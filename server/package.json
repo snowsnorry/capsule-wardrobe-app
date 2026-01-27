@@ -1,0 +1,15 @@
+{
+  "name": "capsule-wardrobe-server",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "NODE_ENV=development node src/index.js",
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  },
+  "devDependencies": {
+    "vite": "^6.2.0"
+  }
+}

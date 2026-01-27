@@ -1,0 +1,13 @@
+{
+  "name": "capsule-wardrobe-app",
+  "private": true,
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "dev:client": "npm --workspace client run dev",
+    "dev:server": "npm --workspace server run dev",
+    "dev:no-pwa": "DISABLE_PWA=true npm --workspace server run dev"
+  }
+}
