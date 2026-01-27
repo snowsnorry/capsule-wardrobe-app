@@ -30,6 +30,17 @@ const theme = createTheme({
     borderRadius: 18
   },
   components: {
+    MuiCssBaseline: {
+      styleOverrides: {
+        "html, body, #root": {
+          height: "100%",
+          overscrollBehavior: "none"
+        },
+        body: {
+          overscrollBehavior: "none"
+        }
+      }
+    },
     MuiButton: {
       defaultProps: {
         disableElevation: true
