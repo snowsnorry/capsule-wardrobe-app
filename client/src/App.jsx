@@ -5,8 +5,6 @@ import {
   fetchCurrentUser,
   fetchProfile,
   fetchProfileStatus,
-  fetchStylePreferences,
-  fetchWardrobeOccasions,
   updateProfile,
   deleteProfile,
   initializeProfile,
@@ -14,6 +12,8 @@ import {
   requestLoginCode,
   verifyLoginCode
 } from "./api/auth.js";
+import { clearProfileOptionsCache, loadProfileOptions } from "./api/profileOptionsCache.js";
+import { clearRequestCache } from "./api/auth.js";
 import LocaleSwitcher from "./components/LocaleSwitcher.jsx";
 import LoadingScreen from "./screens/LoadingScreen.jsx";
 import MainScreen from "./screens/MainScreen.jsx";
@@ -89,12 +89,9 @@ function App() {
   }, []);
 
   const preloadOnboardingOptions = async () => {
-    const [styles, occasions] = await Promise.all([
-      fetchStylePreferences(),
-      fetchWardrobeOccasions()
-    ]);
-    setStyleOptions(styles.items || []);
-    setOccasionOptions(occasions.items || []);
+    const result = await loadProfileOptions();
+    setStyleOptions(result.styles);
+    setOccasionOptions(result.occasions);
   };
 
   const ensureOptionsLoaded = async () => {
@@ -156,6 +153,7 @@ function App() {
     setStatus({ loading: true, error: "", info: "" });
     try {
       await logout();
+      clearRequestCache();
       setUser(null);
       setHasProfile(false);
       setProfileCreated(false);
@@ -166,6 +164,9 @@ function App() {
       setSelectedStyles([]);
       setSelectedOccasions([]);
       setOnboardingStep(0);
+      clearProfileOptionsCache();
+      setStyleOptions([]);
+      setOccasionOptions([]);
       setStatus({ loading: false, error: "", info: t("auth.signedOut") });
     } catch (error) {
       setStatus({ loading: false, error: resolveErrorMessage(error), info: "" });
