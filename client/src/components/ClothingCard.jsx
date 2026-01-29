@@ -3,13 +3,10 @@ import { Box, Chip, Link as MuiLink, Stack, Typography } from "@mui/material";
 function ClothingCard({ item }) {
   const imageUrl = item?.data?.images?.[0] || "";
   const description = item?.data?.description || "";
+  const label = item?.data?.title || "";
 
   return (
-    <MuiLink
-      href={item.link}
-      target="_blank"
-      rel="noopener noreferrer"
-      underline="none"
+    <Box
       sx={{
         display: "flex",
         flexDirection: "column",
@@ -66,61 +63,73 @@ function ClothingCard({ item }) {
             }}
           />
         </Stack>
-        {imageUrl ? (
+        <MuiLink
+          href={item.link}
+          target="_blank"
+          rel="noopener noreferrer"
+          underline="none"
+          sx={{ position: "absolute", inset: 0, zIndex: 0 }}
+        >
+          {imageUrl ? (
+            <Box
+              component="img"
+              src={imageUrl}
+              alt={label}
+              sx={{
+                position: "absolute",
+                inset: 0,
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                objectPosition: "center"
+              }}
+            />
+          ) : (
+            <Box
+              sx={{
+                height: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                px: 2
+              }}
+            >
+              <Typography variant="body2" color="text.secondary" align="center">
+                {description || label}
+              </Typography>
+            </Box>
+          )}
           <Box
-            component="img"
-            src={imageUrl}
-            alt={item.label}
             sx={{
               position: "absolute",
               inset: 0,
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              objectPosition: "center"
+              background:
+                "linear-gradient(180deg, rgba(0,0,0,0) 30%, rgba(10,12,12,0.55) 100%)"
             }}
           />
-        ) : (
           <Box
             sx={{
-              height: "100%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              px: 2
+              position: "absolute",
+              left: 0,
+              right: 0,
+              bottom: 0,
+              p: 2
             }}
           >
-            <Typography variant="body2" color="text.secondary" align="center">
-              {description || item.label}
+            <Typography
+              variant="subtitle1"
+              sx={{
+                color: "#fff",
+                fontWeight: 600,
+                textShadow: "0 2px 12px rgba(0,0,0,0.45)"
+              }}
+            >
+              {label}
             </Typography>
           </Box>
-        )}
-        <Box
-          sx={{
-            position: "absolute",
-            inset: 0,
-            background:
-              "linear-gradient(180deg, rgba(0,0,0,0) 30%, rgba(10,12,12,0.55) 100%)"
-          }}
-        />
-        <Box
-          sx={{
-            position: "absolute",
-            left: 0,
-            right: 0,
-            bottom: 0,
-            p: 2
-          }}
-        >
-          <Typography
-            variant="subtitle1"
-            sx={{ color: "#fff", fontWeight: 600, textShadow: "0 2px 12px rgba(0,0,0,0.45)" }}
-          >
-            {item.label}
-          </Typography>
-        </Box>
+        </MuiLink>
       </Box>
-    </MuiLink>
+    </Box>
   );
 }
 
