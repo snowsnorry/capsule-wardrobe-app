@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Box,
   Button,
@@ -19,14 +19,18 @@ import { useI18n } from "../i18n/useI18n.js";
 import ClothingGridPlaceholder from "../components/ClothingGridPlaceholder.jsx";
 import ClothingCard from "../components/ClothingCard.jsx";
 import LocaleSwitcher from "../components/LocaleSwitcher.jsx";
-import { fetchWardrobeItems } from "../api/wardrobe.js";
 
-function MainScreen({ onSignOut, isSigningOut, onOpenProfile }) {
+function MainScreen({
+  onSignOut,
+  isSigningOut,
+  onOpenProfile,
+  profileKey,
+  items,
+  isLoadingItems
+}) {
   const { t } = useI18n();
   const [menuAnchor, setMenuAnchor] = useState(null);
   const [isSignOutOpen, setIsSignOutOpen] = useState(false);
-  const [items, setItems] = useState([]);
-  const [isLoadingItems, setIsLoadingItems] = useState(true);
   const isMenuOpen = Boolean(menuAnchor);
 
   const handleOpenMenu = (event) => {
@@ -51,32 +55,7 @@ function MainScreen({ onSignOut, isSigningOut, onOpenProfile }) {
     setIsSignOutOpen(false);
   };
 
-  useEffect(() => {
-    let isActive = true;
-    const loadItems = async () => {
-      setIsLoadingItems(true);
-      try {
-        const result = await fetchWardrobeItems();
-        if (isActive) {
-          setItems(result.items || []);
-        }
-      } catch (error) {
-        if (isActive) {
-          setItems([]);
-        }
-      } finally {
-        if (isActive) {
-          setIsLoadingItems(false);
-        }
-      }
-    };
-
-    loadItems();
-
-    return () => {
-      isActive = false;
-    };
-  }, []);
+  void profileKey;
 
   return (
     <Stack spacing={2}>

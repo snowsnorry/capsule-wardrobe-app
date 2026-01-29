@@ -47,6 +47,8 @@ function App() {
   const [selectedOccasions, setSelectedOccasions] = useState([]);
   const [profileCreated, setProfileCreated] = useState(false);
   const [currentView, setCurrentView] = useState("main");
+  const [wardrobeItems, setWardrobeItems] = useState(null);
+  const [isLoadingWardrobe, setIsLoadingWardrobe] = useState(false);
 
   const cardPadding = useMemo(() => (isLarge ? 5 : 3), [isLarge]);
 
@@ -178,6 +180,8 @@ function App() {
       setSelectedStyles([]);
       setSelectedOccasions([]);
       setOnboardingStep(0);
+      setWardrobeItems(null);
+      setIsLoadingWardrobe(false);
       clearProfileOptionsCache();
       setStyleOptions([]);
       setOccasionOptions([]);
@@ -218,6 +222,7 @@ function App() {
       setProfileCreated(true);
       setHasProfile(true);
       setCurrentView("main");
+      setWardrobeItems(null);
       setStatus({ loading: false, error: "", infoKey: "onboarding.step3Hint", infoParams: null });
     } catch (error) {
       setStatus({ loading: false, error: resolveErrorMessage(error), infoKey: "", infoParams: null });
@@ -228,6 +233,7 @@ function App() {
     setStatus({ loading: true, error: "", infoKey: "", infoParams: null });
     try {
       await updateProfile(selectedStyles, selectedOccasions);
+      setWardrobeItems(null);
       setStatus({ loading: false, error: "", infoKey: "profile.updated", infoParams: null });
     } catch (error) {
       setStatus({ loading: false, error: resolveErrorMessage(error), infoKey: "", infoParams: null });
@@ -252,6 +258,40 @@ function App() {
   const handleBackToMain = () => {
     setCurrentView("main");
   };
+
+  const profileKey = JSON.stringify({
+    styles: selectedStyles.slice().sort(),
+    occasions: selectedOccasions.slice().sort()
+  });
+
+  useEffect(() => {
+    if (!user || !(hasProfile || profileCreated)) {
+      return;
+    }
+    if (wardrobeItems) {
+      return;
+    }
+
+    let isActive = true;
+    setIsLoadingWardrobe(true);
+    import("./api/wardrobe.js").then(async ({ fetchWardrobeItems }) => {
+      try {
+        const result = await fetchWardrobeItems();
+        if (!isActive) return;
+        setWardrobeItems(result.items || []);
+      } catch (error) {
+        if (!isActive) return;
+        setWardrobeItems([]);
+      } finally {
+        if (!isActive) return;
+        setIsLoadingWardrobe(false);
+      }
+    });
+
+    return () => {
+      isActive = false;
+    };
+  }, [user, hasProfile, profileCreated, wardrobeItems, profileKey]);
 
   const renderRightPanel = () => {
     if (isCheckingSession || !sessionInitialized) {
@@ -299,6 +339,9 @@ function App() {
           onSignOut={handleLogout}
           isSigningOut={status.loading}
           onOpenProfile={handleOpenProfile}
+          profileKey={profileKey}
+          items={wardrobeItems || []}
+          isLoadingItems={isLoadingWardrobe}
         />
       );
     }
