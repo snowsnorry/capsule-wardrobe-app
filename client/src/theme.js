@@ -38,6 +38,10 @@ const theme = createTheme({
         },
         body: {
           overscrollBehavior: "none"
+        },
+        "@keyframes placeholderShimmer": {
+          "0%": { backgroundPosition: "-200% 0" },
+          "100%": { backgroundPosition: "200% 0" }
         }
       }
     },

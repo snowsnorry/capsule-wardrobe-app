@@ -1,5 +1,6 @@
 import { useState } from "react";
 import {
+  Box,
   Button,
   Chip,
   Dialog,
@@ -11,6 +12,7 @@ import {
   Stack,
   Typography
 } from "@mui/material";
+import LocaleSwitcher from "../components/LocaleSwitcher.jsx";
 import { useI18n } from "../i18n/useI18n.js";
 
 function ProfileScreen({
@@ -43,14 +45,26 @@ function ProfileScreen({
 
   return (
     <Stack spacing={3}>
-      <Stack spacing={1}>
-        <Typography variant="h4">{t("profile.title")}</Typography>
-        <Typography variant="body2" color="text.secondary">
-          {t("profile.subtitle")}
-        </Typography>
-      </Stack>
+      <Box
+        sx={{
+          position: "sticky",
+          top: 0,
+          zIndex: 1,
+          backgroundColor: "background.paper",
+          pb: 1
+        }}
+      >
+        <Stack direction="row" alignItems="center" justifyContent="space-between">
+          <Typography variant="h4">{t("profile.title")}</Typography>
+          <LocaleSwitcher />
+        </Stack>
+      </Box>
 
       <Divider />
+
+      <Typography variant="body2" color="text.secondary">
+        {t("profile.subtitle")}
+      </Typography>
 
       <Stack spacing={2}>
         <Typography variant="h6">{t("profile.stylesTitle")}</Typography>

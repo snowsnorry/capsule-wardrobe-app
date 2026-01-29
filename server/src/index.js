@@ -24,6 +24,7 @@ import {
   hasProfile,
   updateProfile
 } from "./profileStore.js";
+import { getWardrobeItems } from "./ai.js";
 
 const PORT = process.env.PORT || 3000;
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || "http://localhost:5173";
@@ -168,6 +169,8 @@ app.get("/profile/wardrobe-occasions", requireAuth, (req, res) => {
   res.json({ ok: true, items: getWardrobeOccasions() });
 });
 
+app.get("/wardrobe/items", requireAuth, getWardrobeItems);
+
 app.post("/profile/initialize", requireAuth, (req, res) => {
   if (hasProfile(req.user.email)) {
     return res.status(409).json({ error: "profile_exists" });
@@ -241,6 +244,7 @@ const startServer = async () => {
       if (
         req.originalUrl.startsWith("/auth") ||
         req.originalUrl.startsWith("/profile") ||
+        req.originalUrl.startsWith("/wardrobe") ||
         req.originalUrl.startsWith("/health")
       ) {
         return next();
@@ -261,13 +265,14 @@ const startServer = async () => {
     app.use(express.static(CLIENT_DIST_PATH));
 
     app.get("*", (req, res) => {
-      if (
-        req.path.startsWith("/auth") ||
-        req.path.startsWith("/profile") ||
-        req.path.startsWith("/health")
-      ) {
-        return res.status(404).json({ error: "not_found" });
-      }
+    if (
+      req.path.startsWith("/auth") ||
+      req.path.startsWith("/profile") ||
+      req.path.startsWith("/wardrobe") ||
+      req.path.startsWith("/health")
+    ) {
+      return res.status(404).json({ error: "not_found" });
+    }
       return res.sendFile(path.join(CLIENT_DIST_PATH, "index.html"));
     });
   }

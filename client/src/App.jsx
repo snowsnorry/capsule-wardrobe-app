@@ -14,7 +14,6 @@ import {
 } from "./api/auth.js";
 import { clearProfileOptionsCache, loadProfileOptions } from "./api/profileOptionsCache.js";
 import { clearRequestCache } from "./api/auth.js";
-import LocaleSwitcher from "./components/LocaleSwitcher.jsx";
 import LoadingScreen from "./screens/LoadingScreen.jsx";
 import MainScreen from "./screens/MainScreen.jsx";
 import OnboardingScreen from "./screens/OnboardingScreen.jsx";
@@ -350,8 +349,9 @@ function App() {
           alignItems: "center",
           py: { xs: 0, md: 10 },
           px: { xs: 0, md: 3 },
-          minHeight: { xs: "100vh", md: "auto" },
-          height: { xs: "100%", md: "auto" }
+          minHeight: "100vh",
+          height: "100%",
+          boxSizing: "border-box"
         }}
       >
         {!user ? (
@@ -373,18 +373,24 @@ function App() {
           sx={{
             p: cardPadding,
             backdropFilter: "blur(8px)",
-            minHeight: { xs: "100vh", md: "auto" },
-            height: { xs: "100%", md: "auto" },
+            minHeight: 0,
+            height: "100%",
             borderRadius: { xs: 0, md: 4 },
             display: "flex",
             flexDirection: "column",
             overflow: "hidden"
           }}
         >
-          <Stack direction="row" justifyContent="flex-end" sx={{ mb: 2 }}>
-            <LocaleSwitcher />
-          </Stack>
-          <Box sx={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
+          <Box
+            sx={{
+              flex: 1,
+              minHeight: 0,
+              height: "100%",
+              overflowY: "auto",
+              WebkitOverflowScrolling: "touch",
+              touchAction: "pan-y"
+            }}
+          >
             {renderRightPanel()}
           </Box>
         </Paper>
