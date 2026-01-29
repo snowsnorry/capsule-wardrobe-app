@@ -13,6 +13,14 @@ const ru = {
     }
   },
   options: {
+    categories: {
+      bottom: "Низ",
+      top: "Верх",
+      outerwear: "Верхняя одежда",
+      shoes: "Обувь",
+      belt: "Ремень",
+      bag: "Сумка"
+    },
     styles: {
       casual: "Повседневный",
       formal: "Официальный",
@@ -38,7 +46,7 @@ const ru = {
     signInTitle: "Вход",
     signInSubtitleEmail: "Укажите email, чтобы получить код для входа",
     signInSubtitleCode: "Введите код из письма, чтобы продолжить",
-    emailLabel: "Email",
+    emailLabel: "Эл. почта",
     emailPlaceholder: "you@example.com",
     sendCode: "Отправить код",
     emailCodeLabel: "Код из письма",

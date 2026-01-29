@@ -13,6 +13,14 @@ const en = {
     }
   },
   options: {
+    categories: {
+      bottom: "Bottom",
+      top: "Top",
+      outerwear: "Outerwear",
+      shoes: "Shoes",
+      belt: "Belt",
+      bag: "Bag"
+    },
     styles: {
       casual: "Casual",
       formal: "Formal",

@@ -24,7 +24,8 @@ import { useI18n } from "./i18n/useI18n.js";
 const initialStatus = {
   loading: false,
   error: "",
-  info: ""
+  infoKey: "",
+  infoParams: null
 };
 
 function App() {
@@ -37,6 +38,7 @@ function App() {
   const [status, setStatus] = useState(initialStatus);
   const [user, setUser] = useState(null);
   const [isCheckingSession, setIsCheckingSession] = useState(true);
+  const [sessionInitialized, setSessionInitialized] = useState(false);
   const [hasProfile, setHasProfile] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(0);
   const [styleOptions, setStyleOptions] = useState([]);
@@ -63,28 +65,40 @@ function App() {
   };
 
   useEffect(() => {
+    let isActive = true;
     const bootstrapSession = async () => {
       setIsCheckingSession(true);
       try {
         const current = await fetchCurrentUser();
+        if (!isActive) return;
         setUser(current.user);
         const profileStatus = await fetchProfileStatus();
+        if (!isActive) return;
         setHasProfile(profileStatus.hasProfile);
         setProfileCreated(profileStatus.hasProfile);
         if (!profileStatus.hasProfile) {
           await preloadOnboardingOptions();
+          if (!isActive) return;
         } else {
           await Promise.all([ensureOptionsLoaded(), loadProfileSelections()]);
+          if (!isActive) return;
         }
       } catch (error) {
+        if (!isActive) return;
         setUser(null);
         setHasProfile(false);
       } finally {
+        if (!isActive) return;
         setIsCheckingSession(false);
+        setSessionInitialized(true);
       }
     };
 
     bootstrapSession();
+
+    return () => {
+      isActive = false;
+    };
   }, []);
 
   const preloadOnboardingOptions = async () => {
@@ -108,24 +122,25 @@ function App() {
 
   const handleRequestCode = async (event) => {
     event.preventDefault();
-    setStatus({ loading: true, error: "", info: "" });
+    setStatus({ loading: true, error: "", infoKey: "", infoParams: null });
     try {
       const result = await requestLoginCode(email.trim());
       setStatus({
         loading: false,
         error: "",
-        info: t("auth.codeSent", { minutes: Math.ceil(result.expiresInMs / 60000) })
+        infoKey: "auth.codeSent",
+        infoParams: { minutes: Math.ceil(result.expiresInMs / 60000) }
       });
       setStep("code");
     } catch (error) {
-      setStatus({ loading: false, error: resolveErrorMessage(error), info: "" });
+      setStatus({ loading: false, error: resolveErrorMessage(error), infoKey: "", infoParams: null });
       setCode("");
     }
   };
 
   const handleVerifyCode = async (event) => {
     event.preventDefault();
-    setStatus({ loading: true, error: "", info: "" });
+    setStatus({ loading: true, error: "", infoKey: "", infoParams: null });
     try {
       const result = await verifyLoginCode(email.trim(), code.trim());
       setUser(result.user);
@@ -137,19 +152,19 @@ function App() {
         setSelectedStyles([]);
         setSelectedOccasions([]);
         setOnboardingStep(0);
-        setStatus({ loading: false, error: "", info: "" });
+        setStatus({ loading: false, error: "", infoKey: "", infoParams: null });
       } else {
         await Promise.all([ensureOptionsLoaded(), loadProfileSelections()]);
-        setStatus({ loading: false, error: "", info: t("auth.signedIn") });
+        setStatus({ loading: false, error: "", infoKey: "auth.signedIn", infoParams: null });
       }
     } catch (error) {
-      setStatus({ loading: false, error: resolveErrorMessage(error), info: "" });
+      setStatus({ loading: false, error: resolveErrorMessage(error), infoKey: "", infoParams: null });
       setCode("");
     }
   };
 
   const handleLogout = async () => {
-    setStatus({ loading: true, error: "", info: "" });
+    setStatus({ loading: true, error: "", infoKey: "", infoParams: null });
     try {
       await logout();
       clearRequestCache();
@@ -166,9 +181,9 @@ function App() {
       clearProfileOptionsCache();
       setStyleOptions([]);
       setOccasionOptions([]);
-      setStatus({ loading: false, error: "", info: t("auth.signedOut") });
+      setStatus({ loading: false, error: "", infoKey: "auth.signedOut", infoParams: null });
     } catch (error) {
-      setStatus({ loading: false, error: resolveErrorMessage(error), info: "" });
+      setStatus({ loading: false, error: resolveErrorMessage(error), infoKey: "", infoParams: null });
     }
   };
 
@@ -197,35 +212,35 @@ function App() {
   };
 
   const handleFinishOnboarding = async () => {
-    setStatus({ loading: true, error: "", info: "" });
+    setStatus({ loading: true, error: "", infoKey: "", infoParams: null });
     try {
       await initializeProfile(selectedStyles, selectedOccasions);
       setProfileCreated(true);
       setHasProfile(true);
       setCurrentView("main");
-      setStatus({ loading: false, error: "", info: t("onboarding.step3Hint") });
+      setStatus({ loading: false, error: "", infoKey: "onboarding.step3Hint", infoParams: null });
     } catch (error) {
-      setStatus({ loading: false, error: resolveErrorMessage(error), info: "" });
+      setStatus({ loading: false, error: resolveErrorMessage(error), infoKey: "", infoParams: null });
     }
   };
 
   const handleSaveProfile = async () => {
-    setStatus({ loading: true, error: "", info: "" });
+    setStatus({ loading: true, error: "", infoKey: "", infoParams: null });
     try {
       await updateProfile(selectedStyles, selectedOccasions);
-      setStatus({ loading: false, error: "", info: t("profile.updated") });
+      setStatus({ loading: false, error: "", infoKey: "profile.updated", infoParams: null });
     } catch (error) {
-      setStatus({ loading: false, error: resolveErrorMessage(error), info: "" });
+      setStatus({ loading: false, error: resolveErrorMessage(error), infoKey: "", infoParams: null });
     }
   };
 
   const handleDeleteProfile = async () => {
-    setStatus({ loading: true, error: "", info: "" });
+    setStatus({ loading: true, error: "", infoKey: "", infoParams: null });
     try {
       await deleteProfile();
       await handleLogout();
     } catch (error) {
-      setStatus({ loading: false, error: resolveErrorMessage(error), info: "" });
+      setStatus({ loading: false, error: resolveErrorMessage(error), infoKey: "", infoParams: null });
     }
   };
 
@@ -239,7 +254,7 @@ function App() {
   };
 
   const renderRightPanel = () => {
-    if (isCheckingSession) {
+    if (isCheckingSession || !sessionInitialized) {
       return <LoadingScreen />;
     }
 
@@ -354,7 +369,7 @@ function App() {
           boxSizing: "border-box"
         }}
       >
-        {!user ? (
+        {!sessionInitialized ? null : !user ? (
           <Stack spacing={3} sx={{ pr: { md: 4 } }}>
             <Typography variant="overline" color="secondary.main" sx={{ letterSpacing: 2 }}>
               {t("appName")}

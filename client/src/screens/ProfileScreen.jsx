@@ -125,9 +125,9 @@ function ProfileScreen({
           {status.error}
         </Typography>
       ) : null}
-      {status.info && status.info !== t("auth.signedIn") ? (
+      {status.infoKey && status.infoKey !== "auth.signedIn" ? (
         <Typography variant="body2" color="text.secondary">
-          {status.info}
+          {t(status.infoKey, status.infoParams || undefined)}
         </Typography>
       ) : null}
       <Dialog open={isDeleteOpen} onClose={handleCloseDelete}>

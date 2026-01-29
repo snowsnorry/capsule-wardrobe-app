@@ -1,4 +1,5 @@
 import { Button, Chip, Divider, Stack, Typography } from "@mui/material";
+import LocaleSwitcher from "../components/LocaleSwitcher.jsx";
 import { useI18n } from "../i18n/useI18n.js";
 
 function OnboardingScreen({
@@ -18,7 +19,10 @@ function OnboardingScreen({
   return (
     <Stack spacing={3}>
       <Stack spacing={1}>
-        <Typography variant="h4">{t("onboarding.title")}</Typography>
+        <Stack direction="row" alignItems="center" justifyContent="space-between">
+          <Typography variant="h4">{t("onboarding.title")}</Typography>
+          <LocaleSwitcher />
+        </Stack>
         <Typography variant="body2" color="text.secondary">
           {t("onboarding.subtitle")}
         </Typography>
@@ -104,9 +108,9 @@ function OnboardingScreen({
           {status.error}
         </Typography>
       ) : null}
-      {status.info ? (
+      {status.infoKey ? (
         <Typography variant="body2" color="text.secondary">
-          {status.info}
+          {t(status.infoKey, status.infoParams || undefined)}
         </Typography>
       ) : null}
     </Stack>

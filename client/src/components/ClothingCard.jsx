@@ -1,9 +1,12 @@
 import { Box, Chip, Link as MuiLink, Stack, Typography } from "@mui/material";
+import { useI18n } from "../i18n/useI18n.js";
 
 function ClothingCard({ item }) {
+  const { t } = useI18n();
   const imageUrl = item?.data?.images?.[0] || "";
   const description = item?.data?.description || "";
   const label = item?.data?.title || "";
+  const categoryLabel = item?.category ? t(`options.categories.${item.category}`) : "";
 
   return (
     <Box
@@ -51,7 +54,7 @@ function ClothingCard({ item }) {
           sx={{ position: "absolute", top: 12, left: 12, zIndex: 1 }}
         >
           <Chip
-            label={item.category}
+            label={categoryLabel || item.category}
             size="small"
             sx={{
               textTransform: "uppercase",
