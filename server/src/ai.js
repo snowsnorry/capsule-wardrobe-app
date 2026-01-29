@@ -81,7 +81,7 @@ async function prefetchLinksData(items) {
               return false;
             }
           },
-          timeout: 1000
+          timeout: 3000
         });
         if (!data 
           || typeof data !== "object" 
