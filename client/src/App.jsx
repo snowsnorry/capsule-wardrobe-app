@@ -176,7 +176,7 @@ function App() {
     event.preventDefault();
     setStatus({ loading: true, error: "", infoKey: "", infoParams: null });
     try {
-      const result = await requestLoginCode(email.trim());
+      const result = await requestLoginCode(email.trim(), locale);
       setStatus({
         loading: false,
         error: "",

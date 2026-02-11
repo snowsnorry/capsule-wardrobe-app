@@ -1,12 +1,12 @@
 import { API_BASE_URL } from "./config.js";
 import { clearRequestCache, getCachedJson, requestJson } from "./request.js";
 
-async function requestLoginCode(email) {
+async function requestLoginCode(email, locale) {
   return requestJson(`${API_BASE_URL}/auth/request-code`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
-    body: JSON.stringify({ email })
+    body: JSON.stringify({ email, locale })
   });
 }
 

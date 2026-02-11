@@ -26,6 +26,8 @@ cp server/.env.example server/.env
 Then set in `server/.env`:
 - `DATABASE_URL`
 - `AUTH_CODE_SECRET`
+- `RESEND_API_KEY`
+- `RESEND_FROM_EMAIL`
 
 ## Development
 
@@ -67,6 +69,8 @@ server/    # Node.js API (Express)
 - `CLIENT_ORIGIN` (server) – default: http://localhost:5173
 - `DATABASE_URL` (server) – Postgres connection string
 - `AUTH_CODE_SECRET` (server) – secret used for HMAC hashing of login codes
+- `RESEND_API_KEY` (server) – API key for Resend mail delivery
+- `RESEND_FROM_EMAIL` (server) – verified sender for Resend, e.g. `Capsule Wardrobe <auth@yourdomain.com>`
 - `SESSION_PRUNE_MIN_INTERVAL_MS` (server) – minimum interval between session cleanup runs (default: `0`)
 - `DISABLE_PWA` (client build) – set to `true` to disable PWA
 
@@ -80,7 +84,7 @@ curl http://localhost:3000/health
 
 ## Notes
 
-- Login code delivery is currently stubbed and logs codes to the server console.
+- Login codes are sent via Resend.
 - Sessions and profiles are persisted in Postgres (including styles, occasions, and locale).
 
 ## License

@@ -169,6 +169,8 @@ async function requireAuth(req, res, next) {
 
 app.post("/auth/request-code", requestCodeLimiter, async (req, res) => {
   const email = String(req.body?.email || "").trim().toLowerCase();
+  const locale = String(req.body?.locale || "").trim().toLowerCase();
+  const emailLocale = SUPPORTED_LOCALES.has(locale) ? locale : "en";
   if (!email || !email.includes("@")) {
     return res.status(400).json({ error: "invalid_email" });
   }
@@ -190,7 +192,17 @@ app.post("/auth/request-code", requestCodeLimiter, async (req, res) => {
     }
   }
 
-  await sendLoginCodeEmail({ email, code: result.code });
+  try {
+    await sendLoginCodeEmail({
+      email,
+      code: result.code,
+      locale: emailLocale,
+      expiresInMs: CODE_TTL_MS
+    });
+  } catch (error) {
+    console.error("[auth/send-code-email]", error);
+    return res.status(503).json({ error: "email_unavailable" });
+  }
   return res.json({ ok: true, expiresInMs: CODE_TTL_MS });
 });
 
