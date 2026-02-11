@@ -11,9 +11,40 @@ const HOP_BY_HOP_HEADERS = new Set([
   "content-length"
 ]);
 
+function matchesPrefix(path, prefix) {
+  return path === prefix || path.startsWith(`${prefix}/`);
+}
+
+function stripPrefix(path, prefix) {
+  const stripped = path.slice(prefix.length);
+  return stripped ? (stripped.startsWith("/") ? stripped : `/${stripped}`) : "/";
+}
+
+function getStripPrefixes() {
+  return String(process.env.BFF_STRIP_PREFIXES || "/api")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .map((item) => (item.startsWith("/") ? item : `/${item}`));
+}
+
+function normalizeEventPath(eventPath) {
+  let path = String(eventPath || "");
+  if (!path.startsWith("/")) {
+    path = `/${path}`;
+  }
+
+  for (const prefix of getStripPrefixes()) {
+    if (matchesPrefix(path, prefix)) {
+      return stripPrefix(path, prefix);
+    }
+  }
+
+  return path;
+}
+
 function buildUpstreamUrl(event, upstreamOrigin) {
-  const rawPath = event.path.replace(/^\/\.netlify\/functions\/bff/, "") || "/";
-  const upstreamUrl = new URL(rawPath, upstreamOrigin);
+  const upstreamUrl = new URL(normalizeEventPath(event.path), upstreamOrigin);
   if (event.rawQuery) {
     upstreamUrl.search = event.rawQuery;
   }
