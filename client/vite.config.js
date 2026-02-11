@@ -42,6 +42,11 @@ export default defineConfig(({ mode }) => {
     ].filter(Boolean),
     server: {
       proxy: {
+        "/api": {
+          target: "http://localhost:3000",
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/api/, "")
+        },
         "/auth": "http://localhost:3000",
         "/profile": "http://localhost:3000",
         "/wardrobe": "http://localhost:3000",

@@ -73,6 +73,7 @@ server/    # Node.js API (Express)
 - `RESEND_FROM_EMAIL` (server) – verified sender for Resend, e.g. `Capsule Wardrobe <auth@yourdomain.com>`
 - `SESSION_PRUNE_MIN_INTERVAL_MS` (server) – minimum interval between session cleanup runs (default: `0`)
 - `DISABLE_PWA` (client build) – set to `true` to disable PWA
+- `BFF_UPSTREAM_ORIGIN` (Netlify client) – backend origin for Netlify BFF proxy, e.g. `https://your-api.onrender.com`
 
 ## Health check
 
@@ -86,6 +87,7 @@ curl http://localhost:3000/health
 
 - Login codes are sent via Resend.
 - Sessions and profiles are persisted in Postgres (including styles, occasions, and locale).
+- For Netlify deployments, API requests are proxied through `/api/*` via `client/netlify/functions/bff.js` to keep auth cookies first-party.
 
 ## License
 
