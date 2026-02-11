@@ -52,21 +52,30 @@ async function fetchWardrobeOccasions() {
   });
 }
 
-async function initializeProfile(stylePreferences, wardrobeOccasions) {
+async function initializeProfile(stylePreferences, wardrobeOccasions, locale) {
   return requestJson(`${API_BASE_URL}/profile/initialize`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
-    body: JSON.stringify({ stylePreferences, wardrobeOccasions })
+    body: JSON.stringify({ stylePreferences, wardrobeOccasions, locale })
   });
 }
 
-async function updateProfile(stylePreferences, wardrobeOccasions) {
+async function updateProfile(stylePreferences, wardrobeOccasions, locale) {
   return requestJson(`${API_BASE_URL}/profile/me`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
-    body: JSON.stringify({ stylePreferences, wardrobeOccasions })
+    body: JSON.stringify({ stylePreferences, wardrobeOccasions, locale })
+  });
+}
+
+async function updateProfileLocale(locale) {
+  return requestJson(`${API_BASE_URL}/profile/locale`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ locale })
   });
 }
 
@@ -94,6 +103,7 @@ export {
   fetchWardrobeOccasions,
   initializeProfile,
   updateProfile,
+  updateProfileLocale,
   deleteProfile,
   clearRequestCache,
   logout

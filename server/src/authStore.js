@@ -1,28 +1,37 @@
 import crypto from "node:crypto";
+import {
+  getLoginCodeByEmail,
+  verifyAndConsumeLoginCode,
+  pruneLoginCodes,
+  upsertLoginCode,
+  insertSession,
+  getSessionById,
+  deleteSessionById,
+  pruneExpiredSessions
+} from "./db.js";
 
-const CODE_TTL_MS = 10 * 60 * 1000;
+const CODE_TTL_MS = 5 * 60 * 1000;
 const RESEND_COOLDOWN_MS = 60 * 1000;
 const MAX_CODE_SENDS_PER_HOUR = 5;
 const MAX_VERIFY_ATTEMPTS = 5;
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const SESSION_PRUNE_MIN_INTERVAL_MS = Math.max(
+  0,
+  Number.parseInt(process.env.SESSION_PRUNE_MIN_INTERVAL_MS || "0", 10) || 0
+);
 
-const pendingCodes = new Map();
-const sessions = new Map();
+const sendState = new Map();
+let lastSessionPruneAtMs = 0;
 
-function now() {
+function nowMs() {
   return Date.now();
 }
 
-function cleanupExpired() {
-  const time = now();
-  for (const [email, entry] of pendingCodes) {
-    if (entry.expiresAt <= time) {
-      pendingCodes.delete(email);
-    }
-  }
-  for (const [sessionId, session] of sessions) {
-    if (session.expiresAt <= time) {
-      sessions.delete(sessionId);
+function cleanupSendState() {
+  const time = nowMs();
+  for (const [email, entry] of sendState) {
+    if (entry.sendWindowStart + 60 * 60 * 1000 <= time) {
+      sendState.delete(email);
     }
   }
 }
@@ -31,17 +40,31 @@ function generateCode() {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
 
-function hashCode(code, salt) {
+function generateNonce() {
+  return crypto.randomBytes(16).toString("hex");
+}
+
+function getCodeSecret() {
+  const secret = process.env.AUTH_CODE_SECRET;
+  if (!secret) {
+    const error = new Error("AUTH_CODE_SECRET is not set");
+    error.code = "missing_auth_code_secret";
+    throw error;
+  }
+  return secret;
+}
+
+function hashCode({ email, code, nonce }) {
   return crypto
-    .createHash("sha256")
-    .update(`${salt}:${code}`)
+    .createHmac("sha256", getCodeSecret())
+    .update(`${email}:${code}:${nonce}`)
     .digest("hex");
 }
 
-function createPendingCode(email) {
-  cleanupExpired();
-  const time = now();
-  const entry = pendingCodes.get(email);
+async function createPendingCode(email) {
+  cleanupSendState();
+  const time = nowMs();
+  const entry = sendState.get(email);
 
   if (entry) {
     if (entry.lastSentAt + RESEND_COOLDOWN_MS > time) {
@@ -53,76 +76,98 @@ function createPendingCode(email) {
   }
 
   const code = generateCode();
-  const salt = crypto.randomBytes(16).toString("hex");
-  const codeHash = hashCode(code, salt);
+  const nonce = generateNonce();
+  const codeHash = hashCode({ email, code, nonce });
+  const expiresAt = new Date(time + CODE_TTL_MS);
 
-  const nextEntry = {
-    codeHash,
-    salt,
-    expiresAt: time + CODE_TTL_MS,
-    attempts: 0,
+  await pruneLoginCodes();
+  await upsertLoginCode({ email, codeHash, nonce, expiresAt });
+
+  const nextState = {
     lastSentAt: time,
     sendWindowStart: entry?.sendWindowStart && entry.sendWindowStart + 60 * 60 * 1000 > time ? entry.sendWindowStart : time,
     sendCount: entry?.sendWindowStart && entry.sendWindowStart + 60 * 60 * 1000 > time ? entry.sendCount + 1 : 1
   };
 
-  pendingCodes.set(email, nextEntry);
+  sendState.set(email, nextState);
   return { ok: true, code };
 }
 
-function verifyCode(email, code) {
-  cleanupExpired();
-  const entry = pendingCodes.get(email);
+async function verifyCode(email, code) {
+  const entry = await getLoginCodeByEmail(email);
+
   if (!entry) {
     return { ok: false, reason: "not_found" };
   }
-  if (entry.expiresAt <= now()) {
-    pendingCodes.delete(email);
-    return { ok: false, reason: "expired" };
-  }
-  if (entry.attempts >= MAX_VERIFY_ATTEMPTS) {
-    pendingCodes.delete(email);
-    return { ok: false, reason: "max_attempts" };
-  }
 
-  entry.attempts += 1;
-
-  const candidateHash = hashCode(code, entry.salt);
-  if (candidateHash !== entry.codeHash) {
-    return { ok: false, reason: "invalid" };
-  }
-
-  pendingCodes.delete(email);
-  return { ok: true };
-}
-
-function createSession(email) {
-  cleanupExpired();
-  const sessionId = crypto.randomBytes(32).toString("hex");
-  const session = {
+  const candidateHash = hashCode({ email, code, nonce: entry.nonce });
+  return verifyAndConsumeLoginCode({
     email,
-    createdAt: now(),
-    expiresAt: now() + SESSION_TTL_MS
-  };
-  sessions.set(sessionId, session);
-  return { sessionId, session };
+    codeHash: candidateHash,
+    maxAttempts: MAX_VERIFY_ATTEMPTS
+  });
 }
 
-function getSession(sessionId) {
-  cleanupExpired();
-  const session = sessions.get(sessionId);
+async function maybePruneExpiredSessions() {
+  const now = nowMs();
+  if (
+    SESSION_PRUNE_MIN_INTERVAL_MS > 0 &&
+    now - lastSessionPruneAtMs < SESSION_PRUNE_MIN_INTERVAL_MS
+  ) {
+    return;
+  }
+
+  await pruneExpiredSessions();
+  lastSessionPruneAtMs = now;
+}
+
+async function createSession(email) {
+  await maybePruneExpiredSessions();
+
+  const sessionId = crypto.randomBytes(32).toString("hex");
+  const createdAt = new Date();
+  const expiresAt = new Date(createdAt.getTime() + SESSION_TTL_MS);
+
+  await insertSession({
+    sessionId,
+    email,
+    createdAt,
+    expiresAt
+  });
+
+  return {
+    sessionId,
+    session: {
+      email,
+      createdAt: createdAt.toISOString(),
+      expiresAt: expiresAt.toISOString()
+    }
+  };
+}
+
+async function getSession(sessionId) {
+  await maybePruneExpiredSessions();
+
+  const session = await getSessionById(sessionId);
   if (!session) {
     return null;
   }
-  if (session.expiresAt <= now()) {
-    sessions.delete(sessionId);
+
+  const expiresAt = new Date(session.expiresAt);
+  if (expiresAt.getTime() <= nowMs()) {
+    await deleteSessionById(sessionId);
     return null;
   }
-  return session;
+
+  return {
+    email: session.email,
+    createdAt: new Date(session.createdAt).getTime(),
+    expiresAt: expiresAt.getTime()
+  };
 }
 
-function revokeSession(sessionId) {
-  sessions.delete(sessionId);
+async function revokeSession(sessionId) {
+  await deleteSessionById(sessionId);
 }
 
 export {

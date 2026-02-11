@@ -43,6 +43,8 @@ export default defineConfig(({ mode }) => {
     server: {
       proxy: {
         "/auth": "http://localhost:3000",
+        "/profile": "http://localhost:3000",
+        "/wardrobe": "http://localhost:3000",
         "/health": "http://localhost:3000"
       }
     }

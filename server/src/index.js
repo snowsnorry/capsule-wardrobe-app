@@ -1,4 +1,7 @@
+import "dotenv/config";
 import express from "express";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -22,13 +25,16 @@ import {
   getWardrobeOccasions,
   getProfile,
   hasProfile,
-  updateProfile
+  updateProfile,
+  updateProfileLocale
 } from "./profileStore.js";
 import { getWardrobeItems } from "./ai.js";
+import { checkDatabaseConnection, ensureTables } from "./db.js";
 
 const PORT = process.env.PORT || 3000;
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || "http://localhost:5173";
 const NODE_ENV = process.env.NODE_ENV || "development";
+const SUPPORTED_LOCALES = new Set(["en", "ru"]);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const CLIENT_DIST_PATH = path.resolve(__dirname, "../../client/dist");
 const CLIENT_ROOT = path.resolve(__dirname, "../../client");
@@ -36,13 +42,41 @@ const CLIENT_ROOT = path.resolve(__dirname, "../../client");
 const app = express();
 
 app.use(express.json());
+app.use(
+  helmet({
+    contentSecurityPolicy: false
+  })
+);
+
+const requestCodeLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "too_many_requests" }
+});
+
+const verifyCodeLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "too_many_requests" }
+});
+
+function isValidSelection(items, allowedItems) {
+  if (!Array.isArray(items) || items.length === 0) {
+    return false;
+  }
+  return items.every((item) => typeof item === "string" && allowedItems.includes(item));
+}
 
 if (NODE_ENV !== "development") {
   app.use((req, res, next) => {
     res.header("Access-Control-Allow-Origin", CLIENT_ORIGIN);
     res.header("Access-Control-Allow-Credentials", "true");
     res.header("Access-Control-Allow-Headers", "Content-Type");
-    res.header("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+    res.header("Access-Control-Allow-Methods", "GET,POST,PATCH,DELETE,OPTIONS");
     if (req.method === "OPTIONS") {
       return res.sendStatus(204);
     }
@@ -79,27 +113,74 @@ function clearSessionCookie(res) {
   res.header("Set-Cookie", "session=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax");
 }
 
-function requireAuth(req, res, next) {
+function isTrustedOrigin(req) {
+  const origin = req.headers.origin;
+  const referer = req.headers.referer;
+
+  if (origin) {
+    return origin === CLIENT_ORIGIN;
+  }
+
+  if (referer) {
+    try {
+      return new URL(referer).origin === CLIENT_ORIGIN;
+    } catch {
+      return false;
+    }
+  }
+
+  return false;
+}
+
+function requireTrustedOrigin(req, res, next) {
+  if (NODE_ENV === "development") {
+    return next();
+  }
+
+  if (isTrustedOrigin(req)) {
+    return next();
+  }
+
+  return res.status(403).json({ error: "forbidden_origin" });
+}
+
+async function requireAuth(req, res, next) {
   const cookies = parseCookies(req.headers.cookie);
   const sessionId = cookies.session;
   if (!sessionId) {
     return res.status(401).json({ error: "unauthorized" });
   }
-  const session = getSession(sessionId);
+
+  let session;
+  try {
+    session = await getSession(sessionId);
+  } catch (error) {
+    console.error("[requireAuth]", error);
+    return res.status(503).json({ error: "service_unavailable" });
+  }
+
   if (!session) {
     return res.status(401).json({ error: "unauthorized" });
   }
+
   req.user = { email: session.email };
   return next();
 }
 
-app.post("/auth/request-code", async (req, res) => {
+app.post("/auth/request-code", requestCodeLimiter, async (req, res) => {
   const email = String(req.body?.email || "").trim().toLowerCase();
   if (!email || !email.includes("@")) {
     return res.status(400).json({ error: "invalid_email" });
   }
 
-  const result = createPendingCode(email);
+  let result;
+  try {
+    result = await createPendingCode(email);
+  } catch (error) {
+    console.error("[auth/request-code]", error);
+    return res.status(503).json({ error: "service_unavailable" });
+  }
+
   if (!result.ok) {
     if (result.reason === "cooldown") {
       return res.status(429).json({ error: "cooldown", retryAfterMs: RESEND_COOLDOWN_MS });
@@ -113,14 +194,21 @@ app.post("/auth/request-code", async (req, res) => {
   return res.json({ ok: true, expiresInMs: CODE_TTL_MS });
 });
 
-app.post("/auth/verify-code", (req, res) => {
+app.post("/auth/verify-code", verifyCodeLimiter, async (req, res) => {
   const email = String(req.body?.email || "").trim().toLowerCase();
   const code = String(req.body?.code || "").trim();
   if (!email || !code) {
     return res.status(400).json({ error: "invalid_payload" });
   }
 
-  const result = verifyCode(email, code);
+  let result;
+  try {
+    result = await verifyCode(email, code);
+  } catch (error) {
+    console.error("[auth/verify-code]", error);
+    return res.status(503).json({ error: "service_unavailable" });
+  }
+
   if (!result.ok) {
     if (result.reason === "expired") {
       return res.status(400).json({ error: "expired" });
@@ -131,15 +219,28 @@ app.post("/auth/verify-code", (req, res) => {
     return res.status(400).json({ error: "invalid" });
   }
 
-  const { sessionId, session } = createSession(email);
+  let created;
+  try {
+    created = await createSession(email);
+  } catch (error) {
+    console.error("[auth/create-session]", error);
+    return res.status(503).json({ error: "service_unavailable" });
+  }
+
+  const { sessionId, session } = created;
   setSessionCookie(res, sessionId);
   return res.json({ ok: true, user: { email: session.email } });
 });
 
-app.post("/auth/logout", (req, res) => {
+app.post("/auth/logout", requireTrustedOrigin, async (req, res) => {
   const cookies = parseCookies(req.headers.cookie);
   if (cookies.session) {
-    revokeSession(cookies.session);
+    try {
+      await revokeSession(cookies.session);
+    } catch (error) {
+      console.error("[auth/logout]", error);
+      return res.status(503).json({ error: "service_unavailable" });
+    }
   }
   clearSessionCookie(res);
   return res.json({ ok: true });
@@ -149,16 +250,27 @@ app.get("/auth/me", requireAuth, (req, res) => {
   res.json({ ok: true, user: req.user });
 });
 
-app.get("/profile/status", requireAuth, (req, res) => {
-  res.json({ ok: true, hasProfile: hasProfile(req.user.email) });
+app.get("/profile/status", requireAuth, async (req, res) => {
+  try {
+    const exists = await hasProfile(req.user.email);
+    return res.json({ ok: true, hasProfile: exists });
+  } catch (error) {
+    console.error("[profile/status]", error);
+    return res.status(503).json({ error: "service_unavailable" });
+  }
 });
 
-app.get("/profile/me", requireAuth, (req, res) => {
-  const profile = getProfile(req.user.email);
-  if (!profile) {
-    return res.status(404).json({ error: "not_found" });
+app.get("/profile/me", requireAuth, async (req, res) => {
+  try {
+    const profile = await getProfile(req.user.email);
+    if (!profile) {
+      return res.status(404).json({ error: "not_found" });
+    }
+    return res.json({ ok: true, profile });
+  } catch (error) {
+    console.error("[profile/me]", error);
+    return res.status(503).json({ error: "service_unavailable" });
   }
-  return res.json({ ok: true, profile });
 });
 
 app.get("/profile/style-preferences", requireAuth, (req, res) => {
@@ -171,67 +283,116 @@ app.get("/profile/wardrobe-occasions", requireAuth, (req, res) => {
 
 app.get("/wardrobe/items", requireAuth, getWardrobeItems);
 
-app.post("/profile/initialize", requireAuth, (req, res) => {
-  if (hasProfile(req.user.email)) {
-    return res.status(409).json({ error: "profile_exists" });
-  }
-
+app.post("/profile/initialize", requireTrustedOrigin, requireAuth, async (req, res) => {
   const stylePreferences = Array.isArray(req.body?.stylePreferences)
     ? req.body.stylePreferences
     : [];
   const wardrobeOccasions = Array.isArray(req.body?.wardrobeOccasions)
     ? req.body.wardrobeOccasions
     : [];
+  const locale = String(req.body?.locale || "").trim().toLowerCase();
 
-  if (stylePreferences.length === 0 || wardrobeOccasions.length === 0) {
+  if (
+    !isValidSelection(stylePreferences, getStylePreferences()) ||
+    !isValidSelection(wardrobeOccasions, getWardrobeOccasions()) ||
+    !SUPPORTED_LOCALES.has(locale)
+  ) {
     return res.status(400).json({ error: "invalid_payload" });
   }
 
-  const profile = createProfile(req.user.email, {
-    stylePreferences,
-    wardrobeOccasions
-  });
-
-  return res.json({ ok: true, profile });
+  try {
+    const profile = await createProfile(req.user.email, {
+      stylePreferences,
+      wardrobeOccasions,
+      locale
+    });
+    if (!profile) {
+      return res.status(409).json({ error: "profile_exists" });
+    }
+    return res.json({ ok: true, profile });
+  } catch (error) {
+    console.error("[profile/initialize]", error);
+    return res.status(503).json({ error: "service_unavailable" });
+  }
 });
 
-app.patch("/profile/me", requireAuth, (req, res) => {
+app.patch("/profile/me", requireTrustedOrigin, requireAuth, async (req, res) => {
   const stylePreferences = Array.isArray(req.body?.stylePreferences)
     ? req.body.stylePreferences
     : [];
   const wardrobeOccasions = Array.isArray(req.body?.wardrobeOccasions)
     ? req.body.wardrobeOccasions
     : [];
+  const locale = String(req.body?.locale || "").trim().toLowerCase();
 
-  if (stylePreferences.length === 0 || wardrobeOccasions.length === 0) {
+  if (
+    !isValidSelection(stylePreferences, getStylePreferences()) ||
+    !isValidSelection(wardrobeOccasions, getWardrobeOccasions()) ||
+    !SUPPORTED_LOCALES.has(locale)
+  ) {
     return res.status(400).json({ error: "invalid_payload" });
   }
 
-  const profile = updateProfile(req.user.email, {
-    stylePreferences,
-    wardrobeOccasions
-  });
-
-  if (!profile) {
-    return res.status(404).json({ error: "not_found" });
+  try {
+    const profile = await updateProfile(req.user.email, {
+      stylePreferences,
+      wardrobeOccasions,
+      locale
+    });
+    if (!profile) {
+      return res.status(404).json({ error: "not_found" });
+    }
+    return res.json({ ok: true, profile });
+  } catch (error) {
+    console.error("[profile/update]", error);
+    return res.status(503).json({ error: "service_unavailable" });
   }
-
-  return res.json({ ok: true, profile });
 });
 
-app.delete("/profile/me", requireAuth, (req, res) => {
-  if (!hasProfile(req.user.email)) {
-    return res.status(404).json({ error: "not_found" });
+app.patch("/profile/locale", requireTrustedOrigin, requireAuth, async (req, res) => {
+  const locale = String(req.body?.locale || "").trim().toLowerCase();
+  if (!SUPPORTED_LOCALES.has(locale)) {
+    return res.status(400).json({ error: "invalid_payload" });
   }
-  deleteProfile(req.user.email);
-  return res.json({ ok: true });
+
+  try {
+    const profile = await updateProfileLocale(req.user.email, locale);
+    if (!profile) {
+      return res.status(404).json({ error: "not_found" });
+    }
+    return res.json({ ok: true, profile });
+  } catch (error) {
+    console.error("[profile/locale]", error);
+    return res.status(503).json({ error: "service_unavailable" });
+  }
 });
 
-app.get("/health", (req, res) => {
-  res.json({ ok: true });
+app.delete("/profile/me", requireTrustedOrigin, requireAuth, async (req, res) => {
+  try {
+    const deleted = await deleteProfile(req.user.email);
+    if (!deleted) {
+      return res.status(404).json({ error: "not_found" });
+    }
+    return res.json({ ok: true });
+  } catch (error) {
+    console.error("[profile/delete]", error);
+    return res.status(503).json({ error: "service_unavailable" });
+  }
+});
+
+app.get("/health", async (req, res) => {
+  try {
+    await checkDatabaseConnection();
+    return res.json({ ok: true });
+  } catch (error) {
+    console.error("[health]", error);
+    return res.status(503).json({ ok: false });
+  }
 });
 
 const startServer = async () => {
+  await ensureTables();
+
   if (NODE_ENV === "development") {
     const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
@@ -265,14 +426,14 @@ const startServer = async () => {
     app.use(express.static(CLIENT_DIST_PATH));
 
     app.get("*", (req, res) => {
-    if (
-      req.path.startsWith("/auth") ||
-      req.path.startsWith("/profile") ||
-      req.path.startsWith("/wardrobe") ||
-      req.path.startsWith("/health")
-    ) {
-      return res.status(404).json({ error: "not_found" });
-    }
+      if (
+        req.path.startsWith("/auth") ||
+        req.path.startsWith("/profile") ||
+        req.path.startsWith("/wardrobe") ||
+        req.path.startsWith("/health")
+      ) {
+        return res.status(404).json({ error: "not_found" });
+      }
       return res.sendFile(path.join(CLIENT_DIST_PATH, "index.html"));
     });
   }

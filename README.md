@@ -20,7 +20,12 @@ A full-stack prototype for building a capsule wardrobe. The backend is Node.js +
 
 ```bash
 npm install
+cp server/.env.example server/.env
 ```
+
+Then set in `server/.env`:
+- `DATABASE_URL`
+- `AUTH_CODE_SECRET`
 
 ## Development
 
@@ -60,12 +65,23 @@ server/    # Node.js API (Express)
 
 - `PORT` (server) – default: 3000
 - `CLIENT_ORIGIN` (server) – default: http://localhost:5173
+- `DATABASE_URL` (server) – Postgres connection string
+- `AUTH_CODE_SECRET` (server) – secret used for HMAC hashing of login codes
+- `SESSION_PRUNE_MIN_INTERVAL_MS` (server) – minimum interval between session cleanup runs (default: `0`)
 - `DISABLE_PWA` (client build) – set to `true` to disable PWA
+
+## Health check
+
+After starting the app, verify API + DB connectivity:
+
+```bash
+curl http://localhost:3000/health
+```
 
 ## Notes
 
-- Auth/session data and profiles are stored in memory (not persistent).
-- Email delivery is stubbed and logs codes to the server console.
+- Login code delivery is currently stubbed and logs codes to the server console.
+- Sessions and profiles are persisted in Postgres (including styles, occasions, and locale).
 
 ## License
 

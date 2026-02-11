@@ -8,6 +8,9 @@
   "scripts": {
     "dev:client": "npm --workspace client run dev",
     "dev:server": "npm --workspace server run dev",
-    "dev:no-pwa": "DISABLE_PWA=true npm --workspace server run dev"
+    "dev:no-pwa": "DISABLE_PWA=true concurrently -k -n client,server \"npm:dev:client\" \"npm:dev:server\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
   }
 }

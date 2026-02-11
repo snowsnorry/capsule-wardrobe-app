@@ -6,6 +6,7 @@ import {
   fetchProfile,
   fetchProfileStatus,
   updateProfile,
+  updateProfileLocale,
   deleteProfile,
   initializeProfile,
   logout,
@@ -28,10 +29,47 @@ const initialStatus = {
   infoParams: null
 };
 
+const FALLBACK_STYLE_OPTIONS = [
+  "casual",
+  "formal",
+  "romantic",
+  "minimal",
+  "sporty",
+  "classic",
+  "boho",
+  "streetwear"
+];
+
+const FALLBACK_OCCASION_OPTIONS = [
+  "office",
+  "city_walk",
+  "school_dropoff",
+  "party",
+  "travel",
+  "weekend",
+  "date_night",
+  "outdoor"
+];
+
+async function retry(fn, attempts = 3, delayMs = 120) {
+  let lastError;
+  for (let index = 0; index < attempts; index += 1) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      if (index < attempts - 1) {
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+    }
+  }
+  throw lastError;
+}
+
 function App() {
   const theme = useTheme();
   const isLarge = useMediaQuery(theme.breakpoints.up("md"));
-  const { t } = useI18n();
+  const { t, locale, setLocale } = useI18n();
   const [step, setStep] = useState("email");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
@@ -103,23 +141,35 @@ function App() {
     };
   }, []);
 
-  const preloadOnboardingOptions = async () => {
-    const result = await loadProfileOptions();
-    setStyleOptions(result.styles);
-    setOccasionOptions(result.occasions);
+  const preloadOnboardingOptions = async ({ useFallback = false } = {}) => {
+    try {
+      const result = await loadProfileOptions();
+      setStyleOptions(result.styles);
+      setOccasionOptions(result.occasions);
+    } catch (error) {
+      if (useFallback) {
+        setStyleOptions(FALLBACK_STYLE_OPTIONS);
+        setOccasionOptions(FALLBACK_OCCASION_OPTIONS);
+        return;
+      }
+      throw error;
+    }
   };
 
-  const ensureOptionsLoaded = async () => {
+  const ensureOptionsLoaded = async ({ useFallback = false } = {}) => {
     if (styleOptions.length > 0 && occasionOptions.length > 0) {
       return;
     }
-    await preloadOnboardingOptions();
+    await preloadOnboardingOptions({ useFallback });
   };
 
   const loadProfileSelections = async () => {
     const result = await fetchProfile();
     setSelectedStyles(result.profile?.stylePreferences || []);
     setSelectedOccasions(result.profile?.wardrobeOccasions || []);
+    if (result.profile?.locale) {
+      setLocale(result.profile.locale);
+    }
   };
 
   const handleRequestCode = async (event) => {
@@ -145,21 +195,23 @@ function App() {
     setStatus({ loading: true, error: "", infoKey: "", infoParams: null });
     try {
       const result = await verifyLoginCode(email.trim(), code.trim());
-      setUser(result.user);
-      const profileStatus = await fetchProfileStatus();
+      const profileStatus = await retry(() => fetchProfileStatus());
       setHasProfile(profileStatus.hasProfile);
       setProfileCreated(profileStatus.hasProfile);
       if (!profileStatus.hasProfile) {
-        await preloadOnboardingOptions();
+        await preloadOnboardingOptions({ useFallback: true });
+        setUser(result.user);
         setSelectedStyles([]);
         setSelectedOccasions([]);
         setOnboardingStep(0);
         setStatus({ loading: false, error: "", infoKey: "", infoParams: null });
       } else {
-        await Promise.all([ensureOptionsLoaded(), loadProfileSelections()]);
+        await Promise.all([ensureOptionsLoaded({ useFallback: true }), loadProfileSelections()]);
+        setUser(result.user);
         setStatus({ loading: false, error: "", infoKey: "auth.signedIn", infoParams: null });
       }
     } catch (error) {
+      setUser(null);
       setStatus({ loading: false, error: resolveErrorMessage(error), infoKey: "", infoParams: null });
       setCode("");
     }
@@ -218,7 +270,7 @@ function App() {
   const handleFinishOnboarding = async () => {
     setStatus({ loading: true, error: "", infoKey: "", infoParams: null });
     try {
-      await initializeProfile(selectedStyles, selectedOccasions);
+      await initializeProfile(selectedStyles, selectedOccasions, locale);
       setProfileCreated(true);
       setHasProfile(true);
       setCurrentView("main");
@@ -232,7 +284,7 @@ function App() {
   const handleSaveProfile = async () => {
     setStatus({ loading: true, error: "", infoKey: "", infoParams: null });
     try {
-      await updateProfile(selectedStyles, selectedOccasions);
+      await updateProfile(selectedStyles, selectedOccasions, locale);
       setWardrobeItems(null);
       setStatus({ loading: false, error: "", infoKey: "profile.updated", infoParams: null });
     } catch (error) {
@@ -292,6 +344,13 @@ function App() {
       isActive = false;
     };
   }, [user, hasProfile, profileCreated, wardrobeItems, profileKey]);
+
+  useEffect(() => {
+    if (!sessionInitialized || !user || !(hasProfile || profileCreated)) {
+      return;
+    }
+    updateProfileLocale(locale).catch(() => {});
+  }, [locale, sessionInitialized, user, hasProfile, profileCreated]);
 
   const renderRightPanel = () => {
     if (isCheckingSession || !sessionInitialized) {

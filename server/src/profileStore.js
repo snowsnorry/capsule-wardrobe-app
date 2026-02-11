@@ -1,4 +1,11 @@
-const profiles = new Map();
+import {
+  createProfileRecord,
+  deleteProfileByEmail,
+  getProfileByEmail,
+  hasProfileByEmail,
+  updateProfileRecord,
+  updateProfileLocaleByEmail
+} from "./db.js";
 
 const stylePreferences = [
   "casual",
@@ -22,44 +29,6 @@ const wardrobeOccasions = [
   "outdoor"
 ];
 
-function getProfile(email) {
-  return profiles.get(email) || null;
-}
-
-function hasProfile(email) {
-  return profiles.has(email);
-}
-
-function createProfile(email, data) {
-  const profile = {
-    email,
-    stylePreferences: data.stylePreferences || [],
-    wardrobeOccasions: data.wardrobeOccasions || [],
-    createdAt: new Date().toISOString()
-  };
-  profiles.set(email, profile);
-  return profile;
-}
-
-function updateProfile(email, data) {
-  const existing = profiles.get(email);
-  if (!existing) {
-    return null;
-  }
-  const profile = {
-    ...existing,
-    stylePreferences: data.stylePreferences || [],
-    wardrobeOccasions: data.wardrobeOccasions || [],
-    updatedAt: new Date().toISOString()
-  };
-  profiles.set(email, profile);
-  return profile;
-}
-
-function deleteProfile(email) {
-  return profiles.delete(email);
-}
-
 function getStylePreferences() {
   return stylePreferences;
 }
@@ -68,11 +37,46 @@ function getWardrobeOccasions() {
   return wardrobeOccasions;
 }
 
+async function getProfile(email) {
+  return getProfileByEmail(email);
+}
+
+async function hasProfile(email) {
+  return hasProfileByEmail(email);
+}
+
+async function createProfile(email, data) {
+  return createProfileRecord({
+    email,
+    stylePreferences: data.stylePreferences || [],
+    wardrobeOccasions: data.wardrobeOccasions || [],
+    locale: data.locale || "en"
+  });
+}
+
+async function updateProfile(email, data) {
+  return updateProfileRecord({
+    email,
+    stylePreferences: data.stylePreferences || [],
+    wardrobeOccasions: data.wardrobeOccasions || [],
+    locale: data.locale || "en"
+  });
+}
+
+async function updateProfileLocale(email, locale) {
+  return updateProfileLocaleByEmail({ email, locale });
+}
+
+async function deleteProfile(email) {
+  return deleteProfileByEmail(email);
+}
+
 export {
   getProfile,
   hasProfile,
   createProfile,
   updateProfile,
+  updateProfileLocale,
   deleteProfile,
   getStylePreferences,
   getWardrobeOccasions
