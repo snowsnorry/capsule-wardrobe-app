@@ -28,23 +28,61 @@ function getStripPrefixes() {
     .map((item) => (item.startsWith("/") ? item : `/${item}`));
 }
 
-function normalizeEventPath(eventPath) {
-  let path = String(eventPath || "");
+function toPathnameFromUrl(rawUrl) {
+  if (!rawUrl) return null;
+  try {
+    return new URL(rawUrl).pathname;
+  } catch {
+    return null;
+  }
+}
+
+function normalizePath(pathValue) {
+  let path = String(pathValue || "");
   if (!path.startsWith("/")) {
     path = `/${path}`;
   }
-
-  for (const prefix of getStripPrefixes()) {
-    if (matchesPrefix(path, prefix)) {
-      return stripPrefix(path, prefix);
-    }
-  }
-
   return path;
 }
 
+function stripFunctionsMountPrefix(path) {
+  const marker = "/functions/";
+  const markerIndex = path.indexOf(marker);
+  if (markerIndex === -1) return null;
+
+  const afterMarker = path.slice(markerIndex + marker.length);
+  const slashIndex = afterMarker.indexOf("/");
+  if (slashIndex === -1) return "/";
+
+  return `/${afterMarker.slice(slashIndex + 1)}`;
+}
+
+function normalizeEventPath(event) {
+  const candidates = [toPathnameFromUrl(event.rawUrl), event.rawPath, event.path]
+    .filter(Boolean)
+    .map(normalizePath);
+
+  const prefixes = getStripPrefixes();
+  for (const candidate of candidates) {
+    for (const prefix of prefixes) {
+      if (matchesPrefix(candidate, prefix)) {
+        return stripPrefix(candidate, prefix);
+      }
+    }
+  }
+
+  for (const candidate of candidates) {
+    const stripped = stripFunctionsMountPrefix(candidate);
+    if (stripped) {
+      return stripped;
+    }
+  }
+
+  return candidates[0] || "/";
+}
+
 function buildUpstreamUrl(event, upstreamOrigin) {
-  const upstreamUrl = new URL(normalizeEventPath(event.path), upstreamOrigin);
+  const upstreamUrl = new URL(normalizeEventPath(event), upstreamOrigin);
   if (event.rawQuery) {
     upstreamUrl.search = event.rawQuery;
   }
