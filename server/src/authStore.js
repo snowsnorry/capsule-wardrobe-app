@@ -12,7 +12,7 @@ import {
 
 const CODE_TTL_MS = 5 * 60 * 1000;
 const RESEND_COOLDOWN_MS = 60 * 1000;
-const MAX_CODE_SENDS_PER_HOUR = 5;
+const MAX_CODE_SENDS_PER_HOUR = 60;
 const MAX_VERIFY_ATTEMPTS = 5;
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const SESSION_PRUNE_MIN_INTERVAL_MS = Math.max(
