@@ -5,6 +5,7 @@ import rateLimit from "express-rate-limit";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { OAuth2Client } from "google-auth-library";
 import {
   CODE_TTL_MS,
   RESEND_COOLDOWN_MS,
@@ -38,8 +39,10 @@ const SUPPORTED_LOCALES = new Set(["en", "ru"]);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const CLIENT_DIST_PATH = path.resolve(__dirname, "../../client/dist");
 const CLIENT_ROOT = path.resolve(__dirname, "../../client");
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "";
 
 const app = express();
+const googleAuthClient = GOOGLE_CLIENT_ID ? new OAuth2Client(GOOGLE_CLIENT_ID) : null;
 
 app.use(express.json());
 app.use(
@@ -242,6 +245,42 @@ app.post("/auth/verify-code", verifyCodeLimiter, async (req, res) => {
   const { sessionId, session } = created;
   setSessionCookie(res, sessionId);
   return res.json({ ok: true, user: { email: session.email } });
+});
+
+app.post("/auth/google", requireTrustedOrigin, async (req, res) => {
+  const idToken = String(req.body?.idToken || "").trim();
+  if (!idToken) {
+    return res.status(400).json({ error: "invalid_payload" });
+  }
+
+  if (!googleAuthClient) {
+    return res.status(503).json({ error: "google_auth_not_configured" });
+  }
+
+  let email = "";
+  try {
+    const ticket = await googleAuthClient.verifyIdToken({
+      idToken,
+      audience: GOOGLE_CLIENT_ID
+    });
+    const payload = ticket.getPayload();
+    if (!payload?.email || !payload.email_verified) {
+      return res.status(401).json({ error: "invalid_google_token" });
+    }
+    email = payload.email.trim().toLowerCase();
+  } catch (error) {
+    console.error("[auth/google-verify]", error);
+    return res.status(401).json({ error: "invalid_google_token" });
+  }
+
+  try {
+    const { sessionId } = await createSession(email);
+    setSessionCookie(res, sessionId);
+    return res.json({ ok: true, user: { email } });
+  } catch (error) {
+    console.error("[auth/google-create-session]", error);
+    return res.status(503).json({ error: "service_unavailable" });
+  }
 });
 
 app.post("/auth/logout", requireTrustedOrigin, async (req, res) => {

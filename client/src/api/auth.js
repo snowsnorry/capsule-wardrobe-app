@@ -19,6 +19,15 @@ async function verifyLoginCode(email, code) {
   });
 }
 
+async function signInWithGoogle(idToken) {
+  return requestJson(`${API_BASE_URL}/auth/google`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ idToken })
+  });
+}
+
 async function fetchProfileStatus() {
   return getCachedJson(`${API_BASE_URL}/profile/status`, {
     credentials: "include",
@@ -96,6 +105,7 @@ async function logout() {
 export {
   requestLoginCode,
   verifyLoginCode,
+  signInWithGoogle,
   fetchCurrentUser,
   fetchProfileStatus,
   fetchProfile,

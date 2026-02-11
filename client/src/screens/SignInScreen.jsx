@@ -1,19 +1,116 @@
+import { useEffect, useRef } from "react";
 import { Button, Divider, Link, Stack, TextField, Typography } from "@mui/material";
 import LocaleSwitcher from "../components/LocaleSwitcher.jsx";
 import { useI18n } from "../i18n/useI18n.js";
+
+const GOOGLE_GSI_SCRIPT_SRC = "https://accounts.google.com/gsi/client";
+
+function ensureGoogleScriptLoaded() {
+  if (window.google?.accounts?.id) {
+    return Promise.resolve();
+  }
+
+  return new Promise((resolve, reject) => {
+    const existing = document.querySelector(`script[src="${GOOGLE_GSI_SCRIPT_SRC}"]`);
+    if (existing) {
+      if (window.google?.accounts?.id) {
+        resolve();
+        return;
+      }
+
+      const onLoad = () => {
+        existing.removeEventListener("load", onLoad);
+        existing.removeEventListener("error", onError);
+        resolve();
+      };
+      const onError = () => {
+        existing.removeEventListener("load", onLoad);
+        existing.removeEventListener("error", onError);
+        reject(new Error("google_script_load_failed"));
+      };
+      existing.addEventListener("load", onLoad);
+      existing.addEventListener("error", onError);
+      window.setTimeout(() => {
+        if (window.google?.accounts?.id) {
+          existing.removeEventListener("load", onLoad);
+          existing.removeEventListener("error", onError);
+          resolve();
+        }
+      }, 0);
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = GOOGLE_GSI_SCRIPT_SRC;
+    script.async = true;
+    script.defer = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error("google_script_load_failed"));
+    document.head.appendChild(script);
+  });
+}
 
 function SignInScreen({
   step,
   email,
   code,
   status,
+  googleClientId,
   onEmailChange,
   onCodeChange,
   onRequestCode,
   onVerifyCode,
+  onGoogleCredential,
   onResetEmail
 }) {
   const { t } = useI18n();
+  const googleButtonRef = useRef(null);
+
+  useEffect(() => {
+    if (step !== "email" || !googleClientId || !googleButtonRef.current) {
+      return;
+    }
+
+    let isCancelled = false;
+
+    const initGoogleButton = async () => {
+      try {
+        await ensureGoogleScriptLoaded();
+      } catch {
+        return;
+      }
+
+      if (isCancelled || !googleButtonRef.current || !window.google?.accounts?.id) {
+        return;
+      }
+
+      window.google.accounts.id.initialize({
+        client_id: googleClientId,
+        callback: (response) => {
+          const credential = String(response?.credential || "").trim();
+          if (credential) {
+            onGoogleCredential(credential);
+          }
+        }
+      });
+
+      googleButtonRef.current.innerHTML = "";
+      window.google.accounts.id.renderButton(googleButtonRef.current, {
+        type: "standard",
+        theme: "outline",
+        size: "large",
+        width: 320,
+        text: "continue_with"
+      });
+    };
+
+    initGoogleButton();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [step, googleClientId, onGoogleCredential]);
+
   return (
     <Stack spacing={3}>
       <Stack spacing={1}>
@@ -21,17 +118,27 @@ function SignInScreen({
           <Typography variant="h4">{t("auth.signInTitle")}</Typography>
           <LocaleSwitcher />
         </Stack>
-        <Typography variant="body2" color="text.secondary">
-          {step === "email"
-            ? t("auth.signInSubtitleEmail")
-            : t("auth.signInSubtitleCode")}
-        </Typography>
+        {step === "code" ? (
+          <Typography variant="body2" color="text.secondary">
+            {t("auth.signInSubtitleCode")}
+          </Typography>
+        ) : null}
       </Stack>
 
       <Divider />
 
       {step === "email" ? (
         <Stack component="form" spacing={2} onSubmit={onRequestCode}>
+          {googleClientId ? (
+            <>
+              <Stack alignItems="center">
+                <div ref={googleButtonRef} />
+              </Stack>
+              <Typography variant="caption" color="text.secondary">
+                {t("auth.orEmailCode")}
+              </Typography>
+            </>
+          ) : null}
           <TextField
             label={t("auth.emailLabel")}
             type="email"

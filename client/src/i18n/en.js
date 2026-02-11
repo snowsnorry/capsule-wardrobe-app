@@ -59,7 +59,8 @@ const en = {
     checkingSession: "Checking session",
     signedIn: "You are signed in.",
     signedOut: "You are signed out.",
-    codeSent: "Code sent. It will be valid for {minutes} minutes."
+    codeSent: "Code sent. It will be valid for {minutes} minutes.",
+    orEmailCode: "Or enter your email to receive a sign-in code"
   },
   main: {
     title: "Main",
@@ -111,7 +112,9 @@ const en = {
     invalidCode: "Invalid code. Please check your email.",
     profileExists: "Profile already exists.",
     profileNotFound: "Profile not found.",
-    invalidPayload: "Please select at least one option."
+    invalidPayload: "Please select at least one option.",
+    invalidGoogleToken: "Google sign-in failed. Please try again.",
+    googleAuthNotConfigured: "Google sign-in is not configured on the server."
   },
   dialogs: {
     signOutTitle: "Sign out",

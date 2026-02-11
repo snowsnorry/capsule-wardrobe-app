@@ -60,7 +60,8 @@ const ru = {
     checkingSession: "Проверяем сессию",
     signedIn: "Вы вошли в систему.",
     signedOut: "Вы вышли из системы.",
-    codeSent: "Код отправлен. Он будет действителен {minutes} минут."
+    codeSent: "Код отправлен. Он будет действителен {minutes} минут.",
+    orEmailCode: "Или введите email, чтобы получить код для входа"
   },
   main: {
     title: "Главная",
@@ -112,7 +113,9 @@ const ru = {
     invalidCode: "Неверный код. Проверьте письмо.",
     profileExists: "Профиль уже существует.",
     profileNotFound: "Профиль не найден.",
-    invalidPayload: "Выберите хотя бы один вариант."
+    invalidPayload: "Выберите хотя бы один вариант.",
+    invalidGoogleToken: "Не удалось войти через Google. Попробуйте снова.",
+    googleAuthNotConfigured: "Вход через Google не настроен на сервере."
   },
   dialogs: {
     signOutTitle: "Выйти",

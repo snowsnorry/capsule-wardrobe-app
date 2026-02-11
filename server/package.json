@@ -12,6 +12,7 @@
     "express": "^4.19.2",
     "link-preview-js": "^4.0.0",
     "express-rate-limit": "^7.4.0",
+    "google-auth-library": "^9.15.1",
     "helmet": "^8.0.0"
   },
   "devDependencies": {

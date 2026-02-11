@@ -11,7 +11,8 @@ import {
   initializeProfile,
   logout,
   requestLoginCode,
-  verifyLoginCode
+  verifyLoginCode,
+  signInWithGoogle
 } from "./api/auth.js";
 import { clearProfileOptionsCache, loadProfileOptions } from "./api/profileOptionsCache.js";
 import { clearRequestCache } from "./api/auth.js";
@@ -50,6 +51,7 @@ const FALLBACK_OCCASION_OPTIONS = [
   "date_night",
   "outdoor"
 ];
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
 
 async function retry(fn, attempts = 3, delayMs = 120) {
   let lastError;
@@ -101,6 +103,8 @@ function App() {
     if (error.message === "profile_exists") return t("errors.profileExists");
     if (error.message === "not_found") return t("errors.profileNotFound");
     if (error.message === "invalid_payload") return t("errors.invalidPayload");
+    if (error.message === "invalid_google_token") return t("errors.invalidGoogleToken");
+    if (error.message === "google_auth_not_configured") return t("errors.googleAuthNotConfigured");
     return t("errors.generic");
   };
 
@@ -214,6 +218,31 @@ function App() {
       setUser(null);
       setStatus({ loading: false, error: resolveErrorMessage(error), infoKey: "", infoParams: null });
       setCode("");
+    }
+  };
+
+  const handleGoogleCredential = async (idToken) => {
+    setStatus({ loading: true, error: "", infoKey: "", infoParams: null });
+    try {
+      const result = await signInWithGoogle(idToken);
+      const profileStatus = await retry(() => fetchProfileStatus());
+      setHasProfile(profileStatus.hasProfile);
+      setProfileCreated(profileStatus.hasProfile);
+      if (!profileStatus.hasProfile) {
+        await preloadOnboardingOptions({ useFallback: true });
+        setUser(result.user);
+        setSelectedStyles([]);
+        setSelectedOccasions([]);
+        setOnboardingStep(0);
+        setStatus({ loading: false, error: "", infoKey: "", infoParams: null });
+      } else {
+        await Promise.all([ensureOptionsLoaded({ useFallback: true }), loadProfileSelections()]);
+        setUser(result.user);
+        setStatus({ loading: false, error: "", infoKey: "auth.signedIn", infoParams: null });
+      }
+    } catch (error) {
+      setUser(null);
+      setStatus({ loading: false, error: resolveErrorMessage(error), infoKey: "", infoParams: null });
     }
   };
 
@@ -364,10 +393,12 @@ function App() {
           email={email}
           code={code}
           status={status}
+          googleClientId={GOOGLE_CLIENT_ID}
           onEmailChange={setEmail}
           onCodeChange={setCode}
           onRequestCode={handleRequestCode}
           onVerifyCode={handleVerifyCode}
+          onGoogleCredential={handleGoogleCredential}
           onResetEmail={resetToEmail}
         />
       );
