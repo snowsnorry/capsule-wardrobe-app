@@ -1,6 +1,6 @@
 [build]
-  command = "npm run build"
-  publish = "dist"
+  command = "npm --workspace client run build"
+  publish = "client/dist"
 
 [functions]
   directory = "netlify/functions"
