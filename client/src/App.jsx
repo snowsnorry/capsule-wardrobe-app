@@ -181,7 +181,7 @@ function App() {
         loading: false,
         error: "",
         infoKey: "auth.codeSent",
-        infoParams: { minutes: Math.ceil(result.expiresInMs / 60000) }
+        infoParams: { minutes: Math.max(1, Math.ceil((Number(result?.expiresInMs) || 10 * 60000) / 60000)) }
       });
       setStep("code");
     } catch (error) {

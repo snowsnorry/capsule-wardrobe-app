@@ -6,15 +6,50 @@ function getCacheKey(url, options) {
   return `${method}:${url}`;
 }
 
+function tryParseJson(text) {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
+async function readResponseBody(response) {
+  const contentType = (response.headers.get("content-type") || "").toLowerCase();
+  const text = await response.text();
+  if (!text) {
+    return null;
+  }
+
+  if (contentType.includes("application/json")) {
+    return tryParseJson(text);
+  }
+
+  if (text.startsWith("{") || text.startsWith("[")) {
+    return tryParseJson(text);
+  }
+
+  return { raw: text };
+}
+
 async function requestJson(url, options = {}) {
   const response = await fetch(url, options);
-  const data = await response.json();
+  const data = await readResponseBody(response);
+
   if (!response.ok) {
-    const error = new Error(data?.error || "request_failed");
+    const error = new Error(
+      data?.error || data?.message || `request_failed_${response.status}`
+    );
     error.data = data;
+    error.status = response.status;
     throw error;
   }
-  return data;
+
+  if (data && typeof data === "object" && !Array.isArray(data)) {
+    return data;
+  }
+
+  return {};
 }
 
 async function getCachedJson(url, { ttlMs = 1000, force = false, ...options } = {}) {

@@ -8,7 +8,8 @@ const HOP_BY_HOP_HEADERS = new Set([
   "transfer-encoding",
   "upgrade",
   "host",
-  "content-length"
+  "content-length",
+  "content-encoding"
 ]);
 
 function matchesPrefix(path, prefix) {
