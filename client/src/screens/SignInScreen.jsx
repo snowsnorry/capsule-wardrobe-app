@@ -65,6 +65,11 @@ function SignInScreen({
 }) {
   const { t } = useI18n();
   const googleButtonRef = useRef(null);
+  const googleCredentialHandlerRef = useRef(onGoogleCredential);
+
+  useEffect(() => {
+    googleCredentialHandlerRef.current = onGoogleCredential;
+  }, [onGoogleCredential]);
 
   useEffect(() => {
     if (step !== "email" || !googleClientId || !googleButtonRef.current) {
@@ -89,7 +94,7 @@ function SignInScreen({
         callback: (response) => {
           const credential = String(response?.credential || "").trim();
           if (credential) {
-            onGoogleCredential(credential);
+            googleCredentialHandlerRef.current?.(credential);
           }
         }
       });
@@ -109,7 +114,7 @@ function SignInScreen({
     return () => {
       isCancelled = true;
     };
-  }, [step, googleClientId, onGoogleCredential]);
+  }, [step, googleClientId]);
 
   return (
     <Stack spacing={3}>
