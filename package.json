@@ -7,8 +7,8 @@
   ],
   "scripts": {
     "build": "npm --workspace client run build",
-    "dev:client": "npm --workspace client run dev",
-    "dev:server": "npm --workspace server run dev",
+    "dev:client": "op run --env-file=client/.env -- npm --workspace client run dev",
+    "dev:server": "op run --env-file=server/.env -- npm --workspace server run dev",
     "dev:no-pwa": "DISABLE_PWA=true concurrently -k -n client,server \"npm:dev:client\" \"npm:dev:server\""
   },
   "devDependencies": {

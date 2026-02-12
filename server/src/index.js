@@ -91,7 +91,12 @@ function parseCookies(cookieHeader = "") {
   return cookieHeader.split(";").reduce((acc, part) => {
     const [key, ...rest] = part.trim().split("=");
     if (!key) return acc;
-    acc[key] = decodeURIComponent(rest.join("="));
+    const value = rest.join("=");
+    try {
+      acc[key] = decodeURIComponent(value);
+    } catch {
+      acc[key] = value;
+    }
     return acc;
   }, {});
 }
@@ -448,7 +453,14 @@ const startServer = async () => {
     const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       root: CLIENT_ROOT,
-      server: { middlewareMode: true }
+      server: {
+        middlewareMode: true,
+        watch: {
+          // 1Password env mounts can be FIFOs and emit frequent fs events.
+          // Ignore client env files to avoid endless Vite restarts in dev middleware mode.
+          ignored: ["**/.env", "**/.env.*"]
+        }
+      }
     });
     app.use(vite.middlewares);
 
