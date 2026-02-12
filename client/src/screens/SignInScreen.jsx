@@ -63,7 +63,8 @@ function SignInScreen({
   onGoogleCredential,
   onResetEmail
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  const googleLocale = ["en", "ru"].includes(locale) ? locale : "en";
   const googleButtonRef = useRef(null);
   const googleCredentialHandlerRef = useRef(onGoogleCredential);
 
@@ -105,7 +106,8 @@ function SignInScreen({
         theme: "outline",
         size: "large",
         width: 320,
-        text: "continue_with"
+        text: "continue_with",
+        locale: googleLocale
       });
     };
 
@@ -114,7 +116,7 @@ function SignInScreen({
     return () => {
       isCancelled = true;
     };
-  }, [step, googleClientId]);
+  }, [step, googleClientId, locale]);
 
   return (
     <Stack spacing={3}>
