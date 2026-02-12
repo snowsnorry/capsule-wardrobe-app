@@ -45,11 +45,30 @@ const app = express();
 const googleAuthClient = GOOGLE_CLIENT_ID ? new OAuth2Client(GOOGLE_CLIENT_ID) : null;
 
 app.use(express.json());
-app.use(
-  helmet({
-    contentSecurityPolicy: false
-  })
-);
+if (NODE_ENV === "production") {
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        useDefaults: true,
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: ["'self'", "https://accounts.google.com"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          imgSrc: ["'self'", "data:", "https:"],
+          fontSrc: ["'self'", "data:"],
+          connectSrc: ["'self'", "https:"],
+          frameSrc: ["'self'", "https://accounts.google.com"]
+        }
+      }
+    })
+  );
+} else {
+  app.use(
+    helmet({
+      contentSecurityPolicy: false
+    })
+  );
+}
 
 const requestCodeLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
