@@ -49,6 +49,12 @@ Disable PWA during development:
 npm run dev:no-pwa
 ```
 
+Run server in auth test mode (login code printed to terminal instead of email):
+
+```bash
+npm run dev:server:test-auth
+```
+
 ## Production build
 
 ```bash
@@ -72,6 +78,7 @@ server/    # Node.js API (Express)
 - `RESEND_API_KEY` (server) – API key for Resend mail delivery
 - `RESEND_FROM_EMAIL` (server) – verified sender for Resend, e.g. `Capsule Wardrobe <auth@yourdomain.com>`
 - `SESSION_PRUNE_MIN_INTERVAL_MS` (server) – minimum interval between session cleanup runs (default: `0`)
+- `AUTH_TEST_MODE` (server) – when `true` (and not production), auth code is printed to server terminal and not sent via email
 - `DISABLE_PWA` (client build) – set to `true` to disable PWA
 - `BFF_UPSTREAM_ORIGIN` (Netlify client) – backend origin for Netlify BFF proxy, e.g. `https://your-api.onrender.com`
 
@@ -85,7 +92,7 @@ curl http://localhost:3000/health
 
 ## Notes
 
-- Login codes are sent via Resend.
+- Login codes are sent via Resend (or printed to server logs when `AUTH_TEST_MODE=true` in non-production).
 - Sessions and profiles are persisted in Postgres (including styles, occasions, and locale).
 - For Netlify deployments, API requests are proxied through `/api/*` via `client/netlify/functions/bff.js` to keep auth cookies first-party.
 

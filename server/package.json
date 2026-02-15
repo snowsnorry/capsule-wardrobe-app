@@ -4,6 +4,8 @@
   "type": "module",
   "scripts": {
     "dev": "NODE_ENV=development node src/index.js",
+    "dev:test-auth": "AUTH_TEST_MODE=true NODE_ENV=development node src/index.js",
+    "test": "node --test src/*.test.js",
     "start": "node src/index.js"
   },
   "dependencies": {

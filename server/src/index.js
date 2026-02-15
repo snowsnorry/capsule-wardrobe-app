@@ -35,6 +35,8 @@ import { checkDatabaseConnection, ensureTables } from "./db.js";
 const PORT = process.env.PORT || 3000;
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || "http://localhost:5173";
 const NODE_ENV = process.env.NODE_ENV || "development";
+const AUTH_TEST_MODE =
+  NODE_ENV !== "production" && ["1", "true", "yes"].includes(String(process.env.AUTH_TEST_MODE || "").toLowerCase());
 const SUPPORTED_LOCALES = new Set(["en", "ru"]);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const CLIENT_DIST_PATH = path.resolve(__dirname, "../../client/dist");
@@ -217,6 +219,14 @@ app.post("/auth/request-code", requestCodeLimiter, async (req, res) => {
     if (result.reason === "rate_limit") {
       return res.status(429).json({ error: "rate_limit", maxPerHour: MAX_CODE_SENDS_PER_HOUR });
     }
+  }
+
+  if (AUTH_TEST_MODE) {
+    const expiresInMinutes = Math.max(1, Math.ceil(CODE_TTL_MS / (60 * 1000)));
+    console.log(
+      `[auth/test-mode] Sign-in code for ${email}: ${result.code} (expires in ${expiresInMinutes} minute(s))`
+    );
+    return res.json({ ok: true, expiresInMs: CODE_TTL_MS });
   }
 
   try {
