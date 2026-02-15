@@ -282,10 +282,24 @@ async function updateProfileLocaleByEmail({ email, locale }) {
   return row || null;
 }
 
+function hasAffectedRows(result) {
+  if (Array.isArray(result)) {
+    return result.length > 0;
+  }
+  if (result && typeof result.count === "number") {
+    return result.count > 0;
+  }
+  return false;
+}
+
 async function deleteProfileByEmail(email) {
   const sql = getSqlClient();
-  const result = await sql`delete from profiles where email = ${email}`;
-  return (result.count || 0) > 0;
+  const result = await sql`
+    delete from profiles
+    where email = ${email}
+    returning email
+  `;
+  return hasAffectedRows(result);
 }
 
 export {
@@ -304,5 +318,6 @@ export {
   createProfileRecord,
   updateProfileRecord,
   updateProfileLocaleByEmail,
+  hasAffectedRows,
   deleteProfileByEmail
 };
