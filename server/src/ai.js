@@ -346,13 +346,10 @@ async function callWardrobeAi(userProfile = null) {
     throw new Error("OpenAI response must contain items array");
   }
 
-  console.log(JSON.stringify(parsedItems, null, 2));
+//  console.log(JSON.stringify(parsedItems, null, 2));
   const validItems = parsedItems.filter((item) =>
     isValidWardrobeItem(item, allowedCategories, aiConfig.brandUrls)
   );
-  if (validItems.length === 0) {
-    throw new Error("OpenAI response has no valid wardrobe items");
-  }
 
   return validItems;
 }
@@ -411,8 +408,17 @@ async function getWardrobeItems(req, res) {
       return res.json({ ok: true, items: profile.wardrobeItems });
     }
 
-    const items = await callWardrobeAi(profile);
-    const processedItems = await prefetchLinksData(items);
+    let items = await callWardrobeAi(profile);
+    let processedItems = await prefetchLinksData(items);
+
+    if (processedItems.length === 0) {
+      items = await callWardrobeAi(profile);
+      processedItems = await prefetchLinksData(items);
+    }
+
+    if (processedItems.length === 0) {
+      throw new Error("OpenAI response has no valid wardrobe items after retry");
+    }
 
     if (profile) {
       await updateProfileWardrobeItems(req.user.email, processedItems);
