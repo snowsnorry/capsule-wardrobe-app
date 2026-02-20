@@ -5,59 +5,6 @@ import { getActiveAiPromptConfig } from "./db.js";
 import { getProfile, updateProfileWardrobeItems } from "./profileStore.js";
 import en from "../../shared/i18n/en.js";
 
-const TEMP_WARDROBE_ITEMS = [
-   {
-      "category": "bottom",
-      "link": "https://www.arket.com/en-nl/product/wide-leg-tailored-trousers-dark-brown-1307223002/"
-   },
-   {
-      "category": "bottom",
-      "link": "https://www.cos.com/en-nl/women/womenswear/trousers/slimfit/product/elasticated-slim-leg-trousers-dark-brown-1312548001/"
-   },
-   {
-      "category": "top",
-      "link": "https://www.arket.com/en-nl/product/regular-fit-poplin-shirt-burgundy-1243051009/"
-   },
-   {
-      "category": "top",
-      "link": "https://www.stories.com/en-nl/product/mulberry-silk-buttoned-blouse-black-1001320001/"
-   },
-   {
-      "category": "outerwear",
-      "link": "https://www.cos.com/en-nl/women/womenswear/coatsjackets/coats/product/oversized-wool-workwear-coat-black-1258270001/"
-   },
-   {
-      "category": "shoes",
-      "link": "https://www.arket.com/en-nl/product/lacquered-leather-loafers-black-1317806001/"
-   },
-   {
-      "category": "shoes",
-      "link": "https://www.stories.com/en-nl/product/chunky-leather-side-zip-boots-black-1008187001/"
-   },
-   {
-      "category": "belt",
-      "link": "https://www.arket.com/en-nl/product/leather-belt-black-1200313002/"
-   },
-   {
-      "category": "bag",
-      "link": "https://www.cos.com/en-nl/women/accessories/bags/leather/product/trove-crossbody-bag-leather-black-1302042001/"
-   },
-   {
-      "category": "bag",
-      "link": "https://www.stories.com/en-nl/product/leather-tote-bag-dark-grey-1317462001/"
-   },
-   {
-      "category": "top",
-      "link": "https://www.cos.com/en-nl/women/womenswear/knitwear/cardigans/cashmere/product/brushed-cashmere-cardigan-dark-brown-1230442003/"
-   },
-   {
-      "category": "bottom",
-      "link": "https://www.stories.com/en-nl/product/ruffled-mini-skirt-lilacpinkgreen-1199051001/"
-   }
-];
-
-
-
 const OPENAI_MODEL = "gpt-5.2";
 const AI_CONFIG_CACHE_TTL_MS = Number(process.env.AI_CONFIG_CACHE_TTL_MS) || 5 * 60 * 1000;
 const PROMPT_TEMPLATE = readFileSync(new URL("./templates/prompt.txt", import.meta.url), "utf8").trim();
