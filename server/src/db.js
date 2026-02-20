@@ -57,9 +57,33 @@ async function ensureProfilesTable() {
       email text primary key,
       style_preferences text[] not null,
       wardrobe_occasions text[] not null,
+      wardrobe_items jsonb null,
       locale text not null,
       created_at timestamptz not null default now(),
       updated_at timestamptz not null default now()
+    )
+  `;
+  await sql`
+    alter table profiles
+    add column if not exists wardrobe_items jsonb null
+  `;
+}
+
+async function ensureAiPromptConfigsTable() {
+  const sql = getSqlClient();
+  await sql`
+    create table if not exists ai_prompt_configs (
+      id bigserial primary key,
+      config_name text not null,
+      prompt_template text not null,
+      categories jsonb not null,
+      brand_urls jsonb not null,
+      model text null,
+      is_active boolean not null default false,
+      created_at timestamptz not null default now(),
+      updated_at timestamptz not null default now(),
+      constraint ai_prompt_configs_categories_object check (jsonb_typeof(categories) = 'object'),
+      constraint ai_prompt_configs_brand_urls_array check (jsonb_typeof(brand_urls) = 'array')
     )
   `;
 }
@@ -72,6 +96,7 @@ async function ensureAuthTables() {
 async function ensureTables() {
   await ensureAuthTables();
   await ensureProfilesTable();
+  await ensureAiPromptConfigsTable();
 }
 
 async function pruneLoginCodes() {
@@ -215,6 +240,7 @@ async function getProfileByEmail(email) {
       email,
       style_preferences as "stylePreferences",
       wardrobe_occasions as "wardrobeOccasions",
+      wardrobe_items as "wardrobeItems",
       locale,
       created_at as "createdAt",
       updated_at as "updatedAt"
@@ -228,13 +254,14 @@ async function getProfileByEmail(email) {
 async function createProfileRecord({ email, stylePreferences, wardrobeOccasions, locale }) {
   const sql = getSqlClient();
   const [row] = await sql`
-    insert into profiles (email, style_preferences, wardrobe_occasions, locale)
-    values (${email}, ${stylePreferences}, ${wardrobeOccasions}, ${locale})
+    insert into profiles (email, style_preferences, wardrobe_occasions, wardrobe_items, locale)
+    values (${email}, ${stylePreferences}, ${wardrobeOccasions}, null, ${locale})
     on conflict (email) do nothing
     returning
       email,
       style_preferences as "stylePreferences",
       wardrobe_occasions as "wardrobeOccasions",
+      wardrobe_items as "wardrobeItems",
       locale,
       created_at as "createdAt",
       updated_at as "updatedAt"
@@ -247,6 +274,12 @@ async function updateProfileRecord({ email, stylePreferences, wardrobeOccasions,
   const [row] = await sql`
     update profiles
     set
+      wardrobe_items = case
+        when style_preferences is distinct from ${stylePreferences}
+          or wardrobe_occasions is distinct from ${wardrobeOccasions}
+        then null
+        else wardrobe_items
+      end,
       style_preferences = ${stylePreferences},
       wardrobe_occasions = ${wardrobeOccasions},
       locale = ${locale},
@@ -256,6 +289,7 @@ async function updateProfileRecord({ email, stylePreferences, wardrobeOccasions,
       email,
       style_preferences as "stylePreferences",
       wardrobe_occasions as "wardrobeOccasions",
+      wardrobe_items as "wardrobeItems",
       locale,
       created_at as "createdAt",
       updated_at as "updatedAt"
@@ -275,6 +309,27 @@ async function updateProfileLocaleByEmail({ email, locale }) {
       email,
       style_preferences as "stylePreferences",
       wardrobe_occasions as "wardrobeOccasions",
+      wardrobe_items as "wardrobeItems",
+      locale,
+      created_at as "createdAt",
+      updated_at as "updatedAt"
+  `;
+  return row || null;
+}
+
+async function updateProfileWardrobeItemsByEmail({ email, wardrobeItems }) {
+  const sql = getSqlClient();
+  const [row] = await sql`
+    update profiles
+    set
+      wardrobe_items = ${wardrobeItems},
+      updated_at = now()
+    where email = ${email}
+    returning
+      email,
+      style_preferences as "stylePreferences",
+      wardrobe_occasions as "wardrobeOccasions",
+      wardrobe_items as "wardrobeItems",
       locale,
       created_at as "createdAt",
       updated_at as "updatedAt"
@@ -302,6 +357,27 @@ async function deleteProfileByEmail(email) {
   return hasAffectedRows(result);
 }
 
+async function getActiveAiPromptConfig(configName) {
+  const sql = getSqlClient();
+  const [row] = await sql`
+    select
+      config_name as "configName",
+      prompt_template as "promptTemplate",
+      categories,
+      brand_urls as "brandUrls",
+      model,
+      is_active as "isActive",
+      created_at as "createdAt",
+      updated_at as "updatedAt"
+    from ai_prompt_configs
+    where config_name = ${configName}
+      and is_active = true
+    order by updated_at desc
+    limit 1
+  `;
+  return row || null;
+}
+
 export {
   checkDatabaseConnection,
   ensureTables,
@@ -318,6 +394,8 @@ export {
   createProfileRecord,
   updateProfileRecord,
   updateProfileLocaleByEmail,
+  updateProfileWardrobeItemsByEmail,
   hasAffectedRows,
-  deleteProfileByEmail
+  deleteProfileByEmail,
+  getActiveAiPromptConfig
 };

@@ -4,7 +4,8 @@ import {
   getProfileByEmail,
   hasProfileByEmail,
   updateProfileRecord,
-  updateProfileLocaleByEmail
+  updateProfileLocaleByEmail,
+  updateProfileWardrobeItemsByEmail
 } from "./db.js";
 
 const stylePreferences = [
@@ -71,6 +72,10 @@ async function deleteProfile(email) {
   return deleteProfileByEmail(email);
 }
 
+async function updateProfileWardrobeItems(email, wardrobeItems) {
+  return updateProfileWardrobeItemsByEmail({ email, wardrobeItems });
+}
+
 export {
   getProfile,
   hasProfile,
@@ -78,6 +83,7 @@ export {
   updateProfile,
   updateProfileLocale,
   deleteProfile,
+  updateProfileWardrobeItems,
   getStylePreferences,
   getWardrobeOccasions
 };

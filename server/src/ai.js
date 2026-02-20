@@ -1,21 +1,9 @@
 import { getLinkPreview } from "link-preview-js";
-
-/*
-Pick 12 clothing items that coordinate to create a capsule wardrobe for a modern, chic working woman. Include both office and casual pieces. Include 2 bottoms, 2 tops, 1 outerwear item, 2 pairs of shoes, 1 belt, and 2 bags. Use only these brands' websites:
-- https://www.arket.com/en-nl/
-- https://www.stories.com/en-nl/
-- https://www.cos.com/
-
-Return result as valid JSON in the following format, no other information or words should be in the response:
-[{
-"category": <"bottom", "top", "outerwear", "shoes", "belt", "bag">,
-"link": <link on a webpage with that product>
-},...]
-
-Every link MUST return a valid webpage with a product from the specified brands.
-You must navigate to the live shop sections to ensure the products are currently available. Every link must be a direct product URL (not a category or search page) and must be active at the time of this query to avoid 404 errors.
-The response MUST be valid JSON and parsable by standard JSON parsers. Do not include any other text outside of the JSON. 
-*/
+import OpenAI from "openai";
+import { readFileSync } from "node:fs";
+import { getActiveAiPromptConfig } from "./db.js";
+import { getProfile, updateProfileWardrobeItems } from "./profileStore.js";
+import en from "../../shared/i18n/en.js";
 
 const TEMP_WARDROBE_ITEMS = [
    {
@@ -68,106 +56,269 @@ const TEMP_WARDROBE_ITEMS = [
    }
 ];
 
-const TEMP_WARDROBE_ITEMS2 = [
-  {
-    "category": "bottom",
-    "link": "https://www.arket.com/en-nl/women/trousers/product/pleated-trousers-dark-blue-1268316001/?srsltid=AfmBOore4BaX7zLUG3z0jpYTuPTqVeX9W31WQzRaJjMrKtTd0dkio560"
-  },
-  {
-    "category": "bottom",
-    "link": "https://www.arket.com/en-nl/women/knitwear/product/slim-trousers-grey-melange-1246757001/?srsltid=AfmBOoqMduI6qleC05QBeaJJqQIp3fcldcNGw5HU8JjoynsWdlA13js5"
-  },
-  {
-    "category": "top",
-    "link": "https://www.arket.com/en-nl/women/tops/longsleeve/product/long-sleeved-merino-top-black-0630664001/?srsltid=AfmBOorEKLSoX1zuvxEtfZVQz-AZF7IhV6nllMvH-SIbvFBiUNtVTFEC"
-  },
-  {
-    "category": "top",
-    "link": "https://www.cos.com/en-gb/women/womenswear/shirts/collarlesshirts/product/grandad-collar-cotton-shirt-navy-1313114001"
-  },
-  {
-    "category": "outerwear",
-    "link": "https://www.arket.com/en-nl/women/coats-and-jackets/product/oversized-wool-blend-coat-16929/"
-  },
-  {
-    "category": "shoes",
-    "link": "https://www.stories.com/en-nl/shoes/loafers/penny-loafers-1312345001"
-  },
-  {
-    "category": "shoes",
-    "link": "https://www.stories.com/en-nl/shoes/sneakers/adidas-handball-spezial-sneakers-1323456002"
-  },
-  {
-    "category": "belt",
-    "link": "https://www.arket.com/en-nl/women/accessories/belts/product/classic-leather-belt-black-1433567001/"
-  },
-  {
-    "category": "bag",
-    "link": "https://www.arket.com/en-nl/women/bags/crossbody-bags/product/small-leather-crossbody-bag-black-1765432001/"
-  },
-  {
-    "category": "bag",
-    "link": "https://www.cos.com/en-eu/women/womenswear/bags/product/leather-tote-bag-black-1382746002"
-  }
-];
-const TEMP_WARDROBE_ITEMS1 = 
-[
-  {
-    "category": "bottom",
-    "link": "https://www.arket.com/en-nl/product/elastic-waist-tailored-trousers-black-1300382003/"
-  },
-  {
-    "category": "bottom",
-    "link": "https://www.arket.com/en-nl/product/pleated-wool-blend-skirt-dark-grey-1246489003/"
-  },
-  {
-    "category": "top",
-    "link": "https://www.arket.com/en-nl/women/knitwear/crewneck/product/merino-jumper-dark-grey-1259865001/"
-  },
-  {
-    "category": "top",
-    "link": "https://www.arket.com/en-nl/women/knitwear/crewneck/product/knitted-merino-wool-t-shirt-light-beige-1236180005/"
-  },
-  {
-    "category": "top",
-    "link": "https://www.stories.com/en-nl/product/stand-collar-silk-blouse-greenwhite-stripes-1330524001/"
-  },
-  {
-    "category": "top",
-    "link": "https://www.arket.com/en-nl/product/merino-wool-jumper-dark-brown-1246216001/"
-  },
-  {
-    "category": "outerwear",
-    "link": "https://www.arket.com/en-nl/product/wool-alpaca-blend-coat-black-1300194001/"
-  },
-  {
-    "category": "outerwear",
-    "link": "https://www.arket.com/en-nl/product/relaxed-blazer-black-1306503001/"
-  },
-  {
-    "category": "shoes",
-    "link": "https://www.arket.com/en-nl/product/chunky-leather-ankle-boots-black-1306659001/"
-  },
-  {
-    "category": "shoes",
-    "link": "https://www.arket.com/en-nl/product/leather-loafers-black-1246894001/"
-  },
-  {
-    "category": "belt",
-    "link": "https://www.stories.com/en-nl/product/leather-belt-mole-1223959011/"
-  },
-  {
-    "category": "bag",
-    "link": "https://www.cos.com/en-nl/women/accessories/bags/totebags/product/pinch-tote-bag-linen-beige-1289041001"
-  },
-  {
-    "category": "bag",
-    "link": "https://www.stories.com/en-nl/product/leather-crossbody-bag-dusty-blue-1333375002/"
-  }
-];
 
-async function callWardrobeAi() {
-  return TEMP_WARDROBE_ITEMS;
+
+const OPENAI_MODEL = "gpt-5.2";
+const AI_CONFIG_CACHE_TTL_MS = Number(process.env.AI_CONFIG_CACHE_TTL_MS) || 5 * 60 * 1000;
+const PROMPT_TEMPLATE = readFileSync(new URL("./templates/prompt.txt", import.meta.url), "utf8").trim();
+const PROMPT_CONFIG_NAME = process.env.PROMPT_CONFIG_NAME || "wardrobe_default";
+const CATEGORIES = {
+  bottom: 2,
+  top: 2,
+  outerwear: 1,
+  shoes: 2,
+  belt: 1,
+  bag: 2
+};
+const DEFAULT_BRAND_URLS = [
+  "https://www.arket.com/en-nl/",
+  "https://www.stories.com/en-nl/",
+  "https://www.cos.com/"
+];
+let cachedAiConfig = null;
+let cachedAiConfigExpiresAt = 0;
+
+function normalizeCategories(rawCategories) {
+  if (!rawCategories || typeof rawCategories !== "object" || Array.isArray(rawCategories)) {
+    return null;
+  }
+
+  const validated = {};
+  let hasPositiveCount = false;
+  for (const category of Object.keys(rawCategories)) {
+    const value = rawCategories[category];
+    if (!Number.isInteger(value) || value < 0) {
+      return null;
+    }
+    validated[category] = value;
+    if (value > 0) {
+      hasPositiveCount = true;
+    }
+  }
+
+  if (!hasPositiveCount) {
+    return null;
+  }
+
+  return Object.keys(validated).length > 0 ? validated : null;
+}
+
+function normalizeBrandUrls(rawBrandUrls) {
+  if (!Array.isArray(rawBrandUrls) || rawBrandUrls.length === 0) {
+    return null;
+  }
+
+  const normalized = [];
+  for (const url of rawBrandUrls) {
+    if (typeof url !== "string" || !url.trim()) {
+      return null;
+    }
+    try {
+      const parsedUrl = new URL(url);
+      if (parsedUrl.protocol !== "https:" && parsedUrl.protocol !== "http:") {
+        return null;
+      }
+      normalized.push(url);
+    } catch {
+      return null;
+    }
+  }
+
+  return normalized;
+}
+
+function formatCategoryRequirements(counts) {
+  const defaultOrder = Object.keys(CATEGORIES);
+  const categories = [
+    ...defaultOrder.filter((category) => Object.prototype.hasOwnProperty.call(counts, category)),
+    ...Object.keys(counts).filter((category) => !defaultOrder.includes(category))
+  ];
+
+  return categories.filter((category) => counts[category] > 0).map((category) => `${counts[category]} ${category}`).join(", ");
+}
+
+function localizeProfileValues(values, dictionary) {
+  if (!Array.isArray(values) || values.length === 0) {
+    return "Not specified";
+  }
+
+  const localized = values
+    .map((value) => dictionary[value] || value)
+    .filter((value) => typeof value === "string" && value.trim().length > 0);
+  if (localized.length === 0) {
+    return "Not specified";
+  }
+
+  return localized.join(", ");
+}
+
+function getWardrobePrompt(promptTemplate, counts, brandUrls, userProfile = null) {
+  const requirementText = formatCategoryRequirements(counts);
+  const brandUrlsText = brandUrls.map((url) => `- ${url}`).join("\n");
+  const stylePreferencesText = localizeProfileValues(userProfile?.stylePreferences, en.options.styles);
+  const wardrobeOccasionsText = localizeProfileValues(userProfile?.wardrobeOccasions, en.options.occasions);
+
+  return promptTemplate
+    .replace("{{CATEGORY_REQUIREMENTS}}", requirementText)
+    .replace("{{BRAND_URLS}}", brandUrlsText)
+    .replace("{{STYLE_PREFERENCES}}", stylePreferencesText)
+    .replace("{{WARDROBE_OCCASIONS}}", wardrobeOccasionsText);
+}
+
+async function getWardrobeAiConfig() {
+  const now = Date.now();
+  if (cachedAiConfig && now < cachedAiConfigExpiresAt) {
+    return cachedAiConfig;
+  }
+
+  const config = await getActiveAiPromptConfig(PROMPT_CONFIG_NAME);
+  let fallbackReason = "";
+  let resolvedConfig = null;
+
+  if (!config) {
+    fallbackReason = "No active ai_prompt_configs row found";
+  } else {
+    const categories = normalizeCategories(config.categories);
+    const brandUrls = normalizeBrandUrls(config.brandUrls);
+    const promptTemplate =
+      typeof config.promptTemplate === "string" && config.promptTemplate.trim() ? config.promptTemplate : null;
+
+    if (categories && brandUrls && promptTemplate) {
+      resolvedConfig = {
+        model: typeof config.model === "string" && config.model.trim() ? config.model : OPENAI_MODEL,
+        promptTemplate,
+        categories,
+        brandUrls
+      };
+    } else {
+      fallbackReason = "Invalid ai_prompt_configs row";
+    }
+  }
+
+  if (!resolvedConfig) {
+    console.error(`[wardrobe-ai] ${fallbackReason}, fallback to local defaults`);
+    resolvedConfig = {
+      model: OPENAI_MODEL,
+      promptTemplate: PROMPT_TEMPLATE,
+      categories: CATEGORIES,
+      brandUrls: DEFAULT_BRAND_URLS
+    };
+  }
+
+  cachedAiConfig = resolvedConfig;
+  cachedAiConfigExpiresAt = Date.now() + AI_CONFIG_CACHE_TTL_MS;
+  return resolvedConfig;
+}
+
+function extractResponseText(response) {
+  if (typeof response?.output_text === "string" && response.output_text.trim()) {
+    return response.output_text.trim();
+  }
+
+  for (const outputItem of response?.output || []) {
+    for (const contentItem of outputItem?.content || []) {
+      if (contentItem?.type === "output_text" && typeof contentItem?.text === "string") {
+        return contentItem.text.trim();
+      }
+    }
+  }
+
+  return "";
+}
+
+function isValidWardrobeItem(item, allowedCategories, allowedUrlPrefixes) {
+  if (!item || typeof item !== "object") {
+    return false;
+  }
+  if (!allowedCategories.has(item.category)) {
+    return false;
+  }
+  if (typeof item.link !== "string" || item.link.trim().length === 0) {
+    return false;
+  }
+  const normalizedLink = item.link.trim();
+  if (!allowedUrlPrefixes.some((prefix) => normalizedLink.startsWith(prefix))) {
+    return false;
+  }
+
+  try {
+    const url = new URL(normalizedLink);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+async function callWardrobeAi(userProfile = null) {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error("OPENAI_API_KEY is not set");
+  }
+  const aiConfig = await getWardrobeAiConfig();
+  const prompt = getWardrobePrompt(aiConfig.promptTemplate, aiConfig.categories, aiConfig.brandUrls, userProfile);
+  const allowedCategories = new Set(Object.keys(aiConfig.categories));
+
+  const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  const response = await client.responses.create({
+    model: aiConfig.model,
+    input: [
+      {
+        role: "system",
+        content: "Return only valid JSON. Do not include any extra text."
+      },
+      {
+        role: "user",
+        content: prompt
+      }
+    ],
+    text: {
+      format: {
+        type: "json_schema",
+        name: "wardrobe_items",
+        schema: {
+          type: "array",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["category", "link"],
+            properties: {
+              category: {
+                type: "string",
+                enum: Array.from(allowedCategories)
+              },
+              link: {
+                type: "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  });
+
+  const raw = extractResponseText(response);
+  if (!raw) {
+    throw new Error("OpenAI response does not contain output text");
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new Error("OpenAI response is not valid JSON");
+  }
+
+  if (!Array.isArray(parsed)) {
+    throw new Error("OpenAI response must be an array");
+  }
+
+  const validItems = parsed.filter((item) =>
+    isValidWardrobeItem(item, allowedCategories, aiConfig.brandUrls)
+  );
+  if (validItems.length === 0) {
+    throw new Error("OpenAI response has no valid wardrobe items");
+  }
+
+  return validItems;
 }
 
 async function prefetchLinksData(items) {
@@ -218,9 +369,24 @@ async function prefetchLinksData(items) {
 }
 
 async function getWardrobeItems(req, res) {
-  const items = await callWardrobeAi();
-  const processedItems = await prefetchLinksData(items);
-  res.json({ ok: true, items: processedItems });
+  try {
+    const profile = await getProfile(req.user.email);
+    if (profile && Array.isArray(profile.wardrobeItems) && profile.wardrobeItems.length > 0) {
+      return res.json({ ok: true, items: profile.wardrobeItems });
+    }
+
+    const items = await callWardrobeAi(profile);
+    const processedItems = await prefetchLinksData(items);
+
+    if (profile) {
+      await updateProfileWardrobeItems(req.user.email, processedItems);
+    }
+
+    res.json({ ok: true, items: processedItems });
+  } catch (error) {
+    console.error("[wardrobe-ai]", error);
+    res.status(503).json({ error: "service_unavailable" });
+  }
 }
 
 export { getWardrobeItems };
