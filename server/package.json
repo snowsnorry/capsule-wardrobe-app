@@ -9,6 +9,7 @@
     "start": "node src/index.js"
   },
   "dependencies": {
+    "@google/genai": "^1.42.0",
     "@neondatabase/serverless": "^0.10.4",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",

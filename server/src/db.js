@@ -73,9 +73,19 @@ async function ensureProfilesTable() {
 async function ensureAiPromptConfigsTable() {
   const sql = getSqlClient();
   await sql`
+    do $$
+    begin
+      if not exists (select 1 from pg_type where typname = 'ai_provider') then
+        create type ai_provider as enum ('openai', 'gemini');
+      end if;
+    end
+    $$;
+  `;
+  await sql`
     create table if not exists ai_prompt_configs (
       id bigserial primary key,
       config_name text not null,
+      ai ai_provider not null default 'openai',
       prompt_template text not null,
       categories jsonb not null,
       brand_urls jsonb not null,
@@ -363,6 +373,7 @@ async function getActiveAiPromptConfig(configName) {
   const [row] = await sql`
     select
       config_name as "configName",
+      ai,
       prompt_template as "promptTemplate",
       categories,
       brand_urls as "brandUrls",

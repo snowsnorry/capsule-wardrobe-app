@@ -1,13 +1,18 @@
 import { getLinkPreview } from "link-preview-js";
-import OpenAI from "openai";
 import { readFileSync } from "node:fs";
-import { getActiveAiPromptConfig } from "./db.js";
-import { getProfile, updateProfileWardrobeItems } from "./profileStore.js";
-import en from "../../shared/i18n/en.js";
+import { getActiveAiPromptConfig } from "../db.js";
+import { getProfile, updateProfileWardrobeItems } from "../profileStore.js";
+import { callOpenAiWardrobe } from "./openai.js";
+import { callGeminiWardrobe } from "./gemini.js";
+import en from "../../../shared/i18n/en.js";
 
-const OPENAI_MODEL = "gpt-5.2";
+const DEFAULT_AI_PROVIDER = "openai";
+const AI_MODELS = {
+  openai: "gpt-5.2",
+  gemini: "gemini-2.5-flash"
+};
 const AI_CONFIG_CACHE_TTL_MS = Number(process.env.AI_CONFIG_CACHE_TTL_MS) || 5 * 60 * 1000;
-const PROMPT_TEMPLATE = readFileSync(new URL("./templates/prompt.txt", import.meta.url), "utf8").trim();
+const PROMPT_TEMPLATE = readFileSync(new URL("../templates/prompt.txt", import.meta.url), "utf8").trim();
 const PROMPT_CONFIG_NAME = process.env.PROMPT_CONFIG_NAME || "wardrobe_default";
 const CATEGORIES = {
   bottom: 2,
@@ -22,6 +27,8 @@ const DEFAULT_BRAND_URLS = [
   "https://www.stories.com/en-nl/",
   "https://www.cos.com/"
 ];
+const SUPPORTED_AI_PROVIDERS = new Set(["openai", "gemini"]);
+
 let cachedAiConfig = null;
 let cachedAiConfigExpiresAt = 0;
 
@@ -129,10 +136,18 @@ async function getWardrobeAiConfig() {
     const brandUrls = normalizeBrandUrls(config.brandUrls);
     const promptTemplate =
       typeof config.promptTemplate === "string" && config.promptTemplate.trim() ? config.promptTemplate : null;
+    const ai =
+      typeof config.ai === "string" && SUPPORTED_AI_PROVIDERS.has(config.ai.trim())
+        ? config.ai.trim()
+        : DEFAULT_AI_PROVIDER;
 
     if (categories && brandUrls && promptTemplate) {
       resolvedConfig = {
-        model: typeof config.model === "string" && config.model.trim() ? config.model : OPENAI_MODEL,
+        ai,
+        model:
+          typeof config.model === "string" && config.model.trim()
+            ? config.model.trim()
+            : AI_MODELS[ai] || AI_MODELS[DEFAULT_AI_PROVIDER],
         promptTemplate,
         categories,
         brandUrls
@@ -145,7 +160,8 @@ async function getWardrobeAiConfig() {
   if (!resolvedConfig) {
     console.error(`[wardrobe-ai] ${fallbackReason}, fallback to local defaults`);
     resolvedConfig = {
-      model: OPENAI_MODEL,
+      ai: DEFAULT_AI_PROVIDER,
+      model: AI_MODELS[DEFAULT_AI_PROVIDER],
       promptTemplate: PROMPT_TEMPLATE,
       categories: CATEGORIES,
       brandUrls: DEFAULT_BRAND_URLS
@@ -155,22 +171,6 @@ async function getWardrobeAiConfig() {
   cachedAiConfig = resolvedConfig;
   cachedAiConfigExpiresAt = Date.now() + AI_CONFIG_CACHE_TTL_MS;
   return resolvedConfig;
-}
-
-function extractResponseText(response) {
-  if (typeof response?.output_text === "string" && response.output_text.trim()) {
-    return response.output_text.trim();
-  }
-
-  for (const outputItem of response?.output || []) {
-    for (const contentItem of outputItem?.content || []) {
-      if (contentItem?.type === "output_text" && typeof contentItem?.text === "string") {
-        return contentItem.text.trim();
-      }
-    }
-  }
-
-  return "";
 }
 
 function isValidWardrobeItem(item, allowedCategories, allowedUrlPrefixes) {
@@ -212,93 +212,35 @@ function getAllowedDomains(brandUrls) {
 }
 
 async function callWardrobeAi(userProfile = null) {
-  if (!process.env.OPENAI_API_KEY) {
-    throw new Error("OPENAI_API_KEY is not set");
-  }
   const aiConfig = await getWardrobeAiConfig();
   const prompt = getWardrobePrompt(aiConfig.promptTemplate, aiConfig.categories, aiConfig.brandUrls, userProfile);
   const allowedCategories = new Set(Object.keys(aiConfig.categories));
   const allowedDomains = getAllowedDomains(aiConfig.brandUrls);
+
   if (allowedDomains.length === 0) {
     throw new Error("No allowed domains configured for web_search");
   }
 
-  const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  const response = await client.responses.create({
-    model: aiConfig.model,
-    input: [
-      {
-        role: "system",
-        content: "Return only valid JSON. Do not include any extra text."
-      },
-      {
-        role: "user",
-        content: prompt
-      }
-    ],
-    tools: [
-      {
-        type: "web_search",
-        filters: { allowed_domains: allowedDomains }
-      }
-    ],
-    tool_choice: "auto",
-    include: ["web_search_call.action.sources"],
-    text: {
-      format: {
-        type: "json_schema",
-        name: "wardrobe_items",
-        schema: {
-          type: "object",
-          additionalProperties: false,
-          required: ["items"],
-          properties: {
-            items: {
-              type: "array",
-              items: {
-                type: "object",
-                additionalProperties: false,
-                required: ["category", "link"],
-                properties: {
-                  category: {
-                    type: "string",
-                    enum: Array.from(allowedCategories)
-                  },
-                  link: {
-                    type: "string"
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  });
-
-  const raw = extractResponseText(response);
-  if (!raw) {
-    throw new Error("OpenAI response does not contain output text");
+  let items;
+  if (aiConfig.ai === "openai") {
+    items = await callOpenAiWardrobe({
+      model: aiConfig.model,
+      prompt,
+      allowedCategories,
+      allowedDomains
+    });
+  } else if (aiConfig.ai === "gemini") {
+    items = await callGeminiWardrobe({
+      model: aiConfig.model,
+      prompt,
+      allowedCategories,
+      allowedDomains
+    });
+  } else {
+    throw new Error(`Unsupported AI provider: ${aiConfig.ai}`);
   }
 
-  let parsed;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    throw new Error("OpenAI response is not valid JSON");
-  }
-
-  const parsedItems = Array.isArray(parsed) ? parsed : parsed?.items;
-  if (!Array.isArray(parsedItems)) {
-    throw new Error("OpenAI response must contain items array");
-  }
-
-//  console.log(JSON.stringify(parsedItems, null, 2));
-  const validItems = parsedItems.filter((item) =>
-    isValidWardrobeItem(item, allowedCategories, aiConfig.brandUrls)
-  );
-
-  return validItems;
+  return items.filter((item) => isValidWardrobeItem(item, allowedCategories, aiConfig.brandUrls));
 }
 
 async function prefetchLinksData(items) {
@@ -309,11 +251,11 @@ async function prefetchLinksData(items) {
       }
       try {
         const data = await getLinkPreview(item.link, {
-          imagesPropertyType: "og", // fetches only open-graph images
+          imagesPropertyType: "og",
           headers: {
             "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
           },
-          followRedirects: `manual`,
+          followRedirects: "manual",
           handleRedirects: (baseURL, forwardedURL) => {
             const urlObj = new URL(baseURL);
             const forwardedURLObj = new URL(forwardedURL);
@@ -323,24 +265,25 @@ async function prefetchLinksData(items) {
               "www." + forwardedURLObj.hostname === urlObj.hostname
             ) {
               return true;
-            } else {
-              return false;
             }
+            return false;
           },
           timeout: 3000
         });
-        if (!data 
-          || typeof data !== "object" 
-          || Object.keys(data).length === 0 
-          || !data.title 
-          || data.title.indexOf('404') !== -1 
-          || !data.images 
-          || data.images.length === 0) {
+        if (
+          !data ||
+          typeof data !== "object" ||
+          Object.keys(data).length === 0 ||
+          !data.title ||
+          data.title.indexOf("404") !== -1 ||
+          !data.images ||
+          data.images.length === 0
+        ) {
           return null;
         }
         return { ...item, data };
       } catch (error) {
-        console.log(error)
+        console.log(error);
         return null;
       }
     })
@@ -364,17 +307,17 @@ async function getWardrobeItems(req, res) {
     }
 
     if (processedItems.length === 0) {
-      throw new Error("OpenAI response has no valid wardrobe items after retry");
+      throw new Error("AI response has no valid wardrobe items after retry");
     }
 
     if (profile) {
       await updateProfileWardrobeItems(req.user.email, processedItems);
     }
 
-    res.json({ ok: true, items: processedItems });
+    return res.json({ ok: true, items: processedItems });
   } catch (error) {
     console.error("[wardrobe-ai]", error);
-    res.status(503).json({ error: "service_unavailable" });
+    return res.status(503).json({ error: "service_unavailable" });
   }
 }
 

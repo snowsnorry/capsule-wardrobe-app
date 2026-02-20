@@ -29,7 +29,7 @@ import {
   updateProfile,
   updateProfileLocale
 } from "./profileStore.js";
-import { getWardrobeItems } from "./ai.js";
+import { getWardrobeItems } from "./ai/ai.js";
 import { checkDatabaseConnection, ensureTables } from "./db.js";
 
 const PORT = process.env.PORT || 3000;
