@@ -1,5 +1,6 @@
 const inFlight = new Map();
 const cache = new Map();
+const CSRF_HEADER = "X-CSRF-Token";
 
 function getCacheKey(url, options) {
   const method = options?.method || "GET";
@@ -33,7 +34,26 @@ async function readResponseBody(response) {
 }
 
 async function requestJson(url, options = {}) {
-  const response = await fetch(url, options);
+  const method = String(options.method || "GET").toUpperCase();
+  const headers = new Headers(options.headers || {});
+  const isStateChanging = !["GET", "HEAD", "OPTIONS"].includes(method);
+
+  if (isStateChanging && !headers.has(CSRF_HEADER) && typeof document !== "undefined") {
+    const csrfToken = document.cookie
+      .split(";")
+      .map((part) => part.trim())
+      .find((part) => part.startsWith("csrf="))
+      ?.slice("csrf=".length);
+    if (csrfToken) {
+      headers.set(CSRF_HEADER, decodeURIComponent(csrfToken));
+    }
+  }
+
+  const response = await fetch(url, {
+    ...options,
+    method,
+    headers
+  });
   const data = await readResponseBody(response);
 
   if (!response.ok) {

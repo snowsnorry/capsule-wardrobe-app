@@ -44,6 +44,10 @@ function generateNonce() {
   return crypto.randomBytes(16).toString("hex");
 }
 
+function generateCsrfToken() {
+  return crypto.randomBytes(32).toString("hex");
+}
+
 function getCodeSecret() {
   const secret = process.env.AUTH_CODE_SECRET;
   if (!secret) {
@@ -125,12 +129,14 @@ async function createSession(email) {
   await maybePruneExpiredSessions();
 
   const sessionId = crypto.randomBytes(32).toString("hex");
+  const csrfToken = generateCsrfToken();
   const createdAt = new Date();
   const expiresAt = new Date(createdAt.getTime() + SESSION_TTL_MS);
 
   await insertSession({
     sessionId,
     email,
+    csrfToken,
     createdAt,
     expiresAt
   });
@@ -139,6 +145,7 @@ async function createSession(email) {
     sessionId,
     session: {
       email,
+      csrfToken,
       createdAt: createdAt.toISOString(),
       expiresAt: expiresAt.toISOString()
     }
@@ -161,6 +168,7 @@ async function getSession(sessionId) {
 
   return {
     email: session.email,
+    csrfToken: session.csrfToken,
     createdAt: new Date(session.createdAt).getTime(),
     expiresAt: expiresAt.getTime()
   };

@@ -110,6 +110,18 @@ function filterResponseHeaders(headers) {
   return result;
 }
 
+function readSetCookieHeaders(headers) {
+  if (typeof headers.getSetCookie === "function") {
+    const values = headers.getSetCookie().filter(Boolean);
+    if (values.length > 0) {
+      return values;
+    }
+  }
+
+  const single = headers.get("set-cookie");
+  return single ? [single] : [];
+}
+
 export async function handler(event) {
   const upstreamOrigin = process.env.BFF_UPSTREAM_ORIGIN;
   if (!upstreamOrigin) {
@@ -145,15 +157,21 @@ export async function handler(event) {
   }
 
   const responseHeaders = filterResponseHeaders(upstreamResponse.headers);
-  const setCookie = upstreamResponse.headers.get("set-cookie");
-  if (setCookie) {
-    responseHeaders["set-cookie"] = setCookie;
-  }
+  const setCookies = readSetCookieHeaders(upstreamResponse.headers);
+  delete responseHeaders["set-cookie"];
 
   const responseBody = await upstreamResponse.text();
-  return {
+  const response = {
     statusCode: upstreamResponse.status,
     headers: responseHeaders,
     body: responseBody
   };
+
+  if (setCookies.length > 0) {
+    response.multiValueHeaders = {
+      "set-cookie": setCookies
+    };
+  }
+
+  return response;
 }

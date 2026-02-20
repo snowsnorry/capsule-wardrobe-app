@@ -44,6 +44,7 @@ async function ensureSessionsTable() {
     create table if not exists user_sessions (
       "sessionId" text primary key,
       email text not null,
+      "csrfToken" text not null default '',
       "createdAt" timestamptz not null,
       "expiresAt" timestamptz not null
     )
@@ -196,18 +197,18 @@ async function verifyAndConsumeLoginCode({ email, codeHash, maxAttempts }) {
   return { ok: false, reason: "invalid" };
 }
 
-async function insertSession({ sessionId, email, createdAt, expiresAt }) {
+async function insertSession({ sessionId, email, csrfToken, createdAt, expiresAt }) {
   const sql = getSqlClient();
   await sql`
-    insert into user_sessions ("sessionId", email, "createdAt", "expiresAt")
-    values (${sessionId}, ${email}, ${createdAt}, ${expiresAt})
+    insert into user_sessions ("sessionId", email, "csrfToken", "createdAt", "expiresAt")
+    values (${sessionId}, ${email}, ${csrfToken}, ${createdAt}, ${expiresAt})
   `;
 }
 
 async function getSessionById(sessionId) {
   const sql = getSqlClient();
   const [session] = await sql`
-    select "sessionId", email, "createdAt", "expiresAt"
+    select "sessionId", email, "csrfToken", "createdAt", "expiresAt"
     from user_sessions
     where "sessionId" = ${sessionId}
     limit 1

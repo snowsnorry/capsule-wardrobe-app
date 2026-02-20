@@ -99,7 +99,7 @@ if (NODE_ENV !== "development") {
   app.use((req, res, next) => {
     res.header("Access-Control-Allow-Origin", CLIENT_ORIGIN);
     res.header("Access-Control-Allow-Credentials", "true");
-    res.header("Access-Control-Allow-Headers", "Content-Type");
+    res.header("Access-Control-Allow-Headers", "Content-Type, X-CSRF-Token");
     res.header("Access-Control-Allow-Methods", "GET,POST,PATCH,DELETE,OPTIONS");
     if (req.method === "OPTIONS") {
       return res.sendStatus(204);
@@ -135,11 +135,38 @@ function setSessionCookie(res, sessionId) {
   if (secure) {
     parts.push("Secure");
   }
-  res.header("Set-Cookie", parts.join("; "));
+  res.append("Set-Cookie", parts.join("; "));
+}
+
+function setCsrfCookie(res, csrfToken) {
+  const secure = NODE_ENV === "production";
+  const sameSite = secure ? "None" : "Lax";
+  const parts = [
+    `csrf=${encodeURIComponent(csrfToken)}`,
+    "Path=/",
+    `Max-Age=${Math.floor(SESSION_TTL_MS / 1000)}`,
+    `SameSite=${sameSite}`
+  ];
+  if (secure) {
+    parts.push("Secure");
+  }
+  res.append("Set-Cookie", parts.join("; "));
 }
 
 function clearSessionCookie(res) {
-  res.header("Set-Cookie", "session=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax");
+  const secure = NODE_ENV === "production";
+  const sameSite = secure ? "None" : "Lax";
+
+  const sessionParts = ["session=", "HttpOnly", "Path=/", "Max-Age=0", `SameSite=${sameSite}`];
+  const csrfParts = ["csrf=", "Path=/", "Max-Age=0", `SameSite=${sameSite}`];
+
+  if (secure) {
+    sessionParts.push("Secure");
+    csrfParts.push("Secure");
+  }
+
+  res.append("Set-Cookie", sessionParts.join("; "));
+  res.append("Set-Cookie", csrfParts.join("; "));
 }
 
 function isTrustedOrigin(req) {
@@ -193,6 +220,35 @@ async function requireAuth(req, res, next) {
   }
 
   req.user = { email: session.email };
+  req.auth = {
+    sessionId,
+    csrfToken: session.csrfToken
+  };
+  return next();
+}
+
+function readCsrfHeader(req) {
+  const raw = req.headers["x-csrf-token"];
+  if (Array.isArray(raw)) {
+    return String(raw[0] || "").trim();
+  }
+  return String(raw || "").trim();
+}
+
+function requireCsrf(req, res, next) {
+  const cookies = parseCookies(req.headers.cookie);
+  const csrfFromCookie = String(cookies.csrf || "").trim();
+  const csrfFromHeader = readCsrfHeader(req);
+  const csrfFromSession = String(req.auth?.csrfToken || "").trim();
+
+  if (!csrfFromCookie || !csrfFromHeader || !csrfFromSession) {
+    return res.status(403).json({ error: "csrf_invalid" });
+  }
+
+  if (csrfFromCookie !== csrfFromHeader || csrfFromHeader !== csrfFromSession) {
+    return res.status(403).json({ error: "csrf_invalid" });
+  }
+
   return next();
 }
 
@@ -243,7 +299,7 @@ app.post("/auth/request-code", requestCodeLimiter, async (req, res) => {
   return res.json({ ok: true, expiresInMs: CODE_TTL_MS });
 });
 
-app.post("/auth/verify-code", verifyCodeLimiter, async (req, res) => {
+app.post("/auth/verify-code", requireTrustedOrigin, verifyCodeLimiter, async (req, res) => {
   const email = String(req.body?.email || "").trim().toLowerCase();
   const code = String(req.body?.code || "").trim();
   if (!email || !code) {
@@ -278,6 +334,7 @@ app.post("/auth/verify-code", verifyCodeLimiter, async (req, res) => {
 
   const { sessionId, session } = created;
   setSessionCookie(res, sessionId);
+  setCsrfCookie(res, session.csrfToken);
   return res.json({ ok: true, user: { email: session.email } });
 });
 
@@ -308,8 +365,9 @@ app.post("/auth/google", requireTrustedOrigin, async (req, res) => {
   }
 
   try {
-    const { sessionId } = await createSession(email);
+    const { sessionId, session } = await createSession(email);
     setSessionCookie(res, sessionId);
+    setCsrfCookie(res, session.csrfToken);
     return res.json({ ok: true, user: { email } });
   } catch (error) {
     console.error("[auth/google-create-session]", error);
@@ -317,15 +375,12 @@ app.post("/auth/google", requireTrustedOrigin, async (req, res) => {
   }
 });
 
-app.post("/auth/logout", requireTrustedOrigin, async (req, res) => {
-  const cookies = parseCookies(req.headers.cookie);
-  if (cookies.session) {
-    try {
-      await revokeSession(cookies.session);
-    } catch (error) {
-      console.error("[auth/logout]", error);
-      return res.status(503).json({ error: "service_unavailable" });
-    }
+app.post("/auth/logout", requireTrustedOrigin, requireAuth, requireCsrf, async (req, res) => {
+  try {
+    await revokeSession(req.auth.sessionId);
+  } catch (error) {
+    console.error("[auth/logout]", error);
+    return res.status(503).json({ error: "service_unavailable" });
   }
   clearSessionCookie(res);
   return res.json({ ok: true });
@@ -366,9 +421,9 @@ app.get("/profile/wardrobe-occasions", requireAuth, (req, res) => {
   res.json({ ok: true, items: getWardrobeOccasions() });
 });
 
-app.get("/wardrobe/items", requireAuth, getWardrobeItems);
+app.post("/wardrobe/items", requireTrustedOrigin, requireAuth, requireCsrf, getWardrobeItems);
 
-app.post("/profile/initialize", requireTrustedOrigin, requireAuth, async (req, res) => {
+app.post("/profile/initialize", requireTrustedOrigin, requireAuth, requireCsrf, async (req, res) => {
   const stylePreferences = Array.isArray(req.body?.stylePreferences)
     ? req.body.stylePreferences
     : [];
@@ -401,7 +456,7 @@ app.post("/profile/initialize", requireTrustedOrigin, requireAuth, async (req, r
   }
 });
 
-app.patch("/profile/me", requireTrustedOrigin, requireAuth, async (req, res) => {
+app.patch("/profile/me", requireTrustedOrigin, requireAuth, requireCsrf, async (req, res) => {
   const stylePreferences = Array.isArray(req.body?.stylePreferences)
     ? req.body.stylePreferences
     : [];
@@ -434,7 +489,7 @@ app.patch("/profile/me", requireTrustedOrigin, requireAuth, async (req, res) => 
   }
 });
 
-app.patch("/profile/locale", requireTrustedOrigin, requireAuth, async (req, res) => {
+app.patch("/profile/locale", requireTrustedOrigin, requireAuth, requireCsrf, async (req, res) => {
   const locale = String(req.body?.locale || "").trim().toLowerCase();
   if (!SUPPORTED_LOCALES.has(locale)) {
     return res.status(400).json({ error: "invalid_payload" });
@@ -452,7 +507,7 @@ app.patch("/profile/locale", requireTrustedOrigin, requireAuth, async (req, res)
   }
 });
 
-app.delete("/profile/me", requireTrustedOrigin, requireAuth, async (req, res) => {
+app.delete("/profile/me", requireTrustedOrigin, requireAuth, requireCsrf, async (req, res) => {
   try {
     const deleted = await deleteProfile(req.user.email);
     if (!deleted) {
