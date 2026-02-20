@@ -1,5 +1,5 @@
 [build]
-  command = "VITE_DISABLE_PWA=true npm --workspace client run build"
+  command = "npm --workspace client run build"
   publish = "client/dist"
 
 [functions]

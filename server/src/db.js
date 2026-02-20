@@ -323,7 +323,7 @@ async function updateProfileWardrobeItemsByEmail({ email, wardrobeItems }) {
   const [row] = await sql`
     update profiles
     set
-      wardrobe_items = ${wardrobeItems},
+      wardrobe_items = ${JSON.stringify(wardrobeItems)},
       updated_at = now()
     where email = ${email}
     returning

@@ -249,6 +249,21 @@ function isValidWardrobeItem(item, allowedCategories, allowedUrlPrefixes) {
   }
 }
 
+function getAllowedDomains(brandUrls) {
+  const domains = new Set();
+  for (const url of brandUrls || []) {
+    try {
+      const hostname = new URL(url).hostname.trim().toLowerCase();
+      if (hostname) {
+        domains.add(hostname);
+      }
+    } catch {
+      // ignore invalid urls, validation is handled elsewhere
+    }
+  }
+  return Array.from(domains);
+}
+
 async function callWardrobeAi(userProfile = null) {
   if (!process.env.OPENAI_API_KEY) {
     throw new Error("OPENAI_API_KEY is not set");
@@ -256,6 +271,10 @@ async function callWardrobeAi(userProfile = null) {
   const aiConfig = await getWardrobeAiConfig();
   const prompt = getWardrobePrompt(aiConfig.promptTemplate, aiConfig.categories, aiConfig.brandUrls, userProfile);
   const allowedCategories = new Set(Object.keys(aiConfig.categories));
+  const allowedDomains = getAllowedDomains(aiConfig.brandUrls);
+  if (allowedDomains.length === 0) {
+    throw new Error("No allowed domains configured for web_search");
+  }
 
   const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   const response = await client.responses.create({
@@ -270,23 +289,38 @@ async function callWardrobeAi(userProfile = null) {
         content: prompt
       }
     ],
+    tools: [
+      {
+        type: "web_search",
+        filters: { allowed_domains: allowedDomains }
+      }
+    ],
+    tool_choice: "auto",
+    include: ["web_search_call.action.sources"],
     text: {
       format: {
         type: "json_schema",
         name: "wardrobe_items",
         schema: {
-          type: "array",
-          items: {
-            type: "object",
-            additionalProperties: false,
-            required: ["category", "link"],
-            properties: {
-              category: {
-                type: "string",
-                enum: Array.from(allowedCategories)
-              },
-              link: {
-                type: "string"
+          type: "object",
+          additionalProperties: false,
+          required: ["items"],
+          properties: {
+            items: {
+              type: "array",
+              items: {
+                type: "object",
+                additionalProperties: false,
+                required: ["category", "link"],
+                properties: {
+                  category: {
+                    type: "string",
+                    enum: Array.from(allowedCategories)
+                  },
+                  link: {
+                    type: "string"
+                  }
+                }
               }
             }
           }
@@ -307,11 +341,13 @@ async function callWardrobeAi(userProfile = null) {
     throw new Error("OpenAI response is not valid JSON");
   }
 
-  if (!Array.isArray(parsed)) {
-    throw new Error("OpenAI response must be an array");
+  const parsedItems = Array.isArray(parsed) ? parsed : parsed?.items;
+  if (!Array.isArray(parsedItems)) {
+    throw new Error("OpenAI response must contain items array");
   }
 
-  const validItems = parsed.filter((item) =>
+  console.log(JSON.stringify(parsedItems, null, 2));
+  const validItems = parsedItems.filter((item) =>
     isValidWardrobeItem(item, allowedCategories, aiConfig.brandUrls)
   );
   if (validItems.length === 0) {

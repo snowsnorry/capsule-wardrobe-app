@@ -9,9 +9,9 @@
     "build": "npm --workspace client run build",
     "dev:client": "op run --env-file=client/.env -- npm --workspace client run dev",
     "dev:server": "op run --env-file=server/.env -- npm --workspace server run dev",
+    "dev:all": "concurrently -k -n client,server \"npm:dev:client\" \"npm:dev:server\"",
     "dev:server:test-auth": "op run --env-file=server/.env -- npm --workspace server run dev:test-auth",
-    "test:server": "npm --workspace server run test",
-    "dev:no-pwa": "DISABLE_PWA=true concurrently -k -n client,server \"npm:dev:client\" \"npm:dev:server\""
+    "test:server": "npm --workspace server run test"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"

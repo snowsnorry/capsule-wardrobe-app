@@ -372,7 +372,7 @@ function App() {
     return () => {
       isActive = false;
     };
-  }, [user, hasProfile, profileCreated, wardrobeItems, profileKey]);
+  }, [user, hasProfile, profileCreated, wardrobeItems]);
 
   useEffect(() => {
     if (!sessionInitialized || !user || !(hasProfile || profileCreated)) {
