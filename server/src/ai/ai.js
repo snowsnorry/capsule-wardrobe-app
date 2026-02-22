@@ -25,7 +25,7 @@ const CATEGORIES = {
 const DEFAULT_BRAND_URLS = [
   "https://www.arket.com/en-nl/",
   "https://www.stories.com/en-nl/",
-  "https://www.cos.com/"
+  "https://www.cos.com/en-nl/"
 ];
 const SUPPORTED_AI_PROVIDERS = new Set(["openai", "gemini"]);
 
