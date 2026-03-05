@@ -61,21 +61,57 @@ async function fetchWardrobeOccasions() {
   });
 }
 
-async function initializeProfile(stylePreferences, wardrobeOccasions, locale) {
+async function fetchWardrobeSeasons() {
+  return requestJson(`${API_BASE_URL}/profile/wardrobe-seasons`, {
+    credentials: "include"
+  });
+}
+
+async function fetchWardrobeAudience() {
+  return requestJson(`${API_BASE_URL}/profile/wardrobe-audience`, {
+    credentials: "include"
+  });
+}
+
+async function initializeProfile(
+  stylePreferences,
+  wardrobeOccasions,
+  wardrobeSeasons,
+  wardrobeAudience,
+  locale
+) {
   return requestJson(`${API_BASE_URL}/profile/initialize`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
-    body: JSON.stringify({ stylePreferences, wardrobeOccasions, locale })
+    body: JSON.stringify({
+      stylePreferences,
+      wardrobeOccasions,
+      wardrobeSeasons,
+      wardrobeAudience,
+      locale
+    })
   });
 }
 
-async function updateProfile(stylePreferences, wardrobeOccasions, locale) {
+async function updateProfile(
+  stylePreferences,
+  wardrobeOccasions,
+  wardrobeSeasons,
+  wardrobeAudience,
+  locale
+) {
   return requestJson(`${API_BASE_URL}/profile/me`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
-    body: JSON.stringify({ stylePreferences, wardrobeOccasions, locale })
+    body: JSON.stringify({
+      stylePreferences,
+      wardrobeOccasions,
+      wardrobeSeasons,
+      wardrobeAudience,
+      locale
+    })
   });
 }
 
@@ -111,6 +147,8 @@ export {
   fetchProfile,
   fetchStylePreferences,
   fetchWardrobeOccasions,
+  fetchWardrobeSeasons,
+  fetchWardrobeAudience,
   initializeProfile,
   updateProfile,
   updateProfileLocale,

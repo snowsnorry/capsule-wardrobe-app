@@ -131,7 +131,7 @@ function MainScreen({
           }}
         >
           {items.map((item) => (
-            <ClothingCard key={item.link} item={item} />
+            <ClothingCard key={item.id || item.url} item={item} />
           ))}
         </Box>
       )}

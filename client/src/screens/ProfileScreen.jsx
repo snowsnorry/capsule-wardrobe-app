@@ -18,11 +18,17 @@ import { useI18n } from "../i18n/useI18n.js";
 function ProfileScreen({
   styleOptions,
   occasionOptions,
+  seasonOptions,
+  audienceOptions,
   selectedStyles,
   selectedOccasions,
+  selectedSeasons,
+  selectedAudience,
   status,
   onToggleStyle,
   onToggleOccasion,
+  onToggleSeason,
+  onSelectAudience,
   onSave,
   onDelete,
   onBack
@@ -102,6 +108,42 @@ function ProfileScreen({
         </Stack>
       </Stack>
 
+      <Stack spacing={2}>
+        <Typography variant="h6">{t("profile.seasonsTitle")}</Typography>
+        <Typography variant="body2" color="text.secondary">
+          {t("profile.seasonsHint")}
+        </Typography>
+        <Stack direction="row" flexWrap="wrap" gap={1}>
+          {seasonOptions.map((item) => (
+            <Chip
+              key={item}
+              label={t(`options.seasons.${item}`)}
+              clickable
+              color={selectedSeasons.includes(item) ? "primary" : "default"}
+              onClick={() => onToggleSeason(item)}
+            />
+          ))}
+        </Stack>
+      </Stack>
+
+      <Stack spacing={2}>
+        <Typography variant="h6">{t("profile.audienceTitle")}</Typography>
+        <Typography variant="body2" color="text.secondary">
+          {t("profile.audienceHint")}
+        </Typography>
+        <Stack direction="row" flexWrap="wrap" gap={1}>
+          {audienceOptions.map((item) => (
+            <Chip
+              key={item}
+              label={t(`options.audience.${item}`)}
+              clickable
+              color={selectedAudience === item ? "primary" : "default"}
+              onClick={() => onSelectAudience(item)}
+            />
+          ))}
+        </Stack>
+      </Stack>
+
       <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
         <Button variant="outlined" onClick={onBack}>
           {t("profile.back")}
@@ -110,7 +152,11 @@ function ProfileScreen({
           variant="contained"
           onClick={onSave}
           disabled={
-            status.loading || selectedStyles.length === 0 || selectedOccasions.length === 0
+            status.loading ||
+            selectedStyles.length === 0 ||
+            selectedOccasions.length === 0 ||
+            selectedSeasons.length === 0 ||
+            !selectedAudience
           }
         >
           {t("profile.save")}

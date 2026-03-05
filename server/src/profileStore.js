@@ -30,6 +30,18 @@ const wardrobeOccasions = [
   "outdoor"
 ];
 
+const wardrobeSeasons = ["spring", "summer", "autumn", "winter"];
+
+const wardrobeAudience = ["man", "woman", "any"];
+
+function normalizeWardrobeAudience(value) {
+  const audience = String(value || "").trim().toLowerCase();
+  if (audience === "man" || audience === "woman" || audience === "any") {
+    return audience;
+  }
+  return "any";
+}
+
 function getStylePreferences() {
   return stylePreferences;
 }
@@ -38,8 +50,23 @@ function getWardrobeOccasions() {
   return wardrobeOccasions;
 }
 
+function getWardrobeSeasons() {
+  return wardrobeSeasons;
+}
+
+function getWardrobeAudience() {
+  return wardrobeAudience;
+}
+
 async function getProfile(email) {
-  return getProfileByEmail(email);
+  const profile = await getProfileByEmail(email);
+  if (!profile) {
+    return null;
+  }
+  return {
+    ...profile,
+    wardrobeAudience: normalizeWardrobeAudience(profile.wardrobeAudience)
+  };
 }
 
 async function hasProfile(email) {
@@ -51,6 +78,8 @@ async function createProfile(email, data) {
     email,
     stylePreferences: data.stylePreferences || [],
     wardrobeOccasions: data.wardrobeOccasions || [],
+    wardrobeSeasons: data.wardrobeSeasons || [],
+    wardrobeAudience: normalizeWardrobeAudience(data.wardrobeAudience),
     locale: data.locale || "en"
   });
 }
@@ -60,6 +89,8 @@ async function updateProfile(email, data) {
     email,
     stylePreferences: data.stylePreferences || [],
     wardrobeOccasions: data.wardrobeOccasions || [],
+    wardrobeSeasons: data.wardrobeSeasons || [],
+    wardrobeAudience: normalizeWardrobeAudience(data.wardrobeAudience),
     locale: data.locale || "en"
   });
 }
@@ -85,5 +116,7 @@ export {
   deleteProfile,
   updateProfileWardrobeItems,
   getStylePreferences,
-  getWardrobeOccasions
+  getWardrobeOccasions,
+  getWardrobeSeasons,
+  getWardrobeAudience
 };

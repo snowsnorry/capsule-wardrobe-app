@@ -40,6 +40,17 @@ const en = {
       weekend: "Weekend",
       date_night: "Date night",
       outdoor: "Outdoor"
+    },
+    seasons: {
+      winter: "Winter",
+      spring: "Spring",
+      summer: "Summer",
+      autumn: "Autumn"
+    },
+    audience: {
+      man: "Man",
+      woman: "Woman",
+      any: "Not important"
     }
   },
   auth: {
@@ -77,6 +88,10 @@ const en = {
     stylesHint: "Select at least one style.",
     occasionsTitle: "Wardrobe needs",
     occasionsHint: "Select at least one occasion.",
+    seasonsTitle: "Seasons",
+    seasonsHint: "Select one or more seasons.",
+    audienceTitle: "Audience",
+    audienceHint: "Select one option.",
     back: "Back",
     save: "Save changes",
     delete: "Delete profile",
@@ -93,8 +108,11 @@ const en = {
     step1Hint: "Select at least one style that feels like you.",
     step2Title: "Step 2 · Wardrobe needs",
     step2Hint: "Pick the occasions you want your wardrobe to cover.",
-    step3Title: "Step 3 · All set",
-    step3Hint: "Your profile is ready. You can change these choices anytime in profile settings.",
+    step3Title: "Step 3 · Seasons",
+    step3Hint: "Choose the season or seasons this wardrobe is for.",
+    step4Title: "Step 4 · Audience",
+    step4Hint: "Choose who this wardrobe is for.",
+    completedHint: "Your profile is ready. You can change these choices anytime in profile settings.",
     next: "Next",
     start: "Start"
   },

@@ -6,11 +6,17 @@ function OnboardingScreen({
   onboardingStep,
   styleOptions,
   occasionOptions,
+  seasonOptions,
+  audienceOptions,
   selectedStyles,
   selectedOccasions,
+  selectedSeasons,
+  selectedAudience,
   status,
   onToggleStyle,
   onToggleOccasion,
+  onToggleSeason,
+  onSelectAudience,
   onNext,
   onBack,
   onFinish
@@ -76,6 +82,37 @@ function OnboardingScreen({
           <Typography variant="body2" color="text.secondary">
             {t("onboarding.step3Hint")}
           </Typography>
+          <Stack direction="row" flexWrap="wrap" gap={1}>
+            {seasonOptions.map((item) => (
+              <Chip
+                key={item}
+                label={t(`options.seasons.${item}`)}
+                clickable
+                color={selectedSeasons.includes(item) ? "primary" : "default"}
+                onClick={() => onToggleSeason(item)}
+              />
+            ))}
+          </Stack>
+        </Stack>
+      ) : null}
+
+      {onboardingStep === 3 ? (
+        <Stack spacing={2}>
+          <Typography variant="h6">{t("onboarding.step4Title")}</Typography>
+          <Typography variant="body2" color="text.secondary">
+            {t("onboarding.step4Hint")}
+          </Typography>
+          <Stack direction="row" flexWrap="wrap" gap={1}>
+            {audienceOptions.map((item) => (
+              <Chip
+                key={item}
+                label={t(`options.audience.${item}`)}
+                clickable
+                color={selectedAudience === item ? "primary" : "default"}
+                onClick={() => onSelectAudience(item)}
+              />
+            ))}
+          </Stack>
         </Stack>
       ) : null}
 
@@ -85,19 +122,20 @@ function OnboardingScreen({
             {t("profile.back")}
           </Button>
         ) : null}
-        {onboardingStep < 2 ? (
+        {onboardingStep < 3 ? (
           <Button
             variant="contained"
             onClick={onNext}
             disabled={
               (onboardingStep === 0 && selectedStyles.length === 0) ||
-              (onboardingStep === 1 && selectedOccasions.length === 0)
+              (onboardingStep === 1 && selectedOccasions.length === 0) ||
+              (onboardingStep === 2 && selectedSeasons.length === 0)
             }
           >
             {t("onboarding.next")}
           </Button>
         ) : (
-          <Button variant="contained" onClick={onFinish}>
+          <Button variant="contained" onClick={onFinish} disabled={!selectedAudience}>
             {t("onboarding.start")}
           </Button>
         )}

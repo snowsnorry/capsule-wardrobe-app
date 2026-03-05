@@ -1,97 +1,85 @@
 import OpenAI from "openai";
 
-function extractResponseText(response) {
-  if (typeof response?.output_text === "string" && response.output_text.trim()) {
-    return response.output_text.trim();
+const OPENAI_BASE_URL = "https://api.deepinfra.com/v1/openai";
+const DEFAULT_CHAT_MODEL = "google/gemma-3-27b-it";
+const DEFAULT_EMBEDDING_MODEL = "google/embeddinggemma-300m";
+let cachedClient = null;
+
+function getOpenAiClient() {
+  if (cachedClient) {
+    return cachedClient;
   }
 
-  for (const outputItem of response?.output || []) {
-    for (const contentItem of outputItem?.content || []) {
-      if (contentItem?.type === "output_text" && typeof contentItem?.text === "string") {
-        return contentItem.text.trim();
-      }
-    }
+  const apiKey = process.env.DEEPINFRA_API_KEY;
+  if (!apiKey) {
+    throw new Error("DEEPINFRA_API_KEY is not set");
   }
 
-  return "";
+  cachedClient = new OpenAI({
+    apiKey,
+    baseURL: OPENAI_BASE_URL
+  });
+  return cachedClient;
 }
 
-async function callOpenAiWardrobe({ model, prompt, allowedCategories, allowedDomains }) {
-  if (!process.env.OPENAI_API_KEY) {
-    throw new Error("OPENAI_API_KEY is not set");
+function splitSystemAndUserPrompt(prompt) {
+  const source = String(prompt || "");
+  const systemMarker = "System:";
+  const userMarker = "User:";
+  const systemStart = source.indexOf(systemMarker);
+  const userStart = source.indexOf(userMarker);
+
+  if (systemStart === -1 || userStart === -1 || userStart < systemStart) {
+    return {
+      system: "",
+      user: source.trim()
+    };
   }
 
-  const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  const response = await client.responses.create({
-    model,
-    input: [
-      {
-        role: "system",
-        content: "Return only valid JSON. Do not include any extra text."
-      },
-      {
-        role: "user",
-        content: prompt
-      }
+  return {
+    system: source.slice(systemStart + systemMarker.length, userStart).trim(),
+    user: source.slice(userStart + userMarker.length).trim()
+  };
+}
+
+async function getPromptEmbeddings(prompt) {
+  const client = getOpenAiClient();
+  const response = await client.embeddings.create({
+    model: DEFAULT_EMBEDDING_MODEL,
+    input: prompt
+  });
+  const embedding = response?.data?.[0]?.embedding;
+  if (!Array.isArray(embedding) || embedding.length === 0) {
+    throw new Error("Failed to compute prompt embeddings");
+  }
+  return embedding;
+}
+
+async function generateJsonWithLlm(prompt) {
+  const client = getOpenAiClient();
+  const { system, user } = splitSystemAndUserPrompt(prompt);
+
+  const response = await client.chat.completions.create({
+    model: DEFAULT_CHAT_MODEL,
+    messages: [
+      { role: "system", content: system },
+      { role: "user", content: user }
     ],
-    tools: [
-      {
-        type: "web_search",
-        filters: { allowed_domains: allowedDomains }
-      }
-    ],
-    tool_choice: "auto",
-    include: ["web_search_call.action.sources"],
-    text: {
-      format: {
-        type: "json_schema",
-        name: "wardrobe_items",
-        schema: {
-          type: "object",
-          additionalProperties: false,
-          required: ["items"],
-          properties: {
-            items: {
-              type: "array",
-              items: {
-                type: "object",
-                additionalProperties: false,
-                required: ["category", "link"],
-                properties: {
-                  category: {
-                    type: "string",
-                    enum: Array.from(allowedCategories)
-                  },
-                  link: {
-                    type: "string"
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
+    temperature: 0.2
   });
 
-  const raw = extractResponseText(response);
-  if (!raw) {
-    throw new Error("OpenAI response does not contain output text");
+  let content = response?.choices?.[0]?.message?.content || "{}";
+  let json;
+  if(content) {
+    content = content.replace(/^[^{]*/, "").replace(/[^}]*$/, "");
   }
-
-  let parsed;
   try {
-    parsed = JSON.parse(raw);
+    json = JSON.parse(content);
   } catch {
-    throw new Error("OpenAI response is not valid JSON");
+    throw new Error(`Failed to parse JSON response`);
   }
 
-  const parsedItems = Array.isArray(parsed) ? parsed : parsed?.items;
-  if (!Array.isArray(parsedItems)) {
-    throw new Error("OpenAI response must contain items array");
-  }
-
-  return parsedItems;
+  return { response, json };
 }
 
-export { callOpenAiWardrobe };
+export { generateJsonWithLlm, getPromptEmbeddings };

@@ -1,18 +1,22 @@
-Pick 12 clothing items that coordinate to create a capsule wardrobe for a modern, chic working woman.
+System: You are a professional fashion stylist. You create cohesive, stylish capsule wardrobes.
 
-User style preferences: {{STYLE_PREFERENCES}}
-Primary wardrobe occasions: {{WARDROBE_OCCASIONS}}
-Use these user profile details as strict guidance for selection, color palette, silhouettes, and practicality.
+User:
+I need a capsule wardrobe for {{audience}}.
+Context: {{occasions}}, {{season}}.
+Style: {{formality}}
 
-Include both office and casual pieces. Include {{CATEGORY_REQUIREMENTS}}. Use only these brands' websites:
-{{BRAND_URLS}}
+Here is a list of AVAILABLE ITEMS (Candidates):
+{{items}}
 
-Return result as valid JSON in the following format, no other information or words should be in the response:
-[{
-"category": <"bottom", "top", "outerwear", "shoes", "belt", "bag">,
-"link": <link on a webpage with that product>
-},...]
+INSTRUCTIONS:
+1. Select exactly {{num_items}} items to form a complete outfit: {{category_list}}.
+2. DO NOT repeate items.
+3. The items MUST match in color and style.
+4. Explain your reasoning briefly.
+5. Return the result in strictly Valid JSON format.
 
-Every link MUST return a valid webpage with a product from the specified brands.
-You must navigate to the live shop sections to ensure the products are currently available. Every link must be a direct product URL (not a category or search page) and must be active at the time of this query to avoid 404 errors.
-The response MUST be valid JSON and parsable by standard JSON parsers. Do not include any other text outside of the JSON.
+Output Format:
+{
+  "reasoning": "string explanation...",
+  "selected_ids": [id1, id2, id3, id4, id5]
+}

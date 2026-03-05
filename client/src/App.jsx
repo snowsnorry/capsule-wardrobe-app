@@ -51,6 +51,10 @@ const FALLBACK_OCCASION_OPTIONS = [
   "date_night",
   "outdoor"
 ];
+
+const FALLBACK_SEASON_OPTIONS = ["spring", "summer", "autumn", "winter"];
+
+const FALLBACK_AUDIENCE_OPTIONS = ["man", "woman", "any"];
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
 
 async function retry(fn, attempts = 3, delayMs = 120) {
@@ -83,8 +87,12 @@ function App() {
   const [onboardingStep, setOnboardingStep] = useState(0);
   const [styleOptions, setStyleOptions] = useState([]);
   const [occasionOptions, setOccasionOptions] = useState([]);
+  const [seasonOptions, setSeasonOptions] = useState([]);
+  const [audienceOptions, setAudienceOptions] = useState([]);
   const [selectedStyles, setSelectedStyles] = useState([]);
   const [selectedOccasions, setSelectedOccasions] = useState([]);
+  const [selectedSeasons, setSelectedSeasons] = useState([]);
+  const [selectedAudience, setSelectedAudience] = useState("");
   const [profileCreated, setProfileCreated] = useState(false);
   const [currentView, setCurrentView] = useState("main");
   const [wardrobeItems, setWardrobeItems] = useState(null);
@@ -150,10 +158,14 @@ function App() {
       const result = await loadProfileOptions();
       setStyleOptions(result.styles);
       setOccasionOptions(result.occasions);
+      setSeasonOptions(result.seasons);
+      setAudienceOptions(result.audience);
     } catch (error) {
       if (useFallback) {
         setStyleOptions(FALLBACK_STYLE_OPTIONS);
         setOccasionOptions(FALLBACK_OCCASION_OPTIONS);
+        setSeasonOptions(FALLBACK_SEASON_OPTIONS);
+        setAudienceOptions(FALLBACK_AUDIENCE_OPTIONS);
         return;
       }
       throw error;
@@ -161,7 +173,12 @@ function App() {
   };
 
   const ensureOptionsLoaded = async ({ useFallback = false } = {}) => {
-    if (styleOptions.length > 0 && occasionOptions.length > 0) {
+    if (
+      styleOptions.length > 0 &&
+      occasionOptions.length > 0 &&
+      seasonOptions.length > 0 &&
+      audienceOptions.length > 0
+    ) {
       return;
     }
     await preloadOnboardingOptions({ useFallback });
@@ -171,6 +188,8 @@ function App() {
     const result = await fetchProfile();
     setSelectedStyles(result.profile?.stylePreferences || []);
     setSelectedOccasions(result.profile?.wardrobeOccasions || []);
+    setSelectedSeasons(result.profile?.wardrobeSeasons || []);
+    setSelectedAudience(result.profile?.wardrobeAudience || "");
     if (result.profile?.locale) {
       setLocale(result.profile.locale);
     }
@@ -207,6 +226,8 @@ function App() {
         setUser(result.user);
         setSelectedStyles([]);
         setSelectedOccasions([]);
+        setSelectedSeasons([]);
+        setSelectedAudience("");
         setOnboardingStep(0);
         setStatus({ loading: false, error: "", infoKey: "", infoParams: null });
       } else {
@@ -233,6 +254,8 @@ function App() {
         setUser(result.user);
         setSelectedStyles([]);
         setSelectedOccasions([]);
+        setSelectedSeasons([]);
+        setSelectedAudience("");
         setOnboardingStep(0);
         setStatus({ loading: false, error: "", infoKey: "", infoParams: null });
       } else {
@@ -260,12 +283,16 @@ function App() {
       setCode("");
       setSelectedStyles([]);
       setSelectedOccasions([]);
+      setSelectedSeasons([]);
+      setSelectedAudience("");
       setOnboardingStep(0);
       setWardrobeItems(null);
       setIsLoadingWardrobe(false);
       clearProfileOptionsCache();
       setStyleOptions([]);
       setOccasionOptions([]);
+      setSeasonOptions([]);
+      setAudienceOptions([]);
       setStatus({ loading: false, error: "", infoKey: "auth.signedOut", infoParams: null });
     } catch (error) {
       setStatus({ loading: false, error: resolveErrorMessage(error), infoKey: "", infoParams: null });
@@ -289,7 +316,9 @@ function App() {
   const handleNextOnboarding = () => {
     if (onboardingStep === 0 && selectedStyles.length === 0) return;
     if (onboardingStep === 1 && selectedOccasions.length === 0) return;
-    setOnboardingStep((prev) => Math.min(prev + 1, 2));
+    if (onboardingStep === 2 && selectedSeasons.length === 0) return;
+    if (onboardingStep === 3 && !selectedAudience) return;
+    setOnboardingStep((prev) => Math.min(prev + 1, 3));
   };
 
   const handleBackOnboarding = () => {
@@ -299,12 +328,18 @@ function App() {
   const handleFinishOnboarding = async () => {
     setStatus({ loading: true, error: "", infoKey: "", infoParams: null });
     try {
-      await initializeProfile(selectedStyles, selectedOccasions, locale);
+      await initializeProfile(
+        selectedStyles,
+        selectedOccasions,
+        selectedSeasons,
+        selectedAudience,
+        locale
+      );
       setProfileCreated(true);
       setHasProfile(true);
       setCurrentView("main");
       setWardrobeItems(null);
-      setStatus({ loading: false, error: "", infoKey: "onboarding.step3Hint", infoParams: null });
+      setStatus({ loading: false, error: "", infoKey: "onboarding.completedHint", infoParams: null });
     } catch (error) {
       setStatus({ loading: false, error: resolveErrorMessage(error), infoKey: "", infoParams: null });
     }
@@ -313,7 +348,13 @@ function App() {
   const handleSaveProfile = async () => {
     setStatus({ loading: true, error: "", infoKey: "", infoParams: null });
     try {
-      await updateProfile(selectedStyles, selectedOccasions, locale);
+      await updateProfile(
+        selectedStyles,
+        selectedOccasions,
+        selectedSeasons,
+        selectedAudience,
+        locale
+      );
       setWardrobeItems(null);
       setStatus({ loading: false, error: "", infoKey: "profile.updated", infoParams: null });
     } catch (error) {
@@ -342,7 +383,9 @@ function App() {
 
   const profileKey = JSON.stringify({
     styles: selectedStyles.slice().sort(),
-    occasions: selectedOccasions.slice().sort()
+    occasions: selectedOccasions.slice().sort(),
+    seasons: selectedSeasons.slice().sort(),
+    audience: selectedAudience
   });
 
   useEffect(() => {
@@ -410,13 +453,19 @@ function App() {
           <ProfileScreen
             styleOptions={styleOptions}
             occasionOptions={occasionOptions}
+            seasonOptions={seasonOptions}
+            audienceOptions={audienceOptions}
             selectedStyles={selectedStyles}
             selectedOccasions={selectedOccasions}
+            selectedSeasons={selectedSeasons}
+            selectedAudience={selectedAudience}
             status={status}
             onToggleStyle={(value) => toggleSelection(value, selectedStyles, setSelectedStyles)}
             onToggleOccasion={(value) =>
               toggleSelection(value, selectedOccasions, setSelectedOccasions)
             }
+            onToggleSeason={(value) => toggleSelection(value, selectedSeasons, setSelectedSeasons)}
+            onSelectAudience={setSelectedAudience}
             onSave={handleSaveProfile}
             onDelete={handleDeleteProfile}
             onBack={handleBackToMain}
@@ -441,13 +490,19 @@ function App() {
         onboardingStep={onboardingStep}
         styleOptions={styleOptions}
         occasionOptions={occasionOptions}
+        seasonOptions={seasonOptions}
+        audienceOptions={audienceOptions}
         selectedStyles={selectedStyles}
         selectedOccasions={selectedOccasions}
+        selectedSeasons={selectedSeasons}
+        selectedAudience={selectedAudience}
         status={status}
         onToggleStyle={(value) => toggleSelection(value, selectedStyles, setSelectedStyles)}
         onToggleOccasion={(value) =>
           toggleSelection(value, selectedOccasions, setSelectedOccasions)
         }
+        onToggleSeason={(value) => toggleSelection(value, selectedSeasons, setSelectedSeasons)}
+        onSelectAudience={setSelectedAudience}
         onNext={handleNextOnboarding}
         onBack={handleBackOnboarding}
         onFinish={handleFinishOnboarding}

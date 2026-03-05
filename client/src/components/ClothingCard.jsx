@@ -3,9 +3,8 @@ import { useI18n } from "../i18n/useI18n.js";
 
 function ClothingCard({ item }) {
   const { t } = useI18n();
-  const imageUrl = item?.data?.images?.[0] || "";
-  const description = item?.data?.description || "";
-  const label = item?.data?.title || "";
+  const imageUrl = item?.image_url || "";
+  const label = item?.name || "";
   const categoryLabel = item?.category ? t(`options.categories.${item.category}`) : "";
 
   return (
@@ -67,7 +66,7 @@ function ClothingCard({ item }) {
           />
         </Stack>
         <MuiLink
-          href={item.link}
+          href={item.url}
           target="_blank"
           rel="noopener noreferrer"
           underline="none"
@@ -98,7 +97,7 @@ function ClothingCard({ item }) {
               }}
             >
               <Typography variant="body2" color="text.secondary" align="center">
-                {description || label}
+                {label}
               </Typography>
             </Box>
           )}

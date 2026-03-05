@@ -1,19 +1,9 @@
-import { getLinkPreview } from "link-preview-js";
-import { readFileSync } from "node:fs";
-import { getActiveAiPromptConfig } from "../db.js";
 import { getProfile, updateProfileWardrobeItems } from "../profileStore.js";
-import { callOpenAiWardrobe } from "./openai.js";
-import { callGeminiWardrobe } from "./gemini.js";
+import { getSqlClient } from "../db.js";
+import { readFileSync, writeFileSync } from "node:fs";
 import en from "../../../shared/i18n/en.js";
+import { generateJsonWithLlm, getPromptEmbeddings } from "./openai.js";
 
-const DEFAULT_AI_PROVIDER = "openai";
-const AI_MODELS = {
-  openai: "gpt-5.2",
-  gemini: "gemini-2.5-flash"
-};
-const AI_CONFIG_CACHE_TTL_MS = Number(process.env.AI_CONFIG_CACHE_TTL_MS) || 5 * 60 * 1000;
-const PROMPT_TEMPLATE = readFileSync(new URL("../templates/prompt.txt", import.meta.url), "utf8").trim();
-const PROMPT_CONFIG_NAME = process.env.PROMPT_CONFIG_NAME || "wardrobe_default";
 const CATEGORIES = {
   bottom: 2,
   top: 2,
@@ -22,73 +12,23 @@ const CATEGORIES = {
   belt: 1,
   bag: 2
 };
-const DEFAULT_BRAND_URLS = [
-  "https://www.arket.com/en-nl/",
-  "https://www.stories.com/en-nl/",
-  "https://www.cos.com/en-nl/"
-];
-const SUPPORTED_AI_PROVIDERS = new Set(["openai", "gemini"]);
+const PROMPT_TEMPLATE = readFileSync(new URL("../templates/prompt.txt", import.meta.url), "utf8");
 
-let cachedAiConfig = null;
-let cachedAiConfigExpiresAt = 0;
+const ARRAY_FIELDS = ["closure_type", "color_base", "formality_level", "occasions", "season", "style_tags"];
 
-function normalizeCategories(rawCategories) {
-  if (!rawCategories || typeof rawCategories !== "object" || Array.isArray(rawCategories)) {
-    return null;
+function parseArrayField(value) {
+  if (Array.isArray(value)) {
+    return value;
   }
-
-  const validated = {};
-  let hasPositiveCount = false;
-  for (const category of Object.keys(rawCategories)) {
-    const value = rawCategories[category];
-    if (!Number.isInteger(value) || value < 0) {
-      return null;
-    }
-    validated[category] = value;
-    if (value > 0) {
-      hasPositiveCount = true;
-    }
+  if (typeof value !== "string" || value.trim().length === 0) {
+    return [];
   }
-
-  if (!hasPositiveCount) {
-    return null;
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
   }
-
-  return Object.keys(validated).length > 0 ? validated : null;
-}
-
-function normalizeBrandUrls(rawBrandUrls) {
-  if (!Array.isArray(rawBrandUrls) || rawBrandUrls.length === 0) {
-    return null;
-  }
-
-  const normalized = [];
-  for (const url of rawBrandUrls) {
-    if (typeof url !== "string" || !url.trim()) {
-      return null;
-    }
-    try {
-      const parsedUrl = new URL(url);
-      if (parsedUrl.protocol !== "https:" && parsedUrl.protocol !== "http:") {
-        return null;
-      }
-      normalized.push(url);
-    } catch {
-      return null;
-    }
-  }
-
-  return normalized;
-}
-
-function formatCategoryRequirements(counts) {
-  const defaultOrder = Object.keys(CATEGORIES);
-  const categories = [
-    ...defaultOrder.filter((category) => Object.prototype.hasOwnProperty.call(counts, category)),
-    ...Object.keys(counts).filter((category) => !defaultOrder.includes(category))
-  ];
-
-  return categories.filter((category) => counts[category] > 0).map((category) => `${counts[category]} ${category}`).join(", ");
 }
 
 function localizeProfileValues(values, dictionary) {
@@ -103,192 +43,244 @@ function localizeProfileValues(values, dictionary) {
     return "Not specified";
   }
 
-  return localized.join(", ");
+  return localized.join(", ").toLowerCase();
 }
 
-function getWardrobePrompt(promptTemplate, counts, brandUrls, userProfile = null) {
-  const requirementText = formatCategoryRequirements(counts);
-  const brandUrlsText = brandUrls.map((url) => `- ${url}`).join("\n");
+function getWardrobePrompt(userProfile = null) {
   const stylePreferencesText = localizeProfileValues(userProfile?.stylePreferences, en.options.styles);
   const wardrobeOccasionsText = localizeProfileValues(userProfile?.wardrobeOccasions, en.options.occasions);
+  const seasonsText = localizeProfileValues(userProfile?.wardrobeSeasons, en.options.seasons);
+  const audienceMap = {
+    man: "man, all",
+    woman: "woman, all",
+    any: "man, woman, all"
+  };
+  const audienceText = audienceMap[userProfile?.wardrobeAudience] || audienceMap.any;
+  
+  return `Capsule wardrobe request.
+  
+Formality: ${stylePreferencesText}
+Occasions: ${wardrobeOccasionsText}
+Season: ${seasonsText}
+Audience: ${audienceText}
 
-  return promptTemplate
-    .replace("{{CATEGORY_REQUIREMENTS}}", requirementText)
-    .replace("{{BRAND_URLS}}", brandUrlsText)
-    .replace("{{STYLE_PREFERENCES}}", stylePreferencesText)
-    .replace("{{WARDROBE_OCCASIONS}}", wardrobeOccasionsText);
+Balanced and cohesive wardrobe.`;
 }
 
-async function getWardrobeAiConfig() {
-  const now = Date.now();
-  if (cachedAiConfig && now < cachedAiConfigExpiresAt) {
-    return cachedAiConfig;
+function getCategoryListText() {
+  return Object.entries(CATEGORIES)
+    .filter(([, count]) => Number.isInteger(count) && count > 0)
+    .map(([category, count]) => `${count} ${category}`)
+    .join(", ");
+}
+
+function enforceCategoryCounts(selectedItems, normalizedItems) {
+  const categoryOrder = Object.keys(CATEGORIES);
+  const allowedCategories = new Set(categoryOrder);
+  const seenPoolIds = new Set();
+  const poolByCategory = new Map(categoryOrder.map((category) => [category, []]));
+
+  for (const item of normalizedItems) {
+    const itemId = String(item?.id);
+    const category = item?.category;
+    if (!itemId || seenPoolIds.has(itemId) || !allowedCategories.has(category)) {
+      continue;
+    }
+    seenPoolIds.add(itemId);
+    poolByCategory.get(category).push(item);
   }
 
-  const config = await getActiveAiPromptConfig(PROMPT_CONFIG_NAME);
-  let fallbackReason = "";
-  let resolvedConfig = null;
+  const selectedSeenIds = new Set();
+  const selectedByCategory = new Map(categoryOrder.map((category) => [category, []]));
 
-  if (!config) {
-    fallbackReason = "No active ai_prompt_configs row found";
-  } else {
-    const categories = normalizeCategories(config.categories);
-    const brandUrls = normalizeBrandUrls(config.brandUrls);
-    const promptTemplate =
-      typeof config.promptTemplate === "string" && config.promptTemplate.trim() ? config.promptTemplate : null;
-    const ai =
-      typeof config.ai === "string" && SUPPORTED_AI_PROVIDERS.has(config.ai.trim())
-        ? config.ai.trim()
-        : DEFAULT_AI_PROVIDER;
+  for (const item of selectedItems) {
+    const itemId = String(item?.id);
+    const category = item?.category;
+    if (!itemId || selectedSeenIds.has(itemId) || !allowedCategories.has(category)) {
+      continue;
+    }
+    selectedSeenIds.add(itemId);
+    selectedByCategory.get(category).push(item);
+  }
 
-    if (categories && brandUrls && promptTemplate) {
-      resolvedConfig = {
-        ai,
-        model:
-          typeof config.model === "string" && config.model.trim()
-            ? config.model.trim()
-            : AI_MODELS[ai] || AI_MODELS[DEFAULT_AI_PROVIDER],
-        promptTemplate,
-        categories,
-        brandUrls
-      };
-    } else {
-      fallbackReason = "Invalid ai_prompt_configs row";
+  const result = [];
+  const resultIds = new Set();
+
+  for (const category of categoryOrder) {
+    const requiredCount = CATEGORIES[category];
+    const current = selectedByCategory.get(category).slice(0, requiredCount);
+    for (const item of current) {
+      const itemId = String(item.id);
+      if (resultIds.has(itemId)) continue;
+      result.push(item);
+      resultIds.add(itemId);
     }
   }
 
-  if (!resolvedConfig) {
-    console.error(`[wardrobe-ai] ${fallbackReason}, fallback to local defaults`);
-    resolvedConfig = {
-      ai: DEFAULT_AI_PROVIDER,
-      model: AI_MODELS[DEFAULT_AI_PROVIDER],
-      promptTemplate: PROMPT_TEMPLATE,
-      categories: CATEGORIES,
-      brandUrls: DEFAULT_BRAND_URLS
-    };
-  }
+  for (const category of categoryOrder) {
+    const requiredCount = CATEGORIES[category];
+    const currentCount = result.filter((item) => item.category === category).length;
+    const missing = requiredCount - currentCount;
+    if (missing <= 0) {
+      continue;
+    }
 
-  cachedAiConfig = resolvedConfig;
-  cachedAiConfigExpiresAt = Date.now() + AI_CONFIG_CACHE_TTL_MS;
-  return resolvedConfig;
-}
-
-function isValidWardrobeItem(item, allowedCategories, allowedUrlPrefixes) {
-  if (!item || typeof item !== "object") {
-    return false;
-  }
-  if (!allowedCategories.has(item.category)) {
-    return false;
-  }
-  if (typeof item.link !== "string" || item.link.trim().length === 0) {
-    return false;
-  }
-  const normalizedLink = item.link.trim();
-  if (!allowedUrlPrefixes.some((prefix) => normalizedLink.startsWith(prefix))) {
-    return false;
-  }
-
-  try {
-    const url = new URL(normalizedLink);
-    return url.protocol === "http:" || url.protocol === "https:";
-  } catch {
-    return false;
-  }
-}
-
-function getAllowedDomains(brandUrls) {
-  const domains = new Set();
-  for (const url of brandUrls || []) {
-    try {
-      const hostname = new URL(url).hostname.trim().toLowerCase();
-      if (hostname) {
-        domains.add(hostname);
+    const candidates = poolByCategory.get(category);
+    let added = 0;
+    for (const candidate of candidates) {
+      const itemId = String(candidate.id);
+      if (resultIds.has(itemId)) {
+        continue;
       }
-    } catch {
-      // ignore invalid urls, validation is handled elsewhere
+      result.push(candidate);
+      resultIds.add(itemId);
+      added += 1;
+      if (added >= missing) {
+        break;
+      }
     }
   }
-  return Array.from(domains);
+
+  return result;
+}
+
+function getWardrobeSelectionPrompt(userProfile = null, items = []) {
+  const formalityText = localizeProfileValues(userProfile?.stylePreferences, en.options.styles);
+  const occasionsText = localizeProfileValues(userProfile?.wardrobeOccasions, en.options.occasions);
+  const seasonText = localizeProfileValues(userProfile?.wardrobeSeasons, en.options.seasons);
+  const audienceText = userProfile?.wardrobeAudience || "any";
+  const simplifiedItems = items.map((item) => {
+    const colorParts = [
+      Array.isArray(item?.color_base) ? item.color_base.join(", ") : "",
+      typeof item?.pattern === "string" ? item.pattern.trim() : "",
+      typeof item?.finish === "string" ? item.finish.trim() : ""
+    ].filter((value) => value);
+    const styleParts = [
+      Array.isArray(item?.style_tags) ? item.style_tags.join(", ") : "",
+      typeof item?.fit === "string" ? item.fit.trim() : "",
+      typeof item?.silhouette === "string" ? item.silhouette.trim() : ""
+    ].filter((value) => value);
+
+    return {
+      id: item?.id ?? null,
+      name: item?.name ?? "",
+      type: item?.category ?? "",
+      color: colorParts.join(", "),
+      style: styleParts.join(", "),
+      vibe: Array.isArray(item?.occasions) ? item.occasions.join(", ") : ""
+    };
+  });
+  const itemsJson = JSON.stringify(simplifiedItems, null, 2);
+
+  return PROMPT_TEMPLATE
+    .replace("{{formality}}", formalityText)
+    .replace("{{occasions}}", occasionsText)
+    .replace("{{season}}", seasonText)
+    .replace("{{audience}}", audienceText)
+    .replace("{{items}}", itemsJson)
+    .replace("{{category_list}}", getCategoryListText())
+    .replace("{{num_items}}", Object.entries(CATEGORIES).reduce((sum, [, count]) => sum + count, 0))
+    .concat("\n\nReturn strictly valid JSON only. No markdown, no extra text.");
 }
 
 async function callWardrobeAi(userProfile = null) {
-  const aiConfig = await getWardrobeAiConfig();
-  const prompt = getWardrobePrompt(aiConfig.promptTemplate, aiConfig.categories, aiConfig.brandUrls, userProfile);
-  const allowedCategories = new Set(Object.keys(aiConfig.categories));
-  const allowedDomains = getAllowedDomains(aiConfig.brandUrls);
+  const sql = getSqlClient();
+  const prompt = getWardrobePrompt(userProfile);
+  const promptEmbeddings = await getPromptEmbeddings(prompt);
 
-  if (allowedDomains.length === 0) {
-    throw new Error("No allowed domains configured for web_search");
+  const categories = Object.keys(CATEGORIES);
+  const stylePreferences = Array.isArray(userProfile?.stylePreferences) ? userProfile.stylePreferences : [];
+  const wardrobeOccasions = Array.isArray(userProfile?.wardrobeOccasions) ? userProfile.wardrobeOccasions : [];
+  const wardrobeSeasons = Array.isArray(userProfile?.wardrobeSeasons) ? userProfile.wardrobeSeasons : [];
+  const audienceByProfile = {
+    man: ["man", "all"],
+    woman: ["woman", "all"],
+    any: ["man", "woman", "all"]
+  };
+  const audienceFilters = audienceByProfile[userProfile?.wardrobeAudience] || audienceByProfile.any;
+  const embeddingVector = `[${promptEmbeddings.join(",")}]`;
+
+  const items = await sql`
+    SELECT results.*
+    FROM unnest(${categories}::text[]) AS cats(target_category)
+    CROSS JOIN LATERAL (
+      SELECT * FROM (
+        SELECT
+          products.*,
+          embedding <=> ${embeddingVector}::vector as distance,
+          ROW_NUMBER() OVER (
+            PARTITION BY color_base
+            ORDER BY embedding <=> ${embeddingVector}::vector ASC
+          ) as color_rank
+        FROM products
+        WHERE category = cats.target_category
+          AND (
+            cardinality(${stylePreferences}::text[]) = 0
+            OR EXISTS (
+              SELECT 1
+              FROM jsonb_array_elements_text(
+                COALESCE(NULLIF(formality_level, ''), '[]')::jsonb
+              ) AS lvl(value)
+              WHERE lvl.value = ANY(${stylePreferences}::text[])
+            )
+          )
+          AND (
+            cardinality(${wardrobeOccasions}::text[]) = 0
+            OR EXISTS (
+              SELECT 1
+              FROM jsonb_array_elements_text(
+                COALESCE(NULLIF(occasions, ''), '[]')::jsonb
+              ) AS occ(value)
+              WHERE occ.value = ANY(${wardrobeOccasions}::text[])
+            )
+          )
+          AND (
+            cardinality(${wardrobeSeasons}::text[]) = 0
+            OR EXISTS (
+              SELECT 1
+              FROM jsonb_array_elements_text(
+                COALESCE(NULLIF(season, ''), '[]')::jsonb
+              ) AS s(value)
+              WHERE s.value = ANY(${wardrobeSeasons}::text[])
+            )
+          )
+          AND lower(COALESCE(audience, '')) = ANY(${audienceFilters}::text[])
+      ) sub
+      ORDER BY color_rank ASC, distance ASC
+      LIMIT 10
+    ) results
+  `;
+
+  const normalizedItems = items.map((item) => {
+    const normalized = { ...item };
+    for (const field of ARRAY_FIELDS) {
+      normalized[field] = parseArrayField(normalized[field]);
+    }
+    delete normalized.embedding;
+    return normalized;
+  });
+
+  const selectionPrompt = getWardrobeSelectionPrompt(userProfile, normalizedItems);
+  writeFileSync(new URL("../../../last_prompt.txt", import.meta.url), selectionPrompt, "utf8");
+  const { response: selectionResponse, json: parsedSelection } = await generateJsonWithLlm(selectionPrompt);
+
+  console.log("[wardrobe-ai][selected-json]", JSON.stringify(parsedSelection));
+
+  const selectedIds = Array.isArray(parsedSelection?.selected_ids) ? parsedSelection.selected_ids : [];
+  const uniqueSelectedIds = [...new Set(selectedIds.map((id) => String(id)))];
+  const itemsById = new Map(normalizedItems.map((item) => [String(item.id), item]));
+  const selectedItems = uniqueSelectedIds
+    .map((id) => itemsById.get(String(id)))
+    .filter(Boolean);
+  const balancedItems = enforceCategoryCounts(selectedItems, normalizedItems);
+
+  if (balancedItems.length === 0) {
+    throw new Error("Model returned no valid selected_ids");
   }
 
-  let items;
-  if (aiConfig.ai === "openai") {
-    items = await callOpenAiWardrobe({
-      model: aiConfig.model,
-      prompt,
-      allowedCategories,
-      allowedDomains
-    });
-  } else if (aiConfig.ai === "gemini") {
-    items = await callGeminiWardrobe({
-      model: aiConfig.model,
-      prompt,
-      allowedCategories,
-      allowedDomains
-    });
-  } else {
-    throw new Error(`Unsupported AI provider: ${aiConfig.ai}`);
-  }
-
-  return items.filter((item) => isValidWardrobeItem(item, allowedCategories, aiConfig.brandUrls));
-}
-
-async function prefetchLinksData(items) {
-  const processed = await Promise.all(
-    items.map(async (item) => {
-      if (!item.link) {
-        return null;
-      }
-      try {
-        const data = await getLinkPreview(item.link, {
-          imagesPropertyType: "og",
-          headers: {
-            "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-          },
-          followRedirects: "manual",
-          handleRedirects: (baseURL, forwardedURL) => {
-            const urlObj = new URL(baseURL);
-            const forwardedURLObj = new URL(forwardedURL);
-            if (
-              forwardedURLObj.hostname === urlObj.hostname ||
-              forwardedURLObj.hostname === "www." + urlObj.hostname ||
-              "www." + forwardedURLObj.hostname === urlObj.hostname
-            ) {
-              return true;
-            }
-            return false;
-          },
-          timeout: 3000
-        });
-        if (
-          !data ||
-          typeof data !== "object" ||
-          Object.keys(data).length === 0 ||
-          !data.title ||
-          data.title.indexOf("404") !== -1 ||
-          !data.images ||
-          data.images.length === 0
-        ) {
-          return null;
-        }
-        return { ...item, data };
-      } catch (error) {
-        console.log(error);
-        return null;
-      }
-    })
-  );
-  return processed.filter(Boolean);
+  return balancedItems.map(({url, name, category, image_url}) => {
+    return { url, name, category, image_url };
+  });
 }
 
 async function getWardrobeItems(req, res) {
@@ -299,22 +291,16 @@ async function getWardrobeItems(req, res) {
     }
 
     let items = await callWardrobeAi(profile);
-    let processedItems = await prefetchLinksData(items);
 
-    if (processedItems.length === 0) {
-      items = await callWardrobeAi(profile);
-      processedItems = await prefetchLinksData(items);
-    }
-
-    if (processedItems.length === 0) {
-      throw new Error("AI response has no valid wardrobe items after retry");
+    if (items.length === 0) {
+      throw new Error("AI response has no valid wardrobe items");
     }
 
     if (profile) {
-      await updateProfileWardrobeItems(req.user.email, processedItems);
+      await updateProfileWardrobeItems(req.user.email, items);
     }
 
-    return res.json({ ok: true, items: processedItems });
+    return res.json({ ok: true, items: items });
   } catch (error) {
     console.error("[wardrobe-ai]", error);
     return res.status(503).json({ error: "service_unavailable" });

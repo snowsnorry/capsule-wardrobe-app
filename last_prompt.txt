@@ -1,0 +1,505 @@
+System: You are a professional fashion stylist. You create cohesive, stylish capsule wardrobes.
+
+User:
+I need a capsule wardrobe for woman.
+Context: city walk, weekend, autumn, spring.
+Style: streetwear, casual
+
+Here is a list of AVAILABLE ITEMS (Candidates):
+[
+  {
+    "id": "3014",
+    "name": "Corduroy Wide-Leg Trousers",
+    "type": "bottom",
+    "color": "brown",
+    "style": "minimalist, scandi, casual, classic, regular, wide-leg",
+    "vibe": "city_walk, weekend"
+  },
+  {
+    "id": "3137",
+    "name": "Wide-Leg Wool Cargo Trousers",
+    "type": "bottom",
+    "color": "yellow",
+    "style": "minimalist, scandi, utilitarian, classic, regular fit, wide leg",
+    "vibe": "city_walk, weekend"
+  },
+  {
+    "id": "3043",
+    "name": "Barrel-Leg Drawstring Trousers",
+    "type": "bottom",
+    "color": "beige",
+    "style": "minimalist, scandi, casual, effortless, regular, barrel-leg",
+    "vibe": "city_walk, weekend"
+  },
+  {
+    "id": "3015",
+    "name": "Corduroy Wide-Leg Trousers",
+    "type": "bottom",
+    "color": "white",
+    "style": "minimalist, scandi, classic, casual, regular, wide-leg",
+    "vibe": "city_walk, weekend"
+  },
+  {
+    "id": "2758",
+    "name": "Twill Mini Skirt",
+    "type": "bottom",
+    "color": "black",
+    "style": "minimalist, scandi, classic, effortless, high-waisted, a-line",
+    "vibe": "city_walk, weekend, date_night"
+  },
+  {
+    "id": "3065",
+    "name": "Zipped-Cuff Leggings",
+    "type": "bottom",
+    "color": "grey",
+    "style": "minimalist, scandi, modern, effortless, slim, slim",
+    "vibe": "city_walk, weekend"
+  },
+  {
+    "id": "3709",
+    "name": "Cotton Shorts – White/Multi-Colour – Women",
+    "type": "bottom",
+    "color": "multicolor, white",
+    "style": "minimalist, casual, basic, comfy, close fit, shorts",
+    "vibe": "city_walk, weekend"
+  },
+  {
+    "id": "97",
+    "name": "Barrel-Leg Jeans",
+    "type": "bottom",
+    "color": "blue",
+    "style": "classic, denim, casual, timeless, oversized, barrel leg",
+    "vibe": "city_walk, weekend"
+  },
+  {
+    "id": "2771",
+    "name": "Cotton Drawstring Midi Skirt",
+    "type": "bottom",
+    "color": "",
+    "style": "minimalist, scandi, casual, effortless, regular, straight",
+    "vibe": "city_walk, weekend, travel"
+  },
+  {
+    "id": "4386",
+    "name": "Linen Trousers – Beige/Black – Women",
+    "type": "bottom",
+    "color": "beige, black",
+    "style": "minimalist, scandi, casual, classic, slim, straight",
+    "vibe": "city_walk, weekend"
+  },
+  {
+    "id": "3216",
+    "name": "2-Pack Ribbed Socks",
+    "type": "top",
+    "color": "white",
+    "style": "minimalist, scandi, basic, casual",
+    "vibe": "weekend, city_walk"
+  },
+  {
+    "id": "2672",
+    "name": "Oversized Cotton-Blend Shirt",
+    "type": "top",
+    "color": "brown",
+    "style": "minimalist, scandi, effortless, classic, oversized, oversized",
+    "vibe": "city_walk, weekend"
+  },
+  {
+    "id": "3161",
+    "name": "Cotton Crew-Neck T-Shirt",
+    "type": "top",
+    "color": "yellow",
+    "style": "minimalist, scandi, basic, casual, regular, regular",
+    "vibe": "city_walk, weekend"
+  },
+  {
+    "id": "2857",
+    "name": "Boat-Neck Cotton Blouse",
+    "type": "top",
+    "color": "beige, check",
+    "style": "minimalist, scandi, casual, classic, relaxed, relaxed",
+    "vibe": "city_walk, weekend, date_night"
+  },
+  {
+    "id": "3451",
+    "name": "Boat-Neck Blouse – White/Multi Colour – Women",
+    "type": "top",
+    "color": "multicolor, white",
+    "style": "minimalist, scandi, classic, casual, regular, regular",
+    "vibe": "city_walk, weekend, office"
+  },
+  {
+    "id": "2901",
+    "name": "Cotton Long-Sleeved T-Shirt",
+    "type": "top",
+    "color": "brown, pink, stripe",
+    "style": "minimalist, scandi, casual, basic, relaxed, relaxed",
+    "vibe": "city_walk, weekend, school_dropoff"
+  },
+  {
+    "id": "775",
+    "name": "Oversized Denim Shirt",
+    "type": "top",
+    "color": "blue",
+    "style": "casual, denim, minimalist, scandi, loose, oversized",
+    "vibe": "city_walk, weekend, travel"
+  },
+  {
+    "id": "798",
+    "name": "Oversized Shirt",
+    "type": "top",
+    "color": "brown, white",
+    "style": "minimalist, scandi, casual, classic, relaxed, oversized",
+    "vibe": "city_walk, weekend"
+  },
+  {
+    "id": "2653",
+    "name": "Printed Asymmetric Blouse",
+    "type": "top",
+    "color": "multicolor",
+    "style": "modern, artistic, minimal, scandi, regular, asymmetric",
+    "vibe": "city_walk, date_night"
+  },
+  {
+    "id": "1172",
+    "name": "Striped T-Shirt",
+    "type": "top",
+    "color": "blue, white, stripe",
+    "style": "nautical, classic, casual, stripes, regular, regular",
+    "vibe": "city_walk, weekend, school_dropoff"
+  },
+  {
+    "id": "1245",
+    "name": "Tie-Belt Denim Jacket",
+    "type": "outerwear",
+    "color": "blue",
+    "style": "minimalist, scandi, casual, denim, regular, relaxed",
+    "vibe": "city_walk, weekend, travel"
+  },
+  {
+    "id": "4775",
+    "name": "Pile Jacket – Beige – Women",
+    "type": "outerwear",
+    "color": "beige",
+    "style": "minimalist, scandi, cozy, casual, regular, relaxed",
+    "vibe": "city_walk, weekend, travel"
+  },
+  {
+    "id": "2162",
+    "name": "Oversized Raw Denim Jacket",
+    "type": "outerwear",
+    "color": "grey",
+    "style": "minimalist, scandi, casual, denim, effortless, oversized, oversized",
+    "vibe": "city_walk, weekend, travel"
+  },
+  {
+    "id": "778",
+    "name": "Oversized Drawstring Utility Jacket",
+    "type": "outerwear",
+    "color": "brown",
+    "style": "utilitarian, minimalist, casual, boxy, relaxed, oversized",
+    "vibe": "city_walk, weekend, travel"
+  },
+  {
+    "id": "779",
+    "name": "Oversized Drawstring Utility Jacket",
+    "type": "outerwear",
+    "color": "yellow",
+    "style": "utilitarian, minimalist, casual, boxy, relaxed, oversized",
+    "vibe": "city_walk, weekend, travel"
+  },
+  {
+    "id": "3357",
+    "name": "ARKET and Barbour Waxed Cotton Jacket",
+    "type": "outerwear",
+    "color": "green",
+    "style": "heritage, outdoor, classic, utilitarian, regular, straight",
+    "vibe": "city_walk, travel, outdoor, weekend"
+  },
+  {
+    "id": "2148",
+    "name": "Denim Utility Jacket",
+    "type": "outerwear",
+    "color": "pink",
+    "style": "minimalist, scandi, casual, utilitarian, regular, relaxed",
+    "vibe": "city_walk, weekend, travel"
+  },
+  {
+    "id": "4638",
+    "name": "Nylon Jacket – Black – Women",
+    "type": "outerwear",
+    "color": "black",
+    "style": "sporty, minimalist, casual, utilitarian, regular, regular",
+    "vibe": "city_walk, travel, weekend"
+  },
+  {
+    "id": "384",
+    "name": "Faux Fur Leopard Coat",
+    "type": "outerwear",
+    "color": "leopard",
+    "style": "animal print, classic, statement, bold, straight",
+    "vibe": "city_walk, weekend, date_night"
+  },
+  {
+    "id": "4052",
+    "name": "Funnel-Neck Jacket – Off White – Women",
+    "type": "outerwear",
+    "color": "white",
+    "style": "minimalist, scandi, casual, workwear, regular, relaxed",
+    "vibe": "city_walk, weekend, travel"
+  },
+  {
+    "id": "881",
+    "name": "Puma Palermo Pop Sneakers",
+    "type": "shoes",
+    "color": "grey, yellow",
+    "style": "retro, streetwear, casual, sporty, sneaker",
+    "vibe": "city_walk, weekend"
+  },
+  {
+    "id": "40",
+    "name": "adidas Superstar II W",
+    "type": "shoes",
+    "color": "print",
+    "style": "street, sporty, casual, classic, low top",
+    "vibe": "city_walk, weekend"
+  },
+  {
+    "id": "3280",
+    "name": "adidas Gazelle Trainers – Dark Brown – Women",
+    "type": "shoes",
+    "color": "brown",
+    "style": "retro, casual, sporty, classic, low-top",
+    "vibe": "city_walk, weekend"
+  },
+  {
+    "id": "747",
+    "name": "New Balance 530 Sneakers",
+    "type": "shoes",
+    "color": "beige, grey",
+    "style": "retro, athleisure, classic, sporty, sneaker",
+    "vibe": "city_walk, weekend, travel"
+  },
+  {
+    "id": "749",
+    "name": "New Balance 740 Sneakers",
+    "type": "shoes",
+    "color": "blue, white",
+    "style": "sporty, casual, classic, athleisure, sneaker",
+    "vibe": "city_walk, weekend"
+  },
+  {
+    "id": "751",
+    "name": "New Balance CT500 Sneakers",
+    "type": "shoes",
+    "color": "beige",
+    "style": "retro, sporty, casual, classic, low-top",
+    "vibe": "city_walk, weekend"
+  },
+  {
+    "id": "742",
+    "name": "New Balance 204L Sneakers",
+    "type": "shoes",
+    "color": "green, metallic, metallic",
+    "style": "retro, sporty, casual, streetwear, low-profile",
+    "vibe": "city_walk, weekend"
+  },
+  {
+    "id": "750",
+    "name": "New Balance 740 Sneakers",
+    "type": "shoes",
+    "color": "white",
+    "style": "classic, sporty, minimalist, athleisure, sneaker",
+    "vibe": "city_walk, weekend, school_dropoff"
+  },
+  {
+    "id": "3286",
+    "name": "adidas Japan Trainers – White/Brown – Women",
+    "type": "shoes",
+    "color": "brown, white",
+    "style": "retro, sporty, classic, minimalist, low-top",
+    "vibe": "city_walk, travel, weekend"
+  },
+  {
+    "id": "33",
+    "name": "adidas Samba LT",
+    "type": "shoes",
+    "color": "metallic, red, metallic",
+    "style": "retro, sporty, casual, classic, low-top",
+    "vibe": "city_walk, weekend"
+  },
+  {
+    "id": "586",
+    "name": "Leather Belt",
+    "type": "belt",
+    "color": "black",
+    "style": "classic, minimalist, scandi, timeless, regular",
+    "vibe": "city_walk, weekend, office"
+  },
+  {
+    "id": "4263",
+    "name": "Pony Hair-Effect Leather Belt – Brown – Women",
+    "type": "belt",
+    "color": "brown",
+    "style": "minimalist, scandi, casual, classic, relaxed",
+    "vibe": "city_walk, weekend"
+  },
+  {
+    "id": "702",
+    "name": "Mid-Waist Leather Belt",
+    "type": "belt",
+    "color": "",
+    "style": "classic, minimalist, equestrian, timeless, mid-waist",
+    "vibe": "city_walk, weekend, date_night"
+  },
+  {
+    "id": "591",
+    "name": "Leather Belt",
+    "type": "belt",
+    "color": "grey",
+    "style": "classic, minimalist, scandi, timeless, regular",
+    "vibe": "city_walk, weekend, office"
+  },
+  {
+    "id": "5748",
+    "name": "Zebra-Print Leather Belt – White/Black/Faux Zebra",
+    "type": "belt",
+    "color": "black, white, zebra",
+    "style": "animal print, classic, minimalist, statement, regular",
+    "vibe": "city_walk, weekend"
+  },
+  {
+    "id": "1109",
+    "name": "Slim Suede Belt",
+    "type": "belt",
+    "color": "beige",
+    "style": "minimalist, classic, scandi, clean, slim",
+    "vibe": "city_walk, weekend"
+  },
+  {
+    "id": "2003",
+    "name": "Reversible Leather Belt",
+    "type": "belt",
+    "color": "brown, white",
+    "style": "minimalist, scandi, classic, clean, classic",
+    "vibe": "city_walk, travel, weekend"
+  },
+  {
+    "id": "1331",
+    "name": "Wide Suede Waist Belt",
+    "type": "belt",
+    "color": "green",
+    "style": "minimalist, classic, scandi, elegant, wide",
+    "vibe": "city_walk, weekend, date_night"
+  },
+  {
+    "id": "4264",
+    "name": "Leather Belt – Dark Red – Women",
+    "type": "belt",
+    "color": "red",
+    "style": "minimalist, scandi, casual, modern, relaxed, wide leg",
+    "vibe": "city_walk, weekend"
+  },
+  {
+    "id": "1301",
+    "name": "Wide Leather Waist Belt",
+    "type": "belt",
+    "color": "black",
+    "style": "minimalist, classic, scandi, polished, wide",
+    "vibe": "city_walk, weekend, date_night"
+  },
+  {
+    "id": "1117",
+    "name": "Small Suede Croco Tote Bag",
+    "type": "bag",
+    "color": "beige",
+    "style": "minimalist, scandi, classic, understated, tote",
+    "vibe": "city_walk, travel, weekend"
+  },
+  {
+    "id": "5410",
+    "name": "Suede Shoulder Bag – Brown – Women",
+    "type": "bag",
+    "color": "brown",
+    "style": "minimalist, scandi, classic, casual, oversized, shoulder",
+    "vibe": "city_walk, weekend"
+  },
+  {
+    "id": "1960",
+    "name": "Mini Bucket Bag - Pony-Hair Leather",
+    "type": "bag",
+    "color": "pink",
+    "style": "minimalist, scandi, classic, modern, bucket",
+    "vibe": "city_walk, weekend, date_night"
+  },
+  {
+    "id": "145",
+    "name": "Braided Denim Tote Bag",
+    "type": "bag",
+    "color": "blue, denim",
+    "style": "minimalist, scandi, casual, everyday, tote",
+    "vibe": "city_walk, travel, weekend"
+  },
+  {
+    "id": "4269",
+    "name": "Leather Bucket Bag – Black – Women",
+    "type": "bag",
+    "color": "black",
+    "style": "minimalist, scandi, classic, effortless, regular, bucket",
+    "vibe": "city_walk, weekend"
+  },
+  {
+    "id": "1113",
+    "name": "Small Appliquéd Denim Bag",
+    "type": "bag",
+    "color": "white",
+    "style": "boho, floral, casual, textured, tote",
+    "vibe": "city_walk, weekend"
+  },
+  {
+    "id": "600",
+    "name": "Leather Bowling Bag",
+    "type": "bag",
+    "color": "grey",
+    "style": "vintage, minimalist, scandi, classic, null, curved",
+    "vibe": "city_walk, weekend, travel"
+  },
+  {
+    "id": "5509",
+    "name": "Two-In-One Bucket Bag – Brown/Beige – Women",
+    "type": "bag",
+    "color": "beige, brown",
+    "style": "minimalist, scandi, classic, everyday, bucket",
+    "vibe": "city_walk, travel, weekend"
+  },
+  {
+    "id": "1114",
+    "name": "Small Braided-Leather Bag",
+    "type": "bag",
+    "color": "yellow",
+    "style": "minimalist, scandi, classic, everyday, circular",
+    "vibe": "city_walk, weekend"
+  },
+  {
+    "id": "599",
+    "name": "Leather Bowling Bag",
+    "type": "bag",
+    "color": "",
+    "style": "vintage, minimalist, classic, scandi, sturdy, curved",
+    "vibe": "city_walk, weekend, travel"
+  }
+]
+
+INSTRUCTIONS:
+1. Select exactly 10 items to form a complete outfit: 2 bottom, 2 top, 1 outerwear, 2 shoes, 1 belt, 2 bag.
+2. DO NOT repeate items.
+3. The items MUST match in color and style.
+4. Explain your reasoning briefly.
+5. Return the result in strictly Valid JSON format.
+
+Output Format:
+{
+  "reasoning": "string explanation...",
+  "selected_ids": [id1, id2, id3, id4, id5]
+}
+
+Return strictly valid JSON only. No markdown, no extra text.

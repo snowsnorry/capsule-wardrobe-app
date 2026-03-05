@@ -24,6 +24,8 @@ import {
   deleteProfile,
   getStylePreferences,
   getWardrobeOccasions,
+  getWardrobeSeasons,
+  getWardrobeAudience,
   getProfile,
   hasProfile,
   updateProfile,
@@ -93,6 +95,10 @@ function isValidSelection(items, allowedItems) {
     return false;
   }
   return items.every((item) => typeof item === "string" && allowedItems.includes(item));
+}
+
+function isValidSingleSelection(item, allowedItems) {
+  return typeof item === "string" && allowedItems.includes(item);
 }
 
 if (NODE_ENV !== "development") {
@@ -421,6 +427,14 @@ app.get("/profile/wardrobe-occasions", requireAuth, (req, res) => {
   res.json({ ok: true, items: getWardrobeOccasions() });
 });
 
+app.get("/profile/wardrobe-seasons", requireAuth, (req, res) => {
+  res.json({ ok: true, items: getWardrobeSeasons() });
+});
+
+app.get("/profile/wardrobe-audience", requireAuth, (req, res) => {
+  res.json({ ok: true, items: getWardrobeAudience() });
+});
+
 app.post("/wardrobe/items", requireTrustedOrigin, requireAuth, requireCsrf, getWardrobeItems);
 
 app.post("/profile/initialize", requireTrustedOrigin, requireAuth, requireCsrf, async (req, res) => {
@@ -430,11 +444,17 @@ app.post("/profile/initialize", requireTrustedOrigin, requireAuth, requireCsrf, 
   const wardrobeOccasions = Array.isArray(req.body?.wardrobeOccasions)
     ? req.body.wardrobeOccasions
     : [];
+  const wardrobeSeasons = Array.isArray(req.body?.wardrobeSeasons)
+    ? req.body.wardrobeSeasons
+    : [];
+  const wardrobeAudience = String(req.body?.wardrobeAudience || "").trim().toLowerCase();
   const locale = String(req.body?.locale || "").trim().toLowerCase();
 
   if (
     !isValidSelection(stylePreferences, getStylePreferences()) ||
     !isValidSelection(wardrobeOccasions, getWardrobeOccasions()) ||
+    !isValidSelection(wardrobeSeasons, getWardrobeSeasons()) ||
+    !isValidSingleSelection(wardrobeAudience, getWardrobeAudience()) ||
     !SUPPORTED_LOCALES.has(locale)
   ) {
     return res.status(400).json({ error: "invalid_payload" });
@@ -444,6 +464,8 @@ app.post("/profile/initialize", requireTrustedOrigin, requireAuth, requireCsrf, 
     const profile = await createProfile(req.user.email, {
       stylePreferences,
       wardrobeOccasions,
+      wardrobeSeasons,
+      wardrobeAudience,
       locale
     });
     if (!profile) {
@@ -463,11 +485,17 @@ app.patch("/profile/me", requireTrustedOrigin, requireAuth, requireCsrf, async (
   const wardrobeOccasions = Array.isArray(req.body?.wardrobeOccasions)
     ? req.body.wardrobeOccasions
     : [];
+  const wardrobeSeasons = Array.isArray(req.body?.wardrobeSeasons)
+    ? req.body.wardrobeSeasons
+    : [];
+  const wardrobeAudience = String(req.body?.wardrobeAudience || "").trim().toLowerCase();
   const locale = String(req.body?.locale || "").trim().toLowerCase();
 
   if (
     !isValidSelection(stylePreferences, getStylePreferences()) ||
     !isValidSelection(wardrobeOccasions, getWardrobeOccasions()) ||
+    !isValidSelection(wardrobeSeasons, getWardrobeSeasons()) ||
+    !isValidSingleSelection(wardrobeAudience, getWardrobeAudience()) ||
     !SUPPORTED_LOCALES.has(locale)
   ) {
     return res.status(400).json({ error: "invalid_payload" });
@@ -477,6 +505,8 @@ app.patch("/profile/me", requireTrustedOrigin, requireAuth, requireCsrf, async (
     const profile = await updateProfile(req.user.email, {
       stylePreferences,
       wardrobeOccasions,
+      wardrobeSeasons,
+      wardrobeAudience,
       locale
     });
     if (!profile) {
