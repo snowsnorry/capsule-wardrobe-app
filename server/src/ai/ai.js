@@ -207,49 +207,61 @@ async function callWardrobeAi(userProfile = null) {
       SELECT * FROM (
         SELECT
           products.*,
+          -- 1. Compute vector distance (lower is better)
           embedding <=> ${embeddingVector}::vector as distance,
+          
+          -- 2. Compute "match points" (relevance score)
+          (
+            -- Style/formality match gives +20 points
+            CASE WHEN EXISTS (
+              SELECT 1 FROM jsonb_array_elements_text(COALESCE(NULLIF(formality_level, ''), '[]')::jsonb) v 
+              WHERE v.value = ANY(${stylePreferences}::text[])
+            ) THEN 20 ELSE 0 END
+            +
+            -- Occasion match gives +20 points
+            CASE WHEN EXISTS (
+              SELECT 1 FROM jsonb_array_elements_text(COALESCE(NULLIF(occasions, ''), '[]')::jsonb) v 
+              WHERE v.value = ANY(${wardrobeOccasions}::text[])
+            ) THEN 20 ELSE 0 END
+            +
+            -- Season match gives +50 points (critical, but can be softened for accessories)
+            CASE WHEN EXISTS (
+              SELECT 1 FROM jsonb_array_elements_text(COALESCE(NULLIF(season, ''), '[]')::jsonb) v 
+              WHERE v.value = ANY(${wardrobeSeasons}::text[])
+            ) THEN 50 
+            -- If season is not specified at all (bags, watches), give +40 as universal items
+            WHEN jsonb_array_length(COALESCE(NULLIF(season, ''), '[]')::jsonb) = 0 THEN 40
+            ELSE 0 END
+          ) as relevance_score,
+
           ROW_NUMBER() OVER (
             PARTITION BY color_base
             ORDER BY embedding <=> ${embeddingVector}::vector ASC
           ) as color_rank
+
         FROM products
-        WHERE category = cats.target_category
-          AND (
-            cardinality(${stylePreferences}::text[]) = 0
-            OR EXISTS (
-              SELECT 1
-              FROM jsonb_array_elements_text(
-                COALESCE(NULLIF(formality_level, ''), '[]')::jsonb
-              ) AS lvl(value)
-              WHERE lvl.value = ANY(${stylePreferences}::text[])
-            )
-          )
-          AND (
-            cardinality(${wardrobeOccasions}::text[]) = 0
-            OR EXISTS (
-              SELECT 1
-              FROM jsonb_array_elements_text(
-                COALESCE(NULLIF(occasions, ''), '[]')::jsonb
-              ) AS occ(value)
-              WHERE occ.value = ANY(${wardrobeOccasions}::text[])
-            )
-          )
+        WHERE 
+          -- KEEP ONLY HARD FILTERS
+          category = cats.target_category
+          AND lower(COALESCE(audience, '')) = ANY(${audienceFilters}::text[])
+          
+          -- OPTIONAL: Semi-strict season filter.
+          -- Can be removed entirely if relying on relevance_score,
+          -- or kept with logic: "Either season matches, or season is not specified"
           AND (
             cardinality(${wardrobeSeasons}::text[]) = 0
+            OR jsonb_array_length(COALESCE(NULLIF(season, ''), '[]')::jsonb) = 0
             OR EXISTS (
-              SELECT 1
-              FROM jsonb_array_elements_text(
-                COALESCE(NULLIF(season, ''), '[]')::jsonb
-              ) AS s(value)
-              WHERE s.value = ANY(${wardrobeSeasons}::text[])
+                SELECT 1 FROM jsonb_array_elements_text(COALESCE(NULLIF(season, ''), '[]')::jsonb) s 
+                WHERE s.value = ANY(${wardrobeSeasons}::text[])
             )
           )
-          AND lower(COALESCE(audience, '')) = ANY(${audienceFilters}::text[])
+
       ) sub
-      ORDER BY color_rank ASC, distance ASC
+      -- SORTING: Most tag-relevant first, then closest by vector
+      ORDER BY relevance_score DESC, distance ASC
       LIMIT 10
-    ) results
-  `;
+    ) results`;
 
   const normalizedItems = items.map((item) => {
     const normalized = { ...item };
