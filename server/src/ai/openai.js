@@ -65,7 +65,8 @@ async function generateJsonWithLlm(prompt) {
       { role: "system", content: system },
       { role: "user", content: user }
     ],
-    temperature: 0.2
+    temperature: 0.4,
+    response_format: {"type": "json_object"}
   });
 
   let content = response?.choices?.[0]?.message?.content || "{}";
