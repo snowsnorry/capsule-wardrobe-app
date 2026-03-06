@@ -516,29 +516,13 @@ function App() {
         height: "100vh",
         display: "flex",
         alignItems: "stretch",
-        background: "linear-gradient(140deg, #f7f4ef 0%, #edf4f2 45%, #f6fbff 100%)",
+        backgroundColor: "#fcfbf9",
+        backgroundImage:
+          'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noiseFilter\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.8\' numOctaves=\'3\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noiseFilter)\' opacity=\'0.05\'/%3E%3C/svg%3E")',
         position: "relative",
         overflow: "hidden",
-        "&::before": {
-          content: '""',
-          position: "absolute",
-          width: 320,
-          height: 320,
-          top: -120,
-          right: -80,
-          background: "radial-gradient(circle at 30% 30%, rgba(28, 124, 124, 0.25), transparent 65%)",
-          filter: "blur(4px)"
-        },
-        "&::after": {
-          content: '""',
-          position: "absolute",
-          width: 240,
-          height: 240,
-          bottom: -120,
-          left: -60,
-          background: "radial-gradient(circle at 30% 30%, rgba(240, 180, 41, 0.3), transparent 65%)",
-          filter: "blur(6px)"
-        }
+        "&::before": { display: "none" },
+        "&::after": { display: "none" }
       }}
     >
       <Container
@@ -559,7 +543,54 @@ function App() {
       >
         {!sessionInitialized ? null : !user ? (
           <Stack spacing={3} sx={{ pr: { md: 4 } }}>
-            <Typography variant="overline" color="secondary.main" sx={{ letterSpacing: 2 }}>
+            <Box
+              sx={{
+                display: { xs: "none", md: "block" },
+                width: { md: "92%", lg: "100%" },
+                maxWidth: { md: 340, lg: 420 },
+                ml: { md: -1, lg: -2 },
+                mb: { md: -1, lg: -1.5 },
+                overflow: "hidden",
+                position: "relative",
+                "&::after": {
+                  content: '""',
+                  position: "absolute",
+                  inset: 0,
+                  pointerEvents: "none",
+                  background: `
+                    radial-gradient(circle at 50% 50%, rgba(252, 251, 249, 0) 62%, rgba(252, 251, 249, 0.07) 84%, rgba(252, 251, 249, 0.14) 100%),
+                    linear-gradient(to top, rgba(252, 251, 249, 0.08), rgba(252, 251, 249, 0)),
+                    linear-gradient(to bottom, rgba(252, 251, 249, 0.07), rgba(252, 251, 249, 0)),
+                    linear-gradient(to right, rgba(252, 251, 249, 0.07), rgba(252, 251, 249, 0)),
+                    linear-gradient(to left, rgba(252, 251, 249, 0.07), rgba(252, 251, 249, 0))
+                  `
+                }
+              }}
+            >
+              <Box
+                component="img"
+                src="/girl.png"
+                alt=""
+                aria-hidden="true"
+                sx={{
+                  display: "block",
+                  width: "100%",
+                  height: "auto",
+                  filter: "saturate(0.96) contrast(0.98)",
+                  opacity: 0.98,
+                  transform: "translateZ(0)",
+                  willChange: "transform",
+                  backfaceVisibility: "hidden",
+                  imageRendering: "auto",
+                  objectFit: "cover",
+                  mixBlendMode: "multiply"
+                }}
+              />
+            </Box>
+            <Typography
+              variant="overline"
+              sx={{ letterSpacing: 2, color: "#8f6f45", opacity: 0.96 }}
+            >
               {t("appName")}
             </Typography>
             <Typography
