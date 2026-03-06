@@ -76,6 +76,7 @@ const en = {
   main: {
     title: "Main",
     welcome: "Welcome back",
+    refresh: "Refresh wardrobe",
     placeholder: "Your profile is ready. The main screen will appear here next.",
     menuOpen: "Open menu",
     menuProfile: "Profile",

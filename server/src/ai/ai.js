@@ -200,6 +200,7 @@ async function callWardrobeAi(userProfile = null) {
   };
   const audienceFilters = audienceByProfile[userProfile?.wardrobeAudience] || audienceByProfile.any;
   const embeddingVector = `[${promptEmbeddings.join(",")}]`;
+  const noiseFactor = 0.05;
 
   const items = await sql`
     SELECT results.*
@@ -212,7 +213,9 @@ async function callWardrobeAi(userProfile = null) {
           -- This ensures that the "Best" item (highest score) of a specific color gets Rank 1.
           ROW_NUMBER() OVER (
             PARTITION BY COALESCE(color_base, ARRAY[]::text[])
-            ORDER BY relevance_score DESC, distance ASC
+            ORDER BY 
+              relevance_score DESC, 
+              (distance + (RANDOM() * ${noiseFactor}::float)) ASC
           ) as color_rank
         FROM (
           SELECT
@@ -253,7 +256,7 @@ async function callWardrobeAi(userProfile = null) {
       ORDER BY 
         relevance_score DESC, 
         color_rank ASC,       
-        distance ASC          
+        (distance + (RANDOM() * ${noiseFactor}::float)) ASC
       LIMIT 10
     ) results`;
 
@@ -291,9 +294,14 @@ async function callWardrobeAi(userProfile = null) {
 
 async function getWardrobeItems(req, res) {
   try {
+    const forceRefresh = Boolean(req.body?.force);
     const profile = await getProfile(req.user.email);
-    if (profile && Array.isArray(profile.wardrobeItems) && profile.wardrobeItems.length > 0) {
+    if (!forceRefresh && profile && Array.isArray(profile.wardrobeItems) && profile.wardrobeItems.length > 0) {
       return res.json({ ok: true, items: profile.wardrobeItems });
+    }
+
+    if (forceRefresh && profile) {
+      await updateProfileWardrobeItems(req.user.email, null);
     }
 
     let items = await callWardrobeAi(profile);

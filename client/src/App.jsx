@@ -388,6 +388,23 @@ function App() {
     audience: selectedAudience
   });
 
+  const loadWardrobeItems = async ({ force = false } = {}) => {
+    const { fetchWardrobeItems } = await import("./api/wardrobe.js");
+    return fetchWardrobeItems({ profileKey, force });
+  };
+
+  const handleRefreshWardrobe = async () => {
+    setIsLoadingWardrobe(true);
+    try {
+      const result = await loadWardrobeItems({ force: true });
+      setWardrobeItems(result.items || []);
+    } catch (error) {
+      setWardrobeItems([]);
+    } finally {
+      setIsLoadingWardrobe(false);
+    }
+  };
+
   useEffect(() => {
     if (!user || !(hasProfile || profileCreated)) {
       return;
@@ -398,19 +415,19 @@ function App() {
 
     let isActive = true;
     setIsLoadingWardrobe(true);
-    import("./api/wardrobe.js").then(async ({ fetchWardrobeItems }) => {
-      try {
-        const result = await fetchWardrobeItems();
+    loadWardrobeItems()
+      .then((result) => {
         if (!isActive) return;
         setWardrobeItems(result.items || []);
-      } catch (error) {
+      })
+      .catch(() => {
         if (!isActive) return;
         setWardrobeItems([]);
-      } finally {
+      })
+      .finally(() => {
         if (!isActive) return;
         setIsLoadingWardrobe(false);
-      }
-    });
+      });
 
     return () => {
       isActive = false;
@@ -478,6 +495,7 @@ function App() {
           onSignOut={handleLogout}
           isSigningOut={status.loading}
           onOpenProfile={handleOpenProfile}
+          onRefreshItems={handleRefreshWardrobe}
           profileKey={profileKey}
           items={wardrobeItems || []}
           isLoadingItems={isLoadingWardrobe}

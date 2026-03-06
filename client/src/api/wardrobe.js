@@ -3,19 +3,24 @@ import { requestJson } from "./request.js";
 
 const inFlightByKey = new Map();
 
-async function fetchWardrobeItems(profileKey = "default") {
+async function fetchWardrobeItems({ profileKey = "default", force = false } = {}) {
   const key = String(profileKey || "default");
-  if (!inFlightByKey.has(key)) {
+  const requestKey = force ? `${key}:force` : key;
+  if (!inFlightByKey.has(requestKey)) {
     const promise = requestJson(`${API_BASE_URL}/wardrobe/items`, {
-    method: "POST",
-    credentials: "include"
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ force })
     }).finally(() => {
-      inFlightByKey.delete(key);
+      inFlightByKey.delete(requestKey);
     });
-    inFlightByKey.set(key, promise);
+    inFlightByKey.set(requestKey, promise);
   }
 
-  return inFlightByKey.get(key);
+  return inFlightByKey.get(requestKey);
 }
 
 export { fetchWardrobeItems };

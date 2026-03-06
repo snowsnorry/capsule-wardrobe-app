@@ -15,6 +15,7 @@ import {
   Typography
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
+import RefreshIcon from "@mui/icons-material/Refresh";
 import { useI18n } from "../i18n/useI18n.js";
 import ClothingGridPlaceholder from "../components/ClothingGridPlaceholder.jsx";
 import ClothingCard from "../components/ClothingCard.jsx";
@@ -24,6 +25,7 @@ function MainScreen({
   onSignOut,
   isSigningOut,
   onOpenProfile,
+  onRefreshItems,
   profileKey,
   items,
   isLoadingItems
@@ -114,7 +116,16 @@ function MainScreen({
           </Button>
         </DialogActions>
       </Dialog>
-      <Typography variant="h4">{t("main.welcome")}</Typography>
+      <Stack direction="row" alignItems="center" justifyContent="space-between">
+        <Typography variant="h4">{t("main.welcome")}</Typography>
+        <IconButton
+          aria-label={t("main.refresh")}
+          onClick={onRefreshItems}
+          disabled={isLoadingItems}
+        >
+          <RefreshIcon />
+        </IconButton>
+      </Stack>
       <Divider />
       {isLoadingItems ? (
         <ClothingGridPlaceholder count={12} />
