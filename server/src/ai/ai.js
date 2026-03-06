@@ -211,7 +211,7 @@ async function callWardrobeAi(userProfile = null) {
           -- 3. Calculate Rank within a color family, based on the calculated Relevance Score.
           -- This ensures that the "Best" item (highest score) of a specific color gets Rank 1.
           ROW_NUMBER() OVER (
-            PARTITION BY color_base
+            PARTITION BY COALESCE(color_base, ARRAY[]::text[])
             ORDER BY relevance_score DESC, distance ASC
           ) as color_rank
         FROM (
@@ -224,24 +224,17 @@ async function callWardrobeAi(userProfile = null) {
             -- Instead of filtering out items, we give them points.
             (
               -- Style Match: +20 points
-              CASE WHEN EXISTS (
-                SELECT 1 FROM jsonb_array_elements_text(COALESCE(NULLIF(formality_level, ''), '[]')::jsonb) v 
-                WHERE v.value = ANY(${stylePreferences}::text[])
-              ) THEN 20 ELSE 0 END
+              CASE WHEN COALESCE(formality_level, ARRAY[]::text[]) && ${stylePreferences}::text[]
+              THEN 20 ELSE 0 END
               +
               -- Occasion Match: +20 points
-              CASE WHEN EXISTS (
-                SELECT 1 FROM jsonb_array_elements_text(COALESCE(NULLIF(occasions, ''), '[]')::jsonb) v 
-                WHERE v.value = ANY(${wardrobeOccasions}::text[])
-              ) THEN 20 ELSE 0 END
+              CASE WHEN COALESCE(occasions, ARRAY[]::text[]) && ${wardrobeOccasions}::text[]
+              THEN 20 ELSE 0 END
               +
               -- Season Match: +50 points (High priority)
               -- OR Fallback: +40 points if the item has NO season specified (e.g., watches, bags)
-              CASE WHEN EXISTS (
-                SELECT 1 FROM jsonb_array_elements_text(COALESCE(NULLIF(season, ''), '[]')::jsonb) v 
-                WHERE v.value = ANY(${wardrobeSeasons}::text[])
-              ) THEN 50 
-              WHEN jsonb_array_length(COALESCE(NULLIF(season, ''), '[]')::jsonb) = 0 THEN 40
+              CASE WHEN COALESCE(season, ARRAY[]::text[]) && ${wardrobeSeasons}::text[] THEN 50 
+              WHEN cardinality(COALESCE(season, ARRAY[]::text[])) = 0 THEN 40
               ELSE 0 END
             ) as relevance_score
 
