@@ -85,7 +85,7 @@ function MainScreen({
 
   return (
     <>
-      <Stack spacing={3} sx={{ height: "100%", minHeight: 0, overflow: "hidden" }}>
+      <Stack spacing={0} sx={{ height: "100%", minHeight: 0, overflow: "hidden" }}>
         <Box
           sx={{
             position: "sticky",
@@ -222,7 +222,7 @@ function MainScreen({
               zIndex: 2,
               backgroundColor: "background.paper",
               px: 3,
-              pt: 2,
+              pt: 3,
               pb: 2
             }}
           >
