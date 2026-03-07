@@ -393,6 +393,8 @@ function App() {
     audience: selectedAudience
   });
   const isMainScreenView = Boolean(user && (hasProfile || profileCreated) && currentView === "main");
+  const isOnboardingView = Boolean(user && !hasProfile && !profileCreated);
+  const hasBrandedPanelHeader = isMainScreenView || isOnboardingView;
 
   const loadWardrobeItems = async ({ force = false } = {}) => {
     const { fetchWardrobeItems } = await import("./api/wardrobe.js");
@@ -665,6 +667,7 @@ function App() {
           elevation={0}
           sx={{
             p: cardPadding,
+            pt: hasBrandedPanelHeader ? { xs: 3, md: 3.25 } : undefined,
             backdropFilter: "blur(8px)",
             minHeight: 0,
             height: "100%",
