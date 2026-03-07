@@ -1,5 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Button, Divider, Link, Stack, TextField, Typography } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
+import useMediaQuery from "@mui/material/useMediaQuery";
 import LocaleSwitcher from "../components/LocaleSwitcher.jsx";
 import { useI18n } from "../i18n/useI18n.js";
 
@@ -64,6 +66,8 @@ function SignInScreen({
   onResetEmail
 }) {
   const { t, locale } = useI18n();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const googleLocale = ["en", "ru"].includes(locale) ? locale : "en";
   const googleButtonRef = useRef(null);
   const googleCredentialHandlerRef = useRef(onGoogleCredential);
@@ -121,10 +125,27 @@ function SignInScreen({
   return (
     <Stack spacing={3}>
       <Stack spacing={1}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between">
-          <Typography variant="h4">{t("auth.signInTitle")}</Typography>
-          <LocaleSwitcher />
-        </Stack>
+        {isMobile ? (
+          <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
+            <Typography
+              sx={{
+                fontFamily: '"Leckerli One", cursive',
+                fontSize: "1.85rem",
+                lineHeight: 1.1,
+                color: "#8f6f45",
+                textAlign: "left"
+              }}
+            >
+              {t("appName")}
+            </Typography>
+            <LocaleSwitcher />
+          </Stack>
+        ) : (
+          <Stack direction="row" alignItems="center" justifyContent="space-between">
+            <Typography variant="h4">{t("auth.signInTitle")}</Typography>
+            <LocaleSwitcher />
+          </Stack>
+        )}
         {step === "code" ? (
           <Typography variant="body2" color="text.secondary">
             {t("auth.signInSubtitleCode")}

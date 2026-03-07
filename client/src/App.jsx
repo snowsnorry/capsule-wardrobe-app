@@ -552,7 +552,7 @@ function App() {
           gap: { xs: 3, md: 6 },
           gridTemplateColumns: user ? "1fr" : { xs: "1fr", md: "1.2fr 1fr" },
           alignItems: "center",
-          py: { xs: 0, md: 10 },
+          py: { xs: 0, md: "24px" },
           px: { xs: 0, md: 3 },
           minHeight: "100vh",
           height: "100%",
@@ -560,14 +560,16 @@ function App() {
         }}
       >
         {!sessionInitialized ? null : !user ? (
-          <Stack spacing={3} sx={{ pr: { md: 4 } }}>
+          <Stack
+            spacing={{ xs: 1.9, md: 2.2 }}
+            sx={{ display: { xs: "none", md: "flex" }, pr: { md: 4 } }}
+          >
             <Box
               sx={{
-                display: { xs: "none", md: "block" },
                 width: { md: "92%", lg: "100%" },
                 maxWidth: { md: 340, lg: 420 },
                 ml: { md: -1, lg: -2 },
-                mb: { md: -1, lg: -1.5 },
+                mb: { md: -1.4, lg: -1.8 },
                 overflow: "hidden",
                 position: "relative",
                 "&::after": {
@@ -607,13 +609,30 @@ function App() {
             </Box>
             <Typography
               variant="overline"
-              sx={{ letterSpacing: 2, color: "#8f6f45", opacity: 0.96 }}
+              sx={{
+                fontFamily: '"Leckerli One", cursive',
+                fontSize: { xs: "1.5rem", sm: "1.7rem", md: "1.9rem" },
+                fontWeight: 400,
+                letterSpacing: 0,
+                lineHeight: 1.1,
+                mt: { xs: -0.05, md: -0.15 },
+                textTransform: "none",
+                color: "#8f6f45",
+                opacity: 0.96
+              }}
             >
               {t("appName")}
             </Typography>
             <Typography
               variant={isLarge ? "h2" : "h3"}
-              sx={{ fontSize: { xs: "1.85rem", sm: "2.1rem", md: "2.6rem" } }}
+              sx={{
+                mt: { xs: -0.45, md: -0.65 },
+                maxWidth: { xs: "14ch", md: "20ch" },
+                fontSize: { xs: "1.46rem", sm: "1.7rem", md: "2rem", lg: "2.28rem" },
+                lineHeight: { xs: 1.2, md: 1.16 },
+                letterSpacing: "-0.015em",
+                fontWeight: 600
+              }}
             >
               {t("marketingHeadline")}
             </Typography>
@@ -627,7 +646,7 @@ function App() {
             backdropFilter: "blur(8px)",
             minHeight: 0,
             height: "100%",
-            borderRadius: { xs: 0, md: 4 },
+            borderRadius: { xs: 0, md: "22px" },
             display: "flex",
             flexDirection: "column",
             overflow: "hidden"
