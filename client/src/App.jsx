@@ -362,6 +362,16 @@ function App() {
     }
   };
 
+  const handleResetProfileFilters = async () => {
+    setStatus(initialStatus);
+    try {
+      await ensureOptionsLoaded({ useFallback: true });
+      await loadProfileSelections();
+    } catch (error) {
+      setStatus({ loading: false, error: resolveErrorMessage(error), infoKey: "", infoParams: null });
+    }
+  };
+
   const handleDeleteProfile = async () => {
     setStatus({ loading: true, error: "", infoKey: "", infoParams: null });
     try {
@@ -370,11 +380,6 @@ function App() {
     } catch (error) {
       setStatus({ loading: false, error: resolveErrorMessage(error), infoKey: "", infoParams: null });
     }
-  };
-
-  const handleOpenProfile = () => {
-    ensureOptionsLoaded();
-    setCurrentView("profile");
   };
 
   const handleBackToMain = () => {
@@ -387,6 +392,7 @@ function App() {
     seasons: selectedSeasons.slice().sort(),
     audience: selectedAudience
   });
+  const isMainScreenView = Boolean(user && (hasProfile || profileCreated) && currentView === "main");
 
   const loadWardrobeItems = async ({ force = false } = {}) => {
     const { fetchWardrobeItems } = await import("./api/wardrobe.js");
@@ -494,11 +500,26 @@ function App() {
         <MainScreen
           onSignOut={handleLogout}
           isSigningOut={status.loading}
-          onOpenProfile={handleOpenProfile}
           onRefreshItems={handleRefreshWardrobe}
-          profileKey={profileKey}
           items={wardrobeItems || []}
           isLoadingItems={isLoadingWardrobe}
+          styleOptions={styleOptions}
+          occasionOptions={occasionOptions}
+          seasonOptions={seasonOptions}
+          audienceOptions={audienceOptions}
+          selectedStyles={selectedStyles}
+          selectedOccasions={selectedOccasions}
+          selectedSeasons={selectedSeasons}
+          selectedAudience={selectedAudience}
+          status={status}
+          onToggleStyle={(value) => toggleSelection(value, selectedStyles, setSelectedStyles)}
+          onToggleOccasion={(value) =>
+            toggleSelection(value, selectedOccasions, setSelectedOccasions)
+          }
+          onToggleSeason={(value) => toggleSelection(value, selectedSeasons, setSelectedSeasons)}
+          onSelectAudience={setSelectedAudience}
+          onApplyFilters={handleSaveProfile}
+          onResetFilters={handleResetProfileFilters}
         />
       );
     }
@@ -544,7 +565,7 @@ function App() {
       }}
     >
       <Container
-        maxWidth="lg"
+        maxWidth={isMainScreenView ? false : "lg"}
         sx={{
           position: "relative",
           zIndex: 1,
@@ -553,7 +574,8 @@ function App() {
           gridTemplateColumns: user ? "1fr" : { xs: "1fr", md: "1.2fr 1fr" },
           alignItems: "center",
           py: { xs: 0, md: "24px" },
-          px: { xs: 0, md: 3 },
+          px: isMainScreenView ? { xs: 0, md: 4, xl: 5 } : { xs: 0, md: 3 },
+          maxWidth: isMainScreenView ? "1680px" : undefined,
           minHeight: "100vh",
           height: "100%",
           boxSizing: "border-box"

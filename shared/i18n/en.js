@@ -121,6 +121,13 @@ const en = {
     signOut: "Sign out",
     cancel: "Cancel"
   },
+  filters: {
+    title: "Filters",
+    apply: "Apply",
+    reset: "Reset",
+    cancel: "Cancel",
+    open: "Open filters"
+  },
   errors: {
     generic: "Something went wrong. Please try again.",
     invalidEmail: "Please check the email format.",

@@ -122,6 +122,13 @@ const ru = {
     signOut: "Выйти",
     cancel: "Отмена"
   },
+  filters: {
+    title: "Фильтры",
+    apply: "Применить",
+    reset: "Сбросить",
+    cancel: "Отмена",
+    open: "Открыть фильтры"
+  },
   errors: {
     generic: "Что-то пошло не так. Попробуйте еще раз.",
     invalidEmail: "Проверьте формат email.",
