@@ -26,7 +26,17 @@ function OnboardingScreen({
     <Stack spacing={3}>
       <Stack spacing={1}>
         <Stack direction="row" alignItems="center" justifyContent="space-between">
-          <Typography variant="h4">{t("onboarding.title")}</Typography>
+          <Typography
+            sx={{
+              fontFamily: '"Leckerli One", cursive',
+              fontSize: "1.85rem",
+              lineHeight: 1.1,
+              color: "#8f6f45",
+              textAlign: "left"
+            }}
+          >
+            {t("appName")}
+          </Typography>
           <LocaleSwitcher />
         </Stack>
         <Typography variant="body2" color="text.secondary">
