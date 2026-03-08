@@ -22,6 +22,7 @@ import OnboardingScreen from "./screens/OnboardingScreen.jsx";
 import ProfileScreen from "./screens/ProfileScreen.jsx";
 import SignInScreen from "./screens/SignInScreen.jsx";
 import { useI18n } from "./i18n/useI18n.js";
+import { ACCENT_COLOR_OPTIONS } from "../../shared/accentColors.js";
 
 const initialStatus = {
   loading: false,
@@ -55,6 +56,7 @@ const FALLBACK_OCCASION_OPTIONS = [
 const FALLBACK_SEASON_OPTIONS = ["spring", "summer", "autumn", "winter"];
 
 const FALLBACK_AUDIENCE_OPTIONS = ["man", "woman", "any"];
+const FALLBACK_ACCENT_COLOR_OPTIONS = ACCENT_COLOR_OPTIONS;
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
 
 async function retry(fn, attempts = 3, delayMs = 120) {
@@ -93,6 +95,7 @@ function App() {
   const [selectedOccasions, setSelectedOccasions] = useState([]);
   const [selectedSeasons, setSelectedSeasons] = useState([]);
   const [selectedAudience, setSelectedAudience] = useState("");
+  const [selectedAccentColor, setSelectedAccentColor] = useState(null);
   const [profileCreated, setProfileCreated] = useState(false);
   const [currentView, setCurrentView] = useState("main");
   const [wardrobeItems, setWardrobeItems] = useState(null);
@@ -190,6 +193,7 @@ function App() {
     setSelectedOccasions(result.profile?.wardrobeOccasions || []);
     setSelectedSeasons(result.profile?.wardrobeSeasons || []);
     setSelectedAudience(result.profile?.wardrobeAudience || "");
+    setSelectedAccentColor(result.profile?.accentColor ?? null);
     if (result.profile?.locale) {
       setLocale(result.profile.locale);
     }
@@ -228,6 +232,7 @@ function App() {
         setSelectedOccasions([]);
         setSelectedSeasons([]);
         setSelectedAudience("");
+        setSelectedAccentColor(null);
         setOnboardingStep(0);
         setStatus({ loading: false, error: "", infoKey: "", infoParams: null });
       } else {
@@ -256,6 +261,7 @@ function App() {
         setSelectedOccasions([]);
         setSelectedSeasons([]);
         setSelectedAudience("");
+        setSelectedAccentColor(null);
         setOnboardingStep(0);
         setStatus({ loading: false, error: "", infoKey: "", infoParams: null });
       } else {
@@ -285,6 +291,7 @@ function App() {
       setSelectedOccasions([]);
       setSelectedSeasons([]);
       setSelectedAudience("");
+      setSelectedAccentColor(null);
       setOnboardingStep(0);
       setWardrobeItems(null);
       setIsLoadingWardrobe(false);
@@ -353,6 +360,7 @@ function App() {
         selectedOccasions,
         selectedSeasons,
         selectedAudience,
+        selectedAccentColor,
         locale
       );
       setWardrobeItems(null);
@@ -390,7 +398,8 @@ function App() {
     styles: selectedStyles.slice().sort(),
     occasions: selectedOccasions.slice().sort(),
     seasons: selectedSeasons.slice().sort(),
-    audience: selectedAudience
+    audience: selectedAudience,
+    accentColor: selectedAccentColor
   });
   const isSignInView = !user;
   const isMainScreenView = Boolean(user && (hasProfile || profileCreated) && currentView === "main");
@@ -481,10 +490,12 @@ function App() {
             occasionOptions={occasionOptions}
             seasonOptions={seasonOptions}
             audienceOptions={audienceOptions}
+            accentColorOptions={FALLBACK_ACCENT_COLOR_OPTIONS}
             selectedStyles={selectedStyles}
             selectedOccasions={selectedOccasions}
             selectedSeasons={selectedSeasons}
             selectedAudience={selectedAudience}
+            selectedAccentColor={selectedAccentColor}
             status={status}
             onToggleStyle={(value) => toggleSelection(value, selectedStyles, setSelectedStyles)}
             onToggleOccasion={(value) =>
@@ -492,6 +503,7 @@ function App() {
             }
             onToggleSeason={(value) => toggleSelection(value, selectedSeasons, setSelectedSeasons)}
             onSelectAudience={setSelectedAudience}
+            onSelectAccentColor={setSelectedAccentColor}
             onSave={handleSaveProfile}
             onDelete={handleDeleteProfile}
             onBack={handleBackToMain}
@@ -510,10 +522,12 @@ function App() {
           occasionOptions={occasionOptions}
           seasonOptions={seasonOptions}
           audienceOptions={audienceOptions}
+          accentColorOptions={FALLBACK_ACCENT_COLOR_OPTIONS}
           selectedStyles={selectedStyles}
           selectedOccasions={selectedOccasions}
           selectedSeasons={selectedSeasons}
           selectedAudience={selectedAudience}
+          selectedAccentColor={selectedAccentColor}
           status={status}
           onToggleStyle={(value) => toggleSelection(value, selectedStyles, setSelectedStyles)}
           onToggleOccasion={(value) =>
@@ -521,6 +535,7 @@ function App() {
           }
           onToggleSeason={(value) => toggleSelection(value, selectedSeasons, setSelectedSeasons)}
           onSelectAudience={setSelectedAudience}
+          onSelectAccentColor={setSelectedAccentColor}
           onApplyFilters={handleSaveProfile}
           onResetFilters={handleResetProfileFilters}
         />

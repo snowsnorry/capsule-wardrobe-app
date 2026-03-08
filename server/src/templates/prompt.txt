@@ -4,6 +4,7 @@ User:
 I need a capsule wardrobe for {{audience}}.
 Context: {{occasions}}, {{season}}.
 Style: {{formality}}
+{{accent_color}}
 
 Here is a list of AVAILABLE ITEMS (Candidates):
 {{items}}
@@ -14,6 +15,12 @@ INSTRUCTIONS:
 3. The items MUST match in color and style.
 4. Explain your reasoning briefly.
 5. Return the result in strictly Valid JSON format.
+
+COLOR STRATEGY:
+- If accent color is provided in the user request, you MUST include 1 or 2 items in that color.
+- You MUST avoid selecting outfits where both top items or both bottom items share the same accent color.
+- Keep the remaining items neutral (black, white, beige, grey, denim) to maintain a cohesive look.
+- Do NOT make the entire outfit the accent color (avoid "clown effect").
 
 Output Format:
 {

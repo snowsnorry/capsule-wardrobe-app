@@ -51,6 +51,20 @@ const ru = {
       man: "Мужчина",
       woman: "Женщина",
       any: "Не принципиально"
+    },
+    accentColors: {
+      black: "Черный",
+      white: "Белый",
+      gray: "Серый",
+      beige: "Бежевый",
+      brown: "Коричневый",
+      blue: "Синий",
+      green: "Зеленый",
+      red: "Красный",
+      pink: "Розовый",
+      yellow: "Желтый",
+      purple: "Фиолетовый",
+      orange: "Оранжевый"
     }
   },
   auth: {
@@ -94,6 +108,9 @@ const ru = {
     seasonsHint: "Выберите один или несколько сезонов.",
     audienceTitle: "Для кого",
     audienceHint: "Выберите один вариант.",
+    accentColorTitle: "Акцентный цвет",
+    accentColorHint: "Выберите один цвет или оставьте не принципиально.",
+    accentColorNotImportant: "Не принципиально",
     back: "Назад",
     save: "Сохранить изменения",
     delete: "Удалить профиль",

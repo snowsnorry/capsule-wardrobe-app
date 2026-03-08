@@ -13,6 +13,7 @@ import {
   Typography
 } from "@mui/material";
 import LocaleSwitcher from "../components/LocaleSwitcher.jsx";
+import AccentColorChips from "../components/AccentColorChips.jsx";
 import { useI18n } from "../i18n/useI18n.js";
 import { translateOption } from "../i18n/index.js";
 
@@ -21,15 +22,18 @@ function ProfileScreen({
   occasionOptions,
   seasonOptions,
   audienceOptions,
+  accentColorOptions,
   selectedStyles,
   selectedOccasions,
   selectedSeasons,
   selectedAudience,
+  selectedAccentColor,
   status,
   onToggleStyle,
   onToggleOccasion,
   onToggleSeason,
   onSelectAudience,
+  onSelectAccentColor,
   onSave,
   onDelete,
   onBack
@@ -143,6 +147,18 @@ function ProfileScreen({
             />
           ))}
         </Stack>
+      </Stack>
+
+      <Stack spacing={2}>
+        <Typography variant="h6">{t("profile.accentColorTitle")}</Typography>
+        <Typography variant="body2" color="text.secondary">
+          {t("profile.accentColorHint")}
+        </Typography>
+        <AccentColorChips
+          options={accentColorOptions}
+          selectedValue={selectedAccentColor}
+          onSelect={onSelectAccentColor}
+        />
       </Stack>
 
       <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>

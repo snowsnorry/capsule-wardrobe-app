@@ -33,6 +33,7 @@ import {
 } from "./profileStore.js";
 import { getWardrobeItems } from "./ai/ai.js";
 import { checkDatabaseConnection, ensureTables } from "./db.js";
+import { ACCENT_COLOR_OPTIONS } from "../../shared/accentColors.js";
 
 const PORT = process.env.PORT || 3000;
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || "http://localhost:5173";
@@ -99,6 +100,19 @@ function isValidSelection(items, allowedItems) {
 
 function isValidSingleSelection(item, allowedItems) {
   return typeof item === "string" && allowedItems.includes(item);
+}
+
+function isValidOptionalSingleSelection(item, allowedItems) {
+  return item === null || (typeof item === "string" && allowedItems.includes(item));
+}
+
+function parseOptionalSelection(value) {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  const normalized = String(value || "").trim().toLowerCase();
+  return normalized || null;
 }
 
 if (NODE_ENV !== "development") {
@@ -466,6 +480,7 @@ app.post("/profile/initialize", requireTrustedOrigin, requireAuth, requireCsrf, 
     ? req.body.wardrobeSeasons
     : [];
   const wardrobeAudience = String(req.body?.wardrobeAudience || "").trim().toLowerCase();
+  const accentColor = parseOptionalSelection(req.body?.accentColor);
   const locale = String(req.body?.locale || "").trim().toLowerCase();
   const [allowedStylePreferences, allowedWardrobeOccasions, allowedWardrobeSeasons] = await Promise.all([
     getStylePreferences(req.user.email),
@@ -478,6 +493,7 @@ app.post("/profile/initialize", requireTrustedOrigin, requireAuth, requireCsrf, 
     !isValidSelection(wardrobeOccasions, allowedWardrobeOccasions) ||
     !isValidSelection(wardrobeSeasons, allowedWardrobeSeasons) ||
     !isValidSingleSelection(wardrobeAudience, getWardrobeAudience()) ||
+    !isValidOptionalSingleSelection(accentColor, ACCENT_COLOR_OPTIONS) ||
     !SUPPORTED_LOCALES.has(locale)
   ) {
     return res.status(400).json({ error: "invalid_payload" });
@@ -489,6 +505,7 @@ app.post("/profile/initialize", requireTrustedOrigin, requireAuth, requireCsrf, 
       wardrobeOccasions,
       wardrobeSeasons,
       wardrobeAudience,
+      accentColor,
       locale
     });
     if (!profile) {
@@ -512,6 +529,7 @@ app.patch("/profile/me", requireTrustedOrigin, requireAuth, requireCsrf, async (
     ? req.body.wardrobeSeasons
     : [];
   const wardrobeAudience = String(req.body?.wardrobeAudience || "").trim().toLowerCase();
+  const accentColor = parseOptionalSelection(req.body?.accentColor);
   const locale = String(req.body?.locale || "").trim().toLowerCase();
   const [allowedStylePreferences, allowedWardrobeOccasions, allowedWardrobeSeasons] = await Promise.all([
     getStylePreferences(req.user.email),
@@ -524,6 +542,7 @@ app.patch("/profile/me", requireTrustedOrigin, requireAuth, requireCsrf, async (
     !isValidSelection(wardrobeOccasions, allowedWardrobeOccasions) ||
     !isValidSelection(wardrobeSeasons, allowedWardrobeSeasons) ||
     !isValidSingleSelection(wardrobeAudience, getWardrobeAudience()) ||
+    !isValidOptionalSingleSelection(accentColor, ACCENT_COLOR_OPTIONS) ||
     !SUPPORTED_LOCALES.has(locale)
   ) {
     return res.status(400).json({ error: "invalid_payload" });
@@ -535,6 +554,7 @@ app.patch("/profile/me", requireTrustedOrigin, requireAuth, requireCsrf, async (
       wardrobeOccasions,
       wardrobeSeasons,
       wardrobeAudience,
+      accentColor,
       locale
     });
     if (!profile) {

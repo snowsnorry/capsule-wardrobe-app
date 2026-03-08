@@ -1,4 +1,5 @@
 import { Button, Chip, Divider, Stack, Typography } from "@mui/material";
+import AccentColorChips from "./AccentColorChips.jsx";
 import { useI18n } from "../i18n/useI18n.js";
 import { translateOption } from "../i18n/index.js";
 
@@ -7,15 +8,18 @@ function ProfileFiltersSidebar({
   occasionOptions,
   seasonOptions,
   audienceOptions,
+  accentColorOptions,
   selectedStyles,
   selectedOccasions,
   selectedSeasons,
   selectedAudience,
+  selectedAccentColor,
   status,
   onToggleStyle,
   onToggleOccasion,
   onToggleSeason,
   onSelectAudience,
+  onSelectAccentColor,
   onApply,
   onReset,
   onSignOut,
@@ -108,6 +112,18 @@ function ProfileFiltersSidebar({
             />
           ))}
         </Stack>
+      </Stack>
+
+      <Stack spacing={1.5}>
+        <Typography variant="h5">{t("profile.accentColorTitle")}</Typography>
+        <Typography variant="body1" color="text.secondary">
+          {t("profile.accentColorHint")}
+        </Typography>
+        <AccentColorChips
+          options={accentColorOptions}
+          selectedValue={selectedAccentColor}
+          onSelect={onSelectAccentColor}
+        />
       </Stack>
 
       <Stack spacing={1.5}>

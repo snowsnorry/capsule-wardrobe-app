@@ -149,11 +149,14 @@ function getWardrobeSelectionPrompt(userProfile = null, items = []) {
   const occasionsText = localizeProfileValues(userProfile?.wardrobeOccasions, en.options.occasions);
   const seasonText = localizeProfileValues(userProfile?.wardrobeSeasons, en.options.seasons);
   const audienceText = userProfile?.wardrobeAudience || "any";
+  const accentColorText = userProfile?.accentColor ? 
+    `Requested accent color: ${userProfile.accentColor}` : "";
   const simplifiedItems = items.map((item) => {
     const colorParts = [
       Array.isArray(item?.color_base) ? item.color_base.join(", ") : "",
       typeof item?.pattern === "string" ? item.pattern.trim() : "",
-      typeof item?.finish === "string" ? item.finish.trim() : ""
+      typeof item?.finish === "string" ? item.finish.trim() : "",
+      item?.is_neutral ? "neutral" : ""
     ].filter((value) => value);
     const styleParts = [
       Array.isArray(item?.style_tags) ? item.style_tags.join(", ") : "",
@@ -178,6 +181,7 @@ function getWardrobeSelectionPrompt(userProfile = null, items = []) {
     .replace("{{occasions}}", occasionsText)
     .replace("{{season}}", seasonText)
     .replace("{{audience}}", audienceText)
+    .replace("{{accent_color}}", accentColorText)
     .replace("{{items}}", itemsJson)
     .replace("{{category_list}}", getCategoryListText())
     .replace("{{num_items}}", Object.entries(CATEGORIES).reduce((sum, [, count]) => sum + count, 0))
@@ -199,6 +203,7 @@ async function callWardrobeAi(userProfile = null) {
     any: ["man", "woman", "all"]
   };
   const audienceFilters = audienceByProfile[userProfile?.wardrobeAudience] || audienceByProfile.any;
+  const accentColor = userProfile?.accentColor ?? null;
   const embeddingVector = `[${promptEmbeddings.join(",")}]`;
   const noiseFactor = 0.05;
 
@@ -208,9 +213,9 @@ async function callWardrobeAi(userProfile = null) {
     CROSS JOIN LATERAL (
       SELECT * FROM (
         SELECT 
-          scored_items.*,
-          -- 3. Calculate Rank within a color family, based on the calculated Relevance Score.
-          -- This ensures that the "Best" item (highest score) of a specific color gets Rank 1.
+          filtered_items.*,
+          -- 4. Calculate Color Rank (FINAL VISUAL SORTING)
+          -- We calculate this AFTER filtering out the excess accent items.
           ROW_NUMBER() OVER (
             PARTITION BY COALESCE(color_base, ARRAY[]::text[])
             ORDER BY 
@@ -218,44 +223,72 @@ async function callWardrobeAi(userProfile = null) {
               (distance + (RANDOM() * ${noiseFactor}::float)) ASC
           ) as color_rank
         FROM (
-          SELECT
-            products.*,
-            -- 1. Calculate Vector Distance (lower is closer/better)
-            embedding <=> ${embeddingVector}::vector as distance,
-            
-            -- 2. Calculate Relevance Score (Soft Filters)
-            -- Instead of filtering out items, we give them points.
-            (
-              -- Style Match: +20 points
-              CASE WHEN COALESCE(formality_level, ARRAY[]::text[]) && ${stylePreferences}::text[]
-              THEN 20 ELSE 0 END
-              +
-              -- Occasion Match: +20 points
-              CASE WHEN COALESCE(occasions, ARRAY[]::text[]) && ${wardrobeOccasions}::text[]
-              THEN 20 ELSE 0 END
-              +
-              -- Season Match: +50 points (High priority)
-              -- OR Fallback: +40 points if the item has NO season specified (e.g., watches, bags)
-              CASE WHEN COALESCE(season, ARRAY[]::text[]) && ${wardrobeSeasons}::text[] THEN 50 
-              WHEN cardinality(COALESCE(season, ARRAY[]::text[])) = 0 THEN 40
-              ELSE 0 END
-            ) as relevance_score
+          SELECT 
+            raw_scored.*,
+            -- 3. QUOTA RANKING 
+            -- We rank accent items separately from non-accent items.
+            -- This allows us to limit the number of accent items in the next step.
+            ROW_NUMBER() OVER (
+              PARTITION BY is_accent_match
+              ORDER BY relevance_score DESC, distance ASC
+            ) as type_rank
+          FROM (
+            SELECT
+              products.*,
+              -- 1. Calculate Vector Distance
+              embedding <=> ${embeddingVector}::vector as distance,
+              
+              -- 1.1 Identify Accent Match (Boolean helper)
+              (
+                ${accentColor}::text IS NOT NULL 
+                AND ${accentColor}::text != '' 
+                AND ${accentColor}::text = ANY(color_base)
+              ) as is_accent_match,
+              
+              -- 2. Calculate Relevance Score
+              (
+                -- Style Match (+20)
+                CASE WHEN COALESCE(formality_level, ARRAY[]::text[]) && ${stylePreferences}::text[]
+                THEN 20 ELSE 0 END
+                +
+                -- Occasion Match (+20)
+                CASE WHEN COALESCE(occasions, ARRAY[]::text[]) && ${wardrobeOccasions}::text[]
+                THEN 20 ELSE 0 END
+                +
+                -- Season Match (+50 or +40 fallback)
+                CASE WHEN COALESCE(season, ARRAY[]::text[]) && ${wardrobeSeasons}::text[] THEN 50 
+                WHEN cardinality(COALESCE(season, ARRAY[]::text[])) = 0 THEN 40
+                ELSE 0 END
+                +
+                -- ACCENT BOOST (+20)
+                -- We keep the boost to ensure the allowed accent items are the "best" ones.
+                CASE 
+                  WHEN ${accentColor}::text IS NOT NULL AND ${accentColor}::text != '' 
+                      AND ${accentColor}::text = ANY(color_base) 
+                  THEN 20 
+                  ELSE 0 
+                END
+              ) as relevance_score
 
-          FROM products
-          WHERE 
-            -- HARD FILTERS: Apply only strictly necessary constraints here.
-            category = cats.target_category
-            AND lower(COALESCE(audience, '')) = ANY(${audienceFilters}::text[])
-        ) scored_items
-      ) ranked_items
+            FROM products
+            WHERE 
+              -- HARD FILTERS
+              category = cats.target_category
+              AND lower(COALESCE(audience, '')) = ANY(${audienceFilters}::text[])
+          ) raw_scored
+        ) filtered_items
+        WHERE
+          -- If it is an accent item, take only the top 3 best matching ones.
+          -- If it is NOT an accent item, take as many as needed to fill the list.
+          (is_accent_match IS TRUE AND type_rank <= 3) 
+          OR 
+          (is_accent_match IS NOT TRUE)
+      ) results
       
-      -- 4. FINAL SORTING STRATEGY
-      -- Priority 1: High Relevance (Items that match season/style/occasion).
-      -- Priority 2: Diversity (Show Rank 1 of every color before showing Rank 2).
-      -- Priority 3: Vector Distance (Tie-breaker).
+      -- 5. FINAL SORTING STRATEGY
       ORDER BY 
         relevance_score DESC, 
-        color_rank ASC,       
+        color_rank ASC,        
         (distance + (RANDOM() * ${noiseFactor}::float)) ASC
       LIMIT 10
     ) results`;

@@ -51,6 +51,20 @@ const en = {
       man: "Man",
       woman: "Woman",
       any: "Not important"
+    },
+    accentColors: {
+      black: "Black",
+      white: "White",
+      gray: "Gray",
+      beige: "Beige",
+      brown: "Brown",
+      blue: "Blue",
+      green: "Green",
+      red: "Red",
+      pink: "Pink",
+      yellow: "Yellow",
+      purple: "Purple",
+      orange: "Orange"
     }
   },
   auth: {
@@ -93,6 +107,9 @@ const en = {
     seasonsHint: "Select one or more seasons.",
     audienceTitle: "Audience",
     audienceHint: "Select one option.",
+    accentColorTitle: "Accent color",
+    accentColorHint: "Select one color or leave it not important.",
+    accentColorNotImportant: "Not important",
     back: "Back",
     save: "Save changes",
     delete: "Delete profile",

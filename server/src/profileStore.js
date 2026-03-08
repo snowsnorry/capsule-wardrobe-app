@@ -10,6 +10,7 @@ import {
   updateProfileLocaleByEmail,
   updateProfileWardrobeItemsByEmail
 } from "./db.js";
+import { ACCENT_COLOR_OPTIONS } from "../../shared/accentColors.js";
 
 const FALLBACK_STYLE_PREFERENCES = [
   "casual",
@@ -62,6 +63,19 @@ function normalizeWardrobeAudience(value) {
     return audience;
   }
   return "any";
+}
+
+function normalizeAccentColor(value) {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  const accentColor = String(value || "").trim().toLowerCase();
+  if (!accentColor) {
+    return null;
+  }
+
+  return ACCENT_COLOR_OPTIONS.includes(accentColor) ? accentColor : null;
 }
 
 async function getStylePreferences(email) {
@@ -117,7 +131,8 @@ async function getProfile(email) {
   }
   return {
     ...profile,
-    wardrobeAudience: normalizeWardrobeAudience(profile.wardrobeAudience)
+    wardrobeAudience: normalizeWardrobeAudience(profile.wardrobeAudience),
+    accentColor: normalizeAccentColor(profile.accentColor)
   };
 }
 
@@ -132,6 +147,7 @@ async function createProfile(email, data) {
     wardrobeOccasions: data.wardrobeOccasions || [],
     wardrobeSeasons: data.wardrobeSeasons || [],
     wardrobeAudience: normalizeWardrobeAudience(data.wardrobeAudience),
+    accentColor: null,
     locale: data.locale || "en"
   });
 }
@@ -143,6 +159,7 @@ async function updateProfile(email, data) {
     wardrobeOccasions: data.wardrobeOccasions || [],
     wardrobeSeasons: data.wardrobeSeasons || [],
     wardrobeAudience: normalizeWardrobeAudience(data.wardrobeAudience),
+    accentColor: normalizeAccentColor(data.accentColor),
     locale: data.locale || "en"
   });
 }

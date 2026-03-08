@@ -99,6 +99,7 @@ async function updateProfile(
   wardrobeOccasions,
   wardrobeSeasons,
   wardrobeAudience,
+  accentColor,
   locale
 ) {
   return requestJson(`${API_BASE_URL}/profile/me`, {
@@ -110,6 +111,7 @@ async function updateProfile(
       wardrobeOccasions,
       wardrobeSeasons,
       wardrobeAudience,
+      accentColor,
       locale
     })
   });

@@ -34,15 +34,18 @@ function MainScreen({
   occasionOptions,
   seasonOptions,
   audienceOptions,
+  accentColorOptions,
   selectedStyles,
   selectedOccasions,
   selectedSeasons,
   selectedAudience,
+  selectedAccentColor,
   status,
   onToggleStyle,
   onToggleOccasion,
   onToggleSeason,
   onSelectAudience,
+  onSelectAccentColor,
   onApplyFilters,
   onResetFilters
 }) {
@@ -135,15 +138,18 @@ function MainScreen({
               occasionOptions={occasionOptions}
               seasonOptions={seasonOptions}
               audienceOptions={audienceOptions}
+              accentColorOptions={accentColorOptions}
               selectedStyles={selectedStyles}
               selectedOccasions={selectedOccasions}
               selectedSeasons={selectedSeasons}
               selectedAudience={selectedAudience}
+              selectedAccentColor={selectedAccentColor}
               status={status}
               onToggleStyle={onToggleStyle}
               onToggleOccasion={onToggleOccasion}
               onToggleSeason={onToggleSeason}
               onSelectAudience={onSelectAudience}
+              onSelectAccentColor={onSelectAccentColor}
               onApply={onApplyFilters}
               onReset={onResetFilters}
               onSignOut={() => setIsSignOutOpen(true)}
@@ -248,15 +254,18 @@ function MainScreen({
               occasionOptions={occasionOptions}
               seasonOptions={seasonOptions}
               audienceOptions={audienceOptions}
+              accentColorOptions={accentColorOptions}
               selectedStyles={selectedStyles}
               selectedOccasions={selectedOccasions}
               selectedSeasons={selectedSeasons}
               selectedAudience={selectedAudience}
+              selectedAccentColor={selectedAccentColor}
               status={status}
               onToggleStyle={onToggleStyle}
               onToggleOccasion={onToggleOccasion}
               onToggleSeason={onToggleSeason}
               onSelectAudience={onSelectAudience}
+              onSelectAccentColor={onSelectAccentColor}
               onApply={handleApplyMobileFilters}
               onReset={handleCancelMobileFilters}
               onSignOut={() => {
