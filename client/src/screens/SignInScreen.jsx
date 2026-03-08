@@ -142,7 +142,17 @@ function SignInScreen({
           </Stack>
         ) : (
           <Stack direction="row" alignItems="center" justifyContent="space-between">
-            <Typography variant="h4">{t("auth.signInTitle")}</Typography>
+            <Typography
+              sx={{
+                fontFamily: '"Leckerli One", cursive',
+                fontSize: "1.85rem",
+                lineHeight: 1.1,
+                color: "#8f6f45",
+                textAlign: "left"
+              }}
+            >
+              {t("appName")}
+            </Typography>
             <LocaleSwitcher />
           </Stack>
         )}

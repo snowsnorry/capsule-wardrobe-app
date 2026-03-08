@@ -392,9 +392,10 @@ function App() {
     seasons: selectedSeasons.slice().sort(),
     audience: selectedAudience
   });
+  const isSignInView = !user;
   const isMainScreenView = Boolean(user && (hasProfile || profileCreated) && currentView === "main");
   const isOnboardingView = Boolean(user && !hasProfile && !profileCreated);
-  const hasBrandedPanelHeader = isMainScreenView || isOnboardingView;
+  const hasBrandedPanelHeader = isSignInView || isMainScreenView || isOnboardingView;
 
   const loadWardrobeItems = async ({ force = false } = {}) => {
     const { fetchWardrobeItems } = await import("./api/wardrobe.js");
@@ -632,25 +633,9 @@ function App() {
               />
             </Box>
             <Typography
-              variant="overline"
-              sx={{
-                fontFamily: '"Leckerli One", cursive',
-                fontSize: { xs: "1.5rem", sm: "1.7rem", md: "1.9rem" },
-                fontWeight: 400,
-                letterSpacing: 0,
-                lineHeight: 1.1,
-                mt: { xs: -0.05, md: -0.15 },
-                textTransform: "none",
-                color: "#8f6f45",
-                opacity: 0.96
-              }}
-            >
-              {t("appName")}
-            </Typography>
-            <Typography
               variant={isLarge ? "h2" : "h3"}
               sx={{
-                mt: { xs: -0.45, md: -0.65 },
+                mt: { xs: 0.15, md: 0.1 },
                 maxWidth: { xs: "14ch", md: "20ch" },
                 fontSize: { xs: "1.46rem", sm: "1.7rem", md: "2rem", lg: "2.28rem" },
                 lineHeight: { xs: 1.2, md: 1.16 },
@@ -670,7 +655,7 @@ function App() {
             pt: hasBrandedPanelHeader ? { xs: 3, md: 3.25 } : undefined,
             backdropFilter: "blur(8px)",
             minHeight: 0,
-            height: "100%",
+            height: isSignInView ? { xs: "100%", md: "517px" } : "100%",
             borderRadius: { xs: 0, md: "22px" },
             display: "flex",
             flexDirection: "column",
