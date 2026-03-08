@@ -1,5 +1,6 @@
 import { Button, Chip, Divider, Stack, Typography } from "@mui/material";
 import { useI18n } from "../i18n/useI18n.js";
+import { translateOption } from "../i18n/index.js";
 
 function ProfileFiltersSidebar({
   styleOptions,
@@ -46,7 +47,7 @@ function ProfileFiltersSidebar({
           {styleOptions.map((style) => (
             <Chip
               key={style}
-              label={t(`options.styles.${style}`)}
+              label={translateOption("styles", style)}
               clickable
               color={selectedStyles.includes(style) ? "primary" : "default"}
               onClick={() => onToggleStyle(style)}
@@ -64,7 +65,7 @@ function ProfileFiltersSidebar({
           {occasionOptions.map((item) => (
             <Chip
               key={item}
-              label={t(`options.occasions.${item}`)}
+              label={translateOption("occasions", item)}
               clickable
               color={selectedOccasions.includes(item) ? "primary" : "default"}
               onClick={() => onToggleOccasion(item)}
@@ -82,7 +83,7 @@ function ProfileFiltersSidebar({
           {seasonOptions.map((item) => (
             <Chip
               key={item}
-              label={t(`options.seasons.${item}`)}
+              label={translateOption("seasons", item)}
               clickable
               color={selectedSeasons.includes(item) ? "primary" : "default"}
               onClick={() => onToggleSeason(item)}
@@ -100,7 +101,7 @@ function ProfileFiltersSidebar({
           {audienceOptions.map((item) => (
             <Chip
               key={item}
-              label={t(`options.audience.${item}`)}
+              label={translateOption("audience", item)}
               clickable
               color={selectedAudience === item ? "primary" : "default"}
               onClick={() => onSelectAudience(item)}

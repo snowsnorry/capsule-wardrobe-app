@@ -419,16 +419,34 @@ app.get("/profile/me", requireAuth, async (req, res) => {
   }
 });
 
-app.get("/profile/style-preferences", requireAuth, (req, res) => {
-  res.json({ ok: true, items: getStylePreferences() });
+app.get("/profile/style-preferences", requireAuth, async (req, res) => {
+  try {
+    const items = await getStylePreferences(req.user.email);
+    return res.json({ ok: true, items });
+  } catch (error) {
+    console.error("[profile/style-preferences]", error);
+    return res.status(503).json({ error: "service_unavailable" });
+  }
 });
 
-app.get("/profile/wardrobe-occasions", requireAuth, (req, res) => {
-  res.json({ ok: true, items: getWardrobeOccasions() });
+app.get("/profile/wardrobe-occasions", requireAuth, async (req, res) => {
+  try {
+    const items = await getWardrobeOccasions(req.user.email);
+    return res.json({ ok: true, items });
+  } catch (error) {
+    console.error("[profile/wardrobe-occasions]", error);
+    return res.status(503).json({ error: "service_unavailable" });
+  }
 });
 
-app.get("/profile/wardrobe-seasons", requireAuth, (req, res) => {
-  res.json({ ok: true, items: getWardrobeSeasons() });
+app.get("/profile/wardrobe-seasons", requireAuth, async (req, res) => {
+  try {
+    const items = await getWardrobeSeasons(req.user.email);
+    return res.json({ ok: true, items });
+  } catch (error) {
+    console.error("[profile/wardrobe-seasons]", error);
+    return res.status(503).json({ error: "service_unavailable" });
+  }
 });
 
 app.get("/profile/wardrobe-audience", requireAuth, (req, res) => {
@@ -449,11 +467,16 @@ app.post("/profile/initialize", requireTrustedOrigin, requireAuth, requireCsrf, 
     : [];
   const wardrobeAudience = String(req.body?.wardrobeAudience || "").trim().toLowerCase();
   const locale = String(req.body?.locale || "").trim().toLowerCase();
+  const [allowedStylePreferences, allowedWardrobeOccasions, allowedWardrobeSeasons] = await Promise.all([
+    getStylePreferences(req.user.email),
+    getWardrobeOccasions(req.user.email),
+    getWardrobeSeasons(req.user.email)
+  ]);
 
   if (
-    !isValidSelection(stylePreferences, getStylePreferences()) ||
-    !isValidSelection(wardrobeOccasions, getWardrobeOccasions()) ||
-    !isValidSelection(wardrobeSeasons, getWardrobeSeasons()) ||
+    !isValidSelection(stylePreferences, allowedStylePreferences) ||
+    !isValidSelection(wardrobeOccasions, allowedWardrobeOccasions) ||
+    !isValidSelection(wardrobeSeasons, allowedWardrobeSeasons) ||
     !isValidSingleSelection(wardrobeAudience, getWardrobeAudience()) ||
     !SUPPORTED_LOCALES.has(locale)
   ) {
@@ -490,11 +513,16 @@ app.patch("/profile/me", requireTrustedOrigin, requireAuth, requireCsrf, async (
     : [];
   const wardrobeAudience = String(req.body?.wardrobeAudience || "").trim().toLowerCase();
   const locale = String(req.body?.locale || "").trim().toLowerCase();
+  const [allowedStylePreferences, allowedWardrobeOccasions, allowedWardrobeSeasons] = await Promise.all([
+    getStylePreferences(req.user.email),
+    getWardrobeOccasions(req.user.email),
+    getWardrobeSeasons(req.user.email)
+  ]);
 
   if (
-    !isValidSelection(stylePreferences, getStylePreferences()) ||
-    !isValidSelection(wardrobeOccasions, getWardrobeOccasions()) ||
-    !isValidSelection(wardrobeSeasons, getWardrobeSeasons()) ||
+    !isValidSelection(stylePreferences, allowedStylePreferences) ||
+    !isValidSelection(wardrobeOccasions, allowedWardrobeOccasions) ||
+    !isValidSelection(wardrobeSeasons, allowedWardrobeSeasons) ||
     !isValidSingleSelection(wardrobeAudience, getWardrobeAudience()) ||
     !SUPPORTED_LOCALES.has(locale)
   ) {

@@ -256,6 +256,42 @@ async function hasProfileByEmail(email) {
   return Boolean(row?.hasProfile);
 }
 
+async function getDistinctProductFormalityLevels() {
+  const sql = getSqlClient();
+  const rows = await sql`
+    select distinct trim(value) as value
+    from products
+    cross join unnest(coalesce(formality_level, array[]::text[])) as value
+    where nullif(trim(value), '') is not null
+    order by value
+  `;
+  return rows.map((row) => row.value).filter(Boolean);
+}
+
+async function getDistinctProductOccasions() {
+  const sql = getSqlClient();
+  const rows = await sql`
+    select distinct trim(value) as value
+    from products
+    cross join unnest(coalesce(occasions, array[]::text[])) as value
+    where nullif(trim(value), '') is not null
+    order by value
+  `;
+  return rows.map((row) => row.value).filter(Boolean);
+}
+
+async function getDistinctProductSeasons() {
+  const sql = getSqlClient();
+  const rows = await sql`
+    select distinct trim(value) as value
+    from products
+    cross join unnest(coalesce(season, array[]::text[])) as value
+    where nullif(trim(value), '') is not null
+    order by value
+  `;
+  return rows.map((row) => row.value).filter(Boolean);
+}
+
 async function getProfileByEmail(email) {
   const sql = getSqlClient();
   const [row] = await sql`
@@ -459,6 +495,9 @@ export {
   deleteSessionById,
   pruneExpiredSessions,
   hasProfileByEmail,
+  getDistinctProductFormalityLevels,
+  getDistinctProductOccasions,
+  getDistinctProductSeasons,
   getProfileByEmail,
   createProfileRecord,
   updateProfileRecord,

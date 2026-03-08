@@ -1,6 +1,9 @@
 import {
   createProfileRecord,
   deleteProfileByEmail,
+  getDistinctProductFormalityLevels,
+  getDistinctProductOccasions,
+  getDistinctProductSeasons,
   getProfileByEmail,
   hasProfileByEmail,
   updateProfileRecord,
@@ -8,7 +11,7 @@ import {
   updateProfileWardrobeItemsByEmail
 } from "./db.js";
 
-const stylePreferences = [
+const FALLBACK_STYLE_PREFERENCES = [
   "casual",
   "formal",
   "romantic",
@@ -19,7 +22,7 @@ const stylePreferences = [
   "streetwear"
 ];
 
-const wardrobeOccasions = [
+const FALLBACK_WARDROBE_OCCASIONS = [
   "office",
   "city_walk",
   "school_dropoff",
@@ -30,9 +33,28 @@ const wardrobeOccasions = [
   "outdoor"
 ];
 
-const wardrobeSeasons = ["spring", "summer", "autumn", "winter"];
+const FALLBACK_WARDROBE_SEASONS = ["spring", "summer", "autumn", "winter"];
 
 const wardrobeAudience = ["man", "woman", "any"];
+
+function dedupeStrings(items) {
+  return [...new Set(items.filter((item) => typeof item === "string" && item.trim()))];
+}
+
+function mergeOptionValues(primaryItems, fallbackItems, extraItems = []) {
+  const sourceItems = Array.isArray(primaryItems) && primaryItems.length > 0 ? primaryItems : fallbackItems;
+  return dedupeStrings([...sourceItems, ...extraItems]);
+}
+
+async function getDynamicOptions(loadValues, fallbackItems, extraItems = []) {
+  try {
+    const values = await loadValues();
+    return mergeOptionValues(values, fallbackItems, extraItems);
+  } catch (error) {
+    console.error("[profile/options]", error);
+    return mergeOptionValues([], fallbackItems, extraItems);
+  }
+}
 
 function normalizeWardrobeAudience(value) {
   const audience = String(value || "").trim().toLowerCase();
@@ -42,16 +64,46 @@ function normalizeWardrobeAudience(value) {
   return "any";
 }
 
-function getStylePreferences() {
-  return stylePreferences;
+async function getStylePreferences(email) {
+  try {
+    const profile = email ? await getProfile(email) : null;
+    return await getDynamicOptions(
+      getDistinctProductFormalityLevels,
+      FALLBACK_STYLE_PREFERENCES,
+      profile?.stylePreferences || []
+    );
+  } catch (error) {
+    console.error("[profile/style-preferences]", error);
+    return [...FALLBACK_STYLE_PREFERENCES];
+  }
 }
 
-function getWardrobeOccasions() {
-  return wardrobeOccasions;
+async function getWardrobeOccasions(email) {
+  try {
+    const profile = email ? await getProfile(email) : null;
+    return await getDynamicOptions(
+      getDistinctProductOccasions,
+      FALLBACK_WARDROBE_OCCASIONS,
+      profile?.wardrobeOccasions || []
+    );
+  } catch (error) {
+    console.error("[profile/wardrobe-occasions]", error);
+    return [...FALLBACK_WARDROBE_OCCASIONS];
+  }
 }
 
-function getWardrobeSeasons() {
-  return wardrobeSeasons;
+async function getWardrobeSeasons(email) {
+  try {
+    const profile = email ? await getProfile(email) : null;
+    return await getDynamicOptions(
+      getDistinctProductSeasons,
+      FALLBACK_WARDROBE_SEASONS,
+      profile?.wardrobeSeasons || []
+    );
+  } catch (error) {
+    console.error("[profile/wardrobe-seasons]", error);
+    return [...FALLBACK_WARDROBE_SEASONS];
+  }
 }
 
 function getWardrobeAudience() {

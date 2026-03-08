@@ -29,4 +29,18 @@ function t(key, params, locale = defaultLocale) {
   return key;
 }
 
-export { t, defaultLocale, supportedLocales, normalizeLocale, isSupportedLocale };
+function humanizeOptionValue(value = "") {
+  return String(value)
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function translateOption(group, value, locale = defaultLocale) {
+  const key = `options.${group}.${value}`;
+  const translated = t(key, undefined, locale);
+  return translated === key ? humanizeOptionValue(value) : translated;
+}
+
+export { t, translateOption, defaultLocale, supportedLocales, normalizeLocale, isSupportedLocale };
