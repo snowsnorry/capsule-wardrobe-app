@@ -58,6 +58,22 @@ const FALLBACK_SEASON_OPTIONS = ["spring", "summer", "autumn", "winter"];
 const FALLBACK_AUDIENCE_OPTIONS = ["man", "woman", "any"];
 const FALLBACK_ACCENT_COLOR_OPTIONS = ACCENT_COLOR_OPTIONS;
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
+const SEASON_DISPLAY_ORDER = ["spring", "summer", "autumn", "winter"];
+
+function sortSeasonOptions(items) {
+  return [...items].sort((left, right) => {
+    const leftIndex = SEASON_DISPLAY_ORDER.indexOf(left);
+    const rightIndex = SEASON_DISPLAY_ORDER.indexOf(right);
+    const normalizedLeft = leftIndex === -1 ? SEASON_DISPLAY_ORDER.length : leftIndex;
+    const normalizedRight = rightIndex === -1 ? SEASON_DISPLAY_ORDER.length : rightIndex;
+
+    if (normalizedLeft !== normalizedRight) {
+      return normalizedLeft - normalizedRight;
+    }
+
+    return String(left).localeCompare(String(right));
+  });
+}
 
 async function retry(fn, attempts = 3, delayMs = 120) {
   let lastError;
@@ -102,6 +118,7 @@ function App() {
   const [isLoadingWardrobe, setIsLoadingWardrobe] = useState(false);
 
   const cardPadding = useMemo(() => (isLarge ? 5 : 3), [isLarge]);
+  const orderedSeasonOptions = useMemo(() => sortSeasonOptions(seasonOptions), [seasonOptions]);
 
   const resolveErrorMessage = (error) => {
     if (!error) return t("errors.generic");
@@ -488,7 +505,7 @@ function App() {
           <ProfileScreen
             styleOptions={styleOptions}
             occasionOptions={occasionOptions}
-            seasonOptions={seasonOptions}
+            seasonOptions={orderedSeasonOptions}
             audienceOptions={audienceOptions}
             accentColorOptions={FALLBACK_ACCENT_COLOR_OPTIONS}
             selectedStyles={selectedStyles}
@@ -520,7 +537,7 @@ function App() {
           isLoadingItems={isLoadingWardrobe}
           styleOptions={styleOptions}
           occasionOptions={occasionOptions}
-          seasonOptions={seasonOptions}
+          seasonOptions={orderedSeasonOptions}
           audienceOptions={audienceOptions}
           accentColorOptions={FALLBACK_ACCENT_COLOR_OPTIONS}
           selectedStyles={selectedStyles}
@@ -547,7 +564,7 @@ function App() {
         onboardingStep={onboardingStep}
         styleOptions={styleOptions}
         occasionOptions={occasionOptions}
-        seasonOptions={seasonOptions}
+        seasonOptions={orderedSeasonOptions}
         audienceOptions={audienceOptions}
         selectedStyles={selectedStyles}
         selectedOccasions={selectedOccasions}
