@@ -309,7 +309,9 @@ async function getDistinctProductPatterns() {
       lower(trim(pattern)) as value,
       count(*)::int as "rowCount"
     from products
-    where nullif(trim(pattern), '') is not null
+    where
+      nullif(trim(pattern), '') is not null
+      and lower(trim(pattern)) <> 'solid'
     group by lower(trim(pattern))
     having count(*) > 20
     order by "rowCount" desc, value asc

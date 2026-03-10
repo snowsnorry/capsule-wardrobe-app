@@ -301,8 +301,12 @@ async function callWardrobeAi(userProfile = null) {
           -- Rule 1: If it's an accent item, it must be in the top 3 of accents.
           (is_accent_match IS NOT TRUE OR accent_rank <= 3)
           AND 
-          -- Rule 2: If it's a patterned item, it must be in the top 3 of patterns.
-          (is_pattern_match IS NOT TRUE OR pattern_rank <= 3)
+          -- Rule 2: If it's a patterned item, it must be in the top 3 of patterns. (WITH BYPASS FOR 'SOLID')
+          (
+            is_pattern_match IS NOT TRUE 
+            OR lower(${pattern}::text) = 'solid'
+            OR pattern_rank <= 3
+          )
       ) results
       
       -- 5. FINAL SORTING STRATEGY
