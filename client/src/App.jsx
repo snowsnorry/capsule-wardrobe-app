@@ -107,11 +107,13 @@ function App() {
   const [occasionOptions, setOccasionOptions] = useState([]);
   const [seasonOptions, setSeasonOptions] = useState([]);
   const [audienceOptions, setAudienceOptions] = useState([]);
+  const [patternOptions, setPatternOptions] = useState([]);
   const [selectedStyles, setSelectedStyles] = useState([]);
   const [selectedOccasions, setSelectedOccasions] = useState([]);
   const [selectedSeasons, setSelectedSeasons] = useState([]);
   const [selectedAudience, setSelectedAudience] = useState("");
   const [selectedAccentColor, setSelectedAccentColor] = useState(null);
+  const [selectedPattern, setSelectedPattern] = useState(null);
   const [profileCreated, setProfileCreated] = useState(false);
   const [currentView, setCurrentView] = useState("main");
   const [wardrobeItems, setWardrobeItems] = useState(null);
@@ -180,12 +182,14 @@ function App() {
       setOccasionOptions(result.occasions);
       setSeasonOptions(result.seasons);
       setAudienceOptions(result.audience);
+      setPatternOptions(result.patterns);
     } catch (error) {
       if (useFallback) {
         setStyleOptions(FALLBACK_STYLE_OPTIONS);
         setOccasionOptions(FALLBACK_OCCASION_OPTIONS);
         setSeasonOptions(FALLBACK_SEASON_OPTIONS);
         setAudienceOptions(FALLBACK_AUDIENCE_OPTIONS);
+        setPatternOptions([]);
         return;
       }
       throw error;
@@ -197,7 +201,8 @@ function App() {
       styleOptions.length > 0 &&
       occasionOptions.length > 0 &&
       seasonOptions.length > 0 &&
-      audienceOptions.length > 0
+      audienceOptions.length > 0 &&
+      Array.isArray(patternOptions)
     ) {
       return;
     }
@@ -211,6 +216,7 @@ function App() {
     setSelectedSeasons(result.profile?.wardrobeSeasons || []);
     setSelectedAudience(result.profile?.wardrobeAudience || "");
     setSelectedAccentColor(result.profile?.accentColor ?? null);
+    setSelectedPattern(result.profile?.pattern ?? null);
     if (result.profile?.locale) {
       setLocale(result.profile.locale);
     }
@@ -250,6 +256,7 @@ function App() {
         setSelectedSeasons([]);
         setSelectedAudience("");
         setSelectedAccentColor(null);
+        setSelectedPattern(null);
         setOnboardingStep(0);
         setStatus({ loading: false, error: "", infoKey: "", infoParams: null });
       } else {
@@ -279,6 +286,7 @@ function App() {
         setSelectedSeasons([]);
         setSelectedAudience("");
         setSelectedAccentColor(null);
+        setSelectedPattern(null);
         setOnboardingStep(0);
         setStatus({ loading: false, error: "", infoKey: "", infoParams: null });
       } else {
@@ -309,6 +317,7 @@ function App() {
       setSelectedSeasons([]);
       setSelectedAudience("");
       setSelectedAccentColor(null);
+      setSelectedPattern(null);
       setOnboardingStep(0);
       setWardrobeItems(null);
       setIsLoadingWardrobe(false);
@@ -317,6 +326,7 @@ function App() {
       setOccasionOptions([]);
       setSeasonOptions([]);
       setAudienceOptions([]);
+      setPatternOptions([]);
       setStatus({ loading: false, error: "", infoKey: "auth.signedOut", infoParams: null });
     } catch (error) {
       setStatus({ loading: false, error: resolveErrorMessage(error), infoKey: "", infoParams: null });
@@ -378,6 +388,7 @@ function App() {
         selectedSeasons,
         selectedAudience,
         selectedAccentColor,
+        selectedPattern,
         locale
       );
       setWardrobeItems(null);
@@ -416,7 +427,8 @@ function App() {
     occasions: selectedOccasions.slice().sort(),
     seasons: selectedSeasons.slice().sort(),
     audience: selectedAudience,
-    accentColor: selectedAccentColor
+    accentColor: selectedAccentColor,
+    pattern: selectedPattern
   });
   const isSignInView = !user;
   const isMainScreenView = Boolean(user && (hasProfile || profileCreated) && currentView === "main");
@@ -508,11 +520,13 @@ function App() {
             seasonOptions={orderedSeasonOptions}
             audienceOptions={audienceOptions}
             accentColorOptions={FALLBACK_ACCENT_COLOR_OPTIONS}
+            patternOptions={patternOptions}
             selectedStyles={selectedStyles}
             selectedOccasions={selectedOccasions}
             selectedSeasons={selectedSeasons}
             selectedAudience={selectedAudience}
             selectedAccentColor={selectedAccentColor}
+            selectedPattern={selectedPattern}
             status={status}
             onToggleStyle={(value) => toggleSelection(value, selectedStyles, setSelectedStyles)}
             onToggleOccasion={(value) =>
@@ -521,6 +535,7 @@ function App() {
             onToggleSeason={(value) => toggleSelection(value, selectedSeasons, setSelectedSeasons)}
             onSelectAudience={setSelectedAudience}
             onSelectAccentColor={setSelectedAccentColor}
+            onSelectPattern={setSelectedPattern}
             onSave={handleSaveProfile}
             onDelete={handleDeleteProfile}
             onBack={handleBackToMain}
@@ -540,11 +555,13 @@ function App() {
           seasonOptions={orderedSeasonOptions}
           audienceOptions={audienceOptions}
           accentColorOptions={FALLBACK_ACCENT_COLOR_OPTIONS}
+          patternOptions={patternOptions}
           selectedStyles={selectedStyles}
           selectedOccasions={selectedOccasions}
           selectedSeasons={selectedSeasons}
           selectedAudience={selectedAudience}
           selectedAccentColor={selectedAccentColor}
+          selectedPattern={selectedPattern}
           status={status}
           onToggleStyle={(value) => toggleSelection(value, selectedStyles, setSelectedStyles)}
           onToggleOccasion={(value) =>
@@ -553,6 +570,7 @@ function App() {
           onToggleSeason={(value) => toggleSelection(value, selectedSeasons, setSelectedSeasons)}
           onSelectAudience={setSelectedAudience}
           onSelectAccentColor={setSelectedAccentColor}
+          onSelectPattern={setSelectedPattern}
           onApplyFilters={handleSaveProfile}
           onResetFilters={handleResetProfileFilters}
         />

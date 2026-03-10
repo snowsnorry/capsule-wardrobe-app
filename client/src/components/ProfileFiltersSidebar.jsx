@@ -9,17 +9,20 @@ function ProfileFiltersSidebar({
   seasonOptions,
   audienceOptions,
   accentColorOptions,
+  patternOptions,
   selectedStyles,
   selectedOccasions,
   selectedSeasons,
   selectedAudience,
   selectedAccentColor,
+  selectedPattern,
   status,
   onToggleStyle,
   onToggleOccasion,
   onToggleSeason,
   onSelectAudience,
   onSelectAccentColor,
+  onSelectPattern,
   onApply,
   onReset,
   onSignOut,
@@ -124,6 +127,30 @@ function ProfileFiltersSidebar({
           selectedValue={selectedAccentColor}
           onSelect={onSelectAccentColor}
         />
+      </Stack>
+
+      <Stack spacing={1.5}>
+        <Typography variant="h5">{t("profile.patternTitle")}</Typography>
+        <Typography variant="body1" color="text.secondary">
+          {t("profile.patternHint")}
+        </Typography>
+        <Stack direction="row" flexWrap="wrap" gap={1}>
+          <Chip
+            label={t("profile.patternNotImportant")}
+            clickable
+            color={selectedPattern === null ? "primary" : "default"}
+            onClick={() => onSelectPattern(null)}
+          />
+          {patternOptions.map((item) => (
+            <Chip
+              key={item}
+              label={translateOption("patterns", item)}
+              clickable
+              color={selectedPattern === item ? "primary" : "default"}
+              onClick={() => onSelectPattern(item)}
+            />
+          ))}
+        </Stack>
       </Stack>
 
       <Stack spacing={1.5}>

@@ -35,17 +35,20 @@ function MainScreen({
   seasonOptions,
   audienceOptions,
   accentColorOptions,
+  patternOptions,
   selectedStyles,
   selectedOccasions,
   selectedSeasons,
   selectedAudience,
   selectedAccentColor,
+  selectedPattern,
   status,
   onToggleStyle,
   onToggleOccasion,
   onToggleSeason,
   onSelectAudience,
   onSelectAccentColor,
+  onSelectPattern,
   onApplyFilters,
   onResetFilters
 }) {
@@ -139,17 +142,20 @@ function MainScreen({
               seasonOptions={seasonOptions}
               audienceOptions={audienceOptions}
               accentColorOptions={accentColorOptions}
+              patternOptions={patternOptions}
               selectedStyles={selectedStyles}
               selectedOccasions={selectedOccasions}
               selectedSeasons={selectedSeasons}
               selectedAudience={selectedAudience}
               selectedAccentColor={selectedAccentColor}
+              selectedPattern={selectedPattern}
               status={status}
               onToggleStyle={onToggleStyle}
               onToggleOccasion={onToggleOccasion}
               onToggleSeason={onToggleSeason}
               onSelectAudience={onSelectAudience}
               onSelectAccentColor={onSelectAccentColor}
+              onSelectPattern={onSelectPattern}
               onApply={onApplyFilters}
               onReset={onResetFilters}
               onSignOut={() => setIsSignOutOpen(true)}
@@ -255,17 +261,20 @@ function MainScreen({
               seasonOptions={seasonOptions}
               audienceOptions={audienceOptions}
               accentColorOptions={accentColorOptions}
+              patternOptions={patternOptions}
               selectedStyles={selectedStyles}
               selectedOccasions={selectedOccasions}
               selectedSeasons={selectedSeasons}
               selectedAudience={selectedAudience}
               selectedAccentColor={selectedAccentColor}
+              selectedPattern={selectedPattern}
               status={status}
               onToggleStyle={onToggleStyle}
               onToggleOccasion={onToggleOccasion}
               onToggleSeason={onToggleSeason}
               onSelectAudience={onSelectAudience}
               onSelectAccentColor={onSelectAccentColor}
+              onSelectPattern={onSelectPattern}
               onApply={handleApplyMobileFilters}
               onReset={handleCancelMobileFilters}
               onSignOut={() => {

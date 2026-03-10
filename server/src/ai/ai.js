@@ -151,6 +151,9 @@ function getWardrobeSelectionPrompt(userProfile = null, items = []) {
   const audienceText = userProfile?.wardrobeAudience || "any";
   const accentColorText = userProfile?.accentColor ? 
     `Requested accent color: ${userProfile.accentColor}` : "";
+  const patternText = userProfile?.pattern
+    ? `Requested pattern: ${userProfile.pattern}`
+    : "";
   const simplifiedItems = items.map((item) => {
     const colorParts = [
       Array.isArray(item?.color_base) ? item.color_base.join(", ") : "",
@@ -181,7 +184,7 @@ function getWardrobeSelectionPrompt(userProfile = null, items = []) {
     .replace("{{occasions}}", occasionsText)
     .replace("{{season}}", seasonText)
     .replace("{{audience}}", audienceText)
-    .replace("{{accent_color}}", accentColorText)
+    .replace("{{accent_color}}", [accentColorText, patternText].filter(Boolean).join("\n"))
     .replace("{{items}}", itemsJson)
     .replace("{{category_list}}", getCategoryListText())
     .replace("{{num_items}}", Object.entries(CATEGORIES).reduce((sum, [, count]) => sum + count, 0))
@@ -204,6 +207,7 @@ async function callWardrobeAi(userProfile = null) {
   };
   const audienceFilters = audienceByProfile[userProfile?.wardrobeAudience] || audienceByProfile.any;
   const accentColor = userProfile?.accentColor ?? null;
+  const pattern = userProfile?.pattern ?? null;
   const embeddingVector = `[${promptEmbeddings.join(",")}]`;
   const noiseFactor = 0.05;
 
@@ -225,13 +229,16 @@ async function callWardrobeAi(userProfile = null) {
         FROM (
           SELECT 
             raw_scored.*,
-            -- 3. QUOTA RANKING 
-            -- We rank accent items separately from non-accent items.
-            -- This allows us to limit the number of accent items in the next step.
+            -- 3. INDEPENDENT QUOTA RANKING
+            -- We rank accent items and patterned items in completely separate windows.
             ROW_NUMBER() OVER (
               PARTITION BY is_accent_match
               ORDER BY relevance_score DESC, distance ASC
-            ) as type_rank
+            ) as accent_rank,
+            ROW_NUMBER() OVER (
+              PARTITION BY is_pattern_match
+              ORDER BY relevance_score DESC, distance ASC
+            ) as pattern_rank
           FROM (
             SELECT
               products.*,
@@ -244,6 +251,12 @@ async function callWardrobeAi(userProfile = null) {
                 AND ${accentColor}::text != '' 
                 AND ${accentColor}::text = ANY(color_base)
               ) as is_accent_match,
+              (
+                ${pattern}::text IS NOT NULL
+                AND ${pattern}::text != ''
+                -- Small tip: make sure to lower() both sides for safety if patterns are manually entered
+                AND lower(COALESCE(pattern, '')) = lower(${pattern}::text)
+              ) as is_pattern_match,
               
               -- 2. Calculate Relevance Score
               (
@@ -265,8 +278,14 @@ async function callWardrobeAi(userProfile = null) {
                 CASE 
                   WHEN ${accentColor}::text IS NOT NULL AND ${accentColor}::text != '' 
                       AND ${accentColor}::text = ANY(color_base) 
-                  THEN 20 
-                  ELSE 0 
+                  THEN 20 ELSE 0 
+                END
+                +
+                -- PATTERN BOOST (+20)
+                CASE
+                  WHEN ${pattern}::text IS NOT NULL AND ${pattern}::text != ''
+                      AND lower(COALESCE(pattern, '')) = lower(${pattern}::text)
+                  THEN 20 ELSE 0
                 END
               ) as relevance_score
 
@@ -278,11 +297,12 @@ async function callWardrobeAi(userProfile = null) {
           ) raw_scored
         ) filtered_items
         WHERE
-          -- If it is an accent item, take only the top 3 best matching ones.
-          -- If it is NOT an accent item, take as many as needed to fill the list.
-          (is_accent_match IS TRUE AND type_rank <= 3) 
-          OR 
-          (is_accent_match IS NOT TRUE)
+          -- !!! INDEPENDENT QUOTA LIMITS !!!
+          -- Rule 1: If it's an accent item, it must be in the top 3 of accents.
+          (is_accent_match IS NOT TRUE OR accent_rank <= 3)
+          AND 
+          -- Rule 2: If it's a patterned item, it must be in the top 3 of patterns.
+          (is_pattern_match IS NOT TRUE OR pattern_rank <= 3)
       ) results
       
       -- 5. FINAL SORTING STRATEGY

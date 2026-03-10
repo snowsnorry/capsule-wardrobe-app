@@ -3,6 +3,7 @@ import {
   deleteProfileByEmail,
   getDistinctProductFormalityLevels,
   getDistinctProductOccasions,
+  getDistinctProductPatterns,
   getDistinctProductSeasons,
   getProfileByEmail,
   hasProfileByEmail,
@@ -120,6 +121,16 @@ async function getWardrobeSeasons(email) {
   }
 }
 
+async function getPatternOptions(email) {
+  try {
+    const profile = email ? await getProfile(email) : null;
+    return await getDynamicOptions(getDistinctProductPatterns, [], profile?.pattern ? [profile.pattern] : []);
+  } catch (error) {
+    console.error("[profile/patterns]", error);
+    return [];
+  }
+}
+
 function getWardrobeAudience() {
   return wardrobeAudience;
 }
@@ -132,7 +143,10 @@ async function getProfile(email) {
   return {
     ...profile,
     wardrobeAudience: normalizeWardrobeAudience(profile.wardrobeAudience),
-    accentColor: normalizeAccentColor(profile.accentColor)
+    accentColor: normalizeAccentColor(profile.accentColor),
+    pattern: typeof profile.pattern === "string" && profile.pattern.trim()
+      ? profile.pattern.trim().toLowerCase()
+      : null
   };
 }
 
@@ -148,6 +162,7 @@ async function createProfile(email, data) {
     wardrobeSeasons: data.wardrobeSeasons || [],
     wardrobeAudience: normalizeWardrobeAudience(data.wardrobeAudience),
     accentColor: null,
+    pattern: null,
     locale: data.locale || "en"
   });
 }
@@ -160,6 +175,7 @@ async function updateProfile(email, data) {
     wardrobeSeasons: data.wardrobeSeasons || [],
     wardrobeAudience: normalizeWardrobeAudience(data.wardrobeAudience),
     accentColor: normalizeAccentColor(data.accentColor),
+    pattern: typeof data.pattern === "string" && data.pattern.trim() ? data.pattern.trim().toLowerCase() : null,
     locale: data.locale || "en"
   });
 }
@@ -187,5 +203,6 @@ export {
   getStylePreferences,
   getWardrobeOccasions,
   getWardrobeSeasons,
-  getWardrobeAudience
+  getWardrobeAudience,
+  getPatternOptions
 };

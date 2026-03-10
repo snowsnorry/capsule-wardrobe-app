@@ -23,17 +23,20 @@ function ProfileScreen({
   seasonOptions,
   audienceOptions,
   accentColorOptions,
+  patternOptions,
   selectedStyles,
   selectedOccasions,
   selectedSeasons,
   selectedAudience,
   selectedAccentColor,
+  selectedPattern,
   status,
   onToggleStyle,
   onToggleOccasion,
   onToggleSeason,
   onSelectAudience,
   onSelectAccentColor,
+  onSelectPattern,
   onSave,
   onDelete,
   onBack
@@ -159,6 +162,30 @@ function ProfileScreen({
           selectedValue={selectedAccentColor}
           onSelect={onSelectAccentColor}
         />
+      </Stack>
+
+      <Stack spacing={2}>
+        <Typography variant="h6">{t("profile.patternTitle")}</Typography>
+        <Typography variant="body2" color="text.secondary">
+          {t("profile.patternHint")}
+        </Typography>
+        <Stack direction="row" flexWrap="wrap" gap={1}>
+          <Chip
+            label={t("profile.patternNotImportant")}
+            clickable
+            color={selectedPattern === null ? "primary" : "default"}
+            onClick={() => onSelectPattern(null)}
+          />
+          {patternOptions.map((item) => (
+            <Chip
+              key={item}
+              label={translateOption("patterns", item)}
+              clickable
+              color={selectedPattern === item ? "primary" : "default"}
+              onClick={() => onSelectPattern(item)}
+            />
+          ))}
+        </Stack>
       </Stack>
 
       <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>

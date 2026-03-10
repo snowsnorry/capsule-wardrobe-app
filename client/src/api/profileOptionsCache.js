@@ -2,22 +2,25 @@ import {
   fetchStylePreferences,
   fetchWardrobeOccasions,
   fetchWardrobeSeasons,
-  fetchWardrobeAudience
+  fetchWardrobeAudience,
+  fetchPatternOptions
 } from "./auth.js";
 
 let cachedStyles = null;
 let cachedOccasions = null;
 let cachedSeasons = null;
 let cachedAudience = null;
+let cachedPatterns = null;
 let inFlight = null;
 
 async function loadProfileOptions() {
-  if (cachedStyles && cachedOccasions && cachedSeasons && cachedAudience) {
+  if (cachedStyles && cachedOccasions && cachedSeasons && cachedAudience && cachedPatterns) {
     return {
       styles: cachedStyles,
       occasions: cachedOccasions,
       seasons: cachedSeasons,
-      audience: cachedAudience
+      audience: cachedAudience,
+      patterns: cachedPatterns
     };
   }
 
@@ -26,18 +29,21 @@ async function loadProfileOptions() {
       fetchStylePreferences(),
       fetchWardrobeOccasions(),
       fetchWardrobeSeasons(),
-      fetchWardrobeAudience()
+      fetchWardrobeAudience(),
+      fetchPatternOptions()
     ])
-      .then(([styles, occasions, seasons, audience]) => {
+      .then(([styles, occasions, seasons, audience, patterns]) => {
         cachedStyles = styles.items || [];
         cachedOccasions = occasions.items || [];
         cachedSeasons = seasons.items || [];
         cachedAudience = audience.items || [];
+        cachedPatterns = patterns.items || [];
         return {
           styles: cachedStyles,
           occasions: cachedOccasions,
           seasons: cachedSeasons,
-          audience: cachedAudience
+          audience: cachedAudience,
+          patterns: cachedPatterns
         };
       })
       .finally(() => {
@@ -53,6 +59,7 @@ function clearProfileOptionsCache() {
   cachedOccasions = null;
   cachedSeasons = null;
   cachedAudience = null;
+  cachedPatterns = null;
   inFlight = null;
 }
 

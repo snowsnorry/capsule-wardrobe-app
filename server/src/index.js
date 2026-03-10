@@ -26,6 +26,7 @@ import {
   getWardrobeOccasions,
   getWardrobeSeasons,
   getWardrobeAudience,
+  getPatternOptions,
   getProfile,
   hasProfile,
   updateProfile,
@@ -467,6 +468,16 @@ app.get("/profile/wardrobe-audience", requireAuth, (req, res) => {
   res.json({ ok: true, items: getWardrobeAudience() });
 });
 
+app.get("/profile/patterns", requireAuth, async (req, res) => {
+  try {
+    const items = await getPatternOptions(req.user.email);
+    return res.json({ ok: true, items });
+  } catch (error) {
+    console.error("[profile/patterns]", error);
+    return res.status(503).json({ error: "service_unavailable" });
+  }
+});
+
 app.post("/wardrobe/items", requireTrustedOrigin, requireAuth, requireCsrf, getWardrobeItems);
 
 app.post("/profile/initialize", requireTrustedOrigin, requireAuth, requireCsrf, async (req, res) => {
@@ -481,11 +492,13 @@ app.post("/profile/initialize", requireTrustedOrigin, requireAuth, requireCsrf, 
     : [];
   const wardrobeAudience = String(req.body?.wardrobeAudience || "").trim().toLowerCase();
   const accentColor = parseOptionalSelection(req.body?.accentColor);
+  const pattern = parseOptionalSelection(req.body?.pattern);
   const locale = String(req.body?.locale || "").trim().toLowerCase();
-  const [allowedStylePreferences, allowedWardrobeOccasions, allowedWardrobeSeasons] = await Promise.all([
+  const [allowedStylePreferences, allowedWardrobeOccasions, allowedWardrobeSeasons, allowedPatterns] = await Promise.all([
     getStylePreferences(req.user.email),
     getWardrobeOccasions(req.user.email),
-    getWardrobeSeasons(req.user.email)
+    getWardrobeSeasons(req.user.email),
+    getPatternOptions(req.user.email)
   ]);
 
   if (
@@ -494,6 +507,7 @@ app.post("/profile/initialize", requireTrustedOrigin, requireAuth, requireCsrf, 
     !isValidSelection(wardrobeSeasons, allowedWardrobeSeasons) ||
     !isValidSingleSelection(wardrobeAudience, getWardrobeAudience()) ||
     !isValidOptionalSingleSelection(accentColor, ACCENT_COLOR_OPTIONS) ||
+    !isValidOptionalSingleSelection(pattern, allowedPatterns) ||
     !SUPPORTED_LOCALES.has(locale)
   ) {
     return res.status(400).json({ error: "invalid_payload" });
@@ -506,6 +520,7 @@ app.post("/profile/initialize", requireTrustedOrigin, requireAuth, requireCsrf, 
       wardrobeSeasons,
       wardrobeAudience,
       accentColor,
+      pattern,
       locale
     });
     if (!profile) {
@@ -530,11 +545,13 @@ app.patch("/profile/me", requireTrustedOrigin, requireAuth, requireCsrf, async (
     : [];
   const wardrobeAudience = String(req.body?.wardrobeAudience || "").trim().toLowerCase();
   const accentColor = parseOptionalSelection(req.body?.accentColor);
+  const pattern = parseOptionalSelection(req.body?.pattern);
   const locale = String(req.body?.locale || "").trim().toLowerCase();
-  const [allowedStylePreferences, allowedWardrobeOccasions, allowedWardrobeSeasons] = await Promise.all([
+  const [allowedStylePreferences, allowedWardrobeOccasions, allowedWardrobeSeasons, allowedPatterns] = await Promise.all([
     getStylePreferences(req.user.email),
     getWardrobeOccasions(req.user.email),
-    getWardrobeSeasons(req.user.email)
+    getWardrobeSeasons(req.user.email),
+    getPatternOptions(req.user.email)
   ]);
 
   if (
@@ -543,6 +560,7 @@ app.patch("/profile/me", requireTrustedOrigin, requireAuth, requireCsrf, async (
     !isValidSelection(wardrobeSeasons, allowedWardrobeSeasons) ||
     !isValidSingleSelection(wardrobeAudience, getWardrobeAudience()) ||
     !isValidOptionalSingleSelection(accentColor, ACCENT_COLOR_OPTIONS) ||
+    !isValidOptionalSingleSelection(pattern, allowedPatterns) ||
     !SUPPORTED_LOCALES.has(locale)
   ) {
     return res.status(400).json({ error: "invalid_payload" });
@@ -555,6 +573,7 @@ app.patch("/profile/me", requireTrustedOrigin, requireAuth, requireCsrf, async (
       wardrobeSeasons,
       wardrobeAudience,
       accentColor,
+      pattern,
       locale
     });
     if (!profile) {

@@ -61,6 +61,7 @@ async function ensureProfilesTable() {
       wardrobe_seasons text[] not null default array['spring', 'summer', 'autumn', 'winter']::text[],
       wardrobe_audience text not null default 'any',
       accent_color text null,
+      pattern text null,
       wardrobe_items jsonb null,
       locale text not null,
       created_at timestamptz not null default now(),
@@ -84,6 +85,10 @@ async function ensureProfilesTable() {
   await sql`
     alter table profiles
     add column if not exists accent_color text null
+  `;
+  await sql`
+    alter table profiles
+    add column if not exists pattern text null
   `;
 }
 
@@ -297,6 +302,21 @@ async function getDistinctProductSeasons() {
   return rows.map((row) => row.value).filter(Boolean);
 }
 
+async function getDistinctProductPatterns() {
+  const sql = getSqlClient();
+  const rows = await sql`
+    select
+      lower(trim(pattern)) as value,
+      count(*)::int as "rowCount"
+    from products
+    where nullif(trim(pattern), '') is not null
+    group by lower(trim(pattern))
+    having count(*) > 20
+    order by "rowCount" desc, value asc
+  `;
+  return rows.map((row) => row.value).filter(Boolean);
+}
+
 async function getProfileByEmail(email) {
   const sql = getSqlClient();
   const [row] = await sql`
@@ -307,6 +327,7 @@ async function getProfileByEmail(email) {
       wardrobe_seasons as "wardrobeSeasons",
       wardrobe_audience as "wardrobeAudience",
       accent_color as "accentColor",
+      pattern,
       wardrobe_items as "wardrobeItems",
       locale,
       created_at as "createdAt",
@@ -325,6 +346,7 @@ async function createProfileRecord({
   wardrobeSeasons,
   wardrobeAudience,
   accentColor,
+  pattern,
   locale
 }) {
   const sql = getSqlClient();
@@ -336,6 +358,7 @@ async function createProfileRecord({
       wardrobe_seasons,
       wardrobe_audience,
       accent_color,
+      pattern,
       wardrobe_items,
       locale
     )
@@ -346,6 +369,7 @@ async function createProfileRecord({
       ${wardrobeSeasons},
       ${wardrobeAudience},
       ${accentColor},
+      ${pattern},
       null,
       ${locale}
     )
@@ -357,6 +381,7 @@ async function createProfileRecord({
       wardrobe_seasons as "wardrobeSeasons",
       wardrobe_audience as "wardrobeAudience",
       accent_color as "accentColor",
+      pattern,
       wardrobe_items as "wardrobeItems",
       locale,
       created_at as "createdAt",
@@ -372,6 +397,7 @@ async function updateProfileRecord({
   wardrobeSeasons,
   wardrobeAudience,
   accentColor,
+  pattern,
   locale
 }) {
   const sql = getSqlClient();
@@ -384,6 +410,7 @@ async function updateProfileRecord({
           or wardrobe_seasons is distinct from ${wardrobeSeasons}
           or wardrobe_audience is distinct from ${wardrobeAudience}
           or accent_color is distinct from ${accentColor}
+          or pattern is distinct from ${pattern}
         then null
         else wardrobe_items
       end,
@@ -392,6 +419,7 @@ async function updateProfileRecord({
       wardrobe_seasons = ${wardrobeSeasons},
       wardrobe_audience = ${wardrobeAudience},
       accent_color = ${accentColor},
+      pattern = ${pattern},
       locale = ${locale},
       updated_at = now()
     where email = ${email}
@@ -402,6 +430,7 @@ async function updateProfileRecord({
       wardrobe_seasons as "wardrobeSeasons",
       wardrobe_audience as "wardrobeAudience",
       accent_color as "accentColor",
+      pattern,
       wardrobe_items as "wardrobeItems",
       locale,
       created_at as "createdAt",
@@ -425,6 +454,7 @@ async function updateProfileLocaleByEmail({ email, locale }) {
       wardrobe_seasons as "wardrobeSeasons",
       wardrobe_audience as "wardrobeAudience",
       accent_color as "accentColor",
+      pattern,
       wardrobe_items as "wardrobeItems",
       locale,
       created_at as "createdAt",
@@ -448,6 +478,7 @@ async function updateProfileWardrobeItemsByEmail({ email, wardrobeItems }) {
       wardrobe_seasons as "wardrobeSeasons",
       wardrobe_audience as "wardrobeAudience",
       accent_color as "accentColor",
+      pattern,
       wardrobe_items as "wardrobeItems",
       locale,
       created_at as "createdAt",
@@ -514,6 +545,7 @@ export {
   getDistinctProductFormalityLevels,
   getDistinctProductOccasions,
   getDistinctProductSeasons,
+  getDistinctProductPatterns,
   getProfileByEmail,
   createProfileRecord,
   updateProfileRecord,

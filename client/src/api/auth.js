@@ -73,6 +73,12 @@ async function fetchWardrobeAudience() {
   });
 }
 
+async function fetchPatternOptions() {
+  return requestJson(`${API_BASE_URL}/profile/patterns`, {
+    credentials: "include"
+  });
+}
+
 async function initializeProfile(
   stylePreferences,
   wardrobeOccasions,
@@ -100,6 +106,7 @@ async function updateProfile(
   wardrobeSeasons,
   wardrobeAudience,
   accentColor,
+  pattern,
   locale
 ) {
   return requestJson(`${API_BASE_URL}/profile/me`, {
@@ -112,6 +119,7 @@ async function updateProfile(
       wardrobeSeasons,
       wardrobeAudience,
       accentColor,
+      pattern,
       locale
     })
   });
@@ -151,6 +159,7 @@ export {
   fetchWardrobeOccasions,
   fetchWardrobeSeasons,
   fetchWardrobeAudience,
+  fetchPatternOptions,
   initializeProfile,
   updateProfile,
   updateProfileLocale,
