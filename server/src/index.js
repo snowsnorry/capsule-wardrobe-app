@@ -617,12 +617,16 @@ app.delete("/profile/me", requireTrustedOrigin, requireAuth, requireCsrf, async 
   }
 });
 
-app.get("/health", async (req, res) => {
+app.get("/health", (req, res) => {
+  return res.json({ ok: true });
+});
+
+app.get("/healthall", async (req, res) => {
   try {
     await checkDatabaseConnection();
     return res.json({ ok: true });
   } catch (error) {
-    console.error("[health]", error);
+    console.error("[healthall]", error);
     return res.status(503).json({ ok: false });
   }
 });
