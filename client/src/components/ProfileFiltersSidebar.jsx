@@ -29,7 +29,7 @@ function ProfileFiltersSidebar({
   isSigningOut,
   resetLabelKey = "filters.reset"
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const isApplyDisabled =
     status.loading ||
     selectedStyles.length === 0 ||
@@ -54,7 +54,7 @@ function ProfileFiltersSidebar({
           {styleOptions.map((style) => (
             <Chip
               key={style}
-              label={translateOption("styles", style)}
+              label={translateOption("styles", style, locale)}
               clickable
               color={selectedStyles.includes(style) ? "primary" : "default"}
               onClick={() => onToggleStyle(style)}
@@ -72,7 +72,7 @@ function ProfileFiltersSidebar({
           {occasionOptions.map((item) => (
             <Chip
               key={item}
-              label={translateOption("occasions", item)}
+              label={translateOption("occasions", item, locale)}
               clickable
               color={selectedOccasions.includes(item) ? "primary" : "default"}
               onClick={() => onToggleOccasion(item)}
@@ -90,7 +90,7 @@ function ProfileFiltersSidebar({
           {seasonOptions.map((item) => (
             <Chip
               key={item}
-              label={translateOption("seasons", item)}
+              label={translateOption("seasons", item, locale)}
               clickable
               color={selectedSeasons.includes(item) ? "primary" : "default"}
               onClick={() => onToggleSeason(item)}
@@ -108,7 +108,7 @@ function ProfileFiltersSidebar({
           {audienceOptions.map((item) => (
             <Chip
               key={item}
-              label={translateOption("audience", item)}
+              label={translateOption("audience", item, locale)}
               clickable
               color={selectedAudience === item ? "primary" : "default"}
               onClick={() => onSelectAudience(item)}
@@ -144,7 +144,7 @@ function ProfileFiltersSidebar({
           {patternOptions.map((item) => (
             <Chip
               key={item}
-              label={translateOption("patterns", item)}
+              label={translateOption("patterns", item, locale)}
               clickable
               color={selectedPattern === item ? "primary" : "default"}
               onClick={() => onSelectPattern(item)}

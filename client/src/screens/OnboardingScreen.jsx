@@ -22,7 +22,7 @@ function OnboardingScreen({
   onBack,
   onFinish
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   return (
     <Stack spacing={3}>
       <Stack spacing={1}>
@@ -57,7 +57,7 @@ function OnboardingScreen({
             {styleOptions.map((style) => (
               <Chip
                 key={style}
-                label={translateOption("styles", style)}
+                label={translateOption("styles", style, locale)}
                 clickable
                 color={selectedStyles.includes(style) ? "primary" : "default"}
                 onClick={() => onToggleStyle(style)}
@@ -77,7 +77,7 @@ function OnboardingScreen({
             {occasionOptions.map((item) => (
               <Chip
                 key={item}
-                label={translateOption("occasions", item)}
+                label={translateOption("occasions", item, locale)}
                 clickable
                 color={selectedOccasions.includes(item) ? "primary" : "default"}
                 onClick={() => onToggleOccasion(item)}
@@ -97,7 +97,7 @@ function OnboardingScreen({
             {seasonOptions.map((item) => (
               <Chip
                 key={item}
-                label={translateOption("seasons", item)}
+                label={translateOption("seasons", item, locale)}
                 clickable
                 color={selectedSeasons.includes(item) ? "primary" : "default"}
                 onClick={() => onToggleSeason(item)}
@@ -117,7 +117,7 @@ function OnboardingScreen({
             {audienceOptions.map((item) => (
               <Chip
                 key={item}
-                label={translateOption("audience", item)}
+                label={translateOption("audience", item, locale)}
                 clickable
                 color={selectedAudience === item ? "primary" : "default"}
                 onClick={() => onSelectAudience(item)}

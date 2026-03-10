@@ -18,7 +18,7 @@ const ACCENT_COLOR_SWATCHES = {
 };
 
 function AccentColorChips({ options, selectedValue, onSelect }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
 
   return (
     <Stack direction="row" flexWrap="wrap" gap={1}>
@@ -46,7 +46,7 @@ function AccentColorChips({ options, selectedValue, onSelect }) {
                   boxSizing: "border-box"
                 }}
               />
-              <span>{translateOption("accentColors", item)}</span>
+              <span>{translateOption("accentColors", item, locale)}</span>
             </Stack>
           }
         />
