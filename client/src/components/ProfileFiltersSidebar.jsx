@@ -1,5 +1,6 @@
 import { Button, Chip, Divider, Stack, Typography } from "@mui/material";
 import AccentColorChips from "./AccentColorChips.jsx";
+import StylePreferenceSelector from "./StylePreferenceSelector.jsx";
 import { useI18n } from "../i18n/useI18n.js";
 import { translateOption } from "../i18n/index.js";
 
@@ -10,14 +11,16 @@ function ProfileFiltersSidebar({
   audienceOptions,
   accentColorOptions,
   patternOptions,
-  selectedStyles,
+  selectedStyleCore,
+  selectedStyleAesthetic,
   selectedOccasions,
   selectedSeasons,
   selectedAudience,
   selectedAccentColor,
   selectedPattern,
   status,
-  onToggleStyle,
+  onSelectStyleCore,
+  onSelectStyleAesthetic,
   onToggleOccasion,
   onToggleSeason,
   onSelectAudience,
@@ -32,7 +35,7 @@ function ProfileFiltersSidebar({
   const { t, locale } = useI18n();
   const isApplyDisabled =
     status.loading ||
-    selectedStyles.length === 0 ||
+    !selectedStyleCore ||
     selectedOccasions.length === 0 ||
     selectedSeasons.length === 0 ||
     !selectedAudience;
@@ -45,23 +48,13 @@ function ProfileFiltersSidebar({
         minHeight: 0
       }}
     >
-      <Stack spacing={1.5}>
-        <Typography variant="h5">{t("profile.stylesTitle")}</Typography>
-        <Typography variant="body1" color="text.secondary">
-          {t("profile.stylesHint")}
-        </Typography>
-        <Stack direction="row" flexWrap="wrap" gap={1}>
-          {styleOptions.map((style) => (
-            <Chip
-              key={style}
-              label={translateOption("styles", style, locale)}
-              clickable
-              color={selectedStyles.includes(style) ? "primary" : "default"}
-              onClick={() => onToggleStyle(style)}
-            />
-          ))}
-        </Stack>
-      </Stack>
+      <StylePreferenceSelector
+        styleOptions={styleOptions}
+        selectedStyleCore={selectedStyleCore}
+        selectedStyleAesthetic={selectedStyleAesthetic}
+        onSelectStyleCore={onSelectStyleCore}
+        onSelectStyleAesthetic={onSelectStyleAesthetic}
+      />
 
       <Stack spacing={1.5}>
         <Typography variant="h5">{t("profile.occasionsTitle")}</Typography>

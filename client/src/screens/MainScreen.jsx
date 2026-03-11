@@ -36,14 +36,16 @@ function MainScreen({
   audienceOptions,
   accentColorOptions,
   patternOptions,
-  selectedStyles,
+  selectedStyleCore,
+  selectedStyleAesthetic,
   selectedOccasions,
   selectedSeasons,
   selectedAudience,
   selectedAccentColor,
   selectedPattern,
   status,
-  onToggleStyle,
+  onSelectStyleCore,
+  onSelectStyleAesthetic,
   onToggleOccasion,
   onToggleSeason,
   onSelectAudience,
@@ -143,14 +145,16 @@ function MainScreen({
               audienceOptions={audienceOptions}
               accentColorOptions={accentColorOptions}
               patternOptions={patternOptions}
-              selectedStyles={selectedStyles}
+              selectedStyleCore={selectedStyleCore}
+              selectedStyleAesthetic={selectedStyleAesthetic}
               selectedOccasions={selectedOccasions}
               selectedSeasons={selectedSeasons}
               selectedAudience={selectedAudience}
               selectedAccentColor={selectedAccentColor}
               selectedPattern={selectedPattern}
               status={status}
-              onToggleStyle={onToggleStyle}
+              onSelectStyleCore={onSelectStyleCore}
+              onSelectStyleAesthetic={onSelectStyleAesthetic}
               onToggleOccasion={onToggleOccasion}
               onToggleSeason={onToggleSeason}
               onSelectAudience={onSelectAudience}
@@ -262,14 +266,16 @@ function MainScreen({
               audienceOptions={audienceOptions}
               accentColorOptions={accentColorOptions}
               patternOptions={patternOptions}
-              selectedStyles={selectedStyles}
+              selectedStyleCore={selectedStyleCore}
+              selectedStyleAesthetic={selectedStyleAesthetic}
               selectedOccasions={selectedOccasions}
               selectedSeasons={selectedSeasons}
               selectedAudience={selectedAudience}
               selectedAccentColor={selectedAccentColor}
               selectedPattern={selectedPattern}
               status={status}
-              onToggleStyle={onToggleStyle}
+              onSelectStyleCore={onSelectStyleCore}
+              onSelectStyleAesthetic={onSelectStyleAesthetic}
               onToggleOccasion={onToggleOccasion}
               onToggleSeason={onToggleSeason}
               onSelectAudience={onSelectAudience}

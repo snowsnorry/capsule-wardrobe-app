@@ -23,6 +23,7 @@ import ProfileScreen from "./screens/ProfileScreen.jsx";
 import SignInScreen from "./screens/SignInScreen.jsx";
 import { useI18n } from "./i18n/useI18n.js";
 import { ACCENT_COLOR_OPTIONS } from "../../shared/accentColors.js";
+import { buildFallbackStyleOptions } from "../../shared/stylePreferences.js";
 
 const initialStatus = {
   loading: false,
@@ -31,16 +32,7 @@ const initialStatus = {
   infoParams: null
 };
 
-const FALLBACK_STYLE_OPTIONS = [
-  "casual",
-  "formal",
-  "romantic",
-  "minimal",
-  "sporty",
-  "classic",
-  "boho",
-  "streetwear"
-];
+const FALLBACK_STYLE_OPTIONS = buildFallbackStyleOptions({ disabled: false });
 
 const FALLBACK_OCCASION_OPTIONS = [
   "office",
@@ -103,12 +95,13 @@ function App() {
   const [sessionInitialized, setSessionInitialized] = useState(false);
   const [hasProfile, setHasProfile] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(0);
-  const [styleOptions, setStyleOptions] = useState([]);
+  const [styleOptions, setStyleOptions] = useState(FALLBACK_STYLE_OPTIONS);
   const [occasionOptions, setOccasionOptions] = useState([]);
   const [seasonOptions, setSeasonOptions] = useState([]);
   const [audienceOptions, setAudienceOptions] = useState([]);
   const [patternOptions, setPatternOptions] = useState([]);
-  const [selectedStyles, setSelectedStyles] = useState([]);
+  const [selectedStyleCore, setSelectedStyleCore] = useState("");
+  const [selectedStyleAesthetic, setSelectedStyleAesthetic] = useState(null);
   const [selectedOccasions, setSelectedOccasions] = useState([]);
   const [selectedSeasons, setSelectedSeasons] = useState([]);
   const [selectedAudience, setSelectedAudience] = useState("");
@@ -198,7 +191,9 @@ function App() {
 
   const ensureOptionsLoaded = async ({ useFallback = false } = {}) => {
     if (
-      styleOptions.length > 0 &&
+      styleOptions &&
+      Array.isArray(styleOptions.core) &&
+      Array.isArray(styleOptions.aesthetics) &&
       occasionOptions.length > 0 &&
       seasonOptions.length > 0 &&
       audienceOptions.length > 0 &&
@@ -211,7 +206,8 @@ function App() {
 
   const loadProfileSelections = async () => {
     const result = await fetchProfile();
-    setSelectedStyles(result.profile?.stylePreferences || []);
+    setSelectedStyleCore(result.profile?.styleCore || "");
+    setSelectedStyleAesthetic(result.profile?.styleAesthetic ?? null);
     setSelectedOccasions(result.profile?.wardrobeOccasions || []);
     setSelectedSeasons(result.profile?.wardrobeSeasons || []);
     setSelectedAudience(result.profile?.wardrobeAudience || "");
@@ -251,7 +247,8 @@ function App() {
       if (!profileStatus.hasProfile) {
         await preloadOnboardingOptions({ useFallback: true });
         setUser(result.user);
-        setSelectedStyles([]);
+        setSelectedStyleCore("");
+        setSelectedStyleAesthetic(null);
         setSelectedOccasions([]);
         setSelectedSeasons([]);
         setSelectedAudience("");
@@ -281,7 +278,8 @@ function App() {
       if (!profileStatus.hasProfile) {
         await preloadOnboardingOptions({ useFallback: true });
         setUser(result.user);
-        setSelectedStyles([]);
+        setSelectedStyleCore("");
+        setSelectedStyleAesthetic(null);
         setSelectedOccasions([]);
         setSelectedSeasons([]);
         setSelectedAudience("");
@@ -312,7 +310,8 @@ function App() {
       setStep("email");
       setEmail("");
       setCode("");
-      setSelectedStyles([]);
+      setSelectedStyleCore("");
+      setSelectedStyleAesthetic(null);
       setSelectedOccasions([]);
       setSelectedSeasons([]);
       setSelectedAudience("");
@@ -322,7 +321,7 @@ function App() {
       setWardrobeItems(null);
       setIsLoadingWardrobe(false);
       clearProfileOptionsCache();
-      setStyleOptions([]);
+      setStyleOptions(FALLBACK_STYLE_OPTIONS);
       setOccasionOptions([]);
       setSeasonOptions([]);
       setAudienceOptions([]);
@@ -348,7 +347,7 @@ function App() {
   };
 
   const handleNextOnboarding = () => {
-    if (onboardingStep === 0 && selectedStyles.length === 0) return;
+    if (onboardingStep === 0 && !selectedStyleCore) return;
     if (onboardingStep === 1 && selectedOccasions.length === 0) return;
     if (onboardingStep === 2 && selectedSeasons.length === 0) return;
     if (onboardingStep === 3 && !selectedAudience) return;
@@ -363,7 +362,8 @@ function App() {
     setStatus({ loading: true, error: "", infoKey: "", infoParams: null });
     try {
       await initializeProfile(
-        selectedStyles,
+        selectedStyleCore,
+        selectedStyleAesthetic,
         selectedOccasions,
         selectedSeasons,
         selectedAudience,
@@ -383,7 +383,8 @@ function App() {
     setStatus({ loading: true, error: "", infoKey: "", infoParams: null });
     try {
       await updateProfile(
-        selectedStyles,
+        selectedStyleCore,
+        selectedStyleAesthetic,
         selectedOccasions,
         selectedSeasons,
         selectedAudience,
@@ -423,7 +424,8 @@ function App() {
   };
 
   const profileKey = JSON.stringify({
-    styles: selectedStyles.slice().sort(),
+    styleCore: selectedStyleCore,
+    styleAesthetic: selectedStyleAesthetic,
     occasions: selectedOccasions.slice().sort(),
     seasons: selectedSeasons.slice().sort(),
     audience: selectedAudience,
@@ -521,14 +523,16 @@ function App() {
             audienceOptions={audienceOptions}
             accentColorOptions={FALLBACK_ACCENT_COLOR_OPTIONS}
             patternOptions={patternOptions}
-            selectedStyles={selectedStyles}
+            selectedStyleCore={selectedStyleCore}
+            selectedStyleAesthetic={selectedStyleAesthetic}
             selectedOccasions={selectedOccasions}
             selectedSeasons={selectedSeasons}
             selectedAudience={selectedAudience}
             selectedAccentColor={selectedAccentColor}
             selectedPattern={selectedPattern}
             status={status}
-            onToggleStyle={(value) => toggleSelection(value, selectedStyles, setSelectedStyles)}
+            onSelectStyleCore={setSelectedStyleCore}
+            onSelectStyleAesthetic={setSelectedStyleAesthetic}
             onToggleOccasion={(value) =>
               toggleSelection(value, selectedOccasions, setSelectedOccasions)
             }
@@ -556,14 +560,16 @@ function App() {
           audienceOptions={audienceOptions}
           accentColorOptions={FALLBACK_ACCENT_COLOR_OPTIONS}
           patternOptions={patternOptions}
-          selectedStyles={selectedStyles}
+          selectedStyleCore={selectedStyleCore}
+          selectedStyleAesthetic={selectedStyleAesthetic}
           selectedOccasions={selectedOccasions}
           selectedSeasons={selectedSeasons}
           selectedAudience={selectedAudience}
           selectedAccentColor={selectedAccentColor}
           selectedPattern={selectedPattern}
           status={status}
-          onToggleStyle={(value) => toggleSelection(value, selectedStyles, setSelectedStyles)}
+          onSelectStyleCore={setSelectedStyleCore}
+          onSelectStyleAesthetic={setSelectedStyleAesthetic}
           onToggleOccasion={(value) =>
             toggleSelection(value, selectedOccasions, setSelectedOccasions)
           }
@@ -584,12 +590,14 @@ function App() {
         occasionOptions={occasionOptions}
         seasonOptions={orderedSeasonOptions}
         audienceOptions={audienceOptions}
-        selectedStyles={selectedStyles}
+        selectedStyleCore={selectedStyleCore}
+        selectedStyleAesthetic={selectedStyleAesthetic}
         selectedOccasions={selectedOccasions}
         selectedSeasons={selectedSeasons}
         selectedAudience={selectedAudience}
         status={status}
-        onToggleStyle={(value) => toggleSelection(value, selectedStyles, setSelectedStyles)}
+        onSelectStyleCore={setSelectedStyleCore}
+        onSelectStyleAesthetic={setSelectedStyleAesthetic}
         onToggleOccasion={(value) =>
           toggleSelection(value, selectedOccasions, setSelectedOccasions)
         }

@@ -35,6 +35,7 @@ import {
 import { getWardrobeItems } from "./ai/ai.js";
 import { checkDatabaseConnection, ensureTables } from "./db.js";
 import { ACCENT_COLOR_OPTIONS } from "../../shared/accentColors.js";
+import { getEnabledStyleValues } from "../../shared/stylePreferences.js";
 
 const PORT = process.env.PORT || 3000;
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || "http://localhost:5173";
@@ -481,9 +482,8 @@ app.get("/profile/patterns", requireAuth, async (req, res) => {
 app.post("/wardrobe/items", requireTrustedOrigin, requireAuth, requireCsrf, getWardrobeItems);
 
 app.post("/profile/initialize", requireTrustedOrigin, requireAuth, requireCsrf, async (req, res) => {
-  const stylePreferences = Array.isArray(req.body?.stylePreferences)
-    ? req.body.stylePreferences
-    : [];
+  const styleCore = String(req.body?.styleCore || "").trim().toLowerCase();
+  const styleAesthetic = parseOptionalSelection(req.body?.styleAesthetic);
   const wardrobeOccasions = Array.isArray(req.body?.wardrobeOccasions)
     ? req.body.wardrobeOccasions
     : [];
@@ -501,8 +501,12 @@ app.post("/profile/initialize", requireTrustedOrigin, requireAuth, requireCsrf, 
     getPatternOptions(req.user.email)
   ]);
 
+  const allowedCoreStyles = getEnabledStyleValues(allowedStylePreferences.core || []);
+  const allowedAestheticStyles = getEnabledStyleValues(allowedStylePreferences.aesthetics || []);
+
   if (
-    !isValidSelection(stylePreferences, allowedStylePreferences) ||
+    !isValidSingleSelection(styleCore, allowedCoreStyles) ||
+    !isValidOptionalSingleSelection(styleAesthetic, allowedAestheticStyles) ||
     !isValidSelection(wardrobeOccasions, allowedWardrobeOccasions) ||
     !isValidSelection(wardrobeSeasons, allowedWardrobeSeasons) ||
     !isValidSingleSelection(wardrobeAudience, getWardrobeAudience()) ||
@@ -515,7 +519,8 @@ app.post("/profile/initialize", requireTrustedOrigin, requireAuth, requireCsrf, 
 
   try {
     const profile = await createProfile(req.user.email, {
-      stylePreferences,
+      styleCore,
+      styleAesthetic,
       wardrobeOccasions,
       wardrobeSeasons,
       wardrobeAudience,
@@ -534,9 +539,8 @@ app.post("/profile/initialize", requireTrustedOrigin, requireAuth, requireCsrf, 
 });
 
 app.patch("/profile/me", requireTrustedOrigin, requireAuth, requireCsrf, async (req, res) => {
-  const stylePreferences = Array.isArray(req.body?.stylePreferences)
-    ? req.body.stylePreferences
-    : [];
+  const styleCore = String(req.body?.styleCore || "").trim().toLowerCase();
+  const styleAesthetic = parseOptionalSelection(req.body?.styleAesthetic);
   const wardrobeOccasions = Array.isArray(req.body?.wardrobeOccasions)
     ? req.body.wardrobeOccasions
     : [];
@@ -554,8 +558,12 @@ app.patch("/profile/me", requireTrustedOrigin, requireAuth, requireCsrf, async (
     getPatternOptions(req.user.email)
   ]);
 
+  const allowedCoreStyles = getEnabledStyleValues(allowedStylePreferences.core || []);
+  const allowedAestheticStyles = getEnabledStyleValues(allowedStylePreferences.aesthetics || []);
+
   if (
-    !isValidSelection(stylePreferences, allowedStylePreferences) ||
+    !isValidSingleSelection(styleCore, allowedCoreStyles) ||
+    !isValidOptionalSingleSelection(styleAesthetic, allowedAestheticStyles) ||
     !isValidSelection(wardrobeOccasions, allowedWardrobeOccasions) ||
     !isValidSelection(wardrobeSeasons, allowedWardrobeSeasons) ||
     !isValidSingleSelection(wardrobeAudience, getWardrobeAudience()) ||
@@ -568,7 +576,8 @@ app.patch("/profile/me", requireTrustedOrigin, requireAuth, requireCsrf, async (
 
   try {
     const profile = await updateProfile(req.user.email, {
-      stylePreferences,
+      styleCore,
+      styleAesthetic,
       wardrobeOccasions,
       wardrobeSeasons,
       wardrobeAudience,

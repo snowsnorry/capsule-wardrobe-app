@@ -14,6 +14,7 @@ import {
 } from "@mui/material";
 import LocaleSwitcher from "../components/LocaleSwitcher.jsx";
 import AccentColorChips from "../components/AccentColorChips.jsx";
+import StylePreferenceSelector from "../components/StylePreferenceSelector.jsx";
 import { useI18n } from "../i18n/useI18n.js";
 import { translateOption } from "../i18n/index.js";
 
@@ -24,14 +25,16 @@ function ProfileScreen({
   audienceOptions,
   accentColorOptions,
   patternOptions,
-  selectedStyles,
+  selectedStyleCore,
+  selectedStyleAesthetic,
   selectedOccasions,
   selectedSeasons,
   selectedAudience,
   selectedAccentColor,
   selectedPattern,
   status,
-  onToggleStyle,
+  onSelectStyleCore,
+  onSelectStyleAesthetic,
   onToggleOccasion,
   onToggleSeason,
   onSelectAudience,
@@ -80,23 +83,15 @@ function ProfileScreen({
         {t("profile.subtitle")}
       </Typography>
 
-      <Stack spacing={2}>
-        <Typography variant="h6">{t("profile.stylesTitle")}</Typography>
-        <Typography variant="body2" color="text.secondary">
-          {t("profile.stylesHint")}
-        </Typography>
-        <Stack direction="row" flexWrap="wrap" gap={1}>
-          {styleOptions.map((style) => (
-            <Chip
-              key={style}
-              label={translateOption("styles", style, locale)}
-              clickable
-              color={selectedStyles.includes(style) ? "primary" : "default"}
-              onClick={() => onToggleStyle(style)}
-            />
-          ))}
-        </Stack>
-      </Stack>
+      <StylePreferenceSelector
+        styleOptions={styleOptions}
+        selectedStyleCore={selectedStyleCore}
+        selectedStyleAesthetic={selectedStyleAesthetic}
+        onSelectStyleCore={onSelectStyleCore}
+        onSelectStyleAesthetic={onSelectStyleAesthetic}
+        titleVariant="h6"
+        bodyVariant="body2"
+      />
 
       <Stack spacing={2}>
         <Typography variant="h6">{t("profile.occasionsTitle")}</Typography>
@@ -197,7 +192,7 @@ function ProfileScreen({
           onClick={onSave}
           disabled={
             status.loading ||
-            selectedStyles.length === 0 ||
+            !selectedStyleCore ||
             selectedOccasions.length === 0 ||
             selectedSeasons.length === 0 ||
             !selectedAudience

@@ -80,7 +80,8 @@ async function fetchPatternOptions() {
 }
 
 async function initializeProfile(
-  stylePreferences,
+  styleCore,
+  styleAesthetic,
   wardrobeOccasions,
   wardrobeSeasons,
   wardrobeAudience,
@@ -91,7 +92,8 @@ async function initializeProfile(
     headers: { "Content-Type": "application/json" },
     credentials: "include",
     body: JSON.stringify({
-      stylePreferences,
+      styleCore,
+      styleAesthetic,
       wardrobeOccasions,
       wardrobeSeasons,
       wardrobeAudience,
@@ -101,7 +103,8 @@ async function initializeProfile(
 }
 
 async function updateProfile(
-  stylePreferences,
+  styleCore,
+  styleAesthetic,
   wardrobeOccasions,
   wardrobeSeasons,
   wardrobeAudience,
@@ -114,7 +117,8 @@ async function updateProfile(
     headers: { "Content-Type": "application/json" },
     credentials: "include",
     body: JSON.stringify({
-      stylePreferences,
+      styleCore,
+      styleAesthetic,
       wardrobeOccasions,
       wardrobeSeasons,
       wardrobeAudience,

@@ -1,5 +1,6 @@
 import { Button, Chip, Divider, Stack, Typography } from "@mui/material";
 import LocaleSwitcher from "../components/LocaleSwitcher.jsx";
+import StylePreferenceSelector from "../components/StylePreferenceSelector.jsx";
 import { useI18n } from "../i18n/useI18n.js";
 import { translateOption } from "../i18n/index.js";
 
@@ -9,12 +10,14 @@ function OnboardingScreen({
   occasionOptions,
   seasonOptions,
   audienceOptions,
-  selectedStyles,
+  selectedStyleCore,
+  selectedStyleAesthetic,
   selectedOccasions,
   selectedSeasons,
   selectedAudience,
   status,
-  onToggleStyle,
+  onSelectStyleCore,
+  onSelectStyleAesthetic,
   onToggleOccasion,
   onToggleSeason,
   onSelectAudience,
@@ -53,17 +56,15 @@ function OnboardingScreen({
           <Typography variant="body2" color="text.secondary">
             {t("onboarding.step1Hint")}
           </Typography>
-          <Stack direction="row" flexWrap="wrap" gap={1}>
-            {styleOptions.map((style) => (
-              <Chip
-                key={style}
-                label={translateOption("styles", style, locale)}
-                clickable
-                color={selectedStyles.includes(style) ? "primary" : "default"}
-                onClick={() => onToggleStyle(style)}
-              />
-            ))}
-          </Stack>
+          <StylePreferenceSelector
+            styleOptions={styleOptions}
+            selectedStyleCore={selectedStyleCore}
+            selectedStyleAesthetic={selectedStyleAesthetic}
+            onSelectStyleCore={onSelectStyleCore}
+            onSelectStyleAesthetic={onSelectStyleAesthetic}
+            showSectionHeading={false}
+            bodyVariant="body2"
+          />
         </Stack>
       ) : null}
 
@@ -138,7 +139,7 @@ function OnboardingScreen({
             variant="contained"
             onClick={onNext}
             disabled={
-              (onboardingStep === 0 && selectedStyles.length === 0) ||
+              (onboardingStep === 0 && !selectedStyleCore) ||
               (onboardingStep === 1 && selectedOccasions.length === 0) ||
               (onboardingStep === 2 && selectedSeasons.length === 0)
             }

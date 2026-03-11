@@ -33,7 +33,7 @@ async function loadProfileOptions() {
       fetchPatternOptions()
     ])
       .then(([styles, occasions, seasons, audience, patterns]) => {
-        cachedStyles = styles.items || [];
+        cachedStyles = styles.items || { core: [], aesthetics: [] };
         cachedOccasions = occasions.items || [];
         cachedSeasons = seasons.items || [];
         cachedAudience = audience.items || [];

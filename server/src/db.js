@@ -57,6 +57,8 @@ async function ensureProfilesTable() {
     create table if not exists profiles (
       email text primary key,
       style_preferences text[] not null,
+      style_core text null,
+      style_aesthetics text null,
       wardrobe_occasions text[] not null,
       wardrobe_seasons text[] not null default array['spring', 'summer', 'autumn', 'winter']::text[],
       wardrobe_audience text not null default 'any',
@@ -67,6 +69,14 @@ async function ensureProfilesTable() {
       created_at timestamptz not null default now(),
       updated_at timestamptz not null default now()
     )
+  `;
+  await sql`
+    alter table profiles
+    add column if not exists style_core text null
+  `;
+  await sql`
+    alter table profiles
+    add column if not exists style_aesthetics text null
   `;
   await sql`
     alter table profiles
@@ -325,6 +335,8 @@ async function getProfileByEmail(email) {
     select
       email,
       style_preferences as "stylePreferences",
+      style_core as "styleCore",
+      style_aesthetics as "styleAesthetic",
       wardrobe_occasions as "wardrobeOccasions",
       wardrobe_seasons as "wardrobeSeasons",
       wardrobe_audience as "wardrobeAudience",
@@ -343,7 +355,8 @@ async function getProfileByEmail(email) {
 
 async function createProfileRecord({
   email,
-  stylePreferences,
+  styleCore,
+  styleAesthetic,
   wardrobeOccasions,
   wardrobeSeasons,
   wardrobeAudience,
@@ -356,6 +369,8 @@ async function createProfileRecord({
     insert into profiles (
       email,
       style_preferences,
+      style_core,
+      style_aesthetics,
       wardrobe_occasions,
       wardrobe_seasons,
       wardrobe_audience,
@@ -366,7 +381,9 @@ async function createProfileRecord({
     )
     values (
       ${email},
-      ${stylePreferences},
+      ${[]},
+      ${styleCore},
+      ${styleAesthetic},
       ${wardrobeOccasions},
       ${wardrobeSeasons},
       ${wardrobeAudience},
@@ -379,6 +396,8 @@ async function createProfileRecord({
     returning
       email,
       style_preferences as "stylePreferences",
+      style_core as "styleCore",
+      style_aesthetics as "styleAesthetic",
       wardrobe_occasions as "wardrobeOccasions",
       wardrobe_seasons as "wardrobeSeasons",
       wardrobe_audience as "wardrobeAudience",
@@ -394,7 +413,8 @@ async function createProfileRecord({
 
 async function updateProfileRecord({
   email,
-  stylePreferences,
+  styleCore,
+  styleAesthetic,
   wardrobeOccasions,
   wardrobeSeasons,
   wardrobeAudience,
@@ -407,7 +427,8 @@ async function updateProfileRecord({
     update profiles
     set
       wardrobe_items = case
-        when style_preferences is distinct from ${stylePreferences}
+        when style_core is distinct from ${styleCore}
+          or style_aesthetics is distinct from ${styleAesthetic}
           or wardrobe_occasions is distinct from ${wardrobeOccasions}
           or wardrobe_seasons is distinct from ${wardrobeSeasons}
           or wardrobe_audience is distinct from ${wardrobeAudience}
@@ -416,7 +437,8 @@ async function updateProfileRecord({
         then null
         else wardrobe_items
       end,
-      style_preferences = ${stylePreferences},
+      style_core = ${styleCore},
+      style_aesthetics = ${styleAesthetic},
       wardrobe_occasions = ${wardrobeOccasions},
       wardrobe_seasons = ${wardrobeSeasons},
       wardrobe_audience = ${wardrobeAudience},
@@ -428,6 +450,8 @@ async function updateProfileRecord({
     returning
       email,
       style_preferences as "stylePreferences",
+      style_core as "styleCore",
+      style_aesthetics as "styleAesthetic",
       wardrobe_occasions as "wardrobeOccasions",
       wardrobe_seasons as "wardrobeSeasons",
       wardrobe_audience as "wardrobeAudience",
@@ -452,6 +476,8 @@ async function updateProfileLocaleByEmail({ email, locale }) {
     returning
       email,
       style_preferences as "stylePreferences",
+      style_core as "styleCore",
+      style_aesthetics as "styleAesthetic",
       wardrobe_occasions as "wardrobeOccasions",
       wardrobe_seasons as "wardrobeSeasons",
       wardrobe_audience as "wardrobeAudience",
@@ -476,6 +502,8 @@ async function updateProfileWardrobeItemsByEmail({ email, wardrobeItems }) {
     returning
       email,
       style_preferences as "stylePreferences",
+      style_core as "styleCore",
+      style_aesthetics as "styleAesthetic",
       wardrobe_occasions as "wardrobeOccasions",
       wardrobe_seasons as "wardrobeSeasons",
       wardrobe_audience as "wardrobeAudience",

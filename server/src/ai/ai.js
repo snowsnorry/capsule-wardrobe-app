@@ -3,6 +3,7 @@ import { getSqlClient } from "../db.js";
 import { readFileSync, writeFileSync } from "node:fs";
 import en from "../../../shared/i18n/en.js";
 import { generateJsonWithLlm, getPromptEmbeddings } from "./openai.js";
+import { buildStylePreferenceArray } from "../../../shared/stylePreferences.js";
 
 const CATEGORIES = {
   bottom: 2,
@@ -46,8 +47,15 @@ function localizeProfileValues(values, dictionary) {
   return localized.join(", ").toLowerCase();
 }
 
+function getLocalizedStyleText(userProfile = null) {
+  return localizeProfileValues(
+    buildStylePreferenceArray(userProfile?.styleCore, userProfile?.styleAesthetic),
+    en.options.styles
+  );
+}
+
 function getWardrobePrompt(userProfile = null) {
-  const stylePreferencesText = localizeProfileValues(userProfile?.stylePreferences, en.options.styles);
+  const stylePreferencesText = getLocalizedStyleText(userProfile);
   const wardrobeOccasionsText = localizeProfileValues(userProfile?.wardrobeOccasions, en.options.occasions);
   const seasonsText = localizeProfileValues(userProfile?.wardrobeSeasons, en.options.seasons);
   const audienceMap = {
@@ -145,7 +153,7 @@ function enforceCategoryCounts(selectedItems, normalizedItems) {
 }
 
 function getWardrobeSelectionPrompt(userProfile = null, items = []) {
-  const formalityText = localizeProfileValues(userProfile?.stylePreferences, en.options.styles);
+  const formalityText = getLocalizedStyleText(userProfile);
   const occasionsText = localizeProfileValues(userProfile?.wardrobeOccasions, en.options.occasions);
   const seasonText = localizeProfileValues(userProfile?.wardrobeSeasons, en.options.seasons);
   const audienceText = userProfile?.wardrobeAudience || "any";
@@ -197,7 +205,8 @@ async function callWardrobeAi(userProfile = null) {
   const promptEmbeddings = await getPromptEmbeddings(prompt);
 
   const categories = Object.keys(CATEGORIES);
-  const stylePreferences = Array.isArray(userProfile?.stylePreferences) ? userProfile.stylePreferences : [];
+  const styleCore = userProfile?.styleCore ?? null;
+  const styleAesthetic = userProfile?.styleAesthetic ?? null;
   const wardrobeOccasions = Array.isArray(userProfile?.wardrobeOccasions) ? userProfile.wardrobeOccasions : [];
   const wardrobeSeasons = Array.isArray(userProfile?.wardrobeSeasons) ? userProfile.wardrobeSeasons : [];
   const audienceByProfile = {
@@ -232,6 +241,10 @@ async function callWardrobeAi(userProfile = null) {
             -- 3. INDEPENDENT QUOTA RANKING
             -- We rank accent items and patterned items in completely separate windows.
             ROW_NUMBER() OVER (
+              PARTITION BY is_aesthetic_match
+              ORDER BY relevance_score DESC, distance ASC
+            ) as aesthetic_rank,
+            ROW_NUMBER() OVER (
               PARTITION BY is_accent_match
               ORDER BY relevance_score DESC, distance ASC
             ) as accent_rank,
@@ -247,6 +260,10 @@ async function callWardrobeAi(userProfile = null) {
               
               -- 1.1 Identify Accent Match (Boolean helper)
               (
+                ${styleAesthetic}::text IS NOT NULL 
+                AND ${styleAesthetic}::text = ANY(COALESCE(formality_level, ARRAY[]::text[]))
+              ) as is_aesthetic_match,
+              (
                 ${accentColor}::text IS NOT NULL 
                 AND ${accentColor}::text != '' 
                 AND ${accentColor}::text = ANY(color_base)
@@ -261,7 +278,12 @@ async function callWardrobeAi(userProfile = null) {
               -- 2. Calculate Relevance Score
               (
                 -- Style Match (+20)
-                CASE WHEN COALESCE(formality_level, ARRAY[]::text[]) && ${stylePreferences}::text[]
+                CASE WHEN ${styleCore}::text IS NOT NULL 
+                  AND ${styleCore}::text = ANY(COALESCE(formality_level, ARRAY[]::text[]))
+                THEN 20 ELSE 0 END
+                +
+                CASE WHEN ${styleAesthetic}::text IS NOT NULL
+                  AND ${styleAesthetic}::text = ANY(COALESCE(formality_level, ARRAY[]::text[]))
                 THEN 20 ELSE 0 END
                 +
                 -- Occasion Match (+20)
@@ -298,10 +320,13 @@ async function callWardrobeAi(userProfile = null) {
         ) filtered_items
         WHERE
           -- !!! INDEPENDENT QUOTA LIMITS !!!
-          -- Rule 1: If it's an accent item, it must be in the top 3 of accents.
+          -- Rule 1: If it's an aesthetic item, it must be in the top 3 of aesthetics.
+          (is_aesthetic_match IS NOT TRUE OR aesthetic_rank <= 3)
+          AND 
+          -- Rule 2: If it's an accent item, it must be in the top 3 of accents.
           (is_accent_match IS NOT TRUE OR accent_rank <= 3)
           AND 
-          -- Rule 2: If it's a patterned item, it must be in the top 3 of patterns. (WITH BYPASS FOR 'SOLID')
+          -- Rule 3: If it's a patterned item, it must be in the top 3 of patterns. (WITH BYPASS FOR 'SOLID')
           (
             is_pattern_match IS NOT TRUE 
             OR lower(${pattern}::text) = 'solid'

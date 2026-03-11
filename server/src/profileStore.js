@@ -12,17 +12,12 @@ import {
   updateProfileWardrobeItemsByEmail
 } from "./db.js";
 import { ACCENT_COLOR_OPTIONS } from "../../shared/accentColors.js";
-
-const FALLBACK_STYLE_PREFERENCES = [
-  "casual",
-  "formal",
-  "romantic",
-  "minimal",
-  "sporty",
-  "classic",
-  "boho",
-  "streetwear"
-];
+import {
+  CORE_STYLE_ORDER,
+  inferStyleSelections,
+  normalizeStyleValue,
+  partitionStyleValues
+} from "../../shared/stylePreferences.js";
 
 const FALLBACK_WARDROBE_OCCASIONS = [
   "office",
@@ -79,17 +74,29 @@ function normalizeAccentColor(value) {
   return ACCENT_COLOR_OPTIONS.includes(accentColor) ? accentColor : null;
 }
 
+function normalizeStyleCore(value) {
+  const styleCore = normalizeStyleValue(value);
+  return CORE_STYLE_ORDER.includes(styleCore) ? styleCore : null;
+}
+
+function normalizeStyleAesthetics(value) {
+  const styleAesthetic = normalizeStyleValue(value);
+  return styleAesthetic || null;
+}
+
 async function getStylePreferences(email) {
   try {
     const profile = email ? await getProfile(email) : null;
-    return await getDynamicOptions(
-      getDistinctProductFormalityLevels,
-      FALLBACK_STYLE_PREFERENCES,
-      profile?.stylePreferences || []
-    );
+    const values = await getDistinctProductFormalityLevels();
+    return partitionStyleValues([
+      ...values,
+      profile?.styleCore,
+      profile?.styleAesthetic
+    ]);
   } catch (error) {
     console.error("[profile/style-preferences]", error);
-    return [...FALLBACK_STYLE_PREFERENCES];
+    const profile = email ? await getProfile(email).catch(() => null) : null;
+    return partitionStyleValues([profile?.styleCore, profile?.styleAesthetic]);
   }
 }
 
@@ -140,8 +147,15 @@ async function getProfile(email) {
   if (!profile) {
     return null;
   }
+  const legacySelections = inferStyleSelections(profile.stylePreferences);
+  const styleCore = normalizeStyleCore(profile.styleCore) || legacySelections.styleCore;
+  const normalizedLegacyAesthetic = normalizeStyleAesthetics(legacySelections.styleAesthetic);
+  const styleAesthetic = normalizeStyleAesthetics(profile.styleAesthetic) || normalizedLegacyAesthetic;
+
   return {
     ...profile,
+    styleCore,
+    styleAesthetic,
     wardrobeAudience: normalizeWardrobeAudience(profile.wardrobeAudience),
     accentColor: normalizeAccentColor(profile.accentColor),
     pattern: typeof profile.pattern === "string" && profile.pattern.trim()
@@ -157,7 +171,8 @@ async function hasProfile(email) {
 async function createProfile(email, data) {
   return createProfileRecord({
     email,
-    stylePreferences: data.stylePreferences || [],
+    styleCore: normalizeStyleCore(data.styleCore),
+    styleAesthetic: normalizeStyleAesthetics(data.styleAesthetic),
     wardrobeOccasions: data.wardrobeOccasions || [],
     wardrobeSeasons: data.wardrobeSeasons || [],
     wardrobeAudience: normalizeWardrobeAudience(data.wardrobeAudience),
@@ -170,7 +185,8 @@ async function createProfile(email, data) {
 async function updateProfile(email, data) {
   return updateProfileRecord({
     email,
-    stylePreferences: data.stylePreferences || [],
+    styleCore: normalizeStyleCore(data.styleCore),
+    styleAesthetic: normalizeStyleAesthetics(data.styleAesthetic),
     wardrobeOccasions: data.wardrobeOccasions || [],
     wardrobeSeasons: data.wardrobeSeasons || [],
     wardrobeAudience: normalizeWardrobeAudience(data.wardrobeAudience),
@@ -204,5 +220,7 @@ export {
   getWardrobeOccasions,
   getWardrobeSeasons,
   getWardrobeAudience,
-  getPatternOptions
+  getPatternOptions,
+  normalizeStyleCore,
+  normalizeStyleAesthetics
 };
