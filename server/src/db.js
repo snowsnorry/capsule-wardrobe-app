@@ -58,7 +58,7 @@ async function ensureProfilesTable() {
       email text primary key,
       style_preferences text[] not null,
       style_core text null,
-      style_aesthetics text null,
+      style_aesthetic text null,
       wardrobe_occasions text[] not null,
       wardrobe_seasons text[] not null default array['spring', 'summer', 'autumn', 'winter']::text[],
       wardrobe_audience text not null default 'any',
@@ -76,7 +76,7 @@ async function ensureProfilesTable() {
   `;
   await sql`
     alter table profiles
-    add column if not exists style_aesthetics text null
+    add column if not exists style_aesthetic text null
   `;
   await sql`
     alter table profiles
@@ -336,7 +336,7 @@ async function getProfileByEmail(email) {
       email,
       style_preferences as "stylePreferences",
       style_core as "styleCore",
-      style_aesthetics as "styleAesthetic",
+      style_aesthetic as "styleAesthetic",
       wardrobe_occasions as "wardrobeOccasions",
       wardrobe_seasons as "wardrobeSeasons",
       wardrobe_audience as "wardrobeAudience",
@@ -370,7 +370,7 @@ async function createProfileRecord({
       email,
       style_preferences,
       style_core,
-      style_aesthetics,
+      style_aesthetic,
       wardrobe_occasions,
       wardrobe_seasons,
       wardrobe_audience,
@@ -397,7 +397,7 @@ async function createProfileRecord({
       email,
       style_preferences as "stylePreferences",
       style_core as "styleCore",
-      style_aesthetics as "styleAesthetic",
+      style_aesthetic as "styleAesthetic",
       wardrobe_occasions as "wardrobeOccasions",
       wardrobe_seasons as "wardrobeSeasons",
       wardrobe_audience as "wardrobeAudience",
@@ -428,7 +428,7 @@ async function updateProfileRecord({
     set
       wardrobe_items = case
         when style_core is distinct from ${styleCore}
-          or style_aesthetics is distinct from ${styleAesthetic}
+          or style_aesthetic is distinct from ${styleAesthetic}
           or wardrobe_occasions is distinct from ${wardrobeOccasions}
           or wardrobe_seasons is distinct from ${wardrobeSeasons}
           or wardrobe_audience is distinct from ${wardrobeAudience}
@@ -438,7 +438,7 @@ async function updateProfileRecord({
         else wardrobe_items
       end,
       style_core = ${styleCore},
-      style_aesthetics = ${styleAesthetic},
+      style_aesthetic = ${styleAesthetic},
       wardrobe_occasions = ${wardrobeOccasions},
       wardrobe_seasons = ${wardrobeSeasons},
       wardrobe_audience = ${wardrobeAudience},
@@ -451,7 +451,7 @@ async function updateProfileRecord({
       email,
       style_preferences as "stylePreferences",
       style_core as "styleCore",
-      style_aesthetics as "styleAesthetic",
+      style_aesthetic as "styleAesthetic",
       wardrobe_occasions as "wardrobeOccasions",
       wardrobe_seasons as "wardrobeSeasons",
       wardrobe_audience as "wardrobeAudience",
@@ -477,7 +477,7 @@ async function updateProfileLocaleByEmail({ email, locale }) {
       email,
       style_preferences as "stylePreferences",
       style_core as "styleCore",
-      style_aesthetics as "styleAesthetic",
+      style_aesthetic as "styleAesthetic",
       wardrobe_occasions as "wardrobeOccasions",
       wardrobe_seasons as "wardrobeSeasons",
       wardrobe_audience as "wardrobeAudience",
@@ -503,7 +503,7 @@ async function updateProfileWardrobeItemsByEmail({ email, wardrobeItems }) {
       email,
       style_preferences as "stylePreferences",
       style_core as "styleCore",
-      style_aesthetics as "styleAesthetic",
+      style_aesthetic as "styleAesthetic",
       wardrobe_occasions as "wardrobeOccasions",
       wardrobe_seasons as "wardrobeSeasons",
       wardrobe_audience as "wardrobeAudience",
