@@ -170,7 +170,8 @@ function getWardrobeSelectionPrompt(userProfile = null, items = []) {
       item?.is_neutral ? "neutral" : ""
     ].filter((value) => value);
     const styleParts = [
-      Array.isArray(item?.style_tags) ? item.style_tags.join(", ") : "",
+      [...new Set(Array.isArray(item?.formality_level) ? item.formality_level : []
+        .concat(Array.isArray(item?.style_tags) ? item.style_tags : []))].join(", "),
       typeof item?.fit === "string" ? item.fit.trim() : "",
       typeof item?.silhouette === "string" ? item.silhouette.trim() : ""
     ].filter((value) => value);
