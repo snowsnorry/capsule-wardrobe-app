@@ -43,13 +43,10 @@ const en = {
     },
     occasions: {
       office: "Office",
-      city_walk: "City walk",
-      school_dropoff: "School drop-off",
-      party: "Party",
-      travel: "Travel",
-      weekend: "Weekend",
+      brunch_in_the_city: "Brunch in the city",
       date_night: "Date night",
-      outdoor: "Outdoor"
+      "school_drop-off": "School drop-off",
+      weekend_with_family: "Weekend with family"
     },
     seasons: {
       winter: "Winter",

@@ -1,38 +1,66 @@
 import {
   createProfileRecord,
   deleteProfileByEmail,
-  getDistinctProductFormalityLevels,
-  getDistinctProductOccasions,
   getDistinctProductPatterns,
-  getDistinctProductSeasons,
   getProfileByEmail,
   hasProfileByEmail,
   updateProfileRecord,
   updateProfileLocaleByEmail,
-  updateProfileWardrobeItemsByEmail
+  updateProfileItemsByEmail
 } from "./db.js";
 import { ACCENT_COLOR_OPTIONS } from "../../shared/accentColors.js";
-import {
-  CORE_STYLE_ORDER,
-  inferStyleSelections,
-  normalizeStyleValue,
-  partitionStyleValues
-} from "../../shared/stylePreferences.js";
+import { CORE_STYLE_ORDER, normalizeStyleValue } from "../../shared/stylePreferences.js";
 
-const FALLBACK_WARDROBE_OCCASIONS = [
-  "office",
-  "city_walk",
-  "school_dropoff",
-  "party",
-  "travel",
-  "weekend",
-  "date_night",
-  "outdoor"
+const PROFILE_FORMALITY_LEVEL_OPTIONS = [
+  "casual",
+  "smart_casual",
+  "formal"
 ];
 
-const FALLBACK_WARDROBE_SEASONS = ["spring", "summer", "autumn", "winter"];
+const PROFILE_STYLE_OPTIONS = [
+  "minimalistic",
+  "street_style",
+  "romantic",
+  "preppy",
+  "retro",
+  "boho",
+  "nautical",
+  "safari",
+  "equestrian",
+  "military",
+  "grunge",
+  "sporty"
+];
 
-const wardrobeAudience = ["man", "woman", "any"];
+const PROFILE_OCCASION_OPTIONS = [
+  "office",
+  "brunch_in_the_city",
+  "date_night",
+  "school_drop-off",
+  "weekend_with_family"
+];
+
+const PROFILE_SEASON_OPTIONS = ["spring", "summer", "autumn", "winter"];
+
+const PROFILE_PATTERN_OPTIONS = [
+  "solid",
+  "stripe",
+  "check",
+  "floral",
+  "leopard",
+  "zebra",
+  "snake",
+  "paisley",
+  "polka_dot",
+  "herringbone",
+  "dogtooth",
+  "marble",
+  "abstract",
+  "lace",
+  "corduroy"
+];
+
+const audienceOptions = ["man", "woman", "any"];
 
 function dedupeStrings(items) {
   return [...new Set(items.filter((item) => typeof item === "string" && item.trim()))];
@@ -53,6 +81,14 @@ async function getDynamicOptions(loadValues, fallbackItems, extraItems = []) {
   }
 }
 
+function buildPatternOptions(availablePatterns = [], currentPattern = null) {
+  const available = new Set(
+    dedupeStrings(availablePatterns.map((value) => normalizeStyleValue(value)))
+  );
+  const current = normalizeStyleValue(currentPattern);
+  return PROFILE_PATTERN_OPTIONS.filter((value) => available.has(value) || value === current);
+}
+
 function normalizeWardrobeAudience(value) {
   const audience = String(value || "").trim().toLowerCase();
   if (audience === "man" || audience === "woman" || audience === "any") {
@@ -66,80 +102,54 @@ function normalizeAccentColor(value) {
     return null;
   }
 
-  const accentColor = String(value || "").trim().toLowerCase();
-  if (!accentColor) {
+  const color = String(value || "").trim().toLowerCase();
+  if (!color) {
     return null;
   }
 
-  return ACCENT_COLOR_OPTIONS.includes(accentColor) ? accentColor : null;
+  return ACCENT_COLOR_OPTIONS.includes(color) ? color : null;
 }
 
-function normalizeStyleCore(value) {
-  const styleCore = normalizeStyleValue(value);
-  return CORE_STYLE_ORDER.includes(styleCore) ? styleCore : null;
+function normalizeFormalityLevel(value) {
+  const formalityLevel = normalizeStyleValue(value);
+  return CORE_STYLE_ORDER.includes(formalityLevel) ? formalityLevel : null;
 }
 
-function normalizeStyleAesthetics(value) {
-  const styleAesthetic = normalizeStyleValue(value);
-  return styleAesthetic || null;
+function normalizeStyle(value) {
+  const style = normalizeStyleValue(value);
+  return style || null;
 }
 
-async function getStylePreferences(email) {
-  try {
-    const profile = email ? await getProfile(email) : null;
-    const values = await getDistinctProductFormalityLevels();
-    return partitionStyleValues([
-      ...values,
-      profile?.styleCore,
-      profile?.styleAesthetic
-    ]);
-  } catch (error) {
-    console.error("[profile/style-preferences]", error);
-    const profile = email ? await getProfile(email).catch(() => null) : null;
-    return partitionStyleValues([profile?.styleCore, profile?.styleAesthetic]);
-  }
+async function getFormalityLevels(email) {
+  return [...PROFILE_FORMALITY_LEVEL_OPTIONS];
 }
 
-async function getWardrobeOccasions(email) {
-  try {
-    const profile = email ? await getProfile(email) : null;
-    return await getDynamicOptions(
-      getDistinctProductOccasions,
-      FALLBACK_WARDROBE_OCCASIONS,
-      profile?.wardrobeOccasions || []
-    );
-  } catch (error) {
-    console.error("[profile/wardrobe-occasions]", error);
-    return [...FALLBACK_WARDROBE_OCCASIONS];
-  }
+async function getStyles(email) {
+  return [...PROFILE_STYLE_OPTIONS];
 }
 
-async function getWardrobeSeasons(email) {
-  try {
-    const profile = email ? await getProfile(email) : null;
-    return await getDynamicOptions(
-      getDistinctProductSeasons,
-      FALLBACK_WARDROBE_SEASONS,
-      profile?.wardrobeSeasons || []
-    );
-  } catch (error) {
-    console.error("[profile/wardrobe-seasons]", error);
-    return [...FALLBACK_WARDROBE_SEASONS];
-  }
+async function getOccasions(email) {
+  return [...PROFILE_OCCASION_OPTIONS];
+}
+
+async function getSeasons(email) {
+  return [...PROFILE_SEASON_OPTIONS];
 }
 
 async function getPatternOptions(email) {
   try {
     const profile = email ? await getProfile(email) : null;
-    return await getDynamicOptions(getDistinctProductPatterns, [], profile?.pattern ? [profile.pattern] : []);
+    const values = await getDistinctProductPatterns();
+    return buildPatternOptions(values, profile?.pattern || null);
   } catch (error) {
     console.error("[profile/patterns]", error);
-    return [];
+    const profile = email ? await getProfile(email).catch(() => null) : null;
+    return buildPatternOptions([], profile?.pattern || null);
   }
 }
 
-function getWardrobeAudience() {
-  return wardrobeAudience;
+function getAudienceOptions() {
+  return audienceOptions;
 }
 
 async function getProfile(email) {
@@ -147,17 +157,13 @@ async function getProfile(email) {
   if (!profile) {
     return null;
   }
-  const legacySelections = inferStyleSelections(profile.stylePreferences);
-  const styleCore = normalizeStyleCore(profile.styleCore) || legacySelections.styleCore;
-  const normalizedLegacyAesthetic = normalizeStyleAesthetics(legacySelections.styleAesthetic);
-  const styleAesthetic = normalizeStyleAesthetics(profile.styleAesthetic) || normalizedLegacyAesthetic;
 
   return {
     ...profile,
-    styleCore,
-    styleAesthetic,
-    wardrobeAudience: normalizeWardrobeAudience(profile.wardrobeAudience),
-    accentColor: normalizeAccentColor(profile.accentColor),
+    formalityLevel: normalizeFormalityLevel(profile.formalityLevel),
+    style: normalizeStyle(profile.style),
+    audience: normalizeWardrobeAudience(profile.audience),
+    color: normalizeAccentColor(profile.color),
     pattern: typeof profile.pattern === "string" && profile.pattern.trim()
       ? profile.pattern.trim().toLowerCase()
       : null
@@ -171,12 +177,12 @@ async function hasProfile(email) {
 async function createProfile(email, data) {
   return createProfileRecord({
     email,
-    styleCore: normalizeStyleCore(data.styleCore),
-    styleAesthetic: normalizeStyleAesthetics(data.styleAesthetic),
-    wardrobeOccasions: data.wardrobeOccasions || [],
-    wardrobeSeasons: data.wardrobeSeasons || [],
-    wardrobeAudience: normalizeWardrobeAudience(data.wardrobeAudience),
-    accentColor: null,
+    formalityLevel: normalizeFormalityLevel(data.formalityLevel),
+    style: normalizeStyle(data.style),
+    occasions: data.occasions || [],
+    season: data.season || [],
+    audience: normalizeWardrobeAudience(data.audience),
+    color: null,
     pattern: null,
     locale: data.locale || "en"
   });
@@ -185,12 +191,12 @@ async function createProfile(email, data) {
 async function updateProfile(email, data) {
   return updateProfileRecord({
     email,
-    styleCore: normalizeStyleCore(data.styleCore),
-    styleAesthetic: normalizeStyleAesthetics(data.styleAesthetic),
-    wardrobeOccasions: data.wardrobeOccasions || [],
-    wardrobeSeasons: data.wardrobeSeasons || [],
-    wardrobeAudience: normalizeWardrobeAudience(data.wardrobeAudience),
-    accentColor: normalizeAccentColor(data.accentColor),
+    formalityLevel: normalizeFormalityLevel(data.formalityLevel),
+    style: normalizeStyle(data.style),
+    occasions: data.occasions || [],
+    season: data.season || [],
+    audience: normalizeWardrobeAudience(data.audience),
+    color: normalizeAccentColor(data.color),
     pattern: typeof data.pattern === "string" && data.pattern.trim() ? data.pattern.trim().toLowerCase() : null,
     locale: data.locale || "en"
   });
@@ -204,8 +210,8 @@ async function deleteProfile(email) {
   return deleteProfileByEmail(email);
 }
 
-async function updateProfileWardrobeItems(email, wardrobeItems) {
-  return updateProfileWardrobeItemsByEmail({ email, wardrobeItems });
+async function updateProfileItems(email, items) {
+  return updateProfileItemsByEmail({ email, items });
 }
 
 export {
@@ -215,12 +221,20 @@ export {
   updateProfile,
   updateProfileLocale,
   deleteProfile,
-  updateProfileWardrobeItems,
-  getStylePreferences,
-  getWardrobeOccasions,
-  getWardrobeSeasons,
-  getWardrobeAudience,
+  updateProfileItems,
+  getFormalityLevels,
+  getStyles,
+  getOccasions,
+  getSeasons,
+  getAudienceOptions,
   getPatternOptions,
-  normalizeStyleCore,
-  normalizeStyleAesthetics
+  buildPatternOptions,
+  normalizeFormalityLevel,
+  normalizeStyle,
+  normalizeAccentColor as normalizeColor,
+  PROFILE_FORMALITY_LEVEL_OPTIONS,
+  PROFILE_STYLE_OPTIONS,
+  PROFILE_OCCASION_OPTIONS,
+  PROFILE_SEASON_OPTIONS,
+  PROFILE_PATTERN_OPTIONS
 };

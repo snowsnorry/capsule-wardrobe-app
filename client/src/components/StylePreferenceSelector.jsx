@@ -34,12 +34,11 @@ function StylePreferenceSelector({
         <Stack direction="row" flexWrap="wrap" gap={1}>
           {coreOptions.map((style) => (
             <Chip
-              key={style.value}
-              label={translateOption("styles", style.value, locale)}
-              clickable={!style.disabled}
-              disabled={style.disabled}
-              color={selectedStyleCore === style.value ? "primary" : "default"}
-              onClick={style.disabled ? undefined : () => onSelectStyleCore(style.value)}
+              key={style}
+              label={translateOption("styles", style, locale)}
+              clickable
+              color={selectedStyleCore === style ? "primary" : "default"}
+              onClick={() => onSelectStyleCore(style)}
             />
           ))}
         </Stack>
@@ -58,12 +57,11 @@ function StylePreferenceSelector({
           />
           {aestheticsOptions.map((style) => (
             <Chip
-              key={style.value}
-              label={translateOption("styles", style.value, locale)}
-              clickable={!style.disabled}
-              disabled={style.disabled}
-              color={selectedStyleAesthetic === style.value ? "primary" : "default"}
-              onClick={style.disabled ? undefined : () => onSelectStyleAesthetic(style.value)}
+              key={style}
+              label={translateOption("styles", style, locale)}
+              clickable
+              color={selectedStyleAesthetic === style ? "primary" : "default"}
+              onClick={() => onSelectStyleAesthetic(style)}
             />
           ))}
         </Stack>

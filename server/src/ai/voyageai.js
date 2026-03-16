@@ -42,17 +42,17 @@ async function getPromptEmbeddings(prompt) {
  * based on user-selected capsule wardrobe filters.
  *
  * @param {Object} userProfile - The filters selected by the user.
- * @param {string} userProfile.wardrobeAudience - 'man', 'woman', or 'not important'/'all'.
- * @param {string} userProfile.formality_level - E.g., 'smart_casual', 'casual'.
- * @param {string|string[]} userProfile.wardrobeSeasons - E.g., 'autumn' or ['autumn', 'winter'].
+ * @param {string} userProfile.audience - 'man', 'woman', or 'any'.
+ * @param {string} userProfile.formalityLevel - E.g., 'smart_casual', 'casual'.
+ * @param {string|string[]} userProfile.season - E.g., 'autumn' or ['autumn', 'winter'].
  * @param {string} [userProfile.style] - E.g., 'minimalistic' (optional).
- * @param {string} [userProfile.accentColor] - E.g., 'burgundy' (optional).
+ * @param {string} [userProfile.color] - E.g., 'burgundy' (optional).
  * @param {string} [userProfile.pattern] - E.g., 'check' (optional).
  * @returns {string} The semantic query string ready for the embedding model.
  */
 function getWardrobePrompt(userProfile = null) {
   // 1. Process the audience field to make it read naturally
-  const audienceRaw = userProfile?.wardrobeAudience || 'any';
+  const audienceRaw = userProfile?.audience || "any";
   let audienceText = "versatile (men's and women's)";
   
   if (audienceRaw !== 'any') {
@@ -60,14 +60,14 @@ function getWardrobePrompt(userProfile = null) {
   }
 
   // 2. Process the formality level
-  const formality = userProfile?.formality_level || 'any';
+  const formality = userProfile?.formalityLevel || "any";
 
   // 3. Process seasons (handles both an array of strings and a single string)
   let seasonsText = 'any';
-  if (Array.isArray(userProfile?.wardrobeSeasons) && userProfile?.wardrobeSeasons.length > 0) {
-    seasonsText = userProfile?.wardrobeSeasons.join(', ');
-  } else if (typeof userProfile?.wardrobeSeasons === 'string' && userProfile?.wardrobeSeasons.trim() !== '') {
-    seasonsText = userProfile?.wardrobeSeasons;
+  if (Array.isArray(userProfile?.season) && userProfile?.season.length > 0) {
+    seasonsText = userProfile.season.join(", ");
+  } else if (typeof userProfile?.season === "string" && userProfile.season.trim() !== "") {
+    seasonsText = userProfile.season;
   }
 
   // 4. Build the core query parts using semantic phrases 
@@ -79,8 +79,8 @@ function getWardrobePrompt(userProfile = null) {
 
   // 5. Process wardrobe occasions dynamically
   let occasionsText = '';
-  if (Array.isArray(userProfile?.wardrobeOccasions) && userProfile?.wardrobeOccasions.length > 0) {
-    occasionsText = userProfile?.wardrobeOccasions.join(', ');
+  if (Array.isArray(userProfile?.occasions) && userProfile?.occasions.length > 0) {
+    occasionsText = userProfile.occasions.join(", ");
   }
   
   // Aligning with the document embedding structure: "Ideal for {occasions}."
@@ -93,8 +93,8 @@ function getWardrobePrompt(userProfile = null) {
     queryParts.push(`Designed in a ${userProfile?.style} style.`);
   }
 
-  if (userProfile?.accentColor) {
-    queryParts.push(`Preferred color: ${userProfile?.accentColor}.`);
+  if (userProfile?.color) {
+    queryParts.push(`Preferred color: ${userProfile.color}.`);
   }
 
   if (userProfile?.pattern) {

@@ -43,13 +43,10 @@ const ru = {
     },
     occasions: {
       office: "Офис",
-      city_walk: "Прогулка по городу",
-      school_dropoff: "Отвезти ребенка в школу",
-      party: "Вечеринка",
-      travel: "Путешествия",
-      weekend: "Выходные",
+      brunch_in_the_city: "Бранч в городе",
       date_night: "Свидание",
-      outdoor: "На природе"
+      "school_drop-off": "Отвезти ребенка в школу",
+      weekend_with_family: "Выходные с семьей"
     },
     seasons: {
       winter: "Зима",

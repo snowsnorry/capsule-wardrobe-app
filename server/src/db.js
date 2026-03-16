@@ -56,77 +56,17 @@ async function ensureProfilesTable() {
   await sql`
     create table if not exists profiles (
       email text primary key,
-      style_preferences text[] not null,
-      style_core text null,
-      style_aesthetic text null,
-      wardrobe_occasions text[] not null,
-      wardrobe_seasons text[] not null default array['spring', 'summer', 'autumn', 'winter']::text[],
-      wardrobe_audience text not null default 'any',
-      accent_color text null,
+      formality_level text null,
+      style text null,
+      occasions text[] not null,
+      season text[] not null default array['spring', 'summer', 'autumn', 'winter']::text[],
+      audience text not null default 'any',
+      color text null,
       pattern text null,
-      wardrobe_items jsonb null,
+      items jsonb null,
       locale text not null,
       created_at timestamptz not null default now(),
       updated_at timestamptz not null default now()
-    )
-  `;
-  await sql`
-    alter table profiles
-    add column if not exists style_core text null
-  `;
-  await sql`
-    alter table profiles
-    add column if not exists style_aesthetic text null
-  `;
-  await sql`
-    alter table profiles
-    add column if not exists wardrobe_items jsonb null
-  `;
-  await sql`
-    alter table profiles
-    add column if not exists wardrobe_seasons text[] not null
-    default array['spring', 'summer', 'autumn', 'winter']::text[]
-  `;
-  await sql`
-    alter table profiles
-    add column if not exists wardrobe_audience text not null
-    default 'any'
-  `;
-  await sql`
-    alter table profiles
-    add column if not exists accent_color text null
-  `;
-  await sql`
-    alter table profiles
-    add column if not exists pattern text null
-  `;
-}
-
-async function ensureAiPromptConfigsTable() {
-  const sql = getSqlClient();
-  await sql`
-    do $$
-    begin
-      if not exists (select 1 from pg_type where typname = 'ai_provider') then
-        create type ai_provider as enum ('openai', 'gemini');
-      end if;
-    end
-    $$;
-  `;
-  await sql`
-    create table if not exists ai_prompt_configs (
-      id bigserial primary key,
-      config_name text not null,
-      ai ai_provider not null default 'openai',
-      prompt_template text not null,
-      categories jsonb not null,
-      brand_urls jsonb not null,
-      model text null,
-      is_active boolean not null default false,
-      created_at timestamptz not null default now(),
-      updated_at timestamptz not null default now(),
-      constraint ai_prompt_configs_categories_object check (jsonb_typeof(categories) = 'object'),
-      constraint ai_prompt_configs_brand_urls_array check (jsonb_typeof(brand_urls) = 'array')
     )
   `;
 }
@@ -139,7 +79,6 @@ async function ensureAuthTables() {
 async function ensureTables() {
   await ensureAuthTables();
   await ensureProfilesTable();
-  await ensureAiPromptConfigsTable();
 }
 
 async function pruneLoginCodes() {
@@ -315,16 +254,12 @@ async function getDistinctProductSeasons() {
 async function getDistinctProductPatterns() {
   const sql = getSqlClient();
   const rows = await sql`
-    select
-      lower(trim(pattern)) as value,
-      count(*)::int as "rowCount"
+    select distinct
+      lower(trim(pattern)) as value
     from products
     where
       nullif(trim(pattern), '') is not null
-      and lower(trim(pattern)) <> 'solid'
-    group by lower(trim(pattern))
-    having count(*) > 20
-    order by "rowCount" desc, value asc
+    order by value asc
   `;
   return rows.map((row) => row.value).filter(Boolean);
 }
@@ -334,15 +269,14 @@ async function getProfileByEmail(email) {
   const [row] = await sql`
     select
       email,
-      style_preferences as "stylePreferences",
-      style_core as "styleCore",
-      style_aesthetic as "styleAesthetic",
-      wardrobe_occasions as "wardrobeOccasions",
-      wardrobe_seasons as "wardrobeSeasons",
-      wardrobe_audience as "wardrobeAudience",
-      accent_color as "accentColor",
+      formality_level as "formalityLevel",
+      style,
+      occasions,
+      season,
+      audience,
+      color,
       pattern,
-      wardrobe_items as "wardrobeItems",
+      items,
       locale,
       created_at as "createdAt",
       updated_at as "updatedAt"
@@ -355,12 +289,12 @@ async function getProfileByEmail(email) {
 
 async function createProfileRecord({
   email,
-  styleCore,
-  styleAesthetic,
-  wardrobeOccasions,
-  wardrobeSeasons,
-  wardrobeAudience,
-  accentColor,
+  formalityLevel,
+  style,
+  occasions,
+  season,
+  audience,
+  color,
   pattern,
   locale
 }) {
@@ -368,26 +302,24 @@ async function createProfileRecord({
   const [row] = await sql`
     insert into profiles (
       email,
-      style_preferences,
-      style_core,
-      style_aesthetic,
-      wardrobe_occasions,
-      wardrobe_seasons,
-      wardrobe_audience,
-      accent_color,
+      formality_level,
+      style,
+      occasions,
+      season,
+      audience,
+      color,
       pattern,
-      wardrobe_items,
+      items,
       locale
     )
     values (
       ${email},
-      ${[]},
-      ${styleCore},
-      ${styleAesthetic},
-      ${wardrobeOccasions},
-      ${wardrobeSeasons},
-      ${wardrobeAudience},
-      ${accentColor},
+      ${formalityLevel},
+      ${style},
+      ${occasions},
+      ${season},
+      ${audience},
+      ${color},
       ${pattern},
       null,
       ${locale}
@@ -395,15 +327,14 @@ async function createProfileRecord({
     on conflict (email) do nothing
     returning
       email,
-      style_preferences as "stylePreferences",
-      style_core as "styleCore",
-      style_aesthetic as "styleAesthetic",
-      wardrobe_occasions as "wardrobeOccasions",
-      wardrobe_seasons as "wardrobeSeasons",
-      wardrobe_audience as "wardrobeAudience",
-      accent_color as "accentColor",
+      formality_level as "formalityLevel",
+      style,
+      occasions,
+      season,
+      audience,
+      color,
       pattern,
-      wardrobe_items as "wardrobeItems",
+      items,
       locale,
       created_at as "createdAt",
       updated_at as "updatedAt"
@@ -413,12 +344,12 @@ async function createProfileRecord({
 
 async function updateProfileRecord({
   email,
-  styleCore,
-  styleAesthetic,
-  wardrobeOccasions,
-  wardrobeSeasons,
-  wardrobeAudience,
-  accentColor,
+  formalityLevel,
+  style,
+  occasions,
+  season,
+  audience,
+  color,
   pattern,
   locale
 }) {
@@ -426,38 +357,37 @@ async function updateProfileRecord({
   const [row] = await sql`
     update profiles
     set
-      wardrobe_items = case
-        when style_core is distinct from ${styleCore}
-          or style_aesthetic is distinct from ${styleAesthetic}
-          or wardrobe_occasions is distinct from ${wardrobeOccasions}
-          or wardrobe_seasons is distinct from ${wardrobeSeasons}
-          or wardrobe_audience is distinct from ${wardrobeAudience}
-          or accent_color is distinct from ${accentColor}
+      items = case
+        when formality_level is distinct from ${formalityLevel}
+          or style is distinct from ${style}
+          or occasions is distinct from ${occasions}
+          or season is distinct from ${season}
+          or audience is distinct from ${audience}
+          or color is distinct from ${color}
           or pattern is distinct from ${pattern}
         then null
-        else wardrobe_items
+        else items
       end,
-      style_core = ${styleCore},
-      style_aesthetic = ${styleAesthetic},
-      wardrobe_occasions = ${wardrobeOccasions},
-      wardrobe_seasons = ${wardrobeSeasons},
-      wardrobe_audience = ${wardrobeAudience},
-      accent_color = ${accentColor},
+      formality_level = ${formalityLevel},
+      style = ${style},
+      occasions = ${occasions},
+      season = ${season},
+      audience = ${audience},
+      color = ${color},
       pattern = ${pattern},
       locale = ${locale},
       updated_at = now()
     where email = ${email}
     returning
       email,
-      style_preferences as "stylePreferences",
-      style_core as "styleCore",
-      style_aesthetic as "styleAesthetic",
-      wardrobe_occasions as "wardrobeOccasions",
-      wardrobe_seasons as "wardrobeSeasons",
-      wardrobe_audience as "wardrobeAudience",
-      accent_color as "accentColor",
+      formality_level as "formalityLevel",
+      style,
+      occasions,
+      season,
+      audience,
+      color,
       pattern,
-      wardrobe_items as "wardrobeItems",
+      items,
       locale,
       created_at as "createdAt",
       updated_at as "updatedAt"
@@ -475,15 +405,14 @@ async function updateProfileLocaleByEmail({ email, locale }) {
     where email = ${email}
     returning
       email,
-      style_preferences as "stylePreferences",
-      style_core as "styleCore",
-      style_aesthetic as "styleAesthetic",
-      wardrobe_occasions as "wardrobeOccasions",
-      wardrobe_seasons as "wardrobeSeasons",
-      wardrobe_audience as "wardrobeAudience",
-      accent_color as "accentColor",
+      formality_level as "formalityLevel",
+      style,
+      occasions,
+      season,
+      audience,
+      color,
       pattern,
-      wardrobe_items as "wardrobeItems",
+      items,
       locale,
       created_at as "createdAt",
       updated_at as "updatedAt"
@@ -491,25 +420,24 @@ async function updateProfileLocaleByEmail({ email, locale }) {
   return row || null;
 }
 
-async function updateProfileWardrobeItemsByEmail({ email, wardrobeItems }) {
+async function updateProfileItemsByEmail({ email, items }) {
   const sql = getSqlClient();
   const [row] = await sql`
     update profiles
     set
-      wardrobe_items = ${wardrobeItems === null ? null : JSON.stringify(wardrobeItems)},
+      items = ${items === null ? null : JSON.stringify(items)},
       updated_at = now()
     where email = ${email}
     returning
       email,
-      style_preferences as "stylePreferences",
-      style_core as "styleCore",
-      style_aesthetic as "styleAesthetic",
-      wardrobe_occasions as "wardrobeOccasions",
-      wardrobe_seasons as "wardrobeSeasons",
-      wardrobe_audience as "wardrobeAudience",
-      accent_color as "accentColor",
+      formality_level as "formalityLevel",
+      style,
+      occasions,
+      season,
+      audience,
+      color,
       pattern,
-      wardrobe_items as "wardrobeItems",
+      items,
       locale,
       created_at as "createdAt",
       updated_at as "updatedAt"
@@ -537,28 +465,6 @@ async function deleteProfileByEmail(email) {
   return hasAffectedRows(result);
 }
 
-async function getActiveAiPromptConfig(configName) {
-  const sql = getSqlClient();
-  const [row] = await sql`
-    select
-      config_name as "configName",
-      ai,
-      prompt_template as "promptTemplate",
-      categories,
-      brand_urls as "brandUrls",
-      model,
-      is_active as "isActive",
-      created_at as "createdAt",
-      updated_at as "updatedAt"
-    from ai_prompt_configs
-    where config_name = ${configName}
-      and is_active = true
-    order by updated_at desc
-    limit 1
-  `;
-  return row || null;
-}
-
 export {
   getSqlClient,
   checkDatabaseConnection,
@@ -580,8 +486,7 @@ export {
   createProfileRecord,
   updateProfileRecord,
   updateProfileLocaleByEmail,
-  updateProfileWardrobeItemsByEmail,
+  updateProfileItemsByEmail,
   hasAffectedRows,
-  deleteProfileByEmail,
-  getActiveAiPromptConfig
+  deleteProfileByEmail
 };

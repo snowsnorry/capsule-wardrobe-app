@@ -1,8 +1,9 @@
 import {
-  fetchStylePreferences,
-  fetchWardrobeOccasions,
-  fetchWardrobeSeasons,
-  fetchWardrobeAudience,
+  fetchFormalityLevels,
+  fetchStyles,
+  fetchOccasions,
+  fetchSeasons,
+  fetchAudience,
   fetchPatternOptions
 } from "./auth.js";
 
@@ -26,14 +27,18 @@ async function loadProfileOptions() {
 
   if (!inFlight) {
     inFlight = Promise.all([
-      fetchStylePreferences(),
-      fetchWardrobeOccasions(),
-      fetchWardrobeSeasons(),
-      fetchWardrobeAudience(),
+      fetchFormalityLevels(),
+      fetchStyles(),
+      fetchOccasions(),
+      fetchSeasons(),
+      fetchAudience(),
       fetchPatternOptions()
     ])
-      .then(([styles, occasions, seasons, audience, patterns]) => {
-        cachedStyles = styles.items || { core: [], aesthetics: [] };
+      .then(([formalityLevels, styles, occasions, seasons, audience, patterns]) => {
+        cachedStyles = {
+          core: formalityLevels.items || [],
+          aesthetics: styles.items || []
+        };
         cachedOccasions = occasions.items || [];
         cachedSeasons = seasons.items || [];
         cachedAudience = audience.items || [];

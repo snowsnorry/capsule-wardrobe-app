@@ -22,10 +22,11 @@ import { sendLoginCodeEmail } from "./email.js";
 import {
   createProfile,
   deleteProfile,
-  getStylePreferences,
-  getWardrobeOccasions,
-  getWardrobeSeasons,
-  getWardrobeAudience,
+  getFormalityLevels,
+  getStyles,
+  getOccasions,
+  getSeasons,
+  getAudienceOptions,
   getPatternOptions,
   getProfile,
   hasProfile,
@@ -35,7 +36,6 @@ import {
 import { getWardrobeItems } from "./ai/ai.js";
 import { checkDatabaseConnection, ensureTables } from "./db.js";
 import { ACCENT_COLOR_OPTIONS } from "../../shared/accentColors.js";
-import { getEnabledStyleValues } from "../../shared/stylePreferences.js";
 
 const PORT = process.env.PORT || 3000;
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || "http://localhost:5173";
@@ -435,38 +435,48 @@ app.get("/profile/me", requireAuth, async (req, res) => {
   }
 });
 
-app.get("/profile/style-preferences", requireAuth, async (req, res) => {
+app.get("/profile/formality-levels", requireAuth, async (req, res) => {
   try {
-    const items = await getStylePreferences(req.user.email);
+    const items = await getFormalityLevels(req.user.email);
     return res.json({ ok: true, items });
   } catch (error) {
-    console.error("[profile/style-preferences]", error);
+    console.error("[profile/formality-levels]", error);
     return res.status(503).json({ error: "service_unavailable" });
   }
 });
 
-app.get("/profile/wardrobe-occasions", requireAuth, async (req, res) => {
+app.get("/profile/styles", requireAuth, async (req, res) => {
   try {
-    const items = await getWardrobeOccasions(req.user.email);
+    const items = await getStyles(req.user.email);
     return res.json({ ok: true, items });
   } catch (error) {
-    console.error("[profile/wardrobe-occasions]", error);
+    console.error("[profile/styles]", error);
     return res.status(503).json({ error: "service_unavailable" });
   }
 });
 
-app.get("/profile/wardrobe-seasons", requireAuth, async (req, res) => {
+app.get("/profile/occasions", requireAuth, async (req, res) => {
   try {
-    const items = await getWardrobeSeasons(req.user.email);
+    const items = await getOccasions(req.user.email);
     return res.json({ ok: true, items });
   } catch (error) {
-    console.error("[profile/wardrobe-seasons]", error);
+    console.error("[profile/occasions]", error);
     return res.status(503).json({ error: "service_unavailable" });
   }
 });
 
-app.get("/profile/wardrobe-audience", requireAuth, (req, res) => {
-  res.json({ ok: true, items: getWardrobeAudience() });
+app.get("/profile/seasons", requireAuth, async (req, res) => {
+  try {
+    const items = await getSeasons(req.user.email);
+    return res.json({ ok: true, items });
+  } catch (error) {
+    console.error("[profile/seasons]", error);
+    return res.status(503).json({ error: "service_unavailable" });
+  }
+});
+
+app.get("/profile/audience", requireAuth, (req, res) => {
+  res.json({ ok: true, items: getAudienceOptions() });
 });
 
 app.get("/profile/patterns", requireAuth, async (req, res) => {
@@ -482,35 +492,33 @@ app.get("/profile/patterns", requireAuth, async (req, res) => {
 app.post("/wardrobe/items", requireTrustedOrigin, requireAuth, requireCsrf, getWardrobeItems);
 
 app.post("/profile/initialize", requireTrustedOrigin, requireAuth, requireCsrf, async (req, res) => {
-  const styleCore = String(req.body?.styleCore || "").trim().toLowerCase();
-  const styleAesthetic = parseOptionalSelection(req.body?.styleAesthetic);
-  const wardrobeOccasions = Array.isArray(req.body?.wardrobeOccasions)
-    ? req.body.wardrobeOccasions
+  const formalityLevel = String(req.body?.formalityLevel || "").trim().toLowerCase();
+  const style = parseOptionalSelection(req.body?.style);
+  const occasions = Array.isArray(req.body?.occasions)
+    ? req.body.occasions
     : [];
-  const wardrobeSeasons = Array.isArray(req.body?.wardrobeSeasons)
-    ? req.body.wardrobeSeasons
+  const season = Array.isArray(req.body?.season)
+    ? req.body.season
     : [];
-  const wardrobeAudience = String(req.body?.wardrobeAudience || "").trim().toLowerCase();
-  const accentColor = parseOptionalSelection(req.body?.accentColor);
+  const audience = String(req.body?.audience || "").trim().toLowerCase();
+  const color = parseOptionalSelection(req.body?.color);
   const pattern = parseOptionalSelection(req.body?.pattern);
   const locale = String(req.body?.locale || "").trim().toLowerCase();
-  const [allowedStylePreferences, allowedWardrobeOccasions, allowedWardrobeSeasons, allowedPatterns] = await Promise.all([
-    getStylePreferences(req.user.email),
-    getWardrobeOccasions(req.user.email),
-    getWardrobeSeasons(req.user.email),
+  const [allowedFormalityLevels, allowedStyles, allowedOccasions, allowedSeasons, allowedPatterns] = await Promise.all([
+    getFormalityLevels(req.user.email),
+    getStyles(req.user.email),
+    getOccasions(req.user.email),
+    getSeasons(req.user.email),
     getPatternOptions(req.user.email)
   ]);
 
-  const allowedCoreStyles = getEnabledStyleValues(allowedStylePreferences.core || []);
-  const allowedAestheticStyles = getEnabledStyleValues(allowedStylePreferences.aesthetics || []);
-
   if (
-    !isValidSingleSelection(styleCore, allowedCoreStyles) ||
-    !isValidOptionalSingleSelection(styleAesthetic, allowedAestheticStyles) ||
-    !isValidSelection(wardrobeOccasions, allowedWardrobeOccasions) ||
-    !isValidSelection(wardrobeSeasons, allowedWardrobeSeasons) ||
-    !isValidSingleSelection(wardrobeAudience, getWardrobeAudience()) ||
-    !isValidOptionalSingleSelection(accentColor, ACCENT_COLOR_OPTIONS) ||
+    !isValidSingleSelection(formalityLevel, allowedFormalityLevels) ||
+    !isValidOptionalSingleSelection(style, allowedStyles) ||
+    !isValidSelection(occasions, allowedOccasions) ||
+    !isValidSelection(season, allowedSeasons) ||
+    !isValidSingleSelection(audience, getAudienceOptions()) ||
+    !isValidOptionalSingleSelection(color, ACCENT_COLOR_OPTIONS) ||
     !isValidOptionalSingleSelection(pattern, allowedPatterns) ||
     !SUPPORTED_LOCALES.has(locale)
   ) {
@@ -519,12 +527,12 @@ app.post("/profile/initialize", requireTrustedOrigin, requireAuth, requireCsrf, 
 
   try {
     const profile = await createProfile(req.user.email, {
-      styleCore,
-      styleAesthetic,
-      wardrobeOccasions,
-      wardrobeSeasons,
-      wardrobeAudience,
-      accentColor,
+      formalityLevel,
+      style,
+      occasions,
+      season,
+      audience,
+      color,
       pattern,
       locale
     });
@@ -539,35 +547,33 @@ app.post("/profile/initialize", requireTrustedOrigin, requireAuth, requireCsrf, 
 });
 
 app.patch("/profile/me", requireTrustedOrigin, requireAuth, requireCsrf, async (req, res) => {
-  const styleCore = String(req.body?.styleCore || "").trim().toLowerCase();
-  const styleAesthetic = parseOptionalSelection(req.body?.styleAesthetic);
-  const wardrobeOccasions = Array.isArray(req.body?.wardrobeOccasions)
-    ? req.body.wardrobeOccasions
+  const formalityLevel = String(req.body?.formalityLevel || "").trim().toLowerCase();
+  const style = parseOptionalSelection(req.body?.style);
+  const occasions = Array.isArray(req.body?.occasions)
+    ? req.body.occasions
     : [];
-  const wardrobeSeasons = Array.isArray(req.body?.wardrobeSeasons)
-    ? req.body.wardrobeSeasons
+  const season = Array.isArray(req.body?.season)
+    ? req.body.season
     : [];
-  const wardrobeAudience = String(req.body?.wardrobeAudience || "").trim().toLowerCase();
-  const accentColor = parseOptionalSelection(req.body?.accentColor);
+  const audience = String(req.body?.audience || "").trim().toLowerCase();
+  const color = parseOptionalSelection(req.body?.color);
   const pattern = parseOptionalSelection(req.body?.pattern);
   const locale = String(req.body?.locale || "").trim().toLowerCase();
-  const [allowedStylePreferences, allowedWardrobeOccasions, allowedWardrobeSeasons, allowedPatterns] = await Promise.all([
-    getStylePreferences(req.user.email),
-    getWardrobeOccasions(req.user.email),
-    getWardrobeSeasons(req.user.email),
+  const [allowedFormalityLevels, allowedStyles, allowedOccasions, allowedSeasons, allowedPatterns] = await Promise.all([
+    getFormalityLevels(req.user.email),
+    getStyles(req.user.email),
+    getOccasions(req.user.email),
+    getSeasons(req.user.email),
     getPatternOptions(req.user.email)
   ]);
 
-  const allowedCoreStyles = getEnabledStyleValues(allowedStylePreferences.core || []);
-  const allowedAestheticStyles = getEnabledStyleValues(allowedStylePreferences.aesthetics || []);
-
   if (
-    !isValidSingleSelection(styleCore, allowedCoreStyles) ||
-    !isValidOptionalSingleSelection(styleAesthetic, allowedAestheticStyles) ||
-    !isValidSelection(wardrobeOccasions, allowedWardrobeOccasions) ||
-    !isValidSelection(wardrobeSeasons, allowedWardrobeSeasons) ||
-    !isValidSingleSelection(wardrobeAudience, getWardrobeAudience()) ||
-    !isValidOptionalSingleSelection(accentColor, ACCENT_COLOR_OPTIONS) ||
+    !isValidSingleSelection(formalityLevel, allowedFormalityLevels) ||
+    !isValidOptionalSingleSelection(style, allowedStyles) ||
+    !isValidSelection(occasions, allowedOccasions) ||
+    !isValidSelection(season, allowedSeasons) ||
+    !isValidSingleSelection(audience, getAudienceOptions()) ||
+    !isValidOptionalSingleSelection(color, ACCENT_COLOR_OPTIONS) ||
     !isValidOptionalSingleSelection(pattern, allowedPatterns) ||
     !SUPPORTED_LOCALES.has(locale)
   ) {
@@ -576,12 +582,12 @@ app.patch("/profile/me", requireTrustedOrigin, requireAuth, requireCsrf, async (
 
   try {
     const profile = await updateProfile(req.user.email, {
-      styleCore,
-      styleAesthetic,
-      wardrobeOccasions,
-      wardrobeSeasons,
-      wardrobeAudience,
-      accentColor,
+      formalityLevel,
+      style,
+      occasions,
+      season,
+      audience,
+      color,
       pattern,
       locale
     });

@@ -49,26 +49,32 @@ async function fetchCurrentUser() {
   });
 }
 
-async function fetchStylePreferences() {
-  return requestJson(`${API_BASE_URL}/profile/style-preferences`, {
+async function fetchFormalityLevels() {
+  return requestJson(`${API_BASE_URL}/profile/formality-levels`, {
     credentials: "include"
   });
 }
 
-async function fetchWardrobeOccasions() {
-  return requestJson(`${API_BASE_URL}/profile/wardrobe-occasions`, {
+async function fetchStyles() {
+  return requestJson(`${API_BASE_URL}/profile/styles`, {
     credentials: "include"
   });
 }
 
-async function fetchWardrobeSeasons() {
-  return requestJson(`${API_BASE_URL}/profile/wardrobe-seasons`, {
+async function fetchOccasions() {
+  return requestJson(`${API_BASE_URL}/profile/occasions`, {
     credentials: "include"
   });
 }
 
-async function fetchWardrobeAudience() {
-  return requestJson(`${API_BASE_URL}/profile/wardrobe-audience`, {
+async function fetchSeasons() {
+  return requestJson(`${API_BASE_URL}/profile/seasons`, {
+    credentials: "include"
+  });
+}
+
+async function fetchAudience() {
+  return requestJson(`${API_BASE_URL}/profile/audience`, {
     credentials: "include"
   });
 }
@@ -80,11 +86,11 @@ async function fetchPatternOptions() {
 }
 
 async function initializeProfile(
-  styleCore,
-  styleAesthetic,
-  wardrobeOccasions,
-  wardrobeSeasons,
-  wardrobeAudience,
+  formalityLevel,
+  style,
+  occasions,
+  season,
+  audience,
   locale
 ) {
   return requestJson(`${API_BASE_URL}/profile/initialize`, {
@@ -92,23 +98,23 @@ async function initializeProfile(
     headers: { "Content-Type": "application/json" },
     credentials: "include",
     body: JSON.stringify({
-      styleCore,
-      styleAesthetic,
-      wardrobeOccasions,
-      wardrobeSeasons,
-      wardrobeAudience,
+      formalityLevel,
+      style,
+      occasions,
+      season,
+      audience,
       locale
     })
   });
 }
 
 async function updateProfile(
-  styleCore,
-  styleAesthetic,
-  wardrobeOccasions,
-  wardrobeSeasons,
-  wardrobeAudience,
-  accentColor,
+  formalityLevel,
+  style,
+  occasions,
+  season,
+  audience,
+  color,
   pattern,
   locale
 ) {
@@ -117,12 +123,12 @@ async function updateProfile(
     headers: { "Content-Type": "application/json" },
     credentials: "include",
     body: JSON.stringify({
-      styleCore,
-      styleAesthetic,
-      wardrobeOccasions,
-      wardrobeSeasons,
-      wardrobeAudience,
-      accentColor,
+      formalityLevel,
+      style,
+      occasions,
+      season,
+      audience,
+      color,
       pattern,
       locale
     })
@@ -159,10 +165,11 @@ export {
   fetchCurrentUser,
   fetchProfileStatus,
   fetchProfile,
-  fetchStylePreferences,
-  fetchWardrobeOccasions,
-  fetchWardrobeSeasons,
-  fetchWardrobeAudience,
+  fetchFormalityLevels,
+  fetchStyles,
+  fetchOccasions,
+  fetchSeasons,
+  fetchAudience,
   fetchPatternOptions,
   initializeProfile,
   updateProfile,

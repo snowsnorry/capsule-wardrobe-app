@@ -1,8 +1,9 @@
-import { getProfile, updateProfileWardrobeItems } from "../profileStore.js";
+import { getProfile, updateProfileItems } from "../profileStore.js";
 import { getSqlClient } from "../db.js";
 import { readFileSync, writeFileSync } from "node:fs";
 import en from "../../../shared/i18n/en.js";
-import { generateJsonWithLlm, getPromptEmbeddings } from "./openai.js";
+import { generateJsonWithLlm } from "./openai.js";
+import {  getPromptEmbeddings, getWardrobePrompt } from "./voyageai.js";
 import { buildStylePreferenceArray } from "../../../shared/stylePreferences.js";
 
 const CATEGORIES = {
@@ -14,23 +15,6 @@ const CATEGORIES = {
   bag: 2
 };
 const PROMPT_TEMPLATE = readFileSync(new URL("../templates/prompt.txt", import.meta.url), "utf8");
-
-const ARRAY_FIELDS = ["closure_type", "color_base", "formality_level", "occasions", "season", "style_tags"];
-
-function parseArrayField(value) {
-  if (Array.isArray(value)) {
-    return value;
-  }
-  if (typeof value !== "string" || value.trim().length === 0) {
-    return [];
-  }
-  try {
-    const parsed = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
 
 function localizeProfileValues(values, dictionary) {
   if (!Array.isArray(values) || values.length === 0) {
@@ -49,30 +33,18 @@ function localizeProfileValues(values, dictionary) {
 
 function getLocalizedStyleText(userProfile = null) {
   return localizeProfileValues(
-    buildStylePreferenceArray(userProfile?.styleCore, userProfile?.styleAesthetic),
+    buildStylePreferenceArray(userProfile?.formalityLevel, userProfile?.style),
     en.options.styles
   );
 }
 
-function getWardrobePrompt(userProfile = null) {
-  const stylePreferencesText = getLocalizedStyleText(userProfile);
-  const wardrobeOccasionsText = localizeProfileValues(userProfile?.wardrobeOccasions, en.options.occasions);
-  const seasonsText = localizeProfileValues(userProfile?.wardrobeSeasons, en.options.seasons);
-  const audienceMap = {
-    man: "man, all",
-    woman: "woman, all",
-    any: "man, woman, all"
-  };
-  const audienceText = audienceMap[userProfile?.wardrobeAudience] || audienceMap.any;
-  
-  return `Capsule wardrobe request.
-  
-Formality: ${stylePreferencesText}
-Occasions: ${wardrobeOccasionsText}
-Season: ${seasonsText}
-Audience: ${audienceText}
+function getLocalizedFormalityText(userProfile = null) {
+  const formalityLevel = userProfile?.formalityLevel;
+  if (typeof formalityLevel !== "string" || formalityLevel.trim().length === 0) {
+    return "Not specified";
+  }
 
-Balanced and cohesive wardrobe.`;
+  return en.options.styles[formalityLevel] || formalityLevel;
 }
 
 function getCategoryListText() {
@@ -80,6 +52,35 @@ function getCategoryListText() {
     .filter(([, count]) => Number.isInteger(count) && count > 0)
     .map(([category, count]) => `${count} ${category}`)
     .join(", ");
+}
+
+function getCategorySchema() {
+  const schema = Object.entries(CATEGORIES).reduce((result, [category, count]) => {
+    if (!Number.isInteger(count) || count <= 0) {
+      return result;
+    }
+
+    result[category] = Array.from({ length: count }, (_, index) => `id${index + 1}`);
+    return result;
+  }, {});
+
+  return JSON.stringify(schema, null, 4);
+}
+
+function getSelectedIdsFromCapsule(capsule) {
+  if (!capsule || typeof capsule !== "object" || Array.isArray(capsule)) {
+    return [];
+  }
+
+  return Object.values(capsule).flatMap((ids) => {
+    if (!Array.isArray(ids)) {
+      return [];
+    }
+
+    return ids
+      .map((id) => String(id))
+      .filter((id) => id.trim().length > 0);
+  });
 }
 
 function enforceCategoryCounts(selectedItems, normalizedItems) {
@@ -153,15 +154,13 @@ function enforceCategoryCounts(selectedItems, normalizedItems) {
 }
 
 function getWardrobeSelectionPrompt(userProfile = null, items = []) {
-  const formalityText = getLocalizedStyleText(userProfile);
-  const occasionsText = localizeProfileValues(userProfile?.wardrobeOccasions, en.options.occasions);
-  const seasonText = localizeProfileValues(userProfile?.wardrobeSeasons, en.options.seasons);
-  const audienceText = userProfile?.wardrobeAudience || "any";
-  const accentColorText = userProfile?.accentColor ? 
-    `Requested accent color: ${userProfile.accentColor}` : "";
-  const patternText = userProfile?.pattern
-    ? `Requested pattern: ${userProfile.pattern}`
-    : "";
+  const formalityText = getLocalizedFormalityText(userProfile);
+  const styleText = getLocalizedStyleText(userProfile);
+  const occasionsText = localizeProfileValues(userProfile?.occasions, en.options.occasions);
+  const seasonText = localizeProfileValues(userProfile?.season, en.options.seasons);
+  const audienceText = userProfile?.audience || "any";
+  const accentColorText = typeof userProfile?.color === "string" ? userProfile.color : "";
+  const patternText = typeof userProfile?.pattern === "string" ? userProfile.pattern : "";
   const simplifiedItems = items.map((item) => {
     const colorParts = [
       Array.isArray(item?.color_base) ? item.color_base.join(", ") : "",
@@ -169,35 +168,35 @@ function getWardrobeSelectionPrompt(userProfile = null, items = []) {
       typeof item?.finish === "string" ? item.finish.trim() : "",
       item?.is_neutral ? "neutral" : ""
     ].filter((value) => value);
-    const styleParts = [
-      [...new Set(Array.isArray(item?.formality_level) ? item.formality_level : []
-        .concat(Array.isArray(item?.style_tags) ? item.style_tags : []))].join(", "),
-      typeof item?.fit === "string" ? item.fit.trim() : "",
-      typeof item?.silhouette === "string" ? item.silhouette.trim() : ""
-    ].filter((value) => value);
 
     return {
       id: item?.id ?? null,
       name: item?.name ?? "",
       type: item?.category ?? "",
       color: colorParts.join(", "),
-      style: styleParts.join(", "),
+      formality_level: Array.isArray(item?.formality_level) ? item.formality_level : [],
+      style: Array.isArray(item?.style) ? item.style : [],
+      season: Array.isArray(item?.season) ? item.season.join(", ") : "",
       materials: item?.composition ?? "",
-      vibe: Array.isArray(item?.occasions) ? item.occasions.join(", ") : ""
+      occasions: Array.isArray(item?.occasions) ? item.occasions.join(", ") : "",
+      fit: typeof item?.fit === "string" ? item.fit.trim() : "",
+      silhouette: typeof item?.silhouette === "string" ? item.silhouette.trim() : ""
     };
   });
   const itemsJson = JSON.stringify(simplifiedItems, null, 2);
 
   return PROMPT_TEMPLATE
-    .replace("{{formality}}", formalityText)
+    .replace("{{formality_level}}", formalityText)
+    .replace("{{style}}", styleText)
     .replace("{{occasions}}", occasionsText)
     .replace("{{season}}", seasonText)
     .replace("{{audience}}", audienceText)
-    .replace("{{accent_color}}", [accentColorText, patternText].filter(Boolean).join("\n"))
+    .replace("{{color}}", accentColorText)
+    .replace("{{pattern}}", patternText)
     .replace("{{items}}", itemsJson)
     .replace("{{category_list}}", getCategoryListText())
-    .replace("{{num_items}}", Object.entries(CATEGORIES).reduce((sum, [, count]) => sum + count, 0))
-    .concat("\n\nReturn strictly valid JSON only. No markdown, no extra text.");
+    .replace("{{categories_schema}}", getCategorySchema())
+    .replace("{{num_items}}", Object.entries(CATEGORIES).reduce((sum, [, count]) => sum + count, 0));
 }
 
 async function callWardrobeAi(userProfile = null) {
@@ -206,17 +205,17 @@ async function callWardrobeAi(userProfile = null) {
   const promptEmbeddings = await getPromptEmbeddings(prompt);
 
   const categories = Object.keys(CATEGORIES);
-  const styleCore = userProfile?.styleCore ?? null;
-  const styleAesthetic = userProfile?.styleAesthetic ?? null;
-  const wardrobeOccasions = Array.isArray(userProfile?.wardrobeOccasions) ? userProfile.wardrobeOccasions : [];
-  const wardrobeSeasons = Array.isArray(userProfile?.wardrobeSeasons) ? userProfile.wardrobeSeasons : [];
+  const formalityLevel = userProfile?.formalityLevel ?? null;
+  const style = userProfile?.style ?? null;
+  const occasions = Array.isArray(userProfile?.occasions) ? userProfile.occasions : [];
+  const season = Array.isArray(userProfile?.season) ? userProfile.season : [];
   const audienceByProfile = {
     man: ["man", "all"],
     woman: ["woman", "all"],
     any: ["man", "woman", "all"]
   };
-  const audienceFilters = audienceByProfile[userProfile?.wardrobeAudience] || audienceByProfile.any;
-  const accentColor = userProfile?.accentColor ?? null;
+  const audienceFilters = audienceByProfile[userProfile?.audience] || audienceByProfile.any;
+  const color = userProfile?.color ?? null;
   const pattern = userProfile?.pattern ?? null;
   const embeddingVector = `[${promptEmbeddings.join(",")}]`;
   const noiseFactor = 0.05;
@@ -242,11 +241,11 @@ async function callWardrobeAi(userProfile = null) {
             -- 3. INDEPENDENT QUOTA RANKING
             -- We rank accent items and patterned items in completely separate windows.
             ROW_NUMBER() OVER (
-              PARTITION BY is_aesthetic_match
+              PARTITION BY is_style_match
               ORDER BY relevance_score DESC, distance ASC
             ) as aesthetic_rank,
             ROW_NUMBER() OVER (
-              PARTITION BY is_accent_match
+              PARTITION BY is_color_match
               ORDER BY relevance_score DESC, distance ASC
             ) as accent_rank,
             ROW_NUMBER() OVER (
@@ -261,14 +260,14 @@ async function callWardrobeAi(userProfile = null) {
               
               -- 1.1 Identify Accent Match (Boolean helper)
               (
-                ${styleAesthetic}::text IS NOT NULL 
-                AND ${styleAesthetic}::text = ANY(COALESCE(formality_level, ARRAY[]::text[]))
-              ) as is_aesthetic_match,
+                ${style}::text IS NOT NULL
+                AND ${style}::text = ANY(COALESCE(style, ARRAY[]::text[]))
+              ) as is_style_match,
               (
-                ${accentColor}::text IS NOT NULL 
-                AND ${accentColor}::text != '' 
-                AND ${accentColor}::text = ANY(color_base)
-              ) as is_accent_match,
+                ${color}::text IS NOT NULL
+                AND ${color}::text != ''
+                AND ${color}::text = ANY(color_base)
+              ) as is_color_match,
               (
                 ${pattern}::text IS NOT NULL
                 AND ${pattern}::text != ''
@@ -279,28 +278,28 @@ async function callWardrobeAi(userProfile = null) {
               -- 2. Calculate Relevance Score
               (
                 -- Style Match (+20)
-                CASE WHEN ${styleCore}::text IS NOT NULL 
-                  AND ${styleCore}::text = ANY(COALESCE(formality_level, ARRAY[]::text[]))
+                CASE WHEN ${formalityLevel}::text IS NOT NULL
+                  AND ${formalityLevel}::text = ANY(COALESCE(formality_level, ARRAY[]::text[]))
                 THEN 20 ELSE 0 END
                 +
-                CASE WHEN ${styleAesthetic}::text IS NOT NULL
-                  AND ${styleAesthetic}::text = ANY(COALESCE(formality_level, ARRAY[]::text[]))
+                CASE WHEN ${style}::text IS NOT NULL
+                  AND ${style}::text = ANY(COALESCE(style, ARRAY[]::text[]))
                 THEN 20 ELSE 0 END
                 +
                 -- Occasion Match (+20)
-                CASE WHEN COALESCE(occasions, ARRAY[]::text[]) && ${wardrobeOccasions}::text[]
+                CASE WHEN COALESCE(occasions, ARRAY[]::text[]) && ${occasions}::text[]
                 THEN 20 ELSE 0 END
                 +
                 -- Season Match (+50 or +40 fallback)
-                CASE WHEN COALESCE(season, ARRAY[]::text[]) && ${wardrobeSeasons}::text[] THEN 50 
+                CASE WHEN COALESCE(season, ARRAY[]::text[]) && ${season}::text[] THEN 50
                 WHEN cardinality(COALESCE(season, ARRAY[]::text[])) = 0 THEN 40
                 ELSE 0 END
                 +
-                -- ACCENT BOOST (+20)
-                -- We keep the boost to ensure the allowed accent items are the "best" ones.
+                -- COLOR BOOST (+20)
+                -- We keep the boost to ensure the allowed color items are the "best" ones.
                 CASE 
-                  WHEN ${accentColor}::text IS NOT NULL AND ${accentColor}::text != '' 
-                      AND ${accentColor}::text = ANY(color_base) 
+                  WHEN ${color}::text IS NOT NULL AND ${color}::text != ''
+                      AND ${color}::text = ANY(color_base)
                   THEN 20 ELSE 0 
                 END
                 +
@@ -322,10 +321,10 @@ async function callWardrobeAi(userProfile = null) {
         WHERE
           -- !!! INDEPENDENT QUOTA LIMITS !!!
           -- Rule 1: If it's an aesthetic item, it must be in the top 3 of aesthetics.
-          (is_aesthetic_match IS NOT TRUE OR aesthetic_rank <= 3)
+          (is_style_match IS NOT TRUE OR aesthetic_rank <= 3)
           AND 
           -- Rule 2: If it's an accent item, it must be in the top 3 of accents.
-          (is_accent_match IS NOT TRUE OR accent_rank <= 3)
+          (is_color_match IS NOT TRUE OR accent_rank <= 3)
           AND 
           -- Rule 3: If it's a patterned item, it must be in the top 3 of patterns. (WITH BYPASS FOR 'SOLID')
           (
@@ -345,9 +344,6 @@ async function callWardrobeAi(userProfile = null) {
 
   const normalizedItems = items.map((item) => {
     const normalized = { ...item };
-    for (const field of ARRAY_FIELDS) {
-      normalized[field] = parseArrayField(normalized[field]);
-    }
     delete normalized.embedding;
     return normalized;
   });
@@ -358,7 +354,7 @@ async function callWardrobeAi(userProfile = null) {
 
   console.log("[wardrobe-ai][selected-json]", JSON.stringify(parsedSelection));
 
-  const selectedIds = Array.isArray(parsedSelection?.selected_ids) ? parsedSelection.selected_ids : [];
+  const selectedIds = getSelectedIdsFromCapsule(parsedSelection?.capsule);
   const uniqueSelectedIds = [...new Set(selectedIds.map((id) => String(id)))];
   const itemsById = new Map(normalizedItems.map((item) => [String(item.id), item]));
   const selectedItems = uniqueSelectedIds
@@ -379,12 +375,12 @@ async function getWardrobeItems(req, res) {
   try {
     const forceRefresh = Boolean(req.body?.force);
     const profile = await getProfile(req.user.email);
-    if (!forceRefresh && profile && Array.isArray(profile.wardrobeItems) && profile.wardrobeItems.length > 0) {
-      return res.json({ ok: true, items: profile.wardrobeItems });
+    if (!forceRefresh && profile && Array.isArray(profile.items) && profile.items.length > 0) {
+      return res.json({ ok: true, items: profile.items });
     }
 
     if (forceRefresh && profile) {
-      await updateProfileWardrobeItems(req.user.email, null);
+      await updateProfileItems(req.user.email, null);
     }
 
     let items = await callWardrobeAi(profile);
@@ -394,7 +390,7 @@ async function getWardrobeItems(req, res) {
     }
 
     if (profile) {
-      await updateProfileWardrobeItems(req.user.email, items);
+      await updateProfileItems(req.user.email, items);
     }
 
     return res.json({ ok: true, items: items });
