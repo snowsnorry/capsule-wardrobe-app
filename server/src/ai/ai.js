@@ -1,7 +1,6 @@
 import { getProfile, updateProfileItems } from "../profileStore.js";
 import { getSqlClient } from "../db.js";
 import { readFileSync, writeFileSync } from "node:fs";
-import en from "../../../shared/i18n/en.js";
 import { generateJsonWithLlm } from "./openai.js";
 import {  getPromptEmbeddings, getWardrobePrompt } from "./voyageai.js";
 import { buildStylePreferenceArray } from "../../../shared/stylePreferences.js";
@@ -16,35 +15,18 @@ const CATEGORIES = {
 };
 const PROMPT_TEMPLATE = readFileSync(new URL("../templates/prompt.txt", import.meta.url), "utf8");
 
-function localizeProfileValues(values, dictionary) {
+function formatProfileValues(values) {
   if (!Array.isArray(values) || values.length === 0) {
     return "Not specified";
   }
 
-  const localized = values
-    .map((value) => dictionary[value] || value)
+  const formatted = values
     .filter((value) => typeof value === "string" && value.trim().length > 0);
-  if (localized.length === 0) {
+  if (formatted.length === 0) {
     return "Not specified";
   }
 
-  return localized.join(", ").toLowerCase();
-}
-
-function getLocalizedStyleText(userProfile = null) {
-  return localizeProfileValues(
-    buildStylePreferenceArray(userProfile?.formalityLevel, userProfile?.style),
-    en.options.styles
-  );
-}
-
-function getLocalizedFormalityText(userProfile = null) {
-  const formalityLevel = userProfile?.formalityLevel;
-  if (typeof formalityLevel !== "string" || formalityLevel.trim().length === 0) {
-    return "Not specified";
-  }
-
-  return en.options.styles[formalityLevel] || formalityLevel;
+  return formatted.join(", ");
 }
 
 function getCategoryListText() {
@@ -153,11 +135,67 @@ function enforceCategoryCounts(selectedItems, normalizedItems) {
   return result;
 }
 
+/**
+ * Normalizes raw material strings into stylist-friendly texture tags.
+ * @param {string} rawMaterials - The raw materials string from the database.
+ * @returns {string} A comma-separated string of clean material tags.
+ */
+function normalizeMaterials(rawMaterials) {
+  if (!rawMaterials || typeof rawMaterials !== 'string') return "";
+  
+  const text = rawMaterials.toLowerCase();
+  const tags = new Set(); // Using Set to avoid duplicates (e.g., if cotton and linen are both found)
+
+  // 1. Leather & Suede
+  if (text.match(/suede/)) {
+    tags.add("suede");
+  } else if (text.match(/leather|nappa|lambskin|furskin/)) {
+    tags.add("leather");
+  }
+
+  // 2. Wool & Knits
+  if (text.match(/wool|cashmere|alpaca|mohair|yak/)) {
+    tags.add("wool");
+  }
+
+  // 3. Cotton
+  if (text.includes("cotton")) {
+    tags.add("cotton");
+  }
+
+  // 4. Linen & Hemp
+  if (text.match(/linen|hemp|jute|ramie/)) {
+    tags.add("linen");
+  }
+
+  // 5. Silk & Flowing
+  if (text.match(/silk|viscose|cupro|modal|lyocell|acetate|cellulose/)) {
+    tags.add("silk/viscose");
+  }
+
+  // 6. Insulation (Down/Feathers)
+  if (text.match(/down|feather/)) {
+    tags.add("down insulation");
+  }
+
+  // 7. Tech & Synthetic (Only apply if no "natural" fabric was found, or if it's explicitly highly synthetic)
+  // We check if the set is empty, or if we want to explicitly highlight a tech fabric blend.
+  if (text.match(/polyamide|polyurethane|nylon/) && !text.includes("cotton") && !text.includes("wool")) {
+     tags.add("technical fabric");
+  }
+
+  return Array.from(tags).join(", ");
+}
+
 function getWardrobeSelectionPrompt(userProfile = null, items = []) {
-  const formalityText = getLocalizedFormalityText(userProfile);
-  const styleText = getLocalizedStyleText(userProfile);
-  const occasionsText = localizeProfileValues(userProfile?.occasions, en.options.occasions);
-  const seasonText = localizeProfileValues(userProfile?.season, en.options.seasons);
+  const formalityText = typeof userProfile?.formalityLevel === "string" && userProfile.formalityLevel.trim().length > 0
+    ? userProfile.formalityLevel
+    : "Not specified";
+  const styleText = typeof userProfile?.style === "string" && userProfile.style.trim().length > 0
+    ? userProfile.style
+    : "Not specified";
+  const occasionsText = formatProfileValues(userProfile?.occasions);
+  const seasonText = formatProfileValues(userProfile?.season);
   const audienceText = userProfile?.audience || "any";
   const accentColorText = typeof userProfile?.color === "string" ? userProfile.color : "";
   const patternText = typeof userProfile?.pattern === "string" ? userProfile.pattern : "";
@@ -176,9 +214,7 @@ function getWardrobeSelectionPrompt(userProfile = null, items = []) {
       color: colorParts.join(", "),
       formality_level: Array.isArray(item?.formality_level) ? item.formality_level : [],
       style: Array.isArray(item?.style) ? item.style : [],
-      season: Array.isArray(item?.season) ? item.season.join(", ") : "",
-      materials: item?.composition ?? "",
-      occasions: Array.isArray(item?.occasions) ? item.occasions.join(", ") : "",
+      materials: normalizeMaterials(item?.composition),
       fit: typeof item?.fit === "string" ? item.fit.trim() : "",
       silhouette: typeof item?.silhouette === "string" ? item.silhouette.trim() : ""
     };

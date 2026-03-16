@@ -1,7 +1,7 @@
 import OpenAI from "openai";
 
 const OPENAI_BASE_URL = "https://api.deepinfra.com/v1/openai";
-const DEFAULT_CHAT_MODEL = "google/gemma-3-27b-it";
+const DEFAULT_CHAT_MODEL = "meta-llama/Llama-3.3-70B-Instruct-Turbo";
 const DEFAULT_EMBEDDING_MODEL = "google/embeddinggemma-300m";
 let cachedClient = null;
 
@@ -65,7 +65,11 @@ async function generateJsonWithLlm(prompt) {
       { role: "system", content: system },
       { role: "user", content: user }
     ],
-    temperature: 0.4,
+    temperature: 0.2,
+    top_p: 0.9,
+    frequency_penalty: 0,
+    presence_penalty: 0,
+    max_tokens: 1000,
     response_format: {"type": "json_object"}
   });
 
