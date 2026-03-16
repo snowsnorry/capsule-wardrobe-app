@@ -366,9 +366,14 @@ async function callWardrobeAi(userProfile = null) {
     throw new Error("Model returned no valid selected_ids");
   }
 
-  return balancedItems.map(({url, name, category, image_url}) => {
-    return { url, name, category, image_url };
-  });
+  return {
+    items: balancedItems.map(({ url, name, category, image_url }) => {
+      return { url, name, category, image_url };
+    }),
+    reasoning: typeof parsedSelection?._reasoning === "string" && parsedSelection._reasoning.trim().length > 0
+      ? parsedSelection._reasoning.trim()
+      : null
+  };
 }
 
 async function getWardrobeItems(req, res) {
@@ -376,14 +381,15 @@ async function getWardrobeItems(req, res) {
     const forceRefresh = Boolean(req.body?.force);
     const profile = await getProfile(req.user.email);
     if (!forceRefresh && profile && Array.isArray(profile.items) && profile.items.length > 0) {
-      return res.json({ ok: true, items: profile.items });
+      return res.json({ ok: true, items: profile.items, reasoning: null });
     }
 
     if (forceRefresh && profile) {
       await updateProfileItems(req.user.email, null);
     }
 
-    let items = await callWardrobeAi(profile);
+    const wardrobe = await callWardrobeAi(profile);
+    const items = wardrobe.items;
 
     if (items.length === 0) {
       throw new Error("AI response has no valid wardrobe items");
@@ -393,7 +399,7 @@ async function getWardrobeItems(req, res) {
       await updateProfileItems(req.user.email, items);
     }
 
-    return res.json({ ok: true, items: items });
+    return res.json({ ok: true, items, reasoning: wardrobe.reasoning });
   } catch (error) {
     console.error("[wardrobe-ai]", error);
     return res.status(503).json({ error: "service_unavailable" });

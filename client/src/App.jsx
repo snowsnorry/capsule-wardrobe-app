@@ -441,10 +441,19 @@ function App() {
     return fetchWardrobeItems({ profileKey, force });
   };
 
+  const logWardrobeReasoning = (reasoning) => {
+    if (typeof reasoning !== "string" || reasoning.trim().length === 0) {
+      return;
+    }
+
+    console.log("[wardrobe-ai][reasoning]", reasoning);
+  };
+
   const handleRefreshWardrobe = async () => {
     setIsLoadingItems(true);
     try {
       const result = await loadWardrobeItems({ force: true });
+      logWardrobeReasoning(result.reasoning);
       setProfileItems(result.items || []);
     } catch (error) {
       setProfileItems([]);
@@ -466,6 +475,7 @@ function App() {
     loadWardrobeItems()
       .then((result) => {
         if (!isActive) return;
+        logWardrobeReasoning(result.reasoning);
         setProfileItems(result.items || []);
       })
       .catch(() => {
