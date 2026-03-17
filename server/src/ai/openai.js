@@ -123,7 +123,7 @@ async function generateJsonWithLlm(prompt) {
   try {
     json = JSON.parse(content);
   } catch {
-    throw new Error("Failed to parse JSON response");
+    throw new Error(`Failed to parse JSON response: ${response?.output_text}`);
   }
 
   return { response, json };
