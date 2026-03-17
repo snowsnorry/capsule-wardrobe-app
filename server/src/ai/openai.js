@@ -122,8 +122,12 @@ async function generateJsonWithLlm(prompt) {
   }
   try {
     json = JSON.parse(content);
-  } catch {
-    throw new Error(`Failed to parse JSON response: ${response?.output_text}`);
+  } catch(error) {
+    const parseError = new Error(`Failed to parse JSON response: ${error.message}\nResponse content: ${content}`);
+    parseError.rawSelectionText = typeof response?.output_text === "string" && response.output_text.trim().length > 0
+      ? response.output_text.trim()
+      : null;
+    throw parseError;
   }
 
   return { response, json };

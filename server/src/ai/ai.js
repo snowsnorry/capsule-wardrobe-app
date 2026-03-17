@@ -397,6 +397,9 @@ async function callWardrobeAi(userProfile = null) {
     items: balancedItems.map(({ url, name, category, image_url }) => {
       return { url, name, category, image_url };
     }),
+    rawSelectionText: typeof selectionResponse?.output_text === "string" && selectionResponse.output_text.trim().length > 0
+      ? selectionResponse.output_text.trim()
+      : null,
     reasoning: typeof parsedSelection?._reasoning === "string" && parsedSelection._reasoning.trim().length > 0
       ? parsedSelection._reasoning.trim()
       : null
@@ -408,7 +411,7 @@ async function getWardrobeItems(req, res) {
     const forceRefresh = Boolean(req.body?.force);
     const profile = await getProfile(req.user.email);
     if (!forceRefresh && profile && Array.isArray(profile.items) && profile.items.length > 0) {
-      return res.json({ ok: true, items: profile.items, reasoning: null });
+      return res.json({ ok: true, items: profile.items, reasoning: null, rawSelectionText: null });
     }
 
     if (forceRefresh && profile) {
@@ -426,10 +429,20 @@ async function getWardrobeItems(req, res) {
       await updateProfileItems(req.user.email, items);
     }
 
-    return res.json({ ok: true, items, reasoning: wardrobe.reasoning });
+    return res.json({
+      ok: true,
+      items,
+      reasoning: wardrobe.reasoning,
+      rawSelectionText: wardrobe.rawSelectionText
+    });
   } catch (error) {
     console.error("[wardrobe-ai]", error);
-    return res.status(503).json({ error: "service_unavailable" });
+    return res.status(503).json({
+      error: "service_unavailable",
+      rawSelectionText: typeof error?.rawSelectionText === "string" && error.rawSelectionText.trim().length > 0
+        ? error.rawSelectionText.trim()
+        : null
+    });
   }
 }
 

@@ -449,13 +449,27 @@ function App() {
     console.log("[wardrobe-ai][reasoning]", reasoning);
   };
 
+  const logWardrobeRawSelectionText = (rawSelectionText) => {
+    if (typeof rawSelectionText !== "string" || rawSelectionText.trim().length === 0) {
+      return;
+    }
+
+    console.log("[wardrobe-ai][raw-selection]", rawSelectionText);
+  };
+
+  const logWardrobeRawSelectionTextFromError = (error) => {
+    logWardrobeRawSelectionText(error?.data?.rawSelectionText);
+  };
+
   const handleRefreshWardrobe = async () => {
     setIsLoadingItems(true);
     try {
       const result = await loadWardrobeItems({ force: true });
       logWardrobeReasoning(result.reasoning);
+      logWardrobeRawSelectionText(result.rawSelectionText);
       setProfileItems(result.items || []);
     } catch (error) {
+      logWardrobeRawSelectionTextFromError(error);
       setProfileItems([]);
     } finally {
       setIsLoadingItems(false);
@@ -476,10 +490,12 @@ function App() {
       .then((result) => {
         if (!isActive) return;
         logWardrobeReasoning(result.reasoning);
+        logWardrobeRawSelectionText(result.rawSelectionText);
         setProfileItems(result.items || []);
       })
-      .catch(() => {
+      .catch((error) => {
         if (!isActive) return;
+        logWardrobeRawSelectionTextFromError(error);
         setProfileItems([]);
       })
       .finally(() => {
