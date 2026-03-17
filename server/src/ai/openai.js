@@ -109,7 +109,7 @@ async function generateJsonWithLlm(prompt) {
     reasoning: {"effort": "medium"},
     // temperature: 0.2,
     // top_p: 0.9,
-    max_output_tokens: 1000,
+    max_output_tokens: 2000,
     text: {
       format: JSON_OBJECT_FORMAT
     }
