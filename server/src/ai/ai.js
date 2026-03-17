@@ -3,16 +3,7 @@ import { getSqlClient } from "../db.js";
 import { readFileSync, writeFileSync } from "node:fs";
 import { generateJsonWithLlm } from "./openai.js";
 import {  getPromptEmbeddings, getWardrobePrompt } from "./voyageai.js";
-import { buildStylePreferenceArray } from "../../../shared/stylePreferences.js";
-
-const CATEGORIES = {
-  bottom: 2,
-  top: 2,
-  outerwear: 1,
-  shoes: 2,
-  belt: 1,
-  bag: 2
-};
+import { CATEGORIES } from "./categories.js";
 const PROMPT_TEMPLATE = readFileSync(new URL("../templates/prompt.txt", import.meta.url), "utf8");
 
 function formatProfileValues(values) {

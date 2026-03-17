@@ -1,8 +1,53 @@
 import OpenAI from "openai";
+import { CATEGORIES } from "./categories.js";
 
-const OPENAI_BASE_URL = "https://api.deepinfra.com/v1/openai";
-const DEFAULT_CHAT_MODEL = "meta-llama/Llama-3.3-70B-Instruct-Turbo";
-const DEFAULT_EMBEDDING_MODEL = "google/embeddinggemma-300m";
+const DEFAULT_CHAT_MODEL = "gpt-5.2";
+const DEFAULT_EMBEDDING_MODEL = "text-embedding-3-small";
+
+function buildCapsuleSchema(categories) {
+  const properties = {};
+  const required = [];
+
+  for (const [category, count] of Object.entries(categories)) {
+    properties[category] = {
+      type: "array",
+      description: `Exactly ${count} selected item ids for the ${category} category.`,
+      items: {
+        type: "string"
+      },
+      minItems: count,
+      maxItems: count
+    };
+    required.push(category);
+  }
+
+  return {
+    type: "object",
+    additionalProperties: false,
+    properties,
+    required
+  };
+}
+
+const JSON_OBJECT_FORMAT = {
+  type: "json_schema",
+  name: "capsule_wardrobe_response",
+  description: "Structured capsule wardrobe selection with brief reasoning and exact category counts.",
+  schema: {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      _reasoning: {
+        type: "string",
+        description: "Briefly explain how you balanced the 30% Target Style with 70% basic items, how they fit the requested Formality, and how you applied the color/pattern strategy."
+      },
+      capsule: buildCapsuleSchema(CATEGORIES)
+    },
+    required: ["_reasoning", "capsule"]
+  },
+  strict: false
+};
+
 let cachedClient = null;
 
 function getOpenAiClient() {
@@ -10,15 +55,12 @@ function getOpenAiClient() {
     return cachedClient;
   }
 
-  const apiKey = process.env.DEEPINFRA_API_KEY;
+  const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
-    throw new Error("DEEPINFRA_API_KEY is not set");
+    throw new Error("OPENAI_API_KEY is not set");
   }
 
-  cachedClient = new OpenAI({
-    apiKey,
-    baseURL: OPENAI_BASE_URL
-  });
+  cachedClient = new OpenAI({ apiKey });
   return cachedClient;
 }
 
@@ -46,7 +88,8 @@ async function getPromptEmbeddings(prompt) {
   const client = getOpenAiClient();
   const response = await client.embeddings.create({
     model: DEFAULT_EMBEDDING_MODEL,
-    input: prompt
+    input: prompt,
+    encoding_format: "float"
   });
   const embedding = response?.data?.[0]?.embedding;
   if (!Array.isArray(embedding) || embedding.length === 0) {
@@ -59,29 +102,28 @@ async function generateJsonWithLlm(prompt) {
   const client = getOpenAiClient();
   const { system, user } = splitSystemAndUserPrompt(prompt);
 
-  const response = await client.chat.completions.create({
+  const response = await client.responses.create({
     model: DEFAULT_CHAT_MODEL,
-    messages: [
-      { role: "system", content: system },
-      { role: "user", content: user }
-    ],
-    temperature: 0.2,
-    top_p: 0.9,
-    frequency_penalty: 0,
-    presence_penalty: 0,
-    max_tokens: 1000,
-    response_format: {"type": "json_object"}
+    instructions: system || undefined,
+    input: user,
+    reasoning: {"effort": "medium"},
+    // temperature: 0.2,
+    // top_p: 0.9,
+    max_output_tokens: 1000,
+    text: {
+      format: JSON_OBJECT_FORMAT
+    }
   });
 
-  let content = response?.choices?.[0]?.message?.content || "{}";
+  let content = response?.output_text || "{}";
   let json;
-  if(content) {
+  if (content) {
     content = content.replace(/^[^{]*/, "").replace(/[^}]*$/, "");
   }
   try {
     json = JSON.parse(content);
   } catch {
-    throw new Error(`Failed to parse JSON response`);
+    throw new Error("Failed to parse JSON response");
   }
 
   return { response, json };
