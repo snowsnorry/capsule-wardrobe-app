@@ -106,10 +106,10 @@ async function generateJsonWithLlm(prompt) {
     model: DEFAULT_CHAT_MODEL,
     instructions: system || undefined,
     input: user,
-    reasoning: {"effort": "medium"},
+    reasoning: {"effort": "low"},
     // temperature: 0.2,
     // top_p: 0.9,
-    max_output_tokens: 2000,
+    max_output_tokens: 6000,
     text: {
       format: JSON_OBJECT_FORMAT
     }

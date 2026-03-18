@@ -5,6 +5,34 @@ import { generateJsonWithLlm } from "./openai.js";
 import {  getPromptEmbeddings, getWardrobePrompt } from "./voyageai.js";
 import { CATEGORIES } from "./categories.js";
 const PROMPT_TEMPLATE = readFileSync(new URL("../templates/prompt.txt", import.meta.url), "utf8");
+const WARDROBE_POLL_AFTER_MS = 2000;
+const COMPLETED_JOB_TTL_MS = 5 * 60 * 1000;
+const wardrobeJobs = new Map();
+
+function getStoredWardrobePayload(profile) {
+  const stored = profile?.items;
+  if (Array.isArray(stored)) {
+    return {
+      items: stored,
+      reasoning: null,
+      rawSelectionText: null
+    };
+  }
+
+  if (!stored || typeof stored !== "object" || Array.isArray(stored)) {
+    return null;
+  }
+
+  return {
+    items: Array.isArray(stored.items) ? stored.items : [],
+    reasoning: typeof stored.reasoning === "string" && stored.reasoning.trim().length > 0
+      ? stored.reasoning.trim()
+      : null,
+    rawSelectionText: typeof stored.rawSelectionText === "string" && stored.rawSelectionText.trim().length > 0
+      ? stored.rawSelectionText.trim()
+      : null
+  };
+}
 
 function formatProfileValues(values) {
   if (!Array.isArray(values) || values.length === 0) {
@@ -328,6 +356,21 @@ async function callWardrobeAi(userProfile = null) {
   const { response: selectionResponse, json: parsedSelection } = await generateJsonWithLlm(selectionPrompt);
 
   console.log("[wardrobe-ai][selected-json]", JSON.stringify(parsedSelection));
+  if (!parsedSelection?.capsule || typeof parsedSelection.capsule !== "object") {
+    console.warn(
+      "[wardrobe-ai][selected-json-empty]",
+      JSON.stringify({
+        outputText: typeof selectionResponse?.output_text === "string"
+          ? selectionResponse.output_text.trim()
+          : null,
+        output: selectionResponse?.output ?? null,
+        outputParsed: selectionResponse?.output_parsed ?? null,
+        finishReason: selectionResponse?.status ?? null,
+        incompleteDetails: selectionResponse?.incomplete_details ?? null,
+        usage: selectionResponse?.usage ?? null
+      })
+    );
+  }
 
   const selectedIds = getSelectedIdsFromCapsule(parsedSelection?.capsule);
   const uniqueSelectedIds = [...new Set(selectedIds.map((id) => String(id)))];
@@ -354,34 +397,125 @@ async function callWardrobeAi(userProfile = null) {
   };
 }
 
+function hasStoredWardrobeItems(profile) {
+  return Boolean(getStoredWardrobePayload(profile)?.items?.length);
+}
+
+function scheduleJobCleanup(email, job) {
+  setTimeout(() => {
+    if (wardrobeJobs.get(email) === job && job.status !== "pending") {
+      wardrobeJobs.delete(email);
+    }
+  }, COMPLETED_JOB_TTL_MS);
+}
+
+function getWardrobeJob(email) {
+  const job = wardrobeJobs.get(email);
+  if (!job) {
+    return null;
+  }
+
+  if (job.status !== "pending" && Date.now() - job.updatedAt > COMPLETED_JOB_TTL_MS) {
+    wardrobeJobs.delete(email);
+    return null;
+  }
+
+  return job;
+}
+
+function startWardrobeJob(email, profile) {
+  const existing = getWardrobeJob(email);
+  if (existing?.status === "pending") {
+    return existing;
+  }
+
+  const job = {
+    status: "pending",
+    updatedAt: Date.now(),
+    promise: null
+  };
+  wardrobeJobs.set(email, job);
+
+  job.promise = (async () => {
+    try {
+      const wardrobe = await callWardrobeAi(profile);
+      const items = wardrobe.items;
+
+      if (items.length === 0) {
+        throw new Error("AI response has no valid wardrobe items");
+      }
+
+      await updateProfileItems(email, {
+        items,
+        reasoning: wardrobe.reasoning,
+        rawSelectionText: wardrobe.rawSelectionText
+      });
+      job.status = "completed";
+      job.updatedAt = Date.now();
+      job.result = wardrobe;
+    } catch (error) {
+      job.status = "failed";
+      job.updatedAt = Date.now();
+      job.error = error;
+      console.error("[wardrobe-ai]", error);
+    } finally {
+      scheduleJobCleanup(email, job);
+    }
+  })();
+
+  return job;
+}
+
 async function getWardrobeItems(req, res) {
   try {
     const forceRefresh = Boolean(req.body?.force);
-    const profile = await getProfile(req.user.email);
-    if (!forceRefresh && profile && Array.isArray(profile.items) && profile.items.length > 0) {
-      return res.json({ ok: true, items: profile.items, reasoning: null, rawSelectionText: null });
+    const email = req.user.email;
+    const profile = await getProfile(email);
+    const storedWardrobe = getStoredWardrobePayload(profile);
+    const activeJob = getWardrobeJob(email);
+
+    if (!forceRefresh && storedWardrobe?.items?.length) {
+      return res.json({
+        ok: true,
+        status: "ready",
+        items: storedWardrobe.items,
+        reasoning: storedWardrobe.reasoning,
+        rawSelectionText: storedWardrobe.rawSelectionText
+      });
+    }
+
+    if (activeJob?.status === "pending") {
+      return res.status(202).json({
+        ok: true,
+        status: "pending",
+        items: storedWardrobe?.items || [],
+        pollAfterMs: WARDROBE_POLL_AFTER_MS
+      });
+    }
+
+    if (activeJob?.status === "failed" && !forceRefresh) {
+      wardrobeJobs.delete(email);
+      throw activeJob.error || new Error("wardrobe_generation_failed");
+    }
+
+    if (activeJob?.status === "failed" && forceRefresh) {
+      wardrobeJobs.delete(email);
     }
 
     if (forceRefresh && profile) {
-      await updateProfileItems(req.user.email, null);
+      await updateProfileItems(email, null);
     }
 
-    const wardrobe = await callWardrobeAi(profile);
-    const items = wardrobe.items;
+    const generationProfile = forceRefresh && profile
+      ? { ...profile, items: null }
+      : profile;
+    startWardrobeJob(email, generationProfile);
 
-    if (items.length === 0) {
-      throw new Error("AI response has no valid wardrobe items");
-    }
-
-    if (profile) {
-      await updateProfileItems(req.user.email, items);
-    }
-
-    return res.json({
+    return res.status(202).json({
       ok: true,
-      items,
-      reasoning: wardrobe.reasoning,
-      rawSelectionText: wardrobe.rawSelectionText
+      status: "pending",
+      items: [],
+      pollAfterMs: WARDROBE_POLL_AFTER_MS
     });
   } catch (error) {
     console.error("[wardrobe-ai]", error);

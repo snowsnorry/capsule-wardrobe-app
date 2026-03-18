@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Box, Container, Paper, Stack, Typography, useMediaQuery } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import {
@@ -50,6 +50,7 @@ const FALLBACK_AUDIENCE_OPTIONS = ["man", "woman", "any"];
 const FALLBACK_ACCENT_COLOR_OPTIONS = ACCENT_COLOR_OPTIONS;
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
 const SEASON_DISPLAY_ORDER = ["spring", "summer", "autumn", "winter"];
+const WARDROBE_POLL_AFTER_MS_DEFAULT = 2000;
 
 function sortSeasonOptions(items) {
   return [...items].sort((left, right) => {
@@ -110,9 +111,20 @@ function App() {
   const [currentView, setCurrentView] = useState("main");
   const [profileItems, setProfileItems] = useState(null);
   const [isLoadingItems, setIsLoadingItems] = useState(false);
+  const [isWardrobePending, setIsWardrobePending] = useState(false);
+  const [wardrobePollAfterMs, setWardrobePollAfterMs] = useState(WARDROBE_POLL_AFTER_MS_DEFAULT);
+  const isMountedRef = useRef(true);
+  const wardrobeRequestIdRef = useRef(0);
 
   const cardPadding = useMemo(() => (isLarge ? 5 : 3), [isLarge]);
   const orderedSeasonOptions = useMemo(() => sortSeasonOptions(seasonOptions), [seasonOptions]);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const resolveErrorMessage = (error) => {
     if (!error) return t("errors.generic");
@@ -319,6 +331,8 @@ function App() {
       setOnboardingStep(0);
       setProfileItems(null);
       setIsLoadingItems(false);
+      setIsWardrobePending(false);
+      setWardrobePollAfterMs(WARDROBE_POLL_AFTER_MS_DEFAULT);
       clearProfileOptionsCache();
       setStyleOptions(FALLBACK_STYLE_OPTIONS);
       setOccasionOptions([]);
@@ -372,6 +386,7 @@ function App() {
       setHasProfile(true);
       setCurrentView("main");
       setProfileItems(null);
+      setIsWardrobePending(false);
       setStatus({ loading: false, error: "", infoKey: "onboarding.completedHint", infoParams: null });
     } catch (error) {
       setStatus({ loading: false, error: resolveErrorMessage(error), infoKey: "", infoParams: null });
@@ -392,6 +407,7 @@ function App() {
         locale
       );
       setProfileItems(null);
+      setIsWardrobePending(false);
       setStatus({ loading: false, error: "", infoKey: "profile.updated", infoParams: null });
     } catch (error) {
       setStatus({ loading: false, error: resolveErrorMessage(error), infoKey: "", infoParams: null });
@@ -449,48 +465,74 @@ function App() {
     console.log("[wardrobe-ai][reasoning]", reasoning);
   };
 
-  const handleRefreshWardrobe = async () => {
+  const handleWardrobeError = () => {
+    setProfileItems([]);
+    setIsWardrobePending(false);
+    setWardrobePollAfterMs(WARDROBE_POLL_AFTER_MS_DEFAULT);
+    setIsLoadingItems(false);
+  };
+
+  const runWardrobeLoad = async ({ force = false } = {}) => {
+    const requestId = wardrobeRequestIdRef.current + 1;
+    wardrobeRequestIdRef.current = requestId;
     setIsLoadingItems(true);
-    try {
-      const result = await loadWardrobeItems({ force: true });
-      logWardrobeReasoning(result.reasoning);
-      setProfileItems(result.items || []);
-    } catch (error) {
-      setProfileItems([]);
-    } finally {
-      setIsLoadingItems(false);
+
+    let nextForce = force;
+
+    while (true) {
+      try {
+        const result = await loadWardrobeItems({ force: nextForce });
+        if (!isMountedRef.current || requestId !== wardrobeRequestIdRef.current) {
+          return;
+        }
+
+        const items = Array.isArray(result?.items) ? result.items : [];
+        if (result?.status === "pending") {
+          const nextPollAfterMs =
+            Number(result?.pollAfterMs) > 0 ? Number(result.pollAfterMs) : WARDROBE_POLL_AFTER_MS_DEFAULT;
+          setProfileItems(items);
+          setIsWardrobePending(true);
+          setWardrobePollAfterMs(nextPollAfterMs);
+
+          await new Promise((resolve) => setTimeout(resolve, nextPollAfterMs));
+          if (!isMountedRef.current || requestId !== wardrobeRequestIdRef.current) {
+            return;
+          }
+
+          nextForce = false;
+          continue;
+        }
+
+        logWardrobeReasoning(result?.reasoning);
+        setProfileItems(items);
+        setIsWardrobePending(false);
+        setWardrobePollAfterMs(WARDROBE_POLL_AFTER_MS_DEFAULT);
+        setIsLoadingItems(false);
+        return;
+      } catch (error) {
+        if (!isMountedRef.current || requestId !== wardrobeRequestIdRef.current) {
+          return;
+        }
+        handleWardrobeError();
+        return;
+      }
     }
+  };
+
+  const handleRefreshWardrobe = async () => {
+    await runWardrobeLoad({ force: true });
   };
 
   useEffect(() => {
     if (!user || !(hasProfile || profileCreated)) {
       return;
     }
-    if (profileItems) {
+    if (profileItems || isWardrobePending) {
       return;
     }
 
-    let isActive = true;
-    setIsLoadingItems(true);
-    loadWardrobeItems()
-      .then((result) => {
-        if (!isActive) return;
-        logWardrobeReasoning(result.reasoning);
-        setProfileItems(result.items || []);
-      })
-      .catch((error) => {
-        if (!isActive) return;
-        setProfileItems([]);
-      })
-      .finally(() => {
-        if (!isActive) return;
-        setIsLoadingItems(false);
-      });
-
-    return () => {
-      isActive = false;
-    };
-  }, [user, hasProfile, profileCreated, profileItems]);
+    runWardrobeLoad();
+  }, [user, hasProfile, profileCreated, profileItems, isWardrobePending]);
 
   useEffect(() => {
     if (!sessionInitialized || !user || !(hasProfile || profileCreated)) {
