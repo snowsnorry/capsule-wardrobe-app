@@ -5,6 +5,7 @@ import {
   getRelaxedSemanticDistanceThreshold,
   getSemanticDistanceThreshold,
   normalizeSearchPayload,
+  resolveSearchEmbedding,
   serializeSearchRow
 } from "./searchStore.js";
 
@@ -117,4 +118,34 @@ test("getRelaxedSemanticDistanceThreshold adds fallback slack without exceeding 
     getRelaxedSemanticDistanceThreshold("relaxed linen shirt for spring office days with minimalistic tailoring and soft structure"),
     0.44
   );
+});
+
+test("resolveSearchEmbedding reuses persisted embedding when query is unchanged", async () => {
+  const embedding = [0.1, 0.2, 0.3];
+
+  await assert.doesNotReject(async () => {
+    const result = await resolveSearchEmbedding({
+      currentSearch: {
+        query: "blue blazer",
+        embedding
+      },
+      query: "blue blazer"
+    });
+
+    assert.equal(result, embedding);
+  });
+});
+
+test("resolveSearchEmbedding clears embedding for empty query", async () => {
+  await assert.doesNotReject(async () => {
+    const result = await resolveSearchEmbedding({
+      currentSearch: {
+        query: "blue blazer",
+        embedding: [0.1, 0.2, 0.3]
+      },
+      query: ""
+    });
+
+    assert.equal(result, null);
+  });
 });

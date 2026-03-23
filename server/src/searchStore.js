@@ -148,6 +148,25 @@ function serializeSearchRow(row = null) {
   };
 }
 
+function normalizeStoredEmbedding(value) {
+  return Array.isArray(value) && value.length > 0 ? value : null;
+}
+
+async function resolveSearchEmbedding({ currentSearch, query }) {
+  if (!query) {
+    return null;
+  }
+
+  const savedQuery = normalizeQuery(currentSearch?.query);
+  const savedEmbedding = normalizeStoredEmbedding(currentSearch?.embedding);
+
+  if (savedQuery === query && savedEmbedding) {
+    return savedEmbedding;
+  }
+
+  return getPromptEmbeddings(query);
+}
+
 function isAllowedNullableValue(value, allowedItems) {
   return value === null || allowedItems.includes(value);
 }
@@ -209,7 +228,10 @@ async function getSavedSearch(email) {
 
 async function runSavedSearch(email, payload = {}) {
   const normalized = normalizeSearchPayload(payload);
-  const options = await getSearchOptions(email);
+  const [options, currentSearch] = await Promise.all([
+    getSearchOptions(email),
+    getSearchByEmail(email)
+  ]);
 
   if (
     !isAllowedNullableValue(normalized.brand, options.brands) ||
@@ -237,9 +259,10 @@ async function runSavedSearch(email, payload = {}) {
     throw error;
   }
 
-  const embedding = normalized.query
-    ? await getPromptEmbeddings(normalized.query)
-    : null;
+  const embedding = await resolveSearchEmbedding({
+    currentSearch,
+    query: normalized.query
+  });
   const semanticDistanceThreshold = getSemanticDistanceThreshold(normalized.query);
 
   const savedSearch = await upsertSearchByEmail({
@@ -273,6 +296,7 @@ export {
   getSemanticDistanceThreshold,
   getRelaxedSemanticDistanceThreshold,
   normalizeSearchPayload,
+  resolveSearchEmbedding,
   serializeSearchRow,
   getSearchOptions,
   getSavedSearch,
