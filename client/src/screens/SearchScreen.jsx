@@ -129,6 +129,19 @@ function toggleSelection(value, selected) {
     : [...selected, value];
 }
 
+function translateComposition(value, locale) {
+  if (typeof value !== "string") {
+    return value;
+  }
+
+  return value
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map((part) => translateOption("materials", part.toLowerCase(), locale))
+    .join(", ");
+}
+
 function SearchSection({ title, hint, children }) {
   return (
     <Stack spacing={1.3}>
@@ -222,10 +235,10 @@ function ProductDetail({ item, title, t, locale, mobileBackAction = null }) {
     ["search.fields.pattern", item?.pattern ? translateOption("patterns", item.pattern, locale) : null],
     ["search.fields.finish", item?.finish],
     ["search.fields.neutral", typeof item?.isNeutral === "boolean" ? (item.isNeutral ? t("search.yes") : t("search.no")) : null],
-    ["search.fields.composition", item?.composition],
-    ["search.fields.silhouette", item?.silhouette],
-    ["search.fields.fit", item?.fit],
-    ["search.fields.closureType", Array.isArray(item?.closureType) ? item.closureType.join(", ") : null]
+    ["search.fields.composition", item?.composition ? translateComposition(item.composition, locale) : null],
+    ["search.fields.silhouette", item?.silhouette ? translateOption("silhouettes", item.silhouette, locale) : null],
+    ["search.fields.fit", item?.fit ? translateOption("fits", item.fit, locale) : null],
+    ["search.fields.closureType", Array.isArray(item?.closureType) ? item.closureType.map((value) => translateOption("closureTypes", value, locale)).join(", ") : null]
   ].filter(([, value]) => value !== null && value !== undefined && String(value).trim() !== "");
 
   const detailGroups = [
@@ -414,7 +427,18 @@ function SearchFiltersSidebar({
     value: item,
     label: translateOption("patterns", item, locale)
   }));
-  const basicTextItems = (items) => items.map((item) => ({ value: item, label: item }));
+  const silhouetteItems = options.silhouettes.map((item) => ({
+    value: item,
+    label: translateOption("silhouettes", item, locale)
+  }));
+  const fitItems = options.fits.map((item) => ({
+    value: item,
+    label: translateOption("fits", item, locale)
+  }));
+  const closureTypeItems = options.closureTypes.map((item) => ({
+    value: item,
+    label: translateOption("closureTypes", item, locale)
+  }));
 
   const sliderMin = options.priceRange.min ?? 0;
   const sliderMax = options.priceRange.max ?? 1000;
@@ -683,7 +707,7 @@ function SearchFiltersSidebar({
 
       <SearchSection title={t("search.filters.silhouette")}>
         <SingleSelectChips
-          items={basicTextItems(options.silhouettes)}
+          items={silhouetteItems}
           value={draftState.silhouette}
           onChange={(silhouette) => updateDraftState((current) => ({ ...current, silhouette, page: 1 }))}
           defaultLabel={t("search.notImportant")}
@@ -692,7 +716,7 @@ function SearchFiltersSidebar({
 
       <SearchSection title={t("search.filters.fit")}>
         <SingleSelectChips
-          items={basicTextItems(options.fits)}
+          items={fitItems}
           value={draftState.fit}
           onChange={(fit) => updateDraftState((current) => ({ ...current, fit, page: 1 }))}
           defaultLabel={t("search.notImportant")}
@@ -701,7 +725,7 @@ function SearchFiltersSidebar({
 
       <SearchSection title={t("search.filters.closureType")}>
         <SingleSelectChips
-          items={basicTextItems(options.closureTypes)}
+          items={closureTypeItems}
           value={draftState.closureType}
           onChange={(closureType) => updateDraftState((current) => ({ ...current, closureType, page: 1 }))}
           defaultLabel={t("search.notImportant")}
