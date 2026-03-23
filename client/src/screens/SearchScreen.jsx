@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Box,
   Button,
@@ -189,7 +189,7 @@ function MultiSelectChips({ items, values, onToggle, defaultLabel }) {
   );
 }
 
-function ProductDetail({ item, title, t, locale }) {
+function ProductDetail({ item, title, t, locale, mobileBackAction = null }) {
   const colorValues = Array.isArray(item?.colorBase) ? item.colorBase.filter(Boolean) : [];
   const detailRows = [
     ["search.fields.price", item?.price != null ? `${item.price}${item.currency ? ` ${item.currency}` : ""}` : null],
@@ -268,40 +268,57 @@ function ProductDetail({ item, title, t, locale }) {
       {item ? (
         <>
           <Box>
-            <Box
-              component="a"
-              href={item.url || "#"}
-              target="_blank"
-              rel="noreferrer"
-              sx={{
-                color: "#8f6f45",
-                textDecoration: "none",
-                display: "inline",
-                "&:hover": { textDecoration: "underline" }
-              }}
-            >
-              <Typography
-                component="span"
-                variant="h5"
+            <Box sx={{ position: "relative" }}>
+              {mobileBackAction ? (
+                <IconButton
+                  aria-label={t("search.back")}
+                  onClick={mobileBackAction}
+                  sx={{
+                    position: "absolute",
+                    top: -4,
+                    left: -8,
+                    zIndex: 1
+                  }}
+                >
+                  <ArrowBackRoundedIcon />
+                </IconButton>
+              ) : null}
+              <Box
+                component="a"
+                href={item.url || "#"}
+                target="_blank"
+                rel="noreferrer"
                 sx={{
-                  color: "inherit",
-                  display: "inline",
-                  overflowWrap: "anywhere"
+                  color: "#8f6f45",
+                  textDecoration: "none",
+                  display: "block",
+                  "&:hover": { textDecoration: "underline" }
                 }}
               >
-                {item.name || t("search.untitled")}
-              </Typography>
-              {item.url ? (
-                <OpenInNewRoundedIcon
+                <Typography
+                  component="span"
+                  variant="h5"
                   sx={{
-                    fontSize: 18,
                     color: "inherit",
-                    ml: 0.6,
-                    verticalAlign: "middle",
-                    transform: "translateY(-0.14em)"
+                    display: "block",
+                    overflowWrap: "anywhere",
+                    textIndent: mobileBackAction ? "40px" : 0
                   }}
-                />
-              ) : null}
+                >
+                  {item.name || t("search.untitled")}
+                  {item.url ? (
+                    <OpenInNewRoundedIcon
+                      sx={{
+                        fontSize: 18,
+                        color: "inherit",
+                        ml: 0.6,
+                        verticalAlign: "middle",
+                        transform: "translateY(-0.04em)"
+                      }}
+                    />
+                  ) : null}
+                </Typography>
+              </Box>
             </Box>
             {item.brand ? <Typography variant="h6">{item.brand}</Typography> : null}
             {item.category ? (
@@ -368,10 +385,12 @@ function ProductDetail({ item, title, t, locale }) {
 function SearchFiltersSidebar({
   options,
   draftState,
-  setDraftState,
+  onDraftStateChange,
   status,
   onApply,
-  onReset
+  onReset,
+  autoApply = false,
+  showApplyButton = true
 }) {
   const { t, locale } = useI18n();
   const brandItems = options.brands.map((item) => ({ value: item, label: item }));
@@ -404,11 +423,28 @@ function SearchFiltersSidebar({
     clampPriceValue(draftState.priceMaxDraft, sliderMin, sliderMax)
   ];
 
+  const updateDraftState = (updater, { submit = autoApply } = {}) => {
+    onDraftStateChange(updater, { submit });
+  };
+
   const handlePriceSliderChange = (_, nextValue) => {
     if (!Array.isArray(nextValue)) {
       return;
     }
-    setDraftState((current) => ({
+    updateDraftState((current) => ({
+      ...current,
+      priceEnabled: true,
+      priceMinDraft: nextValue[0],
+      priceMaxDraft: nextValue[1],
+      page: 1
+    }), { submit: false });
+  };
+
+  const handlePriceSliderCommit = (_, nextValue) => {
+    if (!Array.isArray(nextValue)) {
+      return;
+    }
+    updateDraftState((current) => ({
       ...current,
       priceEnabled: true,
       priceMinDraft: nextValue[0],
@@ -419,7 +455,7 @@ function SearchFiltersSidebar({
 
   const handlePriceInputChange = (field) => (event) => {
     const rawValue = event.target.value;
-    setDraftState((current) => {
+    updateDraftState((current) => {
       const nextState = {
         ...current,
         priceEnabled: true,
@@ -427,11 +463,11 @@ function SearchFiltersSidebar({
         page: 1
       };
       return nextState;
-    });
+    }, { submit: false });
   };
 
   const handlePriceInputBlur = (field) => () => {
-    setDraftState((current) => {
+    updateDraftState((current) => {
       const currentMin = clampPriceValue(current.priceMinDraft, sliderMin, sliderMax);
       const currentMax = clampPriceValue(current.priceMaxDraft, sliderMin, sliderMax);
       let nextMin = currentMin;
@@ -465,13 +501,22 @@ function SearchFiltersSidebar({
     });
   };
 
+  const handlePriceInputKeyDown = (field) => (event) => {
+    if (event.key !== "Enter") {
+      return;
+    }
+
+    event.preventDefault();
+    handlePriceInputBlur(field)();
+  };
+
   return (
     <Stack spacing={3.2} sx={{ minHeight: 0 }}>
       <SearchSection title={t("search.filters.brand")}>
         <SingleSelectChips
           items={brandItems}
           value={draftState.brand}
-          onChange={(brand) => setDraftState((current) => ({ ...current, brand, page: 1 }))}
+          onChange={(brand) => updateDraftState((current) => ({ ...current, brand, page: 1 }))}
           defaultLabel={t("search.notImportant")}
         />
       </SearchSection>
@@ -485,6 +530,7 @@ function SearchFiltersSidebar({
               max={sliderMax}
               step={1}
               onChange={handlePriceSliderChange}
+              onChangeCommitted={handlePriceSliderCommit}
               valueLabelDisplay="auto"
               sx={{
                 width: "100%",
@@ -500,6 +546,7 @@ function SearchFiltersSidebar({
               value={draftState.priceMinDraft}
               onChange={handlePriceInputChange("priceMinDraft")}
               onBlur={handlePriceInputBlur("priceMinDraft")}
+              onKeyDown={handlePriceInputKeyDown("priceMinDraft")}
               inputProps={{
                 inputMode: "numeric",
                 pattern: "[0-9]*",
@@ -514,6 +561,7 @@ function SearchFiltersSidebar({
               value={draftState.priceMaxDraft}
               onChange={handlePriceInputChange("priceMaxDraft")}
               onBlur={handlePriceInputBlur("priceMaxDraft")}
+              onKeyDown={handlePriceInputKeyDown("priceMaxDraft")}
               inputProps={{
                 inputMode: "numeric",
                 pattern: "[0-9]*",
@@ -525,7 +573,7 @@ function SearchFiltersSidebar({
               variant="outlined"
               color="inherit"
               onClick={() =>
-                setDraftState((current) => ({
+                updateDraftState((current) => ({
                   ...current,
                   priceEnabled: true,
                   priceMinDraft: sliderMin,
@@ -545,7 +593,7 @@ function SearchFiltersSidebar({
         <SingleSelectChips
           items={audienceItems}
           value={draftState.audience}
-          onChange={(audience) => setDraftState((current) => ({ ...current, audience, page: 1 }))}
+          onChange={(audience) => updateDraftState((current) => ({ ...current, audience, page: 1 }))}
           defaultLabel={t("search.notImportant")}
         />
       </SearchSection>
@@ -554,7 +602,7 @@ function SearchFiltersSidebar({
         <SingleSelectChips
           items={categoryItems}
           value={draftState.category}
-          onChange={(category) => setDraftState((current) => ({ ...current, category, page: 1 }))}
+          onChange={(category) => updateDraftState((current) => ({ ...current, category, page: 1 }))}
           defaultLabel={t("search.all")}
         />
       </SearchSection>
@@ -564,7 +612,7 @@ function SearchFiltersSidebar({
           items={seasonItems}
           values={draftState.season}
           defaultLabel={t("search.all")}
-          onToggle={(season) => setDraftState((current) => ({
+          onToggle={(season) => updateDraftState((current) => ({
             ...current,
             season: season === null ? [] : toggleSelection(season, current.season),
             page: 1
@@ -583,7 +631,7 @@ function SearchFiltersSidebar({
               label: translateOption("styles", item, locale)
             }))}
             value={draftState.formalityLevel}
-            onChange={(formalityLevel) => setDraftState((current) => ({ ...current, formalityLevel, page: 1 }))}
+            onChange={(formalityLevel) => updateDraftState((current) => ({ ...current, formalityLevel, page: 1 }))}
             defaultLabel={t("search.notImportant")}
           />
         </Stack>
@@ -597,7 +645,7 @@ function SearchFiltersSidebar({
               label: translateOption("styles", item, locale)
             }))}
             value={draftState.style}
-            onChange={(style) => setDraftState((current) => ({ ...current, style, page: 1 }))}
+            onChange={(style) => updateDraftState((current) => ({ ...current, style, page: 1 }))}
             defaultLabel={t("search.notImportant")}
           />
         </Stack>
@@ -608,7 +656,7 @@ function SearchFiltersSidebar({
           items={occasionItems}
           values={draftState.occasions}
           defaultLabel={t("search.notImportant")}
-          onToggle={(occasion) => setDraftState((current) => ({
+          onToggle={(occasion) => updateDraftState((current) => ({
             ...current,
             occasions: occasion === null ? [] : toggleSelection(occasion, current.occasions),
             page: 1
@@ -620,7 +668,7 @@ function SearchFiltersSidebar({
         <AccentColorChips
           options={options.colors}
           selectedValue={draftState.color}
-          onSelect={(color) => setDraftState((current) => ({ ...current, color, page: 1 }))}
+          onSelect={(color) => updateDraftState((current) => ({ ...current, color, page: 1 }))}
         />
       </SearchSection>
 
@@ -628,7 +676,7 @@ function SearchFiltersSidebar({
         <SingleSelectChips
           items={patternItems}
           value={draftState.pattern}
-          onChange={(pattern) => setDraftState((current) => ({ ...current, pattern, page: 1 }))}
+          onChange={(pattern) => updateDraftState((current) => ({ ...current, pattern, page: 1 }))}
           defaultLabel={t("search.notImportant")}
         />
       </SearchSection>
@@ -637,7 +685,7 @@ function SearchFiltersSidebar({
         <SingleSelectChips
           items={basicTextItems(options.silhouettes)}
           value={draftState.silhouette}
-          onChange={(silhouette) => setDraftState((current) => ({ ...current, silhouette, page: 1 }))}
+          onChange={(silhouette) => updateDraftState((current) => ({ ...current, silhouette, page: 1 }))}
           defaultLabel={t("search.notImportant")}
         />
       </SearchSection>
@@ -646,7 +694,7 @@ function SearchFiltersSidebar({
         <SingleSelectChips
           items={basicTextItems(options.fits)}
           value={draftState.fit}
-          onChange={(fit) => setDraftState((current) => ({ ...current, fit, page: 1 }))}
+          onChange={(fit) => updateDraftState((current) => ({ ...current, fit, page: 1 }))}
           defaultLabel={t("search.notImportant")}
         />
       </SearchSection>
@@ -655,15 +703,17 @@ function SearchFiltersSidebar({
         <SingleSelectChips
           items={basicTextItems(options.closureTypes)}
           value={draftState.closureType}
-          onChange={(closureType) => setDraftState((current) => ({ ...current, closureType, page: 1 }))}
+          onChange={(closureType) => updateDraftState((current) => ({ ...current, closureType, page: 1 }))}
           defaultLabel={t("search.notImportant")}
         />
       </SearchSection>
 
       <Stack direction="row" spacing={1.5}>
-        <Button variant="contained" onClick={onApply} disabled={status.loading}>
-          {t("filters.apply")}
-        </Button>
+        {showApplyButton ? (
+          <Button variant="contained" onClick={onApply} disabled={status.loading}>
+            {t("filters.apply")}
+          </Button>
+        ) : null}
         <Button variant="outlined" color="inherit" onClick={onReset} disabled={status.loading}>
           {t("filters.reset")}
         </Button>
@@ -689,10 +739,15 @@ function SearchScreen({ onNavigateApp }) {
   const [status, setStatus] = useState({ loading: true, error: "" });
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const draftStateRef = useRef(draftState);
   const formattedTotal = useMemo(
     () => new Intl.NumberFormat(locale).format(total),
     [locale, total]
   );
+
+  useEffect(() => {
+    draftStateRef.current = draftState;
+  }, [draftState]);
 
   useEffect(() => {
     let isActive = true;
@@ -785,6 +840,16 @@ function SearchScreen({ onNavigateApp }) {
     const nextState = { ...draftState, page };
     setDraftState(nextState);
     await performSearch(nextState);
+  };
+
+  const handleSidebarDraftStateChange = async (updater, { submit = false } = {}) => {
+    const nextState = typeof updater === "function" ? updater(draftStateRef.current) : updater;
+    draftStateRef.current = nextState;
+    setDraftState(nextState);
+
+    if (submit) {
+      await performSearch(nextState);
+    }
   };
 
   const header = (
@@ -931,7 +996,16 @@ function SearchScreen({ onNavigateApp }) {
           onChange={handleChangePage}
           shape="rounded"
           color="primary"
-          sx={{ alignSelf: "center" }}
+          siblingCount={isMobile ? 0 : 1}
+          boundaryCount={isMobile ? 1 : 2}
+          sx={{
+            alignSelf: "center",
+            maxWidth: "100%",
+            "& .MuiPagination-ul": {
+              flexWrap: "nowrap",
+              justifyContent: "center"
+            }
+          }}
         />
       ) : null}
     </Stack>
@@ -971,10 +1045,12 @@ function SearchScreen({ onNavigateApp }) {
               <SearchFiltersSidebar
                 options={options}
                 draftState={draftState}
-                setDraftState={setDraftState}
+                onDraftStateChange={handleSidebarDraftStateChange}
                 status={status}
                 onApply={handleSearchSubmit}
                 onReset={handleReset}
+                autoApply
+                showApplyButton={false}
               />
             </Box>
             <Box sx={{ gridColumn: "2 / 4" }}>{searchBar}</Box>
@@ -1003,7 +1079,7 @@ function SearchScreen({ onNavigateApp }) {
               <SearchFiltersSidebar
                 options={options}
                 draftState={draftState}
-                setDraftState={setDraftState}
+                onDraftStateChange={handleSidebarDraftStateChange}
                 status={status}
                 onApply={async () => {
                   await handleSearchSubmit();
@@ -1022,14 +1098,14 @@ function SearchScreen({ onNavigateApp }) {
       <Dialog fullScreen open={isDetailOpen} onClose={() => setIsDetailOpen(false)}>
         <DialogContent sx={{ px: 3, py: 3 }}>
           <Stack spacing={2.5} sx={{ minHeight: "100%" }}>
-            <Stack direction="row" alignItems="center" spacing={1}>
-              <IconButton aria-label={t("search.back")} onClick={() => setIsDetailOpen(false)}>
-                <ArrowBackRoundedIcon />
-              </IconButton>
-              <Typography variant="h6">{t("search.productCard")}</Typography>
-            </Stack>
             <Box sx={{ minHeight: 0, overflowY: "auto" }}>
-              <ProductDetail item={selectedItem} title={t("search.productCard")} t={t} locale={locale} />
+              <ProductDetail
+                item={selectedItem}
+                title={t("search.productCard")}
+                t={t}
+                locale={locale}
+                mobileBackAction={() => setIsDetailOpen(false)}
+              />
             </Box>
           </Stack>
         </DialogContent>
