@@ -30,6 +30,7 @@ function MainScreen({
   onRefreshItems,
   items,
   isLoadingItems,
+  showAdditionalItemPlaceholder,
   styleOptions,
   occasionOptions,
   seasonOptions,
@@ -199,10 +200,13 @@ function MainScreen({
                   },
                   gap: 2.5
                 }}
-              >
+                >
                 {sortedItems.map((item) => (
                   <ClothingCard key={item.id || item.url} item={item} />
                 ))}
+                {showAdditionalItemPlaceholder ? (
+                  <ClothingGridPlaceholder count={1} inline />
+                ) : null}
               </Box>
             )}
           </Stack>

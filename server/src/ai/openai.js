@@ -29,6 +29,29 @@ function buildCapsuleSchema(categories) {
   };
 }
 
+function buildSwimwearSchema() {
+  return {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      _reasoning: {
+        type: "string",
+        description: "Briefly explain which bottom you matched the swimwear to and why."
+      },
+      swimwear: {
+        type: "array",
+        description: "Either one swimsuit id or two ids that form a swimwear top and bottom set.",
+        items: {
+          type: "string"
+        },
+        minItems: 1,
+        maxItems: 2
+      }
+    },
+    required: ["_reasoning", "swimwear"]
+  };
+}
+
 function buildJsonObjectFormat(userProfile = null) {
   return {
     type: "json_schema",
@@ -46,6 +69,16 @@ function buildJsonObjectFormat(userProfile = null) {
       },
       required: ["_reasoning", "capsule"]
     },
+    strict: false
+  };
+}
+
+function buildCustomJsonObjectFormat(name, description, schema) {
+  return {
+    type: "json_schema",
+    name,
+    description,
+    schema,
     strict: false
   };
 }
@@ -100,7 +133,7 @@ async function getPromptEmbeddings(prompt) {
   return embedding;
 }
 
-async function generateJsonWithLlm(prompt, userProfile = null) {
+async function generateJsonWithLlm(prompt, { userProfile = null, format = null } = {}) {
   const client = getOpenAiClient();
   const { system, user } = splitSystemAndUserPrompt(prompt);
 
@@ -113,7 +146,7 @@ async function generateJsonWithLlm(prompt, userProfile = null) {
     // top_p: 0.9,
     max_output_tokens: 6000,
     text: {
-      format: buildJsonObjectFormat(userProfile)
+      format: format || buildJsonObjectFormat(userProfile)
     }
   });
 
@@ -135,4 +168,10 @@ async function generateJsonWithLlm(prompt, userProfile = null) {
   return { response, json };
 }
 
-export { generateJsonWithLlm, getPromptEmbeddings, buildCapsuleSchema };
+export {
+  generateJsonWithLlm,
+  getPromptEmbeddings,
+  buildCapsuleSchema,
+  buildSwimwearSchema,
+  buildCustomJsonObjectFormat
+};

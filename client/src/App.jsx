@@ -112,6 +112,7 @@ function App() {
   const [profileItems, setProfileItems] = useState(null);
   const [isLoadingItems, setIsLoadingItems] = useState(false);
   const [isWardrobePending, setIsWardrobePending] = useState(false);
+  const [hasPendingAdditionalItems, setHasPendingAdditionalItems] = useState(false);
   const [wardrobePollAfterMs, setWardrobePollAfterMs] = useState(WARDROBE_POLL_AFTER_MS_DEFAULT);
   const isMountedRef = useRef(true);
   const wardrobeRequestIdRef = useRef(0);
@@ -332,6 +333,7 @@ function App() {
       setProfileItems(null);
       setIsLoadingItems(false);
       setIsWardrobePending(false);
+      setHasPendingAdditionalItems(false);
       setWardrobePollAfterMs(WARDROBE_POLL_AFTER_MS_DEFAULT);
       clearProfileOptionsCache();
       setStyleOptions(FALLBACK_STYLE_OPTIONS);
@@ -387,6 +389,7 @@ function App() {
       setCurrentView("main");
       setProfileItems(null);
       setIsWardrobePending(false);
+      setHasPendingAdditionalItems(false);
       setStatus({ loading: false, error: "", infoKey: "onboarding.completedHint", infoParams: null });
     } catch (error) {
       setStatus({ loading: false, error: resolveErrorMessage(error), infoKey: "", infoParams: null });
@@ -408,6 +411,7 @@ function App() {
       );
       setProfileItems(null);
       setIsWardrobePending(false);
+      setHasPendingAdditionalItems(false);
       setStatus({ loading: false, error: "", infoKey: "profile.updated", infoParams: null });
     } catch (error) {
       setStatus({ loading: false, error: resolveErrorMessage(error), infoKey: "", infoParams: null });
@@ -468,6 +472,7 @@ function App() {
   const handleWardrobeError = () => {
     setProfileItems([]);
     setIsWardrobePending(false);
+    setHasPendingAdditionalItems(false);
     setWardrobePollAfterMs(WARDROBE_POLL_AFTER_MS_DEFAULT);
     setIsLoadingItems(false);
   };
@@ -490,9 +495,12 @@ function App() {
         if (result?.status === "pending") {
           const nextPollAfterMs =
             Number(result?.pollAfterMs) > 0 ? Number(result.pollAfterMs) : WARDROBE_POLL_AFTER_MS_DEFAULT;
+          const isPendingExtras = Boolean(result?.hasPendingAdditionalItems);
           setProfileItems(items);
           setIsWardrobePending(true);
+          setHasPendingAdditionalItems(isPendingExtras);
           setWardrobePollAfterMs(nextPollAfterMs);
+          setIsLoadingItems(items.length === 0 && !isPendingExtras);
 
           await new Promise((resolve) => setTimeout(resolve, nextPollAfterMs));
           if (!isMountedRef.current || requestId !== wardrobeRequestIdRef.current) {
@@ -506,6 +514,7 @@ function App() {
         logWardrobeReasoning(result?.reasoning);
         setProfileItems(items);
         setIsWardrobePending(false);
+        setHasPendingAdditionalItems(false);
         setWardrobePollAfterMs(WARDROBE_POLL_AFTER_MS_DEFAULT);
         setIsLoadingItems(false);
         return;
@@ -605,6 +614,7 @@ function App() {
           onRefreshItems={handleRefreshWardrobe}
           items={profileItems || []}
           isLoadingItems={isLoadingItems}
+          showAdditionalItemPlaceholder={hasPendingAdditionalItems}
           styleOptions={styleOptions}
           occasionOptions={occasionOptions}
           seasonOptions={orderedSeasonOptions}

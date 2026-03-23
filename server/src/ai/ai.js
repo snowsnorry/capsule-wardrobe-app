@@ -4,6 +4,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { generateJsonWithLlm } from "./openai.js";
 import {  getPromptEmbeddings, getWardrobePrompt } from "./voyageai.js";
 import { getCapsuleCategories } from "./categories.js";
+import { generateSwimwearAddition, shouldGenerateSwimwear } from "./swimwear.js";
 const PROMPT_TEMPLATE = readFileSync(new URL("../templates/prompt.txt", import.meta.url), "utf8");
 const WARDROBE_POLL_AFTER_MS = 2000;
 const COMPLETED_JOB_TTL_MS = 5 * 60 * 1000;
@@ -15,7 +16,9 @@ function getStoredWardrobePayload(profile) {
     return {
       items: stored,
       reasoning: null,
-      rawSelectionText: null
+      rawSelectionText: null,
+      swimwearReasoning: null,
+      swimwearRawSelectionText: null
     };
   }
 
@@ -30,7 +33,29 @@ function getStoredWardrobePayload(profile) {
       : null,
     rawSelectionText: typeof stored.rawSelectionText === "string" && stored.rawSelectionText.trim().length > 0
       ? stored.rawSelectionText.trim()
+      : null,
+    swimwearReasoning: typeof stored.swimwearReasoning === "string" && stored.swimwearReasoning.trim().length > 0
+      ? stored.swimwearReasoning.trim()
+      : null,
+    swimwearRawSelectionText: typeof stored.swimwearRawSelectionText === "string" && stored.swimwearRawSelectionText.trim().length > 0
+      ? stored.swimwearRawSelectionText.trim()
       : null
+  };
+}
+
+function buildWardrobePayload({
+  items,
+  reasoning = null,
+  rawSelectionText = null,
+  swimwearReasoning = null,
+  swimwearRawSelectionText = null
+}) {
+  return {
+    items,
+    reasoning,
+    rawSelectionText,
+    swimwearReasoning,
+    swimwearRawSelectionText
   };
 }
 
@@ -202,7 +227,33 @@ function getWardrobeSelectionPrompt(userProfile = null, items = [], categories =
     .replace("{{num_items}}", Object.entries(categories).reduce((sum, [, count]) => sum + count, 0));
 }
 
-async function callWardrobeAi(userProfile = null) {
+function toWardrobeUiItem(item) {
+  return {
+    id: item?.id ?? null,
+    url: item?.url ?? "",
+    name: item?.name ?? "",
+    category: item?.category ?? "",
+    image_url: item?.image_url ?? ""
+  };
+}
+
+function appendUniqueWardrobeItems(items, extraItems) {
+  const result = [];
+  const seenKeys = new Set();
+
+  for (const item of [...items, ...extraItems]) {
+    const key = String(item?.id || item?.url || `${item?.category}:${item?.name}`);
+    if (!key || seenKeys.has(key)) {
+      continue;
+    }
+    seenKeys.add(key);
+    result.push(item);
+  }
+
+  return result;
+}
+
+async function generateCapsuleWardrobe(userProfile = null) {
   const sql = getSqlClient();
   const prompt = getWardrobePrompt(userProfile);
   const promptEmbeddings = await getPromptEmbeddings(prompt);
@@ -354,7 +405,9 @@ async function callWardrobeAi(userProfile = null) {
 
   const selectionPrompt = getWardrobeSelectionPrompt(userProfile, normalizedItems, capsuleCategories);
   writeFileSync(new URL("../../../last_prompt.txt", import.meta.url), selectionPrompt, "utf8");
-  const { response: selectionResponse, json: parsedSelection } = await generateJsonWithLlm(selectionPrompt, userProfile);
+  const { response: selectionResponse, json: parsedSelection } = await generateJsonWithLlm(selectionPrompt, {
+    userProfile
+  });
 
   console.log("[wardrobe-ai][selected-json]", JSON.stringify(parsedSelection));
   if (!parsedSelection?.capsule || typeof parsedSelection.capsule !== "object") {
@@ -386,9 +439,9 @@ async function callWardrobeAi(userProfile = null) {
   }
 
   return {
-    items: balancedItems.map(({ url, name, category, image_url }) => {
-      return { url, name, category, image_url };
-    }),
+    items: balancedItems.map(toWardrobeUiItem),
+    selectedItems: balancedItems,
+    promptEmbeddings,
     rawSelectionText: typeof selectionResponse?.output_text === "string" && selectionResponse.output_text.trim().length > 0
       ? selectionResponse.output_text.trim()
       : null,
@@ -433,29 +486,62 @@ function startWardrobeJob(email, profile) {
   const job = {
     status: "pending",
     updatedAt: Date.now(),
-    promise: null
+    promise: null,
+    phase: "capsule",
+    result: null
   };
   wardrobeJobs.set(email, job);
 
   job.promise = (async () => {
     try {
-      const wardrobe = await callWardrobeAi(profile);
+      const wardrobe = await generateCapsuleWardrobe(profile);
       const items = wardrobe.items;
 
       if (items.length === 0) {
         throw new Error("AI response has no valid wardrobe items");
       }
 
-      await updateProfileItems(email, {
+      const storedCapsule = buildWardrobePayload({
         items,
         reasoning: wardrobe.reasoning,
         rawSelectionText: wardrobe.rawSelectionText
       });
+      await updateProfileItems(email, storedCapsule);
+
+      job.result = storedCapsule;
+
+      if (shouldGenerateSwimwear(profile)) {
+        job.phase = "extras";
+        job.updatedAt = Date.now();
+
+        try {
+          const swimwear = await generateSwimwearAddition({
+            userProfile: profile,
+            selectedCapsuleItems: wardrobe.selectedItems,
+            promptEmbeddings: wardrobe.promptEmbeddings
+          });
+          const finalItems = appendUniqueWardrobeItems(items, swimwear.items);
+          const finalPayload = buildWardrobePayload({
+            items: finalItems,
+            reasoning: wardrobe.reasoning,
+            rawSelectionText: wardrobe.rawSelectionText,
+            swimwearReasoning: swimwear.reasoning,
+            swimwearRawSelectionText: swimwear.rawSelectionText
+          });
+
+          await updateProfileItems(email, finalPayload);
+          job.result = finalPayload;
+        } catch (error) {
+          console.error("[wardrobe-ai][swimwear]", error);
+        }
+      }
+
       job.status = "completed";
+      job.phase = "completed";
       job.updatedAt = Date.now();
-      job.result = wardrobe;
     } catch (error) {
       job.status = "failed";
+      job.phase = "failed";
       job.updatedAt = Date.now();
       job.error = error;
       console.error("[wardrobe-ai]", error);
@@ -475,13 +561,29 @@ async function getWardrobeItems(req, res) {
     const storedWardrobe = getStoredWardrobePayload(profile);
     const activeJob = getWardrobeJob(email);
 
+    if (activeJob?.status === "pending" && activeJob.phase === "extras" && storedWardrobe?.items?.length) {
+      return res.status(202).json({
+        ok: true,
+        status: "pending",
+        pendingStage: "extras",
+        hasPendingAdditionalItems: true,
+        items: storedWardrobe.items,
+        reasoning: storedWardrobe.reasoning,
+        rawSelectionText: storedWardrobe.rawSelectionText,
+        swimwearReasoning: storedWardrobe.swimwearReasoning,
+        pollAfterMs: WARDROBE_POLL_AFTER_MS
+      });
+    }
+
     if (!forceRefresh && storedWardrobe?.items?.length) {
       return res.json({
         ok: true,
         status: "ready",
         items: storedWardrobe.items,
         reasoning: storedWardrobe.reasoning,
-        rawSelectionText: storedWardrobe.rawSelectionText
+        rawSelectionText: storedWardrobe.rawSelectionText,
+        swimwearReasoning: storedWardrobe.swimwearReasoning,
+        hasPendingAdditionalItems: false
       });
     }
 
@@ -489,7 +591,12 @@ async function getWardrobeItems(req, res) {
       return res.status(202).json({
         ok: true,
         status: "pending",
+        pendingStage: activeJob.phase === "extras" ? "extras" : "capsule",
+        hasPendingAdditionalItems: activeJob.phase === "extras",
         items: storedWardrobe?.items || [],
+        reasoning: storedWardrobe?.reasoning || null,
+        rawSelectionText: storedWardrobe?.rawSelectionText || null,
+        swimwearReasoning: storedWardrobe?.swimwearReasoning || null,
         pollAfterMs: WARDROBE_POLL_AFTER_MS
       });
     }
@@ -515,6 +622,8 @@ async function getWardrobeItems(req, res) {
     return res.status(202).json({
       ok: true,
       status: "pending",
+      pendingStage: "capsule",
+      hasPendingAdditionalItems: false,
       items: [],
       pollAfterMs: WARDROBE_POLL_AFTER_MS
     });
