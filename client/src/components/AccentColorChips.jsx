@@ -2,19 +2,25 @@ import { Box, Chip, Stack } from "@mui/material";
 import { useI18n } from "../i18n/useI18n.js";
 import { translateOption } from "../i18n/index.js";
 
-const ACCENT_COLOR_SWATCHES = {
-  black: "#1f2933",
-  white: "#f8f5ef",
-  gray: "#94a3b8",
-  beige: "#d6c1a3",
-  brown: "#8b5e3c",
-  blue: "#4f83cc",
-  green: "#4d8b55",
-  red: "#c84c4c",
-  pink: "#d88aa6",
-  yellow: "#d9b43b",
-  purple: "#8a5fbf",
-  orange: "#d97a2b"
+const ACCENT_COLOR_SWATCH_STYLES = {
+  black: { bgcolor: "#1f2933" },
+  white: { bgcolor: "#f8f5ef" },
+  grey: { bgcolor: "#94a3b8" },
+  beige: { bgcolor: "#d6c1a3" },
+  brown: { bgcolor: "#8b5e3c" },
+  blue: { bgcolor: "#4f83cc" },
+  green: { bgcolor: "#4d8b55" },
+  red: { bgcolor: "#c84c4c" },
+  pink: { bgcolor: "#d88aa6" },
+  yellow: { bgcolor: "#d9b43b" },
+  purple: { bgcolor: "#8a5fbf" },
+  orange: { bgcolor: "#d97a2b" },
+  metallic: {
+    background: "linear-gradient(135deg, #f3f4f6 0%, #cbd5e1 35%, #94a3b8 55%, #e5e7eb 100%)"
+  },
+  multicolor: {
+    background: "linear-gradient(135deg, #ff6b6b 0%, #ffd166 25%, #06d6a0 50%, #4f83cc 75%, #b5179e 100%)"
+  }
 };
 
 function AccentColorChips({
@@ -62,9 +68,9 @@ function AccentColorChips({
                   width: 12,
                   height: 12,
                   borderRadius: "999px",
-                  bgcolor: ACCENT_COLOR_SWATCHES[item] || "transparent",
-                  border: item === "white" ? "1px solid rgba(31, 41, 51, 0.24)" : "none",
-                  boxSizing: "border-box"
+                  boxSizing: "border-box",
+                  border: "1px solid #999",
+                  ...ACCENT_COLOR_SWATCH_STYLES[item]
                 }}
               />
               <span>{translateOption("accentColors", item, locale)}</span>

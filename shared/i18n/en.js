@@ -78,7 +78,7 @@ const en = {
     accentColors: {
       black: "Black",
       white: "White",
-      gray: "Gray",
+      grey: "Grey",
       beige: "Beige",
       brown: "Brown",
       blue: "Blue",
@@ -87,7 +87,9 @@ const en = {
       pink: "Pink",
       yellow: "Yellow",
       purple: "Purple",
-      orange: "Orange"
+      orange: "Orange",
+      metallic: "Metallic",
+      multicolor: "Multicolor"
     },
     patterns: {
       abstract: "Abstract",

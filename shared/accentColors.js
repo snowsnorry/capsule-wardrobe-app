@@ -1,7 +1,7 @@
 const ACCENT_COLOR_OPTIONS = [
   "black",
   "white",
-  "gray",
+  "grey",
   "beige",
   "brown",
   "blue",

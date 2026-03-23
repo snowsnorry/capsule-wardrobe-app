@@ -78,7 +78,7 @@ const ru = {
     accentColors: {
       black: "Черный",
       white: "Белый",
-      gray: "Серый",
+      grey: "Серый",
       beige: "Бежевый",
       brown: "Коричневый",
       blue: "Синий",
@@ -87,7 +87,9 @@ const ru = {
       pink: "Розовый",
       yellow: "Желтый",
       purple: "Фиолетовый",
-      orange: "Оранжевый"
+      orange: "Оранжевый",
+      metallic: "Металлик",
+      multicolor: "Мультиколор"
     },
     patterns: {
       abstract: "Абстракция",
