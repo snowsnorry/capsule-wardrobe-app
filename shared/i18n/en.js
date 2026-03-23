@@ -172,6 +172,7 @@ const en = {
     title: "Search",
     placeholder: "Search in natural language, for example: relaxed blue linen shirt for summer office days",
     cta: "Search",
+    clear: "Clear search",
     productCard: "Product card",
     detailEmpty: "Select a product to inspect its details.",
     empty: "No products matched this search.",

@@ -16,6 +16,7 @@ import {
   Typography
 } from "@mui/material";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
+import ClearRoundedIcon from "@mui/icons-material/ClearRounded";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import TuneRoundedIcon from "@mui/icons-material/TuneRounded";
 import OpenInNewRoundedIcon from "@mui/icons-material/OpenInNewRounded";
@@ -670,6 +671,10 @@ function SearchScreen({ onNavigateApp }) {
   const [status, setStatus] = useState({ loading: true, error: "" });
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const formattedTotal = useMemo(
+    () => new Intl.NumberFormat(locale).format(total),
+    [locale, total]
+  );
 
   useEffect(() => {
     let isActive = true;
@@ -813,7 +818,19 @@ function SearchScreen({ onNavigateApp }) {
             <InputAdornment position="start">
               <SearchRoundedIcon sx={{ color: "text.secondary" }} />
             </InputAdornment>
-          )
+          ),
+          endAdornment: draftState.query ? (
+            <InputAdornment position="end">
+              <IconButton
+                edge="end"
+                aria-label={t("search.clear")}
+                onClick={() => setDraftState((current) => ({ ...current, query: "" }))}
+                size="small"
+              >
+                <ClearRoundedIcon fontSize="small" />
+              </IconButton>
+            </InputAdornment>
+          ) : null
         }}
       />
       <Stack direction="row" spacing={1}>
@@ -833,7 +850,7 @@ function SearchScreen({ onNavigateApp }) {
     <Stack spacing={2} sx={{ minHeight: 0, height: "100%" }}>
       <Stack direction="row" justifyContent="space-between" alignItems="center">
         <Typography variant="overline" color="text.secondary">
-          {t("search.resultsCount", { count: total })}
+          {t("search.resultsCount", { count: formattedTotal })}
         </Typography>
         {status.loading ? <CircularProgress size={18} /> : null}
       </Stack>
