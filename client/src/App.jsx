@@ -21,6 +21,7 @@ import MainScreen from "./screens/MainScreen.jsx";
 import OnboardingScreen from "./screens/OnboardingScreen.jsx";
 import ProfileScreen from "./screens/ProfileScreen.jsx";
 import SignInScreen from "./screens/SignInScreen.jsx";
+import SearchScreen from "./screens/SearchScreen.jsx";
 import { useI18n } from "./i18n/useI18n.js";
 import { ACCENT_COLOR_OPTIONS } from "../../shared/accentColors.js";
 
@@ -51,6 +52,10 @@ const FALLBACK_ACCENT_COLOR_OPTIONS = ACCENT_COLOR_OPTIONS;
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
 const SEASON_DISPLAY_ORDER = ["spring", "summer", "autumn", "winter"];
 const WARDROBE_POLL_AFTER_MS_DEFAULT = 2000;
+
+function getAppRoute(pathname = "/") {
+  return pathname === "/search" || pathname === "/search/" ? "search" : "capsule";
+}
 
 function sortSeasonOptions(items) {
   return [...items].sort((left, right) => {
@@ -114,6 +119,9 @@ function App() {
   const [isWardrobePending, setIsWardrobePending] = useState(false);
   const [hasPendingAdditionalItems, setHasPendingAdditionalItems] = useState(false);
   const [wardrobePollAfterMs, setWardrobePollAfterMs] = useState(WARDROBE_POLL_AFTER_MS_DEFAULT);
+  const [appRoute, setAppRoute] = useState(() => (
+    typeof window === "undefined" ? "capsule" : getAppRoute(window.location.pathname)
+  ));
   const isMountedRef = useRef(true);
   const wardrobeRequestIdRef = useRef(0);
 
@@ -124,6 +132,21 @@ function App() {
     isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return undefined;
+    }
+
+    const handlePopState = () => {
+      setAppRoute(getAppRoute(window.location.pathname));
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
     };
   }, []);
 
@@ -341,6 +364,10 @@ function App() {
       setSeasonOptions([]);
       setAudienceOptions([]);
       setPatternOptions([]);
+      if (typeof window !== "undefined" && window.location.pathname !== "/") {
+        window.history.replaceState({}, "", "/");
+      }
+      setAppRoute("capsule");
       setStatus({ loading: false, error: "", infoKey: "auth.signedOut", infoParams: null });
     } catch (error) {
       setStatus({ loading: false, error: resolveErrorMessage(error), infoKey: "", infoParams: null });
@@ -442,6 +469,17 @@ function App() {
     setCurrentView("main");
   };
 
+  const handleNavigateApp = (nextApp) => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const nextPath = nextApp === "search" ? "/search" : "/";
+    if (window.location.pathname !== nextPath) {
+      window.history.pushState({}, "", nextPath);
+    }
+    setAppRoute(getAppRoute(nextPath));
+  };
+
   const profileKey = JSON.stringify({
     formalityLevel: selectedFormalityLevel,
     style: selectedStyle,
@@ -452,9 +490,10 @@ function App() {
     pattern: selectedPattern
   });
   const isSignInView = !user;
-  const isMainScreenView = Boolean(user && (hasProfile || profileCreated) && currentView === "main");
+  const isSearchView = Boolean(user && (hasProfile || profileCreated) && appRoute === "search");
+  const isMainScreenView = Boolean(user && (hasProfile || profileCreated) && currentView === "main" && appRoute !== "search");
   const isOnboardingView = Boolean(user && !hasProfile && !profileCreated);
-  const hasBrandedPanelHeader = isSignInView || isMainScreenView || isOnboardingView;
+  const hasBrandedPanelHeader = isSignInView || isMainScreenView || isOnboardingView || isSearchView;
 
   const loadWardrobeItems = async ({ force = false } = {}) => {
     const { fetchWardrobeItems } = await import("./api/wardrobe.js");
@@ -574,6 +613,10 @@ function App() {
     }
 
     if (hasProfile || profileCreated) {
+      if (appRoute === "search") {
+        return <SearchScreen onNavigateApp={handleNavigateApp} />;
+      }
+
       if (currentView === "profile") {
         return (
           <ProfileScreen
@@ -640,6 +683,7 @@ function App() {
           onSelectPattern={setSelectedPattern}
           onApplyFilters={handleSaveProfile}
           onResetFilters={handleResetProfileFilters}
+          onNavigateApp={handleNavigateApp}
         />
       );
     }
@@ -687,7 +731,7 @@ function App() {
       }}
     >
       <Container
-        maxWidth={isMainScreenView ? false : "lg"}
+        maxWidth={isMainScreenView || isSearchView ? false : "lg"}
         sx={{
           position: "relative",
           zIndex: 1,
@@ -696,8 +740,8 @@ function App() {
           gridTemplateColumns: user ? "1fr" : { xs: "1fr", md: "1.2fr 1fr" },
           alignItems: "center",
           py: { xs: 0, md: "24px" },
-          px: isMainScreenView ? { xs: 0, md: 4, xl: 5 } : { xs: 0, md: 3 },
-          maxWidth: isMainScreenView ? "1680px" : undefined,
+          px: isMainScreenView || isSearchView ? { xs: 0, md: 4, xl: 5 } : { xs: 0, md: 3 },
+          maxWidth: isMainScreenView || isSearchView ? "1680px" : undefined,
           minHeight: "100vh",
           height: "100%",
           boxSizing: "border-box"

@@ -1,5 +1,7 @@
 import { neon } from "@neondatabase/serverless";
 
+const SEARCH_PAGE_SIZE = 50;
+
 function getSqlClient() {
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) {
@@ -71,6 +73,34 @@ async function ensureProfilesTable() {
   `;
 }
 
+async function ensureSearchTable() {
+  const sql = getSqlClient();
+  await sql`
+    create table if not exists search (
+      email text primary key,
+      query text null,
+      embedding jsonb null,
+      brand text null,
+      price_min double precision null,
+      price_max double precision null,
+      audience text null,
+      category text null,
+      season text[] not null default '{}'::text[],
+      formality_level text null,
+      style text null,
+      occasions text[] not null default '{}'::text[],
+      color text null,
+      pattern text null,
+      silhouette text null,
+      fit text null,
+      closure_type text null,
+      page integer not null default 1,
+      created_at timestamptz not null default now(),
+      updated_at timestamptz not null default now()
+    )
+  `;
+}
+
 async function ensureAuthTables() {
   await ensureLoginCodesTable();
   await ensureSessionsTable();
@@ -79,6 +109,7 @@ async function ensureAuthTables() {
 async function ensureTables() {
   await ensureAuthTables();
   await ensureProfilesTable();
+  await ensureSearchTable();
 }
 
 async function pruneLoginCodes() {
@@ -262,6 +293,348 @@ async function getDistinctProductPatterns() {
     order by value asc
   `;
   return rows.map((row) => row.value).filter(Boolean);
+}
+
+async function getDistinctProductBrands() {
+  const sql = getSqlClient();
+  const rows = await sql`
+    select distinct lower(trim(brand)) as value
+    from products
+    where nullif(trim(brand), '') is not null
+    order by value asc
+  `;
+  return rows.map((row) => row.value).filter(Boolean);
+}
+
+async function getDistinctProductCategories() {
+  const sql = getSqlClient();
+  const rows = await sql`
+    select distinct lower(trim(category)) as value
+    from products
+    where nullif(trim(category), '') is not null
+    order by value asc
+  `;
+  return rows.map((row) => row.value).filter(Boolean);
+}
+
+async function getDistinctProductSilhouettes() {
+  const sql = getSqlClient();
+  const rows = await sql`
+    select distinct lower(trim(silhouette)) as value
+    from products
+    where nullif(trim(silhouette), '') is not null
+    order by value asc
+  `;
+  return rows.map((row) => row.value).filter(Boolean);
+}
+
+async function getDistinctProductFits() {
+  const sql = getSqlClient();
+  const rows = await sql`
+    select distinct lower(trim(fit)) as value
+    from products
+    where nullif(trim(fit), '') is not null
+    order by value asc
+  `;
+  return rows.map((row) => row.value).filter(Boolean);
+}
+
+async function getDistinctProductClosureTypes() {
+  const sql = getSqlClient();
+  const rows = await sql`
+    select distinct lower(trim(value)) as value
+    from products
+    cross join unnest(coalesce(closure_type, array[]::text[])) as value
+    where nullif(trim(value), '') is not null
+    order by value asc
+  `;
+  return rows.map((row) => row.value).filter(Boolean);
+}
+
+async function getDistinctProductColors() {
+  const sql = getSqlClient();
+  const rows = await sql`
+    select distinct lower(trim(value)) as value
+    from products
+    cross join unnest(coalesce(color_base, array[]::text[])) as value
+    where nullif(trim(value), '') is not null
+    order by value asc
+  `;
+  return rows.map((row) => row.value).filter(Boolean);
+}
+
+async function getProductPriceRange() {
+  const sql = getSqlClient();
+  const [row] = await sql`
+    select
+      min(price) as min,
+      max(price) as max
+    from products
+    where price is not null
+  `;
+  return {
+    min: row?.min === null || row?.min === undefined ? null : Number(row.min),
+    max: row?.max === null || row?.max === undefined ? null : Number(row.max)
+  };
+}
+
+async function getSearchByEmail(email) {
+  const sql = getSqlClient();
+  const [row] = await sql`
+    select
+      email,
+      query,
+      embedding,
+      brand,
+      price_min as "priceMin",
+      price_max as "priceMax",
+      audience,
+      category,
+      season,
+      formality_level as "formalityLevel",
+      style,
+      occasions,
+      color,
+      pattern,
+      silhouette,
+      fit,
+      closure_type as "closureType",
+      page,
+      created_at as "createdAt",
+      updated_at as "updatedAt"
+    from search
+    where email = ${email}
+    limit 1
+  `;
+  return row || null;
+}
+
+async function upsertSearchByEmail({
+  email,
+  query,
+  embedding,
+  brand,
+  priceMin,
+  priceMax,
+  audience,
+  category,
+  season,
+  formalityLevel,
+  style,
+  occasions,
+  color,
+  pattern,
+  silhouette,
+  fit,
+  closureType,
+  page
+}) {
+  const sql = getSqlClient();
+  const [row] = await sql`
+    insert into search (
+      email,
+      query,
+      embedding,
+      brand,
+      price_min,
+      price_max,
+      audience,
+      category,
+      season,
+      formality_level,
+      style,
+      occasions,
+      color,
+      pattern,
+      silhouette,
+      fit,
+      closure_type,
+      page
+    )
+    values (
+      ${email},
+      ${query},
+      ${embedding === null ? null : JSON.stringify(embedding)},
+      ${brand},
+      ${priceMin},
+      ${priceMax},
+      ${audience},
+      ${category},
+      ${season},
+      ${formalityLevel},
+      ${style},
+      ${occasions},
+      ${color},
+      ${pattern},
+      ${silhouette},
+      ${fit},
+      ${closureType},
+      ${page}
+    )
+    on conflict (email)
+    do update set
+      query = excluded.query,
+      embedding = excluded.embedding,
+      brand = excluded.brand,
+      price_min = excluded.price_min,
+      price_max = excluded.price_max,
+      audience = excluded.audience,
+      category = excluded.category,
+      season = excluded.season,
+      formality_level = excluded.formality_level,
+      style = excluded.style,
+      occasions = excluded.occasions,
+      color = excluded.color,
+      pattern = excluded.pattern,
+      silhouette = excluded.silhouette,
+      fit = excluded.fit,
+      closure_type = excluded.closure_type,
+      page = excluded.page,
+      updated_at = now()
+    returning
+      email,
+      query,
+      embedding,
+      brand,
+      price_min as "priceMin",
+      price_max as "priceMax",
+      audience,
+      category,
+      season,
+      formality_level as "formalityLevel",
+      style,
+      occasions,
+      color,
+      pattern,
+      silhouette,
+      fit,
+      closure_type as "closureType",
+      page,
+      created_at as "createdAt",
+      updated_at as "updatedAt"
+  `;
+  return row || null;
+}
+
+async function searchProducts({
+  queryEmbedding = null,
+  semanticDistanceThreshold = null,
+  brand = null,
+  priceMin = null,
+  priceMax = null,
+  audience = null,
+  category = null,
+  season = [],
+  formalityLevel = null,
+  style = null,
+  occasions = [],
+  color = null,
+  pattern = null,
+  silhouette = null,
+  fit = null,
+  closureType = null,
+  page = 1
+}) {
+  const sql = getSqlClient();
+  const currentPage = Number.isInteger(page) && page > 0 ? page : 1;
+  const offset = (currentPage - 1) * SEARCH_PAGE_SIZE;
+  const embeddingVector = Array.isArray(queryEmbedding) && queryEmbedding.length > 0
+    ? `[${queryEmbedding.join(",")}]`
+    : null;
+
+  const [countRow] = await sql`
+    select count(*)::integer as total
+    from products
+    where
+      (${brand}::text is null or lower(coalesce(brand, '')) = ${brand})
+      and (${priceMin}::double precision is null or price >= ${priceMin})
+      and (${priceMax}::double precision is null or price <= ${priceMax})
+      and (${audience}::text is null or lower(coalesce(audience, '')) = ${audience})
+      and (${category}::text is null or lower(coalesce(category, '')) = ${category})
+      and (cardinality(${season}::text[]) = 0 or coalesce(season, array[]::text[]) && ${season}::text[])
+      and (${formalityLevel}::text is null or ${formalityLevel}::text = any(coalesce(formality_level, array[]::text[])))
+      and (${style}::text is null or ${style}::text = any(coalesce(style, array[]::text[])))
+      and (cardinality(${occasions}::text[]) = 0 or coalesce(occasions, array[]::text[]) && ${occasions}::text[])
+      and (${color}::text is null or ${color}::text = any(coalesce(color_base, array[]::text[])))
+      and (${pattern}::text is null or lower(coalesce(pattern, '')) = ${pattern})
+      and (${silhouette}::text is null or lower(coalesce(silhouette, '')) = ${silhouette})
+      and (${fit}::text is null or lower(coalesce(fit, '')) = ${fit})
+      and (${closureType}::text is null or ${closureType}::text = any(coalesce(closure_type, array[]::text[])))
+      and (
+        ${embeddingVector}::text is null
+        or ${semanticDistanceThreshold}::double precision is null
+        or embedding <=> ${embeddingVector}::vector <= ${semanticDistanceThreshold}
+      )
+  `;
+
+  const items = await sql`
+    select
+      id,
+      name,
+      url,
+      description,
+      brand,
+      price,
+      currency,
+      availability,
+      image_url as "imageUrl",
+      audience,
+      category,
+      season,
+      formality_level as "formalityLevel",
+      style,
+      occasions,
+      color_base as "colorBase",
+      pattern,
+      finish,
+      is_neutral as "isNeutral",
+      composition,
+      silhouette,
+      fit,
+      closure_type as "closureType",
+      case
+        when ${embeddingVector}::text is null then null
+        else embedding <=> ${embeddingVector}::vector
+      end as distance
+    from products
+    where
+      (${brand}::text is null or lower(coalesce(brand, '')) = ${brand})
+      and (${priceMin}::double precision is null or price >= ${priceMin})
+      and (${priceMax}::double precision is null or price <= ${priceMax})
+      and (${audience}::text is null or lower(coalesce(audience, '')) = ${audience})
+      and (${category}::text is null or lower(coalesce(category, '')) = ${category})
+      and (cardinality(${season}::text[]) = 0 or coalesce(season, array[]::text[]) && ${season}::text[])
+      and (${formalityLevel}::text is null or ${formalityLevel}::text = any(coalesce(formality_level, array[]::text[])))
+      and (${style}::text is null or ${style}::text = any(coalesce(style, array[]::text[])))
+      and (cardinality(${occasions}::text[]) = 0 or coalesce(occasions, array[]::text[]) && ${occasions}::text[])
+      and (${color}::text is null or ${color}::text = any(coalesce(color_base, array[]::text[])))
+      and (${pattern}::text is null or lower(coalesce(pattern, '')) = ${pattern})
+      and (${silhouette}::text is null or lower(coalesce(silhouette, '')) = ${silhouette})
+      and (${fit}::text is null or lower(coalesce(fit, '')) = ${fit})
+      and (${closureType}::text is null or ${closureType}::text = any(coalesce(closure_type, array[]::text[])))
+      and (
+        ${embeddingVector}::text is null
+        or ${semanticDistanceThreshold}::double precision is null
+        or embedding <=> ${embeddingVector}::vector <= ${semanticDistanceThreshold}
+      )
+    order by
+      case when ${embeddingVector}::text is null then 1 else 0 end asc,
+      case
+        when ${embeddingVector}::text is null then null
+        else embedding <=> ${embeddingVector}::vector
+      end asc nulls last,
+      lower(coalesce(brand, '')) asc,
+      lower(coalesce(name, '')) asc
+    limit ${SEARCH_PAGE_SIZE}
+    offset ${offset}
+  `;
+
+  return {
+    items,
+    total: Number(countRow?.total || 0),
+    page: currentPage,
+    pageSize: SEARCH_PAGE_SIZE
+  };
 }
 
 async function getProfileByEmail(email) {
@@ -482,6 +855,16 @@ export {
   getDistinctProductOccasions,
   getDistinctProductSeasons,
   getDistinctProductPatterns,
+  getDistinctProductBrands,
+  getDistinctProductCategories,
+  getDistinctProductSilhouettes,
+  getDistinctProductFits,
+  getDistinctProductClosureTypes,
+  getDistinctProductColors,
+  getProductPriceRange,
+  getSearchByEmail,
+  upsertSearchByEmail,
+  searchProducts,
   getProfileByEmail,
   createProfileRecord,
   updateProfileRecord,

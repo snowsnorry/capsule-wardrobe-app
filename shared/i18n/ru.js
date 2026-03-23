@@ -12,6 +12,13 @@ const ru = {
       ru: "🇷🇺"
     }
   },
+  launcher: {
+    open: "Выбрать приложение",
+    capsule: "Capsule",
+    capsuleHint: "Конструктор капсульного гардероба",
+    search: "Search",
+    searchHint: "Поиск товаров"
+  },
   options: {
     categories: {
       bottom: "Низ",
@@ -161,6 +168,51 @@ const ru = {
     reset: "Сбросить",
     cancel: "Отмена",
     open: "Открыть фильтры"
+  },
+  search: {
+    title: "Search",
+    placeholder: "Ищите на естественном языке, например: свободная голубая льняная рубашка для летнего офиса",
+    cta: "Искать",
+    productCard: "Карточка товара",
+    detailEmpty: "Выберите товар, чтобы посмотреть подробности.",
+    empty: "По этому запросу ничего не найдено.",
+    untitled: "Товар без названия",
+    noBrand: "Бренд не указан",
+    notImportant: "Не принципиально",
+    all: "Все",
+    back: "Назад",
+    yes: "Да",
+    no: "Нет",
+    resultsCount: "Результатов: {count}",
+    priceMin: "Мин: {value}",
+    priceMax: "Макс: {value}",
+    filters: {
+      brand: "Бренд",
+      price: "Цена",
+      min: "Мин",
+      max: "Макс",
+      category: "Категория",
+      silhouette: "Силуэт",
+      fit: "Посадка",
+      closureType: "Тип застежки"
+    },
+    fields: {
+      price: "Цена",
+      availability: "Наличие",
+      audience: "Для кого",
+      season: "Сезон",
+      formalityLevel: "Формальность",
+      style: "Стиль",
+      occasions: "Ситуации",
+      color: "Цвет",
+      pattern: "Паттерн",
+      finish: "Фактура",
+      neutral: "Нейтральный",
+      composition: "Состав",
+      silhouette: "Силуэт",
+      fit: "Посадка",
+      closureType: "Тип застежки"
+    }
   },
   errors: {
     generic: "Что-то пошло не так. Попробуйте еще раз.",

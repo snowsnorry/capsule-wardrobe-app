@@ -21,6 +21,7 @@ import { useI18n } from "../i18n/useI18n.js";
 import ClothingGridPlaceholder from "../components/ClothingGridPlaceholder.jsx";
 import ClothingCard from "../components/ClothingCard.jsx";
 import LocaleSwitcher from "../components/LocaleSwitcher.jsx";
+import AppLauncher from "../components/AppLauncher.jsx";
 
 const CATEGORY_ORDER = ["outerwear", "midlayer", "top", "dress", "bottom", "belt", "shoes", "bag", "swimwear"];
 
@@ -53,7 +54,8 @@ function MainScreen({
   onSelectAccentColor,
   onSelectPattern,
   onApplyFilters,
-  onResetFilters
+  onResetFilters,
+  onNavigateApp
 }) {
   const { t } = useI18n();
   const theme = useTheme();
@@ -116,7 +118,10 @@ function MainScreen({
             >
               {t("appName")}
             </Typography>
-            <LocaleSwitcher />
+            <Stack direction="row" spacing={1.2} alignItems="center">
+              <AppLauncher currentApp="capsule" onSelectApp={onNavigateApp} />
+              <LocaleSwitcher />
+            </Stack>
           </Stack>
         </Box>
 

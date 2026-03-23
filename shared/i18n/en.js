@@ -12,6 +12,13 @@ const en = {
       ru: "🇷🇺"
     }
   },
+  launcher: {
+    open: "Choose app",
+    capsule: "Capsule",
+    capsuleHint: "Capsule wardrobe builder",
+    search: "Search",
+    searchHint: "Product search"
+  },
   options: {
     categories: {
       bottom: "Bottom",
@@ -160,6 +167,51 @@ const en = {
     reset: "Reset",
     cancel: "Cancel",
     open: "Open filters"
+  },
+  search: {
+    title: "Search",
+    placeholder: "Search in natural language, for example: relaxed blue linen shirt for summer office days",
+    cta: "Search",
+    productCard: "Product card",
+    detailEmpty: "Select a product to inspect its details.",
+    empty: "No products matched this search.",
+    untitled: "Untitled product",
+    noBrand: "Unknown brand",
+    notImportant: "Not important",
+    all: "All",
+    back: "Back",
+    yes: "Yes",
+    no: "No",
+    resultsCount: "{count} results",
+    priceMin: "Min: {value}",
+    priceMax: "Max: {value}",
+    filters: {
+      brand: "Brand",
+      price: "Price",
+      min: "Min",
+      max: "Max",
+      category: "Category",
+      silhouette: "Silhouette",
+      fit: "Fit",
+      closureType: "Closure type"
+    },
+    fields: {
+      price: "Price",
+      availability: "Availability",
+      audience: "Audience",
+      season: "Season",
+      formalityLevel: "Formality",
+      style: "Style",
+      occasions: "Occasions",
+      color: "Color",
+      pattern: "Pattern",
+      finish: "Finish",
+      neutral: "Neutral",
+      composition: "Composition",
+      silhouette: "Silhouette",
+      fit: "Fit",
+      closureType: "Closure type"
+    }
   },
   errors: {
     generic: "Something went wrong. Please try again.",

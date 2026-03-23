@@ -33,6 +33,7 @@ import {
   updateProfile,
   updateProfileLocale
 } from "./profileStore.js";
+import { getSearchOptions, getSavedSearch, runSavedSearch } from "./searchStore.js";
 import { getWardrobeItems } from "./ai/ai.js";
 import { checkDatabaseConnection, ensureTables } from "./db.js";
 import { ACCENT_COLOR_OPTIONS } from "../../shared/accentColors.js";
@@ -115,6 +116,18 @@ function parseOptionalSelection(value) {
 
   const normalized = String(value || "").trim().toLowerCase();
   return normalized || null;
+}
+
+function isApiPath(pathname = "") {
+  return (
+    pathname.startsWith("/auth") ||
+    pathname.startsWith("/profile") ||
+    pathname.startsWith("/wardrobe") ||
+    pathname.startsWith("/health") ||
+    pathname === "/search/options" ||
+    pathname === "/search/me" ||
+    pathname === "/search/run"
+  );
 }
 
 if (NODE_ENV !== "development") {
@@ -491,6 +504,39 @@ app.get("/profile/patterns", requireAuth, async (req, res) => {
 
 app.post("/wardrobe/items", requireTrustedOrigin, requireAuth, requireCsrf, getWardrobeItems);
 
+app.get("/search/options", requireAuth, async (req, res) => {
+  try {
+    const options = await getSearchOptions(req.user.email);
+    return res.json({ ok: true, ...options });
+  } catch (error) {
+    console.error("[search/options]", error);
+    return res.status(503).json({ error: "service_unavailable" });
+  }
+});
+
+app.get("/search/me", requireAuth, async (req, res) => {
+  try {
+    const search = await getSavedSearch(req.user.email);
+    return res.json({ ok: true, search });
+  } catch (error) {
+    console.error("[search/me]", error);
+    return res.status(503).json({ error: "service_unavailable" });
+  }
+});
+
+app.post("/search/run", requireTrustedOrigin, requireAuth, requireCsrf, async (req, res) => {
+  try {
+    const result = await runSavedSearch(req.user.email, req.body || {});
+    return res.json({ ok: true, ...result });
+  } catch (error) {
+    if (error?.code === "invalid_payload" || error?.message === "invalid_payload") {
+      return res.status(400).json({ error: "invalid_payload" });
+    }
+    console.error("[search/run]", error);
+    return res.status(503).json({ error: "service_unavailable" });
+  }
+});
+
 app.post("/profile/initialize", requireTrustedOrigin, requireAuth, requireCsrf, async (req, res) => {
   const formalityLevel = String(req.body?.formalityLevel || "").trim().toLowerCase();
   const style = parseOptionalSelection(req.body?.style);
@@ -665,12 +711,7 @@ const startServer = async () => {
     app.use(vite.middlewares);
 
     app.use("*", async (req, res, next) => {
-      if (
-        req.originalUrl.startsWith("/auth") ||
-        req.originalUrl.startsWith("/profile") ||
-        req.originalUrl.startsWith("/wardrobe") ||
-        req.originalUrl.startsWith("/health")
-      ) {
+      if (isApiPath(req.path)) {
         return next();
       }
 
@@ -689,12 +730,7 @@ const startServer = async () => {
     app.use(express.static(CLIENT_DIST_PATH));
 
     app.get("*", (req, res) => {
-      if (
-        req.path.startsWith("/auth") ||
-        req.path.startsWith("/profile") ||
-        req.path.startsWith("/wardrobe") ||
-        req.path.startsWith("/health")
-      ) {
+      if (isApiPath(req.path)) {
         return res.status(404).json({ error: "not_found" });
       }
       return res.sendFile(path.join(CLIENT_DIST_PATH, "index.html"));
