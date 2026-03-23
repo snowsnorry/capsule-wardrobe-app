@@ -268,23 +268,41 @@ function ProductDetail({ item, title, t, locale }) {
       {item ? (
         <>
           <Box>
-            <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+            <Box
+              component="a"
+              href={item.url || "#"}
+              target="_blank"
+              rel="noreferrer"
+              sx={{
+                color: "#8f6f45",
+                textDecoration: "none",
+                display: "inline",
+                "&:hover": { textDecoration: "underline" }
+              }}
+            >
               <Typography
-                component="a"
-                href={item.url || "#"}
-                target="_blank"
-                rel="noreferrer"
+                component="span"
                 variant="h5"
                 sx={{
-                  color: "#8f6f45",
-                  textDecoration: "none",
-                  "&:hover": { textDecoration: "underline" }
+                  color: "inherit",
+                  display: "inline",
+                  overflowWrap: "anywhere"
                 }}
               >
                 {item.name || t("search.untitled")}
               </Typography>
-              {item.url ? <OpenInNewRoundedIcon sx={{ fontSize: 18, color: "#8f6f45" }} /> : null}
-            </Stack>
+              {item.url ? (
+                <OpenInNewRoundedIcon
+                  sx={{
+                    fontSize: 18,
+                    color: "inherit",
+                    ml: 0.6,
+                    verticalAlign: "middle",
+                    transform: "translateY(-0.14em)"
+                  }}
+                />
+              ) : null}
+            </Box>
             {item.brand ? <Typography variant="h6">{item.brand}</Typography> : null}
             {item.category ? (
               <Typography variant="body2" color="text.secondary">
