@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { CATEGORIES } from "./categories.js";
+import { getCapsuleCategories } from "./categories.js";
 
 const DEFAULT_CHAT_MODEL = "gpt-5.2";
 const DEFAULT_EMBEDDING_MODEL = "text-embedding-3-small";
@@ -29,24 +29,26 @@ function buildCapsuleSchema(categories) {
   };
 }
 
-const JSON_OBJECT_FORMAT = {
-  type: "json_schema",
-  name: "capsule_wardrobe_response",
-  description: "Structured capsule wardrobe selection with brief reasoning and exact category counts.",
-  schema: {
-    type: "object",
-    additionalProperties: false,
-    properties: {
-      _reasoning: {
-        type: "string",
-        description: "Briefly explain how you balanced the 30% Target Style with 70% basic items, how they fit the requested Formality, and how you applied the color/pattern strategy."
+function buildJsonObjectFormat(userProfile = null) {
+  return {
+    type: "json_schema",
+    name: "capsule_wardrobe_response",
+    description: "Structured capsule wardrobe selection with brief reasoning and exact category counts.",
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        _reasoning: {
+          type: "string",
+          description: "Briefly explain how you balanced the 30% Target Style with 70% basic items, how they fit the requested Formality, and how you applied the color/pattern strategy."
+        },
+        capsule: buildCapsuleSchema(getCapsuleCategories(userProfile))
       },
-      capsule: buildCapsuleSchema(CATEGORIES)
+      required: ["_reasoning", "capsule"]
     },
-    required: ["_reasoning", "capsule"]
-  },
-  strict: false
-};
+    strict: false
+  };
+}
 
 let cachedClient = null;
 
@@ -98,7 +100,7 @@ async function getPromptEmbeddings(prompt) {
   return embedding;
 }
 
-async function generateJsonWithLlm(prompt) {
+async function generateJsonWithLlm(prompt, userProfile = null) {
   const client = getOpenAiClient();
   const { system, user } = splitSystemAndUserPrompt(prompt);
 
@@ -111,7 +113,7 @@ async function generateJsonWithLlm(prompt) {
     // top_p: 0.9,
     max_output_tokens: 6000,
     text: {
-      format: JSON_OBJECT_FORMAT
+      format: buildJsonObjectFormat(userProfile)
     }
   });
 
@@ -133,4 +135,4 @@ async function generateJsonWithLlm(prompt) {
   return { response, json };
 }
 
-export { generateJsonWithLlm, getPromptEmbeddings };
+export { generateJsonWithLlm, getPromptEmbeddings, buildCapsuleSchema };

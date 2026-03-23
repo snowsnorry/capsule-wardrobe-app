@@ -17,9 +17,12 @@ const en = {
       bottom: "Bottom",
       top: "Top",
       outerwear: "Outerwear",
+      midlayer: "Layering",
+      dress: "Dress",
       shoes: "Shoes",
       belt: "Belt",
-      bag: "Bag"
+      bag: "Bag",
+      swimwear: "Swimwear"
     },
     styles: {
       casual: "Casual",

@@ -3,7 +3,7 @@ import { getSqlClient } from "../db.js";
 import { readFileSync, writeFileSync } from "node:fs";
 import { generateJsonWithLlm } from "./openai.js";
 import {  getPromptEmbeddings, getWardrobePrompt } from "./voyageai.js";
-import { CATEGORIES } from "./categories.js";
+import { getCapsuleCategories } from "./categories.js";
 const PROMPT_TEMPLATE = readFileSync(new URL("../templates/prompt.txt", import.meta.url), "utf8");
 const WARDROBE_POLL_AFTER_MS = 2000;
 const COMPLETED_JOB_TTL_MS = 5 * 60 * 1000;
@@ -48,15 +48,15 @@ function formatProfileValues(values) {
   return formatted.join(", ");
 }
 
-function getCategoryListText() {
-  return Object.entries(CATEGORIES)
+function getCategoryListText(categories) {
+  return Object.entries(categories)
     .filter(([, count]) => Number.isInteger(count) && count > 0)
     .map(([category, count]) => `${count} ${category}`)
     .join(", ");
 }
 
-function getCategorySchema() {
-  const schema = Object.entries(CATEGORIES).reduce((result, [category, count]) => {
+function getCategorySchema(categories) {
+  const schema = Object.entries(categories).reduce((result, [category, count]) => {
     if (!Number.isInteger(count) || count <= 0) {
       return result;
     }
@@ -84,8 +84,8 @@ function getSelectedIdsFromCapsule(capsule) {
   });
 }
 
-function enforceCategoryCounts(selectedItems, normalizedItems) {
-  const categoryOrder = Object.keys(CATEGORIES);
+function enforceCategoryCounts(selectedItems, normalizedItems, categories) {
+  const categoryOrder = Object.keys(categories);
   const allowedCategories = new Set(categoryOrder);
   const seenPoolIds = new Set();
   const poolByCategory = new Map(categoryOrder.map((category) => [category, []]));
@@ -117,7 +117,7 @@ function enforceCategoryCounts(selectedItems, normalizedItems) {
   const resultIds = new Set();
 
   for (const category of categoryOrder) {
-    const requiredCount = CATEGORIES[category];
+    const requiredCount = categories[category];
     const current = selectedByCategory.get(category).slice(0, requiredCount);
     for (const item of current) {
       const itemId = String(item.id);
@@ -128,7 +128,7 @@ function enforceCategoryCounts(selectedItems, normalizedItems) {
   }
 
   for (const category of categoryOrder) {
-    const requiredCount = CATEGORIES[category];
+    const requiredCount = categories[category];
     const currentCount = result.filter((item) => item.category === category).length;
     const missing = requiredCount - currentCount;
     if (missing <= 0) {
@@ -154,7 +154,7 @@ function enforceCategoryCounts(selectedItems, normalizedItems) {
   return result;
 }
 
-function getWardrobeSelectionPrompt(userProfile = null, items = []) {
+function getWardrobeSelectionPrompt(userProfile = null, items = [], categories = getCapsuleCategories(userProfile)) {
   const formalityText = typeof userProfile?.formalityLevel === "string" && userProfile.formalityLevel.trim().length > 0
     ? userProfile.formalityLevel
     : "Not specified";
@@ -197,9 +197,9 @@ function getWardrobeSelectionPrompt(userProfile = null, items = []) {
     .replace("{{color}}", accentColorText)
     .replace("{{pattern}}", patternText)
     .replace("{{items}}", itemsJson)
-    .replace("{{category_list}}", getCategoryListText())
-    .replace("{{categories_schema}}", getCategorySchema())
-    .replace("{{num_items}}", Object.entries(CATEGORIES).reduce((sum, [, count]) => sum + count, 0));
+    .replace("{{category_list}}", getCategoryListText(categories))
+    .replace("{{categories_schema}}", getCategorySchema(categories))
+    .replace("{{num_items}}", Object.entries(categories).reduce((sum, [, count]) => sum + count, 0));
 }
 
 async function callWardrobeAi(userProfile = null) {
@@ -207,7 +207,8 @@ async function callWardrobeAi(userProfile = null) {
   const prompt = getWardrobePrompt(userProfile);
   const promptEmbeddings = await getPromptEmbeddings(prompt);
 
-  const categories = Object.keys(CATEGORIES);
+  const capsuleCategories = getCapsuleCategories(userProfile);
+  const categories = Object.keys(capsuleCategories);
   const formalityLevel = userProfile?.formalityLevel ?? null;
   const style = userProfile?.style ?? null;
   const occasions = Array.isArray(userProfile?.occasions) ? userProfile.occasions : [];
@@ -351,9 +352,9 @@ async function callWardrobeAi(userProfile = null) {
     return normalized;
   });
 
-  const selectionPrompt = getWardrobeSelectionPrompt(userProfile, normalizedItems);
+  const selectionPrompt = getWardrobeSelectionPrompt(userProfile, normalizedItems, capsuleCategories);
   writeFileSync(new URL("../../../last_prompt.txt", import.meta.url), selectionPrompt, "utf8");
-  const { response: selectionResponse, json: parsedSelection } = await generateJsonWithLlm(selectionPrompt);
+  const { response: selectionResponse, json: parsedSelection } = await generateJsonWithLlm(selectionPrompt, userProfile);
 
   console.log("[wardrobe-ai][selected-json]", JSON.stringify(parsedSelection));
   if (!parsedSelection?.capsule || typeof parsedSelection.capsule !== "object") {
@@ -378,7 +379,7 @@ async function callWardrobeAi(userProfile = null) {
   const selectedItems = uniqueSelectedIds
     .map((id) => itemsById.get(String(id)))
     .filter(Boolean);
-  const balancedItems = enforceCategoryCounts(selectedItems, normalizedItems);
+  const balancedItems = enforceCategoryCounts(selectedItems, normalizedItems, capsuleCategories);
 
   if (balancedItems.length === 0) {
     throw new Error("Model returned no valid selected_ids");

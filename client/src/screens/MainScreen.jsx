@@ -22,7 +22,7 @@ import ClothingGridPlaceholder from "../components/ClothingGridPlaceholder.jsx";
 import ClothingCard from "../components/ClothingCard.jsx";
 import LocaleSwitcher from "../components/LocaleSwitcher.jsx";
 
-const CATEGORY_ORDER = ["top", "bottom", "outerwear", "belt", "shoes", "bag"];
+const CATEGORY_ORDER = ["outerwear", "midlayer", "top", "dress", "bottom", "belt", "shoes", "bag", "swimwear"];
 
 function MainScreen({
   onSignOut,

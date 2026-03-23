@@ -17,9 +17,12 @@ const ru = {
       bottom: "Низ",
       top: "Верх",
       outerwear: "Верхняя одежда",
+      midlayer: "Второй слой",
+      dress: "Платье",
       shoes: "Обувь",
       belt: "Ремень",
-      bag: "Сумка"
+      bag: "Сумка",
+      swimwear: "Купальник"
     },
     styles: {
       casual: "Повседневный",
