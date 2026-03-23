@@ -69,6 +69,12 @@ const en = {
       woman: "Woman",
       any: "Not important"
     },
+    availability: {
+      in_stock: "In stock",
+      out_of_stock: "Out of stock",
+      limited: "Limited",
+      pre_order: "Pre-order"
+    },
     accentColors: {
       black: "Black",
       white: "White",

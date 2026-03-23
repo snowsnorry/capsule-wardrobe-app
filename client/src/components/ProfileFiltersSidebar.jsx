@@ -54,11 +54,13 @@ function ProfileFiltersSidebar({
         selectedStyleAesthetic={selectedStyleAesthetic}
         onSelectStyleCore={onSelectStyleCore}
         onSelectStyleAesthetic={onSelectStyleAesthetic}
+        titleVariant="h6"
+        bodyVariant="body2"
       />
 
       <Stack spacing={1.5}>
-        <Typography variant="h5">{t("profile.occasionsTitle")}</Typography>
-        <Typography variant="body1" color="text.secondary">
+        <Typography variant="h6">{t("profile.occasionsTitle")}</Typography>
+        <Typography variant="body2" color="text.secondary">
           {t("profile.occasionsHint")}
         </Typography>
         <Stack direction="row" flexWrap="wrap" gap={1}>
@@ -75,8 +77,8 @@ function ProfileFiltersSidebar({
       </Stack>
 
       <Stack spacing={1.5}>
-        <Typography variant="h5">{t("profile.seasonsTitle")}</Typography>
-        <Typography variant="body1" color="text.secondary">
+        <Typography variant="h6">{t("profile.seasonsTitle")}</Typography>
+        <Typography variant="body2" color="text.secondary">
           {t("profile.seasonsHint")}
         </Typography>
         <Stack direction="row" flexWrap="wrap" gap={1}>
@@ -93,8 +95,8 @@ function ProfileFiltersSidebar({
       </Stack>
 
       <Stack spacing={1.5}>
-        <Typography variant="h5">{t("profile.audienceTitle")}</Typography>
-        <Typography variant="body1" color="text.secondary">
+        <Typography variant="h6">{t("profile.audienceTitle")}</Typography>
+        <Typography variant="body2" color="text.secondary">
           {t("profile.audienceHint")}
         </Typography>
         <Stack direction="row" flexWrap="wrap" gap={1}>
@@ -111,8 +113,8 @@ function ProfileFiltersSidebar({
       </Stack>
 
       <Stack spacing={1.5}>
-        <Typography variant="h5">{t("profile.accentColorTitle")}</Typography>
-        <Typography variant="body1" color="text.secondary">
+        <Typography variant="h6">{t("profile.accentColorTitle")}</Typography>
+        <Typography variant="body2" color="text.secondary">
           {t("profile.accentColorHint")}
         </Typography>
         <AccentColorChips
@@ -123,8 +125,8 @@ function ProfileFiltersSidebar({
       </Stack>
 
       <Stack spacing={1.5}>
-        <Typography variant="h5">{t("profile.patternTitle")}</Typography>
-        <Typography variant="body1" color="text.secondary">
+        <Typography variant="h6">{t("profile.patternTitle")}</Typography>
+        <Typography variant="body2" color="text.secondary">
           {t("profile.patternHint")}
         </Typography>
         <Stack direction="row" flexWrap="wrap" gap={1}>

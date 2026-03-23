@@ -80,25 +80,176 @@ async function ensureSearchTable() {
       email text primary key,
       query text null,
       embedding jsonb null,
-      brand text null,
+      brand text[] not null default '{}'::text[],
       price_min double precision null,
       price_max double precision null,
-      audience text null,
-      category text null,
+      audience text[] not null default '{}'::text[],
+      category text[] not null default '{}'::text[],
       season text[] not null default '{}'::text[],
-      formality_level text null,
-      style text null,
+      formality_level text[] not null default '{}'::text[],
+      style text[] not null default '{}'::text[],
       occasions text[] not null default '{}'::text[],
-      color text null,
-      pattern text null,
-      silhouette text null,
-      fit text null,
-      closure_type text null,
+      color text[] not null default '{}'::text[],
+      pattern text[] not null default '{}'::text[],
+      silhouette text[] not null default '{}'::text[],
+      fit text[] not null default '{}'::text[],
+      closure_type text[] not null default '{}'::text[],
       page integer not null default 1,
       created_at timestamptz not null default now(),
       updated_at timestamptz not null default now()
     )
   `;
+
+  const columns = await sql`
+    select column_name as "columnName", data_type as "dataType"
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'search'
+      and column_name in (
+        'brand',
+        'audience',
+        'category',
+        'formality_level',
+        'style',
+        'color',
+        'pattern',
+        'silhouette',
+        'fit',
+        'closure_type'
+      )
+  `;
+
+  const columnTypes = Object.fromEntries(columns.map((column) => [column.columnName, column.dataType]));
+
+  if (columnTypes.brand === "text") {
+    await sql`
+      alter table search
+      alter column brand type text[]
+      using case
+        when brand is null or nullif(trim(brand), '') is null then '{}'::text[]
+        else array[lower(trim(brand))]
+      end,
+      alter column brand set default '{}'::text[],
+      alter column brand set not null
+    `;
+  }
+
+  if (columnTypes.category === "text") {
+    await sql`
+      alter table search
+      alter column category type text[]
+      using case
+        when category is null or nullif(trim(category), '') is null then '{}'::text[]
+        else array[lower(trim(category))]
+      end,
+      alter column category set default '{}'::text[],
+      alter column category set not null
+    `;
+  }
+
+  if (columnTypes.audience === "text") {
+    await sql`
+      alter table search
+      alter column audience type text[]
+      using case
+        when audience is null or nullif(trim(audience), '') is null then '{}'::text[]
+        else array[lower(trim(audience))]
+      end,
+      alter column audience set default '{}'::text[],
+      alter column audience set not null
+    `;
+  }
+
+  if (columnTypes.formality_level === "text") {
+    await sql`
+      alter table search
+      alter column formality_level type text[]
+      using case
+        when formality_level is null or nullif(trim(formality_level), '') is null then '{}'::text[]
+        else array[lower(trim(formality_level))]
+      end,
+      alter column formality_level set default '{}'::text[],
+      alter column formality_level set not null
+    `;
+  }
+
+  if (columnTypes.style === "text") {
+    await sql`
+      alter table search
+      alter column style type text[]
+      using case
+        when style is null or nullif(trim(style), '') is null then '{}'::text[]
+        else array[lower(trim(style))]
+      end,
+      alter column style set default '{}'::text[],
+      alter column style set not null
+    `;
+  }
+
+  if (columnTypes.color === "text") {
+    await sql`
+      alter table search
+      alter column color type text[]
+      using case
+        when color is null or nullif(trim(color), '') is null then '{}'::text[]
+        else array[lower(trim(color))]
+      end,
+      alter column color set default '{}'::text[],
+      alter column color set not null
+    `;
+  }
+
+  if (columnTypes.pattern === "text") {
+    await sql`
+      alter table search
+      alter column pattern type text[]
+      using case
+        when pattern is null or nullif(trim(pattern), '') is null then '{}'::text[]
+        else array[lower(trim(pattern))]
+      end,
+      alter column pattern set default '{}'::text[],
+      alter column pattern set not null
+    `;
+  }
+
+  if (columnTypes.silhouette === "text") {
+    await sql`
+      alter table search
+      alter column silhouette type text[]
+      using case
+        when silhouette is null or nullif(trim(silhouette), '') is null then '{}'::text[]
+        else array[lower(trim(silhouette))]
+      end,
+      alter column silhouette set default '{}'::text[],
+      alter column silhouette set not null
+    `;
+  }
+
+  if (columnTypes.fit === "text") {
+    await sql`
+      alter table search
+      alter column fit type text[]
+      using case
+        when fit is null or nullif(trim(fit), '') is null then '{}'::text[]
+        else array[lower(trim(fit))]
+      end,
+      alter column fit set default '{}'::text[],
+      alter column fit set not null
+    `;
+  }
+
+  if (columnTypes.closure_type === "text") {
+    await sql`
+      alter table search
+      alter column closure_type type text[]
+      using case
+        when closure_type is null or nullif(trim(closure_type), '') is null then '{}'::text[]
+        else array[lower(trim(closure_type))]
+      end,
+      alter column closure_type set default '{}'::text[],
+      alter column closure_type set not null
+    `;
+  }
 }
 
 async function ensureAuthTables() {
@@ -298,12 +449,30 @@ async function getDistinctProductPatterns() {
 async function getDistinctProductBrands() {
   const sql = getSqlClient();
   const rows = await sql`
-    select distinct lower(trim(brand)) as value
-    from products
-    where nullif(trim(brand), '') is not null
+    with ranked_brands as (
+      select
+        lower(trim(brand)) as value,
+        trim(brand) as label,
+        count(*) as usage_count,
+        row_number() over (
+          partition by lower(trim(brand))
+          order by count(*) desc, trim(brand) asc
+        ) as row_number
+      from products
+      where nullif(trim(brand), '') is not null
+      group by lower(trim(brand)), trim(brand)
+    )
+    select value, label
+    from ranked_brands
+    where row_number = 1
     order by value asc
   `;
-  return rows.map((row) => row.value).filter(Boolean);
+  return rows
+    .map((row) => ({
+      value: row.value,
+      label: row.label
+    }))
+    .filter((row) => row.value && row.label);
 }
 
 async function getDistinctProductCategories() {
@@ -519,20 +688,20 @@ async function upsertSearchByEmail({
 async function searchProducts({
   queryEmbedding = null,
   semanticDistanceThreshold = null,
-  brand = null,
+  brand = [],
   priceMin = null,
   priceMax = null,
-  audience = null,
-  category = null,
+  audience = [],
+  category = [],
   season = [],
-  formalityLevel = null,
-  style = null,
+  formalityLevel = [],
+  style = [],
   occasions = [],
-  color = null,
-  pattern = null,
-  silhouette = null,
-  fit = null,
-  closureType = null,
+  color = [],
+  pattern = [],
+  silhouette = [],
+  fit = [],
+  closureType = [],
   page = 1
 }) {
   const sql = getSqlClient();
@@ -546,20 +715,20 @@ async function searchProducts({
     select count(*)::integer as total
     from products
     where
-      (${brand}::text is null or lower(coalesce(brand, '')) = ${brand})
+      (cardinality(${brand}::text[]) = 0 or lower(coalesce(brand, '')) = any(${brand}::text[]))
       and (${priceMin}::double precision is null or price >= ${priceMin})
       and (${priceMax}::double precision is null or price <= ${priceMax})
-      and (${audience}::text is null or lower(coalesce(audience, '')) = ${audience})
-      and (${category}::text is null or lower(coalesce(category, '')) = ${category})
+      and (cardinality(${audience}::text[]) = 0 or lower(coalesce(audience, '')) = any(${audience}::text[]))
+      and (cardinality(${category}::text[]) = 0 or lower(coalesce(category, '')) = any(${category}::text[]))
       and (cardinality(${season}::text[]) = 0 or coalesce(season, array[]::text[]) && ${season}::text[])
-      and (${formalityLevel}::text is null or ${formalityLevel}::text = any(coalesce(formality_level, array[]::text[])))
-      and (${style}::text is null or ${style}::text = any(coalesce(style, array[]::text[])))
+      and (cardinality(${formalityLevel}::text[]) = 0 or coalesce(formality_level, array[]::text[]) && ${formalityLevel}::text[])
+      and (cardinality(${style}::text[]) = 0 or coalesce(style, array[]::text[]) && ${style}::text[])
       and (cardinality(${occasions}::text[]) = 0 or coalesce(occasions, array[]::text[]) && ${occasions}::text[])
-      and (${color}::text is null or ${color}::text = any(coalesce(color_base, array[]::text[])))
-      and (${pattern}::text is null or lower(coalesce(pattern, '')) = ${pattern})
-      and (${silhouette}::text is null or lower(coalesce(silhouette, '')) = ${silhouette})
-      and (${fit}::text is null or lower(coalesce(fit, '')) = ${fit})
-      and (${closureType}::text is null or ${closureType}::text = any(coalesce(closure_type, array[]::text[])))
+      and (cardinality(${color}::text[]) = 0 or coalesce(color_base, array[]::text[]) && ${color}::text[])
+      and (cardinality(${pattern}::text[]) = 0 or lower(coalesce(pattern, '')) = any(${pattern}::text[]))
+      and (cardinality(${silhouette}::text[]) = 0 or lower(coalesce(silhouette, '')) = any(${silhouette}::text[]))
+      and (cardinality(${fit}::text[]) = 0 or lower(coalesce(fit, '')) = any(${fit}::text[]))
+      and (cardinality(${closureType}::text[]) = 0 or coalesce(closure_type, array[]::text[]) && ${closureType}::text[])
       and (
         ${embeddingVector}::text is null
         or ${semanticDistanceThreshold}::double precision is null
@@ -598,20 +767,20 @@ async function searchProducts({
       end as distance
     from products
     where
-      (${brand}::text is null or lower(coalesce(brand, '')) = ${brand})
+      (cardinality(${brand}::text[]) = 0 or lower(coalesce(brand, '')) = any(${brand}::text[]))
       and (${priceMin}::double precision is null or price >= ${priceMin})
       and (${priceMax}::double precision is null or price <= ${priceMax})
-      and (${audience}::text is null or lower(coalesce(audience, '')) = ${audience})
-      and (${category}::text is null or lower(coalesce(category, '')) = ${category})
+      and (cardinality(${audience}::text[]) = 0 or lower(coalesce(audience, '')) = any(${audience}::text[]))
+      and (cardinality(${category}::text[]) = 0 or lower(coalesce(category, '')) = any(${category}::text[]))
       and (cardinality(${season}::text[]) = 0 or coalesce(season, array[]::text[]) && ${season}::text[])
-      and (${formalityLevel}::text is null or ${formalityLevel}::text = any(coalesce(formality_level, array[]::text[])))
-      and (${style}::text is null or ${style}::text = any(coalesce(style, array[]::text[])))
+      and (cardinality(${formalityLevel}::text[]) = 0 or coalesce(formality_level, array[]::text[]) && ${formalityLevel}::text[])
+      and (cardinality(${style}::text[]) = 0 or coalesce(style, array[]::text[]) && ${style}::text[])
       and (cardinality(${occasions}::text[]) = 0 or coalesce(occasions, array[]::text[]) && ${occasions}::text[])
-      and (${color}::text is null or ${color}::text = any(coalesce(color_base, array[]::text[])))
-      and (${pattern}::text is null or lower(coalesce(pattern, '')) = ${pattern})
-      and (${silhouette}::text is null or lower(coalesce(silhouette, '')) = ${silhouette})
-      and (${fit}::text is null or lower(coalesce(fit, '')) = ${fit})
-      and (${closureType}::text is null or ${closureType}::text = any(coalesce(closure_type, array[]::text[])))
+      and (cardinality(${color}::text[]) = 0 or coalesce(color_base, array[]::text[]) && ${color}::text[])
+      and (cardinality(${pattern}::text[]) = 0 or lower(coalesce(pattern, '')) = any(${pattern}::text[]))
+      and (cardinality(${silhouette}::text[]) = 0 or lower(coalesce(silhouette, '')) = any(${silhouette}::text[]))
+      and (cardinality(${fit}::text[]) = 0 or lower(coalesce(fit, '')) = any(${fit}::text[]))
+      and (cardinality(${closureType}::text[]) = 0 or coalesce(closure_type, array[]::text[]) && ${closureType}::text[])
       and (
         ${embeddingVector}::text is null
         or ${semanticDistanceThreshold}::double precision is null

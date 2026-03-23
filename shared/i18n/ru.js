@@ -69,6 +69,12 @@ const ru = {
       woman: "Женщина",
       any: "Не принципиально"
     },
+    availability: {
+      in_stock: "В наличии",
+      out_of_stock: "Нет в наличии",
+      limited: "Осталось мало",
+      pre_order: "Предзаказ"
+    },
     accentColors: {
       black: "Черный",
       white: "Белый",

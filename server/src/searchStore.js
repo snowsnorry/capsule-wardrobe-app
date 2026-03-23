@@ -19,20 +19,20 @@ import { getPromptEmbeddings } from "./ai/voyageai.js";
 
 const DEFAULT_SEARCH_STATE = Object.freeze({
   query: "",
-  brand: null,
+  brand: [],
   priceMin: null,
   priceMax: null,
-  audience: null,
-  category: null,
+  audience: [],
+  category: [],
   season: [],
-  formalityLevel: null,
-  style: null,
+  formalityLevel: [],
+  style: [],
   occasions: [],
-  color: null,
-  pattern: null,
-  silhouette: null,
-  fit: null,
-  closureType: null,
+  color: [],
+  pattern: [],
+  silhouette: [],
+  fit: [],
+  closureType: [],
   page: 1
 });
 
@@ -79,6 +79,10 @@ function normalizeQuery(value) {
 }
 
 function normalizeStringArray(values) {
+  if (typeof values === "string") {
+    const normalized = normalizeNullableString(values);
+    return normalized ? [normalized] : [];
+  }
   if (!Array.isArray(values)) {
     return [];
   }
@@ -105,20 +109,20 @@ function normalizePage(value) {
 function normalizeSearchPayload(payload = {}) {
   return {
     query: normalizeQuery(payload.query),
-    brand: normalizeNullableString(payload.brand),
+    brand: normalizeStringArray(payload.brand),
     priceMin: normalizePriceValue(payload.priceMin),
     priceMax: normalizePriceValue(payload.priceMax),
-    audience: normalizeNullableString(payload.audience),
-    category: normalizeNullableString(payload.category),
+    audience: normalizeStringArray(payload.audience),
+    category: normalizeStringArray(payload.category),
     season: normalizeStringArray(payload.season),
-    formalityLevel: normalizeNullableString(payload.formalityLevel),
-    style: normalizeNullableString(payload.style),
+    formalityLevel: normalizeStringArray(payload.formalityLevel),
+    style: normalizeStringArray(payload.style),
     occasions: normalizeStringArray(payload.occasions),
-    color: normalizeNullableString(payload.color),
-    pattern: normalizeNullableString(payload.pattern),
-    silhouette: normalizeNullableString(payload.silhouette),
-    fit: normalizeNullableString(payload.fit),
-    closureType: normalizeNullableString(payload.closureType),
+    color: normalizeStringArray(payload.color),
+    pattern: normalizeStringArray(payload.pattern),
+    silhouette: normalizeStringArray(payload.silhouette),
+    fit: normalizeStringArray(payload.fit),
+    closureType: normalizeStringArray(payload.closureType),
     page: normalizePage(payload.page)
   };
 }
@@ -130,20 +134,20 @@ function serializeSearchRow(row = null) {
 
   return {
     query: typeof row.query === "string" ? row.query : "",
-    brand: normalizeNullableString(row.brand),
+    brand: normalizeStringArray(row.brand),
     priceMin: row.priceMin === null || row.priceMin === undefined ? null : Number(row.priceMin),
     priceMax: row.priceMax === null || row.priceMax === undefined ? null : Number(row.priceMax),
-    audience: normalizeNullableString(row.audience),
-    category: normalizeNullableString(row.category),
+    audience: normalizeStringArray(row.audience),
+    category: normalizeStringArray(row.category),
     season: normalizeStringArray(row.season),
-    formalityLevel: normalizeNullableString(row.formalityLevel),
-    style: normalizeNullableString(row.style),
+    formalityLevel: normalizeStringArray(row.formalityLevel),
+    style: normalizeStringArray(row.style),
     occasions: normalizeStringArray(row.occasions),
-    color: normalizeNullableString(row.color),
-    pattern: normalizeNullableString(row.pattern),
-    silhouette: normalizeNullableString(row.silhouette),
-    fit: normalizeNullableString(row.fit),
-    closureType: normalizeNullableString(row.closureType),
+    color: normalizeStringArray(row.color),
+    pattern: normalizeStringArray(row.pattern),
+    silhouette: normalizeStringArray(row.silhouette),
+    fit: normalizeStringArray(row.fit),
+    closureType: normalizeStringArray(row.closureType),
     page: normalizePage(row.page)
   };
 }
@@ -173,6 +177,12 @@ function isAllowedNullableValue(value, allowedItems) {
 
 function isAllowedArrayValue(values, allowedItems) {
   return values.every((value) => allowedItems.includes(value));
+}
+
+function getAllowedBrandValues(brandOptions = []) {
+  return brandOptions
+    .map((item) => (typeof item === "string" ? item : item?.value))
+    .filter(Boolean);
 }
 
 async function getSearchOptions(email) {
@@ -232,18 +242,19 @@ async function runSavedSearch(email, payload = {}) {
     getSearchOptions(email),
     getSearchByEmail(email)
   ]);
+  const allowedBrandValues = getAllowedBrandValues(options.brands);
 
   if (
-    !isAllowedNullableValue(normalized.brand, options.brands) ||
-    !isAllowedNullableValue(normalized.audience, options.audience) ||
-    !isAllowedNullableValue(normalized.category, options.categories) ||
-    !isAllowedNullableValue(normalized.formalityLevel, options.formalityLevels) ||
-    !isAllowedNullableValue(normalized.style, options.styles) ||
-    !isAllowedNullableValue(normalized.color, options.colors) ||
-    !isAllowedNullableValue(normalized.pattern, options.patterns) ||
-    !isAllowedNullableValue(normalized.silhouette, options.silhouettes) ||
-    !isAllowedNullableValue(normalized.fit, options.fits) ||
-    !isAllowedNullableValue(normalized.closureType, options.closureTypes) ||
+    !isAllowedArrayValue(normalized.brand, allowedBrandValues) ||
+    !isAllowedArrayValue(normalized.audience, options.audience) ||
+    !isAllowedArrayValue(normalized.category, options.categories) ||
+    !isAllowedArrayValue(normalized.formalityLevel, options.formalityLevels) ||
+    !isAllowedArrayValue(normalized.style, options.styles) ||
+    !isAllowedArrayValue(normalized.color, options.colors) ||
+    !isAllowedArrayValue(normalized.pattern, options.patterns) ||
+    !isAllowedArrayValue(normalized.silhouette, options.silhouettes) ||
+    !isAllowedArrayValue(normalized.fit, options.fits) ||
+    !isAllowedArrayValue(normalized.closureType, options.closureTypes) ||
     !isAllowedArrayValue(normalized.season, options.seasons) ||
     !isAllowedArrayValue(normalized.occasions, options.occasions) ||
     Number.isNaN(normalized.priceMin) ||

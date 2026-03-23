@@ -17,23 +17,44 @@ const ACCENT_COLOR_SWATCHES = {
   orange: "#d97a2b"
 };
 
-function AccentColorChips({ options, selectedValue, onSelect }) {
+function AccentColorChips({
+  options,
+  selectedValues,
+  onToggle,
+  selectedValue = null,
+  onSelect
+}) {
   const { t, locale } = useI18n();
+  const isMultiSelect = Array.isArray(selectedValues) && typeof onToggle === "function";
+  const activeValues = isMultiSelect
+    ? selectedValues
+    : (selectedValue ? [selectedValue] : []);
+
+  const handleToggle = (value) => {
+    if (isMultiSelect) {
+      onToggle(value);
+      return;
+    }
+
+    if (typeof onSelect === "function") {
+      onSelect(value);
+    }
+  };
 
   return (
     <Stack direction="row" flexWrap="wrap" gap={1}>
       <Chip
         label={t("profile.accentColorNotImportant")}
         clickable
-        color={selectedValue === null ? "primary" : "default"}
-        onClick={() => onSelect(null)}
+        color={activeValues.length === 0 ? "primary" : "default"}
+        onClick={() => handleToggle(null)}
       />
       {options.map((item) => (
         <Chip
           key={item}
           clickable
-          color={selectedValue === item ? "primary" : "default"}
-          onClick={() => onSelect(item)}
+          color={activeValues.includes(item) ? "primary" : "default"}
+          onClick={() => handleToggle(item)}
           label={
             <Stack direction="row" spacing={1} alignItems="center">
               <Box

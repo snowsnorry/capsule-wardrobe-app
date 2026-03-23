@@ -31,20 +31,20 @@ import AccentColorChips from "../components/AccentColorChips.jsx";
 
 const INITIAL_SEARCH_STATE = Object.freeze({
   query: "",
-  brand: null,
+  brand: [],
   priceMin: null,
   priceMax: null,
-  audience: null,
-  category: null,
+  audience: [],
+  category: [],
   season: [],
-  formalityLevel: null,
-  style: null,
+  formalityLevel: [],
+  style: [],
   occasions: [],
-  color: null,
-  pattern: null,
-  silhouette: null,
-  fit: null,
-  closureType: null,
+  color: [],
+  pattern: [],
+  silhouette: [],
+  fit: [],
+  closureType: [],
   page: 1
 });
 
@@ -84,6 +84,16 @@ function createSearchState(savedSearch, priceRange) {
   const hasPriceBounds = base.priceMin !== null || base.priceMax !== null;
   return {
     ...base,
+    brand: Array.isArray(base.brand) ? base.brand : (base.brand ? [base.brand] : []),
+    audience: Array.isArray(base.audience) ? base.audience : (base.audience ? [base.audience] : []),
+    category: Array.isArray(base.category) ? base.category : (base.category ? [base.category] : []),
+    formalityLevel: Array.isArray(base.formalityLevel) ? base.formalityLevel : (base.formalityLevel ? [base.formalityLevel] : []),
+    style: Array.isArray(base.style) ? base.style : (base.style ? [base.style] : []),
+    color: Array.isArray(base.color) ? base.color : (base.color ? [base.color] : []),
+    pattern: Array.isArray(base.pattern) ? base.pattern : (base.pattern ? [base.pattern] : []),
+    silhouette: Array.isArray(base.silhouette) ? base.silhouette : (base.silhouette ? [base.silhouette] : []),
+    fit: Array.isArray(base.fit) ? base.fit : (base.fit ? [base.fit] : []),
+    closureType: Array.isArray(base.closureType) ? base.closureType : (base.closureType ? [base.closureType] : []),
     priceEnabled: hasPriceBounds,
     priceMinDraft: hasPriceBounds
       ? base.priceMin ?? priceRange.min ?? 0
@@ -140,6 +150,21 @@ function translateComposition(value, locale) {
     .filter(Boolean)
     .map((part) => translateOption("materials", part.toLowerCase(), locale))
     .join(", ");
+}
+
+function normalizeBrandOption(item) {
+  if (typeof item === "string") {
+    return { value: item, label: item };
+  }
+
+  if (item && typeof item.value === "string") {
+    return {
+      value: item.value,
+      label: typeof item.label === "string" && item.label.trim() ? item.label : item.value
+    };
+  }
+
+  return null;
 }
 
 function SearchSection({ title, hint, children }) {
@@ -206,7 +231,7 @@ function ProductDetail({ item, title, t, locale, mobileBackAction = null }) {
   const colorValues = Array.isArray(item?.colorBase) ? item.colorBase.filter(Boolean) : [];
   const detailRows = [
     ["search.fields.price", item?.price != null ? `${item.price}${item.currency ? ` ${item.currency}` : ""}` : null],
-    ["search.fields.availability", item?.availability],
+    ["search.fields.availability", item?.availability ? translateOption("availability", item.availability, locale) : null],
     ["search.fields.audience", item?.audience ? translateOption("audience", item.audience, locale) : null],
     ["search.fields.season", Array.isArray(item?.season) ? item.season.map((value) => translateOption("seasons", value, locale)).join(", ") : null],
     ["search.fields.formalityLevel", Array.isArray(item?.formalityLevel) ? item.formalityLevel.map((value) => translateOption("styles", value, locale)).join(", ") : null],
@@ -363,7 +388,7 @@ function ProductDetail({ item, title, t, locale, mobileBackAction = null }) {
                     <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.35 }}>
                       {t(label)}
                     </Typography>
-                    <Typography variant="body2" sx={{ lineHeight: 1.45 }}>
+                    <Typography component="div" variant="body2" sx={{ lineHeight: 1.45 }}>
                       {value}
                     </Typography>
                   </Box>
@@ -406,7 +431,7 @@ function SearchFiltersSidebar({
   showApplyButton = true
 }) {
   const { t, locale } = useI18n();
-  const brandItems = options.brands.map((item) => ({ value: item, label: item }));
+  const brandItems = options.brands.map(normalizeBrandOption).filter(Boolean);
   const categoryItems = options.categories.map((item) => ({
     value: item,
     label: translateOption("categories", item, locale)
@@ -537,11 +562,15 @@ function SearchFiltersSidebar({
   return (
     <Stack spacing={3.2} sx={{ minHeight: 0 }}>
       <SearchSection title={t("search.filters.brand")}>
-        <SingleSelectChips
+        <MultiSelectChips
           items={brandItems}
-          value={draftState.brand}
-          onChange={(brand) => updateDraftState((current) => ({ ...current, brand, page: 1 }))}
-          defaultLabel={t("search.notImportant")}
+          values={draftState.brand}
+          defaultLabel={t("search.all")}
+          onToggle={(brand) => updateDraftState((current) => ({
+            ...current,
+            brand: brand === null ? [] : toggleSelection(brand, current.brand),
+            page: 1
+          }))}
         />
       </SearchSection>
 
@@ -614,20 +643,28 @@ function SearchFiltersSidebar({
       </SearchSection>
 
       <SearchSection title={t("profile.audienceTitle")}>
-        <SingleSelectChips
+        <MultiSelectChips
           items={audienceItems}
-          value={draftState.audience}
-          onChange={(audience) => updateDraftState((current) => ({ ...current, audience, page: 1 }))}
+          values={draftState.audience}
           defaultLabel={t("search.notImportant")}
+          onToggle={(audience) => updateDraftState((current) => ({
+            ...current,
+            audience: audience === null ? [] : toggleSelection(audience, current.audience),
+            page: 1
+          }))}
         />
       </SearchSection>
 
       <SearchSection title={t("search.filters.category")}>
-        <SingleSelectChips
+        <MultiSelectChips
           items={categoryItems}
-          value={draftState.category}
-          onChange={(category) => updateDraftState((current) => ({ ...current, category, page: 1 }))}
+          values={draftState.category}
           defaultLabel={t("search.all")}
+          onToggle={(category) => updateDraftState((current) => ({
+            ...current,
+            category: category === null ? [] : toggleSelection(category, current.category),
+            page: 1
+          }))}
         />
       </SearchSection>
 
@@ -644,33 +681,41 @@ function SearchFiltersSidebar({
         />
       </SearchSection>
 
-      <SearchSection title={t("profile.stylesTitle")} hint={t("profile.stylesHint")}>
+      <SearchSection title={t("profile.stylesTitle")}>
         <Stack spacing={1.5}>
           <Typography variant="body2" sx={{ fontWeight: 600 }}>
             {t("search.fields.formalityLevel")}
           </Typography>
-          <SingleSelectChips
+          <MultiSelectChips
             items={options.formalityLevels.map((item) => ({
               value: item,
               label: translateOption("styles", item, locale)
             }))}
-            value={draftState.formalityLevel}
-            onChange={(formalityLevel) => updateDraftState((current) => ({ ...current, formalityLevel, page: 1 }))}
+            values={draftState.formalityLevel}
             defaultLabel={t("search.notImportant")}
+            onToggle={(formalityLevel) => updateDraftState((current) => ({
+              ...current,
+              formalityLevel: formalityLevel === null ? [] : toggleSelection(formalityLevel, current.formalityLevel),
+              page: 1
+            }))}
           />
         </Stack>
         <Stack spacing={1.5}>
           <Typography variant="body2" sx={{ fontWeight: 600 }}>
             {t("search.fields.style")}
           </Typography>
-          <SingleSelectChips
+          <MultiSelectChips
             items={options.styles.map((item) => ({
               value: item,
               label: translateOption("styles", item, locale)
             }))}
-            value={draftState.style}
-            onChange={(style) => updateDraftState((current) => ({ ...current, style, page: 1 }))}
+            values={draftState.style}
             defaultLabel={t("search.notImportant")}
+            onToggle={(style) => updateDraftState((current) => ({
+              ...current,
+              style: style === null ? [] : toggleSelection(style, current.style),
+              page: 1
+            }))}
           />
         </Stack>
       </SearchSection>
@@ -691,44 +736,64 @@ function SearchFiltersSidebar({
       <SearchSection title={t("profile.accentColorTitle")}>
         <AccentColorChips
           options={options.colors}
-          selectedValue={draftState.color}
-          onSelect={(color) => updateDraftState((current) => ({ ...current, color, page: 1 }))}
+          selectedValues={draftState.color}
+          onToggle={(color) => updateDraftState((current) => ({
+            ...current,
+            color: color === null ? [] : toggleSelection(color, current.color),
+            page: 1
+          }))}
         />
       </SearchSection>
 
       <SearchSection title={t("profile.patternTitle")}>
-        <SingleSelectChips
+        <MultiSelectChips
           items={patternItems}
-          value={draftState.pattern}
-          onChange={(pattern) => updateDraftState((current) => ({ ...current, pattern, page: 1 }))}
+          values={draftState.pattern}
           defaultLabel={t("search.notImportant")}
+          onToggle={(pattern) => updateDraftState((current) => ({
+            ...current,
+            pattern: pattern === null ? [] : toggleSelection(pattern, current.pattern),
+            page: 1
+          }))}
         />
       </SearchSection>
 
       <SearchSection title={t("search.filters.silhouette")}>
-        <SingleSelectChips
+        <MultiSelectChips
           items={silhouetteItems}
-          value={draftState.silhouette}
-          onChange={(silhouette) => updateDraftState((current) => ({ ...current, silhouette, page: 1 }))}
+          values={draftState.silhouette}
           defaultLabel={t("search.notImportant")}
+          onToggle={(silhouette) => updateDraftState((current) => ({
+            ...current,
+            silhouette: silhouette === null ? [] : toggleSelection(silhouette, current.silhouette),
+            page: 1
+          }))}
         />
       </SearchSection>
 
       <SearchSection title={t("search.filters.fit")}>
-        <SingleSelectChips
+        <MultiSelectChips
           items={fitItems}
-          value={draftState.fit}
-          onChange={(fit) => updateDraftState((current) => ({ ...current, fit, page: 1 }))}
+          values={draftState.fit}
           defaultLabel={t("search.notImportant")}
+          onToggle={(fit) => updateDraftState((current) => ({
+            ...current,
+            fit: fit === null ? [] : toggleSelection(fit, current.fit),
+            page: 1
+          }))}
         />
       </SearchSection>
 
       <SearchSection title={t("search.filters.closureType")}>
-        <SingleSelectChips
+        <MultiSelectChips
           items={closureTypeItems}
-          value={draftState.closureType}
-          onChange={(closureType) => updateDraftState((current) => ({ ...current, closureType, page: 1 }))}
+          values={draftState.closureType}
           defaultLabel={t("search.notImportant")}
+          onToggle={(closureType) => updateDraftState((current) => ({
+            ...current,
+            closureType: closureType === null ? [] : toggleSelection(closureType, current.closureType),
+            page: 1
+          }))}
         />
       </SearchSection>
 
