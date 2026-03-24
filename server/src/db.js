@@ -1005,7 +1005,11 @@ async function updateProfileLocaleByEmail({ email, locale }) {
     update profiles
     set
       locale = ${locale},
-      pdf = null,
+      pdf = case
+        when locale is distinct from ${locale}
+        then null
+        else pdf
+      end,
       updated_at = now()
     where email = ${email}
     returning
