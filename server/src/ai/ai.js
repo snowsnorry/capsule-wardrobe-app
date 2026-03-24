@@ -5,7 +5,8 @@ import { generateJsonWithLlm } from "./openai.js";
 import {  getPromptEmbeddings, getWardrobePrompt } from "./voyageai.js";
 import { getCapsuleCategories } from "./categories.js";
 import { generateSwimwearAddition, shouldGenerateSwimwear } from "./swimwear.js";
-import { buildPromptDebugImages } from "./promptImages.js";
+import { buildPromptDebugImages, downloadProductImageAssets } from "./promptImages.js";
+import { startWardrobePdfJob } from "../wardrobePdf.js";
 const PROMPT_TEMPLATE = readFileSync(new URL("../templates/prompt.txt", import.meta.url), "utf8");
 const WARDROBE_POLL_AFTER_MS = 2000;
 const COMPLETED_JOB_TTL_MS = 5 * 60 * 1000;
@@ -254,6 +255,10 @@ function appendUniqueWardrobeItems(items, extraItems) {
   return result;
 }
 
+function mergeImageAssetsById(...sources) {
+  return Object.assign({}, ...sources.filter((source) => source && typeof source === "object"));
+}
+
 async function generateCapsuleWardrobe(userProfile = null) {
   const sql = getSqlClient();
   const prompt = getWardrobePrompt(userProfile);
@@ -467,6 +472,13 @@ async function generateCapsuleWardrobe(userProfile = null) {
   return {
     items: balancedItems.map(toWardrobeUiItem),
     selectedItems: balancedItems,
+    selectedImageAssetsById: Object.fromEntries(
+      balancedItems
+        .map((item) => String(item?.id || ""))
+        .filter(Boolean)
+        .map((id) => [id, promptDebugImages.downloadedImagesById?.[id]])
+        .filter(([, asset]) => asset)
+    ),
     promptEmbeddings,
     rawSelectionText: typeof selectionResponse?.output_text === "string" && selectionResponse.output_text.trim().length > 0
       ? selectionResponse.output_text.trim()
@@ -546,6 +558,7 @@ function startWardrobeJob(email, profile) {
             selectedCapsuleItems: wardrobe.selectedItems,
             promptEmbeddings: wardrobe.promptEmbeddings
           });
+          const swimwearImageAssetsById = await downloadProductImageAssets(swimwear.items);
           const finalItems = appendUniqueWardrobeItems(items, swimwear.items);
           const finalPayload = buildWardrobePayload({
             items: finalItems,
@@ -557,9 +570,28 @@ function startWardrobeJob(email, profile) {
 
           await updateProfileItems(email, finalPayload);
           job.result = finalPayload;
+          startWardrobePdfJob(email, {
+            wardrobePayload: finalPayload,
+            locale: profile?.locale,
+            imageAssetsById: mergeImageAssetsById(
+              wardrobe.selectedImageAssetsById,
+              swimwearImageAssetsById
+            )
+          });
         } catch (error) {
           console.error("[wardrobe-ai][swimwear]", error);
+          startWardrobePdfJob(email, {
+            wardrobePayload: storedCapsule,
+            locale: profile?.locale,
+            imageAssetsById: wardrobe.selectedImageAssetsById
+          });
         }
+      } else {
+        startWardrobePdfJob(email, {
+          wardrobePayload: storedCapsule,
+          locale: profile?.locale,
+          imageAssetsById: wardrobe.selectedImageAssetsById
+        });
       }
 
       job.status = "completed";

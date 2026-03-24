@@ -3,8 +3,10 @@ import {
   deleteProfileByEmail,
   getDistinctProductPatterns,
   getProfileByEmail,
+  getProfilePdfByEmail,
   hasProfileByEmail,
   updateProfileRecord,
+  updateProfilePdfByEmail,
   updateProfileLocaleByEmail,
   updateProfileItemsByEmail
 } from "./db.js";
@@ -214,6 +216,14 @@ async function updateProfileItems(email, items) {
   return updateProfileItemsByEmail({ email, items });
 }
 
+async function getProfilePdf(email) {
+  return getProfilePdfByEmail(email);
+}
+
+async function updateProfilePdf(email, pdf) {
+  return updateProfilePdfByEmail({ email, pdf });
+}
+
 export {
   getProfile,
   hasProfile,
@@ -222,6 +232,8 @@ export {
   updateProfileLocale,
   deleteProfile,
   updateProfileItems,
+  getProfilePdf,
+  updateProfilePdf,
   getFormalityLevels,
   getStyles,
   getOccasions,

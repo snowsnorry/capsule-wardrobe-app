@@ -66,10 +66,15 @@ async function ensureProfilesTable() {
       color text null,
       pattern text null,
       items jsonb null,
+      pdf bytea null,
       locale text not null,
       created_at timestamptz not null default now(),
       updated_at timestamptz not null default now()
     )
+  `;
+  await sql`
+    alter table profiles
+    add column if not exists pdf bytea null
   `;
 }
 
@@ -963,6 +968,18 @@ async function updateProfileRecord({
       color = ${color},
       pattern = ${pattern},
       locale = ${locale},
+      pdf = case
+        when formality_level is distinct from ${formalityLevel}
+          or style is distinct from ${style}
+          or occasions is distinct from ${occasions}
+          or season is distinct from ${season}
+          or audience is distinct from ${audience}
+          or color is distinct from ${color}
+          or pattern is distinct from ${pattern}
+          or locale is distinct from ${locale}
+        then null
+        else pdf
+      end,
       updated_at = now()
     where email = ${email}
     returning
@@ -988,6 +1005,7 @@ async function updateProfileLocaleByEmail({ email, locale }) {
     update profiles
     set
       locale = ${locale},
+      pdf = null,
       updated_at = now()
     where email = ${email}
     returning
@@ -1013,6 +1031,7 @@ async function updateProfileItemsByEmail({ email, items }) {
     update profiles
     set
       items = ${items === null ? null : JSON.stringify(items)},
+      pdf = null,
       updated_at = now()
     where email = ${email}
     returning
@@ -1028,6 +1047,30 @@ async function updateProfileItemsByEmail({ email, items }) {
       locale,
       created_at as "createdAt",
       updated_at as "updatedAt"
+  `;
+  return row || null;
+}
+
+async function getProfilePdfByEmail(email) {
+  const sql = getSqlClient();
+  const [row] = await sql`
+    select pdf
+    from profiles
+    where email = ${email}
+    limit 1
+  `;
+  return row?.pdf ?? null;
+}
+
+async function updateProfilePdfByEmail({ email, pdf }) {
+  const sql = getSqlClient();
+  const [row] = await sql`
+    update profiles
+    set
+      pdf = ${pdf},
+      updated_at = now()
+    where email = ${email}
+    returning email
   `;
   return row || null;
 }
@@ -1085,6 +1128,8 @@ export {
   updateProfileRecord,
   updateProfileLocaleByEmail,
   updateProfileItemsByEmail,
+  getProfilePdfByEmail,
+  updateProfilePdfByEmail,
   hasAffectedRows,
   deleteProfileByEmail
 };

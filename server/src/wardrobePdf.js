@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { PDFDocument, rgb } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import sharp from "sharp";
-import { getProfile } from "./profileStore.js";
+import { getProfile, getProfilePdf, updateProfilePdf } from "./profileStore.js";
 import { getProductsByIdsInOrder } from "./db.js";
 import { sortWardrobeItems } from "../../shared/wardrobeOrder.js";
 import { buildProductDetailGroups } from "../../shared/productDetail.js";
@@ -45,6 +45,9 @@ const FALLBACK_BOLD_FONT_CANDIDATES = [
   "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
   "/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf"
 ];
+const WARDROBE_PDF_POLL_AFTER_MS = 2000;
+const PDF_JOB_TTL_MS = 5 * 60 * 1000;
+const wardrobePdfJobs = new Map();
 
 function resolveFontPath(candidates) {
   const match = candidates.find((candidate) => existsSync(candidate));
@@ -85,12 +88,63 @@ function getStoredWardrobeItems(profile) {
   return Array.isArray(stored.items) ? stored.items : [];
 }
 
+function createWardrobePdfGenerationKey({ items = [], locale = "en" } = {}) {
+  return JSON.stringify({
+    locale,
+    items: sortWardrobeItems(items).map((item) => String(item?.id || item?.url || `${item?.category}:${item?.name}`))
+  });
+}
+
+function normalizeStoredPdf(pdf) {
+  if (!pdf) {
+    return null;
+  }
+
+  if (Buffer.isBuffer(pdf)) {
+    return pdf;
+  }
+
+  if (pdf instanceof Uint8Array) {
+    return Buffer.from(pdf);
+  }
+
+  if (Array.isArray(pdf)) {
+    return Buffer.from(pdf);
+  }
+
+  return null;
+}
+
 function getPdfLocale(rawLocale) {
   const locale = normalizeLocale(String(rawLocale || ""));
   return isSupportedLocale(locale) ? locale : "en";
 }
 
-async function loadImageBytes(imageUrl) {
+async function normalizeImageBytes(buffer, mimeType = "") {
+  if (!buffer) {
+    return null;
+  }
+
+  const contentType = String(mimeType || "").toLowerCase();
+  const sourceBuffer = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
+
+  if (contentType.includes("jpeg") || contentType.includes("jpg")) {
+    return { kind: "jpg", bytes: sourceBuffer };
+  }
+
+  if (contentType.includes("png")) {
+    return { kind: "png", bytes: sourceBuffer };
+  }
+
+  const pngBuffer = await sharp(sourceBuffer).png().toBuffer();
+  return { kind: "png", bytes: pngBuffer };
+}
+
+async function loadImageBytes(imageUrl, imageAsset = null) {
+  if (imageAsset?.buffer) {
+    return normalizeImageBytes(imageAsset.buffer, imageAsset.mimeType);
+  }
+
   if (typeof imageUrl !== "string" || imageUrl.trim().length === 0) {
     return null;
   }
@@ -103,17 +157,7 @@ async function loadImageBytes(imageUrl) {
 
     const contentType = String(response.headers.get("content-type") || "").toLowerCase();
     const sourceBuffer = Buffer.from(await response.arrayBuffer());
-
-    if (contentType.includes("jpeg") || contentType.includes("jpg")) {
-      return { kind: "jpg", bytes: sourceBuffer };
-    }
-
-    if (contentType.includes("png")) {
-      return { kind: "png", bytes: sourceBuffer };
-    }
-
-    const pngBuffer = await sharp(sourceBuffer).png().toBuffer();
-    return { kind: "png", bytes: pngBuffer };
+    return normalizeImageBytes(sourceBuffer, contentType);
   } catch (error) {
     console.error("[wardrobe-pdf][image]", imageUrl, error);
     return null;
@@ -419,7 +463,7 @@ function drawDetailGroup(page, group, startX, startY, width, fonts) {
   return startY - boxHeight - 8;
 }
 
-async function drawProductPage(pdfDoc, product, locale, fonts) {
+async function drawProductPage(pdfDoc, product, locale, fonts, imageAssetsById = {}) {
   const page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
   const { regularFont, boldFont } = fonts;
   let cursorY = PAGE_HEIGHT - PAGE_MARGIN;
@@ -542,7 +586,10 @@ async function drawProductPage(pdfDoc, product, locale, fonts) {
     borderWidth: 1
   });
 
-  const imageBytes = await loadImageBytes(product?.imageUrl);
+  const imageBytes = await loadImageBytes(
+    product?.imageUrl,
+    imageAssetsById[String(product?.id || "")] || null
+  );
   if (!imageBytes) {
     drawTextBlock(page, title, {
       x: imageBounds.x + 12,
@@ -572,7 +619,7 @@ async function drawProductPage(pdfDoc, product, locale, fonts) {
   });
 }
 
-async function buildWardrobePdf(products, { locale = "en" } = {}) {
+async function buildWardrobePdf(products, { locale = "en", imageAssetsById = {} } = {}) {
   const pdfDoc = await PDFDocument.create();
   pdfDoc.registerFontkit(fontkit);
 
@@ -587,52 +634,227 @@ async function buildWardrobePdf(products, { locale = "en" } = {}) {
   const boldFont = await pdfDoc.embedFont(boldFontBytes, { subset: true });
 
   for (const product of products) {
-    await drawProductPage(pdfDoc, product, locale, { regularFont, boldFont });
+    await drawProductPage(pdfDoc, product, locale, { regularFont, boldFont }, imageAssetsById);
   }
 
   return Buffer.from(await pdfDoc.save({ useObjectStreams: false }));
 }
 
-function createWardrobePdfDownloadHandler({
+function scheduleWardrobePdfJobCleanup(email, job) {
+  const timer = setTimeout(() => {
+    if (wardrobePdfJobs.get(email) === job && job.status !== "pending") {
+      wardrobePdfJobs.delete(email);
+    }
+  }, PDF_JOB_TTL_MS);
+  timer.unref?.();
+}
+
+function getWardrobePdfJob(email) {
+  const job = wardrobePdfJobs.get(email);
+  if (!job) {
+    return null;
+  }
+
+  if (job.status !== "pending" && Date.now() - job.updatedAt > PDF_JOB_TTL_MS) {
+    wardrobePdfJobs.delete(email);
+    return null;
+  }
+
+  return job;
+}
+
+function createWardrobePdfJobManager({
   getProfileByEmail = getProfile,
+  getProfilePdfByEmail = getProfilePdf,
+  updateProfilePdfByEmail = updateProfilePdf,
   getProducts = getProductsByIdsInOrder,
   buildPdf = buildWardrobePdf
 } = {}) {
-  return async function downloadWardrobePdf(req, res) {
+  function startWardrobePdfJob(email, {
+    wardrobePayload = null,
+    locale = null,
+    imageAssetsById = {}
+  } = {}) {
+    const resolvedItems = sortWardrobeItems(
+      wardrobePayload && !Array.isArray(wardrobePayload)
+        ? getStoredWardrobeItems({ items: wardrobePayload })
+        : getStoredWardrobeItems({ items: wardrobePayload })
+    );
+    const resolvedLocale = getPdfLocale(locale);
+    const generationKey = createWardrobePdfGenerationKey({
+      items: resolvedItems,
+      locale: resolvedLocale
+    });
+    const existing = getWardrobePdfJob(email);
+
+    if (existing?.status === "pending" && existing.generationKey === generationKey) {
+      return existing;
+    }
+
+    const job = {
+      status: "pending",
+      updatedAt: Date.now(),
+      generationKey,
+      error: null,
+      promise: null
+    };
+    wardrobePdfJobs.set(email, job);
+
+    job.promise = (async () => {
+      try {
+        let profile = null;
+        let items = resolvedItems;
+        let pdfLocale = resolvedLocale;
+
+        if (items.length === 0 || !locale) {
+          profile = await getProfileByEmail(email);
+          items = sortWardrobeItems(getStoredWardrobeItems(profile));
+          pdfLocale = getPdfLocale(profile?.locale);
+        }
+
+        const productIds = items
+          .map((item) => String(item?.id || "").trim())
+          .filter(Boolean);
+
+        if (productIds.length === 0) {
+          throw new Error("wardrobe_pdf_items_missing");
+        }
+
+        const products = await getProducts(productIds);
+        const foundIds = new Set(products.map((product) => String(product?.id || "")));
+        const missingIds = productIds.filter((id) => !foundIds.has(id));
+        if (missingIds.length > 0) {
+          console.warn("[wardrobe-pdf][missing-products]", JSON.stringify({ email, missingIds }));
+        }
+
+        if (products.length === 0) {
+          throw new Error("wardrobe_pdf_products_missing");
+        }
+
+        const pdfBuffer = await buildPdf(products, {
+          locale: pdfLocale,
+          imageAssetsById
+        });
+
+        if (wardrobePdfJobs.get(email) !== job) {
+          return;
+        }
+
+        const latestProfile = await getProfileByEmail(email);
+        const latestGenerationKey = createWardrobePdfGenerationKey({
+          items: getStoredWardrobeItems(latestProfile),
+          locale: getPdfLocale(latestProfile?.locale)
+        });
+        if (latestGenerationKey !== job.generationKey) {
+          job.status = "completed";
+          job.updatedAt = Date.now();
+          return;
+        }
+
+        await updateProfilePdfByEmail(email, pdfBuffer);
+        job.status = "completed";
+        job.updatedAt = Date.now();
+      } catch (error) {
+        if (wardrobePdfJobs.get(email) !== job) {
+          return;
+        }
+        job.status = "failed";
+        job.updatedAt = Date.now();
+        job.error = error;
+        console.error("[wardrobe-pdf][job]", error);
+      } finally {
+        scheduleWardrobePdfJobCleanup(email, job);
+      }
+    })();
+
+    return job;
+  }
+
+  async function ensureWardrobePdfJob(email, options = {}) {
+    const existing = getWardrobePdfJob(email);
+    if (existing?.status === "pending") {
+      return existing;
+    }
+
+    if (existing?.status === "failed") {
+      wardrobePdfJobs.delete(email);
+    }
+
+    let profile = null;
+    let wardrobePayload = options.wardrobePayload || null;
+    let locale = options.locale || null;
+
+    if (!wardrobePayload || !locale) {
+      profile = await getProfileByEmail(email);
+      if (!profile) {
+        return null;
+      }
+      wardrobePayload = wardrobePayload || profile.items;
+      locale = locale || profile.locale;
+    }
+
+    const items = sortWardrobeItems(getStoredWardrobeItems({ items: wardrobePayload }));
+    if (items.length === 0) {
+      return null;
+    }
+
+    return startWardrobePdfJob(email, {
+      wardrobePayload,
+      locale,
+      imageAssetsById: options.imageAssetsById || {}
+    });
+  }
+
+  async function downloadWardrobePdf(req, res) {
     try {
-      const locale = getPdfLocale(req.body?.locale);
-      const profile = await getProfileByEmail(req.user.email);
+      const email = req.user.email;
+      const profile = await getProfileByEmail(email);
       const storedWardrobeItems = sortWardrobeItems(getStoredWardrobeItems(profile));
-      const productIds = storedWardrobeItems
-        .map((item) => String(item?.id || "").trim())
-        .filter(Boolean);
 
-      if (productIds.length === 0) {
+      if (storedWardrobeItems.length === 0) {
         return res.status(404).json({ error: "not_found" });
       }
 
-      const products = await getProducts(productIds);
-      const foundIds = new Set(products.map((product) => String(product?.id || "")));
-      const missingIds = productIds.filter((id) => !foundIds.has(id));
-      if (missingIds.length > 0) {
-        console.warn("[wardrobe-pdf][missing-products]", JSON.stringify({ email: req.user.email, missingIds }));
+      const storedPdf = normalizeStoredPdf(await getProfilePdfByEmail(email));
+      if (storedPdf) {
+        res.setHeader("Content-Type", "application/pdf");
+        res.setHeader("Content-Disposition", 'attachment; filename="capsule-wardrobe.pdf"');
+        return res.status(200).send(storedPdf);
       }
 
-      if (products.length === 0) {
-        return res.status(404).json({ error: "not_found" });
-      }
+      await ensureWardrobePdfJob(email, {
+        wardrobePayload: profile?.items,
+        locale: profile?.locale
+      });
 
-      const pdfBuffer = await buildPdf(products, { locale });
-      res.setHeader("Content-Type", "application/pdf");
-      res.setHeader("Content-Disposition", 'attachment; filename="capsule-wardrobe.pdf"');
-      return res.status(200).send(pdfBuffer);
+      return res.status(202).json({
+        ok: true,
+        status: "pending",
+        pollAfterMs: WARDROBE_PDF_POLL_AFTER_MS
+      });
     } catch (error) {
       console.error("[wardrobe-pdf]", error);
       return res.status(503).json({ error: "service_unavailable" });
     }
+  }
+
+  return {
+    startWardrobePdfJob,
+    ensureWardrobePdfJob,
+    getWardrobePdfJob,
+    downloadWardrobePdf
   };
 }
 
-const downloadWardrobePdf = createWardrobePdfDownloadHandler();
+const wardrobePdfJobManager = createWardrobePdfJobManager();
+const { startWardrobePdfJob, ensureWardrobePdfJob, downloadWardrobePdf } = wardrobePdfJobManager;
 
-export { buildWardrobePdf, createWardrobePdfDownloadHandler, downloadWardrobePdf };
+export {
+  buildWardrobePdf,
+  createWardrobePdfJobManager,
+  createWardrobePdfGenerationKey,
+  getWardrobePdfJob,
+  startWardrobePdfJob,
+  ensureWardrobePdfJob,
+  downloadWardrobePdf
+};

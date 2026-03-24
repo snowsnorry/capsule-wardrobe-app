@@ -99,6 +99,55 @@ function getRequestSignal() {
 }
 
 async function downloadTileBuffer(item) {
+  const result = await downloadProductImageAsset(item);
+  if (result.status !== "downloaded" || !result.sourceBuffer) {
+    return {
+      ...result,
+      tileBuffer: null
+    };
+  }
+
+  try {
+    const tileBuffer = await sharp(result.sourceBuffer)
+      .resize(TILE_SIZE, TILE_SIZE, {
+        fit: "contain",
+        withoutEnlargement: true,
+        background: BACKGROUND_COLOR
+      })
+      .flatten({ background: BACKGROUND_COLOR })
+      .png()
+      .toBuffer();
+
+    return {
+      ...result,
+      status: "downloaded",
+      tileBuffer
+    };
+  } catch (error) {
+    const reason = error?.name === "TimeoutError"
+      ? "timeout"
+      : String(error?.message || "download_failed");
+
+    console.warn(
+      "[prompt-images][tile-build-failed]",
+      JSON.stringify({
+        id: result.id,
+        category: result.category,
+        imageUrl: result.imageUrl,
+        reason
+      })
+    );
+
+    return {
+      ...result,
+      status: "skipped",
+      reason,
+      tileBuffer: null
+    };
+  }
+}
+
+async function downloadProductImageAsset(item) {
   const id = String(item?.id ?? "");
   const imageUrl = String(item?.image_url ?? "").trim();
 
@@ -109,7 +158,8 @@ async function downloadTileBuffer(item) {
       imageUrl,
       status: "skipped",
       reason: "missing_image_url",
-      tileBuffer: null
+      mimeType: null,
+      sourceBuffer: null
     };
   }
 
@@ -122,16 +172,8 @@ async function downloadTileBuffer(item) {
       throw new Error(`http_${response.status}`);
     }
 
-    const arrayBuffer = await response.arrayBuffer();
-    const tileBuffer = await sharp(Buffer.from(arrayBuffer))
-      .resize(TILE_SIZE, TILE_SIZE, {
-        fit: "contain",
-        withoutEnlargement: true,
-        background: BACKGROUND_COLOR
-      })
-      .flatten({ background: BACKGROUND_COLOR })
-      .png()
-      .toBuffer();
+    const mimeType = String(response.headers.get("content-type") || "").toLowerCase() || "application/octet-stream";
+    const sourceBuffer = Buffer.from(await response.arrayBuffer());
 
     return {
       id,
@@ -139,7 +181,8 @@ async function downloadTileBuffer(item) {
       imageUrl,
       status: "downloaded",
       reason: null,
-      tileBuffer
+      mimeType,
+      sourceBuffer
     };
   } catch (error) {
     const reason = error?.name === "TimeoutError"
@@ -147,7 +190,7 @@ async function downloadTileBuffer(item) {
       : String(error?.message || "download_failed");
 
     console.warn(
-      "[prompt-images][download-failed]",
+      "[prompt-images][asset-download-failed]",
       JSON.stringify({
         id,
         category: item?.category ?? "",
@@ -162,9 +205,28 @@ async function downloadTileBuffer(item) {
       imageUrl,
       status: "skipped",
       reason,
-      tileBuffer: null
+      mimeType: null,
+      sourceBuffer: null
     };
   }
+}
+
+async function downloadProductImageAssets(items = []) {
+  const downloadResults = await mapWithConcurrency(
+    items,
+    DOWNLOAD_CONCURRENCY,
+    (item) => downloadProductImageAsset(item)
+  );
+
+  return Object.fromEntries(
+    downloadResults
+      .filter((result) => result.status === "downloaded" && result.id && result.sourceBuffer)
+      .map((result) => [result.id, {
+        buffer: result.sourceBuffer,
+        mimeType: result.mimeType,
+        imageUrl: result.imageUrl
+      }])
+  );
 }
 
 function createCategoryOverlaySvg(category, entries) {
@@ -314,6 +376,7 @@ async function buildPromptDebugImages({
 
   const groupedItems = groupPromptImageItemsByCategory(normalizedItems);
   const categories = [];
+  const downloadedImagesById = {};
   let downloadedCount = 0;
   let skippedCount = 0;
 
@@ -329,6 +392,13 @@ async function buildPromptDebugImages({
     for (const result of downloadResults) {
       if (result.status === "downloaded") {
         downloadedCount += 1;
+        if (result.id && result.sourceBuffer) {
+          downloadedImagesById[result.id] = {
+            buffer: result.sourceBuffer,
+            mimeType: result.mimeType,
+            imageUrl: result.imageUrl
+          };
+        }
       } else {
         skippedCount += 1;
       }
@@ -377,6 +447,7 @@ async function buildPromptDebugImages({
 
   return {
     categories,
+    downloadedImagesById,
     downloadedCount,
     skippedCount
   };
@@ -390,6 +461,7 @@ export {
   GRID_HEIGHT,
   HEADER_HEIGHT,
   MAX_ITEMS_PER_CATEGORY,
+  downloadProductImageAssets,
   groupPromptImageItemsByCategory,
   buildPromptDebugImages
 };
