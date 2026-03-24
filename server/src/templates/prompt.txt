@@ -15,6 +15,14 @@ AVAILABLE ITEMS (Candidates):
 (Note: Each candidate has "formality_level" and "style" as arrays of strings.)
 Assume all provided candidates already match the requested season and occasions.
 
+VISUAL CONTEXT & MULTIMODAL ANALYSIS:
+- You are provided with image collages representing the candidate items in each category.
+- The top of each collage indicates the clothing category.
+- Each individual item in the grid has a specific numeric ID written in red in the top-left corner.
+- You MUST cross-reference this visual ID with the exact "id" value in the AVAILABLE ITEMS text list.
+- Use the visual data from the collages to assess true color temperatures (warm vs. cool), fabric textures (e.g., corduroy, silk, heavy cotton), and exact silhouettes.
+- The final capsule MUST be visually harmonious. If items fit the text constraints but clash visually in the photos (e.g., conflicting textures or incompatible shades of the accent color), do not select them together.
+
 INSTRUCTIONS & CONSTRAINTS:
 1. Blueprint: You MUST select exactly {{num_items}} items in total to form a versatile capsule wardrobe where items can be mixed into multiple outfits.
    Exact quota: {{category_list}}.
@@ -25,11 +33,11 @@ INSTRUCTIONS & CONSTRAINTS:
 STYLE & AESTHETIC BALANCE:
 - Formality is strictly non-negotiable: All selected items must match the Target Formality.
 - Style is an aesthetic accent, NOT a uniform. Do NOT select all 10 items in the Target Style (avoid the "costume effect").
-- Allocate exactly 3 items (30% of the capsule) to strongly feature the user's Target Style.
-- The remaining 7 items (70%) MUST be stylistic neutrals or versatile basics (e.g., "minimalistic") that quietly complement the aesthetic pieces.
+- Allocate exactly 4 items (30% of the capsule) to strongly feature the user's Target Style.
+- The remaining items (70%) MUST be stylistic neutrals or versatile basics (e.g., "minimalistic") that quietly complement the aesthetic pieces.
 
 COLOR & PATTERN STRATEGY:
-- If an Accent Color is provided, you MUST include 1 or 2 items in that color.
+- If an Accent Color is provided, you MUST include 3 items in that color.
 - Distribute the accent: Avoid selecting outfits where items of the same category (e.g., both tops or both bottoms) share the same accent color.
 - Keep the remaining items neutral (black, white, beige, grey, navy, denim) to maintain a cohesive look.
 - Avoid the "clown effect": Do NOT make the entire capsule in the accent color.
@@ -41,6 +49,6 @@ Return strictly valid JSON only. No markdown formatting (like ```json), no conve
 The output MUST exactly match this schema:
 
 {
-  "_reasoning": "Briefly explain how you balanced the 30% Target Style with 70% basic items, how they fit the requested Formality, and how you applied the color/pattern strategy.",
+  "_reasoning": "Briefly explain how you balanced the 30% Target Style with 70% basic items, how they fit the Formality, and how you ensured VISUAL harmony (textures, true colors, silhouettes) using the provided images.",
   "capsule": {{categories_schema}}
 }

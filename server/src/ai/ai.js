@@ -5,6 +5,7 @@ import { generateJsonWithLlm } from "./openai.js";
 import {  getPromptEmbeddings, getWardrobePrompt } from "./voyageai.js";
 import { getCapsuleCategories } from "./categories.js";
 import { generateSwimwearAddition, shouldGenerateSwimwear } from "./swimwear.js";
+import { buildPromptDebugImages } from "./promptImages.js";
 const PROMPT_TEMPLATE = readFileSync(new URL("../templates/prompt.txt", import.meta.url), "utf8");
 const WARDROBE_POLL_AFTER_MS = 2000;
 const COMPLETED_JOB_TTL_MS = 5 * 60 * 1000;
@@ -402,11 +403,36 @@ async function generateCapsuleWardrobe(userProfile = null) {
     delete normalized.embedding;
     return normalized;
   });
+  const shouldSavePromptDebugArtifacts = process.env.NODE_ENV === "development";
+  let promptDebugImages = { categories: [] };
+
+  try {
+    promptDebugImages = await buildPromptDebugImages({
+      normalizedItems,
+      saveDebugArtifacts: shouldSavePromptDebugArtifacts,
+      debugOutputDir: shouldSavePromptDebugArtifacts
+        ? new URL("../../../last-prompt/", import.meta.url)
+        : null
+    });
+  } catch (error) {
+    console.warn(
+      "[prompt-images][build-failed]",
+      JSON.stringify({
+        message: error?.message || "unknown_error"
+      })
+    );
+  }
 
   const selectionPrompt = getWardrobeSelectionPrompt(userProfile, normalizedItems, capsuleCategories);
   writeFileSync(new URL("../../../last_prompt.txt", import.meta.url), selectionPrompt, "utf8");
   const { response: selectionResponse, json: parsedSelection } = await generateJsonWithLlm(selectionPrompt, {
-    userProfile
+    userProfile,
+    images: promptDebugImages.categories.map((entry) => ({
+      buffer: entry.buffer,
+      mimeType: entry.mimeType,
+      category: entry.category,
+      filename: entry.filename
+    }))
   });
 
   console.log("[wardrobe-ai][selected-json]", JSON.stringify(parsedSelection));

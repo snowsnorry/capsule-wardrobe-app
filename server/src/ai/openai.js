@@ -119,6 +119,62 @@ function splitSystemAndUserPrompt(prompt) {
   };
 }
 
+function buildImageDataUrl(image) {
+  const mimeType = typeof image?.mimeType === "string" && image.mimeType.trim().length > 0
+    ? image.mimeType.trim()
+    : "image/png";
+
+  if (!Buffer.isBuffer(image?.buffer) || image.buffer.length === 0) {
+    return null;
+  }
+
+  return `data:${mimeType};base64,${image.buffer.toString("base64")}`;
+}
+
+function buildResponsesInput(user, images = []) {
+  const content = [];
+  const userText = String(user || "").trim();
+
+  if (userText) {
+    content.push({
+      type: "input_text",
+      text: userText
+    });
+  }
+
+  for (const image of images) {
+    const imageUrl = buildImageDataUrl(image);
+    if (!imageUrl) {
+      console.warn(
+        "[openai][image-skipped]",
+        JSON.stringify({
+          category: image?.category ?? null,
+          filename: image?.filename ?? null,
+          reason: "missing_buffer"
+        })
+      );
+      continue;
+    }
+
+    content.push({
+      type: "input_image",
+      image_url: imageUrl,
+      detail: "high"
+    });
+  }
+
+  if (content.length === 1 && content[0].type === "input_text") {
+    return content[0].text;
+  }
+
+  return [
+    {
+      role: "user",
+      content
+    }
+  ];
+}
+
 async function getPromptEmbeddings(prompt) {
   const client = getOpenAiClient();
   const response = await client.embeddings.create({
@@ -133,14 +189,14 @@ async function getPromptEmbeddings(prompt) {
   return embedding;
 }
 
-async function generateJsonWithLlm(prompt, { userProfile = null, format = null } = {}) {
+async function generateJsonWithLlm(prompt, { userProfile = null, format = null, images = [] } = {}) {
   const client = getOpenAiClient();
   const { system, user } = splitSystemAndUserPrompt(prompt);
 
   const response = await client.responses.create({
     model: DEFAULT_CHAT_MODEL,
     instructions: system || undefined,
-    input: user,
+    input: buildResponsesInput(user, images),
     reasoning: {"effort": "low"},
     // temperature: 0.2,
     // top_p: 0.9,
@@ -173,5 +229,7 @@ export {
   getPromptEmbeddings,
   buildCapsuleSchema,
   buildSwimwearSchema,
-  buildCustomJsonObjectFormat
+  buildCustomJsonObjectFormat,
+  buildImageDataUrl,
+  buildResponsesInput
 };
