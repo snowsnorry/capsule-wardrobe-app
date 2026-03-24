@@ -116,6 +116,7 @@ function App() {
   const [currentView, setCurrentView] = useState("main");
   const [profileItems, setProfileItems] = useState(null);
   const [isLoadingItems, setIsLoadingItems] = useState(false);
+  const [isDownloadingWardrobePdf, setIsDownloadingWardrobePdf] = useState(false);
   const [isWardrobePending, setIsWardrobePending] = useState(false);
   const [hasPendingAdditionalItems, setHasPendingAdditionalItems] = useState(false);
   const [wardrobePollAfterMs, setWardrobePollAfterMs] = useState(WARDROBE_POLL_AFTER_MS_DEFAULT);
@@ -355,6 +356,7 @@ function App() {
       setOnboardingStep(0);
       setProfileItems(null);
       setIsLoadingItems(false);
+      setIsDownloadingWardrobePdf(false);
       setIsWardrobePending(false);
       setHasPendingAdditionalItems(false);
       setWardrobePollAfterMs(WARDROBE_POLL_AFTER_MS_DEFAULT);
@@ -571,6 +573,23 @@ function App() {
     await runWardrobeLoad({ force: true });
   };
 
+  const handleDownloadWardrobePdf = async () => {
+    setIsDownloadingWardrobePdf(true);
+    try {
+      const { downloadWardrobePdf } = await import("./api/wardrobe.js");
+      await downloadWardrobePdf({ locale });
+    } catch {
+      setStatus((current) => ({
+        ...current,
+        error: t("errors.downloadFailed")
+      }));
+    } finally {
+      if (isMountedRef.current) {
+        setIsDownloadingWardrobePdf(false);
+      }
+    }
+  };
+
   useEffect(() => {
     if (!user || !(hasProfile || profileCreated)) {
       return;
@@ -655,8 +674,10 @@ function App() {
           onSignOut={handleLogout}
           isSigningOut={status.loading}
           onRefreshItems={handleRefreshWardrobe}
+          onDownloadPdf={handleDownloadWardrobePdf}
           items={profileItems || []}
           isLoadingItems={isLoadingItems}
+          isDownloadingPdf={isDownloadingWardrobePdf}
           showAdditionalItemPlaceholder={hasPendingAdditionalItems}
           styleOptions={styleOptions}
           occasionOptions={occasionOptions}

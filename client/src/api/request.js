@@ -34,26 +34,7 @@ async function readResponseBody(response) {
 }
 
 async function requestJson(url, options = {}) {
-  const method = String(options.method || "GET").toUpperCase();
-  const headers = new Headers(options.headers || {});
-  const isStateChanging = !["GET", "HEAD", "OPTIONS"].includes(method);
-
-  if (isStateChanging && !headers.has(CSRF_HEADER) && typeof document !== "undefined") {
-    const csrfToken = document.cookie
-      .split(";")
-      .map((part) => part.trim())
-      .find((part) => part.startsWith("csrf="))
-      ?.slice("csrf=".length);
-    if (csrfToken) {
-      headers.set(CSRF_HEADER, decodeURIComponent(csrfToken));
-    }
-  }
-
-  const response = await fetch(url, {
-    ...options,
-    method,
-    headers
-  });
+  const response = await request(url, options);
   const data = await readResponseBody(response);
 
   if (!response.ok) {
@@ -70,6 +51,29 @@ async function requestJson(url, options = {}) {
   }
 
   return {};
+}
+
+async function request(url, options = {}) {
+  const method = String(options.method || "GET").toUpperCase();
+  const headers = new Headers(options.headers || {});
+  const isStateChanging = !["GET", "HEAD", "OPTIONS"].includes(method);
+
+  if (isStateChanging && !headers.has(CSRF_HEADER) && typeof document !== "undefined") {
+    const csrfToken = document.cookie
+      .split(";")
+      .map((part) => part.trim())
+      .find((part) => part.startsWith("csrf="))
+      ?.slice("csrf=".length);
+    if (csrfToken) {
+      headers.set(CSRF_HEADER, decodeURIComponent(csrfToken));
+    }
+  }
+
+  return fetch(url, {
+    ...options,
+    method,
+    headers
+  });
 }
 
 async function getCachedJson(url, { ttlMs = 1000, force = false, ...options } = {}) {
@@ -100,4 +104,4 @@ function clearRequestCache() {
   inFlight.clear();
 }
 
-export { requestJson, getCachedJson, clearRequestCache };
+export { request, requestJson, getCachedJson, clearRequestCache };

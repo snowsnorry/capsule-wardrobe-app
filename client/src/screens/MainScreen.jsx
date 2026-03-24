@@ -13,6 +13,7 @@ import {
   Typography
 } from "@mui/material";
 import RefreshIcon from "@mui/icons-material/Refresh";
+import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
 import TuneIcon from "@mui/icons-material/Tune";
 import { useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
@@ -22,15 +23,16 @@ import ClothingGridPlaceholder from "../components/ClothingGridPlaceholder.jsx";
 import ClothingCard from "../components/ClothingCard.jsx";
 import LocaleSwitcher from "../components/LocaleSwitcher.jsx";
 import AppLauncher from "../components/AppLauncher.jsx";
-
-const CATEGORY_ORDER = ["outerwear", "midlayer", "top", "dress", "bottom", "belt", "shoes", "bag", "swimwear"];
+import { sortWardrobeItems } from "../../../shared/wardrobeOrder.js";
 
 function MainScreen({
   onSignOut,
   isSigningOut,
   onRefreshItems,
+  onDownloadPdf,
   items,
   isLoadingItems,
+  isDownloadingPdf,
   showAdditionalItemPlaceholder,
   styleOptions,
   occasionOptions,
@@ -62,18 +64,7 @@ function MainScreen({
   const isMobile = useMediaQuery(theme.breakpoints.down("lg"));
   const [isSignOutOpen, setIsSignOutOpen] = useState(false);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
-  const sortedItems = [...items].sort((left, right) => {
-    const leftIndex = CATEGORY_ORDER.indexOf(left?.category || "");
-    const rightIndex = CATEGORY_ORDER.indexOf(right?.category || "");
-    const normalizedLeft = leftIndex === -1 ? CATEGORY_ORDER.length : leftIndex;
-    const normalizedRight = rightIndex === -1 ? CATEGORY_ORDER.length : rightIndex;
-
-    if (normalizedLeft !== normalizedRight) {
-      return normalizedLeft - normalizedRight;
-    }
-
-    return String(left?.name || "").localeCompare(String(right?.name || ""));
-  });
+  const sortedItems = sortWardrobeItems(items);
 
   const handleConfirmSignOut = () => {
     setIsSignOutOpen(false);
@@ -182,13 +173,22 @@ function MainScreen({
               ) : (
                 <Box />
               )}
-              <IconButton
-                aria-label={t("main.refresh")}
-                onClick={onRefreshItems}
-                disabled={isLoadingItems}
-              >
-                <RefreshIcon />
-              </IconButton>
+              <Stack direction="row" spacing={0.5}>
+                <IconButton
+                  aria-label={t("main.download")}
+                  onClick={onDownloadPdf}
+                  disabled={isDownloadingPdf || sortedItems.length === 0}
+                >
+                  <DownloadRoundedIcon />
+                </IconButton>
+                <IconButton
+                  aria-label={t("main.refresh")}
+                  onClick={onRefreshItems}
+                  disabled={isLoadingItems}
+                >
+                  <RefreshIcon />
+                </IconButton>
+              </Stack>
             </Stack>
             <Divider />
             {isLoadingItems ? (

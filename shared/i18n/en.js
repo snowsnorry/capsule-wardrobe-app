@@ -199,6 +199,7 @@ const en = {
   main: {
     title: "Main",
     welcome: "Welcome back",
+    download: "Download capsule PDF",
     refresh: "Refresh wardrobe",
     placeholder: "Your profile is ready. The main screen will appear here next.",
     menuOpen: "Open menu",
@@ -318,7 +319,8 @@ const en = {
     profileNotFound: "Profile not found.",
     invalidPayload: "Please select at least one option.",
     invalidGoogleToken: "Google sign-in failed. Please try again.",
-    googleAuthNotConfigured: "Google sign-in is not configured on the server."
+    googleAuthNotConfigured: "Google sign-in is not configured on the server.",
+    downloadFailed: "Failed to generate the capsule PDF. Please try again."
   },
   dialogs: {
     signOutTitle: "Sign out",

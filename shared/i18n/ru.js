@@ -200,6 +200,7 @@ const ru = {
   main: {
     title: "Главная",
     welcome: "С возвращением",
+    download: "Скачать PDF капсулы",
     refresh: "Обновить гардероб",
     placeholder: "Ваш профиль готов. Основной экран появится здесь позже.",
     menuOpen: "Открыть меню",
@@ -319,7 +320,8 @@ const ru = {
     profileNotFound: "Профиль не найден.",
     invalidPayload: "Выберите хотя бы один вариант.",
     invalidGoogleToken: "Не удалось войти через Google. Попробуйте снова.",
-    googleAuthNotConfigured: "Вход через Google не настроен на сервере."
+    googleAuthNotConfigured: "Вход через Google не настроен на сервере.",
+    downloadFailed: "Не удалось сгенерировать PDF капсулы. Попробуйте еще раз."
   },
   dialogs: {
     signOutTitle: "Выйти",

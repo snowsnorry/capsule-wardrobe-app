@@ -547,6 +547,51 @@ async function getProductPriceRange() {
   };
 }
 
+async function getProductsByIdsInOrder(ids = []) {
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return [];
+  }
+
+  const sql = getSqlClient();
+  const normalizedIds = ids
+    .map((value) => String(value || "").trim())
+    .filter(Boolean);
+
+  if (normalizedIds.length === 0) {
+    return [];
+  }
+
+  return sql`
+    select
+      products.id,
+      products.name,
+      products.url,
+      products.description,
+      products.brand,
+      products.price,
+      products.currency,
+      products.availability,
+      products.image_url as "imageUrl",
+      products.audience,
+      products.category,
+      products.season,
+      products.formality_level as "formalityLevel",
+      products.style,
+      products.occasions,
+      products.color_base as "colorBase",
+      products.pattern,
+      products.finish,
+      products.is_neutral as "isNeutral",
+      products.composition,
+      products.silhouette,
+      products.fit,
+      products.closure_type as "closureType"
+    from unnest(${normalizedIds}::text[]) with ordinality as selected(id, position)
+    join products on products.id::text = selected.id
+    order by selected.position asc
+  `;
+}
+
 async function getSearchByEmail(email) {
   const sql = getSqlClient();
   const [row] = await sql`
@@ -1031,6 +1076,7 @@ export {
   getDistinctProductClosureTypes,
   getDistinctProductColors,
   getProductPriceRange,
+  getProductsByIdsInOrder,
   getSearchByEmail,
   upsertSearchByEmail,
   searchProducts,

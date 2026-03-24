@@ -35,6 +35,7 @@ import {
 } from "./profileStore.js";
 import { getSearchOptions, getSavedSearch, runSavedSearch } from "./searchStore.js";
 import { getWardrobeItems } from "./ai/ai.js";
+import { downloadWardrobePdf } from "./wardrobePdf.js";
 import { checkDatabaseConnection, ensureTables } from "./db.js";
 import { ACCENT_COLOR_OPTIONS } from "../../shared/accentColors.js";
 
@@ -504,6 +505,7 @@ app.get("/profile/patterns", requireAuth, async (req, res) => {
 });
 
 app.post("/wardrobe/items", requireTrustedOrigin, requireAuth, requireCsrf, getWardrobeItems);
+app.post("/wardrobe/items/pdf", requireTrustedOrigin, requireAuth, requireCsrf, downloadWardrobePdf);
 
 app.get("/search/options", requireAuth, async (req, res) => {
   try {

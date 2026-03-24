@@ -28,6 +28,7 @@ import { translateOption } from "../i18n/index.js";
 import AppLauncher from "../components/AppLauncher.jsx";
 import LocaleSwitcher from "../components/LocaleSwitcher.jsx";
 import AccentColorChips from "../components/AccentColorChips.jsx";
+import { buildProductDetailGroups } from "../../../shared/productDetail.js";
 
 const INITIAL_SEARCH_STATE = Object.freeze({
   query: "",
@@ -145,19 +146,6 @@ function toggleSelection(value, selected) {
     : [...selected, value];
 }
 
-function translateComposition(value, locale) {
-  if (typeof value !== "string") {
-    return value;
-  }
-
-  return value
-    .split(",")
-    .map((part) => part.trim())
-    .filter(Boolean)
-    .map((part) => translateOption("materials", part.toLowerCase(), locale))
-    .join(", ");
-}
-
 function normalizeBrandOption(item) {
   if (typeof item === "string") {
     return { value: item, label: item };
@@ -234,78 +222,7 @@ function MultiSelectChips({ items, values, onToggle, defaultLabel }) {
 }
 
 function ProductDetail({ item, title, t, locale, mobileBackAction = null }) {
-  const colorValues = Array.isArray(item?.colorBase) ? item.colorBase.filter(Boolean) : [];
-  const detailRows = [
-    ["search.fields.price", item?.price != null ? `${item.price}${item.currency ? ` ${item.currency}` : ""}` : null],
-    ["search.fields.availability", item?.availability ? translateOption("availability", item.availability, locale) : null],
-    ["search.fields.audience", item?.audience ? translateOption("audience", item.audience, locale) : null],
-    ["search.fields.season", Array.isArray(item?.season) ? item.season.map((value) => translateOption("seasons", value, locale)).join(", ") : null],
-    ["search.fields.formalityLevel", Array.isArray(item?.formalityLevel) ? item.formalityLevel.map((value) => translateOption("styles", value, locale)).join(", ") : null],
-    ["search.fields.style", Array.isArray(item?.style) ? item.style.map((value) => translateOption("styles", value, locale)).join(", ") : null],
-    ["search.fields.occasions", Array.isArray(item?.occasions) ? item.occasions.map((value) => translateOption("occasions", value, locale)).join(", ") : null],
-    ["search.fields.color", colorValues.length > 0 ? (
-      <Stack direction="row" spacing={0.9} alignItems="center" flexWrap="wrap" useFlexGap>
-        {colorValues.map((value) => (
-          <Stack key={value} direction="row" spacing={0.7} alignItems="center">
-            <Box
-              sx={{
-                width: 12,
-                height: 12,
-                borderRadius: "999px",
-                boxSizing: "border-box",
-                flexShrink: 0,
-                border: "1px solid #999",
-                ...COLOR_SWATCH_STYLES[value]
-              }}
-            />
-            <span>{translateOption("accentColors", value, locale)}</span>
-          </Stack>
-        ))}
-      </Stack>
-    ) : null],
-    ["search.fields.pattern", item?.pattern ? translateOption("patterns", item.pattern, locale) : null],
-    ["search.fields.finish", item?.finish],
-    ["search.fields.neutral", typeof item?.isNeutral === "boolean" ? (item.isNeutral ? t("search.yes") : t("search.no")) : null],
-    ["search.fields.composition", item?.composition ? translateComposition(item.composition, locale) : null],
-    ["search.fields.silhouette", item?.silhouette ? translateOption("silhouettes", item.silhouette, locale) : null],
-    ["search.fields.fit", item?.fit ? translateOption("fits", item.fit, locale) : null],
-    ["search.fields.closureType", Array.isArray(item?.closureType) ? item.closureType.map((value) => translateOption("closureTypes", value, locale)).join(", ") : null]
-  ].filter(([, value]) => value !== null && value !== undefined && String(value).trim() !== "");
-
-  const detailGroups = [
-    {
-      id: "meta",
-      items: detailRows.filter(([label]) => (
-        label === "search.fields.price" ||
-        label === "search.fields.availability" ||
-        label === "search.fields.audience" ||
-        label === "search.fields.season"
-      ))
-    },
-    {
-      id: "style",
-      items: [
-        "search.fields.formalityLevel",
-        "search.fields.color",
-        "search.fields.style",
-        "search.fields.pattern",
-        "search.fields.occasions",
-        "search.fields.neutral"
-      ]
-        .map((targetLabel) => detailRows.find(([label]) => label === targetLabel))
-        .filter(Boolean)
-    },
-    {
-      id: "construction",
-      items: detailRows.filter(([label]) => (
-        label === "search.fields.composition" ||
-        label === "search.fields.finish" ||
-        label === "search.fields.silhouette" ||
-        label === "search.fields.fit" ||
-        label === "search.fields.closureType"
-      ))
-    }
-  ].filter((group) => group.items.length > 0);
+  const detailGroups = buildProductDetailGroups(item, { t, translateOption, locale });
 
   return (
     <Stack spacing={2.2} sx={{ height: "100%", minHeight: 0 }}>
@@ -389,13 +306,32 @@ function ProductDetail({ item, title, t, locale, mobileBackAction = null }) {
                   backgroundColor: "rgba(31, 41, 51, 0.03)"
                 }}
               >
-                {group.items.map(([label, value]) => (
-                  <Box key={label}>
+                {group.items.map((row) => (
+                  <Box key={row.key}>
                     <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.35 }}>
-                      {t(label)}
+                      {row.label}
                     </Typography>
                     <Typography component="div" variant="body2" sx={{ lineHeight: 1.45 }}>
-                      {value}
+                      {row.value.kind === "colors" ? (
+                        <Stack direction="row" spacing={0.9} alignItems="center" flexWrap="wrap" useFlexGap>
+                          {row.value.items.map((value) => (
+                            <Stack key={value.key} direction="row" spacing={0.7} alignItems="center">
+                              <Box
+                                sx={{
+                                  width: 12,
+                                  height: 12,
+                                  borderRadius: "999px",
+                                  boxSizing: "border-box",
+                                  flexShrink: 0,
+                                  border: "1px solid #999",
+                                  ...COLOR_SWATCH_STYLES[value.key]
+                                }}
+                              />
+                              <span>{value.label}</span>
+                            </Stack>
+                          ))}
+                        </Stack>
+                      ) : row.value.text}
                     </Typography>
                   </Box>
                 ))}
