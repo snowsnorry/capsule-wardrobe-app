@@ -7,6 +7,7 @@
   ],
   "scripts": {
     "build": "npm --workspace client run build",
+    "start:client:render": "npm --workspace client run start:render",
     "dev:client": "op run --env-file=client/.env -- npm --workspace client run dev",
     "dev:server": "op run --env-file=server/.env -- npm --workspace server run dev",
     "dev:all": "concurrently -k -n client,server \"npm:dev:client\" \"npm:dev:server\"",
