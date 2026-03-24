@@ -50,6 +50,7 @@ const CLIENT_ROOT = path.resolve(__dirname, "../../client");
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "";
 
 const app = express();
+app.set("trust proxy", 1);
 const googleAuthClient = GOOGLE_CLIENT_ID ? new OAuth2Client(GOOGLE_CLIENT_ID) : null;
 
 app.use(express.json());
