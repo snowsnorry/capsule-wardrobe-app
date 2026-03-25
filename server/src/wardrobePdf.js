@@ -7,6 +7,7 @@ import { getProductsByIdsInOrder } from "./db.js";
 import { sortWardrobeItems } from "../../shared/wardrobeOrder.js";
 import { buildProductDetailGroups } from "../../shared/productDetail.js";
 import { isSupportedLocale, normalizeLocale, t, translateOption } from "../../shared/i18n/helpers.js";
+import { downloadProductImageAssets, preparePdfImageAssets } from "./ai/promptImages.js";
 import {
   getProcessMemoryUsage,
   runWithImageWorkSlot,
@@ -136,6 +137,12 @@ function getStoredWardrobeItems(profile) {
   }
 
   return Array.isArray(stored.items) ? stored.items : [];
+}
+
+function clearImageAssetsById(imageAssetsById = {}) {
+  for (const key of Object.keys(imageAssetsById)) {
+    delete imageAssetsById[key];
+  }
 }
 
 function createWardrobePdfGenerationKey({ items = [], locale = "en" } = {}) {
@@ -782,12 +789,13 @@ function createWardrobePdfJobManager({
   getProfilePdfByEmail = getProfilePdf,
   updateProfilePdfByEmail = updateProfilePdf,
   getProducts = getProductsByIdsInOrder,
-  buildPdf = buildWardrobePdf
+  buildPdf = buildWardrobePdf,
+  downloadImageAssets = downloadProductImageAssets,
+  prepareImageAssets = preparePdfImageAssets
 } = {}) {
   function startWardrobePdfJob(email, {
     wardrobePayload = null,
-    locale = null,
-    imageAssetsById = {}
+    locale = null
   } = {}) {
     const resolvedItems = sortWardrobeItems(
       wardrobePayload && !Array.isArray(wardrobePayload)
@@ -845,10 +853,42 @@ function createWardrobePdfJobManager({
           throw new Error("wardrobe_pdf_products_missing");
         }
 
-        const pdfBuffer = await runWithImageWorkSlot("wardrobe-pdf-build", async () => buildPdf(products, {
-          locale: pdfLocale,
-          imageAssetsById
-        }));
+        const pdfBuffer = await runWithImageWorkSlot("wardrobe-pdf-build", async () => {
+          logPdfMemory("asset-download-start", {
+            productsTotal: products.length
+          });
+          const downloadedImageAssets = await downloadImageAssets(products.map((product) => ({
+            id: product?.id,
+            category: product?.category,
+            image_url: product?.imageUrl || ""
+          })));
+          logPdfMemory("asset-download-completed", {
+            productsTotal: products.length,
+            downloadedImageAssetBytes: sumImageAssetBytesById(downloadedImageAssets)
+          });
+
+          const preparedImageAssets = await prepareImageAssets(
+            downloadedImageAssets,
+            DEFAULT_PDF_IMAGE_TARGET_SIZE
+          );
+          clearImageAssetsById(downloadedImageAssets);
+          logPdfMemory("asset-prepare-completed", {
+            productsTotal: products.length,
+            preparedImageAssetBytes: sumImageAssetBytesById(preparedImageAssets)
+          });
+
+          try {
+            return await buildPdf(products, {
+              locale: pdfLocale,
+              imageAssetsById: preparedImageAssets
+            });
+          } finally {
+            clearImageAssetsById(preparedImageAssets);
+            logPdfMemory("asset-release-completed", {
+              productsTotal: products.length
+            });
+          }
+        });
 
         if (wardrobePdfJobs.get(email) !== job) {
           return;
@@ -914,8 +954,7 @@ function createWardrobePdfJobManager({
 
     return startWardrobePdfJob(email, {
       wardrobePayload,
-      locale,
-      imageAssetsById: options.imageAssetsById || {}
+      locale
     });
   }
 

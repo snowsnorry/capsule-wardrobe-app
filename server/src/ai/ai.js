@@ -6,8 +6,7 @@ import { generateJsonWithLlm } from "./openai.js";
 import {  getPromptEmbeddings, getWardrobePrompt } from "./voyageai.js";
 import { getCapsuleCategories } from "./categories.js";
 import { generateSwimwearAddition, shouldGenerateSwimwear } from "./swimwear.js";
-import { buildPromptDebugImages, downloadProductImageAssets, preparePdfImageAssets } from "./promptImages.js";
-import { DEFAULT_PDF_IMAGE_TARGET_SIZE, startWardrobePdfJob } from "../wardrobePdf.js";
+import { buildPromptDebugImages } from "./promptImages.js";
 import {
   getProcessMemoryUsage,
   runWithImageWorkSlot,
@@ -166,30 +165,6 @@ function buildErrorLogContext(logContext = null) {
   return {
     capsuleRequestId: logContext.capsuleRequestId
   };
-}
-
-async function prepareSelectedPdfAssets(imageAssetsById = {}, logContext = null) {
-  const candidateCount = Object.keys(imageAssetsById).length;
-  if (candidateCount === 0) {
-    return {};
-  }
-
-  logWardrobeMemory("capsule-pdf-assets-start", {
-    selectedImageCandidates: candidateCount,
-    selectedNormalizedBytes: sumImageAssetBytesById(imageAssetsById)
-  }, logContext);
-
-  const prepared = await runWithImageWorkSlot("capsule-pdf-assets", async () => preparePdfImageAssets(
-    imageAssetsById,
-    DEFAULT_PDF_IMAGE_TARGET_SIZE
-  ));
-
-  logWardrobeMemory("capsule-pdf-assets-ready", {
-    selectedImageCandidates: candidateCount,
-    selectedPdfAssetBytes: sumImageAssetBytesById(prepared)
-  }, logContext);
-
-  return prepared;
 }
 
 function getStoredWardrobePayload(profile) {
@@ -435,10 +410,6 @@ function appendUniqueWardrobeItems(items, extraItems) {
   return result;
 }
 
-function mergeImageAssetsById(...sources) {
-  return Object.assign({}, ...sources.filter((source) => source && typeof source === "object"));
-}
-
 async function generateCapsuleWardrobe(userProfile = null, logContext = null) {
   const sql = getSqlClient();
   const prompt = getWardrobePrompt(userProfile);
@@ -621,6 +592,10 @@ async function generateCapsuleWardrobe(userProfile = null, logContext = null) {
     logWardrobeMemory("capsule-collages-ready", {
       collageBytes: sumCategoryBytes(promptDebugImages.categories)
     }, logContext);
+    promptDebugImages.downloadedImagesById = {};
+    logWardrobeMemory("capsule-image-assets-released", {
+      collageBytes: sumCategoryBytes(promptDebugImages.categories)
+    }, logContext);
   } catch (error) {
     console.warn(
       "[prompt-images][build-failed]",
@@ -640,8 +615,9 @@ async function generateCapsuleWardrobe(userProfile = null, logContext = null) {
     userProfile,
     images: promptDebugImages.categories,
     onPayloadBuilt: () => {
+      promptDebugImages.categories = [];
       logWardrobeMemory("capsule-llm-payload-built", {
-        collageBytes: 0
+        collageBytes: sumCategoryBytes(promptDebugImages.categories)
       }, logContext);
     }
   });
@@ -681,20 +657,9 @@ async function generateCapsuleWardrobe(userProfile = null, logContext = null) {
     throw new Error("Model returned no valid selected_ids");
   }
 
-  const selectedImageAssetsById = Object.fromEntries(
-    balancedItems
-      .map((item) => String(item?.id || ""))
-      .filter(Boolean)
-      .map((id) => [id, promptDebugImages.downloadedImagesById?.[id]])
-      .filter(([, asset]) => asset?.buffer)
-  );
-  promptDebugImages.downloadedImagesById = {};
-  const selectedPdfImageAssetsById = await prepareSelectedPdfAssets(selectedImageAssetsById, logContext);
-
   return {
     items: balancedItems.map(toWardrobeUiItem),
     selectedItems: balancedItems,
-    selectedImageAssetsById: selectedPdfImageAssetsById,
     promptEmbeddings,
     rawSelectionText: typeof selectionResponse?.output_text === "string" && selectionResponse.output_text.trim().length > 0
       ? selectionResponse.output_text.trim()
@@ -789,14 +754,6 @@ function startWardrobeJob(email, profile, logContext = null) {
             promptEmbeddings: wardrobe.promptEmbeddings,
             logContext: jobLogContext
           });
-          const swimwearNormalizedImageAssetsById = await runWithImageWorkSlot(
-            "swimwear-images",
-            async () => downloadProductImageAssets(swimwear.items)
-          );
-          const swimwearImageAssetsById = await prepareSelectedPdfAssets(
-            swimwearNormalizedImageAssetsById,
-            jobLogContext
-          );
           const finalItems = appendUniqueWardrobeItems(items, swimwear.items);
           const finalPayload = buildWardrobePayload({
             items: finalItems,
@@ -813,14 +770,6 @@ function startWardrobeJob(email, profile, logContext = null) {
             itemsByCategory: countItemsByKey(finalItems)
           }, jobLogContext);
           job.result = finalPayload;
-          startWardrobePdfJob(email, {
-            wardrobePayload: finalPayload,
-            locale: profile?.locale,
-            imageAssetsById: mergeImageAssetsById(
-              wardrobe.selectedImageAssetsById,
-              swimwearImageAssetsById
-            )
-          });
         } catch (error) {
           console.error("[wardrobe-ai][swimwear]", buildErrorLogContext(jobLogContext), error);
           logWardrobeInfo("capsule-total-completed", {
@@ -828,11 +777,6 @@ function startWardrobeJob(email, profile, logContext = null) {
             itemsTotal: items.length,
             itemsByCategory: countItemsByKey(items)
           }, jobLogContext);
-          startWardrobePdfJob(email, {
-            wardrobePayload: storedCapsule,
-            locale: profile?.locale,
-            imageAssetsById: wardrobe.selectedImageAssetsById
-          });
         }
       } else {
         logWardrobeInfo("capsule-total-completed", {
@@ -840,11 +784,6 @@ function startWardrobeJob(email, profile, logContext = null) {
           itemsTotal: items.length,
           itemsByCategory: countItemsByKey(items)
         }, jobLogContext);
-        startWardrobePdfJob(email, {
-          wardrobePayload: storedCapsule,
-          locale: profile?.locale,
-          imageAssetsById: wardrobe.selectedImageAssetsById
-        });
       }
 
       job.status = "completed";
