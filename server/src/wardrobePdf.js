@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { fork as nodeFork } from "node:child_process";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import os from "node:os";
+import path from "node:path";
 import { PDFDocument, rgb } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import sharp from "sharp";
