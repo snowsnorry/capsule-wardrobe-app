@@ -142,6 +142,30 @@ async function normalizeDownloadedImage(buffer) {
   };
 }
 
+async function buildPromptTileImage(buffer) {
+  const tileBuffer = await createSharpPipeline(buffer)
+    .resize(TILE_SIZE, TILE_SIZE, {
+      fit: "contain",
+      withoutEnlargement: true,
+      background: BACKGROUND_COLOR,
+      fastShrinkOnLoad: true
+    })
+    .flatten({ background: BACKGROUND_COLOR })
+    .jpeg({
+      quality: CATEGORY_COLLAGE_JPEG_QUALITY,
+      mozjpeg: true,
+      progressive: true
+    })
+    .toBuffer();
+
+  return {
+    buffer: tileBuffer,
+    mimeType: "image/jpeg",
+    width: TILE_SIZE,
+    height: TILE_SIZE
+  };
+}
+
 async function downloadProductImageAsset(item) {
   const id = String(item?.id ?? "");
   const imageUrl = resolveSourceImageUrl(item?.image_url);
@@ -184,6 +208,76 @@ async function downloadProductImageAsset(item) {
       originalMimeType: mimeType,
       width: normalized.width,
       height: normalized.height
+    };
+  } catch (error) {
+    const reason = error?.name === "TimeoutError"
+      ? "timeout"
+      : String(error?.message || "download_failed");
+
+    console.warn(
+      "[prompt-images][asset-download-failed]",
+      JSON.stringify({
+        id,
+        category: item?.category ?? "",
+        imageUrl,
+        reason
+      })
+    );
+
+    return {
+      id,
+      category: item?.category ?? "",
+      imageUrl,
+      status: "skipped",
+      reason,
+      mimeType: null,
+      buffer: null,
+      width: null,
+      height: null
+    };
+  }
+}
+
+async function downloadPromptImageAsset(item) {
+  const id = String(item?.id ?? "");
+  const imageUrl = resolveSourceImageUrl(item?.image_url);
+
+  if (!imageUrl) {
+    return {
+      id,
+      category: item?.category ?? "",
+      imageUrl,
+      status: "skipped",
+      reason: "missing_image_url",
+      mimeType: null,
+      buffer: null,
+      width: null,
+      height: null
+    };
+  }
+
+  try {
+    const response = await fetch(imageUrl, {
+      signal: getRequestSignal()
+    });
+
+    if (!response.ok) {
+      throw new Error(`http_${response.status}`);
+    }
+
+    const sourceBuffer = Buffer.from(await response.arrayBuffer());
+    const tile = await buildPromptTileImage(sourceBuffer);
+
+    return {
+      id,
+      category: item?.category ?? "",
+      imageUrl,
+      status: "downloaded",
+      reason: null,
+      mimeType: tile.mimeType,
+      buffer: tile.buffer,
+      width: tile.width,
+      height: tile.height
     };
   } catch (error) {
     const reason = error?.name === "TimeoutError"
@@ -293,22 +387,8 @@ async function buildCategoryImage({
 
     if (entry.result.buffer) {
       try {
-        const tileBuffer = await createSharpPipeline(entry.result.buffer)
-          .resize(TILE_SIZE, TILE_SIZE, {
-            fit: "contain",
-            withoutEnlargement: true,
-            background: BACKGROUND_COLOR
-          })
-          .flatten({ background: BACKGROUND_COLOR })
-          .jpeg({
-            quality: CATEGORY_COLLAGE_JPEG_QUALITY,
-            mozjpeg: true,
-            progressive: true
-          })
-          .toBuffer();
-
         composites.push({
-          input: tileBuffer,
+          input: entry.result.buffer,
           left,
           top
         });
@@ -427,7 +507,7 @@ async function buildPromptDebugImages({
     const downloadResults = await mapWithConcurrency(
       items,
       IMAGE_DOWNLOAD_CONCURRENCY,
-      (item) => downloadProductImageAsset(item)
+      (item) => downloadPromptImageAsset(item)
     );
 
     for (const result of downloadResults) {
