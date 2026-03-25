@@ -2,9 +2,13 @@ import sharp from "sharp";
 
 const SHARP_CONCURRENCY = Number.parseInt(process.env.SHARP_CONCURRENCY || "", 10) || 2;
 
-function configureSharp() {
+function configureSharp(overrideConcurrency = null) {
+  const concurrency = Number.isInteger(overrideConcurrency) && overrideConcurrency > 0
+    ? overrideConcurrency
+    : SHARP_CONCURRENCY;
+
   sharp.cache(false);
-  sharp.concurrency(SHARP_CONCURRENCY);
+  sharp.concurrency(concurrency);
 
   return {
     cache: sharp.cache(),

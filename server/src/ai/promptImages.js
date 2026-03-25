@@ -25,6 +25,7 @@ const MAX_SOURCE_IMAGE_PIXELS = Number.parseInt(process.env.MAX_SOURCE_IMAGE_PIX
 const REQUEST_IMAGE_WIDTH = Number.parseInt(process.env.PROMPT_IMAGE_REQUEST_WIDTH || "", 10) || 1000;
 const PROMPT_IMAGES_CHILD_TIMEOUT_MS = Number.parseInt(process.env.PROMPT_IMAGES_CHILD_TIMEOUT_MS || "", 10) || 120000;
 const PROMPT_IMAGES_CHILD_PATH = new URL("./promptImages.child.js", import.meta.url);
+const PROMPT_CATEGORY_DOWNLOAD_CONCURRENCY = Number.parseInt(process.env.PROMPT_CATEGORY_DOWNLOAD_CONCURRENCY || "", 10) || 5;
 
 function escapeXml(value) {
   return String(value ?? "")
@@ -502,43 +503,14 @@ async function buildPromptDebugImages({
   let skippedCount = 0;
 
   for (const [category, items] of groupedItems.entries()) {
-    const categorySlug = sanitizeFileName(category);
-
-    const downloadResults = await mapWithConcurrency(
+    const categoryResult = await buildPromptDebugImagesForCategory({
+      category,
       items,
-      IMAGE_DOWNLOAD_CONCURRENCY,
-      (item) => downloadPromptImageAsset(item)
-    );
-
-    for (const result of downloadResults) {
-      if (result.status === "downloaded") {
-        downloadedCount += 1;
-      } else {
-        skippedCount += 1;
-      }
-    }
-
-    const entries = items.map((item, slotIndex) => ({
-      item,
-      result: downloadResults[slotIndex],
-      slotIndex
-    }));
-
-    const { buffer, mimeType, manifestEntries } = await buildCategoryImage({
-      category,
-      entries
+      downloadConcurrency: IMAGE_DOWNLOAD_CONCURRENCY
     });
-
-    categories.push({
-      category,
-      mimeType,
-      buffer,
-      filename: `category-${categorySlug}.jpg`,
-      totalItems: items.length,
-      downloadedCount: manifestEntries.filter((entry) => entry.status === "downloaded").length,
-      skippedCount: manifestEntries.filter((entry) => entry.status !== "downloaded").length,
-      items: manifestEntries
-    });
+    categories.push(categoryResult.category);
+    downloadedCount += categoryResult.downloadedCount;
+    skippedCount += categoryResult.skippedCount;
   }
 
   if (shouldSaveDebugArtifacts) {
@@ -561,6 +533,55 @@ async function buildPromptDebugImages({
 
   return {
     categories,
+    downloadedCount,
+    skippedCount
+  };
+}
+
+async function buildPromptDebugImagesForCategory({
+  category = "",
+  items = [],
+  downloadConcurrency = IMAGE_DOWNLOAD_CONCURRENCY
+} = {}) {
+  const categorySlug = sanitizeFileName(category);
+  const downloadResults = await mapWithConcurrency(
+    items,
+    downloadConcurrency,
+    (item) => downloadPromptImageAsset(item)
+  );
+
+  let downloadedCount = 0;
+  let skippedCount = 0;
+  for (const result of downloadResults) {
+    if (result.status === "downloaded") {
+      downloadedCount += 1;
+    } else {
+      skippedCount += 1;
+    }
+  }
+
+  const entries = items.map((item, slotIndex) => ({
+    item,
+    result: downloadResults[slotIndex],
+    slotIndex
+  }));
+
+  const { buffer, mimeType, manifestEntries } = await buildCategoryImage({
+    category,
+    entries
+  });
+
+  return {
+    category: {
+      category,
+      mimeType,
+      buffer,
+      filename: `category-${categorySlug}.jpg`,
+      totalItems: items.length,
+      downloadedCount,
+      skippedCount,
+      items: manifestEntries
+    },
     downloadedCount,
     skippedCount
   };
@@ -622,6 +643,54 @@ async function buildPromptDebugImagesInChild({
   normalizedItems = [],
   debugOutputDir = null,
   saveDebugArtifacts = false,
+  forkImpl = nodeFork
+} = {}) {
+  const groupedItems = groupPromptImageItemsByCategory(normalizedItems);
+  const categories = [];
+  let downloadedCount = 0;
+  let skippedCount = 0;
+
+  for (const [category, items] of groupedItems.entries()) {
+    const categoryResult = await buildPromptDebugImagesCategoryInChild({
+      category,
+      items,
+      forkImpl
+    });
+    categories.push(...categoryResult.categories);
+    downloadedCount += categoryResult.downloadedCount;
+    skippedCount += categoryResult.skippedCount;
+  }
+
+  const result = {
+    categories,
+    downloadedCount,
+    skippedCount
+  };
+
+  if (saveDebugArtifacts) {
+    try {
+      await saveDebugArtifacts({
+        categories,
+        downloadedCount,
+        skippedCount,
+        debugOutputDir
+      });
+    } catch (error) {
+      console.warn(
+        "[prompt-images][debug-save-failed]",
+        JSON.stringify({
+          message: error?.message || "unknown_error"
+        })
+      );
+    }
+  }
+
+  return result;
+}
+
+async function buildPromptDebugImagesCategoryInChild({
+  category = "",
+  items = [],
   forkImpl = nodeFork
 } = {}) {
   return new Promise((resolve, reject) => {
@@ -700,11 +769,9 @@ async function buildPromptDebugImagesInChild({
     child.on("exit", onExit);
 
     child.send({
-      normalizedItems,
-      saveDebugArtifacts,
-      debugOutputDir: debugOutputDir instanceof URL
-        ? fileURLToPath(debugOutputDir)
-        : (debugOutputDir || null)
+      category,
+      items,
+      downloadConcurrency: PROMPT_CATEGORY_DOWNLOAD_CONCURRENCY
     }, (error) => {
       if (error && !childExited) {
         rejectOnce(error);
@@ -768,6 +835,7 @@ export {
   downloadProductImageAssets,
   groupPromptImageItemsByCategory,
   buildPromptDebugImages,
+  buildPromptDebugImagesForCategory,
   buildPromptDebugImagesInChild,
   preparePdfImageAsset,
   preparePdfImageAssets,

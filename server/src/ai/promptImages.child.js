@@ -1,11 +1,14 @@
 import "dotenv/config";
 import { configureSharp } from "./sharpConfig.js";
 import {
-  buildPromptDebugImages,
+  buildPromptDebugImagesForCategory,
   serializePromptDebugImagesForIpc
 } from "./promptImages.js";
 
-configureSharp();
+const PROMPT_CATEGORY_SHARP_CONCURRENCY = Number.parseInt(process.env.PROMPT_CATEGORY_SHARP_CONCURRENCY || "", 10) || 3;
+const PROMPT_CATEGORY_DOWNLOAD_CONCURRENCY = Number.parseInt(process.env.PROMPT_CATEGORY_DOWNLOAD_CONCURRENCY || "", 10) || 5;
+
+configureSharp(PROMPT_CATEGORY_SHARP_CONCURRENCY);
 
 let handled = false;
 
@@ -28,15 +31,21 @@ async function handleMessage(message) {
   handled = true;
 
   try {
-    const result = await buildPromptDebugImages({
-      normalizedItems: Array.isArray(message?.normalizedItems) ? message.normalizedItems : [],
-      saveDebugArtifacts: message?.saveDebugArtifacts === true,
-      debugOutputDir: message?.debugOutputDir || null
+    const result = await buildPromptDebugImagesForCategory({
+      category: message?.category ?? "",
+      items: Array.isArray(message?.items) ? message.items : [],
+      downloadConcurrency: Number.isInteger(message?.downloadConcurrency) && message.downloadConcurrency > 0
+        ? message.downloadConcurrency
+        : PROMPT_CATEGORY_DOWNLOAD_CONCURRENCY
     });
 
     sendFinalMessage({
       ok: true,
-      ...serializePromptDebugImagesForIpc(result)
+      ...serializePromptDebugImagesForIpc({
+        categories: [result.category],
+        downloadedCount: result.downloadedCount,
+        skippedCount: result.skippedCount
+      })
     }, 0);
   } catch (error) {
     sendFinalMessage({

@@ -359,7 +359,7 @@ test("buildPromptDebugImagesInChild works with a real child process", async () =
 test("buildPromptDebugImagesInChild rejects on child-reported failure", async () => {
   await assert.rejects(
     buildPromptDebugImagesInChild({
-      normalizedItems: [],
+      normalizedItems: [{ id: "top-1", category: "top", image_url: "https://example.com/top-1.png" }],
       forkImpl: () => {
         const handlers = new Map();
         return {
@@ -386,7 +386,7 @@ test("buildPromptDebugImagesInChild rejects on child-reported failure", async ()
 test("buildPromptDebugImagesInChild rejects on unexpected child exit", async () => {
   await assert.rejects(
     buildPromptDebugImagesInChild({
-      normalizedItems: [],
+      normalizedItems: [{ id: "top-1", category: "top", image_url: "https://example.com/top-1.png" }],
       forkImpl: () => {
         const handlers = new Map();
         return {
