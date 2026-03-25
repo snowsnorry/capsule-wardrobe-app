@@ -8,17 +8,55 @@ import {
 
 const PROMPT_TEMPLATE = readFileSync(new URL("../templates/prompt_woman_swimwear.txt", import.meta.url), "utf8");
 
-function logWardrobeInfo(event, payload = {}, logContext = null) {
-  const info = {};
-
-  if (logContext?.capsuleRequestId) {
-    info.capsuleRequestId = logContext.capsuleRequestId;
+function formatLogValue(value) {
+  if (value === null) {
+    return "null";
   }
 
-  console.info(`[wardrobe-ai][${event}]`, JSON.stringify({
-    ...info,
-    ...payload
-  }));
+  if (value === undefined) {
+    return "undefined";
+  }
+
+  if (typeof value === "string") {
+    return value;
+  }
+
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+
+  return JSON.stringify(value);
+}
+
+function formatLogPayload(payload = {}) {
+  return Object.entries(payload)
+    .filter(([, value]) => value !== undefined)
+    .map(([key, value]) => `${key}: ${formatLogValue(value)}`)
+    .join(", ");
+}
+
+function getShortRequestId(logContext = null) {
+  const capsuleRequestId = String(logContext?.capsuleRequestId || "").trim();
+  if (!capsuleRequestId) {
+    return "";
+  }
+
+  return capsuleRequestId.split("-")[0] || capsuleRequestId.slice(0, 8);
+}
+
+function logWardrobeInfo(event, payload = {}, logContext = null) {
+  const shortRequestId = getShortRequestId(logContext);
+  const prefix = shortRequestId
+    ? `[${shortRequestId}][wardrobe-ai][${event}]`
+    : `[wardrobe-ai][${event}]`;
+  const message = formatLogPayload(payload);
+
+  if (message) {
+    console.info(`${prefix} ${message}`);
+    return;
+  }
+
+  console.info(prefix);
 }
 
 function countItemsByKey(items = [], key = "category") {

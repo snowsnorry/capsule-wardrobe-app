@@ -58,11 +58,45 @@ const DEFAULT_PDF_IMAGE_TARGET_SIZE = {
   height: Math.round((PAGE_HEIGHT - (PAGE_MARGIN * 2)) * 2)
 };
 
+function formatLogValue(value) {
+  if (value === null) {
+    return "null";
+  }
+
+  if (value === undefined) {
+    return "undefined";
+  }
+
+  if (typeof value === "string") {
+    return value;
+  }
+
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+
+  return JSON.stringify(value);
+}
+
+function formatLogPayload(payload = {}) {
+  return Object.entries(payload)
+    .filter(([, value]) => value !== undefined)
+    .map(([key, value]) => `${key}: ${formatLogValue(value)}`)
+    .join(", ");
+}
+
 function logPdfMemory(event, payload = {}) {
-  console.info(`[wardrobe-pdf][${event}]`, JSON.stringify({
+  const message = formatLogPayload({
     ...payload,
     ...getProcessMemoryUsage()
-  }));
+  });
+
+  if (message) {
+    console.info(`[wardrobe-pdf][${event}] ${message}`);
+    return;
+  }
+
+  console.info(`[wardrobe-pdf][${event}]`);
 }
 
 function resolveFontPath(candidates) {
