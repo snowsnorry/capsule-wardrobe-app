@@ -92,7 +92,7 @@ curl http://localhost:3000/health
 
 This repo can be deployed to Render as a single Node web service:
 
-- build command: `npm install && npm run build`
+- build command: `npm install --include=dev && npm run build`
 - start command: `npm run start`
 - health check path: `/health`
 
