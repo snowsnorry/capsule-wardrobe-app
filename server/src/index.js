@@ -64,7 +64,12 @@ if (NODE_ENV === "production") {
         directives: {
           defaultSrc: ["'self'"],
           scriptSrc: ["'self'", "https://accounts.google.com"],
-          styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+          styleSrc: [
+            "'self'",
+            "'unsafe-inline'",
+            "https://fonts.googleapis.com",
+            "https://accounts.google.com"
+          ],
           imgSrc: ["'self'", "data:", "https:"],
           fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"],
           connectSrc: ["'self'", "https:"],
