@@ -195,6 +195,30 @@ test("downloadProductImageAssets normalizes downloaded files to jpeg", async (t)
   assert.equal(metadata.format, "jpeg");
 });
 
+test("downloadProductImageAssets replaces width placeholder in image url before fetch", async (t) => {
+  const fixtureBuffer = await createFixtureBuffer("#228833");
+  const originalFetch = globalThis.fetch;
+  const requestedUrls = [];
+
+  globalThis.fetch = async (url) => {
+    requestedUrls.push(String(url));
+    return new Response(fixtureBuffer, { status: 200 });
+  };
+
+  t.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  await downloadProductImageAssets([{
+    id: "top-1",
+    category: "top",
+    image_url: "https://static.zara.net/image.jpg?ts=1773310573314&w={width}"
+  }]);
+
+  assert.equal(requestedUrls.length, 1);
+  assert.equal(requestedUrls[0], "https://static.zara.net/image.jpg?ts=1773310573314&w=1000");
+});
+
 test("preparePdfImageAssets resizes normalized images for pdf", async () => {
   const source = await sharp({
     create: {

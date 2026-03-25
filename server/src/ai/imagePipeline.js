@@ -3,7 +3,7 @@ function parsePositiveInteger(value, fallback) {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
 }
 
-const IMAGE_DOWNLOAD_CONCURRENCY = parsePositiveInteger(process.env.IMAGE_DOWNLOAD_CONCURRENCY, 3);
+const IMAGE_DOWNLOAD_CONCURRENCY = parsePositiveInteger(process.env.IMAGE_DOWNLOAD_CONCURRENCY, 2);
 const IMAGE_WORK_MAX_CONCURRENCY = parsePositiveInteger(process.env.IMAGE_WORK_MAX_CONCURRENCY, 1);
 
 let activeImageWork = 0;

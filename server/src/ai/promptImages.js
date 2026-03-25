@@ -21,6 +21,7 @@ const CATEGORY_COLLAGE_JPEG_QUALITY = 80;
 const NORMALIZED_IMAGE_JPEG_QUALITY = 80;
 const PDF_IMAGE_JPEG_QUALITY = 76;
 const MAX_SOURCE_IMAGE_PIXELS = Number.parseInt(process.env.MAX_SOURCE_IMAGE_PIXELS || "", 10) || 16000000;
+const REQUEST_IMAGE_WIDTH = Number.parseInt(process.env.PROMPT_IMAGE_REQUEST_WIDTH || "", 10) || 1000;
 
 function escapeXml(value) {
   return String(value ?? "")
@@ -102,6 +103,15 @@ function getRequestSignal() {
   return undefined;
 }
 
+function resolveSourceImageUrl(imageUrl) {
+  const trimmed = String(imageUrl ?? "").trim();
+  if (!trimmed) {
+    return "";
+  }
+
+  return trimmed.replaceAll("{width}", String(REQUEST_IMAGE_WIDTH));
+}
+
 function createSharpPipeline(buffer) {
   return sharp(buffer, {
     failOn: "none",
@@ -131,7 +141,7 @@ async function normalizeDownloadedImage(buffer) {
 
 async function downloadProductImageAsset(item) {
   const id = String(item?.id ?? "");
-  const imageUrl = String(item?.image_url ?? "").trim();
+  const imageUrl = resolveSourceImageUrl(item?.image_url);
 
   if (!imageUrl) {
     return {
