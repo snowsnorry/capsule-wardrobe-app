@@ -7,6 +7,8 @@
   ],
   "scripts": {
     "build": "npm --workspace client run build",
+    "start": "npm --workspace server run start",
+    "start:render": "npm --workspace server run start",
     "start:client:render": "npm --workspace client run start:render",
     "dev:client": "op run --env-file=client/.env -- npm --workspace client run dev",
     "dev:server": "op run --env-file=server/.env -- npm --workspace server run dev",

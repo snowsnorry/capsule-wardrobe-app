@@ -72,7 +72,7 @@ server/    # Node.js API (Express)
 - `RESEND_FROM_EMAIL` (server) – verified sender for Resend, e.g. `Capsule Wardrobe <auth@yourdomain.com>`
 - `SESSION_PRUNE_MIN_INTERVAL_MS` (server) – minimum interval between session cleanup runs (default: `0`)
 - `AUTH_TEST_MODE` (server) – when `true` (and not production), auth code is printed to server terminal and not sent via email
-- `BFF_UPSTREAM_ORIGIN` (Netlify client) – backend origin for Netlify BFF proxy, e.g. `https://your-api.onrender.com`
+- `BFF_UPSTREAM_ORIGIN` (Netlify client only) – backend origin for Netlify BFF proxy, e.g. `https://your-api.onrender.com`
 
 ## Health check
 
@@ -87,6 +87,35 @@ curl http://localhost:3000/health
 - Login codes are sent via Resend (or printed to server logs when `AUTH_TEST_MODE=true` in non-production).
 - Sessions and profiles are persisted in Postgres (including styles, occasions, and locale).
 - For Netlify deployments, API requests are proxied through `/api/*` via `client/netlify/functions/bff.js` to keep auth cookies first-party.
+
+## Render single-service deploy
+
+This repo can be deployed to Render as a single Node web service:
+
+- build command: `npm install && npm run build`
+- start command: `npm run start`
+- health check path: `/health`
+
+In this setup:
+
+- Render runs the Express server from `server/src/index.js`
+- the client is built into `client/dist`
+- in production, Express serves the built SPA and the API from the same service and origin
+
+Required env vars for this setup:
+
+- `NODE_ENV=production`
+- `CLIENT_ORIGIN=https://<your-render-service>.onrender.com` or your custom domain
+- `DATABASE_URL`
+- `AUTH_CODE_SECRET`
+- `RESEND_API_KEY`
+- `RESEND_FROM_EMAIL`
+
+Optional env vars:
+
+- `GOOGLE_CLIENT_ID`
+
+If you use Render Blueprints, the included `render.yaml` defines this single-service setup.
 
 ## License
 
