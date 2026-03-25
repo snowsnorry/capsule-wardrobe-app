@@ -796,25 +796,31 @@ function App() {
                 }
               }}
             >
-              <Box
-                component="img"
-                src="/girl.png"
-                alt=""
-                aria-hidden="true"
-                sx={{
-                  display: "block",
-                  width: "100%",
-                  height: "auto",
-                  filter: "saturate(0.96) contrast(0.98)",
-                  opacity: 0.98,
-                  transform: "translateZ(0)",
-                  willChange: "transform",
-                  backfaceVisibility: "hidden",
-                  imageRendering: "auto",
-                  objectFit: "cover",
-                  mixBlendMode: "multiply"
-                }}
-              />
+              <Box component="picture" sx={{ display: "block" }}>
+                <source srcSet="/girl.webp" type="image/webp" />
+                <Box
+                  component="img"
+                  src="/girl.png"
+                  alt=""
+                  aria-hidden="true"
+                  loading="eager"
+                  fetchpriority="high"
+                  decoding="async"
+                  sx={{
+                    display: "block",
+                    width: "100%",
+                    height: "auto",
+                    filter: "saturate(0.96) contrast(0.98)",
+                    opacity: 0.98,
+                    transform: "translateZ(0)",
+                    willChange: "transform",
+                    backfaceVisibility: "hidden",
+                    imageRendering: "auto",
+                    objectFit: "cover",
+                    mixBlendMode: "multiply"
+                  }}
+                />
+              </Box>
             </Box>
             <Typography
               variant={isLarge ? "h2" : "h3"}
