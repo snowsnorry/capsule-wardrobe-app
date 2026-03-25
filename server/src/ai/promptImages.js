@@ -1,4 +1,5 @@
 import { mkdir, rm, writeFile } from "node:fs/promises";
+import { fork as nodeFork } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import sharp from "sharp";
@@ -22,6 +23,8 @@ const NORMALIZED_IMAGE_JPEG_QUALITY = 80;
 const PDF_IMAGE_JPEG_QUALITY = 76;
 const MAX_SOURCE_IMAGE_PIXELS = Number.parseInt(process.env.MAX_SOURCE_IMAGE_PIXELS || "", 10) || 16000000;
 const REQUEST_IMAGE_WIDTH = Number.parseInt(process.env.PROMPT_IMAGE_REQUEST_WIDTH || "", 10) || 1000;
+const PROMPT_IMAGES_CHILD_TIMEOUT_MS = Number.parseInt(process.env.PROMPT_IMAGES_CHILD_TIMEOUT_MS || "", 10) || 120000;
+const PROMPT_IMAGES_CHILD_PATH = new URL("./promptImages.child.js", import.meta.url);
 
 function escapeXml(value) {
   return String(value ?? "")
@@ -483,6 +486,153 @@ async function buildPromptDebugImages({
   };
 }
 
+function serializePromptDebugImagesForIpc(result = {}) {
+  return {
+    downloadedCount: Number(result?.downloadedCount) || 0,
+    skippedCount: Number(result?.skippedCount) || 0,
+    categories: Array.isArray(result?.categories)
+      ? result.categories.map((category) => ({
+        category: category?.category ?? "",
+        mimeType: category?.mimeType ?? "image/jpeg",
+        filename: category?.filename ?? "",
+        totalItems: Number(category?.totalItems) || 0,
+        downloadedCount: Number(category?.downloadedCount) || 0,
+        skippedCount: Number(category?.skippedCount) || 0,
+        items: Array.isArray(category?.items) ? category.items : [],
+        bufferBase64: Buffer.isBuffer(category?.buffer) ? category.buffer.toString("base64") : ""
+      }))
+      : []
+  };
+}
+
+function deserializePromptDebugImagesFromIpc(payload = {}) {
+  return {
+    downloadedCount: Number(payload?.downloadedCount) || 0,
+    skippedCount: Number(payload?.skippedCount) || 0,
+    categories: Array.isArray(payload?.categories)
+      ? payload.categories.map((category) => ({
+        category: category?.category ?? "",
+        mimeType: category?.mimeType ?? "image/jpeg",
+        filename: category?.filename ?? "",
+        totalItems: Number(category?.totalItems) || 0,
+        downloadedCount: Number(category?.downloadedCount) || 0,
+        skippedCount: Number(category?.skippedCount) || 0,
+        items: Array.isArray(category?.items) ? category.items : [],
+        buffer: typeof category?.bufferBase64 === "string" && category.bufferBase64.length > 0
+          ? Buffer.from(category.bufferBase64, "base64")
+          : null
+      }))
+      : []
+  };
+}
+
+function isValidPromptImagesIpcPayload(message) {
+  if (!message || typeof message !== "object") {
+    return false;
+  }
+
+  if (!Array.isArray(message.categories)) {
+    return false;
+  }
+
+  return message.categories.every((category) => typeof category?.bufferBase64 === "string");
+}
+
+async function buildPromptDebugImagesInChild({
+  normalizedItems = [],
+  debugOutputDir = null,
+  saveDebugArtifacts = false,
+  forkImpl = nodeFork
+} = {}) {
+  return new Promise((resolve, reject) => {
+    const child = forkImpl(fileURLToPath(PROMPT_IMAGES_CHILD_PATH), {
+      stdio: ["ignore", "inherit", "inherit", "ipc"],
+      execArgv: []
+    });
+    let settled = false;
+    let childExited = false;
+
+    const timeout = setTimeout(() => {
+      cleanup();
+      child.kill();
+      reject(new Error("prompt_images_child_timeout"));
+    }, PROMPT_IMAGES_CHILD_TIMEOUT_MS);
+    timeout.unref?.();
+
+    function cleanup() {
+      clearTimeout(timeout);
+      child.removeListener("message", onMessage);
+      child.removeListener("error", onError);
+      child.removeListener("exit", onExit);
+    }
+
+    function resolveOnce(value) {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      cleanup();
+      resolve(value);
+    }
+
+    function rejectOnce(error) {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      cleanup();
+      reject(error);
+    }
+
+    function onMessage(message) {
+      if (message?.ok === true) {
+        if (!isValidPromptImagesIpcPayload(message)) {
+          rejectOnce(new Error("prompt_images_child_invalid_payload"));
+          return;
+        }
+
+        resolveOnce(deserializePromptDebugImagesFromIpc(message));
+        return;
+      }
+
+      if (message?.ok === false) {
+        const error = new Error(String(message?.message || "prompt_images_child_failed"));
+        if (typeof message?.stack === "string" && message.stack.trim().length > 0) {
+          error.stack = message.stack;
+        }
+        rejectOnce(error);
+      }
+    }
+
+    function onError(error) {
+      rejectOnce(error);
+    }
+
+    function onExit(code, signal) {
+      childExited = true;
+      if (!settled) {
+        rejectOnce(new Error(`prompt_images_child_exit:${code ?? "null"}:${signal ?? "null"}`));
+      }
+    }
+
+    child.on("message", onMessage);
+    child.on("error", onError);
+    child.on("exit", onExit);
+
+    child.send({
+      normalizedItems,
+      saveDebugArtifacts,
+      debugOutputDir: debugOutputDir instanceof URL
+        ? fileURLToPath(debugOutputDir)
+        : (debugOutputDir || null)
+    }, (error) => {
+      if (error && !childExited) {
+        rejectOnce(error);
+      }
+    });
+  });
+}
+
 async function preparePdfImageAsset(imageAsset, { width, height } = {}) {
   if (!imageAsset?.buffer) {
     return null;
@@ -538,6 +688,9 @@ export {
   downloadProductImageAssets,
   groupPromptImageItemsByCategory,
   buildPromptDebugImages,
+  buildPromptDebugImagesInChild,
   preparePdfImageAsset,
-  preparePdfImageAssets
+  preparePdfImageAssets,
+  serializePromptDebugImagesForIpc,
+  deserializePromptDebugImagesFromIpc
 };

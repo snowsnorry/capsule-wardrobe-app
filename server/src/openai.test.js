@@ -7,6 +7,7 @@ import {
   buildResponsesPayload
 } from "./ai/openai.js";
 import { getCapsuleCategories } from "./ai/categories.js";
+import { deserializePromptDebugImagesFromIpc } from "./ai/promptImages.js";
 
 test("buildCapsuleSchema reflects the default capsule counts", () => {
   const schema = buildCapsuleSchema(getCapsuleCategories());
@@ -87,5 +88,28 @@ test("buildResponsesPayload releases source image buffers after payload construc
 
   assert.ok(Array.isArray(input));
   assert.equal(images[0].buffer, null);
+  assert.match(input[0].content[1].image_url, /^data:image\/jpeg;base64,/);
+});
+
+test("buildResponsesInput accepts prompt image collages deserialized from IPC payloads", () => {
+  const promptImages = deserializePromptDebugImagesFromIpc({
+    downloadedCount: 1,
+    skippedCount: 0,
+    categories: [{
+      category: "top",
+      mimeType: "image/jpeg",
+      filename: "category-top.jpg",
+      totalItems: 1,
+      downloadedCount: 1,
+      skippedCount: 0,
+      items: [],
+      bufferBase64: Buffer.from("image-one").toString("base64")
+    }]
+  });
+
+  const input = buildResponsesInput("describe this", promptImages.categories);
+
+  assert.ok(Array.isArray(input));
+  assert.equal(input[0].content[1].type, "input_image");
   assert.match(input[0].content[1].image_url, /^data:image\/jpeg;base64,/);
 });

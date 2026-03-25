@@ -5,7 +5,6 @@ import rateLimit from "express-rate-limit";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import sharp from "sharp";
 import { OAuth2Client } from "google-auth-library";
 import {
   CODE_TTL_MS,
@@ -39,6 +38,7 @@ import { getWardrobeItems } from "./ai/ai.js";
 import { downloadWardrobePdf } from "./wardrobePdf.js";
 import { checkDatabaseConnection, ensureTables } from "./db.js";
 import { ACCENT_COLOR_OPTIONS } from "../../shared/accentColors.js";
+import { configureSharp } from "./ai/sharpConfig.js";
 
 const PORT = process.env.PORT || 3000;
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || "http://localhost:5173";
@@ -50,15 +50,12 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const CLIENT_DIST_PATH = path.resolve(__dirname, "../../client/dist");
 const CLIENT_ROOT = path.resolve(__dirname, "../../client");
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "";
-const SHARP_CONCURRENCY = Number.parseInt(process.env.SHARP_CONCURRENCY || "", 10) || 2;
-
-sharp.cache(false);
-sharp.concurrency(SHARP_CONCURRENCY);
+const sharpConfig = configureSharp();
 console.info(
   "[sharp][configured]",
   JSON.stringify({
-    cache: sharp.cache(),
-    concurrency: sharp.concurrency()
+    cache: sharpConfig.cache,
+    concurrency: sharpConfig.concurrency
   })
 );
 

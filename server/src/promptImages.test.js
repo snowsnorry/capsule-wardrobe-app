@@ -6,13 +6,16 @@ import path from "node:path";
 import sharp from "sharp";
 import {
   buildPromptDebugImages,
+  buildPromptDebugImagesInChild,
+  deserializePromptDebugImagesFromIpc,
   GRID_HEIGHT,
   GRID_WIDTH,
   HEADER_HEIGHT,
   MAX_ITEMS_PER_CATEGORY,
   groupPromptImageItemsByCategory,
   downloadProductImageAssets,
-  preparePdfImageAssets
+  preparePdfImageAssets,
+  serializePromptDebugImagesForIpc
 } from "./ai/promptImages.js";
 
 async function createFixtureBuffer(color) {
@@ -247,4 +250,159 @@ test("preparePdfImageAssets resizes normalized images for pdf", async () => {
   assert.equal(metadata.format, "jpeg");
   assert.ok(metadata.width <= 600);
   assert.ok(metadata.height <= 400);
+});
+
+test("prompt image IPC serialization round-trips collages back to buffers", async () => {
+  const fixtureBuffer = await createFixtureBuffer("#8844aa");
+  const serialized = serializePromptDebugImagesForIpc({
+    downloadedCount: 1,
+    skippedCount: 0,
+    categories: [{
+      category: "top",
+      mimeType: "image/jpeg",
+      buffer: fixtureBuffer,
+      filename: "category-top.jpg",
+      totalItems: 1,
+      downloadedCount: 1,
+      skippedCount: 0,
+      items: []
+    }]
+  });
+
+  const deserialized = deserializePromptDebugImagesFromIpc(serialized);
+
+  assert.equal(deserialized.downloadedCount, 1);
+  assert.equal(deserialized.skippedCount, 0);
+  assert.ok(Buffer.isBuffer(deserialized.categories[0].buffer));
+  assert.deepEqual(deserialized.categories[0].buffer, fixtureBuffer);
+});
+
+test("buildPromptDebugImages does not return a normalized image map", async (t) => {
+  const redBuffer = await createFixtureBuffer("#cc0000");
+  const originalFetch = globalThis.fetch;
+
+  globalThis.fetch = async () => new Response(redBuffer, { status: 200 });
+
+  t.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  const result = await buildPromptDebugImages({
+    normalizedItems: createItems("top", 1)
+  });
+
+  assert.equal("downloadedImagesById" in result, false);
+});
+
+test("buildPromptDebugImagesInChild resolves buffered collages from child success payload", async () => {
+  const result = await buildPromptDebugImagesInChild({
+    normalizedItems: [{ id: "top-1", category: "top", image_url: "https://example.com/top-1.png" }],
+    forkImpl: (_modulePath, _options) => {
+      const handlers = new Map();
+      return {
+        on(event, handler) {
+          handlers.set(event, handler);
+        },
+        removeListener(event) {
+          handlers.delete(event);
+        },
+        kill() {},
+        send() {
+          handlers.get("message")?.({
+            ok: true,
+            downloadedCount: 1,
+            skippedCount: 0,
+            categories: [{
+              category: "top",
+              mimeType: "image/jpeg",
+              filename: "category-top.jpg",
+              totalItems: 1,
+              downloadedCount: 1,
+              skippedCount: 0,
+              items: [],
+              bufferBase64: Buffer.from("child-image").toString("base64")
+            }]
+          });
+          handlers.get("exit")?.(0, null);
+        }
+      };
+    }
+  });
+
+  assert.equal(result.downloadedCount, 1);
+  assert.equal(result.categories.length, 1);
+  assert.ok(Buffer.isBuffer(result.categories[0].buffer));
+  assert.equal(String(result.categories[0].buffer), "child-image");
+});
+
+test("buildPromptDebugImagesInChild works with a real child process", async () => {
+  const fixtureBuffer = await createFixtureBuffer("#1177aa");
+  const imageUrl = `data:image/png;base64,${fixtureBuffer.toString("base64")}`;
+
+  const result = await buildPromptDebugImagesInChild({
+    normalizedItems: [{
+      id: "top-1",
+      category: "top",
+      image_url: imageUrl
+    }]
+  });
+
+  assert.equal(result.downloadedCount, 1);
+  assert.equal(result.skippedCount, 0);
+  assert.equal(result.categories.length, 1);
+  assert.ok(Buffer.isBuffer(result.categories[0].buffer));
+  const metadata = await sharp(result.categories[0].buffer).metadata();
+  assert.equal(metadata.width, GRID_WIDTH);
+  assert.equal(metadata.height, GRID_HEIGHT + HEADER_HEIGHT);
+});
+
+test("buildPromptDebugImagesInChild rejects on child-reported failure", async () => {
+  await assert.rejects(
+    buildPromptDebugImagesInChild({
+      normalizedItems: [],
+      forkImpl: () => {
+        const handlers = new Map();
+        return {
+          on(event, handler) {
+            handlers.set(event, handler);
+          },
+          removeListener(event) {
+            handlers.delete(event);
+          },
+          kill() {},
+          send() {
+            handlers.get("message")?.({
+              ok: false,
+              message: "child_failed"
+            });
+          }
+        };
+      }
+    }),
+    /child_failed/
+  );
+});
+
+test("buildPromptDebugImagesInChild rejects on unexpected child exit", async () => {
+  await assert.rejects(
+    buildPromptDebugImagesInChild({
+      normalizedItems: [],
+      forkImpl: () => {
+        const handlers = new Map();
+        return {
+          on(event, handler) {
+            handlers.set(event, handler);
+          },
+          removeListener(event) {
+            handlers.delete(event);
+          },
+          kill() {},
+          send() {
+            handlers.get("exit")?.(1, "SIGTERM");
+          }
+        };
+      }
+    }),
+    /prompt_images_child_exit:1:SIGTERM/
+  );
 });

@@ -6,7 +6,7 @@ import { generateJsonWithLlm } from "./openai.js";
 import {  getPromptEmbeddings, getWardrobePrompt } from "./voyageai.js";
 import { getCapsuleCategories } from "./categories.js";
 import { generateSwimwearAddition, shouldGenerateSwimwear } from "./swimwear.js";
-import { buildPromptDebugImages } from "./promptImages.js";
+import { buildPromptDebugImagesInChild } from "./promptImages.js";
 import {
   getProcessMemoryUsage,
   runWithImageWorkSlot,
@@ -573,7 +573,7 @@ async function generateCapsuleWardrobe(userProfile = null, logContext = null) {
     logWardrobeMemory("capsule-images-start", {
       requestedCount: normalizedItems.length
     }, logContext);
-    promptDebugImages = await runWithImageWorkSlot("capsule-images", async () => buildPromptDebugImages({
+    promptDebugImages = await runWithImageWorkSlot("capsule-images", async () => buildPromptDebugImagesInChild({
       normalizedItems,
       saveDebugArtifacts: shouldSavePromptDebugArtifacts,
       debugOutputDir: shouldSavePromptDebugArtifacts
@@ -591,6 +591,11 @@ async function generateCapsuleWardrobe(userProfile = null, logContext = null) {
       collageBytes: sumCategoryBytes(promptDebugImages.categories)
     }, logContext);
   } catch (error) {
+    if (String(error?.message || "").startsWith("prompt_images_child_exit:")) {
+      logWardrobeInfo("capsule-images-child-exit", {
+        message: error.message
+      }, logContext);
+    }
     console.warn(
       "[prompt-images][build-failed]",
       JSON.stringify({
