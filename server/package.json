@@ -9,6 +9,7 @@
     "start": "node src/index.js"
   },
   "dependencies": {
+    "@fontsource/dm-sans": "^5.0.18",
     "@google/genai": "^1.42.0",
     "@neondatabase/serverless": "^0.10.4",
     "@pdf-lib/fontkit": "^1.1.1",

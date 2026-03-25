@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { fork as nodeFork } from "node:child_process";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -43,8 +44,9 @@ const COLOR_SWATCH_STYLES = {
   metallic: { fill: rgb(0.741, 0.765, 0.804) },
   multicolor: { fill: rgb(0.31, 0.514, 0.8) }
 };
-const DM_SANS_REGULAR_PATH = "node_modules/@fontsource/dm-sans/files/dm-sans-latin-400-normal.woff";
-const DM_SANS_BOLD_PATH = "node_modules/@fontsource/dm-sans/files/dm-sans-latin-700-normal.woff";
+const require = createRequire(import.meta.url);
+const DM_SANS_REGULAR_PATH = require.resolve("@fontsource/dm-sans/files/dm-sans-latin-400-normal.woff");
+const DM_SANS_BOLD_PATH = require.resolve("@fontsource/dm-sans/files/dm-sans-latin-700-normal.woff");
 const FALLBACK_REGULAR_FONT_CANDIDATES = [
   "/System/Library/Fonts/Supplemental/Arial.ttf",
   "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
