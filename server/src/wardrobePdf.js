@@ -140,8 +140,45 @@ async function normalizeImageBytes(buffer, mimeType = "") {
   return { kind: "png", bytes: pngBuffer };
 }
 
-async function loadImageBytes(imageUrl, imageAsset = null) {
+async function preparePdfImageBytes(buffer, mimeType = "", { width, height } = {}) {
+  if (!buffer) {
+    return null;
+  }
+
+  const sourceBuffer = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
+  const targetWidth = Math.max(1, Math.round(Number(width) || 1));
+  const targetHeight = Math.max(1, Math.round(Number(height) || 1));
+  const image = sharp(sourceBuffer, { failOn: "none" }).rotate();
+  const metadata = await image.metadata().catch(() => ({}));
+  const hasAlpha = metadata?.hasAlpha === true || String(mimeType || "").toLowerCase().includes("png");
+
+  const resized = image.resize(targetWidth, targetHeight, {
+    fit: "inside",
+    withoutEnlargement: true
+  });
+
+  if (hasAlpha) {
+    const pngBuffer = await resized.png({
+      compressionLevel: 9,
+      palette: true,
+      quality: 80
+    }).toBuffer();
+    return { kind: "png", bytes: pngBuffer };
+  }
+
+  const jpgBuffer = await resized.flatten({ background: "#f7f4ef" }).jpeg({
+    quality: 76,
+    mozjpeg: true,
+    progressive: true
+  }).toBuffer();
+  return { kind: "jpg", bytes: jpgBuffer };
+}
+
+async function loadImageBytes(imageUrl, imageAsset = null, targetSize = null) {
   if (imageAsset?.buffer) {
+    if (targetSize) {
+      return preparePdfImageBytes(imageAsset.buffer, imageAsset.mimeType, targetSize);
+    }
     return normalizeImageBytes(imageAsset.buffer, imageAsset.mimeType);
   }
 
@@ -157,6 +194,9 @@ async function loadImageBytes(imageUrl, imageAsset = null) {
 
     const contentType = String(response.headers.get("content-type") || "").toLowerCase();
     const sourceBuffer = Buffer.from(await response.arrayBuffer());
+    if (targetSize) {
+      return preparePdfImageBytes(sourceBuffer, contentType, targetSize);
+    }
     return normalizeImageBytes(sourceBuffer, contentType);
   } catch (error) {
     console.error("[wardrobe-pdf][image]", imageUrl, error);
@@ -588,7 +628,11 @@ async function drawProductPage(pdfDoc, product, locale, fonts, imageAssetsById =
 
   const imageBytes = await loadImageBytes(
     product?.imageUrl,
-    imageAssetsById[String(product?.id || "")] || null
+    imageAssetsById[String(product?.id || "")] || null,
+    {
+      width: (imageBounds.width - 2) * 2,
+      height: (imageBounds.height - 2) * 2
+    }
   );
   if (!imageBytes) {
     drawTextBlock(page, title, {
