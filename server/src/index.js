@@ -58,6 +58,7 @@ app.use(express.json());
 if (NODE_ENV === "production") {
   app.use(
     helmet({
+      crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
       contentSecurityPolicy: {
         useDefaults: true,
         directives: {
@@ -75,6 +76,7 @@ if (NODE_ENV === "production") {
 } else {
   app.use(
     helmet({
+      crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
       contentSecurityPolicy: false
     })
   );
