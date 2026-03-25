@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import { getProfile, updateProfileItems } from "../profileStore.js";
 import { getSqlClient } from "../db.js";
 import { readFileSync, writeFileSync } from "node:fs";
@@ -11,6 +12,110 @@ const PROMPT_TEMPLATE = readFileSync(new URL("../templates/prompt.txt", import.m
 const WARDROBE_POLL_AFTER_MS = 2000;
 const COMPLETED_JOB_TTL_MS = 5 * 60 * 1000;
 const wardrobeJobs = new Map();
+
+function logWardrobeInfo(event, payload = {}, logContext = null) {
+  const info = {};
+
+  if (logContext?.capsuleRequestId) {
+    info.capsuleRequestId = logContext.capsuleRequestId;
+  }
+
+  console.info(`[wardrobe-ai][${event}]`, JSON.stringify({
+    ...info,
+    ...payload
+  }));
+}
+
+function countItemsByKey(items = [], key = "category") {
+  return items.reduce((result, item) => {
+    const value = String(item?.[key] || "").trim();
+    if (!value) {
+      return result;
+    }
+
+    result[value] = (result[value] || 0) + 1;
+    return result;
+  }, {});
+}
+
+function getRequestedWardrobeParams(userProfile = null, { forceRefresh = false } = {}) {
+  const params = {};
+
+  if (forceRefresh) {
+    params.forceRefresh = true;
+  }
+
+  if (typeof userProfile?.formalityLevel === "string" && userProfile.formalityLevel.trim().length > 0) {
+    params.formalityLevel = userProfile.formalityLevel.trim();
+  }
+
+  if (typeof userProfile?.style === "string" && userProfile.style.trim().length > 0) {
+    params.style = userProfile.style.trim();
+  }
+
+  if (Array.isArray(userProfile?.occasions) && userProfile.occasions.length > 0) {
+    params.occasions = userProfile.occasions.filter((value) => typeof value === "string" && value.trim().length > 0);
+  }
+
+  if (Array.isArray(userProfile?.season) && userProfile.season.length > 0) {
+    params.season = userProfile.season.filter((value) => typeof value === "string" && value.trim().length > 0);
+  }
+
+  if (typeof userProfile?.audience === "string" && userProfile.audience.trim().length > 0) {
+    params.audience = userProfile.audience.trim();
+  }
+
+  if (typeof userProfile?.color === "string" && userProfile.color.trim().length > 0) {
+    params.color = userProfile.color.trim();
+  }
+
+  if (typeof userProfile?.pattern === "string" && userProfile.pattern.trim().length > 0) {
+    params.pattern = userProfile.pattern.trim();
+  }
+
+  if (typeof userProfile?.locale === "string" && userProfile.locale.trim().length > 0) {
+    params.locale = userProfile.locale.trim();
+  }
+
+  return params;
+}
+
+function extractLlmUsage(usage = null) {
+  if (!usage || typeof usage !== "object") {
+    return {};
+  }
+
+  const result = {};
+
+  if (Number.isFinite(usage.input_tokens)) {
+    result.inputTokens = usage.input_tokens;
+  }
+
+  if (Number.isFinite(usage.output_tokens)) {
+    result.outputTokens = usage.output_tokens;
+  }
+
+  if (Number.isFinite(usage.total_tokens)) {
+    result.totalTokens = usage.total_tokens;
+  }
+
+  const reasoningTokens = usage?.output_tokens_details?.reasoning_tokens;
+  if (Number.isFinite(reasoningTokens)) {
+    result.reasoningTokens = reasoningTokens;
+  }
+
+  return result;
+}
+
+function buildErrorLogContext(logContext = null) {
+  if (!logContext?.capsuleRequestId) {
+    return null;
+  }
+
+  return {
+    capsuleRequestId: logContext.capsuleRequestId
+  };
+}
 
 function getStoredWardrobePayload(profile) {
   const stored = profile?.items;
@@ -259,7 +364,7 @@ function mergeImageAssetsById(...sources) {
   return Object.assign({}, ...sources.filter((source) => source && typeof source === "object"));
 }
 
-async function generateCapsuleWardrobe(userProfile = null) {
+async function generateCapsuleWardrobe(userProfile = null, logContext = null) {
   const sql = getSqlClient();
   const prompt = getWardrobePrompt(userProfile);
   const promptEmbeddings = await getPromptEmbeddings(prompt);
@@ -281,6 +386,7 @@ async function generateCapsuleWardrobe(userProfile = null) {
   const embeddingVector = `[${promptEmbeddings.join(",")}]`;
   const noiseFactor = 0.05;
 
+  const sqlStartedAt = Date.now();
   const items = await sql`
     SELECT results.*
     FROM unnest(${categories}::text[]) AS cats(target_category)
@@ -402,16 +508,23 @@ async function generateCapsuleWardrobe(userProfile = null) {
         (distance + (RANDOM() * ${noiseFactor}::float)) ASC
       LIMIT 10
     ) results`;
+  const sqlDurationMs = Date.now() - sqlStartedAt;
 
   const normalizedItems = items.map((item) => {
     const normalized = { ...item };
     delete normalized.embedding;
     return normalized;
   });
+  logWardrobeInfo("capsule-sql-completed", {
+    sqlDurationMs,
+    sqlItemsTotal: normalizedItems.length,
+    sqlItemsByCategory: countItemsByKey(normalizedItems)
+  }, logContext);
   const shouldSavePromptDebugArtifacts = process.env.NODE_ENV === "development";
   let promptDebugImages = { categories: [] };
 
   try {
+    const imageFetchStartedAt = Date.now();
     promptDebugImages = await buildPromptDebugImages({
       normalizedItems,
       saveDebugArtifacts: shouldSavePromptDebugArtifacts,
@@ -419,6 +532,12 @@ async function generateCapsuleWardrobe(userProfile = null) {
         ? new URL("../../../last-prompt/", import.meta.url)
         : null
     });
+    logWardrobeInfo("capsule-images-ready", {
+      imageFetchDurationMs: Date.now() - imageFetchStartedAt,
+      requestedCount: normalizedItems.length,
+      downloadedCount: promptDebugImages.downloadedCount || 0,
+      skippedCount: promptDebugImages.skippedCount || 0
+    }, logContext);
   } catch (error) {
     console.warn(
       "[prompt-images][build-failed]",
@@ -430,6 +549,7 @@ async function generateCapsuleWardrobe(userProfile = null) {
 
   const selectionPrompt = getWardrobeSelectionPrompt(userProfile, normalizedItems, capsuleCategories);
   writeFileSync(new URL("../../../last_prompt.txt", import.meta.url), selectionPrompt, "utf8");
+  const llmStartedAt = Date.now();
   const { response: selectionResponse, json: parsedSelection } = await generateJsonWithLlm(selectionPrompt, {
     userProfile,
     images: promptDebugImages.categories.map((entry) => ({
@@ -439,6 +559,10 @@ async function generateCapsuleWardrobe(userProfile = null) {
       filename: entry.filename
     }))
   });
+  logWardrobeInfo("capsule-llm-completed", {
+    llmDurationMs: Date.now() - llmStartedAt,
+    ...extractLlmUsage(selectionResponse?.usage)
+  }, logContext);
 
   console.log("[wardrobe-ai][selected-json]", JSON.stringify(parsedSelection));
   if (!parsedSelection?.capsule || typeof parsedSelection.capsule !== "object") {
@@ -515,14 +639,18 @@ function getWardrobeJob(email) {
   return job;
 }
 
-function startWardrobeJob(email, profile) {
+function startWardrobeJob(email, profile, logContext = null) {
   const existing = getWardrobeJob(email);
   if (existing?.status === "pending") {
     return existing;
   }
 
+  const capsuleRequestId = logContext?.capsuleRequestId || crypto.randomUUID();
+  const startedAt = Date.now();
   const job = {
+    capsuleRequestId,
     status: "pending",
+    startedAt,
     updatedAt: Date.now(),
     promise: null,
     phase: "capsule",
@@ -531,8 +659,13 @@ function startWardrobeJob(email, profile) {
   wardrobeJobs.set(email, job);
 
   job.promise = (async () => {
+    const jobLogContext = {
+      capsuleRequestId,
+      startedAt
+    };
+
     try {
-      const wardrobe = await generateCapsuleWardrobe(profile);
+      const wardrobe = await generateCapsuleWardrobe(profile, jobLogContext);
       const items = wardrobe.items;
 
       if (items.length === 0) {
@@ -545,6 +678,11 @@ function startWardrobeJob(email, profile) {
         rawSelectionText: wardrobe.rawSelectionText
       });
       await updateProfileItems(email, storedCapsule);
+      logWardrobeInfo("capsule-base-completed", {
+        baseDurationMs: Date.now() - startedAt,
+        capsuleItemsTotal: items.length,
+        capsuleItemsByCategory: countItemsByKey(items)
+      }, jobLogContext);
 
       job.result = storedCapsule;
 
@@ -556,7 +694,8 @@ function startWardrobeJob(email, profile) {
           const swimwear = await generateSwimwearAddition({
             userProfile: profile,
             selectedCapsuleItems: wardrobe.selectedItems,
-            promptEmbeddings: wardrobe.promptEmbeddings
+            promptEmbeddings: wardrobe.promptEmbeddings,
+            logContext: jobLogContext
           });
           const swimwearImageAssetsById = await downloadProductImageAssets(swimwear.items);
           const finalItems = appendUniqueWardrobeItems(items, swimwear.items);
@@ -569,6 +708,11 @@ function startWardrobeJob(email, profile) {
           });
 
           await updateProfileItems(email, finalPayload);
+          logWardrobeInfo("capsule-total-completed", {
+            totalDurationMs: Date.now() - startedAt,
+            itemsTotal: finalItems.length,
+            itemsByCategory: countItemsByKey(finalItems)
+          }, jobLogContext);
           job.result = finalPayload;
           startWardrobePdfJob(email, {
             wardrobePayload: finalPayload,
@@ -579,7 +723,12 @@ function startWardrobeJob(email, profile) {
             )
           });
         } catch (error) {
-          console.error("[wardrobe-ai][swimwear]", error);
+          console.error("[wardrobe-ai][swimwear]", buildErrorLogContext(jobLogContext), error);
+          logWardrobeInfo("capsule-total-completed", {
+            totalDurationMs: Date.now() - startedAt,
+            itemsTotal: items.length,
+            itemsByCategory: countItemsByKey(items)
+          }, jobLogContext);
           startWardrobePdfJob(email, {
             wardrobePayload: storedCapsule,
             locale: profile?.locale,
@@ -587,6 +736,11 @@ function startWardrobeJob(email, profile) {
           });
         }
       } else {
+        logWardrobeInfo("capsule-total-completed", {
+          totalDurationMs: Date.now() - startedAt,
+          itemsTotal: items.length,
+          itemsByCategory: countItemsByKey(items)
+        }, jobLogContext);
         startWardrobePdfJob(email, {
           wardrobePayload: storedCapsule,
           locale: profile?.locale,
@@ -602,7 +756,7 @@ function startWardrobeJob(email, profile) {
       job.phase = "failed";
       job.updatedAt = Date.now();
       job.error = error;
-      console.error("[wardrobe-ai]", error);
+      console.error("[wardrobe-ai]", buildErrorLogContext(jobLogContext), error);
     } finally {
       scheduleJobCleanup(email, job);
     }
@@ -675,7 +829,13 @@ async function getWardrobeItems(req, res) {
     const generationProfile = forceRefresh && profile
       ? { ...profile, items: null }
       : profile;
-    startWardrobeJob(email, generationProfile);
+    const logContext = {
+      capsuleRequestId: crypto.randomUUID()
+    };
+    logWardrobeInfo("capsule-request-received", getRequestedWardrobeParams(generationProfile, {
+      forceRefresh
+    }), logContext);
+    startWardrobeJob(email, generationProfile, logContext);
 
     return res.status(202).json({
       ok: true,

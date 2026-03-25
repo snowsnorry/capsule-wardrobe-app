@@ -8,6 +8,58 @@ import {
 
 const PROMPT_TEMPLATE = readFileSync(new URL("../templates/prompt_woman_swimwear.txt", import.meta.url), "utf8");
 
+function logWardrobeInfo(event, payload = {}, logContext = null) {
+  const info = {};
+
+  if (logContext?.capsuleRequestId) {
+    info.capsuleRequestId = logContext.capsuleRequestId;
+  }
+
+  console.info(`[wardrobe-ai][${event}]`, JSON.stringify({
+    ...info,
+    ...payload
+  }));
+}
+
+function countItemsByKey(items = [], key = "category") {
+  return items.reduce((result, item) => {
+    const value = String(item?.[key] || "").trim();
+    if (!value) {
+      return result;
+    }
+
+    result[value] = (result[value] || 0) + 1;
+    return result;
+  }, {});
+}
+
+function extractLlmUsage(usage = null) {
+  if (!usage || typeof usage !== "object") {
+    return {};
+  }
+
+  const result = {};
+
+  if (Number.isFinite(usage.input_tokens)) {
+    result.inputTokens = usage.input_tokens;
+  }
+
+  if (Number.isFinite(usage.output_tokens)) {
+    result.outputTokens = usage.output_tokens;
+  }
+
+  if (Number.isFinite(usage.total_tokens)) {
+    result.totalTokens = usage.total_tokens;
+  }
+
+  const reasoningTokens = usage?.output_tokens_details?.reasoning_tokens;
+  if (Number.isFinite(reasoningTokens)) {
+    result.reasoningTokens = reasoningTokens;
+  }
+
+  return result;
+}
+
 function normalizeSeasonList(season) {
   if (Array.isArray(season)) {
     return season
@@ -146,7 +198,8 @@ function normalizeSwimwearSelection(selectedIds, candidates) {
   return [];
 }
 
-async function selectMaleSwimwear({ sql, targetStyle, topColors, embeddingVector }) {
+async function selectMaleSwimwear({ sql, targetStyle, topColors, embeddingVector, logContext = null }) {
+  const sqlStartedAt = Date.now();
   const rows = await sql`
     SELECT
       *,
@@ -168,10 +221,17 @@ async function selectMaleSwimwear({ sql, targetStyle, topColors, embeddingVector
       (embedding <=> ${embeddingVector}::vector) ASC
     LIMIT 1
   `;
-
-  return rows
+  const candidates = rows
     .map(sanitizeProductRow)
     .filter(Boolean);
+
+  logWardrobeInfo("swimwear-sql-completed", {
+    swimwearSqlDurationMs: Date.now() - sqlStartedAt,
+    swimwearCandidatesTotal: candidates.length,
+    swimwearCandidatesByType: countItemsByKey(candidates, "category")
+  }, logContext);
+
+  return candidates;
 }
 
 async function selectFemaleSwimwear({
@@ -179,8 +239,10 @@ async function selectFemaleSwimwear({
   audience,
   targetStyle,
   bottomColors,
-  embeddingVector
+  embeddingVector,
+  logContext = null
 }) {
+  const sqlStartedAt = Date.now();
   const rows = await sql`
     SELECT
       products.*,
@@ -208,13 +270,20 @@ async function selectFemaleSwimwear({
       (embedding <=> ${embeddingVector}::vector) ASC
     LIMIT 12
   `;
-
-  return rows
+  const candidates = rows
     .map(sanitizeProductRow)
     .filter(Boolean);
+
+  logWardrobeInfo("swimwear-sql-completed", {
+    swimwearSqlDurationMs: Date.now() - sqlStartedAt,
+    swimwearCandidatesTotal: candidates.length,
+    swimwearCandidatesByType: countItemsByKey(candidates, "swimwear_type")
+  }, logContext);
+
+  return candidates;
 }
 
-async function generateFemaleSwimwear({ userProfile, selectedCapsuleItems, promptEmbeddings }) {
+async function generateFemaleSwimwear({ userProfile, selectedCapsuleItems, promptEmbeddings, logContext = null }) {
   const sql = getSqlClient();
   const embeddingVector = `[${promptEmbeddings.join(",")}]`;
   const targetStyle = userProfile?.style ?? null;
@@ -224,7 +293,8 @@ async function generateFemaleSwimwear({ userProfile, selectedCapsuleItems, promp
     audience: userProfile?.audience || "woman",
     targetStyle,
     bottomColors,
-    embeddingVector
+    embeddingVector,
+    logContext
   });
 
   if (candidates.length === 0) {
@@ -236,6 +306,7 @@ async function generateFemaleSwimwear({ userProfile, selectedCapsuleItems, promp
   }
 
   const prompt = getSwimwearPrompt(selectedCapsuleItems, candidates);
+  const llmStartedAt = Date.now();
   const { response, json } = await generateJsonWithLlm(prompt, {
     format: buildCustomJsonObjectFormat(
       "capsule_swimwear_response",
@@ -243,8 +314,16 @@ async function generateFemaleSwimwear({ userProfile, selectedCapsuleItems, promp
       buildSwimwearSchema()
     )
   });
+  logWardrobeInfo("swimwear-llm-completed", {
+    swimwearLlmDurationMs: Date.now() - llmStartedAt,
+    ...extractLlmUsage(response?.usage)
+  }, logContext);
 
   const selectedItems = normalizeSwimwearSelection(json?.swimwear, candidates);
+  logWardrobeInfo("swimwear-completed", {
+    swimwearItemsTotal: selectedItems.length,
+    swimwearItemsByCategory: countItemsByKey(selectedItems)
+  }, logContext);
 
   return {
     items: selectedItems.map(toWardrobeUiItem),
@@ -257,7 +336,7 @@ async function generateFemaleSwimwear({ userProfile, selectedCapsuleItems, promp
   };
 }
 
-async function generateSwimwearAddition({ userProfile, selectedCapsuleItems, promptEmbeddings }) {
+async function generateSwimwearAddition({ userProfile, selectedCapsuleItems, promptEmbeddings, logContext = null }) {
   if (!shouldGenerateSwimwear(userProfile)) {
     return {
       items: [],
@@ -271,7 +350,7 @@ async function generateSwimwearAddition({ userProfile, selectedCapsuleItems, pro
   const targetStyle = userProfile?.style ?? null;
 
   if (userProfile?.audience === "woman") {
-    return generateFemaleSwimwear({ userProfile, selectedCapsuleItems, promptEmbeddings });
+    return generateFemaleSwimwear({ userProfile, selectedCapsuleItems, promptEmbeddings, logContext });
   }
 
   const topColors = getItemColors(selectedCapsuleItems, "top");
@@ -279,8 +358,13 @@ async function generateSwimwearAddition({ userProfile, selectedCapsuleItems, pro
     sql,
     targetStyle,
     topColors,
-    embeddingVector
+    embeddingVector,
+    logContext
   });
+  logWardrobeInfo("swimwear-completed", {
+    swimwearItemsTotal: items.length,
+    swimwearItemsByCategory: countItemsByKey(items)
+  }, logContext);
 
   return {
     items: items.map(toWardrobeUiItem),
