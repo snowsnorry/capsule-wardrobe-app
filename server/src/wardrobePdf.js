@@ -1,4 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
+import { fork as nodeFork } from "node:child_process";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import os from "node:os";
 import { PDFDocument, rgb } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import sharp from "sharp";
@@ -7,7 +10,6 @@ import { getProductsByIdsInOrder } from "./db.js";
 import { sortWardrobeItems } from "../../shared/wardrobeOrder.js";
 import { buildProductDetailGroups } from "../../shared/productDetail.js";
 import { isSupportedLocale, normalizeLocale, t, translateOption } from "../../shared/i18n/helpers.js";
-import { downloadProductImageAssets, preparePdfImageAssets } from "./ai/promptImages.js";
 import {
   getProcessMemoryUsage,
   runWithImageWorkSlot,
@@ -58,6 +60,8 @@ const DEFAULT_PDF_IMAGE_TARGET_SIZE = {
   width: Math.round((CONTENT_WIDTH - 2) * 2),
   height: Math.round((PAGE_HEIGHT - (PAGE_MARGIN * 2)) * 2)
 };
+const WARDROBE_PDF_CHILD_TIMEOUT_MS = Number.parseInt(process.env.WARDROBE_PDF_CHILD_TIMEOUT_MS || "", 10) || 180000;
+const WARDROBE_PDF_CHILD_PATH = new URL("./wardrobePdf.child.js", import.meta.url);
 
 function formatLogValue(value) {
   if (value === null) {
@@ -137,12 +141,6 @@ function getStoredWardrobeItems(profile) {
   }
 
   return Array.isArray(stored.items) ? stored.items : [];
-}
-
-function clearImageAssetsById(imageAssetsById = {}) {
-  for (const key of Object.keys(imageAssetsById)) {
-    delete imageAssetsById[key];
-  }
 }
 
 function createWardrobePdfGenerationKey({ items = [], locale = "en" } = {}) {
@@ -761,6 +759,108 @@ async function buildWardrobePdf(products, { locale = "en", imageAssetsById = {} 
   return buffer;
 }
 
+async function buildWardrobePdfInChild(products, locale = "en", { forkImpl = nodeFork } = {}) {
+  const outputDir = await mkdtemp(path.join(os.tmpdir(), "wardrobe-pdf-child-"));
+  const outputFilePath = path.join(outputDir, "capsule-wardrobe.pdf");
+
+  try {
+    return await new Promise((resolve, reject) => {
+      const child = forkImpl(fileURLToPath(WARDROBE_PDF_CHILD_PATH), {
+        stdio: ["ignore", "inherit", "inherit", "ipc"],
+        execArgv: []
+      });
+      let settled = false;
+      let childExited = false;
+
+      const timeout = setTimeout(() => {
+        cleanup();
+        child.kill();
+        reject(new Error("wardrobe_pdf_child_timeout"));
+      }, WARDROBE_PDF_CHILD_TIMEOUT_MS);
+      timeout.unref?.();
+
+      function cleanup() {
+        clearTimeout(timeout);
+        child.removeListener("message", onMessage);
+        child.removeListener("error", onError);
+        child.removeListener("exit", onExit);
+      }
+
+      async function resolveFromFile(filePath) {
+        try {
+          const buffer = await readFile(filePath);
+          if (!settled) {
+            settled = true;
+            cleanup();
+            resolve(buffer);
+          }
+        } catch (error) {
+          if (!settled) {
+            settled = true;
+            cleanup();
+            reject(error);
+          }
+        }
+      }
+
+      function rejectOnce(error) {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        cleanup();
+        reject(error);
+      }
+
+      function onMessage(message) {
+        if (message?.ok === true) {
+          const filePath = String(message?.outputFilePath || "").trim();
+          if (!filePath) {
+            rejectOnce(new Error("wardrobe_pdf_child_invalid_payload"));
+            return;
+          }
+          void resolveFromFile(filePath);
+          return;
+        }
+
+        if (message?.ok === false) {
+          const error = new Error(String(message?.message || "wardrobe_pdf_child_failed"));
+          if (typeof message?.stack === "string" && message.stack.trim().length > 0) {
+            error.stack = message.stack;
+          }
+          rejectOnce(error);
+        }
+      }
+
+      function onError(error) {
+        rejectOnce(error);
+      }
+
+      function onExit(code, signal) {
+        childExited = true;
+        if (!settled) {
+          rejectOnce(new Error(`wardrobe_pdf_child_exit:${code ?? "null"}:${signal ?? "null"}`));
+        }
+      }
+
+      child.on("message", onMessage);
+      child.on("error", onError);
+      child.on("exit", onExit);
+      child.send({
+        products,
+        locale,
+        outputFilePath
+      }, (error) => {
+        if (error && !childExited) {
+          rejectOnce(error);
+        }
+      });
+    });
+  } finally {
+    await rm(outputDir, { recursive: true, force: true }).catch(() => {});
+  }
+}
+
 function scheduleWardrobePdfJobCleanup(email, job) {
   const timer = setTimeout(() => {
     if (wardrobePdfJobs.get(email) === job && job.status !== "pending") {
@@ -789,9 +889,7 @@ function createWardrobePdfJobManager({
   getProfilePdfByEmail = getProfilePdf,
   updateProfilePdfByEmail = updateProfilePdf,
   getProducts = getProductsByIdsInOrder,
-  buildPdf = buildWardrobePdf,
-  downloadImageAssets = downloadProductImageAssets,
-  prepareImageAssets = preparePdfImageAssets
+  buildPdfInChild = buildWardrobePdfInChild
 } = {}) {
   function startWardrobePdfJob(email, {
     wardrobePayload = null,
@@ -854,40 +952,15 @@ function createWardrobePdfJobManager({
         }
 
         const pdfBuffer = await runWithImageWorkSlot("wardrobe-pdf-build", async () => {
-          logPdfMemory("asset-download-start", {
+          logPdfMemory("child-build-start", {
             productsTotal: products.length
           });
-          const downloadedImageAssets = await downloadImageAssets(products.map((product) => ({
-            id: product?.id,
-            category: product?.category,
-            image_url: product?.imageUrl || ""
-          })));
-          logPdfMemory("asset-download-completed", {
+          const builtPdf = await buildPdfInChild(products, pdfLocale);
+          logPdfMemory("child-build-completed", {
             productsTotal: products.length,
-            downloadedImageAssetBytes: sumImageAssetBytesById(downloadedImageAssets)
+            pdfBytes: builtPdf.length
           });
-
-          const preparedImageAssets = await prepareImageAssets(
-            downloadedImageAssets,
-            DEFAULT_PDF_IMAGE_TARGET_SIZE
-          );
-          clearImageAssetsById(downloadedImageAssets);
-          logPdfMemory("asset-prepare-completed", {
-            productsTotal: products.length,
-            preparedImageAssetBytes: sumImageAssetBytesById(preparedImageAssets)
-          });
-
-          try {
-            return await buildPdf(products, {
-              locale: pdfLocale,
-              imageAssetsById: preparedImageAssets
-            });
-          } finally {
-            clearImageAssetsById(preparedImageAssets);
-            logPdfMemory("asset-release-completed", {
-              productsTotal: products.length
-            });
-          }
+          return builtPdf;
         });
 
         if (wardrobePdfJobs.get(email) !== job) {
@@ -1005,6 +1078,7 @@ const { startWardrobePdfJob, ensureWardrobePdfJob, downloadWardrobePdf } = wardr
 export {
   DEFAULT_PDF_IMAGE_TARGET_SIZE,
   buildWardrobePdf,
+  buildWardrobePdfInChild,
   createWardrobePdfJobManager,
   createWardrobePdfGenerationKey,
   getWardrobePdfJob,

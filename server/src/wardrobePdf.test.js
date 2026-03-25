@@ -61,8 +61,6 @@ test("wardrobe pdf endpoint returns stored attachment when pdf already exists", 
 test("wardrobe pdf endpoint returns pending and starts job when pdf is missing", async () => {
   let updatedPdf = null;
   let receivedIds = null;
-  let downloadedImages = null;
-  let preparedImages = null;
   const manager = createWardrobePdfJobManager({
     getProfileByEmail: async () => ({
       items: {
@@ -88,22 +86,7 @@ test("wardrobe pdf endpoint returns pending and starts job when pdf is missing",
         imageUrl: ""
       }));
     },
-    downloadImageAssets: async (items) => {
-      downloadedImages = items;
-      return {
-        "top-1": { buffer: Buffer.from("raw-top-1"), mimeType: "image/jpeg" }
-      };
-    },
-    prepareImageAssets: async (assets, targetSize) => {
-      preparedImages = {
-        assetKeys: Object.keys(assets),
-        targetSize
-      };
-      return {
-        "top-1": { buffer: Buffer.from("prepared-top-1"), mimeType: "image/jpeg", kind: "jpg", preparedForPdf: true }
-      };
-    },
-    buildPdf: async (products) => Buffer.from(`pdf:${products.map((product) => product.id).join(",")}`)
+    buildPdfInChild: async (products) => Buffer.from(`pdf:${products.map((product) => product.id).join(",")}`)
   });
 
   const res = createResponseRecorder();
@@ -124,18 +107,6 @@ test("wardrobe pdf endpoint returns pending and starts job when pdf is missing",
   await job.promise;
 
   assert.deepEqual(receivedIds, ["top-1", "top-2", "bag-1"]);
-  assert.deepEqual(downloadedImages, [
-    { id: "top-1", category: "top", image_url: "" },
-    { id: "top-2", category: "top", image_url: "" },
-    { id: "bag-1", category: "bag", image_url: "" }
-  ]);
-  assert.deepEqual(preparedImages, {
-    assetKeys: ["top-1"],
-    targetSize: {
-      width: 971,
-      height: 1468
-    }
-  });
   assert.equal(String(updatedPdf), "pdf:top-1,top-2,bag-1");
 });
 
@@ -155,7 +126,7 @@ test("ensureWardrobePdfJob reuses active pending job for same generation", async
       imageUrl: ""
     })),
     updateProfilePdfByEmail: async () => ({ email: "person@example.com" }),
-    buildPdf: async () => {
+    buildPdfInChild: async () => {
       buildCount += 1;
       await new Promise((resolve) => setTimeout(resolve, 5));
       return Buffer.from("pdf");
