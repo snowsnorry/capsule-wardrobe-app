@@ -7,6 +7,11 @@ import { getProductsByIdsInOrder } from "./db.js";
 import { sortWardrobeItems } from "../../shared/wardrobeOrder.js";
 import { buildProductDetailGroups } from "../../shared/productDetail.js";
 import { isSupportedLocale, normalizeLocale, t, translateOption } from "../../shared/i18n/helpers.js";
+import {
+  getProcessMemoryUsage,
+  runWithImageWorkSlot,
+  sumImageAssetBytesById
+} from "./ai/imagePipeline.js";
 
 const PAGE_WIDTH = 595.28;
 const PAGE_HEIGHT = 841.89;
@@ -48,6 +53,17 @@ const FALLBACK_BOLD_FONT_CANDIDATES = [
 const WARDROBE_PDF_POLL_AFTER_MS = 2000;
 const PDF_JOB_TTL_MS = 5 * 60 * 1000;
 const wardrobePdfJobs = new Map();
+const DEFAULT_PDF_IMAGE_TARGET_SIZE = {
+  width: Math.round((CONTENT_WIDTH - 2) * 2),
+  height: Math.round((PAGE_HEIGHT - (PAGE_MARGIN * 2)) * 2)
+};
+
+function logPdfMemory(event, payload = {}) {
+  console.info(`[wardrobe-pdf][${event}]`, JSON.stringify({
+    ...payload,
+    ...getProcessMemoryUsage()
+  }));
+}
 
 function resolveFontPath(candidates) {
   const match = candidates.find((candidate) => existsSync(candidate));
@@ -176,6 +192,10 @@ async function preparePdfImageBytes(buffer, mimeType = "", { width, height } = {
 
 async function loadImageBytes(imageUrl, imageAsset = null, targetSize = null) {
   if (imageAsset?.buffer) {
+    if (imageAsset.preparedForPdf && imageAsset.kind === "jpg") {
+      return { kind: "jpg", bytes: imageAsset.buffer };
+    }
+
     if (targetSize) {
       return preparePdfImageBytes(imageAsset.buffer, imageAsset.mimeType, targetSize);
     }
@@ -626,14 +646,18 @@ async function drawProductPage(pdfDoc, product, locale, fonts, imageAssetsById =
     borderWidth: 1
   });
 
-  const imageBytes = await loadImageBytes(
+  const assetKey = String(product?.id || "");
+  let imageBytes = await loadImageBytes(
     product?.imageUrl,
-    imageAssetsById[String(product?.id || "")] || null,
+    imageAssetsById[assetKey] || null,
     {
       width: (imageBounds.width - 2) * 2,
       height: (imageBounds.height - 2) * 2
     }
   );
+  if (assetKey && imageAssetsById[assetKey]) {
+    delete imageAssetsById[assetKey];
+  }
   if (!imageBytes) {
     drawTextBlock(page, title, {
       x: imageBounds.x + 12,
@@ -648,9 +672,10 @@ async function drawProductPage(pdfDoc, product, locale, fonts, imageAssetsById =
     return;
   }
 
-  const embeddedImage = imageBytes.kind === "jpg"
+  let embeddedImage = imageBytes.kind === "jpg"
     ? await pdfDoc.embedJpg(imageBytes.bytes)
     : await pdfDoc.embedPng(imageBytes.bytes);
+  imageBytes = null;
   const scaled = embeddedImage.scaleToFit(imageBounds.width - 2, imageBounds.height - 2);
   const imageX = imageBounds.x + ((imageBounds.width - scaled.width) / 2);
   const imageY = imageBounds.y + ((imageBounds.height - scaled.height) / 2);
@@ -661,9 +686,14 @@ async function drawProductPage(pdfDoc, product, locale, fonts, imageAssetsById =
     width: scaled.width,
     height: scaled.height
   });
+  embeddedImage = null;
 }
 
 async function buildWardrobePdf(products, { locale = "en", imageAssetsById = {} } = {}) {
+  logPdfMemory("build-start", {
+    productsTotal: products.length,
+    imageAssetBytes: sumImageAssetBytesById(imageAssetsById)
+  });
   const pdfDoc = await PDFDocument.create();
   pdfDoc.registerFontkit(fontkit);
 
@@ -681,7 +711,13 @@ async function buildWardrobePdf(products, { locale = "en", imageAssetsById = {} 
     await drawProductPage(pdfDoc, product, locale, { regularFont, boldFont }, imageAssetsById);
   }
 
-  return Buffer.from(await pdfDoc.save({ useObjectStreams: false }));
+  const buffer = Buffer.from(await pdfDoc.save({ useObjectStreams: false }));
+  logPdfMemory("build-completed", {
+    productsTotal: products.length,
+    pdfBytes: buffer.length,
+    remainingImageAssetBytes: sumImageAssetBytesById(imageAssetsById)
+  });
+  return buffer;
 }
 
 function scheduleWardrobePdfJobCleanup(email, job) {
@@ -775,10 +811,10 @@ function createWardrobePdfJobManager({
           throw new Error("wardrobe_pdf_products_missing");
         }
 
-        const pdfBuffer = await buildPdf(products, {
+        const pdfBuffer = await runWithImageWorkSlot("wardrobe-pdf-build", async () => buildPdf(products, {
           locale: pdfLocale,
           imageAssetsById
-        });
+        }));
 
         if (wardrobePdfJobs.get(email) !== job) {
           return;
@@ -894,6 +930,7 @@ const wardrobePdfJobManager = createWardrobePdfJobManager();
 const { startWardrobePdfJob, ensureWardrobePdfJob, downloadWardrobePdf } = wardrobePdfJobManager;
 
 export {
+  DEFAULT_PDF_IMAGE_TARGET_SIZE,
   buildWardrobePdf,
   createWardrobePdfJobManager,
   createWardrobePdfGenerationKey,

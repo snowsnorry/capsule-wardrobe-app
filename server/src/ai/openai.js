@@ -175,6 +175,20 @@ function buildResponsesInput(user, images = []) {
   ];
 }
 
+function releaseImageBuffers(images = []) {
+  for (const image of images) {
+    if (image && typeof image === "object" && "buffer" in image) {
+      image.buffer = null;
+    }
+  }
+}
+
+function buildResponsesPayload(user, images = []) {
+  const input = buildResponsesInput(user, images);
+  releaseImageBuffers(images);
+  return input;
+}
+
 async function getPromptEmbeddings(prompt) {
   const client = getOpenAiClient();
   const response = await client.embeddings.create({
@@ -189,14 +203,24 @@ async function getPromptEmbeddings(prompt) {
   return embedding;
 }
 
-async function generateJsonWithLlm(prompt, { userProfile = null, format = null, images = [] } = {}) {
+async function generateJsonWithLlm(
+  prompt,
+  {
+    userProfile = null,
+    format = null,
+    images = [],
+    onPayloadBuilt = null
+  } = {}
+) {
   const client = getOpenAiClient();
   const { system, user } = splitSystemAndUserPrompt(prompt);
+  const input = buildResponsesPayload(user, images);
+  onPayloadBuilt?.();
 
   const response = await client.responses.create({
     model: DEFAULT_CHAT_MODEL,
     instructions: system || undefined,
-    input: buildResponsesInput(user, images),
+    input,
     reasoning: {"effort": "low"},
     // temperature: 0.2,
     // top_p: 0.9,
@@ -231,5 +255,7 @@ export {
   buildSwimwearSchema,
   buildCustomJsonObjectFormat,
   buildImageDataUrl,
-  buildResponsesInput
+  buildResponsesInput,
+  buildResponsesPayload,
+  releaseImageBuffers
 };

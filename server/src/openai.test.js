@@ -1,6 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildCapsuleSchema, buildImageDataUrl, buildResponsesInput } from "./ai/openai.js";
+import {
+  buildCapsuleSchema,
+  buildImageDataUrl,
+  buildResponsesInput,
+  buildResponsesPayload
+} from "./ai/openai.js";
 import { getCapsuleCategories } from "./ai/categories.js";
 
 test("buildCapsuleSchema reflects the default capsule counts", () => {
@@ -67,4 +72,20 @@ test("buildResponsesInput creates multimodal content with input_text and input_i
   assert.equal(input[0].content[2].type, "input_image");
   assert.match(input[0].content[1].image_url, /^data:image\/png;base64,/);
   assert.equal(input[0].content[1].detail, "high");
+});
+
+test("buildResponsesPayload releases source image buffers after payload construction", () => {
+  const images = [
+    {
+      mimeType: "image/jpeg",
+      buffer: Buffer.from("image-one"),
+      category: "top"
+    }
+  ];
+
+  const input = buildResponsesPayload("describe this", images);
+
+  assert.ok(Array.isArray(input));
+  assert.equal(images[0].buffer, null);
+  assert.match(input[0].content[1].image_url, /^data:image\/jpeg;base64,/);
 });

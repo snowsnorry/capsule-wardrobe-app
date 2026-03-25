@@ -2,6 +2,7 @@ import { mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import sharp from "sharp";
+import { IMAGE_DOWNLOAD_CONCURRENCY } from "./imagePipeline.js";
 
 const TILE_SIZE = 400;
 const GRID_COLUMNS = 5;
@@ -15,9 +16,11 @@ const GRID_COLOR = "#d10f0f";
 const BACKGROUND_COLOR = "#E4E7EA";
 const TILE_LABEL_FONT_SIZE = 28;
 const HEADER_FONT_SIZE = 42;
-const DOWNLOAD_CONCURRENCY = 6;
 const REQUEST_TIMEOUT_MS = 15000;
 const CATEGORY_COLLAGE_JPEG_QUALITY = 80;
+const NORMALIZED_IMAGE_JPEG_QUALITY = 80;
+const PDF_IMAGE_JPEG_QUALITY = 76;
+const MAX_SOURCE_IMAGE_PIXELS = Number.parseInt(process.env.MAX_SOURCE_IMAGE_PIXELS || "", 10) || 16000000;
 
 function escapeXml(value) {
   return String(value ?? "")
@@ -99,53 +102,31 @@ function getRequestSignal() {
   return undefined;
 }
 
-async function downloadTileBuffer(item) {
-  const result = await downloadProductImageAsset(item);
-  if (result.status !== "downloaded" || !result.sourceBuffer) {
-    return {
-      ...result,
-      tileBuffer: null
-    };
-  }
+function createSharpPipeline(buffer) {
+  return sharp(buffer, {
+    failOn: "none",
+    limitInputPixels: MAX_SOURCE_IMAGE_PIXELS
+  }).rotate();
+}
 
-  try {
-    const tileBuffer = await sharp(result.sourceBuffer)
-      .resize(TILE_SIZE, TILE_SIZE, {
-        fit: "contain",
-        withoutEnlargement: true,
-        background: BACKGROUND_COLOR
-      })
-      .flatten({ background: BACKGROUND_COLOR })
-      .png()
-      .toBuffer();
+async function normalizeDownloadedImage(buffer) {
+  const pipeline = createSharpPipeline(buffer);
+  const metadata = await pipeline.metadata().catch(() => ({}));
+  const normalizedBuffer = await pipeline
+    .flatten({ background: BACKGROUND_COLOR })
+    .jpeg({
+      quality: NORMALIZED_IMAGE_JPEG_QUALITY,
+      mozjpeg: true,
+      progressive: true
+    })
+    .toBuffer();
 
-    return {
-      ...result,
-      status: "downloaded",
-      tileBuffer
-    };
-  } catch (error) {
-    const reason = error?.name === "TimeoutError"
-      ? "timeout"
-      : String(error?.message || "download_failed");
-
-    console.warn(
-      "[prompt-images][tile-build-failed]",
-      JSON.stringify({
-        id: result.id,
-        category: result.category,
-        imageUrl: result.imageUrl,
-        reason
-      })
-    );
-
-    return {
-      ...result,
-      status: "skipped",
-      reason,
-      tileBuffer: null
-    };
-  }
+  return {
+    buffer: normalizedBuffer,
+    mimeType: "image/jpeg",
+    width: Number(metadata?.width) || null,
+    height: Number(metadata?.height) || null
+  };
 }
 
 async function downloadProductImageAsset(item) {
@@ -160,7 +141,9 @@ async function downloadProductImageAsset(item) {
       status: "skipped",
       reason: "missing_image_url",
       mimeType: null,
-      sourceBuffer: null
+      buffer: null,
+      width: null,
+      height: null
     };
   }
 
@@ -175,6 +158,7 @@ async function downloadProductImageAsset(item) {
 
     const mimeType = String(response.headers.get("content-type") || "").toLowerCase() || "application/octet-stream";
     const sourceBuffer = Buffer.from(await response.arrayBuffer());
+    const normalized = await normalizeDownloadedImage(sourceBuffer);
 
     return {
       id,
@@ -182,8 +166,11 @@ async function downloadProductImageAsset(item) {
       imageUrl,
       status: "downloaded",
       reason: null,
-      mimeType,
-      sourceBuffer
+      mimeType: normalized.mimeType,
+      buffer: normalized.buffer,
+      originalMimeType: mimeType,
+      width: normalized.width,
+      height: normalized.height
     };
   } catch (error) {
     const reason = error?.name === "TimeoutError"
@@ -207,7 +194,9 @@ async function downloadProductImageAsset(item) {
       status: "skipped",
       reason,
       mimeType: null,
-      sourceBuffer: null
+      buffer: null,
+      width: null,
+      height: null
     };
   }
 }
@@ -215,17 +204,19 @@ async function downloadProductImageAsset(item) {
 async function downloadProductImageAssets(items = []) {
   const downloadResults = await mapWithConcurrency(
     items,
-    DOWNLOAD_CONCURRENCY,
+    IMAGE_DOWNLOAD_CONCURRENCY,
     (item) => downloadProductImageAsset(item)
   );
 
   return Object.fromEntries(
     downloadResults
-      .filter((result) => result.status === "downloaded" && result.id && result.sourceBuffer)
+      .filter((result) => result.status === "downloaded" && result.id && result.buffer)
       .map((result) => [result.id, {
-        buffer: result.sourceBuffer,
+        buffer: result.buffer,
         mimeType: result.mimeType,
-        imageUrl: result.imageUrl
+        imageUrl: result.imageUrl,
+        width: result.width,
+        height: result.height
       }])
   );
 }
@@ -287,12 +278,45 @@ async function buildCategoryImage({
     const left = column * TILE_SIZE;
     const top = HEADER_HEIGHT + row * TILE_SIZE;
 
-    if (entry.result.tileBuffer) {
-      composites.push({
-        input: entry.result.tileBuffer,
-        left,
-        top
-      });
+    if (entry.result.buffer) {
+      try {
+        const tileBuffer = await createSharpPipeline(entry.result.buffer)
+          .resize(TILE_SIZE, TILE_SIZE, {
+            fit: "contain",
+            withoutEnlargement: true,
+            background: BACKGROUND_COLOR
+          })
+          .flatten({ background: BACKGROUND_COLOR })
+          .jpeg({
+            quality: CATEGORY_COLLAGE_JPEG_QUALITY,
+            mozjpeg: true,
+            progressive: true
+          })
+          .toBuffer();
+
+        composites.push({
+          input: tileBuffer,
+          left,
+          top
+        });
+      } catch (error) {
+        const reason = error?.name === "TimeoutError"
+          ? "timeout"
+          : String(error?.message || "tile_build_failed");
+
+        console.warn(
+          "[prompt-images][tile-build-failed]",
+          JSON.stringify({
+            id: entry.result.id,
+            category,
+            imageUrl: entry.result.imageUrl,
+            reason
+          })
+        );
+
+        entry.result.status = "skipped";
+        entry.result.reason = reason;
+      }
     }
 
     manifestEntries.push({
@@ -390,18 +414,20 @@ async function buildPromptDebugImages({
 
     const downloadResults = await mapWithConcurrency(
       items,
-      DOWNLOAD_CONCURRENCY,
-      (item) => downloadTileBuffer(item)
+      IMAGE_DOWNLOAD_CONCURRENCY,
+      (item) => downloadProductImageAsset(item)
     );
 
     for (const result of downloadResults) {
       if (result.status === "downloaded") {
         downloadedCount += 1;
-        if (result.id && result.sourceBuffer) {
+        if (result.id && result.buffer) {
           downloadedImagesById[result.id] = {
-            buffer: result.sourceBuffer,
+            buffer: result.buffer,
             mimeType: result.mimeType,
-            imageUrl: result.imageUrl
+            imageUrl: result.imageUrl,
+            width: result.width,
+            height: result.height
           };
         }
       } else {
@@ -458,6 +484,50 @@ async function buildPromptDebugImages({
   };
 }
 
+async function preparePdfImageAsset(imageAsset, { width, height } = {}) {
+  if (!imageAsset?.buffer) {
+    return null;
+  }
+
+  const targetWidth = Math.max(1, Math.round(Number(width) || 1));
+  const targetHeight = Math.max(1, Math.round(Number(height) || 1));
+  const buffer = await createSharpPipeline(imageAsset.buffer)
+    .resize(targetWidth, targetHeight, {
+      fit: "inside",
+      withoutEnlargement: true,
+      background: BACKGROUND_COLOR
+    })
+    .flatten({ background: BACKGROUND_COLOR })
+    .jpeg({
+      quality: PDF_IMAGE_JPEG_QUALITY,
+      mozjpeg: true,
+      progressive: true
+    })
+    .toBuffer();
+
+  const metadata = await sharp(buffer).metadata().catch(() => ({}));
+
+  return {
+    buffer,
+    mimeType: "image/jpeg",
+    kind: "jpg",
+    preparedForPdf: true,
+    imageUrl: imageAsset.imageUrl || "",
+    width: Number(metadata?.width) || null,
+    height: Number(metadata?.height) || null
+  };
+}
+
+async function preparePdfImageAssets(imageAssetsById = {}, targetSize) {
+  const entries = Object.entries(imageAssetsById).filter(([, asset]) => asset?.buffer);
+  const preparedEntries = await mapWithConcurrency(entries, IMAGE_DOWNLOAD_CONCURRENCY, async ([id, asset]) => {
+    const prepared = await preparePdfImageAsset(asset, targetSize);
+    return prepared ? [id, prepared] : null;
+  });
+
+  return Object.fromEntries(preparedEntries.filter(Boolean));
+}
+
 export {
   TILE_SIZE,
   GRID_COLUMNS,
@@ -468,5 +538,7 @@ export {
   MAX_ITEMS_PER_CATEGORY,
   downloadProductImageAssets,
   groupPromptImageItemsByCategory,
-  buildPromptDebugImages
+  buildPromptDebugImages,
+  preparePdfImageAsset,
+  preparePdfImageAssets
 };

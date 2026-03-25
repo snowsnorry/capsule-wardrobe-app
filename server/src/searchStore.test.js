@@ -103,20 +103,23 @@ test("serializeSearchRow maps persisted row fields to client shape", () => {
 
 test("getSemanticDistanceThreshold returns adaptive thresholds by query length", () => {
   assert.equal(getSemanticDistanceThreshold(""), null);
-  assert.equal(getSemanticDistanceThreshold("linen shirt"), 0.45);
-  assert.equal(getSemanticDistanceThreshold("relaxed linen shirt for spring office"), 0.4);
+  assert.equal(getSemanticDistanceThreshold("linen shirt"), 0.4);
+  assert.equal(getSemanticDistanceThreshold("relaxed linen shirt for spring office"), 0.35);
   assert.equal(
     getSemanticDistanceThreshold("relaxed linen shirt for spring office days with minimalistic tailoring and soft structure"),
-    0.36
+    0.31
   );
 });
 
 test("getRelaxedSemanticDistanceThreshold adds fallback slack without exceeding cap", () => {
   assert.equal(getRelaxedSemanticDistanceThreshold(""), null);
-  assert.equal(getRelaxedSemanticDistanceThreshold("linen shirt"), 0.53);
-  assert.equal(
-    getRelaxedSemanticDistanceThreshold("relaxed linen shirt for spring office days with minimalistic tailoring and soft structure"),
-    0.44
+  assert.ok(Math.abs(getRelaxedSemanticDistanceThreshold("linen shirt") - 0.48) < 1e-9);
+  assert.ok(
+    Math.abs(
+      getRelaxedSemanticDistanceThreshold(
+        "relaxed linen shirt for spring office days with minimalistic tailoring and soft structure"
+      ) - 0.39
+    ) < 1e-9
   );
 });
 

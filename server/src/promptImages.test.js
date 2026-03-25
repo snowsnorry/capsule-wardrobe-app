@@ -10,7 +10,9 @@ import {
   GRID_WIDTH,
   HEADER_HEIGHT,
   MAX_ITEMS_PER_CATEGORY,
-  groupPromptImageItemsByCategory
+  groupPromptImageItemsByCategory,
+  downloadProductImageAssets,
+  preparePdfImageAssets
 } from "./ai/promptImages.js";
 
 async function createFixtureBuffer(color) {
@@ -159,4 +161,66 @@ test("buildPromptDebugImages skips failed downloads and still produces outputs",
   const metadata = await sharp(result.categories[0].buffer).metadata();
   assert.equal(metadata.width, GRID_WIDTH);
   assert.equal(metadata.height, GRID_HEIGHT + HEADER_HEIGHT);
+});
+
+test("downloadProductImageAssets normalizes downloaded files to jpeg", async (t) => {
+  const transparentBuffer = await sharp({
+    create: {
+      width: 300,
+      height: 180,
+      channels: 4,
+      background: { r: 10, g: 120, b: 240, alpha: 0.3 }
+    }
+  }).png().toBuffer();
+  const originalFetch = globalThis.fetch;
+
+  globalThis.fetch = async () => new Response(transparentBuffer, {
+    status: 200,
+    headers: {
+      "content-type": "image/png"
+    }
+  });
+
+  t.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  const assets = await downloadProductImageAssets(createItems("top", 1));
+  const asset = assets["top-1"];
+
+  assert.ok(asset);
+  assert.equal(asset.mimeType, "image/jpeg");
+  assert.ok(Buffer.isBuffer(asset.buffer));
+  const metadata = await sharp(asset.buffer).metadata();
+  assert.equal(metadata.format, "jpeg");
+});
+
+test("preparePdfImageAssets resizes normalized images for pdf", async () => {
+  const source = await sharp({
+    create: {
+      width: 2400,
+      height: 1600,
+      channels: 3,
+      background: "#336699"
+    }
+  }).jpeg({ quality: 90 }).toBuffer();
+
+  const prepared = await preparePdfImageAssets({
+    "top-1": {
+      buffer: source,
+      mimeType: "image/jpeg",
+      imageUrl: "https://example.com/top-1.jpg"
+    }
+  }, {
+    width: 600,
+    height: 400
+  });
+
+  assert.ok(prepared["top-1"]);
+  assert.equal(prepared["top-1"].preparedForPdf, true);
+  assert.equal(prepared["top-1"].kind, "jpg");
+  const metadata = await sharp(prepared["top-1"].buffer).metadata();
+  assert.equal(metadata.format, "jpeg");
+  assert.ok(metadata.width <= 600);
+  assert.ok(metadata.height <= 400);
 });

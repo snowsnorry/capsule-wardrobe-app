@@ -6,8 +6,14 @@ import { generateJsonWithLlm } from "./openai.js";
 import {  getPromptEmbeddings, getWardrobePrompt } from "./voyageai.js";
 import { getCapsuleCategories } from "./categories.js";
 import { generateSwimwearAddition, shouldGenerateSwimwear } from "./swimwear.js";
-import { buildPromptDebugImages, downloadProductImageAssets } from "./promptImages.js";
-import { startWardrobePdfJob } from "../wardrobePdf.js";
+import { buildPromptDebugImages, downloadProductImageAssets, preparePdfImageAssets } from "./promptImages.js";
+import { DEFAULT_PDF_IMAGE_TARGET_SIZE, startWardrobePdfJob } from "../wardrobePdf.js";
+import {
+  getProcessMemoryUsage,
+  runWithImageWorkSlot,
+  sumCategoryBytes,
+  sumImageAssetBytesById
+} from "./imagePipeline.js";
 const PROMPT_TEMPLATE = readFileSync(new URL("../templates/prompt.txt", import.meta.url), "utf8");
 const WARDROBE_POLL_AFTER_MS = 2000;
 const COMPLETED_JOB_TTL_MS = 5 * 60 * 1000;
@@ -24,6 +30,13 @@ function logWardrobeInfo(event, payload = {}, logContext = null) {
     ...info,
     ...payload
   }));
+}
+
+function logWardrobeMemory(event, payload = {}, logContext = null) {
+  logWardrobeInfo(event, {
+    ...payload,
+    ...getProcessMemoryUsage()
+  }, logContext);
 }
 
 function countItemsByKey(items = [], key = "category") {
@@ -115,6 +128,30 @@ function buildErrorLogContext(logContext = null) {
   return {
     capsuleRequestId: logContext.capsuleRequestId
   };
+}
+
+async function prepareSelectedPdfAssets(imageAssetsById = {}, logContext = null) {
+  const candidateCount = Object.keys(imageAssetsById).length;
+  if (candidateCount === 0) {
+    return {};
+  }
+
+  logWardrobeMemory("capsule-pdf-assets-start", {
+    selectedImageCandidates: candidateCount,
+    selectedNormalizedBytes: sumImageAssetBytesById(imageAssetsById)
+  }, logContext);
+
+  const prepared = await runWithImageWorkSlot("capsule-pdf-assets", async () => preparePdfImageAssets(
+    imageAssetsById,
+    DEFAULT_PDF_IMAGE_TARGET_SIZE
+  ));
+
+  logWardrobeMemory("capsule-pdf-assets-ready", {
+    selectedImageCandidates: candidateCount,
+    selectedPdfAssetBytes: sumImageAssetBytesById(prepared)
+  }, logContext);
+
+  return prepared;
 }
 
 function getStoredWardrobePayload(profile) {
@@ -525,18 +562,26 @@ async function generateCapsuleWardrobe(userProfile = null, logContext = null) {
 
   try {
     const imageFetchStartedAt = Date.now();
-    promptDebugImages = await buildPromptDebugImages({
+    logWardrobeMemory("capsule-images-start", {
+      requestedCount: normalizedItems.length
+    }, logContext);
+    promptDebugImages = await runWithImageWorkSlot("capsule-images", async () => buildPromptDebugImages({
       normalizedItems,
       saveDebugArtifacts: shouldSavePromptDebugArtifacts,
       debugOutputDir: shouldSavePromptDebugArtifacts
         ? new URL("../../../last-prompt/", import.meta.url)
         : null
-    });
+    }));
     logWardrobeInfo("capsule-images-ready", {
       imageFetchDurationMs: Date.now() - imageFetchStartedAt,
       requestedCount: normalizedItems.length,
       downloadedCount: promptDebugImages.downloadedCount || 0,
-      skippedCount: promptDebugImages.skippedCount || 0
+      skippedCount: promptDebugImages.skippedCount || 0,
+      normalizedAssetBytes: sumImageAssetBytesById(promptDebugImages.downloadedImagesById),
+      collageBytes: sumCategoryBytes(promptDebugImages.categories)
+    }, logContext);
+    logWardrobeMemory("capsule-collages-ready", {
+      collageBytes: sumCategoryBytes(promptDebugImages.categories)
     }, logContext);
   } catch (error) {
     console.warn(
@@ -550,19 +595,24 @@ async function generateCapsuleWardrobe(userProfile = null, logContext = null) {
   const selectionPrompt = getWardrobeSelectionPrompt(userProfile, normalizedItems, capsuleCategories);
   writeFileSync(new URL("../../../last_prompt.txt", import.meta.url), selectionPrompt, "utf8");
   const llmStartedAt = Date.now();
+  logWardrobeMemory("capsule-llm-request-start", {
+    collageBytes: sumCategoryBytes(promptDebugImages.categories)
+  }, logContext);
   const { response: selectionResponse, json: parsedSelection } = await generateJsonWithLlm(selectionPrompt, {
     userProfile,
-    images: promptDebugImages.categories.map((entry) => ({
-      buffer: entry.buffer,
-      mimeType: entry.mimeType,
-      category: entry.category,
-      filename: entry.filename
-    }))
+    images: promptDebugImages.categories,
+    onPayloadBuilt: () => {
+      logWardrobeMemory("capsule-llm-payload-built", {
+        collageBytes: 0
+      }, logContext);
+    }
   });
+  promptDebugImages.categories = [];
   logWardrobeInfo("capsule-llm-completed", {
     llmDurationMs: Date.now() - llmStartedAt,
     ...extractLlmUsage(selectionResponse?.usage)
   }, logContext);
+  logWardrobeMemory("capsule-llm-response-received", {}, logContext);
 
   console.log("[wardrobe-ai][selected-json]", JSON.stringify(parsedSelection));
   if (!parsedSelection?.capsule || typeof parsedSelection.capsule !== "object") {
@@ -593,16 +643,20 @@ async function generateCapsuleWardrobe(userProfile = null, logContext = null) {
     throw new Error("Model returned no valid selected_ids");
   }
 
+  const selectedImageAssetsById = Object.fromEntries(
+    balancedItems
+      .map((item) => String(item?.id || ""))
+      .filter(Boolean)
+      .map((id) => [id, promptDebugImages.downloadedImagesById?.[id]])
+      .filter(([, asset]) => asset?.buffer)
+  );
+  promptDebugImages.downloadedImagesById = {};
+  const selectedPdfImageAssetsById = await prepareSelectedPdfAssets(selectedImageAssetsById, logContext);
+
   return {
     items: balancedItems.map(toWardrobeUiItem),
     selectedItems: balancedItems,
-    selectedImageAssetsById: Object.fromEntries(
-      balancedItems
-        .map((item) => String(item?.id || ""))
-        .filter(Boolean)
-        .map((id) => [id, promptDebugImages.downloadedImagesById?.[id]])
-        .filter(([, asset]) => asset)
-    ),
+    selectedImageAssetsById: selectedPdfImageAssetsById,
     promptEmbeddings,
     rawSelectionText: typeof selectionResponse?.output_text === "string" && selectionResponse.output_text.trim().length > 0
       ? selectionResponse.output_text.trim()
@@ -697,7 +751,14 @@ function startWardrobeJob(email, profile, logContext = null) {
             promptEmbeddings: wardrobe.promptEmbeddings,
             logContext: jobLogContext
           });
-          const swimwearImageAssetsById = await downloadProductImageAssets(swimwear.items);
+          const swimwearNormalizedImageAssetsById = await runWithImageWorkSlot(
+            "swimwear-images",
+            async () => downloadProductImageAssets(swimwear.items)
+          );
+          const swimwearImageAssetsById = await prepareSelectedPdfAssets(
+            swimwearNormalizedImageAssetsById,
+            jobLogContext
+          );
           const finalItems = appendUniqueWardrobeItems(items, swimwear.items);
           const finalPayload = buildWardrobePayload({
             items: finalItems,

@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createWardrobePdfJobManager } from "./wardrobePdf.js";
+import sharp from "sharp";
+import { buildWardrobePdf, createWardrobePdfJobManager } from "./wardrobePdf.js";
 import { buildProductDetailGroups } from "../../shared/productDetail.js";
 import { t, translateOption } from "../../shared/i18n/helpers.js";
 
@@ -148,6 +149,41 @@ test("ensureWardrobePdfJob reuses active pending job for same generation", async
   assert.equal(first, second);
   await first.promise;
   assert.equal(buildCount, 1);
+});
+
+test("buildWardrobePdf consumes prepared image assets as pages are rendered", async () => {
+  const imageBuffer = await sharp({
+    create: {
+      width: 600,
+      height: 400,
+      channels: 3,
+      background: "#aa6644"
+    }
+  }).jpeg({ quality: 80 }).toBuffer();
+  const imageAssetsById = {
+    "top-1": {
+      buffer: imageBuffer,
+      mimeType: "image/jpeg",
+      kind: "jpg",
+      preparedForPdf: true,
+      imageUrl: "https://example.com/top-1.jpg"
+    }
+  };
+
+  const pdfBuffer = await buildWardrobePdf([{
+    id: "top-1",
+    name: "Top",
+    category: "top",
+    imageUrl: "https://example.com/top-1.jpg",
+    brand: "Brand",
+    description: "Description"
+  }], {
+    locale: "ru",
+    imageAssetsById
+  });
+
+  assert.ok(Buffer.isBuffer(pdfBuffer));
+  assert.equal(Object.keys(imageAssetsById).length, 0);
 });
 
 test("product detail formatter uses locale-specific labels", () => {
