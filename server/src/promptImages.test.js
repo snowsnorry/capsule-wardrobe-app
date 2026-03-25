@@ -87,7 +87,7 @@ test("buildPromptDebugImages writes category images with expected geometry and m
 
   const topCategory = result.categories.find((entry) => entry.category === "top");
   assert.ok(topCategory);
-  assert.equal(topCategory.mimeType, "image/png");
+  assert.equal(topCategory.mimeType, "image/jpeg");
   assert.ok(Buffer.isBuffer(topCategory.buffer));
 
   const metadata = await sharp(topCategory.buffer).metadata();
@@ -121,7 +121,7 @@ test("buildPromptDebugImages keeps collages in memory when debug saving is disab
   assert.equal(result.categories.length, 1);
   assert.ok(Buffer.isBuffer(result.categories[0].buffer));
   await assert.rejects(access(path.join(outputDir, "manifest.json")));
-  await assert.rejects(access(path.join(outputDir, "category-top.png")));
+  await assert.rejects(access(path.join(outputDir, "category-top.jpg")));
 });
 
 test("buildPromptDebugImages skips failed downloads and still produces outputs", async (t) => {

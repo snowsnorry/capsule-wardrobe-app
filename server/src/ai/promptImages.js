@@ -17,6 +17,7 @@ const TILE_LABEL_FONT_SIZE = 28;
 const HEADER_FONT_SIZE = 42;
 const DOWNLOAD_CONCURRENCY = 6;
 const REQUEST_TIMEOUT_MS = 15000;
+const CATEGORY_COLLAGE_JPEG_QUALITY = 80;
 
 function escapeXml(value) {
   return String(value ?? "")
@@ -317,12 +318,16 @@ async function buildCategoryImage({
       ...composites,
       { input: overlaySvg, left: 0, top: 0 }
     ])
-    .png()
+    .jpeg({
+      quality: CATEGORY_COLLAGE_JPEG_QUALITY,
+      mozjpeg: true,
+      progressive: true
+    })
     .toBuffer();
 
   return {
     buffer,
-    mimeType: "image/png",
+    mimeType: "image/jpeg",
     manifestEntries
   };
 }
@@ -419,7 +424,7 @@ async function buildPromptDebugImages({
       category,
       mimeType,
       buffer,
-      filename: `category-${categorySlug}.png`,
+      filename: `category-${categorySlug}.jpg`,
       totalItems: items.length,
       downloadedCount: manifestEntries.filter((entry) => entry.status === "downloaded").length,
       skippedCount: manifestEntries.filter((entry) => entry.status !== "downloaded").length,
