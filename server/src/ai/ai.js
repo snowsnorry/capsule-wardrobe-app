@@ -10,8 +10,7 @@ import { buildPromptDebugImages } from "./promptImages.js";
 import {
   getProcessMemoryUsage,
   runWithImageWorkSlot,
-  sumCategoryBytes,
-  sumImageAssetBytesById
+  sumCategoryBytes
 } from "./imagePipeline.js";
 const PROMPT_TEMPLATE = readFileSync(new URL("../templates/prompt.txt", import.meta.url), "utf8");
 const WARDROBE_POLL_AFTER_MS = 2000;
@@ -586,14 +585,9 @@ async function generateCapsuleWardrobe(userProfile = null, logContext = null) {
       requestedCount: normalizedItems.length,
       downloadedCount: promptDebugImages.downloadedCount || 0,
       skippedCount: promptDebugImages.skippedCount || 0,
-      normalizedAssetBytes: sumImageAssetBytesById(promptDebugImages.downloadedImagesById),
       collageBytes: sumCategoryBytes(promptDebugImages.categories)
     }, logContext);
     logWardrobeMemory("capsule-collages-ready", {
-      collageBytes: sumCategoryBytes(promptDebugImages.categories)
-    }, logContext);
-    promptDebugImages.downloadedImagesById = {};
-    logWardrobeMemory("capsule-image-assets-released", {
       collageBytes: sumCategoryBytes(promptDebugImages.categories)
     }, logContext);
   } catch (error) {

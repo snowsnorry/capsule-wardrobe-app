@@ -415,7 +415,6 @@ async function buildPromptDebugImages({
 
   const groupedItems = groupPromptImageItemsByCategory(normalizedItems);
   const categories = [];
-  const downloadedImagesById = {};
   let downloadedCount = 0;
   let skippedCount = 0;
 
@@ -431,15 +430,6 @@ async function buildPromptDebugImages({
     for (const result of downloadResults) {
       if (result.status === "downloaded") {
         downloadedCount += 1;
-        if (result.id && result.buffer) {
-          downloadedImagesById[result.id] = {
-            buffer: result.buffer,
-            mimeType: result.mimeType,
-            imageUrl: result.imageUrl,
-            width: result.width,
-            height: result.height
-          };
-        }
       } else {
         skippedCount += 1;
       }
@@ -488,7 +478,6 @@ async function buildPromptDebugImages({
 
   return {
     categories,
-    downloadedImagesById,
     downloadedCount,
     skippedCount
   };
