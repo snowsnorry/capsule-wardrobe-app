@@ -1055,6 +1055,30 @@ async function updateProfileItemsByEmail({ email, items }) {
   return row || null;
 }
 
+async function getProfileWithPdfByEmail(email) {
+  const sql = getSqlClient();
+  const [row] = await sql`
+    select
+      email,
+      formality_level as "formalityLevel",
+      style,
+      occasions,
+      season,
+      audience,
+      color,
+      pattern,
+      items,
+      locale,
+      pdf,
+      created_at as "createdAt",
+      updated_at as "updatedAt"
+    from profiles
+    where email = ${email}
+    limit 1
+  `;
+  return row || null;
+}
+
 async function getProfilePdfByEmail(email) {
   const sql = getSqlClient();
   const [row] = await sql`
@@ -1066,16 +1090,34 @@ async function getProfilePdfByEmail(email) {
   return row?.pdf ?? null;
 }
 
-async function updateProfilePdfByEmail({ email, pdf }) {
+async function updateProfilePdfByEmail({
+  email,
+  pdf,
+  expectedItems,
+  expectedLocale
+}) {
   const sql = getSqlClient();
-  const [row] = await sql`
-    update profiles
-    set
-      pdf = ${pdf},
-      updated_at = now()
-    where email = ${email}
-    returning email
-  `;
+  const hasExpectedItems = expectedItems !== undefined;
+  const hasExpectedLocale = expectedLocale !== undefined;
+  const [row] = hasExpectedItems || hasExpectedLocale
+    ? await sql`
+      update profiles
+      set
+        pdf = ${pdf},
+        updated_at = now()
+      where email = ${email}
+        and (${hasExpectedItems} = false or items = ${expectedItems})
+        and (${hasExpectedLocale} = false or locale = ${expectedLocale})
+      returning email
+    `
+    : await sql`
+      update profiles
+      set
+        pdf = ${pdf},
+        updated_at = now()
+      where email = ${email}
+      returning email
+    `;
   return row || null;
 }
 
@@ -1128,6 +1170,7 @@ export {
   upsertSearchByEmail,
   searchProducts,
   getProfileByEmail,
+  getProfileWithPdfByEmail,
   createProfileRecord,
   updateProfileRecord,
   updateProfileLocaleByEmail,

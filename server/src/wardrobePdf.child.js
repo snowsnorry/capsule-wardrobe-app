@@ -35,7 +35,10 @@ async function handleMessage(message) {
     await mkdir(path.dirname(outputFilePath), { recursive: true });
     const pdfBuffer = await buildWardrobePdf(
       Array.isArray(message?.products) ? message.products : [],
-      { locale: message?.locale || "en" }
+      {
+        locale: message?.locale || "en",
+        totalStartedAt: Number.isFinite(message?.totalStartedAt) ? message.totalStartedAt : null
+      }
     );
     await writeFile(outputFilePath, pdfBuffer);
 

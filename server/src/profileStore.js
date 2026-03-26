@@ -3,6 +3,7 @@ import {
   deleteProfileByEmail,
   getDistinctProductPatterns,
   getProfileByEmail,
+  getProfileWithPdfByEmail,
   getProfilePdfByEmail,
   hasProfileByEmail,
   updateProfileRecord,
@@ -154,8 +155,7 @@ function getAudienceOptions() {
   return audienceOptions;
 }
 
-async function getProfile(email) {
-  const profile = await getProfileByEmail(email);
+function normalizeProfileRecord(profile) {
   if (!profile) {
     return null;
   }
@@ -169,6 +169,25 @@ async function getProfile(email) {
     pattern: typeof profile.pattern === "string" && profile.pattern.trim()
       ? profile.pattern.trim().toLowerCase()
       : null
+  };
+}
+
+async function getProfile(email) {
+  return normalizeProfileRecord(await getProfileByEmail(email));
+}
+
+async function getProfileWithPdf(email) {
+  const row = await getProfileWithPdfByEmail(email);
+  if (!row) {
+    return {
+      profile: null,
+      pdf: null
+    };
+  }
+
+  return {
+    profile: normalizeProfileRecord(row),
+    pdf: row?.pdf ?? null
   };
 }
 
@@ -220,12 +239,13 @@ async function getProfilePdf(email) {
   return getProfilePdfByEmail(email);
 }
 
-async function updateProfilePdf(email, pdf) {
-  return updateProfilePdfByEmail({ email, pdf });
+async function updateProfilePdf(email, pdf, options = {}) {
+  return updateProfilePdfByEmail({ email, pdf, ...options });
 }
 
 export {
   getProfile,
+  getProfileWithPdf,
   hasProfile,
   createProfile,
   updateProfile,

@@ -8,13 +8,12 @@ import { fileURLToPath } from "node:url";
 import { PDFDocument, rgb } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import sharp from "sharp";
-import { getProfile, getProfilePdf, updateProfilePdf } from "./profileStore.js";
+import { getProfile, getProfilePdf, getProfileWithPdf, updateProfilePdf } from "./profileStore.js";
 import { getProductsByIdsInOrder } from "./db.js";
 import { sortWardrobeItems } from "../../shared/wardrobeOrder.js";
 import { buildProductDetailGroups } from "../../shared/productDetail.js";
 import { isSupportedLocale, normalizeLocale, t, translateOption } from "../../shared/i18n/helpers.js";
 import {
-  getProcessMemoryUsage,
   runWithImageWorkSlot,
   sumImageAssetBytesById
 } from "./ai/imagePipeline.js";
@@ -95,11 +94,8 @@ function formatLogPayload(payload = {}) {
     .join(", ");
 }
 
-function logPdfMemory(event, payload = {}) {
-  const message = formatLogPayload({
-    ...payload,
-    ...getProcessMemoryUsage()
-  });
+function logPdfEvent(event, payload = {}) {
+  const message = formatLogPayload(payload);
 
   if (message) {
     console.info(`[wardrobe-pdf][${event}] ${message}`);
@@ -260,12 +256,6 @@ async function loadImageBytes(imageUrl, imageAsset = null, targetSize = null, im
     const cachedImage = await readImageFromLocalCache(imageUrl);
     if (cachedImage?.buffer) {
       stats.cachedCount += 1;
-      if (targetSize) {
-        return preparePdfImageBytes(cachedImage.buffer, cachedImage.mimeType, {
-          ...targetSize,
-          autoRotate: false
-        });
-      }
       return normalizeImageBytes(cachedImage.buffer, cachedImage.mimeType);
     }
 
@@ -753,12 +743,13 @@ async function drawProductPage(pdfDoc, product, locale, fonts, imageAssetsById =
   embeddedImage = null;
 }
 
-async function buildWardrobePdf(products, { locale = "en", imageAssetsById = {} } = {}) {
+async function buildWardrobePdf(products, { locale = "en", imageAssetsById = {}, totalStartedAt = null } = {}) {
+  const buildStartedAt = Date.now();
   const imageLoadStats = {
     cachedCount: 0,
     downloadedCount: 0
   };
-  logPdfMemory("build-start", {
+  logPdfEvent("build-start", {
     productsTotal: products.length,
     imageAssetBytes: sumImageAssetBytesById(imageAssetsById)
   });
@@ -780,7 +771,9 @@ async function buildWardrobePdf(products, { locale = "en", imageAssetsById = {} 
   }
 
   const buffer = Buffer.from(await pdfDoc.save({ useObjectStreams: false }));
-  logPdfMemory("build-completed", {
+  logPdfEvent("build-completed", {
+    durationMs: Date.now() - buildStartedAt,
+    totalDurationMs: Number.isFinite(totalStartedAt) ? Date.now() - totalStartedAt : undefined,
     productsTotal: products.length,
     cachedCount: imageLoadStats.cachedCount,
     downloadedCount: imageLoadStats.downloadedCount,
@@ -790,7 +783,7 @@ async function buildWardrobePdf(products, { locale = "en", imageAssetsById = {} 
   return buffer;
 }
 
-async function buildWardrobePdfInChild(products, locale = "en", { forkImpl = nodeFork } = {}) {
+async function buildWardrobePdfInChild(products, locale = "en", { forkImpl = nodeFork, totalStartedAt = null } = {}) {
   const outputDir = await mkdtemp(path.join(os.tmpdir(), "wardrobe-pdf-child-"));
   const outputFilePath = path.join(outputDir, "capsule-wardrobe.pdf");
 
@@ -880,6 +873,7 @@ async function buildWardrobePdfInChild(products, locale = "en", { forkImpl = nod
       child.send({
         products,
         locale,
+        totalStartedAt,
         outputFilePath
       }, (error) => {
         if (error && !childExited) {
@@ -918,14 +912,27 @@ function getWardrobePdfJob(email) {
 function createWardrobePdfJobManager({
   getProfileByEmail = getProfile,
   getProfilePdfByEmail = getProfilePdf,
+  getProfileWithPdfByEmail = null,
   updateProfilePdfByEmail = updateProfilePdf,
   getProducts = getProductsByIdsInOrder,
   buildPdfInChild = buildWardrobePdfInChild
 } = {}) {
+  const loadProfileWithPdf = getProfileWithPdfByEmail
+    || (
+      getProfileByEmail === getProfile && getProfilePdfByEmail === getProfilePdf
+        ? getProfileWithPdf
+        : async (email) => ({
+          profile: await getProfileByEmail(email),
+          pdf: await getProfilePdfByEmail(email)
+        })
+    );
+
   function startWardrobePdfJob(email, {
     wardrobePayload = null,
     locale = null
   } = {}) {
+    const expectedItems = wardrobePayload ?? null;
+    const expectedLocale = locale ?? null;
     const resolvedItems = sortWardrobeItems(
       wardrobePayload && !Array.isArray(wardrobePayload)
         ? getStoredWardrobeItems({ items: wardrobePayload })
@@ -945,6 +952,7 @@ function createWardrobePdfJobManager({
     const job = {
       status: "pending",
       updatedAt: Date.now(),
+      startedAt: Date.now(),
       generationKey,
       error: null,
       promise: null
@@ -983,13 +991,8 @@ function createWardrobePdfJobManager({
         }
 
         const pdfBuffer = await runWithImageWorkSlot("wardrobe-pdf-build", async () => {
-          logPdfMemory("child-build-start", {
-            productsTotal: products.length
-          });
-          const builtPdf = await buildPdfInChild(products, pdfLocale);
-          logPdfMemory("child-build-completed", {
-            productsTotal: products.length,
-            pdfBytes: builtPdf.length
+          const builtPdf = await buildPdfInChild(products, pdfLocale, {
+            totalStartedAt: job.startedAt
           });
           return builtPdf;
         });
@@ -998,18 +1001,16 @@ function createWardrobePdfJobManager({
           return;
         }
 
-        const latestProfile = await getProfileByEmail(email);
-        const latestGenerationKey = createWardrobePdfGenerationKey({
-          items: getStoredWardrobeItems(latestProfile),
-          locale: getPdfLocale(latestProfile?.locale)
+        const updatedProfile = await updateProfilePdfByEmail(email, pdfBuffer, {
+          expectedItems,
+          expectedLocale
         });
-        if (latestGenerationKey !== job.generationKey) {
+        if (!updatedProfile) {
           job.status = "completed";
           job.updatedAt = Date.now();
           return;
         }
 
-        await updateProfilePdfByEmail(email, pdfBuffer);
         job.status = "completed";
         job.updatedAt = Date.now();
       } catch (error) {
@@ -1065,14 +1066,14 @@ function createWardrobePdfJobManager({
   async function downloadWardrobePdf(req, res) {
     try {
       const email = req.user.email;
-      const profile = await getProfileByEmail(email);
+      const { profile, pdf } = await loadProfileWithPdf(email);
       const storedWardrobeItems = sortWardrobeItems(getStoredWardrobeItems(profile));
 
       if (storedWardrobeItems.length === 0) {
         return res.status(404).json({ error: "not_found" });
       }
 
-      const storedPdf = normalizeStoredPdf(await getProfilePdfByEmail(email));
+      const storedPdf = normalizeStoredPdf(pdf);
       if (storedPdf) {
         res.setHeader("Content-Type", "application/pdf");
         res.setHeader("Content-Disposition", 'attachment; filename="capsule-wardrobe.pdf"');
