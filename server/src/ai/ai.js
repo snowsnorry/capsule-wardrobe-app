@@ -570,9 +570,6 @@ async function generateCapsuleWardrobe(userProfile = null, logContext = null) {
 
   try {
     const imageFetchStartedAt = Date.now();
-    logWardrobeMemory("capsule-images-start", {
-      requestedCount: normalizedItems.length
-    }, logContext);
     promptDebugImages = await runWithImageWorkSlot("capsule-images", async () => buildPromptDebugImagesInChild({
       normalizedItems,
       saveDebugArtifacts: shouldSavePromptDebugArtifacts,
@@ -585,9 +582,6 @@ async function generateCapsuleWardrobe(userProfile = null, logContext = null) {
       requestedCount: normalizedItems.length,
       downloadedCount: promptDebugImages.downloadedCount || 0,
       skippedCount: promptDebugImages.skippedCount || 0,
-      collageBytes: sumCategoryBytes(promptDebugImages.categories)
-    }, logContext);
-    logWardrobeMemory("capsule-collages-ready", {
       collageBytes: sumCategoryBytes(promptDebugImages.categories)
     }, logContext);
   } catch (error) {
@@ -607,17 +601,11 @@ async function generateCapsuleWardrobe(userProfile = null, logContext = null) {
   const selectionPrompt = getWardrobeSelectionPrompt(userProfile, normalizedItems, capsuleCategories);
   writeFileSync(new URL("../../../last_prompt.txt", import.meta.url), selectionPrompt, "utf8");
   const llmStartedAt = Date.now();
-  logWardrobeMemory("capsule-llm-request-start", {
-    collageBytes: sumCategoryBytes(promptDebugImages.categories)
-  }, logContext);
   const { response: selectionResponse, json: parsedSelection } = await generateJsonWithLlm(selectionPrompt, {
     userProfile,
     images: promptDebugImages.categories,
     onPayloadBuilt: () => {
       promptDebugImages.categories = [];
-      logWardrobeMemory("capsule-llm-payload-built", {
-        collageBytes: sumCategoryBytes(promptDebugImages.categories)
-      }, logContext);
     }
   });
   promptDebugImages.categories = [];
@@ -625,7 +613,6 @@ async function generateCapsuleWardrobe(userProfile = null, logContext = null) {
     llmDurationMs: Date.now() - llmStartedAt,
     ...extractLlmUsage(selectionResponse?.usage)
   }, logContext);
-  logWardrobeMemory("capsule-llm-response-received", {}, logContext);
 
   console.log("[wardrobe-ai][selected-json]", JSON.stringify(parsedSelection));
   if (!parsedSelection?.capsule || typeof parsedSelection.capsule !== "object") {
