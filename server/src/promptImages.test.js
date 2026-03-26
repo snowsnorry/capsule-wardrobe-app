@@ -392,7 +392,10 @@ test("buildPromptDebugImages does not return a normalized image map", async (t) 
 
 test("buildPromptDebugImagesInChild resolves buffered collages from child success payload", async () => {
   const result = await buildPromptDebugImagesInChild({
-    normalizedItems: [{ id: "top-1", category: "top", image_url: "https://example.com/top-1.png" }],
+    normalizedItems: [
+      { id: "top-1", category: "top", image_url: "https://example.com/top-1.png" },
+      { id: "bottom-1", category: "bottom", image_url: "https://example.com/bottom-1.png" }
+    ],
     forkImpl: (_modulePath, _options) => {
       const handlers = new Map();
       return {
@@ -409,17 +412,30 @@ test("buildPromptDebugImagesInChild resolves buffered collages from child succes
             cachedCount: 1,
             downloadedCount: 1,
             skippedCount: 0,
-            categories: [{
-              category: "top",
-              mimeType: "image/jpeg",
-              filename: "category-top.jpg",
-              totalItems: 1,
-              cachedCount: 1,
-              downloadedCount: 1,
-              skippedCount: 0,
-              items: [],
-              buffer: Buffer.from("child-image")
-            }]
+            categories: [
+              {
+                category: "top",
+                mimeType: "image/jpeg",
+                filename: "category-top.jpg",
+                totalItems: 1,
+                cachedCount: 1,
+                downloadedCount: 0,
+                skippedCount: 0,
+                items: [],
+                buffer: Buffer.from("child-image-top")
+              },
+              {
+                category: "bottom",
+                mimeType: "image/jpeg",
+                filename: "category-bottom.jpg",
+                totalItems: 1,
+                cachedCount: 0,
+                downloadedCount: 1,
+                skippedCount: 0,
+                items: [],
+                buffer: Buffer.from("child-image-bottom")
+              }
+            ]
           });
           handlers.get("exit")?.(0, null);
         }
@@ -429,9 +445,10 @@ test("buildPromptDebugImagesInChild resolves buffered collages from child succes
 
   assert.equal(result.cachedCount, 1);
   assert.equal(result.downloadedCount, 1);
-  assert.equal(result.categories.length, 1);
+  assert.equal(result.categories.length, 2);
   assert.ok(Buffer.isBuffer(result.categories[0].buffer));
-  assert.equal(String(result.categories[0].buffer), "child-image");
+  assert.equal(String(result.categories[0].buffer), "child-image-top");
+  assert.equal(String(result.categories[1].buffer), "child-image-bottom");
 });
 
 test("buildPromptDebugImagesInChild works with a real child process", async () => {

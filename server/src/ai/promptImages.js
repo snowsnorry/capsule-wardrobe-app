@@ -790,38 +790,18 @@ async function buildPromptDebugImagesInChild({
   saveDebugArtifacts: shouldSaveDebugArtifacts = false,
   forkImpl = nodeFork
 } = {}) {
-  const groupedItems = groupPromptImageItemsByCategory(normalizedItems);
-  const categories = [];
-  let cachedCount = 0;
-  let downloadedCount = 0;
-  let skippedCount = 0;
-
-  for (const [category, items] of groupedItems.entries()) {
-    const categoryResult = await buildPromptDebugImagesCategoryInChild({
-      category,
-      items,
-      forkImpl
-    });
-    categories.push(...categoryResult.categories);
-    cachedCount += categoryResult.cachedCount;
-    downloadedCount += categoryResult.downloadedCount;
-    skippedCount += categoryResult.skippedCount;
-  }
-
-  const result = {
-    categories,
-    cachedCount,
-    downloadedCount,
-    skippedCount
-  };
+  const result = await buildPromptDebugImagesAllInChild({
+    normalizedItems,
+    forkImpl
+  });
 
   if (shouldSaveDebugArtifacts) {
     try {
       await saveDebugArtifacts({
-        categories,
-        cachedCount,
-        downloadedCount,
-        skippedCount,
+        categories: result.categories,
+        cachedCount: result.cachedCount,
+        downloadedCount: result.downloadedCount,
+        skippedCount: result.skippedCount,
         debugOutputDir
       });
     } catch (error) {
@@ -837,9 +817,8 @@ async function buildPromptDebugImagesInChild({
   return result;
 }
 
-async function buildPromptDebugImagesCategoryInChild({
-  category = "",
-  items = [],
+async function buildPromptDebugImagesAllInChild({
+  normalizedItems = [],
   forkImpl = nodeFork
 } = {}) {
   return new Promise((resolve, reject) => {
@@ -918,8 +897,7 @@ async function buildPromptDebugImagesCategoryInChild({
     child.on("exit", onExit);
 
     child.send({
-      category,
-      items,
+      normalizedItems,
       downloadConcurrency: PROMPT_CATEGORY_DOWNLOAD_CONCURRENCY
     }, (error) => {
       if (error && !childExited) {

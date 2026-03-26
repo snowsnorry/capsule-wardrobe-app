@@ -1,7 +1,7 @@
 import "dotenv/config";
 import { configureSharp } from "./sharpConfig.js";
 import {
-  buildPromptDebugImagesForCategory,
+  buildPromptDebugImages,
   serializePromptDebugImagesForIpc
 } from "./promptImages.js";
 
@@ -31,22 +31,14 @@ async function handleMessage(message) {
   handled = true;
 
   try {
-    const result = await buildPromptDebugImagesForCategory({
-      category: message?.category ?? "",
-      items: Array.isArray(message?.items) ? message.items : [],
-      downloadConcurrency: Number.isInteger(message?.downloadConcurrency) && message.downloadConcurrency > 0
-        ? message.downloadConcurrency
-        : PROMPT_CATEGORY_DOWNLOAD_CONCURRENCY
+    const result = await buildPromptDebugImages({
+      normalizedItems: Array.isArray(message?.normalizedItems) ? message.normalizedItems : [],
+      saveDebugArtifacts: false
     });
 
     sendFinalMessage({
       ok: true,
-      ...serializePromptDebugImagesForIpc({
-        categories: [result.category],
-        cachedCount: result.cachedCount,
-        downloadedCount: result.downloadedCount,
-        skippedCount: result.skippedCount
-      })
+      ...serializePromptDebugImagesForIpc(result)
     }, 0);
   } catch (error) {
     sendFinalMessage({
