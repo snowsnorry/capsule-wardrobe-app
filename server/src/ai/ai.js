@@ -583,6 +583,14 @@ async function generateCapsuleWardrobe(userProfile = null, logContext = null) {
       cachedCount: promptDebugImages.cachedCount || 0,
       downloadedCount: promptDebugImages.downloadedCount || 0,
       skippedCount: promptDebugImages.skippedCount || 0,
+      cacheLookupMs: promptDebugImages.timings?.cacheLookupMs || 0,
+      networkFetchMs: promptDebugImages.timings?.networkFetchMs || 0,
+      sourceInspectMs: promptDebugImages.timings?.sourceInspectMs || 0,
+      tileBuildMs: promptDebugImages.timings?.tileBuildMs || 0,
+      collageEncodeMs: promptDebugImages.timings?.collageEncodeMs || 0,
+      categoryBuildMs: promptDebugImages.timings?.categoryBuildMs || 0,
+      debugSaveMs: promptDebugImages.timings?.debugSaveMs || 0,
+      childRoundTripMs: promptDebugImages.timings?.childRoundTripMs || 0,
       collageBytes: sumCategoryBytes(promptDebugImages.categories)
     }, logContext);
   } catch (error) {

@@ -29,6 +29,31 @@ const PROMPT_IMAGES_CHILD_PATH = new URL("./promptImages.child.js", import.meta.
 const PROMPT_CATEGORY_DOWNLOAD_CONCURRENCY = Number.parseInt(process.env.PROMPT_CATEGORY_DOWNLOAD_CONCURRENCY || "", 10) || 5;
 const STORAGE_IMAGES_DIR = fileURLToPath(new URL("../../../storage/images/", import.meta.url));
 
+function nowMs() {
+  return Date.now();
+}
+
+function createPromptImageTimings() {
+  return {
+    cacheLookupMs: 0,
+    networkFetchMs: 0,
+    sourceInspectMs: 0,
+    tileBuildMs: 0,
+    collageEncodeMs: 0,
+    debugSaveMs: 0,
+    categoryBuildMs: 0,
+    childRoundTripMs: 0
+  };
+}
+
+function addTiming(timings, key, startedAt) {
+  if (!timings || !key || !Number.isFinite(startedAt)) {
+    return;
+  }
+
+  timings[key] = (Number(timings[key]) || 0) + Math.max(0, nowMs() - startedAt);
+}
+
 function escapeXml(value) {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
@@ -307,7 +332,7 @@ async function downloadProductImageAsset(item) {
   }
 }
 
-async function downloadPromptImageAsset(item) {
+async function downloadPromptImageAsset(item, timings = null) {
   const id = String(item?.id ?? "");
   const originalImageUrl = getOriginalImageUrl(item?.image_url);
   const imageUrl = resolveSourceImageUrl(item?.image_url);
@@ -329,9 +354,13 @@ async function downloadPromptImageAsset(item) {
   }
 
   try {
+    const cacheLookupStartedAt = nowMs();
     const cachedImage = await readImageFromLocalCache(item?.image_url);
+    addTiming(timings, "cacheLookupMs", cacheLookupStartedAt);
     if (cachedImage?.buffer) {
+      const inspectStartedAt = nowMs();
       const metadata = await sharp(cachedImage.buffer).metadata().catch(() => ({}));
+      addTiming(timings, "sourceInspectMs", inspectStartedAt);
       return {
         id,
         category: item?.category ?? "",
@@ -348,19 +377,23 @@ async function downloadPromptImageAsset(item) {
       };
     }
 
+    const fetchStartedAt = nowMs();
     const response = await fetch(imageUrl, {
       signal: getRequestSignal()
     });
+    addTiming(timings, "networkFetchMs", fetchStartedAt);
 
     if (!response.ok) {
       throw new Error(`http_${response.status}`);
     }
 
     const sourceBuffer = Buffer.from(await response.arrayBuffer());
+    const inspectStartedAt = nowMs();
     const metadata = await sharp(sourceBuffer, {
       failOn: "none",
       limitInputPixels: MAX_SOURCE_IMAGE_PIXELS
     }).metadata().catch(() => ({}));
+    addTiming(timings, "sourceInspectMs", inspectStartedAt);
 
     return {
       id,
@@ -474,7 +507,8 @@ function createCategoryOverlaySvg(category, entries) {
 
 async function buildCategoryImage({
   category,
-  entries
+  entries,
+  timings = null
 }) {
   const composites = [];
   const manifestEntries = [];
@@ -487,9 +521,11 @@ async function buildCategoryImage({
 
     if (entry.result.buffer) {
       try {
+        const tileStartedAt = nowMs();
         const tile = await buildPromptTileCompositeInput(entry.result.buffer, {
           autoRotate: entry.result.source !== "cache"
         });
+        addTiming(timings, "tileBuildMs", tileStartedAt);
         composites.push({
           input: tile.input,
           raw: tile.raw,
@@ -529,6 +565,7 @@ async function buildCategoryImage({
 
   const overlaySvg = createCategoryOverlaySvg(category, entries);
 
+  const collageStartedAt = nowMs();
   const buffer = await sharp({
     create: {
       width: GRID_WIDTH,
@@ -543,10 +580,11 @@ async function buildCategoryImage({
     ])
     .jpeg({
       quality: CATEGORY_COLLAGE_JPEG_QUALITY,
-      mozjpeg: true,
-      progressive: true
+      mozjpeg: false,
+      progressive: false
     })
     .toBuffer();
+  addTiming(timings, "collageEncodeMs", collageStartedAt);
 
   return {
     buffer,
@@ -609,12 +647,14 @@ async function buildPromptDebugImages({
   let cachedCount = 0;
   let downloadedCount = 0;
   let skippedCount = 0;
+  const timings = createPromptImageTimings();
 
   for (const [category, items] of groupedItems.entries()) {
     const categoryResult = await buildPromptDebugImagesForCategory({
       category,
       items,
-      downloadConcurrency: IMAGE_DOWNLOAD_CONCURRENCY
+      downloadConcurrency: IMAGE_DOWNLOAD_CONCURRENCY,
+      timings
     });
     categories.push(categoryResult.category);
     cachedCount += categoryResult.cachedCount;
@@ -624,6 +664,7 @@ async function buildPromptDebugImages({
 
   if (shouldSaveDebugArtifacts) {
     try {
+      const debugSaveStartedAt = nowMs();
       await saveDebugArtifacts({
         categories,
         cachedCount,
@@ -631,6 +672,7 @@ async function buildPromptDebugImages({
         skippedCount,
         debugOutputDir
       });
+      addTiming(timings, "debugSaveMs", debugSaveStartedAt);
     } catch (error) {
       console.warn(
         "[prompt-images][debug-save-failed]",
@@ -645,20 +687,23 @@ async function buildPromptDebugImages({
     categories,
     cachedCount,
     downloadedCount,
-    skippedCount
+    skippedCount,
+    timings
   };
 }
 
 async function buildPromptDebugImagesForCategory({
   category = "",
   items = [],
-  downloadConcurrency = IMAGE_DOWNLOAD_CONCURRENCY
+  downloadConcurrency = IMAGE_DOWNLOAD_CONCURRENCY,
+  timings = null
 } = {}) {
+  const categoryStartedAt = nowMs();
   const categorySlug = sanitizeFileName(category);
   const downloadResults = await mapWithConcurrency(
     items,
     downloadConcurrency,
-    (item) => downloadPromptImageAsset(item)
+    (item) => downloadPromptImageAsset(item, timings)
   );
 
   let cachedCount = 0;
@@ -684,8 +729,10 @@ async function buildPromptDebugImagesForCategory({
 
   const { buffer, mimeType, manifestEntries } = await buildCategoryImage({
     category,
-    entries
+    entries,
+    timings
   });
+  addTiming(timings, "categoryBuildMs", categoryStartedAt);
 
   return {
     category: {
@@ -710,6 +757,7 @@ function serializePromptDebugImagesForIpc(result = {}) {
     cachedCount: Number(result?.cachedCount) || 0,
     downloadedCount: Number(result?.downloadedCount) || 0,
     skippedCount: Number(result?.skippedCount) || 0,
+    timings: result?.timings && typeof result.timings === "object" ? result.timings : undefined,
     categories: Array.isArray(result?.categories)
       ? result.categories.map((category) => ({
         category: category?.category ?? "",
@@ -756,6 +804,10 @@ function deserializePromptDebugImagesFromIpc(payload = {}) {
     cachedCount: Number(payload?.cachedCount) || 0,
     downloadedCount: Number(payload?.downloadedCount) || 0,
     skippedCount: Number(payload?.skippedCount) || 0,
+    timings: {
+      ...createPromptImageTimings(),
+      ...(payload?.timings && typeof payload.timings === "object" ? payload.timings : {})
+    },
     categories: Array.isArray(payload?.categories)
       ? payload.categories.map((category) => ({
         category: category?.category ?? "",
@@ -798,13 +850,20 @@ async function buildPromptDebugImagesInChild({
   saveDebugArtifacts: shouldSaveDebugArtifacts = false,
   forkImpl = nodeFork
 } = {}) {
+  const childRoundTripStartedAt = nowMs();
   const result = await buildPromptDebugImagesAllInChild({
     normalizedItems,
     forkImpl
   });
+  result.timings = {
+    ...createPromptImageTimings(),
+    ...(result.timings && typeof result.timings === "object" ? result.timings : {})
+  };
+  addTiming(result.timings, "childRoundTripMs", childRoundTripStartedAt);
 
   if (shouldSaveDebugArtifacts) {
     try {
+      const debugSaveStartedAt = nowMs();
       await saveDebugArtifacts({
         categories: result.categories,
         cachedCount: result.cachedCount,
@@ -812,6 +871,7 @@ async function buildPromptDebugImagesInChild({
         skippedCount: result.skippedCount,
         debugOutputDir
       });
+      addTiming(result.timings, "debugSaveMs", debugSaveStartedAt);
     } catch (error) {
       console.warn(
         "[prompt-images][debug-save-failed]",
