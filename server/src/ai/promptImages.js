@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import sharp from "sharp";
 import { IMAGE_DOWNLOAD_CONCURRENCY } from "./imagePipeline.js";
 
-const TILE_SIZE = 400;
+const TILE_SIZE = 320;
 const GRID_COLUMNS = 5;
 const GRID_ROWS = 2;
 const MAX_ITEMS_PER_CATEGORY = GRID_COLUMNS * GRID_ROWS;
