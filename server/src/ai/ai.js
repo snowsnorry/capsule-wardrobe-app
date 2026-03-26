@@ -580,6 +580,7 @@ async function generateCapsuleWardrobe(userProfile = null, logContext = null) {
     logWardrobeInfo("capsule-images-ready", {
       imageFetchDurationMs: Date.now() - imageFetchStartedAt,
       requestedCount: normalizedItems.length,
+      cachedCount: promptDebugImages.cachedCount || 0,
       downloadedCount: promptDebugImages.downloadedCount || 0,
       skippedCount: promptDebugImages.skippedCount || 0,
       collageBytes: sumCategoryBytes(promptDebugImages.categories)

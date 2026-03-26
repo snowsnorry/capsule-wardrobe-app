@@ -18,3 +18,4 @@ coverage/
 *.log
 last_prompt.txt
 last-prompt/
+storage/

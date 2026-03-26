@@ -18,6 +18,7 @@ import {
   runWithImageWorkSlot,
   sumImageAssetBytesById
 } from "./ai/imagePipeline.js";
+import { readImageFromLocalCache, resolveSourceImageUrl } from "./ai/promptImages.js";
 
 const PAGE_WIDTH = 595.28;
 const PAGE_HEIGHT = 841.89;
@@ -233,7 +234,10 @@ async function preparePdfImageBytes(buffer, mimeType = "", { width, height } = {
   return { kind: "jpg", bytes: jpgBuffer };
 }
 
-async function loadImageBytes(imageUrl, imageAsset = null, targetSize = null) {
+async function loadImageBytes(imageUrl, imageAsset = null, targetSize = null, imageLoadStats = null) {
+  const stats = imageLoadStats || { cachedCount: 0, downloadedCount: 0 };
+  const resolvedImageUrl = resolveSourceImageUrl(imageUrl);
+
   if (imageAsset?.buffer) {
     if (imageAsset.preparedForPdf && imageAsset.kind === "jpg") {
       return { kind: "jpg", bytes: imageAsset.buffer };
@@ -245,16 +249,26 @@ async function loadImageBytes(imageUrl, imageAsset = null, targetSize = null) {
     return normalizeImageBytes(imageAsset.buffer, imageAsset.mimeType);
   }
 
-  if (typeof imageUrl !== "string" || imageUrl.trim().length === 0) {
+  if (typeof resolvedImageUrl !== "string" || resolvedImageUrl.trim().length === 0) {
     return null;
   }
 
   try {
-    const response = await fetch(imageUrl, { signal: AbortSignal.timeout(10000) });
+    const cachedImage = await readImageFromLocalCache(imageUrl);
+    if (cachedImage?.buffer) {
+      stats.cachedCount += 1;
+      if (targetSize) {
+        return preparePdfImageBytes(cachedImage.buffer, cachedImage.mimeType, targetSize);
+      }
+      return normalizeImageBytes(cachedImage.buffer, cachedImage.mimeType);
+    }
+
+    const response = await fetch(resolvedImageUrl, { signal: AbortSignal.timeout(10000) });
     if (!response.ok) {
       throw new Error(`image_fetch_failed_${response.status}`);
     }
 
+    stats.downloadedCount += 1;
     const contentType = String(response.headers.get("content-type") || "").toLowerCase();
     const sourceBuffer = Buffer.from(await response.arrayBuffer());
     if (targetSize) {
@@ -262,7 +276,7 @@ async function loadImageBytes(imageUrl, imageAsset = null, targetSize = null) {
     }
     return normalizeImageBytes(sourceBuffer, contentType);
   } catch (error) {
-    console.error("[wardrobe-pdf][image]", imageUrl, error);
+    console.error("[wardrobe-pdf][image]", resolvedImageUrl, error);
     return null;
   }
 }
@@ -566,7 +580,7 @@ function drawDetailGroup(page, group, startX, startY, width, fonts) {
   return startY - boxHeight - 8;
 }
 
-async function drawProductPage(pdfDoc, product, locale, fonts, imageAssetsById = {}) {
+async function drawProductPage(pdfDoc, product, locale, fonts, imageAssetsById = {}, imageLoadStats = null) {
   const page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
   const { regularFont, boldFont } = fonts;
   let cursorY = PAGE_HEIGHT - PAGE_MARGIN;
@@ -696,7 +710,8 @@ async function drawProductPage(pdfDoc, product, locale, fonts, imageAssetsById =
     {
       width: (imageBounds.width - 2) * 2,
       height: (imageBounds.height - 2) * 2
-    }
+    },
+    imageLoadStats
   );
   if (assetKey && imageAssetsById[assetKey]) {
     delete imageAssetsById[assetKey];
@@ -733,6 +748,10 @@ async function drawProductPage(pdfDoc, product, locale, fonts, imageAssetsById =
 }
 
 async function buildWardrobePdf(products, { locale = "en", imageAssetsById = {} } = {}) {
+  const imageLoadStats = {
+    cachedCount: 0,
+    downloadedCount: 0
+  };
   logPdfMemory("build-start", {
     productsTotal: products.length,
     imageAssetBytes: sumImageAssetBytesById(imageAssetsById)
@@ -751,12 +770,14 @@ async function buildWardrobePdf(products, { locale = "en", imageAssetsById = {} 
   const boldFont = await pdfDoc.embedFont(boldFontBytes, { subset: true });
 
   for (const product of products) {
-    await drawProductPage(pdfDoc, product, locale, { regularFont, boldFont }, imageAssetsById);
+    await drawProductPage(pdfDoc, product, locale, { regularFont, boldFont }, imageAssetsById, imageLoadStats);
   }
 
   const buffer = Buffer.from(await pdfDoc.save({ useObjectStreams: false }));
   logPdfMemory("build-completed", {
     productsTotal: products.length,
+    cachedCount: imageLoadStats.cachedCount,
+    downloadedCount: imageLoadStats.downloadedCount,
     pdfBytes: buffer.length,
     remainingImageAssetBytes: sumImageAssetBytesById(imageAssetsById)
   });

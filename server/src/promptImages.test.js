@@ -1,11 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { access, mkdtemp, readFile, rm } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import sharp from "sharp";
 import {
   buildPromptDebugImages,
+  buildLocalImageCachePath,
   buildPromptDebugImagesInChild,
   deserializePromptDebugImagesFromIpc,
   GRID_HEIGHT,
@@ -37,6 +38,16 @@ async function withTempDir(testContext, prefix = "prompt-images-") {
     await rm(tempDir, { recursive: true, force: true });
   });
   return tempDir;
+}
+
+async function withCachedImage(testContext, imageUrl, buffer) {
+  const cachePath = buildLocalImageCachePath(imageUrl);
+  await mkdir(path.dirname(cachePath), { recursive: true });
+  await writeFile(cachePath, buffer);
+  testContext.after(async () => {
+    await rm(cachePath, { force: true });
+  });
+  return cachePath;
 }
 
 function createItems(category, count, imageUrlFactory = (index) => `https://example.com/${category}-${index}.png`) {
@@ -86,6 +97,7 @@ test("buildPromptDebugImages writes category images with expected geometry and m
     debugOutputDir: outputDir
   });
 
+  assert.equal(result.cachedCount, 0);
   assert.equal(result.downloadedCount, 3);
   assert.equal(result.skippedCount, 0);
   assert.equal(result.categories.length, 2);
@@ -100,9 +112,12 @@ test("buildPromptDebugImages writes category images with expected geometry and m
   assert.equal(metadata.height, GRID_HEIGHT + HEADER_HEIGHT);
 
   const manifest = JSON.parse(await readFile(path.join(outputDir, "manifest.json"), "utf8"));
+  assert.equal(manifest.cachedCount, 0);
   assert.equal(manifest.downloadedCount, 3);
   assert.equal(manifest.categories.length, 2);
+  assert.equal(manifest.categories[0].cachedCount, 0);
   assert.equal(manifest.categories[0].items[0].status, "downloaded");
+  assert.equal(manifest.categories[0].items[0].source, "download");
   assert.equal(manifest.categories[0].items[0].tileFile, undefined);
 });
 
@@ -155,6 +170,7 @@ test("buildPromptDebugImages skips failed downloads and still produces outputs",
   });
 
   assert.equal(result.downloadedCount, 1);
+  assert.equal(result.cachedCount, 0);
   assert.equal(result.skippedCount, 1);
 
   const manifest = JSON.parse(await readFile(path.join(outputDir, "manifest.json"), "utf8"));
@@ -164,6 +180,45 @@ test("buildPromptDebugImages skips failed downloads and still produces outputs",
   const metadata = await sharp(result.categories[0].buffer).metadata();
   assert.equal(metadata.width, GRID_WIDTH);
   assert.equal(metadata.height, GRID_HEIGHT + HEADER_HEIGHT);
+});
+
+test("buildPromptDebugImages uses local cached image before remote fetch", async (t) => {
+  const outputDir = await withTempDir(t);
+  const cachedJpeg = await sharp({
+    create: {
+      width: 900,
+      height: 600,
+      channels: 3,
+      background: "#d97706"
+    }
+  }).jpeg({ quality: 80 }).toBuffer();
+  const imageUrl = "https://static.zara.net/image.jpg?ts=1773310573314&w={width}";
+  await withCachedImage(t, imageUrl, cachedJpeg);
+  const originalFetch = globalThis.fetch;
+
+  globalThis.fetch = async () => {
+    throw new Error("fetch_should_not_be_called");
+  };
+
+  t.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  const result = await buildPromptDebugImages({
+    normalizedItems: [{
+      id: "top-1",
+      category: "top",
+      image_url: imageUrl
+    }],
+    saveDebugArtifacts: true,
+    debugOutputDir: outputDir
+  });
+
+  assert.equal(result.cachedCount, 1);
+  assert.equal(result.downloadedCount, 0);
+  assert.equal(result.skippedCount, 0);
+  const manifest = JSON.parse(await readFile(path.join(outputDir, "manifest.json"), "utf8"));
+  assert.equal(manifest.categories[0].items[0].source, "cache");
 });
 
 test("downloadProductImageAssets normalizes downloaded files to jpeg", async (t) => {
@@ -193,7 +248,43 @@ test("downloadProductImageAssets normalizes downloaded files to jpeg", async (t)
 
   assert.ok(asset);
   assert.equal(asset.mimeType, "image/jpeg");
+  assert.equal(asset.source, "download");
   assert.ok(Buffer.isBuffer(asset.buffer));
+  const metadata = await sharp(asset.buffer).metadata();
+  assert.equal(metadata.format, "jpeg");
+});
+
+test("downloadProductImageAssets uses local cached jpeg before remote fetch", async (t) => {
+  const imageUrl = "https://static.zara.net/image.jpg?ts=1773310573314&w={width}";
+  const cachedJpeg = await sharp({
+    create: {
+      width: 1000,
+      height: 700,
+      channels: 3,
+      background: "#1d4ed8"
+    }
+  }).jpeg({ quality: 80 }).toBuffer();
+  await withCachedImage(t, imageUrl, cachedJpeg);
+  const originalFetch = globalThis.fetch;
+
+  globalThis.fetch = async () => {
+    throw new Error("fetch_should_not_be_called");
+  };
+
+  t.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  const assets = await downloadProductImageAssets([{
+    id: "top-1",
+    category: "top",
+    image_url: imageUrl
+  }]);
+
+  const asset = assets["top-1"];
+  assert.ok(asset);
+  assert.equal(asset.source, "cache");
+  assert.equal(asset.originalImageUrl, imageUrl);
   const metadata = await sharp(asset.buffer).metadata();
   assert.equal(metadata.format, "jpeg");
 });
@@ -255,6 +346,7 @@ test("preparePdfImageAssets resizes normalized images for pdf", async () => {
 test("prompt image IPC serialization round-trips collages back to buffers", async () => {
   const fixtureBuffer = await createFixtureBuffer("#8844aa");
   const serialized = serializePromptDebugImagesForIpc({
+    cachedCount: 1,
     downloadedCount: 1,
     skippedCount: 0,
     categories: [{
@@ -263,6 +355,7 @@ test("prompt image IPC serialization round-trips collages back to buffers", asyn
       buffer: fixtureBuffer,
       filename: "category-top.jpg",
       totalItems: 1,
+      cachedCount: 1,
       downloadedCount: 1,
       skippedCount: 0,
       items: []
@@ -271,8 +364,10 @@ test("prompt image IPC serialization round-trips collages back to buffers", asyn
 
   const deserialized = deserializePromptDebugImagesFromIpc(serialized);
 
+  assert.equal(deserialized.cachedCount, 1);
   assert.equal(deserialized.downloadedCount, 1);
   assert.equal(deserialized.skippedCount, 0);
+  assert.equal(deserialized.categories[0].cachedCount, 1);
   assert.ok(Buffer.isBuffer(deserialized.categories[0].buffer));
   assert.deepEqual(deserialized.categories[0].buffer, fixtureBuffer);
 });
@@ -310,6 +405,7 @@ test("buildPromptDebugImagesInChild resolves buffered collages from child succes
         send() {
           handlers.get("message")?.({
             ok: true,
+            cachedCount: 1,
             downloadedCount: 1,
             skippedCount: 0,
             categories: [{
@@ -317,6 +413,7 @@ test("buildPromptDebugImagesInChild resolves buffered collages from child succes
               mimeType: "image/jpeg",
               filename: "category-top.jpg",
               totalItems: 1,
+              cachedCount: 1,
               downloadedCount: 1,
               skippedCount: 0,
               items: [],
@@ -329,6 +426,7 @@ test("buildPromptDebugImagesInChild resolves buffered collages from child succes
     }
   });
 
+  assert.equal(result.cachedCount, 1);
   assert.equal(result.downloadedCount, 1);
   assert.equal(result.categories.length, 1);
   assert.ok(Buffer.isBuffer(result.categories[0].buffer));
@@ -354,6 +452,27 @@ test("buildPromptDebugImagesInChild works with a real child process", async () =
   const metadata = await sharp(result.categories[0].buffer).metadata();
   assert.equal(metadata.width, GRID_WIDTH);
   assert.equal(metadata.height, GRID_HEIGHT + HEADER_HEIGHT);
+});
+
+test("buildPromptDebugImagesInChild saves debug artifacts when enabled", async (t) => {
+  const outputDir = await withTempDir(t);
+  const fixtureBuffer = await createFixtureBuffer("#1177aa");
+  const imageUrl = `data:image/png;base64,${fixtureBuffer.toString("base64")}`;
+
+  const result = await buildPromptDebugImagesInChild({
+    normalizedItems: [{
+      id: "top-1",
+      category: "top",
+      image_url: imageUrl
+    }],
+    saveDebugArtifacts: true,
+    debugOutputDir: outputDir
+  });
+
+  assert.equal(result.downloadedCount, 1);
+  const manifest = JSON.parse(await readFile(path.join(outputDir, "manifest.json"), "utf8"));
+  assert.equal(manifest.downloadedCount, 1);
+  assert.equal(manifest.categories.length, 1);
 });
 
 test("buildPromptDebugImagesInChild rejects on child-reported failure", async () => {

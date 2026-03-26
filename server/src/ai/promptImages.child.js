@@ -43,6 +43,7 @@ async function handleMessage(message) {
       ok: true,
       ...serializePromptDebugImagesForIpc({
         categories: [result.category],
+        cachedCount: result.cachedCount,
         downloadedCount: result.downloadedCount,
         skippedCount: result.skippedCount
       })

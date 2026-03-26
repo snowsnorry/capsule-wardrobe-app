@@ -1,4 +1,5 @@
-import { mkdir, rm, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { readFile, mkdir, rm, writeFile } from "node:fs/promises";
 import { fork as nodeFork } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -26,6 +27,7 @@ const REQUEST_IMAGE_WIDTH = Number.parseInt(process.env.PROMPT_IMAGE_REQUEST_WID
 const PROMPT_IMAGES_CHILD_TIMEOUT_MS = Number.parseInt(process.env.PROMPT_IMAGES_CHILD_TIMEOUT_MS || "", 10) || 120000;
 const PROMPT_IMAGES_CHILD_PATH = new URL("./promptImages.child.js", import.meta.url);
 const PROMPT_CATEGORY_DOWNLOAD_CONCURRENCY = Number.parseInt(process.env.PROMPT_CATEGORY_DOWNLOAD_CONCURRENCY || "", 10) || 5;
+const STORAGE_IMAGES_DIR = fileURLToPath(new URL("../../../storage/images/", import.meta.url));
 
 function escapeXml(value) {
   return String(value ?? "")
@@ -116,6 +118,41 @@ function resolveSourceImageUrl(imageUrl) {
   return trimmed.replaceAll("{width}", String(REQUEST_IMAGE_WIDTH));
 }
 
+function getOriginalImageUrl(imageUrl) {
+  return String(imageUrl ?? "").trim();
+}
+
+function buildLocalImageCachePath(originalImageUrl) {
+  const digest = createHash("sha256")
+    .update(String(originalImageUrl || ""), "utf8")
+    .digest("hex");
+  return path.join(STORAGE_IMAGES_DIR, `${digest}.jpg`);
+}
+
+async function readImageFromLocalCache(imageUrl) {
+  const originalImageUrl = getOriginalImageUrl(imageUrl);
+  if (!originalImageUrl) {
+    return null;
+  }
+
+  const cachePath = buildLocalImageCachePath(originalImageUrl);
+
+  try {
+    const buffer = await readFile(cachePath);
+    return {
+      buffer,
+      mimeType: "image/jpeg",
+      originalImageUrl,
+      cachePath
+    };
+  } catch (error) {
+    if (error?.code === "ENOENT") {
+      return null;
+    }
+    throw error;
+  }
+}
+
 function createSharpPipeline(buffer) {
   return sharp(buffer, {
     failOn: "none",
@@ -169,13 +206,16 @@ async function buildPromptTileImage(buffer) {
 
 async function downloadProductImageAsset(item) {
   const id = String(item?.id ?? "");
+  const originalImageUrl = getOriginalImageUrl(item?.image_url);
   const imageUrl = resolveSourceImageUrl(item?.image_url);
 
   if (!imageUrl) {
     return {
       id,
       category: item?.category ?? "",
+      source: null,
       imageUrl,
+      originalImageUrl,
       status: "skipped",
       reason: "missing_image_url",
       mimeType: null,
@@ -186,6 +226,26 @@ async function downloadProductImageAsset(item) {
   }
 
   try {
+    const cachedImage = await readImageFromLocalCache(item?.image_url);
+    if (cachedImage?.buffer) {
+      const metadata = await sharp(cachedImage.buffer).metadata().catch(() => ({}));
+      return {
+        id,
+        category: item?.category ?? "",
+        source: "cache",
+        imageUrl,
+        originalImageUrl,
+        cachePath: cachedImage.cachePath,
+        status: "downloaded",
+        reason: null,
+        mimeType: cachedImage.mimeType,
+        buffer: cachedImage.buffer,
+        originalMimeType: cachedImage.mimeType,
+        width: Number(metadata?.width) || null,
+        height: Number(metadata?.height) || null
+      };
+    }
+
     const response = await fetch(imageUrl, {
       signal: getRequestSignal()
     });
@@ -201,7 +261,9 @@ async function downloadProductImageAsset(item) {
     return {
       id,
       category: item?.category ?? "",
+      source: "download",
       imageUrl,
+      originalImageUrl,
       status: "downloaded",
       reason: null,
       mimeType: normalized.mimeType,
@@ -228,7 +290,9 @@ async function downloadProductImageAsset(item) {
     return {
       id,
       category: item?.category ?? "",
+      source: null,
       imageUrl,
+      originalImageUrl,
       status: "skipped",
       reason,
       mimeType: null,
@@ -241,13 +305,16 @@ async function downloadProductImageAsset(item) {
 
 async function downloadPromptImageAsset(item) {
   const id = String(item?.id ?? "");
+  const originalImageUrl = getOriginalImageUrl(item?.image_url);
   const imageUrl = resolveSourceImageUrl(item?.image_url);
 
   if (!imageUrl) {
     return {
       id,
       category: item?.category ?? "",
+      source: null,
       imageUrl,
+      originalImageUrl,
       status: "skipped",
       reason: "missing_image_url",
       mimeType: null,
@@ -258,6 +325,25 @@ async function downloadPromptImageAsset(item) {
   }
 
   try {
+    const cachedImage = await readImageFromLocalCache(item?.image_url);
+    if (cachedImage?.buffer) {
+      const tile = await buildPromptTileImage(cachedImage.buffer);
+      return {
+        id,
+        category: item?.category ?? "",
+        source: "cache",
+        imageUrl,
+        originalImageUrl,
+        cachePath: cachedImage.cachePath,
+        status: "downloaded",
+        reason: null,
+        mimeType: tile.mimeType,
+        buffer: tile.buffer,
+        width: tile.width,
+        height: tile.height
+      };
+    }
+
     const response = await fetch(imageUrl, {
       signal: getRequestSignal()
     });
@@ -272,7 +358,9 @@ async function downloadPromptImageAsset(item) {
     return {
       id,
       category: item?.category ?? "",
+      source: "download",
       imageUrl,
+      originalImageUrl,
       status: "downloaded",
       reason: null,
       mimeType: tile.mimeType,
@@ -298,7 +386,9 @@ async function downloadPromptImageAsset(item) {
     return {
       id,
       category: item?.category ?? "",
+      source: null,
       imageUrl,
+      originalImageUrl,
       status: "skipped",
       reason,
       mimeType: null,
@@ -322,7 +412,9 @@ async function downloadProductImageAssets(items = []) {
       .map((result) => [result.id, {
         buffer: result.buffer,
         mimeType: result.mimeType,
+        source: result.source,
         imageUrl: result.imageUrl,
+        originalImageUrl: result.originalImageUrl,
         width: result.width,
         height: result.height
       }])
@@ -416,7 +508,9 @@ async function buildCategoryImage({
     manifestEntries.push({
       slotIndex,
       id: entry.result.id,
+      source: entry.result.source,
       imageUrl: entry.result.imageUrl,
+      originalImageUrl: entry.result.originalImageUrl,
       status: entry.result.status,
       reason: entry.result.reason
     });
@@ -450,7 +544,7 @@ async function buildCategoryImage({
   };
 }
 
-async function saveDebugArtifacts({ categories, downloadedCount, skippedCount, debugOutputDir }) {
+async function saveDebugArtifacts({ categories, cachedCount, downloadedCount, skippedCount, debugOutputDir }) {
   if (!debugOutputDir) {
     throw new Error("debugOutputDir is required when saveDebugArtifacts is enabled");
   }
@@ -472,6 +566,7 @@ async function saveDebugArtifacts({ categories, downloadedCount, skippedCount, d
       category: categoryEntry.category,
       file: categoryFile,
       totalItems: categoryEntry.totalItems,
+      cachedCount: categoryEntry.cachedCount,
       downloadedCount: categoryEntry.downloadedCount,
       skippedCount: categoryEntry.skippedCount,
       items: categoryEntry.items
@@ -481,6 +576,7 @@ async function saveDebugArtifacts({ categories, downloadedCount, skippedCount, d
   const manifest = {
     generatedAt: new Date().toISOString(),
     outputDir: resolvedOutputDir,
+    cachedCount,
     downloadedCount,
     skippedCount,
     files,
@@ -499,6 +595,7 @@ async function buildPromptDebugImages({
 
   const groupedItems = groupPromptImageItemsByCategory(normalizedItems);
   const categories = [];
+  let cachedCount = 0;
   let downloadedCount = 0;
   let skippedCount = 0;
 
@@ -509,6 +606,7 @@ async function buildPromptDebugImages({
       downloadConcurrency: IMAGE_DOWNLOAD_CONCURRENCY
     });
     categories.push(categoryResult.category);
+    cachedCount += categoryResult.cachedCount;
     downloadedCount += categoryResult.downloadedCount;
     skippedCount += categoryResult.skippedCount;
   }
@@ -517,6 +615,7 @@ async function buildPromptDebugImages({
     try {
       await saveDebugArtifacts({
         categories,
+        cachedCount,
         downloadedCount,
         skippedCount,
         debugOutputDir
@@ -533,6 +632,7 @@ async function buildPromptDebugImages({
 
   return {
     categories,
+    cachedCount,
     downloadedCount,
     skippedCount
   };
@@ -550,11 +650,16 @@ async function buildPromptDebugImagesForCategory({
     (item) => downloadPromptImageAsset(item)
   );
 
+  let cachedCount = 0;
   let downloadedCount = 0;
   let skippedCount = 0;
   for (const result of downloadResults) {
     if (result.status === "downloaded") {
-      downloadedCount += 1;
+      if (result.source === "cache") {
+        cachedCount += 1;
+      } else {
+        downloadedCount += 1;
+      }
     } else {
       skippedCount += 1;
     }
@@ -578,10 +683,12 @@ async function buildPromptDebugImagesForCategory({
       buffer,
       filename: `category-${categorySlug}.jpg`,
       totalItems: items.length,
+      cachedCount,
       downloadedCount,
       skippedCount,
       items: manifestEntries
     },
+    cachedCount,
     downloadedCount,
     skippedCount
   };
@@ -589,6 +696,7 @@ async function buildPromptDebugImagesForCategory({
 
 function serializePromptDebugImagesForIpc(result = {}) {
   return {
+    cachedCount: Number(result?.cachedCount) || 0,
     downloadedCount: Number(result?.downloadedCount) || 0,
     skippedCount: Number(result?.skippedCount) || 0,
     categories: Array.isArray(result?.categories)
@@ -597,6 +705,7 @@ function serializePromptDebugImagesForIpc(result = {}) {
         mimeType: category?.mimeType ?? "image/jpeg",
         filename: category?.filename ?? "",
         totalItems: Number(category?.totalItems) || 0,
+        cachedCount: Number(category?.cachedCount) || 0,
         downloadedCount: Number(category?.downloadedCount) || 0,
         skippedCount: Number(category?.skippedCount) || 0,
         items: Array.isArray(category?.items) ? category.items : [],
@@ -608,6 +717,7 @@ function serializePromptDebugImagesForIpc(result = {}) {
 
 function deserializePromptDebugImagesFromIpc(payload = {}) {
   return {
+    cachedCount: Number(payload?.cachedCount) || 0,
     downloadedCount: Number(payload?.downloadedCount) || 0,
     skippedCount: Number(payload?.skippedCount) || 0,
     categories: Array.isArray(payload?.categories)
@@ -616,6 +726,7 @@ function deserializePromptDebugImagesFromIpc(payload = {}) {
         mimeType: category?.mimeType ?? "image/jpeg",
         filename: category?.filename ?? "",
         totalItems: Number(category?.totalItems) || 0,
+        cachedCount: Number(category?.cachedCount) || 0,
         downloadedCount: Number(category?.downloadedCount) || 0,
         skippedCount: Number(category?.skippedCount) || 0,
         items: Array.isArray(category?.items) ? category.items : [],
@@ -642,11 +753,12 @@ function isValidPromptImagesIpcPayload(message) {
 async function buildPromptDebugImagesInChild({
   normalizedItems = [],
   debugOutputDir = null,
-  saveDebugArtifacts = false,
+  saveDebugArtifacts: shouldSaveDebugArtifacts = false,
   forkImpl = nodeFork
 } = {}) {
   const groupedItems = groupPromptImageItemsByCategory(normalizedItems);
   const categories = [];
+  let cachedCount = 0;
   let downloadedCount = 0;
   let skippedCount = 0;
 
@@ -657,20 +769,23 @@ async function buildPromptDebugImagesInChild({
       forkImpl
     });
     categories.push(...categoryResult.categories);
+    cachedCount += categoryResult.cachedCount;
     downloadedCount += categoryResult.downloadedCount;
     skippedCount += categoryResult.skippedCount;
   }
 
   const result = {
     categories,
+    cachedCount,
     downloadedCount,
     skippedCount
   };
 
-  if (saveDebugArtifacts) {
+  if (shouldSaveDebugArtifacts) {
     try {
       await saveDebugArtifacts({
         categories,
+        cachedCount,
         downloadedCount,
         skippedCount,
         debugOutputDir
@@ -832,6 +947,8 @@ export {
   GRID_HEIGHT,
   HEADER_HEIGHT,
   MAX_ITEMS_PER_CATEGORY,
+  buildLocalImageCachePath,
+  getOriginalImageUrl,
   downloadProductImageAssets,
   groupPromptImageItemsByCategory,
   buildPromptDebugImages,
@@ -839,6 +956,8 @@ export {
   buildPromptDebugImagesInChild,
   preparePdfImageAsset,
   preparePdfImageAssets,
+  readImageFromLocalCache,
+  resolveSourceImageUrl,
   serializePromptDebugImagesForIpc,
   deserializePromptDebugImagesFromIpc
 };
