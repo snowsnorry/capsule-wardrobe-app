@@ -368,6 +368,7 @@ test("prompt image IPC serialization round-trips collages back to buffers", asyn
   assert.equal(deserialized.downloadedCount, 1);
   assert.equal(deserialized.skippedCount, 0);
   assert.equal(deserialized.categories[0].cachedCount, 1);
+  assert.ok(Buffer.isBuffer(serialized.categories[0].buffer));
   assert.ok(Buffer.isBuffer(deserialized.categories[0].buffer));
   assert.deepEqual(deserialized.categories[0].buffer, fixtureBuffer);
 });
@@ -417,7 +418,7 @@ test("buildPromptDebugImagesInChild resolves buffered collages from child succes
               downloadedCount: 1,
               skippedCount: 0,
               items: [],
-              bufferBase64: Buffer.from("child-image").toString("base64")
+              buffer: Buffer.from("child-image")
             }]
           });
           handlers.get("exit")?.(0, null);

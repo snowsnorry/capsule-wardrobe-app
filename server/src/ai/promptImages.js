@@ -180,8 +180,8 @@ async function normalizeDownloadedImage(buffer) {
   };
 }
 
-async function buildPromptTileImage(buffer) {
-  const tileBuffer = await createSharpPipeline(buffer)
+async function buildPromptTileCompositeInput(buffer) {
+  const { data, info } = await createSharpPipeline(buffer)
     .resize(TILE_SIZE, TILE_SIZE, {
       fit: "contain",
       withoutEnlargement: true,
@@ -189,18 +189,16 @@ async function buildPromptTileImage(buffer) {
       fastShrinkOnLoad: true
     })
     .flatten({ background: BACKGROUND_COLOR })
-    .jpeg({
-      quality: CATEGORY_COLLAGE_JPEG_QUALITY,
-      mozjpeg: true,
-      progressive: true
-    })
-    .toBuffer();
+    .raw()
+    .toBuffer({ resolveWithObject: true });
 
   return {
-    buffer: tileBuffer,
-    mimeType: "image/jpeg",
-    width: TILE_SIZE,
-    height: TILE_SIZE
+    input: data,
+    raw: {
+      width: info.width,
+      height: info.height,
+      channels: info.channels
+    }
   };
 }
 
@@ -327,7 +325,7 @@ async function downloadPromptImageAsset(item) {
   try {
     const cachedImage = await readImageFromLocalCache(item?.image_url);
     if (cachedImage?.buffer) {
-      const tile = await buildPromptTileImage(cachedImage.buffer);
+      const metadata = await sharp(cachedImage.buffer).metadata().catch(() => ({}));
       return {
         id,
         category: item?.category ?? "",
@@ -337,10 +335,10 @@ async function downloadPromptImageAsset(item) {
         cachePath: cachedImage.cachePath,
         status: "downloaded",
         reason: null,
-        mimeType: tile.mimeType,
-        buffer: tile.buffer,
-        width: tile.width,
-        height: tile.height
+        mimeType: cachedImage.mimeType,
+        buffer: cachedImage.buffer,
+        width: Number(metadata?.width) || null,
+        height: Number(metadata?.height) || null
       };
     }
 
@@ -353,7 +351,10 @@ async function downloadPromptImageAsset(item) {
     }
 
     const sourceBuffer = Buffer.from(await response.arrayBuffer());
-    const tile = await buildPromptTileImage(sourceBuffer);
+    const metadata = await sharp(sourceBuffer, {
+      failOn: "none",
+      limitInputPixels: MAX_SOURCE_IMAGE_PIXELS
+    }).metadata().catch(() => ({}));
 
     return {
       id,
@@ -363,10 +364,10 @@ async function downloadPromptImageAsset(item) {
       originalImageUrl,
       status: "downloaded",
       reason: null,
-      mimeType: tile.mimeType,
-      buffer: tile.buffer,
-      width: tile.width,
-      height: tile.height
+      mimeType: String(response.headers.get("content-type") || "").toLowerCase() || "application/octet-stream",
+      buffer: sourceBuffer,
+      width: Number(metadata?.width) || null,
+      height: Number(metadata?.height) || null
     };
   } catch (error) {
     const reason = error?.name === "TimeoutError"
@@ -480,8 +481,10 @@ async function buildCategoryImage({
 
     if (entry.result.buffer) {
       try {
+        const tile = await buildPromptTileCompositeInput(entry.result.buffer);
         composites.push({
-          input: entry.result.buffer,
+          input: tile.input,
+          raw: tile.raw,
           left,
           top
         });
@@ -709,10 +712,35 @@ function serializePromptDebugImagesForIpc(result = {}) {
         downloadedCount: Number(category?.downloadedCount) || 0,
         skippedCount: Number(category?.skippedCount) || 0,
         items: Array.isArray(category?.items) ? category.items : [],
-        bufferBase64: Buffer.isBuffer(category?.buffer) ? category.buffer.toString("base64") : ""
+        buffer: Buffer.isBuffer(category?.buffer)
+          ? category.buffer
+          : category?.buffer instanceof Uint8Array
+            ? Buffer.from(category.buffer)
+            : null
       }))
       : []
   };
+}
+
+function normalizeIpcBuffer(value) {
+  if (Buffer.isBuffer(value)) {
+    return value;
+  }
+
+  if (value instanceof Uint8Array) {
+    return Buffer.from(value);
+  }
+
+  if (
+    value
+    && typeof value === "object"
+    && value.type === "Buffer"
+    && Array.isArray(value.data)
+  ) {
+    return Buffer.from(value.data);
+  }
+
+  return null;
 }
 
 function deserializePromptDebugImagesFromIpc(payload = {}) {
@@ -730,9 +758,12 @@ function deserializePromptDebugImagesFromIpc(payload = {}) {
         downloadedCount: Number(category?.downloadedCount) || 0,
         skippedCount: Number(category?.skippedCount) || 0,
         items: Array.isArray(category?.items) ? category.items : [],
-        buffer: typeof category?.bufferBase64 === "string" && category.bufferBase64.length > 0
-          ? Buffer.from(category.bufferBase64, "base64")
-          : null
+        buffer: normalizeIpcBuffer(category?.buffer)
+          || (
+            typeof category?.bufferBase64 === "string" && category.bufferBase64.length > 0
+              ? Buffer.from(category.bufferBase64, "base64")
+              : null
+          )
       }))
       : []
   };
@@ -747,7 +778,10 @@ function isValidPromptImagesIpcPayload(message) {
     return false;
   }
 
-  return message.categories.every((category) => typeof category?.bufferBase64 === "string");
+  return message.categories.every((category) => (
+    normalizeIpcBuffer(category?.buffer) !== null
+    || typeof category?.bufferBase64 === "string"
+  ));
 }
 
 async function buildPromptDebugImagesInChild({

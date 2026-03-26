@@ -103,7 +103,7 @@ test("buildResponsesInput accepts prompt image collages deserialized from IPC pa
       downloadedCount: 1,
       skippedCount: 0,
       items: [],
-      bufferBase64: Buffer.from("image-one").toString("base64")
+      buffer: Buffer.from("image-one")
     }]
   });
 
