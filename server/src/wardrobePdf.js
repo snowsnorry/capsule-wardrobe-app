@@ -200,7 +200,7 @@ async function normalizeImageBytes(buffer, mimeType = "") {
   return { kind: "png", bytes: pngBuffer };
 }
 
-async function preparePdfImageBytes(buffer, mimeType = "", { width, height } = {}) {
+async function preparePdfImageBytes(buffer, mimeType = "", { width, height, autoRotate = true } = {}) {
   if (!buffer) {
     return null;
   }
@@ -208,7 +208,10 @@ async function preparePdfImageBytes(buffer, mimeType = "", { width, height } = {
   const sourceBuffer = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
   const targetWidth = Math.max(1, Math.round(Number(width) || 1));
   const targetHeight = Math.max(1, Math.round(Number(height) || 1));
-  const image = sharp(sourceBuffer, { failOn: "none" }).rotate();
+  const image = sharp(sourceBuffer, { failOn: "none" });
+  if (autoRotate) {
+    image.rotate();
+  }
   const metadata = await image.metadata().catch(() => ({}));
   const hasAlpha = metadata?.hasAlpha === true || String(mimeType || "").toLowerCase().includes("png");
 
@@ -258,7 +261,10 @@ async function loadImageBytes(imageUrl, imageAsset = null, targetSize = null, im
     if (cachedImage?.buffer) {
       stats.cachedCount += 1;
       if (targetSize) {
-        return preparePdfImageBytes(cachedImage.buffer, cachedImage.mimeType, targetSize);
+        return preparePdfImageBytes(cachedImage.buffer, cachedImage.mimeType, {
+          ...targetSize,
+          autoRotate: false
+        });
       }
       return normalizeImageBytes(cachedImage.buffer, cachedImage.mimeType);
     }

@@ -153,11 +153,17 @@ async function readImageFromLocalCache(imageUrl) {
   }
 }
 
-function createSharpPipeline(buffer) {
-  return sharp(buffer, {
+function createSharpPipeline(buffer, { autoRotate = true } = {}) {
+  const pipeline = sharp(buffer, {
     failOn: "none",
     limitInputPixels: MAX_SOURCE_IMAGE_PIXELS
-  }).rotate();
+  });
+
+  if (autoRotate) {
+    pipeline.rotate();
+  }
+
+  return pipeline;
 }
 
 async function normalizeDownloadedImage(buffer) {
@@ -180,8 +186,8 @@ async function normalizeDownloadedImage(buffer) {
   };
 }
 
-async function buildPromptTileCompositeInput(buffer) {
-  const { data, info } = await createSharpPipeline(buffer)
+async function buildPromptTileCompositeInput(buffer, { autoRotate = true } = {}) {
+  const { data, info } = await createSharpPipeline(buffer, { autoRotate })
     .resize(TILE_SIZE, TILE_SIZE, {
       fit: "contain",
       withoutEnlargement: true,
@@ -481,7 +487,9 @@ async function buildCategoryImage({
 
     if (entry.result.buffer) {
       try {
-        const tile = await buildPromptTileCompositeInput(entry.result.buffer);
+        const tile = await buildPromptTileCompositeInput(entry.result.buffer, {
+          autoRotate: entry.result.source !== "cache"
+        });
         composites.push({
           input: tile.input,
           raw: tile.raw,
