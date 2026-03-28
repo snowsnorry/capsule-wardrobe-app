@@ -15,7 +15,6 @@ function buildCapsuleSchema(categories) {
       items: {
         type: "string"
       },
-      uniqueItems: true,
       minItems: count,
       maxItems: count
     };
