@@ -659,8 +659,8 @@ async function generateCapsuleWardrobe(userProfile = null, logContext = null) {
     rawSelectionText: typeof selectionResponse?.output_text === "string" && selectionResponse.output_text.trim().length > 0
       ? selectionResponse.output_text.trim()
       : null,
-    reasoning: typeof parsedSelection?._reasoning === "string" && parsedSelection._reasoning.trim().length > 0
-      ? parsedSelection._reasoning.trim()
+    reasoning: typeof parsedSelection === "object" && Object.keys(parsedSelection).length > 0
+      ? JSON.stringify(parsedSelection, null, 2)
       : null
   };
 }

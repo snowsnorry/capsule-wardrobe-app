@@ -224,7 +224,7 @@ async function generateJsonWithLlm(
     reasoning: {"effort": "low"},
     // temperature: 0.2,
     // top_p: 0.9,
-    max_output_tokens: 6000,
+    max_output_tokens: 10000,
     text: {
       format: format || buildJsonObjectFormat(userProfile)
     }
