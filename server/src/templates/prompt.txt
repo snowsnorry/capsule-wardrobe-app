@@ -23,13 +23,15 @@ VISUAL CONTEXT & MULTIMODAL ANALYSIS:
 
 CORE SELECTION PRINCIPLES & CAPSULE ASSEMBLY LOGIC:
 1. Combinability First & Pairability Thresholds: 
+   - Evaluate compatibility ONLY across relevant functional pairs (e.g., top ↔ bottom, top ↔ midlayer/outerwear, bottom ↔ shoes, dress ↔ midlayer, dress ↔ shoes). Do NOT waste effort on irrelevant comparisons (e.g., shoe ↔ shoe, bottom ↔ bottom, top ↔ top).
    - Every top should pair well with at least 2 bottoms.
    - Every bottom should pair well with at least 3 tops/top-layer combos.
    - Every outerwear/midlayer must work with at least 50% of relevant base outfits.
    - Reject orphan items that depend on one highly specific companion piece. At every step, ask: "How many easy, realistic outfits does this item unlock?"
 2. Silhouette Balance: Ensure the capsule supports balanced proportions (e.g., fitted top + relaxed bottom; oversized blazer + streamlined base). Avoid selecting items that only work with one specific volume or cut.
-3. Low Styling Friction & Real-life Wearability: Favor items that are easy to wear repeatedly. Penalize items requiring specific underlayers, high-maintenance styling, or highly specific shoes.
-4. Redundancy Control: Penalize near-duplicates in function, silhouette, or color. If two items are similar, choose the one with higher versatility.
+3. Category & Length Diversity: Ensure variety in garment types within categories. If the audience is woman, you are strictly forbidden from selecting only skirts or only shorts for the "bottom" category. You MUST include at least one pair of full-length trousers or jeans. If selecting multiple skirts or dresses, you MUST vary their lengths (e.g., mix mini, midi, maxi) to maximize weather adaptability and outfit proportions.
+4. Low Styling Friction & Real-life Wearability: Favor items that are easy to wear repeatedly. Penalize items requiring specific underlayers, high-maintenance styling, or highly specific shoes.
+5. Redundancy Control: Penalize near-duplicates in function, silhouette, or color. If two items are similar, you MUST choose the one with higher versatility.
 
 INSTRUCTIONS & CONSTRAINTS:
 1. Blueprint: You MUST select exactly {{num_items}} items.
