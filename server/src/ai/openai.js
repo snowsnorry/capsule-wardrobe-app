@@ -15,6 +15,7 @@ function buildCapsuleSchema(categories) {
       items: {
         type: "string"
       },
+      uniqueItems: true,
       minItems: count,
       maxItems: count
     };
@@ -53,6 +54,8 @@ function buildSwimwearSchema() {
 }
 
 function buildJsonObjectFormat(userProfile = null) {
+  const categories = getCapsuleCategories(userProfile);
+  const num_items = Object.entries(categories).reduce((sum, [, count]) => sum + count, 0)
   return {
     type: "json_schema",
     name: "capsule_wardrobe_response",
@@ -61,15 +64,65 @@ function buildJsonObjectFormat(userProfile = null) {
       type: "object",
       additionalProperties: false,
       properties: {
-        _reasoning: {
-          type: "string",
-          description: "Briefly explain how you balanced the 30% Target Style with 70% basic items, how they fit the requested Formality, and how you applied the color/pattern strategy."
+        system_evaluation: {
+          type: "object",
+          additionalProperties: false,
+          required: ["overall_explanation", "outfit_formulas"],
+          properties: {
+            overall_explanation: {
+              type: "string",
+              description: "Briefly explain why this capsule works well as a dense, cohesive system..."
+            },
+            outfit_formulas: {
+              type: "array",
+              description: "Provide 3-4 highly wearable outfit formulas using the selected items (reference them by basic name, not ID).",
+              items: {
+                type: "string"
+              },
+              minItems: 3,
+              maxItems: 4
+            }
+          }
         },
-        capsule: buildCapsuleSchema(getCapsuleCategories(userProfile))
+        item_details: {
+          type: "array",
+          description: `You MUST generate exactly one object in this array for EVERY single item included in the 'capsule'. If you selected ${num_items} items, there MUST be exactly ${num_items} objects in this array.`,
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["id", "role", "reason", "compatibility", "warning"],
+            properties: {
+              id: {
+                type: "string",
+                description: "Must match candidate ID"
+              },
+              role: {
+                type: "string",
+                description: "anchor, connector, or accent",
+                enum: ["anchor", "connector", "accent"]
+              },
+              reason: {
+                type: "string",
+                description: "Brief reason for selection (e.g., silhouette balance, visual harmony)"
+              },
+              compatibility: {
+                type: "string",
+                description: "Note how many/which items this pairs with"
+              },
+              warning: {
+                type: "string",
+                description: "Any styling friction or limitation (or 'None')"
+              }
+            }
+          },
+          minItems: num_items,
+          maxItems: num_items
+        },
+        capsule: buildCapsuleSchema(categories)
       },
-      required: ["_reasoning", "capsule"]
+      required: ["system_evaluation", "item_details", "capsule"]
     },
-    strict: false
+    strict: true
   };
 }
 
