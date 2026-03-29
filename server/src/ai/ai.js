@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import { getProfile, updateProfileItems } from "../profileStore.js";
 import { getSqlClient } from "../db.js";
-import { readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { generateJsonWithLlm } from "./openai.js";
 import {  getPromptEmbeddings, getWardrobePrompt } from "./voyageai.js";
 import { getCapsuleCategories } from "./categories.js";
@@ -16,6 +16,7 @@ import { getPartialRegenerationJob } from "./regenerateSelected.js";
 const PROMPT_TEMPLATE = readFileSync(new URL("../templates/prompt.txt", import.meta.url), "utf8");
 const WARDROBE_POLL_AFTER_MS = 2000;
 const COMPLETED_JOB_TTL_MS = 5 * 60 * 1000;
+const LAST_PROMPT_DIR_URL = new URL("../../../last-prompt/", import.meta.url);
 const wardrobeJobs = new Map();
 
 function formatLogValue(value) {
@@ -74,6 +75,15 @@ function logWardrobeMemory(event, payload = {}, logContext = null) {
     ...payload,
     ...getProcessMemoryUsage()
   }, logContext);
+}
+
+function saveLastPromptArtifacts(prompt) {
+  if (process.env.NODE_ENV !== "development" || typeof prompt !== "string") {
+    return;
+  }
+
+  mkdirSync(LAST_PROMPT_DIR_URL, { recursive: true });
+  writeFileSync(new URL("last_prompt.txt", LAST_PROMPT_DIR_URL), prompt, "utf8");
 }
 
 function countItemsByKey(items = [], key = "category") {
@@ -604,7 +614,7 @@ async function generateCapsuleWardrobe(userProfile = null, logContext = null) {
   }
 
   const selectionPrompt = getWardrobeSelectionPrompt(userProfile, normalizedItems, capsuleCategories);
-  writeFileSync(new URL("../../../last_prompt.txt", import.meta.url), selectionPrompt, "utf8");
+  saveLastPromptArtifacts(selectionPrompt);
   const llmStartedAt = Date.now();
   const { response: selectionResponse, json: parsedSelection } = await generateJsonWithLlm(selectionPrompt, {
     userProfile,

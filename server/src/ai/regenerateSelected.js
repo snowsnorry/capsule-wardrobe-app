@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import {
   getProductsByIdsInOrder,
   getProductsWithEmbeddingsByIdsInOrder,
@@ -35,6 +35,7 @@ const REGENERATE_SELECTED_PROMPT_TEMPLATE = readFileSync(
 );
 const PARTIAL_REGENERATION_POLL_AFTER_MS = 2000;
 const COMPLETED_JOB_TTL_MS = 5 * 60 * 1000;
+const LAST_PROMPT_DIR_URL = new URL("../../../last-prompt/", import.meta.url);
 const partialRegenerationJobs = new Map();
 
 function isValidSelectedItemIds(itemIds) {
@@ -176,6 +177,25 @@ function buildRegeneratedItemsFormat(categories) {
       required: ["system_evaluation", "item_details", "regenerated_items"]
     }
   );
+}
+
+function saveLastPromptArtifacts({ prompt, currentCapsuleCollage } = {}) {
+  if (process.env.NODE_ENV !== "development") {
+    return;
+  }
+
+  mkdirSync(LAST_PROMPT_DIR_URL, { recursive: true });
+
+  if (typeof prompt === "string") {
+    writeFileSync(new URL("last_prompt.txt", LAST_PROMPT_DIR_URL), prompt, "utf8");
+  }
+
+  if (currentCapsuleCollage?.buffer) {
+    writeFileSync(
+      new URL("current-capsule.jpg", LAST_PROMPT_DIR_URL),
+      currentCapsuleCollage.buffer
+    );
+  }
 }
 
 function buildRegenerateSelectedPrompt(userProfile = null, candidateItems = [], currentCapsuleItems = [], categories = {}) {
@@ -434,7 +454,7 @@ async function regenerateCapsuleWardrobe(userProfile = null, products = null, lo
       normalizedItems,
       saveDebugArtifacts: shouldSavePromptDebugArtifacts,
       debugOutputDir: shouldSavePromptDebugArtifacts
-        ? new URL("../../../last-prompt/", import.meta.url)
+        ? LAST_PROMPT_DIR_URL
         : null
     }));
     logWardrobeInfo("capsule-images-ready", {
@@ -491,7 +511,10 @@ async function regenerateCapsuleWardrobe(userProfile = null, products = null, lo
     currentCapsulePromptItems,
     capsuleCategories
   );
-  writeFileSync(new URL("../../../last_prompt.txt", import.meta.url), selectionPrompt, "utf8");
+  saveLastPromptArtifacts({
+    prompt: selectionPrompt,
+    currentCapsuleCollage
+  });
   const llmStartedAt = Date.now();
   const stylistImages = currentCapsuleCollage
     ? [currentCapsuleCollage, ...promptDebugImages.categories]
