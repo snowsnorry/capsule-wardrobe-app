@@ -97,6 +97,15 @@ vi.mock("./screens/MainScreen.jsx", () => ({
     return (
       <div data-testid="main-screen">
         <div>main-screen:{props.items.length}</div>
+        <div>items-order:{props.items.map((item) => item.id).join(",")}</div>
+        {props.items.map((item) => (
+          <button key={item.id} type="button" onClick={() => props.onToggleRegenerationSelection(item)}>
+            select-{item.id}
+          </button>
+        ))}
+        <button type="button" onClick={props.onRegenerateSelectedItems}>
+          regenerate-selected
+        </button>
         <button type="button" onClick={() => props.onNavigateApp("search")}>
           open-search
         </button>
@@ -274,5 +283,57 @@ describe("App", () => {
     expect(authApi.clearRequestCache).toHaveBeenCalled();
     expect(profileOptionsApi.clearProfileOptionsCache).toHaveBeenCalled();
     expect(window.location.pathname).toBe("/");
+  });
+
+  test("keeps regenerated items in the placeholder slots without moving the remaining cards", async () => {
+    authApi.fetchCurrentUser.mockResolvedValue({ user: { email: "person@example.com" } });
+    authApi.fetchProfileStatus.mockResolvedValue({ hasProfile: true });
+    authApi.fetchProfile.mockResolvedValue({
+      profile: {
+        formalityLevel: "casual",
+        style: "minimalistic",
+        occasions: ["office"],
+        season: ["summer"],
+        audience: "woman",
+        color: null,
+        pattern: null,
+        locale: "en"
+      }
+    });
+    authApi.updateProfileLocale.mockResolvedValue({});
+    wardrobeApi.fetchWardrobeItems.mockResolvedValue({
+      items: [
+        { id: "bottom-1", name: "Trousers", category: "bottom" },
+        { id: "top-1", name: "Shirt", category: "top" },
+        { id: "outerwear-1", name: "Blazer", category: "outerwear" }
+      ],
+      status: "ready"
+    });
+    wardrobeApi.regenerateSelectedWardrobeItems.mockResolvedValue({
+      items: [
+        { id: "bottom-1", name: "Trousers", category: "bottom" },
+        { id: "top-2", name: "New Shirt", category: "top" },
+        { id: "outerwear-1", name: "Blazer", category: "outerwear" }
+      ],
+      status: "ready"
+    });
+    mockProfileOptions();
+
+    renderApp();
+
+    expect(await screen.findByTestId("main-screen")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("items-order:outerwear-1,top-1,bottom-1")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "select-top-1" }));
+    fireEvent.click(screen.getByRole("button", { name: "regenerate-selected" }));
+
+    await waitFor(() => {
+      expect(wardrobeApi.regenerateSelectedWardrobeItems).toHaveBeenCalledWith({ itemIds: ["top-1"] });
+    });
+    await waitFor(() => {
+      expect(screen.getByText("items-order:outerwear-1,top-2,bottom-1")).toBeInTheDocument();
+    });
   });
 });

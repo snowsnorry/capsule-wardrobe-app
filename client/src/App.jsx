@@ -24,6 +24,7 @@ import SignInScreen from "./screens/SignInScreen.jsx";
 import SearchScreen from "./screens/SearchScreen.jsx";
 import { useI18n } from "./i18n/useI18n.js";
 import { ACCENT_COLOR_OPTIONS } from "../../shared/accentColors.js";
+import { sortWardrobeItems } from "../../shared/wardrobeOrder.js";
 
 const initialStatus = {
   loading: false,
@@ -70,6 +71,78 @@ function sortSeasonOptions(items) {
 
     return String(left).localeCompare(String(right));
   });
+}
+
+function normalizeWardrobeItemId(item) {
+  return String(item?.id || "").trim();
+}
+
+function buildDisplayWardrobeItems(items) {
+  return sortWardrobeItems(Array.isArray(items) ? items : []);
+}
+
+function mergeWardrobeItemsIntoExistingOrder({
+  currentItems = [],
+  nextItems = [],
+  pendingIds = []
+} = {}) {
+  const orderedCurrentItems = Array.isArray(currentItems) ? currentItems : [];
+  const orderedNextItems = buildDisplayWardrobeItems(nextItems);
+  const normalizedPendingIds = Array.isArray(pendingIds)
+    ? pendingIds.map((itemId) => String(itemId || "").trim()).filter(Boolean)
+    : [];
+
+  if (orderedCurrentItems.length === 0 || normalizedPendingIds.length === 0) {
+    return orderedNextItems;
+  }
+
+  const pendingIdSet = new Set(normalizedPendingIds);
+  const nextItemsById = new Map(
+    orderedNextItems
+      .map((item) => [normalizeWardrobeItemId(item), item])
+      .filter(([itemId]) => itemId)
+  );
+  const preservedItemIds = new Set(
+    orderedCurrentItems
+      .map((item) => normalizeWardrobeItemId(item))
+      .filter((itemId) => itemId && !pendingIdSet.has(itemId))
+  );
+  const replacementCandidates = orderedNextItems.filter((item) => !preservedItemIds.has(normalizeWardrobeItemId(item)));
+  const consumedReplacementIndexes = new Set();
+
+  const takeReplacementItem = (category) => {
+    const preferredCategory = String(category || "");
+    let replacementIndex = replacementCandidates.findIndex((item, index) => (
+      !consumedReplacementIndexes.has(index) && String(item?.category || "") === preferredCategory
+    ));
+    if (replacementIndex === -1) {
+      replacementIndex = replacementCandidates.findIndex((_, index) => !consumedReplacementIndexes.has(index));
+    }
+    if (replacementIndex === -1) {
+      return null;
+    }
+
+    consumedReplacementIndexes.add(replacementIndex);
+    return replacementCandidates[replacementIndex];
+  };
+
+  const mergedItems = orderedCurrentItems.map((currentItem) => {
+    const currentItemId = normalizeWardrobeItemId(currentItem);
+    if (!pendingIdSet.has(currentItemId)) {
+      return nextItemsById.get(currentItemId) || currentItem;
+    }
+
+    return takeReplacementItem(currentItem?.category) || currentItem;
+  });
+
+  const mergedItemIds = new Set(
+    mergedItems
+      .map((item) => normalizeWardrobeItemId(item))
+      .filter(Boolean)
+  );
+  const appendedItems = orderedNextItems.filter((item) => !mergedItemIds.has(normalizeWardrobeItemId(item)));
+
+  return [...mergedItems, ...appendedItems];
 }
 
 async function retry(fn, attempts = 3, delayMs = 120) {
@@ -558,7 +631,15 @@ function App() {
           const pendingRegenerationIds = Array.isArray(result?.pendingRegenerationIds)
             ? result.pendingRegenerationIds.map((itemId) => String(itemId || "").trim()).filter(Boolean)
             : [];
-          setProfileItems(items);
+          setProfileItems((currentItems) => (
+            pendingRegenerationIds.length > 0
+              ? mergeWardrobeItemsIntoExistingOrder({
+                currentItems,
+                nextItems: items,
+                pendingIds: pendingRegenerationIds
+              })
+              : buildDisplayWardrobeItems(items)
+          ));
           setSelectedRegenerationIds([]);
           setPartialRegenerationPendingIds(pendingRegenerationIds);
           setIsPartialRegenerationLoading(pendingRegenerationIds.length > 0);
@@ -577,7 +658,7 @@ function App() {
         }
 
         logWardrobeReasoning(result?.reasoning);
-        setProfileItems(items);
+        setProfileItems(buildDisplayWardrobeItems(items));
         setSelectedRegenerationIds([]);
         setPartialRegenerationPendingIds([]);
         setIsPartialRegenerationLoading(false);
@@ -656,7 +737,11 @@ function App() {
       }
 
       logWardrobeReasoning(result?.reasoning);
-      setProfileItems(Array.isArray(result?.items) ? result.items : []);
+      setProfileItems(mergeWardrobeItemsIntoExistingOrder({
+        currentItems: existingItems,
+        nextItems: Array.isArray(result?.items) ? result.items : [],
+        pendingIds
+      }));
       setPartialRegenerationPendingIds([]);
       setIsPartialRegenerationLoading(false);
     } catch (error) {

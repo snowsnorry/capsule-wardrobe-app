@@ -24,7 +24,6 @@ import { ClothingPlaceholderCard } from "../components/ClothingGridPlaceholder.j
 import ClothingCard from "../components/ClothingCard.jsx";
 import LocaleSwitcher from "../components/LocaleSwitcher.jsx";
 import AppLauncher from "../components/AppLauncher.jsx";
-import { sortWardrobeItems } from "../../../shared/wardrobeOrder.js";
 
 function MainScreen({
   onSignOut,
@@ -71,7 +70,6 @@ function MainScreen({
   const isMobile = useMediaQuery(theme.breakpoints.down("lg"));
   const [isSignOutOpen, setIsSignOutOpen] = useState(false);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
-  const sortedItems = sortWardrobeItems(items);
   const selectedCount = selectedRegenerationIds.length;
 
   const handleConfirmSignOut = () => {
@@ -205,7 +203,7 @@ function MainScreen({
                   <IconButton
                     aria-label={t("main.download")}
                     onClick={onDownloadPdf}
-                    disabled={isDownloadingPdf || sortedItems.length === 0 || isPartialRegenerationLoading}
+                    disabled={isDownloadingPdf || items.length === 0 || isPartialRegenerationLoading}
                   >
                     <DownloadRoundedIcon />
                   </IconButton>
@@ -235,7 +233,7 @@ function MainScreen({
                   gap: 2.5
                 }}
                 >
-                {sortedItems.map((item) => {
+                {items.map((item) => {
                   const itemId = String(item?.id || "");
                   if (partialRegenerationPendingIds.includes(itemId)) {
                     return (
