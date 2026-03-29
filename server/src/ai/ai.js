@@ -12,6 +12,7 @@ import {
   runWithImageWorkSlot,
   sumCategoryBytes
 } from "./imagePipeline.js";
+import { getPartialRegenerationJob } from "./regenerateSelected.js";
 const PROMPT_TEMPLATE = readFileSync(new URL("../templates/prompt.txt", import.meta.url), "utf8");
 const WARDROBE_POLL_AFTER_MS = 2000;
 const COMPLETED_JOB_TTL_MS = 5 * 60 * 1000;
@@ -582,16 +583,7 @@ async function generateCapsuleWardrobe(userProfile = null, logContext = null) {
       requestedCount: normalizedItems.length,
       cachedCount: promptDebugImages.cachedCount || 0,
       downloadedCount: promptDebugImages.downloadedCount || 0,
-      skippedCount: promptDebugImages.skippedCount || 0,
-      cacheLookupMs: promptDebugImages.timings?.cacheLookupMs || 0,
-      networkFetchMs: promptDebugImages.timings?.networkFetchMs || 0,
-      sourceInspectMs: promptDebugImages.timings?.sourceInspectMs || 0,
-      tileBuildMs: promptDebugImages.timings?.tileBuildMs || 0,
-      collageEncodeMs: promptDebugImages.timings?.collageEncodeMs || 0,
-      categoryBuildMs: promptDebugImages.timings?.categoryBuildMs || 0,
-      debugSaveMs: promptDebugImages.timings?.debugSaveMs || 0,
-      childRoundTripMs: promptDebugImages.timings?.childRoundTripMs || 0,
-      collageBytes: sumCategoryBytes(promptDebugImages.categories)
+      skippedCount: promptDebugImages.skippedCount || 0
     }, logContext);
   } catch (error) {
     if (String(error?.message || "").startsWith("prompt_images_child_exit:")) {
@@ -805,6 +797,23 @@ async function getWardrobeItems(req, res) {
     const profile = await getProfile(email);
     const storedWardrobe = getStoredWardrobePayload(profile);
     const activeJob = getWardrobeJob(email);
+    const partialRegenerationJob = getPartialRegenerationJob(email);
+
+    if (partialRegenerationJob?.status === "pending") {
+      return res.status(202).json({
+        ok: true,
+        status: "pending",
+        pendingStage: "regenerate",
+        pendingRegenerationIds: partialRegenerationJob.pendingItemIds,
+        hasPendingAdditionalItems: false,
+        items: storedWardrobe?.items || [],
+        reasoning: storedWardrobe?.reasoning || null,
+        rawSelectionText: storedWardrobe?.rawSelectionText || null,
+        swimwearReasoning: storedWardrobe?.swimwearReasoning || null,
+        swimwearRawSelectionText: storedWardrobe?.swimwearRawSelectionText || null,
+        pollAfterMs: 2000
+      });
+    }
 
     if (activeJob?.status === "pending" && activeJob.phase === "extras" && storedWardrobe?.items?.length) {
       return res.status(202).json({
@@ -889,4 +898,14 @@ async function getWardrobeItems(req, res) {
   }
 }
 
-export { getWardrobeItems };
+export {
+  countItemsByKey,
+  enforceCategoryCounts,
+  extractLlmUsage,
+  getSelectedIdsFromCapsule,
+  getStoredWardrobePayload,
+  getWardrobeItems,
+  getWardrobeSelectionPrompt,
+  logWardrobeInfo,
+  toWardrobeUiItem
+};

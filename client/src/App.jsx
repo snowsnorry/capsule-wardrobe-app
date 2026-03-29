@@ -117,6 +117,9 @@ function App() {
   const [profileItems, setProfileItems] = useState(null);
   const [isLoadingItems, setIsLoadingItems] = useState(false);
   const [isDownloadingWardrobePdf, setIsDownloadingWardrobePdf] = useState(false);
+  const [selectedRegenerationIds, setSelectedRegenerationIds] = useState([]);
+  const [partialRegenerationPendingIds, setPartialRegenerationPendingIds] = useState([]);
+  const [isPartialRegenerationLoading, setIsPartialRegenerationLoading] = useState(false);
   const [isWardrobePending, setIsWardrobePending] = useState(false);
   const [hasPendingAdditionalItems, setHasPendingAdditionalItems] = useState(false);
   const [wardrobePollAfterMs, setWardrobePollAfterMs] = useState(WARDROBE_POLL_AFTER_MS_DEFAULT);
@@ -357,6 +360,9 @@ function App() {
       setProfileItems(null);
       setIsLoadingItems(false);
       setIsDownloadingWardrobePdf(false);
+      setSelectedRegenerationIds([]);
+      setPartialRegenerationPendingIds([]);
+      setIsPartialRegenerationLoading(false);
       setIsWardrobePending(false);
       setHasPendingAdditionalItems(false);
       setWardrobePollAfterMs(WARDROBE_POLL_AFTER_MS_DEFAULT);
@@ -417,6 +423,9 @@ function App() {
       setHasProfile(true);
       setCurrentView("main");
       setProfileItems(null);
+      setSelectedRegenerationIds([]);
+      setPartialRegenerationPendingIds([]);
+      setIsPartialRegenerationLoading(false);
       setIsWardrobePending(false);
       setHasPendingAdditionalItems(false);
       setStatus({ loading: false, error: "", infoKey: "onboarding.completedHint", infoParams: null });
@@ -439,6 +448,9 @@ function App() {
         locale
       );
       setProfileItems(null);
+      setSelectedRegenerationIds([]);
+      setPartialRegenerationPendingIds([]);
+      setIsPartialRegenerationLoading(false);
       setIsWardrobePending(false);
       setHasPendingAdditionalItems(false);
       setStatus({ loading: false, error: "", infoKey: "profile.updated", infoParams: null });
@@ -449,6 +461,9 @@ function App() {
 
   const handleResetProfileFilters = async () => {
     setStatus(initialStatus);
+    setSelectedRegenerationIds([]);
+    setPartialRegenerationPendingIds([]);
+    setIsPartialRegenerationLoading(false);
     try {
       await ensureOptionsLoaded({ useFallback: true });
       await loadProfileSelections();
@@ -512,6 +527,9 @@ function App() {
 
   const handleWardrobeError = () => {
     setProfileItems([]);
+    setSelectedRegenerationIds([]);
+    setPartialRegenerationPendingIds([]);
+    setIsPartialRegenerationLoading(false);
     setIsWardrobePending(false);
     setHasPendingAdditionalItems(false);
     setWardrobePollAfterMs(WARDROBE_POLL_AFTER_MS_DEFAULT);
@@ -537,7 +555,13 @@ function App() {
           const nextPollAfterMs =
             Number(result?.pollAfterMs) > 0 ? Number(result.pollAfterMs) : WARDROBE_POLL_AFTER_MS_DEFAULT;
           const isPendingExtras = Boolean(result?.hasPendingAdditionalItems);
+          const pendingRegenerationIds = Array.isArray(result?.pendingRegenerationIds)
+            ? result.pendingRegenerationIds.map((itemId) => String(itemId || "").trim()).filter(Boolean)
+            : [];
           setProfileItems(items);
+          setSelectedRegenerationIds([]);
+          setPartialRegenerationPendingIds(pendingRegenerationIds);
+          setIsPartialRegenerationLoading(pendingRegenerationIds.length > 0);
           setIsWardrobePending(true);
           setHasPendingAdditionalItems(isPendingExtras);
           setWardrobePollAfterMs(nextPollAfterMs);
@@ -554,6 +578,9 @@ function App() {
 
         logWardrobeReasoning(result?.reasoning);
         setProfileItems(items);
+        setSelectedRegenerationIds([]);
+        setPartialRegenerationPendingIds([]);
+        setIsPartialRegenerationLoading(false);
         setIsWardrobePending(false);
         setHasPendingAdditionalItems(false);
         setWardrobePollAfterMs(WARDROBE_POLL_AFTER_MS_DEFAULT);
@@ -570,6 +597,9 @@ function App() {
   };
 
   const handleRefreshWardrobe = async () => {
+    setSelectedRegenerationIds([]);
+    setPartialRegenerationPendingIds([]);
+    setIsPartialRegenerationLoading(false);
     await runWardrobeLoad({ force: true });
   };
 
@@ -587,6 +617,62 @@ function App() {
       if (isMountedRef.current) {
         setIsDownloadingWardrobePdf(false);
       }
+    }
+  };
+
+  const handleToggleRegenerationSelection = (item) => {
+    const itemId = String(item?.id || "").trim();
+    if (!itemId || isPartialRegenerationLoading) {
+      return;
+    }
+
+    setSelectedRegenerationIds((current) => (
+      current.includes(itemId)
+        ? current.filter((id) => id !== itemId)
+        : [...current, itemId]
+    ));
+  };
+
+  const handleCancelRegenerationSelection = () => {
+    setSelectedRegenerationIds([]);
+  };
+
+  const handleRegenerateSelectedItems = async () => {
+    if (selectedRegenerationIds.length === 0 || isPartialRegenerationLoading) {
+      return;
+    }
+
+    const pendingIds = [...selectedRegenerationIds];
+    const existingItems = Array.isArray(profileItems) ? profileItems : [];
+    setSelectedRegenerationIds([]);
+    setPartialRegenerationPendingIds(pendingIds);
+    setIsPartialRegenerationLoading(true);
+
+    try {
+      const { regenerateSelectedWardrobeItems } = await import("./api/wardrobe.js");
+      const result = await regenerateSelectedWardrobeItems({ itemIds: pendingIds });
+      if (!isMountedRef.current) {
+        return;
+      }
+
+      logWardrobeReasoning(result?.reasoning);
+      setProfileItems(Array.isArray(result?.items) ? result.items : []);
+      setPartialRegenerationPendingIds([]);
+      setIsPartialRegenerationLoading(false);
+    } catch (error) {
+      if (!isMountedRef.current) {
+        return;
+      }
+
+      setProfileItems(existingItems);
+      setPartialRegenerationPendingIds([]);
+      setIsPartialRegenerationLoading(false);
+      setStatus((current) => ({
+        ...current,
+        error: error?.message === "invalid_payload"
+          ? resolveErrorMessage(error)
+          : t("errors.regenerateSelectedFailed")
+      }));
     }
   };
 
@@ -705,6 +791,12 @@ function App() {
           onApplyFilters={handleSaveProfile}
           onResetFilters={handleResetProfileFilters}
           onNavigateApp={handleNavigateApp}
+          selectedRegenerationIds={selectedRegenerationIds}
+          partialRegenerationPendingIds={partialRegenerationPendingIds}
+          onToggleRegenerationSelection={handleToggleRegenerationSelection}
+          onCancelRegenerationSelection={handleCancelRegenerationSelection}
+          onRegenerateSelectedItems={handleRegenerateSelectedItems}
+          isPartialRegenerationLoading={isPartialRegenerationLoading}
         />
       );
     }

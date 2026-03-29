@@ -1,11 +1,28 @@
-import { Box, Chip, Link as MuiLink, Stack, Typography } from "@mui/material";
+import { Box, Chip, IconButton, Link as MuiLink, Stack, Typography } from "@mui/material";
+import ThumbDownAltOutlinedIcon from "@mui/icons-material/ThumbDownAltOutlined";
 import { useI18n } from "../i18n/useI18n.js";
 
-function ClothingCard({ item }) {
+function ClothingCard({
+  item,
+  isSelectable = false,
+  isSelected = false,
+  isRegenerating = false,
+  onToggleSelected,
+  isMobile = false
+}) {
   const { t } = useI18n();
   const imageUrl = item?.image_url || "";
   const label = item?.name || "";
   const categoryLabel = item?.category ? t(`options.categories.${item.category}`) : "";
+  const showToggleButton = isMobile || isSelected;
+
+  const handleToggleSelected = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!isRegenerating && typeof onToggleSelected === "function") {
+      onToggleSelected(item);
+    }
+  };
 
   return (
     <Box
@@ -31,6 +48,18 @@ function ClothingCard({ item }) {
           WebkitMaskComposite: "xor",
           pointerEvents: "none"
         },
+        ...(isSelectable && !isSelected && !isMobile
+          ? {
+              "& .wardrobe-card-regenerate": {
+                opacity: 0,
+                visibility: "hidden"
+              },
+              "&:hover .wardrobe-card-regenerate": {
+                opacity: 0.72,
+                visibility: "visible"
+              }
+            }
+          : {}),
         "&:hover": {
           transform: "translateY(-4px)",
           boxShadow: "0 20px 50px rgba(17, 36, 34, 0.14)"
@@ -47,6 +76,38 @@ function ClothingCard({ item }) {
           overflow: "hidden"
         }}
       >
+        {isSelectable ? (
+          <IconButton
+            aria-label={t("main.partialRegenerateToggle")}
+            className="wardrobe-card-regenerate"
+            onClick={handleToggleSelected}
+            disabled={isRegenerating}
+            sx={{
+              position: "absolute",
+              top: 12,
+              right: 12,
+              zIndex: 4,
+              width: 36,
+              height: 36,
+              bgcolor: isSelected ? "rgba(17, 17, 17, 0.92)" : "rgba(17, 17, 17, 0.42)",
+              color: isSelected ? "#d24343" : "#fff",
+              opacity: showToggleButton ? 0.72 : undefined,
+              visibility: showToggleButton ? "visible" : undefined,
+              transition: "opacity 160ms ease, background-color 160ms ease, color 160ms ease",
+              "&:hover": {
+                bgcolor: isSelected ? "rgba(17, 17, 17, 0.96)" : "rgba(17, 17, 17, 0.62)",
+                opacity: 1
+              },
+              "&.Mui-disabled": {
+                color: isSelected ? "#d24343" : "#fff",
+                bgcolor: isSelected ? "rgba(17, 17, 17, 0.92)" : "rgba(17, 17, 17, 0.42)",
+                opacity: showToggleButton ? 0.72 : 0
+              }
+            }}
+          >
+            <ThumbDownAltOutlinedIcon fontSize="small" />
+          </IconButton>
+        ) : null}
         <Stack
           direction="row"
           spacing={1}
@@ -109,13 +170,25 @@ function ClothingCard({ item }) {
                 "linear-gradient(180deg, rgba(0,0,0,0) 30%, rgba(10,12,12,0.55) 100%)"
             }}
           />
+          {isSelected ? (
+            <Box
+              sx={{
+                position: "absolute",
+                inset: 0,
+                backgroundColor: "rgba(0, 0, 0, 0.38)",
+                zIndex: 1,
+                pointerEvents: "none"
+              }}
+            />
+          ) : null}
           <Box
             sx={{
               position: "absolute",
               left: 0,
               right: 0,
               bottom: 0,
-              p: 2
+              p: 2,
+              zIndex: 2
             }}
           >
             <Typography

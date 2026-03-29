@@ -201,6 +201,9 @@ const en = {
     welcome: "Welcome back",
     download: "Download capsule PDF",
     refresh: "Refresh wardrobe",
+    partialRegenerateToggle: "Mark item for partial regeneration",
+    cancelSelection: "Cancel",
+    regenerateSelected: "Regenerate Selected ({count})",
     placeholder: "Your profile is ready. The main screen will appear here next.",
     menuOpen: "Open menu",
     menuProfile: "Profile",
@@ -320,7 +323,8 @@ const en = {
     invalidPayload: "Please select at least one option.",
     invalidGoogleToken: "Google sign-in failed. Please try again.",
     googleAuthNotConfigured: "Google sign-in is not configured on the server.",
-    downloadFailed: "Failed to generate the capsule PDF. Please try again."
+    downloadFailed: "Failed to generate the capsule PDF. Please try again.",
+    regenerateSelectedFailed: "Failed to regenerate the selected items. Please try again."
   },
   dialogs: {
     signOutTitle: "Sign out",

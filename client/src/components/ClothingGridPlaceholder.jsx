@@ -1,9 +1,9 @@
 import { Box } from "@mui/material";
 
-function renderPlaceholderCards(count) {
-  return Array.from({ length: count }).map((_, index) => (
+function ClothingPlaceholderCard({ placeholderKey }) {
+  return (
     <Box
-      key={`placeholder-${index}`}
+      key={placeholderKey}
       sx={{
         display: "flex",
         flexDirection: "column",
@@ -71,6 +71,15 @@ function renderPlaceholderCards(count) {
         />
       </Box>
     </Box>
+  );
+}
+
+function renderPlaceholderCards(count) {
+  return Array.from({ length: count }).map((_, index) => (
+    <ClothingPlaceholderCard
+      key={`placeholder-${index}`}
+      placeholderKey={`placeholder-${index}`}
+    />
   ));
 }
 
@@ -97,4 +106,5 @@ function ClothingGridPlaceholder({ count = 12, inline = false }) {
   );
 }
 
+export { ClothingPlaceholderCard };
 export default ClothingGridPlaceholder;

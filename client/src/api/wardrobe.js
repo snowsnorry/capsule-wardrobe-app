@@ -68,4 +68,34 @@ async function downloadWardrobePdf({ locale }) {
   }
 }
 
-export { fetchWardrobeItems, downloadWardrobePdf };
+async function regenerateSelectedWardrobeItems({ itemIds }) {
+  while (true) {
+    const response = await request(`${API_BASE_URL}/wardrobe/items/regenerate-selected`, {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ itemIds })
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (response.status === 202) {
+      const pollAfterMs = Number(data?.pollAfterMs) > 0 ? Number(data.pollAfterMs) : 2000;
+      await new Promise((resolve) => setTimeout(resolve, pollAfterMs));
+      continue;
+    }
+
+    if (!response.ok) {
+      const error = new Error(data?.error || data?.message || `request_failed_${response.status}`);
+      error.status = response.status;
+      error.data = data;
+      throw error;
+    }
+
+    return data;
+  }
+}
+
+export { fetchWardrobeItems, downloadWardrobePdf, regenerateSelectedWardrobeItems };

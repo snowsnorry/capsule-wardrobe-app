@@ -202,6 +202,9 @@ const ru = {
     welcome: "С возвращением",
     download: "Скачать PDF капсулы",
     refresh: "Обновить гардероб",
+    partialRegenerateToggle: "Отметить товар для частичного обновления",
+    cancelSelection: "Отменить",
+    regenerateSelected: "Обновить выбранные ({count})",
     placeholder: "Ваш профиль готов. Основной экран появится здесь позже.",
     menuOpen: "Открыть меню",
     menuProfile: "Профиль",
@@ -321,7 +324,8 @@ const ru = {
     invalidPayload: "Выберите хотя бы один вариант.",
     invalidGoogleToken: "Не удалось войти через Google. Попробуйте снова.",
     googleAuthNotConfigured: "Вход через Google не настроен на сервере.",
-    downloadFailed: "Не удалось сгенерировать PDF капсулы. Попробуйте еще раз."
+    downloadFailed: "Не удалось сгенерировать PDF капсулы. Попробуйте еще раз.",
+    regenerateSelectedFailed: "Не удалось обновить выбранные карточки. Попробуйте еще раз."
   },
   dialogs: {
     signOutTitle: "Выйти",

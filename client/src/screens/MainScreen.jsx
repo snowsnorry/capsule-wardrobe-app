@@ -20,6 +20,7 @@ import useMediaQuery from "@mui/material/useMediaQuery";
 import ProfileFiltersSidebar from "../components/ProfileFiltersSidebar.jsx";
 import { useI18n } from "../i18n/useI18n.js";
 import ClothingGridPlaceholder from "../components/ClothingGridPlaceholder.jsx";
+import { ClothingPlaceholderCard } from "../components/ClothingGridPlaceholder.jsx";
 import ClothingCard from "../components/ClothingCard.jsx";
 import LocaleSwitcher from "../components/LocaleSwitcher.jsx";
 import AppLauncher from "../components/AppLauncher.jsx";
@@ -57,7 +58,13 @@ function MainScreen({
   onSelectPattern,
   onApplyFilters,
   onResetFilters,
-  onNavigateApp
+  onNavigateApp,
+  selectedRegenerationIds,
+  partialRegenerationPendingIds,
+  onToggleRegenerationSelection,
+  onCancelRegenerationSelection,
+  onRegenerateSelectedItems,
+  isPartialRegenerationLoading
 }) {
   const { t } = useI18n();
   const theme = useTheme();
@@ -65,6 +72,7 @@ function MainScreen({
   const [isSignOutOpen, setIsSignOutOpen] = useState(false);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const sortedItems = sortWardrobeItems(items);
+  const selectedCount = selectedRegenerationIds.length;
 
   const handleConfirmSignOut = () => {
     setIsSignOutOpen(false);
@@ -173,22 +181,43 @@ function MainScreen({
               ) : (
                 <Box />
               )}
-              <Stack direction="row" spacing={0.5}>
-                <IconButton
-                  aria-label={t("main.download")}
-                  onClick={onDownloadPdf}
-                  disabled={isDownloadingPdf || sortedItems.length === 0}
-                >
-                  <DownloadRoundedIcon />
-                </IconButton>
-                <IconButton
-                  aria-label={t("main.refresh")}
-                  onClick={onRefreshItems}
-                  disabled={isLoadingItems}
-                >
-                  <RefreshIcon />
-                </IconButton>
-              </Stack>
+              {selectedCount > 0 ? (
+                <Stack direction="row" spacing={1} sx={{ minHeight: 40, alignItems: "center" }}>
+                  <Button
+                    variant="outlined"
+                    onClick={onCancelRegenerationSelection}
+                    disabled={isPartialRegenerationLoading}
+                    sx={{ minHeight: 40 }}
+                  >
+                    {t("main.cancelSelection")}
+                  </Button>
+                  <Button
+                    variant="contained"
+                    onClick={onRegenerateSelectedItems}
+                    disabled={isPartialRegenerationLoading}
+                    sx={{ minHeight: 40 }}
+                  >
+                    {t("main.regenerateSelected", { count: selectedCount })}
+                  </Button>
+                </Stack>
+              ) : (
+                <Stack direction="row" spacing={0.5} sx={{ minHeight: 40, alignItems: "center" }}>
+                  <IconButton
+                    aria-label={t("main.download")}
+                    onClick={onDownloadPdf}
+                    disabled={isDownloadingPdf || sortedItems.length === 0 || isPartialRegenerationLoading}
+                  >
+                    <DownloadRoundedIcon />
+                  </IconButton>
+                  <IconButton
+                    aria-label={t("main.refresh")}
+                    onClick={onRefreshItems}
+                    disabled={isLoadingItems || isPartialRegenerationLoading}
+                  >
+                    <RefreshIcon />
+                  </IconButton>
+                </Stack>
+              )}
             </Stack>
             <Divider />
             {isLoadingItems ? (
@@ -206,9 +235,29 @@ function MainScreen({
                   gap: 2.5
                 }}
                 >
-                {sortedItems.map((item) => (
-                  <ClothingCard key={item.id || item.url} item={item} />
-                ))}
+                {sortedItems.map((item) => {
+                  const itemId = String(item?.id || "");
+                  if (partialRegenerationPendingIds.includes(itemId)) {
+                    return (
+                      <ClothingPlaceholderCard
+                        key={`pending-${item.id || item.url}`}
+                        placeholderKey={`pending-${item.id || item.url}`}
+                      />
+                    );
+                  }
+
+                  return (
+                    <ClothingCard
+                      key={item.id || item.url}
+                      item={item}
+                      isSelectable={Boolean(itemId)}
+                      isSelected={selectedRegenerationIds.includes(itemId)}
+                      isRegenerating={isPartialRegenerationLoading}
+                      onToggleSelected={onToggleRegenerationSelection}
+                      isMobile={isMobile}
+                    />
+                  );
+                })}
                 {showAdditionalItemPlaceholder ? (
                   <ClothingGridPlaceholder count={1} inline />
                 ) : null}
