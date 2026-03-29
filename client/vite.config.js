@@ -4,6 +4,11 @@ import react from "@vitejs/plugin-react";
 export default defineConfig(() => {
   return {
     plugins: [react()],
+    test: {
+      environment: "jsdom",
+      setupFiles: "./src/test/setup.js",
+      css: true
+    },
     server: {
       watch: {
         // 1Password env mounts can be FIFOs and emit frequent fs events.

@@ -675,251 +675,280 @@ function hasStoredWardrobeItems(profile) {
   return Boolean(getStoredWardrobePayload(profile)?.items?.length);
 }
 
-function scheduleJobCleanup(email, job) {
-  setTimeout(() => {
-    if (wardrobeJobs.get(email) === job && job.status !== "pending") {
-      wardrobeJobs.delete(email);
-    }
-  }, COMPLETED_JOB_TTL_MS);
-}
-
-function getWardrobeJob(email) {
-  const job = wardrobeJobs.get(email);
-  if (!job) {
-    return null;
-  }
-
-  if (job.status !== "pending" && Date.now() - job.updatedAt > COMPLETED_JOB_TTL_MS) {
-    wardrobeJobs.delete(email);
-    return null;
-  }
-
-  return job;
-}
-
-function startWardrobeJob(email, profile, logContext = null) {
-  const existing = getWardrobeJob(email);
-  if (existing?.status === "pending") {
-    return existing;
-  }
-
-  const capsuleRequestId = logContext?.capsuleRequestId || crypto.randomUUID();
-  const startedAt = Date.now();
-  const job = {
-    capsuleRequestId,
-    status: "pending",
-    startedAt,
-    updatedAt: Date.now(),
-    promise: null,
-    phase: "capsule",
-    result: null
-  };
-  wardrobeJobs.set(email, job);
-
-  job.promise = (async () => {
-    const jobLogContext = {
-      capsuleRequestId,
-      startedAt
-    };
-
-    try {
-      const wardrobe = await generateCapsuleWardrobe(profile, jobLogContext);
-      const items = wardrobe.items;
-
-      if (items.length === 0) {
-        throw new Error("AI response has no valid wardrobe items");
+function createWardrobeService({
+  getProfileImpl = getProfile,
+  updateProfileItemsImpl = updateProfileItems,
+  generateCapsuleWardrobeImpl = generateCapsuleWardrobe,
+  shouldGenerateSwimwearImpl = shouldGenerateSwimwear,
+  generateSwimwearAdditionImpl = generateSwimwearAddition,
+  getPartialRegenerationJobImpl = (...args) => getPartialRegenerationJob(...args),
+  jobs = wardrobeJobs,
+  nowMsImpl = () => Date.now(),
+  setTimeoutImpl = setTimeout,
+  randomUuidImpl = () => crypto.randomUUID()
+} = {}) {
+  function scheduleJobCleanup(email, job) {
+    setTimeoutImpl(() => {
+      if (jobs.get(email) === job && job.status !== "pending") {
+        jobs.delete(email);
       }
+    }, COMPLETED_JOB_TTL_MS);
+  }
 
-      const storedCapsule = buildWardrobePayload({
-        items,
-        reasoning: wardrobe.reasoning,
-        rawSelectionText: wardrobe.rawSelectionText
-      });
-      await updateProfileItems(email, storedCapsule);
-      logWardrobeInfo("capsule-base-completed", {
-        baseDurationMs: Date.now() - startedAt,
-        capsuleItemsTotal: items.length,
-        capsuleItemsByCategory: countItemsByKey(items)
-      }, jobLogContext);
+  function getWardrobeJob(email) {
+    const job = jobs.get(email);
+    if (!job) {
+      return null;
+    }
 
-      job.result = storedCapsule;
+    if (job.status !== "pending" && nowMsImpl() - job.updatedAt > COMPLETED_JOB_TTL_MS) {
+      jobs.delete(email);
+      return null;
+    }
 
-      if (shouldGenerateSwimwear(profile)) {
-        job.phase = "extras";
-        job.updatedAt = Date.now();
+    return job;
+  }
 
-        try {
-          const swimwear = await generateSwimwearAddition({
-            userProfile: profile,
-            selectedCapsuleItems: wardrobe.selectedItems,
-            promptEmbeddings: wardrobe.promptEmbeddings,
-            logContext: jobLogContext
-          });
-          const finalItems = appendUniqueWardrobeItems(items, swimwear.items);
-          const finalPayload = buildWardrobePayload({
-            items: finalItems,
-            reasoning: wardrobe.reasoning,
-            rawSelectionText: wardrobe.rawSelectionText,
-            swimwearReasoning: swimwear.reasoning,
-            swimwearRawSelectionText: swimwear.rawSelectionText
-          });
+  function startWardrobeJob(email, profile, logContext = null) {
+    const existing = getWardrobeJob(email);
+    if (existing?.status === "pending") {
+      return existing;
+    }
 
-          await updateProfileItems(email, finalPayload);
+    const capsuleRequestId = logContext?.capsuleRequestId || randomUuidImpl();
+    const startedAt = nowMsImpl();
+    const job = {
+      capsuleRequestId,
+      status: "pending",
+      startedAt,
+      updatedAt: nowMsImpl(),
+      promise: null,
+      phase: "capsule",
+      result: null
+    };
+    jobs.set(email, job);
+
+    job.promise = (async () => {
+      const jobLogContext = {
+        capsuleRequestId,
+        startedAt
+      };
+
+      try {
+        const wardrobe = await generateCapsuleWardrobeImpl(profile, jobLogContext);
+        const items = wardrobe.items;
+
+        if (items.length === 0) {
+          throw new Error("AI response has no valid wardrobe items");
+        }
+
+        const storedCapsule = buildWardrobePayload({
+          items,
+          reasoning: wardrobe.reasoning,
+          rawSelectionText: wardrobe.rawSelectionText
+        });
+        await updateProfileItemsImpl(email, storedCapsule);
+        logWardrobeInfo("capsule-base-completed", {
+          baseDurationMs: nowMsImpl() - startedAt,
+          capsuleItemsTotal: items.length,
+          capsuleItemsByCategory: countItemsByKey(items)
+        }, jobLogContext);
+
+        job.result = storedCapsule;
+
+        if (shouldGenerateSwimwearImpl(profile)) {
+          job.phase = "extras";
+          job.updatedAt = nowMsImpl();
+
+          try {
+            const swimwear = await generateSwimwearAdditionImpl({
+              userProfile: profile,
+              selectedCapsuleItems: wardrobe.selectedItems,
+              promptEmbeddings: wardrobe.promptEmbeddings,
+              logContext: jobLogContext
+            });
+            const finalItems = appendUniqueWardrobeItems(items, swimwear.items);
+            const finalPayload = buildWardrobePayload({
+              items: finalItems,
+              reasoning: wardrobe.reasoning,
+              rawSelectionText: wardrobe.rawSelectionText,
+              swimwearReasoning: swimwear.reasoning,
+              swimwearRawSelectionText: swimwear.rawSelectionText
+            });
+
+            await updateProfileItemsImpl(email, finalPayload);
+            logWardrobeInfo("capsule-total-completed", {
+              totalDurationMs: nowMsImpl() - startedAt,
+              itemsTotal: finalItems.length,
+              itemsByCategory: countItemsByKey(finalItems)
+            }, jobLogContext);
+            job.result = finalPayload;
+          } catch (error) {
+            console.error("[wardrobe-ai][swimwear]", buildErrorLogContext(jobLogContext), error);
+            logWardrobeInfo("capsule-total-completed", {
+              totalDurationMs: nowMsImpl() - startedAt,
+              itemsTotal: items.length,
+              itemsByCategory: countItemsByKey(items)
+            }, jobLogContext);
+          }
+        } else {
           logWardrobeInfo("capsule-total-completed", {
-            totalDurationMs: Date.now() - startedAt,
-            itemsTotal: finalItems.length,
-            itemsByCategory: countItemsByKey(finalItems)
-          }, jobLogContext);
-          job.result = finalPayload;
-        } catch (error) {
-          console.error("[wardrobe-ai][swimwear]", buildErrorLogContext(jobLogContext), error);
-          logWardrobeInfo("capsule-total-completed", {
-            totalDurationMs: Date.now() - startedAt,
+            totalDurationMs: nowMsImpl() - startedAt,
             itemsTotal: items.length,
             itemsByCategory: countItemsByKey(items)
           }, jobLogContext);
         }
-      } else {
-        logWardrobeInfo("capsule-total-completed", {
-          totalDurationMs: Date.now() - startedAt,
-          itemsTotal: items.length,
-          itemsByCategory: countItemsByKey(items)
-        }, jobLogContext);
+
+        job.status = "completed";
+        job.phase = "completed";
+        job.updatedAt = nowMsImpl();
+      } catch (error) {
+        job.status = "failed";
+        job.phase = "failed";
+        job.updatedAt = nowMsImpl();
+        job.error = error;
+        console.error("[wardrobe-ai]", buildErrorLogContext(jobLogContext), error);
+      } finally {
+        scheduleJobCleanup(email, job);
+      }
+    })();
+
+    return job;
+  }
+
+  async function getWardrobeItems(req, res) {
+    try {
+      const forceRefresh = Boolean(req.body?.force);
+      const email = req.user.email;
+      const profile = await getProfileImpl(email);
+      const storedWardrobe = getStoredWardrobePayload(profile);
+      const activeJob = getWardrobeJob(email);
+      const partialRegenerationJob = getPartialRegenerationJobImpl(email);
+
+      if (partialRegenerationJob?.status === "pending") {
+        return res.status(202).json({
+          ok: true,
+          status: "pending",
+          pendingStage: "regenerate",
+          pendingRegenerationIds: partialRegenerationJob.pendingItemIds,
+          hasPendingAdditionalItems: false,
+          items: storedWardrobe?.items || [],
+          reasoning: storedWardrobe?.reasoning || null,
+          rawSelectionText: storedWardrobe?.rawSelectionText || null,
+          swimwearReasoning: storedWardrobe?.swimwearReasoning || null,
+          swimwearRawSelectionText: storedWardrobe?.swimwearRawSelectionText || null,
+          pollAfterMs: 2000
+        });
       }
 
-      job.status = "completed";
-      job.phase = "completed";
-      job.updatedAt = Date.now();
-    } catch (error) {
-      job.status = "failed";
-      job.phase = "failed";
-      job.updatedAt = Date.now();
-      job.error = error;
-      console.error("[wardrobe-ai]", buildErrorLogContext(jobLogContext), error);
-    } finally {
-      scheduleJobCleanup(email, job);
-    }
-  })();
+      if (activeJob?.status === "pending" && activeJob.phase === "extras" && storedWardrobe?.items?.length) {
+        return res.status(202).json({
+          ok: true,
+          status: "pending",
+          pendingStage: "extras",
+          hasPendingAdditionalItems: true,
+          items: storedWardrobe.items,
+          reasoning: storedWardrobe.reasoning,
+          rawSelectionText: storedWardrobe.rawSelectionText,
+          swimwearReasoning: storedWardrobe.swimwearReasoning,
+          pollAfterMs: WARDROBE_POLL_AFTER_MS
+        });
+      }
 
-  return job;
-}
+      if (!forceRefresh && storedWardrobe?.items?.length) {
+        return res.json({
+          ok: true,
+          status: "ready",
+          items: storedWardrobe.items,
+          reasoning: storedWardrobe.reasoning,
+          rawSelectionText: storedWardrobe.rawSelectionText,
+          swimwearReasoning: storedWardrobe.swimwearReasoning,
+          hasPendingAdditionalItems: false
+        });
+      }
 
-async function getWardrobeItems(req, res) {
-  try {
-    const forceRefresh = Boolean(req.body?.force);
-    const email = req.user.email;
-    const profile = await getProfile(email);
-    const storedWardrobe = getStoredWardrobePayload(profile);
-    const activeJob = getWardrobeJob(email);
-    const partialRegenerationJob = getPartialRegenerationJob(email);
+      if (activeJob?.status === "pending") {
+        return res.status(202).json({
+          ok: true,
+          status: "pending",
+          pendingStage: activeJob.phase === "extras" ? "extras" : "capsule",
+          hasPendingAdditionalItems: activeJob.phase === "extras",
+          items: storedWardrobe?.items || [],
+          reasoning: storedWardrobe?.reasoning || null,
+          rawSelectionText: storedWardrobe?.rawSelectionText || null,
+          swimwearReasoning: storedWardrobe?.swimwearReasoning || null,
+          pollAfterMs: WARDROBE_POLL_AFTER_MS
+        });
+      }
 
-    if (partialRegenerationJob?.status === "pending") {
+      if (activeJob?.status === "failed" && !forceRefresh) {
+        jobs.delete(email);
+        throw activeJob.error || new Error("wardrobe_generation_failed");
+      }
+
+      if (activeJob?.status === "failed" && forceRefresh) {
+        jobs.delete(email);
+      }
+
+      if (forceRefresh && profile) {
+        await updateProfileItemsImpl(email, null);
+      }
+
+      const generationProfile = forceRefresh && profile
+        ? { ...profile, items: null }
+        : profile;
+      const logContext = {
+        capsuleRequestId: randomUuidImpl()
+      };
+      logWardrobeInfo("capsule-request-received", getRequestedWardrobeParams(generationProfile, {
+        forceRefresh
+      }), logContext);
+      startWardrobeJob(email, generationProfile, logContext);
+
       return res.status(202).json({
         ok: true,
         status: "pending",
-        pendingStage: "regenerate",
-        pendingRegenerationIds: partialRegenerationJob.pendingItemIds,
+        pendingStage: "capsule",
         hasPendingAdditionalItems: false,
-        items: storedWardrobe?.items || [],
-        reasoning: storedWardrobe?.reasoning || null,
-        rawSelectionText: storedWardrobe?.rawSelectionText || null,
-        swimwearReasoning: storedWardrobe?.swimwearReasoning || null,
-        swimwearRawSelectionText: storedWardrobe?.swimwearRawSelectionText || null,
-        pollAfterMs: 2000
-      });
-    }
-
-    if (activeJob?.status === "pending" && activeJob.phase === "extras" && storedWardrobe?.items?.length) {
-      return res.status(202).json({
-        ok: true,
-        status: "pending",
-        pendingStage: "extras",
-        hasPendingAdditionalItems: true,
-        items: storedWardrobe.items,
-        reasoning: storedWardrobe.reasoning,
-        rawSelectionText: storedWardrobe.rawSelectionText,
-        swimwearReasoning: storedWardrobe.swimwearReasoning,
+        items: [],
         pollAfterMs: WARDROBE_POLL_AFTER_MS
       });
-    }
-
-    if (!forceRefresh && storedWardrobe?.items?.length) {
-      return res.json({
-        ok: true,
-        status: "ready",
-        items: storedWardrobe.items,
-        reasoning: storedWardrobe.reasoning,
-        rawSelectionText: storedWardrobe.rawSelectionText,
-        swimwearReasoning: storedWardrobe.swimwearReasoning,
-        hasPendingAdditionalItems: false
+    } catch (error) {
+      console.error("[wardrobe-ai]", error);
+      return res.status(503).json({
+        error: "service_unavailable",
+        rawSelectionText: typeof error?.rawSelectionText === "string" && error.rawSelectionText.trim().length > 0
+          ? error.rawSelectionText.trim()
+          : null
       });
     }
-
-    if (activeJob?.status === "pending") {
-      return res.status(202).json({
-        ok: true,
-        status: "pending",
-        pendingStage: activeJob.phase === "extras" ? "extras" : "capsule",
-        hasPendingAdditionalItems: activeJob.phase === "extras",
-        items: storedWardrobe?.items || [],
-        reasoning: storedWardrobe?.reasoning || null,
-        rawSelectionText: storedWardrobe?.rawSelectionText || null,
-        swimwearReasoning: storedWardrobe?.swimwearReasoning || null,
-        pollAfterMs: WARDROBE_POLL_AFTER_MS
-      });
-    }
-
-    if (activeJob?.status === "failed" && !forceRefresh) {
-      wardrobeJobs.delete(email);
-      throw activeJob.error || new Error("wardrobe_generation_failed");
-    }
-
-    if (activeJob?.status === "failed" && forceRefresh) {
-      wardrobeJobs.delete(email);
-    }
-
-    if (forceRefresh && profile) {
-      await updateProfileItems(email, null);
-    }
-
-    const generationProfile = forceRefresh && profile
-      ? { ...profile, items: null }
-      : profile;
-    const logContext = {
-      capsuleRequestId: crypto.randomUUID()
-    };
-    logWardrobeInfo("capsule-request-received", getRequestedWardrobeParams(generationProfile, {
-      forceRefresh
-    }), logContext);
-    startWardrobeJob(email, generationProfile, logContext);
-
-    return res.status(202).json({
-      ok: true,
-      status: "pending",
-      pendingStage: "capsule",
-      hasPendingAdditionalItems: false,
-      items: [],
-      pollAfterMs: WARDROBE_POLL_AFTER_MS
-    });
-  } catch (error) {
-    console.error("[wardrobe-ai]", error);
-    return res.status(503).json({
-      error: "service_unavailable",
-      rawSelectionText: typeof error?.rawSelectionText === "string" && error.rawSelectionText.trim().length > 0
-        ? error.rawSelectionText.trim()
-        : null
-    });
   }
+
+  return {
+    getWardrobeJob,
+    startWardrobeJob,
+    getWardrobeItems
+  };
 }
+
+const wardrobeService = createWardrobeService();
+const {
+  getWardrobeJob,
+  startWardrobeJob,
+  getWardrobeItems
+} = wardrobeService;
 
 export {
   countItemsByKey,
+  createWardrobeService,
   enforceCategoryCounts,
   extractLlmUsage,
   getSelectedIdsFromCapsule,
+  getWardrobeJob,
   getStoredWardrobePayload,
   getWardrobeItems,
   getWardrobeSelectionPrompt,
   logWardrobeInfo,
+  startWardrobeJob,
   toWardrobeUiItem
 };

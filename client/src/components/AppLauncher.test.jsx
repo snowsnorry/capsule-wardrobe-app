@@ -1,0 +1,86 @@
+import { afterEach, describe, expect, test, vi } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { ThemeProvider, createTheme } from "@mui/material/styles";
+
+const useI18nMock = vi.hoisted(() => vi.fn());
+
+vi.mock("../i18n/useI18n.js", () => ({
+  useI18n: useI18nMock
+}));
+
+import AppLauncher from "./AppLauncher.jsx";
+
+const theme = createTheme();
+
+function renderLauncher(props = {}) {
+  useI18nMock.mockReturnValue({
+    t: (key) =>
+      ({
+        "launcher.open": "Open app launcher",
+        "launcher.capsule": "Capsule",
+        "launcher.capsuleHint": "Switch to the wardrobe capsule",
+        "launcher.search": "Search",
+        "launcher.searchHint": "Switch to search"
+      }[key] || key)
+  });
+
+  const defaults = {
+    currentApp: "capsule",
+    onSelectApp: vi.fn()
+  };
+
+  return {
+    ...defaults,
+    ...props,
+    ...render(
+      <ThemeProvider theme={theme}>
+        <AppLauncher {...defaults} {...props} />
+      </ThemeProvider>
+    )
+  };
+}
+
+describe("AppLauncher", () => {
+  afterEach(() => {
+    cleanup();
+    useI18nMock.mockReset();
+  });
+
+  test("opens the app menu and forwards the selected app id", async () => {
+    const user = userEvent.setup();
+    const onSelectApp = vi.fn();
+
+    renderLauncher({ onSelectApp, currentApp: "capsule" });
+
+    expect(screen.getByRole("button", { name: "Open app launcher" })).toHaveTextContent(
+      "Capsule"
+    );
+
+    await user.click(screen.getByRole("button", { name: "Open app launcher" }));
+    await user.click(screen.getByRole("menuitem", { name: /Search/ }));
+
+    expect(onSelectApp).toHaveBeenCalledWith("search");
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+  });
+
+  test("reflects the current app label when rerendered from the parent", async () => {
+    const user = userEvent.setup();
+    const onSelectApp = vi.fn();
+    const { rerender } = renderLauncher({ currentApp: "capsule", onSelectApp });
+
+    await user.click(screen.getByRole("button", { name: "Open app launcher" }));
+    await user.click(screen.getByRole("menuitem", { name: /Search/ }));
+
+    expect(onSelectApp).toHaveBeenCalledWith("search");
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+
+    rerender(
+      <ThemeProvider theme={theme}>
+        <AppLauncher currentApp="search" onSelectApp={vi.fn()} />
+      </ThemeProvider>
+    );
+
+    expect(screen.getByRole("button", { name: "Open app launcher" })).toHaveTextContent("Search");
+  });
+});

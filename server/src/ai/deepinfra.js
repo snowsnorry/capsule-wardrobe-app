@@ -5,21 +5,86 @@ const DEFAULT_CHAT_MODEL = "meta-llama/Llama-3.3-70B-Instruct-Turbo";
 const DEFAULT_EMBEDDING_MODEL = "google/embeddinggemma-300m";
 let cachedClient = null;
 
-function getOpenAiClient() {
-  if (cachedClient) {
-    return cachedClient;
+function createDeepInfraClient({
+  createClientImpl = ({ apiKey, baseURL }) => new OpenAI({ apiKey, baseURL }),
+  getApiKeyImpl = () => process.env.DEEPINFRA_API_KEY,
+  cache = true
+} = {}) {
+  let localCachedClient = null;
+
+  function getOpenAiClient() {
+    if (cache && localCachedClient) {
+      return localCachedClient;
+    }
+
+    const apiKey = getApiKeyImpl();
+    if (!apiKey) {
+      throw new Error("DEEPINFRA_API_KEY is not set");
+    }
+
+    const client = createClientImpl({
+      apiKey,
+      baseURL: OPENAI_BASE_URL
+    });
+
+    if (cache) {
+      localCachedClient = client;
+      cachedClient = client;
+    }
+
+    return client;
   }
 
-  const apiKey = process.env.DEEPINFRA_API_KEY;
-  if (!apiKey) {
-    throw new Error("DEEPINFRA_API_KEY is not set");
+  async function getPromptEmbeddings(prompt) {
+    const client = getOpenAiClient();
+    const response = await client.embeddings.create({
+      model: DEFAULT_EMBEDDING_MODEL,
+      input: prompt
+    });
+    const embedding = response?.data?.[0]?.embedding;
+    if (!Array.isArray(embedding) || embedding.length === 0) {
+      throw new Error("Failed to compute prompt embeddings");
+    }
+    return embedding;
   }
 
-  cachedClient = new OpenAI({
-    apiKey,
-    baseURL: OPENAI_BASE_URL
-  });
-  return cachedClient;
+  async function generateJsonWithLlm(prompt) {
+    const client = getOpenAiClient();
+    const { system, user } = splitSystemAndUserPrompt(prompt);
+
+    const response = await client.chat.completions.create({
+      model: DEFAULT_CHAT_MODEL,
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: user }
+      ],
+      temperature: 0.2,
+      top_p: 0.9,
+      frequency_penalty: 0,
+      presence_penalty: 0,
+      max_tokens: 1000,
+      response_format: { type: "json_object" }
+    });
+
+    let content = response?.choices?.[0]?.message?.content || "{}";
+    let json;
+    if (content) {
+      content = content.replace(/^[^{]*/, "").replace(/[^}]*$/, "");
+    }
+    try {
+      json = JSON.parse(content);
+    } catch {
+      throw new Error("Failed to parse JSON response");
+    }
+
+    return { response, json };
+  }
+
+  return {
+    generateJsonWithLlm,
+    getOpenAiClient,
+    getPromptEmbeddings
+  };
 }
 
 function splitSystemAndUserPrompt(prompt) {
@@ -42,49 +107,17 @@ function splitSystemAndUserPrompt(prompt) {
   };
 }
 
-async function getPromptEmbeddings(prompt) {
-  const client = getOpenAiClient();
-  const response = await client.embeddings.create({
-    model: DEFAULT_EMBEDDING_MODEL,
-    input: prompt
-  });
-  const embedding = response?.data?.[0]?.embedding;
-  if (!Array.isArray(embedding) || embedding.length === 0) {
-    throw new Error("Failed to compute prompt embeddings");
-  }
-  return embedding;
-}
+const deepInfraClient = createDeepInfraClient();
+const {
+  generateJsonWithLlm,
+  getOpenAiClient,
+  getPromptEmbeddings
+} = deepInfraClient;
 
-async function generateJsonWithLlm(prompt) {
-  const client = getOpenAiClient();
-  const { system, user } = splitSystemAndUserPrompt(prompt);
-
-  const response = await client.chat.completions.create({
-    model: DEFAULT_CHAT_MODEL,
-    messages: [
-      { role: "system", content: system },
-      { role: "user", content: user }
-    ],
-    temperature: 0.2,
-    top_p: 0.9,
-    frequency_penalty: 0,
-    presence_penalty: 0,
-    max_tokens: 1000,
-    response_format: {"type": "json_object"}
-  });
-
-  let content = response?.choices?.[0]?.message?.content || "{}";
-  let json;
-  if(content) {
-    content = content.replace(/^[^{]*/, "").replace(/[^}]*$/, "");
-  }
-  try {
-    json = JSON.parse(content);
-  } catch {
-    throw new Error(`Failed to parse JSON response`);
-  }
-
-  return { response, json };
-}
-
-export { generateJsonWithLlm, getPromptEmbeddings };
+export {
+  createDeepInfraClient,
+  generateJsonWithLlm,
+  getOpenAiClient,
+  getPromptEmbeddings,
+  splitSystemAndUserPrompt
+};

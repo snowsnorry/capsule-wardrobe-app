@@ -6,55 +6,73 @@ import { buildWardrobePdf } from "./wardrobePdf.js";
 
 configureSharp();
 
-let handled = false;
+function createWardrobePdfChildRuntime({
+  mkdirImpl = mkdir,
+  writeFileImpl = writeFile,
+  buildWardrobePdfImpl = buildWardrobePdf,
+  sendImpl = process.send?.bind(process),
+  disconnectImpl = process.disconnect?.bind(process),
+  exitImpl = (code) => process.exit(code)
+} = {}) {
+  let handled = false;
 
-function sendFinalMessage(message, exitCode) {
-  if (!process.send) {
-    process.exit(exitCode);
-    return;
-  }
-
-  process.send(message, () => {
-    process.disconnect?.();
-    process.exit(exitCode);
-  });
-}
-
-async function handleMessage(message) {
-  if (handled) {
-    return;
-  }
-  handled = true;
-
-  try {
-    const outputFilePath = String(message?.outputFilePath || "").trim();
-    if (!outputFilePath) {
-      throw new Error("wardrobe_pdf_child_output_path_missing");
+  function sendFinalMessage(message, exitCode) {
+    if (!sendImpl) {
+      exitImpl(exitCode);
+      return;
     }
 
-    await mkdir(path.dirname(outputFilePath), { recursive: true });
-    const pdfBuffer = await buildWardrobePdf(
-      Array.isArray(message?.products) ? message.products : [],
-      {
-        locale: message?.locale || "en",
-        totalStartedAt: Number.isFinite(message?.totalStartedAt) ? message.totalStartedAt : null
-      }
-    );
-    await writeFile(outputFilePath, pdfBuffer);
-
-    sendFinalMessage({
-      ok: true,
-      outputFilePath
-    }, 0);
-  } catch (error) {
-    sendFinalMessage({
-      ok: false,
-      message: error?.message || "unknown_error",
-      stack: typeof error?.stack === "string" ? error.stack : null
-    }, 1);
+    sendImpl(message, () => {
+      disconnectImpl?.();
+      exitImpl(exitCode);
+    });
   }
+
+  async function handleMessage(message) {
+    if (handled) {
+      return;
+    }
+    handled = true;
+
+    try {
+      const outputFilePath = String(message?.outputFilePath || "").trim();
+      if (!outputFilePath) {
+        throw new Error("wardrobe_pdf_child_output_path_missing");
+      }
+
+      await mkdirImpl(path.dirname(outputFilePath), { recursive: true });
+      const pdfBuffer = await buildWardrobePdfImpl(
+        Array.isArray(message?.products) ? message.products : [],
+        {
+          locale: message?.locale || "en",
+          totalStartedAt: Number.isFinite(message?.totalStartedAt) ? message.totalStartedAt : null
+        }
+      );
+      await writeFileImpl(outputFilePath, pdfBuffer);
+
+      sendFinalMessage({
+        ok: true,
+        outputFilePath
+      }, 0);
+    } catch (error) {
+      sendFinalMessage({
+        ok: false,
+        message: error?.message || "unknown_error",
+        stack: typeof error?.stack === "string" ? error.stack : null
+      }, 1);
+    }
+  }
+
+  return {
+    handleMessage,
+    sendFinalMessage
+  };
 }
 
+const wardrobePdfChildRuntime = createWardrobePdfChildRuntime();
+
 process.once("message", (message) => {
-  handleMessage(message);
+  wardrobePdfChildRuntime.handleMessage(message);
 });
+
+export { createWardrobePdfChildRuntime };

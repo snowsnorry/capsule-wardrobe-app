@@ -54,28 +54,6 @@ function buildStoredWardrobePayloadFromResult(result = {}, storedWardrobe = null
   };
 }
 
-function scheduleJobCleanup(email, job) {
-  setTimeout(() => {
-    if (partialRegenerationJobs.get(email) === job && job.status !== "pending") {
-      partialRegenerationJobs.delete(email);
-    }
-  }, COMPLETED_JOB_TTL_MS);
-}
-
-function getPartialRegenerationJob(email) {
-  const job = partialRegenerationJobs.get(email);
-  if (!job) {
-    return null;
-  }
-
-  if (job.status !== "pending" && Date.now() - job.updatedAt > COMPLETED_JOB_TTL_MS) {
-    partialRegenerationJobs.delete(email);
-    return null;
-  }
-
-  return job;
-}
-
 function formatProfileValues(values) {
   if (!Array.isArray(values) || values.length === 0) {
     return "Not specified";
@@ -582,169 +560,221 @@ async function regenerateCapsuleWardrobe(userProfile = null, products = null, lo
   };
 }
 
-function startPartialRegenerationJob(email, profile, selectedProducts, storedWardrobe, logContext = null) {
-  const existing = getPartialRegenerationJob(email);
-  if (existing?.status === "pending") {
-    return existing;
+function createPartialRegenerationService({
+  getProfileImpl = getProfile,
+  updateProfileItemsImpl = updateProfileItems,
+  updateProfileRejectedImpl = updateProfileRejected,
+  regenerateCapsuleWardrobeImpl = regenerateCapsuleWardrobe,
+  jobs = partialRegenerationJobs,
+  nowMsImpl = () => Date.now(),
+  setTimeoutImpl = setTimeout,
+  randomUuidImpl = () => crypto.randomUUID()
+} = {}) {
+  function scheduleJobCleanup(email, job) {
+    setTimeoutImpl(() => {
+      if (jobs.get(email) === job && job.status !== "pending") {
+        jobs.delete(email);
+      }
+    }, COMPLETED_JOB_TTL_MS);
   }
 
-  const pendingItemIds = selectedProducts
-    .map((item) => String(item?.id || "").trim())
-    .filter(Boolean);
-  const capsuleRequestId = logContext?.capsuleRequestId || crypto.randomUUID();
-  const startedAt = Date.now();
-  const job = {
-    capsuleRequestId,
-    status: "pending",
-    phase: "regenerate",
-    startedAt,
-    updatedAt: startedAt,
-    pendingItemIds,
-    result: null,
-    promise: null
-  };
-  partialRegenerationJobs.set(email, job);
-
-  job.promise = (async () => {
-    const jobLogContext = {
-      capsuleRequestId,
-      startedAt
-    };
-
-    try {
-      const result = await regenerateCapsuleWardrobe(profile, selectedProducts, jobLogContext);
-      const payload = buildStoredWardrobePayloadFromResult(result, storedWardrobe);
-      await updateProfileItems(email, payload);
-      job.result = payload;
-      job.status = "completed";
-      job.phase = "completed";
-      job.updatedAt = Date.now();
-      logWardrobeInfo("regenerate-total-completed", {
-        totalDurationMs: Date.now() - startedAt,
-        itemsTotal: payload.items.length,
-        itemsByCategory: countItemsByKey(payload.items)
-      }, jobLogContext);
-    } catch (error) {
-      job.status = "failed";
-      job.phase = "failed";
-      job.updatedAt = Date.now();
-      job.error = error;
-      console.error("[wardrobe-ai][regenerate-selected]", error);
-    } finally {
-      scheduleJobCleanup(email, job);
+  function getPartialRegenerationJob(email) {
+    const job = jobs.get(email);
+    if (!job) {
+      return null;
     }
-  })();
 
-  return job;
-}
+    if (job.status !== "pending" && nowMsImpl() - job.updatedAt > COMPLETED_JOB_TTL_MS) {
+      jobs.delete(email);
+      return null;
+    }
 
-async function regenerateSelectedWardrobeItems(req, res) {
-  try {
-    const email = req.user.email;
-    const itemIds = Array.isArray(req.body?.itemIds)
-      ? req.body.itemIds.map((itemId) => String(itemId || "").trim()).filter(Boolean)
-      : [];
-    const profile = await getProfile(email);
-    const storedWardrobe = getStoredWardrobePayload(profile);
-    const activeJob = getPartialRegenerationJob(email);
+    return job;
+  }
 
-    if (activeJob?.status === "pending") {
+  function startPartialRegenerationJob(email, profile, selectedProducts, storedWardrobe, logContext = null) {
+    const existing = getPartialRegenerationJob(email);
+    if (existing?.status === "pending") {
+      return existing;
+    }
+
+    const pendingItemIds = selectedProducts
+      .map((item) => String(item?.id || "").trim())
+      .filter(Boolean);
+    const capsuleRequestId = logContext?.capsuleRequestId || randomUuidImpl();
+    const startedAt = nowMsImpl();
+    const job = {
+      capsuleRequestId,
+      status: "pending",
+      phase: "regenerate",
+      startedAt,
+      updatedAt: startedAt,
+      pendingItemIds,
+      result: null,
+      promise: null
+    };
+    jobs.set(email, job);
+
+    job.promise = (async () => {
+      const jobLogContext = {
+        capsuleRequestId,
+        startedAt
+      };
+
+      try {
+        const result = await regenerateCapsuleWardrobeImpl(profile, selectedProducts, jobLogContext);
+        const payload = buildStoredWardrobePayloadFromResult(result, storedWardrobe);
+        await updateProfileItemsImpl(email, payload);
+        job.result = payload;
+        job.status = "completed";
+        job.phase = "completed";
+        job.updatedAt = nowMsImpl();
+        logWardrobeInfo("regenerate-total-completed", {
+          totalDurationMs: nowMsImpl() - startedAt,
+          itemsTotal: payload.items.length,
+          itemsByCategory: countItemsByKey(payload.items)
+        }, jobLogContext);
+      } catch (error) {
+        job.status = "failed";
+        job.phase = "failed";
+        job.updatedAt = nowMsImpl();
+        job.error = error;
+        console.error("[wardrobe-ai][regenerate-selected]", error);
+      } finally {
+        scheduleJobCleanup(email, job);
+      }
+    })();
+
+    return job;
+  }
+
+  async function regenerateSelectedWardrobeItems(req, res) {
+    try {
+      const email = req.user.email;
+      const itemIds = Array.isArray(req.body?.itemIds)
+        ? req.body.itemIds.map((itemId) => String(itemId || "").trim()).filter(Boolean)
+        : [];
+      const profile = await getProfileImpl(email);
+      const storedWardrobe = getStoredWardrobePayload(profile);
+      const activeJob = getPartialRegenerationJob(email);
+
+      if (activeJob?.status === "pending") {
+        return res.status(202).json({
+          ok: true,
+          status: "pending",
+          pendingStage: "regenerate",
+          pendingRegenerationIds: activeJob.pendingItemIds,
+          items: storedWardrobe?.items || [],
+          reasoning: storedWardrobe?.reasoning || null,
+          rawSelectionText: storedWardrobe?.rawSelectionText || null,
+          swimwearReasoning: storedWardrobe?.swimwearReasoning || null,
+          swimwearRawSelectionText: storedWardrobe?.swimwearRawSelectionText || null,
+          pollAfterMs: PARTIAL_REGENERATION_POLL_AFTER_MS
+        });
+      }
+
+      if (activeJob?.status === "completed") {
+        jobs.delete(email);
+        const readyPayload = activeJob.result || storedWardrobe || {};
+        return res.json({
+          ok: true,
+          status: "ready",
+          items: readyPayload.items || [],
+          reasoning: readyPayload.reasoning || null,
+          rawSelectionText: readyPayload.rawSelectionText || null,
+          swimwearReasoning: readyPayload.swimwearReasoning || null,
+          swimwearRawSelectionText: readyPayload.swimwearRawSelectionText || null
+        });
+      }
+
+      if (activeJob?.status === "failed") {
+        jobs.delete(email);
+        throw activeJob.error || new Error("partial_regeneration_failed");
+      }
+
+      if (!isValidSelectedItemIds(itemIds)) {
+        return res.status(400).json({ error: "invalid_payload" });
+      }
+
+      if (!storedWardrobe?.items?.length) {
+        return res.status(404).json({ error: "not_found" });
+      }
+
+      const storedItemsById = new Map(
+        storedWardrobe.items
+          .filter((item) => item && typeof item === "object")
+          .map((item) => [String(item.id || "").trim(), item])
+          .filter(([itemId]) => itemId)
+      );
+      const selectedProducts = itemIds.map((itemId) => storedItemsById.get(itemId)).filter(Boolean);
+      if (selectedProducts.length !== itemIds.length) {
+        return res.status(400).json({ error: "invalid_payload" });
+      }
+      const nextRejectedIds = [...new Set([
+        ...(Array.isArray(profile?.rejected) ? profile.rejected : []),
+        ...itemIds
+      ].map((itemId) => String(itemId || "").trim()).filter(Boolean))];
+
+      const selectedItemIdSet = new Set(itemIds);
+      const partialItems = storedWardrobe.items.filter((item) => !selectedItemIdSet.has(String(item?.id || "").trim()));
+      const partialPayload = {
+        items: partialItems,
+        reasoning: storedWardrobe.reasoning || null,
+        rawSelectionText: storedWardrobe.rawSelectionText || null,
+        swimwearReasoning: storedWardrobe.swimwearReasoning || null,
+        swimwearRawSelectionText: storedWardrobe.swimwearRawSelectionText || null
+      };
+      const logContext = {
+        capsuleRequestId: randomUuidImpl(),
+        source: "partial-regeneration"
+      };
+      logWardrobeInfo("regenerate-request-received", { itemIds }, logContext);
+      await updateProfileRejectedImpl(email, nextRejectedIds);
+      await updateProfileItemsImpl(email, partialPayload);
+      startPartialRegenerationJob(
+        email,
+        { ...profile, items: partialPayload, rejected: nextRejectedIds },
+        selectedProducts,
+        storedWardrobe,
+        logContext
+      );
+
       return res.status(202).json({
         ok: true,
         status: "pending",
         pendingStage: "regenerate",
-        pendingRegenerationIds: activeJob.pendingItemIds,
-        items: storedWardrobe?.items || [],
-        reasoning: storedWardrobe?.reasoning || null,
-        rawSelectionText: storedWardrobe?.rawSelectionText || null,
-        swimwearReasoning: storedWardrobe?.swimwearReasoning || null,
-        swimwearRawSelectionText: storedWardrobe?.swimwearRawSelectionText || null,
+        pendingRegenerationIds: itemIds,
+        items: partialItems,
+        reasoning: partialPayload.reasoning,
+        rawSelectionText: partialPayload.rawSelectionText,
+        swimwearReasoning: partialPayload.swimwearReasoning,
+        swimwearRawSelectionText: partialPayload.swimwearRawSelectionText,
         pollAfterMs: PARTIAL_REGENERATION_POLL_AFTER_MS
       });
+    } catch (error) {
+      console.error("[wardrobe-ai][regenerate-selected]", error);
+      return res.status(503).json({ error: "service_unavailable" });
     }
-
-    if (activeJob?.status === "completed") {
-      partialRegenerationJobs.delete(email);
-      const readyPayload = activeJob.result || storedWardrobe || {};
-      return res.json({
-        ok: true,
-        status: "ready",
-        items: readyPayload.items || [],
-        reasoning: readyPayload.reasoning || null,
-        rawSelectionText: readyPayload.rawSelectionText || null,
-        swimwearReasoning: readyPayload.swimwearReasoning || null,
-        swimwearRawSelectionText: readyPayload.swimwearRawSelectionText || null
-      });
-    }
-
-    if (activeJob?.status === "failed") {
-      partialRegenerationJobs.delete(email);
-      throw activeJob.error || new Error("partial_regeneration_failed");
-    }
-
-    if (!isValidSelectedItemIds(itemIds)) {
-      return res.status(400).json({ error: "invalid_payload" });
-    }
-
-    if (!storedWardrobe?.items?.length) {
-      return res.status(404).json({ error: "not_found" });
-    }
-
-    const storedItemsById = new Map(
-      storedWardrobe.items
-        .filter((item) => item && typeof item === "object")
-        .map((item) => [String(item.id || "").trim(), item])
-        .filter(([itemId]) => itemId)
-    );
-    const selectedProducts = itemIds.map((itemId) => storedItemsById.get(itemId)).filter(Boolean);
-    if (selectedProducts.length !== itemIds.length) {
-      return res.status(400).json({ error: "invalid_payload" });
-    }
-    const nextRejectedIds = [...new Set([
-      ...(Array.isArray(profile?.rejected) ? profile.rejected : []),
-      ...itemIds
-    ].map((itemId) => String(itemId || "").trim()).filter(Boolean))];
-
-    const selectedItemIdSet = new Set(itemIds);
-    const partialItems = storedWardrobe.items.filter((item) => !selectedItemIdSet.has(String(item?.id || "").trim()));
-    const partialPayload = {
-      items: partialItems,
-      reasoning: storedWardrobe.reasoning || null,
-      rawSelectionText: storedWardrobe.rawSelectionText || null,
-      swimwearReasoning: storedWardrobe.swimwearReasoning || null,
-      swimwearRawSelectionText: storedWardrobe.swimwearRawSelectionText || null
-    };
-    const logContext = {
-      capsuleRequestId: crypto.randomUUID(),
-      source: "partial-regeneration"
-    };
-    logWardrobeInfo("regenerate-request-received", {itemIds}, logContext);
-    await updateProfileRejected(email, nextRejectedIds);
-    await updateProfileItems(email, partialPayload);
-    startPartialRegenerationJob(
-      email,
-      { ...profile, items: partialPayload, rejected: nextRejectedIds },
-      selectedProducts,
-      storedWardrobe,
-      logContext
-    );
-
-    return res.status(202).json({
-      ok: true,
-      status: "pending",
-      pendingStage: "regenerate",
-      pendingRegenerationIds: itemIds,
-      items: partialItems,
-      reasoning: partialPayload.reasoning,
-      rawSelectionText: partialPayload.rawSelectionText,
-      swimwearReasoning: partialPayload.swimwearReasoning,
-      swimwearRawSelectionText: partialPayload.swimwearRawSelectionText,
-      pollAfterMs: PARTIAL_REGENERATION_POLL_AFTER_MS
-    });
-  } catch (error) {
-    console.error("[wardrobe-ai][regenerate-selected]", error);
-    return res.status(503).json({ error: "service_unavailable" });
   }
+
+  return {
+    getPartialRegenerationJob,
+    startPartialRegenerationJob,
+    regenerateSelectedWardrobeItems
+  };
 }
 
-export { getPartialRegenerationJob, regenerateCapsuleWardrobe, regenerateSelectedWardrobeItems };
+const partialRegenerationService = createPartialRegenerationService();
+const {
+  getPartialRegenerationJob,
+  startPartialRegenerationJob,
+  regenerateSelectedWardrobeItems
+} = partialRegenerationService;
+
+export {
+  createPartialRegenerationService,
+  getPartialRegenerationJob,
+  regenerateCapsuleWardrobe,
+  regenerateSelectedWardrobeItems,
+  startPartialRegenerationJob
+};

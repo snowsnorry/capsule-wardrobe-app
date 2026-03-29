@@ -1,40 +1,45 @@
 const VOYAGE_API_URL = "https://api.voyageai.com/v1/embeddings";
 const DEFAULT_EMBEDDING_MODEL = "voyage-4-large";
 
-function getVoyageApiKey() {
-  const apiKey = process.env.VOYAGE_API_KEY;
-  if (!apiKey) {
-    throw new Error("VOYAGE_API_KEY is not set");
+function createVoyageClient({
+  fetchImpl = fetch,
+  getVoyageApiKeyImpl = () => {
+    const apiKey = process.env.VOYAGE_API_KEY;
+    if (!apiKey) {
+      throw new Error("VOYAGE_API_KEY is not set");
+    }
+    return apiKey;
   }
-  return apiKey;
-}
+} = {}) {
+  async function getPromptEmbeddings(prompt) {
+    const response = await fetchImpl(VOYAGE_API_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${getVoyageApiKeyImpl()}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        input: prompt,
+        model: DEFAULT_EMBEDDING_MODEL,
+        input_type: "query"
+      })
+    });
 
-async function getPromptEmbeddings(prompt) {
-  const response = await fetch(VOYAGE_API_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${getVoyageApiKey()}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      input: prompt,
-      model: DEFAULT_EMBEDDING_MODEL,
-      input_type: "query"
-    })
-  });
+    if (!response.ok) {
+      const details = await response.text();
+      throw new Error(`Failed to compute prompt embeddings: ${response.status} ${details}`);
+    }
 
-  if (!response.ok) {
-    const details = await response.text();
-    throw new Error(`Failed to compute prompt embeddings: ${response.status} ${details}`);
+    const payload = await response.json();
+    const embedding = payload?.data?.[0]?.embedding;
+    if (!Array.isArray(embedding) || embedding.length === 0) {
+      throw new Error("Failed to compute prompt embeddings");
+    }
+
+    return embedding;
   }
 
-  const payload = await response.json();
-  const embedding = payload?.data?.[0]?.embedding;
-  if (!Array.isArray(embedding) || embedding.length === 0) {
-    throw new Error("Failed to compute prompt embeddings");
-  }
-
-  return embedding;
+  return { getPromptEmbeddings };
 }
 
 /**
@@ -105,4 +110,7 @@ function getWardrobePrompt(userProfile = null) {
   return queryParts.join(' ');
 }
 
-export { getPromptEmbeddings, getWardrobePrompt };
+const voyageClient = createVoyageClient();
+const { getPromptEmbeddings } = voyageClient;
+
+export { createVoyageClient, getPromptEmbeddings, getWardrobePrompt };

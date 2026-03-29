@@ -39,56 +39,74 @@ function renderLoginCodeEmailHtml({ code, expiresInMinutes, locale }) {
     .replaceAll("{{EXPIRES_IN_MINUTES}}", safeMinutes);
 }
 
-async function sendLoginCodeEmail({ email, code, locale = "en", expiresInMs = DEFAULT_CODE_TTL_MS }) {
-  const apiKey = getRequiredEnv("RESEND_API_KEY");
-  const from = getRequiredEnv("RESEND_FROM_EMAIL");
-  const expiresInMinutes = Math.max(1, Math.ceil(expiresInMs / (60 * 1000)));
-  const normalizedLocale = locale === "ru" ? "ru" : "en";
-  const html = renderLoginCodeEmailHtml({
+function createEmailSender({
+  fetchImpl = fetch,
+  getRequiredEnvImpl = getRequiredEnv
+} = {}) {
+  return async function sendLoginCodeEmail({
+    email,
     code,
-    expiresInMinutes,
-    locale: normalizedLocale
-  });
-  const subject =
-    normalizedLocale === "ru"
-      ? "Код входа в Capsule Wardrobe"
-      : "Your Capsule Wardrobe sign-in code";
-  const text =
-    normalizedLocale === "ru"
-      ? [
-          `Ваш код для входа: ${code}`,
-          "",
-          `Код действует ${expiresInMinutes} мин.`,
-          "Если вы не запрашивали этот код, просто проигнорируйте письмо."
-        ].join("\n")
-      : [
-          `Your sign-in code is: ${code}`,
-          "",
-          `This code expires in ${expiresInMinutes} minute(s).`,
-          "If you did not request this code, you can ignore this email."
-        ].join("\n");
+    locale = "en",
+    expiresInMs = DEFAULT_CODE_TTL_MS
+  }) {
+    const apiKey = getRequiredEnvImpl("RESEND_API_KEY");
+    const from = getRequiredEnvImpl("RESEND_FROM_EMAIL");
+    const expiresInMinutes = Math.max(1, Math.ceil(expiresInMs / (60 * 1000)));
+    const normalizedLocale = locale === "ru" ? "ru" : "en";
+    const html = renderLoginCodeEmailHtml({
+      code,
+      expiresInMinutes,
+      locale: normalizedLocale
+    });
+    const subject =
+      normalizedLocale === "ru"
+        ? "Код входа в Capsule Wardrobe"
+        : "Your Capsule Wardrobe sign-in code";
+    const text =
+      normalizedLocale === "ru"
+        ? [
+            `Ваш код для входа: ${code}`,
+            "",
+            `Код действует ${expiresInMinutes} мин.`,
+            "Если вы не запрашивали этот код, просто проигнорируйте письмо."
+          ].join("\n")
+        : [
+            `Your sign-in code is: ${code}`,
+            "",
+            `This code expires in ${expiresInMinutes} minute(s).`,
+            "If you did not request this code, you can ignore this email."
+          ].join("\n");
 
-  const response = await fetch(RESEND_API_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      from,
-      to: [email],
-      subject,
-      html,
-      text
-    })
-  });
+    const response = await fetchImpl(RESEND_API_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        from,
+        to: [email],
+        subject,
+        html,
+        text
+      })
+    });
 
-  if (!response.ok) {
-    const details = await response.text();
-    const error = new Error(`Failed to send email via Resend: ${response.status} ${details}`);
-    error.code = "email_send_failed";
-    throw error;
-  }
+    if (!response.ok) {
+      const details = await response.text();
+      const error = new Error(`Failed to send email via Resend: ${response.status} ${details}`);
+      error.code = "email_send_failed";
+      throw error;
+    }
+  };
 }
 
-export { sendLoginCodeEmail };
+const sendLoginCodeEmail = createEmailSender();
+
+export {
+  createEmailSender,
+  escapeHtml,
+  getRequiredEnv,
+  renderLoginCodeEmailHtml,
+  sendLoginCodeEmail
+};

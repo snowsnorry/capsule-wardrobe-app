@@ -1,32 +1,51 @@
 import ollama from "ollama";
 
-async function getPromptEmbeddings(prompt) {
-  const response = await ollama.embeddings({
-    model: "embeddinggemma",
-    prompt
-  });
-  const embedding = response?.embedding;
-  if (!Array.isArray(embedding) || embedding.length === 0) {
-    throw new Error("Failed to compute prompt embeddings");
-  }
-  return embedding;
-}
+const DEFAULT_OLLAMA_EMBEDDING_MODEL = "embeddinggemma";
+const DEFAULT_OLLAMA_CHAT_MODEL = "gemma3:27b";
 
-async function generateJsonWithLlm(prompt) {
-  const response = await ollama.generate({
-    model: "gemma3:27b",
-    prompt,
-    format: "json"
-  });
-
-  let json;
-  try {
-    json = JSON.parse(response?.response || "{}");
-  } catch {
-    throw new Error(`Failed to parse JSON response from ${model}`);
+function createOllamaClient({
+  embeddingsImpl = (payload) => ollama.embeddings(payload),
+  generateImpl = (payload) => ollama.generate(payload)
+} = {}) {
+  async function getPromptEmbeddings(prompt) {
+    const response = await embeddingsImpl({
+      model: DEFAULT_OLLAMA_EMBEDDING_MODEL,
+      prompt
+    });
+    const embedding = response?.embedding;
+    if (!Array.isArray(embedding) || embedding.length === 0) {
+      throw new Error("Failed to compute prompt embeddings");
+    }
+    return embedding;
   }
 
-  return { response, json };
+  async function generateJsonWithLlm(prompt) {
+    const response = await generateImpl({
+      model: DEFAULT_OLLAMA_CHAT_MODEL,
+      prompt,
+      format: "json"
+    });
+
+    let json;
+    try {
+      json = JSON.parse(response?.response || "{}");
+    } catch {
+      throw new Error(`Failed to parse JSON response from ${DEFAULT_OLLAMA_CHAT_MODEL}`);
+    }
+
+    return { response, json };
+  }
+
+  return { generateJsonWithLlm, getPromptEmbeddings };
 }
 
-export { getPromptEmbeddings, generateJsonWithLlm };
+const ollamaClient = createOllamaClient();
+const { getPromptEmbeddings, generateJsonWithLlm } = ollamaClient;
+
+export {
+  createOllamaClient,
+  DEFAULT_OLLAMA_CHAT_MODEL,
+  DEFAULT_OLLAMA_EMBEDDING_MODEL,
+  getPromptEmbeddings,
+  generateJsonWithLlm
+};

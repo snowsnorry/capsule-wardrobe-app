@@ -1,8 +1,12 @@
 import { neon } from "@neondatabase/serverless";
 
 const SEARCH_PAGE_SIZE = 50;
+let sqlClientOverride = null;
 
 function getSqlClient() {
+  if (sqlClientOverride) {
+    return sqlClientOverride;
+  }
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) {
     const error = new Error("DATABASE_URL is not set");
@@ -10,6 +14,10 @@ function getSqlClient() {
     throw error;
   }
   return neon(databaseUrl);
+}
+
+function setSqlClientOverride(client) {
+  sqlClientOverride = client || null;
 }
 
 async function checkDatabaseConnection() {
@@ -1218,6 +1226,7 @@ async function deleteProfileByEmail(email) {
 
 export {
   getSqlClient,
+  setSqlClientOverride,
   checkDatabaseConnection,
   ensureTables,
   pruneLoginCodes,

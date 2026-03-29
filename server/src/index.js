@@ -60,59 +60,6 @@ console.info(
   })
 );
 
-const app = express();
-app.set("trust proxy", 1);
-const googleAuthClient = GOOGLE_CLIENT_ID ? new OAuth2Client(GOOGLE_CLIENT_ID) : null;
-
-app.use(express.json());
-if (NODE_ENV === "production") {
-  app.use(
-    helmet({
-      crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
-      contentSecurityPolicy: {
-        useDefaults: true,
-        directives: {
-          defaultSrc: ["'self'"],
-          scriptSrc: ["'self'", "https://accounts.google.com"],
-          styleSrc: [
-            "'self'",
-            "'unsafe-inline'",
-            "https://fonts.googleapis.com",
-            "https://accounts.google.com"
-          ],
-          imgSrc: ["'self'", "data:", "https:"],
-          fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"],
-          connectSrc: ["'self'", "https:"],
-          frameSrc: ["'self'", "https://accounts.google.com"]
-        }
-      }
-    })
-  );
-} else {
-  app.use(
-    helmet({
-      crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
-      contentSecurityPolicy: false
-    })
-  );
-}
-
-const requestCodeLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 30,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: "too_many_requests" }
-});
-
-const verifyCodeLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 60,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: "too_many_requests" }
-});
-
 function isValidSelection(items, allowedItems) {
   if (!Array.isArray(items) || items.length === 0) {
     return false;
@@ -149,19 +96,6 @@ function isApiPath(pathname = "") {
   );
 }
 
-if (NODE_ENV !== "development") {
-  app.use((req, res, next) => {
-    res.header("Access-Control-Allow-Origin", CLIENT_ORIGIN);
-    res.header("Access-Control-Allow-Credentials", "true");
-    res.header("Access-Control-Allow-Headers", "Content-Type, X-CSRF-Token");
-    res.header("Access-Control-Allow-Methods", "GET,POST,PATCH,DELETE,OPTIONS");
-    if (req.method === "OPTIONS") {
-      return res.sendStatus(204);
-    }
-    return next();
-  });
-}
-
 function parseCookies(cookieHeader = "") {
   return cookieHeader.split(";").reduce((acc, part) => {
     const [key, ...rest] = part.trim().split("=");
@@ -176,8 +110,8 @@ function parseCookies(cookieHeader = "") {
   }, {});
 }
 
-function setSessionCookie(res, sessionId) {
-  const secure = NODE_ENV === "production";
+function setSessionCookie(res, sessionId, nodeEnv = NODE_ENV) {
+  const secure = nodeEnv === "production";
   const sameSite = secure ? "None" : "Lax";
   const parts = [
     `session=${encodeURIComponent(sessionId)}`,
@@ -192,8 +126,8 @@ function setSessionCookie(res, sessionId) {
   res.append("Set-Cookie", parts.join("; "));
 }
 
-function setCsrfCookie(res, csrfToken) {
-  const secure = NODE_ENV === "production";
+function setCsrfCookie(res, csrfToken, nodeEnv = NODE_ENV) {
+  const secure = nodeEnv === "production";
   const sameSite = secure ? "None" : "Lax";
   const parts = [
     `csrf=${encodeURIComponent(csrfToken)}`,
@@ -207,8 +141,8 @@ function setCsrfCookie(res, csrfToken) {
   res.append("Set-Cookie", parts.join("; "));
 }
 
-function clearSessionCookie(res) {
-  const secure = NODE_ENV === "production";
+function clearSessionCookie(res, nodeEnv = NODE_ENV) {
+  const secure = nodeEnv === "production";
   const sameSite = secure ? "None" : "Lax";
 
   const sessionParts = ["session=", "HttpOnly", "Path=/", "Max-Age=0", `SameSite=${sameSite}`];
@@ -223,62 +157,23 @@ function clearSessionCookie(res) {
   res.append("Set-Cookie", csrfParts.join("; "));
 }
 
-function isTrustedOrigin(req) {
+function isTrustedOrigin(req, clientOrigin = CLIENT_ORIGIN) {
   const origin = req.headers.origin;
   const referer = req.headers.referer;
 
   if (origin) {
-    return origin === CLIENT_ORIGIN;
+    return origin === clientOrigin;
   }
 
   if (referer) {
     try {
-      return new URL(referer).origin === CLIENT_ORIGIN;
+      return new URL(referer).origin === clientOrigin;
     } catch {
       return false;
     }
   }
 
   return false;
-}
-
-function requireTrustedOrigin(req, res, next) {
-  if (NODE_ENV === "development") {
-    return next();
-  }
-
-  if (isTrustedOrigin(req)) {
-    return next();
-  }
-
-  return res.status(403).json({ error: "forbidden_origin" });
-}
-
-async function requireAuth(req, res, next) {
-  const cookies = parseCookies(req.headers.cookie);
-  const sessionId = cookies.session;
-  if (!sessionId) {
-    return res.status(401).json({ error: "unauthorized" });
-  }
-
-  let session;
-  try {
-    session = await getSession(sessionId);
-  } catch (error) {
-    console.error("[requireAuth]", error);
-    return res.status(503).json({ error: "service_unavailable" });
-  }
-
-  if (!session) {
-    return res.status(401).json({ error: "unauthorized" });
-  }
-
-  req.user = { email: session.email };
-  req.auth = {
-    sessionId,
-    csrfToken: session.csrfToken
-  };
-  return next();
 }
 
 function readCsrfHeader(req) {
@@ -289,22 +184,158 @@ function readCsrfHeader(req) {
   return String(raw || "").trim();
 }
 
-function requireCsrf(req, res, next) {
-  const cookies = parseCookies(req.headers.cookie);
-  const csrfFromCookie = String(cookies.csrf || "").trim();
-  const csrfFromHeader = readCsrfHeader(req);
-  const csrfFromSession = String(req.auth?.csrfToken || "").trim();
+function createApp({
+  nodeEnv = NODE_ENV,
+  clientOrigin = CLIENT_ORIGIN,
+  authTestMode = AUTH_TEST_MODE,
+  googleClientId = GOOGLE_CLIENT_ID,
+  googleAuthClient = googleClientId ? new OAuth2Client(googleClientId) : null,
+  createPendingCodeImpl = createPendingCode,
+  verifyCodeImpl = verifyCode,
+  createSessionImpl = createSession,
+  getSessionImpl = getSession,
+  revokeSessionImpl = revokeSession,
+  sendLoginCodeEmailImpl = sendLoginCodeEmail,
+  createProfileImpl = createProfile,
+  deleteProfileImpl = deleteProfile,
+  getFormalityLevelsImpl = getFormalityLevels,
+  getStylesImpl = getStyles,
+  getOccasionsImpl = getOccasions,
+  getSeasonsImpl = getSeasons,
+  getAudienceOptionsImpl = getAudienceOptions,
+  getPatternOptionsImpl = getPatternOptions,
+  getProfileImpl = getProfile,
+  hasProfileImpl = hasProfile,
+  updateProfileImpl = updateProfile,
+  updateProfileLocaleImpl = updateProfileLocale,
+  getSearchOptionsImpl = getSearchOptions,
+  getSavedSearchImpl = getSavedSearch,
+  runSavedSearchImpl = runSavedSearch,
+  getWardrobeItemsHandler = getWardrobeItems,
+  regenerateSelectedWardrobeItemsHandler = regenerateSelectedWardrobeItems,
+  downloadWardrobePdfHandler = downloadWardrobePdf,
+  checkDatabaseConnectionImpl = checkDatabaseConnection
+} = {}) {
+  const app = express();
+  app.set("trust proxy", 1);
+  app.use(express.json());
 
-  if (!csrfFromCookie || !csrfFromHeader || !csrfFromSession) {
-    return res.status(403).json({ error: "csrf_invalid" });
+  if (nodeEnv === "production") {
+    app.use(
+      helmet({
+        crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
+        contentSecurityPolicy: {
+          useDefaults: true,
+          directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", "https://accounts.google.com"],
+            styleSrc: [
+              "'self'",
+              "'unsafe-inline'",
+              "https://fonts.googleapis.com",
+              "https://accounts.google.com"
+            ],
+            imgSrc: ["'self'", "data:", "https:"],
+            fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"],
+            connectSrc: ["'self'", "https:"],
+            frameSrc: ["'self'", "https://accounts.google.com"]
+          }
+        }
+      })
+    );
+  } else {
+    app.use(
+      helmet({
+        crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
+        contentSecurityPolicy: false
+      })
+    );
   }
 
-  if (csrfFromCookie !== csrfFromHeader || csrfFromHeader !== csrfFromSession) {
-    return res.status(403).json({ error: "csrf_invalid" });
+  const requestCodeLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 30,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "too_many_requests" }
+  });
+
+  const verifyCodeLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 60,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "too_many_requests" }
+  });
+
+  if (nodeEnv !== "development") {
+    app.use((req, res, next) => {
+      res.header("Access-Control-Allow-Origin", clientOrigin);
+      res.header("Access-Control-Allow-Credentials", "true");
+      res.header("Access-Control-Allow-Headers", "Content-Type, X-CSRF-Token");
+      res.header("Access-Control-Allow-Methods", "GET,POST,PATCH,DELETE,OPTIONS");
+      if (req.method === "OPTIONS") {
+        return res.sendStatus(204);
+      }
+      return next();
+    });
   }
 
-  return next();
-}
+  function requireTrustedOrigin(req, res, next) {
+    if (nodeEnv === "development") {
+      return next();
+    }
+
+    if (isTrustedOrigin(req, clientOrigin)) {
+      return next();
+    }
+
+    return res.status(403).json({ error: "forbidden_origin" });
+  }
+
+  async function requireAuth(req, res, next) {
+    const cookies = parseCookies(req.headers.cookie);
+    const sessionId = cookies.session;
+    if (!sessionId) {
+      return res.status(401).json({ error: "unauthorized" });
+    }
+
+    let session;
+    try {
+      session = await getSessionImpl(sessionId);
+    } catch (error) {
+      console.error("[requireAuth]", error);
+      return res.status(503).json({ error: "service_unavailable" });
+    }
+
+    if (!session) {
+      return res.status(401).json({ error: "unauthorized" });
+    }
+
+    req.user = { email: session.email };
+    req.auth = {
+      sessionId,
+      csrfToken: session.csrfToken
+    };
+    return next();
+  }
+
+  function requireCsrf(req, res, next) {
+    const cookies = parseCookies(req.headers.cookie);
+    const csrfFromCookie = String(cookies.csrf || "").trim();
+    const csrfFromHeader = readCsrfHeader(req);
+    const csrfFromSession = String(req.auth?.csrfToken || "").trim();
+
+    if (!csrfFromCookie || !csrfFromHeader || !csrfFromSession) {
+      return res.status(403).json({ error: "csrf_invalid" });
+    }
+
+    if (csrfFromCookie !== csrfFromHeader || csrfFromHeader !== csrfFromSession) {
+      return res.status(403).json({ error: "csrf_invalid" });
+    }
+
+    return next();
+  }
 
 app.post("/auth/request-code", requestCodeLimiter, async (req, res) => {
   const email = String(req.body?.email || "").trim().toLowerCase();
@@ -316,7 +347,7 @@ app.post("/auth/request-code", requestCodeLimiter, async (req, res) => {
 
   let result;
   try {
-    result = await createPendingCode(email);
+    result = await createPendingCodeImpl(email);
   } catch (error) {
     console.error("[auth/request-code]", error);
     return res.status(503).json({ error: "service_unavailable" });
@@ -331,7 +362,7 @@ app.post("/auth/request-code", requestCodeLimiter, async (req, res) => {
     }
   }
 
-  if (AUTH_TEST_MODE) {
+  if (authTestMode) {
     const expiresInMinutes = Math.max(1, Math.ceil(CODE_TTL_MS / (60 * 1000)));
     console.log(
       `[auth/test-mode] Sign-in code for ${email}: ${result.code} (expires in ${expiresInMinutes} minute(s))`
@@ -340,7 +371,7 @@ app.post("/auth/request-code", requestCodeLimiter, async (req, res) => {
   }
 
   try {
-    await sendLoginCodeEmail({
+    await sendLoginCodeEmailImpl({
       email,
       code: result.code,
       locale: emailLocale,
@@ -362,7 +393,7 @@ app.post("/auth/verify-code", requireTrustedOrigin, verifyCodeLimiter, async (re
 
   let result;
   try {
-    result = await verifyCode(email, code);
+    result = await verifyCodeImpl(email, code);
   } catch (error) {
     console.error("[auth/verify-code]", error);
     return res.status(503).json({ error: "service_unavailable" });
@@ -380,15 +411,15 @@ app.post("/auth/verify-code", requireTrustedOrigin, verifyCodeLimiter, async (re
 
   let created;
   try {
-    created = await createSession(email);
+    created = await createSessionImpl(email);
   } catch (error) {
     console.error("[auth/create-session]", error);
     return res.status(503).json({ error: "service_unavailable" });
   }
 
   const { sessionId, session } = created;
-  setSessionCookie(res, sessionId);
-  setCsrfCookie(res, session.csrfToken);
+  setSessionCookie(res, sessionId, nodeEnv);
+  setCsrfCookie(res, session.csrfToken, nodeEnv);
   return res.json({ ok: true, user: { email: session.email } });
 });
 
@@ -419,9 +450,9 @@ app.post("/auth/google", requireTrustedOrigin, async (req, res) => {
   }
 
   try {
-    const { sessionId, session } = await createSession(email);
-    setSessionCookie(res, sessionId);
-    setCsrfCookie(res, session.csrfToken);
+    const { sessionId, session } = await createSessionImpl(email);
+    setSessionCookie(res, sessionId, nodeEnv);
+    setCsrfCookie(res, session.csrfToken, nodeEnv);
     return res.json({ ok: true, user: { email } });
   } catch (error) {
     console.error("[auth/google-create-session]", error);
@@ -431,12 +462,12 @@ app.post("/auth/google", requireTrustedOrigin, async (req, res) => {
 
 app.post("/auth/logout", requireTrustedOrigin, requireAuth, requireCsrf, async (req, res) => {
   try {
-    await revokeSession(req.auth.sessionId);
+    await revokeSessionImpl(req.auth.sessionId);
   } catch (error) {
     console.error("[auth/logout]", error);
     return res.status(503).json({ error: "service_unavailable" });
   }
-  clearSessionCookie(res);
+  clearSessionCookie(res, nodeEnv);
   return res.json({ ok: true });
 });
 
@@ -446,7 +477,7 @@ app.get("/auth/me", requireAuth, (req, res) => {
 
 app.get("/profile/status", requireAuth, async (req, res) => {
   try {
-    const exists = await hasProfile(req.user.email);
+    const exists = await hasProfileImpl(req.user.email);
     return res.json({ ok: true, hasProfile: exists });
   } catch (error) {
     console.error("[profile/status]", error);
@@ -456,7 +487,7 @@ app.get("/profile/status", requireAuth, async (req, res) => {
 
 app.get("/profile/me", requireAuth, async (req, res) => {
   try {
-    const profile = await getProfile(req.user.email);
+    const profile = await getProfileImpl(req.user.email);
     if (!profile) {
       return res.status(404).json({ error: "not_found" });
     }
@@ -469,7 +500,7 @@ app.get("/profile/me", requireAuth, async (req, res) => {
 
 app.get("/profile/formality-levels", requireAuth, async (req, res) => {
   try {
-    const items = await getFormalityLevels(req.user.email);
+    const items = await getFormalityLevelsImpl(req.user.email);
     return res.json({ ok: true, items });
   } catch (error) {
     console.error("[profile/formality-levels]", error);
@@ -479,7 +510,7 @@ app.get("/profile/formality-levels", requireAuth, async (req, res) => {
 
 app.get("/profile/styles", requireAuth, async (req, res) => {
   try {
-    const items = await getStyles(req.user.email);
+    const items = await getStylesImpl(req.user.email);
     return res.json({ ok: true, items });
   } catch (error) {
     console.error("[profile/styles]", error);
@@ -489,7 +520,7 @@ app.get("/profile/styles", requireAuth, async (req, res) => {
 
 app.get("/profile/occasions", requireAuth, async (req, res) => {
   try {
-    const items = await getOccasions(req.user.email);
+    const items = await getOccasionsImpl(req.user.email);
     return res.json({ ok: true, items });
   } catch (error) {
     console.error("[profile/occasions]", error);
@@ -499,7 +530,7 @@ app.get("/profile/occasions", requireAuth, async (req, res) => {
 
 app.get("/profile/seasons", requireAuth, async (req, res) => {
   try {
-    const items = await getSeasons(req.user.email);
+    const items = await getSeasonsImpl(req.user.email);
     return res.json({ ok: true, items });
   } catch (error) {
     console.error("[profile/seasons]", error);
@@ -508,12 +539,12 @@ app.get("/profile/seasons", requireAuth, async (req, res) => {
 });
 
 app.get("/profile/audience", requireAuth, (req, res) => {
-  res.json({ ok: true, items: getAudienceOptions() });
+  res.json({ ok: true, items: getAudienceOptionsImpl() });
 });
 
 app.get("/profile/patterns", requireAuth, async (req, res) => {
   try {
-    const items = await getPatternOptions(req.user.email);
+    const items = await getPatternOptionsImpl(req.user.email);
     return res.json({ ok: true, items });
   } catch (error) {
     console.error("[profile/patterns]", error);
@@ -521,19 +552,19 @@ app.get("/profile/patterns", requireAuth, async (req, res) => {
   }
 });
 
-app.post("/wardrobe/items", requireTrustedOrigin, requireAuth, requireCsrf, getWardrobeItems);
+app.post("/wardrobe/items", requireTrustedOrigin, requireAuth, requireCsrf, getWardrobeItemsHandler);
 app.post(
   "/wardrobe/items/regenerate-selected",
   requireTrustedOrigin,
   requireAuth,
   requireCsrf,
-  regenerateSelectedWardrobeItems
+  regenerateSelectedWardrobeItemsHandler
 );
-app.post("/wardrobe/items/pdf", requireTrustedOrigin, requireAuth, requireCsrf, downloadWardrobePdf);
+app.post("/wardrobe/items/pdf", requireTrustedOrigin, requireAuth, requireCsrf, downloadWardrobePdfHandler);
 
 app.get("/search/options", requireAuth, async (req, res) => {
   try {
-    const options = await getSearchOptions(req.user.email);
+    const options = await getSearchOptionsImpl(req.user.email);
     return res.json({ ok: true, ...options });
   } catch (error) {
     console.error("[search/options]", error);
@@ -543,7 +574,7 @@ app.get("/search/options", requireAuth, async (req, res) => {
 
 app.get("/search/me", requireAuth, async (req, res) => {
   try {
-    const search = await getSavedSearch(req.user.email);
+    const search = await getSavedSearchImpl(req.user.email);
     return res.json({ ok: true, search });
   } catch (error) {
     console.error("[search/me]", error);
@@ -553,7 +584,7 @@ app.get("/search/me", requireAuth, async (req, res) => {
 
 app.post("/search/run", requireTrustedOrigin, requireAuth, requireCsrf, async (req, res) => {
   try {
-    const result = await runSavedSearch(req.user.email, req.body || {});
+    const result = await runSavedSearchImpl(req.user.email, req.body || {});
     return res.json({ ok: true, ...result });
   } catch (error) {
     if (error?.code === "invalid_payload" || error?.message === "invalid_payload") {
@@ -578,11 +609,11 @@ app.post("/profile/initialize", requireTrustedOrigin, requireAuth, requireCsrf, 
   const pattern = parseOptionalSelection(req.body?.pattern);
   const locale = String(req.body?.locale || "").trim().toLowerCase();
   const [allowedFormalityLevels, allowedStyles, allowedOccasions, allowedSeasons, allowedPatterns] = await Promise.all([
-    getFormalityLevels(req.user.email),
-    getStyles(req.user.email),
-    getOccasions(req.user.email),
-    getSeasons(req.user.email),
-    getPatternOptions(req.user.email)
+    getFormalityLevelsImpl(req.user.email),
+    getStylesImpl(req.user.email),
+    getOccasionsImpl(req.user.email),
+    getSeasonsImpl(req.user.email),
+    getPatternOptionsImpl(req.user.email)
   ]);
 
   if (
@@ -590,7 +621,7 @@ app.post("/profile/initialize", requireTrustedOrigin, requireAuth, requireCsrf, 
     !isValidOptionalSingleSelection(style, allowedStyles) ||
     !isValidSelection(occasions, allowedOccasions) ||
     !isValidSelection(season, allowedSeasons) ||
-    !isValidSingleSelection(audience, getAudienceOptions()) ||
+    !isValidSingleSelection(audience, getAudienceOptionsImpl()) ||
     !isValidOptionalSingleSelection(color, ACCENT_COLOR_OPTIONS) ||
     !isValidOptionalSingleSelection(pattern, allowedPatterns) ||
     !SUPPORTED_LOCALES.has(locale)
@@ -599,7 +630,7 @@ app.post("/profile/initialize", requireTrustedOrigin, requireAuth, requireCsrf, 
   }
 
   try {
-    const profile = await createProfile(req.user.email, {
+    const profile = await createProfileImpl(req.user.email, {
       formalityLevel,
       style,
       occasions,
@@ -633,11 +664,11 @@ app.patch("/profile/me", requireTrustedOrigin, requireAuth, requireCsrf, async (
   const pattern = parseOptionalSelection(req.body?.pattern);
   const locale = String(req.body?.locale || "").trim().toLowerCase();
   const [allowedFormalityLevels, allowedStyles, allowedOccasions, allowedSeasons, allowedPatterns] = await Promise.all([
-    getFormalityLevels(req.user.email),
-    getStyles(req.user.email),
-    getOccasions(req.user.email),
-    getSeasons(req.user.email),
-    getPatternOptions(req.user.email)
+    getFormalityLevelsImpl(req.user.email),
+    getStylesImpl(req.user.email),
+    getOccasionsImpl(req.user.email),
+    getSeasonsImpl(req.user.email),
+    getPatternOptionsImpl(req.user.email)
   ]);
 
   if (
@@ -645,7 +676,7 @@ app.patch("/profile/me", requireTrustedOrigin, requireAuth, requireCsrf, async (
     !isValidOptionalSingleSelection(style, allowedStyles) ||
     !isValidSelection(occasions, allowedOccasions) ||
     !isValidSelection(season, allowedSeasons) ||
-    !isValidSingleSelection(audience, getAudienceOptions()) ||
+    !isValidSingleSelection(audience, getAudienceOptionsImpl()) ||
     !isValidOptionalSingleSelection(color, ACCENT_COLOR_OPTIONS) ||
     !isValidOptionalSingleSelection(pattern, allowedPatterns) ||
     !SUPPORTED_LOCALES.has(locale)
@@ -654,7 +685,7 @@ app.patch("/profile/me", requireTrustedOrigin, requireAuth, requireCsrf, async (
   }
 
   try {
-    const profile = await updateProfile(req.user.email, {
+    const profile = await updateProfileImpl(req.user.email, {
       formalityLevel,
       style,
       occasions,
@@ -681,7 +712,7 @@ app.patch("/profile/locale", requireTrustedOrigin, requireAuth, requireCsrf, asy
   }
 
   try {
-    const profile = await updateProfileLocale(req.user.email, locale);
+    const profile = await updateProfileLocaleImpl(req.user.email, locale);
     if (!profile) {
       return res.status(404).json({ error: "not_found" });
     }
@@ -694,7 +725,7 @@ app.patch("/profile/locale", requireTrustedOrigin, requireAuth, requireCsrf, asy
 
 app.delete("/profile/me", requireTrustedOrigin, requireAuth, requireCsrf, async (req, res) => {
   try {
-    const deleted = await deleteProfile(req.user.email);
+    const deleted = await deleteProfileImpl(req.user.email);
     if (!deleted) {
       return res.status(404).json({ error: "not_found" });
     }
@@ -711,7 +742,7 @@ app.get("/health", (req, res) => {
 
 app.get("/healthall", async (req, res) => {
   try {
-    await checkDatabaseConnection();
+    await checkDatabaseConnectionImpl();
     return res.json({ ok: true });
   } catch (error) {
     console.error("[healthall]", error);
@@ -719,10 +750,20 @@ app.get("/healthall", async (req, res) => {
   }
 });
 
-const startServer = async () => {
-  await ensureTables();
+  return app;
+}
 
-  if (NODE_ENV === "development") {
+const app = createApp();
+
+const startServer = async ({
+  appInstance = app,
+  nodeEnv = NODE_ENV,
+  ensureTablesImpl = ensureTables,
+  port = PORT
+} = {}) => {
+  await ensureTablesImpl();
+
+  if (nodeEnv === "development") {
     const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       root: CLIENT_ROOT,
@@ -735,9 +776,9 @@ const startServer = async () => {
         }
       }
     });
-    app.use(vite.middlewares);
+    appInstance.use(vite.middlewares);
 
-    app.use("*", async (req, res, next) => {
+    appInstance.use("*", async (req, res, next) => {
       if (isApiPath(req.path)) {
         return next();
       }
@@ -754,9 +795,9 @@ const startServer = async () => {
       return undefined;
     });
   } else if (fs.existsSync(CLIENT_DIST_PATH)) {
-    app.use(express.static(CLIENT_DIST_PATH));
+    appInstance.use(express.static(CLIENT_DIST_PATH));
 
-    app.get("*", (req, res) => {
+    appInstance.get("*", (req, res) => {
       if (isApiPath(req.path)) {
         return res.status(404).json({ error: "not_found" });
       }
@@ -764,9 +805,16 @@ const startServer = async () => {
     });
   }
 
-  app.listen(PORT, () => {
-    console.log(`Server listening on http://localhost:${PORT}`);
+  return appInstance.listen(port, () => {
+    console.log(`Server listening on http://localhost:${port}`);
   });
 };
 
-startServer();
+if (process.env.NODE_ENV !== "test") {
+  startServer().catch((error) => {
+    console.error("[server/start]", error);
+    process.exitCode = 1;
+  });
+}
+
+export { app, createApp, startServer };

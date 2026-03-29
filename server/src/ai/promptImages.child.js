@@ -10,45 +10,62 @@ const PROMPT_CATEGORY_DOWNLOAD_CONCURRENCY = Number.parseInt(process.env.PROMPT_
 
 configureSharp(PROMPT_CATEGORY_SHARP_CONCURRENCY);
 
-let handled = false;
+function createPromptImagesChildRuntime({
+  buildPromptDebugImagesImpl = buildPromptDebugImages,
+  serializePromptDebugImagesForIpcImpl = serializePromptDebugImagesForIpc,
+  sendImpl = process.send?.bind(process),
+  disconnectImpl = process.disconnect?.bind(process),
+  exitImpl = (code) => process.exit(code)
+} = {}) {
+  let handled = false;
 
-function sendFinalMessage(message, exitCode) {
-  if (!process.send) {
-    process.exit(exitCode);
-    return;
-  }
+  function sendFinalMessage(message, exitCode) {
+    if (!sendImpl) {
+      exitImpl(exitCode);
+      return;
+    }
 
-  process.send(message, () => {
-    process.disconnect?.();
-    process.exit(exitCode);
-  });
-}
-
-async function handleMessage(message) {
-  if (handled) {
-    return;
-  }
-  handled = true;
-
-  try {
-    const result = await buildPromptDebugImages({
-      normalizedItems: Array.isArray(message?.normalizedItems) ? message.normalizedItems : [],
-      saveDebugArtifacts: false
+    sendImpl(message, () => {
+      disconnectImpl?.();
+      exitImpl(exitCode);
     });
-
-    sendFinalMessage({
-      ok: true,
-      ...serializePromptDebugImagesForIpc(result)
-    }, 0);
-  } catch (error) {
-    sendFinalMessage({
-      ok: false,
-      message: error?.message || "unknown_error",
-      stack: typeof error?.stack === "string" ? error.stack : null
-    }, 1);
   }
+
+  async function handleMessage(message) {
+    if (handled) {
+      return;
+    }
+    handled = true;
+
+    try {
+      const result = await buildPromptDebugImagesImpl({
+        normalizedItems: Array.isArray(message?.normalizedItems) ? message.normalizedItems : [],
+        saveDebugArtifacts: false
+      });
+
+      sendFinalMessage({
+        ok: true,
+        ...serializePromptDebugImagesForIpcImpl(result)
+      }, 0);
+    } catch (error) {
+      sendFinalMessage({
+        ok: false,
+        message: error?.message || "unknown_error",
+        stack: typeof error?.stack === "string" ? error.stack : null
+      }, 1);
+    }
+  }
+
+  return {
+    handleMessage,
+    sendFinalMessage
+  };
 }
+
+const promptImagesChildRuntime = createPromptImagesChildRuntime();
 
 process.once("message", (message) => {
-  handleMessage(message);
+  promptImagesChildRuntime.handleMessage(message);
 });
+
+export { createPromptImagesChildRuntime };
