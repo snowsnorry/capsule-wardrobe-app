@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 import { getProductsByIdsInOrder, getSqlClient } from "../db.js";
-import { getProfile, updateProfileItems } from "../profileStore.js";
+import { getProfile, updateProfileItems, updateProfileRejected } from "../profileStore.js";
 import { getCapsuleCategories } from "./categories.js";
 import {
   buildCapsuleSchema,
@@ -271,6 +271,10 @@ async function regenerateCapsuleWardrobe(userProfile = null, products = null, lo
   const audienceFilters = audienceByProfile[userProfile?.audience] || audienceByProfile.any;
   const color = userProfile?.color ?? null;
   const pattern = userProfile?.pattern ?? null;
+  const rejectedIds = Array.isArray(userProfile?.rejected)
+    ? userProfile.rejected.map((itemId) => String(itemId || "").trim()).filter(Boolean)
+    : [];
+  const excludedIds = [...new Set([...storedWardrobeProductIds, ...rejectedIds])];
   const embeddingVector = `[${promptEmbeddings.join(",")}]`;
   const noiseFactor = 0.05;
 
@@ -371,7 +375,7 @@ async function regenerateCapsuleWardrobe(userProfile = null, products = null, lo
               -- HARD FILTERS
               category = cats.target_category
               AND lower(COALESCE(audience, '')) = ANY(${audienceFilters}::text[])
-              AND NOT (products.id::text = ANY(${storedWardrobeProductIds}::text[]))
+              AND NOT (products.id::text = ANY(${excludedIds}::text[]))
           ) raw_scored
         ) filtered_items
         WHERE
@@ -662,6 +666,10 @@ async function regenerateSelectedWardrobeItems(req, res) {
     if (selectedProducts.length !== itemIds.length) {
       return res.status(400).json({ error: "invalid_payload" });
     }
+    const nextRejectedIds = [...new Set([
+      ...(Array.isArray(profile?.rejected) ? profile.rejected : []),
+      ...itemIds
+    ].map((itemId) => String(itemId || "").trim()).filter(Boolean))];
 
     const selectedItemIdSet = new Set(itemIds);
     const partialItems = storedWardrobe.items.filter((item) => !selectedItemIdSet.has(String(item?.id || "").trim()));
@@ -677,8 +685,15 @@ async function regenerateSelectedWardrobeItems(req, res) {
       source: "partial-regeneration"
     };
     logWardrobeInfo("regenerate-request-received", {itemIds}, logContext);
+    await updateProfileRejected(email, nextRejectedIds);
     await updateProfileItems(email, partialPayload);
-    startPartialRegenerationJob(email, { ...profile, items: partialPayload }, selectedProducts, storedWardrobe, logContext);
+    startPartialRegenerationJob(
+      email,
+      { ...profile, items: partialPayload, rejected: nextRejectedIds },
+      selectedProducts,
+      storedWardrobe,
+      logContext
+    );
 
     return res.status(202).json({
       ok: true,

@@ -429,6 +429,9 @@ async function generateCapsuleWardrobe(userProfile = null, logContext = null) {
   const audienceFilters = audienceByProfile[userProfile?.audience] || audienceByProfile.any;
   const color = userProfile?.color ?? null;
   const pattern = userProfile?.pattern ?? null;
+  const rejectedIds = Array.isArray(userProfile?.rejected)
+    ? userProfile.rejected.map((itemId) => String(itemId || "").trim()).filter(Boolean)
+    : [];
   const embeddingVector = `[${promptEmbeddings.join(",")}]`;
   const noiseFactor = 0.05;
 
@@ -529,6 +532,7 @@ async function generateCapsuleWardrobe(userProfile = null, logContext = null) {
               -- HARD FILTERS
               category = cats.target_category
               AND lower(COALESCE(audience, '')) = ANY(${audienceFilters}::text[])
+              AND NOT (products.id::text = ANY(${rejectedIds}::text[]))
           ) raw_scored
         ) filtered_items
         WHERE

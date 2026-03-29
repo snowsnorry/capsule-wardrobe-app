@@ -8,6 +8,7 @@ import {
   hasProfileByEmail,
   updateProfileRecord,
   updateProfilePdfByEmail,
+  updateProfileRejectedByEmail,
   updateProfileLocaleByEmail,
   updateProfileItemsByEmail
 } from "./db.js";
@@ -166,6 +167,11 @@ function normalizeProfileRecord(profile) {
     style: normalizeStyle(profile.style),
     audience: normalizeWardrobeAudience(profile.audience),
     color: normalizeAccentColor(profile.color),
+    rejected: dedupeStrings(
+      Array.isArray(profile.rejected)
+        ? profile.rejected.map((value) => String(value || "").trim())
+        : []
+    ),
     pattern: typeof profile.pattern === "string" && profile.pattern.trim()
       ? profile.pattern.trim().toLowerCase()
       : null
@@ -235,6 +241,10 @@ async function updateProfileItems(email, items) {
   return updateProfileItemsByEmail({ email, items });
 }
 
+async function updateProfileRejected(email, rejected) {
+  return updateProfileRejectedByEmail({ email, rejected });
+}
+
 async function getProfilePdf(email) {
   return getProfilePdfByEmail(email);
 }
@@ -252,6 +262,7 @@ export {
   updateProfileLocale,
   deleteProfile,
   updateProfileItems,
+  updateProfileRejected,
   getProfilePdf,
   updateProfilePdf,
   getFormalityLevels,

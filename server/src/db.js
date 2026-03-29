@@ -65,16 +65,13 @@ async function ensureProfilesTable() {
       audience text not null default 'any',
       color text null,
       pattern text null,
+      rejected text[] not null default '{}'::text[],
       items jsonb null,
       pdf bytea null,
       locale text not null,
       created_at timestamptz not null default now(),
       updated_at timestamptz not null default now()
     )
-  `;
-  await sql`
-    alter table profiles
-    add column if not exists pdf bytea null
   `;
 }
 
@@ -868,6 +865,7 @@ async function getProfileByEmail(email) {
       audience,
       color,
       pattern,
+      rejected,
       items,
       locale,
       created_at as "createdAt",
@@ -901,6 +899,7 @@ async function createProfileRecord({
       audience,
       color,
       pattern,
+      rejected,
       items,
       locale
     )
@@ -913,6 +912,7 @@ async function createProfileRecord({
       ${audience},
       ${color},
       ${pattern},
+      '{}'::text[],
       null,
       ${locale}
     )
@@ -926,6 +926,7 @@ async function createProfileRecord({
       audience,
       color,
       pattern,
+      rejected,
       items,
       locale,
       created_at as "createdAt",
@@ -960,6 +961,17 @@ async function updateProfileRecord({
         then null
         else items
       end,
+      rejected = case
+        when formality_level is distinct from ${formalityLevel}
+          or style is distinct from ${style}
+          or occasions is distinct from ${occasions}
+          or season is distinct from ${season}
+          or audience is distinct from ${audience}
+          or color is distinct from ${color}
+          or pattern is distinct from ${pattern}
+        then '{}'::text[]
+        else rejected
+      end,
       formality_level = ${formalityLevel},
       style = ${style},
       occasions = ${occasions},
@@ -991,6 +1003,7 @@ async function updateProfileRecord({
       audience,
       color,
       pattern,
+      rejected,
       items,
       locale,
       created_at as "createdAt",
@@ -1021,6 +1034,7 @@ async function updateProfileLocaleByEmail({ email, locale }) {
       audience,
       color,
       pattern,
+      rejected,
       items,
       locale,
       created_at as "createdAt",
@@ -1047,6 +1061,7 @@ async function updateProfileItemsByEmail({ email, items }) {
       audience,
       color,
       pattern,
+      rejected,
       items,
       locale,
       created_at as "createdAt",
@@ -1067,6 +1082,7 @@ async function getProfileWithPdfByEmail(email) {
       audience,
       color,
       pattern,
+      rejected,
       items,
       locale,
       pdf,
@@ -1075,6 +1091,37 @@ async function getProfileWithPdfByEmail(email) {
     from profiles
     where email = ${email}
     limit 1
+  `;
+  return row || null;
+}
+
+async function updateProfileRejectedByEmail({ email, rejected }) {
+  const sql = getSqlClient();
+  const normalizedRejected = [...new Set(
+    (Array.isArray(rejected) ? rejected : [])
+      .map((value) => String(value || "").trim())
+      .filter(Boolean)
+  )];
+  const [row] = await sql`
+    update profiles
+    set
+      rejected = ${normalizedRejected},
+      updated_at = now()
+    where email = ${email}
+    returning
+      email,
+      formality_level as "formalityLevel",
+      style,
+      occasions,
+      season,
+      audience,
+      color,
+      pattern,
+      rejected,
+      items,
+      locale,
+      created_at as "createdAt",
+      updated_at as "updatedAt"
   `;
   return row || null;
 }
@@ -1175,6 +1222,7 @@ export {
   updateProfileRecord,
   updateProfileLocaleByEmail,
   updateProfileItemsByEmail,
+  updateProfileRejectedByEmail,
   getProfilePdfByEmail,
   updateProfilePdfByEmail,
   hasAffectedRows,
