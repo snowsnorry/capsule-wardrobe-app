@@ -157,6 +157,9 @@ test("index routes expose health checks and protected auth status", async (t) =>
 });
 
 test("index routes map auth request-code branches", async (t) => {
+  t.mock.method(console, "log", () => {});
+  t.mock.method(console, "error", () => {});
+
   const invalidServer = await startTestServer(t);
   const invalid = await requestJson(invalidServer.baseUrl, "/auth/request-code", {
     method: "POST",
@@ -296,6 +299,8 @@ test("index routes map auth verify-code branches and set cookies on success", as
 });
 
 test("index routes cover google auth not-configured, invalid token, and success", async (t) => {
+  t.mock.method(console, "error", () => {});
+
   const missingConfigServer = await startTestServer(t, {
     googleClientId: "",
     googleAuthClient: null
@@ -664,6 +669,8 @@ test("index routes cover wardrobe handlers and search endpoints", async (t) => {
 });
 
 test("index routes map search and health dependency failures", async (t) => {
+  t.mock.method(console, "error", () => {});
+
   const failingSearchServer = await startTestServer(t, {
     overrides: {
       runSavedSearchImpl: async () => {
