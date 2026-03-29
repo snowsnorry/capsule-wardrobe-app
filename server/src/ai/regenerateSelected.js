@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
-import { getSqlClient } from "../db.js";
+import { getProductsByIdsInOrder, getSqlClient } from "../db.js";
 import { getProfile, updateProfileItems } from "../profileStore.js";
 import { getCapsuleCategories } from "./categories.js";
 import {
@@ -94,10 +94,14 @@ function getCategoryListText(categories) {
 function simplifyPromptItems(items = []) {
   return items.map((item) => {
     const colorParts = [
-      Array.isArray(item?.color_base) ? item.color_base.join(", ") : "",
+      Array.isArray(item?.color_base)
+        ? item.color_base.join(", ")
+        : Array.isArray(item?.colorBase)
+          ? item.colorBase.join(", ")
+          : "",
       typeof item?.pattern === "string" ? item.pattern.trim() : "",
       typeof item?.finish === "string" ? item.finish.trim() : "",
-      item?.is_neutral ? "neutral" : ""
+      item?.is_neutral || item?.isNeutral ? "neutral" : ""
     ].filter(Boolean);
 
     return {
@@ -105,7 +109,11 @@ function simplifyPromptItems(items = []) {
       name: item?.name ?? "",
       type: item?.category ?? "",
       color: colorParts.join(", "),
-      formality_level: Array.isArray(item?.formality_level) ? item.formality_level : [],
+      formality_level: Array.isArray(item?.formality_level)
+        ? item.formality_level
+        : Array.isArray(item?.formalityLevel)
+          ? item.formalityLevel
+          : [],
       style: Array.isArray(item?.style) ? item.style : [],
       materials: item?.composition || "",
       fit: typeof item?.fit === "string" ? item.fit.trim() : "",
@@ -223,6 +231,9 @@ async function regenerateCapsuleWardrobe(userProfile = null, products = null, lo
   const currentCapsuleItems = Array.isArray(storedWardrobe?.items)
     ? storedWardrobe.items.filter((item) => !selectedProductIdSet.has(String(item?.id || "").trim()))
     : [];
+  const currentCapsulePromptItems = await getProductsByIdsInOrder(
+    currentCapsuleItems.map((item) => String(item?.id || "").trim()).filter(Boolean)
+  );
   const selectedCategoryCounts = selectedProducts.reduce((result, item) => {
     const category = String(item?.category || "").trim();
     if (!category) {
@@ -462,7 +473,7 @@ async function regenerateCapsuleWardrobe(userProfile = null, products = null, lo
   const selectionPrompt = buildRegenerateSelectedPrompt(
     userProfile,
     normalizedItems,
-    currentCapsuleItems,
+    currentCapsulePromptItems,
     capsuleCategories
   );
   writeFileSync(new URL("../../../last_prompt.txt", import.meta.url), selectionPrompt, "utf8");
