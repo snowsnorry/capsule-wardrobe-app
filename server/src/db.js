@@ -594,6 +594,34 @@ async function getProductsByIdsInOrder(ids = []) {
   `;
 }
 
+async function getProductsWithEmbeddingsByIdsInOrder(ids = []) {
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return [];
+  }
+
+  const sql = getSqlClient();
+  const normalizedIds = ids
+    .map((value) => String(value || "").trim())
+    .filter(Boolean);
+
+  if (normalizedIds.length === 0) {
+    return [];
+  }
+
+  return sql`
+    select
+      products.*,
+      products.image_url as "imageUrl",
+      products.formality_level as "formalityLevel",
+      products.color_base as "colorBase",
+      products.is_neutral as "isNeutral",
+      products.closure_type as "closureType"
+    from unnest(${normalizedIds}::text[]) with ordinality as selected(id, position)
+    join products on products.id::text = selected.id
+    order by selected.position asc
+  `;
+}
+
 async function getSearchByEmail(email) {
   const sql = getSqlClient();
   const [row] = await sql`
@@ -1213,6 +1241,7 @@ export {
   getDistinctProductColors,
   getProductPriceRange,
   getProductsByIdsInOrder,
+  getProductsWithEmbeddingsByIdsInOrder,
   getSearchByEmail,
   upsertSearchByEmail,
   searchProducts,

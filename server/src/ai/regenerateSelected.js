@@ -1,6 +1,10 @@
 import crypto from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
-import { getProductsByIdsInOrder, getSqlClient } from "../db.js";
+import {
+  getProductsByIdsInOrder,
+  getProductsWithEmbeddingsByIdsInOrder,
+  getSqlClient
+} from "../db.js";
 import { getProfile, updateProfileItems, updateProfileRejected } from "../profileStore.js";
 import { getCapsuleCategories } from "./categories.js";
 import {
@@ -13,6 +17,7 @@ import {
   buildPromptDebugImagesInChild
 } from "./promptImages.js";
 import { runWithImageWorkSlot } from "./imagePipeline.js";
+import { buildShiftedTargetVector, normalizeEmbeddingVector } from "./vectorMath.js";
 import { getPromptEmbeddings, getWardrobePrompt } from "./voyageai.js";
 import {
   countItemsByKey,
@@ -275,7 +280,13 @@ async function regenerateCapsuleWardrobe(userProfile = null, products = null, lo
     ? userProfile.rejected.map((itemId) => String(itemId || "").trim()).filter(Boolean)
     : [];
   const excludedIds = [...new Set([...storedWardrobeProductIds, ...rejectedIds])];
-  const embeddingVector = `[${promptEmbeddings.join(",")}]`;
+  const negativePromptingIds = [...new Set([...rejectedIds, ...selectedProductIds])];
+  const rejectedProducts = await getProductsWithEmbeddingsByIdsInOrder(negativePromptingIds);
+  const rejectedVectors = rejectedProducts
+    .map((product) => normalizeEmbeddingVector(product?.embedding))
+    .filter(Boolean);
+  const shiftedPromptEmbeddings = buildShiftedTargetVector(promptEmbeddings, rejectedVectors, 0.3);
+  const embeddingVector = `[${shiftedPromptEmbeddings.join(",")}]`;
   const noiseFactor = 0.05;
 
   const sqlStartedAt = Date.now();
