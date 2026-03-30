@@ -58,8 +58,8 @@ function MainScreen({
   onApplyFilters,
   onResetFilters,
   onNavigateApp,
-  selectedRegenerationIds,
-  partialRegenerationPendingIds,
+  selectedRegenerationUrls,
+  partialRegenerationPendingUrls,
   onToggleRegenerationSelection,
   onCancelRegenerationSelection,
   onRegenerateSelectedItems,
@@ -70,7 +70,7 @@ function MainScreen({
   const isMobile = useMediaQuery(theme.breakpoints.down("lg"));
   const [isSignOutOpen, setIsSignOutOpen] = useState(false);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
-  const selectedCount = selectedRegenerationIds.length;
+  const selectedCount = selectedRegenerationUrls.length;
 
   const handleConfirmSignOut = () => {
     setIsSignOutOpen(false);
@@ -234,22 +234,22 @@ function MainScreen({
                 }}
                 >
                 {items.map((item) => {
-                  const itemId = String(item?.id || "");
-                  if (partialRegenerationPendingIds.includes(itemId)) {
+                  const itemUrl = String(item?.url || "");
+                  if (partialRegenerationPendingUrls.includes(itemUrl)) {
                     return (
                       <ClothingPlaceholderCard
-                        key={`pending-${item.id || item.url}`}
-                        placeholderKey={`pending-${item.id || item.url}`}
+                        key={`pending-${item.url || item.id}`}
+                        placeholderKey={`pending-${item.url || item.id}`}
                       />
                     );
                   }
 
                   return (
                     <ClothingCard
-                      key={item.id || item.url}
+                      key={item.url || item.id}
                       item={item}
-                      isSelectable={Boolean(itemId)}
-                      isSelected={selectedRegenerationIds.includes(itemId)}
+                      isSelectable={Boolean(itemUrl)}
+                      isSelected={selectedRegenerationUrls.includes(itemUrl)}
                       isRegenerating={isPartialRegenerationLoading}
                       onToggleSelected={onToggleRegenerationSelection}
                       isMobile={isMobile}

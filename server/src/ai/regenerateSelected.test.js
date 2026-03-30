@@ -24,12 +24,12 @@ function createStoredProfile() {
   return {
     audience: "woman",
     season: ["summer"],
-    rejected: ["old-1"],
+    rejected: ["https://example.com/old-1"],
     items: {
       items: [
-        { id: "top-1", category: "top" },
-        { id: "bottom-1", category: "bottom" },
-        { id: "bag-1", category: "bag" }
+        { id: "top-1", url: "https://example.com/top-1", category: "top" },
+        { id: "bottom-1", url: "https://example.com/bottom-1", category: "bottom" },
+        { id: "bag-1", url: "https://example.com/bag-1", category: "bag" }
       ],
       reasoning: "capsule-json",
       rawSelectionText: "capsule-raw",
@@ -44,7 +44,7 @@ test("regenerateSelectedWardrobeItems returns pending payload when job is alread
     ["person@example.com", {
       status: "pending",
       updatedAt: Date.now(),
-      pendingItemIds: ["top-1"]
+      pendingItemUrls: ["https://example.com/top-1"]
     }]
   ]);
   const service = createPartialRegenerationService({
@@ -55,12 +55,12 @@ test("regenerateSelectedWardrobeItems returns pending payload when job is alread
 
   await service.regenerateSelectedWardrobeItems({
     user: { email: "person@example.com" },
-    body: { itemIds: ["top-1"] }
+    body: { itemUrls: ["https://example.com/top-1"] }
   }, res);
 
   assert.equal(res.statusCode, 202);
   assert.equal(res.body.pendingStage, "regenerate");
-  assert.deepEqual(res.body.pendingRegenerationIds, ["top-1"]);
+  assert.deepEqual(res.body.pendingRegenerationUrls, ["https://example.com/top-1"]);
   assert.equal(res.body.reasoning, "capsule-json");
 });
 
@@ -70,7 +70,7 @@ test("regenerateSelectedWardrobeItems returns ready payload and clears completed
       status: "completed",
       updatedAt: Date.now(),
       result: {
-        items: [{ id: "new-1", category: "top" }],
+        items: [{ id: "new-1", url: "https://example.com/new-1", category: "top" }],
         reasoning: "new-reasoning",
         rawSelectionText: "new-raw",
         swimwearReasoning: "swim-json",
@@ -86,12 +86,12 @@ test("regenerateSelectedWardrobeItems returns ready payload and clears completed
 
   await service.regenerateSelectedWardrobeItems({
     user: { email: "person@example.com" },
-    body: { itemIds: ["top-1"] }
+    body: { itemUrls: ["https://example.com/top-1"] }
   }, res);
 
   assert.equal(res.statusCode, 200);
   assert.equal(res.body.status, "ready");
-  assert.deepEqual(res.body.items, [{ id: "new-1", category: "top" }]);
+  assert.deepEqual(res.body.items, [{ id: "new-1", url: "https://example.com/new-1", category: "top" }]);
   assert.equal(jobs.has("person@example.com"), false);
 });
 
@@ -111,7 +111,7 @@ test("regenerateSelectedWardrobeItems returns service_unavailable for failed job
 
   await service.regenerateSelectedWardrobeItems({
     user: { email: "person@example.com" },
-    body: { itemIds: ["top-1"] }
+    body: { itemUrls: ["https://example.com/top-1"] }
   }, res);
 
   assert.equal(res.statusCode, 503);
@@ -119,7 +119,7 @@ test("regenerateSelectedWardrobeItems returns service_unavailable for failed job
   assert.equal(jobs.has("person@example.com"), false);
 });
 
-test("regenerateSelectedWardrobeItems validates selected ids and missing wardrobe", async () => {
+test("regenerateSelectedWardrobeItems validates selected urls and missing wardrobe", async () => {
   const invalidPayloadService = createPartialRegenerationService({
     getProfileImpl: async () => createStoredProfile(),
     jobs: new Map()
@@ -127,7 +127,7 @@ test("regenerateSelectedWardrobeItems validates selected ids and missing wardrob
   const invalidPayloadRes = createResponseRecorder();
   await invalidPayloadService.regenerateSelectedWardrobeItems({
     user: { email: "person@example.com" },
-    body: { itemIds: [] }
+    body: { itemUrls: [] }
   }, invalidPayloadRes);
   assert.equal(invalidPayloadRes.statusCode, 400);
   assert.deepEqual(invalidPayloadRes.body, { error: "invalid_payload" });
@@ -139,13 +139,13 @@ test("regenerateSelectedWardrobeItems validates selected ids and missing wardrob
   const noWardrobeRes = createResponseRecorder();
   await noWardrobeService.regenerateSelectedWardrobeItems({
     user: { email: "person@example.com" },
-    body: { itemIds: ["top-1"] }
+    body: { itemUrls: ["https://example.com/top-1"] }
   }, noWardrobeRes);
   assert.equal(noWardrobeRes.statusCode, 404);
   assert.deepEqual(noWardrobeRes.body, { error: "not_found" });
 });
 
-test("regenerateSelectedWardrobeItems rejects unknown ids from request", async () => {
+test("regenerateSelectedWardrobeItems rejects unknown urls from request", async () => {
   const service = createPartialRegenerationService({
     getProfileImpl: async () => createStoredProfile(),
     jobs: new Map()
@@ -154,14 +154,14 @@ test("regenerateSelectedWardrobeItems rejects unknown ids from request", async (
 
   await service.regenerateSelectedWardrobeItems({
     user: { email: "person@example.com" },
-    body: { itemIds: ["missing-id"] }
+    body: { itemUrls: ["https://example.com/missing-url"] }
   }, res);
 
   assert.equal(res.statusCode, 400);
   assert.deepEqual(res.body, { error: "invalid_payload" });
 });
 
-test("regenerateSelectedWardrobeItems updates rejected ids, shrinks partial payload, and starts pending job", async () => {
+test("regenerateSelectedWardrobeItems updates rejected urls, shrinks partial payload, and starts pending job", async () => {
   const rejectedUpdates = [];
   const itemUpdates = [];
   let regeneratedProfile = null;
@@ -169,8 +169,8 @@ test("regenerateSelectedWardrobeItems updates rejected ids, shrinks partial payl
   const jobs = new Map();
   const service = createPartialRegenerationService({
     getProfileImpl: async () => createStoredProfile(),
-    updateProfileRejectedImpl: async (email, ids) => {
-      rejectedUpdates.push([email, ids]);
+    updateProfileRejectedImpl: async (email, urls) => {
+      rejectedUpdates.push([email, urls]);
     },
     updateProfileItemsImpl: async (email, payload) => {
       itemUpdates.push([email, payload]);
@@ -180,9 +180,9 @@ test("regenerateSelectedWardrobeItems updates rejected ids, shrinks partial payl
       regeneratedSelectedProducts = selectedProducts;
       return {
         items: [
-          { id: "bottom-1", category: "bottom" },
-          { id: "bag-1", category: "bag" },
-          { id: "top-2", category: "top" }
+          { id: "bottom-1", url: "https://example.com/bottom-1", category: "bottom" },
+          { id: "bag-1", url: "https://example.com/bag-1", category: "bag" },
+          { id: "top-2", url: "https://example.com/top-2", category: "top" }
         ],
         reasoning: "regen-json",
         rawSelectionText: "regen-raw"
@@ -195,25 +195,25 @@ test("regenerateSelectedWardrobeItems updates rejected ids, shrinks partial payl
 
   await service.regenerateSelectedWardrobeItems({
     user: { email: "person@example.com" },
-    body: { itemIds: ["top-1"] }
+    body: { itemUrls: ["https://example.com/top-1"] }
   }, res);
 
   assert.equal(res.statusCode, 202);
   assert.equal(res.body.pendingStage, "regenerate");
   assert.deepEqual(res.body.items, [
-    { id: "bottom-1", category: "bottom" },
-    { id: "bag-1", category: "bag" }
+    { id: "bottom-1", url: "https://example.com/bottom-1", category: "bottom" },
+    { id: "bag-1", url: "https://example.com/bag-1", category: "bag" }
   ]);
   assert.deepEqual(rejectedUpdates, [[
     "person@example.com",
-    ["old-1", "top-1"]
+    ["https://example.com/old-1", "https://example.com/top-1"]
   ]]);
   assert.deepEqual(itemUpdates[0], [
     "person@example.com",
     {
       items: [
-        { id: "bottom-1", category: "bottom" },
-        { id: "bag-1", category: "bag" }
+        { id: "bottom-1", url: "https://example.com/bottom-1", category: "bottom" },
+        { id: "bag-1", url: "https://example.com/bag-1", category: "bag" }
       ],
       reasoning: "capsule-json",
       rawSelectionText: "capsule-raw",
@@ -226,15 +226,15 @@ test("regenerateSelectedWardrobeItems updates rejected ids, shrinks partial payl
   assert.ok(job);
   await job.promise;
 
-  assert.deepEqual(regeneratedSelectedProducts, [{ id: "top-1", category: "top" }]);
-  assert.equal(regeneratedProfile.rejected.includes("top-1"), true);
+  assert.deepEqual(regeneratedSelectedProducts, [{ id: "top-1", url: "https://example.com/top-1", category: "top" }]);
+  assert.equal(regeneratedProfile.rejected.includes("https://example.com/top-1"), true);
   assert.deepEqual(itemUpdates[1], [
     "person@example.com",
     {
       items: [
-        { id: "bottom-1", category: "bottom" },
-        { id: "bag-1", category: "bag" },
-        { id: "top-2", category: "top" }
+        { id: "bottom-1", url: "https://example.com/bottom-1", category: "bottom" },
+        { id: "bag-1", url: "https://example.com/bag-1", category: "bag" },
+        { id: "top-2", url: "https://example.com/top-2", category: "top" }
       ],
       reasoning: "regen-json",
       rawSelectionText: "regen-raw",

@@ -9,7 +9,7 @@ import { PDFDocument, rgb } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import sharp from "sharp";
 import { getProfile, getProfilePdf, getProfileWithPdf, updateProfilePdf } from "./profileStore.js";
-import { getProductsByIdsInOrder } from "./db.js";
+import { getProductsByUrlsInOrder } from "./db.js";
 import { sortWardrobeItems } from "../../shared/wardrobeOrder.js";
 import { buildProductDetailGroups } from "../../shared/productDetail.js";
 import { isSupportedLocale, normalizeLocale, t, translateOption } from "../../shared/i18n/helpers.js";
@@ -147,7 +147,7 @@ function getStoredWardrobeItems(profile) {
 function createWardrobePdfGenerationKey({ items = [], locale = "en" } = {}) {
   return JSON.stringify({
     locale,
-    items: sortWardrobeItems(items).map((item) => String(item?.id || item?.url || `${item?.category}:${item?.name}`))
+    items: sortWardrobeItems(items).map((item) => String(item?.url || item?.id || `${item?.category}:${item?.name}`))
   });
 }
 
@@ -914,7 +914,7 @@ function createWardrobePdfJobManager({
   getProfilePdfByEmail = getProfilePdf,
   getProfileWithPdfByEmail = null,
   updateProfilePdfByEmail = updateProfilePdf,
-  getProducts = getProductsByIdsInOrder,
+  getProducts = getProductsByUrlsInOrder,
   buildPdfInChild = buildWardrobePdfInChild
 } = {}) {
   const loadProfileWithPdf = getProfileWithPdfByEmail
@@ -971,19 +971,19 @@ function createWardrobePdfJobManager({
           pdfLocale = getPdfLocale(profile?.locale);
         }
 
-        const productIds = items
-          .map((item) => String(item?.id || "").trim())
+        const productUrls = items
+          .map((item) => String(item?.url || "").trim())
           .filter(Boolean);
 
-        if (productIds.length === 0) {
+        if (productUrls.length === 0) {
           throw new Error("wardrobe_pdf_items_missing");
         }
 
-        const products = await getProducts(productIds);
-        const foundIds = new Set(products.map((product) => String(product?.id || "")));
-        const missingIds = productIds.filter((id) => !foundIds.has(id));
-        if (missingIds.length > 0) {
-          console.warn("[wardrobe-pdf][missing-products]", JSON.stringify({ email, missingIds }));
+        const products = await getProducts(productUrls);
+        const foundUrls = new Set(products.map((product) => String(product?.url || "")));
+        const missingUrls = productUrls.filter((url) => !foundUrls.has(url));
+        if (missingUrls.length > 0) {
+          console.warn("[wardrobe-pdf][missing-products]", JSON.stringify({ email, missingUrls }));
         }
 
         if (products.length === 0) {

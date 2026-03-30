@@ -40,7 +40,7 @@ vi.mock("../components/ClothingCard.jsx", () => ({
   default: ({ item, isSelected, isSelectable, isRegenerating, onToggleSelected }) => (
     <button
       type="button"
-      data-testid={`clothing-card-${item.id}`}
+      data-testid={`clothing-card-${item.url}`}
       data-selected={String(isSelected)}
       data-selectable={String(isSelectable)}
       data-regenerating={String(isRegenerating)}
@@ -117,8 +117,8 @@ function renderScreen(props = {}, { mobile = false } = {}) {
     onApplyFilters: vi.fn(),
     onResetFilters: vi.fn(),
     onNavigateApp: vi.fn(),
-    selectedRegenerationIds: [],
-    partialRegenerationPendingIds: [],
+    selectedRegenerationUrls: [],
+    partialRegenerationPendingUrls: [],
     onToggleRegenerationSelection: vi.fn(),
     onCancelRegenerationSelection: vi.fn(),
     onRegenerateSelectedItems: vi.fn(),
@@ -167,28 +167,28 @@ describe("MainScreen", () => {
 
     renderScreen({
       items: [
-        { id: "b", name: "Blazer", category: "outerwear" },
-        { id: "a", name: "Shirt", category: "top" },
-        { id: "c", name: "Trousers", category: "bottom" }
+        { id: "b", url: "https://example.com/b", name: "Blazer", category: "outerwear" },
+        { id: "a", url: "https://example.com/a", name: "Shirt", category: "top" },
+        { id: "c", url: "https://example.com/c", name: "Trousers", category: "bottom" }
       ],
-      selectedRegenerationIds: ["a"],
-      partialRegenerationPendingIds: ["b"],
+      selectedRegenerationUrls: ["https://example.com/a"],
+      partialRegenerationPendingUrls: ["https://example.com/b"],
       showAdditionalItemPlaceholder: true,
       onToggleRegenerationSelection,
       onCancelRegenerationSelection,
       onRegenerateSelectedItems
     });
 
-    expect(screen.getByTestId("placeholder-card-pending-b")).toBeInTheDocument();
-    expect(screen.getByTestId("clothing-card-a")).toHaveAttribute("data-selected", "true");
+    expect(screen.getByTestId("placeholder-card-pending-https://example.com/b")).toBeInTheDocument();
+    expect(screen.getByTestId("clothing-card-https://example.com/a")).toHaveAttribute("data-selected", "true");
     expect(screen.queryByRole("button", { name: "Download capsule PDF" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Refresh wardrobe" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Regenerate Selected (1)" })).toBeInTheDocument();
     expect(screen.getByTestId("inline-placeholder-1")).toBeInTheDocument();
 
-    await user.click(screen.getByTestId("clothing-card-c"));
-    expect(onToggleRegenerationSelection).toHaveBeenCalledWith({ id: "c", name: "Trousers", category: "bottom" });
+    await user.click(screen.getByTestId("clothing-card-https://example.com/c"));
+    expect(onToggleRegenerationSelection).toHaveBeenCalledWith({ id: "c", url: "https://example.com/c", name: "Trousers", category: "bottom" });
 
     await user.click(screen.getByRole("button", { name: "Cancel" }));
     expect(onCancelRegenerationSelection).toHaveBeenCalledTimes(1);

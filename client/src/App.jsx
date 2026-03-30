@@ -73,8 +73,8 @@ function sortSeasonOptions(items) {
   });
 }
 
-function normalizeWardrobeItemId(item) {
-  return String(item?.id || "").trim();
+function normalizeWardrobeItemUrl(item) {
+  return String(item?.url || "").trim();
 }
 
 function buildDisplayWardrobeItems(items) {
@@ -84,30 +84,30 @@ function buildDisplayWardrobeItems(items) {
 function mergeWardrobeItemsIntoExistingOrder({
   currentItems = [],
   nextItems = [],
-  pendingIds = []
+  pendingUrls = []
 } = {}) {
   const orderedCurrentItems = Array.isArray(currentItems) ? currentItems : [];
   const orderedNextItems = buildDisplayWardrobeItems(nextItems);
-  const normalizedPendingIds = Array.isArray(pendingIds)
-    ? pendingIds.map((itemId) => String(itemId || "").trim()).filter(Boolean)
+  const normalizedPendingUrls = Array.isArray(pendingUrls)
+    ? pendingUrls.map((itemUrl) => String(itemUrl || "").trim()).filter(Boolean)
     : [];
 
-  if (orderedCurrentItems.length === 0 || normalizedPendingIds.length === 0) {
+  if (orderedCurrentItems.length === 0 || normalizedPendingUrls.length === 0) {
     return orderedNextItems;
   }
 
-  const pendingIdSet = new Set(normalizedPendingIds);
-  const nextItemsById = new Map(
+  const pendingUrlSet = new Set(normalizedPendingUrls);
+  const nextItemsByUrl = new Map(
     orderedNextItems
-      .map((item) => [normalizeWardrobeItemId(item), item])
-      .filter(([itemId]) => itemId)
+      .map((item) => [normalizeWardrobeItemUrl(item), item])
+      .filter(([itemUrl]) => itemUrl)
   );
-  const preservedItemIds = new Set(
+  const preservedItemUrls = new Set(
     orderedCurrentItems
-      .map((item) => normalizeWardrobeItemId(item))
-      .filter((itemId) => itemId && !pendingIdSet.has(itemId))
+      .map((item) => normalizeWardrobeItemUrl(item))
+      .filter((itemUrl) => itemUrl && !pendingUrlSet.has(itemUrl))
   );
-  const replacementCandidates = orderedNextItems.filter((item) => !preservedItemIds.has(normalizeWardrobeItemId(item)));
+  const replacementCandidates = orderedNextItems.filter((item) => !preservedItemUrls.has(normalizeWardrobeItemUrl(item)));
   const consumedReplacementIndexes = new Set();
 
   const takeReplacementItem = (category) => {
@@ -127,20 +127,20 @@ function mergeWardrobeItemsIntoExistingOrder({
   };
 
   const mergedItems = orderedCurrentItems.map((currentItem) => {
-    const currentItemId = normalizeWardrobeItemId(currentItem);
-    if (!pendingIdSet.has(currentItemId)) {
-      return nextItemsById.get(currentItemId) || currentItem;
+    const currentItemUrl = normalizeWardrobeItemUrl(currentItem);
+    if (!pendingUrlSet.has(currentItemUrl)) {
+      return nextItemsByUrl.get(currentItemUrl) || currentItem;
     }
 
     return takeReplacementItem(currentItem?.category) || currentItem;
   });
 
-  const mergedItemIds = new Set(
+  const mergedItemUrls = new Set(
     mergedItems
-      .map((item) => normalizeWardrobeItemId(item))
+      .map((item) => normalizeWardrobeItemUrl(item))
       .filter(Boolean)
   );
-  const appendedItems = orderedNextItems.filter((item) => !mergedItemIds.has(normalizeWardrobeItemId(item)));
+  const appendedItems = orderedNextItems.filter((item) => !mergedItemUrls.has(normalizeWardrobeItemUrl(item)));
 
   return [...mergedItems, ...appendedItems];
 }
@@ -190,8 +190,8 @@ function App() {
   const [profileItems, setProfileItems] = useState(null);
   const [isLoadingItems, setIsLoadingItems] = useState(false);
   const [isDownloadingWardrobePdf, setIsDownloadingWardrobePdf] = useState(false);
-  const [selectedRegenerationIds, setSelectedRegenerationIds] = useState([]);
-  const [partialRegenerationPendingIds, setPartialRegenerationPendingIds] = useState([]);
+  const [selectedRegenerationUrls, setSelectedRegenerationUrls] = useState([]);
+  const [partialRegenerationPendingUrls, setPartialRegenerationPendingUrls] = useState([]);
   const [isPartialRegenerationLoading, setIsPartialRegenerationLoading] = useState(false);
   const [isWardrobePending, setIsWardrobePending] = useState(false);
   const [hasPendingAdditionalItems, setHasPendingAdditionalItems] = useState(false);
@@ -433,8 +433,8 @@ function App() {
       setProfileItems(null);
       setIsLoadingItems(false);
       setIsDownloadingWardrobePdf(false);
-      setSelectedRegenerationIds([]);
-      setPartialRegenerationPendingIds([]);
+      setSelectedRegenerationUrls([]);
+      setPartialRegenerationPendingUrls([]);
       setIsPartialRegenerationLoading(false);
       setIsWardrobePending(false);
       setHasPendingAdditionalItems(false);
@@ -496,8 +496,8 @@ function App() {
       setHasProfile(true);
       setCurrentView("main");
       setProfileItems(null);
-      setSelectedRegenerationIds([]);
-      setPartialRegenerationPendingIds([]);
+      setSelectedRegenerationUrls([]);
+      setPartialRegenerationPendingUrls([]);
       setIsPartialRegenerationLoading(false);
       setIsWardrobePending(false);
       setHasPendingAdditionalItems(false);
@@ -521,8 +521,8 @@ function App() {
         locale
       );
       setProfileItems(null);
-      setSelectedRegenerationIds([]);
-      setPartialRegenerationPendingIds([]);
+      setSelectedRegenerationUrls([]);
+      setPartialRegenerationPendingUrls([]);
       setIsPartialRegenerationLoading(false);
       setIsWardrobePending(false);
       setHasPendingAdditionalItems(false);
@@ -534,8 +534,8 @@ function App() {
 
   const handleResetProfileFilters = async () => {
     setStatus(initialStatus);
-    setSelectedRegenerationIds([]);
-    setPartialRegenerationPendingIds([]);
+    setSelectedRegenerationUrls([]);
+    setPartialRegenerationPendingUrls([]);
     setIsPartialRegenerationLoading(false);
     try {
       await ensureOptionsLoaded({ useFallback: true });
@@ -600,8 +600,8 @@ function App() {
 
   const handleWardrobeError = () => {
     setProfileItems([]);
-    setSelectedRegenerationIds([]);
-    setPartialRegenerationPendingIds([]);
+    setSelectedRegenerationUrls([]);
+    setPartialRegenerationPendingUrls([]);
     setIsPartialRegenerationLoading(false);
     setIsWardrobePending(false);
     setHasPendingAdditionalItems(false);
@@ -628,21 +628,21 @@ function App() {
           const nextPollAfterMs =
             Number(result?.pollAfterMs) > 0 ? Number(result.pollAfterMs) : WARDROBE_POLL_AFTER_MS_DEFAULT;
           const isPendingExtras = Boolean(result?.hasPendingAdditionalItems);
-          const pendingRegenerationIds = Array.isArray(result?.pendingRegenerationIds)
-            ? result.pendingRegenerationIds.map((itemId) => String(itemId || "").trim()).filter(Boolean)
+          const pendingRegenerationUrls = Array.isArray(result?.pendingRegenerationUrls)
+            ? result.pendingRegenerationUrls.map((itemUrl) => String(itemUrl || "").trim()).filter(Boolean)
             : [];
           setProfileItems((currentItems) => (
-            pendingRegenerationIds.length > 0
+            pendingRegenerationUrls.length > 0
               ? mergeWardrobeItemsIntoExistingOrder({
                 currentItems,
                 nextItems: items,
-                pendingIds: pendingRegenerationIds
+                pendingUrls: pendingRegenerationUrls
               })
               : buildDisplayWardrobeItems(items)
           ));
-          setSelectedRegenerationIds([]);
-          setPartialRegenerationPendingIds(pendingRegenerationIds);
-          setIsPartialRegenerationLoading(pendingRegenerationIds.length > 0);
+          setSelectedRegenerationUrls([]);
+          setPartialRegenerationPendingUrls(pendingRegenerationUrls);
+          setIsPartialRegenerationLoading(pendingRegenerationUrls.length > 0);
           setIsWardrobePending(true);
           setHasPendingAdditionalItems(isPendingExtras);
           setWardrobePollAfterMs(nextPollAfterMs);
@@ -659,8 +659,8 @@ function App() {
 
         logWardrobeReasoning(result?.reasoning);
         setProfileItems(buildDisplayWardrobeItems(items));
-        setSelectedRegenerationIds([]);
-        setPartialRegenerationPendingIds([]);
+        setSelectedRegenerationUrls([]);
+        setPartialRegenerationPendingUrls([]);
         setIsPartialRegenerationLoading(false);
         setIsWardrobePending(false);
         setHasPendingAdditionalItems(false);
@@ -678,8 +678,8 @@ function App() {
   };
 
   const handleRefreshWardrobe = async () => {
-    setSelectedRegenerationIds([]);
-    setPartialRegenerationPendingIds([]);
+    setSelectedRegenerationUrls([]);
+    setPartialRegenerationPendingUrls([]);
     setIsPartialRegenerationLoading(false);
     await runWardrobeLoad({ force: true });
   };
@@ -702,36 +702,36 @@ function App() {
   };
 
   const handleToggleRegenerationSelection = (item) => {
-    const itemId = String(item?.id || "").trim();
-    if (!itemId || isPartialRegenerationLoading) {
+    const itemUrl = String(item?.url || "").trim();
+    if (!itemUrl || isPartialRegenerationLoading) {
       return;
     }
 
-    setSelectedRegenerationIds((current) => (
-      current.includes(itemId)
-        ? current.filter((id) => id !== itemId)
-        : [...current, itemId]
+    setSelectedRegenerationUrls((current) => (
+      current.includes(itemUrl)
+        ? current.filter((url) => url !== itemUrl)
+        : [...current, itemUrl]
     ));
   };
 
   const handleCancelRegenerationSelection = () => {
-    setSelectedRegenerationIds([]);
+    setSelectedRegenerationUrls([]);
   };
 
   const handleRegenerateSelectedItems = async () => {
-    if (selectedRegenerationIds.length === 0 || isPartialRegenerationLoading) {
+    if (selectedRegenerationUrls.length === 0 || isPartialRegenerationLoading) {
       return;
     }
 
-    const pendingIds = [...selectedRegenerationIds];
+    const pendingUrls = [...selectedRegenerationUrls];
     const existingItems = Array.isArray(profileItems) ? profileItems : [];
-    setSelectedRegenerationIds([]);
-    setPartialRegenerationPendingIds(pendingIds);
+    setSelectedRegenerationUrls([]);
+    setPartialRegenerationPendingUrls(pendingUrls);
     setIsPartialRegenerationLoading(true);
 
     try {
       const { regenerateSelectedWardrobeItems } = await import("./api/wardrobe.js");
-      const result = await regenerateSelectedWardrobeItems({ itemIds: pendingIds });
+      const result = await regenerateSelectedWardrobeItems({ itemUrls: pendingUrls });
       if (!isMountedRef.current) {
         return;
       }
@@ -740,9 +740,9 @@ function App() {
       setProfileItems(mergeWardrobeItemsIntoExistingOrder({
         currentItems: existingItems,
         nextItems: Array.isArray(result?.items) ? result.items : [],
-        pendingIds
+        pendingUrls
       }));
-      setPartialRegenerationPendingIds([]);
+      setPartialRegenerationPendingUrls([]);
       setIsPartialRegenerationLoading(false);
     } catch (error) {
       if (!isMountedRef.current) {
@@ -750,7 +750,7 @@ function App() {
       }
 
       setProfileItems(existingItems);
-      setPartialRegenerationPendingIds([]);
+      setPartialRegenerationPendingUrls([]);
       setIsPartialRegenerationLoading(false);
       setStatus((current) => ({
         ...current,
@@ -876,8 +876,8 @@ function App() {
           onApplyFilters={handleSaveProfile}
           onResetFilters={handleResetProfileFilters}
           onNavigateApp={handleNavigateApp}
-          selectedRegenerationIds={selectedRegenerationIds}
-          partialRegenerationPendingIds={partialRegenerationPendingIds}
+          selectedRegenerationUrls={selectedRegenerationUrls}
+          partialRegenerationPendingUrls={partialRegenerationPendingUrls}
           onToggleRegenerationSelection={handleToggleRegenerationSelection}
           onCancelRegenerationSelection={handleCancelRegenerationSelection}
           onRegenerateSelectedItems={handleRegenerateSelectedItems}

@@ -557,17 +557,17 @@ async function getProductPriceRange() {
   };
 }
 
-async function getProductsByIdsInOrder(ids = []) {
-  if (!Array.isArray(ids) || ids.length === 0) {
+async function getProductsByUrlsInOrder(urls = []) {
+  if (!Array.isArray(urls) || urls.length === 0) {
     return [];
   }
 
   const sql = getSqlClient();
-  const normalizedIds = ids
+  const normalizedUrls = urls
     .map((value) => String(value || "").trim())
     .filter(Boolean);
 
-  if (normalizedIds.length === 0) {
+  if (normalizedUrls.length === 0) {
     return [];
   }
 
@@ -596,23 +596,23 @@ async function getProductsByIdsInOrder(ids = []) {
       products.silhouette,
       products.fit,
       products.closure_type as "closureType"
-    from unnest(${normalizedIds}::text[]) with ordinality as selected(id, position)
-    join products on products.id::text = selected.id
+    from unnest(${normalizedUrls}::text[]) with ordinality as selected(url, position)
+    join products on products.url = selected.url
     order by selected.position asc
   `;
 }
 
-async function getProductsWithEmbeddingsByIdsInOrder(ids = []) {
-  if (!Array.isArray(ids) || ids.length === 0) {
+async function getProductsWithEmbeddingsByUrlsInOrder(urls = []) {
+  if (!Array.isArray(urls) || urls.length === 0) {
     return [];
   }
 
   const sql = getSqlClient();
-  const normalizedIds = ids
+  const normalizedUrls = urls
     .map((value) => String(value || "").trim())
     .filter(Boolean);
 
-  if (normalizedIds.length === 0) {
+  if (normalizedUrls.length === 0) {
     return [];
   }
 
@@ -624,8 +624,8 @@ async function getProductsWithEmbeddingsByIdsInOrder(ids = []) {
       products.color_base as "colorBase",
       products.is_neutral as "isNeutral",
       products.closure_type as "closureType"
-    from unnest(${normalizedIds}::text[]) with ordinality as selected(id, position)
-    join products on products.id::text = selected.id
+    from unnest(${normalizedUrls}::text[]) with ordinality as selected(url, position)
+    join products on products.url = selected.url
     order by selected.position asc
   `;
 }
@@ -1249,8 +1249,8 @@ export {
   getDistinctProductClosureTypes,
   getDistinctProductColors,
   getProductPriceRange,
-  getProductsByIdsInOrder,
-  getProductsWithEmbeddingsByIdsInOrder,
+  getProductsByUrlsInOrder,
+  getProductsWithEmbeddingsByUrlsInOrder,
   getSearchByEmail,
   upsertSearchByEmail,
   searchProducts,

@@ -71,14 +71,14 @@ test("getWardrobeItems returns pending regenerate payload when partial regenerat
   const service = createWardrobeService({
     getProfileImpl: async () => ({
       items: {
-        items: [{ id: "top-1", category: "top" }],
+        items: [{ id: "top-1", url: "https://example.com/top-1", category: "top" }],
         reasoning: "capsule",
         rawSelectionText: "raw"
       }
     }),
     getPartialRegenerationJobImpl: () => ({
       status: "pending",
-      pendingItemIds: ["top-1"]
+      pendingItemUrls: ["https://example.com/top-1"]
     }),
     jobs: new Map()
   });
@@ -91,8 +91,8 @@ test("getWardrobeItems returns pending regenerate payload when partial regenerat
 
   assert.equal(res.statusCode, 202);
   assert.equal(res.body.pendingStage, "regenerate");
-  assert.deepEqual(res.body.pendingRegenerationIds, ["top-1"]);
-  assert.deepEqual(res.body.items, [{ id: "top-1", category: "top" }]);
+  assert.deepEqual(res.body.pendingRegenerationUrls, ["https://example.com/top-1"]);
+  assert.deepEqual(res.body.items, [{ id: "top-1", url: "https://example.com/top-1", category: "top" }]);
 });
 
 test("getWardrobeItems returns ready payload from stored wardrobe when no refresh is requested", async () => {

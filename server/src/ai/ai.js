@@ -409,7 +409,7 @@ function appendUniqueWardrobeItems(items, extraItems) {
   const seenKeys = new Set();
 
   for (const item of [...items, ...extraItems]) {
-    const key = String(item?.id || item?.url || `${item?.category}:${item?.name}`);
+    const key = String(item?.url || item?.id || `${item?.category}:${item?.name}`);
     if (!key || seenKeys.has(key)) {
       continue;
     }
@@ -439,8 +439,8 @@ async function generateCapsuleWardrobe(userProfile = null, logContext = null) {
   const audienceFilters = audienceByProfile[userProfile?.audience] || audienceByProfile.any;
   const color = userProfile?.color ?? null;
   const pattern = userProfile?.pattern ?? null;
-  const rejectedIds = Array.isArray(userProfile?.rejected)
-    ? userProfile.rejected.map((itemId) => String(itemId || "").trim()).filter(Boolean)
+  const rejectedUrls = Array.isArray(userProfile?.rejected)
+    ? userProfile.rejected.map((itemUrl) => String(itemUrl || "").trim()).filter(Boolean)
     : [];
   const embeddingVector = `[${promptEmbeddings.join(",")}]`;
   const noiseFactor = 0.05;
@@ -542,7 +542,7 @@ async function generateCapsuleWardrobe(userProfile = null, logContext = null) {
               -- HARD FILTERS
               category = cats.target_category
               AND lower(COALESCE(audience, '')) = ANY(${audienceFilters}::text[])
-              AND NOT (products.id::text = ANY(${rejectedIds}::text[]))
+              AND NOT (products.url = ANY(${rejectedUrls}::text[]))
           ) raw_scored
         ) filtered_items
         WHERE
@@ -830,7 +830,7 @@ function createWardrobeService({
           ok: true,
           status: "pending",
           pendingStage: "regenerate",
-          pendingRegenerationIds: partialRegenerationJob.pendingItemIds,
+          pendingRegenerationUrls: partialRegenerationJob.pendingItemUrls,
           hasPendingAdditionalItems: false,
           items: storedWardrobe?.items || [],
           reasoning: storedWardrobe?.reasoning || null,

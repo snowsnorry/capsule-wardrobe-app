@@ -1,8 +1,8 @@
 import crypto from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import {
-  getProductsByIdsInOrder,
-  getProductsWithEmbeddingsByIdsInOrder,
+  getProductsByUrlsInOrder,
+  getProductsWithEmbeddingsByUrlsInOrder,
   getSqlClient
 } from "../db.js";
 import { getProfile, updateProfileItems, updateProfileRejected } from "../profileStore.js";
@@ -38,9 +38,9 @@ const COMPLETED_JOB_TTL_MS = 5 * 60 * 1000;
 const LAST_PROMPT_DIR_URL = new URL("../../../last-prompt/", import.meta.url);
 const partialRegenerationJobs = new Map();
 
-function isValidSelectedItemIds(itemIds) {
-  return Array.isArray(itemIds) && itemIds.length > 0 && itemIds.every((itemId) => (
-    typeof itemId === "string" && itemId.trim().length > 0
+function isValidSelectedItemUrls(itemUrls) {
+  return Array.isArray(itemUrls) && itemUrls.length > 0 && itemUrls.every((itemUrl) => (
+    typeof itemUrl === "string" && itemUrl.trim().length > 0
   ));
 }
 
@@ -222,20 +222,20 @@ async function regenerateCapsuleWardrobe(userProfile = null, products = null, lo
   const promptEmbeddings = await getPromptEmbeddings(prompt);
   const storedWardrobe = getStoredWardrobePayload(userProfile);
   const selectedProducts = Array.isArray(products) ? products : [];
-  const selectedProductIds = selectedProducts
-    .map((item) => String(item?.id || "").trim())
+  const selectedProductUrls = selectedProducts
+    .map((item) => String(item?.url || "").trim())
     .filter(Boolean);
-  const storedWardrobeProductIds = Array.isArray(storedWardrobe?.items)
+  const storedWardrobeProductUrls = Array.isArray(storedWardrobe?.items)
     ? storedWardrobe.items
-      .map((item) => String(item?.id || "").trim())
+      .map((item) => String(item?.url || "").trim())
       .filter(Boolean)
     : [];
-  const selectedProductIdSet = new Set(selectedProductIds);
+  const selectedProductUrlSet = new Set(selectedProductUrls);
   const currentCapsuleItems = Array.isArray(storedWardrobe?.items)
-    ? storedWardrobe.items.filter((item) => !selectedProductIdSet.has(String(item?.id || "").trim()))
+    ? storedWardrobe.items.filter((item) => !selectedProductUrlSet.has(String(item?.url || "").trim()))
     : [];
-  const currentCapsulePromptItems = await getProductsByIdsInOrder(
-    currentCapsuleItems.map((item) => String(item?.id || "").trim()).filter(Boolean)
+  const currentCapsulePromptItems = await getProductsByUrlsInOrder(
+    currentCapsuleItems.map((item) => String(item?.url || "").trim()).filter(Boolean)
   );
   const selectedCategoryCounts = selectedProducts.reduce((result, item) => {
     const category = String(item?.category || "").trim();
@@ -274,12 +274,12 @@ async function regenerateCapsuleWardrobe(userProfile = null, products = null, lo
   const audienceFilters = audienceByProfile[userProfile?.audience] || audienceByProfile.any;
   const color = userProfile?.color ?? null;
   const pattern = userProfile?.pattern ?? null;
-  const rejectedIds = Array.isArray(userProfile?.rejected)
-    ? userProfile.rejected.map((itemId) => String(itemId || "").trim()).filter(Boolean)
+  const rejectedUrls = Array.isArray(userProfile?.rejected)
+    ? userProfile.rejected.map((itemUrl) => String(itemUrl || "").trim()).filter(Boolean)
     : [];
-  const excludedIds = [...new Set([...storedWardrobeProductIds, ...rejectedIds])];
-  const negativePromptingIds = [...new Set([...rejectedIds, ...selectedProductIds])];
-  const rejectedProducts = await getProductsWithEmbeddingsByIdsInOrder(negativePromptingIds);
+  const excludedUrls = [...new Set([...storedWardrobeProductUrls, ...rejectedUrls])];
+  const negativePromptingUrls = [...new Set([...rejectedUrls, ...selectedProductUrls])];
+  const rejectedProducts = await getProductsWithEmbeddingsByUrlsInOrder(negativePromptingUrls);
   const rejectedVectors = rejectedProducts
     .map((product) => normalizeEmbeddingVector(product?.embedding))
     .filter(Boolean);
@@ -384,7 +384,7 @@ async function regenerateCapsuleWardrobe(userProfile = null, products = null, lo
               -- HARD FILTERS
               category = cats.target_category
               AND lower(COALESCE(audience, '')) = ANY(${audienceFilters}::text[])
-              AND NOT (products.id::text = ANY(${excludedIds}::text[]))
+              AND NOT (products.url = ANY(${excludedUrls}::text[]))
           ) raw_scored
         ) filtered_items
         WHERE
@@ -598,8 +598,8 @@ function createPartialRegenerationService({
       return existing;
     }
 
-    const pendingItemIds = selectedProducts
-      .map((item) => String(item?.id || "").trim())
+    const pendingItemUrls = selectedProducts
+      .map((item) => String(item?.url || "").trim())
       .filter(Boolean);
     const capsuleRequestId = logContext?.capsuleRequestId || randomUuidImpl();
     const startedAt = nowMsImpl();
@@ -609,7 +609,7 @@ function createPartialRegenerationService({
       phase: "regenerate",
       startedAt,
       updatedAt: startedAt,
-      pendingItemIds,
+      pendingItemUrls,
       result: null,
       promise: null
     };
@@ -651,8 +651,8 @@ function createPartialRegenerationService({
   async function regenerateSelectedWardrobeItems(req, res) {
     try {
       const email = req.user.email;
-      const itemIds = Array.isArray(req.body?.itemIds)
-        ? req.body.itemIds.map((itemId) => String(itemId || "").trim()).filter(Boolean)
+      const itemUrls = Array.isArray(req.body?.itemUrls)
+        ? req.body.itemUrls.map((itemUrl) => String(itemUrl || "").trim()).filter(Boolean)
         : [];
       const profile = await getProfileImpl(email);
       const storedWardrobe = getStoredWardrobePayload(profile);
@@ -663,7 +663,7 @@ function createPartialRegenerationService({
           ok: true,
           status: "pending",
           pendingStage: "regenerate",
-          pendingRegenerationIds: activeJob.pendingItemIds,
+          pendingRegenerationUrls: activeJob.pendingItemUrls,
           items: storedWardrobe?.items || [],
           reasoning: storedWardrobe?.reasoning || null,
           rawSelectionText: storedWardrobe?.rawSelectionText || null,
@@ -692,7 +692,7 @@ function createPartialRegenerationService({
         throw activeJob.error || new Error("partial_regeneration_failed");
       }
 
-      if (!isValidSelectedItemIds(itemIds)) {
+      if (!isValidSelectedItemUrls(itemUrls)) {
         return res.status(400).json({ error: "invalid_payload" });
       }
 
@@ -700,23 +700,23 @@ function createPartialRegenerationService({
         return res.status(404).json({ error: "not_found" });
       }
 
-      const storedItemsById = new Map(
+      const storedItemsByUrl = new Map(
         storedWardrobe.items
           .filter((item) => item && typeof item === "object")
-          .map((item) => [String(item.id || "").trim(), item])
-          .filter(([itemId]) => itemId)
+          .map((item) => [String(item.url || "").trim(), item])
+          .filter(([itemUrl]) => itemUrl)
       );
-      const selectedProducts = itemIds.map((itemId) => storedItemsById.get(itemId)).filter(Boolean);
-      if (selectedProducts.length !== itemIds.length) {
+      const selectedProducts = itemUrls.map((itemUrl) => storedItemsByUrl.get(itemUrl)).filter(Boolean);
+      if (selectedProducts.length !== itemUrls.length) {
         return res.status(400).json({ error: "invalid_payload" });
       }
-      const nextRejectedIds = [...new Set([
+      const nextRejectedUrls = [...new Set([
         ...(Array.isArray(profile?.rejected) ? profile.rejected : []),
-        ...itemIds
-      ].map((itemId) => String(itemId || "").trim()).filter(Boolean))];
+        ...itemUrls
+      ].map((itemUrl) => String(itemUrl || "").trim()).filter(Boolean))];
 
-      const selectedItemIdSet = new Set(itemIds);
-      const partialItems = storedWardrobe.items.filter((item) => !selectedItemIdSet.has(String(item?.id || "").trim()));
+      const selectedItemUrlSet = new Set(itemUrls);
+      const partialItems = storedWardrobe.items.filter((item) => !selectedItemUrlSet.has(String(item?.url || "").trim()));
       const partialPayload = {
         items: partialItems,
         reasoning: storedWardrobe.reasoning || null,
@@ -728,12 +728,12 @@ function createPartialRegenerationService({
         capsuleRequestId: randomUuidImpl(),
         source: "partial-regeneration"
       };
-      logWardrobeInfo("regenerate-request-received", { itemIds }, logContext);
-      await updateProfileRejectedImpl(email, nextRejectedIds);
+      logWardrobeInfo("regenerate-request-received", { itemUrls }, logContext);
+      await updateProfileRejectedImpl(email, nextRejectedUrls);
       await updateProfileItemsImpl(email, partialPayload);
       startPartialRegenerationJob(
         email,
-        { ...profile, items: partialPayload, rejected: nextRejectedIds },
+        { ...profile, items: partialPayload, rejected: nextRejectedUrls },
         selectedProducts,
         storedWardrobe,
         logContext
@@ -743,7 +743,7 @@ function createPartialRegenerationService({
         ok: true,
         status: "pending",
         pendingStage: "regenerate",
-        pendingRegenerationIds: itemIds,
+        pendingRegenerationUrls: itemUrls,
         items: partialItems,
         reasoning: partialPayload.reasoning,
         rawSelectionText: partialPayload.rawSelectionText,

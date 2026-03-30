@@ -163,7 +163,7 @@ describe("wardrobe api", () => {
       }));
 
     await expect(
-      regenerateSelectedWardrobeItems({ itemIds: ["item-1"] })
+      regenerateSelectedWardrobeItems({ itemUrls: ["https://example.com/item-1"] })
     ).resolves.toEqual({ items: [{ id: "item-2" }], reasoning: "updated" });
 
     expect(requestApi.request).toHaveBeenNthCalledWith(
@@ -173,7 +173,7 @@ describe("wardrobe api", () => {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ itemIds: ["item-1"] })
+        body: JSON.stringify({ itemUrls: ["https://example.com/item-1"] })
       }
     );
     expect(setTimeout).toHaveBeenCalledWith(expect.any(Function), 10);
@@ -187,7 +187,7 @@ describe("wardrobe api", () => {
     }));
 
     await expect(
-      regenerateSelectedWardrobeItems({ itemIds: ["item-1"] })
+      regenerateSelectedWardrobeItems({ itemUrls: ["https://example.com/item-1"] })
     ).rejects.toMatchObject({
       message: "invalid_payload",
       status: 422,

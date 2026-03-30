@@ -34,7 +34,7 @@ vi.mock("../components/ClothingCard.jsx", () => ({
   default: ({ item, onToggleSelected }) => (
     <button
       type="button"
-      data-testid={`clothing-card-${item.id}`}
+      data-testid={`clothing-card-${item.url}`}
       onClick={() => onToggleSelected(item)}
     >
       {item.name}
@@ -72,8 +72,8 @@ function t(key, params) {
 }
 
 function MainScreenFlowHarness({ onRefreshItems, onDownloadPdf, onRegenerateSelectedItems }) {
-  const [selectedRegenerationIds, setSelectedRegenerationIds] = useState([]);
-  const [partialRegenerationPendingIds, setPartialRegenerationPendingIds] = useState([]);
+  const [selectedRegenerationUrls, setSelectedRegenerationUrls] = useState([]);
+  const [partialRegenerationPendingUrls, setPartialRegenerationPendingUrls] = useState([]);
 
   return (
     <MainScreen
@@ -82,9 +82,9 @@ function MainScreenFlowHarness({ onRefreshItems, onDownloadPdf, onRegenerateSele
       onRefreshItems={onRefreshItems}
       onDownloadPdf={onDownloadPdf}
       items={[
-        { id: "b", name: "Blazer", category: "outerwear" },
-        { id: "a", name: "Shirt", category: "top" },
-        { id: "c", name: "Trousers", category: "bottom" }
+        { id: "b", url: "https://example.com/b", name: "Blazer", category: "outerwear" },
+        { id: "a", url: "https://example.com/a", name: "Shirt", category: "top" },
+        { id: "c", url: "https://example.com/c", name: "Trousers", category: "bottom" }
       ]}
       isLoadingItems={false}
       isDownloadingPdf={false}
@@ -113,23 +113,23 @@ function MainScreenFlowHarness({ onRefreshItems, onDownloadPdf, onRegenerateSele
       onApplyFilters={vi.fn()}
       onResetFilters={vi.fn()}
       onNavigateApp={vi.fn()}
-      selectedRegenerationIds={selectedRegenerationIds}
-      partialRegenerationPendingIds={partialRegenerationPendingIds}
+      selectedRegenerationUrls={selectedRegenerationUrls}
+      partialRegenerationPendingUrls={partialRegenerationPendingUrls}
       onToggleRegenerationSelection={(item) => {
-        const itemId = String(item.id);
-        setSelectedRegenerationIds((current) => (
-          current.includes(itemId)
-            ? current.filter((id) => id !== itemId)
-            : [...current, itemId]
+        const itemUrl = String(item.url);
+        setSelectedRegenerationUrls((current) => (
+          current.includes(itemUrl)
+            ? current.filter((url) => url !== itemUrl)
+            : [...current, itemUrl]
         ));
       }}
       onCancelRegenerationSelection={() => {
-        setSelectedRegenerationIds([]);
+        setSelectedRegenerationUrls([]);
       }}
       onRegenerateSelectedItems={() => {
-        onRegenerateSelectedItems(selectedRegenerationIds);
-        setPartialRegenerationPendingIds(selectedRegenerationIds);
-        setSelectedRegenerationIds([]);
+        onRegenerateSelectedItems(selectedRegenerationUrls);
+        setPartialRegenerationPendingUrls(selectedRegenerationUrls);
+        setSelectedRegenerationUrls([]);
       }}
       isPartialRegenerationLoading={false}
     />
@@ -175,14 +175,14 @@ describe("MainScreen e2e-style flow", () => {
     expect(onDownloadPdf).toHaveBeenCalledTimes(1);
     expect(onRefreshItems).toHaveBeenCalledTimes(1);
 
-    await user.click(screen.getByTestId("clothing-card-a"));
+    await user.click(screen.getByTestId("clothing-card-https://example.com/a"));
     expect(screen.getByRole("button", { name: "Regenerate Selected (1)" })).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Regenerate Selected (1)" }));
-    expect(onRegenerateSelectedItems).toHaveBeenCalledWith(["a"]);
+    expect(onRegenerateSelectedItems).toHaveBeenCalledWith(["https://example.com/a"]);
 
     await waitFor(() => {
-      expect(screen.getByTestId("placeholder-card-pending-a")).toBeInTheDocument();
+      expect(screen.getByTestId("placeholder-card-pending-https://example.com/a")).toBeInTheDocument();
     });
   });
 });

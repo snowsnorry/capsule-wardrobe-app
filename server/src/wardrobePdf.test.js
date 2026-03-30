@@ -72,14 +72,14 @@ test("wardrobe pdf endpoint returns stored attachment when pdf already exists", 
 
 test("wardrobe pdf endpoint returns pending and starts job when pdf is missing", async () => {
   let updatedPdf = null;
-  let receivedIds = null;
+  let receivedUrls = null;
   const manager = createWardrobePdfJobManager({
     getProfileByEmail: async () => ({
       items: {
         items: [
-          { id: "bag-1", category: "bag", name: "Bag" },
-          { id: "top-2", category: "top", name: "Z Top" },
-          { id: "top-1", category: "top", name: "A Top" }
+          { id: "bag-1", url: "https://example.com/bag-1", category: "bag", name: "Bag" },
+          { id: "top-2", url: "https://example.com/top-2", category: "top", name: "Z Top" },
+          { id: "top-1", url: "https://example.com/top-1", category: "top", name: "A Top" }
         ]
       },
       locale: "en"
@@ -89,12 +89,13 @@ test("wardrobe pdf endpoint returns pending and starts job when pdf is missing",
       updatedPdf = pdf;
       return { email: _email };
     },
-    getProducts: async (ids) => {
-      receivedIds = ids;
-      return ids.map((id) => ({
-        id,
-        name: id,
-        category: id.startsWith("bag") ? "bag" : "top",
+    getProducts: async (urls) => {
+      receivedUrls = urls;
+      return urls.map((url) => ({
+        id: url,
+        url,
+        name: url,
+        category: url.includes("bag") ? "bag" : "top",
         imageUrl: ""
       }));
     },
@@ -118,8 +119,8 @@ test("wardrobe pdf endpoint returns pending and starts job when pdf is missing",
   assert.ok(job);
   await job.promise;
 
-  assert.deepEqual(receivedIds, ["top-1", "top-2", "bag-1"]);
-  assert.equal(String(updatedPdf), "pdf:top-1,top-2,bag-1");
+  assert.deepEqual(receivedUrls, ["https://example.com/top-1", "https://example.com/top-2", "https://example.com/bag-1"]);
+  assert.equal(String(updatedPdf), "pdf:https://example.com/top-1,https://example.com/top-2,https://example.com/bag-1");
 });
 
 test("ensureWardrobePdfJob reuses active pending job for same generation", async () => {
@@ -127,13 +128,14 @@ test("ensureWardrobePdfJob reuses active pending job for same generation", async
   const manager = createWardrobePdfJobManager({
     getProfileByEmail: async () => ({
       items: {
-        items: [{ id: "top-1", category: "top", name: "A Top" }]
+        items: [{ id: "top-1", url: "https://example.com/top-1", category: "top", name: "A Top" }]
       },
       locale: "en"
     }),
-    getProducts: async (ids) => ids.map((id) => ({
-      id,
-      name: id,
+    getProducts: async (urls) => urls.map((url) => ({
+      id: url,
+      url,
+      name: url,
       category: "top",
       imageUrl: ""
     })),
@@ -147,13 +149,13 @@ test("ensureWardrobePdfJob reuses active pending job for same generation", async
 
   const first = await manager.ensureWardrobePdfJob("person@example.com", {
     wardrobePayload: {
-      items: [{ id: "top-1", category: "top", name: "A Top" }]
+      items: [{ id: "top-1", url: "https://example.com/top-1", category: "top", name: "A Top" }]
     },
     locale: "en"
   });
   const second = await manager.ensureWardrobePdfJob("person@example.com", {
     wardrobePayload: {
-      items: [{ id: "top-1", category: "top", name: "A Top" }]
+      items: [{ id: "top-1", url: "https://example.com/top-1", category: "top", name: "A Top" }]
     },
     locale: "en"
   });

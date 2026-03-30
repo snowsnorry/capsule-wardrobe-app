@@ -97,10 +97,10 @@ vi.mock("./screens/MainScreen.jsx", () => ({
     return (
       <div data-testid="main-screen">
         <div>main-screen:{props.items.length}</div>
-        <div>items-order:{props.items.map((item) => item.id).join(",")}</div>
+        <div>items-order:{props.items.map((item) => item.url).join(",")}</div>
         {props.items.map((item) => (
-          <button key={item.id} type="button" onClick={() => props.onToggleRegenerationSelection(item)}>
-            select-{item.id}
+          <button key={item.url} type="button" onClick={() => props.onToggleRegenerationSelection(item)}>
+            select-{item.url}
           </button>
         ))}
         <button type="button" onClick={props.onRegenerateSelectedItems}>
@@ -303,17 +303,17 @@ describe("App", () => {
     authApi.updateProfileLocale.mockResolvedValue({});
     wardrobeApi.fetchWardrobeItems.mockResolvedValue({
       items: [
-        { id: "bottom-1", name: "Trousers", category: "bottom" },
-        { id: "top-1", name: "Shirt", category: "top" },
-        { id: "outerwear-1", name: "Blazer", category: "outerwear" }
+        { id: "bottom-1", url: "https://example.com/bottom-1", name: "Trousers", category: "bottom" },
+        { id: "top-1", url: "https://example.com/top-1", name: "Shirt", category: "top" },
+        { id: "outerwear-1", url: "https://example.com/outerwear-1", name: "Blazer", category: "outerwear" }
       ],
       status: "ready"
     });
     wardrobeApi.regenerateSelectedWardrobeItems.mockResolvedValue({
       items: [
-        { id: "bottom-1", name: "Trousers", category: "bottom" },
-        { id: "top-2", name: "New Shirt", category: "top" },
-        { id: "outerwear-1", name: "Blazer", category: "outerwear" }
+        { id: "bottom-1", url: "https://example.com/bottom-1", name: "Trousers", category: "bottom" },
+        { id: "top-2", url: "https://example.com/top-2", name: "New Shirt", category: "top" },
+        { id: "outerwear-1", url: "https://example.com/outerwear-1", name: "Blazer", category: "outerwear" }
       ],
       status: "ready"
     });
@@ -323,17 +323,17 @@ describe("App", () => {
 
     expect(await screen.findByTestId("main-screen")).toBeInTheDocument();
     await waitFor(() => {
-      expect(screen.getByText("items-order:outerwear-1,top-1,bottom-1")).toBeInTheDocument();
+      expect(screen.getByText("items-order:https://example.com/outerwear-1,https://example.com/top-1,https://example.com/bottom-1")).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "select-top-1" }));
+    fireEvent.click(screen.getByRole("button", { name: "select-https://example.com/top-1" }));
     fireEvent.click(screen.getByRole("button", { name: "regenerate-selected" }));
 
     await waitFor(() => {
-      expect(wardrobeApi.regenerateSelectedWardrobeItems).toHaveBeenCalledWith({ itemIds: ["top-1"] });
+      expect(wardrobeApi.regenerateSelectedWardrobeItems).toHaveBeenCalledWith({ itemUrls: ["https://example.com/top-1"] });
     });
     await waitFor(() => {
-      expect(screen.getByText("items-order:outerwear-1,top-2,bottom-1")).toBeInTheDocument();
+      expect(screen.getByText("items-order:https://example.com/outerwear-1,https://example.com/top-2,https://example.com/bottom-1")).toBeInTheDocument();
     });
   });
 });

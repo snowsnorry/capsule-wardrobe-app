@@ -652,7 +652,7 @@ test("index routes cover wardrobe handlers and search endpoints", async (t) => {
     origin: TEST_CLIENT_ORIGIN,
     cookie: AUTH_COOKIE,
     csrfToken: CSRF_TOKEN,
-    body: { itemIds: ["1"] }
+    body: { itemUrls: ["https://example.com/1"] }
   });
   assert.equal(regenerate.response.status, 200);
   assert.equal(regenerateCalled, true);

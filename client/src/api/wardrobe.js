@@ -68,7 +68,7 @@ async function downloadWardrobePdf({ locale }) {
   }
 }
 
-async function regenerateSelectedWardrobeItems({ itemIds }) {
+async function regenerateSelectedWardrobeItems({ itemUrls }) {
   while (true) {
     const response = await request(`${API_BASE_URL}/wardrobe/items/regenerate-selected`, {
       method: "POST",
@@ -76,7 +76,7 @@ async function regenerateSelectedWardrobeItems({ itemIds }) {
       headers: {
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({ itemIds })
+      body: JSON.stringify({ itemUrls })
     });
 
     const data = await response.json().catch(() => ({}));
