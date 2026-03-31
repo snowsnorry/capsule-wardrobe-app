@@ -266,6 +266,20 @@ describe("MainScreen", () => {
     });
   });
 
+  test("moves regenerate all into the header menu on mobile", async () => {
+    const user = userEvent.setup();
+    const onRefreshItems = vi.fn();
+
+    renderScreen({ onRefreshItems }, { mobile: true });
+
+    expect(screen.queryByRole("button", { name: "Regenerate all" })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Open capsule menu" }));
+    await user.click(screen.getByRole("menuitem", { name: "Regenerate all" }));
+
+    expect(onRefreshItems).toHaveBeenCalledTimes(1);
+  });
+
   test("opens user menu and signs out", async () => {
     const user = userEvent.setup();
     const onSignOut = vi.fn();

@@ -27,6 +27,7 @@ import MoreVertRoundedIcon from "@mui/icons-material/MoreVertRounded";
 import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
+import TuneRoundedIcon from "@mui/icons-material/TuneRounded";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import DriveFileRenameOutlineRoundedIcon from "@mui/icons-material/DriveFileRenameOutlineRounded";
 import RestoreRoundedIcon from "@mui/icons-material/RestoreRounded";
@@ -98,6 +99,8 @@ function CapsuleActionMenu({
   open,
   onClose,
   capsule,
+  showRegenerateAll = false,
+  onRegenerateAll,
   onDownloadPdf,
   onRename,
   onRevert,
@@ -111,6 +114,15 @@ function CapsuleActionMenu({
 
   return (
     <Menu anchorEl={anchorEl} open={open} onClose={onClose}>
+      {showRegenerateAll ? (
+        <>
+          <MenuItem onClick={() => { onClose(); onRegenerateAll?.(); }}>
+            <ListItemIcon sx={{ visibility: "hidden" }} />
+            Regenerate all
+          </MenuItem>
+          <Divider />
+        </>
+      ) : null}
       <MenuItem onClick={() => { onClose(); onDownloadPdf(); }}>
         <ListItemIcon><DownloadRoundedIcon fontSize="small" /></ListItemIcon>
         Export as PDF
@@ -561,18 +573,20 @@ function MainScreen({
                       <MenuRoundedIcon />
                     </IconButton>
                   ) : null}
-                  <Typography
-                    noWrap
-                    sx={{
-                      fontFamily: '"Leckerli One", cursive',
-                      fontSize: "1.85rem",
-                      lineHeight: 1.1,
-                      color: "#8f6f45",
-                      textAlign: "left"
-                    }}
-                  >
-                    {t("appName")}
-                  </Typography>
+                  {!isOverlaySidebar ? (
+                    <Typography
+                      noWrap
+                      sx={{
+                        fontFamily: '"Leckerli One", cursive',
+                        fontSize: "1.85rem",
+                        lineHeight: 1.1,
+                        color: "#8f6f45",
+                        textAlign: "left"
+                      }}
+                    >
+                      {t("appName")}
+                    </Typography>
+                  ) : null}
                 </Stack>
                 <Stack direction="row" spacing={1.2} alignItems="center">
                   <AppLauncher currentApp="capsule" onSelectApp={onNavigateApp} />
@@ -635,6 +649,15 @@ function MainScreen({
             <Stack spacing={2.5} sx={{ minWidth: 0, minHeight: 0, overflowY: "auto", pr: 0.5 }}>
               <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1}>
                 <Stack direction="row" alignItems="center" spacing={0.75} sx={{ minWidth: 0, flex: 1 }}>
+                  {isOverlaySidebar ? (
+                    <IconButton
+                      aria-label={t("filters.open")}
+                      onClick={() => setIsFiltersOpen(true)}
+                      sx={{ ml: -1 }}
+                    >
+                      <TuneRoundedIcon />
+                    </IconButton>
+                  ) : null}
                   <Typography
                     variant="h6"
                     noWrap
@@ -652,11 +675,6 @@ function MainScreen({
                 </Stack>
                 {selectedCount > 0 ? (
                   <Stack direction="row" spacing={1} sx={{ minHeight: 40, alignItems: "center" }}>
-                    {isOverlaySidebar ? (
-                      <Button variant="outlined" onClick={() => setIsFiltersOpen(true)}>
-                        {t("filters.open")}
-                      </Button>
-                    ) : null}
                     <Button variant="outlined" onClick={onCancelRegenerationSelection} disabled={isPartialRegenerationLoading}>
                       {t("main.cancelSelection")}
                     </Button>
@@ -666,18 +684,15 @@ function MainScreen({
                   </Stack>
                 ) : (
                   <Stack direction="row" spacing={1} sx={{ minHeight: 40, alignItems: "center" }}>
-                    {isOverlaySidebar ? (
-                      <Button variant="outlined" onClick={() => setIsFiltersOpen(true)}>
-                        {t("filters.open")}
+                    {!isOverlaySidebar ? (
+                      <Button
+                        variant="contained"
+                        onClick={onRefreshItems}
+                        disabled={isLoadingItems || isPartialRegenerationLoading}
+                      >
+                        Regenerate all
                       </Button>
                     ) : null}
-                    <Button
-                      variant="contained"
-                      onClick={onRefreshItems}
-                      disabled={isLoadingItems || isPartialRegenerationLoading}
-                    >
-                      Regenerate all
-                    </Button>
                     <IconButton aria-label="Open capsule menu" onClick={(event) => setHeaderMenuAnchor(event.currentTarget)}>
                       <MoreVertRoundedIcon />
                     </IconButton>
@@ -755,6 +770,8 @@ function MainScreen({
         open={Boolean(headerMenuAnchor)}
         onClose={() => setHeaderMenuAnchor(null)}
         capsule={activeCapsule}
+        showRegenerateAll={isOverlaySidebar && selectedCount === 0}
+        onRegenerateAll={onRefreshItems}
         onDownloadPdf={onDownloadPdf}
         onRename={() => {
           setRenameCapsuleId(activeCapsule?.id || "");
@@ -971,7 +988,14 @@ function MainScreen({
       </Dialog>
 
       <Dialog open={isFiltersOpen} onClose={() => setIsFiltersOpen(false)} fullScreen={isOverlaySidebar}>
-        <DialogTitle>{t("filters.title")}</DialogTitle>
+        <DialogTitle sx={{ pr: 1.5 }}>
+          <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
+            <Typography variant="inherit">{t("filters.title")}</Typography>
+            <IconButton aria-label="Close filters" onClick={() => setIsFiltersOpen(false)}>
+              <CloseRoundedIcon />
+            </IconButton>
+          </Stack>
+        </DialogTitle>
         <DialogContent>
           <ProfileFiltersSidebar
             styleOptions={styleOptions}
