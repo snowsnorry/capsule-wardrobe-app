@@ -333,7 +333,7 @@ function MainScreen({
       sx={{
         height: "100%",
         width: isOverlaySidebar ? "min(92vw, 360px)" : desktopSidebarWidth,
-        bgcolor: "#f8f8f7",
+        bgcolor: "#ffffff",
         borderRight: "1px solid rgba(15, 23, 42, 0.08)",
         overflow: "hidden",
         transition: isOverlaySidebar ? undefined : "width 240ms ease, box-shadow 240ms ease"
