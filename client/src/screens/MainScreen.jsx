@@ -18,6 +18,7 @@ import {
   Menu,
   MenuItem,
   Stack,
+  SvgIcon,
   TextField,
   Tooltip,
   Typography
@@ -92,6 +93,37 @@ function groupCapsules(items = []) {
 
 function capsuleHasUnsavedChanges(capsule) {
   return capsule?.status === "new" || capsule?.status === "modified";
+}
+
+function SidebarCollapseIcon(props) {
+  return (
+    <SvgIcon {...props} viewBox="-0.5 -0.5 16 16">
+      <path
+        d="M12.7769375 14.284625H2.2230625c-0.8326875 0 -1.5076875 -0.675 -1.5076875 -1.5076875l0 -10.553875c0 -0.8326875 0.675 -1.5076875 1.5076875 -1.5076875h10.553875c0.8326875 0 1.5076875 0.675 1.5076875 1.5076875v10.553875c0 0.8326875 -0.675 1.5076875 -1.5076875 1.5076875Z"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1"
+      />
+      <path
+        d="M3.9192500000000003 5.9923125 2.6 7.5l1.3192499999999998 1.5076875"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1"
+      />
+      <path
+        d="M5.615375 14.284625V0.7153750000000001"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1"
+      />
+    </SvgIcon>
+  );
 }
 
 function CapsuleActionMenu({
@@ -240,13 +272,8 @@ function MainScreen({
   const activeCapsuleName = activeCapsule?.name || `<${t("capsule.new")}>`;
   const desktopSidebarWidth = isSidebarCollapsed ? 72 : 296;
   const desktopSidebarRailWidth = 72;
-  const desktopSidebarExpandedWidth = 296;
   const desktopSidebarGap = 12;
-  const mainBlockOffset = isOverlaySidebar
-    ? 0
-    : (isLargeDesktopSidebar
-        ? desktopSidebarExpandedWidth + desktopSidebarGap
-        : desktopSidebarWidth + desktopSidebarGap);
+  const desktopContentInset = isOverlaySidebar ? 0 : desktopSidebarWidth + desktopSidebarGap;
 
   useEffect(() => {
     if (!searchOpen) {
@@ -284,6 +311,12 @@ function MainScreen({
   const handleCreateNewCapsule = async () => {
     await onCreateCapsule();
     setIsSidebarOpen(false);
+  };
+
+  const handleExpandCollapsedSidebar = () => {
+    if (!isOverlaySidebar && isSidebarCollapsed) {
+      setIsSidebarCollapsed(false);
+    }
   };
 
   const handleRequestDuplicate = async (capsule = activeCapsule) => {
@@ -330,7 +363,20 @@ function MainScreen({
             transition: "opacity 180ms ease, transform 220ms ease",
             pointerEvents: isSidebarCollapsed && !isOverlaySidebar ? "none" : "auto"
           }}
-        />
+          onClick={handleExpandCollapsedSidebar}
+        >
+          {!isSidebarCollapsed && !isOverlaySidebar ? (
+            <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
+              <IconButton
+                aria-label="Collapse sidebar"
+                onClick={() => setIsSidebarCollapsed(true)}
+                sx={{ width: 40, height: 40 }}
+              >
+                <SidebarCollapseIcon />
+              </IconButton>
+            </Box>
+          ) : null}
+        </Box>
       </Stack>
 
       <Stack spacing={0.5} sx={{ px: 0, alignItems: "stretch" }}>
@@ -462,7 +508,11 @@ function MainScreen({
           })}
         </List>
       ) : (
-        <Box sx={{ flex: 1 }} />
+        <Box
+          data-testid="collapsed-sidebar-expand-hitbox"
+          onClick={handleExpandCollapsedSidebar}
+          sx={{ flex: 1, cursor: "pointer" }}
+        />
       )}
 
       <Box sx={{ mt: "auto" }}>
@@ -539,11 +589,12 @@ function MainScreen({
             flex: 1,
             minHeight: 0,
             overflow: "hidden",
-            ml: isOverlaySidebar ? 0 : `${mainBlockOffset}px`,
+            pl: isOverlaySidebar ? 0 : `${desktopContentInset}px`,
             mr: isOverlaySidebar ? 0 : `${desktopSidebarGap}px`,
             my: { xs: 0, md: 0.5 },
             display: "flex",
-            justifyContent: isLargeDesktopSidebar ? "center" : "stretch"
+            justifyContent: isOverlaySidebar ? "stretch" : "center",
+            transition: isOverlaySidebar ? undefined : "padding-left 240ms ease"
           }}
         >
           <Box
@@ -551,9 +602,10 @@ function MainScreen({
             data-sidebar-mode={
               isOverlaySidebar ? "overlay" : (isLargeDesktopSidebar ? "desktop-large" : "desktop-medium")
             }
+            data-content-alignment={isOverlaySidebar ? "overlay" : "centered"}
             sx={{
-              width: isLargeDesktopSidebar ? "min(100%, 1600px)" : "100%",
-              maxWidth: isLargeDesktopSidebar ? "1600px" : undefined,
+              width: isOverlaySidebar ? "100%" : "min(100%, 1600px)",
+              maxWidth: isOverlaySidebar ? undefined : "1600px",
               minHeight: 0,
               overflow: "hidden",
               bgcolor: "background.paper",

@@ -218,18 +218,23 @@ describe("MainScreen", () => {
 
     renderScreen({}, { mobile: true });
     expect(screen.getByTestId("main-screen-shell")).toHaveAttribute("data-sidebar-mode", "overlay");
+    expect(screen.getByTestId("main-screen-shell")).toHaveAttribute("data-content-alignment", "overlay");
     await user.click(screen.getByRole("button", { name: "Toggle sidebar" }));
     expect(await screen.findByText("New capsule")).toBeInTheDocument();
 
     cleanup();
     renderScreen({}, { layoutMode: "medium" });
     expect(screen.getByTestId("main-screen-shell")).toHaveAttribute("data-sidebar-mode", "desktop-medium");
+    expect(screen.getByTestId("main-screen-shell")).toHaveAttribute("data-content-alignment", "centered");
     expect(screen.getAllByRole("button", { name: "Toggle sidebar" })).toHaveLength(1);
+    expect(screen.getByRole("button", { name: "Collapse sidebar" })).toBeInTheDocument();
 
     cleanup();
     renderScreen({}, { layoutMode: "large" });
     expect(screen.getByTestId("main-screen-shell")).toHaveAttribute("data-sidebar-mode", "desktop-large");
+    expect(screen.getByTestId("main-screen-shell")).toHaveAttribute("data-content-alignment", "centered");
     expect(screen.getAllByRole("button", { name: "Toggle sidebar" })).toHaveLength(1);
+    expect(screen.getByRole("button", { name: "Collapse sidebar" })).toBeInTheDocument();
   });
 
   test("renders grid items, pending placeholders, and regeneration actions when selection exists", async () => {
@@ -332,6 +337,19 @@ describe("MainScreen", () => {
     await user.click(screen.getByRole("button", { name: "Open user menu" }));
     await user.click(screen.getByRole("menuitem", { name: /Sign out|actions\.signOut/i }));
     expect(onSignOut).toHaveBeenCalledTimes(1);
+  });
+
+  test("expands a collapsed desktop sidebar when clicking its empty area", async () => {
+    const user = userEvent.setup();
+
+    renderScreen({}, { layoutMode: "medium" });
+
+    await user.click(screen.getByRole("button", { name: "Collapse sidebar" }));
+    expect(screen.queryByText("Your capsules")).not.toBeInTheDocument();
+
+    await user.click(screen.getByTestId("collapsed-sidebar-expand-hitbox"));
+    expect(screen.getByText("Your capsules")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Collapse sidebar" })).toBeInTheDocument();
   });
 
   test("optimistically highlights a clicked capsule before open request resolves", async () => {
