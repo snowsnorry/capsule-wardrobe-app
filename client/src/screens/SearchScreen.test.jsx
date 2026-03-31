@@ -207,6 +207,7 @@ describe("SearchScreen", () => {
     renderScreen();
 
     expect(await screen.findByDisplayValue("linen shirt")).toBeInTheDocument();
+    expect(screen.queryByText("Capsule Wardrobe")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByLabelText("Open filters"));
     expect(await screen.findByText("Filters")).toBeInTheDocument();

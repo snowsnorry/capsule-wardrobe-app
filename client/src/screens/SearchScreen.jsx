@@ -895,16 +895,18 @@ function SearchScreen({ onNavigateApp }) {
     >
       <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
         <Stack direction="row" alignItems="center" spacing={1.5}>
-          <Typography
-            sx={{
-              fontFamily: '"Leckerli One", cursive',
-              fontSize: "1.85rem",
-              lineHeight: 1.1,
-              color: "#8f6f45"
-            }}
-          >
-            {t("appName")}
-          </Typography>
+          {!isMobile ? (
+            <Typography
+              sx={{
+                fontFamily: '"Leckerli One", cursive',
+                fontSize: "1.85rem",
+                lineHeight: 1.1,
+                color: "#8f6f45"
+              }}
+            >
+              {t("appName")}
+            </Typography>
+          ) : null}
         </Stack>
         <Stack direction="row" spacing={1.2} alignItems="center">
           <AppLauncher currentApp="search" onSelectApp={onNavigateApp} />

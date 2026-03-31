@@ -298,6 +298,17 @@ describe("MainScreen", () => {
     });
   });
 
+  test("hides mobile filters button and capsule label while regeneration selection is active", () => {
+    renderScreen({
+      selectedRegenerationUrls: ["https://example.com/a"],
+      items: [{ id: "a", url: "https://example.com/a", name: "Shirt", category: "top" }]
+    }, { mobile: true });
+
+    expect(screen.queryByRole("button", { name: "Open filters" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Spring edit")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Regenerate Selected (1)" })).toBeInTheDocument();
+  });
+
   test("moves regenerate all into the header menu on mobile", async () => {
     const user = userEvent.setup();
     const onRefreshItems = vi.fn();

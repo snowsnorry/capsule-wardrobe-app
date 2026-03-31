@@ -650,7 +650,7 @@ function MainScreen({
             <Stack spacing={2.5} sx={{ minWidth: 0, minHeight: 0, overflowY: "auto", pr: 0.5 }}>
               <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1}>
                 <Stack direction="row" alignItems="center" spacing={0.75} sx={{ minWidth: 0, flex: 1 }}>
-                  {isOverlaySidebar ? (
+                  {isOverlaySidebar && selectedCount === 0 ? (
                     <IconButton
                       aria-label={t("filters.open")}
                       onClick={() => setIsFiltersOpen(true)}
@@ -659,19 +659,23 @@ function MainScreen({
                       <TuneRoundedIcon />
                     </IconButton>
                   ) : null}
-                  <Typography
-                    variant="h6"
-                    noWrap
-                    sx={{
-                      minWidth: 0
-                    }}
-                  >
-                    {activeCapsuleName}
-                  </Typography>
-                  {capsuleHasUnsavedChanges(activeCapsule) ? (
-                    <Tooltip title={t("capsule.notSaved")}>
-                      <FiberManualRecordRoundedIcon sx={{ fontSize: 10, color: "#2f8f58", flexShrink: 0 }} />
-                    </Tooltip>
+                  {!(isOverlaySidebar && selectedCount > 0) ? (
+                    <>
+                      <Typography
+                        variant="h6"
+                        noWrap
+                        sx={{
+                          minWidth: 0
+                        }}
+                      >
+                        {activeCapsuleName}
+                      </Typography>
+                      {capsuleHasUnsavedChanges(activeCapsule) ? (
+                        <Tooltip title={t("capsule.notSaved")}>
+                          <FiberManualRecordRoundedIcon sx={{ fontSize: 10, color: "#2f8f58", flexShrink: 0 }} />
+                        </Tooltip>
+                      ) : null}
+                    </>
                   ) : null}
                 </Stack>
                 {selectedCount > 0 ? (
