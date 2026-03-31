@@ -54,12 +54,57 @@ function createDependencies(overrides = {}) {
     hasProfileImpl: async () => true,
     updateProfileImpl: async (_email, payload) => ({ id: "profile-1", ...payload }),
     updateProfileLocaleImpl: async (_email, locale) => ({ id: "profile-1", locale }),
+    updateProfileActiveCapsuleIdImpl: async (_email, activeCapsuleId) => ({ activeCapsuleId }),
+    resolveActiveCapsuleImpl: async () => ({
+      id: "capsule-1",
+      name: "<New capsule>",
+      draft: null,
+      saved: null,
+      status: "new",
+      createdAt: new Date(0).toISOString(),
+      updatedAt: new Date(0).toISOString()
+    }),
+    listRecentCapsulesImpl: async () => [],
+    searchCapsulesImpl: async () => [],
+    getCapsuleImpl: async () => ({
+      id: "capsule-1",
+      name: "<New capsule>",
+      draft: {
+        filters: {
+          formalityLevel: "casual",
+          style: "minimalistic",
+          occasions: ["office"],
+          season: ["spring"],
+          audience: "woman",
+          color: null,
+          pattern: null,
+          locale: "en"
+        },
+        data: {
+          wardrobe: { items: [{ url: "https://example.com/1" }] },
+          rejectedUrls: []
+        }
+      },
+      saved: null,
+      status: "new",
+      createdAt: new Date(0).toISOString(),
+      updatedAt: new Date(0).toISOString()
+    }),
+    createCapsuleImpl: async (_email, payload) => ({ id: "capsule-2", status: "new", ...payload }),
+    updateCapsuleDraftImpl: async (_email, _id, draft) => ({ id: "capsule-1", draft, saved: null, status: "new" }),
+    saveCapsuleImpl: async () => ({ id: "capsule-1", draft: null, saved: { filters: {}, data: {} }, status: "saved" }),
+    revertCapsuleImpl: async () => ({ id: "capsule-1", draft: null, saved: { filters: {}, data: {} }, status: "saved" }),
+    renameCapsuleImpl: async (_email, id, name) => ({ id, name, draft: null, saved: null, status: "new" }),
+    duplicateCapsuleImpl: async () => ({ id: "capsule-3", name: "<New capsule (1)>", draft: null, saved: { filters: {}, data: {} }, status: "saved" }),
+    deleteCapsuleImpl: async () => true,
+    setActiveCapsuleIdImpl: async () => ({ activeCapsuleId: "capsule-1" }),
     getSearchOptionsImpl: async () => ({ brands: [{ value: "zara", label: "Zara" }] }),
     getSavedSearchImpl: async () => ({ query: "coat", page: 1 }),
     runSavedSearchImpl: async (_email, payload) => ({ items: [{ id: "1" }], total: 1, search: payload }),
     getWardrobeItemsHandler: async (_req, res) => res.json({ ok: true, status: "ready", items: [] }),
     regenerateSelectedWardrobeItemsHandler: async (_req, res) => res.json({ ok: true, items: [] }),
-    downloadWardrobePdfHandler: async (_req, res) => res.status(202).json({ status: "pending", pollAfterMs: 50 }),
+    buildWardrobePdfInChildImpl: async () => Buffer.from("pdf"),
+    getProductsByUrlsInOrderImpl: async () => [{ url: "https://example.com/1" }],
     checkDatabaseConnectionImpl: async () => {},
     ...overrides
   };
@@ -642,7 +687,7 @@ test("index routes cover wardrobe handlers and search endpoints", async (t) => {
     origin: TEST_CLIENT_ORIGIN,
     cookie: AUTH_COOKIE,
     csrfToken: CSRF_TOKEN,
-    body: { force: false }
+    body: { force: false, capsuleId: "capsule-1" }
   });
   assert.equal(wardrobe.response.status, 200);
   assert.equal(wardrobeCalled, true);
@@ -652,20 +697,18 @@ test("index routes cover wardrobe handlers and search endpoints", async (t) => {
     origin: TEST_CLIENT_ORIGIN,
     cookie: AUTH_COOKIE,
     csrfToken: CSRF_TOKEN,
-    body: { itemUrls: ["https://example.com/1"] }
+    body: { capsuleId: "capsule-1", itemUrls: ["https://example.com/1"] }
   });
   assert.equal(regenerate.response.status, 200);
   assert.equal(regenerateCalled, true);
 
-  const pdf = await requestJson(baseUrl, "/wardrobe/items/pdf", {
+  const pdf = await requestJson(baseUrl, "/capsules/capsule-1/pdf", {
     method: "POST",
     origin: TEST_CLIENT_ORIGIN,
     cookie: AUTH_COOKIE,
-    csrfToken: CSRF_TOKEN,
-    body: { locale: "en" }
+    csrfToken: CSRF_TOKEN
   });
-  assert.equal(pdf.response.status, 202);
-  assert.equal(pdfCalled, true);
+  assert.equal(pdf.response.status, 200);
 });
 
 test("index routes map search and health dependency failures", async (t) => {

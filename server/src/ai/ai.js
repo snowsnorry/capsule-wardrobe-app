@@ -1,6 +1,12 @@
 import crypto from "node:crypto";
 import { getProfile, updateProfileItems } from "../profileStore.js";
 import { getSqlClient } from "../db.js";
+import {
+  buildProfileCapsuleContext,
+  getCapsule,
+  getEffectiveCapsuleSnapshot,
+  updateCapsuleDraft
+} from "../capsuleStore.js";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { generateJsonWithLlm } from "./openai.js";
 import {  getPromptEmbeddings, getWardrobePrompt } from "./voyageai.js";
@@ -675,8 +681,16 @@ function hasStoredWardrobeItems(profile) {
   return Boolean(getStoredWardrobePayload(profile)?.items?.length);
 }
 
+function createWardrobeJobKey(email, capsuleId) {
+  const normalizedEmail = String(email || "").trim().toLowerCase();
+  const normalizedCapsuleId = String(capsuleId || "").trim();
+  return normalizedCapsuleId ? `${normalizedEmail}::${normalizedCapsuleId}` : normalizedEmail;
+}
+
 function createWardrobeService({
   getProfileImpl = getProfile,
+  getCapsuleImpl = getCapsule,
+  updateCapsuleDraftImpl = updateCapsuleDraft,
   updateProfileItemsImpl = updateProfileItems,
   generateCapsuleWardrobeImpl = generateCapsuleWardrobe,
   shouldGenerateSwimwearImpl = shouldGenerateSwimwear,
@@ -687,30 +701,45 @@ function createWardrobeService({
   setTimeoutImpl = setTimeout,
   randomUuidImpl = () => crypto.randomUUID()
 } = {}) {
-  function scheduleJobCleanup(email, job) {
+  function scheduleJobCleanup(jobKey, job) {
     setTimeoutImpl(() => {
-      if (jobs.get(email) === job && job.status !== "pending") {
-        jobs.delete(email);
+      if (jobs.get(jobKey) === job && job.status !== "pending") {
+        jobs.delete(jobKey);
       }
     }, COMPLETED_JOB_TTL_MS);
   }
 
-  function getWardrobeJob(email) {
-    const job = jobs.get(email);
+  function getWardrobeJob(email, capsuleId) {
+    const jobKey = createWardrobeJobKey(email, capsuleId);
+    const job = jobs.get(jobKey);
     if (!job) {
       return null;
     }
 
     if (job.status !== "pending" && nowMsImpl() - job.updatedAt > COMPLETED_JOB_TTL_MS) {
-      jobs.delete(email);
+      jobs.delete(jobKey);
       return null;
     }
 
     return job;
   }
 
-  function startWardrobeJob(email, profile, logContext = null) {
-    const existing = getWardrobeJob(email);
+  function startWardrobeJob(email, capsuleId, profile, capsule, logContext = null) {
+    if (typeof capsuleId === "object" && capsuleId !== null) {
+      const legacyProfile = capsuleId;
+      const legacyLogContext = profile || null;
+      return startWardrobeJob(email, "", legacyProfile, {
+        draft: {
+          filters: getRequestedWardrobeParams(legacyProfile),
+          data: {
+            wardrobe: getStoredWardrobePayload(legacyProfile),
+            rejectedUrls: Array.isArray(legacyProfile?.rejected) ? legacyProfile.rejected : []
+          }
+        }
+      }, legacyLogContext);
+    }
+    const jobKey = createWardrobeJobKey(email, capsuleId);
+    const existing = getWardrobeJob(email, capsuleId);
     if (existing?.status === "pending") {
       return existing;
     }
@@ -726,7 +755,7 @@ function createWardrobeService({
       phase: "capsule",
       result: null
     };
-    jobs.set(email, job);
+    jobs.set(jobKey, job);
 
     job.promise = (async () => {
       const jobLogContext = {
@@ -735,7 +764,8 @@ function createWardrobeService({
       };
 
       try {
-        const wardrobe = await generateCapsuleWardrobeImpl(profile, jobLogContext);
+        const generationProfile = buildProfileCapsuleContext(profile, capsule);
+        const wardrobe = await generateCapsuleWardrobeImpl(generationProfile, jobLogContext);
         const items = wardrobe.items;
 
         if (items.length === 0) {
@@ -747,7 +777,18 @@ function createWardrobeService({
           reasoning: wardrobe.reasoning,
           rawSelectionText: wardrobe.rawSelectionText
         });
-        await updateProfileItemsImpl(email, storedCapsule);
+        const baseSnapshot = getEffectiveCapsuleSnapshot(capsule);
+        if (capsuleId) {
+          await updateCapsuleDraftImpl(email, capsuleId, {
+            filters: baseSnapshot?.filters,
+            data: {
+              wardrobe: storedCapsule,
+              rejectedUrls: []
+            }
+          });
+        } else {
+          await updateProfileItemsImpl(email, storedCapsule);
+        }
         logWardrobeInfo("capsule-base-completed", {
           baseDurationMs: nowMsImpl() - startedAt,
           capsuleItemsTotal: items.length,
@@ -756,13 +797,13 @@ function createWardrobeService({
 
         job.result = storedCapsule;
 
-        if (shouldGenerateSwimwearImpl(profile)) {
+        if (shouldGenerateSwimwearImpl(generationProfile)) {
           job.phase = "extras";
           job.updatedAt = nowMsImpl();
 
           try {
             const swimwear = await generateSwimwearAdditionImpl({
-              userProfile: profile,
+              userProfile: generationProfile,
               selectedCapsuleItems: wardrobe.selectedItems,
               promptEmbeddings: wardrobe.promptEmbeddings,
               logContext: jobLogContext
@@ -776,7 +817,17 @@ function createWardrobeService({
               swimwearRawSelectionText: swimwear.rawSelectionText
             });
 
-            await updateProfileItemsImpl(email, finalPayload);
+            if (capsuleId) {
+              await updateCapsuleDraftImpl(email, capsuleId, {
+                filters: baseSnapshot?.filters,
+                data: {
+                  wardrobe: finalPayload,
+                  rejectedUrls: []
+                }
+              });
+            } else {
+              await updateProfileItemsImpl(email, finalPayload);
+            }
             logWardrobeInfo("capsule-total-completed", {
               totalDurationMs: nowMsImpl() - startedAt,
               itemsTotal: finalItems.length,
@@ -809,7 +860,7 @@ function createWardrobeService({
         job.error = error;
         console.error("[wardrobe-ai]", buildErrorLogContext(jobLogContext), error);
       } finally {
-        scheduleJobCleanup(email, job);
+        scheduleJobCleanup(jobKey, job);
       }
     })();
 
@@ -820,10 +871,24 @@ function createWardrobeService({
     try {
       const forceRefresh = Boolean(req.body?.force);
       const email = req.user.email;
+      const capsuleId = String(req.body?.capsuleId || "").trim();
       const profile = await getProfileImpl(email);
-      const storedWardrobe = getStoredWardrobePayload(profile);
-      const activeJob = getWardrobeJob(email);
-      const partialRegenerationJob = getPartialRegenerationJobImpl(email);
+      const capsule = capsuleId ? await getCapsuleImpl(email, capsuleId) : {
+        draft: {
+          filters: getRequestedWardrobeParams(profile),
+          data: {
+            wardrobe: getStoredWardrobePayload(profile),
+            rejectedUrls: Array.isArray(profile?.rejected) ? profile.rejected : []
+          }
+        }
+      };
+      if (capsuleId && !capsule) {
+        return res.status(404).json({ error: "not_found" });
+      }
+      const effectiveSnapshot = getEffectiveCapsuleSnapshot(capsule);
+      const storedWardrobe = getStoredWardrobePayload({ items: effectiveSnapshot?.data?.wardrobe });
+      const activeJob = getWardrobeJob(email, capsuleId);
+      const partialRegenerationJob = getPartialRegenerationJobImpl(email, capsuleId);
 
       if (partialRegenerationJob?.status === "pending") {
         return res.status(202).json({
@@ -882,28 +947,49 @@ function createWardrobeService({
       }
 
       if (activeJob?.status === "failed" && !forceRefresh) {
-        jobs.delete(email);
+        jobs.delete(createWardrobeJobKey(email, capsuleId));
         throw activeJob.error || new Error("wardrobe_generation_failed");
       }
 
       if (activeJob?.status === "failed" && forceRefresh) {
-        jobs.delete(email);
+        jobs.delete(createWardrobeJobKey(email, capsuleId));
       }
 
-      if (forceRefresh && profile) {
-        await updateProfileItemsImpl(email, null);
+      if (forceRefresh && capsule) {
+        if (capsuleId) {
+          await updateCapsuleDraftImpl(email, capsuleId, {
+            filters: effectiveSnapshot?.filters,
+            data: {
+              wardrobe: null,
+              rejectedUrls: []
+            }
+          });
+        } else {
+          await updateProfileItemsImpl(email, null);
+        }
       }
 
-      const generationProfile = forceRefresh && profile
-        ? { ...profile, items: null }
+      const generationProfile = !capsuleId && forceRefresh
+        ? { ...profile, items: null, rejected: [] }
         : profile;
+      const generationCapsule = !capsuleId && forceRefresh
+        ? {
+          draft: {
+            filters: getRequestedWardrobeParams(profile),
+            data: {
+              wardrobe: null,
+              rejectedUrls: []
+            }
+          }
+        }
+        : capsule;
       const logContext = {
         capsuleRequestId: randomUuidImpl()
       };
-      logWardrobeInfo("capsule-request-received", getRequestedWardrobeParams(generationProfile, {
+      logWardrobeInfo("capsule-request-received", getRequestedWardrobeParams(buildProfileCapsuleContext(profile, capsule), {
         forceRefresh
       }), logContext);
-      startWardrobeJob(email, generationProfile, logContext);
+      startWardrobeJob(email, capsuleId, generationProfile, generationCapsule, logContext);
 
       return res.status(202).json({
         ok: true,

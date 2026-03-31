@@ -25,13 +25,29 @@ const profileOptionsApi = vi.hoisted(() => ({
 
 const wardrobeApi = vi.hoisted(() => ({
   fetchWardrobeItems: vi.fn(),
-  downloadWardrobePdf: vi.fn(),
   regenerateSelectedWardrobeItems: vi.fn()
+}));
+
+const capsulesApi = vi.hoisted(() => ({
+  createCapsule: vi.fn(),
+  deleteCapsule: vi.fn(),
+  downloadCapsulePdf: vi.fn(),
+  duplicateCapsule: vi.fn(),
+  fetchCapsule: vi.fn(),
+  fetchCapsuleBootstrap: vi.fn(),
+  fetchRecentCapsules: vi.fn(),
+  renameCapsule: vi.fn(),
+  revertCapsule: vi.fn(),
+  saveCapsule: vi.fn(),
+  searchCapsules: vi.fn(),
+  selectCapsule: vi.fn(),
+  updateCapsuleDraft: vi.fn()
 }));
 
 vi.mock("./api/auth.js", () => authApi);
 vi.mock("./api/profileOptionsCache.js", () => profileOptionsApi);
 vi.mock("./api/wardrobe.js", () => wardrobeApi);
+vi.mock("./api/capsules.js", () => capsulesApi);
 
 vi.mock("./screens/LoadingScreen.jsx", () => ({
   default: () => <div data-testid="loading-screen">loading-screen</div>
@@ -145,6 +161,51 @@ function mockProfileOptions() {
   });
 }
 
+function createBootstrapResponse({ items = [], locale = "en" } = {}) {
+  return {
+    profile: { locale },
+    activeCapsule: {
+      id: "capsule-1",
+      name: "Spring edit",
+      draft: {
+        filters: {
+          formalityLevel: "casual",
+          style: null,
+          occasions: ["office"],
+          season: ["summer"],
+          audience: "woman",
+          color: null,
+          pattern: null,
+          locale
+        },
+        data: {
+          wardrobe: { items },
+          rejectedUrls: []
+        }
+      },
+      saved: null,
+      effective: {
+        filters: {
+          formalityLevel: "casual",
+          style: null,
+          occasions: ["office"],
+          season: ["summer"],
+          audience: "woman",
+          color: null,
+          pattern: null,
+          locale
+        },
+        data: {
+          wardrobe: { items },
+          rejectedUrls: []
+        }
+      },
+      status: "new"
+    },
+    capsules: [{ id: "capsule-1", name: "Spring edit", status: "new" }]
+  };
+}
+
 describe("App e2e-style flows", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -169,10 +230,14 @@ describe("App e2e-style flows", () => {
     profileOptionsApi.loadProfileOptions.mockReset();
 
     wardrobeApi.fetchWardrobeItems.mockReset();
-    wardrobeApi.downloadWardrobePdf.mockReset();
     wardrobeApi.regenerateSelectedWardrobeItems.mockReset();
+    Object.values(capsulesApi).forEach((mockFn) => mockFn.mockReset());
 
     authApi.updateProfileLocale.mockResolvedValue({});
+    capsulesApi.fetchCapsuleBootstrap.mockResolvedValue(createBootstrapResponse());
+    capsulesApi.fetchRecentCapsules.mockResolvedValue({ capsules: [{ id: "capsule-1", name: "Spring edit", status: "new" }] });
+    capsulesApi.fetchCapsule.mockResolvedValue({ capsule: createBootstrapResponse().activeCapsule });
+    capsulesApi.updateCapsuleDraft.mockResolvedValue({ capsule: createBootstrapResponse().activeCapsule });
   });
 
   afterEach(() => {

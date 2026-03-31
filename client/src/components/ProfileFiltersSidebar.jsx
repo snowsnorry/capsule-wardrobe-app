@@ -169,18 +169,20 @@ function ProfileFiltersSidebar({
         ) : null}
       </Stack>
 
-      <Stack sx={{ mt: "auto" }} spacing={2}>
-        <Divider />
-        <Button
-          variant="outlined"
-          color="error"
-          onClick={onSignOut}
-          disabled={isSigningOut}
-          sx={{ alignSelf: "flex-start", borderRadius: "999px", px: 2.5 }}
-        >
-          {t("actions.signOut")}
-        </Button>
-      </Stack>
+      {typeof onSignOut === "function" ? (
+        <Stack sx={{ mt: "auto" }} spacing={2}>
+          <Divider />
+          <Button
+            variant="outlined"
+            color="error"
+            onClick={onSignOut}
+            disabled={isSigningOut}
+            sx={{ alignSelf: "flex-start", borderRadius: "999px", px: 2.5 }}
+          >
+            {t("actions.signOut")}
+          </Button>
+        </Stack>
+      ) : null}
     </Stack>
   );
 }

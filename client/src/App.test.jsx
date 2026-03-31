@@ -25,13 +25,29 @@ const profileOptionsApi = vi.hoisted(() => ({
 
 const wardrobeApi = vi.hoisted(() => ({
   fetchWardrobeItems: vi.fn(),
-  downloadWardrobePdf: vi.fn(),
   regenerateSelectedWardrobeItems: vi.fn()
+}));
+
+const capsulesApi = vi.hoisted(() => ({
+  createCapsule: vi.fn(),
+  deleteCapsule: vi.fn(),
+  downloadCapsulePdf: vi.fn(),
+  duplicateCapsule: vi.fn(),
+  fetchCapsule: vi.fn(),
+  fetchCapsuleBootstrap: vi.fn(),
+  fetchRecentCapsules: vi.fn(),
+  renameCapsule: vi.fn(),
+  revertCapsule: vi.fn(),
+  saveCapsule: vi.fn(),
+  searchCapsules: vi.fn(),
+  selectCapsule: vi.fn(),
+  updateCapsuleDraft: vi.fn()
 }));
 
 vi.mock("./api/auth.js", () => authApi);
 vi.mock("./api/profileOptionsCache.js", () => profileOptionsApi);
 vi.mock("./api/wardrobe.js", () => wardrobeApi);
+vi.mock("./api/capsules.js", () => capsulesApi);
 
 vi.mock("./screens/LoadingScreen.jsx", () => ({
   default: () => <div data-testid="loading-screen">loading-screen</div>
@@ -98,6 +114,15 @@ vi.mock("./screens/MainScreen.jsx", () => ({
       <div data-testid="main-screen">
         <div>main-screen:{props.items.length}</div>
         <div>items-order:{props.items.map((item) => item.url).join(",")}</div>
+        <button type="button" onClick={() => props.onSelectStyleCore("formal")}>
+          change-filter
+        </button>
+        <button type="button" onClick={props.onApplyFilters}>
+          apply-filters
+        </button>
+        <button type="button" onClick={() => props.onDuplicateCapsule("Copied capsule")}>
+          save-as
+        </button>
         {props.items.map((item) => (
           <button key={item.url} type="button" onClick={() => props.onToggleRegenerationSelection(item)}>
             select-{item.url}
@@ -154,6 +179,51 @@ function mockProfileOptions() {
   });
 }
 
+function createBootstrapResponse({ items = [], locale = "ru" } = {}) {
+  return {
+    profile: { locale },
+    activeCapsule: {
+      id: "capsule-1",
+      name: "Spring edit",
+      draft: {
+        filters: {
+          formalityLevel: "casual",
+          style: "minimalistic",
+          occasions: ["office"],
+          season: ["spring"],
+          audience: "woman",
+          color: null,
+          pattern: null,
+          locale
+        },
+        data: {
+          wardrobe: { items },
+          rejectedUrls: []
+        }
+      },
+      saved: null,
+      effective: {
+        filters: {
+          formalityLevel: "casual",
+          style: "minimalistic",
+          occasions: ["office"],
+          season: ["spring"],
+          audience: "woman",
+          color: null,
+          pattern: null,
+          locale
+        },
+        data: {
+          wardrobe: { items },
+          rejectedUrls: []
+        }
+      },
+      status: "new"
+    },
+    capsules: [{ id: "capsule-1", name: "Spring edit", status: "new" }]
+  };
+}
+
 describe("App", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -178,10 +248,32 @@ describe("App", () => {
     profileOptionsApi.loadProfileOptions.mockReset();
 
     wardrobeApi.fetchWardrobeItems.mockReset();
-    wardrobeApi.downloadWardrobePdf.mockReset();
     wardrobeApi.regenerateSelectedWardrobeItems.mockReset();
+    Object.values(capsulesApi).forEach((mockFn) => mockFn.mockReset());
 
     wardrobeApi.fetchWardrobeItems.mockResolvedValue({ items: [], status: "ready" });
+    capsulesApi.fetchCapsuleBootstrap.mockResolvedValue(createBootstrapResponse());
+    capsulesApi.fetchRecentCapsules.mockResolvedValue({ capsules: [{ id: "capsule-1", name: "Spring edit", status: "new" }] });
+    capsulesApi.fetchCapsule.mockResolvedValue({ capsule: createBootstrapResponse().activeCapsule });
+    capsulesApi.updateCapsuleDraft.mockResolvedValue({ capsule: createBootstrapResponse().activeCapsule });
+    capsulesApi.duplicateCapsule.mockResolvedValue({
+      capsule: {
+        ...createBootstrapResponse().activeCapsule,
+        id: "capsule-2",
+        name: "Copied capsule",
+        draft: null,
+        saved: createBootstrapResponse().activeCapsule.draft,
+        status: "saved"
+      }
+    });
+    capsulesApi.revertCapsule.mockResolvedValue({
+      capsule: {
+        ...createBootstrapResponse().activeCapsule,
+        draft: null,
+        saved: createBootstrapResponse().activeCapsule.draft,
+        status: "saved"
+      }
+    });
   });
 
   afterEach(() => {
@@ -330,10 +422,81 @@ describe("App", () => {
     fireEvent.click(screen.getByRole("button", { name: "regenerate-selected" }));
 
     await waitFor(() => {
-      expect(wardrobeApi.regenerateSelectedWardrobeItems).toHaveBeenCalledWith({ itemUrls: ["https://example.com/top-1"] });
+      expect(wardrobeApi.regenerateSelectedWardrobeItems).toHaveBeenCalledWith({
+        itemUrls: ["https://example.com/top-1"],
+        capsuleId: "capsule-1"
+      });
     });
     await waitFor(() => {
       expect(screen.getByText("items-order:https://example.com/outerwear-1,https://example.com/top-2,https://example.com/bottom-1")).toBeInTheDocument();
+    });
+  });
+
+  test("does not write capsule draft before filters are applied", async () => {
+    authApi.fetchCurrentUser.mockResolvedValue({ user: { email: "person@example.com" } });
+    authApi.fetchProfileStatus.mockResolvedValue({ hasProfile: true });
+    authApi.fetchProfile.mockResolvedValue({
+      profile: {
+        formalityLevel: "casual",
+        style: "minimalistic",
+        occasions: ["office"],
+        season: ["summer"],
+        audience: "woman",
+        color: null,
+        pattern: null,
+        locale: "en"
+      }
+    });
+    authApi.updateProfileLocale.mockResolvedValue({});
+    mockProfileOptions();
+
+    renderApp();
+
+    expect(await screen.findByTestId("main-screen")).toBeInTheDocument();
+    capsulesApi.updateCapsuleDraft.mockClear();
+
+    fireEvent.click(screen.getByRole("button", { name: "change-filter" }));
+
+    await waitFor(() => {
+      expect(capsulesApi.updateCapsuleDraft).not.toHaveBeenCalled();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "apply-filters" }));
+
+    await waitFor(() => {
+      expect(capsulesApi.updateCapsuleDraft).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  test("save as duplicates with a provided name and reverts the source capsule", async () => {
+    authApi.fetchCurrentUser.mockResolvedValue({ user: { email: "person@example.com" } });
+    authApi.fetchProfileStatus.mockResolvedValue({ hasProfile: true });
+    authApi.fetchProfile.mockResolvedValue({
+      profile: {
+        formalityLevel: "casual",
+        style: "minimalistic",
+        occasions: ["office"],
+        season: ["summer"],
+        audience: "woman",
+        color: null,
+        pattern: null,
+        locale: "en"
+      }
+    });
+    authApi.updateProfileLocale.mockResolvedValue({});
+    mockProfileOptions();
+
+    renderApp();
+
+    expect(await screen.findByTestId("main-screen")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "save-as" }));
+
+    await waitFor(() => {
+      expect(capsulesApi.duplicateCapsule).toHaveBeenCalledWith("capsule-1", "Copied capsule");
+    });
+    await waitFor(() => {
+      expect(capsulesApi.revertCapsule).toHaveBeenCalledWith("capsule-1");
     });
   });
 });

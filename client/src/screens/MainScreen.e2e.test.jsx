@@ -20,7 +20,12 @@ vi.mock("../components/LocaleSwitcher.jsx", () => ({
   default: () => <div data-testid="locale-switcher">locale-switcher</div>
 }));
 vi.mock("../components/ProfileFiltersSidebar.jsx", () => ({
-  default: () => <div data-testid="profile-filters-sidebar">profile-filters-sidebar</div>
+  default: ({ onApply, onReset }) => (
+    <div data-testid="profile-filters-sidebar">
+      <button type="button" onClick={onApply}>apply-filters</button>
+      <button type="button" onClick={onReset}>reset-filters</button>
+    </div>
+  )
 }));
 vi.mock("../components/ClothingGridPlaceholder.jsx", () => ({
   default: ({ count, inline }) => (
@@ -77,10 +82,20 @@ function MainScreenFlowHarness({ onRefreshItems, onDownloadPdf, onRegenerateSele
 
   return (
     <MainScreen
+      activeCapsule={{ id: "capsule-1", name: "Spring edit", draft: null, saved: null, status: "new" }}
+      capsuleList={[{ id: "capsule-1", name: "Spring edit", status: "new" }]}
       onSignOut={vi.fn()}
       isSigningOut={false}
       onRefreshItems={onRefreshItems}
       onDownloadPdf={onDownloadPdf}
+      onCreateCapsule={vi.fn()}
+      onOpenCapsule={vi.fn(() => Promise.resolve())}
+      onSaveCapsule={vi.fn(() => Promise.resolve())}
+      onRevertCapsule={vi.fn(() => Promise.resolve())}
+      onRenameCapsule={vi.fn(() => Promise.resolve())}
+      onDuplicateCapsule={vi.fn(() => Promise.resolve())}
+      onDeleteCapsule={vi.fn(() => Promise.resolve())}
+      onSearchCapsules={vi.fn(() => Promise.resolve([]))}
       items={[
         { id: "b", url: "https://example.com/b", name: "Blazer", category: "outerwear" },
         { id: "a", url: "https://example.com/a", name: "Shirt", category: "top" },
@@ -169,8 +184,9 @@ describe("MainScreen e2e-style flow", () => {
       onRegenerateSelectedItems
     });
 
-    await user.click(screen.getByRole("button", { name: "Download capsule PDF" }));
-    await user.click(screen.getByRole("button", { name: "Refresh wardrobe" }));
+    await user.click(screen.getByRole("button", { name: "Open capsule menu" }));
+    await user.click(screen.getByRole("menuitem", { name: "Export as PDF" }));
+    await user.click(screen.getByRole("button", { name: "Regenerate all" }));
 
     expect(onDownloadPdf).toHaveBeenCalledTimes(1);
     expect(onRefreshItems).toHaveBeenCalledTimes(1);

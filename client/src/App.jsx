@@ -3,7 +3,6 @@ import { Box, Container, Paper, Stack, Typography, useMediaQuery } from "@mui/ma
 import { useTheme } from "@mui/material/styles";
 import {
   fetchCurrentUser,
-  fetchProfile,
   fetchProfileStatus,
   updateProfile,
   updateProfileLocale,
@@ -14,9 +13,22 @@ import {
   verifyLoginCode,
   signInWithGoogle
 } from "./api/auth.js";
+import {
+  createCapsule,
+  deleteCapsule,
+  downloadCapsulePdf,
+  duplicateCapsule,
+  fetchCapsule,
+  fetchCapsuleBootstrap,
+  fetchRecentCapsules,
+  renameCapsule,
+  revertCapsule,
+  saveCapsule,
+  searchCapsules,
+  updateCapsuleDraft
+} from "./api/capsules.js";
 import { clearProfileOptionsCache, loadProfileOptions } from "./api/profileOptionsCache.js";
 import { clearRequestCache } from "./api/auth.js";
-import LoadingScreen from "./screens/LoadingScreen.jsx";
 import MainScreen from "./screens/MainScreen.jsx";
 import OnboardingScreen from "./screens/OnboardingScreen.jsx";
 import ProfileScreen from "./screens/ProfileScreen.jsx";
@@ -145,6 +157,42 @@ function mergeWardrobeItemsIntoExistingOrder({
   return [...mergedItems, ...appendedItems];
 }
 
+function buildCapsuleStatus(capsule) {
+  if (!capsule) {
+    return "new";
+  }
+  if (capsule.saved && !capsule.draft) {
+    return "saved";
+  }
+  if (capsule.saved && capsule.draft) {
+    return JSON.stringify(capsule.saved) === JSON.stringify(capsule.draft) ? "saved" : "modified";
+  }
+  return "new";
+}
+
+function buildEmptyCapsuleDraft(locale = "en") {
+  return {
+    filters: {
+      formalityLevel: "",
+      style: null,
+      occasions: [],
+      season: [],
+      audience: "",
+      color: null,
+      pattern: null,
+      locale
+    },
+    data: {
+      wardrobe: null,
+      rejectedUrls: []
+    }
+  };
+}
+
+function getEffectiveCapsule(capsule) {
+  return capsule?.draft || capsule?.saved || null;
+}
+
 async function retry(fn, attempts = 3, delayMs = 120) {
   let lastError;
   for (let index = 0; index < attempts; index += 1) {
@@ -188,7 +236,11 @@ function App() {
   const [profileCreated, setProfileCreated] = useState(false);
   const [currentView, setCurrentView] = useState("main");
   const [profileItems, setProfileItems] = useState(null);
+  const [activeCapsuleId, setActiveCapsuleId] = useState("");
+  const [activeCapsuleMeta, setActiveCapsuleMeta] = useState(null);
+  const [capsuleList, setCapsuleList] = useState([]);
   const [isLoadingItems, setIsLoadingItems] = useState(false);
+  const [isContentOperationLoading, setIsContentOperationLoading] = useState(false);
   const [isDownloadingWardrobePdf, setIsDownloadingWardrobePdf] = useState(false);
   const [selectedRegenerationUrls, setSelectedRegenerationUrls] = useState([]);
   const [partialRegenerationPendingUrls, setPartialRegenerationPendingUrls] = useState([]);
@@ -196,6 +248,7 @@ function App() {
   const [isWardrobePending, setIsWardrobePending] = useState(false);
   const [hasPendingAdditionalItems, setHasPendingAdditionalItems] = useState(false);
   const [wardrobePollAfterMs, setWardrobePollAfterMs] = useState(WARDROBE_POLL_AFTER_MS_DEFAULT);
+  const [wardrobeLoadedCapsuleId, setWardrobeLoadedCapsuleId] = useState("");
   const [appRoute, setAppRoute] = useState(() => (
     typeof window === "undefined" ? "capsule" : getAppRoute(window.location.pathname)
   ));
@@ -259,7 +312,7 @@ function App() {
           await preloadOnboardingOptions();
           if (!isActive) return;
         } else {
-          await Promise.all([ensureOptionsLoaded(), loadProfileSelections()]);
+          await Promise.all([ensureOptionsLoaded(), bootstrapCapsules()]);
           if (!isActive) return;
         }
       } catch (error) {
@@ -316,18 +369,74 @@ function App() {
     await preloadOnboardingOptions({ useFallback });
   };
 
-  const loadProfileSelections = async () => {
-    const result = await fetchProfile();
-    setSelectedFormalityLevel(result.profile?.formalityLevel || "");
-    setSelectedStyle(result.profile?.style ?? null);
-    setSelectedOccasions(result.profile?.occasions || []);
-    setSelectedSeason(result.profile?.season || []);
-    setSelectedAudience(result.profile?.audience || "");
-    setSelectedColor(result.profile?.color ?? null);
-    setSelectedPattern(result.profile?.pattern ?? null);
+  const applyCapsuleState = (capsule, { capsules = null } = {}) => {
+    if (!capsule) {
+      return;
+    }
+
+    const effective = getEffectiveCapsule(capsule) || buildEmptyCapsuleDraft(locale);
+    setActiveCapsuleId(capsule.id || "");
+    setActiveCapsuleMeta({
+      ...capsule,
+      status: capsule.status || buildCapsuleStatus(capsule)
+    });
+    setSelectedFormalityLevel(effective.filters?.formalityLevel || "");
+    setSelectedStyle(effective.filters?.style ?? null);
+    setSelectedOccasions(effective.filters?.occasions || []);
+    setSelectedSeason(effective.filters?.season || []);
+    setSelectedAudience(effective.filters?.audience || "");
+    setSelectedColor(effective.filters?.color ?? null);
+    setSelectedPattern(effective.filters?.pattern ?? null);
+    setProfileItems(buildDisplayWardrobeItems(effective.data?.wardrobe?.items || []));
+    setWardrobeLoadedCapsuleId("");
+    setSelectedRegenerationUrls([]);
+    setPartialRegenerationPendingUrls([]);
+    setIsPartialRegenerationLoading(false);
+    setIsWardrobePending(false);
+    setHasPendingAdditionalItems(false);
+
+    if (effective.filters?.locale) {
+      setLocale(effective.filters.locale);
+    }
+
+    if (Array.isArray(capsules)) {
+      setCapsuleList(capsules);
+    }
+  };
+
+  const buildCurrentDraftSnapshot = ({ wardrobe = profileItems, rejectedUrls = null } = {}) => ({
+    filters: {
+      formalityLevel: selectedFormalityLevel,
+      style: selectedStyle,
+      occasions: selectedOccasions,
+      season: selectedSeason,
+      audience: selectedAudience,
+      color: selectedColor,
+      pattern: selectedPattern,
+      locale
+    },
+    data: {
+      wardrobe: wardrobe
+        ? {
+          items: Array.isArray(wardrobe) ? wardrobe : wardrobe.items || [],
+          reasoning: wardrobe?.reasoning || null,
+          rawSelectionText: wardrobe?.rawSelectionText || null,
+          swimwearReasoning: wardrobe?.swimwearReasoning || null,
+          swimwearRawSelectionText: wardrobe?.swimwearRawSelectionText || null
+        }
+        : null,
+      rejectedUrls: Array.isArray(rejectedUrls)
+        ? rejectedUrls
+        : getEffectiveCapsule(activeCapsuleMeta)?.data?.rejectedUrls || []
+    }
+  });
+
+  const bootstrapCapsules = async () => {
+    const result = await fetchCapsuleBootstrap();
     if (result.profile?.locale) {
       setLocale(result.profile.locale);
     }
+    applyCapsuleState(result.activeCapsule, { capsules: result.capsules || [] });
   };
 
   const handleRequestCode = async (event) => {
@@ -369,7 +478,7 @@ function App() {
         setOnboardingStep(0);
         setStatus({ loading: false, error: "", infoKey: "", infoParams: null });
       } else {
-        await Promise.all([ensureOptionsLoaded({ useFallback: true }), loadProfileSelections()]);
+        await Promise.all([ensureOptionsLoaded({ useFallback: true }), bootstrapCapsules()]);
         setUser(result.user);
         setStatus({ loading: false, error: "", infoKey: "auth.signedIn", infoParams: null });
       }
@@ -400,7 +509,7 @@ function App() {
         setOnboardingStep(0);
         setStatus({ loading: false, error: "", infoKey: "", infoParams: null });
       } else {
-        await Promise.all([ensureOptionsLoaded({ useFallback: true }), loadProfileSelections()]);
+        await Promise.all([ensureOptionsLoaded({ useFallback: true }), bootstrapCapsules()]);
         setUser(result.user);
         setStatus({ loading: false, error: "", infoKey: "auth.signedIn", infoParams: null });
       }
@@ -431,8 +540,12 @@ function App() {
       setSelectedPattern(null);
       setOnboardingStep(0);
       setProfileItems(null);
+      setActiveCapsuleId("");
+      setActiveCapsuleMeta(null);
+      setCapsuleList([]);
       setIsLoadingItems(false);
       setIsDownloadingWardrobePdf(false);
+      setWardrobeLoadedCapsuleId("");
       setSelectedRegenerationUrls([]);
       setPartialRegenerationPendingUrls([]);
       setIsPartialRegenerationLoading(false);
@@ -501,6 +614,7 @@ function App() {
       setIsPartialRegenerationLoading(false);
       setIsWardrobePending(false);
       setHasPendingAdditionalItems(false);
+      await bootstrapCapsules();
       setStatus({ loading: false, error: "", infoKey: "onboarding.completedHint", infoParams: null });
     } catch (error) {
       setStatus({ loading: false, error: resolveErrorMessage(error), infoKey: "", infoParams: null });
@@ -532,16 +646,146 @@ function App() {
     }
   };
 
+  const refreshCapsuleList = async () => {
+    const result = await fetchRecentCapsules();
+    setCapsuleList(result.capsules || []);
+  };
+
+  const handleApplyCapsuleFilters = async () => {
+    if (!activeCapsuleId) {
+      return;
+    }
+
+    setIsContentOperationLoading(true);
+    setStatus({ loading: true, error: "", infoKey: "", infoParams: null });
+    try {
+      const draft = buildCurrentDraftSnapshot({ wardrobe: null, rejectedUrls: [] });
+      const result = await updateCapsuleDraft(activeCapsuleId, draft);
+      setActiveCapsuleMeta(result.capsule);
+      setProfileItems([]);
+      await refreshCapsuleList();
+      await runWardrobeLoad({ force: true });
+      setStatus({ loading: false, error: "", infoKey: "profile.updated", infoParams: null });
+    } catch (error) {
+      setStatus({ loading: false, error: resolveErrorMessage(error), infoKey: "", infoParams: null });
+    } finally {
+      setIsContentOperationLoading(false);
+    }
+  };
+
+  const handleCreateCapsule = async () => {
+    setIsContentOperationLoading(true);
+    try {
+      const result = await createCapsule({ draft: buildEmptyCapsuleDraft(locale) });
+      applyCapsuleState(result.capsule);
+      await refreshCapsuleList();
+    } finally {
+      setIsContentOperationLoading(false);
+    }
+  };
+
+  const handleOpenCapsule = async (capsuleId) => {
+    setIsContentOperationLoading(true);
+    try {
+      const result = await fetchCapsule(capsuleId);
+      applyCapsuleState(result.capsule);
+      await refreshCapsuleList();
+    } finally {
+      setIsContentOperationLoading(false);
+    }
+  };
+
+  const handleSaveCapsule = async (capsuleId = activeCapsuleId) => {
+    if (!capsuleId) {
+      return;
+    }
+    const result = await saveCapsule(capsuleId);
+    if (capsuleId === activeCapsuleId) {
+      setActiveCapsuleMeta(result.capsule);
+    }
+    await refreshCapsuleList();
+  };
+
+  const handleRevertCapsule = async (capsuleId = activeCapsuleId) => {
+    if (!capsuleId) {
+      return;
+    }
+    setIsContentOperationLoading(true);
+    try {
+      const result = await revertCapsule(capsuleId);
+      if (capsuleId === activeCapsuleId) {
+        applyCapsuleState(result.capsule);
+      }
+      await refreshCapsuleList();
+    } finally {
+      setIsContentOperationLoading(false);
+    }
+  };
+
+  const handleRenameCapsule = async (name, capsuleId = activeCapsuleId) => {
+    if (!capsuleId) {
+      return;
+    }
+    const result = await renameCapsule(capsuleId, name);
+    if (capsuleId === activeCapsuleId) {
+      setActiveCapsuleMeta(result.capsule);
+    }
+    await refreshCapsuleList();
+  };
+
+  const handleDuplicateCapsule = async (name, capsuleId = activeCapsuleId) => {
+    if (!capsuleId) {
+      return;
+    }
+    setIsContentOperationLoading(true);
+    try {
+      const sourceCapsuleId = capsuleId;
+      const result = await duplicateCapsule(sourceCapsuleId, name);
+      await revertCapsule(sourceCapsuleId);
+      applyCapsuleState(result.capsule);
+      await refreshCapsuleList();
+    } finally {
+      setIsContentOperationLoading(false);
+    }
+  };
+
+  const handleDeleteCapsule = async (capsuleId = activeCapsuleId) => {
+    if (!capsuleId) {
+      return;
+    }
+    setIsContentOperationLoading(true);
+    try {
+      const result = await deleteCapsule(capsuleId);
+      if (result.activeCapsule) {
+        applyCapsuleState(result.activeCapsule);
+      }
+      await refreshCapsuleList();
+    } finally {
+      setIsContentOperationLoading(false);
+    }
+  };
+
+  const handleSearchCapsules = async (query) => {
+    const result = await searchCapsules(query);
+    return result.capsules || [];
+  };
+
   const handleResetProfileFilters = async () => {
     setStatus(initialStatus);
     setSelectedRegenerationUrls([]);
     setPartialRegenerationPendingUrls([]);
     setIsPartialRegenerationLoading(false);
+    setIsContentOperationLoading(true);
     try {
-      await ensureOptionsLoaded({ useFallback: true });
-      await loadProfileSelections();
+      if (!activeCapsuleId) {
+        return;
+      }
+      const result = await fetchCapsule(activeCapsuleId);
+      applyCapsuleState(result.capsule);
     } catch (error) {
       setStatus({ loading: false, error: resolveErrorMessage(error), infoKey: "", infoParams: null });
+    } finally {
+      setIsContentOperationLoading(false);
     }
   };
 
@@ -571,6 +815,7 @@ function App() {
   };
 
   const profileKey = JSON.stringify({
+    capsuleId: activeCapsuleId,
     formalityLevel: selectedFormalityLevel,
     style: selectedStyle,
     occasions: selectedOccasions.slice().sort(),
@@ -584,10 +829,17 @@ function App() {
   const isMainScreenView = Boolean(user && (hasProfile || profileCreated) && currentView === "main" && appRoute !== "search");
   const isOnboardingView = Boolean(user && !hasProfile && !profileCreated);
   const hasBrandedPanelHeader = isSignInView || isMainScreenView || isOnboardingView || isSearchView;
+  const canGenerateWardrobe = Boolean(
+    selectedFormalityLevel &&
+    selectedOccasions.length > 0 &&
+    selectedSeason.length > 0 &&
+    selectedAudience
+  );
+  const isContentBusy = isLoadingItems || isWardrobePending || isPartialRegenerationLoading || isContentOperationLoading;
 
   const loadWardrobeItems = async ({ force = false } = {}) => {
     const { fetchWardrobeItems } = await import("./api/wardrobe.js");
-    return fetchWardrobeItems({ profileKey, force });
+    return fetchWardrobeItems({ profileKey, force, capsuleId: activeCapsuleId });
   };
 
   const logWardrobeReasoning = (reasoning) => {
@@ -600,6 +852,7 @@ function App() {
 
   const handleWardrobeError = () => {
     setProfileItems([]);
+    setWardrobeLoadedCapsuleId(activeCapsuleId);
     setSelectedRegenerationUrls([]);
     setPartialRegenerationPendingUrls([]);
     setIsPartialRegenerationLoading(false);
@@ -647,6 +900,7 @@ function App() {
           setHasPendingAdditionalItems(isPendingExtras);
           setWardrobePollAfterMs(nextPollAfterMs);
           setIsLoadingItems(items.length === 0 && !isPendingExtras);
+          setWardrobeLoadedCapsuleId(activeCapsuleId);
 
           await new Promise((resolve) => setTimeout(resolve, nextPollAfterMs));
           if (!isMountedRef.current || requestId !== wardrobeRequestIdRef.current) {
@@ -659,6 +913,13 @@ function App() {
 
         logWardrobeReasoning(result?.reasoning);
         setProfileItems(buildDisplayWardrobeItems(items));
+        try {
+          const capsuleResult = await fetchCapsule(activeCapsuleId);
+          setActiveCapsuleMeta(capsuleResult.capsule);
+          await refreshCapsuleList();
+        } catch {
+          // Keep rendered items even if sidebar metadata refresh fails.
+        }
         setSelectedRegenerationUrls([]);
         setPartialRegenerationPendingUrls([]);
         setIsPartialRegenerationLoading(false);
@@ -666,6 +927,7 @@ function App() {
         setHasPendingAdditionalItems(false);
         setWardrobePollAfterMs(WARDROBE_POLL_AFTER_MS_DEFAULT);
         setIsLoadingItems(false);
+        setWardrobeLoadedCapsuleId(activeCapsuleId);
         return;
       } catch (error) {
         if (!isMountedRef.current || requestId !== wardrobeRequestIdRef.current) {
@@ -684,11 +946,13 @@ function App() {
     await runWardrobeLoad({ force: true });
   };
 
-  const handleDownloadWardrobePdf = async () => {
+  const handleDownloadWardrobePdf = async (capsuleId = activeCapsuleId) => {
+    if (!capsuleId) {
+      return;
+    }
     setIsDownloadingWardrobePdf(true);
     try {
-      const { downloadWardrobePdf } = await import("./api/wardrobe.js");
-      await downloadWardrobePdf({ locale });
+      await downloadCapsulePdf(capsuleId);
     } catch {
       setStatus((current) => ({
         ...current,
@@ -719,7 +983,7 @@ function App() {
   };
 
   const handleRegenerateSelectedItems = async () => {
-    if (selectedRegenerationUrls.length === 0 || isPartialRegenerationLoading) {
+    if (selectedRegenerationUrls.length === 0 || isPartialRegenerationLoading || !activeCapsuleId) {
       return;
     }
 
@@ -731,7 +995,7 @@ function App() {
 
     try {
       const { regenerateSelectedWardrobeItems } = await import("./api/wardrobe.js");
-      const result = await regenerateSelectedWardrobeItems({ itemUrls: pendingUrls });
+      const result = await regenerateSelectedWardrobeItems({ itemUrls: pendingUrls, capsuleId: activeCapsuleId });
       if (!isMountedRef.current) {
         return;
       }
@@ -742,6 +1006,13 @@ function App() {
         nextItems: Array.isArray(result?.items) ? result.items : [],
         pendingUrls
       }));
+      try {
+        const capsuleResult = await fetchCapsule(activeCapsuleId);
+        setActiveCapsuleMeta(capsuleResult.capsule);
+        await refreshCapsuleList();
+      } catch {
+        // Ignore sidebar refresh errors after partial regeneration success.
+      }
       setPartialRegenerationPendingUrls([]);
       setIsPartialRegenerationLoading(false);
     } catch (error) {
@@ -762,15 +1033,15 @@ function App() {
   };
 
   useEffect(() => {
-    if (!user || !(hasProfile || profileCreated)) {
+    if (!user || !(hasProfile || profileCreated) || !activeCapsuleId || !canGenerateWardrobe) {
       return;
     }
-    if (profileItems || isWardrobePending) {
+    if (wardrobeLoadedCapsuleId === activeCapsuleId || isWardrobePending) {
       return;
     }
 
     runWardrobeLoad();
-  }, [user, hasProfile, profileCreated, profileItems, isWardrobePending]);
+  }, [user, hasProfile, profileCreated, activeCapsuleId, canGenerateWardrobe, wardrobeLoadedCapsuleId, isWardrobePending]);
 
   useEffect(() => {
     if (!sessionInitialized || !user || !(hasProfile || profileCreated)) {
@@ -781,7 +1052,7 @@ function App() {
 
   const renderRightPanel = () => {
     if (isCheckingSession || !sessionInitialized) {
-      return <LoadingScreen />;
+      return null;
     }
 
     if (!user) {
@@ -842,12 +1113,24 @@ function App() {
 
       return (
         <MainScreen
+          activeCapsule={activeCapsuleMeta}
+          capsuleList={capsuleList}
+          userEmail={user?.email || ""}
           onSignOut={handleLogout}
           isSigningOut={status.loading}
           onRefreshItems={handleRefreshWardrobe}
           onDownloadPdf={handleDownloadWardrobePdf}
+          onCreateCapsule={handleCreateCapsule}
+          onOpenCapsule={handleOpenCapsule}
+          onSaveCapsule={handleSaveCapsule}
+          onRevertCapsule={handleRevertCapsule}
+          onRenameCapsule={handleRenameCapsule}
+          onDuplicateCapsule={handleDuplicateCapsule}
+          onDeleteCapsule={handleDeleteCapsule}
+          onSearchCapsules={handleSearchCapsules}
           items={profileItems || []}
           isLoadingItems={isLoadingItems}
+          isContentBusy={isContentBusy}
           isDownloadingPdf={isDownloadingWardrobePdf}
           showAdditionalItemPlaceholder={hasPendingAdditionalItems}
           styleOptions={styleOptions}
@@ -873,7 +1156,7 @@ function App() {
           onSelectAudience={setSelectedAudience}
           onSelectAccentColor={setSelectedColor}
           onSelectPattern={setSelectedPattern}
-          onApplyFilters={handleSaveProfile}
+          onApplyFilters={handleApplyCapsuleFilters}
           onResetFilters={handleResetProfileFilters}
           onNavigateApp={handleNavigateApp}
           selectedRegenerationUrls={selectedRegenerationUrls}
@@ -929,6 +1212,7 @@ function App() {
       }}
     >
       <Container
+        disableGutters={isMainScreenView}
         maxWidth={isMainScreenView || isSearchView ? false : "lg"}
         sx={{
           position: "relative",
@@ -937,9 +1221,9 @@ function App() {
           gap: { xs: 3, md: 6 },
           gridTemplateColumns: user ? "1fr" : { xs: "1fr", md: "1.2fr 1fr" },
           alignItems: "center",
-          py: { xs: 0, md: "24px" },
-          px: isMainScreenView || isSearchView ? { xs: 0, md: 4, xl: 5 } : { xs: 0, md: 3 },
-          maxWidth: isMainScreenView || isSearchView ? "1680px" : undefined,
+          py: isMainScreenView ? { xs: 0, md: "12px" } : { xs: 0, md: "24px" },
+          px: isMainScreenView ? 0 : (isSearchView ? { xs: 0, md: 4, xl: 5 } : { xs: 0, md: 3 }),
+          maxWidth: isMainScreenView ? "none" : (isSearchView ? "1680px" : undefined),
           minHeight: "100vh",
           height: "100%",
           boxSizing: "border-box"
@@ -1015,33 +1299,45 @@ function App() {
           </Stack>
         ) : null}
 
-        <Paper
-          elevation={0}
-          sx={{
-            p: cardPadding,
-            pt: hasBrandedPanelHeader ? { xs: 3, md: 3.25 } : undefined,
-            backdropFilter: "blur(8px)",
-            minHeight: 0,
-            height: isSignInView ? { xs: "100%", md: "517px" } : "100%",
-            borderRadius: { xs: 0, md: "22px" },
-            display: "flex",
-            flexDirection: "column",
-            overflow: "hidden"
-          }}
-        >
+        {!sessionInitialized ? null : isMainScreenView ? (
           <Box
             sx={{
-              flex: 1,
               minHeight: 0,
               height: "100%",
-              overflowY: "auto",
-              WebkitOverflowScrolling: "touch",
-              touchAction: "pan-y"
+              overflow: "hidden"
             }}
           >
             {renderRightPanel()}
           </Box>
-        </Paper>
+        ) : (
+          <Paper
+            elevation={0}
+            sx={{
+              p: cardPadding,
+              pt: hasBrandedPanelHeader ? { xs: 3, md: 3.25 } : undefined,
+              backdropFilter: "blur(8px)",
+              minHeight: 0,
+              height: isSignInView ? { xs: "100%", md: "517px" } : "100%",
+              borderRadius: { xs: 0, md: "22px" },
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden"
+            }}
+          >
+            <Box
+              sx={{
+                flex: 1,
+                minHeight: 0,
+                height: "100%",
+                overflowY: "auto",
+                WebkitOverflowScrolling: "touch",
+                touchAction: "pan-y"
+              }}
+            >
+              {renderRightPanel()}
+            </Box>
+          </Paper>
+        )}
       </Container>
     </Box>
   );

@@ -10,11 +10,8 @@ vi.mock("./config.js", () => ({
   API_BASE_URL: "https://api.example.test"
 }));
 
-import {
-  downloadWardrobePdf,
-  fetchWardrobeItems,
-  regenerateSelectedWardrobeItems
-} from "./wardrobe.js";
+import { downloadCapsulePdf } from "./capsules.js";
+import { fetchWardrobeItems, regenerateSelectedWardrobeItems } from "./wardrobe.js";
 
 function createResponse({
   ok = true,
@@ -102,7 +99,7 @@ describe("wardrobe api", () => {
     );
   });
 
-  test("downloadWardrobePdf polls pending responses, downloads blob, and revokes object url", async () => {
+  test("downloadCapsulePdf downloads blob and revokes object url", async () => {
     const originalCreateElement = document.createElement.bind(document);
     const anchorMethods = { click: vi.fn(), remove: vi.fn() };
     vi.spyOn(document, "createElement").mockImplementation((tagName) => {
@@ -114,36 +111,36 @@ describe("wardrobe api", () => {
       return element;
     });
 
-    requestApi.request
-      .mockResolvedValueOnce(createResponse({
-        status: 202,
-        ok: false,
-        jsonData: { pollAfterMs: 25 }
-      }))
-      .mockResolvedValueOnce(createResponse({
-        status: 200,
-        ok: true,
-        blobData: new Blob(["pdf-binary"], { type: "application/pdf" })
-      }));
+    requestApi.request.mockResolvedValueOnce(createResponse({
+      status: 200,
+      ok: true,
+      blobData: new Blob(["pdf-binary"], { type: "application/pdf" })
+    }));
 
-    await downloadWardrobePdf({ locale: "ru" });
+    await downloadCapsulePdf("capsule-1");
 
-    expect(requestApi.request).toHaveBeenCalledTimes(2);
-    expect(setTimeout).toHaveBeenCalledWith(expect.any(Function), 25);
+    expect(requestApi.request).toHaveBeenCalledTimes(1);
+    expect(requestApi.request).toHaveBeenCalledWith(
+      "https://api.example.test/capsules/capsule-1/pdf",
+      {
+        method: "POST",
+        credentials: "include"
+      }
+    );
     expect(URL.createObjectURL).toHaveBeenCalledTimes(1);
     expect(anchorMethods.click).toHaveBeenCalledTimes(1);
     expect(anchorMethods.remove).toHaveBeenCalledTimes(1);
     expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:wardrobe-pdf");
   });
 
-  test("downloadWardrobePdf surfaces endpoint errors after polling parse fallback", async () => {
+  test("downloadCapsulePdf surfaces endpoint errors after parse fallback", async () => {
     requestApi.request.mockResolvedValue(createResponse({
       ok: false,
       status: 503,
       jsonError: new Error("invalid_json")
     }));
 
-    await expect(downloadWardrobePdf({ locale: "en" })).rejects.toMatchObject({
+    await expect(downloadCapsulePdf("capsule-1")).rejects.toMatchObject({
       message: "request_failed_503",
       status: 503
     });

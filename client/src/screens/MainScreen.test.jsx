@@ -1,6 +1,6 @@
 import React from "react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 
@@ -24,7 +24,9 @@ vi.mock("../components/ProfileFiltersSidebar.jsx", () => ({
     <div data-testid="profile-filters-sidebar">
       <button type="button" onClick={onApply}>apply-filters</button>
       <button type="button" onClick={onReset}>reset-filters</button>
-      <button type="button" onClick={onSignOut}>sign-out</button>
+      {typeof onSignOut === "function" ? (
+        <button type="button" onClick={onSignOut}>sign-out</button>
+      ) : null}
     </div>
   )
 }));
@@ -80,17 +82,36 @@ function t(key, params) {
   return key.split(".").reduce((current, part) => current?.[part], labels) || key;
 }
 
-function renderScreen(props = {}, { mobile = false } = {}) {
-  mediaQueryMock.mockReturnValue(mobile);
+function renderScreen(props = {}, { mobile = false, layoutMode = mobile ? "overlay" : "medium" } = {}) {
+  mediaQueryMock.mockImplementation((query) => {
+    if (String(query).includes("max-width: 1279.95px")) {
+      return layoutMode === "overlay";
+    }
+    if (String(query).includes("min-width: 1680px")) {
+      return layoutMode === "large";
+    }
+    return false;
+  });
   useI18nMock.mockReturnValue({ t });
 
   const defaults = {
+    activeCapsule: { id: "capsule-1", name: "Spring edit", draft: null, saved: null, status: "new" },
+    capsuleList: [{ id: "capsule-1", name: "Spring edit", status: "new" }],
     onSignOut: vi.fn(),
     isSigningOut: false,
     onRefreshItems: vi.fn(),
     onDownloadPdf: vi.fn(),
+    onCreateCapsule: vi.fn(),
+    onOpenCapsule: vi.fn(() => Promise.resolve()),
+    onSaveCapsule: vi.fn(() => Promise.resolve()),
+    onRevertCapsule: vi.fn(() => Promise.resolve()),
+    onRenameCapsule: vi.fn(() => Promise.resolve()),
+    onDuplicateCapsule: vi.fn(() => Promise.resolve()),
+    onDeleteCapsule: vi.fn(() => Promise.resolve()),
+    onSearchCapsules: vi.fn(() => Promise.resolve([])),
     items: [],
     isLoadingItems: false,
+    isContentBusy: false,
     isDownloadingPdf: false,
     showAdditionalItemPlaceholder: false,
     styleOptions: { core: ["casual"], aesthetics: ["minimalistic"] },
@@ -151,12 +172,32 @@ describe("MainScreen", () => {
     renderScreen({
       items: [],
       isLoadingItems: true,
+      isContentBusy: true,
       isDownloadingPdf: true
     });
 
     expect(screen.getByTestId("loading-placeholder")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Download capsule PDF" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Refresh wardrobe" })).toBeDisabled();
+    expect(screen.getByRole("progressbar")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Regenerate all" })).toBeDisabled();
+  });
+
+  test("exposes overlay, medium desktop, and large desktop sidebar modes", async () => {
+    const user = userEvent.setup();
+
+    renderScreen({}, { mobile: true });
+    expect(screen.getByTestId("main-screen-shell")).toHaveAttribute("data-sidebar-mode", "overlay");
+    await user.click(screen.getByRole("button", { name: "Toggle sidebar" }));
+    expect(await screen.findByText("New capsule")).toBeInTheDocument();
+
+    cleanup();
+    renderScreen({}, { layoutMode: "medium" });
+    expect(screen.getByTestId("main-screen-shell")).toHaveAttribute("data-sidebar-mode", "desktop-medium");
+    expect(screen.getAllByRole("button", { name: "Toggle sidebar" })).toHaveLength(1);
+
+    cleanup();
+    renderScreen({}, { layoutMode: "large" });
+    expect(screen.getByTestId("main-screen-shell")).toHaveAttribute("data-sidebar-mode", "desktop-large");
+    expect(screen.getAllByRole("button", { name: "Toggle sidebar" })).toHaveLength(1);
   });
 
   test("renders grid items, pending placeholders, and regeneration actions when selection exists", async () => {
@@ -207,7 +248,7 @@ describe("MainScreen", () => {
       onResetFilters
     }, { mobile: true });
 
-    await user.click(screen.getByLabelText("Open filters"));
+    await user.click(screen.getByRole("button", { name: "Open filters" }));
     expect(screen.getAllByText("apply-filters").length).toBeGreaterThan(0);
     expect(screen.getAllByText("reset-filters").length).toBeGreaterThan(0);
 
@@ -217,7 +258,7 @@ describe("MainScreen", () => {
       expect(screen.queryAllByTestId("profile-filters-sidebar").length).toBe(1);
     });
 
-    await user.click(screen.getByLabelText("Open filters"));
+    await user.click(screen.getByRole("button", { name: "Open filters" }));
     await user.click(screen.getAllByText("reset-filters").at(-1));
     expect(onResetFilters).toHaveBeenCalledTimes(1);
     await waitFor(() => {
@@ -225,25 +266,66 @@ describe("MainScreen", () => {
     });
   });
 
-  test("shows sign-out confirmation and respects cancel and confirm actions", async () => {
+  test("opens user menu and signs out", async () => {
     const user = userEvent.setup();
     const onSignOut = vi.fn();
 
     renderScreen({ onSignOut });
 
-    await user.click(screen.getByText("sign-out"));
-    expect(screen.getByText("Are you sure you want to sign out?")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Sign out" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Open user menu" }));
+    await user.click(screen.getByRole("menuitem", { name: /Sign out|actions\.signOut/i }));
+    expect(onSignOut).toHaveBeenCalledTimes(1);
+  });
 
-    await user.click(screen.getByRole("button", { name: "Cancel" }));
-    expect(onSignOut).not.toHaveBeenCalled();
-    await waitFor(() => {
-      expect(screen.queryByText("Are you sure you want to sign out?")).not.toBeInTheDocument();
+  test("optimistically highlights a clicked capsule before open request resolves", async () => {
+    const user = userEvent.setup();
+    let resolveOpen;
+    const onOpenCapsule = vi.fn(() => new Promise((resolve) => {
+      resolveOpen = resolve;
+    }));
+
+    renderScreen({
+      activeCapsule: { id: "capsule-1", name: "Spring edit", draft: null, saved: null, status: "saved" },
+      capsuleList: [
+        { id: "capsule-1", name: "Spring edit", status: "saved" },
+        { id: "capsule-2", name: "Summer edit", status: "saved" }
+      ],
+      onOpenCapsule
     });
 
-    await user.click(screen.getByText("sign-out"));
-    await user.click(screen.getByRole("button", { name: "Sign out" }));
-    expect(onSignOut).toHaveBeenCalledTimes(1);
+    const capsuleList = screen.getByRole("list");
+    const springRow = within(capsuleList).getByText("Spring edit").closest(".MuiListItemButton-root");
+    const summerRow = within(capsuleList).getByText("Summer edit").closest(".MuiListItemButton-root");
+
+    expect(springRow).toHaveClass("Mui-selected");
+    expect(summerRow).not.toHaveClass("Mui-selected");
+
+    await user.click(within(capsuleList).getByText("Summer edit"));
+
+    expect(onOpenCapsule).toHaveBeenCalledWith("capsule-2");
+    expect(summerRow).toHaveClass("Mui-selected");
+    expect(springRow).not.toHaveClass("Mui-selected");
+
+    resolveOpen();
+  });
+
+  test("deletes a sidebar capsule row by its explicit capsule id", async () => {
+    const user = userEvent.setup();
+    const onDeleteCapsule = vi.fn(() => Promise.resolve());
+
+    renderScreen({
+      activeCapsule: { id: "capsule-1", name: "Spring edit", draft: null, saved: null, status: "saved" },
+      capsuleList: [
+        { id: "capsule-1", name: "Spring edit", status: "saved" },
+        { id: "capsule-2", name: "Summer edit", status: "new" }
+      ],
+      onDeleteCapsule
+    });
+
+    await user.click(screen.getByLabelText("Capsule actions Summer edit"));
+    await user.click(screen.getByRole("menuitem", { name: "Delete" }));
+    await user.click(screen.getAllByRole("button", { name: "Delete" }).at(-1));
+
+    expect(onDeleteCapsule).toHaveBeenCalledWith("capsule-2");
   });
 });

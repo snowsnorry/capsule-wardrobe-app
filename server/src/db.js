@@ -76,10 +76,39 @@ async function ensureProfilesTable() {
       rejected text[] not null default '{}'::text[],
       items jsonb null,
       pdf bytea null,
+      active_capsule_id uuid null,
       locale text not null,
       created_at timestamptz not null default now(),
       updated_at timestamptz not null default now()
     )
+  `;
+  await sql`
+    alter table profiles
+    add column if not exists active_capsule_id uuid null
+  `;
+}
+
+async function ensureCapsulesTable() {
+  const sql = getSqlClient();
+  await sql`create extension if not exists pgcrypto`;
+  await sql`
+    create table if not exists capsules (
+      id uuid primary key default gen_random_uuid(),
+      email text not null,
+      name text not null,
+      draft jsonb null,
+      saved jsonb null,
+      created_at timestamptz not null default now(),
+      updated_at timestamptz not null default now()
+    )
+  `;
+  await sql`
+    create index if not exists capsules_email_updated_at_idx
+    on capsules (email, updated_at desc)
+  `;
+  await sql`
+    create index if not exists capsules_email_lower_name_idx
+    on capsules (email, lower(name))
   `;
 }
 
@@ -270,6 +299,7 @@ async function ensureAuthTables() {
 async function ensureTables() {
   await ensureAuthTables();
   await ensureProfilesTable();
+  await ensureCapsulesTable();
   await ensureSearchTable();
 }
 
@@ -903,6 +933,7 @@ async function getProfileByEmail(email) {
       pattern,
       rejected,
       items,
+      active_capsule_id as "activeCapsuleId",
       locale,
       created_at as "createdAt",
       updated_at as "updatedAt"
@@ -937,6 +968,7 @@ async function createProfileRecord({
       pattern,
       rejected,
       items,
+      active_capsule_id,
       locale
     )
     values (
@@ -949,6 +981,7 @@ async function createProfileRecord({
       ${color},
       ${pattern},
       '{}'::text[],
+      null,
       null,
       ${locale}
     )
@@ -964,6 +997,7 @@ async function createProfileRecord({
       pattern,
       rejected,
       items,
+      active_capsule_id as "activeCapsuleId",
       locale,
       created_at as "createdAt",
       updated_at as "updatedAt"
@@ -1041,6 +1075,7 @@ async function updateProfileRecord({
       pattern,
       rejected,
       items,
+      active_capsule_id as "activeCapsuleId",
       locale,
       created_at as "createdAt",
       updated_at as "updatedAt"
@@ -1072,6 +1107,7 @@ async function updateProfileLocaleByEmail({ email, locale }) {
       pattern,
       rejected,
       items,
+      active_capsule_id as "activeCapsuleId",
       locale,
       created_at as "createdAt",
       updated_at as "updatedAt"
@@ -1099,6 +1135,7 @@ async function updateProfileItemsByEmail({ email, items }) {
       pattern,
       rejected,
       items,
+      active_capsule_id as "activeCapsuleId",
       locale,
       created_at as "createdAt",
       updated_at as "updatedAt"
@@ -1120,6 +1157,7 @@ async function getProfileWithPdfByEmail(email) {
       pattern,
       rejected,
       items,
+      active_capsule_id as "activeCapsuleId",
       locale,
       pdf,
       created_at as "createdAt",
@@ -1155,6 +1193,7 @@ async function updateProfileRejectedByEmail({ email, rejected }) {
       pattern,
       rejected,
       items,
+      active_capsule_id as "activeCapsuleId",
       locale,
       created_at as "createdAt",
       updated_at as "updatedAt"
@@ -1200,8 +1239,232 @@ async function updateProfilePdfByEmail({
         updated_at = now()
       where email = ${email}
       returning email
-    `;
+  `;
   return row || null;
+}
+
+async function updateProfileActiveCapsuleIdByEmail({ email, activeCapsuleId }) {
+  const sql = getSqlClient();
+  const [row] = await sql`
+    update profiles
+    set
+      active_capsule_id = ${activeCapsuleId},
+      updated_at = now()
+    where email = ${email}
+    returning
+      email,
+      formality_level as "formalityLevel",
+      style,
+      occasions,
+      season,
+      audience,
+      color,
+      pattern,
+      rejected,
+      items,
+      active_capsule_id as "activeCapsuleId",
+      locale,
+      created_at as "createdAt",
+      updated_at as "updatedAt"
+  `;
+  return row || null;
+}
+
+async function createCapsuleRecord({
+  email,
+  name,
+  draft = null,
+  saved = null
+}) {
+  const sql = getSqlClient();
+  const [row] = await sql`
+    insert into capsules (
+      email,
+      name,
+      draft,
+      saved
+    )
+    values (
+      ${email},
+      ${name},
+      ${draft === null ? null : JSON.stringify(draft)},
+      ${saved === null ? null : JSON.stringify(saved)}
+    )
+    returning
+      id,
+      email,
+      name,
+      draft,
+      saved,
+      created_at as "createdAt",
+      updated_at as "updatedAt"
+  `;
+  return row || null;
+}
+
+async function getCapsuleByIdForEmail({ email, capsuleId }) {
+  const sql = getSqlClient();
+  const [row] = await sql`
+    select
+      id,
+      email,
+      name,
+      draft,
+      saved,
+      created_at as "createdAt",
+      updated_at as "updatedAt"
+    from capsules
+    where email = ${email} and id = ${capsuleId}
+    limit 1
+  `;
+  return row || null;
+}
+
+async function listRecentCapsulesByEmail({ email, limit = 10 }) {
+  const sql = getSqlClient();
+  return sql`
+    select
+      id,
+      email,
+      name,
+      draft,
+      saved,
+      created_at as "createdAt",
+      updated_at as "updatedAt"
+    from capsules
+    where email = ${email}
+    order by updated_at desc, created_at desc
+    limit ${limit}
+  `;
+}
+
+async function searchCapsulesByEmail({ email, query, limit = 25 }) {
+  const sql = getSqlClient();
+  const normalizedQuery = `%${String(query || "").trim().toLowerCase()}%`;
+  return sql`
+    select
+      id,
+      email,
+      name,
+      draft,
+      saved,
+      created_at as "createdAt",
+      updated_at as "updatedAt"
+    from capsules
+    where email = ${email}
+      and lower(name) like ${normalizedQuery}
+    order by updated_at desc, created_at desc
+    limit ${limit}
+  `;
+}
+
+async function listCapsuleNamesByEmail(email) {
+  const sql = getSqlClient();
+  const rows = await sql`
+    select name
+    from capsules
+    where email = ${email}
+  `;
+  return rows.map((row) => String(row?.name || "").trim()).filter(Boolean);
+}
+
+async function updateCapsuleDraftByIdForEmail({
+  email,
+  capsuleId,
+  draft
+}) {
+  const sql = getSqlClient();
+  const [row] = await sql`
+    update capsules
+    set
+      draft = ${draft === null ? null : JSON.stringify(draft)},
+      updated_at = now()
+    where email = ${email} and id = ${capsuleId}
+    returning
+      id,
+      email,
+      name,
+      draft,
+      saved,
+      created_at as "createdAt",
+      updated_at as "updatedAt"
+  `;
+  return row || null;
+}
+
+async function renameCapsuleByIdForEmail({
+  email,
+  capsuleId,
+  name
+}) {
+  const sql = getSqlClient();
+  const [row] = await sql`
+    update capsules
+    set
+      name = ${name},
+      updated_at = now()
+    where email = ${email} and id = ${capsuleId}
+    returning
+      id,
+      email,
+      name,
+      draft,
+      saved,
+      created_at as "createdAt",
+      updated_at as "updatedAt"
+  `;
+  return row || null;
+}
+
+async function saveCapsuleByIdForEmail({ email, capsuleId }) {
+  const sql = getSqlClient();
+  const [row] = await sql`
+    update capsules
+    set
+      saved = coalesce(draft, saved),
+      draft = null,
+      updated_at = now()
+    where email = ${email} and id = ${capsuleId}
+    returning
+      id,
+      email,
+      name,
+      draft,
+      saved,
+      created_at as "createdAt",
+      updated_at as "updatedAt"
+  `;
+  return row || null;
+}
+
+async function revertCapsuleDraftByIdForEmail({ email, capsuleId }) {
+  const sql = getSqlClient();
+  const [row] = await sql`
+    update capsules
+    set
+      draft = null,
+      updated_at = now()
+    where email = ${email} and id = ${capsuleId}
+    returning
+      id,
+      email,
+      name,
+      draft,
+      saved,
+      created_at as "createdAt",
+      updated_at as "updatedAt"
+  `;
+  return row || null;
+}
+
+async function deleteCapsuleByIdForEmail({ email, capsuleId }) {
+  const sql = getSqlClient();
+  const result = await sql`
+    delete from capsules
+    where email = ${email} and id = ${capsuleId}
+    returning id
+  `;
+  return hasAffectedRows(result);
 }
 
 function hasAffectedRows(result) {
@@ -1263,6 +1526,17 @@ export {
   updateProfileRejectedByEmail,
   getProfilePdfByEmail,
   updateProfilePdfByEmail,
+  updateProfileActiveCapsuleIdByEmail,
+  createCapsuleRecord,
+  getCapsuleByIdForEmail,
+  listRecentCapsulesByEmail,
+  searchCapsulesByEmail,
+  listCapsuleNamesByEmail,
+  updateCapsuleDraftByIdForEmail,
+  renameCapsuleByIdForEmail,
+  saveCapsuleByIdForEmail,
+  revertCapsuleDraftByIdForEmail,
+  deleteCapsuleByIdForEmail,
   hasAffectedRows,
   deleteProfileByEmail
 };

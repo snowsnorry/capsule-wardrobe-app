@@ -6,6 +6,12 @@ import {
   getSqlClient
 } from "../db.js";
 import { getProfile, updateProfileItems, updateProfileRejected } from "../profileStore.js";
+import {
+  buildProfileCapsuleContext,
+  getCapsule,
+  getEffectiveCapsuleSnapshot,
+  updateCapsuleDraft
+} from "../capsuleStore.js";
 import { getCapsuleCategories } from "./categories.js";
 import {
   buildCapsuleSchema,
@@ -37,6 +43,12 @@ const PARTIAL_REGENERATION_POLL_AFTER_MS = 2000;
 const COMPLETED_JOB_TTL_MS = 5 * 60 * 1000;
 const LAST_PROMPT_DIR_URL = new URL("../../../last-prompt/", import.meta.url);
 const partialRegenerationJobs = new Map();
+
+function createPartialRegenerationJobKey(email, capsuleId) {
+  const normalizedEmail = String(email || "").trim().toLowerCase();
+  const normalizedCapsuleId = String(capsuleId || "").trim();
+  return normalizedCapsuleId ? `${normalizedEmail}::${normalizedCapsuleId}` : normalizedEmail;
+}
 
 function isValidSelectedItemUrls(itemUrls) {
   return Array.isArray(itemUrls) && itemUrls.length > 0 && itemUrls.every((itemUrl) => (
@@ -562,6 +574,8 @@ async function regenerateCapsuleWardrobe(userProfile = null, products = null, lo
 
 function createPartialRegenerationService({
   getProfileImpl = getProfile,
+  getCapsuleImpl = getCapsule,
+  updateCapsuleDraftImpl = updateCapsuleDraft,
   updateProfileItemsImpl = updateProfileItems,
   updateProfileRejectedImpl = updateProfileRejected,
   regenerateCapsuleWardrobeImpl = regenerateCapsuleWardrobe,
@@ -570,30 +584,64 @@ function createPartialRegenerationService({
   setTimeoutImpl = setTimeout,
   randomUuidImpl = () => crypto.randomUUID()
 } = {}) {
-  function scheduleJobCleanup(email, job) {
+  function scheduleJobCleanup(jobKey, job) {
     setTimeoutImpl(() => {
-      if (jobs.get(email) === job && job.status !== "pending") {
-        jobs.delete(email);
+      if (jobs.get(jobKey) === job && job.status !== "pending") {
+        jobs.delete(jobKey);
       }
     }, COMPLETED_JOB_TTL_MS);
   }
 
-  function getPartialRegenerationJob(email) {
-    const job = jobs.get(email);
+  function getPartialRegenerationJob(email, capsuleId) {
+    const jobKey = createPartialRegenerationJobKey(email, capsuleId);
+    const job = jobs.get(jobKey);
     if (!job) {
       return null;
     }
 
     if (job.status !== "pending" && nowMsImpl() - job.updatedAt > COMPLETED_JOB_TTL_MS) {
-      jobs.delete(email);
+      jobs.delete(jobKey);
       return null;
     }
 
     return job;
   }
 
-  function startPartialRegenerationJob(email, profile, selectedProducts, storedWardrobe, logContext = null) {
-    const existing = getPartialRegenerationJob(email);
+  function startPartialRegenerationJob(email, capsuleId, profile, capsule, selectedProducts, storedWardrobe, logContext = null) {
+    if (typeof capsuleId === "object" && capsuleId !== null) {
+      const legacyProfile = capsuleId;
+      const legacySelectedProducts = profile;
+      const legacyStoredWardrobe = capsule;
+      const legacyLogContext = selectedProducts || null;
+      return startPartialRegenerationJob(
+        email,
+        "",
+        legacyProfile,
+        {
+          draft: {
+            filters: {
+              formalityLevel: legacyProfile?.formalityLevel || "",
+              style: legacyProfile?.style ?? null,
+              occasions: legacyProfile?.occasions || [],
+              season: legacyProfile?.season || [],
+              audience: legacyProfile?.audience || "",
+              color: legacyProfile?.color ?? null,
+              pattern: legacyProfile?.pattern ?? null,
+              locale: legacyProfile?.locale || "en"
+            },
+            data: {
+              wardrobe: legacyStoredWardrobe,
+              rejectedUrls: Array.isArray(legacyProfile?.rejected) ? legacyProfile.rejected : []
+            }
+          }
+        },
+        legacySelectedProducts,
+        legacyStoredWardrobe,
+        legacyLogContext
+      );
+    }
+    const jobKey = createPartialRegenerationJobKey(email, capsuleId);
+    const existing = getPartialRegenerationJob(email, capsuleId);
     if (existing?.status === "pending") {
       return existing;
     }
@@ -613,7 +661,7 @@ function createPartialRegenerationService({
       result: null,
       promise: null
     };
-    jobs.set(email, job);
+    jobs.set(jobKey, job);
 
     job.promise = (async () => {
       const jobLogContext = {
@@ -622,9 +670,20 @@ function createPartialRegenerationService({
       };
 
       try {
-        const result = await regenerateCapsuleWardrobeImpl(profile, selectedProducts, jobLogContext);
+        const result = await regenerateCapsuleWardrobeImpl(buildProfileCapsuleContext(profile, capsule), selectedProducts, jobLogContext);
         const payload = buildStoredWardrobePayloadFromResult(result, storedWardrobe);
-        await updateProfileItemsImpl(email, payload);
+        const baseSnapshot = getEffectiveCapsuleSnapshot(capsule);
+        if (capsuleId) {
+          await updateCapsuleDraftImpl(email, capsuleId, {
+            filters: baseSnapshot?.filters,
+            data: {
+              wardrobe: payload,
+              rejectedUrls: baseSnapshot?.data?.rejectedUrls || []
+            }
+          });
+        } else {
+          await updateProfileItemsImpl(email, payload);
+        }
         job.result = payload;
         job.status = "completed";
         job.phase = "completed";
@@ -641,7 +700,7 @@ function createPartialRegenerationService({
         job.error = error;
         console.error("[wardrobe-ai][regenerate-selected]", error);
       } finally {
-        scheduleJobCleanup(email, job);
+        scheduleJobCleanup(jobKey, job);
       }
     })();
 
@@ -651,12 +710,35 @@ function createPartialRegenerationService({
   async function regenerateSelectedWardrobeItems(req, res) {
     try {
       const email = req.user.email;
+      const capsuleId = String(req.body?.capsuleId || "").trim();
       const itemUrls = Array.isArray(req.body?.itemUrls)
         ? req.body.itemUrls.map((itemUrl) => String(itemUrl || "").trim()).filter(Boolean)
         : [];
       const profile = await getProfileImpl(email);
-      const storedWardrobe = getStoredWardrobePayload(profile);
-      const activeJob = getPartialRegenerationJob(email);
+      const capsule = capsuleId ? await getCapsuleImpl(email, capsuleId) : {
+        draft: {
+          filters: {
+            formalityLevel: profile?.formalityLevel || "",
+            style: profile?.style ?? null,
+            occasions: profile?.occasions || [],
+            season: profile?.season || [],
+            audience: profile?.audience || "",
+            color: profile?.color ?? null,
+            pattern: profile?.pattern ?? null,
+            locale: profile?.locale || "en"
+          },
+          data: {
+            wardrobe: getStoredWardrobePayload(profile),
+            rejectedUrls: Array.isArray(profile?.rejected) ? profile.rejected : []
+          }
+        }
+      };
+      if (capsuleId && !capsule) {
+        return res.status(404).json({ error: "not_found" });
+      }
+      const effectiveSnapshot = getEffectiveCapsuleSnapshot(capsule);
+      const storedWardrobe = getStoredWardrobePayload({ items: effectiveSnapshot?.data?.wardrobe });
+      const activeJob = getPartialRegenerationJob(email, capsuleId);
 
       if (activeJob?.status === "pending") {
         return res.status(202).json({
@@ -674,7 +756,7 @@ function createPartialRegenerationService({
       }
 
       if (activeJob?.status === "completed") {
-        jobs.delete(email);
+        jobs.delete(createPartialRegenerationJobKey(email, capsuleId));
         const readyPayload = activeJob.result || storedWardrobe || {};
         return res.json({
           ok: true,
@@ -688,7 +770,7 @@ function createPartialRegenerationService({
       }
 
       if (activeJob?.status === "failed") {
-        jobs.delete(email);
+        jobs.delete(createPartialRegenerationJobKey(email, capsuleId));
         throw activeJob.error || new Error("partial_regeneration_failed");
       }
 
@@ -711,7 +793,7 @@ function createPartialRegenerationService({
         return res.status(400).json({ error: "invalid_payload" });
       }
       const nextRejectedUrls = [...new Set([
-        ...(Array.isArray(profile?.rejected) ? profile.rejected : []),
+        ...(Array.isArray(effectiveSnapshot?.data?.rejectedUrls) ? effectiveSnapshot.data.rejectedUrls : []),
         ...itemUrls
       ].map((itemUrl) => String(itemUrl || "").trim()).filter(Boolean))];
 
@@ -729,11 +811,32 @@ function createPartialRegenerationService({
         source: "partial-regeneration"
       };
       logWardrobeInfo("regenerate-request-received", { itemUrls }, logContext);
-      await updateProfileRejectedImpl(email, nextRejectedUrls);
-      await updateProfileItemsImpl(email, partialPayload);
+      if (capsuleId) {
+        await updateCapsuleDraftImpl(email, capsuleId, {
+          filters: effectiveSnapshot?.filters,
+          data: {
+            wardrobe: partialPayload,
+            rejectedUrls: nextRejectedUrls
+          }
+        });
+      } else {
+        await updateProfileRejectedImpl(email, nextRejectedUrls);
+        await updateProfileItemsImpl(email, partialPayload);
+      }
       startPartialRegenerationJob(
         email,
-        { ...profile, items: partialPayload, rejected: nextRejectedUrls },
+        capsuleId,
+        profile,
+        {
+          ...capsule,
+          draft: {
+            filters: effectiveSnapshot?.filters,
+            data: {
+              wardrobe: partialPayload,
+              rejectedUrls: nextRejectedUrls
+            }
+          }
+        },
         selectedProducts,
         storedWardrobe,
         logContext

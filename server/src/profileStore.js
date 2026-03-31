@@ -10,7 +10,8 @@ import {
   updateProfilePdfByEmail,
   updateProfileRejectedByEmail,
   updateProfileLocaleByEmail,
-  updateProfileItemsByEmail
+  updateProfileItemsByEmail,
+  updateProfileActiveCapsuleIdByEmail
 } from "./db.js";
 import { ACCENT_COLOR_OPTIONS } from "../../shared/accentColors.js";
 import { CORE_STYLE_ORDER, normalizeStyleValue } from "../../shared/stylePreferences.js";
@@ -174,6 +175,9 @@ function normalizeProfileRecord(profile) {
     ),
     pattern: typeof profile.pattern === "string" && profile.pattern.trim()
       ? profile.pattern.trim().toLowerCase()
+      : null,
+    activeCapsuleId: typeof profile.activeCapsuleId === "string" && profile.activeCapsuleId.trim()
+      ? profile.activeCapsuleId.trim()
       : null
   };
 }
@@ -253,6 +257,10 @@ async function updateProfilePdf(email, pdf, options = {}) {
   return updateProfilePdfByEmail({ email, pdf, ...options });
 }
 
+async function updateProfileActiveCapsuleId(email, activeCapsuleId) {
+  return updateProfileActiveCapsuleIdByEmail({ email, activeCapsuleId });
+}
+
 export {
   getProfile,
   getProfileWithPdf,
@@ -265,6 +273,7 @@ export {
   updateProfileRejected,
   getProfilePdf,
   updateProfilePdf,
+  updateProfileActiveCapsuleId,
   getFormalityLevels,
   getStyles,
   getOccasions,
