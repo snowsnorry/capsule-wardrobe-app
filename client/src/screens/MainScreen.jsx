@@ -68,17 +68,17 @@ function highlightMatch(name, query) {
 
 function getCapsuleSectionLabel(updatedAt) {
   if (!updatedAt) {
-    return "Earlier";
+    return "searchEarlier";
   }
   const diffMs = Date.now() - new Date(updatedAt).getTime();
   const diffDays = Math.floor(diffMs / (24 * 60 * 60 * 1000));
   if (diffDays < 7) {
-    return "Previous 7 Days";
+    return "searchPrevious7Days";
   }
   if (diffDays < 30) {
-    return "Previous 30 Days";
+    return "searchPrevious30Days";
   }
-  return "Earlier";
+  return "searchEarlier";
 }
 
 function groupCapsules(items = []) {
@@ -108,6 +108,7 @@ function CapsuleActionMenu({
   onDuplicate,
   onDelete
 }) {
+  const { t } = useI18n();
   const canRevert = capsule?.status === "modified";
   const canSave = capsule?.status === "new" || capsule?.status === "modified";
   const canDuplicate = Boolean(capsule?.saved && capsule?.draft);
@@ -118,39 +119,39 @@ function CapsuleActionMenu({
         <>
           <MenuItem onClick={() => { onClose(); onRegenerateAll?.(); }}>
             <ListItemIcon sx={{ visibility: "hidden" }} />
-            Regenerate all
+            {t("capsule.regenerateAll")}
           </MenuItem>
           <Divider />
         </>
       ) : null}
       <MenuItem onClick={() => { onClose(); onDownloadPdf(); }}>
         <ListItemIcon><DownloadRoundedIcon fontSize="small" /></ListItemIcon>
-        Export as PDF
+        {t("capsule.exportPdf")}
       </MenuItem>
       <Divider />
       <MenuItem onClick={() => { onClose(); onRename(); }}>
         <ListItemIcon><DriveFileRenameOutlineRoundedIcon fontSize="small" /></ListItemIcon>
-        Rename
+        {t("capsule.rename")}
       </MenuItem>
       <Divider />
       <MenuItem disabled={!canRevert} onClick={() => { onClose(); onRevert(); }}>
         <ListItemIcon><RestoreRoundedIcon fontSize="small" /></ListItemIcon>
-        Revert
+        {t("capsule.revert")}
       </MenuItem>
       <MenuItem disabled={!canSave} onClick={() => { onClose(); onSave(); }}>
         <ListItemIcon sx={{ visibility: "hidden" }} />
-        Save
+        {t("actions.save")}
       </MenuItem>
       {canDuplicate ? (
         <MenuItem onClick={() => { onClose(); onDuplicate(); }}>
           <ListItemIcon sx={{ visibility: "hidden" }} />
-          Save as...
+          {t("capsule.saveAs")}
         </MenuItem>
       ) : null}
       <Divider />
       <MenuItem onClick={() => { onClose(); onDelete(); }} sx={{ color: "error.main" }}>
         <ListItemIcon sx={{ color: "inherit" }}><DeleteOutlineRoundedIcon fontSize="small" /></ListItemIcon>
-        Delete
+        {t("actions.delete")}
       </MenuItem>
     </Menu>
   );
@@ -236,7 +237,7 @@ function MainScreen({
 
   const selectedCount = selectedRegenerationUrls.length;
   const searchGroups = useMemo(() => groupCapsules(searchResults), [searchResults]);
-  const activeCapsuleName = activeCapsule?.name || "<New capsule>";
+  const activeCapsuleName = activeCapsule?.name || `<${t("capsule.new")}>`;
   const desktopSidebarWidth = isSidebarCollapsed ? 72 : 296;
   const desktopSidebarRailWidth = 72;
   const desktopSidebarExpandedWidth = 296;
@@ -359,7 +360,7 @@ function MainScreen({
               transition: "opacity 180ms ease, transform 220ms ease"
             }}
           >
-            New capsule
+            {t("capsule.new")}
           </Box>
         </Button>
         <Button
@@ -388,7 +389,7 @@ function MainScreen({
               transition: "opacity 180ms ease, transform 220ms ease"
             }}
           >
-            Search capsules
+            {t("capsule.search")}
           </Box>
         </Button>
       </Stack>
@@ -405,7 +406,7 @@ function MainScreen({
             textAlign: "left"
           }}
         >
-          Your capsules
+          {t("capsule.yourCapsules")}
         </Typography>
       ) : null}
 
@@ -440,7 +441,7 @@ function MainScreen({
                   primaryTypographyProps={{ noWrap: true, fontWeight: isActive ? 600 : 500 }}
                 />
                 {capsuleHasUnsavedChanges(capsule) ? (
-                  <Tooltip title="Not saved">
+                  <Tooltip title={t("capsule.notSaved")}>
                     <FiberManualRecordRoundedIcon sx={{ fontSize: 10, color: "#2f8f58", mr: 0.75 }} />
                   </Tooltip>
                 ) : null}
@@ -668,7 +669,7 @@ function MainScreen({
                     {activeCapsuleName}
                   </Typography>
                   {capsuleHasUnsavedChanges(activeCapsule) ? (
-                    <Tooltip title="Not saved">
+                    <Tooltip title={t("capsule.notSaved")}>
                       <FiberManualRecordRoundedIcon sx={{ fontSize: 10, color: "#2f8f58", flexShrink: 0 }} />
                     </Tooltip>
                   ) : null}
@@ -690,10 +691,10 @@ function MainScreen({
                         onClick={onRefreshItems}
                         disabled={isLoadingItems || isPartialRegenerationLoading}
                       >
-                        Regenerate all
+                        {t("capsule.regenerateAll")}
                       </Button>
                     ) : null}
-                    <IconButton aria-label="Open capsule menu" onClick={(event) => setHeaderMenuAnchor(event.currentTarget)}>
+                    <IconButton aria-label={t("capsule.openMenu")} onClick={(event) => setHeaderMenuAnchor(event.currentTarget)}>
                       <MoreVertRoundedIcon />
                     </IconButton>
                   </Stack>
@@ -818,7 +819,7 @@ function MainScreen({
       </Menu>
 
       <Dialog open={renameOpen} onClose={() => setRenameOpen(false)} fullScreen={isOverlaySidebar}>
-        <DialogTitle>Rename capsule</DialogTitle>
+        <DialogTitle>{t("capsule.renameTitle")}</DialogTitle>
         <DialogContent>
           <TextField
             fullWidth
@@ -837,13 +838,13 @@ function MainScreen({
             }}
             disabled={!renameValue.trim()}
           >
-            OK
+            {t("actions.ok")}
           </Button>
         </DialogActions>
       </Dialog>
 
       <Dialog open={saveAsOpen} onClose={() => setSaveAsOpen(false)} fullScreen={isOverlaySidebar}>
-        <DialogTitle>Save as</DialogTitle>
+        <DialogTitle>{t("capsule.saveAsTitle")}</DialogTitle>
         <DialogContent>
           <TextField
             fullWidth
@@ -862,7 +863,7 @@ function MainScreen({
             }}
             disabled={!saveAsValue.trim()}
           >
-            OK
+            {t("actions.ok")}
           </Button>
         </DialogActions>
       </Dialog>
@@ -875,7 +876,9 @@ function MainScreen({
         }}
         fullScreen={isOverlaySidebar}
       >
-        <DialogTitle>{confirmAction.startsWith("delete") ? "Delete capsule" : "Revert changes"}</DialogTitle>
+        <DialogTitle>
+          {confirmAction.startsWith("delete") ? t("capsule.deleteTitle") : t("capsule.revertTitle")}
+        </DialogTitle>
         <DialogActions>
           <Button onClick={() => {
             setConfirmAction("");
@@ -907,7 +910,7 @@ function MainScreen({
               setConfirmAction("");
             }}
           >
-            {confirmAction.startsWith("delete") ? "Delete" : "Revert"}
+            {confirmAction.startsWith("delete") ? t("capsule.deleteConfirm") : t("capsule.revertConfirm")}
           </Button>
         </DialogActions>
       </Dialog>
@@ -920,7 +923,7 @@ function MainScreen({
                 autoFocus
                 fullWidth
                 variant="standard"
-                placeholder="Search capsules..."
+                placeholder={t("capsule.searchPlaceholder")}
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
                 InputProps={{ disableUnderline: true }}
@@ -946,7 +949,7 @@ function MainScreen({
             <Box sx={{ p: 2, maxHeight: "70vh", overflowY: "auto" }}>
               {Object.entries(searchGroups).map(([label, group]) => (
                 <Stack key={label} spacing={1} sx={{ mb: 3 }}>
-                  <Typography color="text.secondary">{label}</Typography>
+                  <Typography color="text.secondary">{t(`capsule.${label}`)}</Typography>
                   {group.map((capsule) => (
                     <ListItemButton
                       key={capsule.id}
@@ -991,7 +994,7 @@ function MainScreen({
         <DialogTitle sx={{ pr: 1.5 }}>
           <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
             <Typography variant="inherit">{t("filters.title")}</Typography>
-            <IconButton aria-label="Close filters" onClick={() => setIsFiltersOpen(false)}>
+            <IconButton aria-label={t("capsule.closeFilters")} onClick={() => setIsFiltersOpen(false)}>
               <CloseRoundedIcon />
             </IconButton>
           </Stack>

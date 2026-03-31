@@ -395,10 +395,6 @@ function App() {
     setIsWardrobePending(false);
     setHasPendingAdditionalItems(false);
 
-    if (effective.filters?.locale) {
-      setLocale(effective.filters.locale);
-    }
-
     if (Array.isArray(capsules)) {
       setCapsuleList(capsules);
     }

@@ -215,8 +215,8 @@ const ru = {
     subtitle: "Обновите предпочтения и потребности гардероба.",
     stylesTitle: "Стилевые предпочтения",
     stylesHint: "Выберите один основной стиль и при желании одну эстетику.",
-    styleCoreTitle: "Core",
-    styleAestheticTitle: "Aesthetics",
+    styleCoreTitle: "Основной стиль",
+    styleAestheticTitle: "Эстетика",
     styleAestheticNotImportant: "Не принципиально",
     occasionsTitle: "Потребности гардероба",
     occasionsHint: "Выберите хотя бы один вариант.",
@@ -256,7 +256,11 @@ const ru = {
   },
   actions: {
     signOut: "Выйти",
-    cancel: "Отмена"
+    cancel: "Отмена",
+    ok: "ОК",
+    delete: "Удалить",
+    save: "Сохранить",
+    close: "Закрыть"
   },
   filters: {
     title: "Фильтры",
@@ -265,8 +269,31 @@ const ru = {
     cancel: "Отмена",
     open: "Открыть фильтры"
   },
+  capsule: {
+    new: "Новая капсула",
+    search: "Поиск капсул",
+    yourCapsules: "Ваши капсулы",
+    notSaved: "Не сохранено",
+    regenerateAll: "Обновить все",
+    exportPdf: "Экспорт в PDF",
+    rename: "Переименовать",
+    revert: "Откатить",
+    saveAs: "Сохранить как...",
+    saveAsTitle: "Сохранить как",
+    renameTitle: "Переименовать капсулу",
+    deleteTitle: "Удалить капсулу",
+    revertTitle: "Откатить изменения",
+    deleteConfirm: "Удалить",
+    revertConfirm: "Откатить",
+    searchPlaceholder: "Поиск капсул...",
+    searchPrevious7Days: "Последние 7 дней",
+    searchPrevious30Days: "Последние 30 дней",
+    searchEarlier: "Ранее",
+    closeFilters: "Закрыть фильтры",
+    openMenu: "Открыть меню капсулы"
+  },
   search: {
-    title: "Search",
+    title: "Поиск",
     placeholder: "Ищите на естественном языке, например: свободная голубая льняная рубашка для летнего офиса",
     cta: "Искать",
     clear: "Очистить поиск",

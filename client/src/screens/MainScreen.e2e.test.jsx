@@ -57,7 +57,39 @@ function t(key, params) {
     filters: {
       open: "Open filters",
       apply: "Apply",
-      cancel: "Cancel"
+      cancel: "Cancel",
+      title: "Filters"
+    },
+    actions: {
+      signOut: "Sign out",
+      cancel: "Cancel",
+      ok: "OK",
+      delete: "Delete",
+      save: "Save",
+      close: "Close"
+    },
+    capsule: {
+      new: "New capsule",
+      search: "Search capsules",
+      yourCapsules: "Your capsules",
+      notSaved: "Not saved",
+      regenerateAll: "Regenerate all",
+      exportPdf: "Export as PDF",
+      rename: "Rename",
+      revert: "Revert",
+      saveAs: "Save as...",
+      saveAsTitle: "Save as",
+      renameTitle: "Rename capsule",
+      deleteTitle: "Delete capsule",
+      revertTitle: "Revert changes",
+      deleteConfirm: "Delete",
+      revertConfirm: "Revert",
+      searchPlaceholder: "Search capsules...",
+      searchPrevious7Days: "Previous 7 Days",
+      searchPrevious30Days: "Previous 30 Days",
+      searchEarlier: "Earlier",
+      closeFilters: "Close filters",
+      openMenu: "Open capsule menu"
     },
     main: {
       cancelSelection: "Cancel",

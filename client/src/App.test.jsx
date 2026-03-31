@@ -345,6 +345,35 @@ describe("App", () => {
     expect(await screen.findByTestId("search-screen")).toBeInTheDocument();
   });
 
+  test("does not let capsule snapshot locale override the persisted profile locale on bootstrap", async () => {
+    authApi.fetchCurrentUser.mockResolvedValue({ user: { email: "person@example.com" } });
+    authApi.fetchProfileStatus.mockResolvedValue({ hasProfile: true });
+    authApi.updateProfileLocale.mockResolvedValue({});
+    mockProfileOptions();
+    capsulesApi.fetchCapsuleBootstrap.mockResolvedValue({
+      profile: { locale: "ru" },
+      activeCapsule: {
+        ...createBootstrapResponse({ locale: "en" }).activeCapsule,
+        draft: {
+          ...createBootstrapResponse({ locale: "en" }).activeCapsule.draft,
+          filters: {
+            ...createBootstrapResponse({ locale: "en" }).activeCapsule.draft.filters,
+            locale: "en"
+          }
+        }
+      },
+      capsules: [{ id: "capsule-1", name: "Spring edit", status: "new" }]
+    });
+
+    renderApp();
+
+    expect(await screen.findByTestId("main-screen")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(authApi.updateProfileLocale).toHaveBeenCalledWith("ru");
+    });
+    expect(authApi.updateProfileLocale).not.toHaveBeenCalledWith("en");
+  });
+
   test("sign-out clears cached client state and returns to sign-in", async () => {
     authApi.fetchCurrentUser.mockResolvedValue({ user: { email: "person@example.com" } });
     authApi.fetchProfileStatus.mockResolvedValue({ hasProfile: true });

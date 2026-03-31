@@ -255,7 +255,11 @@ const en = {
   },
   actions: {
     signOut: "Sign out",
-    cancel: "Cancel"
+    cancel: "Cancel",
+    ok: "OK",
+    delete: "Delete",
+    save: "Save",
+    close: "Close"
   },
   filters: {
     title: "Filters",
@@ -263,6 +267,29 @@ const en = {
     reset: "Reset",
     cancel: "Cancel",
     open: "Open filters"
+  },
+  capsule: {
+    new: "New capsule",
+    search: "Search capsules",
+    yourCapsules: "Your capsules",
+    notSaved: "Not saved",
+    regenerateAll: "Regenerate all",
+    exportPdf: "Export as PDF",
+    rename: "Rename",
+    revert: "Revert",
+    saveAs: "Save as...",
+    saveAsTitle: "Save as",
+    renameTitle: "Rename capsule",
+    deleteTitle: "Delete capsule",
+    revertTitle: "Revert changes",
+    deleteConfirm: "Delete",
+    revertConfirm: "Revert",
+    searchPlaceholder: "Search capsules...",
+    searchPrevious7Days: "Previous 7 Days",
+    searchPrevious30Days: "Previous 30 Days",
+    searchEarlier: "Earlier",
+    closeFilters: "Close filters",
+    openMenu: "Open capsule menu"
   },
   search: {
     title: "Search",
