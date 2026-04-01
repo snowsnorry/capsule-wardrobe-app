@@ -5,6 +5,21 @@ function capsuleUrl(path = "") {
   return `${API_BASE_URL}/capsules${path}`;
 }
 
+function getDownloadFilenameFromDisposition(contentDisposition) {
+  const header = String(contentDisposition || "");
+  const utf8Match = header.match(/filename\*\s*=\s*UTF-8''([^;]+)/i);
+  if (utf8Match?.[1]) {
+    try {
+      return decodeURIComponent(utf8Match[1]);
+    } catch {
+      // ignore malformed filename*
+    }
+  }
+
+  const filenameMatch = header.match(/filename\s*=\s*"([^"]+)"|filename\s*=\s*([^;]+)/i);
+  return (filenameMatch?.[1] || filenameMatch?.[2] || "").trim() || "capsule-wardrobe.pdf";
+}
+
 async function fetchCapsuleBootstrap() {
   return requestJson(capsuleUrl("/bootstrap"), {
     credentials: "include"
@@ -147,11 +162,12 @@ async function downloadCapsulePdf(id) {
     throw error;
   }
 
+  const filename = getDownloadFilenameFromDisposition(response.headers.get("content-disposition"));
   const blob = await response.blob();
   const objectUrl = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = objectUrl;
-  anchor.download = "capsule-wardrobe.pdf";
+  anchor.download = filename;
   document.body.append(anchor);
   anchor.click();
   anchor.remove();

@@ -23,11 +23,17 @@ function createResponse({
   status = 200,
   jsonData = undefined,
   jsonError = null,
-  blobData = null
+  blobData = null,
+  headers = {}
 } = {}) {
   return {
     ok,
     status,
+    headers: {
+      get(name) {
+        return headers[String(name).toLowerCase()] ?? null;
+      }
+    },
     async json() {
       if (jsonError) {
         throw jsonError;
@@ -110,11 +116,13 @@ describe("wardrobe api", () => {
   test("downloadCapsulePdf downloads blob and revokes object url", async () => {
     const originalCreateElement = document.createElement.bind(document);
     const anchorMethods = { click: vi.fn(), remove: vi.fn() };
+    let createdAnchor = null;
     vi.spyOn(document, "createElement").mockImplementation((tagName) => {
       const element = originalCreateElement(tagName);
       if (String(tagName).toLowerCase() === "a") {
         element.click = anchorMethods.click;
         element.remove = anchorMethods.remove;
+        createdAnchor = element;
       }
       return element;
     });
@@ -122,7 +130,10 @@ describe("wardrobe api", () => {
     requestApi.request.mockResolvedValueOnce(createResponse({
       status: 200,
       ok: true,
-      blobData: new Blob(["pdf-binary"], { type: "application/pdf" })
+      blobData: new Blob(["pdf-binary"], { type: "application/pdf" }),
+      headers: {
+        "content-disposition": `attachment; filename="Spring-edit.pdf"; filename*=UTF-8''${encodeURIComponent("Spring edit.pdf")}`
+      }
     }));
 
     await downloadCapsulePdf("capsule-1");
@@ -138,6 +149,7 @@ describe("wardrobe api", () => {
     expect(URL.createObjectURL).toHaveBeenCalledTimes(1);
     expect(anchorMethods.click).toHaveBeenCalledTimes(1);
     expect(anchorMethods.remove).toHaveBeenCalledTimes(1);
+    expect(createdAnchor?.download).toBe("Spring edit.pdf");
     expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:wardrobe-pdf");
   });
 

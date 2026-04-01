@@ -79,6 +79,22 @@ console.info(
   })
 );
 
+function buildPdfDownloadFilename(capsuleName) {
+  const normalizedName = String(capsuleName || "")
+    .replace(/[\u0000-\u001f\u007f]/g, " ")
+    .replace(/[\\/:"*?<>|]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+  const baseName = normalizedName || "capsule-wardrobe";
+  const asciiFallback = baseName
+    .replace(/[^\x20-\x7e]/g, "")
+    .trim()
+    .replace(/\s+/g, "-")
+    || "capsule-wardrobe";
+  const encodedUtf8Name = encodeURIComponent(`${baseName}.pdf`);
+  return `attachment; filename="${asciiFallback}.pdf"; filename*=UTF-8''${encodedUtf8Name}`;
+}
+
 function isApiPath(pathname = "") {
   return (
     pathname.startsWith("/auth") ||
@@ -967,7 +983,7 @@ app.post("/capsules/:id/pdf", requireTrustedOrigin, requireAuth, requireCsrf, as
     const locale = profile?.locale || "en";
     const pdfBuffer = await buildWardrobePdfInChildImpl(products, locale);
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", 'attachment; filename="capsule-wardrobe.pdf"');
+    res.setHeader("Content-Disposition", buildPdfDownloadFilename(capsule?.name));
     return res.status(200).send(pdfBuffer);
   } catch (error) {
     console.error("[capsules/pdf]", error);

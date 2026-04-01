@@ -671,6 +671,10 @@ test("index routes cover wardrobe handlers and search endpoints", async (t) => {
   });
   assert.equal(pdf.response.status, 200);
   assert.equal(pdfLocale, "en");
+  assert.equal(
+    pdf.response.headers.get("content-disposition"),
+    `attachment; filename="New-capsule.pdf"; filename*=UTF-8''${encodeURIComponent("New capsule.pdf")}`
+  );
 });
 
 test("capsule creation only accepts name and filters and initializes server-owned data", async (t) => {
