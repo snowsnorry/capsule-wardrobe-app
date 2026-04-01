@@ -1,11 +1,4 @@
-import {
-  fetchFormalityLevels,
-  fetchStyles,
-  fetchOccasions,
-  fetchSeasons,
-  fetchAudience,
-  fetchPatternOptions
-} from "./auth.js";
+import { fetchWardrobeFilters } from "./auth.js";
 
 let cachedStyles = null;
 let cachedOccasions = null;
@@ -26,23 +19,16 @@ async function loadProfileOptions() {
   }
 
   if (!inFlight) {
-    inFlight = Promise.all([
-      fetchFormalityLevels(),
-      fetchStyles(),
-      fetchOccasions(),
-      fetchSeasons(),
-      fetchAudience(),
-      fetchPatternOptions()
-    ])
-      .then(([formalityLevels, styles, occasions, seasons, audience, patterns]) => {
+    inFlight = fetchWardrobeFilters()
+      .then((filters) => {
         cachedStyles = {
-          core: formalityLevels.items || [],
-          aesthetics: styles.items || []
+          core: filters.formalityLevels || [],
+          aesthetics: filters.styles || []
         };
-        cachedOccasions = occasions.items || [];
-        cachedSeasons = seasons.items || [];
-        cachedAudience = audience.items || [];
-        cachedPatterns = patterns.items || [];
+        cachedOccasions = filters.occasions || [];
+        cachedSeasons = filters.seasons || [];
+        cachedAudience = filters.audience || [];
+        cachedPatterns = filters.patterns || [];
         return {
           styles: cachedStyles,
           occasions: cachedOccasions,

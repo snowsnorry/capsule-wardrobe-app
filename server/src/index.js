@@ -536,56 +536,26 @@ app.get("/profile/me", requireAuth, async (req, res) => {
   }
 });
 
-app.get("/profile/formality-levels", requireAuth, async (req, res) => {
+app.get("/wardrobe/filters", requireAuth, async (req, res) => {
   try {
-    const items = await getFormalityLevelsImpl(req.user.email);
-    return res.json({ ok: true, items });
+    const [formalityLevels, styles, occasions, seasons, patterns] = await Promise.all([
+      getFormalityLevelsImpl(req.user.email),
+      getStylesImpl(req.user.email),
+      getOccasionsImpl(req.user.email),
+      getSeasonsImpl(req.user.email),
+      getPatternOptionsImpl(req.user.email)
+    ]);
+    return res.json({
+      ok: true,
+      formalityLevels,
+      styles,
+      occasions,
+      seasons,
+      audience: getAudienceOptionsImpl(),
+      patterns
+    });
   } catch (error) {
-    console.error("[profile/formality-levels]", error);
-    return res.status(503).json({ error: "service_unavailable" });
-  }
-});
-
-app.get("/profile/styles", requireAuth, async (req, res) => {
-  try {
-    const items = await getStylesImpl(req.user.email);
-    return res.json({ ok: true, items });
-  } catch (error) {
-    console.error("[profile/styles]", error);
-    return res.status(503).json({ error: "service_unavailable" });
-  }
-});
-
-app.get("/profile/occasions", requireAuth, async (req, res) => {
-  try {
-    const items = await getOccasionsImpl(req.user.email);
-    return res.json({ ok: true, items });
-  } catch (error) {
-    console.error("[profile/occasions]", error);
-    return res.status(503).json({ error: "service_unavailable" });
-  }
-});
-
-app.get("/profile/seasons", requireAuth, async (req, res) => {
-  try {
-    const items = await getSeasonsImpl(req.user.email);
-    return res.json({ ok: true, items });
-  } catch (error) {
-    console.error("[profile/seasons]", error);
-    return res.status(503).json({ error: "service_unavailable" });
-  }
-});
-
-app.get("/profile/audience", requireAuth, (req, res) => {
-  res.json({ ok: true, items: getAudienceOptionsImpl() });
-});
-
-app.get("/profile/patterns", requireAuth, async (req, res) => {
-  try {
-    const items = await getPatternOptionsImpl(req.user.email);
-    return res.json({ ok: true, items });
-  } catch (error) {
-    console.error("[profile/patterns]", error);
+    console.error("[wardrobe/filters]", error);
     return res.status(503).json({ error: "service_unavailable" });
   }
 });

@@ -437,35 +437,18 @@ test("index routes cover profile read endpoints", async (t) => {
   assert.equal(profile.json.profile.activeCapsuleId, "capsule-1");
   assert.equal(profile.json.profile.locale, "en");
 
-  const formality = await requestJson(baseUrl, "/profile/formality-levels", {
+  const wardrobeFilters = await requestJson(baseUrl, "/wardrobe/filters", {
     cookie: AUTH_COOKIE
   });
-  assert.deepEqual(formality.json, { ok: true, items: ["casual", "formal"] });
-
-  const styles = await requestJson(baseUrl, "/profile/styles", {
-    cookie: AUTH_COOKIE
+  assert.deepEqual(wardrobeFilters.json, {
+    ok: true,
+    formalityLevels: ["casual", "formal"],
+    styles: ["minimalistic", "sporty"],
+    occasions: ["office", "date_night"],
+    seasons: ["spring", "summer"],
+    audience: ["man", "woman", "any"],
+    patterns: ["striped", "plain"]
   });
-  assert.deepEqual(styles.json, { ok: true, items: ["minimalistic", "sporty"] });
-
-  const occasions = await requestJson(baseUrl, "/profile/occasions", {
-    cookie: AUTH_COOKIE
-  });
-  assert.deepEqual(occasions.json, { ok: true, items: ["office", "date_night"] });
-
-  const seasons = await requestJson(baseUrl, "/profile/seasons", {
-    cookie: AUTH_COOKIE
-  });
-  assert.deepEqual(seasons.json, { ok: true, items: ["spring", "summer"] });
-
-  const audience = await requestJson(baseUrl, "/profile/audience", {
-    cookie: AUTH_COOKIE
-  });
-  assert.deepEqual(audience.json, { ok: true, items: ["man", "woman", "any"] });
-
-  const patterns = await requestJson(baseUrl, "/profile/patterns", {
-    cookie: AUTH_COOKIE
-  });
-  assert.deepEqual(patterns.json, { ok: true, items: ["striped", "plain"] });
 });
 
 test("index routes cover profile initialize branches", async (t) => {

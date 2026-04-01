@@ -18,6 +18,7 @@ import {
   fetchProfileStatus,
   fetchProfile,
   fetchCurrentUser,
+  fetchWardrobeFilters,
   initializeProfile,
   updateProfile,
   updateProfileLocale,
@@ -93,6 +94,15 @@ describe("auth api", () => {
       3,
       "https://api.example.test/auth/me",
       { credentials: "include", ttlMs: 1000 }
+    );
+  });
+
+  test("wardrobe filter options are loaded with a single authenticated request", async () => {
+    await fetchWardrobeFilters();
+
+    expect(requestApi.requestJson).toHaveBeenCalledWith(
+      "https://api.example.test/wardrobe/filters",
+      { credentials: "include" }
     );
   });
 

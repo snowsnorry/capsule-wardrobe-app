@@ -49,38 +49,8 @@ async function fetchCurrentUser() {
   });
 }
 
-async function fetchFormalityLevels() {
-  return requestJson(`${API_BASE_URL}/profile/formality-levels`, {
-    credentials: "include"
-  });
-}
-
-async function fetchStyles() {
-  return requestJson(`${API_BASE_URL}/profile/styles`, {
-    credentials: "include"
-  });
-}
-
-async function fetchOccasions() {
-  return requestJson(`${API_BASE_URL}/profile/occasions`, {
-    credentials: "include"
-  });
-}
-
-async function fetchSeasons() {
-  return requestJson(`${API_BASE_URL}/profile/seasons`, {
-    credentials: "include"
-  });
-}
-
-async function fetchAudience() {
-  return requestJson(`${API_BASE_URL}/profile/audience`, {
-    credentials: "include"
-  });
-}
-
-async function fetchPatternOptions() {
-  return requestJson(`${API_BASE_URL}/profile/patterns`, {
+async function fetchWardrobeFilters() {
+  return requestJson(`${API_BASE_URL}/wardrobe/filters`, {
     credentials: "include"
   });
 }
@@ -133,12 +103,7 @@ export {
   fetchCurrentUser,
   fetchProfileStatus,
   fetchProfile,
-  fetchFormalityLevels,
-  fetchStyles,
-  fetchOccasions,
-  fetchSeasons,
-  fetchAudience,
-  fetchPatternOptions,
+  fetchWardrobeFilters,
   initializeProfile,
   updateProfile,
   updateProfileLocale,
