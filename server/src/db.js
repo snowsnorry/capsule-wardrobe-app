@@ -42,10 +42,6 @@ async function ensureLoginCodesTable() {
       "consumedAt" timestamptz null
     )
   `;
-  await sql`
-    alter table login_codes
-    add column if not exists nonce text not null default ''
-  `;
 }
 
 async function ensureSessionsTable() {
@@ -72,20 +68,6 @@ async function ensureProfilesTable() {
       updated_at timestamptz not null default now()
     )
   `;
-  await sql`
-    alter table profiles
-    add column if not exists active_capsule_id uuid null
-  `;
-  await sql`alter table profiles drop column if exists formality_level`;
-  await sql`alter table profiles drop column if exists style`;
-  await sql`alter table profiles drop column if exists occasions`;
-  await sql`alter table profiles drop column if exists season`;
-  await sql`alter table profiles drop column if exists audience`;
-  await sql`alter table profiles drop column if exists color`;
-  await sql`alter table profiles drop column if exists pattern`;
-  await sql`alter table profiles drop column if exists rejected`;
-  await sql`alter table profiles drop column if exists items`;
-  await sql`alter table profiles drop column if exists pdf`;
 }
 
 async function ensureCapsulesTable() {
@@ -138,157 +120,6 @@ async function ensureSearchTable() {
       updated_at timestamptz not null default now()
     )
   `;
-
-  const columns = await sql`
-    select column_name as "columnName", data_type as "dataType"
-    from information_schema.columns
-    where table_schema = 'public'
-      and table_name = 'search'
-      and column_name in (
-        'brand',
-        'audience',
-        'category',
-        'formality_level',
-        'style',
-        'color',
-        'pattern',
-        'silhouette',
-        'fit',
-        'closure_type'
-      )
-  `;
-
-  const columnTypes = Object.fromEntries(columns.map((column) => [column.columnName, column.dataType]));
-
-  if (columnTypes.brand === "text") {
-    await sql`
-      alter table search
-      alter column brand type text[]
-      using case
-        when brand is null or nullif(trim(brand), '') is null then '{}'::text[]
-        else array[lower(trim(brand))]
-      end,
-      alter column brand set default '{}'::text[],
-      alter column brand set not null
-    `;
-  }
-
-  if (columnTypes.category === "text") {
-    await sql`
-      alter table search
-      alter column category type text[]
-      using case
-        when category is null or nullif(trim(category), '') is null then '{}'::text[]
-        else array[lower(trim(category))]
-      end,
-      alter column category set default '{}'::text[],
-      alter column category set not null
-    `;
-  }
-
-  if (columnTypes.audience === "text") {
-    await sql`
-      alter table search
-      alter column audience type text[]
-      using case
-        when audience is null or nullif(trim(audience), '') is null then '{}'::text[]
-        else array[lower(trim(audience))]
-      end,
-      alter column audience set default '{}'::text[],
-      alter column audience set not null
-    `;
-  }
-
-  if (columnTypes.formality_level === "text") {
-    await sql`
-      alter table search
-      alter column formality_level type text[]
-      using case
-        when formality_level is null or nullif(trim(formality_level), '') is null then '{}'::text[]
-        else array[lower(trim(formality_level))]
-      end,
-      alter column formality_level set default '{}'::text[],
-      alter column formality_level set not null
-    `;
-  }
-
-  if (columnTypes.style === "text") {
-    await sql`
-      alter table search
-      alter column style type text[]
-      using case
-        when style is null or nullif(trim(style), '') is null then '{}'::text[]
-        else array[lower(trim(style))]
-      end,
-      alter column style set default '{}'::text[],
-      alter column style set not null
-    `;
-  }
-
-  if (columnTypes.color === "text") {
-    await sql`
-      alter table search
-      alter column color type text[]
-      using case
-        when color is null or nullif(trim(color), '') is null then '{}'::text[]
-        else array[lower(trim(color))]
-      end,
-      alter column color set default '{}'::text[],
-      alter column color set not null
-    `;
-  }
-
-  if (columnTypes.pattern === "text") {
-    await sql`
-      alter table search
-      alter column pattern type text[]
-      using case
-        when pattern is null or nullif(trim(pattern), '') is null then '{}'::text[]
-        else array[lower(trim(pattern))]
-      end,
-      alter column pattern set default '{}'::text[],
-      alter column pattern set not null
-    `;
-  }
-
-  if (columnTypes.silhouette === "text") {
-    await sql`
-      alter table search
-      alter column silhouette type text[]
-      using case
-        when silhouette is null or nullif(trim(silhouette), '') is null then '{}'::text[]
-        else array[lower(trim(silhouette))]
-      end,
-      alter column silhouette set default '{}'::text[],
-      alter column silhouette set not null
-    `;
-  }
-
-  if (columnTypes.fit === "text") {
-    await sql`
-      alter table search
-      alter column fit type text[]
-      using case
-        when fit is null or nullif(trim(fit), '') is null then '{}'::text[]
-        else array[lower(trim(fit))]
-      end,
-      alter column fit set default '{}'::text[],
-      alter column fit set not null
-    `;
-  }
-
-  if (columnTypes.closure_type === "text") {
-    await sql`
-      alter table search
-      alter column closure_type type text[]
-      using case
-        when closure_type is null or nullif(trim(closure_type), '') is null then '{}'::text[]
-        else array[lower(trim(closure_type))]
-      end,
-      alter column closure_type set default '{}'::text[],
-      alter column closure_type set not null
-    `;
-  }
 }
 
 async function ensureAuthTables() {
