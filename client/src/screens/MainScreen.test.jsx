@@ -223,6 +223,11 @@ describe("MainScreen", () => {
     expect(screen.getByTestId("main-screen-shell")).toHaveAttribute("data-content-alignment", "overlay");
     await user.click(screen.getByRole("button", { name: "Toggle sidebar" }));
     expect(await screen.findByText("New capsule")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Collapse sidebar" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Collapse sidebar" }));
+    await waitFor(() => {
+      expect(screen.queryByText("New capsule")).not.toBeInTheDocument();
+    });
 
     cleanup();
     renderScreen({}, { layoutMode: "medium" });
