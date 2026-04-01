@@ -192,6 +192,11 @@ function getEffectiveCapsule(capsule) {
   return capsule?.draft || capsule?.saved || null;
 }
 
+function hasStoredWardrobeItems(capsule) {
+  const items = getEffectiveCapsule(capsule)?.data?.wardrobe?.items;
+  return Array.isArray(items) && items.length > 0;
+}
+
 async function retry(fn, attempts = 3, delayMs = 120) {
   let lastError;
   for (let index = 0; index < attempts; index += 1) {
@@ -248,6 +253,7 @@ function App() {
   const [hasPendingAdditionalItems, setHasPendingAdditionalItems] = useState(false);
   const [wardrobePollAfterMs, setWardrobePollAfterMs] = useState(WARDROBE_POLL_AFTER_MS_DEFAULT);
   const [wardrobeLoadedCapsuleId, setWardrobeLoadedCapsuleId] = useState("");
+  const [persistedProfileLocale, setPersistedProfileLocale] = useState("");
   const [appRoute, setAppRoute] = useState(() => (
     typeof window === "undefined" ? "capsule" : getAppRoute(window.location.pathname)
   ));
@@ -318,6 +324,7 @@ function App() {
         if (!isActive) return;
         setUser(null);
         setHasProfile(false);
+        setPersistedProfileLocale("");
       } finally {
         if (!isActive) return;
         setIsCheckingSession(false);
@@ -387,7 +394,7 @@ function App() {
     setSelectedColor(effective.filters?.color ?? null);
     setSelectedPattern(effective.filters?.pattern ?? null);
     setProfileItems(buildDisplayWardrobeItems(effective.data?.wardrobe?.items || []));
-    setWardrobeLoadedCapsuleId("");
+    setWardrobeLoadedCapsuleId(hasStoredWardrobeItems(capsule) ? capsule.id || "" : "");
     setSelectedRegenerationUrls([]);
     setPartialRegenerationPendingUrls([]);
     setIsPartialRegenerationLoading(false);
@@ -429,6 +436,7 @@ function App() {
   const bootstrapCapsules = async () => {
     const result = await fetchCapsuleBootstrap();
     if (result.profile?.locale) {
+      setPersistedProfileLocale(result.profile.locale);
       setLocale(result.profile.locale);
     }
     applyCapsuleState(result.activeCapsule, { capsules: result.capsules || [] });
@@ -522,6 +530,7 @@ function App() {
       setUser(null);
       setHasProfile(false);
       setProfileCreated(false);
+      setPersistedProfileLocale("");
       setCurrentView("main");
       setStep("email");
       setEmail("");
@@ -1015,8 +1024,17 @@ function App() {
     if (!sessionInitialized || !user || !(hasProfile || profileCreated)) {
       return;
     }
-    updateProfileLocale(locale).catch(() => {});
-  }, [locale, sessionInitialized, user, hasProfile, profileCreated]);
+    if (!persistedProfileLocale || locale === persistedProfileLocale) {
+      return;
+    }
+    updateProfileLocale(locale)
+      .then(() => {
+        if (isMountedRef.current) {
+          setPersistedProfileLocale(locale);
+        }
+      })
+      .catch(() => {});
+  }, [locale, persistedProfileLocale, sessionInitialized, user, hasProfile, profileCreated]);
 
   const renderRightPanel = () => {
     if (isCheckingSession || !sessionInitialized) {

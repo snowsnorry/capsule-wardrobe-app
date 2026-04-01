@@ -316,10 +316,16 @@ describe("App", () => {
     expect(profileOptionsApi.loadProfileOptions).toHaveBeenCalled();
   });
 
-  test("bootstraps an existing profile, syncs locale, and switches between capsule and search routes", async () => {
+  test("bootstraps an existing profile without redundant locale or wardrobe sync and switches between routes", async () => {
     window.history.replaceState({}, "", "/search");
     authApi.fetchCurrentUser.mockResolvedValue({ user: { email: "person@example.com" } });
     authApi.fetchProfileStatus.mockResolvedValue({ hasProfile: true });
+    capsulesApi.fetchCapsuleBootstrap.mockResolvedValue(createBootstrapResponse({
+      items: [
+        { id: "top-1", url: "https://example.com/top-1", name: "Shirt", category: "top" }
+      ],
+      locale: "ru"
+    }));
     authApi.fetchProfile.mockResolvedValue({
       profile: {
         formalityLevel: "casual",
@@ -339,18 +345,34 @@ describe("App", () => {
 
     expect(await screen.findByTestId("search-screen")).toBeInTheDocument();
     await waitFor(() => {
-      expect(authApi.updateProfileLocale).toHaveBeenCalledWith("ru");
+      expect(capsulesApi.fetchCapsuleBootstrap).toHaveBeenCalled();
     });
+    expect(authApi.updateProfileLocale).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("button", { name: "back-to-capsule" }));
     expect(await screen.findByTestId("main-screen")).toBeInTheDocument();
-    expect(wardrobeApi.fetchWardrobeItems).toHaveBeenCalled();
+    expect(wardrobeApi.fetchWardrobeItems).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("button", { name: "open-search" }));
     expect(await screen.findByTestId("search-screen")).toBeInTheDocument();
   });
 
-  test("does not let capsule snapshot locale override the persisted profile locale on bootstrap", async () => {
+  test("loads wardrobe after bootstrap when the active capsule does not include stored items", async () => {
+    authApi.fetchCurrentUser.mockResolvedValue({ user: { email: "person@example.com" } });
+    authApi.fetchProfileStatus.mockResolvedValue({ hasProfile: true });
+    authApi.updateProfileLocale.mockResolvedValue({});
+    capsulesApi.fetchCapsuleBootstrap.mockResolvedValue(createBootstrapResponse({ items: [], locale: "en" }));
+    mockProfileOptions();
+
+    renderApp();
+
+    expect(await screen.findByTestId("main-screen")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(wardrobeApi.fetchWardrobeItems).toHaveBeenCalled();
+    });
+  });
+
+  test("does not patch profile locale during bootstrap when the persisted locale already came from the server", async () => {
     authApi.fetchCurrentUser.mockResolvedValue({ user: { email: "person@example.com" } });
     authApi.fetchProfileStatus.mockResolvedValue({ hasProfile: true });
     authApi.updateProfileLocale.mockResolvedValue({});
@@ -373,10 +395,7 @@ describe("App", () => {
     renderApp();
 
     expect(await screen.findByTestId("main-screen")).toBeInTheDocument();
-    await waitFor(() => {
-      expect(authApi.updateProfileLocale).toHaveBeenCalledWith("ru");
-    });
-    expect(authApi.updateProfileLocale).not.toHaveBeenCalledWith("en");
+    expect(authApi.updateProfileLocale).not.toHaveBeenCalled();
   });
 
   test("sign-out clears cached client state and returns to sign-in", async () => {
