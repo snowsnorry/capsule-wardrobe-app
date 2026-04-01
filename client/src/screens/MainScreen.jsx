@@ -388,11 +388,11 @@ function MainScreen({
           }}
           onClick={handleExpandCollapsedSidebar}
         >
-          {!isSidebarCollapsed && !isOverlaySidebar ? (
+          {!isSidebarCollapsed ? (
             <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
               <IconButton
                 aria-label="Collapse sidebar"
-                onClick={() => setIsSidebarCollapsed(true)}
+                onClick={() => (isOverlaySidebar ? setIsSidebarOpen(false) : setIsSidebarCollapsed(true))}
                 sx={{ width: 40, height: 40 }}
               >
                 <SidebarCollapseIcon />
@@ -722,7 +722,7 @@ function MainScreen({
               />
             </Box>
 
-            <Stack spacing={2.5} sx={{ minWidth: 0, minHeight: 0, overflowY: "auto", pr: 0.5 }}>
+            <Stack spacing={2.5} sx={{ minWidth: 0, minHeight: 0, overflow: "hidden" }}>
               <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1}>
                 <Stack direction="row" alignItems="center" spacing={0.75} sx={{ minWidth: 0, flex: 1 }}>
                   {isOverlaySidebar && selectedCount === 0 ? (
@@ -793,52 +793,54 @@ function MainScreen({
                   />
                 ) : null}
               </Box>
-              {isLoadingItems ? (
-                <ClothingGridPlaceholder count={12} />
-              ) : (
-                <Box
-                  sx={{
-                    display: "grid",
-                    gridTemplateColumns: {
-                      xs: "1fr",
-                      sm: "repeat(2, minmax(0, 1fr))",
-                      lg: "repeat(2, minmax(0, 1fr))"
-                    },
-                    gap: 2.5,
-                    "@media (min-width: 1400px)": {
-                      gridTemplateColumns: "repeat(3, minmax(0, 1fr))"
-                    },
-                    "@media (min-width: 1760px)": {
-                      gridTemplateColumns: "repeat(4, minmax(0, 1fr))"
-                    }
-                  }}
-                >
-                  {items.map((item) => {
-                    const itemUrl = String(item?.url || "");
-                    if (partialRegenerationPendingUrls.includes(itemUrl)) {
+              <Box sx={{ flex: 1, minHeight: 0, overflowY: "auto", pr: 0.5 }}>
+                {isLoadingItems ? (
+                  <ClothingGridPlaceholder count={12} />
+                ) : (
+                  <Box
+                    sx={{
+                      display: "grid",
+                      gridTemplateColumns: {
+                        xs: "1fr",
+                        sm: "repeat(2, minmax(0, 1fr))",
+                        lg: "repeat(2, minmax(0, 1fr))"
+                      },
+                      gap: 2.5,
+                      "@media (min-width: 1400px)": {
+                        gridTemplateColumns: "repeat(3, minmax(0, 1fr))"
+                      },
+                      "@media (min-width: 1760px)": {
+                        gridTemplateColumns: "repeat(4, minmax(0, 1fr))"
+                      }
+                    }}
+                  >
+                    {items.map((item) => {
+                      const itemUrl = String(item?.url || "");
+                      if (partialRegenerationPendingUrls.includes(itemUrl)) {
+                        return (
+                          <ClothingPlaceholderCard
+                            key={`pending-${item.url || item.id}`}
+                            placeholderKey={`pending-${item.url || item.id}`}
+                          />
+                        );
+                      }
+
                       return (
-                        <ClothingPlaceholderCard
-                          key={`pending-${item.url || item.id}`}
-                          placeholderKey={`pending-${item.url || item.id}`}
+                        <ClothingCard
+                          key={item.url || item.id}
+                          item={item}
+                          isSelectable={Boolean(itemUrl)}
+                          isSelected={selectedRegenerationUrls.includes(itemUrl)}
+                          isRegenerating={isPartialRegenerationLoading}
+                          onToggleSelected={onToggleRegenerationSelection}
+                          isMobile={isOverlaySidebar}
                         />
                       );
-                    }
-
-                    return (
-                      <ClothingCard
-                        key={item.url || item.id}
-                        item={item}
-                        isSelectable={Boolean(itemUrl)}
-                        isSelected={selectedRegenerationUrls.includes(itemUrl)}
-                        isRegenerating={isPartialRegenerationLoading}
-                        onToggleSelected={onToggleRegenerationSelection}
-                        isMobile={isOverlaySidebar}
-                      />
-                    );
-                  })}
-                  {showAdditionalItemPlaceholder ? <ClothingGridPlaceholder count={1} inline /> : null}
-                </Box>
-              )}
+                    })}
+                    {showAdditionalItemPlaceholder ? <ClothingGridPlaceholder count={1} inline /> : null}
+                  </Box>
+                )}
+              </Box>
             </Stack>
           </Box>
           </Box>
