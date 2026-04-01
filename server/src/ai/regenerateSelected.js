@@ -35,6 +35,7 @@ import {
   enforceCategoryCounts,
   extractLlmUsage,
   getSelectedIdsFromCapsule,
+  isNoLlmModeEnabled,
   logWardrobeInfo,
   toWardrobeUiItem
 } from "./ai.js";
@@ -437,6 +438,31 @@ async function regenerateCapsuleWardrobe(userProfile = null, products = null, lo
     sqlItemsTotal: normalizedItems.length,
     sqlItemsByCategory: countItemsByKey(normalizedItems)
   }, logContext);
+  const noLlm = userProfile?.noLlm === true;
+  if (noLlm) {
+    const balancedItems = enforceCategoryCounts([], normalizedItems, capsuleCategories);
+
+    if (balancedItems.length === 0) {
+      throw new Error("SQL returned no valid regenerated items");
+    }
+
+    const nextWardrobeItems = [
+      ...currentCapsuleItems,
+      ...balancedItems.map(toWardrobeUiItem)
+    ];
+    logWardrobeInfo("capsule-nollm-completed", {
+      selectedItemsTotal: balancedItems.length,
+      selectedItemsByCategory: countItemsByKey(balancedItems)
+    }, logContext);
+
+    return {
+      items: nextWardrobeItems,
+      selectedItems: balancedItems,
+      promptEmbeddings,
+      rawSelectionText: null,
+      reasoning: null
+    };
+  }
   const shouldSavePromptDebugArtifacts = process.env.NODE_ENV === "development";
   let promptDebugImages = { categories: [] };
   let currentCapsuleCollage = null;
@@ -610,7 +636,7 @@ function createPartialRegenerationService({
     return job;
   }
 
-  function startPartialRegenerationJob(email, capsuleId, profile, capsule, selectedProducts, storedWardrobe, logContext = null) {
+  function startPartialRegenerationJob(email, capsuleId, profile, capsule, selectedProducts, storedWardrobe, options = {}, logContext = null) {
     const jobKey = createPartialRegenerationJobKey(email, capsuleId);
     const existing = getPartialRegenerationJob(email, capsuleId);
     if (existing?.status === "pending") {
@@ -642,7 +668,10 @@ function createPartialRegenerationService({
       let currentCapsule = capsule;
 
       try {
-        const result = await regenerateCapsuleWardrobeImpl(buildProfileCapsuleContext(profile, capsule), selectedProducts, jobLogContext);
+        const result = await regenerateCapsuleWardrobeImpl({
+          ...buildProfileCapsuleContext(profile, capsule),
+          noLlm: options?.noLlm === true
+        }, selectedProducts, jobLogContext);
         const payload = buildStoredWardrobePayloadFromResult(result, storedWardrobe);
         const baseSnapshot = getEffectiveCapsuleSnapshot(capsule);
         if (capsuleId) {
@@ -765,7 +794,8 @@ function createPartialRegenerationService({
         capsuleRequestId: randomUuidImpl(),
         source: "partial-regeneration"
       };
-      logWardrobeInfo("regenerate-request-received", { itemUrls }, logContext);
+      const noLlm = isNoLlmModeEnabled(req.query);
+      logWardrobeInfo("regenerate-request-received", { itemUrls, noLlm }, logContext);
       if (capsuleId) {
         await updateCapsuleSnapshotImpl(email, capsuleId, {
           filters: effectiveSnapshot?.filters,
@@ -792,6 +822,7 @@ function createPartialRegenerationService({
         generationCapsule,
         selectedProducts,
         storedWardrobe,
+        { noLlm },
         logContext
       );
       publishSnapshotImpl(

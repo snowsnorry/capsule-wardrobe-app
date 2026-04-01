@@ -242,6 +242,42 @@ test("regenerateCapsuleWardrobe starts a new pending job and clears stored items
   }]);
 });
 
+test("regenerateCapsuleWardrobe forwards nollm mode from query params", async () => {
+  let generatedProfile = null;
+  const service = createWardrobeService({
+    getProfileImpl: async () => ({ audience: "woman", locale: "en" }),
+    getCapsuleImpl: async () => createCapsuleWithWardrobe({
+      items: [{ id: "top-1", category: "top" }]
+    }),
+    updateCapsuleSnapshotImpl: async (_email, capsuleId, draft) => ({ id: capsuleId, draft, saved: null }),
+    generateCapsuleWardrobeImpl: async (profile) => {
+      generatedProfile = profile;
+      return {
+        items: [{ id: "top-2", category: "top" }],
+        selectedItems: [{ id: "top-2", category: "top" }],
+        promptEmbeddings: [0.1],
+        reasoning: null,
+        rawSelectionText: null
+      };
+    },
+    shouldGenerateSwimwearImpl: () => false,
+    jobs: new Map(),
+    randomUuidImpl: () => "req-nollm"
+  });
+  const res = createResponseRecorder();
+
+  await service.regenerateCapsuleWardrobe({
+    user: { email: "person@example.com" },
+    params: { id: "capsule-1" },
+    query: { nollm: "true" }
+  }, res);
+
+  const job = service.getWardrobeJob("person@example.com", "capsule-1");
+  assert.ok(job);
+  await job.promise;
+  assert.equal(generatedProfile.noLlm, true);
+});
+
 test("getCapsuleItems surfaces failed job as service_unavailable and drops stale failed entry", async () => {
   const jobs = new Map([
     ["person@example.com::capsule-1", {

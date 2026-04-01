@@ -236,6 +236,13 @@ function normalizeSwimwearSelection(selectedIds, candidates) {
   return [];
 }
 
+function selectSwimwearWithoutLlm(candidates) {
+  return normalizeSwimwearSelection(
+    candidates.map((item) => String(item?.id || "").trim()).filter(Boolean),
+    candidates
+  );
+}
+
 async function selectMaleSwimwear({ sql, targetStyle, topColors, embeddingVector, logContext = null }) {
   const sqlStartedAt = Date.now();
   const rows = await sql`
@@ -338,6 +345,20 @@ async function generateFemaleSwimwear({ userProfile, selectedCapsuleItems, promp
   if (candidates.length === 0) {
     return {
       items: [],
+      reasoning: null,
+      rawSelectionText: null
+    };
+  }
+
+  if (userProfile?.noLlm === true) {
+    const selectedItems = selectSwimwearWithoutLlm(candidates);
+    logWardrobeInfo("swimwear-nollm-completed", {
+      swimwearItemsTotal: selectedItems.length,
+      swimwearItemsByCategory: countItemsByKey(selectedItems)
+    }, logContext);
+
+    return {
+      items: selectedItems.map(toWardrobeUiItem),
       reasoning: null,
       rawSelectionText: null
     };

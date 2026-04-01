@@ -150,6 +150,22 @@ function getRequestedWardrobeParams(userProfile = null, { forceRefresh = false }
   return params;
 }
 
+function isTruthyFlag(value) {
+  return ["1", "true", "yes", "on"].includes(String(value || "").trim().toLowerCase());
+}
+
+function isNoLlmModeEnabled(query = null) {
+  if (!query || typeof query !== "object") {
+    return false;
+  }
+
+  const value = Array.isArray(query.nollm)
+    ? query.nollm[0]
+    : query.nollm;
+
+  return isTruthyFlag(value);
+}
+
 function getRequiredCapsule(capsuleId, capsule) {
   if (!capsuleId) {
     const error = new Error("invalid_payload");
@@ -573,6 +589,27 @@ async function generateCapsuleWardrobe(userProfile = null, logContext = null) {
     sqlItemsTotal: normalizedItems.length,
     sqlItemsByCategory: countItemsByKey(normalizedItems)
   }, logContext);
+  const noLlm = userProfile?.noLlm === true;
+  if (noLlm) {
+    const balancedItems = enforceCategoryCounts([], normalizedItems, capsuleCategories);
+
+    if (balancedItems.length === 0) {
+      throw new Error("SQL returned no valid wardrobe items");
+    }
+
+    logWardrobeInfo("capsule-nollm-completed", {
+      selectedItemsTotal: balancedItems.length,
+      selectedItemsByCategory: countItemsByKey(balancedItems)
+    }, logContext);
+
+    return {
+      items: balancedItems.map(toWardrobeUiItem),
+      selectedItems: balancedItems,
+      promptEmbeddings,
+      rawSelectionText: null,
+      reasoning: null
+    };
+  }
   const shouldSavePromptDebugArtifacts = process.env.NODE_ENV === "development";
   let promptDebugImages = { categories: [] };
 
@@ -712,7 +749,7 @@ function createWardrobeService({
     return job;
   }
 
-  function startWardrobeJob(email, capsuleId, profile, capsule, logContext = null) {
+  function startWardrobeJob(email, capsuleId, profile, capsule, options = {}, logContext = null) {
     const jobKey = createWardrobeJobKey(email, capsuleId);
     const existing = getWardrobeJob(email, capsuleId);
     if (existing?.status === "pending") {
@@ -740,7 +777,10 @@ function createWardrobeService({
       let currentCapsule = capsule;
 
       try {
-        const generationProfile = buildProfileCapsuleContext(profile, capsule);
+        const generationProfile = {
+          ...buildProfileCapsuleContext(profile, capsule),
+          noLlm: options?.noLlm === true
+        };
         const wardrobe = await generateCapsuleWardrobeImpl(generationProfile, jobLogContext);
         const items = wardrobe.items;
 
@@ -924,13 +964,17 @@ function createWardrobeService({
           }
         }
       };
+      const noLlm = isNoLlmModeEnabled(req.query);
       const logContext = {
         capsuleRequestId: randomUuidImpl()
       };
-      logWardrobeInfo("capsule-request-received", getRequestedWardrobeParams(buildProfileCapsuleContext(profile, capsule), {
-        forceRefresh: true
-      }), logContext);
-      const job = startWardrobeJob(email, capsuleId, profile, generationCapsule, logContext);
+      logWardrobeInfo("capsule-request-received", {
+        ...getRequestedWardrobeParams(buildProfileCapsuleContext(profile, capsule), {
+          forceRefresh: true
+        }),
+        noLlm
+      }, logContext);
+      const job = startWardrobeJob(email, capsuleId, profile, generationCapsule, { noLlm }, logContext);
       publishSnapshotImpl(
         email,
         capsuleId,
@@ -987,6 +1031,7 @@ export {
   getWardrobeJob,
   getStoredWardrobePayload,
   getWardrobeSelectionPrompt,
+  isNoLlmModeEnabled,
   logWardrobeInfo,
   regenerateCapsuleWardrobe,
   startWardrobeJob,

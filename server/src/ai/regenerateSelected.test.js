@@ -290,6 +290,42 @@ test("regenerateSelectedWardrobeItems updates rejected urls, shrinks partial pay
   ]);
 });
 
+test("regenerateSelectedWardrobeItems forwards nollm mode from query params", async () => {
+  let regeneratedProfile = null;
+  const service = createPartialRegenerationService({
+    getProfileImpl: async () => createProfile(),
+    getCapsuleImpl: async () => createCapsule(),
+    updateCapsuleSnapshotImpl: async (_email, capsuleId, draft) => ({ id: capsuleId, draft, saved: null }),
+    regenerateCapsuleWardrobeImpl: async (profile) => {
+      regeneratedProfile = profile;
+      return {
+        items: [
+          { id: "bottom-1", url: "https://example.com/bottom-1", category: "bottom" },
+          { id: "bag-1", url: "https://example.com/bag-1", category: "bag" },
+          { id: "top-2", url: "https://example.com/top-2", category: "top" }
+        ],
+        reasoning: null,
+        rawSelectionText: null
+      };
+    },
+    jobs: new Map(),
+    randomUuidImpl: () => "regen-req-nollm"
+  });
+  const res = createResponseRecorder();
+
+  await service.regenerateSelectedWardrobeItems({
+    user: { email: "person@example.com" },
+    params: { id: "capsule-1" },
+    query: { nollm: "true" },
+    body: { itemUrls: ["https://example.com/top-1"] }
+  }, res);
+
+  const job = service.getPartialRegenerationJob("person@example.com", "capsule-1");
+  assert.ok(job);
+  await job.promise;
+  assert.equal(regeneratedProfile.noLlm, true);
+});
+
 test("startPartialRegenerationJob reuses active pending job and marks failures", async () => {
   let resolveRegen;
   const pending = new Promise((resolve) => {

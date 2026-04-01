@@ -48,6 +48,7 @@ describe("wardrobe api", () => {
     requestApi.requestJson.mockReset();
     requestApi.requestJson.mockResolvedValue({ items: [] });
     requestApi.request.mockResolvedValue(createResponse());
+    window.history.replaceState({}, "", "/");
     vi.stubGlobal("URL", {
       createObjectURL: vi.fn(() => "blob:wardrobe-pdf"),
       revokeObjectURL: vi.fn()
@@ -90,6 +91,20 @@ describe("wardrobe api", () => {
       method: "POST",
       credentials: "include"
     });
+  });
+
+  test("regenerateCapsuleWardrobe preserves nollm=true from browser url", async () => {
+    window.history.pushState({}, "", "/?nollm=true");
+
+    await regenerateCapsuleWardrobe({ capsuleId: "capsule-1" });
+
+    expect(requestApi.requestJson).toHaveBeenCalledWith(
+      "https://api.example.test/capsules/capsule-1/regenerate?nollm=true",
+      {
+        method: "POST",
+        credentials: "include"
+      }
+    );
   });
 
   test("downloadCapsulePdf downloads blob and revokes object url", async () => {
@@ -152,6 +167,22 @@ describe("wardrobe api", () => {
     expect(requestApi.requestJson).toHaveBeenNthCalledWith(
       1,
       "https://api.example.test/capsules/capsule-1/regenerate-selected",
+      {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ itemUrls: ["https://example.com/item-1"] })
+      }
+    );
+  });
+
+  test("regenerateSelectedWardrobeItems preserves nollm=true from browser url", async () => {
+    window.history.pushState({}, "", "/?nollm=true");
+
+    await regenerateSelectedWardrobeItems({ itemUrls: ["https://example.com/item-1"], capsuleId: "capsule-1" });
+
+    expect(requestApi.requestJson).toHaveBeenCalledWith(
+      "https://api.example.test/capsules/capsule-1/regenerate-selected?nollm=true",
       {
         method: "POST",
         credentials: "include",
