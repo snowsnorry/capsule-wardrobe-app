@@ -328,6 +328,60 @@ describe("MainScreen", () => {
     expect(onRefreshItems).toHaveBeenCalledTimes(1);
   });
 
+  test("shows Save as for a saved capsule without a draft", async () => {
+    const user = userEvent.setup();
+
+    renderScreen({
+      activeCapsule: {
+        id: "capsule-1",
+        name: "Spring edit",
+        draft: null,
+        saved: { filters: {}, data: {} },
+        status: "saved"
+      }
+    });
+
+    await user.click(screen.getByRole("button", { name: "Open capsule menu" }));
+
+    expect(screen.getByRole("menuitem", { name: "Save as..." })).toBeInTheDocument();
+  });
+
+  test("shows Save as for a modified capsule", async () => {
+    const user = userEvent.setup();
+
+    renderScreen({
+      activeCapsule: {
+        id: "capsule-1",
+        name: "Spring edit",
+        draft: { filters: { locale: "en" }, data: {} },
+        saved: { filters: {}, data: {} },
+        status: "modified"
+      }
+    });
+
+    await user.click(screen.getByRole("button", { name: "Open capsule menu" }));
+
+    expect(screen.getByRole("menuitem", { name: "Save as..." })).toBeInTheDocument();
+  });
+
+  test("hides Save as for a never-saved capsule", async () => {
+    const user = userEvent.setup();
+
+    renderScreen({
+      activeCapsule: {
+        id: "capsule-1",
+        name: "Spring edit",
+        draft: { filters: { locale: "en" }, data: {} },
+        saved: null,
+        status: "new"
+      }
+    });
+
+    await user.click(screen.getByRole("button", { name: "Open capsule menu" }));
+
+    expect(screen.queryByRole("menuitem", { name: "Save as..." })).not.toBeInTheDocument();
+  });
+
   test("opens user menu and signs out", async () => {
     const user = userEvent.setup();
     const onSignOut = vi.fn();

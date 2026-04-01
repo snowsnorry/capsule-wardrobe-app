@@ -709,9 +709,7 @@ function App() {
     }
     setIsContentOperationLoading(true);
     try {
-      const sourceCapsuleId = capsuleId;
-      const result = await duplicateCapsule(sourceCapsuleId, name);
-      await revertCapsule(sourceCapsuleId);
+      const result = await duplicateCapsule(capsuleId, name);
       applyCapsuleState(result.capsule);
       await refreshCapsuleList();
     } finally {

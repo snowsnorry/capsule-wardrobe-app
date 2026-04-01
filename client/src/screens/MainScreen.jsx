@@ -143,7 +143,7 @@ function CapsuleActionMenu({
   const { t } = useI18n();
   const canRevert = capsule?.status === "modified";
   const canSave = capsule?.status === "new" || capsule?.status === "modified";
-  const canDuplicate = Boolean(capsule?.saved && capsule?.draft);
+  const canDuplicate = Boolean(capsule?.saved);
 
   return (
     <Menu anchorEl={anchorEl} open={open} onClose={onClose}>

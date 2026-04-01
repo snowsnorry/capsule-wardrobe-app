@@ -28,6 +28,8 @@ const wardrobeApi = vi.hoisted(() => ({
   regenerateSelectedWardrobeItems: vi.fn()
 }));
 
+const mainScreenRender = vi.hoisted(() => vi.fn());
+
 const capsulesApi = vi.hoisted(() => ({
   createCapsule: vi.fn(),
   deleteCapsule: vi.fn(),
@@ -110,9 +112,11 @@ vi.mock("./screens/OnboardingScreen.jsx", () => ({
 
 vi.mock("./screens/MainScreen.jsx", () => ({
   default: function MainScreenMock(props) {
+    mainScreenRender(props);
     return (
       <div data-testid="main-screen">
         <div>main-screen:{props.items.length}</div>
+        <div>active-capsule:{props.activeCapsule?.id || ""}:{props.activeCapsule?.name || ""}</div>
         <div>items-order:{props.items.map((item) => item.url).join(",")}</div>
         <button type="button" onClick={() => props.onSelectStyleCore("formal")}>
           change-filter
@@ -246,6 +250,7 @@ describe("App", () => {
 
     profileOptionsApi.clearProfileOptionsCache.mockReset();
     profileOptionsApi.loadProfileOptions.mockReset();
+    mainScreenRender.mockReset();
 
     wardrobeApi.fetchWardrobeItems.mockReset();
     wardrobeApi.regenerateSelectedWardrobeItems.mockReset();
@@ -497,7 +502,7 @@ describe("App", () => {
     });
   });
 
-  test("save as duplicates with a provided name and reverts the source capsule", async () => {
+  test("save as duplicates with a provided name without reverting the source capsule", async () => {
     authApi.fetchCurrentUser.mockResolvedValue({ user: { email: "person@example.com" } });
     authApi.fetchProfileStatus.mockResolvedValue({ hasProfile: true });
     authApi.fetchProfile.mockResolvedValue({
@@ -525,7 +530,12 @@ describe("App", () => {
       expect(capsulesApi.duplicateCapsule).toHaveBeenCalledWith("capsule-1", "Copied capsule");
     });
     await waitFor(() => {
-      expect(capsulesApi.revertCapsule).toHaveBeenCalledWith("capsule-1");
+      expect(
+        mainScreenRender.mock.calls.some(([props]) => (
+          props.activeCapsule?.id === "capsule-2" && props.activeCapsule?.name === "Copied capsule"
+        ))
+      ).toBe(true);
     });
+    expect(capsulesApi.revertCapsule).not.toHaveBeenCalled();
   });
 });
