@@ -656,6 +656,64 @@ test("index routes cover wardrobe handlers and search endpoints", async (t) => {
   assert.equal(pdf.response.status, 200);
 });
 
+test("draft patch only accepts filters and resets draft data", async (t) => {
+  let receivedDraft = null;
+  const { baseUrl } = await startTestServer(t, {
+    overrides: {
+      updateCapsuleDraftImpl: async (_email, _id, draft) => {
+        receivedDraft = draft;
+        return { id: "capsule-1", draft, saved: null, status: "new" };
+      }
+    }
+  });
+
+  const result = await requestJson(baseUrl, "/capsules/capsule-1/draft", {
+    method: "PATCH",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN,
+    body: {
+      draft: {
+        filters: {
+          formalityLevel: "casual",
+          style: "minimalistic",
+          occasions: ["office", "", null],
+          season: ["spring"],
+          audience: "woman",
+          color: "red",
+          pattern: "striped",
+          locale: "en",
+          ignoredField: "ignored"
+        },
+        data: {
+          wardrobe: {
+            items: [{ url: "https://malicious.example/item" }]
+          },
+          rejectedUrls: ["https://malicious.example/rejected"]
+        }
+      }
+    }
+  });
+
+  assert.equal(result.response.status, 200);
+  assert.deepEqual(receivedDraft, {
+    filters: {
+      formalityLevel: "casual",
+      style: "minimalistic",
+      occasions: ["office"],
+      season: ["spring"],
+      audience: "woman",
+      color: "red",
+      pattern: "striped",
+      locale: "en"
+    },
+    data: {
+      wardrobe: null,
+      rejectedUrls: []
+    }
+  });
+});
+
 test("index routes map search and health dependency failures", async (t) => {
   t.mock.method(console, "error", () => {});
 

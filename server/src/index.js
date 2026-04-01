@@ -631,7 +631,15 @@ app.post("/capsules", requireTrustedOrigin, requireAuth, requireCsrf, async (req
 
 app.patch("/capsules/:id/draft", requireTrustedOrigin, requireAuth, requireCsrf, async (req, res) => {
   try {
-    const capsule = await updateCapsuleDraftImpl(req.user.email, req.params.id, req.body?.draft || null);
+    const capsule = await updateCapsuleDraftImpl(req.user.email, req.params.id, {
+      filters: normalizeCapsuleSnapshot({
+        filters: req.body?.draft?.filters
+      })?.filters,
+      data: {
+        wardrobe: null,
+        rejectedUrls: []
+      }
+    });
     if (!capsule) {
       return res.status(404).json({ error: "not_found" });
     }

@@ -638,8 +638,7 @@ function App() {
     setIsContentOperationLoading(true);
     setStatus({ loading: true, error: "", infoKey: "", infoParams: null });
     try {
-      const draft = buildCurrentDraftSnapshot({ wardrobe: null, rejectedUrls: [] });
-      const result = await updateCapsuleDraft(activeCapsuleId, draft);
+      const result = await updateCapsuleDraft(activeCapsuleId, buildCurrentDraftSnapshot().filters);
       setActiveCapsuleMeta(result.capsule);
       setProfileItems([]);
       await refreshCapsuleList();

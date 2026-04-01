@@ -40,12 +40,12 @@ async function createCapsule(payload = {}) {
   });
 }
 
-async function updateCapsuleDraft(id, draft) {
+async function updateCapsuleDraft(id, filters) {
   return requestJson(capsuleUrl(`/${id}/draft`), {
     method: "PATCH",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ draft })
+    body: JSON.stringify({ draft: { filters } })
   });
 }
 
