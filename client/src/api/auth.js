@@ -85,53 +85,21 @@ async function fetchPatternOptions() {
   });
 }
 
-async function initializeProfile(
-  formalityLevel,
-  style,
-  occasions,
-  season,
-  audience,
-  locale
-) {
+async function initializeProfile(locale) {
   return requestJson(`${API_BASE_URL}/profile/initialize`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
-    body: JSON.stringify({
-      formalityLevel,
-      style,
-      occasions,
-      season,
-      audience,
-      locale
-    })
+    body: JSON.stringify({ locale })
   });
 }
 
-async function updateProfile(
-  formalityLevel,
-  style,
-  occasions,
-  season,
-  audience,
-  color,
-  pattern,
-  locale
-) {
+async function updateProfile(locale) {
   return requestJson(`${API_BASE_URL}/profile/me`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
-    body: JSON.stringify({
-      formalityLevel,
-      style,
-      occasions,
-      season,
-      audience,
-      color,
-      pattern,
-      locale
-    })
+    body: JSON.stringify({ locale })
   });
 }
 

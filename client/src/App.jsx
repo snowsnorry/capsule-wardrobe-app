@@ -4,7 +4,6 @@ import { useTheme } from "@mui/material/styles";
 import {
   fetchCurrentUser,
   fetchProfileStatus,
-  updateProfile,
   updateProfileLocale,
   deleteProfile,
   initializeProfile,
@@ -593,14 +592,10 @@ function App() {
   const handleFinishOnboarding = async () => {
     setStatus({ loading: true, error: "", infoKey: "", infoParams: null });
     try {
-      await initializeProfile(
-        selectedFormalityLevel,
-        selectedStyle,
-        selectedOccasions,
-        selectedSeason,
-        selectedAudience,
-        locale
-      );
+      await initializeProfile(locale);
+      await createCapsule({
+        draft: buildCurrentDraftSnapshot({ wardrobe: null, rejectedUrls: [] })
+      });
       setProfileCreated(true);
       setHasProfile(true);
       setCurrentView("main");
@@ -618,28 +613,7 @@ function App() {
   };
 
   const handleSaveProfile = async () => {
-    setStatus({ loading: true, error: "", infoKey: "", infoParams: null });
-    try {
-      await updateProfile(
-        selectedFormalityLevel,
-        selectedStyle,
-        selectedOccasions,
-        selectedSeason,
-        selectedAudience,
-        selectedColor,
-        selectedPattern,
-        locale
-      );
-      setProfileItems(null);
-      setSelectedRegenerationUrls([]);
-      setPartialRegenerationPendingUrls([]);
-      setIsPartialRegenerationLoading(false);
-      setIsWardrobePending(false);
-      setHasPendingAdditionalItems(false);
-      setStatus({ loading: false, error: "", infoKey: "profile.updated", infoParams: null });
-    } catch (error) {
-      setStatus({ loading: false, error: resolveErrorMessage(error), infoKey: "", infoParams: null });
-    }
+    await handleApplyCapsuleFilters();
   };
 
   const refreshCapsuleList = async () => {

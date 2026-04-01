@@ -20,42 +20,62 @@ function createResponseRecorder() {
   };
 }
 
-function createStoredProfile() {
+function createProfile() {
   return {
-    audience: "woman",
-    season: ["summer"],
-    rejected: ["https://example.com/old-1"],
-    items: {
-      items: [
-        { id: "top-1", url: "https://example.com/top-1", category: "top" },
-        { id: "bottom-1", url: "https://example.com/bottom-1", category: "bottom" },
-        { id: "bag-1", url: "https://example.com/bag-1", category: "bag" }
-      ],
-      reasoning: "capsule-json",
-      rawSelectionText: "capsule-raw",
-      swimwearReasoning: "swim-json",
-      swimwearRawSelectionText: "swim-raw"
+    locale: "en"
+  };
+}
+
+function createCapsule() {
+  return {
+    id: "capsule-1",
+    draft: {
+      filters: {
+        formalityLevel: "casual",
+        style: "minimalistic",
+        occasions: ["office"],
+        season: ["summer"],
+        audience: "woman",
+        color: null,
+        pattern: null,
+        locale: "en"
+      },
+      data: {
+        rejectedUrls: ["https://example.com/old-1"],
+        wardrobe: {
+          items: [
+            { id: "top-1", url: "https://example.com/top-1", category: "top" },
+            { id: "bottom-1", url: "https://example.com/bottom-1", category: "bottom" },
+            { id: "bag-1", url: "https://example.com/bag-1", category: "bag" }
+          ],
+          reasoning: "capsule-json",
+          rawSelectionText: "capsule-raw",
+          swimwearReasoning: "swim-json",
+          swimwearRawSelectionText: "swim-raw"
+        }
+      }
     }
   };
 }
 
 test("regenerateSelectedWardrobeItems returns pending payload when job is already active", async () => {
   const jobs = new Map([
-    ["person@example.com", {
+    ["person@example.com::capsule-1", {
       status: "pending",
       updatedAt: Date.now(),
       pendingItemUrls: ["https://example.com/top-1"]
     }]
   ]);
   const service = createPartialRegenerationService({
-    getProfileImpl: async () => createStoredProfile(),
+    getProfileImpl: async () => createProfile(),
+    getCapsuleImpl: async () => createCapsule(),
     jobs
   });
   const res = createResponseRecorder();
 
   await service.regenerateSelectedWardrobeItems({
     user: { email: "person@example.com" },
-    body: { itemUrls: ["https://example.com/top-1"] }
+    body: { capsuleId: "capsule-1", itemUrls: ["https://example.com/top-1"] }
   }, res);
 
   assert.equal(res.statusCode, 202);
@@ -66,7 +86,7 @@ test("regenerateSelectedWardrobeItems returns pending payload when job is alread
 
 test("regenerateSelectedWardrobeItems returns ready payload and clears completed job", async () => {
   const jobs = new Map([
-    ["person@example.com", {
+    ["person@example.com::capsule-1", {
       status: "completed",
       updatedAt: Date.now(),
       result: {
@@ -79,67 +99,77 @@ test("regenerateSelectedWardrobeItems returns ready payload and clears completed
     }]
   ]);
   const service = createPartialRegenerationService({
-    getProfileImpl: async () => createStoredProfile(),
+    getProfileImpl: async () => createProfile(),
+    getCapsuleImpl: async () => createCapsule(),
     jobs
   });
   const res = createResponseRecorder();
 
   await service.regenerateSelectedWardrobeItems({
     user: { email: "person@example.com" },
-    body: { itemUrls: ["https://example.com/top-1"] }
+    body: { capsuleId: "capsule-1", itemUrls: ["https://example.com/top-1"] }
   }, res);
 
   assert.equal(res.statusCode, 200);
   assert.equal(res.body.status, "ready");
   assert.deepEqual(res.body.items, [{ id: "new-1", url: "https://example.com/new-1", category: "top" }]);
-  assert.equal(jobs.has("person@example.com"), false);
+  assert.equal(jobs.has("person@example.com::capsule-1"), false);
 });
 
 test("regenerateSelectedWardrobeItems returns service_unavailable for failed job and clears it", async () => {
   const jobs = new Map([
-    ["person@example.com", {
+    ["person@example.com::capsule-1", {
       status: "failed",
       updatedAt: Date.now(),
       error: new Error("partial failed")
     }]
   ]);
   const service = createPartialRegenerationService({
-    getProfileImpl: async () => createStoredProfile(),
+    getProfileImpl: async () => createProfile(),
+    getCapsuleImpl: async () => createCapsule(),
     jobs
   });
   const res = createResponseRecorder();
 
   await service.regenerateSelectedWardrobeItems({
     user: { email: "person@example.com" },
-    body: { itemUrls: ["https://example.com/top-1"] }
+    body: { capsuleId: "capsule-1", itemUrls: ["https://example.com/top-1"] }
   }, res);
 
   assert.equal(res.statusCode, 503);
   assert.deepEqual(res.body, { error: "service_unavailable" });
-  assert.equal(jobs.has("person@example.com"), false);
+  assert.equal(jobs.has("person@example.com::capsule-1"), false);
 });
 
 test("regenerateSelectedWardrobeItems validates selected urls and missing wardrobe", async () => {
   const invalidPayloadService = createPartialRegenerationService({
-    getProfileImpl: async () => createStoredProfile(),
+    getProfileImpl: async () => createProfile(),
+    getCapsuleImpl: async () => createCapsule(),
     jobs: new Map()
   });
   const invalidPayloadRes = createResponseRecorder();
   await invalidPayloadService.regenerateSelectedWardrobeItems({
     user: { email: "person@example.com" },
-    body: { itemUrls: [] }
+    body: { capsuleId: "capsule-1", itemUrls: [] }
   }, invalidPayloadRes);
   assert.equal(invalidPayloadRes.statusCode, 400);
   assert.deepEqual(invalidPayloadRes.body, { error: "invalid_payload" });
 
   const noWardrobeService = createPartialRegenerationService({
-    getProfileImpl: async () => ({ items: null }),
+    getProfileImpl: async () => createProfile(),
+    getCapsuleImpl: async () => ({
+      id: "capsule-1",
+      draft: {
+        filters: createCapsule().draft.filters,
+        data: { wardrobe: null, rejectedUrls: [] }
+      }
+    }),
     jobs: new Map()
   });
   const noWardrobeRes = createResponseRecorder();
   await noWardrobeService.regenerateSelectedWardrobeItems({
     user: { email: "person@example.com" },
-    body: { itemUrls: ["https://example.com/top-1"] }
+    body: { capsuleId: "capsule-1", itemUrls: ["https://example.com/top-1"] }
   }, noWardrobeRes);
   assert.equal(noWardrobeRes.statusCode, 404);
   assert.deepEqual(noWardrobeRes.body, { error: "not_found" });
@@ -147,14 +177,15 @@ test("regenerateSelectedWardrobeItems validates selected urls and missing wardro
 
 test("regenerateSelectedWardrobeItems rejects unknown urls from request", async () => {
   const service = createPartialRegenerationService({
-    getProfileImpl: async () => createStoredProfile(),
+    getProfileImpl: async () => createProfile(),
+    getCapsuleImpl: async () => createCapsule(),
     jobs: new Map()
   });
   const res = createResponseRecorder();
 
   await service.regenerateSelectedWardrobeItems({
     user: { email: "person@example.com" },
-    body: { itemUrls: ["https://example.com/missing-url"] }
+    body: { capsuleId: "capsule-1", itemUrls: ["https://example.com/missing-url"] }
   }, res);
 
   assert.equal(res.statusCode, 400);
@@ -162,18 +193,16 @@ test("regenerateSelectedWardrobeItems rejects unknown urls from request", async 
 });
 
 test("regenerateSelectedWardrobeItems updates rejected urls, shrinks partial payload, and starts pending job", async () => {
-  const rejectedUpdates = [];
-  const itemUpdates = [];
+  const draftUpdates = [];
   let regeneratedProfile = null;
   let regeneratedSelectedProducts = null;
   const jobs = new Map();
   const service = createPartialRegenerationService({
-    getProfileImpl: async () => createStoredProfile(),
-    updateProfileRejectedImpl: async (email, urls) => {
-      rejectedUpdates.push([email, urls]);
-    },
-    updateProfileItemsImpl: async (email, payload) => {
-      itemUpdates.push([email, payload]);
+    getProfileImpl: async () => createProfile(),
+    getCapsuleImpl: async () => createCapsule(),
+    updateCapsuleDraftImpl: async (email, capsuleId, draft) => {
+      draftUpdates.push([email, capsuleId, draft]);
+      return { id: capsuleId, draft, saved: null };
     },
     regenerateCapsuleWardrobeImpl: async (profile, selectedProducts) => {
       regeneratedProfile = profile;
@@ -195,7 +224,7 @@ test("regenerateSelectedWardrobeItems updates rejected urls, shrinks partial pay
 
   await service.regenerateSelectedWardrobeItems({
     user: { email: "person@example.com" },
-    body: { itemUrls: ["https://example.com/top-1"] }
+    body: { capsuleId: "capsule-1", itemUrls: ["https://example.com/top-1"] }
   }, res);
 
   assert.equal(res.statusCode, 202);
@@ -204,42 +233,52 @@ test("regenerateSelectedWardrobeItems updates rejected urls, shrinks partial pay
     { id: "bottom-1", url: "https://example.com/bottom-1", category: "bottom" },
     { id: "bag-1", url: "https://example.com/bag-1", category: "bag" }
   ]);
-  assert.deepEqual(rejectedUpdates, [[
+  assert.deepEqual(draftUpdates[0], [
     "person@example.com",
-    ["https://example.com/old-1", "https://example.com/top-1"]
-  ]]);
-  assert.deepEqual(itemUpdates[0], [
-    "person@example.com",
+    "capsule-1",
     {
-      items: [
-        { id: "bottom-1", url: "https://example.com/bottom-1", category: "bottom" },
-        { id: "bag-1", url: "https://example.com/bag-1", category: "bag" }
-      ],
-      reasoning: "capsule-json",
-      rawSelectionText: "capsule-raw",
-      swimwearReasoning: "swim-json",
-      swimwearRawSelectionText: "swim-raw"
+      filters: createCapsule().draft.filters,
+      data: {
+        wardrobe: {
+          items: [
+            { id: "bottom-1", url: "https://example.com/bottom-1", category: "bottom" },
+            { id: "bag-1", url: "https://example.com/bag-1", category: "bag" }
+          ],
+          reasoning: "capsule-json",
+          rawSelectionText: "capsule-raw",
+          swimwearReasoning: "swim-json",
+          swimwearRawSelectionText: "swim-raw"
+        },
+        rejectedUrls: ["https://example.com/old-1", "https://example.com/top-1"]
+      }
     }
   ]);
 
-  const job = service.getPartialRegenerationJob("person@example.com");
+  const job = service.getPartialRegenerationJob("person@example.com", "capsule-1");
   assert.ok(job);
   await job.promise;
 
   assert.deepEqual(regeneratedSelectedProducts, [{ id: "top-1", url: "https://example.com/top-1", category: "top" }]);
   assert.equal(regeneratedProfile.rejected.includes("https://example.com/top-1"), true);
-  assert.deepEqual(itemUpdates[1], [
+  assert.deepEqual(draftUpdates[1], [
     "person@example.com",
+    "capsule-1",
     {
-      items: [
-        { id: "bottom-1", url: "https://example.com/bottom-1", category: "bottom" },
-        { id: "bag-1", url: "https://example.com/bag-1", category: "bag" },
-        { id: "top-2", url: "https://example.com/top-2", category: "top" }
-      ],
-      reasoning: "regen-json",
-      rawSelectionText: "regen-raw",
-      swimwearReasoning: "swim-json",
-      swimwearRawSelectionText: "swim-raw"
+      filters: createCapsule().draft.filters,
+      data: {
+        wardrobe: {
+          items: [
+            { id: "bottom-1", url: "https://example.com/bottom-1", category: "bottom" },
+            { id: "bag-1", url: "https://example.com/bag-1", category: "bag" },
+            { id: "top-2", url: "https://example.com/top-2", category: "top" }
+          ],
+          reasoning: "regen-json",
+          rawSelectionText: "regen-raw",
+          swimwearReasoning: "swim-json",
+          swimwearRawSelectionText: "swim-raw"
+        },
+        rejectedUrls: ["https://example.com/old-1", "https://example.com/top-1"]
+      }
     }
   ]);
 });
@@ -251,19 +290,23 @@ test("startPartialRegenerationJob reuses active pending job and marks failures",
   });
   const service = createPartialRegenerationService({
     regenerateCapsuleWardrobeImpl: async () => pending,
-    updateProfileItemsImpl: async () => {},
+    updateCapsuleDraftImpl: async () => {},
     jobs: new Map()
   });
 
   const first = service.startPartialRegenerationJob(
     "person@example.com",
-    createStoredProfile(),
+    "capsule-1",
+    createProfile(),
+    createCapsule(),
     [{ id: "top-1", category: "top" }],
     getStoredProfilePayload()
   );
   const second = service.startPartialRegenerationJob(
     "person@example.com",
-    createStoredProfile(),
+    "capsule-1",
+    createProfile(),
+    createCapsule(),
     [{ id: "top-1", category: "top" }],
     getStoredProfilePayload()
   );
@@ -284,7 +327,9 @@ test("startPartialRegenerationJob reuses active pending job and marks failures",
   });
   const failed = failingService.startPartialRegenerationJob(
     "person@example.com",
-    createStoredProfile(),
+    "capsule-1",
+    createProfile(),
+    createCapsule(),
     [{ id: "top-1", category: "top" }],
     getStoredProfilePayload()
   );

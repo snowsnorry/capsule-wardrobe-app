@@ -14,12 +14,7 @@ import {
   upsertSearchByEmail,
   searchProducts,
   createProfileRecord,
-  updateProfileRecord,
   updateProfileLocaleByEmail,
-  updateProfileItemsByEmail,
-  updateProfileRejectedByEmail,
-  getProfilePdfByEmail,
-  updateProfilePdfByEmail,
   deleteProfileByEmail
 } from "./db.js";
 
@@ -240,116 +235,38 @@ test("db integration shapes search persistence and searchProducts queries", asyn
   assert.equal(calls[3].values.filter((value) => value === 50).length >= 2, true);
 });
 
-test("db integration shapes profile persistence and conditional pdf reset queries", async () => {
-  const items = [{ id: "look-1" }];
-  const pdf = Buffer.from("pdf");
+test("db integration shapes reduced profile persistence queries", async () => {
   const { sql, calls } = createSqlMock([
     [{
       email: "user@example.com",
-      formalityLevel: "casual",
-      style: "minimalistic",
-      occasions: ["office"],
-      season: ["spring"],
-      audience: "woman",
-      color: null,
-      pattern: null,
-      rejected: [],
-      items: null,
+      activeCapsuleId: null,
       locale: "en"
     }],
     [{
       email: "user@example.com",
-      formalityLevel: "formal",
-      style: "minimalistic",
-      occasions: ["office"],
-      season: ["winter"],
-      audience: "woman",
-      color: "navy",
-      pattern: "solid",
-      rejected: [],
-      items: null,
+      activeCapsuleId: null,
       locale: "ru"
     }],
-    [{
-      email: "user@example.com",
-      locale: "ru"
-    }],
-    [{
-      email: "user@example.com",
-      items
-    }],
-    [{
-      email: "user@example.com",
-      rejected: ["prod-1", "prod-2"]
-    }],
-    [{ pdf }],
-    [{ email: "user@example.com" }],
+    [],
     [{ email: "user@example.com" }]
   ]);
   setSqlClientOverride(sql);
 
   await createProfileRecord({
     email: "user@example.com",
-    formalityLevel: "casual",
-    style: "minimalistic",
-    occasions: ["office"],
-    season: ["spring"],
-    audience: "woman",
-    color: null,
-    pattern: null,
     locale: "en"
   });
-  await updateProfileRecord({
-    email: "user@example.com",
-    formalityLevel: "formal",
-    style: "minimalistic",
-    occasions: ["office"],
-    season: ["winter"],
-    audience: "woman",
-    color: "navy",
-    pattern: "solid",
-    locale: "ru"
-  });
   await updateProfileLocaleByEmail({ email: "user@example.com", locale: "ru" });
-  await updateProfileItemsByEmail({ email: "user@example.com", items });
-  await updateProfileRejectedByEmail({ email: "user@example.com", rejected: ["prod-1", "prod-2", "prod-1", " "] });
-  const storedPdf = await getProfilePdfByEmail("user@example.com");
-  await updateProfilePdfByEmail({
-    email: "user@example.com",
-    pdf,
-    expectedItems: items,
-    expectedLocale: "ru"
-  });
   const deleted = await deleteProfileByEmail("user@example.com");
 
-  assert.equal(Buffer.compare(storedPdf, pdf), 0);
   assert.equal(deleted, true);
 
   assert.match(calls[0].text, /insert into profiles/i);
-  assert.deepEqual(calls[0].values.slice(0, 9), [
-    "user@example.com",
-    "casual",
-    "minimalistic",
-    ["office"],
-    ["spring"],
-    "woman",
-    null,
-    null,
-    "en"
-  ]);
-  assert.match(calls[1].text, /update profiles\s+set\s+items = case/i);
-  assert.equal(calls[1].values[0], "formal");
-  assert.equal(calls[1].values.at(-1), "user@example.com");
-  assert.match(calls[2].text, /locale =[\s\S]*pdf = case/i);
-  assert.deepEqual(calls[2].values, ["ru", "ru", "user@example.com"]);
-  assert.match(calls[3].text, /items =[\s\S]*pdf = null/i);
-  assert.equal(calls[3].values[0], JSON.stringify(items));
-  assert.match(calls[4].text, /rejected =/i);
-  assert.deepEqual(calls[4].values[0], ["prod-1", "prod-2"]);
-  assert.match(calls[5].text, /select pdf\s+from profiles/i);
-  assert.match(calls[6].text, /and \([\s\S]*items =[\s\S]*and \([\s\S]*locale =/i);
-  assert.deepEqual(calls[6].values, [pdf, "user@example.com", true, items, true, "ru"]);
-  assert.match(calls[7].text, /delete from profiles/i);
+  assert.deepEqual(calls[0].values, ["user@example.com", "en"]);
+  assert.match(calls[1].text, /update profiles\s+set[\s\S]*locale =/i);
+  assert.deepEqual(calls[1].values, ["ru", "user@example.com"]);
+  assert.match(calls[2].text, /delete from capsules/i);
+  assert.match(calls[3].text, /delete from profiles/i);
 });
 
 test("db integration checkDatabaseConnection selects current database metadata", async () => {

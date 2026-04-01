@@ -111,13 +111,13 @@ function getEffectiveCapsuleSnapshot(capsule) {
 function buildSnapshotFromProfile(profile = null) {
   return normalizeCapsuleSnapshot({
     filters: {
-      formalityLevel: profile?.formalityLevel || "",
-      style: profile?.style ?? null,
-      occasions: profile?.occasions || [],
-      season: profile?.season || [],
-      audience: profile?.audience || "",
-      color: profile?.color ?? null,
-      pattern: profile?.pattern ?? null,
+      formalityLevel: "",
+      style: null,
+      occasions: [],
+      season: [],
+      audience: "",
+      color: null,
+      pattern: null,
       locale: profile?.locale || "en"
     },
     data: {

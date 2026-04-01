@@ -21,6 +21,28 @@ function createResponseRecorder() {
   };
 }
 
+function createCapsuleWithWardrobe(wardrobe = null) {
+  return {
+    id: "capsule-1",
+    draft: {
+      filters: {
+        formalityLevel: "casual",
+        style: "minimalistic",
+        occasions: ["office"],
+        season: ["spring"],
+        audience: "woman",
+        color: null,
+        pattern: null,
+        locale: "en"
+      },
+      data: {
+        wardrobe,
+        rejectedUrls: []
+      }
+    }
+  };
+}
+
 test("getSelectedIdsFromCapsule flattens only non-empty ids from capsule object", () => {
   assert.deepEqual(
     getSelectedIdsFromCapsule({
@@ -69,12 +91,11 @@ test("getStoredWardrobePayload normalizes legacy arrays and object payloads", ()
 
 test("getWardrobeItems returns pending regenerate payload when partial regeneration job is active", async () => {
   const service = createWardrobeService({
-    getProfileImpl: async () => ({
-      items: {
-        items: [{ id: "top-1", url: "https://example.com/top-1", category: "top" }],
-        reasoning: "capsule",
-        rawSelectionText: "raw"
-      }
+    getProfileImpl: async () => ({ locale: "en" }),
+    getCapsuleImpl: async () => createCapsuleWithWardrobe({
+      items: [{ id: "top-1", url: "https://example.com/top-1", category: "top" }],
+      reasoning: "capsule",
+      rawSelectionText: "raw"
     }),
     getPartialRegenerationJobImpl: () => ({
       status: "pending",
@@ -86,7 +107,7 @@ test("getWardrobeItems returns pending regenerate payload when partial regenerat
 
   await service.getWardrobeItems({
     user: { email: "person@example.com" },
-    body: {}
+    body: { capsuleId: "capsule-1" }
   }, res);
 
   assert.equal(res.statusCode, 202);
@@ -97,13 +118,12 @@ test("getWardrobeItems returns pending regenerate payload when partial regenerat
 
 test("getWardrobeItems returns ready payload from stored wardrobe when no refresh is requested", async () => {
   const service = createWardrobeService({
-    getProfileImpl: async () => ({
-      items: {
-        items: [{ id: "top-1", category: "top" }],
-        reasoning: "capsule-json",
-        rawSelectionText: "raw-selection",
-        swimwearReasoning: "swimwear-json"
-      }
+    getProfileImpl: async () => ({ locale: "en" }),
+    getCapsuleImpl: async () => createCapsuleWithWardrobe({
+      items: [{ id: "top-1", category: "top" }],
+      reasoning: "capsule-json",
+      rawSelectionText: "raw-selection",
+      swimwearReasoning: "swimwear-json"
     }),
     jobs: new Map()
   });
@@ -111,7 +131,7 @@ test("getWardrobeItems returns ready payload from stored wardrobe when no refres
 
   await service.getWardrobeItems({
     user: { email: "person@example.com" },
-    body: { force: false }
+    body: { force: false, capsuleId: "capsule-1" }
   }, res);
 
   assert.equal(res.statusCode, 200);
@@ -128,20 +148,19 @@ test("getWardrobeItems returns ready payload from stored wardrobe when no refres
 
 test("getWardrobeItems returns extras pending state when extras are still generating", async () => {
   const jobs = new Map([
-    ["person@example.com", {
+    ["person@example.com::capsule-1", {
       status: "pending",
       phase: "extras",
       updatedAt: Date.now()
     }]
   ]);
   const service = createWardrobeService({
-    getProfileImpl: async () => ({
-      items: {
-        items: [{ id: "top-1", category: "top" }],
-        reasoning: "capsule-json",
-        rawSelectionText: "raw-selection",
-        swimwearReasoning: "swimwear-json"
-      }
+    getProfileImpl: async () => ({ locale: "en" }),
+    getCapsuleImpl: async () => createCapsuleWithWardrobe({
+      items: [{ id: "top-1", category: "top" }],
+      reasoning: "capsule-json",
+      rawSelectionText: "raw-selection",
+      swimwearReasoning: "swimwear-json"
     }),
     jobs
   });
@@ -149,7 +168,7 @@ test("getWardrobeItems returns extras pending state when extras are still genera
 
   await service.getWardrobeItems({
     user: { email: "person@example.com" },
-    body: {}
+    body: { capsuleId: "capsule-1" }
   }, res);
 
   assert.equal(res.statusCode, 202);
@@ -163,14 +182,13 @@ test("getWardrobeItems starts a new pending job and clears stored items on force
   let generatedProfile = null;
   const jobs = new Map();
   const service = createWardrobeService({
-    getProfileImpl: async () => ({
-      audience: "woman",
-      items: {
-        items: [{ id: "top-1", category: "top" }]
-      }
+    getProfileImpl: async () => ({ audience: "woman", locale: "en" }),
+    getCapsuleImpl: async () => createCapsuleWithWardrobe({
+      items: [{ id: "top-1", category: "top" }]
     }),
-    updateProfileItemsImpl: async (email, payload) => {
-      updates.push([email, payload]);
+    updateCapsuleDraftImpl: async (email, capsuleId, draft) => {
+      updates.push([email, capsuleId, draft]);
+      return { id: capsuleId, draft, saved: null };
     },
     generateCapsuleWardrobeImpl: async (profile) => {
       generatedProfile = profile;
@@ -190,31 +208,43 @@ test("getWardrobeItems starts a new pending job and clears stored items on force
 
   await service.getWardrobeItems({
     user: { email: "person@example.com" },
-    body: { force: true }
+    body: { force: true, capsuleId: "capsule-1" }
   }, res);
 
   assert.equal(res.statusCode, 202);
   assert.equal(res.body.pendingStage, "capsule");
-  assert.deepEqual(updates[0], ["person@example.com", null]);
+  assert.deepEqual(updates[0], ["person@example.com", "capsule-1", {
+    filters: createCapsuleWithWardrobe().draft.filters,
+    data: {
+      wardrobe: null,
+      rejectedUrls: []
+    }
+  }]);
 
-  const job = service.getWardrobeJob("person@example.com");
+  const job = service.getWardrobeJob("person@example.com", "capsule-1");
   assert.ok(job);
   await job.promise;
 
   assert.deepEqual(generatedProfile.items, null);
   assert.equal(job.status, "completed");
-  assert.deepEqual(updates[1], ["person@example.com", {
-    items: [{ id: "top-2", category: "top" }],
-    reasoning: "reasoning",
-    rawSelectionText: "raw",
-    swimwearReasoning: null,
-    swimwearRawSelectionText: null
+  assert.deepEqual(updates[1], ["person@example.com", "capsule-1", {
+    filters: createCapsuleWithWardrobe().draft.filters,
+    data: {
+      wardrobe: {
+        items: [{ id: "top-2", category: "top" }],
+        reasoning: "reasoning",
+        rawSelectionText: "raw",
+        swimwearReasoning: null,
+        swimwearRawSelectionText: null
+      },
+      rejectedUrls: []
+    }
   }]);
 });
 
 test("getWardrobeItems surfaces failed job as service_unavailable and drops stale failed entry", async () => {
   const jobs = new Map([
-    ["person@example.com", {
+    ["person@example.com::capsule-1", {
       status: "failed",
       phase: "failed",
       updatedAt: Date.now(),
@@ -222,14 +252,15 @@ test("getWardrobeItems surfaces failed job as service_unavailable and drops stal
     }]
   ]);
   const service = createWardrobeService({
-    getProfileImpl: async () => ({ items: null }),
+    getProfileImpl: async () => ({ locale: "en" }),
+    getCapsuleImpl: async () => createCapsuleWithWardrobe(null),
     jobs
   });
   const res = createResponseRecorder();
 
   await service.getWardrobeItems({
     user: { email: "person@example.com" },
-    body: {}
+    body: { capsuleId: "capsule-1" }
   }, res);
 
   assert.equal(res.statusCode, 503);
@@ -237,7 +268,7 @@ test("getWardrobeItems surfaces failed job as service_unavailable and drops stal
     error: "service_unavailable",
     rawSelectionText: "llm raw"
   });
-  assert.equal(jobs.has("person@example.com"), false);
+  assert.equal(jobs.has("person@example.com::capsule-1"), false);
 });
 
 test("startWardrobeJob reuses active pending job for the same email", async () => {
@@ -247,12 +278,12 @@ test("startWardrobeJob reuses active pending job for the same email", async () =
   });
   const service = createWardrobeService({
     generateCapsuleWardrobeImpl: async () => pendingGeneration,
-    updateProfileItemsImpl: async () => {},
+    updateCapsuleDraftImpl: async () => {},
     jobs: new Map()
   });
 
-  const first = service.startWardrobeJob("person@example.com", { audience: "woman" });
-  const second = service.startWardrobeJob("person@example.com", { audience: "woman" });
+  const first = service.startWardrobeJob("person@example.com", "capsule-1", { locale: "en" }, createCapsuleWithWardrobe(null));
+  const second = service.startWardrobeJob("person@example.com", "capsule-1", { locale: "en" }, createCapsuleWithWardrobe(null));
 
   assert.equal(first, second);
 
@@ -274,8 +305,9 @@ test("startWardrobeJob stores capsule result and merges swimwear additions when 
       reasoning: "capsule-json",
       rawSelectionText: "capsule-raw"
     }),
-    updateProfileItemsImpl: async (email, payload) => {
-      updates.push([email, payload]);
+    updateCapsuleDraftImpl: async (email, capsuleId, draft) => {
+      updates.push([email, capsuleId, draft]);
+      return { id: capsuleId, draft, saved: null };
     },
     shouldGenerateSwimwearImpl: () => true,
     generateSwimwearAdditionImpl: async () => ({
@@ -289,31 +321,45 @@ test("startWardrobeJob stores capsule result and merges swimwear additions when 
     jobs: new Map()
   });
 
-  const job = service.startWardrobeJob("person@example.com", {
-    audience: "woman",
-    season: ["summer"]
-  });
+  const job = service.startWardrobeJob(
+    "person@example.com",
+    "capsule-1",
+    { audience: "woman", season: ["summer"], locale: "en" },
+    createCapsuleWithWardrobe(null)
+  );
   await job.promise;
 
   assert.equal(job.status, "completed");
   assert.equal(job.phase, "completed");
   assert.deepEqual(updates, [
-    ["person@example.com", {
-      items: [{ id: "top-1", category: "top" }],
-      reasoning: "capsule-json",
-      rawSelectionText: "capsule-raw",
-      swimwearReasoning: null,
-      swimwearRawSelectionText: null
+    ["person@example.com", "capsule-1", {
+      filters: createCapsuleWithWardrobe().draft.filters,
+      data: {
+        wardrobe: {
+          items: [{ id: "top-1", category: "top" }],
+          reasoning: "capsule-json",
+          rawSelectionText: "capsule-raw",
+          swimwearReasoning: null,
+          swimwearRawSelectionText: null
+        },
+        rejectedUrls: []
+      }
     }],
-    ["person@example.com", {
-      items: [
-        { id: "top-1", category: "top" },
-        { id: "swim-1", category: "swimwear" }
-      ],
-      reasoning: "capsule-json",
-      rawSelectionText: "capsule-raw",
-      swimwearReasoning: "swimwear-json",
-      swimwearRawSelectionText: "swimwear-raw"
+    ["person@example.com", "capsule-1", {
+      filters: createCapsuleWithWardrobe().draft.filters,
+      data: {
+        wardrobe: {
+          items: [
+            { id: "top-1", category: "top" },
+            { id: "swim-1", category: "swimwear" }
+          ],
+          reasoning: "capsule-json",
+          rawSelectionText: "capsule-raw",
+          swimwearReasoning: "swimwear-json",
+          swimwearRawSelectionText: "swimwear-raw"
+        },
+        rejectedUrls: []
+      }
     }]
   ]);
 });
@@ -328,7 +374,7 @@ test("startWardrobeJob marks job failed when capsule generation returns no usabl
     jobs: new Map()
   });
 
-  const job = service.startWardrobeJob("person@example.com", { audience: "woman" });
+  const job = service.startWardrobeJob("person@example.com", "capsule-1", { audience: "woman", locale: "en" }, createCapsuleWithWardrobe(null));
   await job.promise;
 
   assert.equal(job.status, "failed");

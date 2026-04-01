@@ -33,7 +33,7 @@ function createDependencies(overrides = {}) {
     ),
     revokeSessionImpl: async () => {},
     sendLoginCodeEmailImpl: async () => {},
-    createProfileImpl: async (_email, payload) => ({ id: "profile-1", ...payload }),
+    createProfileImpl: async (email, payload) => ({ id: "profile-1", email, activeCapsuleId: null, ...payload }),
     deleteProfileImpl: async () => true,
     getFormalityLevelsImpl: async () => ["casual", "formal"],
     getStylesImpl: async () => ["minimalistic", "sporty"],
@@ -42,18 +42,13 @@ function createDependencies(overrides = {}) {
     getAudienceOptionsImpl: () => ["man", "woman", "any"],
     getPatternOptionsImpl: async () => ["striped", "plain"],
     getProfileImpl: async () => ({
-      formalityLevel: "casual",
-      style: "minimalistic",
-      occasions: ["office"],
-      season: ["spring"],
-      audience: "woman",
-      color: null,
-      pattern: null,
+      email: "person@example.com",
+      activeCapsuleId: "capsule-1",
       locale: "en"
     }),
     hasProfileImpl: async () => true,
-    updateProfileImpl: async (_email, payload) => ({ id: "profile-1", ...payload }),
-    updateProfileLocaleImpl: async (_email, locale) => ({ id: "profile-1", locale }),
+    updateProfileImpl: async (email, payload) => ({ id: "profile-1", email, activeCapsuleId: "capsule-1", ...payload }),
+    updateProfileLocaleImpl: async (email, locale) => ({ id: "profile-1", email, activeCapsuleId: "capsule-1", locale }),
     updateProfileActiveCapsuleIdImpl: async (_email, activeCapsuleId) => ({ activeCapsuleId }),
     resolveActiveCapsuleImpl: async () => ({
       id: "capsule-1",
@@ -438,7 +433,9 @@ test("index routes cover profile read endpoints", async (t) => {
   });
   assert.equal(profile.response.status, 200);
   assert.equal(profile.json.ok, true);
-  assert.equal(profile.json.profile.formalityLevel, "casual");
+  assert.equal(profile.json.profile.email, "person@example.com");
+  assert.equal(profile.json.profile.activeCapsuleId, "capsule-1");
+  assert.equal(profile.json.profile.locale, "en");
 
   const formality = await requestJson(baseUrl, "/profile/formality-levels", {
     cookie: AUTH_COOKIE
@@ -479,14 +476,7 @@ test("index routes cover profile initialize branches", async (t) => {
     cookie: AUTH_COOKIE,
     csrfToken: CSRF_TOKEN,
     body: {
-      formalityLevel: "unknown",
-      style: null,
-      occasions: ["office"],
-      season: ["spring"],
-      audience: "woman",
-      color: null,
-      pattern: null,
-      locale: "en"
+      locale: "de"
     }
   });
   assert.equal(invalid.response.status, 400);
@@ -503,13 +493,6 @@ test("index routes cover profile initialize branches", async (t) => {
     cookie: AUTH_COOKIE,
     csrfToken: CSRF_TOKEN,
     body: {
-      formalityLevel: "casual",
-      style: "minimalistic",
-      occasions: ["office"],
-      season: ["spring"],
-      audience: "woman",
-      color: null,
-      pattern: "striped",
       locale: "en"
     }
   });
@@ -523,19 +506,12 @@ test("index routes cover profile initialize branches", async (t) => {
     cookie: AUTH_COOKIE,
     csrfToken: CSRF_TOKEN,
     body: {
-      formalityLevel: "casual",
-      style: "minimalistic",
-      occasions: ["office"],
-      season: ["spring"],
-      audience: "woman",
-      color: null,
-      pattern: "striped",
       locale: "en"
     }
   });
   assert.equal(success.response.status, 200);
   assert.equal(success.json.ok, true);
-  assert.equal(success.json.profile.pattern, "striped");
+  assert.equal(success.json.profile.locale, "en");
 });
 
 test("index routes cover profile update, locale update, and delete branches", async (t) => {
@@ -553,13 +529,6 @@ test("index routes cover profile update, locale update, and delete branches", as
     cookie: AUTH_COOKIE,
     csrfToken: CSRF_TOKEN,
     body: {
-      formalityLevel: "casual",
-      style: "minimalistic",
-      occasions: ["office"],
-      season: ["spring"],
-      audience: "woman",
-      color: null,
-      pattern: "striped",
       locale: "en"
     }
   });
@@ -602,13 +571,6 @@ test("index routes cover profile update, locale update, and delete branches", as
     cookie: AUTH_COOKIE,
     csrfToken: CSRF_TOKEN,
     body: {
-      formalityLevel: "casual",
-      style: "minimalistic",
-      occasions: ["office"],
-      season: ["spring"],
-      audience: "woman",
-      color: null,
-      pattern: "striped",
       locale: "en"
     }
   });

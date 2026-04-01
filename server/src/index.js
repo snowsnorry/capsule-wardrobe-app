@@ -56,7 +56,6 @@ import { getWardrobeItems } from "./ai/ai.js";
 import { regenerateSelectedWardrobeItems } from "./ai/regenerateSelected.js";
 import { buildWardrobePdfInChild } from "./wardrobePdf.js";
 import { checkDatabaseConnection, ensureTables, getProductsByUrlsInOrder } from "./db.js";
-import { ACCENT_COLOR_OPTIONS } from "../../shared/accentColors.js";
 import { configureSharp } from "./ai/sharpConfig.js";
 import { sortWardrobeItems } from "../../shared/wardrobeOrder.js";
 
@@ -78,30 +77,6 @@ console.info(
     concurrency: sharpConfig.concurrency
   })
 );
-
-function isValidSelection(items, allowedItems) {
-  if (!Array.isArray(items) || items.length === 0) {
-    return false;
-  }
-  return items.every((item) => typeof item === "string" && allowedItems.includes(item));
-}
-
-function isValidSingleSelection(item, allowedItems) {
-  return typeof item === "string" && allowedItems.includes(item);
-}
-
-function isValidOptionalSingleSelection(item, allowedItems) {
-  return item === null || (typeof item === "string" && allowedItems.includes(item));
-}
-
-function parseOptionalSelection(value) {
-  if (value === null || value === undefined) {
-    return null;
-  }
-
-  const normalized = String(value || "").trim().toLowerCase();
-  return normalized || null;
-}
 
 function isApiPath(pathname = "") {
   return (
@@ -850,48 +825,13 @@ app.post("/search/run", requireTrustedOrigin, requireAuth, requireCsrf, async (r
 });
 
 app.post("/profile/initialize", requireTrustedOrigin, requireAuth, requireCsrf, async (req, res) => {
-  const formalityLevel = String(req.body?.formalityLevel || "").trim().toLowerCase();
-  const style = parseOptionalSelection(req.body?.style);
-  const occasions = Array.isArray(req.body?.occasions)
-    ? req.body.occasions
-    : [];
-  const season = Array.isArray(req.body?.season)
-    ? req.body.season
-    : [];
-  const audience = String(req.body?.audience || "").trim().toLowerCase();
-  const color = parseOptionalSelection(req.body?.color);
-  const pattern = parseOptionalSelection(req.body?.pattern);
   const locale = String(req.body?.locale || "").trim().toLowerCase();
-  const [allowedFormalityLevels, allowedStyles, allowedOccasions, allowedSeasons, allowedPatterns] = await Promise.all([
-    getFormalityLevelsImpl(req.user.email),
-    getStylesImpl(req.user.email),
-    getOccasionsImpl(req.user.email),
-    getSeasonsImpl(req.user.email),
-    getPatternOptionsImpl(req.user.email)
-  ]);
-
-  if (
-    !isValidSingleSelection(formalityLevel, allowedFormalityLevels) ||
-    !isValidOptionalSingleSelection(style, allowedStyles) ||
-    !isValidSelection(occasions, allowedOccasions) ||
-    !isValidSelection(season, allowedSeasons) ||
-    !isValidSingleSelection(audience, getAudienceOptionsImpl()) ||
-    !isValidOptionalSingleSelection(color, ACCENT_COLOR_OPTIONS) ||
-    !isValidOptionalSingleSelection(pattern, allowedPatterns) ||
-    !SUPPORTED_LOCALES.has(locale)
-  ) {
+  if (!SUPPORTED_LOCALES.has(locale)) {
     return res.status(400).json({ error: "invalid_payload" });
   }
 
   try {
     const profile = await createProfileImpl(req.user.email, {
-      formalityLevel,
-      style,
-      occasions,
-      season,
-      audience,
-      color,
-      pattern,
       locale
     });
     if (!profile) {
@@ -905,48 +845,13 @@ app.post("/profile/initialize", requireTrustedOrigin, requireAuth, requireCsrf, 
 });
 
 app.patch("/profile/me", requireTrustedOrigin, requireAuth, requireCsrf, async (req, res) => {
-  const formalityLevel = String(req.body?.formalityLevel || "").trim().toLowerCase();
-  const style = parseOptionalSelection(req.body?.style);
-  const occasions = Array.isArray(req.body?.occasions)
-    ? req.body.occasions
-    : [];
-  const season = Array.isArray(req.body?.season)
-    ? req.body.season
-    : [];
-  const audience = String(req.body?.audience || "").trim().toLowerCase();
-  const color = parseOptionalSelection(req.body?.color);
-  const pattern = parseOptionalSelection(req.body?.pattern);
   const locale = String(req.body?.locale || "").trim().toLowerCase();
-  const [allowedFormalityLevels, allowedStyles, allowedOccasions, allowedSeasons, allowedPatterns] = await Promise.all([
-    getFormalityLevelsImpl(req.user.email),
-    getStylesImpl(req.user.email),
-    getOccasionsImpl(req.user.email),
-    getSeasonsImpl(req.user.email),
-    getPatternOptionsImpl(req.user.email)
-  ]);
-
-  if (
-    !isValidSingleSelection(formalityLevel, allowedFormalityLevels) ||
-    !isValidOptionalSingleSelection(style, allowedStyles) ||
-    !isValidSelection(occasions, allowedOccasions) ||
-    !isValidSelection(season, allowedSeasons) ||
-    !isValidSingleSelection(audience, getAudienceOptionsImpl()) ||
-    !isValidOptionalSingleSelection(color, ACCENT_COLOR_OPTIONS) ||
-    !isValidOptionalSingleSelection(pattern, allowedPatterns) ||
-    !SUPPORTED_LOCALES.has(locale)
-  ) {
+  if (!SUPPORTED_LOCALES.has(locale)) {
     return res.status(400).json({ error: "invalid_payload" });
   }
 
   try {
     const profile = await updateProfileImpl(req.user.email, {
-      formalityLevel,
-      style,
-      occasions,
-      season,
-      audience,
-      color,
-      pattern,
       locale
     });
     if (!profile) {

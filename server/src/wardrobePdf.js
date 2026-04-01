@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 import { PDFDocument, rgb } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import sharp from "sharp";
-import { getProfile, getProfilePdf, getProfileWithPdf, updateProfilePdf } from "./profileStore.js";
+import { getProfile } from "./profileStore.js";
 import { getProductsByUrlsInOrder } from "./db.js";
 import { sortWardrobeItems } from "../../shared/wardrobeOrder.js";
 import { buildProductDetailGroups } from "../../shared/productDetail.js";
@@ -911,21 +911,17 @@ function getWardrobePdfJob(email) {
 
 function createWardrobePdfJobManager({
   getProfileByEmail = getProfile,
-  getProfilePdfByEmail = getProfilePdf,
+  getProfilePdfByEmail = async () => null,
   getProfileWithPdfByEmail = null,
-  updateProfilePdfByEmail = updateProfilePdf,
+  updateProfilePdfByEmail = async () => ({ email: "unknown@example.com" }),
   getProducts = getProductsByUrlsInOrder,
   buildPdfInChild = buildWardrobePdfInChild
 } = {}) {
   const loadProfileWithPdf = getProfileWithPdfByEmail
-    || (
-      getProfileByEmail === getProfile && getProfilePdfByEmail === getProfilePdf
-        ? getProfileWithPdf
-        : async (email) => ({
-          profile: await getProfileByEmail(email),
-          pdf: await getProfilePdfByEmail(email)
-        })
-    );
+    || (async (email) => ({
+      profile: await getProfileByEmail(email),
+      pdf: await getProfilePdfByEmail(email)
+    }));
 
   function startWardrobePdfJob(email, {
     wardrobePayload = null,

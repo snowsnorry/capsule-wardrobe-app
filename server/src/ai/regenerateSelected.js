@@ -5,7 +5,7 @@ import {
   getProductsWithEmbeddingsByUrlsInOrder,
   getSqlClient
 } from "../db.js";
-import { getProfile, updateProfileItems, updateProfileRejected } from "../profileStore.js";
+import { getProfile } from "../profileStore.js";
 import {
   buildProfileCapsuleContext,
   getCapsule,
@@ -576,8 +576,6 @@ function createPartialRegenerationService({
   getProfileImpl = getProfile,
   getCapsuleImpl = getCapsule,
   updateCapsuleDraftImpl = updateCapsuleDraft,
-  updateProfileItemsImpl = updateProfileItems,
-  updateProfileRejectedImpl = updateProfileRejected,
   regenerateCapsuleWardrobeImpl = regenerateCapsuleWardrobe,
   jobs = partialRegenerationJobs,
   nowMsImpl = () => Date.now(),
@@ -608,38 +606,6 @@ function createPartialRegenerationService({
   }
 
   function startPartialRegenerationJob(email, capsuleId, profile, capsule, selectedProducts, storedWardrobe, logContext = null) {
-    if (typeof capsuleId === "object" && capsuleId !== null) {
-      const legacyProfile = capsuleId;
-      const legacySelectedProducts = profile;
-      const legacyStoredWardrobe = capsule;
-      const legacyLogContext = selectedProducts || null;
-      return startPartialRegenerationJob(
-        email,
-        "",
-        legacyProfile,
-        {
-          draft: {
-            filters: {
-              formalityLevel: legacyProfile?.formalityLevel || "",
-              style: legacyProfile?.style ?? null,
-              occasions: legacyProfile?.occasions || [],
-              season: legacyProfile?.season || [],
-              audience: legacyProfile?.audience || "",
-              color: legacyProfile?.color ?? null,
-              pattern: legacyProfile?.pattern ?? null,
-              locale: legacyProfile?.locale || "en"
-            },
-            data: {
-              wardrobe: legacyStoredWardrobe,
-              rejectedUrls: Array.isArray(legacyProfile?.rejected) ? legacyProfile.rejected : []
-            }
-          }
-        },
-        legacySelectedProducts,
-        legacyStoredWardrobe,
-        legacyLogContext
-      );
-    }
     const jobKey = createPartialRegenerationJobKey(email, capsuleId);
     const existing = getPartialRegenerationJob(email, capsuleId);
     if (existing?.status === "pending") {
@@ -681,8 +647,6 @@ function createPartialRegenerationService({
               rejectedUrls: baseSnapshot?.data?.rejectedUrls || []
             }
           });
-        } else {
-          await updateProfileItemsImpl(email, payload);
         }
         job.result = payload;
         job.status = "completed";
@@ -715,25 +679,11 @@ function createPartialRegenerationService({
         ? req.body.itemUrls.map((itemUrl) => String(itemUrl || "").trim()).filter(Boolean)
         : [];
       const profile = await getProfileImpl(email);
-      const capsule = capsuleId ? await getCapsuleImpl(email, capsuleId) : {
-        draft: {
-          filters: {
-            formalityLevel: profile?.formalityLevel || "",
-            style: profile?.style ?? null,
-            occasions: profile?.occasions || [],
-            season: profile?.season || [],
-            audience: profile?.audience || "",
-            color: profile?.color ?? null,
-            pattern: profile?.pattern ?? null,
-            locale: profile?.locale || "en"
-          },
-          data: {
-            wardrobe: getStoredWardrobePayload(profile),
-            rejectedUrls: Array.isArray(profile?.rejected) ? profile.rejected : []
-          }
-        }
-      };
-      if (capsuleId && !capsule) {
+      if (!capsuleId) {
+        return res.status(400).json({ error: "invalid_payload" });
+      }
+      const capsule = await getCapsuleImpl(email, capsuleId);
+      if (!capsule) {
         return res.status(404).json({ error: "not_found" });
       }
       const effectiveSnapshot = getEffectiveCapsuleSnapshot(capsule);
@@ -819,9 +769,6 @@ function createPartialRegenerationService({
             rejectedUrls: nextRejectedUrls
           }
         });
-      } else {
-        await updateProfileRejectedImpl(email, nextRejectedUrls);
-        await updateProfileItemsImpl(email, partialPayload);
       }
       startPartialRegenerationJob(
         email,

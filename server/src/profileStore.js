@@ -3,14 +3,8 @@ import {
   deleteProfileByEmail,
   getDistinctProductPatterns,
   getProfileByEmail,
-  getProfileWithPdfByEmail,
-  getProfilePdfByEmail,
   hasProfileByEmail,
-  updateProfileRecord,
-  updateProfilePdfByEmail,
-  updateProfileRejectedByEmail,
   updateProfileLocaleByEmail,
-  updateProfileItemsByEmail,
   updateProfileActiveCapsuleIdByEmail
 } from "./db.js";
 import { ACCENT_COLOR_OPTIONS } from "../../shared/accentColors.js";
@@ -143,13 +137,11 @@ async function getSeasons(email) {
 
 async function getPatternOptions(email) {
   try {
-    const profile = email ? await getProfile(email) : null;
     const values = await getDistinctProductPatterns();
-    return buildPatternOptions(values, profile?.pattern || null);
+    return buildPatternOptions(values);
   } catch (error) {
     console.error("[profile/patterns]", error);
-    const profile = email ? await getProfile(email).catch(() => null) : null;
-    return buildPatternOptions([], profile?.pattern || null);
+    return buildPatternOptions([]);
   }
 }
 
@@ -164,18 +156,6 @@ function normalizeProfileRecord(profile) {
 
   return {
     ...profile,
-    formalityLevel: normalizeFormalityLevel(profile.formalityLevel),
-    style: normalizeStyle(profile.style),
-    audience: normalizeWardrobeAudience(profile.audience),
-    color: normalizeAccentColor(profile.color),
-    rejected: dedupeStrings(
-      Array.isArray(profile.rejected)
-        ? profile.rejected.map((value) => String(value || "").trim())
-        : []
-    ),
-    pattern: typeof profile.pattern === "string" && profile.pattern.trim()
-      ? profile.pattern.trim().toLowerCase()
-      : null,
     activeCapsuleId: typeof profile.activeCapsuleId === "string" && profile.activeCapsuleId.trim()
       ? profile.activeCapsuleId.trim()
       : null
@@ -186,21 +166,6 @@ async function getProfile(email) {
   return normalizeProfileRecord(await getProfileByEmail(email));
 }
 
-async function getProfileWithPdf(email) {
-  const row = await getProfileWithPdfByEmail(email);
-  if (!row) {
-    return {
-      profile: null,
-      pdf: null
-    };
-  }
-
-  return {
-    profile: normalizeProfileRecord(row),
-    pdf: row?.pdf ?? null
-  };
-}
-
 async function hasProfile(email) {
   return hasProfileByEmail(email);
 }
@@ -208,29 +173,12 @@ async function hasProfile(email) {
 async function createProfile(email, data) {
   return createProfileRecord({
     email,
-    formalityLevel: normalizeFormalityLevel(data.formalityLevel),
-    style: normalizeStyle(data.style),
-    occasions: data.occasions || [],
-    season: data.season || [],
-    audience: normalizeWardrobeAudience(data.audience),
-    color: null,
-    pattern: null,
     locale: data.locale || "en"
   });
 }
 
 async function updateProfile(email, data) {
-  return updateProfileRecord({
-    email,
-    formalityLevel: normalizeFormalityLevel(data.formalityLevel),
-    style: normalizeStyle(data.style),
-    occasions: data.occasions || [],
-    season: data.season || [],
-    audience: normalizeWardrobeAudience(data.audience),
-    color: normalizeAccentColor(data.color),
-    pattern: typeof data.pattern === "string" && data.pattern.trim() ? data.pattern.trim().toLowerCase() : null,
-    locale: data.locale || "en"
-  });
+  return updateProfileLocale(email, data.locale || "en");
 }
 
 async function updateProfileLocale(email, locale) {
@@ -241,38 +189,17 @@ async function deleteProfile(email) {
   return deleteProfileByEmail(email);
 }
 
-async function updateProfileItems(email, items) {
-  return updateProfileItemsByEmail({ email, items });
-}
-
-async function updateProfileRejected(email, rejected) {
-  return updateProfileRejectedByEmail({ email, rejected });
-}
-
-async function getProfilePdf(email) {
-  return getProfilePdfByEmail(email);
-}
-
-async function updateProfilePdf(email, pdf, options = {}) {
-  return updateProfilePdfByEmail({ email, pdf, ...options });
-}
-
 async function updateProfileActiveCapsuleId(email, activeCapsuleId) {
   return updateProfileActiveCapsuleIdByEmail({ email, activeCapsuleId });
 }
 
 export {
   getProfile,
-  getProfileWithPdf,
   hasProfile,
   createProfile,
   updateProfile,
   updateProfileLocale,
   deleteProfile,
-  updateProfileItems,
-  updateProfileRejected,
-  getProfilePdf,
-  updateProfilePdf,
   updateProfileActiveCapsuleId,
   getFormalityLevels,
   getStyles,

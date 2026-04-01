@@ -97,8 +97,8 @@ describe("auth api", () => {
   });
 
   test("profile mutation helpers shape initialize, update, and locale payloads", async () => {
-    await initializeProfile("casual", "minimalistic", ["office"], ["summer"], "woman", "en");
-    await updateProfile("formal", "retro", ["date_night"], ["winter"], "woman", "navy", "solid", "ru");
+    await initializeProfile("en");
+    await updateProfile("ru");
     await updateProfileLocale("ru");
 
     expect(requestApi.requestJson).toHaveBeenNthCalledWith(
@@ -108,14 +108,7 @@ describe("auth api", () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({
-          formalityLevel: "casual",
-          style: "minimalistic",
-          occasions: ["office"],
-          season: ["summer"],
-          audience: "woman",
-          locale: "en"
-        })
+        body: JSON.stringify({ locale: "en" })
       }
     );
     expect(requestApi.requestJson).toHaveBeenNthCalledWith(
@@ -125,16 +118,7 @@ describe("auth api", () => {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({
-          formalityLevel: "formal",
-          style: "retro",
-          occasions: ["date_night"],
-          season: ["winter"],
-          audience: "woman",
-          color: "navy",
-          pattern: "solid",
-          locale: "ru"
-        })
+        body: JSON.stringify({ locale: "ru" })
       }
     );
     expect(requestApi.requestJson).toHaveBeenNthCalledWith(

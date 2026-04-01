@@ -66,16 +66,6 @@ async function ensureProfilesTable() {
   await sql`
     create table if not exists profiles (
       email text primary key,
-      formality_level text null,
-      style text null,
-      occasions text[] not null,
-      season text[] not null default array['spring', 'summer', 'autumn', 'winter']::text[],
-      audience text not null default 'any',
-      color text null,
-      pattern text null,
-      rejected text[] not null default '{}'::text[],
-      items jsonb null,
-      pdf bytea null,
       active_capsule_id uuid null,
       locale text not null,
       created_at timestamptz not null default now(),
@@ -86,6 +76,16 @@ async function ensureProfilesTable() {
     alter table profiles
     add column if not exists active_capsule_id uuid null
   `;
+  await sql`alter table profiles drop column if exists formality_level`;
+  await sql`alter table profiles drop column if exists style`;
+  await sql`alter table profiles drop column if exists occasions`;
+  await sql`alter table profiles drop column if exists season`;
+  await sql`alter table profiles drop column if exists audience`;
+  await sql`alter table profiles drop column if exists color`;
+  await sql`alter table profiles drop column if exists pattern`;
+  await sql`alter table profiles drop column if exists rejected`;
+  await sql`alter table profiles drop column if exists items`;
+  await sql`alter table profiles drop column if exists pdf`;
 }
 
 async function ensureCapsulesTable() {
@@ -924,15 +924,6 @@ async function getProfileByEmail(email) {
   const [row] = await sql`
     select
       email,
-      formality_level as "formalityLevel",
-      style,
-      occasions,
-      season,
-      audience,
-      color,
-      pattern,
-      rejected,
-      items,
       active_capsule_id as "activeCapsuleId",
       locale,
       created_at as "createdAt",
@@ -946,135 +937,23 @@ async function getProfileByEmail(email) {
 
 async function createProfileRecord({
   email,
-  formalityLevel,
-  style,
-  occasions,
-  season,
-  audience,
-  color,
-  pattern,
   locale
 }) {
   const sql = getSqlClient();
   const [row] = await sql`
     insert into profiles (
       email,
-      formality_level,
-      style,
-      occasions,
-      season,
-      audience,
-      color,
-      pattern,
-      rejected,
-      items,
       active_capsule_id,
       locale
     )
     values (
       ${email},
-      ${formalityLevel},
-      ${style},
-      ${occasions},
-      ${season},
-      ${audience},
-      ${color},
-      ${pattern},
-      '{}'::text[],
-      null,
       null,
       ${locale}
     )
     on conflict (email) do nothing
     returning
       email,
-      formality_level as "formalityLevel",
-      style,
-      occasions,
-      season,
-      audience,
-      color,
-      pattern,
-      rejected,
-      items,
-      active_capsule_id as "activeCapsuleId",
-      locale,
-      created_at as "createdAt",
-      updated_at as "updatedAt"
-  `;
-  return row || null;
-}
-
-async function updateProfileRecord({
-  email,
-  formalityLevel,
-  style,
-  occasions,
-  season,
-  audience,
-  color,
-  pattern,
-  locale
-}) {
-  const sql = getSqlClient();
-  const [row] = await sql`
-    update profiles
-    set
-      items = case
-        when formality_level is distinct from ${formalityLevel}
-          or style is distinct from ${style}
-          or occasions is distinct from ${occasions}
-          or season is distinct from ${season}
-          or audience is distinct from ${audience}
-          or color is distinct from ${color}
-          or pattern is distinct from ${pattern}
-        then null
-        else items
-      end,
-      rejected = case
-        when formality_level is distinct from ${formalityLevel}
-          or style is distinct from ${style}
-          or occasions is distinct from ${occasions}
-          or season is distinct from ${season}
-          or audience is distinct from ${audience}
-          or color is distinct from ${color}
-          or pattern is distinct from ${pattern}
-        then '{}'::text[]
-        else rejected
-      end,
-      formality_level = ${formalityLevel},
-      style = ${style},
-      occasions = ${occasions},
-      season = ${season},
-      audience = ${audience},
-      color = ${color},
-      pattern = ${pattern},
-      locale = ${locale},
-      pdf = case
-        when formality_level is distinct from ${formalityLevel}
-          or style is distinct from ${style}
-          or occasions is distinct from ${occasions}
-          or season is distinct from ${season}
-          or audience is distinct from ${audience}
-          or color is distinct from ${color}
-          or pattern is distinct from ${pattern}
-          or locale is distinct from ${locale}
-        then null
-        else pdf
-      end,
-      updated_at = now()
-    where email = ${email}
-    returning
-      email,
-      formality_level as "formalityLevel",
-      style,
-      occasions,
-      season,
-      audience,
-      color,
-      pattern,
-      rejected,
-      items,
       active_capsule_id as "activeCapsuleId",
       locale,
       created_at as "createdAt",
@@ -1089,156 +968,14 @@ async function updateProfileLocaleByEmail({ email, locale }) {
     update profiles
     set
       locale = ${locale},
-      pdf = case
-        when locale is distinct from ${locale}
-        then null
-        else pdf
-      end,
       updated_at = now()
     where email = ${email}
     returning
       email,
-      formality_level as "formalityLevel",
-      style,
-      occasions,
-      season,
-      audience,
-      color,
-      pattern,
-      rejected,
-      items,
       active_capsule_id as "activeCapsuleId",
       locale,
       created_at as "createdAt",
       updated_at as "updatedAt"
-  `;
-  return row || null;
-}
-
-async function updateProfileItemsByEmail({ email, items }) {
-  const sql = getSqlClient();
-  const [row] = await sql`
-    update profiles
-    set
-      items = ${items === null ? null : JSON.stringify(items)},
-      pdf = null,
-      updated_at = now()
-    where email = ${email}
-    returning
-      email,
-      formality_level as "formalityLevel",
-      style,
-      occasions,
-      season,
-      audience,
-      color,
-      pattern,
-      rejected,
-      items,
-      active_capsule_id as "activeCapsuleId",
-      locale,
-      created_at as "createdAt",
-      updated_at as "updatedAt"
-  `;
-  return row || null;
-}
-
-async function getProfileWithPdfByEmail(email) {
-  const sql = getSqlClient();
-  const [row] = await sql`
-    select
-      email,
-      formality_level as "formalityLevel",
-      style,
-      occasions,
-      season,
-      audience,
-      color,
-      pattern,
-      rejected,
-      items,
-      active_capsule_id as "activeCapsuleId",
-      locale,
-      pdf,
-      created_at as "createdAt",
-      updated_at as "updatedAt"
-    from profiles
-    where email = ${email}
-    limit 1
-  `;
-  return row || null;
-}
-
-async function updateProfileRejectedByEmail({ email, rejected }) {
-  const sql = getSqlClient();
-  const normalizedRejected = [...new Set(
-    (Array.isArray(rejected) ? rejected : [])
-      .map((value) => String(value || "").trim())
-      .filter(Boolean)
-  )];
-  const [row] = await sql`
-    update profiles
-    set
-      rejected = ${normalizedRejected},
-      updated_at = now()
-    where email = ${email}
-    returning
-      email,
-      formality_level as "formalityLevel",
-      style,
-      occasions,
-      season,
-      audience,
-      color,
-      pattern,
-      rejected,
-      items,
-      active_capsule_id as "activeCapsuleId",
-      locale,
-      created_at as "createdAt",
-      updated_at as "updatedAt"
-  `;
-  return row || null;
-}
-
-async function getProfilePdfByEmail(email) {
-  const sql = getSqlClient();
-  const [row] = await sql`
-    select pdf
-    from profiles
-    where email = ${email}
-    limit 1
-  `;
-  return row?.pdf ?? null;
-}
-
-async function updateProfilePdfByEmail({
-  email,
-  pdf,
-  expectedItems,
-  expectedLocale
-}) {
-  const sql = getSqlClient();
-  const hasExpectedItems = expectedItems !== undefined;
-  const hasExpectedLocale = expectedLocale !== undefined;
-  const [row] = hasExpectedItems || hasExpectedLocale
-    ? await sql`
-      update profiles
-      set
-        pdf = ${pdf},
-        updated_at = now()
-      where email = ${email}
-        and (${hasExpectedItems} = false or items = ${expectedItems})
-        and (${hasExpectedLocale} = false or locale = ${expectedLocale})
-      returning email
-    `
-    : await sql`
-      update profiles
-      set
-        pdf = ${pdf},
-        updated_at = now()
-      where email = ${email}
-      returning email
   `;
   return row || null;
 }
@@ -1253,15 +990,6 @@ async function updateProfileActiveCapsuleIdByEmail({ email, activeCapsuleId }) {
     where email = ${email}
     returning
       email,
-      formality_level as "formalityLevel",
-      style,
-      occasions,
-      season,
-      audience,
-      color,
-      pattern,
-      rejected,
-      items,
       active_capsule_id as "activeCapsuleId",
       locale,
       created_at as "createdAt",
@@ -1479,6 +1207,10 @@ function hasAffectedRows(result) {
 
 async function deleteProfileByEmail(email) {
   const sql = getSqlClient();
+  await sql`
+    delete from capsules
+    where email = ${email}
+  `;
   const result = await sql`
     delete from profiles
     where email = ${email}
@@ -1518,14 +1250,8 @@ export {
   upsertSearchByEmail,
   searchProducts,
   getProfileByEmail,
-  getProfileWithPdfByEmail,
   createProfileRecord,
-  updateProfileRecord,
   updateProfileLocaleByEmail,
-  updateProfileItemsByEmail,
-  updateProfileRejectedByEmail,
-  getProfilePdfByEmail,
-  updateProfilePdfByEmail,
   updateProfileActiveCapsuleIdByEmail,
   createCapsuleRecord,
   getCapsuleByIdForEmail,
