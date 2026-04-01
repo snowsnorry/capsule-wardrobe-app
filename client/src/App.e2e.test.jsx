@@ -24,7 +24,8 @@ const profileOptionsApi = vi.hoisted(() => ({
 }));
 
 const wardrobeApi = vi.hoisted(() => ({
-  fetchWardrobeItems: vi.fn(),
+  fetchCapsuleItems: vi.fn(),
+  regenerateCapsuleWardrobe: vi.fn(),
   regenerateSelectedWardrobeItems: vi.fn()
 }));
 
@@ -41,7 +42,8 @@ const capsulesApi = vi.hoisted(() => ({
   saveCapsule: vi.fn(),
   searchCapsules: vi.fn(),
   selectCapsule: vi.fn(),
-  updateCapsuleDraft: vi.fn()
+  updateCapsuleFilters: vi.fn(),
+  updateCapsuleRejectedUrls: vi.fn()
 }));
 
 vi.mock("./api/auth.js", () => authApi);
@@ -229,7 +231,8 @@ describe("App e2e-style flows", () => {
     profileOptionsApi.clearProfileOptionsCache.mockReset();
     profileOptionsApi.loadProfileOptions.mockReset();
 
-    wardrobeApi.fetchWardrobeItems.mockReset();
+    wardrobeApi.fetchCapsuleItems.mockReset();
+    wardrobeApi.regenerateCapsuleWardrobe.mockReset();
     wardrobeApi.regenerateSelectedWardrobeItems.mockReset();
     Object.values(capsulesApi).forEach((mockFn) => mockFn.mockReset());
 
@@ -237,7 +240,7 @@ describe("App e2e-style flows", () => {
     capsulesApi.fetchCapsuleBootstrap.mockResolvedValue(createBootstrapResponse());
     capsulesApi.fetchRecentCapsules.mockResolvedValue({ capsules: [{ id: "capsule-1", name: "Spring edit", status: "new" }] });
     capsulesApi.fetchCapsule.mockResolvedValue({ capsule: createBootstrapResponse().activeCapsule });
-    capsulesApi.updateCapsuleDraft.mockResolvedValue({ capsule: createBootstrapResponse().activeCapsule });
+    capsulesApi.updateCapsuleFilters.mockResolvedValue({ capsule: createBootstrapResponse().activeCapsule });
   });
 
   afterEach(() => {
@@ -252,7 +255,7 @@ describe("App e2e-style flows", () => {
     authApi.initializeProfile.mockResolvedValue({});
     authApi.logout.mockResolvedValue({});
     mockProfileOptions();
-    wardrobeApi.fetchWardrobeItems.mockResolvedValue({
+    wardrobeApi.fetchCapsuleItems.mockResolvedValue({
       items: [{ id: "item-1", name: "Linen Shirt", category: "top" }],
       status: "ready"
     });
@@ -274,8 +277,13 @@ describe("App e2e-style flows", () => {
     expect(await screen.findByTestId("main-screen")).toBeInTheDocument();
     await waitFor(() => {
       expect(authApi.initializeProfile).toHaveBeenCalledTimes(1);
-      expect(wardrobeApi.fetchWardrobeItems).toHaveBeenCalled();
+      expect(capsulesApi.createCapsule).toHaveBeenCalledWith({
+        filters: expect.any(Object)
+      });
+      expect(wardrobeApi.regenerateCapsuleWardrobe).toHaveBeenCalled();
+      expect(wardrobeApi.fetchCapsuleItems).toHaveBeenCalled();
     });
+    expect(capsulesApi.createCapsule.mock.calls[0][0]).not.toHaveProperty("draft");
 
     fireEvent.click(screen.getByRole("button", { name: "open-search" }));
     expect(await screen.findByTestId("search-screen")).toBeInTheDocument();

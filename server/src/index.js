@@ -49,10 +49,10 @@ import {
   saveCapsule,
   searchCapsules,
   setActiveCapsuleId,
-  updateCapsuleDraft
+  updateCapsuleSnapshot
 } from "./capsuleStore.js";
 import { getSearchOptions, getSavedSearch, runSavedSearch } from "./searchStore.js";
-import { getWardrobeItems } from "./ai/ai.js";
+import { getCapsuleItems as getCapsuleItemsRoute, regenerateCapsuleWardrobe } from "./ai/ai.js";
 import { regenerateSelectedWardrobeItems } from "./ai/regenerateSelected.js";
 import { buildWardrobePdfInChild } from "./wardrobePdf.js";
 import { checkDatabaseConnection, ensureTables, getProductsByUrlsInOrder } from "./db.js";
@@ -179,6 +179,94 @@ function readCsrfHeader(req) {
   return String(raw || "").trim();
 }
 
+function hasOwnProperty(object, key) {
+  return Boolean(object) && Object.prototype.hasOwnProperty.call(object, key);
+}
+
+function hasUnexpectedCapsuleCreateFields(payload = {}) {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return false;
+  }
+
+  const allowedKeys = new Set(["name", "filters"]);
+  return Object.keys(payload).some((key) => !allowedKeys.has(key));
+}
+
+function hasUnexpectedCapsuleFiltersFields(payload = {}) {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return false;
+  }
+
+  return Object.keys(payload).some((key) => key !== "filters");
+}
+
+function hasUnexpectedRejectedUrlsFields(payload = {}) {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return false;
+  }
+
+  return Object.keys(payload).some((key) => key !== "rejectedUrls");
+}
+
+function buildCapsuleDraftFromFilters(profile, filters = null) {
+  if (!filters || typeof filters !== "object" || Array.isArray(filters)) {
+    return buildSnapshotFromProfile(profile);
+  }
+
+  const normalizedFilters = normalizeCapsuleSnapshot({
+    filters
+  })?.filters;
+
+  return {
+    filters: normalizedFilters || buildSnapshotFromProfile(profile)?.filters,
+    data: {
+      wardrobe: null,
+      rejectedUrls: []
+    }
+  };
+}
+
+function getValidatedRejectedUrls(capsule, rejectedUrls) {
+  if (!Array.isArray(rejectedUrls)) {
+    return null;
+  }
+
+  const effectiveSnapshot = getEffectiveCapsuleSnapshot(capsule);
+  const wardrobeItems = Array.isArray(effectiveSnapshot?.data?.wardrobe?.items)
+    ? effectiveSnapshot.data.wardrobe.items
+    : [];
+
+  if (wardrobeItems.length === 0) {
+    return { error: "not_found" };
+  }
+
+  const allowedUrls = new Set(
+    wardrobeItems
+      .map((item) => String(item?.url || "").trim())
+      .filter(Boolean)
+  );
+
+  if (allowedUrls.size === 0) {
+    return { error: "not_found" };
+  }
+
+  const normalizedRejectedUrls = [];
+  for (const itemUrl of rejectedUrls) {
+    if (typeof itemUrl !== "string") {
+      return { error: "invalid_payload" };
+    }
+
+    const normalizedItemUrl = itemUrl.trim();
+    if (!normalizedItemUrl || !allowedUrls.has(normalizedItemUrl)) {
+      return { error: "invalid_payload" };
+    }
+
+    normalizedRejectedUrls.push(normalizedItemUrl);
+  }
+
+  return { rejectedUrls: [...new Set(normalizedRejectedUrls)] };
+}
+
 function createApp({
   nodeEnv = NODE_ENV,
   clientOrigin = CLIENT_ORIGIN,
@@ -209,7 +297,7 @@ function createApp({
   searchCapsulesImpl = searchCapsules,
   getCapsuleImpl = getCapsule,
   createCapsuleImpl = createCapsule,
-  updateCapsuleDraftImpl = updateCapsuleDraft,
+  updateCapsuleSnapshotImpl = updateCapsuleSnapshot,
   saveCapsuleImpl = saveCapsule,
   revertCapsuleImpl = revertCapsule,
   renameCapsuleImpl = renameCapsule,
@@ -219,15 +307,16 @@ function createApp({
   getSearchOptionsImpl = getSearchOptions,
   getSavedSearchImpl = getSavedSearch,
   runSavedSearchImpl = runSavedSearch,
-  getWardrobeItemsHandler = getWardrobeItems,
-  regenerateSelectedWardrobeItemsHandler = regenerateSelectedWardrobeItems,
+  getCapsuleItemsHandler = getCapsuleItemsRoute,
+  regenerateCapsuleWardrobeHandler = regenerateCapsuleWardrobe,
+  regenerateSelectedCapsuleItemsHandler = regenerateSelectedWardrobeItems,
   buildWardrobePdfInChildImpl = buildWardrobePdfInChild,
   getProductsByUrlsInOrderImpl = getProductsByUrlsInOrder,
   checkDatabaseConnectionImpl = checkDatabaseConnection
 } = {}) {
   const app = express();
   app.set("trust proxy", 1);
-  app.use(express.json());
+  app.use(express.json({ limit: "100kb" }));
 
   if (nodeEnv === "production") {
     app.use(
@@ -614,12 +703,33 @@ app.get("/capsules/:id", requireAuth, async (req, res) => {
   }
 });
 
+app.get("/capsules/:id/items", requireAuth, getCapsuleItemsHandler);
+
+app.post("/capsules/:id/regenerate", requireTrustedOrigin, requireAuth, requireCsrf, regenerateCapsuleWardrobeHandler);
+
+app.post(
+  "/capsules/:id/regenerate-selected",
+  requireTrustedOrigin,
+  requireAuth,
+  requireCsrf,
+  regenerateSelectedCapsuleItemsHandler
+);
+
 app.post("/capsules", requireTrustedOrigin, requireAuth, requireCsrf, async (req, res) => {
+  if (!req.body || typeof req.body !== "object" || Array.isArray(req.body)) {
+    return res.status(400).json({ error: "invalid_payload" });
+  }
+
+  if (hasUnexpectedCapsuleCreateFields(req.body)) {
+    return res.status(400).json({ error: "invalid_payload" });
+  }
+
   try {
+    const profile = await getProfileImpl(req.user.email);
     const capsule = await createCapsuleImpl(req.user.email, {
       name: String(req.body?.name || "").trim() || undefined,
-      draft: req.body?.draft ? normalizeCapsuleSnapshot(req.body.draft) : buildSnapshotFromProfile(await getProfileImpl(req.user.email)),
-      saved: req.body?.saved ? normalizeCapsuleSnapshot(req.body.saved) : null,
+      draft: buildCapsuleDraftFromFilters(profile, req.body?.filters),
+      saved: null,
       setActive: true
     });
     return res.status(201).json({ ok: true, capsule: toCapsuleResponse(capsule) });
@@ -629,11 +739,23 @@ app.post("/capsules", requireTrustedOrigin, requireAuth, requireCsrf, async (req
   }
 });
 
-app.patch("/capsules/:id/draft", requireTrustedOrigin, requireAuth, requireCsrf, async (req, res) => {
+app.patch("/capsules/:id/filters", requireTrustedOrigin, requireAuth, requireCsrf, async (req, res) => {
+  if (!req.body || typeof req.body !== "object" || Array.isArray(req.body)) {
+    return res.status(400).json({ error: "invalid_payload" });
+  }
+
+  if (hasUnexpectedCapsuleFiltersFields(req.body)) {
+    return res.status(400).json({ error: "invalid_payload" });
+  }
+
+  if (!hasOwnProperty(req.body, "filters")) {
+    return res.status(400).json({ error: "invalid_payload" });
+  }
+
   try {
-    const capsule = await updateCapsuleDraftImpl(req.user.email, req.params.id, {
+    const capsule = await updateCapsuleSnapshotImpl(req.user.email, req.params.id, {
       filters: normalizeCapsuleSnapshot({
-        filters: req.body?.draft?.filters
+        filters: req.body?.filters
       })?.filters,
       data: {
         wardrobe: null,
@@ -645,7 +767,54 @@ app.patch("/capsules/:id/draft", requireTrustedOrigin, requireAuth, requireCsrf,
     }
     return res.json({ ok: true, capsule: toCapsuleResponse(capsule) });
   } catch (error) {
-    console.error("[capsules/draft]", error);
+    console.error("[capsules/filters]", error);
+    return res.status(503).json({ error: "service_unavailable" });
+  }
+});
+
+app.patch("/capsules/:id/rejected-urls", requireTrustedOrigin, requireAuth, requireCsrf, async (req, res) => {
+  if (!req.body || typeof req.body !== "object" || Array.isArray(req.body)) {
+    return res.status(400).json({ error: "invalid_payload" });
+  }
+
+  if (hasUnexpectedRejectedUrlsFields(req.body)) {
+    return res.status(400).json({ error: "invalid_payload" });
+  }
+
+  if (!hasOwnProperty(req.body, "rejectedUrls")) {
+    return res.status(400).json({ error: "invalid_payload" });
+  }
+
+  try {
+    const capsule = await getCapsuleImpl(req.user.email, req.params.id);
+    if (!capsule) {
+      return res.status(404).json({ error: "not_found" });
+    }
+
+    const validationResult = getValidatedRejectedUrls(capsule, req.body?.rejectedUrls);
+    if (validationResult?.error === "not_found") {
+      return res.status(404).json({ error: "not_found" });
+    }
+    if (validationResult?.error) {
+      return res.status(400).json({ error: "invalid_payload" });
+    }
+
+    const effectiveSnapshot = getEffectiveCapsuleSnapshot(capsule);
+    const nextCapsule = await updateCapsuleSnapshotImpl(req.user.email, req.params.id, {
+      filters: effectiveSnapshot?.filters,
+      data: {
+        wardrobe: effectiveSnapshot?.data?.wardrobe || null,
+        rejectedUrls: validationResult.rejectedUrls
+      }
+    });
+
+    if (!nextCapsule) {
+      return res.status(404).json({ error: "not_found" });
+    }
+
+    return res.json({ ok: true, capsule: toCapsuleResponse(nextCapsule) });
+  } catch (error) {
+    console.error("[capsules/rejected-urls]", error);
     return res.status(503).json({ error: "service_unavailable" });
   }
 });
@@ -759,15 +928,6 @@ app.post("/capsules/:id/pdf", requireTrustedOrigin, requireAuth, requireCsrf, as
     return res.status(503).json({ error: "service_unavailable" });
   }
 });
-
-app.post("/wardrobe/items", requireTrustedOrigin, requireAuth, requireCsrf, getWardrobeItemsHandler);
-app.post(
-  "/wardrobe/items/regenerate-selected",
-  requireTrustedOrigin,
-  requireAuth,
-  requireCsrf,
-  regenerateSelectedWardrobeItemsHandler
-);
 
 app.get("/search/options", requireAuth, async (req, res) => {
   try {

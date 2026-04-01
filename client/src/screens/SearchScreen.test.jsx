@@ -228,4 +228,29 @@ describe("SearchScreen", () => {
       expect(screen.queryByLabelText("Back")).not.toBeInTheDocument();
     });
   });
+
+  test("product detail does not render unsafe product or image urls", async () => {
+    searchApi.runSearch.mockResolvedValue(makeResults([
+      {
+        id: "1",
+        name: "Unsafe Shirt",
+        brand: "UNIQLO",
+        category: "top",
+        url: "javascript:alert(1)",
+        imageUrl: "data:text/html,<script>alert(1)</script>"
+      }
+    ]));
+
+    renderScreen();
+
+    expect(await screen.findByDisplayValue("linen shirt")).toBeInTheDocument();
+    fireEvent.click(screen.getAllByText("Unsafe Shirt")[0]);
+
+    await waitFor(() => {
+      expect(screen.getAllByText("Unsafe Shirt").length).toBeGreaterThan(0);
+    });
+
+    expect(screen.queryByRole("link", { name: /Unsafe Shirt/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("img", { name: "Unsafe Shirt" })).not.toBeInTheDocument();
+  });
 });

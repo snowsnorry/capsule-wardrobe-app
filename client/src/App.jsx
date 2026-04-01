@@ -24,7 +24,7 @@ import {
   revertCapsule,
   saveCapsule,
   searchCapsules,
-  updateCapsuleDraft
+  updateCapsuleFilters
 } from "./api/capsules.js";
 import { clearProfileOptionsCache, loadProfileOptions } from "./api/profileOptionsCache.js";
 import { clearRequestCache } from "./api/auth.js";
@@ -603,7 +603,7 @@ function App() {
     try {
       await initializeProfile(locale);
       await createCapsule({
-        draft: buildCurrentDraftSnapshot({ wardrobe: null, rejectedUrls: [] })
+        filters: buildCurrentDraftSnapshot({ wardrobe: null, rejectedUrls: [] }).filters
       });
       setProfileCreated(true);
       setHasProfile(true);
@@ -638,11 +638,11 @@ function App() {
     setIsContentOperationLoading(true);
     setStatus({ loading: true, error: "", infoKey: "", infoParams: null });
     try {
-      const result = await updateCapsuleDraft(activeCapsuleId, buildCurrentDraftSnapshot().filters);
+      const result = await updateCapsuleFilters(activeCapsuleId, buildCurrentDraftSnapshot().filters);
       setActiveCapsuleMeta(result.capsule);
       setProfileItems([]);
       await refreshCapsuleList();
-      await runWardrobeLoad({ force: true });
+      await runWardrobeLoad({ regenerate: true });
       setStatus({ loading: false, error: "", infoKey: "profile.updated", infoParams: null });
     } catch (error) {
       setStatus({ loading: false, error: resolveErrorMessage(error), infoKey: "", infoParams: null });
@@ -654,7 +654,7 @@ function App() {
   const handleCreateCapsule = async () => {
     setIsContentOperationLoading(true);
     try {
-      const result = await createCapsule({ draft: buildEmptyCapsuleDraft(locale) });
+      const result = await createCapsule({ filters: buildEmptyCapsuleDraft(locale).filters });
       applyCapsuleState(result.capsule);
       await refreshCapsuleList();
     } finally {
@@ -813,9 +813,9 @@ function App() {
   );
   const isContentBusy = isLoadingItems || isWardrobePending || isPartialRegenerationLoading || isContentOperationLoading;
 
-  const loadWardrobeItems = async ({ force = false } = {}) => {
-    const { fetchWardrobeItems } = await import("./api/wardrobe.js");
-    return fetchWardrobeItems({ profileKey, force, capsuleId: activeCapsuleId });
+  const loadWardrobeItems = async () => {
+    const { fetchCapsuleItems } = await import("./api/wardrobe.js");
+    return fetchCapsuleItems({ profileKey, capsuleId: activeCapsuleId });
   };
 
   const logWardrobeReasoning = (reasoning) => {
@@ -838,16 +838,23 @@ function App() {
     setIsLoadingItems(false);
   };
 
-  const runWardrobeLoad = async ({ force = false } = {}) => {
+  const runWardrobeLoad = async ({ regenerate = false } = {}) => {
     const requestId = wardrobeRequestIdRef.current + 1;
     wardrobeRequestIdRef.current = requestId;
     setIsLoadingItems(true);
 
-    let nextForce = force;
-
     while (true) {
       try {
-        const result = await loadWardrobeItems({ force: nextForce });
+        if (regenerate) {
+          const { regenerateCapsuleWardrobe } = await import("./api/wardrobe.js");
+          await regenerateCapsuleWardrobe({ capsuleId: activeCapsuleId });
+          if (!isMountedRef.current || requestId !== wardrobeRequestIdRef.current) {
+            return;
+          }
+          regenerate = false;
+        }
+
+        const result = await loadWardrobeItems();
         if (!isMountedRef.current || requestId !== wardrobeRequestIdRef.current) {
           return;
         }
@@ -882,8 +889,6 @@ function App() {
           if (!isMountedRef.current || requestId !== wardrobeRequestIdRef.current) {
             return;
           }
-
-          nextForce = false;
           continue;
         }
 
@@ -919,7 +924,7 @@ function App() {
     setSelectedRegenerationUrls([]);
     setPartialRegenerationPendingUrls([]);
     setIsPartialRegenerationLoading(false);
-    await runWardrobeLoad({ force: true });
+    await runWardrobeLoad({ regenerate: true });
   };
 
   const handleDownloadWardrobePdf = async (capsuleId = activeCapsuleId) => {
@@ -1016,8 +1021,8 @@ function App() {
       return;
     }
 
-    runWardrobeLoad();
-  }, [user, hasProfile, profileCreated, activeCapsuleId, canGenerateWardrobe, wardrobeLoadedCapsuleId, isWardrobePending]);
+    runWardrobeLoad({ regenerate: !hasStoredWardrobeItems(activeCapsuleMeta) });
+  }, [user, hasProfile, profileCreated, activeCapsuleId, canGenerateWardrobe, wardrobeLoadedCapsuleId, isWardrobePending, activeCapsuleMeta]);
 
   useEffect(() => {
     if (!sessionInitialized || !user || !(hasProfile || profileCreated)) {

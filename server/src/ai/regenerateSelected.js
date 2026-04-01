@@ -10,7 +10,7 @@ import {
   buildProfileCapsuleContext,
   getCapsule,
   getEffectiveCapsuleSnapshot,
-  updateCapsuleDraft
+  updateCapsuleSnapshot
 } from "../capsuleStore.js";
 import { getCapsuleCategories } from "./categories.js";
 import {
@@ -575,7 +575,7 @@ async function regenerateCapsuleWardrobe(userProfile = null, products = null, lo
 function createPartialRegenerationService({
   getProfileImpl = getProfile,
   getCapsuleImpl = getCapsule,
-  updateCapsuleDraftImpl = updateCapsuleDraft,
+  updateCapsuleSnapshotImpl = updateCapsuleSnapshot,
   regenerateCapsuleWardrobeImpl = regenerateCapsuleWardrobe,
   jobs = partialRegenerationJobs,
   nowMsImpl = () => Date.now(),
@@ -640,7 +640,7 @@ function createPartialRegenerationService({
         const payload = buildStoredWardrobePayloadFromResult(result, storedWardrobe);
         const baseSnapshot = getEffectiveCapsuleSnapshot(capsule);
         if (capsuleId) {
-          await updateCapsuleDraftImpl(email, capsuleId, {
+          await updateCapsuleSnapshotImpl(email, capsuleId, {
             filters: baseSnapshot?.filters,
             data: {
               wardrobe: payload,
@@ -674,7 +674,7 @@ function createPartialRegenerationService({
   async function regenerateSelectedWardrobeItems(req, res) {
     try {
       const email = req.user.email;
-      const capsuleId = String(req.body?.capsuleId || "").trim();
+      const capsuleId = String(req.params?.id || "").trim();
       const itemUrls = Array.isArray(req.body?.itemUrls)
         ? req.body.itemUrls.map((itemUrl) => String(itemUrl || "").trim()).filter(Boolean)
         : [];
@@ -762,7 +762,7 @@ function createPartialRegenerationService({
       };
       logWardrobeInfo("regenerate-request-received", { itemUrls }, logContext);
       if (capsuleId) {
-        await updateCapsuleDraftImpl(email, capsuleId, {
+        await updateCapsuleSnapshotImpl(email, capsuleId, {
           filters: effectiveSnapshot?.filters,
           data: {
             wardrobe: partialPayload,

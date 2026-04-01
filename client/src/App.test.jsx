@@ -24,7 +24,8 @@ const profileOptionsApi = vi.hoisted(() => ({
 }));
 
 const wardrobeApi = vi.hoisted(() => ({
-  fetchWardrobeItems: vi.fn(),
+  fetchCapsuleItems: vi.fn(),
+  regenerateCapsuleWardrobe: vi.fn(),
   regenerateSelectedWardrobeItems: vi.fn()
 }));
 
@@ -43,7 +44,8 @@ const capsulesApi = vi.hoisted(() => ({
   saveCapsule: vi.fn(),
   searchCapsules: vi.fn(),
   selectCapsule: vi.fn(),
-  updateCapsuleDraft: vi.fn()
+  updateCapsuleFilters: vi.fn(),
+  updateCapsuleRejectedUrls: vi.fn()
 }));
 
 vi.mock("./api/auth.js", () => authApi);
@@ -252,15 +254,16 @@ describe("App", () => {
     profileOptionsApi.loadProfileOptions.mockReset();
     mainScreenRender.mockReset();
 
-    wardrobeApi.fetchWardrobeItems.mockReset();
+    wardrobeApi.fetchCapsuleItems.mockReset();
+    wardrobeApi.regenerateCapsuleWardrobe.mockReset();
     wardrobeApi.regenerateSelectedWardrobeItems.mockReset();
     Object.values(capsulesApi).forEach((mockFn) => mockFn.mockReset());
 
-    wardrobeApi.fetchWardrobeItems.mockResolvedValue({ items: [], status: "ready" });
+    wardrobeApi.fetchCapsuleItems.mockResolvedValue({ items: [], status: "ready" });
     capsulesApi.fetchCapsuleBootstrap.mockResolvedValue(createBootstrapResponse());
     capsulesApi.fetchRecentCapsules.mockResolvedValue({ capsules: [{ id: "capsule-1", name: "Spring edit", status: "new" }] });
     capsulesApi.fetchCapsule.mockResolvedValue({ capsule: createBootstrapResponse().activeCapsule });
-    capsulesApi.updateCapsuleDraft.mockResolvedValue({ capsule: createBootstrapResponse().activeCapsule });
+    capsulesApi.updateCapsuleFilters.mockResolvedValue({ capsule: createBootstrapResponse().activeCapsule });
     capsulesApi.duplicateCapsule.mockResolvedValue({
       capsule: {
         ...createBootstrapResponse().activeCapsule,
@@ -316,6 +319,30 @@ describe("App", () => {
     expect(profileOptionsApi.loadProfileOptions).toHaveBeenCalled();
   });
 
+  test("onboarding creates capsule with filters only and no draft payload", async () => {
+    authApi.fetchCurrentUser.mockRejectedValue(new Error("unauthorized"));
+    authApi.requestLoginCode.mockResolvedValue({ expiresInMs: 300000 });
+    authApi.verifyLoginCode.mockResolvedValue({ user: { email: "person@example.com" } });
+    authApi.fetchProfileStatus.mockResolvedValue({ hasProfile: false });
+    authApi.initializeProfile.mockResolvedValue({});
+    mockProfileOptions();
+
+    renderApp();
+
+    await screen.findByTestId("sign-in-screen");
+    fireEvent.click(screen.getByRole("button", { name: "verify-code" }));
+    expect(await screen.findByTestId("onboarding-screen")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "finish-onboarding" }));
+
+    await waitFor(() => {
+      expect(capsulesApi.createCapsule).toHaveBeenCalledWith({
+        filters: expect.any(Object)
+      });
+    });
+    expect(capsulesApi.createCapsule.mock.calls[0][0]).not.toHaveProperty("draft");
+  });
+
   test("bootstraps an existing profile without redundant locale or wardrobe sync and switches between routes", async () => {
     window.history.replaceState({}, "", "/search");
     authApi.fetchCurrentUser.mockResolvedValue({ user: { email: "person@example.com" } });
@@ -351,7 +378,7 @@ describe("App", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "back-to-capsule" }));
     expect(await screen.findByTestId("main-screen")).toBeInTheDocument();
-    expect(wardrobeApi.fetchWardrobeItems).not.toHaveBeenCalled();
+    expect(wardrobeApi.fetchCapsuleItems).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("button", { name: "open-search" }));
     expect(await screen.findByTestId("search-screen")).toBeInTheDocument();
@@ -368,7 +395,8 @@ describe("App", () => {
 
     expect(await screen.findByTestId("main-screen")).toBeInTheDocument();
     await waitFor(() => {
-      expect(wardrobeApi.fetchWardrobeItems).toHaveBeenCalled();
+      expect(wardrobeApi.regenerateCapsuleWardrobe).toHaveBeenCalled();
+      expect(wardrobeApi.fetchCapsuleItems).toHaveBeenCalled();
     });
   });
 
@@ -446,7 +474,7 @@ describe("App", () => {
       }
     });
     authApi.updateProfileLocale.mockResolvedValue({});
-    wardrobeApi.fetchWardrobeItems.mockResolvedValue({
+    wardrobeApi.fetchCapsuleItems.mockResolvedValue({
       items: [
         { id: "bottom-1", url: "https://example.com/bottom-1", name: "Trousers", category: "bottom" },
         { id: "top-1", url: "https://example.com/top-1", name: "Shirt", category: "top" },
@@ -506,18 +534,18 @@ describe("App", () => {
     renderApp();
 
     expect(await screen.findByTestId("main-screen")).toBeInTheDocument();
-    capsulesApi.updateCapsuleDraft.mockClear();
+    capsulesApi.updateCapsuleFilters.mockClear();
 
     fireEvent.click(screen.getByRole("button", { name: "change-filter" }));
 
     await waitFor(() => {
-      expect(capsulesApi.updateCapsuleDraft).not.toHaveBeenCalled();
+      expect(capsulesApi.updateCapsuleFilters).not.toHaveBeenCalled();
     });
 
     fireEvent.click(screen.getByRole("button", { name: "apply-filters" }));
 
     await waitFor(() => {
-      expect(capsulesApi.updateCapsuleDraft).toHaveBeenCalledTimes(1);
+      expect(capsulesApi.updateCapsuleFilters).toHaveBeenCalledTimes(1);
     });
   });
 

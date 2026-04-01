@@ -11,7 +11,7 @@ vi.mock("./config.js", () => ({
 }));
 
 import { downloadCapsulePdf } from "./capsules.js";
-import { fetchWardrobeItems, regenerateSelectedWardrobeItems } from "./wardrobe.js";
+import { fetchCapsuleItems, regenerateCapsuleWardrobe, regenerateSelectedWardrobeItems } from "./wardrobe.js";
 
 function createResponse({
   ok = true,
@@ -58,45 +58,34 @@ describe("wardrobe api", () => {
     vi.unstubAllGlobals();
   });
 
-  test("fetchWardrobeItems dedupes in-flight requests per profileKey and force flag", async () => {
+  test("fetchCapsuleItems dedupes in-flight requests per profileKey", async () => {
     const deferred = [];
     requestApi.requestJson.mockImplementation(() => new Promise((resolve) => {
       deferred.push(resolve);
     }));
 
-    const first = fetchWardrobeItems({ profileKey: "profile-1" });
-    const second = fetchWardrobeItems({ profileKey: "profile-1" });
-    const forced = fetchWardrobeItems({ profileKey: "profile-1", force: true });
+    const first = fetchCapsuleItems({ profileKey: "profile-1", capsuleId: "capsule-1" });
+    const second = fetchCapsuleItems({ profileKey: "profile-1", capsuleId: "capsule-1" });
 
-    expect(requestApi.requestJson).toHaveBeenCalledTimes(2);
+    expect(requestApi.requestJson).toHaveBeenCalledTimes(1);
 
     deferred[0]({ items: [{ id: "look-1" }] });
-    deferred[1]({ items: [{ id: "look-1" }] });
 
     await expect(first).resolves.toEqual({ items: [{ id: "look-1" }] });
     await expect(second).resolves.toEqual({ items: [{ id: "look-1" }] });
-    await expect(forced).resolves.toEqual({ items: [{ id: "look-1" }] });
 
-    expect(requestApi.requestJson).toHaveBeenNthCalledWith(
-      1,
-      "https://api.example.test/wardrobe/items",
-      {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ force: false })
-      }
-    );
-    expect(requestApi.requestJson).toHaveBeenNthCalledWith(
-      2,
-      "https://api.example.test/wardrobe/items",
-      {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ force: true })
-      }
-    );
+    expect(requestApi.requestJson).toHaveBeenNthCalledWith(1, "https://api.example.test/capsules/capsule-1/items", {
+      credentials: "include"
+    });
+  });
+
+  test("regenerateCapsuleWardrobe posts to the capsule-centric route", async () => {
+    await regenerateCapsuleWardrobe({ capsuleId: "capsule-1" });
+
+    expect(requestApi.requestJson).toHaveBeenCalledWith("https://api.example.test/capsules/capsule-1/regenerate", {
+      method: "POST",
+      credentials: "include"
+    });
   });
 
   test("downloadCapsulePdf downloads blob and revokes object url", async () => {
@@ -160,12 +149,12 @@ describe("wardrobe api", () => {
       }));
 
     await expect(
-      regenerateSelectedWardrobeItems({ itemUrls: ["https://example.com/item-1"] })
+      regenerateSelectedWardrobeItems({ itemUrls: ["https://example.com/item-1"], capsuleId: "capsule-1" })
     ).resolves.toEqual({ items: [{ id: "item-2" }], reasoning: "updated" });
 
     expect(requestApi.request).toHaveBeenNthCalledWith(
       1,
-      "https://api.example.test/wardrobe/items/regenerate-selected",
+      "https://api.example.test/capsules/capsule-1/regenerate-selected",
       {
         method: "POST",
         credentials: "include",
@@ -184,7 +173,7 @@ describe("wardrobe api", () => {
     }));
 
     await expect(
-      regenerateSelectedWardrobeItems({ itemUrls: ["https://example.com/item-1"] })
+      regenerateSelectedWardrobeItems({ itemUrls: ["https://example.com/item-1"], capsuleId: "capsule-1" })
     ).rejects.toMatchObject({
       message: "invalid_payload",
       status: 422,

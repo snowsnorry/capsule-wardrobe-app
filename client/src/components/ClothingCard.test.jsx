@@ -87,4 +87,18 @@ describe("ClothingCard", () => {
     expect(image).toHaveAttribute("src", item.image_url);
     expect(image).toHaveAttribute("alt", item.name);
   });
+
+  test("drops unsafe product and image urls", () => {
+    renderCard({
+      item: {
+        ...item,
+        url: "javascript:alert(1)",
+        image_url: "data:text/html,<script>alert(1)</script>"
+      }
+    });
+
+    expect(screen.queryByRole("link", { name: /Red Jacket/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("img", { name: item.name })).not.toBeInTheDocument();
+    expect(screen.getAllByText("Red Jacket").length).toBeGreaterThan(0);
+  });
 });

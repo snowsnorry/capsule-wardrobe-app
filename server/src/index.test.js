@@ -86,7 +86,7 @@ function createDependencies(overrides = {}) {
       updatedAt: new Date(0).toISOString()
     }),
     createCapsuleImpl: async (_email, payload) => ({ id: "capsule-2", status: "new", ...payload }),
-    updateCapsuleDraftImpl: async (_email, _id, draft) => ({ id: "capsule-1", draft, saved: null, status: "new" }),
+    updateCapsuleSnapshotImpl: async (_email, _id, draft) => ({ id: "capsule-1", draft, saved: null, status: "new" }),
     saveCapsuleImpl: async () => ({ id: "capsule-1", draft: null, saved: { filters: {}, data: {} }, status: "saved" }),
     revertCapsuleImpl: async () => ({ id: "capsule-1", draft: null, saved: { filters: {}, data: {} }, status: "saved" }),
     renameCapsuleImpl: async (_email, id, name) => ({ id, name, draft: null, saved: null, status: "new" }),
@@ -96,8 +96,9 @@ function createDependencies(overrides = {}) {
     getSearchOptionsImpl: async () => ({ brands: [{ value: "zara", label: "Zara" }] }),
     getSavedSearchImpl: async () => ({ query: "coat", page: 1 }),
     runSavedSearchImpl: async (_email, payload) => ({ items: [{ id: "1" }], total: 1, search: payload }),
-    getWardrobeItemsHandler: async (_req, res) => res.json({ ok: true, status: "ready", items: [] }),
-    regenerateSelectedWardrobeItemsHandler: async (_req, res) => res.json({ ok: true, items: [] }),
+    getCapsuleItemsHandler: async (_req, res) => res.json({ ok: true, status: "ready", items: [] }),
+    regenerateCapsuleWardrobeHandler: async (_req, res) => res.status(202).json({ ok: true, status: "pending", items: [] }),
+    regenerateSelectedCapsuleItemsHandler: async (_req, res) => res.json({ ok: true, items: [] }),
     buildWardrobePdfInChildImpl: async () => Buffer.from("pdf"),
     getProductsByUrlsInOrderImpl: async () => [{ url: "https://example.com/1" }],
     checkDatabaseConnectionImpl: async () => {},
@@ -582,22 +583,22 @@ test("index routes cover profile update, locale update, and delete branches", as
 
 test("index routes cover wardrobe handlers and search endpoints", async (t) => {
   let wardrobeCalled = false;
+  let fullRegenerateCalled = false;
   let regenerateCalled = false;
-  let pdfCalled = false;
 
   const { baseUrl } = await startTestServer(t, {
     overrides: {
-      getWardrobeItemsHandler: async (_req, res) => {
+      getCapsuleItemsHandler: async (_req, res) => {
         wardrobeCalled = true;
         res.json({ ok: true, status: "ready", items: [] });
       },
-      regenerateSelectedWardrobeItemsHandler: async (_req, res) => {
+      regenerateCapsuleWardrobeHandler: async (_req, res) => {
+        fullRegenerateCalled = true;
+        res.status(202).json({ ok: true, status: "pending", items: [] });
+      },
+      regenerateSelectedCapsuleItemsHandler: async (_req, res) => {
         regenerateCalled = true;
         res.json({ ok: true, items: [{ id: "2" }] });
-      },
-      downloadWardrobePdfHandler: async (_req, res) => {
-        pdfCalled = true;
-        res.status(202).json({ status: "pending", pollAfterMs: 10 });
       }
     }
   });
@@ -627,22 +628,27 @@ test("index routes cover wardrobe handlers and search endpoints", async (t) => {
   assert.equal(invalidSearch.response.status, 200);
   assert.equal(invalidSearch.json.ok, true);
 
-  const wardrobe = await requestJson(baseUrl, "/wardrobe/items", {
-    method: "POST",
-    origin: TEST_CLIENT_ORIGIN,
-    cookie: AUTH_COOKIE,
-    csrfToken: CSRF_TOKEN,
-    body: { force: false, capsuleId: "capsule-1" }
+  const wardrobe = await requestJson(baseUrl, "/capsules/capsule-1/items", {
+    cookie: AUTH_COOKIE
   });
   assert.equal(wardrobe.response.status, 200);
   assert.equal(wardrobeCalled, true);
 
-  const regenerate = await requestJson(baseUrl, "/wardrobe/items/regenerate-selected", {
+  const fullRegenerate = await requestJson(baseUrl, "/capsules/capsule-1/regenerate", {
+    method: "POST",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN
+  });
+  assert.equal(fullRegenerate.response.status, 202);
+  assert.equal(fullRegenerateCalled, true);
+
+  const regenerate = await requestJson(baseUrl, "/capsules/capsule-1/regenerate-selected", {
     method: "POST",
     origin: TEST_CLIENT_ORIGIN,
     cookie: AUTH_COOKIE,
     csrfToken: CSRF_TOKEN,
-    body: { capsuleId: "capsule-1", itemUrls: ["https://example.com/1"] }
+    body: { itemUrls: ["https://example.com/1"] }
   });
   assert.equal(regenerate.response.status, 200);
   assert.equal(regenerateCalled, true);
@@ -656,41 +662,112 @@ test("index routes cover wardrobe handlers and search endpoints", async (t) => {
   assert.equal(pdf.response.status, 200);
 });
 
-test("draft patch only accepts filters and resets draft data", async (t) => {
+test("capsule creation only accepts name and filters and initializes server-owned data", async (t) => {
+  let receivedPayload = null;
+  const { baseUrl } = await startTestServer(t, {
+    overrides: {
+      createCapsuleImpl: async (_email, payload) => {
+        receivedPayload = payload;
+        return { id: "capsule-2", draft: payload.draft, saved: null, status: "new" };
+      }
+    }
+  });
+
+  const result = await requestJson(baseUrl, "/capsules", {
+    method: "POST",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN,
+    body: {
+      name: "Spring edit",
+      filters: {
+        formalityLevel: "casual",
+        style: "minimalistic",
+        occasions: ["office", "", null],
+        season: ["spring"],
+        audience: "woman",
+        color: "red",
+        pattern: "striped",
+        locale: "en"
+      }
+    }
+  });
+
+  assert.equal(result.response.status, 201);
+  assert.deepEqual(receivedPayload, {
+    name: "Spring edit",
+    draft: {
+      filters: {
+        formalityLevel: "casual",
+        style: "minimalistic",
+        occasions: ["office"],
+        season: ["spring"],
+        audience: "woman",
+        color: "red",
+        pattern: "striped",
+        locale: "en"
+      },
+      data: {
+        wardrobe: null,
+        rejectedUrls: []
+      }
+    },
+    saved: null,
+    setActive: true
+  });
+});
+
+test("capsule creation rejects client-supplied state-bearing fields", async (t) => {
+  const { baseUrl } = await startTestServer(t);
+
+  const result = await requestJson(baseUrl, "/capsules", {
+    method: "POST",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN,
+    body: {
+      name: "Spring edit",
+      draft: {
+        filters: { locale: "en" },
+        data: {
+          wardrobe: { items: [{ url: "https://malicious.example/item" }] },
+          rejectedUrls: ["https://malicious.example/rejected"]
+        }
+      }
+    }
+  });
+
+  assert.equal(result.response.status, 400);
+  assert.deepEqual(result.json, { error: "invalid_payload" });
+});
+
+test("filters patch only accepts filters and resets draft data", async (t) => {
   let receivedDraft = null;
   const { baseUrl } = await startTestServer(t, {
     overrides: {
-      updateCapsuleDraftImpl: async (_email, _id, draft) => {
+      updateCapsuleSnapshotImpl: async (_email, _id, draft) => {
         receivedDraft = draft;
         return { id: "capsule-1", draft, saved: null, status: "new" };
       }
     }
   });
 
-  const result = await requestJson(baseUrl, "/capsules/capsule-1/draft", {
+  const result = await requestJson(baseUrl, "/capsules/capsule-1/filters", {
     method: "PATCH",
     origin: TEST_CLIENT_ORIGIN,
     cookie: AUTH_COOKIE,
     csrfToken: CSRF_TOKEN,
     body: {
-      draft: {
-        filters: {
-          formalityLevel: "casual",
-          style: "minimalistic",
-          occasions: ["office", "", null],
-          season: ["spring"],
-          audience: "woman",
-          color: "red",
-          pattern: "striped",
-          locale: "en",
-          ignoredField: "ignored"
-        },
-        data: {
-          wardrobe: {
-            items: [{ url: "https://malicious.example/item" }]
-          },
-          rejectedUrls: ["https://malicious.example/rejected"]
-        }
+      filters: {
+        formalityLevel: "casual",
+        style: "minimalistic",
+        occasions: ["office", "", null],
+        season: ["spring"],
+        audience: "woman",
+        color: "red",
+        pattern: "striped",
+        locale: "en",
+        ignoredField: "ignored"
       }
     }
   });
@@ -712,6 +789,109 @@ test("draft patch only accepts filters and resets draft data", async (t) => {
       rejectedUrls: []
     }
   });
+});
+
+test("rejected urls patch validates against current capsule wardrobe", async (t) => {
+  let receivedDraft = null;
+  const { baseUrl } = await startTestServer(t, {
+    overrides: {
+      updateCapsuleSnapshotImpl: async (_email, _id, draft) => {
+        receivedDraft = draft;
+        return { id: "capsule-1", draft, saved: null, status: "new" };
+      }
+    }
+  });
+
+  const result = await requestJson(baseUrl, "/capsules/capsule-1/rejected-urls", {
+    method: "PATCH",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN,
+    body: {
+      rejectedUrls: ["https://example.com/1", "https://example.com/1"]
+    }
+  });
+
+  assert.equal(result.response.status, 200);
+  assert.deepEqual(receivedDraft, {
+    filters: {
+      formalityLevel: "casual",
+      style: "minimalistic",
+      occasions: ["office"],
+      season: ["spring"],
+      audience: "woman",
+      color: null,
+      pattern: null,
+      locale: "en"
+    },
+    data: {
+      wardrobe: {
+        items: [{ url: "https://example.com/1" }],
+        reasoning: null,
+        rawSelectionText: null,
+        swimwearReasoning: null,
+        swimwearRawSelectionText: null
+      },
+      rejectedUrls: ["https://example.com/1"]
+    }
+  });
+});
+
+test("rejected urls patch rejects unknown urls and missing wardrobe", async (t) => {
+  const { baseUrl } = await startTestServer(t);
+
+  const invalid = await requestJson(baseUrl, "/capsules/capsule-1/rejected-urls", {
+    method: "PATCH",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN,
+    body: {
+      rejectedUrls: ["https://example.com/unknown"]
+    }
+  });
+
+  assert.equal(invalid.response.status, 400);
+  assert.deepEqual(invalid.json, { error: "invalid_payload" });
+
+  const noWardrobeServer = await startTestServer(t, {
+    overrides: {
+      getCapsuleImpl: async () => ({
+        id: "capsule-1",
+        name: "<New capsule>",
+        draft: {
+          filters: {
+            formalityLevel: "casual",
+            style: "minimalistic",
+            occasions: ["office"],
+            season: ["spring"],
+            audience: "woman",
+            color: null,
+            pattern: null,
+            locale: "en"
+          },
+          data: {
+            wardrobe: null,
+            rejectedUrls: []
+          }
+        },
+        saved: null,
+        status: "new"
+      })
+    }
+  });
+
+  const notFound = await requestJson(noWardrobeServer.baseUrl, "/capsules/capsule-1/rejected-urls", {
+    method: "PATCH",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN,
+    body: {
+      rejectedUrls: ["https://example.com/1"]
+    }
+  });
+
+  assert.equal(notFound.response.status, 404);
+  assert.deepEqual(notFound.json, { error: "not_found" });
 });
 
 test("index routes map search and health dependency failures", async (t) => {

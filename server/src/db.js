@@ -927,7 +927,7 @@ async function listCapsuleNamesByEmail(email) {
   return rows.map((row) => String(row?.name || "").trim()).filter(Boolean);
 }
 
-async function updateCapsuleDraftByIdForEmail({
+async function updateCapsuleSnapshotByIdForEmail({
   email,
   capsuleId,
   draft
@@ -1089,7 +1089,7 @@ export {
   listRecentCapsulesByEmail,
   searchCapsulesByEmail,
   listCapsuleNamesByEmail,
-  updateCapsuleDraftByIdForEmail,
+  updateCapsuleSnapshotByIdForEmail,
   renameCapsuleByIdForEmail,
   saveCapsuleByIdForEmail,
   revertCapsuleDraftByIdForEmail,

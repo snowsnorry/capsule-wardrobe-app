@@ -32,20 +32,37 @@ async function fetchCapsule(id) {
 }
 
 async function createCapsule(payload = {}) {
+  const body = {};
+  if (typeof payload?.name === "string" && payload.name.trim()) {
+    body.name = payload.name;
+  }
+  if (payload && typeof payload.filters === "object" && !Array.isArray(payload.filters) && payload.filters !== null) {
+    body.filters = payload.filters;
+  }
+
   return requestJson(capsuleUrl(""), {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
+    body: JSON.stringify(body)
   });
 }
 
-async function updateCapsuleDraft(id, filters) {
-  return requestJson(capsuleUrl(`/${id}/draft`), {
+async function updateCapsuleFilters(id, filters) {
+  return requestJson(capsuleUrl(`/${id}/filters`), {
     method: "PATCH",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ draft: { filters } })
+    body: JSON.stringify({ filters })
+  });
+}
+
+async function updateCapsuleRejectedUrls(id, rejectedUrls) {
+  return requestJson(capsuleUrl(`/${id}/rejected-urls`), {
+    method: "PATCH",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ rejectedUrls })
   });
 }
 
@@ -138,5 +155,6 @@ export {
   saveCapsule,
   searchCapsules,
   selectCapsule,
-  updateCapsuleDraft
+  updateCapsuleFilters,
+  updateCapsuleRejectedUrls
 };

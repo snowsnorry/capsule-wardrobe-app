@@ -16,6 +16,7 @@ import {
   groupPromptImageItemsByCategory,
   downloadProductImageAssets,
   preparePdfImageAssets,
+  resolveSourceImageUrl,
   serializePromptDebugImagesForIpc
 } from "./ai/promptImages.js";
 
@@ -451,9 +452,10 @@ test("buildPromptDebugImagesInChild resolves buffered collages from child succes
   assert.equal(String(result.categories[1].buffer), "child-image-bottom");
 });
 
-test("buildPromptDebugImagesInChild works with a real child process", async () => {
+test("buildPromptDebugImagesInChild works with a real child process", async (t) => {
   const fixtureBuffer = await createFixtureBuffer("#1177aa");
-  const imageUrl = `data:image/png;base64,${fixtureBuffer.toString("base64")}`;
+  const imageUrl = "https://example.com/top-1.png";
+  await withCachedImage(t, imageUrl, fixtureBuffer);
 
   const result = await buildPromptDebugImagesInChild({
     normalizedItems: [{
@@ -463,7 +465,8 @@ test("buildPromptDebugImagesInChild works with a real child process", async () =
     }]
   });
 
-  assert.equal(result.downloadedCount, 1);
+  assert.equal(result.cachedCount, 1);
+  assert.equal(result.downloadedCount, 0);
   assert.equal(result.skippedCount, 0);
   assert.equal(result.categories.length, 1);
   assert.ok(Buffer.isBuffer(result.categories[0].buffer));
@@ -475,7 +478,8 @@ test("buildPromptDebugImagesInChild works with a real child process", async () =
 test("buildPromptDebugImagesInChild saves debug artifacts when enabled", async (t) => {
   const outputDir = await withTempDir(t);
   const fixtureBuffer = await createFixtureBuffer("#1177aa");
-  const imageUrl = `data:image/png;base64,${fixtureBuffer.toString("base64")}`;
+  const imageUrl = "https://example.com/top-1.png";
+  await withCachedImage(t, imageUrl, fixtureBuffer);
 
   const result = await buildPromptDebugImagesInChild({
     normalizedItems: [{
@@ -487,10 +491,20 @@ test("buildPromptDebugImagesInChild saves debug artifacts when enabled", async (
     debugOutputDir: outputDir
   });
 
-  assert.equal(result.downloadedCount, 1);
+  assert.equal(result.cachedCount, 1);
+  assert.equal(result.downloadedCount, 0);
   const manifest = JSON.parse(await readFile(path.join(outputDir, "manifest.json"), "utf8"));
-  assert.equal(manifest.downloadedCount, 1);
+  assert.equal(manifest.cachedCount, 1);
+  assert.equal(manifest.downloadedCount, 0);
   assert.equal(manifest.categories.length, 1);
+});
+
+test("resolveSourceImageUrl only allows http and https schemes", () => {
+  assert.equal(resolveSourceImageUrl("https://example.com/image.jpg?w={width}"), "https://example.com/image.jpg?w=1000");
+  assert.equal(resolveSourceImageUrl("http://example.com/image.jpg"), "http://example.com/image.jpg");
+  assert.equal(resolveSourceImageUrl("javascript:alert(1)"), "");
+  assert.equal(resolveSourceImageUrl("data:image/png;base64,abc"), "");
+  assert.equal(resolveSourceImageUrl("file:///etc/passwd"), "");
 });
 
 test("buildPromptDebugImagesInChild rejects on child-reported failure", async () => {

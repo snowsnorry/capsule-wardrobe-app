@@ -18,6 +18,7 @@ import {
   sumImageAssetBytesById
 } from "./ai/imagePipeline.js";
 import { readImageFromLocalCache, resolveSourceImageUrl } from "./ai/promptImages.js";
+import { getSafeHttpUrl } from "../../shared/urlSecurity.js";
 
 const PAGE_WIDTH = 595.28;
 const PAGE_HEIGHT = 841.89;
@@ -579,6 +580,7 @@ function drawDetailGroup(page, group, startX, startY, width, fonts) {
 async function drawProductPage(pdfDoc, product, locale, fonts, imageAssetsById = {}, imageLoadStats = null) {
   const page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
   const { regularFont, boldFont } = fonts;
+  const productUrl = getSafeHttpUrl(product?.url);
   let cursorY = PAGE_HEIGHT - PAGE_MARGIN;
   const title = product?.name || t("search.untitled", undefined, locale);
   const category = product?.category ? translateOption("categories", product.category, locale) : "";
@@ -607,7 +609,7 @@ async function drawProductPage(pdfDoc, product, locale, fonts, imageAssetsById =
     titleY -= titleLineHeight;
   }
 
-  if (product?.url) {
+  if (productUrl) {
     let underlineY = cursorY - 2;
     for (const line of titleLines) {
       const lineWidth = regularFont.widthOfTextAtSize(line, titleFontSize);
@@ -621,10 +623,10 @@ async function drawProductPage(pdfDoc, product, locale, fonts, imageAssetsById =
     }
   }
 
-  if (product?.url) {
+  if (productUrl) {
     const titleTopY = cursorY + (titleFontSize * 0.9);
     const titleBottomY = cursorY - titleHeight + 3;
-    addLinkAnnotation(pdfDoc, page, product.url, {
+    addLinkAnnotation(pdfDoc, page, productUrl, {
       x: PAGE_MARGIN,
       y: titleBottomY,
       width: CONTENT_WIDTH,

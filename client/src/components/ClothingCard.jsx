@@ -1,6 +1,7 @@
 import { Box, Chip, IconButton, Link as MuiLink, Stack, Typography } from "@mui/material";
 import ThumbDownAltOutlinedIcon from "@mui/icons-material/ThumbDownAltOutlined";
 import { useI18n } from "../i18n/useI18n.js";
+import { getSafeHttpUrl } from "../../../shared/urlSecurity.js";
 
 function ClothingCard({
   item,
@@ -11,7 +12,8 @@ function ClothingCard({
   isMobile = false
 }) {
   const { t } = useI18n();
-  const imageUrl = item?.image_url || "";
+  const imageUrl = getSafeHttpUrl(item?.image_url);
+  const productUrl = getSafeHttpUrl(item?.url);
   const label = item?.name || "";
   const categoryLabel = item?.category ? t(`options.categories.${item.category}`) : "";
   const showToggleButton = isMobile || isSelected;
@@ -23,6 +25,80 @@ function ClothingCard({
       onToggleSelected(item);
     }
   };
+
+  const cardContent = (
+    <>
+      {imageUrl ? (
+        <Box
+          component="img"
+          src={imageUrl}
+          alt={label}
+          sx={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            objectPosition: "center"
+          }}
+        />
+      ) : (
+        <Box
+          sx={{
+            height: "100%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            px: 2
+          }}
+        >
+          <Typography variant="body2" color="text.secondary" align="center">
+            {label}
+          </Typography>
+        </Box>
+      )}
+      <Box
+        sx={{
+          position: "absolute",
+          inset: 0,
+          background:
+            "linear-gradient(180deg, rgba(0,0,0,0) 30%, rgba(10,12,12,0.55) 100%)"
+        }}
+      />
+      {isSelected ? (
+        <Box
+          sx={{
+            position: "absolute",
+            inset: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.38)",
+            zIndex: 1,
+            pointerEvents: "none"
+          }}
+        />
+      ) : null}
+      <Box
+        sx={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          bottom: 0,
+          p: 2,
+          zIndex: 2
+        }}
+      >
+        <Typography
+          variant="subtitle1"
+          sx={{
+            color: "#fff",
+            fontWeight: 600,
+            textShadow: "0 2px 12px rgba(0,0,0,0.45)"
+          }}
+        >
+          {label}
+        </Typography>
+      </Box>
+    </>
+  );
 
   return (
     <Box
@@ -126,83 +202,21 @@ function ClothingCard({
             }}
           />
         </Stack>
-        <MuiLink
-          href={item.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          underline="none"
-          sx={{ position: "absolute", inset: 0, zIndex: 0 }}
-        >
-          {imageUrl ? (
-            <Box
-              component="img"
-              src={imageUrl}
-              alt={label}
-              sx={{
-                position: "absolute",
-                inset: 0,
-                width: "100%",
-                height: "100%",
-                objectFit: "cover",
-                objectPosition: "center"
-              }}
-            />
-          ) : (
-            <Box
-              sx={{
-                height: "100%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                px: 2
-              }}
-            >
-              <Typography variant="body2" color="text.secondary" align="center">
-                {label}
-              </Typography>
-            </Box>
-          )}
-          <Box
-            sx={{
-              position: "absolute",
-              inset: 0,
-              background:
-                "linear-gradient(180deg, rgba(0,0,0,0) 30%, rgba(10,12,12,0.55) 100%)"
-            }}
-          />
-          {isSelected ? (
-            <Box
-              sx={{
-                position: "absolute",
-                inset: 0,
-                backgroundColor: "rgba(0, 0, 0, 0.38)",
-                zIndex: 1,
-                pointerEvents: "none"
-              }}
-            />
-          ) : null}
-          <Box
-            sx={{
-              position: "absolute",
-              left: 0,
-              right: 0,
-              bottom: 0,
-              p: 2,
-              zIndex: 2
-            }}
+        {productUrl ? (
+          <MuiLink
+            href={productUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            underline="none"
+            sx={{ position: "absolute", inset: 0, zIndex: 0 }}
           >
-            <Typography
-              variant="subtitle1"
-              sx={{
-                color: "#fff",
-                fontWeight: 600,
-                textShadow: "0 2px 12px rgba(0,0,0,0.45)"
-              }}
-            >
-              {label}
-            </Typography>
+            {cardContent}
+          </MuiLink>
+        ) : (
+          <Box sx={{ position: "absolute", inset: 0, zIndex: 0 }}>
+            {cardContent}
           </Box>
-        </MuiLink>
+        )}
       </Box>
     </Box>
   );

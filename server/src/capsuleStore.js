@@ -8,7 +8,7 @@ import {
   revertCapsuleDraftByIdForEmail,
   saveCapsuleByIdForEmail,
   searchCapsulesByEmail,
-  updateCapsuleDraftByIdForEmail,
+  updateCapsuleSnapshotByIdForEmail,
   updateProfileActiveCapsuleIdByEmail
 } from "./db.js";
 import { getProfile } from "./profileStore.js";
@@ -222,8 +222,8 @@ async function resolveActiveCapsule(email) {
   return createBootstrapCapsule(email);
 }
 
-async function updateCapsuleDraft(email, capsuleId, draft) {
-  return normalizeCapsuleRecord(await updateCapsuleDraftByIdForEmail({
+async function updateCapsuleSnapshot(email, capsuleId, draft) {
+  return normalizeCapsuleRecord(await updateCapsuleSnapshotByIdForEmail({
     email,
     capsuleId,
     draft: normalizeCapsuleSnapshot(draft)
@@ -295,6 +295,6 @@ export {
   saveCapsule,
   searchCapsules,
   setActiveCapsuleId,
-  updateCapsuleDraft,
+  updateCapsuleSnapshot,
   renameCapsule
 };

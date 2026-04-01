@@ -89,7 +89,7 @@ test("getStoredWardrobePayload normalizes legacy arrays and object payloads", ()
   );
 });
 
-test("getWardrobeItems returns pending regenerate payload when partial regeneration job is active", async () => {
+test("getCapsuleItems returns pending regenerate payload when partial regeneration job is active", async () => {
   const service = createWardrobeService({
     getProfileImpl: async () => ({ locale: "en" }),
     getCapsuleImpl: async () => createCapsuleWithWardrobe({
@@ -105,9 +105,9 @@ test("getWardrobeItems returns pending regenerate payload when partial regenerat
   });
   const res = createResponseRecorder();
 
-  await service.getWardrobeItems({
+  await service.getCapsuleItems({
     user: { email: "person@example.com" },
-    body: { capsuleId: "capsule-1" }
+    params: { id: "capsule-1" }
   }, res);
 
   assert.equal(res.statusCode, 202);
@@ -116,7 +116,7 @@ test("getWardrobeItems returns pending regenerate payload when partial regenerat
   assert.deepEqual(res.body.items, [{ id: "top-1", url: "https://example.com/top-1", category: "top" }]);
 });
 
-test("getWardrobeItems returns ready payload from stored wardrobe when no refresh is requested", async () => {
+test("getCapsuleItems returns ready payload from stored wardrobe", async () => {
   const service = createWardrobeService({
     getProfileImpl: async () => ({ locale: "en" }),
     getCapsuleImpl: async () => createCapsuleWithWardrobe({
@@ -129,9 +129,9 @@ test("getWardrobeItems returns ready payload from stored wardrobe when no refres
   });
   const res = createResponseRecorder();
 
-  await service.getWardrobeItems({
+  await service.getCapsuleItems({
     user: { email: "person@example.com" },
-    body: { force: false, capsuleId: "capsule-1" }
+    params: { id: "capsule-1" }
   }, res);
 
   assert.equal(res.statusCode, 200);
@@ -146,7 +146,7 @@ test("getWardrobeItems returns ready payload from stored wardrobe when no refres
   });
 });
 
-test("getWardrobeItems returns extras pending state when extras are still generating", async () => {
+test("getCapsuleItems returns extras pending state when extras are still generating", async () => {
   const jobs = new Map([
     ["person@example.com::capsule-1", {
       status: "pending",
@@ -166,9 +166,9 @@ test("getWardrobeItems returns extras pending state when extras are still genera
   });
   const res = createResponseRecorder();
 
-  await service.getWardrobeItems({
+  await service.getCapsuleItems({
     user: { email: "person@example.com" },
-    body: { capsuleId: "capsule-1" }
+    params: { id: "capsule-1" }
   }, res);
 
   assert.equal(res.statusCode, 202);
@@ -177,7 +177,7 @@ test("getWardrobeItems returns extras pending state when extras are still genera
   assert.deepEqual(res.body.items, [{ id: "top-1", category: "top" }]);
 });
 
-test("getWardrobeItems starts a new pending job and clears stored items on force refresh", async () => {
+test("regenerateCapsuleWardrobe starts a new pending job and clears stored items", async () => {
   const updates = [];
   let generatedProfile = null;
   const jobs = new Map();
@@ -186,7 +186,7 @@ test("getWardrobeItems starts a new pending job and clears stored items on force
     getCapsuleImpl: async () => createCapsuleWithWardrobe({
       items: [{ id: "top-1", category: "top" }]
     }),
-    updateCapsuleDraftImpl: async (email, capsuleId, draft) => {
+    updateCapsuleSnapshotImpl: async (email, capsuleId, draft) => {
       updates.push([email, capsuleId, draft]);
       return { id: capsuleId, draft, saved: null };
     },
@@ -206,9 +206,9 @@ test("getWardrobeItems starts a new pending job and clears stored items on force
   });
   const res = createResponseRecorder();
 
-  await service.getWardrobeItems({
+  await service.regenerateCapsuleWardrobe({
     user: { email: "person@example.com" },
-    body: { force: true, capsuleId: "capsule-1" }
+    params: { id: "capsule-1" }
   }, res);
 
   assert.equal(res.statusCode, 202);
@@ -242,7 +242,7 @@ test("getWardrobeItems starts a new pending job and clears stored items on force
   }]);
 });
 
-test("getWardrobeItems surfaces failed job as service_unavailable and drops stale failed entry", async () => {
+test("getCapsuleItems surfaces failed job as service_unavailable and drops stale failed entry", async () => {
   const jobs = new Map([
     ["person@example.com::capsule-1", {
       status: "failed",
@@ -258,9 +258,9 @@ test("getWardrobeItems surfaces failed job as service_unavailable and drops stal
   });
   const res = createResponseRecorder();
 
-  await service.getWardrobeItems({
+  await service.getCapsuleItems({
     user: { email: "person@example.com" },
-    body: { capsuleId: "capsule-1" }
+    params: { id: "capsule-1" }
   }, res);
 
   assert.equal(res.statusCode, 503);
@@ -278,7 +278,7 @@ test("startWardrobeJob reuses active pending job for the same email", async () =
   });
   const service = createWardrobeService({
     generateCapsuleWardrobeImpl: async () => pendingGeneration,
-    updateCapsuleDraftImpl: async () => {},
+    updateCapsuleSnapshotImpl: async () => {},
     jobs: new Map()
   });
 
@@ -305,7 +305,7 @@ test("startWardrobeJob stores capsule result and merges swimwear additions when 
       reasoning: "capsule-json",
       rawSelectionText: "capsule-raw"
     }),
-    updateCapsuleDraftImpl: async (email, capsuleId, draft) => {
+    updateCapsuleSnapshotImpl: async (email, capsuleId, draft) => {
       updates.push([email, capsuleId, draft]);
       return { id: capsuleId, draft, saved: null };
     },

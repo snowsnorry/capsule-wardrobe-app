@@ -75,7 +75,8 @@ test("regenerateSelectedWardrobeItems returns pending payload when job is alread
 
   await service.regenerateSelectedWardrobeItems({
     user: { email: "person@example.com" },
-    body: { capsuleId: "capsule-1", itemUrls: ["https://example.com/top-1"] }
+    params: { id: "capsule-1" },
+    body: { itemUrls: ["https://example.com/top-1"] }
   }, res);
 
   assert.equal(res.statusCode, 202);
@@ -107,7 +108,8 @@ test("regenerateSelectedWardrobeItems returns ready payload and clears completed
 
   await service.regenerateSelectedWardrobeItems({
     user: { email: "person@example.com" },
-    body: { capsuleId: "capsule-1", itemUrls: ["https://example.com/top-1"] }
+    params: { id: "capsule-1" },
+    body: { itemUrls: ["https://example.com/top-1"] }
   }, res);
 
   assert.equal(res.statusCode, 200);
@@ -133,7 +135,8 @@ test("regenerateSelectedWardrobeItems returns service_unavailable for failed job
 
   await service.regenerateSelectedWardrobeItems({
     user: { email: "person@example.com" },
-    body: { capsuleId: "capsule-1", itemUrls: ["https://example.com/top-1"] }
+    params: { id: "capsule-1" },
+    body: { itemUrls: ["https://example.com/top-1"] }
   }, res);
 
   assert.equal(res.statusCode, 503);
@@ -150,7 +153,8 @@ test("regenerateSelectedWardrobeItems validates selected urls and missing wardro
   const invalidPayloadRes = createResponseRecorder();
   await invalidPayloadService.regenerateSelectedWardrobeItems({
     user: { email: "person@example.com" },
-    body: { capsuleId: "capsule-1", itemUrls: [] }
+    params: { id: "capsule-1" },
+    body: { itemUrls: [] }
   }, invalidPayloadRes);
   assert.equal(invalidPayloadRes.statusCode, 400);
   assert.deepEqual(invalidPayloadRes.body, { error: "invalid_payload" });
@@ -169,7 +173,8 @@ test("regenerateSelectedWardrobeItems validates selected urls and missing wardro
   const noWardrobeRes = createResponseRecorder();
   await noWardrobeService.regenerateSelectedWardrobeItems({
     user: { email: "person@example.com" },
-    body: { capsuleId: "capsule-1", itemUrls: ["https://example.com/top-1"] }
+    params: { id: "capsule-1" },
+    body: { itemUrls: ["https://example.com/top-1"] }
   }, noWardrobeRes);
   assert.equal(noWardrobeRes.statusCode, 404);
   assert.deepEqual(noWardrobeRes.body, { error: "not_found" });
@@ -185,7 +190,8 @@ test("regenerateSelectedWardrobeItems rejects unknown urls from request", async 
 
   await service.regenerateSelectedWardrobeItems({
     user: { email: "person@example.com" },
-    body: { capsuleId: "capsule-1", itemUrls: ["https://example.com/missing-url"] }
+    params: { id: "capsule-1" },
+    body: { itemUrls: ["https://example.com/missing-url"] }
   }, res);
 
   assert.equal(res.statusCode, 400);
@@ -200,7 +206,7 @@ test("regenerateSelectedWardrobeItems updates rejected urls, shrinks partial pay
   const service = createPartialRegenerationService({
     getProfileImpl: async () => createProfile(),
     getCapsuleImpl: async () => createCapsule(),
-    updateCapsuleDraftImpl: async (email, capsuleId, draft) => {
+    updateCapsuleSnapshotImpl: async (email, capsuleId, draft) => {
       draftUpdates.push([email, capsuleId, draft]);
       return { id: capsuleId, draft, saved: null };
     },
@@ -224,7 +230,8 @@ test("regenerateSelectedWardrobeItems updates rejected urls, shrinks partial pay
 
   await service.regenerateSelectedWardrobeItems({
     user: { email: "person@example.com" },
-    body: { capsuleId: "capsule-1", itemUrls: ["https://example.com/top-1"] }
+    params: { id: "capsule-1" },
+    body: { itemUrls: ["https://example.com/top-1"] }
   }, res);
 
   assert.equal(res.statusCode, 202);
@@ -290,7 +297,7 @@ test("startPartialRegenerationJob reuses active pending job and marks failures",
   });
   const service = createPartialRegenerationService({
     regenerateCapsuleWardrobeImpl: async () => pending,
-    updateCapsuleDraftImpl: async () => {},
+    updateCapsuleSnapshotImpl: async () => {},
     jobs: new Map()
   });
 

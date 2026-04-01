@@ -29,6 +29,7 @@ import AppLauncher from "../components/AppLauncher.jsx";
 import LocaleSwitcher from "../components/LocaleSwitcher.jsx";
 import AccentColorChips from "../components/AccentColorChips.jsx";
 import { buildProductDetailGroups } from "../../../shared/productDetail.js";
+import { getSafeHttpUrl } from "../../../shared/urlSecurity.js";
 
 const INITIAL_SEARCH_STATE = Object.freeze({
   query: "",
@@ -223,6 +224,8 @@ function MultiSelectChips({ items, values, onToggle, defaultLabel }) {
 
 function ProductDetail({ item, title, t, locale, mobileBackAction = null }) {
   const detailGroups = buildProductDetailGroups(item, { t, translateOption, locale });
+  const productUrl = getSafeHttpUrl(item?.url);
+  const imageUrl = getSafeHttpUrl(item?.imageUrl);
 
   return (
     <Stack spacing={2.2} sx={{ height: "100%", minHeight: 0 }}>
@@ -245,15 +248,19 @@ function ProductDetail({ item, title, t, locale, mobileBackAction = null }) {
                 </IconButton>
               ) : null}
               <Box
-                component="a"
-                href={item.url || "#"}
-                target="_blank"
-                rel="noreferrer"
+                component={productUrl ? "a" : "div"}
+                {...(productUrl
+                  ? {
+                      href: productUrl,
+                      target: "_blank",
+                      rel: "noreferrer"
+                    }
+                  : {})}
                 sx={{
                   color: "#8f6f45",
                   textDecoration: "none",
                   display: "block",
-                  "&:hover": { textDecoration: "underline" }
+                  "&:hover": productUrl ? { textDecoration: "underline" } : undefined
                 }}
               >
                 <Typography
@@ -267,7 +274,7 @@ function ProductDetail({ item, title, t, locale, mobileBackAction = null }) {
                   }}
                 >
                   {item.name || t("search.untitled")}
-                  {item.url ? (
+                  {productUrl ? (
                     <OpenInNewRoundedIcon
                       sx={{
                         fontSize: 18,
@@ -338,10 +345,10 @@ function ProductDetail({ item, title, t, locale, mobileBackAction = null }) {
               </Box>
             ))}
           </Stack>
-          {item.imageUrl ? (
+          {imageUrl ? (
             <Box
               component="img"
-              src={item.imageUrl}
+              src={imageUrl}
               alt={item.name || ""}
               sx={{
                 width: "100%",
