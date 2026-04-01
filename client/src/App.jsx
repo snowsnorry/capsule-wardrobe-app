@@ -1050,7 +1050,6 @@ function App() {
     regenerationBaseItemsRef.current = existingItems;
     setPartialRegenerationPendingUrls(pendingUrls);
     setIsPartialRegenerationLoading(true);
-    setProfileItems(existingItems.filter((item) => !pendingUrls.includes(normalizeWardrobeItemUrl(item))));
 
     try {
       const response = await requestSelectedWardrobeRegeneration({ itemUrls: pendingUrls, capsuleId: activeCapsuleId });
