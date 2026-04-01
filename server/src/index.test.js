@@ -798,6 +798,64 @@ test("filters patch only accepts filters and resets draft data", async (t) => {
   });
 });
 
+test("filters patch can trigger regenerate via query flag after saving filters", async (t) => {
+  const calls = [];
+  const { baseUrl } = await startTestServer(t, {
+    overrides: {
+      updateCapsuleSnapshotImpl: async (_email, _id, draft) => {
+        calls.push({ type: "update", draft });
+        return { id: "capsule-1", draft, saved: null, status: "new" };
+      },
+      regenerateCapsuleWardrobeHandler: async (req, res) => {
+        calls.push({ type: "regenerate", query: req.query });
+        return res.status(202).json({ ok: true, status: "pending" });
+      }
+    }
+  });
+
+  const result = await requestJson(baseUrl, "/capsules/capsule-1/filters?regenerate=true&nollm=true", {
+    method: "PATCH",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN,
+    body: {
+      filters: {
+        audience: "woman",
+        season: ["summer"]
+      }
+    }
+  });
+
+  assert.equal(result.response.status, 202);
+  assert.deepEqual(calls, [
+    {
+      type: "update",
+      draft: {
+        filters: {
+          formalityLevel: "",
+          style: null,
+          occasions: [],
+          audience: "woman",
+          season: ["summer"],
+          color: null,
+          pattern: null
+        },
+        data: {
+          wardrobe: null,
+          rejectedUrls: []
+        }
+      }
+    },
+    {
+      type: "regenerate",
+      query: {
+        regenerate: "true",
+        nollm: "true"
+      }
+    }
+  ]);
+});
+
 test("rejected urls patch validates against current capsule wardrobe", async (t) => {
   let receivedDraft = null;
   const { baseUrl } = await startTestServer(t, {

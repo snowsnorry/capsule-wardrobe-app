@@ -184,6 +184,10 @@ function hasOwnProperty(object, key) {
   return Boolean(object) && Object.prototype.hasOwnProperty.call(object, key);
 }
 
+function isTruthyQueryFlag(value) {
+  return ["1", "true", "yes", "on"].includes(String(value || "").trim().toLowerCase());
+}
+
 function hasUnexpectedCapsuleCreateFields(payload = {}) {
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
     return false;
@@ -788,7 +792,7 @@ app.patch("/capsules/:id/filters", requireTrustedOrigin, requireAuth, requireCsr
   }
 
   try {
-    const capsule = await updateCapsuleSnapshotImpl(req.user.email, req.params.id, {
+    const nextDraft = {
       filters: normalizeCapsuleSnapshot({
         filters: req.body?.filters
       })?.filters,
@@ -796,10 +800,16 @@ app.patch("/capsules/:id/filters", requireTrustedOrigin, requireAuth, requireCsr
         wardrobe: null,
         rejectedUrls: []
       }
-    });
+    };
+    const capsule = await updateCapsuleSnapshotImpl(req.user.email, req.params.id, nextDraft);
     if (!capsule) {
       return res.status(404).json({ error: "not_found" });
     }
+
+    if (isTruthyQueryFlag(req.query?.regenerate)) {
+      return regenerateCapsuleWardrobeHandler(req, res);
+    }
+
     return res.json({ ok: true, capsule: toCapsuleResponse(capsule) });
   } catch (error) {
     console.error("[capsules/filters]", error);

@@ -48,13 +48,29 @@ async function createCapsule(payload = {}) {
   });
 }
 
-async function updateCapsuleFilters(id, filters) {
-  return requestJson(capsuleUrl(`/${id}/filters`), {
+async function updateCapsuleFilters(id, filters, options = {}) {
+  return requestJson(buildCapsuleFiltersUrl(id, options), {
     method: "PATCH",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ filters })
   });
+}
+
+function buildCapsuleFiltersUrl(id, { regenerate = false } = {}) {
+  const params = new URLSearchParams();
+  if (regenerate) {
+    params.set("regenerate", "true");
+  }
+  if (typeof window !== "undefined") {
+    const locationParams = new URLSearchParams(window.location.search);
+    if (locationParams.get("nollm") === "true") {
+      params.set("nollm", "true");
+    }
+  }
+
+  const query = params.toString();
+  return capsuleUrl(`/${id}/filters${query ? `?${query}` : ""}`);
 }
 
 async function updateCapsuleRejectedUrls(id, rejectedUrls) {

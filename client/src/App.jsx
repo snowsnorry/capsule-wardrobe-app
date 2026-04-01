@@ -657,15 +657,28 @@ function App() {
     setIsContentOperationLoading(true);
     setStatus({ loading: true, error: "", infoKey: "", infoParams: null });
     try {
-      const result = await updateCapsuleFilters(activeCapsuleId, buildCurrentDraftSnapshot().filters);
-      setActiveCapsuleMeta(result.capsule);
+      const nextFilters = buildCurrentDraftSnapshot().filters;
+      const result = await updateCapsuleFilters(activeCapsuleId, nextFilters, { regenerate: true });
+      setActiveCapsuleMeta((current) => result?.capsule || (
+        current
+          ? {
+            ...current,
+            draft: {
+              filters: nextFilters,
+              data: {
+                wardrobe: null,
+                rejectedUrls: []
+              }
+            }
+          }
+          : current
+      ));
       setProfileItems([]);
       setWardrobeLoadedCapsuleId("");
       manualWardrobeRegenerationCapsuleIdRef.current = activeCapsuleId;
       await refreshCapsuleList();
       setIsLoadingItems(true);
-      const response = await requestWardrobeRegeneration({ capsuleId: activeCapsuleId });
-      if (response?.status === "pending") {
+      if (result?.status === "pending") {
         startCapsuleEventStream(activeCapsuleId);
       } else {
         setIsLoadingItems(false);

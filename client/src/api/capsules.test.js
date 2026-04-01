@@ -21,6 +21,7 @@ describe("capsules api", () => {
     requestApi.request.mockReset();
     requestApi.requestJson.mockReset();
     requestApi.requestJson.mockResolvedValue({});
+    window.history.replaceState({}, "", "/");
   });
 
   test("createCapsule only sends name and filters", async () => {
@@ -83,6 +84,24 @@ describe("capsules api", () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           rejectedUrls: ["https://example.com/1"]
+        })
+      }
+    );
+  });
+
+  test("updateCapsuleFilters appends regenerate and nollm query flags when requested", async () => {
+    window.history.replaceState({}, "", "/?nollm=true");
+
+    await updateCapsuleFilters("capsule-1", { audience: "woman" }, { regenerate: true });
+
+    expect(requestApi.requestJson).toHaveBeenCalledWith(
+      "https://api.example.test/capsules/capsule-1/filters?regenerate=true&nollm=true",
+      {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          filters: { audience: "woman" }
         })
       }
     );
