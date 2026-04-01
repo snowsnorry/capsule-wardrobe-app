@@ -172,7 +172,7 @@ function buildCapsuleStatus(capsule) {
   return "new";
 }
 
-function buildEmptyCapsuleDraft(locale = "en") {
+function buildEmptyCapsuleDraft() {
   return {
     filters: {
       formalityLevel: "",
@@ -181,8 +181,7 @@ function buildEmptyCapsuleDraft(locale = "en") {
       season: [],
       audience: "",
       color: null,
-      pattern: null,
-      locale
+      pattern: null
     },
     data: {
       wardrobe: null,
@@ -385,7 +384,7 @@ function App() {
       return;
     }
 
-    const effective = getEffectiveCapsule(capsule) || buildEmptyCapsuleDraft(locale);
+    const effective = getEffectiveCapsule(capsule) || buildEmptyCapsuleDraft();
     setActiveCapsuleId(capsule.id || "");
     setActiveCapsuleMeta({
       ...capsule,
@@ -422,8 +421,7 @@ function App() {
       season: selectedSeason,
       audience: selectedAudience,
       color: selectedColor,
-      pattern: selectedPattern,
-      locale
+      pattern: selectedPattern
     },
     data: {
       wardrobe: wardrobe
@@ -683,7 +681,7 @@ function App() {
   const handleCreateCapsule = async () => {
     setIsContentOperationLoading(true);
     try {
-      const result = await createCapsule({ filters: buildEmptyCapsuleDraft(locale).filters });
+      const result = await createCapsule({ filters: buildEmptyCapsuleDraft().filters });
       applyCapsuleState(result.capsule);
       await refreshCapsuleList();
     } finally {

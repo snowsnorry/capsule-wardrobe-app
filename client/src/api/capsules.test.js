@@ -27,18 +27,17 @@ describe("capsules api", () => {
     await createCapsule({
       name: "Spring edit",
       filters: {
-        locale: "en",
         audience: "woman"
       },
       draft: {
-        filters: { locale: "ru" },
+        filters: { audience: "man" },
         data: {
           wardrobe: { items: [{ url: "https://example.com/1" }] },
           rejectedUrls: ["https://example.com/1"]
         }
       },
       saved: {
-        filters: { locale: "ru" }
+        filters: { audience: "man" }
       }
     });
 
@@ -51,7 +50,6 @@ describe("capsules api", () => {
         body: JSON.stringify({
           name: "Spring edit",
           filters: {
-            locale: "en",
             audience: "woman"
           }
         })
@@ -60,7 +58,7 @@ describe("capsules api", () => {
   });
 
   test("capsule mutation helpers use explicit filters and rejected urls routes", async () => {
-    await updateCapsuleFilters("capsule-1", { locale: "en" });
+    await updateCapsuleFilters("capsule-1", { audience: "woman" });
     await updateCapsuleRejectedUrls("capsule-1", ["https://example.com/1"]);
 
     expect(requestApi.requestJson).toHaveBeenNthCalledWith(
@@ -71,7 +69,7 @@ describe("capsules api", () => {
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          filters: { locale: "en" }
+          filters: { audience: "woman" }
         })
       }
     );

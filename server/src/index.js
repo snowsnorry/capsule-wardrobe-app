@@ -944,6 +944,7 @@ app.post("/capsules/:id/pdf", requireTrustedOrigin, requireAuth, requireCsrf, as
     if (!capsule) {
       return res.status(404).json({ error: "not_found" });
     }
+    const profile = await getProfileImpl(req.user.email);
     const items = getCapsuleItems(capsule);
     if (items.length === 0) {
       return res.status(404).json({ error: "not_found" });
@@ -953,7 +954,7 @@ app.post("/capsules/:id/pdf", requireTrustedOrigin, requireAuth, requireCsrf, as
     if (products.length === 0) {
       return res.status(404).json({ error: "not_found" });
     }
-    const locale = getEffectiveCapsuleSnapshot(capsule)?.filters?.locale || "en";
+    const locale = profile?.locale || "en";
     const pdfBuffer = await buildWardrobePdfInChildImpl(products, locale);
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", 'attachment; filename="capsule-wardrobe.pdf"');

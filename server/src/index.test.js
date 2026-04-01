@@ -72,8 +72,7 @@ function createDependencies(overrides = {}) {
           season: ["spring"],
           audience: "woman",
           color: null,
-          pattern: null,
-          locale: "en"
+          pattern: null
         },
         data: {
           wardrobe: { items: [{ url: "https://example.com/1" }] },
@@ -585,6 +584,7 @@ test("index routes cover wardrobe handlers and search endpoints", async (t) => {
   let wardrobeCalled = false;
   let fullRegenerateCalled = false;
   let regenerateCalled = false;
+  let pdfLocale = null;
 
   const { baseUrl } = await startTestServer(t, {
     overrides: {
@@ -599,6 +599,10 @@ test("index routes cover wardrobe handlers and search endpoints", async (t) => {
       regenerateSelectedCapsuleItemsHandler: async (_req, res) => {
         regenerateCalled = true;
         res.json({ ok: true, items: [{ id: "2" }] });
+      },
+      buildWardrobePdfInChildImpl: async (_products, locale) => {
+        pdfLocale = locale;
+        return Buffer.from("pdf");
       }
     }
   });
@@ -666,6 +670,7 @@ test("index routes cover wardrobe handlers and search endpoints", async (t) => {
     csrfToken: CSRF_TOKEN
   });
   assert.equal(pdf.response.status, 200);
+  assert.equal(pdfLocale, "en");
 });
 
 test("capsule creation only accepts name and filters and initializes server-owned data", async (t) => {
@@ -693,8 +698,7 @@ test("capsule creation only accepts name and filters and initializes server-owne
         season: ["spring"],
         audience: "woman",
         color: "red",
-        pattern: "striped",
-        locale: "en"
+        pattern: "striped"
       }
     }
   });
@@ -710,8 +714,7 @@ test("capsule creation only accepts name and filters and initializes server-owne
         season: ["spring"],
         audience: "woman",
         color: "red",
-        pattern: "striped",
-        locale: "en"
+        pattern: "striped"
       },
       data: {
         wardrobe: null,
@@ -734,7 +737,7 @@ test("capsule creation rejects client-supplied state-bearing fields", async (t) 
     body: {
       name: "Spring edit",
       draft: {
-        filters: { locale: "en" },
+        filters: { audience: "woman" },
         data: {
           wardrobe: { items: [{ url: "https://malicious.example/item" }] },
           rejectedUrls: ["https://malicious.example/rejected"]
@@ -772,7 +775,6 @@ test("filters patch only accepts filters and resets draft data", async (t) => {
         audience: "woman",
         color: "red",
         pattern: "striped",
-        locale: "en",
         ignoredField: "ignored"
       }
     }
@@ -787,8 +789,7 @@ test("filters patch only accepts filters and resets draft data", async (t) => {
       season: ["spring"],
       audience: "woman",
       color: "red",
-      pattern: "striped",
-      locale: "en"
+      pattern: "striped"
     },
     data: {
       wardrobe: null,
@@ -827,8 +828,7 @@ test("rejected urls patch validates against current capsule wardrobe", async (t)
       season: ["spring"],
       audience: "woman",
       color: null,
-      pattern: null,
-      locale: "en"
+      pattern: null
     },
     data: {
       wardrobe: {
@@ -872,8 +872,7 @@ test("rejected urls patch rejects unknown urls and missing wardrobe", async (t) 
             season: ["spring"],
             audience: "woman",
             color: null,
-            pattern: null,
-            locale: "en"
+            pattern: null
           },
           data: {
             wardrobe: null,

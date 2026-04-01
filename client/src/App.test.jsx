@@ -211,8 +211,7 @@ function createBootstrapResponse({ items = [], locale = "ru" } = {}) {
           season: ["spring"],
           audience: "woman",
           color: null,
-          pattern: null,
-          locale
+          pattern: null
         },
         data: {
           wardrobe: { items },
@@ -228,8 +227,7 @@ function createBootstrapResponse({ items = [], locale = "ru" } = {}) {
           season: ["spring"],
           audience: "woman",
           color: null,
-          pattern: null,
-          locale
+          pattern: null
         },
         data: {
           wardrobe: { items },
@@ -434,16 +432,7 @@ describe("App", () => {
     mockProfileOptions();
     capsulesApi.fetchCapsuleBootstrap.mockResolvedValue({
       profile: { locale: "ru" },
-      activeCapsule: {
-        ...createBootstrapResponse({ locale: "en" }).activeCapsule,
-        draft: {
-          ...createBootstrapResponse({ locale: "en" }).activeCapsule.draft,
-          filters: {
-            ...createBootstrapResponse({ locale: "en" }).activeCapsule.draft.filters,
-            locale: "en"
-          }
-        }
-      },
+      activeCapsule: createBootstrapResponse({ locale: "en" }).activeCapsule,
       capsules: [{ id: "capsule-1", name: "Spring edit", status: "new" }]
     });
 

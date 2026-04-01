@@ -184,8 +184,7 @@ function createBootstrapResponse({ items = [], locale = "en" } = {}) {
           season: ["summer"],
           audience: "woman",
           color: null,
-          pattern: null,
-          locale
+          pattern: null
         },
         data: {
           wardrobe: { items },
@@ -201,8 +200,7 @@ function createBootstrapResponse({ items = [], locale = "en" } = {}) {
           season: ["summer"],
           audience: "woman",
           color: null,
-          pattern: null,
-          locale
+          pattern: null
         },
         data: {
           wardrobe: { items },
