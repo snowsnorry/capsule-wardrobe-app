@@ -1,22 +1,67 @@
+import { fetchEventSource } from "@microsoft/fetch-event-source";
 import { API_BASE_URL } from "./config.js";
-import { request, requestJson } from "./request.js";
+import { requestJson } from "./request.js";
 
-const inFlightByKey = new Map();
+class RetriableError extends Error {}
+class FatalError extends Error {}
 
-async function fetchCapsuleItems({ profileKey = "default", capsuleId } = {}) {
-  const key = String(profileKey || "default");
-  const normalizedCapsuleId = String(capsuleId || "").trim();
-  const requestKey = `${normalizedCapsuleId || "no-capsule"}:${key}`;
-  if (!inFlightByKey.has(requestKey)) {
-    const promise = requestJson(`${API_BASE_URL}/capsules/${normalizedCapsuleId}/items`, {
-      credentials: "include"
-    }).finally(() => {
-      inFlightByKey.delete(requestKey);
-    });
-    inFlightByKey.set(requestKey, promise);
+function parseEventPayload(data) {
+  if (typeof data !== "string" || data.trim().length === 0) {
+    return {};
   }
 
-  return inFlightByKey.get(requestKey);
+  try {
+    return JSON.parse(data);
+  } catch {
+    throw new FatalError("invalid_event_payload");
+  }
+}
+
+async function subscribeCapsuleEvents({
+  capsuleId,
+  signal,
+  onMessage = () => {},
+  onError = () => {}
+} = {}) {
+  const normalizedCapsuleId = String(capsuleId || "").trim();
+  return fetchEventSource(`${API_BASE_URL}/capsules/${normalizedCapsuleId}/events`, {
+    credentials: "include",
+    signal,
+    openWhenHidden: true,
+    async onopen(response) {
+      const contentType = (response.headers.get("content-type") || "").toLowerCase();
+      if (response.ok && contentType.includes("text/event-stream")) {
+        return;
+      }
+
+      if (response.status >= 400 && response.status < 500 && response.status !== 429) {
+        throw new FatalError(`request_failed_${response.status}`);
+      }
+
+      throw new RetriableError(`request_failed_${response.status}`);
+    },
+    onmessage(event) {
+      onMessage({
+        event: event.event || "message",
+        data: parseEventPayload(event.data)
+      });
+    },
+    onclose() {
+      throw new RetriableError("event_stream_closed");
+    },
+    onerror(error) {
+      if (signal?.aborted) {
+        return undefined;
+      }
+
+      if (error instanceof FatalError) {
+        onError(error);
+        throw error;
+      }
+
+      return 1000;
+    }
+  });
 }
 
 async function regenerateCapsuleWardrobe({ capsuleId }) {
@@ -27,33 +72,14 @@ async function regenerateCapsuleWardrobe({ capsuleId }) {
 }
 
 async function regenerateSelectedWardrobeItems({ itemUrls, capsuleId }) {
-  while (true) {
-    const response = await request(`${API_BASE_URL}/capsules/${String(capsuleId || "").trim()}/regenerate-selected`, {
-      method: "POST",
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ itemUrls })
-    });
-
-    const data = await response.json().catch(() => ({}));
-
-    if (response.status === 202) {
-      const pollAfterMs = Number(data?.pollAfterMs) > 0 ? Number(data.pollAfterMs) : 2000;
-      await new Promise((resolve) => setTimeout(resolve, pollAfterMs));
-      continue;
-    }
-
-    if (!response.ok) {
-      const error = new Error(data?.error || data?.message || `request_failed_${response.status}`);
-      error.status = response.status;
-      error.data = data;
-      throw error;
-    }
-
-    return data;
-  }
+  return requestJson(`${API_BASE_URL}/capsules/${String(capsuleId || "").trim()}/regenerate-selected`, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ itemUrls })
+  });
 }
 
-export { fetchCapsuleItems, regenerateCapsuleWardrobe, regenerateSelectedWardrobeItems };
+export { regenerateCapsuleWardrobe, regenerateSelectedWardrobeItems, subscribeCapsuleEvents };

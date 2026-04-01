@@ -52,8 +52,9 @@ import {
   updateCapsuleSnapshot
 } from "./capsuleStore.js";
 import { getSearchOptions, getSavedSearch, runSavedSearch } from "./searchStore.js";
-import { getCapsuleItems as getCapsuleItemsRoute, regenerateCapsuleWardrobe } from "./ai/ai.js";
-import { regenerateSelectedWardrobeItems } from "./ai/regenerateSelected.js";
+import { getWardrobeJob, regenerateCapsuleWardrobe } from "./ai/ai.js";
+import { getPartialRegenerationJob, regenerateSelectedWardrobeItems } from "./ai/regenerateSelected.js";
+import { buildCapsuleEventSnapshot, capsuleEventHub } from "./ai/capsuleEvents.js";
 import { buildWardrobePdfInChild } from "./wardrobePdf.js";
 import { checkDatabaseConnection, ensureTables, getProductsByUrlsInOrder } from "./db.js";
 import { configureSharp } from "./ai/sharpConfig.js";
@@ -307,7 +308,9 @@ function createApp({
   getSearchOptionsImpl = getSearchOptions,
   getSavedSearchImpl = getSavedSearch,
   runSavedSearchImpl = runSavedSearch,
-  getCapsuleItemsHandler = getCapsuleItemsRoute,
+  getWardrobeJobImpl = getWardrobeJob,
+  getPartialRegenerationJobImpl = getPartialRegenerationJob,
+  streamCapsuleEventsImpl = capsuleEventHub.subscribe,
   regenerateCapsuleWardrobeHandler = regenerateCapsuleWardrobe,
   regenerateSelectedCapsuleItemsHandler = regenerateSelectedWardrobeItems,
   buildWardrobePdfInChildImpl = buildWardrobePdfInChild,
@@ -462,6 +465,38 @@ function createApp({
     const effective = getEffectiveCapsuleSnapshot(capsule);
     const wardrobe = effective?.data?.wardrobe;
     return Array.isArray(wardrobe?.items) ? sortWardrobeItems(wardrobe.items) : [];
+  }
+
+  async function streamCapsuleEventsHandler(req, res) {
+    try {
+      const capsuleId = String(req.params?.id || "").trim();
+      if (!capsuleId) {
+        return res.status(400).json({ error: "invalid_payload" });
+      }
+
+      const capsule = await getCapsuleImpl(req.user.email, capsuleId);
+      if (!capsule) {
+        return res.status(404).json({ error: "not_found" });
+      }
+
+      const snapshot = buildCapsuleEventSnapshot({
+        capsule,
+        activeJob: getWardrobeJobImpl(req.user.email, capsuleId),
+        partialRegenerationJob: getPartialRegenerationJobImpl(req.user.email, capsuleId)
+      });
+      await streamCapsuleEventsImpl(req, res, {
+        email: req.user.email,
+        capsuleId,
+        snapshot
+      });
+      return undefined;
+    } catch (error) {
+      console.error("[capsules/events]", error);
+      if (!res.headersSent) {
+        return res.status(503).json({ error: "service_unavailable" });
+      }
+      return undefined;
+    }
   }
 
 app.post("/auth/request-code", requestCodeLimiter, async (req, res) => {
@@ -703,7 +738,7 @@ app.get("/capsules/:id", requireAuth, async (req, res) => {
   }
 });
 
-app.get("/capsules/:id/items", requireAuth, getCapsuleItemsHandler);
+app.get("/capsules/:id/events", requireAuth, streamCapsuleEventsHandler);
 
 app.post("/capsules/:id/regenerate", requireTrustedOrigin, requireAuth, requireCsrf, regenerateCapsuleWardrobeHandler);
 

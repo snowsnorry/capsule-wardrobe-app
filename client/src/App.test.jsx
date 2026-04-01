@@ -23,8 +23,20 @@ const profileOptionsApi = vi.hoisted(() => ({
   loadProfileOptions: vi.fn()
 }));
 
+const wardrobeStream = vi.hoisted(() => ({
+  listeners: new Set(),
+  emit(data, event = "snapshot") {
+    for (const listener of this.listeners) {
+      listener({ event, data });
+    }
+  },
+  reset() {
+    this.listeners.clear();
+  }
+}));
+
 const wardrobeApi = vi.hoisted(() => ({
-  fetchCapsuleItems: vi.fn(),
+  subscribeCapsuleEvents: vi.fn(),
   regenerateCapsuleWardrobe: vi.fn(),
   regenerateSelectedWardrobeItems: vi.fn()
 }));
@@ -254,12 +266,21 @@ describe("App", () => {
     profileOptionsApi.loadProfileOptions.mockReset();
     mainScreenRender.mockReset();
 
-    wardrobeApi.fetchCapsuleItems.mockReset();
+    wardrobeStream.reset();
+    wardrobeApi.subscribeCapsuleEvents.mockReset();
     wardrobeApi.regenerateCapsuleWardrobe.mockReset();
     wardrobeApi.regenerateSelectedWardrobeItems.mockReset();
     Object.values(capsulesApi).forEach((mockFn) => mockFn.mockReset());
 
-    wardrobeApi.fetchCapsuleItems.mockResolvedValue({ items: [], status: "ready" });
+    wardrobeApi.subscribeCapsuleEvents.mockImplementation(({ onMessage, signal }) => {
+      wardrobeStream.listeners.add(onMessage);
+      signal?.addEventListener("abort", () => {
+        wardrobeStream.listeners.delete(onMessage);
+      }, { once: true });
+      return new Promise(() => {});
+    });
+    wardrobeApi.regenerateCapsuleWardrobe.mockResolvedValue({ ok: true, status: "pending" });
+    wardrobeApi.regenerateSelectedWardrobeItems.mockResolvedValue({ ok: true, status: "pending" });
     capsulesApi.fetchCapsuleBootstrap.mockResolvedValue(createBootstrapResponse());
     capsulesApi.fetchRecentCapsules.mockResolvedValue({ capsules: [{ id: "capsule-1", name: "Spring edit", status: "new" }] });
     capsulesApi.fetchCapsule.mockResolvedValue({ capsule: createBootstrapResponse().activeCapsule });
@@ -378,7 +399,7 @@ describe("App", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "back-to-capsule" }));
     expect(await screen.findByTestId("main-screen")).toBeInTheDocument();
-    expect(wardrobeApi.fetchCapsuleItems).not.toHaveBeenCalled();
+    expect(wardrobeApi.subscribeCapsuleEvents).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("button", { name: "open-search" }));
     expect(await screen.findByTestId("search-screen")).toBeInTheDocument();
@@ -396,7 +417,7 @@ describe("App", () => {
     expect(await screen.findByTestId("main-screen")).toBeInTheDocument();
     await waitFor(() => {
       expect(wardrobeApi.regenerateCapsuleWardrobe).toHaveBeenCalled();
-      expect(wardrobeApi.fetchCapsuleItems).toHaveBeenCalled();
+      expect(wardrobeApi.subscribeCapsuleEvents).toHaveBeenCalled();
     });
   });
 
@@ -474,22 +495,14 @@ describe("App", () => {
       }
     });
     authApi.updateProfileLocale.mockResolvedValue({});
-    wardrobeApi.fetchCapsuleItems.mockResolvedValue({
+    capsulesApi.fetchCapsuleBootstrap.mockResolvedValue(createBootstrapResponse({
       items: [
         { id: "bottom-1", url: "https://example.com/bottom-1", name: "Trousers", category: "bottom" },
         { id: "top-1", url: "https://example.com/top-1", name: "Shirt", category: "top" },
         { id: "outerwear-1", url: "https://example.com/outerwear-1", name: "Blazer", category: "outerwear" }
-      ],
-      status: "ready"
-    });
-    wardrobeApi.regenerateSelectedWardrobeItems.mockResolvedValue({
-      items: [
-        { id: "bottom-1", url: "https://example.com/bottom-1", name: "Trousers", category: "bottom" },
-        { id: "top-2", url: "https://example.com/top-2", name: "New Shirt", category: "top" },
-        { id: "outerwear-1", url: "https://example.com/outerwear-1", name: "Blazer", category: "outerwear" }
-      ],
-      status: "ready"
-    });
+      ]
+    }));
+    wardrobeApi.regenerateSelectedWardrobeItems.mockResolvedValue({ ok: true, status: "pending" });
     mockProfileOptions();
 
     renderApp();
@@ -507,6 +520,14 @@ describe("App", () => {
         itemUrls: ["https://example.com/top-1"],
         capsuleId: "capsule-1"
       });
+    });
+    wardrobeStream.emit({
+      status: "ready",
+      items: [
+        { id: "bottom-1", url: "https://example.com/bottom-1", name: "Trousers", category: "bottom" },
+        { id: "top-2", url: "https://example.com/top-2", name: "New Shirt", category: "top" },
+        { id: "outerwear-1", url: "https://example.com/outerwear-1", name: "Blazer", category: "outerwear" }
+      ]
     });
     await waitFor(() => {
       expect(screen.getByText("items-order:https://example.com/outerwear-1,https://example.com/top-2,https://example.com/bottom-1")).toBeInTheDocument();

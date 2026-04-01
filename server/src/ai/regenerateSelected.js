@@ -26,11 +26,15 @@ import { runWithImageWorkSlot } from "./imagePipeline.js";
 import { buildShiftedTargetVector, normalizeEmbeddingVector } from "./vectorMath.js";
 import { getPromptEmbeddings, getWardrobePrompt } from "./voyageai.js";
 import {
+  buildCapsuleEventSnapshot,
+  capsuleEventHub,
+  getStoredWardrobePayload
+} from "./capsuleEvents.js";
+import {
   countItemsByKey,
   enforceCategoryCounts,
   extractLlmUsage,
   getSelectedIdsFromCapsule,
-  getStoredWardrobePayload,
   logWardrobeInfo,
   toWardrobeUiItem
 } from "./ai.js";
@@ -39,7 +43,6 @@ const REGENERATE_SELECTED_PROMPT_TEMPLATE = readFileSync(
   new URL("../templates/prompt_regenerate_selected.txt", import.meta.url),
   "utf8"
 );
-const PARTIAL_REGENERATION_POLL_AFTER_MS = 2000;
 const COMPLETED_JOB_TTL_MS = 5 * 60 * 1000;
 const LAST_PROMPT_DIR_URL = new URL("../../../last-prompt/", import.meta.url);
 const partialRegenerationJobs = new Map();
@@ -577,6 +580,8 @@ function createPartialRegenerationService({
   getCapsuleImpl = getCapsule,
   updateCapsuleSnapshotImpl = updateCapsuleSnapshot,
   regenerateCapsuleWardrobeImpl = regenerateCapsuleWardrobe,
+  buildCapsuleEventSnapshotImpl = buildCapsuleEventSnapshot,
+  publishSnapshotImpl = (email, capsuleId, snapshot) => capsuleEventHub.publish(email, capsuleId, snapshot),
   jobs = partialRegenerationJobs,
   nowMsImpl = () => Date.now(),
   setTimeoutImpl = setTimeout,
@@ -634,19 +639,31 @@ function createPartialRegenerationService({
         capsuleRequestId,
         startedAt
       };
+      let currentCapsule = capsule;
 
       try {
         const result = await regenerateCapsuleWardrobeImpl(buildProfileCapsuleContext(profile, capsule), selectedProducts, jobLogContext);
         const payload = buildStoredWardrobePayloadFromResult(result, storedWardrobe);
         const baseSnapshot = getEffectiveCapsuleSnapshot(capsule);
         if (capsuleId) {
-          await updateCapsuleSnapshotImpl(email, capsuleId, {
+          currentCapsule = await updateCapsuleSnapshotImpl(email, capsuleId, {
             filters: baseSnapshot?.filters,
             data: {
               wardrobe: payload,
               rejectedUrls: baseSnapshot?.data?.rejectedUrls || []
             }
           });
+        } else {
+          currentCapsule = {
+            ...capsule,
+            draft: {
+              filters: baseSnapshot?.filters,
+              data: {
+                wardrobe: payload,
+                rejectedUrls: baseSnapshot?.data?.rejectedUrls || []
+              }
+            }
+          };
         }
         job.result = payload;
         job.status = "completed";
@@ -657,12 +674,22 @@ function createPartialRegenerationService({
           itemsTotal: payload.items.length,
           itemsByCategory: countItemsByKey(payload.items)
         }, jobLogContext);
+        publishSnapshotImpl(
+          email,
+          capsuleId,
+          buildCapsuleEventSnapshotImpl({ capsule: currentCapsule, partialRegenerationJob: job })
+        );
       } catch (error) {
         job.status = "failed";
         job.phase = "failed";
         job.updatedAt = nowMsImpl();
         job.error = error;
         console.error("[wardrobe-ai][regenerate-selected]", error);
+        publishSnapshotImpl(
+          email,
+          capsuleId,
+          buildCapsuleEventSnapshotImpl({ capsule: currentCapsule, partialRegenerationJob: job })
+        );
       } finally {
         scheduleJobCleanup(jobKey, job);
       }
@@ -694,34 +721,12 @@ function createPartialRegenerationService({
         return res.status(202).json({
           ok: true,
           status: "pending",
-          pendingStage: "regenerate",
-          pendingRegenerationUrls: activeJob.pendingItemUrls,
-          items: storedWardrobe?.items || [],
-          reasoning: storedWardrobe?.reasoning || null,
-          rawSelectionText: storedWardrobe?.rawSelectionText || null,
-          swimwearReasoning: storedWardrobe?.swimwearReasoning || null,
-          swimwearRawSelectionText: storedWardrobe?.swimwearRawSelectionText || null,
-          pollAfterMs: PARTIAL_REGENERATION_POLL_AFTER_MS
+          pendingStage: "regenerate"
         });
       }
 
-      if (activeJob?.status === "completed") {
+      if (activeJob?.status === "completed" || activeJob?.status === "failed") {
         jobs.delete(createPartialRegenerationJobKey(email, capsuleId));
-        const readyPayload = activeJob.result || storedWardrobe || {};
-        return res.json({
-          ok: true,
-          status: "ready",
-          items: readyPayload.items || [],
-          reasoning: readyPayload.reasoning || null,
-          rawSelectionText: readyPayload.rawSelectionText || null,
-          swimwearReasoning: readyPayload.swimwearReasoning || null,
-          swimwearRawSelectionText: readyPayload.swimwearRawSelectionText || null
-        });
-      }
-
-      if (activeJob?.status === "failed") {
-        jobs.delete(createPartialRegenerationJobKey(email, capsuleId));
-        throw activeJob.error || new Error("partial_regeneration_failed");
       }
 
       if (!isValidSelectedItemUrls(itemUrls)) {
@@ -770,36 +775,38 @@ function createPartialRegenerationService({
           }
         });
       }
-      startPartialRegenerationJob(
+      const generationCapsule = {
+        ...capsule,
+        draft: {
+          filters: effectiveSnapshot?.filters,
+          data: {
+            wardrobe: partialPayload,
+            rejectedUrls: nextRejectedUrls
+          }
+        }
+      };
+      const job = startPartialRegenerationJob(
         email,
         capsuleId,
         profile,
-        {
-          ...capsule,
-          draft: {
-            filters: effectiveSnapshot?.filters,
-            data: {
-              wardrobe: partialPayload,
-              rejectedUrls: nextRejectedUrls
-            }
-          }
-        },
+        generationCapsule,
         selectedProducts,
         storedWardrobe,
         logContext
+      );
+      publishSnapshotImpl(
+        email,
+        capsuleId,
+        buildCapsuleEventSnapshotImpl({
+          capsule: generationCapsule,
+          partialRegenerationJob: job
+        })
       );
 
       return res.status(202).json({
         ok: true,
         status: "pending",
-        pendingStage: "regenerate",
-        pendingRegenerationUrls: itemUrls,
-        items: partialItems,
-        reasoning: partialPayload.reasoning,
-        rawSelectionText: partialPayload.rawSelectionText,
-        swimwearReasoning: partialPayload.swimwearReasoning,
-        swimwearRawSelectionText: partialPayload.swimwearRawSelectionText,
-        pollAfterMs: PARTIAL_REGENERATION_POLL_AFTER_MS
+        pendingStage: "regenerate"
       });
     } catch (error) {
       console.error("[wardrobe-ai][regenerate-selected]", error);

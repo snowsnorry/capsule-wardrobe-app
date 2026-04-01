@@ -96,7 +96,7 @@ function createDependencies(overrides = {}) {
     getSearchOptionsImpl: async () => ({ brands: [{ value: "zara", label: "Zara" }] }),
     getSavedSearchImpl: async () => ({ query: "coat", page: 1 }),
     runSavedSearchImpl: async (_email, payload) => ({ items: [{ id: "1" }], total: 1, search: payload }),
-    getCapsuleItemsHandler: async (_req, res) => res.json({ ok: true, status: "ready", items: [] }),
+    streamCapsuleEventsImpl: async (_req, res, { snapshot }) => res.json({ ok: true, snapshot }),
     regenerateCapsuleWardrobeHandler: async (_req, res) => res.status(202).json({ ok: true, status: "pending", items: [] }),
     regenerateSelectedCapsuleItemsHandler: async (_req, res) => res.json({ ok: true, items: [] }),
     buildWardrobePdfInChildImpl: async () => Buffer.from("pdf"),
@@ -588,9 +588,9 @@ test("index routes cover wardrobe handlers and search endpoints", async (t) => {
 
   const { baseUrl } = await startTestServer(t, {
     overrides: {
-      getCapsuleItemsHandler: async (_req, res) => {
+      streamCapsuleEventsImpl: async (_req, res, { snapshot }) => {
         wardrobeCalled = true;
-        res.json({ ok: true, status: "ready", items: [] });
+        res.json({ ok: true, snapshot });
       },
       regenerateCapsuleWardrobeHandler: async (_req, res) => {
         fullRegenerateCalled = true;
@@ -628,11 +628,12 @@ test("index routes cover wardrobe handlers and search endpoints", async (t) => {
   assert.equal(invalidSearch.response.status, 200);
   assert.equal(invalidSearch.json.ok, true);
 
-  const wardrobe = await requestJson(baseUrl, "/capsules/capsule-1/items", {
+  const wardrobe = await requestJson(baseUrl, "/capsules/capsule-1/events", {
     cookie: AUTH_COOKIE
   });
   assert.equal(wardrobe.response.status, 200);
   assert.equal(wardrobeCalled, true);
+  assert.equal(wardrobe.json.snapshot.status, "ready");
 
   const fullRegenerate = await requestJson(baseUrl, "/capsules/capsule-1/regenerate", {
     method: "POST",
@@ -652,6 +653,11 @@ test("index routes cover wardrobe handlers and search endpoints", async (t) => {
   });
   assert.equal(regenerate.response.status, 200);
   assert.equal(regenerateCalled, true);
+
+  const removedWardrobeRoute = await requestJson(baseUrl, "/capsules/capsule-1/items", {
+    cookie: AUTH_COOKIE
+  });
+  assert.equal(removedWardrobeRoute.response.status, 404);
 
   const pdf = await requestJson(baseUrl, "/capsules/capsule-1/pdf", {
     method: "POST",

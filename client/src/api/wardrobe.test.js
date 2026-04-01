@@ -1,17 +1,22 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
+const fetchEventSourceApi = vi.hoisted(() => ({
+  fetchEventSource: vi.fn()
+}));
+
 const requestApi = vi.hoisted(() => ({
   request: vi.fn(),
   requestJson: vi.fn()
 }));
 
+vi.mock("@microsoft/fetch-event-source", () => fetchEventSourceApi);
 vi.mock("./request.js", () => requestApi);
 vi.mock("./config.js", () => ({
   API_BASE_URL: "https://api.example.test"
 }));
 
 import { downloadCapsulePdf } from "./capsules.js";
-import { fetchCapsuleItems, regenerateCapsuleWardrobe, regenerateSelectedWardrobeItems } from "./wardrobe.js";
+import { regenerateCapsuleWardrobe, regenerateSelectedWardrobeItems, subscribeCapsuleEvents } from "./wardrobe.js";
 
 function createResponse({
   ok = true,
@@ -38,15 +43,11 @@ function createResponse({
 describe("wardrobe api", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
-    vi.useFakeTimers();
+    fetchEventSourceApi.fetchEventSource.mockReset();
     requestApi.request.mockReset();
     requestApi.requestJson.mockReset();
     requestApi.requestJson.mockResolvedValue({ items: [] });
     requestApi.request.mockResolvedValue(createResponse());
-    vi.stubGlobal("setTimeout", vi.fn((callback) => {
-      callback();
-      return 0;
-    }));
     vi.stubGlobal("URL", {
       createObjectURL: vi.fn(() => "blob:wardrobe-pdf"),
       revokeObjectURL: vi.fn()
@@ -54,28 +55,31 @@ describe("wardrobe api", () => {
   });
 
   afterEach(() => {
-    vi.useRealTimers();
     vi.unstubAllGlobals();
   });
 
-  test("fetchCapsuleItems dedupes in-flight requests per profileKey", async () => {
-    const deferred = [];
-    requestApi.requestJson.mockImplementation(() => new Promise((resolve) => {
-      deferred.push(resolve);
-    }));
+  test("subscribeCapsuleEvents delegates to fetch-event-source and parses snapshot payloads", async () => {
+    const onMessage = vi.fn();
+    fetchEventSourceApi.fetchEventSource.mockImplementation(async (_url, options) => {
+      options.onmessage({
+        event: "snapshot",
+        data: JSON.stringify({ status: "ready", items: [{ id: "look-1" }] })
+      });
+    });
 
-    const first = fetchCapsuleItems({ profileKey: "profile-1", capsuleId: "capsule-1" });
-    const second = fetchCapsuleItems({ profileKey: "profile-1", capsuleId: "capsule-1" });
+    await subscribeCapsuleEvents({ capsuleId: "capsule-1", onMessage });
 
-    expect(requestApi.requestJson).toHaveBeenCalledTimes(1);
-
-    deferred[0]({ items: [{ id: "look-1" }] });
-
-    await expect(first).resolves.toEqual({ items: [{ id: "look-1" }] });
-    await expect(second).resolves.toEqual({ items: [{ id: "look-1" }] });
-
-    expect(requestApi.requestJson).toHaveBeenNthCalledWith(1, "https://api.example.test/capsules/capsule-1/items", {
-      credentials: "include"
+    expect(fetchEventSourceApi.fetchEventSource).toHaveBeenCalledTimes(1);
+    expect(fetchEventSourceApi.fetchEventSource).toHaveBeenCalledWith(
+      "https://api.example.test/capsules/capsule-1/events",
+      expect.objectContaining({
+        credentials: "include",
+        openWhenHidden: true
+      })
+    );
+    expect(onMessage).toHaveBeenCalledWith({
+      event: "snapshot",
+      data: { status: "ready", items: [{ id: "look-1" }] }
     });
   });
 
@@ -135,24 +139,17 @@ describe("wardrobe api", () => {
     });
   });
 
-  test("regenerateSelectedWardrobeItems polls until completion and returns payload", async () => {
-    requestApi.request
-      .mockResolvedValueOnce(createResponse({
-        status: 202,
-        ok: false,
-        jsonData: { pollAfterMs: 10 }
-      }))
-      .mockResolvedValueOnce(createResponse({
-        status: 200,
-        ok: true,
-        jsonData: { items: [{ id: "item-2" }], reasoning: "updated" }
-      }));
+  test("regenerateSelectedWardrobeItems posts once and returns payload", async () => {
+    requestApi.requestJson.mockResolvedValueOnce({
+      items: [{ id: "item-2" }],
+      reasoning: "updated"
+    });
 
     await expect(
       regenerateSelectedWardrobeItems({ itemUrls: ["https://example.com/item-1"], capsuleId: "capsule-1" })
     ).resolves.toEqual({ items: [{ id: "item-2" }], reasoning: "updated" });
 
-    expect(requestApi.request).toHaveBeenNthCalledWith(
+    expect(requestApi.requestJson).toHaveBeenNthCalledWith(
       1,
       "https://api.example.test/capsules/capsule-1/regenerate-selected",
       {
@@ -162,14 +159,12 @@ describe("wardrobe api", () => {
         body: JSON.stringify({ itemUrls: ["https://example.com/item-1"] })
       }
     );
-    expect(setTimeout).toHaveBeenCalledWith(expect.any(Function), 10);
   });
 
   test("regenerateSelectedWardrobeItems propagates structured endpoint errors", async () => {
-    requestApi.request.mockResolvedValue(createResponse({
-      ok: false,
+    requestApi.requestJson.mockRejectedValue(Object.assign(new Error("invalid_payload"), {
       status: 422,
-      jsonData: { error: "invalid_payload", rejected: ["item-1"] }
+      data: { error: "invalid_payload", rejected: ["item-1"] }
     }));
 
     await expect(

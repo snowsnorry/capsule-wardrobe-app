@@ -23,8 +23,15 @@ const profileOptionsApi = vi.hoisted(() => ({
   loadProfileOptions: vi.fn()
 }));
 
+const wardrobeStream = vi.hoisted(() => ({
+  listeners: new Set(),
+  reset() {
+    this.listeners.clear();
+  }
+}));
+
 const wardrobeApi = vi.hoisted(() => ({
-  fetchCapsuleItems: vi.fn(),
+  subscribeCapsuleEvents: vi.fn(),
   regenerateCapsuleWardrobe: vi.fn(),
   regenerateSelectedWardrobeItems: vi.fn()
 }));
@@ -231,10 +238,21 @@ describe("App e2e-style flows", () => {
     profileOptionsApi.clearProfileOptionsCache.mockReset();
     profileOptionsApi.loadProfileOptions.mockReset();
 
-    wardrobeApi.fetchCapsuleItems.mockReset();
+    wardrobeStream.reset();
+    wardrobeApi.subscribeCapsuleEvents.mockReset();
     wardrobeApi.regenerateCapsuleWardrobe.mockReset();
     wardrobeApi.regenerateSelectedWardrobeItems.mockReset();
     Object.values(capsulesApi).forEach((mockFn) => mockFn.mockReset());
+
+    wardrobeApi.subscribeCapsuleEvents.mockImplementation(({ onMessage, signal }) => {
+      wardrobeStream.listeners.add(onMessage);
+      signal?.addEventListener("abort", () => {
+        wardrobeStream.listeners.delete(onMessage);
+      }, { once: true });
+      return new Promise(() => {});
+    });
+    wardrobeApi.regenerateCapsuleWardrobe.mockResolvedValue({ ok: true, status: "pending" });
+    wardrobeApi.regenerateSelectedWardrobeItems.mockResolvedValue({ ok: true, status: "pending" });
 
     authApi.updateProfileLocale.mockResolvedValue({});
     capsulesApi.fetchCapsuleBootstrap.mockResolvedValue(createBootstrapResponse());
@@ -255,10 +273,6 @@ describe("App e2e-style flows", () => {
     authApi.initializeProfile.mockResolvedValue({});
     authApi.logout.mockResolvedValue({});
     mockProfileOptions();
-    wardrobeApi.fetchCapsuleItems.mockResolvedValue({
-      items: [{ id: "item-1", name: "Linen Shirt", category: "top" }],
-      status: "ready"
-    });
 
     renderApp();
 
@@ -281,7 +295,7 @@ describe("App e2e-style flows", () => {
         filters: expect.any(Object)
       });
       expect(wardrobeApi.regenerateCapsuleWardrobe).toHaveBeenCalled();
-      expect(wardrobeApi.fetchCapsuleItems).toHaveBeenCalled();
+      expect(wardrobeApi.subscribeCapsuleEvents).toHaveBeenCalled();
     });
     expect(capsulesApi.createCapsule.mock.calls[0][0]).not.toHaveProperty("draft");
 

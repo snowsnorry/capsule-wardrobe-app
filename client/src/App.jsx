@@ -28,6 +28,11 @@ import {
 } from "./api/capsules.js";
 import { clearProfileOptionsCache, loadProfileOptions } from "./api/profileOptionsCache.js";
 import { clearRequestCache } from "./api/auth.js";
+import {
+  regenerateCapsuleWardrobe as requestWardrobeRegeneration,
+  regenerateSelectedWardrobeItems as requestSelectedWardrobeRegeneration,
+  subscribeCapsuleEvents
+} from "./api/wardrobe.js";
 import MainScreen from "./screens/MainScreen.jsx";
 import OnboardingScreen from "./screens/OnboardingScreen.jsx";
 import ProfileScreen from "./screens/ProfileScreen.jsx";
@@ -63,8 +68,6 @@ const FALLBACK_AUDIENCE_OPTIONS = ["man", "woman", "any"];
 const FALLBACK_ACCENT_COLOR_OPTIONS = ACCENT_COLOR_OPTIONS;
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
 const SEASON_DISPLAY_ORDER = ["spring", "summer", "autumn", "winter"];
-const WARDROBE_POLL_AFTER_MS_DEFAULT = 2000;
-
 function getAppRoute(pathname = "/") {
   return pathname === "/search" || pathname === "/search/" ? "search" : "capsule";
 }
@@ -251,14 +254,16 @@ function App() {
   const [isPartialRegenerationLoading, setIsPartialRegenerationLoading] = useState(false);
   const [isWardrobePending, setIsWardrobePending] = useState(false);
   const [hasPendingAdditionalItems, setHasPendingAdditionalItems] = useState(false);
-  const [wardrobePollAfterMs, setWardrobePollAfterMs] = useState(WARDROBE_POLL_AFTER_MS_DEFAULT);
   const [wardrobeLoadedCapsuleId, setWardrobeLoadedCapsuleId] = useState("");
   const [persistedProfileLocale, setPersistedProfileLocale] = useState("");
   const [appRoute, setAppRoute] = useState(() => (
     typeof window === "undefined" ? "capsule" : getAppRoute(window.location.pathname)
   ));
   const isMountedRef = useRef(true);
-  const wardrobeRequestIdRef = useRef(0);
+  const pendingRegenerationUrlsRef = useRef([]);
+  const regenerationBaseItemsRef = useRef([]);
+  const capsuleEventsAbortRef = useRef(null);
+  const manualWardrobeRegenerationCapsuleIdRef = useRef("");
 
   const cardPadding = useMemo(() => (isLarge ? 5 : 3), [isLarge]);
   const orderedSeasonOptions = useMemo(() => sortSeasonOptions(seasonOptions), [seasonOptions]);
@@ -396,6 +401,9 @@ function App() {
     setProfileItems(buildDisplayWardrobeItems(effective.data?.wardrobe?.items || []));
     setWardrobeLoadedCapsuleId(hasStoredWardrobeItems(capsule) ? capsule.id || "" : "");
     setSelectedRegenerationUrls([]);
+    pendingRegenerationUrlsRef.current = [];
+    regenerationBaseItemsRef.current = [];
+    manualWardrobeRegenerationCapsuleIdRef.current = "";
     setPartialRegenerationPendingUrls([]);
     setIsPartialRegenerationLoading(false);
     setIsWardrobePending(false);
@@ -555,7 +563,9 @@ function App() {
       setIsPartialRegenerationLoading(false);
       setIsWardrobePending(false);
       setHasPendingAdditionalItems(false);
-      setWardrobePollAfterMs(WARDROBE_POLL_AFTER_MS_DEFAULT);
+      pendingRegenerationUrlsRef.current = [];
+      regenerationBaseItemsRef.current = [];
+      manualWardrobeRegenerationCapsuleIdRef.current = "";
       clearProfileOptionsCache();
       setStyleOptions(FALLBACK_STYLE_OPTIONS);
       setOccasionOptions([]);
@@ -641,8 +651,16 @@ function App() {
       const result = await updateCapsuleFilters(activeCapsuleId, buildCurrentDraftSnapshot().filters);
       setActiveCapsuleMeta(result.capsule);
       setProfileItems([]);
+      setWardrobeLoadedCapsuleId("");
+      manualWardrobeRegenerationCapsuleIdRef.current = activeCapsuleId;
       await refreshCapsuleList();
-      await runWardrobeLoad({ regenerate: true });
+      setIsLoadingItems(true);
+      const response = await requestWardrobeRegeneration({ capsuleId: activeCapsuleId });
+      if (response?.status === "pending") {
+        startCapsuleEventStream(activeCapsuleId);
+      } else {
+        setIsLoadingItems(false);
+      }
       setStatus({ loading: false, error: "", infoKey: "profile.updated", infoParams: null });
     } catch (error) {
       setStatus({ loading: false, error: resolveErrorMessage(error), infoKey: "", infoParams: null });
@@ -790,16 +808,6 @@ function App() {
     setAppRoute(getAppRoute(nextPath));
   };
 
-  const profileKey = JSON.stringify({
-    capsuleId: activeCapsuleId,
-    formalityLevel: selectedFormalityLevel,
-    style: selectedStyle,
-    occasions: selectedOccasions.slice().sort(),
-    season: selectedSeason.slice().sort(),
-    audience: selectedAudience,
-    color: selectedColor,
-    pattern: selectedPattern
-  });
   const isSignInView = !user;
   const isSearchView = Boolean(user && (hasProfile || profileCreated) && appRoute === "search");
   const isMainScreenView = Boolean(user && (hasProfile || profileCreated) && currentView === "main" && appRoute !== "search");
@@ -812,11 +820,6 @@ function App() {
     selectedAudience
   );
   const isContentBusy = isLoadingItems || isWardrobePending || isPartialRegenerationLoading || isContentOperationLoading;
-
-  const loadWardrobeItems = async () => {
-    const { fetchCapsuleItems } = await import("./api/wardrobe.js");
-    return fetchCapsuleItems({ profileKey, capsuleId: activeCapsuleId });
-  };
 
   const logWardrobeReasoning = (reasoning) => {
     if (typeof reasoning !== "string" || reasoning.trim().length === 0) {
@@ -834,97 +837,169 @@ function App() {
     setIsPartialRegenerationLoading(false);
     setIsWardrobePending(false);
     setHasPendingAdditionalItems(false);
-    setWardrobePollAfterMs(WARDROBE_POLL_AFTER_MS_DEFAULT);
     setIsLoadingItems(false);
   };
 
-  const runWardrobeLoad = async ({ regenerate = false } = {}) => {
-    const requestId = wardrobeRequestIdRef.current + 1;
-    wardrobeRequestIdRef.current = requestId;
-    setIsLoadingItems(true);
+  const stopCapsuleEventStream = () => {
+    if (!capsuleEventsAbortRef.current) {
+      return;
+    }
 
-    while (true) {
+    capsuleEventsAbortRef.current.abort();
+    capsuleEventsAbortRef.current = null;
+  };
+
+  const applyWardrobeSnapshot = async (snapshot) => {
+    const items = Array.isArray(snapshot?.items) ? snapshot.items : [];
+    const pendingRegenerationUrls = Array.isArray(snapshot?.pendingRegenerationUrls)
+      ? snapshot.pendingRegenerationUrls.map((itemUrl) => String(itemUrl || "").trim()).filter(Boolean)
+      : [];
+    const isPending = snapshot?.status === "pending";
+    const isPendingExtras = Boolean(snapshot?.hasPendingAdditionalItems);
+
+    if (snapshot?.status === "failed") {
+      manualWardrobeRegenerationCapsuleIdRef.current = "";
+      stopCapsuleEventStream();
+      handleWardrobeError();
+      setStatus((current) => ({
+        ...current,
+        error: t("errors.generic")
+      }));
+      return;
+    }
+
+    if (isPending) {
+      setProfileItems((currentItems) => (
+        pendingRegenerationUrls.length > 0
+          ? mergeWardrobeItemsIntoExistingOrder({
+            currentItems,
+            nextItems: items,
+            pendingUrls: pendingRegenerationUrls
+          })
+          : buildDisplayWardrobeItems(items)
+      ));
+      setSelectedRegenerationUrls([]);
+      pendingRegenerationUrlsRef.current = pendingRegenerationUrls;
+      setPartialRegenerationPendingUrls(pendingRegenerationUrls);
+      setIsPartialRegenerationLoading(pendingRegenerationUrls.length > 0);
+      setIsWardrobePending(true);
+      setHasPendingAdditionalItems(isPendingExtras);
+      setIsLoadingItems(items.length === 0 && !isPendingExtras);
+      return;
+    }
+
+    logWardrobeReasoning(snapshot?.reasoning);
+    const currentPendingUrls = pendingRegenerationUrlsRef.current;
+    const baseItems = currentPendingUrls.length > 0 ? regenerationBaseItemsRef.current : [];
+    setProfileItems((currentItems) => (
+      currentPendingUrls.length > 0
+        ? mergeWardrobeItemsIntoExistingOrder({
+          currentItems: baseItems.length > 0 ? baseItems : currentItems,
+          nextItems: items,
+          pendingUrls: currentPendingUrls
+        })
+        : buildDisplayWardrobeItems(items)
+    ));
+    setSelectedRegenerationUrls([]);
+    pendingRegenerationUrlsRef.current = [];
+    regenerationBaseItemsRef.current = [];
+    setPartialRegenerationPendingUrls([]);
+    setIsPartialRegenerationLoading(false);
+    setIsWardrobePending(false);
+    setHasPendingAdditionalItems(false);
+    setIsLoadingItems(false);
+    setWardrobeLoadedCapsuleId(snapshot?.status === "ready" ? activeCapsuleId : "");
+
+    if (snapshot?.status !== "pending") {
+      manualWardrobeRegenerationCapsuleIdRef.current = "";
+      stopCapsuleEventStream();
+    }
+
+    if (snapshot?.status === "ready") {
       try {
-        if (regenerate) {
-          const { regenerateCapsuleWardrobe } = await import("./api/wardrobe.js");
-          await regenerateCapsuleWardrobe({ capsuleId: activeCapsuleId });
-          if (!isMountedRef.current || requestId !== wardrobeRequestIdRef.current) {
-            return;
-          }
-          regenerate = false;
-        }
-
-        const result = await loadWardrobeItems();
-        if (!isMountedRef.current || requestId !== wardrobeRequestIdRef.current) {
-          return;
-        }
-
-        const items = Array.isArray(result?.items) ? result.items : [];
-        if (result?.status === "pending") {
-          const nextPollAfterMs =
-            Number(result?.pollAfterMs) > 0 ? Number(result.pollAfterMs) : WARDROBE_POLL_AFTER_MS_DEFAULT;
-          const isPendingExtras = Boolean(result?.hasPendingAdditionalItems);
-          const pendingRegenerationUrls = Array.isArray(result?.pendingRegenerationUrls)
-            ? result.pendingRegenerationUrls.map((itemUrl) => String(itemUrl || "").trim()).filter(Boolean)
-            : [];
-          setProfileItems((currentItems) => (
-            pendingRegenerationUrls.length > 0
-              ? mergeWardrobeItemsIntoExistingOrder({
-                currentItems,
-                nextItems: items,
-                pendingUrls: pendingRegenerationUrls
-              })
-              : buildDisplayWardrobeItems(items)
-          ));
-          setSelectedRegenerationUrls([]);
-          setPartialRegenerationPendingUrls(pendingRegenerationUrls);
-          setIsPartialRegenerationLoading(pendingRegenerationUrls.length > 0);
-          setIsWardrobePending(true);
-          setHasPendingAdditionalItems(isPendingExtras);
-          setWardrobePollAfterMs(nextPollAfterMs);
-          setIsLoadingItems(items.length === 0 && !isPendingExtras);
-          setWardrobeLoadedCapsuleId(activeCapsuleId);
-
-          await new Promise((resolve) => setTimeout(resolve, nextPollAfterMs));
-          if (!isMountedRef.current || requestId !== wardrobeRequestIdRef.current) {
-            return;
-          }
-          continue;
-        }
-
-        logWardrobeReasoning(result?.reasoning);
-        setProfileItems(buildDisplayWardrobeItems(items));
-        try {
-          const capsuleResult = await fetchCapsule(activeCapsuleId);
-          setActiveCapsuleMeta(capsuleResult.capsule);
-          await refreshCapsuleList();
-        } catch {
-          // Keep rendered items even if sidebar metadata refresh fails.
-        }
-        setSelectedRegenerationUrls([]);
-        setPartialRegenerationPendingUrls([]);
-        setIsPartialRegenerationLoading(false);
-        setIsWardrobePending(false);
-        setHasPendingAdditionalItems(false);
-        setWardrobePollAfterMs(WARDROBE_POLL_AFTER_MS_DEFAULT);
-        setIsLoadingItems(false);
-        setWardrobeLoadedCapsuleId(activeCapsuleId);
-        return;
-      } catch (error) {
-        if (!isMountedRef.current || requestId !== wardrobeRequestIdRef.current) {
-          return;
-        }
-        handleWardrobeError();
-        return;
+        const capsuleResult = await fetchCapsule(activeCapsuleId);
+        setActiveCapsuleMeta(capsuleResult.capsule);
+        await refreshCapsuleList();
+      } catch {
+        // Keep rendered items even if sidebar metadata refresh fails.
       }
     }
   };
 
+  const startCapsuleEventStream = (capsuleId) => {
+    const normalizedCapsuleId = String(capsuleId || "").trim();
+    if (!normalizedCapsuleId) {
+      return Promise.resolve();
+    }
+
+    stopCapsuleEventStream();
+    const abortController = new AbortController();
+    capsuleEventsAbortRef.current = abortController;
+
+    return subscribeCapsuleEvents({
+      capsuleId: normalizedCapsuleId,
+      signal: abortController.signal,
+      onMessage(event) {
+        if (event.event !== "snapshot" || !isMountedRef.current) {
+          return;
+        }
+
+        applyWardrobeSnapshot(event.data).catch(() => {
+          if (!isMountedRef.current) {
+            return;
+          }
+          stopCapsuleEventStream();
+          handleWardrobeError();
+        });
+      },
+      onError(error) {
+        if (!isMountedRef.current) {
+          return;
+        }
+        stopCapsuleEventStream();
+        handleWardrobeError();
+        setStatus((current) => ({
+          ...current,
+          error: resolveErrorMessage(error)
+        }));
+      }
+    }).catch((error) => {
+      if (abortController.signal.aborted || !isMountedRef.current) {
+        return;
+      }
+      stopCapsuleEventStream();
+      handleWardrobeError();
+      setStatus((current) => ({
+        ...current,
+        error: resolveErrorMessage(error)
+      }));
+    });
+  };
+
   const handleRefreshWardrobe = async () => {
     setSelectedRegenerationUrls([]);
+    pendingRegenerationUrlsRef.current = [];
+    regenerationBaseItemsRef.current = [];
+    manualWardrobeRegenerationCapsuleIdRef.current = activeCapsuleId;
+    stopCapsuleEventStream();
     setPartialRegenerationPendingUrls([]);
     setIsPartialRegenerationLoading(false);
-    await runWardrobeLoad({ regenerate: true });
+    setWardrobeLoadedCapsuleId("");
+    setIsLoadingItems(true);
+    try {
+      const response = await requestWardrobeRegeneration({ capsuleId: activeCapsuleId });
+      if (response?.status === "pending") {
+        startCapsuleEventStream(activeCapsuleId);
+      } else {
+        setIsLoadingItems(false);
+      }
+    } catch (error) {
+      handleWardrobeError();
+      setStatus((current) => ({
+        ...current,
+        error: resolveErrorMessage(error)
+      }));
+    }
   };
 
   const handleDownloadWardrobePdf = async (capsuleId = activeCapsuleId) => {
@@ -971,37 +1046,27 @@ function App() {
     const pendingUrls = [...selectedRegenerationUrls];
     const existingItems = Array.isArray(profileItems) ? profileItems : [];
     setSelectedRegenerationUrls([]);
+    pendingRegenerationUrlsRef.current = pendingUrls;
+    regenerationBaseItemsRef.current = existingItems;
     setPartialRegenerationPendingUrls(pendingUrls);
     setIsPartialRegenerationLoading(true);
+    setProfileItems(existingItems.filter((item) => !pendingUrls.includes(normalizeWardrobeItemUrl(item))));
 
     try {
-      const { regenerateSelectedWardrobeItems } = await import("./api/wardrobe.js");
-      const result = await regenerateSelectedWardrobeItems({ itemUrls: pendingUrls, capsuleId: activeCapsuleId });
-      if (!isMountedRef.current) {
-        return;
+      const response = await requestSelectedWardrobeRegeneration({ itemUrls: pendingUrls, capsuleId: activeCapsuleId });
+      if (response?.status === "pending") {
+        startCapsuleEventStream(activeCapsuleId);
+      } else {
+        setIsPartialRegenerationLoading(false);
       }
-
-      logWardrobeReasoning(result?.reasoning);
-      setProfileItems(mergeWardrobeItemsIntoExistingOrder({
-        currentItems: existingItems,
-        nextItems: Array.isArray(result?.items) ? result.items : [],
-        pendingUrls
-      }));
-      try {
-        const capsuleResult = await fetchCapsule(activeCapsuleId);
-        setActiveCapsuleMeta(capsuleResult.capsule);
-        await refreshCapsuleList();
-      } catch {
-        // Ignore sidebar refresh errors after partial regeneration success.
-      }
-      setPartialRegenerationPendingUrls([]);
-      setIsPartialRegenerationLoading(false);
     } catch (error) {
       if (!isMountedRef.current) {
         return;
       }
 
       setProfileItems(existingItems);
+      pendingRegenerationUrlsRef.current = [];
+      regenerationBaseItemsRef.current = [];
       setPartialRegenerationPendingUrls([]);
       setIsPartialRegenerationLoading(false);
       setStatus((current) => ({
@@ -1014,15 +1079,51 @@ function App() {
   };
 
   useEffect(() => {
+    pendingRegenerationUrlsRef.current = partialRegenerationPendingUrls;
+  }, [partialRegenerationPendingUrls]);
+
+  useEffect(() => {
+    stopCapsuleEventStream();
+  }, [activeCapsuleId]);
+
+  useEffect(() => {
     if (!user || !(hasProfile || profileCreated) || !activeCapsuleId || !canGenerateWardrobe) {
       return;
     }
-    if (wardrobeLoadedCapsuleId === activeCapsuleId || isWardrobePending) {
+    if (wardrobeLoadedCapsuleId === activeCapsuleId || isWardrobePending || hasStoredWardrobeItems(activeCapsuleMeta)) {
+      return;
+    }
+    if (manualWardrobeRegenerationCapsuleIdRef.current === activeCapsuleId) {
       return;
     }
 
-    runWardrobeLoad({ regenerate: !hasStoredWardrobeItems(activeCapsuleMeta) });
+    setIsLoadingItems(true);
+    requestWardrobeRegeneration({ capsuleId: activeCapsuleId })
+      .then((response) => {
+        if (!isMountedRef.current) {
+          return;
+        }
+        if (response?.status === "pending") {
+          startCapsuleEventStream(activeCapsuleId);
+          return;
+        }
+        setIsLoadingItems(false);
+      })
+      .catch((error) => {
+        if (!isMountedRef.current) {
+          return;
+        }
+        handleWardrobeError();
+        setStatus((current) => ({
+          ...current,
+          error: resolveErrorMessage(error)
+        }));
+      });
   }, [user, hasProfile, profileCreated, activeCapsuleId, canGenerateWardrobe, wardrobeLoadedCapsuleId, isWardrobePending, activeCapsuleMeta]);
+
+  useEffect(() => () => {
+    stopCapsuleEventStream();
+  }, []);
 
   useEffect(() => {
     if (!sessionInitialized || !user || !(hasProfile || profileCreated)) {
