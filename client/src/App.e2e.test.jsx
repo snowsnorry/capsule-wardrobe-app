@@ -258,6 +258,7 @@ describe("App e2e-style flows", () => {
     capsulesApi.fetchCapsuleBootstrap.mockResolvedValue(createBootstrapResponse());
     capsulesApi.fetchRecentCapsules.mockResolvedValue({ capsules: [{ id: "capsule-1", name: "Spring edit", status: "new" }] });
     capsulesApi.fetchCapsule.mockResolvedValue({ capsule: createBootstrapResponse().activeCapsule });
+    capsulesApi.createCapsule.mockResolvedValue({ capsule: createBootstrapResponse().activeCapsule });
     capsulesApi.updateCapsuleFilters.mockResolvedValue({ capsule: createBootstrapResponse().activeCapsule });
   });
 
@@ -294,7 +295,7 @@ describe("App e2e-style flows", () => {
       expect(capsulesApi.createCapsule).toHaveBeenCalledWith({
         filters: expect.any(Object)
       });
-      expect(wardrobeApi.regenerateCapsuleWardrobe).toHaveBeenCalled();
+      expect(wardrobeApi.regenerateCapsuleWardrobe).toHaveBeenCalledWith({ capsuleId: "capsule-1" });
       expect(wardrobeApi.subscribeCapsuleEvents).toHaveBeenCalled();
     });
     expect(capsulesApi.createCapsule.mock.calls[0][0]).not.toHaveProperty("draft");

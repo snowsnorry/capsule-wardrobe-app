@@ -284,6 +284,7 @@ describe("App", () => {
     capsulesApi.fetchCapsuleBootstrap.mockResolvedValue(createBootstrapResponse());
     capsulesApi.fetchRecentCapsules.mockResolvedValue({ capsules: [{ id: "capsule-1", name: "Spring edit", status: "new" }] });
     capsulesApi.fetchCapsule.mockResolvedValue({ capsule: createBootstrapResponse().activeCapsule });
+    capsulesApi.createCapsule.mockResolvedValue({ capsule: createBootstrapResponse().activeCapsule });
     capsulesApi.updateCapsuleFilters.mockResolvedValue({ capsule: createBootstrapResponse().activeCapsule });
     capsulesApi.duplicateCapsule.mockResolvedValue({
       capsule: {
@@ -361,6 +362,10 @@ describe("App", () => {
         filters: expect.any(Object)
       });
     });
+    await waitFor(() => {
+      expect(wardrobeApi.regenerateCapsuleWardrobe).toHaveBeenCalledWith({ capsuleId: "capsule-1" });
+      expect(wardrobeApi.subscribeCapsuleEvents).toHaveBeenCalled();
+    });
     expect(capsulesApi.createCapsule.mock.calls[0][0]).not.toHaveProperty("draft");
   });
 
@@ -405,7 +410,7 @@ describe("App", () => {
     expect(await screen.findByTestId("search-screen")).toBeInTheDocument();
   });
 
-  test("loads wardrobe after bootstrap when the active capsule does not include stored items", async () => {
+  test("does not auto-regenerate wardrobe after bootstrap when the active capsule has no stored items", async () => {
     authApi.fetchCurrentUser.mockResolvedValue({ user: { email: "person@example.com" } });
     authApi.fetchProfileStatus.mockResolvedValue({ hasProfile: true });
     authApi.updateProfileLocale.mockResolvedValue({});
@@ -416,9 +421,10 @@ describe("App", () => {
 
     expect(await screen.findByTestId("main-screen")).toBeInTheDocument();
     await waitFor(() => {
-      expect(wardrobeApi.regenerateCapsuleWardrobe).toHaveBeenCalled();
-      expect(wardrobeApi.subscribeCapsuleEvents).toHaveBeenCalled();
+      expect(capsulesApi.fetchCapsuleBootstrap).toHaveBeenCalled();
     });
+    expect(wardrobeApi.regenerateCapsuleWardrobe).not.toHaveBeenCalled();
+    expect(wardrobeApi.subscribeCapsuleEvents).not.toHaveBeenCalled();
   });
 
   test("does not patch profile locale during bootstrap when the persisted locale already came from the server", async () => {

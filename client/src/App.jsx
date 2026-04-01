@@ -612,9 +612,10 @@ function App() {
     setStatus({ loading: true, error: "", infoKey: "", infoParams: null });
     try {
       await initializeProfile(locale);
-      await createCapsule({
+      const createdCapsuleResult = await createCapsule({
         filters: buildCurrentDraftSnapshot({ wardrobe: null, rejectedUrls: [] }).filters
       });
+      const createdCapsuleId = String(createdCapsuleResult?.capsule?.id || "").trim();
       setProfileCreated(true);
       setHasProfile(true);
       setCurrentView("main");
@@ -625,6 +626,16 @@ function App() {
       setIsWardrobePending(false);
       setHasPendingAdditionalItems(false);
       await bootstrapCapsules();
+      if (createdCapsuleId) {
+        manualWardrobeRegenerationCapsuleIdRef.current = createdCapsuleId;
+        setIsLoadingItems(true);
+        const response = await requestWardrobeRegeneration({ capsuleId: createdCapsuleId });
+        if (response?.status === "pending") {
+          startCapsuleEventStream(createdCapsuleId);
+        } else {
+          setIsLoadingItems(false);
+        }
+      }
       setStatus({ loading: false, error: "", infoKey: "onboarding.completedHint", infoParams: null });
     } catch (error) {
       setStatus({ loading: false, error: resolveErrorMessage(error), infoKey: "", infoParams: null });
@@ -1084,41 +1095,6 @@ function App() {
   useEffect(() => {
     stopCapsuleEventStream();
   }, [activeCapsuleId]);
-
-  useEffect(() => {
-    if (!user || !(hasProfile || profileCreated) || !activeCapsuleId || !canGenerateWardrobe) {
-      return;
-    }
-    if (wardrobeLoadedCapsuleId === activeCapsuleId || isWardrobePending || hasStoredWardrobeItems(activeCapsuleMeta)) {
-      return;
-    }
-    if (manualWardrobeRegenerationCapsuleIdRef.current === activeCapsuleId) {
-      return;
-    }
-
-    setIsLoadingItems(true);
-    requestWardrobeRegeneration({ capsuleId: activeCapsuleId })
-      .then((response) => {
-        if (!isMountedRef.current) {
-          return;
-        }
-        if (response?.status === "pending") {
-          startCapsuleEventStream(activeCapsuleId);
-          return;
-        }
-        setIsLoadingItems(false);
-      })
-      .catch((error) => {
-        if (!isMountedRef.current) {
-          return;
-        }
-        handleWardrobeError();
-        setStatus((current) => ({
-          ...current,
-          error: resolveErrorMessage(error)
-        }));
-      });
-  }, [user, hasProfile, profileCreated, activeCapsuleId, canGenerateWardrobe, wardrobeLoadedCapsuleId, isWardrobePending, activeCapsuleMeta]);
 
   useEffect(() => () => {
     stopCapsuleEventStream();
