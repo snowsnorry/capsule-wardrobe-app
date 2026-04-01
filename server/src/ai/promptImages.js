@@ -5,7 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import sharp from "sharp";
 import { IMAGE_DOWNLOAD_CONCURRENCY } from "./imagePipeline.js";
-import { getSafeHttpUrl } from "../../../shared/urlSecurity.js";
+import { getSafeServerFetchUrl } from "../serverUrlSecurity.js";
 
 const TILE_SIZE = 320;
 const GRID_COLUMNS = 5;
@@ -141,7 +141,7 @@ function resolveSourceImageUrl(imageUrl) {
     return "";
   }
 
-  return getSafeHttpUrl(trimmed.replaceAll("{width}", String(REQUEST_IMAGE_WIDTH)));
+  return getSafeServerFetchUrl(trimmed.replaceAll("{width}", String(REQUEST_IMAGE_WIDTH)));
 }
 
 function getOriginalImageUrl(imageUrl) {

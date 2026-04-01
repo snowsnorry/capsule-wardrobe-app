@@ -72,6 +72,17 @@ test("groupPromptImageItemsByCategory preserves order and caps each category at 
   assert.equal(groups.get("bottom").length, 3);
 });
 
+test("resolveSourceImageUrl rejects localhost and literal IP hosts for server-side fetches", () => {
+  assert.equal(resolveSourceImageUrl("https://example.com/image.jpg?w={width}"), "https://example.com/image.jpg?w=1000");
+  assert.equal(resolveSourceImageUrl("https://localhost/image.jpg"), "");
+  assert.equal(resolveSourceImageUrl("https://cdn.localhost/image.jpg"), "");
+  assert.equal(resolveSourceImageUrl("http://127.0.0.1/image.jpg"), "");
+  assert.equal(resolveSourceImageUrl("http://10.0.0.15/image.jpg"), "");
+  assert.equal(resolveSourceImageUrl("http://169.254.169.254/latest/meta-data"), "");
+  assert.equal(resolveSourceImageUrl("http://[::1]/image.jpg"), "");
+  assert.equal(resolveSourceImageUrl("https://[2606:4700:4700::1111]/image.jpg"), "");
+});
+
 test("buildPromptDebugImages writes category images with expected geometry and manifest", async (t) => {
   const outputDir = await withTempDir(t);
   const greenBuffer = await createFixtureBuffer("#00aa00");
