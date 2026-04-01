@@ -6,6 +6,7 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
+  DialogContentText,
   DialogTitle,
   Divider,
   Drawer,
@@ -266,6 +267,28 @@ function MainScreen({
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [optimisticActiveCapsuleId, setOptimisticActiveCapsuleId] = useState(activeCapsule?.id || "");
+  const nameDialogProps = isOverlaySidebar ? { fullScreen: true } : {
+    fullWidth: true,
+    maxWidth: "sm",
+    PaperProps: {
+      sx: {
+        width: "min(92vw, 720px)"
+      }
+    }
+  };
+  const confirmDialogProps = isOverlaySidebar ? { fullScreen: true } : {
+    fullWidth: true,
+    maxWidth: "xs",
+    PaperProps: {
+      sx: {
+        width: "min(92vw, 460px)"
+      }
+    }
+  };
+  const isDeleteConfirm = confirmAction.startsWith("delete");
+  const confirmBodyKey = isDeleteConfirm ? "capsule.deleteConfirmBody" : "capsule.revertConfirmBody";
+  const confirmTitleKey = isDeleteConfirm ? "capsule.deleteTitle" : "capsule.revertTitle";
+  const confirmButtonKey = isDeleteConfirm ? "capsule.deleteConfirm" : "capsule.revertConfirm";
 
   const selectedCount = selectedRegenerationUrls.length;
   const searchGroups = useMemo(() => groupCapsules(searchResults), [searchResults]);
@@ -874,18 +897,18 @@ function MainScreen({
         </MenuItem>
       </Menu>
 
-      <Dialog open={renameOpen} onClose={() => setRenameOpen(false)} fullScreen={isOverlaySidebar}>
+      <Dialog open={renameOpen} onClose={() => setRenameOpen(false)} {...nameDialogProps}>
         <DialogTitle>{t("capsule.renameTitle")}</DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ pt: 1, pb: 0.5 }}>
           <TextField
             fullWidth
             autoFocus
             value={renameValue}
             onChange={(event) => setRenameValue(event.target.value)}
-            margin="dense"
+            margin="normal"
           />
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ px: 3, pb: 2.5 }}>
           <Button onClick={() => setRenameOpen(false)}>{t("actions.cancel")}</Button>
           <Button
             onClick={async () => {
@@ -899,18 +922,18 @@ function MainScreen({
         </DialogActions>
       </Dialog>
 
-      <Dialog open={saveAsOpen} onClose={() => setSaveAsOpen(false)} fullScreen={isOverlaySidebar}>
+      <Dialog open={saveAsOpen} onClose={() => setSaveAsOpen(false)} {...nameDialogProps}>
         <DialogTitle>{t("capsule.saveAsTitle")}</DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ pt: 1, pb: 0.5 }}>
           <TextField
             fullWidth
             autoFocus
             value={saveAsValue}
             onChange={(event) => setSaveAsValue(event.target.value)}
-            margin="dense"
+            margin="normal"
           />
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ px: 3, pb: 2.5 }}>
           <Button onClick={() => setSaveAsOpen(false)}>{t("actions.cancel")}</Button>
           <Button
             onClick={async () => {
@@ -930,12 +953,17 @@ function MainScreen({
           setConfirmAction("");
           setConfirmCapsuleId("");
         }}
-        fullScreen={isOverlaySidebar}
+        {...confirmDialogProps}
       >
-        <DialogTitle>
-          {confirmAction.startsWith("delete") ? t("capsule.deleteTitle") : t("capsule.revertTitle")}
+        <DialogTitle sx={{ pb: 1 }}>
+          {t(confirmTitleKey)}
         </DialogTitle>
-        <DialogActions>
+        <DialogContent sx={{ pt: 0.5, pb: 0 }}>
+          <DialogContentText sx={{ color: "text.secondary" }}>
+            {t(confirmBodyKey)}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2.5, pt: 2 }}>
           <Button onClick={() => {
             setConfirmAction("");
             setConfirmCapsuleId("");
@@ -944,7 +972,8 @@ function MainScreen({
             {t("actions.cancel")}
           </Button>
           <Button
-            color={confirmAction.startsWith("delete") ? "error" : "primary"}
+            color={isDeleteConfirm ? "error" : "primary"}
+            variant="contained"
             onClick={async () => {
               if (confirmAction === "delete") {
                 await onDeleteCapsule();
@@ -966,7 +995,7 @@ function MainScreen({
               setConfirmAction("");
             }}
           >
-            {confirmAction.startsWith("delete") ? t("capsule.deleteConfirm") : t("capsule.revertConfirm")}
+            {t(confirmButtonKey)}
           </Button>
         </DialogActions>
       </Dialog>

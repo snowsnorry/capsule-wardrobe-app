@@ -88,6 +88,8 @@ function t(key, params) {
       renameTitle: "Rename capsule",
       deleteTitle: "Delete capsule",
       revertTitle: "Revert changes",
+      deleteConfirmBody: "Are you sure you want to delete this capsule? This action cannot be undone.",
+      revertConfirmBody: "Discard the current unsaved changes and restore the last saved version of this capsule?",
       deleteConfirm: "Delete",
       revertConfirm: "Revert",
       searchPlaceholder: "Search capsules...",
