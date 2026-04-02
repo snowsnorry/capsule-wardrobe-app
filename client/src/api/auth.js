@@ -64,12 +64,12 @@ async function initializeProfile(locale) {
   });
 }
 
-async function updateProfile(locale) {
+async function updateProfile(profile) {
   return requestJson(`${API_BASE_URL}/profile/me`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
-    body: JSON.stringify({ locale })
+    body: JSON.stringify(profile)
   });
 }
 

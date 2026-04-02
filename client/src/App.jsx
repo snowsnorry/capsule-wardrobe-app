@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Box, Container, Paper, Stack, Typography, useMediaQuery } from "@mui/material";
-import { useTheme } from "@mui/material/styles";
+import { Box, Container, CssBaseline, Paper, Stack, ThemeProvider, Typography, useMediaQuery } from "@mui/material";
 import {
   fetchCurrentUser,
   fetchProfileStatus,
+  updateProfile,
   updateProfileLocale,
   deleteProfile,
   initializeProfile,
@@ -41,6 +41,8 @@ import SearchScreen from "./screens/SearchScreen.jsx";
 import { useI18n } from "./i18n/useI18n.js";
 import { ACCENT_COLOR_OPTIONS } from "../../shared/accentColors.js";
 import { sortWardrobeItems } from "../../shared/wardrobeOrder.js";
+import { createAppTheme } from "./theme.js";
+import { DEFAULT_PROFILE_LLM, DEFAULT_PROFILE_THEME } from "../../shared/profileSettings.js";
 
 const initialStatus = {
   loading: false,
@@ -68,6 +70,16 @@ const FALLBACK_AUDIENCE_OPTIONS = ["man", "woman", "any"];
 const FALLBACK_ACCENT_COLOR_OPTIONS = ACCENT_COLOR_OPTIONS;
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
 const SEASON_DISPLAY_ORDER = ["spring", "summer", "autumn", "winter"];
+
+function normalizeProfileSettings(profile = {}, email = "") {
+  return {
+    email: String(profile?.email || email || "").trim(),
+    locale: typeof profile?.locale === "string" && profile.locale.trim() ? profile.locale.trim() : "en",
+    fullname: typeof profile?.fullname === "string" ? profile.fullname.trim() : "",
+    theme: typeof profile?.theme === "string" && profile.theme.trim() ? profile.theme.trim() : DEFAULT_PROFILE_THEME,
+    llm: typeof profile?.llm === "string" && profile.llm.trim() ? profile.llm.trim() : DEFAULT_PROFILE_LLM
+  };
+}
 function getAppRoute(pathname = "/") {
   return pathname === "/search" || pathname === "/search/" ? "search" : "capsule";
 }
@@ -231,8 +243,8 @@ async function retry(fn, attempts = 3, delayMs = 120) {
 }
 
 function App() {
-  const theme = useTheme();
-  const isLarge = useMediaQuery(theme.breakpoints.up("md"));
+  const isLarge = useMediaQuery("(min-width:900px)");
+  const prefersDarkMode = useMediaQuery("(prefers-color-scheme: dark)");
   const { t, locale, setLocale } = useI18n();
   const [step, setStep] = useState("email");
   const [email, setEmail] = useState("");
@@ -258,6 +270,7 @@ function App() {
   const [profileCreated, setProfileCreated] = useState(false);
   const [currentView, setCurrentView] = useState("main");
   const [profileItems, setProfileItems] = useState(null);
+  const [settingsProfile, setSettingsProfile] = useState(() => normalizeProfileSettings());
   const [activeCapsuleId, setActiveCapsuleId] = useState("");
   const [activeCapsuleMeta, setActiveCapsuleMeta] = useState(null);
   const [capsuleList, setCapsuleList] = useState([]);
@@ -270,7 +283,6 @@ function App() {
   const [isWardrobePending, setIsWardrobePending] = useState(false);
   const [hasPendingAdditionalItems, setHasPendingAdditionalItems] = useState(false);
   const [wardrobeLoadedCapsuleId, setWardrobeLoadedCapsuleId] = useState("");
-  const [persistedProfileLocale, setPersistedProfileLocale] = useState("");
   const [appRoute, setAppRoute] = useState(() => (
     typeof window === "undefined" ? "capsule" : getAppRoute(window.location.pathname)
   ));
@@ -282,6 +294,12 @@ function App() {
 
   const cardPadding = useMemo(() => (isLarge ? 5 : 3), [isLarge]);
   const orderedSeasonOptions = useMemo(() => sortSeasonOptions(seasonOptions), [seasonOptions]);
+  const resolvedThemeMode = settingsProfile.theme === "dark"
+    ? "dark"
+    : settingsProfile.theme === "light"
+      ? "light"
+      : (prefersDarkMode ? "dark" : "light");
+  const appTheme = useMemo(() => createAppTheme(resolvedThemeMode), [resolvedThemeMode]);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -337,14 +355,14 @@ function App() {
           await preloadOnboardingOptions();
           if (!isActive) return;
         } else {
-          await Promise.all([ensureOptionsLoaded(), bootstrapCapsules()]);
+          await Promise.all([ensureOptionsLoaded(), bootstrapCapsules(current.user?.email)]);
           if (!isActive) return;
         }
       } catch (error) {
         if (!isActive) return;
         setUser(null);
         setHasProfile(false);
-        setPersistedProfileLocale("");
+        setSettingsProfile(normalizeProfileSettings());
       } finally {
         if (!isActive) return;
         setIsCheckingSession(false);
@@ -455,11 +473,12 @@ function App() {
     }
   });
 
-  const bootstrapCapsules = async () => {
+  const bootstrapCapsules = async (email = user?.email) => {
     const result = await fetchCapsuleBootstrap();
-    if (result.profile?.locale) {
-      setPersistedProfileLocale(result.profile.locale);
-      setLocale(result.profile.locale);
+    const normalizedProfile = normalizeProfileSettings(result.profile, email);
+    setSettingsProfile(normalizedProfile);
+    if (normalizedProfile.locale) {
+      setLocale(normalizedProfile.locale);
     }
     applyCapsuleState(result.activeCapsule, { capsules: result.capsules || [] });
   };
@@ -493,6 +512,7 @@ function App() {
       if (!profileStatus.hasProfile) {
         await preloadOnboardingOptions({ useFallback: true });
         setUser(result.user);
+        setSettingsProfile(normalizeProfileSettings({}, result.user?.email));
         setSelectedFormalityLevel("");
         setSelectedStyle(null);
         setSelectedOccasions([]);
@@ -503,7 +523,7 @@ function App() {
         setOnboardingStep(0);
         setStatus({ loading: false, error: "", infoKey: "", infoParams: null });
       } else {
-        await Promise.all([ensureOptionsLoaded({ useFallback: true }), bootstrapCapsules()]);
+        await Promise.all([ensureOptionsLoaded({ useFallback: true }), bootstrapCapsules(result.user?.email)]);
         setUser(result.user);
         setStatus({ loading: false, error: "", infoKey: "auth.signedIn", infoParams: null });
       }
@@ -524,6 +544,7 @@ function App() {
       if (!profileStatus.hasProfile) {
         await preloadOnboardingOptions({ useFallback: true });
         setUser(result.user);
+        setSettingsProfile(normalizeProfileSettings({}, result.user?.email));
         setSelectedFormalityLevel("");
         setSelectedStyle(null);
         setSelectedOccasions([]);
@@ -534,7 +555,7 @@ function App() {
         setOnboardingStep(0);
         setStatus({ loading: false, error: "", infoKey: "", infoParams: null });
       } else {
-        await Promise.all([ensureOptionsLoaded({ useFallback: true }), bootstrapCapsules()]);
+        await Promise.all([ensureOptionsLoaded({ useFallback: true }), bootstrapCapsules(result.user?.email)]);
         setUser(result.user);
         setStatus({ loading: false, error: "", infoKey: "auth.signedIn", infoParams: null });
       }
@@ -552,7 +573,7 @@ function App() {
       setUser(null);
       setHasProfile(false);
       setProfileCreated(false);
-      setPersistedProfileLocale("");
+      setSettingsProfile(normalizeProfileSettings());
       setCurrentView("main");
       setStep("email");
       setEmail("");
@@ -639,7 +660,7 @@ function App() {
       setIsPartialRegenerationLoading(false);
       setIsWardrobePending(false);
       setHasPendingAdditionalItems(false);
-      await bootstrapCapsules();
+      await bootstrapCapsules(user?.email);
       if (createdCapsuleId) {
         manualWardrobeRegenerationCapsuleIdRef.current = createdCapsuleId;
         setIsLoadingItems(true);
@@ -658,6 +679,31 @@ function App() {
 
   const handleSaveProfile = async () => {
     await handleApplyCapsuleFilters();
+  };
+
+  const handleSaveSettings = async (nextSettings) => {
+    const payload = {
+      locale: String(nextSettings?.locale || settingsProfile.locale || locale || "en").trim().toLowerCase(),
+      theme: String(nextSettings?.theme || settingsProfile.theme || DEFAULT_PROFILE_THEME).trim().toLowerCase(),
+      llm: String(nextSettings?.llm || settingsProfile.llm || DEFAULT_PROFILE_LLM).trim(),
+      fullname: typeof nextSettings?.fullname === "string" ? nextSettings.fullname.trim() : ""
+    };
+
+    setStatus({ loading: true, error: "", infoKey: "", infoParams: null });
+    try {
+      const result = await updateProfile(payload);
+      const normalizedProfile = normalizeProfileSettings(result.profile, user?.email);
+      setSettingsProfile(normalizedProfile);
+      if (normalizedProfile.locale && normalizedProfile.locale !== locale) {
+        setLocale(normalizedProfile.locale);
+      }
+      setStatus({ loading: false, error: "", infoKey: "settings.saved", infoParams: null });
+      return normalizedProfile;
+    } catch (error) {
+      const message = resolveErrorMessage(error);
+      setStatus({ loading: false, error: message, infoKey: "", infoParams: null });
+      throw new Error(message);
+    }
   };
 
   const refreshCapsuleList = async () => {
@@ -1135,17 +1181,17 @@ function App() {
     if (!sessionInitialized || !user || !(hasProfile || profileCreated)) {
       return;
     }
-    if (!persistedProfileLocale || locale === persistedProfileLocale) {
+    if (!settingsProfile.locale || locale === settingsProfile.locale) {
       return;
     }
     updateProfileLocale(locale)
       .then(() => {
         if (isMountedRef.current) {
-          setPersistedProfileLocale(locale);
+          setSettingsProfile((current) => ({ ...current, locale }));
         }
       })
       .catch(() => {});
-  }, [locale, persistedProfileLocale, sessionInitialized, user, hasProfile, profileCreated]);
+  }, [locale, settingsProfile.locale, sessionInitialized, user, hasProfile, profileCreated]);
 
   const renderRightPanel = () => {
     if (isCheckingSession || !sessionInitialized) {
@@ -1213,7 +1259,10 @@ function App() {
           activeCapsule={activeCapsuleMeta}
           capsuleList={capsuleList}
           userEmail={user?.email || ""}
+          userName={settingsProfile.fullname}
+          settingsProfile={settingsProfile}
           onSignOut={handleLogout}
+          onSaveSettings={handleSaveSettings}
           isSigningOut={status.loading}
           onRefreshItems={handleRefreshWardrobe}
           onDownloadPdf={handleDownloadWardrobePdf}
@@ -1295,20 +1344,22 @@ function App() {
   };
 
   return (
-    <Box
-      sx={{
-        height: "100vh",
-        display: "flex",
-        alignItems: "stretch",
-        backgroundColor: "#fcfbf9",
-        backgroundImage:
-          'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noiseFilter\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.8\' numOctaves=\'3\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noiseFilter)\' opacity=\'0.05\'/%3E%3C/svg%3E")',
-        position: "relative",
-        overflow: "hidden",
-        "&::before": { display: "none" },
-        "&::after": { display: "none" }
-      }}
-    >
+    <ThemeProvider theme={appTheme}>
+      <CssBaseline />
+      <Box
+        sx={{
+          height: "100vh",
+          display: "flex",
+          alignItems: "stretch",
+          backgroundColor: "background.default",
+          backgroundImage:
+            'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noiseFilter\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.8\' numOctaves=\'3\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noiseFilter)\' opacity=\'0.05\'/%3E%3C/svg%3E")',
+          position: "relative",
+          overflow: "hidden",
+          "&::before": { display: "none" },
+          "&::after": { display: "none" }
+        }}
+      >
       <Container
         disableGutters={isMainScreenView}
         maxWidth={isMainScreenView || isSearchView ? false : "lg"}
@@ -1437,7 +1488,8 @@ function App() {
           </Paper>
         )}
       </Container>
-    </Box>
+      </Box>
+    </ThemeProvider>
   );
 }
 

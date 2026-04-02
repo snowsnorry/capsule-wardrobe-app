@@ -132,6 +132,7 @@ vi.mock("./screens/MainScreen.jsx", () => ({
         <div>main-screen:{props.items.length}</div>
         <div>active-capsule:{props.activeCapsule?.id || ""}:{props.activeCapsule?.name || ""}</div>
         <div>items-order:{props.items.map((item) => item.url).join(",")}</div>
+        <div>settings-user:{props.userName || ""}:{props.settingsProfile?.theme || ""}:{props.settingsProfile?.llm || ""}</div>
         <button type="button" onClick={() => props.onSelectStyleCore("formal")}>
           change-filter
         </button>
@@ -151,6 +152,17 @@ vi.mock("./screens/MainScreen.jsx", () => ({
         </button>
         <button type="button" onClick={() => props.onNavigateApp("search")}>
           open-search
+        </button>
+        <button
+          type="button"
+          onClick={() => props.onSaveSettings({
+            fullname: "Ada Lovelace",
+            locale: "ru",
+            theme: "dark",
+            llm: "openai:gpt-5"
+          })}
+        >
+          save-settings
         </button>
         <button type="button" onClick={props.onSignOut}>
           sign-out
@@ -197,9 +209,15 @@ function mockProfileOptions() {
   });
 }
 
-function createBootstrapResponse({ items = [], locale = "ru" } = {}) {
+function createBootstrapResponse({ items = [], locale = "ru", theme = "system", llm = "none", fullname = "" } = {}) {
   return {
-    profile: { locale },
+    profile: {
+      email: "person@example.com",
+      locale,
+      theme,
+      llm,
+      fullname
+    },
     activeCapsule: {
       id: "capsule-1",
       name: "Spring edit",
@@ -472,6 +490,38 @@ describe("App", () => {
     expect(authApi.clearRequestCache).toHaveBeenCalled();
     expect(profileOptionsApi.clearProfileOptionsCache).toHaveBeenCalled();
     expect(window.location.pathname).toBe("/");
+  });
+
+  test("saves settings and updates the app-level profile state", async () => {
+    authApi.fetchCurrentUser.mockResolvedValue({ user: { email: "person@example.com" } });
+    authApi.fetchProfileStatus.mockResolvedValue({ hasProfile: true });
+    authApi.updateProfile.mockResolvedValue({
+      profile: {
+        email: "person@example.com",
+        locale: "ru",
+        theme: "dark",
+        llm: "openai:gpt-5",
+        fullname: "Ada Lovelace"
+      }
+    });
+    mockProfileOptions();
+
+    renderApp();
+
+    expect(await screen.findByTestId("main-screen")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "save-settings" }));
+
+    await waitFor(() => {
+      expect(authApi.updateProfile).toHaveBeenCalledWith({
+        locale: "ru",
+        theme: "dark",
+        llm: "openai:gpt-5",
+        fullname: "Ada Lovelace"
+      });
+    });
+    await waitFor(() => {
+      expect(screen.getByText("settings-user:Ada Lovelace:dark:openai:gpt-5")).toBeInTheDocument();
+    });
   });
 
   test("keeps regenerated items in the placeholder slots without moving the remaining cards", async () => {

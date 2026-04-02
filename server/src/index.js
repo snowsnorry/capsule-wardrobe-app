@@ -59,6 +59,12 @@ import { buildWardrobePdfInChild } from "./wardrobePdf.js";
 import { checkDatabaseConnection, ensureTables, getProductsByUrlsInOrder } from "./db.js";
 import { configureSharp } from "./ai/sharpConfig.js";
 import { sortWardrobeItems } from "../../shared/wardrobeOrder.js";
+import {
+  DEFAULT_PROFILE_LLM,
+  DEFAULT_PROFILE_THEME,
+  PROFILE_LLM_VALUES,
+  PROFILE_THEME_VALUES
+} from "../../shared/profileSettings.js";
 
 const PORT = process.env.PORT || 3000;
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || "http://localhost:5173";
@@ -227,6 +233,40 @@ function hasUnexpectedRejectedUrlsFields(payload = {}) {
   }
 
   return Object.keys(payload).some((key) => key !== "rejectedUrls");
+}
+
+function normalizeProfileSettingsPayload(payload) {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return null;
+  }
+
+  const locale = String(payload.locale || "").trim().toLowerCase();
+  const theme = String(payload.theme || "").trim().toLowerCase();
+  const llm = String(payload.llm || "").trim();
+
+  if (!SUPPORTED_LOCALES.has(locale)) {
+    return null;
+  }
+  if (!PROFILE_THEME_VALUES.includes(theme)) {
+    return null;
+  }
+  if (!PROFILE_LLM_VALUES.includes(llm)) {
+    return null;
+  }
+
+  const rawFullname = payload.fullname;
+  if (rawFullname !== null && rawFullname !== undefined && typeof rawFullname !== "string") {
+    return null;
+  }
+
+  return {
+    locale,
+    theme: theme || DEFAULT_PROFILE_THEME,
+    llm: llm || DEFAULT_PROFILE_LLM,
+    fullname: typeof rawFullname === "string" && rawFullname.trim()
+      ? rawFullname.trim()
+      : null
+  };
 }
 
 function buildCapsuleDraftFromFilters(profile, filters = null) {
@@ -1045,15 +1085,13 @@ app.post("/profile/initialize", requireTrustedOrigin, requireAuth, requireCsrf, 
 });
 
 app.patch("/profile/me", requireTrustedOrigin, requireAuth, requireCsrf, async (req, res) => {
-  const locale = String(req.body?.locale || "").trim().toLowerCase();
-  if (!SUPPORTED_LOCALES.has(locale)) {
+  const payload = normalizeProfileSettingsPayload(req.body);
+  if (!payload) {
     return res.status(400).json({ error: "invalid_payload" });
   }
 
   try {
-    const profile = await updateProfileImpl(req.user.email, {
-      locale
-    });
+    const profile = await updateProfileImpl(req.user.email, payload);
     if (!profile) {
       return res.status(404).json({ error: "not_found" });
     }

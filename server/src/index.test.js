@@ -44,11 +44,22 @@ function createDependencies(overrides = {}) {
     getProfileImpl: async () => ({
       email: "person@example.com",
       activeCapsuleId: "capsule-1",
-      locale: "en"
+      locale: "en",
+      fullname: null,
+      theme: "system",
+      llm: "openai:gpt-5"
     }),
     hasProfileImpl: async () => true,
     updateProfileImpl: async (email, payload) => ({ id: "profile-1", email, activeCapsuleId: "capsule-1", ...payload }),
-    updateProfileLocaleImpl: async (email, locale) => ({ id: "profile-1", email, activeCapsuleId: "capsule-1", locale }),
+    updateProfileLocaleImpl: async (email, locale) => ({
+      id: "profile-1",
+      email,
+      activeCapsuleId: "capsule-1",
+      locale,
+      fullname: null,
+      theme: "system",
+      llm: "openai:gpt-5"
+    }),
     updateProfileActiveCapsuleIdImpl: async (_email, activeCapsuleId) => ({ activeCapsuleId }),
     resolveActiveCapsuleImpl: async () => ({
       id: "capsule-1",
@@ -436,6 +447,9 @@ test("index routes cover profile read endpoints", async (t) => {
   assert.equal(profile.json.profile.email, "person@example.com");
   assert.equal(profile.json.profile.activeCapsuleId, "capsule-1");
   assert.equal(profile.json.profile.locale, "en");
+  assert.equal(profile.json.profile.theme, "system");
+  assert.equal(profile.json.profile.llm, "openai:gpt-5");
+  assert.equal(profile.json.profile.fullname, null);
 
   const wardrobeFilters = await requestJson(baseUrl, "/wardrobe/filters", {
     cookie: AUTH_COOKIE
@@ -512,11 +526,29 @@ test("index routes cover profile update, locale update, and delete branches", as
     cookie: AUTH_COOKIE,
     csrfToken: CSRF_TOKEN,
     body: {
-      locale: "en"
+      locale: "en",
+      theme: "system",
+      llm: "openai:gpt-5",
+      fullname: null
     }
   });
   assert.equal(updateNotFound.response.status, 404);
   assert.deepEqual(updateNotFound.json, { error: "not_found" });
+
+  const invalidProfilePayload = await requestJson(notFoundUpdateServer.baseUrl, "/profile/me", {
+    method: "PATCH",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN,
+    body: {
+      locale: "en",
+      theme: "sepia",
+      llm: "openai:gpt-5",
+      fullname: "Ada"
+    }
+  });
+  assert.equal(invalidProfilePayload.response.status, 400);
+  assert.deepEqual(invalidProfilePayload.json, { error: "invalid_payload" });
 
   const invalidLocale = await requestJson(notFoundUpdateServer.baseUrl, "/profile/locale", {
     method: "PATCH",
@@ -554,11 +586,18 @@ test("index routes cover profile update, locale update, and delete branches", as
     cookie: AUTH_COOKIE,
     csrfToken: CSRF_TOKEN,
     body: {
-      locale: "en"
+      locale: "ru",
+      theme: "dark",
+      llm: "openai:gpt-5",
+      fullname: "  Ada Lovelace  "
     }
   });
   assert.equal(updateSuccess.response.status, 200);
   assert.equal(updateSuccess.json.ok, true);
+  assert.equal(updateSuccess.json.profile.locale, "ru");
+  assert.equal(updateSuccess.json.profile.theme, "dark");
+  assert.equal(updateSuccess.json.profile.llm, "openai:gpt-5");
+  assert.equal(updateSuccess.json.profile.fullname, "Ada Lovelace");
 
   const localeSuccess = await requestJson(successServer.baseUrl, "/profile/locale", {
     method: "PATCH",

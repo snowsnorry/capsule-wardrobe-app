@@ -64,9 +64,63 @@ async function ensureProfilesTable() {
       email text primary key,
       active_capsule_id uuid null,
       locale text not null,
+      fullname text null,
+      theme text not null default 'system',
+      llm text not null default 'openai:gpt-5',
       created_at timestamptz not null default now(),
       updated_at timestamptz not null default now()
     )
+  `;
+  await sql`
+    alter table profiles
+    add column if not exists fullname text null
+  `;
+  await sql`
+    alter table profiles
+    add column if not exists theme text not null default 'system'
+  `;
+  await sql`
+    alter table profiles
+    add column if not exists llm text not null default 'openai:gpt-5'
+  `;
+  await sql`
+    alter table profiles
+    alter column llm set default 'openai:gpt-5'
+  `;
+  await sql`
+    do $$
+    begin
+      if not exists (
+        select 1
+        from pg_constraint
+        where conname = 'profiles_theme_check'
+      ) then
+        alter table profiles
+        add constraint profiles_theme_check
+        check (theme in ('system', 'light', 'dark'));
+      end if;
+    end
+    $$;
+  `;
+  await sql`
+    do $$
+    begin
+      if not exists (
+        select 1
+        from pg_constraint
+        where conname = 'profiles_llm_check'
+      ) then
+        alter table profiles
+        add constraint profiles_llm_check
+        check (llm in (
+          'openai:gpt-5',
+          'deepinfra:Qwen/Qwen3-VL-235B-A22B-Instruct',
+          'deepinfra:google/gemma-3-27b-it',
+          'none'
+        ));
+      end if;
+    end
+    $$;
   `;
 }
 
@@ -757,6 +811,9 @@ async function getProfileByEmail(email) {
       email,
       active_capsule_id as "activeCapsuleId",
       locale,
+      fullname,
+      theme,
+      llm,
       created_at as "createdAt",
       updated_at as "updatedAt"
     from profiles
@@ -787,6 +844,9 @@ async function createProfileRecord({
       email,
       active_capsule_id as "activeCapsuleId",
       locale,
+      fullname,
+      theme,
+      llm,
       created_at as "createdAt",
       updated_at as "updatedAt"
   `;
@@ -805,6 +865,39 @@ async function updateProfileLocaleByEmail({ email, locale }) {
       email,
       active_capsule_id as "activeCapsuleId",
       locale,
+      fullname,
+      theme,
+      llm,
+      created_at as "createdAt",
+      updated_at as "updatedAt"
+  `;
+  return row || null;
+}
+
+async function updateProfileByEmail({
+  email,
+  locale,
+  fullname,
+  theme,
+  llm
+}) {
+  const sql = getSqlClient();
+  const [row] = await sql`
+    update profiles
+    set
+      locale = ${locale},
+      fullname = ${fullname},
+      theme = ${theme},
+      llm = ${llm},
+      updated_at = now()
+    where email = ${email}
+    returning
+      email,
+      active_capsule_id as "activeCapsuleId",
+      locale,
+      fullname,
+      theme,
+      llm,
       created_at as "createdAt",
       updated_at as "updatedAt"
   `;
@@ -823,6 +916,9 @@ async function updateProfileActiveCapsuleIdByEmail({ email, activeCapsuleId }) {
       email,
       active_capsule_id as "activeCapsuleId",
       locale,
+      fullname,
+      theme,
+      llm,
       created_at as "createdAt",
       updated_at as "updatedAt"
   `;
@@ -1082,6 +1178,7 @@ export {
   searchProducts,
   getProfileByEmail,
   createProfileRecord,
+  updateProfileByEmail,
   updateProfileLocaleByEmail,
   updateProfileActiveCapsuleIdByEmail,
   createCapsuleRecord,

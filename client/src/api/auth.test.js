@@ -108,7 +108,12 @@ describe("auth api", () => {
 
   test("profile mutation helpers shape initialize, update, and locale payloads", async () => {
     await initializeProfile("en");
-    await updateProfile("ru");
+    await updateProfile({
+      locale: "ru",
+      theme: "dark",
+      llm: "openai:gpt-5",
+      fullname: "Ada Lovelace"
+    });
     await updateProfileLocale("ru");
 
     expect(requestApi.requestJson).toHaveBeenNthCalledWith(
@@ -128,7 +133,12 @@ describe("auth api", () => {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ locale: "ru" })
+        body: JSON.stringify({
+          locale: "ru",
+          theme: "dark",
+          llm: "openai:gpt-5",
+          fullname: "Ada Lovelace"
+        })
       }
     );
     expect(requestApi.requestJson).toHaveBeenNthCalledWith(

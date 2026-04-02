@@ -353,9 +353,10 @@ function ProductDetail({ item, title, t, locale, mobileBackAction = null }) {
               sx={{
                 width: "100%",
                 borderRadius: "22px",
-                border: "1px solid rgba(31, 41, 51, 0.12)",
+                border: "1px solid",
+                borderColor: "divider",
                 objectFit: "cover",
-                backgroundColor: "#f7f4ef"
+                backgroundColor: "background.default"
               }}
             />
           ) : null}
@@ -1079,7 +1080,8 @@ function SearchScreen({ onNavigateApp }) {
                 minHeight: 0,
                 overflowY: "auto",
                 pr: 2.5,
-                borderRight: "1px solid rgba(31, 41, 51, 0.12)"
+                borderRight: "1px solid",
+                borderColor: "divider"
               }}
             >
               <SearchFiltersSidebar

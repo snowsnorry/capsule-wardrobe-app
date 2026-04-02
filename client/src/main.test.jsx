@@ -16,8 +16,6 @@ vi.mock("./i18n/LocaleProvider.jsx", () => ({
   LocaleProvider: localeProviderMock
 }));
 
-import theme from "./theme.js";
-
 describe("main entrypoint", () => {
   beforeEach(() => {
     document.body.innerHTML = '<div id="root"></div>';
@@ -39,20 +37,23 @@ describe("main entrypoint", () => {
 
     const tree = renderMock.mock.calls[0][0];
     const localeProvider = tree.props.children;
-    const themeProvider = localeProvider.props.children;
-    const themeChildren = React.Children.toArray(themeProvider.props.children);
+    const providerChildren = React.Children.toArray(localeProvider.props.children);
 
     expect(tree.type).toBe(React.StrictMode);
     expect(localeProvider.type).toBe(localeProviderMock);
-    expect(themeProvider.props.theme).toBe(theme);
-    expect(themeChildren.some((child) => child.type === appMock)).toBe(true);
+    expect(providerChildren.some((child) => child.type === appMock)).toBe(true);
   });
 });
 
 describe("theme contract", () => {
-  test("exports the expected palette, typography, and component defaults", () => {
+  test("exports the expected palette factory, typography, and component defaults", async () => {
+    const { createAppTheme, default: theme } = await import("./theme.js");
+    const darkTheme = createAppTheme("dark");
+
     expect(theme.palette.primary.main).toBe("#1c7c7c");
     expect(theme.palette.background.default).toBe("#f7f4ef");
+    expect(darkTheme.palette.mode).toBe("dark");
+    expect(darkTheme.palette.background.default).toBe("#101817");
     expect(theme.typography.fontFamily).toContain("DM Sans");
     expect(theme.shape.borderRadius).toBe(18);
     expect(theme.components.MuiButton.defaultProps.disableElevation).toBe(true);

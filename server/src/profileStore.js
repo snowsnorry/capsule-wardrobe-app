@@ -4,11 +4,18 @@ import {
   getDistinctProductPatterns,
   getProfileByEmail,
   hasProfileByEmail,
+  updateProfileByEmail,
   updateProfileLocaleByEmail,
   updateProfileActiveCapsuleIdByEmail
 } from "./db.js";
 import { ACCENT_COLOR_OPTIONS } from "../../shared/accentColors.js";
 import { CORE_STYLE_ORDER, normalizeStyleValue } from "../../shared/stylePreferences.js";
+import {
+  DEFAULT_PROFILE_LLM,
+  DEFAULT_PROFILE_THEME,
+  PROFILE_LLM_VALUES,
+  PROFILE_THEME_VALUES
+} from "../../shared/profileSettings.js";
 
 const PROFILE_FORMALITY_LEVEL_OPTIONS = [
   "casual",
@@ -154,11 +161,20 @@ function normalizeProfileRecord(profile) {
     return null;
   }
 
+  const theme = String(profile.theme || "").trim().toLowerCase();
+  const llm = String(profile.llm || "").trim();
+  const fullname = typeof profile.fullname === "string" && profile.fullname.trim()
+    ? profile.fullname.trim()
+    : null;
+
   return {
     ...profile,
+    fullname,
     activeCapsuleId: typeof profile.activeCapsuleId === "string" && profile.activeCapsuleId.trim()
       ? profile.activeCapsuleId.trim()
-      : null
+      : null,
+    theme: PROFILE_THEME_VALUES.includes(theme) ? theme : DEFAULT_PROFILE_THEME,
+    llm: PROFILE_LLM_VALUES.includes(llm) ? llm : DEFAULT_PROFILE_LLM
   };
 }
 
@@ -171,18 +187,30 @@ async function hasProfile(email) {
 }
 
 async function createProfile(email, data) {
-  return createProfileRecord({
+  return normalizeProfileRecord(await createProfileRecord({
     email,
     locale: data.locale || "en"
-  });
+  }));
 }
 
 async function updateProfile(email, data) {
-  return updateProfileLocale(email, data.locale || "en");
+  return normalizeProfileRecord(await updateProfileByEmail({
+    email,
+    locale: data.locale || "en",
+    fullname: typeof data.fullname === "string" && data.fullname.trim()
+      ? data.fullname.trim()
+      : null,
+    theme: PROFILE_THEME_VALUES.includes(String(data.theme || "").trim().toLowerCase())
+      ? String(data.theme || "").trim().toLowerCase()
+      : DEFAULT_PROFILE_THEME,
+    llm: PROFILE_LLM_VALUES.includes(String(data.llm || "").trim())
+      ? String(data.llm || "").trim()
+      : DEFAULT_PROFILE_LLM
+  }));
 }
 
 async function updateProfileLocale(email, locale) {
-  return updateProfileLocaleByEmail({ email, locale });
+  return normalizeProfileRecord(await updateProfileLocaleByEmail({ email, locale }));
 }
 
 async function deleteProfile(email) {
@@ -190,7 +218,7 @@ async function deleteProfile(email) {
 }
 
 async function updateProfileActiveCapsuleId(email, activeCapsuleId) {
-  return updateProfileActiveCapsuleIdByEmail({ email, activeCapsuleId });
+  return normalizeProfileRecord(await updateProfileActiveCapsuleIdByEmail({ email, activeCapsuleId }));
 }
 
 export {
@@ -208,6 +236,7 @@ export {
   getAudienceOptions,
   getPatternOptions,
   buildPatternOptions,
+  normalizeProfileRecord,
   normalizeFormalityLevel,
   normalizeStyle,
   normalizeAccentColor as normalizeColor,

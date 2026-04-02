@@ -14,6 +14,7 @@ import {
   upsertSearchByEmail,
   searchProducts,
   createProfileRecord,
+  updateProfileByEmail,
   updateProfileLocaleByEmail,
   deleteProfileByEmail
 } from "./db.js";
@@ -240,12 +241,26 @@ test("db integration shapes reduced profile persistence queries", async () => {
     [{
       email: "user@example.com",
       activeCapsuleId: null,
-      locale: "en"
+      locale: "en",
+      fullname: null,
+      theme: "system",
+      llm: "openai:gpt-5"
     }],
     [{
       email: "user@example.com",
       activeCapsuleId: null,
-      locale: "ru"
+      locale: "ru",
+      fullname: null,
+      theme: "system",
+      llm: "openai:gpt-5"
+    }],
+    [{
+      email: "user@example.com",
+      activeCapsuleId: null,
+      locale: "ru",
+      fullname: "Ada Lovelace",
+      theme: "dark",
+      llm: "openai:gpt-5"
     }],
     [],
     [{ email: "user@example.com" }]
@@ -257,6 +272,13 @@ test("db integration shapes reduced profile persistence queries", async () => {
     locale: "en"
   });
   await updateProfileLocaleByEmail({ email: "user@example.com", locale: "ru" });
+  await updateProfileByEmail({
+    email: "user@example.com",
+    locale: "ru",
+    fullname: "Ada Lovelace",
+    theme: "dark",
+    llm: "openai:gpt-5"
+  });
   const deleted = await deleteProfileByEmail("user@example.com");
 
   assert.equal(deleted, true);
@@ -265,8 +287,10 @@ test("db integration shapes reduced profile persistence queries", async () => {
   assert.deepEqual(calls[0].values, ["user@example.com", "en"]);
   assert.match(calls[1].text, /update profiles\s+set[\s\S]*locale =/i);
   assert.deepEqual(calls[1].values, ["ru", "user@example.com"]);
-  assert.match(calls[2].text, /delete from capsules/i);
-  assert.match(calls[3].text, /delete from profiles/i);
+  assert.match(calls[2].text, /update profiles\s+set[\s\S]*fullname =/i);
+  assert.deepEqual(calls[2].values, ["ru", "Ada Lovelace", "dark", "openai:gpt-5", "user@example.com"]);
+  assert.match(calls[3].text, /delete from capsules/i);
+  assert.match(calls[4].text, /delete from profiles/i);
 });
 
 test("db integration checkDatabaseConnection selects current database metadata", async () => {

@@ -6,6 +6,7 @@ import {
   getStyles,
   PROFILE_OCCASION_OPTIONS,
   PROFILE_SEASON_OPTIONS,
+  normalizeProfileRecord,
   normalizeFormalityLevel,
   normalizeStyle,
   normalizeColor,
@@ -75,5 +76,26 @@ test("buildPatternOptions keeps current valid profile pattern even if absent in 
   assert.deepEqual(
     buildPatternOptions(["stripe"], "lace"),
     ["stripe", "lace"]
+  );
+});
+
+test("normalizeProfileRecord applies defaults for new profile fields", () => {
+  assert.deepEqual(
+    normalizeProfileRecord({
+      email: "user@example.com",
+      activeCapsuleId: " capsule-1 ",
+      locale: "en",
+      fullname: "  ",
+      theme: "invalid",
+      llm: ""
+    }),
+    {
+      email: "user@example.com",
+      activeCapsuleId: "capsule-1",
+      locale: "en",
+      fullname: null,
+      theme: "system",
+      llm: "openai:gpt-5"
+    }
   );
 });

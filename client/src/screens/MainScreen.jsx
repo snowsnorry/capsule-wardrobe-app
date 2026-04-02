@@ -31,6 +31,7 @@ import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import TuneRoundedIcon from "@mui/icons-material/TuneRounded";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
+import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
 import DriveFileRenameOutlineRoundedIcon from "@mui/icons-material/DriveFileRenameOutlineRounded";
 import RestoreRoundedIcon from "@mui/icons-material/RestoreRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
@@ -45,6 +46,7 @@ import { ClothingPlaceholderCard } from "../components/ClothingGridPlaceholder.j
 import ClothingCard from "../components/ClothingCard.jsx";
 import LocaleSwitcher from "../components/LocaleSwitcher.jsx";
 import AppLauncher from "../components/AppLauncher.jsx";
+import SettingsDialog from "../components/SettingsDialog.jsx";
 
 function highlightMatch(name, query) {
   const label = String(name || "");
@@ -98,6 +100,20 @@ function capsuleHasUnsavedChanges(capsule) {
 
 function normalizeCapsuleName(name) {
   return String(name || "").trim();
+}
+
+function getUserInitials(fullname, email) {
+  const trimmedName = String(fullname || "").trim();
+  if (trimmedName) {
+    const parts = trimmedName.split(/\s+/).filter(Boolean);
+    return parts
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() || "")
+      .join("") || "U";
+  }
+
+  const normalizedEmail = String(email || "").trim();
+  return normalizedEmail ? normalizedEmail[0].toUpperCase() : "U";
 }
 
 function SidebarCollapseIcon(props) {
@@ -198,7 +214,10 @@ function MainScreen({
   activeCapsule = null,
   capsuleList = [],
   userEmail = "",
+  userName = "",
+  settingsProfile = null,
   onSignOut = () => {},
+  onSaveSettings = async () => {},
   isSigningOut,
   onRefreshItems,
   onDownloadPdf,
@@ -259,6 +278,7 @@ function MainScreen({
   const [rowMenuAnchor, setRowMenuAnchor] = useState(null);
   const [rowMenuCapsule, setRowMenuCapsule] = useState(null);
   const [userMenuAnchor, setUserMenuAnchor] = useState(null);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [renameOpen, setRenameOpen] = useState(false);
   const [renameValue, setRenameValue] = useState("");
   const [renameCapsuleId, setRenameCapsuleId] = useState("");
@@ -276,6 +296,8 @@ function MainScreen({
   const [isSearching, setIsSearching] = useState(false);
   const [optimisticActiveCapsuleId, setOptimisticActiveCapsuleId] = useState(activeCapsule?.id || "");
   const inlineRenameSubmitGuardRef = useRef(false);
+  const displayName = String(userName || "").trim();
+  const avatarInitials = getUserInitials(displayName, userEmail);
   const nameDialogProps = isOverlaySidebar ? { fullScreen: true } : {
     fullWidth: true,
     maxWidth: "sm",
@@ -411,8 +433,10 @@ function MainScreen({
       sx={{
         height: "100%",
         width: isOverlaySidebar ? "min(92vw, 360px)" : desktopSidebarWidth,
-        bgcolor: "#ffffff",
-        borderRight: "1px solid rgba(15, 23, 42, 0.08)",
+        bgcolor: (theme) => theme.palette.mode === "dark" ? "#1e1f20" : theme.palette.background.paper,
+        color: "text.primary",
+        borderRight: "1px solid",
+        borderColor: "divider",
         overflow: "hidden",
         transition: isOverlaySidebar ? undefined : "width 240ms ease, box-shadow 240ms ease"
       }}
@@ -608,25 +632,32 @@ function MainScreen({
         >
           <Box sx={{ width: desktopSidebarRailWidth, display: "flex", justifyContent: "center", flexShrink: 0 }}>
             <Avatar sx={{ width: 36, height: 36, bgcolor: "#9aa4a6" }}>
-              SN
+              {avatarInitials}
             </Avatar>
           </Box>
           {!isSidebarCollapsed || isOverlaySidebar ? (
             <Stack
               justifyContent="center"
-              sx={{ minHeight: 36, minWidth: 0 }}
+              alignItems="flex-start"
+              sx={{ minHeight: 36, minWidth: 0, textAlign: "left" }}
             >
               <Typography
                 color="text.primary"
                 noWrap
                 sx={{
+                  width: "100%",
                   opacity: isSidebarCollapsed && !isOverlaySidebar ? 0 : 1,
                   transform: isSidebarCollapsed && !isOverlaySidebar ? "translateX(-8px)" : "translateX(0)",
                   transition: "opacity 180ms ease, transform 220ms ease"
                 }}
               >
-                {userEmail || ""}
+                {displayName || userEmail || ""}
               </Typography>
+              {displayName ? (
+                <Typography variant="body2" color="text.secondary" noWrap sx={{ width: "100%" }}>
+                  {userEmail || ""}
+                </Typography>
+              ) : null}
             </Stack>
           ) : null}
         </Button>
@@ -687,7 +718,8 @@ function MainScreen({
               minHeight: 0,
               overflow: "hidden",
               bgcolor: "background.paper",
-              border: "1px solid rgba(15, 23, 42, 0.08)",
+              border: "1px solid",
+              borderColor: "divider",
               borderRadius: { xs: 0, md: "22px" },
               boxShadow: "none",
               px: { xs: 2, md: 3 },
@@ -711,7 +743,7 @@ function MainScreen({
                         fontFamily: '"Leckerli One", cursive',
                         fontSize: "1.85rem",
                         lineHeight: 1.1,
-                        color: "#8f6f45",
+                        color: "primary.main",
                         textAlign: "left"
                       }}
                     >
@@ -743,7 +775,8 @@ function MainScreen({
               sx={{
                 display: { xs: "none", lg: "block" },
                 pr: { lg: 3 },
-                borderRight: { lg: "1px solid rgba(31, 41, 51, 0.08)" },
+                borderRight: { lg: "1px solid" },
+                borderColor: { lg: "divider" },
                 minHeight: 0,
                 overflowY: "auto"
               }}
@@ -1085,11 +1118,26 @@ function MainScreen({
         transformOrigin={{ vertical: "center", horizontal: "left" }}
         slotProps={{ paper: { sx: { ml: 1 } } }}
       >
+        <MenuItem onClick={() => { setUserMenuAnchor(null); setIsSettingsOpen(true); }}>
+          <ListItemIcon><SettingsRoundedIcon fontSize="small" /></ListItemIcon>
+          {t("settings.title")}
+        </MenuItem>
+        <Divider />
         <MenuItem onClick={() => { setUserMenuAnchor(null); onSignOut(); }}>
           <ListItemIcon><LogoutRoundedIcon fontSize="small" /></ListItemIcon>
           {t("actions.signOut")}
         </MenuItem>
       </Menu>
+
+      <SettingsDialog
+        open={isSettingsOpen}
+        settings={{
+          ...settingsProfile,
+          email: userEmail
+        }}
+        onClose={() => setIsSettingsOpen(false)}
+        onSave={onSaveSettings}
+      />
 
       <Dialog open={renameOpen} onClose={() => setRenameOpen(false)} {...nameDialogProps}>
         <DialogTitle>{t("capsule.renameTitle")}</DialogTitle>

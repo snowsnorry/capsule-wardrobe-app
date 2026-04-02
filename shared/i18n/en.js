@@ -238,6 +238,38 @@ const en = {
     deleteConfirmCancel: "Cancel",
     deleteConfirmConfirm: "Delete"
   },
+  settings: {
+    title: "Settings",
+    saved: "Settings saved.",
+    sections: {
+      general: "General",
+      ai: "AI",
+      account: "Account"
+    },
+    sectionHints: {
+      general: "Choose your visual and language preferences.",
+      ai: "Pick which stylist model to save on your profile.",
+      account: "Review your account details."
+    },
+    fields: {
+      theme: "Theme",
+      language: "Language",
+      stylistModel: "Stylist Model",
+      name: "Name",
+      email: "Email"
+    },
+    themeOptions: {
+      system: "System",
+      light: "Light",
+      dark: "Dark"
+    },
+    llmOptions: {
+      "openai:gpt-5": "OpenAI GPT-5",
+      "deepinfra:Qwen/Qwen3-VL-235B-A22B-Instruct": "Qwen 3",
+      "deepinfra:google/gemma-3-27b-it": "Google Gemma 3",
+      none: "None"
+    }
+  },
   onboarding: {
     title: "Welcome",
     subtitle: "Let us set up your profile in a few quick steps.",

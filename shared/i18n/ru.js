@@ -239,6 +239,38 @@ const ru = {
     deleteConfirmCancel: "Отмена",
     deleteConfirmConfirm: "Удалить"
   },
+  settings: {
+    title: "Настройки",
+    saved: "Настройки сохранены.",
+    sections: {
+      general: "Основные",
+      ai: "AI",
+      account: "Аккаунт"
+    },
+    sectionHints: {
+      general: "Выберите визуальные параметры и язык интерфейса.",
+      ai: "Выберите модель стилиста, которую нужно сохранить в профиле.",
+      account: "Просмотрите данные учетной записи."
+    },
+    fields: {
+      theme: "Тема",
+      language: "Язык",
+      stylistModel: "Модель стилиста",
+      name: "Имя",
+      email: "Email"
+    },
+    themeOptions: {
+      system: "Системная",
+      light: "Светлая",
+      dark: "Тёмная"
+    },
+    llmOptions: {
+      "openai:gpt-5": "OpenAI GPT-5",
+      "deepinfra:Qwen/Qwen3-VL-235B-A22B-Instruct": "Qwen 3",
+      "deepinfra:google/gemma-3-27b-it": "Google Gemma 3",
+      none: "None"
+    }
+  },
   onboarding: {
     title: "Добро пожаловать",
     subtitle: "Давайте настроим профиль за несколько шагов.",

@@ -60,6 +60,12 @@ const theme = createTheme();
 function t(key, params) {
   const labels = {
     appName: "Capsule Wardrobe",
+    locale: {
+      options: {
+        en: "English",
+        ru: "Russian"
+      }
+    },
     filters: {
       open: "Open filters",
       apply: "Apply",
@@ -110,6 +116,38 @@ function t(key, params) {
       signOutBody: "Are you sure you want to sign out?",
       signOutCancel: "Cancel",
       signOutConfirm: "Sign out"
+    },
+    settings: {
+      title: "Settings",
+      saved: "Settings saved.",
+      sections: {
+        general: "General",
+        ai: "AI",
+        account: "Account"
+      },
+      sectionHints: {
+        general: "General settings",
+        ai: "AI settings",
+        account: "Account settings"
+      },
+      fields: {
+        theme: "Theme",
+        language: "Language",
+        stylistModel: "Stylist Model",
+        name: "Name",
+        email: "Email"
+      },
+      themeOptions: {
+        system: "System",
+        light: "Light",
+        dark: "Dark"
+      },
+      llmOptions: {
+        "openai:gpt-5": "OpenAI GPT-5",
+        "deepinfra:Qwen/Qwen3-VL-235B-A22B-Instruct": "Qwen 3",
+        "deepinfra:google/gemma-3-27b-it": "Google Gemma 3",
+        none: "None"
+      }
     }
   };
 
@@ -131,7 +169,17 @@ function renderScreen(props = {}, { mobile = false, layoutMode = mobile ? "overl
   const defaults = {
     activeCapsule: { id: "capsule-1", name: "Spring edit", draft: null, saved: null, status: "new" },
     capsuleList: [{ id: "capsule-1", name: "Spring edit", status: "new" }],
+    userEmail: "person@example.com",
+    userName: "",
+    settingsProfile: {
+      fullname: "",
+      email: "person@example.com",
+      locale: "en",
+      theme: "system",
+      llm: "openai:gpt-5"
+    },
     onSignOut: vi.fn(),
+    onSaveSettings: vi.fn(() => Promise.resolve()),
     isSigningOut: false,
     onRefreshItems: vi.fn(),
     onDownloadPdf: vi.fn(),
@@ -519,6 +567,52 @@ describe("MainScreen", () => {
     await user.click(screen.getByRole("button", { name: "Open user menu" }));
     await user.click(screen.getByRole("menuitem", { name: /Sign out|actions\.signOut/i }));
     expect(onSignOut).toHaveBeenCalledTimes(1);
+  });
+
+  test("opens settings dialog and saves updated profile preferences", async () => {
+    const user = userEvent.setup();
+    const onSaveSettings = vi.fn(() => Promise.resolve());
+
+    renderScreen({
+      userName: "Ada Lovelace",
+      settingsProfile: {
+        fullname: "Ada Lovelace",
+        email: "person@example.com",
+        locale: "en",
+        theme: "system",
+        llm: "openai:gpt-5"
+      },
+      onSaveSettings
+    });
+
+    await user.click(screen.getByRole("button", { name: "Open user menu" }));
+    await user.click(screen.getByRole("menuitem", { name: "Settings" }));
+
+    const dialog = screen.getByRole("dialog");
+    expect(within(dialog).getByRole("heading", { name: "Settings" })).toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole("combobox", { name: "Theme" }));
+    await user.click(screen.getByRole("option", { name: "Dark" }));
+
+    await user.click(within(dialog).getByRole("button", { name: "AI" }));
+    await user.click(within(dialog).getByRole("combobox", { name: "Stylist Model" }));
+    await user.click(screen.getByRole("option", { name: "OpenAI GPT-5" }));
+
+    await user.click(within(dialog).getByRole("button", { name: "Account" }));
+    const nameInput = within(dialog).getByRole("textbox", { name: "Name" });
+    await user.clear(nameInput);
+    await user.type(nameInput, "Ada Byron");
+
+    await user.click(within(dialog).getByRole("button", { name: "Save" }));
+
+    await waitFor(() => {
+      expect(onSaveSettings).toHaveBeenCalledWith({
+        fullname: "Ada Byron",
+        locale: "en",
+        theme: "dark",
+        llm: "openai:gpt-5"
+      });
+    });
   });
 
   test("expands a collapsed desktop sidebar when clicking its empty area", async () => {
