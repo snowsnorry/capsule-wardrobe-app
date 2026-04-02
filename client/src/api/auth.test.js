@@ -111,7 +111,7 @@ describe("auth api", () => {
     await updateProfile({
       locale: "ru",
       theme: "dark",
-      llm: "openai:gpt-5",
+      llm: "openai:gpt-5.2",
       fullname: "Ada Lovelace"
     });
     await updateProfileLocale("ru");
@@ -136,7 +136,7 @@ describe("auth api", () => {
         body: JSON.stringify({
           locale: "ru",
           theme: "dark",
-          llm: "openai:gpt-5",
+          llm: "openai:gpt-5.2",
           fullname: "Ada Lovelace"
         })
       }

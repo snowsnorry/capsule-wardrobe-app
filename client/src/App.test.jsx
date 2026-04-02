@@ -159,7 +159,7 @@ vi.mock("./screens/MainScreen.jsx", () => ({
             fullname: "Ada Lovelace",
             locale: "ru",
             theme: "dark",
-            llm: "openai:gpt-5"
+            llm: "openai:gpt-5.2"
           })}
         >
           save-settings
@@ -500,7 +500,7 @@ describe("App", () => {
         email: "person@example.com",
         locale: "ru",
         theme: "dark",
-        llm: "openai:gpt-5",
+        llm: "openai:gpt-5.2",
         fullname: "Ada Lovelace"
       }
     });
@@ -515,12 +515,12 @@ describe("App", () => {
       expect(authApi.updateProfile).toHaveBeenCalledWith({
         locale: "ru",
         theme: "dark",
-        llm: "openai:gpt-5",
+        llm: "openai:gpt-5.2",
         fullname: "Ada Lovelace"
       });
     });
     await waitFor(() => {
-      expect(screen.getByText("settings-user:Ada Lovelace:dark:openai:gpt-5")).toBeInTheDocument();
+      expect(screen.getByText("settings-user:Ada Lovelace:dark:openai:gpt-5.2")).toBeInTheDocument();
     });
   });
 

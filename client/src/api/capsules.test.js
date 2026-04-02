@@ -89,13 +89,11 @@ describe("capsules api", () => {
     );
   });
 
-  test("updateCapsuleFilters appends regenerate and nollm query flags when requested", async () => {
-    window.history.replaceState({}, "", "/?nollm=true");
-
+  test("updateCapsuleFilters appends only regenerate query flag when requested", async () => {
     await updateCapsuleFilters("capsule-1", { audience: "woman" }, { regenerate: true });
 
     expect(requestApi.requestJson).toHaveBeenCalledWith(
-      "https://api.example.test/capsules/capsule-1/filters?regenerate=true&nollm=true",
+      "https://api.example.test/capsules/capsule-1/filters?regenerate=true",
       {
         method: "PATCH",
         credentials: "include",

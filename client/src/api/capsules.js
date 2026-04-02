@@ -77,12 +77,6 @@ function buildCapsuleFiltersUrl(id, { regenerate = false } = {}) {
   if (regenerate) {
     params.set("regenerate", "true");
   }
-  if (typeof window !== "undefined") {
-    const locationParams = new URLSearchParams(window.location.search);
-    if (locationParams.get("nollm") === "true") {
-      params.set("nollm", "true");
-    }
-  }
 
   const query = params.toString();
   return capsuleUrl(`/${id}/filters${query ? `?${query}` : ""}`);

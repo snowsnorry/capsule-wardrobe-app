@@ -440,7 +440,7 @@ test("regenerateCapsuleWardrobe starts a new pending job and clears stored items
   let generatedProfile = null;
   const jobs = new Map();
   const service = createWardrobeService({
-    getProfileImpl: async () => ({ audience: "woman", locale: "en" }),
+    getProfileImpl: async () => ({ audience: "woman", locale: "en", llm: "openai:gpt-5.2" }),
     getCapsuleImpl: async () => createCapsuleWithWardrobe({
       items: [{ id: "top-1", category: "top" }]
     }),
@@ -500,10 +500,10 @@ test("regenerateCapsuleWardrobe starts a new pending job and clears stored items
   }]);
 });
 
-test("regenerateCapsuleWardrobe forwards nollm mode from query params", async () => {
+test("regenerateCapsuleWardrobe uses profile llm=none instead of query flag", async () => {
   let generatedProfile = null;
   const service = createWardrobeService({
-    getProfileImpl: async () => ({ audience: "woman", locale: "en" }),
+    getProfileImpl: async () => ({ audience: "woman", locale: "en", llm: "none" }),
     getCapsuleImpl: async () => createCapsuleWithWardrobe({
       items: [{ id: "top-1", category: "top" }]
     }),
@@ -520,20 +520,19 @@ test("regenerateCapsuleWardrobe forwards nollm mode from query params", async ()
     },
     shouldGenerateSwimwearImpl: () => false,
     jobs: new Map(),
-    randomUuidImpl: () => "req-nollm"
+    randomUuidImpl: () => "req-no-llm"
   });
   const res = createResponseRecorder();
 
   await service.regenerateCapsuleWardrobe({
     user: { email: "person@example.com" },
-    params: { id: "capsule-1" },
-    query: { nollm: "true" }
+    params: { id: "capsule-1" }
   }, res);
 
   const job = service.getWardrobeJob("person@example.com", "capsule-1");
   assert.ok(job);
   await job.promise;
-  assert.equal(generatedProfile.noLlm, true);
+  assert.equal(generatedProfile.llm, "none");
 });
 
 test("getCapsuleItems surfaces failed job as service_unavailable and drops stale failed entry", async () => {

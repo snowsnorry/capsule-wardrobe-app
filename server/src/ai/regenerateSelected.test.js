@@ -22,7 +22,8 @@ function createResponseRecorder() {
 
 function createProfile() {
   return {
-    locale: "en"
+    locale: "en",
+    llm: "openai:gpt-5.2"
   };
 }
 
@@ -290,10 +291,10 @@ test("regenerateSelectedWardrobeItems updates rejected urls, shrinks partial pay
   ]);
 });
 
-test("regenerateSelectedWardrobeItems forwards nollm mode from query params", async () => {
+test("regenerateSelectedWardrobeItems uses profile llm=none instead of query flag", async () => {
   let regeneratedProfile = null;
   const service = createPartialRegenerationService({
-    getProfileImpl: async () => createProfile(),
+    getProfileImpl: async () => ({ ...createProfile(), llm: "none" }),
     getCapsuleImpl: async () => createCapsule(),
     updateCapsuleSnapshotImpl: async (_email, capsuleId, draft) => ({ id: capsuleId, draft, saved: null }),
     regenerateCapsuleWardrobeImpl: async (profile) => {
@@ -309,21 +310,20 @@ test("regenerateSelectedWardrobeItems forwards nollm mode from query params", as
       };
     },
     jobs: new Map(),
-    randomUuidImpl: () => "regen-req-nollm"
+    randomUuidImpl: () => "regen-req-no-llm"
   });
   const res = createResponseRecorder();
 
   await service.regenerateSelectedWardrobeItems({
     user: { email: "person@example.com" },
     params: { id: "capsule-1" },
-    query: { nollm: "true" },
     body: { itemUrls: ["https://example.com/top-1"] }
   }, res);
 
   const job = service.getPartialRegenerationJob("person@example.com", "capsule-1");
   assert.ok(job);
   await job.promise;
-  assert.equal(regeneratedProfile.noLlm, true);
+  assert.equal(regeneratedProfile.llm, "none");
 });
 
 test("startPartialRegenerationJob reuses active pending job and marks failures", async () => {

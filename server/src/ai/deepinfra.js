@@ -1,8 +1,13 @@
 import OpenAI from "openai";
+import { buildImageDataUrl, releaseImageBuffers } from "./openai.js";
 
 const OPENAI_BASE_URL = "https://api.deepinfra.com/v1/openai";
-const DEFAULT_CHAT_MODEL = "meta-llama/Llama-3.3-70B-Instruct-Turbo";
+const DEFAULT_CHAT_MODEL = "google/gemma-3-27b-it";
 const DEFAULT_EMBEDDING_MODEL = "google/embeddinggemma-300m";
+const ALLOWED_CHAT_MODELS = [
+  "google/gemma-3-27b-it",
+  "Qwen/Qwen3-VL-235B-A22B-Instruct"
+];
 let cachedClient = null;
 
 function createDeepInfraClient({
@@ -48,36 +53,58 @@ function createDeepInfraClient({
     return embedding;
   }
 
-  async function generateJsonWithLlm(prompt) {
+  async function generateJsonWithLlm(
+    prompt,
+    {
+      userProfile = null,
+      format = null,
+      images = [],
+      onPayloadBuilt = null
+    } = {}
+  ) {
     const client = getOpenAiClient();
     const { system, user } = splitSystemAndUserPrompt(prompt);
+    void format;
+    const messages = buildChatMessages(user, images);
+    releaseImageBuffers(images);
+    onPayloadBuilt?.();
 
     const response = await client.chat.completions.create({
-      model: DEFAULT_CHAT_MODEL,
+      model: resolveChatModel(userProfile),
       messages: [
-        { role: "system", content: system },
-        { role: "user", content: user }
+        ...(system ? [{ role: "system", content: system }] : []),
+        { role: "user", content: messages }
       ],
       temperature: 0.2,
       top_p: 0.9,
       frequency_penalty: 0,
       presence_penalty: 0,
-      max_tokens: 1000,
+      max_tokens: 10000,
       response_format: { type: "json_object" }
     });
 
-    let content = response?.choices?.[0]?.message?.content || "{}";
+    let content = extractResponseText(response);
     let json;
     if (content) {
       content = content.replace(/^[^{]*/, "").replace(/[^}]*$/, "");
     }
     try {
       json = JSON.parse(content);
-    } catch {
-      throw new Error("Failed to parse JSON response");
+    } catch (error) {
+      const parseError = new Error(`Failed to parse JSON response: ${error.message}\nResponse content: ${content}`);
+      parseError.rawSelectionText = typeof content === "string" && content.trim().length > 0
+        ? content.trim()
+        : null;
+      throw parseError;
     }
 
-    return { response, json };
+    return {
+      response: {
+        ...response,
+        output_text: extractResponseText(response)
+      },
+      json
+    };
   }
 
   return {
@@ -107,6 +134,81 @@ function splitSystemAndUserPrompt(prompt) {
   };
 }
 
+function resolveChatModel(userProfile = null) {
+  const llm = String(userProfile?.llm || "").trim();
+  if (llm.startsWith("deepinfra:")) {
+    const model = llm.slice("deepinfra:".length).trim();
+    if (ALLOWED_CHAT_MODELS.includes(model)) {
+      return model;
+    }
+  }
+
+  return DEFAULT_CHAT_MODEL;
+}
+
+function buildChatMessages(user, images = []) {
+  const content = [];
+  const userText = String(user || "").trim();
+
+  if (userText) {
+    content.push({
+      type: "text",
+      text: userText
+    });
+  }
+
+  for (const image of images) {
+    const imageUrl = buildImageDataUrl(image);
+    if (!imageUrl) {
+      console.warn(
+        "[deepinfra][image-skipped]",
+        JSON.stringify({
+          category: image?.category ?? null,
+          filename: image?.filename ?? null,
+          reason: "missing_buffer"
+        })
+      );
+      continue;
+    }
+
+    content.push({
+      type: "image_url",
+      image_url: {
+        url: imageUrl
+      }
+    });
+  }
+
+  return content.length > 0 ? content : [{ type: "text", text: "" }];
+}
+
+function extractResponseText(response = null) {
+  const content = response?.choices?.[0]?.message?.content;
+
+  if (typeof content === "string") {
+    return content;
+  }
+
+  if (Array.isArray(content)) {
+    return content
+      .map((part) => {
+        if (typeof part === "string") {
+          return part;
+        }
+
+        if (typeof part?.text === "string") {
+          return part.text;
+        }
+
+        return "";
+      })
+      .join("")
+      .trim();
+  }
+
+  return "{}";
+}
+
 const deepInfraClient = createDeepInfraClient();
 const {
   generateJsonWithLlm,
@@ -116,8 +218,12 @@ const {
 
 export {
   createDeepInfraClient,
+  ALLOWED_CHAT_MODELS,
+  buildChatMessages,
+  extractResponseText,
   generateJsonWithLlm,
   getOpenAiClient,
   getPromptEmbeddings,
+  resolveChatModel,
   splitSystemAndUserPrompt
 };

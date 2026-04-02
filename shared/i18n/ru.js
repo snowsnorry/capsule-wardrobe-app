@@ -265,7 +265,8 @@ const ru = {
       dark: "Тёмная"
     },
     llmOptions: {
-      "openai:gpt-5": "OpenAI GPT-5",
+      "openai:gpt-5.2": "OpenAI GPT-5.2",
+      "gemini:gemini-2.5-pro": "Gemini 2.5 Pro",
       "deepinfra:Qwen/Qwen3-VL-235B-A22B-Instruct": "Qwen 3",
       "deepinfra:google/gemma-3-27b-it": "Google Gemma 3",
       none: "None"

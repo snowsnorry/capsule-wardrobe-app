@@ -66,7 +66,7 @@ async function ensureProfilesTable() {
       locale text not null,
       fullname text null,
       theme text not null default 'system',
-      llm text not null default 'openai:gpt-5',
+      llm text not null default 'openai:gpt-5.2',
       created_at timestamptz not null default now(),
       updated_at timestamptz not null default now()
     )
@@ -81,11 +81,16 @@ async function ensureProfilesTable() {
   `;
   await sql`
     alter table profiles
-    add column if not exists llm text not null default 'openai:gpt-5'
+    add column if not exists llm text not null default 'openai:gpt-5.2'
   `;
   await sql`
     alter table profiles
-    alter column llm set default 'openai:gpt-5'
+    alter column llm set default 'openai:gpt-5.2'
+  `;
+  await sql`
+    update profiles
+    set llm = 'openai:gpt-5.2'
+    where llm = 'openai:gpt-5'
   `;
   await sql`
     do $$
@@ -105,20 +110,23 @@ async function ensureProfilesTable() {
   await sql`
     do $$
     begin
-      if not exists (
+      if exists (
         select 1
         from pg_constraint
         where conname = 'profiles_llm_check'
       ) then
         alter table profiles
-        add constraint profiles_llm_check
-        check (llm in (
-          'openai:gpt-5',
-          'deepinfra:Qwen/Qwen3-VL-235B-A22B-Instruct',
-          'deepinfra:google/gemma-3-27b-it',
-          'none'
-        ));
+        drop constraint profiles_llm_check;
       end if;
+      alter table profiles
+      add constraint profiles_llm_check
+      check (llm in (
+        'openai:gpt-5.2',
+        'gemini:gemini-2.5-pro',
+        'deepinfra:Qwen/Qwen3-VL-235B-A22B-Instruct',
+        'deepinfra:google/gemma-3-27b-it',
+        'none'
+      ));
     end
     $$;
   `;

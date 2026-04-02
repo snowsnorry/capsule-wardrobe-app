@@ -95,7 +95,7 @@ test("normalizeProfileRecord applies defaults for new profile fields", () => {
       locale: "en",
       fullname: null,
       theme: "system",
-      llm: "openai:gpt-5"
+      llm: "openai:gpt-5.2"
     }
   );
 });

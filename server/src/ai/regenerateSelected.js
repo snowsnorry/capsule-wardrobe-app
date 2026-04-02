@@ -15,9 +15,9 @@ import {
 import { getCapsuleCategories } from "./categories.js";
 import {
   buildCapsuleSchema,
-  buildCustomJsonObjectFormat,
-  generateJsonWithLlm
+  buildCustomJsonObjectFormat
 } from "./openai.js";
+import { getGenerateJsonWithLlm, isNoLlmProfileEnabled, resolveLlmProvider } from "./llm.js";
 import {
   buildPromptDebugImagesForCategory,
   buildPromptDebugImagesInChild
@@ -35,7 +35,6 @@ import {
   enforceCategoryCounts,
   extractLlmUsage,
   getSelectedIdsFromCapsule,
-  isNoLlmModeEnabled,
   logWardrobeInfo,
   toWardrobeUiItem
 } from "./ai.js";
@@ -233,6 +232,7 @@ function buildRegenerateSelectedPrompt(userProfile = null, candidateItems = [], 
 }
 
 async function regenerateCapsuleWardrobe(userProfile = null, products = null, logContext = null) {
+  const llmResolution = resolveLlmProvider(userProfile);
   const sql = getSqlClient();
   const prompt = getWardrobePrompt(userProfile);
   const promptEmbeddings = await getPromptEmbeddings(prompt);
@@ -438,8 +438,13 @@ async function regenerateCapsuleWardrobe(userProfile = null, products = null, lo
     sqlItemsTotal: normalizedItems.length,
     sqlItemsByCategory: countItemsByKey(normalizedItems)
   }, logContext);
-  const noLlm = userProfile?.noLlm === true;
+  const noLlm = isNoLlmProfileEnabled(userProfile);
   if (noLlm) {
+    logWardrobeInfo("capsule-llm-skipped", {
+      reason: "profile_llm_none",
+      requestedLlm: llmResolution.requestedLlm,
+      usedModel: null
+    }, logContext);
     const balancedItems = enforceCategoryCounts([], normalizedItems, capsuleCategories, userProfile);
 
     if (balancedItems.length === 0) {
@@ -535,6 +540,7 @@ async function regenerateCapsuleWardrobe(userProfile = null, products = null, lo
     currentCapsuleCollage
   });
   const llmStartedAt = Date.now();
+  const generateJsonWithLlm = getGenerateJsonWithLlm(userProfile);
   const stylistImages = currentCapsuleCollage
     ? [currentCapsuleCollage, ...promptDebugImages.categories]
     : promptDebugImages.categories;
@@ -550,6 +556,10 @@ async function regenerateCapsuleWardrobe(userProfile = null, products = null, lo
   promptDebugImages.categories = [];
   currentCapsuleCollage = null;
   logWardrobeInfo("capsule-llm-completed", {
+    llmProvider: llmResolution.provider,
+    llmModel: llmResolution.model,
+    requestedLlm: llmResolution.requestedLlm,
+    fallbackReason: llmResolution.fallbackReason,
     llmDurationMs: Date.now() - llmStartedAt,
     ...extractLlmUsage(selectionResponse?.usage)
   }, logContext);
@@ -636,7 +646,7 @@ function createPartialRegenerationService({
     return job;
   }
 
-  function startPartialRegenerationJob(email, capsuleId, profile, capsule, selectedProducts, storedWardrobe, options = {}, logContext = null) {
+  function startPartialRegenerationJob(email, capsuleId, profile, capsule, selectedProducts, storedWardrobe, logContext = null) {
     const jobKey = createPartialRegenerationJobKey(email, capsuleId);
     const existing = getPartialRegenerationJob(email, capsuleId);
     if (existing?.status === "pending") {
@@ -669,8 +679,7 @@ function createPartialRegenerationService({
 
       try {
         const result = await regenerateCapsuleWardrobeImpl({
-          ...buildProfileCapsuleContext(profile, capsule),
-          noLlm: options?.noLlm === true
+          ...buildProfileCapsuleContext(profile, capsule)
         }, selectedProducts, jobLogContext);
         const payload = buildStoredWardrobePayloadFromResult(result, storedWardrobe);
         const baseSnapshot = getEffectiveCapsuleSnapshot(capsule);
@@ -794,8 +803,6 @@ function createPartialRegenerationService({
         capsuleRequestId: randomUuidImpl(),
         source: "partial-regeneration"
       };
-      const noLlm = isNoLlmModeEnabled(req.query);
-      logWardrobeInfo("regenerate-request-received", { itemUrls, noLlm }, logContext);
       if (capsuleId) {
         await updateCapsuleSnapshotImpl(email, capsuleId, {
           filters: effectiveSnapshot?.filters,
@@ -815,6 +822,9 @@ function createPartialRegenerationService({
           }
         }
       };
+      const generationProfile = buildProfileCapsuleContext(profile, generationCapsule);
+      const noLlm = isNoLlmProfileEnabled(generationProfile);
+      logWardrobeInfo("regenerate-request-received", { itemUrls, noLlm }, logContext);
       const job = startPartialRegenerationJob(
         email,
         capsuleId,
@@ -822,7 +832,6 @@ function createPartialRegenerationService({
         generationCapsule,
         selectedProducts,
         storedWardrobe,
-        { noLlm },
         logContext
       );
       publishSnapshotImpl(

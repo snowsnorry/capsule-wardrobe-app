@@ -2,9 +2,9 @@ import { readFileSync } from "node:fs";
 import { getSqlClient } from "../db.js";
 import {
   buildCustomJsonObjectFormat,
-  buildSwimwearSchema,
-  generateJsonWithLlm
+  buildSwimwearSchema
 } from "./openai.js";
+import { getGenerateJsonWithLlm, isNoLlmProfileEnabled, resolveLlmProvider } from "./llm.js";
 
 const PROMPT_TEMPLATE = readFileSync(new URL("../templates/prompt_woman_swimwear.txt", import.meta.url), "utf8");
 
@@ -329,6 +329,7 @@ async function selectFemaleSwimwear({
 }
 
 async function generateFemaleSwimwear({ userProfile, selectedCapsuleItems, promptEmbeddings, logContext = null }) {
+  const llmResolution = resolveLlmProvider(userProfile);
   const sql = getSqlClient();
   const embeddingVector = `[${promptEmbeddings.join(",")}]`;
   const targetStyle = userProfile?.style ?? null;
@@ -350,7 +351,12 @@ async function generateFemaleSwimwear({ userProfile, selectedCapsuleItems, promp
     };
   }
 
-  if (userProfile?.noLlm === true) {
+  if (isNoLlmProfileEnabled(userProfile)) {
+    logWardrobeInfo("swimwear-llm-skipped", {
+      reason: "profile_llm_none",
+      requestedLlm: llmResolution.requestedLlm,
+      usedModel: null
+    }, logContext);
     const selectedItems = selectSwimwearWithoutLlm(candidates);
     logWardrobeInfo("swimwear-nollm-completed", {
       swimwearItemsTotal: selectedItems.length,
@@ -366,7 +372,9 @@ async function generateFemaleSwimwear({ userProfile, selectedCapsuleItems, promp
 
   const prompt = getSwimwearPrompt(selectedCapsuleItems, candidates);
   const llmStartedAt = Date.now();
+  const generateJsonWithLlm = getGenerateJsonWithLlm(userProfile);
   const { response, json } = await generateJsonWithLlm(prompt, {
+    userProfile,
     format: buildCustomJsonObjectFormat(
       "capsule_swimwear_response",
       "Structured swimwear selection with a brief reasoning and one valid swimsuit or a matching two-piece set.",
@@ -374,6 +382,10 @@ async function generateFemaleSwimwear({ userProfile, selectedCapsuleItems, promp
     )
   });
   logWardrobeInfo("swimwear-llm-completed", {
+    llmProvider: llmResolution.provider,
+    llmModel: llmResolution.model,
+    requestedLlm: llmResolution.requestedLlm,
+    fallbackReason: llmResolution.fallbackReason,
     swimwearLlmDurationMs: Date.now() - llmStartedAt,
     ...extractLlmUsage(response?.usage)
   }, logContext);

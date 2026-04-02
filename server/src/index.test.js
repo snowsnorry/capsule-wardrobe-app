@@ -47,7 +47,7 @@ function createDependencies(overrides = {}) {
       locale: "en",
       fullname: null,
       theme: "system",
-      llm: "openai:gpt-5"
+      llm: "openai:gpt-5.2"
     }),
     hasProfileImpl: async () => true,
     updateProfileImpl: async (email, payload) => ({ id: "profile-1", email, activeCapsuleId: "capsule-1", ...payload }),
@@ -58,7 +58,7 @@ function createDependencies(overrides = {}) {
       locale,
       fullname: null,
       theme: "system",
-      llm: "openai:gpt-5"
+      llm: "openai:gpt-5.2"
     }),
     updateProfileActiveCapsuleIdImpl: async (_email, activeCapsuleId) => ({ activeCapsuleId }),
     resolveActiveCapsuleImpl: async () => ({
@@ -448,7 +448,7 @@ test("index routes cover profile read endpoints", async (t) => {
   assert.equal(profile.json.profile.activeCapsuleId, "capsule-1");
   assert.equal(profile.json.profile.locale, "en");
   assert.equal(profile.json.profile.theme, "system");
-  assert.equal(profile.json.profile.llm, "openai:gpt-5");
+  assert.equal(profile.json.profile.llm, "openai:gpt-5.2");
   assert.equal(profile.json.profile.fullname, null);
 
   const wardrobeFilters = await requestJson(baseUrl, "/wardrobe/filters", {
@@ -528,7 +528,7 @@ test("index routes cover profile update, locale update, and delete branches", as
     body: {
       locale: "en",
       theme: "system",
-      llm: "openai:gpt-5",
+      llm: "openai:gpt-5.2",
       fullname: null
     }
   });
@@ -543,7 +543,7 @@ test("index routes cover profile update, locale update, and delete branches", as
     body: {
       locale: "en",
       theme: "sepia",
-      llm: "openai:gpt-5",
+      llm: "openai:gpt-5.2",
       fullname: "Ada"
     }
   });
@@ -588,7 +588,7 @@ test("index routes cover profile update, locale update, and delete branches", as
     body: {
       locale: "ru",
       theme: "dark",
-      llm: "openai:gpt-5",
+      llm: "openai:gpt-5.2",
       fullname: "  Ada Lovelace  "
     }
   });
@@ -596,7 +596,7 @@ test("index routes cover profile update, locale update, and delete branches", as
   assert.equal(updateSuccess.json.ok, true);
   assert.equal(updateSuccess.json.profile.locale, "ru");
   assert.equal(updateSuccess.json.profile.theme, "dark");
-  assert.equal(updateSuccess.json.profile.llm, "openai:gpt-5");
+  assert.equal(updateSuccess.json.profile.llm, "openai:gpt-5.2");
   assert.equal(updateSuccess.json.profile.fullname, "Ada Lovelace");
 
   const localeSuccess = await requestJson(successServer.baseUrl, "/profile/locale", {
@@ -856,7 +856,7 @@ test("filters patch can trigger regenerate via query flag after saving filters",
     }
   });
 
-  const result = await requestJson(baseUrl, "/capsules/capsule-1/filters?regenerate=true&nollm=true", {
+  const result = await requestJson(baseUrl, "/capsules/capsule-1/filters?regenerate=true", {
     method: "PATCH",
     origin: TEST_CLIENT_ORIGIN,
     cookie: AUTH_COOKIE,
@@ -892,8 +892,7 @@ test("filters patch can trigger regenerate via query flag after saving filters",
     {
       type: "regenerate",
       query: {
-        regenerate: "true",
-        nollm: "true"
+        regenerate: "true"
       }
     }
   ]);

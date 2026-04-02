@@ -65,14 +65,14 @@ async function subscribeCapsuleEvents({
 }
 
 async function regenerateCapsuleWardrobe({ capsuleId }) {
-  return requestJson(buildRegenerateUrl(`/capsules/${String(capsuleId || "").trim()}/regenerate`), {
+  return requestJson(`${API_BASE_URL}/capsules/${String(capsuleId || "").trim()}/regenerate`, {
     method: "POST",
     credentials: "include"
   });
 }
 
 async function regenerateSelectedWardrobeItems({ itemUrls, capsuleId }) {
-  return requestJson(buildRegenerateUrl(`/capsules/${String(capsuleId || "").trim()}/regenerate-selected`), {
+  return requestJson(`${API_BASE_URL}/capsules/${String(capsuleId || "").trim()}/regenerate-selected`, {
     method: "POST",
     credentials: "include",
     headers: {
@@ -80,17 +80,6 @@ async function regenerateSelectedWardrobeItems({ itemUrls, capsuleId }) {
     },
     body: JSON.stringify({ itemUrls })
   });
-}
-
-function buildRegenerateUrl(pathname) {
-  const baseUrl = `${API_BASE_URL}${pathname}`;
-  if (typeof window !== "undefined") {
-    const searchParams = new URLSearchParams(window.location.search);
-    if (searchParams.get("nollm") === "true") {
-      return `${baseUrl}?nollm=true`;
-    }
-  }
-  return baseUrl;
 }
 
 export { regenerateCapsuleWardrobe, regenerateSelectedWardrobeItems, subscribeCapsuleEvents };

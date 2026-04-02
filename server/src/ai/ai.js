@@ -8,7 +8,7 @@ import {
   updateCapsuleSnapshot
 } from "../capsuleStore.js";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { generateJsonWithLlm } from "./openai.js";
+import { getGenerateJsonWithLlm, isNoLlmProfileEnabled, resolveLlmProvider } from "./llm.js";
 import {  getPromptEmbeddings, getWardrobePrompt } from "./voyageai.js";
 import { getCapsuleCategories } from "./categories.js";
 import { generateSwimwearAddition, shouldGenerateSwimwear } from "./swimwear.js";
@@ -148,22 +148,6 @@ function getRequestedWardrobeParams(userProfile = null, { forceRefresh = false }
   }
 
   return params;
-}
-
-function isTruthyFlag(value) {
-  return ["1", "true", "yes", "on"].includes(String(value || "").trim().toLowerCase());
-}
-
-function isNoLlmModeEnabled(query = null) {
-  if (!query || typeof query !== "object") {
-    return false;
-  }
-
-  const value = Array.isArray(query.nollm)
-    ? query.nollm[0]
-    : query.nollm;
-
-  return isTruthyFlag(value);
 }
 
 function getRequiredCapsule(capsuleId, capsule) {
@@ -625,6 +609,7 @@ function appendUniqueWardrobeItems(items, extraItems) {
 }
 
 async function generateCapsuleWardrobe(userProfile = null, logContext = null) {
+  const llmResolution = resolveLlmProvider(userProfile);
   const sql = getSqlClient();
   const prompt = getWardrobePrompt(userProfile);
   const promptEmbeddings = await getPromptEmbeddings(prompt);
@@ -784,8 +769,13 @@ async function generateCapsuleWardrobe(userProfile = null, logContext = null) {
     sqlItemsTotal: normalizedItems.length,
     sqlItemsByCategory: countItemsByKey(normalizedItems)
   }, logContext);
-  const noLlm = userProfile?.noLlm === true;
+  const noLlm = isNoLlmProfileEnabled(userProfile);
   if (noLlm) {
+    logWardrobeInfo("capsule-llm-skipped", {
+      reason: "profile_llm_none",
+      requestedLlm: llmResolution.requestedLlm,
+      usedModel: null
+    }, logContext);
     const balancedItems = enforceCategoryCounts([], normalizedItems, capsuleCategories, userProfile);
 
     if (balancedItems.length === 0) {
@@ -841,6 +831,7 @@ async function generateCapsuleWardrobe(userProfile = null, logContext = null) {
   const selectionPrompt = getWardrobeSelectionPrompt(userProfile, normalizedItems, capsuleCategories);
   saveLastPromptArtifacts(selectionPrompt);
   const llmStartedAt = Date.now();
+  const generateJsonWithLlm = getGenerateJsonWithLlm(userProfile);
   const { response: selectionResponse, json: parsedSelection } = await generateJsonWithLlm(selectionPrompt, {
     userProfile,
     images: promptDebugImages.categories,
@@ -850,6 +841,10 @@ async function generateCapsuleWardrobe(userProfile = null, logContext = null) {
   });
   promptDebugImages.categories = [];
   logWardrobeInfo("capsule-llm-completed", {
+    llmProvider: llmResolution.provider,
+    llmModel: llmResolution.model,
+    requestedLlm: llmResolution.requestedLlm,
+    fallbackReason: llmResolution.fallbackReason,
     llmDurationMs: Date.now() - llmStartedAt,
     ...extractLlmUsage(selectionResponse?.usage)
   }, logContext);
@@ -944,7 +939,7 @@ function createWardrobeService({
     return job;
   }
 
-  function startWardrobeJob(email, capsuleId, profile, capsule, options = {}, logContext = null) {
+  function startWardrobeJob(email, capsuleId, profile, capsule, logContext = null) {
     const jobKey = createWardrobeJobKey(email, capsuleId);
     const existing = getWardrobeJob(email, capsuleId);
     if (existing?.status === "pending") {
@@ -973,8 +968,7 @@ function createWardrobeService({
 
       try {
         const generationProfile = {
-          ...buildProfileCapsuleContext(profile, capsule),
-          noLlm: options?.noLlm === true
+          ...buildProfileCapsuleContext(profile, capsule)
         };
         const wardrobe = await generateCapsuleWardrobeImpl(generationProfile, jobLogContext);
         const items = wardrobe.items;
@@ -1159,17 +1153,18 @@ function createWardrobeService({
           }
         }
       };
-      const noLlm = isNoLlmModeEnabled(req.query);
+      const generationProfile = buildProfileCapsuleContext(profile, generationCapsule);
+      const noLlm = isNoLlmProfileEnabled(generationProfile);
       const logContext = {
         capsuleRequestId: randomUuidImpl()
       };
       logWardrobeInfo("capsule-request-received", {
-        ...getRequestedWardrobeParams(buildProfileCapsuleContext(profile, capsule), {
+        ...getRequestedWardrobeParams(generationProfile, {
           forceRefresh: true
         }),
         noLlm
       }, logContext);
-      const job = startWardrobeJob(email, capsuleId, profile, generationCapsule, { noLlm }, logContext);
+      const job = startWardrobeJob(email, capsuleId, profile, generationCapsule, logContext);
       publishSnapshotImpl(
         email,
         capsuleId,
@@ -1226,7 +1221,6 @@ export {
   getWardrobeJob,
   getStoredWardrobePayload,
   getWardrobeSelectionPrompt,
-  isNoLlmModeEnabled,
   logWardrobeInfo,
   regenerateCapsuleWardrobe,
   startWardrobeJob,

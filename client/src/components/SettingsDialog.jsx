@@ -6,6 +6,8 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  Divider,
+  LinearProgress,
   List,
   ListItemButton,
   ListItemText,
@@ -26,7 +28,7 @@ function normalizeSettingsDraft(settings = {}, fallbackEmail = "") {
     email: String(settings.email || fallbackEmail || "").trim(),
     locale: LANGUAGE_OPTIONS.includes(settings.locale) ? settings.locale : "en",
     theme: PROFILE_THEME_VALUES.includes(settings.theme) ? settings.theme : "system",
-    llm: PROFILE_LLM_VALUES.includes(settings.llm) ? settings.llm : "openai:gpt-5"
+    llm: PROFILE_LLM_VALUES.includes(settings.llm) ? settings.llm : "openai:gpt-5.2"
   };
 }
 
@@ -160,6 +162,23 @@ function SettingsDialog({
   return (
     <Dialog open={open} onClose={handleClose} fullWidth maxWidth="md">
       <DialogTitle>{t("settings.title")}</DialogTitle>
+      <Box sx={{ px: 3, pb: 0.5 }}>
+        <Divider sx={{ borderColor: "divider" }} />
+        {isSaving ? (
+          <LinearProgress
+            color="success"
+            sx={{
+              mt: "-2px",
+              height: 3,
+              borderRadius: 999,
+              backgroundColor: "action.hover",
+              "& .MuiLinearProgress-bar": {
+                borderRadius: 999
+              }
+            }}
+          />
+        ) : null}
+      </Box>
       <DialogContent sx={{ pt: 1, pb: 0 }}>
         <Box
           sx={{

@@ -306,8 +306,10 @@ export {
   buildCapsuleSchema,
   buildSwimwearSchema,
   buildCustomJsonObjectFormat,
+  buildJsonObjectFormat,
   buildImageDataUrl,
   buildResponsesInput,
   buildResponsesPayload,
+  splitSystemAndUserPrompt,
   releaseImageBuffers
 };

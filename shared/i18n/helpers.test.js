@@ -4,6 +4,7 @@ import {
   defaultLocale,
   isSupportedLocale,
   normalizeLocale,
+  resolveTranslationValue,
   t,
   translateOption
 } from "./helpers.js";
@@ -30,4 +31,21 @@ test("t falls back to default locale and interpolates parameters", () => {
 test("translateOption humanizes unknown values and translates known ones", () => {
   assert.equal(translateOption("styles", "street_style", "en"), "Street style");
   assert.equal(translateOption("styles", "unknown_style", "en"), "Unknown Style");
+});
+
+test("t resolves dictionary keys that contain dots", () => {
+  assert.equal(t("settings.llmOptions.openai:gpt-5.2", undefined, "en"), "OpenAI GPT-5.2");
+  assert.equal(
+    resolveTranslationValue(
+      {
+        settings: {
+          llmOptions: {
+            "openai:gpt-5.2": "OpenAI GPT-5.2"
+          }
+        }
+      },
+      "settings.llmOptions.openai:gpt-5.2"
+    ),
+    "OpenAI GPT-5.2"
+  );
 });
