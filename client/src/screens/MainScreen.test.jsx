@@ -335,6 +335,127 @@ describe("MainScreen", () => {
     expect(onRefreshItems).toHaveBeenCalledTimes(1);
   });
 
+  test("shows desktop inline rename trigger and keeps it out of the mobile header", async () => {
+    const user = userEvent.setup();
+
+    renderScreen();
+    expect(screen.getByRole("button", { name: "Edit capsule name" })).toBeInTheDocument();
+
+    cleanup();
+    renderScreen({}, { mobile: true });
+    expect(screen.queryByRole("button", { name: "Edit capsule name" })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Open capsule menu" }));
+    expect(screen.getByRole("menuitem", { name: "Rename" })).toBeInTheDocument();
+  });
+
+  test("enters inline rename mode from the desktop title and submits on Enter", async () => {
+    const user = userEvent.setup();
+    const onRenameCapsule = vi.fn(() => Promise.resolve());
+
+    renderScreen({ onRenameCapsule });
+
+    await user.click(screen.getByRole("button", { name: "Rename capsule Spring edit" }));
+    const input = screen.getByRole("textbox", { name: "Capsule name" });
+    expect(input).toHaveValue("Spring edit");
+
+    await user.clear(input);
+    await user.type(input, "Summer edit{Enter}");
+
+    await waitFor(() => {
+      expect(onRenameCapsule).toHaveBeenCalledWith("Summer edit", "capsule-1");
+    });
+    await waitFor(() => {
+      expect(screen.queryByRole("textbox", { name: "Capsule name" })).not.toBeInTheDocument();
+    });
+  });
+
+  test("enters inline rename mode from the desktop pencil and submits on blur", async () => {
+    const user = userEvent.setup();
+    const onRenameCapsule = vi.fn(() => Promise.resolve());
+
+    renderScreen({ onRenameCapsule });
+
+    await user.click(screen.getByRole("button", { name: "Edit capsule name" }));
+    const input = screen.getByRole("textbox", { name: "Capsule name" });
+    await user.clear(input);
+    await user.type(input, "Evening edit");
+    await user.tab();
+
+    await waitFor(() => {
+      expect(onRenameCapsule).toHaveBeenCalledWith("Evening edit", "capsule-1");
+    });
+    await waitFor(() => {
+      expect(screen.queryByRole("textbox", { name: "Capsule name" })).not.toBeInTheDocument();
+    });
+  });
+
+  test("cancels desktop inline rename on Escape without sending a request", async () => {
+    const user = userEvent.setup();
+    const onRenameCapsule = vi.fn(() => Promise.resolve());
+
+    renderScreen({ onRenameCapsule });
+
+    await user.click(screen.getByRole("button", { name: "Edit capsule name" }));
+    const input = screen.getByRole("textbox", { name: "Capsule name" });
+    await user.clear(input);
+    await user.type(input, "Cancelled");
+    await user.keyboard("{Escape}");
+
+    expect(onRenameCapsule).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(screen.queryByRole("textbox", { name: "Capsule name" })).not.toBeInTheDocument();
+    });
+    expect(screen.getByRole("button", { name: "Rename capsule Spring edit" })).toBeInTheDocument();
+  });
+
+  test("does not submit desktop inline rename for unchanged or whitespace-only values", async () => {
+    const user = userEvent.setup();
+    const onRenameCapsule = vi.fn(() => Promise.resolve());
+
+    renderScreen({ onRenameCapsule });
+
+    await user.click(screen.getByRole("button", { name: "Edit capsule name" }));
+    let input = screen.getByRole("textbox", { name: "Capsule name" });
+    await user.type(input, "   ");
+    await user.tab();
+
+    await waitFor(() => {
+      expect(screen.queryByRole("textbox", { name: "Capsule name" })).not.toBeInTheDocument();
+    });
+    expect(onRenameCapsule).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Edit capsule name" }));
+    input = screen.getByRole("textbox", { name: "Capsule name" });
+    await user.clear(input);
+    await user.type(input, "  Spring edit  ");
+    await user.tab();
+
+    await waitFor(() => {
+      expect(screen.queryByRole("textbox", { name: "Capsule name" })).not.toBeInTheDocument();
+    });
+    expect(onRenameCapsule).not.toHaveBeenCalled();
+  });
+
+  test("keeps unsaved dot before the pencil trigger in the desktop header", () => {
+    renderScreen({
+      activeCapsule: {
+        id: "capsule-1",
+        name: "Spring edit",
+        draft: { filters: { locale: "en" }, data: {} },
+        saved: null,
+        status: "new"
+      }
+    });
+
+    const renameButton = screen.getByRole("button", { name: "Edit capsule name" });
+    const renameContainer = renameButton.parentElement?.parentElement;
+    const unsavedDot = renameContainer?.querySelector("svg[data-testid='FiberManualRecordRoundedIcon']");
+
+    expect(unsavedDot).not.toBeNull();
+    expect(unsavedDot?.compareDocumentPosition(renameButton.parentElement)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+
   test("shows Save as for a saved capsule without a draft", async () => {
     const user = userEvent.setup();
 

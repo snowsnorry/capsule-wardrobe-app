@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Avatar,
   Box,
@@ -94,6 +94,10 @@ function groupCapsules(items = []) {
 
 function capsuleHasUnsavedChanges(capsule) {
   return capsule?.status === "new" || capsule?.status === "modified";
+}
+
+function normalizeCapsuleName(name) {
+  return String(name || "").trim();
 }
 
 function SidebarCollapseIcon(props) {
@@ -257,6 +261,9 @@ function MainScreen({
   const [renameOpen, setRenameOpen] = useState(false);
   const [renameValue, setRenameValue] = useState("");
   const [renameCapsuleId, setRenameCapsuleId] = useState("");
+  const [isInlineRenameActive, setIsInlineRenameActive] = useState(false);
+  const [inlineRenameValue, setInlineRenameValue] = useState("");
+  const [isInlineRenameSubmitting, setIsInlineRenameSubmitting] = useState(false);
   const [saveAsOpen, setSaveAsOpen] = useState(false);
   const [saveAsValue, setSaveAsValue] = useState("");
   const [saveAsCapsuleId, setSaveAsCapsuleId] = useState("");
@@ -267,6 +274,7 @@ function MainScreen({
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [optimisticActiveCapsuleId, setOptimisticActiveCapsuleId] = useState(activeCapsule?.id || "");
+  const inlineRenameSubmitGuardRef = useRef(false);
   const nameDialogProps = isOverlaySidebar ? { fullScreen: true } : {
     fullWidth: true,
     maxWidth: "sm",
@@ -324,6 +332,13 @@ function MainScreen({
     setOptimisticActiveCapsuleId(activeCapsule?.id || "");
   }, [activeCapsule?.id]);
 
+  useEffect(() => {
+    setIsInlineRenameActive(false);
+    setInlineRenameValue(activeCapsule?.name || "");
+    setIsInlineRenameSubmitting(false);
+    inlineRenameSubmitGuardRef.current = false;
+  }, [activeCapsule?.id, activeCapsule?.name]);
+
   const handleCapsuleOpen = async (capsuleId) => {
     setOptimisticActiveCapsuleId(capsuleId);
     await onOpenCapsule(capsuleId);
@@ -349,6 +364,45 @@ function MainScreen({
     setSaveAsCapsuleId(capsule.id);
     setSaveAsValue(capsule.name || "");
     setSaveAsOpen(true);
+  };
+
+  const handleStartInlineRename = () => {
+    if (isOverlaySidebar || !activeCapsule?.id || isInlineRenameSubmitting) {
+      return;
+    }
+    setInlineRenameValue(activeCapsule?.name || "");
+    setIsInlineRenameActive(true);
+  };
+
+  const handleCancelInlineRename = () => {
+    inlineRenameSubmitGuardRef.current = false;
+    setInlineRenameValue(activeCapsule?.name || "");
+    setIsInlineRenameActive(false);
+    setIsInlineRenameSubmitting(false);
+  };
+
+  const handleSubmitInlineRename = async () => {
+    if (!activeCapsule?.id || inlineRenameSubmitGuardRef.current || isInlineRenameSubmitting) {
+      return;
+    }
+
+    const nextName = normalizeCapsuleName(inlineRenameValue);
+    const currentName = normalizeCapsuleName(activeCapsule?.name);
+
+    if (!nextName || nextName === currentName) {
+      handleCancelInlineRename();
+      return;
+    }
+
+    inlineRenameSubmitGuardRef.current = true;
+    setIsInlineRenameSubmitting(true);
+    try {
+      await onRenameCapsule(nextName, activeCapsule.id);
+      setIsInlineRenameActive(false);
+    } finally {
+      inlineRenameSubmitGuardRef.current = false;
+      setIsInlineRenameSubmitting(false);
+    }
   };
 
   const sidebarContent = (
@@ -736,20 +790,145 @@ function MainScreen({
                   ) : null}
                   {!(isOverlaySidebar && selectedCount > 0) ? (
                     <>
-                      <Typography
-                        variant="h6"
-                        noWrap
-                        sx={{
-                          minWidth: 0
-                        }}
-                      >
-                        {activeCapsuleName}
-                      </Typography>
-                      {capsuleHasUnsavedChanges(activeCapsule) ? (
-                        <Tooltip title={t("capsule.notSaved")}>
-                          <FiberManualRecordRoundedIcon sx={{ fontSize: 10, color: "#2f8f58", flexShrink: 0 }} />
-                        </Tooltip>
-                      ) : null}
+                      {isOverlaySidebar ? (
+                        <>
+                          <Typography
+                            variant="h6"
+                            noWrap
+                            sx={{
+                              minWidth: 0
+                            }}
+                          >
+                            {activeCapsuleName}
+                          </Typography>
+                          {capsuleHasUnsavedChanges(activeCapsule) ? (
+                            <Tooltip title={t("capsule.notSaved")}>
+                              <FiberManualRecordRoundedIcon sx={{ fontSize: 10, color: "#2f8f58", flexShrink: 0 }} />
+                            </Tooltip>
+                          ) : null}
+                        </>
+                      ) : (
+                        <Stack
+                          direction="row"
+                          alignItems="center"
+                          spacing={0.75}
+                          sx={{
+                            minWidth: 0,
+                            flex: 1,
+                            "& .capsule-header-rename-icon": {
+                              opacity: isInlineRenameActive ? 1 : 0,
+                              transition: "opacity 160ms ease"
+                            },
+                            "&:hover .capsule-header-rename-icon": {
+                              opacity: 1
+                            },
+                            "&:focus-within .capsule-header-rename-icon": {
+                              opacity: 1
+                            }
+                          }}
+                        >
+                          {isInlineRenameActive ? (
+                            <TextField
+                              autoFocus
+                              variant="standard"
+                              value={inlineRenameValue}
+                              disabled={isInlineRenameSubmitting}
+                              inputProps={{ "aria-label": "Capsule name" }}
+                              onChange={(event) => setInlineRenameValue(event.target.value)}
+                              onBlur={() => {
+                                void handleSubmitInlineRename();
+                              }}
+                              onKeyDown={(event) => {
+                                if (event.key === "Enter") {
+                                  event.preventDefault();
+                                  void handleSubmitInlineRename();
+                                  return;
+                                }
+                                if (event.key === "Escape") {
+                                  event.preventDefault();
+                                  handleCancelInlineRename();
+                                }
+                              }}
+                              sx={{
+                                minWidth: 0,
+                                flex: 1,
+                                mt: "-1px",
+                                "& .MuiInputBase-root": {
+                                  alignItems: "center",
+                                  fontSize: "1.25rem",
+                                  fontWeight: 500,
+                                  lineHeight: 1.6,
+                                  p: 0,
+                                  "&::before": {
+                                    display: "none"
+                                  },
+                                  "&::after": {
+                                    display: "none"
+                                  }
+                                },
+                                "& .MuiInputBase-root.Mui-focused": {
+                                  boxShadow: "inset 0 -1px 0 rgba(15, 23, 42, 0.38)"
+                                },
+                                "& .MuiInputBase-input": {
+                                  p: 0,
+                                  lineHeight: 1.6
+                                }
+                              }}
+                            />
+                          ) : (
+                            <>
+                              <Box
+                                component="button"
+                                type="button"
+                                onClick={handleStartInlineRename}
+                                aria-label={`Rename capsule ${activeCapsuleName}`}
+                                sx={{
+                                  minWidth: 0,
+                                  flexShrink: 1,
+                                  p: 0,
+                                  border: 0,
+                                  background: "transparent",
+                                  textAlign: "left",
+                                  color: "inherit",
+                                  cursor: "text"
+                                }}
+                              >
+                                <Typography
+                                  variant="h6"
+                                  noWrap
+                                  sx={{
+                                    minWidth: 0
+                                  }}
+                                >
+                                  {activeCapsuleName}
+                                </Typography>
+                              </Box>
+                              {capsuleHasUnsavedChanges(activeCapsule) ? (
+                                <Tooltip title={t("capsule.notSaved")}>
+                                  <FiberManualRecordRoundedIcon sx={{ fontSize: 10, color: "#2f8f58", flexShrink: 0 }} />
+                                </Tooltip>
+                              ) : null}
+                              <Box
+                                sx={{
+                                  width: 32,
+                                  display: "flex",
+                                  justifyContent: "center",
+                                  flexShrink: 0
+                                }}
+                              >
+                                <IconButton
+                                  className="capsule-header-rename-icon"
+                                  aria-label="Edit capsule name"
+                                  size="small"
+                                  onClick={handleStartInlineRename}
+                                >
+                                  <DriveFileRenameOutlineRoundedIcon fontSize="small" />
+                                </IconButton>
+                              </Box>
+                            </>
+                          )}
+                        </Stack>
+                      )}
                     </>
                   ) : null}
                 </Stack>
@@ -856,9 +1035,13 @@ function MainScreen({
         onRegenerateAll={onRefreshItems}
         onDownloadPdf={onDownloadPdf}
         onRename={() => {
-          setRenameCapsuleId(activeCapsule?.id || "");
-          setRenameValue(activeCapsuleName);
-          setRenameOpen(true);
+          if (isOverlaySidebar) {
+            setRenameCapsuleId(activeCapsule?.id || "");
+            setRenameValue(activeCapsuleName);
+            setRenameOpen(true);
+            return;
+          }
+          handleStartInlineRename();
         }}
         onRevert={() => setConfirmAction("revert")}
         onSave={onSaveCapsule}
