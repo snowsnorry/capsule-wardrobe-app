@@ -1077,7 +1077,14 @@ function MainScreen({
         }}
       />
 
-      <Menu anchorEl={userMenuAnchor} open={Boolean(userMenuAnchor)} onClose={() => setUserMenuAnchor(null)}>
+      <Menu
+        anchorEl={userMenuAnchor}
+        open={Boolean(userMenuAnchor)}
+        onClose={() => setUserMenuAnchor(null)}
+        anchorOrigin={{ vertical: "center", horizontal: "right" }}
+        transformOrigin={{ vertical: "center", horizontal: "left" }}
+        slotProps={{ paper: { sx: { ml: 1 } } }}
+      >
         <MenuItem onClick={() => { setUserMenuAnchor(null); onSignOut(); }}>
           <ListItemIcon><LogoutRoundedIcon fontSize="small" /></ListItemIcon>
           {t("actions.signOut")}
