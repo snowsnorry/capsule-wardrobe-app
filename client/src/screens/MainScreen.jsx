@@ -1114,6 +1114,7 @@ function MainScreen({
         anchorEl={userMenuAnchor}
         open={Boolean(userMenuAnchor)}
         onClose={() => setUserMenuAnchor(null)}
+        disableRestoreFocus
         anchorOrigin={{ vertical: "center", horizontal: "right" }}
         transformOrigin={{ vertical: "center", horizontal: "left" }}
         slotProps={{ paper: { sx: { ml: 1 } } }}
