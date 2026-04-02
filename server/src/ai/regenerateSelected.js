@@ -824,7 +824,10 @@ function createPartialRegenerationService({
       };
       const generationProfile = buildProfileCapsuleContext(profile, generationCapsule);
       const noLlm = isNoLlmProfileEnabled(generationProfile);
-      logWardrobeInfo("regenerate-request-received", { itemUrls, noLlm }, logContext);
+      logWardrobeInfo("regenerate-request-received", {
+        itemUrls,
+        noLlm: noLlm || undefined
+      }, logContext);
       const job = startPartialRegenerationJob(
         email,
         capsuleId,

@@ -1162,7 +1162,7 @@ function createWardrobeService({
         ...getRequestedWardrobeParams(generationProfile, {
           forceRefresh: true
         }),
-        noLlm
+        noLlm: noLlm || undefined
       }, logContext);
       const job = startWardrobeJob(email, capsuleId, profile, generationCapsule, logContext);
       publishSnapshotImpl(

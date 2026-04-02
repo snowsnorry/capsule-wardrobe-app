@@ -111,7 +111,7 @@ function createGeminiClient({
 
       const finishReason = response?.candidates?.[0]?.finishReason;
       if (finishReason && finishReason !== "STOP") {
-        console.warn(`[gemini][generation-aborted] Генерация прервана сервером! Причина: ${finishReason}`);
+        console.warn(`[gemini][generation-aborted] Generation was interrupted by the server: ${finishReason}`);
       }
 
       let content = typeof response?.text === "string" ? response.text : "{}";
