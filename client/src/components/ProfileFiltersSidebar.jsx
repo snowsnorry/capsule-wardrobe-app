@@ -18,6 +18,7 @@ function ProfileFiltersSidebar({
   selectedAudience,
   selectedAccentColor,
   selectedPattern,
+  hasFilterChanges = true,
   status,
   onSelectStyleCore,
   onSelectStyleAesthetic,
@@ -33,12 +34,24 @@ function ProfileFiltersSidebar({
   resetLabelKey = "filters.reset"
 }) {
   const { t, locale } = useI18n();
-  const isApplyDisabled =
-    status.loading ||
-    !selectedStyleCore ||
-    selectedOccasions.length === 0 ||
-    selectedSeasons.length === 0 ||
-    !selectedAudience;
+  const missingRequiredFilters = [];
+
+  if (!selectedStyleCore) {
+    missingRequiredFilters.push(t("filters.required.styleCore"));
+  }
+  if (selectedOccasions.length === 0) {
+    missingRequiredFilters.push(t("filters.required.occasions"));
+  }
+  if (selectedSeasons.length === 0) {
+    missingRequiredFilters.push(t("filters.required.seasons"));
+  }
+  if (!selectedAudience) {
+    missingRequiredFilters.push(t("filters.required.audience"));
+  }
+
+  const isMissingRequiredFilters = missingRequiredFilters.length > 0;
+  const showUnchangedFiltersHint = !status.loading && !isMissingRequiredFilters && !hasFilterChanges;
+  const isApplyDisabled = status.loading || isMissingRequiredFilters || !hasFilterChanges;
 
   return (
     <Stack
@@ -149,6 +162,16 @@ function ProfileFiltersSidebar({
       </Stack>
 
       <Stack spacing={1.5}>
+        {isMissingRequiredFilters ? (
+          <Typography variant="body2" color="text.secondary">
+            {t("filters.applyDisabledHint", { items: missingRequiredFilters.join(", ") })}
+          </Typography>
+        ) : null}
+        {showUnchangedFiltersHint ? (
+          <Typography variant="body2" color="text.secondary">
+            {t("filters.applyDisabledUnchangedHint")}
+          </Typography>
+        ) : null}
         <Stack direction="row" spacing={2}>
           <Button variant="contained" onClick={onApply} disabled={isApplyDisabled}>
             {t("filters.apply")}

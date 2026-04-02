@@ -31,6 +31,7 @@ function renderSidebar(props = {}) {
     selectedAudience: "woman",
     selectedAccentColor: "blue",
     selectedPattern: null,
+    hasFilterChanges: true,
     status: { loading: false, error: "", infoKey: "", infoParams: null },
     onSelectStyleCore: vi.fn(),
     onSelectStyleAesthetic: vi.fn(),
@@ -66,6 +67,12 @@ function renderSidebar(props = {}) {
         "profile.styleAestheticTitle": "Aesthetic style",
         "profile.styleAestheticNotImportant": "Aesthetic not important",
         "filters.apply": "Apply",
+        "filters.applyDisabledHint": "To apply filters, choose: {items}.",
+        "filters.applyDisabledUnchangedHint": "Filters have not changed.",
+        "filters.required.styleCore": "a core style",
+        "filters.required.occasions": "at least one occasion",
+        "filters.required.seasons": "at least one season",
+        "filters.required.audience": "an audience",
         "filters.reset": "Reset",
         "actions.signOut": "Sign out",
         "main.partialRegenerateToggle": "Toggle"
@@ -75,7 +82,10 @@ function renderSidebar(props = {}) {
         return `info:${params.count}`;
       }
 
-      return labels[key] || key;
+      const label = labels[key] || key;
+      return params
+        ? label.replace(/\{(\w+)\}/g, (_, paramKey) => String(params[paramKey] ?? `{${paramKey}}`))
+        : label;
     }
   });
 
@@ -162,5 +172,50 @@ describe("ProfileFiltersSidebar", () => {
 
     expect(screen.getByRole("button", { name: "Apply" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Reset" })).toBeDisabled();
+    expect(screen.queryByText(/To apply filters, choose:/)).not.toBeInTheDocument();
+    expect(screen.queryByText("Filters have not changed.")).not.toBeInTheDocument();
+  });
+
+  test("shows no hint and keeps apply enabled when required filters are selected", () => {
+    renderSidebar();
+
+    expect(screen.getByRole("button", { name: "Apply" })).toBeEnabled();
+    expect(screen.queryByText(/To apply filters, choose:/)).not.toBeInTheDocument();
+  });
+
+  test("shows a single missing required filter in the apply hint", () => {
+    renderSidebar({
+      selectedAudience: ""
+    });
+
+    expect(screen.getByRole("button", { name: "Apply" })).toBeDisabled();
+    expect(screen.getByText("To apply filters, choose: an audience.")).toBeInTheDocument();
+  });
+
+  test("shows all missing required filters in the apply hint", () => {
+    renderSidebar({
+      selectedStyleCore: "",
+      selectedOccasions: [],
+      selectedSeasons: [],
+      selectedAudience: ""
+    });
+
+    expect(screen.getByRole("button", { name: "Apply" })).toBeDisabled();
+    expect(
+      screen.getByText(
+        "To apply filters, choose: a core style, at least one occasion, at least one season, an audience."
+      )
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Filters have not changed.")).not.toBeInTheDocument();
+  });
+
+  test("shows an unchanged hint and disables apply when filters did not change", () => {
+    renderSidebar({
+      hasFilterChanges: false
+    });
+
+    expect(screen.getByRole("button", { name: "Apply" })).toBeDisabled();
+    expect(screen.getByText("Filters have not changed.")).toBeInTheDocument();
+    expect(screen.queryByText(/To apply filters, choose:/)).not.toBeInTheDocument();
   });
 });

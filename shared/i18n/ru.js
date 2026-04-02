@@ -265,9 +265,17 @@ const ru = {
   filters: {
     title: "Фильтры",
     apply: "Применить",
+    applyDisabledHint: "Чтобы применить фильтры, выберите: {items}.",
+    applyDisabledUnchangedHint: "Фильтры не изменились.",
     reset: "Сбросить",
     cancel: "Отмена",
-    open: "Открыть фильтры"
+    open: "Открыть фильтры",
+    required: {
+      styleCore: "основной стиль",
+      occasions: "хотя бы один повод",
+      seasons: "хотя бы один сезон",
+      audience: "аудиторию"
+    }
   },
   capsule: {
     new: "Новая капсула",

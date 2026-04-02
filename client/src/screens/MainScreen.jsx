@@ -228,6 +228,7 @@ function MainScreen({
   selectedAudience,
   selectedAccentColor,
   selectedPattern,
+  hasFilterChanges,
   status,
   onSelectStyleCore,
   onSelectStyleAesthetic,
@@ -761,6 +762,7 @@ function MainScreen({
                 selectedAudience={selectedAudience}
                 selectedAccentColor={selectedAccentColor}
                 selectedPattern={selectedPattern}
+                hasFilterChanges={hasFilterChanges}
                 status={status}
                 onSelectStyleCore={onSelectStyleCore}
                 onSelectStyleAesthetic={onSelectStyleAesthetic}
@@ -1284,6 +1286,7 @@ function MainScreen({
             selectedAudience={selectedAudience}
             selectedAccentColor={selectedAccentColor}
             selectedPattern={selectedPattern}
+            hasFilterChanges={hasFilterChanges}
             status={status}
             onSelectStyleCore={onSelectStyleCore}
             onSelectStyleAesthetic={onSelectStyleAesthetic}

@@ -264,9 +264,17 @@ const en = {
   filters: {
     title: "Filters",
     apply: "Apply",
+    applyDisabledHint: "To apply filters, choose: {items}.",
+    applyDisabledUnchangedHint: "Filters have not changed.",
     reset: "Reset",
     cancel: "Cancel",
-    open: "Open filters"
+    open: "Open filters",
+    required: {
+      styleCore: "a core style",
+      occasions: "at least one occasion",
+      seasons: "at least one season",
+      audience: "an audience"
+    }
   },
   capsule: {
     new: "New capsule",

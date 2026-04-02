@@ -194,6 +194,22 @@ function getEffectiveCapsule(capsule) {
   return capsule?.draft || capsule?.saved || null;
 }
 
+function normalizeComparableFilters(filters = {}) {
+  return {
+    formalityLevel: typeof filters.formalityLevel === "string" ? filters.formalityLevel : "",
+    style: filters.style ?? null,
+    occasions: Array.isArray(filters.occasions) ? [...filters.occasions].sort() : [],
+    season: Array.isArray(filters.season) ? [...filters.season].sort() : [],
+    audience: typeof filters.audience === "string" ? filters.audience : "",
+    color: filters.color ?? null,
+    pattern: filters.pattern ?? null
+  };
+}
+
+function areFiltersEqual(left, right) {
+  return JSON.stringify(normalizeComparableFilters(left)) === JSON.stringify(normalizeComparableFilters(right));
+}
+
 function hasStoredWardrobeItems(capsule) {
   const items = getEffectiveCapsule(capsule)?.data?.wardrobe?.items;
   return Array.isArray(items) && items.length > 0;
@@ -841,6 +857,10 @@ function App() {
     selectedSeason.length > 0 &&
     selectedAudience
   );
+  const hasFilterChanges = !areFiltersEqual(
+    buildCurrentDraftSnapshot({ wardrobe: null }).filters,
+    getEffectiveCapsule(activeCapsuleMeta)?.filters || buildEmptyCapsuleDraft().filters
+  );
   const isContentBusy = isLoadingItems || isWardrobePending || isPartialRegenerationLoading || isContentOperationLoading;
 
   const logWardrobeReasoning = (reasoning) => {
@@ -1223,6 +1243,7 @@ function App() {
           selectedAudience={selectedAudience}
           selectedAccentColor={selectedColor}
           selectedPattern={selectedPattern}
+          hasFilterChanges={hasFilterChanges}
           status={status}
           onSelectStyleCore={setSelectedFormalityLevel}
           onSelectStyleAesthetic={setSelectedStyle}
