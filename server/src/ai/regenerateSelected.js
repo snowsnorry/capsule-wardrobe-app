@@ -440,7 +440,7 @@ async function regenerateCapsuleWardrobe(userProfile = null, products = null, lo
   }, logContext);
   const noLlm = userProfile?.noLlm === true;
   if (noLlm) {
-    const balancedItems = enforceCategoryCounts([], normalizedItems, capsuleCategories);
+    const balancedItems = enforceCategoryCounts([], normalizedItems, capsuleCategories, userProfile);
 
     if (balancedItems.length === 0) {
       throw new Error("SQL returned no valid regenerated items");
@@ -577,7 +577,7 @@ async function regenerateCapsuleWardrobe(userProfile = null, products = null, lo
   const selectedItems = uniqueSelectedIds
     .map((id) => itemsById.get(String(id)))
     .filter(Boolean);
-  const balancedItems = enforceCategoryCounts(selectedItems, normalizedItems, capsuleCategories);
+  const balancedItems = enforceCategoryCounts(selectedItems, normalizedItems, capsuleCategories, userProfile);
 
   if (balancedItems.length === 0) {
     throw new Error("Model returned no valid selected_ids");

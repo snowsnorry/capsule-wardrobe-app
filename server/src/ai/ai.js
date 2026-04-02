@@ -285,9 +285,61 @@ function getSelectedIdsFromCapsule(capsule) {
   });
 }
 
-function enforceCategoryCounts(selectedItems, normalizedItems, categories) {
+function normalizeCapsuleConstraintValue(value) {
+  return typeof value === "string" && value.trim().length > 0
+    ? value.trim()
+    : null;
+}
+
+function isStyleMatched(item, targetStyle) {
+  if (!targetStyle) {
+    return false;
+  }
+
+  return Array.isArray(item?.style) && item.style.includes(targetStyle);
+}
+
+function isColorMatched(item, targetColor) {
+  if (!targetColor) {
+    return false;
+  }
+
+  return Array.isArray(item?.color_base) && item.color_base.includes(targetColor);
+}
+
+function isNeutralItem(item) {
+  return item?.is_neutral === true;
+}
+
+function normalizePatternValue(value) {
+  return typeof value === "string" && value.trim().length > 0
+    ? value.trim().toLowerCase()
+    : null;
+}
+
+function isPatternMatched(item, targetPattern) {
+  if (!targetPattern || targetPattern === "solid") {
+    return false;
+  }
+
+  return normalizePatternValue(item?.pattern) === targetPattern;
+}
+
+function hasSolidOrNullPattern(item) {
+  const normalizedPattern = normalizePatternValue(item?.pattern);
+  return normalizedPattern === null || normalizedPattern === "solid";
+}
+
+function enforceCategoryCounts(selectedItems, normalizedItems, categories, capsuleParams = null) {
   const categoryOrder = Object.keys(categories);
   const allowedCategories = new Set(categoryOrder);
+  const categoryIndexByName = new Map(categoryOrder.map((category, index) => [category, index]));
+  const targetStyle = normalizeCapsuleConstraintValue(capsuleParams?.style);
+  const targetColor = normalizeCapsuleConstraintValue(capsuleParams?.color);
+  const targetPattern = normalizePatternValue(capsuleParams?.pattern);
+  const styleLimit = targetStyle ? 4 : Infinity;
+  const colorLimit = targetColor ? 3 : Infinity;
+  const patternLimit = targetPattern && targetPattern !== "solid" ? 1 : Infinity;
   const seenPoolIds = new Set();
   const poolByCategory = new Map(categoryOrder.map((category) => [category, []]));
 
@@ -316,21 +368,137 @@ function enforceCategoryCounts(selectedItems, normalizedItems, categories) {
 
   const result = [];
   const resultIds = new Set();
+  let styleMatchCount = 0;
+  let colorMatchCount = 0;
+  let patternMatchCount = 0;
+  const selectedCountByCategory = new Map(categoryOrder.map((category) => [category, 0]));
+  const styleMatchCountByCategory = new Map(categoryOrder.map((category) => [category, 0]));
+  const colorMatchCountByCategory = new Map(categoryOrder.map((category) => [category, 0]));
+
+  function addItem(item) {
+    const itemId = String(item.id);
+    if (resultIds.has(itemId)) {
+      return false;
+    }
+
+    result.push(item);
+    resultIds.add(itemId);
+    selectedCountByCategory.set(item.category, (selectedCountByCategory.get(item.category) || 0) + 1);
+
+    if (isStyleMatched(item, targetStyle)) {
+      styleMatchCount += 1;
+      styleMatchCountByCategory.set(item.category, (styleMatchCountByCategory.get(item.category) || 0) + 1);
+    }
+
+    if (isColorMatched(item, targetColor)) {
+      colorMatchCount += 1;
+      colorMatchCountByCategory.set(item.category, (colorMatchCountByCategory.get(item.category) || 0) + 1);
+    }
+
+    if (isPatternMatched(item, targetPattern)) {
+      patternMatchCount += 1;
+    }
+
+    return true;
+  }
 
   for (const category of categoryOrder) {
     const requiredCount = categories[category];
     const current = selectedByCategory.get(category).slice(0, requiredCount);
     for (const item of current) {
-      const itemId = String(item.id);
-      if (resultIds.has(itemId)) continue;
-      result.push(item);
-      resultIds.add(itemId);
+      addItem(item);
     }
+  }
+
+  function canUseStyleSafeCandidate(candidate) {
+    return !isStyleMatched(candidate, targetStyle) || styleMatchCount < styleLimit;
+  }
+
+  function canUseColorSafeCandidate(candidate) {
+    if (!targetColor) {
+      return true;
+    }
+
+    if (isColorMatched(candidate, targetColor)) {
+      return colorMatchCount < colorLimit;
+    }
+
+    return isNeutralItem(candidate);
+  }
+
+  function canUsePatternSafeCandidate(candidate) {
+    if (!targetPattern || targetPattern === "solid") {
+      return true;
+    }
+
+    if (isPatternMatched(candidate, targetPattern)) {
+      return patternMatchCount < patternLimit;
+    }
+
+    return hasSolidOrNullPattern(candidate);
+  }
+
+  function hasRemainingSlots(category) {
+    return (selectedCountByCategory.get(category) || 0) < (categories[category] || 0);
+  }
+
+  function hasFutureCategoryNeedingAccent(matchType, categoryIndex, currentCategory) {
+    const matchCountByCategory = matchType === "style"
+      ? styleMatchCountByCategory
+      : colorMatchCountByCategory;
+    const matchesAccent = matchType === "style"
+      ? (item) => isStyleMatched(item, targetStyle)
+      : (item) => isColorMatched(item, targetColor);
+
+    for (const [category, index] of categoryIndexByName.entries()) {
+      if (index <= categoryIndex || category === currentCategory || !hasRemainingSlots(category)) {
+        continue;
+      }
+
+      if ((matchCountByCategory.get(category) || 0) > 0) {
+        continue;
+      }
+
+      const candidates = poolByCategory.get(category) || [];
+      if (candidates.some((candidate) => (
+        !resultIds.has(String(candidate?.id)) && matchesAccent(candidate)
+      ))) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  function canUseStyleDistributedCandidate(candidate, category) {
+    if (!isStyleMatched(candidate, targetStyle)) {
+      return true;
+    }
+
+    if ((styleMatchCountByCategory.get(category) || 0) === 0) {
+      return true;
+    }
+
+    const categoryIndex = categoryIndexByName.get(category) ?? -1;
+    return !hasFutureCategoryNeedingAccent("style", categoryIndex, category);
+  }
+
+  function canUseColorDistributedCandidate(candidate, category) {
+    if (!isColorMatched(candidate, targetColor)) {
+      return true;
+    }
+
+    if ((colorMatchCountByCategory.get(category) || 0) === 0) {
+      return true;
+    }
+
+    const categoryIndex = categoryIndexByName.get(category) ?? -1;
+    return !hasFutureCategoryNeedingAccent("color", categoryIndex, category);
   }
 
   for (const category of categoryOrder) {
     const requiredCount = categories[category];
-    const currentCount = result.filter((item) => item.category === category).length;
+    const currentCount = selectedCountByCategory.get(category) || 0;
     const missing = requiredCount - currentCount;
     if (missing <= 0) {
       continue;
@@ -338,16 +506,43 @@ function enforceCategoryCounts(selectedItems, normalizedItems, categories) {
 
     const candidates = poolByCategory.get(category);
     let added = 0;
-    for (const candidate of candidates) {
-      const itemId = String(candidate.id);
-      if (resultIds.has(itemId)) {
-        continue;
-      }
-      result.push(candidate);
-      resultIds.add(itemId);
-      added += 1;
+
+    const candidateGroups = [
+      (candidate) => (
+        canUseStyleSafeCandidate(candidate)
+        && canUseColorSafeCandidate(candidate)
+        && canUsePatternSafeCandidate(candidate)
+        && canUseStyleDistributedCandidate(candidate, category)
+        && canUseColorDistributedCandidate(candidate, category)
+      ),
+      (candidate) => (
+        canUseStyleSafeCandidate(candidate)
+        && canUseColorSafeCandidate(candidate)
+        && canUsePatternSafeCandidate(candidate)
+      ),
+      (candidate) => canUseColorSafeCandidate(candidate) && canUsePatternSafeCandidate(candidate),
+      () => true
+    ];
+
+    for (const matchesGroup of candidateGroups) {
       if (added >= missing) {
         break;
+      }
+
+      for (const candidate of candidates) {
+        const itemId = String(candidate?.id);
+        if (!itemId || resultIds.has(itemId) || !matchesGroup(candidate)) {
+          continue;
+        }
+
+        if (!addItem(candidate)) {
+          continue;
+        }
+
+        added += 1;
+        if (added >= missing) {
+          break;
+        }
       }
     }
   }
@@ -591,7 +786,7 @@ async function generateCapsuleWardrobe(userProfile = null, logContext = null) {
   }, logContext);
   const noLlm = userProfile?.noLlm === true;
   if (noLlm) {
-    const balancedItems = enforceCategoryCounts([], normalizedItems, capsuleCategories);
+    const balancedItems = enforceCategoryCounts([], normalizedItems, capsuleCategories, userProfile);
 
     if (balancedItems.length === 0) {
       throw new Error("SQL returned no valid wardrobe items");
@@ -682,7 +877,7 @@ async function generateCapsuleWardrobe(userProfile = null, logContext = null) {
   const selectedItems = uniqueSelectedIds
     .map((id) => itemsById.get(String(id)))
     .filter(Boolean);
-  const balancedItems = enforceCategoryCounts(selectedItems, normalizedItems, capsuleCategories);
+  const balancedItems = enforceCategoryCounts(selectedItems, normalizedItems, capsuleCategories, userProfile);
 
   if (balancedItems.length === 0) {
     throw new Error("Model returned no valid selected_ids");
