@@ -296,6 +296,8 @@ function MainScreen({
   const [isSearching, setIsSearching] = useState(false);
   const [optimisticActiveCapsuleId, setOptimisticActiveCapsuleId] = useState(activeCapsule?.id || "");
   const inlineRenameSubmitGuardRef = useRef(false);
+  const userMenuPaperRef = useRef(null);
+  const searchDialogPaperRef = useRef(null);
   const displayName = String(userName || "").trim();
   const avatarInitials = getUserInitials(displayName, userEmail);
   const nameDialogProps = isOverlaySidebar ? { fullScreen: true } : {
@@ -378,6 +380,35 @@ function MainScreen({
     if (!isOverlaySidebar && isSidebarCollapsed) {
       setIsSidebarCollapsed(false);
     }
+  };
+
+  const handleCloseUserMenu = () => {
+    const activeElement = document.activeElement;
+    if (
+      activeElement instanceof HTMLElement &&
+      userMenuPaperRef.current?.contains(activeElement)
+    ) {
+      activeElement.blur();
+    }
+    setUserMenuAnchor(null);
+  };
+
+  const handleCloseSearchDialog = () => {
+    const activeElement = document.activeElement;
+    if (
+      activeElement instanceof HTMLElement &&
+      searchDialogPaperRef.current?.contains(activeElement)
+    ) {
+      activeElement.blur();
+    }
+    setSearchOpen(false);
+  };
+
+  const handleOpenSearchDialog = (event) => {
+    if (event?.currentTarget instanceof HTMLElement) {
+      event.currentTarget.blur();
+    }
+    setSearchOpen(true);
   };
 
   const handleRequestDuplicate = async (capsule = activeCapsule) => {
@@ -513,7 +544,7 @@ function MainScreen({
         </Button>
         <Button
           variant="text"
-          onClick={() => setSearchOpen(true)}
+          onClick={handleOpenSearchDialog}
           sx={{
             justifyContent: "flex-start",
             px: 0,
@@ -1113,18 +1144,18 @@ function MainScreen({
       <Menu
         anchorEl={userMenuAnchor}
         open={Boolean(userMenuAnchor)}
-        onClose={() => setUserMenuAnchor(null)}
+        onClose={handleCloseUserMenu}
         disableRestoreFocus
         anchorOrigin={{ vertical: "center", horizontal: "right" }}
         transformOrigin={{ vertical: "center", horizontal: "left" }}
-        slotProps={{ paper: { sx: { ml: 1 } } }}
+        slotProps={{ paper: { ref: userMenuPaperRef, sx: { ml: 1 } } }}
       >
-        <MenuItem onClick={() => { setUserMenuAnchor(null); setIsSettingsOpen(true); }}>
+        <MenuItem onClick={() => { handleCloseUserMenu(); setIsSettingsOpen(true); }}>
           <ListItemIcon><SettingsRoundedIcon fontSize="small" /></ListItemIcon>
           {t("settings.title")}
         </MenuItem>
         <Divider />
-        <MenuItem onClick={() => { setUserMenuAnchor(null); onSignOut(); }}>
+        <MenuItem onClick={() => { handleCloseUserMenu(); onSignOut(); }}>
           <ListItemIcon><LogoutRoundedIcon fontSize="small" /></ListItemIcon>
           {t("actions.signOut")}
         </MenuItem>
@@ -1243,7 +1274,14 @@ function MainScreen({
         </DialogActions>
       </Dialog>
 
-      <Dialog open={searchOpen} onClose={() => setSearchOpen(false)} fullScreen={isOverlaySidebar} maxWidth="md" fullWidth>
+      <Dialog
+        open={searchOpen}
+        onClose={handleCloseSearchDialog}
+        fullScreen={isOverlaySidebar}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{ ref: searchDialogPaperRef }}
+      >
         <DialogContent sx={{ p: 0 }}>
           <Stack spacing={0}>
             <Stack direction="row" alignItems="center" sx={{ px: 2, py: 2 }}>
@@ -1256,7 +1294,7 @@ function MainScreen({
                 onChange={(event) => setSearchQuery(event.target.value)}
                 InputProps={{ disableUnderline: true }}
               />
-              <IconButton onClick={() => setSearchOpen(false)}>
+              <IconButton onClick={handleCloseSearchDialog}>
                 <CloseRoundedIcon />
               </IconButton>
             </Stack>
