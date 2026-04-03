@@ -1,5 +1,6 @@
 import en from "./en.js";
 import ru from "./ru.js";
+import { normalizeColorSwatchKey } from "../colorSwatches.js";
 
 const dictionaries = { en, ru };
 const defaultLocale = "en";
@@ -76,7 +77,20 @@ function humanizeOptionValue(value = "") {
 function translateOption(group, value, locale = defaultLocale) {
   const key = `options.${group}.${value}`;
   const translated = t(key, undefined, locale);
-  return translated === key ? humanizeOptionValue(value) : translated;
+  if (translated !== key) {
+    return translated;
+  }
+
+  if (group === "accentColors") {
+    const normalizedValue = normalizeColorSwatchKey(value);
+    const normalizedKey = `options.${group}.${normalizedValue}`;
+    const normalizedTranslated = t(normalizedKey, undefined, locale);
+    if (normalizedTranslated !== normalizedKey) {
+      return normalizedTranslated;
+    }
+  }
+
+  return humanizeOptionValue(value);
 }
 
 export { t, translateOption, defaultLocale, supportedLocales, normalizeLocale, isSupportedLocale, resolveTranslationValue };

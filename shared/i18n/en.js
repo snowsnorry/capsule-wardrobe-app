@@ -82,6 +82,7 @@ const en = {
       beige: "Beige",
       brown: "Brown",
       blue: "Blue",
+      light_blue: "Light blue",
       navy: "Navy",
       green: "Green",
       khaki: "Khaki",

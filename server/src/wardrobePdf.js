@@ -19,6 +19,7 @@ import {
 } from "./ai/imagePipeline.js";
 import { readImageFromLocalCache, resolveSourceImageUrl } from "./ai/promptImages.js";
 import { getSafeHttpUrl } from "../../shared/urlSecurity.js";
+import { getPdfColorSwatchFill } from "../../shared/colorSwatches.js";
 
 const PAGE_WIDTH = 595.28;
 const PAGE_HEIGHT = 841.89;
@@ -29,26 +30,6 @@ const BLOCK_RADIUS = 16.5;
 const LINK_COLOR = rgb(0.56, 0.44, 0.27);
 const SUBTLE_BLOCK_COLOR = rgb(0.96, 0.965, 0.972);
 const IMAGE_BACKGROUND_COLOR = rgb(0.97, 0.96, 0.94);
-const COLOR_SWATCH_STYLES = {
-  black: { fill: rgb(0.12, 0.16, 0.2) },
-  white: { fill: rgb(0.972, 0.961, 0.937) },
-  grey: { fill: rgb(0.58, 0.64, 0.72) },
-  beige: { fill: rgb(0.839, 0.757, 0.639) },
-  brown: { fill: rgb(0.545, 0.369, 0.235) },
-  blue: { fill: rgb(0.31, 0.514, 0.8) },
-  navy: { fill: rgb(0.141, 0.231, 0.42) },
-  green: { fill: rgb(0.302, 0.545, 0.333) },
-  khaki: { fill: rgb(0.541, 0.498, 0.271) },
-  red: { fill: rgb(0.784, 0.298, 0.298) },
-  burgundy: { fill: rgb(0.478, 0.122, 0.239) },
-  pink: { fill: rgb(0.847, 0.541, 0.651) },
-  yellow: { fill: rgb(0.851, 0.706, 0.231) },
-  purple: { fill: rgb(0.541, 0.373, 0.749) },
-  orange: { fill: rgb(0.851, 0.478, 0.169) },
-  denim: { fill: rgb(0.353, 0.471, 0.659) },
-  metallic: { fill: rgb(0.741, 0.765, 0.804) },
-  multicolor: { fill: rgb(0.31, 0.514, 0.8) }
-};
 const require = createRequire(import.meta.url);
 const DM_SANS_REGULAR_PATH = require.resolve("@fontsource/dm-sans/files/dm-sans-latin-400-normal.woff");
 const DM_SANS_BOLD_PATH = require.resolve("@fontsource/dm-sans/files/dm-sans-latin-700-normal.woff");
@@ -488,12 +469,12 @@ function drawColorValue(page, row, x, y, maxWidth, fonts) {
       cursorY -= lineHeight;
     }
 
-    const swatchStyle = COLOR_SWATCH_STYLES[item.key] || COLOR_SWATCH_STYLES.multicolor;
+    const [fillR, fillG, fillB] = getPdfColorSwatchFill(item.key);
     page.drawCircle({
       x: cursorX + swatchRadius,
       y: cursorY + 2,
       size: swatchRadius,
-      color: swatchStyle.fill,
+      color: rgb(fillR, fillG, fillB),
       borderColor: rgb(0.6, 0.6, 0.6),
       borderWidth: 0.6
     });

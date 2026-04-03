@@ -30,6 +30,7 @@ import LocaleSwitcher from "../components/LocaleSwitcher.jsx";
 import AccentColorChips from "../components/AccentColorChips.jsx";
 import { buildProductDetailGroups } from "../../../shared/productDetail.js";
 import { getSafeHttpUrl } from "../../../shared/urlSecurity.js";
+import { getColorSwatchStyle } from "../../../shared/colorSwatches.js";
 
 const INITIAL_SEARCH_STATE = Object.freeze({
   query: "",
@@ -65,31 +66,6 @@ const EMPTY_OPTIONS = Object.freeze({
   closureTypes: [],
   priceRange: { min: null, max: null }
 });
-
-const COLOR_SWATCH_STYLES = {
-  black: { bgcolor: "#1f2933" },
-  white: { bgcolor: "#f8f5ef" },
-  grey: { bgcolor: "#94a3b8" },
-  beige: { bgcolor: "#d6c1a3" },
-  brown: { bgcolor: "#8b5e3c" },
-  blue: { bgcolor: "#4f83cc" },
-  navy: { bgcolor: "#243b6b" },
-  green: { bgcolor: "#4d8b55" },
-  khaki: { bgcolor: "#8a7f45" },
-  red: { bgcolor: "#c84c4c" },
-  burgundy: { bgcolor: "#7a1f3d" },
-  pink: { bgcolor: "#d88aa6" },
-  yellow: { bgcolor: "#d9b43b" },
-  purple: { bgcolor: "#8a5fbf" },
-  orange: { bgcolor: "#d97a2b" },
-  denim: { bgcolor: "#5a78a8" },
-  metallic: {
-    background: "linear-gradient(135deg, #f3f4f6 0%, #cbd5e1 35%, #94a3b8 55%, #e5e7eb 100%)"
-  },
-  multicolor: {
-    background: "linear-gradient(135deg, #ff6b6b 0%, #ffd166 25%, #06d6a0 50%, #4f83cc 75%, #b5179e 100%)"
-  }
-};
 
 function createSearchState(savedSearch, priceRange) {
   const base = { ...INITIAL_SEARCH_STATE, ...(savedSearch || {}) };
@@ -335,7 +311,7 @@ function ProductDetail({ item, title, t, locale, mobileBackAction = null }) {
                                   boxSizing: "border-box",
                                   flexShrink: 0,
                                   border: "1px solid #999",
-                                  ...COLOR_SWATCH_STYLES[value.key]
+                                  ...getColorSwatchStyle(value.key)
                                 }}
                               />
                               <span>{value.label}</span>

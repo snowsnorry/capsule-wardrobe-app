@@ -82,6 +82,7 @@ const ru = {
       beige: "Бежевый",
       brown: "Коричневый",
       blue: "Синий",
+      light_blue: "Голубой",
       navy: "Темно-синий",
       green: "Зеленый",
       khaki: "Хаки",
