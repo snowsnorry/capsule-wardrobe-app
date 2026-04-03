@@ -9,12 +9,16 @@ const ACCENT_COLOR_SWATCH_STYLES = {
   beige: { bgcolor: "#d6c1a3" },
   brown: { bgcolor: "#8b5e3c" },
   blue: { bgcolor: "#4f83cc" },
+  navy: { bgcolor: "#243b6b" },
   green: { bgcolor: "#4d8b55" },
+  khaki: { bgcolor: "#8a7f45" },
   red: { bgcolor: "#c84c4c" },
+  burgundy: { bgcolor: "#7a1f3d" },
   pink: { bgcolor: "#d88aa6" },
   yellow: { bgcolor: "#d9b43b" },
   purple: { bgcolor: "#8a5fbf" },
   orange: { bgcolor: "#d97a2b" },
+  denim: { bgcolor: "#5a78a8" },
   metallic: {
     background: "linear-gradient(135deg, #f3f4f6 0%, #cbd5e1 35%, #94a3b8 55%, #e5e7eb 100%)"
   },

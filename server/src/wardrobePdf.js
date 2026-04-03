@@ -36,12 +36,16 @@ const COLOR_SWATCH_STYLES = {
   beige: { fill: rgb(0.839, 0.757, 0.639) },
   brown: { fill: rgb(0.545, 0.369, 0.235) },
   blue: { fill: rgb(0.31, 0.514, 0.8) },
+  navy: { fill: rgb(0.141, 0.231, 0.42) },
   green: { fill: rgb(0.302, 0.545, 0.333) },
+  khaki: { fill: rgb(0.541, 0.498, 0.271) },
   red: { fill: rgb(0.784, 0.298, 0.298) },
+  burgundy: { fill: rgb(0.478, 0.122, 0.239) },
   pink: { fill: rgb(0.847, 0.541, 0.651) },
   yellow: { fill: rgb(0.851, 0.706, 0.231) },
   purple: { fill: rgb(0.541, 0.373, 0.749) },
   orange: { fill: rgb(0.851, 0.478, 0.169) },
+  denim: { fill: rgb(0.353, 0.471, 0.659) },
   metallic: { fill: rgb(0.741, 0.765, 0.804) },
   multicolor: { fill: rgb(0.31, 0.514, 0.8) }
 };

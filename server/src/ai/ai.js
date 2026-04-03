@@ -731,6 +731,13 @@ async function generateCapsuleWardrobe(userProfile = null, logContext = null) {
               -- HARD FILTERS
               category = cats.target_category
               AND lower(COALESCE(audience, '')) = ANY(${audienceFilters}::text[])
+              -- If accent color filter is set then keep only products with accent color and neutrals
+              AND (
+                ${color}::text IS NULL
+                OR ${color}::text = ''
+                OR ${color}::text = ANY(COALESCE(color_base, ARRAY[]::text[]))
+                OR COALESCE(is_neutral, false)
+              )
               AND NOT (products.url = ANY(${rejectedUrls}::text[]))
           ) raw_scored
         ) filtered_items
