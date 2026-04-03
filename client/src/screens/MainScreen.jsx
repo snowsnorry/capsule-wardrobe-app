@@ -774,7 +774,7 @@ function MainScreen({
                         fontFamily: '"Leckerli One", cursive',
                         fontSize: "1.85rem",
                         lineHeight: 1.1,
-                        color: "primary.main",
+                        color: "#8f6f45",
                         textAlign: "left"
                       }}
                     >
