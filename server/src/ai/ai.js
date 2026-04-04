@@ -738,6 +738,15 @@ async function generateCapsuleWardrobe(userProfile = null, logContext = null) {
                 OR ${color}::text = ANY(COALESCE(color_base, ARRAY[]::text[]))
                 OR COALESCE(is_neutral, false)
               )
+              -- If pattern filter is set then keep only products with same pattern or solid/no pattern
+              AND (
+                ${pattern}::text IS NULL
+                OR ${pattern}::text = ''
+                OR lower(COALESCE(pattern, '')) = lower(${pattern}::text)
+                OR pattern IS NULL
+                OR trim(pattern) = ''
+                OR lower(pattern) = 'solid'
+              )
               AND NOT (products.url = ANY(${rejectedUrls}::text[]))
           ) raw_scored
         ) filtered_items
