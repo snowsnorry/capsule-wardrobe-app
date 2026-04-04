@@ -275,20 +275,48 @@ function normalizeCapsuleConstraintValue(value) {
     : null;
 }
 
-function isStyleMatched(item, targetStyle) {
-  if (!targetStyle) {
-    return false;
+function getNormalizedItemStyles(item) {
+  if (!Array.isArray(item?.style)) {
+    return [];
   }
 
-  return Array.isArray(item?.style) && item.style.includes(targetStyle);
+  return item.style
+    .filter((style) => typeof style === "string" && style.trim().length > 0)
+    .map((style) => style.trim());
+}
+
+function getFirstNonMinimalisticStyle(item) {
+  return getNormalizedItemStyles(item).find((style) => style !== "minimalistic") || null;
+}
+
+function isStyleMatched(item, targetStyle) {
+  return Boolean(targetStyle) && getNormalizedItemStyles(item).includes(targetStyle);
+}
+
+function isStyleSafe(item, targetStyle) {
+  if (!targetStyle) {
+    return true;
+  }
+
+  const styles = getNormalizedItemStyles(item);
+  const nonMinimalisticStyles = styles.filter((style) => style !== "minimalistic");
+  if (nonMinimalisticStyles.length === 0) {
+    return true;
+  }
+
+  return nonMinimalisticStyles.every((style) => style === targetStyle);
+}
+
+function getPrimaryItemColor(item) {
+  if (!Array.isArray(item?.color_base)) {
+    return null;
+  }
+
+  return item.color_base.find((color) => typeof color === "string" && color.trim().length > 0) || null;
 }
 
 function isColorMatched(item, targetColor) {
-  if (!targetColor) {
-    return false;
-  }
-
-  return Array.isArray(item?.color_base) && item.color_base.includes(targetColor);
+  return Boolean(targetColor) && Array.isArray(item?.color_base) && item.color_base.includes(targetColor);
 }
 
 function isNeutralItem(item) {
@@ -318,12 +346,12 @@ function enforceCategoryCounts(selectedItems, normalizedItems, categories, capsu
   const categoryOrder = Object.keys(categories);
   const allowedCategories = new Set(categoryOrder);
   const categoryIndexByName = new Map(categoryOrder.map((category, index) => [category, index]));
-  const targetStyle = normalizeCapsuleConstraintValue(capsuleParams?.style);
-  const targetColor = normalizeCapsuleConstraintValue(capsuleParams?.color);
-  const targetPattern = normalizePatternValue(capsuleParams?.pattern);
-  const styleLimit = targetStyle ? 4 : Infinity;
-  const colorLimit = targetColor ? 3 : Infinity;
-  const patternLimit = targetPattern && targetPattern !== "solid" ? 1 : Infinity;
+  let effectiveStyle = normalizeCapsuleConstraintValue(capsuleParams?.style);
+  let effectiveColor = normalizeCapsuleConstraintValue(capsuleParams?.color);
+  let effectivePattern = normalizePatternValue(capsuleParams?.pattern);
+  const hasExplicitStyle = Boolean(effectiveStyle);
+  const hasExplicitColor = Boolean(effectiveColor);
+  const hasExplicitPattern = Boolean(effectivePattern);
   const seenPoolIds = new Set();
   const poolByCategory = new Map(categoryOrder.map((category) => [category, []]));
 
@@ -359,27 +387,54 @@ function enforceCategoryCounts(selectedItems, normalizedItems, categories, capsu
   const styleMatchCountByCategory = new Map(categoryOrder.map((category) => [category, 0]));
   const colorMatchCountByCategory = new Map(categoryOrder.map((category) => [category, 0]));
 
+  function getStyleLimit() {
+    return effectiveStyle ? 4 : Infinity;
+  }
+
+  function getColorLimit() {
+    return effectiveColor ? 3 : Infinity;
+  }
+
+  function getPatternLimit() {
+    return effectivePattern && effectivePattern !== "solid" ? 1 : Infinity;
+  }
+
   function addItem(item) {
     const itemId = String(item.id);
     if (resultIds.has(itemId)) {
       return false;
     }
 
+    if (!hasExplicitStyle && !effectiveStyle) {
+      effectiveStyle = getFirstNonMinimalisticStyle(item);
+    }
+
+    if (!hasExplicitColor && !effectiveColor && !isNeutralItem(item)) {
+      effectiveColor = getPrimaryItemColor(item);
+    }
+
+    if (!hasExplicitPattern && !effectivePattern) {
+      const inferredPattern = normalizePatternValue(item?.pattern);
+      if (inferredPattern && inferredPattern !== "solid") {
+        effectivePattern = inferredPattern;
+      }
+    }
+
     result.push(item);
     resultIds.add(itemId);
     selectedCountByCategory.set(item.category, (selectedCountByCategory.get(item.category) || 0) + 1);
 
-    if (isStyleMatched(item, targetStyle)) {
+    if (isStyleMatched(item, effectiveStyle)) {
       styleMatchCount += 1;
       styleMatchCountByCategory.set(item.category, (styleMatchCountByCategory.get(item.category) || 0) + 1);
     }
 
-    if (isColorMatched(item, targetColor)) {
+    if (isColorMatched(item, effectiveColor)) {
       colorMatchCount += 1;
       colorMatchCountByCategory.set(item.category, (colorMatchCountByCategory.get(item.category) || 0) + 1);
     }
 
-    if (isPatternMatched(item, targetPattern)) {
+    if (isPatternMatched(item, effectivePattern)) {
       patternMatchCount += 1;
     }
 
@@ -395,28 +450,36 @@ function enforceCategoryCounts(selectedItems, normalizedItems, categories, capsu
   }
 
   function canUseStyleSafeCandidate(candidate) {
-    return !isStyleMatched(candidate, targetStyle) || styleMatchCount < styleLimit;
+    if (!isStyleSafe(candidate, effectiveStyle)) {
+      return false;
+    }
+
+    return !isStyleMatched(candidate, effectiveStyle) || styleMatchCount < getStyleLimit();
+  }
+
+  function isNonStyleMatchCandidate(candidate) {
+    return !isStyleMatched(candidate, effectiveStyle);
   }
 
   function canUseColorSafeCandidate(candidate) {
-    if (!targetColor) {
+    if (!effectiveColor) {
       return true;
     }
 
-    if (isColorMatched(candidate, targetColor)) {
-      return colorMatchCount < colorLimit;
+    if (isColorMatched(candidate, effectiveColor)) {
+      return colorMatchCount < getColorLimit();
     }
 
     return isNeutralItem(candidate);
   }
 
   function canUsePatternSafeCandidate(candidate) {
-    if (!targetPattern || targetPattern === "solid") {
+    if (!effectivePattern || effectivePattern === "solid") {
       return true;
     }
 
-    if (isPatternMatched(candidate, targetPattern)) {
-      return patternMatchCount < patternLimit;
+    if (isPatternMatched(candidate, effectivePattern)) {
+      return patternMatchCount < getPatternLimit();
     }
 
     return hasSolidOrNullPattern(candidate);
@@ -430,9 +493,14 @@ function enforceCategoryCounts(selectedItems, normalizedItems, categories, capsu
     const matchCountByCategory = matchType === "style"
       ? styleMatchCountByCategory
       : colorMatchCountByCategory;
+    const effectiveMatchTarget = matchType === "style" ? effectiveStyle : effectiveColor;
+    if (!effectiveMatchTarget) {
+      return false;
+    }
+
     const matchesAccent = matchType === "style"
-      ? (item) => isStyleMatched(item, targetStyle)
-      : (item) => isColorMatched(item, targetColor);
+      ? (item) => isStyleMatched(item, effectiveStyle)
+      : (item) => isColorMatched(item, effectiveColor);
 
     for (const [category, index] of categoryIndexByName.entries()) {
       if (index <= categoryIndex || category === currentCategory || !hasRemainingSlots(category)) {
@@ -455,7 +523,7 @@ function enforceCategoryCounts(selectedItems, normalizedItems, categories, capsu
   }
 
   function canUseStyleDistributedCandidate(candidate, category) {
-    if (!isStyleMatched(candidate, targetStyle)) {
+    if (!isStyleMatched(candidate, effectiveStyle)) {
       return true;
     }
 
@@ -468,7 +536,7 @@ function enforceCategoryCounts(selectedItems, normalizedItems, categories, capsu
   }
 
   function canUseColorDistributedCandidate(candidate, category) {
-    if (!isColorMatched(candidate, targetColor)) {
+    if (!isColorMatched(candidate, effectiveColor)) {
       return true;
     }
 
@@ -501,6 +569,11 @@ function enforceCategoryCounts(selectedItems, normalizedItems, categories, capsu
       ),
       (candidate) => (
         canUseStyleSafeCandidate(candidate)
+        && canUseColorSafeCandidate(candidate)
+        && canUsePatternSafeCandidate(candidate)
+      ),
+      (candidate) => (
+        isNonStyleMatchCandidate(candidate)
         && canUseColorSafeCandidate(candidate)
         && canUsePatternSafeCandidate(candidate)
       ),
