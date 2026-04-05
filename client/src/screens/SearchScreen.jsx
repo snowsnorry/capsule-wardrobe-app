@@ -28,6 +28,7 @@ import { translateOption } from "../i18n/index.js";
 import AppLauncher from "../components/AppLauncher.jsx";
 import LocaleSwitcher from "../components/LocaleSwitcher.jsx";
 import AccentColorChips from "../components/AccentColorChips.jsx";
+import { formatProductLabel } from "../utils/productLabel.js";
 import { buildProductDetailGroups } from "../../../shared/productDetail.js";
 import { getSafeHttpUrl } from "../../../shared/urlSecurity.js";
 import { getColorSwatchStyle } from "../../../shared/colorSwatches.js";
@@ -206,6 +207,7 @@ function ProductDetail({ item, title, t, locale, mobileBackAction = null }) {
   const detailGroups = buildProductDetailGroups(item, { t, translateOption, locale });
   const productUrl = getSafeHttpUrl(item?.url);
   const imageUrl = getSafeHttpUrl(item?.imageUrl);
+  const productLabel = formatProductLabel(item, t("search.untitled"));
 
   return (
     <Stack spacing={2.2} sx={{ height: "100%", minHeight: 0 }}>
@@ -253,7 +255,7 @@ function ProductDetail({ item, title, t, locale, mobileBackAction = null }) {
                     textIndent: mobileBackAction ? "40px" : 0
                   }}
                 >
-                  {item.name || t("search.untitled")}
+                  {productLabel}
                   {productUrl ? (
                     <OpenInNewRoundedIcon
                       sx={{
@@ -1002,7 +1004,7 @@ function SearchScreen({ onNavigateApp }) {
             }}
           >
             <Typography variant="body1" sx={{ fontWeight: 700 }}>
-              {item.name || t("search.untitled")}
+              {formatProductLabel(item, t("search.untitled"))}
             </Typography>
             <Typography variant="body2" color="text.secondary">
               {item.brand || t("search.noBrand")}

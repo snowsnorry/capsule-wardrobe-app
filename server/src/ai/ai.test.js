@@ -4,6 +4,7 @@ import {
   createWardrobeService,
   enforceCategoryCounts,
   getSelectedIdsFromCapsule,
+  toWardrobeUiItem,
   getWardrobeSelectionPrompt,
   getStoredWardrobePayload
 } from "./ai.js";
@@ -86,6 +87,27 @@ test("getSelectedIdsFromCapsule flattens only non-empty ids from capsule object"
       misc: "nope"
     }),
     ["1", "2", "3"]
+  );
+});
+
+test("toWardrobeUiItem preserves audience for downstream UI labeling", () => {
+  assert.deepEqual(
+    toWardrobeUiItem({
+      id: "top-1",
+      url: "https://example.com/top-1",
+      name: "Pocketable Parka",
+      category: "outerwear",
+      image_url: "https://example.com/top-1.jpg",
+      audience: "all"
+    }),
+    {
+      id: "top-1",
+      url: "https://example.com/top-1",
+      name: "Pocketable Parka",
+      category: "outerwear",
+      image_url: "https://example.com/top-1.jpg",
+      audience: "all"
+    }
   );
 });
 

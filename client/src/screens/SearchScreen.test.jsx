@@ -108,7 +108,7 @@ describe("SearchScreen", () => {
     searchApi.fetchSearchOptions.mockResolvedValue(makeOptions());
     searchApi.fetchSavedSearch.mockResolvedValue(makeSavedSearch());
     searchApi.runSearch.mockResolvedValue(makeResults([
-      { id: "1", name: "Linen Shirt", brand: "UNIQLO", category: "top", url: "https://example.com/1" },
+      { id: "1", name: "Linen Shirt", brand: "UNIQLO", category: "top", url: "https://example.com/1", audience: "all" },
       { id: "2", name: "Wool Trousers", brand: "COS", category: "bottom", url: "https://example.com/2" }
     ], 55));
   });
@@ -142,7 +142,7 @@ describe("SearchScreen", () => {
       page: 3
     });
     expect(await screen.findByText("55 results")).toBeInTheDocument();
-    expect(screen.getAllByText("Linen Shirt").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Linen Shirt (unisex)").length).toBeGreaterThan(0);
   });
 
   test("desktop filter interactions auto-apply and reset page to 1", async () => {
@@ -252,5 +252,33 @@ describe("SearchScreen", () => {
 
     expect(screen.queryByRole("link", { name: /Unsafe Shirt/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("img", { name: "Unsafe Shirt" })).not.toBeInTheDocument();
+  });
+
+  test("shows unisex suffix in search results and product detail for all-audience items", async () => {
+    renderScreen();
+
+    expect(await screen.findByDisplayValue("linen shirt")).toBeInTheDocument();
+    expect(screen.getAllByText("Linen Shirt (unisex)").length).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getAllByText("Linen Shirt (unisex)")[0]);
+
+    await waitFor(() => {
+      expect(screen.getAllByText("Linen Shirt (unisex)").length).toBeGreaterThan(1);
+    });
+  });
+
+  test("keeps non-all audience items unchanged in search results and product detail", async () => {
+    renderScreen();
+
+    expect(await screen.findByDisplayValue("linen shirt")).toBeInTheDocument();
+    expect(screen.getAllByText("Wool Trousers").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Wool Trousers (unisex)")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("Wool Trousers"));
+
+    await waitFor(() => {
+      expect(screen.getAllByText("Wool Trousers").length).toBeGreaterThan(1);
+    });
+    expect(screen.queryByText("Wool Trousers (unisex)")).not.toBeInTheDocument();
   });
 });

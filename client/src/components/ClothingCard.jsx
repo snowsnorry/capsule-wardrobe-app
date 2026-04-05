@@ -1,6 +1,7 @@
 import { Box, Chip, IconButton, Link as MuiLink, Stack, Typography } from "@mui/material";
 import ThumbDownAltOutlinedIcon from "@mui/icons-material/ThumbDownAltOutlined";
 import { useI18n } from "../i18n/useI18n.js";
+import { formatProductLabel } from "../utils/productLabel.js";
 import { getSafeHttpUrl } from "../../../shared/urlSecurity.js";
 
 function ClothingCard({
@@ -14,7 +15,7 @@ function ClothingCard({
   const { t } = useI18n();
   const imageUrl = getSafeHttpUrl(item?.image_url);
   const productUrl = getSafeHttpUrl(item?.url);
-  const label = item?.name || "";
+  const label = formatProductLabel(item, "");
   const categoryLabel = item?.category ? t(`options.categories.${item.category}`) : "";
   const showToggleButton = isMobile || isSelected;
 

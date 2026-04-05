@@ -101,4 +101,31 @@ describe("ClothingCard", () => {
     expect(screen.queryByRole("img", { name: item.name })).not.toBeInTheDocument();
     expect(screen.getAllByText("Red Jacket").length).toBeGreaterThan(0);
   });
+
+  test("appends unisex suffix for all-audience products", () => {
+    renderCard({
+      item: {
+        ...item,
+        audience: "all"
+      }
+    });
+
+    const expectedLabel = "Red Jacket (unisex)";
+
+    expect(screen.getByText(expectedLabel)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Red Jacket \(unisex\)/ })).toHaveAttribute("href", item.url);
+    expect(screen.getByRole("img", { name: expectedLabel })).toHaveAttribute("alt", expectedLabel);
+  });
+
+  test("does not append unisex suffix for non-all audiences", () => {
+    renderCard({
+      item: {
+        ...item,
+        audience: "woman"
+      }
+    });
+
+    expect(screen.getByText("Red Jacket")).toBeInTheDocument();
+    expect(screen.queryByText("Red Jacket (unisex)")).not.toBeInTheDocument();
+  });
 });

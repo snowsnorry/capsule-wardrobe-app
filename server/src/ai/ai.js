@@ -666,7 +666,8 @@ function toWardrobeUiItem(item) {
     url: item?.url ?? "",
     name: item?.name ?? "",
     category: item?.category ?? "",
-    image_url: item?.image_url ?? ""
+    image_url: item?.image_url ?? "",
+    audience: item?.audience ?? ""
   };
 }
 
