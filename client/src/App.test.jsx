@@ -41,6 +41,25 @@ const wardrobeApi = vi.hoisted(() => ({
   regenerateSelectedWardrobeItems: vi.fn()
 }));
 
+const notificationApi = vi.hoisted(() => {
+  const api = {
+    permission: "default",
+    nextPermission: "default",
+    created: vi.fn(),
+    requestPermission: vi.fn(async () => {
+      api.permission = api.nextPermission;
+      return api.permission;
+    }),
+    reset() {
+      api.permission = "default";
+      api.nextPermission = "default";
+      api.created.mockReset();
+      api.requestPermission.mockClear();
+    }
+  };
+  return api;
+});
+
 const mainScreenRender = vi.hoisted(() => vi.fn());
 
 const capsulesApi = vi.hoisted(() => ({
@@ -196,6 +215,22 @@ function renderApp() {
   );
 }
 
+function installNotificationMock() {
+  function MockNotification(title, options) {
+    notificationApi.created(title, options);
+  }
+
+  Object.defineProperty(MockNotification, "permission", {
+    configurable: true,
+    get() {
+      return notificationApi.permission;
+    }
+  });
+  MockNotification.requestPermission = notificationApi.requestPermission;
+  globalThis.Notification = MockNotification;
+  window.Notification = MockNotification;
+}
+
 function mockProfileOptions() {
   profileOptionsApi.loadProfileOptions.mockResolvedValue({
     styles: {
@@ -264,6 +299,8 @@ describe("App", () => {
     cleanup();
     window.localStorage.clear();
     window.history.replaceState({}, "", "/");
+    notificationApi.reset();
+    installNotificationMock();
 
     authApi.fetchCurrentUser.mockReset();
     authApi.fetchProfile.mockReset();
@@ -383,6 +420,121 @@ describe("App", () => {
       expect(wardrobeApi.subscribeCapsuleEvents).toHaveBeenCalled();
     });
     expect(capsulesApi.createCapsule.mock.calls[0][0]).not.toHaveProperty("draft");
+  });
+
+  test("shows notification prompt for pending full generation when permission is default and stylist LLM is enabled", async () => {
+    authApi.fetchCurrentUser.mockRejectedValue(new Error("unauthorized"));
+    authApi.requestLoginCode.mockResolvedValue({ expiresInMs: 300000 });
+    authApi.verifyLoginCode.mockResolvedValue({ user: { email: "person@example.com" } });
+    authApi.fetchProfileStatus.mockResolvedValue({ hasProfile: false });
+    authApi.initializeProfile.mockResolvedValue({});
+    capsulesApi.fetchCapsuleBootstrap.mockResolvedValue(createBootstrapResponse({
+      locale: "en",
+      llm: "openai:gpt-5.2"
+    }));
+    mockProfileOptions();
+
+    renderApp();
+
+    await screen.findByTestId("sign-in-screen");
+    fireEvent.click(screen.getByRole("button", { name: "verify-code" }));
+    expect(await screen.findByTestId("onboarding-screen")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "finish-onboarding" }));
+
+    expect(await screen.findByText("Capsule generation usually takes about a minute. Enable notifications and we will let you know when your result is ready.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Enable notifications" })).toBeInTheDocument();
+  });
+
+  test("does not show notification prompt when stylist LLM is none", async () => {
+    authApi.fetchCurrentUser.mockRejectedValue(new Error("unauthorized"));
+    authApi.requestLoginCode.mockResolvedValue({ expiresInMs: 300000 });
+    authApi.verifyLoginCode.mockResolvedValue({ user: { email: "person@example.com" } });
+    authApi.fetchProfileStatus.mockResolvedValue({ hasProfile: false });
+    authApi.initializeProfile.mockResolvedValue({});
+    capsulesApi.fetchCapsuleBootstrap.mockResolvedValue(createBootstrapResponse({
+      locale: "en",
+      llm: "none"
+    }));
+    mockProfileOptions();
+
+    renderApp();
+
+    await screen.findByTestId("sign-in-screen");
+    fireEvent.click(screen.getByRole("button", { name: "verify-code" }));
+    expect(await screen.findByTestId("onboarding-screen")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "finish-onboarding" }));
+
+    await waitFor(() => {
+      expect(wardrobeApi.regenerateCapsuleWardrobe).toHaveBeenCalled();
+    });
+    expect(screen.queryByText("Capsule generation usually takes about a minute. Enable notifications and we will let you know when your result is ready.")).not.toBeInTheDocument();
+  });
+
+  test.each(["granted", "denied"])("does not show notification prompt when permission is %s", async (permission) => {
+    notificationApi.permission = permission;
+    authApi.fetchCurrentUser.mockRejectedValue(new Error("unauthorized"));
+    authApi.requestLoginCode.mockResolvedValue({ expiresInMs: 300000 });
+    authApi.verifyLoginCode.mockResolvedValue({ user: { email: "person@example.com" } });
+    authApi.fetchProfileStatus.mockResolvedValue({ hasProfile: false });
+    authApi.initializeProfile.mockResolvedValue({});
+    capsulesApi.fetchCapsuleBootstrap.mockResolvedValue(createBootstrapResponse({
+      locale: "en",
+      llm: "openai:gpt-5.2"
+    }));
+    mockProfileOptions();
+
+    renderApp();
+
+    await screen.findByTestId("sign-in-screen");
+    fireEvent.click(screen.getByRole("button", { name: "verify-code" }));
+    expect(await screen.findByTestId("onboarding-screen")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "finish-onboarding" }));
+
+    await waitFor(() => {
+      expect(wardrobeApi.regenerateCapsuleWardrobe).toHaveBeenCalled();
+    });
+    expect(screen.queryByText("Capsule generation usually takes about a minute. Enable notifications and we will let you know when your result is ready.")).not.toBeInTheDocument();
+  });
+
+  test("requests notification permission from snackbar action and sends ready notification for full generation", async () => {
+    notificationApi.nextPermission = "granted";
+    authApi.fetchCurrentUser.mockRejectedValue(new Error("unauthorized"));
+    authApi.requestLoginCode.mockResolvedValue({ expiresInMs: 300000 });
+    authApi.verifyLoginCode.mockResolvedValue({ user: { email: "person@example.com" } });
+    authApi.fetchProfileStatus.mockResolvedValue({ hasProfile: false });
+    authApi.initializeProfile.mockResolvedValue({});
+    capsulesApi.fetchCapsuleBootstrap.mockResolvedValue(createBootstrapResponse({
+      locale: "en",
+      llm: "openai:gpt-5.2"
+    }));
+    mockProfileOptions();
+
+    renderApp();
+
+    await screen.findByTestId("sign-in-screen");
+    fireEvent.click(screen.getByRole("button", { name: "verify-code" }));
+    expect(await screen.findByTestId("onboarding-screen")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "finish-onboarding" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Enable notifications" }));
+
+    await waitFor(() => {
+      expect(notificationApi.requestPermission).toHaveBeenCalledTimes(1);
+    });
+
+    wardrobeStream.emit({ status: "ready", items: [] });
+
+    await waitFor(() => {
+      expect(notificationApi.created).toHaveBeenCalledWith("Your capsule is ready", {
+        body: "Your new capsule is ready to review. Open the app to see the result."
+      });
+    });
+    await waitFor(() => {
+      expect(screen.queryByText("Capsule generation usually takes about a minute. Enable notifications and we will let you know when your result is ready.")).not.toBeInTheDocument();
+    });
   });
 
   test("bootstraps an existing profile without redundant locale or wardrobe sync and switches between routes", async () => {
@@ -576,6 +728,97 @@ describe("App", () => {
     });
     await waitFor(() => {
       expect(screen.getByText("items-order:https://example.com/outerwear-1,https://example.com/top-2,https://example.com/bottom-1")).toBeInTheDocument();
+    });
+  });
+
+  test("does not send ready notification when permission is not granted", async () => {
+    authApi.fetchCurrentUser.mockResolvedValue({ user: { email: "person@example.com" } });
+    authApi.fetchProfileStatus.mockResolvedValue({ hasProfile: true });
+    authApi.updateProfileLocale.mockResolvedValue({});
+    capsulesApi.updateCapsuleFilters.mockResolvedValue({
+      capsule: createBootstrapResponse({
+        locale: "en",
+        llm: "openai:gpt-5.2"
+      }).activeCapsule,
+      status: "pending"
+    });
+    capsulesApi.fetchCapsuleBootstrap.mockResolvedValue(createBootstrapResponse({
+      locale: "en",
+      llm: "openai:gpt-5.2"
+    }));
+    mockProfileOptions();
+
+    renderApp();
+
+    expect(await screen.findByTestId("main-screen")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "change-filter" }));
+    fireEvent.click(screen.getByRole("button", { name: "apply-filters" }));
+
+    await waitFor(() => {
+      expect(capsulesApi.updateCapsuleFilters).toHaveBeenCalledTimes(1);
+    });
+
+    wardrobeStream.emit({ status: "ready", items: [] });
+
+    await waitFor(() => {
+      expect(capsulesApi.fetchCapsule).toHaveBeenCalled();
+    });
+    expect(notificationApi.created).not.toHaveBeenCalled();
+  });
+
+  test("sends partial ready notification after selected regeneration completes", async () => {
+    notificationApi.permission = "granted";
+    authApi.fetchCurrentUser.mockResolvedValue({ user: { email: "person@example.com" } });
+    authApi.fetchProfileStatus.mockResolvedValue({ hasProfile: true });
+    authApi.fetchProfile.mockResolvedValue({
+      profile: {
+        formalityLevel: "casual",
+        style: "minimalistic",
+        occasions: ["office"],
+        season: ["summer"],
+        audience: "woman",
+        color: null,
+        pattern: null,
+        locale: "en"
+      }
+    });
+    authApi.updateProfileLocale.mockResolvedValue({});
+    capsulesApi.fetchCapsuleBootstrap.mockResolvedValue(createBootstrapResponse({
+      locale: "en",
+      llm: "openai:gpt-5.2",
+      items: [
+        { id: "bottom-1", url: "https://example.com/bottom-1", name: "Trousers", category: "bottom" },
+        { id: "top-1", url: "https://example.com/top-1", name: "Shirt", category: "top" }
+      ]
+    }));
+    wardrobeApi.regenerateSelectedWardrobeItems.mockResolvedValue({ ok: true, status: "pending" });
+    mockProfileOptions();
+
+    renderApp();
+
+    expect(await screen.findByTestId("main-screen")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "select-https://example.com/top-1" }));
+    fireEvent.click(screen.getByRole("button", { name: "regenerate-selected" }));
+
+    await waitFor(() => {
+      expect(wardrobeApi.regenerateSelectedWardrobeItems).toHaveBeenCalledWith({
+        itemUrls: ["https://example.com/top-1"],
+        capsuleId: "capsule-1"
+      });
+    });
+
+    wardrobeStream.emit({
+      status: "ready",
+      items: [
+        { id: "bottom-1", url: "https://example.com/bottom-1", name: "Trousers", category: "bottom" },
+        { id: "top-2", url: "https://example.com/top-2", name: "New Shirt", category: "top" }
+      ]
+    });
+
+    await waitFor(() => {
+      expect(notificationApi.created).toHaveBeenCalledWith("Your capsule is ready", {
+        body: "Your updated selection is ready. Open the app to see the result."
+      });
     });
   });
 

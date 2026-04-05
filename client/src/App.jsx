@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Box, Container, CssBaseline, Paper, Stack, ThemeProvider, Typography, useMediaQuery } from "@mui/material";
+import { Alert, Box, Button, Container, CssBaseline, Paper, Snackbar, Stack, ThemeProvider, Typography, useMediaQuery } from "@mui/material";
 import {
   fetchCurrentUser,
   fetchProfileStatus,
@@ -49,6 +49,10 @@ const initialStatus = {
   error: "",
   infoKey: "",
   infoParams: null
+};
+
+const initialNotificationPrompt = {
+  open: false
 };
 
 const FALLBACK_STYLE_OPTIONS = {
@@ -250,6 +254,7 @@ function App() {
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [status, setStatus] = useState(initialStatus);
+  const [notificationPrompt, setNotificationPrompt] = useState(initialNotificationPrompt);
   const [user, setUser] = useState(null);
   const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [sessionInitialized, setSessionInitialized] = useState(false);
@@ -291,6 +296,7 @@ function App() {
   const regenerationBaseItemsRef = useRef([]);
   const capsuleEventsAbortRef = useRef(null);
   const manualWardrobeRegenerationCapsuleIdRef = useRef("");
+  const pendingNotificationKindRef = useRef("");
 
   const cardPadding = useMemo(() => (isLarge ? 5 : 3), [isLarge]);
   const orderedSeasonOptions = useMemo(() => sortSeasonOptions(seasonOptions), [seasonOptions]);
@@ -337,6 +343,67 @@ function App() {
     if (error.message === "invalid_google_token") return t("errors.invalidGoogleToken");
     if (error.message === "google_auth_not_configured") return t("errors.googleAuthNotConfigured");
     return t("errors.generic");
+  };
+
+  const isNotificationApiSupported = () => (
+    typeof window !== "undefined" && typeof window.Notification === "function"
+  );
+
+  const getNotificationPermission = () => (
+    isNotificationApiSupported() ? window.Notification.permission : "unsupported"
+  );
+
+  const closeNotificationPrompt = () => {
+    setNotificationPrompt(initialNotificationPrompt);
+  };
+
+  const shouldShowNotificationPrompt = (llm = settingsProfile.llm) => (
+    llm !== "none" && getNotificationPermission() === "default"
+  );
+
+  const startPendingNotificationFlow = (kind, llm = settingsProfile.llm) => {
+    pendingNotificationKindRef.current = kind;
+
+    if (shouldShowNotificationPrompt(llm)) {
+      setNotificationPrompt({ open: true });
+      return;
+    }
+
+    closeNotificationPrompt();
+  };
+
+  const requestBrowserNotificationPermission = async () => {
+    if (!isNotificationApiSupported()) {
+      return "unsupported";
+    }
+
+    try {
+      const permission = await window.Notification.requestPermission();
+      if (permission !== "default") {
+        closeNotificationPrompt();
+      }
+      return permission;
+    } catch {
+      return getNotificationPermission();
+    }
+  };
+
+  const sendReadyNotification = (kind) => {
+    if (getNotificationPermission() !== "granted") {
+      return;
+    }
+
+    const bodyKey = kind === "partial"
+      ? "notifications.ready.partialBody"
+      : "notifications.ready.fullBody";
+
+    try {
+      new window.Notification(t("notifications.ready.title"), {
+        body: t(bodyKey)
+      });
+    } catch {
+      // Ignore browser-level notification errors and keep the UI responsive.
+    }
   };
 
   useEffect(() => {
@@ -481,6 +548,7 @@ function App() {
       setLocale(normalizedProfile.locale);
     }
     applyCapsuleState(result.activeCapsule, { capsules: result.capsules || [] });
+    return normalizedProfile;
   };
 
   const handleRequestCode = async (event) => {
@@ -601,6 +669,8 @@ function App() {
       pendingRegenerationUrlsRef.current = [];
       regenerationBaseItemsRef.current = [];
       manualWardrobeRegenerationCapsuleIdRef.current = "";
+      pendingNotificationKindRef.current = "";
+      closeNotificationPrompt();
       clearProfileOptionsCache();
       setStyleOptions(FALLBACK_STYLE_OPTIONS);
       setOccasionOptions([]);
@@ -660,12 +730,13 @@ function App() {
       setIsPartialRegenerationLoading(false);
       setIsWardrobePending(false);
       setHasPendingAdditionalItems(false);
-      await bootstrapCapsules(user?.email);
+      const normalizedProfile = await bootstrapCapsules(user?.email);
       if (createdCapsuleId) {
         manualWardrobeRegenerationCapsuleIdRef.current = createdCapsuleId;
         setIsLoadingItems(true);
         const response = await requestWardrobeRegeneration({ capsuleId: createdCapsuleId });
         if (response?.status === "pending") {
+          startPendingNotificationFlow("full", normalizedProfile?.llm);
           startCapsuleEventStream(createdCapsuleId);
         } else {
           setIsLoadingItems(false);
@@ -741,6 +812,7 @@ function App() {
       await refreshCapsuleList();
       setIsLoadingItems(true);
       if (result?.status === "pending") {
+        startPendingNotificationFlow("full");
         startCapsuleEventStream(activeCapsuleId);
       } else {
         setIsLoadingItems(false);
@@ -947,6 +1019,8 @@ function App() {
 
     if (snapshot?.status === "failed") {
       manualWardrobeRegenerationCapsuleIdRef.current = "";
+      pendingNotificationKindRef.current = "";
+      closeNotificationPrompt();
       stopCapsuleEventStream();
       handleWardrobeError();
       setStatus((current) => ({
@@ -1004,6 +1078,9 @@ function App() {
     }
 
     if (snapshot?.status === "ready") {
+      sendReadyNotification(pendingNotificationKindRef.current || "full");
+      pendingNotificationKindRef.current = "";
+      closeNotificationPrompt();
       try {
         const capsuleResult = await fetchCapsule(activeCapsuleId);
         setActiveCapsuleMeta(capsuleResult.capsule);
@@ -1037,6 +1114,8 @@ function App() {
             return;
           }
           stopCapsuleEventStream();
+          pendingNotificationKindRef.current = "";
+          closeNotificationPrompt();
           handleWardrobeError();
         });
       },
@@ -1045,6 +1124,8 @@ function App() {
           return;
         }
         stopCapsuleEventStream();
+        pendingNotificationKindRef.current = "";
+        closeNotificationPrompt();
         handleWardrobeError();
         setStatus((current) => ({
           ...current,
@@ -1056,6 +1137,8 @@ function App() {
         return;
       }
       stopCapsuleEventStream();
+      pendingNotificationKindRef.current = "";
+      closeNotificationPrompt();
       handleWardrobeError();
       setStatus((current) => ({
         ...current,
@@ -1077,11 +1160,14 @@ function App() {
     try {
       const response = await requestWardrobeRegeneration({ capsuleId: activeCapsuleId });
       if (response?.status === "pending") {
+        startPendingNotificationFlow("full");
         startCapsuleEventStream(activeCapsuleId);
       } else {
         setIsLoadingItems(false);
       }
     } catch (error) {
+      pendingNotificationKindRef.current = "";
+      closeNotificationPrompt();
       handleWardrobeError();
       setStatus((current) => ({
         ...current,
@@ -1142,6 +1228,7 @@ function App() {
     try {
       const response = await requestSelectedWardrobeRegeneration({ itemUrls: pendingUrls, capsuleId: activeCapsuleId });
       if (response?.status === "pending") {
+        startPendingNotificationFlow("partial");
         startCapsuleEventStream(activeCapsuleId);
       } else {
         setIsPartialRegenerationLoading(false);
@@ -1156,6 +1243,8 @@ function App() {
       regenerationBaseItemsRef.current = [];
       setPartialRegenerationPendingUrls([]);
       setIsPartialRegenerationLoading(false);
+      pendingNotificationKindRef.current = "";
+      closeNotificationPrompt();
       setStatus((current) => ({
         ...current,
         error: error?.message === "invalid_payload"
@@ -1171,10 +1260,13 @@ function App() {
 
   useEffect(() => {
     stopCapsuleEventStream();
+    pendingNotificationKindRef.current = "";
+    closeNotificationPrompt();
   }, [activeCapsuleId]);
 
   useEffect(() => () => {
     stopCapsuleEventStream();
+    pendingNotificationKindRef.current = "";
   }, []);
 
   useEffect(() => {
@@ -1488,6 +1580,24 @@ function App() {
           </Paper>
         )}
       </Container>
+      <Snackbar
+        open={notificationPrompt.open}
+        autoHideDuration={null}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          severity="info"
+          variant="filled"
+          action={(
+            <Button color="inherit" size="small" onClick={() => { void requestBrowserNotificationPermission(); }}>
+              {t("notifications.prompt.action")}
+            </Button>
+          )}
+          sx={{ width: "100%", alignItems: "center" }}
+        >
+          {t("notifications.prompt.message")}
+        </Alert>
+      </Snackbar>
       </Box>
     </ThemeProvider>
   );

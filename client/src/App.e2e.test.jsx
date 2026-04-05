@@ -25,6 +25,11 @@ const profileOptionsApi = vi.hoisted(() => ({
 
 const wardrobeStream = vi.hoisted(() => ({
   listeners: new Set(),
+  emit(data, event = "snapshot") {
+    for (const listener of this.listeners) {
+      listener({ event, data });
+    }
+  },
   reset() {
     this.listeners.clear();
   }
@@ -35,6 +40,25 @@ const wardrobeApi = vi.hoisted(() => ({
   regenerateCapsuleWardrobe: vi.fn(),
   regenerateSelectedWardrobeItems: vi.fn()
 }));
+
+const notificationApi = vi.hoisted(() => {
+  const api = {
+    permission: "default",
+    nextPermission: "default",
+    created: vi.fn(),
+    requestPermission: vi.fn(async () => {
+      api.permission = api.nextPermission;
+      return api.permission;
+    }),
+    reset() {
+      api.permission = "default";
+      api.nextPermission = "default";
+      api.created.mockReset();
+      api.requestPermission.mockClear();
+    }
+  };
+  return api;
+});
 
 const capsulesApi = vi.hoisted(() => ({
   createCapsule: vi.fn(),
@@ -157,6 +181,22 @@ function renderApp() {
   );
 }
 
+function installNotificationMock() {
+  function MockNotification(title, options) {
+    notificationApi.created(title, options);
+  }
+
+  Object.defineProperty(MockNotification, "permission", {
+    configurable: true,
+    get() {
+      return notificationApi.permission;
+    }
+  });
+  MockNotification.requestPermission = notificationApi.requestPermission;
+  globalThis.Notification = MockNotification;
+  window.Notification = MockNotification;
+}
+
 function mockProfileOptions() {
   profileOptionsApi.loadProfileOptions.mockResolvedValue({
     styles: {
@@ -170,9 +210,9 @@ function mockProfileOptions() {
   });
 }
 
-function createBootstrapResponse({ items = [], locale = "en" } = {}) {
+function createBootstrapResponse({ items = [], locale = "en", llm = "openai:gpt-5.2" } = {}) {
   return {
-    profile: { locale },
+    profile: { locale, llm },
     activeCapsule: {
       id: "capsule-1",
       name: "Spring edit",
@@ -219,6 +259,8 @@ describe("App e2e-style flows", () => {
     cleanup();
     window.localStorage.clear();
     window.history.replaceState({}, "", "/");
+    notificationApi.reset();
+    installNotificationMock();
 
     authApi.fetchCurrentUser.mockReset();
     authApi.fetchProfile.mockReset();
@@ -309,5 +351,43 @@ describe("App e2e-style flows", () => {
     expect(authApi.logout).toHaveBeenCalledTimes(1);
     expect(authApi.clearRequestCache).toHaveBeenCalledTimes(1);
     expect(profileOptionsApi.clearProfileOptionsCache).toHaveBeenCalledTimes(1);
+  });
+
+  test("shows notification prompt during pending onboarding generation and sends ready notification after permission is granted", async () => {
+    notificationApi.nextPermission = "granted";
+    authApi.fetchCurrentUser.mockRejectedValue(new Error("unauthorized"));
+    authApi.requestLoginCode.mockResolvedValue({ expiresInMs: 300000 });
+    authApi.verifyLoginCode.mockResolvedValue({ user: { email: "flow@example.com" } });
+    authApi.fetchProfileStatus.mockResolvedValue({ hasProfile: false });
+    authApi.initializeProfile.mockResolvedValue({});
+    authApi.logout.mockResolvedValue({});
+    capsulesApi.fetchCapsuleBootstrap.mockResolvedValue(createBootstrapResponse({ locale: "en", llm: "openai:gpt-5.2" }));
+    mockProfileOptions();
+
+    renderApp();
+
+    expect(await screen.findByTestId("sign-in-screen")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "verify-code" }));
+    expect(await screen.findByTestId("onboarding-screen")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "finish-onboarding" }));
+
+    expect(await screen.findByText("Capsule generation usually takes about a minute. Enable notifications and we will let you know when your result is ready.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Enable notifications" }));
+
+    await waitFor(() => {
+      expect(notificationApi.requestPermission).toHaveBeenCalledTimes(1);
+    });
+
+    wardrobeStream.emit({ status: "ready", items: [] });
+
+    await waitFor(() => {
+      expect(notificationApi.created).toHaveBeenCalledWith("Your capsule is ready", {
+        body: "Your new capsule is ready to review. Open the app to see the result."
+      });
+    });
+    await waitFor(() => {
+      expect(screen.queryByText("Capsule generation usually takes about a minute. Enable notifications and we will let you know when your result is ready.")).not.toBeInTheDocument();
+    });
   });
 });
