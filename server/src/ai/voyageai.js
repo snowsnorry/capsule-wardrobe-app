@@ -106,6 +106,11 @@ function getWardrobePrompt(userProfile = null) {
     queryParts.push(`Features a ${userProfile?.pattern} pattern.`);
   }
 
+  const additionalText = typeof userProfile?.text === "string" ? userProfile.text.trim() : "";
+  if (additionalText) {
+    queryParts.push(`Additional request: ${additionalText}.`);
+  }
+
   // 6. Combine all parts into a single cohesive paragraph
   return queryParts.join(' ');
 }

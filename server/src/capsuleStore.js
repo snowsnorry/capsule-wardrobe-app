@@ -45,7 +45,8 @@ function normalizeCapsuleFilters(filters = null) {
       season: [],
       audience: "",
       color: null,
-      pattern: null
+      pattern: null,
+      text: ""
     };
   }
 
@@ -56,7 +57,8 @@ function normalizeCapsuleFilters(filters = null) {
     season: Array.isArray(filters.season) ? filters.season.filter(Boolean) : [],
     audience: typeof filters.audience === "string" ? filters.audience : "",
     color: typeof filters.color === "string" ? filters.color : null,
-    pattern: typeof filters.pattern === "string" ? filters.pattern : null
+    pattern: typeof filters.pattern === "string" ? filters.pattern : null,
+    text: typeof filters.text === "string" && filters.text.trim() ? filters.text.trim() : ""
   };
 }
 
@@ -115,7 +117,8 @@ function buildSnapshotFromProfile(profile = null) {
       season: [],
       audience: "",
       color: null,
-      pattern: null
+      pattern: null,
+      text: ""
     },
     data: {
       wardrobe: null,
@@ -136,6 +139,7 @@ function buildProfileCapsuleContext(profile = null, capsule = null) {
     audience: filters?.audience || "",
     color: filters?.color ?? null,
     pattern: filters?.pattern ?? null,
+    text: typeof filters?.text === "string" ? filters.text : "",
     locale: profile?.locale || "en",
     items: snapshot?.data?.wardrobe || null,
     rejected: snapshot?.data?.rejectedUrls || []

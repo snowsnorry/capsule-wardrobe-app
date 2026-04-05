@@ -247,6 +247,7 @@ function MainScreen({
   selectedAudience,
   selectedAccentColor,
   selectedPattern,
+  selectedText,
   hasFilterChanges,
   status,
   onSelectStyleCore,
@@ -256,6 +257,7 @@ function MainScreen({
   onSelectAudience,
   onSelectAccentColor,
   onSelectPattern,
+  onTextChange,
   onApplyFilters,
   onResetFilters,
   onNavigateApp,
@@ -826,6 +828,7 @@ function MainScreen({
                 selectedAudience={selectedAudience}
                 selectedAccentColor={selectedAccentColor}
                 selectedPattern={selectedPattern}
+                selectedText={selectedText}
                 hasFilterChanges={hasFilterChanges}
                 status={status}
                 onSelectStyleCore={onSelectStyleCore}
@@ -835,6 +838,7 @@ function MainScreen({
                 onSelectAudience={onSelectAudience}
                 onSelectAccentColor={onSelectAccentColor}
                 onSelectPattern={onSelectPattern}
+                onTextChange={onTextChange}
                 onApply={onApplyFilters}
                 onReset={onResetFilters}
                 onSignOut={null}
@@ -1380,6 +1384,7 @@ function MainScreen({
             selectedAudience={selectedAudience}
             selectedAccentColor={selectedAccentColor}
             selectedPattern={selectedPattern}
+            selectedText={selectedText}
             hasFilterChanges={hasFilterChanges}
             status={status}
             onSelectStyleCore={onSelectStyleCore}
@@ -1389,6 +1394,7 @@ function MainScreen({
             onSelectAudience={onSelectAudience}
             onSelectAccentColor={onSelectAccentColor}
             onSelectPattern={onSelectPattern}
+            onTextChange={onTextChange}
             onApply={async () => {
               await onApplyFilters();
               setIsFiltersOpen(false);

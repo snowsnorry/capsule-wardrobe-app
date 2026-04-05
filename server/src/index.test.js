@@ -83,7 +83,8 @@ function createDependencies(overrides = {}) {
           season: ["spring"],
           audience: "woman",
           color: null,
-          pattern: null
+          pattern: null,
+          text: ""
         },
         data: {
           wardrobe: { items: [{ url: "https://example.com/1" }] },
@@ -757,7 +758,8 @@ test("capsule creation only accepts name and filters and initializes server-owne
         season: ["spring"],
         audience: "woman",
         color: "red",
-        pattern: "striped"
+        pattern: "striped",
+        text: ""
       },
       data: {
         wardrobe: null,
@@ -818,6 +820,7 @@ test("filters patch only accepts filters and resets draft data", async (t) => {
         audience: "woman",
         color: "red",
         pattern: "striped",
+        text: "  Prefer natural fabrics  ",
         ignoredField: "ignored"
       }
     }
@@ -832,7 +835,8 @@ test("filters patch only accepts filters and resets draft data", async (t) => {
       season: ["spring"],
       audience: "woman",
       color: "red",
-      pattern: "striped"
+      pattern: "striped",
+      text: "Prefer natural fabrics"
     },
     data: {
       wardrobe: null,
@@ -881,7 +885,8 @@ test("filters patch can trigger regenerate via query flag after saving filters",
           audience: "woman",
           season: ["summer"],
           color: null,
-          pattern: null
+          pattern: null,
+          text: ""
         },
         data: {
           wardrobe: null,
@@ -928,7 +933,8 @@ test("rejected urls patch validates against current capsule wardrobe", async (t)
       season: ["spring"],
       audience: "woman",
       color: null,
-      pattern: null
+      pattern: null,
+      text: ""
     },
     data: {
       wardrobe: {
@@ -972,7 +978,8 @@ test("rejected urls patch rejects unknown urls and missing wardrobe", async (t) 
             season: ["spring"],
             audience: "woman",
             color: null,
-            pattern: null
+            pattern: null,
+            text: ""
           },
           data: {
             wardrobe: null,

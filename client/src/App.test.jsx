@@ -152,8 +152,12 @@ vi.mock("./screens/MainScreen.jsx", () => ({
         <div>active-capsule:{props.activeCapsule?.id || ""}:{props.activeCapsule?.name || ""}</div>
         <div>items-order:{props.items.map((item) => item.url).join(",")}</div>
         <div>settings-user:{props.userName || ""}:{props.settingsProfile?.theme || ""}:{props.settingsProfile?.llm || ""}</div>
+        <div>selected-text:{props.selectedText || ""}</div>
         <button type="button" onClick={() => props.onSelectStyleCore("formal")}>
           change-filter
+        </button>
+        <button type="button" onClick={() => props.onTextChange("Prefer natural fabrics")}>
+          change-text
         </button>
         <button type="button" onClick={props.onApplyFilters}>
           apply-filters
@@ -264,7 +268,8 @@ function createBootstrapResponse({ items = [], locale = "ru", theme = "system", 
           season: ["spring"],
           audience: "woman",
           color: null,
-          pattern: null
+          pattern: null,
+          text: ""
         },
         data: {
           wardrobe: { items },
@@ -280,7 +285,8 @@ function createBootstrapResponse({ items = [], locale = "ru", theme = "system", 
           season: ["spring"],
           audience: "woman",
           color: null,
-          pattern: null
+          pattern: null,
+          text: ""
         },
         data: {
           wardrobe: { items },
@@ -856,6 +862,28 @@ describe("App", () => {
     await waitFor(() => {
       expect(capsulesApi.updateCapsuleFilters).toHaveBeenCalledTimes(1);
     });
+  });
+
+  test("preserves optional text filter in applied capsule filters", async () => {
+    authApi.fetchCurrentUser.mockResolvedValue({ user: { email: "person@example.com" } });
+    authApi.fetchProfileStatus.mockResolvedValue({ hasProfile: true });
+    mockProfileOptions();
+
+    renderApp();
+
+    expect(await screen.findByTestId("main-screen")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "change-text" }));
+    fireEvent.click(screen.getByRole("button", { name: "apply-filters" }));
+
+    await waitFor(() => {
+      expect(capsulesApi.updateCapsuleFilters).toHaveBeenCalledWith(
+        "capsule-1",
+        expect.objectContaining({ text: "Prefer natural fabrics" }),
+        { regenerate: true }
+      );
+    });
+    expect(screen.getByText("selected-text:Prefer natural fabrics")).toBeInTheDocument();
   });
 
   test("save as duplicates with a provided name without reverting the source capsule", async () => {

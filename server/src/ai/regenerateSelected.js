@@ -192,6 +192,7 @@ function saveLastPromptArtifacts({ prompt, currentCapsuleCollage } = {}) {
 }
 
 function buildRegenerateSelectedPrompt(userProfile = null, candidateItems = [], currentCapsuleItems = [], categories = {}) {
+  const additionalText = typeof userProfile?.text === "string" ? userProfile.text.trim() : "";
   const replacements = {
     audience: userProfile?.audience || "any",
     occasions: formatProfileValues(userProfile?.occasions),
@@ -211,6 +212,7 @@ function buildRegenerateSelectedPrompt(userProfile = null, candidateItems = [], 
       typeof userProfile?.pattern === "string" && userProfile.pattern.trim().length > 0
         ? userProfile.pattern
         : "Not specified",
+    additional_info_block: additionalText ? `Important Additional Information: ${additionalText}` : "",
     current_capsule_items: JSON.stringify(simplifyPromptItems(currentCapsuleItems), null, 2),
     category_list: getCategoryListText(categories),
     items: JSON.stringify(simplifyPromptItems(candidateItems), null, 2),
@@ -872,6 +874,7 @@ const {
 } = partialRegenerationService;
 
 export {
+  buildRegenerateSelectedPrompt,
   createPartialRegenerationService,
   getPartialRegenerationJob,
   regenerateCapsuleWardrobe,

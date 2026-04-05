@@ -197,7 +197,8 @@ function buildEmptyCapsuleDraft() {
       season: [],
       audience: "",
       color: null,
-      pattern: null
+      pattern: null,
+      text: ""
     },
     data: {
       wardrobe: null,
@@ -218,7 +219,8 @@ function normalizeComparableFilters(filters = {}) {
     season: Array.isArray(filters.season) ? [...filters.season].sort() : [],
     audience: typeof filters.audience === "string" ? filters.audience : "",
     color: filters.color ?? null,
-    pattern: filters.pattern ?? null
+    pattern: filters.pattern ?? null,
+    text: typeof filters.text === "string" ? filters.text.trim() : ""
   };
 }
 
@@ -272,6 +274,7 @@ function App() {
   const [selectedAudience, setSelectedAudience] = useState("");
   const [selectedColor, setSelectedColor] = useState(null);
   const [selectedPattern, setSelectedPattern] = useState(null);
+  const [selectedText, setSelectedText] = useState("");
   const [profileCreated, setProfileCreated] = useState(false);
   const [currentView, setCurrentView] = useState("main");
   const [profileItems, setProfileItems] = useState(null);
@@ -498,6 +501,7 @@ function App() {
     setSelectedAudience(effective.filters?.audience || "");
     setSelectedColor(effective.filters?.color ?? null);
     setSelectedPattern(effective.filters?.pattern ?? null);
+    setSelectedText(effective.filters?.text || "");
     setProfileItems(buildDisplayWardrobeItems(effective.data?.wardrobe?.items || []));
     setWardrobeLoadedCapsuleId(hasStoredWardrobeItems(capsule) ? capsule.id || "" : "");
     setSelectedRegenerationUrls([]);
@@ -522,7 +526,8 @@ function App() {
       season: selectedSeason,
       audience: selectedAudience,
       color: selectedColor,
-      pattern: selectedPattern
+      pattern: selectedPattern,
+      text: selectedText
     },
     data: {
       wardrobe: wardrobe
@@ -588,6 +593,7 @@ function App() {
         setSelectedAudience("");
         setSelectedColor(null);
         setSelectedPattern(null);
+        setSelectedText("");
         setOnboardingStep(0);
         setStatus({ loading: false, error: "", infoKey: "", infoParams: null });
       } else {
@@ -620,6 +626,7 @@ function App() {
         setSelectedAudience("");
         setSelectedColor(null);
         setSelectedPattern(null);
+        setSelectedText("");
         setOnboardingStep(0);
         setStatus({ loading: false, error: "", infoKey: "", infoParams: null });
       } else {
@@ -653,6 +660,7 @@ function App() {
       setSelectedAudience("");
       setSelectedColor(null);
       setSelectedPattern(null);
+      setSelectedText("");
       setOnboardingStep(0);
       setProfileItems(null);
       setActiveCapsuleId("");
@@ -1328,8 +1336,9 @@ function App() {
             selectedSeasons={selectedSeason}
             selectedAudience={selectedAudience}
             selectedAccentColor={selectedColor}
-            selectedPattern={selectedPattern}
-            status={status}
+          selectedPattern={selectedPattern}
+          selectedText={selectedText}
+          status={status}
             onSelectStyleCore={setSelectedFormalityLevel}
             onSelectStyleAesthetic={setSelectedStyle}
             onToggleOccasion={(value) =>
@@ -1338,8 +1347,9 @@ function App() {
             onToggleSeason={(value) => toggleSelection(value, selectedSeason, setSelectedSeason)}
             onSelectAudience={setSelectedAudience}
             onSelectAccentColor={setSelectedColor}
-            onSelectPattern={setSelectedPattern}
-            onSave={handleSaveProfile}
+          onSelectPattern={setSelectedPattern}
+          onTextChange={setSelectedText}
+          onSave={handleSaveProfile}
             onDelete={handleDeleteProfile}
             onBack={handleBackToMain}
           />
@@ -1384,6 +1394,7 @@ function App() {
           selectedAudience={selectedAudience}
           selectedAccentColor={selectedColor}
           selectedPattern={selectedPattern}
+          selectedText={selectedText}
           hasFilterChanges={hasFilterChanges}
           status={status}
           onSelectStyleCore={setSelectedFormalityLevel}
@@ -1395,6 +1406,7 @@ function App() {
           onSelectAudience={setSelectedAudience}
           onSelectAccentColor={setSelectedColor}
           onSelectPattern={setSelectedPattern}
+          onTextChange={setSelectedText}
           onApplyFilters={handleApplyCapsuleFilters}
           onResetFilters={handleResetProfileFilters}
           onNavigateApp={handleNavigateApp}

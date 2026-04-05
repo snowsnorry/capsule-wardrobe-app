@@ -31,6 +31,7 @@ function renderSidebar(props = {}) {
     selectedAudience: "woman",
     selectedAccentColor: "blue",
     selectedPattern: null,
+    selectedText: "",
     hasFilterChanges: true,
     status: { loading: false, error: "", infoKey: "", infoParams: null },
     onSelectStyleCore: vi.fn(),
@@ -40,6 +41,7 @@ function renderSidebar(props = {}) {
     onSelectAudience: vi.fn(),
     onSelectAccentColor: vi.fn(),
     onSelectPattern: vi.fn(),
+    onTextChange: vi.fn(),
     onApply: vi.fn(),
     onReset: vi.fn(),
     onSignOut: vi.fn(),
@@ -61,6 +63,9 @@ function renderSidebar(props = {}) {
         "profile.patternTitle": "Pattern",
         "profile.patternHint": "Hint",
         "profile.patternNotImportant": "Pattern not important",
+        "profile.additionalInfoTitle": "Additional information",
+        "profile.additionalInfoHint": "Additional hint",
+        "profile.additionalInfoPlaceholder": "Additional placeholder",
         "profile.stylesTitle": "Styles",
         "profile.stylesHint": "Hint",
         "profile.styleCoreTitle": "Core style",
@@ -115,6 +120,7 @@ describe("ProfileFiltersSidebar", () => {
     const onSelectAudience = vi.fn();
     const onSelectAccentColor = vi.fn();
     const onSelectPattern = vi.fn();
+    const onTextChange = vi.fn();
 
     renderSidebar({
       onSelectStyleCore,
@@ -123,7 +129,8 @@ describe("ProfileFiltersSidebar", () => {
       onToggleSeason,
       onSelectAudience,
       onSelectAccentColor,
-      onSelectPattern
+      onSelectPattern,
+      onTextChange
     });
 
     await user.click(screen.getByRole("button", { name: "formal" }));
@@ -133,6 +140,7 @@ describe("ProfileFiltersSidebar", () => {
     await user.click(screen.getByRole("button", { name: "man" }));
     await user.click(screen.getByRole("button", { name: "red" }));
     await user.click(screen.getByRole("button", { name: "stripe" }));
+    await user.type(screen.getByPlaceholderText("Additional placeholder"), "linen only");
 
     expect(onSelectStyleCore).toHaveBeenCalledWith("formal");
     expect(onSelectStyleAesthetic).toHaveBeenCalledWith("retro");
@@ -141,6 +149,7 @@ describe("ProfileFiltersSidebar", () => {
     expect(onSelectAudience).toHaveBeenCalledWith("man");
     expect(onSelectAccentColor).toHaveBeenCalledWith("red");
     expect(onSelectPattern).toHaveBeenCalledWith("stripe");
+    expect(onTextChange).toHaveBeenCalled();
   });
 
   test("calls apply and reset callbacks and disables actions while loading", async () => {
@@ -217,5 +226,14 @@ describe("ProfileFiltersSidebar", () => {
     expect(screen.getByRole("button", { name: "Apply" })).toBeDisabled();
     expect(screen.getByText("Filters have not changed.")).toBeInTheDocument();
     expect(screen.queryByText(/To apply filters, choose:/)).not.toBeInTheDocument();
+  });
+
+  test("renders additional information field", () => {
+    renderSidebar({
+      selectedText: "Prefer natural fabrics"
+    });
+
+    expect(screen.getByText("Additional information")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("Prefer natural fabrics")).toBeInTheDocument();
   });
 });

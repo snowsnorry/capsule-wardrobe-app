@@ -1,4 +1,4 @@
-import { Button, Chip, Divider, Stack, Typography } from "@mui/material";
+import { Button, Chip, Divider, Stack, TextField, Typography } from "@mui/material";
 import AccentColorChips from "./AccentColorChips.jsx";
 import StylePreferenceSelector from "./StylePreferenceSelector.jsx";
 import { useI18n } from "../i18n/useI18n.js";
@@ -18,6 +18,7 @@ function ProfileFiltersSidebar({
   selectedAudience,
   selectedAccentColor,
   selectedPattern,
+  selectedText,
   hasFilterChanges = true,
   status,
   onSelectStyleCore,
@@ -27,6 +28,7 @@ function ProfileFiltersSidebar({
   onSelectAudience,
   onSelectAccentColor,
   onSelectPattern,
+  onTextChange,
   onApply,
   onReset,
   onSignOut,
@@ -159,6 +161,30 @@ function ProfileFiltersSidebar({
             />
           ))}
         </Stack>
+      </Stack>
+
+      <Stack spacing={1.5}>
+        <Typography variant="h6">{t("profile.additionalInfoTitle")}</Typography>
+        <Typography variant="body2" color="text.secondary">
+          {t("profile.additionalInfoHint")}
+        </Typography>
+        <TextField
+          multiline
+          minRows={1}
+          maxRows={4}
+          value={selectedText}
+          onChange={(event) => onTextChange(event.target.value)}
+          placeholder={t("profile.additionalInfoPlaceholder")}
+          fullWidth
+          InputProps={{
+            sx: {
+              alignItems: "flex-start",
+              "& .MuiInputBase-inputMultiline": {
+                overflowY: "auto !important"
+              }
+            }
+          }}
+        />
       </Stack>
 
       <Stack spacing={1.5}>

@@ -619,6 +619,8 @@ function getWardrobeSelectionPrompt(userProfile = null, items = [], categories =
   const audienceText = userProfile?.audience || "any";
   const accentColorText = typeof userProfile?.color === "string" ? userProfile.color : "";
   const patternText = typeof userProfile?.pattern === "string" ? userProfile.pattern : "";
+  const additionalText = typeof userProfile?.text === "string" ? userProfile.text.trim() : "";
+  const additionalInfoBlock = additionalText ? `Important Additional Information: ${additionalText}` : "";
   const simplifiedItems = items.map((item) => {
     const colorParts = [
       Array.isArray(item?.color_base) ? item.color_base.join(", ") : "",
@@ -641,7 +643,7 @@ function getWardrobeSelectionPrompt(userProfile = null, items = [], categories =
   });
   const itemsJson = JSON.stringify(simplifiedItems, null, 2);
 
-  return PROMPT_TEMPLATE
+  let prompt = PROMPT_TEMPLATE
     .replace("{{formality_level}}", formalityText)
     .replace("{{style}}", styleText)
     .replace("{{occasions}}", occasionsText)
@@ -649,10 +651,13 @@ function getWardrobeSelectionPrompt(userProfile = null, items = [], categories =
     .replace("{{audience}}", audienceText)
     .replace("{{color}}", accentColorText)
     .replace("{{pattern}}", patternText)
+    .replace("{{additional_info_block}}", additionalInfoBlock)
     .replace("{{items}}", itemsJson)
     .replace("{{category_list}}", getCategoryListText(categories))
     .replace("{{categories_schema}}", getCategorySchema(categories))
     .replace("{{num_items}}", Object.entries(categories).reduce((sum, [, count]) => sum + count, 0));
+
+  return prompt;
 }
 
 function toWardrobeUiItem(item) {

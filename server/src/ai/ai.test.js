@@ -4,6 +4,7 @@ import {
   createWardrobeService,
   enforceCategoryCounts,
   getSelectedIdsFromCapsule,
+  getWardrobeSelectionPrompt,
   getStoredWardrobePayload
 } from "./ai.js";
 
@@ -34,7 +35,7 @@ function createCapsuleWithWardrobe(wardrobe = null) {
         audience: "woman",
         color: null,
         pattern: null,
-        locale: "en"
+        text: ""
       },
       data: {
         wardrobe,
@@ -43,6 +44,38 @@ function createCapsuleWithWardrobe(wardrobe = null) {
     }
   };
 }
+
+test("getWardrobeSelectionPrompt includes optional additional information", () => {
+  const prompt = getWardrobeSelectionPrompt(
+    {
+      audience: "woman",
+      occasions: ["office"],
+      formalityLevel: "casual",
+      style: "minimalistic",
+      text: "Prefer natural fabrics"
+    },
+    [{ id: "top-1", name: "Top", category: "top" }],
+    { top: 1 }
+  );
+
+  assert.match(prompt, /Important Additional Information: Prefer natural fabrics/);
+});
+
+test("getWardrobeSelectionPrompt omits additional information line when text is blank", () => {
+  const prompt = getWardrobeSelectionPrompt(
+    {
+      audience: "woman",
+      occasions: ["office"],
+      formalityLevel: "casual",
+      style: "minimalistic",
+      text: "   "
+    },
+    [{ id: "top-1", name: "Top", category: "top" }],
+    { top: 1 }
+  );
+
+  assert.doesNotMatch(prompt, /Important Additional Information:/);
+});
 
 test("getSelectedIdsFromCapsule flattens only non-empty ids from capsule object", () => {
   assert.deepEqual(

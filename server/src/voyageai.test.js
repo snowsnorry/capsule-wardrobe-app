@@ -10,7 +10,8 @@ test("getWardrobePrompt builds a semantic query from profile filters", () => {
     occasions: ["office", "brunch"],
     style: "minimalistic",
     color: "burgundy",
-    pattern: "striped"
+    pattern: "striped",
+    text: "Prefer natural fabrics and no oversized fits"
   });
 
   assert.match(prompt, /Looking for woman's fashion items and clothing\./);
@@ -19,6 +20,16 @@ test("getWardrobePrompt builds a semantic query from profile filters", () => {
   assert.match(prompt, /Designed in a minimalistic style\./);
   assert.match(prompt, /Preferred color: burgundy\./);
   assert.match(prompt, /Features a striped pattern\./);
+  assert.match(prompt, /Additional request: Prefer natural fabrics and no oversized fits\./);
+});
+
+test("getWardrobePrompt omits additional request for blank text", () => {
+  const prompt = getWardrobePrompt({
+    audience: "woman",
+    text: "   "
+  });
+
+  assert.doesNotMatch(prompt, /Additional request:/);
 });
 
 test("voyage client requires api key and shapes embedding request", async () => {

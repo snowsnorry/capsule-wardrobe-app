@@ -9,6 +9,7 @@ Target Formality: {{formality_level}}
 Target Style: {{style}}
 Accent Color: {{color}}
 Pattern: {{pattern}}
+{{additional_info_block}}
 
 CURRENT CAPSULE (Fixed Context - DO NOT RETURN IN OUTPUT):
 {{current_capsule_items}}

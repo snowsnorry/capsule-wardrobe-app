@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  buildRegenerateSelectedPrompt,
   createPartialRegenerationService,
   getPartialRegenerationJob
 } from "./regenerateSelected.js";
@@ -39,7 +40,7 @@ function createCapsule() {
         audience: "woman",
         color: null,
         pattern: null,
-        locale: "en"
+        text: ""
       },
       data: {
         rejectedUrls: ["https://example.com/old-1"],
@@ -58,6 +59,40 @@ function createCapsule() {
     }
   };
 }
+
+test("buildRegenerateSelectedPrompt includes optional additional information", () => {
+  const prompt = buildRegenerateSelectedPrompt(
+    {
+      audience: "woman",
+      occasions: ["office"],
+      formalityLevel: "casual",
+      style: "minimalistic",
+      text: "Prefer natural fabrics"
+    },
+    [{ id: "top-1", name: "Top", category: "top" }],
+    [{ id: "bottom-1", name: "Bottom", category: "bottom" }],
+    { top: 1 }
+  );
+
+  assert.match(prompt, /Important Additional Information: Prefer natural fabrics/);
+});
+
+test("buildRegenerateSelectedPrompt omits additional information line when text is blank", () => {
+  const prompt = buildRegenerateSelectedPrompt(
+    {
+      audience: "woman",
+      occasions: ["office"],
+      formalityLevel: "casual",
+      style: "minimalistic",
+      text: "   "
+    },
+    [{ id: "top-1", name: "Top", category: "top" }],
+    [{ id: "bottom-1", name: "Bottom", category: "bottom" }],
+    { top: 1 }
+  );
+
+  assert.doesNotMatch(prompt, /Important Additional Information:/);
+});
 
 test("regenerateSelectedWardrobeItems returns pending payload when job is already active", async () => {
   const jobs = new Map([

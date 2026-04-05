@@ -9,6 +9,7 @@ Target Formality: {{formality_level}}
 Target Style: {{style}}
 Accent Color: {{color}}
 Pattern: {{pattern}}
+{{additional_info_block}}
 
 AVAILABLE ITEMS (Candidates):
 {{items}}
