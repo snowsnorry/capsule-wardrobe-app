@@ -1596,16 +1596,54 @@ function App() {
         open={notificationPrompt.open}
         autoHideDuration={null}
         anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        sx={{
+          "& .MuiSnackbarContent-root": {
+            p: 0,
+            background: "transparent"
+          }
+        }}
       >
         <Alert
           severity="info"
-          variant="filled"
           action={(
-            <Button color="inherit" size="small" onClick={() => { void requestBrowserNotificationPermission(); }}>
+            <Button
+              size="small"
+              variant="text"
+              onClick={() => { void requestBrowserNotificationPermission(); }}
+              sx={{
+                color: "primary.main",
+                fontWeight: 700,
+                "&:hover": {
+                  backgroundColor: (theme) => (
+                    theme.palette.mode === "dark"
+                      ? "rgba(73, 163, 163, 0.14)"
+                      : "rgba(28, 124, 124, 0.08)"
+                  )
+                }
+              }}
+            >
               {t("notifications.prompt.action")}
             </Button>
           )}
-          sx={{ width: "100%", alignItems: "center" }}
+          sx={{
+            width: "min(680px, calc(100vw - 32px))",
+            alignItems: "center",
+            color: "text.primary",
+            backgroundColor: "background.paper",
+            border: "1px solid",
+            borderColor: "divider",
+            boxShadow: (theme) => (
+              theme.palette.mode === "dark"
+                ? "0 14px 36px rgba(0, 0, 0, 0.34)"
+                : "0 14px 32px rgba(31, 41, 51, 0.12)"
+            ),
+            "& .MuiAlert-icon": {
+              color: "#8f6f45"
+            },
+            "& .MuiAlert-message": {
+              py: 1
+            }
+          }}
         >
           {t("notifications.prompt.message")}
         </Alert>
