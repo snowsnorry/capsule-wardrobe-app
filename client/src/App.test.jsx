@@ -151,6 +151,9 @@ vi.mock("./screens/MainScreen.jsx", () => ({
         <div>main-screen:{props.items.length}</div>
         <div>active-capsule:{props.activeCapsule?.id || ""}:{props.activeCapsule?.name || ""}</div>
         <div>items-order:{props.items.map((item) => item.url).join(",")}</div>
+        <div>loading-items:{String(props.isLoadingItems)}</div>
+        <div>content-busy:{String(props.isContentBusy)}</div>
+        <div>partial-loading:{String(props.isPartialRegenerationLoading)}</div>
         <div>settings-user:{props.userName || ""}:{props.settingsProfile?.theme || ""}:{props.settingsProfile?.llm || ""}</div>
         <div>selected-text:{props.selectedText || ""}</div>
         <button type="button" onClick={() => props.onSelectStyleCore("formal")}>
@@ -248,7 +251,14 @@ function mockProfileOptions() {
   });
 }
 
-function createBootstrapResponse({ items = [], locale = "ru", theme = "system", llm = "none", fullname = "" } = {}) {
+function createBootstrapResponse({
+  items = [],
+  locale = "ru",
+  theme = "system",
+  llm = "none",
+  fullname = "",
+  activeSnapshot = undefined
+} = {}) {
   return {
     profile: {
       email: "person@example.com",
@@ -295,6 +305,7 @@ function createBootstrapResponse({ items = [], locale = "ru", theme = "system", 
       },
       status: "new"
     },
+    activeSnapshot,
     capsules: [{ id: "capsule-1", name: "Spring edit", status: "new" }]
   };
 }
@@ -599,6 +610,53 @@ describe("App", () => {
     });
     expect(wardrobeApi.regenerateCapsuleWardrobe).not.toHaveBeenCalled();
     expect(wardrobeApi.subscribeCapsuleEvents).not.toHaveBeenCalled();
+  });
+
+  test("restores pending wardrobe generation after bootstrap refresh", async () => {
+    authApi.fetchCurrentUser.mockResolvedValue({ user: { email: "person@example.com" } });
+    authApi.fetchProfileStatus.mockResolvedValue({ hasProfile: true });
+    authApi.updateProfileLocale.mockResolvedValue({});
+    capsulesApi.fetchCapsuleBootstrap.mockResolvedValue(createBootstrapResponse({
+      items: [],
+      locale: "en",
+      activeSnapshot: {
+        status: "pending",
+        pendingStage: "capsule",
+        hasPendingAdditionalItems: false,
+        pendingRegenerationUrls: [],
+        items: [],
+        reasoning: null,
+        rawSelectionText: null,
+        swimwearReasoning: null,
+        swimwearRawSelectionText: null,
+        error: null
+      }
+    }));
+    mockProfileOptions();
+
+    renderApp();
+
+    expect(await screen.findByTestId("main-screen")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(wardrobeApi.subscribeCapsuleEvents).toHaveBeenCalledWith(expect.objectContaining({
+        capsuleId: "capsule-1"
+      }));
+    });
+    expect(screen.getByText("loading-items:true")).toBeInTheDocument();
+    expect(screen.getByText("content-busy:true")).toBeInTheDocument();
+    expect(wardrobeApi.regenerateCapsuleWardrobe).not.toHaveBeenCalled();
+
+    wardrobeStream.emit({
+      status: "ready",
+      items: [
+        { id: "top-1", url: "https://example.com/top-1", name: "Shirt", category: "top" }
+      ]
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText("main-screen:1")).toBeInTheDocument();
+    });
+    expect(screen.getByText("loading-items:false")).toBeInTheDocument();
   });
 
   test("does not patch profile locale during bootstrap when the persisted locale already came from the server", async () => {

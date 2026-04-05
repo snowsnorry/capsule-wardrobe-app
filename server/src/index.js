@@ -527,6 +527,15 @@ function createApp({
     return Array.isArray(wardrobe?.items) ? sortWardrobeItems(wardrobe.items) : [];
   }
 
+  function getCapsuleEventSnapshot(email, capsule) {
+    const capsuleId = String(capsule?.id || "").trim();
+    return buildCapsuleEventSnapshot({
+      capsule,
+      activeJob: capsuleId ? getWardrobeJobImpl(email, capsuleId) : null,
+      partialRegenerationJob: capsuleId ? getPartialRegenerationJobImpl(email, capsuleId) : null
+    });
+  }
+
   async function streamCapsuleEventsHandler(req, res) {
     try {
       const capsuleId = String(req.params?.id || "").trim();
@@ -753,6 +762,7 @@ app.get("/capsules/bootstrap", requireAuth, async (req, res) => {
       ok: true,
       profile: profile || null,
       activeCapsule: toCapsuleResponse(activeCapsule),
+      activeSnapshot: getCapsuleEventSnapshot(req.user.email, activeCapsule),
       capsules: recentCapsules.map(toCapsuleSummary)
     });
   } catch (error) {
@@ -791,7 +801,11 @@ app.get("/capsules/:id", requireAuth, async (req, res) => {
       return res.status(404).json({ error: "not_found" });
     }
     await setActiveCapsuleIdImpl(req.user.email, capsule.id);
-    return res.json({ ok: true, capsule: toCapsuleResponse(capsule) });
+    return res.json({
+      ok: true,
+      capsule: toCapsuleResponse(capsule),
+      snapshot: getCapsuleEventSnapshot(req.user.email, capsule)
+    });
   } catch (error) {
     console.error("[capsules/get]", error);
     return res.status(503).json({ error: "service_unavailable" });

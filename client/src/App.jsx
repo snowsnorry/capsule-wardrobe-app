@@ -483,11 +483,27 @@ function App() {
     await preloadOnboardingOptions({ useFallback });
   };
 
+  const clearWardrobeProgressState = () => {
+    stopCapsuleEventStream();
+    setSelectedRegenerationUrls([]);
+    pendingRegenerationUrlsRef.current = [];
+    regenerationBaseItemsRef.current = [];
+    manualWardrobeRegenerationCapsuleIdRef.current = "";
+    pendingNotificationKindRef.current = "";
+    closeNotificationPrompt();
+    setPartialRegenerationPendingUrls([]);
+    setIsPartialRegenerationLoading(false);
+    setIsWardrobePending(false);
+    setHasPendingAdditionalItems(false);
+    setIsLoadingItems(false);
+  };
+
   const applyCapsuleState = (capsule, { capsules = null } = {}) => {
     if (!capsule) {
       return;
     }
 
+    clearWardrobeProgressState();
     const effective = getEffectiveCapsule(capsule) || buildEmptyCapsuleDraft();
     setActiveCapsuleId(capsule.id || "");
     setActiveCapsuleMeta({
@@ -504,14 +520,6 @@ function App() {
     setSelectedText(effective.filters?.text || "");
     setProfileItems(buildDisplayWardrobeItems(effective.data?.wardrobe?.items || []));
     setWardrobeLoadedCapsuleId(hasStoredWardrobeItems(capsule) ? capsule.id || "" : "");
-    setSelectedRegenerationUrls([]);
-    pendingRegenerationUrlsRef.current = [];
-    regenerationBaseItemsRef.current = [];
-    manualWardrobeRegenerationCapsuleIdRef.current = "";
-    setPartialRegenerationPendingUrls([]);
-    setIsPartialRegenerationLoading(false);
-    setIsWardrobePending(false);
-    setHasPendingAdditionalItems(false);
 
     if (Array.isArray(capsules)) {
       setCapsuleList(capsules);
@@ -545,6 +553,17 @@ function App() {
     }
   });
 
+  const restoreCapsuleSnapshot = async (capsuleId, snapshot, { shouldResumeEvents = false } = {}) => {
+    if (!snapshot || snapshot.status !== "pending") {
+      return;
+    }
+
+    await applyWardrobeSnapshot(snapshot);
+    if (shouldResumeEvents) {
+      startCapsuleEventStream(capsuleId);
+    }
+  };
+
   const bootstrapCapsules = async (email = user?.email) => {
     const result = await fetchCapsuleBootstrap();
     const normalizedProfile = normalizeProfileSettings(result.profile, email);
@@ -553,6 +572,7 @@ function App() {
       setLocale(normalizedProfile.locale);
     }
     applyCapsuleState(result.activeCapsule, { capsules: result.capsules || [] });
+    await restoreCapsuleSnapshot(result.activeCapsule?.id, result.activeSnapshot, { shouldResumeEvents: true });
     return normalizedProfile;
   };
 
@@ -849,6 +869,7 @@ function App() {
     try {
       const result = await fetchCapsule(capsuleId);
       applyCapsuleState(result.capsule);
+      await restoreCapsuleSnapshot(result.capsule?.id, result.snapshot, { shouldResumeEvents: true });
       await refreshCapsuleList();
     } finally {
       setIsContentOperationLoading(false);
@@ -1265,12 +1286,6 @@ function App() {
   useEffect(() => {
     pendingRegenerationUrlsRef.current = partialRegenerationPendingUrls;
   }, [partialRegenerationPendingUrls]);
-
-  useEffect(() => {
-    stopCapsuleEventStream();
-    pendingNotificationKindRef.current = "";
-    closeNotificationPrompt();
-  }, [activeCapsuleId]);
 
   useEffect(() => () => {
     stopCapsuleEventStream();
