@@ -142,7 +142,8 @@ describe("SearchScreen", () => {
       page: 3
     });
     expect(await screen.findByText("55 results")).toBeInTheDocument();
-    expect(screen.getAllByText("Linen Shirt (unisex)").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Linen Shirt").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("unisex").length).toBeGreaterThan(0);
   });
 
   test("desktop filter interactions auto-apply and reset page to 1", async () => {
@@ -258,12 +259,12 @@ describe("SearchScreen", () => {
     renderScreen();
 
     expect(await screen.findByDisplayValue("linen shirt")).toBeInTheDocument();
-    expect(screen.getAllByText("Linen Shirt (unisex)").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("unisex").length).toBeGreaterThan(0);
 
-    fireEvent.click(screen.getAllByText("Linen Shirt (unisex)")[0]);
+    fireEvent.click(screen.getAllByText("Linen Shirt")[0]);
 
     await waitFor(() => {
-      expect(screen.getAllByText("Linen Shirt (unisex)").length).toBeGreaterThan(1);
+      expect(screen.getAllByText("unisex").length).toBeGreaterThan(1);
     });
   });
 
@@ -271,14 +272,16 @@ describe("SearchScreen", () => {
     renderScreen();
 
     expect(await screen.findByDisplayValue("linen shirt")).toBeInTheDocument();
-    expect(screen.getAllByText("Wool Trousers").length).toBeGreaterThan(0);
-    expect(screen.queryByText("Wool Trousers (unisex)")).not.toBeInTheDocument();
+    const woolTitlesBeforeOpen = screen.getAllByText("Wool Trousers");
+    expect(woolTitlesBeforeOpen.length).toBeGreaterThan(0);
+    expect(woolTitlesBeforeOpen.every((element) => element.textContent === "Wool Trousers")).toBe(true);
 
     fireEvent.click(screen.getByText("Wool Trousers"));
 
+    const woolTitlesAfterOpen = await screen.findAllByText("Wool Trousers");
     await waitFor(() => {
-      expect(screen.getAllByText("Wool Trousers").length).toBeGreaterThan(1);
+      expect(woolTitlesAfterOpen.length).toBeGreaterThan(1);
     });
-    expect(screen.queryByText("Wool Trousers (unisex)")).not.toBeInTheDocument();
+    expect(woolTitlesAfterOpen.every((element) => element.textContent === "Wool Trousers")).toBe(true);
   });
 });

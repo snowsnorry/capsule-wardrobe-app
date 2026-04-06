@@ -110,10 +110,11 @@ describe("ClothingCard", () => {
       }
     });
 
-    const expectedLabel = "Red Jacket (unisex)";
+    const expectedLabel = "Red Jacket unisex";
 
-    expect(screen.getByText(expectedLabel)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Red Jacket \(unisex\)/ })).toHaveAttribute("href", item.url);
+    expect(screen.getByText("Red Jacket")).toBeInTheDocument();
+    expect(screen.getByText("unisex")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Red Jacket unisex/ })).toHaveAttribute("href", item.url);
     expect(screen.getByRole("img", { name: expectedLabel })).toHaveAttribute("alt", expectedLabel);
   });
 
@@ -126,6 +127,6 @@ describe("ClothingCard", () => {
     });
 
     expect(screen.getByText("Red Jacket")).toBeInTheDocument();
-    expect(screen.queryByText("Red Jacket (unisex)")).not.toBeInTheDocument();
+    expect(screen.queryByText("unisex")).not.toBeInTheDocument();
   });
 });

@@ -28,6 +28,7 @@ import { translateOption } from "../i18n/index.js";
 import AppLauncher from "../components/AppLauncher.jsx";
 import LocaleSwitcher from "../components/LocaleSwitcher.jsx";
 import AccentColorChips from "../components/AccentColorChips.jsx";
+import ProductLabelText from "../components/ProductLabelText.jsx";
 import { formatProductLabel } from "../utils/productLabel.js";
 import { buildProductDetailGroups } from "../../../shared/productDetail.js";
 import { getSafeHttpUrl } from "../../../shared/urlSecurity.js";
@@ -255,7 +256,7 @@ function ProductDetail({ item, title, t, locale, mobileBackAction = null }) {
                     textIndent: mobileBackAction ? "40px" : 0
                   }}
                 >
-                  {productLabel}
+                  <ProductLabelText item={item} fallbackLabel={t("search.untitled")} />
                   {productUrl ? (
                     <OpenInNewRoundedIcon
                       sx={{
@@ -1004,7 +1005,7 @@ function SearchScreen({ onNavigateApp }) {
             }}
           >
             <Typography variant="body1" sx={{ fontWeight: 700 }}>
-              {formatProductLabel(item, t("search.untitled"))}
+              <ProductLabelText item={item} fallbackLabel={t("search.untitled")} />
             </Typography>
             <Typography variant="body2" color="text.secondary">
               {item.brand || t("search.noBrand")}

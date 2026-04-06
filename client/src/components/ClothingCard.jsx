@@ -2,6 +2,7 @@ import { Box, Chip, IconButton, Link as MuiLink, Stack, Typography } from "@mui/
 import ThumbDownAltOutlinedIcon from "@mui/icons-material/ThumbDownAltOutlined";
 import { useI18n } from "../i18n/useI18n.js";
 import { formatProductLabel } from "../utils/productLabel.js";
+import ProductLabelText from "./ProductLabelText.jsx";
 import { getSafeHttpUrl } from "../../../shared/urlSecurity.js";
 
 function ClothingCard({
@@ -95,7 +96,14 @@ function ClothingCard({
             textShadow: "0 2px 12px rgba(0,0,0,0.45)"
           }}
         >
-          {label}
+          <ProductLabelText
+            item={item}
+            fallbackLabel=""
+            suffixSx={{
+              fontSize: "0.72em",
+              opacity: 0.88
+            }}
+          />
         </Typography>
       </Box>
     </>
