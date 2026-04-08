@@ -3,7 +3,10 @@ import assert from "node:assert/strict";
 import {
   ALLOWED_CHAT_MODELS,
   buildChatMessages,
+  collectStreamText,
   createDeepInfraClient,
+  estimateJsonByteLength,
+  extractChunkText,
   resolveChatModel,
   splitSystemAndUserPrompt
 } from "./ai/deepinfra.js";
@@ -30,9 +33,9 @@ test("deepinfra client validates api key and caches constructed client", () => {
   let createdCount = 0;
   const client = createDeepInfraClient({
     getApiKeyImpl: () => "deep-key",
-    createClientImpl: ({ apiKey, baseURL }) => {
+    createClientImpl: ({ apiKey, baseURL, maxRetries }) => {
       createdCount += 1;
-      return { apiKey, baseURL, embeddings: {}, chat: { completions: {} } };
+      return { apiKey, baseURL, maxRetries, embeddings: {}, chat: { completions: {} } };
     }
   });
 
@@ -42,6 +45,7 @@ test("deepinfra client validates api key and caches constructed client", () => {
   assert.equal(first, second);
   assert.equal(first.apiKey, "deep-key");
   assert.equal(first.baseURL, "https://api.deepinfra.com/v1/openai");
+  assert.equal(first.maxRetries, 0);
 
   const missingKeyClient = createDeepInfraClient({
     getApiKeyImpl: () => ""
@@ -61,12 +65,35 @@ test("buildChatMessages emits multimodal user content and preserves images", () 
     buffer: Buffer.from("image-one")
   }]);
 
-  assert.deepEqual(content[0], {
+  assert.equal(content[0].type, "image_url");
+  assert.match(content[0].image_url.url, /^data:image\/png;base64,/);
+  assert.deepEqual(content[1], {
     type: "text",
     text: "Describe capsule"
   });
-  assert.equal(content[1].type, "image_url");
-  assert.match(content[1].image_url.url, /^data:image\/png;base64,/);
+});
+
+test("estimateJsonByteLength returns a utf8 byte count for json payloads", () => {
+  assert.equal(estimateJsonByteLength({ ok: true }), Buffer.byteLength("{\"ok\":true}", "utf8"));
+});
+
+test("extractChunkText and collectStreamText accumulate streaming delta content", async () => {
+  assert.equal(extractChunkText({
+    choices: [{ delta: { content: "{\"ok\":" } }]
+  }), "{\"ok\":");
+  assert.equal(extractChunkText({
+    choices: [{ delta: { content: [{ text: "true" }, { text: "}" }] } }]
+  }), "true}");
+
+  const stream = {
+    async *[Symbol.asyncIterator]() {
+      yield { choices: [{ delta: { content: "{\"ok\":" } }] };
+      yield { choices: [{ delta: { content: "true" } }] };
+      yield { choices: [{ delta: { content: "}" } }] };
+    }
+  };
+
+  assert.equal(await collectStreamText(stream), "{\"ok\":true}");
 });
 
 test("deepinfra client shapes embedding and chat requests and parses JSON output", async () => {
@@ -86,11 +113,11 @@ test("deepinfra client shapes embedding and chat requests and parses JSON output
           create: async (payload) => {
             chatPayload = payload;
             return {
-              choices: [{
-                message: {
-                  content: "noise before {\"ok\":true} trailing"
-                }
-              }]
+              async *[Symbol.asyncIterator]() {
+                yield { choices: [{ delta: { content: "noise before " } }] };
+                yield { choices: [{ delta: { content: "{\"ok\":true}" } }] };
+                yield { choices: [{ delta: { content: " trailing" } }] };
+              }
             };
           }
         }
@@ -126,17 +153,18 @@ test("deepinfra client shapes embedding and chat requests and parses JSON output
     {
       role: "user",
       content: [
-        { type: "text", text: "Return JSON" },
         {
           type: "image_url",
           image_url: {
-            url: chatPayload.messages[1].content[1].image_url.url
+            url: chatPayload.messages[1].content[0].image_url.url
           }
-        }
+        },
+        { type: "text", text: "Return JSON" }
       ]
     }
   ]);
   assert.deepEqual(chatPayload.response_format, { type: "json_object" });
+  assert.equal(chatPayload.stream, true);
   assert.equal(payloadBuiltCalls, 1);
   assert.equal(images[0].buffer, null);
   assert.equal(result.response.output_text, "noise before {\"ok\":true} trailing");
@@ -151,7 +179,11 @@ test("deepinfra client throws for invalid embedding and invalid chat JSON", asyn
       },
       chat: {
         completions: {
-          create: async () => ({ choices: [{ message: { content: "{}" } }] })
+          create: async () => ({
+            async *[Symbol.asyncIterator]() {
+              yield { choices: [{ delta: { content: "{}" } }] };
+            }
+          })
         }
       }
     })
@@ -170,7 +202,9 @@ test("deepinfra client throws for invalid embedding and invalid chat JSON", asyn
       chat: {
         completions: {
           create: async () => ({
-            choices: [{ message: { content: "not-json" } }]
+            async *[Symbol.asyncIterator]() {
+              yield { choices: [{ delta: { content: "not-json" } }] };
+            }
           })
         }
       }
@@ -180,4 +214,59 @@ test("deepinfra client throws for invalid embedding and invalid chat JSON", asyn
     () => badJsonClient.generateJsonWithLlm("User: Return JSON"),
     /Failed to parse JSON response/
   );
+});
+
+test("deepinfra client logs transport diagnostics before rethrowing request errors", async () => {
+  const warnings = [];
+  const error = new Error("Connection error.");
+  error.cause = {
+    name: "FetchError",
+    message: "socket hang up",
+    code: "ECONNRESET",
+    errno: "ECONNRESET"
+  };
+
+  const client = createDeepInfraClient({
+    getApiKeyImpl: () => "deep-key",
+    nowImpl: (() => {
+      let tick = 0;
+      return () => {
+        tick += 1;
+        return tick === 1 ? 1000 : 1125;
+      };
+    })(),
+    warnImpl: (...args) => warnings.push(args),
+    createClientImpl: () => ({
+      embeddings: {
+        create: async () => ({ data: [{ embedding: [1] }] })
+      },
+      chat: {
+        completions: {
+          create: async () => {
+            throw error;
+          }
+        }
+      }
+    })
+  });
+
+  await assert.rejects(
+    () => client.generateJsonWithLlm("System: Be concise\nUser: Return JSON", {
+      userProfile: { llm: "deepinfra:Qwen/Qwen3-VL-235B-A22B-Instruct" },
+      images: [{ mimeType: "image/png", buffer: Buffer.from("image-one") }]
+    }),
+    /Connection error/
+  );
+
+  assert.equal(warnings.length, 1);
+  assert.equal(warnings[0][0], "[deepinfra][request-failed]");
+  const payload = JSON.parse(warnings[0][1]);
+  assert.equal(payload.model, "Qwen/Qwen3-VL-235B-A22B-Instruct");
+  assert.equal(payload.durationMs, 125);
+  assert.equal(payload.imageCount, 1);
+  assert.equal(payload.causeName, "FetchError");
+  assert.equal(payload.causeMessage, "socket hang up");
+  assert.equal(payload.causeCode, "ECONNRESET");
+  assert.equal(payload.causeErrno, "ECONNRESET");
+  assert.equal(typeof payload.payloadBytes, "number");
 });

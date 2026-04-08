@@ -335,7 +335,7 @@ async function regenerateCapsuleWardrobe(userProfile = null, products = null, lo
               ORDER BY relevance_score DESC, distance ASC
             ) as accent_rank,
             ROW_NUMBER() OVER (
-              PARTITION BY is_pattern_match
+              PARTITION BY is_pattern_limited_item
               ORDER BY relevance_score DESC, distance ASC
             ) as pattern_rank
           FROM (
@@ -355,11 +355,14 @@ async function regenerateCapsuleWardrobe(userProfile = null, products = null, lo
                 AND ${color}::text = ANY(color_base)
               ) as is_color_match,
               (
-                ${pattern}::text IS NOT NULL
-                AND ${pattern}::text != ''
-                -- Small tip: make sure to lower() both sides for safety if patterns are manually entered
-                AND lower(COALESCE(pattern, '')) = lower(${pattern}::text)
-              ) as is_pattern_match,
+                CASE
+                  WHEN ${pattern}::text IS NOT NULL AND ${pattern}::text != ''
+                  THEN lower(COALESCE(pattern, '')) = lower(${pattern}::text)
+                  ELSE pattern IS NOT NULL
+                    AND trim(pattern) != ''
+                    AND lower(pattern) != 'solid'
+                END
+              ) as is_pattern_limited_item,
               
               -- 2. Calculate Relevance Score
               (
@@ -415,7 +418,7 @@ async function regenerateCapsuleWardrobe(userProfile = null, products = null, lo
           AND 
           -- Rule 3: If it's a patterned item, it must be in the top 3 of patterns. (WITH BYPASS FOR 'SOLID')
           (
-            is_pattern_match IS NOT TRUE 
+            is_pattern_limited_item IS NOT TRUE 
             OR lower(${pattern}::text) = 'solid'
             OR pattern_rank <= 3
           )
@@ -471,7 +474,7 @@ async function regenerateCapsuleWardrobe(userProfile = null, products = null, lo
     };
   }
   const shouldSavePromptDebugArtifacts = process.env.NODE_ENV === "development";
-  let promptDebugImages = { categories: [] };
+  let promptDebugImages = { categories: [], stitched: null };
   let currentCapsuleCollage = null;
 
   try {
@@ -544,18 +547,20 @@ async function regenerateCapsuleWardrobe(userProfile = null, products = null, lo
   const llmStartedAt = Date.now();
   const generateJsonWithLlm = getGenerateJsonWithLlm(userProfile);
   const stylistImages = currentCapsuleCollage
-    ? [currentCapsuleCollage, ...promptDebugImages.categories]
-    : promptDebugImages.categories;
+    ? [currentCapsuleCollage, ...(promptDebugImages.stitched ? [promptDebugImages.stitched] : promptDebugImages.categories)]
+    : (promptDebugImages.stitched ? [promptDebugImages.stitched] : promptDebugImages.categories);
   const { response: selectionResponse, json: parsedSelection } = await generateJsonWithLlm(selectionPrompt, {
     userProfile,
     format: buildRegeneratedItemsFormat(capsuleCategories),
     images: stylistImages,
     onPayloadBuilt: () => {
       promptDebugImages.categories = [];
+      promptDebugImages.stitched = null;
       currentCapsuleCollage = null;
     }
   });
   promptDebugImages.categories = [];
+  promptDebugImages.stitched = null;
   currentCapsuleCollage = null;
   logWardrobeInfo("capsule-llm-completed", {
     llmProvider: llmResolution.provider,

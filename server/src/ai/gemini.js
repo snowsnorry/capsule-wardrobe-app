@@ -8,7 +8,6 @@ import { buildJsonObjectFormat, releaseImageBuffers, splitSystemAndUserPrompt } 
 const DEFAULT_CHAT_MODEL = "gemini-2.5-pro";
 const ALLOWED_CHAT_MODELS = ["gemini-2.5-pro"];
 const DEFAULT_API_VERSION = "v1beta";
-const MAX_RETRY_ATTEMPTS = 3;
 let cachedClient = null;
 
 function resolveChatModel(userProfile = null) {
@@ -27,10 +26,6 @@ function buildGeminiContents(user, uploadedFiles = []) {
   const content = [];
   const userText = String(user || "").trim();
 
-  if (userText) {
-    content.push({ text: userText });
-  }
-
   for (const file of uploadedFiles) {
     if (file && file.uri) {
       content.push({
@@ -42,6 +37,10 @@ function buildGeminiContents(user, uploadedFiles = []) {
     }
   }
 
+  if (userText) {
+    content.push({ text: userText });
+  }
+
   return content.length > 0 ? content : [""];
 }
 
@@ -49,7 +48,6 @@ function createGeminiClient({
   createClientImpl = ({ apiKey, apiVersion }) => new GoogleGenAI({ apiKey, apiVersion }),
   getApiKeyImpl = () => process.env.GEMINI_API_KEY,
   cache = true,
-  waitImpl = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
   uploadBufferToGeminiImpl = uploadBufferToGemini,
   cleanupUploadedFilesImpl = cleanupUploadedGeminiFiles
 } = {}) {
@@ -107,7 +105,7 @@ function createGeminiClient({
       }
     };
     try {
-      const response = await generateContentWithRetry(client, requestPayload, waitImpl);
+      const response = await client.models.generateContent(requestPayload);
 
       const finishReason = response?.candidates?.[0]?.finishReason;
       if (finishReason && finishReason !== "STOP") {
@@ -246,41 +244,6 @@ async function cleanupUploadedGeminiFiles(client, uploadedFiles = []) {
   }
 }
 
-async function generateContentWithRetry(client, payload, waitImpl) {
-  let lastError = null;
-
-  for (let attempt = 1; attempt <= MAX_RETRY_ATTEMPTS; attempt += 1) {
-    try {
-      return await client.models.generateContent(payload);
-    } catch (error) {
-      lastError = error;
-      if (!isRetryableGeminiTransportError(error) || attempt === MAX_RETRY_ATTEMPTS) {
-        throw error;
-      }
-
-      const delayMs = attempt * 500;
-      console.warn("[gemini][request-retry]", JSON.stringify({
-        attempt,
-        delayMs,
-        reason: error?.cause?.code || error?.message || "unknown_error"
-      }));
-      await waitImpl(delayMs);
-    }
-  }
-
-  throw lastError;
-}
-
-function isRetryableGeminiTransportError(error) {
-  const message = String(error?.message || "").toLowerCase();
-  const causeCode = String(error?.cause?.code || "").trim();
-
-  return message.includes("fetch failed")
-    || causeCode === "UND_ERR_SOCKET"
-    || causeCode === "ECONNRESET"
-    || causeCode === "ETIMEDOUT";
-}
-
 const geminiClient = createGeminiClient();
 const { generateJsonWithLlm, getGeminiClient } = geminiClient;
 
@@ -290,9 +253,7 @@ export {
   cleanupUploadedGeminiFiles,
   createGeminiClient,
   generateJsonWithLlm,
-  generateContentWithRetry,
   getGeminiClient,
-  isRetryableGeminiTransportError,
   resolveChatModel,
   uploadBufferToGemini,
   uploadImagesToGemini

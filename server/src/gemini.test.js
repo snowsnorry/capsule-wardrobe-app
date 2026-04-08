@@ -6,7 +6,6 @@ import {
   cleanupUploadedGeminiFiles,
   createGeminiClient,
   generateJsonWithLlm,
-  isRetryableGeminiTransportError,
   resolveChatModel,
   uploadBufferToGemini
 } from "./ai/gemini.js";
@@ -23,13 +22,13 @@ test("buildGeminiContents emits text and fileData parts", () => {
     mimeType: "image/png"
   }]);
 
-  assert.deepEqual(content[0], { text: "Describe capsule" });
-  assert.deepEqual(content[1], {
+  assert.deepEqual(content[0], {
     fileData: {
       fileUri: "gs://gemini/files/123",
       mimeType: "image/png"
     }
   });
+  assert.deepEqual(content[1], { text: "Describe capsule" });
 });
 
 test("uploadBufferToGemini writes temp file, uploads it, and deletes local temp file", async () => {
@@ -143,13 +142,13 @@ test("gemini client validates api key and shapes multimodal JSON request", async
   assert.equal(requestPayload.model, "gemini-2.5-pro");
   assert.equal(requestPayload.config.systemInstruction, "Be concise");
   assert.equal(requestPayload.config.responseMimeType, "application/json");
-  assert.equal(requestPayload.contents[0].text, "Return JSON");
-  assert.deepEqual(requestPayload.contents[1], {
+  assert.deepEqual(requestPayload.contents[0], {
     fileData: {
       fileUri: "gs://gemini/files/1",
       mimeType: "image/png"
     }
   });
+  assert.equal(requestPayload.contents[1].text, "Return JSON");
   assert.equal(payloadBuiltCalls, 1);
   assert.equal(images[0].buffer, null);
   assert.deepEqual(uploadedImages, [null]);
@@ -175,32 +174,24 @@ test("gemini generateJsonWithLlm throws for invalid JSON", async () => {
   );
 });
 
-test("gemini retries transient transport failures", async () => {
-  let calls = 0;
+test("gemini does not retry transient transport failures", async () => {
   const client = createGeminiClient({
     getApiKeyImpl: () => "gem-key",
-    waitImpl: async () => {},
     createClientImpl: () => ({
       models: {
         generateContent: async () => {
-          calls += 1;
-          if (calls < 3) {
-            const error = new TypeError("fetch failed");
-            error.cause = { code: "UND_ERR_SOCKET" };
-            throw error;
-          }
-          return { text: "{\"ok\":true}" };
+          const error = new TypeError("fetch failed");
+          error.cause = { code: "UND_ERR_SOCKET" };
+          throw error;
         }
       }
     })
   });
 
-  const result = await client.generateJsonWithLlm("User: Return JSON");
-  assert.deepEqual(result.json, { ok: true });
-  assert.equal(calls, 3);
-  assert.equal(isRetryableGeminiTransportError(Object.assign(new TypeError("fetch failed"), {
-    cause: { code: "UND_ERR_SOCKET" }
-  })), true);
+  await assert.rejects(
+    () => client.generateJsonWithLlm("User: Return JSON"),
+    /fetch failed/
+  );
 });
 
 test("module-level gemini generateJsonWithLlm validates api key", async () => {

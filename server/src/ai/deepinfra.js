@@ -11,9 +11,11 @@ const ALLOWED_CHAT_MODELS = [
 let cachedClient = null;
 
 function createDeepInfraClient({
-  createClientImpl = ({ apiKey, baseURL }) => new OpenAI({ apiKey, baseURL }),
+  createClientImpl = ({ apiKey, baseURL, maxRetries }) => new OpenAI({ apiKey, baseURL, maxRetries }),
   getApiKeyImpl = () => process.env.DEEPINFRA_API_KEY,
-  cache = true
+  cache = true,
+  nowImpl = () => Date.now(),
+  warnImpl = (...args) => console.warn(...args)
 } = {}) {
   let localCachedClient = null;
 
@@ -29,7 +31,8 @@ function createDeepInfraClient({
 
     const client = createClientImpl({
       apiKey,
-      baseURL: OPENAI_BASE_URL
+      baseURL: OPENAI_BASE_URL,
+      maxRetries: 0
     });
 
     if (cache) {
@@ -66,11 +69,9 @@ function createDeepInfraClient({
     const { system, user } = splitSystemAndUserPrompt(prompt);
     void format;
     const messages = buildChatMessages(user, images);
-    releaseImageBuffers(images);
-    onPayloadBuilt?.();
-
-    const response = await client.chat.completions.create({
-      model: resolveChatModel(userProfile),
+    const model = resolveChatModel(userProfile);
+    const payload = {
+      model,
       messages: [
         ...(system ? [{ role: "system", content: system }] : []),
         { role: "user", content: messages }
@@ -81,17 +82,56 @@ function createDeepInfraClient({
       presence_penalty: 0,
       max_tokens: 10000,
       response_format: { type: "json_object" }
-    });
+    };
+    const payloadBytes = estimateJsonByteLength(payload);
+    const requestStartedAt = nowImpl();
+    releaseImageBuffers(images);
+    onPayloadBuilt?.();
+    let stream;
+    try {
+      stream = await client.chat.completions.create({
+        ...payload,
+        stream: true
+      });
+    } catch (error) {
+      warnImpl(
+        "[deepinfra][request-failed]",
+        JSON.stringify({
+          model,
+          durationMs: Math.max(0, nowImpl() - requestStartedAt),
+          imageCount: Array.isArray(images) ? images.length : 0,
+          payloadBytes,
+          status: error?.status,
+          requestId: error?.request_id,
+          code: error?.code,
+          type: error?.type,
+          causeName: error?.cause?.name ?? null,
+          causeMessage: error?.cause?.message ?? null,
+          causeCode: error?.cause?.code ?? null,
+          causeErrno: error?.cause?.errno ?? null
+        })
+      );
+      throw error;
+    }
 
-    let content = extractResponseText(response);
+    const content = await collectStreamText(stream);
+    const response = {
+      choices: [{
+        message: {
+          content
+        }
+      }],
+      output_text: content
+    };
     let json;
-    if (content) {
-      content = content.replace(/^[^{]*/, "").replace(/[^}]*$/, "");
+    let normalizedContent = content;
+    if (normalizedContent) {
+      normalizedContent = normalizedContent.replace(/^[^{]*/, "").replace(/[^}]*$/, "");
     }
     try {
-      json = JSON.parse(content);
+      json = JSON.parse(normalizedContent);
     } catch (error) {
-      const parseError = new Error(`Failed to parse JSON response: ${error.message}\nResponse content: ${content}`);
+      const parseError = new Error(`Failed to parse JSON response: ${error.message}\nResponse content: ${normalizedContent}`);
       parseError.rawSelectionText = typeof content === "string" && content.trim().length > 0
         ? content.trim()
         : null;
@@ -99,10 +139,7 @@ function createDeepInfraClient({
     }
 
     return {
-      response: {
-        ...response,
-        output_text: extractResponseText(response)
-      },
+      response,
       json
     };
   }
@@ -112,6 +149,14 @@ function createDeepInfraClient({
     getOpenAiClient,
     getPromptEmbeddings
   };
+}
+
+function estimateJsonByteLength(value) {
+  try {
+    return Buffer.byteLength(JSON.stringify(value), "utf8");
+  } catch {
+    return null;
+  }
 }
 
 function splitSystemAndUserPrompt(prompt) {
@@ -150,13 +195,6 @@ function buildChatMessages(user, images = []) {
   const content = [];
   const userText = String(user || "").trim();
 
-  if (userText) {
-    content.push({
-      type: "text",
-      text: userText
-    });
-  }
-
   for (const image of images) {
     const imageUrl = buildImageDataUrl(image);
     if (!imageUrl) {
@@ -176,6 +214,13 @@ function buildChatMessages(user, images = []) {
       image_url: {
         url: imageUrl
       }
+    });
+  }
+
+  if (userText) {
+    content.push({
+      type: "text",
+      text: userText
     });
   }
 
@@ -209,6 +254,43 @@ function extractResponseText(response = null) {
   return "{}";
 }
 
+async function collectStreamText(stream) {
+  let content = "";
+
+  for await (const chunk of stream) {
+    content += extractChunkText(chunk);
+  }
+
+  return content;
+}
+
+function extractChunkText(chunk = null) {
+  const delta = chunk?.choices?.[0]?.delta;
+  const content = delta?.content;
+
+  if (typeof content === "string") {
+    return content;
+  }
+
+  if (Array.isArray(content)) {
+    return content
+      .map((part) => {
+        if (typeof part === "string") {
+          return part;
+        }
+
+        if (typeof part?.text === "string") {
+          return part.text;
+        }
+
+        return "";
+      })
+      .join("");
+  }
+
+  return "";
+}
+
 const deepInfraClient = createDeepInfraClient();
 const {
   generateJsonWithLlm,
@@ -220,6 +302,9 @@ export {
   createDeepInfraClient,
   ALLOWED_CHAT_MODELS,
   buildChatMessages,
+  collectStreamText,
+  estimateJsonByteLength,
+  extractChunkText,
   extractResponseText,
   generateJsonWithLlm,
   getOpenAiClient,

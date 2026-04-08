@@ -16,7 +16,7 @@ AVAILABLE ITEMS (Candidates):
 (Note: Each candidate has "formality_level" and "style" as arrays of strings. Assume all candidates already match the requested season and occasions.)
 
 VISUAL CONTEXT & MULTIMODAL ANALYSIS:
-- You are provided with image collages representing the candidate items in each category. The top of each collage indicates the category.
+- You are provided with one vertically stitched image containing the candidate item collages for all categories. Each section is labeled with its category at the top.
 - Each individual item in the grid has a specific numeric ID written in red in the top-left corner.
 - You MUST cross-reference this visual ID with the exact "id" value in the AVAILABLE ITEMS text list.
 - Use visual data to assess true color temperatures, fabric textures, and exact silhouettes to ensure Low Styling Friction (e.g., avoiding conflicting textures or high-maintenance combinations).

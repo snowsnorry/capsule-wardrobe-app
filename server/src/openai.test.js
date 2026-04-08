@@ -68,11 +68,12 @@ test("buildResponsesInput creates multimodal content with input_text and input_i
 
   assert.ok(Array.isArray(input));
   assert.equal(input[0].role, "user");
-  assert.equal(input[0].content[0].type, "input_text");
+  assert.equal(input[0].content[0].type, "input_image");
   assert.equal(input[0].content[1].type, "input_image");
-  assert.equal(input[0].content[2].type, "input_image");
-  assert.match(input[0].content[1].image_url, /^data:image\/png;base64,/);
-  assert.equal(input[0].content[1].detail, "high");
+  assert.equal(input[0].content[2].type, "input_text");
+  assert.match(input[0].content[0].image_url, /^data:image\/png;base64,/);
+  assert.equal(input[0].content[0].detail, "high");
+  assert.equal(input[0].content[2].text, "describe this");
 });
 
 test("buildResponsesPayload releases source image buffers after payload construction", () => {
@@ -88,13 +89,22 @@ test("buildResponsesPayload releases source image buffers after payload construc
 
   assert.ok(Array.isArray(input));
   assert.equal(images[0].buffer, null);
-  assert.match(input[0].content[1].image_url, /^data:image\/jpeg;base64,/);
+  assert.match(input[0].content[0].image_url, /^data:image\/jpeg;base64,/);
+  assert.equal(input[0].content[1].text, "describe this");
 });
 
 test("buildResponsesInput accepts prompt image collages deserialized from IPC payloads", () => {
   const promptImages = deserializePromptDebugImagesFromIpc({
     downloadedCount: 1,
     skippedCount: 0,
+    stitched: {
+      category: "all-categories",
+      mimeType: "image/jpeg",
+      filename: "categories-stitched.jpg",
+      totalItems: 1,
+      categoryCount: 1,
+      buffer: Buffer.from("image-one")
+    },
     categories: [{
       category: "top",
       mimeType: "image/jpeg",
@@ -107,9 +117,10 @@ test("buildResponsesInput accepts prompt image collages deserialized from IPC pa
     }]
   });
 
-  const input = buildResponsesInput("describe this", promptImages.categories);
+  const input = buildResponsesInput("describe this", [promptImages.stitched]);
 
   assert.ok(Array.isArray(input));
-  assert.equal(input[0].content[1].type, "input_image");
-  assert.match(input[0].content[1].image_url, /^data:image\/jpeg;base64,/);
+  assert.equal(input[0].content[0].type, "input_image");
+  assert.match(input[0].content[0].image_url, /^data:image\/jpeg;base64,/);
+  assert.equal(input[0].content[1].text, "describe this");
 });

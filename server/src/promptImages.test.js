@@ -113,19 +113,24 @@ test("buildPromptDebugImages writes category images with expected geometry and m
   assert.equal(result.downloadedCount, 3);
   assert.equal(result.skippedCount, 0);
   assert.equal(result.categories.length, 2);
+  assert.ok(Buffer.isBuffer(result.stitched.buffer));
 
   const topCategory = result.categories.find((entry) => entry.category === "top");
   assert.ok(topCategory);
   assert.equal(topCategory.mimeType, "image/jpeg");
-  assert.ok(Buffer.isBuffer(topCategory.buffer));
+  assert.equal(topCategory.buffer, undefined);
 
-  const metadata = await sharp(topCategory.buffer).metadata();
+  const metadata = await sharp(path.join(outputDir, "category-top.jpg")).metadata();
   assert.equal(metadata.width, GRID_WIDTH);
   assert.equal(metadata.height, GRID_HEIGHT + HEADER_HEIGHT);
+  const stitchedMetadata = await sharp(result.stitched.buffer).metadata();
+  assert.equal(stitchedMetadata.width, GRID_WIDTH);
+  assert.equal(stitchedMetadata.height, (GRID_HEIGHT + HEADER_HEIGHT) * 2);
 
   const manifest = JSON.parse(await readFile(path.join(outputDir, "manifest.json"), "utf8"));
   assert.equal(manifest.cachedCount, 0);
   assert.equal(manifest.downloadedCount, 3);
+  assert.equal(manifest.stitched.file, path.join(outputDir, "categories-stitched.jpg"));
   assert.equal(manifest.categories.length, 2);
   assert.equal(manifest.categories[0].cachedCount, 0);
   assert.equal(manifest.categories[0].items[0].status, "downloaded");
@@ -151,9 +156,11 @@ test("buildPromptDebugImages keeps collages in memory when debug saving is disab
   });
 
   assert.equal(result.categories.length, 1);
-  assert.ok(Buffer.isBuffer(result.categories[0].buffer));
+  assert.ok(Buffer.isBuffer(result.stitched.buffer));
+  assert.equal(result.categories[0].buffer, undefined);
   await assert.rejects(access(path.join(outputDir, "manifest.json")));
   await assert.rejects(access(path.join(outputDir, "category-top.jpg")));
+  await assert.rejects(access(path.join(outputDir, "categories-stitched.jpg")));
 });
 
 test("buildPromptDebugImages skips failed downloads and still produces outputs", async (t) => {
@@ -184,12 +191,13 @@ test("buildPromptDebugImages skips failed downloads and still produces outputs",
   assert.equal(result.downloadedCount, 1);
   assert.equal(result.cachedCount, 0);
   assert.equal(result.skippedCount, 1);
+  assert.ok(Buffer.isBuffer(result.stitched.buffer));
 
   const manifest = JSON.parse(await readFile(path.join(outputDir, "manifest.json"), "utf8"));
   assert.equal(manifest.categories[0].items[1].status, "skipped");
   assert.equal(manifest.categories[0].items[1].reason, "socket_hang_up");
 
-  const metadata = await sharp(result.categories[0].buffer).metadata();
+  const metadata = await sharp(path.join(outputDir, "category-top.jpg")).metadata();
   assert.equal(metadata.width, GRID_WIDTH);
   assert.equal(metadata.height, GRID_HEIGHT + HEADER_HEIGHT);
 });
@@ -361,10 +369,17 @@ test("prompt image IPC serialization round-trips collages back to buffers", asyn
     cachedCount: 1,
     downloadedCount: 1,
     skippedCount: 0,
+    stitched: {
+      category: "all-categories",
+      mimeType: "image/jpeg",
+      buffer: fixtureBuffer,
+      filename: "categories-stitched.jpg",
+      totalItems: 1,
+      categoryCount: 1
+    },
     categories: [{
       category: "top",
       mimeType: "image/jpeg",
-      buffer: fixtureBuffer,
       filename: "category-top.jpg",
       totalItems: 1,
       cachedCount: 1,
@@ -379,10 +394,12 @@ test("prompt image IPC serialization round-trips collages back to buffers", asyn
   assert.equal(deserialized.cachedCount, 1);
   assert.equal(deserialized.downloadedCount, 1);
   assert.equal(deserialized.skippedCount, 0);
+  assert.ok(Buffer.isBuffer(serialized.stitched.buffer));
+  assert.ok(Buffer.isBuffer(deserialized.stitched.buffer));
+  assert.deepEqual(deserialized.stitched.buffer, fixtureBuffer);
   assert.equal(deserialized.categories[0].cachedCount, 1);
-  assert.ok(Buffer.isBuffer(serialized.categories[0].buffer));
-  assert.ok(Buffer.isBuffer(deserialized.categories[0].buffer));
-  assert.deepEqual(deserialized.categories[0].buffer, fixtureBuffer);
+  assert.equal(serialized.categories[0].buffer, null);
+  assert.equal(deserialized.categories[0].buffer, null);
 });
 
 test("buildPromptDebugImages does not return a normalized image map", async (t) => {
@@ -424,6 +441,14 @@ test("buildPromptDebugImagesInChild resolves buffered collages from child succes
             cachedCount: 1,
             downloadedCount: 1,
             skippedCount: 0,
+            stitched: {
+              category: "all-categories",
+              mimeType: "image/jpeg",
+              filename: "categories-stitched.jpg",
+              totalItems: 2,
+              categoryCount: 2,
+              buffer: Buffer.from("child-image-stitched")
+            },
             categories: [
               {
                 category: "top",
@@ -433,8 +458,7 @@ test("buildPromptDebugImagesInChild resolves buffered collages from child succes
                 cachedCount: 1,
                 downloadedCount: 0,
                 skippedCount: 0,
-                items: [],
-                buffer: Buffer.from("child-image-top")
+                items: []
               },
               {
                 category: "bottom",
@@ -444,8 +468,7 @@ test("buildPromptDebugImagesInChild resolves buffered collages from child succes
                 cachedCount: 0,
                 downloadedCount: 1,
                 skippedCount: 0,
-                items: [],
-                buffer: Buffer.from("child-image-bottom")
+                items: []
               }
             ]
           });
@@ -458,9 +481,10 @@ test("buildPromptDebugImagesInChild resolves buffered collages from child succes
   assert.equal(result.cachedCount, 1);
   assert.equal(result.downloadedCount, 1);
   assert.equal(result.categories.length, 2);
-  assert.ok(Buffer.isBuffer(result.categories[0].buffer));
-  assert.equal(String(result.categories[0].buffer), "child-image-top");
-  assert.equal(String(result.categories[1].buffer), "child-image-bottom");
+  assert.ok(Buffer.isBuffer(result.stitched.buffer));
+  assert.equal(String(result.stitched.buffer), "child-image-stitched");
+  assert.equal(result.categories[0].buffer, null);
+  assert.equal(result.categories[1].buffer, null);
 });
 
 test("buildPromptDebugImagesInChild works with a real child process", async (t) => {
@@ -480,10 +504,10 @@ test("buildPromptDebugImagesInChild works with a real child process", async (t) 
   assert.equal(result.downloadedCount, 0);
   assert.equal(result.skippedCount, 0);
   assert.equal(result.categories.length, 1);
-  assert.ok(Buffer.isBuffer(result.categories[0].buffer));
-  const metadata = await sharp(result.categories[0].buffer).metadata();
-  assert.equal(metadata.width, GRID_WIDTH);
-  assert.equal(metadata.height, GRID_HEIGHT + HEADER_HEIGHT);
+  assert.ok(Buffer.isBuffer(result.stitched.buffer));
+  const stitchedMetadata = await sharp(result.stitched.buffer).metadata();
+  assert.equal(stitchedMetadata.width, GRID_WIDTH);
+  assert.equal(stitchedMetadata.height, GRID_HEIGHT + HEADER_HEIGHT);
 });
 
 test("buildPromptDebugImagesInChild saves debug artifacts when enabled", async (t) => {
@@ -507,6 +531,7 @@ test("buildPromptDebugImagesInChild saves debug artifacts when enabled", async (
   const manifest = JSON.parse(await readFile(path.join(outputDir, "manifest.json"), "utf8"));
   assert.equal(manifest.cachedCount, 1);
   assert.equal(manifest.downloadedCount, 0);
+  assert.equal(manifest.stitched.file, path.join(outputDir, "categories-stitched.jpg"));
   assert.equal(manifest.categories.length, 1);
 });
 

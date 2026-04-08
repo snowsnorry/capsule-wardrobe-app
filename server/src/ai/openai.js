@@ -147,7 +147,10 @@ function getOpenAiClient() {
     throw new Error("OPENAI_API_KEY is not set");
   }
 
-  cachedClient = new OpenAI({ apiKey });
+  cachedClient = new OpenAI({
+    apiKey,
+    maxRetries: 0
+  });
   return cachedClient;
 }
 
@@ -187,13 +190,6 @@ function buildResponsesInput(user, images = []) {
   const content = [];
   const userText = String(user || "").trim();
 
-  if (userText) {
-    content.push({
-      type: "input_text",
-      text: userText
-    });
-  }
-
   for (const image of images) {
     const imageUrl = buildImageDataUrl(image);
     if (!imageUrl) {
@@ -212,6 +208,13 @@ function buildResponsesInput(user, images = []) {
       type: "input_image",
       image_url: imageUrl,
       detail: "high"
+    });
+  }
+
+  if (userText) {
+    content.push({
+      type: "input_text",
+      text: userText
     });
   }
 
