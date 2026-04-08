@@ -6,7 +6,7 @@ import { generateJsonWithLlm as generateJsonWithGemini } from "./gemini.js";
 const OPENAI_PROFILE_LLM = "openai:gpt-5.2";
 const GEMINI_PROFILE_LLM = "gemini:gemini-2.5-pro";
 const DEEPINFRA_ALLOWED_MODELS = [
-  "google/gemma-3-27b-it",
+  "google/gemma-4-31B-it",
   "Qwen/Qwen3-VL-235B-A22B-Instruct"
 ];
 

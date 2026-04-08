@@ -23,12 +23,12 @@ test("resolveLlmProvider maps supported profile llm values to providers", () => 
   );
 
   assert.deepEqual(
-    resolveLlmProvider({ llm: "deepinfra:google/gemma-3-27b-it" }),
+    resolveLlmProvider({ llm: "deepinfra:google/gemma-4-31B-it" }),
     {
       provider: "deepinfra",
-      model: "google/gemma-3-27b-it",
-      llm: "deepinfra:google/gemma-3-27b-it",
-      requestedLlm: "deepinfra:google/gemma-3-27b-it"
+      model: "google/gemma-4-31B-it",
+      llm: "deepinfra:google/gemma-4-31B-it",
+      requestedLlm: "deepinfra:google/gemma-4-31B-it"
     }
   );
 

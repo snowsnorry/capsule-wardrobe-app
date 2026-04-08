@@ -2,10 +2,10 @@ import OpenAI from "openai";
 import { buildImageDataUrl, releaseImageBuffers } from "./openai.js";
 
 const OPENAI_BASE_URL = "https://api.deepinfra.com/v1/openai";
-const DEFAULT_CHAT_MODEL = "google/gemma-3-27b-it";
+const DEFAULT_CHAT_MODEL = "google/gemma-4-31B-it";
 const DEFAULT_EMBEDDING_MODEL = "google/embeddinggemma-300m";
 const ALLOWED_CHAT_MODELS = [
-  "google/gemma-3-27b-it",
+  "google/gemma-4-31B-it",
   "Qwen/Qwen3-VL-235B-A22B-Instruct"
 ];
 let cachedClient = null;

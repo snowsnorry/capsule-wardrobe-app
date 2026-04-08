@@ -47,7 +47,7 @@ function renderDialog(props = {}) {
         "settings.llmOptions.openai:gpt-5.2": "OpenAI GPT-5.2",
         "settings.llmOptions.gemini:gemini-2.5-pro": "Gemini 2.5 Pro",
         "settings.llmOptions.deepinfra:Qwen/Qwen3-VL-235B-A22B-Instruct": "Qwen 3",
-        "settings.llmOptions.deepinfra:google/gemma-3-27b-it": "Google Gemma 3",
+        "settings.llmOptions.deepinfra:google/gemma-4-31B-it": "Google Gemma 4",
         "settings.llmOptions.none": "None",
         "actions.cancel": "Cancel",
         "actions.save": "Save",

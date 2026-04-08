@@ -3,7 +3,7 @@ const PROFILE_LLM_VALUES = [
   "openai:gpt-5.2",
   "gemini:gemini-2.5-pro",
   "deepinfra:Qwen/Qwen3-VL-235B-A22B-Instruct",
-  "deepinfra:google/gemma-3-27b-it",
+  "deepinfra:google/gemma-4-31B-it",
   "none"
 ];
 
