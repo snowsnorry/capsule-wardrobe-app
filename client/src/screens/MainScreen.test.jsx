@@ -209,7 +209,7 @@ function renderScreen(props = {}, { mobile = false, layoutMode = mobile ? "overl
     selectedSeasons: ["summer"],
     selectedAudience: "woman",
     selectedAccentColor: null,
-    selectedPattern: null,
+    selectedPattern: "solid",
     status: { loading: false, error: "", infoKey: "", infoParams: null },
     onSelectStyleCore: vi.fn(),
     onSelectStyleAesthetic: vi.fn(),

@@ -21,7 +21,7 @@ function renderChips(props = {}) {
     locale: "en",
     t: (key) =>
       ({
-        "profile.accentColorNotImportant": "Not important"
+        "profile.accentColorNotImportant": "No accent color"
       }[key] || key)
   });
 
@@ -57,10 +57,10 @@ describe("AccentColorChips", () => {
 
     expect(screen.getByRole("button", { name: "blue" })).toHaveClass("MuiChip-filledPrimary");
     expect(screen.getByRole("button", { name: "red" })).toHaveClass("MuiChip-filledDefault");
-    expect(screen.getByRole("button", { name: "Not important" })).toHaveClass("MuiChip-filledDefault");
+    expect(screen.getByRole("button", { name: "No accent color" })).toHaveClass("MuiChip-filledDefault");
 
     await user.click(screen.getByRole("button", { name: "red" }));
-    await user.click(screen.getByRole("button", { name: "Not important" }));
+    await user.click(screen.getByRole("button", { name: "No accent color" }));
 
     expect(onSelect).toHaveBeenNthCalledWith(1, "red");
     expect(onSelect).toHaveBeenNthCalledWith(2, null);
@@ -80,5 +80,15 @@ describe("AccentColorChips", () => {
 
     await user.click(screen.getByRole("button", { name: "blue" }));
     expect(onToggle).toHaveBeenCalledWith("blue");
+  });
+
+  test("supports a custom empty label in multi-select mode", () => {
+    renderChips({
+      selectedValues: [],
+      onToggle: vi.fn(),
+      emptyLabel: "Not important"
+    });
+
+    expect(screen.getByRole("button", { name: "Not important" })).toHaveClass("MuiChip-filledPrimary");
   });
 });

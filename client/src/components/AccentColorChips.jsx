@@ -8,13 +8,15 @@ function AccentColorChips({
   selectedValues,
   onToggle,
   selectedValue = null,
-  onSelect
+  onSelect,
+  emptyLabel
 }) {
   const { t, locale } = useI18n();
   const isMultiSelect = Array.isArray(selectedValues) && typeof onToggle === "function";
   const activeValues = isMultiSelect
     ? selectedValues
     : (selectedValue ? [selectedValue] : []);
+  const emptyChipLabel = emptyLabel || t("profile.accentColorNotImportant");
 
   const handleToggle = (value) => {
     if (isMultiSelect) {
@@ -30,7 +32,7 @@ function AccentColorChips({
   return (
     <Stack direction="row" flexWrap="wrap" gap={1}>
       <Chip
-        label={t("profile.accentColorNotImportant")}
+        label={emptyChipLabel}
         clickable
         color={activeValues.length === 0 ? "primary" : "default"}
         onClick={() => handleToggle(null)}

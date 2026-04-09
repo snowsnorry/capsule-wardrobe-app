@@ -53,6 +53,10 @@ const INITIAL_SEARCH_STATE = Object.freeze({
   page: 1
 });
 
+const CORE_DISPLAY_ORDER = ["casual", "smart_casual", "formal"];
+const SEASON_DISPLAY_ORDER = ["spring", "summer", "autumn", "winter"];
+const AUDIENCE_DISPLAY_ORDER = ["man", "woman", "any"];
+
 const EMPTY_OPTIONS = Object.freeze({
   brands: [],
   categories: [],
@@ -144,6 +148,55 @@ function normalizeBrandOption(item) {
   return null;
 }
 
+function sortItemsByLabel(items, locale) {
+  return [...items].sort((left, right) => left.label.localeCompare(right.label, locale));
+}
+
+function sortCoreValues(items) {
+  return [...items].sort((left, right) => {
+    const leftIndex = CORE_DISPLAY_ORDER.indexOf(left);
+    const rightIndex = CORE_DISPLAY_ORDER.indexOf(right);
+    const normalizedLeft = leftIndex === -1 ? CORE_DISPLAY_ORDER.length : leftIndex;
+    const normalizedRight = rightIndex === -1 ? CORE_DISPLAY_ORDER.length : rightIndex;
+
+    if (normalizedLeft !== normalizedRight) {
+      return normalizedLeft - normalizedRight;
+    }
+
+    return String(left).localeCompare(String(right));
+  });
+}
+
+function sortSeasonValues(items) {
+  return [...items].sort((left, right) => {
+    const leftIndex = SEASON_DISPLAY_ORDER.indexOf(left);
+    const rightIndex = SEASON_DISPLAY_ORDER.indexOf(right);
+    const normalizedLeft = leftIndex === -1 ? SEASON_DISPLAY_ORDER.length : leftIndex;
+    const normalizedRight = rightIndex === -1 ? SEASON_DISPLAY_ORDER.length : rightIndex;
+
+    if (normalizedLeft !== normalizedRight) {
+      return normalizedLeft - normalizedRight;
+    }
+
+    return String(left).localeCompare(String(right));
+  });
+}
+
+function sortAudienceValues(items) {
+  return [...items].sort((left, right) => {
+    const leftIndex = AUDIENCE_DISPLAY_ORDER.indexOf(left);
+    const rightIndex = AUDIENCE_DISPLAY_ORDER.indexOf(right);
+    const normalizedLeft = leftIndex === -1 ? AUDIENCE_DISPLAY_ORDER.length : leftIndex;
+    const normalizedRight = rightIndex === -1 ? AUDIENCE_DISPLAY_ORDER.length : rightIndex;
+
+    if (normalizedLeft !== normalizedRight) {
+      return normalizedLeft - normalizedRight;
+    }
+
+    return String(left).localeCompare(String(right));
+  });
+}
+
 function SearchSection({ title, hint, children }) {
   return (
     <Stack spacing={1.3}>
@@ -180,17 +233,19 @@ function SingleSelectChips({ items, value, onChange, defaultLabel }) {
   );
 }
 
-function MultiSelectChips({ items, values, onToggle, defaultLabel }) {
+function MultiSelectChips({ items, values, onToggle, defaultLabel, defaultPosition = "start" }) {
+  const defaultChip = defaultLabel ? (
+    <Chip
+      label={defaultLabel}
+      clickable
+      color={values.length === 0 ? "primary" : "default"}
+      onClick={() => onToggle(null)}
+    />
+  ) : null;
+
   return (
     <Stack direction="row" flexWrap="wrap" gap={1}>
-      {defaultLabel ? (
-        <Chip
-          label={defaultLabel}
-          clickable
-          color={values.length === 0 ? "primary" : "default"}
-          onClick={() => onToggle(null)}
-        />
-      ) : null}
+      {defaultPosition === "start" ? defaultChip : null}
       {items.map((item) => (
         <Chip
           key={item.value}
@@ -200,6 +255,7 @@ function MultiSelectChips({ items, values, onToggle, defaultLabel }) {
           onClick={() => onToggle(item.value)}
         />
       ))}
+      {defaultPosition === "end" ? defaultChip : null}
     </Stack>
   );
 }
@@ -369,11 +425,11 @@ function SearchFiltersSidebar({
     value: item,
     label: translateOption("categories", item, locale)
   }));
-  const seasonItems = options.seasons.map((item) => ({
+  const seasonItems = sortSeasonValues(options.seasons).map((item) => ({
     value: item,
     label: translateOption("seasons", item, locale)
   }));
-  const audienceItems = options.audience.map((item) => ({
+  const audienceItems = sortAudienceValues(options.audience).map((item) => ({
     value: item,
     label: translateOption("audience", item, locale)
   })).filter((item) => item.value !== "any");
@@ -381,10 +437,10 @@ function SearchFiltersSidebar({
     value: item,
     label: translateOption("occasions", item, locale)
   }));
-  const patternItems = options.patterns.map((item) => ({
+  const patternItems = sortItemsByLabel(options.patterns.map((item) => ({
     value: item,
     label: translateOption("patterns", item, locale)
-  }));
+  })), locale);
   const silhouetteItems = options.silhouettes.map((item) => ({
     value: item,
     label: translateOption("silhouettes", item, locale)
@@ -580,6 +636,7 @@ function SearchFiltersSidebar({
           items={audienceItems}
           values={draftState.audience}
           defaultLabel={t("search.notImportant")}
+          defaultPosition="end"
           onToggle={(audience) => updateDraftState((current) => ({
             ...current,
             audience: audience === null ? [] : toggleSelection(audience, current.audience),
@@ -617,10 +674,10 @@ function SearchFiltersSidebar({
       <SearchSection title={t("profile.stylesTitle")}>
         <Stack spacing={1.5}>
           <Typography variant="body2" sx={{ fontWeight: 600 }}>
-            {t("search.fields.formalityLevel")}
+            {t("profile.styleCoreTitle")}
           </Typography>
           <MultiSelectChips
-            items={options.formalityLevels.map((item) => ({
+            items={sortCoreValues(options.formalityLevels).map((item) => ({
               value: item,
               label: translateOption("styles", item, locale)
             }))}
@@ -635,13 +692,13 @@ function SearchFiltersSidebar({
         </Stack>
         <Stack spacing={1.5}>
           <Typography variant="body2" sx={{ fontWeight: 600 }}>
-            {t("search.fields.style")}
+            {t("profile.styleAestheticTitle")}
           </Typography>
           <MultiSelectChips
-            items={options.styles.map((item) => ({
+            items={sortItemsByLabel(options.styles.map((item) => ({
               value: item,
               label: translateOption("styles", item, locale)
-            }))}
+            })), locale)}
             values={draftState.style}
             defaultLabel={t("search.notImportant")}
             onToggle={(style) => updateDraftState((current) => ({
@@ -670,6 +727,7 @@ function SearchFiltersSidebar({
         <AccentColorChips
           options={options.colors}
           selectedValues={draftState.color}
+          emptyLabel={t("search.notImportant")}
           onToggle={(color) => updateDraftState((current) => ({
             ...current,
             color: color === null ? [] : toggleSelection(color, current.color),

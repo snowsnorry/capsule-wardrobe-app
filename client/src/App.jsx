@@ -197,7 +197,7 @@ function buildEmptyCapsuleDraft() {
       season: [],
       audience: "",
       color: null,
-      pattern: null,
+      pattern: "solid",
       text: ""
     },
     data: {
@@ -219,7 +219,7 @@ function normalizeComparableFilters(filters = {}) {
     season: Array.isArray(filters.season) ? [...filters.season].sort() : [],
     audience: typeof filters.audience === "string" ? filters.audience : "",
     color: filters.color ?? null,
-    pattern: filters.pattern ?? null,
+    pattern: typeof filters.pattern === "string" && filters.pattern.trim().length > 0 ? filters.pattern : "solid",
     text: typeof filters.text === "string" ? filters.text.trim() : ""
   };
 }
@@ -273,7 +273,7 @@ function App() {
   const [selectedSeason, setSelectedSeason] = useState([]);
   const [selectedAudience, setSelectedAudience] = useState("");
   const [selectedColor, setSelectedColor] = useState(null);
-  const [selectedPattern, setSelectedPattern] = useState(null);
+  const [selectedPattern, setSelectedPattern] = useState("solid");
   const [selectedText, setSelectedText] = useState("");
   const [profileCreated, setProfileCreated] = useState(false);
   const [currentView, setCurrentView] = useState("main");
@@ -516,7 +516,11 @@ function App() {
     setSelectedSeason(effective.filters?.season || []);
     setSelectedAudience(effective.filters?.audience || "");
     setSelectedColor(effective.filters?.color ?? null);
-    setSelectedPattern(effective.filters?.pattern ?? null);
+    setSelectedPattern(
+      typeof effective.filters?.pattern === "string" && effective.filters.pattern.trim().length > 0
+        ? effective.filters.pattern
+        : "solid"
+    );
     setSelectedText(effective.filters?.text || "");
     setProfileItems(buildDisplayWardrobeItems(effective.data?.wardrobe?.items || []));
     setWardrobeLoadedCapsuleId(hasStoredWardrobeItems(capsule) ? capsule.id || "" : "");
@@ -612,7 +616,7 @@ function App() {
         setSelectedSeason([]);
         setSelectedAudience("");
         setSelectedColor(null);
-        setSelectedPattern(null);
+        setSelectedPattern("solid");
         setSelectedText("");
         setOnboardingStep(0);
         setStatus({ loading: false, error: "", infoKey: "", infoParams: null });
@@ -645,7 +649,7 @@ function App() {
         setSelectedSeason([]);
         setSelectedAudience("");
         setSelectedColor(null);
-        setSelectedPattern(null);
+        setSelectedPattern("solid");
         setSelectedText("");
         setOnboardingStep(0);
         setStatus({ loading: false, error: "", infoKey: "", infoParams: null });
@@ -679,7 +683,7 @@ function App() {
       setSelectedSeason([]);
       setSelectedAudience("");
       setSelectedColor(null);
-      setSelectedPattern(null);
+      setSelectedPattern("solid");
       setSelectedText("");
       setOnboardingStep(0);
       setProfileItems(null);

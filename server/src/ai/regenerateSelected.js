@@ -207,11 +207,15 @@ function buildRegenerateSelectedPrompt(userProfile = null, candidateItems = [], 
     color:
       typeof userProfile?.color === "string" && userProfile.color.trim().length > 0
         ? userProfile.color
-        : "Not specified",
+        : "No accent color (keep the capsule fully neutral)",
     pattern:
       typeof userProfile?.pattern === "string" && userProfile.pattern.trim().length > 0
-        ? userProfile.pattern
-        : "Not specified",
+        ? (
+          userProfile.pattern.trim().toLowerCase() === "solid"
+            ? "solid (no print)"
+            : userProfile.pattern
+        )
+        : "solid (no print)",
     additional_info_block: additionalText ? `Important Additional Information: ${additionalText}` : "",
     current_capsule_items: JSON.stringify(simplifyPromptItems(currentCapsuleItems), null, 2),
     category_list: getCategoryListText(categories),
@@ -291,7 +295,9 @@ async function regenerateCapsuleWardrobe(userProfile = null, products = null, lo
   };
   const audienceFilters = audienceByProfile[userProfile?.audience] || audienceByProfile.any;
   const color = userProfile?.color ?? null;
-  const pattern = userProfile?.pattern ?? null;
+  const pattern = typeof userProfile?.pattern === "string" && userProfile.pattern.trim().length > 0
+    ? userProfile.pattern.trim().toLowerCase()
+    : "solid";
   const rejectedUrls = Array.isArray(userProfile?.rejected)
     ? userProfile.rejected.map((itemUrl) => String(itemUrl || "").trim()).filter(Boolean)
     : [];
@@ -356,6 +362,8 @@ async function regenerateCapsuleWardrobe(userProfile = null, products = null, lo
               ) as is_color_match,
               (
                 CASE
+                  WHEN lower(${pattern}::text) = 'solid'
+                  THEN FALSE
                   WHEN ${pattern}::text IS NOT NULL AND ${pattern}::text != ''
                   THEN lower(COALESCE(pattern, '')) = lower(${pattern}::text)
                   ELSE pattern IS NOT NULL
@@ -405,6 +413,26 @@ async function regenerateCapsuleWardrobe(userProfile = null, products = null, lo
               -- HARD FILTERS
               category = cats.target_category
               AND lower(COALESCE(audience, '')) = ANY(${audienceFilters}::text[])
+              AND (
+                CASE
+                  WHEN ${color}::text IS NOT NULL AND ${color}::text != ''
+                  THEN ${color}::text = ANY(COALESCE(color_base, ARRAY[]::text[]))
+                    OR COALESCE(is_neutral, false)
+                  ELSE COALESCE(is_neutral, false)
+                END
+              )
+              AND (
+                CASE
+                  WHEN lower(${pattern}::text) = 'solid'
+                  THEN pattern IS NULL
+                    OR trim(pattern) = ''
+                    OR lower(pattern) = 'solid'
+                  ELSE lower(COALESCE(pattern, '')) = lower(${pattern}::text)
+                    OR pattern IS NULL
+                    OR trim(pattern) = ''
+                    OR lower(pattern) = 'solid'
+                END
+              )
               AND NOT (products.url = ANY(${excludedUrls}::text[]))
           ) raw_scored
         ) filtered_items

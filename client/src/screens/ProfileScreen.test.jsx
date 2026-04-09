@@ -26,14 +26,14 @@ function renderScreen(props = {}, { locale = "en" } = {}) {
     seasonOptions: ["summer", "winter"],
     audienceOptions: ["woman", "man"],
     accentColorOptions: ["blue", "red"],
-    patternOptions: ["solid", "stripe"],
+    patternOptions: ["stripe", "solid"],
     selectedStyleCore: "casual",
     selectedStyleAesthetic: null,
     selectedOccasions: ["office"],
     selectedSeasons: ["summer"],
     selectedAudience: "woman",
     selectedAccentColor: null,
-    selectedPattern: null,
+    selectedPattern: "solid",
     status: { loading: false, error: "", infoKey: "", infoParams: null },
     onSelectStyleCore: vi.fn(),
     onSelectStyleAesthetic: vi.fn(),
@@ -176,5 +176,40 @@ describe("ProfileScreen", () => {
     expect(screen.getByRole("button", { name: "Delete profile" })).toBeDisabled();
     expect(screen.getByText("something went wrong")).toBeInTheDocument();
     expect(screen.getByText("Profile updated.")).toBeInTheDocument();
+  });
+
+  test("renders solid as selected for a legacy null pattern", () => {
+    renderScreen({
+      selectedPattern: null
+    });
+
+    expect(screen.getByRole("button", { name: "Solid" })).toHaveClass("MuiChip-filledPrimary");
+  });
+
+  test("sorts pattern chips alphabetically by label with solid pinned first", () => {
+    renderScreen({
+      patternOptions: ["stripe", "solid", "abstract"]
+    });
+
+    const solid = screen.getByRole("button", { name: "Solid" });
+    const abstract = screen.getByRole("button", { name: "Abstract" });
+    const stripe = screen.getByRole("button", { name: "Stripe" });
+
+    expect(solid.compareDocumentPosition(abstract) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(abstract.compareDocumentPosition(stripe) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  test("renders the full canonical pattern list on the main screen", () => {
+    renderScreen({
+      patternOptions: ["stripe", "solid", "abstract"]
+    });
+
+    const solid = screen.getByRole("button", { name: "Solid" });
+    const argyle = screen.getByRole("button", { name: "Argyle" });
+    const graphic = screen.getByRole("button", { name: "Graphic" });
+
+    expect(argyle).toBeInTheDocument();
+    expect(graphic).toBeInTheDocument();
+    expect(solid.compareDocumentPosition(argyle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });

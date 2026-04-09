@@ -3,6 +3,23 @@ import AccentColorChips from "./AccentColorChips.jsx";
 import StylePreferenceSelector from "./StylePreferenceSelector.jsx";
 import { useI18n } from "../i18n/useI18n.js";
 import { translateOption } from "../i18n/index.js";
+import { buildCanonicalPatternOptions } from "../../../shared/patternOptions.js";
+
+function sortPatternOptions(patternOptions, locale) {
+  return buildCanonicalPatternOptions(patternOptions).sort((left, right) => {
+    if (left === "solid") {
+      return -1;
+    }
+    if (right === "solid") {
+      return 1;
+    }
+
+    return translateOption("patterns", left, locale).localeCompare(
+      translateOption("patterns", right, locale),
+      locale
+    );
+  });
+}
 
 function ProfileFiltersSidebar({
   styleOptions,
@@ -54,6 +71,8 @@ function ProfileFiltersSidebar({
   const isMissingRequiredFilters = missingRequiredFilters.length > 0;
   const showUnchangedFiltersHint = !status.loading && !isMissingRequiredFilters && !hasFilterChanges;
   const isApplyDisabled = status.loading || isMissingRequiredFilters || !hasFilterChanges;
+  const normalizedSelectedPattern = selectedPattern ?? "solid";
+  const sortedPatternOptions = sortPatternOptions(patternOptions, locale);
 
   return (
     <Stack
@@ -145,18 +164,12 @@ function ProfileFiltersSidebar({
           {t("profile.patternHint")}
         </Typography>
         <Stack direction="row" flexWrap="wrap" gap={1}>
-          <Chip
-            label={t("profile.patternNotImportant")}
-            clickable
-            color={selectedPattern === null ? "primary" : "default"}
-            onClick={() => onSelectPattern(null)}
-          />
-          {patternOptions.map((item) => (
+          {sortedPatternOptions.map((item) => (
             <Chip
               key={item}
               label={translateOption("patterns", item, locale)}
               clickable
-              color={selectedPattern === item ? "primary" : "default"}
+              color={normalizedSelectedPattern === item ? "primary" : "default"}
               onClick={() => onSelectPattern(item)}
             />
           ))}

@@ -9,7 +9,14 @@ vi.mock("../i18n/useI18n.js", () => ({
   useI18n: useI18nMock
 }));
 vi.mock("../i18n/index.js", () => ({
-  translateOption: (_group, value) => value
+  translateOption: (_group, value) => ({
+    casual: "Casual",
+    smart_casual: "Smart casual",
+    formal: "Formal",
+    minimalistic: "Minimalistic",
+    retro: "Retro",
+    boho: "Boho"
+  }[value] || value)
 }));
 
 import StylePreferenceSelector from "./StylePreferenceSelector.jsx";
@@ -29,7 +36,7 @@ function renderSelector(props = {}) {
   });
 
   const defaults = {
-    styleOptions: { core: ["casual", "formal"], aesthetics: ["minimalistic", "retro"] },
+    styleOptions: { core: ["formal", "casual"], aesthetics: ["retro", "minimalistic"] },
     selectedStyleCore: "casual",
     selectedStyleAesthetic: null,
     onSelectStyleCore: vi.fn(),
@@ -58,11 +65,11 @@ describe("StylePreferenceSelector", () => {
     const { rerender } = renderSelector();
 
     expect(screen.getByText("Styles")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "casual" })).toHaveClass("MuiChip-filledPrimary");
+    expect(screen.getByRole("button", { name: "Casual" })).toHaveClass("MuiChip-filledPrimary");
     expect(screen.getByRole("button", { name: "Aesthetic not important" })).toHaveClass(
       "MuiChip-filledPrimary"
     );
-    expect(screen.getByRole("button", { name: "retro" })).toHaveClass("MuiChip-filledDefault");
+    expect(screen.getByRole("button", { name: "Retro" })).toHaveClass("MuiChip-filledDefault");
 
     rerender(
       <ThemeProvider theme={theme}>
@@ -76,13 +83,13 @@ describe("StylePreferenceSelector", () => {
       </ThemeProvider>
     );
 
-    expect(screen.getByRole("button", { name: "formal" })).toHaveClass("MuiChip-filledPrimary");
+    expect(screen.getByRole("button", { name: "Formal" })).toHaveClass("MuiChip-filledPrimary");
     expect(screen.getByRole("button", { name: "Aesthetic not important" })).toHaveClass(
       "MuiChip-filledDefault"
     );
-    expect(screen.getByRole("button", { name: "retro" })).toHaveClass("MuiChip-filledPrimary");
+    expect(screen.getByRole("button", { name: "Retro" })).toHaveClass("MuiChip-filledPrimary");
 
-    await user.unhover(screen.getByRole("button", { name: "formal" }));
+    await user.unhover(screen.getByRole("button", { name: "Formal" }));
   });
 
   test("forwards core, aesthetic, and nullable aesthetic selections to callbacks", async () => {
@@ -92,8 +99,8 @@ describe("StylePreferenceSelector", () => {
 
     renderSelector({ onSelectStyleCore, onSelectStyleAesthetic });
 
-    await user.click(screen.getByRole("button", { name: "formal" }));
-    await user.click(screen.getByRole("button", { name: "retro" }));
+    await user.click(screen.getByRole("button", { name: "Formal" }));
+    await user.click(screen.getByRole("button", { name: "Retro" }));
     await user.click(screen.getByRole("button", { name: "Aesthetic not important" }));
 
     expect(onSelectStyleCore).toHaveBeenCalledWith("formal");
@@ -107,5 +114,28 @@ describe("StylePreferenceSelector", () => {
     expect(screen.queryByText("Styles")).not.toBeInTheDocument();
     expect(screen.getByText("Core style")).toBeInTheDocument();
     expect(screen.getByText("Aesthetic style")).toBeInTheDocument();
+  });
+
+  test("sorts core by fixed order and aesthetics alphabetically with nullable option first", () => {
+    renderSelector({
+      styleOptions: {
+        core: ["formal", "smart_casual", "casual"],
+        aesthetics: ["retro", "boho", "minimalistic"]
+      }
+    });
+
+    const casual = screen.getByRole("button", { name: "Casual" });
+    const smartCasual = screen.getByRole("button", { name: "Smart casual" });
+    const formal = screen.getByRole("button", { name: "Formal" });
+    const notImportant = screen.getByRole("button", { name: "Aesthetic not important" });
+    const boho = screen.getByRole("button", { name: "Boho" });
+    const minimalistic = screen.getByRole("button", { name: "Minimalistic" });
+    const retro = screen.getByRole("button", { name: "Retro" });
+
+    expect(casual.compareDocumentPosition(smartCasual) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(smartCasual.compareDocumentPosition(formal) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(notImportant.compareDocumentPosition(boho) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(boho.compareDocumentPosition(minimalistic) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(minimalistic.compareDocumentPosition(retro) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });

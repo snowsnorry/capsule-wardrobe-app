@@ -278,7 +278,7 @@ function createBootstrapResponse({
           season: ["spring"],
           audience: "woman",
           color: null,
-          pattern: null,
+          pattern: "solid",
           text: ""
         },
         data: {
@@ -295,7 +295,7 @@ function createBootstrapResponse({
           season: ["spring"],
           audience: "woman",
           color: null,
-          pattern: null,
+          pattern: "solid",
           text: ""
         },
         data: {
@@ -612,6 +612,26 @@ describe("App", () => {
     expect(wardrobeApi.subscribeCapsuleEvents).not.toHaveBeenCalled();
   });
 
+  test("normalizes a legacy null pattern from bootstrap to solid in UI state", async () => {
+    authApi.fetchCurrentUser.mockResolvedValue({ user: { email: "person@example.com" } });
+    authApi.fetchProfileStatus.mockResolvedValue({ hasProfile: true });
+    authApi.updateProfileLocale.mockResolvedValue({});
+    const bootstrapResponse = createBootstrapResponse({ items: [], locale: "en" });
+    bootstrapResponse.activeCapsule.draft.filters.pattern = null;
+    bootstrapResponse.activeCapsule.effective.filters.pattern = null;
+    capsulesApi.fetchCapsuleBootstrap.mockResolvedValue(bootstrapResponse);
+    mockProfileOptions();
+
+    renderApp();
+
+    expect(await screen.findByTestId("main-screen")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(
+        mainScreenRender.mock.calls.some(([props]) => props.selectedPattern === "solid")
+      ).toBe(true);
+    });
+  });
+
   test("restores pending wardrobe generation after bootstrap refresh", async () => {
     authApi.fetchCurrentUser.mockResolvedValue({ user: { email: "person@example.com" } });
     authApi.fetchProfileStatus.mockResolvedValue({ hasProfile: true });
@@ -687,7 +707,7 @@ describe("App", () => {
         season: ["summer"],
         audience: "woman",
         color: null,
-        pattern: null,
+        pattern: "solid",
         locale: "en"
       }
     });
@@ -751,7 +771,7 @@ describe("App", () => {
         season: ["summer"],
         audience: "woman",
         color: null,
-        pattern: null,
+        pattern: "solid",
         locale: "en"
       }
     });
@@ -842,7 +862,7 @@ describe("App", () => {
         season: ["summer"],
         audience: "woman",
         color: null,
-        pattern: null,
+        pattern: "solid",
         locale: "en"
       }
     });
@@ -897,7 +917,7 @@ describe("App", () => {
         season: ["summer"],
         audience: "woman",
         color: null,
-        pattern: null,
+        pattern: "solid",
         locale: "en"
       }
     });
@@ -955,7 +975,7 @@ describe("App", () => {
         season: ["summer"],
         audience: "woman",
         color: null,
-        pattern: null,
+        pattern: "solid",
         locale: "en"
       }
     });

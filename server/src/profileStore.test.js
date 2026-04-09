@@ -65,18 +65,21 @@ test("getSeasons returns fixed schema-based values in schema order", async () =>
   assert.deepEqual(await getSeasons("user@example.com"), PROFILE_SEASON_OPTIONS);
 });
 
-test("buildPatternOptions keeps only whitelisted product-backed values in schema order", () => {
-  assert.deepEqual(
-    buildPatternOptions(["paisley", "snake", "check", "unknown", "stripe"]),
-    ["stripe", "check", "snake", "paisley"]
-  );
+test("buildPatternOptions keeps all product-backed values and forces solid first", () => {
+  const options = buildPatternOptions(["paisley", "snake", "check", "unknown", "stripe", "logo"]);
+
+  assert.equal(options[0], "solid");
+  assert.ok(options.includes("argyle"));
+  assert.ok(options.includes("graphic"));
+  assert.ok(options.includes("unknown"));
 });
 
 test("buildPatternOptions keeps current valid profile pattern even if absent in products", () => {
-  assert.deepEqual(
-    buildPatternOptions(["stripe"], "lace"),
-    ["stripe", "lace"]
-  );
+  const options = buildPatternOptions(["stripe"], "lace");
+
+  assert.equal(options[0], "solid");
+  assert.ok(options.includes("lace"));
+  assert.ok(options.includes("stripe"));
 });
 
 test("normalizeProfileRecord applies defaults for new profile fields", () => {

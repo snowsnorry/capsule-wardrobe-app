@@ -39,7 +39,7 @@ function createCapsule() {
         season: ["summer"],
         audience: "woman",
         color: null,
-        pattern: null,
+        pattern: "solid",
         text: ""
       },
       data: {

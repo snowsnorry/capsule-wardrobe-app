@@ -224,7 +224,7 @@ function createBootstrapResponse({ items = [], locale = "en", llm = "openai:gpt-
           season: ["summer"],
           audience: "woman",
           color: null,
-          pattern: null
+          pattern: "solid"
         },
         data: {
           wardrobe: { items },
@@ -240,7 +240,7 @@ function createBootstrapResponse({ items = [], locale = "en", llm = "openai:gpt-
           season: ["summer"],
           audience: "woman",
           color: null,
-          pattern: null
+          pattern: "solid"
         },
         data: {
           wardrobe: { items },

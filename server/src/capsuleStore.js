@@ -15,6 +15,12 @@ import { getProfile } from "./profileStore.js";
 
 const DEFAULT_CAPSULE_NAME = "<New capsule>";
 
+function normalizeCapsulePattern(value) {
+  return typeof value === "string" && value.trim()
+    ? value.trim().toLowerCase()
+    : "solid";
+}
+
 function normalizeWardrobePayload(payload = null) {
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
     return null;
@@ -45,7 +51,7 @@ function normalizeCapsuleFilters(filters = null) {
       season: [],
       audience: "",
       color: null,
-      pattern: null,
+      pattern: "solid",
       text: ""
     };
   }
@@ -57,7 +63,7 @@ function normalizeCapsuleFilters(filters = null) {
     season: Array.isArray(filters.season) ? filters.season.filter(Boolean) : [],
     audience: typeof filters.audience === "string" ? filters.audience : "",
     color: typeof filters.color === "string" ? filters.color : null,
-    pattern: typeof filters.pattern === "string" ? filters.pattern : null,
+    pattern: normalizeCapsulePattern(filters.pattern),
     text: typeof filters.text === "string" && filters.text.trim() ? filters.text.trim() : ""
   };
 }
@@ -117,7 +123,7 @@ function buildSnapshotFromProfile(profile = null) {
       season: [],
       audience: "",
       color: null,
-      pattern: null,
+      pattern: "solid",
       text: ""
     },
     data: {
@@ -138,7 +144,7 @@ function buildProfileCapsuleContext(profile = null, capsule = null) {
     season: filters?.season || [],
     audience: filters?.audience || "",
     color: filters?.color ?? null,
-    pattern: filters?.pattern ?? null,
+    pattern: normalizeCapsulePattern(filters?.pattern),
     text: typeof filters?.text === "string" ? filters.text : "",
     locale: profile?.locale || "en",
     items: snapshot?.data?.wardrobe || null,

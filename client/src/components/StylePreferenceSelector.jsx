@@ -2,6 +2,32 @@ import { Chip, Stack, Typography } from "@mui/material";
 import { useI18n } from "../i18n/useI18n.js";
 import { translateOption } from "../i18n/index.js";
 
+const CORE_DISPLAY_ORDER = ["casual", "smart_casual", "formal"];
+
+function sortCoreOptions(items) {
+  return [...items].sort((left, right) => {
+    const leftIndex = CORE_DISPLAY_ORDER.indexOf(left);
+    const rightIndex = CORE_DISPLAY_ORDER.indexOf(right);
+    const normalizedLeft = leftIndex === -1 ? CORE_DISPLAY_ORDER.length : leftIndex;
+    const normalizedRight = rightIndex === -1 ? CORE_DISPLAY_ORDER.length : rightIndex;
+
+    if (normalizedLeft !== normalizedRight) {
+      return normalizedLeft - normalizedRight;
+    }
+
+    return String(left).localeCompare(String(right));
+  });
+}
+
+function sortAestheticOptions(items, locale) {
+  return [...items].sort((left, right) => (
+    translateOption("styles", left, locale).localeCompare(
+      translateOption("styles", right, locale),
+      locale
+    )
+  ));
+}
+
 function StylePreferenceSelector({
   styleOptions,
   selectedStyleCore,
@@ -13,8 +39,8 @@ function StylePreferenceSelector({
   bodyVariant = "body1"
 }) {
   const { t, locale } = useI18n();
-  const coreOptions = styleOptions?.core || [];
-  const aestheticsOptions = styleOptions?.aesthetics || [];
+  const coreOptions = sortCoreOptions(styleOptions?.core || []);
+  const aestheticsOptions = sortAestheticOptions(styleOptions?.aesthetics || [], locale);
 
   return (
     <Stack spacing={2}>

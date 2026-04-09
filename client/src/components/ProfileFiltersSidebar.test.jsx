@@ -9,7 +9,13 @@ vi.mock("../i18n/useI18n.js", () => ({
   useI18n: useI18nMock
 }));
 vi.mock("../i18n/index.js", () => ({
-  translateOption: (_group, value) => value
+  translateOption: (_group, value) => ({
+    solid: "Solid",
+    stripe: "Stripe",
+    abstract: "Abstract",
+    argyle: "Argyle",
+    graphic: "Graphic"
+  }[value] || value)
 }));
 
 import ProfileFiltersSidebar from "./ProfileFiltersSidebar.jsx";
@@ -23,14 +29,14 @@ function renderSidebar(props = {}) {
     seasonOptions: ["summer", "winter"],
     audienceOptions: ["woman", "man", "any"],
     accentColorOptions: ["blue", "red"],
-    patternOptions: ["solid", "stripe"],
+    patternOptions: ["stripe", "solid"],
     selectedStyleCore: "casual",
     selectedStyleAesthetic: null,
     selectedOccasions: ["office"],
     selectedSeasons: ["summer"],
     selectedAudience: "woman",
     selectedAccentColor: "blue",
-    selectedPattern: null,
+    selectedPattern: "solid",
     selectedText: "",
     hasFilterChanges: true,
     status: { loading: false, error: "", infoKey: "", infoParams: null },
@@ -60,9 +66,9 @@ function renderSidebar(props = {}) {
         "profile.audienceHint": "Hint",
         "profile.accentColorTitle": "Accent color",
         "profile.accentColorHint": "Hint",
+        "profile.accentColorNotImportant": "No accent color",
         "profile.patternTitle": "Pattern",
         "profile.patternHint": "Hint",
-        "profile.patternNotImportant": "Pattern not important",
         "profile.additionalInfoTitle": "Additional information",
         "profile.additionalInfoHint": "Additional hint",
         "profile.additionalInfoPlaceholder": "Additional placeholder",
@@ -139,7 +145,7 @@ describe("ProfileFiltersSidebar", () => {
     await user.click(screen.getByRole("button", { name: "winter" }));
     await user.click(screen.getByRole("button", { name: "man" }));
     await user.click(screen.getByRole("button", { name: "red" }));
-    await user.click(screen.getByRole("button", { name: "stripe" }));
+    await user.click(screen.getByRole("button", { name: "Stripe" }));
     await user.type(screen.getByPlaceholderText("Additional placeholder"), "linen only");
 
     expect(onSelectStyleCore).toHaveBeenCalledWith("formal");
@@ -235,5 +241,41 @@ describe("ProfileFiltersSidebar", () => {
 
     expect(screen.getByText("Additional information")).toBeInTheDocument();
     expect(screen.getByDisplayValue("Prefer natural fabrics")).toBeInTheDocument();
+  });
+
+  test("treats a legacy null pattern as solid in the UI", () => {
+    renderSidebar({
+      selectedPattern: null
+    });
+
+    expect(screen.getByRole("button", { name: "Solid" })).toHaveClass("MuiChip-filledPrimary");
+    expect(screen.queryByText("Pattern not important")).not.toBeInTheDocument();
+  });
+
+  test("sorts pattern chips alphabetically by label with solid pinned first", () => {
+    renderSidebar({
+      patternOptions: ["stripe", "solid", "abstract"]
+    });
+
+    const solid = screen.getByRole("button", { name: "Solid" });
+    const abstract = screen.getByRole("button", { name: "Abstract" });
+    const stripe = screen.getByRole("button", { name: "Stripe" });
+
+    expect(solid.compareDocumentPosition(abstract) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(abstract.compareDocumentPosition(stripe) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  test("renders the full canonical pattern list in the sidebar", () => {
+    renderSidebar({
+      patternOptions: ["stripe", "solid", "abstract"]
+    });
+
+    const solid = screen.getByRole("button", { name: "Solid" });
+    const argyle = screen.getByRole("button", { name: "Argyle" });
+    const graphic = screen.getByRole("button", { name: "Graphic" });
+
+    expect(argyle).toBeInTheDocument();
+    expect(graphic).toBeInTheDocument();
+    expect(solid.compareDocumentPosition(argyle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });

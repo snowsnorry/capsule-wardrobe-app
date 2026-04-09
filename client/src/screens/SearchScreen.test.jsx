@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import { LocaleProvider } from "../i18n/LocaleProvider.jsx";
 
@@ -56,13 +56,13 @@ function makeOptions() {
   return {
     brands: [{ value: "uniqlo", label: "UNIQLO" }],
     categories: ["top", "bottom"],
-    seasons: ["summer", "winter"],
-    formalityLevels: ["casual", "formal"],
-    styles: ["minimalistic", "retro"],
+    seasons: ["winter", "summer", "spring"],
+    formalityLevels: ["formal", "casual", "smart_casual"],
+    styles: ["retro", "minimalistic", "boho"],
     occasions: ["office"],
     audience: ["woman", "man", "any"],
     colors: ["blue"],
-    patterns: ["solid"],
+    patterns: ["stripe", "solid", "abstract"],
     silhouettes: ["straight"],
     fits: ["regular"],
     closureTypes: ["button"],
@@ -283,5 +283,68 @@ describe("SearchScreen", () => {
       expect(woolTitlesAfterOpen.length).toBeGreaterThan(1);
     });
     expect(woolTitlesAfterOpen.every((element) => element.textContent === "Wool Trousers")).toBe(true);
+  });
+
+  test("sorts search pattern chips alphabetically and keeps Not important first", async () => {
+    renderScreen();
+
+    expect(await screen.findByDisplayValue("linen shirt")).toBeInTheDocument();
+
+    const patternSection = screen.getByRole("heading", { name: "Pattern" }).parentElement;
+    const patternQueries = within(patternSection);
+    const notImportant = patternQueries.getByRole("button", { name: "Not important" });
+    const abstract = patternQueries.getByRole("button", { name: "Abstract" });
+    const solid = patternQueries.getByRole("button", { name: "Solid" });
+    const stripe = patternQueries.getByRole("button", { name: "Stripe" });
+
+    expect(notImportant.compareDocumentPosition(abstract) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(abstract.compareDocumentPosition(solid) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(solid.compareDocumentPosition(stripe) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  test("sorts core, aesthetics, and seasons to match the main screen rules", async () => {
+    renderScreen();
+
+    expect(await screen.findByDisplayValue("linen shirt")).toBeInTheDocument();
+
+    const stylesSection = screen.getByRole("heading", { name: "Style preferences" }).parentElement;
+    const coreLabel = within(stylesSection).getByText("Core");
+    const aestheticsLabel = within(stylesSection).getByText("Aesthetics");
+    const coreContainer = coreLabel.parentElement;
+    const aestheticsContainer = aestheticsLabel.parentElement;
+    const seasonsSection = screen.getByRole("heading", { name: "Seasons" }).parentElement;
+
+    const casual = within(coreContainer).getByRole("button", { name: "Casual" });
+    const smartCasual = within(coreContainer).getByRole("button", { name: "Smart casual" });
+    const formal = within(coreContainer).getByRole("button", { name: "Formal" });
+    const notImportant = within(aestheticsContainer).getByRole("button", { name: "Not important" });
+    const boho = within(aestheticsContainer).getByRole("button", { name: "Boho" });
+    const minimalistic = within(aestheticsContainer).getByRole("button", { name: "Minimalistic" });
+    const retro = within(aestheticsContainer).getByRole("button", { name: "Retro" });
+    const spring = within(seasonsSection).getByRole("button", { name: "Spring" });
+    const summer = within(seasonsSection).getByRole("button", { name: "Summer" });
+    const winter = within(seasonsSection).getByRole("button", { name: "Winter" });
+
+    expect(casual.compareDocumentPosition(smartCasual) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(smartCasual.compareDocumentPosition(formal) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(notImportant.compareDocumentPosition(boho) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(boho.compareDocumentPosition(minimalistic) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(minimalistic.compareDocumentPosition(retro) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(spring.compareDocumentPosition(summer) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(summer.compareDocumentPosition(winter) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  test("sorts audience to match the main screen order", async () => {
+    renderScreen();
+
+    expect(await screen.findByDisplayValue("linen shirt")).toBeInTheDocument();
+
+    const audienceSection = screen.getByRole("heading", { name: "Audience" }).parentElement;
+    const labels = within(audienceSection)
+      .getAllByRole("button")
+      .map((button) => button.textContent?.trim())
+      .filter(Boolean);
+
+    expect(labels).toEqual(["Man", "Woman", "Not important"]);
   });
 });

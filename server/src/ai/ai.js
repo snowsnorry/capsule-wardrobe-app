@@ -307,14 +307,6 @@ function isStyleSafe(item, targetStyle) {
   return nonMinimalisticStyles.every((style) => style === targetStyle);
 }
 
-function getPrimaryItemColor(item) {
-  if (!Array.isArray(item?.color_base)) {
-    return null;
-  }
-
-  return item.color_base.find((color) => typeof color === "string" && color.trim().length > 0) || null;
-}
-
 function isColorMatched(item, targetColor) {
   return Boolean(targetColor) && Array.isArray(item?.color_base) && item.color_base.includes(targetColor);
 }
@@ -348,10 +340,8 @@ function enforceCategoryCounts(selectedItems, normalizedItems, categories, capsu
   const categoryIndexByName = new Map(categoryOrder.map((category, index) => [category, index]));
   let effectiveStyle = normalizeCapsuleConstraintValue(capsuleParams?.style);
   let effectiveColor = normalizeCapsuleConstraintValue(capsuleParams?.color);
-  let effectivePattern = normalizePatternValue(capsuleParams?.pattern);
+  let effectivePattern = normalizePatternValue(capsuleParams?.pattern) || "solid";
   const hasExplicitStyle = Boolean(effectiveStyle);
-  const hasExplicitColor = Boolean(effectiveColor);
-  const hasExplicitPattern = Boolean(effectivePattern);
   const seenPoolIds = new Set();
   const poolByCategory = new Map(categoryOrder.map((category) => [category, []]));
 
@@ -396,7 +386,7 @@ function enforceCategoryCounts(selectedItems, normalizedItems, categories, capsu
   }
 
   function getPatternLimit() {
-    return effectivePattern && effectivePattern !== "solid" ? 1 : Infinity;
+    return effectivePattern !== "solid" ? 1 : Infinity;
   }
 
   function addItem(item) {
@@ -407,17 +397,6 @@ function enforceCategoryCounts(selectedItems, normalizedItems, categories, capsu
 
     if (!hasExplicitStyle && !effectiveStyle) {
       effectiveStyle = getFirstNonMinimalisticStyle(item);
-    }
-
-    if (!hasExplicitColor && !effectiveColor && !isNeutralItem(item)) {
-      effectiveColor = getPrimaryItemColor(item);
-    }
-
-    if (!hasExplicitPattern && !effectivePattern) {
-      const inferredPattern = normalizePatternValue(item?.pattern);
-      if (inferredPattern && inferredPattern !== "solid") {
-        effectivePattern = inferredPattern;
-      }
     }
 
     result.push(item);
@@ -463,7 +442,7 @@ function enforceCategoryCounts(selectedItems, normalizedItems, categories, capsu
 
   function canUseColorSafeCandidate(candidate) {
     if (!effectiveColor) {
-      return true;
+      return isNeutralItem(candidate);
     }
 
     if (isColorMatched(candidate, effectiveColor)) {
@@ -474,8 +453,8 @@ function enforceCategoryCounts(selectedItems, normalizedItems, categories, capsu
   }
 
   function canUsePatternSafeCandidate(candidate) {
-    if (!effectivePattern || effectivePattern === "solid") {
-      return true;
+    if (effectivePattern === "solid") {
+      return hasSolidOrNullPattern(candidate);
     }
 
     if (isPatternMatched(candidate, effectivePattern)) {
@@ -617,8 +596,16 @@ function getWardrobeSelectionPrompt(userProfile = null, items = [], categories =
   const occasionsText = formatProfileValues(userProfile?.occasions);
   const seasonText = formatProfileValues(userProfile?.season);
   const audienceText = userProfile?.audience || "any";
-  const accentColorText = typeof userProfile?.color === "string" ? userProfile.color : "";
-  const patternText = typeof userProfile?.pattern === "string" ? userProfile.pattern : "";
+  const accentColorText = typeof userProfile?.color === "string" && userProfile.color.trim().length > 0
+    ? userProfile.color
+    : "No accent color (keep the capsule fully neutral)";
+  const patternText = normalizePatternValue(userProfile?.pattern) === "solid"
+    ? "solid (no print)"
+    : (
+      typeof userProfile?.pattern === "string" && userProfile.pattern.trim().length > 0
+        ? userProfile.pattern
+        : "solid (no print)"
+    );
   const additionalText = typeof userProfile?.text === "string" ? userProfile.text.trim() : "";
   const additionalInfoBlock = additionalText ? `Important Additional Information: ${additionalText}` : "";
   const simplifiedItems = items.map((item) => {
@@ -706,7 +693,7 @@ async function generateCapsuleWardrobe(userProfile = null, logContext = null) {
   };
   const audienceFilters = audienceByProfile[userProfile?.audience] || audienceByProfile.any;
   const color = userProfile?.color ?? null;
-  const pattern = userProfile?.pattern ?? null;
+  const pattern = normalizePatternValue(userProfile?.pattern) || "solid";
   const rejectedUrls = Array.isArray(userProfile?.rejected)
     ? userProfile.rejected.map((itemUrl) => String(itemUrl || "").trim()).filter(Boolean)
     : [];
@@ -764,6 +751,8 @@ async function generateCapsuleWardrobe(userProfile = null, logContext = null) {
               ) as is_color_match,
               (
                 CASE
+                  WHEN lower(${pattern}::text) = 'solid'
+                  THEN FALSE
                   WHEN ${pattern}::text IS NOT NULL AND ${pattern}::text != ''
                   THEN lower(COALESCE(pattern, '')) = lower(${pattern}::text)
                   ELSE pattern IS NOT NULL
@@ -813,21 +802,25 @@ async function generateCapsuleWardrobe(userProfile = null, logContext = null) {
               -- HARD FILTERS
               category = cats.target_category
               AND lower(COALESCE(audience, '')) = ANY(${audienceFilters}::text[])
-              -- If accent color filter is set then keep only products with accent color and neutrals
               AND (
-                ${color}::text IS NULL
-                OR ${color}::text = ''
-                OR ${color}::text = ANY(COALESCE(color_base, ARRAY[]::text[]))
-                OR COALESCE(is_neutral, false)
+                CASE
+                  WHEN ${color}::text IS NOT NULL AND ${color}::text != ''
+                  THEN ${color}::text = ANY(COALESCE(color_base, ARRAY[]::text[]))
+                    OR COALESCE(is_neutral, false)
+                  ELSE COALESCE(is_neutral, false)
+                END
               )
-              -- If pattern filter is set then keep only products with same pattern or solid/no pattern
               AND (
-                ${pattern}::text IS NULL
-                OR ${pattern}::text = ''
-                OR lower(COALESCE(pattern, '')) = lower(${pattern}::text)
-                OR pattern IS NULL
-                OR trim(pattern) = ''
-                OR lower(pattern) = 'solid'
+                CASE
+                  WHEN lower(${pattern}::text) = 'solid'
+                  THEN pattern IS NULL
+                    OR trim(pattern) = ''
+                    OR lower(pattern) = 'solid'
+                  ELSE lower(COALESCE(pattern, '')) = lower(${pattern}::text)
+                    OR pattern IS NULL
+                    OR trim(pattern) = ''
+                    OR lower(pattern) = 'solid'
+                END
               )
               AND NOT (products.url = ANY(${rejectedUrls}::text[]))
           ) raw_scored

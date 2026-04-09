@@ -43,7 +43,7 @@ STYLE & AESTHETIC BALANCE (Roles):
 Categorize your selections into three roles:
 - ACCENTS (30% of capsule / exactly 4 items): Strongly feature the user's Target Style and/or Accent Color. Style is an aesthetic accent, NOT a uniform. Avoid the "costume effect".
 - ANCHORS & CONNECTORS (70% of capsule): Stylistic neutrals or versatile basics that quietly complement the Accents.
-- Color/Pattern: If an Accent Color is provided, include exactly 3 items in that color (distribute them across categories to avoid the "clown effect"). Keep the rest neutral. If a Pattern is provided, include exactly 1 core item with that pattern. The rest MUST be solid.
+- Color/Pattern: If Accent Color says "No accent color", keep the entire capsule in neutral colors unless a non-neutral item is absolutely required to fill a category. If an Accent Color is provided, include exactly 3 items in that color (distribute them across categories to avoid the "clown effect") and keep the rest neutral. If Pattern says "solid (no print)", do not add prints; all items should be solid or have no listed pattern unless a printed item is absolutely required to fill a category. If another Pattern is provided, include exactly 1 core item with that pattern. The rest MUST be solid.
 
 VALIDATION REQUIREMENT:
 Before finalizing, mentally validate the capsule by generating realistic "Outfit Formulas" (e.g., knit + trousers + loafers; tee + jeans + blazer + sneakers). Flag any weakly integrated items and replace them if better alternatives exist.

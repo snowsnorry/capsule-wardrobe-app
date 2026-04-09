@@ -83,7 +83,7 @@ function createDependencies(overrides = {}) {
           season: ["spring"],
           audience: "woman",
           color: null,
-          pattern: null,
+          pattern: "solid",
           text: ""
         },
         data: {
@@ -885,7 +885,7 @@ test("filters patch can trigger regenerate via query flag after saving filters",
           audience: "woman",
           season: ["summer"],
           color: null,
-          pattern: null,
+          pattern: "solid",
           text: ""
         },
         data: {
@@ -933,7 +933,7 @@ test("rejected urls patch validates against current capsule wardrobe", async (t)
       season: ["spring"],
       audience: "woman",
       color: null,
-      pattern: null,
+      pattern: "solid",
       text: ""
     },
     data: {
@@ -978,7 +978,7 @@ test("rejected urls patch rejects unknown urls and missing wardrobe", async (t) 
             season: ["spring"],
             audience: "woman",
             color: null,
-            pattern: null,
+            pattern: "solid",
             text: ""
           },
           data: {

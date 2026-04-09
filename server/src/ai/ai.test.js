@@ -35,7 +35,7 @@ function createCapsuleWithWardrobe(wardrobe = null) {
         season: ["spring"],
         audience: "woman",
         color: null,
-        pattern: null,
+        pattern: "solid",
         text: ""
       },
       data: {
@@ -78,6 +78,24 @@ test("getWardrobeSelectionPrompt omits additional information line when text is 
   assert.doesNotMatch(prompt, /Important Additional Information:/);
 });
 
+test("getWardrobeSelectionPrompt includes no-accent and solid guidance by default", () => {
+  const prompt = getWardrobeSelectionPrompt(
+    {
+      audience: "woman",
+      occasions: ["office"],
+      formalityLevel: "casual",
+      style: "minimalistic",
+      color: null,
+      pattern: "solid"
+    },
+    [{ id: "top-1", name: "Top", category: "top" }],
+    { top: 1 }
+  );
+
+  assert.match(prompt, /No accent color \(keep the capsule fully neutral\)/);
+  assert.match(prompt, /solid \(no print\)/);
+});
+
 test("getSelectedIdsFromCapsule flattens only non-empty ids from capsule object", () => {
   assert.deepEqual(
     getSelectedIdsFromCapsule({
@@ -118,14 +136,14 @@ test("enforceCategoryCounts limits style-matched additions to four when alternat
       { id: "bottom-1", category: "bottom", style: ["minimalistic"] }
     ],
     [
-      { id: "top-1", category: "top", style: ["minimalistic"] },
-      { id: "top-2", category: "top", style: ["minimalistic"] },
-      { id: "top-3", category: "top", style: ["minimalistic"] },
-      { id: "top-4", category: "top", style: ["minimalistic"] },
-      { id: "top-5", category: "top", style: ["classic"] },
-      { id: "bottom-1", category: "bottom", style: ["minimalistic"] },
-      { id: "bottom-2", category: "bottom", style: ["minimalistic"] },
-      { id: "bottom-3", category: "bottom", style: ["classic"] }
+      { id: "top-1", category: "top", style: ["minimalistic"], is_neutral: true },
+      { id: "top-2", category: "top", style: ["minimalistic"], is_neutral: true },
+      { id: "top-3", category: "top", style: ["minimalistic"], is_neutral: true },
+      { id: "top-4", category: "top", style: ["minimalistic"], is_neutral: true },
+      { id: "top-5", category: "top", style: ["classic"], is_neutral: true },
+      { id: "bottom-1", category: "bottom", style: ["minimalistic"], is_neutral: true },
+      { id: "bottom-2", category: "bottom", style: ["minimalistic"], is_neutral: true },
+      { id: "bottom-3", category: "bottom", style: ["classic"], is_neutral: true }
     ],
     {
       top: 3,
@@ -259,10 +277,10 @@ test("enforceCategoryCounts keeps only one target pattern item and prefers solid
   const balancedItems = enforceCategoryCounts(
     [],
     [
-      { id: "top-1", category: "top", pattern: "Floral" },
-      { id: "top-2", category: "top", pattern: "solid" },
-      { id: "bottom-1", category: "bottom", pattern: "floral" },
-      { id: "bottom-2", category: "bottom", pattern: null }
+      { id: "top-1", category: "top", pattern: "Floral", is_neutral: true },
+      { id: "top-2", category: "top", pattern: "solid", is_neutral: true },
+      { id: "bottom-1", category: "bottom", pattern: "floral", is_neutral: true },
+      { id: "bottom-2", category: "bottom", pattern: null, is_neutral: true }
     ],
     {
       top: 2,
@@ -329,7 +347,7 @@ test("enforceCategoryCounts falls back to violating constraints when needed to f
   );
 });
 
-test("enforceCategoryCounts infers accent color from first non-neutral item and prefers neutrals after that", () => {
+test("enforceCategoryCounts keeps no-accent mode neutral unless fallback is required", () => {
   const balancedItems = enforceCategoryCounts(
     [],
     [
@@ -348,27 +366,21 @@ test("enforceCategoryCounts infers accent color from first non-neutral item and 
     }
   );
 
-  assert.equal(
-    balancedItems.filter((item) => Array.isArray(item.color_base) && item.color_base.includes("red")).length,
-    2
-  );
+  assert.equal(balancedItems.filter((item) => item.is_neutral === true).length, 3);
   assert.ok(balancedItems.some((item) => item.id === "top-3"));
+  assert.ok(balancedItems.some((item) => item.id === "bottom-2"));
   assert.ok(balancedItems.some((item) => item.id === "shoe-2"));
-  assert.ok(
-    balancedItems.every((item) => (
-      (Array.isArray(item.color_base) && item.color_base.includes("red")) || item.is_neutral === true
-    ))
-  );
+  assert.ok(balancedItems.some((item) => item.is_neutral !== true));
 });
 
-test("enforceCategoryCounts infers pattern from first patterned item and keeps the rest solid or null", () => {
+test("enforceCategoryCounts keeps solid-only mode free of prints unless fallback is required", () => {
   const balancedItems = enforceCategoryCounts(
     [],
     [
-      { id: "top-1", category: "top", pattern: "Floral" },
-      { id: "top-2", category: "top", pattern: "solid" },
-      { id: "bottom-1", category: "bottom", pattern: "stripe" },
-      { id: "bottom-2", category: "bottom", pattern: null }
+      { id: "top-1", category: "top", pattern: "Floral", is_neutral: true },
+      { id: "top-2", category: "top", pattern: "solid", is_neutral: true },
+      { id: "bottom-1", category: "bottom", pattern: "stripe", is_neutral: true },
+      { id: "bottom-2", category: "bottom", pattern: null, is_neutral: true }
     ],
     {
       top: 2,
@@ -377,16 +389,14 @@ test("enforceCategoryCounts infers pattern from first patterned item and keeps t
   );
 
   assert.equal(
-    balancedItems.filter((item) => String(item.pattern || "").toLowerCase() === "floral").length,
+    balancedItems.filter((item) => {
+      const normalizedPattern = String(item.pattern || "").toLowerCase();
+      return normalizedPattern !== "" && normalizedPattern !== "solid";
+    }).length,
     1
   );
-  assert.ok(balancedItems.some((item) => item.id === "bottom-2"));
   assert.ok(
-    balancedItems.every((item) => (
-      String(item.pattern || "").toLowerCase() === "floral"
-      || item.pattern === null
-      || String(item.pattern).toLowerCase() === "solid"
-    ))
+    balancedItems.some((item) => item.pattern === null || String(item.pattern).toLowerCase() === "solid")
   );
 });
 
@@ -394,12 +404,12 @@ test("enforceCategoryCounts infers style from first non-minimalistic item and st
   const balancedItems = enforceCategoryCounts(
     [],
     [
-      { id: "top-1", category: "top", style: ["sporty"] },
-      { id: "top-2", category: "top", style: ["minimalistic"] },
-      { id: "bottom-1", category: "bottom", style: ["classic"] },
-      { id: "bottom-2", category: "bottom", style: ["minimalistic"] },
-      { id: "shoe-1", category: "shoe", style: ["sporty"] },
-      { id: "shoe-2", category: "shoe", style: ["minimalistic"] }
+      { id: "top-1", category: "top", style: ["sporty"], is_neutral: true },
+      { id: "top-2", category: "top", style: ["minimalistic"], is_neutral: true },
+      { id: "bottom-1", category: "bottom", style: ["classic"], is_neutral: true },
+      { id: "bottom-2", category: "bottom", style: ["minimalistic"], is_neutral: true },
+      { id: "shoe-1", category: "shoe", style: ["sporty"], is_neutral: true },
+      { id: "shoe-2", category: "shoe", style: ["minimalistic"], is_neutral: true }
     ],
     {
       top: 2,

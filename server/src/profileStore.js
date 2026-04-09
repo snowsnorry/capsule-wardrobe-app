@@ -9,6 +9,7 @@ import {
   updateProfileActiveCapsuleIdByEmail
 } from "./db.js";
 import { ACCENT_COLOR_OPTIONS } from "../../shared/accentColors.js";
+import { buildCanonicalPatternOptions } from "../../shared/patternOptions.js";
 import { CORE_STYLE_ORDER, normalizeStyleValue } from "../../shared/stylePreferences.js";
 import {
   DEFAULT_PROFILE_LLM,
@@ -48,23 +49,7 @@ const PROFILE_OCCASION_OPTIONS = [
 
 const PROFILE_SEASON_OPTIONS = ["spring", "summer", "autumn", "winter"];
 
-const PROFILE_PATTERN_OPTIONS = [
-  "solid",
-  "stripe",
-  "check",
-  "floral",
-  "leopard",
-  "zebra",
-  "snake",
-  "paisley",
-  "polka_dot",
-  "herringbone",
-  "dogtooth",
-  "marble",
-  "abstract",
-  "lace",
-  "corduroy"
-];
+const PROFILE_PATTERN_OPTIONS = buildCanonicalPatternOptions();
 
 const audienceOptions = ["man", "woman", "any"];
 
@@ -88,11 +73,10 @@ async function getDynamicOptions(loadValues, fallbackItems, extraItems = []) {
 }
 
 function buildPatternOptions(availablePatterns = [], currentPattern = null) {
-  const available = new Set(
-    dedupeStrings(availablePatterns.map((value) => normalizeStyleValue(value)))
+  return buildCanonicalPatternOptions(
+    availablePatterns.map((value) => normalizeStyleValue(value)),
+    normalizeStyleValue(currentPattern)
   );
-  const current = normalizeStyleValue(currentPattern);
-  return PROFILE_PATTERN_OPTIONS.filter((value) => available.has(value) || value === current);
 }
 
 function normalizeWardrobeAudience(value) {

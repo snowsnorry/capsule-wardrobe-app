@@ -11,6 +11,10 @@ Accent Color: {{color}}
 Pattern: {{pattern}}
 {{additional_info_block}}
 
+FILTER RULES:
+- If Accent Color says "No accent color", keep the capsule fully neutral unless a non-neutral candidate is absolutely required to fill a target slot.
+- If Pattern says "solid (no print)", avoid prints; replacements should be solid or have no listed pattern unless a printed candidate is absolutely required to fill a target slot.
+
 CURRENT CAPSULE (Fixed Context - DO NOT RETURN IN OUTPUT):
 {{current_capsule_items}}
 (Note: These items are already locked in. Use them ONLY as visual and stylistic context to ensure new selections match perfectly.)
