@@ -17,11 +17,10 @@ import {
 } from "@mui/material";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import ClearRoundedIcon from "@mui/icons-material/ClearRounded";
+import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import TuneRoundedIcon from "@mui/icons-material/TuneRounded";
 import OpenInNewRoundedIcon from "@mui/icons-material/OpenInNewRounded";
-import { useTheme } from "@mui/material/styles";
-import useMediaQuery from "@mui/material/useMediaQuery";
 import { fetchSavedSearch, fetchSearchOptions, runSearch } from "../api/search.js";
 import { useI18n } from "../i18n/useI18n.js";
 import { translateOption } from "../i18n/index.js";
@@ -29,6 +28,7 @@ import AppLauncher from "../components/AppLauncher.jsx";
 import LocaleSwitcher from "../components/LocaleSwitcher.jsx";
 import AccentColorChips from "../components/AccentColorChips.jsx";
 import ProductLabelText from "../components/ProductLabelText.jsx";
+import AppSidebarShell from "../components/AppSidebarShell.jsx";
 import { formatProductLabel } from "../utils/productLabel.js";
 import { buildProductDetailGroups } from "../../../shared/productDetail.js";
 import { getSafeHttpUrl } from "../../../shared/urlSecurity.js";
@@ -807,9 +807,14 @@ function SearchFiltersSidebar({
   );
 }
 
-function SearchScreen({ onNavigateApp }) {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("lg"));
+function SearchScreen({
+  onNavigateApp,
+  userEmail = "",
+  userName = "",
+  settingsProfile = null,
+  onSignOut = () => {},
+  onSaveSettings = async () => {}
+}) {
   const { t, locale } = useI18n();
   const [options, setOptions] = useState(EMPTY_OPTIONS);
   const [draftState, setDraftState] = useState(createSearchState(null, EMPTY_OPTIONS.priceRange));
@@ -932,40 +937,7 @@ function SearchScreen({ onNavigateApp }) {
     }
   };
 
-  const header = (
-    <Box
-      sx={{
-        position: "sticky",
-        top: 0,
-        zIndex: 3,
-        backgroundColor: "background.paper",
-        pb: 1.5
-      }}
-    >
-      <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
-        <Stack direction="row" alignItems="center" spacing={1.5}>
-          {!isMobile ? (
-            <Typography
-              sx={{
-                fontFamily: '"Leckerli One", cursive',
-                fontSize: "1.85rem",
-                lineHeight: 1.1,
-                color: "#8f6f45"
-              }}
-            >
-              {t("appName")}
-            </Typography>
-          ) : null}
-        </Stack>
-        <Stack direction="row" spacing={1.2} alignItems="center">
-          <AppLauncher currentApp="search" onSelectApp={onNavigateApp} />
-          <LocaleSwitcher />
-        </Stack>
-      </Stack>
-    </Box>
-  );
-
-  const searchBar = (
+  const renderSearchBar = (isMobile) => (
     <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} alignItems={{ sm: "center" }}>
       <TextField
         fullWidth
@@ -1011,7 +983,7 @@ function SearchScreen({ onNavigateApp }) {
     </Stack>
   );
 
-  const resultsList = (
+  const renderResultsList = (isMobile) => (
     <Stack spacing={2} sx={{ minHeight: 0, height: "100%" }}>
       <Stack direction="row" justifyContent="space-between" alignItems="center">
         <Typography variant="overline" color="text.secondary">
@@ -1055,8 +1027,7 @@ function SearchScreen({ onNavigateApp }) {
               border: "none",
               backgroundColor: String(selectedResultId) === String(item.id) ? "rgba(28, 124, 124, 0.06)" : "transparent",
               transition: "background-color 160ms ease, transform 160ms ease",
-              outline: "none"
-              ,
+              outline: "none",
               "&:hover": {
                 backgroundColor: "rgba(31, 41, 51, 0.035)"
               }
@@ -1095,61 +1066,118 @@ function SearchScreen({ onNavigateApp }) {
 
   return (
     <>
-      <Stack spacing={2.4} sx={{ height: "100%", minHeight: 0, overflow: "hidden" }}>
-        {header}
-        {isMobile ? (
-          <Stack spacing={2} sx={{ minHeight: 0, overflow: "hidden" }}>
-            {searchBar}
-            <Divider />
-            <Box sx={{ flex: 1, minHeight: 0, overflow: "hidden" }}>{resultsList}</Box>
-          </Stack>
-        ) : (
+      <AppSidebarShell
+        shellTestId="search-screen-shell"
+        currentApp="search"
+        userEmail={userEmail}
+        userName={userName}
+        settingsProfile={settingsProfile}
+        onSaveSettings={onSaveSettings}
+        onSignOut={onSignOut}
+        headerContent={({ isOverlaySidebar, openSidebar }) => (
           <Box
             sx={{
-              display: "grid",
-              gridTemplateColumns: "320px minmax(280px, 420px) minmax(0, 1fr)",
-              gridTemplateRows: "auto minmax(0, 1fr)",
-              gap: 3,
-              flex: 1,
-              minHeight: 0,
-              overflow: "hidden"
+              position: "sticky",
+              top: 0,
+              zIndex: 3,
+              backgroundColor: "background.paper",
+              pb: 1.5
             }}
           >
-            <Box
-              sx={{
-                gridRow: "1 / span 2",
-                minHeight: 0,
-                overflowY: "auto",
-                pr: 2.5,
-                borderRight: "1px solid",
-                borderColor: "divider"
-              }}
-            >
-              <SearchFiltersSidebar
-                options={options}
-                draftState={draftState}
-                onDraftStateChange={handleSidebarDraftStateChange}
-                status={status}
-                onApply={handleSearchSubmit}
-                onReset={handleReset}
-                autoApply
-                showApplyButton={false}
-              />
-            </Box>
-            <Box sx={{ gridColumn: "2 / 4" }}>{searchBar}</Box>
-            <Box sx={{ minHeight: 0, overflow: "hidden" }}>{resultsList}</Box>
-            <Box
-              sx={{
-                minHeight: 0,
-                overflowY: "auto",
-                pl: 0.5
-              }}
-            >
-              <ProductDetail item={selectedItem} title={t("search.productCard")} t={t} locale={locale} />
-            </Box>
+            <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
+              <Stack direction="row" alignItems="center" spacing={1.25}>
+                {isOverlaySidebar ? (
+                  <IconButton aria-label="Toggle sidebar" onClick={openSidebar}>
+                    <MenuRoundedIcon />
+                  </IconButton>
+                ) : null}
+                {!isOverlaySidebar ? (
+                  <Typography
+                    sx={{
+                      fontFamily: '"Leckerli One", cursive',
+                      fontSize: "1.85rem",
+                      lineHeight: 1.1,
+                      color: "#8f6f45"
+                    }}
+                  >
+                    {t("appName")}
+                  </Typography>
+                ) : null}
+              </Stack>
+              <Stack direction="row" spacing={1.2} alignItems="center">
+                <AppLauncher currentApp="search" onSelectApp={onNavigateApp} />
+                <LocaleSwitcher />
+              </Stack>
+            </Stack>
           </Box>
         )}
-      </Stack>
+        sidebarBodyContent={({ isOverlaySidebar, isSidebarCollapsed, expandCollapsedSidebar }) => (
+          isSidebarCollapsed && !isOverlaySidebar ? (
+            <Box
+              data-testid="collapsed-sidebar-expand-hitbox"
+              onClick={expandCollapsedSidebar}
+              sx={{ flex: 1, height: "100%", cursor: "pointer" }}
+            />
+          ) : null
+        )}
+      >
+        {({ isOverlaySidebar }) => (
+          <Stack spacing={2.4} sx={{ height: "100%", minHeight: 0, overflow: "hidden" }}>
+            {isOverlaySidebar ? (
+              <Stack spacing={2} sx={{ minHeight: 0, overflow: "hidden" }}>
+                {renderSearchBar(true)}
+                <Divider />
+                <Box sx={{ flex: 1, minHeight: 0, overflow: "hidden" }}>{renderResultsList(true)}</Box>
+              </Stack>
+            ) : (
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: "320px minmax(280px, 420px) minmax(0, 1fr)",
+                  gridTemplateRows: "auto minmax(0, 1fr)",
+                  gap: 3,
+                  flex: 1,
+                  minHeight: 0,
+                  overflow: "hidden"
+                }}
+              >
+                <Box
+                  sx={{
+                    gridRow: "1 / span 2",
+                    minHeight: 0,
+                    overflowY: "auto",
+                    pr: 2.5,
+                    borderRight: "1px solid",
+                    borderColor: "divider"
+                  }}
+                >
+                  <SearchFiltersSidebar
+                    options={options}
+                    draftState={draftState}
+                    onDraftStateChange={handleSidebarDraftStateChange}
+                    status={status}
+                    onApply={handleSearchSubmit}
+                    onReset={handleReset}
+                    autoApply
+                    showApplyButton={false}
+                  />
+                </Box>
+                <Box sx={{ gridColumn: "2 / 4" }}>{renderSearchBar(false)}</Box>
+                <Box sx={{ minHeight: 0, overflow: "hidden" }}>{renderResultsList(false)}</Box>
+                <Box
+                  sx={{
+                    minHeight: 0,
+                    overflowY: "auto",
+                    pl: 0.5
+                  }}
+                >
+                  <ProductDetail item={selectedItem} title={t("search.productCard")} t={t} locale={locale} />
+                </Box>
+              </Box>
+            )}
+          </Stack>
+        )}
+      </AppSidebarShell>
 
       <Dialog fullScreen open={isFiltersOpen} onClose={() => setIsFiltersOpen(false)}>
         <DialogContent sx={{ px: 3, py: 3 }}>

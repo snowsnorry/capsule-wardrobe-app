@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import { LocaleProvider } from "../i18n/LocaleProvider.jsx";
 
@@ -42,7 +43,17 @@ import SearchScreen from "./SearchScreen.jsx";
 
 const theme = createTheme();
 
-function renderScreen(props = {}) {
+function renderScreen(props = {}, { layoutMode = "medium" } = {}) {
+  mediaQueryMock.mockImplementation((query) => {
+    if (String(query).includes("max-width: 1279.95px")) {
+      return layoutMode === "overlay";
+    }
+    if (String(query).includes("min-width: 1680px")) {
+      return layoutMode === "large";
+    }
+    return false;
+  });
+
   return render(
     <ThemeProvider theme={theme}>
       <LocaleProvider>
@@ -101,7 +112,6 @@ function makeResults(items, total = items.length) {
 describe("SearchScreen", () => {
   beforeEach(() => {
     mediaQueryMock.mockReset();
-    mediaQueryMock.mockReturnValue(false);
     searchApi.fetchSavedSearch.mockReset();
     searchApi.fetchSearchOptions.mockReset();
     searchApi.runSearch.mockReset();
@@ -144,6 +154,8 @@ describe("SearchScreen", () => {
     expect(await screen.findByText("55 results")).toBeInTheDocument();
     expect(screen.getAllByText("Linen Shirt").length).toBeGreaterThan(0);
     expect(screen.getAllByText("unisex").length).toBeGreaterThan(0);
+    expect(screen.getByTestId("search-screen-shell")).toHaveAttribute("data-sidebar-mode", "desktop-medium");
+    expect(screen.getByRole("button", { name: "Open user menu" })).toBeInTheDocument();
   });
 
   test("desktop filter interactions auto-apply and reset page to 1", async () => {
@@ -204,11 +216,17 @@ describe("SearchScreen", () => {
   });
 
   test("mobile opens filters dialog and product detail dialog", async () => {
-    mediaQueryMock.mockReturnValue(true);
-    renderScreen();
+    const user = userEvent.setup();
+    renderScreen({}, { layoutMode: "overlay" });
 
     expect(await screen.findByDisplayValue("linen shirt")).toBeInTheDocument();
     expect(screen.queryByText("Capsule Wardrobe")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Toggle sidebar" }));
+    expect(screen.getByRole("button", { name: "Collapse sidebar" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Collapse sidebar" }));
+    await waitFor(() => {
+      expect(screen.queryByRole("button", { name: "Collapse sidebar" })).not.toBeInTheDocument();
+    });
 
     fireEvent.click(screen.getByLabelText("Open filters"));
     expect(await screen.findByText("Filters")).toBeInTheDocument();
@@ -228,6 +246,34 @@ describe("SearchScreen", () => {
     await waitFor(() => {
       expect(screen.queryByLabelText("Back")).not.toBeInTheDocument();
     });
+  });
+
+  test("desktop sidebar collapses and expands, and user menu opens on search screen", async () => {
+    const user = userEvent.setup();
+    const onSignOut = vi.fn();
+
+    renderScreen({
+      userEmail: "person@example.com",
+      userName: "Person Name",
+      settingsProfile: {
+        fullname: "Person Name",
+        email: "person@example.com",
+        locale: "en",
+        theme: "system",
+        llm: "openai:gpt-5.2"
+      },
+      onSignOut
+    });
+
+    expect(await screen.findByDisplayValue("linen shirt")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Collapse sidebar" }));
+    await user.click(screen.getByTestId("collapsed-sidebar-expand-hitbox"));
+    expect(screen.getByRole("button", { name: "Collapse sidebar" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Open user menu" }));
+    expect(screen.getByText("Settings")).toBeInTheDocument();
+    await user.click(screen.getByText("Sign out"));
+    expect(onSignOut).toHaveBeenCalledTimes(1);
   });
 
   test("product detail does not render unsafe product or image urls", async () => {

@@ -1337,7 +1337,16 @@ function App() {
 
     if (hasProfile || profileCreated) {
       if (appRoute === "search") {
-        return <SearchScreen onNavigateApp={handleNavigateApp} />;
+        return (
+          <SearchScreen
+            onNavigateApp={handleNavigateApp}
+            userEmail={user?.email || ""}
+            userName={settingsProfile.fullname}
+            settingsProfile={settingsProfile}
+            onSignOut={handleLogout}
+            onSaveSettings={handleSaveSettings}
+          />
+        );
       }
 
       if (currentView === "profile") {
@@ -1484,7 +1493,7 @@ function App() {
         }}
       >
       <Container
-        disableGutters={isMainScreenView}
+        disableGutters={isMainScreenView || isSearchView}
         maxWidth={isMainScreenView || isSearchView ? false : "lg"}
         sx={{
           position: "relative",
@@ -1493,9 +1502,9 @@ function App() {
           gap: { xs: 3, md: 6 },
           gridTemplateColumns: user ? "1fr" : { xs: "1fr", md: "1.2fr 1fr" },
           alignItems: "center",
-          py: isMainScreenView ? { xs: 0, md: "12px" } : { xs: 0, md: "24px" },
-          px: isMainScreenView ? 0 : (isSearchView ? { xs: 0, md: 4, xl: 5 } : { xs: 0, md: 3 }),
-          maxWidth: isMainScreenView ? "none" : (isSearchView ? "1680px" : undefined),
+          py: (isMainScreenView || isSearchView) ? { xs: 0, md: "12px" } : { xs: 0, md: "24px" },
+          px: (isMainScreenView || isSearchView) ? 0 : { xs: 0, md: 3 },
+          maxWidth: (isMainScreenView || isSearchView) ? "none" : undefined,
           minHeight: "100vh",
           height: "100%",
           boxSizing: "border-box"
@@ -1571,7 +1580,7 @@ function App() {
           </Stack>
         ) : null}
 
-        {!sessionInitialized ? null : isMainScreenView ? (
+        {!sessionInitialized ? null : (isMainScreenView || isSearchView) ? (
           <Box
             sx={{
               minHeight: 0,
