@@ -698,7 +698,9 @@ async function generateCapsuleWardrobe(userProfile = null, logContext = null) {
     ? userProfile.rejected.map((itemUrl) => String(itemUrl || "").trim()).filter(Boolean)
     : [];
   const embeddingVector = `[${promptEmbeddings.join(",")}]`;
-  const noiseFactor = 0.05;
+  const additionalText = typeof userProfile?.text === "string" ? userProfile.text.trim() : "";
+  // There should be no random noise when the user makes a specific request.
+  const noiseFactor = additionalText ? 0 : 0.05;
 
   const sqlStartedAt = Date.now();
   const items = await sql`
