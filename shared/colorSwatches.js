@@ -2,68 +2,68 @@ const FALLBACK_COLOR_SWATCH_KEY = "multicolor";
 
 const COLOR_SWATCH_DEFINITIONS = Object.freeze({
   black: Object.freeze({
-    client: Object.freeze({ bgcolor: "#1f2933" }),
-    pdfFill: Object.freeze([0.12, 0.16, 0.2])
+    client: Object.freeze({ bgcolor: "#0f172a" }), // Глубокий темный сланец вместо скучного черного
+    pdfFill: Object.freeze([0.059, 0.090, 0.165])
   }),
   white: Object.freeze({
-    client: Object.freeze({ bgcolor: "#f8f5ef" }),
-    pdfFill: Object.freeze([0.972, 0.961, 0.937])
+    client: Object.freeze({ bgcolor: "#ffffff" }),
+    pdfFill: Object.freeze([1, 1, 1])
   }),
   grey: Object.freeze({
-    client: Object.freeze({ bgcolor: "#94a3b8" }),
-    pdfFill: Object.freeze([0.58, 0.64, 0.72])
+    client: Object.freeze({ bgcolor: "#9ca3af" }), // Чистый холодный серый
+    pdfFill: Object.freeze([0.612, 0.639, 0.686])
   }),
   beige: Object.freeze({
-    client: Object.freeze({ bgcolor: "#d6c1a3" }),
-    pdfFill: Object.freeze([0.839, 0.757, 0.639])
+    client: Object.freeze({ bgcolor: "#e6ccb2" }), // Теплый песочный
+    pdfFill: Object.freeze([0.902, 0.800, 0.698])
   }),
   brown: Object.freeze({
-    client: Object.freeze({ bgcolor: "#8b5e3c" }),
-    pdfFill: Object.freeze([0.545, 0.369, 0.235])
+    client: Object.freeze({ bgcolor: "#9c6644" }), // Насыщенный терракотово-коричневый
+    pdfFill: Object.freeze([0.612, 0.400, 0.267])
   }),
   blue: Object.freeze({
-    client: Object.freeze({ bgcolor: "#4f83cc" }),
-    pdfFill: Object.freeze([0.31, 0.514, 0.8])
+    client: Object.freeze({ bgcolor: "#3b82f6" }), // Яркий синий (SaaS blue)
+    pdfFill: Object.freeze([0.231, 0.510, 0.965])
   }),
   light_blue: Object.freeze({
-    client: Object.freeze({ bgcolor: "#9ecae8" }),
-    pdfFill: Object.freeze([0.62, 0.792, 0.91])
+    client: Object.freeze({ bgcolor: "#38bdf8" }), // Сочный голубой
+    pdfFill: Object.freeze([0.220, 0.741, 0.973])
   }),
   navy: Object.freeze({
-    client: Object.freeze({ bgcolor: "#243b6b" }),
-    pdfFill: Object.freeze([0.141, 0.231, 0.42])
+    client: Object.freeze({ bgcolor: "#1e3a8a" }), // Глубокий морской синий
+    pdfFill: Object.freeze([0.118, 0.227, 0.541])
   }),
   green: Object.freeze({
-    client: Object.freeze({ bgcolor: "#4d8b55" }),
-    pdfFill: Object.freeze([0.302, 0.545, 0.333])
+    client: Object.freeze({ bgcolor: "#10b981" }), // Изумрудный / Мятный
+    pdfFill: Object.freeze([0.063, 0.725, 0.506])
   }),
   khaki: Object.freeze({
-    client: Object.freeze({ bgcolor: "#8a7f45" }),
-    pdfFill: Object.freeze([0.541, 0.498, 0.271])
+    client: Object.freeze({ bgcolor: "#a3b18a" }), // Свежий оливковый
+    pdfFill: Object.freeze([0.639, 0.694, 0.541])
   }),
   red: Object.freeze({
-    client: Object.freeze({ bgcolor: "#c84c4c" }),
-    pdfFill: Object.freeze([0.784, 0.298, 0.298])
+    client: Object.freeze({ bgcolor: "#ef4444" }), // Яркий кораллово-красный
+    pdfFill: Object.freeze([0.937, 0.267, 0.267])
   }),
   burgundy: Object.freeze({
-    client: Object.freeze({ bgcolor: "#7a1f3d" }),
-    pdfFill: Object.freeze([0.478, 0.122, 0.239])
+    client: Object.freeze({ bgcolor: "#9f1239" }), // Насыщенный бордово-розовый
+    pdfFill: Object.freeze([0.624, 0.071, 0.224])
   }),
   pink: Object.freeze({
-    client: Object.freeze({ bgcolor: "#d88aa6" }),
-    pdfFill: Object.freeze([0.847, 0.541, 0.651])
+    client: Object.freeze({ bgcolor: "#ec4899" }), // Яркая фуксия
+    pdfFill: Object.freeze([0.925, 0.282, 0.600])
   }),
   yellow: Object.freeze({
-    client: Object.freeze({ bgcolor: "#d9b43b" }),
-    pdfFill: Object.freeze([0.851, 0.706, 0.231])
+    client: Object.freeze({ bgcolor: "#fbbf24" }), // Теплый лимонный/янтарный
+    pdfFill: Object.freeze([0.984, 0.749, 0.141])
   }),
   purple: Object.freeze({
-    client: Object.freeze({ bgcolor: "#8a5fbf" }),
-    pdfFill: Object.freeze([0.541, 0.373, 0.749])
+    client: Object.freeze({ bgcolor: "#8b5cf6" }), // Сочный фиолетовый
+    pdfFill: Object.freeze([0.545, 0.361, 0.965])
   }),
   orange: Object.freeze({
-    client: Object.freeze({ bgcolor: "#d97a2b" }),
-    pdfFill: Object.freeze([0.851, 0.478, 0.169])
+    client: Object.freeze({ bgcolor: "#f97316" }), // Апельсиновый
+    pdfFill: Object.freeze([0.976, 0.451, 0.086])
   }),
   denim: Object.freeze({
     client: Object.freeze({ bgcolor: "#5a78a8" }),
@@ -71,9 +71,9 @@ const COLOR_SWATCH_DEFINITIONS = Object.freeze({
   }),
   metallic: Object.freeze({
     client: Object.freeze({
-      background: "linear-gradient(135deg, #f3f4f6 0%, #cbd5e1 35%, #94a3b8 55%, #e5e7eb 100%)"
+      background: "linear-gradient(135deg, #f8fafc 0%, #cbd5e1 35%, #94a3b8 55%, #f1f5f9 100%)"
     }),
-    pdfFill: Object.freeze([0.741, 0.765, 0.804])
+    pdfFill: Object.freeze([0.612, 0.639, 0.686]) // Fallback на серый
   }),
   multicolor: Object.freeze({
     client: Object.freeze({

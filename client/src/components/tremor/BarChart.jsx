@@ -20,6 +20,7 @@ function BarChart({
   activeValues = []
 }) {
   const hasSelection = activeValues.length > 0;
+  const activeLabels = new Set(data.filter((row) => row.isActive).map((row) => row[index]));
 
   return (
     <Box
@@ -67,8 +68,9 @@ function BarChart({
                   y={0}
                   dy={12}
                   textAnchor="end"
-                  fill="#475467"
+                  fill={hasSelection && activeLabels.has(payload.value) ? "#000000" : "#475467"}
                   fontSize={11}
+                  fontWeight={hasSelection && activeLabels.has(payload.value) ? 900 : 400}
                   transform="rotate(-42)"
                 >
                   {payload.value}
@@ -109,7 +111,7 @@ function BarChart({
               <Cell
                 key={row.rawValue}
                 fill={row.color}
-                fillOpacity={hasSelection ? (row.isActive ? 1 : 0.46) : 0.96}
+                fillOpacity={hasSelection ? (row.isActive ? 1 : 0.46) : 1}
                 stroke={row.isActive ? "rgba(0,0,0,0.42)" : "rgba(0,0,0,0.22)"}
                 strokeWidth={1}
                 style={{
