@@ -57,8 +57,7 @@ const ru = {
       office: "Офис",
       brunch_in_the_city: "Бранч в городе",
       date_night: "Свидание",
-      "school_drop-off": "Отвезти ребенка в школу",
-      weekend_with_family: "Выходные с семьей"
+      everyday_errands: "Повседневные дела"
     },
     seasons: {
       winter: "Зима",

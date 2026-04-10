@@ -82,8 +82,7 @@ const FALLBACK_OCCASION_OPTIONS = [
   "office",
   "brunch_in_the_city",
   "date_night",
-  "school_drop-off",
-  "weekend_with_family"
+  "everyday_errands"
 ];
 
 const FALLBACK_SEASON_OPTIONS = ["spring", "summer", "autumn", "winter"];

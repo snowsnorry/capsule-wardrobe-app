@@ -57,8 +57,7 @@ const en = {
       office: "Office",
       brunch_in_the_city: "Brunch in the city",
       date_night: "Date night",
-      "school_drop-off": "School drop-off",
-      weekend_with_family: "Weekend with family"
+      everyday_errands: "Everyday errands"
     },
     seasons: {
       winter: "Winter",

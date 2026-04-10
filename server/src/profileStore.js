@@ -43,9 +43,21 @@ const PROFILE_OCCASION_OPTIONS = [
   "office",
   "brunch_in_the_city",
   "date_night",
-  "school_drop-off",
-  "weekend_with_family"
+  "everyday_errands"
 ];
+
+function normalizeOccasion(value) {
+  const occasion = normalizeStyleValue(value);
+  return PROFILE_OCCASION_OPTIONS.includes(occasion) ? occasion : null;
+}
+
+function normalizeOccasionList(values) {
+  if (!Array.isArray(values)) {
+    return [];
+  }
+
+  return [...new Set(values.map((value) => normalizeOccasion(value)).filter(Boolean))];
+}
 
 const PROFILE_SEASON_OPTIONS = ["spring", "summer", "autumn", "winter"];
 
@@ -223,6 +235,8 @@ export {
   normalizeProfileRecord,
   normalizeFormalityLevel,
   normalizeStyle,
+  normalizeOccasion,
+  normalizeOccasionList,
   normalizeAccentColor as normalizeColor,
   PROFILE_FORMALITY_LEVEL_OPTIONS,
   PROFILE_STYLE_OPTIONS,

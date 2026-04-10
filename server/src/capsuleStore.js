@@ -11,7 +11,7 @@ import {
   updateCapsuleSnapshotByIdForEmail,
   updateProfileActiveCapsuleIdByEmail
 } from "./db.js";
-import { getProfile } from "./profileStore.js";
+import { getProfile, normalizeOccasionList } from "./profileStore.js";
 
 const DEFAULT_CAPSULE_NAME = "<New capsule>";
 
@@ -59,7 +59,7 @@ function normalizeCapsuleFilters(filters = null) {
   return {
     formalityLevel: typeof filters.formalityLevel === "string" ? filters.formalityLevel : "",
     style: typeof filters.style === "string" ? filters.style : null,
-    occasions: Array.isArray(filters.occasions) ? filters.occasions.filter(Boolean) : [],
+    occasions: normalizeOccasionList(filters.occasions),
     season: Array.isArray(filters.season) ? filters.season.filter(Boolean) : [],
     audience: typeof filters.audience === "string" ? filters.audience : "",
     color: typeof filters.color === "string" ? filters.color : null,
@@ -295,6 +295,7 @@ export {
   getCapsule,
   getEffectiveCapsuleSnapshot,
   listRecentCapsules,
+  normalizeCapsuleFilters,
   normalizeCapsuleRecord,
   normalizeCapsuleSnapshot,
   resolveActiveCapsule,

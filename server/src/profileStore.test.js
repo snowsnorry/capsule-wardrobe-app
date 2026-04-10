@@ -9,6 +9,8 @@ import {
   normalizeProfileRecord,
   normalizeFormalityLevel,
   normalizeStyle,
+  normalizeOccasion,
+  normalizeOccasionList,
   normalizeColor,
   getAudienceOptions,
   getOccasions,
@@ -30,6 +32,19 @@ test("normalizeColor keeps only allowed accent colors", () => {
   assert.equal(normalizeColor(" Red "), "red");
   assert.equal(normalizeColor("ultraviolet"), null);
   assert.equal(normalizeColor(""), null);
+});
+
+test("normalizeOccasion keeps only supported profile occasions", () => {
+  assert.equal(normalizeOccasion(" everyday_errands "), "everyday_errands");
+  assert.equal(normalizeOccasion("school_drop-off"), null);
+  assert.equal(normalizeOccasion("weekend_with_family"), null);
+});
+
+test("normalizeOccasionList keeps supported profile occasions in first-seen order", () => {
+  assert.deepEqual(
+    normalizeOccasionList(["office", "school_drop-off", "everyday_errands", "office", "weekend_with_family"]),
+    ["office", "everyday_errands"]
+  );
 });
 
 test("getAudienceOptions returns supported profile audiences", () => {
