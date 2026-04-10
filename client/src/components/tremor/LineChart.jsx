@@ -2,7 +2,8 @@ import { Box } from "@mui/material";
 import {
   CartesianGrid,
   Line,
-  LineChart as RechartsLineChart,
+  Area,
+  AreaChart as RechartsLineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -33,7 +34,7 @@ function LineChart({ data, index, category, valueFormatter, labelFormatter }) {
             height={58}
             tick={{ fontSize: 11, fill: "#667085" }}
           />
-          <YAxis hide />
+          <YAxis  width="auto" tick={{ fontSize: 11, fill: "#667085" }} />
           <Tooltip
             formatter={(value, _name, item) => [
               valueFormatter(Number(value || 0)),
@@ -44,13 +45,14 @@ function LineChart({ data, index, category, valueFormatter, labelFormatter }) {
             itemStyle={tooltipTextStyle}
             labelStyle={tooltipTextStyle}
           />
-          <Line
+          <Area
             type="monotone"
             dataKey={category}
-            stroke="#8f6f45"
-            strokeWidth={2.5}
+            stroke="#8884d8"
+            fill="#8884d8"
+            strokeWidth={1}
             dot={false}
-            activeDot={{ r: 5, stroke: "#ffffff", strokeWidth: 2, fill: "#8f6f45" }}
+            activeDot={{ r: 5, stroke: "#ffffff", strokeWidth: 2, fill: "#8884d8" }}
             isAnimationActive
             animationDuration={320}
           />
