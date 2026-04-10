@@ -901,10 +901,7 @@ async function searchProductStats({
   closureType = []
 }) {
   const sql = getSqlClient();
-  const embeddingVector = Array.isArray(queryEmbedding) && queryEmbedding.length > 0
-    ? `[${queryEmbedding.join(",")}]`
-    : null;
-  const priceBucketCount = 24;
+  const priceBucketCount = 100;
 
   const [countRow, brandRows, categoryRows, seasonRows, audienceRows, formalityRows, styleRows, occasionRows, colorRows, patternRows, silhouetteRows, fitRows, closureTypeRows, priceRows] = await Promise.all([
     sql`
@@ -1202,6 +1199,8 @@ async function searchProductStats({
         from products
         where
           (cardinality(${brand}::text[]) = 0 or lower(coalesce(brand, '')) = any(${brand}::text[]))
+          and (${priceMin}::double precision is null or price >= ${priceMin})
+          and (${priceMax}::double precision is null or price <= ${priceMax})
           and (cardinality(${audience}::text[]) = 0 or lower(coalesce(audience, '')) = any(${audience}::text[]))
           and (cardinality(${category}::text[]) = 0 or lower(coalesce(category, '')) = any(${category}::text[]))
           and (cardinality(${season}::text[]) = 0 or coalesce(season, array[]::text[]) && ${season}::text[])
@@ -1244,7 +1243,7 @@ async function searchProductStats({
   ]);
 
   return {
-    total: Number(countRow?.total || 0),
+    total: Number(countRow?.[0]?.total || 0),
     stats: {
       brand: normalizeFacetRows(brandRows),
       category: normalizeFacetRows(categoryRows),

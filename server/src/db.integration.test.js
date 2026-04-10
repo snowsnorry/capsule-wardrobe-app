@@ -13,6 +13,7 @@ import {
   getSearchByEmail,
   upsertSearchByEmail,
   searchProducts,
+  searchProductStats,
   createProfileRecord,
   updateProfileByEmail,
   updateProfileLocaleByEmail,
@@ -234,6 +235,44 @@ test("db integration shapes search persistence and searchProducts queries", asyn
   assert.equal(calls[2].values.some((value) => value === 0.35), true);
   assert.match(calls[3].text, /case[\s\S]*embedding <=>[\s\S]*as distance/i);
   assert.equal(calls[3].values.filter((value) => value === 50).length >= 2, true);
+});
+
+test("db integration applies price range to product stats price buckets", async () => {
+  const handlers = [
+    [{ total: 1 }],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [{ bucket: 1, count: 1, rangeMin: 20, rangeMax: 80 }]
+  ];
+  const { sql, calls } = createSqlMock(handlers);
+  setSqlClientOverride(sql);
+
+  const stats = await searchProductStats({
+    priceMin: 20,
+    priceMax: 80
+  });
+
+  const priceBucketQuery = calls.at(-1);
+  assert.equal(stats.total, 1);
+  assert.equal(stats.priceBuckets.length, 24);
+  assert.deepEqual(stats.priceBuckets[0], { key: "20:22.5", min: 20, max: 22.5, count: 1 });
+  assert.deepEqual(stats.priceBuckets.at(-1), { key: "77.5:80", min: 77.5, max: 80, count: 0 });
+  assert.match(priceBucketQuery.text, /with filtered as/i);
+  assert.match(priceBucketQuery.text, /price >=/i);
+  assert.match(priceBucketQuery.text, /price <=/i);
+  assert.equal(priceBucketQuery.values.includes(20), true);
+  assert.equal(priceBucketQuery.values.includes(80), true);
+  assert.equal(calls.length, 14);
 });
 
 test("db integration shapes reduced profile persistence queries", async () => {
