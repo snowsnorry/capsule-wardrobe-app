@@ -641,6 +641,19 @@ describe("App", () => {
     expect(await screen.findByTestId("statistics-screen")).toBeInTheDocument();
   });
 
+  test("opens statistics on direct statistics route after session bootstrap", async () => {
+    window.history.replaceState({}, "", "/statistics");
+    authApi.fetchCurrentUser.mockResolvedValue({ user: { email: "person@example.com" } });
+    authApi.fetchProfileStatus.mockResolvedValue({ hasProfile: true });
+    authApi.updateProfileLocale.mockResolvedValue({});
+    capsulesApi.fetchCapsuleBootstrap.mockResolvedValue(createBootstrapResponse({ items: [], locale: "en" }));
+    mockProfileOptions();
+
+    renderApp();
+
+    expect(await screen.findByTestId("statistics-screen")).toBeInTheDocument();
+  });
+
   test("normalizes a legacy null pattern from bootstrap to solid in UI state", async () => {
     authApi.fetchCurrentUser.mockResolvedValue({ user: { email: "person@example.com" } });
     authApi.fetchProfileStatus.mockResolvedValue({ hasProfile: true });

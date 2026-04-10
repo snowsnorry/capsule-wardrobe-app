@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Alert, Box, Button, Container, CssBaseline, Paper, Snackbar, Stack, ThemeProvider, Typography, useMediaQuery } from "@mui/material";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Alert, Box, Button, Container, CssBaseline, LinearProgress, Paper, Snackbar, Stack, ThemeProvider, Typography, useMediaQuery } from "@mui/material";
 import {
   fetchCurrentUser,
   fetchProfileStatus,
@@ -33,17 +33,18 @@ import {
   regenerateSelectedWardrobeItems as requestSelectedWardrobeRegeneration,
   subscribeCapsuleEvents
 } from "./api/wardrobe.js";
-import MainScreen from "./screens/MainScreen.jsx";
-import OnboardingScreen from "./screens/OnboardingScreen.jsx";
-import ProfileScreen from "./screens/ProfileScreen.jsx";
 import SignInScreen from "./screens/SignInScreen.jsx";
-import SearchScreen from "./screens/SearchScreen.jsx";
-import StatisticsScreen from "./screens/StatisticsScreen.jsx";
 import { useI18n } from "./i18n/useI18n.js";
 import { ACCENT_COLOR_OPTIONS } from "../../shared/accentColors.js";
 import { sortWardrobeItems } from "../../shared/wardrobeOrder.js";
 import { createAppTheme } from "./theme.js";
 import { DEFAULT_PROFILE_LLM, DEFAULT_PROFILE_THEME } from "../../shared/profileSettings.js";
+
+const MainScreen = lazy(() => import("./screens/MainScreen.jsx"));
+const OnboardingScreen = lazy(() => import("./screens/OnboardingScreen.jsx"));
+const ProfileScreen = lazy(() => import("./screens/ProfileScreen.jsx"));
+const SearchScreen = lazy(() => import("./screens/SearchScreen.jsx"));
+const StatisticsScreen = lazy(() => import("./screens/StatisticsScreen.jsx"));
 
 const initialStatus = {
   loading: false,
@@ -55,6 +56,22 @@ const initialStatus = {
 const initialNotificationPrompt = {
   open: false
 };
+
+function RoutePanelFallback() {
+  return (
+    <Box
+      sx={{
+        height: "100%",
+        minHeight: 0,
+        display: "flex",
+        alignItems: "center",
+        px: { xs: 3, md: 4 }
+      }}
+    >
+      <LinearProgress aria-label="Loading section" sx={{ width: "100%" }} />
+    </Box>
+  );
+}
 
 const FALLBACK_STYLE_OPTIONS = {
   core: ["casual", "smart_casual", "formal"],
@@ -1613,7 +1630,9 @@ function App() {
               overflow: "hidden"
             }}
           >
-            {renderRightPanel()}
+            <Suspense fallback={<RoutePanelFallback />}>
+              {renderRightPanel()}
+            </Suspense>
           </Box>
         ) : (
           <Paper
@@ -1640,7 +1659,9 @@ function App() {
                 touchAction: "pan-y"
               }}
             >
-              {renderRightPanel()}
+              <Suspense fallback={<RoutePanelFallback />}>
+                {renderRightPanel()}
+              </Suspense>
             </Box>
           </Paper>
         )}

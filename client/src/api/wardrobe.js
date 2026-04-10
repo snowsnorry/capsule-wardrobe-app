@@ -1,9 +1,19 @@
-import { fetchEventSource } from "@microsoft/fetch-event-source";
 import { API_BASE_URL } from "./config.js";
 import { requestJson } from "./request.js";
 
 class RetriableError extends Error {}
 class FatalError extends Error {}
+
+let fetchEventSourcePromise = null;
+
+function loadFetchEventSource() {
+  if (!fetchEventSourcePromise) {
+    fetchEventSourcePromise = import("@microsoft/fetch-event-source")
+      .then((module) => module.fetchEventSource);
+  }
+
+  return fetchEventSourcePromise;
+}
 
 function parseEventPayload(data) {
   if (typeof data !== "string" || data.trim().length === 0) {
@@ -24,6 +34,7 @@ async function subscribeCapsuleEvents({
   onError = () => {}
 } = {}) {
   const normalizedCapsuleId = String(capsuleId || "").trim();
+  const fetchEventSource = await loadFetchEventSource();
   return fetchEventSource(`${API_BASE_URL}/capsules/${normalizedCapsuleId}/events`, {
     credentials: "include",
     signal,
