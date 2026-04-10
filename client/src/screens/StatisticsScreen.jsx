@@ -13,7 +13,7 @@ import {
 } from "@mui/material";
 import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
 import TuneRoundedIcon from "@mui/icons-material/TuneRounded";
-import { fetchSavedSearch, fetchSearchOptions, fetchSearchStats } from "../api/search.js";
+import { fetchSearchOptions, fetchSearchStats } from "../api/search.js";
 import AppLauncher from "../components/AppLauncher.jsx";
 import LocaleSwitcher from "../components/LocaleSwitcher.jsx";
 import AppSidebarShell from "../components/AppSidebarShell.jsx";
@@ -74,9 +74,15 @@ function buildInitialStatsState() {
   return {
     total: 0,
     stats: {},
-    priceBuckets: [],
-    appliedFilters: null
+    priceBuckets: []
   };
+}
+
+function serializeStatisticsState(state) {
+  const payload = serializeDraftState(state);
+  delete payload.query;
+  delete payload.page;
+  return payload;
 }
 
 function formatCount(locale, value) {
@@ -90,7 +96,8 @@ function formatPrice(locale, value) {
 }
 
 function formatPriceBucketLabel(locale, bucket) {
-  return `${formatPrice(locale, bucket.min)} - ${formatPrice(locale, bucket.max)}`;
+  return `${formatPrice(locale, Math.round(bucket.min + bucket.max) / 2)}`;
+  // return `${formatPrice(locale, bucket.min)} - ${formatPrice(locale, bucket.max)}`;
 }
 
 function resolveStatisticsTotal(statsState) {
@@ -183,15 +190,6 @@ function buildActiveFilterChips({ state, options, locale, t }) {
       label: `${title}: ${labelValues.join(", ")}`
     });
   };
-
-  if (state.query) {
-    chips.push({
-      key: `query:${state.query}`,
-      field: "query",
-      value: state.query,
-      label: `${t("search.title")}: ${state.query}`
-    });
-  }
 
   pushFacetChips(state.brand, t("search.filters.brand"), "brand", "brand");
   pushFacetChips(state.audience, t("profile.audienceTitle"), "audience", "audience");
@@ -413,7 +411,7 @@ function PriceLineChart({ title, subtitle, buckets, locale }) {
   const chartData = buckets.map((bucket) => ({
     ...bucket,
     label: formatPriceBucketLabel(locale, bucket),
-    shortLabel: `${formatPrice(locale, bucket.min)}-${formatPrice(locale, bucket.max)}`
+    shortLabel: `${formatPrice(locale, Math.round(bucket.min + bucket.max) / 2)}`
   }));
 
   return (
@@ -484,27 +482,23 @@ function StatisticsScreen({
     const bootstrap = async () => {
       setStatus({ loading: true, error: "" });
       try {
-        const [optionsResponse, savedResponse] = await Promise.all([
-          fetchSearchOptions({ force: true }),
-          fetchSavedSearch({ force: true })
-        ]);
+        const optionsResponse = await fetchSearchOptions({ force: true });
         if (!isActive) {
           return;
         }
 
         const nextOptions = buildSearchOptionsPayload(optionsResponse);
-        const nextState = createSearchState(savedResponse.search, nextOptions.priceRange);
+        const nextState = createSearchState(null, nextOptions.priceRange);
         setOptions(nextOptions);
         setDraftState(nextState);
-        const result = await fetchSearchStats(serializeDraftState(nextState));
+        const result = await fetchSearchStats(serializeStatisticsState(nextState));
         if (!isActive) {
           return;
         }
         setStatsState({
           total: Number(result.total || 0),
           stats: result.stats || {},
-          priceBuckets: result.priceBuckets || [],
-          appliedFilters: result.appliedFilters || null
+          priceBuckets: result.priceBuckets || []
         });
         setStatus({ loading: false, error: "" });
       } catch {
@@ -524,12 +518,11 @@ function StatisticsScreen({
   const performStatsRefresh = async (nextState) => {
     setStatus({ loading: true, error: "" });
     try {
-      const result = await fetchSearchStats(serializeDraftState(nextState));
+      const result = await fetchSearchStats(serializeStatisticsState(nextState));
       setStatsState({
         total: Number(result.total || 0),
         stats: result.stats || {},
-        priceBuckets: result.priceBuckets || [],
-        appliedFilters: result.appliedFilters || null
+        priceBuckets: result.priceBuckets || []
       });
       setStatus({ loading: false, error: "" });
     } catch {
@@ -671,10 +664,6 @@ function StatisticsScreen({
   );
 
   const handleDeleteActiveChip = (chip) => {
-    if (chip.field === "query") {
-      handleSidebarDraftStateChange((current) => ({ ...current, query: "", page: 1 }), { submit: true });
-      return;
-    }
     if (chip.field === "price") {
       handleSidebarDraftStateChange((current) => ({
         ...current,

@@ -5,7 +5,6 @@ import { ThemeProvider, createTheme } from "@mui/material/styles";
 import { LocaleProvider } from "../i18n/LocaleProvider.jsx";
 
 const searchApi = vi.hoisted(() => ({
-  fetchSavedSearch: vi.fn(),
   fetchSearchOptions: vi.fn(),
   fetchSearchStats: vi.fn()
 }));
@@ -61,30 +60,6 @@ function makeOptions() {
   };
 }
 
-function makeSavedSearch(overrides = {}) {
-  return {
-    search: {
-      query: "linen shirt",
-      brand: [],
-      priceMin: null,
-      priceMax: null,
-      audience: [],
-      category: [],
-      season: ["summer"],
-      formalityLevel: [],
-      style: [],
-      occasions: [],
-      color: [],
-      pattern: [],
-      silhouette: [],
-      fit: [],
-      closureType: [],
-      page: 1,
-      ...overrides
-    }
-  };
-}
-
 function makeStats(overrides = {}) {
   return {
     total: 120,
@@ -110,7 +85,6 @@ function makeStats(overrides = {}) {
       { key: "50:100", min: 50, max: 100, count: 45 },
       { key: "100:150", min: 100, max: 150, count: 45 }
     ],
-    appliedFilters: makeSavedSearch().search,
     ...overrides
   };
 }
@@ -138,11 +112,9 @@ function renderScreen(props = {}, { layoutMode = "medium" } = {}) {
 describe("StatisticsScreen", () => {
   beforeEach(() => {
     mediaQueryMock.mockReset();
-    searchApi.fetchSavedSearch.mockReset();
     searchApi.fetchSearchOptions.mockReset();
     searchApi.fetchSearchStats.mockReset();
     searchApi.fetchSearchOptions.mockResolvedValue(makeOptions());
-    searchApi.fetchSavedSearch.mockResolvedValue(makeSavedSearch());
     searchApi.fetchSearchStats.mockResolvedValue(makeStats());
   });
 
@@ -150,20 +122,18 @@ describe("StatisticsScreen", () => {
     cleanup();
   });
 
-  test("hydrates from saved search and fetches statistics", async () => {
+  test("hydrates statistic filters from defaults and fetches statistics", async () => {
     renderScreen();
 
     expect((await screen.findAllByText("120")).length).toBeGreaterThan(0);
     expect(searchApi.fetchSearchOptions).toHaveBeenCalledWith({ force: true });
-    expect(searchApi.fetchSavedSearch).toHaveBeenCalledWith({ force: true });
     expect(searchApi.fetchSearchStats).toHaveBeenCalledWith({
-      query: "linen shirt",
       brand: [],
       priceMin: null,
       priceMax: null,
       audience: [],
       category: [],
-      season: ["summer"],
+      season: [],
       formalityLevel: [],
       style: [],
       occasions: [],
@@ -171,8 +141,7 @@ describe("StatisticsScreen", () => {
       pattern: [],
       silhouette: [],
       fit: [],
-      closureType: [],
-      page: 1
+      closureType: []
     });
     expect(screen.getByTestId("statistics-screen-shell")).toHaveAttribute("data-sidebar-mode", "desktop-medium");
   });
@@ -186,8 +155,7 @@ describe("StatisticsScreen", () => {
 
     await waitFor(() => {
       expect(searchApi.fetchSearchStats).toHaveBeenCalledWith(expect.objectContaining({
-        category: ["top"],
-        page: 1
+        category: ["top"]
       }));
     });
   });
@@ -210,8 +178,7 @@ describe("StatisticsScreen", () => {
 
     await waitFor(() => {
       expect(searchApi.fetchSearchStats).toHaveBeenCalledWith(expect.objectContaining({
-        color: ["white"],
-        page: 1
+        color: ["white"]
       }));
     });
   });

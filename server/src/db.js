@@ -885,8 +885,6 @@ function buildPriceBuckets(rows = [], bucketCount) {
 }
 
 async function searchProductStats({
-  queryEmbedding = null,
-  semanticDistanceThreshold = null,
   brand = [],
   priceMin = null,
   priceMax = null,
@@ -927,11 +925,6 @@ async function searchProductStats({
         and (cardinality(${silhouette}::text[]) = 0 or lower(coalesce(silhouette, '')) = any(${silhouette}::text[]))
         and (cardinality(${fit}::text[]) = 0 or lower(coalesce(fit, '')) = any(${fit}::text[]))
         and (cardinality(${closureType}::text[]) = 0 or coalesce(closure_type, array[]::text[]) && ${closureType}::text[])
-        and (
-          ${embeddingVector}::text is null
-          or ${semanticDistanceThreshold}::double precision is null
-          or embedding <=> ${embeddingVector}::vector <= ${semanticDistanceThreshold}
-        )
     `,
     sql`
       select lower(coalesce(brand, '')) as value, count(*)::integer as count
@@ -950,11 +943,6 @@ async function searchProductStats({
         and (cardinality(${silhouette}::text[]) = 0 or lower(coalesce(silhouette, '')) = any(${silhouette}::text[]))
         and (cardinality(${fit}::text[]) = 0 or lower(coalesce(fit, '')) = any(${fit}::text[]))
         and (cardinality(${closureType}::text[]) = 0 or coalesce(closure_type, array[]::text[]) && ${closureType}::text[])
-        and (
-          ${embeddingVector}::text is null
-          or ${semanticDistanceThreshold}::double precision is null
-          or embedding <=> ${embeddingVector}::vector <= ${semanticDistanceThreshold}
-        )
         and coalesce(brand, '') <> ''
       group by 1
       order by count desc, value asc
@@ -976,11 +964,6 @@ async function searchProductStats({
         and (cardinality(${silhouette}::text[]) = 0 or lower(coalesce(silhouette, '')) = any(${silhouette}::text[]))
         and (cardinality(${fit}::text[]) = 0 or lower(coalesce(fit, '')) = any(${fit}::text[]))
         and (cardinality(${closureType}::text[]) = 0 or coalesce(closure_type, array[]::text[]) && ${closureType}::text[])
-        and (
-          ${embeddingVector}::text is null
-          or ${semanticDistanceThreshold}::double precision is null
-          or embedding <=> ${embeddingVector}::vector <= ${semanticDistanceThreshold}
-        )
         and coalesce(category, '') <> ''
       group by 1
       order by count desc, value asc
@@ -1004,11 +987,6 @@ async function searchProductStats({
           and (cardinality(${silhouette}::text[]) = 0 or lower(coalesce(silhouette, '')) = any(${silhouette}::text[]))
           and (cardinality(${fit}::text[]) = 0 or lower(coalesce(fit, '')) = any(${fit}::text[]))
           and (cardinality(${closureType}::text[]) = 0 or coalesce(closure_type, array[]::text[]) && ${closureType}::text[])
-          and (
-            ${embeddingVector}::text is null
-            or ${semanticDistanceThreshold}::double precision is null
-            or embedding <=> ${embeddingVector}::vector <= ${semanticDistanceThreshold}
-          )
       ) values_table
       where value <> ''
       group by 1
@@ -1031,11 +1009,6 @@ async function searchProductStats({
         and (cardinality(${silhouette}::text[]) = 0 or lower(coalesce(silhouette, '')) = any(${silhouette}::text[]))
         and (cardinality(${fit}::text[]) = 0 or lower(coalesce(fit, '')) = any(${fit}::text[]))
         and (cardinality(${closureType}::text[]) = 0 or coalesce(closure_type, array[]::text[]) && ${closureType}::text[])
-        and (
-          ${embeddingVector}::text is null
-          or ${semanticDistanceThreshold}::double precision is null
-          or embedding <=> ${embeddingVector}::vector <= ${semanticDistanceThreshold}
-        )
         and coalesce(audience, '') <> ''
       group by 1
       order by count desc, value asc
@@ -1059,11 +1032,6 @@ async function searchProductStats({
           and (cardinality(${silhouette}::text[]) = 0 or lower(coalesce(silhouette, '')) = any(${silhouette}::text[]))
           and (cardinality(${fit}::text[]) = 0 or lower(coalesce(fit, '')) = any(${fit}::text[]))
           and (cardinality(${closureType}::text[]) = 0 or coalesce(closure_type, array[]::text[]) && ${closureType}::text[])
-          and (
-            ${embeddingVector}::text is null
-            or ${semanticDistanceThreshold}::double precision is null
-            or embedding <=> ${embeddingVector}::vector <= ${semanticDistanceThreshold}
-          )
       ) values_table
       where value <> ''
       group by 1
@@ -1088,11 +1056,6 @@ async function searchProductStats({
           and (cardinality(${silhouette}::text[]) = 0 or lower(coalesce(silhouette, '')) = any(${silhouette}::text[]))
           and (cardinality(${fit}::text[]) = 0 or lower(coalesce(fit, '')) = any(${fit}::text[]))
           and (cardinality(${closureType}::text[]) = 0 or coalesce(closure_type, array[]::text[]) && ${closureType}::text[])
-          and (
-            ${embeddingVector}::text is null
-            or ${semanticDistanceThreshold}::double precision is null
-            or embedding <=> ${embeddingVector}::vector <= ${semanticDistanceThreshold}
-          )
       ) values_table
       where value <> ''
       group by 1
@@ -1117,11 +1080,6 @@ async function searchProductStats({
           and (cardinality(${silhouette}::text[]) = 0 or lower(coalesce(silhouette, '')) = any(${silhouette}::text[]))
           and (cardinality(${fit}::text[]) = 0 or lower(coalesce(fit, '')) = any(${fit}::text[]))
           and (cardinality(${closureType}::text[]) = 0 or coalesce(closure_type, array[]::text[]) && ${closureType}::text[])
-          and (
-            ${embeddingVector}::text is null
-            or ${semanticDistanceThreshold}::double precision is null
-            or embedding <=> ${embeddingVector}::vector <= ${semanticDistanceThreshold}
-          )
       ) values_table
       where value <> ''
       group by 1
@@ -1146,11 +1104,6 @@ async function searchProductStats({
           and (cardinality(${silhouette}::text[]) = 0 or lower(coalesce(silhouette, '')) = any(${silhouette}::text[]))
           and (cardinality(${fit}::text[]) = 0 or lower(coalesce(fit, '')) = any(${fit}::text[]))
           and (cardinality(${closureType}::text[]) = 0 or coalesce(closure_type, array[]::text[]) && ${closureType}::text[])
-          and (
-            ${embeddingVector}::text is null
-            or ${semanticDistanceThreshold}::double precision is null
-            or embedding <=> ${embeddingVector}::vector <= ${semanticDistanceThreshold}
-          )
       ) values_table
       where value <> ''
       group by 1
@@ -1173,11 +1126,6 @@ async function searchProductStats({
         and (cardinality(${silhouette}::text[]) = 0 or lower(coalesce(silhouette, '')) = any(${silhouette}::text[]))
         and (cardinality(${fit}::text[]) = 0 or lower(coalesce(fit, '')) = any(${fit}::text[]))
         and (cardinality(${closureType}::text[]) = 0 or coalesce(closure_type, array[]::text[]) && ${closureType}::text[])
-        and (
-          ${embeddingVector}::text is null
-          or ${semanticDistanceThreshold}::double precision is null
-          or embedding <=> ${embeddingVector}::vector <= ${semanticDistanceThreshold}
-        )
         and coalesce(pattern, '') <> ''
       group by 1
       order by count desc, value asc
@@ -1199,11 +1147,6 @@ async function searchProductStats({
         and (cardinality(${pattern}::text[]) = 0 or lower(coalesce(pattern, '')) = any(${pattern}::text[]))
         and (cardinality(${fit}::text[]) = 0 or lower(coalesce(fit, '')) = any(${fit}::text[]))
         and (cardinality(${closureType}::text[]) = 0 or coalesce(closure_type, array[]::text[]) && ${closureType}::text[])
-        and (
-          ${embeddingVector}::text is null
-          or ${semanticDistanceThreshold}::double precision is null
-          or embedding <=> ${embeddingVector}::vector <= ${semanticDistanceThreshold}
-        )
         and coalesce(silhouette, '') <> ''
       group by 1
       order by count desc, value asc
@@ -1225,11 +1168,6 @@ async function searchProductStats({
         and (cardinality(${pattern}::text[]) = 0 or lower(coalesce(pattern, '')) = any(${pattern}::text[]))
         and (cardinality(${silhouette}::text[]) = 0 or lower(coalesce(silhouette, '')) = any(${silhouette}::text[]))
         and (cardinality(${closureType}::text[]) = 0 or coalesce(closure_type, array[]::text[]) && ${closureType}::text[])
-        and (
-          ${embeddingVector}::text is null
-          or ${semanticDistanceThreshold}::double precision is null
-          or embedding <=> ${embeddingVector}::vector <= ${semanticDistanceThreshold}
-        )
         and coalesce(fit, '') <> ''
       group by 1
       order by count desc, value asc
@@ -1253,11 +1191,6 @@ async function searchProductStats({
           and (cardinality(${pattern}::text[]) = 0 or lower(coalesce(pattern, '')) = any(${pattern}::text[]))
           and (cardinality(${silhouette}::text[]) = 0 or lower(coalesce(silhouette, '')) = any(${silhouette}::text[]))
           and (cardinality(${fit}::text[]) = 0 or lower(coalesce(fit, '')) = any(${fit}::text[]))
-          and (
-            ${embeddingVector}::text is null
-            or ${semanticDistanceThreshold}::double precision is null
-            or embedding <=> ${embeddingVector}::vector <= ${semanticDistanceThreshold}
-          )
       ) values_table
       where value <> ''
       group by 1
@@ -1280,11 +1213,6 @@ async function searchProductStats({
           and (cardinality(${silhouette}::text[]) = 0 or lower(coalesce(silhouette, '')) = any(${silhouette}::text[]))
           and (cardinality(${fit}::text[]) = 0 or lower(coalesce(fit, '')) = any(${fit}::text[]))
           and (cardinality(${closureType}::text[]) = 0 or coalesce(closure_type, array[]::text[]) && ${closureType}::text[])
-          and (
-            ${embeddingVector}::text is null
-            or ${semanticDistanceThreshold}::double precision is null
-            or embedding <=> ${embeddingVector}::vector <= ${semanticDistanceThreshold}
-          )
           and price is not null
       ),
       bounds as (

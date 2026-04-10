@@ -104,7 +104,6 @@ describe("search api", () => {
 
   test("fetchSearchStats posts serialized payload to the authenticated statistics endpoint", async () => {
     const payload = {
-      query: "linen shirt",
       category: ["top"]
     };
 

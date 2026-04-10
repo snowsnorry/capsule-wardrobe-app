@@ -106,7 +106,7 @@ function createDependencies(overrides = {}) {
     setActiveCapsuleIdImpl: async () => ({ activeCapsuleId: "capsule-1" }),
     getSearchOptionsImpl: async () => ({ brands: [{ value: "zara", label: "Zara" }] }),
     getSavedSearchImpl: async () => ({ query: "coat", page: 1 }),
-    getSearchStatsImpl: async (_email, payload) => ({ total: 3, stats: { category: [{ value: "top", count: 3 }] }, priceBuckets: [], appliedFilters: payload }),
+    getSearchStatsImpl: async () => ({ total: 3, stats: { category: [{ value: "top", count: 3 }] }, priceBuckets: [] }),
     runSavedSearchImpl: async (_email, payload) => ({ items: [{ id: "1" }], total: 1, search: payload }),
     streamCapsuleEventsImpl: async (_req, res, { snapshot }) => res.json({ ok: true, snapshot }),
     regenerateCapsuleWardrobeHandler: async (_req, res) => res.status(202).json({ ok: true, status: "pending", items: [] }),
@@ -678,15 +678,14 @@ test("index routes cover wardrobe handlers and search endpoints", async (t) => {
     origin: TEST_CLIENT_ORIGIN,
     cookie: AUTH_COOKIE,
     csrfToken: CSRF_TOKEN,
-    body: { query: "coat", category: ["top"] }
+    body: { category: ["top"] }
   });
   assert.equal(searchStats.response.status, 200);
   assert.deepEqual(searchStats.json, {
     ok: true,
     total: 3,
     stats: { category: [{ value: "top", count: 3 }] },
-    priceBuckets: [],
-    appliedFilters: { query: "coat", category: ["top"] }
+    priceBuckets: []
   });
 
   const wardrobe = await requestJson(baseUrl, "/capsules/capsule-1/events", {

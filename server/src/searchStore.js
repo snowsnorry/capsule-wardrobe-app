@@ -309,42 +309,10 @@ async function runSavedSearch(email, payload = {}) {
 
 async function getSearchStats(email, payload = {}) {
   const normalized = normalizeSearchPayload(payload);
-  const [options, currentSearch] = await Promise.all([
-    getSearchOptions(email),
-    getSearchByEmail(email)
-  ]);
+  const options = await getSearchOptions(email);
   assertValidSearchPayload(normalized, options);
 
-  const embedding = await resolveSearchEmbedding({
-    currentSearch,
-    query: normalized.query
-  });
-  const semanticDistanceThreshold = getSemanticDistanceThreshold(normalized.query);
-
-  const savedSearch = await upsertSearchByEmail({
-    email,
-    ...normalized,
-    embedding
-  });
-
-  let stats = await searchProductStats({
-    ...normalized,
-    queryEmbedding: embedding,
-    semanticDistanceThreshold
-  });
-
-  if (normalized.query && stats.total === 0) {
-    stats = await searchProductStats({
-      ...normalized,
-      queryEmbedding: embedding,
-      semanticDistanceThreshold: getRelaxedSemanticDistanceThreshold(normalized.query)
-    });
-  }
-
-  return {
-    ...stats,
-    appliedFilters: serializeSearchRow(savedSearch)
-  };
+  return searchProductStats(normalized);
 }
 
 export {
