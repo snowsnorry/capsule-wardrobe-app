@@ -812,6 +812,529 @@ async function searchProducts({
   };
 }
 
+function normalizeFacetRows(rows = []) {
+  return rows
+    .map((row) => ({
+      value: String(row?.value || "").trim().toLowerCase(),
+      count: Number(row?.count || 0)
+    }))
+    .filter((row) => row.value && row.count > 0);
+}
+
+function buildPriceBuckets(rows = [], bucketCount) {
+  const normalizedRows = rows
+    .map((row) => {
+      const bucket = Number(row?.bucket || 0);
+      const count = Number(row?.count || 0);
+      const rangeMin = Number(row?.rangeMin);
+      const rangeMax = Number(row?.rangeMax);
+
+      if (
+        !Number.isInteger(bucket) ||
+        bucket <= 0 ||
+        count < 0 ||
+        !Number.isFinite(rangeMin) ||
+        !Number.isFinite(rangeMax)
+      ) {
+        return null;
+      }
+
+      if (rangeMin === rangeMax) {
+        return {
+          key: `${rangeMin}:${rangeMax}`,
+          min: rangeMin,
+          max: rangeMax,
+          count
+        };
+      }
+
+      return {
+        bucket,
+        rangeMin,
+        rangeMax,
+        count
+      };
+    })
+    .filter(Boolean);
+
+  if (normalizedRows.length === 0) {
+    return [];
+  }
+
+  const firstRow = normalizedRows[0];
+  if (firstRow.min !== undefined && firstRow.max !== undefined) {
+    return firstRow ? [{ key: `${firstRow.min}:${firstRow.max}`, min: firstRow.min, max: firstRow.max, count: firstRow.count }] : [];
+  }
+
+  const { rangeMin, rangeMax } = firstRow;
+  const countByBucket = new Map(normalizedRows.map((row) => [row.bucket, row.count]));
+  const step = (rangeMax - rangeMin) / bucketCount;
+
+  return Array.from({ length: bucketCount }, (_, index) => {
+    const bucket = index + 1;
+    const min = rangeMin + step * index;
+    const max = bucket === bucketCount ? rangeMax : rangeMin + step * bucket;
+
+    return {
+      key: `${min}:${max}`,
+      min,
+      max,
+      count: countByBucket.get(bucket) || 0
+    };
+  });
+}
+
+async function searchProductStats({
+  queryEmbedding = null,
+  semanticDistanceThreshold = null,
+  brand = [],
+  priceMin = null,
+  priceMax = null,
+  audience = [],
+  category = [],
+  season = [],
+  formalityLevel = [],
+  style = [],
+  occasions = [],
+  color = [],
+  pattern = [],
+  silhouette = [],
+  fit = [],
+  closureType = []
+}) {
+  const sql = getSqlClient();
+  const embeddingVector = Array.isArray(queryEmbedding) && queryEmbedding.length > 0
+    ? `[${queryEmbedding.join(",")}]`
+    : null;
+  const priceBucketCount = 24;
+
+  const [countRow, brandRows, categoryRows, seasonRows, audienceRows, formalityRows, styleRows, occasionRows, colorRows, patternRows, silhouetteRows, fitRows, closureTypeRows, priceRows] = await Promise.all([
+    sql`
+      select count(*)::integer as total
+      from products
+      where
+        (cardinality(${brand}::text[]) = 0 or lower(coalesce(brand, '')) = any(${brand}::text[]))
+        and (${priceMin}::double precision is null or price >= ${priceMin})
+        and (${priceMax}::double precision is null or price <= ${priceMax})
+        and (cardinality(${audience}::text[]) = 0 or lower(coalesce(audience, '')) = any(${audience}::text[]))
+        and (cardinality(${category}::text[]) = 0 or lower(coalesce(category, '')) = any(${category}::text[]))
+        and (cardinality(${season}::text[]) = 0 or coalesce(season, array[]::text[]) && ${season}::text[])
+        and (cardinality(${formalityLevel}::text[]) = 0 or coalesce(formality_level, array[]::text[]) && ${formalityLevel}::text[])
+        and (cardinality(${style}::text[]) = 0 or coalesce(style, array[]::text[]) && ${style}::text[])
+        and (cardinality(${occasions}::text[]) = 0 or coalesce(occasions, array[]::text[]) && ${occasions}::text[])
+        and (cardinality(${color}::text[]) = 0 or coalesce(color_base, array[]::text[]) && ${color}::text[])
+        and (cardinality(${pattern}::text[]) = 0 or lower(coalesce(pattern, '')) = any(${pattern}::text[]))
+        and (cardinality(${silhouette}::text[]) = 0 or lower(coalesce(silhouette, '')) = any(${silhouette}::text[]))
+        and (cardinality(${fit}::text[]) = 0 or lower(coalesce(fit, '')) = any(${fit}::text[]))
+        and (cardinality(${closureType}::text[]) = 0 or coalesce(closure_type, array[]::text[]) && ${closureType}::text[])
+        and (
+          ${embeddingVector}::text is null
+          or ${semanticDistanceThreshold}::double precision is null
+          or embedding <=> ${embeddingVector}::vector <= ${semanticDistanceThreshold}
+        )
+    `,
+    sql`
+      select lower(coalesce(brand, '')) as value, count(*)::integer as count
+      from products
+      where
+        (${priceMin}::double precision is null or price >= ${priceMin})
+        and (${priceMax}::double precision is null or price <= ${priceMax})
+        and (cardinality(${audience}::text[]) = 0 or lower(coalesce(audience, '')) = any(${audience}::text[]))
+        and (cardinality(${category}::text[]) = 0 or lower(coalesce(category, '')) = any(${category}::text[]))
+        and (cardinality(${season}::text[]) = 0 or coalesce(season, array[]::text[]) && ${season}::text[])
+        and (cardinality(${formalityLevel}::text[]) = 0 or coalesce(formality_level, array[]::text[]) && ${formalityLevel}::text[])
+        and (cardinality(${style}::text[]) = 0 or coalesce(style, array[]::text[]) && ${style}::text[])
+        and (cardinality(${occasions}::text[]) = 0 or coalesce(occasions, array[]::text[]) && ${occasions}::text[])
+        and (cardinality(${color}::text[]) = 0 or coalesce(color_base, array[]::text[]) && ${color}::text[])
+        and (cardinality(${pattern}::text[]) = 0 or lower(coalesce(pattern, '')) = any(${pattern}::text[]))
+        and (cardinality(${silhouette}::text[]) = 0 or lower(coalesce(silhouette, '')) = any(${silhouette}::text[]))
+        and (cardinality(${fit}::text[]) = 0 or lower(coalesce(fit, '')) = any(${fit}::text[]))
+        and (cardinality(${closureType}::text[]) = 0 or coalesce(closure_type, array[]::text[]) && ${closureType}::text[])
+        and (
+          ${embeddingVector}::text is null
+          or ${semanticDistanceThreshold}::double precision is null
+          or embedding <=> ${embeddingVector}::vector <= ${semanticDistanceThreshold}
+        )
+        and coalesce(brand, '') <> ''
+      group by 1
+      order by count desc, value asc
+    `,
+    sql`
+      select lower(coalesce(category, '')) as value, count(*)::integer as count
+      from products
+      where
+        (cardinality(${brand}::text[]) = 0 or lower(coalesce(brand, '')) = any(${brand}::text[]))
+        and (${priceMin}::double precision is null or price >= ${priceMin})
+        and (${priceMax}::double precision is null or price <= ${priceMax})
+        and (cardinality(${audience}::text[]) = 0 or lower(coalesce(audience, '')) = any(${audience}::text[]))
+        and (cardinality(${season}::text[]) = 0 or coalesce(season, array[]::text[]) && ${season}::text[])
+        and (cardinality(${formalityLevel}::text[]) = 0 or coalesce(formality_level, array[]::text[]) && ${formalityLevel}::text[])
+        and (cardinality(${style}::text[]) = 0 or coalesce(style, array[]::text[]) && ${style}::text[])
+        and (cardinality(${occasions}::text[]) = 0 or coalesce(occasions, array[]::text[]) && ${occasions}::text[])
+        and (cardinality(${color}::text[]) = 0 or coalesce(color_base, array[]::text[]) && ${color}::text[])
+        and (cardinality(${pattern}::text[]) = 0 or lower(coalesce(pattern, '')) = any(${pattern}::text[]))
+        and (cardinality(${silhouette}::text[]) = 0 or lower(coalesce(silhouette, '')) = any(${silhouette}::text[]))
+        and (cardinality(${fit}::text[]) = 0 or lower(coalesce(fit, '')) = any(${fit}::text[]))
+        and (cardinality(${closureType}::text[]) = 0 or coalesce(closure_type, array[]::text[]) && ${closureType}::text[])
+        and (
+          ${embeddingVector}::text is null
+          or ${semanticDistanceThreshold}::double precision is null
+          or embedding <=> ${embeddingVector}::vector <= ${semanticDistanceThreshold}
+        )
+        and coalesce(category, '') <> ''
+      group by 1
+      order by count desc, value asc
+    `,
+    sql`
+      select lower(value) as value, count(*)::integer as count
+      from (
+        select unnest(coalesce(season, array[]::text[])) as value
+        from products
+        where
+          (cardinality(${brand}::text[]) = 0 or lower(coalesce(brand, '')) = any(${brand}::text[]))
+          and (${priceMin}::double precision is null or price >= ${priceMin})
+          and (${priceMax}::double precision is null or price <= ${priceMax})
+          and (cardinality(${audience}::text[]) = 0 or lower(coalesce(audience, '')) = any(${audience}::text[]))
+          and (cardinality(${category}::text[]) = 0 or lower(coalesce(category, '')) = any(${category}::text[]))
+          and (cardinality(${formalityLevel}::text[]) = 0 or coalesce(formality_level, array[]::text[]) && ${formalityLevel}::text[])
+          and (cardinality(${style}::text[]) = 0 or coalesce(style, array[]::text[]) && ${style}::text[])
+          and (cardinality(${occasions}::text[]) = 0 or coalesce(occasions, array[]::text[]) && ${occasions}::text[])
+          and (cardinality(${color}::text[]) = 0 or coalesce(color_base, array[]::text[]) && ${color}::text[])
+          and (cardinality(${pattern}::text[]) = 0 or lower(coalesce(pattern, '')) = any(${pattern}::text[]))
+          and (cardinality(${silhouette}::text[]) = 0 or lower(coalesce(silhouette, '')) = any(${silhouette}::text[]))
+          and (cardinality(${fit}::text[]) = 0 or lower(coalesce(fit, '')) = any(${fit}::text[]))
+          and (cardinality(${closureType}::text[]) = 0 or coalesce(closure_type, array[]::text[]) && ${closureType}::text[])
+          and (
+            ${embeddingVector}::text is null
+            or ${semanticDistanceThreshold}::double precision is null
+            or embedding <=> ${embeddingVector}::vector <= ${semanticDistanceThreshold}
+          )
+      ) values_table
+      where value <> ''
+      group by 1
+      order by count desc, value asc
+    `,
+    sql`
+      select lower(coalesce(audience, '')) as value, count(*)::integer as count
+      from products
+      where
+        (cardinality(${brand}::text[]) = 0 or lower(coalesce(brand, '')) = any(${brand}::text[]))
+        and (${priceMin}::double precision is null or price >= ${priceMin})
+        and (${priceMax}::double precision is null or price <= ${priceMax})
+        and (cardinality(${category}::text[]) = 0 or lower(coalesce(category, '')) = any(${category}::text[]))
+        and (cardinality(${season}::text[]) = 0 or coalesce(season, array[]::text[]) && ${season}::text[])
+        and (cardinality(${formalityLevel}::text[]) = 0 or coalesce(formality_level, array[]::text[]) && ${formalityLevel}::text[])
+        and (cardinality(${style}::text[]) = 0 or coalesce(style, array[]::text[]) && ${style}::text[])
+        and (cardinality(${occasions}::text[]) = 0 or coalesce(occasions, array[]::text[]) && ${occasions}::text[])
+        and (cardinality(${color}::text[]) = 0 or coalesce(color_base, array[]::text[]) && ${color}::text[])
+        and (cardinality(${pattern}::text[]) = 0 or lower(coalesce(pattern, '')) = any(${pattern}::text[]))
+        and (cardinality(${silhouette}::text[]) = 0 or lower(coalesce(silhouette, '')) = any(${silhouette}::text[]))
+        and (cardinality(${fit}::text[]) = 0 or lower(coalesce(fit, '')) = any(${fit}::text[]))
+        and (cardinality(${closureType}::text[]) = 0 or coalesce(closure_type, array[]::text[]) && ${closureType}::text[])
+        and (
+          ${embeddingVector}::text is null
+          or ${semanticDistanceThreshold}::double precision is null
+          or embedding <=> ${embeddingVector}::vector <= ${semanticDistanceThreshold}
+        )
+        and coalesce(audience, '') <> ''
+      group by 1
+      order by count desc, value asc
+    `,
+    sql`
+      select lower(value) as value, count(*)::integer as count
+      from (
+        select unnest(coalesce(formality_level, array[]::text[])) as value
+        from products
+        where
+          (cardinality(${brand}::text[]) = 0 or lower(coalesce(brand, '')) = any(${brand}::text[]))
+          and (${priceMin}::double precision is null or price >= ${priceMin})
+          and (${priceMax}::double precision is null or price <= ${priceMax})
+          and (cardinality(${audience}::text[]) = 0 or lower(coalesce(audience, '')) = any(${audience}::text[]))
+          and (cardinality(${category}::text[]) = 0 or lower(coalesce(category, '')) = any(${category}::text[]))
+          and (cardinality(${season}::text[]) = 0 or coalesce(season, array[]::text[]) && ${season}::text[])
+          and (cardinality(${style}::text[]) = 0 or coalesce(style, array[]::text[]) && ${style}::text[])
+          and (cardinality(${occasions}::text[]) = 0 or coalesce(occasions, array[]::text[]) && ${occasions}::text[])
+          and (cardinality(${color}::text[]) = 0 or coalesce(color_base, array[]::text[]) && ${color}::text[])
+          and (cardinality(${pattern}::text[]) = 0 or lower(coalesce(pattern, '')) = any(${pattern}::text[]))
+          and (cardinality(${silhouette}::text[]) = 0 or lower(coalesce(silhouette, '')) = any(${silhouette}::text[]))
+          and (cardinality(${fit}::text[]) = 0 or lower(coalesce(fit, '')) = any(${fit}::text[]))
+          and (cardinality(${closureType}::text[]) = 0 or coalesce(closure_type, array[]::text[]) && ${closureType}::text[])
+          and (
+            ${embeddingVector}::text is null
+            or ${semanticDistanceThreshold}::double precision is null
+            or embedding <=> ${embeddingVector}::vector <= ${semanticDistanceThreshold}
+          )
+      ) values_table
+      where value <> ''
+      group by 1
+      order by count desc, value asc
+    `,
+    sql`
+      select lower(value) as value, count(*)::integer as count
+      from (
+        select unnest(coalesce(style, array[]::text[])) as value
+        from products
+        where
+          (cardinality(${brand}::text[]) = 0 or lower(coalesce(brand, '')) = any(${brand}::text[]))
+          and (${priceMin}::double precision is null or price >= ${priceMin})
+          and (${priceMax}::double precision is null or price <= ${priceMax})
+          and (cardinality(${audience}::text[]) = 0 or lower(coalesce(audience, '')) = any(${audience}::text[]))
+          and (cardinality(${category}::text[]) = 0 or lower(coalesce(category, '')) = any(${category}::text[]))
+          and (cardinality(${season}::text[]) = 0 or coalesce(season, array[]::text[]) && ${season}::text[])
+          and (cardinality(${formalityLevel}::text[]) = 0 or coalesce(formality_level, array[]::text[]) && ${formalityLevel}::text[])
+          and (cardinality(${occasions}::text[]) = 0 or coalesce(occasions, array[]::text[]) && ${occasions}::text[])
+          and (cardinality(${color}::text[]) = 0 or coalesce(color_base, array[]::text[]) && ${color}::text[])
+          and (cardinality(${pattern}::text[]) = 0 or lower(coalesce(pattern, '')) = any(${pattern}::text[]))
+          and (cardinality(${silhouette}::text[]) = 0 or lower(coalesce(silhouette, '')) = any(${silhouette}::text[]))
+          and (cardinality(${fit}::text[]) = 0 or lower(coalesce(fit, '')) = any(${fit}::text[]))
+          and (cardinality(${closureType}::text[]) = 0 or coalesce(closure_type, array[]::text[]) && ${closureType}::text[])
+          and (
+            ${embeddingVector}::text is null
+            or ${semanticDistanceThreshold}::double precision is null
+            or embedding <=> ${embeddingVector}::vector <= ${semanticDistanceThreshold}
+          )
+      ) values_table
+      where value <> ''
+      group by 1
+      order by count desc, value asc
+    `,
+    sql`
+      select lower(value) as value, count(*)::integer as count
+      from (
+        select unnest(coalesce(occasions, array[]::text[])) as value
+        from products
+        where
+          (cardinality(${brand}::text[]) = 0 or lower(coalesce(brand, '')) = any(${brand}::text[]))
+          and (${priceMin}::double precision is null or price >= ${priceMin})
+          and (${priceMax}::double precision is null or price <= ${priceMax})
+          and (cardinality(${audience}::text[]) = 0 or lower(coalesce(audience, '')) = any(${audience}::text[]))
+          and (cardinality(${category}::text[]) = 0 or lower(coalesce(category, '')) = any(${category}::text[]))
+          and (cardinality(${season}::text[]) = 0 or coalesce(season, array[]::text[]) && ${season}::text[])
+          and (cardinality(${formalityLevel}::text[]) = 0 or coalesce(formality_level, array[]::text[]) && ${formalityLevel}::text[])
+          and (cardinality(${style}::text[]) = 0 or coalesce(style, array[]::text[]) && ${style}::text[])
+          and (cardinality(${color}::text[]) = 0 or coalesce(color_base, array[]::text[]) && ${color}::text[])
+          and (cardinality(${pattern}::text[]) = 0 or lower(coalesce(pattern, '')) = any(${pattern}::text[]))
+          and (cardinality(${silhouette}::text[]) = 0 or lower(coalesce(silhouette, '')) = any(${silhouette}::text[]))
+          and (cardinality(${fit}::text[]) = 0 or lower(coalesce(fit, '')) = any(${fit}::text[]))
+          and (cardinality(${closureType}::text[]) = 0 or coalesce(closure_type, array[]::text[]) && ${closureType}::text[])
+          and (
+            ${embeddingVector}::text is null
+            or ${semanticDistanceThreshold}::double precision is null
+            or embedding <=> ${embeddingVector}::vector <= ${semanticDistanceThreshold}
+          )
+      ) values_table
+      where value <> ''
+      group by 1
+      order by count desc, value asc
+    `,
+    sql`
+      select lower(value) as value, count(*)::integer as count
+      from (
+        select unnest(coalesce(color_base, array[]::text[])) as value
+        from products
+        where
+          (cardinality(${brand}::text[]) = 0 or lower(coalesce(brand, '')) = any(${brand}::text[]))
+          and (${priceMin}::double precision is null or price >= ${priceMin})
+          and (${priceMax}::double precision is null or price <= ${priceMax})
+          and (cardinality(${audience}::text[]) = 0 or lower(coalesce(audience, '')) = any(${audience}::text[]))
+          and (cardinality(${category}::text[]) = 0 or lower(coalesce(category, '')) = any(${category}::text[]))
+          and (cardinality(${season}::text[]) = 0 or coalesce(season, array[]::text[]) && ${season}::text[])
+          and (cardinality(${formalityLevel}::text[]) = 0 or coalesce(formality_level, array[]::text[]) && ${formalityLevel}::text[])
+          and (cardinality(${style}::text[]) = 0 or coalesce(style, array[]::text[]) && ${style}::text[])
+          and (cardinality(${occasions}::text[]) = 0 or coalesce(occasions, array[]::text[]) && ${occasions}::text[])
+          and (cardinality(${pattern}::text[]) = 0 or lower(coalesce(pattern, '')) = any(${pattern}::text[]))
+          and (cardinality(${silhouette}::text[]) = 0 or lower(coalesce(silhouette, '')) = any(${silhouette}::text[]))
+          and (cardinality(${fit}::text[]) = 0 or lower(coalesce(fit, '')) = any(${fit}::text[]))
+          and (cardinality(${closureType}::text[]) = 0 or coalesce(closure_type, array[]::text[]) && ${closureType}::text[])
+          and (
+            ${embeddingVector}::text is null
+            or ${semanticDistanceThreshold}::double precision is null
+            or embedding <=> ${embeddingVector}::vector <= ${semanticDistanceThreshold}
+          )
+      ) values_table
+      where value <> ''
+      group by 1
+      order by count desc, value asc
+    `,
+    sql`
+      select lower(coalesce(pattern, '')) as value, count(*)::integer as count
+      from products
+      where
+        (cardinality(${brand}::text[]) = 0 or lower(coalesce(brand, '')) = any(${brand}::text[]))
+        and (${priceMin}::double precision is null or price >= ${priceMin})
+        and (${priceMax}::double precision is null or price <= ${priceMax})
+        and (cardinality(${audience}::text[]) = 0 or lower(coalesce(audience, '')) = any(${audience}::text[]))
+        and (cardinality(${category}::text[]) = 0 or lower(coalesce(category, '')) = any(${category}::text[]))
+        and (cardinality(${season}::text[]) = 0 or coalesce(season, array[]::text[]) && ${season}::text[])
+        and (cardinality(${formalityLevel}::text[]) = 0 or coalesce(formality_level, array[]::text[]) && ${formalityLevel}::text[])
+        and (cardinality(${style}::text[]) = 0 or coalesce(style, array[]::text[]) && ${style}::text[])
+        and (cardinality(${occasions}::text[]) = 0 or coalesce(occasions, array[]::text[]) && ${occasions}::text[])
+        and (cardinality(${color}::text[]) = 0 or coalesce(color_base, array[]::text[]) && ${color}::text[])
+        and (cardinality(${silhouette}::text[]) = 0 or lower(coalesce(silhouette, '')) = any(${silhouette}::text[]))
+        and (cardinality(${fit}::text[]) = 0 or lower(coalesce(fit, '')) = any(${fit}::text[]))
+        and (cardinality(${closureType}::text[]) = 0 or coalesce(closure_type, array[]::text[]) && ${closureType}::text[])
+        and (
+          ${embeddingVector}::text is null
+          or ${semanticDistanceThreshold}::double precision is null
+          or embedding <=> ${embeddingVector}::vector <= ${semanticDistanceThreshold}
+        )
+        and coalesce(pattern, '') <> ''
+      group by 1
+      order by count desc, value asc
+    `,
+    sql`
+      select lower(coalesce(silhouette, '')) as value, count(*)::integer as count
+      from products
+      where
+        (cardinality(${brand}::text[]) = 0 or lower(coalesce(brand, '')) = any(${brand}::text[]))
+        and (${priceMin}::double precision is null or price >= ${priceMin})
+        and (${priceMax}::double precision is null or price <= ${priceMax})
+        and (cardinality(${audience}::text[]) = 0 or lower(coalesce(audience, '')) = any(${audience}::text[]))
+        and (cardinality(${category}::text[]) = 0 or lower(coalesce(category, '')) = any(${category}::text[]))
+        and (cardinality(${season}::text[]) = 0 or coalesce(season, array[]::text[]) && ${season}::text[])
+        and (cardinality(${formalityLevel}::text[]) = 0 or coalesce(formality_level, array[]::text[]) && ${formalityLevel}::text[])
+        and (cardinality(${style}::text[]) = 0 or coalesce(style, array[]::text[]) && ${style}::text[])
+        and (cardinality(${occasions}::text[]) = 0 or coalesce(occasions, array[]::text[]) && ${occasions}::text[])
+        and (cardinality(${color}::text[]) = 0 or coalesce(color_base, array[]::text[]) && ${color}::text[])
+        and (cardinality(${pattern}::text[]) = 0 or lower(coalesce(pattern, '')) = any(${pattern}::text[]))
+        and (cardinality(${fit}::text[]) = 0 or lower(coalesce(fit, '')) = any(${fit}::text[]))
+        and (cardinality(${closureType}::text[]) = 0 or coalesce(closure_type, array[]::text[]) && ${closureType}::text[])
+        and (
+          ${embeddingVector}::text is null
+          or ${semanticDistanceThreshold}::double precision is null
+          or embedding <=> ${embeddingVector}::vector <= ${semanticDistanceThreshold}
+        )
+        and coalesce(silhouette, '') <> ''
+      group by 1
+      order by count desc, value asc
+    `,
+    sql`
+      select lower(coalesce(fit, '')) as value, count(*)::integer as count
+      from products
+      where
+        (cardinality(${brand}::text[]) = 0 or lower(coalesce(brand, '')) = any(${brand}::text[]))
+        and (${priceMin}::double precision is null or price >= ${priceMin})
+        and (${priceMax}::double precision is null or price <= ${priceMax})
+        and (cardinality(${audience}::text[]) = 0 or lower(coalesce(audience, '')) = any(${audience}::text[]))
+        and (cardinality(${category}::text[]) = 0 or lower(coalesce(category, '')) = any(${category}::text[]))
+        and (cardinality(${season}::text[]) = 0 or coalesce(season, array[]::text[]) && ${season}::text[])
+        and (cardinality(${formalityLevel}::text[]) = 0 or coalesce(formality_level, array[]::text[]) && ${formalityLevel}::text[])
+        and (cardinality(${style}::text[]) = 0 or coalesce(style, array[]::text[]) && ${style}::text[])
+        and (cardinality(${occasions}::text[]) = 0 or coalesce(occasions, array[]::text[]) && ${occasions}::text[])
+        and (cardinality(${color}::text[]) = 0 or coalesce(color_base, array[]::text[]) && ${color}::text[])
+        and (cardinality(${pattern}::text[]) = 0 or lower(coalesce(pattern, '')) = any(${pattern}::text[]))
+        and (cardinality(${silhouette}::text[]) = 0 or lower(coalesce(silhouette, '')) = any(${silhouette}::text[]))
+        and (cardinality(${closureType}::text[]) = 0 or coalesce(closure_type, array[]::text[]) && ${closureType}::text[])
+        and (
+          ${embeddingVector}::text is null
+          or ${semanticDistanceThreshold}::double precision is null
+          or embedding <=> ${embeddingVector}::vector <= ${semanticDistanceThreshold}
+        )
+        and coalesce(fit, '') <> ''
+      group by 1
+      order by count desc, value asc
+    `,
+    sql`
+      select lower(value) as value, count(*)::integer as count
+      from (
+        select unnest(coalesce(closure_type, array[]::text[])) as value
+        from products
+        where
+          (cardinality(${brand}::text[]) = 0 or lower(coalesce(brand, '')) = any(${brand}::text[]))
+          and (${priceMin}::double precision is null or price >= ${priceMin})
+          and (${priceMax}::double precision is null or price <= ${priceMax})
+          and (cardinality(${audience}::text[]) = 0 or lower(coalesce(audience, '')) = any(${audience}::text[]))
+          and (cardinality(${category}::text[]) = 0 or lower(coalesce(category, '')) = any(${category}::text[]))
+          and (cardinality(${season}::text[]) = 0 or coalesce(season, array[]::text[]) && ${season}::text[])
+          and (cardinality(${formalityLevel}::text[]) = 0 or coalesce(formality_level, array[]::text[]) && ${formalityLevel}::text[])
+          and (cardinality(${style}::text[]) = 0 or coalesce(style, array[]::text[]) && ${style}::text[])
+          and (cardinality(${occasions}::text[]) = 0 or coalesce(occasions, array[]::text[]) && ${occasions}::text[])
+          and (cardinality(${color}::text[]) = 0 or coalesce(color_base, array[]::text[]) && ${color}::text[])
+          and (cardinality(${pattern}::text[]) = 0 or lower(coalesce(pattern, '')) = any(${pattern}::text[]))
+          and (cardinality(${silhouette}::text[]) = 0 or lower(coalesce(silhouette, '')) = any(${silhouette}::text[]))
+          and (cardinality(${fit}::text[]) = 0 or lower(coalesce(fit, '')) = any(${fit}::text[]))
+          and (
+            ${embeddingVector}::text is null
+            or ${semanticDistanceThreshold}::double precision is null
+            or embedding <=> ${embeddingVector}::vector <= ${semanticDistanceThreshold}
+          )
+      ) values_table
+      where value <> ''
+      group by 1
+      order by count desc, value asc
+    `,
+    sql`
+      with filtered as (
+        select price
+        from products
+        where
+          (cardinality(${brand}::text[]) = 0 or lower(coalesce(brand, '')) = any(${brand}::text[]))
+          and (cardinality(${audience}::text[]) = 0 or lower(coalesce(audience, '')) = any(${audience}::text[]))
+          and (cardinality(${category}::text[]) = 0 or lower(coalesce(category, '')) = any(${category}::text[]))
+          and (cardinality(${season}::text[]) = 0 or coalesce(season, array[]::text[]) && ${season}::text[])
+          and (cardinality(${formalityLevel}::text[]) = 0 or coalesce(formality_level, array[]::text[]) && ${formalityLevel}::text[])
+          and (cardinality(${style}::text[]) = 0 or coalesce(style, array[]::text[]) && ${style}::text[])
+          and (cardinality(${occasions}::text[]) = 0 or coalesce(occasions, array[]::text[]) && ${occasions}::text[])
+          and (cardinality(${color}::text[]) = 0 or coalesce(color_base, array[]::text[]) && ${color}::text[])
+          and (cardinality(${pattern}::text[]) = 0 or lower(coalesce(pattern, '')) = any(${pattern}::text[]))
+          and (cardinality(${silhouette}::text[]) = 0 or lower(coalesce(silhouette, '')) = any(${silhouette}::text[]))
+          and (cardinality(${fit}::text[]) = 0 or lower(coalesce(fit, '')) = any(${fit}::text[]))
+          and (cardinality(${closureType}::text[]) = 0 or coalesce(closure_type, array[]::text[]) && ${closureType}::text[])
+          and (
+            ${embeddingVector}::text is null
+            or ${semanticDistanceThreshold}::double precision is null
+            or embedding <=> ${embeddingVector}::vector <= ${semanticDistanceThreshold}
+          )
+          and price is not null
+      ),
+      bounds as (
+        select min(price) as min_price, max(price) as max_price
+        from filtered
+      ),
+      bucketed as (
+        select
+          case
+            when bounds.min_price is null or bounds.max_price is null then null
+            when bounds.min_price = bounds.max_price then 1
+            else least(width_bucket(filtered.price, bounds.min_price, bounds.max_price, ${priceBucketCount}), ${priceBucketCount})
+          end as bucket,
+          bounds.min_price as "rangeMin",
+          bounds.max_price as "rangeMax"
+        from filtered
+        cross join bounds
+      )
+      select
+        bucket,
+        count(*)::integer as count,
+        min("rangeMin") as "rangeMin",
+        max("rangeMax") as "rangeMax"
+      from bucketed
+      where bucket is not null
+      group by bucket
+      order by bucket asc
+    `
+  ]);
+
+  return {
+    total: Number(countRow?.total || 0),
+    stats: {
+      brand: normalizeFacetRows(brandRows),
+      category: normalizeFacetRows(categoryRows),
+      season: normalizeFacetRows(seasonRows),
+      audience: normalizeFacetRows(audienceRows),
+      formalityLevel: normalizeFacetRows(formalityRows),
+      style: normalizeFacetRows(styleRows),
+      occasions: normalizeFacetRows(occasionRows),
+      color: normalizeFacetRows(colorRows),
+      pattern: normalizeFacetRows(patternRows),
+      silhouette: normalizeFacetRows(silhouetteRows),
+      fit: normalizeFacetRows(fitRows),
+      closureType: normalizeFacetRows(closureTypeRows)
+    },
+    priceBuckets: buildPriceBuckets(priceRows, priceBucketCount)
+  };
+}
+
 async function getProfileByEmail(email) {
   const sql = getSqlClient();
   const [row] = await sql`
@@ -1179,11 +1702,13 @@ export {
   getDistinctProductClosureTypes,
   getDistinctProductColors,
   getProductPriceRange,
+  buildPriceBuckets,
   getProductsByUrlsInOrder,
   getProductsWithEmbeddingsByUrlsInOrder,
   getSearchByEmail,
   upsertSearchByEmail,
   searchProducts,
+  searchProductStats,
   getProfileByEmail,
   createProfileRecord,
   updateProfileByEmail,

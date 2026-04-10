@@ -17,7 +17,9 @@ const en = {
     capsule: "Capsule",
     capsuleHint: "Capsule wardrobe builder",
     search: "Search",
-    searchHint: "Product search"
+    searchHint: "Product search",
+    statistics: "Statistics",
+    statisticsHint: "Search analytics"
   },
   options: {
     categories: {
@@ -397,6 +399,21 @@ const en = {
       silhouette: "Silhouette",
       fit: "Fit",
       closureType: "Closure type"
+    }
+  },
+  statistics: {
+    title: "Statistics",
+    total: "Total",
+    totalHint: "Charts are calculated for the full result set after all current filters are applied.",
+    activeFilters: "Active filters",
+    empty: "No data available for the current filters.",
+    noActiveFilters: "No active filters.",
+    refresh: "Refresh",
+    chartHint: "Click a segment to apply or remove the matching filter.",
+    priceHint: "Click a bar to narrow the search to that price bucket.",
+    charts: {
+      formalityLevel: "Formality",
+      style: "Style"
     }
   },
   errors: {

@@ -17,7 +17,9 @@ const ru = {
     capsule: "Capsule",
     capsuleHint: "Конструктор капсульного гардероба",
     search: "Search",
-    searchHint: "Поиск товаров"
+    searchHint: "Поиск товаров",
+    statistics: "Statistics",
+    statisticsHint: "Аналитика поиска"
   },
   options: {
     categories: {
@@ -398,6 +400,21 @@ const ru = {
       silhouette: "Силуэт",
       fit: "Посадка",
       closureType: "Тип застежки"
+    }
+  },
+  statistics: {
+    title: "Statistics",
+    total: "Всего",
+    totalHint: "Графики считаются по полному набору результатов с учетом всех текущих фильтров.",
+    activeFilters: "Активные фильтры",
+    empty: "Для текущих фильтров нет данных.",
+    noActiveFilters: "Активных фильтров нет.",
+    refresh: "Обновить",
+    chartHint: "Нажмите на сегмент, чтобы наложить или снять соответствующий фильтр.",
+    priceHint: "Нажмите на столбец, чтобы сузить поиск до этого диапазона цен.",
+    charts: {
+      formalityLevel: "Формальность",
+      style: "Стиль"
     }
   },
   errors: {

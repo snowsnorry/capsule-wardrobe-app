@@ -38,6 +38,7 @@ import OnboardingScreen from "./screens/OnboardingScreen.jsx";
 import ProfileScreen from "./screens/ProfileScreen.jsx";
 import SignInScreen from "./screens/SignInScreen.jsx";
 import SearchScreen from "./screens/SearchScreen.jsx";
+import StatisticsScreen from "./screens/StatisticsScreen.jsx";
 import { useI18n } from "./i18n/useI18n.js";
 import { ACCENT_COLOR_OPTIONS } from "../../shared/accentColors.js";
 import { sortWardrobeItems } from "../../shared/wardrobeOrder.js";
@@ -85,7 +86,13 @@ function normalizeProfileSettings(profile = {}, email = "") {
   };
 }
 function getAppRoute(pathname = "/") {
-  return pathname === "/search" || pathname === "/search/" ? "search" : "capsule";
+  if (pathname === "/search" || pathname === "/search/") {
+    return "search";
+  }
+  if (pathname === "/statistics" || pathname === "/statistics/") {
+    return "statistics";
+  }
+  return "capsule";
 }
 
 function sortSeasonOptions(items) {
@@ -990,7 +997,11 @@ function App() {
     if (typeof window === "undefined") {
       return;
     }
-    const nextPath = nextApp === "search" ? "/search" : "/";
+    const nextPath = nextApp === "search"
+      ? "/search"
+      : nextApp === "statistics"
+        ? "/statistics"
+        : "/";
     if (window.location.pathname !== nextPath) {
       window.history.pushState({}, "", nextPath);
     }
@@ -999,9 +1010,10 @@ function App() {
 
   const isSignInView = !user;
   const isSearchView = Boolean(user && (hasProfile || profileCreated) && appRoute === "search");
-  const isMainScreenView = Boolean(user && (hasProfile || profileCreated) && currentView === "main" && appRoute !== "search");
+  const isStatisticsView = Boolean(user && (hasProfile || profileCreated) && appRoute === "statistics");
+  const isMainScreenView = Boolean(user && (hasProfile || profileCreated) && currentView === "main" && appRoute === "capsule");
   const isOnboardingView = Boolean(user && !hasProfile && !profileCreated);
-  const hasBrandedPanelHeader = isSignInView || isMainScreenView || isOnboardingView || isSearchView;
+  const hasBrandedPanelHeader = isSignInView || isMainScreenView || isOnboardingView || isSearchView || isStatisticsView;
   const canGenerateWardrobe = Boolean(
     selectedFormalityLevel &&
     selectedOccasions.length > 0 &&
@@ -1349,6 +1361,19 @@ function App() {
         );
       }
 
+      if (appRoute === "statistics") {
+        return (
+          <StatisticsScreen
+            onNavigateApp={handleNavigateApp}
+            userEmail={user?.email || ""}
+            userName={settingsProfile.fullname}
+            settingsProfile={settingsProfile}
+            onSignOut={handleLogout}
+            onSaveSettings={handleSaveSettings}
+          />
+        );
+      }
+
       if (currentView === "profile") {
         return (
           <ProfileScreen
@@ -1493,8 +1518,8 @@ function App() {
         }}
       >
       <Container
-        disableGutters={isMainScreenView || isSearchView}
-        maxWidth={isMainScreenView || isSearchView ? false : "lg"}
+        disableGutters={isMainScreenView || isSearchView || isStatisticsView}
+        maxWidth={isMainScreenView || isSearchView || isStatisticsView ? false : "lg"}
         sx={{
           position: "relative",
           zIndex: 1,
@@ -1502,9 +1527,9 @@ function App() {
           gap: { xs: 3, md: 6 },
           gridTemplateColumns: user ? "1fr" : { xs: "1fr", md: "1.2fr 1fr" },
           alignItems: "center",
-          py: (isMainScreenView || isSearchView) ? { xs: 0, md: "12px" } : { xs: 0, md: "24px" },
-          px: (isMainScreenView || isSearchView) ? 0 : { xs: 0, md: 3 },
-          maxWidth: (isMainScreenView || isSearchView) ? "none" : undefined,
+          py: (isMainScreenView || isSearchView || isStatisticsView) ? { xs: 0, md: "12px" } : { xs: 0, md: "24px" },
+          px: (isMainScreenView || isSearchView || isStatisticsView) ? 0 : { xs: 0, md: 3 },
+          maxWidth: (isMainScreenView || isSearchView || isStatisticsView) ? "none" : undefined,
           minHeight: "100vh",
           height: "100%",
           boxSizing: "border-box"
@@ -1580,7 +1605,7 @@ function App() {
           </Stack>
         ) : null}
 
-        {!sessionInitialized ? null : (isMainScreenView || isSearchView) ? (
+        {!sessionInitialized ? null : (isMainScreenView || isSearchView || isStatisticsView) ? (
           <Box
             sx={{
               minHeight: 0,

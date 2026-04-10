@@ -16,9 +16,14 @@
     "@microsoft/fetch-event-source": "^2.0.1",
     "@mui/icons-material": "^5.15.20",
     "@mui/material": "^5.15.20",
+    "@tailwindcss/vite": "^4.2.2",
+    "clsx": "^2.1.1",
     "express": "^4.19.2",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "recharts": "^3.8.1",
+    "tailwind-merge": "^3.5.0",
+    "tailwindcss": "^4.2.2"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.6.3",

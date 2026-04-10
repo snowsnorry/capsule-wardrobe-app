@@ -10,6 +10,7 @@ import {
   getDistinctProductSilhouettes,
   getProductPriceRange,
   getSearchByEmail,
+  searchProductStats,
   searchProducts,
   upsertSearchByEmail,
   getDistinctProductFormalityLevels
@@ -185,6 +186,36 @@ function getAllowedBrandValues(brandOptions = []) {
     .filter(Boolean);
 }
 
+function assertValidSearchPayload(normalized, options) {
+  const allowedBrandValues = getAllowedBrandValues(options.brands);
+
+  if (
+    !isAllowedArrayValue(normalized.brand, allowedBrandValues) ||
+    !isAllowedArrayValue(normalized.audience, options.audience) ||
+    !isAllowedArrayValue(normalized.category, options.categories) ||
+    !isAllowedArrayValue(normalized.formalityLevel, options.formalityLevels) ||
+    !isAllowedArrayValue(normalized.style, options.styles) ||
+    !isAllowedArrayValue(normalized.color, options.colors) ||
+    !isAllowedArrayValue(normalized.pattern, options.patterns) ||
+    !isAllowedArrayValue(normalized.silhouette, options.silhouettes) ||
+    !isAllowedArrayValue(normalized.fit, options.fits) ||
+    !isAllowedArrayValue(normalized.closureType, options.closureTypes) ||
+    !isAllowedArrayValue(normalized.season, options.seasons) ||
+    !isAllowedArrayValue(normalized.occasions, options.occasions) ||
+    Number.isNaN(normalized.priceMin) ||
+    Number.isNaN(normalized.priceMax) ||
+    (
+      normalized.priceMin !== null &&
+      normalized.priceMax !== null &&
+      normalized.priceMin > normalized.priceMax
+    )
+  ) {
+    const error = new Error("invalid_payload");
+    error.code = "invalid_payload";
+    throw error;
+  }
+}
+
 async function getSearchOptions(email) {
   const [
     brands,
@@ -242,33 +273,7 @@ async function runSavedSearch(email, payload = {}) {
     getSearchOptions(email),
     getSearchByEmail(email)
   ]);
-  const allowedBrandValues = getAllowedBrandValues(options.brands);
-
-  if (
-    !isAllowedArrayValue(normalized.brand, allowedBrandValues) ||
-    !isAllowedArrayValue(normalized.audience, options.audience) ||
-    !isAllowedArrayValue(normalized.category, options.categories) ||
-    !isAllowedArrayValue(normalized.formalityLevel, options.formalityLevels) ||
-    !isAllowedArrayValue(normalized.style, options.styles) ||
-    !isAllowedArrayValue(normalized.color, options.colors) ||
-    !isAllowedArrayValue(normalized.pattern, options.patterns) ||
-    !isAllowedArrayValue(normalized.silhouette, options.silhouettes) ||
-    !isAllowedArrayValue(normalized.fit, options.fits) ||
-    !isAllowedArrayValue(normalized.closureType, options.closureTypes) ||
-    !isAllowedArrayValue(normalized.season, options.seasons) ||
-    !isAllowedArrayValue(normalized.occasions, options.occasions) ||
-    Number.isNaN(normalized.priceMin) ||
-    Number.isNaN(normalized.priceMax) ||
-    (
-      normalized.priceMin !== null &&
-      normalized.priceMax !== null &&
-      normalized.priceMin > normalized.priceMax
-    )
-  ) {
-    const error = new Error("invalid_payload");
-    error.code = "invalid_payload";
-    throw error;
-  }
+  assertValidSearchPayload(normalized, options);
 
   const embedding = await resolveSearchEmbedding({
     currentSearch,
@@ -302,6 +307,46 @@ async function runSavedSearch(email, payload = {}) {
   };
 }
 
+async function getSearchStats(email, payload = {}) {
+  const normalized = normalizeSearchPayload(payload);
+  const [options, currentSearch] = await Promise.all([
+    getSearchOptions(email),
+    getSearchByEmail(email)
+  ]);
+  assertValidSearchPayload(normalized, options);
+
+  const embedding = await resolveSearchEmbedding({
+    currentSearch,
+    query: normalized.query
+  });
+  const semanticDistanceThreshold = getSemanticDistanceThreshold(normalized.query);
+
+  const savedSearch = await upsertSearchByEmail({
+    email,
+    ...normalized,
+    embedding
+  });
+
+  let stats = await searchProductStats({
+    ...normalized,
+    queryEmbedding: embedding,
+    semanticDistanceThreshold
+  });
+
+  if (normalized.query && stats.total === 0) {
+    stats = await searchProductStats({
+      ...normalized,
+      queryEmbedding: embedding,
+      semanticDistanceThreshold: getRelaxedSemanticDistanceThreshold(normalized.query)
+    });
+  }
+
+  return {
+    ...stats,
+    appliedFilters: serializeSearchRow(savedSearch)
+  };
+}
+
 export {
   DEFAULT_SEARCH_STATE,
   getSemanticDistanceThreshold,
@@ -311,5 +356,6 @@ export {
   serializeSearchRow,
   getSearchOptions,
   getSavedSearch,
-  runSavedSearch
+  runSavedSearch,
+  getSearchStats
 };

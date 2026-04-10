@@ -21,7 +21,9 @@ function renderLauncher(props = {}) {
         "launcher.capsule": "Capsule",
         "launcher.capsuleHint": "Switch to the wardrobe capsule",
         "launcher.search": "Search",
-        "launcher.searchHint": "Switch to search"
+        "launcher.searchHint": "Switch to search",
+        "launcher.statistics": "Statistics",
+        "launcher.statisticsHint": "Switch to statistics"
       }[key] || key)
   });
 
@@ -82,5 +84,17 @@ describe("AppLauncher", () => {
     );
 
     expect(screen.getByRole("button", { name: "Open app launcher" })).toHaveTextContent("Search");
+  });
+
+  test("shows the statistics app and can select it", async () => {
+    const user = userEvent.setup();
+    const onSelectApp = vi.fn();
+
+    renderLauncher({ onSelectApp, currentApp: "capsule" });
+
+    await user.click(screen.getByRole("button", { name: "Open app launcher" }));
+    await user.click(screen.getByRole("menuitem", { name: /Statistics/ }));
+
+    expect(onSelectApp).toHaveBeenCalledWith("statistics");
   });
 });

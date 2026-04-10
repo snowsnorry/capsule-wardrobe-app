@@ -13,7 +13,8 @@ function AppLauncher({ currentApp = "capsule", onSelectApp }) {
   const isDarkMode = theme.palette.mode === "dark";
   const items = [
     { id: "capsule", label: t("launcher.capsule"), subtitle: t("launcher.capsuleHint") },
-    { id: "search", label: t("launcher.search"), subtitle: t("launcher.searchHint") }
+    { id: "search", label: t("launcher.search"), subtitle: t("launcher.searchHint") },
+    { id: "statistics", label: t("launcher.statistics"), subtitle: t("launcher.statisticsHint") }
   ];
 
   return (

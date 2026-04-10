@@ -179,6 +179,9 @@ vi.mock("./screens/MainScreen.jsx", () => ({
         <button type="button" onClick={() => props.onNavigateApp("search")}>
           open-search
         </button>
+        <button type="button" onClick={() => props.onNavigateApp("statistics")}>
+          open-statistics
+        </button>
         <button
           type="button"
           onClick={() => props.onSaveSettings({
@@ -206,6 +209,18 @@ vi.mock("./screens/SearchScreen.jsx", () => ({
   default: function SearchScreenMock(props) {
     return (
       <div data-testid="search-screen">
+        <button type="button" onClick={() => props.onNavigateApp("capsule")}>
+          back-to-capsule
+        </button>
+      </div>
+    );
+  }
+}));
+
+vi.mock("./screens/StatisticsScreen.jsx", () => ({
+  default: function StatisticsScreenMock(props) {
+    return (
+      <div data-testid="statistics-screen">
         <button type="button" onClick={() => props.onNavigateApp("capsule")}>
           back-to-capsule
         </button>
@@ -610,6 +625,20 @@ describe("App", () => {
     });
     expect(wardrobeApi.regenerateCapsuleWardrobe).not.toHaveBeenCalled();
     expect(wardrobeApi.subscribeCapsuleEvents).not.toHaveBeenCalled();
+  });
+
+  test("navigates from the main app to statistics via route state", async () => {
+    authApi.fetchCurrentUser.mockResolvedValue({ user: { email: "person@example.com" } });
+    authApi.fetchProfileStatus.mockResolvedValue({ hasProfile: true });
+    authApi.updateProfileLocale.mockResolvedValue({});
+    capsulesApi.fetchCapsuleBootstrap.mockResolvedValue(createBootstrapResponse({ items: [], locale: "en" }));
+    mockProfileOptions();
+
+    renderApp();
+
+    expect(await screen.findByTestId("main-screen")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "open-statistics" }));
+    expect(await screen.findByTestId("statistics-screen")).toBeInTheDocument();
   });
 
   test("normalizes a legacy null pattern from bootstrap to solid in UI state", async () => {

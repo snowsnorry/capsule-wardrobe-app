@@ -51,7 +51,7 @@ import {
   setActiveCapsuleId,
   updateCapsuleSnapshot
 } from "./capsuleStore.js";
-import { getSearchOptions, getSavedSearch, runSavedSearch } from "./searchStore.js";
+import { getSearchOptions, getSavedSearch, getSearchStats, runSavedSearch } from "./searchStore.js";
 import { getWardrobeJob, regenerateCapsuleWardrobe } from "./ai/ai.js";
 import { getPartialRegenerationJob, regenerateSelectedWardrobeItems } from "./ai/regenerateSelected.js";
 import { buildCapsuleEventSnapshot, capsuleEventHub } from "./ai/capsuleEvents.js";
@@ -110,7 +110,8 @@ function isApiPath(pathname = "") {
     pathname.startsWith("/health") ||
     pathname === "/search/options" ||
     pathname === "/search/me" ||
-    pathname === "/search/run"
+    pathname === "/search/run" ||
+    pathname === "/search/stats"
   );
 }
 
@@ -367,6 +368,7 @@ function createApp({
   setActiveCapsuleIdImpl = setActiveCapsuleId,
   getSearchOptionsImpl = getSearchOptions,
   getSavedSearchImpl = getSavedSearch,
+  getSearchStatsImpl = getSearchStats,
   runSavedSearchImpl = runSavedSearch,
   getWardrobeJobImpl = getWardrobeJob,
   getPartialRegenerationJobImpl = getPartialRegenerationJob,
@@ -1074,6 +1076,19 @@ app.post("/search/run", requireTrustedOrigin, requireAuth, requireCsrf, async (r
       return res.status(400).json({ error: "invalid_payload" });
     }
     console.error("[search/run]", error);
+    return res.status(503).json({ error: "service_unavailable" });
+  }
+});
+
+app.post("/search/stats", requireTrustedOrigin, requireAuth, requireCsrf, async (req, res) => {
+  try {
+    const result = await getSearchStatsImpl(req.user.email, req.body || {});
+    return res.json({ ok: true, ...result });
+  } catch (error) {
+    if (error?.code === "invalid_payload" || error?.message === "invalid_payload") {
+      return res.status(400).json({ error: "invalid_payload" });
+    }
+    console.error("[search/stats]", error);
     return res.status(503).json({ error: "service_unavailable" });
   }
 });

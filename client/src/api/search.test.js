@@ -10,7 +10,7 @@ vi.mock("./config.js", () => ({
   API_BASE_URL: "https://api.example.test"
 }));
 
-import { fetchSavedSearch, fetchSearchOptions, runSearch } from "./search.js";
+import { fetchSavedSearch, fetchSearchOptions, fetchSearchStats, runSearch } from "./search.js";
 
 describe("search api", () => {
   beforeEach(() => {
@@ -100,5 +100,24 @@ describe("search api", () => {
       total: 1,
       savedSearch: { page: 1 }
     });
+  });
+
+  test("fetchSearchStats posts serialized payload to the authenticated statistics endpoint", async () => {
+    const payload = {
+      query: "linen shirt",
+      category: ["top"]
+    };
+
+    await fetchSearchStats(payload);
+
+    expect(requestApi.requestJson).toHaveBeenCalledWith(
+      "https://api.example.test/search/stats",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(payload)
+      }
+    );
   });
 });
