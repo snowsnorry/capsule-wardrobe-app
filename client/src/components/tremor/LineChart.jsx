@@ -1,7 +1,6 @@
-import { Box } from "@mui/material";
+import { Box, useTheme } from "@mui/material";
 import {
   CartesianGrid,
-  Line,
   Area,
   AreaChart as RechartsLineChart,
   ResponsiveContainer,
@@ -9,9 +8,17 @@ import {
   XAxis,
   YAxis
 } from "recharts";
-import { tooltipStyle, tooltipTextStyle } from "./chartUtils.js";
+import { getTooltipStyle, getTooltipTextStyle } from "./chartUtils.js";
 
 function LineChart({ data, index, category, valueFormatter, labelFormatter }) {
+  const theme = useTheme();
+  const isDarkMode = theme.palette.mode === "dark";
+  const gridColor = isDarkMode ? "rgba(255,255,255,0.14)" : "rgba(148, 163, 184, 0.16)";
+  const tickColor = isDarkMode ? "rgba(255,255,255,0.78)" : "#667085";
+  const areaColor = isDarkMode ? "#a78bfa" : "#8884d8";
+  const tooltipStyle = getTooltipStyle(isDarkMode);
+  const tooltipTextStyle = getTooltipTextStyle(isDarkMode);
+
   return (
     <Box
       sx={{
@@ -24,7 +31,7 @@ function LineChart({ data, index, category, valueFormatter, labelFormatter }) {
     >
       <ResponsiveContainer width="100%" height="100%">
         <RechartsLineChart data={data} margin={{ top: 24, right: 24, left: 8, bottom: 15 }}>
-          <CartesianGrid vertical={false} stroke="rgba(148, 163, 184, 0.16)" />
+          <CartesianGrid vertical={false} stroke={gridColor} />
           <XAxis
             dataKey={index}
             tickLine={false}
@@ -32,13 +39,13 @@ function LineChart({ data, index, category, valueFormatter, labelFormatter }) {
             interval="preserveStartEnd"
             minTickGap={24}
             height={58}
-            tick={{ fontSize: 11, fill: "#667085" }}
+            tick={{ fontSize: 11, fill: tickColor }}
           />
-          <YAxis  width="auto" tick={{ fontSize: 11, fill: "#667085" }} />
+          <YAxis width="auto" tick={{ fontSize: 11, fill: tickColor }} />
           <Tooltip
             formatter={(value, _name, item) => [
               valueFormatter(Number(value || 0)),
-              `${item?.payload?.[index]} EUR` || ""
+              labelFormatter?.(item?.payload) || `${item?.payload?.[index]} EUR` || ""
             ]}
             labelFormatter={() => ""}
             contentStyle={tooltipStyle}
@@ -48,11 +55,11 @@ function LineChart({ data, index, category, valueFormatter, labelFormatter }) {
           <Area
             type="monotone"
             dataKey={category}
-            stroke="#8884d8"
-            fill="#8884d8"
+            stroke={areaColor}
+            fill={areaColor}
             strokeWidth={1}
             dot={false}
-            activeDot={{ r: 5, stroke: "#ffffff", strokeWidth: 2, fill: "#8884d8" }}
+            activeDot={{ r: 5, stroke: "#ffffff", strokeWidth: 2, fill: areaColor }}
             isAnimationActive
             animationDuration={320}
           />

@@ -11,6 +11,7 @@ import {
   Stack,
   Typography
 } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
 import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
 import TuneRoundedIcon from "@mui/icons-material/TuneRounded";
 import { fetchSearchOptions, fetchSearchStats } from "../api/search.js";
@@ -217,8 +218,12 @@ function buildActiveFilterChips({ state, options, locale, t }) {
 }
 
 function StatisticsCard({ title, subtitle, children }) {
+  const theme = useTheme();
+  const isDarkMode = theme.palette.mode === "dark";
+
   return (
     <Stack
+      data-testid="statistics-card"
       spacing={2}
       sx={{
         p: 2.2,
@@ -229,14 +234,15 @@ function StatisticsCard({ title, subtitle, children }) {
         borderRadius: "5.4px",
         border: "1px solid",
         borderColor: "divider",
-        bgcolor: "rgba(255,255,255,0.55)",
+        bgcolor: isDarkMode ? "#000000" : "rgba(255,255,255,0.55)",
+        color: isDarkMode ? "#ffffff" : "text.primary",
         backdropFilter: "blur(8px)"
       }}
     >
       <Box>
-        <Typography variant="h6">{title}</Typography>
+        <Typography variant="h6" sx={{ color: isDarkMode ? "#ffffff" : "text.primary" }}>{title}</Typography>
         {subtitle ? (
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" sx={{ color: isDarkMode ? "rgba(255,255,255,0.74)" : "text.secondary" }}>
             {subtitle}
           </Typography>
         ) : null}
@@ -256,15 +262,19 @@ function StatisticsSummaryCard({
   activeFiltersLabel,
   noActiveFiltersLabel
 }) {
+  const theme = useTheme();
+  const isDarkMode = theme.palette.mode === "dark";
+
   return (
     <Box
+      data-testid="statistics-summary-card"
       sx={{
         p: { xs: 2.4, md: 3 },
         minHeight: { xs: 156, md: 156 },
         borderRadius: "5.4px",
         border: "1px solid",
         borderColor: "divider",
-        bgcolor: "rgba(255,255,255,0.72)",
+        bgcolor: isDarkMode ? "#000000" : "rgba(255,255,255,0.72)",
         backdropFilter: "blur(8px)"
       }}
     >
@@ -278,7 +288,14 @@ function StatisticsSummaryCard({
         }}
       >
         <Stack spacing={1.2} sx={{ minWidth: 0, flexShrink: 0 }}>
-          <Typography variant="body2" color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: "0.08em" }}>
+          <Typography
+            variant="body2"
+            sx={{
+              textTransform: "uppercase",
+              letterSpacing: "0.08em",
+              color: isDarkMode ? "rgba(255,255,255,0.68)" : "text.secondary"
+            }}
+          >
             {title}
           </Typography>
           <Stack direction="row" alignItems="center" spacing={1.2}>
@@ -287,7 +304,8 @@ function StatisticsSummaryCard({
               sx={{
                 lineHeight: 1,
                 fontSize: { xs: "1.5rem", md: "1.5rem" },
-                fontWeight: 600
+                fontWeight: 600,
+                color: isDarkMode ? "#ffffff" : "text.primary"
               }}
             >
               {totalLabel}
@@ -296,11 +314,11 @@ function StatisticsSummaryCard({
           </Stack>
           <Typography
             variant="body2"
-            color="text.secondary"
             sx={{
               maxWidth: 560,
               lineHeight: 1.5,
-              pr: { lg: 2 }
+              pr: { lg: 2 },
+              color: isDarkMode ? "rgba(255,255,255,0.74)" : "text.secondary"
             }}
           >
             {subtitle}
@@ -317,7 +335,14 @@ function StatisticsSummaryCard({
             pl: { lg: 1 }
           }}
         >
-          <Typography variant="caption" color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: "0.08em" }}>
+          <Typography
+            variant="caption"
+            sx={{
+              textTransform: "uppercase",
+              letterSpacing: "0.08em",
+              color: isDarkMode ? "rgba(255,255,255,0.68)" : "text.secondary"
+            }}
+          >
             {chips.length > 0 ? activeFiltersLabel : ""}
           </Typography>
           {chips.length > 0 ? (
@@ -329,10 +354,15 @@ function StatisticsSummaryCard({
                   onDelete={() => onDeleteChip(chip)}
                   sx={{
                     maxWidth: "100%",
+                    bgcolor: isDarkMode ? "rgba(255,255,255,0.08)" : undefined,
+                    color: isDarkMode ? "#ffffff" : undefined,
                     "& .MuiChip-label": {
                       display: "block",
                       overflow: "hidden",
                       textOverflow: "ellipsis"
+                    },
+                    "& .MuiChip-deleteIcon": {
+                      color: isDarkMode ? "rgba(255,255,255,0.72)" : undefined
                     }
                   }}
                 />
@@ -348,7 +378,7 @@ function StatisticsSummaryCard({
                 alignItems: "center"
               }}
             >
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" sx={{ color: isDarkMode ? "rgba(255,255,255,0.74)" : "text.secondary" }}>
                 {noActiveFiltersLabel}
               </Typography>
             </Box>

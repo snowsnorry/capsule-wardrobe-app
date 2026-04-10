@@ -1,4 +1,4 @@
-import { Box, Stack, Typography } from "@mui/material";
+import { Box, Stack, Typography, useTheme } from "@mui/material";
 import {
   Cell,
   Pie,
@@ -6,7 +6,7 @@ import {
   ResponsiveContainer,
   Tooltip
 } from "recharts";
-import { tooltipStyle, tooltipTextStyle } from "./chartUtils.js";
+import { getTooltipStyle, getTooltipTextStyle } from "./chartUtils.js";
 
 function DonutChart({
   data,
@@ -17,7 +17,13 @@ function DonutChart({
   activeValues = [],
   className
 }) {
+  const theme = useTheme();
+  const isDarkMode = theme.palette.mode === "dark";
   const hasSelection = activeValues.length > 0;
+  const strokeColor = isDarkMode ? "rgba(255,255,255,0.34)" : "rgba(0,0,0,0.22)";
+  const activeStrokeColor = isDarkMode ? "rgba(255,255,255,0.56)" : "rgba(0,0,0,0.42)";
+  const tooltipStyle = getTooltipStyle(isDarkMode);
+  const tooltipTextStyle = getTooltipTextStyle(isDarkMode);
 
   return (
     <Box
@@ -72,7 +78,7 @@ function DonutChart({
                   key={row.rawValue}
                   fill={row.color}
                   fillOpacity={row.isOther ? 0.34 : (hasSelection ? (row.isActive ? 1 : 0.42) : 0.92)}
-                  stroke={row.isActive ? "rgba(0,0,0,0.42)" : "rgba(0,0,0,0.22)"}
+                  stroke={row.isActive ? activeStrokeColor : strokeColor}
                   strokeWidth={1}
                   style={{
                     cursor: row.isOther ? "default" : "pointer",

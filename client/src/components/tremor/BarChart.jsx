@@ -1,4 +1,4 @@
-import { Box } from "@mui/material";
+import { Box, useTheme } from "@mui/material";
 import {
   Bar,
   BarChart as RechartsBarChart,
@@ -9,7 +9,7 @@ import {
   XAxis,
   YAxis
 } from "recharts";
-import { tooltipStyle, tooltipTextStyle } from "./chartUtils.js";
+import { getTooltipStyle, getTooltipTextStyle } from "./chartUtils.js";
 
 function BarChart({
   data,
@@ -19,8 +19,17 @@ function BarChart({
   onValueChange,
   activeValues = []
 }) {
+  const theme = useTheme();
+  const isDarkMode = theme.palette.mode === "dark";
   const hasSelection = activeValues.length > 0;
   const activeLabels = new Set(data.filter((row) => row.isActive).map((row) => row[index]));
+  const tickColor = isDarkMode ? "#f5f5f5" : "#475467";
+  const secondaryTickColor = isDarkMode ? "rgba(255,255,255,0.76)" : "#667085";
+  const gridColor = isDarkMode ? "rgba(255,255,255,0.14)" : "rgba(148, 163, 184, 0.16)";
+  const strokeColor = isDarkMode ? "rgba(255,255,255,0.34)" : "rgba(0,0,0,0.22)";
+  const activeStrokeColor = isDarkMode ? "rgba(255,255,255,0.56)" : "rgba(0,0,0,0.42)";
+  const tooltipStyle = getTooltipStyle(isDarkMode);
+  const tooltipTextStyle = getTooltipTextStyle(isDarkMode);
 
   return (
     <Box
@@ -53,7 +62,7 @@ function BarChart({
               ) : null
             ))}
           </defs>
-          <CartesianGrid vertical={false} stroke="rgba(148, 163, 184, 0.16)" />
+          <CartesianGrid vertical={false} stroke={gridColor} />
           <XAxis
             dataKey={index}
             tickLine={false}
@@ -68,7 +77,7 @@ function BarChart({
                   y={0}
                   dy={12}
                   textAnchor="end"
-                  fill={hasSelection && activeLabels.has(payload.value) ? "#000000" : "#475467"}
+                  fill={hasSelection && activeLabels.has(payload.value) ? "#ffffff" : tickColor}
                   fontSize={11}
                   fontWeight={hasSelection && activeLabels.has(payload.value) ? 900 : 400}
                   transform="rotate(-42)"
@@ -82,7 +91,7 @@ function BarChart({
             tickLine={false}
             axisLine={false}
             width={36}
-            tick={{ fontSize: 11, fill: "#667085" }}
+            tick={{ fontSize: 11, fill: secondaryTickColor }}
           />
           <Tooltip
             cursor={{ fill: "rgba(143,111,69,0.05)" }}
@@ -112,7 +121,7 @@ function BarChart({
                 key={row.rawValue}
                 fill={row.color}
                 fillOpacity={hasSelection ? (row.isActive ? 1 : 0.46) : 1}
-                stroke={row.isActive ? "rgba(0,0,0,0.42)" : "rgba(0,0,0,0.22)"}
+                stroke={row.isActive ? activeStrokeColor : strokeColor}
                 strokeWidth={1}
                 style={{
                   cursor: "pointer",

@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import userEvent from "@testing-library/user-event";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import { LocaleProvider } from "../i18n/LocaleProvider.jsx";
+import { createAppTheme } from "../theme.js";
 
 const searchApi = vi.hoisted(() => ({
   fetchSearchOptions: vi.fn(),
@@ -109,6 +110,26 @@ function renderScreen(props = {}, { layoutMode = "medium" } = {}) {
   );
 }
 
+function renderScreenWithTheme(themeOverride, props = {}, { layoutMode = "medium" } = {}) {
+  mediaQueryMock.mockImplementation((query) => {
+    if (String(query).includes("max-width: 1279.95px")) {
+      return layoutMode === "overlay";
+    }
+    if (String(query).includes("min-width: 1680px")) {
+      return layoutMode === "large";
+    }
+    return false;
+  });
+
+  return render(
+    <ThemeProvider theme={themeOverride}>
+      <LocaleProvider>
+        <StatisticsScreen onNavigateApp={vi.fn()} {...props} />
+      </LocaleProvider>
+    </ThemeProvider>
+  );
+}
+
 describe("StatisticsScreen", () => {
   beforeEach(() => {
     mediaQueryMock.mockReset();
@@ -190,5 +211,17 @@ describe("StatisticsScreen", () => {
     expect((await screen.findAllByText("120")).length).toBeGreaterThan(0);
     await user.click(screen.getByLabelText("Open filters"));
     expect(await screen.findByText("Filters")).toBeInTheDocument();
+  });
+
+  test("uses dark chart cards in dark mode", async () => {
+    renderScreenWithTheme(createAppTheme("dark"));
+
+    expect((await screen.findAllByText("120")).length).toBeGreaterThan(0);
+
+    const summaryCard = screen.getByTestId("statistics-summary-card");
+    const chartCards = screen.getAllByTestId("statistics-card");
+
+    expect(summaryCard).toHaveStyle({ backgroundColor: "rgb(0, 0, 0)" });
+    expect(chartCards[0]).toHaveStyle({ backgroundColor: "rgb(0, 0, 0)" });
   });
 });
