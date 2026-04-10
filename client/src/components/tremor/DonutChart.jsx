@@ -23,10 +23,11 @@ function DonutChart({
     <Box
       className={className}
       sx={{
-        height: 300,
+        height: { xs: "auto", sm: 300 },
         minWidth: 0,
         display: "grid",
         gridTemplateColumns: { xs: "minmax(0, 1fr)", sm: "minmax(0, 1fr) minmax(150px, 0.55fr)" },
+        gridTemplateRows: { xs: "240px auto", sm: "minmax(0, 1fr)" },
         gap: 2,
         alignItems: "center",
         overflow: "hidden",
@@ -83,9 +84,32 @@ function DonutChart({
           </PieChart>
         </ResponsiveContainer>
       </Box>
-      <Stack spacing={0.85} sx={{ minWidth: 0, display: { xs: "none", sm: "flex" } }}>
+      <Stack
+        spacing={{ xs: 0, sm: 0.85 }}
+        direction={{ xs: "row", sm: "column" }}
+        useFlexGap
+        sx={{
+          minWidth: 0,
+          display: "flex",
+          flexWrap: { xs: "wrap", sm: "nowrap" },
+          gap: { xs: 1.1, sm: 0.85 },
+          alignItems: { xs: "center", sm: "stretch" },
+          alignContent: "flex-start",
+          overflow: "hidden"
+        }}
+      >
         {data.filter((row) => !row.isOther).map((row) => (
-          <Stack key={row.rawValue} direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
+          <Stack
+            key={row.rawValue}
+            direction="row"
+            spacing={1}
+            alignItems="center"
+            sx={{
+              minWidth: 0,
+              maxWidth: "100%",
+              flex: { xs: "0 1 auto", sm: "0 1 auto" }
+            }}
+          >
             <Box
               component="span"
               sx={{

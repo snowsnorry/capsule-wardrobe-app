@@ -33,7 +33,28 @@ import {
 } from "../search/searchState.js";
 import { getColorSwatchStyle } from "../../../shared/colorSwatches.js";
 
-const FACET_COLORS = ["#8f6f45", "#c08b5b", "#4a6d7c", "#7b8f62", "#b55d4c", "#7d6ba8", "#4f8f7b", "#c2a13d"];
+const FACET_COLORS = [
+  "#FF6B6B", 
+  "#4ECDC4", 
+  "#FFE66D", 
+  "#FF9F1C", 
+  // "#2EC4B6", 
+  "#E71D36", 
+  "#8338EC", 
+  "#3A86FF", 
+  "#FF006E", 
+  "#8AC926", 
+  "#1982C4", 
+  "#F15BB5", 
+  "#00B4D8", 
+  "#9B5DE5", 
+  "#FFB703", 
+  "#38B000", 
+  "#E07A5F", 
+  "#5A189A", 
+  "#F4A261", 
+  "#014F86"  
+];
 const BAR_CHART_DIMENSION_KEYS = new Set(["style", "pattern", "silhouette", "closureType"]);
 const CHART_DIMENSIONS = [
   { key: "brand", titleKey: "search.filters.brand", optionGroup: "brand" },
