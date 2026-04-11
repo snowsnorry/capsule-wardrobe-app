@@ -126,6 +126,10 @@ function resolveOutfitSets(items = [], outfitSets = []) {
     .filter(Boolean);
 }
 
+const OUTFIT_SET_IMAGE_WIDTH = 896;
+const OUTFIT_SET_IMAGE_HEIGHT = 1195;
+const OUTFIT_SET_IMAGE_ASPECT_RATIO = `${OUTFIT_SET_IMAGE_WIDTH} / ${OUTFIT_SET_IMAGE_HEIGHT}`;
+
 function CapsuleActionMenu({
   anchorEl,
   open,
@@ -247,6 +251,7 @@ function MainScreen({
   onToggleRegenerationSelection,
   onCancelRegenerationSelection,
   onRegenerateSelectedItems,
+  onDeleteOutfitSetImage = async () => {},
   onGenerateOutfitSetImage = () => {},
   isPartialRegenerationLoading
 }) {
@@ -267,6 +272,7 @@ function MainScreen({
   const [saveAsCapsuleId, setSaveAsCapsuleId] = useState("");
   const [confirmAction, setConfirmAction] = useState("");
   const [confirmCapsuleId, setConfirmCapsuleId] = useState("");
+  const [confirmOutfitSetIndex, setConfirmOutfitSetIndex] = useState(-1);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
@@ -276,8 +282,17 @@ function MainScreen({
   const inlineRenameSubmitGuardRef = useRef(false);
   const searchDialogPaperRef = useRef(null);
   const isDeleteConfirm = confirmAction.startsWith("delete");
-  const confirmBodyKey = isDeleteConfirm ? "capsule.deleteConfirmBody" : "capsule.revertConfirmBody";
-  const confirmTitleKey = isDeleteConfirm ? "capsule.deleteTitle" : "capsule.revertTitle";
+  const isDeleteOutfitSetImageConfirm = confirmAction === "delete-outfit-set-image";
+  const confirmBodyKey = isDeleteOutfitSetImageConfirm
+    ? "capsule.deleteOutfitSetImageConfirmBody"
+    : isDeleteConfirm
+      ? "capsule.deleteConfirmBody"
+      : "capsule.revertConfirmBody";
+  const confirmTitleKey = isDeleteOutfitSetImageConfirm
+    ? "capsule.deleteOutfitSetImageTitle"
+    : isDeleteConfirm
+      ? "capsule.deleteTitle"
+      : "capsule.revertTitle";
   const confirmButtonKey = isDeleteConfirm ? "capsule.deleteConfirm" : "capsule.revertConfirm";
 
   const selectedCount = selectedRegenerationUrls.length;
@@ -935,39 +950,104 @@ function MainScreen({
                               sx={{
                                 alignSelf: "center",
                                 width: "100%",
+                                maxWidth: `${OUTFIT_SET_IMAGE_WIDTH}px`,
                                 borderRadius: 0.3,
                                 overflow: "hidden",
-                                border: "1px solid",
-                                borderColor: "divider",
-                                backgroundColor: "grey.100"
+                                backgroundColor: "background.paper",
+                                position: "relative",
+                                boxShadow: "0 16px 40px rgba(17, 36, 34, 0.08)",
+                                "&::before": {
+                                  content: '""',
+                                  position: "absolute",
+                                  inset: 0,
+                                  borderRadius: 0.3,
+                                  padding: "1px",
+                                  background:
+                                    "linear-gradient(140deg, rgba(28,124,124,0.2), rgba(240,180,41,0.2))",
+                                  WebkitMask:
+                                    "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
+                                  WebkitMaskComposite: "xor",
+                                  pointerEvents: "none"
+                                }
                               }}
                             >
                               <Box
                                 data-testid="outfit-set-image-placeholder"
                                 sx={{
-                                  aspectRatio: "5 / 3",
-                                  minHeight: 220,
-                                  background: "linear-gradient(135deg, rgba(209,15,15,0.05), rgba(255,255,255,0.85))"
+                                  width: "100%",
+                                  aspectRatio: OUTFIT_SET_IMAGE_ASPECT_RATIO,
+                                  background:
+                                    "linear-gradient(110deg, #ece8e2 8%, #f6f4f1 18%, #ece8e2 33%)",
+                                  backgroundSize: "200% 100%",
+                                  animation: "placeholderShimmer 1.3s linear infinite",
+                                  position: "relative",
+                                  overflow: "hidden"
                                 }}
-                              />
+                              >
+                                <Box
+                                  sx={{
+                                    position: "absolute",
+                                    inset: 0,
+                                    background:
+                                      "linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(10,12,12,0.12) 100%)"
+                                  }}
+                                />
+                              </Box>
                             </Box>
                           ) : activeOutfitSetImageSrc ? (
                             <Box
-                              component="img"
-                              src={activeOutfitSetImageSrc}
-                              alt={`Outfit set ${activeOutfitSet.label}`}
-                              data-testid="outfit-set-image"
                               sx={{
                                 alignSelf: "center",
-                                width: "auto",
-                                maxWidth: "100%",
-                                height: "auto",
-                                borderRadius: 0.3,
-                                display: "block",
-                                border: "1px solid",
-                                borderColor: "divider"
+                                width: "100%",
+                                maxWidth: `${OUTFIT_SET_IMAGE_WIDTH}px`,
+                                position: "relative",
+                                "&:hover .outfit-set-image-delete-button, &:focus-within .outfit-set-image-delete-button": {
+                                  opacity: 1,
+                                  transform: "translateY(0)"
+                                }
                               }}
-                            />
+                            >
+                              <IconButton
+                                className="outfit-set-image-delete-button"
+                                aria-label={t("capsule.deleteOutfitSetImage")}
+                                onClick={() => {
+                                  setConfirmAction("delete-outfit-set-image");
+                                  setConfirmOutfitSetIndex(activeOutfitSet.index);
+                                }}
+                                sx={{
+                                  position: "absolute",
+                                  top: 12,
+                                  right: 12,
+                                  zIndex: 1,
+                                  bgcolor: "rgba(255,255,255,0.9)",
+                                  color: "error.main",
+                                  boxShadow: "0 8px 24px rgba(17, 36, 34, 0.16)",
+                                  opacity: isOverlaySidebar ? 1 : 0,
+                                  transform: isOverlaySidebar ? "translateY(0)" : "translateY(-4px)",
+                                  transition: "opacity 160ms ease, transform 160ms ease, background-color 160ms ease",
+                                  "&:hover": {
+                                    bgcolor: "rgba(255,255,255,0.98)"
+                                  }
+                                }}
+                              >
+                                <DeleteOutlineRoundedIcon />
+                              </IconButton>
+                              <Box
+                                component="img"
+                                src={activeOutfitSetImageSrc}
+                                alt={`Outfit set ${activeOutfitSet.label}`}
+                                data-testid="outfit-set-image"
+                                sx={{
+                                  width: "auto",
+                                  maxWidth: "100%",
+                                  height: "auto",
+                                  borderRadius: 0.3,
+                                  display: "block",
+                                  border: "1px solid",
+                                  borderColor: "divider"
+                                }}
+                              />
+                            </Box>
                           ) : (
                             <Button
                               variant="outlined"
@@ -1039,6 +1119,7 @@ function MainScreen({
                 onClose={() => {
                   setConfirmAction("");
                   setConfirmCapsuleId("");
+                  setConfirmOutfitSetIndex(-1);
                 }}
                 {...confirmDialogProps}
               >
@@ -1054,6 +1135,7 @@ function MainScreen({
                   <Button onClick={() => {
                     setConfirmAction("");
                     setConfirmCapsuleId("");
+                    setConfirmOutfitSetIndex(-1);
                   }}
                   >
                     {t("actions.cancel")}
@@ -1078,7 +1160,11 @@ function MainScreen({
                         setRowMenuAnchor(null);
                         setRowMenuCapsule(null);
                       }
+                      if (confirmAction === "delete-outfit-set-image" && confirmOutfitSetIndex >= 0) {
+                        await onDeleteOutfitSetImage(confirmOutfitSetIndex);
+                      }
                       setConfirmCapsuleId("");
+                      setConfirmOutfitSetIndex(-1);
                       setConfirmAction("");
                     }}
                   >

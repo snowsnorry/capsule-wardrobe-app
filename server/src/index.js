@@ -54,7 +54,7 @@ import {
 import { getSearchOptions, getSavedSearch, getSearchStats, runSavedSearch } from "./searchStore.js";
 import { getWardrobeJob, regenerateCapsuleWardrobe } from "./ai/ai.js";
 import { getPartialRegenerationJob, regenerateSelectedWardrobeItems } from "./ai/regenerateSelected.js";
-import { generateOutfitSetImage, getOutfitSetImageJob } from "./ai/outfitSetImages.js";
+import { deleteOutfitSetImage, generateOutfitSetImage, getOutfitSetImageJob } from "./ai/outfitSetImages.js";
 import { buildCapsuleEventSnapshot, capsuleEventHub } from "./ai/capsuleEvents.js";
 import { buildWardrobePdfInChild } from "./wardrobePdf.js";
 import { checkDatabaseConnection, ensureTables, getProductsByUrlsInOrder } from "./db.js";
@@ -377,6 +377,7 @@ function createApp({
   streamCapsuleEventsImpl = capsuleEventHub.subscribe,
   regenerateCapsuleWardrobeHandler = regenerateCapsuleWardrobe,
   regenerateSelectedCapsuleItemsHandler = regenerateSelectedWardrobeItems,
+  deleteOutfitSetImageHandler = deleteOutfitSetImage,
   generateOutfitSetImageHandler = generateOutfitSetImage,
   buildWardrobePdfInChildImpl = buildWardrobePdfInChild,
   getProductsByUrlsInOrderImpl = getProductsByUrlsInOrder,
@@ -837,6 +838,14 @@ app.post(
   requireAuth,
   requireCsrf,
   generateOutfitSetImageHandler
+);
+
+app.delete(
+  "/capsules/:id/outfit-sets/:setIndex/image",
+  requireTrustedOrigin,
+  requireAuth,
+  requireCsrf,
+  deleteOutfitSetImageHandler
 );
 
 app.post("/capsules", requireTrustedOrigin, requireAuth, requireCsrf, async (req, res) => {

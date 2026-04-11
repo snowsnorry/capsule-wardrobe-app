@@ -29,6 +29,7 @@ import {
 import { clearProfileOptionsCache, loadProfileOptions } from "./api/profileOptionsCache.js";
 import { clearRequestCache } from "./api/auth.js";
 import {
+  deleteOutfitSetImage as requestOutfitSetImageDeletion,
   generateOutfitSetImage as requestOutfitSetImageGeneration,
   regenerateCapsuleWardrobe as requestWardrobeRegeneration,
   regenerateSelectedWardrobeItems as requestSelectedWardrobeRegeneration,
@@ -1405,6 +1406,38 @@ function App() {
     }
   };
 
+  const handleDeleteOutfitSetImage = async (setIndex) => {
+    const normalizedSetIndex = Number.parseInt(String(setIndex ?? ""), 10);
+    if (!activeCapsuleId || !Number.isInteger(normalizedSetIndex) || normalizedSetIndex < 0) {
+      return;
+    }
+
+    try {
+      await requestOutfitSetImageDeletion({
+        capsuleId: activeCapsuleId,
+        setIndex: normalizedSetIndex
+      });
+      setProfileOutfitSets((current) => current.map((set, index) => (
+        index === normalizedSetIndex
+          ? {
+            ...set,
+            image: null
+          }
+          : set
+      )));
+      startCapsuleEventStream(activeCapsuleId);
+    } catch (error) {
+      if (!isMountedRef.current) {
+        return;
+      }
+
+      setStatus((current) => ({
+        ...current,
+        error: resolveErrorMessage(error)
+      }));
+    }
+  };
+
   useEffect(() => {
     pendingRegenerationUrlsRef.current = partialRegenerationPendingUrls;
   }, [partialRegenerationPendingUrls]);
@@ -1576,6 +1609,7 @@ function App() {
           onToggleRegenerationSelection={handleToggleRegenerationSelection}
           onCancelRegenerationSelection={handleCancelRegenerationSelection}
           onRegenerateSelectedItems={handleRegenerateSelectedItems}
+          onDeleteOutfitSetImage={handleDeleteOutfitSetImage}
           onGenerateOutfitSetImage={handleGenerateOutfitSetImage}
           isPartialRegenerationLoading={isPartialRegenerationLoading}
         />

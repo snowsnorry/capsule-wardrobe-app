@@ -93,8 +93,11 @@ function t(key, params) {
       saveAsTitle: "Save as",
       renameTitle: "Rename capsule",
       deleteTitle: "Delete capsule",
+      deleteOutfitSetImageTitle: "Delete image",
       revertTitle: "Revert changes",
       deleteConfirmBody: "Are you sure you want to delete this capsule? This action cannot be undone.",
+      deleteOutfitSetImage: "Delete image",
+      deleteOutfitSetImageConfirmBody: "Are you sure you want to delete this image? This action cannot be undone.",
       revertConfirmBody: "Discard the current unsaved changes and restore the last saved version of this capsule?",
       deleteConfirm: "Delete",
       revertConfirm: "Revert",
@@ -235,6 +238,7 @@ function renderScreen(props = {}, { mobile = false, layoutMode = mobile ? "overl
     onToggleRegenerationSelection: vi.fn(),
     onCancelRegenerationSelection: vi.fn(),
     onRegenerateSelectedItems: vi.fn(),
+    onDeleteOutfitSetImage: vi.fn(),
     onGenerateOutfitSetImage: vi.fn(),
     isPartialRegenerationLoading: false
   };
@@ -455,6 +459,29 @@ describe("MainScreen", () => {
 
     expect(screen.getByTestId("outfit-set-image")).toHaveAttribute("src", "data:image/png;base64,abc123");
     expect(screen.queryByRole("button", { name: "Create image" })).not.toBeInTheDocument();
+  });
+
+  test("confirms deleting an outfit set image", async () => {
+    const user = userEvent.setup();
+    const onDeleteOutfitSetImage = vi.fn(() => Promise.resolve());
+
+    renderScreen({
+      items: [
+        { id: "a", url: "https://example.com/a", name: "Shirt", category: "top" },
+        { id: "b", url: "https://example.com/b", name: "Trousers", category: "bottom" },
+        { id: "c", url: "https://example.com/c", name: "Bag", category: "bag" }
+      ],
+      outfitSets: [{ itemIds: ["a", "b", "c"], image: "abc123" }],
+      onDeleteOutfitSetImage
+    });
+
+    await user.click(screen.getByRole("tab", { name: "Набор 1" }));
+    await user.click(screen.getByRole("button", { name: "Delete image" }));
+
+    expect(screen.getByText("Are you sure you want to delete this image? This action cannot be undone.")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+    expect(onDeleteOutfitSetImage).toHaveBeenCalledWith(0);
   });
 
   test("opens mobile filters dialog and closes it through apply and reset actions", async () => {

@@ -100,4 +100,11 @@ async function generateOutfitSetImage({ capsuleId, setIndex }) {
   });
 }
 
-export { generateOutfitSetImage, regenerateCapsuleWardrobe, regenerateSelectedWardrobeItems, subscribeCapsuleEvents };
+async function deleteOutfitSetImage({ capsuleId, setIndex }) {
+  return requestJson(`${API_BASE_URL}/capsules/${String(capsuleId || "").trim()}/outfit-sets/${Number.parseInt(String(setIndex ?? ""), 10)}/image`, {
+    method: "DELETE",
+    credentials: "include"
+  });
+}
+
+export { deleteOutfitSetImage, generateOutfitSetImage, regenerateCapsuleWardrobe, regenerateSelectedWardrobeItems, subscribeCapsuleEvents };

@@ -80,6 +80,57 @@ function createOutfitSetImageService({
   generateImageWithGeminiImpl = generateImageWithGemini,
   buildOutfitSetDescriptionImpl = buildOutfitSetDescription
 } = {}) {
+  async function deleteOutfitSetImage(req, res) {
+    const email = String(req?.user?.email || "").trim().toLowerCase();
+    const capsuleId = String(req?.params?.id || "").trim();
+    const setIndex = Number.parseInt(String(req?.params?.setIndex || ""), 10);
+
+    if (!capsuleId || !Number.isInteger(setIndex) || setIndex < 0) {
+      return res.status(400).json({ error: "invalid_payload" });
+    }
+
+    const capsule = await getCapsuleImpl(email, capsuleId);
+    if (!capsule) {
+      return res.status(404).json({ error: "not_found" });
+    }
+
+    const effectiveSnapshot = getEffectiveCapsuleSnapshot(capsule);
+    const wardrobe = effectiveSnapshot?.data?.wardrobe;
+    const outfitSets = Array.isArray(wardrobe?.outfitSets) ? wardrobe.outfitSets : [];
+    const targetSet = outfitSets[setIndex];
+
+    if (!targetSet) {
+      return res.status(404).json({ error: "not_found" });
+    }
+
+    const nextOutfitSets = outfitSets.map((set, index) => (
+      index === setIndex
+        ? {
+          ...set,
+          image: null
+        }
+        : set
+    ));
+
+    const updatedCapsule = await updateCapsuleSnapshotImpl(email, capsuleId, {
+      filters: effectiveSnapshot?.filters,
+      data: {
+        wardrobe: {
+          ...wardrobe,
+          outfitSets: nextOutfitSets
+        },
+        rejectedUrls: effectiveSnapshot?.data?.rejectedUrls || []
+      }
+    });
+
+    publishSnapshotImpl(email, capsuleId, buildCapsuleEventSnapshotImpl({
+      capsule: updatedCapsule,
+      outfitSetImageJob: getOutfitSetImageJob(email, capsuleId)
+    }));
+
+    return res.json({ ok: true, status: "ready" });
+  }
+
   async function generateOutfitSetImage(req, res) {
     const email = String(req?.user?.email || "").trim().toLowerCase();
     const capsuleId = String(req?.params?.id || "").trim();
@@ -184,6 +235,7 @@ function createOutfitSetImageService({
   }
 
   return {
+    deleteOutfitSetImage,
     generateOutfitSetImage
   };
 }
@@ -198,4 +250,5 @@ export {
   saveOutfitSetDebugArtifacts
 };
 
+export const deleteOutfitSetImage = outfitSetImageService.deleteOutfitSetImage;
 export const generateOutfitSetImage = outfitSetImageService.generateOutfitSetImage;

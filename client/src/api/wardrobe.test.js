@@ -17,6 +17,7 @@ vi.mock("./config.js", () => ({
 
 import { downloadCapsulePdf } from "./capsules.js";
 import {
+  deleteOutfitSetImage,
   generateOutfitSetImage,
   regenerateCapsuleWardrobe,
   regenerateSelectedWardrobeItems,
@@ -206,6 +207,23 @@ describe("wardrobe api", () => {
       "https://api.example.test/capsules/capsule-1/outfit-sets/2/image",
       {
         method: "POST",
+        credentials: "include"
+      }
+    );
+  });
+
+  test("deleteOutfitSetImage deletes through the outfit-set image route", async () => {
+    requestApi.requestJson.mockResolvedValueOnce({ ok: true, status: "ready" });
+
+    await expect(deleteOutfitSetImage({ capsuleId: "capsule-1", setIndex: 2 })).resolves.toEqual({
+      ok: true,
+      status: "ready"
+    });
+
+    expect(requestApi.requestJson).toHaveBeenCalledWith(
+      "https://api.example.test/capsules/capsule-1/outfit-sets/2/image",
+      {
+        method: "DELETE",
         credentials: "include"
       }
     );
