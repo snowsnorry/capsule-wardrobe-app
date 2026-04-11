@@ -461,6 +461,29 @@ describe("MainScreen", () => {
     expect(screen.queryByRole("button", { name: "Create image" })).not.toBeInTheDocument();
   });
 
+  test("opens the full-size outfit set image dialog on image click", async () => {
+    const user = userEvent.setup();
+
+    renderScreen({
+      items: [
+        { id: "a", url: "https://example.com/a", name: "Shirt", category: "top" },
+        { id: "b", url: "https://example.com/b", name: "Trousers", category: "bottom" },
+        { id: "c", url: "https://example.com/c", name: "Bag", category: "bag" }
+      ],
+      outfitSets: [{ itemIds: ["a", "b", "c"], image: "abc123" }]
+    });
+
+    await user.click(screen.getByRole("tab", { name: "Набор 1" }));
+    await user.click(screen.getByTestId("outfit-set-image"));
+
+    expect(screen.getByTestId("outfit-set-image-dialog")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Close" }));
+    await waitFor(() => {
+      expect(screen.queryByTestId("outfit-set-image-dialog")).not.toBeInTheDocument();
+    });
+  });
+
   test("confirms deleting an outfit set image", async () => {
     const user = userEvent.setup();
     const onDeleteOutfitSetImage = vi.fn(() => Promise.resolve());

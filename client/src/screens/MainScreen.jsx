@@ -129,6 +129,7 @@ function resolveOutfitSets(items = [], outfitSets = []) {
 const OUTFIT_SET_IMAGE_WIDTH = 896;
 const OUTFIT_SET_IMAGE_HEIGHT = 1195;
 const OUTFIT_SET_IMAGE_ASPECT_RATIO = `${OUTFIT_SET_IMAGE_WIDTH} / ${OUTFIT_SET_IMAGE_HEIGHT}`;
+const OUTFIT_SET_IMAGE_PREVIEW_MAX_WIDTH = OUTFIT_SET_IMAGE_WIDTH / 2;
 
 function CapsuleActionMenu({
   anchorEl,
@@ -270,6 +271,7 @@ function MainScreen({
   const [saveAsOpen, setSaveAsOpen] = useState(false);
   const [saveAsValue, setSaveAsValue] = useState("");
   const [saveAsCapsuleId, setSaveAsCapsuleId] = useState("");
+  const [isOutfitSetImageDialogOpen, setIsOutfitSetImageDialogOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState("");
   const [confirmCapsuleId, setConfirmCapsuleId] = useState("");
   const [confirmOutfitSetIndex, setConfirmOutfitSetIndex] = useState(-1);
@@ -950,7 +952,7 @@ function MainScreen({
                               sx={{
                                 alignSelf: "center",
                                 width: "100%",
-                                maxWidth: `${OUTFIT_SET_IMAGE_WIDTH}px`,
+                                maxWidth: `${OUTFIT_SET_IMAGE_PREVIEW_MAX_WIDTH}px`,
                                 borderRadius: 0.3,
                                 overflow: "hidden",
                                 backgroundColor: "background.paper",
@@ -999,7 +1001,7 @@ function MainScreen({
                               sx={{
                                 alignSelf: "center",
                                 width: "100%",
-                                maxWidth: `${OUTFIT_SET_IMAGE_WIDTH}px`,
+                                maxWidth: `${OUTFIT_SET_IMAGE_PREVIEW_MAX_WIDTH}px`,
                                 position: "relative",
                                 "&:hover .outfit-set-image-delete-button, &:focus-within .outfit-set-image-delete-button": {
                                   opacity: 1,
@@ -1037,6 +1039,7 @@ function MainScreen({
                                 src={activeOutfitSetImageSrc}
                                 alt={`Outfit set ${activeOutfitSet.label}`}
                                 data-testid="outfit-set-image"
+                                onClick={() => setIsOutfitSetImageDialogOpen(true)}
                                 sx={{
                                   width: "auto",
                                   maxWidth: "100%",
@@ -1044,7 +1047,8 @@ function MainScreen({
                                   borderRadius: 0.3,
                                   display: "block",
                                   border: "1px solid",
-                                  borderColor: "divider"
+                                  borderColor: "divider",
+                                  cursor: "zoom-in"
                                 }}
                               />
                             </Box>
@@ -1171,6 +1175,75 @@ function MainScreen({
                     {t(confirmButtonKey)}
                   </Button>
                 </DialogActions>
+              </Dialog>
+
+              <Dialog
+                open={isOutfitSetImageDialogOpen}
+                onClose={() => setIsOutfitSetImageDialogOpen(false)}
+                fullScreen
+                maxWidth={false}
+                PaperProps={{
+                  elevation: 0,
+                  sx: {
+                    backgroundColor: "transparent",
+                    backgroundImage: "none",
+                    border: "none",
+                    boxShadow: "none",
+                    overflow: "hidden"
+                  }
+                }}
+                BackdropProps={{
+                  sx: {
+                    backgroundColor: "rgba(10, 12, 12, 0.5)"
+                  }
+                }}
+              >
+                <Box
+                  data-testid="outfit-set-image-dialog"
+                  sx={{
+                    position: "relative",
+                    width: "100vw",
+                    height: "100vh",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    p: 2
+                  }}
+                >
+                  <IconButton
+                    aria-label={t("actions.close")}
+                    onClick={() => setIsOutfitSetImageDialogOpen(false)}
+                    sx={{
+                      position: "fixed",
+                      top: 16,
+                      right: 16,
+                      zIndex: 1,
+                      bgcolor: "rgba(255,255,255,0.94)",
+                      color: "#14211f",
+                      boxShadow: "0 8px 24px rgba(17, 36, 34, 0.18)",
+                      "&:hover": {
+                        bgcolor: "rgba(255,255,255,0.98)"
+                      }
+                    }}
+                  >
+                    <CloseRoundedIcon />
+                  </IconButton>
+                  {activeOutfitSetImageSrc ? (
+                    <Box
+                      component="img"
+                      src={activeOutfitSetImageSrc}
+                      alt={`Outfit set ${activeOutfitSet?.label || ""}`}
+                      sx={{
+                        display: "block",
+                        width: "auto",
+                        maxWidth: "calc(100vw - 32px)",
+                        maxHeight: "calc(100vh - 32px)",
+                        objectFit: "contain",
+                        borderRadius: 0.3
+                      }}
+                    />
+                  ) : null}
+                </Box>
               </Dialog>
 
               <Dialog
