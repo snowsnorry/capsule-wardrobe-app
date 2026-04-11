@@ -13,6 +13,7 @@ import {  getPromptEmbeddings, getWardrobePrompt } from "./voyageai.js";
 import { getCapsuleCategories } from "./categories.js";
 import { generateSwimwearAddition, shouldGenerateSwimwear } from "./swimwear.js";
 import { buildPromptDebugImagesInChild } from "./promptImages.js";
+import { buildOutfitSetsFromFormulas, getOutfitFormulas } from "./outfitSets.js";
 import {
   getProcessMemoryUsage,
   runWithImageWorkSlot,
@@ -205,6 +206,7 @@ function buildErrorLogContext(logContext = null) {
 
 function buildWardrobePayload({
   items,
+  outfitSets = [],
   reasoning = null,
   rawSelectionText = null,
   swimwearReasoning = null,
@@ -212,6 +214,7 @@ function buildWardrobePayload({
 }) {
   return {
     items,
+    outfitSets,
     reasoning,
     rawSelectionText,
     swimwearReasoning,
@@ -883,6 +886,7 @@ async function generateCapsuleWardrobe(userProfile = null, logContext = null) {
     return {
       items: balancedItems.map(toWardrobeUiItem),
       selectedItems: balancedItems,
+      outfitSets: [],
       promptEmbeddings,
       rawSelectionText: null,
       reasoning: null
@@ -979,6 +983,7 @@ async function generateCapsuleWardrobe(userProfile = null, logContext = null) {
   return {
     items: balancedItems.map(toWardrobeUiItem),
     selectedItems: balancedItems,
+    outfitSets: buildOutfitSetsFromFormulas(getOutfitFormulas(parsedSelection), balancedItems),
     promptEmbeddings,
     rawSelectionText: typeof selectionResponse?.output_text === "string" && selectionResponse.output_text.trim().length > 0
       ? selectionResponse.output_text.trim()
@@ -1077,6 +1082,7 @@ function createWardrobeService({
 
         const storedCapsule = buildWardrobePayload({
           items,
+          outfitSets: wardrobe.outfitSets,
           reasoning: wardrobe.reasoning,
           rawSelectionText: wardrobe.rawSelectionText
         });
@@ -1128,6 +1134,7 @@ function createWardrobeService({
             const finalItems = appendUniqueWardrobeItems(items, swimwear.items);
             const finalPayload = buildWardrobePayload({
               items: finalItems,
+              outfitSets: wardrobe.outfitSets,
               reasoning: wardrobe.reasoning,
               rawSelectionText: wardrobe.rawSelectionText,
               swimwearReasoning: swimwear.reasoning,

@@ -23,6 +23,7 @@ import {
   buildPromptDebugImagesInChild
 } from "./promptImages.js";
 import { runWithImageWorkSlot } from "./imagePipeline.js";
+import { buildOutfitSetsFromFormulas, getOutfitFormulas } from "./outfitSets.js";
 import { buildShiftedTargetVector, normalizeEmbeddingVector } from "./vectorMath.js";
 import { getPromptEmbeddings, getWardrobePrompt } from "./voyageai.js";
 import {
@@ -62,6 +63,7 @@ function isValidSelectedItemUrls(itemUrls) {
 function buildStoredWardrobePayloadFromResult(result = {}, storedWardrobe = null) {
   return {
     items: Array.isArray(result?.items) ? result.items : [],
+    outfitSets: Array.isArray(result?.outfitSets) ? result.outfitSets : [],
     reasoning: result?.reasoning || null,
     rawSelectionText: result?.rawSelectionText || null,
     swimwearReasoning: storedWardrobe?.swimwearReasoning || null,
@@ -636,6 +638,7 @@ async function regenerateCapsuleWardrobe(userProfile = null, products = null, lo
   return {
     items: nextWardrobeItems,
     selectedItems: balancedItems,
+    outfitSets: buildOutfitSetsFromFormulas(getOutfitFormulas(parsedSelection), nextWardrobeItems),
     promptEmbeddings,
     rawSelectionText: typeof selectionResponse?.output_text === "string" && selectionResponse.output_text.trim().length > 0
       ? selectionResponse.output_text.trim()
@@ -829,6 +832,7 @@ function createPartialRegenerationService({
       const partialItems = storedWardrobe.items.filter((item) => !selectedItemUrlSet.has(String(item?.url || "").trim()));
       const partialPayload = {
         items: partialItems,
+        outfitSets: [],
         reasoning: storedWardrobe.reasoning || null,
         rawSelectionText: storedWardrobe.rawSelectionText || null,
         swimwearReasoning: storedWardrobe.swimwearReasoning || null,

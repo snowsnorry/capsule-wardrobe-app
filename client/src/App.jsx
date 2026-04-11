@@ -130,6 +130,18 @@ function normalizeWardrobeItemUrl(item) {
   return String(item?.url || "").trim();
 }
 
+function normalizeOutfitSets(outfitSets) {
+  return Array.isArray(outfitSets)
+    ? outfitSets
+      .map((set) => ({
+        itemIds: Array.isArray(set?.itemIds)
+          ? set.itemIds.map((id) => String(id || "").trim()).filter(Boolean)
+          : []
+      }))
+      .filter((set) => set.itemIds.length > 0)
+    : [];
+}
+
 function buildDisplayWardrobeItems(items) {
   return sortWardrobeItems(Array.isArray(items) ? items : []);
 }
@@ -301,6 +313,7 @@ function App() {
   const [profileCreated, setProfileCreated] = useState(false);
   const [currentView, setCurrentView] = useState("main");
   const [profileItems, setProfileItems] = useState(null);
+  const [profileOutfitSets, setProfileOutfitSets] = useState([]);
   const [settingsProfile, setSettingsProfile] = useState(() => normalizeProfileSettings());
   const [activeCapsuleId, setActiveCapsuleId] = useState("");
   const [activeCapsuleMeta, setActiveCapsuleMeta] = useState(null);
@@ -546,6 +559,7 @@ function App() {
     );
     setSelectedText(effective.filters?.text || "");
     setProfileItems(buildDisplayWardrobeItems(effective.data?.wardrobe?.items || []));
+    setProfileOutfitSets(normalizeOutfitSets(effective.data?.wardrobe?.outfitSets));
     setWardrobeLoadedCapsuleId(hasStoredWardrobeItems(capsule) ? capsule.id || "" : "");
 
     if (Array.isArray(capsules)) {
@@ -553,7 +567,13 @@ function App() {
     }
   };
 
-  const buildCurrentDraftSnapshot = ({ wardrobe = profileItems, rejectedUrls = null } = {}) => ({
+  const buildCurrentDraftSnapshot = ({
+    wardrobe = {
+      items: profileItems,
+      outfitSets: profileOutfitSets
+    },
+    rejectedUrls = null
+  } = {}) => ({
     filters: {
       formalityLevel: selectedFormalityLevel,
       style: selectedStyle,
@@ -568,6 +588,7 @@ function App() {
       wardrobe: wardrobe
         ? {
           items: Array.isArray(wardrobe) ? wardrobe : wardrobe.items || [],
+          outfitSets: Array.isArray(wardrobe) ? [] : normalizeOutfitSets(wardrobe?.outfitSets),
           reasoning: wardrobe?.reasoning || null,
           rawSelectionText: wardrobe?.rawSelectionText || null,
           swimwearReasoning: wardrobe?.swimwearReasoning || null,
@@ -710,6 +731,7 @@ function App() {
       setSelectedText("");
       setOnboardingStep(0);
       setProfileItems(null);
+      setProfileOutfitSets([]);
       setActiveCapsuleId("");
       setActiveCapsuleMeta(null);
       setCapsuleList([]);
@@ -780,6 +802,7 @@ function App() {
       setHasProfile(true);
       setCurrentView("main");
       setProfileItems(null);
+      setProfileOutfitSets([]);
       setSelectedRegenerationUrls([]);
       setPartialRegenerationPendingUrls([]);
       setIsPartialRegenerationLoading(false);
@@ -862,6 +885,7 @@ function App() {
           : current
       ));
       setProfileItems([]);
+      setProfileOutfitSets([]);
       setWardrobeLoadedCapsuleId("");
       manualWardrobeRegenerationCapsuleIdRef.current = activeCapsuleId;
       await refreshCapsuleList();
@@ -1052,6 +1076,7 @@ function App() {
 
   const handleWardrobeError = () => {
     setProfileItems([]);
+    setProfileOutfitSets([]);
     setWardrobeLoadedCapsuleId(activeCapsuleId);
     setSelectedRegenerationUrls([]);
     setPartialRegenerationPendingUrls([]);
@@ -1072,6 +1097,7 @@ function App() {
 
   const applyWardrobeSnapshot = async (snapshot) => {
     const items = Array.isArray(snapshot?.items) ? snapshot.items : [];
+    const outfitSets = normalizeOutfitSets(snapshot?.outfitSets);
     const pendingRegenerationUrls = Array.isArray(snapshot?.pendingRegenerationUrls)
       ? snapshot.pendingRegenerationUrls.map((itemUrl) => String(itemUrl || "").trim()).filter(Boolean)
       : [];
@@ -1105,6 +1131,7 @@ function App() {
       pendingRegenerationUrlsRef.current = pendingRegenerationUrls;
       setPartialRegenerationPendingUrls(pendingRegenerationUrls);
       setIsPartialRegenerationLoading(pendingRegenerationUrls.length > 0);
+      setProfileOutfitSets(outfitSets);
       setIsWardrobePending(true);
       setHasPendingAdditionalItems(isPendingExtras);
       setIsLoadingItems(items.length === 0 && !isPendingExtras);
@@ -1126,6 +1153,7 @@ function App() {
     setSelectedRegenerationUrls([]);
     pendingRegenerationUrlsRef.current = [];
     regenerationBaseItemsRef.current = [];
+    setProfileOutfitSets(outfitSets);
     setPartialRegenerationPendingUrls([]);
     setIsPartialRegenerationLoading(false);
     setIsWardrobePending(false);
@@ -1446,6 +1474,7 @@ function App() {
           onDeleteCapsule={handleDeleteCapsule}
           onSearchCapsules={handleSearchCapsules}
           items={profileItems || []}
+          outfitSets={profileOutfitSets}
           isLoadingItems={isLoadingItems}
           isContentBusy={isContentBusy}
           isDownloadingPdf={isDownloadingWardrobePdf}

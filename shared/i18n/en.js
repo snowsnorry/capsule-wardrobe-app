@@ -351,6 +351,7 @@ const en = {
     searchPrevious7Days: "Previous 7 Days",
     searchPrevious30Days: "Previous 30 Days",
     searchEarlier: "Earlier",
+    outfitSet: "Set {number}",
     closeFilters: "Close filters",
     openMenu: "Open capsule menu"
   },

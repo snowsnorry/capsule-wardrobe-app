@@ -56,7 +56,7 @@ The output MUST exactly match this schema:
   "system_evaluation": {
     "overall_explanation": "Briefly explain why this capsule works well as a dense, cohesive system...",
     "outfit_formulas": [
-      "Provide 3-4 highly wearable outfit formulas using the selected items (reference them by basic name, not ID)."
+      "Provide 3-4 highly wearable outfit formulas using the selected items (reference them by basic name AND ID in [] - IMPORTANT)."
     ]
   },
   "item_details": [

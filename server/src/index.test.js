@@ -955,6 +955,7 @@ test("rejected urls patch validates against current capsule wardrobe", async (t)
     data: {
       wardrobe: {
         items: [{ url: "https://example.com/1" }],
+        outfitSets: [],
         reasoning: null,
         rawSelectionText: null,
         swimwearReasoning: null,

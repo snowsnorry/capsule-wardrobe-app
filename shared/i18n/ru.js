@@ -352,6 +352,7 @@ const ru = {
     searchPrevious7Days: "Последние 7 дней",
     searchPrevious30Days: "Последние 30 дней",
     searchEarlier: "Ранее",
+    outfitSet: "Набор {number}",
     closeFilters: "Закрыть фильтры",
     openMenu: "Открыть меню капсулы"
   },

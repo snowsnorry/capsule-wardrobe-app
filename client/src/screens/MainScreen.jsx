@@ -17,6 +17,8 @@ import {
   Menu,
   MenuItem,
   Stack,
+  Tab,
+  Tabs,
   TextField,
   Tooltip,
   Typography
@@ -41,6 +43,7 @@ import ClothingCard from "../components/ClothingCard.jsx";
 import LocaleSwitcher from "../components/LocaleSwitcher.jsx";
 import AppLauncher from "../components/AppLauncher.jsx";
 import AppSidebarShell from "../components/AppSidebarShell.jsx";
+import { sortWardrobeItems } from "../../../shared/wardrobeOrder.js";
 
 function highlightMatch(name, query) {
   const label = String(name || "");
@@ -94,6 +97,25 @@ function capsuleHasUnsavedChanges(capsule) {
 
 function normalizeCapsuleName(name) {
   return String(name || "").trim();
+}
+
+function resolveOutfitSets(items = [], outfitSets = []) {
+  const itemsById = new Map(
+    (Array.isArray(items) ? items : [])
+      .map((item) => [String(item?.id || "").trim(), item])
+      .filter(([id]) => id)
+  );
+
+  return (Array.isArray(outfitSets) ? outfitSets : [])
+    .map((set, index) => {
+      const resolvedItems = sortWardrobeItems((Array.isArray(set?.itemIds) ? set.itemIds : [])
+        .map((id) => itemsById.get(String(id || "").trim()))
+        .filter(Boolean));
+      return resolvedItems.length >= 3
+        ? { id: `set-${index + 1}`, label: index + 1, items: resolvedItems }
+        : null;
+    })
+    .filter(Boolean);
 }
 
 function CapsuleActionMenu({
@@ -179,6 +201,7 @@ function MainScreen({
   onDeleteCapsule = async () => {},
   onSearchCapsules = async () => [],
   items,
+  outfitSets = [],
   isLoadingItems,
   isContentBusy = false,
   isDownloadingPdf,
@@ -238,6 +261,7 @@ function MainScreen({
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [activeItemsTab, setActiveItemsTab] = useState("all");
   const [optimisticActiveCapsuleId, setOptimisticActiveCapsuleId] = useState(activeCapsule?.id || "");
   const inlineRenameSubmitGuardRef = useRef(false);
   const searchDialogPaperRef = useRef(null);
@@ -249,6 +273,10 @@ function MainScreen({
   const selectedCount = selectedRegenerationUrls.length;
   const searchGroups = useMemo(() => groupCapsules(searchResults), [searchResults]);
   const activeCapsuleName = activeCapsule?.name || `<${t("capsule.new")}>`;
+  const resolvedOutfitSets = useMemo(() => resolveOutfitSets(items, outfitSets), [items, outfitSets]);
+  const visibleItems = activeItemsTab === "all"
+    ? items
+    : (resolvedOutfitSets.find((set) => set.id === activeItemsTab)?.items || items);
 
   useEffect(() => {
     if (!searchOpen) {
@@ -275,6 +303,16 @@ function MainScreen({
   useEffect(() => {
     setOptimisticActiveCapsuleId(activeCapsule?.id || "");
   }, [activeCapsule?.id]);
+
+  useEffect(() => {
+    if (activeItemsTab === "all") {
+      return;
+    }
+
+    if (!resolvedOutfitSets.some((set) => set.id === activeItemsTab)) {
+      setActiveItemsTab("all");
+    }
+  }, [activeItemsTab, resolvedOutfitSets]);
 
   useEffect(() => {
     setIsInlineRenameActive(false);
@@ -796,6 +834,24 @@ function MainScreen({
                   ) : null}
                 </Box>
                 <Box sx={{ flex: 1, minHeight: 0, overflowY: "auto", pr: 0.5 }}>
+                  {resolvedOutfitSets.length > 0 ? (
+                    <Tabs
+                      value={activeItemsTab}
+                      onChange={(_event, value) => setActiveItemsTab(value)}
+                      variant="scrollable"
+                      scrollButtons="auto"
+                      sx={{ mb: 2 }}
+                    >
+                      <Tab value="all" label={t("search.all")} />
+                      {resolvedOutfitSets.map((set) => (
+                        <Tab
+                          key={set.id}
+                          value={set.id}
+                          label={t("capsule.outfitSet", { number: set.label })}
+                        />
+                      ))}
+                    </Tabs>
+                  ) : null}
                   {isLoadingItems ? (
                     <ClothingGridPlaceholder count={12} />
                   ) : (
@@ -816,7 +872,7 @@ function MainScreen({
                         }
                       }}
                     >
-                      {items.map((item) => {
+                      {visibleItems.map((item) => {
                         const itemUrl = String(item?.url || "");
                         if (partialRegenerationPendingUrls.includes(itemUrl)) {
                           return (

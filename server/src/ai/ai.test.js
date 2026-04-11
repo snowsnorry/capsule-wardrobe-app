@@ -8,6 +8,7 @@ import {
   getWardrobeSelectionPrompt,
   getStoredWardrobePayload
 } from "./ai.js";
+import { buildOutfitSetsFromFormulas } from "./outfitSets.js";
 
 function createResponseRecorder() {
   return {
@@ -504,6 +505,7 @@ test("getStoredWardrobePayload normalizes legacy arrays and object payloads", ()
     }),
     {
       items: [{ id: "1" }],
+      outfitSets: [],
       reasoning: null,
       rawSelectionText: null,
       swimwearReasoning: null,
@@ -515,6 +517,7 @@ test("getStoredWardrobePayload normalizes legacy arrays and object payloads", ()
     getStoredWardrobePayload({
       items: {
         items: [{ id: "2" }],
+        outfitSets: [{ itemIds: ["2"] }],
         reasoning: "r",
         rawSelectionText: "raw",
         swimwearReasoning: "swim",
@@ -523,11 +526,29 @@ test("getStoredWardrobePayload normalizes legacy arrays and object payloads", ()
     }),
     {
       items: [{ id: "2" }],
+      outfitSets: [{ itemIds: ["2"] }],
       reasoning: "r",
       rawSelectionText: "raw",
       swimwearReasoning: "swim",
       swimwearRawSelectionText: "swim-raw"
     }
+  );
+});
+
+test("buildOutfitSetsFromFormulas keeps only formulas with three or more resolved items", () => {
+  assert.deepEqual(
+    buildOutfitSetsFromFormulas(
+      [
+        "Look [1] + [2] + [3].",
+        "Small [1] + [9].",
+        "Ordered [3] then [1] then [2] then [3]."
+      ],
+      [{ id: "1" }, { id: "2" }, { id: "3" }]
+    ),
+    [
+      { itemIds: ["1", "2", "3"] },
+      { itemIds: ["3", "1", "2", "3"] }
+    ]
   );
 });
 
@@ -556,6 +577,7 @@ test("getCapsuleItems returns pending regenerate payload when partial regenerati
   assert.equal(res.body.pendingStage, "regenerate");
   assert.deepEqual(res.body.pendingRegenerationUrls, ["https://example.com/top-1"]);
   assert.deepEqual(res.body.items, [{ id: "top-1", url: "https://example.com/top-1", category: "top" }]);
+  assert.deepEqual(res.body.outfitSets, []);
 });
 
 test("getCapsuleItems returns ready payload from stored wardrobe", async () => {
@@ -581,6 +603,7 @@ test("getCapsuleItems returns ready payload from stored wardrobe", async () => {
     ok: true,
     status: "ready",
     items: [{ id: "top-1", category: "top" }],
+    outfitSets: [],
     reasoning: "capsule-json",
     rawSelectionText: "raw-selection",
     swimwearReasoning: "swimwear-json",
@@ -617,6 +640,7 @@ test("getCapsuleItems returns extras pending state when extras are still generat
   assert.equal(res.body.pendingStage, "extras");
   assert.equal(res.body.hasPendingAdditionalItems, true);
   assert.deepEqual(res.body.items, [{ id: "top-1", category: "top" }]);
+  assert.deepEqual(res.body.outfitSets, []);
 });
 
 test("regenerateCapsuleWardrobe starts a new pending job and clears stored items", async () => {
@@ -674,6 +698,7 @@ test("regenerateCapsuleWardrobe starts a new pending job and clears stored items
     data: {
       wardrobe: {
         items: [{ id: "top-2", category: "top" }],
+        outfitSets: [],
         reasoning: "reasoning",
         rawSelectionText: "raw",
         swimwearReasoning: null,
@@ -779,6 +804,7 @@ test("startWardrobeJob stores capsule result and merges swimwear additions when 
       items: [{ id: "top-1", category: "top" }],
       selectedItems: [{ id: "top-1", category: "top" }],
       promptEmbeddings: [0.1],
+      outfitSets: [{ itemIds: ["top-1", "top-1", "top-1"] }],
       reasoning: "capsule-json",
       rawSelectionText: "capsule-raw"
     }),
@@ -814,6 +840,7 @@ test("startWardrobeJob stores capsule result and merges swimwear additions when 
       data: {
         wardrobe: {
           items: [{ id: "top-1", category: "top" }],
+          outfitSets: [{ itemIds: ["top-1", "top-1", "top-1"] }],
           reasoning: "capsule-json",
           rawSelectionText: "capsule-raw",
           swimwearReasoning: null,
@@ -830,6 +857,7 @@ test("startWardrobeJob stores capsule result and merges swimwear additions when 
             { id: "top-1", category: "top" },
             { id: "swim-1", category: "swimwear" }
           ],
+          outfitSets: [{ itemIds: ["top-1", "top-1", "top-1"] }],
           reasoning: "capsule-json",
           rawSelectionText: "capsule-raw",
           swimwearReasoning: "swimwear-json",

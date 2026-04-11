@@ -102,8 +102,12 @@ function t(key, params) {
       searchPrevious7Days: "Previous 7 Days",
       searchPrevious30Days: "Previous 30 Days",
       searchEarlier: "Earlier",
+      outfitSet: "Набор {number}",
       closeFilters: "Close filters",
       openMenu: "Open capsule menu"
+    },
+    search: {
+      all: "All"
     },
     main: {
       cancelSelection: "Cancel",
@@ -152,7 +156,10 @@ function t(key, params) {
     }
   };
 
-  return key.split(".").reduce((current, part) => current?.[part], labels) || key;
+  const value = key.split(".").reduce((current, part) => current?.[part], labels) || key;
+  return typeof value === "string"
+    ? value.replace(/\{(\w+)\}/g, (_, token) => String(params?.[token] ?? `{${token}}`))
+    : value;
 }
 
 function renderScreen(props = {}, { mobile = false, layoutMode = mobile ? "overlay" : "medium" } = {}) {
@@ -193,6 +200,7 @@ function renderScreen(props = {}, { mobile = false, layoutMode = mobile ? "overl
     onDeleteCapsule: vi.fn(() => Promise.resolve()),
     onSearchCapsules: vi.fn(() => Promise.resolve([])),
     items: [],
+    outfitSets: [],
     isLoadingItems: false,
     isContentBusy: false,
     isDownloadingPdf: false,
@@ -329,6 +337,64 @@ describe("MainScreen", () => {
 
     await user.click(screen.getByRole("button", { name: "Regenerate Selected (1)" }));
     expect(onRegenerateSelectedItems).toHaveBeenCalledTimes(1);
+  });
+
+  test("renders outfit tabs and filters cards by wardrobe category order", async () => {
+    const user = userEvent.setup();
+
+    renderScreen({
+      items: [
+        { id: "b", url: "https://example.com/b", name: "Blazer", category: "outerwear" },
+        { id: "a", url: "https://example.com/a", name: "Shirt", category: "top" },
+        { id: "c", url: "https://example.com/c", name: "Trousers", category: "bottom" },
+        { id: "d", url: "https://example.com/d", name: "Bag", category: "bag" }
+      ],
+      outfitSets: [
+        { itemIds: ["c", "a", "d"] },
+        { itemIds: ["x", "a"] }
+      ]
+    });
+
+    expect(screen.getByRole("tab", { name: "All" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Набор 1" })).toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "Набор 2" })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("tab", { name: "Набор 1" }));
+
+    const cards = screen.getAllByRole("button").filter((node) => (
+      node.getAttribute("data-testid")?.startsWith("clothing-card-")
+    ));
+    expect(cards.map((node) => node.textContent)).toEqual(["Shirt", "Trousers", "Bag"]);
+    expect(screen.queryByTestId("clothing-card-https://example.com/b")).not.toBeInTheDocument();
+  });
+
+  test("resets back to All when the selected outfit tab disappears", async () => {
+    const user = userEvent.setup();
+    const initialProps = {
+      items: [
+        { id: "a", url: "https://example.com/a", name: "Shirt", category: "top" },
+        { id: "b", url: "https://example.com/b", name: "Trousers", category: "bottom" },
+        { id: "c", url: "https://example.com/c", name: "Bag", category: "bag" }
+      ],
+      outfitSets: [{ itemIds: ["a", "b", "c"] }]
+    };
+    const view = renderScreen(initialProps);
+
+    await user.click(screen.getByRole("tab", { name: "Набор 1" }));
+    expect(screen.queryByRole("tab", { selected: true, name: "Набор 1" })).toBeInTheDocument();
+
+    view.rerender(
+      <ThemeProvider theme={theme}>
+        <MainScreen
+          {...view}
+          {...initialProps}
+          outfitSets={[]}
+        />
+      </ThemeProvider>
+    );
+
+    expect(screen.queryByRole("tab", { name: "Набор 1" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "All" })).not.toBeInTheDocument();
   });
 
   test("opens mobile filters dialog and closes it through apply and reset actions", async () => {

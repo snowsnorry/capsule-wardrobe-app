@@ -12,6 +12,7 @@ function getStoredWardrobePayload(profile) {
   if (Array.isArray(stored)) {
     return {
       items: stored,
+      outfitSets: [],
       reasoning: null,
       rawSelectionText: null,
       swimwearReasoning: null,
@@ -25,6 +26,15 @@ function getStoredWardrobePayload(profile) {
 
   return {
     items: Array.isArray(stored.items) ? stored.items : [],
+    outfitSets: Array.isArray(stored.outfitSets)
+      ? stored.outfitSets
+        .map((set) => ({
+          itemIds: Array.isArray(set?.itemIds)
+            ? set.itemIds.map((id) => String(id || "").trim()).filter(Boolean)
+            : []
+        }))
+        .filter((set) => set.itemIds.length > 0)
+      : [],
     reasoning: typeof stored.reasoning === "string" && stored.reasoning.trim().length > 0
       ? stored.reasoning.trim()
       : null,
@@ -46,6 +56,7 @@ function buildSnapshotPayload({
   hasPendingAdditionalItems = false,
   pendingRegenerationUrls = [],
   items = [],
+  outfitSets = [],
   reasoning = null,
   rawSelectionText = null,
   swimwearReasoning = null,
@@ -58,6 +69,7 @@ function buildSnapshotPayload({
     hasPendingAdditionalItems,
     pendingRegenerationUrls,
     items,
+    outfitSets,
     reasoning,
     rawSelectionText,
     swimwearReasoning,
@@ -70,6 +82,7 @@ function buildFailedSnapshot(storedWardrobe, error) {
   return buildSnapshotPayload({
     status: "failed",
     items: storedWardrobe?.items || [],
+    outfitSets: storedWardrobe?.outfitSets || [],
     reasoning: storedWardrobe?.reasoning || null,
     rawSelectionText:
       typeof error?.rawSelectionText === "string" && error.rawSelectionText.trim().length > 0
@@ -97,6 +110,7 @@ function buildCapsuleEventSnapshot({
         ? partialRegenerationJob.pendingItemUrls.map((itemUrl) => String(itemUrl || "").trim()).filter(Boolean)
         : [],
       items: storedWardrobe?.items || [],
+      outfitSets: storedWardrobe?.outfitSets || [],
       reasoning: storedWardrobe?.reasoning || null,
       rawSelectionText: storedWardrobe?.rawSelectionText || null,
       swimwearReasoning: storedWardrobe?.swimwearReasoning || null,
@@ -114,6 +128,7 @@ function buildCapsuleEventSnapshot({
       pendingStage: "extras",
       hasPendingAdditionalItems: true,
       items: storedWardrobe.items,
+      outfitSets: storedWardrobe.outfitSets,
       reasoning: storedWardrobe.reasoning,
       rawSelectionText: storedWardrobe.rawSelectionText,
       swimwearReasoning: storedWardrobe.swimwearReasoning,
@@ -125,6 +140,7 @@ function buildCapsuleEventSnapshot({
     return buildSnapshotPayload({
       status: "ready",
       items: storedWardrobe.items,
+      outfitSets: storedWardrobe.outfitSets,
       reasoning: storedWardrobe.reasoning,
       rawSelectionText: storedWardrobe.rawSelectionText,
       swimwearReasoning: storedWardrobe.swimwearReasoning,
@@ -138,6 +154,7 @@ function buildCapsuleEventSnapshot({
       pendingStage: activeJob.phase === "extras" ? "extras" : "capsule",
       hasPendingAdditionalItems: activeJob.phase === "extras",
       items: storedWardrobe?.items || [],
+      outfitSets: storedWardrobe?.outfitSets || [],
       reasoning: storedWardrobe?.reasoning || null,
       rawSelectionText: storedWardrobe?.rawSelectionText || null,
       swimwearReasoning: storedWardrobe?.swimwearReasoning || null,

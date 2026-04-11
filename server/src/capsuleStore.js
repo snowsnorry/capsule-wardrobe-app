@@ -29,6 +29,15 @@ function normalizeWardrobePayload(payload = null) {
   const items = Array.isArray(payload.items) ? payload.items : [];
   return {
     items,
+    outfitSets: Array.isArray(payload.outfitSets)
+      ? payload.outfitSets
+        .map((set) => ({
+          itemIds: Array.isArray(set?.itemIds)
+            ? set.itemIds.map((id) => String(id || "").trim()).filter(Boolean)
+            : []
+        }))
+        .filter((set) => set.itemIds.length > 0)
+      : [],
     reasoning: typeof payload.reasoning === "string" && payload.reasoning.trim() ? payload.reasoning.trim() : null,
     rawSelectionText: typeof payload.rawSelectionText === "string" && payload.rawSelectionText.trim()
       ? payload.rawSelectionText.trim()
