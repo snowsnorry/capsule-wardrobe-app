@@ -656,8 +656,17 @@ function MainScreen({
                 />
               </Box>
 
-              <Stack spacing={2.5} sx={{ minWidth: 0, minHeight: 0, overflow: "hidden" }}>
-                <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1}>
+              <Stack
+                spacing={resolvedOutfitSets.length > 0 ? 0 : 2.5}
+                sx={{ minWidth: 0, minHeight: 0, overflow: "hidden" }}
+              >
+                <Stack
+                  direction="row"
+                  justifyContent="space-between"
+                  alignItems="center"
+                  spacing={1}
+                  sx={{ pb: 2.5 }}
+                >
                   <Stack direction="row" alignItems="center" spacing={0.75} sx={{ minWidth: 0, flex: 1 }}>
                     {isOverlaySidebar && selectedCount === 0 ? (
                       <IconButton
@@ -833,25 +842,25 @@ function MainScreen({
                     />
                   ) : null}
                 </Box>
+                {resolvedOutfitSets.length > 0 ? (
+                  <Tabs
+                    value={activeItemsTab}
+                    onChange={(_event, value) => setActiveItemsTab(value)}
+                    variant="scrollable"
+                    scrollButtons="auto"
+                    sx={{ px: { xs: 2, md: 3 }, pt: 0, pb: 0.5 }}
+                  >
+                    <Tab value="all" label={t("search.all")} />
+                    {resolvedOutfitSets.map((set) => (
+                      <Tab
+                        key={set.id}
+                        value={set.id}
+                        label={t("capsule.outfitSet", { number: set.label })}
+                      />
+                    ))}
+                  </Tabs>
+                ) : null}
                 <Box sx={{ flex: 1, minHeight: 0, overflowY: "auto", pr: 0.5 }}>
-                  {resolvedOutfitSets.length > 0 ? (
-                    <Tabs
-                      value={activeItemsTab}
-                      onChange={(_event, value) => setActiveItemsTab(value)}
-                      variant="scrollable"
-                      scrollButtons="auto"
-                      sx={{ mb: 2 }}
-                    >
-                      <Tab value="all" label={t("search.all")} />
-                      {resolvedOutfitSets.map((set) => (
-                        <Tab
-                          key={set.id}
-                          value={set.id}
-                          label={t("capsule.outfitSet", { number: set.label })}
-                        />
-                      ))}
-                    </Tabs>
-                  ) : null}
                   {isLoadingItems ? (
                     <ClothingGridPlaceholder count={12} />
                   ) : (
