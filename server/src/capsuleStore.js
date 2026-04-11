@@ -34,7 +34,10 @@ function normalizeWardrobePayload(payload = null) {
         .map((set) => ({
           itemIds: Array.isArray(set?.itemIds)
             ? set.itemIds.map((id) => String(id || "").trim()).filter(Boolean)
-            : []
+            : [],
+          image: typeof set?.image === "string" && set.image.trim().length > 0
+            ? set.image.trim()
+            : null
         }))
         .filter((set) => set.itemIds.length > 0)
       : [],

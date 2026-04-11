@@ -231,9 +231,11 @@ function renderScreen(props = {}, { mobile = false, layoutMode = mobile ? "overl
     onNavigateApp: vi.fn(),
     selectedRegenerationUrls: [],
     partialRegenerationPendingUrls: [],
+    pendingImageSetIndexes: [],
     onToggleRegenerationSelection: vi.fn(),
     onCancelRegenerationSelection: vi.fn(),
     onRegenerateSelectedItems: vi.fn(),
+    onGenerateOutfitSetImage: vi.fn(),
     isPartialRegenerationLoading: false
   };
 
@@ -395,6 +397,64 @@ describe("MainScreen", () => {
 
     expect(screen.queryByRole("tab", { name: "Набор 1" })).not.toBeInTheDocument();
     expect(screen.queryByRole("tab", { name: "All" })).not.toBeInTheDocument();
+  });
+
+  test("renders create image button for outfit tab without generated image", async () => {
+    const user = userEvent.setup();
+    const onGenerateOutfitSetImage = vi.fn();
+
+    renderScreen({
+      items: [
+        { id: "a", url: "https://example.com/a", name: "Shirt", category: "top" },
+        { id: "b", url: "https://example.com/b", name: "Trousers", category: "bottom" },
+        { id: "c", url: "https://example.com/c", name: "Bag", category: "bag" }
+      ],
+      outfitSets: [{ itemIds: ["a", "b", "c"] }],
+      onGenerateOutfitSetImage
+    });
+
+    expect(screen.queryByRole("button", { name: "Create image" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("tab", { name: "Набор 1" }));
+    await user.click(screen.getByRole("button", { name: "Create image" }));
+
+    expect(onGenerateOutfitSetImage).toHaveBeenCalledWith(0);
+  });
+
+  test("renders placeholder while outfit set image is pending", async () => {
+    const user = userEvent.setup();
+
+    renderScreen({
+      items: [
+        { id: "a", url: "https://example.com/a", name: "Shirt", category: "top" },
+        { id: "b", url: "https://example.com/b", name: "Trousers", category: "bottom" },
+        { id: "c", url: "https://example.com/c", name: "Bag", category: "bag" }
+      ],
+      outfitSets: [{ itemIds: ["a", "b", "c"] }],
+      pendingImageSetIndexes: [0]
+    });
+
+    await user.click(screen.getByRole("tab", { name: "Набор 1" }));
+
+    expect(screen.getByTestId("outfit-set-image-placeholder")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Create image" })).not.toBeInTheDocument();
+  });
+
+  test("renders generated outfit set image instead of action button", async () => {
+    const user = userEvent.setup();
+
+    renderScreen({
+      items: [
+        { id: "a", url: "https://example.com/a", name: "Shirt", category: "top" },
+        { id: "b", url: "https://example.com/b", name: "Trousers", category: "bottom" },
+        { id: "c", url: "https://example.com/c", name: "Bag", category: "bag" }
+      ],
+      outfitSets: [{ itemIds: ["a", "b", "c"], image: "abc123" }]
+    });
+
+    await user.click(screen.getByRole("tab", { name: "Набор 1" }));
+
+    expect(screen.getByTestId("outfit-set-image")).toHaveAttribute("src", "data:image/png;base64,abc123");
+    expect(screen.queryByRole("button", { name: "Create image" })).not.toBeInTheDocument();
   });
 
   test("opens mobile filters dialog and closes it through apply and reset actions", async () => {

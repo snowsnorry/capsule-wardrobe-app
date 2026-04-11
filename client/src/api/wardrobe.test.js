@@ -16,7 +16,12 @@ vi.mock("./config.js", () => ({
 }));
 
 import { downloadCapsulePdf } from "./capsules.js";
-import { regenerateCapsuleWardrobe, regenerateSelectedWardrobeItems, subscribeCapsuleEvents } from "./wardrobe.js";
+import {
+  generateOutfitSetImage,
+  regenerateCapsuleWardrobe,
+  regenerateSelectedWardrobeItems,
+  subscribeCapsuleEvents
+} from "./wardrobe.js";
 
 function createResponse({
   ok = true,
@@ -187,5 +192,22 @@ describe("wardrobe api", () => {
       status: 422,
       data: { error: "invalid_payload", rejected: ["item-1"] }
     });
+  });
+
+  test("generateOutfitSetImage posts to the outfit-set image route", async () => {
+    requestApi.requestJson.mockResolvedValueOnce({ ok: true, status: "pending" });
+
+    await expect(generateOutfitSetImage({ capsuleId: "capsule-1", setIndex: 2 })).resolves.toEqual({
+      ok: true,
+      status: "pending"
+    });
+
+    expect(requestApi.requestJson).toHaveBeenCalledWith(
+      "https://api.example.test/capsules/capsule-1/outfit-sets/2/image",
+      {
+        method: "POST",
+        credentials: "include"
+      }
+    );
   });
 });

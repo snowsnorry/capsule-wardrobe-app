@@ -1,0 +1,10 @@
+A highly realistic, professional top-down flat lay photograph of a curated outfit on a seamless, clean light grey background. The layout uses a central vertical core for main garments and side zones for accessories to ensure all items fit and remain distinct. Each item is presented as an empty, form-retentive, detailed object, never on a model, and never covering other items completely. The composition should look like a professional product assortment, ready to be picked.
+
+CRITICAL RULES FOR GENERATION:
+- NO TEXT ALLOWED: Absolutely do not generate any letters, words, typography, watermarks, price tags, brands, or logos anywhere in the image.
+- NO PEOPLE: The clothes must be laid out flat, empty, and form-retentive. Do not generate human bodies, hands, or mannequins.
+- PRESERVE ORIGINAL DESIGN: Replicate the provided reference garments as closely as possible. Do not invent extra pockets, patterns, or alter the structural design of the source images. Do not change original color from the source images.
+- CLEAN COMPOSITION: Arrange items modularly. No overlapping items unless specified.
+- NO FOLDING!: All garments must be laid out completely flat and fully extended.
+
+{{description}}

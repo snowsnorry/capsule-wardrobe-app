@@ -29,6 +29,7 @@ import {
 import { clearProfileOptionsCache, loadProfileOptions } from "./api/profileOptionsCache.js";
 import { clearRequestCache } from "./api/auth.js";
 import {
+  generateOutfitSetImage as requestOutfitSetImageGeneration,
   regenerateCapsuleWardrobe as requestWardrobeRegeneration,
   regenerateSelectedWardrobeItems as requestSelectedWardrobeRegeneration,
   subscribeCapsuleEvents
@@ -136,7 +137,10 @@ function normalizeOutfitSets(outfitSets) {
       .map((set) => ({
         itemIds: Array.isArray(set?.itemIds)
           ? set.itemIds.map((id) => String(id || "").trim()).filter(Boolean)
-          : []
+          : [],
+        image: typeof set?.image === "string" && set.image.trim().length > 0
+          ? set.image.trim()
+          : null
       }))
       .filter((set) => set.itemIds.length > 0)
     : [];
@@ -323,6 +327,7 @@ function App() {
   const [isDownloadingWardrobePdf, setIsDownloadingWardrobePdf] = useState(false);
   const [selectedRegenerationUrls, setSelectedRegenerationUrls] = useState([]);
   const [partialRegenerationPendingUrls, setPartialRegenerationPendingUrls] = useState([]);
+  const [pendingImageSetIndexes, setPendingImageSetIndexes] = useState([]);
   const [isPartialRegenerationLoading, setIsPartialRegenerationLoading] = useState(false);
   const [isWardrobePending, setIsWardrobePending] = useState(false);
   const [hasPendingAdditionalItems, setHasPendingAdditionalItems] = useState(false);
@@ -528,6 +533,7 @@ function App() {
     pendingNotificationKindRef.current = "";
     closeNotificationPrompt();
     setPartialRegenerationPendingUrls([]);
+    setPendingImageSetIndexes([]);
     setIsPartialRegenerationLoading(false);
     setIsWardrobePending(false);
     setHasPendingAdditionalItems(false);
@@ -560,6 +566,7 @@ function App() {
     setSelectedText(effective.filters?.text || "");
     setProfileItems(buildDisplayWardrobeItems(effective.data?.wardrobe?.items || []));
     setProfileOutfitSets(normalizeOutfitSets(effective.data?.wardrobe?.outfitSets));
+    setPendingImageSetIndexes([]);
     setWardrobeLoadedCapsuleId(hasStoredWardrobeItems(capsule) ? capsule.id || "" : "");
 
     if (Array.isArray(capsules)) {
@@ -732,6 +739,7 @@ function App() {
       setOnboardingStep(0);
       setProfileItems(null);
       setProfileOutfitSets([]);
+      setPendingImageSetIndexes([]);
       setActiveCapsuleId("");
       setActiveCapsuleMeta(null);
       setCapsuleList([]);
@@ -803,6 +811,7 @@ function App() {
       setCurrentView("main");
       setProfileItems(null);
       setProfileOutfitSets([]);
+      setPendingImageSetIndexes([]);
       setSelectedRegenerationUrls([]);
       setPartialRegenerationPendingUrls([]);
       setIsPartialRegenerationLoading(false);
@@ -886,6 +895,7 @@ function App() {
       ));
       setProfileItems([]);
       setProfileOutfitSets([]);
+      setPendingImageSetIndexes([]);
       setWardrobeLoadedCapsuleId("");
       manualWardrobeRegenerationCapsuleIdRef.current = activeCapsuleId;
       await refreshCapsuleList();
@@ -1064,7 +1074,13 @@ function App() {
     buildCurrentDraftSnapshot({ wardrobe: null }).filters,
     getEffectiveCapsule(activeCapsuleMeta)?.filters || buildEmptyCapsuleDraft().filters
   );
-  const isContentBusy = isLoadingItems || isWardrobePending || isPartialRegenerationLoading || isContentOperationLoading;
+  const isContentBusy = (
+    isLoadingItems
+    || isWardrobePending
+    || isPartialRegenerationLoading
+    || isContentOperationLoading
+    || pendingImageSetIndexes.length > 0
+  );
 
   const logWardrobeReasoning = (reasoning) => {
     if (typeof reasoning !== "string" || reasoning.trim().length === 0) {
@@ -1077,6 +1093,7 @@ function App() {
   const handleWardrobeError = () => {
     setProfileItems([]);
     setProfileOutfitSets([]);
+    setPendingImageSetIndexes([]);
     setWardrobeLoadedCapsuleId(activeCapsuleId);
     setSelectedRegenerationUrls([]);
     setPartialRegenerationPendingUrls([]);
@@ -1101,8 +1118,14 @@ function App() {
     const pendingRegenerationUrls = Array.isArray(snapshot?.pendingRegenerationUrls)
       ? snapshot.pendingRegenerationUrls.map((itemUrl) => String(itemUrl || "").trim()).filter(Boolean)
       : [];
+    const nextPendingImageSetIndexes = Array.isArray(snapshot?.pendingImageSetIndexes)
+      ? snapshot.pendingImageSetIndexes
+        .map((value) => Number.parseInt(value, 10))
+        .filter((value) => Number.isInteger(value) && value >= 0)
+      : [];
     const isPending = snapshot?.status === "pending";
     const isPendingExtras = Boolean(snapshot?.hasPendingAdditionalItems);
+    const hasPendingOutfitSetImages = nextPendingImageSetIndexes.length > 0;
 
     if (snapshot?.status === "failed") {
       manualWardrobeRegenerationCapsuleIdRef.current = "";
@@ -1110,6 +1133,7 @@ function App() {
       closeNotificationPrompt();
       stopCapsuleEventStream();
       handleWardrobeError();
+      setPendingImageSetIndexes([]);
       setStatus((current) => ({
         ...current,
         error: t("errors.generic")
@@ -1132,6 +1156,7 @@ function App() {
       setPartialRegenerationPendingUrls(pendingRegenerationUrls);
       setIsPartialRegenerationLoading(pendingRegenerationUrls.length > 0);
       setProfileOutfitSets(outfitSets);
+      setPendingImageSetIndexes(nextPendingImageSetIndexes);
       setIsWardrobePending(true);
       setHasPendingAdditionalItems(isPendingExtras);
       setIsLoadingItems(items.length === 0 && !isPendingExtras);
@@ -1154,6 +1179,7 @@ function App() {
     pendingRegenerationUrlsRef.current = [];
     regenerationBaseItemsRef.current = [];
     setProfileOutfitSets(outfitSets);
+    setPendingImageSetIndexes(nextPendingImageSetIndexes);
     setPartialRegenerationPendingUrls([]);
     setIsPartialRegenerationLoading(false);
     setIsWardrobePending(false);
@@ -1161,12 +1187,12 @@ function App() {
     setIsLoadingItems(false);
     setWardrobeLoadedCapsuleId(snapshot?.status === "ready" ? activeCapsuleId : "");
 
-    if (snapshot?.status !== "pending") {
+    if (snapshot?.status !== "pending" && !hasPendingOutfitSetImages) {
       manualWardrobeRegenerationCapsuleIdRef.current = "";
       stopCapsuleEventStream();
     }
 
-    if (snapshot?.status === "ready") {
+    if (snapshot?.status === "ready" && !hasPendingOutfitSetImages) {
       sendReadyNotification(pendingNotificationKindRef.current || "full");
       pendingNotificationKindRef.current = "";
       closeNotificationPrompt();
@@ -1343,6 +1369,42 @@ function App() {
     }
   };
 
+  const handleGenerateOutfitSetImage = async (setIndex) => {
+    const normalizedSetIndex = Number.parseInt(String(setIndex ?? ""), 10);
+    if (!activeCapsuleId || !Number.isInteger(normalizedSetIndex) || normalizedSetIndex < 0) {
+      return;
+    }
+
+    setPendingImageSetIndexes((current) => (
+      current.includes(normalizedSetIndex)
+        ? current
+        : [...current, normalizedSetIndex].sort((left, right) => left - right)
+    ));
+
+    try {
+      const response = await requestOutfitSetImageGeneration({
+        capsuleId: activeCapsuleId,
+        setIndex: normalizedSetIndex
+      });
+      if (response?.status === "pending") {
+        startCapsuleEventStream(activeCapsuleId);
+        return;
+      }
+
+      setPendingImageSetIndexes((current) => current.filter((value) => value !== normalizedSetIndex));
+    } catch (error) {
+      if (!isMountedRef.current) {
+        return;
+      }
+
+      setPendingImageSetIndexes((current) => current.filter((value) => value !== normalizedSetIndex));
+      setStatus((current) => ({
+        ...current,
+        error: resolveErrorMessage(error)
+      }));
+    }
+  };
+
   useEffect(() => {
     pendingRegenerationUrlsRef.current = partialRegenerationPendingUrls;
   }, [partialRegenerationPendingUrls]);
@@ -1510,9 +1572,11 @@ function App() {
           onNavigateApp={handleNavigateApp}
           selectedRegenerationUrls={selectedRegenerationUrls}
           partialRegenerationPendingUrls={partialRegenerationPendingUrls}
+          pendingImageSetIndexes={pendingImageSetIndexes}
           onToggleRegenerationSelection={handleToggleRegenerationSelection}
           onCancelRegenerationSelection={handleCancelRegenerationSelection}
           onRegenerateSelectedItems={handleRegenerateSelectedItems}
+          onGenerateOutfitSetImage={handleGenerateOutfitSetImage}
           isPartialRegenerationLoading={isPartialRegenerationLoading}
         />
       );

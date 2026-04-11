@@ -32,3 +32,25 @@ test("normalizeCapsuleSnapshot sanitizes saved profile occasions on read and wri
     ["office"]
   );
 });
+
+test("normalizeCapsuleSnapshot preserves outfit set image payloads", () => {
+  assert.deepEqual(
+    normalizeCapsuleSnapshot({
+      filters: {},
+      data: {
+        wardrobe: {
+          items: [],
+          outfitSets: [{
+            itemIds: ["top-1", "bottom-1", "bag-1"],
+            image: "base64-image"
+          }]
+        },
+        rejectedUrls: []
+      }
+    })?.data?.wardrobe?.outfitSets,
+    [{
+      itemIds: ["top-1", "bottom-1", "bag-1"],
+      image: "base64-image"
+    }]
+  );
+});

@@ -112,7 +112,15 @@ function resolveOutfitSets(items = [], outfitSets = []) {
         .map((id) => itemsById.get(String(id || "").trim()))
         .filter(Boolean));
       return resolvedItems.length >= 3
-        ? { id: `set-${index + 1}`, label: index + 1, items: resolvedItems }
+        ? {
+          id: `set-${index + 1}`,
+          index,
+          label: index + 1,
+          items: resolvedItems,
+          image: typeof set?.image === "string" && set.image.trim().length > 0
+            ? set.image.trim()
+            : null
+        }
         : null;
     })
     .filter(Boolean);
@@ -235,9 +243,11 @@ function MainScreen({
   onNavigateApp,
   selectedRegenerationUrls,
   partialRegenerationPendingUrls,
+  pendingImageSetIndexes = [],
   onToggleRegenerationSelection,
   onCancelRegenerationSelection,
   onRegenerateSelectedItems,
+  onGenerateOutfitSetImage = () => {},
   isPartialRegenerationLoading
 }) {
   const { t } = useI18n();
@@ -274,9 +284,18 @@ function MainScreen({
   const searchGroups = useMemo(() => groupCapsules(searchResults), [searchResults]);
   const activeCapsuleName = activeCapsule?.name || `<${t("capsule.new")}>`;
   const resolvedOutfitSets = useMemo(() => resolveOutfitSets(items, outfitSets), [items, outfitSets]);
+  const activeOutfitSet = activeItemsTab === "all"
+    ? null
+    : (resolvedOutfitSets.find((set) => set.id === activeItemsTab) || null);
   const visibleItems = activeItemsTab === "all"
     ? items
-    : (resolvedOutfitSets.find((set) => set.id === activeItemsTab)?.items || items);
+    : (activeOutfitSet?.items || items);
+  const isActiveOutfitSetImagePending = activeOutfitSet
+    ? pendingImageSetIndexes.includes(activeOutfitSet.index)
+    : false;
+  const activeOutfitSetImageSrc = activeOutfitSet?.image
+    ? `data:image/png;base64,${activeOutfitSet.image}`
+    : "";
 
   useEffect(() => {
     if (!searchOpen) {
@@ -864,48 +883,103 @@ function MainScreen({
                   {isLoadingItems ? (
                     <ClothingGridPlaceholder count={12} />
                   ) : (
-                    <Box
-                      sx={{
-                        display: "grid",
-                        gridTemplateColumns: {
-                          xs: "1fr",
-                          sm: "repeat(2, minmax(0, 1fr))",
-                          lg: "repeat(2, minmax(0, 1fr))"
-                        },
-                        gap: 2.5,
-                        "@media (min-width: 1400px)": {
-                          gridTemplateColumns: "repeat(3, minmax(0, 1fr))"
-                        },
-                        "@media (min-width: 1760px)": {
-                          gridTemplateColumns: "repeat(4, minmax(0, 1fr))"
-                        }
-                      }}
-                    >
-                      {visibleItems.map((item) => {
-                        const itemUrl = String(item?.url || "");
-                        if (partialRegenerationPendingUrls.includes(itemUrl)) {
+                    <Stack spacing={3} sx={{ minHeight: "100%" }}>
+                      <Box
+                        sx={{
+                          display: "grid",
+                          gridTemplateColumns: {
+                            xs: "1fr",
+                            sm: "repeat(2, minmax(0, 1fr))",
+                            lg: "repeat(2, minmax(0, 1fr))"
+                          },
+                          gap: 2.5,
+                          "@media (min-width: 1400px)": {
+                            gridTemplateColumns: "repeat(3, minmax(0, 1fr))"
+                          },
+                          "@media (min-width: 1760px)": {
+                            gridTemplateColumns: "repeat(4, minmax(0, 1fr))"
+                          }
+                        }}
+                      >
+                        {visibleItems.map((item) => {
+                          const itemUrl = String(item?.url || "");
+                          if (partialRegenerationPendingUrls.includes(itemUrl)) {
+                            return (
+                              <ClothingPlaceholderCard
+                                key={`pending-${item.url || item.id}`}
+                                placeholderKey={`pending-${item.url || item.id}`}
+                              />
+                            );
+                          }
+
                           return (
-                            <ClothingPlaceholderCard
-                              key={`pending-${item.url || item.id}`}
-                              placeholderKey={`pending-${item.url || item.id}`}
+                            <ClothingCard
+                              key={item.url || item.id}
+                              item={item}
+                              isSelectable={Boolean(itemUrl)}
+                              isSelected={selectedRegenerationUrls.includes(itemUrl)}
+                              isRegenerating={isPartialRegenerationLoading}
+                              onToggleSelected={onToggleRegenerationSelection}
+                              isMobile={isOverlaySidebar}
                             />
                           );
-                        }
+                        })}
+                        {showAdditionalItemPlaceholder ? <ClothingGridPlaceholder count={1} inline /> : null}
+                      </Box>
 
-                        return (
-                          <ClothingCard
-                            key={item.url || item.id}
-                            item={item}
-                            isSelectable={Boolean(itemUrl)}
-                            isSelected={selectedRegenerationUrls.includes(itemUrl)}
-                            isRegenerating={isPartialRegenerationLoading}
-                            onToggleSelected={onToggleRegenerationSelection}
-                            isMobile={isOverlaySidebar}
-                          />
-                        );
-                      })}
-                      {showAdditionalItemPlaceholder ? <ClothingGridPlaceholder count={1} inline /> : null}
-                    </Box>
+                      {activeOutfitSet ? (
+                        <Stack spacing={2} sx={{ pb: 2, px: { xs: 0.5, md: 1 } }}>
+                          <Divider sx={{ mx: { xs: 1, md: 2 } }} />
+                          {isActiveOutfitSetImagePending ? (
+                            <Box
+                              sx={{
+                                alignSelf: "center",
+                                width: "100%",
+                                borderRadius: 0.3,
+                                overflow: "hidden",
+                                border: "1px solid",
+                                borderColor: "divider",
+                                backgroundColor: "grey.100"
+                              }}
+                            >
+                              <Box
+                                data-testid="outfit-set-image-placeholder"
+                                sx={{
+                                  aspectRatio: "5 / 3",
+                                  minHeight: 220,
+                                  background: "linear-gradient(135deg, rgba(209,15,15,0.05), rgba(255,255,255,0.85))"
+                                }}
+                              />
+                            </Box>
+                          ) : activeOutfitSetImageSrc ? (
+                            <Box
+                              component="img"
+                              src={activeOutfitSetImageSrc}
+                              alt={`Outfit set ${activeOutfitSet.label}`}
+                              data-testid="outfit-set-image"
+                              sx={{
+                                alignSelf: "center",
+                                width: "auto",
+                                maxWidth: "100%",
+                                height: "auto",
+                                borderRadius: 0.3,
+                                display: "block",
+                                border: "1px solid",
+                                borderColor: "divider"
+                              }}
+                            />
+                          ) : (
+                            <Button
+                              variant="outlined"
+                              onClick={() => onGenerateOutfitSetImage(activeOutfitSet.index)}
+                              sx={{ alignSelf: "center", minWidth: 180 }}
+                            >
+                              Create image
+                            </Button>
+                          )}
+                        </Stack>
+                      ) : null}
+                    </Stack>
                   )}
                 </Box>
               </Stack>

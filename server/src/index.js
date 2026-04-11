@@ -54,6 +54,7 @@ import {
 import { getSearchOptions, getSavedSearch, getSearchStats, runSavedSearch } from "./searchStore.js";
 import { getWardrobeJob, regenerateCapsuleWardrobe } from "./ai/ai.js";
 import { getPartialRegenerationJob, regenerateSelectedWardrobeItems } from "./ai/regenerateSelected.js";
+import { generateOutfitSetImage, getOutfitSetImageJob } from "./ai/outfitSetImages.js";
 import { buildCapsuleEventSnapshot, capsuleEventHub } from "./ai/capsuleEvents.js";
 import { buildWardrobePdfInChild } from "./wardrobePdf.js";
 import { checkDatabaseConnection, ensureTables, getProductsByUrlsInOrder } from "./db.js";
@@ -372,9 +373,11 @@ function createApp({
   runSavedSearchImpl = runSavedSearch,
   getWardrobeJobImpl = getWardrobeJob,
   getPartialRegenerationJobImpl = getPartialRegenerationJob,
+  getOutfitSetImageJobImpl = getOutfitSetImageJob,
   streamCapsuleEventsImpl = capsuleEventHub.subscribe,
   regenerateCapsuleWardrobeHandler = regenerateCapsuleWardrobe,
   regenerateSelectedCapsuleItemsHandler = regenerateSelectedWardrobeItems,
+  generateOutfitSetImageHandler = generateOutfitSetImage,
   buildWardrobePdfInChildImpl = buildWardrobePdfInChild,
   getProductsByUrlsInOrderImpl = getProductsByUrlsInOrder,
   checkDatabaseConnectionImpl = checkDatabaseConnection
@@ -534,7 +537,8 @@ function createApp({
     return buildCapsuleEventSnapshot({
       capsule,
       activeJob: capsuleId ? getWardrobeJobImpl(email, capsuleId) : null,
-      partialRegenerationJob: capsuleId ? getPartialRegenerationJobImpl(email, capsuleId) : null
+      partialRegenerationJob: capsuleId ? getPartialRegenerationJobImpl(email, capsuleId) : null,
+      outfitSetImageJob: capsuleId ? getOutfitSetImageJobImpl(email, capsuleId) : null
     });
   }
 
@@ -553,7 +557,8 @@ function createApp({
       const snapshot = buildCapsuleEventSnapshot({
         capsule,
         activeJob: getWardrobeJobImpl(req.user.email, capsuleId),
-        partialRegenerationJob: getPartialRegenerationJobImpl(req.user.email, capsuleId)
+        partialRegenerationJob: getPartialRegenerationJobImpl(req.user.email, capsuleId),
+        outfitSetImageJob: getOutfitSetImageJobImpl(req.user.email, capsuleId)
       });
       await streamCapsuleEventsImpl(req, res, {
         email: req.user.email,
@@ -824,6 +829,14 @@ app.post(
   requireAuth,
   requireCsrf,
   regenerateSelectedCapsuleItemsHandler
+);
+
+app.post(
+  "/capsules/:id/outfit-sets/:setIndex/image",
+  requireTrustedOrigin,
+  requireAuth,
+  requireCsrf,
+  generateOutfitSetImageHandler
 );
 
 app.post("/capsules", requireTrustedOrigin, requireAuth, requireCsrf, async (req, res) => {

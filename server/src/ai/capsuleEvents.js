@@ -31,7 +31,10 @@ function getStoredWardrobePayload(profile) {
         .map((set) => ({
           itemIds: Array.isArray(set?.itemIds)
             ? set.itemIds.map((id) => String(id || "").trim()).filter(Boolean)
-            : []
+            : [],
+          image: typeof set?.image === "string" && set.image.trim().length > 0
+            ? set.image.trim()
+            : null
         }))
         .filter((set) => set.itemIds.length > 0)
       : [],
@@ -55,6 +58,7 @@ function buildSnapshotPayload({
   pendingStage = null,
   hasPendingAdditionalItems = false,
   pendingRegenerationUrls = [],
+  pendingImageSetIndexes = [],
   items = [],
   outfitSets = [],
   reasoning = null,
@@ -68,6 +72,7 @@ function buildSnapshotPayload({
     pendingStage,
     hasPendingAdditionalItems,
     pendingRegenerationUrls,
+    pendingImageSetIndexes,
     items,
     outfitSets,
     reasoning,
@@ -97,10 +102,17 @@ function buildFailedSnapshot(storedWardrobe, error) {
 function buildCapsuleEventSnapshot({
   capsule = null,
   activeJob = null,
-  partialRegenerationJob = null
+  partialRegenerationJob = null,
+  outfitSetImageJob = null
 } = {}) {
   const effectiveSnapshot = getEffectiveCapsuleSnapshot(capsule);
   const storedWardrobe = getStoredWardrobePayload({ items: effectiveSnapshot?.data?.wardrobe });
+  const pendingImageSetIndexes = Array.isArray(outfitSetImageJob?.pendingSetIndexes)
+    ? outfitSetImageJob.pendingSetIndexes
+      .map((value) => Number.parseInt(value, 10))
+      .filter((value) => Number.isInteger(value) && value >= 0)
+      .sort((left, right) => left - right)
+    : [];
 
   if (partialRegenerationJob?.status === "pending") {
     return buildSnapshotPayload({
@@ -109,6 +121,7 @@ function buildCapsuleEventSnapshot({
       pendingRegenerationUrls: Array.isArray(partialRegenerationJob.pendingItemUrls)
         ? partialRegenerationJob.pendingItemUrls.map((itemUrl) => String(itemUrl || "").trim()).filter(Boolean)
         : [],
+      pendingImageSetIndexes,
       items: storedWardrobe?.items || [],
       outfitSets: storedWardrobe?.outfitSets || [],
       reasoning: storedWardrobe?.reasoning || null,
@@ -127,6 +140,7 @@ function buildCapsuleEventSnapshot({
       status: "pending",
       pendingStage: "extras",
       hasPendingAdditionalItems: true,
+      pendingImageSetIndexes,
       items: storedWardrobe.items,
       outfitSets: storedWardrobe.outfitSets,
       reasoning: storedWardrobe.reasoning,
@@ -139,6 +153,7 @@ function buildCapsuleEventSnapshot({
   if (storedWardrobe?.items?.length) {
     return buildSnapshotPayload({
       status: "ready",
+      pendingImageSetIndexes,
       items: storedWardrobe.items,
       outfitSets: storedWardrobe.outfitSets,
       reasoning: storedWardrobe.reasoning,
@@ -153,6 +168,7 @@ function buildCapsuleEventSnapshot({
       status: "pending",
       pendingStage: activeJob.phase === "extras" ? "extras" : "capsule",
       hasPendingAdditionalItems: activeJob.phase === "extras",
+      pendingImageSetIndexes,
       items: storedWardrobe?.items || [],
       outfitSets: storedWardrobe?.outfitSets || [],
       reasoning: storedWardrobe?.reasoning || null,

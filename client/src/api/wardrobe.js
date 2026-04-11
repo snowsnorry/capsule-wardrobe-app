@@ -93,4 +93,11 @@ async function regenerateSelectedWardrobeItems({ itemUrls, capsuleId }) {
   });
 }
 
-export { regenerateCapsuleWardrobe, regenerateSelectedWardrobeItems, subscribeCapsuleEvents };
+async function generateOutfitSetImage({ capsuleId, setIndex }) {
+  return requestJson(`${API_BASE_URL}/capsules/${String(capsuleId || "").trim()}/outfit-sets/${Number.parseInt(String(setIndex ?? ""), 10)}/image`, {
+    method: "POST",
+    credentials: "include"
+  });
+}
+
+export { generateOutfitSetImage, regenerateCapsuleWardrobe, regenerateSelectedWardrobeItems, subscribeCapsuleEvents };

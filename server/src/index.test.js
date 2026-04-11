@@ -108,9 +108,11 @@ function createDependencies(overrides = {}) {
     getSavedSearchImpl: async () => ({ query: "coat", page: 1 }),
     getSearchStatsImpl: async () => ({ total: 3, stats: { category: [{ value: "top", count: 3 }] }, priceBuckets: [] }),
     runSavedSearchImpl: async (_email, payload) => ({ items: [{ id: "1" }], total: 1, search: payload }),
+    getOutfitSetImageJobImpl: async () => null,
     streamCapsuleEventsImpl: async (_req, res, { snapshot }) => res.json({ ok: true, snapshot }),
     regenerateCapsuleWardrobeHandler: async (_req, res) => res.status(202).json({ ok: true, status: "pending", items: [] }),
     regenerateSelectedCapsuleItemsHandler: async (_req, res) => res.json({ ok: true, items: [] }),
+    generateOutfitSetImageHandler: async (_req, res) => res.status(202).json({ ok: true, status: "pending" }),
     buildWardrobePdfInChildImpl: async () => Buffer.from("pdf"),
     getProductsByUrlsInOrderImpl: async () => [{ url: "https://example.com/1" }],
     checkDatabaseConnectionImpl: async () => {},
@@ -714,6 +716,15 @@ test("index routes cover wardrobe handlers and search endpoints", async (t) => {
   assert.equal(regenerate.response.status, 200);
   assert.equal(regenerateCalled, true);
 
+  const outfitSetImage = await requestJson(baseUrl, "/capsules/capsule-1/outfit-sets/0/image", {
+    method: "POST",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN
+  });
+  assert.equal(outfitSetImage.response.status, 202);
+  assert.deepEqual(outfitSetImage.json, { ok: true, status: "pending" });
+
   const removedWardrobeRoute = await requestJson(baseUrl, "/capsules/capsule-1/items", {
     cookie: AUTH_COOKIE
   });
@@ -731,6 +742,56 @@ test("index routes cover wardrobe handlers and search endpoints", async (t) => {
     pdf.response.headers.get("content-disposition"),
     `attachment; filename="New-capsule.pdf"; filename*=UTF-8''${encodeURIComponent("New capsule.pdf")}`
   );
+});
+
+test("capsule events initial snapshot includes pending outfit set image indexes", async (t) => {
+  let streamedSnapshot = null;
+  const { baseUrl } = await startTestServer(t, {
+    overrides: {
+      getCapsuleImpl: async () => ({
+        id: "capsule-1",
+        name: "<New capsule>",
+        draft: {
+          filters: {
+            formalityLevel: "casual",
+            style: "minimalistic",
+            occasions: ["office"],
+            season: ["spring"],
+            audience: "woman",
+            color: null,
+            pattern: "solid",
+            text: ""
+          },
+          data: {
+            wardrobe: {
+              items: [{ id: "top-1", category: "top" }],
+              outfitSets: [{ itemIds: ["top-1", "bottom-1", "bag-1"] }]
+            },
+            rejectedUrls: []
+          }
+        },
+        saved: null,
+        status: "new",
+        createdAt: new Date(0).toISOString(),
+        updatedAt: new Date(0).toISOString()
+      }),
+      getOutfitSetImageJobImpl: () => ({
+        status: "pending",
+        pendingSetIndexes: [0]
+      }),
+      streamCapsuleEventsImpl: async (_req, res, { snapshot }) => {
+        streamedSnapshot = snapshot;
+        res.json({ ok: true, snapshot });
+      }
+    }
+  });
+
+  const response = await requestJson(baseUrl, "/capsules/capsule-1/events", {
+    cookie: AUTH_COOKIE
+  });
+
+  assert.equal(response.response.status, 200);
+  assert.deepEqual(streamedSnapshot?.pendingImageSetIndexes, [0]);
 });
 
 test("capsule creation only accepts name and filters and initializes server-owned data", async (t) => {
