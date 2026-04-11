@@ -27,10 +27,10 @@ for (const locale of [
 }
 
 test("shared color swatches expose consistent client and pdf styles", () => {
-  assert.deepEqual(getColorSwatchStyle("light_blue"), { bgcolor: "#9ecae8" });
-  assert.deepEqual(getColorSwatchStyle("light blue"), { bgcolor: "#9ecae8" });
-  assert.deepEqual(getPdfColorSwatchFill("light_blue"), [0.62, 0.792, 0.91]);
-  assert.deepEqual(getPdfColorSwatchFill("light blue"), [0.62, 0.792, 0.91]);
+  assert.deepEqual(getColorSwatchStyle("light_blue"), { bgcolor: "#38bdf8" });
+  assert.deepEqual(getColorSwatchStyle("light blue"), { bgcolor: "#38bdf8" });
+  assert.deepEqual(getPdfColorSwatchFill("light_blue"), [0.220, 0.741, 0.973]);
+  assert.deepEqual(getPdfColorSwatchFill("light blue"), [0.220, 0.741, 0.973]);
   assert.equal(normalizeColorSwatchKey("Light Blue"), "light_blue");
   assert.deepEqual(
     getColorSwatchStyle("missing_color"),

@@ -264,9 +264,9 @@ test("db integration applies price range to product stats price buckets", async 
 
   const priceBucketQuery = calls.at(-1);
   assert.equal(stats.total, 1);
-  assert.equal(stats.priceBuckets.length, 24);
-  assert.deepEqual(stats.priceBuckets[0], { key: "20:22.5", min: 20, max: 22.5, count: 1 });
-  assert.deepEqual(stats.priceBuckets.at(-1), { key: "77.5:80", min: 77.5, max: 80, count: 0 });
+  assert.equal(stats.priceBuckets.length, 100);
+  assert.deepEqual(stats.priceBuckets[0], { key: "20:20.6", min: 20, max: 20.6, count: 1 });
+  assert.deepEqual(stats.priceBuckets.at(-1), { key: "79.4:80", min: 79.4, max: 80, count: 0 });
   assert.match(priceBucketQuery.text, /with filtered as/i);
   assert.match(priceBucketQuery.text, /price >=/i);
   assert.match(priceBucketQuery.text, /price <=/i);
