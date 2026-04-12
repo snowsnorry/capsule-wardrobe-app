@@ -76,7 +76,7 @@ function SearchFiltersSidebar({
   const audienceItems = sortAudienceValues(options.audience).map((item) => ({
     value: item,
     label: translateOption("audience", item, locale)
-  })).filter((item) => item.value !== "any");
+  }));
   const occasionItems = options.occasions.map((item) => ({
     value: item,
     label: translateOption("occasions", item, locale)
@@ -277,7 +277,6 @@ function SearchFiltersSidebar({
           items={audienceItems}
           values={draftState.audience}
           defaultLabel={t("search.notImportant")}
-          defaultPosition="end"
           onToggle={(audience) => updateDraftState((current) => ({
             ...current,
             audience: audience === null ? [] : toggleSelection(audience, current.audience),

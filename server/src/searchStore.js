@@ -15,7 +15,7 @@ import {
   upsertSearchByEmail,
   getDistinctProductFormalityLevels
 } from "./db.js";
-import { getStyles, getAudienceOptions } from "./profileStore.js";
+import { getStyles } from "./profileStore.js";
 import { getPromptEmbeddings } from "./ai/voyageai.js";
 
 const DEFAULT_SEARCH_STATE = Object.freeze({
@@ -36,6 +36,8 @@ const DEFAULT_SEARCH_STATE = Object.freeze({
   closureType: [],
   page: 1
 });
+
+const SEARCH_AUDIENCE_OPTIONS = Object.freeze(["woman", "man", "all"]);
 
 function getSemanticDistanceThreshold(query = "") {
   const normalizedLength = String(query || "").trim().length;
@@ -252,7 +254,7 @@ async function getSearchOptions(email) {
     formalityLevels,
     styles,
     occasions,
-    audience: getAudienceOptions(),
+    audience: [...SEARCH_AUDIENCE_OPTIONS],
     colors,
     patterns,
     silhouettes,
@@ -317,6 +319,7 @@ async function getSearchStats(email, payload = {}) {
 
 export {
   DEFAULT_SEARCH_STATE,
+  SEARCH_AUDIENCE_OPTIONS,
   getSemanticDistanceThreshold,
   getRelaxedSemanticDistanceThreshold,
   normalizeSearchPayload,

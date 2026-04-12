@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import { LocaleProvider } from "../i18n/LocaleProvider.jsx";
@@ -51,7 +51,7 @@ function makeOptions() {
     formalityLevels: ["casual"],
     styles: ["minimalistic"],
     occasions: ["office"],
-    audience: ["woman", "man", "any"],
+    audience: ["woman", "man", "all"],
     colors: ["blue", "white"],
     patterns: ["solid", "stripe"],
     silhouettes: ["straight"],
@@ -71,7 +71,8 @@ function makeStats(overrides = {}) {
       ],
       audience: [
         { value: "woman", count: 80 },
-        { value: "man", count: 40 }
+        { value: "all", count: 40 },
+        { value: "man", count: 20 }
       ],
       brand: [
         { value: "uniqlo", count: 20 }
@@ -200,6 +201,33 @@ describe("StatisticsScreen", () => {
     await waitFor(() => {
       expect(searchApi.fetchSearchStats).toHaveBeenCalledWith(expect.objectContaining({
         color: ["white"]
+      }));
+    });
+  });
+
+  test("sorts audience filters as not important, woman, man, unisex", async () => {
+    renderScreen();
+    expect((await screen.findAllByText("120")).length).toBeGreaterThan(0);
+
+    const audienceSection = screen.getAllByRole("heading", { name: "Audience" })[0].parentElement;
+    const labels = within(audienceSection)
+      .getAllByRole("button")
+      .map((button) => button.textContent?.trim())
+      .filter(Boolean);
+
+    expect(labels).toEqual(["Not important", "Woman", "Man", "Unisex"]);
+  });
+
+  test("shows unisex audience label on the chart and toggles all", async () => {
+    renderScreen();
+    expect((await screen.findAllByText("120")).length).toBeGreaterThan(0);
+
+    searchApi.fetchSearchStats.mockClear();
+    fireEvent.click(screen.getByRole("button", { name: "Audience: Unisex" }));
+
+    await waitFor(() => {
+      expect(searchApi.fetchSearchStats).toHaveBeenCalledWith(expect.objectContaining({
+        audience: ["all"]
       }));
     });
   });

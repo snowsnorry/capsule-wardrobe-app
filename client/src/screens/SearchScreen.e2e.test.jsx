@@ -68,7 +68,7 @@ describe("SearchScreen e2e-style flow", () => {
       formalityLevels: ["casual"],
       styles: ["minimalistic"],
       occasions: ["office"],
-      audience: ["woman", "man", "any"],
+      audience: ["woman", "man", "all"],
       colors: ["blue"],
       patterns: ["solid"],
       silhouettes: ["straight"],

@@ -104,7 +104,10 @@ function createDependencies(overrides = {}) {
     duplicateCapsuleImpl: async () => ({ id: "capsule-3", name: "<New capsule (1)>", draft: null, saved: { filters: {}, data: {} }, status: "saved" }),
     deleteCapsuleImpl: async () => true,
     setActiveCapsuleIdImpl: async () => ({ activeCapsuleId: "capsule-1" }),
-    getSearchOptionsImpl: async () => ({ brands: [{ value: "zara", label: "Zara" }] }),
+    getSearchOptionsImpl: async () => ({
+      brands: [{ value: "zara", label: "Zara" }],
+      audience: ["woman", "man", "all"]
+    }),
     getSavedSearchImpl: async () => ({ query: "coat", page: 1 }),
     getSearchStatsImpl: async () => ({ total: 3, stats: { category: [{ value: "top", count: 3 }] }, priceBuckets: [] }),
     runSavedSearchImpl: async (_email, payload) => ({ items: [{ id: "1" }], total: 1, search: payload }),
@@ -655,6 +658,7 @@ test("index routes cover wardrobe handlers and search endpoints", async (t) => {
   });
   assert.equal(searchOptions.response.status, 200);
   assert.equal(searchOptions.json.ok, true);
+  assert.deepEqual(searchOptions.json.audience, ["woman", "man", "all"]);
 
   const savedSearch = await requestJson(baseUrl, "/search/me", {
     cookie: AUTH_COOKIE

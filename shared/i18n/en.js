@@ -66,6 +66,7 @@ const en = {
       autumn: "Autumn"
     },
     audience: {
+      all: "Unisex",
       man: "Man",
       woman: "Woman",
       any: "Not important"

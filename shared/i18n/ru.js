@@ -66,6 +66,7 @@ const ru = {
       autumn: "Осень"
     },
     audience: {
+      all: "Унисекс",
       man: "Мужчина",
       woman: "Женщина",
       any: "Не принципиально"

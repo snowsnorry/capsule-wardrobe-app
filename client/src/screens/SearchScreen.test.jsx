@@ -71,7 +71,7 @@ function makeOptions() {
     formalityLevels: ["formal", "casual", "smart_casual"],
     styles: ["retro", "minimalistic", "boho"],
     occasions: ["office"],
-    audience: ["woman", "man", "any"],
+    audience: ["woman", "man", "all"],
     colors: ["blue"],
     patterns: ["stripe", "solid", "abstract"],
     silhouettes: ["straight"],
@@ -391,6 +391,6 @@ describe("SearchScreen", () => {
       .map((button) => button.textContent?.trim())
       .filter(Boolean);
 
-    expect(labels).toEqual(["Man", "Woman", "Not important"]);
+    expect(labels).toEqual(["Not important", "Woman", "Man", "Unisex"]);
   });
 });

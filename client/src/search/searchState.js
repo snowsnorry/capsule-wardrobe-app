@@ -19,7 +19,7 @@ const INITIAL_SEARCH_STATE = Object.freeze({
 
 const CORE_DISPLAY_ORDER = ["casual", "smart_casual", "formal"];
 const SEASON_DISPLAY_ORDER = ["spring", "summer", "autumn", "winter"];
-const AUDIENCE_DISPLAY_ORDER = ["man", "woman", "any"];
+const AUDIENCE_DISPLAY_ORDER = ["woman", "man", "all"];
 
 const EMPTY_SEARCH_OPTIONS = Object.freeze({
   brands: [],
