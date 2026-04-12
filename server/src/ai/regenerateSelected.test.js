@@ -50,7 +50,7 @@ function createCapsule() {
             { id: "bottom-1", url: "https://example.com/bottom-1", category: "bottom" },
             { id: "bag-1", url: "https://example.com/bag-1", category: "bag" }
           ],
-          outfitSets: [{ itemIds: ["top-1", "bottom-1", "bag-1"] }],
+          outfitSets: [{ itemIds: ["top-1", "bottom-1", "bag-1"], image: "set-image", imageObsolete: false }],
           reasoning: "capsule-json",
           rawSelectionText: "capsule-raw",
           swimwearReasoning: "swim-json",
@@ -118,19 +118,21 @@ test("regenerateSelectedWardrobeItems returns pending payload when job is alread
 
   assert.equal(res.statusCode, 202);
   assert.equal(res.body.pendingStage, "regenerate");
-  assert.deepEqual(res.body.pendingRegenerationUrls, ["https://example.com/top-1"]);
-  assert.deepEqual(res.body.outfitSets, [{ itemIds: ["top-1", "bottom-1", "bag-1"] }]);
-  assert.equal(res.body.reasoning, "capsule-json");
+  assert.deepEqual(res.body, {
+    ok: true,
+    status: "pending",
+    pendingStage: "regenerate"
+  });
 });
 
-test("regenerateSelectedWardrobeItems returns ready payload and clears completed job", async () => {
+test("regenerateSelectedWardrobeItems clears completed job and starts a fresh pending regeneration", async () => {
   const jobs = new Map([
     ["person@example.com::capsule-1", {
       status: "completed",
       updatedAt: Date.now(),
       result: {
         items: [{ id: "new-1", url: "https://example.com/new-1", category: "top" }],
-        outfitSets: [{ itemIds: ["new-1", "new-1", "new-1"] }],
+        outfitSets: [{ itemIds: ["new-1", "new-1", "new-1"], imageObsolete: false }],
         reasoning: "new-reasoning",
         rawSelectionText: "new-raw",
         swimwearReasoning: "swim-json",
@@ -141,6 +143,16 @@ test("regenerateSelectedWardrobeItems returns ready payload and clears completed
   const service = createPartialRegenerationService({
     getProfileImpl: async () => createProfile(),
     getCapsuleImpl: async () => createCapsule(),
+    updateCapsuleSnapshotImpl: async (_email, capsuleId, draft) => ({ id: capsuleId, draft, saved: null }),
+    regenerateCapsuleWardrobeImpl: async () => ({
+      items: [
+        { id: "bottom-1", url: "https://example.com/bottom-1", category: "bottom" },
+        { id: "bag-1", url: "https://example.com/bag-1", category: "bag" },
+        { id: "top-2", url: "https://example.com/top-2", category: "top" }
+      ],
+      reasoning: "regen-json",
+      rawSelectionText: "regen-raw"
+    }),
     jobs
   });
   const res = createResponseRecorder();
@@ -151,11 +163,18 @@ test("regenerateSelectedWardrobeItems returns ready payload and clears completed
     body: { itemUrls: ["https://example.com/top-1"] }
   }, res);
 
-  assert.equal(res.statusCode, 200);
-  assert.equal(res.body.status, "ready");
-  assert.deepEqual(res.body.items, [{ id: "new-1", url: "https://example.com/new-1", category: "top" }]);
-  assert.deepEqual(res.body.outfitSets, [{ itemIds: ["new-1", "new-1", "new-1"] }]);
-  assert.equal(jobs.has("person@example.com::capsule-1"), false);
+  assert.equal(res.statusCode, 202);
+  assert.deepEqual(res.body, {
+    ok: true,
+    status: "pending",
+    pendingStage: "regenerate"
+  });
+  assert.equal(jobs.has("person@example.com::capsule-1"), true);
+
+  const job = service.getPartialRegenerationJob("person@example.com", "capsule-1");
+  assert.ok(job);
+  await job.promise;
+  assert.deepEqual(job.result.outfitSets, [{ itemIds: ["top-2", "bottom-1", "bag-1"], image: "set-image", imageObsolete: true }]);
 });
 
 test("regenerateSelectedWardrobeItems returns service_unavailable for failed job and clears it", async () => {
@@ -277,10 +296,11 @@ test("regenerateSelectedWardrobeItems updates rejected urls, shrinks partial pay
 
   assert.equal(res.statusCode, 202);
   assert.equal(res.body.pendingStage, "regenerate");
-  assert.deepEqual(res.body.items, [
-    { id: "bottom-1", url: "https://example.com/bottom-1", category: "bottom" },
-    { id: "bag-1", url: "https://example.com/bag-1", category: "bag" }
-  ]);
+  assert.deepEqual(res.body, {
+    ok: true,
+    status: "pending",
+    pendingStage: "regenerate"
+  });
   assert.deepEqual(draftUpdates[0], [
     "person@example.com",
     "capsule-1",
@@ -292,7 +312,7 @@ test("regenerateSelectedWardrobeItems updates rejected urls, shrinks partial pay
             { id: "bottom-1", url: "https://example.com/bottom-1", category: "bottom" },
             { id: "bag-1", url: "https://example.com/bag-1", category: "bag" }
           ],
-          outfitSets: [],
+          outfitSets: [{ itemIds: ["top-1", "bottom-1", "bag-1"], image: "set-image", imageObsolete: false }],
           reasoning: "capsule-json",
           rawSelectionText: "capsule-raw",
           swimwearReasoning: "swim-json",
@@ -321,7 +341,7 @@ test("regenerateSelectedWardrobeItems updates rejected urls, shrinks partial pay
             { id: "bag-1", url: "https://example.com/bag-1", category: "bag" },
             { id: "top-2", url: "https://example.com/top-2", category: "top" }
           ],
-          outfitSets: [{ itemIds: ["bottom-1", "top-2", "bag-1"] }],
+          outfitSets: [{ itemIds: ["top-2", "bottom-1", "bag-1"], image: "set-image", imageObsolete: true }],
           reasoning: "regen-json",
           rawSelectionText: "regen-raw",
           swimwearReasoning: "swim-json",
@@ -384,7 +404,7 @@ test("startPartialRegenerationJob reuses active pending job and marks failures",
     "capsule-1",
     createProfile(),
     createCapsule(),
-    [{ id: "top-1", category: "top" }],
+    [{ id: "top-1", url: "https://example.com/top-1", category: "top" }],
     getStoredProfilePayload()
   );
   const second = service.startPartialRegenerationJob(
@@ -392,7 +412,7 @@ test("startPartialRegenerationJob reuses active pending job and marks failures",
     "capsule-1",
     createProfile(),
     createCapsule(),
-    [{ id: "top-1", category: "top" }],
+    [{ id: "top-1", url: "https://example.com/top-1", category: "top" }],
     getStoredProfilePayload()
   );
   assert.equal(first, second);
@@ -415,7 +435,7 @@ test("startPartialRegenerationJob reuses active pending job and marks failures",
     "capsule-1",
     createProfile(),
     createCapsule(),
-    [{ id: "top-1", category: "top" }],
+    [{ id: "top-1", url: "https://example.com/top-1", category: "top" }],
     getStoredProfilePayload()
   );
   await failed.promise;
@@ -433,9 +453,9 @@ test("startPartialRegenerationJob stores recomputed outfit sets in the completed
     },
     regenerateCapsuleWardrobeImpl: async () => ({
       items: [
-        { id: "bottom-1", category: "bottom" },
-        { id: "bag-1", category: "bag" },
-        { id: "top-2", category: "top" }
+        { id: "bottom-1", url: "https://example.com/bottom-1", category: "bottom" },
+        { id: "bag-1", url: "https://example.com/bag-1", category: "bag" },
+        { id: "top-2", url: "https://example.com/top-2", category: "top" }
       ],
       outfitSets: [{ itemIds: ["bottom-1", "top-2", "bag-1"] }],
       reasoning: "regen-json",
@@ -449,30 +469,76 @@ test("startPartialRegenerationJob stores recomputed outfit sets in the completed
     "capsule-1",
     createProfile(),
     createCapsule(),
-    [{ id: "top-1", category: "top" }],
+    [{ id: "top-1", url: "https://example.com/top-1", category: "top" }],
     getStoredProfilePayload()
   );
   await job.promise;
 
   assert.equal(job.status, "completed");
-  assert.deepEqual(job.result.outfitSets, [{ itemIds: ["bottom-1", "top-2", "bag-1"] }]);
-  assert.deepEqual(updates[0][2].data.wardrobe.outfitSets, [{ itemIds: ["bottom-1", "top-2", "bag-1"] }]);
+  assert.deepEqual(job.result.outfitSets, [{ itemIds: ["top-2", "bottom-1", "bag-1"], image: "set-image", imageObsolete: true }]);
+  assert.deepEqual(updates[0][2].data.wardrobe.outfitSets, [{ itemIds: ["top-2", "bottom-1", "bag-1"], image: "set-image", imageObsolete: true }]);
 });
 
 function getStoredProfilePayload() {
   return {
     items: [
-      { id: "top-1", category: "top" },
-      { id: "bottom-1", category: "bottom" },
-      { id: "bag-1", category: "bag" }
+      { id: "top-1", url: "https://example.com/top-1", category: "top" },
+      { id: "bottom-1", url: "https://example.com/bottom-1", category: "bottom" },
+      { id: "bag-1", url: "https://example.com/bag-1", category: "bag" }
     ],
-    outfitSets: [{ itemIds: ["top-1", "bottom-1", "bag-1"] }],
+    outfitSets: [{ itemIds: ["top-1", "bottom-1", "bag-1"], image: "set-image", imageObsolete: false }],
     reasoning: "capsule-json",
     rawSelectionText: "capsule-raw",
     swimwearReasoning: "swim-json",
     swimwearRawSelectionText: "swim-raw"
   };
 }
+
+test("startPartialRegenerationJob preserves unchanged set images without marking them obsolete", async () => {
+  const service = createPartialRegenerationService({
+    updateCapsuleSnapshotImpl: async (_email, capsuleId, draft) => ({ id: capsuleId, draft, saved: null }),
+    regenerateCapsuleWardrobeImpl: async () => ({
+      items: [
+        { id: "top-1", url: "https://example.com/top-1", category: "top" },
+        { id: "bottom-2", url: "https://example.com/bottom-2", category: "bottom" },
+        { id: "bag-1", url: "https://example.com/bag-1", category: "bag" }
+      ],
+      reasoning: "regen-json",
+      rawSelectionText: "regen-raw"
+    }),
+    jobs: new Map()
+  });
+
+  const capsule = createCapsule();
+  capsule.draft.data.wardrobe.outfitSets = [
+    { itemIds: ["top-1", "bottom-1", "bag-1"], image: "set-image", imageObsolete: false },
+    { itemIds: ["top-1", "bag-1", "bag-1"], image: "stable-image", imageObsolete: false }
+  ];
+  const storedWardrobe = {
+    ...getStoredProfilePayload(),
+    items: [
+      { id: "top-1", url: "https://example.com/top-1", category: "top" },
+      { id: "bottom-1", url: "https://example.com/bottom-1", category: "bottom" },
+      { id: "bag-1", url: "https://example.com/bag-1", category: "bag" }
+    ],
+    outfitSets: capsule.draft.data.wardrobe.outfitSets
+  };
+
+  const job = service.startPartialRegenerationJob(
+    "person@example.com",
+    "capsule-1",
+    createProfile(),
+    capsule,
+    [{ id: "bottom-1", url: "https://example.com/bottom-1", category: "bottom" }],
+    storedWardrobe
+  );
+  await job.promise;
+
+  assert.deepEqual(job.result.outfitSets, [
+    { itemIds: ["top-1", "bottom-2", "bag-1"], image: "set-image", imageObsolete: true },
+    { itemIds: ["top-1", "bag-1", "bag-1"], image: "stable-image", imageObsolete: false }
+  ]);
+});
 
 test("module-level getPartialRegenerationJob returns null for unknown email", () => {
   assert.equal(getPartialRegenerationJob("missing@example.com"), null);

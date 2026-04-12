@@ -39,6 +39,7 @@ import {
   logWardrobeInfo,
   toWardrobeUiItem
 } from "./ai.js";
+import { mergeWardrobeItemsWithMetadata } from "../../../shared/wardrobeMerge.js";
 
 const REGENERATE_SELECTED_PROMPT_TEMPLATE = readFileSync(
   new URL("../templates/prompt_regenerate_selected.txt", import.meta.url),
@@ -69,6 +70,49 @@ function buildStoredWardrobePayloadFromResult(result = {}, storedWardrobe = null
     swimwearReasoning: storedWardrobe?.swimwearReasoning || null,
     swimwearRawSelectionText: storedWardrobe?.swimwearRawSelectionText || null
   };
+}
+
+function remapOutfitSetsAfterPartialRegeneration({
+  currentItems = [],
+  nextItems = [],
+  pendingUrls = [],
+  outfitSets = []
+} = {}) {
+  const { replacementMap } = mergeWardrobeItemsWithMetadata({
+    currentItems,
+    nextItems,
+    pendingUrls
+  });
+
+  return (Array.isArray(outfitSets) ? outfitSets : [])
+    .map((set) => {
+      const currentItemIds = Array.isArray(set?.itemIds)
+        ? set.itemIds.map((id) => String(id || "").trim()).filter(Boolean)
+        : [];
+      if (currentItemIds.length === 0) {
+        return null;
+      }
+
+      let hasChanges = false;
+      const nextItemIds = currentItemIds.map((itemId) => {
+        const nextItemId = replacementMap.get(itemId) || itemId;
+        if (nextItemId !== itemId) {
+          hasChanges = true;
+        }
+        return nextItemId;
+      });
+
+      return {
+        itemIds: nextItemIds,
+        image: typeof set?.image === "string" && set.image.trim().length > 0
+          ? set.image.trim()
+          : null,
+        imageObsolete: hasChanges && typeof set?.image === "string" && set.image.trim().length > 0
+          ? true
+          : Boolean(set?.imageObsolete)
+      };
+    })
+    .filter((set) => Array.isArray(set?.itemIds) && set.itemIds.length > 0);
 }
 
 function formatProfileValues(values) {
@@ -719,7 +763,14 @@ function createPartialRegenerationService({
         const result = await regenerateCapsuleWardrobeImpl({
           ...buildProfileCapsuleContext(profile, capsule)
         }, selectedProducts, jobLogContext);
+        const remappedOutfitSets = remapOutfitSetsAfterPartialRegeneration({
+          currentItems: storedWardrobe?.items || [],
+          nextItems: result?.items || [],
+          pendingUrls: pendingItemUrls,
+          outfitSets: storedWardrobe?.outfitSets || []
+        });
         const payload = buildStoredWardrobePayloadFromResult(result, storedWardrobe);
+        payload.outfitSets = remappedOutfitSets;
         const baseSnapshot = getEffectiveCapsuleSnapshot(capsule);
         if (capsuleId) {
           currentCapsule = await updateCapsuleSnapshotImpl(email, capsuleId, {
@@ -832,7 +883,7 @@ function createPartialRegenerationService({
       const partialItems = storedWardrobe.items.filter((item) => !selectedItemUrlSet.has(String(item?.url || "").trim()));
       const partialPayload = {
         items: partialItems,
-        outfitSets: [],
+        outfitSets: storedWardrobe.outfitSets || [],
         reasoning: storedWardrobe.reasoning || null,
         rawSelectionText: storedWardrobe.rawSelectionText || null,
         swimwearReasoning: storedWardrobe.swimwearReasoning || null,

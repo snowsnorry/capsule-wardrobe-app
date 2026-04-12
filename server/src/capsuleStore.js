@@ -37,7 +37,8 @@ function normalizeWardrobePayload(payload = null) {
             : [],
           image: typeof set?.image === "string" && set.image.trim().length > 0
             ? set.image.trim()
-            : null
+            : null,
+          imageObsolete: Boolean(set?.imageObsolete)
         }))
         .filter((set) => set.itemIds.length > 0)
       : [],

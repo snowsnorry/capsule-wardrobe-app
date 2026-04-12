@@ -107,7 +107,8 @@ function createOutfitSetImageService({
       index === setIndex
         ? {
           ...set,
-          image: null
+          image: null,
+          imageObsolete: false
         }
         : set
     ));
@@ -200,7 +201,8 @@ function createOutfitSetImageService({
           index === setIndex
             ? {
               ...set,
-              image: result?.image?.base64 || null
+              image: result?.image?.base64 || null,
+              imageObsolete: false
             }
             : set
         ));

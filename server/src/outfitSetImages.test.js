@@ -114,6 +114,7 @@ test("outfitSetImage service starts job and persists generated image", async () 
 
   assert.equal(updates.length, 1);
   assert.equal(updates[0].data.wardrobe.outfitSets[0].image, "generated-base64");
+  assert.equal(updates[0].data.wardrobe.outfitSets[0].imageObsolete, false);
   assert.equal(published.length, 2);
   assert.match(prompts[0], /top-down flat lay photograph/i);
   assert.equal(imagePayloads[0].length, 3);
@@ -123,7 +124,11 @@ test("deleteOutfitSetImage clears stored image and publishes updated snapshot", 
   const published = [];
   const updates = [];
   const capsuleWithImage = createCapsule();
-  capsuleWithImage.draft.data.wardrobe.outfitSets = [{ itemIds: ["top-1", "bottom-1", "bag-1"], image: "abc123" }];
+  capsuleWithImage.draft.data.wardrobe.outfitSets = [{
+    itemIds: ["top-1", "bottom-1", "bag-1"],
+    image: "abc123",
+    imageObsolete: true
+  }];
 
   const service = createOutfitSetImageService({
     getCapsuleImpl: async () => capsuleWithImage,
@@ -150,6 +155,7 @@ test("deleteOutfitSetImage clears stored image and publishes updated snapshot", 
   assert.deepEqual(res.body, { ok: true, status: "ready" });
   assert.equal(updates.length, 1);
   assert.equal(updates[0].data.wardrobe.outfitSets[0].image, null);
+  assert.equal(updates[0].data.wardrobe.outfitSets[0].imageObsolete, false);
   assert.equal(published.length, 1);
 });
 
@@ -168,7 +174,11 @@ test("deleteOutfitSetImage writes a draft when the capsule only has saved data",
             { id: "bottom-1", image_url: "https://example.com/bottom.jpg", type: "bottom" },
             { id: "bag-1", image_url: "https://example.com/bag.jpg", type: "bag" }
           ],
-          outfitSets: [{ itemIds: ["top-1", "bottom-1", "bag-1"], image: "saved-image" }]
+          outfitSets: [{
+            itemIds: ["top-1", "bottom-1", "bag-1"],
+            image: "saved-image",
+            imageObsolete: true
+          }]
         },
         rejectedUrls: []
       }
@@ -200,6 +210,7 @@ test("deleteOutfitSetImage writes a draft when the capsule only has saved data",
   assert.equal(res.statusCode, 200);
   assert.equal(updates.length, 1);
   assert.equal(updates[0].data.wardrobe.outfitSets[0].image, null);
+  assert.equal(updates[0].data.wardrobe.outfitSets[0].imageObsolete, false);
   assert.equal(savedOnlyCapsule.saved.data.wardrobe.outfitSets[0].image, "saved-image");
   assert.equal(published.length, 1);
 });

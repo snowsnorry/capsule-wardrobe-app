@@ -38,9 +38,12 @@ import {
 import SignInScreen from "./screens/SignInScreen.jsx";
 import { useI18n } from "./i18n/useI18n.js";
 import { ACCENT_COLOR_OPTIONS } from "../../shared/accentColors.js";
-import { sortWardrobeItems } from "../../shared/wardrobeOrder.js";
 import { createAppTheme } from "./theme.js";
 import { DEFAULT_PROFILE_LLM, DEFAULT_PROFILE_THEME } from "../../shared/profileSettings.js";
+import {
+  buildDisplayWardrobeItems,
+  mergeWardrobeItemsIntoExistingOrder
+} from "../../shared/wardrobeMerge.js";
 
 const MainScreen = lazy(() => import("./screens/MainScreen.jsx"));
 const OnboardingScreen = lazy(() => import("./screens/OnboardingScreen.jsx"));
@@ -128,10 +131,6 @@ function sortSeasonOptions(items) {
   });
 }
 
-function normalizeWardrobeItemUrl(item) {
-  return String(item?.url || "").trim();
-}
-
 function normalizeOutfitSets(outfitSets) {
   return Array.isArray(outfitSets)
     ? outfitSets
@@ -141,78 +140,11 @@ function normalizeOutfitSets(outfitSets) {
           : [],
         image: typeof set?.image === "string" && set.image.trim().length > 0
           ? set.image.trim()
-          : null
+          : null,
+        imageObsolete: Boolean(set?.imageObsolete)
       }))
       .filter((set) => set.itemIds.length > 0)
     : [];
-}
-
-function buildDisplayWardrobeItems(items) {
-  return sortWardrobeItems(Array.isArray(items) ? items : []);
-}
-
-function mergeWardrobeItemsIntoExistingOrder({
-  currentItems = [],
-  nextItems = [],
-  pendingUrls = []
-} = {}) {
-  const orderedCurrentItems = Array.isArray(currentItems) ? currentItems : [];
-  const orderedNextItems = buildDisplayWardrobeItems(nextItems);
-  const normalizedPendingUrls = Array.isArray(pendingUrls)
-    ? pendingUrls.map((itemUrl) => String(itemUrl || "").trim()).filter(Boolean)
-    : [];
-
-  if (orderedCurrentItems.length === 0 || normalizedPendingUrls.length === 0) {
-    return orderedNextItems;
-  }
-
-  const pendingUrlSet = new Set(normalizedPendingUrls);
-  const nextItemsByUrl = new Map(
-    orderedNextItems
-      .map((item) => [normalizeWardrobeItemUrl(item), item])
-      .filter(([itemUrl]) => itemUrl)
-  );
-  const preservedItemUrls = new Set(
-    orderedCurrentItems
-      .map((item) => normalizeWardrobeItemUrl(item))
-      .filter((itemUrl) => itemUrl && !pendingUrlSet.has(itemUrl))
-  );
-  const replacementCandidates = orderedNextItems.filter((item) => !preservedItemUrls.has(normalizeWardrobeItemUrl(item)));
-  const consumedReplacementIndexes = new Set();
-
-  const takeReplacementItem = (category) => {
-    const preferredCategory = String(category || "");
-    let replacementIndex = replacementCandidates.findIndex((item, index) => (
-      !consumedReplacementIndexes.has(index) && String(item?.category || "") === preferredCategory
-    ));
-    if (replacementIndex === -1) {
-      replacementIndex = replacementCandidates.findIndex((_, index) => !consumedReplacementIndexes.has(index));
-    }
-    if (replacementIndex === -1) {
-      return null;
-    }
-
-    consumedReplacementIndexes.add(replacementIndex);
-    return replacementCandidates[replacementIndex];
-  };
-
-  const mergedItems = orderedCurrentItems.map((currentItem) => {
-    const currentItemUrl = normalizeWardrobeItemUrl(currentItem);
-    if (!pendingUrlSet.has(currentItemUrl)) {
-      return nextItemsByUrl.get(currentItemUrl) || currentItem;
-    }
-
-    return takeReplacementItem(currentItem?.category) || currentItem;
-  });
-
-  const mergedItemUrls = new Set(
-    mergedItems
-      .map((item) => normalizeWardrobeItemUrl(item))
-      .filter(Boolean)
-  );
-  const appendedItems = orderedNextItems.filter((item) => !mergedItemUrls.has(normalizeWardrobeItemUrl(item)));
-
-  return [...mergedItems, ...appendedItems];
 }
 
 function buildCapsuleStatus(capsule) {
@@ -1421,7 +1353,8 @@ function App() {
         index === normalizedSetIndex
           ? {
             ...set,
-            image: null
+            image: null,
+            imageObsolete: false
           }
           : set
       )));

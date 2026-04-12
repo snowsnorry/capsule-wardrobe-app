@@ -42,7 +42,8 @@ test("normalizeCapsuleSnapshot preserves outfit set image payloads", () => {
           items: [],
           outfitSets: [{
             itemIds: ["top-1", "bottom-1", "bag-1"],
-            image: "base64-image"
+            image: "base64-image",
+            imageObsolete: true
           }]
         },
         rejectedUrls: []
@@ -50,7 +51,8 @@ test("normalizeCapsuleSnapshot preserves outfit set image payloads", () => {
     })?.data?.wardrobe?.outfitSets,
     [{
       itemIds: ["top-1", "bottom-1", "bag-1"],
-      image: "base64-image"
+      image: "base64-image",
+      imageObsolete: true
     }]
   );
 });

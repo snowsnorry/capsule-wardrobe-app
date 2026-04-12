@@ -98,6 +98,7 @@ function t(key, params) {
       deleteConfirmBody: "Are you sure you want to delete this capsule? This action cannot be undone.",
       deleteOutfitSetImage: "Delete image",
       deleteOutfitSetImageConfirmBody: "Are you sure you want to delete this image? This action cannot be undone.",
+      outfitSetImageObsolete: "This image may no longer match the current outfit. Remove it and generate a new one if needed.",
       revertConfirmBody: "Discard the current unsaved changes and restore the last saved version of this capsule?",
       deleteConfirm: "Delete",
       revertConfirm: "Revert",
@@ -459,6 +460,62 @@ describe("MainScreen", () => {
 
     expect(screen.getByTestId("outfit-set-image")).toHaveAttribute("src", "data:image/png;base64,abc123");
     expect(screen.queryByRole("button", { name: "Create image" })).not.toBeInTheDocument();
+  });
+
+  test("renders pending placeholders inside an outfit set tab during partial regeneration", async () => {
+    const user = userEvent.setup();
+
+    renderScreen({
+      items: [
+        { id: "a", url: "https://example.com/a", name: "Shirt", category: "top" },
+        { id: "b", url: "https://example.com/b", name: "Trousers", category: "bottom" },
+        { id: "c", url: "https://example.com/c", name: "Bag", category: "bag" }
+      ],
+      outfitSets: [{ itemIds: ["a", "b", "c"] }],
+      partialRegenerationPendingUrls: ["https://example.com/a"]
+    });
+
+    await user.click(screen.getByRole("tab", { name: "Набор 1" }));
+
+    expect(screen.getByTestId("placeholder-card-pending-https://example.com/a")).toBeInTheDocument();
+    expect(screen.getByTestId("clothing-card-https://example.com/b")).toBeInTheDocument();
+    expect(screen.getByTestId("clothing-card-https://example.com/c")).toBeInTheDocument();
+  });
+
+  test("renders obsolete image warning only when the image is marked obsolete", async () => {
+    const user = userEvent.setup();
+
+    const props = {
+      items: [
+        { id: "a", url: "https://example.com/a", name: "Shirt", category: "top" },
+        { id: "b", url: "https://example.com/b", name: "Trousers", category: "bottom" },
+        { id: "c", url: "https://example.com/c", name: "Bag", category: "bag" }
+      ]
+    };
+
+    const view = renderScreen({
+      ...props,
+      outfitSets: [{ itemIds: ["a", "b", "c"], image: "abc123", imageObsolete: true }]
+    });
+
+    await user.click(screen.getByRole("tab", { name: "Набор 1" }));
+    expect(
+      screen.getByText("This image may no longer match the current outfit. Remove it and generate a new one if needed.")
+    ).toBeInTheDocument();
+
+    view.rerender(
+      <ThemeProvider theme={theme}>
+        <MainScreen
+          {...view}
+          {...props}
+          outfitSets={[{ itemIds: ["a", "b", "c"], image: "abc123", imageObsolete: false }]}
+        />
+      </ThemeProvider>
+    );
+
+    expect(
+      screen.queryByText("This image may no longer match the current outfit. Remove it and generate a new one if needed.")
+    ).not.toBeInTheDocument();
   });
 
   test("opens the full-size outfit set image dialog on image click", async () => {

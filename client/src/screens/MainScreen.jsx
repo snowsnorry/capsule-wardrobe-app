@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  Alert,
   Box,
   Button,
   Dialog,
@@ -119,7 +120,8 @@ function resolveOutfitSets(items = [], outfitSets = []) {
           items: resolvedItems,
           image: typeof set?.image === "string" && set.image.trim().length > 0
             ? set.image.trim()
-            : null
+            : null,
+          imageObsolete: Boolean(set?.imageObsolete)
         }
         : null;
     })
@@ -947,6 +949,19 @@ function MainScreen({
                       {activeOutfitSet ? (
                         <Stack spacing={2} sx={{ pb: 2, px: { xs: 0.5, md: 1 } }}>
                           <Divider sx={{ mx: { xs: 1, md: 2 } }} />
+                          {activeOutfitSet.image && activeOutfitSet.imageObsolete ? (
+                            <Alert
+                              severity="warning"
+                              sx={{
+                                alignSelf: "center",
+                                width: "100%",
+                                maxWidth: `${OUTFIT_SET_IMAGE_PREVIEW_MAX_WIDTH}px`,
+                                borderRadius: "5.4px"
+                              }}
+                            >
+                              {t("capsule.outfitSetImageObsolete")}
+                            </Alert>
+                          ) : null}
                           {isActiveOutfitSetImagePending ? (
                             <Box
                               sx={{
