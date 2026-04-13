@@ -24,6 +24,7 @@ function BarChart({
   const hasSelection = activeValues.length > 0;
   const activeLabels = new Set(data.filter((row) => row.isActive).map((row) => row[index]));
   const tickColor = isDarkMode ? "#f5f5f5" : "#475467";
+  const selectedTickColor = isDarkMode ? "#ffffff" : "#000000";
   const secondaryTickColor = isDarkMode ? "rgba(255,255,255,0.76)" : "#667085";
   const gridColor = isDarkMode ? "rgba(255,255,255,0.14)" : "rgba(148, 163, 184, 0.16)";
   const strokeColor = isDarkMode ? "rgba(255,255,255,0.34)" : "rgba(0,0,0,0.22)";
@@ -77,7 +78,7 @@ function BarChart({
                   y={0}
                   dy={12}
                   textAnchor="end"
-                  fill={hasSelection && activeLabels.has(payload.value) ? "#ffffff" : tickColor}
+                  fill={hasSelection && activeLabels.has(payload.value) ? selectedTickColor : tickColor}
                   fontSize={11}
                   fontWeight={hasSelection && activeLabels.has(payload.value) ? 900 : 400}
                   transform="rotate(-42)"
