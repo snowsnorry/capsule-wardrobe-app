@@ -7,6 +7,39 @@ function extractFormulaIds(formula) {
     .filter(Boolean);
 }
 
+function normalizeOutfitSetItemIds(itemIds = [], itemsById = new Map()) {
+  const normalizedItemIds = [];
+  const seenCategories = new Set();
+  const categories = new Set();
+
+  for (const itemId of itemIds) {
+    const item = itemsById.get(itemId);
+    if (!item) {
+      continue;
+    }
+
+    const category = String(item?.category || "").trim();
+    const categoryKey = category || `__missing__:${itemId}`;
+    if (seenCategories.has(categoryKey)) {
+      continue;
+    }
+
+    seenCategories.add(categoryKey);
+    normalizedItemIds.push(itemId);
+
+    if (category) {
+      categories.add(category);
+    }
+  }
+
+  const hasDress = categories.has("dress");
+  const hasTopAndBottom = categories.has("top") && categories.has("bottom");
+
+  return hasDress || hasTopAndBottom
+    ? { itemIds: normalizedItemIds }
+    : null;
+}
+
 function buildOutfitSetsFromFormulas(formulas = [], items = []) {
   const normalizedItems = Array.isArray(items) ? items : [];
   const itemsById = new Map(
@@ -18,7 +51,7 @@ function buildOutfitSetsFromFormulas(formulas = [], items = []) {
   return (Array.isArray(formulas) ? formulas : [])
     .map((formula) => {
       const itemIds = extractFormulaIds(formula).filter((id) => itemsById.has(id));
-      return itemIds.length >= 3 ? { itemIds } : null;
+      return normalizeOutfitSetItemIds(itemIds, itemsById);
     })
     .filter(Boolean);
 }

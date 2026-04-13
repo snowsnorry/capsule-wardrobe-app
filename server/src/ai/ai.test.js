@@ -535,19 +535,32 @@ test("getStoredWardrobePayload normalizes legacy arrays and object payloads", ()
   );
 });
 
-test("buildOutfitSetsFromFormulas keeps only formulas with three or more resolved items", () => {
+test("buildOutfitSetsFromFormulas keeps only valid outfit compositions and deduplicates categories", () => {
   assert.deepEqual(
     buildOutfitSetsFromFormulas(
       [
-        "Look [1] + [2] + [3].",
-        "Small [1] + [9].",
-        "Ordered [3] then [1] then [2] then [3]."
+        "Top, bottom, bag [1] + [2] + [3].",
+        "Dress look [4] + [5].",
+        "Missing bottom [1] + [3] + [5].",
+        "Keep first top [1] + [6] + [2] + [3].",
+        "Keep first bottom [1] + [7] + [8] + [3]."
       ],
-      [{ id: "1" }, { id: "2" }, { id: "3" }]
+      [
+        { id: "1", category: "top" },
+        { id: "2", category: "bottom" },
+        { id: "3", category: "bag" },
+        { id: "4", category: "dress" },
+        { id: "5", category: "shoes" },
+        { id: "6", category: "top" },
+        { id: "7", category: "bottom" },
+        { id: "8", category: "bottom" }
+      ]
     ),
     [
       { itemIds: ["1", "2", "3"] },
-      { itemIds: ["3", "1", "2", "3"] }
+      { itemIds: ["4", "5"] },
+      { itemIds: ["1", "2", "3"] },
+      { itemIds: ["1", "7", "3"] }
     ]
   );
 });
@@ -801,10 +814,20 @@ test("startWardrobeJob stores capsule result and merges swimwear additions when 
   const updates = [];
   const service = createWardrobeService({
     generateCapsuleWardrobeImpl: async () => ({
-      items: [{ id: "top-1", category: "top" }],
-      selectedItems: [{ id: "top-1", category: "top" }],
+      items: [
+        { id: "top-1", category: "top" },
+        { id: "top-2", category: "top" },
+        { id: "bottom-1", category: "bottom" },
+        { id: "bag-1", category: "bag" }
+      ],
+      selectedItems: [
+        { id: "top-1", category: "top" },
+        { id: "top-2", category: "top" },
+        { id: "bottom-1", category: "bottom" },
+        { id: "bag-1", category: "bag" }
+      ],
       promptEmbeddings: [0.1],
-      outfitSets: [{ itemIds: ["top-1", "top-1", "top-1"] }],
+      outfitSets: [{ itemIds: ["top-1", "bottom-1", "bag-1"] }],
       reasoning: "capsule-json",
       rawSelectionText: "capsule-raw"
     }),
@@ -839,8 +862,13 @@ test("startWardrobeJob stores capsule result and merges swimwear additions when 
       filters: createCapsuleWithWardrobe().draft.filters,
       data: {
         wardrobe: {
-          items: [{ id: "top-1", category: "top" }],
-          outfitSets: [{ itemIds: ["top-1", "top-1", "top-1"] }],
+          items: [
+            { id: "top-1", category: "top" },
+            { id: "top-2", category: "top" },
+            { id: "bottom-1", category: "bottom" },
+            { id: "bag-1", category: "bag" }
+          ],
+          outfitSets: [{ itemIds: ["top-1", "bottom-1", "bag-1"] }],
           reasoning: "capsule-json",
           rawSelectionText: "capsule-raw",
           swimwearReasoning: null,
@@ -855,9 +883,12 @@ test("startWardrobeJob stores capsule result and merges swimwear additions when 
         wardrobe: {
           items: [
             { id: "top-1", category: "top" },
+            { id: "top-2", category: "top" },
+            { id: "bottom-1", category: "bottom" },
+            { id: "bag-1", category: "bag" },
             { id: "swim-1", category: "swimwear" }
           ],
-          outfitSets: [{ itemIds: ["top-1", "top-1", "top-1"] }],
+          outfitSets: [{ itemIds: ["top-1", "bottom-1", "bag-1"] }],
           reasoning: "capsule-json",
           rawSelectionText: "capsule-raw",
           swimwearReasoning: "swimwear-json",

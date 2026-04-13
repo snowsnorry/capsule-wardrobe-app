@@ -74,11 +74,11 @@ function buildJsonObjectFormat(userProfile = null) {
             },
             outfit_formulas: {
               type: "array",
-              description: "Provide 5-6 highly wearable outfit formulas using the selected items (reference them by basic name, not ID).",
+              description: "Provide 4-6 highly wearable outfit formulas using the selected items (reference them by basic name AND ID in [] - IMPORTANT). Every outfit formula must contain either top + bottom or dress.",
               items: {
                 type: "string"
               },
-              minItems: 5,
+              minItems: 4,
               maxItems: 6
             }
           }
