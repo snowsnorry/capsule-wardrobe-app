@@ -34,6 +34,7 @@ function StylePreferenceSelector({
   selectedStyleAesthetic,
   onSelectStyleCore,
   onSelectStyleAesthetic,
+  disabled = false,
   showSectionHeading = true,
   titleVariant = "h5",
   bodyVariant = "body1"
@@ -63,6 +64,7 @@ function StylePreferenceSelector({
               key={style}
               label={translateOption("styles", style, locale)}
               clickable
+              disabled={disabled}
               color={selectedStyleCore === style ? "primary" : "default"}
               onClick={() => onSelectStyleCore(style)}
             />
@@ -78,6 +80,7 @@ function StylePreferenceSelector({
           <Chip
             label={t("profile.styleAestheticNotImportant")}
             clickable
+            disabled={disabled}
             color={selectedStyleAesthetic === null ? "primary" : "default"}
             onClick={() => onSelectStyleAesthetic(null)}
           />
@@ -86,6 +89,7 @@ function StylePreferenceSelector({
               key={style}
               label={translateOption("styles", style, locale)}
               clickable
+              disabled={disabled}
               color={selectedStyleAesthetic === style ? "primary" : "default"}
               onClick={() => onSelectStyleAesthetic(style)}
             />

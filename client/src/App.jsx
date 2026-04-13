@@ -874,11 +874,16 @@ function App() {
     if (!capsuleId) {
       return;
     }
-    const result = await saveCapsule(capsuleId);
-    if (capsuleId === activeCapsuleId) {
-      setActiveCapsuleMeta(result.capsule);
+    setIsContentOperationLoading(true);
+    try {
+      const result = await saveCapsule(capsuleId);
+      if (capsuleId === activeCapsuleId) {
+        setActiveCapsuleMeta(result.capsule);
+      }
+      await refreshCapsuleList();
+    } finally {
+      setIsContentOperationLoading(false);
     }
-    await refreshCapsuleList();
   };
 
   const handleRevertCapsule = async (capsuleId = activeCapsuleId) => {
@@ -901,11 +906,16 @@ function App() {
     if (!capsuleId) {
       return;
     }
-    const result = await renameCapsule(capsuleId, name);
-    if (capsuleId === activeCapsuleId) {
-      setActiveCapsuleMeta(result.capsule);
+    setIsContentOperationLoading(true);
+    try {
+      const result = await renameCapsule(capsuleId, name);
+      if (capsuleId === activeCapsuleId) {
+        setActiveCapsuleMeta(result.capsule);
+      }
+      await refreshCapsuleList();
+    } finally {
+      setIsContentOperationLoading(false);
     }
-    await refreshCapsuleList();
   };
 
   const handleDuplicateCapsule = async (name, capsuleId = activeCapsuleId) => {
@@ -1344,6 +1354,7 @@ function App() {
       return;
     }
 
+    setIsContentOperationLoading(true);
     try {
       await requestOutfitSetImageDeletion({
         capsuleId: activeCapsuleId,
@@ -1368,6 +1379,10 @@ function App() {
         ...current,
         error: resolveErrorMessage(error)
       }));
+    } finally {
+      if (isMountedRef.current) {
+        setIsContentOperationLoading(false);
+      }
     }
   };
 

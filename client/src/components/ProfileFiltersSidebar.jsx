@@ -50,6 +50,7 @@ function ProfileFiltersSidebar({
   onReset,
   onSignOut,
   isSigningOut,
+  isInteractionDisabled = false,
   resetLabelKey = "filters.reset"
 }) {
   const { t, locale } = useI18n();
@@ -70,7 +71,7 @@ function ProfileFiltersSidebar({
 
   const isMissingRequiredFilters = missingRequiredFilters.length > 0;
   const showUnchangedFiltersHint = !status.loading && !isMissingRequiredFilters && !hasFilterChanges;
-  const isApplyDisabled = status.loading || isMissingRequiredFilters || !hasFilterChanges;
+  const isApplyDisabled = status.loading || isInteractionDisabled || isMissingRequiredFilters || !hasFilterChanges;
   const normalizedSelectedPattern = selectedPattern ?? "solid";
   const sortedPatternOptions = sortPatternOptions(patternOptions, locale);
 
@@ -88,6 +89,7 @@ function ProfileFiltersSidebar({
         selectedStyleAesthetic={selectedStyleAesthetic}
         onSelectStyleCore={onSelectStyleCore}
         onSelectStyleAesthetic={onSelectStyleAesthetic}
+        disabled={isInteractionDisabled}
         titleVariant="h6"
         bodyVariant="body2"
       />
@@ -103,6 +105,7 @@ function ProfileFiltersSidebar({
               key={item}
               label={translateOption("occasions", item, locale)}
               clickable
+              disabled={isInteractionDisabled}
               color={selectedOccasions.includes(item) ? "primary" : "default"}
               onClick={() => onToggleOccasion(item)}
             />
@@ -121,6 +124,7 @@ function ProfileFiltersSidebar({
               key={item}
               label={translateOption("seasons", item, locale)}
               clickable
+              disabled={isInteractionDisabled}
               color={selectedSeasons.includes(item) ? "primary" : "default"}
               onClick={() => onToggleSeason(item)}
             />
@@ -139,6 +143,7 @@ function ProfileFiltersSidebar({
               key={item}
               label={translateOption("audience", item, locale)}
               clickable
+              disabled={isInteractionDisabled}
               color={selectedAudience === item ? "primary" : "default"}
               onClick={() => onSelectAudience(item)}
             />
@@ -155,6 +160,7 @@ function ProfileFiltersSidebar({
           options={accentColorOptions}
           selectedValue={selectedAccentColor}
           onSelect={onSelectAccentColor}
+          disabled={isInteractionDisabled}
         />
       </Stack>
 
@@ -169,6 +175,7 @@ function ProfileFiltersSidebar({
               key={item}
               label={translateOption("patterns", item, locale)}
               clickable
+              disabled={isInteractionDisabled}
               color={normalizedSelectedPattern === item ? "primary" : "default"}
               onClick={() => onSelectPattern(item)}
             />
@@ -185,6 +192,7 @@ function ProfileFiltersSidebar({
           multiline
           minRows={1}
           maxRows={4}
+          disabled={isInteractionDisabled}
           value={selectedText}
           onChange={(event) => onTextChange(event.target.value)}
           placeholder={t("profile.additionalInfoPlaceholder")}
@@ -215,7 +223,7 @@ function ProfileFiltersSidebar({
           <Button variant="contained" onClick={onApply} disabled={isApplyDisabled}>
             {t("filters.apply")}
           </Button>
-          <Button variant="outlined" color="inherit" onClick={onReset} disabled={status.loading}>
+          <Button variant="outlined" color="inherit" onClick={onReset} disabled={status.loading || isInteractionDisabled}>
             {t(resetLabelKey)}
           </Button>
         </Stack>

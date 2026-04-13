@@ -9,7 +9,8 @@ function AccentColorChips({
   onToggle,
   selectedValue = null,
   onSelect,
-  emptyLabel
+  emptyLabel,
+  disabled = false
 }) {
   const { t, locale } = useI18n();
   const isMultiSelect = Array.isArray(selectedValues) && typeof onToggle === "function";
@@ -34,6 +35,7 @@ function AccentColorChips({
       <Chip
         label={emptyChipLabel}
         clickable
+        disabled={disabled}
         color={activeValues.length === 0 ? "primary" : "default"}
         onClick={() => handleToggle(null)}
       />
@@ -41,6 +43,7 @@ function AccentColorChips({
         <Chip
           key={item}
           clickable
+          disabled={disabled}
           color={activeValues.includes(item) ? "primary" : "default"}
           onClick={() => handleToggle(item)}
           label={

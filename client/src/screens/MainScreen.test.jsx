@@ -20,10 +20,10 @@ vi.mock("../components/LocaleSwitcher.jsx", () => ({
   default: () => <div data-testid="locale-switcher">locale-switcher</div>
 }));
 vi.mock("../components/ProfileFiltersSidebar.jsx", () => ({
-  default: ({ onApply, onReset, onSignOut }) => (
+  default: ({ onApply, onReset, onSignOut, isInteractionDisabled }) => (
     <div data-testid="profile-filters-sidebar">
-      <button type="button" onClick={onApply}>apply-filters</button>
-      <button type="button" onClick={onReset}>reset-filters</button>
+      <button type="button" onClick={onApply} disabled={isInteractionDisabled}>apply-filters</button>
+      <button type="button" onClick={onReset} disabled={isInteractionDisabled}>reset-filters</button>
       {typeof onSignOut === "function" ? (
         <button type="button" onClick={onSignOut}>sign-out</button>
       ) : null}
@@ -46,6 +46,7 @@ vi.mock("../components/ClothingCard.jsx", () => ({
       data-selected={String(isSelected)}
       data-selectable={String(isSelectable)}
       data-regenerating={String(isRegenerating)}
+      disabled={isRegenerating}
       onClick={() => onToggleSelected(item)}
     >
       {item.name}
@@ -100,6 +101,9 @@ function t(key, params) {
       deleteOutfitSetImageConfirmBody: "Are you sure you want to delete this image? This action cannot be undone.",
       outfitSetImageObsolete: "This image may no longer match the current outfit. Remove it and generate a new one if needed.",
       revertConfirmBody: "Discard the current unsaved changes and restore the last saved version of this capsule?",
+      regenerateWithFilterChangesTitle: "Apply updated filters?",
+      regenerateWithFilterChangesBody: "Your filter changes have not been applied yet. Apply them and generate a new capsule with the updated settings?",
+      regenerateWithFilterChangesConfirm: "Apply and regenerate",
       deleteConfirm: "Delete",
       revertConfirm: "Revert",
       searchPlaceholder: "Search capsules...",
@@ -629,6 +633,123 @@ describe("MainScreen", () => {
 
     await user.click(screen.getByRole("button", { name: "Open capsule menu" }));
     expect(screen.getByRole("menuitem", { name: "Rename" })).toBeInTheDocument();
+  });
+
+  test("opens rename dialog from the header menu on desktop", async () => {
+    const user = userEvent.setup();
+
+    renderScreen();
+
+    await user.click(screen.getByRole("button", { name: "Open capsule menu" }));
+    await user.click(screen.getByRole("menuitem", { name: "Rename" }));
+
+    expect(screen.getByRole("dialog", { name: "Rename capsule" })).toBeInTheDocument();
+    expect(screen.getByRole("textbox")).toHaveValue("Spring edit");
+    expect(screen.queryByRole("textbox", { name: "Capsule name" })).not.toBeInTheDocument();
+  });
+
+  test("disables primary capsule controls while content is busy", async () => {
+    const onOpenCapsule = vi.fn(() => Promise.resolve());
+    const onRefreshItems = vi.fn();
+
+    renderScreen({
+      isContentBusy: true,
+      onOpenCapsule,
+      onRefreshItems,
+      items: [{ id: "a", url: "https://example.com/a", name: "Shirt", category: "top" }]
+    });
+
+    expect(screen.getByRole("button", { name: "New capsule" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Search capsules" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Rename capsule Spring edit" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Edit capsule name" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Regenerate all" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Open capsule menu" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Capsule actions Spring edit" })).toBeDisabled();
+    expect(screen.getByTestId("clothing-card-https://example.com/a")).toBeDisabled();
+
+    expect(onOpenCapsule).not.toHaveBeenCalled();
+    expect(onRefreshItems).not.toHaveBeenCalled();
+  });
+
+  test("disables mobile filters trigger while content is busy", () => {
+    const onApplyFilters = vi.fn();
+
+    renderScreen({
+      isContentBusy: true,
+      onApplyFilters
+    }, { mobile: true });
+
+    expect(screen.getByRole("button", { name: "Open filters" })).toBeDisabled();
+    expect(onApplyFilters).not.toHaveBeenCalled();
+  });
+
+  test("closes rename dialog immediately after confirming while rename is still pending", async () => {
+    const user = userEvent.setup();
+    let resolveRename;
+    const onRenameCapsule = vi.fn(() => new Promise((resolve) => {
+      resolveRename = resolve;
+    }));
+
+    renderScreen({ onRenameCapsule });
+
+    await user.click(screen.getByRole("button", { name: "Open capsule menu" }));
+    await user.click(screen.getByRole("menuitem", { name: "Rename" }));
+    await user.click(screen.getByRole("button", { name: "OK" }));
+
+    expect(onRenameCapsule).toHaveBeenCalledWith("Spring edit", "capsule-1");
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog", { name: "Rename capsule" })).not.toBeInTheDocument();
+    });
+
+    resolveRename?.();
+  });
+
+  test("asks to apply changed filters before regenerate all", async () => {
+    const user = userEvent.setup();
+    const onRefreshItems = vi.fn();
+    const onApplyFilters = vi.fn();
+
+    renderScreen({
+      hasFilterChanges: true,
+      onRefreshItems,
+      onApplyFilters
+    });
+
+    await user.click(screen.getByRole("button", { name: "Regenerate all" }));
+
+    expect(screen.getByRole("dialog", { name: "Apply updated filters?" })).toBeInTheDocument();
+    expect(
+      screen.getByText("Your filter changes have not been applied yet. Apply them and generate a new capsule with the updated settings?")
+    ).toBeInTheDocument();
+    expect(onRefreshItems).not.toHaveBeenCalled();
+    expect(onApplyFilters).not.toHaveBeenCalled();
+  });
+
+  test("closes regenerate-all confirmation immediately and applies filters on confirm", async () => {
+    const user = userEvent.setup();
+    let resolveApply;
+    const onRefreshItems = vi.fn();
+    const onApplyFilters = vi.fn(() => new Promise((resolve) => {
+      resolveApply = resolve;
+    }));
+
+    renderScreen({
+      hasFilterChanges: true,
+      onRefreshItems,
+      onApplyFilters
+    });
+
+    await user.click(screen.getByRole("button", { name: "Regenerate all" }));
+    await user.click(screen.getByRole("button", { name: "Apply and regenerate" }));
+
+    expect(onApplyFilters).toHaveBeenCalledTimes(1);
+    expect(onRefreshItems).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog", { name: "Apply updated filters?" })).not.toBeInTheDocument();
+    });
+
+    resolveApply?.();
   });
 
   test("enters inline rename mode from the desktop title and submits on Enter", async () => {

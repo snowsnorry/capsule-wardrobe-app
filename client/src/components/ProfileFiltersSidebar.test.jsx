@@ -191,6 +191,31 @@ describe("ProfileFiltersSidebar", () => {
     expect(screen.queryByText("Filters have not changed.")).not.toBeInTheDocument();
   });
 
+  test("disables filter controls while interactions are blocked", () => {
+    const onSelectStyleCore = vi.fn();
+    const onToggleOccasion = vi.fn();
+    const onSelectAccentColor = vi.fn();
+    const onTextChange = vi.fn();
+
+    renderSidebar({
+      isInteractionDisabled: true,
+      onSelectStyleCore,
+      onToggleOccasion,
+      onSelectAccentColor,
+      onTextChange
+    });
+
+    expect(screen.getByRole("button", { name: "formal" })).toHaveAttribute("aria-disabled", "true");
+    expect(screen.getByRole("button", { name: "travel" })).toHaveAttribute("aria-disabled", "true");
+    expect(screen.getByRole("button", { name: "red" })).toHaveAttribute("aria-disabled", "true");
+    expect(screen.getByPlaceholderText("Additional placeholder")).toBeDisabled();
+
+    expect(onSelectStyleCore).not.toHaveBeenCalled();
+    expect(onToggleOccasion).not.toHaveBeenCalled();
+    expect(onSelectAccentColor).not.toHaveBeenCalled();
+    expect(onTextChange).not.toHaveBeenCalled();
+  });
+
   test("shows no hint and keeps apply enabled when required filters are selected", () => {
     renderSidebar();
 

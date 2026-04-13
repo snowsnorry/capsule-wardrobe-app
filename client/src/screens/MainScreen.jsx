@@ -138,6 +138,7 @@ function CapsuleActionMenu({
   open,
   onClose,
   capsule,
+  disabled = false,
   showRegenerateAll = false,
   onRegenerateAll,
   onDownloadPdf,
@@ -156,39 +157,39 @@ function CapsuleActionMenu({
     <Menu anchorEl={anchorEl} open={open} onClose={onClose}>
       {showRegenerateAll ? (
         <>
-          <MenuItem onClick={() => { onClose(); onRegenerateAll?.(); }}>
+          <MenuItem disabled={disabled} onClick={() => { onClose(); onRegenerateAll?.(); }}>
             <ListItemIcon sx={{ visibility: "hidden" }} />
             {t("capsule.regenerateAll")}
           </MenuItem>
           <Divider />
         </>
       ) : null}
-      <MenuItem onClick={() => { onClose(); onDownloadPdf(); }}>
+      <MenuItem disabled={disabled} onClick={() => { onClose(); onDownloadPdf(); }}>
         <ListItemIcon><DownloadRoundedIcon fontSize="small" /></ListItemIcon>
         {t("capsule.exportPdf")}
       </MenuItem>
       <Divider />
-      <MenuItem onClick={() => { onClose(); onRename(); }}>
+      <MenuItem disabled={disabled} onClick={() => { onClose(); onRename(); }}>
         <ListItemIcon><DriveFileRenameOutlineRoundedIcon fontSize="small" /></ListItemIcon>
         {t("capsule.rename")}
       </MenuItem>
       <Divider />
-      <MenuItem disabled={!canRevert} onClick={() => { onClose(); onRevert(); }}>
+      <MenuItem disabled={disabled || !canRevert} onClick={() => { onClose(); onRevert(); }}>
         <ListItemIcon><RestoreRoundedIcon fontSize="small" /></ListItemIcon>
         {t("capsule.revert")}
       </MenuItem>
-      <MenuItem disabled={!canSave} onClick={() => { onClose(); onSave(); }}>
+      <MenuItem disabled={disabled || !canSave} onClick={() => { onClose(); onSave(); }}>
         <ListItemIcon sx={{ visibility: "hidden" }} />
         {t("actions.save")}
       </MenuItem>
       {canDuplicate ? (
-        <MenuItem onClick={() => { onClose(); onDuplicate(); }}>
+        <MenuItem disabled={disabled} onClick={() => { onClose(); onDuplicate(); }}>
           <ListItemIcon sx={{ visibility: "hidden" }} />
           {t("capsule.saveAs")}
         </MenuItem>
       ) : null}
       <Divider />
-      <MenuItem onClick={() => { onClose(); onDelete(); }} sx={{ color: "error.main" }}>
+      <MenuItem disabled={disabled} onClick={() => { onClose(); onDelete(); }} sx={{ color: "error.main" }}>
         <ListItemIcon sx={{ color: "inherit" }}><DeleteOutlineRoundedIcon fontSize="small" /></ListItemIcon>
         {t("actions.delete")}
       </MenuItem>
@@ -286,20 +287,30 @@ function MainScreen({
   const inlineRenameSubmitGuardRef = useRef(false);
   const searchDialogPaperRef = useRef(null);
   const isDeleteConfirm = confirmAction.startsWith("delete");
+  const isRegenerateFiltersConfirm = confirmAction === "regenerate-with-filter-changes";
   const isDeleteOutfitSetImageConfirm = confirmAction === "delete-outfit-set-image";
   const confirmBodyKey = isDeleteOutfitSetImageConfirm
     ? "capsule.deleteOutfitSetImageConfirmBody"
+    : isRegenerateFiltersConfirm
+      ? "capsule.regenerateWithFilterChangesBody"
     : isDeleteConfirm
       ? "capsule.deleteConfirmBody"
       : "capsule.revertConfirmBody";
   const confirmTitleKey = isDeleteOutfitSetImageConfirm
     ? "capsule.deleteOutfitSetImageTitle"
+    : isRegenerateFiltersConfirm
+      ? "capsule.regenerateWithFilterChangesTitle"
     : isDeleteConfirm
       ? "capsule.deleteTitle"
       : "capsule.revertTitle";
-  const confirmButtonKey = isDeleteConfirm ? "capsule.deleteConfirm" : "capsule.revertConfirm";
+  const confirmButtonKey = isDeleteConfirm
+    ? "capsule.deleteConfirm"
+    : isRegenerateFiltersConfirm
+      ? "capsule.regenerateWithFilterChangesConfirm"
+      : "capsule.revertConfirm";
 
   const selectedCount = selectedRegenerationUrls.length;
+  const isInteractionDisabled = isContentBusy || isInlineRenameSubmitting;
   const searchGroups = useMemo(() => groupCapsules(searchResults), [searchResults]);
   const activeCapsuleName = activeCapsule?.name || `<${t("capsule.new")}>`;
   const resolvedOutfitSets = useMemo(() => resolveOutfitSets(items, outfitSets), [items, outfitSets]);
@@ -360,6 +371,9 @@ function MainScreen({
   }, [activeCapsule?.id, activeCapsule?.name]);
 
   const handleCapsuleOpen = async (capsuleId, onComplete) => {
+    if (isInteractionDisabled) {
+      return;
+    }
     setOptimisticActiveCapsuleId(capsuleId);
     await onOpenCapsule(capsuleId);
     onComplete?.();
@@ -378,6 +392,9 @@ function MainScreen({
   };
 
   const handleOpenSearchDialog = (event) => {
+    if (isInteractionDisabled) {
+      return;
+    }
     if (event?.currentTarget instanceof HTMLElement) {
       event.currentTarget.blur();
     }
@@ -385,7 +402,7 @@ function MainScreen({
   };
 
   const handleRequestDuplicate = async (capsule = activeCapsule) => {
-    if (!capsule?.id) {
+    if (!capsule?.id || isInteractionDisabled) {
       return;
     }
     setSaveAsCapsuleId(capsule.id);
@@ -393,8 +410,23 @@ function MainScreen({
     setSaveAsOpen(true);
   };
 
+  const handleRequestRegenerateAll = async () => {
+    if (isInteractionDisabled) {
+      return;
+    }
+
+    if (hasFilterChanges) {
+      setConfirmCapsuleId("");
+      setConfirmOutfitSetIndex(-1);
+      setConfirmAction("regenerate-with-filter-changes");
+      return;
+    }
+
+    await onRefreshItems();
+  };
+
   const handleStartInlineRename = () => {
-    if (isOverlaySidebar || !activeCapsule?.id || isInlineRenameSubmitting) {
+    if (isOverlaySidebar || !activeCapsule?.id || isInteractionDisabled) {
       return;
     }
     setInlineRenameValue(activeCapsule?.name || "");
@@ -409,7 +441,7 @@ function MainScreen({
   };
 
   const handleSubmitInlineRename = async () => {
-    if (!activeCapsule?.id || inlineRenameSubmitGuardRef.current || isInlineRenameSubmitting) {
+    if (!activeCapsule?.id || inlineRenameSubmitGuardRef.current || isInteractionDisabled) {
       return;
     }
 
@@ -424,8 +456,8 @@ function MainScreen({
     inlineRenameSubmitGuardRef.current = true;
     setIsInlineRenameSubmitting(true);
     try {
-      await onRenameCapsule(nextName, activeCapsule.id);
       setIsInlineRenameActive(false);
+      await onRenameCapsule(nextName, activeCapsule.id);
     } finally {
       inlineRenameSubmitGuardRef.current = false;
       setIsInlineRenameSubmitting(false);
@@ -447,7 +479,7 @@ function MainScreen({
             <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
               <Stack direction="row" alignItems="center" spacing={1.25}>
                 {isOverlaySidebar ? (
-                  <IconButton aria-label="Toggle sidebar" onClick={openSidebar}>
+                  <IconButton aria-label="Toggle sidebar" onClick={openSidebar} disabled={isInteractionDisabled}>
                     <MenuRoundedIcon />
                   </IconButton>
                 ) : null}
@@ -478,6 +510,7 @@ function MainScreen({
             <Stack spacing={0.5} sx={{ px: 0, alignItems: "stretch" }}>
               <Button
                 variant="text"
+                disabled={isInteractionDisabled}
                 onClick={async () => {
                   await onCreateCapsule();
                   if (isOverlaySidebar) {
@@ -512,6 +545,7 @@ function MainScreen({
               </Button>
               <Button
                 variant="text"
+                disabled={isInteractionDisabled}
                 onClick={handleOpenSearchDialog}
                 sx={{
                   justifyContent: "flex-start",
@@ -565,6 +599,7 @@ function MainScreen({
                     <ListItemButton
                       key={capsule.id}
                       selected={isActive}
+                      disabled={isInteractionDisabled}
                       onClick={() => handleCapsuleOpen(capsule.id, closeSidebar)}
                       sx={{
                         borderRadius: 3,
@@ -596,6 +631,7 @@ function MainScreen({
                         className="capsule-row-actions"
                         aria-label={`Capsule actions ${capsule.name}`}
                         size="small"
+                        disabled={isInteractionDisabled}
                         onClick={(event) => {
                           event.stopPropagation();
                           setRowMenuAnchor(event.currentTarget);
@@ -691,6 +727,7 @@ function MainScreen({
                   onReset={onResetFilters}
                   onSignOut={null}
                   isSigningOut={isSigningOut}
+                  isInteractionDisabled={isInteractionDisabled}
                 />
               </Box>
 
@@ -710,6 +747,7 @@ function MainScreen({
                       <IconButton
                         aria-label={t("filters.open")}
                         onClick={() => setIsFiltersOpen(true)}
+                        disabled={isInteractionDisabled}
                         sx={{ ml: -1 }}
                       >
                         <TuneRoundedIcon />
@@ -753,7 +791,7 @@ function MainScreen({
                                 autoFocus
                                 variant="standard"
                                 value={inlineRenameValue}
-                                disabled={isInlineRenameSubmitting}
+                                disabled={isInteractionDisabled}
                                 inputProps={{ "aria-label": "Capsule name" }}
                                 onChange={(event) => setInlineRenameValue(event.target.value)}
                                 onBlur={() => {
@@ -803,6 +841,7 @@ function MainScreen({
                                   type="button"
                                   onClick={handleStartInlineRename}
                                   aria-label={`Rename capsule ${activeCapsuleName}`}
+                                  disabled={isInteractionDisabled}
                                   sx={{
                                     minWidth: 0,
                                     flexShrink: 1,
@@ -811,7 +850,7 @@ function MainScreen({
                                     background: "transparent",
                                     textAlign: "left",
                                     color: "inherit",
-                                    cursor: "text"
+                                    cursor: isInteractionDisabled ? "default" : "text"
                                   }}
                                 >
                                   <Typography variant="h6" noWrap sx={{ minWidth: 0 }}>
@@ -828,6 +867,7 @@ function MainScreen({
                                     className="capsule-header-rename-icon"
                                     aria-label="Edit capsule name"
                                     size="small"
+                                    disabled={isInteractionDisabled}
                                     onClick={handleStartInlineRename}
                                   >
                                     <DriveFileRenameOutlineRoundedIcon fontSize="small" />
@@ -842,10 +882,10 @@ function MainScreen({
                   </Stack>
                   {selectedCount > 0 ? (
                     <Stack direction="row" spacing={1} sx={{ minHeight: 40, alignItems: "center" }}>
-                      <Button variant="outlined" onClick={onCancelRegenerationSelection} disabled={isPartialRegenerationLoading}>
+                      <Button variant="outlined" onClick={onCancelRegenerationSelection} disabled={isInteractionDisabled}>
                         {t("main.cancelSelection")}
                       </Button>
-                      <Button variant="contained" onClick={onRegenerateSelectedItems} disabled={isPartialRegenerationLoading}>
+                      <Button variant="contained" onClick={onRegenerateSelectedItems} disabled={isInteractionDisabled}>
                         {t("main.regenerateSelected", { count: selectedCount })}
                       </Button>
                     </Stack>
@@ -854,13 +894,17 @@ function MainScreen({
                       {!isOverlaySidebar ? (
                         <Button
                           variant="contained"
-                          onClick={onRefreshItems}
-                          disabled={isLoadingItems || isPartialRegenerationLoading}
+                          onClick={handleRequestRegenerateAll}
+                          disabled={isInteractionDisabled}
                         >
                           {t("capsule.regenerateAll")}
                         </Button>
                       ) : null}
-                      <IconButton aria-label={t("capsule.openMenu")} onClick={(event) => setHeaderMenuAnchor(event.currentTarget)}>
+                      <IconButton
+                        aria-label={t("capsule.openMenu")}
+                        disabled={isInteractionDisabled}
+                        onClick={(event) => setHeaderMenuAnchor(event.currentTarget)}
+                      >
                         <MoreVertRoundedIcon />
                       </IconButton>
                     </Stack>
@@ -883,17 +927,22 @@ function MainScreen({
                 {resolvedOutfitSets.length > 0 ? (
                   <Tabs
                     value={activeItemsTab}
-                    onChange={(_event, value) => setActiveItemsTab(value)}
+                    onChange={(_event, value) => {
+                      if (!isInteractionDisabled) {
+                        setActiveItemsTab(value);
+                      }
+                    }}
                     variant="scrollable"
                     scrollButtons="auto"
                     sx={{ px: { xs: 2, md: 3 }, pt: 0, pb: 0.5 }}
                   >
-                    <Tab value="all" label={t("search.all")} />
+                    <Tab value="all" label={t("search.all")} disabled={isInteractionDisabled} />
                     {resolvedOutfitSets.map((set) => (
                       <Tab
                         key={set.id}
                         value={set.id}
                         label={t("capsule.outfitSet", { number: set.label })}
+                        disabled={isInteractionDisabled}
                       />
                     ))}
                   </Tabs>
@@ -937,7 +986,7 @@ function MainScreen({
                               item={item}
                               isSelectable={Boolean(itemUrl)}
                               isSelected={selectedRegenerationUrls.includes(itemUrl)}
-                              isRegenerating={isPartialRegenerationLoading}
+                              isRegenerating={isInteractionDisabled}
                               onToggleSelected={onToggleRegenerationSelection}
                               isMobile={isOverlaySidebar}
                             />
@@ -1027,6 +1076,7 @@ function MainScreen({
                               <IconButton
                                 className="outfit-set-image-delete-button"
                                 aria-label={t("capsule.deleteOutfitSetImage")}
+                                disabled={isInteractionDisabled}
                                 onClick={() => {
                                   setConfirmAction("delete-outfit-set-image");
                                   setConfirmOutfitSetIndex(activeOutfitSet.index);
@@ -1070,6 +1120,7 @@ function MainScreen({
                           ) : (
                             <Button
                               variant="outlined"
+                              disabled={isInteractionDisabled}
                               onClick={() => onGenerateOutfitSetImage(activeOutfitSet.index)}
                               sx={{ alignSelf: "center", minWidth: 180 }}
                             >
@@ -1083,50 +1134,62 @@ function MainScreen({
                 </Box>
               </Stack>
 
-              <Dialog open={renameOpen} onClose={() => setRenameOpen(false)} {...nameDialogProps}>
+              <Dialog open={renameOpen} onClose={() => {
+                if (!isInteractionDisabled) {
+                  setRenameOpen(false);
+                }
+              }} {...nameDialogProps}>
                 <DialogTitle>{t("capsule.renameTitle")}</DialogTitle>
                 <DialogContent sx={{ pt: 1, pb: 0.5 }}>
                   <TextField
                     fullWidth
                     autoFocus
+                    disabled={isInteractionDisabled}
                     value={renameValue}
                     onChange={(event) => setRenameValue(event.target.value)}
                     margin="normal"
                   />
                 </DialogContent>
                 <DialogActions sx={{ px: 3, pb: 2.5 }}>
-                  <Button onClick={() => setRenameOpen(false)}>{t("actions.cancel")}</Button>
+                  <Button disabled={isInteractionDisabled} onClick={() => setRenameOpen(false)}>{t("actions.cancel")}</Button>
                   <Button
                     onClick={async () => {
-                      await onRenameCapsule(renameValue, renameCapsuleId);
+                      const nextName = renameValue;
+                      const nextCapsuleId = renameCapsuleId;
                       setRenameOpen(false);
+                      await onRenameCapsule(nextName, nextCapsuleId);
                     }}
-                    disabled={!renameValue.trim()}
+                    disabled={isInteractionDisabled || !renameValue.trim()}
                   >
                     {t("actions.ok")}
                   </Button>
                 </DialogActions>
               </Dialog>
 
-              <Dialog open={saveAsOpen} onClose={() => setSaveAsOpen(false)} {...nameDialogProps}>
+              <Dialog open={saveAsOpen} onClose={() => {
+                if (!isInteractionDisabled) {
+                  setSaveAsOpen(false);
+                }
+              }} {...nameDialogProps}>
                 <DialogTitle>{t("capsule.saveAsTitle")}</DialogTitle>
                 <DialogContent sx={{ pt: 1, pb: 0.5 }}>
                   <TextField
                     fullWidth
                     autoFocus
+                    disabled={isInteractionDisabled}
                     value={saveAsValue}
                     onChange={(event) => setSaveAsValue(event.target.value)}
                     margin="normal"
                   />
                 </DialogContent>
                 <DialogActions sx={{ px: 3, pb: 2.5 }}>
-                  <Button onClick={() => setSaveAsOpen(false)}>{t("actions.cancel")}</Button>
+                  <Button disabled={isInteractionDisabled} onClick={() => setSaveAsOpen(false)}>{t("actions.cancel")}</Button>
                   <Button
                     onClick={async () => {
-                      await onDuplicateCapsule(saveAsValue, saveAsCapsuleId);
                       setSaveAsOpen(false);
+                      await onDuplicateCapsule(saveAsValue, saveAsCapsuleId);
                     }}
-                    disabled={!saveAsValue.trim()}
+                    disabled={isInteractionDisabled || !saveAsValue.trim()}
                   >
                     {t("actions.ok")}
                   </Button>
@@ -1136,9 +1199,11 @@ function MainScreen({
               <Dialog
                 open={Boolean(confirmAction)}
                 onClose={() => {
-                  setConfirmAction("");
-                  setConfirmCapsuleId("");
-                  setConfirmOutfitSetIndex(-1);
+                  if (!isInteractionDisabled) {
+                    setConfirmAction("");
+                    setConfirmCapsuleId("");
+                    setConfirmOutfitSetIndex(-1);
+                  }
                 }}
                 {...confirmDialogProps}
               >
@@ -1151,7 +1216,7 @@ function MainScreen({
                   </DialogContentText>
                 </DialogContent>
                 <DialogActions sx={{ px: 3, pb: 2.5, pt: 2 }}>
-                  <Button onClick={() => {
+                  <Button disabled={isInteractionDisabled} onClick={() => {
                     setConfirmAction("");
                     setConfirmCapsuleId("");
                     setConfirmOutfitSetIndex(-1);
@@ -1162,29 +1227,36 @@ function MainScreen({
                   <Button
                     color={isDeleteConfirm ? "error" : "primary"}
                     variant="contained"
+                    disabled={isInteractionDisabled}
                     onClick={async () => {
-                      if (confirmAction === "delete") {
-                        await onDeleteCapsule();
-                      }
-                      if (confirmAction === "delete-row") {
-                        await onDeleteCapsule(confirmCapsuleId);
-                        setRowMenuAnchor(null);
-                        setRowMenuCapsule(null);
-                      }
-                      if (confirmAction === "revert") {
-                        await onRevertCapsule();
-                      }
-                      if (confirmAction === "revert-row") {
-                        await onRevertCapsule(confirmCapsuleId);
-                        setRowMenuAnchor(null);
-                        setRowMenuCapsule(null);
-                      }
-                      if (confirmAction === "delete-outfit-set-image" && confirmOutfitSetIndex >= 0) {
-                        await onDeleteOutfitSetImage(confirmOutfitSetIndex);
-                      }
+                      const nextConfirmAction = confirmAction;
+                      const nextConfirmCapsuleId = confirmCapsuleId;
+                      const nextConfirmOutfitSetIndex = confirmOutfitSetIndex;
                       setConfirmCapsuleId("");
                       setConfirmOutfitSetIndex(-1);
                       setConfirmAction("");
+                      if (nextConfirmAction === "delete") {
+                        await onDeleteCapsule();
+                      }
+                      if (nextConfirmAction === "delete-row") {
+                        await onDeleteCapsule(nextConfirmCapsuleId);
+                        setRowMenuAnchor(null);
+                        setRowMenuCapsule(null);
+                      }
+                      if (nextConfirmAction === "revert") {
+                        await onRevertCapsule();
+                      }
+                      if (nextConfirmAction === "revert-row") {
+                        await onRevertCapsule(nextConfirmCapsuleId);
+                        setRowMenuAnchor(null);
+                        setRowMenuCapsule(null);
+                      }
+                      if (nextConfirmAction === "delete-outfit-set-image" && nextConfirmOutfitSetIndex >= 0) {
+                        await onDeleteOutfitSetImage(nextConfirmOutfitSetIndex);
+                      }
+                      if (nextConfirmAction === "regenerate-with-filter-changes") {
+                        await onApplyFilters();
+                      }
                     }}
                   >
                     {t(confirmButtonKey)}
@@ -1194,7 +1266,11 @@ function MainScreen({
 
               <Dialog
                 open={isOutfitSetImageDialogOpen}
-                onClose={() => setIsOutfitSetImageDialogOpen(false)}
+                onClose={() => {
+                  if (!isInteractionDisabled) {
+                    setIsOutfitSetImageDialogOpen(false);
+                  }
+                }}
                 fullScreen
                 maxWidth={false}
                 PaperProps={{
@@ -1227,6 +1303,7 @@ function MainScreen({
                 >
                   <IconButton
                     aria-label={t("actions.close")}
+                    disabled={isInteractionDisabled}
                     onClick={() => setIsOutfitSetImageDialogOpen(false)}
                     sx={{
                       position: "fixed",
@@ -1263,7 +1340,11 @@ function MainScreen({
 
               <Dialog
                 open={searchOpen}
-                onClose={handleCloseSearchDialog}
+                onClose={() => {
+                  if (!isInteractionDisabled) {
+                    handleCloseSearchDialog();
+                  }
+                }}
                 fullScreen={isOverlaySidebar}
                 maxWidth="md"
                 fullWidth
@@ -1278,10 +1359,11 @@ function MainScreen({
                         variant="standard"
                         placeholder={t("capsule.searchPlaceholder")}
                         value={searchQuery}
+                        disabled={isInteractionDisabled}
                         onChange={(event) => setSearchQuery(event.target.value)}
                         InputProps={{ disableUnderline: true }}
                       />
-                      <IconButton onClick={handleCloseSearchDialog}>
+                      <IconButton disabled={isInteractionDisabled} onClick={handleCloseSearchDialog}>
                         <CloseRoundedIcon />
                       </IconButton>
                     </Stack>
@@ -1306,6 +1388,7 @@ function MainScreen({
                           {group.map((capsule) => (
                             <ListItemButton
                               key={capsule.id}
+                              disabled={isInteractionDisabled}
                               onClick={() => handleCapsuleOpen(capsule.id)}
                               sx={{
                                 borderRadius: 3,
@@ -1343,11 +1426,19 @@ function MainScreen({
                 </DialogContent>
               </Dialog>
 
-              <Dialog open={isFiltersOpen} onClose={() => setIsFiltersOpen(false)} fullScreen={isOverlaySidebar}>
+              <Dialog open={isFiltersOpen} onClose={() => {
+                if (!isInteractionDisabled) {
+                  setIsFiltersOpen(false);
+                }
+              }} fullScreen={isOverlaySidebar}>
                 <DialogTitle sx={{ pr: 1.5 }}>
                   <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
                     <Typography variant="inherit">{t("filters.title")}</Typography>
-                    <IconButton aria-label={t("capsule.closeFilters")} onClick={() => setIsFiltersOpen(false)}>
+                    <IconButton
+                      aria-label={t("capsule.closeFilters")}
+                      disabled={isInteractionDisabled}
+                      onClick={() => setIsFiltersOpen(false)}
+                    >
                       <CloseRoundedIcon />
                     </IconButton>
                   </Stack>
@@ -1379,15 +1470,16 @@ function MainScreen({
                     onSelectPattern={onSelectPattern}
                     onTextChange={onTextChange}
                     onApply={async () => {
-                      await onApplyFilters();
                       setIsFiltersOpen(false);
+                      await onApplyFilters();
                     }}
                     onReset={async () => {
-                      await onResetFilters();
                       setIsFiltersOpen(false);
+                      await onResetFilters();
                     }}
                     onSignOut={null}
                     isSigningOut={isSigningOut}
+                    isInteractionDisabled={isInteractionDisabled}
                   />
                 </DialogContent>
               </Dialog>
@@ -1401,17 +1493,14 @@ function MainScreen({
         open={Boolean(headerMenuAnchor)}
         onClose={() => setHeaderMenuAnchor(null)}
         capsule={activeCapsule}
+        disabled={isInteractionDisabled}
         showRegenerateAll={isOverlaySidebar && selectedCount === 0}
-        onRegenerateAll={onRefreshItems}
+        onRegenerateAll={handleRequestRegenerateAll}
         onDownloadPdf={onDownloadPdf}
         onRename={() => {
-          if (isOverlaySidebar) {
-            setRenameCapsuleId(activeCapsule?.id || "");
-            setRenameValue(activeCapsuleName);
-            setRenameOpen(true);
-            return;
-          }
-          handleStartInlineRename();
+          setRenameCapsuleId(activeCapsule?.id || "");
+          setRenameValue(activeCapsuleName);
+          setRenameOpen(true);
         }}
         onRevert={() => setConfirmAction("revert")}
         onSave={onSaveCapsule}
@@ -1427,6 +1516,7 @@ function MainScreen({
           setRowMenuCapsule(null);
         }}
         capsule={rowMenuCapsule}
+        disabled={isInteractionDisabled}
         onDownloadPdf={() => onDownloadPdf(rowMenuCapsule?.id)}
         onRename={() => {
           setRenameCapsuleId(rowMenuCapsule?.id || "");
