@@ -204,6 +204,17 @@ function normalizeDeveloperAudience(value) {
   return "not important";
 }
 
+function normalizeDeveloperSectionContent(content) {
+  if (Array.isArray(content)) {
+    return content
+      .filter((line) => typeof line === "string" && line.trim().length > 0)
+      .join("\n")
+      .trim();
+  }
+
+  return typeof content === "string" ? content.trim() : "";
+}
+
 function renderStyleLibraryContent(entry, userProfile = null) {
   if (!entry || typeof entry !== "object") {
     return "";
@@ -242,7 +253,7 @@ function renderStyleLibraryContent(entry, userProfile = null) {
 }
 
 function renderDeveloperSection(title, content, intro = "") {
-  const normalizedContent = typeof content === "string" ? content.trim() : "";
+  const normalizedContent = normalizeDeveloperSectionContent(content);
   if (!normalizedContent) {
     return "";
   }

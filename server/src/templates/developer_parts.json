@@ -230,26 +230,121 @@
     }
   },
   "palette_by_style": {
-    "minimalistic": "Minimalistic:\n- Absolute Monochrome = base black / secondary grey / accent white\n- Ivory & Sand = base beige / secondary white / accent metallic\n- Midnight Navy = base navy / secondary grey / accent black",
-    "street_style": "Street Style:\n- Concrete Jungle = base grey / secondary black / accent white\n- High-Contrast Hype = base black / secondary white / accent multicolor\n- Washed Indigo = base denim / secondary grey / accent black",
-    "romantic": "Romantic:\n- Dusty Rose Garden = base beige / secondary pink / accent white\n- Ethereal Mist = base light blue / secondary white / accent grey\n- Midnight Velvet = base navy / secondary purple / accent metallic",
-    "preppy": "Preppy:\n- Ivy League = base navy / secondary white / accent burgundy\n- Country Club = base beige / secondary light blue / accent white\n- Heritage Plaid = base grey / secondary navy / accent green",
-    "boho": "Boho:\n- Earth & Terracotta = base brown / secondary orange / accent beige\n- Vintage Bloom = base khaki / secondary green / accent multicolor\n- Nomad Spirit = base grey / secondary white / accent blue",
-    "nautical": "Nautical:\n- Riviera Standard = base navy / secondary white / accent red\n- Coastal Morning = base white / secondary light blue / accent navy\n- Seaside Neutral = base navy / secondary beige / accent metallic",
-    "safari": "Safari:\n- Desert Expedition = base khaki / secondary beige / accent brown\n- Savanna Shadow = base green / secondary khaki / accent black\n- Linen Mirage = base white / secondary beige / accent metallic",
-    "equestrian": "Equestrian:\n- Royal Hunt = base navy / secondary white / accent brown\n- English Estate = base brown / secondary beige / accent green\n- Grey Steeplechase = base grey / secondary white / accent black",
-    "military": "Military:\n- Field Ops = base green / secondary khaki / accent black\n- Navy Fleet = base navy / secondary grey / accent metallic\n- Stealth Urban = base black / secondary grey / accent camo",
-    "grunge": "Grunge:\n- Seattle Rain = base black / secondary grey / accent red\n- Subterranean = base grey / secondary black / accent purple\n- Forest Grunge = base green / secondary brown / accent black",
-    "sporty": "Sporty:\n- Tech Runner = base black / secondary grey / accent yellow\n- Court Classic = base white / secondary navy / accent green\n- Olympic Spirit = base navy / secondary white / accent red",
-    "retro": "Retro:\n- Sepia Archive = base brown / secondary beige / accent orange\n- Analog Classics = base navy / secondary beige / accent red\n- Washed Vinyl = base denim / secondary white / accent green"
+    "minimalistic": [
+      "Minimalistic:",
+      "- Absolute Monochrome = base black / secondary grey / accent white",
+      "- Ivory & Sand = base beige / secondary white / accent metallic",
+      "- Midnight Navy = base navy / secondary grey / accent black"
+    ],
+    "street_style": [
+      "Street Style:",
+      "- Concrete Jungle = base grey / secondary black / accent white",
+      "- High-Contrast Hype = base black / secondary white / accent multicolor",
+      "- Washed Indigo = base denim / secondary grey / accent black"
+    ],
+    "romantic": [
+      "Romantic:",
+      "- Dusty Rose Garden = base beige / secondary pink / accent white",
+      "- Ethereal Mist = base light blue / secondary white / accent grey",
+      "- Midnight Velvet = base navy / secondary purple / accent metallic"
+    ],
+    "preppy": [
+      "Preppy:",
+      "- Ivy League = base navy / secondary white / accent burgundy",
+      "- Country Club = base beige / secondary light blue / accent white",
+      "- Heritage Plaid = base grey / secondary navy / accent green"
+    ],
+    "boho": [
+      "Boho:",
+      "- Earth & Terracotta = base brown / secondary orange / accent beige",
+      "- Vintage Bloom = base khaki / secondary green / accent multicolor",
+      "- Nomad Spirit = base grey / secondary white / accent blue"
+    ],
+    "nautical": [
+      "Nautical:",
+      "- Riviera Standard = base navy / secondary white / accent red",
+      "- Coastal Morning = base white / secondary light blue / accent navy",
+      "- Seaside Neutral = base navy / secondary beige / accent metallic"
+    ],
+    "safari": [
+      "Safari:",
+      "- Desert Expedition = base khaki / secondary beige / accent brown",
+      "- Savanna Shadow = base green / secondary khaki / accent black",
+      "- Linen Mirage = base white / secondary beige / accent metallic"
+    ],
+    "equestrian": [
+      "Equestrian:",
+      "- Royal Hunt = base navy / secondary white / accent brown",
+      "- English Estate = base brown / secondary beige / accent green",
+      "- Grey Steeplechase = base grey / secondary white / accent black"
+    ],
+    "military": [
+      "Military:",
+      "- Field Ops = base green / secondary khaki / accent black",
+      "- Navy Fleet = base navy / secondary grey / accent metallic",
+      "- Stealth Urban = base black / secondary grey / accent camo"
+    ],
+    "grunge": [
+      "Grunge:",
+      "- Seattle Rain = base black / secondary grey / accent red",
+      "- Subterranean = base grey / secondary black / accent purple",
+      "- Forest Grunge = base green / secondary brown / accent black"
+    ],
+    "sporty": [
+      "Sporty:",
+      "- Tech Runner = base black / secondary grey / accent yellow",
+      "- Court Classic = base white / secondary navy / accent green",
+      "- Olympic Spirit = base navy / secondary white / accent red"
+    ],
+    "retro": [
+      "Retro:",
+      "- Sepia Archive = base brown / secondary beige / accent orange",
+      "- Analog Classics = base navy / secondary beige / accent red",
+      "- Washed Vinyl = base denim / secondary white / accent green"
+    ]
   },
   "palette_by_accent_color": {
-    "blue": "- blue:\n  - black / grey / blue\n  - navy / white / blue\n  - grey / beige / blue",
-    "green": "- green:\n  - grey / white / green\n  - brown / beige / green\n  - black / grey / green",
-    "red": "- red:\n  - navy / white / red\n  - black / grey / red\n  - grey / beige / red",
-    "pink": "- pink:\n  - grey / white / pink\n  - beige / brown / pink\n  - black / navy / pink",
-    "yellow": "- yellow:\n  - black / grey / yellow\n  - navy / khaki / yellow\n  - beige / white / yellow",
-    "purple": "- purple:\n  - black / navy / purple\n  - grey / white / purple\n  - brown / beige / purple",
-    "orange": "- orange:\n  - khaki / brown / orange\n  - black / grey / orange\n  - navy / white / orange"
+    "blue": [
+      "- blue:",
+      "  - black / grey / blue",
+      "  - navy / white / blue",
+      "  - grey / beige / blue"
+    ],
+    "green": [
+      "- green:",
+      "  - grey / white / green",
+      "  - brown / beige / green",
+      "  - black / grey / green"
+    ],
+    "red": [
+      "- red:",
+      "  - navy / white / red",
+      "  - black / grey / red",
+      "  - grey / beige / red"
+    ],
+    "pink": [
+      "- pink:",
+      "  - grey / white / pink",
+      "  - beige / brown / pink",
+      "  - black / navy / pink"
+    ],
+    "yellow": [
+      "- yellow:",
+      "  - black / grey / yellow",
+      "  - navy / khaki / yellow",
+      "  - beige / white / yellow"
+    ],
+    "purple": [
+      "- purple:",
+      "  - black / navy / purple",
+      "  - grey / white / purple",
+      "  - brown / beige / purple"
+    ],
+    "orange": [
+      "- orange:",
+      "  - khaki / brown / orange",
+      "  - black / grey / orange",
+      "  - navy / white / orange"
+    ]
   }
 }
