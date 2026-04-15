@@ -15,7 +15,8 @@ import {
 import { getCapsuleCategories } from "./categories.js";
 import {
   buildCapsuleSchema,
-  buildCustomJsonObjectFormat
+  buildCustomJsonObjectFormat,
+  buildDeveloperPrompt
 } from "./openai.js";
 import { getGenerateJsonWithLlm, isNoLlmProfileEnabled, resolveLlmProvider } from "./llm.js";
 import {
@@ -218,7 +219,18 @@ function buildRegeneratedItemsFormat(categories) {
   );
 }
 
-function saveLastPromptArtifacts({ prompt, currentCapsuleCollage } = {}) {
+function buildLastPromptArtifact(prompt, userProfile = null) {
+  if (typeof prompt !== "string") {
+    return "";
+  }
+
+  const developerPrompt = buildDeveloperPrompt(userProfile);
+  return developerPrompt
+    ? `Developer:\n${developerPrompt}\n\n${prompt}`
+    : prompt;
+}
+
+function saveLastPromptArtifacts({ prompt, currentCapsuleCollage, userProfile = null } = {}) {
   if (process.env.NODE_ENV !== "development") {
     return;
   }
@@ -226,7 +238,11 @@ function saveLastPromptArtifacts({ prompt, currentCapsuleCollage } = {}) {
   mkdirSync(LAST_PROMPT_DIR_URL, { recursive: true });
 
   if (typeof prompt === "string") {
-    writeFileSync(new URL("last_prompt.txt", LAST_PROMPT_DIR_URL), prompt, "utf8");
+    writeFileSync(
+      new URL("last_prompt.txt", LAST_PROMPT_DIR_URL),
+      buildLastPromptArtifact(prompt, userProfile),
+      "utf8"
+    );
   }
 
   if (currentCapsuleCollage?.buffer) {
@@ -616,7 +632,8 @@ async function regenerateCapsuleWardrobe(userProfile = null, products = null, lo
   );
   saveLastPromptArtifacts({
     prompt: selectionPrompt,
-    currentCapsuleCollage
+    currentCapsuleCollage,
+    userProfile
   });
   const llmStartedAt = Date.now();
   const generateJsonWithLlm = getGenerateJsonWithLlm(userProfile);

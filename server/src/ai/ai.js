@@ -25,6 +25,7 @@ import {
   capsuleEventHub,
   getStoredWardrobePayload
 } from "./capsuleEvents.js";
+import { buildDeveloperPrompt } from "./openai.js";
 const PROMPT_TEMPLATE = readFileSync(new URL("../templates/prompt.txt", import.meta.url), "utf8");
 const COMPLETED_JOB_TTL_MS = 5 * 60 * 1000;
 const LAST_PROMPT_DIR_URL = new URL("../../../last-prompt/", import.meta.url);
@@ -88,13 +89,28 @@ function logWardrobeMemory(event, payload = {}, logContext = null) {
   }, logContext);
 }
 
-function saveLastPromptArtifacts(prompt) {
+function buildLastPromptArtifact(prompt, userProfile = null) {
+  if (typeof prompt !== "string") {
+    return "";
+  }
+
+  const developerPrompt = buildDeveloperPrompt(userProfile);
+  return developerPrompt
+    ? `Developer:\n${developerPrompt}\n\n${prompt}`
+    : prompt;
+}
+
+function saveLastPromptArtifacts(prompt, userProfile = null) {
   if (process.env.NODE_ENV !== "development" || typeof prompt !== "string") {
     return;
   }
 
   mkdirSync(LAST_PROMPT_DIR_URL, { recursive: true });
-  writeFileSync(new URL("last_prompt.txt", LAST_PROMPT_DIR_URL), prompt, "utf8");
+  writeFileSync(
+    new URL("last_prompt.txt", LAST_PROMPT_DIR_URL),
+    buildLastPromptArtifact(prompt, userProfile),
+    "utf8"
+  );
 }
 
 function countItemsByKey(items = [], key = "category") {
@@ -926,7 +942,7 @@ async function generateCapsuleWardrobe(userProfile = null, logContext = null) {
   }
 
   const selectionPrompt = getWardrobeSelectionPrompt(userProfile, normalizedItems, capsuleCategories);
-  saveLastPromptArtifacts(selectionPrompt);
+  saveLastPromptArtifacts(selectionPrompt, userProfile);
   const llmStartedAt = Date.now();
   const generateJsonWithLlm = getGenerateJsonWithLlm(userProfile);
   const stylistImages = promptDebugImages.stitched

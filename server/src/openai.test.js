@@ -2,9 +2,11 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   buildCapsuleSchema,
+  buildDeveloperPrompt,
   buildImageDataUrl,
   buildResponsesInput,
-  buildResponsesPayload
+  buildResponsesPayload,
+  renderStyleLibraryContent
 } from "./ai/openai.js";
 import { getCapsuleCategories } from "./ai/categories.js";
 import { deserializePromptDebugImagesFromIpc } from "./ai/promptImages.js";
@@ -76,6 +78,22 @@ test("buildResponsesInput creates multimodal content with input_text and input_i
   assert.equal(input[0].content[2].text, "describe this");
 });
 
+test("buildResponsesInput prepends a developer message when provided", () => {
+  const input = buildResponsesInput("describe this", [
+    {
+      mimeType: "image/png",
+      buffer: Buffer.from("image-one")
+    }
+  ], "developer rules");
+
+  assert.ok(Array.isArray(input));
+  assert.equal(input[0].role, "developer");
+  assert.equal(input[0].content, "developer rules");
+  assert.equal(input[1].role, "user");
+  assert.equal(input[1].content[0].type, "input_image");
+  assert.equal(input[1].content[1].type, "input_text");
+});
+
 test("buildResponsesPayload releases source image buffers after payload construction", () => {
   const images = [
     {
@@ -91,6 +109,98 @@ test("buildResponsesPayload releases source image buffers after payload construc
   assert.equal(images[0].buffer, null);
   assert.match(input[0].content[0].image_url, /^data:image\/jpeg;base64,/);
   assert.equal(input[0].content[1].text, "describe this");
+});
+
+test("buildDeveloperPrompt returns the base template without dynamic sections by default", () => {
+  const prompt = buildDeveloperPrompt({});
+
+  assert.match(prompt, /GENERAL OPERATING RULE/);
+  assert.doesNotMatch(prompt, /STYLE LIBRARY/);
+  assert.doesNotMatch(prompt, /PALETTE REFERENCE BY STYLE/);
+  assert.doesNotMatch(prompt, /PALETTE REFERENCE BY ACCENT COLOR/);
+  assert.doesNotMatch(prompt, /\{\{/);
+});
+
+test("buildDeveloperPrompt includes style-specific sections when style is provided", () => {
+  const prompt = buildDeveloperPrompt({
+    style: "minimalistic",
+    audience: "woman",
+    formalityLevel: "smart_casual",
+    occasions: ["everyday_errands"]
+  });
+
+  assert.match(prompt, /STYLE LIBRARY/);
+  assert.match(prompt, /Minimalistic/);
+  assert.match(prompt, /- woman: silk midi skirts, crisp button-downs/);
+  assert.match(prompt, /- smart_casual: turtlenecks, poplin shirts, sleek loafers/);
+  assert.match(prompt, /everyday_errands: elevated basics, oversized wool coat\n\nPALETTE REFERENCE BY STYLE/);
+  assert.match(prompt, /PALETTE REFERENCE BY STYLE/);
+  assert.doesNotMatch(prompt, /PALETTE REFERENCE BY ACCENT COLOR/);
+});
+
+test("buildDeveloperPrompt includes accent color defaults when color is provided", () => {
+  const prompt = buildDeveloperPrompt({ color: "red" });
+
+  assert.match(prompt, /PALETTE REFERENCE BY ACCENT COLOR/);
+  assert.match(prompt, /- red:/);
+  assert.doesNotMatch(prompt, /STYLE LIBRARY/);
+});
+
+test("buildDeveloperPrompt combines style and accent color sections", () => {
+  const prompt = buildDeveloperPrompt({
+    style: "minimalistic",
+    color: "red",
+    audience: "man",
+    formalityLevel: "formal",
+    occasions: ["office"]
+  });
+
+  assert.match(prompt, /STYLE LIBRARY/);
+  assert.match(prompt, /PALETTE REFERENCE BY STYLE/);
+  assert.match(prompt, /PALETTE REFERENCE BY ACCENT COLOR/);
+  assert.doesNotMatch(prompt, /\{\{/);
+});
+
+test("renderStyleLibraryContent injects only the requested fields and joins occasions with newlines", () => {
+  const content = renderStyleLibraryContent({
+    template: "Minimalistic\n{{audience}}\nFormality:\n{{formality_level}}\nOccasions:\n{{occasions}}",
+    audience: {
+      woman: "- woman: silk midi skirts, crisp button-downs",
+      man: "- man: fine-gauge knits, unstructured blazers",
+      "not important": "- not important: boxy architectural silhouettes, drop-shoulder tees"
+    },
+    formality_level: {
+      casual: "- casual: heavyweight tees, raw denim",
+      smart_casual: "- smart_casual: turtlenecks, poplin shirts, sleek loafers",
+      formal: "- formal: monochromatic suits, hidden plackets"
+    },
+    occasions: {
+      office: "- office: tailored separates in navy, grey, muted neutrals",
+      brunch_in_the_city: "- brunch_in_the_city: cashmere sweater + relaxed trousers"
+    }
+  }, {
+    audience: "any",
+    formalityLevel: "smart_casual",
+    occasions: ["office", "brunch_in_the_city"]
+  });
+
+  assert.match(content, /- not important: boxy architectural silhouettes, drop-shoulder tees/);
+  assert.match(content, /- smart_casual: turtlenecks, poplin shirts, sleek loafers/);
+  assert.match(content, /- office: tailored separates in navy, grey, muted neutrals\n- brunch_in_the_city: cashmere sweater \+ relaxed trousers/);
+  assert.doesNotMatch(content, /\{\{/);
+});
+
+test("buildDeveloperPrompt includes retro sections when retro is configured", () => {
+  const prompt = buildDeveloperPrompt({
+    style: "retro",
+    audience: "woman",
+    formalityLevel: "casual",
+    occasions: ["date_night"]
+  });
+
+  assert.match(prompt, /STYLE LIBRARY/);
+  assert.match(prompt, /Retro/);
+  assert.match(prompt, /PALETTE REFERENCE BY STYLE/);
 });
 
 test("buildResponsesInput accepts prompt image collages deserialized from IPC payloads", () => {

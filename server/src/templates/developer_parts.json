@@ -1,0 +1,255 @@
+{
+  "style_library": {
+    "minimalistic": {
+      "template": "Minimalistic\nCore tokens: monochrome, clean lines, hidden hardware, premium fabrics\n{{audience}}\nFormality:\n{{formality_level}}\nOccasions:\n{{occasions}}",
+      "audience": {
+        "woman": "- woman: silk midi skirts, crisp button-downs",
+        "man": "- man: fine-gauge knits, unstructured blazers",
+        "not important": "- not important: boxy architectural silhouettes, drop-shoulder tees"
+      },
+      "formality_level": {
+        "casual": "- casual: heavyweight tees, raw denim",
+        "smart_casual": "- smart_casual: turtlenecks, poplin shirts, sleek loafers",
+        "formal": "- formal: monochromatic suits, hidden plackets"
+      },
+      "occasions": {
+        "office": "- office: tailored separates in navy, grey, muted neutrals",
+        "brunch_in_the_city": "- brunch_in_the_city: cashmere sweater + relaxed trousers",
+        "date_night": "- date_night: silk tops, minimal jewelry",
+        "everyday_errands": "- everyday_errands: elevated basics, oversized wool coat"
+      }
+    },
+    "street_style": {
+      "template": "Street Style\nCore tokens: oversized, trend-focused, statement sneakers, graphic prints, heavy hardware\n{{audience}}\nFormality:\n{{formality_level}}\nOccasions:\n{{occasions}}",
+      "audience": {
+        "woman": "- woman: oversized top + fitted bottom",
+        "man": "- man: heavy hoodies + baggy cargo",
+        "not important": "- not important: heavyweight sweat-sets, technical bags"
+      },
+      "formality_level": {
+        "casual": "- casual: graphic tees, distressed baggy jeans",
+        "smart_casual": "- smart_casual: oversized blazer + clean hoodie",
+        "formal": "- formal: deconstructed suits + fashion-forward footwear"
+      },
+      "occasions": {
+        "office": "- office: tailored wide-leg pants + premium crewneck",
+        "brunch_in_the_city": "- brunch_in_the_city: vintage tee + bucket hat",
+        "date_night": "- date_night: black leather biker + dark silk shirt",
+        "everyday_errands": "- everyday_errands: monochrome tracksuit + puffer"
+      }
+    },
+    "romantic": {
+      "template": "Romantic\nCore tokens: pastels, lace, ruffles, soft draping, delicate fabrics\n{{audience}}\nFormality:\n{{formality_level}}\nOccasions:\n{{occasions}}",
+      "audience": {
+        "woman": "- woman: bias-cut dresses, ruffles",
+        "man": "- man: fluid silk or viscose shirts",
+        "not important": "- not important: soft oversized knits"
+      },
+      "formality_level": {
+        "casual": "- casual: cardigans, flowing linen pants",
+        "smart_casual": "- smart_casual: silk camisoles, fluid skirts",
+        "formal": "- formal: draped silk gowns, velvet tuxedo jackets"
+      },
+      "occasions": {
+        "office": "- office: silk blouse + tailored trousers",
+        "brunch_in_the_city": "- brunch_in_the_city: midi skirt + chunky soft knit",
+        "date_night": "- date_night: lace details, sensual necklines",
+        "everyday_errands": "- everyday_errands: cashmere loungewear"
+      }
+    },
+    "preppy": {
+      "template": "Preppy\nCore tokens: argyle, stripes, pleats, collars, cable-knit, crests\n{{audience}}\nFormality:\n{{formality_level}}\nOccasions:\n{{occasions}}",
+      "audience": {
+        "woman": "- woman: pleated skirts, Mary Janes",
+        "man": "- man: chinos, OCBD shirts, navy blazers",
+        "not important": "- not important: rugby shirts, v-neck cardigans"
+      },
+      "formality_level": {
+        "casual": "- casual: canvas shorts, cotton polos",
+        "smart_casual": "- smart_casual: Oxford shirt + merino crewneck + loafers",
+        "formal": "- formal: tweed or seersucker suits, knit ties"
+      },
+      "occasions": {
+        "office": "- office: chinos + structured blazers",
+        "brunch_in_the_city": "- brunch_in_the_city: lightweight polo + sweater over shoulders",
+        "date_night": "- date_night: tailored blazer + dark trousers",
+        "everyday_errands": "- everyday_errands: rugby shirt + straight jeans"
+      }
+    },
+    "boho": {
+      "template": "Boho\nCore tokens: earth tones, fringe, natural textures, loose fits, ethnic prints, suede\n{{audience}}\nFormality:\n{{formality_level}}\nOccasions:\n{{occasions}}",
+      "audience": {
+        "woman": "- woman: tiered maxi skirts, crochet",
+        "man": "- man: relaxed linen shirts, suede desert boots",
+        "not important": "- not important: oversized textured cardigans"
+      },
+      "formality_level": {
+        "casual": "- casual: denim cut-offs, fringed kimonos",
+        "smart_casual": "- smart_casual: printed midi skirt + fitted knit",
+        "formal": "- formal: silk maxi with ethnic prints, velvet suits"
+      },
+      "occasions": {
+        "office": "- office: paisley silk blouse + neutral blazer",
+        "brunch_in_the_city": "- brunch_in_the_city: midi dress + suede jacket",
+        "date_night": "- date_night: dark floral maxi + artisan jewelry",
+        "everyday_errands": "- everyday_errands: loose linen pants + clogs"
+      }
+    },
+    "nautical": {
+      "template": "Nautical\nCore tokens: navy/white/red triad, breton stripes, gold buttons, double-breasted, canvas\n{{audience}}\nFormality:\n{{formality_level}}\nOccasions:\n{{occasions}}",
+      "audience": {
+        "woman": "- woman: sailor trousers, boatneck tops",
+        "man": "- man: double-breasted blazers, boat shoes",
+        "not important": "- not important: striped knit sweaters, yellow macs"
+      },
+      "formality_level": {
+        "casual": "- casual: striped t-shirts, canvas slip-ons",
+        "smart_casual": "- smart_casual: navy blazer + Breton tee + white denim",
+        "formal": "- formal: navy double-breasted suit + poplin shirt"
+      },
+      "occasions": {
+        "office": "- office: navy blazer + grey trousers, no costume-like motifs",
+        "brunch_in_the_city": "- brunch_in_the_city: Breton top + white denim + sunglasses",
+        "date_night": "- date_night: silk navy dress + gold jewelry",
+        "everyday_errands": "- everyday_errands: striped pullover + canvas tote"
+      }
+    },
+    "safari": {
+      "template": "Safari\nCore tokens: khaki/sand, patch pockets, linen, utility, belted waists\n{{audience}}\nFormality:\n{{formality_level}}\nOccasions:\n{{occasions}}",
+      "audience": {
+        "woman": "- woman: belted linen dresses, Sahariana jackets",
+        "man": "- man: utility button-downs, chukka boots",
+        "not important": "- not important: linen chore coats, cargo pants"
+      },
+      "formality_level": {
+        "casual": "- casual: camp collar shirts, walking sandals",
+        "smart_casual": "- smart_casual: linen button-down + tailored trousers + suede loafers",
+        "formal": "- formal: full linen suit in sand or khaki"
+      },
+      "occasions": {
+        "office": "- office: belted utility jacket as blazer alternative",
+        "brunch_in_the_city": "- brunch_in_the_city: linen jumpsuit or utility overshirt",
+        "date_night": "- date_night: silk slip dress + rugged linen jacket",
+        "everyday_errands": "- everyday_errands: multi-pocket cargo pants"
+      }
+    },
+    "equestrian": {
+      "template": "Equestrian\nCore tokens: tailored jackets, slim trousers, knee-high leather boots, quiet luxury, heritage\n{{audience}}\nFormality:\n{{formality_level}}\nOccasions:\n{{occasions}}",
+      "audience": {
+        "woman": "- woman: fitted hacking jackets, knee-high boots",
+        "man": "- man: tweed coats, turtlenecks, Chelsea boots",
+        "not important": "- not important: boxy tweed blazers, ribbed knits"
+      },
+      "formality_level": {
+        "casual": "- casual: quilted jackets, cotton turtlenecks",
+        "smart_casual": "- smart_casual: tweed blazer + silk blouse + riding boots",
+        "formal": "- formal: three-piece heritage wool suit"
+      },
+      "occasions": {
+        "office": "- office: structured blazer + pencil skirt + loafers",
+        "brunch_in_the_city": "- brunch_in_the_city: quilted jacket + cable-knit + slim denim",
+        "date_night": "- date_night: velvet blazer + silk camisole",
+        "everyday_errands": "- everyday_errands: quilted vest + flat Chelsea boots"
+      }
+    },
+    "military": {
+      "template": "Military\nCore tokens: epaulettes, heavy cotton, camo, olive green, rugged leather, cargo pockets\n{{audience}}\nFormality:\n{{formality_level}}\nOccasions:\n{{occasions}}",
+      "audience": {
+        "woman": "- woman: tailored cargo + silk camisoles",
+        "man": "- man: M-65 jackets, henleys, service boots",
+        "not important": "- not important: oversized bombers, lug-sole boots"
+      },
+      "formality_level": {
+        "casual": "- casual: camo accents, vintage flight jackets",
+        "smart_casual": "- smart_casual: structured olive field jacket + white button-down",
+        "formal": "- formal: officer overcoats + polished oxfords"
+      },
+      "occasions": {
+        "office": "- office: officer-style overcoat over business attire",
+        "brunch_in_the_city": "- brunch_in_the_city: M-65 field jacket + casual hoodie",
+        "date_night": "- date_night: black leather aviator + dark slim jeans",
+        "everyday_errands": "- everyday_errands: weather-resistant bomber + lace-up boots"
+      }
+    },
+    "grunge": {
+      "template": "Grunge\nCore tokens: distressed, raw hems, flannel, layering, oversized, dark denim, combat boots, faded\n{{audience}}\nFormality:\n{{formality_level}}\nOccasions:\n{{occasions}}",
+      "audience": {
+        "woman": "- woman: slip dresses + band tees, ripped tights",
+        "man": "- man: faded denim, oversized flannels",
+        "not important": "- not important: slouchy cardigans, silver hardware"
+      },
+      "formality_level": {
+        "casual": "- casual: heavily distressed denim, scuffed boots",
+        "smart_casual": "- smart_casual: dark washed denim + fitted turtleneck + overshirt",
+        "formal": "- formal: oversized unstructured suit in charcoal"
+      },
+      "occasions": {
+        "office": "- office: dark plaid blazer + grey crewneck",
+        "brunch_in_the_city": "- brunch_in_the_city: slouchy cardigan + vintage wash tee",
+        "date_night": "- date_night: dark silk slip + raw-hem leather jacket",
+        "everyday_errands": "- everyday_errands: flannel tied at waist + high-tops"
+      }
+    },
+    "sporty": {
+      "template": "Sporty\nCore tokens: synthetic, technical fabrics, activewear, athleisure, performance, sneakers\n{{audience}}\nFormality:\n{{formality_level}}\nOccasions:\n{{occasions}}",
+      "audience": {
+        "woman": "- woman: leggings, tech tanks, windbreakers",
+        "man": "- man: tailored joggers, technical pullovers",
+        "not important": "- not important: matching sweat-sets, nylon shells"
+      },
+      "formality_level": {
+        "casual": "- casual: pure activewear, running shoes",
+        "smart_casual": "- smart_casual: tailored technical trousers + sleek bomber",
+        "formal": "- formal: tech-tailoring with structured stretch fabrics"
+      },
+      "occasions": {
+        "office": "- office: tailored tech pants + premium polo",
+        "brunch_in_the_city": "- brunch_in_the_city: coordinated tracksuit + structured coat",
+        "date_night": "- date_night: dark monochrome athleisure",
+        "everyday_errands": "- everyday_errands: technical fleece + running shoes"
+      }
+    },
+    "retro": {
+      "template": "Retro\nCore tokens: vintage references, washed tones, classic silhouettes, nostalgic prints, textured fabrics, old-school polish\n{{audience}}\nFormality:\n{{formality_level}}\nOccasions:\n{{occasions}}",
+      "audience": {
+        "woman": "- woman: A-line midi skirts, fitted cardigans, straight or flared trousers, pussy-bow blouses, structured mini bags, low block heels or loafers",
+        "man": "- man: straight-leg trousers, polo knits, short structured jackets, vintage-wash denim, loafers, derbies, old-school leather sneakers",
+        "not important": "- not important: relaxed vintage denim, boxy cardigans, cropped jackets, striped knits, straight trousers, classic leather loafers or retro sneakers"
+      },
+      "formality_level": {
+        "casual": "- casual: vintage-wash denim, striped tees, polo knits, suede or corduroy jackets, retro sneakers, soft cardigans",
+        "smart_casual": "- smart_casual: pleated trousers, knit polos, loafers, cropped wool jackets, refined vintage shirts, structured leather accessories",
+        "formal": "- formal: mid-century inspired tailoring, wide or straight wool trousers, silk blouses or fine shirts, polished loafers, derbies, or pumps, restrained vintage detailing"
+      },
+      "occasions": {
+        "office": "- office: controlled retro, straight wool trousers or midi skirt, knit polo or blouse, structured blazer or cardigan, polished loafers",
+        "brunch_in_the_city": "- brunch_in_the_city: vintage denim or A-line midi, fitted knit, suede or cropped jacket, classic eyewear",
+        "date_night": "- date_night: satin or silk blouse, high-waisted tailored trousers or fitted midi skirt, heeled boots, pumps, or polished loafers",
+        "everyday_errands": "- everyday_errands: relaxed straight jeans, striped knit or vintage tee, practical cardigan or short jacket, retro sneakers or loafers"
+      }
+    }
+  },
+  "palette_by_style": {
+    "minimalistic": "Minimalistic:\n- Absolute Monochrome = base black / secondary grey / accent white\n- Ivory & Sand = base beige / secondary white / accent metallic\n- Midnight Navy = base navy / secondary grey / accent black",
+    "street_style": "Street Style:\n- Concrete Jungle = base grey / secondary black / accent white\n- High-Contrast Hype = base black / secondary white / accent multicolor\n- Washed Indigo = base denim / secondary grey / accent black",
+    "romantic": "Romantic:\n- Dusty Rose Garden = base beige / secondary pink / accent white\n- Ethereal Mist = base light blue / secondary white / accent grey\n- Midnight Velvet = base navy / secondary purple / accent metallic",
+    "preppy": "Preppy:\n- Ivy League = base navy / secondary white / accent burgundy\n- Country Club = base beige / secondary light blue / accent white\n- Heritage Plaid = base grey / secondary navy / accent green",
+    "boho": "Boho:\n- Earth & Terracotta = base brown / secondary orange / accent beige\n- Vintage Bloom = base khaki / secondary green / accent multicolor\n- Nomad Spirit = base grey / secondary white / accent blue",
+    "nautical": "Nautical:\n- Riviera Standard = base navy / secondary white / accent red\n- Coastal Morning = base white / secondary light blue / accent navy\n- Seaside Neutral = base navy / secondary beige / accent metallic",
+    "safari": "Safari:\n- Desert Expedition = base khaki / secondary beige / accent brown\n- Savanna Shadow = base green / secondary khaki / accent black\n- Linen Mirage = base white / secondary beige / accent metallic",
+    "equestrian": "Equestrian:\n- Royal Hunt = base navy / secondary white / accent brown\n- English Estate = base brown / secondary beige / accent green\n- Grey Steeplechase = base grey / secondary white / accent black",
+    "military": "Military:\n- Field Ops = base green / secondary khaki / accent black\n- Navy Fleet = base navy / secondary grey / accent metallic\n- Stealth Urban = base black / secondary grey / accent camo",
+    "grunge": "Grunge:\n- Seattle Rain = base black / secondary grey / accent red\n- Subterranean = base grey / secondary black / accent purple\n- Forest Grunge = base green / secondary brown / accent black",
+    "sporty": "Sporty:\n- Tech Runner = base black / secondary grey / accent yellow\n- Court Classic = base white / secondary navy / accent green\n- Olympic Spirit = base navy / secondary white / accent red",
+    "retro": "Retro:\n- Sepia Archive = base brown / secondary beige / accent orange\n- Analog Classics = base navy / secondary beige / accent red\n- Washed Vinyl = base denim / secondary white / accent green"
+  },
+  "palette_by_accent_color": {
+    "blue": "- blue:\n  - black / grey / blue\n  - navy / white / blue\n  - grey / beige / blue",
+    "green": "- green:\n  - grey / white / green\n  - brown / beige / green\n  - black / grey / green",
+    "red": "- red:\n  - navy / white / red\n  - black / grey / red\n  - grey / beige / red",
+    "pink": "- pink:\n  - grey / white / pink\n  - beige / brown / pink\n  - black / navy / pink",
+    "yellow": "- yellow:\n  - black / grey / yellow\n  - navy / khaki / yellow\n  - beige / white / yellow",
+    "purple": "- purple:\n  - black / navy / purple\n  - grey / white / purple\n  - brown / beige / purple",
+    "orange": "- orange:\n  - khaki / brown / orange\n  - black / grey / orange\n  - navy / white / orange"
+  }
+}

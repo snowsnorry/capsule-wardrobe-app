@@ -1,8 +1,13 @@
+import { readFileSync } from "node:fs";
 import OpenAI from "openai";
 import { getCapsuleCategories } from "./categories.js";
 
 const DEFAULT_CHAT_MODEL = "gpt-5.2";
 const DEFAULT_EMBEDDING_MODEL = "text-embedding-3-small";
+const DEVELOPER_TEMPLATE = readFileSync(new URL("../templates/developer.txt", import.meta.url), "utf8");
+const DEVELOPER_PARTS = JSON.parse(
+  readFileSync(new URL("../templates/developer_parts.json", import.meta.url), "utf8")
+);
 
 function buildCapsuleSchema(categories) {
   const properties = {};
@@ -149,6 +154,7 @@ function getOpenAiClient() {
 
   cachedClient = new OpenAI({
     apiKey,
+    timeout: 3 * 1000 * 60,
     maxRetries: 0
   });
   return cachedClient;
@@ -186,9 +192,103 @@ function buildImageDataUrl(image) {
   return `data:${mimeType};base64,${image.buffer.toString("base64")}`;
 }
 
-function buildResponsesInput(user, images = []) {
+function normalizeDeveloperKey(value) {
+  return typeof value === "string" ? value.trim().toLowerCase() : "";
+}
+
+function normalizeDeveloperAudience(value) {
+  const normalized = normalizeDeveloperKey(value);
+  if (normalized === "woman" || normalized === "man") {
+    return normalized;
+  }
+  return "not important";
+}
+
+function renderStyleLibraryContent(entry, userProfile = null) {
+  if (!entry || typeof entry !== "object") {
+    return "";
+  }
+
+  const template = typeof entry.template === "string" ? entry.template : "";
+  if (!template) {
+    return "";
+  }
+
+  const audienceKey = normalizeDeveloperAudience(userProfile?.audience);
+  const formalityLevelKey = normalizeDeveloperKey(userProfile?.formalityLevel);
+  const occasions = Array.isArray(userProfile?.occasions) ? userProfile.occasions : [];
+  const replacements = {
+    audience: typeof entry.audience?.[audienceKey] === "string"
+      ? entry.audience[audienceKey]
+      : "",
+    formality_level: typeof entry.formality_level?.[formalityLevelKey] === "string"
+      ? entry.formality_level[formalityLevelKey]
+      : "",
+    occasions: occasions
+      .map((occasion) => normalizeDeveloperKey(occasion))
+      .map((occasionKey) => entry.occasions?.[occasionKey])
+      .filter((value) => typeof value === "string" && value.trim().length > 0)
+      .join("\n")
+  };
+
+  let content = template;
+  for (const [key, value] of Object.entries(replacements)) {
+    content = content.replaceAll(`{{${key}}}`, value);
+  }
+
+  return content
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function renderDeveloperSection(title, content, intro = "") {
+  const normalizedContent = typeof content === "string" ? content.trim() : "";
+  if (!normalizedContent) {
+    return "";
+  }
+
+  return [title, intro.trim(), normalizedContent].filter(Boolean).join("\n\n");
+}
+
+function buildDeveloperPrompt(userProfile = null) {
+  const styleKey = normalizeDeveloperKey(userProfile?.style);
+  const accentColorKey = normalizeDeveloperKey(userProfile?.color);
+  const replacements = {
+    style_library_block: renderDeveloperSection(
+      "STYLE LIBRARY",
+      renderStyleLibraryContent(DEVELOPER_PARTS.style_library?.[styleKey], userProfile)
+    ),
+    style_palette_block: renderDeveloperSection(
+      "PALETTE REFERENCE BY STYLE",
+      DEVELOPER_PARTS.palette_by_style?.[styleKey],
+      "Use these as preferred defaults when no better user constraint overrides them."
+    ),
+    accent_color_palette_block: renderDeveloperSection(
+      "PALETTE REFERENCE BY ACCENT COLOR",
+      DEVELOPER_PARTS.palette_by_accent_color?.[accentColorKey],
+      "If the user specifies an accent color, you may use these defaults:"
+    )
+  };
+
+  let prompt = DEVELOPER_TEMPLATE;
+  for (const [key, value] of Object.entries(replacements)) {
+    prompt = prompt.replaceAll(`{{${key}}}`, value);
+  }
+
+  const unresolvedTokens = prompt.match(/\{\{[a-zA-Z0-9_]+\}\}/g);
+  if (unresolvedTokens?.length) {
+    throw new Error(`Unresolved developer prompt placeholders: ${unresolvedTokens.join(", ")}`);
+  }
+
+  return prompt
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function buildResponsesInput(user, images = [], developer = "") {
   const content = [];
   const userText = String(user || "").trim();
+  const developerText = String(developer || "").trim();
 
   for (const image of images) {
     const imageUrl = buildImageDataUrl(image);
@@ -218,16 +318,24 @@ function buildResponsesInput(user, images = []) {
     });
   }
 
-  if (content.length === 1 && content[0].type === "input_text") {
+  if (!developerText && content.length === 1 && content[0].type === "input_text") {
     return content[0].text;
   }
 
-  return [
-    {
-      role: "user",
-      content
-    }
-  ];
+  const input = [];
+  if (developerText) {
+    input.push({
+      role: "developer",
+      content: developerText
+    });
+  }
+
+  input.push({
+    role: "user",
+    content
+  });
+
+  return input;
 }
 
 function releaseImageBuffers(images = []) {
@@ -238,8 +346,8 @@ function releaseImageBuffers(images = []) {
   }
 }
 
-function buildResponsesPayload(user, images = []) {
-  const input = buildResponsesInput(user, images);
+function buildResponsesPayload(user, images = [], developer = "") {
+  const input = buildResponsesInput(user, images, developer);
   releaseImageBuffers(images);
   return input;
 }
@@ -269,21 +377,39 @@ async function generateJsonWithLlm(
 ) {
   const client = getOpenAiClient();
   const { system, user } = splitSystemAndUserPrompt(prompt);
-  const input = buildResponsesPayload(user, images);
+  const developer = buildDeveloperPrompt(userProfile);
+  const input = buildResponsesPayload(user, images, developer);
   onPayloadBuilt?.();
+  const requestStartedAt = Date.now();
+  let response;
 
-  const response = await client.responses.create({
-    model: DEFAULT_CHAT_MODEL,
-    instructions: system || undefined,
-    input,
-    reasoning: {"effort": "low"},
-    // temperature: 0.2,
-    // top_p: 0.9,
-    max_output_tokens: 10000,
-    text: {
-      format: format || buildJsonObjectFormat(userProfile)
-    }
-  });
+  try {
+    response = await client.responses.create({
+      model: DEFAULT_CHAT_MODEL,
+      instructions: system || undefined,
+      input,
+      reasoning: {"effort": "low"},
+      // temperature: 0.2,
+      // top_p: 0.9,
+      max_output_tokens: 10000,
+      text: {
+        format: format || buildJsonObjectFormat(userProfile)
+      }
+    });
+  } catch (error) {
+    console.error(
+      "[openai][request-failed]",
+      JSON.stringify({
+        model: DEFAULT_CHAT_MODEL,
+        durationMs: Date.now() - requestStartedAt,
+        imageCount: Array.isArray(images) ? images.length : 0,
+        hasSystemPrompt: Boolean(system),
+        userChars: user.length
+      }),
+      error
+    );
+    throw error;
+  }
 
   let content = response?.output_text || "{}";
   let json;
@@ -311,8 +437,10 @@ export {
   buildCustomJsonObjectFormat,
   buildJsonObjectFormat,
   buildImageDataUrl,
+  buildDeveloperPrompt,
   buildResponsesInput,
   buildResponsesPayload,
+  renderStyleLibraryContent,
   splitSystemAndUserPrompt,
   releaseImageBuffers
 };
