@@ -215,6 +215,40 @@ function normalizeDeveloperSectionContent(content) {
   return typeof content === "string" ? content.trim() : "";
 }
 
+function normalizeDeveloperSeasonList(value) {
+  if (Array.isArray(value)) {
+    return value
+      .map((season) => normalizeDeveloperKey(season))
+      .filter(Boolean);
+  }
+
+  const normalized = normalizeDeveloperKey(value);
+  return normalized ? [normalized] : [];
+}
+
+function renderSeasonalityLogicContent(entry, userProfile = null) {
+  if (!entry || typeof entry !== "object") {
+    return "";
+  }
+
+  const seasons = new Set(normalizeDeveloperSeasonList(userProfile?.season));
+  const lines = [];
+
+  if (seasons.has("summer") && typeof entry.summer === "string") {
+    lines.push(entry.summer);
+  }
+
+  if ((seasons.has("spring") || seasons.has("autumn")) && typeof entry.spring_autumn === "string") {
+    lines.push(entry.spring_autumn);
+  }
+
+  if (seasons.has("winter") && typeof entry.winter === "string") {
+    lines.push(entry.winter);
+  }
+
+  return lines.join("\n").trim();
+}
+
 function renderStyleLibraryContent(entry, userProfile = null) {
   if (!entry || typeof entry !== "object") {
     return "";
@@ -264,7 +298,19 @@ function renderDeveloperSection(title, content, intro = "") {
 function buildDeveloperPrompt(userProfile = null) {
   const styleKey = normalizeDeveloperKey(userProfile?.style);
   const accentColorKey = normalizeDeveloperKey(userProfile?.color);
+  const audienceKey = normalizeDeveloperAudience(userProfile?.audience);
+  const formalityLevelKey = normalizeDeveloperKey(userProfile?.formalityLevel);
   const replacements = {
+    audience_logic_block: normalizeDeveloperSectionContent(
+      DEVELOPER_PARTS.audience_logic?.[audienceKey]
+    ),
+    formality_logic_block: normalizeDeveloperSectionContent(
+      DEVELOPER_PARTS.formality_logic?.[formalityLevelKey]
+    ),
+    seasonality_logic_block: renderSeasonalityLogicContent(
+      DEVELOPER_PARTS.seasonality_logic,
+      userProfile
+    ),
     style_library_block: renderDeveloperSection(
       "STYLE LIBRARY",
       renderStyleLibraryContent(DEVELOPER_PARTS.style_library?.[styleKey], userProfile)

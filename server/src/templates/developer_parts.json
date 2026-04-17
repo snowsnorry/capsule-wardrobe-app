@@ -1,4 +1,19 @@
 {
+  "audience_logic": {
+    "woman": "- woman: Allow diverse silhouettes including A-line, fitted, flowing, waist-accentuating items, skirts, dresses, and delicate detailing.",
+    "man": "- man: Anchor in classic menswear logic with stronger tailoring vocabulary, shoulder structure, and controlled silhouette volume.",
+    "not important": "- not important: Activate relaxed-fit / unisex logic, suppress hyper-gendered items, and favor straight-leg denim, oversized hoodies, and chunky sneakers."
+  },
+  "formality_logic": {
+    "casual": "- casual: Prioritize comfort, elasticity, denim, fleece, jersey, and unstructured silhouettes.",
+    "smart_casual": "- smart_casual: Enforce the High/Low Balance Rule. Every outfit must include one \"high\" item (blazer, tailored trouser, refined coat) and one \"low\" item (premium sneaker, denim, hoodie).",
+    "formal": "- formal: Enforce strict dress-code. Use worsted wool, silk, crisp poplin, and sharp creases. Only closed-toe leather footwear. Suppress distressed materials and casual knits."
+  },
+  "seasonality_logic": {
+    "summer": "- summer: Lightweight, breathable fabrics; suppress heavy midlayers.",
+    "spring_autumn": "- spring/autumn: Light-to-medium layering; transitional outerwear preferred.",
+    "winter": "- winter: Insulating layers, heavy wool, and thermal logic required."
+  },
   "style_library": {
     "minimalistic": {
       "template": "Minimalistic Style Logic:\nTokens: monochrome, clean lines, hidden hardware, premium fabrics.\n- Audience: {{audience}}\n- Formality Scaling: {{formality_level}}\n- Occasion Adaptation: {{occasions}}\n- STYLE OVERRIDE: All hardware must be concealed or tonal.",

@@ -114,7 +114,14 @@ test("buildResponsesPayload releases source image buffers after payload construc
 test("buildDeveloperPrompt returns the base template without dynamic sections by default", () => {
   const prompt = buildDeveloperPrompt({});
 
-  assert.match(prompt, /GENERAL OPERATING RULE/);
+  assert.match(prompt, /CORE CONSTRAINTS/);
+  assert.match(prompt, /AUDIENCE LOGIC/);
+  assert.match(prompt, /FORMALITY LOGIC/);
+  assert.match(prompt, /SEASONALITY AND LAYERING/);
+  assert.match(prompt, /- not important: Activate relaxed-fit \/ unisex logic/);
+  assert.match(prompt, /- Specifics: Linen for summer\/safari; silk for romantic\/formal; heavy wool for winter\./);
+  assert.doesNotMatch(prompt, /- casual:/);
+  assert.doesNotMatch(prompt, /- summer:/);
   assert.doesNotMatch(prompt, /STYLE LIBRARY/);
   assert.doesNotMatch(prompt, /PALETTE REFERENCE BY STYLE/);
   assert.doesNotMatch(prompt, /PALETTE REFERENCE BY ACCENT COLOR/);
@@ -133,16 +140,40 @@ test("buildDeveloperPrompt includes style-specific sections when style is provid
   assert.match(prompt, /Minimalistic/);
   assert.match(prompt, /- woman: silk midi skirts, crisp button-downs/);
   assert.match(prompt, /- smart_casual: turtlenecks, poplin shirts, sleek loafers/);
-  assert.match(prompt, /everyday_errands: elevated basics, oversized wool coat\n\nPALETTE REFERENCE BY STYLE/);
+  assert.match(prompt, /- Occasion Adaptation: - everyday_errands: elevated basics, oversized wool coat/);
   assert.match(prompt, /PALETTE REFERENCE BY STYLE/);
   assert.doesNotMatch(prompt, /PALETTE REFERENCE BY ACCENT COLOR/);
+});
+
+test("buildDeveloperPrompt injects audience, formality, and selected seasons", () => {
+  const prompt = buildDeveloperPrompt({
+    audience: "woman",
+    formalityLevel: "formal",
+    season: ["spring", "winter"]
+  });
+
+  assert.match(prompt, /- woman: Allow diverse silhouettes including A-line, fitted, flowing, waist-accentuating items, skirts, dresses, and delicate detailing\./);
+  assert.match(prompt, /- formal: Enforce strict dress-code\./);
+  assert.match(prompt, /- spring\/autumn: Light-to-medium layering; transitional outerwear preferred\./);
+  assert.match(prompt, /- winter: Insulating layers, heavy wool, and thermal logic required\./);
+  assert.doesNotMatch(prompt, /- summer: Lightweight, breathable fabrics; suppress heavy midlayers\./);
+});
+
+test("buildDeveloperPrompt includes spring/autumn line when autumn is selected", () => {
+  const prompt = buildDeveloperPrompt({
+    season: ["autumn"]
+  });
+
+  assert.match(prompt, /- spring\/autumn: Light-to-medium layering; transitional outerwear preferred\./);
+  assert.doesNotMatch(prompt, /- summer: Lightweight, breathable fabrics; suppress heavy midlayers\./);
+  assert.doesNotMatch(prompt, /- winter: Insulating layers, heavy wool, and thermal logic required\./);
 });
 
 test("buildDeveloperPrompt includes accent color defaults when color is provided", () => {
   const prompt = buildDeveloperPrompt({ color: "red" });
 
   assert.match(prompt, /PALETTE REFERENCE BY ACCENT COLOR/);
-  assert.match(prompt, /- red:/);
+  assert.match(prompt, /Option 1: 60% navy \/ 30% white \/ 10% red/);
   assert.doesNotMatch(prompt, /STYLE LIBRARY/);
 });
 
