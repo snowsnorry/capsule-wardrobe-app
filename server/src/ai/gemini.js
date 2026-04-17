@@ -3,6 +3,8 @@ import { randomUUID } from "node:crypto";
 import { writeFileSync, unlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { z } from "zod";
+import { zodToJsonSchema } from "zod-to-json-schema";
 import {
   buildDeveloperPrompt,
   buildJsonObjectFormat,
@@ -57,6 +59,95 @@ function buildGeminiSystemInstruction(system = "", userProfile = null) {
     .join("\n\n");
 }
 
+function buildZodSchemaFromJsonSchema(schema) {
+  if (!schema || typeof schema !== "object") {
+    return z.any();
+  }
+
+  const type = Array.isArray(schema.type) ? schema.type : [schema.type];
+  const supportsNull = type.includes("null");
+  const nonNullType = type.find((value) => value !== "null");
+
+  let zodSchema;
+
+  if (Array.isArray(schema.enum) && schema.enum.length > 0) {
+    zodSchema = z.enum(schema.enum);
+  } else {
+    switch (nonNullType) {
+      case "object": {
+        const properties = schema.properties && typeof schema.properties === "object" ? schema.properties : {};
+        const required = new Set(Array.isArray(schema.required) ? schema.required : []);
+        const shape = Object.fromEntries(
+          Object.entries(properties).map(([key, value]) => {
+            const propertySchema = buildZodSchemaFromJsonSchema(value);
+            return [key, required.has(key) ? propertySchema : propertySchema.optional()];
+          })
+        );
+        zodSchema = z.object(shape);
+        if (schema.additionalProperties === false) {
+          zodSchema = zodSchema.strict();
+        }
+        break;
+      }
+      case "array": {
+        const itemSchema = buildZodSchemaFromJsonSchema(schema.items);
+        zodSchema = z.array(itemSchema);
+        if (typeof schema.minItems === "number") {
+          zodSchema = zodSchema.min(schema.minItems);
+        }
+        if (typeof schema.maxItems === "number") {
+          zodSchema = zodSchema.max(schema.maxItems);
+        }
+        break;
+      }
+      case "integer":
+        zodSchema = z.number().int();
+        if (typeof schema.minimum === "number") {
+          zodSchema = zodSchema.min(schema.minimum);
+        }
+        if (typeof schema.maximum === "number") {
+          zodSchema = zodSchema.max(schema.maximum);
+        }
+        break;
+      case "number":
+        zodSchema = z.number();
+        if (typeof schema.minimum === "number") {
+          zodSchema = zodSchema.min(schema.minimum);
+        }
+        if (typeof schema.maximum === "number") {
+          zodSchema = zodSchema.max(schema.maximum);
+        }
+        break;
+      case "boolean":
+        zodSchema = z.boolean();
+        break;
+      case "string":
+      default:
+        zodSchema = z.string();
+        break;
+    }
+  }
+
+  if (typeof schema.description === "string" && schema.description.trim().length > 0) {
+    zodSchema = zodSchema.describe(schema.description.trim());
+  } else if (typeof schema.title === "string" && schema.title.trim().length > 0) {
+    zodSchema = zodSchema.describe(schema.title.trim());
+  }
+
+  return supportsNull ? zodSchema.nullable() : zodSchema;
+}
+
+function buildGeminiStructuredOutput(format = null, userProfile = null) {
+  const resolvedFormat = format || buildJsonObjectFormat(userProfile);
+  const schema = resolvedFormat?.schema;
+  const zodSchema = buildZodSchemaFromJsonSchema(schema);
+
+  return {
+    zodSchema,
+    responseJsonSchema: zodToJsonSchema(zodSchema)
+  };
+}
+
 function createGeminiClient({
   createClientImpl = ({ apiKey, apiVersion }) => new GoogleGenAI({ apiKey, apiVersion }),
   getApiKeyImpl = () => process.env.GEMINI_API_KEY,
@@ -99,7 +190,7 @@ function createGeminiClient({
     const client = getGeminiClient();
     const { system, user } = splitSystemAndUserPrompt(prompt);
     const systemInstruction = buildGeminiSystemInstruction(system, userProfile);
-    const responseSchema = (format || buildJsonObjectFormat(userProfile))?.schema || null;
+    const { zodSchema, responseJsonSchema } = buildGeminiStructuredOutput(format, userProfile);
     const uploadedFiles = await uploadImagesToGemini(client, images, uploadBufferToGeminiImpl);
     const contents = buildGeminiContents(user, uploadedFiles);
     releaseImageBuffers(images);
@@ -114,7 +205,7 @@ function createGeminiClient({
         topP: 0.9,
         maxOutputTokens: 8000,
         responseMimeType: "application/json",
-        // responseSchema: responseSchema
+        responseJsonSchema
       }
     };
     try {
@@ -131,7 +222,7 @@ function createGeminiClient({
         content = content.replace(/^[^{]*/, "").replace(/[^}]*$/, "");
       }
       try {
-        json = JSON.parse(content);
+        json = zodSchema.parse(JSON.parse(content));
       } catch (error) {
         const parseError = new Error(`Failed to parse JSON response: ${error.message}\nResponse content: ${content}`);
         parseError.rawSelectionText = typeof response?.text === "string" && response.text.trim().length > 0
@@ -263,7 +354,9 @@ const { generateJsonWithLlm, getGeminiClient } = geminiClient;
 export {
   ALLOWED_CHAT_MODELS,
   buildGeminiContents,
+  buildGeminiStructuredOutput,
   buildGeminiSystemInstruction,
+  buildZodSchemaFromJsonSchema,
   cleanupUploadedGeminiFiles,
   createGeminiClient,
   generateJsonWithLlm,

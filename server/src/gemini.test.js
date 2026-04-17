@@ -3,7 +3,9 @@ import assert from "node:assert/strict";
 import {
   ALLOWED_CHAT_MODELS,
   buildGeminiContents,
+  buildGeminiStructuredOutput,
   buildGeminiSystemInstruction,
+  buildZodSchemaFromJsonSchema,
   cleanupUploadedGeminiFiles,
   createGeminiClient,
   generateJsonWithLlm,
@@ -11,6 +13,19 @@ import {
   uploadBufferToGemini
 } from "./ai/gemini.js";
 import { buildDeveloperPrompt } from "./ai/openai.js";
+
+const SIMPLE_OK_FORMAT = {
+  type: "json_schema",
+  name: "simple_ok_response",
+  schema: {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      ok: { type: "boolean" }
+    },
+    required: ["ok"]
+  }
+};
 
 test("resolveChatModel keeps only supported gemini profile models", () => {
   assert.equal(resolveChatModel({ llm: "gemini:gemini-2.5-pro" }), "gemini-2.5-pro");
@@ -60,6 +75,71 @@ test("buildGeminiSystemInstruction includes the default developer prompt for a n
     buildGeminiSystemInstruction("Be concise", {}),
     `Be concise\n\n${buildDeveloperPrompt({})}`
   );
+});
+
+test("buildZodSchemaFromJsonSchema supports strict objects, arrays, enums, and integers", () => {
+  const schema = buildZodSchemaFromJsonSchema({
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      mood: {
+        type: "string",
+        enum: ["good", "bad"]
+      },
+      count: {
+        type: "integer",
+        minimum: 1
+      },
+      tags: {
+        type: "array",
+        minItems: 1,
+        maxItems: 2,
+        items: {
+          type: "string"
+        }
+      }
+    },
+    required: ["mood", "count", "tags"]
+  });
+
+  assert.deepEqual(schema.parse({
+    mood: "good",
+    count: 1,
+    tags: ["a"]
+  }), {
+    mood: "good",
+    count: 1,
+    tags: ["a"]
+  });
+
+  assert.throws(() => schema.parse({
+    mood: "other",
+    count: 1,
+    tags: ["a"]
+  }));
+});
+
+test("buildGeminiStructuredOutput converts app format to Gemini responseJsonSchema", () => {
+  const result = buildGeminiStructuredOutput({
+    type: "json_schema",
+    name: "example_response",
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        ok: {
+          type: "boolean",
+          description: "Whether generation succeeded."
+        }
+      },
+      required: ["ok"]
+    }
+  });
+
+  assert.equal(typeof result.zodSchema.parse, "function");
+  assert.equal(result.responseJsonSchema.type, "object");
+  assert.equal(result.responseJsonSchema.additionalProperties, false);
+  assert.equal(result.responseJsonSchema.properties.ok.type, "boolean");
 });
 
 test("uploadBufferToGemini writes temp file, uploads it, and deletes local temp file", async () => {
@@ -168,6 +248,7 @@ test("gemini client validates api key and shapes multimodal JSON request", async
       formalityLevel: "formal",
       season: ["winter"]
     },
+    format: SIMPLE_OK_FORMAT,
     images,
     onPayloadBuilt: () => {
       payloadBuiltCalls += 1;
@@ -186,6 +267,8 @@ test("gemini client validates api key and shapes multimodal JSON request", async
     })}`
   );
   assert.equal(requestPayload.config.responseMimeType, "application/json");
+  assert.equal(requestPayload.config.responseJsonSchema.type, "object");
+  assert.equal(requestPayload.config.responseJsonSchema.properties.ok.type, "boolean");
   assert.deepEqual(requestPayload.contents[0], {
     fileData: {
       fileUri: "gs://gemini/files/1",
@@ -225,7 +308,10 @@ test("gemini uses only developer prompt as systemInstruction when prompt has no 
     })
   });
 
-  await client.generateJsonWithLlm("Return JSON", { userProfile });
+  await client.generateJsonWithLlm("Return JSON", {
+    userProfile,
+    format: SIMPLE_OK_FORMAT
+  });
 
   assert.equal(requestPayload.config.systemInstruction, buildDeveloperPrompt(userProfile));
   assert.equal(requestPayload.contents[0].text, "Return JSON");
@@ -243,6 +329,26 @@ test("gemini generateJsonWithLlm throws for invalid JSON", async () => {
 
   await assert.rejects(
     () => client.generateJsonWithLlm("User: Return JSON"),
+    /Failed to parse JSON response/
+  );
+});
+
+test("gemini generateJsonWithLlm throws when parsed JSON does not satisfy the schema", async () => {
+  const client = createGeminiClient({
+    getApiKeyImpl: () => "gem-key",
+    createClientImpl: () => ({
+      models: {
+        generateContent: async () => ({ text: "{\"ok\":\"yes\"}" })
+      }
+    })
+  });
+
+  await assert.rejects(
+    () => client.generateJsonWithLlm("User: Return JSON", {
+      format: {
+        ...SIMPLE_OK_FORMAT
+      }
+    }),
     /Failed to parse JSON response/
   );
 });
