@@ -3,12 +3,16 @@ import { randomUUID } from "node:crypto";
 import { writeFileSync, unlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { buildJsonObjectFormat, releaseImageBuffers, splitSystemAndUserPrompt } from "./openai.js";
+import {
+  buildDeveloperPrompt,
+  buildJsonObjectFormat,
+  releaseImageBuffers,
+  splitSystemAndUserPrompt
+} from "./openai.js";
 
 const DEFAULT_CHAT_MODEL = "gemini-2.5-pro";
 const ALLOWED_CHAT_MODELS = ["gemini-2.5-pro"];
 const DEFAULT_API_VERSION = "v1beta";
-let cachedClient = null;
 
 function resolveChatModel(userProfile = null) {
   const llm = String(userProfile?.llm || "").trim();
@@ -44,6 +48,15 @@ function buildGeminiContents(user, uploadedFiles = []) {
   return content.length > 0 ? content : [""];
 }
 
+function buildGeminiSystemInstruction(system = "", userProfile = null) {
+  const systemText = String(system || "").trim();
+  const developerText = buildDeveloperPrompt(userProfile);
+
+  return [systemText, developerText]
+    .filter((part) => typeof part === "string" && part.trim().length > 0)
+    .join("\n\n");
+}
+
 function createGeminiClient({
   createClientImpl = ({ apiKey, apiVersion }) => new GoogleGenAI({ apiKey, apiVersion }),
   getApiKeyImpl = () => process.env.GEMINI_API_KEY,
@@ -69,7 +82,6 @@ function createGeminiClient({
     });
     if (cache) {
       localCachedClient = client;
-      cachedClient = client;
     }
 
     return client;
@@ -86,6 +98,7 @@ function createGeminiClient({
   ) {
     const client = getGeminiClient();
     const { system, user } = splitSystemAndUserPrompt(prompt);
+    const systemInstruction = buildGeminiSystemInstruction(system, userProfile);
     const responseSchema = (format || buildJsonObjectFormat(userProfile))?.schema || null;
     const uploadedFiles = await uploadImagesToGemini(client, images, uploadBufferToGeminiImpl);
     const contents = buildGeminiContents(user, uploadedFiles);
@@ -96,7 +109,7 @@ function createGeminiClient({
       model: resolveChatModel(userProfile),
       contents,
       config: {
-        systemInstruction: system || undefined,
+        systemInstruction: systemInstruction || undefined,
         temperature: 0.2,
         topP: 0.9,
         maxOutputTokens: 8000,
@@ -250,6 +263,7 @@ const { generateJsonWithLlm, getGeminiClient } = geminiClient;
 export {
   ALLOWED_CHAT_MODELS,
   buildGeminiContents,
+  buildGeminiSystemInstruction,
   cleanupUploadedGeminiFiles,
   createGeminiClient,
   generateJsonWithLlm,

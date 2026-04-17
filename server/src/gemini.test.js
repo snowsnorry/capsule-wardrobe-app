@@ -3,12 +3,14 @@ import assert from "node:assert/strict";
 import {
   ALLOWED_CHAT_MODELS,
   buildGeminiContents,
+  buildGeminiSystemInstruction,
   cleanupUploadedGeminiFiles,
   createGeminiClient,
   generateJsonWithLlm,
   resolveChatModel,
   uploadBufferToGemini
 } from "./ai/gemini.js";
+import { buildDeveloperPrompt } from "./ai/openai.js";
 
 test("resolveChatModel keeps only supported gemini profile models", () => {
   assert.equal(resolveChatModel({ llm: "gemini:gemini-2.5-pro" }), "gemini-2.5-pro");
@@ -29,6 +31,35 @@ test("buildGeminiContents emits text and fileData parts", () => {
     }
   });
   assert.deepEqual(content[1], { text: "Describe capsule" });
+});
+
+test("buildGeminiSystemInstruction concatenates system and developer prompt", () => {
+  const userProfile = {
+    audience: "woman",
+    formalityLevel: "formal",
+    season: ["winter"]
+  };
+
+  assert.equal(
+    buildGeminiSystemInstruction("Be concise", userProfile),
+    `Be concise\n\n${buildDeveloperPrompt(userProfile)}`
+  );
+});
+
+test("buildGeminiSystemInstruction returns only developer prompt when system is empty", () => {
+  const userProfile = { style: "minimalistic" };
+
+  assert.equal(
+    buildGeminiSystemInstruction("", userProfile),
+    buildDeveloperPrompt(userProfile)
+  );
+});
+
+test("buildGeminiSystemInstruction includes the default developer prompt for a neutral profile", () => {
+  assert.equal(
+    buildGeminiSystemInstruction("Be concise", {}),
+    `Be concise\n\n${buildDeveloperPrompt({})}`
+  );
 });
 
 test("uploadBufferToGemini writes temp file, uploads it, and deletes local temp file", async () => {
@@ -131,7 +162,12 @@ test("gemini client validates api key and shapes multimodal JSON request", async
   }];
   let payloadBuiltCalls = 0;
   const result = await client.generateJsonWithLlm("System: Be concise\nUser: Return JSON", {
-    userProfile: { llm: "gemini:gemini-2.5-pro" },
+    userProfile: {
+      llm: "gemini:gemini-2.5-pro",
+      audience: "woman",
+      formalityLevel: "formal",
+      season: ["winter"]
+    },
     images,
     onPayloadBuilt: () => {
       payloadBuiltCalls += 1;
@@ -140,7 +176,15 @@ test("gemini client validates api key and shapes multimodal JSON request", async
 
   assert.deepEqual(result.json, { ok: true });
   assert.equal(requestPayload.model, "gemini-2.5-pro");
-  assert.equal(requestPayload.config.systemInstruction, "Be concise");
+  assert.equal(
+    requestPayload.config.systemInstruction,
+    `Be concise\n\n${buildDeveloperPrompt({
+      llm: "gemini:gemini-2.5-pro",
+      audience: "woman",
+      formalityLevel: "formal",
+      season: ["winter"]
+    })}`
+  );
   assert.equal(requestPayload.config.responseMimeType, "application/json");
   assert.deepEqual(requestPayload.contents[0], {
     fileData: {
@@ -156,6 +200,35 @@ test("gemini client validates api key and shapes multimodal JSON request", async
 
   const missingKeyClient = createGeminiClient({ getApiKeyImpl: () => "" });
   assert.throws(() => missingKeyClient.getGeminiClient(), /GEMINI_API_KEY is not set/);
+});
+
+test("gemini uses only developer prompt as systemInstruction when prompt has no System block", async () => {
+  let requestPayload = null;
+  const userProfile = {
+    style: "minimalistic",
+    audience: "woman",
+    formalityLevel: "smart_casual",
+    occasions: ["everyday_errands"]
+  };
+  const client = createGeminiClient({
+    getApiKeyImpl: () => "gem-key",
+    createClientImpl: () => ({
+      models: {
+        generateContent: async (payload) => {
+          requestPayload = payload;
+          return { text: "{\"ok\":true}" };
+        }
+      },
+      files: {
+        delete: async () => {}
+      }
+    })
+  });
+
+  await client.generateJsonWithLlm("Return JSON", { userProfile });
+
+  assert.equal(requestPayload.config.systemInstruction, buildDeveloperPrompt(userProfile));
+  assert.equal(requestPayload.contents[0].text, "Return JSON");
 });
 
 test("gemini generateJsonWithLlm throws for invalid JSON", async () => {
