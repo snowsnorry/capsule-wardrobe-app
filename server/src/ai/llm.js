@@ -1,9 +1,11 @@
 import { DEFAULT_PROFILE_LLM } from "../../../shared/profileSettings.js";
+import { generateJsonWithLlm as generateJsonWithClaude } from "./claude.js";
 import { generateJsonWithLlm as generateJsonWithOpenAi } from "./openai.js";
 import { generateJsonWithLlm as generateJsonWithDeepInfra } from "./deepinfra.js";
 import { generateJsonWithLlm as generateJsonWithGemini } from "./gemini.js";
 
 const OPENAI_PROFILE_LLM = "openai:gpt-5.2";
+const CLAUDE_ALLOWED_MODELS = ["claude-opus-4-7"];
 const GEMINI_PROFILE_LLM = "gemini:gemini-2.5-pro";
 const DEEPINFRA_ALLOWED_MODELS = [
   "google/gemma-4-31B-it",
@@ -48,6 +50,18 @@ function resolveLlmProvider(userProfile = null) {
     };
   }
 
+  if (llm.startsWith("claude:")) {
+    const model = llm.slice("claude:".length).trim();
+    if (CLAUDE_ALLOWED_MODELS.includes(model)) {
+      return {
+        provider: "claude",
+        model,
+        llm,
+        requestedLlm: llm
+      };
+    }
+  }
+
   if (llm.startsWith("deepinfra:")) {
     const model = llm.slice("deepinfra:".length).trim();
     if (DEEPINFRA_ALLOWED_MODELS.includes(model)) {
@@ -84,12 +98,15 @@ function getGenerateJsonWithLlm(userProfile = null) {
 
   return resolved.provider === "deepinfra"
     ? generateJsonWithDeepInfra
+    : resolved.provider === "claude"
+      ? generateJsonWithClaude
     : resolved.provider === "gemini"
       ? generateJsonWithGemini
       : generateJsonWithOpenAi;
 }
 
 export {
+  CLAUDE_ALLOWED_MODELS,
   DEEPINFRA_ALLOWED_MODELS,
   GEMINI_PROFILE_LLM,
   OPENAI_PROFILE_LLM,

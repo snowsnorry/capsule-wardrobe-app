@@ -45,6 +45,7 @@ function renderDialog(props = {}) {
         "locale.options.en": "English",
         "locale.options.ru": "Russian",
         "settings.llmOptions.openai:gpt-5.2": "OpenAI GPT-5.2",
+        "settings.llmOptions.claude:claude-opus-4-7": "Claude Opus 4.7",
         "settings.llmOptions.gemini:gemini-2.5-pro": "Gemini 2.5 Pro",
         "settings.llmOptions.deepinfra:Qwen/Qwen3-VL-235B-A22B-Instruct": "Qwen 3",
         "settings.llmOptions.deepinfra:google/gemma-4-31B-it": "Google Gemma 4",

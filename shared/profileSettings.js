@@ -1,6 +1,7 @@
 const PROFILE_THEME_VALUES = ["system", "light", "dark"];
 const PROFILE_LLM_VALUES = [
   "openai:gpt-5.2",
+  "claude:claude-opus-4-7",
   "gemini:gemini-2.5-pro",
   "deepinfra:Qwen/Qwen3-VL-235B-A22B-Instruct",
   "deepinfra:google/gemma-4-31B-it",

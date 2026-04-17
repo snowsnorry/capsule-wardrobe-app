@@ -299,7 +299,7 @@ test("db integration shapes reduced profile persistence queries", async () => {
       locale: "ru",
       fullname: "Ada Lovelace",
       theme: "dark",
-      llm: "openai:gpt-5.2"
+      llm: "claude:claude-opus-4-7"
     }],
     [],
     [{ email: "user@example.com" }]
@@ -316,7 +316,7 @@ test("db integration shapes reduced profile persistence queries", async () => {
     locale: "ru",
     fullname: "Ada Lovelace",
     theme: "dark",
-    llm: "openai:gpt-5.2"
+    llm: "claude:claude-opus-4-7"
   });
   const deleted = await deleteProfileByEmail("user@example.com");
 
@@ -327,7 +327,7 @@ test("db integration shapes reduced profile persistence queries", async () => {
   assert.match(calls[1].text, /update profiles\s+set[\s\S]*locale =/i);
   assert.deepEqual(calls[1].values, ["ru", "user@example.com"]);
   assert.match(calls[2].text, /update profiles\s+set[\s\S]*fullname =/i);
-  assert.deepEqual(calls[2].values, ["ru", "Ada Lovelace", "dark", "openai:gpt-5.2", "user@example.com"]);
+  assert.deepEqual(calls[2].values, ["ru", "Ada Lovelace", "dark", "claude:claude-opus-4-7", "user@example.com"]);
   assert.match(calls[3].text, /delete from capsules/i);
   assert.match(calls[4].text, /delete from profiles/i);
 });

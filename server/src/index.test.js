@@ -595,7 +595,7 @@ test("index routes cover profile update, locale update, and delete branches", as
     body: {
       locale: "ru",
       theme: "dark",
-      llm: "openai:gpt-5.2",
+      llm: "claude:claude-opus-4-7",
       fullname: "  Ada Lovelace  "
     }
   });
@@ -603,7 +603,7 @@ test("index routes cover profile update, locale update, and delete branches", as
   assert.equal(updateSuccess.json.ok, true);
   assert.equal(updateSuccess.json.profile.locale, "ru");
   assert.equal(updateSuccess.json.profile.theme, "dark");
-  assert.equal(updateSuccess.json.profile.llm, "openai:gpt-5.2");
+  assert.equal(updateSuccess.json.profile.llm, "claude:claude-opus-4-7");
   assert.equal(updateSuccess.json.profile.fullname, "Ada Lovelace");
 
   const localeSuccess = await requestJson(successServer.baseUrl, "/profile/locale", {

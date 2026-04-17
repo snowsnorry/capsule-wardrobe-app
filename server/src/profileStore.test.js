@@ -117,3 +117,24 @@ test("normalizeProfileRecord applies defaults for new profile fields", () => {
     }
   );
 });
+
+test("normalizeProfileRecord keeps a supported claude llm selection", () => {
+  assert.deepEqual(
+    normalizeProfileRecord({
+      email: "user@example.com",
+      activeCapsuleId: null,
+      locale: "en",
+      fullname: "Ada",
+      theme: "dark",
+      llm: "claude:claude-opus-4-7"
+    }),
+    {
+      email: "user@example.com",
+      activeCapsuleId: null,
+      locale: "en",
+      fullname: "Ada",
+      theme: "dark",
+      llm: "claude:claude-opus-4-7"
+    }
+  );
+});

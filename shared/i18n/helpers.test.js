@@ -35,17 +35,19 @@ test("translateOption humanizes unknown values and translates known ones", () =>
 
 test("t resolves dictionary keys that contain dots", () => {
   assert.equal(t("settings.llmOptions.openai:gpt-5.2", undefined, "en"), "OpenAI GPT-5.2");
+  assert.equal(t("settings.llmOptions.claude:claude-opus-4-7", undefined, "en"), "Claude Opus 4.7");
   assert.equal(
     resolveTranslationValue(
       {
         settings: {
           llmOptions: {
-            "openai:gpt-5.2": "OpenAI GPT-5.2"
+            "openai:gpt-5.2": "OpenAI GPT-5.2",
+            "claude:claude-opus-4-7": "Claude Opus 4.7"
           }
         }
       },
-      "settings.llmOptions.openai:gpt-5.2"
+      "settings.llmOptions.claude:claude-opus-4-7"
     ),
-    "OpenAI GPT-5.2"
+    "Claude Opus 4.7"
   );
 });

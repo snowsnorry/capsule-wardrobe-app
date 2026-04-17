@@ -276,6 +276,7 @@ const ru = {
     },
     llmOptions: {
       "openai:gpt-5.2": "OpenAI GPT-5.2",
+      "claude:claude-opus-4-7": "Claude Opus 4.7",
       "gemini:gemini-2.5-pro": "Gemini 2.5 Pro",
       "deepinfra:Qwen/Qwen3-VL-235B-A22B-Instruct": "Qwen 3",
       "deepinfra:google/gemma-4-31B-it": "Google Gemma 4",
