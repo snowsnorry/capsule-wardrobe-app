@@ -1,7 +1,7 @@
 {
   "style_library": {
     "minimalistic": {
-      "template": "Minimalistic\nCore tokens: monochrome, clean lines, hidden hardware, premium fabrics\n{{audience}}\nFormality:\n{{formality_level}}\nOccasions:\n{{occasions}}",
+      "template": "Minimalistic Style Logic:\nTokens: monochrome, clean lines, hidden hardware, premium fabrics.\n- Audience: {{audience}}\n- Formality Scaling: {{formality_level}}\n- Occasion Adaptation: {{occasions}}\n- STYLE OVERRIDE: All hardware must be concealed or tonal.",
       "audience": {
         "woman": "- woman: silk midi skirts, crisp button-downs",
         "man": "- man: fine-gauge knits, unstructured blazers",
@@ -20,7 +20,7 @@
       }
     },
     "street_style": {
-      "template": "Street Style\nCore tokens: oversized, trend-focused, statement sneakers, graphic prints, heavy hardware\n{{audience}}\nFormality:\n{{formality_level}}\nOccasions:\n{{occasions}}",
+      "template": "Street Style Logic:\nTokens: oversized, trend-focused, statement sneakers, graphic prints, heavy hardware.\n- Audience: {{audience}}\n- Formality Scaling: {{formality_level}}\n- Occasion Adaptation: {{occasions}}",
       "audience": {
         "woman": "- woman: oversized top + fitted bottom",
         "man": "- man: heavy hoodies + baggy cargo",
@@ -39,7 +39,7 @@
       }
     },
     "romantic": {
-      "template": "Romantic\nCore tokens: pastels, lace, ruffles, soft draping, delicate fabrics\n{{audience}}\nFormality:\n{{formality_level}}\nOccasions:\n{{occasions}}",
+      "template": "Romantic Style Logic:\nTokens: pastels, lace, ruffles, soft draping, delicate fabrics.\n- Audience: {{audience}}\n- Formality Scaling: {{formality_level}}\n- Occasion Adaptation: {{occasions}}",
       "audience": {
         "woman": "- woman: bias-cut dresses, ruffles",
         "man": "- man: fluid silk or viscose shirts",
@@ -58,7 +58,7 @@
       }
     },
     "preppy": {
-      "template": "Preppy\nCore tokens: argyle, stripes, pleats, collars, cable-knit, crests\n{{audience}}\nFormality:\n{{formality_level}}\nOccasions:\n{{occasions}}",
+      "template": "Preppy Style Logic:\nTokens: argyle, stripes, pleats, collars, cable-knit, crests.\n- Audience: {{audience}}\n- Formality Scaling: {{formality_level}}\n- Occasion Adaptation: {{occasions}}",
       "audience": {
         "woman": "- woman: pleated skirts, Mary Janes",
         "man": "- man: chinos, OCBD shirts, navy blazers",
@@ -77,7 +77,7 @@
       }
     },
     "boho": {
-      "template": "Boho\nCore tokens: earth tones, fringe, natural textures, loose fits, ethnic prints, suede\n{{audience}}\nFormality:\n{{formality_level}}\nOccasions:\n{{occasions}}",
+      "template": "Boho Style Logic:\nTokens: earth tones, fringe, natural textures, loose fits, ethnic prints, suede.\n- Audience: {{audience}}\n- Formality Scaling: {{formality_level}}\n- Occasion Adaptation: {{occasions}}",
       "audience": {
         "woman": "- woman: tiered maxi skirts, crochet",
         "man": "- man: relaxed linen shirts, suede desert boots",
@@ -96,7 +96,7 @@
       }
     },
     "nautical": {
-      "template": "Nautical\nCore tokens: navy/white/red triad, breton stripes, gold buttons, double-breasted, canvas\n{{audience}}\nFormality:\n{{formality_level}}\nOccasions:\n{{occasions}}",
+      "template": "Nautical Style Logic:\nTokens: navy/white/red triad, breton stripes, gold buttons, double-breasted, canvas.\n- Audience: {{audience}}\n- Formality Scaling: {{formality_level}}\n- Occasion Adaptation: {{occasions}}",
       "audience": {
         "woman": "- woman: sailor trousers, boatneck tops",
         "man": "- man: double-breasted blazers, boat shoes",
@@ -115,7 +115,7 @@
       }
     },
     "safari": {
-      "template": "Safari\nCore tokens: khaki/sand, patch pockets, linen, utility, belted waists\n{{audience}}\nFormality:\n{{formality_level}}\nOccasions:\n{{occasions}}",
+      "template": "Safari Style Logic:\nTokens: khaki/sand, patch pockets, linen, utility, belted waists.\n- Audience: {{audience}}\n- Formality Scaling: {{formality_level}}\n- Occasion Adaptation: {{occasions}}",
       "audience": {
         "woman": "- woman: belted linen dresses, Sahariana jackets",
         "man": "- man: utility button-downs, chukka boots",
@@ -134,7 +134,7 @@
       }
     },
     "equestrian": {
-      "template": "Equestrian\nCore tokens: tailored jackets, slim trousers, knee-high leather boots, quiet luxury, heritage\n{{audience}}\nFormality:\n{{formality_level}}\nOccasions:\n{{occasions}}",
+      "template": "Equestrian Style Logic:\nTokens: tailored jackets, slim trousers, knee-high leather boots, quiet luxury, heritage.\n- Audience: {{audience}}\n- Formality Scaling: {{formality_level}}\n- Occasion Adaptation: {{occasions}}",
       "audience": {
         "woman": "- woman: fitted hacking jackets, knee-high boots",
         "man": "- man: tweed coats, turtlenecks, Chelsea boots",
@@ -153,7 +153,7 @@
       }
     },
     "military": {
-      "template": "Military\nCore tokens: epaulettes, heavy cotton, camo, olive green, rugged leather, cargo pockets\n{{audience}}\nFormality:\n{{formality_level}}\nOccasions:\n{{occasions}}",
+      "template": "Military Style Logic:\nTokens: epaulettes, heavy cotton, camo, olive green, rugged leather, cargo pockets.\n- Audience: {{audience}}\n- Formality Scaling: {{formality_level}}\n- Occasion Adaptation: {{occasions}}\n- STYLE OVERRIDE: For smart_casual, prioritize 'Officer-style' clean lines and structured wool over distressed field gear.",
       "audience": {
         "woman": "- woman: tailored cargo + silk camisoles",
         "man": "- man: M-65 jackets, henleys, service boots",
@@ -172,7 +172,7 @@
       }
     },
     "grunge": {
-      "template": "Grunge\nCore tokens: distressed, raw hems, flannel, layering, oversized, dark denim, combat boots, faded\n{{audience}}\nFormality:\n{{formality_level}}\nOccasions:\n{{occasions}}",
+      "template": "Grunge Style Logic:\nTokens: distressed, raw hems, flannel, layering, oversized, dark denim, combat boots, faded.\n- Audience: {{audience}}\n- Formality Scaling: {{formality_level}}\n- Occasion Adaptation: {{occasions}}",
       "audience": {
         "woman": "- woman: slip dresses + band tees, ripped tights",
         "man": "- man: faded denim, oversized flannels",
@@ -191,7 +191,7 @@
       }
     },
     "sporty": {
-      "template": "Sporty\nCore tokens: synthetic, technical fabrics, activewear, athleisure, performance, sneakers\n{{audience}}\nFormality:\n{{formality_level}}\nOccasions:\n{{occasions}}",
+      "template": "Sporty Style Logic:\nTokens: synthetic, technical fabrics, activewear, athleisure, performance, sneakers.\n- Audience: {{audience}}\n- Formality Scaling: {{formality_level}}\n- Occasion Adaptation: {{occasions}}",
       "audience": {
         "woman": "- woman: leggings, tech tanks, windbreakers",
         "man": "- man: tailored joggers, technical pullovers",
@@ -210,141 +210,122 @@
       }
     },
     "retro": {
-      "template": "Retro\nCore tokens: vintage references, washed tones, classic silhouettes, nostalgic prints, textured fabrics, old-school polish\n{{audience}}\nFormality:\n{{formality_level}}\nOccasions:\n{{occasions}}",
+      "template": "Retro Style Logic:\nTokens: vintage references, washed tones, nostalgic prints, textured fabrics.\n- Audience: {{audience}}\n- Formality Scaling: {{formality_level}}\n- Occasion Adaptation: {{occasions}}",
       "audience": {
-        "woman": "- woman: A-line midi skirts, fitted cardigans, straight or flared trousers, pussy-bow blouses, structured mini bags, low block heels or loafers",
-        "man": "- man: straight-leg trousers, polo knits, short structured jackets, vintage-wash denim, loafers, derbies, old-school leather sneakers",
-        "not important": "- not important: relaxed vintage denim, boxy cardigans, cropped jackets, striped knits, straight trousers, classic leather loafers or retro sneakers"
+        "woman": "- woman: A-line midi skirts, fitted cardigans",
+        "man": "- man: straight-leg trousers, polo knits, vintage-wash denim",
+        "not important": "- not important: boxy cardigans, cropped jackets, striped knits"
       },
       "formality_level": {
-        "casual": "- casual: vintage-wash denim, striped tees, polo knits, suede or corduroy jackets, retro sneakers, soft cardigans",
-        "smart_casual": "- smart_casual: pleated trousers, knit polos, loafers, cropped wool jackets, refined vintage shirts, structured leather accessories",
-        "formal": "- formal: mid-century inspired tailoring, wide or straight wool trousers, silk blouses or fine shirts, polished loafers, derbies, or pumps, restrained vintage detailing"
+        "casual": "- casual: vintage-wash denim, striped tees, retro sneakers",
+        "smart_casual": "- smart_casual: pleated trousers, knit polos, cropped wool jackets",
+        "formal": "- formal: mid-century inspired tailoring, silk blouses"
       },
       "occasions": {
-        "office": "- office: controlled retro, straight wool trousers or midi skirt, knit polo or blouse, structured blazer or cardigan, polished loafers",
-        "brunch_in_the_city": "- brunch_in_the_city: vintage denim or A-line midi, fitted knit, suede or cropped jacket, classic eyewear",
-        "date_night": "- date_night: satin or silk blouse, high-waisted tailored trousers or fitted midi skirt, heeled boots, pumps, or polished loafers",
-        "everyday_errands": "- everyday_errands: relaxed straight jeans, striped knit or vintage tee, practical cardigan or short jacket, retro sneakers or loafers"
+        "office": "- office: wool trousers or midi skirt, knit polo, polished loafers",
+        "brunch_in_the_city": "- brunch_in_the_city: vintage denim, fitted knit, suede jacket",
+        "date_night": "- date_night: satin blouse, heeled boots or pumps",
+        "everyday_errands": "- everyday_errands: relaxed jeans, striped knit, practical cardigan"
       }
     }
   },
   "palette_by_style": {
     "minimalistic": [
-      "Minimalistic:",
-      "- Absolute Monochrome = base black / secondary grey / accent white",
-      "- Ivory & Sand = base beige / secondary white / accent metallic",
-      "- Midnight Navy = base navy / secondary grey / accent black"
+      "Absolute Monochrome: 60% black / 30% grey / 10% white",
+      "Ivory & Sand: 60% beige / 30% white / 10% metallic",
+      "Midnight Navy: 60% navy / 30% grey / 10% black"
     ],
     "street_style": [
-      "Street Style:",
-      "- Concrete Jungle = base grey / secondary black / accent white",
-      "- High-Contrast Hype = base black / secondary white / accent multicolor",
-      "- Washed Indigo = base denim / secondary grey / accent black"
+      "Concrete Jungle: 60% grey / 30% black / 10% white",
+      "High-Contrast Hype: 60% black / 30% white / 10% multicolor",
+      "Washed Indigo: 60% denim / 30% grey / 10% black"
     ],
     "romantic": [
-      "Romantic:",
-      "- Dusty Rose Garden = base beige / secondary pink / accent white",
-      "- Ethereal Mist = base light blue / secondary white / accent grey",
-      "- Midnight Velvet = base navy / secondary purple / accent metallic"
+      "Dusty Rose Garden: 60% beige / 30% pink / 10% white",
+      "Ethereal Mist: 60% light blue / 30% white / 10% grey",
+      "Midnight Velvet: 60% navy / 30% purple / 10% metallic"
     ],
     "preppy": [
-      "Preppy:",
-      "- Ivy League = base navy / secondary white / accent burgundy",
-      "- Country Club = base beige / secondary light blue / accent white",
-      "- Heritage Plaid = base grey / secondary navy / accent green"
+      "Ivy League: 60% navy / 30% white / 10% burgundy",
+      "Country Club: 60% beige / 30% light blue / 10% white",
+      "Heritage Plaid: 60% grey / 30% navy / 10% green"
     ],
     "boho": [
-      "Boho:",
-      "- Earth & Terracotta = base brown / secondary orange / accent beige",
-      "- Vintage Bloom = base khaki / secondary green / accent multicolor",
-      "- Nomad Spirit = base grey / secondary white / accent blue"
+      "Earth & Terracotta: 60% brown / 30% orange / 10% beige",
+      "Vintage Bloom: 60% khaki / 30% green / 10% multicolor",
+      "Nomad Spirit: 60% grey / 30% white / 10% blue"
     ],
     "nautical": [
-      "Nautical:",
-      "- Riviera Standard = base navy / secondary white / accent red",
-      "- Coastal Morning = base white / secondary light blue / accent navy",
-      "- Seaside Neutral = base navy / secondary beige / accent metallic"
+      "Riviera Standard: 60% navy / 30% white / 10% red",
+      "Coastal Morning: 60% white / 30% light blue / 10% navy",
+      "Seaside Neutral: 60% navy / 30% beige / 10% metallic"
     ],
     "safari": [
-      "Safari:",
-      "- Desert Expedition = base khaki / secondary beige / accent brown",
-      "- Savanna Shadow = base green / secondary khaki / accent black",
-      "- Linen Mirage = base white / secondary beige / accent metallic"
+      "Desert Expedition: 60% khaki / 30% beige / 10% brown",
+      "Savanna Shadow: 60% green / 30% khaki / 10% black",
+      "Linen Mirage: 60% white / 30% beige / 10% metallic"
     ],
     "equestrian": [
-      "Equestrian:",
-      "- Royal Hunt = base navy / secondary white / accent brown",
-      "- English Estate = base brown / secondary beige / accent green",
-      "- Grey Steeplechase = base grey / secondary white / accent black"
+      "Royal Hunt: 60% navy / 30% white / 10% brown",
+      "English Estate: 60% brown / 30% beige / 10% green",
+      "Grey Steeplechase: 60% grey / 30% white / 10% black"
     ],
     "military": [
-      "Military:",
-      "- Field Ops = base green / secondary khaki / accent black",
-      "- Navy Fleet = base navy / secondary grey / accent metallic",
-      "- Stealth Urban = base black / secondary grey / accent camo"
+      "Field Ops: 60% green / 30% khaki / 10% black",
+      "Navy Fleet: 60% navy / 30% grey / 10% metallic",
+      "Stealth Urban: 60% black / 30% grey / 10% camo"
     ],
     "grunge": [
-      "Grunge:",
-      "- Seattle Rain = base black / secondary grey / accent red",
-      "- Subterranean = base grey / secondary black / accent purple",
-      "- Forest Grunge = base green / secondary brown / accent black"
+      "Seattle Rain: 60% black / 30% grey / 10% red",
+      "Subterranean: 60% grey / 30% black / 10% purple",
+      "Forest Grunge: 60% green / 30% brown / 10% black"
     ],
     "sporty": [
-      "Sporty:",
-      "- Tech Runner = base black / secondary grey / accent yellow",
-      "- Court Classic = base white / secondary navy / accent green",
-      "- Olympic Spirit = base navy / secondary white / accent red"
+      "Tech Runner: 60% black / 30% grey / 10% yellow",
+      "Court Classic: 60% white / 30% navy / 10% green",
+      "Olympic Spirit: 60% navy / 30% white / 10% red"
     ],
     "retro": [
-      "Retro:",
-      "- Sepia Archive = base brown / secondary beige / accent orange",
-      "- Analog Classics = base navy / secondary beige / accent red",
-      "- Washed Vinyl = base denim / secondary white / accent green"
+      "Sepia Archive: 60% brown / 30% beige / 10% orange",
+      "Analog Classics: 60% navy / 30% beige / 10% red",
+      "Washed Vinyl: 60% denim / 30% white / 10% green"
     ]
   },
   "palette_by_accent_color": {
     "blue": [
-      "- blue:",
-      "  - black / grey / blue",
-      "  - navy / white / blue",
-      "  - grey / beige / blue"
+      "Option 1: 60% black / 30% grey / 10% blue",
+      "Option 2: 60% navy / 30% white / 10% blue",
+      "Option 3: 60% grey / 30% beige / 10% blue"
     ],
     "green": [
-      "- green:",
-      "  - grey / white / green",
-      "  - brown / beige / green",
-      "  - black / grey / green"
+      "Option 1: 60% grey / 30% white / 10% green",
+      "Option 2: 60% brown / 30% beige / 10% green",
+      "Option 3: 60% black / 30% grey / 10% green"
     ],
     "red": [
-      "- red:",
-      "  - navy / white / red",
-      "  - black / grey / red",
-      "  - grey / beige / red"
+      "Option 1: 60% navy / 30% white / 10% red",
+      "Option 2: 60% black / 30% grey / 10% red",
+      "Option 3: 60% grey / 30% beige / 10% red"
     ],
     "pink": [
-      "- pink:",
-      "  - grey / white / pink",
-      "  - beige / brown / pink",
-      "  - black / navy / pink"
+      "Option 1: 60% grey / 30% white / 10% pink",
+      "Option 2: 60% beige / 30% brown / 10% pink",
+      "Option 3: 60% black / 30% navy / 10% pink"
     ],
     "yellow": [
-      "- yellow:",
-      "  - black / grey / yellow",
-      "  - navy / khaki / yellow",
-      "  - beige / white / yellow"
+      "Option 1: 60% black / 30% grey / 10% yellow",
+      "Option 2: 60% navy / 30% khaki / 10% yellow",
+      "Option 3: 60% beige / 30% white / 10% yellow"
     ],
     "purple": [
-      "- purple:",
-      "  - black / navy / purple",
-      "  - grey / white / purple",
-      "  - brown / beige / purple"
+      "Option 1: 60% black / 30% navy / 10% purple",
+      "Option 2: 60% grey / 30% white / 10% purple",
+      "Option 3: 60% brown / 30% beige / 10% purple"
     ],
     "orange": [
-      "- orange:",
-      "  - khaki / brown / orange",
-      "  - black / grey / orange",
-      "  - navy / white / orange"
+      "Option 1: 60% khaki / 30% brown / 10% orange",
+      "Option 2: 60% black / 30% grey / 10% orange",
+      "Option 3: 60% navy / 30% white / 10% orange"
     ]
   }
 }
