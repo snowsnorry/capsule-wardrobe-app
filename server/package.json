@@ -3,10 +3,13 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "NODE_ENV=development node src/index.js",
-    "dev:test-auth": "AUTH_TEST_MODE=true NODE_ENV=development node src/index.js",
-    "test": "node --test src/*.test.js",
-    "start": "node src/index.js"
+    "dev": "NODE_ENV=development tsx src/index.js",
+    "dev:test-auth": "AUTH_TEST_MODE=true NODE_ENV=development tsx src/index.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "tsx --test src/*.test.js",
+    "build": "tsc -p tsconfig.build.json",
+    "prestart": "npm run build",
+    "start": "node dist/server/src/index.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.54.0",
@@ -29,6 +32,9 @@
     "zod-to-json-schema": "^3.25.2"
   },
   "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.6.0",
+    "tsx": "^4.21.0",
     "vite": "^6.2.0"
   }
 }

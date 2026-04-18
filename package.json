@@ -6,7 +6,7 @@
     "server"
   ],
   "scripts": {
-    "build": "npm --workspace client run build",
+    "build": "npm --workspace client run build && npm --workspace server run build",
     "start": "npm --workspace server run start",
     "start:render": "npm --workspace server run start",
     "start:client:render": "npm --workspace client run start:render",
@@ -14,8 +14,9 @@
     "dev:server": "op run --env-file=server/.env -- npm --workspace server run dev",
     "dev:all": "concurrently -k -n client,server \"npm:dev:client\" \"npm:dev:server\"",
     "dev:server:test-auth": "op run --env-file=server/.env -- npm --workspace server run dev:test-auth",
-    "typecheck": "npm run client:typecheck",
+    "typecheck": "npm run client:typecheck && npm run server:typecheck",
     "client:typecheck": "npm --workspace client run typecheck",
+    "server:typecheck": "npm --workspace server run typecheck",
     "test": "npm run test:server && npm run test:client && npm run test:shared",
     "test:server": "npm --workspace server run test",
     "test:client": "npm --workspace client run test",

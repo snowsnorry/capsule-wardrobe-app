@@ -32,7 +32,7 @@ The server package is larger and riskier than the client package, so the migrati
 
 ## Definition of Done for the Full Migration
 
-- [ ] Root, client, and server have TypeScript configured.
+- [x] Root, client, and server have TypeScript configured.
 - [ ] `client/src/**/*` migrated from `.jsx/.js` to `.tsx/.ts` where appropriate.
   - Audit status: all `client/src/**/*` files are now migrated except intentionally deferred `client/src/test/setup.js`, which remains blocked on the excluded `client/vite.config.js` `test.setupFiles` update.
 - [ ] `server/src/**/*` migrated from `.js` to `.ts` where appropriate.
@@ -1088,9 +1088,9 @@ Use this section during execution.
 - [ ] Because current server execution does not run `.ts` modules, shared `.js` -> `.ts` renames are blocked when those shared modules are imported by server-side runtime/test paths.
 - [ ] `server/src/index.js` is both the API entrypoint and the Vite dev host in development. Treat it as a late-stage migration target.
 - [ ] `client/render-server.js` and `client/netlify/functions/bff.js` are deployment/runtime entrypoints and should stay out of the first client batch.
-- [ ] Server TS conversion is blocked on a runtime strategy decision:
-  - `tsx` for dev/test, or
-  - emitted JS build output for server execution
+- [x] Server TS runtime strategy is now defined:
+  - `tsx` for dev/test
+  - emitted JS build output for production server execution
 - [ ] `server/src/db.js` is a high-fanout backend infrastructure module and should be split into smaller migration slices later, not included in the first batch.
 - [ ] `server/src/ai/*`, `server/src/wardrobePdf.js`, and child-process files remain late-stage targets.
 - [ ] `client/src/index.css` currently triggers a non-fatal jsdom CSS parse warning during client tests; do not treat that warning as a TS migration regression unless it becomes test-fatal.
