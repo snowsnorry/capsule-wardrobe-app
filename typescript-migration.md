@@ -184,7 +184,11 @@ Reason for this order:
 ---
 
 ### Phase 2 — Shared low-risk module migration
-**Goal:** establish common types and conventions in the least risky area.
+**Goal:** establish common types and conventions in shared code only where the current runtime can support the migration safely.
+
+Constraint note:
+- [ ] Shared `.js` -> `.ts` renames are not currently safe when the module is imported by server-side `.js` runtime or `node --test` paths, because current server execution does not run `.ts` modules.
+- [ ] Treat this phase as conditional: migrate only shared modules that are not consumed by current server `.js` runtime/test paths, or wait until server TS bootstrap / an intentional compatibility strategy exists.
 
 Prioritize:
 - [ ] Pure shared leaves with no internal shared dependencies:
@@ -193,13 +197,13 @@ Prioritize:
   - `shared/urlSecurity.js`
   - `shared/wardrobeOrder.js`
   - `shared/patternOptions.js`
-  - `shared/stylePreferences.js`
   - `shared/productDetail.js`
   - `shared/colorSwatches.js`
 - [ ] Then shared modules with internal shared dependencies:
   - `shared/wardrobeMerge.js`
   - `shared/i18n/helpers.js`
 - [ ] Keep `shared/i18n/en.js` and `shared/i18n/ru.js` late within this phase unless tooling forces them earlier
+- [ ] Defer `shared/stylePreferences.js` until server TS bootstrap exists or a safe compatibility strategy is intentionally chosen, because it is imported by current server runtime/test paths.
 
 During this phase:
 - [ ] Replace loose object literals with named exported types where shapes repeat
@@ -209,6 +213,7 @@ During this phase:
 - [ ] Keep `shared/i18n/helpers.js` intentionally loose at first; do not turn it into a strict key-safe translation system during migration
 
 Sequencing notes:
+- [ ] Do not begin this phase with blanket shared leaf renames; first confirm the target shared module is not required by current plain-Node server runtime/tests.
 - [ ] `shared/colorSwatches.js` is higher fanout than it looks because it feeds `shared/i18n/helpers.js`, client UI, and server PDF code
 - [ ] `shared/i18n/helpers.js` should stay loose initially because it walks heterogeneous dictionaries dynamically
 
@@ -223,7 +228,7 @@ Sequencing notes:
 **Goal:** migrate client modules with relatively small runtime risk before moving into the app shell.
 
 Recommended order:
-- [ ] `client/src/api/config.js`
+- [x] `client/src/api/config.js`
 - [ ] `client/src/api/request.js`
 - [ ] `client/src/api/auth.js`, `client/src/api/search.js`, `client/src/api/capsules.js`, `client/src/api/wardrobe.js`
 - [ ] `client/src/i18n/index.js`
@@ -415,17 +420,18 @@ Recommended execution sequence:
 
 1. [x] TS configs + root typecheck scripts
 2. [x] client bootstrap leaf (`main.tsx`, optional `test/setup.ts`) without touching `App.jsx`
-3. [ ] shared pure leaves + tests
-4. [ ] shared dependent helpers (`wardrobeMerge`, `i18n/helpers`)
+3. [x] client API base leaf: `client/src/api/config.js`
+4. [ ] client-only utility leaf: `client/src/utils/productLabel.js`
 5. [ ] client API base + i18n hubs
 6. [ ] client presentational components + theme
 7. [ ] client screens/search/App
-8. [ ] server TS bootstrap/scripts
-9. [ ] server stores (`authStore`, `capsuleStore`, `profileStore`, `searchStore`)
-10. [ ] server DB/auth/email boundary modules
-11. [ ] server entrypoint
-12. [ ] AI/image/PDF modules
-13. [ ] final strictness cleanup
+8. [ ] shared modules that are safe under current runtime constraints
+9. [ ] server TS bootstrap/scripts
+10. [ ] server stores (`authStore`, `capsuleStore`, `profileStore`, `searchStore`)
+11. [ ] server DB/auth/email boundary modules
+12. [ ] server entrypoint
+13. [ ] AI/image/PDF modules
+14. [ ] final strictness cleanup
 
 ---
 
@@ -457,7 +463,27 @@ Recommended execution sequence:
 - Newly discovered blockers:
   - existing non-fatal jsdom CSS parse warning from `client/src/index.css` still appears during client tests
 - Recommended next batch:
-  - Phase 2 shared low-risk module migration, starting with pure shared leaf modules
+  - `client/src/utils/productLabel.js` only
+  - Reason: next narrow client-only leaf after Batch 2, still avoids server/runtime loader changes
+
+### Batch 2 — Phase 3 client API config leaf
+
+- Batch name / phase: Batch 2 — Phase 3 client API config leaf
+- Exact files changed:
+  - `client/src/api/config.ts`
+  - `typescript-migration.md`
+- Commands run:
+  - `npx tsc -p client/tsconfig.json --noEmit`
+  - `npm --workspace client run test`
+- Typecheck passed: yes
+- Tests passed: yes
+- Type errors worked around temporarily: none
+- `any`, assertion, or suppression introduced: none
+- Newly discovered blockers:
+  - none beyond the existing non-fatal jsdom CSS parse warning from `client/src/index.css`
+  - existing `./config.js` specifiers in direct client API consumers and Vitest mocks continued to resolve to `config.ts` under the current client bundler/TS setup, so no consumer import changes were required
+- Recommended next batch:
+  - `client/src/utils/productLabel.js` only
 
 ---
 
@@ -565,7 +591,7 @@ Batch 1 is complete.
   - any `server/src/*.js`
 
 Recommended next batch:
-- [ ] Phase 2 shared low-risk module migration, starting with pure shared leaf modules
+- [ ] `client/src/utils/productLabel.js` only
 
 ---
 
@@ -575,12 +601,17 @@ Use this section during execution.
 
 ### Completed
 - [x] Batch 1 — Phase 0 / Phase 1 client TS bootstrap scaffold completed successfully
+- [x] Batch 2 — Phase 3 client API config leaf completed successfully
 - [x] Root/client TypeScript bootstrap is in place and client hybrid typecheck passes
 - [x] `client/src/test/setup.js` was reviewed and intentionally left as JS because migration was not required in Batch 1
 
 ### Newly discovered blockers
 - [ ] `shared/` is not an npm workspace package. It is imported by path from both apps, so shared-module renames have cross-workspace impact immediately.
 - [ ] Explicit `.js` and `.jsx` import specifiers are widespread. Early renames of shared or server modules will create broad import churn.
+- [ ] Server runtime/tests currently execute under plain Node:
+  - `node src/index.js`
+  - `node --test src/*.test.js`
+- [ ] Because current server execution does not run `.ts` modules, shared `.js` -> `.ts` renames are blocked when those shared modules are imported by server-side runtime/test paths.
 - [ ] `server/src/index.js` is both the API entrypoint and the Vite dev host in development. Treat it as a late-stage migration target.
 - [ ] `client/render-server.js` and `client/netlify/functions/bff.js` are deployment/runtime entrypoints and should stay out of the first client batch.
 - [ ] Server TS conversion is blocked on a runtime strategy decision:
@@ -597,6 +628,7 @@ Use this section during execution.
 - [ ] `server/src/wardrobePdf.js`
 - [ ] `server/src/wardrobePdf.child.js`
 - [ ] `server/src/ai/*`
+- [ ] `shared/stylePreferences.js` until server TS bootstrap exists or a safe compatibility strategy is intentionally chosen
 - [ ] `client/src/App.jsx`
 - [ ] `client/src/screens/SearchScreen.jsx`
 - [ ] `client/src/screens/StatisticsScreen.jsx`
