@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
+import type { ComponentProps } from "react";
 
 const useI18nMock = vi.hoisted(() => vi.fn());
 
@@ -9,23 +10,23 @@ vi.mock("../i18n/useI18n.js", () => ({
   useI18n: useI18nMock
 }));
 vi.mock("../i18n/index.js", () => ({
-  translateOption: (_group, value) => value
+  translateOption: (_group: string, value: string) => value
 }));
 
-import AccentColorChips from "./AccentColorChips.jsx";
+import AccentColorChips from "./AccentColorChips";
 
 const theme = createTheme();
 
-function renderChips(props = {}) {
+function renderChips(props: Partial<ComponentProps<typeof AccentColorChips>> = {}) {
   useI18nMock.mockReturnValue({
     locale: "en",
-    t: (key) =>
+    t: (key: string) =>
       ({
         "profile.accentColorNotImportant": "No accent color"
       }[key] || key)
   });
 
-  const defaults = {
+  const defaults: ComponentProps<typeof AccentColorChips> = {
     options: ["blue", "red"]
   };
 

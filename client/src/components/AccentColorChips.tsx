@@ -3,6 +3,18 @@ import { useI18n } from "../i18n/useI18n.js";
 import { translateOption } from "../i18n/index.js";
 import { getColorSwatchStyle } from "../../../shared/colorSwatches.js";
 
+type AccentColorValue = string;
+
+type AccentColorChipsProps = {
+  options: AccentColorValue[];
+  selectedValues?: AccentColorValue[];
+  onToggle?: (value: AccentColorValue | null) => void;
+  selectedValue?: AccentColorValue | null;
+  onSelect?: (value: AccentColorValue | null) => void;
+  emptyLabel?: string;
+  disabled?: boolean;
+};
+
 function AccentColorChips({
   options,
   selectedValues,
@@ -11,7 +23,7 @@ function AccentColorChips({
   onSelect,
   emptyLabel,
   disabled = false
-}) {
+}: AccentColorChipsProps) {
   const { t, locale } = useI18n();
   const isMultiSelect = Array.isArray(selectedValues) && typeof onToggle === "function";
   const activeValues = isMultiSelect
@@ -19,7 +31,7 @@ function AccentColorChips({
     : (selectedValue ? [selectedValue] : []);
   const emptyChipLabel = emptyLabel || t("profile.accentColorNotImportant");
 
-  const handleToggle = (value) => {
+  const handleToggle = (value: AccentColorValue | null) => {
     if (isMultiSelect) {
       onToggle(value);
       return;

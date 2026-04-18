@@ -1,5 +1,5 @@
 import { Button, Chip, Divider, Stack, TextField, Typography } from "@mui/material";
-import AccentColorChips from "./AccentColorChips.jsx";
+import AccentColorChips from "./AccentColorChips";
 import StylePreferenceSelector from "./StylePreferenceSelector";
 import { useI18n } from "../i18n/useI18n.js";
 import { translateOption } from "../i18n/index.js";

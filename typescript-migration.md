@@ -449,14 +449,15 @@ Recommended execution sequence:
 7. [x] client API cluster: `client/src/api/capsules.js` + `client/src/api/capsules.test.js` + `client/src/api/wardrobe.js` + `client/src/api/wardrobe.test.js`
 8. [x] low-risk presentational/theme slice: `client/src/theme.js` + `client/src/components/ClothingGridPlaceholder.jsx` + `client/src/components/ClothingGridPlaceholder.test.jsx`
 9. [x] presentational component slice: `client/src/components/StylePreferenceSelector.jsx` + `client/src/components/StylePreferenceSelector.test.jsx`
-10. [ ] remaining low-risk presentational components
-11. [ ] shared modules that are safe under current runtime constraints
-12. [ ] server TS bootstrap/scripts
-13. [ ] server stores (`authStore`, `capsuleStore`, `profileStore`, `searchStore`)
-14. [ ] server DB/auth/email boundary modules
-15. [ ] server entrypoint
-16. [ ] AI/image/PDF modules
-17. [ ] final strictness cleanup
+10. [x] presentational component slice: `client/src/components/AccentColorChips.jsx` + `client/src/components/AccentColorChips.test.jsx`
+11. [ ] remaining low-risk presentational components
+12. [ ] shared modules that are safe under current runtime constraints
+13. [ ] server TS bootstrap/scripts
+14. [ ] server stores (`authStore`, `capsuleStore`, `profileStore`, `searchStore`)
+15. [ ] server DB/auth/email boundary modules
+16. [ ] server entrypoint
+17. [ ] AI/image/PDF modules
+18. [ ] final strictness cleanup
 
 ---
 
@@ -714,6 +715,34 @@ Recommended execution sequence:
   - `client/src/components/AccentColorChips.test.jsx`
   - Reason: next smallest remaining client-only presentational slice with a colocated test and limited direct-consumer rename fallout
 
+### Batch 10 — Phase 3 presentational component slice (`AccentColorChips`)
+
+- Batch name / phase: Batch 10 — Phase 3 presentational component slice (`AccentColorChips`)
+- Exact files changed:
+  - `client/src/components/AccentColorChips.tsx`
+  - `client/src/components/AccentColorChips.test.tsx`
+  - `client/src/components/ProfileFiltersSidebar.jsx`
+  - `client/src/screens/ProfileScreen.jsx`
+  - `client/src/search/SearchFiltersSidebar.jsx`
+  - `client/src/screens/SearchScreen.test.jsx`
+  - `client/src/screens/SearchScreen.e2e.test.jsx`
+  - `client/src/screens/StatisticsScreen.test.jsx`
+  - `typescript-migration.md`
+- Commands run:
+  - `npx tsc -p client/tsconfig.json --noEmit`
+  - `npm --workspace client run test`
+- Typecheck passed: yes
+- Tests passed: yes
+- Type errors worked around temporarily: none
+- `any`, assertion, or suppression introduced: none
+- Newly discovered blockers:
+  - none beyond the existing non-fatal jsdom CSS parse warning from `client/src/index.css`
+  - the `AccentColorChips.jsx` -> `AccentColorChips.tsx` rename required 6 exact client-only specifier updates in the colocated test, two direct runtime consumers, one direct `search/` runtime consumer, and three direct screen-test mocks under the current setup
+- Recommended next batch:
+  - `client/src/components/SettingsDialog.jsx`
+  - `client/src/components/SettingsDialog.test.jsx`
+  - Reason: next smallest remaining client-only component slice, with a colocated test and only one direct component consumer (`AppSidebarShell.jsx`) for rename-only fallout
+
 ---
 
 ## Subagent Guidance for Codex
@@ -839,6 +868,7 @@ Use this section during execution.
 - [x] Batch 7 — Phase 3 low-risk presentational/theme slice completed successfully
 - [x] Batch 8 — Phase 3 presentational cluster (`ProductLabelText` + `ClothingCard`) completed successfully
 - [x] Batch 9 — Phase 3 presentational component slice (`StylePreferenceSelector`) completed successfully
+- [x] Batch 10 — Phase 3 presentational component slice (`AccentColorChips`) completed successfully
 - [x] Root/client TypeScript bootstrap is in place and client hybrid typecheck passes
 - [x] `client/src/test/setup.js` was reviewed and intentionally left as JS because migration was not required in Batch 1
 

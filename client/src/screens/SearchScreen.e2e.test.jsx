@@ -21,7 +21,7 @@ vi.mock("../components/AppLauncher.jsx", () => ({
 vi.mock("../components/LocaleSwitcher.jsx", () => ({
   default: () => <div data-testid="locale-switcher">locale-switcher</div>
 }));
-vi.mock("../components/AccentColorChips.jsx", () => ({
+vi.mock("../components/AccentColorChips", () => ({
   default: ({ options = [], selectedValues = [], onToggle }) => (
     <div data-testid="accent-color-chips">
       {options.map((item) => (

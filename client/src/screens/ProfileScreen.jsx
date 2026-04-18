@@ -13,7 +13,7 @@ import {
   Typography
 } from "@mui/material";
 import LocaleSwitcher from "../components/LocaleSwitcher.jsx";
-import AccentColorChips from "../components/AccentColorChips.jsx";
+import AccentColorChips from "../components/AccentColorChips";
 import StylePreferenceSelector from "../components/StylePreferenceSelector";
 import { useI18n } from "../i18n/useI18n.js";
 import { translateOption } from "../i18n/index.js";
