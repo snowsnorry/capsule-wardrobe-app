@@ -18,6 +18,50 @@ import {
 import { getStyles } from "./profileStore.js";
 import { getPromptEmbeddings } from "./ai/voyageai.js";
 
+type SearchPayload = {
+  query: string;
+  brand: string[];
+  priceMin: number | null;
+  priceMax: number | null;
+  audience: string[];
+  category: string[];
+  season: string[];
+  formalityLevel: string[];
+  style: string[];
+  occasions: string[];
+  color: string[];
+  pattern: string[];
+  silhouette: string[];
+  fit: string[];
+  closureType: string[];
+  page: number;
+};
+
+type SearchRow = Partial<SearchPayload> & {
+  embedding?: number[] | null;
+};
+
+type SearchOptions = {
+  brands: Array<string | { value?: string | null }>;
+  categories: string[];
+  seasons: string[];
+  formalityLevels: string[];
+  styles: string[];
+  occasions: string[];
+  audience: string[];
+  colors: string[];
+  patterns: string[];
+  silhouettes: string[];
+  fits: string[];
+  closureTypes: string[];
+  priceRange: unknown;
+};
+
+type SearchResults = {
+  total: number;
+  [key: string]: unknown;
+};
+
 const DEFAULT_SEARCH_STATE = Object.freeze({
   query: "",
   brand: [],
@@ -35,11 +79,11 @@ const DEFAULT_SEARCH_STATE = Object.freeze({
   fit: [],
   closureType: [],
   page: 1
-});
+} as SearchPayload);
 
-const SEARCH_AUDIENCE_OPTIONS = Object.freeze(["woman", "man", "all"]);
+const SEARCH_AUDIENCE_OPTIONS = Object.freeze(["woman", "man", "all"] as const);
 
-function getSemanticDistanceThreshold(query = "") {
+function getSemanticDistanceThreshold(query: string = ""): number | null {
   const normalizedLength = String(query || "").trim().length;
 
   if (normalizedLength === 0) {
@@ -57,7 +101,7 @@ function getSemanticDistanceThreshold(query = "") {
   return 0.31;
 }
 
-function getRelaxedSemanticDistanceThreshold(query = "") {
+function getRelaxedSemanticDistanceThreshold(query: string = ""): number | null {
   const baseThreshold = getSemanticDistanceThreshold(query);
   if (baseThreshold === null) {
     return null;
@@ -66,7 +110,7 @@ function getRelaxedSemanticDistanceThreshold(query = "") {
   return Math.min(baseThreshold + 0.08, 0.50);
 }
 
-function normalizeNullableString(value) {
+function normalizeNullableString(value: unknown): string | null {
   if (value === null || value === undefined) {
     return null;
   }
@@ -74,14 +118,14 @@ function normalizeNullableString(value) {
   return normalized || null;
 }
 
-function normalizeQuery(value) {
+function normalizeQuery(value: unknown): string {
   if (value === null || value === undefined) {
     return "";
   }
   return String(value).trim();
 }
 
-function normalizeStringArray(values) {
+function normalizeStringArray(values: unknown): string[] {
   if (typeof values === "string") {
     const normalized = normalizeNullableString(values);
     return normalized ? [normalized] : [];
@@ -96,7 +140,7 @@ function normalizeStringArray(values) {
   )];
 }
 
-function normalizePriceValue(value) {
+function normalizePriceValue(value: unknown): number | null {
   if (value === null || value === undefined || value === "") {
     return null;
   }
@@ -104,12 +148,12 @@ function normalizePriceValue(value) {
   return Number.isFinite(parsed) ? parsed : NaN;
 }
 
-function normalizePage(value) {
+function normalizePage(value: unknown): number {
   const parsed = Number(value);
   return Number.isInteger(parsed) && parsed > 0 ? parsed : 1;
 }
 
-function normalizeSearchPayload(payload = {}) {
+function normalizeSearchPayload(payload: Partial<SearchPayload> = {}): SearchPayload {
   return {
     query: normalizeQuery(payload.query),
     brand: normalizeStringArray(payload.brand),
@@ -130,7 +174,7 @@ function normalizeSearchPayload(payload = {}) {
   };
 }
 
-function serializeSearchRow(row = null) {
+function serializeSearchRow(row: SearchRow | null = null): SearchPayload {
   if (!row) {
     return { ...DEFAULT_SEARCH_STATE };
   }
@@ -155,11 +199,17 @@ function serializeSearchRow(row = null) {
   };
 }
 
-function normalizeStoredEmbedding(value) {
+function normalizeStoredEmbedding(value: unknown): number[] | null {
   return Array.isArray(value) && value.length > 0 ? value : null;
 }
 
-async function resolveSearchEmbedding({ currentSearch, query }) {
+async function resolveSearchEmbedding({
+  currentSearch,
+  query
+}: {
+  currentSearch: SearchRow | null | undefined;
+  query: string;
+}): Promise<number[] | null> {
   if (!query) {
     return null;
   }
@@ -174,21 +224,21 @@ async function resolveSearchEmbedding({ currentSearch, query }) {
   return getPromptEmbeddings(query);
 }
 
-function isAllowedNullableValue(value, allowedItems) {
+function isAllowedNullableValue(value: string | null, allowedItems: readonly string[]): boolean {
   return value === null || allowedItems.includes(value);
 }
 
-function isAllowedArrayValue(values, allowedItems) {
+function isAllowedArrayValue(values: readonly string[], allowedItems: readonly string[]): boolean {
   return values.every((value) => allowedItems.includes(value));
 }
 
-function getAllowedBrandValues(brandOptions = []) {
+function getAllowedBrandValues(brandOptions: SearchOptions["brands"] = []): string[] {
   return brandOptions
     .map((item) => (typeof item === "string" ? item : item?.value))
     .filter(Boolean);
 }
 
-function assertValidSearchPayload(normalized, options) {
+function assertValidSearchPayload(normalized: SearchPayload, options: SearchOptions): void {
   const allowedBrandValues = getAllowedBrandValues(options.brands);
 
   if (
@@ -213,12 +263,12 @@ function assertValidSearchPayload(normalized, options) {
     )
   ) {
     const error = new Error("invalid_payload");
-    error.code = "invalid_payload";
+    (error as Error & { code?: string }).code = "invalid_payload";
     throw error;
   }
 }
 
-async function getSearchOptions(email) {
+async function getSearchOptions(email: string): Promise<SearchOptions> {
   const [
     brands,
     categories,
@@ -264,12 +314,12 @@ async function getSearchOptions(email) {
   };
 }
 
-async function getSavedSearch(email) {
+async function getSavedSearch(email: string): Promise<SearchPayload> {
   const row = await getSearchByEmail(email);
   return serializeSearchRow(row);
 }
 
-async function runSavedSearch(email, payload = {}) {
+async function runSavedSearch(email: string, payload: Partial<SearchPayload> = {}): Promise<SearchResults & { savedSearch: SearchPayload }> {
   const normalized = normalizeSearchPayload(payload);
   const [options, currentSearch] = await Promise.all([
     getSearchOptions(email),
@@ -309,7 +359,7 @@ async function runSavedSearch(email, payload = {}) {
   };
 }
 
-async function getSearchStats(email, payload = {}) {
+async function getSearchStats(email: string, payload: Partial<SearchPayload> = {}): Promise<unknown> {
   const normalized = normalizeSearchPayload(payload);
   const options = await getSearchOptions(email);
   assertValidSearchPayload(normalized, options);

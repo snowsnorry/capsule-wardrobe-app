@@ -310,24 +310,24 @@ Focus areas:
 **Goal:** add TS support to server without touching the riskiest modules yet.
 
 Recommended first changes:
-- [ ] Add server typings:
+- [x] Add server typings:
   - `typescript`
   - `@types/node`
   - `@types/express`
-- [ ] Decide runtime strategy:
+- [x] Decide runtime strategy:
   - build server TS to JS before running, or
   - use a TS runtime only in dev
-- [ ] Update server scripts accordingly
-- [ ] Add server-compatible module resolution and output config
-- [ ] Keep existing test command behavior stable or intentionally replace it with a TS-capable equivalent
+- [x] Update server scripts accordingly
+- [x] Add server-compatible module resolution and output config
+- [x] Keep existing test command behavior stable or intentionally replace it with a TS-capable equivalent
 
 **Decision note**
 Prefer compiling server TypeScript for production rather than depending on a TS runtime in production.
 
 **Definition of done**
-- [ ] Server can typecheck in hybrid mode.
-- [ ] Development startup path is still simple and reproducible.
-- [ ] Production start path is defined for TS sources.
+- [x] Server can typecheck in hybrid mode.
+- [x] Development startup path is still simple and reproducible.
+- [x] Production start path is defined for TS sources.
 
 ---
 
@@ -335,12 +335,12 @@ Prefer compiling server TypeScript for production rather than depending on a TS 
 **Goal:** migrate server modules that are important but structurally manageable.
 
 Recommended first candidates:
-- [ ] `authStore`
-- [ ] `capsuleStore`
-- [ ] `profileStore`
-- [ ] `searchStore`
-- [ ] `serverUrlSecurity`
-- [ ] other pure helper modules with strong local tests
+- [x] `authStore`
+- [x] `capsuleStore`
+- [x] `profileStore`
+- [x] `searchStore`
+- [x] `serverUrlSecurity`
+- [x] other pure helper modules with strong local tests
 
 Why these first:
 - They appear to have dedicated tests.
@@ -348,15 +348,15 @@ Why these first:
 - They are safer than top-level request handling and external integration modules.
 
 Focus areas:
-- [ ] Define input/output types for store methods
-- [ ] Type persisted entity shapes
-- [ ] Type query/filter/result structures
+- [x] Define input/output types for store methods
+- [x] Type persisted entity shapes
+- [x] Type query/filter/result structures
 - [ ] Extract repeated domain models to `shared/` only when it genuinely reduces duplication
 
 **Definition of done**
-- [ ] Store tests pass after migration.
-- [ ] Core entity shapes are explicit.
-- [ ] Minimal `any` use in migrated server logic.
+- [x] Store tests pass after migration.
+- [x] Core entity shapes are explicit.
+- [x] Minimal `any` use in migrated server logic.
 
 ---
 
@@ -454,9 +454,9 @@ Recommended execution sequence:
 11. [x] authenticated sidebar/settings UI cluster: `client/src/components/AppSidebarShell.jsx` + `client/src/components/AppSidebarShell.test.jsx` + `client/src/components/SettingsDialog.jsx` + `client/src/components/SettingsDialog.test.jsx` + `client/src/components/ProfileFiltersSidebar.jsx` + `client/src/components/ProfileFiltersSidebar.test.jsx`
 12. [x] i18n + app chrome + lightweight screens cluster: `client/src/i18n/index.js` + `client/src/i18n/useI18n.js` + `client/src/i18n/LocaleProvider.jsx` + `client/src/i18n/LocaleProvider.test.jsx` + `client/src/i18n/useI18n.test.jsx` + `client/src/components/LocaleSwitcher.jsx` + `client/src/components/LocaleSwitcher.test.jsx` + `client/src/components/AppLauncher.jsx` + `client/src/components/AppLauncher.test.jsx` + `client/src/screens/LoadingScreen.jsx` + `client/src/screens/SignInScreen.jsx` + `client/src/screens/SignInScreen.test.jsx` + `client/src/screens/OnboardingScreen.jsx` + `client/src/screens/OnboardingScreen.test.jsx` + `client/src/screens/ProfileScreen.jsx` + `client/src/screens/ProfileScreen.test.jsx`
 13. [x] app core/search cluster: `client/src/App.jsx` + `client/src/App.test.jsx` + `client/src/App.e2e.test.jsx` + `client/src/api/profileOptionsCache.js` + `client/src/search/searchState.js` + `client/src/search/searchState.test.js` + `client/src/search/SearchFiltersSidebar.jsx` + `client/src/screens/MainScreen.jsx` + `client/src/screens/MainScreen.test.jsx` + `client/src/screens/MainScreen.e2e.test.jsx` + `client/src/screens/SearchScreen.jsx` + `client/src/screens/SearchScreen.test.jsx` + `client/src/screens/SearchScreen.e2e.test.jsx` + `client/src/screens/StatisticsScreen.jsx` + `client/src/screens/StatisticsScreen.test.jsx`
-14. [ ] shared modules that are safe under current runtime constraints
-15. [ ] server TS bootstrap/scripts
-16. [ ] server stores (`authStore`, `capsuleStore`, `profileStore`, `searchStore`)
+14. [x] shared modules that are safe under current runtime constraints
+15. [x] server TS bootstrap/scripts
+16. [x] server stores (`authStore`, `capsuleStore`, `profileStore`, `searchStore`)
 17. [ ] server DB/auth/email boundary modules
 18. [ ] server entrypoint
 19. [ ] AI/image/PDF modules
@@ -916,6 +916,49 @@ Recommended execution sequence:
   - none for `client/src/**/*` under the current scope guard
   - remaining client-side blocker is limited to `client/src/test/setup.js` and the excluded `client/vite.config.js` update required to rename it safely
 
+### Batch 15 — Phase 5 / Phase 6 enlarged server store/helper batch
+
+- Batch name / phase: Batch 15 — Phase 5 / Phase 6 enlarged server store/helper batch
+- Exact files changed:
+  - `server/src/authStore.ts` (renamed from `server/src/authStore.js`)
+  - `server/src/capsuleStore.ts` (renamed from `server/src/capsuleStore.js`)
+  - `server/src/profileStore.ts` (renamed from `server/src/profileStore.js`)
+  - `server/src/searchStore.ts` (renamed from `server/src/searchStore.js`)
+  - `server/src/serverUrlSecurity.ts` (renamed from `server/src/serverUrlSecurity.js`)
+  - `server/src/serverUrlSecurity.js` (plain-Node compatibility shim for excluded child-process paths)
+  - `server/src/serverUrlSecurity.test.js`
+  - `server/tsconfig.build.json`
+  - `shared/stylePreferences.ts` (renamed from `shared/stylePreferences.js`)
+  - `shared/patternOptions.ts` (renamed from `shared/patternOptions.js`)
+  - `shared/profileSettings.ts` (renamed from `shared/profileSettings.js`)
+  - `shared/urlSecurity.ts` (renamed from `shared/urlSecurity.js`)
+  - `typescript-migration.md`
+- Commands run:
+  - `npm --workspace server run typecheck`
+  - `npm --workspace server run test`
+  - `npm --workspace server run build`
+- Typecheck passed: yes
+- Tests passed: yes
+- Build passed: yes
+- `client/src/test/setup.js` had to be migrated: no
+- Type errors worked around temporarily: none
+- `any`, assertion, or suppression introduced:
+  - no `any`
+  - narrow local `as` assertions only inside migrated TS files
+  - no `@ts-ignore` or `@ts-expect-error`
+- Temporary compatibility decisions:
+  - `shared/accentColors.js` remains deferred because `shared/accentColors.test.js` still runs under root plain-Node `node --test`
+  - `server/src/serverUrlSecurity.js` remains as a small JS shim because excluded `server/src/ai/promptImages.js` spawns a real plain-Node child-process path that imports the source `.js` module directly
+  - `server/tsconfig.build.json` excludes `server/src/serverUrlSecurity.js` so emitted build output still comes from `server/src/serverUrlSecurity.ts`
+- Newly discovered blockers:
+  - excluded child-process source paths can still require targeted JS shims even after the main server TS bootstrap is green
+  - remaining shared-module renames still need to be screened against root plain-Node test/runtime consumers before conversion
+- Recommended next batch:
+  - `server/src/db.js`
+  - nearest DB-boundary tests already covering row shaping
+  - the smallest dependent boundary module cluster that consumes DB row/result shapes without crossing into `server/src/index.js`, `server/src/email.js`, or `server/src/ai/*`
+  - Reason: the store/helper layer is now typed, so the next highest-leverage batch is the DB contract layer that currently hides most server-side shape uncertainty
+
 ---
 
 ## Subagent Guidance for Codex
@@ -1046,6 +1089,7 @@ Use this section during execution.
 - [x] Batch 12 — Phase 4 i18n + app chrome + lightweight screens cluster completed successfully
 - [x] Batch 13 — Phase 4 app core/search cluster completed successfully
 - [x] Batch 14 — Final client TS mop-up audit and batch completed successfully
+- [x] Batch 15 — Phase 5 / Phase 6 enlarged server store/helper batch completed successfully
 - [x] Root/client TypeScript bootstrap is in place and client hybrid typecheck passes
 - [x] `client/src/test/setup.js` was reviewed and intentionally left as JS because migration was not required in Batch 1
 - [x] Final client audit confirms the only remaining JS file under `client/src/**/*` is `client/src/test/setup.js`, intentionally deferred because renaming it would require changing excluded `client/vite.config.js`
@@ -1082,10 +1126,8 @@ Use this section during execution.
 - [ ] `shared/` is not an npm workspace package. It is imported by path from both apps, so shared-module renames have cross-workspace impact immediately.
 - [ ] Explicit `.js` and `.jsx` import specifiers are widespread. Early renames of shared or server modules will create broad import churn.
 - [ ] Some client API `.js` -> `.ts` renames can also create broader client-only rename-only fallout in `App`, caches, screens, and tests; these edits are acceptable only when they are strict specifier updates with no logic or typing expansion outside the target batch.
-- [ ] Server runtime/tests currently execute under plain Node:
-  - `node src/index.js`
-  - `node --test src/*.test.js`
-- [ ] Because current server execution does not run `.ts` modules, shared `.js` -> `.ts` renames are blocked when those shared modules are imported by server-side runtime/test paths.
+- [ ] Some excluded server child-process paths still execute source `.js` files under plain Node, so targeted compatibility shims may be required even after the main server TS bootstrap is complete.
+- [ ] Because some root shared tests still execute under plain Node, shared `.js` -> `.ts` renames remain blocked when those shared modules are imported by plain-Node runtime/test paths.
 - [ ] `server/src/index.js` is both the API entrypoint and the Vite dev host in development. Treat it as a late-stage migration target.
 - [ ] `client/render-server.js` and `client/netlify/functions/bff.js` are deployment/runtime entrypoints and should stay out of the first client batch.
 - [x] Server TS runtime strategy is now defined:
@@ -1098,11 +1140,10 @@ Use this section during execution.
 ### What Not To Touch Yet
 - [ ] `server/src/index.js`
 - [ ] `server/src/db.js`
-- [ ] `server/src/searchStore.js`
 - [ ] `server/src/wardrobePdf.js`
 - [ ] `server/src/wardrobePdf.child.js`
 - [ ] `server/src/ai/*`
-- [ ] `shared/stylePreferences.js` until server TS bootstrap exists or a safe compatibility strategy is intentionally chosen
+- [ ] `shared/accentColors.js` until the root shared plain-Node test path is intentionally changed
 - [ ] `client/render-server.js`
 - [ ] `client/netlify/functions/bff.js`
 

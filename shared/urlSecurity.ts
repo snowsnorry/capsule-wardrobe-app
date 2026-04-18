@@ -1,6 +1,6 @@
-const ALLOWED_HTTP_PROTOCOLS = new Set(["http:", "https:"]);
+const ALLOWED_HTTP_PROTOCOLS = new Set<string>(["http:", "https:"]);
 
-function getSafeHttpUrl(rawValue) {
+function getSafeHttpUrl(rawValue: unknown): string {
   const trimmed = String(rawValue || "").trim();
   if (!trimmed) {
     return "";
@@ -17,7 +17,7 @@ function getSafeHttpUrl(rawValue) {
   }
 }
 
-function isSafeHttpUrl(rawValue) {
+function isSafeHttpUrl(rawValue: unknown): boolean {
   return getSafeHttpUrl(rawValue).length > 0;
 }
 

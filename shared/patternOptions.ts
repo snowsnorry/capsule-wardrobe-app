@@ -26,19 +26,22 @@ const CANONICAL_PATTERN_OPTIONS = Object.freeze([
   "tie_dye",
   "waffle",
   "zebra"
-]);
+] as const);
 
-function normalizePatternOption(value) {
+function normalizePatternOption(value: unknown): string {
   return typeof value === "string" ? value.trim().toLowerCase() : "";
 }
 
-function buildCanonicalPatternOptions(patternOptions = [], currentPattern = null) {
-  const seen = new Set();
-  const extras = [];
+function buildCanonicalPatternOptions(
+  patternOptions: readonly unknown[] = [],
+  currentPattern: unknown = null
+): string[] {
+  const seen = new Set<string>();
+  const extras: string[] = [];
 
   for (const value of [...patternOptions, currentPattern]) {
     const normalized = normalizePatternOption(value);
-    if (!normalized || seen.has(normalized) || CANONICAL_PATTERN_OPTIONS.includes(normalized)) {
+    if (!normalized || seen.has(normalized) || (CANONICAL_PATTERN_OPTIONS as readonly string[]).includes(normalized)) {
       continue;
     }
     seen.add(normalized);

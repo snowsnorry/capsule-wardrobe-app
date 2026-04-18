@@ -10,6 +10,80 @@ import {
   pruneExpiredSessions
 } from "./db.js";
 
+type LoginCodeRow = {
+  nonce: string;
+};
+
+type VerifyCodeResult = {
+  ok: boolean;
+  reason?: string;
+  [key: string]: unknown;
+};
+
+type SessionRow = {
+  email: string;
+  csrfToken: string;
+  createdAt: string | Date;
+  expiresAt: string | Date;
+};
+
+type PersistedSession = {
+  sessionId: string;
+  email: string;
+  csrfToken: string;
+  createdAt: Date;
+  expiresAt: Date;
+};
+
+type SessionView = {
+  email: string;
+  csrfToken: string;
+  createdAt: number;
+  expiresAt: number;
+};
+
+type CreatedSession = {
+  sessionId: string;
+  session: {
+    email: string;
+    csrfToken: string;
+    createdAt: string;
+    expiresAt: string;
+  };
+};
+
+type SendStateEntry = {
+  lastSentAt: number;
+  sendWindowStart: number;
+  sendCount: number;
+};
+
+type CreatePendingCodeResult =
+  | { ok: true; code: string }
+  | { ok: false; reason: "cooldown" | "rate_limit" };
+
+type AuthStoreDeps = {
+  getLoginCodeByEmailImpl?: (email: string) => Promise<LoginCodeRow | null>;
+  verifyAndConsumeLoginCodeImpl?: (input: { email: string; codeHash: string; maxAttempts: number }) => Promise<VerifyCodeResult>;
+  pruneLoginCodesImpl?: () => Promise<void>;
+  upsertLoginCodeImpl?: (input: {
+    email: string;
+    codeHash: string;
+    nonce: string;
+    expiresAt: Date;
+  }) => Promise<void>;
+  insertSessionImpl?: (input: PersistedSession) => Promise<void>;
+  getSessionByIdImpl?: (sessionId: string) => Promise<SessionRow | null>;
+  deleteSessionByIdImpl?: (sessionId: string) => Promise<void>;
+  pruneExpiredSessionsImpl?: () => Promise<void>;
+  nowMsImpl?: () => number;
+  randomIntImpl?: (min: number, max: number) => number;
+  randomBytesImpl?: (size: number) => Buffer;
+  codeSecret?: string | undefined;
+  sessionPruneMinIntervalMs?: number;
+  initialSendState?: Iterable<[string, SendStateEntry]>;
+};
+
 const CODE_TTL_MS = 5 * 60 * 1000;
 const RESEND_COOLDOWN_MS = 60 * 1000;
 const MAX_CODE_SENDS_PER_HOUR = 60;
@@ -35,11 +109,11 @@ function createAuthStore({
   codeSecret = process.env.AUTH_CODE_SECRET,
   sessionPruneMinIntervalMs = SESSION_PRUNE_MIN_INTERVAL_MS,
   initialSendState = []
-} = {}) {
-  const sendState = new Map(initialSendState);
+}: AuthStoreDeps = {}) {
+  const sendState = new Map<string, SendStateEntry>(initialSendState);
   let lastSessionPruneAtMs = 0;
 
-  function nowMs() {
+  function nowMs(): number {
     return nowMsImpl();
   }
 
@@ -52,35 +126,35 @@ function createAuthStore({
     }
   }
 
-  function generateCode() {
+  function generateCode(): string {
     return String(randomIntImpl(100000, 1000000));
   }
 
-  function generateNonce() {
+  function generateNonce(): string {
     return randomBytesImpl(16).toString("hex");
   }
 
-  function generateCsrfToken() {
+  function generateCsrfToken(): string {
     return randomBytesImpl(32).toString("hex");
   }
 
-  function getCodeSecret() {
+  function getCodeSecret(): string {
     if (!codeSecret) {
       const error = new Error("AUTH_CODE_SECRET is not set");
-      error.code = "missing_auth_code_secret";
+      (error as Error & { code?: string }).code = "missing_auth_code_secret";
       throw error;
     }
     return codeSecret;
   }
 
-  function hashCode({ email, code, nonce }) {
+  function hashCode({ email, code, nonce }: { email: string; code: string; nonce: string }): string {
     return crypto
       .createHmac("sha256", getCodeSecret())
       .update(`${email}:${code}:${nonce}`)
       .digest("hex");
   }
 
-  async function createPendingCode(email) {
+  async function createPendingCode(email: string): Promise<CreatePendingCodeResult> {
     cleanupSendState();
     const time = nowMs();
     const entry = sendState.get(email);
@@ -112,7 +186,7 @@ function createAuthStore({
     return { ok: true, code };
   }
 
-  async function verifyCode(email, code) {
+  async function verifyCode(email: string, code: string): Promise<VerifyCodeResult> {
     const entry = await getLoginCodeByEmailImpl(email);
 
     if (!entry) {
@@ -127,7 +201,7 @@ function createAuthStore({
     });
   }
 
-  async function maybePruneExpiredSessions() {
+  async function maybePruneExpiredSessions(): Promise<void> {
     const now = nowMs();
     if (
       sessionPruneMinIntervalMs > 0 &&
@@ -140,7 +214,7 @@ function createAuthStore({
     lastSessionPruneAtMs = now;
   }
 
-  async function createSession(email) {
+  async function createSession(email: string): Promise<CreatedSession> {
     await maybePruneExpiredSessions();
 
     const sessionId = randomBytesImpl(32).toString("hex");
@@ -167,7 +241,7 @@ function createAuthStore({
     };
   }
 
-  async function getSession(sessionId) {
+  async function getSession(sessionId: string): Promise<SessionView | null> {
     await maybePruneExpiredSessions();
 
     const session = await getSessionByIdImpl(sessionId);
@@ -189,7 +263,7 @@ function createAuthStore({
     };
   }
 
-  async function revokeSession(sessionId) {
+  async function revokeSession(sessionId: string): Promise<void> {
     await deleteSessionByIdImpl(sessionId);
   }
 

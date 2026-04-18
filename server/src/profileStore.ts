@@ -18,11 +18,42 @@ import {
   PROFILE_THEME_VALUES
 } from "../../shared/profileSettings.js";
 
+type ProfileTheme = (typeof PROFILE_THEME_VALUES)[number];
+type ProfileLlm = (typeof PROFILE_LLM_VALUES)[number];
+type ProfileOccasion = (typeof PROFILE_OCCASION_OPTIONS)[number];
+type ProfileSeason = (typeof PROFILE_SEASON_OPTIONS)[number];
+
+type ProfileRecord = {
+  email: string;
+  locale?: string;
+  fullname?: string | null;
+  activeCapsuleId?: string | null;
+  theme?: string | null;
+  llm?: string | null;
+  [key: string]: unknown;
+};
+
+type NormalizedProfileRecord = Omit<ProfileRecord, "fullname" | "activeCapsuleId" | "theme" | "llm"> & {
+  fullname: string | null;
+  activeCapsuleId: string | null;
+  theme: ProfileTheme;
+  llm: ProfileLlm;
+};
+
+type ProfilePayload = {
+  locale?: string | null;
+  fullname?: string | null;
+  theme?: string | null;
+  llm?: string | null;
+};
+
+type LoadValues = () => Promise<string[]>;
+
 const PROFILE_FORMALITY_LEVEL_OPTIONS = [
   "casual",
   "smart_casual",
   "formal"
-];
+] as const;
 
 const PROFILE_STYLE_OPTIONS = [
   "minimalistic",
@@ -37,44 +68,52 @@ const PROFILE_STYLE_OPTIONS = [
   "military",
   "grunge",
   "sporty"
-];
+] as const;
 
 const PROFILE_OCCASION_OPTIONS = [
   "office",
   "brunch_in_the_city",
   "date_night",
   "everyday_errands"
-];
+] as const;
 
-function normalizeOccasion(value) {
+function normalizeOccasion(value: unknown): ProfileOccasion | null {
   const occasion = normalizeStyleValue(value);
-  return PROFILE_OCCASION_OPTIONS.includes(occasion) ? occasion : null;
+  return PROFILE_OCCASION_OPTIONS.includes(occasion as ProfileOccasion) ? (occasion as ProfileOccasion) : null;
 }
 
-function normalizeOccasionList(values) {
+function normalizeOccasionList(values: unknown): ProfileOccasion[] {
   if (!Array.isArray(values)) {
     return [];
   }
 
-  return [...new Set(values.map((value) => normalizeOccasion(value)).filter(Boolean))];
+  return [...new Set(values.map((value) => normalizeOccasion(value)).filter(Boolean))] as ProfileOccasion[];
 }
 
-const PROFILE_SEASON_OPTIONS = ["spring", "summer", "autumn", "winter"];
+const PROFILE_SEASON_OPTIONS = ["spring", "summer", "autumn", "winter"] as const;
 
 const PROFILE_PATTERN_OPTIONS = buildCanonicalPatternOptions();
 
-const audienceOptions = ["man", "woman", "any"];
+const audienceOptions = ["man", "woman", "any"] as const;
 
-function dedupeStrings(items) {
-  return [...new Set(items.filter((item) => typeof item === "string" && item.trim()))];
+function dedupeStrings(items: readonly unknown[]): string[] {
+  return [...new Set(items.filter((item): item is string => typeof item === "string" && item.trim().length > 0))];
 }
 
-function mergeOptionValues(primaryItems, fallbackItems, extraItems = []) {
+function mergeOptionValues(
+  primaryItems: readonly unknown[] | null | undefined,
+  fallbackItems: readonly string[],
+  extraItems: readonly string[] = []
+): string[] {
   const sourceItems = Array.isArray(primaryItems) && primaryItems.length > 0 ? primaryItems : fallbackItems;
   return dedupeStrings([...sourceItems, ...extraItems]);
 }
 
-async function getDynamicOptions(loadValues, fallbackItems, extraItems = []) {
+async function getDynamicOptions(
+  loadValues: LoadValues,
+  fallbackItems: readonly string[],
+  extraItems: readonly string[] = []
+): Promise<string[]> {
   try {
     const values = await loadValues();
     return mergeOptionValues(values, fallbackItems, extraItems);
@@ -84,22 +123,22 @@ async function getDynamicOptions(loadValues, fallbackItems, extraItems = []) {
   }
 }
 
-function buildPatternOptions(availablePatterns = [], currentPattern = null) {
+function buildPatternOptions(availablePatterns: readonly unknown[] = [], currentPattern: unknown = null): string[] {
   return buildCanonicalPatternOptions(
     availablePatterns.map((value) => normalizeStyleValue(value)),
     normalizeStyleValue(currentPattern)
   );
 }
 
-function normalizeWardrobeAudience(value) {
+function normalizeWardrobeAudience(value: unknown): (typeof audienceOptions)[number] {
   const audience = String(value || "").trim().toLowerCase();
   if (audience === "man" || audience === "woman" || audience === "any") {
-    return audience;
+    return audience as (typeof audienceOptions)[number];
   }
   return "any";
 }
 
-function normalizeAccentColor(value) {
+function normalizeAccentColor(value: unknown): string | null {
   if (value === null || value === undefined) {
     return null;
   }
@@ -112,33 +151,33 @@ function normalizeAccentColor(value) {
   return ACCENT_COLOR_OPTIONS.includes(color) ? color : null;
 }
 
-function normalizeFormalityLevel(value) {
+function normalizeFormalityLevel(value: unknown): string | null {
   const formalityLevel = normalizeStyleValue(value);
-  return CORE_STYLE_ORDER.includes(formalityLevel) ? formalityLevel : null;
+  return (CORE_STYLE_ORDER as readonly string[]).includes(formalityLevel) ? formalityLevel : null;
 }
 
-function normalizeStyle(value) {
+function normalizeStyle(value: unknown): string | null {
   const style = normalizeStyleValue(value);
   return style || null;
 }
 
-async function getFormalityLevels(email) {
+async function getFormalityLevels(email: string): Promise<string[]> {
   return [...PROFILE_FORMALITY_LEVEL_OPTIONS];
 }
 
-async function getStyles(email) {
+async function getStyles(email: string): Promise<string[]> {
   return [...PROFILE_STYLE_OPTIONS];
 }
 
-async function getOccasions(email) {
+async function getOccasions(email: string): Promise<ProfileOccasion[]> {
   return [...PROFILE_OCCASION_OPTIONS];
 }
 
-async function getSeasons(email) {
+async function getSeasons(email: string): Promise<ProfileSeason[]> {
   return [...PROFILE_SEASON_OPTIONS];
 }
 
-async function getPatternOptions(email) {
+async function getPatternOptions(email: string): Promise<string[]> {
   try {
     const values = await getDistinctProductPatterns();
     return buildPatternOptions(values);
@@ -148,11 +187,11 @@ async function getPatternOptions(email) {
   }
 }
 
-function getAudienceOptions() {
+function getAudienceOptions(): readonly string[] {
   return audienceOptions;
 }
 
-function normalizeProfileRecord(profile) {
+function normalizeProfileRecord(profile: ProfileRecord | null): NormalizedProfileRecord | null {
   if (!profile) {
     return null;
   }
@@ -169,51 +208,54 @@ function normalizeProfileRecord(profile) {
     activeCapsuleId: typeof profile.activeCapsuleId === "string" && profile.activeCapsuleId.trim()
       ? profile.activeCapsuleId.trim()
       : null,
-    theme: PROFILE_THEME_VALUES.includes(theme) ? theme : DEFAULT_PROFILE_THEME,
-    llm: PROFILE_LLM_VALUES.includes(llm) ? llm : DEFAULT_PROFILE_LLM
+    theme: (PROFILE_THEME_VALUES as readonly string[]).includes(theme) ? (theme as ProfileTheme) : DEFAULT_PROFILE_THEME,
+    llm: (PROFILE_LLM_VALUES as readonly string[]).includes(llm) ? (llm as ProfileLlm) : DEFAULT_PROFILE_LLM
   };
 }
 
-async function getProfile(email) {
+async function getProfile(email: string): Promise<NormalizedProfileRecord | null> {
   return normalizeProfileRecord(await getProfileByEmail(email));
 }
 
-async function hasProfile(email) {
+async function hasProfile(email: string): Promise<boolean> {
   return hasProfileByEmail(email);
 }
 
-async function createProfile(email, data) {
+async function createProfile(email: string, data: ProfilePayload): Promise<NormalizedProfileRecord | null> {
   return normalizeProfileRecord(await createProfileRecord({
     email,
     locale: data.locale || "en"
   }));
 }
 
-async function updateProfile(email, data) {
+async function updateProfile(email: string, data: ProfilePayload): Promise<NormalizedProfileRecord | null> {
   return normalizeProfileRecord(await updateProfileByEmail({
     email,
     locale: data.locale || "en",
     fullname: typeof data.fullname === "string" && data.fullname.trim()
       ? data.fullname.trim()
       : null,
-    theme: PROFILE_THEME_VALUES.includes(String(data.theme || "").trim().toLowerCase())
-      ? String(data.theme || "").trim().toLowerCase()
+    theme: (PROFILE_THEME_VALUES as readonly string[]).includes(String(data.theme || "").trim().toLowerCase())
+      ? (String(data.theme || "").trim().toLowerCase() as ProfileTheme)
       : DEFAULT_PROFILE_THEME,
-    llm: PROFILE_LLM_VALUES.includes(String(data.llm || "").trim())
-      ? String(data.llm || "").trim()
+    llm: (PROFILE_LLM_VALUES as readonly string[]).includes(String(data.llm || "").trim())
+      ? (String(data.llm || "").trim() as ProfileLlm)
       : DEFAULT_PROFILE_LLM
   }));
 }
 
-async function updateProfileLocale(email, locale) {
+async function updateProfileLocale(email: string, locale: string): Promise<NormalizedProfileRecord | null> {
   return normalizeProfileRecord(await updateProfileLocaleByEmail({ email, locale }));
 }
 
-async function deleteProfile(email) {
+async function deleteProfile(email: string): Promise<boolean> {
   return deleteProfileByEmail(email);
 }
 
-async function updateProfileActiveCapsuleId(email, activeCapsuleId) {
+async function updateProfileActiveCapsuleId(
+  email: string,
+  activeCapsuleId: string | null
+): Promise<NormalizedProfileRecord | null> {
   return normalizeProfileRecord(await updateProfileActiveCapsuleIdByEmail({ email, activeCapsuleId }));
 }
 

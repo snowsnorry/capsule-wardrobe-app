@@ -1,25 +1,7 @@
 import { isIP } from "node:net";
+import { getSafeHttpUrl } from "../../shared/urlSecurity.js";
 
-const ALLOWED_HTTP_PROTOCOLS = new Set(["http:", "https:"]);
-
-function getSafeHttpUrl(rawValue) {
-  const trimmed = String(rawValue || "").trim();
-  if (!trimmed) {
-    return "";
-  }
-
-  try {
-    const parsedUrl = new URL(trimmed);
-    if (!ALLOWED_HTTP_PROTOCOLS.has(parsedUrl.protocol)) {
-      return "";
-    }
-    return parsedUrl.toString();
-  } catch {
-    return "";
-  }
-}
-
-function normalizeHostForIpCheck(hostname = "") {
+function normalizeHostForIpCheck(hostname: string = ""): string {
   return String(hostname || "")
     .trim()
     .replace(/^\[/, "")
@@ -27,12 +9,12 @@ function normalizeHostForIpCheck(hostname = "") {
     .toLowerCase();
 }
 
-function isLocalHostname(hostname = "") {
+function isLocalHostname(hostname: string = ""): boolean {
   const normalized = String(hostname || "").trim().toLowerCase();
   return normalized === "localhost" || normalized.endsWith(".localhost");
 }
 
-function getSafeServerFetchUrl(rawValue) {
+function getSafeServerFetchUrl(rawValue: unknown): string {
   const safeUrl = getSafeHttpUrl(rawValue);
   if (!safeUrl) {
     return "";
@@ -46,6 +28,8 @@ function getSafeServerFetchUrl(rawValue) {
       return "";
     }
 
+    // Reject all literal IP hosts so private, loopback, and link-local
+    // addresses cannot be reached through server-side fetches.
     if (isIP(hostname)) {
       return "";
     }
