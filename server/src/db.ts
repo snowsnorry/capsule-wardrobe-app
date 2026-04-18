@@ -1,36 +1,296 @@
 import { neon } from "@neondatabase/serverless";
 
 const SEARCH_PAGE_SIZE = 50;
-let sqlClientOverride = null;
 
-function getSqlClient() {
+type JsonObject = Record<string, unknown>;
+type SqlCountResult = { count: number };
+type SqlResultLike<TRow = unknown> = TRow[] | SqlCountResult;
+type SqlClientLike = {
+  <TRow = unknown>(strings: TemplateStringsArray, ...values: readonly unknown[]): Promise<SqlResultLike<TRow>>;
+};
+type HasAffectedRowsResult = SqlResultLike<{ id?: string; email?: string }>;
+
+type DatabaseConnectionRow = {
+  database: string;
+  now: string | Date;
+};
+
+type LoginCodeRow = {
+  email: string;
+  codeHash: string;
+  nonce: string;
+  expiresAt: string | Date;
+  attempts: number;
+  consumedAt: string | Date | null;
+};
+
+type SessionRow = {
+  sessionId: string;
+  email: string;
+  csrfToken: string;
+  createdAt: string | Date;
+  expiresAt: string | Date;
+};
+
+type VerifyAndConsumeLoginCodeResult =
+  | { ok: true }
+  | { ok: false; reason: "invalid" | "not_found" | "expired" | "max_attempts" };
+
+type StringValueRow = { value: string | null };
+type BrandOptionRow = { value: string | null; label: string | null };
+type BooleanFlagRow = { hasProfile?: unknown };
+type NumericRangeRow = { min: unknown; max: unknown };
+type CountRow = { total?: unknown };
+type FacetRow = { value: unknown; count: unknown };
+type PriceBucketRow = { bucket?: unknown; count: unknown; rangeMin: unknown; rangeMax: unknown };
+
+type PriceBucket = {
+  key: string;
+  min: number;
+  max: number;
+  count: number;
+};
+
+type BucketRangeRow = {
+  bucket: number;
+  rangeMin: number;
+  rangeMax: number;
+  count: number;
+};
+
+type ProductRow = {
+  id: string;
+  name: string;
+  url: string;
+  description: string | null;
+  brand: string | null;
+  price: number | string | null;
+  currency: string | null;
+  availability: string | null;
+  imageUrl: string | null;
+  audience: string | null;
+  category: string | null;
+  season: string[] | null;
+  formalityLevel: string[] | null;
+  style: string[] | null;
+  occasions: string[] | null;
+  colorBase: string[] | null;
+  pattern: string | null;
+  finish: string | null;
+  isNeutral: boolean | null;
+  composition: string | null;
+  silhouette: string | null;
+  fit: string | null;
+  closureType: string[] | null;
+};
+
+type ProductSearchRow = ProductRow & {
+  distance: number | string | null;
+};
+
+type ProductWithEmbeddingRow = ProductRow & JsonObject & {
+  embedding?: unknown;
+};
+
+type SearchRow = {
+  email: string;
+  query: string | null;
+  embedding: number[] | null;
+  brand: string[];
+  priceMin: number | null;
+  priceMax: number | null;
+  audience: string[];
+  category: string[];
+  season: string[];
+  formalityLevel: string[];
+  style: string[];
+  occasions: string[];
+  color: string[];
+  pattern: string[];
+  silhouette: string[];
+  fit: string[];
+  closureType: string[];
+  page: number;
+  createdAt: string | Date;
+  updatedAt: string | Date;
+};
+
+type SearchRowQuery = Omit<SearchRow, "priceMin" | "priceMax"> & {
+  embedding: unknown;
+  priceMin: unknown;
+  priceMax: unknown;
+};
+
+type UpsertSearchInput = {
+  email: string;
+  query: string | null;
+  embedding: number[] | null;
+  brand: string[];
+  priceMin: number | null;
+  priceMax: number | null;
+  audience: string[];
+  category: string[];
+  season: string[];
+  formalityLevel: string[];
+  style: string[];
+  occasions: string[];
+  color: string[];
+  pattern: string[];
+  silhouette: string[];
+  fit: string[];
+  closureType: string[];
+  page: number;
+};
+
+type SearchProductsInput = {
+  queryEmbedding?: number[] | null;
+  semanticDistanceThreshold?: number | null;
+  brand?: string[];
+  priceMin?: number | null;
+  priceMax?: number | null;
+  audience?: string[];
+  category?: string[];
+  season?: string[];
+  formalityLevel?: string[];
+  style?: string[];
+  occasions?: string[];
+  color?: string[];
+  pattern?: string[];
+  silhouette?: string[];
+  fit?: string[];
+  closureType?: string[];
+  page?: number;
+};
+
+type SearchProductsResult = {
+  items: ProductSearchRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
+
+type ProfileRow = {
+  email: string;
+  activeCapsuleId: string | null;
+  locale: string;
+  fullname: string | null;
+  theme: string | null;
+  llm: string | null;
+  createdAt: string | Date;
+  updatedAt: string | Date;
+};
+
+type CreateProfileInput = {
+  email: string;
+  locale: string;
+};
+
+type UpdateProfileInput = {
+  email: string;
+  locale: string;
+  fullname: string | null;
+  theme: string;
+  llm: string;
+};
+
+type UpdateProfileActiveCapsuleInput = {
+  email: string;
+  activeCapsuleId: string | null;
+};
+
+type CapsuleRow = {
+  id: string;
+  email: string;
+  name: string;
+  draft: JsonObject | null;
+  saved: JsonObject | null;
+  createdAt: string | Date;
+  updatedAt: string | Date;
+};
+
+type CreateCapsuleInput = {
+  email: string;
+  name: string;
+  draft?: JsonObject | null;
+  saved?: JsonObject | null;
+};
+
+type CapsuleLookupInput = {
+  email: string;
+  capsuleId: string;
+};
+
+type UpdateCapsuleSnapshotInput = {
+  email: string;
+  capsuleId: string;
+  draft: JsonObject | null;
+};
+
+type RenameCapsuleInput = {
+  email: string;
+  capsuleId: string;
+  name: string;
+};
+
+let sqlClientOverride: SqlClientLike | null = null;
+
+function getResultRows<TRow>(result: SqlResultLike<TRow>): TRow[] {
+  return Array.isArray(result) ? result : [];
+}
+
+function getFirstRow<TRow>(result: SqlResultLike<TRow>): TRow | null {
+  return getResultRows(result)[0] ?? null;
+}
+
+function toOptionalNumber(value: unknown): number | null {
+  return value === null || value === undefined ? null : Number(value);
+}
+
+function normalizeSearchRow(row: SearchRowQuery | null): SearchRow | null {
+  if (!row) {
+    return null;
+  }
+
+  return {
+    ...row,
+    embedding: Array.isArray(row.embedding) ? row.embedding.filter((value): value is number => typeof value === "number") : null,
+    priceMin: toOptionalNumber(row.priceMin),
+    priceMax: toOptionalNumber(row.priceMax)
+  };
+}
+
+function isPriceBucket(row: PriceBucket | BucketRangeRow): row is PriceBucket {
+  return "min" in row && "max" in row;
+}
+
+function getSqlClient(): SqlClientLike {
   if (sqlClientOverride) {
     return sqlClientOverride;
   }
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) {
     const error = new Error("DATABASE_URL is not set");
-    error.code = "missing_database_url";
+    (error as Error & { code?: string }).code = "missing_database_url";
     throw error;
   }
-  return neon(databaseUrl);
+  return neon(databaseUrl) as SqlClientLike;
 }
 
-function setSqlClientOverride(client) {
+function setSqlClientOverride(client: SqlClientLike | null | undefined): void {
   sqlClientOverride = client || null;
 }
 
-async function checkDatabaseConnection() {
+async function checkDatabaseConnection(): Promise<DatabaseConnectionRow | null> {
   const sql = getSqlClient();
-  const [row] = await sql`
+  const row = getFirstRow(await sql<DatabaseConnectionRow>`
     select
       current_database() as database,
       now() as now
-  `;
+  `);
   return row;
 }
 
-async function ensureLoginCodesTable() {
+async function ensureLoginCodesTable(): Promise<void> {
   const sql = getSqlClient();
   await sql`
     create table if not exists login_codes (
@@ -44,7 +304,7 @@ async function ensureLoginCodesTable() {
   `;
 }
 
-async function ensureSessionsTable() {
+async function ensureSessionsTable(): Promise<void> {
   const sql = getSqlClient();
   await sql`
     create table if not exists user_sessions (
@@ -57,7 +317,7 @@ async function ensureSessionsTable() {
   `;
 }
 
-async function ensureProfilesTable() {
+async function ensureProfilesTable(): Promise<void> {
   const sql = getSqlClient();
   await sql`
     create table if not exists profiles (
@@ -133,7 +393,7 @@ async function ensureProfilesTable() {
   `;
 }
 
-async function ensureCapsulesTable() {
+async function ensureCapsulesTable(): Promise<void> {
   const sql = getSqlClient();
   await sql`create extension if not exists pgcrypto`;
   await sql`
@@ -157,7 +417,7 @@ async function ensureCapsulesTable() {
   `;
 }
 
-async function ensureSearchTable() {
+async function ensureSearchTable(): Promise<void> {
   const sql = getSqlClient();
   await sql`
     create table if not exists search (
@@ -185,24 +445,34 @@ async function ensureSearchTable() {
   `;
 }
 
-async function ensureAuthTables() {
+async function ensureAuthTables(): Promise<void> {
   await ensureLoginCodesTable();
   await ensureSessionsTable();
 }
 
-async function ensureTables() {
+async function ensureTables(): Promise<void> {
   await ensureAuthTables();
   await ensureProfilesTable();
   await ensureCapsulesTable();
   await ensureSearchTable();
 }
 
-async function pruneLoginCodes() {
+async function pruneLoginCodes(): Promise<void> {
   const sql = getSqlClient();
   await sql`delete from login_codes where "expiresAt" <= now() or "consumedAt" is not null`;
 }
 
-async function upsertLoginCode({ email, codeHash, nonce, expiresAt }) {
+async function upsertLoginCode({
+  email,
+  codeHash,
+  nonce,
+  expiresAt
+}: {
+  email: string;
+  codeHash: string;
+  nonce: string;
+  expiresAt: Date;
+}): Promise<void> {
   const sql = getSqlClient();
   await sql`
     insert into login_codes (email, "codeHash", nonce, "expiresAt", attempts, "consumedAt")
@@ -217,9 +487,9 @@ async function upsertLoginCode({ email, codeHash, nonce, expiresAt }) {
   `;
 }
 
-async function getLoginCodeByEmail(email) {
+async function getLoginCodeByEmail(email: string): Promise<LoginCodeRow | null> {
   const sql = getSqlClient();
-  const [entry] = await sql`
+  const entry = getFirstRow(await sql<LoginCodeRow>`
     select
       email,
       "codeHash",
@@ -230,14 +500,22 @@ async function getLoginCodeByEmail(email) {
     from login_codes
     where email = ${email}
     limit 1
-  `;
+  `);
   return entry || null;
 }
 
-async function verifyAndConsumeLoginCode({ email, codeHash, maxAttempts }) {
+async function verifyAndConsumeLoginCode({
+  email,
+  codeHash,
+  maxAttempts
+}: {
+  email: string;
+  codeHash: string;
+  maxAttempts: number;
+}): Promise<VerifyAndConsumeLoginCodeResult> {
   const sql = getSqlClient();
 
-  const [consumed] = await sql`
+  const consumed = getFirstRow(await sql<{ email: string }>`
     update login_codes
     set "consumedAt" = now()
     where
@@ -247,12 +525,12 @@ async function verifyAndConsumeLoginCode({ email, codeHash, maxAttempts }) {
       and attempts < ${maxAttempts}
       and "codeHash" = ${codeHash}
     returning email
-  `;
+  `);
   if (consumed) {
     return { ok: true };
   }
 
-  const [incremented] = await sql`
+  const incremented = getFirstRow(await sql<{ attempts: number }>`
     update login_codes
     set attempts = attempts + 1
     where
@@ -262,17 +540,17 @@ async function verifyAndConsumeLoginCode({ email, codeHash, maxAttempts }) {
       and attempts < ${maxAttempts}
       and "codeHash" <> ${codeHash}
     returning attempts
-  `;
+  `);
   if (incremented) {
     return { ok: false, reason: "invalid" };
   }
 
-  const [entry] = await sql`
+  const entry = getFirstRow(await sql<Pick<LoginCodeRow, "expiresAt" | "attempts" | "consumedAt">>`
     select "expiresAt", attempts, "consumedAt"
     from login_codes
     where email = ${email}
     limit 1
-  `;
+  `);
   if (!entry) {
     return { ok: false, reason: "not_found" };
   }
@@ -294,7 +572,13 @@ async function verifyAndConsumeLoginCode({ email, codeHash, maxAttempts }) {
   return { ok: false, reason: "invalid" };
 }
 
-async function insertSession({ sessionId, email, csrfToken, createdAt, expiresAt }) {
+async function insertSession({
+  sessionId,
+  email,
+  csrfToken,
+  createdAt,
+  expiresAt
+}: SessionRow): Promise<void> {
   const sql = getSqlClient();
   await sql`
     insert into user_sessions ("sessionId", email, "csrfToken", "createdAt", "expiresAt")
@@ -302,87 +586,87 @@ async function insertSession({ sessionId, email, csrfToken, createdAt, expiresAt
   `;
 }
 
-async function getSessionById(sessionId) {
+async function getSessionById(sessionId: string): Promise<SessionRow | null> {
   const sql = getSqlClient();
-  const [session] = await sql`
+  const session = getFirstRow(await sql<SessionRow>`
     select "sessionId", email, "csrfToken", "createdAt", "expiresAt"
     from user_sessions
     where "sessionId" = ${sessionId}
     limit 1
-  `;
+  `);
   return session || null;
 }
 
-async function deleteSessionById(sessionId) {
+async function deleteSessionById(sessionId: string): Promise<void> {
   const sql = getSqlClient();
   await sql`delete from user_sessions where "sessionId" = ${sessionId}`;
 }
 
-async function pruneExpiredSessions() {
+async function pruneExpiredSessions(): Promise<void> {
   const sql = getSqlClient();
   await sql`delete from user_sessions where "expiresAt" <= now()`;
 }
 
-async function hasProfileByEmail(email) {
+async function hasProfileByEmail(email: string): Promise<boolean> {
   const sql = getSqlClient();
-  const [row] = await sql`
+  const row = getFirstRow(await sql<BooleanFlagRow>`
     select exists(select 1 from profiles where email = ${email}) as "hasProfile"
-  `;
+  `);
   return Boolean(row?.hasProfile);
 }
 
-async function getDistinctProductFormalityLevels() {
+async function getDistinctProductFormalityLevels(): Promise<string[]> {
   const sql = getSqlClient();
-  const rows = await sql`
+  const rows = getResultRows(await sql<StringValueRow>`
     select distinct trim(value) as value
     from products
     cross join unnest(coalesce(formality_level, array[]::text[])) as value
     where nullif(trim(value), '') is not null
     order by value
-  `;
+  `);
   return rows.map((row) => row.value).filter(Boolean);
 }
 
-async function getDistinctProductOccasions() {
+async function getDistinctProductOccasions(): Promise<string[]> {
   const sql = getSqlClient();
-  const rows = await sql`
+  const rows = getResultRows(await sql<StringValueRow>`
     select distinct trim(value) as value
     from products
     cross join unnest(coalesce(occasions, array[]::text[])) as value
     where nullif(trim(value), '') is not null
     order by value
-  `;
+  `);
   return rows.map((row) => row.value).filter(Boolean);
 }
 
-async function getDistinctProductSeasons() {
+async function getDistinctProductSeasons(): Promise<string[]> {
   const sql = getSqlClient();
-  const rows = await sql`
+  const rows = getResultRows(await sql<StringValueRow>`
     select distinct trim(value) as value
     from products
     cross join unnest(coalesce(season, array[]::text[])) as value
     where nullif(trim(value), '') is not null
     order by value
-  `;
+  `);
   return rows.map((row) => row.value).filter(Boolean);
 }
 
-async function getDistinctProductPatterns() {
+async function getDistinctProductPatterns(): Promise<string[]> {
   const sql = getSqlClient();
-  const rows = await sql`
+  const rows = getResultRows(await sql<StringValueRow>`
     select distinct
       lower(trim(pattern)) as value
     from products
     where
       nullif(trim(pattern), '') is not null
     order by value asc
-  `;
+  `);
   return rows.map((row) => row.value).filter(Boolean);
 }
 
-async function getDistinctProductBrands() {
+async function getDistinctProductBrands(): Promise<Array<{ value: string; label: string }>> {
   const sql = getSqlClient();
-  const rows = await sql`
+  const rows = getResultRows(await sql<BrandOptionRow>`
     with ranked_brands as (
       select
         lower(trim(brand)) as value,
@@ -400,7 +684,7 @@ async function getDistinctProductBrands() {
     from ranked_brands
     where row_number = 1
     order by value asc
-  `;
+  `);
   return rows
     .map((row) => ({
       value: row.value,
@@ -409,79 +693,79 @@ async function getDistinctProductBrands() {
     .filter((row) => row.value && row.label);
 }
 
-async function getDistinctProductCategories() {
+async function getDistinctProductCategories(): Promise<string[]> {
   const sql = getSqlClient();
-  const rows = await sql`
+  const rows = getResultRows(await sql<StringValueRow>`
     select distinct lower(trim(category)) as value
     from products
     where nullif(trim(category), '') is not null
     order by value asc
-  `;
+  `);
   return rows.map((row) => row.value).filter(Boolean);
 }
 
-async function getDistinctProductSilhouettes() {
+async function getDistinctProductSilhouettes(): Promise<string[]> {
   const sql = getSqlClient();
-  const rows = await sql`
+  const rows = getResultRows(await sql<StringValueRow>`
     select distinct lower(trim(silhouette)) as value
     from products
     where nullif(trim(silhouette), '') is not null
     order by value asc
-  `;
+  `);
   return rows.map((row) => row.value).filter(Boolean);
 }
 
-async function getDistinctProductFits() {
+async function getDistinctProductFits(): Promise<string[]> {
   const sql = getSqlClient();
-  const rows = await sql`
+  const rows = getResultRows(await sql<StringValueRow>`
     select distinct lower(trim(fit)) as value
     from products
     where nullif(trim(fit), '') is not null
     order by value asc
-  `;
+  `);
   return rows.map((row) => row.value).filter(Boolean);
 }
 
-async function getDistinctProductClosureTypes() {
+async function getDistinctProductClosureTypes(): Promise<string[]> {
   const sql = getSqlClient();
-  const rows = await sql`
+  const rows = getResultRows(await sql<StringValueRow>`
     select distinct lower(trim(value)) as value
     from products
     cross join unnest(coalesce(closure_type, array[]::text[])) as value
     where nullif(trim(value), '') is not null
     order by value asc
-  `;
+  `);
   return rows.map((row) => row.value).filter(Boolean);
 }
 
-async function getDistinctProductColors() {
+async function getDistinctProductColors(): Promise<string[]> {
   const sql = getSqlClient();
-  const rows = await sql`
+  const rows = getResultRows(await sql<StringValueRow>`
     select distinct lower(trim(value)) as value
     from products
     cross join unnest(coalesce(color_base, array[]::text[])) as value
     where nullif(trim(value), '') is not null
     order by value asc
-  `;
+  `);
   return rows.map((row) => row.value).filter(Boolean);
 }
 
-async function getProductPriceRange() {
+async function getProductPriceRange(): Promise<{ min: number | null; max: number | null }> {
   const sql = getSqlClient();
-  const [row] = await sql`
+  const row = getFirstRow(await sql<NumericRangeRow>`
     select
       min(price) as min,
       max(price) as max
     from products
     where price is not null
-  `;
+  `);
   return {
-    min: row?.min === null || row?.min === undefined ? null : Number(row.min),
-    max: row?.max === null || row?.max === undefined ? null : Number(row.max)
+    min: toOptionalNumber(row?.min),
+    max: toOptionalNumber(row?.max)
   };
 }
 
-async function getProductsByUrlsInOrder(urls = []) {
+async function getProductsByUrlsInOrder(urls: unknown[] = []): Promise<ProductRow[]> {
   if (!Array.isArray(urls) || urls.length === 0) {
     return [];
   }
@@ -495,7 +779,7 @@ async function getProductsByUrlsInOrder(urls = []) {
     return [];
   }
 
-  return sql`
+  return getResultRows(await sql<ProductRow>`
     select
       products.id,
       products.name,
@@ -523,10 +807,10 @@ async function getProductsByUrlsInOrder(urls = []) {
     from unnest(${normalizedUrls}::text[]) with ordinality as selected(url, position)
     join products on products.url = selected.url
     order by selected.position asc
-  `;
+  `);
 }
 
-async function getProductsWithEmbeddingsByUrlsInOrder(urls = []) {
+async function getProductsWithEmbeddingsByUrlsInOrder(urls: unknown[] = []): Promise<ProductWithEmbeddingRow[]> {
   if (!Array.isArray(urls) || urls.length === 0) {
     return [];
   }
@@ -540,7 +824,7 @@ async function getProductsWithEmbeddingsByUrlsInOrder(urls = []) {
     return [];
   }
 
-  return sql`
+  return getResultRows(await sql<ProductWithEmbeddingRow>`
     select
       products.*,
       products.image_url as "imageUrl",
@@ -551,12 +835,12 @@ async function getProductsWithEmbeddingsByUrlsInOrder(urls = []) {
     from unnest(${normalizedUrls}::text[]) with ordinality as selected(url, position)
     join products on products.url = selected.url
     order by selected.position asc
-  `;
+  `);
 }
 
-async function getSearchByEmail(email) {
+async function getSearchByEmail(email: string): Promise<SearchRow | null> {
   const sql = getSqlClient();
-  const [row] = await sql`
+  const row = getFirstRow(await sql<SearchRowQuery>`
     select
       email,
       query,
@@ -581,8 +865,8 @@ async function getSearchByEmail(email) {
     from search
     where email = ${email}
     limit 1
-  `;
-  return row || null;
+  `);
+  return normalizeSearchRow(row);
 }
 
 async function upsertSearchByEmail({
@@ -604,9 +888,9 @@ async function upsertSearchByEmail({
   fit,
   closureType,
   page
-}) {
+}: UpsertSearchInput): Promise<SearchRow | null> {
   const sql = getSqlClient();
-  const [row] = await sql`
+  const row = getFirstRow(await sql<SearchRowQuery>`
     insert into search (
       email,
       query,
@@ -688,8 +972,8 @@ async function upsertSearchByEmail({
       page,
       created_at as "createdAt",
       updated_at as "updatedAt"
-  `;
-  return row || null;
+  `);
+  return normalizeSearchRow(row);
 }
 
 async function searchProducts({
@@ -710,7 +994,7 @@ async function searchProducts({
   fit = [],
   closureType = [],
   page = 1
-}) {
+}: SearchProductsInput = {}): Promise<SearchProductsResult> {
   const sql = getSqlClient();
   const currentPage = Number.isInteger(page) && page > 0 ? page : 1;
   const offset = (currentPage - 1) * SEARCH_PAGE_SIZE;
@@ -718,7 +1002,7 @@ async function searchProducts({
     ? `[${queryEmbedding.join(",")}]`
     : null;
 
-  const [countRow] = await sql`
+  const countRow = getFirstRow(await sql<CountRow>`
     select count(*)::integer as total
     from products
     where
@@ -741,9 +1025,9 @@ async function searchProducts({
         or ${semanticDistanceThreshold}::double precision is null
         or embedding <=> ${embeddingVector}::vector <= ${semanticDistanceThreshold}
       )
-  `;
+  `);
 
-  const items = await sql`
+  const items = getResultRows(await sql<ProductSearchRow>`
     select
       id,
       name,
@@ -803,7 +1087,7 @@ async function searchProducts({
       lower(coalesce(name, '')) asc
     limit ${SEARCH_PAGE_SIZE}
     offset ${offset}
-  `;
+  `);
 
   return {
     items,
@@ -813,7 +1097,7 @@ async function searchProducts({
   };
 }
 
-function normalizeFacetRows(rows = []) {
+function normalizeFacetRows(rows: FacetRow[] = []): Array<{ value: string; count: number }> {
   return rows
     .map((row) => ({
       value: String(row?.value || "").trim().toLowerCase(),
@@ -822,7 +1106,7 @@ function normalizeFacetRows(rows = []) {
     .filter((row) => row.value && row.count > 0);
 }
 
-function buildPriceBuckets(rows = [], bucketCount) {
+function buildPriceBuckets(rows: PriceBucketRow[] = [], bucketCount: number): PriceBucket[] {
   const normalizedRows = rows
     .map((row) => {
       const bucket = Number(row?.bucket || 0);
@@ -856,19 +1140,20 @@ function buildPriceBuckets(rows = [], bucketCount) {
         count
       };
     })
-    .filter(Boolean);
+    .filter((row): row is PriceBucket | BucketRangeRow => Boolean(row));
 
   if (normalizedRows.length === 0) {
     return [];
   }
 
   const firstRow = normalizedRows[0];
-  if (firstRow.min !== undefined && firstRow.max !== undefined) {
-    return firstRow ? [{ key: `${firstRow.min}:${firstRow.max}`, min: firstRow.min, max: firstRow.max, count: firstRow.count }] : [];
+  if (isPriceBucket(firstRow)) {
+    return [{ key: `${firstRow.min}:${firstRow.max}`, min: firstRow.min, max: firstRow.max, count: firstRow.count }];
   }
 
+  const rangeRows = normalizedRows.filter((row): row is BucketRangeRow => !isPriceBucket(row));
   const { rangeMin, rangeMax } = firstRow;
-  const countByBucket = new Map(normalizedRows.map((row) => [row.bucket, row.count]));
+  const countByBucket = new Map(rangeRows.map((row) => [row.bucket, row.count]));
   const step = (rangeMax - rangeMin) / bucketCount;
 
   return Array.from({ length: bucketCount }, (_, index) => {
@@ -900,12 +1185,29 @@ async function searchProductStats({
   silhouette = [],
   fit = [],
   closureType = []
-}) {
+}: Omit<SearchProductsInput, "queryEmbedding" | "semanticDistanceThreshold" | "page"> = {}): Promise<{
+  total: number;
+  stats: {
+    brand: Array<{ value: string; count: number }>;
+    category: Array<{ value: string; count: number }>;
+    season: Array<{ value: string; count: number }>;
+    audience: Array<{ value: string; count: number }>;
+    formalityLevel: Array<{ value: string; count: number }>;
+    style: Array<{ value: string; count: number }>;
+    occasions: Array<{ value: string; count: number }>;
+    color: Array<{ value: string; count: number }>;
+    pattern: Array<{ value: string; count: number }>;
+    silhouette: Array<{ value: string; count: number }>;
+    fit: Array<{ value: string; count: number }>;
+    closureType: Array<{ value: string; count: number }>;
+  };
+  priceBuckets: PriceBucket[];
+}> {
   const sql = getSqlClient();
   const priceBucketCount = 100;
 
   const [countRow, brandRows, categoryRows, seasonRows, audienceRows, formalityRows, styleRows, occasionRows, colorRows, patternRows, silhouetteRows, fitRows, closureTypeRows, priceRows] = await Promise.all([
-    sql`
+    sql<CountRow>`
       select count(*)::integer as total
       from products
       where
@@ -924,7 +1226,7 @@ async function searchProductStats({
         and (cardinality(${fit}::text[]) = 0 or lower(coalesce(fit, '')) = any(${fit}::text[]))
         and (cardinality(${closureType}::text[]) = 0 or coalesce(closure_type, array[]::text[]) && ${closureType}::text[])
     `,
-    sql`
+    sql<FacetRow>`
       select lower(coalesce(brand, '')) as value, count(*)::integer as count
       from products
       where
@@ -945,7 +1247,7 @@ async function searchProductStats({
       group by 1
       order by count desc, value asc
     `,
-    sql`
+    sql<FacetRow>`
       select lower(coalesce(category, '')) as value, count(*)::integer as count
       from products
       where
@@ -966,7 +1268,7 @@ async function searchProductStats({
       group by 1
       order by count desc, value asc
     `,
-    sql`
+    sql<FacetRow>`
       select lower(value) as value, count(*)::integer as count
       from (
         select unnest(coalesce(season, array[]::text[])) as value
@@ -990,7 +1292,7 @@ async function searchProductStats({
       group by 1
       order by count desc, value asc
     `,
-    sql`
+    sql<FacetRow>`
       select lower(coalesce(audience, '')) as value, count(*)::integer as count
       from products
       where
@@ -1011,7 +1313,7 @@ async function searchProductStats({
       group by 1
       order by count desc, value asc
     `,
-    sql`
+    sql<FacetRow>`
       select lower(value) as value, count(*)::integer as count
       from (
         select unnest(coalesce(formality_level, array[]::text[])) as value
@@ -1035,7 +1337,7 @@ async function searchProductStats({
       group by 1
       order by count desc, value asc
     `,
-    sql`
+    sql<FacetRow>`
       select lower(value) as value, count(*)::integer as count
       from (
         select unnest(coalesce(style, array[]::text[])) as value
@@ -1059,7 +1361,7 @@ async function searchProductStats({
       group by 1
       order by count desc, value asc
     `,
-    sql`
+    sql<FacetRow>`
       select lower(value) as value, count(*)::integer as count
       from (
         select unnest(coalesce(occasions, array[]::text[])) as value
@@ -1083,7 +1385,7 @@ async function searchProductStats({
       group by 1
       order by count desc, value asc
     `,
-    sql`
+    sql<FacetRow>`
       select lower(value) as value, count(*)::integer as count
       from (
         select unnest(coalesce(color_base, array[]::text[])) as value
@@ -1107,7 +1409,7 @@ async function searchProductStats({
       group by 1
       order by count desc, value asc
     `,
-    sql`
+    sql<FacetRow>`
       select lower(coalesce(pattern, '')) as value, count(*)::integer as count
       from products
       where
@@ -1128,7 +1430,7 @@ async function searchProductStats({
       group by 1
       order by count desc, value asc
     `,
-    sql`
+    sql<FacetRow>`
       select lower(coalesce(silhouette, '')) as value, count(*)::integer as count
       from products
       where
@@ -1149,7 +1451,7 @@ async function searchProductStats({
       group by 1
       order by count desc, value asc
     `,
-    sql`
+    sql<FacetRow>`
       select lower(coalesce(fit, '')) as value, count(*)::integer as count
       from products
       where
@@ -1170,7 +1472,7 @@ async function searchProductStats({
       group by 1
       order by count desc, value asc
     `,
-    sql`
+    sql<FacetRow>`
       select lower(value) as value, count(*)::integer as count
       from (
         select unnest(coalesce(closure_type, array[]::text[])) as value
@@ -1194,7 +1496,7 @@ async function searchProductStats({
       group by 1
       order by count desc, value asc
     `,
-    sql`
+    sql<PriceBucketRow>`
       with filtered as (
         select price
         from products
@@ -1244,28 +1546,28 @@ async function searchProductStats({
   ]);
 
   return {
-    total: Number(countRow?.[0]?.total || 0),
+    total: Number(getFirstRow(countRow)?.total || 0),
     stats: {
-      brand: normalizeFacetRows(brandRows),
-      category: normalizeFacetRows(categoryRows),
-      season: normalizeFacetRows(seasonRows),
-      audience: normalizeFacetRows(audienceRows),
-      formalityLevel: normalizeFacetRows(formalityRows),
-      style: normalizeFacetRows(styleRows),
-      occasions: normalizeFacetRows(occasionRows),
-      color: normalizeFacetRows(colorRows),
-      pattern: normalizeFacetRows(patternRows),
-      silhouette: normalizeFacetRows(silhouetteRows),
-      fit: normalizeFacetRows(fitRows),
-      closureType: normalizeFacetRows(closureTypeRows)
+      brand: normalizeFacetRows(getResultRows(brandRows)),
+      category: normalizeFacetRows(getResultRows(categoryRows)),
+      season: normalizeFacetRows(getResultRows(seasonRows)),
+      audience: normalizeFacetRows(getResultRows(audienceRows)),
+      formalityLevel: normalizeFacetRows(getResultRows(formalityRows)),
+      style: normalizeFacetRows(getResultRows(styleRows)),
+      occasions: normalizeFacetRows(getResultRows(occasionRows)),
+      color: normalizeFacetRows(getResultRows(colorRows)),
+      pattern: normalizeFacetRows(getResultRows(patternRows)),
+      silhouette: normalizeFacetRows(getResultRows(silhouetteRows)),
+      fit: normalizeFacetRows(getResultRows(fitRows)),
+      closureType: normalizeFacetRows(getResultRows(closureTypeRows))
     },
-    priceBuckets: buildPriceBuckets(priceRows, priceBucketCount)
+    priceBuckets: buildPriceBuckets(getResultRows(priceRows), priceBucketCount)
   };
 }
 
-async function getProfileByEmail(email) {
+async function getProfileByEmail(email: string): Promise<ProfileRow | null> {
   const sql = getSqlClient();
-  const [row] = await sql`
+  const row = getFirstRow(await sql<ProfileRow>`
     select
       email,
       active_capsule_id as "activeCapsuleId",
@@ -1278,16 +1580,16 @@ async function getProfileByEmail(email) {
     from profiles
     where email = ${email}
     limit 1
-  `;
+  `);
   return row || null;
 }
 
 async function createProfileRecord({
   email,
   locale
-}) {
+}: CreateProfileInput): Promise<ProfileRow | null> {
   const sql = getSqlClient();
-  const [row] = await sql`
+  const row = getFirstRow(await sql<ProfileRow>`
     insert into profiles (
       email,
       active_capsule_id,
@@ -1308,13 +1610,13 @@ async function createProfileRecord({
       llm,
       created_at as "createdAt",
       updated_at as "updatedAt"
-  `;
+  `);
   return row || null;
 }
 
-async function updateProfileLocaleByEmail({ email, locale }) {
+async function updateProfileLocaleByEmail({ email, locale }: CreateProfileInput): Promise<ProfileRow | null> {
   const sql = getSqlClient();
-  const [row] = await sql`
+  const row = getFirstRow(await sql<ProfileRow>`
     update profiles
     set
       locale = ${locale},
@@ -1329,7 +1631,7 @@ async function updateProfileLocaleByEmail({ email, locale }) {
       llm,
       created_at as "createdAt",
       updated_at as "updatedAt"
-  `;
+  `);
   return row || null;
 }
 
@@ -1339,9 +1641,9 @@ async function updateProfileByEmail({
   fullname,
   theme,
   llm
-}) {
+}: UpdateProfileInput): Promise<ProfileRow | null> {
   const sql = getSqlClient();
-  const [row] = await sql`
+  const row = getFirstRow(await sql<ProfileRow>`
     update profiles
     set
       locale = ${locale},
@@ -1359,13 +1661,16 @@ async function updateProfileByEmail({
       llm,
       created_at as "createdAt",
       updated_at as "updatedAt"
-  `;
+  `);
   return row || null;
 }
 
-async function updateProfileActiveCapsuleIdByEmail({ email, activeCapsuleId }) {
+async function updateProfileActiveCapsuleIdByEmail({
+  email,
+  activeCapsuleId
+}: UpdateProfileActiveCapsuleInput): Promise<ProfileRow | null> {
   const sql = getSqlClient();
-  const [row] = await sql`
+  const row = getFirstRow(await sql<ProfileRow>`
     update profiles
     set
       active_capsule_id = ${activeCapsuleId},
@@ -1380,7 +1685,7 @@ async function updateProfileActiveCapsuleIdByEmail({ email, activeCapsuleId }) {
       llm,
       created_at as "createdAt",
       updated_at as "updatedAt"
-  `;
+  `);
   return row || null;
 }
 
@@ -1389,9 +1694,9 @@ async function createCapsuleRecord({
   name,
   draft = null,
   saved = null
-}) {
+}: CreateCapsuleInput): Promise<CapsuleRow | null> {
   const sql = getSqlClient();
-  const [row] = await sql`
+  const row = getFirstRow(await sql<CapsuleRow>`
     insert into capsules (
       email,
       name,
@@ -1412,13 +1717,13 @@ async function createCapsuleRecord({
       saved,
       created_at as "createdAt",
       updated_at as "updatedAt"
-  `;
+  `);
   return row || null;
 }
 
-async function getCapsuleByIdForEmail({ email, capsuleId }) {
+async function getCapsuleByIdForEmail({ email, capsuleId }: CapsuleLookupInput): Promise<CapsuleRow | null> {
   const sql = getSqlClient();
-  const [row] = await sql`
+  const row = getFirstRow(await sql<CapsuleRow>`
     select
       id,
       email,
@@ -1430,13 +1735,19 @@ async function getCapsuleByIdForEmail({ email, capsuleId }) {
     from capsules
     where email = ${email} and id = ${capsuleId}
     limit 1
-  `;
+  `);
   return row || null;
 }
 
-async function listRecentCapsulesByEmail({ email, limit = 10 }) {
+async function listRecentCapsulesByEmail({
+  email,
+  limit = 10
+}: {
+  email: string;
+  limit?: number;
+}): Promise<CapsuleRow[]> {
   const sql = getSqlClient();
-  return sql`
+  return getResultRows(await sql<CapsuleRow>`
     select
       id,
       email,
@@ -1449,13 +1760,21 @@ async function listRecentCapsulesByEmail({ email, limit = 10 }) {
     where email = ${email}
     order by updated_at desc, created_at desc
     limit ${limit}
-  `;
+  `);
 }
 
-async function searchCapsulesByEmail({ email, query, limit = 25 }) {
+async function searchCapsulesByEmail({
+  email,
+  query,
+  limit = 25
+}: {
+  email: string;
+  query: string;
+  limit?: number;
+}): Promise<CapsuleRow[]> {
   const sql = getSqlClient();
   const normalizedQuery = `%${String(query || "").trim().toLowerCase()}%`;
-  return sql`
+  return getResultRows(await sql<CapsuleRow>`
     select
       id,
       email,
@@ -1469,16 +1788,16 @@ async function searchCapsulesByEmail({ email, query, limit = 25 }) {
       and lower(name) like ${normalizedQuery}
     order by updated_at desc, created_at desc
     limit ${limit}
-  `;
+  `);
 }
 
-async function listCapsuleNamesByEmail(email) {
+async function listCapsuleNamesByEmail(email: string): Promise<string[]> {
   const sql = getSqlClient();
-  const rows = await sql`
+  const rows = getResultRows(await sql<{ name: string | null }>`
     select name
     from capsules
     where email = ${email}
-  `;
+  `);
   return rows.map((row) => String(row?.name || "").trim()).filter(Boolean);
 }
 
@@ -1486,9 +1805,9 @@ async function updateCapsuleSnapshotByIdForEmail({
   email,
   capsuleId,
   draft
-}) {
+}: UpdateCapsuleSnapshotInput): Promise<CapsuleRow | null> {
   const sql = getSqlClient();
-  const [row] = await sql`
+  const row = getFirstRow(await sql<CapsuleRow>`
     update capsules
     set
       draft = ${draft === null ? null : JSON.stringify(draft)},
@@ -1502,7 +1821,7 @@ async function updateCapsuleSnapshotByIdForEmail({
       saved,
       created_at as "createdAt",
       updated_at as "updatedAt"
-  `;
+  `);
   return row || null;
 }
 
@@ -1510,9 +1829,9 @@ async function renameCapsuleByIdForEmail({
   email,
   capsuleId,
   name
-}) {
+}: RenameCapsuleInput): Promise<CapsuleRow | null> {
   const sql = getSqlClient();
-  const [row] = await sql`
+  const row = getFirstRow(await sql<CapsuleRow>`
     update capsules
     set
       name = ${name},
@@ -1526,13 +1845,13 @@ async function renameCapsuleByIdForEmail({
       saved,
       created_at as "createdAt",
       updated_at as "updatedAt"
-  `;
+  `);
   return row || null;
 }
 
-async function saveCapsuleByIdForEmail({ email, capsuleId }) {
+async function saveCapsuleByIdForEmail({ email, capsuleId }: CapsuleLookupInput): Promise<CapsuleRow | null> {
   const sql = getSqlClient();
-  const [row] = await sql`
+  const row = getFirstRow(await sql<CapsuleRow>`
     update capsules
     set
       saved = coalesce(draft, saved),
@@ -1547,13 +1866,13 @@ async function saveCapsuleByIdForEmail({ email, capsuleId }) {
       saved,
       created_at as "createdAt",
       updated_at as "updatedAt"
-  `;
+  `);
   return row || null;
 }
 
-async function revertCapsuleDraftByIdForEmail({ email, capsuleId }) {
+async function revertCapsuleDraftByIdForEmail({ email, capsuleId }: CapsuleLookupInput): Promise<CapsuleRow | null> {
   const sql = getSqlClient();
-  const [row] = await sql`
+  const row = getFirstRow(await sql<CapsuleRow>`
     update capsules
     set
       draft = null,
@@ -1567,11 +1886,11 @@ async function revertCapsuleDraftByIdForEmail({ email, capsuleId }) {
       saved,
       created_at as "createdAt",
       updated_at as "updatedAt"
-  `;
+  `);
   return row || null;
 }
 
-async function deleteCapsuleByIdForEmail({ email, capsuleId }) {
+async function deleteCapsuleByIdForEmail({ email, capsuleId }: CapsuleLookupInput): Promise<boolean> {
   const sql = getSqlClient();
   const result = await sql`
     delete from capsules
@@ -1581,7 +1900,7 @@ async function deleteCapsuleByIdForEmail({ email, capsuleId }) {
   return hasAffectedRows(result);
 }
 
-function hasAffectedRows(result) {
+function hasAffectedRows(result: HasAffectedRowsResult | null | undefined): boolean {
   if (Array.isArray(result)) {
     return result.length > 0;
   }
@@ -1591,7 +1910,7 @@ function hasAffectedRows(result) {
   return false;
 }
 
-async function deleteProfileByEmail(email) {
+async function deleteProfileByEmail(email: string): Promise<boolean> {
   const sql = getSqlClient();
   await sql`
     delete from capsules

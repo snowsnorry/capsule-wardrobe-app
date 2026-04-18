@@ -1090,6 +1090,7 @@ Use this section during execution.
 - [x] Batch 13 — Phase 4 app core/search cluster completed successfully
 - [x] Batch 14 — Final client TS mop-up audit and batch completed successfully
 - [x] Batch 15 — Phase 5 / Phase 6 enlarged server store/helper batch completed successfully
+- [x] Batch 17A — Phase 7 server DB boundary layer (`server/src/db.ts`) completed successfully
 - [x] Root/client TypeScript bootstrap is in place and client hybrid typecheck passes
 - [x] `client/src/test/setup.js` was reviewed and intentionally left as JS because migration was not required in Batch 1
 - [x] Final client audit confirms the only remaining JS file under `client/src/**/*` is `client/src/test/setup.js`, intentionally deferred because renaming it would require changing excluded `client/vite.config.js`
@@ -1133,13 +1134,13 @@ Use this section during execution.
 - [x] Server TS runtime strategy is now defined:
   - `tsx` for dev/test
   - emitted JS build output for production server execution
-- [ ] `server/src/db.js` is a high-fanout backend infrastructure module and should be split into smaller migration slices later, not included in the first batch.
+- [ ] The remaining Phase 7 boundary surface still needs follow-up slices for `email.js` and request/response boundary typing after the DB layer migration.
 - [ ] `server/src/ai/*`, `server/src/wardrobePdf.js`, and child-process files remain late-stage targets.
 - [ ] `client/src/index.css` currently triggers a non-fatal jsdom CSS parse warning during client tests; do not treat that warning as a TS migration regression unless it becomes test-fatal.
 
 ### What Not To Touch Yet
 - [ ] `server/src/index.js`
-- [ ] `server/src/db.js`
+- [ ] `server/src/db.ts`
 - [ ] `server/src/wardrobePdf.js`
 - [ ] `server/src/wardrobePdf.child.js`
 - [ ] `server/src/ai/*`
@@ -1159,6 +1160,34 @@ After every completed batch, append a short entry with:
 - [ ] any `any`, assertion, or suppression introduced
 - [ ] newly discovered blockers
 - [ ] recommended next batch
+
+### Batch 17A — Phase 7 server DB boundary layer
+- Batch name / phase:
+  - Batch 17A — Phase 7 server DB boundary layer
+- Exact files changed:
+  - `server/src/db.ts` (renamed from `server/src/db.js`)
+  - `typescript-migration.md`
+- Commands run:
+  - `npm --workspace server run typecheck`
+  - `npm --workspace server run test`
+  - `npm --workspace server run build`
+  - `npm --workspace server run test` (re-run after one unrelated/flaky test failure)
+- Typecheck passed: yes
+- Tests passed: yes
+- `client/src/test/setup.js` had to be migrated: no
+- Type errors worked around temporarily:
+  - none
+- `any`, assertion, or suppression introduced:
+  - no `any`
+  - narrow local `as` assertions only in `server/src/db.ts` at the SQL client boundary
+  - no `@ts-ignore` or `@ts-expect-error`
+- Newly discovered blockers:
+  - `npm --workspace server run test` had one transient failure on first run in `server/src/promptImages.test.js` (`downloadProductImageAssets replaces width placeholder in image url before fetch`), but the required re-run passed with no code changes
+  - `getProductsWithEmbeddingsByUrlsInOrder` remains the main shape-pressure point for future excluded AI/PDF work, so its types should stay local until those higher-risk modules are migrated
+- Recommended next batch:
+  - `server/src/email.js`
+  - nearest email/auth boundary tests
+  - request/response boundary typing that depends on the now-typed DB layer but still stays out of `server/src/index.js`, `server/src/ai/*`, and `wardrobePdf*`
 
 ### Deferred decisions
 - [ ] Whether server TS should use emitted build output only, or a TS runtime in dev
