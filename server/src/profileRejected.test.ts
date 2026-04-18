@@ -6,7 +6,22 @@ import {
   normalizeStyle
 } from "./profileStore.js";
 
-function normalizeRejected(profile) {
+type RejectedProfile = {
+  rejected?: unknown;
+};
+
+type RejectedResetProfile = {
+  formalityLevel: string | null;
+  style: string | null;
+  occasions?: string[];
+  season?: string[];
+  audience: string;
+  color: string | null;
+  pattern: string | null;
+  locale?: string;
+};
+
+function normalizeRejected(profile: RejectedProfile): string[] {
   return [...new Set(
     (Array.isArray(profile?.rejected) ? profile.rejected : [])
       .map((value) => String(value || "").trim())
@@ -14,7 +29,7 @@ function normalizeRejected(profile) {
   )];
 }
 
-function shouldResetRejected(current, next) {
+function shouldResetRejected(current: RejectedResetProfile, next: RejectedResetProfile): boolean {
   return (
     current.formalityLevel !== normalizeFormalityLevel(next.formalityLevel)
     || current.style !== normalizeStyle(next.style)

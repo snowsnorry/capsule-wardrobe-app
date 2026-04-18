@@ -7,6 +7,17 @@ import {
   renderLoginCodeEmailHtml
 } from "./email.js";
 
+type EmailError = Error & { code?: string };
+
+type RequestInitCapture = {
+  method: string;
+  headers: {
+    Authorization: string;
+    "Content-Type": string;
+  };
+  body: string;
+};
+
 test("escapeHtml escapes critical HTML characters", () => {
   assert.equal(
     escapeHtml(`a&<>"'`),
@@ -41,7 +52,7 @@ test("getRequiredEnv throws a typed error for missing values", () => {
   try {
     assert.throws(
       () => getRequiredEnv("TEST_EMAIL_ENV_MISSING"),
-      (error) => error?.code === "missing_email_env"
+      (error) => (error as EmailError | undefined)?.code === "missing_email_env"
     );
   } finally {
     if (original !== undefined) {
@@ -51,8 +62,8 @@ test("getRequiredEnv throws a typed error for missing values", () => {
 });
 
 test("sendLoginCodeEmail builds english resend payload with normalized locale and minimum ttl", async () => {
-  let requestUrl = null;
-  let requestInit = null;
+  let requestUrl: string | null = null;
+  let requestInit: RequestInitCapture | null = null;
   const sendLoginCodeEmail = createEmailSender({
     getRequiredEnvImpl: (name) => (
       name === "RESEND_API_KEY" ? "resend-key" : "hello@example.com"
@@ -61,7 +72,8 @@ test("sendLoginCodeEmail builds english resend payload with normalized locale an
       requestUrl = url;
       requestInit = init;
       return {
-        ok: true
+        ok: true,
+        text: async () => ""
       };
     }
   });
@@ -74,6 +86,7 @@ test("sendLoginCodeEmail builds english resend payload with normalized locale an
   });
 
   assert.equal(requestUrl, "https://api.resend.com/emails");
+  assert.ok(requestInit);
   assert.equal(requestInit.method, "POST");
   assert.equal(requestInit.headers.Authorization, "Bearer resend-key");
 
@@ -87,7 +100,7 @@ test("sendLoginCodeEmail builds english resend payload with normalized locale an
 });
 
 test("sendLoginCodeEmail builds russian resend payload and throws on resend failure", async () => {
-  let requestInit = null;
+  let requestInit: RequestInitCapture | null = null;
   const sendLoginCodeEmail = createEmailSender({
     getRequiredEnvImpl: (name) => (
       name === "RESEND_API_KEY" ? "resend-key" : "hello@example.com"
@@ -109,9 +122,10 @@ test("sendLoginCodeEmail builds russian resend payload and throws on resend fail
       locale: "ru",
       expiresInMs: 2 * 60 * 1000
     }),
-    (error) => error?.code === "email_send_failed"
+    (error) => (error as EmailError | undefined)?.code === "email_send_failed"
   );
 
+  assert.ok(requestInit);
   const payload = JSON.parse(requestInit.body);
   assert.equal(payload.subject, "Код входа в Capsule Wardrobe");
   assert.match(payload.text, /Ваш код для входа: 654321/);

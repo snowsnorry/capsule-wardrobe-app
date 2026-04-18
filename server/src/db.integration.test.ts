@@ -20,9 +20,88 @@ import {
   deleteProfileByEmail
 } from "./db.js";
 
-function createSqlMock(handlers) {
-  const calls = [];
-  async function sql(strings, ...values) {
+type SqlCall = {
+  strings: string[];
+  values: unknown[];
+  text: string;
+};
+
+type SqlCallContext = SqlCall & {
+  calls: SqlCall[];
+};
+
+type SqlResultValue = unknown[] | { count: number };
+type SqlResultHandler = SqlResultValue | ((context: SqlCallContext) => SqlResultValue);
+
+type DatabaseConnectionRow = {
+  database: string;
+  now: string | Date;
+};
+
+type LoginCodeRow = {
+  email: string;
+  codeHash: string;
+  nonce: string;
+  expiresAt: Date | string;
+  attempts: number;
+  consumedAt: Date | string | null;
+};
+
+type SessionRow = {
+  sessionId: string;
+  email: string;
+  csrfToken: string;
+  createdAt: Date | string;
+  expiresAt: Date | string;
+};
+
+type SearchRow = {
+  email: string;
+  query: string | null;
+  embedding: number[] | null;
+  brand: string[];
+  priceMin: number | null;
+  priceMax: number | null;
+  audience: string[];
+  category: string[];
+  season: string[];
+  formalityLevel: string[];
+  style: string[];
+  occasions: string[];
+  color: string[];
+  pattern: string[];
+  silhouette: string[];
+  fit: string[];
+  closureType: string[];
+  page: number;
+};
+
+type CountRow = {
+  total: number;
+};
+
+type ProductSearchRow = {
+  id: string;
+  name: string;
+  brand: string | null;
+  distance?: number;
+};
+
+type ProfileRow = {
+  email: string;
+  activeCapsuleId?: string | null;
+  locale: string;
+  fullname?: string | null;
+  theme?: string | null;
+  llm?: string | null;
+};
+
+function createSqlMock(handlers: SqlResultHandler[]) {
+  const calls: SqlCall[] = [];
+  async function sql<TRow = unknown>(
+    strings: TemplateStringsArray,
+    ...values: unknown[]
+  ): Promise<TRow[] | { count: number }> {
     const text = strings.join(" ");
     calls.push({ strings: [...strings], values, text });
     const handler = handlers.shift();
@@ -30,9 +109,9 @@ function createSqlMock(handlers) {
       throw new Error(`Unexpected SQL call: ${text}`);
     }
     if (typeof handler === "function") {
-      return handler({ strings: [...strings], values, text, calls });
+      return handler({ strings: [...strings], values, text, calls }) as TRow[] | { count: number };
     }
-    return handler;
+    return handler as TRow[] | { count: number };
   }
   return { sql, calls };
 }
@@ -52,7 +131,7 @@ test("db integration shapes login code persistence and verification queries", as
       expiresAt,
       attempts: 0,
       consumedAt: null
-    }],
+    }] satisfies LoginCodeRow[],
     [],
     [{ attempts: 3 }],
     [{ consumedAt: null, expiresAt: new Date(Date.now() + 60_000), attempts: 3 }]
@@ -97,7 +176,7 @@ test("db integration shapes session persistence queries", async () => {
       csrfToken: "csrf-1",
       createdAt,
       expiresAt
-    }],
+    }] satisfies SessionRow[],
     [],
     []
   ]);
@@ -145,7 +224,7 @@ test("db integration shapes search persistence and searchProducts queries", asyn
       fit: ["regular"],
       closureType: ["button"],
       page: 2
-    }],
+    }] satisfies SearchRow[],
     [{
       email: "user@example.com",
       query: "linen shirt",
@@ -165,14 +244,14 @@ test("db integration shapes search persistence and searchProducts queries", asyn
       fit: ["regular"],
       closureType: ["button"],
       page: 2
-    }],
-    [{ total: 1 }],
+    }] satisfies SearchRow[],
+    [{ total: 1 }] satisfies CountRow[],
     [{
       id: "prod-1",
       name: "Linen Shirt",
       brand: "Uniqlo",
       distance: 0.12
-    }]
+    }] satisfies ProductSearchRow[]
   ]);
   setSqlClientOverride(sql);
 
@@ -239,7 +318,7 @@ test("db integration shapes search persistence and searchProducts queries", asyn
 
 test("db integration applies price range to product stats price buckets", async () => {
   const handlers = [
-    [{ total: 1 }],
+    [{ total: 1 }] satisfies CountRow[],
     [],
     [],
     [],
@@ -284,7 +363,7 @@ test("db integration shapes reduced profile persistence queries", async () => {
       fullname: null,
       theme: "system",
       llm: "openai:gpt-5.2"
-    }],
+    }] satisfies ProfileRow[],
     [{
       email: "user@example.com",
       activeCapsuleId: null,
@@ -292,7 +371,7 @@ test("db integration shapes reduced profile persistence queries", async () => {
       fullname: null,
       theme: "system",
       llm: "openai:gpt-5.2"
-    }],
+    }] satisfies ProfileRow[],
     [{
       email: "user@example.com",
       activeCapsuleId: null,
@@ -300,7 +379,7 @@ test("db integration shapes reduced profile persistence queries", async () => {
       fullname: "Ada Lovelace",
       theme: "dark",
       llm: "claude:claude-opus-4-7"
-    }],
+    }] satisfies ProfileRow[],
     [],
     [{ email: "user@example.com" }]
   ]);
@@ -333,7 +412,9 @@ test("db integration shapes reduced profile persistence queries", async () => {
 });
 
 test("db integration checkDatabaseConnection selects current database metadata", async () => {
-  const { sql, calls } = createSqlMock([[{ database: "capsule", now: new Date("2026-03-29T12:00:00.000Z") }]]);
+  const { sql, calls } = createSqlMock([
+    [{ database: "capsule", now: new Date("2026-03-29T12:00:00.000Z") }] satisfies DatabaseConnectionRow[]
+  ]);
   setSqlClientOverride(sql);
 
   const row = await checkDatabaseConnection();

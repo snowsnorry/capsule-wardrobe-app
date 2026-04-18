@@ -10,14 +10,48 @@ import {
   createAuthStore
 } from "./authStore.js";
 
-function createRandomBytesQueue(hexValues) {
+type LoginCodeUpsertPayload = {
+  email: string;
+  codeHash: string;
+  nonce: string;
+  expiresAt: Date;
+};
+
+type VerifyPayload = {
+  email: string;
+  codeHash: string;
+  maxAttempts: number;
+};
+
+type PersistedSession = {
+  sessionId: string;
+  email: string;
+  csrfToken: string;
+  createdAt: Date;
+  expiresAt: Date;
+};
+
+type SessionLookupRow = {
+  email: string;
+  csrfToken: string;
+  createdAt: string;
+  expiresAt: string;
+};
+
+type SendStateEntry = {
+  lastSentAt: number;
+  sendWindowStart: number;
+  sendCount: number;
+};
+
+function createRandomBytesQueue(hexValues: string[]): () => Buffer {
   const queue = [...hexValues];
   return () => Buffer.from(queue.shift() || "ab".repeat(32), "hex");
 }
 
 test("createPendingCode stores hashed login code with generated nonce and expiry", async () => {
   let pruned = 0;
-  let upsertPayload = null;
+  let upsertPayload: LoginCodeUpsertPayload | null = null;
   const now = 1_700_000_000_000;
   const store = createAuthStore({
     codeSecret: "secret",
@@ -36,6 +70,7 @@ test("createPendingCode stores hashed login code with generated nonce and expiry
 
   assert.deepEqual(result, { ok: true, code: "123456" });
   assert.equal(pruned, 1);
+  assert.ok(upsertPayload);
   assert.equal(upsertPayload.email, "person@example.com");
   assert.equal(upsertPayload.nonce, "11".repeat(16));
   assert.equal(upsertPayload.expiresAt.toISOString(), new Date(now + CODE_TTL_MS).toISOString());
@@ -79,14 +114,16 @@ test("createPendingCode enforces resend cooldown and hourly limit", async () => 
     randomBytesImpl: createRandomBytesQueue(["99".repeat(16)]),
     pruneLoginCodesImpl: async () => {},
     upsertLoginCodeImpl: async () => {},
-    initialSendState: [[
-      "person@example.com",
-      {
-        lastSentAt: now - RESEND_COOLDOWN_MS - 1,
-        sendWindowStart: now - (60 * 60 * 1000) + 10_000,
-        sendCount: MAX_CODE_SENDS_PER_HOUR
-      }
-    ]]
+    initialSendState: [
+      [
+        "person@example.com",
+        {
+          lastSentAt: now - RESEND_COOLDOWN_MS - 1,
+          sendWindowStart: now - (60 * 60 * 1000) + 10_000,
+          sendCount: MAX_CODE_SENDS_PER_HOUR
+        }
+      ]
+    ] satisfies [string, SendStateEntry][]
   });
   const rateLimited = await rateLimitedStore.createPendingCode("person@example.com");
   assert.deepEqual(rateLimited, { ok: false, reason: "rate_limit" });
@@ -111,7 +148,7 @@ test("createPendingCode resets hourly window after stale send state is cleaned u
 });
 
 test("verifyCode returns not_found without stored login code and hashes candidate for verification", async () => {
-  let verifyPayload = null;
+  let verifyPayload: VerifyPayload | null = null;
   const store = createAuthStore({
     codeSecret: "secret",
     getLoginCodeByEmailImpl: async (email) => (
@@ -130,6 +167,7 @@ test("verifyCode returns not_found without stored login code and hashes candidat
 
   const success = await store.verifyCode("found@example.com", "654321");
   assert.deepEqual(success, { ok: true });
+  assert.ok(verifyPayload);
   assert.deepEqual(verifyPayload, {
     email: "found@example.com",
     codeHash: crypto
@@ -143,7 +181,7 @@ test("verifyCode returns not_found without stored login code and hashes candidat
 test("createSession prunes expired sessions, inserts session, and respects prune interval", async () => {
   let now = 10_000;
   let pruneCalls = 0;
-  const inserted = [];
+  const inserted: PersistedSession[] = [];
   const store = createAuthStore({
     codeSecret: "secret",
     nowMsImpl: () => now,
@@ -179,12 +217,12 @@ test("createSession prunes expired sessions, inserts session, and respects prune
 
 test("getSession normalizes valid sessions and deletes expired sessions", async () => {
   let now = 50_000;
-  const deletedIds = [];
+  const deletedIds: string[] = [];
   const store = createAuthStore({
     codeSecret: "secret",
     nowMsImpl: () => now,
     pruneExpiredSessionsImpl: async () => {},
-    getSessionByIdImpl: async (sessionId) => {
+    getSessionByIdImpl: async (sessionId): Promise<SessionLookupRow | null> => {
       if (sessionId === "missing") {
         return null;
       }
@@ -222,7 +260,7 @@ test("getSession normalizes valid sessions and deletes expired sessions", async 
 });
 
 test("revokeSession deletes persisted session by id", async () => {
-  const deletedIds = [];
+  const deletedIds: string[] = [];
   const store = createAuthStore({
     codeSecret: "secret",
     deleteSessionByIdImpl: async (sessionId) => {

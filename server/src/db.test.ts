@@ -2,20 +2,27 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { buildPriceBuckets, hasAffectedRows } from "./db.js";
 
+type HasAffectedRowsInput =
+  | { email: string }[]
+  | { count: number }
+  | null
+  | undefined
+  | Record<string, never>;
+
 test("hasAffectedRows handles Neon-style returned rows", () => {
-  assert.equal(hasAffectedRows([{ email: "user@example.com" }]), true);
-  assert.equal(hasAffectedRows([]), false);
+  assert.equal(hasAffectedRows([{ email: "user@example.com" }] satisfies HasAffectedRowsInput), true);
+  assert.equal(hasAffectedRows([] satisfies HasAffectedRowsInput), false);
 });
 
 test("hasAffectedRows handles drivers that return count", () => {
-  assert.equal(hasAffectedRows({ count: 1 }), true);
-  assert.equal(hasAffectedRows({ count: 0 }), false);
+  assert.equal(hasAffectedRows({ count: 1 } satisfies HasAffectedRowsInput), true);
+  assert.equal(hasAffectedRows({ count: 0 } satisfies HasAffectedRowsInput), false);
 });
 
 test("hasAffectedRows returns false for unsupported payloads", () => {
-  assert.equal(hasAffectedRows(null), false);
-  assert.equal(hasAffectedRows(undefined), false);
-  assert.equal(hasAffectedRows({}), false);
+  assert.equal(hasAffectedRows(null satisfies HasAffectedRowsInput), false);
+  assert.equal(hasAffectedRows(undefined satisfies HasAffectedRowsInput), false);
+  assert.equal(hasAffectedRows({} as never), false);
 });
 
 test("buildPriceBuckets returns a continuous bucket range with zero-count gaps", () => {

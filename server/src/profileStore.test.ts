@@ -17,6 +17,15 @@ import {
   getSeasons
 } from "./profileStore.js";
 
+type ProfileRecordFixture = {
+  email: string;
+  activeCapsuleId: string | null;
+  locale: string;
+  fullname: string | null;
+  theme: string;
+  llm: string;
+};
+
 test("normalizeFormalityLevel keeps only known core styles", () => {
   assert.equal(normalizeFormalityLevel(" smart_casual "), "smart_casual");
   assert.equal(normalizeFormalityLevel("retro"), null);
@@ -98,43 +107,42 @@ test("buildPatternOptions keeps current valid profile pattern even if absent in 
 });
 
 test("normalizeProfileRecord applies defaults for new profile fields", () => {
+  const input: ProfileRecordFixture = {
+    email: "user@example.com",
+    activeCapsuleId: " capsule-1 ",
+    locale: "en",
+    fullname: "  ",
+    theme: "invalid",
+    llm: ""
+  };
+
+  const expected: ProfileRecordFixture = {
+    email: "user@example.com",
+    activeCapsuleId: "capsule-1",
+    locale: "en",
+    fullname: null,
+    theme: "system",
+    llm: "openai:gpt-5.2"
+  };
+
   assert.deepEqual(
-    normalizeProfileRecord({
-      email: "user@example.com",
-      activeCapsuleId: " capsule-1 ",
-      locale: "en",
-      fullname: "  ",
-      theme: "invalid",
-      llm: ""
-    }),
-    {
-      email: "user@example.com",
-      activeCapsuleId: "capsule-1",
-      locale: "en",
-      fullname: null,
-      theme: "system",
-      llm: "openai:gpt-5.2"
-    }
+    normalizeProfileRecord(input),
+    expected
   );
 });
 
 test("normalizeProfileRecord keeps a supported claude llm selection", () => {
+  const input: ProfileRecordFixture = {
+    email: "user@example.com",
+    activeCapsuleId: null,
+    locale: "en",
+    fullname: "Ada",
+    theme: "dark",
+    llm: "claude:claude-opus-4-7"
+  };
+
   assert.deepEqual(
-    normalizeProfileRecord({
-      email: "user@example.com",
-      activeCapsuleId: null,
-      locale: "en",
-      fullname: "Ada",
-      theme: "dark",
-      llm: "claude:claude-opus-4-7"
-    }),
-    {
-      email: "user@example.com",
-      activeCapsuleId: null,
-      locale: "en",
-      fullname: "Ada",
-      theme: "dark",
-      llm: "claude:claude-opus-4-7"
-    }
+    normalizeProfileRecord(input),
+    input
   );
 });

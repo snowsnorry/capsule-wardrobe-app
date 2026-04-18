@@ -364,8 +364,8 @@ Focus areas:
 **Goal:** type the boundary where server logic meets external systems.
 
 Recommended candidates:
-- [ ] `db.js`
-- [ ] `email.js`
+- [x] `db.ts`
+- [x] `email.ts`
 - [ ] auth-related request handling and security-sensitive modules
 - [ ] modules that shape request payloads, DB rows, or response bodies
 
@@ -1091,6 +1091,7 @@ Use this section during execution.
 - [x] Batch 14 — Final client TS mop-up audit and batch completed successfully
 - [x] Batch 15 — Phase 5 / Phase 6 enlarged server store/helper batch completed successfully
 - [x] Batch 17A — Phase 7 server DB boundary layer (`server/src/db.ts`) completed successfully
+- [x] Batch 17B — Phase 7 server email/boundary test cluster completed successfully
 - [x] Root/client TypeScript bootstrap is in place and client hybrid typecheck passes
 - [x] `client/src/test/setup.js` was reviewed and intentionally left as JS because migration was not required in Batch 1
 - [x] Final client audit confirms the only remaining JS file under `client/src/**/*` is `client/src/test/setup.js`, intentionally deferred because renaming it would require changing excluded `client/vite.config.js`
@@ -1130,11 +1131,12 @@ Use this section during execution.
 - [ ] Some excluded server child-process paths still execute source `.js` files under plain Node, so targeted compatibility shims may be required even after the main server TS bootstrap is complete.
 - [ ] Because some root shared tests still execute under plain Node, shared `.js` -> `.ts` renames remain blocked when those shared modules are imported by plain-Node runtime/test paths.
 - [ ] `server/src/index.js` is both the API entrypoint and the Vite dev host in development. Treat it as a late-stage migration target.
+- [ ] `server/src/index.test.js` remains the main deferred request/response typing surface; it should be migrated alone as Batch 17C to avoid widening into blocked entrypoint-adjacent work.
 - [ ] `client/render-server.js` and `client/netlify/functions/bff.js` are deployment/runtime entrypoints and should stay out of the first client batch.
 - [x] Server TS runtime strategy is now defined:
   - `tsx` for dev/test
   - emitted JS build output for production server execution
-- [ ] The remaining Phase 7 boundary surface still needs follow-up slices for `email.js` and request/response boundary typing after the DB layer migration.
+- [ ] The remaining Phase 7 boundary surface now centers on request/response boundary typing, starting with `server/src/index.test.js`, while staying out of `server/src/index.js`.
 - [ ] `server/src/ai/*`, `server/src/wardrobePdf.js`, and child-process files remain late-stage targets.
 - [ ] `client/src/index.css` currently triggers a non-fatal jsdom CSS parse warning during client tests; do not treat that warning as a TS migration regression unless it becomes test-fatal.
 
@@ -1188,6 +1190,41 @@ After every completed batch, append a short entry with:
   - `server/src/email.js`
   - nearest email/auth boundary tests
   - request/response boundary typing that depends on the now-typed DB layer but still stays out of `server/src/index.js`, `server/src/ai/*`, and `wardrobePdf*`
+
+### Batch 17B — Phase 7 server email/boundary test cluster
+- Batch name / phase:
+  - Batch 17B — Phase 7 server email/boundary test cluster
+- Exact files changed:
+  - `server/src/email.ts` (renamed from `server/src/email.js`)
+  - `server/src/email.test.ts` (renamed from `server/src/email.test.js`)
+  - `server/src/authStore.test.ts` (renamed from `server/src/authStore.test.js`)
+  - `server/src/db.test.ts` (renamed from `server/src/db.test.js`)
+  - `server/src/db.integration.test.ts` (renamed from `server/src/db.integration.test.js`)
+  - `server/src/profileStore.test.ts` (renamed from `server/src/profileStore.test.js`)
+  - `server/src/profileRejected.test.ts` (renamed from `server/src/profileRejected.test.js`)
+  - `server/package.json`
+  - `typescript-migration.md`
+- Commands run:
+  - `npm --workspace server run typecheck`
+  - `npm --workspace server run test`
+  - `npm --workspace server run build`
+- Typecheck passed: yes
+- Tests passed: yes
+- Build passed: yes
+- `client/src/test/setup.js` had to be migrated: no
+- Type errors worked around temporarily:
+  - none
+- `any`, assertion, or suppression introduced:
+  - no `any`
+  - narrow local assertions only for error-code tagging in `server/src/email.ts`
+  - no `@ts-ignore` or `@ts-expect-error`
+- Newly discovered blockers:
+  - `server/package.json` test coverage now needs the mixed `src/*.test.js src/*.test.ts` glob until the remaining root-level server tests are migrated
+  - `server/src/index.test.js` should stay isolated as the next request/response batch because its fixture graph reaches blocked AI/PDF adjacency through dependency injection
+- Recommended next batch:
+  - `server/src/index.test.ts`
+  - request/response boundary envelopes for auth/profile endpoints only
+  - no edits to `server/src/index.js`, `server/src/ai/*`, or `wardrobePdf*`
 
 ### Deferred decisions
 - [ ] Whether server TS should use emitted build output only, or a TS runtime in dev
