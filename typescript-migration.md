@@ -234,7 +234,7 @@ Recommended order:
 - [ ] `client/src/i18n/index.js`
 - [ ] `client/src/i18n/useI18n.js`
 - [ ] `client/src/i18n/LocaleProvider.jsx`
-- [ ] `client/src/utils/productLabel.js`
+- [x] `client/src/utils/productLabel.js`
 - [ ] low-risk presentational components in `client/src/components/**/*`
 - [ ] `client/src/theme.js` to `theme.ts`
 
@@ -244,10 +244,15 @@ Focus areas:
 - [ ] Type MUI theme-related exports
 - [ ] Type reusable component props
 - [ ] Avoid over-generalizing prop types too early
-- [ ] Add a small explicit response/error envelope type before migrating `client/src/api/request.js`
+- [ ] Add a small explicit response/error envelope type in the same batch as `client/src/api/request.js`
 
 Sequencing notes:
-- [ ] `client/src/api/request.js` mutates `Error` instances with `status` and `data`, so it should not be migrated without a small explicit envelope type
+- [ ] The next grouped client-only batch should be the API transport core cluster:
+  - `client/src/api/request.js`
+  - `client/src/api/request.test.js`
+- [ ] This is the smallest coherent grouped batch after the completed leaf batches because it keeps the transport helper and its contract test together.
+- [ ] `client/src/api/request.js` mutates `Error` instances with `status` and `data`, so the request/error envelope typing should be handled in the same batch as the file rename rather than split into a later follow-up.
+- [ ] Existing `./request.js` specifiers in `auth.js`, `search.js`, `capsules.js`, and `wardrobe.js` are expected to continue resolving under the current client bundler-based resolution, so this cluster should not require broader API-consumer edits.
 - [ ] `client/src/i18n/index.js` and `client/src/i18n/useI18n.js` are high-fanout client hubs and should follow the shared helper migration rather than precede it
 - [ ] Keep `client/src/components/LocaleSwitcher.jsx` after `client/src/i18n/useI18n.js`
 - [ ] Keep chart code and dynamic-key stats UI later in the client migration
@@ -421,8 +426,8 @@ Recommended execution sequence:
 1. [x] TS configs + root typecheck scripts
 2. [x] client bootstrap leaf (`main.tsx`, optional `test/setup.ts`) without touching `App.jsx`
 3. [x] client API base leaf: `client/src/api/config.js`
-4. [ ] client-only utility leaf: `client/src/utils/productLabel.js`
-5. [ ] client API base + i18n hubs
+4. [x] client-only utility leaf: `client/src/utils/productLabel.js`
+5. [ ] client API transport core cluster: `client/src/api/request.js` + `client/src/api/request.test.js`
 6. [ ] client presentational components + theme
 7. [ ] client screens/search/App
 8. [ ] shared modules that are safe under current runtime constraints
@@ -463,8 +468,9 @@ Recommended execution sequence:
 - Newly discovered blockers:
   - existing non-fatal jsdom CSS parse warning from `client/src/index.css` still appears during client tests
 - Recommended next batch:
-  - `client/src/utils/productLabel.js` only
-  - Reason: next narrow client-only leaf after Batch 2, still avoids server/runtime loader changes
+  - `client/src/api/request.js`
+  - `client/src/api/request.test.js`
+  - Reason: smallest coherent grouped client-only batch after the isolated leaf batches; it keeps the transport helper and its contract test together and addresses the request/error-envelope prerequisite in the same run
 
 ### Batch 2 — Phase 3 client API config leaf
 
@@ -483,7 +489,29 @@ Recommended execution sequence:
   - none beyond the existing non-fatal jsdom CSS parse warning from `client/src/index.css`
   - existing `./config.js` specifiers in direct client API consumers and Vitest mocks continued to resolve to `config.ts` under the current client bundler/TS setup, so no consumer import changes were required
 - Recommended next batch:
-  - `client/src/utils/productLabel.js` only
+  - `client/src/api/request.js`
+  - `client/src/api/request.test.js`
+
+### Batch 3 — Phase 3 client product label leaf
+
+- Batch name / phase: Batch 3 — Phase 3 client product label leaf
+- Exact files changed:
+  - `client/src/utils/productLabel.ts`
+  - `typescript-migration.md`
+- Commands run:
+  - `npx tsc -p client/tsconfig.json --noEmit`
+  - `npm --workspace client run test`
+- Typecheck passed: yes
+- Tests passed: yes
+- Type errors worked around temporarily: none
+- `any`, assertion, or suppression introduced: none
+- Newly discovered blockers:
+  - none beyond the existing non-fatal jsdom CSS parse warning from `client/src/index.css`
+  - existing `../utils/productLabel.js` specifiers in direct client consumers continued to resolve to `productLabel.ts` under the current client bundler/TS setup, so no consumer import changes were required
+- Recommended next batch:
+  - `client/src/api/request.js`
+  - `client/src/api/request.test.js`
+  - Reason: smallest coherent grouped client-only batch after the completed leaf batches; i18n hubs are higher fanout and small component clusters are lower leverage
 
 ---
 
@@ -591,7 +619,8 @@ Batch 1 is complete.
   - any `server/src/*.js`
 
 Recommended next batch:
-- [ ] `client/src/utils/productLabel.js` only
+- [ ] `client/src/api/request.js`
+- [ ] `client/src/api/request.test.js`
 
 ---
 
@@ -602,6 +631,7 @@ Use this section during execution.
 ### Completed
 - [x] Batch 1 — Phase 0 / Phase 1 client TS bootstrap scaffold completed successfully
 - [x] Batch 2 — Phase 3 client API config leaf completed successfully
+- [x] Batch 3 — Phase 3 client product label leaf completed successfully
 - [x] Root/client TypeScript bootstrap is in place and client hybrid typecheck passes
 - [x] `client/src/test/setup.js` was reviewed and intentionally left as JS because migration was not required in Batch 1
 

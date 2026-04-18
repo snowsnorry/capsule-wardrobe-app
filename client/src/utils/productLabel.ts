@@ -1,4 +1,9 @@
-function getProductLabelParts(item, fallbackLabel = "") {
+type ProductLabelItem = {
+  name?: string | null;
+  audience?: string | null;
+} | null | undefined;
+
+function getProductLabelParts(item: ProductLabelItem, fallbackLabel = "") {
   const baseLabel = String(item?.name || "").trim();
   if (!baseLabel) {
     return {
@@ -16,7 +21,7 @@ function getProductLabelParts(item, fallbackLabel = "") {
   };
 }
 
-function formatProductLabel(item, fallbackLabel = "") {
+function formatProductLabel(item: ProductLabelItem, fallbackLabel = "") {
   return getProductLabelParts(item, fallbackLabel).accessibilityLabel;
 }
 
