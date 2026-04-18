@@ -232,7 +232,8 @@ Recommended order:
 - [x] `client/src/api/request.js`
 - [x] `client/src/api/auth.js`
 - [x] `client/src/api/search.js`
-- [ ] `client/src/api/capsules.js`, `client/src/api/wardrobe.js`
+- [x] `client/src/api/capsules.js`
+- [x] `client/src/api/wardrobe.js`
 - [ ] `client/src/i18n/index.js`
 - [ ] `client/src/i18n/useI18n.js`
 - [ ] `client/src/i18n/LocaleProvider.jsx`
@@ -260,6 +261,9 @@ Sequencing notes:
 - [x] The completed `auth.js` and `search.js` renames required broader client-only rename-only fallout in `App`, screens, caches, and tests:
   - these fallout edits were limited to strict import/mock specifier updates only
   - broader typing/refactor work in those higher-fanout files remains deferred to later batches
+- [x] The completed `capsules.js` and `wardrobe.js` renames required narrower client-only rename-only fallout in `App` and App tests:
+  - these fallout edits were limited to strict import/mock specifier updates only
+  - no additional screen-level fallout was required by the current import graph
 - [ ] `client/src/i18n/index.js` and `client/src/i18n/useI18n.js` are high-fanout client hubs and should follow the shared helper migration rather than precede it
 - [ ] Keep `client/src/components/LocaleSwitcher.jsx` after `client/src/i18n/useI18n.js`
 - [ ] Keep chart code and dynamic-key stats UI later in the client migration
@@ -436,7 +440,7 @@ Recommended execution sequence:
 4. [x] client-only utility leaf: `client/src/utils/productLabel.js`
 5. [x] client API transport core cluster: `client/src/api/request.js` + `client/src/api/request.test.js`
 6. [x] client API consumer cluster: `client/src/api/auth.js` + `client/src/api/auth.test.js` + `client/src/api/search.js` + `client/src/api/search.test.js`
-7. [ ] client API cluster: `client/src/api/capsules.js` + `client/src/api/capsules.test.js` + `client/src/api/wardrobe.js` + `client/src/api/wardrobe.test.js`
+7. [x] client API cluster: `client/src/api/capsules.js` + `client/src/api/capsules.test.js` + `client/src/api/wardrobe.js` + `client/src/api/wardrobe.test.js`
 8. [ ] client presentational components + theme
 9. [ ] client screens/search/App
 10. [ ] shared modules that are safe under current runtime constraints
@@ -592,6 +596,36 @@ Recommended execution sequence:
   - `client/src/api/wardrobe.test.js`
   - Reason: next smallest remaining client API cluster after the `auth` and `search` consumer batch, with transport and core consumer modules now typed
 
+### Batch 6 — Phase 3 remaining client API cluster (`capsules` + `wardrobe`)
+
+- Batch name / phase: Batch 6 — Phase 3 remaining client API cluster (`capsules` + `wardrobe`)
+- Exact files changed:
+  - `client/src/api/capsules.ts`
+  - `client/src/api/capsules.test.ts`
+  - `client/src/api/wardrobe.ts`
+  - `client/src/api/wardrobe.test.ts`
+  - `client/src/App.jsx`
+  - `client/src/App.test.jsx`
+  - `client/src/App.e2e.test.jsx`
+  - `typescript-migration.md`
+- Commands run:
+  - `npx tsc -p client/tsconfig.json --noEmit`
+  - `npm --workspace client run test`
+- Typecheck passed: yes
+- Tests passed: yes
+- Type errors worked around temporarily: none
+- `any`, assertion, or suppression introduced:
+  - local assertions only: `as RequestErrorWithStatus` and `as Response`
+  - no `any`
+  - no suppression comments
+- Newly discovered blockers:
+  - none beyond the existing non-fatal jsdom CSS parse warning from `client/src/index.css`
+  - the `capsules.js` and `wardrobe.js` renames required 3 exact client-only specifier updates in `App` and App Vitest mocks, plus the intra-cluster `downloadCapsulePdf` import update in `wardrobe.test.ts`
+- Recommended next batch:
+  - low-risk presentational components in `client/src/components/**/*`
+  - `client/src/theme.js`
+  - Reason: the remaining client API layer is now typed, so the next narrow Phase 3 slice is presentational components plus theme before broader screens/App typing work
+
 ---
 
 ## Subagent Guidance for Codex
@@ -698,10 +732,8 @@ Batch 1 is complete.
   - any `server/src/*.js`
 
 Recommended next batch:
-- [ ] `client/src/api/capsules.js`
-- [ ] `client/src/api/capsules.test.js`
-- [ ] `client/src/api/wardrobe.js`
-- [ ] `client/src/api/wardrobe.test.js`
+- [ ] low-risk presentational components in `client/src/components/**/*`
+- [ ] `client/src/theme.js`
 
 ---
 
@@ -715,6 +747,7 @@ Use this section during execution.
 - [x] Batch 3 — Phase 3 client product label leaf completed successfully
 - [x] Batch 4 — Phase 3 client API transport core cluster completed successfully
 - [x] Batch 5 — Phase 3 client API consumer cluster (`auth` + `search`) completed successfully
+- [x] Batch 6 — Phase 3 remaining client API cluster (`capsules` + `wardrobe`) completed successfully
 - [x] Root/client TypeScript bootstrap is in place and client hybrid typecheck passes
 - [x] `client/src/test/setup.js` was reviewed and intentionally left as JS because migration was not required in Batch 1
 

@@ -1,12 +1,48 @@
 import { API_BASE_URL } from "./config.js";
 import { requestJson } from "./request";
+import type { JsonObject } from "./request";
 
 class RetriableError extends Error {}
 class FatalError extends Error {}
 
-let fetchEventSourcePromise = null;
+type WardrobeResponse = JsonObject;
+type EventPayload = JsonObject;
+type EventMessage = {
+  data: EventPayload;
+  event: string;
+};
+type EventStreamLike = {
+  fetchEventSource: (
+    url: string,
+    options: Record<string, unknown>
+  ) => Promise<unknown>;
+};
+type CapsuleEventMessage = {
+  data?: string;
+  event?: string;
+};
+type CapsuleStreamResponse = Pick<Response, "ok" | "status"> & {
+  headers: Pick<Headers, "get">;
+};
+type CapsuleEventSubscription = {
+  capsuleId?: string;
+  onError?: (error: Error) => void;
+  onMessage?: (message: EventMessage) => void;
+  signal?: AbortSignal;
+};
+type WardrobeMutationInput = {
+  capsuleId?: string;
+};
+type SelectedWardrobeMutationInput = WardrobeMutationInput & {
+  itemUrls: string[];
+};
+type OutfitSetMutationInput = WardrobeMutationInput & {
+  setIndex?: number | string;
+};
 
-function loadFetchEventSource() {
+let fetchEventSourcePromise: Promise<EventStreamLike["fetchEventSource"]> | null = null;
+
+function loadFetchEventSource(): Promise<EventStreamLike["fetchEventSource"]> {
   if (!fetchEventSourcePromise) {
     fetchEventSourcePromise = import("@microsoft/fetch-event-source")
       .then((module) => module.fetchEventSource);
@@ -15,7 +51,7 @@ function loadFetchEventSource() {
   return fetchEventSourcePromise;
 }
 
-function parseEventPayload(data) {
+function parseEventPayload(data: string | undefined): EventPayload {
   if (typeof data !== "string" || data.trim().length === 0) {
     return {};
   }
@@ -32,14 +68,14 @@ async function subscribeCapsuleEvents({
   signal,
   onMessage = () => {},
   onError = () => {}
-} = {}) {
+}: CapsuleEventSubscription = {}): Promise<unknown> {
   const normalizedCapsuleId = String(capsuleId || "").trim();
   const fetchEventSource = await loadFetchEventSource();
   return fetchEventSource(`${API_BASE_URL}/capsules/${normalizedCapsuleId}/events`, {
     credentials: "include",
     signal,
     openWhenHidden: true,
-    async onopen(response) {
+    async onopen(response: CapsuleStreamResponse) {
       const contentType = (response.headers.get("content-type") || "").toLowerCase();
       if (response.ok && contentType.includes("text/event-stream")) {
         return;
@@ -51,7 +87,7 @@ async function subscribeCapsuleEvents({
 
       throw new RetriableError(`request_failed_${response.status}`);
     },
-    onmessage(event) {
+    onmessage(event: CapsuleEventMessage) {
       onMessage({
         event: event.event || "message",
         data: parseEventPayload(event.data)
@@ -60,7 +96,7 @@ async function subscribeCapsuleEvents({
     onclose() {
       throw new RetriableError("event_stream_closed");
     },
-    onerror(error) {
+    onerror(error: Error) {
       if (signal?.aborted) {
         return undefined;
       }
@@ -75,14 +111,17 @@ async function subscribeCapsuleEvents({
   });
 }
 
-async function regenerateCapsuleWardrobe({ capsuleId }) {
+async function regenerateCapsuleWardrobe({ capsuleId }: WardrobeMutationInput): Promise<WardrobeResponse> {
   return requestJson(`${API_BASE_URL}/capsules/${String(capsuleId || "").trim()}/regenerate`, {
     method: "POST",
     credentials: "include"
   });
 }
 
-async function regenerateSelectedWardrobeItems({ itemUrls, capsuleId }) {
+async function regenerateSelectedWardrobeItems({
+  itemUrls,
+  capsuleId
+}: SelectedWardrobeMutationInput): Promise<WardrobeResponse> {
   return requestJson(`${API_BASE_URL}/capsules/${String(capsuleId || "").trim()}/regenerate-selected`, {
     method: "POST",
     credentials: "include",
@@ -93,14 +132,14 @@ async function regenerateSelectedWardrobeItems({ itemUrls, capsuleId }) {
   });
 }
 
-async function generateOutfitSetImage({ capsuleId, setIndex }) {
+async function generateOutfitSetImage({ capsuleId, setIndex }: OutfitSetMutationInput): Promise<WardrobeResponse> {
   return requestJson(`${API_BASE_URL}/capsules/${String(capsuleId || "").trim()}/outfit-sets/${Number.parseInt(String(setIndex ?? ""), 10)}/image`, {
     method: "POST",
     credentials: "include"
   });
 }
 
-async function deleteOutfitSetImage({ capsuleId, setIndex }) {
+async function deleteOutfitSetImage({ capsuleId, setIndex }: OutfitSetMutationInput): Promise<WardrobeResponse> {
   return requestJson(`${API_BASE_URL}/capsules/${String(capsuleId || "").trim()}/outfit-sets/${Number.parseInt(String(setIndex ?? ""), 10)}/image`, {
     method: "DELETE",
     credentials: "include"

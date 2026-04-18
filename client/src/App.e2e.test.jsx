@@ -79,8 +79,8 @@ const capsulesApi = vi.hoisted(() => ({
 
 vi.mock("./api/auth", () => authApi);
 vi.mock("./api/profileOptionsCache.js", () => profileOptionsApi);
-vi.mock("./api/wardrobe.js", () => wardrobeApi);
-vi.mock("./api/capsules.js", () => capsulesApi);
+vi.mock("./api/wardrobe", () => wardrobeApi);
+vi.mock("./api/capsules", () => capsulesApi);
 
 vi.mock("./screens/LoadingScreen.jsx", () => ({
   default: () => <div data-testid="loading-screen">loading-screen</div>

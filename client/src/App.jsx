@@ -25,7 +25,7 @@ import {
   saveCapsule,
   searchCapsules,
   updateCapsuleFilters
-} from "./api/capsules.js";
+} from "./api/capsules";
 import { clearProfileOptionsCache, loadProfileOptions } from "./api/profileOptionsCache.js";
 import { clearRequestCache } from "./api/auth";
 import {
@@ -34,7 +34,7 @@ import {
   regenerateCapsuleWardrobe as requestWardrobeRegeneration,
   regenerateSelectedWardrobeItems as requestSelectedWardrobeRegeneration,
   subscribeCapsuleEvents
-} from "./api/wardrobe.js";
+} from "./api/wardrobe";
 import SignInScreen from "./screens/SignInScreen.jsx";
 import { useI18n } from "./i18n/useI18n.js";
 import { ACCENT_COLOR_OPTIONS } from "../../shared/accentColors.js";

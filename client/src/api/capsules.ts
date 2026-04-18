@@ -1,11 +1,25 @@
 import { API_BASE_URL } from "./config.js";
 import { request, requestJson } from "./request";
+import type { JsonObject } from "./request";
 
-function capsuleUrl(path = "") {
+type CapsuleResponse = JsonObject;
+type CapsuleFilters = Record<string, unknown>;
+type CapsuleCreatePayload = Record<string, unknown> & {
+  filters?: CapsuleFilters | null;
+  name?: string;
+};
+type CapsuleFiltersOptions = {
+  regenerate?: boolean;
+};
+type RequestErrorWithStatus = Error & {
+  status: number;
+};
+
+function capsuleUrl(path = ""): string {
   return `${API_BASE_URL}/capsules${path}`;
 }
 
-function getDownloadFilenameFromDisposition(contentDisposition) {
+function getDownloadFilenameFromDisposition(contentDisposition?: string | null): string {
   const header = String(contentDisposition || "");
   const utf8Match = header.match(/filename\*\s*=\s*UTF-8''([^;]+)/i);
   if (utf8Match?.[1]) {
@@ -20,19 +34,19 @@ function getDownloadFilenameFromDisposition(contentDisposition) {
   return (filenameMatch?.[1] || filenameMatch?.[2] || "").trim() || "capsule-wardrobe.pdf";
 }
 
-async function fetchCapsuleBootstrap() {
+async function fetchCapsuleBootstrap(): Promise<CapsuleResponse> {
   return requestJson(capsuleUrl("/bootstrap"), {
     credentials: "include"
   });
 }
 
-async function fetchRecentCapsules() {
+async function fetchRecentCapsules(): Promise<CapsuleResponse> {
   return requestJson(capsuleUrl("/recent"), {
     credentials: "include"
   });
 }
 
-async function searchCapsules(query) {
+async function searchCapsules(query: string): Promise<CapsuleResponse> {
   const encodedQuery = encodeURIComponent(String(query || "").trim());
   const url = encodedQuery ? `${capsuleUrl("/search")}?q=${encodedQuery}` : capsuleUrl("/search");
   return requestJson(url, {
@@ -40,14 +54,14 @@ async function searchCapsules(query) {
   });
 }
 
-async function fetchCapsule(id) {
+async function fetchCapsule(id: string): Promise<CapsuleResponse> {
   return requestJson(capsuleUrl(`/${id}`), {
     credentials: "include"
   });
 }
 
-async function createCapsule(payload = {}) {
-  const body = {};
+async function createCapsule(payload: CapsuleCreatePayload = {}): Promise<CapsuleResponse> {
+  const body: CapsuleCreatePayload = {};
   if (typeof payload?.name === "string" && payload.name.trim()) {
     body.name = payload.name;
   }
@@ -63,7 +77,11 @@ async function createCapsule(payload = {}) {
   });
 }
 
-async function updateCapsuleFilters(id, filters, options = {}) {
+async function updateCapsuleFilters(
+  id: string,
+  filters: CapsuleFilters,
+  options: CapsuleFiltersOptions = {}
+): Promise<CapsuleResponse> {
   return requestJson(buildCapsuleFiltersUrl(id, options), {
     method: "PATCH",
     credentials: "include",
@@ -72,7 +90,7 @@ async function updateCapsuleFilters(id, filters, options = {}) {
   });
 }
 
-function buildCapsuleFiltersUrl(id, { regenerate = false } = {}) {
+function buildCapsuleFiltersUrl(id: string, { regenerate = false }: CapsuleFiltersOptions = {}): string {
   const params = new URLSearchParams();
   if (regenerate) {
     params.set("regenerate", "true");
@@ -82,7 +100,7 @@ function buildCapsuleFiltersUrl(id, { regenerate = false } = {}) {
   return capsuleUrl(`/${id}/filters${query ? `?${query}` : ""}`);
 }
 
-async function updateCapsuleRejectedUrls(id, rejectedUrls) {
+async function updateCapsuleRejectedUrls(id: string, rejectedUrls: string[]): Promise<CapsuleResponse> {
   return requestJson(capsuleUrl(`/${id}/rejected-urls`), {
     method: "PATCH",
     credentials: "include",
@@ -91,21 +109,21 @@ async function updateCapsuleRejectedUrls(id, rejectedUrls) {
   });
 }
 
-async function saveCapsule(id) {
+async function saveCapsule(id: string): Promise<CapsuleResponse> {
   return requestJson(capsuleUrl(`/${id}/save`), {
     method: "POST",
     credentials: "include"
   });
 }
 
-async function revertCapsule(id) {
+async function revertCapsule(id: string): Promise<CapsuleResponse> {
   return requestJson(capsuleUrl(`/${id}/revert`), {
     method: "POST",
     credentials: "include"
   });
 }
 
-async function renameCapsule(id, name) {
+async function renameCapsule(id: string, name: string): Promise<CapsuleResponse> {
   return requestJson(capsuleUrl(`/${id}/rename`), {
     method: "PATCH",
     credentials: "include",
@@ -114,7 +132,7 @@ async function renameCapsule(id, name) {
   });
 }
 
-async function duplicateCapsule(id, name) {
+async function duplicateCapsule(id: string, name?: string): Promise<CapsuleResponse> {
   return requestJson(capsuleUrl(`/${id}/duplicate`), {
     method: "POST",
     credentials: "include",
@@ -123,21 +141,21 @@ async function duplicateCapsule(id, name) {
   });
 }
 
-async function selectCapsule(id) {
+async function selectCapsule(id: string): Promise<CapsuleResponse> {
   return requestJson(capsuleUrl(`/${id}/select`), {
     method: "POST",
     credentials: "include"
   });
 }
 
-async function deleteCapsule(id) {
+async function deleteCapsule(id: string): Promise<CapsuleResponse> {
   return requestJson(capsuleUrl(`/${id}`), {
     method: "DELETE",
     credentials: "include"
   });
 }
 
-async function downloadCapsulePdf(id) {
+async function downloadCapsulePdf(id: string): Promise<void> {
   const response = await request(capsuleUrl(`/${id}/pdf`), {
     method: "POST",
     credentials: "include"
@@ -151,7 +169,7 @@ async function downloadCapsulePdf(id) {
     } catch {
       // ignore
     }
-    const error = new Error(message);
+    const error = new Error(message) as RequestErrorWithStatus;
     error.status = response.status;
     throw error;
   }

@@ -15,14 +15,19 @@ vi.mock("./config.js", () => ({
   API_BASE_URL: "https://api.example.test"
 }));
 
-import { downloadCapsulePdf } from "./capsules.js";
+import { downloadCapsulePdf } from "./capsules";
 import {
   deleteOutfitSetImage,
   generateOutfitSetImage,
   regenerateCapsuleWardrobe,
   regenerateSelectedWardrobeItems,
   subscribeCapsuleEvents
-} from "./wardrobe.js";
+} from "./wardrobe";
+
+type HeaderMap = Record<string, string>;
+type MockResponse = Pick<Response, "blob" | "json" | "ok" | "status"> & {
+  headers: Pick<Headers, "get">;
+};
 
 function createResponse({
   ok = true,
@@ -31,7 +36,14 @@ function createResponse({
   jsonError = null,
   blobData = null,
   headers = {}
-} = {}) {
+}: {
+  blobData?: Blob | null;
+  headers?: HeaderMap;
+  jsonData?: unknown;
+  jsonError?: Error | null;
+  ok?: boolean;
+  status?: number;
+} = {}): MockResponse {
   return {
     ok,
     status,
@@ -59,7 +71,7 @@ describe("wardrobe api", () => {
     requestApi.request.mockReset();
     requestApi.requestJson.mockReset();
     requestApi.requestJson.mockResolvedValue({ items: [] });
-    requestApi.request.mockResolvedValue(createResponse());
+    requestApi.request.mockResolvedValue(createResponse() as Response);
     window.history.replaceState({}, "", "/");
     vi.stubGlobal("URL", {
       createObjectURL: vi.fn(() => "blob:wardrobe-pdf"),
@@ -126,7 +138,7 @@ describe("wardrobe api", () => {
       headers: {
         "content-disposition": `attachment; filename="Spring-edit.pdf"; filename*=UTF-8''${encodeURIComponent("Spring edit.pdf")}`
       }
-    }));
+    }) as Response);
 
     await downloadCapsulePdf("capsule-1");
 
@@ -150,7 +162,7 @@ describe("wardrobe api", () => {
       ok: false,
       status: 503,
       jsonError: new Error("invalid_json")
-    }));
+    }) as Response);
 
     await expect(downloadCapsulePdf("capsule-1")).rejects.toMatchObject({
       message: "request_failed_503",

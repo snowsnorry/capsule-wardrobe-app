@@ -14,7 +14,7 @@ import {
   createCapsule,
   updateCapsuleFilters,
   updateCapsuleRejectedUrls
-} from "./capsules.js";
+} from "./capsules";
 
 describe("capsules api", () => {
   beforeEach(() => {
