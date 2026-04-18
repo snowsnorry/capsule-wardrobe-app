@@ -20,7 +20,7 @@
     "test": "npm run test:server && npm run test:client && npm run test:shared",
     "test:server": "npm --workspace server run test",
     "test:client": "npm --workspace client run test",
-    "test:shared": "node --test shared/wardrobeOrder.test.js shared/accentColors.test.js shared/colorSwatches.test.js shared/i18n/helpers.test.js shared/i18n/localeParity.test.js"
+    "test:shared": "npm --workspace server exec -- tsx --test ../shared/wardrobeOrder.test.ts ../shared/accentColors.test.ts ../shared/colorSwatches.test.ts ../shared/i18n/helpers.test.ts ../shared/i18n/localeParity.test.ts"
   },
   "devDependencies": {
     "concurrently": "^9.1.2",

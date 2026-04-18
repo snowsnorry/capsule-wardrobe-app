@@ -11,10 +11,12 @@ import {
 } from "./colorSwatches.js";
 import { translateOption } from "./i18n/helpers.js";
 
+type LocaleDictionary = typeof en;
+
 for (const locale of [
   ["en", en],
   ["ru", ru]
-]) {
+] satisfies [string, LocaleDictionary][]) {
   test(`${locale[0]} defines accent color labels for every shared swatch key`, () => {
     const dictionary = locale[1];
     const accentColors = dictionary?.options?.accentColors || {};

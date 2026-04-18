@@ -52,7 +52,7 @@ The server package is larger and riskier than the client package, so the migrati
 - Root test orchestration runs:
   - package-local server tests,
   - package-local client tests,
-  - direct Node tests in `shared/`.
+  - root-triggered shared tests via the server workspace `tsx --test` path.
 - Client already uses ESM and Vite.
 - Server already uses ESM and runs directly via `node src/index.js`.
 - The server entrypoint is also the local Vite dev host in development and serves the built client in production.
@@ -188,23 +188,23 @@ Reason for this order:
 **Goal:** establish common types and conventions in shared code only where the current runtime can support the migration safely.
 
 Constraint note:
-- [ ] Shared `.js` -> `.ts` renames are not currently safe when the module is imported by server-side `.js` runtime or `node --test` paths, because current server execution does not run `.ts` modules.
-- [ ] Treat this phase as conditional: migrate only shared modules that are not consumed by current server `.js` runtime/test paths, or wait until server TS bootstrap / an intentional compatibility strategy exists.
+- [ ] Shared `.js` -> `.ts` renames still need screening when the module is imported by excluded plain-Node source paths such as deferred child-process entrypoints.
+- [x] Root shared tests now run through the server workspace `tsx --test` path, so the remaining shared utility cluster is no longer blocked on plain `node --test`.
 
 Prioritize:
-- [ ] Pure shared leaves with no internal shared dependencies:
-  - `shared/accentColors.js`
-  - `shared/profileSettings.js`
-  - `shared/urlSecurity.js`
-  - `shared/wardrobeOrder.js`
-  - `shared/patternOptions.js`
-  - `shared/productDetail.js`
-  - `shared/colorSwatches.js`
-- [ ] Then shared modules with internal shared dependencies:
-  - `shared/wardrobeMerge.js`
-  - `shared/i18n/helpers.js`
-- [ ] Keep `shared/i18n/en.js` and `shared/i18n/ru.js` late within this phase unless tooling forces them earlier
-- [ ] Defer `shared/stylePreferences.js` until server TS bootstrap exists or a safe compatibility strategy is intentionally chosen, because it is imported by current server runtime/test paths.
+- [x] Pure shared leaves with no internal shared dependencies:
+  - `shared/accentColors.ts`
+  - `shared/profileSettings.ts`
+  - `shared/urlSecurity.ts`
+  - `shared/wardrobeOrder.ts`
+  - `shared/patternOptions.ts`
+  - `shared/productDetail.ts`
+  - `shared/colorSwatches.ts`
+- [x] Then shared modules with internal shared dependencies:
+  - `shared/wardrobeMerge.ts`
+  - `shared/i18n/helpers.ts`
+- [x] `shared/i18n/en.ts` and `shared/i18n/ru.ts`
+- [x] `shared/stylePreferences.ts`
 
 During this phase:
 - [ ] Replace loose object literals with named exported types where shapes repeat
@@ -1129,14 +1129,14 @@ Use this section during execution.
 - [ ] Explicit `.js` and `.jsx` import specifiers are widespread. Early renames of shared or server modules will create broad import churn.
 - [ ] Some client API `.js` -> `.ts` renames can also create broader client-only rename-only fallout in `App`, caches, screens, and tests; these edits are acceptable only when they are strict specifier updates with no logic or typing expansion outside the target batch.
 - [ ] Some excluded server child-process paths still execute source `.js` files under plain Node, so targeted compatibility shims may be required even after the main server TS bootstrap is complete.
-- [ ] Because some root shared tests still execute under plain Node, shared `.js` -> `.ts` renames remain blocked when those shared modules are imported by plain-Node runtime/test paths.
+- [x] Root shared tests no longer execute under plain Node; remaining shared migration blockers are now limited to excluded plain-Node runtime paths.
 - [ ] `server/src/index.js` is both the API entrypoint and the Vite dev host in development. Treat it as a late-stage migration target.
-- [ ] `server/src/index.test.js` remains the main deferred request/response typing surface; it should be migrated alone as Batch 17C to avoid widening into blocked entrypoint-adjacent work.
+- [ ] `server/src/index.test.js` is no longer the recommended next batch; request/response boundary typing remains deferred until after the approved shared implementation cluster.
 - [ ] `client/render-server.js` and `client/netlify/functions/bff.js` are deployment/runtime entrypoints and should stay out of the first client batch.
 - [x] Server TS runtime strategy is now defined:
   - `tsx` for dev/test
   - emitted JS build output for production server execution
-- [ ] The remaining Phase 7 boundary surface now centers on request/response boundary typing, starting with `server/src/index.test.js`, while staying out of `server/src/index.js`.
+- [ ] The remaining server migration frontier is now split between request/response boundary typing and the deferred high-risk AI/PDF/runtime-entrypoint surface.
 - [ ] `server/src/ai/*`, `server/src/wardrobePdf.js`, and child-process files remain late-stage targets.
 - [ ] `client/src/index.css` currently triggers a non-fatal jsdom CSS parse warning during client tests; do not treat that warning as a TS migration regression unless it becomes test-fatal.
 
@@ -1146,7 +1146,6 @@ Use this section during execution.
 - [ ] `server/src/wardrobePdf.js`
 - [ ] `server/src/wardrobePdf.child.js`
 - [ ] `server/src/ai/*`
-- [ ] `shared/accentColors.js` until the root shared plain-Node test path is intentionally changed
 - [ ] `client/render-server.js`
 - [ ] `client/netlify/functions/bff.js`
 
@@ -1225,6 +1224,48 @@ After every completed batch, append a short entry with:
   - `server/src/index.test.ts`
   - request/response boundary envelopes for auth/profile endpoints only
   - no edits to `server/src/index.js`, `server/src/ai/*`, or `wardrobePdf*`
+
+### Batch 17C — Phase 2 shared utility and i18n implementation cluster
+- Batch name / phase:
+  - Batch 17C — Phase 2 shared utility and i18n implementation cluster
+- Exact files changed:
+  - `shared/accentColors.ts` (renamed from `shared/accentColors.js`)
+  - `shared/colorSwatches.ts` (renamed from `shared/colorSwatches.js`)
+  - `shared/i18n/en.ts` (renamed from `shared/i18n/en.js`)
+  - `shared/i18n/helpers.ts` (renamed from `shared/i18n/helpers.js`)
+  - `shared/i18n/ru.ts` (renamed from `shared/i18n/ru.js`)
+  - `shared/productDetail.ts` (renamed from `shared/productDetail.js`)
+  - `shared/wardrobeMerge.ts` (renamed from `shared/wardrobeMerge.js`)
+  - `shared/wardrobeOrder.ts` (renamed from `shared/wardrobeOrder.js`)
+  - `shared/accentColors.test.ts` (renamed from `shared/accentColors.test.js`)
+  - `shared/colorSwatches.test.ts` (renamed from `shared/colorSwatches.test.js`)
+  - `shared/i18n/helpers.test.ts` (renamed from `shared/i18n/helpers.test.js`)
+  - `shared/i18n/localeParity.test.ts` (renamed from `shared/i18n/localeParity.test.js`)
+  - `shared/wardrobeOrder.test.ts` (renamed from `shared/wardrobeOrder.test.js`)
+  - `package.json`
+  - `typescript-migration.md`
+- Commands run:
+  - `npm run test:shared`
+  - `npm --workspace server run typecheck`
+  - `npm --workspace server run test`
+  - `npm --workspace server run build`
+- Typecheck passed: yes
+- Tests passed: yes
+- Build passed: yes
+- `client/src/test/setup.js` had to be migrated: no
+- Type errors worked around temporarily:
+  - none
+- `any`, assertion, or suppression introduced:
+  - no `any`
+  - one local `as WardrobeItem[]` assertion in `shared/wardrobeMerge.ts` at the array-normalization boundary
+  - one local tuple `satisfies` assertion in `shared/colorSwatches.test.ts` to preserve locale-dictionary inference
+  - no `@ts-ignore` or `@ts-expect-error`
+- Newly discovered blockers:
+  - `npm run test:shared` requires escalation in this sandbox because `tsx` creates an IPC pipe outside the default sandbox allowance
+  - `server/src/index.js`, `server/src/ai/*`, and `server/src/wardrobePdf*` remain deferred high-risk surfaces after the shared cluster
+- Recommended next batch:
+  - `server/src/index.test.ts`
+  - request/response boundary typing only if it stays out of `server/src/index.js`, `server/src/ai/*`, and `wardrobePdf*`
 
 ### Deferred decisions
 - [ ] Whether server TS should use emitted build output only, or a TS runtime in dev

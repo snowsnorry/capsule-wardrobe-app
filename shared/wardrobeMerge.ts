@@ -1,19 +1,30 @@
 import { sortWardrobeItems } from "./wardrobeOrder.js";
 
-function normalizeWardrobeItemUrl(item) {
+type WardrobeItem = {
+  id?: unknown;
+  url?: unknown;
+  category?: unknown;
+  [key: string]: unknown;
+};
+
+function normalizeWardrobeItemUrl(item: WardrobeItem | null | undefined): string {
   return String(item?.url || "").trim();
 }
 
-function buildDisplayWardrobeItems(items) {
-  return sortWardrobeItems(Array.isArray(items) ? items : []);
+function buildDisplayWardrobeItems(items: unknown): WardrobeItem[] {
+  return sortWardrobeItems(Array.isArray(items) ? items as WardrobeItem[] : []);
 }
 
 function mergeWardrobeItemsWithMetadata({
   currentItems = [],
   nextItems = [],
   pendingUrls = []
+}: {
+  currentItems?: unknown;
+  nextItems?: unknown;
+  pendingUrls?: unknown;
 } = {}) {
-  const orderedCurrentItems = Array.isArray(currentItems) ? currentItems : [];
+  const orderedCurrentItems = Array.isArray(currentItems) ? currentItems as WardrobeItem[] : [];
   const orderedNextItems = buildDisplayWardrobeItems(nextItems);
   const normalizedPendingUrls = Array.isArray(pendingUrls)
     ? pendingUrls.map((itemUrl) => String(itemUrl || "").trim()).filter(Boolean)
@@ -29,8 +40,8 @@ function mergeWardrobeItemsWithMetadata({
   const pendingUrlSet = new Set(normalizedPendingUrls);
   const nextItemsByUrl = new Map(
     orderedNextItems
-      .map((item) => [normalizeWardrobeItemUrl(item), item])
-      .filter(([itemUrl]) => itemUrl)
+      .map((item) => [normalizeWardrobeItemUrl(item), item] as const)
+      .filter((entry): entry is readonly [string, WardrobeItem] => Boolean(entry[0]))
   );
   const preservedItemUrls = new Set(
     orderedCurrentItems
@@ -41,7 +52,7 @@ function mergeWardrobeItemsWithMetadata({
   const consumedReplacementIndexes = new Set();
   const replacementMap = new Map();
 
-  const takeReplacementItem = (category) => {
+  const takeReplacementItem = (category: unknown): WardrobeItem | null => {
     const preferredCategory = String(category || "");
     let replacementIndex = replacementCandidates.findIndex((item, index) => (
       !consumedReplacementIndexes.has(index) && String(item?.category || "") === preferredCategory
@@ -85,7 +96,11 @@ function mergeWardrobeItemsWithMetadata({
   };
 }
 
-function mergeWardrobeItemsIntoExistingOrder(params = {}) {
+function mergeWardrobeItemsIntoExistingOrder(params: {
+  currentItems?: unknown;
+  nextItems?: unknown;
+  pendingUrls?: unknown;
+} = {}) {
   return mergeWardrobeItemsWithMetadata(params).items;
 }
 
