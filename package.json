@@ -14,12 +14,15 @@
     "dev:server": "op run --env-file=server/.env -- npm --workspace server run dev",
     "dev:all": "concurrently -k -n client,server \"npm:dev:client\" \"npm:dev:server\"",
     "dev:server:test-auth": "op run --env-file=server/.env -- npm --workspace server run dev:test-auth",
+    "typecheck": "npm run client:typecheck",
+    "client:typecheck": "npm --workspace client run typecheck",
     "test": "npm run test:server && npm run test:client && npm run test:shared",
     "test:server": "npm --workspace server run test",
     "test:client": "npm --workspace client run test",
     "test:shared": "node --test shared/wardrobeOrder.test.js shared/accentColors.test.js shared/colorSwatches.test.js shared/i18n/helpers.test.js shared/i18n/localeParity.test.js"
   },
   "devDependencies": {
-    "concurrently": "^9.1.2"
+    "concurrently": "^9.1.2",
+    "typescript": "^5.9.3"
   }
 }

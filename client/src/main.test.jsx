@@ -30,7 +30,7 @@ describe("main entrypoint", () => {
   });
 
   test("renders the app tree into the root element", async () => {
-    await import("./main.jsx");
+    await import("./main.tsx");
 
     expect(createRootMock).toHaveBeenCalledWith(document.getElementById("root"));
     expect(renderMock).toHaveBeenCalledTimes(1);
