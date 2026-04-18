@@ -1,13 +1,33 @@
 import { fetchWardrobeFilters } from "./auth";
 
-let cachedStyles = null;
-let cachedOccasions = null;
-let cachedSeasons = null;
-let cachedAudience = null;
-let cachedPatterns = null;
-let inFlight = null;
+type WardrobeFiltersResponse = {
+  formalityLevels?: string[] | null;
+  styles?: string[] | null;
+  occasions?: string[] | null;
+  seasons?: string[] | null;
+  audience?: string[] | null;
+  patterns?: string[] | null;
+};
 
-async function loadProfileOptions() {
+type CachedProfileOptions = {
+  styles: {
+    core: string[];
+    aesthetics: string[];
+  };
+  occasions: string[];
+  seasons: string[];
+  audience: string[];
+  patterns: string[];
+};
+
+let cachedStyles: CachedProfileOptions["styles"] | null = null;
+let cachedOccasions: string[] | null = null;
+let cachedSeasons: string[] | null = null;
+let cachedAudience: string[] | null = null;
+let cachedPatterns: string[] | null = null;
+let inFlight: Promise<CachedProfileOptions> | null = null;
+
+async function loadProfileOptions(): Promise<CachedProfileOptions> {
   if (cachedStyles && cachedOccasions && cachedSeasons && cachedAudience && cachedPatterns) {
     return {
       styles: cachedStyles,
@@ -20,7 +40,7 @@ async function loadProfileOptions() {
 
   if (!inFlight) {
     inFlight = fetchWardrobeFilters()
-      .then((filters) => {
+      .then((filters: WardrobeFiltersResponse) => {
         cachedStyles = {
           core: filters.formalityLevels || [],
           aesthetics: filters.styles || []

@@ -45,6 +45,7 @@ type ProfileScreenProps = {
   selectedAudience: string;
   selectedAccentColor: string | null;
   selectedPattern: string | null;
+  selectedText?: string;
   status: ScreenStatus;
   onSelectStyleCore: (value: string) => void;
   onSelectStyleAesthetic: (value: string) => void;
@@ -53,6 +54,7 @@ type ProfileScreenProps = {
   onSelectAudience: (value: string) => void;
   onSelectAccentColor: (value: string) => void;
   onSelectPattern: (value: string) => void;
+  onTextChange?: (value: string) => void;
   onSave: () => void;
   onDelete: () => void;
   onBack: () => void;

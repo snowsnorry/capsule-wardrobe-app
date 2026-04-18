@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { KeyboardEvent, MouseEvent, ReactNode } from "react";
 import {
   Alert,
   Box,
@@ -45,8 +46,117 @@ import LocaleSwitcher from "../components/LocaleSwitcher";
 import AppLauncher from "../components/AppLauncher";
 import AppSidebarShell from "../components/AppSidebarShell";
 import { sortWardrobeItems } from "../../../shared/wardrobeOrder.js";
+import type { SettingsProfile, SettingsSavePayload } from "../components/SettingsDialog";
+import type { DialogProps } from "@mui/material/Dialog";
 
-function highlightMatch(name, query) {
+type CapsuleMenuAnchor = HTMLElement | null;
+type CapsuleLike = {
+  id?: string;
+  name?: string;
+  status?: string;
+  draft?: unknown;
+  saved?: unknown;
+  updatedAt?: string;
+};
+
+type OutfitSetLike = {
+  itemIds?: string[];
+  image?: string | null;
+  imageObsolete?: boolean;
+};
+
+type MainScreenItem = {
+  id?: string | number;
+  url?: string;
+  name?: string;
+  [key: string]: unknown;
+};
+
+type ScreenStatus = {
+  loading: boolean;
+  error: string;
+  infoKey: string;
+  infoParams: Record<string, unknown> | null;
+};
+
+type StyleOptions = {
+  core: string[];
+  aesthetics: string[];
+};
+
+type ResolvedOutfitSet = {
+  id: string;
+  index: number;
+  label: number;
+  items: MainScreenItem[];
+  image: string | null;
+  imageObsolete: boolean;
+};
+
+type MainScreenProps = {
+  activeCapsule?: CapsuleLike | null;
+  capsuleList?: CapsuleLike[];
+  userEmail?: string;
+  userName?: string;
+  settingsProfile?: SettingsProfile | null;
+  onSignOut?: () => void;
+  onSaveSettings?: (settings: SettingsSavePayload) => Promise<void> | void;
+  isSigningOut: boolean;
+  onRefreshItems: () => Promise<void> | void;
+  onDownloadPdf: (capsuleId?: string) => Promise<void> | void;
+  onCreateCapsule?: () => Promise<void> | void;
+  onOpenCapsule?: (capsuleId: string) => Promise<void> | void;
+  onSaveCapsule?: (capsuleId?: string) => Promise<void> | void;
+  onRevertCapsule?: (capsuleId?: string) => Promise<void> | void;
+  onRenameCapsule?: (name: string, capsuleId?: string) => Promise<void> | void;
+  onDuplicateCapsule?: (name: string, capsuleId?: string) => Promise<void> | void;
+  onDeleteCapsule?: (capsuleId?: string) => Promise<void> | void;
+  onSearchCapsules?: (query: string) => Promise<CapsuleLike[]> | CapsuleLike[];
+  items: MainScreenItem[];
+  outfitSets?: OutfitSetLike[];
+  isLoadingItems: boolean;
+  isContentBusy?: boolean;
+  isDownloadingPdf: boolean;
+  showAdditionalItemPlaceholder: boolean;
+  styleOptions: StyleOptions;
+  occasionOptions: string[];
+  seasonOptions: string[];
+  audienceOptions: string[];
+  accentColorOptions: string[];
+  patternOptions: string[];
+  selectedStyleCore: string;
+  selectedStyleAesthetic: string | null;
+  selectedOccasions: string[];
+  selectedSeasons: string[];
+  selectedAudience: string;
+  selectedAccentColor: string | null;
+  selectedPattern: string | null;
+  selectedText: string;
+  hasFilterChanges: boolean;
+  status: ScreenStatus;
+  onSelectStyleCore: (value: string) => void;
+  onSelectStyleAesthetic: (value: string | null) => void;
+  onToggleOccasion: (value: string) => void;
+  onToggleSeason: (value: string) => void;
+  onSelectAudience: (value: string) => void;
+  onSelectAccentColor: (value: string | null) => void;
+  onSelectPattern: (value: string) => void;
+  onTextChange: (value: string) => void;
+  onApplyFilters: () => Promise<void> | void;
+  onResetFilters: () => Promise<void> | void;
+  onNavigateApp: (nextApp: "capsule" | "search" | "statistics") => void;
+  selectedRegenerationUrls: string[];
+  partialRegenerationPendingUrls: string[];
+  pendingImageSetIndexes?: number[];
+  onToggleRegenerationSelection: (item: MainScreenItem) => void;
+  onCancelRegenerationSelection: () => void;
+  onRegenerateSelectedItems: () => Promise<void> | void;
+  onDeleteOutfitSetImage?: (setIndex: number) => Promise<void> | void;
+  onGenerateOutfitSetImage?: (setIndex: number) => Promise<void> | void;
+  isPartialRegenerationLoading: boolean;
+};
+
+function highlightMatch(name: string | undefined, query: string | undefined): ReactNode {
   const label = String(name || "");
   const normalizedQuery = String(query || "").trim();
   if (!normalizedQuery) {
@@ -68,7 +178,7 @@ function highlightMatch(name, query) {
   );
 }
 
-function getCapsuleSectionLabel(updatedAt) {
+function getCapsuleSectionLabel(updatedAt: string | undefined) {
   if (!updatedAt) {
     return "searchEarlier";
   }
@@ -83,8 +193,8 @@ function getCapsuleSectionLabel(updatedAt) {
   return "searchEarlier";
 }
 
-function groupCapsules(items = []) {
-  return items.reduce((acc, item) => {
+function groupCapsules(items: CapsuleLike[] = []) {
+  return items.reduce<Record<string, CapsuleLike[]>>((acc, item) => {
     const key = getCapsuleSectionLabel(item.updatedAt);
     acc[key] = acc[key] || [];
     acc[key].push(item);
@@ -92,26 +202,29 @@ function groupCapsules(items = []) {
   }, {});
 }
 
-function capsuleHasUnsavedChanges(capsule) {
+function capsuleHasUnsavedChanges(capsule: CapsuleLike | null | undefined) {
   return capsule?.status === "new" || capsule?.status === "modified";
 }
 
-function normalizeCapsuleName(name) {
+function normalizeCapsuleName(name: string | undefined) {
   return String(name || "").trim();
 }
 
-function resolveOutfitSets(items = [], outfitSets = []) {
-  const itemsById = new Map(
+function resolveOutfitSets(items: MainScreenItem[] = [], outfitSets: OutfitSetLike[] = []): ResolvedOutfitSet[] {
+  const itemsById = new Map<string, MainScreenItem>(
     (Array.isArray(items) ? items : [])
-      .map((item) => [String(item?.id || "").trim(), item])
-      .filter(([id]) => id)
+      .map((item): [string, MainScreenItem] | null => {
+        const id = String(item?.id || "").trim();
+        return id ? [id, item] : null;
+      })
+      .filter((entry): entry is [string, MainScreenItem] => Boolean(entry))
   );
 
   return (Array.isArray(outfitSets) ? outfitSets : [])
     .map((set, index) => {
       const resolvedItems = sortWardrobeItems((Array.isArray(set?.itemIds) ? set.itemIds : [])
         .map((id) => itemsById.get(String(id || "").trim()))
-        .filter(Boolean));
+        .filter((item): item is MainScreenItem => Boolean(item)));
       return resolvedItems.length >= 3
         ? {
           id: `set-${index + 1}`,
@@ -125,7 +238,7 @@ function resolveOutfitSets(items = [], outfitSets = []) {
         }
         : null;
     })
-    .filter(Boolean);
+    .filter((set): set is ResolvedOutfitSet => Boolean(set));
 }
 
 const OUTFIT_SET_IMAGE_WIDTH = 896;
@@ -258,13 +371,13 @@ function MainScreen({
   onDeleteOutfitSetImage = async () => {},
   onGenerateOutfitSetImage = () => {},
   isPartialRegenerationLoading
-}) {
+}: MainScreenProps) {
   const { t } = useI18n();
   const isOverlaySidebar = useMediaQuery("(max-width: 1279.95px)");
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
-  const [headerMenuAnchor, setHeaderMenuAnchor] = useState(null);
-  const [rowMenuAnchor, setRowMenuAnchor] = useState(null);
-  const [rowMenuCapsule, setRowMenuCapsule] = useState(null);
+  const [headerMenuAnchor, setHeaderMenuAnchor] = useState<CapsuleMenuAnchor>(null);
+  const [rowMenuAnchor, setRowMenuAnchor] = useState<CapsuleMenuAnchor>(null);
+  const [rowMenuCapsule, setRowMenuCapsule] = useState<CapsuleLike | null>(null);
   const [renameOpen, setRenameOpen] = useState(false);
   const [renameValue, setRenameValue] = useState("");
   const [renameCapsuleId, setRenameCapsuleId] = useState("");
@@ -280,12 +393,12 @@ function MainScreen({
   const [confirmOutfitSetIndex, setConfirmOutfitSetIndex] = useState(-1);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState([]);
+  const [searchResults, setSearchResults] = useState<CapsuleLike[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [activeItemsTab, setActiveItemsTab] = useState("all");
   const [optimisticActiveCapsuleId, setOptimisticActiveCapsuleId] = useState(activeCapsule?.id || "");
   const inlineRenameSubmitGuardRef = useRef(false);
-  const searchDialogPaperRef = useRef(null);
+  const searchDialogPaperRef = useRef<HTMLDivElement | null>(null);
   const isDeleteConfirm = confirmAction.startsWith("delete");
   const isRegenerateFiltersConfirm = confirmAction === "regenerate-with-filter-changes";
   const isDeleteOutfitSetImageConfirm = confirmAction === "delete-outfit-set-image";
@@ -334,7 +447,7 @@ function MainScreen({
 
     let isCurrent = true;
     setIsSearching(true);
-    onSearchCapsules(searchQuery).then((items) => {
+    Promise.resolve(onSearchCapsules(searchQuery)).then((items) => {
       if (isCurrent) {
         setSearchResults(items);
       }
@@ -370,7 +483,7 @@ function MainScreen({
     inlineRenameSubmitGuardRef.current = false;
   }, [activeCapsule?.id, activeCapsule?.name]);
 
-  const handleCapsuleOpen = async (capsuleId, onComplete) => {
+  const handleCapsuleOpen = async (capsuleId: string, onComplete?: () => void) => {
     if (isInteractionDisabled) {
       return;
     }
@@ -391,7 +504,7 @@ function MainScreen({
     setSearchOpen(false);
   };
 
-  const handleOpenSearchDialog = (event) => {
+  const handleOpenSearchDialog = (event?: MouseEvent<HTMLElement>) => {
     if (isInteractionDisabled) {
       return;
     }
@@ -655,7 +768,7 @@ function MainScreen({
         )}
       >
         {({ isOverlaySidebar }) => {
-          const nameDialogProps = isOverlaySidebar ? { fullScreen: true } : {
+          const nameDialogProps: Partial<DialogProps> = isOverlaySidebar ? { fullScreen: true } : {
             fullWidth: true,
             maxWidth: "sm",
             PaperProps: {
@@ -664,7 +777,7 @@ function MainScreen({
               }
             }
           };
-          const confirmDialogProps = isOverlaySidebar ? { fullScreen: true } : {
+          const confirmDialogProps: Partial<DialogProps> = isOverlaySidebar ? { fullScreen: true } : {
             fullWidth: true,
             maxWidth: "xs",
             PaperProps: {
@@ -797,7 +910,7 @@ function MainScreen({
                                 onBlur={() => {
                                   void handleSubmitInlineRename();
                                 }}
-                                onKeyDown={(event) => {
+                                onKeyDown={(event: KeyboardEvent<HTMLInputElement>) => {
                                   if (event.key === "Enter") {
                                     event.preventDefault();
                                     void handleSubmitInlineRename();
@@ -1528,6 +1641,7 @@ function MainScreen({
           setConfirmAction("revert-row");
         }}
         onSave={() => onSaveCapsule(rowMenuCapsule?.id)}
+        onRegenerateAll={() => {}}
         onDuplicate={() => handleRequestDuplicate(rowMenuCapsule)}
         onDelete={() => {
           setConfirmCapsuleId(rowMenuCapsule?.id || "");

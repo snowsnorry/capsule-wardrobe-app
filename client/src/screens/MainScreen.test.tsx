@@ -54,7 +54,7 @@ vi.mock("../components/ClothingCard", () => ({
   )
 }));
 
-import MainScreen from "./MainScreen.jsx";
+import MainScreen from "./MainScreen";
 
 const theme = createTheme();
 
@@ -227,6 +227,8 @@ function renderScreen(props = {}, { mobile = false, layoutMode = mobile ? "overl
     selectedAudience: "woman",
     selectedAccentColor: null,
     selectedPattern: "solid",
+    selectedText: "",
+    hasFilterChanges: false,
     status: { loading: false, error: "", infoKey: "", infoParams: null },
     onSelectStyleCore: vi.fn(),
     onSelectStyleAesthetic: vi.fn(),
@@ -235,6 +237,7 @@ function renderScreen(props = {}, { mobile = false, layoutMode = mobile ? "overl
     onSelectAudience: vi.fn(),
     onSelectAccentColor: vi.fn(),
     onSelectPattern: vi.fn(),
+    onTextChange: vi.fn(),
     onApplyFilters: vi.fn(),
     onResetFilters: vi.fn(),
     onNavigateApp: vi.fn(),

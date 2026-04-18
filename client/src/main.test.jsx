@@ -9,7 +9,7 @@ const localeProviderMock = vi.fn(({ children }) => <>{children}</>);
 vi.mock("react-dom/client", () => ({
   createRoot: createRootMock
 }));
-vi.mock("./App.jsx", () => ({
+vi.mock("./App", () => ({
   default: appMock
 }));
 vi.mock("./i18n/LocaleProvider", () => ({

@@ -452,7 +452,7 @@ Recommended execution sequence:
 10. [x] presentational component slice: `client/src/components/AccentColorChips.jsx` + `client/src/components/AccentColorChips.test.jsx`
 11. [x] authenticated sidebar/settings UI cluster: `client/src/components/AppSidebarShell.jsx` + `client/src/components/AppSidebarShell.test.jsx` + `client/src/components/SettingsDialog.jsx` + `client/src/components/SettingsDialog.test.jsx` + `client/src/components/ProfileFiltersSidebar.jsx` + `client/src/components/ProfileFiltersSidebar.test.jsx`
 12. [x] i18n + app chrome + lightweight screens cluster: `client/src/i18n/index.js` + `client/src/i18n/useI18n.js` + `client/src/i18n/LocaleProvider.jsx` + `client/src/i18n/LocaleProvider.test.jsx` + `client/src/i18n/useI18n.test.jsx` + `client/src/components/LocaleSwitcher.jsx` + `client/src/components/LocaleSwitcher.test.jsx` + `client/src/components/AppLauncher.jsx` + `client/src/components/AppLauncher.test.jsx` + `client/src/screens/LoadingScreen.jsx` + `client/src/screens/SignInScreen.jsx` + `client/src/screens/SignInScreen.test.jsx` + `client/src/screens/OnboardingScreen.jsx` + `client/src/screens/OnboardingScreen.test.jsx` + `client/src/screens/ProfileScreen.jsx` + `client/src/screens/ProfileScreen.test.jsx`
-13. [ ] app core/search cluster: `client/src/App.jsx` + `client/src/App.test.jsx` + `client/src/App.e2e.test.jsx` + `client/src/api/profileOptionsCache.js` + `client/src/search/searchState.js` + `client/src/search/searchState.test.js` + `client/src/search/SearchFiltersSidebar.jsx` + `client/src/screens/MainScreen.jsx` + `client/src/screens/MainScreen.test.jsx` + `client/src/screens/MainScreen.e2e.test.jsx` + `client/src/screens/SearchScreen.jsx` + `client/src/screens/SearchScreen.test.jsx` + `client/src/screens/SearchScreen.e2e.test.jsx` + `client/src/screens/StatisticsScreen.jsx` + `client/src/screens/StatisticsScreen.test.jsx`
+13. [x] app core/search cluster: `client/src/App.jsx` + `client/src/App.test.jsx` + `client/src/App.e2e.test.jsx` + `client/src/api/profileOptionsCache.js` + `client/src/search/searchState.js` + `client/src/search/searchState.test.js` + `client/src/search/SearchFiltersSidebar.jsx` + `client/src/screens/MainScreen.jsx` + `client/src/screens/MainScreen.test.jsx` + `client/src/screens/MainScreen.e2e.test.jsx` + `client/src/screens/SearchScreen.jsx` + `client/src/screens/SearchScreen.test.jsx` + `client/src/screens/SearchScreen.e2e.test.jsx` + `client/src/screens/StatisticsScreen.jsx` + `client/src/screens/StatisticsScreen.test.jsx`
 14. [ ] shared modules that are safe under current runtime constraints
 15. [ ] server TS bootstrap/scripts
 16. [ ] server stores (`authStore`, `capsuleStore`, `profileStore`, `searchStore`)
@@ -844,6 +844,45 @@ Recommended execution sequence:
     - `client/src/screens/StatisticsScreen.test.jsx`
   - Reason: Batch 12 intentionally widened from a tiny `AppLauncher + LocaleSwitcher` slice to a 16-file client-only cluster, and the remaining `App/search/screens` core is the next coherent client-only subsystem even though it is materially denser and larger
 
+### Batch 13 — Phase 4 app core/search cluster
+
+- Batch name / phase: Batch 13 — Phase 4 app core/search cluster
+- Exact files changed:
+  - `client/src/App.tsx`
+  - `client/src/App.test.tsx`
+  - `client/src/App.e2e.test.tsx`
+  - `client/src/api/profileOptionsCache.ts`
+  - `client/src/search/searchState.ts`
+  - `client/src/search/searchState.test.ts`
+  - `client/src/search/SearchFiltersSidebar.tsx`
+  - `client/src/screens/MainScreen.tsx`
+  - `client/src/screens/MainScreen.test.tsx`
+  - `client/src/screens/MainScreen.e2e.test.tsx`
+  - `client/src/screens/SearchScreen.tsx`
+  - `client/src/screens/SearchScreen.test.tsx`
+  - `client/src/screens/SearchScreen.e2e.test.tsx`
+  - `client/src/screens/StatisticsScreen.tsx`
+  - `client/src/screens/StatisticsScreen.test.tsx`
+  - rename-only client consumer fallout in `main.tsx` and `main.test.jsx`
+  - type-only compatibility fallout in already-migrated child components required by the Batch 13 contracts:
+    - `client/src/components/ClothingCard.tsx`
+    - `client/src/screens/ProfileScreen.tsx`
+  - `typescript-migration.md`
+- Commands run:
+  - `npm --workspace client run typecheck`
+  - `npm --workspace client run test`
+- Typecheck passed: yes
+- Tests passed: yes
+- `client/src/test/setup.js` had to be migrated: no
+- Type errors worked around temporarily: none
+- `any`, assertion, or suppression introduced: none
+- Newly discovered blockers:
+  - none beyond the existing non-fatal jsdom CSS parse warning from `client/src/index.css`
+  - the Batch 13 cluster required explicit local prop and response typing across `App`, `MainScreen`, `StatisticsScreen`, and `searchState`, plus narrow compatibility fallout in `main.tsx`, `main.test.jsx`, `ClothingCard.tsx`, and `ProfileScreen.tsx`
+- Recommended next batch:
+  - shared modules that are safe under current runtime constraints
+  - Reason: the client app core/search surface is now migrated and validated, so the next smallest safe frontier is the shared subset that does not break current plain-Node server runtime/test paths
+
 ---
 
 ## Subagent Guidance for Codex
@@ -972,10 +1011,12 @@ Use this section during execution.
 - [x] Batch 10 — Phase 3 presentational component slice (`AccentColorChips`) completed successfully
 - [x] Batch 11 — Phase 3 authenticated sidebar/settings UI cluster completed successfully
 - [x] Batch 12 — Phase 4 i18n + app chrome + lightweight screens cluster completed successfully
+- [x] Batch 13 — Phase 4 app core/search cluster completed successfully
 - [x] Root/client TypeScript bootstrap is in place and client hybrid typecheck passes
 - [x] `client/src/test/setup.js` was reviewed and intentionally left as JS because migration was not required in Batch 1
 - [x] Batch 12 was intentionally widened from a tiny `AppLauncher + LocaleSwitcher` slice to a 16-file client-only cluster
-- [x] The `App/search/screens` core remains deferred as the next batch because it is materially denser and larger
+- [x] The `App/search/screens` core is no longer deferred; Batch 13 finished successfully from the recovered in-progress worktree
+- [x] Recovery source of truth remained `ae4dc91` (`TypeScript migration, stage 12`) until Batch 13 was completed from the in-progress working tree
 
 ### Newly discovered blockers
 - [ ] `shared/` is not an npm workspace package. It is imported by path from both apps, so shared-module renames have cross-workspace impact immediately.

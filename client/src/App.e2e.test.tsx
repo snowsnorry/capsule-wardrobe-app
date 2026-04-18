@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import App from "./App.jsx";
+import App from "./App";
 import { LocaleProvider } from "./i18n/LocaleProvider";
 
 const authApi = vi.hoisted(() => ({
@@ -78,7 +78,7 @@ const capsulesApi = vi.hoisted(() => ({
 }));
 
 vi.mock("./api/auth", () => authApi);
-vi.mock("./api/profileOptionsCache.js", () => profileOptionsApi);
+vi.mock("./api/profileOptionsCache", () => profileOptionsApi);
 vi.mock("./api/wardrobe", () => wardrobeApi);
 vi.mock("./api/capsules", () => capsulesApi);
 
@@ -141,7 +141,7 @@ vi.mock("./screens/OnboardingScreen", () => ({
   }
 }));
 
-vi.mock("./screens/MainScreen.jsx", () => ({
+vi.mock("./screens/MainScreen", () => ({
   default: function MainScreenMock(props) {
     return (
       <div data-testid="main-screen">
@@ -161,7 +161,7 @@ vi.mock("./screens/ProfileScreen", () => ({
   default: () => <div data-testid="profile-screen">profile-screen</div>
 }));
 
-vi.mock("./screens/SearchScreen.jsx", () => ({
+vi.mock("./screens/SearchScreen", () => ({
   default: function SearchScreenMock(props) {
     return (
       <div data-testid="search-screen">
@@ -193,8 +193,8 @@ function installNotificationMock() {
     }
   });
   MockNotification.requestPermission = notificationApi.requestPermission;
-  globalThis.Notification = MockNotification;
-  window.Notification = MockNotification;
+  globalThis.Notification = MockNotification as unknown as typeof Notification;
+  window.Notification = MockNotification as unknown as typeof Notification;
 }
 
 function mockProfileOptions() {

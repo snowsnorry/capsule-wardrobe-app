@@ -39,7 +39,7 @@ vi.mock("../components/AccentColorChips", () => ({
   )
 }));
 
-import SearchScreen from "./SearchScreen.jsx";
+import SearchScreen from "./SearchScreen";
 
 const theme = createTheme();
 

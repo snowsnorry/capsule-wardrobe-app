@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { KeyboardEvent, ReactElement } from "react";
 import {
   Box,
   Button,
@@ -30,15 +31,60 @@ import { formatProductLabel } from "../utils/productLabel.js";
 import { buildProductDetailGroups } from "../../../shared/productDetail.js";
 import { getSafeHttpUrl } from "../../../shared/urlSecurity.js";
 import { getColorSwatchStyle } from "../../../shared/colorSwatches.js";
-import SearchFiltersSidebar from "../search/SearchFiltersSidebar.jsx";
+import SearchFiltersSidebar from "../search/SearchFiltersSidebar";
 import {
   EMPTY_SEARCH_OPTIONS,
   buildSearchOptionsPayload,
   createSearchState,
   serializeDraftState
 } from "../search/searchState.js";
+import type { SearchDraftState, SearchOptions } from "../search/searchState.js";
+import type { SettingsProfile, SettingsSavePayload } from "../components/SettingsDialog";
 
-function ProductDetail({ item, title, t, locale, mobileBackAction = null }) {
+type SearchResultItem = {
+  id: string | number;
+  name?: string;
+  brand?: string;
+  category?: string;
+  url?: string;
+  imageUrl?: string;
+  description?: string;
+  audience?: string;
+  [key: string]: unknown;
+};
+
+type SearchStatus = {
+  loading: boolean;
+  error: string;
+};
+
+type SearchResponse = {
+  items?: SearchResultItem[];
+  total?: number;
+};
+
+type SearchScreenProps = {
+  onNavigateApp: (nextApp: "capsule" | "search" | "statistics") => void;
+  userEmail?: string;
+  userName?: string;
+  settingsProfile?: SettingsProfile | null;
+  onSignOut?: () => void;
+  onSaveSettings?: (settings: SettingsSavePayload) => Promise<void> | void;
+};
+
+function ProductDetail({
+  item,
+  title,
+  t,
+  locale,
+  mobileBackAction = null
+}: {
+  item: SearchResultItem | null;
+  title: string;
+  t: (key: string, params?: Record<string, unknown>) => string;
+  locale: string;
+  mobileBackAction?: (() => void) | null;
+}): ReactElement {
   const detailGroups = buildProductDetailGroups(item, { t, translateOption, locale });
   const productUrl = getSafeHttpUrl(item?.url);
   const imageUrl = getSafeHttpUrl(item?.imageUrl);
@@ -194,14 +240,14 @@ function SearchScreen({
   settingsProfile = null,
   onSignOut = () => {},
   onSaveSettings = async () => {}
-}) {
+}: SearchScreenProps): ReactElement {
   const { t, locale } = useI18n();
-  const [options, setOptions] = useState(EMPTY_SEARCH_OPTIONS);
-  const [draftState, setDraftState] = useState(createSearchState(null, EMPTY_SEARCH_OPTIONS.priceRange));
-  const [results, setResults] = useState([]);
+  const [options, setOptions] = useState<SearchOptions>(EMPTY_SEARCH_OPTIONS);
+  const [draftState, setDraftState] = useState<SearchDraftState>(createSearchState(null, EMPTY_SEARCH_OPTIONS.priceRange));
+  const [results, setResults] = useState<SearchResultItem[]>([]);
   const [total, setTotal] = useState(0);
-  const [selectedResultId, setSelectedResultId] = useState(null);
-  const [status, setStatus] = useState({ loading: true, error: "" });
+  const [selectedResultId, setSelectedResultId] = useState<string | number | null>(null);
+  const [status, setStatus] = useState<SearchStatus>({ loading: true, error: "" });
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const draftStateRef = useRef(draftState);
@@ -232,7 +278,7 @@ function SearchScreen({
         setOptions(nextOptions);
         setDraftState(nextState);
         const serialized = serializeDraftState(nextState);
-        const result = await runSearch(serialized);
+        const result = await runSearch(serialized) as SearchResponse;
         if (!isActive) {
           return;
         }
@@ -261,11 +307,11 @@ function SearchScreen({
 
   const totalPages = Math.max(1, Math.ceil(total / 50));
 
-  const performSearch = async (nextState) => {
+  const performSearch = async (nextState: SearchDraftState) => {
     const payload = serializeDraftState(nextState);
     setStatus({ loading: true, error: "" });
     try {
-      const result = await runSearch(payload);
+      const result = await runSearch(payload) as SearchResponse;
       setResults(result.items || []);
       setTotal(result.total || 0);
       setSelectedResultId(result.items?.[0]?.id ?? null);
@@ -287,13 +333,16 @@ function SearchScreen({
     await performSearch(nextState);
   };
 
-  const handleChangePage = async (_, page) => {
+  const handleChangePage = async (_event: unknown, page: number) => {
     const nextState = { ...draftState, page };
     setDraftState(nextState);
     await performSearch(nextState);
   };
 
-  const handleSidebarDraftStateChange = async (updater, { submit = false } = {}) => {
+  const handleSidebarDraftStateChange = async (
+    updater: SearchDraftState | ((current: SearchDraftState) => SearchDraftState),
+    { submit = false } = {}
+  ) => {
     const nextState = typeof updater === "function" ? updater(draftStateRef.current) : updater;
     draftStateRef.current = nextState;
     setDraftState(nextState);
@@ -303,13 +352,13 @@ function SearchScreen({
     }
   };
 
-  const renderSearchBar = (isMobile) => (
+  const renderSearchBar = (isMobile: boolean) => (
     <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} alignItems={{ sm: "center" }}>
       <TextField
         fullWidth
         value={draftState.query}
         onChange={(event) => setDraftState((current) => ({ ...current, query: event.target.value }))}
-        onKeyDown={(event) => {
+        onKeyDown={(event: KeyboardEvent<HTMLInputElement>) => {
           if (event.key === "Enter") {
             event.preventDefault();
             handleSearchSubmit();

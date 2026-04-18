@@ -1,3 +1,69 @@
+type SearchFilterValue = string;
+type SearchBrandOption = string | { value: string; label?: string };
+
+type SearchPriceRange = {
+  min: number | null;
+  max: number | null;
+};
+
+type SearchOptions = {
+  brands: SearchBrandOption[];
+  categories: SearchFilterValue[];
+  seasons: SearchFilterValue[];
+  formalityLevels: SearchFilterValue[];
+  styles: SearchFilterValue[];
+  occasions: SearchFilterValue[];
+  audience: SearchFilterValue[];
+  colors: SearchFilterValue[];
+  patterns: SearchFilterValue[];
+  silhouettes: SearchFilterValue[];
+  fits: SearchFilterValue[];
+  closureTypes: SearchFilterValue[];
+  priceRange: SearchPriceRange;
+};
+
+type SearchState = {
+  query: string;
+  brand: SearchFilterValue[];
+  priceMin: number | null;
+  priceMax: number | null;
+  audience: SearchFilterValue[];
+  category: SearchFilterValue[];
+  season: SearchFilterValue[];
+  formalityLevel: SearchFilterValue[];
+  style: SearchFilterValue[];
+  occasions: SearchFilterValue[];
+  color: SearchFilterValue[];
+  pattern: SearchFilterValue[];
+  silhouette: SearchFilterValue[];
+  fit: SearchFilterValue[];
+  closureType: SearchFilterValue[];
+  page: number;
+};
+
+type SearchStateSource = Omit<SearchState, "brand" | "audience" | "category" | "season" | "formalityLevel" | "style" | "occasions" | "color" | "pattern" | "silhouette" | "fit" | "closureType"> & {
+  brand?: SearchFilterValue | SearchFilterValue[];
+  audience?: SearchFilterValue | SearchFilterValue[];
+  category?: SearchFilterValue | SearchFilterValue[];
+  season?: SearchFilterValue | SearchFilterValue[];
+  formalityLevel?: SearchFilterValue | SearchFilterValue[];
+  style?: SearchFilterValue | SearchFilterValue[];
+  occasions?: SearchFilterValue | SearchFilterValue[];
+  color?: SearchFilterValue | SearchFilterValue[];
+  pattern?: SearchFilterValue | SearchFilterValue[];
+  silhouette?: SearchFilterValue | SearchFilterValue[];
+  fit?: SearchFilterValue | SearchFilterValue[];
+  closureType?: SearchFilterValue | SearchFilterValue[];
+};
+
+type SearchDraftState = SearchState & {
+  priceEnabled: boolean;
+  priceMinDraft: number | string;
+  priceMaxDraft: number | string;
+};
+
+type SerializedSearchState = SearchState;
+
 const INITIAL_SEARCH_STATE = Object.freeze({
   query: "",
   brand: [],
@@ -15,7 +81,7 @@ const INITIAL_SEARCH_STATE = Object.freeze({
   fit: [],
   closureType: [],
   page: 1
-});
+}) satisfies SearchState;
 
 const CORE_DISPLAY_ORDER = ["casual", "smart_casual", "formal"];
 const SEASON_DISPLAY_ORDER = ["spring", "summer", "autumn", "winter"];
@@ -35,9 +101,9 @@ const EMPTY_SEARCH_OPTIONS = Object.freeze({
   fits: [],
   closureTypes: [],
   priceRange: { min: null, max: null }
-});
+}) satisfies SearchOptions;
 
-function createSearchState(savedSearch, priceRange) {
+function createSearchState(savedSearch: Partial<SearchStateSource> | null | undefined, priceRange: SearchPriceRange): SearchDraftState {
   const base = { ...INITIAL_SEARCH_STATE, ...(savedSearch || {}) };
   const hasPriceBounds = base.priceMin !== null || base.priceMax !== null;
   return {
@@ -45,8 +111,10 @@ function createSearchState(savedSearch, priceRange) {
     brand: Array.isArray(base.brand) ? base.brand : (base.brand ? [base.brand] : []),
     audience: Array.isArray(base.audience) ? base.audience : (base.audience ? [base.audience] : []),
     category: Array.isArray(base.category) ? base.category : (base.category ? [base.category] : []),
+    season: Array.isArray(base.season) ? base.season : (base.season ? [base.season] : []),
     formalityLevel: Array.isArray(base.formalityLevel) ? base.formalityLevel : (base.formalityLevel ? [base.formalityLevel] : []),
     style: Array.isArray(base.style) ? base.style : (base.style ? [base.style] : []),
+    occasions: Array.isArray(base.occasions) ? base.occasions : (base.occasions ? [base.occasions] : []),
     color: Array.isArray(base.color) ? base.color : (base.color ? [base.color] : []),
     pattern: Array.isArray(base.pattern) ? base.pattern : (base.pattern ? [base.pattern] : []),
     silhouette: Array.isArray(base.silhouette) ? base.silhouette : (base.silhouette ? [base.silhouette] : []),
@@ -62,7 +130,7 @@ function createSearchState(savedSearch, priceRange) {
   };
 }
 
-function clampPriceValue(value, min, max) {
+function clampPriceValue(value: number | string | null | undefined, min: number, max: number): number {
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) {
     return min;
@@ -70,12 +138,12 @@ function clampPriceValue(value, min, max) {
   return Math.min(Math.max(parsed, min), max);
 }
 
-function serializeDraftState(state) {
+function serializeDraftState(state: SearchDraftState): SerializedSearchState {
   return {
     query: state.query,
     brand: state.brand,
-    priceMin: state.priceEnabled ? state.priceMinDraft : null,
-    priceMax: state.priceEnabled ? state.priceMaxDraft : null,
+    priceMin: state.priceEnabled ? Number(state.priceMinDraft) : null,
+    priceMax: state.priceEnabled ? Number(state.priceMaxDraft) : null,
     audience: state.audience,
     category: state.category,
     season: state.season,
@@ -91,13 +159,13 @@ function serializeDraftState(state) {
   };
 }
 
-function toggleSelection(value, selected) {
+function toggleSelection(value: SearchFilterValue, selected: SearchFilterValue[]): SearchFilterValue[] {
   return selected.includes(value)
     ? selected.filter((item) => item !== value)
     : [...selected, value];
 }
 
-function normalizeBrandOption(item) {
+function normalizeBrandOption(item: SearchBrandOption | null | undefined): { value: string; label: string } | null {
   if (typeof item === "string") {
     return { value: item, label: item };
   }
@@ -112,11 +180,11 @@ function normalizeBrandOption(item) {
   return null;
 }
 
-function sortItemsByLabel(items, locale) {
+function sortItemsByLabel(items: Array<{ value: string; label: string }>, locale: string): Array<{ value: string; label: string }> {
   return [...items].sort((left, right) => left.label.localeCompare(right.label, locale));
 }
 
-function sortCoreValues(items) {
+function sortCoreValues(items: SearchFilterValue[]): SearchFilterValue[] {
   return [...items].sort((left, right) => {
     const leftIndex = CORE_DISPLAY_ORDER.indexOf(left);
     const rightIndex = CORE_DISPLAY_ORDER.indexOf(right);
@@ -131,7 +199,7 @@ function sortCoreValues(items) {
   });
 }
 
-function sortSeasonValues(items) {
+function sortSeasonValues(items: SearchFilterValue[]): SearchFilterValue[] {
   return [...items].sort((left, right) => {
     const leftIndex = SEASON_DISPLAY_ORDER.indexOf(left);
     const rightIndex = SEASON_DISPLAY_ORDER.indexOf(right);
@@ -146,7 +214,7 @@ function sortSeasonValues(items) {
   });
 }
 
-function sortAudienceValues(items) {
+function sortAudienceValues(items: SearchFilterValue[]): SearchFilterValue[] {
   return [...items].sort((left, right) => {
     const leftIndex = AUDIENCE_DISPLAY_ORDER.indexOf(left);
     const rightIndex = AUDIENCE_DISPLAY_ORDER.indexOf(right);
@@ -161,7 +229,7 @@ function sortAudienceValues(items) {
   });
 }
 
-function buildSearchOptionsPayload(optionsResponse = {}) {
+function buildSearchOptionsPayload(optionsResponse: Partial<SearchOptions> = {}): SearchOptions {
   return {
     brands: optionsResponse.brands || [],
     categories: optionsResponse.categories || [],
@@ -195,4 +263,14 @@ export {
   sortItemsByLabel,
   sortSeasonValues,
   toggleSelection
+};
+
+export type {
+  SearchBrandOption,
+  SearchDraftState,
+  SearchFilterValue,
+  SearchOptions,
+  SearchPriceRange,
+  SearchState,
+  SerializedSearchState
 };

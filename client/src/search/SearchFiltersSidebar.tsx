@@ -1,4 +1,5 @@
 import { Box, Button, Chip, Slider, Stack, TextField, Typography } from "@mui/material";
+import type { ChangeEvent, KeyboardEvent, ReactNode } from "react";
 import AccentColorChips from "../components/AccentColorChips";
 import { useI18n } from "../i18n/useI18n.js";
 import { translateOption } from "../i18n/index.js";
@@ -12,7 +13,46 @@ import {
   toggleSelection
 } from "./searchState.js";
 
-function SearchSection({ title, hint, children }) {
+import type { SearchDraftState, SearchOptions } from "./searchState.js";
+
+type SearchFiltersStatus = {
+  loading: boolean;
+  error: string;
+};
+
+type SearchStateUpdater = SearchDraftState | ((current: SearchDraftState) => SearchDraftState);
+
+type SearchFiltersSidebarProps = {
+  options: SearchOptions;
+  draftState: SearchDraftState;
+  onDraftStateChange: (updater: SearchStateUpdater, options?: { submit?: boolean }) => void | Promise<void>;
+  status: SearchFiltersStatus;
+  onApply: () => void | Promise<void>;
+  onReset: () => void | Promise<void>;
+  autoApply?: boolean;
+  showApplyButton?: boolean;
+};
+
+type SearchSectionProps = {
+  title: string;
+  hint?: string;
+  children: ReactNode;
+};
+
+type SelectItem = {
+  value: string;
+  label: string;
+};
+
+type MultiSelectChipsProps = {
+  items: SelectItem[];
+  values: string[];
+  onToggle: (value: string | null) => void;
+  defaultLabel?: string;
+  defaultPosition?: "start" | "end";
+};
+
+function SearchSection({ title, hint, children }: SearchSectionProps) {
   return (
     <Stack spacing={1.3}>
       <Typography variant="h6">{title}</Typography>
@@ -26,7 +66,13 @@ function SearchSection({ title, hint, children }) {
   );
 }
 
-function MultiSelectChips({ items, values, onToggle, defaultLabel, defaultPosition = "start" }) {
+function MultiSelectChips({
+  items,
+  values,
+  onToggle,
+  defaultLabel,
+  defaultPosition = "start"
+}: MultiSelectChipsProps) {
   const defaultChip = defaultLabel ? (
     <Chip
       label={defaultLabel}
@@ -62,7 +108,7 @@ function SearchFiltersSidebar({
   onReset,
   autoApply = false,
   showApplyButton = true
-}) {
+}: SearchFiltersSidebarProps) {
   const { t, locale } = useI18n();
   const brandItems = options.brands.map(normalizeBrandOption).filter(Boolean);
   const categoryItems = options.categories.map((item) => ({
@@ -105,11 +151,11 @@ function SearchFiltersSidebar({
     clampPriceValue(draftState.priceMaxDraft, sliderMin, sliderMax)
   ];
 
-  const updateDraftState = (updater, { submit = autoApply } = {}) => {
+  const updateDraftState = (updater: SearchStateUpdater, { submit = autoApply } = {}) => {
     onDraftStateChange(updater, { submit });
   };
 
-  const handlePriceSliderChange = (_, nextValue) => {
+  const handlePriceSliderChange = (_event: Event, nextValue: number | number[]) => {
     if (!Array.isArray(nextValue)) {
       return;
     }
@@ -122,7 +168,7 @@ function SearchFiltersSidebar({
     }), { submit: false });
   };
 
-  const handlePriceSliderCommit = (_, nextValue) => {
+  const handlePriceSliderCommit = (_event: Event | React.SyntheticEvent<Element, Event>, nextValue: number | number[]) => {
     if (!Array.isArray(nextValue)) {
       return;
     }
@@ -135,7 +181,7 @@ function SearchFiltersSidebar({
     }));
   };
 
-  const handlePriceInputChange = (field) => (event) => {
+  const handlePriceInputChange = (field: "priceMinDraft" | "priceMaxDraft") => (event: ChangeEvent<HTMLInputElement>) => {
     const rawValue = event.target.value;
     updateDraftState((current) => ({
       ...current,
@@ -145,7 +191,7 @@ function SearchFiltersSidebar({
     }), { submit: false });
   };
 
-  const handlePriceInputBlur = (field) => () => {
+  const handlePriceInputBlur = (field: "priceMinDraft" | "priceMaxDraft") => () => {
     updateDraftState((current) => {
       const currentMin = clampPriceValue(current.priceMinDraft, sliderMin, sliderMax);
       const currentMax = clampPriceValue(current.priceMaxDraft, sliderMin, sliderMax);
@@ -180,7 +226,7 @@ function SearchFiltersSidebar({
     });
   };
 
-  const handlePriceInputKeyDown = (field) => (event) => {
+  const handlePriceInputKeyDown = (field: "priceMinDraft" | "priceMaxDraft") => (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key !== "Enter") {
       return;
     }
@@ -448,3 +494,4 @@ function SearchFiltersSidebar({
 }
 
 export default SearchFiltersSidebar;
+export type { SearchFiltersSidebarProps, SearchFiltersStatus, SearchStateUpdater };

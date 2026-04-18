@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { ReactElement, ReactNode } from "react";
 import {
   Box,
   Button,
@@ -18,7 +19,7 @@ import { fetchSearchOptions, fetchSearchStats } from "../api/search";
 import AppLauncher from "../components/AppLauncher";
 import LocaleSwitcher from "../components/LocaleSwitcher";
 import AppSidebarShell from "../components/AppSidebarShell";
-import SearchFiltersSidebar from "../search/SearchFiltersSidebar.jsx";
+import SearchFiltersSidebar from "../search/SearchFiltersSidebar";
 import TremorBarChart from "../components/tremor/BarChart.jsx";
 import TremorDonutChart from "../components/tremor/DonutChart.jsx";
 import TremorLineChart from "../components/tremor/LineChart.jsx";
@@ -32,7 +33,62 @@ import {
   serializeDraftState,
   toggleSelection
 } from "../search/searchState.js";
+import type { SearchDraftState, SearchFilterValue, SearchOptions, SerializedSearchState } from "../search/searchState.js";
 import { getColorSwatchStyle } from "../../../shared/colorSwatches.js";
+import type { SettingsProfile, SettingsSavePayload } from "../components/SettingsDialog";
+
+type StatisticsStatus = {
+  loading: boolean;
+  error: string;
+};
+
+type StatsRow = {
+  value: string;
+  count: number;
+  isOther?: boolean;
+};
+
+type PriceBucket = {
+  key: string;
+  min: number;
+  max: number;
+  count: number;
+};
+
+type SearchStatsResponse = {
+  total?: number;
+  stats?: Record<string, StatsRow[]>;
+  priceBuckets?: PriceBucket[];
+};
+
+type StatisticsState = {
+  total: number;
+  stats: Record<string, StatsRow[]>;
+  priceBuckets: PriceBucket[];
+};
+
+type ActiveFilterChip = {
+  key: string;
+  field: keyof SearchDraftState | "price";
+  values?: string[];
+  value?: string;
+  label: string;
+};
+
+type ColorFillConfig = {
+  color: string;
+  gradientId?: string;
+  gradientStops?: string[];
+};
+
+type StatisticsScreenProps = {
+  onNavigateApp: (nextApp: "capsule" | "search" | "statistics") => void;
+  userEmail?: string;
+  userName?: string;
+  settingsProfile?: SettingsProfile | null;
+  onSignOut?: () => void;
+  onSaveSettings?: (settings: SettingsSavePayload) => Promise<void> | void;
+};
 
 const FACET_COLORS = [
   "#FF6B6B", 
@@ -71,7 +127,7 @@ const CHART_DIMENSIONS = [
   { key: "closureType", titleKey: "search.filters.closureType", optionGroup: "closureTypes" }
 ];
 
-function buildInitialStatsState() {
+function buildInitialStatsState(): StatisticsState {
   return {
     total: 0,
     stats: {},
@@ -79,29 +135,29 @@ function buildInitialStatsState() {
   };
 }
 
-function serializeStatisticsState(state) {
+function serializeStatisticsState(state: SearchDraftState): Omit<SerializedSearchState, "query" | "page"> {
   const payload = serializeDraftState(state);
   delete payload.query;
   delete payload.page;
   return payload;
 }
 
-function formatCount(locale, value) {
+function formatCount(locale: string, value: number) {
   return new Intl.NumberFormat(locale).format(value);
 }
 
-function formatPrice(locale, value) {
+function formatPrice(locale: string, value: number) {
   return new Intl.NumberFormat(locale, {
     maximumFractionDigits: value % 1 === 0 ? 0 : 2
   }).format(value);
 }
 
-function formatPriceBucketLabel(locale, bucket) {
+function formatPriceBucketLabel(locale: string, bucket: PriceBucket) {
   return `${formatPrice(locale, Math.round(bucket.min + bucket.max) / 2)}`;
   // return `${formatPrice(locale, bucket.min)} - ${formatPrice(locale, bucket.max)}`;
 }
 
-function resolveStatisticsTotal(statsState) {
+function resolveStatisticsTotal(statsState: StatisticsState) {
   const directTotal = Number(statsState?.total || 0);
   if (directTotal > 0) {
     return directTotal;
@@ -128,7 +184,19 @@ function resolveStatisticsTotal(statsState) {
   return 0;
 }
 
-function getFacetLabel({ key, value, optionGroup, options, locale }) {
+function getFacetLabel({
+  key,
+  value,
+  optionGroup,
+  options,
+  locale
+}: {
+  key: string;
+  value: string;
+  optionGroup: string;
+  options: SearchOptions;
+  locale: string;
+}) {
   if (value === "__other__") {
     return "Other";
   }
@@ -150,7 +218,7 @@ function getFacetLabel({ key, value, optionGroup, options, locale }) {
   return translateOption(optionGroup, value, locale);
 }
 
-function summarizeFacetRows(rows = []) {
+function summarizeFacetRows(rows: StatsRow[] = []): StatsRow[] {
   const normalizedRows = Array.isArray(rows) ? rows.filter((row) => row?.count > 0 && row?.value) : [];
   if (normalizedRows.length <= 12) {
     return normalizedRows;
@@ -161,7 +229,7 @@ function summarizeFacetRows(rows = []) {
   return [...visibleRows, { value: "__other__", count: otherCount, isOther: true }];
 }
 
-function isFacetValueSelected(state, key, value) {
+function isFacetValueSelected(state: SearchDraftState, key: keyof SearchDraftState | "price", value: string) {
   if (key === "price") {
     return false;
   }
@@ -169,8 +237,18 @@ function isFacetValueSelected(state, key, value) {
   return Array.isArray(currentValue) ? currentValue.includes(value) : currentValue === value;
 }
 
-function buildActiveFilterChips({ state, options, locale, t }) {
-  const chips = [];
+function buildActiveFilterChips({
+  state,
+  options,
+  locale,
+  t
+}: {
+  state: SearchDraftState;
+  options: SearchOptions;
+  locale: string;
+  t: (key: string, params?: Record<string, unknown>) => string;
+}): ActiveFilterChip[] {
+  const chips: ActiveFilterChip[] = [];
   const pushFacetChips = (values, title, optionGroup, fieldKey) => {
     if (!Array.isArray(values) || values.length === 0) {
       return;
@@ -217,7 +295,15 @@ function buildActiveFilterChips({ state, options, locale, t }) {
   return chips;
 }
 
-function StatisticsCard({ title, subtitle, children }) {
+function StatisticsCard({
+  title,
+  subtitle,
+  children
+}: {
+  title: string;
+  subtitle?: string;
+  children: ReactNode;
+}) {
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === "dark";
 
@@ -261,6 +347,15 @@ function StatisticsSummaryCard({
   onDeleteChip,
   activeFiltersLabel,
   noActiveFiltersLabel
+}: {
+  title: string;
+  subtitle: string;
+  totalLabel: string;
+  chips: ActiveFilterChip[];
+  isLoading: boolean;
+  onDeleteChip: (chip: ActiveFilterChip) => void;
+  activeFiltersLabel: string;
+  noActiveFiltersLabel: string;
 }) {
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === "dark";
@@ -389,7 +484,7 @@ function StatisticsSummaryCard({
   );
 }
 
-function getColorChartFillConfig(value) {
+function getColorChartFillConfig(value: string): ColorFillConfig {
   const swatchStyle = getColorSwatchStyle(value);
   if (swatchStyle?.bgcolor) {
     return { color: swatchStyle.bgcolor };
@@ -408,7 +503,17 @@ function getColorChartFillConfig(value) {
   return { color: "#94a3b8" };
 }
 
-function buildDonutChartData({ rows, activeValues, formatLabel, title }) {
+function buildDonutChartData({
+  rows,
+  activeValues,
+  formatLabel,
+  title
+}: {
+  rows: StatsRow[];
+  activeValues: string[];
+  formatLabel: (value: string) => string;
+  title: string;
+}) {
   const summarizedRows = summarizeFacetRows(rows);
   return summarizedRows.map((row, index) => ({
     ...row,
@@ -421,7 +526,23 @@ function buildDonutChartData({ rows, activeValues, formatLabel, title }) {
   }));
 }
 
-function StatisticsDonutChart({ title, subtitle, rows, activeValues, onToggleValue, formatLabel, locale }) {
+function StatisticsDonutChart({
+  title,
+  subtitle,
+  rows,
+  activeValues,
+  onToggleValue,
+  formatLabel,
+  locale
+}: {
+  title: string;
+  subtitle: string;
+  rows: StatsRow[];
+  activeValues: string[];
+  onToggleValue: (value: string) => void;
+  formatLabel: (value: string) => string;
+  locale: string;
+}) {
   const chartData = buildDonutChartData({ rows, activeValues, formatLabel, title });
   return (
     <StatisticsCard title={title} subtitle={subtitle}>
@@ -429,6 +550,7 @@ function StatisticsDonutChart({ title, subtitle, rows, activeValues, onToggleVal
         data={chartData}
         category="count"
         index="label"
+        className=""
         valueFormatter={(value) => formatCount(locale, value)}
         activeValues={activeValues}
         onValueChange={(row) => onToggleValue(row.rawValue)}
@@ -437,7 +559,17 @@ function StatisticsDonutChart({ title, subtitle, rows, activeValues, onToggleVal
   );
 }
 
-function PriceLineChart({ title, subtitle, buckets, locale }) {
+function PriceLineChart({
+  title,
+  subtitle,
+  buckets,
+  locale
+}: {
+  title: string;
+  subtitle?: string;
+  buckets: PriceBucket[];
+  locale: string;
+}) {
   const chartData = buckets.map((bucket) => ({
     ...bucket,
     label: formatPriceBucketLabel(locale, bucket),
@@ -457,7 +589,25 @@ function PriceLineChart({ title, subtitle, buckets, locale }) {
   );
 }
 
-function StatisticsBarChart({ title, subtitle, rows, activeValues, onToggleValue, formatLabel, locale, getFillConfig }) {
+function StatisticsBarChart({
+  title,
+  subtitle,
+  rows,
+  activeValues,
+  onToggleValue,
+  formatLabel,
+  locale,
+  getFillConfig
+}: {
+  title: string;
+  subtitle: string;
+  rows: StatsRow[];
+  activeValues: string[];
+  onToggleValue: (value: string) => void;
+  formatLabel: (value: string) => string;
+  locale: string;
+  getFillConfig: (value: string, index: number) => ColorFillConfig;
+}) {
   const chartData = rows
     .filter((row) => row?.count > 0 && row?.value)
     .map((row, index) => {
@@ -493,12 +643,12 @@ function StatisticsScreen({
   settingsProfile = null,
   onSignOut = () => {},
   onSaveSettings = async () => {}
-}) {
+}: StatisticsScreenProps): ReactElement {
   const { t, locale } = useI18n();
-  const [options, setOptions] = useState(EMPTY_SEARCH_OPTIONS);
-  const [draftState, setDraftState] = useState(createSearchState(null, EMPTY_SEARCH_OPTIONS.priceRange));
-  const [statsState, setStatsState] = useState(buildInitialStatsState());
-  const [status, setStatus] = useState({ loading: true, error: "" });
+  const [options, setOptions] = useState<SearchOptions>(EMPTY_SEARCH_OPTIONS);
+  const [draftState, setDraftState] = useState<SearchDraftState>(createSearchState(null, EMPTY_SEARCH_OPTIONS.priceRange));
+  const [statsState, setStatsState] = useState<StatisticsState>(buildInitialStatsState());
+  const [status, setStatus] = useState<StatisticsStatus>({ loading: true, error: "" });
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const draftStateRef = useRef(draftState);
 
@@ -521,7 +671,7 @@ function StatisticsScreen({
         const nextState = createSearchState(null, nextOptions.priceRange);
         setOptions(nextOptions);
         setDraftState(nextState);
-        const result = await fetchSearchStats(serializeStatisticsState(nextState));
+        const result = await fetchSearchStats(serializeStatisticsState(nextState)) as SearchStatsResponse;
         if (!isActive) {
           return;
         }
@@ -545,10 +695,10 @@ function StatisticsScreen({
     };
   }, [t]);
 
-  const performStatsRefresh = async (nextState) => {
+  const performStatsRefresh = async (nextState: SearchDraftState) => {
     setStatus({ loading: true, error: "" });
     try {
-      const result = await fetchSearchStats(serializeStatisticsState(nextState));
+      const result = await fetchSearchStats(serializeStatisticsState(nextState)) as SearchStatsResponse;
       setStatsState({
         total: Number(result.total || 0),
         stats: result.stats || {},
@@ -574,7 +724,10 @@ function StatisticsScreen({
     await performStatsRefresh(nextState);
   };
 
-  const handleSidebarDraftStateChange = async (updater, { submit = false } = {}) => {
+  const handleSidebarDraftStateChange = async (
+    updater: SearchDraftState | ((current: SearchDraftState) => SearchDraftState),
+    { submit = false } = {}
+  ) => {
     const nextState = typeof updater === "function" ? updater(draftStateRef.current) : updater;
     draftStateRef.current = nextState;
     setDraftState(nextState);
@@ -583,10 +736,10 @@ function StatisticsScreen({
     }
   };
 
-  const handleToggleFacetValue = async (fieldKey, value) => {
+  const handleToggleFacetValue = async (fieldKey: keyof SearchDraftState, value: SearchFilterValue) => {
     await handleSidebarDraftStateChange((current) => ({
       ...current,
-      [fieldKey]: toggleSelection(value, current[fieldKey] || []),
+      [fieldKey]: toggleSelection(value, Array.isArray(current[fieldKey]) ? current[fieldKey] : []),
       page: 1
     }), { submit: true });
   };
@@ -612,8 +765,8 @@ function StatisticsScreen({
               title={t(dimension.titleKey)}
               subtitle={t("statistics.chartHint")}
               rows={rows}
-              activeValues={draftState[dimension.key] || []}
-              onToggleValue={(value) => handleToggleFacetValue(dimension.key, value)}
+              activeValues={(draftState[dimension.key as keyof SearchDraftState] as string[] | undefined) || []}
+              onToggleValue={(value) => handleToggleFacetValue(dimension.key as keyof SearchDraftState, value)}
               formatLabel={(value) => getFacetLabel({
                 key: dimension.key,
                 value,
@@ -633,8 +786,8 @@ function StatisticsScreen({
             title={t(dimension.titleKey)}
             subtitle={t("statistics.chartHint")}
             rows={rows}
-            activeValues={draftState[dimension.key] || []}
-            onToggleValue={(value) => handleToggleFacetValue(dimension.key, value)}
+            activeValues={(draftState[dimension.key as keyof SearchDraftState] as string[] | undefined) || []}
+            onToggleValue={(value) => handleToggleFacetValue(dimension.key as keyof SearchDraftState, value)}
             formatLabel={(value) => getFacetLabel({
               key: dimension.key,
               value,
@@ -693,7 +846,7 @@ function StatisticsScreen({
     </Stack>
   );
 
-  const handleDeleteActiveChip = (chip) => {
+  const handleDeleteActiveChip = (chip: ActiveFilterChip) => {
     if (chip.field === "price") {
       handleSidebarDraftStateChange((current) => ({
         ...current,

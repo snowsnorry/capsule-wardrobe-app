@@ -7,7 +7,7 @@ import ProductLabelText from "./ProductLabelText";
 import { getSafeHttpUrl } from "../../../shared/urlSecurity.js";
 
 type ClothingCardItem = {
-  id?: string | null;
+  id?: string | number | null;
   name?: string | null;
   category?: string | null;
   image_url?: string | null;

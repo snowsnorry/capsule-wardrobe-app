@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import type { FormEvent, MouseEvent } from "react";
 import { Alert, Box, Button, Container, CssBaseline, LinearProgress, Paper, Snackbar, Stack, ThemeProvider, Typography, useMediaQuery } from "@mui/material";
 import {
   fetchCurrentUser,
@@ -44,21 +45,152 @@ import {
   buildDisplayWardrobeItems,
   mergeWardrobeItemsIntoExistingOrder
 } from "../../shared/wardrobeMerge.js";
+import type { SettingsSavePayload } from "./components/SettingsDialog";
 
-const MainScreen = lazy(() => import("./screens/MainScreen.jsx"));
+type StatusState = {
+  loading: boolean;
+  error: string;
+  infoKey: string;
+  infoParams: Record<string, unknown> | null;
+};
+
+type NotificationPromptState = {
+  open: boolean;
+};
+
+type UserLike = {
+  email?: string;
+};
+
+type SessionStep = "email" | "code";
+
+type ProfileSettings = {
+  email: string;
+  locale: string;
+  fullname: string;
+  theme: string;
+  llm: string;
+};
+
+type CapsuleFilters = {
+  formalityLevel: string;
+  style: string | null;
+  occasions: string[];
+  season: string[];
+  audience: string;
+  color: string | null;
+  pattern: string;
+  text: string;
+};
+
+type OutfitSetSnapshot = {
+  itemIds: string[];
+  image: string | null;
+  imageObsolete: boolean;
+};
+
+type WardrobeItem = {
+  id?: string | number;
+  url?: string;
+  [key: string]: unknown;
+};
+
+type CapsuleWardrobeData = {
+  items: WardrobeItem[];
+  outfitSets?: OutfitSetSnapshot[];
+  reasoning?: string | null;
+  rawSelectionText?: string | null;
+  swimwearReasoning?: string | null;
+  swimwearRawSelectionText?: string | null;
+};
+
+type CapsuleDraft = {
+  filters: CapsuleFilters;
+  data: {
+    wardrobe: CapsuleWardrobeData | null;
+    rejectedUrls: string[];
+  };
+};
+
+type CapsuleMeta = {
+  id?: string;
+  name?: string;
+  draft?: CapsuleDraft | null;
+  saved?: CapsuleDraft | null;
+  effective?: CapsuleDraft | null;
+  status?: string;
+  updatedAt?: string;
+};
+
+type WardrobeSnapshot = {
+  status?: string;
+  items?: WardrobeItem[];
+  outfitSets?: OutfitSetSnapshot[];
+  pendingRegenerationUrls?: string[];
+  pendingImageSetIndexes?: number[];
+  hasPendingAdditionalItems?: boolean;
+  reasoning?: string | null;
+};
+
+type ProfileOptionsResult = {
+  styles: {
+    core: string[];
+    aesthetics: string[];
+  };
+  occasions: string[];
+  seasons: string[];
+  audience: string[];
+  patterns: string[];
+};
+
+type CurrentUserResponse = {
+  user?: UserLike | null;
+};
+
+type ProfileStatusResponse = {
+  hasProfile?: boolean;
+};
+
+type AuthResultResponse = {
+  user?: UserLike | null;
+  expiresInMs?: number;
+};
+
+type CapsuleBootstrapResponse = {
+  profile?: Partial<ProfileSettings>;
+  activeCapsule?: CapsuleMeta | null;
+  capsules?: CapsuleMeta[];
+  activeSnapshot?: WardrobeSnapshot;
+};
+
+type CapsuleListResponse = {
+  capsules?: CapsuleMeta[];
+};
+
+type CapsuleMutationResponse = {
+  capsule?: CapsuleMeta | null;
+  activeCapsule?: CapsuleMeta | null;
+  status?: string;
+};
+
+type WardrobeMutationResponse = {
+  status?: string;
+};
+
+const MainScreen = lazy(() => import("./screens/MainScreen"));
 const OnboardingScreen = lazy(() => import("./screens/OnboardingScreen"));
 const ProfileScreen = lazy(() => import("./screens/ProfileScreen"));
-const SearchScreen = lazy(() => import("./screens/SearchScreen.jsx"));
-const StatisticsScreen = lazy(() => import("./screens/StatisticsScreen.jsx"));
+const SearchScreen = lazy(() => import("./screens/SearchScreen"));
+const StatisticsScreen = lazy(() => import("./screens/StatisticsScreen"));
 
-const initialStatus = {
+const initialStatus: StatusState = {
   loading: false,
   error: "",
   infoKey: "",
   infoParams: null
 };
 
-const initialNotificationPrompt = {
+const initialNotificationPrompt: NotificationPromptState = {
   open: false
 };
 
@@ -97,7 +229,7 @@ const FALLBACK_ACCENT_COLOR_OPTIONS = ACCENT_COLOR_OPTIONS;
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
 const SEASON_DISPLAY_ORDER = ["spring", "summer", "autumn", "winter"];
 
-function normalizeProfileSettings(profile = {}, email = "") {
+function normalizeProfileSettings(profile: Partial<ProfileSettings> = {}, email = ""): ProfileSettings {
   return {
     email: String(profile?.email || email || "").trim(),
     locale: typeof profile?.locale === "string" && profile.locale.trim() ? profile.locale.trim() : "en",
@@ -106,6 +238,16 @@ function normalizeProfileSettings(profile = {}, email = "") {
     llm: typeof profile?.llm === "string" && profile.llm.trim() ? profile.llm.trim() : DEFAULT_PROFILE_LLM
   };
 }
+
+function getWardrobeMetadata(wardrobe: CapsuleWardrobeData | null | undefined) {
+  return {
+    reasoning: wardrobe?.reasoning || null,
+    rawSelectionText: wardrobe?.rawSelectionText || null,
+    swimwearReasoning: wardrobe?.swimwearReasoning || null,
+    swimwearRawSelectionText: wardrobe?.swimwearRawSelectionText || null
+  };
+}
+
 function getAppRoute(pathname = "/") {
   if (pathname === "/search" || pathname === "/search/") {
     return "search";
@@ -131,7 +273,7 @@ function sortSeasonOptions(items) {
   });
 }
 
-function normalizeOutfitSets(outfitSets) {
+function normalizeOutfitSets(outfitSets: unknown): OutfitSetSnapshot[] {
   return Array.isArray(outfitSets)
     ? outfitSets
       .map((set) => ({
@@ -147,7 +289,7 @@ function normalizeOutfitSets(outfitSets) {
     : [];
 }
 
-function buildCapsuleStatus(capsule) {
+function buildCapsuleStatus(capsule: CapsuleMeta | null | undefined) {
   if (!capsule) {
     return "new";
   }
@@ -160,7 +302,7 @@ function buildCapsuleStatus(capsule) {
   return "new";
 }
 
-function buildEmptyCapsuleDraft() {
+function buildEmptyCapsuleDraft(): CapsuleDraft {
   return {
     filters: {
       formalityLevel: "",
@@ -179,11 +321,11 @@ function buildEmptyCapsuleDraft() {
   };
 }
 
-function getEffectiveCapsule(capsule) {
+function getEffectiveCapsule(capsule: CapsuleMeta | null | undefined): CapsuleDraft | null {
   return capsule?.draft || capsule?.saved || null;
 }
 
-function normalizeComparableFilters(filters = {}) {
+function normalizeComparableFilters(filters: Partial<CapsuleFilters> = {}) {
   return {
     formalityLevel: typeof filters.formalityLevel === "string" ? filters.formalityLevel : "",
     style: filters.style ?? null,
@@ -196,11 +338,11 @@ function normalizeComparableFilters(filters = {}) {
   };
 }
 
-function areFiltersEqual(left, right) {
+function areFiltersEqual(left: Partial<CapsuleFilters>, right: Partial<CapsuleFilters>) {
   return JSON.stringify(normalizeComparableFilters(left)) === JSON.stringify(normalizeComparableFilters(right));
 }
 
-function hasStoredWardrobeItems(capsule) {
+function hasStoredWardrobeItems(capsule: CapsuleMeta | null | undefined) {
   const items = getEffectiveCapsule(capsule)?.data?.wardrobe?.items;
   return Array.isArray(items) && items.length > 0;
 }
@@ -224,43 +366,43 @@ function App() {
   const isLarge = useMediaQuery("(min-width:900px)");
   const prefersDarkMode = useMediaQuery("(prefers-color-scheme: dark)");
   const { t, locale, setLocale } = useI18n();
-  const [step, setStep] = useState("email");
+  const [step, setStep] = useState<SessionStep>("email");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
-  const [status, setStatus] = useState(initialStatus);
+  const [status, setStatus] = useState<StatusState>(initialStatus);
   const [notificationPrompt, setNotificationPrompt] = useState(initialNotificationPrompt);
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<UserLike | null>(null);
   const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [sessionInitialized, setSessionInitialized] = useState(false);
   const [hasProfile, setHasProfile] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(0);
   const [styleOptions, setStyleOptions] = useState(FALLBACK_STYLE_OPTIONS);
-  const [occasionOptions, setOccasionOptions] = useState([]);
-  const [seasonOptions, setSeasonOptions] = useState([]);
-  const [audienceOptions, setAudienceOptions] = useState([]);
-  const [patternOptions, setPatternOptions] = useState([]);
+  const [occasionOptions, setOccasionOptions] = useState<string[]>([]);
+  const [seasonOptions, setSeasonOptions] = useState<string[]>([]);
+  const [audienceOptions, setAudienceOptions] = useState<string[]>([]);
+  const [patternOptions, setPatternOptions] = useState<string[]>([]);
   const [selectedFormalityLevel, setSelectedFormalityLevel] = useState("");
-  const [selectedStyle, setSelectedStyle] = useState(null);
-  const [selectedOccasions, setSelectedOccasions] = useState([]);
-  const [selectedSeason, setSelectedSeason] = useState([]);
+  const [selectedStyle, setSelectedStyle] = useState<string | null>(null);
+  const [selectedOccasions, setSelectedOccasions] = useState<string[]>([]);
+  const [selectedSeason, setSelectedSeason] = useState<string[]>([]);
   const [selectedAudience, setSelectedAudience] = useState("");
-  const [selectedColor, setSelectedColor] = useState(null);
+  const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [selectedPattern, setSelectedPattern] = useState("solid");
   const [selectedText, setSelectedText] = useState("");
   const [profileCreated, setProfileCreated] = useState(false);
   const [currentView, setCurrentView] = useState("main");
-  const [profileItems, setProfileItems] = useState(null);
-  const [profileOutfitSets, setProfileOutfitSets] = useState([]);
+  const [profileItems, setProfileItems] = useState<WardrobeItem[] | null>(null);
+  const [profileOutfitSets, setProfileOutfitSets] = useState<OutfitSetSnapshot[]>([]);
   const [settingsProfile, setSettingsProfile] = useState(() => normalizeProfileSettings());
   const [activeCapsuleId, setActiveCapsuleId] = useState("");
-  const [activeCapsuleMeta, setActiveCapsuleMeta] = useState(null);
-  const [capsuleList, setCapsuleList] = useState([]);
+  const [activeCapsuleMeta, setActiveCapsuleMeta] = useState<CapsuleMeta | null>(null);
+  const [capsuleList, setCapsuleList] = useState<CapsuleMeta[]>([]);
   const [isLoadingItems, setIsLoadingItems] = useState(false);
   const [isContentOperationLoading, setIsContentOperationLoading] = useState(false);
   const [isDownloadingWardrobePdf, setIsDownloadingWardrobePdf] = useState(false);
-  const [selectedRegenerationUrls, setSelectedRegenerationUrls] = useState([]);
-  const [partialRegenerationPendingUrls, setPartialRegenerationPendingUrls] = useState([]);
-  const [pendingImageSetIndexes, setPendingImageSetIndexes] = useState([]);
+  const [selectedRegenerationUrls, setSelectedRegenerationUrls] = useState<string[]>([]);
+  const [partialRegenerationPendingUrls, setPartialRegenerationPendingUrls] = useState<string[]>([]);
+  const [pendingImageSetIndexes, setPendingImageSetIndexes] = useState<number[]>([]);
   const [isPartialRegenerationLoading, setIsPartialRegenerationLoading] = useState(false);
   const [isWardrobePending, setIsWardrobePending] = useState(false);
   const [hasPendingAdditionalItems, setHasPendingAdditionalItems] = useState(false);
@@ -269,9 +411,9 @@ function App() {
     typeof window === "undefined" ? "capsule" : getAppRoute(window.location.pathname)
   ));
   const isMountedRef = useRef(true);
-  const pendingRegenerationUrlsRef = useRef([]);
-  const regenerationBaseItemsRef = useRef([]);
-  const capsuleEventsAbortRef = useRef(null);
+  const pendingRegenerationUrlsRef = useRef<string[]>([]);
+  const regenerationBaseItemsRef = useRef<WardrobeItem[]>([]);
+  const capsuleEventsAbortRef = useRef<AbortController | null>(null);
   const manualWardrobeRegenerationCapsuleIdRef = useRef("");
   const pendingNotificationKindRef = useRef("");
 
@@ -306,7 +448,7 @@ function App() {
     };
   }, []);
 
-  const resolveErrorMessage = (error) => {
+  const resolveErrorMessage = (error: { message?: string } | null | undefined) => {
     if (!error) return t("errors.generic");
     if (error.message === "invalid_email") return t("errors.invalidEmail");
     if (error.message === "cooldown") return t("errors.cooldown");
@@ -338,7 +480,7 @@ function App() {
     llm !== "none" && getNotificationPermission() === "default"
   );
 
-  const startPendingNotificationFlow = (kind, llm = settingsProfile.llm) => {
+  const startPendingNotificationFlow = (kind: string, llm = settingsProfile.llm) => {
     pendingNotificationKindRef.current = kind;
 
     if (shouldShowNotificationPrompt(llm)) {
@@ -365,7 +507,7 @@ function App() {
     }
   };
 
-  const sendReadyNotification = (kind) => {
+  const sendReadyNotification = (kind: string) => {
     if (getNotificationPermission() !== "granted") {
       return;
     }
@@ -388,10 +530,10 @@ function App() {
     const bootstrapSession = async () => {
       setIsCheckingSession(true);
       try {
-        const current = await fetchCurrentUser();
+        const current = await fetchCurrentUser() as CurrentUserResponse;
         if (!isActive) return;
         setUser(current.user);
-        const profileStatus = await fetchProfileStatus();
+        const profileStatus = await fetchProfileStatus() as ProfileStatusResponse;
         if (!isActive) return;
         setHasProfile(profileStatus.hasProfile);
         setProfileCreated(profileStatus.hasProfile);
@@ -421,9 +563,9 @@ function App() {
     };
   }, []);
 
-  const preloadOnboardingOptions = async ({ useFallback = false } = {}) => {
+  const preloadOnboardingOptions = async ({ useFallback = false }: { useFallback?: boolean } = {}) => {
     try {
-      const result = await loadProfileOptions();
+      const result = await loadProfileOptions() as ProfileOptionsResult;
       setStyleOptions(result.styles);
       setOccasionOptions(result.occasions);
       setSeasonOptions(result.seasons);
@@ -442,7 +584,7 @@ function App() {
     }
   };
 
-  const ensureOptionsLoaded = async ({ useFallback = false } = {}) => {
+  const ensureOptionsLoaded = async ({ useFallback = false }: { useFallback?: boolean } = {}) => {
     if (
       styleOptions &&
       Array.isArray(styleOptions.core) &&
@@ -473,7 +615,7 @@ function App() {
     setIsLoadingItems(false);
   };
 
-  const applyCapsuleState = (capsule, { capsules = null } = {}) => {
+  const applyCapsuleState = (capsule: CapsuleMeta | null | undefined, { capsules = null as CapsuleMeta[] | null } = {}) => {
     if (!capsule) {
       return;
     }
@@ -513,7 +655,10 @@ function App() {
       outfitSets: profileOutfitSets
     },
     rejectedUrls = null
-  } = {}) => ({
+  }: {
+    wardrobe?: CapsuleWardrobeData | { items: WardrobeItem[] | null; outfitSets: OutfitSetSnapshot[] } | null;
+    rejectedUrls?: string[] | null;
+  } = {}): CapsuleDraft => ({
     filters: {
       formalityLevel: selectedFormalityLevel,
       style: selectedStyle,
@@ -527,12 +672,9 @@ function App() {
     data: {
       wardrobe: wardrobe
         ? {
-          items: Array.isArray(wardrobe) ? wardrobe : wardrobe.items || [],
-          outfitSets: Array.isArray(wardrobe) ? [] : normalizeOutfitSets(wardrobe?.outfitSets),
-          reasoning: wardrobe?.reasoning || null,
-          rawSelectionText: wardrobe?.rawSelectionText || null,
-          swimwearReasoning: wardrobe?.swimwearReasoning || null,
-          swimwearRawSelectionText: wardrobe?.swimwearRawSelectionText || null
+          items: Array.isArray(wardrobe.items) ? wardrobe.items : [],
+          outfitSets: normalizeOutfitSets(wardrobe.outfitSets),
+          ...getWardrobeMetadata(wardrobe as CapsuleWardrobeData)
         }
         : null,
       rejectedUrls: Array.isArray(rejectedUrls)
@@ -541,7 +683,11 @@ function App() {
     }
   });
 
-  const restoreCapsuleSnapshot = async (capsuleId, snapshot, { shouldResumeEvents = false } = {}) => {
+  const restoreCapsuleSnapshot = async (
+    capsuleId: string | undefined,
+    snapshot: WardrobeSnapshot | undefined,
+    { shouldResumeEvents = false }: { shouldResumeEvents?: boolean } = {}
+  ) => {
     if (!snapshot || snapshot.status !== "pending") {
       return;
     }
@@ -553,7 +699,7 @@ function App() {
   };
 
   const bootstrapCapsules = async (email = user?.email) => {
-    const result = await fetchCapsuleBootstrap();
+    const result = await fetchCapsuleBootstrap() as CapsuleBootstrapResponse;
     const normalizedProfile = normalizeProfileSettings(result.profile, email);
     setSettingsProfile(normalizedProfile);
     if (normalizedProfile.locale) {
@@ -564,11 +710,11 @@ function App() {
     return normalizedProfile;
   };
 
-  const handleRequestCode = async (event) => {
+  const handleRequestCode = async (event: FormEvent<HTMLFormElement> | MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
     setStatus({ loading: true, error: "", infoKey: "", infoParams: null });
     try {
-      const result = await requestLoginCode(email.trim(), locale);
+      const result = await requestLoginCode(email.trim(), locale) as AuthResultResponse;
       setStatus({
         loading: false,
         error: "",
@@ -582,12 +728,12 @@ function App() {
     }
   };
 
-  const handleVerifyCode = async (event) => {
+  const handleVerifyCode = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setStatus({ loading: true, error: "", infoKey: "", infoParams: null });
     try {
-      const result = await verifyLoginCode(email.trim(), code.trim());
-      const profileStatus = await retry(() => fetchProfileStatus());
+      const result = await verifyLoginCode(email.trim(), code.trim()) as AuthResultResponse;
+      const profileStatus = await retry(() => fetchProfileStatus() as Promise<ProfileStatusResponse>);
       setHasProfile(profileStatus.hasProfile);
       setProfileCreated(profileStatus.hasProfile);
       if (!profileStatus.hasProfile) {
@@ -616,11 +762,11 @@ function App() {
     }
   };
 
-  const handleGoogleCredential = async (idToken) => {
+  const handleGoogleCredential = async (idToken: string) => {
     setStatus({ loading: true, error: "", infoKey: "", infoParams: null });
     try {
-      const result = await signInWithGoogle(idToken);
-      const profileStatus = await retry(() => fetchProfileStatus());
+      const result = await signInWithGoogle(idToken) as AuthResultResponse;
+      const profileStatus = await retry(() => fetchProfileStatus() as Promise<ProfileStatusResponse>);
       setHasProfile(profileStatus.hasProfile);
       setProfileCreated(profileStatus.hasProfile);
       if (!profileStatus.hasProfile) {
@@ -737,7 +883,7 @@ function App() {
       await initializeProfile(locale);
       const createdCapsuleResult = await createCapsule({
         filters: buildCurrentDraftSnapshot({ wardrobe: null, rejectedUrls: [] }).filters
-      });
+      }) as CapsuleMutationResponse;
       const createdCapsuleId = String(createdCapsuleResult?.capsule?.id || "").trim();
       setProfileCreated(true);
       setHasProfile(true);
@@ -754,7 +900,7 @@ function App() {
       if (createdCapsuleId) {
         manualWardrobeRegenerationCapsuleIdRef.current = createdCapsuleId;
         setIsLoadingItems(true);
-        const response = await requestWardrobeRegeneration({ capsuleId: createdCapsuleId });
+        const response = await requestWardrobeRegeneration({ capsuleId: createdCapsuleId }) as WardrobeMutationResponse;
         if (response?.status === "pending") {
           startPendingNotificationFlow("full", normalizedProfile?.llm);
           startCapsuleEventStream(createdCapsuleId);
@@ -772,7 +918,7 @@ function App() {
     await handleApplyCapsuleFilters();
   };
 
-  const handleSaveSettings = async (nextSettings) => {
+  const handleSaveSettings = async (nextSettings: SettingsSavePayload) => {
     const payload = {
       locale: String(nextSettings?.locale || settingsProfile.locale || locale || "en").trim().toLowerCase(),
       theme: String(nextSettings?.theme || settingsProfile.theme || DEFAULT_PROFILE_THEME).trim().toLowerCase(),
@@ -782,7 +928,7 @@ function App() {
 
     setStatus({ loading: true, error: "", infoKey: "", infoParams: null });
     try {
-      const result = await updateProfile(payload);
+      const result = await updateProfile(payload) as { profile?: Partial<ProfileSettings> };
       const normalizedProfile = normalizeProfileSettings(result.profile, user?.email);
       setSettingsProfile(normalizedProfile);
       if (normalizedProfile.locale && normalizedProfile.locale !== locale) {
@@ -798,7 +944,7 @@ function App() {
   };
 
   const refreshCapsuleList = async () => {
-    const result = await fetchRecentCapsules();
+    const result = await fetchRecentCapsules() as CapsuleListResponse;
     setCapsuleList(result.capsules || []);
   };
 
@@ -811,7 +957,7 @@ function App() {
     setStatus({ loading: true, error: "", infoKey: "", infoParams: null });
     try {
       const nextFilters = buildCurrentDraftSnapshot().filters;
-      const result = await updateCapsuleFilters(activeCapsuleId, nextFilters, { regenerate: true });
+      const result = await updateCapsuleFilters(activeCapsuleId, nextFilters, { regenerate: true }) as CapsuleMutationResponse;
       setActiveCapsuleMeta((current) => result?.capsule || (
         current
           ? {
@@ -850,7 +996,7 @@ function App() {
   const handleCreateCapsule = async () => {
     setIsContentOperationLoading(true);
     try {
-      const result = await createCapsule({ filters: buildEmptyCapsuleDraft().filters });
+      const result = await createCapsule({ filters: buildEmptyCapsuleDraft().filters }) as CapsuleMutationResponse;
       applyCapsuleState(result.capsule);
       await refreshCapsuleList();
     } finally {
@@ -858,10 +1004,10 @@ function App() {
     }
   };
 
-  const handleOpenCapsule = async (capsuleId) => {
+  const handleOpenCapsule = async (capsuleId: string) => {
     setIsContentOperationLoading(true);
     try {
-      const result = await fetchCapsule(capsuleId);
+      const result = await fetchCapsule(capsuleId) as { capsule?: CapsuleMeta | null; snapshot?: WardrobeSnapshot };
       applyCapsuleState(result.capsule);
       await restoreCapsuleSnapshot(result.capsule?.id, result.snapshot, { shouldResumeEvents: true });
       await refreshCapsuleList();
@@ -876,7 +1022,7 @@ function App() {
     }
     setIsContentOperationLoading(true);
     try {
-      const result = await saveCapsule(capsuleId);
+      const result = await saveCapsule(capsuleId) as CapsuleMutationResponse;
       if (capsuleId === activeCapsuleId) {
         setActiveCapsuleMeta(result.capsule);
       }
@@ -892,7 +1038,7 @@ function App() {
     }
     setIsContentOperationLoading(true);
     try {
-      const result = await revertCapsule(capsuleId);
+      const result = await revertCapsule(capsuleId) as CapsuleMutationResponse;
       if (capsuleId === activeCapsuleId) {
         applyCapsuleState(result.capsule);
       }
@@ -902,13 +1048,13 @@ function App() {
     }
   };
 
-  const handleRenameCapsule = async (name, capsuleId = activeCapsuleId) => {
+  const handleRenameCapsule = async (name: string, capsuleId = activeCapsuleId) => {
     if (!capsuleId) {
       return;
     }
     setIsContentOperationLoading(true);
     try {
-      const result = await renameCapsule(capsuleId, name);
+      const result = await renameCapsule(capsuleId, name) as CapsuleMutationResponse;
       if (capsuleId === activeCapsuleId) {
         setActiveCapsuleMeta(result.capsule);
       }
@@ -918,13 +1064,13 @@ function App() {
     }
   };
 
-  const handleDuplicateCapsule = async (name, capsuleId = activeCapsuleId) => {
+  const handleDuplicateCapsule = async (name: string, capsuleId = activeCapsuleId) => {
     if (!capsuleId) {
       return;
     }
     setIsContentOperationLoading(true);
     try {
-      const result = await duplicateCapsule(capsuleId, name);
+      const result = await duplicateCapsule(capsuleId, name) as CapsuleMutationResponse;
       applyCapsuleState(result.capsule);
       await refreshCapsuleList();
     } finally {
@@ -938,7 +1084,7 @@ function App() {
     }
     setIsContentOperationLoading(true);
     try {
-      const result = await deleteCapsule(capsuleId);
+      const result = await deleteCapsule(capsuleId) as CapsuleMutationResponse;
       if (result.activeCapsule) {
         applyCapsuleState(result.activeCapsule);
       }
@@ -948,8 +1094,8 @@ function App() {
     }
   };
 
-  const handleSearchCapsules = async (query) => {
-    const result = await searchCapsules(query);
+  const handleSearchCapsules = async (query: string) => {
+    const result = await searchCapsules(query) as CapsuleListResponse;
     return result.capsules || [];
   };
 
@@ -1055,7 +1201,7 @@ function App() {
     capsuleEventsAbortRef.current = null;
   };
 
-  const applyWardrobeSnapshot = async (snapshot) => {
+  const applyWardrobeSnapshot = async (snapshot: WardrobeSnapshot | undefined) => {
     const items = Array.isArray(snapshot?.items) ? snapshot.items : [];
     const outfitSets = normalizeOutfitSets(snapshot?.outfitSets);
     const pendingRegenerationUrls = Array.isArray(snapshot?.pendingRegenerationUrls)
@@ -1063,7 +1209,7 @@ function App() {
       : [];
     const nextPendingImageSetIndexes = Array.isArray(snapshot?.pendingImageSetIndexes)
       ? snapshot.pendingImageSetIndexes
-        .map((value) => Number.parseInt(value, 10))
+        .map((value) => Number.parseInt(String(value), 10))
         .filter((value) => Number.isInteger(value) && value >= 0)
       : [];
     const isPending = snapshot?.status === "pending";
@@ -1149,7 +1295,7 @@ function App() {
     }
   };
 
-  const startCapsuleEventStream = (capsuleId) => {
+  const startCapsuleEventStream = (capsuleId: string | undefined) => {
     const normalizedCapsuleId = String(capsuleId || "").trim();
     if (!normalizedCapsuleId) {
       return Promise.resolve();
@@ -1216,7 +1362,7 @@ function App() {
     setWardrobeLoadedCapsuleId("");
     setIsLoadingItems(true);
     try {
-      const response = await requestWardrobeRegeneration({ capsuleId: activeCapsuleId });
+      const response = await requestWardrobeRegeneration({ capsuleId: activeCapsuleId }) as WardrobeMutationResponse;
       if (response?.status === "pending") {
         startPendingNotificationFlow("full");
         startCapsuleEventStream(activeCapsuleId);
@@ -1253,7 +1399,7 @@ function App() {
     }
   };
 
-  const handleToggleRegenerationSelection = (item) => {
+  const handleToggleRegenerationSelection = (item: WardrobeItem) => {
     const itemUrl = String(item?.url || "").trim();
     if (!itemUrl || isPartialRegenerationLoading) {
       return;
@@ -1284,7 +1430,7 @@ function App() {
     setIsPartialRegenerationLoading(true);
 
     try {
-      const response = await requestSelectedWardrobeRegeneration({ itemUrls: pendingUrls, capsuleId: activeCapsuleId });
+      const response = await requestSelectedWardrobeRegeneration({ itemUrls: pendingUrls, capsuleId: activeCapsuleId }) as WardrobeMutationResponse;
       if (response?.status === "pending") {
         startPendingNotificationFlow("partial");
         startCapsuleEventStream(activeCapsuleId);
@@ -1312,7 +1458,7 @@ function App() {
     }
   };
 
-  const handleGenerateOutfitSetImage = async (setIndex) => {
+  const handleGenerateOutfitSetImage = async (setIndex: number | string | null | undefined) => {
     const normalizedSetIndex = Number.parseInt(String(setIndex ?? ""), 10);
     if (!activeCapsuleId || !Number.isInteger(normalizedSetIndex) || normalizedSetIndex < 0) {
       return;
@@ -1328,7 +1474,7 @@ function App() {
       const response = await requestOutfitSetImageGeneration({
         capsuleId: activeCapsuleId,
         setIndex: normalizedSetIndex
-      });
+      }) as WardrobeMutationResponse;
       if (response?.status === "pending") {
         startCapsuleEventStream(activeCapsuleId);
         return;
@@ -1348,7 +1494,7 @@ function App() {
     }
   };
 
-  const handleDeleteOutfitSetImage = async (setIndex) => {
+  const handleDeleteOutfitSetImage = async (setIndex: number | string | null | undefined) => {
     const normalizedSetIndex = Number.parseInt(String(setIndex ?? ""), 10);
     if (!activeCapsuleId || !Number.isInteger(normalizedSetIndex) || normalizedSetIndex < 0) {
       return;
@@ -1411,6 +1557,10 @@ function App() {
       .catch(() => {});
   }, [locale, settingsProfile.locale, sessionInitialized, user, hasProfile, profileCreated]);
 
+  const handleSaveSettingsFromScreen = async (nextSettings: SettingsSavePayload) => {
+    await handleSaveSettings(nextSettings);
+  };
+
   const renderRightPanel = () => {
     if (isCheckingSession || !sessionInitialized) {
       return null;
@@ -1443,7 +1593,7 @@ function App() {
             userName={settingsProfile.fullname}
             settingsProfile={settingsProfile}
             onSignOut={handleLogout}
-            onSaveSettings={handleSaveSettings}
+            onSaveSettings={handleSaveSettingsFromScreen}
           />
         );
       }
@@ -1456,7 +1606,7 @@ function App() {
             userName={settingsProfile.fullname}
             settingsProfile={settingsProfile}
             onSignOut={handleLogout}
-            onSaveSettings={handleSaveSettings}
+            onSaveSettings={handleSaveSettingsFromScreen}
           />
         );
       }
@@ -1504,7 +1654,7 @@ function App() {
           userName={settingsProfile.fullname}
           settingsProfile={settingsProfile}
           onSignOut={handleLogout}
-          onSaveSettings={handleSaveSettings}
+          onSaveSettings={handleSaveSettingsFromScreen}
           isSigningOut={status.loading}
           onRefreshItems={handleRefreshWardrobe}
           onDownloadPdf={handleDownloadWardrobePdf}
@@ -1662,7 +1812,7 @@ function App() {
                   alt=""
                   aria-hidden="true"
                   loading="eager"
-                  fetchpriority="high"
+                  fetchPriority="high"
                   decoding="async"
                   sx={{
                     display: "block",

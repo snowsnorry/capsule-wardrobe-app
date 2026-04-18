@@ -39,7 +39,7 @@ vi.mock("../components/AccentColorChips", () => ({
   )
 }));
 
-import StatisticsScreen from "./StatisticsScreen.jsx";
+import StatisticsScreen from "./StatisticsScreen";
 
 const theme = createTheme();
 

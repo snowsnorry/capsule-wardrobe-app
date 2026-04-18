@@ -47,7 +47,7 @@ vi.mock("../components/ClothingCard", () => ({
   )
 }));
 
-import MainScreen from "./MainScreen.jsx";
+import MainScreen from "./MainScreen";
 
 const theme = createTheme();
 
@@ -110,7 +110,15 @@ function t(key, params) {
   return key.split(".").reduce((current, part) => current?.[part], labels) || key;
 }
 
-function MainScreenFlowHarness({ onRefreshItems, onDownloadPdf, onRegenerateSelectedItems }) {
+function MainScreenFlowHarness({
+  onRefreshItems,
+  onDownloadPdf,
+  onRegenerateSelectedItems
+}: {
+  onRefreshItems: () => void;
+  onDownloadPdf: () => void;
+  onRegenerateSelectedItems: (urls: string[]) => void;
+}) {
   const [selectedRegenerationUrls, setSelectedRegenerationUrls] = useState([]);
   const [partialRegenerationPendingUrls, setPartialRegenerationPendingUrls] = useState([]);
 
@@ -151,6 +159,8 @@ function MainScreenFlowHarness({ onRefreshItems, onDownloadPdf, onRegenerateSele
       selectedAudience="woman"
       selectedAccentColor={null}
       selectedPattern={null}
+      selectedText=""
+      hasFilterChanges={false}
       status={{ loading: false, error: "", infoKey: "", infoParams: null }}
       onSelectStyleCore={vi.fn()}
       onSelectStyleAesthetic={vi.fn()}
@@ -159,6 +169,7 @@ function MainScreenFlowHarness({ onRefreshItems, onDownloadPdf, onRegenerateSele
       onSelectAudience={vi.fn()}
       onSelectAccentColor={vi.fn()}
       onSelectPattern={vi.fn()}
+      onTextChange={vi.fn()}
       onApplyFilters={vi.fn()}
       onResetFilters={vi.fn()}
       onNavigateApp={vi.fn()}
@@ -185,10 +196,20 @@ function MainScreenFlowHarness({ onRefreshItems, onDownloadPdf, onRegenerateSele
   );
 }
 
-function renderScreen(props = {}) {
+function renderScreen(props: Partial<{
+  onRefreshItems: () => void;
+  onDownloadPdf: () => void;
+  onRegenerateSelectedItems: (urls: string[]) => void;
+}> = {}) {
+  const defaultProps = {
+    onRefreshItems: () => {},
+    onDownloadPdf: () => {},
+    onRegenerateSelectedItems: (_urls: string[]) => {}
+  };
+
   return render(
     <ThemeProvider theme={theme}>
-      <MainScreenFlowHarness {...props} />
+      <MainScreenFlowHarness {...defaultProps} {...props} />
     </ThemeProvider>
   );
 }
