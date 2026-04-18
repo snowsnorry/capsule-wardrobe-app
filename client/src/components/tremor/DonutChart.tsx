@@ -1,4 +1,5 @@
 import { Box, Stack, Typography, useTheme } from "@mui/material";
+import type { CSSProperties } from "react";
 import {
   Cell,
   Pie,
@@ -6,7 +7,35 @@ import {
   ResponsiveContainer,
   Tooltip
 } from "recharts";
-import { getTooltipStyle, getTooltipTextStyle } from "./chartUtils.js";
+import { getTooltipStyle, getTooltipTextStyle } from "./chartUtils";
+
+type DonutChartDatum = {
+  rawValue: string;
+  color: string;
+  groupLabel: string;
+  isActive?: boolean;
+  isOther?: boolean;
+  legendColor?: string;
+  [key: string]: string | number | boolean | undefined;
+};
+
+type TooltipPayloadItem = {
+  payload?: Record<string, unknown>;
+};
+
+type DonutChartProps = {
+  data: DonutChartDatum[];
+  category: string;
+  index: string;
+  valueFormatter: (value: number) => string;
+  onValueChange?: (row: DonutChartDatum) => void;
+  activeValues?: string[];
+  className?: string;
+};
+
+function isDonutChartDatum(value: unknown): value is DonutChartDatum {
+  return typeof value === "object" && value !== null && "rawValue" in value;
+}
 
 function DonutChart({
   data,
@@ -16,7 +45,7 @@ function DonutChart({
   onValueChange,
   activeValues = [],
   className
-}) {
+}: DonutChartProps) {
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === "dark";
   const hasSelection = activeValues.length > 0;
@@ -46,9 +75,9 @@ function DonutChart({
         <ResponsiveContainer width="100%" height="100%">
           <PieChart margin={{ top: 16, right: 16, bottom: 16, left: 16 }}>
             <Tooltip
-              formatter={(value, _name, item) => [
+              formatter={(value: number | string, _name: string, item: TooltipPayloadItem) => [
                 valueFormatter(Number(value || 0)),
-                item?.payload?.[index] || ""
+                String(item?.payload?.[index] || "")
               ]}
               contentStyle={tooltipStyle}
               itemStyle={tooltipTextStyle}
@@ -66,8 +95,8 @@ function DonutChart({
               strokeWidth={1}
               isAnimationActive
               animationDuration={320}
-              onClick={(entry) => {
-                if (entry?.isOther || !entry?.rawValue) {
+              onClick={(entry: unknown) => {
+                if (!isDonutChartDatum(entry) || entry.isOther || !entry.rawValue) {
                   return;
                 }
                 onValueChange?.(entry);
@@ -83,7 +112,7 @@ function DonutChart({
                   style={{
                     cursor: row.isOther ? "default" : "pointer",
                     transition: "fill-opacity 180ms ease, stroke 180ms ease, stroke-width 180ms ease"
-                  }}
+                  } as CSSProperties}
                 />
               ))}
             </Pie>

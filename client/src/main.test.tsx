@@ -1,10 +1,11 @@
 import React from "react";
+import type { PropsWithChildren } from "react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 const renderMock = vi.fn();
 const createRootMock = vi.fn(() => ({ render: renderMock }));
 const appMock = vi.fn(() => null);
-const localeProviderMock = vi.fn(({ children }) => <>{children}</>);
+const localeProviderMock = vi.fn(({ children }: PropsWithChildren) => <>{children}</>);
 
 vi.mock("react-dom/client", () => ({
   createRoot: createRootMock
@@ -30,7 +31,7 @@ describe("main entrypoint", () => {
   });
 
   test("renders the app tree into the root element", async () => {
-    await import("./main.tsx");
+    await import("./main");
 
     expect(createRootMock).toHaveBeenCalledWith(document.getElementById("root"));
     expect(renderMock).toHaveBeenCalledTimes(1);
@@ -41,7 +42,7 @@ describe("main entrypoint", () => {
 
     expect(tree.type).toBe(React.StrictMode);
     expect(localeProvider.type).toBe(localeProviderMock);
-    expect(providerChildren.some((child) => child.type === appMock)).toBe(true);
+    expect(providerChildren.some((child) => React.isValidElement(child) && child.type === appMock)).toBe(true);
   });
 });
 

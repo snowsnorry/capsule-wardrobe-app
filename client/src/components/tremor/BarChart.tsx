@@ -1,4 +1,5 @@
 import { Box, useTheme } from "@mui/material";
+import type { CSSProperties, ReactElement } from "react";
 import {
   Bar,
   BarChart as RechartsBarChart,
@@ -9,7 +10,44 @@ import {
   XAxis,
   YAxis
 } from "recharts";
-import { getTooltipStyle, getTooltipTextStyle } from "./chartUtils.js";
+import { getTooltipStyle, getTooltipTextStyle } from "./chartUtils";
+
+type BarChartDatum = {
+  rawValue: string;
+  color: string;
+  isActive?: boolean;
+  groupLabel: string;
+  gradientId?: string;
+  gradientStops?: string[];
+  [key: string]: string | number | boolean | string[] | undefined;
+};
+
+type AxisTickPayload = {
+  value?: string | number;
+};
+
+type AxisTickProps = {
+  x?: number | string;
+  y?: number | string;
+  payload?: AxisTickPayload;
+};
+
+type TooltipPayloadItem = {
+  payload?: Record<string, unknown>;
+};
+
+type BarChartProps = {
+  data: BarChartDatum[];
+  index: string;
+  category: string;
+  valueFormatter: (value: number) => string;
+  onValueChange?: (row: BarChartDatum) => void;
+  activeValues?: string[];
+};
+
+function isBarChartDatum(value: unknown): value is BarChartDatum {
+  return typeof value === "object" && value !== null && "rawValue" in value;
+}
 
 function BarChart({
   data,
@@ -18,7 +56,7 @@ function BarChart({
   valueFormatter,
   onValueChange,
   activeValues = []
-}) {
+}: BarChartProps) {
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === "dark";
   const hasSelection = activeValues.length > 0;
@@ -71,7 +109,7 @@ function BarChart({
             interval={0}
             tickMargin={12}
             height={58}
-            tick={({ x, y, payload }) => (
+            tick={({ x = 0, y = 0, payload = {} }: AxisTickProps): ReactElement => (
               <g transform={`translate(${x},${y})`}>
                 <text
                   x={0}
@@ -96,9 +134,9 @@ function BarChart({
           />
           <Tooltip
             cursor={{ fill: "rgba(143,111,69,0.05)" }}
-            formatter={(value, _name, item) => [
+            formatter={(value: number | string, _name: string, item: TooltipPayloadItem) => [
               valueFormatter(Number(value || 0)),
-              item?.payload?.[index] || ""
+              String(item?.payload?.[index] || "")
             ]}
             labelFormatter={() => ""}
             contentStyle={tooltipStyle}
@@ -111,8 +149,8 @@ function BarChart({
             maxBarSize={18}
             isAnimationActive
             animationDuration={320}
-            onClick={(entry) => {
-              if (entry?.rawValue) {
+            onClick={(entry: unknown) => {
+              if (isBarChartDatum(entry) && entry.rawValue) {
                 onValueChange?.(entry);
               }
             }}
@@ -127,7 +165,7 @@ function BarChart({
                 style={{
                   cursor: "pointer",
                   transition: "fill-opacity 180ms ease, stroke 180ms ease, stroke-width 180ms ease"
-                }}
+                } as CSSProperties}
               />
             ))}
           </Bar>

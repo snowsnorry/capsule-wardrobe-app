@@ -8,9 +8,25 @@ import {
   XAxis,
   YAxis
 } from "recharts";
-import { getTooltipStyle, getTooltipTextStyle } from "./chartUtils.js";
+import { getTooltipStyle, getTooltipTextStyle } from "./chartUtils";
 
-function LineChart({ data, index, category, valueFormatter, labelFormatter }) {
+type LineChartDatum = {
+  [key: string]: string | number | undefined;
+};
+
+type TooltipPayloadItem = {
+  payload?: LineChartDatum;
+};
+
+type LineChartProps = {
+  data: LineChartDatum[];
+  index: string;
+  category: string;
+  valueFormatter: (value: number) => string;
+  labelFormatter?: (payload?: LineChartDatum) => string;
+};
+
+function LineChart({ data, index, category, valueFormatter, labelFormatter }: LineChartProps) {
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === "dark";
   const gridColor = isDarkMode ? "rgba(255,255,255,0.14)" : "rgba(148, 163, 184, 0.16)";
@@ -43,9 +59,9 @@ function LineChart({ data, index, category, valueFormatter, labelFormatter }) {
           />
           <YAxis width="auto" tick={{ fontSize: 11, fill: tickColor }} />
           <Tooltip
-            formatter={(value, _name, item) => [
+            formatter={(value: number | string, _name: string, item: TooltipPayloadItem) => [
               valueFormatter(Number(value || 0)),
-              labelFormatter?.(item?.payload) || `${item?.payload?.[index]} EUR` || ""
+              labelFormatter?.(item?.payload) || `${item?.payload?.[index] || ""} EUR`
             ]}
             labelFormatter={() => ""}
             contentStyle={tooltipStyle}

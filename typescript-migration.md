@@ -34,6 +34,7 @@ The server package is larger and riskier than the client package, so the migrati
 
 - [ ] Root, client, and server have TypeScript configured.
 - [ ] `client/src/**/*` migrated from `.jsx/.js` to `.tsx/.ts` where appropriate.
+  - Audit status: all `client/src/**/*` files are now migrated except intentionally deferred `client/src/test/setup.js`, which remains blocked on the excluded `client/vite.config.js` `test.setupFiles` update.
 - [ ] `server/src/**/*` migrated from `.js` to `.ts` where appropriate.
 - [ ] `shared/**/*` migrated from `.js` to `.ts` where appropriate.
 - [ ] Tests are migrated or TypeScript-compatible.
@@ -301,7 +302,7 @@ Focus areas:
 **Definition of done**
 - [ ] Client source is predominantly TS/TSX.
 - [ ] Client app builds and tests pass.
-- [ ] No remaining critical `.jsx/.js` files in `client/src/` except intentionally deferred edge cases.
+- [x] No remaining critical `.jsx/.js` files in `client/src/` except intentionally deferred edge cases.
 
 ---
 
@@ -883,6 +884,38 @@ Recommended execution sequence:
   - shared modules that are safe under current runtime constraints
   - Reason: the client app core/search surface is now migrated and validated, so the next smallest safe frontier is the shared subset that does not break current plain-Node server runtime/test paths
 
+### Batch 14 — Final client TS mop-up audit and batch
+
+- Batch name / phase: Batch 14 — Final client TS mop-up audit and batch
+- Exact files changed:
+  - `client/src/main.test.tsx`
+  - `client/src/i18n/en.ts`
+  - `client/src/i18n/ru.ts`
+  - `client/src/components/tremor/utils.ts`
+  - `client/src/components/tremor/chartUtils.ts`
+  - `client/src/components/tremor/BarChart.tsx`
+  - `client/src/components/tremor/LineChart.tsx`
+  - `client/src/components/tremor/DonutChart.tsx`
+  - `client/src/screens/StatisticsScreen.tsx`
+  - `typescript-migration.md`
+- Commands run:
+  - `npm --workspace client run typecheck`
+  - `npm --workspace client run test`
+- Typecheck passed: yes
+- Tests passed: yes
+- `client/src/test/setup.js` had to be migrated: no
+- Type errors worked around temporarily: none
+- `any`, assertion, or suppression introduced:
+  - no `any`
+  - assertions: `CSSProperties` assertions on inline `Cell` style objects in `client/src/components/tremor/BarChart.tsx` and `client/src/components/tremor/DonutChart.tsx`
+  - suppressions: none
+- Newly discovered blockers:
+  - `client/src/test/setup.js` remains intentionally deferred because renaming it would require touching excluded `client/vite.config.js`
+  - the pre-existing non-fatal jsdom CSS parse warning from `client/src/index.css` still appears during `npm --workspace client run test`
+- Recommended next batch:
+  - none for `client/src/**/*` under the current scope guard
+  - remaining client-side blocker is limited to `client/src/test/setup.js` and the excluded `client/vite.config.js` update required to rename it safely
+
 ---
 
 ## Subagent Guidance for Codex
@@ -1012,11 +1045,38 @@ Use this section during execution.
 - [x] Batch 11 — Phase 3 authenticated sidebar/settings UI cluster completed successfully
 - [x] Batch 12 — Phase 4 i18n + app chrome + lightweight screens cluster completed successfully
 - [x] Batch 13 — Phase 4 app core/search cluster completed successfully
+- [x] Batch 14 — Final client TS mop-up audit and batch completed successfully
 - [x] Root/client TypeScript bootstrap is in place and client hybrid typecheck passes
 - [x] `client/src/test/setup.js` was reviewed and intentionally left as JS because migration was not required in Batch 1
+- [x] Final client audit confirms the only remaining JS file under `client/src/**/*` is `client/src/test/setup.js`, intentionally deferred because renaming it would require changing excluded `client/vite.config.js`
 - [x] Batch 12 was intentionally widened from a tiny `AppLauncher + LocaleSwitcher` slice to a 16-file client-only cluster
 - [x] The `App/search/screens` core is no longer deferred; Batch 13 finished successfully from the recovered in-progress worktree
 - [x] Recovery source of truth remained `ae4dc91` (`TypeScript migration, stage 12`) until Batch 13 was completed from the in-progress working tree
+
+### Client audit status
+- [x] Full filesystem audit of `client/src/**/*` completed after the planned batches rather than trusting the earlier plan state
+- [x] Remaining unmigrated files found by audit before Batch 14:
+  - `client/src/main.test.jsx`
+  - `client/src/i18n/en.js`
+  - `client/src/i18n/ru.js`
+  - `client/src/components/tremor/utils.js`
+  - `client/src/components/tremor/chartUtils.js`
+  - `client/src/components/tremor/BarChart.jsx`
+  - `client/src/components/tremor/LineChart.jsx`
+  - `client/src/components/tremor/DonutChart.jsx`
+  - `client/src/test/setup.js`
+- [x] Safe final mop-up targets migrated in one grouped batch:
+  - `client/src/main.test.tsx`
+  - `client/src/i18n/en.ts`
+  - `client/src/i18n/ru.ts`
+  - `client/src/components/tremor/utils.ts`
+  - `client/src/components/tremor/chartUtils.ts`
+  - `client/src/components/tremor/BarChart.tsx`
+  - `client/src/components/tremor/LineChart.tsx`
+  - `client/src/components/tremor/DonutChart.tsx`
+- [x] Current `client/src/**/*` migration state:
+  - fully migrated except `client/src/test/setup.js`
+  - blocker: renaming `client/src/test/setup.js` requires updating excluded `client/vite.config.js` `test.setupFiles`
 
 ### Newly discovered blockers
 - [ ] `shared/` is not an npm workspace package. It is imported by path from both apps, so shared-module renames have cross-workspace impact immediately.
@@ -1043,13 +1103,8 @@ Use this section during execution.
 - [ ] `server/src/wardrobePdf.child.js`
 - [ ] `server/src/ai/*`
 - [ ] `shared/stylePreferences.js` until server TS bootstrap exists or a safe compatibility strategy is intentionally chosen
-- [ ] `client/src/search/searchState.js`
 - [ ] `client/render-server.js`
 - [ ] `client/netlify/functions/bff.js`
-
-Note:
-- [ ] `client/src/App.jsx`, `client/src/screens/SearchScreen.jsx`, and `client/src/screens/StatisticsScreen.jsx` are no longer absolute “do not touch” files because Batch 5 already required rename-only import/mock fallout there.
-- [ ] Their substantive TypeScript migration is still deferred; only strict rename-only fallout was considered in scope before their own dedicated migration batches.
 
 ### Post-Batch Log Template
 After every completed batch, append a short entry with:

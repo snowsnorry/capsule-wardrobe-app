@@ -20,10 +20,10 @@ import AppLauncher from "../components/AppLauncher";
 import LocaleSwitcher from "../components/LocaleSwitcher";
 import AppSidebarShell from "../components/AppSidebarShell";
 import SearchFiltersSidebar from "../search/SearchFiltersSidebar";
-import TremorBarChart from "../components/tremor/BarChart.jsx";
-import TremorDonutChart from "../components/tremor/DonutChart.jsx";
-import TremorLineChart from "../components/tremor/LineChart.jsx";
-import { getGradientStops, sanitizeSvgId } from "../components/tremor/chartUtils.js";
+import TremorBarChart from "../components/tremor/BarChart";
+import TremorDonutChart from "../components/tremor/DonutChart";
+import TremorLineChart from "../components/tremor/LineChart";
+import { getGradientStops, sanitizeSvgId } from "../components/tremor/chartUtils";
 import { useI18n } from "../i18n/useI18n.js";
 import { translateOption } from "../i18n/index.js";
 import {
@@ -583,7 +583,7 @@ function PriceLineChart({
         index="shortLabel"
         category="count"
         valueFormatter={(value) => formatCount(locale, value)}
-        labelFormatter={(bucket) => bucket?.label || ""}
+        labelFormatter={(bucket) => String(bucket?.label || "")}
       />
     </StatisticsCard>
   );

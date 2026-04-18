@@ -1,4 +1,6 @@
-function getTooltipStyle(isDarkMode = false) {
+import type { CSSProperties } from "react";
+
+function getTooltipStyle(isDarkMode = false): CSSProperties {
   if (isDarkMode) {
     return {
       borderRadius: 14,
@@ -18,20 +20,20 @@ function getTooltipStyle(isDarkMode = false) {
   };
 }
 
-function getTooltipTextStyle(isDarkMode = false) {
+function getTooltipTextStyle(isDarkMode = false): CSSProperties {
   return {
     color: isDarkMode ? "#ffffff" : "#111111"
   };
 }
 
-function getGradientStops(backgroundValue) {
+function getGradientStops(backgroundValue?: string | null): string[] {
   if (typeof backgroundValue !== "string") {
     return [];
   }
   return backgroundValue.match(/#(?:[0-9a-fA-F]{3,8})/g) || [];
 }
 
-function sanitizeSvgId(value) {
+function sanitizeSvgId(value?: string | null): string {
   return String(value || "")
     .trim()
     .toLowerCase()
