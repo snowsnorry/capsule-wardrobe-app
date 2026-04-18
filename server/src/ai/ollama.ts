@@ -1,4 +1,3 @@
-// @ts-nocheck
 import ollama from "ollama";
 
 const DEFAULT_OLLAMA_EMBEDDING_MODEL = "embeddinggemma";
@@ -8,7 +7,7 @@ function createOllamaClient({
   embeddingsImpl = (payload) => ollama.embeddings(payload),
   generateImpl = (payload) => ollama.generate(payload)
 } = {}) {
-  async function getPromptEmbeddings(prompt) {
+  async function getPromptEmbeddings(prompt: string) {
     const response = await embeddingsImpl({
       model: DEFAULT_OLLAMA_EMBEDDING_MODEL,
       prompt
@@ -20,12 +19,12 @@ function createOllamaClient({
     return embedding;
   }
 
-  async function generateJsonWithLlm(prompt) {
+  async function generateJsonWithLlm(prompt: string) {
     const response = await generateImpl({
       model: DEFAULT_OLLAMA_CHAT_MODEL,
       prompt,
       format: "json"
-    });
+    }) as { response?: string };
 
     let json;
     try {

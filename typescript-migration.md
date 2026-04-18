@@ -28,10 +28,10 @@ Client source audit:
 
 | Check | Status | Notes |
 | --- | --- | --- |
-| `npm run build` | green | Verified in the current repo state. |
-| `npm run test:server` | green | Verified in the current repo state. |
+| `npm run build` | green | Re-verified during Wave 2 AI runtime hardening. |
+| `npm run test:server` | green | Previously verified in the repo baseline; Wave 2 additionally passed the narrow AI/runtime server test slice. |
 | `npm run test:shared` | green | Verified in the current repo state. |
-| `npm run typecheck` | green | Restored during Wave 1 by resolving the client-side typing blockers in `App.tsx` and `SettingsDialog.tsx`. |
+| `npm run typecheck` | green | Re-verified during Wave 2 after removing the provider/swimwear `@ts-nocheck` files. |
 
 ## Remaining Intentional Exceptions
 
@@ -60,17 +60,10 @@ Heavy runtime files still using temporary `// @ts-nocheck`:
 - `server/src/wardrobePdf.ts`
 - `server/src/ai/ai.ts`
 - `server/src/ai/regenerateSelected.ts`
-- `server/src/ai/gemini.ts`
-- `server/src/ai/openai.ts`
-- `server/src/ai/deepinfra.ts`
-- `server/src/ai/ollama.ts`
-- `server/src/ai/claude.ts`
-- `server/src/ai/swimwear.ts`
 
 Additional strict-typing debt:
-- local `any` surfaces in `server/src/ai/promptImages.ts`
-- weak metadata assertions around image-processing boundaries
-- weak IPC payload assertions / unsafe narrowing in prompt-image runtime code
+- residual local weak typing remains in `server/src/ai/promptImages.ts`, but the major metadata and IPC hotspots were reduced in Wave 2
+- remaining loosely modeled wardrobe/job payloads in `server/src/ai/ai.ts` and `server/src/ai/regenerateSelected.ts`
 - other local weak assertions that were acceptable during migration but should be reduced during hardening
 
 ### Intentional scope exclusions
@@ -108,10 +101,39 @@ Status: complete.
 
 Priority: reduce heavy-runtime TypeScript debt on the server.
 
-- remove or reduce `// @ts-nocheck` in the server entrypoint, PDF runtime, and AI orchestration/provider files
-- shrink `any` usage in `server/src/ai/promptImages.ts`
-- replace weak assertions and unsafe narrowing where the runtime boundaries are now understood well enough to model more explicitly
-- keep this wave focused on typing hardening, not feature work
+Status: partial cluster complete.
+
+Fully removed `@ts-nocheck`:
+- `server/src/ai/openai.ts`
+- `server/src/ai/gemini.ts`
+- `server/src/ai/deepinfra.ts`
+- `server/src/ai/ollama.ts`
+- `server/src/ai/claude.ts`
+- `server/src/ai/swimwear.ts`
+
+Partially reduced debt:
+- `server/src/ai/promptImages.ts`
+  - introduced shared AI/runtime helper types in `server/src/ai/types.ts`
+  - replaced the highest-value `any` / metadata casts with narrower prompt-image asset, IPC payload, and result modeling
+  - hardened serialized-buffer detection and child-process payload validation without changing runtime behavior
+- `server/src/ai/ai.ts`
+  - remained on `@ts-nocheck` in this pass
+  - benefited from hardened provider and prompt-image boundaries, but still needs a dedicated orchestration-focused pass
+- `server/src/ai/regenerateSelected.ts`
+  - remained on `@ts-nocheck` in this pass
+  - benefited from hardened provider and prompt-image boundaries, but still needs a dedicated partial-regeneration-focused pass
+
+Remaining hard blockers:
+- `server/src/ai/ai.ts`
+  - large orchestration surface with loosely modeled DB/profile/capsule payloads and long async job flows
+- `server/src/ai/regenerateSelected.ts`
+  - mixed regeneration orchestration, payload normalization, and stored snapshot mutation in one file
+- `server/src/index.ts`
+  - intentionally deferred from this cluster
+- `server/src/wardrobePdf.ts`
+  - intentionally deferred from this cluster
+
+Wave 2 stayed focused on typing hardening only. No request/response behavior, prompts, provider selection, DB logic, PDF logic, or job orchestration behavior changed.
 
 ### Wave 3
 
@@ -130,10 +152,12 @@ Priority: optional cleanup once the baseline is green.
 ## Validation Baseline For This Document
 
 This document is aligned to the current verified repo state:
-- `npm run build`: green
-- `npm run test:server`: green
+- `npm run build`: green after Wave 2 AI runtime hardening
+- narrow AI/runtime server tests: green
+  - `npm --workspace server exec -- tsx --test src/openai.test.ts src/gemini.test.ts src/deepinfra.test.ts src/ollama.test.ts src/claude.test.ts src/swimwear.test.ts src/promptImages.test.ts src/promptImages.child.test.ts src/ai/llm.test.ts src/ai/ai.test.ts src/ai/regenerateSelected.test.ts`
+- `npm run test:server`: baseline previously green; not rerun because the Wave 2 change set stayed inside the AI/runtime cluster and the targeted suite remained green
 - `npm run test:shared`: green
-- `npm run typecheck`: green after Wave 1 client typing reconciliation
+- `npm run typecheck`: green after Wave 2 provider/swimwear hardening and prompt-image boundary typing
 
 ## Assumptions
 

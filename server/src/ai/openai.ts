@@ -1,18 +1,25 @@
-// @ts-nocheck
 import { readFileSync } from "node:fs";
 import OpenAI from "openai";
 import { getCapsuleCategories } from "./categories.js";
+import type {
+  ImageAssetLike,
+  JsonSchema,
+  JsonSchemaFormat,
+  LlmGenerateOptions,
+  ParsedGenerationError,
+  UserProfileLike
+} from "./types.js";
 
 const DEFAULT_CHAT_MODEL = "gpt-5.2";
 const DEFAULT_EMBEDDING_MODEL = "text-embedding-3-small";
 const DEVELOPER_TEMPLATE = readFileSync(new URL("../templates/developer.txt", import.meta.url), "utf8");
 const DEVELOPER_PARTS = JSON.parse(
   readFileSync(new URL("../templates/developer_parts.json", import.meta.url), "utf8")
-);
+) as Record<string, unknown>;
 
-function buildCapsuleSchema(categories) {
-  const properties = {};
-  const required = [];
+function buildCapsuleSchema(categories: Record<string, number>): JsonSchema {
+  const properties: Record<string, JsonSchema> = {};
+  const required: string[] = [];
 
   for (const [category, count] of Object.entries(categories)) {
     properties[category] = {
@@ -35,7 +42,7 @@ function buildCapsuleSchema(categories) {
   };
 }
 
-function buildSwimwearSchema() {
+function buildSwimwearSchema(): JsonSchema {
   return {
     type: "object",
     additionalProperties: false,
@@ -58,9 +65,9 @@ function buildSwimwearSchema() {
   };
 }
 
-function buildJsonObjectFormat(userProfile = null) {
+function buildJsonObjectFormat(userProfile: UserProfileLike | null = null): JsonSchemaFormat {
   const categories = getCapsuleCategories(userProfile);
-  const num_items = Object.entries(categories).reduce((sum, [, count]) => sum + count, 0)
+  const num_items = Object.entries(categories).reduce((sum, [, count]) => sum + count, 0);
   return {
     type: "json_schema",
     name: "capsule_wardrobe_response",
@@ -131,7 +138,7 @@ function buildJsonObjectFormat(userProfile = null) {
   };
 }
 
-function buildCustomJsonObjectFormat(name, description, schema) {
+function buildCustomJsonObjectFormat(name: string, description: string, schema: JsonSchema): JsonSchemaFormat {
   return {
     type: "json_schema",
     name,
@@ -161,7 +168,7 @@ function getOpenAiClient() {
   return cachedClient;
 }
 
-function splitSystemAndUserPrompt(prompt) {
+function splitSystemAndUserPrompt(prompt: string) {
   const source = String(prompt || "");
   const systemMarker = "System:";
   const userMarker = "User:";
@@ -181,7 +188,7 @@ function splitSystemAndUserPrompt(prompt) {
   };
 }
 
-function buildImageDataUrl(image) {
+function buildImageDataUrl(image: ImageAssetLike) {
   const mimeType = typeof image?.mimeType === "string" && image.mimeType.trim().length > 0
     ? image.mimeType.trim()
     : "image/png";
@@ -193,11 +200,11 @@ function buildImageDataUrl(image) {
   return `data:${mimeType};base64,${image.buffer.toString("base64")}`;
 }
 
-function normalizeDeveloperKey(value) {
+function normalizeDeveloperKey(value: unknown) {
   return typeof value === "string" ? value.trim().toLowerCase() : "";
 }
 
-function normalizeDeveloperAudience(value) {
+function normalizeDeveloperAudience(value: unknown) {
   const normalized = normalizeDeveloperKey(value);
   if (normalized === "woman" || normalized === "man") {
     return normalized;
@@ -205,7 +212,7 @@ function normalizeDeveloperAudience(value) {
   return "not important";
 }
 
-function normalizeDeveloperSectionContent(content) {
+function normalizeDeveloperSectionContent(content: unknown) {
   if (Array.isArray(content)) {
     return content
       .filter((line) => typeof line === "string" && line.trim().length > 0)
@@ -216,7 +223,7 @@ function normalizeDeveloperSectionContent(content) {
   return typeof content === "string" ? content.trim() : "";
 }
 
-function normalizeDeveloperSeasonList(value) {
+function normalizeDeveloperSeasonList(value: unknown) {
   if (Array.isArray(value)) {
     return value
       .map((season) => normalizeDeveloperKey(season))
@@ -227,35 +234,41 @@ function normalizeDeveloperSeasonList(value) {
   return normalized ? [normalized] : [];
 }
 
-function renderSeasonalityLogicContent(entry, userProfile = null) {
+function renderSeasonalityLogicContent(entry: unknown, userProfile: UserProfileLike | null = null) {
   if (!entry || typeof entry !== "object") {
     return "";
   }
 
+  const normalizedEntry = entry as Record<string, unknown>;
+
   const seasons = new Set(normalizeDeveloperSeasonList(userProfile?.season));
   const lines = [];
 
-  if (seasons.has("summer") && typeof entry.summer === "string") {
-    lines.push(entry.summer);
+  if (seasons.has("summer") && typeof normalizedEntry.summer === "string") {
+    lines.push(normalizedEntry.summer);
   }
 
-  if ((seasons.has("spring") || seasons.has("autumn")) && typeof entry.spring_autumn === "string") {
-    lines.push(entry.spring_autumn);
+  if ((seasons.has("spring") || seasons.has("autumn")) && typeof normalizedEntry.spring_autumn === "string") {
+    lines.push(normalizedEntry.spring_autumn);
   }
 
-  if (seasons.has("winter") && typeof entry.winter === "string") {
-    lines.push(entry.winter);
+  if (seasons.has("winter") && typeof normalizedEntry.winter === "string") {
+    lines.push(normalizedEntry.winter);
   }
 
   return lines.join("\n").trim();
 }
 
-function renderStyleLibraryContent(entry, userProfile = null) {
+function renderStyleLibraryContent(entry: unknown, userProfile: UserProfileLike | null = null) {
   if (!entry || typeof entry !== "object") {
     return "";
   }
 
-  const template = typeof entry.template === "string" ? entry.template : "";
+  const normalizedEntry = entry as Record<string, unknown>;
+  const audienceConfig = normalizedEntry.audience as Record<string, unknown> | undefined;
+  const formalityConfig = normalizedEntry.formality_level as Record<string, unknown> | undefined;
+  const occasionsConfig = normalizedEntry.occasions as Record<string, unknown> | undefined;
+  const template = typeof normalizedEntry.template === "string" ? normalizedEntry.template : "";
   if (!template) {
     return "";
   }
@@ -264,15 +277,15 @@ function renderStyleLibraryContent(entry, userProfile = null) {
   const formalityLevelKey = normalizeDeveloperKey(userProfile?.formalityLevel);
   const occasions = Array.isArray(userProfile?.occasions) ? userProfile.occasions : [];
   const replacements = {
-    audience: typeof entry.audience?.[audienceKey] === "string"
-      ? entry.audience[audienceKey]
+    audience: typeof audienceConfig?.[audienceKey] === "string"
+      ? audienceConfig[audienceKey]
       : "",
-    formality_level: typeof entry.formality_level?.[formalityLevelKey] === "string"
-      ? entry.formality_level[formalityLevelKey]
+    formality_level: typeof formalityConfig?.[formalityLevelKey] === "string"
+      ? formalityConfig[formalityLevelKey]
       : "",
     occasions: occasions
       .map((occasion) => normalizeDeveloperKey(occasion))
-      .map((occasionKey) => entry.occasions?.[occasionKey])
+      .map((occasionKey) => occasionsConfig?.[occasionKey])
       .filter((value) => typeof value === "string" && value.trim().length > 0)
       .join("\n")
   };
@@ -287,7 +300,7 @@ function renderStyleLibraryContent(entry, userProfile = null) {
     .trim();
 }
 
-function renderDeveloperSection(title, content, intro = "") {
+function renderDeveloperSection(title: string, content: unknown, intro = "") {
   const normalizedContent = normalizeDeveloperSectionContent(content);
   if (!normalizedContent) {
     return "";
@@ -296,7 +309,7 @@ function renderDeveloperSection(title, content, intro = "") {
   return [title, intro.trim(), normalizedContent].filter(Boolean).join("\n\n");
 }
 
-function buildDeveloperPrompt(userProfile = null) {
+function buildDeveloperPrompt(userProfile: UserProfileLike | null = null) {
   const styleKey = normalizeDeveloperKey(userProfile?.style);
   const accentColorKey = normalizeDeveloperKey(userProfile?.color);
   const audienceKey = normalizeDeveloperAudience(userProfile?.audience);
@@ -343,8 +356,11 @@ function buildDeveloperPrompt(userProfile = null) {
     .trim();
 }
 
-function buildResponsesInput(user, images = [], developer = "") {
-  const content = [];
+function buildResponsesInput(user: string, images: ImageAssetLike[] = [], developer = "") {
+  const content: Array<
+    | { type: "input_image"; image_url: string; detail: "high" }
+    | { type: "input_text"; text: string }
+  > = [];
   const userText = String(user || "").trim();
   const developerText = String(developer || "").trim();
 
@@ -380,7 +396,10 @@ function buildResponsesInput(user, images = [], developer = "") {
     return content[0].text;
   }
 
-  const input = [];
+  const input: Array<
+    | { role: "developer"; content: string }
+    | { role: "user"; content: typeof content }
+  > = [];
   if (developerText) {
     input.push({
       role: "developer",
@@ -396,7 +415,7 @@ function buildResponsesInput(user, images = [], developer = "") {
   return input;
 }
 
-function releaseImageBuffers(images = []) {
+function releaseImageBuffers(images: ImageAssetLike[] = []) {
   for (const image of images) {
     if (image && typeof image === "object" && "buffer" in image) {
       image.buffer = null;
@@ -404,13 +423,13 @@ function releaseImageBuffers(images = []) {
   }
 }
 
-function buildResponsesPayload(user, images = [], developer = "") {
+function buildResponsesPayload(user: string, images: ImageAssetLike[] = [], developer = "") {
   const input = buildResponsesInput(user, images, developer);
   releaseImageBuffers(images);
   return input;
 }
 
-async function getPromptEmbeddings(prompt) {
+async function getPromptEmbeddings(prompt: string) {
   const client = getOpenAiClient();
   const response = await client.embeddings.create({
     model: DEFAULT_EMBEDDING_MODEL,
@@ -424,15 +443,13 @@ async function getPromptEmbeddings(prompt) {
   return embedding;
 }
 
-async function generateJsonWithLlm(
-  prompt,
-  {
+async function generateJsonWithLlm(prompt: string, options: LlmGenerateOptions = {}) {
+  const {
     userProfile = null,
     format = null,
     images = [],
     onPayloadBuilt = null
-  } = {}
-) {
+  } = options;
   const client = getOpenAiClient();
   const { system, user } = splitSystemAndUserPrompt(prompt);
   const developer = buildDeveloperPrompt(userProfile);
@@ -476,8 +493,10 @@ async function generateJsonWithLlm(
   }
   try {
     json = JSON.parse(content);
-  } catch(error) {
-    const parseError = new Error(`Failed to parse JSON response: ${error.message}\nResponse content: ${content}`);
+  } catch (error) {
+    const parseError = new Error(
+      `Failed to parse JSON response: ${error instanceof Error ? error.message : String(error)}\nResponse content: ${content}`
+    ) as ParsedGenerationError;
     parseError.rawSelectionText = typeof response?.output_text === "string" && response.output_text.trim().length > 0
       ? response.output_text.trim()
       : null;

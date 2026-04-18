@@ -1,6 +1,6 @@
-// @ts-nocheck
 import OpenAI from "openai";
 import { buildImageDataUrl, releaseImageBuffers } from "./openai.js";
+import type { ImageAssetLike, LlmGenerateOptions, ParsedGenerationError, UserProfileLike } from "./types.js";
 
 const OPENAI_BASE_URL = "https://api.deepinfra.com/v1/openai";
 const DEFAULT_CHAT_MODEL = "google/gemma-4-31B-it";
@@ -12,7 +12,7 @@ const ALLOWED_CHAT_MODELS = [
 let cachedClient = null;
 
 function createDeepInfraClient({
-  createClientImpl = ({ apiKey, baseURL, maxRetries }) => new OpenAI({ apiKey, baseURL, maxRetries }),
+  createClientImpl = ({ apiKey, baseURL, maxRetries }: { apiKey: string; baseURL: string; maxRetries: number }) => new OpenAI({ apiKey, baseURL, maxRetries }),
   getApiKeyImpl = () => process.env.DEEPINFRA_API_KEY,
   cache = true,
   nowImpl = () => Date.now(),
@@ -44,7 +44,7 @@ function createDeepInfraClient({
     return client;
   }
 
-  async function getPromptEmbeddings(prompt) {
+  async function getPromptEmbeddings(prompt: string) {
     const client = getOpenAiClient();
     const response = await client.embeddings.create({
       model: DEFAULT_EMBEDDING_MODEL,
@@ -57,15 +57,13 @@ function createDeepInfraClient({
     return embedding;
   }
 
-  async function generateJsonWithLlm(
-    prompt,
-    {
+  async function generateJsonWithLlm(prompt: string, options: LlmGenerateOptions = {}) {
+    const {
       userProfile = null,
       format = null,
       images = [],
       onPayloadBuilt = null
-    } = {}
-  ) {
+    } = options;
     const client = getOpenAiClient();
     const { system, user } = splitSystemAndUserPrompt(prompt);
     void format;
@@ -95,6 +93,13 @@ function createDeepInfraClient({
         stream: true
       });
     } catch (error) {
+      const requestError = error as {
+        status?: number;
+        request_id?: string;
+        code?: string;
+        type?: string;
+        cause?: { name?: string; message?: string; code?: string; errno?: string | number };
+      };
       warnImpl(
         "[deepinfra][request-failed]",
         JSON.stringify({
@@ -102,14 +107,14 @@ function createDeepInfraClient({
           durationMs: Math.max(0, nowImpl() - requestStartedAt),
           imageCount: Array.isArray(images) ? images.length : 0,
           payloadBytes,
-          status: error?.status,
-          requestId: error?.request_id,
-          code: error?.code,
-          type: error?.type,
-          causeName: error?.cause?.name ?? null,
-          causeMessage: error?.cause?.message ?? null,
-          causeCode: error?.cause?.code ?? null,
-          causeErrno: error?.cause?.errno ?? null
+          status: requestError.status,
+          requestId: requestError.request_id,
+          code: requestError.code,
+          type: requestError.type,
+          causeName: requestError.cause?.name ?? null,
+          causeMessage: requestError.cause?.message ?? null,
+          causeCode: requestError.cause?.code ?? null,
+          causeErrno: requestError.cause?.errno ?? null
         })
       );
       throw error;
@@ -132,7 +137,9 @@ function createDeepInfraClient({
     try {
       json = JSON.parse(normalizedContent);
     } catch (error) {
-      const parseError = new Error(`Failed to parse JSON response: ${error.message}\nResponse content: ${normalizedContent}`);
+      const parseError = new Error(
+        `Failed to parse JSON response: ${error instanceof Error ? error.message : String(error)}\nResponse content: ${normalizedContent}`
+      ) as ParsedGenerationError;
       parseError.rawSelectionText = typeof content === "string" && content.trim().length > 0
         ? content.trim()
         : null;
@@ -160,7 +167,7 @@ function estimateJsonByteLength(value) {
   }
 }
 
-function splitSystemAndUserPrompt(prompt) {
+function splitSystemAndUserPrompt(prompt: string) {
   const source = String(prompt || "");
   const systemMarker = "System:";
   const userMarker = "User:";
@@ -180,7 +187,7 @@ function splitSystemAndUserPrompt(prompt) {
   };
 }
 
-function resolveChatModel(userProfile = null) {
+function resolveChatModel(userProfile: UserProfileLike | null = null) {
   const llm = String(userProfile?.llm || "").trim();
   if (llm.startsWith("deepinfra:")) {
     const model = llm.slice("deepinfra:".length).trim();
@@ -192,8 +199,11 @@ function resolveChatModel(userProfile = null) {
   return DEFAULT_CHAT_MODEL;
 }
 
-function buildChatMessages(user, images = []) {
-  const content = [];
+function buildChatMessages(user: string, images: ImageAssetLike[] = []) {
+  const content: Array<
+    | { type: "image_url"; image_url: { url: string } }
+    | { type: "text"; text: string }
+  > = [];
   const userText = String(user || "").trim();
 
   for (const image of images) {
@@ -228,7 +238,9 @@ function buildChatMessages(user, images = []) {
   return content.length > 0 ? content : [{ type: "text", text: "" }];
 }
 
-function extractResponseText(response = null) {
+function extractResponseText(response: {
+  choices?: Array<{ message?: { content?: string | Array<string | { text?: string | null }> } }>;
+} | null = null) {
   const content = response?.choices?.[0]?.message?.content;
 
   if (typeof content === "string") {
@@ -255,7 +267,7 @@ function extractResponseText(response = null) {
   return "{}";
 }
 
-async function collectStreamText(stream) {
+async function collectStreamText(stream: AsyncIterable<unknown>) {
   let content = "";
 
   for await (const chunk of stream) {
@@ -265,7 +277,9 @@ async function collectStreamText(stream) {
   return content;
 }
 
-function extractChunkText(chunk = null) {
+function extractChunkText(chunk: {
+  choices?: Array<{ delta?: { content?: string | Array<string | { text?: string | null }> } }>;
+} | null = null) {
   const delta = chunk?.choices?.[0]?.delta;
   const content = delta?.content;
 

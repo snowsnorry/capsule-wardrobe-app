@@ -8,6 +8,19 @@ import { fileURLToPath } from "node:url";
 import sharp from "sharp";
 import { IMAGE_DOWNLOAD_CONCURRENCY } from "./imagePipeline.js";
 import { getSafeServerFetchUrl } from "../serverUrlSecurity.js";
+import type {
+  PromptDebugImageCategory,
+  PromptDebugImageResult,
+  PromptDebugImageStitched,
+  PromptImageAsset,
+  PromptImageDownloadResult,
+  PromptImageItemLike,
+  PromptImageTimings,
+  PromptImagesChildMessage,
+  PromptImagesChildPayload,
+  PromptImagesChildSuccessPayload,
+  SerializedIpcBuffer
+} from "./types.js";
 
 const TILE_SIZE = 320;
 const GRID_COLUMNS = 5;
@@ -37,53 +50,6 @@ const PROMPT_IMAGES_CHILD_JS_URL = new URL("./promptImages.child.js", import.met
 const PROMPT_CATEGORY_DOWNLOAD_CONCURRENCY = Number.parseInt(process.env.PROMPT_CATEGORY_DOWNLOAD_CONCURRENCY || "", 10) || 5;
 const STORAGE_IMAGES_DIR = fileURLToPath(new URL("../../../storage/images/", import.meta.url));
 const STITCHED_COLLAGE_FILENAME = "categories-stitched.jpg";
-
-type PromptImageTimings = {
-  cacheLookupMs: number;
-  networkFetchMs: number;
-  sourceInspectMs: number;
-  tileBuildMs: number;
-  collageEncodeMs: number;
-  debugSaveMs: number;
-  categoryBuildMs: number;
-  childRoundTripMs: number;
-};
-
-type PromptDebugImageCategory = {
-  category?: string;
-  mimeType?: string;
-  filename?: string;
-  totalItems?: number;
-  cachedCount?: number;
-  downloadedCount?: number;
-  skippedCount?: number;
-  items?: any[];
-  buffer?: Buffer | Uint8Array | null;
-  bufferBase64?: string;
-  file?: string;
-};
-
-type PromptDebugImageResult = {
-  cachedCount?: number;
-  downloadedCount?: number;
-  skippedCount?: number;
-  timings?: PromptImageTimings | Record<string, number>;
-  stitched?: {
-    category?: string;
-    mimeType?: string;
-    filename?: string;
-    totalItems?: number;
-    categoryCount?: number;
-    buffer?: Buffer | Uint8Array | null;
-    bufferBase64?: string;
-  } | null;
-  categories?: PromptDebugImageCategory[];
-};
-
-type PromptImagesChildMessage = {
-  normalizedItems?: any[];
-  downloadConcurrency?: number;
-};
 
 type PromptImagesFork = typeof nodeFork;
 
@@ -141,8 +107,8 @@ function sanitizeFileName(value: unknown) {
   return sanitized || "unknown";
 }
 
-function groupPromptImageItemsByCategory(normalizedItems: any[] = []) {
-  const groups = new Map<string, any[]>();
+function groupPromptImageItemsByCategory(normalizedItems: PromptImageItemLike[] = []) {
+  const groups = new Map<string, PromptImageItemLike[]>();
 
   for (const item of normalizedItems) {
     const category = String(item?.category || "").trim();
@@ -155,6 +121,9 @@ function groupPromptImageItemsByCategory(normalizedItems: any[] = []) {
     }
 
     const group = groups.get(category);
+    if (!group) {
+      continue;
+    }
     if (group.length >= MAX_ITEMS_PER_CATEGORY) {
       continue;
     }
@@ -200,6 +169,17 @@ function getRequestSignal() {
   }
 
   return undefined;
+}
+
+function getMetadataDimensions(metadata: { width?: number | null; height?: number | null } | null | undefined) {
+  return {
+    width: typeof metadata?.width === "number" ? metadata.width : null,
+    height: typeof metadata?.height === "number" ? metadata.height : null
+  };
+}
+
+function getErrorMessage(error: unknown, fallback = "unknown_error") {
+  return error instanceof Error && error.message ? error.message : fallback;
 }
 
 function resolveSourceImageUrl(imageUrl: unknown) {
@@ -271,11 +251,13 @@ async function normalizeDownloadedImage(buffer: Buffer | Uint8Array) {
     })
     .toBuffer();
 
+  const { width, height } = getMetadataDimensions(metadata);
+
   return {
     buffer: normalizedBuffer,
     mimeType: "image/jpeg",
-    width: Number((metadata as any)?.width) || null,
-    height: Number((metadata as any)?.height) || null
+    width,
+    height
   };
 }
 
@@ -301,7 +283,7 @@ async function buildPromptTileCompositeInput(buffer: Buffer | Uint8Array, { auto
   };
 }
 
-async function downloadProductImageAsset(item: any) {
+async function downloadProductImageAsset(item: PromptImageItemLike): Promise<PromptImageDownloadResult> {
   const id = String(item?.id ?? "");
   const originalImageUrl = getOriginalImageUrl(item?.image_url);
   const imageUrl = resolveSourceImageUrl(item?.image_url);
@@ -326,6 +308,7 @@ async function downloadProductImageAsset(item: any) {
     const cachedImage = await readImageFromLocalCache(item?.image_url);
     if (cachedImage?.buffer) {
       const metadata = await sharp(cachedImage.buffer).metadata().catch(() => ({}));
+      const { width, height } = getMetadataDimensions(metadata);
       return {
         id,
         category: item?.category ?? "",
@@ -338,8 +321,8 @@ async function downloadProductImageAsset(item: any) {
         mimeType: cachedImage.mimeType,
         buffer: cachedImage.buffer,
         originalMimeType: cachedImage.mimeType,
-        width: Number((metadata as any)?.width) || null,
-        height: Number((metadata as any)?.height) || null
+        width,
+        height
       };
     }
 
@@ -370,9 +353,9 @@ async function downloadProductImageAsset(item: any) {
       height: normalized.height
     };
   } catch (error) {
-    const reason = error?.name === "TimeoutError"
+    const reason = error instanceof Error && error.name === "TimeoutError"
       ? "timeout"
-      : String(error?.message || "download_failed");
+      : getErrorMessage(error, "download_failed");
 
     console.warn(
       "[prompt-images][asset-download-failed]",
@@ -400,7 +383,10 @@ async function downloadProductImageAsset(item: any) {
   }
 }
 
-async function downloadPromptImageAsset(item: any, timings: PromptImageTimings | null = null) {
+async function downloadPromptImageAsset(
+  item: PromptImageItemLike,
+  timings: PromptImageTimings | null = null
+): Promise<PromptImageDownloadResult> {
   const id = String(item?.id ?? "");
   const originalImageUrl = getOriginalImageUrl(item?.image_url);
   const imageUrl = resolveSourceImageUrl(item?.image_url);
@@ -429,6 +415,7 @@ async function downloadPromptImageAsset(item: any, timings: PromptImageTimings |
       const inspectStartedAt = nowMs();
       const metadata = await sharp(cachedImage.buffer).metadata().catch(() => ({}));
       addTiming(timings, "sourceInspectMs", inspectStartedAt);
+      const { width, height } = getMetadataDimensions(metadata);
       return {
         id,
         category: item?.category ?? "",
@@ -440,8 +427,8 @@ async function downloadPromptImageAsset(item: any, timings: PromptImageTimings |
         reason: null,
         mimeType: cachedImage.mimeType,
         buffer: cachedImage.buffer,
-        width: Number((metadata as any)?.width) || null,
-        height: Number((metadata as any)?.height) || null
+        width,
+        height
       };
     }
 
@@ -462,6 +449,7 @@ async function downloadPromptImageAsset(item: any, timings: PromptImageTimings |
       limitInputPixels: MAX_SOURCE_IMAGE_PIXELS
     }).metadata().catch(() => ({}));
     addTiming(timings, "sourceInspectMs", inspectStartedAt);
+    const { width, height } = getMetadataDimensions(metadata);
 
     return {
       id,
@@ -473,13 +461,13 @@ async function downloadPromptImageAsset(item: any, timings: PromptImageTimings |
       reason: null,
       mimeType: String(response.headers.get("content-type") || "").toLowerCase() || "application/octet-stream",
       buffer: sourceBuffer,
-      width: Number((metadata as any)?.width) || null,
-      height: Number((metadata as any)?.height) || null
+      width,
+      height
     };
   } catch (error) {
-    const reason = error?.name === "TimeoutError"
+    const reason = error instanceof Error && error.name === "TimeoutError"
       ? "timeout"
-      : String(error?.message || "download_failed");
+      : getErrorMessage(error, "download_failed");
 
     console.warn(
       "[prompt-images][asset-download-failed]",
@@ -507,7 +495,7 @@ async function downloadPromptImageAsset(item: any, timings: PromptImageTimings |
   }
 }
 
-async function downloadProductImageAssets(items: any[] = []) {
+async function downloadProductImageAssets(items: PromptImageItemLike[] = []) {
   const downloadResults = await mapWithConcurrency(
     items,
     IMAGE_DOWNLOAD_CONCURRENCY,
@@ -529,7 +517,10 @@ async function downloadProductImageAssets(items: any[] = []) {
   );
 }
 
-function createCategoryOverlaySvg(category: string, entries: any[]) {
+function createCategoryOverlaySvg(
+  category: string,
+  entries: Array<{ item: PromptImageItemLike; result: PromptImageDownloadResult; slotIndex: number }>
+) {
   const width = GRID_WIDTH;
   const height = HEADER_HEIGHT + GRID_HEIGHT;
   const parts = [
@@ -584,7 +575,7 @@ async function buildCategoryImage({
   timings = null
 }: {
   category: string;
-  entries: any[];
+  entries: Array<{ item: PromptImageItemLike; result: PromptImageDownloadResult; slotIndex: number }>;
   timings?: PromptImageTimings | null;
 }) {
   const composites = [];
@@ -610,9 +601,9 @@ async function buildCategoryImage({
           top
         });
       } catch (error) {
-        const reason = error?.name === "TimeoutError"
+        const reason = error instanceof Error && error.name === "TimeoutError"
           ? "timeout"
-          : String(error?.message || "tile_build_failed");
+          : getErrorMessage(error, "tile_build_failed");
 
         console.warn(
           "[prompt-images][tile-build-failed]",
@@ -725,9 +716,10 @@ async function stitchCategoryImagesVertically(categories: Array<PromptDebugImage
       limitInputPixels: false
     });
     const info = await image.metadata().catch(() => ({}));
+    const { width, height } = getMetadataDimensions(info);
     return {
-      width: Number((info as any)?.width) || 0,
-      height: Number((info as any)?.height) || 0
+      width: width || 0,
+      height: height || 0
     };
   }));
 
@@ -784,7 +776,7 @@ async function saveDebugArtifacts({
   debugOutputDir
 }: {
   categories: Array<PromptDebugImageCategory & { file?: string }>;
-  stitched?: any;
+  stitched?: PromptDebugImageStitched | null;
   cachedCount: number;
   downloadedCount: number;
   skippedCount: number;
@@ -798,8 +790,8 @@ async function saveDebugArtifacts({
     ? fileURLToPath(debugOutputDir)
     : path.resolve(String(debugOutputDir));
 
-  const files = [];
-  const manifestCategories = [];
+  const files: string[] = [];
+  const manifestCategories: Array<Record<string, unknown>> = [];
 
   for (const categoryEntry of categories) {
     const categoryFile = path.join(resolvedOutputDir, categoryEntry.filename);
@@ -848,7 +840,7 @@ async function buildPromptDebugImages({
   debugOutputDir = null,
   saveDebugArtifacts: shouldSaveDebugArtifacts = false
 }: {
-  normalizedItems?: any[];
+  normalizedItems?: PromptImageItemLike[];
   debugOutputDir?: string | URL | null;
   saveDebugArtifacts?: boolean;
 } = {}) {
@@ -898,12 +890,7 @@ async function buildPromptDebugImages({
         });
         addTiming(timings, "debugSaveMs", debugSaveStartedAt);
       } catch (error) {
-        console.warn(
-          "[prompt-images][debug-save-failed]",
-          JSON.stringify({
-            message: error?.message || "unknown_error"
-          })
-        );
+        console.warn("[prompt-images][debug-save-failed]", JSON.stringify({ message: getErrorMessage(error) }));
       }
     }
 
@@ -929,7 +916,7 @@ async function buildPromptDebugImagesForCategory({
   timings = null
 }: {
   category?: string;
-  items?: any[];
+  items?: PromptImageItemLike[];
   downloadConcurrency?: number;
   timings?: PromptImageTimings | null;
 } = {}) {
@@ -1027,6 +1014,17 @@ function serializePromptDebugImagesForIpc(result: PromptDebugImageResult = {}) {
   };
 }
 
+function isSerializedIpcBuffer(value: unknown): value is SerializedIpcBuffer {
+  return Boolean(
+    value
+    && typeof value === "object"
+    && "type" in value
+    && "data" in value
+    && (value as { type?: unknown }).type === "Buffer"
+    && Array.isArray((value as { data?: unknown }).data)
+  );
+}
+
 function normalizeIpcBuffer(value: unknown) {
   if (Buffer.isBuffer(value)) {
     return value;
@@ -1036,13 +1034,8 @@ function normalizeIpcBuffer(value: unknown) {
     return Buffer.from(value);
   }
 
-  if (
-    value
-    && typeof value === "object"
-    && (value as any).type === "Buffer"
-    && Array.isArray((value as any).data)
-  ) {
-    return Buffer.from((value as any).data);
+  if (isSerializedIpcBuffer(value)) {
+    return Buffer.from(value.data);
   }
 
   return null;
@@ -1093,21 +1086,22 @@ function deserializePromptDebugImagesFromIpc(payload: PromptDebugImageResult = {
   };
 }
 
-function isValidPromptImagesIpcPayload(message: any) {
+function isValidPromptImagesIpcPayload(message: unknown): message is PromptImagesChildSuccessPayload {
   if (!message || typeof message !== "object") {
     return false;
   }
 
-  if (!Array.isArray(message.categories)) {
+  const payload = message as PromptImagesChildSuccessPayload;
+  if (!Array.isArray(payload.categories)) {
     return false;
   }
 
-  const hasValidStitched = message.stitched != null && (
-    normalizeIpcBuffer(message?.stitched?.buffer) !== null
-    || typeof message?.stitched?.bufferBase64 === "string"
+  const hasValidStitched = payload.stitched != null && (
+    normalizeIpcBuffer(payload.stitched?.buffer) !== null
+    || typeof payload.stitched?.bufferBase64 === "string"
   );
 
-  const allCategoriesValid = message.categories.every((category) => (
+  const allCategoriesValid = payload.categories.every((category) => (
     normalizeIpcBuffer(category?.buffer) !== null
     || typeof category?.bufferBase64 === "string"
     || category?.buffer == null
@@ -1122,7 +1116,7 @@ async function buildPromptDebugImagesInChild({
   saveDebugArtifacts: shouldSaveDebugArtifacts = false,
   forkImpl = nodeFork
 }: {
-  normalizedItems?: any[];
+  normalizedItems?: PromptImageItemLike[];
   debugOutputDir?: string | URL | null;
   saveDebugArtifacts?: boolean;
   forkImpl?: PromptImagesFork;
@@ -1151,12 +1145,7 @@ async function buildPromptDebugImagesInChild({
       });
       addTiming(result.timings, "debugSaveMs", debugSaveStartedAt);
     } catch (error) {
-      console.warn(
-        "[prompt-images][debug-save-failed]",
-        JSON.stringify({
-          message: error?.message || "unknown_error"
-        })
-      );
+      console.warn("[prompt-images][debug-save-failed]", JSON.stringify({ message: getErrorMessage(error) }));
     }
   }
 
@@ -1167,7 +1156,7 @@ async function buildPromptDebugImagesAllInChild({
   normalizedItems = [],
   forkImpl = nodeFork
 }: {
-  normalizedItems?: any[];
+  normalizedItems?: PromptImageItemLike[];
   forkImpl?: PromptImagesFork;
 } = {}) {
   return new Promise<PromptDebugImageResult>((resolve, reject) => {
@@ -1211,7 +1200,7 @@ async function buildPromptDebugImagesAllInChild({
       reject(error);
     }
 
-    function onMessage(message: any) {
+    function onMessage(message: PromptImagesChildPayload) {
       if (message?.ok === true) {
         if (!isValidPromptImagesIpcPayload(message)) {
           rejectOnce(new Error("prompt_images_child_invalid_payload"));
@@ -1259,7 +1248,10 @@ async function buildPromptDebugImagesAllInChild({
   });
 }
 
-async function preparePdfImageAsset(imageAsset: any, { width, height }: { width?: number; height?: number } = {}) {
+async function preparePdfImageAsset(
+  imageAsset: PromptImageAsset | null | undefined,
+  { width, height }: { width?: number; height?: number } = {}
+) {
   if (!imageAsset?.buffer) {
     return null;
   }
@@ -1281,6 +1273,7 @@ async function preparePdfImageAsset(imageAsset: any, { width, height }: { width?
     .toBuffer();
 
   const metadata = await sharp(buffer).metadata().catch(() => ({}));
+  const dimensions = getMetadataDimensions(metadata);
 
   return {
     buffer,
@@ -1288,13 +1281,16 @@ async function preparePdfImageAsset(imageAsset: any, { width, height }: { width?
     kind: "jpg",
     preparedForPdf: true,
     imageUrl: imageAsset.imageUrl || "",
-    width: Number((metadata as any)?.width) || null,
-    height: Number((metadata as any)?.height) || null
+    width: dimensions.width,
+    height: dimensions.height
   };
 }
 
-async function preparePdfImageAssets(imageAssetsById: Record<string, any> = {}, targetSize?: { width?: number; height?: number }) {
-  const entries = Object.entries(imageAssetsById).filter(([, asset]) => (asset as any)?.buffer);
+async function preparePdfImageAssets(
+  imageAssetsById: Record<string, PromptImageAsset> = {},
+  targetSize?: { width?: number; height?: number }
+) {
+  const entries = Object.entries(imageAssetsById).filter(([, asset]) => Boolean(asset?.buffer));
   const preparedEntries = await mapWithConcurrency(entries, IMAGE_DOWNLOAD_CONCURRENCY, async ([id, asset]) => {
     const prepared = await preparePdfImageAsset(asset, targetSize);
     return prepared ? [id, prepared] : null;

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import Anthropic from "@anthropic-ai/sdk";
 import {
   buildDeveloperPrompt,
@@ -6,11 +5,19 @@ import {
   releaseImageBuffers,
   splitSystemAndUserPrompt
 } from "./openai.js";
+import type {
+  ImageAssetLike,
+  JsonSchema,
+  JsonSchemaFormat,
+  LlmGenerateOptions,
+  ParsedGenerationError,
+  UserProfileLike
+} from "./types.js";
 
 const DEFAULT_CHAT_MODEL = "claude-opus-4-7";
 const ALLOWED_CHAT_MODELS = ["claude-opus-4-7"];
 
-function resolveChatModel(userProfile = null) {
+function resolveChatModel(userProfile: UserProfileLike | null = null) {
   const llm = String(userProfile?.llm || "").trim();
   if (llm.startsWith("claude:")) {
     const model = llm.slice("claude:".length).trim();
@@ -22,7 +29,7 @@ function resolveChatModel(userProfile = null) {
   return DEFAULT_CHAT_MODEL;
 }
 
-function buildClaudeSystemPrompt(system = "", userProfile = null) {
+function buildClaudeSystemPrompt(system = "", userProfile: UserProfileLike | null = null) {
   const systemText = String(system || "").trim();
   const developerText = buildDeveloperPrompt(userProfile);
 
@@ -31,8 +38,11 @@ function buildClaudeSystemPrompt(system = "", userProfile = null) {
     .join("\n\n");
 }
 
-function buildClaudeMessages(user, images = []) {
-  const content = [];
+function buildClaudeMessages(user: string, images: ImageAssetLike[] = []) {
+  const content: Array<
+    | { type: "image"; source: { type: "base64"; media_type: string; data: string } }
+    | { type: "text"; text: string }
+  > = [];
   const userText = String(user || "").trim();
 
   for (const image of images) {
@@ -73,7 +83,7 @@ function buildClaudeMessages(user, images = []) {
   }];
 }
 
-function sanitizeClaudeJsonSchema(schema) {
+function sanitizeClaudeJsonSchema(schema: JsonSchema | JsonSchema[] | unknown): JsonSchema | JsonSchema[] | unknown {
   if (Array.isArray(schema)) {
     return schema.map((item) => sanitizeClaudeJsonSchema(item));
   }
@@ -82,7 +92,7 @@ function sanitizeClaudeJsonSchema(schema) {
     return schema;
   }
 
-  const normalized = {};
+  const normalized: Record<string, unknown> = {};
 
   for (const [key, value] of Object.entries(schema)) {
     if (key === "minItems" && typeof value === "number" && value > 1) {
@@ -100,7 +110,7 @@ function sanitizeClaudeJsonSchema(schema) {
   return normalized;
 }
 
-function buildClaudeOutputConfig(format = null, userProfile = null) {
+function buildClaudeOutputConfig(format: JsonSchemaFormat | null = null, userProfile: UserProfileLike | null = null) {
   const resolvedFormat = format || buildJsonObjectFormat(userProfile);
   const schema = resolvedFormat?.schema;
 
@@ -116,7 +126,7 @@ function buildClaudeOutputConfig(format = null, userProfile = null) {
   };
 }
 
-function extractClaudeResponseText(response = null) {
+function extractClaudeResponseText(response: { content?: Array<{ type?: string; text?: string | null }> } | null = null) {
   if (!Array.isArray(response?.content)) {
     return "";
   }
@@ -128,7 +138,7 @@ function extractClaudeResponseText(response = null) {
 }
 
 function createClaudeClient({
-  createClientImpl = ({ apiKey }) => new Anthropic({ apiKey, maxRetries: 0 }),
+  createClientImpl = ({ apiKey }: { apiKey: string }) => new Anthropic({ apiKey, maxRetries: 0 }),
   getApiKeyImpl = () => process.env.ANTHROPIC_API_KEY,
   cache = true
 } = {}) {
@@ -152,15 +162,13 @@ function createClaudeClient({
     return client;
   }
 
-  async function generateJsonWithLlm(
-    prompt,
-    {
+  async function generateJsonWithLlm(prompt: string, options: LlmGenerateOptions = {}) {
+    const {
       userProfile = null,
       format = null,
       images = [],
       onPayloadBuilt = null
-    } = {}
-  ) {
+    } = options;
     const client = getClaudeClient();
     const { system, user } = splitSystemAndUserPrompt(prompt);
     const systemPrompt = buildClaudeSystemPrompt(system, userProfile);
@@ -185,7 +193,9 @@ function createClaudeClient({
     try {
       json = JSON.parse(content);
     } catch (error) {
-      const parseError = new Error(`Failed to parse JSON response: ${error.message}\nResponse content: ${content}`);
+      const parseError = new Error(
+        `Failed to parse JSON response: ${error instanceof Error ? error.message : String(error)}\nResponse content: ${content}`
+      ) as ParsedGenerationError;
       const rawSelectionText = extractClaudeResponseText(response);
       parseError.rawSelectionText = rawSelectionText.length > 0 ? rawSelectionText : null;
       throw parseError;
