@@ -1,5 +1,5 @@
 import { API_BASE_URL } from "./config.js";
-import { getCachedJson, requestJson } from "./request.js";
+import { getCachedJson, requestJson } from "./request";
 
 async function fetchSearchOptions({ force = false } = {}) {
   return getCachedJson(`${API_BASE_URL}/search/options`, {

@@ -1,5 +1,5 @@
 import { API_BASE_URL } from "./config.js";
-import { requestJson } from "./request.js";
+import { requestJson } from "./request";
 
 class RetriableError extends Error {}
 class FatalError extends Error {}

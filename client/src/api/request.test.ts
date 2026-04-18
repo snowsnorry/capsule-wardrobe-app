@@ -1,7 +1,22 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { clearRequestCache, getCachedJson, request, requestJson } from "./request.js";
+import { clearRequestCache, getCachedJson, request, requestJson } from "./request";
 
-function createResponse({ ok = true, status = 200, headers = {}, body = "" } = {}) {
+type HeaderMap = Record<string, string>;
+type ResponseLike = Pick<Response, "ok" | "status" | "text"> & {
+  headers: Pick<Headers, "get">;
+};
+
+function createResponse({
+  ok = true,
+  status = 200,
+  headers = {},
+  body = ""
+}: {
+  body?: string;
+  headers?: HeaderMap;
+  ok?: boolean;
+  status?: number;
+} = {}): ResponseLike {
   return {
     ok,
     status,
@@ -20,7 +35,7 @@ describe("request api", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     clearRequestCache();
-    global.fetch = vi.fn();
+    vi.stubGlobal("fetch", vi.fn());
     Object.defineProperty(document, "cookie", {
       configurable: true,
       value: "csrf=token-123; theme=light"
@@ -32,7 +47,8 @@ describe("request api", () => {
   });
 
   test("request injects csrf header for state-changing methods", async () => {
-    fetch.mockResolvedValue(createResponse());
+    const fetchMock = vi.mocked(fetch);
+    fetchMock.mockResolvedValue(createResponse() as Response);
 
     await request("/profile/me", {
       method: "PATCH",
@@ -40,34 +56,35 @@ describe("request api", () => {
     });
 
     expect(fetch).toHaveBeenCalledTimes(1);
-    const [, options] = fetch.mock.calls[0];
+    const [, options] = fetchMock.mock.calls[0];
     expect(options.method).toBe("PATCH");
-    expect(options.headers.get("X-CSRF-Token")).toBe("token-123");
-    expect(options.headers.get("Content-Type")).toBe("application/json");
+    const headers = options.headers as Headers;
+    expect(headers.get("X-CSRF-Token")).toBe("token-123");
+    expect(headers.get("Content-Type")).toBe("application/json");
   });
 
   test("requestJson parses json bodies and returns empty object for empty success payloads", async () => {
-    fetch
+    vi.mocked(fetch)
       .mockResolvedValueOnce(createResponse({
         headers: { "content-type": "application/json; charset=utf-8" },
         body: JSON.stringify({ ok: true, items: [1, 2] })
-      }))
+      }) as Response)
       .mockResolvedValueOnce(createResponse({
         headers: { "content-type": "application/json" },
         body: ""
-      }));
+      }) as Response);
 
     await expect(requestJson("/api/one")).resolves.toEqual({ ok: true, items: [1, 2] });
     await expect(requestJson("/api/two")).resolves.toEqual({});
   });
 
   test("requestJson uses non-json fallback payloads for error messages", async () => {
-    fetch.mockResolvedValue(createResponse({
+    vi.mocked(fetch).mockResolvedValue(createResponse({
       ok: false,
       status: 502,
       headers: { "content-type": "text/plain" },
       body: "gateway_down"
-    }));
+    }) as Response);
 
     await expect(requestJson("/api/fail")).rejects.toMatchObject({
       message: "request_failed_502",
@@ -77,8 +94,8 @@ describe("request api", () => {
   });
 
   test("getCachedJson dedupes in-flight requests and serves cached value until cleared", async () => {
-    let resolveFetch;
-    fetch.mockImplementation(() => new Promise((resolve) => {
+    let resolveFetch: ((response: Response) => void) | undefined;
+    vi.mocked(fetch).mockImplementation(() => new Promise<Response>((resolve) => {
       resolveFetch = resolve;
     }));
 
@@ -87,10 +104,10 @@ describe("request api", () => {
 
     expect(fetch).toHaveBeenCalledTimes(1);
 
-    resolveFetch(createResponse({
+    resolveFetch?.(createResponse({
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ hasProfile: true })
-    }));
+    }) as Response);
 
     await expect(first).resolves.toEqual({ hasProfile: true });
     await expect(second).resolves.toEqual({ hasProfile: true });
@@ -100,10 +117,10 @@ describe("request api", () => {
     expect(fetch).toHaveBeenCalledTimes(1);
 
     clearRequestCache();
-    fetch.mockResolvedValueOnce(createResponse({
+    vi.mocked(fetch).mockResolvedValueOnce(createResponse({
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ hasProfile: false })
-    }));
+    }) as Response);
 
     await expect(getCachedJson("/profile/status", { ttlMs: 1000 })).resolves.toEqual({ hasProfile: false });
     expect(fetch).toHaveBeenCalledTimes(2);

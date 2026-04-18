@@ -1,5 +1,5 @@
 import { API_BASE_URL } from "./config.js";
-import { request, requestJson } from "./request.js";
+import { request, requestJson } from "./request";
 
 function capsuleUrl(path = "") {
   return `${API_BASE_URL}/capsules${path}`;

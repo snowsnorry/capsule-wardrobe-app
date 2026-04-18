@@ -10,7 +10,7 @@ const requestApi = vi.hoisted(() => ({
 }));
 
 vi.mock("@microsoft/fetch-event-source", () => fetchEventSourceApi);
-vi.mock("./request.js", () => requestApi);
+vi.mock("./request", () => requestApi);
 vi.mock("./config.js", () => ({
   API_BASE_URL: "https://api.example.test"
 }));

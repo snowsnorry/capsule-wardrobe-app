@@ -5,7 +5,7 @@ const requestApi = vi.hoisted(() => ({
   requestJson: vi.fn()
 }));
 
-vi.mock("./request.js", () => requestApi);
+vi.mock("./request", () => requestApi);
 vi.mock("./config.js", () => ({
   API_BASE_URL: "https://api.example.test"
 }));

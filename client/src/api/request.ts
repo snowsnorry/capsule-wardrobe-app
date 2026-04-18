@@ -1,21 +1,41 @@
-const inFlight = new Map();
-const cache = new Map();
+type JsonValue = string | number | boolean | null | JsonObject | JsonArray;
+type JsonObject = Record<string, unknown>;
+type JsonArray = JsonValue[];
+type RequestErrorData = JsonValue;
+type RequestError = Error & {
+  data: RequestErrorData;
+  status: number;
+};
+type CacheEntry = {
+  timestamp: number;
+  value: JsonObject;
+};
+type CachedJsonOptions = RequestInit & {
+  force?: boolean;
+  ttlMs?: number;
+};
+type ResponseLike = Pick<Response, "ok" | "status" | "text"> & {
+  headers: Pick<Headers, "get">;
+};
+
+const inFlight = new Map<string, Promise<JsonObject>>();
+const cache = new Map<string, CacheEntry>();
 const CSRF_HEADER = "X-CSRF-Token";
 
-function getCacheKey(url, options) {
+function getCacheKey(url: string, options?: RequestInit) {
   const method = options?.method || "GET";
   return `${method}:${url}`;
 }
 
-function tryParseJson(text) {
+function tryParseJson(text: string): JsonValue | null {
   try {
-    return JSON.parse(text);
+    return JSON.parse(text) as JsonValue;
   } catch {
     return null;
   }
 }
 
-async function readResponseBody(response) {
+async function readResponseBody(response: ResponseLike): Promise<JsonValue | JsonObject | null> {
   const contentType = (response.headers.get("content-type") || "").toLowerCase();
   const text = await response.text();
   if (!text) {
@@ -33,14 +53,28 @@ async function readResponseBody(response) {
   return { raw: text };
 }
 
-async function requestJson(url, options = {}) {
+function getErrorMessage(data: JsonValue | null, status: number): string {
+  if (data && typeof data === "object" && !Array.isArray(data)) {
+    const error = data.error;
+    if (typeof error === "string" && error) {
+      return error;
+    }
+
+    const message = data.message;
+    if (typeof message === "string" && message) {
+      return message;
+    }
+  }
+
+  return `request_failed_${status}`;
+}
+
+async function requestJson(url: string, options: RequestInit = {}): Promise<JsonObject> {
   const response = await request(url, options);
   const data = await readResponseBody(response);
 
   if (!response.ok) {
-    const error = new Error(
-      data?.error || data?.message || `request_failed_${response.status}`
-    );
+    const error = new Error(getErrorMessage(data, response.status)) as RequestError;
     error.data = data;
     error.status = response.status;
     throw error;
@@ -53,7 +87,7 @@ async function requestJson(url, options = {}) {
   return {};
 }
 
-async function request(url, options = {}) {
+async function request(url: string, options: RequestInit = {}): Promise<Response> {
   const method = String(options.method || "GET").toUpperCase();
   const headers = new Headers(options.headers || {});
   const isStateChanging = !["GET", "HEAD", "OPTIONS"].includes(method);
@@ -76,7 +110,10 @@ async function request(url, options = {}) {
   });
 }
 
-async function getCachedJson(url, { ttlMs = 1000, force = false, ...options } = {}) {
+async function getCachedJson(
+  url: string,
+  { ttlMs = 1000, force = false, ...options }: CachedJsonOptions = {}
+): Promise<JsonObject> {
   const key = getCacheKey(url, options);
   const now = Date.now();
   const cached = cache.get(key);
@@ -105,3 +142,4 @@ function clearRequestCache() {
 }
 
 export { request, requestJson, getCachedJson, clearRequestCache };
+export type { JsonObject, RequestError, RequestErrorData };

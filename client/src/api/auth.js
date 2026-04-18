@@ -1,5 +1,5 @@
 import { API_BASE_URL } from "./config.js";
-import { clearRequestCache, getCachedJson, requestJson } from "./request.js";
+import { clearRequestCache, getCachedJson, requestJson } from "./request";
 
 async function requestLoginCode(email, locale) {
   return requestJson(`${API_BASE_URL}/auth/request-code`, {
