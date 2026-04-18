@@ -639,7 +639,7 @@ function App() {
         : "solid"
     );
     setSelectedText(effective.filters?.text || "");
-    setProfileItems(buildDisplayWardrobeItems(effective.data?.wardrobe?.items || []));
+    setProfileItems(buildDisplayWardrobeItems(effective.data?.wardrobe?.items || []) as WardrobeItem[]);
     setProfileOutfitSets(normalizeOutfitSets(effective.data?.wardrobe?.outfitSets));
     setPendingImageSetIndexes([]);
     setWardrobeLoadedCapsuleId(hasStoredWardrobeItems(capsule) ? capsule.id || "" : "");
@@ -1237,8 +1237,8 @@ function App() {
             currentItems,
             nextItems: items,
             pendingUrls: pendingRegenerationUrls
-          })
-          : buildDisplayWardrobeItems(items)
+          }) as WardrobeItem[]
+          : buildDisplayWardrobeItems(items) as WardrobeItem[]
       ));
       setSelectedRegenerationUrls([]);
       pendingRegenerationUrlsRef.current = pendingRegenerationUrls;
@@ -1261,8 +1261,8 @@ function App() {
           currentItems: baseItems.length > 0 ? baseItems : currentItems,
           nextItems: items,
           pendingUrls: currentPendingUrls
-        })
-        : buildDisplayWardrobeItems(items)
+        }) as WardrobeItem[]
+        : buildDisplayWardrobeItems(items) as WardrobeItem[]
     ));
     setSelectedRegenerationUrls([]);
     pendingRegenerationUrlsRef.current = [];

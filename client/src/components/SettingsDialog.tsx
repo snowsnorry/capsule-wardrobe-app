@@ -22,11 +22,13 @@ import { PROFILE_LLM_VALUES, PROFILE_THEME_VALUES } from "../../../shared/profil
 
 const SETTINGS_SECTIONS = ["general", "ai", "account"] as const;
 const LANGUAGE_OPTIONS = ["en", "ru"] as const;
-const PROFILE_THEME_OPTIONS = PROFILE_THEME_VALUES.filter((value): value is string => typeof value === "string");
-const PROFILE_LLM_OPTIONS = PROFILE_LLM_VALUES.filter((value): value is string => typeof value === "string");
+const PROFILE_THEME_OPTIONS = [...PROFILE_THEME_VALUES];
+const PROFILE_LLM_OPTIONS = [...PROFILE_LLM_VALUES];
 
 type SettingsSection = (typeof SETTINGS_SECTIONS)[number];
 type SettingsLocale = (typeof LANGUAGE_OPTIONS)[number];
+type SettingsTheme = (typeof PROFILE_THEME_VALUES)[number];
+type SettingsLlm = (typeof PROFILE_LLM_VALUES)[number];
 
 type SettingsProfile = {
   fullname?: string | null;
@@ -40,15 +42,15 @@ type SettingsDraft = {
   fullname: string;
   email: string;
   locale: SettingsLocale;
-  theme: string;
-  llm: string;
+  theme: SettingsTheme;
+  llm: SettingsLlm;
 };
 
 type SettingsSavePayload = {
   fullname: string;
   locale: SettingsLocale;
-  theme: string;
-  llm: string;
+  theme: SettingsTheme;
+  llm: SettingsLlm;
 };
 
 type SettingsDialogProps = {
@@ -66,13 +68,21 @@ function normalizeLocaleValue(value: string): SettingsLocale {
   return isOneOf(LANGUAGE_OPTIONS, value) ? value : "en";
 }
 
+function normalizeThemeValue(value: string): SettingsTheme {
+  return isOneOf(PROFILE_THEME_OPTIONS, value) ? value : "system";
+}
+
+function normalizeLlmValue(value: string): SettingsLlm {
+  return isOneOf(PROFILE_LLM_OPTIONS, value) ? value : "openai:gpt-5.2";
+}
+
 function normalizeSettingsDraft(settings: SettingsProfile = {}, fallbackEmail = ""): SettingsDraft {
   return {
     fullname: typeof settings.fullname === "string" ? settings.fullname : "",
     email: String(settings.email || fallbackEmail || "").trim(),
     locale: isOneOf(LANGUAGE_OPTIONS, settings.locale) ? settings.locale : "en",
-    theme: isOneOf(PROFILE_THEME_OPTIONS, settings.theme) ? settings.theme : "system",
-    llm: isOneOf(PROFILE_LLM_OPTIONS, settings.llm) ? settings.llm : "openai:gpt-5.2"
+    theme: normalizeThemeValue(String(settings.theme || "")),
+    llm: normalizeLlmValue(String(settings.llm || ""))
   };
 }
 
@@ -144,7 +154,7 @@ function SettingsDialog({
             select
             label={t("settings.fields.theme")}
             value={draft.theme}
-            onChange={(event) => handleDraftChange("theme", event.target.value)}
+            onChange={(event) => handleDraftChange("theme", normalizeThemeValue(event.target.value))}
           >
             {PROFILE_THEME_OPTIONS.map((value) => (
               <MenuItem key={value} value={value}>
@@ -175,7 +185,7 @@ function SettingsDialog({
             select
             label={t("settings.fields.stylistModel")}
             value={draft.llm}
-            onChange={(event) => handleDraftChange("llm", event.target.value)}
+            onChange={(event) => handleDraftChange("llm", normalizeLlmValue(event.target.value))}
           >
             {PROFILE_LLM_OPTIONS.map((value) => (
               <MenuItem key={value} value={value}>
