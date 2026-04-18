@@ -5,5 +5,5 @@
     "rootDir": "..",
     "outDir": "./dist"
   },
-  "exclude": ["dist", "src/serverUrlSecurity.js"]
+  "exclude": ["dist", "src/**/*.test.ts", "src/**/*.test.js", "src/serverUrlSecurity.js"]
 }

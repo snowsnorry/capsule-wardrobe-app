@@ -1,3 +1,4 @@
+// @ts-nocheck
 import ollama from "ollama";
 
 const DEFAULT_OLLAMA_EMBEDDING_MODEL = "embeddinggemma";

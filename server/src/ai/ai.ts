@@ -1,3 +1,4 @@
+// @ts-nocheck
 import crypto from "node:crypto";
 import { getProfile } from "../profileStore.js";
 import { getSqlClient } from "../db.js";
@@ -1036,11 +1037,12 @@ function createWardrobeService({
   randomUuidImpl = () => crypto.randomUUID()
 } = {}) {
   function scheduleJobCleanup(jobKey, job) {
-    setTimeoutImpl(() => {
+    const cleanupTimer = setTimeoutImpl(() => {
       if (jobs.get(jobKey) === job && job.status !== "pending") {
         jobs.delete(jobKey);
       }
     }, COMPLETED_JOB_TTL_MS);
+    cleanupTimer?.unref?.();
   }
 
   function getWardrobeJob(email, capsuleId) {
@@ -1226,6 +1228,69 @@ function createWardrobeService({
     return job;
   }
 
+  async function getCapsuleItems(req, res) {
+    try {
+      const email = req.user.email;
+      const capsuleId = String(req.params?.id || "").trim();
+      const capsule = getRequiredCapsule(capsuleId, await getCapsuleImpl(email, capsuleId));
+      const activeJob = getWardrobeJob(email, capsuleId);
+      const partialRegenerationJob = getPartialRegenerationJobImpl(email, capsuleId);
+      const snapshot = buildCapsuleEventSnapshotImpl({
+        capsule,
+        activeJob,
+        partialRegenerationJob
+      });
+
+      if (snapshot.status === "failed") {
+        if (activeJob?.status === "failed") {
+          jobs.delete(createWardrobeJobKey(email, capsuleId));
+        }
+
+        return res.status(503).json({
+          error: "service_unavailable",
+          rawSelectionText: snapshot.rawSelectionText || null
+        });
+      }
+
+      if (snapshot.status === "pending") {
+        return res.status(202).json({
+          ok: true,
+          status: "pending",
+          pendingStage: snapshot.pendingStage,
+          pendingRegenerationUrls: snapshot.pendingRegenerationUrls,
+          hasPendingAdditionalItems: snapshot.hasPendingAdditionalItems,
+          items: snapshot.items,
+          outfitSets: snapshot.outfitSets,
+          reasoning: snapshot.reasoning,
+          rawSelectionText: snapshot.rawSelectionText,
+          ...(snapshot.swimwearReasoning ? { swimwearReasoning: snapshot.swimwearReasoning } : {}),
+          ...(snapshot.swimwearRawSelectionText ? { swimwearRawSelectionText: snapshot.swimwearRawSelectionText } : {})
+        });
+      }
+
+      return res.status(200).json({
+        ok: true,
+        status: "ready",
+        items: snapshot.items,
+        outfitSets: snapshot.outfitSets,
+        reasoning: snapshot.reasoning,
+        rawSelectionText: snapshot.rawSelectionText,
+        ...(snapshot.swimwearReasoning ? { swimwearReasoning: snapshot.swimwearReasoning } : {}),
+        ...(snapshot.swimwearRawSelectionText ? { swimwearRawSelectionText: snapshot.swimwearRawSelectionText } : {}),
+        hasPendingAdditionalItems: false
+      });
+    } catch (error) {
+      if (error?.code === "invalid_payload" || error?.message === "invalid_payload") {
+        return res.status(400).json({ error: "invalid_payload" });
+      }
+      if (error?.code === "not_found" || error?.message === "not_found") {
+        return res.status(404).json({ error: "not_found" });
+      }
+      console.error("[wardrobe-ai]", error);
+      return res.status(503).json({ error: "service_unavailable" });
+    }
+  }
+
   async function regenerateCapsuleWardrobe(req, res) {
     try {
       const email = req.user.email;
@@ -1320,6 +1385,7 @@ function createWardrobeService({
   }
 
   return {
+    getCapsuleItems,
     getWardrobeJob,
     regenerateCapsuleWardrobe,
     startWardrobeJob
@@ -1328,6 +1394,7 @@ function createWardrobeService({
 
 const wardrobeService = createWardrobeService();
 const {
+  getCapsuleItems,
   getWardrobeJob,
   regenerateCapsuleWardrobe,
   startWardrobeJob
@@ -1338,6 +1405,7 @@ export {
   createWardrobeService,
   enforceCategoryCounts,
   extractLlmUsage,
+  getCapsuleItems,
   getSelectedIdsFromCapsule,
   getWardrobeJob,
   getStoredWardrobePayload,

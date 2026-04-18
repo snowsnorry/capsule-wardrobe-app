@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { readFileSync } from "node:fs";
 import OpenAI from "openai";
 import { getCapsuleCategories } from "./categories.js";

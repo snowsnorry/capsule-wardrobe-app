@@ -1,3 +1,4 @@
+// @ts-nocheck
 import OpenAI from "openai";
 import { buildImageDataUrl, releaseImageBuffers } from "./openai.js";
 

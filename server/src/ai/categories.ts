@@ -1,4 +1,4 @@
-const _CATEGORIES = {
+const _CATEGORIES: Record<string, number> = {
   bottom: 3,
   top: 3,
   outerwear: 1,

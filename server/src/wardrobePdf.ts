@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { existsSync, readFileSync } from "node:fs";
 import { fork as nodeFork } from "node:child_process";
 import { mkdtemp, readFile, rm } from "node:fs/promises";

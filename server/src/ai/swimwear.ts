@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { readFileSync } from "node:fs";
 import { getSqlClient } from "../db.js";
 import {

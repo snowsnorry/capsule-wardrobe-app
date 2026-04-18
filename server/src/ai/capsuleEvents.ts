@@ -28,15 +28,27 @@ function getStoredWardrobePayload(profile) {
     items: Array.isArray(stored.items) ? stored.items : [],
     outfitSets: Array.isArray(stored.outfitSets)
       ? stored.outfitSets
-        .map((set) => ({
-          itemIds: Array.isArray(set?.itemIds)
-            ? set.itemIds.map((id) => String(id || "").trim()).filter(Boolean)
-            : [],
-          image: typeof set?.image === "string" && set.image.trim().length > 0
-            ? set.image.trim()
-            : null,
-          imageObsolete: Boolean(set?.imageObsolete)
-        }))
+        .map((set) => {
+          const normalizedSet: {
+            itemIds: string[];
+            image?: string;
+            imageObsolete?: boolean;
+          } = {
+            itemIds: Array.isArray(set?.itemIds)
+              ? set.itemIds.map((id) => String(id || "").trim()).filter(Boolean)
+              : []
+          };
+
+          if (typeof set?.image === "string" && set.image.trim().length > 0) {
+            normalizedSet.image = set.image.trim();
+          }
+
+          if (set && typeof set === "object" && "imageObsolete" in set) {
+            normalizedSet.imageObsolete = Boolean(set.imageObsolete);
+          }
+
+          return normalizedSet;
+        })
         .filter((set) => set.itemIds.length > 0)
       : [],
     reasoning: typeof stored.reasoning === "string" && stored.reasoning.trim().length > 0

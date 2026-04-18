@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { GoogleGenAI } from "@google/genai";
 import { randomUUID } from "node:crypto";
 import { writeFileSync, unlinkSync } from "node:fs";

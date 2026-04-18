@@ -44,8 +44,8 @@ function buildOutfitSetsFromFormulas(formulas = [], items = []) {
   const normalizedItems = Array.isArray(items) ? items : [];
   const itemsById = new Map(
     normalizedItems
-      .map((item) => [String(item?.id || "").trim(), item])
-      .filter(([id]) => id)
+      .map((item) => [String(item?.id || "").trim(), item] as const)
+      .filter(([id]) => Boolean(id))
   );
 
   return (Array.isArray(formulas) ? formulas : [])

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import crypto from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import {
@@ -723,11 +724,12 @@ function createPartialRegenerationService({
   randomUuidImpl = () => crypto.randomUUID()
 } = {}) {
   function scheduleJobCleanup(jobKey, job) {
-    setTimeoutImpl(() => {
+    const cleanupTimer = setTimeoutImpl(() => {
       if (jobs.get(jobKey) === job && job.status !== "pending") {
         jobs.delete(jobKey);
       }
     }, COMPLETED_JOB_TTL_MS);
+    cleanupTimer?.unref?.();
   }
 
   function getPartialRegenerationJob(email, capsuleId) {

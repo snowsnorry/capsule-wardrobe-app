@@ -29,6 +29,7 @@ test("buildCapsuleEventSnapshot includes pending outfit set image indexes", () =
   assert.deepEqual(snapshot.pendingImageSetIndexes, [0, 1]);
   assert.deepEqual(snapshot.outfitSets, [{
     itemIds: ["top-1", "bottom-1", "bag-1"],
-    image: "base64"
+    image: "base64",
+    imageObsolete: false
   }]);
 });
