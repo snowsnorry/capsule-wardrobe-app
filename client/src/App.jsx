@@ -35,7 +35,7 @@ import {
   regenerateSelectedWardrobeItems as requestSelectedWardrobeRegeneration,
   subscribeCapsuleEvents
 } from "./api/wardrobe";
-import SignInScreen from "./screens/SignInScreen.jsx";
+import SignInScreen from "./screens/SignInScreen";
 import { useI18n } from "./i18n/useI18n.js";
 import { ACCENT_COLOR_OPTIONS } from "../../shared/accentColors.js";
 import { createAppTheme } from "./theme";
@@ -46,8 +46,8 @@ import {
 } from "../../shared/wardrobeMerge.js";
 
 const MainScreen = lazy(() => import("./screens/MainScreen.jsx"));
-const OnboardingScreen = lazy(() => import("./screens/OnboardingScreen.jsx"));
-const ProfileScreen = lazy(() => import("./screens/ProfileScreen.jsx"));
+const OnboardingScreen = lazy(() => import("./screens/OnboardingScreen"));
+const ProfileScreen = lazy(() => import("./screens/ProfileScreen"));
 const SearchScreen = lazy(() => import("./screens/SearchScreen.jsx"));
 const StatisticsScreen = lazy(() => import("./screens/StatisticsScreen.jsx"));
 

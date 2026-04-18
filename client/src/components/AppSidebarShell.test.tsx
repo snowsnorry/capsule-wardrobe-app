@@ -3,7 +3,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import type { ComponentProps } from "react";
-import { LocaleProvider } from "../i18n/LocaleProvider.jsx";
+import { LocaleProvider } from "../i18n/LocaleProvider";
 
 const mediaQueryMock = vi.hoisted(() => vi.fn());
 

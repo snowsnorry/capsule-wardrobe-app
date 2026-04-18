@@ -12,7 +12,7 @@ vi.mock("react-dom/client", () => ({
 vi.mock("./App.jsx", () => ({
   default: appMock
 }));
-vi.mock("./i18n/LocaleProvider.jsx", () => ({
+vi.mock("./i18n/LocaleProvider", () => ({
   LocaleProvider: localeProviderMock
 }));
 

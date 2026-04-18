@@ -451,14 +451,15 @@ Recommended execution sequence:
 9. [x] presentational component slice: `client/src/components/StylePreferenceSelector.jsx` + `client/src/components/StylePreferenceSelector.test.jsx`
 10. [x] presentational component slice: `client/src/components/AccentColorChips.jsx` + `client/src/components/AccentColorChips.test.jsx`
 11. [x] authenticated sidebar/settings UI cluster: `client/src/components/AppSidebarShell.jsx` + `client/src/components/AppSidebarShell.test.jsx` + `client/src/components/SettingsDialog.jsx` + `client/src/components/SettingsDialog.test.jsx` + `client/src/components/ProfileFiltersSidebar.jsx` + `client/src/components/ProfileFiltersSidebar.test.jsx`
-12. [ ] grouped app chrome/navigation cluster
-13. [ ] shared modules that are safe under current runtime constraints
-14. [ ] server TS bootstrap/scripts
-15. [ ] server stores (`authStore`, `capsuleStore`, `profileStore`, `searchStore`)
-16. [ ] server DB/auth/email boundary modules
-17. [ ] server entrypoint
-18. [ ] AI/image/PDF modules
-19. [ ] final strictness cleanup
+12. [x] i18n + app chrome + lightweight screens cluster: `client/src/i18n/index.js` + `client/src/i18n/useI18n.js` + `client/src/i18n/LocaleProvider.jsx` + `client/src/i18n/LocaleProvider.test.jsx` + `client/src/i18n/useI18n.test.jsx` + `client/src/components/LocaleSwitcher.jsx` + `client/src/components/LocaleSwitcher.test.jsx` + `client/src/components/AppLauncher.jsx` + `client/src/components/AppLauncher.test.jsx` + `client/src/screens/LoadingScreen.jsx` + `client/src/screens/SignInScreen.jsx` + `client/src/screens/SignInScreen.test.jsx` + `client/src/screens/OnboardingScreen.jsx` + `client/src/screens/OnboardingScreen.test.jsx` + `client/src/screens/ProfileScreen.jsx` + `client/src/screens/ProfileScreen.test.jsx`
+13. [ ] app core/search cluster: `client/src/App.jsx` + `client/src/App.test.jsx` + `client/src/App.e2e.test.jsx` + `client/src/api/profileOptionsCache.js` + `client/src/search/searchState.js` + `client/src/search/searchState.test.js` + `client/src/search/SearchFiltersSidebar.jsx` + `client/src/screens/MainScreen.jsx` + `client/src/screens/MainScreen.test.jsx` + `client/src/screens/MainScreen.e2e.test.jsx` + `client/src/screens/SearchScreen.jsx` + `client/src/screens/SearchScreen.test.jsx` + `client/src/screens/SearchScreen.e2e.test.jsx` + `client/src/screens/StatisticsScreen.jsx` + `client/src/screens/StatisticsScreen.test.jsx`
+14. [ ] shared modules that are safe under current runtime constraints
+15. [ ] server TS bootstrap/scripts
+16. [ ] server stores (`authStore`, `capsuleStore`, `profileStore`, `searchStore`)
+17. [ ] server DB/auth/email boundary modules
+18. [ ] server entrypoint
+19. [ ] AI/image/PDF modules
+20. [ ] final strictness cleanup
 
 ---
 
@@ -771,12 +772,77 @@ Recommended execution sequence:
   - none beyond the existing non-fatal jsdom CSS parse warning from `client/src/index.css`
   - the grouped shell/settings renames required 6 exact rename-only specifier updates in direct screen consumers and mocks under the current setup (`MainScreen.jsx`, `MainScreen.test.jsx`, `MainScreen.e2e.test.jsx`, `SearchScreen.jsx`, and `StatisticsScreen.jsx`)
 - Recommended next batch:
-  - grouped app chrome/navigation cluster:
-    - `client/src/components/AppLauncher.jsx`
-    - `client/src/components/AppLauncher.test.jsx`
+  - `Batch 12 — Phase 4 i18n + app chrome + lightweight screens cluster`
+  - Primary files:
+    - `client/src/i18n/index.js`
+    - `client/src/i18n/useI18n.js`
+    - `client/src/i18n/LocaleProvider.jsx`
+    - `client/src/i18n/LocaleProvider.test.jsx`
+    - `client/src/i18n/useI18n.test.jsx`
     - `client/src/components/LocaleSwitcher.jsx`
     - `client/src/components/LocaleSwitcher.test.jsx`
-  - Reason: best next speed/safety tradeoff after the authenticated shell cluster, with shared UI chrome used across screens and predictable rename-only fallout
+    - `client/src/components/AppLauncher.jsx`
+    - `client/src/components/AppLauncher.test.jsx`
+    - `client/src/screens/LoadingScreen.jsx`
+    - `client/src/screens/SignInScreen.jsx`
+    - `client/src/screens/SignInScreen.test.jsx`
+    - `client/src/screens/OnboardingScreen.jsx`
+    - `client/src/screens/OnboardingScreen.test.jsx`
+    - `client/src/screens/ProfileScreen.jsx`
+    - `client/src/screens/ProfileScreen.test.jsx`
+  - Reason: largest safe client-only batch after Batch 11, with high leverage across i18n, provider wiring, shared chrome, and lighter screen flows without bundling `App.jsx`, `MainScreen.jsx`, `SearchScreen.jsx`, `StatisticsScreen.jsx`, and `searchState.js` into the same run
+
+### Batch 12 — Phase 4 i18n + app chrome + lightweight screens cluster
+
+- Batch name / phase: Batch 12 — Phase 4 i18n + app chrome + lightweight screens cluster
+- Exact files changed:
+  - `client/src/i18n/index.ts`
+  - `client/src/i18n/useI18n.ts`
+  - `client/src/i18n/LocaleProvider.tsx`
+  - `client/src/i18n/LocaleProvider.test.tsx`
+  - `client/src/i18n/useI18n.test.tsx`
+  - `client/src/components/LocaleSwitcher.tsx`
+  - `client/src/components/LocaleSwitcher.test.tsx`
+  - `client/src/components/AppLauncher.tsx`
+  - `client/src/components/AppLauncher.test.tsx`
+  - `client/src/screens/LoadingScreen.tsx`
+  - `client/src/screens/SignInScreen.tsx`
+  - `client/src/screens/SignInScreen.test.tsx`
+  - `client/src/screens/OnboardingScreen.tsx`
+  - `client/src/screens/OnboardingScreen.test.tsx`
+  - `client/src/screens/ProfileScreen.tsx`
+  - `client/src/screens/ProfileScreen.test.tsx`
+  - rename-only client consumer fallout in `App`, `main`, remaining screens, and tests
+  - `typescript-migration.md`
+- Commands run:
+  - `npm --workspace client run typecheck`
+  - `npm --workspace client run test`
+- Typecheck passed: yes
+- Tests passed: yes
+- `client/src/test/setup.js` had to be migrated: no
+- Type errors worked around temporarily: none
+- `any`, assertion, or suppression introduced: none
+- Newly discovered blockers:
+  - none beyond the existing non-fatal jsdom CSS parse warning from `client/src/index.css`
+  - the widened Batch 12 cluster required rename-only specifier updates across `App`, `main`, the remaining screen/tests, and already-migrated TS component tests that reference `LocaleProvider`, `AppLauncher`, `LocaleSwitcher`, `SignInScreen`, `OnboardingScreen`, or `ProfileScreen`
+- Recommended next batch:
+  - app core/search cluster:
+    - `client/src/App.jsx`
+    - `client/src/App.test.jsx`
+    - `client/src/App.e2e.test.jsx`
+    - `client/src/api/profileOptionsCache.js`
+    - `client/src/search/searchState.js`
+    - `client/src/search/searchState.test.js`
+    - `client/src/search/SearchFiltersSidebar.jsx`
+    - `client/src/screens/MainScreen.jsx`
+    - `client/src/screens/MainScreen.test.jsx`
+    - `client/src/screens/MainScreen.e2e.test.jsx`
+    - `client/src/screens/SearchScreen.jsx`
+    - `client/src/screens/SearchScreen.test.jsx`
+    - `client/src/screens/SearchScreen.e2e.test.jsx`
+    - `client/src/screens/StatisticsScreen.jsx`
+    - `client/src/screens/StatisticsScreen.test.jsx`
+  - Reason: Batch 12 intentionally widened from a tiny `AppLauncher + LocaleSwitcher` slice to a 16-file client-only cluster, and the remaining `App/search/screens` core is the next coherent client-only subsystem even though it is materially denser and larger
 
 ---
 
@@ -905,8 +971,11 @@ Use this section during execution.
 - [x] Batch 9 — Phase 3 presentational component slice (`StylePreferenceSelector`) completed successfully
 - [x] Batch 10 — Phase 3 presentational component slice (`AccentColorChips`) completed successfully
 - [x] Batch 11 — Phase 3 authenticated sidebar/settings UI cluster completed successfully
+- [x] Batch 12 — Phase 4 i18n + app chrome + lightweight screens cluster completed successfully
 - [x] Root/client TypeScript bootstrap is in place and client hybrid typecheck passes
 - [x] `client/src/test/setup.js` was reviewed and intentionally left as JS because migration was not required in Batch 1
+- [x] Batch 12 was intentionally widened from a tiny `AppLauncher + LocaleSwitcher` slice to a 16-file client-only cluster
+- [x] The `App/search/screens` core remains deferred as the next batch because it is materially denser and larger
 
 ### Newly discovered blockers
 - [ ] `shared/` is not an npm workspace package. It is imported by path from both apps, so shared-module renames have cross-workspace impact immediately.

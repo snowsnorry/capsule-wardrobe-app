@@ -2,15 +2,15 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
-import { LocaleProvider } from "../i18n/LocaleProvider.jsx";
+import { LocaleProvider } from "../i18n/LocaleProvider";
 
 const localeSwitcherMock = vi.hoisted(() => vi.fn(() => <div data-testid="locale-switcher" />));
 
-vi.mock("../components/LocaleSwitcher.jsx", () => ({
+vi.mock("../components/LocaleSwitcher", () => ({
   default: localeSwitcherMock
 }));
 
-import ProfileScreen from "./ProfileScreen.jsx";
+import ProfileScreen from "./ProfileScreen";
 
 const theme = createTheme();
 

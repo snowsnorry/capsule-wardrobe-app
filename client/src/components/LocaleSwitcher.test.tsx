@@ -9,7 +9,7 @@ vi.mock("../i18n/useI18n.js", () => ({
   useI18n: useI18nMock
 }));
 
-import LocaleSwitcher from "./LocaleSwitcher.jsx";
+import LocaleSwitcher from "./LocaleSwitcher";
 
 const theme = createTheme();
 

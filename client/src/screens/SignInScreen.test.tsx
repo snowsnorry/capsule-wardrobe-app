@@ -1,9 +1,10 @@
 import React from "react";
+import type { ComponentProps } from "react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
-import { LocaleProvider } from "../i18n/LocaleProvider.jsx";
+import { LocaleProvider } from "../i18n/LocaleProvider";
 
 const mediaQueryMock = vi.hoisted(() => vi.fn());
 const localeSwitcherMock = vi.hoisted(() => vi.fn(() => <div data-testid="locale-switcher" />));
@@ -11,13 +12,25 @@ const localeSwitcherMock = vi.hoisted(() => vi.fn(() => <div data-testid="locale
 vi.mock("@mui/material/useMediaQuery", () => ({
   default: mediaQueryMock
 }));
-vi.mock("../components/LocaleSwitcher.jsx", () => ({
+vi.mock("../components/LocaleSwitcher", () => ({
   default: localeSwitcherMock
 }));
 
-import SignInScreen from "./SignInScreen.jsx";
+import SignInScreen from "./SignInScreen";
 
 const theme = createTheme();
+
+type RenderHarnessOptions = {
+  initialStep?: ComponentProps<typeof SignInScreen>["step"];
+  initialEmail?: string;
+  initialCode?: string;
+  googleClientId?: string;
+  status?: ComponentProps<typeof SignInScreen>["status"];
+  onRequestCode?: ComponentProps<typeof SignInScreen>["onRequestCode"];
+  onVerifyCode?: ComponentProps<typeof SignInScreen>["onVerifyCode"];
+  onGoogleCredential?: ComponentProps<typeof SignInScreen>["onGoogleCredential"];
+  onResetEmail?: ComponentProps<typeof SignInScreen>["onResetEmail"];
+};
 
 function renderHarness({
   initialStep = "email",
@@ -29,7 +42,7 @@ function renderHarness({
   onVerifyCode = vi.fn(),
   onGoogleCredential = vi.fn(),
   onResetEmail = vi.fn()
-} = {}) {
+}: RenderHarnessOptions = {}) {
   function Harness() {
     const [email, setEmail] = React.useState(initialEmail);
     const [code, setCode] = React.useState(initialCode);
@@ -73,7 +86,7 @@ describe("SignInScreen", () => {
     localeSwitcherMock.mockClear();
     vi.restoreAllMocks();
     document.head.querySelectorAll('script[src="https://accounts.google.com/gsi/client"]').forEach((node) => node.remove());
-    window.google = undefined;
+    delete window.google;
   });
 
   afterEach(() => {
@@ -143,7 +156,9 @@ describe("SignInScreen", () => {
         }
       };
       queueMicrotask(() => {
-        node.onload?.();
+        if (node instanceof HTMLScriptElement) {
+          node.onload?.(new Event("load"));
+        }
       });
       return node;
     });
@@ -164,7 +179,7 @@ describe("SignInScreen", () => {
       }));
     });
 
-    const callback = initialize.mock.calls[0][0].callback;
+    const callback = initialize.mock.calls[0][0].callback as (response: { credential?: string | null }) => void;
     callback({ credential: "  google-credential  " });
     expect(onGoogleCredential).toHaveBeenCalledWith("google-credential");
   });
@@ -172,7 +187,9 @@ describe("SignInScreen", () => {
   test("google script load failure keeps email flow usable", async () => {
     const appendChildSpy = vi.spyOn(document.head, "appendChild").mockImplementation((node) => {
       queueMicrotask(() => {
-        node.onerror?.();
+        if (node instanceof HTMLScriptElement) {
+          node.onerror?.(new Event("error"));
+        }
       });
       return node;
     });

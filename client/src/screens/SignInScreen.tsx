@@ -1,19 +1,72 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type ChangeEvent, type FormEvent, type MouseEvent } from "react";
 import { Button, Divider, Link, Stack, TextField, Typography } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
-import LocaleSwitcher from "../components/LocaleSwitcher.jsx";
+import LocaleSwitcher from "../components/LocaleSwitcher";
 import { useI18n } from "../i18n/useI18n.js";
 
 const GOOGLE_GSI_SCRIPT_SRC = "https://accounts.google.com/gsi/client";
 
-function ensureGoogleScriptLoaded() {
+type GoogleCredentialResponse = {
+  credential?: string | null;
+};
+
+type GoogleAccountsId = {
+  initialize: (config: {
+    client_id: string;
+    callback: (response: GoogleCredentialResponse) => void;
+  }) => void;
+  renderButton: (
+    container: HTMLDivElement,
+    options: {
+      type: string;
+      theme: string;
+      size: string;
+      width: number;
+      text: string;
+      locale: string;
+    }
+  ) => void;
+};
+
+type SignInStatus = {
+  loading: boolean;
+  error: string;
+  infoKey: string;
+  infoParams: Record<string, unknown> | null;
+};
+
+type SignInScreenProps = {
+  step: "email" | "code";
+  email: string;
+  code: string;
+  status: SignInStatus;
+  googleClientId: string;
+  onEmailChange: (nextEmail: string) => void;
+  onCodeChange: (nextCode: string) => void;
+  onRequestCode: (event: FormEvent<HTMLFormElement> | MouseEvent<HTMLButtonElement>) => void;
+  onVerifyCode: (event: FormEvent<HTMLFormElement>) => void;
+  onGoogleCredential: (credential: string) => void;
+  onResetEmail: () => void;
+};
+
+declare global {
+  interface Window {
+    google?: {
+      accounts?: {
+        id?: GoogleAccountsId;
+      };
+    };
+  }
+}
+
+function ensureGoogleScriptLoaded(): Promise<void> {
   if (window.google?.accounts?.id) {
     return Promise.resolve();
   }
 
   return new Promise((resolve, reject) => {
-    const existing = document.querySelector(`script[src="${GOOGLE_GSI_SCRIPT_SRC}"]`);
+    const existing = document.querySelector<HTMLScriptElement>(`script[src="${GOOGLE_GSI_SCRIPT_SRC}"]`);
     if (existing) {
       if (window.google?.accounts?.id) {
         resolve();
@@ -64,13 +117,13 @@ function SignInScreen({
   onVerifyCode,
   onGoogleCredential,
   onResetEmail
-}) {
+}: SignInScreenProps) {
   const { t, locale } = useI18n();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const googleLocale = ["en", "ru"].includes(locale) ? locale : "en";
-  const googleButtonRef = useRef(null);
-  const googleCredentialHandlerRef = useRef(onGoogleCredential);
+  const googleButtonRef = useRef<HTMLDivElement | null>(null);
+  const googleCredentialHandlerRef = useRef<SignInScreenProps["onGoogleCredential"]>(onGoogleCredential);
 
   useEffect(() => {
     googleCredentialHandlerRef.current = onGoogleCredential;
@@ -181,7 +234,7 @@ function SignInScreen({
             label={t("auth.emailLabel")}
             type="email"
             value={email}
-            onChange={(event) => onEmailChange(event.target.value)}
+            onChange={(event: ChangeEvent<HTMLInputElement>) => onEmailChange(event.target.value)}
             placeholder={t("auth.emailPlaceholder")}
             required
             fullWidth
@@ -200,7 +253,7 @@ function SignInScreen({
           <TextField
             label={t("auth.emailCodeLabel")}
             value={code}
-            onChange={(event) => onCodeChange(event.target.value)}
+            onChange={(event: ChangeEvent<HTMLInputElement>) => onCodeChange(event.target.value)}
             placeholder={t("auth.emailCodePlaceholder")}
             type="tel"
             inputMode="numeric"

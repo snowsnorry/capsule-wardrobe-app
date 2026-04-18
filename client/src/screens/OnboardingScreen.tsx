@@ -1,8 +1,42 @@
 import { Button, Chip, Divider, Stack, Typography } from "@mui/material";
-import LocaleSwitcher from "../components/LocaleSwitcher.jsx";
+import LocaleSwitcher from "../components/LocaleSwitcher";
 import StylePreferenceSelector from "../components/StylePreferenceSelector";
 import { useI18n } from "../i18n/useI18n.js";
 import { translateOption } from "../i18n/index.js";
+
+type StyleOptions = {
+  core: string[];
+  aesthetics: string[];
+};
+
+type ScreenStatus = {
+  loading: boolean;
+  error: string;
+  infoKey: string;
+  infoParams: Record<string, unknown> | null;
+};
+
+type OnboardingScreenProps = {
+  onboardingStep: number;
+  styleOptions: StyleOptions;
+  occasionOptions: string[];
+  seasonOptions: string[];
+  audienceOptions: string[];
+  selectedStyleCore: string;
+  selectedStyleAesthetic: string | null;
+  selectedOccasions: string[];
+  selectedSeasons: string[];
+  selectedAudience: string;
+  status: ScreenStatus;
+  onSelectStyleCore: (value: string) => void;
+  onSelectStyleAesthetic: (value: string) => void;
+  onToggleOccasion: (value: string) => void;
+  onToggleSeason: (value: string) => void;
+  onSelectAudience: (value: string) => void;
+  onNext: () => void;
+  onBack: () => void;
+  onFinish: () => void;
+};
 
 function OnboardingScreen({
   onboardingStep,
@@ -24,7 +58,7 @@ function OnboardingScreen({
   onNext,
   onBack,
   onFinish
-}) {
+}: OnboardingScreenProps) {
   const { t, locale } = useI18n();
   return (
     <Stack spacing={3}>

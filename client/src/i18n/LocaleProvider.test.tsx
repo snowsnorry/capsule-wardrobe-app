@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
-import { LocaleProvider, useLocale } from "./LocaleProvider.jsx";
+import { LocaleProvider, useLocale } from "./LocaleProvider";
 
 const STORAGE_KEY = "locale";
 
@@ -26,7 +26,7 @@ describe("LocaleProvider", () => {
 
   test("uses stored locale when it is supported and persists updates", async () => {
     window.localStorage.setItem(STORAGE_KEY, "ru");
-    const setItemSpy = vi.spyOn(window.localStorage.__proto__, "setItem");
+    const setItemSpy = vi.spyOn(Storage.prototype, "setItem");
 
     render(
       <LocaleProvider>

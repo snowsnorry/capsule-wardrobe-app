@@ -1,17 +1,24 @@
-import { useState } from "react";
+import { useState, type MouseEvent } from "react";
 import { Box, ButtonBase, Menu, MenuItem, Stack, Typography } from "@mui/material";
 import AppsRoundedIcon from "@mui/icons-material/AppsRounded";
 import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
 import { useTheme } from "@mui/material/styles";
 import { useI18n } from "../i18n/useI18n.js";
 
-function AppLauncher({ currentApp = "capsule", onSelectApp }) {
+type AppId = "capsule" | "search" | "statistics";
+
+type AppLauncherProps = {
+  currentApp?: AppId;
+  onSelectApp?: (appId: AppId) => void;
+};
+
+function AppLauncher({ currentApp = "capsule", onSelectApp }: AppLauncherProps) {
   const { t } = useI18n();
   const theme = useTheme();
-  const [anchorEl, setAnchorEl] = useState(null);
+  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const isOpen = Boolean(anchorEl);
   const isDarkMode = theme.palette.mode === "dark";
-  const items = [
+  const items: Array<{ id: AppId; label: string; subtitle: string }> = [
     { id: "capsule", label: t("launcher.capsule"), subtitle: t("launcher.capsuleHint") },
     { id: "search", label: t("launcher.search"), subtitle: t("launcher.searchHint") },
     { id: "statistics", label: t("launcher.statistics"), subtitle: t("launcher.statisticsHint") }
@@ -21,7 +28,7 @@ function AppLauncher({ currentApp = "capsule", onSelectApp }) {
     <>
       <ButtonBase
         aria-label={t("launcher.open")}
-        onClick={(event) => setAnchorEl(event.currentTarget)}
+        onClick={(event: MouseEvent<HTMLElement>) => setAnchorEl(event.currentTarget)}
         sx={{
           borderRadius: "999px",
           px: 1.4,

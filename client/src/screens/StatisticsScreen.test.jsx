@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
-import { LocaleProvider } from "../i18n/LocaleProvider.jsx";
+import { LocaleProvider } from "../i18n/LocaleProvider";
 import { createAppTheme } from "../theme";
 
 const searchApi = vi.hoisted(() => ({
@@ -16,10 +16,10 @@ vi.mock("../api/search", () => searchApi);
 vi.mock("@mui/material/useMediaQuery", () => ({
   default: mediaQueryMock
 }));
-vi.mock("../components/AppLauncher.jsx", () => ({
+vi.mock("../components/AppLauncher", () => ({
   default: ({ currentApp }) => <div data-testid="app-launcher">{currentApp}</div>
 }));
-vi.mock("../components/LocaleSwitcher.jsx", () => ({
+vi.mock("../components/LocaleSwitcher", () => ({
   default: () => <div data-testid="locale-switcher">locale-switcher</div>
 }));
 vi.mock("../components/AccentColorChips", () => ({

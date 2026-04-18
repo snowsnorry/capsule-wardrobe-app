@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import App from "./App.jsx";
-import { LocaleProvider } from "./i18n/LocaleProvider.jsx";
+import { LocaleProvider } from "./i18n/LocaleProvider";
 
 const authApi = vi.hoisted(() => ({
   fetchCurrentUser: vi.fn(),
@@ -82,11 +82,11 @@ vi.mock("./api/profileOptionsCache.js", () => profileOptionsApi);
 vi.mock("./api/wardrobe", () => wardrobeApi);
 vi.mock("./api/capsules", () => capsulesApi);
 
-vi.mock("./screens/LoadingScreen.jsx", () => ({
+vi.mock("./screens/LoadingScreen", () => ({
   default: () => <div data-testid="loading-screen">loading-screen</div>
 }));
 
-vi.mock("./screens/SignInScreen.jsx", () => ({
+vi.mock("./screens/SignInScreen", () => ({
   default: function SignInScreenMock(props) {
     return (
       <div data-testid="sign-in-screen">
@@ -118,7 +118,7 @@ vi.mock("./screens/SignInScreen.jsx", () => ({
   }
 }));
 
-vi.mock("./screens/OnboardingScreen.jsx", () => ({
+vi.mock("./screens/OnboardingScreen", () => ({
   default: function OnboardingScreenMock(props) {
     return (
       <div data-testid="onboarding-screen">
@@ -157,7 +157,7 @@ vi.mock("./screens/MainScreen.jsx", () => ({
   }
 }));
 
-vi.mock("./screens/ProfileScreen.jsx", () => ({
+vi.mock("./screens/ProfileScreen", () => ({
   default: () => <div data-testid="profile-screen">profile-screen</div>
 }));
 

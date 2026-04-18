@@ -41,8 +41,8 @@ import { useI18n } from "../i18n/useI18n.js";
 import ClothingGridPlaceholder from "../components/ClothingGridPlaceholder";
 import { ClothingPlaceholderCard } from "../components/ClothingGridPlaceholder";
 import ClothingCard from "../components/ClothingCard";
-import LocaleSwitcher from "../components/LocaleSwitcher.jsx";
-import AppLauncher from "../components/AppLauncher.jsx";
+import LocaleSwitcher from "../components/LocaleSwitcher";
+import AppLauncher from "../components/AppLauncher";
 import AppSidebarShell from "../components/AppSidebarShell";
 import { sortWardrobeItems } from "../../../shared/wardrobeOrder.js";
 

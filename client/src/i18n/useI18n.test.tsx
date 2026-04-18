@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { LocaleProvider } from "./LocaleProvider.jsx";
+import { LocaleProvider } from "./LocaleProvider";
 import { useI18n } from "./useI18n.js";
 
 function Consumer() {

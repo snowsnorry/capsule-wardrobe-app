@@ -12,14 +12,53 @@ import {
   Stack,
   Typography
 } from "@mui/material";
-import LocaleSwitcher from "../components/LocaleSwitcher.jsx";
+import LocaleSwitcher from "../components/LocaleSwitcher";
 import AccentColorChips from "../components/AccentColorChips";
 import StylePreferenceSelector from "../components/StylePreferenceSelector";
 import { useI18n } from "../i18n/useI18n.js";
 import { translateOption } from "../i18n/index.js";
 import { buildCanonicalPatternOptions } from "../../../shared/patternOptions.js";
 
-function sortPatternOptions(patternOptions, locale) {
+type StyleOptions = {
+  core: string[];
+  aesthetics: string[];
+};
+
+type ScreenStatus = {
+  loading: boolean;
+  error: string;
+  infoKey: string;
+  infoParams: Record<string, unknown> | null;
+};
+
+type ProfileScreenProps = {
+  styleOptions: StyleOptions;
+  occasionOptions: string[];
+  seasonOptions: string[];
+  audienceOptions: string[];
+  accentColorOptions: string[];
+  patternOptions: string[];
+  selectedStyleCore: string;
+  selectedStyleAesthetic: string | null;
+  selectedOccasions: string[];
+  selectedSeasons: string[];
+  selectedAudience: string;
+  selectedAccentColor: string | null;
+  selectedPattern: string | null;
+  status: ScreenStatus;
+  onSelectStyleCore: (value: string) => void;
+  onSelectStyleAesthetic: (value: string) => void;
+  onToggleOccasion: (value: string) => void;
+  onToggleSeason: (value: string) => void;
+  onSelectAudience: (value: string) => void;
+  onSelectAccentColor: (value: string) => void;
+  onSelectPattern: (value: string) => void;
+  onSave: () => void;
+  onDelete: () => void;
+  onBack: () => void;
+};
+
+function sortPatternOptions(patternOptions: string[], locale: string) {
   return buildCanonicalPatternOptions(patternOptions).sort((left, right) => {
     if (left === "solid") {
       return -1;
@@ -60,7 +99,7 @@ function ProfileScreen({
   onSave,
   onDelete,
   onBack
-}) {
+}: ProfileScreenProps) {
   const { t, locale } = useI18n();
   const normalizedSelectedPattern = selectedPattern ?? "solid";
   const sortedPatternOptions = sortPatternOptions(patternOptions, locale);

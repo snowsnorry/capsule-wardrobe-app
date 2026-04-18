@@ -1,13 +1,13 @@
-import { useState } from "react";
+import { useState, type MouseEvent } from "react";
 import { Box, IconButton, Menu, MenuItem, Stack, Typography } from "@mui/material";
 import { useI18n } from "../i18n/useI18n.js";
 
 function LocaleSwitcher() {
   const { locale, setLocale, supportedLocales, t } = useI18n();
-  const [anchorEl, setAnchorEl] = useState(null);
+  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const isOpen = Boolean(anchorEl);
 
-  const handleOpen = (event) => {
+  const handleOpen = (event: MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
   };
 
@@ -15,7 +15,7 @@ function LocaleSwitcher() {
     setAnchorEl(null);
   };
 
-  const handleSelect = (nextLocale) => {
+  const handleSelect = (nextLocale: string) => {
     setLocale(nextLocale);
     handleClose();
   };

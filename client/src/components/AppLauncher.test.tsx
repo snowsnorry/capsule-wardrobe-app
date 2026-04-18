@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
+import type { ComponentProps } from "react";
 
 const useI18nMock = vi.hoisted(() => vi.fn());
 
@@ -9,11 +10,11 @@ vi.mock("../i18n/useI18n.js", () => ({
   useI18n: useI18nMock
 }));
 
-import AppLauncher from "./AppLauncher.jsx";
+import AppLauncher from "./AppLauncher";
 
 const theme = createTheme();
 
-function renderLauncher(props = {}) {
+function renderLauncher(props: Partial<ComponentProps<typeof AppLauncher>> = {}) {
   useI18nMock.mockReturnValue({
     t: (key) =>
       ({
@@ -27,7 +28,7 @@ function renderLauncher(props = {}) {
       }[key] || key)
   });
 
-  const defaults = {
+  const defaults: ComponentProps<typeof AppLauncher> = {
     currentApp: "capsule",
     onSelectApp: vi.fn()
   };
