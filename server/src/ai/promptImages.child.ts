@@ -6,7 +6,6 @@ import {
 } from "./promptImages.js";
 
 const PROMPT_CATEGORY_SHARP_CONCURRENCY = Number.parseInt(process.env.PROMPT_CATEGORY_SHARP_CONCURRENCY || "", 10) || 3;
-const PROMPT_CATEGORY_DOWNLOAD_CONCURRENCY = Number.parseInt(process.env.PROMPT_CATEGORY_DOWNLOAD_CONCURRENCY || "", 10) || 5;
 
 configureSharp(PROMPT_CATEGORY_SHARP_CONCURRENCY);
 

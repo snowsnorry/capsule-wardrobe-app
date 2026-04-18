@@ -1,4 +1,4 @@
-function parsePositiveInteger(value, fallback) {
+function parsePositiveInteger(value: unknown, fallback: number) {
   const parsed = Number.parseInt(String(value ?? ""), 10);
   return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
 }
@@ -7,7 +7,7 @@ const IMAGE_DOWNLOAD_CONCURRENCY = parsePositiveInteger(process.env.IMAGE_DOWNLO
 const IMAGE_WORK_MAX_CONCURRENCY = parsePositiveInteger(process.env.IMAGE_WORK_MAX_CONCURRENCY, 1);
 
 let activeImageWork = 0;
-const imageWorkQueue = [];
+const imageWorkQueue: Array<() => void> = [];
 
 function acquireImageWorkSlot() {
   if (activeImageWork < IMAGE_WORK_MAX_CONCURRENCY) {
@@ -15,7 +15,7 @@ function acquireImageWorkSlot() {
     return Promise.resolve();
   }
 
-  return new Promise((resolve) => {
+  return new Promise<void>((resolve) => {
     imageWorkQueue.push(resolve);
   });
 }
@@ -30,7 +30,7 @@ function releaseImageWorkSlot() {
   activeImageWork = Math.max(0, activeImageWork - 1);
 }
 
-async function runWithImageWorkSlot(_label, work) {
+async function runWithImageWorkSlot<T>(_label: string, work: () => Promise<T> | T): Promise<T> {
   await acquireImageWorkSlot();
 
   try {
@@ -52,14 +52,14 @@ function getProcessMemoryUsage() {
   };
 }
 
-function sumCategoryBytes(categories = []) {
+function sumCategoryBytes(categories: Array<{ buffer?: Buffer | null }> = []) {
   return categories.reduce(
     (total, entry) => total + (Buffer.isBuffer(entry?.buffer) ? entry.buffer.length : 0),
     0
   );
 }
 
-function sumImageAssetBytesById(imageAssetsById = {}) {
+function sumImageAssetBytesById(imageAssetsById: Record<string, { buffer?: Buffer | null }> = {}) {
   return Object.values(imageAssetsById).reduce(
     (total, asset) => total + (Buffer.isBuffer(asset?.buffer) ? asset.buffer.length : 0),
     0

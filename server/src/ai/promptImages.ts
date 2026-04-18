@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { existsSync } from "node:fs";
 import { readFile, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { fork as nodeFork } from "node:child_process";
 import os from "node:os";
@@ -31,16 +32,76 @@ const PDF_IMAGE_JPEG_QUALITY = 76;
 const MAX_SOURCE_IMAGE_PIXELS = Number.parseInt(process.env.MAX_SOURCE_IMAGE_PIXELS || "", 10) || 16000000;
 const REQUEST_IMAGE_WIDTH = Number.parseInt(process.env.PROMPT_IMAGE_REQUEST_WIDTH || "", 10) || 1000;
 const PROMPT_IMAGES_CHILD_TIMEOUT_MS = Number.parseInt(process.env.PROMPT_IMAGES_CHILD_TIMEOUT_MS || "", 10) || 120000;
-const PROMPT_IMAGES_CHILD_PATH = new URL("./promptImages.child.js", import.meta.url);
+const PROMPT_IMAGES_CHILD_TS_URL = new URL("./promptImages.child.ts", import.meta.url);
+const PROMPT_IMAGES_CHILD_JS_URL = new URL("./promptImages.child.js", import.meta.url);
 const PROMPT_CATEGORY_DOWNLOAD_CONCURRENCY = Number.parseInt(process.env.PROMPT_CATEGORY_DOWNLOAD_CONCURRENCY || "", 10) || 5;
 const STORAGE_IMAGES_DIR = fileURLToPath(new URL("../../../storage/images/", import.meta.url));
 const STITCHED_COLLAGE_FILENAME = "categories-stitched.jpg";
+
+type PromptImageTimings = {
+  cacheLookupMs: number;
+  networkFetchMs: number;
+  sourceInspectMs: number;
+  tileBuildMs: number;
+  collageEncodeMs: number;
+  debugSaveMs: number;
+  categoryBuildMs: number;
+  childRoundTripMs: number;
+};
+
+type PromptDebugImageCategory = {
+  category?: string;
+  mimeType?: string;
+  filename?: string;
+  totalItems?: number;
+  cachedCount?: number;
+  downloadedCount?: number;
+  skippedCount?: number;
+  items?: any[];
+  buffer?: Buffer | Uint8Array | null;
+  bufferBase64?: string;
+  file?: string;
+};
+
+type PromptDebugImageResult = {
+  cachedCount?: number;
+  downloadedCount?: number;
+  skippedCount?: number;
+  timings?: PromptImageTimings | Record<string, number>;
+  stitched?: {
+    category?: string;
+    mimeType?: string;
+    filename?: string;
+    totalItems?: number;
+    categoryCount?: number;
+    buffer?: Buffer | Uint8Array | null;
+    bufferBase64?: string;
+  } | null;
+  categories?: PromptDebugImageCategory[];
+};
+
+type PromptImagesChildMessage = {
+  normalizedItems?: any[];
+  downloadConcurrency?: number;
+};
+
+type PromptImagesFork = typeof nodeFork;
+
+function resolvePromptImagesChildUrl() {
+  return existsSync(fileURLToPath(PROMPT_IMAGES_CHILD_TS_URL))
+    ? PROMPT_IMAGES_CHILD_TS_URL
+    : PROMPT_IMAGES_CHILD_JS_URL;
+}
+
+function getPromptImagesChildExecArgv(childUrl: URL) {
+  return fileURLToPath(childUrl).endsWith(".ts") ? [...process.execArgv] : [];
+}
 
 function nowMs() {
   return Date.now();
 }
 
-function createPromptImageTimings() {
+function createPromptImageTimings(): PromptImageTimings {
   return {
     cacheLookupMs: 0,
     networkFetchMs: 0,
@@ -53,7 +114,7 @@ function createPromptImageTimings() {
   };
 }
 
-function addTiming(timings, key, startedAt) {
+function addTiming(timings: PromptImageTimings | Record<string, number> | null | undefined, key: string, startedAt: number) {
   if (!timings || !key || !Number.isFinite(startedAt)) {
     return;
   }
@@ -61,7 +122,7 @@ function addTiming(timings, key, startedAt) {
   timings[key] = (Number(timings[key]) || 0) + Math.max(0, nowMs() - startedAt);
 }
 
-function escapeXml(value) {
+function escapeXml(value: unknown) {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
@@ -70,7 +131,7 @@ function escapeXml(value) {
     .replaceAll("'", "&apos;");
 }
 
-function sanitizeFileName(value) {
+function sanitizeFileName(value: unknown) {
   const sanitized = String(value ?? "")
     .trim()
     .toLowerCase()
@@ -80,8 +141,8 @@ function sanitizeFileName(value) {
   return sanitized || "unknown";
 }
 
-function groupPromptImageItemsByCategory(normalizedItems = []) {
-  const groups = new Map();
+function groupPromptImageItemsByCategory(normalizedItems: any[] = []) {
+  const groups = new Map<string, any[]>();
 
   for (const item of normalizedItems) {
     const category = String(item?.category || "").trim();
@@ -104,12 +165,12 @@ function groupPromptImageItemsByCategory(normalizedItems = []) {
   return groups;
 }
 
-async function ensureCleanDirectory(outputDir) {
+async function ensureCleanDirectory(outputDir: string) {
   await rm(outputDir, { recursive: true, force: true });
   await mkdir(outputDir, { recursive: true });
 }
 
-async function mapWithConcurrency(items, concurrency, mapper) {
+async function mapWithConcurrency<T, R>(items: T[], concurrency: number, mapper: (item: T, index: number) => Promise<R> | R): Promise<R[]> {
   const results = new Array(items.length);
   let currentIndex = 0;
 
@@ -141,7 +202,7 @@ function getRequestSignal() {
   return undefined;
 }
 
-function resolveSourceImageUrl(imageUrl) {
+function resolveSourceImageUrl(imageUrl: unknown) {
   const trimmed = String(imageUrl ?? "").trim();
   if (!trimmed) {
     return "";
@@ -150,18 +211,18 @@ function resolveSourceImageUrl(imageUrl) {
   return getSafeServerFetchUrl(trimmed.replaceAll("{width}", String(REQUEST_IMAGE_WIDTH)));
 }
 
-function getOriginalImageUrl(imageUrl) {
+function getOriginalImageUrl(imageUrl: unknown) {
   return String(imageUrl ?? "").trim();
 }
 
-function buildLocalImageCachePath(originalImageUrl) {
+function buildLocalImageCachePath(originalImageUrl: unknown) {
   const digest = createHash("sha256")
     .update(String(originalImageUrl || ""), "utf8")
     .digest("hex");
   return path.join(STORAGE_IMAGES_DIR, `${digest}.jpg`);
 }
 
-async function readImageFromLocalCache(imageUrl) {
+async function readImageFromLocalCache(imageUrl: unknown) {
   const originalImageUrl = getOriginalImageUrl(imageUrl);
   if (!originalImageUrl) {
     return null;
@@ -185,7 +246,7 @@ async function readImageFromLocalCache(imageUrl) {
   }
 }
 
-function createSharpPipeline(buffer, { autoRotate = true } = {}) {
+function createSharpPipeline(buffer: Buffer | Uint8Array | string, { autoRotate = true }: { autoRotate?: boolean } = {}) {
   const pipeline = sharp(buffer, {
     failOn: "none",
     limitInputPixels: MAX_SOURCE_IMAGE_PIXELS
@@ -198,7 +259,7 @@ function createSharpPipeline(buffer, { autoRotate = true } = {}) {
   return pipeline;
 }
 
-async function normalizeDownloadedImage(buffer) {
+async function normalizeDownloadedImage(buffer: Buffer | Uint8Array) {
   const pipeline = createSharpPipeline(buffer);
   const metadata = await pipeline.metadata().catch(() => ({}));
   const normalizedBuffer = await pipeline
@@ -213,12 +274,12 @@ async function normalizeDownloadedImage(buffer) {
   return {
     buffer: normalizedBuffer,
     mimeType: "image/jpeg",
-    width: Number(metadata?.width) || null,
-    height: Number(metadata?.height) || null
+    width: Number((metadata as any)?.width) || null,
+    height: Number((metadata as any)?.height) || null
   };
 }
 
-async function buildPromptTileCompositeInput(buffer, { autoRotate = true } = {}) {
+async function buildPromptTileCompositeInput(buffer: Buffer | Uint8Array, { autoRotate = true }: { autoRotate?: boolean } = {}) {
   const { data, info } = await createSharpPipeline(buffer, { autoRotate })
     .resize(TILE_SIZE, TILE_SIZE, {
       fit: "contain",
@@ -240,7 +301,7 @@ async function buildPromptTileCompositeInput(buffer, { autoRotate = true } = {})
   };
 }
 
-async function downloadProductImageAsset(item) {
+async function downloadProductImageAsset(item: any) {
   const id = String(item?.id ?? "");
   const originalImageUrl = getOriginalImageUrl(item?.image_url);
   const imageUrl = resolveSourceImageUrl(item?.image_url);
@@ -277,8 +338,8 @@ async function downloadProductImageAsset(item) {
         mimeType: cachedImage.mimeType,
         buffer: cachedImage.buffer,
         originalMimeType: cachedImage.mimeType,
-        width: Number(metadata?.width) || null,
-        height: Number(metadata?.height) || null
+        width: Number((metadata as any)?.width) || null,
+        height: Number((metadata as any)?.height) || null
       };
     }
 
@@ -339,7 +400,7 @@ async function downloadProductImageAsset(item) {
   }
 }
 
-async function downloadPromptImageAsset(item, timings = null) {
+async function downloadPromptImageAsset(item: any, timings: PromptImageTimings | null = null) {
   const id = String(item?.id ?? "");
   const originalImageUrl = getOriginalImageUrl(item?.image_url);
   const imageUrl = resolveSourceImageUrl(item?.image_url);
@@ -379,8 +440,8 @@ async function downloadPromptImageAsset(item, timings = null) {
         reason: null,
         mimeType: cachedImage.mimeType,
         buffer: cachedImage.buffer,
-        width: Number(metadata?.width) || null,
-        height: Number(metadata?.height) || null
+        width: Number((metadata as any)?.width) || null,
+        height: Number((metadata as any)?.height) || null
       };
     }
 
@@ -412,8 +473,8 @@ async function downloadPromptImageAsset(item, timings = null) {
       reason: null,
       mimeType: String(response.headers.get("content-type") || "").toLowerCase() || "application/octet-stream",
       buffer: sourceBuffer,
-      width: Number(metadata?.width) || null,
-      height: Number(metadata?.height) || null
+      width: Number((metadata as any)?.width) || null,
+      height: Number((metadata as any)?.height) || null
     };
   } catch (error) {
     const reason = error?.name === "TimeoutError"
@@ -446,7 +507,7 @@ async function downloadPromptImageAsset(item, timings = null) {
   }
 }
 
-async function downloadProductImageAssets(items = []) {
+async function downloadProductImageAssets(items: any[] = []) {
   const downloadResults = await mapWithConcurrency(
     items,
     IMAGE_DOWNLOAD_CONCURRENCY,
@@ -468,7 +529,7 @@ async function downloadProductImageAssets(items = []) {
   );
 }
 
-function createCategoryOverlaySvg(category, entries) {
+function createCategoryOverlaySvg(category: string, entries: any[]) {
   const width = GRID_WIDTH;
   const height = HEADER_HEIGHT + GRID_HEIGHT;
   const parts = [
@@ -521,6 +582,10 @@ async function buildCategoryImage({
   category,
   entries,
   timings = null
+}: {
+  category: string;
+  entries: any[];
+  timings?: PromptImageTimings | null;
 }) {
   const composites = [];
   const manifestEntries = [];
@@ -608,6 +673,9 @@ async function buildCategoryImage({
 async function createIntermediateCollageDirectory({
   debugOutputDir = null,
   saveDebugArtifacts = false
+}: {
+  debugOutputDir?: string | URL | null;
+  saveDebugArtifacts?: boolean;
 } = {}) {
   if (saveDebugArtifacts) {
     if (!debugOutputDir) {
@@ -632,7 +700,7 @@ async function createIntermediateCollageDirectory({
   };
 }
 
-function stripCategoryBuffer(category = {}) {
+function stripCategoryBuffer(category: PromptDebugImageCategory = {}) {
   return {
     category: category?.category ?? "",
     mimeType: category?.mimeType ?? "image/jpeg",
@@ -645,7 +713,7 @@ function stripCategoryBuffer(category = {}) {
   };
 }
 
-async function stitchCategoryImagesVertically(categories = []) {
+async function stitchCategoryImagesVertically(categories: Array<PromptDebugImageCategory & { file?: string }> = []) {
   const validCategories = categories.filter((category) => typeof category?.file === "string" && category.file.length > 0);
   if (validCategories.length === 0) {
     return null;
@@ -658,8 +726,8 @@ async function stitchCategoryImagesVertically(categories = []) {
     });
     const info = await image.metadata().catch(() => ({}));
     return {
-      width: Number(info?.width) || 0,
-      height: Number(info?.height) || 0
+      width: Number((info as any)?.width) || 0,
+      height: Number((info as any)?.height) || 0
     };
   }));
 
@@ -707,7 +775,21 @@ async function stitchCategoryImagesVertically(categories = []) {
   };
 }
 
-async function saveDebugArtifacts({ categories, stitched = null, cachedCount, downloadedCount, skippedCount, debugOutputDir }) {
+async function saveDebugArtifacts({
+  categories,
+  stitched = null,
+  cachedCount,
+  downloadedCount,
+  skippedCount,
+  debugOutputDir
+}: {
+  categories: Array<PromptDebugImageCategory & { file?: string }>;
+  stitched?: any;
+  cachedCount: number;
+  downloadedCount: number;
+  skippedCount: number;
+  debugOutputDir: string | URL | null;
+}) {
   if (!debugOutputDir) {
     throw new Error("debugOutputDir is required when saveDebugArtifacts is enabled");
   }
@@ -765,7 +847,11 @@ async function buildPromptDebugImages({
   normalizedItems = [],
   debugOutputDir = null,
   saveDebugArtifacts: shouldSaveDebugArtifacts = false
-}) {
+}: {
+  normalizedItems?: any[];
+  debugOutputDir?: string | URL | null;
+  saveDebugArtifacts?: boolean;
+} = {}) {
   const groupedItems = groupPromptImageItemsByCategory(normalizedItems);
   const categories = [];
   let cachedCount = 0;
@@ -841,6 +927,11 @@ async function buildPromptDebugImagesForCategory({
   items = [],
   downloadConcurrency = IMAGE_DOWNLOAD_CONCURRENCY,
   timings = null
+}: {
+  category?: string;
+  items?: any[];
+  downloadConcurrency?: number;
+  timings?: PromptImageTimings | null;
 } = {}) {
   const categoryStartedAt = nowMs();
   const categorySlug = sanitizeFileName(category);
@@ -896,7 +987,7 @@ async function buildPromptDebugImagesForCategory({
   };
 }
 
-function serializePromptDebugImagesForIpc(result = {}) {
+function serializePromptDebugImagesForIpc(result: PromptDebugImageResult = {}) {
   return {
     cachedCount: Number(result?.cachedCount) || 0,
     downloadedCount: Number(result?.downloadedCount) || 0,
@@ -936,7 +1027,7 @@ function serializePromptDebugImagesForIpc(result = {}) {
   };
 }
 
-function normalizeIpcBuffer(value) {
+function normalizeIpcBuffer(value: unknown) {
   if (Buffer.isBuffer(value)) {
     return value;
   }
@@ -948,16 +1039,16 @@ function normalizeIpcBuffer(value) {
   if (
     value
     && typeof value === "object"
-    && value.type === "Buffer"
-    && Array.isArray(value.data)
+    && (value as any).type === "Buffer"
+    && Array.isArray((value as any).data)
   ) {
-    return Buffer.from(value.data);
+    return Buffer.from((value as any).data);
   }
 
   return null;
 }
 
-function deserializePromptDebugImagesFromIpc(payload = {}) {
+function deserializePromptDebugImagesFromIpc(payload: PromptDebugImageResult = {}) {
   return {
     cachedCount: Number(payload?.cachedCount) || 0,
     downloadedCount: Number(payload?.downloadedCount) || 0,
@@ -1002,7 +1093,7 @@ function deserializePromptDebugImagesFromIpc(payload = {}) {
   };
 }
 
-function isValidPromptImagesIpcPayload(message) {
+function isValidPromptImagesIpcPayload(message: any) {
   if (!message || typeof message !== "object") {
     return false;
   }
@@ -1030,9 +1121,14 @@ async function buildPromptDebugImagesInChild({
   debugOutputDir = null,
   saveDebugArtifacts: shouldSaveDebugArtifacts = false,
   forkImpl = nodeFork
+}: {
+  normalizedItems?: any[];
+  debugOutputDir?: string | URL | null;
+  saveDebugArtifacts?: boolean;
+  forkImpl?: PromptImagesFork;
 } = {}) {
   const childRoundTripStartedAt = nowMs();
-  const result = await buildPromptDebugImagesAllInChild({
+  const result: PromptDebugImageResult = await buildPromptDebugImagesAllInChild({
     normalizedItems,
     forkImpl
   });
@@ -1070,11 +1166,15 @@ async function buildPromptDebugImagesInChild({
 async function buildPromptDebugImagesAllInChild({
   normalizedItems = [],
   forkImpl = nodeFork
+}: {
+  normalizedItems?: any[];
+  forkImpl?: PromptImagesFork;
 } = {}) {
-  return new Promise((resolve, reject) => {
-    const child = forkImpl(fileURLToPath(PROMPT_IMAGES_CHILD_PATH), {
+  return new Promise<PromptDebugImageResult>((resolve, reject) => {
+    const childUrl = resolvePromptImagesChildUrl();
+    const child = forkImpl(fileURLToPath(childUrl), {
       stdio: ["ignore", "inherit", "inherit", "ipc"],
-      execArgv: []
+      execArgv: getPromptImagesChildExecArgv(childUrl)
     });
     let settled = false;
     let childExited = false;
@@ -1093,7 +1193,7 @@ async function buildPromptDebugImagesAllInChild({
       child.removeListener("exit", onExit);
     }
 
-    function resolveOnce(value) {
+    function resolveOnce(value: PromptDebugImageResult) {
       if (settled) {
         return;
       }
@@ -1102,7 +1202,7 @@ async function buildPromptDebugImagesAllInChild({
       resolve(value);
     }
 
-    function rejectOnce(error) {
+    function rejectOnce(error: Error) {
       if (settled) {
         return;
       }
@@ -1111,7 +1211,7 @@ async function buildPromptDebugImagesAllInChild({
       reject(error);
     }
 
-    function onMessage(message) {
+    function onMessage(message: any) {
       if (message?.ok === true) {
         if (!isValidPromptImagesIpcPayload(message)) {
           rejectOnce(new Error("prompt_images_child_invalid_payload"));
@@ -1131,11 +1231,11 @@ async function buildPromptDebugImagesAllInChild({
       }
     }
 
-    function onError(error) {
+    function onError(error: Error) {
       rejectOnce(error);
     }
 
-    function onExit(code, signal) {
+    function onExit(code: number | null, signal: NodeJS.Signals | null) {
       childExited = true;
       if (!settled) {
         rejectOnce(new Error(`prompt_images_child_exit:${code ?? "null"}:${signal ?? "null"}`));
@@ -1146,10 +1246,12 @@ async function buildPromptDebugImagesAllInChild({
     child.on("error", onError);
     child.on("exit", onExit);
 
-    child.send({
+    const message: PromptImagesChildMessage = {
       normalizedItems,
       downloadConcurrency: PROMPT_CATEGORY_DOWNLOAD_CONCURRENCY
-    }, (error) => {
+    };
+
+    child.send(message, (error: Error | null) => {
       if (error && !childExited) {
         rejectOnce(error);
       }
@@ -1157,7 +1259,7 @@ async function buildPromptDebugImagesAllInChild({
   });
 }
 
-async function preparePdfImageAsset(imageAsset, { width, height } = {}) {
+async function preparePdfImageAsset(imageAsset: any, { width, height }: { width?: number; height?: number } = {}) {
   if (!imageAsset?.buffer) {
     return null;
   }
@@ -1186,13 +1288,13 @@ async function preparePdfImageAsset(imageAsset, { width, height } = {}) {
     kind: "jpg",
     preparedForPdf: true,
     imageUrl: imageAsset.imageUrl || "",
-    width: Number(metadata?.width) || null,
-    height: Number(metadata?.height) || null
+    width: Number((metadata as any)?.width) || null,
+    height: Number((metadata as any)?.height) || null
   };
 }
 
-async function preparePdfImageAssets(imageAssetsById = {}, targetSize) {
-  const entries = Object.entries(imageAssetsById).filter(([, asset]) => asset?.buffer);
+async function preparePdfImageAssets(imageAssetsById: Record<string, any> = {}, targetSize?: { width?: number; height?: number }) {
+  const entries = Object.entries(imageAssetsById).filter(([, asset]) => (asset as any)?.buffer);
   const preparedEntries = await mapWithConcurrency(entries, IMAGE_DOWNLOAD_CONCURRENCY, async ([id, asset]) => {
     const prepared = await preparePdfImageAsset(asset, targetSize);
     return prepared ? [id, prepared] : null;

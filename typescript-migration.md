@@ -1264,8 +1264,51 @@ After every completed batch, append a short entry with:
   - `npm run test:shared` requires escalation in this sandbox because `tsx` creates an IPC pipe outside the default sandbox allowance
   - `server/src/index.js`, `server/src/ai/*`, and `server/src/wardrobePdf*` remain deferred high-risk surfaces after the shared cluster
 - Recommended next batch:
-  - `server/src/index.test.ts`
-  - request/response boundary typing only if it stays out of `server/src/index.js`, `server/src/ai/*`, and `wardrobePdf*`
+  - `server/src/ai/imagePipeline.ts`
+  - `server/src/ai/sharpConfig.ts`
+  - `server/src/ai/promptImages.ts`
+  - `server/src/ai/promptImages.child.ts`
+  - implementation-centered prompt/image child-process runtime migration before `server/src/index.js` or `server/src/index.test.ts`
+
+### Batch 17D — Phase 8 prompt/image child-process runtime cluster
+- Batch name / phase:
+  - Batch 17D — Phase 8 prompt/image child-process runtime cluster
+- Exact files changed:
+  - `server/src/ai/imagePipeline.ts` (renamed from `server/src/ai/imagePipeline.js`)
+  - `server/src/ai/sharpConfig.ts` (renamed from `server/src/ai/sharpConfig.js`)
+  - `server/src/ai/promptImages.ts` (renamed from `server/src/ai/promptImages.js`)
+  - `server/src/ai/promptImages.child.ts` (renamed from `server/src/ai/promptImages.child.js`)
+  - `typescript-migration.md`
+- Commands run:
+  - `npm --workspace server run typecheck`
+  - `npm --workspace server run test -- src/imagePipeline.test.js` (initial workspace-script attempt ran the full suite and exposed shared-cache interference across my parallel validation sessions)
+  - `npm --workspace server run test -- src/promptImages.child.test.js` (same script-level caveat)
+  - `npm --workspace server run test -- src/promptImages.test.js` (same script-level caveat)
+  - `npx tsx --test src/imagePipeline.test.js`
+  - `npx tsx --test src/promptImages.child.test.js`
+  - `npx tsx --test src/promptImages.test.js`
+  - `npm --workspace server run build`
+- Typecheck passed: yes
+- Tests passed: yes
+- Build passed: yes
+- `client/src/test/setup.js` had to be migrated: no
+- Type errors worked around temporarily:
+  - none
+- `any`, assertion, or suppression introduced:
+  - no `@ts-ignore` or `@ts-expect-error`
+  - narrow local `any`-typed IPC/category payload surfaces in `server/src/ai/promptImages.ts` to avoid over-modeling heterogeneous child-process and image metadata shapes in this batch
+  - narrow `(metadata as any)` reads at `sharp().metadata()` boundaries in `server/src/ai/promptImages.ts`
+- Newly discovered blockers:
+  - source-mode TS child execution required a targeted compatibility pattern: resolve the prompt-image child entry to `.ts` when present and preserve `process.execArgv` only for TS child launches
+  - the workspace `npm --workspace server run test -- ...` wrapper appends extra paths onto the existing `tsx --test src/*.test.js src/*.test.ts` script, so isolated server validation is more reliable through direct `npx tsx --test ...` invocation for this stage
+  - running multiple prompt-image test sessions in parallel can contaminate the shared local image cache under `storage/images/`; isolated sequential runs are the correct validation path for this subsystem
+  - `server/src/wardrobePdf.js` and `server/src/wardrobePdf.child.js` still have the same child-process runtime constraint and can reuse this batch's entry-resolution pattern later
+- Recommended next batch:
+  - `server/src/ai/capsuleEvents.js`
+  - `server/src/ai/llm.js`
+  - `server/src/ai/ai.js`
+  - `server/src/ai/regenerateSelected.js`
+  - optionally `server/src/ai/outfitSetImages.js` if the AI orchestration batch remains coherent after a fresh import-graph check
 
 ### Deferred decisions
 - [ ] Whether server TS should use emitted build output only, or a TS runtime in dev
