@@ -35,7 +35,7 @@ vi.mock("../components/ClothingGridPlaceholder", () => ({
     <div data-testid={`placeholder-card-${placeholderKey}`} />
   )
 }));
-vi.mock("../components/ClothingCard.jsx", () => ({
+vi.mock("../components/ClothingCard", () => ({
   default: ({ item, onToggleSelected }) => (
     <button
       type="button"

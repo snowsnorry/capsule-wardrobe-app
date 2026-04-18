@@ -1,9 +1,28 @@
 import { Box, Chip, IconButton, Link as MuiLink, Stack, Typography } from "@mui/material";
 import ThumbDownAltOutlinedIcon from "@mui/icons-material/ThumbDownAltOutlined";
+import type { MouseEvent, ReactElement } from "react";
 import { useI18n } from "../i18n/useI18n.js";
 import { formatProductLabel } from "../utils/productLabel.js";
-import ProductLabelText from "./ProductLabelText.jsx";
+import ProductLabelText from "./ProductLabelText";
 import { getSafeHttpUrl } from "../../../shared/urlSecurity.js";
+
+type ClothingCardItem = {
+  id?: string | null;
+  name?: string | null;
+  category?: string | null;
+  image_url?: string | null;
+  url?: string | null;
+  audience?: string | null;
+};
+
+type ClothingCardProps = {
+  item: ClothingCardItem;
+  isSelectable?: boolean;
+  isSelected?: boolean;
+  isRegenerating?: boolean;
+  onToggleSelected?: (item: ClothingCardItem) => void;
+  isMobile?: boolean;
+};
 
 function ClothingCard({
   item,
@@ -12,7 +31,7 @@ function ClothingCard({
   isRegenerating = false,
   onToggleSelected,
   isMobile = false
-}) {
+}: ClothingCardProps): ReactElement {
   const { t } = useI18n();
   const imageUrl = getSafeHttpUrl(item?.image_url);
   const productUrl = getSafeHttpUrl(item?.url);
@@ -20,7 +39,7 @@ function ClothingCard({
   const categoryLabel = item?.category ? t(`options.categories.${item.category}`) : "";
   const showToggleButton = isMobile || isSelected;
 
-  const handleToggleSelected = (event) => {
+  const handleToggleSelected = (event: MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
     event.stopPropagation();
     if (!isRegenerating && typeof onToggleSelected === "function") {
@@ -199,7 +218,7 @@ function ClothingCard({
           sx={{ position: "absolute", top: 12, left: 12, zIndex: 1 }}
         >
           <Chip
-            label={categoryLabel || item.category}
+            label={categoryLabel || item.category || ""}
             size="small"
             sx={{
               textTransform: "uppercase",

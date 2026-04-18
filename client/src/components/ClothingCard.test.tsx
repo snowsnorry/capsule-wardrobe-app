@@ -1,18 +1,19 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
+import type { ComponentProps } from "react";
 
 vi.mock("../i18n/useI18n.js", () => ({
   useI18n: () => ({
-    t: (key) => key
+    t: (key: string) => key
   })
 }));
 
-import ClothingCard from "./ClothingCard.jsx";
+import ClothingCard from "./ClothingCard";
 
 const theme = createTheme();
 
-const item = {
+const item: ComponentProps<typeof ClothingCard>["item"] = {
   id: "item-1",
   name: "Red Jacket",
   category: "outerwear",
@@ -20,7 +21,7 @@ const item = {
   url: "https://example.com/products/red-jacket"
 };
 
-function renderCard(props = {}) {
+function renderCard(props: Partial<ComponentProps<typeof ClothingCard>> = {}) {
   return render(
     <ThemeProvider theme={theme}>
       <ClothingCard item={item} {...props} />
@@ -78,7 +79,7 @@ describe("ClothingCard", () => {
     renderCard();
 
     const link = screen.getByRole("link", { name: /Red Jacket/ });
-    const image = screen.getByRole("img", { name: item.name });
+    const image = screen.getByRole("img", { name: item.name ?? "" });
 
     expect(link).toHaveAttribute("href", item.url);
     expect(link).toHaveAttribute("target", "_blank");
@@ -98,7 +99,7 @@ describe("ClothingCard", () => {
     });
 
     expect(screen.queryByRole("link", { name: /Red Jacket/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole("img", { name: item.name })).not.toBeInTheDocument();
+    expect(screen.queryByRole("img", { name: item.name ?? "" })).not.toBeInTheDocument();
     expect(screen.getAllByText("Red Jacket").length).toBeGreaterThan(0);
   });
 

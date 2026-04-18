@@ -1,7 +1,20 @@
 import { Box } from "@mui/material";
+import type { SxProps, Theme } from "@mui/material/styles";
 import { getProductLabelParts } from "../utils/productLabel.js";
 
-function ProductLabelText({ item, fallbackLabel = "", suffixSx = {} }) {
+type ProductLabelItem = Parameters<typeof getProductLabelParts>[0];
+
+type ProductLabelTextProps = {
+  item: ProductLabelItem;
+  fallbackLabel?: string;
+  suffixSx?: SxProps<Theme>;
+};
+
+function ProductLabelText({
+  item,
+  fallbackLabel = "",
+  suffixSx = {}
+}: ProductLabelTextProps) {
   const { baseLabel, suffixLabel } = getProductLabelParts(item, fallbackLabel);
   if (!suffixLabel) {
     return baseLabel;

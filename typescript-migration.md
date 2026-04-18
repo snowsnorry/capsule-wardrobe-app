@@ -267,6 +267,9 @@ Sequencing notes:
 - [x] The completed `theme.js` and `ClothingGridPlaceholder.jsx` renames required limited client-only rename-only fallout in `App`, `main.test.jsx`, `MainScreen.jsx`, `MainScreen` tests, and `StatisticsScreen.test.jsx`:
   - these fallout edits were limited to strict import/mock specifier updates only
   - no broader App test, i18n, search-state, or server-facing fallout was required
+- [x] The completed `ProductLabelText.jsx` and `ClothingCard.jsx` renames required limited client-only rename-only fallout in `MainScreen.jsx`, `MainScreen` tests, and `SearchScreen.jsx`:
+  - these fallout edits were limited to strict import/mock specifier updates only
+  - no `App`, API, i18n, search-state, shared, or server-facing fallout was required
 - [ ] `client/src/i18n/index.js` and `client/src/i18n/useI18n.js` are high-fanout client hubs and should follow the shared helper migration rather than precede it
 - [ ] Keep `client/src/components/LocaleSwitcher.jsx` after `client/src/i18n/useI18n.js`
 - [ ] Keep chart code and dynamic-key stats UI later in the client migration
@@ -658,6 +661,33 @@ Recommended execution sequence:
   - additional low-risk presentational components in `client/src/components/**/*`
   - Reason: the smallest safe theme/placeholder slice is complete, and the next narrow step is another low-risk presentational-only cluster before broader screens/App typing work
 
+### Batch 8 — Phase 3 presentational cluster (`ProductLabelText` + `ClothingCard`)
+
+- Batch name / phase: Batch 8 — Phase 3 presentational cluster (`ProductLabelText` + `ClothingCard`)
+- Exact files changed:
+  - `client/src/components/ProductLabelText.tsx`
+  - `client/src/components/ClothingCard.tsx`
+  - `client/src/components/ClothingCard.test.tsx`
+  - `client/src/screens/MainScreen.jsx`
+  - `client/src/screens/MainScreen.test.jsx`
+  - `client/src/screens/MainScreen.e2e.test.jsx`
+  - `client/src/screens/SearchScreen.jsx`
+  - `typescript-migration.md`
+- Commands run:
+  - `npx tsc -p client/tsconfig.json --noEmit`
+  - `npm --workspace client run test`
+- Typecheck passed: yes
+- Tests passed: yes
+- Type errors worked around temporarily: none
+- `any`, assertion, or suppression introduced: none
+- Newly discovered blockers:
+  - none beyond the existing non-fatal jsdom CSS parse warning from `client/src/index.css`
+  - the `ProductLabelText.jsx` and `ClothingCard.jsx` renames required 4 exact client-only specifier updates in `MainScreen.jsx`, `MainScreen` Vitest mocks, and `SearchScreen.jsx`
+- Recommended next batch:
+  - `client/src/components/StylePreferenceSelector.jsx`
+  - `client/src/components/StylePreferenceSelector.test.jsx`
+  - Reason: still presentational and client-only, but more coupled to i18n and screen flows than the current `ProductLabelText` + `ClothingCard` slice
+
 ---
 
 ## Subagent Guidance for Codex
@@ -781,6 +811,7 @@ Use this section during execution.
 - [x] Batch 5 — Phase 3 client API consumer cluster (`auth` + `search`) completed successfully
 - [x] Batch 6 — Phase 3 remaining client API cluster (`capsules` + `wardrobe`) completed successfully
 - [x] Batch 7 — Phase 3 low-risk presentational/theme slice completed successfully
+- [x] Batch 8 — Phase 3 presentational cluster (`ProductLabelText` + `ClothingCard`) completed successfully
 - [x] Root/client TypeScript bootstrap is in place and client hybrid typecheck passes
 - [x] `client/src/test/setup.js` was reviewed and intentionally left as JS because migration was not required in Batch 1
 
