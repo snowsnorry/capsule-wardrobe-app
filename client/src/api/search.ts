@@ -1,7 +1,14 @@
 import { API_BASE_URL } from "./config.js";
 import { getCachedJson, requestJson } from "./request";
+import type { JsonObject } from "./request";
 
-async function fetchSearchOptions({ force = false } = {}) {
+type SearchResponse = JsonObject;
+type SearchRequestPayload = Record<string, unknown>;
+type SearchFetchOptions = {
+  force?: boolean;
+};
+
+async function fetchSearchOptions({ force = false }: SearchFetchOptions = {}): Promise<SearchResponse> {
   return getCachedJson(`${API_BASE_URL}/search/options`, {
     credentials: "include",
     ttlMs: 1000,
@@ -9,7 +16,7 @@ async function fetchSearchOptions({ force = false } = {}) {
   });
 }
 
-async function fetchSavedSearch({ force = false } = {}) {
+async function fetchSavedSearch({ force = false }: SearchFetchOptions = {}): Promise<SearchResponse> {
   return getCachedJson(`${API_BASE_URL}/search/me`, {
     credentials: "include",
     ttlMs: 1000,
@@ -17,7 +24,7 @@ async function fetchSavedSearch({ force = false } = {}) {
   });
 }
 
-async function runSearch(payload) {
+async function runSearch(payload: SearchRequestPayload): Promise<SearchResponse> {
   return requestJson(`${API_BASE_URL}/search/run`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -26,7 +33,7 @@ async function runSearch(payload) {
   });
 }
 
-async function fetchSearchStats(payload) {
+async function fetchSearchStats(payload: SearchRequestPayload): Promise<SearchResponse> {
   return requestJson(`${API_BASE_URL}/search/stats`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

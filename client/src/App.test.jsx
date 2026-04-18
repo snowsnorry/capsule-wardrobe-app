@@ -79,7 +79,7 @@ const capsulesApi = vi.hoisted(() => ({
   updateCapsuleRejectedUrls: vi.fn()
 }));
 
-vi.mock("./api/auth.js", () => authApi);
+vi.mock("./api/auth", () => authApi);
 vi.mock("./api/profileOptionsCache.js", () => profileOptionsApi);
 vi.mock("./api/wardrobe.js", () => wardrobeApi);
 vi.mock("./api/capsules.js", () => capsulesApi);

@@ -230,7 +230,9 @@ Sequencing notes:
 Recommended order:
 - [x] `client/src/api/config.js`
 - [x] `client/src/api/request.js`
-- [ ] `client/src/api/auth.js`, `client/src/api/search.js`, `client/src/api/capsules.js`, `client/src/api/wardrobe.js`
+- [x] `client/src/api/auth.js`
+- [x] `client/src/api/search.js`
+- [ ] `client/src/api/capsules.js`, `client/src/api/wardrobe.js`
 - [ ] `client/src/i18n/index.js`
 - [ ] `client/src/i18n/useI18n.js`
 - [ ] `client/src/i18n/LocaleProvider.jsx`
@@ -255,6 +257,9 @@ Sequencing notes:
 - [x] The transport rename required 8 exact client-only specifier updates in direct API consumers and Vitest mocks:
   - imports in `auth.js`, `search.js`, `capsules.js`, and `wardrobe.js`
   - `vi.mock` specifiers in `auth.test.js`, `search.test.js`, `capsules.test.js`, and `wardrobe.test.js`
+- [x] The completed `auth.js` and `search.js` renames required broader client-only rename-only fallout in `App`, screens, caches, and tests:
+  - these fallout edits were limited to strict import/mock specifier updates only
+  - broader typing/refactor work in those higher-fanout files remains deferred to later batches
 - [ ] `client/src/i18n/index.js` and `client/src/i18n/useI18n.js` are high-fanout client hubs and should follow the shared helper migration rather than precede it
 - [ ] Keep `client/src/components/LocaleSwitcher.jsx` after `client/src/i18n/useI18n.js`
 - [ ] Keep chart code and dynamic-key stats UI later in the client migration
@@ -430,15 +435,17 @@ Recommended execution sequence:
 3. [x] client API base leaf: `client/src/api/config.js`
 4. [x] client-only utility leaf: `client/src/utils/productLabel.js`
 5. [x] client API transport core cluster: `client/src/api/request.js` + `client/src/api/request.test.js`
-6. [ ] client presentational components + theme
-7. [ ] client screens/search/App
-8. [ ] shared modules that are safe under current runtime constraints
-9. [ ] server TS bootstrap/scripts
-10. [ ] server stores (`authStore`, `capsuleStore`, `profileStore`, `searchStore`)
-11. [ ] server DB/auth/email boundary modules
-12. [ ] server entrypoint
-13. [ ] AI/image/PDF modules
-14. [ ] final strictness cleanup
+6. [x] client API consumer cluster: `client/src/api/auth.js` + `client/src/api/auth.test.js` + `client/src/api/search.js` + `client/src/api/search.test.js`
+7. [ ] client API cluster: `client/src/api/capsules.js` + `client/src/api/capsules.test.js` + `client/src/api/wardrobe.js` + `client/src/api/wardrobe.test.js`
+8. [ ] client presentational components + theme
+9. [ ] client screens/search/App
+10. [ ] shared modules that are safe under current runtime constraints
+11. [ ] server TS bootstrap/scripts
+12. [ ] server stores (`authStore`, `capsuleStore`, `profileStore`, `searchStore`)
+13. [ ] server DB/auth/email boundary modules
+14. [ ] server entrypoint
+15. [ ] AI/image/PDF modules
+16. [ ] final strictness cleanup
 
 ---
 
@@ -550,6 +557,41 @@ Recommended execution sequence:
   - `client/src/api/search.test.js`
   - Reason: next smallest client-only API layer cluster after the transport core, with the typed request transport now in place
 
+### Batch 5 — Phase 3 client API consumer cluster (`auth` + `search`)
+
+- Batch name / phase: Batch 5 — Phase 3 client API consumer cluster (`auth` + `search`)
+- Exact files changed:
+  - `client/src/api/auth.ts`
+  - `client/src/api/auth.test.ts`
+  - `client/src/api/search.ts`
+  - `client/src/api/search.test.ts`
+  - `client/src/api/profileOptionsCache.js`
+  - `client/src/App.jsx`
+  - `client/src/App.test.jsx`
+  - `client/src/App.e2e.test.jsx`
+  - `client/src/screens/SearchScreen.jsx`
+  - `client/src/screens/SearchScreen.test.jsx`
+  - `client/src/screens/SearchScreen.e2e.test.jsx`
+  - `client/src/screens/StatisticsScreen.jsx`
+  - `client/src/screens/StatisticsScreen.test.jsx`
+  - `typescript-migration.md`
+- Commands run:
+  - `npx tsc -p client/tsconfig.json --noEmit`
+  - `npm --workspace client run test`
+- Typecheck passed: yes
+- Tests passed: yes
+- Type errors worked around temporarily: none
+- `any`, assertion, or suppression introduced: none
+- Newly discovered blockers:
+  - none beyond the existing non-fatal jsdom CSS parse warning from `client/src/index.css`
+  - the `auth.js` and `search.js` renames required 9 exact client-only specifier updates in direct callers and Vitest mocks under the current setup
+- Recommended next batch:
+  - `client/src/api/capsules.js`
+  - `client/src/api/capsules.test.js`
+  - `client/src/api/wardrobe.js`
+  - `client/src/api/wardrobe.test.js`
+  - Reason: next smallest remaining client API cluster after the `auth` and `search` consumer batch, with transport and core consumer modules now typed
+
 ---
 
 ## Subagent Guidance for Codex
@@ -656,10 +698,10 @@ Batch 1 is complete.
   - any `server/src/*.js`
 
 Recommended next batch:
-- [ ] `client/src/api/auth.js`
-- [ ] `client/src/api/auth.test.js`
-- [ ] `client/src/api/search.js`
-- [ ] `client/src/api/search.test.js`
+- [ ] `client/src/api/capsules.js`
+- [ ] `client/src/api/capsules.test.js`
+- [ ] `client/src/api/wardrobe.js`
+- [ ] `client/src/api/wardrobe.test.js`
 
 ---
 
@@ -672,12 +714,14 @@ Use this section during execution.
 - [x] Batch 2 — Phase 3 client API config leaf completed successfully
 - [x] Batch 3 — Phase 3 client product label leaf completed successfully
 - [x] Batch 4 — Phase 3 client API transport core cluster completed successfully
+- [x] Batch 5 — Phase 3 client API consumer cluster (`auth` + `search`) completed successfully
 - [x] Root/client TypeScript bootstrap is in place and client hybrid typecheck passes
 - [x] `client/src/test/setup.js` was reviewed and intentionally left as JS because migration was not required in Batch 1
 
 ### Newly discovered blockers
 - [ ] `shared/` is not an npm workspace package. It is imported by path from both apps, so shared-module renames have cross-workspace impact immediately.
 - [ ] Explicit `.js` and `.jsx` import specifiers are widespread. Early renames of shared or server modules will create broad import churn.
+- [ ] Some client API `.js` -> `.ts` renames can also create broader client-only rename-only fallout in `App`, caches, screens, and tests; these edits are acceptable only when they are strict specifier updates with no logic or typing expansion outside the target batch.
 - [ ] Server runtime/tests currently execute under plain Node:
   - `node src/index.js`
   - `node --test src/*.test.js`
@@ -699,12 +743,13 @@ Use this section during execution.
 - [ ] `server/src/wardrobePdf.child.js`
 - [ ] `server/src/ai/*`
 - [ ] `shared/stylePreferences.js` until server TS bootstrap exists or a safe compatibility strategy is intentionally chosen
-- [ ] `client/src/App.jsx`
-- [ ] `client/src/screens/SearchScreen.jsx`
-- [ ] `client/src/screens/StatisticsScreen.jsx`
 - [ ] `client/src/search/searchState.js`
 - [ ] `client/render-server.js`
 - [ ] `client/netlify/functions/bff.js`
+
+Note:
+- [ ] `client/src/App.jsx`, `client/src/screens/SearchScreen.jsx`, and `client/src/screens/StatisticsScreen.jsx` are no longer absolute “do not touch” files because Batch 5 already required rename-only import/mock fallout there.
+- [ ] Their substantive TypeScript migration is still deferred; only strict rename-only fallout was considered in scope before their own dedicated migration batches.
 
 ### Post-Batch Log Template
 After every completed batch, append a short entry with:

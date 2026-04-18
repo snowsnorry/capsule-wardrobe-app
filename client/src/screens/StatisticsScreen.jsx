@@ -14,7 +14,7 @@ import {
 import { useTheme } from "@mui/material/styles";
 import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
 import TuneRoundedIcon from "@mui/icons-material/TuneRounded";
-import { fetchSearchOptions, fetchSearchStats } from "../api/search.js";
+import { fetchSearchOptions, fetchSearchStats } from "../api/search";
 import AppLauncher from "../components/AppLauncher.jsx";
 import LocaleSwitcher from "../components/LocaleSwitcher.jsx";
 import AppSidebarShell from "../components/AppSidebarShell.jsx";

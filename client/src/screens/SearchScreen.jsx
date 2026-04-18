@@ -19,7 +19,7 @@ import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import TuneRoundedIcon from "@mui/icons-material/TuneRounded";
 import OpenInNewRoundedIcon from "@mui/icons-material/OpenInNewRounded";
-import { fetchSavedSearch, fetchSearchOptions, runSearch } from "../api/search.js";
+import { fetchSavedSearch, fetchSearchOptions, runSearch } from "../api/search";
 import { useI18n } from "../i18n/useI18n.js";
 import { translateOption } from "../i18n/index.js";
 import AppLauncher from "../components/AppLauncher.jsx";

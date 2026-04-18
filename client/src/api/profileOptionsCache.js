@@ -1,4 +1,4 @@
-import { fetchWardrobeFilters } from "./auth.js";
+import { fetchWardrobeFilters } from "./auth";
 
 let cachedStyles = null;
 let cachedOccasions = null;

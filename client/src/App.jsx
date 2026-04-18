@@ -11,7 +11,7 @@ import {
   requestLoginCode,
   verifyLoginCode,
   signInWithGoogle
-} from "./api/auth.js";
+} from "./api/auth";
 import {
   createCapsule,
   deleteCapsule,
@@ -27,7 +27,7 @@ import {
   updateCapsuleFilters
 } from "./api/capsules.js";
 import { clearProfileOptionsCache, loadProfileOptions } from "./api/profileOptionsCache.js";
-import { clearRequestCache } from "./api/auth.js";
+import { clearRequestCache } from "./api/auth";
 import {
   deleteOutfitSetImage as requestOutfitSetImageDeletion,
   generateOutfitSetImage as requestOutfitSetImageGeneration,

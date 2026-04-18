@@ -12,7 +12,7 @@ const searchApi = vi.hoisted(() => ({
 
 const mediaQueryMock = vi.hoisted(() => vi.fn());
 
-vi.mock("../api/search.js", () => searchApi);
+vi.mock("../api/search", () => searchApi);
 vi.mock("@mui/material/useMediaQuery", () => ({
   default: mediaQueryMock
 }));

@@ -24,7 +24,7 @@ import {
   updateProfileLocale,
   deleteProfile,
   logout
-} from "./auth.js";
+} from "./auth";
 
 describe("auth api", () => {
   beforeEach(() => {

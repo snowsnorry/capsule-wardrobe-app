@@ -10,7 +10,7 @@ vi.mock("./config.js", () => ({
   API_BASE_URL: "https://api.example.test"
 }));
 
-import { fetchSavedSearch, fetchSearchOptions, fetchSearchStats, runSearch } from "./search.js";
+import { fetchSavedSearch, fetchSearchOptions, fetchSearchStats, runSearch } from "./search";
 
 describe("search api", () => {
   beforeEach(() => {
