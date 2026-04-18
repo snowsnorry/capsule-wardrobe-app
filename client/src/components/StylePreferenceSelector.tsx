@@ -1,13 +1,34 @@
 import { Chip, Stack, Typography } from "@mui/material";
+import type { TypographyProps } from "@mui/material/Typography";
 import { useI18n } from "../i18n/useI18n.js";
 import { translateOption } from "../i18n/index.js";
 
-const CORE_DISPLAY_ORDER = ["casual", "smart_casual", "formal"];
+const CORE_DISPLAY_ORDER = ["casual", "smart_casual", "formal"] as const;
 
-function sortCoreOptions(items) {
+type CoreDisplayStyle = (typeof CORE_DISPLAY_ORDER)[number];
+type StyleOption = string;
+
+type StyleOptions = {
+  core?: StyleOption[];
+  aesthetics?: StyleOption[];
+};
+
+type StylePreferenceSelectorProps = {
+  styleOptions: StyleOptions;
+  selectedStyleCore: StyleOption | null;
+  selectedStyleAesthetic: StyleOption | null;
+  onSelectStyleCore: (style: StyleOption) => void;
+  onSelectStyleAesthetic: (style: StyleOption | null) => void;
+  disabled?: boolean;
+  showSectionHeading?: boolean;
+  titleVariant?: TypographyProps["variant"];
+  bodyVariant?: TypographyProps["variant"];
+};
+
+function sortCoreOptions(items: StyleOption[]): StyleOption[] {
   return [...items].sort((left, right) => {
-    const leftIndex = CORE_DISPLAY_ORDER.indexOf(left);
-    const rightIndex = CORE_DISPLAY_ORDER.indexOf(right);
+    const leftIndex = CORE_DISPLAY_ORDER.indexOf(left as CoreDisplayStyle);
+    const rightIndex = CORE_DISPLAY_ORDER.indexOf(right as CoreDisplayStyle);
     const normalizedLeft = leftIndex === -1 ? CORE_DISPLAY_ORDER.length : leftIndex;
     const normalizedRight = rightIndex === -1 ? CORE_DISPLAY_ORDER.length : rightIndex;
 
@@ -19,7 +40,7 @@ function sortCoreOptions(items) {
   });
 }
 
-function sortAestheticOptions(items, locale) {
+function sortAestheticOptions(items: StyleOption[], locale: string): StyleOption[] {
   return [...items].sort((left, right) => (
     translateOption("styles", left, locale).localeCompare(
       translateOption("styles", right, locale),
@@ -38,7 +59,7 @@ function StylePreferenceSelector({
   showSectionHeading = true,
   titleVariant = "h5",
   bodyVariant = "body1"
-}) {
+}: StylePreferenceSelectorProps) {
   const { t, locale } = useI18n();
   const coreOptions = sortCoreOptions(styleOptions?.core || []);
   const aestheticsOptions = sortAestheticOptions(styleOptions?.aesthetics || [], locale);

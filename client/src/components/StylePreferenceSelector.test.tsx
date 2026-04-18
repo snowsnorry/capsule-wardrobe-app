@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
+import type { ComponentProps } from "react";
 
 const useI18nMock = vi.hoisted(() => vi.fn());
 
@@ -9,7 +10,7 @@ vi.mock("../i18n/useI18n.js", () => ({
   useI18n: useI18nMock
 }));
 vi.mock("../i18n/index.js", () => ({
-  translateOption: (_group, value) => ({
+  translateOption: (_group: string, value: string) => ({
     casual: "Casual",
     smart_casual: "Smart casual",
     formal: "Formal",
@@ -19,14 +20,14 @@ vi.mock("../i18n/index.js", () => ({
   }[value] || value)
 }));
 
-import StylePreferenceSelector from "./StylePreferenceSelector.jsx";
+import StylePreferenceSelector from "./StylePreferenceSelector";
 
 const theme = createTheme();
 
-function renderSelector(props = {}) {
+function renderSelector(props: Partial<ComponentProps<typeof StylePreferenceSelector>> = {}) {
   useI18nMock.mockReturnValue({
     locale: "en",
-    t: (key) => ({
+    t: (key: string) => ({
       "profile.stylesTitle": "Styles",
       "profile.stylesHint": "Choose a style",
       "profile.styleCoreTitle": "Core style",
@@ -35,7 +36,7 @@ function renderSelector(props = {}) {
     }[key] || key)
   });
 
-  const defaults = {
+  const defaults: ComponentProps<typeof StylePreferenceSelector> = {
     styleOptions: { core: ["formal", "casual"], aesthetics: ["retro", "minimalistic"] },
     selectedStyleCore: "casual",
     selectedStyleAesthetic: null,
