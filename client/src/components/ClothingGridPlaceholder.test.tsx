@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from "vitest";
 import { cleanup, render } from "@testing-library/react";
 
-import ClothingGridPlaceholder from "./ClothingGridPlaceholder.jsx";
+import ClothingGridPlaceholder from "./ClothingGridPlaceholder";
 
 describe("ClothingGridPlaceholder", () => {
   afterEach(() => {

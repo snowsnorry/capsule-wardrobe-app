@@ -38,7 +38,7 @@ import {
 import SignInScreen from "./screens/SignInScreen.jsx";
 import { useI18n } from "./i18n/useI18n.js";
 import { ACCENT_COLOR_OPTIONS } from "../../shared/accentColors.js";
-import { createAppTheme } from "./theme.js";
+import { createAppTheme } from "./theme";
 import { DEFAULT_PROFILE_LLM, DEFAULT_PROFILE_THEME } from "../../shared/profileSettings.js";
 import {
   buildDisplayWardrobeItems,

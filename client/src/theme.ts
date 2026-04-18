@@ -1,6 +1,9 @@
 import { createTheme } from "@mui/material/styles";
+import type { PaletteOptions } from "@mui/material/styles";
 
-function createPalette(mode = "light") {
+type ThemeMode = "light" | "dark";
+
+function createPalette(mode: ThemeMode = "light"): PaletteOptions {
   if (mode === "dark") {
     return {
       mode: "dark",
@@ -44,7 +47,7 @@ function createPalette(mode = "light") {
   };
 }
 
-function createAppTheme(mode = "light") {
+function createAppTheme(mode: ThemeMode = "light") {
   return createTheme({
     palette: createPalette(mode),
     typography: {

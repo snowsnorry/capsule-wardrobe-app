@@ -38,8 +38,8 @@ import FiberManualRecordRoundedIcon from "@mui/icons-material/FiberManualRecordR
 import useMediaQuery from "@mui/material/useMediaQuery";
 import ProfileFiltersSidebar from "../components/ProfileFiltersSidebar.jsx";
 import { useI18n } from "../i18n/useI18n.js";
-import ClothingGridPlaceholder from "../components/ClothingGridPlaceholder.jsx";
-import { ClothingPlaceholderCard } from "../components/ClothingGridPlaceholder.jsx";
+import ClothingGridPlaceholder from "../components/ClothingGridPlaceholder";
+import { ClothingPlaceholderCard } from "../components/ClothingGridPlaceholder";
 import ClothingCard from "../components/ClothingCard.jsx";
 import LocaleSwitcher from "../components/LocaleSwitcher.jsx";
 import AppLauncher from "../components/AppLauncher.jsx";

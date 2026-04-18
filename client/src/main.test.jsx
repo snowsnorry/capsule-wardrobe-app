@@ -47,7 +47,7 @@ describe("main entrypoint", () => {
 
 describe("theme contract", () => {
   test("exports the expected palette factory, typography, and component defaults", async () => {
-    const { createAppTheme, default: theme } = await import("./theme.js");
+    const { createAppTheme, default: theme } = await import("./theme");
     const darkTheme = createAppTheme("dark");
 
     expect(theme.palette.primary.main).toBe("#1c7c7c");

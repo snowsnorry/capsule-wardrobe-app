@@ -1,6 +1,16 @@
 import { Box } from "@mui/material";
+import type { ReactElement } from "react";
 
-function ClothingPlaceholderCard({ placeholderKey }) {
+type ClothingPlaceholderCardProps = {
+  placeholderKey: string;
+};
+
+type ClothingGridPlaceholderProps = {
+  count?: number;
+  inline?: boolean;
+};
+
+function ClothingPlaceholderCard({ placeholderKey }: ClothingPlaceholderCardProps): ReactElement {
   return (
     <Box
       key={placeholderKey}
@@ -74,7 +84,7 @@ function ClothingPlaceholderCard({ placeholderKey }) {
   );
 }
 
-function renderPlaceholderCards(count) {
+function renderPlaceholderCards(count: number): ReactElement[] {
   return Array.from({ length: count }).map((_, index) => (
     <ClothingPlaceholderCard
       key={`placeholder-${index}`}
@@ -83,7 +93,10 @@ function renderPlaceholderCards(count) {
   ));
 }
 
-function ClothingGridPlaceholder({ count = 12, inline = false }) {
+function ClothingGridPlaceholder({
+  count = 12,
+  inline = false
+}: ClothingGridPlaceholderProps): ReactElement | ReactElement[] {
   if (inline) {
     return renderPlaceholderCards(count);
   }

@@ -30,7 +30,7 @@ vi.mock("../components/ProfileFiltersSidebar.jsx", () => ({
     </div>
   )
 }));
-vi.mock("../components/ClothingGridPlaceholder.jsx", () => ({
+vi.mock("../components/ClothingGridPlaceholder", () => ({
   default: ({ count, inline }) => (
     <div data-testid={inline ? `inline-placeholder-${count}` : "loading-placeholder"} />
   ),

@@ -3,7 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import userEvent from "@testing-library/user-event";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import { LocaleProvider } from "../i18n/LocaleProvider.jsx";
-import { createAppTheme } from "../theme.js";
+import { createAppTheme } from "../theme";
 
 const searchApi = vi.hoisted(() => ({
   fetchSearchOptions: vi.fn(),
