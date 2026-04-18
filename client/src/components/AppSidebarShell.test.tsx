@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
+import type { ComponentProps } from "react";
 import { LocaleProvider } from "../i18n/LocaleProvider.jsx";
 
 const mediaQueryMock = vi.hoisted(() => vi.fn());
@@ -10,11 +11,14 @@ vi.mock("@mui/material/useMediaQuery", () => ({
   default: mediaQueryMock
 }));
 
-import AppSidebarShell from "./AppSidebarShell.jsx";
+import AppSidebarShell from "./AppSidebarShell";
 
 const theme = createTheme();
 
-function renderShell(props = {}, { layoutMode = "medium" } = {}) {
+function renderShell(
+  props: Partial<ComponentProps<typeof AppSidebarShell>> = {},
+  { layoutMode = "medium" }: { layoutMode?: "overlay" | "medium" | "large" } = {}
+) {
   mediaQueryMock.mockImplementation((query) => {
     if (String(query).includes("max-width: 1279.95px")) {
       return layoutMode === "overlay";

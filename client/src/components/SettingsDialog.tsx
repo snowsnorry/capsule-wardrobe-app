@@ -16,19 +16,63 @@ import {
   TextField,
   Typography
 } from "@mui/material";
+import type { ReactElement } from "react";
 import { useI18n } from "../i18n/useI18n.js";
 import { PROFILE_LLM_VALUES, PROFILE_THEME_VALUES } from "../../../shared/profileSettings.js";
 
-const SETTINGS_SECTIONS = ["general", "ai", "account"];
-const LANGUAGE_OPTIONS = ["en", "ru"];
+const SETTINGS_SECTIONS = ["general", "ai", "account"] as const;
+const LANGUAGE_OPTIONS = ["en", "ru"] as const;
+const PROFILE_THEME_OPTIONS = PROFILE_THEME_VALUES.filter((value): value is string => typeof value === "string");
+const PROFILE_LLM_OPTIONS = PROFILE_LLM_VALUES.filter((value): value is string => typeof value === "string");
 
-function normalizeSettingsDraft(settings = {}, fallbackEmail = "") {
+type SettingsSection = (typeof SETTINGS_SECTIONS)[number];
+type SettingsLocale = (typeof LANGUAGE_OPTIONS)[number];
+
+type SettingsProfile = {
+  fullname?: string | null;
+  email?: string | null;
+  locale?: string | null;
+  theme?: string | null;
+  llm?: string | null;
+};
+
+type SettingsDraft = {
+  fullname: string;
+  email: string;
+  locale: SettingsLocale;
+  theme: string;
+  llm: string;
+};
+
+type SettingsSavePayload = {
+  fullname: string;
+  locale: SettingsLocale;
+  theme: string;
+  llm: string;
+};
+
+type SettingsDialogProps = {
+  open: boolean;
+  settings: SettingsProfile;
+  onClose: () => void;
+  onSave: (settings: SettingsSavePayload) => Promise<void> | void;
+};
+
+function isOneOf<T extends string>(options: readonly T[], value: string | null | undefined): value is T {
+  return typeof value === "string" && options.some((option) => option === value);
+}
+
+function normalizeLocaleValue(value: string): SettingsLocale {
+  return isOneOf(LANGUAGE_OPTIONS, value) ? value : "en";
+}
+
+function normalizeSettingsDraft(settings: SettingsProfile = {}, fallbackEmail = ""): SettingsDraft {
   return {
     fullname: typeof settings.fullname === "string" ? settings.fullname : "",
     email: String(settings.email || fallbackEmail || "").trim(),
-    locale: LANGUAGE_OPTIONS.includes(settings.locale) ? settings.locale : "en",
-    theme: PROFILE_THEME_VALUES.includes(settings.theme) ? settings.theme : "system",
-    llm: PROFILE_LLM_VALUES.includes(settings.llm) ? settings.llm : "openai:gpt-5.2"
+    locale: isOneOf(LANGUAGE_OPTIONS, settings.locale) ? settings.locale : "en",
+    theme: isOneOf(PROFILE_THEME_OPTIONS, settings.theme) ? settings.theme : "system",
+    llm: isOneOf(PROFILE_LLM_OPTIONS, settings.llm) ? settings.llm : "openai:gpt-5.2"
   };
 }
 
@@ -37,13 +81,13 @@ function SettingsDialog({
   settings,
   onClose,
   onSave
-}) {
+}: SettingsDialogProps): ReactElement {
   const { t } = useI18n();
   const initialDraft = useMemo(
     () => normalizeSettingsDraft(settings, settings?.email),
     [settings]
   );
-  const [activeSection, setActiveSection] = useState("general");
+  const [activeSection, setActiveSection] = useState<SettingsSection>("general");
   const [draft, setDraft] = useState(initialDraft);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
@@ -60,7 +104,7 @@ function SettingsDialog({
 
   const hasChanges = JSON.stringify(draft) !== JSON.stringify(initialDraft);
 
-  const handleDraftChange = (key, value) => {
+  const handleDraftChange = <Key extends keyof SettingsDraft>(key: Key, value: SettingsDraft[Key]) => {
     setDraft((current) => ({ ...current, [key]: value }));
   };
 
@@ -86,13 +130,13 @@ function SettingsDialog({
       });
       onClose();
     } catch (saveError) {
-      setError(saveError?.message || t("errors.generic"));
+      setError(saveError instanceof Error ? saveError.message : t("errors.generic"));
     } finally {
       setIsSaving(false);
     }
   };
 
-  const renderSectionContent = () => {
+  const renderSectionContent = (): ReactElement => {
     if (activeSection === "general") {
       return (
         <Stack spacing={2.5}>
@@ -102,7 +146,7 @@ function SettingsDialog({
             value={draft.theme}
             onChange={(event) => handleDraftChange("theme", event.target.value)}
           >
-            {PROFILE_THEME_VALUES.map((value) => (
+            {PROFILE_THEME_OPTIONS.map((value) => (
               <MenuItem key={value} value={value}>
                 {t(`settings.themeOptions.${value}`)}
               </MenuItem>
@@ -112,7 +156,7 @@ function SettingsDialog({
             select
             label={t("settings.fields.language")}
             value={draft.locale}
-            onChange={(event) => handleDraftChange("locale", event.target.value)}
+            onChange={(event) => handleDraftChange("locale", normalizeLocaleValue(event.target.value))}
           >
             {LANGUAGE_OPTIONS.map((value) => (
               <MenuItem key={value} value={value}>
@@ -133,7 +177,7 @@ function SettingsDialog({
             value={draft.llm}
             onChange={(event) => handleDraftChange("llm", event.target.value)}
           >
-            {PROFILE_LLM_VALUES.map((value) => (
+            {PROFILE_LLM_OPTIONS.map((value) => (
               <MenuItem key={value} value={value}>
                 {t(`settings.llmOptions.${value}`)}
               </MenuItem>
@@ -225,4 +269,5 @@ function SettingsDialog({
   );
 }
 
+export type { SettingsDialogProps, SettingsProfile, SettingsSavePayload };
 export default SettingsDialog;

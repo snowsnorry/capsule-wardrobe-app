@@ -450,14 +450,15 @@ Recommended execution sequence:
 8. [x] low-risk presentational/theme slice: `client/src/theme.js` + `client/src/components/ClothingGridPlaceholder.jsx` + `client/src/components/ClothingGridPlaceholder.test.jsx`
 9. [x] presentational component slice: `client/src/components/StylePreferenceSelector.jsx` + `client/src/components/StylePreferenceSelector.test.jsx`
 10. [x] presentational component slice: `client/src/components/AccentColorChips.jsx` + `client/src/components/AccentColorChips.test.jsx`
-11. [ ] remaining low-risk presentational components
-12. [ ] shared modules that are safe under current runtime constraints
-13. [ ] server TS bootstrap/scripts
-14. [ ] server stores (`authStore`, `capsuleStore`, `profileStore`, `searchStore`)
-15. [ ] server DB/auth/email boundary modules
-16. [ ] server entrypoint
-17. [ ] AI/image/PDF modules
-18. [ ] final strictness cleanup
+11. [x] authenticated sidebar/settings UI cluster: `client/src/components/AppSidebarShell.jsx` + `client/src/components/AppSidebarShell.test.jsx` + `client/src/components/SettingsDialog.jsx` + `client/src/components/SettingsDialog.test.jsx` + `client/src/components/ProfileFiltersSidebar.jsx` + `client/src/components/ProfileFiltersSidebar.test.jsx`
+12. [ ] grouped app chrome/navigation cluster
+13. [ ] shared modules that are safe under current runtime constraints
+14. [ ] server TS bootstrap/scripts
+15. [ ] server stores (`authStore`, `capsuleStore`, `profileStore`, `searchStore`)
+16. [ ] server DB/auth/email boundary modules
+17. [ ] server entrypoint
+18. [ ] AI/image/PDF modules
+19. [ ] final strictness cleanup
 
 ---
 
@@ -743,6 +744,40 @@ Recommended execution sequence:
   - `client/src/components/SettingsDialog.test.jsx`
   - Reason: next smallest remaining client-only component slice, with a colocated test and only one direct component consumer (`AppSidebarShell.jsx`) for rename-only fallout
 
+### Batch 11 — Phase 3 authenticated sidebar/settings UI cluster
+
+- Batch name / phase: Batch 11 — Phase 3 authenticated sidebar/settings UI cluster
+- Exact files changed:
+  - `client/src/components/AppSidebarShell.tsx`
+  - `client/src/components/AppSidebarShell.test.tsx`
+  - `client/src/components/SettingsDialog.tsx`
+  - `client/src/components/SettingsDialog.test.tsx`
+  - `client/src/components/ProfileFiltersSidebar.tsx`
+  - `client/src/components/ProfileFiltersSidebar.test.tsx`
+  - `client/src/screens/MainScreen.jsx`
+  - `client/src/screens/MainScreen.test.jsx`
+  - `client/src/screens/MainScreen.e2e.test.jsx`
+  - `client/src/screens/SearchScreen.jsx`
+  - `client/src/screens/StatisticsScreen.jsx`
+  - `typescript-migration.md`
+- Commands run:
+  - `npx tsc -p client/tsconfig.json --noEmit`
+  - `npm --workspace client run test`
+- Typecheck passed: yes
+- Tests passed: yes
+- Type errors worked around temporarily: none
+- `any`, assertion, or suppression introduced: none
+- Newly discovered blockers:
+  - none beyond the existing non-fatal jsdom CSS parse warning from `client/src/index.css`
+  - the grouped shell/settings renames required 6 exact rename-only specifier updates in direct screen consumers and mocks under the current setup (`MainScreen.jsx`, `MainScreen.test.jsx`, `MainScreen.e2e.test.jsx`, `SearchScreen.jsx`, and `StatisticsScreen.jsx`)
+- Recommended next batch:
+  - grouped app chrome/navigation cluster:
+    - `client/src/components/AppLauncher.jsx`
+    - `client/src/components/AppLauncher.test.jsx`
+    - `client/src/components/LocaleSwitcher.jsx`
+    - `client/src/components/LocaleSwitcher.test.jsx`
+  - Reason: best next speed/safety tradeoff after the authenticated shell cluster, with shared UI chrome used across screens and predictable rename-only fallout
+
 ---
 
 ## Subagent Guidance for Codex
@@ -869,6 +904,7 @@ Use this section during execution.
 - [x] Batch 8 — Phase 3 presentational cluster (`ProductLabelText` + `ClothingCard`) completed successfully
 - [x] Batch 9 — Phase 3 presentational component slice (`StylePreferenceSelector`) completed successfully
 - [x] Batch 10 — Phase 3 presentational component slice (`AccentColorChips`) completed successfully
+- [x] Batch 11 — Phase 3 authenticated sidebar/settings UI cluster completed successfully
 - [x] Root/client TypeScript bootstrap is in place and client hybrid typecheck passes
 - [x] `client/src/test/setup.js` was reviewed and intentionally left as JS because migration was not required in Batch 1
 

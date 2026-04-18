@@ -1,12 +1,58 @@
 import { Button, Chip, Divider, Stack, TextField, Typography } from "@mui/material";
+import type { ReactElement } from "react";
 import AccentColorChips from "./AccentColorChips";
 import StylePreferenceSelector from "./StylePreferenceSelector";
 import { useI18n } from "../i18n/useI18n.js";
 import { translateOption } from "../i18n/index.js";
 import { buildCanonicalPatternOptions } from "../../../shared/patternOptions.js";
 
-function sortPatternOptions(patternOptions, locale) {
-  return buildCanonicalPatternOptions(patternOptions).sort((left, right) => {
+type StyleOptions = Parameters<typeof StylePreferenceSelector>[0]["styleOptions"];
+type AccentColorOptions = Parameters<typeof AccentColorChips>[0]["options"];
+type AccentColorValue = Parameters<NonNullable<Parameters<typeof AccentColorChips>[0]["onSelect"]>>[0];
+type ProfileFilterValue = string;
+
+type ProfileFiltersStatus = {
+  loading: boolean;
+  error: string;
+  infoKey: string;
+  infoParams: Record<string, unknown> | null;
+};
+
+type ProfileFiltersSidebarProps = {
+  styleOptions: StyleOptions;
+  occasionOptions: ProfileFilterValue[];
+  seasonOptions: ProfileFilterValue[];
+  audienceOptions: ProfileFilterValue[];
+  accentColorOptions: AccentColorOptions;
+  patternOptions: ProfileFilterValue[];
+  selectedStyleCore: ProfileFilterValue | null;
+  selectedStyleAesthetic: ProfileFilterValue | null;
+  selectedOccasions: ProfileFilterValue[];
+  selectedSeasons: ProfileFilterValue[];
+  selectedAudience: ProfileFilterValue | null;
+  selectedAccentColor: AccentColorValue;
+  selectedPattern: ProfileFilterValue | null;
+  selectedText: string;
+  hasFilterChanges?: boolean;
+  status: ProfileFiltersStatus;
+  onSelectStyleCore: (value: ProfileFilterValue) => void;
+  onSelectStyleAesthetic: (value: ProfileFilterValue | null) => void;
+  onToggleOccasion: (value: ProfileFilterValue) => void;
+  onToggleSeason: (value: ProfileFilterValue) => void;
+  onSelectAudience: (value: ProfileFilterValue) => void;
+  onSelectAccentColor: (value: AccentColorValue) => void;
+  onSelectPattern: (value: ProfileFilterValue) => void;
+  onTextChange: (value: string) => void;
+  onApply: () => void;
+  onReset: () => void;
+  onSignOut?: () => void;
+  isSigningOut?: boolean;
+  isInteractionDisabled?: boolean;
+  resetLabelKey?: string;
+};
+
+function sortPatternOptions(patternOptions: ProfileFilterValue[], locale: string): ProfileFilterValue[] {
+  return buildCanonicalPatternOptions(patternOptions).map((item) => String(item)).sort((left, right) => {
     if (left === "solid") {
       return -1;
     }
@@ -52,9 +98,9 @@ function ProfileFiltersSidebar({
   isSigningOut,
   isInteractionDisabled = false,
   resetLabelKey = "filters.reset"
-}) {
+}: ProfileFiltersSidebarProps): ReactElement {
   const { t, locale } = useI18n();
-  const missingRequiredFilters = [];
+  const missingRequiredFilters: string[] = [];
 
   if (!selectedStyleCore) {
     missingRequiredFilters.push(t("filters.required.styleCore"));
@@ -257,4 +303,5 @@ function ProfileFiltersSidebar({
   );
 }
 
+export type { ProfileFiltersSidebarProps, ProfileFiltersStatus };
 export default ProfileFiltersSidebar;

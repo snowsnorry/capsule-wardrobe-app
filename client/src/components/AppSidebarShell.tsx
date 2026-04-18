@@ -17,12 +17,50 @@ import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
 import useMediaQuery from "@mui/material/useMediaQuery";
-import SettingsDialog from "./SettingsDialog.jsx";
+import type { MouseEvent, ReactElement, ReactNode } from "react";
+import type { SvgIconProps } from "@mui/material/SvgIcon";
+import SettingsDialog from "./SettingsDialog";
+import type { SettingsProfile, SettingsSavePayload } from "./SettingsDialog";
 import { useI18n } from "../i18n/useI18n.js";
 
 const SIDEBAR_COLLAPSED_STORAGE_KEY = "capsule.appSidebarCollapsed";
 
-function readSharedDesktopSidebarCollapsed() {
+type AppSidebarShellContext = {
+  currentApp: string;
+  isOverlaySidebar: boolean;
+  isLargeDesktopSidebar: boolean;
+  isMediumDesktopSidebar: boolean;
+  isSidebarOpen: boolean;
+  isSidebarCollapsed: boolean;
+  desktopSidebarWidth: number;
+  desktopSidebarRailWidth: number;
+  desktopSidebarGap: number;
+  desktopContentInset: number;
+  openSidebar: () => void;
+  closeSidebar: () => void;
+  toggleSidebar: () => void;
+  collapseSidebar: () => void;
+  expandCollapsedSidebar: () => void;
+};
+
+type AppSidebarShellSlot =
+  | ReactNode
+  | ((context: AppSidebarShellContext) => ReactNode);
+
+type AppSidebarShellProps = {
+  shellTestId?: string;
+  currentApp?: string;
+  userEmail?: string;
+  userName?: string;
+  settingsProfile?: SettingsProfile | null;
+  onSaveSettings?: (settings: SettingsSavePayload) => Promise<void> | void;
+  onSignOut?: () => void;
+  headerContent?: AppSidebarShellSlot;
+  sidebarBodyContent?: AppSidebarShellSlot;
+  children?: AppSidebarShellSlot;
+};
+
+function readSharedDesktopSidebarCollapsed(): boolean {
   if (typeof window === "undefined") {
     return false;
   }
@@ -30,7 +68,7 @@ function readSharedDesktopSidebarCollapsed() {
   return window.localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY) === "true";
 }
 
-function writeSharedDesktopSidebarCollapsed(value) {
+function writeSharedDesktopSidebarCollapsed(value: boolean): void {
   if (typeof window !== "undefined") {
     window.localStorage.setItem(
       SIDEBAR_COLLAPSED_STORAGE_KEY,
@@ -39,7 +77,7 @@ function writeSharedDesktopSidebarCollapsed(value) {
   }
 }
 
-function getUserInitials(fullname, email) {
+function getUserInitials(fullname: string, email: string): string {
   const trimmedName = String(fullname || "").trim();
   if (trimmedName) {
     const parts = trimmedName.split(/\s+/).filter(Boolean);
@@ -53,7 +91,11 @@ function getUserInitials(fullname, email) {
   return normalizedEmail ? normalizedEmail[0].toUpperCase() : "U";
 }
 
-function SidebarCollapseIcon(props) {
+function renderShellSlot(slot: AppSidebarShellSlot | undefined, context: AppSidebarShellContext): ReactNode {
+  return typeof slot === "function" ? slot(context) : slot;
+}
+
+function SidebarCollapseIcon(props: SvgIconProps): ReactElement {
   return (
     <SvgIcon {...props} viewBox="-0.5 -0.5 16 16">
       <path
@@ -95,16 +137,16 @@ function AppSidebarShell({
   headerContent,
   sidebarBodyContent,
   children
-}) {
+}: AppSidebarShellProps): ReactElement {
   const { t } = useI18n();
   const isOverlaySidebar = useMediaQuery("(max-width: 1279.95px)");
   const isLargeDesktopSidebar = useMediaQuery("(min-width: 1680px)");
   const isMediumDesktopSidebar = !isOverlaySidebar && !isLargeDesktopSidebar;
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => readSharedDesktopSidebarCollapsed());
-  const [userMenuAnchor, setUserMenuAnchor] = useState(null);
+  const [userMenuAnchor, setUserMenuAnchor] = useState<HTMLElement | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const userMenuPaperRef = useRef(null);
+  const userMenuPaperRef = useRef<HTMLDivElement | null>(null);
   const displayName = String(userName || "").trim();
   const avatarInitials = getUserInitials(displayName, userEmail);
   const desktopSidebarWidth = isSidebarCollapsed ? 72 : 296;
@@ -218,14 +260,14 @@ function AppSidebarShell({
       </Stack>
 
       <Box sx={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
-        {typeof sidebarBodyContent === "function" ? sidebarBodyContent(shellContext) : sidebarBodyContent}
+        {renderShellSlot(sidebarBodyContent, shellContext)}
       </Box>
 
       <Box sx={{ mt: "auto" }}>
         <Divider />
         <Button
           aria-label="Open user menu"
-          onClick={(event) => setUserMenuAnchor(event.currentTarget)}
+          onClick={(event: MouseEvent<HTMLElement>) => setUserMenuAnchor(event.currentTarget)}
           sx={{
             width: "100%",
             justifyContent: "flex-start",
@@ -314,8 +356,8 @@ function AppSidebarShell({
               flexDirection: "column"
             }}
           >
-            {typeof headerContent === "function" ? headerContent(shellContext) : headerContent}
-            {typeof children === "function" ? children(shellContext) : children}
+            {renderShellSlot(headerContent, shellContext)}
+            {renderShellSlot(children, shellContext)}
           </Box>
         </Box>
       </Stack>
@@ -343,7 +385,7 @@ function AppSidebarShell({
       <SettingsDialog
         open={isSettingsOpen}
         settings={{
-          ...settingsProfile,
+          ...(settingsProfile ?? {}),
           email: userEmail
         }}
         onClose={() => setIsSettingsOpen(false)}
@@ -353,4 +395,5 @@ function AppSidebarShell({
   );
 }
 
+export type { AppSidebarShellContext, AppSidebarShellProps };
 export default AppSidebarShell;

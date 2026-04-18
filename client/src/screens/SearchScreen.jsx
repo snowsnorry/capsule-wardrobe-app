@@ -25,7 +25,7 @@ import { translateOption } from "../i18n/index.js";
 import AppLauncher from "../components/AppLauncher.jsx";
 import LocaleSwitcher from "../components/LocaleSwitcher.jsx";
 import ProductLabelText from "../components/ProductLabelText";
-import AppSidebarShell from "../components/AppSidebarShell.jsx";
+import AppSidebarShell from "../components/AppSidebarShell";
 import { formatProductLabel } from "../utils/productLabel.js";
 import { buildProductDetailGroups } from "../../../shared/productDetail.js";
 import { getSafeHttpUrl } from "../../../shared/urlSecurity.js";

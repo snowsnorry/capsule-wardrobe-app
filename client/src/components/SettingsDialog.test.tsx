@@ -2,7 +2,8 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
-import SettingsDialog from "./SettingsDialog.jsx";
+import type { ComponentProps } from "react";
+import SettingsDialog from "./SettingsDialog";
 
 const useI18nMock = vi.hoisted(() => vi.fn());
 
@@ -13,19 +14,19 @@ vi.mock("../i18n/useI18n.js", () => ({
 const theme = createTheme();
 
 function createDeferred() {
-  let resolve;
-  let reject;
-  const promise = new Promise((nextResolve, nextReject) => {
-    resolve = nextResolve;
+  let resolve: () => void = () => {};
+  let reject: (reason?: unknown) => void = () => {};
+  const promise = new Promise<void>((nextResolve, nextReject) => {
+    resolve = () => nextResolve();
     reject = nextReject;
   });
 
   return { promise, resolve, reject };
 }
 
-function renderDialog(props = {}) {
+function renderDialog(props: Partial<ComponentProps<typeof SettingsDialog>> = {}) {
   useI18nMock.mockReturnValue({
-    t: (key) => {
+    t: (key: string) => {
       const labels = {
         "settings.title": "Settings",
         "settings.sections.general": "General",
@@ -59,7 +60,7 @@ function renderDialog(props = {}) {
     }
   });
 
-  const defaults = {
+  const defaults: ComponentProps<typeof SettingsDialog> = {
     open: true,
     settings: {
       fullname: "Ada Lovelace",

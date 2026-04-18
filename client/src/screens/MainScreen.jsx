@@ -36,14 +36,14 @@ import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import FiberManualRecordRoundedIcon from "@mui/icons-material/FiberManualRecordRounded";
 import useMediaQuery from "@mui/material/useMediaQuery";
-import ProfileFiltersSidebar from "../components/ProfileFiltersSidebar.jsx";
+import ProfileFiltersSidebar from "../components/ProfileFiltersSidebar";
 import { useI18n } from "../i18n/useI18n.js";
 import ClothingGridPlaceholder from "../components/ClothingGridPlaceholder";
 import { ClothingPlaceholderCard } from "../components/ClothingGridPlaceholder";
 import ClothingCard from "../components/ClothingCard";
 import LocaleSwitcher from "../components/LocaleSwitcher.jsx";
 import AppLauncher from "../components/AppLauncher.jsx";
-import AppSidebarShell from "../components/AppSidebarShell.jsx";
+import AppSidebarShell from "../components/AppSidebarShell";
 import { sortWardrobeItems } from "../../../shared/wardrobeOrder.js";
 
 function highlightMatch(name, query) {

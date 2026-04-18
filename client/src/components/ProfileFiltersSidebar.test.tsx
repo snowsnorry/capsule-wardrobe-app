@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
+import type { ComponentProps } from "react";
 
 const useI18nMock = vi.hoisted(() => vi.fn());
 
@@ -9,7 +10,7 @@ vi.mock("../i18n/useI18n.js", () => ({
   useI18n: useI18nMock
 }));
 vi.mock("../i18n/index.js", () => ({
-  translateOption: (_group, value) => ({
+  translateOption: (_group: string, value: string) => ({
     solid: "Solid",
     stripe: "Stripe",
     abstract: "Abstract",
@@ -18,12 +19,12 @@ vi.mock("../i18n/index.js", () => ({
   }[value] || value)
 }));
 
-import ProfileFiltersSidebar from "./ProfileFiltersSidebar.jsx";
+import ProfileFiltersSidebar from "./ProfileFiltersSidebar";
 
 const theme = createTheme();
 
-function renderSidebar(props = {}) {
-  const defaults = {
+function renderSidebar(props: Partial<ComponentProps<typeof ProfileFiltersSidebar>> = {}) {
+  const defaults: ComponentProps<typeof ProfileFiltersSidebar> = {
     styleOptions: { core: ["casual", "formal"], aesthetics: ["minimalistic", "retro"] },
     occasionOptions: ["office", "travel"],
     seasonOptions: ["summer", "winter"],
@@ -56,7 +57,7 @@ function renderSidebar(props = {}) {
 
   useI18nMock.mockReturnValue({
     locale: "en",
-    t: (key, params) => {
+    t: (key: string, params?: Record<string, unknown>) => {
       const labels = {
         "profile.occasionsTitle": "Occasions",
         "profile.occasionsHint": "Hint",

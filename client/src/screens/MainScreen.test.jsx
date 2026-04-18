@@ -19,7 +19,7 @@ vi.mock("../components/AppLauncher.jsx", () => ({
 vi.mock("../components/LocaleSwitcher.jsx", () => ({
   default: () => <div data-testid="locale-switcher">locale-switcher</div>
 }));
-vi.mock("../components/ProfileFiltersSidebar.jsx", () => ({
+vi.mock("../components/ProfileFiltersSidebar", () => ({
   default: ({ onApply, onReset, onSignOut, isInteractionDisabled }) => (
     <div data-testid="profile-filters-sidebar">
       <button type="button" onClick={onApply} disabled={isInteractionDisabled}>apply-filters</button>
