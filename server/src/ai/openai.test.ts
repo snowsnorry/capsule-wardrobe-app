@@ -7,9 +7,9 @@ import {
   buildResponsesInput,
   buildResponsesPayload,
   renderStyleLibraryContent
-} from "./ai/openai.js";
-import { getCapsuleCategories } from "./ai/categories.js";
-import { deserializePromptDebugImagesFromIpc } from "./ai/promptImages.js";
+} from "./openai.js";
+import { getCapsuleCategories } from "./categories.js";
+import { deserializePromptDebugImagesFromIpc } from "./promptImages.js";
 
 function assertResponsesUserContent(
   content: string | Array<

@@ -18,8 +18,8 @@ import {
   preparePdfImageAssets,
   resolveSourceImageUrl,
   serializePromptDebugImagesForIpc
-} from "./ai/promptImages.js";
-import { createBinaryResponse } from "./test/testDoubles.js";
+} from "./promptImages.js";
+import { createBinaryResponse } from "../test/testDoubles.js";
 
 function assertCategoryHasBufferProperty(
   category: unknown

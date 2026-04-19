@@ -5,7 +5,7 @@ import {
   getEnabledStyleValues,
   inferStyleSelections,
   partitionStyleValues
-} from "../../shared/stylePreferences.js";
+} from "./stylePreferences.js";
 
 test("partitionStyleValues groups known styles and appends unknown styles to aesthetics", () => {
   assert.deepEqual(

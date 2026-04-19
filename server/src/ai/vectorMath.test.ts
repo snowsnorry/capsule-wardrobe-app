@@ -4,7 +4,7 @@ import {
   buildShiftedTargetVector,
   normalizeEmbeddingVector,
   normalizeVector
-} from "./ai/vectorMath.js";
+} from "./vectorMath.js";
 
 function magnitude(vector) {
   return Math.sqrt(vector.reduce((sum, value) => sum + (value * value), 0));

@@ -3,8 +3,8 @@ import assert from "node:assert/strict";
 import {
   normalizeSwimwearSelection,
   shouldGenerateSwimwear
-} from "./ai/swimwear.js";
-import type { SwimwearCandidate } from "./ai/types.js";
+} from "./swimwear.js";
+import type { SwimwearCandidate } from "./types.js";
 
 test("shouldGenerateSwimwear returns true only when summer is present", () => {
   assert.equal(shouldGenerateSwimwear({ season: ["spring"] }), false);

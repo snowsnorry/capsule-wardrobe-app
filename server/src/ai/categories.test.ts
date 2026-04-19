@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { getCapsuleCategories } from "./ai/categories.js";
+import { getCapsuleCategories } from "./categories.js";
 
 test("getCapsuleCategories returns the base capsule for missing profile", () => {
   assert.deepEqual(getCapsuleCategories(), {

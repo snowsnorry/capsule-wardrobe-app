@@ -10,8 +10,8 @@ import {
   generateJsonWithLlm,
   sanitizeClaudeJsonSchema,
   resolveChatModel
-} from "./ai/claude.js";
-import { buildDeveloperPrompt } from "./ai/openai.js";
+} from "./claude.js";
+import { buildDeveloperPrompt } from "./openai.js";
 
 function assertClaudeImagePart(
   part: { type?: string; source?: { type?: string; media_type?: string; data?: string } }

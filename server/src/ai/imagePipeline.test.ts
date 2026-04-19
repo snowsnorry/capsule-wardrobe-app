@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { runWithImageWorkSlot } from "./ai/imagePipeline.js";
+import { runWithImageWorkSlot } from "./imagePipeline.js";
 
 test("runWithImageWorkSlot serializes image-heavy work by default", async () => {
   let active = 0;

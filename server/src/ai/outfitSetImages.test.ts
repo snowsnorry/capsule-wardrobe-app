@@ -1,11 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildPromptFromTemplate, createOutfitSetImageService } from "./ai/outfitSetImages.js";
+import { buildPromptFromTemplate, createOutfitSetImageService } from "./outfitSetImages.js";
 import {
   buildCapsuleSnapshot,
   buildNormalizedCapsuleRecord,
   buildStoredOutfitSet
-} from "./test/domainFixtures.js";
+} from "../test/domainFixtures.js";
 
 function createResponseRecorder() {
   return {

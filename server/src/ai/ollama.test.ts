@@ -4,7 +4,7 @@ import {
   createOllamaClient,
   DEFAULT_OLLAMA_CHAT_MODEL,
   DEFAULT_OLLAMA_EMBEDDING_MODEL
-} from "./ai/ollama.js";
+} from "./ollama.js";
 
 function createGenerateResponse(response: string) {
   return {

@@ -9,7 +9,7 @@ import {
   extractChunkText,
   resolveChatModel,
   splitSystemAndUserPrompt
-} from "./ai/deepinfra.js";
+} from "./deepinfra.js";
 
 function assertDeepInfraImagePart(
   part: { type?: string; image_url?: { url?: string } }

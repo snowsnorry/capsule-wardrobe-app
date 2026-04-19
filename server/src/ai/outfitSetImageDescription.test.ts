@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildOutfitSetDescription } from "./ai/outfitSetImageDescription.js";
+import { buildOutfitSetDescription } from "./outfitSetImageDescription.js";
 
 test("buildOutfitSetDescription tolerates items without type", () => {
   const description = buildOutfitSetDescription([

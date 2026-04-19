@@ -4,7 +4,7 @@ import {
   buildGeminiImagePromptParts,
   createGeminiImageClient,
   extractGeneratedImage
-} from "./ai/geminiImage.js";
+} from "./geminiImage.js";
 
 test("buildGeminiImagePromptParts creates text and inlineData parts", () => {
   assert.deepEqual(

@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import sharp from "sharp";
-import { SHARP_CONCURRENCY, configureSharp } from "./ai/sharpConfig.js";
+import { SHARP_CONCURRENCY, configureSharp } from "./sharpConfig.js";
 
 test("configureSharp disables cache and uses default or override concurrency", () => {
   const originalCache = sharp.cache;

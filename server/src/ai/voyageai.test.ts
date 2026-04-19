@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createVoyageClient, getWardrobePrompt } from "./ai/voyageai.js";
+import { createVoyageClient, getWardrobePrompt } from "./voyageai.js";
 
 test("getWardrobePrompt builds a semantic query from profile filters", () => {
   const prompt = getWardrobePrompt({

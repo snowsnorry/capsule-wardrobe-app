@@ -11,9 +11,9 @@ import {
   generateJsonWithLlm,
   resolveChatModel,
   uploadBufferToGemini
-} from "./ai/gemini.js";
-import { buildDeveloperPrompt } from "./ai/openai.js";
-import type { JsonSchemaFormat } from "./ai/types.js";
+} from "./gemini.js";
+import { buildDeveloperPrompt } from "./openai.js";
+import type { JsonSchemaFormat } from "./types.js";
 
 function assertGeminiObjectSchema(
   schema: unknown

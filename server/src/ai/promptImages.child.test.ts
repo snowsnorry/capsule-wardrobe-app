@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createPromptImagesChildRuntime } from "./ai/promptImages.child.js";
+import { createPromptImagesChildRuntime } from "./promptImages.child.js";
 
 function createSendSpy() {
   const calls = [];
