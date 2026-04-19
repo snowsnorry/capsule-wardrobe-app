@@ -4,11 +4,13 @@
 This directory contains the Express backend and server-side domain logic.
 
 Primary areas:
-- `index.js` — app/server entrypoint
-- `db.js` — database access
-- `email.js` — email sending and auth delivery behavior
-- `authStore.js` — auth/session storage logic
-- `capsuleStore.js` — capsule/domain storage logic
+- `index.ts` — app/server entrypoint
+- `db.ts` — database access
+- `email.ts` — email sending and auth delivery behavior
+- `authStore.ts` — auth/session storage logic
+- `capsuleStore.ts` — capsule/domain storage logic
+- `profileStore.ts` — profile storage logic
+- `searchStore.ts` — search-related storage logic
 - `ai/` — AI integrations and orchestration
 - `templates/` — server-side templates
 
@@ -22,8 +24,9 @@ Primary areas:
 
 ## Validation
 - `npm run test:server`
+- `npm run server:typecheck`
 
 ## First files to inspect
-- `index.js`
+- `index.ts`
 - nearest domain module
-- corresponding `*.test.js` files
+- corresponding `*.test.ts` files

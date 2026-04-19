@@ -8,13 +8,13 @@ Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, onboard
 ### 1. App startup
 - Root workspace scripts coordinate `client` and `server`
 - Frontend starts via Vite
-- Backend starts from `server/src/index.js`
+- Backend starts from `server/src/index.ts`
 
 ### 2. Authentication flow
 - UI initiates auth from the client
 - server entrypoint routes requests
-- auth/session logic lives around `authStore.js`
-- email delivery logic lives in `email.js`
+- auth/session logic lives around `authStore.ts`
+- email delivery logic lives in `email.ts`
 - auth test mode exists and should remain usable
 
 ### 3. Profile / onboarding flow
@@ -23,7 +23,7 @@ Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, onboard
 - persisted server-side behavior likely touches DB-backed modules
 
 ### 4. Capsule / wardrobe flow
-- server-side domain state likely centers on `capsuleStore.js`
+- server-side domain state likely centers on `capsuleStore.ts`
 - AI-related generation or enrichment behavior lives under `server/src/ai/`
 
 ### 5. Localization flow
@@ -35,15 +35,17 @@ Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, onboard
 ### Root
 - `package.json` — workspace definitions and top-level dev/test commands
 - `README.md` — setup, env vars, deployment notes
+- `shared/` — TypeScript shared domain models, helpers, and cross-workspace tests
 
 ### Client
 - `client/package.json`
-- `client/vite.config.js`
+- `client/tsconfig.json`
+- `client/vite.config.ts`
 - `client/render-server.js`
 - `client/netlify/functions/`
-- `client/src/App.jsx`
-- `client/src/main.jsx`
-- `client/src/theme.js`
+- `client/src/App.tsx`
+- `client/src/main.tsx`
+- `client/src/theme.ts`
 
 ### Client feature areas
 - `client/src/api/`
@@ -55,11 +57,17 @@ Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, onboard
 
 ### Server
 - `server/package.json`
-- `server/src/index.js`
-- `server/src/db.js`
-- `server/src/email.js`
-- `server/src/authStore.js`
-- `server/src/capsuleStore.js`
+- `server/tsconfig.json`
+- `server/tsconfig.build.json`
+- `server/tsconfig.test.json`
+- `server/src/index.ts`
+- `server/src/db.ts`
+- `server/src/email.ts`
+- `server/src/authStore.ts`
+- `server/src/capsuleStore.ts`
+- `server/src/profileStore.ts`
+- `server/src/searchStore.ts`
+- `server/src/serverUrlSecurity.ts`
 - `server/src/ai/`
 - `server/src/templates/`
 
@@ -70,18 +78,20 @@ Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, onboard
 - `client/src/*.e2e.test.*`
 
 ### Server tests
-- `server/src/*.test.js`
+- `server/src/*.test.ts`
+- `server/src/**/*.test.ts`
 
 ### Shared tests
 Run from root:
-- `shared/wardrobeOrder.test.js`
-- `shared/accentColors.test.js`
-- `shared/colorSwatches.test.js`
-- `shared/i18n/helpers.test.js`
-- `shared/i18n/localeParity.test.js`
+- `shared/wardrobeOrder.test.ts`
+- `shared/accentColors.test.ts`
+- `shared/colorSwatches.test.ts`
+- `shared/i18n/helpers.test.ts`
+- `shared/i18n/localeParity.test.ts`
 
 ## Invariants
 - The repo is a two-workspace monorepo: `client` and `server`
+- Shared TypeScript modules live in root `shared/` and are validated from root scripts
 - Root scripts are the canonical entrypoint for cross-workspace work
 - Localization parity matters
 - Auth test mode matters
@@ -94,3 +104,4 @@ Run from root:
 3. Inspect closest tests
 4. Make the smallest viable change
 5. Run the narrowest relevant validation
+6. Prefer `npm run typecheck` or workspace `typecheck` when changing TS types or module boundaries

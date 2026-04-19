@@ -10,8 +10,8 @@ High-level responsibilities:
 
 ## Architecture
 - Monorepo using npm workspaces
-- Frontend: React + Vite + MUI
-- Backend: Node.js + Express
+- Frontend: React + Vite + MUI + TypeScript
+- Backend: Node.js + Express + TypeScript
 - Persistence: Postgres
 - Email auth delivery: Resend
 - Netlify deployment path exists for the client with a BFF proxy
@@ -20,6 +20,7 @@ High-level responsibilities:
 ## Directory map
 - `client/` — frontend app
 - `server/` — backend app
+- `shared/` — shared TypeScript domain models, helpers, and tests
 - `client/src/api/` — HTTP client calls and API-facing logic
 - `client/src/components/` — reusable UI pieces
 - `client/src/i18n/` — localization resources and helpers
@@ -28,11 +29,11 @@ High-level responsibilities:
 - `client/src/utils/` — client utilities
 - `server/src/ai/` — AI-related integrations and orchestration
 - `server/src/templates/` — server-side templates
-- `server/src/index.js` — server entrypoint
-- `server/src/db.js` — database integration
-- `server/src/email.js` — email delivery/auth messaging
-- `server/src/authStore.js` — auth/session-related storage logic
-- `server/src/capsuleStore.js` — capsule/domain storage logic
+- `server/src/index.ts` — server entrypoint
+- `server/src/db.ts` — database integration
+- `server/src/email.ts` — email delivery/auth messaging
+- `server/src/authStore.ts` — auth/session-related storage logic
+- `server/src/capsuleStore.ts` — capsule/domain storage logic
 
 ## Commands
 Run from repository root unless stated otherwise.
@@ -52,6 +53,11 @@ Build:
 Start:
 - `npm run start`
 
+Type checking:
+- `npm run typecheck`
+- `npm run client:typecheck`
+- `npm run server:typecheck`
+
 Tests:
 - `npm test`
 - `npm run test:client`
@@ -70,13 +76,13 @@ Tests:
 
 ## Change heuristics
 For frontend tasks:
-- first inspect `client/src/App.jsx`, `client/src/screens/`, `client/src/components/`, and `client/src/api/`
+- first inspect `client/src/App.tsx`, `client/src/screens/`, `client/src/components/`, and `client/src/api/`
 
 For backend tasks:
-- first inspect `server/src/index.js` and the closest domain module (`db.js`, `email.js`, `authStore.js`, `capsuleStore.js`, or `ai/`)
+- first inspect `server/src/index.ts` and the closest domain module (`db.ts`, `email.ts`, `authStore.ts`, `capsuleStore.ts`, `profileStore.ts`, `searchStore.ts`, or `ai/`)
 
 For deployment/config tasks:
-- inspect root `package.json`, `client/netlify.toml`, `client/render-server.js`, `client/vite.config.js`, and README first
+- inspect root `package.json`, `client/netlify.toml`, `client/render-server.js`, `client/vite.config.ts`, and README first
 
 ## Validation expectations
 After edits, prefer the narrowest relevant validation first:
@@ -88,6 +94,7 @@ At minimum:
 - server-only changes: `npm run test:server`
 - shared logic changes: `npm run test:shared`
 - cross-cutting changes: `npm test`
+- TypeScript-only or contract-shape changes: run the narrowest relevant `typecheck` command
 
 ## Avoid
 - Do not invent new architecture not already present in the repo.

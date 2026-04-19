@@ -22,11 +22,12 @@ Primary areas:
 
 ## Validation
 - `npm run test:client`
+- `npm run client:typecheck`
 
 ## First files to inspect
-- `App.jsx`
+- `App.tsx`
 - `screens/`
 - `components/`
 - `api/`
 - `i18n/`
-- `theme.js`
+- `theme.ts`
