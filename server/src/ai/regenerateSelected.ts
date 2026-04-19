@@ -1,4 +1,3 @@
-// @ts-nocheck
 import crypto from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import {
@@ -42,6 +41,18 @@ import {
   toWardrobeUiItem
 } from "./ai.js";
 import { mergeWardrobeItemsWithMetadata } from "../../../shared/wardrobeMerge.js";
+import type {
+  CountByKey,
+  GeneratedOutfitSetLike,
+  LogContextLike,
+  PromptDebugImageCategory,
+  PromptDebugImageResult,
+  StoredWardrobePayloadLike,
+  UserProfileLike,
+  WardrobeGenerationResult,
+  PartialRegenerationJobState,
+  WardrobeUiItemLike
+} from "./types.js";
 
 const REGENERATE_SELECTED_PROMPT_TEMPLATE = readFileSync(
   new URL("../templates/prompt_regenerate_selected.txt", import.meta.url),
@@ -49,7 +60,32 @@ const REGENERATE_SELECTED_PROMPT_TEMPLATE = readFileSync(
 );
 const COMPLETED_JOB_TTL_MS = 5 * 60 * 1000;
 const LAST_PROMPT_DIR_URL = new URL("../../../last-prompt/", import.meta.url);
-const partialRegenerationJobs = new Map();
+const partialRegenerationJobs = new Map<string, PartialRegenerationJobState>();
+
+type SqlWardrobeRow = WardrobeUiItemLike & {
+  embedding?: unknown;
+};
+
+type PartialRegenerationServiceDependencies = {
+  getProfileImpl?: typeof getProfile;
+  getCapsuleImpl?: typeof getCapsule;
+  updateCapsuleSnapshotImpl?: typeof updateCapsuleSnapshot;
+  regenerateCapsuleWardrobeImpl?: (
+    userProfile?: UserProfileLike | null,
+    products?: WardrobeUiItemLike[] | null,
+    logContext?: LogContextLike | null
+  ) => Promise<WardrobeGenerationResult>;
+  buildCapsuleEventSnapshotImpl?: typeof buildCapsuleEventSnapshot;
+  publishSnapshotImpl?: (email: string, capsuleId: string, snapshot: unknown) => void;
+  jobs?: Map<string, PartialRegenerationJobState>;
+  nowMsImpl?: () => number;
+  setTimeoutImpl?: typeof setTimeout;
+  randomUuidImpl?: () => string;
+};
+
+function getSqlRows<TRow>(result: TRow[] | { count: number }): TRow[] {
+  return Array.isArray(result) ? result : [];
+}
 
 function createPartialRegenerationJobKey(email, capsuleId) {
   const normalizedEmail = String(email || "").trim().toLowerCase();
@@ -57,16 +93,29 @@ function createPartialRegenerationJobKey(email, capsuleId) {
   return normalizedCapsuleId ? `${normalizedEmail}::${normalizedCapsuleId}` : normalizedEmail;
 }
 
-function isValidSelectedItemUrls(itemUrls) {
+function isValidSelectedItemUrls(itemUrls: unknown): itemUrls is string[] {
   return Array.isArray(itemUrls) && itemUrls.length > 0 && itemUrls.every((itemUrl) => (
     typeof itemUrl === "string" && itemUrl.trim().length > 0
   ));
 }
 
-function buildStoredWardrobePayloadFromResult(result = {}, storedWardrobe = null) {
+function buildStoredWardrobePayloadFromResult(
+  result: Partial<WardrobeGenerationResult> = {},
+  storedWardrobe: StoredWardrobePayloadLike | null = null
+): StoredWardrobePayloadLike {
   return {
     items: Array.isArray(result?.items) ? result.items : [],
-    outfitSets: Array.isArray(result?.outfitSets) ? result.outfitSets : [],
+    outfitSets: Array.isArray(result?.outfitSets)
+      ? result.outfitSets.map((outfitSet) => ({
+        itemIds: Array.isArray((outfitSet as GeneratedOutfitSetLike | undefined)?.itemIds)
+          ? (outfitSet as GeneratedOutfitSetLike).itemIds.map((itemId) => String(itemId))
+          : [],
+        image: typeof (outfitSet as GeneratedOutfitSetLike | undefined)?.image === "string"
+          ? (outfitSet as GeneratedOutfitSetLike).image ?? null
+          : null,
+        imageObsolete: Boolean((outfitSet as GeneratedOutfitSetLike | undefined)?.imageObsolete)
+      }))
+      : [],
     reasoning: result?.reasoning || null,
     rawSelectionText: result?.rawSelectionText || null,
     swimwearReasoning: storedWardrobe?.swimwearReasoning || null,
@@ -117,7 +166,7 @@ function remapOutfitSetsAfterPartialRegeneration({
     .filter((set) => Array.isArray(set?.itemIds) && set.itemIds.length > 0);
 }
 
-function formatProfileValues(values) {
+function formatProfileValues(values: string[] | null | undefined) {
   if (!Array.isArray(values) || values.length === 0) {
     return "Not specified";
   }
@@ -131,14 +180,14 @@ function formatProfileValues(values) {
   return formatted.join(", ");
 }
 
-function getCategoryListText(categories) {
+function getCategoryListText(categories: CountByKey) {
   return Object.entries(categories)
     .filter(([, count]) => Number.isInteger(count) && count > 0)
     .map(([category, count]) => `${count} ${category}`)
     .join(", ");
 }
 
-function simplifyPromptItems(items = []) {
+function simplifyPromptItems(items: WardrobeUiItemLike[] = []) {
   return items.map((item) => {
     const colorParts = [
       Array.isArray(item?.color_base)
@@ -231,7 +280,15 @@ function buildLastPromptArtifact(prompt, userProfile = null) {
     : prompt;
 }
 
-function saveLastPromptArtifacts({ prompt, currentCapsuleCollage, userProfile = null } = {}) {
+function saveLastPromptArtifacts({
+  prompt,
+  currentCapsuleCollage,
+  userProfile = null
+}: {
+  prompt?: string | null;
+  currentCapsuleCollage?: PromptDebugImageCategory | null;
+  userProfile?: UserProfileLike | null;
+} = {}) {
   if (process.env.NODE_ENV !== "development") {
     return;
   }
@@ -254,7 +311,12 @@ function saveLastPromptArtifacts({ prompt, currentCapsuleCollage, userProfile = 
   }
 }
 
-function buildRegenerateSelectedPrompt(userProfile = null, candidateItems = [], currentCapsuleItems = [], categories = {}) {
+function buildRegenerateSelectedPrompt(
+  userProfile: UserProfileLike | null = null,
+  candidateItems: WardrobeUiItemLike[] = [],
+  currentCapsuleItems: WardrobeUiItemLike[] = [],
+  categories: CountByKey = {}
+) {
   const additionalText = typeof userProfile?.text === "string" ? userProfile.text.trim() : "";
   const replacements = {
     audience: userProfile?.audience || "any",
@@ -283,7 +345,7 @@ function buildRegenerateSelectedPrompt(userProfile = null, candidateItems = [], 
     current_capsule_items: JSON.stringify(simplifyPromptItems(currentCapsuleItems), null, 2),
     category_list: getCategoryListText(categories),
     items: JSON.stringify(simplifyPromptItems(candidateItems), null, 2),
-    num_items: String(Object.values(categories).reduce((sum, count) => sum + count, 0)),
+    num_items: String(Object.values(categories).reduce((sum, count) => sum + Number(count), 0)),
     categories_schema: JSON.stringify(buildCapsuleSchema(categories), null, 2)
   };
 
@@ -300,7 +362,11 @@ function buildRegenerateSelectedPrompt(userProfile = null, candidateItems = [], 
   return prompt;
 }
 
-async function regenerateCapsuleWardrobe(userProfile = null, products = null, logContext = null) {
+async function regenerateCapsuleWardrobe(
+  userProfile: UserProfileLike | null = null,
+  products: WardrobeUiItemLike[] | null = null,
+  logContext: LogContextLike | null = null
+): Promise<WardrobeGenerationResult> {
   const llmResolution = resolveLlmProvider(userProfile);
   const sql = getSqlClient();
   const prompt = getWardrobePrompt(userProfile);
@@ -322,7 +388,7 @@ async function regenerateCapsuleWardrobe(userProfile = null, products = null, lo
   const currentCapsulePromptItems = await getProductsByUrlsInOrder(
     currentCapsuleItems.map((item) => String(item?.url || "").trim()).filter(Boolean)
   );
-  const selectedCategoryCounts = selectedProducts.reduce((result, item) => {
+  const selectedCategoryCounts = selectedProducts.reduce<CountByKey>((result, item) => {
     const category = String(item?.category || "").trim();
     if (!category) {
       return result;
@@ -332,7 +398,7 @@ async function regenerateCapsuleWardrobe(userProfile = null, products = null, lo
     return result;
   }, {});
   const baseCategoryOrder = Object.keys(getCapsuleCategories(userProfile));
-  const capsuleCategories = {};
+  const capsuleCategories: CountByKey = {};
   for (const category of baseCategoryOrder) {
     if (selectedCategoryCounts[category] > 0) {
       capsuleCategories[category] = selectedCategoryCounts[category];
@@ -375,7 +441,7 @@ async function regenerateCapsuleWardrobe(userProfile = null, products = null, lo
   const noiseFactor = 0.05;
 
   const sqlStartedAt = Date.now();
-  const items = await sql`
+  const itemsResult = await sql<SqlWardrobeRow>`
     SELECT results.*
     FROM unnest(${categories}::text[]) AS cats(target_category)
     CROSS JOIN LATERAL (
@@ -524,6 +590,7 @@ async function regenerateCapsuleWardrobe(userProfile = null, products = null, lo
     ) results`;
   const sqlDurationMs = Date.now() - sqlStartedAt;
 
+  const items = getSqlRows(itemsResult);
   const normalizedItems = items.map((item) => {
     const normalized = { ...item };
     delete normalized.embedding;
@@ -559,14 +626,15 @@ async function regenerateCapsuleWardrobe(userProfile = null, products = null, lo
     return {
       items: nextWardrobeItems,
       selectedItems: balancedItems,
+      outfitSets: [],
       promptEmbeddings,
       rawSelectionText: null,
       reasoning: null
     };
   }
   const shouldSavePromptDebugArtifacts = process.env.NODE_ENV === "development";
-  let promptDebugImages = { categories: [], stitched: null };
-  let currentCapsuleCollage = null;
+  let promptDebugImages: PromptDebugImageResult = { categories: [], stitched: null };
+  let currentCapsuleCollage: PromptDebugImageCategory | null = null;
 
   try {
     const imageFetchStartedAt = Date.now();
@@ -722,8 +790,8 @@ function createPartialRegenerationService({
   nowMsImpl = () => Date.now(),
   setTimeoutImpl = setTimeout,
   randomUuidImpl = () => crypto.randomUUID()
-} = {}) {
-  function scheduleJobCleanup(jobKey, job) {
+}: PartialRegenerationServiceDependencies = {}) {
+  function scheduleJobCleanup(jobKey: string, job: PartialRegenerationJobState) {
     const cleanupTimer = setTimeoutImpl(() => {
       if (jobs.get(jobKey) === job && job.status !== "pending") {
         jobs.delete(jobKey);
@@ -732,7 +800,7 @@ function createPartialRegenerationService({
     cleanupTimer?.unref?.();
   }
 
-  function getPartialRegenerationJob(email, capsuleId) {
+  function getPartialRegenerationJob(email: string, capsuleId: string) {
     const jobKey = createPartialRegenerationJobKey(email, capsuleId);
     const job = jobs.get(jobKey);
     if (!job) {
@@ -747,7 +815,15 @@ function createPartialRegenerationService({
     return job;
   }
 
-  function startPartialRegenerationJob(email, capsuleId, profile, capsule, selectedProducts, storedWardrobe, logContext = null) {
+  function startPartialRegenerationJob(
+    email: string,
+    capsuleId: string,
+    profile: Awaited<ReturnType<typeof getProfile>>,
+    capsule: Awaited<ReturnType<typeof getCapsule>>,
+    selectedProducts: WardrobeUiItemLike[],
+    storedWardrobe: StoredWardrobePayloadLike,
+    logContext: LogContextLike | null = null
+  ) {
     const jobKey = createPartialRegenerationJobKey(email, capsuleId);
     const existing = getPartialRegenerationJob(email, capsuleId);
     if (existing?.status === "pending") {
@@ -759,7 +835,7 @@ function createPartialRegenerationService({
       .filter(Boolean);
     const capsuleRequestId = logContext?.capsuleRequestId || randomUuidImpl();
     const startedAt = nowMsImpl();
-    const job = {
+    const job: PartialRegenerationJobState = {
       capsuleRequestId,
       status: "pending",
       phase: "regenerate",

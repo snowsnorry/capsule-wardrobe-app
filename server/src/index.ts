@@ -1,4 +1,3 @@
-// @ts-nocheck
 import "dotenv/config";
 import express from "express";
 import helmet from "helmet";
@@ -67,6 +66,26 @@ import {
   PROFILE_LLM_VALUES,
   PROFILE_THEME_VALUES
 } from "../../shared/profileSettings.js";
+import type { ErrorWithCode, WardrobeUiItemLike } from "./ai/types.js";
+
+type CookieMap = Record<string, string>;
+type ProfileSettingsPayload = {
+  locale: string;
+  theme: string;
+  llm: string;
+  fullname: string | null;
+};
+type RejectedUrlsValidationResult =
+  | { error: "invalid_payload" | "not_found" }
+  | { rejectedUrls: string[] };
+
+function isProfileThemeValue(value: string): value is (typeof PROFILE_THEME_VALUES)[number] {
+  return (PROFILE_THEME_VALUES as readonly string[]).includes(value);
+}
+
+function isProfileLlmValue(value: string): value is (typeof PROFILE_LLM_VALUES)[number] {
+  return (PROFILE_LLM_VALUES as readonly string[]).includes(value);
+}
 
 const PORT = process.env.PORT || 3000;
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || "http://localhost:5173";
@@ -117,8 +136,8 @@ function isApiPath(pathname = "") {
   );
 }
 
-function parseCookies(cookieHeader = "") {
-  return cookieHeader.split(";").reduce((acc, part) => {
+function parseCookies(cookieHeader = ""): CookieMap {
+  return cookieHeader.split(";").reduce<CookieMap>((acc, part) => {
     const [key, ...rest] = part.trim().split("=");
     if (!key) return acc;
     const value = rest.join("=");
@@ -238,26 +257,27 @@ function hasUnexpectedRejectedUrlsFields(payload = {}) {
   return Object.keys(payload).some((key) => key !== "rejectedUrls");
 }
 
-function normalizeProfileSettingsPayload(payload) {
+function normalizeProfileSettingsPayload(payload: unknown): ProfileSettingsPayload | null {
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
     return null;
   }
+  const record = payload as Record<string, unknown>;
 
-  const locale = String(payload.locale || "").trim().toLowerCase();
-  const theme = String(payload.theme || "").trim().toLowerCase();
-  const llm = String(payload.llm || "").trim();
+  const locale = String(record.locale || "").trim().toLowerCase();
+  const theme = String(record.theme || "").trim().toLowerCase();
+  const llm = String(record.llm || "").trim();
 
   if (!SUPPORTED_LOCALES.has(locale)) {
     return null;
   }
-  if (!PROFILE_THEME_VALUES.includes(theme)) {
+  if (!isProfileThemeValue(theme)) {
     return null;
   }
-  if (!PROFILE_LLM_VALUES.includes(llm)) {
+  if (!isProfileLlmValue(llm)) {
     return null;
   }
 
-  const rawFullname = payload.fullname;
+  const rawFullname = record.fullname;
   if (rawFullname !== null && rawFullname !== undefined && typeof rawFullname !== "string") {
     return null;
   }
@@ -290,14 +310,14 @@ function buildCapsuleDraftFromFilters(profile, filters = null) {
   };
 }
 
-function getValidatedRejectedUrls(capsule, rejectedUrls) {
+function getValidatedRejectedUrls(capsule, rejectedUrls): RejectedUrlsValidationResult | null {
   if (!Array.isArray(rejectedUrls)) {
     return null;
   }
 
   const effectiveSnapshot = getEffectiveCapsuleSnapshot(capsule);
-  const wardrobeItems = Array.isArray(effectiveSnapshot?.data?.wardrobe?.items)
-    ? effectiveSnapshot.data.wardrobe.items
+  const wardrobeItems: WardrobeUiItemLike[] = Array.isArray(effectiveSnapshot?.data?.wardrobe?.items)
+    ? effectiveSnapshot.data.wardrobe.items as WardrobeUiItemLike[]
     : [];
 
   if (wardrobeItems.length === 0) {
@@ -932,19 +952,23 @@ app.patch("/capsules/:id/rejected-urls", requireTrustedOrigin, requireAuth, requ
     }
 
     const validationResult = getValidatedRejectedUrls(capsule, req.body?.rejectedUrls);
-    if (validationResult?.error === "not_found") {
+    if (validationResult && "error" in validationResult && validationResult.error === "not_found") {
       return res.status(404).json({ error: "not_found" });
     }
-    if (validationResult?.error) {
+    if (validationResult && "error" in validationResult) {
       return res.status(400).json({ error: "invalid_payload" });
     }
+    const normalizedRejectedUrls =
+      validationResult && "rejectedUrls" in validationResult
+        ? validationResult.rejectedUrls
+        : [];
 
     const effectiveSnapshot = getEffectiveCapsuleSnapshot(capsule);
     const nextCapsule = await updateCapsuleSnapshotImpl(req.user.email, req.params.id, {
       filters: effectiveSnapshot?.filters,
       data: {
         wardrobe: effectiveSnapshot?.data?.wardrobe || null,
-        rejectedUrls: validationResult.rejectedUrls
+        rejectedUrls: normalizedRejectedUrls
       }
     });
 
@@ -1060,7 +1084,7 @@ app.post("/capsules/:id/pdf", requireTrustedOrigin, requireAuth, requireCsrf, as
       return res.status(404).json({ error: "not_found" });
     }
     const locale = profile?.locale || "en";
-    const pdfBuffer = await buildWardrobePdfInChildImpl(products, locale);
+    const pdfBuffer = await buildWardrobePdfInChildImpl(products, String(locale));
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", buildPdfDownloadFilename(capsule?.name));
     return res.status(200).send(pdfBuffer);
@@ -1093,7 +1117,7 @@ app.get("/search/me", requireAuth, async (req, res) => {
 app.post("/search/run", requireTrustedOrigin, requireAuth, requireCsrf, async (req, res) => {
   try {
     const result = await runSavedSearchImpl(req.user.email, req.body || {});
-    return res.json({ ok: true, ...result });
+    return res.json({ ok: true, ...(result && typeof result === "object" ? result : {}) });
   } catch (error) {
     if (error?.code === "invalid_payload" || error?.message === "invalid_payload") {
       return res.status(400).json({ error: "invalid_payload" });
@@ -1106,7 +1130,7 @@ app.post("/search/run", requireTrustedOrigin, requireAuth, requireCsrf, async (r
 app.post("/search/stats", requireTrustedOrigin, requireAuth, requireCsrf, async (req, res) => {
   try {
     const result = await getSearchStatsImpl(req.user.email, req.body || {});
-    return res.json({ ok: true, ...result });
+    return res.json({ ok: true, ...(result && typeof result === "object" ? result : {}) });
   } catch (error) {
     if (error?.code === "invalid_payload" || error?.message === "invalid_payload") {
       return res.status(400).json({ error: "invalid_payload" });

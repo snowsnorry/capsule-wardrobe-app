@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { existsSync, readFileSync } from "node:fs";
 import { fork as nodeFork } from "node:child_process";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
@@ -21,6 +20,13 @@ import {
 import { readImageFromLocalCache, resolveSourceImageUrl } from "./ai/promptImages.js";
 import { getSafeHttpUrl } from "../../shared/urlSecurity.js";
 import { getPdfColorSwatchFill } from "../../shared/colorSwatches.js";
+import type {
+  ProfileWithItemsLike,
+  PromptImageAsset,
+  WardrobePdfBuildChildOptions,
+  WardrobePdfJobState,
+  WardrobeUiItemLike
+} from "./ai/types.js";
 
 const PAGE_WIDTH = 595.28;
 const PAGE_HEIGHT = 841.89;
@@ -46,13 +52,65 @@ const FALLBACK_BOLD_FONT_CANDIDATES = [
 ];
 const WARDROBE_PDF_POLL_AFTER_MS = 2000;
 const PDF_JOB_TTL_MS = 5 * 60 * 1000;
-const wardrobePdfJobs = new Map();
+const wardrobePdfJobs = new Map<string, WardrobePdfJobState>();
 const DEFAULT_PDF_IMAGE_TARGET_SIZE = {
   width: Math.round((CONTENT_WIDTH - 2) * 2),
   height: Math.round((PAGE_HEIGHT - (PAGE_MARGIN * 2)) * 2)
 };
 const WARDROBE_PDF_CHILD_TIMEOUT_MS = Number.parseInt(process.env.WARDROBE_PDF_CHILD_TIMEOUT_MS || "", 10) || 180000;
 const WARDROBE_PDF_CHILD_PATH = new URL("./wardrobePdf.child.js", import.meta.url);
+
+type PdfImageBytes = {
+  kind: "jpg" | "png";
+  bytes: Buffer;
+};
+
+type PdfTargetSize = {
+  width: number;
+  height: number;
+  autoRotate?: boolean;
+};
+
+type ProductLike = {
+  id?: string | null;
+  url?: string | null;
+  name?: string | null;
+  category?: string | null;
+  imageUrl?: string | null;
+  brand?: string | null;
+  description?: string | null;
+  [key: string]: unknown;
+};
+
+type WardrobePdfJobOptions = {
+  wardrobePayload?: ProfileWithItemsLike["items"] | null;
+  locale?: string | null;
+};
+
+type ProfileWithPdfResult = {
+  profile: ProfileWithItemsLike | null;
+  pdf: Buffer | Uint8Array | number[] | null;
+};
+
+type UpdateProfilePdfImpl = (
+  email: string,
+  pdf: Buffer,
+  options?: {
+    expectedItems?: WardrobePdfJobOptions["wardrobePayload"];
+    expectedLocale?: string | null;
+  }
+) => Promise<unknown>;
+
+type ChildMessage =
+  | {
+    ok: true;
+    outputFilePath?: string | null;
+  }
+  | {
+    ok: false;
+    message?: string | null;
+    stack?: string | null;
+  };
 
 function formatLogValue(value) {
   if (value === null) {
@@ -117,8 +175,8 @@ function productNeedsUnicodeFallback(product, locale) {
   ].some(hasNonLatinText);
 }
 
-function getStoredWardrobeItems(profile) {
-  const stored = profile?.items;
+function getStoredWardrobeItems(profile: unknown): WardrobeUiItemLike[] {
+  const stored = (profile && typeof profile === "object" ? (profile as { items?: unknown }).items : undefined);
 
   if (Array.isArray(stored)) {
     return stored;
@@ -128,7 +186,9 @@ function getStoredWardrobeItems(profile) {
     return [];
   }
 
-  return Array.isArray(stored.items) ? stored.items : [];
+  return Array.isArray((stored as { items?: unknown }).items)
+    ? ((stored as { items: WardrobeUiItemLike[] }).items)
+    : [];
 }
 
 function createWardrobePdfGenerationKey({ items = [], locale = "en" } = {}) {
@@ -163,7 +223,10 @@ function getPdfLocale(rawLocale) {
   return isSupportedLocale(locale) ? locale : "en";
 }
 
-async function normalizeImageBytes(buffer, mimeType = "") {
+async function normalizeImageBytes(
+  buffer: Buffer | Uint8Array | null | undefined,
+  mimeType = ""
+): Promise<PdfImageBytes | null> {
   if (!buffer) {
     return null;
   }
@@ -183,7 +246,11 @@ async function normalizeImageBytes(buffer, mimeType = "") {
   return { kind: "png", bytes: pngBuffer };
 }
 
-async function preparePdfImageBytes(buffer, mimeType = "", { width, height, autoRotate = true } = {}) {
+async function preparePdfImageBytes(
+  buffer: Buffer | Uint8Array | null | undefined,
+  mimeType = "",
+  { width, height, autoRotate = true }: PdfTargetSize
+): Promise<PdfImageBytes | null> {
   if (!buffer) {
     return null;
   }
@@ -195,7 +262,7 @@ async function preparePdfImageBytes(buffer, mimeType = "", { width, height, auto
   if (autoRotate) {
     image.rotate();
   }
-  const metadata = await image.metadata().catch(() => ({}));
+  const metadata = await image.metadata().catch(() => null);
   const hasAlpha = metadata?.hasAlpha === true || String(mimeType || "").toLowerCase().includes("png");
 
   const resized = image.resize(targetWidth, targetHeight, {
@@ -220,7 +287,12 @@ async function preparePdfImageBytes(buffer, mimeType = "", { width, height, auto
   return { kind: "jpg", bytes: jpgBuffer };
 }
 
-async function loadImageBytes(imageUrl, imageAsset = null, targetSize = null, imageLoadStats = null) {
+async function loadImageBytes(
+  imageUrl: string | null | undefined,
+  imageAsset: PromptImageAsset | null = null,
+  targetSize: PdfTargetSize | null = null,
+  imageLoadStats: { cachedCount: number; downloadedCount: number } | null = null
+) : Promise<PdfImageBytes | null> {
   const stats = imageLoadStats || { cachedCount: 0, downloadedCount: 0 };
   const resolvedImageUrl = resolveSourceImageUrl(imageUrl);
 
@@ -322,7 +394,25 @@ function truncateLines(lines, maxLines) {
   return truncated;
 }
 
-function drawRoundedRect(page, { x, y, width, height, radius, color, borderColor, borderWidth = 0 }) {
+function drawRoundedRect(page, {
+  x,
+  y,
+  width,
+  height,
+  radius,
+  color,
+  borderColor,
+  borderWidth = 0
+}: {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  radius: number;
+  color: unknown;
+  borderColor?: unknown;
+  borderWidth?: number;
+}) {
   const r = Math.max(0, Math.min(radius, width / 2, height / 2));
 
   if (borderColor && borderWidth > 0) {
@@ -771,12 +861,19 @@ async function buildWardrobePdf(products, { locale = "en", imageAssetsById = {},
   return buffer;
 }
 
-async function buildWardrobePdfInChild(products, locale = "en", { forkImpl = nodeFork, totalStartedAt = null } = {}) {
+async function buildWardrobePdfInChild(
+  products: ProductLike[],
+  locale = "en",
+  {
+    forkImpl = nodeFork,
+    totalStartedAt = null
+  }: WardrobePdfBuildChildOptions & { forkImpl?: typeof nodeFork } = {}
+) {
   const outputDir = await mkdtemp(path.join(os.tmpdir(), "wardrobe-pdf-child-"));
   const outputFilePath = path.join(outputDir, "capsule-wardrobe.pdf");
 
   try {
-    return await new Promise((resolve, reject) => {
+    return await new Promise<Buffer>((resolve, reject) => {
       const child = forkImpl(fileURLToPath(WARDROBE_PDF_CHILD_PATH), {
         stdio: ["ignore", "inherit", "inherit", "ipc"],
         execArgv: []
@@ -824,7 +921,7 @@ async function buildWardrobePdfInChild(products, locale = "en", { forkImpl = nod
         reject(error);
       }
 
-      function onMessage(message) {
+      function onMessage(message: ChildMessage | null | undefined) {
         if (message?.ok === true) {
           const filePath = String(message?.outputFilePath || "").trim();
           if (!filePath) {
@@ -874,7 +971,7 @@ async function buildWardrobePdfInChild(products, locale = "en", { forkImpl = nod
   }
 }
 
-function scheduleWardrobePdfJobCleanup(email, job) {
+function scheduleWardrobePdfJobCleanup(email: string, job: WardrobePdfJobState) {
   const timer = setTimeout(() => {
     if (wardrobePdfJobs.get(email) === job && job.status !== "pending") {
       wardrobePdfJobs.delete(email);
@@ -883,7 +980,7 @@ function scheduleWardrobePdfJobCleanup(email, job) {
   timer.unref?.();
 }
 
-function getWardrobePdfJob(email) {
+function getWardrobePdfJob(email: string) {
   const job = wardrobePdfJobs.get(email);
   if (!job) {
     return null;
@@ -904,6 +1001,13 @@ function createWardrobePdfJobManager({
   updateProfilePdfByEmail = async () => ({ email: "unknown@example.com" }),
   getProducts = getProductsByUrlsInOrder,
   buildPdfInChild = buildWardrobePdfInChild
+}: {
+  getProfileByEmail?: typeof getProfile;
+  getProfilePdfByEmail?: (email: string) => Promise<Buffer | Uint8Array | number[] | null>;
+  getProfileWithPdfByEmail?: ((email: string) => Promise<ProfileWithPdfResult>) | null;
+  updateProfilePdfByEmail?: UpdateProfilePdfImpl;
+  getProducts?: typeof getProductsByUrlsInOrder;
+  buildPdfInChild?: (products: ProductLike[], locale?: string, options?: WardrobePdfBuildChildOptions) => Promise<Buffer>;
 } = {}) {
   const loadProfileWithPdf = getProfileWithPdfByEmail
     || (async (email) => ({
@@ -911,10 +1015,10 @@ function createWardrobePdfJobManager({
       pdf: await getProfilePdfByEmail(email)
     }));
 
-  function startWardrobePdfJob(email, {
+  function startWardrobePdfJob(email: string, {
     wardrobePayload = null,
     locale = null
-  } = {}) {
+  }: WardrobePdfJobOptions = {}) {
     const expectedItems = wardrobePayload ?? null;
     const expectedLocale = locale ?? null;
     const resolvedItems = sortWardrobeItems(
@@ -933,7 +1037,7 @@ function createWardrobePdfJobManager({
       return existing;
     }
 
-    const job = {
+    const job: WardrobePdfJobState = {
       status: "pending",
       updatedAt: Date.now(),
       startedAt: Date.now(),
@@ -1013,7 +1117,7 @@ function createWardrobePdfJobManager({
     return job;
   }
 
-  async function ensureWardrobePdfJob(email, options = {}) {
+  async function ensureWardrobePdfJob(email: string, options: WardrobePdfJobOptions = {}) {
     const existing = getWardrobePdfJob(email);
     if (existing?.status === "pending") {
       return existing;
@@ -1066,7 +1170,7 @@ function createWardrobePdfJobManager({
 
       await ensureWardrobePdfJob(email, {
         wardrobePayload: profile?.items,
-        locale: profile?.locale
+        locale: typeof profile?.locale === "string" ? profile.locale : null
       });
 
       return res.status(202).json({

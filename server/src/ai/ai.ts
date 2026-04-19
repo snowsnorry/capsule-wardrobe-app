@@ -1,4 +1,3 @@
-// @ts-nocheck
 import crypto from "node:crypto";
 import { getProfile } from "../profileStore.js";
 import { getSqlClient } from "../db.js";
@@ -27,10 +26,62 @@ import {
   getStoredWardrobePayload
 } from "./capsuleEvents.js";
 import { buildDeveloperPrompt } from "./openai.js";
+import type {
+  CountByKey,
+  ErrorWithCode,
+  GeneratedOutfitSetLike,
+  LogContextLike,
+  LlmUsageLike,
+  LlmUsageSummary,
+  PartialRegenerationJobState,
+  PromptDebugImageResult,
+  StoredWardrobePayloadLike,
+  UserProfileLike,
+  WardrobeGenerationResult,
+  WardrobeJobState,
+  WardrobeUiItemLike
+} from "./types.js";
+
 const PROMPT_TEMPLATE = readFileSync(new URL("../templates/prompt.txt", import.meta.url), "utf8");
 const COMPLETED_JOB_TTL_MS = 5 * 60 * 1000;
 const LAST_PROMPT_DIR_URL = new URL("../../../last-prompt/", import.meta.url);
-const wardrobeJobs = new Map();
+const wardrobeJobs = new Map<string, WardrobeJobState>();
+
+type RequestedWardrobeParams = Partial<{
+  forceRefresh: boolean;
+  formalityLevel: string;
+  style: string;
+  occasions: string[];
+  season: string[];
+  audience: string;
+  color: string;
+  pattern: string;
+  locale: string;
+}>;
+
+type SqlWardrobeRow = WardrobeUiItemLike & {
+  embedding?: unknown;
+};
+
+type WardrobeServiceDependencies = {
+  getProfileImpl?: typeof getProfile;
+  getCapsuleImpl?: typeof getCapsule;
+  updateCapsuleSnapshotImpl?: typeof updateCapsuleSnapshot;
+  generateCapsuleWardrobeImpl?: (userProfile?: UserProfileLike | null, logContext?: LogContextLike | null) => Promise<WardrobeGenerationResult>;
+  shouldGenerateSwimwearImpl?: typeof shouldGenerateSwimwear;
+  generateSwimwearAdditionImpl?: typeof generateSwimwearAddition;
+  getPartialRegenerationJobImpl?: (email: string, capsuleId: string) => PartialRegenerationJobState | null;
+  buildCapsuleEventSnapshotImpl?: typeof buildCapsuleEventSnapshot;
+  publishSnapshotImpl?: (email: string, capsuleId: string, snapshot: unknown) => void;
+  jobs?: Map<string, WardrobeJobState>;
+  nowMsImpl?: () => number;
+  setTimeoutImpl?: typeof setTimeout;
+  randomUuidImpl?: () => string;
+};
+
+function getSqlRows<TRow>(result: TRow[] | { count: number }): TRow[] {
+  return Array.isArray(result) ? result : [];
+}
 
 function formatLogValue(value) {
   if (value === null) {
@@ -114,8 +165,8 @@ function saveLastPromptArtifacts(prompt, userProfile = null) {
   );
 }
 
-function countItemsByKey(items = [], key = "category") {
-  return items.reduce((result, item) => {
+function countItemsByKey(items: WardrobeUiItemLike[] = [], key = "category"): CountByKey {
+  return items.reduce<CountByKey>((result, item) => {
     const value = String(item?.[key] || "").trim();
     if (!value) {
       return result;
@@ -126,8 +177,11 @@ function countItemsByKey(items = [], key = "category") {
   }, {});
 }
 
-function getRequestedWardrobeParams(userProfile = null, { forceRefresh = false } = {}) {
-  const params = {};
+function getRequestedWardrobeParams(
+  userProfile: UserProfileLike | null = null,
+  { forceRefresh = false }: { forceRefresh?: boolean } = {}
+): RequestedWardrobeParams {
+  const params: RequestedWardrobeParams = {};
 
   if (forceRefresh) {
     params.forceRefresh = true;
@@ -168,15 +222,15 @@ function getRequestedWardrobeParams(userProfile = null, { forceRefresh = false }
   return params;
 }
 
-function getRequiredCapsule(capsuleId, capsule) {
+function getRequiredCapsule<TCapsule>(capsuleId: string, capsule: TCapsule | null): TCapsule {
   if (!capsuleId) {
-    const error = new Error("invalid_payload");
+    const error = new Error("invalid_payload") as ErrorWithCode;
     error.code = "invalid_payload";
     throw error;
   }
 
   if (!capsule) {
-    const error = new Error("not_found");
+    const error = new Error("not_found") as ErrorWithCode;
     error.code = "not_found";
     throw error;
   }
@@ -184,12 +238,12 @@ function getRequiredCapsule(capsuleId, capsule) {
   return capsule;
 }
 
-function extractLlmUsage(usage = null) {
+function extractLlmUsage(usage: LlmUsageLike | null = null): LlmUsageSummary {
   if (!usage || typeof usage !== "object") {
     return {};
   }
 
-  const result = {};
+  const result: LlmUsageSummary = {};
 
   if (Number.isFinite(usage.input_tokens)) {
     result.inputTokens = usage.input_tokens;
@@ -211,7 +265,7 @@ function extractLlmUsage(usage = null) {
   return result;
 }
 
-function buildErrorLogContext(logContext = null) {
+function buildErrorLogContext(logContext: LogContextLike | null = null) {
   if (!logContext?.capsuleRequestId) {
     return null;
   }
@@ -228,10 +282,17 @@ function buildWardrobePayload({
   rawSelectionText = null,
   swimwearReasoning = null,
   swimwearRawSelectionText = null
-}) {
+}: {
+  items: WardrobeUiItemLike[];
+  outfitSets?: GeneratedOutfitSetLike[];
+  reasoning?: string | null;
+  rawSelectionText?: string | null;
+  swimwearReasoning?: string | null;
+  swimwearRawSelectionText?: string | null;
+}): StoredWardrobePayloadLike {
   return {
     items,
-    outfitSets,
+    outfitSets: outfitSets as unknown as StoredWardrobePayloadLike["outfitSets"],
     reasoning,
     rawSelectionText,
     swimwearReasoning,
@@ -239,7 +300,7 @@ function buildWardrobePayload({
   };
 }
 
-function formatProfileValues(values) {
+function formatProfileValues(values: string[] | null | undefined) {
   if (!Array.isArray(values) || values.length === 0) {
     return "Not specified";
   }
@@ -253,20 +314,20 @@ function formatProfileValues(values) {
   return formatted.join(", ");
 }
 
-function getCategoryListText(categories) {
+function getCategoryListText(categories: CountByKey) {
   return Object.entries(categories)
     .filter(([, count]) => Number.isInteger(count) && count > 0)
     .map(([category, count]) => `${count} ${category}`)
     .join(", ");
 }
 
-function getCategorySchema(categories) {
-  const schema = Object.entries(categories).reduce((result, [category, count]) => {
+function getCategorySchema(categories: CountByKey) {
+  const schema = Object.entries(categories).reduce<Record<string, string[]>>((result, [category, count]) => {
     if (!Number.isInteger(count) || count <= 0) {
       return result;
     }
 
-    result[category] = Array.from({ length: count }, (_, index) => `id${index + 1}`);
+    result[category] = Array.from({ length: Number(count) }, (_, index) => `id${index + 1}`);
     return result;
   }, {});
 
@@ -662,7 +723,7 @@ function getWardrobeSelectionPrompt(userProfile = null, items = [], categories =
     .replace("{{items}}", itemsJson)
     .replace("{{category_list}}", getCategoryListText(categories))
     .replace("{{categories_schema}}", getCategorySchema(categories))
-    .replace("{{num_items}}", Object.entries(categories).reduce((sum, [, count]) => sum + count, 0));
+    .replace("{{num_items}}", String(Object.entries(categories).reduce((sum, [, count]) => sum + Number(count), 0)));
 
   return prompt;
 }
@@ -723,7 +784,7 @@ async function generateCapsuleWardrobe(userProfile = null, logContext = null) {
   const noiseFactor = additionalText ? 0 : 0.05;
 
   const sqlStartedAt = Date.now();
-  const items = await sql`
+  const itemsResult = await sql<SqlWardrobeRow>`
     SELECT results.*
     FROM unnest(${categories}::text[]) AS cats(target_category)
     CROSS JOIN LATERAL (
@@ -872,6 +933,7 @@ async function generateCapsuleWardrobe(userProfile = null, logContext = null) {
     ) results`;
   const sqlDurationMs = Date.now() - sqlStartedAt;
 
+  const items = getSqlRows(itemsResult);
   const normalizedItems = items.map((item) => {
     const normalized = { ...item };
     delete normalized.embedding;
@@ -910,7 +972,7 @@ async function generateCapsuleWardrobe(userProfile = null, logContext = null) {
     };
   }
   const shouldSavePromptDebugArtifacts = process.env.NODE_ENV === "development";
-  let promptDebugImages = { categories: [], stitched: null };
+  let promptDebugImages: PromptDebugImageResult = { categories: [], stitched: null };
 
   try {
     const imageFetchStartedAt = Date.now();
@@ -1028,15 +1090,15 @@ function createWardrobeService({
   generateCapsuleWardrobeImpl = generateCapsuleWardrobe,
   shouldGenerateSwimwearImpl = shouldGenerateSwimwear,
   generateSwimwearAdditionImpl = generateSwimwearAddition,
-  getPartialRegenerationJobImpl = (...args) => getPartialRegenerationJob(...args),
+  getPartialRegenerationJobImpl = (email, capsuleId) => getPartialRegenerationJob(email, capsuleId),
   buildCapsuleEventSnapshotImpl = buildCapsuleEventSnapshot,
   publishSnapshotImpl = (email, capsuleId, snapshot) => capsuleEventHub.publish(email, capsuleId, snapshot),
   jobs = wardrobeJobs,
   nowMsImpl = () => Date.now(),
   setTimeoutImpl = setTimeout,
   randomUuidImpl = () => crypto.randomUUID()
-} = {}) {
-  function scheduleJobCleanup(jobKey, job) {
+}: WardrobeServiceDependencies = {}) {
+  function scheduleJobCleanup(jobKey: string, job: WardrobeJobState) {
     const cleanupTimer = setTimeoutImpl(() => {
       if (jobs.get(jobKey) === job && job.status !== "pending") {
         jobs.delete(jobKey);
@@ -1045,7 +1107,7 @@ function createWardrobeService({
     cleanupTimer?.unref?.();
   }
 
-  function getWardrobeJob(email, capsuleId) {
+  function getWardrobeJob(email: string, capsuleId: string) {
     const jobKey = createWardrobeJobKey(email, capsuleId);
     const job = jobs.get(jobKey);
     if (!job) {
@@ -1060,7 +1122,13 @@ function createWardrobeService({
     return job;
   }
 
-  function startWardrobeJob(email, capsuleId, profile, capsule, logContext = null) {
+  function startWardrobeJob(
+    email: string,
+    capsuleId: string,
+    profile: Awaited<ReturnType<typeof getProfile>>,
+    capsule: Awaited<ReturnType<typeof getCapsule>>,
+    logContext: LogContextLike | null = null
+  ) {
     const jobKey = createWardrobeJobKey(email, capsuleId);
     const existing = getWardrobeJob(email, capsuleId);
     if (existing?.status === "pending") {
@@ -1069,7 +1137,7 @@ function createWardrobeService({
 
     const capsuleRequestId = logContext?.capsuleRequestId || randomUuidImpl();
     const startedAt = nowMsImpl();
-    const job = {
+    const job: WardrobeJobState = {
       capsuleRequestId,
       status: "pending",
       startedAt,
@@ -1088,9 +1156,7 @@ function createWardrobeService({
       let currentCapsule = capsule;
 
       try {
-        const generationProfile = {
-          ...buildProfileCapsuleContext(profile, capsule)
-        };
+        const generationProfile = buildProfileCapsuleContext(profile, capsule);
         const wardrobe = await generateCapsuleWardrobeImpl(generationProfile, jobLogContext);
         const items = wardrobe.items;
 
@@ -1123,7 +1189,7 @@ function createWardrobeService({
                 rejectedUrls: []
               }
             }
-          };
+          } as typeof capsule;
         }
         logWardrobeInfo("capsule-base-completed", {
           baseDurationMs: nowMsImpl() - startedAt,
@@ -1177,7 +1243,7 @@ function createWardrobeService({
                     rejectedUrls: []
                   }
                 }
-              };
+              } as typeof currentCapsule;
             }
             logWardrobeInfo("capsule-total-completed", {
               totalDurationMs: nowMsImpl() - startedAt,
@@ -1280,10 +1346,10 @@ function createWardrobeService({
         hasPendingAdditionalItems: false
       });
     } catch (error) {
-      if (error?.code === "invalid_payload" || error?.message === "invalid_payload") {
+      if ((error as ErrorWithCode | undefined)?.code === "invalid_payload" || (error as Error | undefined)?.message === "invalid_payload") {
         return res.status(400).json({ error: "invalid_payload" });
       }
-      if (error?.code === "not_found" || error?.message === "not_found") {
+      if ((error as ErrorWithCode | undefined)?.code === "not_found" || (error as Error | undefined)?.message === "not_found") {
         return res.status(404).json({ error: "not_found" });
       }
       console.error("[wardrobe-ai]", error);
@@ -1368,17 +1434,18 @@ function createWardrobeService({
         hasPendingAdditionalItems: false
       });
     } catch (error) {
-      if (error?.code === "invalid_payload" || error?.message === "invalid_payload") {
+      if ((error as ErrorWithCode | undefined)?.code === "invalid_payload" || (error as Error | undefined)?.message === "invalid_payload") {
         return res.status(400).json({ error: "invalid_payload" });
       }
-      if (error?.code === "not_found" || error?.message === "not_found") {
+      if ((error as ErrorWithCode | undefined)?.code === "not_found" || (error as Error | undefined)?.message === "not_found") {
         return res.status(404).json({ error: "not_found" });
       }
       console.error("[wardrobe-ai]", error);
       return res.status(503).json({
         error: "service_unavailable",
-        rawSelectionText: typeof error?.rawSelectionText === "string" && error.rawSelectionText.trim().length > 0
-          ? error.rawSelectionText.trim()
+        rawSelectionText: typeof (error as { rawSelectionText?: string | null } | undefined)?.rawSelectionText === "string"
+          && (error as { rawSelectionText?: string }).rawSelectionText.trim().length > 0
+          ? (error as { rawSelectionText: string }).rawSelectionText.trim()
           : null
       });
     }
