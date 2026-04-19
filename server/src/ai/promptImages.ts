@@ -10,11 +10,15 @@ import { IMAGE_DOWNLOAD_CONCURRENCY } from "./imagePipeline.js";
 import { getSafeServerFetchUrl } from "../serverUrlSecurity.js";
 import type {
   PromptDebugImageCategory,
+  PromptDebugImageCategoryManifest,
+  PromptDebugImageManifest,
   PromptDebugImageResult,
   PromptDebugImageStitched,
+  PromptDebugImageStitchedManifest,
   PromptImageAsset,
   PromptImageDownloadResult,
   PromptImageItemLike,
+  PromptImageTimingKey,
   PromptImageTimings,
   PromptImagesChildMessage,
   PromptImagesChildPayload,
@@ -52,6 +56,21 @@ const STORAGE_IMAGES_DIR = fileURLToPath(new URL("../../../storage/images/", imp
 const STITCHED_COLLAGE_FILENAME = "categories-stitched.jpg";
 
 type PromptImagesFork = typeof nodeFork;
+type PromptImageTimingState = PromptImageTimings | Partial<PromptImageTimings> | null | undefined;
+type PromptDebugImageCategoryWithFile = PromptDebugImageCategory & { file: string };
+type PromptDebugImageCategoryWithoutBuffer = Omit<PromptDebugImageCategory, "buffer" | "bufferBase64" | "file">;
+type PromptDebugImageCategoryManifestSource = PromptDebugImageCategoryWithoutBuffer & {
+  filename: string;
+  items: NonNullable<PromptDebugImageCategory["items"]>;
+};
+
+function isNodeErrorWithCode(error: unknown, code: string): error is NodeJS.ErrnoException {
+  return error instanceof Error && "code" in error && error.code === code;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object";
+}
 
 function resolvePromptImagesChildUrl() {
   return existsSync(fileURLToPath(PROMPT_IMAGES_CHILD_TS_URL))
@@ -80,7 +99,7 @@ function createPromptImageTimings(): PromptImageTimings {
   };
 }
 
-function addTiming(timings: PromptImageTimings | Record<string, number> | null | undefined, key: string, startedAt: number) {
+function addTiming(timings: PromptImageTimingState, key: PromptImageTimingKey, startedAt: number) {
   if (!timings || !key || !Number.isFinite(startedAt)) {
     return;
   }
@@ -107,7 +126,7 @@ function sanitizeFileName(value: unknown) {
   return sanitized || "unknown";
 }
 
-function groupPromptImageItemsByCategory(normalizedItems: PromptImageItemLike[] = []) {
+function groupPromptImageItemsByCategory(normalizedItems: PromptImageItemLike[] = []): Map<string, PromptImageItemLike[]> {
   const groups = new Map<string, PromptImageItemLike[]>();
 
   for (const item of normalizedItems) {
@@ -219,7 +238,7 @@ async function readImageFromLocalCache(imageUrl: unknown) {
       cachePath
     };
   } catch (error) {
-    if (error?.code === "ENOENT") {
+    if (isNodeErrorWithCode(error, "ENOENT")) {
       return null;
     }
     throw error;
@@ -577,9 +596,9 @@ async function buildCategoryImage({
   category: string;
   entries: Array<{ item: PromptImageItemLike; result: PromptImageDownloadResult; slotIndex: number }>;
   timings?: PromptImageTimings | null;
-}) {
+}): Promise<{ buffer: Buffer; mimeType: string; manifestEntries: NonNullable<PromptDebugImageCategory["items"]> }> {
   const composites = [];
-  const manifestEntries = [];
+  const manifestEntries: NonNullable<PromptDebugImageCategory["items"]> = [];
 
   for (const [slotIndex, entry] of entries.entries()) {
     const row = Math.floor(slotIndex / GRID_COLUMNS);
@@ -667,7 +686,7 @@ async function createIntermediateCollageDirectory({
 }: {
   debugOutputDir?: string | URL | null;
   saveDebugArtifacts?: boolean;
-} = {}) {
+} = {}): Promise<{ directory: string; shouldCleanup: boolean }> {
   if (saveDebugArtifacts) {
     if (!debugOutputDir) {
       throw new Error("debugOutputDir is required when saveDebugArtifacts is enabled");
@@ -691,7 +710,7 @@ async function createIntermediateCollageDirectory({
   };
 }
 
-function stripCategoryBuffer(category: PromptDebugImageCategory = {}) {
+function stripCategoryBuffer(category: PromptDebugImageCategory = {}): PromptDebugImageCategoryWithoutBuffer {
   return {
     category: category?.category ?? "",
     mimeType: category?.mimeType ?? "image/jpeg",
@@ -704,8 +723,18 @@ function stripCategoryBuffer(category: PromptDebugImageCategory = {}) {
   };
 }
 
-async function stitchCategoryImagesVertically(categories: Array<PromptDebugImageCategory & { file?: string }> = []) {
-  const validCategories = categories.filter((category) => typeof category?.file === "string" && category.file.length > 0);
+function normalizeManifestCategory(category: PromptDebugImageCategory = {}): PromptDebugImageCategoryManifestSource {
+  const stripped = stripCategoryBuffer(category);
+
+  return {
+    ...stripped,
+    filename: stripped.filename,
+    items: stripped.items
+  };
+}
+
+async function stitchCategoryImagesVertically(categories: PromptDebugImageCategoryWithFile[] = []): Promise<PromptDebugImageStitched | null> {
+  const validCategories = categories.filter((category) => category.file.length > 0);
   if (validCategories.length === 0) {
     return null;
   }
@@ -731,7 +760,7 @@ async function stitchCategoryImagesVertically(categories: Array<PromptDebugImage
   }
 
   let offsetTop = 0;
-  const composites = validCategories.map((category, index) => {
+  const composites: Array<{ input: string; left: number; top: number }> = validCategories.map((category, index) => {
     const composite = {
       input: category.file,
       left: 0,
@@ -775,7 +804,7 @@ async function saveDebugArtifacts({
   skippedCount,
   debugOutputDir
 }: {
-  categories: Array<PromptDebugImageCategory & { file?: string }>;
+  categories: PromptDebugImageCategory[];
   stitched?: PromptDebugImageStitched | null;
   cachedCount: number;
   downloadedCount: number;
@@ -791,9 +820,10 @@ async function saveDebugArtifacts({
     : path.resolve(String(debugOutputDir));
 
   const files: string[] = [];
-  const manifestCategories: Array<Record<string, unknown>> = [];
+  const manifestCategories: PromptDebugImageCategoryManifest[] = [];
 
-  for (const categoryEntry of categories) {
+  for (const category of categories) {
+    const categoryEntry = normalizeManifestCategory(category);
     const categoryFile = path.join(resolvedOutputDir, categoryEntry.filename);
     files.push(categoryFile);
     manifestCategories.push({
@@ -807,7 +837,7 @@ async function saveDebugArtifacts({
     });
   }
 
-  let stitchedManifest = null;
+  let stitchedManifest: PromptDebugImageStitchedManifest | null = null;
   if (stitched?.buffer) {
     const stitchedFile = path.join(resolvedOutputDir, stitched.filename || STITCHED_COLLAGE_FILENAME);
     await writeFile(stitchedFile, stitched.buffer);
@@ -820,7 +850,7 @@ async function saveDebugArtifacts({
     };
   }
 
-  const manifest = {
+  const manifest: PromptDebugImageManifest = {
     generatedAt: new Date().toISOString(),
     outputDir: resolvedOutputDir,
     cachedCount,
@@ -845,7 +875,7 @@ async function buildPromptDebugImages({
   saveDebugArtifacts?: boolean;
 } = {}) {
   const groupedItems = groupPromptImageItemsByCategory(normalizedItems);
-  const categories = [];
+  const categories: PromptDebugImageCategoryWithFile[] = [];
   let cachedCount = 0;
   let downloadedCount = 0;
   let skippedCount = 0;
@@ -919,7 +949,12 @@ async function buildPromptDebugImagesForCategory({
   items?: PromptImageItemLike[];
   downloadConcurrency?: number;
   timings?: PromptImageTimings | null;
-} = {}) {
+} = {}): Promise<{
+  category: PromptDebugImageCategory;
+  cachedCount: number;
+  downloadedCount: number;
+  skippedCount: number;
+}> {
   const categoryStartedAt = nowMs();
   const categorySlug = sanitizeFileName(category);
   const downloadResults = await mapWithConcurrency(
@@ -974,12 +1009,19 @@ async function buildPromptDebugImagesForCategory({
   };
 }
 
-function serializePromptDebugImagesForIpc(result: PromptDebugImageResult = {}) {
+function getNormalizedPromptImageTimings(timings: PromptDebugImageResult["timings"]): PromptImageTimings {
+  return {
+    ...createPromptImageTimings(),
+    ...(timings ?? {})
+  };
+}
+
+function serializePromptDebugImagesForIpc(result: PromptDebugImageResult = {}): PromptDebugImageResult {
   return {
     cachedCount: Number(result?.cachedCount) || 0,
     downloadedCount: Number(result?.downloadedCount) || 0,
     skippedCount: Number(result?.skippedCount) || 0,
-    timings: result?.timings && typeof result.timings === "object" ? result.timings : undefined,
+    timings: isRecord(result.timings) ? getNormalizedPromptImageTimings(result.timings) : undefined,
     stitched: result?.stitched
       ? {
         category: result.stitched?.category ?? "all-categories",
@@ -1015,17 +1057,16 @@ function serializePromptDebugImagesForIpc(result: PromptDebugImageResult = {}) {
 }
 
 function isSerializedIpcBuffer(value: unknown): value is SerializedIpcBuffer {
-  return Boolean(
-    value
-    && typeof value === "object"
-    && "type" in value
-    && "data" in value
-    && (value as { type?: unknown }).type === "Buffer"
-    && Array.isArray((value as { data?: unknown }).data)
-  );
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return value.type === "Buffer"
+    && Array.isArray(value.data)
+    && value.data.every((entry) => Number.isInteger(entry));
 }
 
-function normalizeIpcBuffer(value: unknown) {
+function normalizeIpcBuffer(value: unknown): Buffer | null {
   if (Buffer.isBuffer(value)) {
     return value;
   }
@@ -1041,15 +1082,12 @@ function normalizeIpcBuffer(value: unknown) {
   return null;
 }
 
-function deserializePromptDebugImagesFromIpc(payload: PromptDebugImageResult = {}) {
+function deserializePromptDebugImagesFromIpc(payload: PromptDebugImageResult = {}): PromptDebugImageResult {
   return {
     cachedCount: Number(payload?.cachedCount) || 0,
     downloadedCount: Number(payload?.downloadedCount) || 0,
     skippedCount: Number(payload?.skippedCount) || 0,
-    timings: {
-      ...createPromptImageTimings(),
-      ...(payload?.timings && typeof payload.timings === "object" ? payload.timings : {})
-    },
+    timings: getNormalizedPromptImageTimings(isRecord(payload.timings) ? payload.timings : undefined),
     stitched: payload?.stitched
       ? {
         category: payload.stitched?.category ?? "all-categories",
@@ -1087,7 +1125,7 @@ function deserializePromptDebugImagesFromIpc(payload: PromptDebugImageResult = {
 }
 
 function isValidPromptImagesIpcPayload(message: unknown): message is PromptImagesChildSuccessPayload {
-  if (!message || typeof message !== "object") {
+  if (!isRecord(message)) {
     return false;
   }
 

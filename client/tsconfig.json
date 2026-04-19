@@ -6,5 +6,5 @@
     "types": ["vite/client", "vitest/globals", "node"]
   },
   "include": ["src/**/*"],
-  "exclude": ["dist", "render-server.js", "netlify", "vite.config.js"]
+  "exclude": ["dist", "render-server.js", "netlify"]
 }

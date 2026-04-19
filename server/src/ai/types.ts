@@ -95,6 +95,8 @@ type PromptImageTimings = {
   childRoundTripMs: number;
 };
 
+type PromptImageTimingKey = keyof PromptImageTimings;
+
 type PromptImageDownloadResult = {
   id: string;
   category: string;
@@ -163,9 +165,37 @@ type PromptDebugImageResult = {
   cachedCount?: number;
   downloadedCount?: number;
   skippedCount?: number;
-  timings?: PromptImageTimings | Record<string, number>;
+  timings?: PromptImageTimings | Partial<PromptImageTimings>;
   stitched?: PromptDebugImageStitched | null;
   categories?: PromptDebugImageCategory[];
+};
+
+type PromptDebugImageCategoryManifest = {
+  category: string;
+  file: string;
+  totalItems: number;
+  cachedCount: number;
+  downloadedCount: number;
+  skippedCount: number;
+  items: PromptDebugImageItemManifest[];
+};
+
+type PromptDebugImageStitchedManifest = {
+  category: string;
+  file: string;
+  totalItems: number;
+  categoryCount: number;
+};
+
+type PromptDebugImageManifest = {
+  generatedAt: string;
+  outputDir: string;
+  cachedCount: number;
+  downloadedCount: number;
+  skippedCount: number;
+  files: string[];
+  stitched: PromptDebugImageStitchedManifest | null;
+  categories: PromptDebugImageCategoryManifest[];
 };
 
 type SerializedIpcBuffer = {
@@ -355,12 +385,16 @@ export type {
   ParsedGenerationError,
   PartialRegenerationJobState,
   PromptDebugImageCategory,
+  PromptDebugImageCategoryManifest,
   PromptDebugImageItemManifest,
+  PromptDebugImageManifest,
   PromptDebugImageResult,
   PromptDebugImageStitched,
+  PromptDebugImageStitchedManifest,
   PromptImageAsset,
   PromptImageDownloadResult,
   PromptImageItemLike,
+  PromptImageTimingKey,
   PromptImageTimings,
   PromptImagesChildFailurePayload,
   PromptImagesChildMessage,
