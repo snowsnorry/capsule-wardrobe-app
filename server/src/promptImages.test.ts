@@ -19,6 +19,13 @@ import {
   resolveSourceImageUrl,
   serializePromptDebugImagesForIpc
 } from "./ai/promptImages.js";
+import { createBinaryResponse } from "./test/testDoubles.js";
+
+function assertCategoryHasBufferProperty(
+  category: unknown
+): asserts category is { buffer: Buffer | Uint8Array | null } {
+  assert.ok(Boolean(category) && typeof category === "object");
+}
 
 async function createFixtureBuffer(color) {
   return sharp({
@@ -91,9 +98,9 @@ test("buildPromptDebugImages writes category images with expected geometry and m
 
   globalThis.fetch = async (url) => {
     if (String(url).includes("top-1")) {
-      return new Response(greenBuffer, { status: 200 });
+      return createBinaryResponse(greenBuffer, { status: 200 });
     }
-    return new Response(blueBuffer, { status: 200 });
+    return createBinaryResponse(blueBuffer, { status: 200 });
   };
 
   t.after(() => {
@@ -117,6 +124,7 @@ test("buildPromptDebugImages writes category images with expected geometry and m
 
   const topCategory = result.categories.find((entry) => entry.category === "top");
   assert.ok(topCategory);
+  assertCategoryHasBufferProperty(topCategory);
   assert.equal(topCategory.mimeType, "image/jpeg");
   assert.equal(topCategory.buffer, undefined);
 
@@ -143,7 +151,7 @@ test("buildPromptDebugImages keeps collages in memory when debug saving is disab
   const redBuffer = await createFixtureBuffer("#cc0000");
   const originalFetch = globalThis.fetch;
 
-  globalThis.fetch = async () => new Response(redBuffer, { status: 200 });
+  globalThis.fetch = async () => createBinaryResponse(redBuffer, { status: 200 });
 
   t.after(() => {
     globalThis.fetch = originalFetch;
@@ -157,6 +165,7 @@ test("buildPromptDebugImages keeps collages in memory when debug saving is disab
 
   assert.equal(result.categories.length, 1);
   assert.ok(Buffer.isBuffer(result.stitched.buffer));
+  assertCategoryHasBufferProperty(result.categories[0]);
   assert.equal(result.categories[0].buffer, undefined);
   await assert.rejects(access(path.join(outputDir, "manifest.json")));
   await assert.rejects(access(path.join(outputDir, "category-top.jpg")));
@@ -172,7 +181,7 @@ test("buildPromptDebugImages skips failed downloads and still produces outputs",
     if (String(url).includes("bad")) {
       throw new Error("socket_hang_up");
     }
-    return new Response(redBuffer, { status: 200 });
+    return createBinaryResponse(redBuffer, { status: 200 });
   };
 
   t.after(() => {
@@ -252,7 +261,7 @@ test("downloadProductImageAssets normalizes downloaded files to jpeg", async (t)
   }).png().toBuffer();
   const originalFetch = globalThis.fetch;
 
-  globalThis.fetch = async () => new Response(transparentBuffer, {
+  globalThis.fetch = async () => createBinaryResponse(transparentBuffer, {
     status: 200,
     headers: {
       "content-type": "image/png"
@@ -316,7 +325,7 @@ test("downloadProductImageAssets replaces width placeholder in image url before 
 
   globalThis.fetch = async (url) => {
     requestedUrls.push(String(url));
-    return new Response(fixtureBuffer, { status: 200 });
+    return createBinaryResponse(fixtureBuffer, { status: 200 });
   };
 
   t.after(() => {
@@ -399,6 +408,7 @@ test("prompt image IPC serialization round-trips collages back to buffers", asyn
   assert.deepEqual(deserialized.stitched.buffer, fixtureBuffer);
   assert.equal(deserialized.categories[0].cachedCount, 1);
   assert.equal(serialized.categories[0].buffer, null);
+  assertCategoryHasBufferProperty(deserialized.categories[0]);
   assert.equal(deserialized.categories[0].buffer, null);
 });
 
@@ -406,7 +416,7 @@ test("buildPromptDebugImages does not return a normalized image map", async (t) 
   const redBuffer = await createFixtureBuffer("#cc0000");
   const originalFetch = globalThis.fetch;
 
-  globalThis.fetch = async () => new Response(redBuffer, { status: 200 });
+  globalThis.fetch = async () => createBinaryResponse(redBuffer, { status: 200 });
 
   t.after(() => {
     globalThis.fetch = originalFetch;
@@ -483,6 +493,8 @@ test("buildPromptDebugImagesInChild resolves buffered collages from child succes
   assert.equal(result.categories.length, 2);
   assert.ok(Buffer.isBuffer(result.stitched.buffer));
   assert.equal(String(result.stitched.buffer), "child-image-stitched");
+  assertCategoryHasBufferProperty(result.categories[0]);
+  assertCategoryHasBufferProperty(result.categories[1]);
   assert.equal(result.categories[0].buffer, null);
   assert.equal(result.categories[1].buffer, null);
 });

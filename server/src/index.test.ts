@@ -1,5 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import type { Server } from "node:http";
+import type { OAuth2Client } from "google-auth-library";
+import type { ErrorWithCode } from "./ai/types.js";
 
 process.env.NODE_ENV = "test";
 
@@ -10,7 +13,25 @@ const SESSION_ID = "session-123";
 const CSRF_TOKEN = "csrf-123";
 const AUTH_COOKIE = `session=${SESSION_ID}; csrf=${CSRF_TOKEN}`;
 
-function createDependencies(overrides = {}) {
+type DependencyOverrides = Record<string, unknown>;
+type StartedTestServer = {
+  deps: Record<string, unknown>;
+  baseUrl: string;
+};
+type RequestJsonOptions = {
+  method?: string;
+  body?: unknown;
+  cookie?: string;
+  csrfToken?: string;
+  origin?: string;
+  headers?: Record<string, string>;
+};
+type RequestJsonResult = {
+  response: Response;
+  json: any;
+};
+
+function createDependencies(overrides: DependencyOverrides = {}) {
   return {
     createPendingCodeImpl: async () => ({ ok: true, code: "654321" }),
     verifyCodeImpl: async () => ({ ok: true }),
@@ -129,30 +150,36 @@ async function startTestServer(testContext, {
   googleClientId = "google-client-id",
   googleAuthClient = null,
   overrides = {}
-} = {}) {
+}: {
+  nodeEnv?: string;
+  authTestMode?: boolean;
+  googleClientId?: string;
+  googleAuthClient?: unknown | null;
+  overrides?: DependencyOverrides;
+} = {}): Promise<StartedTestServer> {
   const deps = createDependencies(overrides);
   const app = createApp({
     nodeEnv,
     clientOrigin: TEST_CLIENT_ORIGIN,
     authTestMode,
     googleClientId,
-    googleAuthClient,
+    googleAuthClient: googleAuthClient as OAuth2Client | null,
     ...deps
-  });
+  } as any);
 
-  const server = await new Promise((resolve) => {
+  const server = await new Promise<Server>((resolve) => {
     const nextServer = app.listen(0, "127.0.0.1", () => resolve(nextServer));
   });
 
   testContext.after(async () => {
-    await new Promise((resolve, reject) => {
+    await new Promise<void>((resolve, reject) => {
       server.close((error) => (error ? reject(error) : resolve()));
     });
   });
 
   return {
     deps,
-    baseUrl: `http://127.0.0.1:${server.address().port}`
+    baseUrl: `http://127.0.0.1:${(server.address() as { port: number }).port}`
   };
 }
 
@@ -163,7 +190,7 @@ async function requestJson(baseUrl, pathname, {
   csrfToken,
   origin,
   headers = {}
-} = {}) {
+}: RequestJsonOptions = {}): Promise<RequestJsonResult> {
   const response = await fetch(`${baseUrl}${pathname}`, {
     method,
     headers: {
@@ -1095,7 +1122,7 @@ test("index routes map search and health dependency failures", async (t) => {
     overrides: {
       runSavedSearchImpl: async () => {
         const error = new Error("invalid_payload");
-        error.code = "invalid_payload";
+        (error as ErrorWithCode).code = "invalid_payload";
         throw error;
       },
       checkDatabaseConnectionImpl: async () => {

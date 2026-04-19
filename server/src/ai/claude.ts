@@ -18,13 +18,33 @@ const DEFAULT_CHAT_MODEL = "claude-opus-4-7";
 const ALLOWED_CHAT_MODELS = ["claude-opus-4-7"];
 
 type ClaudeResponseLike = {
-  content?: Array<{ type?: string; text?: string | null }>;
+  content?: Array<{ type?: string; text?: string | null; [key: string]: unknown }>;
+};
+
+type ClaudeMessageContent =
+  | { type: "image"; source: { type: "base64"; media_type: "image/png" | "image/jpeg" | "image/gif" | "image/webp"; data: string } }
+  | { type: "text"; text: string };
+
+type ClaudeMessagesCreatePayload = {
+  model: string;
+  system?: string;
+  messages: Array<{
+    role: "user";
+    content: ClaudeMessageContent[];
+  }>;
+  output_config?: {
+    format: {
+      type: "json_schema";
+      schema: JsonSchema | JsonSchema[] | unknown;
+    };
+  };
+  max_tokens: number;
 };
 
 type ClaudeClientLike = {
   apiKey?: string;
   messages: {
-    create: (payload: Record<string, unknown>) => Promise<ClaudeResponseLike>;
+    create: (payload: ClaudeMessagesCreatePayload) => Promise<ClaudeResponseLike>;
   };
 };
 
@@ -74,7 +94,7 @@ function buildClaudeMessages(user: string, images: ImageAssetLike[] = []) {
       source: {
         type: "base64",
         media_type: typeof image?.mimeType === "string" && image.mimeType.trim().length > 0
-          ? image.mimeType.trim()
+          ? normalizeClaudeImageMimeType(image.mimeType)
           : "image/jpeg",
         data: image.buffer.toString("base64")
       }
@@ -92,6 +112,21 @@ function buildClaudeMessages(user: string, images: ImageAssetLike[] = []) {
     role: "user",
     content: content.length > 0 ? content : [{ type: "text", text: "" }]
   }];
+}
+
+function normalizeClaudeImageMimeType(mimeType: string): "image/png" | "image/jpeg" | "image/gif" | "image/webp" {
+  switch (String(mimeType || "").trim().toLowerCase()) {
+    case "image/png":
+      return "image/png";
+    case "image/gif":
+      return "image/gif";
+    case "image/webp":
+      return "image/webp";
+    case "image/jpg":
+    case "image/jpeg":
+    default:
+      return "image/jpeg";
+  }
 }
 
 function sanitizeClaudeJsonSchema(schema: JsonSchema | JsonSchema[] | unknown): JsonSchema | JsonSchema[] | unknown {
@@ -137,7 +172,9 @@ function buildClaudeOutputConfig(format: JsonSchemaFormat | null = null, userPro
   };
 }
 
-function extractClaudeResponseText(response: { content?: Array<{ type?: string; text?: string | null }> } | null = null) {
+function extractClaudeResponseText(
+  response: { content?: Array<{ type?: string; text?: string | null; [key: string]: unknown }> } | null = null
+) {
   if (!Array.isArray(response?.content)) {
     return "";
   }
@@ -149,9 +186,23 @@ function extractClaudeResponseText(response: { content?: Array<{ type?: string; 
 }
 
 function createClaudeClient({
-  createClientImpl = ({ apiKey }: { apiKey: string }) => new Anthropic({ apiKey, maxRetries: 0 }),
+  createClientImpl = ({ apiKey }: { apiKey: string }): ClaudeClientLike => {
+    const sdkClient = new Anthropic({ apiKey, maxRetries: 0 });
+    return {
+      apiKey,
+      messages: {
+        create: (payload) =>
+          sdkClient.messages.create(payload as Parameters<typeof sdkClient.messages.create>[0])
+            .then((response) => response as ClaudeResponseLike)
+      }
+    };
+  },
   getApiKeyImpl = () => process.env.ANTHROPIC_API_KEY,
   cache = true
+}: {
+  createClientImpl?: ({ apiKey }: { apiKey: string }) => ClaudeClientLike;
+  getApiKeyImpl?: () => string | undefined;
+  cache?: boolean;
 } = {}) {
   let localCachedClient = null;
 
@@ -165,7 +216,7 @@ function createClaudeClient({
       throw new Error("ANTHROPIC_API_KEY is not set");
     }
 
-    const client = createClientImpl({ apiKey }) as ClaudeClientLike;
+    const client = createClientImpl({ apiKey });
     if (cache) {
       localCachedClient = client;
     }

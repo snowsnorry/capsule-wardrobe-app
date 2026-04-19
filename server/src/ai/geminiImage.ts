@@ -3,9 +3,39 @@ import { GoogleGenAI } from "@google/genai";
 const DEFAULT_IMAGE_MODEL = "gemini-3-pro-image-preview";
 const DEFAULT_API_VERSION = "v1beta";
 
+type GeminiImagePromptPart =
+  | { text: string }
+  | { inlineData: { mimeType: string; data: string } };
+
+type GeminiImageGenerateContentPayload = {
+  model: string;
+  contents: GeminiImagePromptPart[];
+  config: {
+    responseModalities: ["IMAGE"];
+  };
+};
+
+type GeminiImageGenerateContentResponse = {
+  outputs?: Array<{ type?: string; data?: string; mime_type?: string }>;
+  candidates?: Array<{
+    content?: {
+      parts?: Array<{
+        inlineData?: { data?: string; mimeType?: string };
+        inline_data?: { data?: string; mime_type?: string };
+      }>;
+    };
+  }>;
+  generatedImages?: Array<{
+    image?: {
+      imageBytes?: string;
+      mimeType?: string;
+    };
+  }>;
+};
+
 type GeminiImageClientLike = {
   models: {
-    generateContent: (payload: Record<string, unknown>) => Promise<unknown>;
+    generateContent: (payload: GeminiImageGenerateContentPayload) => Promise<GeminiImageGenerateContentResponse>;
   };
 };
 
@@ -73,8 +103,19 @@ function extractGeneratedImage(response) {
 }
 
 function createGeminiImageClient({
-  createClientImpl = ({ apiKey, apiVersion }) => new GoogleGenAI({ apiKey, apiVersion }),
+  createClientImpl = ({ apiKey, apiVersion }: { apiKey: string; apiVersion: string }): GeminiImageClientLike => {
+    const sdkClient = new GoogleGenAI({ apiKey, apiVersion });
+    return {
+      models: {
+        generateContent: (payload: GeminiImageGenerateContentPayload) =>
+          sdkClient.models.generateContent(payload as Parameters<typeof sdkClient.models.generateContent>[0]) as Promise<GeminiImageGenerateContentResponse>
+      }
+    };
+  },
   getApiKeyImpl = () => process.env.GEMINI_API_KEY
+}: {
+  createClientImpl?: ({ apiKey, apiVersion }: { apiKey: string; apiVersion: string }) => GeminiImageClientLike;
+  getApiKeyImpl?: () => string | undefined;
 } = {}) {
   let cachedClient = null;
 
@@ -91,7 +132,7 @@ function createGeminiImageClient({
     cachedClient = createClientImpl({
       apiKey,
       apiVersion: DEFAULT_API_VERSION
-    }) as GeminiImageClientLike;
+    });
     return cachedClient;
   }
 

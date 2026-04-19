@@ -4,6 +4,7 @@ import {
   normalizeSwimwearSelection,
   shouldGenerateSwimwear
 } from "./ai/swimwear.js";
+import type { SwimwearCandidate } from "./ai/types.js";
 
 test("shouldGenerateSwimwear returns true only when summer is present", () => {
   assert.equal(shouldGenerateSwimwear({ season: ["spring"] }), false);
@@ -13,7 +14,7 @@ test("shouldGenerateSwimwear returns true only when summer is present", () => {
 });
 
 test("normalizeSwimwearSelection keeps a single swimsuit when swimsuit and extras are mixed", () => {
-  const candidates = [
+  const candidates: SwimwearCandidate[] = [
     { id: "1", swimwear_type: "swimsuit" },
     { id: "2", swimwear_type: "swimwear_top" },
     { id: "3", swimwear_type: "swimwear_bottom" }
@@ -26,7 +27,7 @@ test("normalizeSwimwearSelection keeps a single swimsuit when swimsuit and extra
 });
 
 test("normalizeSwimwearSelection keeps a valid top and bottom pair", () => {
-  const candidates = [
+  const candidates: SwimwearCandidate[] = [
     { id: "1", swimwear_type: "swimwear_top" },
     { id: "2", swimwear_type: "swimwear_bottom" }
   ];
@@ -38,7 +39,7 @@ test("normalizeSwimwearSelection keeps a valid top and bottom pair", () => {
 });
 
 test("normalizeSwimwearSelection backfills missing bottom from ranked candidates", () => {
-  const candidates = [
+  const candidates: SwimwearCandidate[] = [
     { id: "1", swimwear_type: "swimwear_top" },
     { id: "2", swimwear_type: "swimwear_bottom" },
     { id: "3", swimwear_type: "swimsuit" }
@@ -54,7 +55,7 @@ test("normalizeSwimwearSelection backfills missing bottom from ranked candidates
 });
 
 test("normalizeSwimwearSelection backfills missing top from ranked candidates", () => {
-  const candidates = [
+  const candidates: SwimwearCandidate[] = [
     { id: "1", swimwear_type: "swimwear_top" },
     { id: "2", swimwear_type: "swimwear_bottom" }
   ];
@@ -69,7 +70,7 @@ test("normalizeSwimwearSelection backfills missing top from ranked candidates", 
 });
 
 test("normalizeSwimwearSelection returns empty array when pair cannot be completed", () => {
-  const candidates = [{ id: "1", swimwear_type: "swimwear_top" }];
+  const candidates: SwimwearCandidate[] = [{ id: "1", swimwear_type: "swimwear_top" }];
 
   assert.deepEqual(normalizeSwimwearSelection(["1"], candidates), []);
 });

@@ -13,8 +13,19 @@ import {
   uploadBufferToGemini
 } from "./ai/gemini.js";
 import { buildDeveloperPrompt } from "./ai/openai.js";
+import type { JsonSchemaFormat } from "./ai/types.js";
 
-const SIMPLE_OK_FORMAT = {
+function assertGeminiObjectSchema(
+  schema: unknown
+): asserts schema is {
+  type?: string;
+  additionalProperties?: boolean;
+  properties?: Record<string, { type?: string }>;
+} {
+  assert.ok(Boolean(schema) && typeof schema === "object" && !Array.isArray(schema));
+}
+
+const SIMPLE_OK_FORMAT: JsonSchemaFormat = {
   type: "json_schema",
   name: "simple_ok_response",
   schema: {
@@ -137,9 +148,10 @@ test("buildGeminiStructuredOutput converts app format to Gemini responseJsonSche
   });
 
   assert.equal(typeof result.zodSchema.parse, "function");
+  assertGeminiObjectSchema(result.responseJsonSchema);
   assert.equal(result.responseJsonSchema.type, "object");
   assert.equal(result.responseJsonSchema.additionalProperties, false);
-  assert.equal(result.responseJsonSchema.properties.ok.type, "boolean");
+  assert.equal(result.responseJsonSchema.properties?.ok.type, "boolean");
 });
 
 test("uploadBufferToGemini writes temp file, uploads it, and deletes local temp file", async () => {
@@ -149,31 +161,32 @@ test("uploadBufferToGemini writes temp file, uploads it, and deletes local temp 
       upload: async (payload) => {
         calls.push(["upload", payload]);
         return { name: "files/123", uri: "gs://gemini/files/123", mimeType: "image/png" };
-      }
+      },
+      delete: async () => ({})
     }
   }, {
     filename: "capsule.png",
     mimeType: "image/png",
     buffer: Buffer.from("image-one")
   }, {
-    writeFileSyncImpl: (filePath, buffer) => calls.push(["write", filePath, buffer.toString("utf8")]),
+    writeFileSyncImpl: (filePath, buffer) => calls.push(["write", filePath, Buffer.from(buffer).toString("utf8")]),
     unlinkSyncImpl: (filePath) => calls.push(["unlink", filePath]),
     tmpdirImpl: () => "/tmp/gemini-tests",
     joinImpl: (...parts) => parts.join("/"),
-    randomUUIDImpl: () => "uuid-1"
+    randomUUIDImpl: () => "123e4567-e89b-12d3-a456-426614174000"
   });
 
   assert.deepEqual(uploaded, { name: "files/123", uri: "gs://gemini/files/123", mimeType: "image/png" });
   assert.deepEqual(calls, [
-    ["write", "/tmp/gemini-tests/uuid-1.png", "image-one"],
+    ["write", "/tmp/gemini-tests/123e4567-e89b-12d3-a456-426614174000.png", "image-one"],
     ["upload", {
-      file: "/tmp/gemini-tests/uuid-1.png",
+      file: "/tmp/gemini-tests/123e4567-e89b-12d3-a456-426614174000.png",
       config: {
         mimeType: "image/png",
         displayName: "capsule.png"
       }
     }],
-    ["unlink", "/tmp/gemini-tests/uuid-1.png"]
+    ["unlink", "/tmp/gemini-tests/123e4567-e89b-12d3-a456-426614174000.png"]
   ]);
 });
 
@@ -183,7 +196,9 @@ test("cleanupUploadedGeminiFiles deletes uploaded files and ignores nameless ent
     files: {
       delete: async ({ name }) => {
         deleted.push(name);
-      }
+        return {};
+      },
+      upload: async () => ({ name: "files/ignore" })
     }
   }, [
     { name: "files/123" },
@@ -209,12 +224,14 @@ test("gemini client validates api key and shapes multimodal JSON request", async
         models: {
           generateContent: async (payload) => {
             requestPayload = payload;
-            return { text: "noise before {\"ok\":true} trailing" };
+            return { text: "noise before {\"ok\":true} trailing", candidates: [] };
           }
         },
         files: {
+          upload: async () => ({ name: "files/ignore" }),
           delete: async ({ name }) => {
             deletedImages.push(name);
+            return {};
           }
         }
       };
@@ -267,8 +284,9 @@ test("gemini client validates api key and shapes multimodal JSON request", async
     })}`
   );
   assert.equal(requestPayload.config.responseMimeType, "application/json");
+  assertGeminiObjectSchema(requestPayload.config.responseJsonSchema);
   assert.equal(requestPayload.config.responseJsonSchema.type, "object");
-  assert.equal(requestPayload.config.responseJsonSchema.properties.ok.type, "boolean");
+  assert.equal(requestPayload.config.responseJsonSchema.properties?.ok.type, "boolean");
   assert.deepEqual(requestPayload.contents[0], {
     fileData: {
       fileUri: "gs://gemini/files/1",
@@ -299,11 +317,12 @@ test("gemini uses only developer prompt as systemInstruction when prompt has no 
       models: {
         generateContent: async (payload) => {
           requestPayload = payload;
-          return { text: "{\"ok\":true}" };
+          return { text: "{\"ok\":true}", candidates: [] };
         }
       },
       files: {
-        delete: async () => {}
+        upload: async () => ({ name: "files/ignore" }),
+        delete: async () => ({})
       }
     })
   });
@@ -322,7 +341,11 @@ test("gemini generateJsonWithLlm throws for invalid JSON", async () => {
     getApiKeyImpl: () => "gem-key",
     createClientImpl: () => ({
       models: {
-        generateContent: async () => ({ text: "not-json" })
+        generateContent: async () => ({ text: "not-json", candidates: [] })
+      },
+      files: {
+        upload: async () => ({ name: "files/1" }),
+        delete: async () => ({})
       }
     })
   });
@@ -338,7 +361,11 @@ test("gemini generateJsonWithLlm throws when parsed JSON does not satisfy the sc
     getApiKeyImpl: () => "gem-key",
     createClientImpl: () => ({
       models: {
-        generateContent: async () => ({ text: "{\"ok\":\"yes\"}" })
+        generateContent: async () => ({ text: "{\"ok\":\"yes\"}", candidates: [] })
+      },
+      files: {
+        upload: async () => ({ name: "files/1" }),
+        delete: async () => ({})
       }
     })
   });
@@ -360,9 +387,13 @@ test("gemini does not retry transient transport failures", async () => {
       models: {
         generateContent: async () => {
           const error = new TypeError("fetch failed");
-          error.cause = { code: "UND_ERR_SOCKET" };
+          (error as Error & { cause?: { code?: string } }).cause = { code: "UND_ERR_SOCKET" };
           throw error;
         }
+      },
+      files: {
+        upload: async () => ({ name: "files/1" }),
+        delete: async () => ({})
       }
     })
   });

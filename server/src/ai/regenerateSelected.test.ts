@@ -52,6 +52,14 @@ function createCapsule() {
   });
 }
 
+function toItemIdentity(items) {
+  return items.map((item) => ({
+    id: item.id,
+    url: item.url,
+    category: item.category
+  }));
+}
+
 test("buildRegenerateSelectedPrompt includes optional additional information", () => {
   const prompt = buildRegenerateSelectedPrompt(
     {
@@ -301,8 +309,8 @@ test("regenerateSelectedWardrobeItems updates rejected urls, shrinks partial pay
       data: {
         wardrobe: {
           items: [
-            { id: "bottom-1", url: "https://example.com/bottom-1", category: "bottom" },
-            { id: "bag-1", url: "https://example.com/bag-1", category: "bag" }
+            buildWardrobeUiItem({ id: "bottom-1", url: "https://example.com/bottom-1", category: "bottom" }),
+            buildWardrobeUiItem({ id: "bag-1", url: "https://example.com/bag-1", category: "bag" })
           ],
           outfitSets: [{ itemIds: ["top-1", "bottom-1", "bag-1"], image: "set-image", imageObsolete: false }],
           reasoning: "capsule-json",
@@ -319,7 +327,7 @@ test("regenerateSelectedWardrobeItems updates rejected urls, shrinks partial pay
   assert.ok(job);
   await job.promise;
 
-  assert.deepEqual(regeneratedSelectedProducts, [{ id: "top-1", url: "https://example.com/top-1", category: "top" }]);
+  assert.deepEqual(toItemIdentity(regeneratedSelectedProducts), [{ id: "top-1", url: "https://example.com/top-1", category: "top" }]);
   assert.equal(regeneratedProfile.rejected.includes("https://example.com/top-1"), true);
   assert.deepEqual(draftUpdates[1], [
     "person@example.com",
@@ -329,9 +337,9 @@ test("regenerateSelectedWardrobeItems updates rejected urls, shrinks partial pay
       data: {
         wardrobe: {
           items: [
-            { id: "bottom-1", url: "https://example.com/bottom-1", category: "bottom" },
-            { id: "bag-1", url: "https://example.com/bag-1", category: "bag" },
-            { id: "top-2", url: "https://example.com/top-2", category: "top" }
+            buildWardrobeUiItem({ id: "bottom-1", url: "https://example.com/bottom-1", category: "bottom" }),
+            buildWardrobeUiItem({ id: "bag-1", url: "https://example.com/bag-1", category: "bag" }),
+            buildWardrobeUiItem({ id: "top-2", url: "https://example.com/top-2", category: "top" })
           ],
           outfitSets: [{ itemIds: ["top-2", "bottom-1", "bag-1"], image: "set-image", imageObsolete: true }],
           reasoning: "regen-json",

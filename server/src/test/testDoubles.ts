@@ -78,7 +78,9 @@ function createTextResponse(body: string, init: ResponseInit = {}): Response {
 }
 
 function createBinaryResponse(body: Buffer | Uint8Array, init: ResponseInit = {}): Response {
-  const payload = Buffer.isBuffer(body) ? new Uint8Array(body) : body;
+  const bytes = Buffer.isBuffer(body) ? body : Buffer.from(body);
+  const payload = new ArrayBuffer(bytes.byteLength);
+  new Uint8Array(payload).set(bytes);
   return new Response(payload, {
     status: init.status ?? 200,
     headers: init.headers
@@ -90,22 +92,57 @@ function createMockChildProcess(): ChildProcess {
   const child = Object.assign(emitter, {
     pid: 1234,
     connected: true,
+    killed: false,
     exitCode: null,
     signalCode: null,
-    stdin: null,
-    stdout: null,
-    stderr: null,
-    stdio: [],
+    spawnargs: [],
+    spawnfile: "",
+    stdin: process.stdin,
+    stdout: process.stdout,
+    stderr: process.stderr,
+    stdio: [
+      process.stdin,
+      process.stdout,
+      process.stderr,
+      process.stdout,
+      process.stderr
+    ] as [
+      typeof process.stdin,
+      typeof process.stdout,
+      typeof process.stderr,
+      typeof process.stdout,
+      typeof process.stderr
+    ],
     channel: null,
-    send(message: unknown, callback?: (error: Error | null) => void) {
-      callback?.(null);
+    send(
+      message: unknown,
+      sendHandleOrCallback?: unknown,
+      optionsOrCallback?: unknown,
+      callback?: (error: Error | null) => void
+    ) {
+      void message;
+      const resolvedCallback = typeof sendHandleOrCallback === "function"
+        ? sendHandleOrCallback
+        : typeof optionsOrCallback === "function"
+          ? optionsOrCallback
+          : callback;
+      resolvedCallback?.(null);
       return true;
     },
     kill() {
       return true;
     },
+    ref() {
+      return child;
+    },
+    unref() {
+      return child;
+    },
     disconnect() {
       return child;
+    },
+    [Symbol.dispose]() {
+      return undefined;
     }
   });
 

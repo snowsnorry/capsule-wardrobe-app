@@ -3,9 +3,21 @@ import ollama from "ollama";
 const DEFAULT_OLLAMA_EMBEDDING_MODEL = "embeddinggemma";
 const DEFAULT_OLLAMA_CHAT_MODEL = "gemma3:27b";
 
+type OllamaEmbeddingResponseLike = {
+  embedding?: number[];
+};
+
+type OllamaGenerateResponseLike = {
+  response?: string;
+};
+
 function createOllamaClient({
-  embeddingsImpl = (payload) => ollama.embeddings(payload),
-  generateImpl = (payload) => ollama.generate(payload)
+  embeddingsImpl = (payload: { model: string; prompt: string }) => ollama.embeddings(payload),
+  generateImpl = (payload: { model: string; prompt: string; format: "json" }) =>
+    ollama.generate(payload) as Promise<OllamaGenerateResponseLike>
+}: {
+  embeddingsImpl?: (payload: { model: string; prompt: string }) => Promise<OllamaEmbeddingResponseLike>;
+  generateImpl?: (payload: { model: string; prompt: string; format: "json" }) => Promise<OllamaGenerateResponseLike>;
 } = {}) {
   async function getPromptEmbeddings(prompt: string) {
     const response = await embeddingsImpl({
@@ -24,7 +36,7 @@ function createOllamaClient({
       model: DEFAULT_OLLAMA_CHAT_MODEL,
       prompt,
       format: "json"
-    }) as { response?: string };
+    });
 
     let json;
     try {

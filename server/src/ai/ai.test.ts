@@ -46,6 +46,21 @@ function createCapsuleWithWardrobe(wardrobe = null) {
   });
 }
 
+function toItemIdentity(items) {
+  return items.map((item) => ({
+    id: item.id,
+    url: item.url,
+    category: item.category
+  }));
+}
+
+function toItemCategoryIdentity(items) {
+  return items.map((item) => ({
+    id: item.id,
+    category: item.category
+  }));
+}
+
 test("getWardrobeSelectionPrompt includes optional additional information", () => {
   const prompt = getWardrobeSelectionPrompt(
     {
@@ -587,7 +602,7 @@ test("getCapsuleItems returns pending regenerate payload when partial regenerati
   assert.equal(res.statusCode, 202);
   assert.equal(res.body.pendingStage, "regenerate");
   assert.deepEqual(res.body.pendingRegenerationUrls, ["https://example.com/top-1"]);
-  assert.deepEqual(res.body.items, [{ id: "top-1", url: "https://example.com/top-1", category: "top" }]);
+  assert.deepEqual(toItemIdentity(res.body.items), [{ id: "top-1", url: "https://example.com/top-1", category: "top" }]);
   assert.deepEqual(res.body.outfitSets, []);
 });
 
@@ -610,16 +625,23 @@ test("getCapsuleItems returns ready payload from stored wardrobe", async () => {
   }, res);
 
   assert.equal(res.statusCode, 200);
-  assert.deepEqual(res.body, {
-    ok: true,
-    status: "ready",
-    items: [{ id: "top-1", category: "top" }],
-    outfitSets: [],
-    reasoning: "capsule-json",
-    rawSelectionText: "raw-selection",
-    swimwearReasoning: "swimwear-json",
-    hasPendingAdditionalItems: false
-  });
+  assert.equal(res.body.ok, true);
+  assert.equal(res.body.status, "ready");
+  assert.deepEqual(res.body.items, [
+    buildWardrobeUiItem({
+      id: "top-1",
+      category: "top",
+      url: undefined,
+      name: undefined,
+      image_url: undefined,
+      audience: undefined
+    })
+  ]);
+  assert.deepEqual(res.body.outfitSets, []);
+  assert.equal(res.body.reasoning, "capsule-json");
+  assert.equal(res.body.rawSelectionText, "raw-selection");
+  assert.equal(res.body.swimwearReasoning, "swimwear-json");
+  assert.equal(res.body.hasPendingAdditionalItems, false);
 });
 
 test("getCapsuleItems returns extras pending state when extras are still generating", async () => {
@@ -649,7 +671,7 @@ test("getCapsuleItems returns extras pending state when extras are still generat
   assert.equal(res.statusCode, 202);
   assert.equal(res.body.pendingStage, "extras");
   assert.equal(res.body.hasPendingAdditionalItems, true);
-  assert.deepEqual(res.body.items, [{ id: "top-1", category: "top" }]);
+  assert.deepEqual(toItemCategoryIdentity(res.body.items), [{ id: "top-1", category: "top" }]);
   assert.deepEqual(res.body.outfitSets, []);
 });
 
@@ -707,7 +729,16 @@ test("regenerateCapsuleWardrobe starts a new pending job and clears stored items
     filters: createCapsuleWithWardrobe().draft.filters,
     data: {
       wardrobe: {
-        items: [{ id: "top-2", category: "top" }],
+        items: [
+          buildWardrobeUiItem({
+            id: "top-2",
+            category: "top",
+            url: undefined,
+            name: undefined,
+            image_url: undefined,
+            audience: undefined
+          })
+        ],
         outfitSets: [],
         reasoning: "reasoning",
         rawSelectionText: "raw",
@@ -868,10 +899,10 @@ test("startWardrobeJob stores capsule result and merges swimwear additions when 
       data: {
         wardrobe: {
           items: [
-            { id: "top-1", category: "top" },
-            { id: "top-2", category: "top" },
-            { id: "bottom-1", category: "bottom" },
-            { id: "bag-1", category: "bag" }
+            buildWardrobeUiItem({ id: "top-1", category: "top", url: undefined, name: undefined, image_url: undefined, audience: undefined }),
+            buildWardrobeUiItem({ id: "top-2", category: "top", url: undefined, name: undefined, image_url: undefined, audience: undefined }),
+            buildWardrobeUiItem({ id: "bottom-1", category: "bottom", url: undefined, name: undefined, image_url: undefined, audience: undefined }),
+            buildWardrobeUiItem({ id: "bag-1", category: "bag", url: undefined, name: undefined, image_url: undefined, audience: undefined })
           ],
           outfitSets: [{ itemIds: ["top-1", "bottom-1", "bag-1"] }],
           reasoning: "capsule-json",
@@ -887,11 +918,12 @@ test("startWardrobeJob stores capsule result and merges swimwear additions when 
       data: {
         wardrobe: {
           items: [
-            { id: "top-1", category: "top" },
-            { id: "top-2", category: "top" },
-            { id: "bottom-1", category: "bottom" },
-            { id: "bag-1", category: "bag" },
-            { id: "swim-1", category: "swimwear" }
+            buildWardrobeUiItem({ id: "top-1", category: "top", url: undefined, name: undefined, image_url: undefined, audience: undefined }),
+            buildWardrobeUiItem({ id: "top-2", category: "top", url: undefined, name: undefined, image_url: undefined, audience: undefined }),
+            buildWardrobeUiItem({ id: "bottom-1", category: "bottom", url: undefined, name: undefined, image_url: undefined, audience: undefined }),
+            buildWardrobeUiItem({ id: "bag-1", category: "bag", url: undefined, name: undefined, image_url: undefined, audience: undefined }),
+            buildWardrobeUiItem({ id: "swim-1", category: "swimwear", url: "https://example.com/swim-1", name: "Swim 1", image_url: "https://example.com/swim-1.jpg", audience: "woman" }),
+            buildWardrobeUiItem({ id: "top-1", category: "top", url: "https://example.com/top-1", name: "Top 1", image_url: "https://example.com/top-1.jpg", audience: "woman" })
           ],
           outfitSets: [{ itemIds: ["top-1", "bottom-1", "bag-1"] }],
           reasoning: "capsule-json",

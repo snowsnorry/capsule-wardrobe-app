@@ -153,7 +153,7 @@ function normalizePage(value: unknown): number {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : 1;
 }
 
-function normalizeSearchPayload(payload: Partial<SearchPayload> = {}): SearchPayload {
+function normalizeSearchPayload(payload: Partial<Record<keyof SearchPayload, unknown>> = {}): SearchPayload {
   return {
     query: normalizeQuery(payload.query),
     brand: normalizeStringArray(payload.brand),

@@ -25,9 +25,9 @@ test("normalizeSearchPayload normalizes nullable scalar filters and arrays", () 
       silhouette: [" relaxed ", "relaxed"],
       fit: [" tailored ", "tailored"],
       closureType: [" Buttons ", "buttons"],
-      priceMin: "12.5",
+      priceMin: 12.5,
       priceMax: 99,
-      page: "2"
+      page: 2
     }),
     {
       query: "linen summer shirt",

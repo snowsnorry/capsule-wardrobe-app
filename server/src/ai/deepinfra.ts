@@ -15,8 +15,27 @@ type DeepInfraEmbeddingsClient = {
   create: (payload: { model: string; input: string }) => Promise<{ data?: Array<{ embedding?: number[] }> }>;
 };
 
+type DeepInfraChatMessageContent =
+  | { type: "image_url"; image_url: { url: string } }
+  | { type: "text"; text: string };
+
+type DeepInfraChatCompletionPayload = {
+  model: string;
+  messages: Array<
+    | { role: "system"; content: string }
+    | { role: "user"; content: DeepInfraChatMessageContent[] }
+  >;
+  temperature: number;
+  top_p: number;
+  frequency_penalty: number;
+  presence_penalty: number;
+  max_tokens: number;
+  response_format: { type: "json_object" };
+  stream: true;
+};
+
 type DeepInfraChatCompletionsClient = {
-  create: (payload: Record<string, unknown>) => Promise<AsyncIterable<unknown>>;
+  create: (payload: DeepInfraChatCompletionPayload) => Promise<AsyncIterable<unknown>>;
 };
 
 type DeepInfraClientLike = {
@@ -30,11 +49,42 @@ type DeepInfraClientLike = {
 };
 
 function createDeepInfraClient({
-  createClientImpl = ({ apiKey, baseURL, maxRetries }: { apiKey: string; baseURL: string; maxRetries: number }) => new OpenAI({ apiKey, baseURL, maxRetries }),
+  createClientImpl = ({
+    apiKey,
+    baseURL,
+    maxRetries
+  }: {
+    apiKey: string;
+    baseURL: string;
+    maxRetries: number;
+  }): DeepInfraClientLike => {
+    const sdkClient = new OpenAI({ apiKey, baseURL, maxRetries });
+    return {
+      apiKey,
+      baseURL,
+      maxRetries,
+      embeddings: {
+        create: (payload) => sdkClient.embeddings.create(payload as Parameters<typeof sdkClient.embeddings.create>[0])
+      },
+      chat: {
+        completions: {
+          create: (payload) =>
+            sdkClient.chat.completions.create(payload as Parameters<typeof sdkClient.chat.completions.create>[0])
+              .then((response) => response as AsyncIterable<unknown>)
+        }
+      }
+    };
+  },
   getApiKeyImpl = () => process.env.DEEPINFRA_API_KEY,
   cache = true,
   nowImpl = () => Date.now(),
   warnImpl = (...args) => console.warn(...args)
+}: {
+  createClientImpl?: ({ apiKey, baseURL, maxRetries }: { apiKey: string; baseURL: string; maxRetries: number }) => DeepInfraClientLike;
+  getApiKeyImpl?: () => string | undefined;
+  cache?: boolean;
+  nowImpl?: () => number;
+  warnImpl?: (...args: unknown[]) => void;
 } = {}) {
   let localCachedClient = null;
 
@@ -52,7 +102,7 @@ function createDeepInfraClient({
       apiKey,
       baseURL: OPENAI_BASE_URL,
       maxRetries: 0
-    }) as DeepInfraClientLike;
+    });
 
     if (cache) {
       localCachedClient = client;

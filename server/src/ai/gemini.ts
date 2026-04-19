@@ -30,18 +30,42 @@ type GeminiUploadedFileLike = {
   mimeType?: string | null;
 };
 
+type GeminiContentPart = { fileData: { fileUri: string; mimeType: string } } | { text: string };
+type GeminiJsonSchemaLike = {
+  type?: string;
+  additionalProperties?: boolean;
+  properties?: Record<string, GeminiJsonSchemaLike>;
+  required?: string[];
+  items?: GeminiJsonSchemaLike;
+};
+type GeminiGenerateContentPayload = {
+  model: string;
+  contents: GeminiContentPart[] | [""];
+  config: {
+    systemInstruction?: string;
+    temperature: number;
+    topP: number;
+    maxOutputTokens: number;
+    responseMimeType: "application/json";
+    responseJsonSchema: GeminiJsonSchemaLike;
+  };
+};
+
 type GeminiGenerateContentResponseLike = {
-  text?: string;
+  text?: string | null;
   candidates?: Array<{ finishReason?: string; content?: { parts?: unknown[] } }>;
 };
 
 type GeminiClientLike = {
   models: {
-    generateContent: (params: Record<string, unknown>) => Promise<GeminiGenerateContentResponseLike>;
+    generateContent: (params: GeminiGenerateContentPayload) => Promise<GeminiGenerateContentResponseLike>;
   };
   files: {
-    upload: (params: Record<string, unknown>) => Promise<GeminiUploadedFileLike>;
-    delete: (params: { name?: string }) => Promise<unknown>;
+    upload: (params: {
+      file: string;
+      config: { mimeType: string; displayName?: string };
+    }) => Promise<GeminiUploadedFileLike>;
+    delete: (params: { name: string }) => Promise<unknown>;
   };
   apiKey?: string;
   apiVersion?: string;
@@ -186,11 +210,30 @@ function buildGeminiStructuredOutput(format: JsonSchemaFormat | null = null, use
 }
 
 function createGeminiClient({
-  createClientImpl = ({ apiKey, apiVersion }: { apiKey: string; apiVersion: string }) => new GoogleGenAI({ apiKey, apiVersion }),
+  createClientImpl = ({ apiKey, apiVersion }: { apiKey: string; apiVersion: string }): GeminiClientLike => {
+    const sdkClient = new GoogleGenAI({ apiKey, apiVersion });
+    return {
+      apiKey,
+      apiVersion,
+      models: {
+        generateContent: (params) => sdkClient.models.generateContent(params as Parameters<typeof sdkClient.models.generateContent>[0]) as Promise<GeminiGenerateContentResponseLike>
+      },
+      files: {
+        upload: (params) => sdkClient.files.upload(params as Parameters<typeof sdkClient.files.upload>[0]) as Promise<GeminiUploadedFileLike>,
+        delete: (params) => sdkClient.files.delete(params as Parameters<typeof sdkClient.files.delete>[0])
+      }
+    };
+  },
   getApiKeyImpl = () => process.env.GEMINI_API_KEY,
   cache = true,
   uploadBufferToGeminiImpl = uploadBufferToGemini,
   cleanupUploadedFilesImpl = cleanupUploadedGeminiFiles
+}: {
+  createClientImpl?: ({ apiKey, apiVersion }: { apiKey: string; apiVersion: string }) => GeminiClientLike;
+  getApiKeyImpl?: () => string | undefined;
+  cache?: boolean;
+  uploadBufferToGeminiImpl?: typeof uploadBufferToGemini;
+  cleanupUploadedFilesImpl?: typeof cleanupUploadedGeminiFiles;
 } = {}) {
   let localCachedClient = null;
 
@@ -207,7 +250,7 @@ function createGeminiClient({
     const client = createClientImpl({
       apiKey,
       apiVersion: DEFAULT_API_VERSION
-    }) as GeminiClientLike;
+    });
     if (cache) {
       localCachedClient = client;
     }
@@ -287,11 +330,11 @@ function createGeminiClient({
 }
 
 async function uploadImagesToGemini(
-  client: { files: { upload: (payload: unknown) => Promise<unknown> } },
+  client: Pick<GeminiClientLike, "files">,
   images: ImageAssetLike[],
   uploadBufferToGeminiImpl: typeof uploadBufferToGemini
 ) {
-  const uploadedFiles: unknown[] = [];
+  const uploadedFiles: GeminiUploadedFileLike[] = [];
 
   for (const image of images || []) {
     const uploadedFile = await uploadBufferToGeminiImpl(client, image);
@@ -309,7 +352,7 @@ function getMimeType(image: ImageAssetLike) {
     : "image/jpeg";
 }
 
-function getTempFileExtension(mimeType) {
+function getTempFileExtension(mimeType: string) {
   switch (mimeType) {
     case "image/png":
       return ".png";
@@ -325,7 +368,7 @@ function getTempFileExtension(mimeType) {
 }
 
 async function uploadBufferToGemini(
-  client: { files: { upload: (payload: unknown) => Promise<unknown> } },
+  client: Pick<GeminiClientLike, "files">,
   image: ImageAssetLike,
   {
     writeFileSyncImpl = writeFileSync,
@@ -333,6 +376,12 @@ async function uploadBufferToGemini(
     tmpdirImpl = tmpdir,
     joinImpl = join,
     randomUUIDImpl = randomUUID
+  }: {
+    writeFileSyncImpl?: (path: string, data: Buffer) => void;
+    unlinkSyncImpl?: (path: string) => void;
+    tmpdirImpl?: () => string;
+    joinImpl?: (...parts: string[]) => string;
+    randomUUIDImpl?: () => string;
   } = {}
 ) {
   const buffer = image?.buffer;
@@ -372,8 +421,8 @@ async function uploadBufferToGemini(
 }
 
 async function cleanupUploadedGeminiFiles(
-  client: { files: { delete: ({ name }: { name: string }) => Promise<void> } },
-  uploadedFiles: Array<{ name?: string | null }> = []
+  client: Pick<GeminiClientLike, "files">,
+  uploadedFiles: GeminiUploadedFileLike[] = []
 ) {
   for (const uploadedFile of uploadedFiles) {
     const name = typeof uploadedFile?.name === "string" ? uploadedFile.name.trim() : "";

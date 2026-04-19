@@ -6,6 +6,17 @@ import {
   DEFAULT_OLLAMA_EMBEDDING_MODEL
 } from "./ai/ollama.js";
 
+function createGenerateResponse(response: string) {
+  return {
+    response,
+    abortController: new AbortController(),
+    itr: (async function *() {})(),
+    doneCallback: undefined,
+    abort() {},
+    async *[Symbol.asyncIterator]() {}
+  };
+}
+
 test("ollama client shapes embedding and generation requests", async () => {
   let embeddingsPayload = null;
   let generatePayload = null;
@@ -16,7 +27,7 @@ test("ollama client shapes embedding and generation requests", async () => {
     },
     generateImpl: async (payload) => {
       generatePayload = payload;
-      return { response: "{\"ok\":true}" };
+      return createGenerateResponse("{\"ok\":true}");
     }
   });
 
@@ -39,7 +50,7 @@ test("ollama client shapes embedding and generation requests", async () => {
 test("ollama client throws for invalid embedding payload and invalid json output", async () => {
   const badEmbeddingClient = createOllamaClient({
     embeddingsImpl: async () => ({ embedding: [] }),
-    generateImpl: async () => ({ response: "{}" })
+    generateImpl: async () => createGenerateResponse("{}")
   });
   await assert.rejects(
     () => badEmbeddingClient.getPromptEmbeddings("prompt"),
@@ -48,7 +59,7 @@ test("ollama client throws for invalid embedding payload and invalid json output
 
   const badJsonClient = createOllamaClient({
     embeddingsImpl: async () => ({ embedding: [1] }),
-    generateImpl: async () => ({ response: "not-json" })
+    generateImpl: async () => createGenerateResponse("not-json")
   });
   await assert.rejects(
     () => badJsonClient.generateJsonWithLlm("prompt"),

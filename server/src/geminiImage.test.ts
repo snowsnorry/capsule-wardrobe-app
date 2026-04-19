@@ -73,6 +73,7 @@ test("gemini image client builds interactions payload and returns base64 image",
           generateContent: async (payload) => {
             requestPayload = payload;
             return {
+              outputs: [],
               candidates: [{
                 content: {
                   parts: [{

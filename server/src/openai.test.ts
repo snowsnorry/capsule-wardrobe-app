@@ -11,6 +11,18 @@ import {
 import { getCapsuleCategories } from "./ai/categories.js";
 import { deserializePromptDebugImagesFromIpc } from "./ai/promptImages.js";
 
+function assertResponsesUserContent(
+  content: string | Array<
+    | { type: "input_image"; image_url: string; detail: "high" }
+    | { type: "input_text"; text: string }
+  >
+): asserts content is Array<
+  | { type: "input_image"; image_url: string; detail: "high" }
+  | { type: "input_text"; text: string }
+> {
+  assert.ok(Array.isArray(content));
+}
+
 test("buildCapsuleSchema reflects the default capsule counts", () => {
   const schema = buildCapsuleSchema(getCapsuleCategories());
 
@@ -70,6 +82,7 @@ test("buildResponsesInput creates multimodal content with input_text and input_i
 
   assert.ok(Array.isArray(input));
   assert.equal(input[0].role, "user");
+  assertResponsesUserContent(input[0].content);
   assert.equal(input[0].content[0].type, "input_image");
   assert.equal(input[0].content[1].type, "input_image");
   assert.equal(input[0].content[2].type, "input_text");
@@ -90,6 +103,7 @@ test("buildResponsesInput prepends a developer message when provided", () => {
   assert.equal(input[0].role, "developer");
   assert.equal(input[0].content, "developer rules");
   assert.equal(input[1].role, "user");
+  assertResponsesUserContent(input[1].content);
   assert.equal(input[1].content[0].type, "input_image");
   assert.equal(input[1].content[1].type, "input_text");
 });
@@ -106,7 +120,10 @@ test("buildResponsesPayload releases source image buffers after payload construc
   const input = buildResponsesPayload("describe this", images);
 
   assert.ok(Array.isArray(input));
+  assertResponsesUserContent(input[0].content);
   assert.equal(images[0].buffer, null);
+  assert.equal(input[0].content[0].type, "input_image");
+  assert.equal(input[0].content[1].type, "input_text");
   assert.match(input[0].content[0].image_url, /^data:image\/jpeg;base64,/);
   assert.equal(input[0].content[1].text, "describe this");
 });
@@ -261,7 +278,9 @@ test("buildResponsesInput accepts prompt image collages deserialized from IPC pa
   const input = buildResponsesInput("describe this", [promptImages.stitched]);
 
   assert.ok(Array.isArray(input));
+  assertResponsesUserContent(input[0].content);
   assert.equal(input[0].content[0].type, "input_image");
+  assert.equal(input[0].content[1].type, "input_text");
   assert.match(input[0].content[0].image_url, /^data:image\/jpeg;base64,/);
   assert.equal(input[0].content[1].text, "describe this");
 });

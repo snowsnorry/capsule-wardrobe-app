@@ -13,6 +13,12 @@ import {
 } from "./ai/claude.js";
 import { buildDeveloperPrompt } from "./ai/openai.js";
 
+function assertClaudeImagePart(
+  part: { type?: string; source?: { type?: string; media_type?: string; data?: string } }
+): asserts part is { type: "image"; source: { type: "base64"; media_type: string; data: string } } {
+  assert.equal(part.type, "image");
+}
+
 test("resolveChatModel keeps only supported claude profile models", () => {
   assert.equal(resolveChatModel({ llm: "claude:claude-opus-4-7" }), "claude-opus-4-7");
   assert.equal(resolveChatModel({ llm: "claude:unknown-model" }), ALLOWED_CHAT_MODELS[0]);
@@ -41,7 +47,7 @@ test("buildClaudeMessages creates Anthropic multimodal user content", () => {
   }]);
 
   assert.equal(messages[0].role, "user");
-  assert.equal(messages[0].content[0].type, "image");
+  assertClaudeImagePart(messages[0].content[0]);
   assert.equal(messages[0].content[0].source.type, "base64");
   assert.equal(messages[0].content[0].source.media_type, "image/png");
   assert.equal(messages[0].content[0].source.data, Buffer.from("image-one").toString("base64"));
@@ -191,7 +197,7 @@ test("claude client validates api key, caches constructed client, and shapes mul
     requestPayload.system,
     `Be concise\n\n${buildDeveloperPrompt(userProfile)}`
   );
-  assert.equal(requestPayload.messages[0].content[0].type, "image");
+  assertClaudeImagePart(requestPayload.messages[0].content[0]);
   assert.equal(requestPayload.output_config.format.type, "json_schema");
   assert.equal(requestPayload.output_config.format.schema.type, "object");
   assert.equal(requestPayload.output_config.format.schema.properties.capsule.properties.top.minItems, 1);
@@ -231,7 +237,7 @@ test("claude does not retry transport failures", async () => {
       messages: {
         create: async () => {
           const error = new TypeError("fetch failed");
-          error.cause = { code: "UND_ERR_SOCKET" };
+          (error as Error & { cause?: { code?: string } }).cause = { code: "UND_ERR_SOCKET" };
           throw error;
         }
       }

@@ -11,6 +11,12 @@ import {
   splitSystemAndUserPrompt
 } from "./ai/deepinfra.js";
 
+function assertDeepInfraImagePart(
+  part: { type?: string; image_url?: { url?: string } }
+): asserts part is { type: "image_url"; image_url: { url: string } } {
+  assert.equal(part.type, "image_url");
+}
+
 test("splitSystemAndUserPrompt extracts system and user sections or falls back to plain user text", () => {
   assert.deepEqual(
     splitSystemAndUserPrompt("System: Be concise\nUser: Return JSON"),
@@ -35,7 +41,23 @@ test("deepinfra client validates api key and caches constructed client", () => {
     getApiKeyImpl: () => "deep-key",
     createClientImpl: ({ apiKey, baseURL, maxRetries }) => {
       createdCount += 1;
-      return { apiKey, baseURL, maxRetries, embeddings: {}, chat: { completions: {} } };
+      return {
+        apiKey,
+        baseURL,
+        maxRetries,
+        embeddings: {
+          create: async () => ({ data: [{ embedding: [1] }] })
+        },
+        chat: {
+          completions: {
+            create: async () => ({
+              async *[Symbol.asyncIterator]() {
+                yield { choices: [{ delta: { content: "{}" } }] };
+              }
+            })
+          }
+        }
+      };
     }
   });
 
@@ -65,7 +87,7 @@ test("buildChatMessages emits multimodal user content and preserves images", () 
     buffer: Buffer.from("image-one")
   }]);
 
-  assert.equal(content[0].type, "image_url");
+  assertDeepInfraImagePart(content[0]);
   assert.match(content[0].image_url.url, /^data:image\/png;base64,/);
   assert.deepEqual(content[1], {
     type: "text",
@@ -140,7 +162,7 @@ test("deepinfra client shapes embedding and chat requests and parses JSON output
 
   const result = await client.generateJsonWithLlm("System: Be concise\nUser: Return JSON", {
     userProfile: { llm: "deepinfra:Qwen/Qwen3-VL-235B-A22B-Instruct" },
-    format: { ignored: true },
+    format: null,
     images,
     onPayloadBuilt: () => {
       payloadBuiltCalls += 1;
@@ -148,6 +170,7 @@ test("deepinfra client shapes embedding and chat requests and parses JSON output
   });
   assert.deepEqual(result.json, { ok: true });
   assert.equal(chatPayload.model, "Qwen/Qwen3-VL-235B-A22B-Instruct");
+  assertDeepInfraImagePart(chatPayload.messages[1].content[0]);
   assert.deepEqual(chatPayload.messages, [
     { role: "system", content: "Be concise" },
     {
@@ -219,7 +242,7 @@ test("deepinfra client throws for invalid embedding and invalid chat JSON", asyn
 test("deepinfra client logs transport diagnostics before rethrowing request errors", async () => {
   const warnings = [];
   const error = new Error("Connection error.");
-  error.cause = {
+  (error as Error & { cause?: Record<string, unknown> }).cause = {
     name: "FetchError",
     message: "socket hang up",
     code: "ECONNRESET",
