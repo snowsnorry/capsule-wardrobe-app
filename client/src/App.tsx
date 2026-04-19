@@ -1812,7 +1812,7 @@ function App() {
                   alt=""
                   aria-hidden="true"
                   loading="eager"
-                  fetchPriority="high"
+                  fetchpriority="high"
                   decoding="async"
                   sx={{
                     display: "block",

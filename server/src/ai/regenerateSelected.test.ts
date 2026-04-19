@@ -191,16 +191,30 @@ test("regenerateSelectedWardrobeItems returns service_unavailable for failed job
     jobs
   });
   const res = createResponseRecorder();
+  const originalError = console.error;
+  const calls = [];
 
-  await service.regenerateSelectedWardrobeItems({
-    user: { email: "person@example.com" },
-    params: { id: "capsule-1" },
-    body: { itemUrls: ["https://example.com/top-1"] }
-  }, res);
+  console.error = (...args) => {
+    calls.push(args);
+  };
 
-  assert.equal(res.statusCode, 503);
-  assert.deepEqual(res.body, { error: "service_unavailable" });
-  assert.equal(jobs.has("person@example.com::capsule-1"), false);
+  try {
+    await service.regenerateSelectedWardrobeItems({
+      user: { email: "person@example.com" },
+      params: { id: "capsule-1" },
+      body: { itemUrls: ["https://example.com/top-1"] }
+    }, res);
+
+    assert.equal(res.statusCode, 503);
+    assert.deepEqual(res.body, { error: "service_unavailable" });
+    assert.equal(jobs.has("person@example.com::capsule-1"), false);
+  } finally {
+    console.error = originalError;
+  }
+
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0][0], "[wardrobe-ai][regenerate-selected]");
+  assert.match(String((calls[0][1] as Error | undefined)?.message || ""), /DATABASE_URL is not set/i);
 });
 
 test("regenerateSelectedWardrobeItems validates selected urls and missing wardrobe", async () => {
@@ -428,18 +442,33 @@ test("startPartialRegenerationJob reuses active pending job and marks failures",
     },
     jobs: new Map()
   });
-  const failed = failingService.startPartialRegenerationJob(
-    "person@example.com",
-    "capsule-1",
-    createProfile(),
-    createCapsule(),
-    [{ id: "top-1", url: "https://example.com/top-1", category: "top" }],
-    getStoredProfilePayload()
-  );
-  await failed.promise;
+  const originalError = console.error;
+  const calls = [];
 
-  assert.equal(failed.status, "failed");
-  assert.equal(failed.phase, "failed");
+  console.error = (...args) => {
+    calls.push(args);
+  };
+
+  try {
+    const failed = failingService.startPartialRegenerationJob(
+      "person@example.com",
+      "capsule-1",
+      createProfile(),
+      createCapsule(),
+      [{ id: "top-1", url: "https://example.com/top-1", category: "top" }],
+      getStoredProfilePayload()
+    );
+    await failed.promise;
+
+    assert.equal(failed.status, "failed");
+    assert.equal(failed.phase, "failed");
+  } finally {
+    console.error = originalError;
+  }
+
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0][0], "[wardrobe-ai][regenerate-selected]");
+  assert.match(String((calls[0][1] as Error | undefined)?.message || ""), /regen_failed/i);
 });
 
 test("startPartialRegenerationJob stores recomputed outfit sets in the completed payload", async () => {

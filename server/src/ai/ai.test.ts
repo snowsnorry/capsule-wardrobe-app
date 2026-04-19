@@ -942,16 +942,30 @@ test("startWardrobeJob marks job failed when capsule generation returns no usabl
     generateCapsuleWardrobeImpl: async () => buildWardrobeGenerationResult(),
     jobs: new Map()
   });
+  const originalError = console.error;
+  const calls = [];
 
-  const job = service.startWardrobeJob(
-    "person@example.com",
-    "capsule-1",
-    buildNormalizedProfileRecord({ audience: "woman", locale: "en" }),
-    createCapsuleWithWardrobe(null)
-  );
-  await job.promise;
+  console.error = (...args) => {
+    calls.push(args);
+  };
 
-  assert.equal(job.status, "failed");
-  assert.equal(job.phase, "failed");
-  assert.match((job.error as Error).message, /no valid wardrobe items/i);
+  try {
+    const job = service.startWardrobeJob(
+      "person@example.com",
+      "capsule-1",
+      buildNormalizedProfileRecord({ audience: "woman", locale: "en" }),
+      createCapsuleWithWardrobe(null)
+    );
+    await job.promise;
+
+    assert.equal(job.status, "failed");
+    assert.equal(job.phase, "failed");
+    assert.match((job.error as Error).message, /no valid wardrobe items/i);
+  } finally {
+    console.error = originalError;
+  }
+
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0][0], "[wardrobe-ai]");
+  assert.match(String((calls[0][2] as Error | undefined)?.message || ""), /no valid wardrobe items/i);
 });
