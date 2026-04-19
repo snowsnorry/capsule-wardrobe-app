@@ -1,122 +1,267 @@
 # Capsule Wardrobe App
 
-A full-stack prototype for building a capsule wardrobe. The backend is Node.js + Express, and the frontend is React + MUI. The app supports passwordless email login, profile onboarding, and localization (EN/RU).
+Full-stack TypeScript monorepo for a capsule wardrobe application. The project combines passwordless auth, profile onboarding, AI-assisted wardrobe generation, saved capsules, product search, and statistics.
 
-## Features
+## Stack
 
-- Passwordless email sign-in with verification codes
-- Onboarding flow with style and wardrobe needs selection
-- Profile edit/delete
-- Localization (English/Russian) with a UI switcher
-- Single-port dev setup (API + UI) with Vite middleware
+- Frontend: React, Vite, MUI, Vitest
+- Backend: Node.js, Express, TypeScript
+- Shared domain layer: root `shared/`
+- Persistence: Postgres
+- Email auth delivery: Resend
+- Optional auth provider: Google Sign-In
+- Deployment paths: Render single-service, Netlify static client + BFF proxy
+
+## What the app does
+
+- passwordless email sign-in with verification codes
+- optional Google sign-in
+- onboarding and profile settings with EN/RU localization
+- capsule creation, duplication, rename, save/revert, and delete
+- AI-assisted wardrobe generation and selective regeneration
+- outfit-set image generation and PDF export
+- product search and aggregated statistics views
+
+## Repository layout
+
+```text
+client/   React frontend
+server/   Express API and server workflows
+shared/   shared TypeScript models, helpers, and tests
+docs/     repository documentation
+```
+
+Useful entrypoints:
+
+- `client/src/App.tsx`
+- `client/src/main.tsx`
+- `client/vite.config.ts`
+- `server/src/index.ts`
+- `server/src/db.ts`
+- `server/src/authStore.ts`
+- `server/src/capsuleStore.ts`
+- `server/src/profileStore.ts`
+- `server/src/searchStore.ts`
 
 ## Requirements
 
-- Node.js 18+ (recommended)
+- Node.js 18+
 - npm
 
 ## Setup
 
+Install dependencies:
+
 ```bash
 npm install
-cp server/.env.example server/.env
 ```
 
-Then set in `server/.env`:
-- `DATABASE_URL`
-- `AUTH_CODE_SECRET`
-- `RESEND_API_KEY`
-- `RESEND_FROM_EMAIL`
-
-## Development
-
-Start the API + UI on the same port:
+Create env files from examples:
 
 ```bash
-npm --workspace server run dev
+cp server/.env.example server/.env
+cp client/.env.example client/.env
 ```
 
-Open:
+## Environment variables
 
-```
-http://localhost:3000
+### Server env
+
+Required for a normal backend setup:
+
+- `DATABASE_URL` — Postgres connection string
+- `AUTH_CODE_SECRET` — secret for verification code hashing
+- `RESEND_API_KEY` — Resend API key
+- `RESEND_FROM_EMAIL` — verified sender address
+
+Common optional values:
+
+- `GOOGLE_CLIENT_ID` — enables Google Sign-In verification
+- `OPENAI_API_KEY` — OpenAI-backed wardrobe generation and selection flows
+- `VOYAGE_API_KEY` — embeddings and prompt-related wardrobe flows
+- `DEEPINFRA_API_KEY` — DeepInfra-backed generation flows
+- `GEMINI_API_KEY` — Gemini-backed text and image generation flows
+- `ANTHROPIC_API_KEY` — Claude-backed generation flows
+- `PORT` — defaults to `3000`
+- `CLIENT_ORIGIN` — defaults to `http://localhost:5173`
+- `NODE_ENV` — defaults to `development`
+- `AUTH_TEST_MODE` — prints sign-in codes to logs outside production
+- `SESSION_PRUNE_MIN_INTERVAL_MS` — session cleanup throttle
+- `WARDROBE_PDF_CHILD_TIMEOUT_MS` — PDF child-process timeout
+- `SHARP_CONCURRENCY` and related image/prompt concurrency envs — optional tuning knobs for image work
+
+See [server/.env.example](server/.env.example) for the baseline template.
+
+### Client env
+
+- `VITE_API_BASE_URL` — defaults to `/api`
+- `VITE_GOOGLE_CLIENT_ID` — Google Sign-In client ID for the frontend
+- `BFF_UPSTREAM_ORIGIN` — upstream backend origin for proxy-based deployments
+- `BFF_STRIP_PREFIXES` — path prefixes stripped by the BFF, default `/api`
+
+See [client/.env.example](client/.env.example).
+
+## Local development
+
+### Option 1: root scripts
+
+Run both apps:
+
+```bash
+npm run dev:all
 ```
 
-Run server in auth test mode (login code printed to terminal instead of email):
+Or run one workspace:
+
+```bash
+npm run dev:client
+npm run dev:server
+```
+
+Auth test mode:
 
 ```bash
 npm run dev:server:test-auth
 ```
 
-## Production build
+### Option 2: direct workspace scripts
+
+Run the backend:
 
 ```bash
-npm --workspace client run build
-npm --workspace server run start
+npm --workspace server run dev
 ```
 
-## Project structure
+Run the frontend in another terminal:
 
+```bash
+npm --workspace client run dev
 ```
-client/    # React app (Vite + MUI)
-server/    # Node.js API (Express)
+
+Server auth test mode:
+
+```bash
+npm --workspace server run dev:test-auth
 ```
 
-## Environment variables
+### Local URLs
 
-- `PORT` (server) – default: 3000
-- `CLIENT_ORIGIN` (server) – default: http://localhost:5173
-- `DATABASE_URL` (server) – Postgres connection string
-- `AUTH_CODE_SECRET` (server) – secret used for HMAC hashing of login codes
-- `RESEND_API_KEY` (server) – API key for Resend mail delivery
-- `RESEND_FROM_EMAIL` (server) – verified sender for Resend, e.g. `Capsule Wardrobe <auth@yourdomain.com>`
-- `SESSION_PRUNE_MIN_INTERVAL_MS` (server) – minimum interval between session cleanup runs (default: `0`)
-- `AUTH_TEST_MODE` (server) – when `true` (and not production), auth code is printed to server terminal and not sent via email
-- `BFF_UPSTREAM_ORIGIN` (Netlify client only) – backend origin for Netlify BFF proxy, e.g. `https://your-api.onrender.com`
+- frontend: `http://localhost:5173`
+- backend: `http://localhost:3000`
 
-## Health check
+In local development, Vite proxies `/api`, `/auth`, `/profile`, `/wardrobe`, and `/health` to the Express server.
 
-After starting the app, verify API + DB connectivity:
+## Build, start, validation
+
+Build everything:
+
+```bash
+npm run build
+```
+
+Start the production server:
+
+```bash
+npm run start
+```
+
+Type-check:
+
+```bash
+npm run typecheck
+npm run client:typecheck
+npm run server:typecheck
+```
+
+Run tests:
+
+```bash
+npm test
+npm run test:client
+npm run test:server
+npm run test:shared
+```
+
+## Health checks
+
+Backend health endpoint:
 
 ```bash
 curl http://localhost:3000/health
 ```
 
-## Notes
+There is also `GET /healthall` for a broader backend health check.
 
-- Login codes are sent via Resend (or printed to server logs when `AUTH_TEST_MODE=true` in non-production).
-- Sessions and profiles are persisted in Postgres (including styles, occasions, and locale).
-- For Netlify deployments, API requests are proxied through `/api/*` via `client/netlify/functions/bff.js` to keep auth cookies first-party.
+## API surface summary
 
-## Render single-service deploy
+Main backend route groups:
 
-This repo can be deployed to Render as a single Node web service:
+- `/auth/*` — email auth, Google auth, logout, current session
+- `/profile/*` — onboarding, profile data, locale, delete profile
+- `/capsules/*` — bootstrap, recent, search, CRUD, save/revert, regenerate, PDF, SSE events
+- `/search/*` — search options, saved filters, run search, stats
+- `/wardrobe/*` — profile-derived wardrobe filters
+- `/health`, `/healthall`
+
+The API is implemented in [server/src/index.ts](server/src/index.ts).
+
+## Deployment
+
+### Render single-service deploy
+
+This repo supports a single Render web service that builds the client and serves it from the Express backend.
 
 - build command: `npm install --include=dev && npm run build`
 - start command: `npm run start`
 - health check path: `/health`
 
-In this setup:
+Related files:
 
-- Render runs the Express server from `server/src/index.js`
-- the client is built into `client/dist`
-- in production, Express serves the built SPA and the API from the same service and origin
+- [render.yaml](render.yaml)
+- [server/src/index.ts](server/src/index.ts)
 
-Required env vars for this setup:
+Minimum env for this path:
 
 - `NODE_ENV=production`
-- `CLIENT_ORIGIN=https://<your-render-service>.onrender.com` or your custom domain
+- `CLIENT_ORIGIN=https://<your-service>.onrender.com` or your custom domain
 - `DATABASE_URL`
 - `AUTH_CODE_SECRET`
 - `RESEND_API_KEY`
 - `RESEND_FROM_EMAIL`
 
-Optional env vars:
+Optional:
 
 - `GOOGLE_CLIENT_ID`
+- AI provider keys you actually use
 
-If you use Render Blueprints, the included `render.yaml` defines this single-service setup.
+### Netlify static client + BFF proxy
 
-## License
+The frontend can also be deployed as a static app on Netlify with API requests routed through `client/netlify/functions/bff.js`.
 
-MIT
+Related files:
+
+- [client/netlify.toml](client/netlify.toml)
+- [client/netlify/functions/bff.js](netlify/functions/bff.js)
+
+Important env:
+
+- `BFF_UPSTREAM_ORIGIN=https://your-backend.example.com`
+- `BFF_STRIP_PREFIXES=/api`
+
+### Render client-only proxy server
+
+There is also a small Express server for serving the built client with `/api` proxying:
+
+- [client/render-server.js](client/render-server.js)
+
+This path requires:
+
+- `PORT`
+- `BFF_UPSTREAM_ORIGIN`
+
+## Notes
+
+- The server entry source is TypeScript: `server/src/index.ts`.
+- Production start runs compiled output from `server/dist`.
+- Shared business logic and locale helpers live in `shared/`.
+- Auth test mode should remain non-production only.
