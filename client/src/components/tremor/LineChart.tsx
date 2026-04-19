@@ -1,14 +1,14 @@
-import { Box, useTheme } from "@mui/material";
+import { useTheme } from "@mui/material";
 import {
   CartesianGrid,
   Area,
   AreaChart as RechartsLineChart,
-  ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis
 } from "recharts";
 import { getTooltipStyle, getTooltipTextStyle } from "./chartUtils";
+import ChartContainer from "./ChartContainer";
 
 type LineChartDatum = {
   [key: string]: string | number | undefined;
@@ -36,17 +36,9 @@ function LineChart({ data, index, category, valueFormatter, labelFormatter }: Li
   const tooltipTextStyle = getTooltipTextStyle(isDarkMode);
 
   return (
-    <Box
-      sx={{
-        height: 360,
-        minWidth: 0,
-        "& .recharts-surface:focus, & .recharts-surface:focus-visible, & [tabindex]:focus, & [tabindex]:focus-visible": {
-          outline: "none"
-        }
-      }}
-    >
-      <ResponsiveContainer width="100%" height="100%">
-        <RechartsLineChart data={data} margin={{ top: 24, right: 24, left: 8, bottom: 15 }}>
+    <ChartContainer
+      renderChart={({ width, height }) => (
+        <RechartsLineChart width={width} height={height} data={data} margin={{ top: 24, right: 24, left: 8, bottom: 15 }}>
           <CartesianGrid vertical={false} stroke={gridColor} />
           <XAxis
             dataKey={index}
@@ -80,8 +72,14 @@ function LineChart({ data, index, category, valueFormatter, labelFormatter }: Li
             animationDuration={320}
           />
         </RechartsLineChart>
-      </ResponsiveContainer>
-    </Box>
+      )}
+      sx={{
+        height: 360,
+        "& .recharts-surface:focus, & .recharts-surface:focus-visible, & [tabindex]:focus, & [tabindex]:focus-visible": {
+          outline: "none"
+        }
+      }}
+    />
   );
 }
 

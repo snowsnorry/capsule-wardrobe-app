@@ -4,10 +4,10 @@ import {
   Cell,
   Pie,
   PieChart,
-  ResponsiveContainer,
   Tooltip
 } from "recharts";
 import { getTooltipStyle, getTooltipTextStyle } from "./chartUtils";
+import ChartContainer from "./ChartContainer";
 
 type DonutChartDatum = {
   rawValue: string;
@@ -59,7 +59,6 @@ function DonutChart({
       className={className}
       sx={{
         height: { xs: "auto", sm: 300 },
-        minWidth: 0,
         display: "grid",
         gridTemplateColumns: { xs: "minmax(0, 1fr)", sm: "minmax(0, 1fr) minmax(150px, 0.55fr)" },
         gridTemplateRows: { xs: "240px auto", sm: "minmax(0, 1fr)" },
@@ -71,9 +70,9 @@ function DonutChart({
         }
       }}
     >
-      <Box sx={{ height: "100%", minWidth: 0, overflow: "hidden" }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart margin={{ top: 16, right: 16, bottom: 16, left: 16 }}>
+      <ChartContainer
+        renderChart={({ width, height }) => (
+          <PieChart width={width} height={height} margin={{ top: 16, right: 16, bottom: 16, left: 16 }}>
             <Tooltip
               formatter={(value: number | string, _name: string, item: TooltipPayloadItem) => [
                 valueFormatter(Number(value || 0)),
@@ -117,8 +116,9 @@ function DonutChart({
               ))}
             </Pie>
           </PieChart>
-        </ResponsiveContainer>
-      </Box>
+        )}
+        sx={{ height: "100%", minWidth: 0, overflow: "hidden" }}
+      />
       <Stack
         spacing={{ xs: 0, sm: 0.85 }}
         direction={{ xs: "row", sm: "column" }}

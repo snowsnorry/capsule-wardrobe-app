@@ -5,12 +5,12 @@ import {
   BarChart as RechartsBarChart,
   CartesianGrid,
   Cell,
-  ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis
 } from "recharts";
 import { getTooltipStyle, getTooltipTextStyle } from "./chartUtils";
+import ChartContainer from "./ChartContainer";
 
 type BarChartDatum = {
   rawValue: string;
@@ -71,17 +71,11 @@ function BarChart({
   const tooltipTextStyle = getTooltipTextStyle(isDarkMode);
 
   return (
-    <Box
-      sx={{
-        height: 360,
-        minWidth: 0,
-        "& .recharts-surface:focus, & .recharts-surface:focus-visible, & .recharts-rectangle:focus, & .recharts-rectangle:focus-visible, & [tabindex]:focus, & [tabindex]:focus-visible": {
-          outline: "none"
-        }
-      }}
-    >
-      <ResponsiveContainer width="100%" height="100%">
+    <ChartContainer
+      renderChart={({ width, height }) => (
         <RechartsBarChart
+          width={width}
+          height={height}
           data={data}
           margin={{ top: 12, right: 18, left: 8, bottom: 15 }}
           barCategoryGap="16%"
@@ -170,7 +164,14 @@ function BarChart({
             ))}
           </Bar>
         </RechartsBarChart>
-      </ResponsiveContainer>
+      )}
+      sx={{
+        height: 360,
+        "& .recharts-surface:focus, & .recharts-surface:focus-visible, & .recharts-rectangle:focus, & .recharts-rectangle:focus-visible, & [tabindex]:focus, & [tabindex]:focus-visible": {
+          outline: "none"
+        }
+      }}
+    >
       <Box
         sx={{
           position: "absolute",
@@ -193,7 +194,7 @@ function BarChart({
           />
         ))}
       </Box>
-    </Box>
+    </ChartContainer>
   );
 }
 
