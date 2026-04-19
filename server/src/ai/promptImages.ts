@@ -55,7 +55,14 @@ const PROMPT_CATEGORY_DOWNLOAD_CONCURRENCY = Number.parseInt(process.env.PROMPT_
 const STORAGE_IMAGES_DIR = fileURLToPath(new URL("../../../storage/images/", import.meta.url));
 const STITCHED_COLLAGE_FILENAME = "categories-stitched.jpg";
 
-type PromptImagesFork = typeof nodeFork;
+type PromptImagesChildProcessLike = {
+  on: (event: string, handler: (...args: unknown[]) => void) => unknown;
+  removeListener: (event: string, handler: (...args: unknown[]) => void) => unknown;
+  kill: () => unknown;
+  send: (message: unknown, callback?: (error: Error | null) => void) => unknown;
+};
+
+type PromptImagesFork = (modulePath: string, options?: Record<string, unknown>) => PromptImagesChildProcessLike;
 type PromptImageTimingState = PromptImageTimings | Partial<PromptImageTimings> | null | undefined;
 type PromptDebugImageCategoryWithFile = PromptDebugImageCategory & { file: string };
 type PromptDebugImageCategoryWithoutBuffer = Omit<PromptDebugImageCategory, "buffer" | "bufferBase64" | "file">;

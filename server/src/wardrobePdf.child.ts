@@ -7,12 +7,21 @@ import { buildWardrobePdf } from "./wardrobePdf.js";
 configureSharp();
 
 function createWardrobePdfChildRuntime({
-  mkdirImpl = mkdir,
-  writeFileImpl = writeFile,
-  buildWardrobePdfImpl = buildWardrobePdf,
+  mkdirImpl = mkdir as (path: string, options?: Record<string, unknown>) => Promise<unknown>,
+  writeFileImpl = writeFile as (path: string, buffer: Buffer) => Promise<unknown>,
+  buildWardrobePdfImpl = buildWardrobePdf as (products: unknown[], options?: { locale?: string; totalStartedAt?: number | null }) => Promise<Buffer>,
   sendImpl = process.send?.bind(process),
   disconnectImpl = process.disconnect?.bind(process),
-  exitImpl = (code) => process.exit(code)
+  exitImpl = (code: number) => {
+    process.exit(code);
+  }
+}: {
+  mkdirImpl?: (path: string, options?: Record<string, unknown>) => Promise<unknown>;
+  writeFileImpl?: (path: string, buffer: Buffer) => Promise<unknown>;
+  buildWardrobePdfImpl?: (products: unknown[], options?: { locale?: string; totalStartedAt?: number | null }) => Promise<Buffer>;
+  sendImpl?: ((message: unknown, callback?: () => void) => unknown) | undefined;
+  disconnectImpl?: (() => unknown) | undefined;
+  exitImpl?: (code: number) => void;
 } = {}) {
   let handled = false;
 

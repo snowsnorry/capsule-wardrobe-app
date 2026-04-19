@@ -17,6 +17,17 @@ import type {
 const DEFAULT_CHAT_MODEL = "claude-opus-4-7";
 const ALLOWED_CHAT_MODELS = ["claude-opus-4-7"];
 
+type ClaudeResponseLike = {
+  content?: Array<{ type?: string; text?: string | null }>;
+};
+
+type ClaudeClientLike = {
+  apiKey?: string;
+  messages: {
+    create: (payload: Record<string, unknown>) => Promise<ClaudeResponseLike>;
+  };
+};
+
 function resolveChatModel(userProfile: UserProfileLike | null = null) {
   const llm = String(userProfile?.llm || "").trim();
   if (llm.startsWith("claude:")) {
@@ -154,7 +165,7 @@ function createClaudeClient({
       throw new Error("ANTHROPIC_API_KEY is not set");
     }
 
-    const client = createClientImpl({ apiKey });
+    const client = createClientImpl({ apiKey }) as ClaudeClientLike;
     if (cache) {
       localCachedClient = client;
     }

@@ -1,6 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { buildPromptFromTemplate, createOutfitSetImageService } from "./ai/outfitSetImages.js";
+import {
+  buildCapsuleSnapshot,
+  buildNormalizedCapsuleRecord,
+  buildStoredOutfitSet
+} from "./test/domainFixtures.js";
 
 function createResponseRecorder() {
   return {
@@ -18,24 +23,27 @@ function createResponseRecorder() {
 }
 
 function createCapsule() {
-  return {
-    id: "capsule-1",
-    draft: {
+  return buildNormalizedCapsuleRecord({
+    draft: buildCapsuleSnapshot({
       filters: { formalityLevel: "casual" },
       data: {
         wardrobe: {
           items: [
-            { id: "top-1", image_url: "https://example.com/top.jpg", type: "top" },
-            { id: "bottom-1", image_url: "https://example.com/bottom.jpg", type: "bottom" },
-            { id: "bag-1", image_url: "https://example.com/bag.jpg", type: "bag" }
+            { id: "top-1", image_url: "https://example.com/top.jpg", category: "top" },
+            { id: "bottom-1", image_url: "https://example.com/bottom.jpg", category: "bottom" },
+            { id: "bag-1", image_url: "https://example.com/bag.jpg", category: "bag" }
           ],
-          outfitSets: [{ itemIds: ["top-1", "bottom-1", "bag-1"] }]
+          outfitSets: [buildStoredOutfitSet({ itemIds: ["top-1", "bottom-1", "bag-1"] })],
+          reasoning: null,
+          rawSelectionText: null,
+          swimwearReasoning: null,
+          swimwearRawSelectionText: null
         },
         rejectedUrls: []
       }
-    },
+    }),
     saved: null
-  };
+  });
 }
 
 test("outfitSetImage service validates missing set index", async () => {
@@ -81,23 +89,48 @@ test("outfitSetImage service starts job and persists generated image", async () 
       prompts.push(prompt);
       imagePayloads.push(images);
       return {
-      image: {
-        base64: "generated-base64",
-        mimeType: "image/png"
-      }
+        response: null,
+        image: {
+          base64: "generated-base64",
+          mimeType: "image/png"
+        }
       };
     },
     downloadProductImageAssetsImpl: async () => ({
-      "top-1": { buffer: Buffer.from("top"), mimeType: "image/jpeg" },
-      "bottom-1": { buffer: Buffer.from("bottom"), mimeType: "image/jpeg" },
-      "bag-1": { buffer: Buffer.from("bag"), mimeType: "image/jpeg" }
+      "top-1": {
+        buffer: Buffer.from("top"),
+        mimeType: "image/jpeg",
+        source: "download",
+        imageUrl: "https://example.com/top.jpg",
+        originalImageUrl: "https://example.com/top.jpg",
+        width: 100,
+        height: 100
+      },
+      "bottom-1": {
+        buffer: Buffer.from("bottom"),
+        mimeType: "image/jpeg",
+        source: "download",
+        imageUrl: "https://example.com/bottom.jpg",
+        originalImageUrl: "https://example.com/bottom.jpg",
+        width: 100,
+        height: 100
+      },
+      "bag-1": {
+        buffer: Buffer.from("bag"),
+        mimeType: "image/jpeg",
+        source: "download",
+        imageUrl: "https://example.com/bag.jpg",
+        originalImageUrl: "https://example.com/bag.jpg",
+        width: 100,
+        height: 100
+      }
     }),
     updateCapsuleSnapshotImpl: async (_email, _capsuleId, draft) => {
       updates.push(draft);
-      return {
+      return buildNormalizedCapsuleRecord({
         ...createCapsule(),
         draft
-      };
+      });
     }
   });
   const res = createResponseRecorder();
@@ -138,10 +171,10 @@ test("deleteOutfitSetImage clears stored image and publishes updated snapshot", 
     },
     updateCapsuleSnapshotImpl: async (_email, _capsuleId, draft) => {
       updates.push(draft);
-      return {
+      return buildNormalizedCapsuleRecord({
         ...capsuleWithImage,
         draft
-      };
+      });
     }
   });
   const res = createResponseRecorder();
@@ -162,28 +195,32 @@ test("deleteOutfitSetImage clears stored image and publishes updated snapshot", 
 test("deleteOutfitSetImage writes a draft when the capsule only has saved data", async () => {
   const published = [];
   const updates = [];
-  const savedOnlyCapsule = {
+  const savedOnlyCapsule = buildNormalizedCapsuleRecord({
     id: "capsule-1",
     draft: null,
-    saved: {
+    saved: buildCapsuleSnapshot({
       filters: { formalityLevel: "casual" },
       data: {
         wardrobe: {
           items: [
-            { id: "top-1", image_url: "https://example.com/top.jpg", type: "top" },
-            { id: "bottom-1", image_url: "https://example.com/bottom.jpg", type: "bottom" },
-            { id: "bag-1", image_url: "https://example.com/bag.jpg", type: "bag" }
+            { id: "top-1", image_url: "https://example.com/top.jpg", category: "top" },
+            { id: "bottom-1", image_url: "https://example.com/bottom.jpg", category: "bottom" },
+            { id: "bag-1", image_url: "https://example.com/bag.jpg", category: "bag" }
           ],
-          outfitSets: [{
+          outfitSets: [buildStoredOutfitSet({
             itemIds: ["top-1", "bottom-1", "bag-1"],
             image: "saved-image",
             imageObsolete: true
-          }]
+          })],
+          reasoning: null,
+          rawSelectionText: null,
+          swimwearReasoning: null,
+          swimwearRawSelectionText: null
         },
         rejectedUrls: []
       }
-    }
-  };
+    })
+  });
 
   const service = createOutfitSetImageService({
     getCapsuleImpl: async () => savedOnlyCapsule,
@@ -193,11 +230,11 @@ test("deleteOutfitSetImage writes a draft when the capsule only has saved data",
     },
     updateCapsuleSnapshotImpl: async (_email, _capsuleId, draft) => {
       updates.push(draft);
-      return {
+      return buildNormalizedCapsuleRecord({
         ...savedOnlyCapsule,
         draft,
         saved: savedOnlyCapsule.saved
-      };
+      });
     }
   });
   const res = createResponseRecorder();

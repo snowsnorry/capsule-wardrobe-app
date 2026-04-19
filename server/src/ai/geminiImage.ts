@@ -3,6 +3,12 @@ import { GoogleGenAI } from "@google/genai";
 const DEFAULT_IMAGE_MODEL = "gemini-3-pro-image-preview";
 const DEFAULT_API_VERSION = "v1beta";
 
+type GeminiImageClientLike = {
+  models: {
+    generateContent: (payload: Record<string, unknown>) => Promise<unknown>;
+  };
+};
+
 function buildGeminiImagePromptParts(prompt, images = []) {
   const promptParts = [];
   const text = String(prompt || "").trim();
@@ -85,7 +91,7 @@ function createGeminiImageClient({
     cachedClient = createClientImpl({
       apiKey,
       apiVersion: DEFAULT_API_VERSION
-    });
+    }) as GeminiImageClientLike;
     return cachedClient;
   }
 

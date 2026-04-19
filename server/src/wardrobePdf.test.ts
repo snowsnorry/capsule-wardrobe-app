@@ -7,6 +7,11 @@ import { buildWardrobePdf, createWardrobePdfJobManager } from "./wardrobePdf.js"
 import { buildLocalImageCachePath } from "./ai/promptImages.js";
 import { buildProductDetailGroups } from "../../shared/productDetail.js";
 import { t, translateOption } from "../../shared/i18n/helpers.js";
+import {
+  buildNormalizedProfileRecord,
+  buildProductRow,
+  buildProfileWithItems
+} from "./test/domainFixtures.js";
 
 function createResponseRecorder() {
   return {
@@ -43,14 +48,16 @@ async function withCachedImage(testContext, imageUrl, buffer) {
 test("wardrobe pdf endpoint returns stored attachment when pdf already exists", async () => {
   const manager = createWardrobePdfJobManager({
     getProfileByEmail: async () => ({
-      items: {
-        items: [
-          { id: "bag-1", category: "bag", name: "B Bag" },
-          { id: "top-2", category: "top", name: "Z Top" },
-          { id: "top-1", category: "top", name: "A Top" }
-        ]
-      },
-      locale: "ru"
+      ...buildNormalizedProfileRecord({ locale: "ru" }),
+      ...buildProfileWithItems({
+        items: {
+          items: [
+            { id: "bag-1", category: "bag", name: "B Bag" },
+            { id: "top-2", category: "top", name: "Z Top" },
+            { id: "top-1", category: "top", name: "A Top" }
+          ]
+        }
+      })
     }),
     getProfilePdfByEmail: async () => Buffer.from("stored-pdf")
   });
@@ -75,14 +82,16 @@ test("wardrobe pdf endpoint returns pending and starts job when pdf is missing",
   let receivedUrls = null;
   const manager = createWardrobePdfJobManager({
     getProfileByEmail: async () => ({
-      items: {
-        items: [
-          { id: "bag-1", url: "https://example.com/bag-1", category: "bag", name: "Bag" },
-          { id: "top-2", url: "https://example.com/top-2", category: "top", name: "Z Top" },
-          { id: "top-1", url: "https://example.com/top-1", category: "top", name: "A Top" }
-        ]
-      },
-      locale: "en"
+      ...buildNormalizedProfileRecord({ locale: "en" }),
+      ...buildProfileWithItems({
+        items: {
+          items: [
+            { id: "bag-1", url: "https://example.com/bag-1", category: "bag", name: "Bag" },
+            { id: "top-2", url: "https://example.com/top-2", category: "top", name: "Z Top" },
+            { id: "top-1", url: "https://example.com/top-1", category: "top", name: "A Top" }
+          ]
+        }
+      })
     }),
     getProfilePdfByEmail: async () => null,
     updateProfilePdfByEmail: async (_email, pdf) => {
@@ -91,11 +100,11 @@ test("wardrobe pdf endpoint returns pending and starts job when pdf is missing",
     },
     getProducts: async (urls) => {
       receivedUrls = urls;
-      return urls.map((url) => ({
-        id: url,
-        url,
-        name: url,
-        category: url.includes("bag") ? "bag" : "top",
+      return urls.map((url) => buildProductRow({
+        id: String(url),
+        url: String(url),
+        name: String(url),
+        category: String(url).includes("bag") ? "bag" : "top",
         imageUrl: ""
       }));
     },
@@ -127,15 +136,17 @@ test("ensureWardrobePdfJob reuses active pending job for same generation", async
   let buildCount = 0;
   const manager = createWardrobePdfJobManager({
     getProfileByEmail: async () => ({
-      items: {
-        items: [{ id: "top-1", url: "https://example.com/top-1", category: "top", name: "A Top" }]
-      },
-      locale: "en"
+      ...buildNormalizedProfileRecord({ locale: "en" }),
+      ...buildProfileWithItems({
+        items: {
+          items: [{ id: "top-1", url: "https://example.com/top-1", category: "top", name: "A Top" }]
+        }
+      })
     }),
-    getProducts: async (urls) => urls.map((url) => ({
-      id: url,
-      url,
-      name: url,
+    getProducts: async (urls) => urls.map((url) => buildProductRow({
+      id: String(url),
+      url: String(url),
+      name: String(url),
       category: "top",
       imageUrl: ""
     })),

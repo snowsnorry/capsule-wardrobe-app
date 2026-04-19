@@ -11,6 +11,24 @@ const ALLOWED_CHAT_MODELS = [
 ];
 let cachedClient = null;
 
+type DeepInfraEmbeddingsClient = {
+  create: (payload: { model: string; input: string }) => Promise<{ data?: Array<{ embedding?: number[] }> }>;
+};
+
+type DeepInfraChatCompletionsClient = {
+  create: (payload: Record<string, unknown>) => Promise<AsyncIterable<unknown>>;
+};
+
+type DeepInfraClientLike = {
+  embeddings: DeepInfraEmbeddingsClient;
+  chat: {
+    completions: DeepInfraChatCompletionsClient;
+  };
+  apiKey?: string;
+  baseURL?: string;
+  maxRetries?: number;
+};
+
 function createDeepInfraClient({
   createClientImpl = ({ apiKey, baseURL, maxRetries }: { apiKey: string; baseURL: string; maxRetries: number }) => new OpenAI({ apiKey, baseURL, maxRetries }),
   getApiKeyImpl = () => process.env.DEEPINFRA_API_KEY,
@@ -34,7 +52,7 @@ function createDeepInfraClient({
       apiKey,
       baseURL: OPENAI_BASE_URL,
       maxRetries: 0
-    });
+    }) as DeepInfraClientLike;
 
     if (cache) {
       localCachedClient = client;

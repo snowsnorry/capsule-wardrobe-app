@@ -74,8 +74,12 @@ function resolveTargetSetItems(wardrobe, setIndex) {
 function createOutfitSetImageService({
   getCapsuleImpl = getCapsule,
   updateCapsuleSnapshotImpl = updateCapsuleSnapshot,
-  publishSnapshotImpl = (email, capsuleId, snapshot) => capsuleEventHub.publish(email, capsuleId, snapshot),
-  buildCapsuleEventSnapshotImpl = buildCapsuleEventSnapshot,
+  publishSnapshotImpl = ((email, capsuleId, snapshot) => capsuleEventHub.publish(email, capsuleId, snapshot)) as (
+    email: string,
+    capsuleId: string,
+    snapshot: unknown
+  ) => void | boolean,
+  buildCapsuleEventSnapshotImpl = buildCapsuleEventSnapshot as (payload?: Record<string, unknown>) => unknown,
   downloadProductImageAssetsImpl = downloadProductImageAssets,
   generateImageWithGeminiImpl = generateImageWithGemini,
   buildOutfitSetDescriptionImpl = buildOutfitSetDescription

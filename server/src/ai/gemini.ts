@@ -24,6 +24,29 @@ const DEFAULT_CHAT_MODEL = "gemini-2.5-pro";
 const ALLOWED_CHAT_MODELS = ["gemini-2.5-pro"];
 const DEFAULT_API_VERSION = "v1beta";
 
+type GeminiUploadedFileLike = {
+  uri?: string | null;
+  name?: string | null;
+  mimeType?: string | null;
+};
+
+type GeminiGenerateContentResponseLike = {
+  text?: string;
+  candidates?: Array<{ finishReason?: string; content?: { parts?: unknown[] } }>;
+};
+
+type GeminiClientLike = {
+  models: {
+    generateContent: (params: Record<string, unknown>) => Promise<GeminiGenerateContentResponseLike>;
+  };
+  files: {
+    upload: (params: Record<string, unknown>) => Promise<GeminiUploadedFileLike>;
+    delete: (params: { name?: string }) => Promise<unknown>;
+  };
+  apiKey?: string;
+  apiVersion?: string;
+};
+
 function resolveChatModel(userProfile: UserProfileLike | null = null) {
   const llm = String(userProfile?.llm || "").trim();
   if (llm.startsWith("gemini:")) {
@@ -184,7 +207,7 @@ function createGeminiClient({
     const client = createClientImpl({
       apiKey,
       apiVersion: DEFAULT_API_VERSION
-    });
+    }) as GeminiClientLike;
     if (cache) {
       localCachedClient = client;
     }

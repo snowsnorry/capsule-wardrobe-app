@@ -9,6 +9,16 @@ import {
   getStoredWardrobePayload
 } from "./ai.js";
 import { buildOutfitSetsFromFormulas } from "./outfitSets.js";
+import {
+  buildCapsuleSnapshot,
+  buildNormalizedCapsuleRecord,
+  buildNormalizedProfileRecord,
+  buildPartialRegenerationJobState,
+  buildStoredWardrobePayload,
+  buildWardrobeGenerationResult,
+  buildWardrobeJobState,
+  buildWardrobeUiItem
+} from "../test/domainFixtures.js";
 
 function createResponseRecorder() {
   return {
@@ -26,25 +36,14 @@ function createResponseRecorder() {
 }
 
 function createCapsuleWithWardrobe(wardrobe = null) {
-  return {
-    id: "capsule-1",
-    draft: {
-      filters: {
-        formalityLevel: "casual",
-        style: "minimalistic",
-        occasions: ["office"],
-        season: ["spring"],
-        audience: "woman",
-        color: null,
-        pattern: "solid",
-        text: ""
-      },
+  return buildNormalizedCapsuleRecord({
+    draft: buildCapsuleSnapshot({
       data: {
         wardrobe,
         rejectedUrls: []
       }
-    }
-  };
+    })
+  });
 }
 
 test("getWardrobeSelectionPrompt includes optional additional information", () => {
@@ -567,14 +566,13 @@ test("buildOutfitSetsFromFormulas keeps only valid outfit compositions and dedup
 
 test("getCapsuleItems returns pending regenerate payload when partial regeneration job is active", async () => {
   const service = createWardrobeService({
-    getProfileImpl: async () => ({ locale: "en" }),
+    getProfileImpl: async () => buildNormalizedProfileRecord({ locale: "en" }),
     getCapsuleImpl: async () => createCapsuleWithWardrobe({
-      items: [{ id: "top-1", url: "https://example.com/top-1", category: "top" }],
+      items: [buildWardrobeUiItem({ id: "top-1", url: "https://example.com/top-1", category: "top" })],
       reasoning: "capsule",
       rawSelectionText: "raw"
     }),
-    getPartialRegenerationJobImpl: () => ({
-      status: "pending",
+    getPartialRegenerationJobImpl: () => buildPartialRegenerationJobState({
       pendingItemUrls: ["https://example.com/top-1"]
     }),
     jobs: new Map()
@@ -595,9 +593,9 @@ test("getCapsuleItems returns pending regenerate payload when partial regenerati
 
 test("getCapsuleItems returns ready payload from stored wardrobe", async () => {
   const service = createWardrobeService({
-    getProfileImpl: async () => ({ locale: "en" }),
+    getProfileImpl: async () => buildNormalizedProfileRecord({ locale: "en" }),
     getCapsuleImpl: async () => createCapsuleWithWardrobe({
-      items: [{ id: "top-1", category: "top" }],
+      items: [buildWardrobeUiItem({ id: "top-1", category: "top", url: undefined, name: undefined, image_url: undefined, audience: undefined })],
       reasoning: "capsule-json",
       rawSelectionText: "raw-selection",
       swimwearReasoning: "swimwear-json"
@@ -626,16 +624,15 @@ test("getCapsuleItems returns ready payload from stored wardrobe", async () => {
 
 test("getCapsuleItems returns extras pending state when extras are still generating", async () => {
   const jobs = new Map([
-    ["person@example.com::capsule-1", {
-      status: "pending",
+    ["person@example.com::capsule-1", buildWardrobeJobState({
       phase: "extras",
       updatedAt: Date.now()
-    }]
+    })]
   ]);
   const service = createWardrobeService({
-    getProfileImpl: async () => ({ locale: "en" }),
+    getProfileImpl: async () => buildNormalizedProfileRecord({ locale: "en" }),
     getCapsuleImpl: async () => createCapsuleWithWardrobe({
-      items: [{ id: "top-1", category: "top" }],
+      items: [buildWardrobeUiItem({ id: "top-1", category: "top", url: undefined, name: undefined, image_url: undefined, audience: undefined })],
       reasoning: "capsule-json",
       rawSelectionText: "raw-selection",
       swimwearReasoning: "swimwear-json"
@@ -661,23 +658,23 @@ test("regenerateCapsuleWardrobe starts a new pending job and clears stored items
   let generatedProfile = null;
   const jobs = new Map();
   const service = createWardrobeService({
-    getProfileImpl: async () => ({ audience: "woman", locale: "en", llm: "openai:gpt-5.2" }),
+    getProfileImpl: async () => buildNormalizedProfileRecord({ audience: "woman", locale: "en", llm: "openai:gpt-5.2" }),
     getCapsuleImpl: async () => createCapsuleWithWardrobe({
-      items: [{ id: "top-1", category: "top" }]
+      items: [buildWardrobeUiItem({ id: "top-1", category: "top", url: undefined, name: undefined, image_url: undefined, audience: undefined })]
     }),
     updateCapsuleSnapshotImpl: async (email, capsuleId, draft) => {
       updates.push([email, capsuleId, draft]);
-      return { id: capsuleId, draft, saved: null };
+      return buildNormalizedCapsuleRecord({ id: capsuleId, draft, saved: null });
     },
     generateCapsuleWardrobeImpl: async (profile) => {
       generatedProfile = profile;
-      return {
-        items: [{ id: "top-2", category: "top" }],
-        selectedItems: [{ id: "top-2", category: "top" }],
+      return buildWardrobeGenerationResult({
+        items: [buildWardrobeUiItem({ id: "top-2", category: "top", url: undefined, name: undefined, image_url: undefined, audience: undefined })],
+        selectedItems: [buildWardrobeUiItem({ id: "top-2", category: "top", url: undefined, name: undefined, image_url: undefined, audience: undefined })],
         promptEmbeddings: [0.1],
         reasoning: "reasoning",
         rawSelectionText: "raw"
-      };
+      });
     },
     shouldGenerateSwimwearImpl: () => false,
     jobs,
@@ -725,20 +722,18 @@ test("regenerateCapsuleWardrobe starts a new pending job and clears stored items
 test("regenerateCapsuleWardrobe uses profile llm=none instead of query flag", async () => {
   let generatedProfile = null;
   const service = createWardrobeService({
-    getProfileImpl: async () => ({ audience: "woman", locale: "en", llm: "none" }),
+    getProfileImpl: async () => buildNormalizedProfileRecord({ audience: "woman", locale: "en", llm: "none" }),
     getCapsuleImpl: async () => createCapsuleWithWardrobe({
-      items: [{ id: "top-1", category: "top" }]
+      items: [buildWardrobeUiItem({ id: "top-1", category: "top", url: undefined, name: undefined, image_url: undefined, audience: undefined })]
     }),
-    updateCapsuleSnapshotImpl: async (_email, capsuleId, draft) => ({ id: capsuleId, draft, saved: null }),
+    updateCapsuleSnapshotImpl: async (_email, capsuleId, draft) => buildNormalizedCapsuleRecord({ id: capsuleId, draft, saved: null }),
     generateCapsuleWardrobeImpl: async (profile) => {
       generatedProfile = profile;
-      return {
-        items: [{ id: "top-2", category: "top" }],
-        selectedItems: [{ id: "top-2", category: "top" }],
-        promptEmbeddings: [0.1],
-        reasoning: null,
-        rawSelectionText: null
-      };
+      return buildWardrobeGenerationResult({
+        items: [buildWardrobeUiItem({ id: "top-2", category: "top", url: undefined, name: undefined, image_url: undefined, audience: undefined })],
+        selectedItems: [buildWardrobeUiItem({ id: "top-2", category: "top", url: undefined, name: undefined, image_url: undefined, audience: undefined })],
+        promptEmbeddings: [0.1]
+      });
     },
     shouldGenerateSwimwearImpl: () => false,
     jobs: new Map(),
@@ -759,15 +754,15 @@ test("regenerateCapsuleWardrobe uses profile llm=none instead of query flag", as
 
 test("getCapsuleItems surfaces failed job as service_unavailable and drops stale failed entry", async () => {
   const jobs = new Map([
-    ["person@example.com::capsule-1", {
+    ["person@example.com::capsule-1", buildWardrobeJobState({
       status: "failed",
       phase: "failed",
       updatedAt: Date.now(),
       error: Object.assign(new Error("failed"), { rawSelectionText: "llm raw" })
-    }]
+    })]
   ]);
   const service = createWardrobeService({
-    getProfileImpl: async () => ({ locale: "en" }),
+    getProfileImpl: async () => buildNormalizedProfileRecord({ locale: "en" }),
     getCapsuleImpl: async () => createCapsuleWithWardrobe(null),
     jobs
   });
@@ -788,43 +783,53 @@ test("getCapsuleItems surfaces failed job as service_unavailable and drops stale
 
 test("startWardrobeJob reuses active pending job for the same email", async () => {
   let resolveGeneration;
-  const pendingGeneration = new Promise((resolve) => {
+  const pendingGeneration = new Promise<ReturnType<typeof buildWardrobeGenerationResult>>((resolve) => {
     resolveGeneration = resolve;
   });
   const service = createWardrobeService({
     generateCapsuleWardrobeImpl: async () => pendingGeneration,
-    updateCapsuleSnapshotImpl: async () => {},
+    updateCapsuleSnapshotImpl: async (_email, capsuleId, draft) => buildNormalizedCapsuleRecord({ id: capsuleId, draft, saved: null }),
     jobs: new Map()
   });
 
-  const first = service.startWardrobeJob("person@example.com", "capsule-1", { locale: "en" }, createCapsuleWithWardrobe(null));
-  const second = service.startWardrobeJob("person@example.com", "capsule-1", { locale: "en" }, createCapsuleWithWardrobe(null));
+  const first = service.startWardrobeJob(
+    "person@example.com",
+    "capsule-1",
+    buildNormalizedProfileRecord({ locale: "en" }),
+    createCapsuleWithWardrobe(null)
+  );
+  const second = service.startWardrobeJob(
+    "person@example.com",
+    "capsule-1",
+    buildNormalizedProfileRecord({ locale: "en" }),
+    createCapsuleWithWardrobe(null)
+  );
 
   assert.equal(first, second);
 
-  resolveGeneration({
-    items: [{ id: "top-1", category: "top" }],
-    selectedItems: [{ id: "top-1", category: "top" }],
+  resolveGeneration(buildWardrobeGenerationResult({
+    items: [buildWardrobeUiItem({ id: "top-1", category: "top", url: undefined, name: undefined, image_url: undefined, audience: undefined })],
+    selectedItems: [buildWardrobeUiItem({ id: "top-1", category: "top", url: undefined, name: undefined, image_url: undefined, audience: undefined })],
     promptEmbeddings: [0.1]
-  });
+  }));
   await first.promise;
 });
 
 test("startWardrobeJob stores capsule result and merges swimwear additions when enabled", async () => {
   const updates = [];
   const service = createWardrobeService({
-    generateCapsuleWardrobeImpl: async () => ({
+    generateCapsuleWardrobeImpl: async () => buildWardrobeGenerationResult({
       items: [
-        { id: "top-1", category: "top" },
-        { id: "top-2", category: "top" },
-        { id: "bottom-1", category: "bottom" },
-        { id: "bag-1", category: "bag" }
+        buildWardrobeUiItem({ id: "top-1", category: "top", url: undefined, name: undefined, image_url: undefined, audience: undefined }),
+        buildWardrobeUiItem({ id: "top-2", category: "top", url: undefined, name: undefined, image_url: undefined, audience: undefined }),
+        buildWardrobeUiItem({ id: "bottom-1", category: "bottom", url: undefined, name: undefined, image_url: undefined, audience: undefined }),
+        buildWardrobeUiItem({ id: "bag-1", category: "bag", url: undefined, name: undefined, image_url: undefined, audience: undefined })
       ],
       selectedItems: [
-        { id: "top-1", category: "top" },
-        { id: "top-2", category: "top" },
-        { id: "bottom-1", category: "bottom" },
-        { id: "bag-1", category: "bag" }
+        buildWardrobeUiItem({ id: "top-1", category: "top", url: undefined, name: undefined, image_url: undefined, audience: undefined }),
+        buildWardrobeUiItem({ id: "top-2", category: "top", url: undefined, name: undefined, image_url: undefined, audience: undefined }),
+        buildWardrobeUiItem({ id: "bottom-1", category: "bottom", url: undefined, name: undefined, image_url: undefined, audience: undefined }),
+        buildWardrobeUiItem({ id: "bag-1", category: "bag", url: undefined, name: undefined, image_url: undefined, audience: undefined })
       ],
       promptEmbeddings: [0.1],
       outfitSets: [{ itemIds: ["top-1", "bottom-1", "bag-1"] }],
@@ -833,13 +838,13 @@ test("startWardrobeJob stores capsule result and merges swimwear additions when 
     }),
     updateCapsuleSnapshotImpl: async (email, capsuleId, draft) => {
       updates.push([email, capsuleId, draft]);
-      return { id: capsuleId, draft, saved: null };
+      return buildNormalizedCapsuleRecord({ id: capsuleId, draft, saved: null });
     },
     shouldGenerateSwimwearImpl: () => true,
     generateSwimwearAdditionImpl: async () => ({
       items: [
-        { id: "swim-1", category: "swimwear" },
-        { id: "top-1", category: "top" }
+        buildWardrobeUiItem({ id: "swim-1", category: "swimwear", url: "https://example.com/swim-1", name: "Swim 1", image_url: "https://example.com/swim-1.jpg", audience: "woman" }),
+        buildWardrobeUiItem({ id: "top-1", category: "top", url: "https://example.com/top-1", name: "Top 1", image_url: "https://example.com/top-1.jpg", audience: "woman" })
       ],
       reasoning: "swimwear-json",
       rawSelectionText: "swimwear-raw"
@@ -850,7 +855,7 @@ test("startWardrobeJob stores capsule result and merges swimwear additions when 
   const job = service.startWardrobeJob(
     "person@example.com",
     "capsule-1",
-    { audience: "woman", season: ["summer"], locale: "en" },
+    buildNormalizedProfileRecord({ audience: "woman", season: ["summer"], locale: "en" }),
     createCapsuleWithWardrobe(null)
   );
   await job.promise;
@@ -902,18 +907,19 @@ test("startWardrobeJob stores capsule result and merges swimwear additions when 
 
 test("startWardrobeJob marks job failed when capsule generation returns no usable items", async () => {
   const service = createWardrobeService({
-    generateCapsuleWardrobeImpl: async () => ({
-      items: [],
-      selectedItems: [],
-      promptEmbeddings: []
-    }),
+    generateCapsuleWardrobeImpl: async () => buildWardrobeGenerationResult(),
     jobs: new Map()
   });
 
-  const job = service.startWardrobeJob("person@example.com", "capsule-1", { audience: "woman", locale: "en" }, createCapsuleWithWardrobe(null));
+  const job = service.startWardrobeJob(
+    "person@example.com",
+    "capsule-1",
+    buildNormalizedProfileRecord({ audience: "woman", locale: "en" }),
+    createCapsuleWithWardrobe(null)
+  );
   await job.promise;
 
   assert.equal(job.status, "failed");
   assert.equal(job.phase, "failed");
-  assert.match(job.error.message, /no valid wardrobe items/i);
+  assert.match((job.error as Error).message, /no valid wardrobe items/i);
 });

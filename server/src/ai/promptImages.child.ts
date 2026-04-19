@@ -10,11 +10,23 @@ const PROMPT_CATEGORY_SHARP_CONCURRENCY = Number.parseInt(process.env.PROMPT_CAT
 configureSharp(PROMPT_CATEGORY_SHARP_CONCURRENCY);
 
 function createPromptImagesChildRuntime({
-  buildPromptDebugImagesImpl = buildPromptDebugImages,
-  serializePromptDebugImagesForIpcImpl = serializePromptDebugImagesForIpc,
+  buildPromptDebugImagesImpl = buildPromptDebugImages as (
+    input?: { normalizedItems?: unknown[]; debugOutputDir?: string | URL; saveDebugArtifacts?: boolean }
+  ) => Promise<unknown>,
+  serializePromptDebugImagesForIpcImpl = serializePromptDebugImagesForIpc as (result?: unknown) => unknown,
   sendImpl = process.send?.bind(process),
   disconnectImpl = process.disconnect?.bind(process),
-  exitImpl = (code) => process.exit(code)
+  exitImpl = (code: number) => {
+    process.exit(code);
+  }
+}: {
+  buildPromptDebugImagesImpl?: (
+    input?: { normalizedItems?: unknown[]; debugOutputDir?: string | URL; saveDebugArtifacts?: boolean }
+  ) => Promise<unknown>;
+  serializePromptDebugImagesForIpcImpl?: (result?: unknown) => unknown;
+  sendImpl?: ((message: unknown, callback?: () => void) => unknown) | undefined;
+  disconnectImpl?: (() => unknown) | undefined;
+  exitImpl?: (code: number) => void;
 } = {}) {
   let handled = false;
 
@@ -42,9 +54,10 @@ function createPromptImagesChildRuntime({
         saveDebugArtifacts: false
       });
 
+      const serialized = serializePromptDebugImagesForIpcImpl(result);
       sendFinalMessage({
         ok: true,
-        ...serializePromptDebugImagesForIpcImpl(result)
+        ...(serialized && typeof serialized === "object" ? serialized : {})
       }, 0);
     } catch (error) {
       sendFinalMessage({

@@ -1,8 +1,17 @@
 const VOYAGE_API_URL = "https://api.voyageai.com/v1/embeddings";
 const DEFAULT_EMBEDDING_MODEL = "voyage-4-large";
 
+type VoyageResponseLike = {
+  ok: boolean;
+  status?: number;
+  text?: () => Promise<string>;
+  json?: () => Promise<unknown>;
+};
+
+type VoyageFetchLike = (input: string, init?: RequestInit) => Promise<VoyageResponseLike>;
+
 function createVoyageClient({
-  fetchImpl = fetch,
+  fetchImpl = fetch as VoyageFetchLike,
   getVoyageApiKeyImpl = () => {
     const apiKey = process.env.VOYAGE_API_KEY;
     if (!apiKey) {
@@ -26,11 +35,11 @@ function createVoyageClient({
     });
 
     if (!response.ok) {
-      const details = await response.text();
+      const details = response.text ? await response.text() : "";
       throw new Error(`Failed to compute prompt embeddings: ${response.status} ${details}`);
     }
 
-    const payload = await response.json();
+    const payload = await (response.json ? response.json() : Promise.resolve({})) as { data?: Array<{ embedding?: number[] }> };
     const embedding = payload?.data?.[0]?.embedding;
     if (!Array.isArray(embedding) || embedding.length === 0) {
       throw new Error("Failed to compute prompt embeddings");

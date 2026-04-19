@@ -5,6 +5,16 @@ import {
   createPartialRegenerationService,
   getPartialRegenerationJob
 } from "./regenerateSelected.js";
+import {
+  buildCapsuleSnapshot,
+  buildNormalizedCapsuleRecord,
+  buildNormalizedProfileRecord,
+  buildPartialRegenerationJobState,
+  buildStoredOutfitSet,
+  buildStoredWardrobePayload,
+  buildWardrobeGenerationResult,
+  buildWardrobeUiItem
+} from "../test/domainFixtures.js";
 
 function createResponseRecorder() {
   return {
@@ -22,43 +32,24 @@ function createResponseRecorder() {
 }
 
 function createProfile() {
-  return {
+  return buildNormalizedProfileRecord({
     locale: "en",
     llm: "openai:gpt-5.2"
-  };
+  });
 }
 
 function createCapsule() {
-  return {
-    id: "capsule-1",
-    draft: {
+  return buildNormalizedCapsuleRecord({
+    draft: buildCapsuleSnapshot({
       filters: {
-        formalityLevel: "casual",
-        style: "minimalistic",
-        occasions: ["office"],
-        season: ["summer"],
-        audience: "woman",
-        color: null,
-        pattern: "solid",
-        text: ""
+        season: ["summer"]
       },
       data: {
         rejectedUrls: ["https://example.com/old-1"],
-        wardrobe: {
-          items: [
-            { id: "top-1", url: "https://example.com/top-1", category: "top" },
-            { id: "bottom-1", url: "https://example.com/bottom-1", category: "bottom" },
-            { id: "bag-1", url: "https://example.com/bag-1", category: "bag" }
-          ],
-          outfitSets: [{ itemIds: ["top-1", "bottom-1", "bag-1"], image: "set-image", imageObsolete: false }],
-          reasoning: "capsule-json",
-          rawSelectionText: "capsule-raw",
-          swimwearReasoning: "swim-json",
-          swimwearRawSelectionText: "swim-raw"
-        }
+        wardrobe: getStoredProfilePayload()
       }
-    }
-  };
+    })
+  });
 }
 
 test("buildRegenerateSelectedPrompt includes optional additional information", () => {
@@ -97,11 +88,10 @@ test("buildRegenerateSelectedPrompt omits additional information line when text 
 
 test("regenerateSelectedWardrobeItems returns pending payload when job is already active", async () => {
   const jobs = new Map([
-    ["person@example.com::capsule-1", {
-      status: "pending",
+    ["person@example.com::capsule-1", buildPartialRegenerationJobState({
       updatedAt: Date.now(),
       pendingItemUrls: ["https://example.com/top-1"]
-    }]
+    })]
   ]);
   const service = createPartialRegenerationService({
     getProfileImpl: async () => createProfile(),
@@ -127,28 +117,29 @@ test("regenerateSelectedWardrobeItems returns pending payload when job is alread
 
 test("regenerateSelectedWardrobeItems clears completed job and starts a fresh pending regeneration", async () => {
   const jobs = new Map([
-    ["person@example.com::capsule-1", {
+    ["person@example.com::capsule-1", buildPartialRegenerationJobState({
       status: "completed",
+      phase: "completed",
       updatedAt: Date.now(),
-      result: {
-        items: [{ id: "new-1", url: "https://example.com/new-1", category: "top" }],
-        outfitSets: [{ itemIds: ["new-1", "new-1", "new-1"], imageObsolete: false }],
+      result: buildStoredWardrobePayload({
+        items: [buildWardrobeUiItem({ id: "new-1", url: "https://example.com/new-1", category: "top" })],
+        outfitSets: [buildStoredOutfitSet({ itemIds: ["new-1", "new-1", "new-1"], imageObsolete: false })],
         reasoning: "new-reasoning",
         rawSelectionText: "new-raw",
         swimwearReasoning: "swim-json",
         swimwearRawSelectionText: "swim-raw"
-      }
-    }]
+      })
+    })]
   ]);
   const service = createPartialRegenerationService({
     getProfileImpl: async () => createProfile(),
     getCapsuleImpl: async () => createCapsule(),
-    updateCapsuleSnapshotImpl: async (_email, capsuleId, draft) => ({ id: capsuleId, draft, saved: null }),
-    regenerateCapsuleWardrobeImpl: async () => ({
+    updateCapsuleSnapshotImpl: async (_email, capsuleId, draft) => buildNormalizedCapsuleRecord({ id: capsuleId, draft, saved: null }),
+    regenerateCapsuleWardrobeImpl: async () => buildWardrobeGenerationResult({
       items: [
-        { id: "bottom-1", url: "https://example.com/bottom-1", category: "bottom" },
-        { id: "bag-1", url: "https://example.com/bag-1", category: "bag" },
-        { id: "top-2", url: "https://example.com/top-2", category: "top" }
+        buildWardrobeUiItem({ id: "bottom-1", url: "https://example.com/bottom-1", category: "bottom" }),
+        buildWardrobeUiItem({ id: "bag-1", url: "https://example.com/bag-1", category: "bag" }),
+        buildWardrobeUiItem({ id: "top-2", url: "https://example.com/top-2", category: "top" })
       ],
       reasoning: "regen-json",
       rawSelectionText: "regen-raw"
@@ -179,11 +170,12 @@ test("regenerateSelectedWardrobeItems clears completed job and starts a fresh pe
 
 test("regenerateSelectedWardrobeItems returns service_unavailable for failed job and clears it", async () => {
   const jobs = new Map([
-    ["person@example.com::capsule-1", {
+    ["person@example.com::capsule-1", buildPartialRegenerationJobState({
       status: "failed",
+      phase: "failed",
       updatedAt: Date.now(),
       error: new Error("partial failed")
-    }]
+    })]
   ]);
   const service = createPartialRegenerationService({
     getProfileImpl: async () => createProfile(),
@@ -220,12 +212,12 @@ test("regenerateSelectedWardrobeItems validates selected urls and missing wardro
 
   const noWardrobeService = createPartialRegenerationService({
     getProfileImpl: async () => createProfile(),
-    getCapsuleImpl: async () => ({
+    getCapsuleImpl: async () => buildNormalizedCapsuleRecord({
       id: "capsule-1",
-      draft: {
-        filters: createCapsule().draft.filters,
+      draft: buildCapsuleSnapshot({
+        filters: createCapsule().draft?.filters,
         data: { wardrobe: null, rejectedUrls: [] }
-      }
+      })
     }),
     jobs: new Map()
   });
@@ -267,21 +259,21 @@ test("regenerateSelectedWardrobeItems updates rejected urls, shrinks partial pay
     getCapsuleImpl: async () => createCapsule(),
     updateCapsuleSnapshotImpl: async (email, capsuleId, draft) => {
       draftUpdates.push([email, capsuleId, draft]);
-      return { id: capsuleId, draft, saved: null };
+      return buildNormalizedCapsuleRecord({ id: capsuleId, draft, saved: null });
     },
     regenerateCapsuleWardrobeImpl: async (profile, selectedProducts) => {
       regeneratedProfile = profile;
       regeneratedSelectedProducts = selectedProducts;
-      return {
+      return buildWardrobeGenerationResult({
         items: [
-          { id: "bottom-1", url: "https://example.com/bottom-1", category: "bottom" },
-          { id: "bag-1", url: "https://example.com/bag-1", category: "bag" },
-          { id: "top-2", url: "https://example.com/top-2", category: "top" }
+          buildWardrobeUiItem({ id: "bottom-1", url: "https://example.com/bottom-1", category: "bottom" }),
+          buildWardrobeUiItem({ id: "bag-1", url: "https://example.com/bag-1", category: "bag" }),
+          buildWardrobeUiItem({ id: "top-2", url: "https://example.com/top-2", category: "top" })
         ],
         outfitSets: [{ itemIds: ["bottom-1", "top-2", "bag-1"] }],
         reasoning: "regen-json",
         rawSelectionText: "regen-raw"
-      };
+      });
     },
     jobs,
     randomUuidImpl: () => "regen-req-1"
@@ -358,18 +350,16 @@ test("regenerateSelectedWardrobeItems uses profile llm=none instead of query fla
   const service = createPartialRegenerationService({
     getProfileImpl: async () => ({ ...createProfile(), llm: "none" }),
     getCapsuleImpl: async () => createCapsule(),
-    updateCapsuleSnapshotImpl: async (_email, capsuleId, draft) => ({ id: capsuleId, draft, saved: null }),
+    updateCapsuleSnapshotImpl: async (_email, capsuleId, draft) => buildNormalizedCapsuleRecord({ id: capsuleId, draft, saved: null }),
     regenerateCapsuleWardrobeImpl: async (profile) => {
       regeneratedProfile = profile;
-      return {
+      return buildWardrobeGenerationResult({
         items: [
-          { id: "bottom-1", url: "https://example.com/bottom-1", category: "bottom" },
-          { id: "bag-1", url: "https://example.com/bag-1", category: "bag" },
-          { id: "top-2", url: "https://example.com/top-2", category: "top" }
-        ],
-        reasoning: null,
-        rawSelectionText: null
-      };
+          buildWardrobeUiItem({ id: "bottom-1", url: "https://example.com/bottom-1", category: "bottom" }),
+          buildWardrobeUiItem({ id: "bag-1", url: "https://example.com/bag-1", category: "bag" }),
+          buildWardrobeUiItem({ id: "top-2", url: "https://example.com/top-2", category: "top" })
+        ]
+      });
     },
     jobs: new Map(),
     randomUuidImpl: () => "regen-req-no-llm"
@@ -390,12 +380,12 @@ test("regenerateSelectedWardrobeItems uses profile llm=none instead of query fla
 
 test("startPartialRegenerationJob reuses active pending job and marks failures", async () => {
   let resolveRegen;
-  const pending = new Promise((resolve) => {
+  const pending = new Promise<ReturnType<typeof buildWardrobeGenerationResult>>((resolve) => {
     resolveRegen = resolve;
   });
   const service = createPartialRegenerationService({
     regenerateCapsuleWardrobeImpl: async () => pending,
-    updateCapsuleSnapshotImpl: async () => {},
+    updateCapsuleSnapshotImpl: async (_email, capsuleId, draft) => buildNormalizedCapsuleRecord({ id: capsuleId, draft, saved: null }),
     jobs: new Map()
   });
 
@@ -417,11 +407,11 @@ test("startPartialRegenerationJob reuses active pending job and marks failures",
   );
   assert.equal(first, second);
 
-  resolveRegen({
-    items: [{ id: "bottom-1", category: "bottom" }],
+  resolveRegen(buildWardrobeGenerationResult({
+    items: [buildWardrobeUiItem({ id: "bottom-1", category: "bottom", url: undefined, name: undefined, image_url: undefined, audience: undefined })],
     reasoning: "regen-json",
     rawSelectionText: "regen-raw"
-  });
+  }));
   await first.promise;
 
   const failingService = createPartialRegenerationService({
@@ -449,13 +439,13 @@ test("startPartialRegenerationJob stores recomputed outfit sets in the completed
   const service = createPartialRegenerationService({
     updateCapsuleSnapshotImpl: async (email, capsuleId, draft) => {
       updates.push([email, capsuleId, draft]);
-      return { id: capsuleId, draft, saved: null };
+      return buildNormalizedCapsuleRecord({ id: capsuleId, draft, saved: null });
     },
-    regenerateCapsuleWardrobeImpl: async () => ({
+    regenerateCapsuleWardrobeImpl: async () => buildWardrobeGenerationResult({
       items: [
-        { id: "bottom-1", url: "https://example.com/bottom-1", category: "bottom" },
-        { id: "bag-1", url: "https://example.com/bag-1", category: "bag" },
-        { id: "top-2", url: "https://example.com/top-2", category: "top" }
+        buildWardrobeUiItem({ id: "bottom-1", url: "https://example.com/bottom-1", category: "bottom" }),
+        buildWardrobeUiItem({ id: "bag-1", url: "https://example.com/bag-1", category: "bag" }),
+        buildWardrobeUiItem({ id: "top-2", url: "https://example.com/top-2", category: "top" })
       ],
       outfitSets: [{ itemIds: ["bottom-1", "top-2", "bag-1"] }],
       reasoning: "regen-json",
@@ -480,28 +470,28 @@ test("startPartialRegenerationJob stores recomputed outfit sets in the completed
 });
 
 function getStoredProfilePayload() {
-  return {
+  return buildStoredWardrobePayload({
     items: [
-      { id: "top-1", url: "https://example.com/top-1", category: "top" },
-      { id: "bottom-1", url: "https://example.com/bottom-1", category: "bottom" },
-      { id: "bag-1", url: "https://example.com/bag-1", category: "bag" }
+      buildWardrobeUiItem({ id: "top-1", url: "https://example.com/top-1", category: "top" }),
+      buildWardrobeUiItem({ id: "bottom-1", url: "https://example.com/bottom-1", category: "bottom" }),
+      buildWardrobeUiItem({ id: "bag-1", url: "https://example.com/bag-1", category: "bag" })
     ],
-    outfitSets: [{ itemIds: ["top-1", "bottom-1", "bag-1"], image: "set-image", imageObsolete: false }],
+    outfitSets: [buildStoredOutfitSet({ itemIds: ["top-1", "bottom-1", "bag-1"], image: "set-image", imageObsolete: false })],
     reasoning: "capsule-json",
     rawSelectionText: "capsule-raw",
     swimwearReasoning: "swim-json",
     swimwearRawSelectionText: "swim-raw"
-  };
+  });
 }
 
 test("startPartialRegenerationJob preserves unchanged set images without marking them obsolete", async () => {
   const service = createPartialRegenerationService({
-    updateCapsuleSnapshotImpl: async (_email, capsuleId, draft) => ({ id: capsuleId, draft, saved: null }),
-    regenerateCapsuleWardrobeImpl: async () => ({
+    updateCapsuleSnapshotImpl: async (_email, capsuleId, draft) => buildNormalizedCapsuleRecord({ id: capsuleId, draft, saved: null }),
+    regenerateCapsuleWardrobeImpl: async () => buildWardrobeGenerationResult({
       items: [
-        { id: "top-1", url: "https://example.com/top-1", category: "top" },
-        { id: "bottom-2", url: "https://example.com/bottom-2", category: "bottom" },
-        { id: "bag-1", url: "https://example.com/bag-1", category: "bag" }
+        buildWardrobeUiItem({ id: "top-1", url: "https://example.com/top-1", category: "top" }),
+        buildWardrobeUiItem({ id: "bottom-2", url: "https://example.com/bottom-2", category: "bottom" }),
+        buildWardrobeUiItem({ id: "bag-1", url: "https://example.com/bag-1", category: "bag" })
       ],
       reasoning: "regen-json",
       rawSelectionText: "regen-raw"
@@ -541,5 +531,5 @@ test("startPartialRegenerationJob preserves unchanged set images without marking
 });
 
 test("module-level getPartialRegenerationJob returns null for unknown email", () => {
-  assert.equal(getPartialRegenerationJob("missing@example.com"), null);
+  assert.equal(getPartialRegenerationJob("missing@example.com", "capsule-1"), null);
 });

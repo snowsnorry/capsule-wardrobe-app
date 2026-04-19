@@ -112,6 +112,15 @@ type ChildMessage =
     stack?: string | null;
   };
 
+type WardrobePdfChildProcessLike = {
+  on: (event: string, handler: (...args: unknown[]) => void) => unknown;
+  removeListener: (event: string, handler: (...args: unknown[]) => void) => unknown;
+  kill: () => unknown;
+  send: (message: unknown, callback?: (error: Error | null) => void) => unknown;
+};
+
+type WardrobePdfForkLike = (modulePath: string, options?: Record<string, unknown>) => WardrobePdfChildProcessLike;
+
 function formatLogValue(value) {
   if (value === null) {
     return "null";
@@ -867,7 +876,7 @@ async function buildWardrobePdfInChild(
   {
     forkImpl = nodeFork,
     totalStartedAt = null
-  }: WardrobePdfBuildChildOptions & { forkImpl?: typeof nodeFork } = {}
+  }: WardrobePdfBuildChildOptions & { forkImpl?: WardrobePdfForkLike } = {}
 ) {
   const outputDir = await mkdtemp(path.join(os.tmpdir(), "wardrobe-pdf-child-"));
   const outputFilePath = path.join(outputDir, "capsule-wardrobe.pdf");
