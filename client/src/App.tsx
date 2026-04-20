@@ -1,6 +1,24 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, MouseEvent } from "react";
-import { Alert, Box, Button, Container, CssBaseline, LinearProgress, Paper, Snackbar, Stack, ThemeProvider, Typography, useMediaQuery } from "@mui/material";
+import {
+  Alert,
+  Box,
+  Button,
+  Container,
+  CssBaseline,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  LinearProgress,
+  Paper,
+  Snackbar,
+  Stack,
+  ThemeProvider,
+  Typography,
+  useMediaQuery
+} from "@mui/material";
 import {
   fetchCurrentUser,
   fetchProfileStatus,
@@ -371,6 +389,7 @@ function App() {
   const [code, setCode] = useState("");
   const [status, setStatus] = useState<StatusState>(initialStatus);
   const [notificationPrompt, setNotificationPrompt] = useState(initialNotificationPrompt);
+  const [isSignOutConfirmOpen, setIsSignOutConfirmOpen] = useState(false);
   const [user, setUser] = useState<UserLike | null>(null);
   const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [sessionInitialized, setSessionInitialized] = useState(false);
@@ -794,7 +813,12 @@ function App() {
     }
   };
 
+  const handleRequestSignOut = () => {
+    setIsSignOutConfirmOpen(true);
+  };
+
   const handleLogout = async () => {
+    setIsSignOutConfirmOpen(false);
     setStatus({ loading: true, error: "", infoKey: "", infoParams: null });
     try {
       await logout();
@@ -1593,7 +1617,7 @@ function App() {
             userEmail={user?.email || ""}
             userName={settingsProfile.fullname}
             settingsProfile={settingsProfile}
-            onSignOut={handleLogout}
+            onSignOut={handleRequestSignOut}
             onSaveSettings={handleSaveSettingsFromScreen}
           />
         );
@@ -1606,7 +1630,7 @@ function App() {
             userEmail={user?.email || ""}
             userName={settingsProfile.fullname}
             settingsProfile={settingsProfile}
-            onSignOut={handleLogout}
+            onSignOut={handleRequestSignOut}
             onSaveSettings={handleSaveSettingsFromScreen}
           />
         );
@@ -1654,7 +1678,7 @@ function App() {
           userEmail={user?.email || ""}
           userName={settingsProfile.fullname}
           settingsProfile={settingsProfile}
-          onSignOut={handleLogout}
+          onSignOut={handleRequestSignOut}
           onSaveSettings={handleSaveSettingsFromScreen}
           isSigningOut={status.loading}
           onRefreshItems={handleRefreshWardrobe}
@@ -1947,6 +1971,38 @@ function App() {
           {t("notifications.prompt.message")}
         </Alert>
       </Snackbar>
+      <Dialog
+        open={isSignOutConfirmOpen}
+        onClose={() => {
+          if (!status.loading) {
+            setIsSignOutConfirmOpen(false);
+          }
+        }}
+        aria-labelledby="sign-out-dialog-title"
+        aria-describedby="sign-out-dialog-description"
+      >
+        <DialogTitle id="sign-out-dialog-title" sx={{ pb: 1 }}>
+          {t("dialogs.signOutTitle")}
+        </DialogTitle>
+        <DialogContent sx={{ pt: 0.5, pb: 0 }}>
+          <DialogContentText id="sign-out-dialog-description" sx={{ color: "text.secondary" }}>
+            {t("dialogs.signOutBody")}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2.5, pt: 2 }}>
+          <Button disabled={status.loading} onClick={() => setIsSignOutConfirmOpen(false)}>
+            {t("dialogs.signOutCancel")}
+          </Button>
+          <Button
+            color="error"
+            variant="contained"
+            disabled={status.loading}
+            onClick={() => { void handleLogout(); }}
+          >
+            {t("dialogs.signOutConfirm")}
+          </Button>
+        </DialogActions>
+      </Dialog>
       </Box>
     </ThemeProvider>
   );

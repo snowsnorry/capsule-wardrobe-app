@@ -347,6 +347,9 @@ describe("App e2e-style flows", () => {
     expect(await screen.findByTestId("main-screen")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "sign-out" }));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByText(/Are you sure you want to sign out\?|Вы уверены, что хотите выйти\?/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Sign out|Выйти/i }));
     expect(await screen.findByTestId("sign-in-screen")).toBeInTheDocument();
     expect(authApi.logout).toHaveBeenCalledTimes(1);
     expect(authApi.clearRequestCache).toHaveBeenCalledTimes(1);
