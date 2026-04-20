@@ -94,8 +94,18 @@ const AUTH_TEST_MODE =
   NODE_ENV !== "production" && ["1", "true", "yes"].includes(String(process.env.AUTH_TEST_MODE || "").toLowerCase());
 const SUPPORTED_LOCALES = new Set(["en", "ru"]);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const CLIENT_DIST_PATH = path.resolve(__dirname, "../../client/dist");
-const CLIENT_ROOT = path.resolve(__dirname, "../../client");
+const CLIENT_DIST_CANDIDATES = [
+  path.resolve(__dirname, "../../client/dist"),
+  path.resolve(__dirname, "../../../../client/dist"),
+  path.resolve(process.cwd(), "../client/dist")
+];
+const CLIENT_ROOT_CANDIDATES = [
+  path.resolve(__dirname, "../../client"),
+  path.resolve(__dirname, "../../../../client"),
+  path.resolve(process.cwd(), "../client")
+];
+const CLIENT_DIST_PATH = CLIENT_DIST_CANDIDATES.find((candidate) => fs.existsSync(candidate)) || CLIENT_DIST_CANDIDATES[0];
+const CLIENT_ROOT = CLIENT_ROOT_CANDIDATES.find((candidate) => fs.existsSync(candidate)) || CLIENT_ROOT_CANDIDATES[0];
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "";
 const sharpConfig = configureSharp();
 console.info(
