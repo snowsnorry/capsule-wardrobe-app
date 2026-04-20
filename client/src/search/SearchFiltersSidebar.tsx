@@ -1,7 +1,7 @@
 import { Box, Button, Chip, Slider, Stack, TextField, Typography } from "@mui/material";
 import type { ChangeEvent, KeyboardEvent, ReactNode } from "react";
 import AccentColorChips from "../components/AccentColorChips";
-import { useI18n } from "../i18n/useI18n.js";
+import { useI18n } from "../i18n/useI18n";
 import { translateOption } from "../i18n";
 import {
   clampPriceValue,
@@ -11,9 +11,9 @@ import {
   sortItemsByLabel,
   sortSeasonValues,
   toggleSelection
-} from "./searchState.js";
+} from "./searchState";
 
-import type { SearchDraftState, SearchOptions } from "./searchState.js";
+import type { SearchDraftState, SearchOptions } from "./searchState";
 
 type SearchFiltersStatus = {
   loading: boolean;

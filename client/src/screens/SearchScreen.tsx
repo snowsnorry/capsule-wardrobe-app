@@ -21,13 +21,13 @@ import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import TuneRoundedIcon from "@mui/icons-material/TuneRounded";
 import OpenInNewRoundedIcon from "@mui/icons-material/OpenInNewRounded";
 import { fetchSavedSearch, fetchSearchOptions, runSearch } from "../api/search";
-import { useI18n } from "../i18n/useI18n.js";
+import { useI18n } from "../i18n/useI18n";
 import { translateOption } from "../i18n";
 import AppLauncher from "../components/AppLauncher";
 import LocaleSwitcher from "../components/LocaleSwitcher";
 import ProductLabelText from "../components/ProductLabelText";
 import AppSidebarShell from "../components/AppSidebarShell";
-import { formatProductLabel } from "../utils/productLabel.js";
+import { formatProductLabel } from "../utils/productLabel";
 import { buildProductDetailGroups } from "../../../shared/productDetail.js";
 import { getSafeHttpUrl } from "../../../shared/urlSecurity.js";
 import { getColorSwatchStyle } from "../../../shared/colorSwatches.js";
@@ -37,8 +37,8 @@ import {
   buildSearchOptionsPayload,
   createSearchState,
   serializeDraftState
-} from "../search/searchState.js";
-import type { SearchDraftState, SearchOptions } from "../search/searchState.js";
+} from "../search/searchState";
+import type { SearchDraftState, SearchOptions } from "../search/searchState";
 import type { SettingsProfile, SettingsSavePayload } from "../components/SettingsDialog";
 
 type SearchResultItem = {

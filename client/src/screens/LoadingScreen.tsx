@@ -1,5 +1,5 @@
 import { LinearProgress, Stack, Typography } from "@mui/material";
-import { useI18n } from "../i18n/useI18n.js";
+import { useI18n } from "../i18n/useI18n";
 
 function LoadingScreen() {
   const { t } = useI18n();

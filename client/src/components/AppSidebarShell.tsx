@@ -21,7 +21,7 @@ import type { MouseEvent, ReactElement, ReactNode } from "react";
 import type { SvgIconProps } from "@mui/material/SvgIcon";
 import SettingsDialog from "./SettingsDialog";
 import type { SettingsProfile, SettingsSavePayload } from "./SettingsDialog";
-import { useI18n } from "../i18n/useI18n.js";
+import { useI18n } from "../i18n/useI18n";
 
 const SIDEBAR_COLLAPSED_STORAGE_KEY = "capsule.appSidebarCollapsed";
 

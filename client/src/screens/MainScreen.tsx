@@ -38,7 +38,7 @@ import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import FiberManualRecordRoundedIcon from "@mui/icons-material/FiberManualRecordRounded";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import ProfileFiltersSidebar from "../components/ProfileFiltersSidebar";
-import { useI18n } from "../i18n/useI18n.js";
+import { useI18n } from "../i18n/useI18n";
 import ClothingGridPlaceholder from "../components/ClothingGridPlaceholder";
 import { ClothingPlaceholderCard } from "../components/ClothingGridPlaceholder";
 import ClothingCard from "../components/ClothingCard";

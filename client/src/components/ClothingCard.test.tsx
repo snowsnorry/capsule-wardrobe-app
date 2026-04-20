@@ -3,7 +3,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import type { ComponentProps } from "react";
 
-vi.mock("../i18n/useI18n.js", () => ({
+vi.mock("../i18n/useI18n", () => ({
   useI18n: () => ({
     t: (key: string) => key
   })

@@ -3,7 +3,7 @@ import { Button, Divider, Link, Stack, TextField, Typography } from "@mui/materi
 import { useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import LocaleSwitcher from "../components/LocaleSwitcher";
-import { useI18n } from "../i18n/useI18n.js";
+import { useI18n } from "../i18n/useI18n";
 
 const GOOGLE_GSI_SCRIPT_SRC = "https://accounts.google.com/gsi/client";
 

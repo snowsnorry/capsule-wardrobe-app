@@ -2,7 +2,7 @@ import { Button, Chip, Divider, Stack, TextField, Typography } from "@mui/materi
 import type { ReactElement } from "react";
 import AccentColorChips from "./AccentColorChips";
 import StylePreferenceSelector from "./StylePreferenceSelector";
-import { useI18n } from "../i18n/useI18n.js";
+import { useI18n } from "../i18n/useI18n";
 import { translateOption } from "../i18n";
 import { buildCanonicalPatternOptions } from "../../../shared/patternOptions.js";
 

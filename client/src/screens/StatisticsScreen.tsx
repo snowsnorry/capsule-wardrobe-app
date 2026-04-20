@@ -24,7 +24,7 @@ import TremorBarChart from "../components/tremor/BarChart";
 import TremorDonutChart from "../components/tremor/DonutChart";
 import TremorLineChart from "../components/tremor/LineChart";
 import { getGradientStops, sanitizeSvgId } from "../components/tremor/chartUtils";
-import { useI18n } from "../i18n/useI18n.js";
+import { useI18n } from "../i18n/useI18n";
 import { translateOption } from "../i18n";
 import {
   EMPTY_SEARCH_OPTIONS,
@@ -32,8 +32,8 @@ import {
   createSearchState,
   serializeDraftState,
   toggleSelection
-} from "../search/searchState.js";
-import type { SearchDraftState, SearchFilterValue, SearchOptions, SerializedSearchState } from "../search/searchState.js";
+} from "../search/searchState";
+import type { SearchDraftState, SearchFilterValue, SearchOptions, SerializedSearchState } from "../search/searchState";
 import { getColorSwatchStyle } from "../../../shared/colorSwatches.js";
 import type { SettingsProfile, SettingsSavePayload } from "../components/SettingsDialog";
 

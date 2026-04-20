@@ -1,6 +1,6 @@
 import { Box } from "@mui/material";
 import type { SxProps, Theme } from "@mui/material/styles";
-import { getProductLabelParts } from "../utils/productLabel.js";
+import { getProductLabelParts } from "../utils/productLabel";
 
 type ProductLabelItem = Parameters<typeof getProductLabelParts>[0];
 

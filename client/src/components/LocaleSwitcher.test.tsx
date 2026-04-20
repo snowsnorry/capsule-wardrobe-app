@@ -5,7 +5,7 @@ import { ThemeProvider, createTheme } from "@mui/material/styles";
 
 const useI18nMock = vi.hoisted(() => vi.fn());
 
-vi.mock("../i18n/useI18n.js", () => ({
+vi.mock("../i18n/useI18n", () => ({
   useI18n: useI18nMock
 }));
 

@@ -4,7 +4,7 @@ import {
   createSearchState,
   EMPTY_SEARCH_OPTIONS,
   serializeDraftState
-} from "./searchState.js";
+} from "./searchState";
 
 describe("searchState", () => {
   test("createSearchState normalizes scalar and array filters for shared search screens", () => {

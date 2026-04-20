@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./config.js";
+import { API_BASE_URL } from "./config";
 import { requestJson } from "./request";
 import type { JsonObject } from "./request";
 

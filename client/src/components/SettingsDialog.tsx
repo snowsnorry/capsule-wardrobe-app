@@ -17,7 +17,7 @@ import {
   Typography
 } from "@mui/material";
 import type { ReactElement } from "react";
-import { useI18n } from "../i18n/useI18n.js";
+import { useI18n } from "../i18n/useI18n";
 import { PROFILE_LLM_VALUES, PROFILE_THEME_VALUES } from "../../../shared/profileSettings.js";
 
 const SETTINGS_SECTIONS = ["general", "ai", "account"] as const;

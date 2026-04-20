@@ -1,8 +1,8 @@
 import { Box, Chip, IconButton, Link as MuiLink, Stack, Typography } from "@mui/material";
 import ThumbDownAltOutlinedIcon from "@mui/icons-material/ThumbDownAltOutlined";
 import type { MouseEvent, ReactElement } from "react";
-import { useI18n } from "../i18n/useI18n.js";
-import { formatProductLabel } from "../utils/productLabel.js";
+import { useI18n } from "../i18n/useI18n";
+import { formatProductLabel } from "../utils/productLabel";
 import ProductLabelText from "./ProductLabelText";
 import { getSafeHttpUrl } from "../../../shared/urlSecurity.js";
 

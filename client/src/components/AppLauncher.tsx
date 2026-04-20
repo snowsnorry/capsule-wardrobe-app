@@ -3,7 +3,7 @@ import { Box, ButtonBase, Menu, MenuItem, Stack, Typography } from "@mui/materia
 import AppsRoundedIcon from "@mui/icons-material/AppsRounded";
 import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
 import { useTheme } from "@mui/material/styles";
-import { useI18n } from "../i18n/useI18n.js";
+import { useI18n } from "../i18n/useI18n";
 
 type AppId = "capsule" | "search" | "statistics";
 

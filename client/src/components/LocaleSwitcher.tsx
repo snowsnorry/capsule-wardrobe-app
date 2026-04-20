@@ -1,6 +1,6 @@
 import { useState, type MouseEvent } from "react";
 import { Box, IconButton, Menu, MenuItem, Stack, Typography } from "@mui/material";
-import { useI18n } from "../i18n/useI18n.js";
+import { useI18n } from "../i18n/useI18n";
 
 function LocaleSwitcher() {
   const { locale, setLocale, supportedLocales, t } = useI18n();

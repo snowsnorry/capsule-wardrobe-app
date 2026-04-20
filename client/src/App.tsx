@@ -45,7 +45,7 @@ import {
   searchCapsules,
   updateCapsuleFilters
 } from "./api/capsules";
-import { clearProfileOptionsCache, loadProfileOptions } from "./api/profileOptionsCache.js";
+import { clearProfileOptionsCache, loadProfileOptions } from "./api/profileOptionsCache";
 import { clearRequestCache } from "./api/auth";
 import {
   deleteOutfitSetImage as requestOutfitSetImageDeletion,
@@ -55,7 +55,7 @@ import {
   subscribeCapsuleEvents
 } from "./api/wardrobe";
 import SignInScreen from "./screens/SignInScreen";
-import { useI18n } from "./i18n/useI18n.js";
+import { useI18n } from "./i18n/useI18n";
 import { ACCENT_COLOR_OPTIONS } from "../../shared/accentColors.js";
 import { createAppTheme } from "./theme";
 import { DEFAULT_PROFILE_LLM, DEFAULT_PROFILE_THEME } from "../../shared/profileSettings.js";
