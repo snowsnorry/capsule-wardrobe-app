@@ -937,6 +937,80 @@ test("startWardrobeJob stores capsule result and merges swimwear additions when 
   ]);
 });
 
+test("startWardrobeJob renames a new capsule from stylist short_capsule_name on first content generation", async () => {
+  const renamedCapsules = [];
+  const service = createWardrobeService({
+    generateCapsuleWardrobeImpl: async () => buildWardrobeGenerationResult({
+      items: [
+        buildWardrobeUiItem({ id: "top-1", category: "top", url: undefined, name: undefined, image_url: undefined, audience: undefined })
+      ],
+      selectedItems: [
+        buildWardrobeUiItem({ id: "top-1", category: "top", url: undefined, name: undefined, image_url: undefined, audience: undefined })
+      ],
+      promptEmbeddings: [0.1],
+      shortCapsuleName: "City Core"
+    }),
+    updateCapsuleSnapshotImpl: async (_email, capsuleId, draft) => (
+      buildNormalizedCapsuleRecord({ id: capsuleId, name: "<New capsule>", draft, saved: null, status: "new" })
+    ),
+    renameCapsuleImpl: async (email, capsuleId, name) => {
+      renamedCapsules.push([email, capsuleId, name]);
+      return buildNormalizedCapsuleRecord({ id: capsuleId, name, draft: createCapsuleWithWardrobe(null).draft, saved: null, status: "new" });
+    },
+    shouldGenerateSwimwearImpl: () => false,
+    jobs: new Map()
+  });
+
+  const job = service.startWardrobeJob(
+    "person@example.com",
+    "capsule-1",
+    buildNormalizedProfileRecord({ audience: "woman", locale: "en" }),
+    createCapsuleWithWardrobe(null)
+  );
+  await job.promise;
+
+  assert.deepEqual(renamedCapsules, [["person@example.com", "capsule-1", "City Core"]]);
+});
+
+test("startWardrobeJob does not rename capsule when wardrobe content already exists", async () => {
+  let renameCallCount = 0;
+  const service = createWardrobeService({
+    generateCapsuleWardrobeImpl: async () => buildWardrobeGenerationResult({
+      items: [
+        buildWardrobeUiItem({ id: "top-1", category: "top", url: undefined, name: undefined, image_url: undefined, audience: undefined })
+      ],
+      selectedItems: [
+        buildWardrobeUiItem({ id: "top-1", category: "top", url: undefined, name: undefined, image_url: undefined, audience: undefined })
+      ],
+      promptEmbeddings: [0.1],
+      shortCapsuleName: "City Core"
+    }),
+    updateCapsuleSnapshotImpl: async (_email, capsuleId, draft) => (
+      buildNormalizedCapsuleRecord({ id: capsuleId, name: "<New capsule>", draft, saved: null, status: "new" })
+    ),
+    renameCapsuleImpl: async () => {
+      renameCallCount += 1;
+      return null;
+    },
+    shouldGenerateSwimwearImpl: () => false,
+    jobs: new Map()
+  });
+
+  const job = service.startWardrobeJob(
+    "person@example.com",
+    "capsule-1",
+    buildNormalizedProfileRecord({ audience: "woman", locale: "en" }),
+    createCapsuleWithWardrobe({
+      items: [
+        buildWardrobeUiItem({ id: "existing-top-1", category: "top", url: undefined, name: undefined, image_url: undefined, audience: undefined })
+      ]
+    })
+  );
+  await job.promise;
+
+  assert.equal(renameCallCount, 0);
+});
+
 test("startWardrobeJob marks job failed when capsule generation returns no usable items", async () => {
   const service = createWardrobeService({
     generateCapsuleWardrobeImpl: async () => buildWardrobeGenerationResult(),

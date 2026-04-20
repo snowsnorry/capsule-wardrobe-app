@@ -322,6 +322,7 @@ type WardrobeGenerationResult = {
   selectedItems: WardrobeUiItemLike[];
   outfitSets: GeneratedOutfitSetLike[];
   promptEmbeddings: number[];
+  shortCapsuleName: string | null;
   rawSelectionText: string | null;
   reasoning: string | null;
 };

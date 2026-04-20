@@ -54,6 +54,7 @@ The output MUST exactly match this schema:
 
 {
   "system_evaluation": {
+    "short_capsule_name": "Give this capsule a short meaningful name",
     "overall_explanation": "Briefly explain why this capsule works well as a dense, cohesive system...",
     "outfit_formulas": [
       "Provide 4-6 highly wearable outfit formulas using the selected items (reference them by basic name AND ID in [] - IMPORTANT). Every outfit formula must contain either top + bottom or dress."

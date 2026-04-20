@@ -129,6 +129,7 @@ function buildWardrobeGenerationResult(
     selectedItems: overrides.selectedItems ?? [],
     outfitSets: overrides.outfitSets ?? [],
     promptEmbeddings: overrides.promptEmbeddings ?? [],
+    shortCapsuleName: overrides.shortCapsuleName ?? null,
     reasoning: overrides.reasoning ?? null,
     rawSelectionText: overrides.rawSelectionText ?? null
   };

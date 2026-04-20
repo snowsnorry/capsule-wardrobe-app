@@ -79,8 +79,12 @@ function buildJsonObjectFormat(userProfile: UserProfileLike | null = null): Json
         system_evaluation: {
           type: "object",
           additionalProperties: false,
-          required: ["overall_explanation", "outfit_formulas"],
+          required: ["short_capsule_name", "overall_explanation", "outfit_formulas"],
           properties: {
+            short_capsule_name: {
+              type: "string",
+              description: "Give this capsule a short meaningful name"
+            },
             overall_explanation: {
               type: "string",
               description: "Briefly explain why this capsule works well as a dense, cohesive system..."

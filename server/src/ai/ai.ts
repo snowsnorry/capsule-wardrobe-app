@@ -5,6 +5,7 @@ import {
   buildProfileCapsuleContext,
   getCapsule,
   getEffectiveCapsuleSnapshot,
+  renameCapsule,
   updateCapsuleSnapshot
 } from "../capsuleStore.js";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -66,6 +67,7 @@ type SqlWardrobeRow = WardrobeUiItemLike & {
 type WardrobeServiceDependencies = {
   getProfileImpl?: typeof getProfile;
   getCapsuleImpl?: typeof getCapsule;
+  renameCapsuleImpl?: typeof renameCapsule;
   updateCapsuleSnapshotImpl?: typeof updateCapsuleSnapshot;
   generateCapsuleWardrobeImpl?: (userProfile?: UserProfileLike | null, logContext?: LogContextLike | null) => Promise<WardrobeGenerationResult>;
   shouldGenerateSwimwearImpl?: typeof shouldGenerateSwimwear;
@@ -348,6 +350,12 @@ function getSelectedIdsFromCapsule(capsule) {
       .map((id) => String(id))
       .filter((id) => id.trim().length > 0);
   });
+}
+
+function getShortCapsuleName(value: unknown): string | null {
+  return typeof value === "string" && value.trim().length > 0
+    ? value.trim()
+    : null;
 }
 
 function normalizeCapsuleConstraintValue(value) {
@@ -967,6 +975,7 @@ async function generateCapsuleWardrobe(userProfile = null, logContext = null) {
       selectedItems: balancedItems,
       outfitSets: [],
       promptEmbeddings,
+      shortCapsuleName: null,
       rawSelectionText: null,
       reasoning: null
     };
@@ -1064,6 +1073,7 @@ async function generateCapsuleWardrobe(userProfile = null, logContext = null) {
     selectedItems: balancedItems,
     outfitSets: buildOutfitSetsFromFormulas(getOutfitFormulas(parsedSelection), balancedItems),
     promptEmbeddings,
+    shortCapsuleName: getShortCapsuleName(parsedSelection?.system_evaluation?.short_capsule_name),
     rawSelectionText: typeof selectionResponse?.output_text === "string" && selectionResponse.output_text.trim().length > 0
       ? selectionResponse.output_text.trim()
       : null,
@@ -1086,6 +1096,7 @@ function createWardrobeJobKey(email, capsuleId) {
 function createWardrobeService({
   getProfileImpl = getProfile,
   getCapsuleImpl = getCapsule,
+  renameCapsuleImpl = renameCapsule,
   updateCapsuleSnapshotImpl = updateCapsuleSnapshot,
   generateCapsuleWardrobeImpl = generateCapsuleWardrobe,
   shouldGenerateSwimwearImpl = shouldGenerateSwimwear,
@@ -1157,6 +1168,10 @@ function createWardrobeService({
 
       try {
         const generationProfile = buildProfileCapsuleContext(profile, capsule);
+        const baseSnapshot = getEffectiveCapsuleSnapshot(capsule);
+        const storedWardrobeBeforeGeneration = getStoredWardrobePayload({ items: baseSnapshot?.data?.wardrobe });
+        const isFirstContentGenerationForNewCapsule =
+          capsule?.status === "new" && !storedWardrobeBeforeGeneration?.items?.length;
         const wardrobe = await generateCapsuleWardrobeImpl(generationProfile, jobLogContext);
         const items = wardrobe.items;
 
@@ -1170,7 +1185,6 @@ function createWardrobeService({
           reasoning: wardrobe.reasoning,
           rawSelectionText: wardrobe.rawSelectionText
         });
-        const baseSnapshot = getEffectiveCapsuleSnapshot(capsule);
         if (capsuleId) {
           currentCapsule = await updateCapsuleSnapshotImpl(email, capsuleId, {
             filters: baseSnapshot?.filters,
@@ -1190,6 +1204,9 @@ function createWardrobeService({
               }
             }
           } as typeof capsule;
+        }
+        if (capsuleId && isFirstContentGenerationForNewCapsule && wardrobe.shortCapsuleName) {
+          currentCapsule = await renameCapsuleImpl(email, capsuleId, wardrobe.shortCapsuleName) || currentCapsule;
         }
         logWardrobeInfo("capsule-base-completed", {
           baseDurationMs: nowMsImpl() - startedAt,
