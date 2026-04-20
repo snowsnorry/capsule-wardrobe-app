@@ -1168,6 +1168,7 @@ function App() {
     || isWardrobePending
     || isPartialRegenerationLoading
     || isContentOperationLoading
+    || isDownloadingWardrobePdf
     || pendingImageSetIndexes.length > 0
   );
 

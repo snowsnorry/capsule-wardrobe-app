@@ -58,7 +58,6 @@ const DEFAULT_PDF_IMAGE_TARGET_SIZE = {
   height: Math.round((PAGE_HEIGHT - (PAGE_MARGIN * 2)) * 2)
 };
 const WARDROBE_PDF_CHILD_TIMEOUT_MS = Number.parseInt(process.env.WARDROBE_PDF_CHILD_TIMEOUT_MS || "", 10) || 180000;
-const WARDROBE_PDF_CHILD_PATH = new URL("./wardrobePdf.child.js", import.meta.url);
 
 type PdfImageBytes = {
   kind: "jpg" | "png";
@@ -118,6 +117,22 @@ type WardrobePdfChildProcessLike = {
   kill: () => unknown;
   send: (message: unknown, callback?: (error: Error | null) => void) => unknown;
 };
+
+function resolveWardrobePdfChildEntryUrl() {
+  const currentModulePath = fileURLToPath(import.meta.url);
+  const preferredExtension = path.extname(currentModulePath) === ".js" ? ".js" : ".ts";
+  const preferredUrl = new URL(`./wardrobePdf.child${preferredExtension}`, import.meta.url);
+  if (existsSync(fileURLToPath(preferredUrl))) {
+    return preferredUrl;
+  }
+
+  const fallbackExtension = preferredExtension === ".js" ? ".ts" : ".js";
+  return new URL(`./wardrobePdf.child${fallbackExtension}`, import.meta.url);
+}
+
+function resolveWardrobePdfChildExecArgv(childEntryUrl: URL) {
+  return path.extname(fileURLToPath(childEntryUrl)) === ".ts" ? process.execArgv : [];
+}
 
 type WardrobePdfForkLike = (modulePath: string, options?: Record<string, unknown>) => WardrobePdfChildProcessLike;
 
@@ -880,12 +895,14 @@ async function buildWardrobePdfInChild(
 ) {
   const outputDir = await mkdtemp(path.join(os.tmpdir(), "wardrobe-pdf-child-"));
   const outputFilePath = path.join(outputDir, "capsule-wardrobe.pdf");
+  const childEntryUrl = resolveWardrobePdfChildEntryUrl();
+  const childExecArgv = resolveWardrobePdfChildExecArgv(childEntryUrl);
 
   try {
     return await new Promise<Buffer>((resolve, reject) => {
-      const child = forkImpl(fileURLToPath(WARDROBE_PDF_CHILD_PATH), {
+      const child = forkImpl(fileURLToPath(childEntryUrl), {
         stdio: ["ignore", "inherit", "inherit", "ipc"],
-        execArgv: []
+        execArgv: childExecArgv
       });
       let settled = false;
       let childExited = false;
@@ -1213,5 +1230,7 @@ export {
   getWardrobePdfJob,
   startWardrobePdfJob,
   ensureWardrobePdfJob,
-  downloadWardrobePdf
+  downloadWardrobePdf,
+  resolveWardrobePdfChildEntryUrl,
+  resolveWardrobePdfChildExecArgv
 };

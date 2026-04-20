@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createWardrobePdfChildRuntime } from "./wardrobePdf.child.js";
+import { createWardrobePdfChildRuntime } from "./wardrobePdf.child.ts";
 
 function createSendSpy() {
   const calls = [];

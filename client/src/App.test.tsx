@@ -176,6 +176,9 @@ vi.mock("./screens/MainScreen", () => ({
         <button type="button" onClick={props.onRegenerateSelectedItems}>
           regenerate-selected
         </button>
+        <button type="button" onClick={() => props.onDownloadPdf()}>
+          download-pdf
+        </button>
         <button type="button" onClick={() => props.onNavigateApp("search")}>
           open-search
         </button>
@@ -736,6 +739,42 @@ describe("App", () => {
 
     expect(await screen.findByTestId("main-screen")).toBeInTheDocument();
     expect(authApi.updateProfileLocale).not.toHaveBeenCalled();
+  });
+
+  test("marks main screen content busy while capsule PDF is downloading", async () => {
+    let resolveDownload = () => {};
+    capsulesApi.downloadCapsulePdf.mockImplementationOnce(() => new Promise<void>((resolve) => {
+      resolveDownload = resolve;
+    }));
+
+    authApi.fetchCurrentUser.mockResolvedValue({ user: { email: "person@example.com" } });
+    authApi.fetchProfileStatus.mockResolvedValue({ hasProfile: true });
+    authApi.updateProfileLocale.mockResolvedValue({});
+    capsulesApi.fetchCapsuleBootstrap.mockResolvedValue(createBootstrapResponse({
+      items: [
+        { id: "top-1", url: "https://example.com/top-1", name: "Shirt", category: "top" }
+      ],
+      locale: "en"
+    }));
+    mockProfileOptions();
+
+    renderApp();
+
+    expect(await screen.findByTestId("main-screen")).toBeInTheDocument();
+    expect(screen.getByText("content-busy:false")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "download-pdf" }));
+
+    await waitFor(() => {
+      expect(capsulesApi.downloadCapsulePdf).toHaveBeenCalledWith("capsule-1");
+      expect(screen.getByText("content-busy:true")).toBeInTheDocument();
+    });
+
+    resolveDownload();
+
+    await waitFor(() => {
+      expect(screen.getByText("content-busy:false")).toBeInTheDocument();
+    });
   });
 
   test("sign-out clears cached client state and returns to sign-in", async () => {

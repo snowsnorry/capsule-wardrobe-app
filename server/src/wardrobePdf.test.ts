@@ -3,7 +3,13 @@ import assert from "node:assert/strict";
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
-import { buildWardrobePdf, createWardrobePdfJobManager } from "./wardrobePdf.js";
+import {
+  buildWardrobePdf,
+  buildWardrobePdfInChild,
+  createWardrobePdfJobManager,
+  resolveWardrobePdfChildEntryUrl,
+  resolveWardrobePdfChildExecArgv
+} from "./wardrobePdf.js";
 import { buildLocalImageCachePath } from "./ai/promptImages.js";
 import { buildProductDetailGroups } from "../../shared/productDetail.js";
 import { t, translateOption } from "../../shared/i18n/helpers.js";
@@ -130,6 +136,47 @@ test("wardrobe pdf endpoint returns pending and starts job when pdf is missing",
 
   assert.deepEqual(receivedUrls, ["https://example.com/top-1", "https://example.com/top-2", "https://example.com/bag-1"]);
   assert.equal(String(updatedPdf), "pdf:https://example.com/top-1,https://example.com/top-2,https://example.com/bag-1");
+});
+
+test("buildWardrobePdfInChild uses the runtime-matching child entry and execArgv", async () => {
+  const handlers = new Map();
+  let forkPath = "";
+  let forkOptions = null;
+
+  const pdfBuffer = await buildWardrobePdfInChild(
+    [{ id: "top-1" }],
+    "en",
+    {
+      forkImpl(modulePath, options) {
+        forkPath = String(modulePath);
+        forkOptions = options;
+
+        return {
+          on(event, handler) {
+            handlers.set(event, handler);
+          },
+          removeListener(event) {
+            handlers.delete(event);
+          },
+          kill() {},
+          send(message, callback) {
+            void writeFile(String(message.outputFilePath), Buffer.from("pdf")).then(() => {
+              handlers.get("message")?.({
+                ok: true,
+                outputFilePath: message.outputFilePath
+              });
+              callback?.(null);
+            });
+          }
+        };
+      }
+    }
+  );
+
+  const childEntryUrl = resolveWardrobePdfChildEntryUrl();
+  assert.equal(forkPath, childEntryUrl.pathname);
+  assert.deepEqual(forkOptions?.execArgv, resolveWardrobePdfChildExecArgv(childEntryUrl));
+  assert.equal(String(pdfBuffer), "pdf");
 });
 
 test("ensureWardrobePdfJob reuses active pending job for same generation", async () => {

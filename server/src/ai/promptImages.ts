@@ -49,8 +49,6 @@ const PDF_IMAGE_JPEG_QUALITY = 76;
 const MAX_SOURCE_IMAGE_PIXELS = Number.parseInt(process.env.MAX_SOURCE_IMAGE_PIXELS || "", 10) || 16000000;
 const REQUEST_IMAGE_WIDTH = Number.parseInt(process.env.PROMPT_IMAGE_REQUEST_WIDTH || "", 10) || 1000;
 const PROMPT_IMAGES_CHILD_TIMEOUT_MS = Number.parseInt(process.env.PROMPT_IMAGES_CHILD_TIMEOUT_MS || "", 10) || 120000;
-const PROMPT_IMAGES_CHILD_TS_URL = new URL("./promptImages.child.ts", import.meta.url);
-const PROMPT_IMAGES_CHILD_JS_URL = new URL("./promptImages.child.js", import.meta.url);
 const PROMPT_CATEGORY_DOWNLOAD_CONCURRENCY = Number.parseInt(process.env.PROMPT_CATEGORY_DOWNLOAD_CONCURRENCY || "", 10) || 5;
 const STORAGE_IMAGES_DIR = fileURLToPath(new URL("../../../storage/images/", import.meta.url));
 const STITCHED_COLLAGE_FILENAME = "categories-stitched.jpg";
@@ -79,14 +77,20 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object";
 }
 
-function resolvePromptImagesChildUrl() {
-  return existsSync(fileURLToPath(PROMPT_IMAGES_CHILD_TS_URL))
-    ? PROMPT_IMAGES_CHILD_TS_URL
-    : PROMPT_IMAGES_CHILD_JS_URL;
+function resolvePromptImagesChildEntryUrl() {
+  const currentModulePath = fileURLToPath(import.meta.url);
+  const preferredExtension = path.extname(currentModulePath) === ".js" ? ".js" : ".ts";
+  const preferredUrl = new URL(`./promptImages.child${preferredExtension}`, import.meta.url);
+  if (existsSync(fileURLToPath(preferredUrl))) {
+    return preferredUrl;
+  }
+
+  const fallbackExtension = preferredExtension === ".js" ? ".ts" : ".js";
+  return new URL(`./promptImages.child${fallbackExtension}`, import.meta.url);
 }
 
-function getPromptImagesChildExecArgv(childUrl: URL) {
-  return fileURLToPath(childUrl).endsWith(".ts") ? [...process.execArgv] : [];
+function resolvePromptImagesChildExecArgv(childEntryUrl: URL) {
+  return path.extname(fileURLToPath(childEntryUrl)) === ".ts" ? [...process.execArgv] : [];
 }
 
 function nowMs() {
@@ -1205,10 +1209,10 @@ async function buildPromptDebugImagesAllInChild({
   forkImpl?: PromptImagesFork;
 } = {}) {
   return new Promise<PromptDebugImageResult>((resolve, reject) => {
-    const childUrl = resolvePromptImagesChildUrl();
-    const child = forkImpl(fileURLToPath(childUrl), {
+    const childEntryUrl = resolvePromptImagesChildEntryUrl();
+    const child = forkImpl(fileURLToPath(childEntryUrl), {
       stdio: ["ignore", "inherit", "inherit", "ipc"],
-      execArgv: getPromptImagesChildExecArgv(childUrl)
+      execArgv: resolvePromptImagesChildExecArgv(childEntryUrl)
     });
     let settled = false;
     let childExited = false;
