@@ -212,12 +212,14 @@ test("cleanupUploadedGeminiFiles deletes uploaded files and ignores nameless ent
 test("gemini client validates api key and shapes multimodal JSON request", async () => {
   let createdCount = 0;
   let requestPayload = null;
+  let clientInitOptions = null;
   const uploadedImages = [];
   const deletedImages = [];
   const client = createGeminiClient({
     getApiKeyImpl: () => "gem-key",
-    createClientImpl: ({ apiKey, apiVersion }) => {
+    createClientImpl: ({ apiKey, apiVersion, httpOptions }) => {
       createdCount += 1;
+      clientInitOptions = { apiKey, apiVersion, httpOptions };
       return {
         apiKey,
         apiVersion,
@@ -252,6 +254,13 @@ test("gemini client validates api key and shapes multimodal JSON request", async
   assert.equal(first, second);
   assert.equal(first.apiKey, "gem-key");
   assert.equal(first.apiVersion, "v1beta");
+  assert.deepEqual(clientInitOptions, {
+    apiKey: "gem-key",
+    apiVersion: "v1beta",
+    httpOptions: {
+      timeout: 120000
+    }
+  });
 
   const images = [{
     mimeType: "image/png",

@@ -23,6 +23,7 @@ import type {
 const DEFAULT_CHAT_MODEL = "gemini-2.5-pro";
 const ALLOWED_CHAT_MODELS = ["gemini-2.5-pro"];
 const DEFAULT_API_VERSION = "v1beta";
+const GEMINI_HTTP_TIMEOUT_MS = 2 * 60 * 1000;
 
 type GeminiUploadedFileLike = {
   uri?: string | null;
@@ -210,8 +211,16 @@ function buildGeminiStructuredOutput(format: JsonSchemaFormat | null = null, use
 }
 
 function createGeminiClient({
-  createClientImpl = ({ apiKey, apiVersion }: { apiKey: string; apiVersion: string }): GeminiClientLike => {
-    const sdkClient = new GoogleGenAI({ apiKey, apiVersion });
+  createClientImpl = ({
+    apiKey,
+    apiVersion,
+    httpOptions
+  }: {
+    apiKey: string;
+    apiVersion: string;
+    httpOptions: { timeout: number };
+  }): GeminiClientLike => {
+    const sdkClient = new GoogleGenAI({ apiKey, apiVersion, httpOptions });
     return {
       apiKey,
       apiVersion,
@@ -229,7 +238,15 @@ function createGeminiClient({
   uploadBufferToGeminiImpl = uploadBufferToGemini,
   cleanupUploadedFilesImpl = cleanupUploadedGeminiFiles
 }: {
-  createClientImpl?: ({ apiKey, apiVersion }: { apiKey: string; apiVersion: string }) => GeminiClientLike;
+  createClientImpl?: ({
+    apiKey,
+    apiVersion,
+    httpOptions
+  }: {
+    apiKey: string;
+    apiVersion: string;
+    httpOptions: { timeout: number };
+  }) => GeminiClientLike;
   getApiKeyImpl?: () => string | undefined;
   cache?: boolean;
   uploadBufferToGeminiImpl?: typeof uploadBufferToGemini;
@@ -249,7 +266,10 @@ function createGeminiClient({
 
     const client = createClientImpl({
       apiKey,
-      apiVersion: DEFAULT_API_VERSION
+      apiVersion: DEFAULT_API_VERSION,
+      httpOptions: {
+        timeout: GEMINI_HTTP_TIMEOUT_MS
+      }
     });
     if (cache) {
       localCachedClient = client;
