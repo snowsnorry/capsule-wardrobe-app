@@ -628,6 +628,7 @@ async function regenerateCapsuleWardrobe(
       selectedItems: balancedItems,
       outfitSets: [],
       promptEmbeddings,
+      shortCapsuleName: null,
       rawSelectionText: null,
       reasoning: null
     };
@@ -770,6 +771,7 @@ async function regenerateCapsuleWardrobe(
     selectedItems: balancedItems,
     outfitSets: buildOutfitSetsFromFormulas(getOutfitFormulas(parsedSelection), nextWardrobeItems),
     promptEmbeddings,
+    shortCapsuleName: null,
     rawSelectionText: typeof selectionResponse?.output_text === "string" && selectionResponse.output_text.trim().length > 0
       ? selectionResponse.output_text.trim()
       : null,

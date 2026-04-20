@@ -7,7 +7,7 @@
     "dev:test-auth": "AUTH_TEST_MODE=true NODE_ENV=development tsx src/index.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "tsx --test src/**/*.test.ts",
-    "build": "tsc -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json && mkdir -p dist/server/src && cp -R src/templates dist/server/src/templates",
     "prestart": "npm run build",
     "start": "node ./dist/server/src/index.js"
   },
