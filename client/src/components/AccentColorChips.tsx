@@ -1,6 +1,6 @@
 import { Box, Chip, Stack } from "@mui/material";
 import { useI18n } from "../i18n/useI18n.js";
-import { translateOption } from "../i18n/index.js";
+import { translateOption } from "../i18n";
 import { getColorSwatchStyle } from "../../../shared/colorSwatches.js";
 
 type AccentColorValue = string;

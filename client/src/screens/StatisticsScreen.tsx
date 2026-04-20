@@ -25,7 +25,7 @@ import TremorDonutChart from "../components/tremor/DonutChart";
 import TremorLineChart from "../components/tremor/LineChart";
 import { getGradientStops, sanitizeSvgId } from "../components/tremor/chartUtils";
 import { useI18n } from "../i18n/useI18n.js";
-import { translateOption } from "../i18n/index.js";
+import { translateOption } from "../i18n";
 import {
   EMPTY_SEARCH_OPTIONS,
   buildSearchOptionsPayload,

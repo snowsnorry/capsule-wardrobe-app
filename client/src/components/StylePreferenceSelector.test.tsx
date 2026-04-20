@@ -9,7 +9,7 @@ const useI18nMock = vi.hoisted(() => vi.fn());
 vi.mock("../i18n/useI18n.js", () => ({
   useI18n: useI18nMock
 }));
-vi.mock("../i18n/index.js", () => ({
+vi.mock("../i18n", () => ({
   translateOption: (_group: string, value: string) => ({
     casual: "Casual",
     smart_casual: "Smart casual",

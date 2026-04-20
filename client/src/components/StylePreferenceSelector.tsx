@@ -1,7 +1,7 @@
 import { Chip, Stack, Typography } from "@mui/material";
 import type { TypographyProps } from "@mui/material/Typography";
 import { useI18n } from "../i18n/useI18n.js";
-import { translateOption } from "../i18n/index.js";
+import { translateOption } from "../i18n";
 
 const CORE_DISPLAY_ORDER = ["casual", "smart_casual", "formal"] as const;
 

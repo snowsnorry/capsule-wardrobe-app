@@ -3,7 +3,7 @@ import type { ReactElement } from "react";
 import AccentColorChips from "./AccentColorChips";
 import StylePreferenceSelector from "./StylePreferenceSelector";
 import { useI18n } from "../i18n/useI18n.js";
-import { translateOption } from "../i18n/index.js";
+import { translateOption } from "../i18n";
 import { buildCanonicalPatternOptions } from "../../../shared/patternOptions.js";
 
 type StyleOptions = Parameters<typeof StylePreferenceSelector>[0]["styleOptions"];

@@ -2,7 +2,7 @@ import { Box, Button, Chip, Slider, Stack, TextField, Typography } from "@mui/ma
 import type { ChangeEvent, KeyboardEvent, ReactNode } from "react";
 import AccentColorChips from "../components/AccentColorChips";
 import { useI18n } from "../i18n/useI18n.js";
-import { translateOption } from "../i18n/index.js";
+import { translateOption } from "../i18n";
 import {
   clampPriceValue,
   normalizeBrandOption,

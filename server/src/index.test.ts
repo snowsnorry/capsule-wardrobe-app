@@ -6,7 +6,7 @@ import type { ErrorWithCode } from "./ai/types.js";
 
 process.env.NODE_ENV = "test";
 
-const { createApp } = await import("./index.js");
+const { createApp } = await import("./index.ts");
 
 const TEST_CLIENT_ORIGIN = "https://client.example";
 const SESSION_ID = "session-123";

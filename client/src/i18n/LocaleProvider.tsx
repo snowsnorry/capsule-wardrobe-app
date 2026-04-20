@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
-import { defaultLocale, isSupportedLocale, normalizeLocale } from "./index.js";
+import { defaultLocale, isSupportedLocale, normalizeLocale } from "./index";
 
 const STORAGE_KEY = "locale";
 

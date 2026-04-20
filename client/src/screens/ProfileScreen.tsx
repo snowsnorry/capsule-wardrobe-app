@@ -16,7 +16,7 @@ import LocaleSwitcher from "../components/LocaleSwitcher";
 import AccentColorChips from "../components/AccentColorChips";
 import StylePreferenceSelector from "../components/StylePreferenceSelector";
 import { useI18n } from "../i18n/useI18n.js";
-import { translateOption } from "../i18n/index.js";
+import { translateOption } from "../i18n";
 import { buildCanonicalPatternOptions } from "../../../shared/patternOptions.js";
 
 type StyleOptions = {

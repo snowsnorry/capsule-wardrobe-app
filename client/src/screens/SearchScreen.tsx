@@ -22,7 +22,7 @@ import TuneRoundedIcon from "@mui/icons-material/TuneRounded";
 import OpenInNewRoundedIcon from "@mui/icons-material/OpenInNewRounded";
 import { fetchSavedSearch, fetchSearchOptions, runSearch } from "../api/search";
 import { useI18n } from "../i18n/useI18n.js";
-import { translateOption } from "../i18n/index.js";
+import { translateOption } from "../i18n";
 import AppLauncher from "../components/AppLauncher";
 import LocaleSwitcher from "../components/LocaleSwitcher";
 import ProductLabelText from "../components/ProductLabelText";

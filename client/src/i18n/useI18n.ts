@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { t as translate, supportedLocales } from "./index.js";
+import { t as translate, supportedLocales } from "./index";
 import { useLocale } from "./LocaleProvider";
 
 type TranslationParams = Record<string, unknown> | undefined;
