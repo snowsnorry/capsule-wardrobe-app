@@ -1837,8 +1837,8 @@ function App() {
                   alt=""
                   aria-hidden="true"
                   loading="eager"
-                  fetchpriority="high"
                   decoding="async"
+                  {...({ fetchpriority: "high" } as Record<string, string>)}
                   sx={{
                     display: "block",
                     width: "100%",

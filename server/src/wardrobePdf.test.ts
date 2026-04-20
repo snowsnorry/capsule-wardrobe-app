@@ -142,6 +142,9 @@ test("buildWardrobePdfInChild uses the runtime-matching child entry and execArgv
   const handlers = new Map();
   let forkPath = "";
   let forkOptions = null;
+  type ChildSendMessage = {
+    outputFilePath?: string | null;
+  };
 
   const pdfBuffer = await buildWardrobePdfInChild(
     [{ id: "top-1" }],
@@ -159,7 +162,7 @@ test("buildWardrobePdfInChild uses the runtime-matching child entry and execArgv
             handlers.delete(event);
           },
           kill() {},
-          send(message, callback) {
+          send(message: ChildSendMessage, callback) {
             void writeFile(String(message.outputFilePath), Buffer.from("pdf")).then(() => {
               handlers.get("message")?.({
                 ok: true,

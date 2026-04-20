@@ -3,6 +3,7 @@ import { afterAll } from "vitest";
 
 const originalConsoleError = console.error;
 const originalStderrWrite = process.stderr.write.bind(process.stderr);
+type StderrWriteCallback = (error?: Error | null) => void;
 
 function isKnownJsdomCssParseWarning(args) {
   if (!Array.isArray(args) || args.length === 0) {
@@ -22,8 +23,10 @@ console.error = (...args) => {
   originalConsoleError(...args);
 };
 
-process.stderr.write = ((chunk, encoding, callback) => {
-  const text = typeof chunk === "string" ? chunk : chunk?.toString?.(typeof encoding === "string" ? encoding : undefined);
+process.stderr.write = ((chunk: string | Uint8Array, encoding?: BufferEncoding | StderrWriteCallback, callback?: StderrWriteCallback) => {
+  const text = typeof chunk === "string"
+    ? chunk
+    : Buffer.from(chunk).toString(typeof encoding === "string" ? encoding : undefined);
   const isKnownJsdomCssParseBlock = typeof text === "string"
     && text.includes("Could not parse CSS stylesheet")
     && text.includes("/client/src/index.css");
@@ -35,6 +38,10 @@ process.stderr.write = ((chunk, encoding, callback) => {
       callback();
     }
     return true;
+  }
+
+  if (typeof encoding === "function") {
+    return originalStderrWrite(chunk, encoding);
   }
 
   return originalStderrWrite(chunk, encoding, callback);
