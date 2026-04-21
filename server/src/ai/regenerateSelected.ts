@@ -17,7 +17,7 @@ import {
   buildCapsuleSchema,
   buildCustomJsonObjectFormat,
   buildSystemPrompt
-} from "./openai.js";
+} from "./llm.js";
 import { getGenerateJsonWithLlm, isNoLlmProfileEnabled, resolveLlmProvider } from "./llm.js";
 import {
   buildPromptDebugImagesForCategory,
@@ -56,6 +56,10 @@ import type {
 
 const REGENERATE_SELECTED_PROMPT_TEMPLATE = readFileSync(
   new URL("../templates/user_prompt_regenerate_selected.txt", import.meta.url),
+  "utf8"
+);
+const REGENERATE_SELECTED_SYSTEM_PROMPT_TEMPLATE = readFileSync(
+  new URL("../templates/system_prompt_regenerate_selected.txt", import.meta.url),
   "utf8"
 );
 const COMPLETED_JOB_TTL_MS = 5 * 60 * 1000;
@@ -269,14 +273,26 @@ function buildRegeneratedItemsFormat(categories) {
   );
 }
 
-function buildLastPromptArtifact(prompt, userProfile = null) {
+function buildRegenerateSelectedSystemPrompt(
+  userProfile: UserProfileLike | null = null,
+  categories: CountByKey | null = null
+) {
+  return buildSystemPrompt(userProfile, {
+    categories,
+    template: REGENERATE_SELECTED_SYSTEM_PROMPT_TEMPLATE
+  });
+}
+
+function buildLastPromptArtifact(prompt, userProfile = null, systemPrompt = "") {
   if (typeof prompt !== "string") {
     return "";
   }
 
-  const systemPrompt = buildSystemPrompt(userProfile);
+  const resolvedSystemPrompt = typeof systemPrompt === "string" && systemPrompt.trim().length > 0
+    ? systemPrompt
+    : buildRegenerateSelectedSystemPrompt(userProfile);
   return [
-    systemPrompt ? `System:\n${systemPrompt}` : "",
+    resolvedSystemPrompt ? `System:\n${resolvedSystemPrompt}` : "",
     `User:\n${prompt}`
   ].filter(Boolean).join("\n\n");
 }
@@ -284,11 +300,13 @@ function buildLastPromptArtifact(prompt, userProfile = null) {
 function saveLastPromptArtifacts({
   prompt,
   currentCapsuleCollage,
-  userProfile = null
+  userProfile = null,
+  systemPrompt = ""
 }: {
   prompt?: string | null;
   currentCapsuleCollage?: PromptDebugImageCategory | null;
   userProfile?: UserProfileLike | null;
+  systemPrompt?: string | null;
 } = {}) {
   if (process.env.NODE_ENV !== "development") {
     return;
@@ -299,7 +317,7 @@ function saveLastPromptArtifacts({
   if (typeof prompt === "string") {
     writeFileSync(
       new URL("last_prompt.txt", LAST_PROMPT_DIR_URL),
-      buildLastPromptArtifact(prompt, userProfile),
+      buildLastPromptArtifact(prompt, userProfile, systemPrompt),
       "utf8"
     );
   }
@@ -701,10 +719,12 @@ async function regenerateCapsuleWardrobe(
     currentCapsulePromptItems,
     capsuleCategories
   );
+  const selectionSystemPrompt = buildRegenerateSelectedSystemPrompt(userProfile, capsuleCategories);
   saveLastPromptArtifacts({
     prompt: selectionPrompt,
     currentCapsuleCollage,
-    userProfile
+    userProfile,
+    systemPrompt: selectionSystemPrompt
   });
   const llmStartedAt = Date.now();
   const generateJsonWithLlm = getGenerateJsonWithLlm(userProfile);
@@ -715,6 +735,7 @@ async function regenerateCapsuleWardrobe(
     userProfile,
     format: buildRegeneratedItemsFormat(capsuleCategories),
     images: stylistImages,
+    systemPrompt: selectionSystemPrompt,
     onPayloadBuilt: () => {
       promptDebugImages.categories = [];
       promptDebugImages.stitched = null;
@@ -1060,6 +1081,7 @@ const {
 } = partialRegenerationService;
 
 export {
+  buildRegenerateSelectedSystemPrompt,
   buildRegenerateSelectedPrompt,
   createPartialRegenerationService,
   getPartialRegenerationJob,

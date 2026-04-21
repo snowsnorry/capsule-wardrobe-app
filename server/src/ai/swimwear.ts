@@ -2,9 +2,11 @@ import { readFileSync } from "node:fs";
 import { getSqlClient } from "../db.js";
 import {
   buildCustomJsonObjectFormat,
-  buildSwimwearSchema
-} from "./openai.js";
-import { getGenerateJsonWithLlm, isNoLlmProfileEnabled, resolveLlmProvider } from "./llm.js";
+  buildSwimwearSchema,
+  getGenerateJsonWithLlm,
+  isNoLlmProfileEnabled,
+  resolveLlmProvider
+} from "./llm.js";
 import type { LlmUsageLike, SwimwearCandidate, UserProfileLike } from "./types.js";
 
 const PROMPT_TEMPLATE = readFileSync(new URL("../templates/prompt_woman_swimwear.txt", import.meta.url), "utf8");

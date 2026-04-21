@@ -9,7 +9,7 @@ import {
   updateCapsuleSnapshot
 } from "../capsuleStore.js";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { getGenerateJsonWithLlm, isNoLlmProfileEnabled, resolveLlmProvider } from "./llm.js";
+import { buildSystemPrompt, getGenerateJsonWithLlm, isNoLlmProfileEnabled, resolveLlmProvider } from "./llm.js";
 import {  getPromptEmbeddings, getWardrobePrompt } from "./voyageai.js";
 import { getCapsuleCategories } from "./categories.js";
 import { generateSwimwearAddition, shouldGenerateSwimwear } from "./swimwear.js";
@@ -26,7 +26,6 @@ import {
   capsuleEventHub,
   getStoredWardrobePayload
 } from "./capsuleEvents.js";
-import { buildSystemPrompt } from "./openai.js";
 import type {
   CountByKey,
   ErrorWithCode,

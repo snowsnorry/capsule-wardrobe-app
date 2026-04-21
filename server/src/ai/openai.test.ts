@@ -1,13 +1,15 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  buildCapsuleSchema,
-  buildSystemPrompt,
   buildImageDataUrl,
   buildResponsesInput,
-  buildResponsesPayload,
-  renderStyleLibraryContent
+  buildResponsesPayload
 } from "./openai.js";
+import {
+  buildCapsuleSchema,
+  buildSystemPrompt,
+  renderStyleLibraryContent
+} from "./llm.js";
 import { getCapsuleCategories } from "./categories.js";
 import { deserializePromptDebugImagesFromIpc } from "./promptImages.js";
 

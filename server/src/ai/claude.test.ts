@@ -11,7 +11,7 @@ import {
   sanitizeClaudeJsonSchema,
   resolveChatModel
 } from "./claude.js";
-import { buildSystemPrompt } from "./openai.js";
+import { buildSystemPrompt } from "./llm.js";
 
 function assertClaudeImagePart(
   part: { type?: string; source?: { type?: string; media_type?: string; data?: string } }
@@ -35,6 +35,13 @@ test("buildClaudeSystemPrompt concatenates system and system prompt", () => {
   assert.equal(
     buildClaudeSystemPrompt("Be concise", userProfile),
     `Be concise\n\n${buildSystemPrompt(userProfile)}`
+  );
+});
+
+test("buildClaudeSystemPrompt uses explicit system prompt override", () => {
+  assert.equal(
+    buildClaudeSystemPrompt("Be concise", { style: "minimalistic" }, "Override system"),
+    "Be concise\n\nOverride system"
   );
 });
 

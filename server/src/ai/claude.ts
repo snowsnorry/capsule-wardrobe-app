@@ -2,9 +2,9 @@ import Anthropic from "@anthropic-ai/sdk";
 import {
   buildJsonObjectFormat,
   buildSystemPrompt,
-  releaseImageBuffers,
   splitSystemAndUserPrompt
-} from "./openai.js";
+} from "./llm.js";
+import { releaseImageBuffers } from "./openai.js";
 import type {
   ImageAssetLike,
   JsonSchema,
@@ -60,9 +60,13 @@ function resolveChatModel(userProfile: UserProfileLike | null = null) {
   return DEFAULT_CHAT_MODEL;
 }
 
-function buildClaudeSystemPrompt(system = "", userProfile: UserProfileLike | null = null) {
+function buildClaudeSystemPrompt(
+  system = "",
+  userProfile: UserProfileLike | null = null,
+  systemPromptOverride: string | null = null
+) {
   const systemText = String(system || "").trim();
-  const generatedSystemText = buildSystemPrompt(userProfile);
+  const generatedSystemText = systemPromptOverride || buildSystemPrompt(userProfile);
 
   return [systemText, generatedSystemText]
     .filter((part) => typeof part === "string" && part.trim().length > 0)
@@ -229,11 +233,12 @@ function createClaudeClient({
       userProfile = null,
       format = null,
       images = [],
+      systemPrompt: systemPromptOverride = null,
       onPayloadBuilt = null
     } = options;
     const client = getClaudeClient();
     const { system, user } = splitSystemAndUserPrompt(prompt);
-    const systemPrompt = buildClaudeSystemPrompt(system, userProfile);
+    const systemPrompt = buildClaudeSystemPrompt(system, userProfile, systemPromptOverride);
     const messages = buildClaudeMessages(user, images);
     const outputConfig = buildClaudeOutputConfig(format, userProfile);
     releaseImageBuffers(images);

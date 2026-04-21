@@ -12,7 +12,7 @@ import {
   resolveChatModel,
   uploadBufferToGemini
 } from "./gemini.js";
-import { buildSystemPrompt } from "./openai.js";
+import { buildSystemPrompt } from "./llm.js";
 import type { JsonSchemaFormat } from "./types.js";
 
 function assertGeminiObjectSchema(
@@ -69,6 +69,13 @@ test("buildGeminiSystemInstruction concatenates system and system prompt", () =>
   assert.equal(
     buildGeminiSystemInstruction("Be concise", userProfile),
     `Be concise\n\n${buildSystemPrompt(userProfile)}`
+  );
+});
+
+test("buildGeminiSystemInstruction uses explicit system prompt override", () => {
+  assert.equal(
+    buildGeminiSystemInstruction("Be concise", { style: "minimalistic" }, "Override system"),
+    "Be concise\n\nOverride system"
   );
 });
 

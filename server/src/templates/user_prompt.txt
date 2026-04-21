@@ -10,60 +10,10 @@ AVAILABLE ITEMS (Candidates):
 {{items}}
 (Note: Each candidate has "formality_level" and "style" as arrays of strings. Assume all candidates already match the requested season and occasions.)
 
-VISUAL CONTEXT & MULTIMODAL ANALYSIS:
-- You are provided with one vertically stitched image containing the candidate item collages for all categories.
-- Each individual item in the grid has a specific numeric ID written in red in the top-left corner.
-- You MUST cross-reference this visual ID with the exact "id" value in the AVAILABLE ITEMS text list.
-- Use visual data to assess true color temperatures, fabric textures, hardware details, and exact silhouettes to ensure Low Styling Friction.
-- The final capsule MUST be visually harmonious.
-
-CORE SELECTION PRINCIPLES & CAPSULE ASSEMBLY LOGIC:
-1. Define Outfit Formulas First: Before selecting items, define 4-6 realistic "Outfit Formulas" based on the Target Style and Formality (e.g., base top + jeans + oversized blazer + sneakers). Select items specifically to fulfill these formulas.
-2. Combinability & Pairability Thresholds: 
-   - Evaluate compatibility ONLY across relevant functional pairs (e.g., top ↔ bottom, top ↔ midlayer/outerwear, bottom ↔ shoes). 
-   - Every top should pair well with at least 2 bottoms.
-   - Every bottom should pair well with at least 3 tops/top-layer combos.
-   - Reject orphan items. At every step, ask: "How many easy, realistic outfits does this item unlock?"
-3. Silhouette Balance: Align proportions with the Target Style. Minimalist/Formal requires sleek, tailored, unbroken lines. Boho/Grunge allows relaxed/unconstructed volumes. Street Style/Casual thrives on contrast (e.g., oversized top + fitted bottom).
-4. Category & Length Diversity: Ensure variety in garment types within categories. If the audience is woman, you MUST include at least one pair of full-length trousers/jeans. If selecting multiple skirts/dresses, you MUST vary their lengths (mini, midi, maxi) to maximize adaptability.
-5. Redundancy Control: Penalize near-duplicates in function, silhouette, or color.
-
-STYLE & AESTHETIC BALANCE (Roles):
-Categorize your selections into three roles:
-- KEY PIECES (~40%): Items that 100% reflect the core Target Style (e.g., a perfect leather jacket for Grunge, or a tailored blazer for Classic).
-- BASICS (~40%): Stylistic neutrals that quietly complement the Key Pieces and lower styling friction.
-- STATEMENT PIECES / ACCENTS (~20%): Bold items that feature the Accent Color, Pattern, or unique textures.
-- Color/Pattern Rules: If Accent Color is provided, distribute exactly 2-3 items in that color across categories (avoid the "clown effect" by varying their visual weight). If Pattern says "solid", do not add prints. If another Pattern is provided, you may include 1-2 items with that pattern. If using multiple patterned items, their scales/sizes MUST contrast significantly (e.g., large plaid with small stripes).
-
 INSTRUCTIONS & CONSTRAINTS:
 1. Blueprint: You MUST select exactly {{num_items}} items.
    Exact quota: {{category_list}}.
 2. Validity: Use ONLY the exact "id" values from the list. Do not invent items. Do not select the same "id" twice.
+3. Validation Requirement: Verify the final capsule by listing 4-6 resulting highly-wearable outfits based on your initial Outfit Formulas. Flag and replace any weakly integrated items.
 
-VALIDATION REQUIREMENT:
-Verify the final capsule by listing 4-6 resulting highly-wearable outfits based on your initial Outfit Formulas. Flag and replace any weakly integrated items.
-
-OUTPUT FORMAT:
-Return strictly valid JSON only. No markdown formatting (like ```json), no conversational text outside the JSON.
-The output MUST exactly match this schema:
-
-{
-  "system_evaluation": {
-    "short_capsule_name": "Give this capsule a short meaningful name",
-    "overall_explanation": "Briefly explain why this capsule works well as a dense, cohesive system...",
-    "outfit_formulas": [
-      "Provide 4-6 highly wearable outfit formulas using the selected items (reference them by basic name AND ID in [] - IMPORTANT). Every outfit formula must contain either top + bottom or dress."
-    ]
-  },
-  "item_details": [
-    // INSTRUCTION: You MUST generate exactly one object in this array for EVERY single item included in the "capsule". If you selected {{num_items}} items, there MUST be exactly {{num_items}} objects in this array.
-    {
-      "id": "Must match candidate ID",
-      "role": "key, basic, or accent",
-      "reason": "Brief reason for selection (e.g., silhouette balance, visual harmony)",
-      "compatibility": "Note how many/which items this pairs with",
-      "warning": "Any styling friction or limitation (or 'None')"
-    }
-  ],
-  "capsule": {{categories_schema}}
-}
+OUTPUT: Return the result in strictly valid JSON format matching the schema defined in the system instructions.

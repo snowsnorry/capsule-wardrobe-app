@@ -57,6 +57,7 @@ type LlmGenerateOptions = {
   userProfile?: UserProfileLike | null;
   format?: JsonSchemaFormat | null;
   images?: ImageAssetLike[];
+  systemPrompt?: string | null;
   onPayloadBuilt?: (() => void) | null;
 };
 

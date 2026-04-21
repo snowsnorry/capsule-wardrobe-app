@@ -8,9 +8,9 @@ import { zodToJsonSchema } from "zod-to-json-schema";
 import {
   buildJsonObjectFormat,
   buildSystemPrompt,
-  releaseImageBuffers,
   splitSystemAndUserPrompt
-} from "./openai.js";
+} from "./llm.js";
+import { releaseImageBuffers } from "./openai.js";
 import type {
   ImageAssetLike,
   JsonSchema,
@@ -109,9 +109,13 @@ function buildGeminiContents(
   return content.length > 0 ? content : [""];
 }
 
-function buildGeminiSystemInstruction(system = "", userProfile: UserProfileLike | null = null) {
+function buildGeminiSystemInstruction(
+  system = "",
+  userProfile: UserProfileLike | null = null,
+  systemPromptOverride: string | null = null
+) {
   const systemText = String(system || "").trim();
-  const generatedSystemText = buildSystemPrompt(userProfile);
+  const generatedSystemText = systemPromptOverride || buildSystemPrompt(userProfile);
 
   return [systemText, generatedSystemText]
     .filter((part) => typeof part === "string" && part.trim().length > 0)
@@ -283,11 +287,12 @@ function createGeminiClient({
       userProfile = null,
       format = null,
       images = [],
+      systemPrompt: systemPromptOverride = null,
       onPayloadBuilt = null
     } = options;
     const client = getGeminiClient();
     const { system, user } = splitSystemAndUserPrompt(prompt);
-    const systemInstruction = buildGeminiSystemInstruction(system, userProfile);
+    const systemInstruction = buildGeminiSystemInstruction(system, userProfile, systemPromptOverride);
     const { zodSchema, responseJsonSchema } = buildGeminiStructuredOutput(format, userProfile);
     const uploadedFiles = await uploadImagesToGemini(client, images, uploadBufferToGeminiImpl);
     const contents = buildGeminiContents(user, uploadedFiles);

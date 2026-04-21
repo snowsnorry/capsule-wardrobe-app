@@ -7,10 +7,9 @@ import {
   createDeepInfraClient,
   estimateJsonByteLength,
   extractChunkText,
-  resolveChatModel,
-  splitSystemAndUserPrompt
+  resolveChatModel
 } from "./deepinfra.js";
-import { buildSystemPrompt } from "./openai.js";
+import { buildSystemPrompt, splitSystemAndUserPrompt } from "./llm.js";
 
 function assertDeepInfraImagePart(
   part: { type?: string; image_url?: { url?: string } }
@@ -193,6 +192,37 @@ test("deepinfra client shapes embedding and chat requests and parses JSON output
   assert.equal(payloadBuiltCalls, 1);
   assert.equal(images[0].buffer, null);
   assert.equal(result.response.output_text, "noise before {\"ok\":true} trailing");
+});
+
+test("deepinfra client uses explicit system prompt override", async () => {
+  let chatPayload;
+  const client = createDeepInfraClient({
+    getApiKeyImpl: () => "deep-key",
+    createClientImpl: () => ({
+      embeddings: {
+        create: async () => ({ data: [{ embedding: [0.4, 0.5] }] })
+      },
+      chat: {
+        completions: {
+          create: async (payload) => {
+            chatPayload = payload;
+            return {
+              async *[Symbol.asyncIterator]() {
+                yield { choices: [{ delta: { content: "{\"ok\":true}" } }] };
+              }
+            };
+          }
+        }
+      }
+    })
+  });
+
+  await client.generateJsonWithLlm("System: Be concise\nUser: Return JSON", {
+    userProfile: { llm: "deepinfra:google/gemma-4-31B-it" },
+    systemPrompt: "Override system"
+  });
+
+  assert.equal(chatPayload.messages[0].content, "Be concise\n\nOverride system");
 });
 
 test("deepinfra client throws for invalid embedding and invalid chat JSON", async () => {

@@ -1,5 +1,6 @@
 import OpenAI from "openai";
-import { buildImageDataUrl, buildSystemPrompt, releaseImageBuffers } from "./openai.js";
+import { buildSystemPrompt, splitSystemAndUserPrompt } from "./llm.js";
+import { buildImageDataUrl, releaseImageBuffers } from "./openai.js";
 import type { ImageAssetLike, LlmGenerateOptions, ParsedGenerationError, UserProfileLike } from "./types.js";
 
 const OPENAI_BASE_URL = "https://api.deepinfra.com/v1/openai";
@@ -130,13 +131,14 @@ function createDeepInfraClient({
       userProfile = null,
       format = null,
       images = [],
+      systemPrompt: systemPromptOverride = null,
       onPayloadBuilt = null
     } = options;
     const client = getOpenAiClient();
     const { system, user } = splitSystemAndUserPrompt(prompt);
     void format;
     const messages = buildChatMessages(user, images);
-    const systemPrompt = [system, buildSystemPrompt(userProfile)]
+    const systemPrompt = [system, systemPromptOverride || buildSystemPrompt(userProfile)]
       .filter((part) => typeof part === "string" && part.trim().length > 0)
       .join("\n\n");
     const model = resolveChatModel(userProfile);
@@ -236,26 +238,6 @@ function estimateJsonByteLength(value) {
   } catch {
     return null;
   }
-}
-
-function splitSystemAndUserPrompt(prompt: string) {
-  const source = String(prompt || "");
-  const systemMarker = "System:";
-  const userMarker = "User:";
-  const systemStart = source.indexOf(systemMarker);
-  const userStart = source.indexOf(userMarker);
-
-  if (systemStart === -1 || userStart === -1 || userStart < systemStart) {
-    return {
-      system: "",
-      user: source.trim()
-    };
-  }
-
-  return {
-    system: source.slice(systemStart + systemMarker.length, userStart).trim(),
-    user: source.slice(userStart + userMarker.length).trim()
-  };
 }
 
 function resolveChatModel(userProfile: UserProfileLike | null = null) {
@@ -395,6 +377,5 @@ export {
   generateJsonWithLlm,
   getOpenAiClient,
   getPromptEmbeddings,
-  resolveChatModel,
-  splitSystemAndUserPrompt
+  resolveChatModel
 };

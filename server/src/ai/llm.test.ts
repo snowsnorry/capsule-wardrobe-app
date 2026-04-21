@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   CLAUDE_ALLOWED_MODELS,
   GEMINI_PROFILE_LLM,
+  buildSystemPrompt,
   getGenerateJsonWithLlm,
   getProfileLlm,
   isNoLlmProfileEnabled,
@@ -59,6 +60,35 @@ test("profile llm helpers default to openai and expose no-llm mode", () => {
   assert.equal(getProfileLlm(null), "openai:gpt-5.2");
   assert.equal(isNoLlmProfileEnabled({ llm: "none" }), true);
   assert.equal(isNoLlmProfileEnabled({ llm: "openai:gpt-5.2" }), false);
+});
+
+test("buildSystemPrompt renders an alternate template with shared placeholder blocks", () => {
+  const prompt = buildSystemPrompt({
+    audience: "woman",
+    formalityLevel: "formal",
+    season: ["winter"],
+    style: "minimalistic",
+    color: "red"
+  }, {
+    template: [
+      "ALT PROMPT",
+      "{{audience_logic_block}}",
+      "{{formality_logic_block}}",
+      "{{seasonality_logic_block}}",
+      "{{style_library_block}}",
+      "{{style_palette_block}}",
+      "{{accent_color_palette_block}}"
+    ].join("\n\n")
+  });
+
+  assert.match(prompt, /ALT PROMPT/);
+  assert.match(prompt, /- woman:/);
+  assert.match(prompt, /- formal:/);
+  assert.match(prompt, /- winter:/);
+  assert.match(prompt, /STYLE LIBRARY/);
+  assert.match(prompt, /PALETTE REFERENCE BY STYLE/);
+  assert.match(prompt, /PALETTE REFERENCE BY ACCENT COLOR/);
+  assert.doesNotMatch(prompt, /\{\{/);
 });
 
 test("getGenerateJsonWithLlm returns provider-specific generator", () => {
