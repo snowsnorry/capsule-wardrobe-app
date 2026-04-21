@@ -10,6 +10,7 @@ import {
   resolveChatModel,
   splitSystemAndUserPrompt
 } from "./deepinfra.js";
+import { buildSystemPrompt } from "./openai.js";
 
 function assertDeepInfraImagePart(
   part: { type?: string; image_url?: { url?: string } }
@@ -160,8 +161,9 @@ test("deepinfra client shapes embedding and chat requests and parses JSON output
   }];
   let payloadBuiltCalls = 0;
 
-  const result = await client.generateJsonWithLlm("System: Be concise\nUser: Return JSON", {
-    userProfile: { llm: "deepinfra:Qwen/Qwen3-VL-235B-A22B-Instruct" },
+  const userProfile = { llm: "deepinfra:Qwen/Qwen3-VL-235B-A22B-Instruct" };
+  const result = await client.generateJsonWithLlm("Return JSON", {
+    userProfile,
     format: null,
     images,
     onPayloadBuilt: () => {
@@ -172,7 +174,7 @@ test("deepinfra client shapes embedding and chat requests and parses JSON output
   assert.equal(chatPayload.model, "Qwen/Qwen3-VL-235B-A22B-Instruct");
   assertDeepInfraImagePart(chatPayload.messages[1].content[0]);
   assert.deepEqual(chatPayload.messages, [
-    { role: "system", content: "Be concise" },
+    { role: "system", content: buildSystemPrompt(userProfile) },
     {
       role: "user",
       content: [

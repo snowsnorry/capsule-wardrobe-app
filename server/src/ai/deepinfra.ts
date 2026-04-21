@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { buildImageDataUrl, releaseImageBuffers } from "./openai.js";
+import { buildImageDataUrl, buildSystemPrompt, releaseImageBuffers } from "./openai.js";
 import type { ImageAssetLike, LlmGenerateOptions, ParsedGenerationError, UserProfileLike } from "./types.js";
 
 const OPENAI_BASE_URL = "https://api.deepinfra.com/v1/openai";
@@ -136,11 +136,14 @@ function createDeepInfraClient({
     const { system, user } = splitSystemAndUserPrompt(prompt);
     void format;
     const messages = buildChatMessages(user, images);
+    const systemPrompt = [system, buildSystemPrompt(userProfile)]
+      .filter((part) => typeof part === "string" && part.trim().length > 0)
+      .join("\n\n");
     const model = resolveChatModel(userProfile);
     const payload = {
       model,
       messages: [
-        ...(system ? [{ role: "system", content: system }] : []),
+        ...(systemPrompt ? [{ role: "system", content: systemPrompt }] : []),
         { role: "user", content: messages }
       ],
       temperature: 0.2,

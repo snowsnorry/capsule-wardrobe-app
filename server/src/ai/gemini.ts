@@ -6,8 +6,8 @@ import { join } from "node:path";
 import { z } from "zod";
 import { zodToJsonSchema } from "zod-to-json-schema";
 import {
-  buildDeveloperPrompt,
   buildJsonObjectFormat,
+  buildSystemPrompt,
   releaseImageBuffers,
   splitSystemAndUserPrompt
 } from "./openai.js";
@@ -111,9 +111,9 @@ function buildGeminiContents(
 
 function buildGeminiSystemInstruction(system = "", userProfile: UserProfileLike | null = null) {
   const systemText = String(system || "").trim();
-  const developerText = buildDeveloperPrompt(userProfile);
+  const generatedSystemText = buildSystemPrompt(userProfile);
 
-  return [systemText, developerText]
+  return [systemText, generatedSystemText]
     .filter((part) => typeof part === "string" && part.trim().length > 0)
     .join("\n\n");
 }

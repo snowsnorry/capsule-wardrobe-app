@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   buildCapsuleSchema,
-  buildDeveloperPrompt,
+  buildSystemPrompt,
   buildImageDataUrl,
   buildResponsesInput,
   buildResponsesPayload,
@@ -91,21 +91,20 @@ test("buildResponsesInput creates multimodal content with input_text and input_i
   assert.equal(input[0].content[2].text, "describe this");
 });
 
-test("buildResponsesInput prepends a developer message when provided", () => {
+test("buildResponsesInput keeps multimodal payloads user-only", () => {
   const input = buildResponsesInput("describe this", [
     {
       mimeType: "image/png",
       buffer: Buffer.from("image-one")
     }
-  ], "developer rules");
+  ]);
 
   assert.ok(Array.isArray(input));
-  assert.equal(input[0].role, "developer");
-  assert.equal(input[0].content, "developer rules");
-  assert.equal(input[1].role, "user");
-  assertResponsesUserContent(input[1].content);
-  assert.equal(input[1].content[0].type, "input_image");
-  assert.equal(input[1].content[1].type, "input_text");
+  assert.equal(input.length, 1);
+  assert.equal(input[0].role, "user");
+  assertResponsesUserContent(input[0].content);
+  assert.equal(input[0].content[0].type, "input_image");
+  assert.equal(input[0].content[1].type, "input_text");
 });
 
 test("buildResponsesPayload releases source image buffers after payload construction", () => {
@@ -128,8 +127,8 @@ test("buildResponsesPayload releases source image buffers after payload construc
   assert.equal(input[0].content[1].text, "describe this");
 });
 
-test("buildDeveloperPrompt returns the base template without dynamic sections by default", () => {
-  const prompt = buildDeveloperPrompt({});
+test("buildSystemPrompt returns the base template without dynamic sections by default", () => {
+  const prompt = buildSystemPrompt({});
 
   assert.match(prompt, /CORE CONSTRAINTS/);
   assert.match(prompt, /AUDIENCE LOGIC/);
@@ -145,8 +144,8 @@ test("buildDeveloperPrompt returns the base template without dynamic sections by
   assert.doesNotMatch(prompt, /\{\{/);
 });
 
-test("buildDeveloperPrompt includes style-specific sections when style is provided", () => {
-  const prompt = buildDeveloperPrompt({
+test("buildSystemPrompt includes style-specific sections when style is provided", () => {
+  const prompt = buildSystemPrompt({
     style: "minimalistic",
     audience: "woman",
     formalityLevel: "smart_casual",
@@ -155,47 +154,47 @@ test("buildDeveloperPrompt includes style-specific sections when style is provid
 
   assert.match(prompt, /STYLE LIBRARY/);
   assert.match(prompt, /Minimalistic/);
-  assert.match(prompt, /- woman: silk midi skirts, crisp button-downs/);
-  assert.match(prompt, /- smart_casual: turtlenecks, poplin shirts, sleek loafers/);
-  assert.match(prompt, /- Occasion Adaptation: - everyday_errands: elevated basics, oversized wool coat/);
+  assert.match(prompt, /- Audience: - woman: silk slip midi skirts, crisp poplin button-downs/);
+  assert.match(prompt, /- Formality Scaling: - smart_casual: black turtlenecks, crisp shirts, classic blazers, sleek loafers/);
+  assert.match(prompt, /- Occasion Adaptation: - everyday_errands: elevated basics \(white tee, straight jeans\), structured oversized wool coat/);
   assert.match(prompt, /PALETTE REFERENCE BY STYLE/);
   assert.doesNotMatch(prompt, /PALETTE REFERENCE BY ACCENT COLOR/);
 });
 
-test("buildDeveloperPrompt injects audience, formality, and selected seasons", () => {
-  const prompt = buildDeveloperPrompt({
+test("buildSystemPrompt injects audience, formality, and selected seasons", () => {
+  const prompt = buildSystemPrompt({
     audience: "woman",
     formalityLevel: "formal",
     season: ["spring", "winter"]
   });
 
-  assert.match(prompt, /- woman: Allow diverse silhouettes including A-line, fitted, flowing, waist-accentuating items, skirts, dresses, and delicate detailing\./);
+  assert.match(prompt, /- woman: Allow diverse silhouettes based on Yin\/Yang balance, including A-line, fitted, flowing, waist-accentuating items, skirts, dresses, and delicate detailing/);
   assert.match(prompt, /- formal: Enforce strict dress-code\./);
-  assert.match(prompt, /- spring\/autumn: Light-to-medium layering; transitional outerwear preferred\./);
-  assert.match(prompt, /- winter: Insulating layers, heavy wool, and thermal logic required\./);
+  assert.match(prompt, /- spring\/autumn: Light-to-medium layering; transitional outerwear \(trench coats, light leather, denim jackets\) preferred\./);
+  assert.match(prompt, /- winter: Insulating layers and thermal logic required\./);
   assert.doesNotMatch(prompt, /- summer: Lightweight, breathable fabrics; suppress heavy midlayers\./);
 });
 
-test("buildDeveloperPrompt includes spring/autumn line when autumn is selected", () => {
-  const prompt = buildDeveloperPrompt({
+test("buildSystemPrompt includes spring/autumn line when autumn is selected", () => {
+  const prompt = buildSystemPrompt({
     season: ["autumn"]
   });
 
-  assert.match(prompt, /- spring\/autumn: Light-to-medium layering; transitional outerwear preferred\./);
+  assert.match(prompt, /- spring\/autumn: Light-to-medium layering; transitional outerwear \(trench coats, light leather, denim jackets\) preferred\./);
   assert.doesNotMatch(prompt, /- summer: Lightweight, breathable fabrics; suppress heavy midlayers\./);
   assert.doesNotMatch(prompt, /- winter: Insulating layers, heavy wool, and thermal logic required\./);
 });
 
-test("buildDeveloperPrompt includes accent color defaults when color is provided", () => {
-  const prompt = buildDeveloperPrompt({ color: "red" });
+test("buildSystemPrompt includes accent color defaults when color is provided", () => {
+  const prompt = buildSystemPrompt({ color: "red" });
 
   assert.match(prompt, /PALETTE REFERENCE BY ACCENT COLOR/);
-  assert.match(prompt, /Option 1: 60% navy \/ 30% white \/ 10% red/);
+  assert.match(prompt, /Riviera Standard \(Flusser\): 60% navy \/ 30% white \/ 10% true red or cherry/);
   assert.doesNotMatch(prompt, /STYLE LIBRARY/);
 });
 
-test("buildDeveloperPrompt combines style and accent color sections", () => {
-  const prompt = buildDeveloperPrompt({
+test("buildSystemPrompt combines style and accent color sections", () => {
+  const prompt = buildSystemPrompt({
     style: "minimalistic",
     color: "red",
     audience: "man",
@@ -238,8 +237,8 @@ test("renderStyleLibraryContent injects only the requested fields and joins occa
   assert.doesNotMatch(content, /\{\{/);
 });
 
-test("buildDeveloperPrompt includes retro sections when retro is configured", () => {
-  const prompt = buildDeveloperPrompt({
+test("buildSystemPrompt includes retro sections when retro is configured", () => {
+  const prompt = buildSystemPrompt({
     style: "retro",
     audience: "woman",
     formalityLevel: "casual",

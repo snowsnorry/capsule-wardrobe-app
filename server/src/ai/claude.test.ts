@@ -11,7 +11,7 @@ import {
   sanitizeClaudeJsonSchema,
   resolveChatModel
 } from "./claude.js";
-import { buildDeveloperPrompt } from "./openai.js";
+import { buildSystemPrompt } from "./openai.js";
 
 function assertClaudeImagePart(
   part: { type?: string; source?: { type?: string; media_type?: string; data?: string } }
@@ -25,7 +25,7 @@ test("resolveChatModel keeps only supported claude profile models", () => {
   assert.equal(resolveChatModel({ llm: "openai:gpt-5.2" }), ALLOWED_CHAT_MODELS[0]);
 });
 
-test("buildClaudeSystemPrompt concatenates system and developer prompt", () => {
+test("buildClaudeSystemPrompt concatenates system and system prompt", () => {
   const userProfile = {
     audience: "woman",
     formalityLevel: "formal",
@@ -34,7 +34,7 @@ test("buildClaudeSystemPrompt concatenates system and developer prompt", () => {
 
   assert.equal(
     buildClaudeSystemPrompt("Be concise", userProfile),
-    `Be concise\n\n${buildDeveloperPrompt(userProfile)}`
+    `Be concise\n\n${buildSystemPrompt(userProfile)}`
   );
 });
 
@@ -183,7 +183,7 @@ test("claude client validates api key, caches constructed client, and shapes mul
     formalityLevel: "formal",
     season: ["winter"]
   };
-  const result = await client.generateJsonWithLlm("System: Be concise\nUser: Return JSON", {
+  const result = await client.generateJsonWithLlm("Return JSON", {
     userProfile,
     images,
     onPayloadBuilt: () => {
@@ -195,7 +195,7 @@ test("claude client validates api key, caches constructed client, and shapes mul
   assert.equal(requestPayload.model, "claude-opus-4-7");
   assert.equal(
     requestPayload.system,
-    `Be concise\n\n${buildDeveloperPrompt(userProfile)}`
+    buildSystemPrompt(userProfile)
   );
   assertClaudeImagePart(requestPayload.messages[0].content[0]);
   assert.equal(requestPayload.output_config.format.type, "json_schema");

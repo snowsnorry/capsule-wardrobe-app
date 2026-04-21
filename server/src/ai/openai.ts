@@ -12,9 +12,9 @@ import type {
 
 const DEFAULT_CHAT_MODEL = "gpt-5.2";
 const DEFAULT_EMBEDDING_MODEL = "text-embedding-3-small";
-const DEVELOPER_TEMPLATE = readFileSync(new URL("../templates/developer.txt", import.meta.url), "utf8");
-const DEVELOPER_PARTS = JSON.parse(
-  readFileSync(new URL("../templates/developer_parts.json", import.meta.url), "utf8")
+const SYSTEM_PROMPT_TEMPLATE = readFileSync(new URL("../templates/system_prompt.txt", import.meta.url), "utf8");
+const SYSTEM_PROMPT_PARTS = JSON.parse(
+  readFileSync(new URL("../templates/system_prompt_parts.json", import.meta.url), "utf8")
 ) as Record<string, unknown>;
 
 function buildCapsuleSchema(categories: Record<string, number>): JsonSchema {
@@ -204,19 +204,19 @@ function buildImageDataUrl(image: ImageAssetLike) {
   return `data:${mimeType};base64,${image.buffer.toString("base64")}`;
 }
 
-function normalizeDeveloperKey(value: unknown) {
+function normalizeSystemPromptKey(value: unknown) {
   return typeof value === "string" ? value.trim().toLowerCase() : "";
 }
 
-function normalizeDeveloperAudience(value: unknown) {
-  const normalized = normalizeDeveloperKey(value);
+function normalizeSystemPromptAudience(value: unknown) {
+  const normalized = normalizeSystemPromptKey(value);
   if (normalized === "woman" || normalized === "man") {
     return normalized;
   }
   return "not important";
 }
 
-function normalizeDeveloperSectionContent(content: unknown) {
+function normalizeSystemPromptSectionContent(content: unknown) {
   if (Array.isArray(content)) {
     return content
       .filter((line) => typeof line === "string" && line.trim().length > 0)
@@ -227,14 +227,14 @@ function normalizeDeveloperSectionContent(content: unknown) {
   return typeof content === "string" ? content.trim() : "";
 }
 
-function normalizeDeveloperSeasonList(value: unknown) {
+function normalizeSystemPromptSeasonList(value: unknown) {
   if (Array.isArray(value)) {
     return value
-      .map((season) => normalizeDeveloperKey(season))
+      .map((season) => normalizeSystemPromptKey(season))
       .filter(Boolean);
   }
 
-  const normalized = normalizeDeveloperKey(value);
+  const normalized = normalizeSystemPromptKey(value);
   return normalized ? [normalized] : [];
 }
 
@@ -245,7 +245,7 @@ function renderSeasonalityLogicContent(entry: unknown, userProfile: UserProfileL
 
   const normalizedEntry = entry as Record<string, unknown>;
 
-  const seasons = new Set(normalizeDeveloperSeasonList(userProfile?.season));
+  const seasons = new Set(normalizeSystemPromptSeasonList(userProfile?.season));
   const lines = [];
 
   if (seasons.has("summer") && typeof normalizedEntry.summer === "string") {
@@ -277,8 +277,8 @@ function renderStyleLibraryContent(entry: unknown, userProfile: UserProfileLike 
     return "";
   }
 
-  const audienceKey = normalizeDeveloperAudience(userProfile?.audience);
-  const formalityLevelKey = normalizeDeveloperKey(userProfile?.formalityLevel);
+  const audienceKey = normalizeSystemPromptAudience(userProfile?.audience);
+  const formalityLevelKey = normalizeSystemPromptKey(userProfile?.formalityLevel);
   const occasions = Array.isArray(userProfile?.occasions) ? userProfile.occasions : [];
   const replacements = {
     audience: typeof audienceConfig?.[audienceKey] === "string"
@@ -288,7 +288,7 @@ function renderStyleLibraryContent(entry: unknown, userProfile: UserProfileLike 
       ? formalityConfig[formalityLevelKey]
       : "",
     occasions: occasions
-      .map((occasion) => normalizeDeveloperKey(occasion))
+      .map((occasion) => normalizeSystemPromptKey(occasion))
       .map((occasionKey) => occasionsConfig?.[occasionKey])
       .filter((value) => typeof value === "string" && value.trim().length > 0)
       .join("\n")
@@ -304,8 +304,8 @@ function renderStyleLibraryContent(entry: unknown, userProfile: UserProfileLike 
     .trim();
 }
 
-function renderDeveloperSection(title: string, content: unknown, intro = "") {
-  const normalizedContent = normalizeDeveloperSectionContent(content);
+function renderSystemPromptSection(title: string, content: unknown, intro = "") {
+  const normalizedContent = normalizeSystemPromptSectionContent(content);
   if (!normalizedContent) {
     return "";
   }
@@ -313,46 +313,46 @@ function renderDeveloperSection(title: string, content: unknown, intro = "") {
   return [title, intro.trim(), normalizedContent].filter(Boolean).join("\n\n");
 }
 
-function buildDeveloperPrompt(userProfile: UserProfileLike | null = null) {
-  const styleKey = normalizeDeveloperKey(userProfile?.style);
-  const accentColorKey = normalizeDeveloperKey(userProfile?.color);
-  const audienceKey = normalizeDeveloperAudience(userProfile?.audience);
-  const formalityLevelKey = normalizeDeveloperKey(userProfile?.formalityLevel);
+function buildSystemPrompt(userProfile: UserProfileLike | null = null) {
+  const styleKey = normalizeSystemPromptKey(userProfile?.style);
+  const accentColorKey = normalizeSystemPromptKey(userProfile?.color);
+  const audienceKey = normalizeSystemPromptAudience(userProfile?.audience);
+  const formalityLevelKey = normalizeSystemPromptKey(userProfile?.formalityLevel);
   const replacements = {
-    audience_logic_block: normalizeDeveloperSectionContent(
-      DEVELOPER_PARTS.audience_logic?.[audienceKey]
+    audience_logic_block: normalizeSystemPromptSectionContent(
+      SYSTEM_PROMPT_PARTS.audience_logic?.[audienceKey]
     ),
-    formality_logic_block: normalizeDeveloperSectionContent(
-      DEVELOPER_PARTS.formality_logic?.[formalityLevelKey]
+    formality_logic_block: normalizeSystemPromptSectionContent(
+      SYSTEM_PROMPT_PARTS.formality_logic?.[formalityLevelKey]
     ),
     seasonality_logic_block: renderSeasonalityLogicContent(
-      DEVELOPER_PARTS.seasonality_logic,
+      SYSTEM_PROMPT_PARTS.seasonality_logic,
       userProfile
     ),
-    style_library_block: renderDeveloperSection(
+    style_library_block: renderSystemPromptSection(
       "STYLE LIBRARY",
-      renderStyleLibraryContent(DEVELOPER_PARTS.style_library?.[styleKey], userProfile)
+      renderStyleLibraryContent(SYSTEM_PROMPT_PARTS.style_library?.[styleKey], userProfile)
     ),
-    style_palette_block: renderDeveloperSection(
+    style_palette_block: renderSystemPromptSection(
       "PALETTE REFERENCE BY STYLE",
-      DEVELOPER_PARTS.palette_by_style?.[styleKey],
+      SYSTEM_PROMPT_PARTS.palette_by_style?.[styleKey],
       "Use these as preferred defaults when no better user constraint overrides them."
     ),
-    accent_color_palette_block: renderDeveloperSection(
+    accent_color_palette_block: renderSystemPromptSection(
       "PALETTE REFERENCE BY ACCENT COLOR",
-      DEVELOPER_PARTS.palette_by_accent_color?.[accentColorKey],
+      SYSTEM_PROMPT_PARTS.palette_by_accent_color?.[accentColorKey],
       "If the user specifies an accent color, you may use these defaults:"
     )
   };
 
-  let prompt = DEVELOPER_TEMPLATE;
+  let prompt = SYSTEM_PROMPT_TEMPLATE;
   for (const [key, value] of Object.entries(replacements)) {
     prompt = prompt.replaceAll(`{{${key}}}`, value);
   }
 
   const unresolvedTokens = prompt.match(/\{\{[a-zA-Z0-9_]+\}\}/g);
   if (unresolvedTokens?.length) {
-    throw new Error(`Unresolved developer prompt placeholders: ${unresolvedTokens.join(", ")}`);
+    throw new Error(`Unresolved system prompt placeholders: ${unresolvedTokens.join(", ")}`);
   }
 
   return prompt
@@ -360,13 +360,12 @@ function buildDeveloperPrompt(userProfile: UserProfileLike | null = null) {
     .trim();
 }
 
-function buildResponsesInput(user: string, images: ImageAssetLike[] = [], developer = "") {
+function buildResponsesInput(user: string, images: ImageAssetLike[] = []) {
   const content: Array<
     | { type: "input_image"; image_url: string; detail: "high" }
     | { type: "input_text"; text: string }
   > = [];
   const userText = String(user || "").trim();
-  const developerText = String(developer || "").trim();
 
   for (const image of images) {
     const imageUrl = buildImageDataUrl(image);
@@ -396,27 +395,14 @@ function buildResponsesInput(user: string, images: ImageAssetLike[] = [], develo
     });
   }
 
-  if (!developerText && content.length === 1 && content[0].type === "input_text") {
+  if (content.length === 1 && content[0].type === "input_text") {
     return content[0].text;
   }
 
-  const input: Array<
-    | { role: "developer"; content: string }
-    | { role: "user"; content: typeof content }
-  > = [];
-  if (developerText) {
-    input.push({
-      role: "developer",
-      content: developerText
-    });
-  }
-
-  input.push({
+  return [{
     role: "user",
     content
-  });
-
-  return input;
+  }];
 }
 
 function releaseImageBuffers(images: ImageAssetLike[] = []) {
@@ -427,8 +413,8 @@ function releaseImageBuffers(images: ImageAssetLike[] = []) {
   }
 }
 
-function buildResponsesPayload(user: string, images: ImageAssetLike[] = [], developer = "") {
-  const input = buildResponsesInput(user, images, developer);
+function buildResponsesPayload(user: string, images: ImageAssetLike[] = []) {
+  const input = buildResponsesInput(user, images);
   releaseImageBuffers(images);
   return input;
 }
@@ -456,8 +442,10 @@ async function generateJsonWithLlm(prompt: string, options: LlmGenerateOptions =
   } = options;
   const client = getOpenAiClient();
   const { system, user } = splitSystemAndUserPrompt(prompt);
-  const developer = buildDeveloperPrompt(userProfile);
-  const input = buildResponsesPayload(user, images, developer);
+  const systemPrompt = [system, buildSystemPrompt(userProfile)]
+    .filter((part) => typeof part === "string" && part.trim().length > 0)
+    .join("\n\n");
+  const input = buildResponsesPayload(user, images);
   onPayloadBuilt?.();
   const requestStartedAt = Date.now();
   let response;
@@ -465,7 +453,7 @@ async function generateJsonWithLlm(prompt: string, options: LlmGenerateOptions =
   try {
     response = await client.responses.create({
       model: DEFAULT_CHAT_MODEL,
-      instructions: system || undefined,
+      instructions: systemPrompt || undefined,
       input,
       reasoning: {"effort": "low"},
       // temperature: 0.2,
@@ -482,7 +470,7 @@ async function generateJsonWithLlm(prompt: string, options: LlmGenerateOptions =
         model: DEFAULT_CHAT_MODEL,
         durationMs: Date.now() - requestStartedAt,
         imageCount: Array.isArray(images) ? images.length : 0,
-        hasSystemPrompt: Boolean(system),
+        hasSystemPrompt: Boolean(systemPrompt),
         userChars: user.length
       }),
       error
@@ -518,7 +506,7 @@ export {
   buildCustomJsonObjectFormat,
   buildJsonObjectFormat,
   buildImageDataUrl,
-  buildDeveloperPrompt,
+  buildSystemPrompt,
   buildResponsesInput,
   buildResponsesPayload,
   renderStyleLibraryContent,

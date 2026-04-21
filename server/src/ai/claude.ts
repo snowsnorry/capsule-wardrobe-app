@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import {
-  buildDeveloperPrompt,
   buildJsonObjectFormat,
+  buildSystemPrompt,
   releaseImageBuffers,
   splitSystemAndUserPrompt
 } from "./openai.js";
@@ -62,9 +62,9 @@ function resolveChatModel(userProfile: UserProfileLike | null = null) {
 
 function buildClaudeSystemPrompt(system = "", userProfile: UserProfileLike | null = null) {
   const systemText = String(system || "").trim();
-  const developerText = buildDeveloperPrompt(userProfile);
+  const generatedSystemText = buildSystemPrompt(userProfile);
 
-  return [systemText, developerText]
+  return [systemText, generatedSystemText]
     .filter((part) => typeof part === "string" && part.trim().length > 0)
     .join("\n\n");
 }

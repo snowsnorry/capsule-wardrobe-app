@@ -16,7 +16,7 @@ import { getCapsuleCategories } from "./categories.js";
 import {
   buildCapsuleSchema,
   buildCustomJsonObjectFormat,
-  buildDeveloperPrompt
+  buildSystemPrompt
 } from "./openai.js";
 import { getGenerateJsonWithLlm, isNoLlmProfileEnabled, resolveLlmProvider } from "./llm.js";
 import {
@@ -55,7 +55,7 @@ import type {
 } from "./types.js";
 
 const REGENERATE_SELECTED_PROMPT_TEMPLATE = readFileSync(
-  new URL("../templates/prompt_regenerate_selected.txt", import.meta.url),
+  new URL("../templates/user_prompt_regenerate_selected.txt", import.meta.url),
   "utf8"
 );
 const COMPLETED_JOB_TTL_MS = 5 * 60 * 1000;
@@ -274,10 +274,11 @@ function buildLastPromptArtifact(prompt, userProfile = null) {
     return "";
   }
 
-  const developerPrompt = buildDeveloperPrompt(userProfile);
-  return developerPrompt
-    ? `Developer:\n${developerPrompt}\n\n${prompt}`
-    : prompt;
+  const systemPrompt = buildSystemPrompt(userProfile);
+  return [
+    systemPrompt ? `System:\n${systemPrompt}` : "",
+    `User:\n${prompt}`
+  ].filter(Boolean).join("\n\n");
 }
 
 function saveLastPromptArtifacts({

@@ -12,7 +12,7 @@ import {
   resolveChatModel,
   uploadBufferToGemini
 } from "./gemini.js";
-import { buildDeveloperPrompt } from "./openai.js";
+import { buildSystemPrompt } from "./openai.js";
 import type { JsonSchemaFormat } from "./types.js";
 
 function assertGeminiObjectSchema(
@@ -59,7 +59,7 @@ test("buildGeminiContents emits text and fileData parts", () => {
   assert.deepEqual(content[1], { text: "Describe capsule" });
 });
 
-test("buildGeminiSystemInstruction concatenates system and developer prompt", () => {
+test("buildGeminiSystemInstruction concatenates system and system prompt", () => {
   const userProfile = {
     audience: "woman",
     formalityLevel: "formal",
@@ -68,23 +68,23 @@ test("buildGeminiSystemInstruction concatenates system and developer prompt", ()
 
   assert.equal(
     buildGeminiSystemInstruction("Be concise", userProfile),
-    `Be concise\n\n${buildDeveloperPrompt(userProfile)}`
+    `Be concise\n\n${buildSystemPrompt(userProfile)}`
   );
 });
 
-test("buildGeminiSystemInstruction returns only developer prompt when system is empty", () => {
+test("buildGeminiSystemInstruction returns only system prompt when system is empty", () => {
   const userProfile = { style: "minimalistic" };
 
   assert.equal(
     buildGeminiSystemInstruction("", userProfile),
-    buildDeveloperPrompt(userProfile)
+    buildSystemPrompt(userProfile)
   );
 });
 
-test("buildGeminiSystemInstruction includes the default developer prompt for a neutral profile", () => {
+test("buildGeminiSystemInstruction includes the default system prompt for a neutral profile", () => {
   assert.equal(
     buildGeminiSystemInstruction("Be concise", {}),
-    `Be concise\n\n${buildDeveloperPrompt({})}`
+    `Be concise\n\n${buildSystemPrompt({})}`
   );
 });
 
@@ -267,7 +267,7 @@ test("gemini client validates api key and shapes multimodal JSON request", async
     buffer: Buffer.from("image-one")
   }];
   let payloadBuiltCalls = 0;
-  const result = await client.generateJsonWithLlm("System: Be concise\nUser: Return JSON", {
+  const result = await client.generateJsonWithLlm("Return JSON", {
     userProfile: {
       llm: "gemini:gemini-2.5-pro",
       audience: "woman",
@@ -285,12 +285,12 @@ test("gemini client validates api key and shapes multimodal JSON request", async
   assert.equal(requestPayload.model, "gemini-2.5-pro");
   assert.equal(
     requestPayload.config.systemInstruction,
-    `Be concise\n\n${buildDeveloperPrompt({
+    buildSystemPrompt({
       llm: "gemini:gemini-2.5-pro",
       audience: "woman",
       formalityLevel: "formal",
       season: ["winter"]
-    })}`
+    })
   );
   assert.equal(requestPayload.config.responseMimeType, "application/json");
   assertGeminiObjectSchema(requestPayload.config.responseJsonSchema);
@@ -312,7 +312,7 @@ test("gemini client validates api key and shapes multimodal JSON request", async
   assert.throws(() => missingKeyClient.getGeminiClient(), /GEMINI_API_KEY is not set/);
 });
 
-test("gemini uses only developer prompt as systemInstruction when prompt has no System block", async () => {
+test("gemini uses only system prompt as systemInstruction when prompt has no System block", async () => {
   let requestPayload = null;
   const userProfile = {
     style: "minimalistic",
@@ -341,7 +341,7 @@ test("gemini uses only developer prompt as systemInstruction when prompt has no 
     format: SIMPLE_OK_FORMAT
   });
 
-  assert.equal(requestPayload.config.systemInstruction, buildDeveloperPrompt(userProfile));
+  assert.equal(requestPayload.config.systemInstruction, buildSystemPrompt(userProfile));
   assert.equal(requestPayload.contents[0].text, "Return JSON");
 });
 

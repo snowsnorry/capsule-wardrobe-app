@@ -26,7 +26,7 @@ import {
   capsuleEventHub,
   getStoredWardrobePayload
 } from "./capsuleEvents.js";
-import { buildDeveloperPrompt } from "./openai.js";
+import { buildSystemPrompt } from "./openai.js";
 import type {
   CountByKey,
   ErrorWithCode,
@@ -43,7 +43,7 @@ import type {
   WardrobeUiItemLike
 } from "./types.js";
 
-const PROMPT_TEMPLATE = readFileSync(new URL("../templates/prompt.txt", import.meta.url), "utf8");
+const PROMPT_TEMPLATE = readFileSync(new URL("../templates/user_prompt.txt", import.meta.url), "utf8");
 const COMPLETED_JOB_TTL_MS = 5 * 60 * 1000;
 const LAST_PROMPT_DIR_URL = new URL("../../../last-prompt/", import.meta.url);
 const wardrobeJobs = new Map<string, WardrobeJobState>();
@@ -148,10 +148,11 @@ function buildLastPromptArtifact(prompt, userProfile = null) {
     return "";
   }
 
-  const developerPrompt = buildDeveloperPrompt(userProfile);
-  return developerPrompt
-    ? `Developer:\n${developerPrompt}\n\n${prompt}`
-    : prompt;
+  const systemPrompt = buildSystemPrompt(userProfile);
+  return [
+    systemPrompt ? `System:\n${systemPrompt}` : "",
+    `User:\n${prompt}`
+  ].filter(Boolean).join("\n\n");
 }
 
 function saveLastPromptArtifacts(prompt, userProfile = null) {
