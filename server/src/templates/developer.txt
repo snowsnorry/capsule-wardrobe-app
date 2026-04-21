@@ -21,17 +21,26 @@ SEASONALITY AND LAYERING
 {{seasonality_logic_block}}
 - Specifics: Linen for summer/safari; silk for romantic/formal; heavy wool for winter.
 
+CAPSULE COMPOSITION (Item Roles)
+- 40% Key Pieces: Items that 100% reflect the chosen Style Identity.
+- 40% Basics: Simple, neutral background items that glue the wardrobe together.
+- 20% Statement Pieces: Bold items (using the Accent Color or Pattern) for variety.
+
 VISUAL HARMONIZATION (60/30/10 RULE)
 - 60% base neutrals: Trousers, main outerwear.
 - 30% secondary colors: Tops, knitwear, midlayers.
 - 10% accent colors: Footwear, bags, belts, accessories.
-- Neutrals: black, white, grey, beige, brown, light blue, navy, denim, khaki.
+- Core Neutrals must align with the Season and Style (e.g., avoid stark black for Autumn/Boho, use deep brown/olive instead).
 
 PATTERN & SILHOUETTE RULES
-- Pattern Conflict: If an item is patterned, all other items in the outfit must be solid or micro-patterns (ribbed, waffle, corduroy).
-- Silhouette Sync: If bottom is wide/high-volume, top must be fitted or structured. Exception: Street Style and Grunge allow volume-on-volume.
+- Pattern Harmony: If mixing multiple patterned items in one outfit, their scales/sizes MUST contrast significantly (e.g., large plaid with small stripes). If scales are similar, pair pattern with solid.
+- Silhouette Sync: Balance volume unless the Style dictates otherwise. Minimalist/Classic requires Volume + Fitted. Boho/Safari/Grunge/Natural allow Relaxed/Unconstructed top + bottom. Romantic requires waist emphasis.
 
 {{style_library_block}}
+
+- Adjust the 10% accent volume based on color luminosity. High-luminosity accents (yellow, bright orange) must be micro-accents (stitching, jewelry, hardware). Low-luminosity accents (burgundy, forest green) can be full accessories (bags, shoes).
+- If 'black' is overly harsh for the user's inferred coloring, substitute it with their natural 'First Base' (e.g., charcoal, midnight navy, aubergine, or deep espresso).
+- For Romantic and Soft Classic styles, avoid harsh blocky contrasts; blend the 60/30/10 colors fluidly (watercolor effect). For Gamine/Street Style, enforce sharp, staccato color blocking.
 
 {{style_palette_block}}
 
@@ -39,11 +48,13 @@ PATTERN & SILHOUETTE RULES
 
 GENERATION ALGORITHM:
 1. Filter catalog by Audience and Formality.
-2. Inject Style "Hero Items" and tokens.
-3. Synchronize silhouettes and verify material validity.
-4. Apply Category Quota: 3 bottom, 3 top, 2 outerwear, 2 shoes, 1 belt, 2 bag, 2 midlayer.
-5. Calibrate footwear and accessories to lock final formality.
-6. Select/adapt palette using the 60/30/10 rule.
-7. Verify interchangeability: every top must pair with >= 2 bottoms.
+2. Define 4-6 "Outfit Formulas" specific to the Style and Formality (e.g., Formula 1: Turtleneck + Trousers + Blazer + Loafers).
+3. Inject Style "Hero Items" (Key Pieces) and tokens to fulfill these formulas.
+4. Add Basics to maximize combinatorics and Statement pieces for accent colors.
+5. Synchronize silhouettes according to Style rules and verify material validity.
+6. Apply Category Quota.
+7. Calibrate footwear and accessories to lock final formality.
+8. Select/adapt palette using the 60/30/10 rule.
+9. Verify interchangeability: every top must pair with >= 2 bottoms seamlessly.
 
 OUTPUT: Return strictly valid JSON as per provided schema.

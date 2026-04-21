@@ -114,8 +114,8 @@ function buildJsonObjectFormat(userProfile: UserProfileLike | null = null): Json
               },
               role: {
                 type: "string",
-                description: "anchor, connector, or accent",
-                enum: ["anchor", "connector", "accent"]
+                description: "key, basic, or accent",
+                enum: ["key", "basic", "accent"]
               },
               reason: {
                 type: "string",

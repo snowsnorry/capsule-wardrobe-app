@@ -16,37 +16,37 @@ AVAILABLE ITEMS (Candidates):
 (Note: Each candidate has "formality_level" and "style" as arrays of strings. Assume all candidates already match the requested season and occasions.)
 
 VISUAL CONTEXT & MULTIMODAL ANALYSIS:
-- You are provided with one vertically stitched image containing the candidate item collages for all categories. Each section is labeled with its category at the top.
+- You are provided with one vertically stitched image containing the candidate item collages for all categories.
 - Each individual item in the grid has a specific numeric ID written in red in the top-left corner.
 - You MUST cross-reference this visual ID with the exact "id" value in the AVAILABLE ITEMS text list.
-- Use visual data to assess true color temperatures, fabric textures, and exact silhouettes to ensure Low Styling Friction (e.g., avoiding conflicting textures or high-maintenance combinations).
+- Use visual data to assess true color temperatures, fabric textures, hardware details, and exact silhouettes to ensure Low Styling Friction.
 - The final capsule MUST be visually harmonious.
 
 CORE SELECTION PRINCIPLES & CAPSULE ASSEMBLY LOGIC:
-1. Combinability First & Pairability Thresholds: 
-   - Evaluate compatibility ONLY across relevant functional pairs (e.g., top ↔ bottom, top ↔ midlayer/outerwear, bottom ↔ shoes, dress ↔ midlayer, dress ↔ shoes). Do NOT waste effort on irrelevant comparisons (e.g., shoe ↔ shoe, bottom ↔ bottom, top ↔ top).
+1. Define Outfit Formulas First: Before selecting items, define 4-6 realistic "Outfit Formulas" based on the Target Style and Formality (e.g., base top + jeans + oversized blazer + sneakers). Select items specifically to fulfill these formulas.
+2. Combinability & Pairability Thresholds: 
+   - Evaluate compatibility ONLY across relevant functional pairs (e.g., top ↔ bottom, top ↔ midlayer/outerwear, bottom ↔ shoes). 
    - Every top should pair well with at least 2 bottoms.
    - Every bottom should pair well with at least 3 tops/top-layer combos.
-   - Every outerwear/midlayer must work with at least 50% of relevant base outfits.
-   - Reject orphan items that depend on one highly specific companion piece. At every step, ask: "How many easy, realistic outfits does this item unlock?"
-2. Silhouette Balance: Ensure the capsule supports balanced proportions (e.g., fitted top + relaxed bottom; oversized blazer + streamlined base). Avoid selecting items that only work with one specific volume or cut.
-3. Category & Length Diversity: Ensure variety in garment types within categories. If the audience is woman, you are strictly forbidden from selecting only skirts or only shorts for the "bottom" category. You MUST include at least one pair of full-length trousers or jeans. If selecting multiple skirts or dresses, you MUST vary their lengths (e.g., mix mini, midi, maxi) to maximize weather adaptability and outfit proportions.
-4. Low Styling Friction & Real-life Wearability: Favor items that are easy to wear repeatedly. Penalize items requiring specific underlayers, high-maintenance styling, or highly specific shoes.
-5. Redundancy Control: Penalize near-duplicates in function, silhouette, or color. If two items are similar, you MUST choose the one with higher versatility.
+   - Reject orphan items. At every step, ask: "How many easy, realistic outfits does this item unlock?"
+3. Silhouette Balance: Align proportions with the Target Style. Minimalist/Formal requires sleek, tailored, unbroken lines. Boho/Grunge allows relaxed/unconstructed volumes. Street Style/Casual thrives on contrast (e.g., oversized top + fitted bottom).
+4. Category & Length Diversity: Ensure variety in garment types within categories. If the audience is woman, you MUST include at least one pair of full-length trousers/jeans. If selecting multiple skirts/dresses, you MUST vary their lengths (mini, midi, maxi) to maximize adaptability.
+5. Redundancy Control: Penalize near-duplicates in function, silhouette, or color.
+
+STYLE & AESTHETIC BALANCE (Roles):
+Categorize your selections into three roles:
+- KEY PIECES (~40%): Items that 100% reflect the core Target Style (e.g., a perfect leather jacket for Grunge, or a tailored blazer for Classic).
+- BASICS (~40%): Stylistic neutrals that quietly complement the Key Pieces and lower styling friction.
+- STATEMENT PIECES / ACCENTS (~20%): Bold items that feature the Accent Color, Pattern, or unique textures.
+- Color/Pattern Rules: If Accent Color is provided, distribute exactly 2-3 items in that color across categories (avoid the "clown effect" by varying their visual weight). If Pattern says "solid", do not add prints. If another Pattern is provided, you may include 1-2 items with that pattern. If using multiple patterned items, their scales/sizes MUST contrast significantly (e.g., large plaid with small stripes).
 
 INSTRUCTIONS & CONSTRAINTS:
 1. Blueprint: You MUST select exactly {{num_items}} items.
    Exact quota: {{category_list}}.
 2. Validity: Use ONLY the exact "id" values from the list. Do not invent items. Do not select the same "id" twice.
 
-STYLE & AESTHETIC BALANCE (Roles):
-Categorize your selections into three roles:
-- ACCENTS (30% of capsule / exactly 4 items): Strongly feature the user's Target Style and/or Accent Color. Style is an aesthetic accent, NOT a uniform. Avoid the "costume effect".
-- ANCHORS & CONNECTORS (70% of capsule): Stylistic neutrals or versatile basics that quietly complement the Accents.
-- Color/Pattern: If Accent Color says "No accent color", keep the entire capsule in neutral colors unless a non-neutral item is absolutely required to fill a category. If an Accent Color is provided, include exactly 3 items in that color (distribute them across categories to avoid the "clown effect") and keep the rest neutral. If Pattern says "solid (no print)", do not add prints; all items should be solid or have no listed pattern unless a printed item is absolutely required to fill a category. If another Pattern is provided, include exactly 1 core item with that pattern. The rest MUST be solid.
-
 VALIDATION REQUIREMENT:
-Before finalizing, mentally validate the capsule by generating realistic "Outfit Formulas" (e.g., knit + trousers + loafers; tee + jeans + blazer + sneakers). Flag any weakly integrated items and replace them if better alternatives exist.
+Verify the final capsule by listing 4-6 resulting highly-wearable outfits based on your initial Outfit Formulas. Flag and replace any weakly integrated items.
 
 OUTPUT FORMAT:
 Return strictly valid JSON only. No markdown formatting (like ```json), no conversational text outside the JSON.
@@ -64,7 +64,7 @@ The output MUST exactly match this schema:
     // INSTRUCTION: You MUST generate exactly one object in this array for EVERY single item included in the "capsule". If you selected {{num_items}} items, there MUST be exactly {{num_items}} objects in this array.
     {
       "id": "Must match candidate ID",
-      "role": "anchor, connector, or accent",
+      "role": "key, basic, or accent",
       "reason": "Brief reason for selection (e.g., silhouette balance, visual harmony)",
       "compatibility": "Note how many/which items this pairs with",
       "warning": "Any styling friction or limitation (or 'None')"
