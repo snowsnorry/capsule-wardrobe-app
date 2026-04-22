@@ -42,7 +42,7 @@ function renderShell(
             email: "person@example.com",
             locale: "en",
             theme: "system",
-            llm: "openai:gpt-5.2"
+            llm: "openai:gpt-5.4"
           }}
           onSaveSettings={vi.fn(() => Promise.resolve())}
           onSignOut={vi.fn()}

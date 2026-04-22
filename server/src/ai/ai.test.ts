@@ -680,7 +680,7 @@ test("regenerateCapsuleWardrobe starts a new pending job and clears stored items
   let generatedProfile = null;
   const jobs = new Map();
   const service = createWardrobeService({
-    getProfileImpl: async () => buildNormalizedProfileRecord({ audience: "woman", locale: "en", llm: "openai:gpt-5.2" }),
+    getProfileImpl: async () => buildNormalizedProfileRecord({ audience: "woman", locale: "en", llm: "openai:gpt-5.4" }),
     getCapsuleImpl: async () => createCapsuleWithWardrobe({
       items: [buildWardrobeUiItem({ id: "top-1", category: "top", url: undefined, name: undefined, image_url: undefined, audience: undefined })]
     }),

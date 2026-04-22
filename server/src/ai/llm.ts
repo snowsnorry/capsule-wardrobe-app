@@ -7,7 +7,7 @@ import { generateJsonWithLlm as generateJsonWithDeepInfra } from "./deepinfra.js
 import { generateJsonWithLlm as generateJsonWithGemini } from "./gemini.js";
 import type { JsonSchema, JsonSchemaFormat, UserProfileLike } from "./types.js";
 
-const OPENAI_PROFILE_LLM = "openai:gpt-5.2";
+const OPENAI_PROFILE_LLM = "openai:gpt-5.4";
 const CLAUDE_ALLOWED_MODELS = ["claude-opus-4-7"];
 const GEMINI_PROFILE_LLM = "gemini:gemini-2.5-pro";
 const DEEPINFRA_ALLOWED_MODELS = [
@@ -365,7 +365,7 @@ function resolveLlmProvider(userProfile = null) {
   if (llm === OPENAI_PROFILE_LLM) {
     return {
       provider: "openai",
-      model: "gpt-5.2",
+      model: "gpt-5.4",
       llm,
       requestedLlm: llm
     };
@@ -407,12 +407,12 @@ function resolveLlmProvider(userProfile = null) {
   console.warn("[wardrobe-ai][llm-unknown-model]", JSON.stringify({
     requestedLlm: llm,
     fallbackProvider: "openai",
-    fallbackModel: "gpt-5.2"
+    fallbackModel: "gpt-5.4"
   }));
 
   return {
     provider: "openai",
-    model: "gpt-5.2",
+    model: "gpt-5.4",
     llm: OPENAI_PROFILE_LLM,
     requestedLlm: llm,
     fallbackReason: "unknown_model"

@@ -328,7 +328,7 @@ async function ensureProfilesTable(): Promise<void> {
       locale text not null,
       fullname text null,
       theme text not null default 'system',
-      llm text not null default 'openai:gpt-5.2',
+      llm text not null default 'openai:gpt-5.4',
       image_llm text not null default 'openai:gpt-image-2',
       created_at timestamptz not null default now(),
       updated_at timestamptz not null default now()
@@ -344,11 +344,11 @@ async function ensureProfilesTable(): Promise<void> {
   `;
   await sql`
     alter table profiles
-    add column if not exists llm text not null default 'openai:gpt-5.2'
+    add column if not exists llm text not null default 'openai:gpt-5.4'
   `;
   await sql`
     alter table profiles
-    alter column llm set default 'openai:gpt-5.2'
+    alter column llm set default 'openai:gpt-5.4'
   `;
   await sql`
     alter table profiles
@@ -360,8 +360,13 @@ async function ensureProfilesTable(): Promise<void> {
   `;
   await sql`
     update profiles
-    set llm = 'openai:gpt-5.2'
+    set llm = 'openai:gpt-5.4'
     where llm = 'openai:gpt-5'
+  `;
+  await sql`
+    update profiles
+    set llm = 'openai:gpt-5.4'
+    where llm = 'openai:gpt-5.2'
   `;
   await sql`
     do $$
@@ -391,14 +396,10 @@ async function ensureProfilesTable(): Promise<void> {
       end if;
       alter table profiles
       add constraint profiles_llm_check
-      check (llm in (
-        'openai:gpt-5.2',
-        'claude:claude-opus-4-7',
-        'gemini:gemini-2.5-pro',
-        'deepinfra:Qwen/Qwen3-VL-235B-A22B-Instruct',
-        'deepinfra:google/gemma-4-31B-it',
-        'none'
-      ));
+      check (
+        llm = 'none'
+        or llm ~ '^(openai|claude|gemini|deepinfra):'
+      );
     end
     $$;
   `;
@@ -415,10 +416,7 @@ async function ensureProfilesTable(): Promise<void> {
       end if;
       alter table profiles
       add constraint profiles_image_llm_check
-      check (image_llm in (
-        'openai:gpt-image-2',
-        'gemini:gemini-3-pro-image-preview'
-      ));
+      check (image_llm ~ '^(openai|gemini):');
     end
     $$;
   `;

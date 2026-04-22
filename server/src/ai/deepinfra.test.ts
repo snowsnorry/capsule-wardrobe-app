@@ -78,7 +78,7 @@ test("deepinfra client validates api key and caches constructed client", () => {
 test("resolveChatModel keeps only supported deepinfra profile models", () => {
   assert.equal(resolveChatModel({ llm: "deepinfra:Qwen/Qwen3-VL-235B-A22B-Instruct" }), "Qwen/Qwen3-VL-235B-A22B-Instruct");
   assert.equal(resolveChatModel({ llm: "deepinfra:not-supported" }), ALLOWED_CHAT_MODELS[0]);
-  assert.equal(resolveChatModel({ llm: "openai:gpt-5.2" }), ALLOWED_CHAT_MODELS[0]);
+  assert.equal(resolveChatModel({ llm: "openai:gpt-5.4" }), ALLOWED_CHAT_MODELS[0]);
 });
 
 test("buildChatMessages emits multimodal user content and preserves images", () => {

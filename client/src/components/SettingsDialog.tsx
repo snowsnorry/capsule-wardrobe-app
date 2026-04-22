@@ -79,7 +79,7 @@ function normalizeThemeValue(value: string): SettingsTheme {
 }
 
 function normalizeLlmValue(value: string): SettingsLlm {
-  return isOneOf(PROFILE_LLM_OPTIONS, value) ? value : "openai:gpt-5.2";
+  return isOneOf(PROFILE_LLM_OPTIONS, value) ? value : "openai:gpt-5.4";
 }
 
 function normalizeImageLlmValue(value: string): SettingsImageLlm {

@@ -35,7 +35,7 @@ function createResponseRecorder() {
 function createProfile() {
   return buildNormalizedProfileRecord({
     locale: "en",
-    llm: "openai:gpt-5.2"
+    llm: "openai:gpt-5.4"
   });
 }
 
