@@ -98,7 +98,7 @@ function buildJsonObjectFormat(userProfile: UserProfileLike | null = null): Json
             },
             outfit_formulas: {
               type: "array",
-              description: "Provide 4-6 highly wearable outfit formulas using the selected items (reference them by basic name AND ID in [] - IMPORTANT). Every outfit formula must contain either top + bottom or dress.",
+              description: "Provide 4-6 highly wearable outfit formulas using the selected items (reference them by basic name AND ID in [] - IMPORTANT). Every outfit formula must contain either top + bottom or dress. CRITICAL: Every single ID mentioned here MUST explicitly exist in the final 'capsule' object below. Do NOT invent IDs.",
               items: {
                 type: "string"
               },
@@ -117,7 +117,7 @@ function buildJsonObjectFormat(userProfile: UserProfileLike | null = null): Json
             properties: {
               id: {
                 type: "string",
-                description: "Must match candidate ID"
+                description: "CRITICAL: This MUST exactly match a selected candidate ID that is present in the final 'capsule' object. Do not hallucinate IDs."
               },
               role: {
                 type: "string",
@@ -130,7 +130,7 @@ function buildJsonObjectFormat(userProfile: UserProfileLike | null = null): Json
               },
               compatibility: {
                 type: "string",
-                description: "Note how many/which items this pairs with"
+                description: "Note how many/which items this pairs with - the exact IDs of other items IN THE CAPSULE this pairs with. Do NOT reference IDs that are not in your final selection."
               },
               warning: {
                 type: "string",

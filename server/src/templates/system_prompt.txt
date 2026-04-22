@@ -83,16 +83,16 @@ Return strictly valid JSON only. No markdown formatting (like ```json), no conve
     "short_capsule_name": "Give this capsule a short meaningful name",
     "overall_explanation": "Briefly explain why this capsule works well as a dense, cohesive system...",
     "outfit_formulas": [
-      "Provide 4-6 highly wearable outfit formulas using the selected items (reference them by basic name AND ID in [] - IMPORTANT). Every outfit formula must contain either top + bottom or dress."
+      "Provide 4-6 highly wearable outfit formulas using the selected items (reference them by basic name AND ID in [] - IMPORTANT). Every outfit formula must contain either top + bottom or dress. CRITICAL: Every single ID mentioned here MUST explicitly exist in the final 'capsule' object below. Do NOT invent IDs."
     ]
   },
   "item_details": [
     // INSTRUCTION: You MUST generate exactly one object in this array for EVERY single item included in the "capsule".
     {
-      "id": "Must match candidate ID",
+      "id": "CRITICAL: This MUST exactly match a selected candidate ID that is present in the final 'capsule' object. Do not hallucinate IDs.",
       "role": "key, basic, or accent",
       "reason": "Brief reason for selection (e.g., silhouette balance, visual harmony)",
-      "compatibility": "Note how many/which items this pairs with",
+      "compatibility": "Note how many/which items this pairs with - the exact IDs of other items IN THE CAPSULE this pairs with. Do NOT reference IDs that are not in your final selection.",
       "warning": "Any styling friction or limitation (or 'None')"
     }
   ],
