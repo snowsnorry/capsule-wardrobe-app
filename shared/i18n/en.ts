@@ -265,6 +265,7 @@ const en = {
       theme: "Theme",
       language: "Language",
       stylistModel: "Stylist Model",
+      imageGenerationModel: "Image Generation Model",
       name: "Name",
       email: "Email"
     },
@@ -280,6 +281,10 @@ const en = {
       "deepinfra:Qwen/Qwen3-VL-235B-A22B-Instruct": "Qwen 3",
       "deepinfra:google/gemma-4-31B-it": "Google Gemma 4",
       none: "None"
+    },
+    imageLlmOptions: {
+      "openai:gpt-image-2": "OpenAI GPT Image 2",
+      "gemini:gemini-3-pro-image-preview": "Gemini 3 Pro Image Preview"
     }
   },
   onboarding: {

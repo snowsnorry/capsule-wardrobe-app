@@ -154,7 +154,7 @@ vi.mock("./screens/MainScreen", () => ({
         <div>loading-items:{String(props.isLoadingItems)}</div>
         <div>content-busy:{String(props.isContentBusy)}</div>
         <div>partial-loading:{String(props.isPartialRegenerationLoading)}</div>
-        <div>settings-user:{props.userName || ""}:{props.settingsProfile?.theme || ""}:{props.settingsProfile?.llm || ""}</div>
+        <div>settings-user:{props.userName || ""}:{props.settingsProfile?.theme || ""}:{props.settingsProfile?.llm || ""}:{props.settingsProfile?.imageLlm || ""}</div>
         <div>selected-text:{props.selectedText || ""}</div>
         <button type="button" onClick={() => props.onSelectStyleCore("formal")}>
           change-filter
@@ -191,7 +191,8 @@ vi.mock("./screens/MainScreen", () => ({
             fullname: "Ada Lovelace",
             locale: "ru",
             theme: "dark",
-            llm: "openai:gpt-5.2"
+            llm: "openai:gpt-5.2",
+            image_llm: "gemini:gemini-3-pro-image-preview"
           })}
         >
           save-settings
@@ -274,6 +275,7 @@ function createBootstrapResponse({
   locale = "ru",
   theme = "system",
   llm = "none",
+  imageLlm = "openai:gpt-image-2",
   fullname = "",
   activeSnapshot = undefined
 } = {}) {
@@ -283,6 +285,7 @@ function createBootstrapResponse({
       locale,
       theme,
       llm,
+      image_llm: imageLlm,
       fullname
     },
     activeCapsule: {
@@ -821,6 +824,7 @@ describe("App", () => {
         locale: "ru",
         theme: "dark",
         llm: "openai:gpt-5.2",
+        image_llm: "gemini:gemini-3-pro-image-preview",
         fullname: "Ada Lovelace"
       }
     });
@@ -836,11 +840,12 @@ describe("App", () => {
         locale: "ru",
         theme: "dark",
         llm: "openai:gpt-5.2",
+        image_llm: "gemini:gemini-3-pro-image-preview",
         fullname: "Ada Lovelace"
       });
     });
     await waitFor(() => {
-      expect(screen.getByText("settings-user:Ada Lovelace:dark:openai:gpt-5.2")).toBeInTheDocument();
+      expect(screen.getByText("settings-user:Ada Lovelace:dark:openai:gpt-5.2:gemini:gemini-3-pro-image-preview")).toBeInTheDocument();
     });
   });
 

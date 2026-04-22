@@ -146,6 +146,7 @@ function t(key, params) {
         theme: "Theme",
         language: "Language",
         stylistModel: "Stylist Model",
+        imageGenerationModel: "Image Generation Model",
         name: "Name",
         email: "Email"
       },
@@ -161,6 +162,10 @@ function t(key, params) {
         "deepinfra:Qwen/Qwen3-VL-235B-A22B-Instruct": "Qwen 3",
         "deepinfra:google/gemma-4-31B-it": "Google Gemma 4",
         none: "None"
+      },
+      imageLlmOptions: {
+        "openai:gpt-image-2": "OpenAI GPT Image 2",
+        "gemini:gemini-3-pro-image-preview": "Gemini 3 Pro Image Preview"
       }
     }
   };
@@ -939,7 +944,8 @@ describe("MainScreen", () => {
         email: "person@example.com",
         locale: "en",
         theme: "system",
-        llm: "openai:gpt-5.2"
+        llm: "openai:gpt-5.2",
+        imageLlm: "openai:gpt-image-2"
       },
       onSaveSettings
     });
@@ -969,7 +975,8 @@ describe("MainScreen", () => {
         fullname: "Ada Byron",
         locale: "en",
         theme: "dark",
-        llm: "openai:gpt-5.2"
+        llm: "openai:gpt-5.2",
+        image_llm: "openai:gpt-image-2"
       });
     });
   });

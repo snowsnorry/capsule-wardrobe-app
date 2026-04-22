@@ -176,6 +176,7 @@ type ProfileRow = {
   fullname: string | null;
   theme: string | null;
   llm: string | null;
+  imageLlm: string | null;
   createdAt: string | Date;
   updatedAt: string | Date;
 };
@@ -191,6 +192,7 @@ type UpdateProfileInput = {
   fullname: string | null;
   theme: string;
   llm: string;
+  imageLlm: string;
 };
 
 type UpdateProfileActiveCapsuleInput = {
@@ -327,6 +329,7 @@ async function ensureProfilesTable(): Promise<void> {
       fullname text null,
       theme text not null default 'system',
       llm text not null default 'openai:gpt-5.2',
+      image_llm text not null default 'openai:gpt-image-2',
       created_at timestamptz not null default now(),
       updated_at timestamptz not null default now()
     )
@@ -346,6 +349,14 @@ async function ensureProfilesTable(): Promise<void> {
   await sql`
     alter table profiles
     alter column llm set default 'openai:gpt-5.2'
+  `;
+  await sql`
+    alter table profiles
+    add column if not exists image_llm text not null default 'openai:gpt-image-2'
+  `;
+  await sql`
+    alter table profiles
+    alter column image_llm set default 'openai:gpt-image-2'
   `;
   await sql`
     update profiles
@@ -387,6 +398,26 @@ async function ensureProfilesTable(): Promise<void> {
         'deepinfra:Qwen/Qwen3-VL-235B-A22B-Instruct',
         'deepinfra:google/gemma-4-31B-it',
         'none'
+      ));
+    end
+    $$;
+  `;
+  await sql`
+    do $$
+    begin
+      if exists (
+        select 1
+        from pg_constraint
+        where conname = 'profiles_image_llm_check'
+      ) then
+        alter table profiles
+        drop constraint profiles_image_llm_check;
+      end if;
+      alter table profiles
+      add constraint profiles_image_llm_check
+      check (image_llm in (
+        'openai:gpt-image-2',
+        'gemini:gemini-3-pro-image-preview'
       ));
     end
     $$;
@@ -1575,6 +1606,7 @@ async function getProfileByEmail(email: string): Promise<ProfileRow | null> {
       fullname,
       theme,
       llm,
+      image_llm as "imageLlm",
       created_at as "createdAt",
       updated_at as "updatedAt"
     from profiles
@@ -1608,6 +1640,7 @@ async function createProfileRecord({
       fullname,
       theme,
       llm,
+      image_llm as "imageLlm",
       created_at as "createdAt",
       updated_at as "updatedAt"
   `);
@@ -1629,6 +1662,7 @@ async function updateProfileLocaleByEmail({ email, locale }: CreateProfileInput)
       fullname,
       theme,
       llm,
+      image_llm as "imageLlm",
       created_at as "createdAt",
       updated_at as "updatedAt"
   `);
@@ -1640,7 +1674,8 @@ async function updateProfileByEmail({
   locale,
   fullname,
   theme,
-  llm
+  llm,
+  imageLlm
 }: UpdateProfileInput): Promise<ProfileRow | null> {
   const sql = getSqlClient();
   const row = getFirstRow(await sql<ProfileRow>`
@@ -1650,6 +1685,7 @@ async function updateProfileByEmail({
       fullname = ${fullname},
       theme = ${theme},
       llm = ${llm},
+      image_llm = ${imageLlm},
       updated_at = now()
     where email = ${email}
     returning
@@ -1659,6 +1695,7 @@ async function updateProfileByEmail({
       fullname,
       theme,
       llm,
+      image_llm as "imageLlm",
       created_at as "createdAt",
       updated_at as "updatedAt"
   `);
@@ -1683,6 +1720,7 @@ async function updateProfileActiveCapsuleIdByEmail({
       fullname,
       theme,
       llm,
+      image_llm as "imageLlm",
       created_at as "createdAt",
       updated_at as "updatedAt"
   `);

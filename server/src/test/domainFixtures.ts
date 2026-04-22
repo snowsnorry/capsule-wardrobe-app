@@ -68,6 +68,7 @@ function buildNormalizedProfileRecord(
     activeCapsuleId: null,
     theme: "system",
     llm: "openai:gpt-5.2",
+    imageLlm: "openai:gpt-image-2",
     ...overrides
   };
 }

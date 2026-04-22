@@ -112,6 +112,7 @@ describe("auth api", () => {
       locale: "ru",
       theme: "dark",
       llm: "openai:gpt-5.2",
+      image_llm: "openai:gpt-image-2",
       fullname: "Ada Lovelace"
     });
     await updateProfileLocale("ru");
@@ -137,6 +138,7 @@ describe("auth api", () => {
           locale: "ru",
           theme: "dark",
           llm: "openai:gpt-5.2",
+          image_llm: "openai:gpt-image-2",
           fullname: "Ada Lovelace"
         })
       }

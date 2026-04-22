@@ -32,6 +32,7 @@ type JsonSchemaFormat = {
 
 type UserProfileLike = {
   llm?: string | null;
+  imageLlm?: string | null;
   style?: string | null;
   color?: string | null;
   audience?: string | null;

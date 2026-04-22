@@ -68,7 +68,8 @@ function createDependencies(overrides: DependencyOverrides = {}) {
       locale: "en",
       fullname: null,
       theme: "system",
-      llm: "openai:gpt-5.2"
+      llm: "openai:gpt-5.2",
+      imageLlm: "openai:gpt-image-2"
     }),
     hasProfileImpl: async () => true,
     updateProfileImpl: async (email, payload) => ({ id: "profile-1", email, activeCapsuleId: "capsule-1", ...payload }),
@@ -79,7 +80,8 @@ function createDependencies(overrides: DependencyOverrides = {}) {
       locale,
       fullname: null,
       theme: "system",
-      llm: "openai:gpt-5.2"
+      llm: "openai:gpt-5.2",
+      imageLlm: "openai:gpt-image-2"
     }),
     updateProfileActiveCapsuleIdImpl: async (_email, activeCapsuleId) => ({ activeCapsuleId }),
     resolveActiveCapsuleImpl: async () => ({
@@ -483,6 +485,7 @@ test("index routes cover profile read endpoints", async (t) => {
   assert.equal(profile.json.profile.locale, "en");
   assert.equal(profile.json.profile.theme, "system");
   assert.equal(profile.json.profile.llm, "openai:gpt-5.2");
+  assert.equal(profile.json.profile.image_llm, "openai:gpt-image-2");
   assert.equal(profile.json.profile.fullname, null);
 
   const wardrobeFilters = await requestJson(baseUrl, "/wardrobe/filters", {
@@ -563,6 +566,7 @@ test("index routes cover profile update, locale update, and delete branches", as
       locale: "en",
       theme: "system",
       llm: "openai:gpt-5.2",
+      image_llm: "openai:gpt-image-2",
       fullname: null
     }
   });
@@ -578,6 +582,7 @@ test("index routes cover profile update, locale update, and delete branches", as
       locale: "en",
       theme: "sepia",
       llm: "openai:gpt-5.2",
+      image_llm: "openai:gpt-image-2",
       fullname: "Ada"
     }
   });
@@ -623,6 +628,7 @@ test("index routes cover profile update, locale update, and delete branches", as
       locale: "ru",
       theme: "dark",
       llm: "claude:claude-opus-4-7",
+      image_llm: "gemini:gemini-3-pro-image-preview",
       fullname: "  Ada Lovelace  "
     }
   });
@@ -631,6 +637,7 @@ test("index routes cover profile update, locale update, and delete branches", as
   assert.equal(updateSuccess.json.profile.locale, "ru");
   assert.equal(updateSuccess.json.profile.theme, "dark");
   assert.equal(updateSuccess.json.profile.llm, "claude:claude-opus-4-7");
+  assert.equal(updateSuccess.json.profile.image_llm, "gemini:gemini-3-pro-image-preview");
   assert.equal(updateSuccess.json.profile.fullname, "Ada Lovelace");
 
   const localeSuccess = await requestJson(successServer.baseUrl, "/profile/locale", {

@@ -94,6 +94,7 @@ type ProfileRow = {
   fullname?: string | null;
   theme?: string | null;
   llm?: string | null;
+  imageLlm?: string | null;
 };
 
 function createSqlMock(handlers: SqlResultHandler[]) {
@@ -362,7 +363,8 @@ test("db integration shapes reduced profile persistence queries", async () => {
       locale: "en",
       fullname: null,
       theme: "system",
-      llm: "openai:gpt-5.2"
+      llm: "openai:gpt-5.2",
+      imageLlm: "openai:gpt-image-2"
     }] satisfies ProfileRow[],
     [{
       email: "user@example.com",
@@ -370,7 +372,8 @@ test("db integration shapes reduced profile persistence queries", async () => {
       locale: "ru",
       fullname: null,
       theme: "system",
-      llm: "openai:gpt-5.2"
+      llm: "openai:gpt-5.2",
+      imageLlm: "openai:gpt-image-2"
     }] satisfies ProfileRow[],
     [{
       email: "user@example.com",
@@ -378,7 +381,8 @@ test("db integration shapes reduced profile persistence queries", async () => {
       locale: "ru",
       fullname: "Ada Lovelace",
       theme: "dark",
-      llm: "claude:claude-opus-4-7"
+      llm: "claude:claude-opus-4-7",
+      imageLlm: "gemini:gemini-3-pro-image-preview"
     }] satisfies ProfileRow[],
     [],
     [{ email: "user@example.com" }]
@@ -395,7 +399,8 @@ test("db integration shapes reduced profile persistence queries", async () => {
     locale: "ru",
     fullname: "Ada Lovelace",
     theme: "dark",
-    llm: "claude:claude-opus-4-7"
+    llm: "claude:claude-opus-4-7",
+    imageLlm: "gemini:gemini-3-pro-image-preview"
   });
   const deleted = await deleteProfileByEmail("user@example.com");
 
@@ -406,7 +411,14 @@ test("db integration shapes reduced profile persistence queries", async () => {
   assert.match(calls[1].text, /update profiles\s+set[\s\S]*locale =/i);
   assert.deepEqual(calls[1].values, ["ru", "user@example.com"]);
   assert.match(calls[2].text, /update profiles\s+set[\s\S]*fullname =/i);
-  assert.deepEqual(calls[2].values, ["ru", "Ada Lovelace", "dark", "claude:claude-opus-4-7", "user@example.com"]);
+  assert.deepEqual(calls[2].values, [
+    "ru",
+    "Ada Lovelace",
+    "dark",
+    "claude:claude-opus-4-7",
+    "gemini:gemini-3-pro-image-preview",
+    "user@example.com"
+  ]);
   assert.match(calls[3].text, /delete from capsules/i);
   assert.match(calls[4].text, /delete from profiles/i);
 });

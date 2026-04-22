@@ -38,6 +38,7 @@ function renderDialog(props: Partial<ComponentProps<typeof SettingsDialog>> = {}
         "settings.fields.theme": "Theme",
         "settings.fields.language": "Language",
         "settings.fields.stylistModel": "Stylist Model",
+        "settings.fields.imageGenerationModel": "Image Generation Model",
         "settings.fields.name": "Name",
         "settings.fields.email": "Email",
         "settings.themeOptions.system": "System",
@@ -51,6 +52,8 @@ function renderDialog(props: Partial<ComponentProps<typeof SettingsDialog>> = {}
         "settings.llmOptions.deepinfra:Qwen/Qwen3-VL-235B-A22B-Instruct": "Qwen 3",
         "settings.llmOptions.deepinfra:google/gemma-4-31B-it": "Google Gemma 4",
         "settings.llmOptions.none": "None",
+        "settings.imageLlmOptions.openai:gpt-image-2": "OpenAI GPT Image 2",
+        "settings.imageLlmOptions.gemini:gemini-3-pro-image-preview": "Gemini 3 Pro Image Preview",
         "actions.cancel": "Cancel",
         "actions.save": "Save",
         "errors.generic": "Something went wrong"
@@ -67,7 +70,8 @@ function renderDialog(props: Partial<ComponentProps<typeof SettingsDialog>> = {}
       email: "ada@example.com",
       locale: "en",
       theme: "system",
-      llm: "openai:gpt-5.2"
+      llm: "openai:gpt-5.2",
+      imageLlm: "openai:gpt-image-2"
     },
     onClose: vi.fn(),
     onSave: vi.fn(() => Promise.resolve())
@@ -101,6 +105,8 @@ describe("SettingsDialog", () => {
     await user.click(screen.getByRole("button", { name: "AI" }));
     await user.click(screen.getByRole("combobox", { name: "Stylist Model" }));
     await user.click(screen.getByRole("option", { name: "Qwen 3" }));
+    await user.click(screen.getByRole("combobox", { name: "Image Generation Model" }));
+    await user.click(screen.getByRole("option", { name: "Gemini 3 Pro Image Preview" }));
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     expect(screen.getByRole("progressbar")).toBeInTheDocument();

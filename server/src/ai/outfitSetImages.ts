@@ -1,8 +1,12 @@
 import { randomUUID } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { getCapsule, getEffectiveCapsuleSnapshot, updateCapsuleSnapshot } from "../capsuleStore.js";
+import { getProfile } from "../profileStore.js";
 import { buildCapsuleEventSnapshot, capsuleEventHub } from "./capsuleEvents.js";
 import { generateImageWithGemini } from "./geminiImage.js";
+import { resolveImageLlmProvider } from "./imageLlm.js";
+import { logWardrobeInfo } from "./ai.js";
+import { generateImageWithOpenAi } from "./openaiImage.js";
 import { buildOutfitSetDescription } from "./outfitSetImageDescription.js";
 import { downloadProductImageAssets } from "./promptImages.js";
 
@@ -73,6 +77,7 @@ function resolveTargetSetItems(wardrobe, setIndex) {
 
 function createOutfitSetImageService({
   getCapsuleImpl = getCapsule,
+  getProfileImpl = getProfile,
   updateCapsuleSnapshotImpl = updateCapsuleSnapshot,
   publishSnapshotImpl = ((email, capsuleId, snapshot) => capsuleEventHub.publish(email, capsuleId, snapshot)) as (
     email: string,
@@ -81,6 +86,7 @@ function createOutfitSetImageService({
   ) => void | boolean,
   buildCapsuleEventSnapshotImpl = buildCapsuleEventSnapshot as (payload?: Record<string, unknown>) => unknown,
   downloadProductImageAssetsImpl = downloadProductImageAssets,
+  generateImageWithOpenAiImpl = generateImageWithOpenAi,
   generateImageWithGeminiImpl = generateImageWithGemini,
   buildOutfitSetDescriptionImpl = buildOutfitSetDescription
 } = {}) {
@@ -199,7 +205,24 @@ function createOutfitSetImageService({
           .map((item) => imageAssetsById[String(item?.id || "").trim()] || null)
           .filter(Boolean);
 
-        const result = await generateImageWithGeminiImpl(prompt, { images });
+        const userProfile = await getProfileImpl(email);
+        const imageLlmResolution = resolveImageLlmProvider(userProfile);
+        const imageLlmStartedAt = Date.now();
+        const generateImageImpl = imageLlmResolution.provider === "gemini"
+          ? generateImageWithGeminiImpl
+          : generateImageWithOpenAiImpl;
+        const result = await generateImageImpl(prompt, {
+          images,
+          model: imageLlmResolution.model
+        });
+        logWardrobeInfo("outfit-set-image-llm-completed", {
+          llmProvider: imageLlmResolution.provider,
+          llmModel: imageLlmResolution.model,
+          requestedImageLlm: imageLlmResolution.requestedImageLlm,
+          fallbackReason: imageLlmResolution.fallbackReason,
+          llmDurationMs: Date.now() - imageLlmStartedAt,
+          imageCount: images.length
+        });
 
         const nextOutfitSets = outfitSets.map((set, index) => (
           index === setIndex

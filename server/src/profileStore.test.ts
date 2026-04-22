@@ -24,6 +24,7 @@ type ProfileRecordFixture = {
   fullname: string | null;
   theme: string;
   llm: string;
+  imageLlm?: string;
 };
 
 test("normalizeFormalityLevel keeps only known core styles", () => {
@@ -113,7 +114,8 @@ test("normalizeProfileRecord applies defaults for new profile fields", () => {
     locale: "en",
     fullname: "  ",
     theme: "invalid",
-    llm: ""
+    llm: "",
+    imageLlm: ""
   };
 
   const expected: ProfileRecordFixture = {
@@ -122,7 +124,8 @@ test("normalizeProfileRecord applies defaults for new profile fields", () => {
     locale: "en",
     fullname: null,
     theme: "system",
-    llm: "openai:gpt-5.2"
+    llm: "openai:gpt-5.2",
+    imageLlm: "openai:gpt-image-2"
   };
 
   assert.deepEqual(
@@ -138,7 +141,8 @@ test("normalizeProfileRecord keeps a supported claude llm selection", () => {
     locale: "en",
     fullname: "Ada",
     theme: "dark",
-    llm: "claude:claude-opus-4-7"
+    llm: "claude:claude-opus-4-7",
+    imageLlm: "gemini:gemini-3-pro-image-preview"
   };
 
   assert.deepEqual(

@@ -58,7 +58,7 @@ import SignInScreen from "./screens/SignInScreen";
 import { useI18n } from "./i18n/useI18n";
 import { ACCENT_COLOR_OPTIONS } from "../../shared/accentColors.js";
 import { createAppTheme } from "./theme";
-import { DEFAULT_PROFILE_LLM, DEFAULT_PROFILE_THEME } from "../../shared/profileSettings.js";
+import { DEFAULT_PROFILE_IMAGE_LLM, DEFAULT_PROFILE_LLM, DEFAULT_PROFILE_THEME } from "../../shared/profileSettings.js";
 import {
   buildDisplayWardrobeItems,
   mergeWardrobeItemsIntoExistingOrder
@@ -88,6 +88,8 @@ type ProfileSettings = {
   fullname: string;
   theme: string;
   llm: string;
+  imageLlm: string;
+  image_llm?: string;
 };
 
 type CapsuleFilters = {
@@ -253,7 +255,10 @@ function normalizeProfileSettings(profile: Partial<ProfileSettings> = {}, email 
     locale: typeof profile?.locale === "string" && profile.locale.trim() ? profile.locale.trim() : "en",
     fullname: typeof profile?.fullname === "string" ? profile.fullname.trim() : "",
     theme: typeof profile?.theme === "string" && profile.theme.trim() ? profile.theme.trim() : DEFAULT_PROFILE_THEME,
-    llm: typeof profile?.llm === "string" && profile.llm.trim() ? profile.llm.trim() : DEFAULT_PROFILE_LLM
+    llm: typeof profile?.llm === "string" && profile.llm.trim() ? profile.llm.trim() : DEFAULT_PROFILE_LLM,
+    imageLlm: typeof profile?.imageLlm === "string" && profile.imageLlm.trim()
+      ? profile.imageLlm.trim()
+      : (typeof profile?.image_llm === "string" && profile.image_llm.trim() ? profile.image_llm.trim() : DEFAULT_PROFILE_IMAGE_LLM)
   };
 }
 
@@ -947,6 +952,7 @@ function App() {
       locale: String(nextSettings?.locale || settingsProfile.locale || locale || "en").trim().toLowerCase(),
       theme: String(nextSettings?.theme || settingsProfile.theme || DEFAULT_PROFILE_THEME).trim().toLowerCase(),
       llm: String(nextSettings?.llm || settingsProfile.llm || DEFAULT_PROFILE_LLM).trim(),
+      image_llm: String(nextSettings?.image_llm || settingsProfile.imageLlm || DEFAULT_PROFILE_IMAGE_LLM).trim(),
       fullname: typeof nextSettings?.fullname === "string" ? nextSettings.fullname.trim() : ""
     };
 

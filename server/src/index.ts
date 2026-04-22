@@ -62,7 +62,9 @@ import { configureSharp } from "./ai/sharpConfig.js";
 import { sortWardrobeItems } from "../../shared/wardrobeOrder.js";
 import {
   DEFAULT_PROFILE_LLM,
+  DEFAULT_PROFILE_IMAGE_LLM,
   DEFAULT_PROFILE_THEME,
+  PROFILE_IMAGE_LLM_VALUES,
   PROFILE_LLM_VALUES,
   PROFILE_THEME_VALUES
 } from "../../shared/profileSettings.js";
@@ -73,6 +75,7 @@ type ProfileSettingsPayload = {
   locale: string;
   theme: string;
   llm: string;
+  imageLlm: string;
   fullname: string | null;
 };
 type RejectedUrlsValidationResult =
@@ -85,6 +88,10 @@ function isProfileThemeValue(value: string): value is (typeof PROFILE_THEME_VALU
 
 function isProfileLlmValue(value: string): value is (typeof PROFILE_LLM_VALUES)[number] {
   return (PROFILE_LLM_VALUES as readonly string[]).includes(value);
+}
+
+function isProfileImageLlmValue(value: string): value is (typeof PROFILE_IMAGE_LLM_VALUES)[number] {
+  return (PROFILE_IMAGE_LLM_VALUES as readonly string[]).includes(value);
 }
 
 const PORT = process.env.PORT || 3000;
@@ -276,6 +283,7 @@ function normalizeProfileSettingsPayload(payload: unknown): ProfileSettingsPaylo
   const locale = String(record.locale || "").trim().toLowerCase();
   const theme = String(record.theme || "").trim().toLowerCase();
   const llm = String(record.llm || "").trim();
+  const imageLlm = String(record.image_llm || "").trim();
 
   if (!SUPPORTED_LOCALES.has(locale)) {
     return null;
@@ -284,6 +292,9 @@ function normalizeProfileSettingsPayload(payload: unknown): ProfileSettingsPaylo
     return null;
   }
   if (!isProfileLlmValue(llm)) {
+    return null;
+  }
+  if (imageLlm && !isProfileImageLlmValue(imageLlm)) {
     return null;
   }
 
@@ -296,9 +307,24 @@ function normalizeProfileSettingsPayload(payload: unknown): ProfileSettingsPaylo
     locale,
     theme: theme || DEFAULT_PROFILE_THEME,
     llm: llm || DEFAULT_PROFILE_LLM,
+    imageLlm: imageLlm || DEFAULT_PROFILE_IMAGE_LLM,
     fullname: typeof rawFullname === "string" && rawFullname.trim()
       ? rawFullname.trim()
       : null
+  };
+}
+
+function toProfileResponse(profile) {
+  if (!profile || typeof profile !== "object") {
+    return profile || null;
+  }
+
+  const { imageLlm, ...rest } = profile;
+  return {
+    ...rest,
+    image_llm: typeof imageLlm === "string" && imageLlm.trim()
+      ? imageLlm.trim()
+      : DEFAULT_PROFILE_IMAGE_LLM
   };
 }
 
@@ -761,7 +787,7 @@ app.get("/profile/me", requireAuth, async (req, res) => {
     if (!profile) {
       return res.status(404).json({ error: "not_found" });
     }
-    return res.json({ ok: true, profile });
+    return res.json({ ok: true, profile: toProfileResponse(profile) });
   } catch (error) {
     console.error("[profile/me]", error);
     return res.status(503).json({ error: "service_unavailable" });
@@ -799,7 +825,7 @@ app.get("/capsules/bootstrap", requireAuth, async (req, res) => {
     const recentCapsules = await listRecentCapsulesImpl(req.user.email, 10);
     return res.json({
       ok: true,
-      profile: profile || null,
+      profile: toProfileResponse(profile),
       activeCapsule: toCapsuleResponse(activeCapsule),
       activeSnapshot: getCapsuleEventSnapshot(req.user.email, activeCapsule),
       capsules: recentCapsules.map(toCapsuleSummary)
@@ -1163,7 +1189,7 @@ app.post("/profile/initialize", requireTrustedOrigin, requireAuth, requireCsrf, 
     if (!profile) {
       return res.status(409).json({ error: "profile_exists" });
     }
-    return res.json({ ok: true, profile });
+    return res.json({ ok: true, profile: toProfileResponse(profile) });
   } catch (error) {
     console.error("[profile/initialize]", error);
     return res.status(503).json({ error: "service_unavailable" });
@@ -1181,7 +1207,7 @@ app.patch("/profile/me", requireTrustedOrigin, requireAuth, requireCsrf, async (
     if (!profile) {
       return res.status(404).json({ error: "not_found" });
     }
-    return res.json({ ok: true, profile });
+    return res.json({ ok: true, profile: toProfileResponse(profile) });
   } catch (error) {
     console.error("[profile/update]", error);
     return res.status(503).json({ error: "service_unavailable" });
@@ -1199,7 +1225,7 @@ app.patch("/profile/locale", requireTrustedOrigin, requireAuth, requireCsrf, asy
     if (!profile) {
       return res.status(404).json({ error: "not_found" });
     }
-    return res.json({ ok: true, profile });
+    return res.json({ ok: true, profile: toProfileResponse(profile) });
   } catch (error) {
     console.error("[profile/locale]", error);
     return res.status(503).json({ error: "service_unavailable" });

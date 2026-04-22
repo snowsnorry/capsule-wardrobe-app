@@ -18,17 +18,19 @@ import {
 } from "@mui/material";
 import type { ReactElement } from "react";
 import { useI18n } from "../i18n/useI18n";
-import { PROFILE_LLM_VALUES, PROFILE_THEME_VALUES } from "../../../shared/profileSettings.js";
+import { PROFILE_IMAGE_LLM_VALUES, PROFILE_LLM_VALUES, PROFILE_THEME_VALUES } from "../../../shared/profileSettings.js";
 
 const SETTINGS_SECTIONS = ["general", "ai", "account"] as const;
 const LANGUAGE_OPTIONS = ["en", "ru"] as const;
 const PROFILE_THEME_OPTIONS = [...PROFILE_THEME_VALUES];
 const PROFILE_LLM_OPTIONS = [...PROFILE_LLM_VALUES];
+const PROFILE_IMAGE_LLM_OPTIONS = [...PROFILE_IMAGE_LLM_VALUES];
 
 type SettingsSection = (typeof SETTINGS_SECTIONS)[number];
 type SettingsLocale = (typeof LANGUAGE_OPTIONS)[number];
 type SettingsTheme = (typeof PROFILE_THEME_VALUES)[number];
 type SettingsLlm = (typeof PROFILE_LLM_VALUES)[number];
+type SettingsImageLlm = (typeof PROFILE_IMAGE_LLM_VALUES)[number];
 
 type SettingsProfile = {
   fullname?: string | null;
@@ -36,6 +38,8 @@ type SettingsProfile = {
   locale?: string | null;
   theme?: string | null;
   llm?: string | null;
+  imageLlm?: string | null;
+  image_llm?: string | null;
 };
 
 type SettingsDraft = {
@@ -44,6 +48,7 @@ type SettingsDraft = {
   locale: SettingsLocale;
   theme: SettingsTheme;
   llm: SettingsLlm;
+  imageLlm: SettingsImageLlm;
 };
 
 type SettingsSavePayload = {
@@ -51,6 +56,7 @@ type SettingsSavePayload = {
   locale: SettingsLocale;
   theme: SettingsTheme;
   llm: SettingsLlm;
+  image_llm: SettingsImageLlm;
 };
 
 type SettingsDialogProps = {
@@ -76,13 +82,18 @@ function normalizeLlmValue(value: string): SettingsLlm {
   return isOneOf(PROFILE_LLM_OPTIONS, value) ? value : "openai:gpt-5.2";
 }
 
+function normalizeImageLlmValue(value: string): SettingsImageLlm {
+  return isOneOf(PROFILE_IMAGE_LLM_OPTIONS, value) ? value : "openai:gpt-image-2";
+}
+
 function normalizeSettingsDraft(settings: SettingsProfile = {}, fallbackEmail = ""): SettingsDraft {
   return {
     fullname: typeof settings.fullname === "string" ? settings.fullname : "",
     email: String(settings.email || fallbackEmail || "").trim(),
     locale: isOneOf(LANGUAGE_OPTIONS, settings.locale) ? settings.locale : "en",
     theme: normalizeThemeValue(String(settings.theme || "")),
-    llm: normalizeLlmValue(String(settings.llm || ""))
+    llm: normalizeLlmValue(String(settings.llm || "")),
+    imageLlm: normalizeImageLlmValue(String(settings.imageLlm || settings.image_llm || ""))
   };
 }
 
@@ -136,7 +147,8 @@ function SettingsDialog({
         fullname: draft.fullname,
         locale: draft.locale,
         theme: draft.theme,
-        llm: draft.llm
+        llm: draft.llm,
+        image_llm: draft.imageLlm
       });
       onClose();
     } catch (saveError) {
@@ -190,6 +202,18 @@ function SettingsDialog({
             {PROFILE_LLM_OPTIONS.map((value) => (
               <MenuItem key={value} value={value}>
                 {t(`settings.llmOptions.${value}`)}
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            select
+            label={t("settings.fields.imageGenerationModel")}
+            value={draft.imageLlm}
+            onChange={(event) => handleDraftChange("imageLlm", normalizeImageLlmValue(event.target.value))}
+          >
+            {PROFILE_IMAGE_LLM_OPTIONS.map((value) => (
+              <MenuItem key={value} value={value}>
+                {t(`settings.imageLlmOptions.${value}`)}
               </MenuItem>
             ))}
           </TextField>

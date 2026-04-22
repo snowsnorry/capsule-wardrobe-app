@@ -13,13 +13,16 @@ import { buildCanonicalPatternOptions } from "../../shared/patternOptions.js";
 import { CORE_STYLE_ORDER, normalizeStyleValue } from "../../shared/stylePreferences.js";
 import {
   DEFAULT_PROFILE_LLM,
+  DEFAULT_PROFILE_IMAGE_LLM,
   DEFAULT_PROFILE_THEME,
+  PROFILE_IMAGE_LLM_VALUES,
   PROFILE_LLM_VALUES,
   PROFILE_THEME_VALUES
 } from "../../shared/profileSettings.js";
 
 type ProfileTheme = (typeof PROFILE_THEME_VALUES)[number];
 type ProfileLlm = (typeof PROFILE_LLM_VALUES)[number];
+type ProfileImageLlm = (typeof PROFILE_IMAGE_LLM_VALUES)[number];
 type ProfileOccasion = (typeof PROFILE_OCCASION_OPTIONS)[number];
 type ProfileSeason = (typeof PROFILE_SEASON_OPTIONS)[number];
 
@@ -30,14 +33,16 @@ type ProfileRecord = {
   activeCapsuleId?: string | null;
   theme?: string | null;
   llm?: string | null;
+  imageLlm?: string | null;
   [key: string]: unknown;
 };
 
-type NormalizedProfileRecord = Omit<ProfileRecord, "fullname" | "activeCapsuleId" | "theme" | "llm"> & {
+type NormalizedProfileRecord = Omit<ProfileRecord, "fullname" | "activeCapsuleId" | "theme" | "llm" | "imageLlm"> & {
   fullname: string | null;
   activeCapsuleId: string | null;
   theme: ProfileTheme;
   llm: ProfileLlm;
+  imageLlm: ProfileImageLlm;
 };
 
 type ProfilePayload = {
@@ -45,6 +50,7 @@ type ProfilePayload = {
   fullname?: string | null;
   theme?: string | null;
   llm?: string | null;
+  imageLlm?: string | null;
 };
 
 type LoadValues = () => Promise<string[]>;
@@ -198,6 +204,7 @@ function normalizeProfileRecord(profile: ProfileRecord | null): NormalizedProfil
 
   const theme = String(profile.theme || "").trim().toLowerCase();
   const llm = String(profile.llm || "").trim();
+  const imageLlm = String(profile.imageLlm || "").trim();
   const fullname = typeof profile.fullname === "string" && profile.fullname.trim()
     ? profile.fullname.trim()
     : null;
@@ -209,7 +216,10 @@ function normalizeProfileRecord(profile: ProfileRecord | null): NormalizedProfil
       ? profile.activeCapsuleId.trim()
       : null,
     theme: (PROFILE_THEME_VALUES as readonly string[]).includes(theme) ? (theme as ProfileTheme) : DEFAULT_PROFILE_THEME,
-    llm: (PROFILE_LLM_VALUES as readonly string[]).includes(llm) ? (llm as ProfileLlm) : DEFAULT_PROFILE_LLM
+    llm: (PROFILE_LLM_VALUES as readonly string[]).includes(llm) ? (llm as ProfileLlm) : DEFAULT_PROFILE_LLM,
+    imageLlm: (PROFILE_IMAGE_LLM_VALUES as readonly string[]).includes(imageLlm)
+      ? (imageLlm as ProfileImageLlm)
+      : DEFAULT_PROFILE_IMAGE_LLM
   };
 }
 
@@ -240,7 +250,10 @@ async function updateProfile(email: string, data: ProfilePayload): Promise<Norma
       : DEFAULT_PROFILE_THEME,
     llm: (PROFILE_LLM_VALUES as readonly string[]).includes(String(data.llm || "").trim())
       ? (String(data.llm || "").trim() as ProfileLlm)
-      : DEFAULT_PROFILE_LLM
+      : DEFAULT_PROFILE_LLM,
+    imageLlm: (PROFILE_IMAGE_LLM_VALUES as readonly string[]).includes(String(data.imageLlm || "").trim())
+      ? (String(data.imageLlm || "").trim() as ProfileImageLlm)
+      : DEFAULT_PROFILE_IMAGE_LLM
   }));
 }
 

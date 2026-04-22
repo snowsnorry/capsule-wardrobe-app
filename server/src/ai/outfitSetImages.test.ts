@@ -4,6 +4,7 @@ import { buildPromptFromTemplate, createOutfitSetImageService } from "./outfitSe
 import {
   buildCapsuleSnapshot,
   buildNormalizedCapsuleRecord,
+  buildNormalizedProfileRecord,
   buildStoredOutfitSet
 } from "../test/domainFixtures.js";
 
@@ -79,15 +80,20 @@ test("outfitSetImage service starts job and persists generated image", async () 
   const updates = [];
   const prompts = [];
   const imagePayloads = [];
+  const models = [];
   const service = createOutfitSetImageService({
     getCapsuleImpl: async () => createCapsule(),
+    getProfileImpl: async () => buildNormalizedProfileRecord({
+      imageLlm: "openai:gpt-image-2"
+    }),
     buildCapsuleEventSnapshotImpl: (payload) => payload,
     publishSnapshotImpl: (...args) => {
       published.push(args);
     },
-    generateImageWithGeminiImpl: async (prompt, { images }) => {
+    generateImageWithOpenAiImpl: async (prompt, { images, model }) => {
       prompts.push(prompt);
       imagePayloads.push(images);
+      models.push(model);
       return {
         response: null,
         image: {
@@ -151,6 +157,81 @@ test("outfitSetImage service starts job and persists generated image", async () 
   assert.equal(published.length, 2);
   assert.match(prompts[0], /top-down flat lay photograph/i);
   assert.equal(imagePayloads[0].length, 3);
+  assert.deepEqual(models, ["gpt-image-2"]);
+});
+
+test("outfitSetImage service uses gemini image provider from profile setting", async () => {
+  const geminiCalls = [];
+  const openAiCalls = [];
+  const service = createOutfitSetImageService({
+    getCapsuleImpl: async () => createCapsule(),
+    getProfileImpl: async () => buildNormalizedProfileRecord({
+      imageLlm: "gemini:gemini-3-pro-image-preview"
+    }),
+    buildCapsuleEventSnapshotImpl: (payload) => payload,
+    publishSnapshotImpl: () => {},
+    generateImageWithOpenAiImpl: async (...args) => {
+      openAiCalls.push(args);
+      throw new Error("unexpected_openai_call");
+    },
+    generateImageWithGeminiImpl: async (prompt, { images, model }) => {
+      geminiCalls.push({ prompt, images, model });
+      return {
+        response: null,
+        image: {
+          base64: "generated-by-gemini",
+          mimeType: "image/png"
+        }
+      };
+    },
+    downloadProductImageAssetsImpl: async () => ({
+      "top-1": {
+        buffer: Buffer.from("top"),
+        mimeType: "image/jpeg",
+        source: "download",
+        imageUrl: "https://example.com/top.jpg",
+        originalImageUrl: "https://example.com/top.jpg",
+        width: 100,
+        height: 100
+      },
+      "bottom-1": {
+        buffer: Buffer.from("bottom"),
+        mimeType: "image/jpeg",
+        source: "download",
+        imageUrl: "https://example.com/bottom.jpg",
+        originalImageUrl: "https://example.com/bottom.jpg",
+        width: 100,
+        height: 100
+      },
+      "bag-1": {
+        buffer: Buffer.from("bag"),
+        mimeType: "image/jpeg",
+        source: "download",
+        imageUrl: "https://example.com/bag.jpg",
+        originalImageUrl: "https://example.com/bag.jpg",
+        width: 100,
+        height: 100
+      }
+    }),
+    updateCapsuleSnapshotImpl: async (_email, _capsuleId, draft) => buildNormalizedCapsuleRecord({
+      ...createCapsule(),
+      draft
+    })
+  });
+  const res = createResponseRecorder();
+
+  await service.generateOutfitSetImage({
+    user: { email: "person@example.com" },
+    params: { id: "capsule-1", setIndex: "0" }
+  }, res);
+
+  assert.equal(res.statusCode, 202);
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  assert.equal(openAiCalls.length, 0);
+  assert.equal(geminiCalls.length, 1);
+  assert.equal(geminiCalls[0].model, "gemini-3-pro-image-preview");
+  assert.equal(geminiCalls[0].images.length, 3);
 });
 
 test("deleteOutfitSetImage clears stored image and publishes updated snapshot", async () => {
