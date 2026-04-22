@@ -55,6 +55,7 @@ type CapsuleSnapshotOverrides = {
   data?: {
     wardrobe?: StoredWardrobePayloadLike | null;
     rejectedUrls?: string[];
+    regeneration?: CapsuleSnapshot["data"]["regeneration"];
   };
 };
 
@@ -153,7 +154,8 @@ function buildCapsuleSnapshot(
     },
     data: {
       wardrobe: overrides.data?.wardrobe ?? null,
-      rejectedUrls: overrides.data?.rejectedUrls ?? []
+      rejectedUrls: overrides.data?.rejectedUrls ?? [],
+      regeneration: overrides.data?.regeneration ?? null
     }
   };
 }

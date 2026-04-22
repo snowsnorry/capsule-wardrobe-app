@@ -445,6 +445,7 @@ const ru = {
     invalidGoogleToken: "Не удалось войти через Google. Попробуйте снова.",
     googleAuthNotConfigured: "Вход через Google не настроен на сервере.",
     downloadFailed: "Не удалось сгенерировать PDF капсулы. Попробуйте еще раз.",
+    regenerateAllFailed: "Не удалось обновить капсулу. Предыдущая версия восстановлена.",
     regenerateSelectedFailed: "Не удалось обновить выбранные карточки. Попробуйте еще раз."
   },
   dialogs: {

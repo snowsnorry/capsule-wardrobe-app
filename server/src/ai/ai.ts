@@ -2,9 +2,11 @@ import crypto from "node:crypto";
 import { getProfile } from "../profileStore.js";
 import { getSqlClient } from "../db.js";
 import {
+  buildCapsuleSnapshotWithRegeneration,
   buildProfileCapsuleContext,
   getCapsule,
   getEffectiveCapsuleSnapshot,
+  getCapsuleSnapshotRegeneration,
   renameCapsule,
   updateCapsuleSnapshot
 } from "../capsuleStore.js";
@@ -78,6 +80,12 @@ type WardrobeServiceDependencies = {
   nowMsImpl?: () => number;
   setTimeoutImpl?: typeof setTimeout;
   randomUuidImpl?: () => string;
+};
+
+type StartWardrobeJobOptions = {
+  allowAutoRename?: boolean;
+  forceEmptyWardrobe?: boolean;
+  rollbackSnapshot?: ReturnType<typeof getEffectiveCapsuleSnapshot> | null;
 };
 
 function getSqlRows<TRow>(result: TRow[] | { count: number }): TRow[] {
@@ -1138,7 +1146,8 @@ function createWardrobeService({
     capsuleId: string,
     profile: Awaited<ReturnType<typeof getProfile>>,
     capsule: Awaited<ReturnType<typeof getCapsule>>,
-    logContext: LogContextLike | null = null
+    logContext: LogContextLike | null = null,
+    options: StartWardrobeJobOptions = {}
   ) {
     const jobKey = createWardrobeJobKey(email, capsuleId);
     const existing = getWardrobeJob(email, capsuleId);
@@ -1165,9 +1174,12 @@ function createWardrobeService({
         startedAt
       };
       let currentCapsule = capsule;
+      const allowAutoRename = options.allowAutoRename !== false;
+      const forceEmptyWardrobe = Boolean(options.forceEmptyWardrobe);
+      const rollbackSnapshot = options.rollbackSnapshot || null;
 
       try {
-        const generationProfile = buildProfileCapsuleContext(profile, capsule);
+        const generationProfile = buildProfileCapsuleContext(profile, capsule, { forceEmptyWardrobe });
         const baseSnapshot = getEffectiveCapsuleSnapshot(capsule);
         const storedWardrobeBeforeGeneration = getStoredWardrobePayload({ items: baseSnapshot?.data?.wardrobe });
         const isFirstContentGenerationForNewCapsule =
@@ -1190,7 +1202,8 @@ function createWardrobeService({
             filters: baseSnapshot?.filters,
             data: {
               wardrobe: storedCapsule,
-              rejectedUrls: []
+              rejectedUrls: [],
+              regeneration: null
             }
           });
         } else {
@@ -1200,12 +1213,13 @@ function createWardrobeService({
               filters: baseSnapshot?.filters,
               data: {
                 wardrobe: storedCapsule,
-                rejectedUrls: []
+                rejectedUrls: [],
+                regeneration: null
               }
             }
           } as typeof capsule;
         }
-        if (capsuleId && isFirstContentGenerationForNewCapsule && wardrobe.shortCapsuleName) {
+        if (allowAutoRename && capsuleId && isFirstContentGenerationForNewCapsule && wardrobe.shortCapsuleName) {
           currentCapsule = await renameCapsuleImpl(email, capsuleId, wardrobe.shortCapsuleName) || currentCapsule;
         }
         logWardrobeInfo("capsule-base-completed", {
@@ -1247,7 +1261,8 @@ function createWardrobeService({
                 filters: baseSnapshot?.filters,
                 data: {
                   wardrobe: finalPayload,
-                  rejectedUrls: []
+                  rejectedUrls: [],
+                  regeneration: null
                 }
               });
             } else {
@@ -1257,7 +1272,8 @@ function createWardrobeService({
                   filters: baseSnapshot?.filters,
                   data: {
                     wardrobe: finalPayload,
-                    rejectedUrls: []
+                    rejectedUrls: [],
+                    regeneration: null
                   }
                 }
               } as typeof currentCapsule;
@@ -1298,6 +1314,13 @@ function createWardrobeService({
         job.updatedAt = nowMsImpl();
         job.error = error;
         console.error("[wardrobe-ai]", buildErrorLogContext(jobLogContext), error);
+        if (capsuleId && rollbackSnapshot) {
+          try {
+            currentCapsule = await updateCapsuleSnapshotImpl(email, capsuleId, rollbackSnapshot) || currentCapsule;
+          } catch (rollbackError) {
+            console.error("[wardrobe-ai][rollback]", buildErrorLogContext(jobLogContext), rollbackError);
+          }
+        }
         publishSnapshotImpl(
           email,
           capsuleId,
@@ -1315,9 +1338,26 @@ function createWardrobeService({
     try {
       const email = req.user.email;
       const capsuleId = String(req.params?.id || "").trim();
-      const capsule = getRequiredCapsule(capsuleId, await getCapsuleImpl(email, capsuleId));
+      let capsule = getRequiredCapsule(capsuleId, await getCapsuleImpl(email, capsuleId));
       const activeJob = getWardrobeJob(email, capsuleId);
       const partialRegenerationJob = getPartialRegenerationJobImpl(email, capsuleId);
+      if (getCapsuleSnapshotRegeneration(getEffectiveCapsuleSnapshot(capsule)) && activeJob?.status !== "pending") {
+        const clearedSnapshot = buildCapsuleSnapshotWithRegeneration(getEffectiveCapsuleSnapshot(capsule), null);
+        capsule = await updateCapsuleSnapshotImpl(email, capsuleId, clearedSnapshot) || capsule;
+        const staleSnapshot = buildCapsuleEventSnapshotImpl({
+          capsule,
+          activeJob: {
+            status: "failed",
+            phase: "failed",
+            error: new Error("stale_regeneration")
+          },
+          partialRegenerationJob
+        });
+        return res.status(503).json({
+          error: "service_unavailable",
+          rawSelectionText: staleSnapshot.rawSelectionText || null
+        });
+      }
       const snapshot = buildCapsuleEventSnapshotImpl({
         capsule,
         activeJob,
@@ -1405,35 +1445,35 @@ function createWardrobeService({
       }
 
       const effectiveSnapshot = getEffectiveCapsuleSnapshot(capsule);
-      await updateCapsuleSnapshotImpl(email, capsuleId, {
-        filters: effectiveSnapshot?.filters,
-        data: {
-          wardrobe: null,
-          rejectedUrls: []
-        }
-      });
-      const generationCapsule = {
-        ...capsule,
-        draft: {
-          filters: effectiveSnapshot?.filters,
-          data: {
-            wardrobe: null,
-            rejectedUrls: []
-          }
-        }
-      };
-      const generationProfile = buildProfileCapsuleContext(profile, generationCapsule);
-      const noLlm = isNoLlmProfileEnabled(generationProfile);
       const logContext = {
         capsuleRequestId: randomUuidImpl()
       };
+      const rollbackSnapshot = buildCapsuleSnapshotWithRegeneration(effectiveSnapshot, null);
+      const pendingSnapshot = buildCapsuleSnapshotWithRegeneration(effectiveSnapshot, {
+        status: "pending",
+        kind: "full",
+        startedAt: new Date().toISOString(),
+        requestId: logContext.capsuleRequestId
+      });
+      const updatedCapsule = await updateCapsuleSnapshotImpl(email, capsuleId, pendingSnapshot);
+      const generationCapsule = {
+        ...capsule,
+        ...(updatedCapsule || {}),
+        draft: pendingSnapshot
+      };
+      const generationProfile = buildProfileCapsuleContext(profile, generationCapsule, { forceEmptyWardrobe: true });
+      const noLlm = isNoLlmProfileEnabled(generationProfile);
       logWardrobeInfo("capsule-request-received", {
         ...getRequestedWardrobeParams(generationProfile, {
           forceRefresh: true
         }),
         noLlm: noLlm || undefined
       }, logContext);
-      const job = startWardrobeJob(email, capsuleId, profile, generationCapsule, logContext);
+      const job = startWardrobeJob(email, capsuleId, profile, generationCapsule, logContext, {
+        allowAutoRename: false,
+        forceEmptyWardrobe: true,
+        rollbackSnapshot
+      });
       publishSnapshotImpl(
         email,
         capsuleId,

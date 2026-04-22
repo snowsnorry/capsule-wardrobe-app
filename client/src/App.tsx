@@ -150,6 +150,7 @@ type WardrobeSnapshot = {
   pendingImageSetIndexes?: number[];
   hasPendingAdditionalItems?: boolean;
   reasoning?: string | null;
+  error?: string | null;
 };
 
 type ProfileOptionsResult = {
@@ -1252,11 +1253,21 @@ function App() {
       pendingNotificationKindRef.current = "";
       closeNotificationPrompt();
       stopCapsuleEventStream();
-      handleWardrobeError();
-      setPendingImageSetIndexes([]);
+      setProfileItems(buildDisplayWardrobeItems(items) as WardrobeItem[]);
+      setProfileOutfitSets(outfitSets);
+      setSelectedRegenerationUrls([]);
+      pendingRegenerationUrlsRef.current = [];
+      regenerationBaseItemsRef.current = [];
+      setPartialRegenerationPendingUrls([]);
+      setIsPartialRegenerationLoading(false);
+      setIsWardrobePending(false);
+      setHasPendingAdditionalItems(false);
+      setIsLoadingItems(false);
+      setPendingImageSetIndexes(nextPendingImageSetIndexes);
+      setWardrobeLoadedCapsuleId(activeCapsuleId);
       setStatus((current) => ({
         ...current,
-        error: t("errors.generic")
+        error: t("errors.regenerateAllFailed")
       }));
       return;
     }
@@ -1975,6 +1986,24 @@ function App() {
           }}
         >
           {t("notifications.prompt.message")}
+        </Alert>
+      </Snackbar>
+      <Snackbar
+        open={Boolean(status.error)}
+        autoHideDuration={6000}
+        onClose={() => {
+          setStatus((current) => ({ ...current, error: "" }));
+        }}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          severity="error"
+          onClose={() => {
+            setStatus((current) => ({ ...current, error: "" }));
+          }}
+          sx={{ width: "min(680px, calc(100vw - 32px))" }}
+        >
+          {status.error}
         </Alert>
       </Snackbar>
       <Dialog

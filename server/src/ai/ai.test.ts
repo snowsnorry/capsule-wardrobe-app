@@ -40,7 +40,8 @@ function createCapsuleWithWardrobe(wardrobe = null) {
     draft: buildCapsuleSnapshot({
       data: {
         wardrobe,
-        rejectedUrls: []
+        rejectedUrls: [],
+        regeneration: null
       }
     })
   });
@@ -675,15 +676,17 @@ test("getCapsuleItems returns extras pending state when extras are still generat
   assert.deepEqual(res.body.outfitSets, []);
 });
 
-test("regenerateCapsuleWardrobe starts a new pending job and clears stored items", async () => {
+test("regenerateCapsuleWardrobe starts a new pending job without clearing stored items", async () => {
   const updates = [];
   let generatedProfile = null;
+  let renameCallCount = 0;
   const jobs = new Map();
+  const existingWardrobe = buildStoredWardrobePayload({
+    items: [buildWardrobeUiItem({ id: "top-1", category: "top", url: undefined, name: undefined, image_url: undefined, audience: undefined })]
+  });
   const service = createWardrobeService({
     getProfileImpl: async () => buildNormalizedProfileRecord({ audience: "woman", locale: "en", llm: "openai:gpt-5.4" }),
-    getCapsuleImpl: async () => createCapsuleWithWardrobe({
-      items: [buildWardrobeUiItem({ id: "top-1", category: "top", url: undefined, name: undefined, image_url: undefined, audience: undefined })]
-    }),
+    getCapsuleImpl: async () => createCapsuleWithWardrobe(existingWardrobe),
     updateCapsuleSnapshotImpl: async (email, capsuleId, draft) => {
       updates.push([email, capsuleId, draft]);
       return buildNormalizedCapsuleRecord({ id: capsuleId, draft, saved: null });
@@ -694,9 +697,14 @@ test("regenerateCapsuleWardrobe starts a new pending job and clears stored items
         items: [buildWardrobeUiItem({ id: "top-2", category: "top", url: undefined, name: undefined, image_url: undefined, audience: undefined })],
         selectedItems: [buildWardrobeUiItem({ id: "top-2", category: "top", url: undefined, name: undefined, image_url: undefined, audience: undefined })],
         promptEmbeddings: [0.1],
+        shortCapsuleName: "New Name",
         reasoning: "reasoning",
         rawSelectionText: "raw"
       });
+    },
+    renameCapsuleImpl: async () => {
+      renameCallCount += 1;
+      return null;
     },
     shouldGenerateSwimwearImpl: () => false,
     jobs,
@@ -714,8 +722,14 @@ test("regenerateCapsuleWardrobe starts a new pending job and clears stored items
   assert.deepEqual(updates[0], ["person@example.com", "capsule-1", {
     filters: createCapsuleWithWardrobe().draft.filters,
     data: {
-      wardrobe: null,
-      rejectedUrls: []
+      wardrobe: existingWardrobe,
+      rejectedUrls: [],
+      regeneration: {
+        status: "pending",
+        kind: "full",
+        startedAt: updates[0][2].data.regeneration.startedAt,
+        requestId: "req-123"
+      }
     }
   }]);
 
@@ -725,6 +739,7 @@ test("regenerateCapsuleWardrobe starts a new pending job and clears stored items
 
   assert.deepEqual(generatedProfile.items, null);
   assert.equal(job.status, "completed");
+  assert.equal(renameCallCount, 0);
   assert.deepEqual(updates[1], ["person@example.com", "capsule-1", {
     filters: createCapsuleWithWardrobe().draft.filters,
     data: {
@@ -745,7 +760,8 @@ test("regenerateCapsuleWardrobe starts a new pending job and clears stored items
         swimwearReasoning: null,
         swimwearRawSelectionText: null
       },
-      rejectedUrls: []
+      rejectedUrls: [],
+      regeneration: null
     }
   }]);
 });
@@ -783,6 +799,55 @@ test("regenerateCapsuleWardrobe uses profile llm=none instead of query flag", as
   assert.equal(generatedProfile.llm, "none");
 });
 
+test("regenerateCapsuleWardrobe restores stored items and clears pending marker when generation fails", async () => {
+  const updates = [];
+  const jobs = new Map();
+  const existingWardrobe = buildStoredWardrobePayload({
+    items: [buildWardrobeUiItem({ id: "top-1", category: "top", url: undefined, name: undefined, image_url: undefined, audience: undefined })]
+  });
+  const service = createWardrobeService({
+    getProfileImpl: async () => buildNormalizedProfileRecord({ audience: "woman", locale: "en" }),
+    getCapsuleImpl: async () => createCapsuleWithWardrobe(existingWardrobe),
+    updateCapsuleSnapshotImpl: async (email, capsuleId, draft) => {
+      updates.push([email, capsuleId, draft]);
+      return buildNormalizedCapsuleRecord({ id: capsuleId, draft, saved: null });
+    },
+    generateCapsuleWardrobeImpl: async () => {
+      throw new Error("llm_failed");
+    },
+    shouldGenerateSwimwearImpl: () => false,
+    jobs,
+    randomUuidImpl: () => "req-fail"
+  });
+  const originalError = console.error;
+  console.error = () => {};
+
+  try {
+    const res = createResponseRecorder();
+    await service.regenerateCapsuleWardrobe({
+      user: { email: "person@example.com" },
+      params: { id: "capsule-1" }
+    }, res);
+
+    assert.equal(res.statusCode, 202);
+    const job = service.getWardrobeJob("person@example.com", "capsule-1");
+    assert.ok(job);
+    await job.promise;
+
+    assert.equal(job.status, "failed");
+    assert.deepEqual(updates[1], ["person@example.com", "capsule-1", {
+      filters: createCapsuleWithWardrobe().draft.filters,
+      data: {
+        wardrobe: existingWardrobe,
+        rejectedUrls: [],
+        regeneration: null
+      }
+    }]);
+  } finally {
+    console.error = originalError;
+  }
+});
+
 test("getCapsuleItems surfaces failed job as service_unavailable and drops stale failed entry", async () => {
   const jobs = new Map([
     ["person@example.com::capsule-1", buildWardrobeJobState({
@@ -810,6 +875,51 @@ test("getCapsuleItems surfaces failed job as service_unavailable and drops stale
     rawSelectionText: "llm raw"
   });
   assert.equal(jobs.has("person@example.com::capsule-1"), false);
+});
+
+test("getCapsuleItems clears stale full regeneration marker when no job is active", async () => {
+  const updates = [];
+  const existingWardrobe = buildStoredWardrobePayload({
+    items: [buildWardrobeUiItem({ id: "top-1", category: "top", url: undefined, name: undefined, image_url: undefined, audience: undefined })]
+  });
+  const service = createWardrobeService({
+    getProfileImpl: async () => buildNormalizedProfileRecord({ locale: "en" }),
+    getCapsuleImpl: async () => buildNormalizedCapsuleRecord({
+      draft: buildCapsuleSnapshot({
+        data: {
+          wardrobe: existingWardrobe,
+          rejectedUrls: [],
+          regeneration: {
+            status: "pending",
+            kind: "full",
+            startedAt: "2026-04-22T00:00:00.000Z",
+            requestId: "stale-req"
+          }
+        }
+      })
+    }),
+    updateCapsuleSnapshotImpl: async (email, capsuleId, draft) => {
+      updates.push([email, capsuleId, draft]);
+      return buildNormalizedCapsuleRecord({ id: capsuleId, draft, saved: null });
+    },
+    jobs: new Map()
+  });
+  const res = createResponseRecorder();
+
+  await service.getCapsuleItems({
+    user: { email: "person@example.com" },
+    params: { id: "capsule-1" }
+  }, res);
+
+  assert.equal(res.statusCode, 503);
+  assert.deepEqual(updates, [["person@example.com", "capsule-1", {
+    filters: createCapsuleWithWardrobe().draft.filters,
+    data: {
+      wardrobe: existingWardrobe,
+      rejectedUrls: [],
+      regeneration: null
+    }
+  }]]);
 });
 
 test("startWardrobeJob reuses active pending job for the same email", async () => {
@@ -910,7 +1020,8 @@ test("startWardrobeJob stores capsule result and merges swimwear additions when 
           swimwearReasoning: null,
           swimwearRawSelectionText: null
         },
-        rejectedUrls: []
+        rejectedUrls: [],
+        regeneration: null
       }
     }],
     ["person@example.com", "capsule-1", {
@@ -931,7 +1042,8 @@ test("startWardrobeJob stores capsule result and merges swimwear additions when 
           swimwearReasoning: "swimwear-json",
           swimwearRawSelectionText: "swimwear-raw"
         },
-        rejectedUrls: []
+        rejectedUrls: [],
+        regeneration: null
       }
     }]
   ]);

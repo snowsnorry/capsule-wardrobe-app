@@ -289,6 +289,12 @@ type StoredWardrobePayloadLike = {
 type CapsuleDataLike = {
   wardrobe?: StoredWardrobePayloadLike | null;
   rejectedUrls?: string[] | null;
+  regeneration?: {
+    status?: string | null;
+    kind?: string | null;
+    startedAt?: string | null;
+    requestId?: string | null;
+  } | null;
 };
 
 type CapsuleSnapshotLike = {

@@ -1,5 +1,5 @@
 import { createChannel, createSession } from "better-sse";
-import { getEffectiveCapsuleSnapshot } from "../capsuleStore.js";
+import { getCapsuleSnapshotRegeneration, getEffectiveCapsuleSnapshot } from "../capsuleStore.js";
 
 function createCapsuleEventKey(email, capsuleId) {
   const normalizedEmail = String(email || "").trim().toLowerCase();
@@ -120,6 +120,7 @@ function buildCapsuleEventSnapshot({
 } = {}) {
   const effectiveSnapshot = getEffectiveCapsuleSnapshot(capsule);
   const storedWardrobe = getStoredWardrobePayload({ items: effectiveSnapshot?.data?.wardrobe });
+  const fullRegenerationMarker = getCapsuleSnapshotRegeneration(effectiveSnapshot);
   const pendingImageSetIndexes = Array.isArray(outfitSetImageJob?.pendingSetIndexes)
     ? outfitSetImageJob.pendingSetIndexes
       .map((value) => Number.parseInt(value, 10))
@@ -163,6 +164,25 @@ function buildCapsuleEventSnapshot({
     });
   }
 
+  if (activeJob?.status === "failed") {
+    return buildFailedSnapshot(storedWardrobe, activeJob.error);
+  }
+
+  if (activeJob?.status === "pending" || fullRegenerationMarker?.status === "pending") {
+    return buildSnapshotPayload({
+      status: "pending",
+      pendingStage: activeJob?.phase === "extras" ? "extras" : "capsule",
+      hasPendingAdditionalItems: activeJob?.phase === "extras",
+      pendingImageSetIndexes,
+      items: storedWardrobe?.items || [],
+      outfitSets: storedWardrobe?.outfitSets || [],
+      reasoning: storedWardrobe?.reasoning || null,
+      rawSelectionText: storedWardrobe?.rawSelectionText || null,
+      swimwearReasoning: storedWardrobe?.swimwearReasoning || null,
+      swimwearRawSelectionText: storedWardrobe?.swimwearRawSelectionText || null
+    });
+  }
+
   if (storedWardrobe?.items?.length) {
     return buildSnapshotPayload({
       status: "ready",
@@ -174,25 +194,6 @@ function buildCapsuleEventSnapshot({
       swimwearReasoning: storedWardrobe.swimwearReasoning,
       swimwearRawSelectionText: storedWardrobe.swimwearRawSelectionText
     });
-  }
-
-  if (activeJob?.status === "pending") {
-    return buildSnapshotPayload({
-      status: "pending",
-      pendingStage: activeJob.phase === "extras" ? "extras" : "capsule",
-      hasPendingAdditionalItems: activeJob.phase === "extras",
-      pendingImageSetIndexes,
-      items: storedWardrobe?.items || [],
-      outfitSets: storedWardrobe?.outfitSets || [],
-      reasoning: storedWardrobe?.reasoning || null,
-      rawSelectionText: storedWardrobe?.rawSelectionText || null,
-      swimwearReasoning: storedWardrobe?.swimwearReasoning || null,
-      swimwearRawSelectionText: storedWardrobe?.swimwearRawSelectionText || null
-    });
-  }
-
-  if (activeJob?.status === "failed") {
-    return buildFailedSnapshot(storedWardrobe, activeJob.error);
   }
 
   return buildSnapshotPayload();

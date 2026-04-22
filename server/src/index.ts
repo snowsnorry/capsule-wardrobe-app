@@ -35,12 +35,14 @@ import {
   updateProfileActiveCapsuleId
 } from "./profileStore.js";
 import {
+  buildCapsuleSnapshotWithRegeneration,
   buildSnapshotFromProfile,
   createCapsule,
   deleteCapsule,
   duplicateCapsule,
   getCapsule,
   getEffectiveCapsuleSnapshot,
+  getCapsuleSnapshotRegeneration,
   listRecentCapsules,
   normalizeCapsuleSnapshot,
   renameCapsule,
@@ -590,11 +592,29 @@ function createApp({
     return Array.isArray(wardrobe?.items) ? sortWardrobeItems(wardrobe.items) : [];
   }
 
-  function getCapsuleEventSnapshot(email, capsule) {
+  async function getCapsuleEventSnapshot(email, capsule) {
     const capsuleId = String(capsule?.id || "").trim();
+    const activeJob = capsuleId ? getWardrobeJobImpl(email, capsuleId) : null;
+    let snapshotCapsule = capsule;
+
+    if (capsuleId && getCapsuleSnapshotRegeneration(getEffectiveCapsuleSnapshot(capsule)) && activeJob?.status !== "pending") {
+      const clearedSnapshot = buildCapsuleSnapshotWithRegeneration(getEffectiveCapsuleSnapshot(capsule), null);
+      snapshotCapsule = await updateCapsuleSnapshotImpl(email, capsuleId, clearedSnapshot) || capsule;
+      return buildCapsuleEventSnapshot({
+        capsule: snapshotCapsule,
+        activeJob: {
+          status: "failed",
+          phase: "failed",
+          error: new Error("stale_regeneration")
+        },
+        partialRegenerationJob: null,
+        outfitSetImageJob: capsuleId ? getOutfitSetImageJobImpl(email, capsuleId) : null
+      });
+    }
+
     return buildCapsuleEventSnapshot({
-      capsule,
-      activeJob: capsuleId ? getWardrobeJobImpl(email, capsuleId) : null,
+      capsule: snapshotCapsule,
+      activeJob,
       partialRegenerationJob: capsuleId ? getPartialRegenerationJobImpl(email, capsuleId) : null,
       outfitSetImageJob: capsuleId ? getOutfitSetImageJobImpl(email, capsuleId) : null
     });
@@ -612,12 +632,7 @@ function createApp({
         return res.status(404).json({ error: "not_found" });
       }
 
-      const snapshot = buildCapsuleEventSnapshot({
-        capsule,
-        activeJob: getWardrobeJobImpl(req.user.email, capsuleId),
-        partialRegenerationJob: getPartialRegenerationJobImpl(req.user.email, capsuleId),
-        outfitSetImageJob: getOutfitSetImageJobImpl(req.user.email, capsuleId)
-      });
+      const snapshot = await getCapsuleEventSnapshot(req.user.email, capsule);
       await streamCapsuleEventsImpl(req, res, {
         email: req.user.email,
         capsuleId,
@@ -827,7 +842,7 @@ app.get("/capsules/bootstrap", requireAuth, async (req, res) => {
       ok: true,
       profile: toProfileResponse(profile),
       activeCapsule: toCapsuleResponse(activeCapsule),
-      activeSnapshot: getCapsuleEventSnapshot(req.user.email, activeCapsule),
+      activeSnapshot: await getCapsuleEventSnapshot(req.user.email, activeCapsule),
       capsules: recentCapsules.map(toCapsuleSummary)
     });
   } catch (error) {

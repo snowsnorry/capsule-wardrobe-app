@@ -896,7 +896,8 @@ function createPartialRegenerationService({
             filters: baseSnapshot?.filters,
             data: {
               wardrobe: payload,
-              rejectedUrls: baseSnapshot?.data?.rejectedUrls || []
+              rejectedUrls: baseSnapshot?.data?.rejectedUrls || [],
+              regeneration: baseSnapshot?.data?.regeneration || null
             }
           });
         } else {
@@ -906,7 +907,8 @@ function createPartialRegenerationService({
               filters: baseSnapshot?.filters,
               data: {
                 wardrobe: payload,
-                rejectedUrls: baseSnapshot?.data?.rejectedUrls || []
+                rejectedUrls: baseSnapshot?.data?.rejectedUrls || [],
+                regeneration: baseSnapshot?.data?.regeneration || null
               }
             }
           };
@@ -1017,7 +1019,8 @@ function createPartialRegenerationService({
           filters: effectiveSnapshot?.filters,
           data: {
             wardrobe: partialPayload,
-            rejectedUrls: nextRejectedUrls
+            rejectedUrls: nextRejectedUrls,
+            regeneration: effectiveSnapshot?.data?.regeneration || null
           }
         });
       }
@@ -1027,7 +1030,8 @@ function createPartialRegenerationService({
           filters: effectiveSnapshot?.filters,
           data: {
             wardrobe: partialPayload,
-            rejectedUrls: nextRejectedUrls
+            rejectedUrls: nextRejectedUrls,
+            regeneration: effectiveSnapshot?.data?.regeneration || null
           }
         }
       };

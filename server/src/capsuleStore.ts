@@ -39,11 +39,19 @@ type WardrobePayload = {
   swimwearRawSelectionText: string | null;
 };
 
+type CapsuleRegenerationMarker = {
+  status: "pending";
+  kind: "full";
+  startedAt: string;
+  requestId: string;
+};
+
 type CapsuleSnapshot = {
   filters: CapsuleFilters;
   data: {
     wardrobe: WardrobePayload | null;
     rejectedUrls: string[];
+    regeneration: CapsuleRegenerationMarker | null;
   };
 };
 
@@ -64,6 +72,10 @@ type NormalizedCapsuleRecord = Omit<CapsuleRecord, "draft" | "saved"> & {
 type CapsuleContextProfile = {
   locale?: string;
   [key: string]: unknown;
+};
+
+type BuildProfileCapsuleContextOptions = {
+  forceEmptyWardrobe?: boolean;
 };
 
 const DEFAULT_CAPSULE_NAME = "<New capsule>";
@@ -134,6 +146,33 @@ function normalizeCapsuleFilters(filters: Record<string, unknown> | null = null)
   };
 }
 
+function normalizeCapsuleRegenerationMarker(value: unknown): CapsuleRegenerationMarker | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+
+  const marker = value as Record<string, unknown>;
+  const status = typeof marker.status === "string" ? marker.status.trim() : "";
+  const kind = typeof marker.kind === "string" ? marker.kind.trim() : "";
+  const startedAt = typeof marker.startedAt === "string" && marker.startedAt.trim().length > 0
+    ? marker.startedAt.trim()
+    : "";
+  const requestId = typeof marker.requestId === "string" && marker.requestId.trim().length > 0
+    ? marker.requestId.trim()
+    : "";
+
+  if (status !== "pending" || kind !== "full" || !startedAt || !requestId) {
+    return null;
+  }
+
+  return {
+    status: "pending",
+    kind: "full",
+    startedAt,
+    requestId
+  };
+}
+
 function normalizeCapsuleSnapshot(snapshot: Record<string, unknown> | null = null): CapsuleSnapshot | null {
   if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot)) {
     return null;
@@ -143,7 +182,7 @@ function normalizeCapsuleSnapshot(snapshot: Record<string, unknown> | null = nul
     ? (snapshot.filters as Record<string, unknown>)
     : null;
   const snapshotData = snapshot.data && typeof snapshot.data === "object" && !Array.isArray(snapshot.data)
-    ? (snapshot.data as { wardrobe?: Record<string, unknown> | null; rejectedUrls?: unknown })
+    ? (snapshot.data as { wardrobe?: Record<string, unknown> | null; rejectedUrls?: unknown; regeneration?: unknown })
     : null;
 
   return {
@@ -152,9 +191,28 @@ function normalizeCapsuleSnapshot(snapshot: Record<string, unknown> | null = nul
       wardrobe: normalizeWardrobePayload(snapshotData?.wardrobe ?? null),
       rejectedUrls: Array.isArray(snapshotData?.rejectedUrls)
         ? [...new Set(snapshotData.rejectedUrls.map((value) => String(value || "").trim()).filter(Boolean))]
-        : []
+        : [],
+      regeneration: normalizeCapsuleRegenerationMarker(snapshotData?.regeneration)
     }
   };
+}
+
+function buildCapsuleSnapshotWithRegeneration(
+  snapshot: CapsuleSnapshot | null,
+  regeneration: CapsuleRegenerationMarker | null
+): CapsuleSnapshot | null {
+  if (!snapshot) {
+    return null;
+  }
+
+  return normalizeCapsuleSnapshot({
+    filters: snapshot.filters,
+    data: {
+      wardrobe: snapshot.data?.wardrobe || null,
+      rejectedUrls: snapshot.data?.rejectedUrls || [],
+      regeneration
+    }
+  });
 }
 
 function getCapsuleIdValue(capsule: { id?: unknown } | null): string | null {
@@ -191,6 +249,10 @@ function getEffectiveCapsuleSnapshot(capsule: CapsuleRecord | null): CapsuleSnap
   return normalized?.draft || normalized?.saved || null;
 }
 
+function getCapsuleSnapshotRegeneration(snapshot: CapsuleSnapshot | null): CapsuleRegenerationMarker | null {
+  return normalizeCapsuleRegenerationMarker(snapshot?.data?.regeneration);
+}
+
 function buildSnapshotFromProfile(profile: CapsuleContextProfile | null = null): CapsuleSnapshot | null {
   return normalizeCapsuleSnapshot({
     filters: {
@@ -205,14 +267,16 @@ function buildSnapshotFromProfile(profile: CapsuleContextProfile | null = null):
     },
     data: {
       wardrobe: null,
-      rejectedUrls: []
+      rejectedUrls: [],
+      regeneration: null
     }
   });
 }
 
 function buildProfileCapsuleContext(
   profile: CapsuleContextProfile | null = null,
-  capsule: CapsuleRecord | null = null
+  capsule: CapsuleRecord | null = null,
+  options: BuildProfileCapsuleContextOptions = {}
 ): Record<string, unknown> {
   const snapshot = getEffectiveCapsuleSnapshot(capsule);
   const filters = snapshot?.filters || buildSnapshotFromProfile(profile)?.filters;
@@ -227,7 +291,7 @@ function buildProfileCapsuleContext(
     pattern: normalizeCapsulePattern(filters?.pattern),
     text: typeof filters?.text === "string" ? filters.text : "",
     locale: profile?.locale || "en",
-    items: snapshot?.data?.wardrobe || null,
+    items: options.forceEmptyWardrobe ? null : snapshot?.data?.wardrobe || null,
     rejected: snapshot?.data?.rejectedUrls || []
   };
 }
@@ -379,6 +443,7 @@ async function deleteCapsule(email: string, capsuleId: string): Promise<boolean>
 
 export {
   DEFAULT_CAPSULE_NAME,
+  buildCapsuleSnapshotWithRegeneration,
   buildSnapshotFromProfile,
   buildProfileCapsuleContext,
   createBootstrapCapsule,
@@ -387,6 +452,7 @@ export {
   duplicateCapsule,
   getCapsule,
   getEffectiveCapsuleSnapshot,
+  getCapsuleSnapshotRegeneration,
   listRecentCapsules,
   normalizeCapsuleFilters,
   normalizeCapsuleRecord,

@@ -351,7 +351,8 @@ test("regenerateSelectedWardrobeItems updates rejected urls, shrinks partial pay
           swimwearReasoning: "swim-json",
           swimwearRawSelectionText: "swim-raw"
         },
-        rejectedUrls: ["https://example.com/old-1", "https://example.com/top-1"]
+        rejectedUrls: ["https://example.com/old-1", "https://example.com/top-1"],
+        regeneration: null
       }
     }
   ]);
@@ -380,7 +381,8 @@ test("regenerateSelectedWardrobeItems updates rejected urls, shrinks partial pay
           swimwearReasoning: "swim-json",
           swimwearRawSelectionText: "swim-raw"
         },
-        rejectedUrls: ["https://example.com/old-1", "https://example.com/top-1"]
+        rejectedUrls: ["https://example.com/old-1", "https://example.com/top-1"],
+        regeneration: null
       }
     }
   ]);

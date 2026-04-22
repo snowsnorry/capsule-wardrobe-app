@@ -727,6 +727,54 @@ describe("App", () => {
     expect(screen.getByText("loading-items:false")).toBeInTheDocument();
   });
 
+  test("keeps previous wardrobe visible and shows an error when full regeneration fails", async () => {
+    const existingItems = [
+      { id: "top-1", url: "https://example.com/top-1", name: "Shirt", category: "top" }
+    ];
+    authApi.fetchCurrentUser.mockResolvedValue({ user: { email: "person@example.com" } });
+    authApi.fetchProfileStatus.mockResolvedValue({ hasProfile: true });
+    authApi.updateProfileLocale.mockResolvedValue({});
+    capsulesApi.fetchCapsuleBootstrap.mockResolvedValue(createBootstrapResponse({
+      items: existingItems,
+      locale: "en",
+      activeSnapshot: {
+        status: "pending",
+        pendingStage: "capsule",
+        hasPendingAdditionalItems: false,
+        pendingRegenerationUrls: [],
+        items: existingItems,
+        outfitSets: [],
+        reasoning: null,
+        rawSelectionText: null,
+        swimwearReasoning: null,
+        swimwearRawSelectionText: null,
+        error: null
+      }
+    }));
+    mockProfileOptions();
+
+    renderApp();
+
+    expect(await screen.findByTestId("main-screen")).toBeInTheDocument();
+    expect(screen.getByText("main-screen:1")).toBeInTheDocument();
+    expect(screen.getByText("loading-items:false")).toBeInTheDocument();
+    expect(screen.getByText("content-busy:true")).toBeInTheDocument();
+
+    wardrobeStream.emit({
+      status: "failed",
+      items: existingItems,
+      outfitSets: [],
+      error: "service_unavailable"
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText("main-screen:1")).toBeInTheDocument();
+    });
+    expect(screen.getByText("loading-items:false")).toBeInTheDocument();
+    expect(screen.getByText("content-busy:false")).toBeInTheDocument();
+    expect(screen.getByText("Failed to regenerate the capsule. Your previous capsule was restored.")).toBeInTheDocument();
+  });
+
   test("does not patch profile locale during bootstrap when the persisted locale already came from the server", async () => {
     authApi.fetchCurrentUser.mockResolvedValue({ user: { email: "person@example.com" } });
     authApi.fetchProfileStatus.mockResolvedValue({ hasProfile: true });

@@ -444,6 +444,7 @@ const en = {
     invalidGoogleToken: "Google sign-in failed. Please try again.",
     googleAuthNotConfigured: "Google sign-in is not configured on the server.",
     downloadFailed: "Failed to generate the capsule PDF. Please try again.",
+    regenerateAllFailed: "Failed to regenerate the capsule. Your previous capsule was restored.",
     regenerateSelectedFailed: "Failed to regenerate the selected items. Please try again."
   },
   dialogs: {
