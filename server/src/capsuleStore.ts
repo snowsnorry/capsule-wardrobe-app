@@ -2,14 +2,18 @@ import {
   createCapsuleRecord,
   deleteCapsuleByIdForEmail,
   getCapsuleByIdForEmail,
+  getValidSharedCapsuleById,
+  hashCapsuleContent,
   listCapsuleNamesByEmail,
   listRecentCapsulesByEmail,
+  pruneExpiredSharedCapsules,
   renameCapsuleByIdForEmail,
   revertCapsuleDraftByIdForEmail,
   saveCapsuleByIdForEmail,
   searchCapsulesByEmail,
   updateCapsuleSnapshotByIdForEmail,
-  updateProfileActiveCapsuleIdByEmail
+  updateProfileActiveCapsuleIdByEmail,
+  upsertSharedCapsule
 } from "./db.js";
 import { getProfile, normalizeOccasionList } from "./profileStore.js";
 
@@ -69,6 +73,18 @@ type NormalizedCapsuleRecord = Omit<CapsuleRecord, "draft" | "saved"> & {
   status: "new" | "saved" | "modified";
 };
 
+type SharedCapsuleResult = {
+  id: string;
+  url: string;
+  expiresAt: string | Date;
+};
+
+type SharedCapsuleMetadata = {
+  id: string;
+  name: string;
+  expiresAt: string | Date;
+};
+
 type CapsuleContextProfile = {
   locale?: string;
   [key: string]: unknown;
@@ -79,6 +95,7 @@ type BuildProfileCapsuleContextOptions = {
 };
 
 const DEFAULT_CAPSULE_NAME = "<New capsule>";
+const SHARE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 function normalizeCapsulePattern(value: unknown): string {
   return typeof value === "string" && value.trim()
@@ -247,6 +264,15 @@ function normalizeCapsuleRecord(capsule: CapsuleRecord | null): NormalizedCapsul
 function getEffectiveCapsuleSnapshot(capsule: CapsuleRecord | null): CapsuleSnapshot | null {
   const normalized = normalizeCapsuleRecord(capsule);
   return normalized?.draft || normalized?.saved || null;
+}
+
+function capsuleSnapshotHasWardrobe(snapshot: CapsuleSnapshot | null): boolean {
+  const items = snapshot?.data?.wardrobe?.items;
+  return Array.isArray(items) && items.length > 0;
+}
+
+function isShareableCapsuleSnapshot(snapshot: CapsuleSnapshot | null): boolean {
+  return Boolean(snapshot && capsuleSnapshotHasWardrobe(snapshot) && !getCapsuleSnapshotRegeneration(snapshot));
 }
 
 function getCapsuleSnapshotRegeneration(snapshot: CapsuleSnapshot | null): CapsuleRegenerationMarker | null {
@@ -421,6 +447,85 @@ async function duplicateCapsule(
   });
 }
 
+function buildShareUrl(clientOrigin: string, shareId: string): string {
+  const origin = String(clientOrigin || "").replace(/\/+$/, "") || "http://localhost:5173";
+  return `${origin}/share/${encodeURIComponent(shareId)}`;
+}
+
+async function createCapsuleShare(
+  email: string,
+  capsuleId: string,
+  clientOrigin: string
+): Promise<SharedCapsuleResult | null> {
+  const capsule = await getCapsule(email, capsuleId);
+  if (!capsule) {
+    return null;
+  }
+
+  const snapshot = capsule.draft || capsule.saved || null;
+  if (!isShareableCapsuleSnapshot(snapshot)) {
+    const error = new Error("capsule_not_shareable");
+    (error as Error & { code?: string }).code = "capsule_not_shareable";
+    throw error;
+  }
+
+  await pruneExpiredSharedCapsules();
+  const expiresAt = new Date(Date.now() + SHARE_TTL_MS);
+  const shared = await upsertSharedCapsule({
+    profileEmail: email,
+    name: String(capsule.name || DEFAULT_CAPSULE_NAME),
+    content: snapshot as unknown as Record<string, unknown>,
+    contentHash: hashCapsuleContent(snapshot),
+    expiresAt
+  });
+
+  if (!shared) {
+    return null;
+  }
+
+  return {
+    id: shared.id,
+    url: buildShareUrl(clientOrigin, shared.id),
+    expiresAt: shared.expiresAt
+  };
+}
+
+async function getSharedCapsule(id: string): Promise<SharedCapsuleMetadata | null> {
+  const shared = await getValidSharedCapsuleById(String(id || "").trim());
+  if (!shared) {
+    await pruneExpiredSharedCapsules();
+    return null;
+  }
+
+  return {
+    id: shared.id,
+    name: shared.name,
+    expiresAt: shared.expiresAt
+  };
+}
+
+async function importSharedCapsule(email: string, id: string): Promise<NormalizedCapsuleRecord | null> {
+  const shared = await getValidSharedCapsuleById(String(id || "").trim());
+  if (!shared) {
+    await pruneExpiredSharedCapsules();
+    return null;
+  }
+
+  const content = normalizeCapsuleSnapshot(shared.content);
+  if (!isShareableCapsuleSnapshot(content)) {
+    const error = new Error("capsule_not_shareable");
+    (error as Error & { code?: string }).code = "capsule_not_shareable";
+    throw error;
+  }
+
+  return createCapsule(email, {
+    name: shared.name,
+    draft: null,
+    saved: content,
+    setActive: true
+  });
+}
+
 async function deleteCapsule(email: string, capsuleId: string): Promise<boolean> {
   const deleted = await deleteCapsuleByIdForEmail({ email, capsuleId });
   if (!deleted) {
@@ -448,11 +553,15 @@ export {
   buildProfileCapsuleContext,
   createBootstrapCapsule,
   createCapsule,
+  createCapsuleShare,
   deleteCapsule,
   duplicateCapsule,
   getCapsule,
   getEffectiveCapsuleSnapshot,
   getCapsuleSnapshotRegeneration,
+  getSharedCapsule,
+  importSharedCapsule,
+  isShareableCapsuleSnapshot,
   listRecentCapsules,
   normalizeCapsuleFilters,
   normalizeCapsuleRecord,

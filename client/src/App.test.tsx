@@ -70,10 +70,13 @@ const capsulesApi = vi.hoisted(() => ({
   fetchCapsule: vi.fn(),
   fetchCapsuleBootstrap: vi.fn(),
   fetchRecentCapsules: vi.fn(),
+  fetchSharedCapsule: vi.fn(),
+  importSharedCapsule: vi.fn(),
   renameCapsule: vi.fn(),
   revertCapsule: vi.fn(),
   saveCapsule: vi.fn(),
   searchCapsules: vi.fn(),
+  shareCapsule: vi.fn(),
   selectCapsule: vi.fn(),
   updateCapsuleFilters: vi.fn(),
   updateCapsuleRejectedUrls: vi.fn()
@@ -167,6 +170,9 @@ vi.mock("./screens/MainScreen", () => ({
         </button>
         <button type="button" onClick={() => props.onDuplicateCapsule("Copied capsule")}>
           save-as
+        </button>
+        <button type="button" onClick={() => props.onShareCapsule("capsule-1")}>
+          share-capsule
         </button>
         {props.items.map((item) => (
           <button key={item.url} type="button" onClick={() => props.onToggleRegenerationSelection(item)}>
@@ -375,6 +381,25 @@ describe("App", () => {
     capsulesApi.fetchCapsuleBootstrap.mockResolvedValue(createBootstrapResponse());
     capsulesApi.fetchRecentCapsules.mockResolvedValue({ capsules: [{ id: "capsule-1", name: "Spring edit", status: "new" }] });
     capsulesApi.fetchCapsule.mockResolvedValue({ capsule: createBootstrapResponse().activeCapsule });
+    capsulesApi.fetchSharedCapsule.mockResolvedValue({
+      id: "share-1",
+      name: "Shared edit",
+      expiresAt: new Date(60_000).toISOString()
+    });
+    capsulesApi.importSharedCapsule.mockResolvedValue({
+      capsule: {
+        ...createBootstrapResponse().activeCapsule,
+        id: "capsule-2",
+        name: "Shared edit",
+        draft: null,
+        saved: createBootstrapResponse().activeCapsule.draft,
+        status: "saved"
+      }
+    });
+    capsulesApi.shareCapsule.mockResolvedValue({
+      url: "https://client.example/share/share-1",
+      expiresAt: new Date(60_000).toISOString()
+    });
     capsulesApi.createCapsule.mockResolvedValue({ capsule: createBootstrapResponse().activeCapsule });
     capsulesApi.updateCapsuleFilters.mockResolvedValue({ capsule: createBootstrapResponse().activeCapsule });
     capsulesApi.duplicateCapsule.mockResolvedValue({
@@ -790,6 +815,78 @@ describe("App", () => {
 
     expect(await screen.findByTestId("main-screen")).toBeInTheDocument();
     expect(authApi.updateProfileLocale).not.toHaveBeenCalled();
+  });
+
+  test("opens shared capsule route and imports after confirmation", async () => {
+    window.history.replaceState({}, "", "/share/share-1");
+    authApi.fetchCurrentUser.mockResolvedValue({ user: { email: "person@example.com" } });
+    authApi.fetchProfileStatus.mockResolvedValue({ hasProfile: true });
+    authApi.updateProfileLocale.mockResolvedValue({});
+    capsulesApi.fetchCapsuleBootstrap.mockResolvedValue(createBootstrapResponse({ locale: "en" }));
+    mockProfileOptions();
+
+    renderApp();
+
+    expect(await screen.findByRole("dialog", { name: "Save shared capsule?" })).toBeInTheDocument();
+    expect(screen.getByText("Save capsule \"Shared edit\" to your capsules?")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Save capsule" }));
+
+    await waitFor(() => {
+      expect(capsulesApi.importSharedCapsule).toHaveBeenCalledWith("share-1");
+    });
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/");
+    });
+    await waitFor(() => {
+      expect(mainScreenRender.mock.calls.some(([props]) => (
+        props.activeCapsule?.id === "capsule-2" && props.activeCapsule?.name === "Shared edit"
+      ))).toBe(true);
+    });
+  });
+
+  test("keeps share route through sign-in and cancels shared capsule import", async () => {
+    window.history.replaceState({}, "", "/share/share-1");
+    authApi.fetchCurrentUser.mockRejectedValue(new Error("unauthorized"));
+    authApi.requestLoginCode.mockResolvedValue({ expiresInMs: 300000 });
+    authApi.verifyLoginCode.mockResolvedValue({ user: { email: "person@example.com" } });
+    authApi.fetchProfileStatus.mockResolvedValue({ hasProfile: true });
+    authApi.updateProfileLocale.mockResolvedValue({});
+    capsulesApi.fetchCapsuleBootstrap.mockResolvedValue(createBootstrapResponse({ locale: "en" }));
+    mockProfileOptions();
+
+    renderApp();
+
+    expect(await screen.findByTestId("sign-in-screen")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "verify-code" }));
+
+    expect(await screen.findByRole("dialog", { name: "Save shared capsule?" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/");
+    });
+    expect(capsulesApi.importSharedCapsule).not.toHaveBeenCalled();
+  });
+
+  test("removes invalid share route and shows unavailable error", async () => {
+    window.history.replaceState({}, "", "/share/missing-share");
+    authApi.fetchCurrentUser.mockResolvedValue({ user: { email: "person@example.com" } });
+    authApi.fetchProfileStatus.mockResolvedValue({ hasProfile: true });
+    authApi.updateProfileLocale.mockResolvedValue({});
+    capsulesApi.fetchCapsuleBootstrap.mockResolvedValue(createBootstrapResponse({ locale: "en" }));
+    capsulesApi.fetchSharedCapsule.mockRejectedValue(new Error("shared_capsule_unavailable"));
+    mockProfileOptions();
+
+    renderApp();
+
+    await waitFor(() => {
+      expect(capsulesApi.fetchSharedCapsule).toHaveBeenCalledWith("missing-share");
+    });
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/");
+    });
+    expect(await screen.findByText("This shared capsule is unavailable or expired.")).toBeInTheDocument();
   });
 
   test("marks main screen content busy while capsule PDF is downloading", async () => {

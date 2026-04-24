@@ -11,6 +11,7 @@ import {
   DialogTitle,
   Divider,
   IconButton,
+  Link,
   LinearProgress,
   List,
   ListItemButton,
@@ -27,6 +28,8 @@ import {
 } from "@mui/material";
 import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
 import MoreVertRoundedIcon from "@mui/icons-material/MoreVertRounded";
+import ShareRoundedIcon from "@mui/icons-material/ShareRounded";
+import ContentCopyRoundedIcon from "@mui/icons-material/ContentCopyRounded";
 import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
@@ -111,6 +114,7 @@ type MainScreenProps = {
   onRenameCapsule?: (name: string, capsuleId?: string) => Promise<void> | void;
   onDuplicateCapsule?: (name: string, capsuleId?: string) => Promise<void> | void;
   onDeleteCapsule?: (capsuleId?: string) => Promise<void> | void;
+  onShareCapsule?: (capsuleId?: string) => Promise<{ url?: string; expiresAt?: string | Date } | void> | { url?: string; expiresAt?: string | Date } | void;
   onSearchCapsules?: (query: string) => Promise<CapsuleLike[]> | CapsuleLike[];
   items: MainScreenItem[];
   outfitSets?: OutfitSetLike[];
@@ -206,6 +210,13 @@ function capsuleHasUnsavedChanges(capsule: CapsuleLike | null | undefined) {
   return capsule?.status === "new" || capsule?.status === "modified";
 }
 
+function capsuleHasShareableContent(capsule: CapsuleLike | null | undefined) {
+  const snapshot = (capsule?.draft || capsule?.saved) as { data?: { wardrobe?: { items?: unknown[]; regeneration?: unknown } | null; regeneration?: unknown } } | null;
+  const items = snapshot?.data?.wardrobe?.items;
+  const regeneration = snapshot?.data?.regeneration;
+  return Array.isArray(items) && items.length > 0 && !regeneration;
+}
+
 function normalizeCapsuleName(name: string | undefined) {
   return String(name || "").trim();
 }
@@ -259,12 +270,14 @@ function CapsuleActionMenu({
   onRevert,
   onSave,
   onDuplicate,
+  onShare,
   onDelete
 }) {
   const { t } = useI18n();
   const canRevert = capsule?.status === "modified";
   const canSave = capsule?.status === "new" || capsule?.status === "modified";
   const canDuplicate = Boolean(capsule?.saved);
+  const canShare = capsuleHasShareableContent(capsule);
 
   return (
     <Menu anchorEl={anchorEl} open={open} onClose={onClose}>
@@ -301,6 +314,12 @@ function CapsuleActionMenu({
           {t("capsule.saveAs")}
         </MenuItem>
       ) : null}
+      {canShare ? (
+        <MenuItem disabled={disabled} onClick={() => { onClose(); onShare(); }}>
+          <ListItemIcon><ShareRoundedIcon fontSize="small" /></ListItemIcon>
+          {t("capsule.share")}
+        </MenuItem>
+      ) : null}
       <Divider />
       <MenuItem disabled={disabled} onClick={() => { onClose(); onDelete(); }} sx={{ color: "error.main" }}>
         <ListItemIcon sx={{ color: "inherit" }}><DeleteOutlineRoundedIcon fontSize="small" /></ListItemIcon>
@@ -328,6 +347,7 @@ function MainScreen({
   onRenameCapsule = async () => {},
   onDuplicateCapsule = async () => {},
   onDeleteCapsule = async () => {},
+  onShareCapsule = async () => {},
   onSearchCapsules = async () => [],
   items,
   outfitSets = [],
@@ -387,6 +407,11 @@ function MainScreen({
   const [saveAsOpen, setSaveAsOpen] = useState(false);
   const [saveAsValue, setSaveAsValue] = useState("");
   const [saveAsCapsuleId, setSaveAsCapsuleId] = useState("");
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [shareUrl, setShareUrl] = useState("");
+  const [shareExpiresAt, setShareExpiresAt] = useState<string | Date | null>(null);
+  const [shareCapsuleName, setShareCapsuleName] = useState("");
+  const [shareCopied, setShareCopied] = useState(false);
   const [isOutfitSetImageDialogOpen, setIsOutfitSetImageDialogOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState("");
   const [confirmCapsuleId, setConfirmCapsuleId] = useState("");
@@ -521,6 +546,33 @@ function MainScreen({
     setSaveAsCapsuleId(capsule.id);
     setSaveAsValue(capsule.name || "");
     setSaveAsOpen(true);
+  };
+
+  const handleShareCapsule = async (capsule = activeCapsule) => {
+    if (!capsule?.id || isInteractionDisabled || !capsuleHasShareableContent(capsule)) {
+      return;
+    }
+    const result = await onShareCapsule(capsule.id);
+    if (!result) {
+      return;
+    }
+    const nextUrl = typeof result?.url === "string" ? result.url : "";
+    if (!nextUrl) {
+      return;
+    }
+    setShareUrl(nextUrl);
+    setShareExpiresAt(result?.expiresAt || null);
+    setShareCapsuleName(capsule.name || activeCapsuleName);
+    setShareCopied(false);
+    setShareDialogOpen(true);
+  };
+
+  const handleCopyShareUrl = async () => {
+    if (!shareUrl || typeof navigator === "undefined" || !navigator.clipboard?.writeText) {
+      return;
+    }
+    await navigator.clipboard.writeText(shareUrl);
+    setShareCopied(true);
   };
 
   const handleRequestRegenerateAll = async () => {
@@ -1596,6 +1648,39 @@ function MainScreen({
                   />
                 </DialogContent>
               </Dialog>
+
+              <Dialog
+                open={shareDialogOpen}
+                onClose={() => setShareDialogOpen(false)}
+                fullScreen={isOverlaySidebar}
+                fullWidth
+                maxWidth="sm"
+              >
+                <DialogTitle>{t("capsule.shareTitle")}</DialogTitle>
+                <DialogContent>
+                  <Stack spacing={2}>
+                    <DialogContentText>{t("capsule.shareReady")}</DialogContentText>
+                    <Stack direction="row" alignItems="center" spacing={1}>
+                      <Link href={shareUrl} target="_blank" rel="noreferrer" sx={{ minWidth: 0, flex: 1 }} noWrap>
+                        {shareCapsuleName || shareUrl}
+                      </Link>
+                      <Tooltip title={shareCopied ? t("capsule.shareCopied") : t("capsule.copyShareLink")}>
+                        <IconButton aria-label={t("capsule.copyShareLink")} onClick={handleCopyShareUrl}>
+                          <ContentCopyRoundedIcon />
+                        </IconButton>
+                      </Tooltip>
+                    </Stack>
+                    {shareExpiresAt ? (
+                      <Typography variant="body2" color="text.secondary">
+                        {t("capsule.shareExpires", { date: new Date(shareExpiresAt).toLocaleString() })}
+                      </Typography>
+                    ) : null}
+                  </Stack>
+                </DialogContent>
+                <DialogActions>
+                  <Button onClick={() => setShareDialogOpen(false)}>{t("actions.close")}</Button>
+                </DialogActions>
+              </Dialog>
             </Box>
           );
         }}
@@ -1618,6 +1703,7 @@ function MainScreen({
         onRevert={() => setConfirmAction("revert")}
         onSave={onSaveCapsule}
         onDuplicate={() => handleRequestDuplicate(activeCapsule)}
+        onShare={() => handleShareCapsule(activeCapsule)}
         onDelete={() => setConfirmAction("delete")}
       />
 
@@ -1643,6 +1729,7 @@ function MainScreen({
         onSave={() => onSaveCapsule(rowMenuCapsule?.id)}
         onRegenerateAll={() => {}}
         onDuplicate={() => handleRequestDuplicate(rowMenuCapsule)}
+        onShare={() => handleShareCapsule(rowMenuCapsule)}
         onDelete={() => {
           setConfirmCapsuleId(rowMenuCapsule?.id || "");
           setConfirmAction("delete-row");

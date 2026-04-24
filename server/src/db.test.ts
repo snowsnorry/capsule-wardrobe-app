@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildPriceBuckets, hasAffectedRows } from "./db.js";
+import { buildPriceBuckets, hasAffectedRows, hashCapsuleContent, stableStringify } from "./db.js";
 
 type HasAffectedRowsInput =
   | { email: string }[]
@@ -35,4 +35,12 @@ test("buildPriceBuckets returns a continuous bucket range with zero-count gaps",
     { key: "120:180", min: 120, max: 180, count: 7 },
     { key: "180:240", min: 180, max: 240, count: 0 }
   ]);
+});
+
+test("stableStringify and hashCapsuleContent ignore object key insertion order", () => {
+  const left = { b: 2, a: { d: 4, c: [3, { z: true, y: null }] } };
+  const right = { a: { c: [3, { y: null, z: true }], d: 4 }, b: 2 };
+
+  assert.equal(stableStringify(left), stableStringify(right));
+  assert.equal(hashCapsuleContent(left), hashCapsuleContent(right));
 });

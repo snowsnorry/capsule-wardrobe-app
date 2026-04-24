@@ -365,6 +365,16 @@ const ru = {
     revert: "Откатить",
     saveAs: "Сохранить как...",
     saveAsTitle: "Сохранить как",
+    share: "Поделиться",
+    shareTitle: "Поделиться капсулой",
+    shareReady: "Ссылка для доступа готова.",
+    copyShareLink: "Скопировать ссылку",
+    shareCopied: "Скопировано",
+    shareExpires: "Истекает {date}",
+    shareImportTitle: "Сохранить общую капсулу?",
+    shareImportBody: "Сохранить капсулу \"{name}\" в ваши капсулы?",
+    shareImportConfirm: "Сохранить капсулу",
+    shareImported: "Общая капсула сохранена.",
     renameTitle: "Переименовать капсулу",
     deleteTitle: "Удалить капсулу",
     revertTitle: "Откатить изменения",
@@ -466,7 +476,9 @@ const ru = {
     passkeyLoginFailed: "Не удалось войти с passkey.",
     downloadFailed: "Не удалось сгенерировать PDF капсулы. Попробуйте еще раз.",
     regenerateAllFailed: "Не удалось обновить капсулу. Предыдущая версия восстановлена.",
-    regenerateSelectedFailed: "Не удалось обновить выбранные карточки. Попробуйте еще раз."
+    regenerateSelectedFailed: "Не удалось обновить выбранные карточки. Попробуйте еще раз.",
+    capsuleNotShareable: "В капсуле нет содержимого, которым можно поделиться.",
+    sharedCapsuleUnavailable: "Эта общая капсула недоступна или срок ссылки истек."
   },
   dialogs: {
     signOutTitle: "Выйти",

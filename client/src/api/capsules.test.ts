@@ -12,6 +12,9 @@ vi.mock("./config", () => ({
 
 import {
   createCapsule,
+  fetchSharedCapsule,
+  importSharedCapsule,
+  shareCapsule,
   updateCapsuleFilters,
   updateCapsuleRejectedUrls
 } from "./capsules";
@@ -101,6 +104,36 @@ describe("capsules api", () => {
         body: JSON.stringify({
           filters: { audience: "woman" }
         })
+      }
+    );
+  });
+
+  test("share helpers use capsule and shared-capsule routes", async () => {
+    await shareCapsule("capsule-1");
+    await fetchSharedCapsule("share/1");
+    await importSharedCapsule("share/1");
+
+    expect(requestApi.requestJson).toHaveBeenNthCalledWith(
+      1,
+      "https://api.example.test/capsules/capsule-1/share",
+      {
+        method: "POST",
+        credentials: "include"
+      }
+    );
+    expect(requestApi.requestJson).toHaveBeenNthCalledWith(
+      2,
+      "https://api.example.test/shared-capsules/share%2F1",
+      {
+        credentials: "include"
+      }
+    );
+    expect(requestApi.requestJson).toHaveBeenNthCalledWith(
+      3,
+      "https://api.example.test/shared-capsules/share%2F1/import",
+      {
+        method: "POST",
+        credentials: "include"
       }
     );
   });

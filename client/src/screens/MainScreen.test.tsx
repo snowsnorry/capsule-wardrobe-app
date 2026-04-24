@@ -92,6 +92,12 @@ function t(key, params) {
       revert: "Revert",
       saveAs: "Save as...",
       saveAsTitle: "Save as",
+      share: "Share",
+      shareTitle: "Share capsule",
+      shareReady: "Your share link is ready.",
+      copyShareLink: "Copy share link",
+      shareCopied: "Copied",
+      shareExpires: "Expires {date}",
       renameTitle: "Rename capsule",
       deleteTitle: "Delete capsule",
       deleteOutfitSetImageTitle: "Delete image",
@@ -212,6 +218,10 @@ function renderScreen(props = {}, { mobile = false, layoutMode = mobile ? "overl
     onRenameCapsule: vi.fn(() => Promise.resolve()),
     onDuplicateCapsule: vi.fn(() => Promise.resolve()),
     onDeleteCapsule: vi.fn(() => Promise.resolve()),
+    onShareCapsule: vi.fn(() => Promise.resolve({
+      url: "https://client.example/share/share-1",
+      expiresAt: new Date(60_000).toISOString()
+    })),
     onSearchCapsules: vi.fn(() => Promise.resolve([])),
     items: [],
     outfitSets: [],
@@ -655,6 +665,48 @@ describe("MainScreen", () => {
     expect(screen.getByRole("dialog", { name: "Rename capsule" })).toBeInTheDocument();
     expect(screen.getByRole("textbox")).toHaveValue("Spring edit");
     expect(screen.queryByRole("textbox", { name: "Capsule name" })).not.toBeInTheDocument();
+  });
+
+  test("shows share action only for generated capsules and displays the generated link", async () => {
+    const user = userEvent.setup();
+    const onShareCapsule = vi.fn(() => Promise.resolve({
+      url: "https://client.example/share/share-1",
+      expiresAt: new Date(60_000).toISOString()
+    }));
+
+    renderScreen({
+      onShareCapsule,
+      activeCapsule: {
+        id: "capsule-1",
+        name: "Spring edit",
+        draft: {
+          filters: {},
+          data: {
+            wardrobe: { items: [{ url: "https://example.com/1" }] },
+            rejectedUrls: []
+          }
+        },
+        saved: null,
+        status: "new"
+      }
+    });
+
+    await user.click(screen.getByRole("button", { name: "Open capsule menu" }));
+    await user.click(screen.getByRole("menuitem", { name: "Share" }));
+
+    expect(onShareCapsule).toHaveBeenCalledWith("capsule-1");
+    expect(await screen.findByRole("dialog", { name: "Share capsule" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Spring edit" })).toHaveAttribute("href", "https://client.example/share/share-1");
+  });
+
+  test("hides share action for capsules without wardrobe content", async () => {
+    const user = userEvent.setup();
+
+    renderScreen();
+
+    await user.click(screen.getByRole("button", { name: "Open capsule menu" }));
+
+    expect(screen.queryByRole("menuitem", { name: "Share" })).not.toBeInTheDocument();
   });
 
   test("disables primary capsule controls while content is busy", async () => {

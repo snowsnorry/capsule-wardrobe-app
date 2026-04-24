@@ -52,11 +52,14 @@ import {
   buildCapsuleSnapshotWithRegeneration,
   buildSnapshotFromProfile,
   createCapsule,
+  createCapsuleShare,
   deleteCapsule,
   duplicateCapsule,
   getCapsule,
   getEffectiveCapsuleSnapshot,
   getCapsuleSnapshotRegeneration,
+  getSharedCapsule,
+  importSharedCapsule,
   listRecentCapsules,
   normalizeCapsuleSnapshot,
   renameCapsule,
@@ -230,6 +233,7 @@ function isApiPath(pathname = "") {
   return (
     pathname.startsWith("/auth") ||
     pathname.startsWith("/capsules") ||
+    pathname.startsWith("/shared-capsules") ||
     pathname.startsWith("/profile") ||
     pathname.startsWith("/wardrobe") ||
     pathname.startsWith("/health") ||
@@ -603,6 +607,9 @@ function createApp({
   searchCapsulesImpl = searchCapsules,
   getCapsuleImpl = getCapsule,
   createCapsuleImpl = createCapsule,
+  createCapsuleShareImpl = createCapsuleShare,
+  getSharedCapsuleImpl = getSharedCapsule,
+  importSharedCapsuleImpl = importSharedCapsule,
   updateCapsuleSnapshotImpl = updateCapsuleSnapshot,
   saveCapsuleImpl = saveCapsule,
   revertCapsuleImpl = revertCapsule,
@@ -1326,6 +1333,58 @@ app.get("/capsules/:id", requireAuth, async (req, res) => {
 app.get("/capsules/:id/events", requireAuth, streamCapsuleEventsHandler);
 
 app.post("/capsules/:id/regenerate", requireTrustedOrigin, requireAuth, requireCsrf, regenerateCapsuleWardrobeHandler);
+
+app.post("/capsules/:id/share", requireTrustedOrigin, requireAuth, requireCsrf, async (req, res) => {
+  try {
+    const share = await createCapsuleShareImpl(req.user.email, req.params.id, clientOrigin);
+    if (!share) {
+      return res.status(404).json({ error: "not_found" });
+    }
+    return res.status(201).json({ ok: true, ...share });
+  } catch (error) {
+    const code = (error as ErrorWithCode)?.code || (error as Error)?.message;
+    if (code === "capsule_not_shareable") {
+      return res.status(400).json({ error: "capsule_not_shareable" });
+    }
+    console.error("[capsules/share]", error);
+    return res.status(503).json({ error: "service_unavailable" });
+  }
+});
+
+app.get("/shared-capsules/:id", async (req, res) => {
+  try {
+    const shared = await getSharedCapsuleImpl(req.params.id);
+    if (!shared) {
+      return res.status(404).json({ error: "shared_capsule_unavailable" });
+    }
+    return res.json({ ok: true, ...shared });
+  } catch (error) {
+    console.error("[shared-capsules/get]", error);
+    return res.status(503).json({ error: "service_unavailable" });
+  }
+});
+
+app.post("/shared-capsules/:id/import", requireTrustedOrigin, requireAuth, requireCsrf, async (req, res) => {
+  try {
+    const capsule = await importSharedCapsuleImpl(req.user.email, req.params.id);
+    if (!capsule) {
+      return res.status(404).json({ error: "shared_capsule_unavailable" });
+    }
+    return res.status(201).json({
+      ok: true,
+      capsule: toCapsuleResponse(capsule),
+      capsuleId: capsule.id,
+      name: capsule.name
+    });
+  } catch (error) {
+    const code = (error as ErrorWithCode)?.code || (error as Error)?.message;
+    if (code === "capsule_not_shareable") {
+      return res.status(400).json({ error: "capsule_not_shareable" });
+    }
+    console.error("[shared-capsules/import]", error);
+    return res.status(503).json({ error: "service_unavailable" });
+  }
+});
 
 app.post(
   "/capsules/:id/regenerate-selected",

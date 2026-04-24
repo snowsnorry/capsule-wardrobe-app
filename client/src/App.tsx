@@ -41,10 +41,13 @@ import {
   fetchCapsule,
   fetchCapsuleBootstrap,
   fetchRecentCapsules,
+  fetchSharedCapsule,
+  importSharedCapsule,
   renameCapsule,
   revertCapsule,
   saveCapsule,
   searchCapsules,
+  shareCapsule,
   updateCapsuleFilters
 } from "./api/capsules";
 import { clearProfileOptionsCache, loadProfileOptions } from "./api/profileOptionsCache";
@@ -201,6 +204,12 @@ type CapsuleMutationResponse = {
   status?: string;
 };
 
+type ShareMetadata = {
+  id?: string;
+  name?: string;
+  expiresAt?: string | Date;
+};
+
 type WardrobeMutationResponse = {
   status?: string;
 };
@@ -286,6 +295,9 @@ function getWardrobeMetadata(wardrobe: CapsuleWardrobeData | null | undefined) {
 }
 
 function getAppRoute(pathname = "/") {
+  if (pathname.startsWith("/share/")) {
+    return "share";
+  }
   if (pathname === "/search" || pathname === "/search/") {
     return "search";
   }
@@ -293,6 +305,11 @@ function getAppRoute(pathname = "/") {
     return "statistics";
   }
   return "capsule";
+}
+
+function getShareIdFromPath(pathname = "") {
+  const match = pathname.match(/^\/share\/([^/?#]+)/);
+  return match?.[1] ? decodeURIComponent(match[1]) : "";
 }
 
 function sortSeasonOptions(items) {
@@ -449,6 +466,12 @@ function App() {
   const [appRoute, setAppRoute] = useState(() => (
     typeof window === "undefined" ? "capsule" : getAppRoute(window.location.pathname)
   ));
+  const [pendingShareId, setPendingShareId] = useState(() => (
+    typeof window === "undefined" ? "" : getShareIdFromPath(window.location.pathname)
+  ));
+  const [shareMetadata, setShareMetadata] = useState<ShareMetadata | null>(null);
+  const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
+  const [isShareLoading, setIsShareLoading] = useState(false);
   const isMountedRef = useRef(true);
   const pendingRegenerationUrlsRef = useRef<string[]>([]);
   const regenerationBaseItemsRef = useRef<WardrobeItem[]>([]);
@@ -479,6 +502,7 @@ function App() {
 
     const handlePopState = () => {
       setAppRoute(getAppRoute(window.location.pathname));
+      setPendingShareId(getShareIdFromPath(window.location.pathname));
     };
 
     window.addEventListener("popstate", handlePopState);
@@ -505,6 +529,8 @@ function App() {
     if (error.message === "passkey_login_failed") return t("errors.passkeyLoginFailed");
     if (error.message === "passkey_failed") return t("errors.passkeyLoginFailed");
     if (error.message === "passkey_cancelled") return "";
+    if (error.message === "capsule_not_shareable") return t("errors.capsuleNotShareable");
+    if (error.message === "shared_capsule_unavailable") return t("errors.sharedCapsuleUnavailable");
     return t("errors.generic");
   };
 
@@ -1267,6 +1293,52 @@ function App() {
     setCurrentView("main");
   };
 
+  const clearShareRoute = () => {
+    setPendingShareId("");
+    setShareMetadata(null);
+    setIsShareDialogOpen(false);
+    if (typeof window !== "undefined" && window.location.pathname.startsWith("/share/")) {
+      window.history.replaceState({}, "", "/");
+    }
+    setAppRoute("capsule");
+  };
+
+  const handleShareCapsule = async (capsuleId = activeCapsuleId) => {
+    if (!capsuleId) {
+      return {};
+    }
+    try {
+      return await shareCapsule(capsuleId) as { url?: string; expiresAt?: string | Date };
+    } catch (error) {
+      setStatus({ loading: false, error: resolveErrorMessage(error), infoKey: "", infoParams: null });
+      return {};
+    }
+  };
+
+  const handleImportSharedCapsule = async () => {
+    const shareId = String(shareMetadata?.id || pendingShareId || "").trim();
+    if (!shareId) {
+      return;
+    }
+    setIsShareLoading(true);
+    try {
+      const result = await importSharedCapsule(shareId) as CapsuleMutationResponse;
+      if (result.capsule) {
+        applyCapsuleState(result.capsule);
+      }
+      await refreshCapsuleList();
+      setStatus({ loading: false, error: "", infoKey: "capsule.shareImported", infoParams: null });
+      clearShareRoute();
+    } catch (error) {
+      setStatus({ loading: false, error: resolveErrorMessage(error), infoKey: "", infoParams: null });
+      clearShareRoute();
+    } finally {
+      if (isMountedRef.current) {
+        setIsShareLoading(false);
+      }
+    }
+  };
+
   const handleNavigateApp = (nextApp) => {
     if (typeof window === "undefined") {
       return;
@@ -1282,10 +1354,45 @@ function App() {
     setAppRoute(getAppRoute(nextPath));
   };
 
+  useEffect(() => {
+    if (!sessionInitialized || !pendingShareId || !user || !(hasProfile || profileCreated)) {
+      return;
+    }
+
+    let isActive = true;
+    setIsShareLoading(true);
+    fetchSharedCapsule(pendingShareId)
+      .then((metadata) => {
+        if (!isActive || !isMountedRef.current) {
+          return;
+        }
+        setShareMetadata(metadata as ShareMetadata);
+        setIsShareDialogOpen(true);
+      })
+      .catch((error) => {
+        if (!isActive || !isMountedRef.current) {
+          return;
+        }
+        setStatus({ loading: false, error: resolveErrorMessage(error), infoKey: "", infoParams: null });
+        clearShareRoute();
+      })
+      .finally(() => {
+        if (isActive && isMountedRef.current) {
+          setIsShareLoading(false);
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [sessionInitialized, pendingShareId, user, hasProfile, profileCreated]);
+
   const isSignInView = !user;
   const isSearchView = Boolean(user && (hasProfile || profileCreated) && appRoute === "search");
   const isStatisticsView = Boolean(user && (hasProfile || profileCreated) && appRoute === "statistics");
-  const isMainScreenView = Boolean(user && (hasProfile || profileCreated) && currentView === "main" && appRoute === "capsule");
+  const isMainScreenView = Boolean(
+    user && (hasProfile || profileCreated) && currentView === "main" && (appRoute === "capsule" || appRoute === "share")
+  );
   const isOnboardingView = Boolean(user && !hasProfile && !profileCreated);
   const hasBrandedPanelHeader = isSignInView || isMainScreenView || isOnboardingView || isSearchView || isStatisticsView;
   const canGenerateWardrobe = Boolean(
@@ -1812,6 +1919,7 @@ function App() {
           onRenameCapsule={handleRenameCapsule}
           onDuplicateCapsule={handleDuplicateCapsule}
           onDeleteCapsule={handleDeleteCapsule}
+          onShareCapsule={handleShareCapsule}
           onSearchCapsules={handleSearchCapsules}
           items={profileItems || []}
           outfitSets={profileOutfitSets}
@@ -2157,6 +2265,32 @@ function App() {
           {status.error}
         </Alert>
       </Snackbar>
+      <Dialog
+        open={isShareDialogOpen}
+        onClose={() => {
+          if (!isShareLoading) {
+            clearShareRoute();
+          }
+        }}
+        aria-labelledby="share-import-dialog-title"
+      >
+        <DialogTitle id="share-import-dialog-title">
+          {t("capsule.shareImportTitle")}
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {t("capsule.shareImportBody", { name: shareMetadata?.name || "" })}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button disabled={isShareLoading} onClick={clearShareRoute}>
+            {t("actions.cancel")}
+          </Button>
+          <Button variant="contained" disabled={isShareLoading} onClick={() => { void handleImportSharedCapsule(); }}>
+            {t("capsule.shareImportConfirm")}
+          </Button>
+        </DialogActions>
+      </Dialog>
       <Dialog
         open={isSignOutConfirmOpen}
         onClose={() => {

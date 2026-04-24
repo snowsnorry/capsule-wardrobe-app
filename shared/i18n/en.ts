@@ -364,6 +364,16 @@ const en = {
     revert: "Revert",
     saveAs: "Save as...",
     saveAsTitle: "Save as",
+    share: "Share",
+    shareTitle: "Share capsule",
+    shareReady: "Your share link is ready.",
+    copyShareLink: "Copy share link",
+    shareCopied: "Copied",
+    shareExpires: "Expires {date}",
+    shareImportTitle: "Save shared capsule?",
+    shareImportBody: "Save capsule \"{name}\" to your capsules?",
+    shareImportConfirm: "Save capsule",
+    shareImported: "Shared capsule saved.",
     renameTitle: "Rename capsule",
     deleteTitle: "Delete capsule",
     revertTitle: "Revert changes",
@@ -465,7 +475,9 @@ const en = {
     passkeyLoginFailed: "Passkey login failed.",
     downloadFailed: "Failed to generate the capsule PDF. Please try again.",
     regenerateAllFailed: "Failed to regenerate the capsule. Your previous capsule was restored.",
-    regenerateSelectedFailed: "Failed to regenerate the selected items. Please try again."
+    regenerateSelectedFailed: "Failed to regenerate the selected items. Please try again.",
+    capsuleNotShareable: "Capsule has no shareable content.",
+    sharedCapsuleUnavailable: "This shared capsule is unavailable or expired."
   },
   dialogs: {
     signOutTitle: "Sign out",

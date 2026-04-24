@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import { neon } from "@neondatabase/serverless";
 
 const SEARCH_PAGE_SIZE = 50;
@@ -235,6 +236,17 @@ type CapsuleRow = {
   updatedAt: string | Date;
 };
 
+type SharedCapsuleRow = {
+  id: string;
+  profileEmail: string;
+  name: string;
+  content: JsonObject;
+  contentHash: string;
+  expiresAt: string | Date;
+  createdAt: string | Date;
+  updatedAt: string | Date;
+};
+
 type CreateCapsuleInput = {
   email: string;
   name: string;
@@ -259,6 +271,14 @@ type RenameCapsuleInput = {
   name: string;
 };
 
+type UpsertSharedCapsuleInput = {
+  profileEmail: string;
+  name: string;
+  content: JsonObject;
+  contentHash: string;
+  expiresAt: string | Date;
+};
+
 let sqlClientOverride: SqlClientLike | null = null;
 
 function getResultRows<TRow>(result: SqlResultLike<TRow>): TRow[] {
@@ -267,6 +287,30 @@ function getResultRows<TRow>(result: SqlResultLike<TRow>): TRow[] {
 
 function getFirstRow<TRow>(result: SqlResultLike<TRow>): TRow | null {
   return getResultRows(result)[0] ?? null;
+}
+
+function stableStringify(value: unknown): string {
+  if (value === null || typeof value !== "object") {
+    return JSON.stringify(value);
+  }
+
+  if (Array.isArray(value)) {
+    return `[${value.map((item) => stableStringify(item)).join(",")}]`;
+  }
+
+  const record = value as Record<string, unknown>;
+  return `{${Object.keys(record)
+    .sort()
+    .filter((key) => record[key] !== undefined)
+    .map((key) => `${JSON.stringify(key)}:${stableStringify(record[key])}`)
+    .join(",")}}`;
+}
+
+function hashCapsuleContent(content: unknown): string {
+  return crypto
+    .createHash("sha256")
+    .update(stableStringify(content))
+    .digest("hex");
 }
 
 function toOptionalNumber(value: unknown): number | null {
@@ -511,6 +555,31 @@ async function ensureCapsulesTable(): Promise<void> {
   `;
 }
 
+async function ensureSharedCapsulesTable(): Promise<void> {
+  const sql = getSqlClient();
+  await sql`create extension if not exists pgcrypto`;
+  await sql`
+    create table if not exists shared_capsules (
+      id uuid primary key default gen_random_uuid(),
+      profile_email text not null references profiles(email) on delete cascade,
+      name text not null,
+      content jsonb not null,
+      content_hash text not null,
+      expires_at timestamptz not null,
+      created_at timestamptz not null default now(),
+      updated_at timestamptz not null default now()
+    )
+  `;
+  await sql`
+    create unique index if not exists shared_capsules_profile_email_name_hash_idx
+    on shared_capsules (profile_email, name, content_hash)
+  `;
+  await sql`
+    create index if not exists shared_capsules_expires_at_idx
+    on shared_capsules (expires_at)
+  `;
+}
+
 async function ensureSearchTable(): Promise<void> {
   const sql = getSqlClient();
   await sql`
@@ -549,6 +618,7 @@ async function ensureTables(): Promise<void> {
   await ensureProfilesTable();
   await ensurePasskeysTables();
   await ensureCapsulesTable();
+  await ensureSharedCapsulesTable();
   await ensureSearchTable();
 }
 
@@ -2227,6 +2297,70 @@ async function deleteCapsuleByIdForEmail({ email, capsuleId }: CapsuleLookupInpu
   return hasAffectedRows(result);
 }
 
+async function upsertSharedCapsule({
+  profileEmail,
+  name,
+  content,
+  contentHash,
+  expiresAt
+}: UpsertSharedCapsuleInput): Promise<SharedCapsuleRow | null> {
+  const sql = getSqlClient();
+  const row = getFirstRow(await sql<SharedCapsuleRow>`
+    insert into shared_capsules (
+      profile_email,
+      name,
+      content,
+      content_hash,
+      expires_at
+    )
+    values (
+      ${profileEmail},
+      ${name},
+      ${JSON.stringify(content)},
+      ${contentHash},
+      ${expiresAt}
+    )
+    on conflict (profile_email, name, content_hash)
+    do update set
+      expires_at = excluded.expires_at,
+      updated_at = now()
+    returning
+      id,
+      profile_email as "profileEmail",
+      name,
+      content,
+      content_hash as "contentHash",
+      expires_at as "expiresAt",
+      created_at as "createdAt",
+      updated_at as "updatedAt"
+  `);
+  return row || null;
+}
+
+async function getValidSharedCapsuleById(id: string): Promise<SharedCapsuleRow | null> {
+  const sql = getSqlClient();
+  const row = getFirstRow(await sql<SharedCapsuleRow>`
+    select
+      id,
+      profile_email as "profileEmail",
+      name,
+      content,
+      content_hash as "contentHash",
+      expires_at as "expiresAt",
+      created_at as "createdAt",
+      updated_at as "updatedAt"
+    from shared_capsules
+    where id = ${id} and expires_at > now()
+    limit 1
+  `);
+  return row || null;
+}
+
+async function pruneExpiredSharedCapsules(): Promise<void> {
+  const sql = getSqlClient();
+  await sql`delete from shared_capsules where expires_at < now()`;
+}
+
 function hasAffectedRows(result: HasAffectedRowsResult | null | undefined): boolean {
   if (Array.isArray(result)) {
     return result.length > 0;
@@ -2306,6 +2440,11 @@ export {
   saveCapsuleByIdForEmail,
   revertCapsuleDraftByIdForEmail,
   deleteCapsuleByIdForEmail,
+  stableStringify,
+  hashCapsuleContent,
+  upsertSharedCapsule,
+  getValidSharedCapsuleById,
+  pruneExpiredSharedCapsules,
   hasAffectedRows,
   deleteProfileByEmail
 };

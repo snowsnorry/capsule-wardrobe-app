@@ -19,6 +19,10 @@ function capsuleUrl(path = ""): string {
   return `${API_BASE_URL}/capsules${path}`;
 }
 
+function sharedCapsuleUrl(path = ""): string {
+  return `${API_BASE_URL}/shared-capsules${path}`;
+}
+
 function getDownloadFilenameFromDisposition(contentDisposition?: string | null): string {
   const header = String(contentDisposition || "");
   const utf8Match = header.match(/filename\*\s*=\s*UTF-8''([^;]+)/i);
@@ -141,6 +145,26 @@ async function duplicateCapsule(id: string, name?: string): Promise<CapsuleRespo
   });
 }
 
+async function shareCapsule(id: string): Promise<CapsuleResponse> {
+  return requestJson(capsuleUrl(`/${id}/share`), {
+    method: "POST",
+    credentials: "include"
+  });
+}
+
+async function fetchSharedCapsule(id: string): Promise<CapsuleResponse> {
+  return requestJson(sharedCapsuleUrl(`/${encodeURIComponent(id)}`), {
+    credentials: "include"
+  });
+}
+
+async function importSharedCapsule(id: string): Promise<CapsuleResponse> {
+  return requestJson(sharedCapsuleUrl(`/${encodeURIComponent(id)}/import`), {
+    method: "POST",
+    credentials: "include"
+  });
+}
+
 async function selectCapsule(id: string): Promise<CapsuleResponse> {
   return requestJson(capsuleUrl(`/${id}/select`), {
     method: "POST",
@@ -198,7 +222,10 @@ export {
   revertCapsule,
   saveCapsule,
   searchCapsules,
+  fetchSharedCapsule,
+  importSharedCapsule,
   selectCapsule,
+  shareCapsule,
   updateCapsuleFilters,
   updateCapsuleRejectedUrls
 };
