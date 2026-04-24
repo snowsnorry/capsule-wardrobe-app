@@ -50,7 +50,6 @@ const MAX_SOURCE_IMAGE_PIXELS = Number.parseInt(process.env.MAX_SOURCE_IMAGE_PIX
 const REQUEST_IMAGE_WIDTH = Number.parseInt(process.env.PROMPT_IMAGE_REQUEST_WIDTH || "", 10) || 1000;
 const PROMPT_IMAGES_CHILD_TIMEOUT_MS = Number.parseInt(process.env.PROMPT_IMAGES_CHILD_TIMEOUT_MS || "", 10) || 120000;
 const PROMPT_CATEGORY_DOWNLOAD_CONCURRENCY = Number.parseInt(process.env.PROMPT_CATEGORY_DOWNLOAD_CONCURRENCY || "", 10) || 5;
-const STORAGE_IMAGES_DIR = fileURLToPath(new URL("../../../storage/images/", import.meta.url));
 const STITCHED_COLLAGE_FILENAME = "categories-stitched.jpg";
 
 type PromptImagesChildProcessLike = {
@@ -92,6 +91,42 @@ function resolvePromptImagesChildEntryUrl() {
 function resolvePromptImagesChildExecArgv(childEntryUrl: URL) {
   return path.extname(fileURLToPath(childEntryUrl)) === ".ts" ? [...process.execArgv] : [];
 }
+
+function findRepositoryRoot(startDir: string) {
+  let currentDir = path.resolve(startDir);
+
+  while (true) {
+    if (
+      existsSync(path.join(currentDir, "package.json")) &&
+      existsSync(path.join(currentDir, "server", "package.json"))
+    ) {
+      return currentDir;
+    }
+
+    const parentDir = path.dirname(currentDir);
+    if (parentDir === currentDir) {
+      return "";
+    }
+    currentDir = parentDir;
+  }
+}
+
+function resolveStorageImagesDir(moduleUrl = import.meta.url) {
+  const configuredDir = String(process.env.STORAGE_IMAGES_DIR || "").trim();
+  if (configuredDir) {
+    return path.resolve(configuredDir);
+  }
+
+  const moduleDir = path.dirname(fileURLToPath(moduleUrl));
+  const repositoryRoot = findRepositoryRoot(moduleDir);
+  if (repositoryRoot) {
+    return path.join(repositoryRoot, "storage", "images");
+  }
+
+  return fileURLToPath(new URL("../../../storage/images/", moduleUrl));
+}
+
+const STORAGE_IMAGES_DIR = resolveStorageImagesDir();
 
 function nowMs() {
   return Date.now();
@@ -1357,6 +1392,7 @@ export {
   HEADER_HEIGHT,
   MAX_ITEMS_PER_CATEGORY,
   buildLocalImageCachePath,
+  resolveStorageImagesDir,
   getOriginalImageUrl,
   downloadProductImageAssets,
   groupPromptImageItemsByCategory,

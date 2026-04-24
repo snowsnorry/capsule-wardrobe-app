@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import sharp from "sharp";
 import {
   buildPromptDebugImages,
@@ -16,6 +17,7 @@ import {
   groupPromptImageItemsByCategory,
   downloadProductImageAssets,
   preparePdfImageAssets,
+  resolveStorageImagesDir,
   resolveSourceImageUrl,
   serializePromptDebugImagesForIpc
 } from "./promptImages.js";
@@ -88,6 +90,16 @@ test("resolveSourceImageUrl rejects localhost and literal IP hosts for server-si
   assert.equal(resolveSourceImageUrl("http://169.254.169.254/latest/meta-data"), "");
   assert.equal(resolveSourceImageUrl("http://[::1]/image.jpg"), "");
   assert.equal(resolveSourceImageUrl("https://[2606:4700:4700::1111]/image.jpg"), "");
+});
+
+test("resolveStorageImagesDir points dist builds at the repository storage cache", () => {
+  const distModuleUrl = new URL("../../dist/server/src/ai/promptImages.js", import.meta.url).href;
+  const expectedStorageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../storage/images");
+
+  assert.equal(
+    resolveStorageImagesDir(distModuleUrl),
+    expectedStorageDir
+  );
 });
 
 test("buildPromptDebugImages writes category images with expected geometry and manifest", async (t) => {
