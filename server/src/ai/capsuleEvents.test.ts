@@ -33,3 +33,42 @@ test("buildCapsuleEventSnapshot includes pending outfit set image indexes", () =
     imageObsolete: false
   }]);
 });
+
+test("buildCapsuleEventSnapshot marks stored item urls as pending during full regeneration", () => {
+  const snapshot = buildCapsuleEventSnapshot({
+    capsule: {
+      draft: {
+        filters: {},
+        data: {
+          wardrobe: {
+            items: [
+              { id: "top-1", url: "https://example.com/top-1" },
+              { id: "bottom-1", url: "https://example.com/bottom-1" },
+              { id: "bag-1", url: "" }
+            ],
+            outfitSets: []
+          },
+          rejectedUrls: [],
+          regeneration: {
+            status: "pending",
+            kind: "full",
+            startedAt: "2026-04-24T00:00:00.000Z",
+            requestId: "req-1"
+          }
+        }
+      },
+      saved: null
+    },
+    activeJob: {
+      status: "pending",
+      phase: "capsule"
+    }
+  });
+
+  assert.equal(snapshot.status, "pending");
+  assert.equal(snapshot.pendingStage, "capsule");
+  assert.deepEqual(snapshot.pendingRegenerationUrls, [
+    "https://example.com/top-1",
+    "https://example.com/bottom-1"
+  ]);
+});

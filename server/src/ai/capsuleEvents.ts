@@ -112,6 +112,14 @@ function buildFailedSnapshot(storedWardrobe, error) {
   });
 }
 
+function getWardrobeItemUrls(storedWardrobe) {
+  return Array.isArray(storedWardrobe?.items)
+    ? storedWardrobe.items
+      .map((item) => String(item?.url || "").trim())
+      .filter(Boolean)
+    : [];
+}
+
 function buildCapsuleEventSnapshot({
   capsule = null,
   activeJob = null,
@@ -169,10 +177,12 @@ function buildCapsuleEventSnapshot({
   }
 
   if (activeJob?.status === "pending" || fullRegenerationMarker?.status === "pending") {
+    const isPendingExtras = activeJob?.phase === "extras";
     return buildSnapshotPayload({
       status: "pending",
-      pendingStage: activeJob?.phase === "extras" ? "extras" : "capsule",
-      hasPendingAdditionalItems: activeJob?.phase === "extras",
+      pendingStage: isPendingExtras ? "extras" : "capsule",
+      hasPendingAdditionalItems: isPendingExtras,
+      pendingRegenerationUrls: isPendingExtras ? [] : getWardrobeItemUrls(storedWardrobe),
       pendingImageSetIndexes,
       items: storedWardrobe?.items || [],
       outfitSets: storedWardrobe?.outfitSets || [],
