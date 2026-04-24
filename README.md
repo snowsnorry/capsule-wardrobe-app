@@ -73,6 +73,8 @@ Required for a normal backend setup:
 - `AUTH_CODE_SECRET` — secret for verification code hashing
 - `RESEND_API_KEY` — Resend API key
 - `RESEND_FROM_EMAIL` — verified sender address
+- `PASSKEY_RP_ID` — WebAuthn relying party hostname users see in the browser, for example `app.example.com`
+- `PASSKEY_ORIGIN` — full WebAuthn browser origin, for example `https://app.example.com`
 
 Common optional values:
 
@@ -224,6 +226,8 @@ Minimum env for this path:
 
 - `NODE_ENV=production`
 - `CLIENT_ORIGIN=https://<your-service>.onrender.com` or your custom domain
+- `PASSKEY_RP_ID=<your-service>.onrender.com` or your custom domain hostname
+- `PASSKEY_ORIGIN=https://<your-service>.onrender.com` or your custom domain origin
 - `DATABASE_URL`
 - `AUTH_CODE_SECRET`
 - `RESEND_API_KEY`

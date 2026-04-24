@@ -11,6 +11,10 @@ services:
         value: production
       - key: CLIENT_ORIGIN
         sync: false
+      - key: PASSKEY_RP_ID
+        sync: false
+      - key: PASSKEY_ORIGIN
+        sync: false
       - key: DATABASE_URL
         sync: false
       - key: AUTH_CODE_SECRET
