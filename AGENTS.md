@@ -14,6 +14,7 @@ High-level responsibilities:
 - Backend: Node.js + Express + TypeScript
 - Persistence: Postgres
 - Email auth delivery: Resend
+- Passkey/WebAuthn auth: SimpleWebAuthn with DB-backed short-lived challenges
 - Netlify deployment path exists for the client with a BFF proxy
 - Render single-service deployment is supported
 
@@ -22,6 +23,7 @@ High-level responsibilities:
 - `server/` — backend app
 - `shared/` — shared TypeScript domain models, helpers, and tests
 - `client/src/api/` — HTTP client calls and API-facing logic
+- `client/src/auth/` — browser auth helpers such as passkey/WebAuthn flows
 - `client/src/components/` — reusable UI pieces
 - `client/src/i18n/` — localization resources and helpers
 - `client/src/screens/` — page/screen-level UI flows
@@ -72,6 +74,7 @@ Tests:
 - When changing API contracts, inspect both `server/` and the corresponding `client/src/api/` usage.
 - When changing localization-visible text, update locale resources and keep EN/RU parity.
 - When changing auth, session, DB, email, or deployment behavior, be conservative and avoid incidental rewrites.
+- When changing passkeys/WebAuthn, preserve DB-backed challenge single-use semantics, do not return stored public keys to the client, and keep `PASSKEY_RP_ID`/`PASSKEY_ORIGIN` aligned with the visible frontend origin.
 - Prefer extending existing patterns over introducing new abstractions.
 
 ## Change heuristics
@@ -80,6 +83,7 @@ For frontend tasks:
 
 For backend tasks:
 - first inspect `server/src/index.ts` and the closest domain module (`db.ts`, `email.ts`, `authStore.ts`, `capsuleStore.ts`, `profileStore.ts`, `searchStore.ts`, or `ai/`)
+- for passkey/WebAuthn work, inspect `server/src/index.ts`, `server/src/db.ts`, `client/src/api/passkeys.ts`, and `client/src/auth/passkeys.ts`
 
 For deployment/config tasks:
 - inspect root `package.json`, `client/netlify.toml`, `client/render-server.js`, `client/vite.config.ts`, and README first

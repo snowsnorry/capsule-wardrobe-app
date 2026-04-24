@@ -1,5 +1,5 @@
 import { useEffect, useRef, type ChangeEvent, type FormEvent, type MouseEvent } from "react";
-import { Button, Divider, Link, Stack, TextField, Typography } from "@mui/material";
+import { Button, Divider, LinearProgress, Link, Stack, TextField, Typography } from "@mui/material";
 import KeyRoundedIcon from "@mui/icons-material/KeyRounded";
 import { useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
@@ -219,7 +219,10 @@ function SignInScreen({
         ) : null}
       </Stack>
 
-      <Divider />
+      <Stack spacing={0}>
+        <Divider />
+        {status.loading ? <LinearProgress aria-label={t("auth.signInProgress")} /> : null}
+      </Stack>
 
       {step === "email" ? (
         <Stack component="form" spacing={2} onSubmit={onRequestCode}>

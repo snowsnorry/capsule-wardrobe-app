@@ -15,6 +15,10 @@ Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, onboard
 - server entrypoint routes requests
 - auth/session logic lives around `authStore.ts`
 - email delivery logic lives in `email.ts`
+- Google and passkey login create the same normal app session as email-code login
+- Passkey/WebAuthn browser work lives in `client/src/auth/passkeys.ts` and API calls in `client/src/api/passkeys.ts`
+- Passkey credentials and short-lived single-use challenges are persisted via `server/src/db.ts`
+- Passkey RP config uses `PASSKEY_RP_ID` for the visible frontend hostname and `PASSKEY_ORIGIN` for the full visible frontend origin
 - auth test mode exists and should remain usable
 
 ### 3. Profile / onboarding flow
@@ -46,6 +50,7 @@ Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, onboard
 - `client/src/App.tsx`
 - `client/src/main.tsx`
 - `client/src/theme.ts`
+- `client/src/auth/passkeys.ts`
 
 ### Client feature areas
 - `client/src/api/`
@@ -61,7 +66,7 @@ Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, onboard
 - `server/tsconfig.build.json`
 - `server/tsconfig.test.json`
 - `server/src/index.ts`
-- `server/src/db.ts`
+- `server/src/db.ts` — database integration, including passkey credential and challenge persistence
 - `server/src/email.ts`
 - `server/src/authStore.ts`
 - `server/src/capsuleStore.ts`
@@ -95,6 +100,8 @@ Run from root:
 - Root scripts are the canonical entrypoint for cross-workspace work
 - Localization parity matters
 - Auth test mode matters
+- Passkey challenges are single-use and stored separately from normal app sessions
+- Passkey API responses must never expose stored credential public keys
 - DB/env wiring should remain explicit and stable
 - Netlify proxy path and Render deployment path are both first-class deployment concerns
 

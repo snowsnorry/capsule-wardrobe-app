@@ -203,7 +203,8 @@ const ru = {
     signedOut: "Вы вышли из системы.",
     codeSent: "Код отправлен. Он будет действителен {minutes} минут.",
     orEmailCode: "Или введите email, чтобы получить код для входа",
-    signInWithPasskey: "Войти с passkey"
+    signInWithPasskey: "Войти с passkey",
+    signInProgress: "Выполняем вход"
   },
   main: {
     title: "Главная",

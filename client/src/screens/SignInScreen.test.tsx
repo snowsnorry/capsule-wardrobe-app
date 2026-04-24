@@ -123,6 +123,20 @@ describe("SignInScreen", () => {
     expect(onPasskeySignIn).toHaveBeenCalledTimes(1);
   });
 
+  test("shows progress indicator while sign-in is loading", () => {
+    renderHarness({
+      status: { loading: true, error: "", infoKey: "", infoParams: null }
+    });
+
+    expect(screen.getByRole("progressbar", { name: "Signing in" })).toBeInTheDocument();
+  });
+
+  test("hides progress indicator when sign-in is idle", () => {
+    renderHarness();
+
+    expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+  });
+
   test("code step disables verify until code is present and wires resend/reset actions", async () => {
     const onRequestCode = vi.fn((event) => event.preventDefault());
     const onResetEmail = vi.fn();

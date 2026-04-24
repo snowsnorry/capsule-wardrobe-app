@@ -202,7 +202,8 @@ const en = {
     signedOut: "You are signed out.",
     codeSent: "Code sent. It will be valid for {minutes} minutes.",
     orEmailCode: "Or enter your email to receive a sign-in code",
-    signInWithPasskey: "Sign in with passkey"
+    signInWithPasskey: "Sign in with passkey",
+    signInProgress: "Signing in"
   },
   main: {
     title: "Main",
