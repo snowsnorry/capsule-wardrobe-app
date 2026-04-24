@@ -95,7 +95,6 @@ At minimum:
 - shared logic changes: `npm run test:shared`
 - cross-cutting changes: `npm test`
 - TypeScript-only or contract-shape changes: run the narrowest relevant `typecheck` command
-- TypeScript-only test changes: run the command `npx tsc --noEmit -p server/tsconfig.test.json`
 
 ## Avoid
 - Do not invent new architecture not already present in the repo.

@@ -1,5 +1,6 @@
 import { useEffect, useRef, type ChangeEvent, type FormEvent, type MouseEvent } from "react";
 import { Button, Divider, Link, Stack, TextField, Typography } from "@mui/material";
+import KeyRoundedIcon from "@mui/icons-material/KeyRounded";
 import { useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import LocaleSwitcher from "../components/LocaleSwitcher";
@@ -47,6 +48,7 @@ type SignInScreenProps = {
   onRequestCode: (event: FormEvent<HTMLFormElement> | MouseEvent<HTMLButtonElement>) => void;
   onVerifyCode: (event: FormEvent<HTMLFormElement>) => void;
   onGoogleCredential: (credential: string) => void;
+  onPasskeySignIn: () => void;
   onResetEmail: () => void;
 };
 
@@ -116,6 +118,7 @@ function SignInScreen({
   onRequestCode,
   onVerifyCode,
   onGoogleCredential,
+  onPasskeySignIn,
   onResetEmail
 }: SignInScreenProps) {
   const { t, locale } = useI18n();
@@ -220,6 +223,47 @@ function SignInScreen({
 
       {step === "email" ? (
         <Stack component="form" spacing={2} onSubmit={onRequestCode}>
+          <Stack alignItems="center">
+            <Button
+              type="button"
+              variant="outlined"
+              startIcon={<KeyRoundedIcon />}
+              onClick={onPasskeySignIn}
+              disabled={status.loading}
+              sx={{
+                width: "min(320px, 100%)",
+                height: 40,
+                position: "relative",
+                justifyContent: "center",
+                borderRadius: "4px",
+                borderColor: "#dadce0",
+                backgroundColor: "#fff",
+                color: "#3c4043",
+                fontFamily: "Roboto, arial, sans-serif",
+                fontSize: "14px",
+                fontWeight: 500,
+                letterSpacing: "0.25px",
+                lineHeight: "20px",
+                textTransform: "none",
+                paddingLeft: "38px",
+                "&:hover": {
+                  borderColor: "#dadce0",
+                  backgroundColor: "#f2f5fe"
+                },
+                "& .MuiButton-startIcon": {
+                  position: "absolute",
+                  left: 12,
+                  m: 0,
+                  color: "primary.main"
+                },
+                "& .MuiSvgIcon-root": {
+                  fontSize: 20
+                }
+              }}
+            >
+              {t("auth.signInWithPasskey")}
+            </Button>
+          </Stack>
           {googleClientId ? (
             <>
               <Stack alignItems="center">

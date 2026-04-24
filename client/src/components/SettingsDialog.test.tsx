@@ -6,10 +6,19 @@ import type { ComponentProps } from "react";
 import SettingsDialog from "./SettingsDialog";
 
 const useI18nMock = vi.hoisted(() => vi.fn());
+const passkeysApiMock = vi.hoisted(() => ({
+  deletePasskey: vi.fn(),
+  listPasskeys: vi.fn()
+}));
+const passkeysAuthMock = vi.hoisted(() => ({
+  registerPasskey: vi.fn()
+}));
 
 vi.mock("../i18n/useI18n", () => ({
   useI18n: useI18nMock
 }));
+vi.mock("../api/passkeys", () => passkeysApiMock);
+vi.mock("../auth/passkeys", () => passkeysAuthMock);
 
 const theme = createTheme();
 
@@ -25,6 +34,9 @@ function createDeferred() {
 }
 
 function renderDialog(props: Partial<ComponentProps<typeof SettingsDialog>> = {}) {
+  passkeysApiMock.listPasskeys.mockResolvedValue({ passkeys: [] });
+  passkeysApiMock.deletePasskey.mockResolvedValue({});
+  passkeysAuthMock.registerPasskey.mockResolvedValue({});
   useI18nMock.mockReturnValue({
     t: (key: string) => {
       const labels = {
@@ -54,6 +66,17 @@ function renderDialog(props: Partial<ComponentProps<typeof SettingsDialog>> = {}
         "settings.llmOptions.none": "None",
         "settings.imageLlmOptions.openai:gpt-image-2": "OpenAI GPT Image 2",
         "settings.imageLlmOptions.gemini:gemini-3-pro-image-preview": "Gemini 3 Pro Image Preview",
+        "passkeys.title": "Passkeys",
+        "passkeys.add": "Add passkey",
+        "passkeys.remove": "Remove passkey",
+        "passkeys.removeConfirm": "Remove this passkey?",
+        "passkeys.empty": "No passkeys added yet.",
+        "passkeys.defaultName": "Passkey",
+        "passkeys.backedUp": "Backed up",
+        "passkeys.used": "Used before",
+        "passkeys.loading": "Loading passkeys",
+        "errors.passkeySetupFailed": "Passkey setup failed.",
+        "errors.passkeyNotSupported": "Passkeys are not supported.",
         "actions.cancel": "Cancel",
         "actions.save": "Save",
         "errors.generic": "Something went wrong"
@@ -91,6 +114,9 @@ describe("SettingsDialog", () => {
   afterEach(() => {
     cleanup();
     useI18nMock.mockReset();
+    passkeysApiMock.deletePasskey.mockReset();
+    passkeysApiMock.listPasskeys.mockReset();
+    passkeysAuthMock.registerPasskey.mockReset();
   });
 
   test("shows a header divider and turns it into a progress indicator while saving", async () => {

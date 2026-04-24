@@ -31,6 +31,8 @@ import {
   verifyLoginCode,
   signInWithGoogle
 } from "./api/auth";
+import { listPasskeys } from "./api/passkeys";
+import { authenticateWithPasskey, isPasskeySupported, registerPasskey } from "./auth/passkeys";
 import {
   createCapsule,
   deleteCapsule,
@@ -74,6 +76,11 @@ type StatusState = {
 
 type NotificationPromptState = {
   open: boolean;
+};
+
+type PasskeyPromptState = {
+  open: boolean;
+  loading: boolean;
 };
 
 type UserLike = {
@@ -214,6 +221,12 @@ const initialStatus: StatusState = {
 const initialNotificationPrompt: NotificationPromptState = {
   open: false
 };
+
+const initialPasskeyPrompt: PasskeyPromptState = {
+  open: false,
+  loading: false
+};
+const PASSKEY_PROMPT_DISMISSED_STORAGE_KEY = "capsule.passkeyPromptDismissed";
 
 function RoutePanelFallback() {
   return (
@@ -395,6 +408,7 @@ function App() {
   const [code, setCode] = useState("");
   const [status, setStatus] = useState<StatusState>(initialStatus);
   const [notificationPrompt, setNotificationPrompt] = useState(initialNotificationPrompt);
+  const [passkeyPrompt, setPasskeyPrompt] = useState(initialPasskeyPrompt);
   const [isSignOutConfirmOpen, setIsSignOutConfirmOpen] = useState(false);
   const [user, setUser] = useState<UserLike | null>(null);
   const [isCheckingSession, setIsCheckingSession] = useState(true);
@@ -486,6 +500,11 @@ function App() {
     if (error.message === "invalid_payload") return t("errors.invalidPayload");
     if (error.message === "invalid_google_token") return t("errors.invalidGoogleToken");
     if (error.message === "google_auth_not_configured") return t("errors.googleAuthNotConfigured");
+    if (error.message === "passkey_not_supported") return t("errors.passkeyNotSupported");
+    if (error.message === "passkey_registration_failed") return t("errors.passkeySetupFailed");
+    if (error.message === "passkey_login_failed") return t("errors.passkeyLoginFailed");
+    if (error.message === "passkey_failed") return t("errors.passkeyLoginFailed");
+    if (error.message === "passkey_cancelled") return "";
     return t("errors.generic");
   };
 
@@ -499,6 +518,57 @@ function App() {
 
   const closeNotificationPrompt = () => {
     setNotificationPrompt(initialNotificationPrompt);
+  };
+
+  const closePasskeyPrompt = () => {
+    setPasskeyPrompt(initialPasskeyPrompt);
+  };
+
+  const dismissPasskeyPrompt = () => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(PASSKEY_PROMPT_DISMISSED_STORAGE_KEY, "true");
+    }
+    closePasskeyPrompt();
+  };
+
+  const shouldSkipPasskeyPrompt = () => (
+    typeof window !== "undefined" &&
+    window.localStorage.getItem(PASSKEY_PROMPT_DISMISSED_STORAGE_KEY) === "true"
+  );
+
+  const maybeShowPasskeyPrompt = async () => {
+    if (!isPasskeySupported() || shouldSkipPasskeyPrompt()) {
+      return;
+    }
+
+    try {
+      const response = await listPasskeys() as { passkeys?: unknown[] };
+      if (Array.isArray(response.passkeys) && response.passkeys.length === 0) {
+        setPasskeyPrompt({ open: true, loading: false });
+      }
+    } catch {
+      // Prompting for passkeys is opportunistic; login should not fail if this read fails.
+    }
+  };
+
+  const handleAddPasskeyFromPrompt = async () => {
+    setPasskeyPrompt({ open: true, loading: true });
+    try {
+      await registerPasskey();
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(PASSKEY_PROMPT_DISMISSED_STORAGE_KEY, "true");
+      }
+      setPasskeyPrompt(initialPasskeyPrompt);
+      setStatus({ loading: false, error: "", infoKey: "passkeys.added", infoParams: null });
+    } catch (error) {
+      const message = error instanceof Error && error.message === "passkey_cancelled"
+        ? ""
+        : resolveErrorMessage(error);
+      setPasskeyPrompt({ open: Boolean(message), loading: false });
+      if (message) {
+        setStatus({ loading: false, error: message, infoKey: "", infoParams: null });
+      }
+    }
   };
 
   const shouldShowNotificationPrompt = (llm = settingsProfile.llm) => (
@@ -779,6 +849,7 @@ function App() {
         await Promise.all([ensureOptionsLoaded({ useFallback: true }), bootstrapCapsules(result.user?.email)]);
         setUser(result.user);
         setStatus({ loading: false, error: "", infoKey: "auth.signedIn", infoParams: null });
+        void maybeShowPasskeyPrompt();
       }
     } catch (error) {
       setUser(null);
@@ -812,10 +883,43 @@ function App() {
         await Promise.all([ensureOptionsLoaded({ useFallback: true }), bootstrapCapsules(result.user?.email)]);
         setUser(result.user);
         setStatus({ loading: false, error: "", infoKey: "auth.signedIn", infoParams: null });
+        void maybeShowPasskeyPrompt();
       }
     } catch (error) {
       setUser(null);
       setStatus({ loading: false, error: resolveErrorMessage(error), infoKey: "", infoParams: null });
+    }
+  };
+
+  const handlePasskeySignIn = async () => {
+    setStatus({ loading: true, error: "", infoKey: "", infoParams: null });
+    try {
+      const result = await authenticateWithPasskey() as AuthResultResponse;
+      clearRequestCache();
+      const profileStatus = await retry(() => fetchProfileStatus() as Promise<ProfileStatusResponse>);
+      setHasProfile(profileStatus.hasProfile);
+      setProfileCreated(profileStatus.hasProfile);
+      if (!profileStatus.hasProfile) {
+        await preloadOnboardingOptions({ useFallback: true });
+        setUser(result.user);
+        setSettingsProfile(normalizeProfileSettings({}, result.user?.email));
+        setSelectedFormalityLevel("");
+        setSelectedStyle(null);
+        setSelectedOccasions([]);
+        setSelectedSeason([]);
+        setSelectedAudience("");
+        setSelectedColor(null);
+        setSelectedPattern("solid");
+        setSelectedText("");
+        setOnboardingStep(0);
+      } else {
+        await Promise.all([ensureOptionsLoaded({ useFallback: true }), bootstrapCapsules(result.user?.email)]);
+        setUser(result.user);
+      }
+      setStatus({ loading: false, error: "", infoKey: "auth.signedIn", infoParams: null });
+    } catch (error) {
+      const message = resolveErrorMessage(error);
+      setStatus({ loading: false, error: message, infoKey: "", infoParams: null });
     }
   };
 
@@ -1621,6 +1725,7 @@ function App() {
           onRequestCode={handleRequestCode}
           onVerifyCode={handleVerifyCode}
           onGoogleCredential={handleGoogleCredential}
+          onPasskeySignIn={handlePasskeySignIn}
           onResetEmail={resetToEmail}
         />
       );
@@ -1986,6 +2091,52 @@ function App() {
           }}
         >
           {t("notifications.prompt.message")}
+        </Alert>
+      </Snackbar>
+      <Snackbar
+        open={passkeyPrompt.open}
+        autoHideDuration={null}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          severity="info"
+          action={(
+            <Stack direction="row" spacing={1}>
+              <Button
+                size="small"
+                variant="text"
+                disabled={passkeyPrompt.loading}
+                onClick={() => { void handleAddPasskeyFromPrompt(); }}
+                sx={{ color: "primary.main", fontWeight: 700 }}
+              >
+                {t("passkeys.add")}
+              </Button>
+              <Button
+                size="small"
+                variant="text"
+                disabled={passkeyPrompt.loading}
+                onClick={dismissPasskeyPrompt}
+                sx={{ color: "text.secondary", fontWeight: 700 }}
+              >
+                {t("passkeys.notNow")}
+              </Button>
+            </Stack>
+          )}
+          sx={{
+            width: "min(680px, calc(100vw - 32px))",
+            alignItems: "center",
+            color: "text.primary",
+            backgroundColor: "background.paper",
+            border: "1px solid",
+            borderColor: "divider",
+            boxShadow: (theme) => (
+              theme.palette.mode === "dark"
+                ? "0 14px 36px rgba(0, 0, 0, 0.34)"
+                : "0 14px 32px rgba(31, 41, 51, 0.12)"
+            )
+          }}
+        >
+          {t("passkeys.prompt")}
         </Alert>
       </Snackbar>
       <Snackbar

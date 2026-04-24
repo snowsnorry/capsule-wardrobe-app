@@ -201,7 +201,8 @@ const en = {
     signedIn: "You are signed in.",
     signedOut: "You are signed out.",
     codeSent: "Code sent. It will be valid for {minutes} minutes.",
-    orEmailCode: "Or enter your email to receive a sign-in code"
+    orEmailCode: "Or enter your email to receive a sign-in code",
+    signInWithPasskey: "Sign in with passkey"
   },
   main: {
     title: "Main",
@@ -309,6 +310,21 @@ const en = {
     delete: "Delete",
     save: "Save",
     close: "Close"
+  },
+  passkeys: {
+    title: "Passkeys",
+    add: "Add passkey",
+    remove: "Remove passkey",
+    removeConfirm: "Remove this passkey from your account?",
+    prompt: "Add a passkey for faster sign-in?",
+    notNow: "Not now",
+    added: "Passkey added",
+    removed: "Passkey removed",
+    empty: "No passkeys added yet.",
+    defaultName: "Passkey",
+    backedUp: "Backed up",
+    used: "Used before",
+    loading: "Loading passkeys"
   },
   notifications: {
     prompt: {
@@ -443,6 +459,9 @@ const en = {
     invalidPayload: "Please select at least one option.",
     invalidGoogleToken: "Google sign-in failed. Please try again.",
     googleAuthNotConfigured: "Google sign-in is not configured on the server.",
+    passkeyNotSupported: "Passkeys are not supported in this browser/device.",
+    passkeySetupFailed: "Passkey setup failed.",
+    passkeyLoginFailed: "Passkey login failed.",
     downloadFailed: "Failed to generate the capsule PDF. Please try again.",
     regenerateAllFailed: "Failed to regenerate the capsule. Your previous capsule was restored.",
     regenerateSelectedFailed: "Failed to regenerate the selected items. Please try again."

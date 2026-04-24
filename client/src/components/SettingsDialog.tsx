@@ -2,11 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Box,
   Button,
+  Chip,
   Dialog,
   DialogActions,
   DialogContent,
+  DialogContentText,
   DialogTitle,
   Divider,
+  IconButton,
   LinearProgress,
   List,
   ListItemButton,
@@ -16,7 +19,11 @@ import {
   TextField,
   Typography
 } from "@mui/material";
+import DeleteRoundedIcon from "@mui/icons-material/DeleteRounded";
+import KeyRoundedIcon from "@mui/icons-material/KeyRounded";
 import type { ReactElement } from "react";
+import { deletePasskey, listPasskeys } from "../api/passkeys";
+import { registerPasskey } from "../auth/passkeys";
 import { useI18n } from "../i18n/useI18n";
 import { PROFILE_IMAGE_LLM_VALUES, PROFILE_LLM_VALUES, PROFILE_THEME_VALUES } from "../../../shared/profileSettings.js";
 
@@ -57,6 +64,16 @@ type SettingsSavePayload = {
   theme: SettingsTheme;
   llm: SettingsLlm;
   image_llm: SettingsImageLlm;
+};
+
+type PasskeyMetadata = {
+  id: string;
+  name?: string | null;
+  deviceType?: string | null;
+  backedUp?: boolean | null;
+  transports?: string[] | null;
+  createdAt?: string | null;
+  lastUsedAt?: string | null;
 };
 
 type SettingsDialogProps = {
@@ -112,6 +129,9 @@ function SettingsDialog({
   const [draft, setDraft] = useState(initialDraft);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
+  const [passkeys, setPasskeys] = useState<PasskeyMetadata[]>([]);
+  const [isPasskeyLoading, setIsPasskeyLoading] = useState(false);
+  const [passkeyToDelete, setPasskeyToDelete] = useState<PasskeyMetadata | null>(null);
 
   useEffect(() => {
     if (!open) {
@@ -122,6 +142,36 @@ function SettingsDialog({
     setError("");
     setIsSaving(false);
   }, [initialDraft, open]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    let isActive = true;
+    setIsPasskeyLoading(true);
+    listPasskeys()
+      .then((response) => {
+        if (!isActive) {
+          return;
+        }
+        setPasskeys(Array.isArray(response.passkeys) ? response.passkeys as PasskeyMetadata[] : []);
+      })
+      .catch(() => {
+        if (isActive) {
+          setPasskeys([]);
+        }
+      })
+      .finally(() => {
+        if (isActive) {
+          setIsPasskeyLoading(false);
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [open]);
 
   const hasChanges = JSON.stringify(draft) !== JSON.stringify(initialDraft);
 
@@ -155,6 +205,50 @@ function SettingsDialog({
       setError(saveError instanceof Error ? saveError.message : t("errors.generic"));
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const refreshPasskeys = async () => {
+    const response = await listPasskeys();
+    setPasskeys(Array.isArray(response.passkeys) ? response.passkeys as PasskeyMetadata[] : []);
+  };
+
+  const handleAddPasskey = async () => {
+    setIsPasskeyLoading(true);
+    setError("");
+    try {
+      await registerPasskey();
+      await refreshPasskeys();
+      setError("");
+    } catch (passkeyError) {
+      if (passkeyError instanceof Error && passkeyError.message === "passkey_cancelled") {
+        return;
+      }
+      setError(
+        passkeyError instanceof Error && passkeyError.message === "passkey_not_supported"
+          ? t("errors.passkeyNotSupported")
+          : t("errors.passkeySetupFailed")
+      );
+    } finally {
+      setIsPasskeyLoading(false);
+    }
+  };
+
+  const handleDeletePasskey = async () => {
+    if (!passkeyToDelete) {
+      return;
+    }
+
+    setIsPasskeyLoading(true);
+    setError("");
+    try {
+      await deletePasskey(passkeyToDelete.id);
+      setPasskeys((current) => current.filter((passkey) => passkey.id !== passkeyToDelete.id));
+      setPasskeyToDelete(null);
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : t("errors.generic"));
+    } finally {
+      setIsPasskeyLoading(false);
     }
   };
 
@@ -233,6 +327,65 @@ function SettingsDialog({
           value={draft.email}
           InputProps={{ readOnly: true }}
         />
+        <Divider />
+        <Stack spacing={1.5}>
+          <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
+            <Typography variant="subtitle1" fontWeight={700}>
+              {t("passkeys.title")}
+            </Typography>
+            <Button
+              type="button"
+              variant="outlined"
+              size="small"
+              startIcon={<KeyRoundedIcon />}
+              onClick={() => { void handleAddPasskey(); }}
+              disabled={isPasskeyLoading}
+            >
+              {t("passkeys.add")}
+            </Button>
+          </Stack>
+          {isPasskeyLoading ? <LinearProgress aria-label={t("passkeys.loading")} /> : null}
+          {!isPasskeyLoading && passkeys.length === 0 ? (
+            <Typography variant="body2" color="text.secondary">
+              {t("passkeys.empty")}
+            </Typography>
+          ) : null}
+          {passkeys.map((passkey) => (
+            <Stack
+              key={passkey.id}
+              direction="row"
+              alignItems="center"
+              justifyContent="space-between"
+              spacing={2}
+              sx={{
+                border: "1px solid",
+                borderColor: "divider",
+                borderRadius: 2,
+                px: 1.5,
+                py: 1
+              }}
+            >
+              <Stack spacing={0.5} sx={{ minWidth: 0 }}>
+                <Typography noWrap fontWeight={600}>
+                  {passkey.name || t("passkeys.defaultName")}
+                </Typography>
+                <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+                  {passkey.deviceType ? <Chip size="small" label={passkey.deviceType} /> : null}
+                  {passkey.backedUp ? <Chip size="small" label={t("passkeys.backedUp")} /> : null}
+                  {passkey.lastUsedAt ? <Chip size="small" label={t("passkeys.used")} /> : null}
+                </Stack>
+              </Stack>
+              <IconButton
+                aria-label={t("passkeys.remove")}
+                color="error"
+                onClick={() => setPasskeyToDelete(passkey)}
+                disabled={isPasskeyLoading}
+              >
+                <DeleteRoundedIcon />
+              </IconButton>
+            </Stack>
+          ))}
+        </Stack>
       </Stack>
     );
   };
@@ -299,6 +452,32 @@ function SettingsDialog({
           {t("actions.save")}
         </Button>
       </DialogActions>
+      <Dialog
+        open={Boolean(passkeyToDelete)}
+        onClose={() => {
+          if (!isPasskeyLoading) {
+            setPasskeyToDelete(null);
+          }
+        }}
+      >
+        <DialogTitle>{t("passkeys.remove")}</DialogTitle>
+        <DialogContent>
+          <DialogContentText>{t("passkeys.removeConfirm")}</DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button disabled={isPasskeyLoading} onClick={() => setPasskeyToDelete(null)}>
+            {t("actions.cancel")}
+          </Button>
+          <Button
+            color="error"
+            variant="contained"
+            disabled={isPasskeyLoading}
+            onClick={() => { void handleDeletePasskey(); }}
+          >
+            {t("passkeys.remove")}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Dialog>
   );
 }

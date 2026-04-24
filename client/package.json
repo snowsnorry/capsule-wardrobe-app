@@ -17,6 +17,7 @@
     "@microsoft/fetch-event-source": "^2.0.1",
     "@mui/icons-material": "^5.15.20",
     "@mui/material": "^5.15.20",
+    "@simplewebauthn/browser": "^13.3.0",
     "@tailwindcss/vite": "^4.2.2",
     "clsx": "^2.1.1",
     "express": "^4.19.2",

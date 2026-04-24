@@ -29,6 +29,7 @@ type RenderHarnessOptions = {
   onRequestCode?: ComponentProps<typeof SignInScreen>["onRequestCode"];
   onVerifyCode?: ComponentProps<typeof SignInScreen>["onVerifyCode"];
   onGoogleCredential?: ComponentProps<typeof SignInScreen>["onGoogleCredential"];
+  onPasskeySignIn?: ComponentProps<typeof SignInScreen>["onPasskeySignIn"];
   onResetEmail?: ComponentProps<typeof SignInScreen>["onResetEmail"];
 };
 
@@ -41,6 +42,7 @@ function renderHarness({
   onRequestCode = vi.fn(),
   onVerifyCode = vi.fn(),
   onGoogleCredential = vi.fn(),
+  onPasskeySignIn = vi.fn(),
   onResetEmail = vi.fn()
 }: RenderHarnessOptions = {}) {
   function Harness() {
@@ -59,6 +61,7 @@ function renderHarness({
         onRequestCode={onRequestCode}
         onVerifyCode={onVerifyCode}
         onGoogleCredential={onGoogleCredential}
+        onPasskeySignIn={onPasskeySignIn}
         onResetEmail={onResetEmail}
       />
     );
@@ -68,6 +71,7 @@ function renderHarness({
     onRequestCode,
     onVerifyCode,
     onGoogleCredential,
+    onPasskeySignIn,
     onResetEmail,
     ...render(
       <ThemeProvider theme={theme}>
@@ -107,6 +111,16 @@ describe("SignInScreen", () => {
     expect(sendCodeButton).not.toBeDisabled();
     await user.click(sendCodeButton);
     expect(onRequestCode).toHaveBeenCalledTimes(1);
+  });
+
+  test("email step wires passkey sign-in action", async () => {
+    const onPasskeySignIn = vi.fn();
+    const user = userEvent.setup();
+
+    renderHarness({ onPasskeySignIn });
+
+    await user.click(screen.getByRole("button", { name: "Sign in with passkey" }));
+    expect(onPasskeySignIn).toHaveBeenCalledTimes(1);
   });
 
   test("code step disables verify until code is present and wires resend/reset actions", async () => {

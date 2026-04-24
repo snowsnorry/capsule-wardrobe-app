@@ -1,4 +1,5 @@
 import "dotenv/config";
+import crypto from "node:crypto";
 import express from "express";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
@@ -6,6 +7,18 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { OAuth2Client } from "google-auth-library";
+import {
+  generateAuthenticationOptions,
+  generateRegistrationOptions,
+  verifyAuthenticationResponse,
+  verifyRegistrationResponse
+} from "@simplewebauthn/server";
+import type {
+  AuthenticationResponseJSON,
+  AuthenticatorTransportFuture,
+  RegistrationResponseJSON,
+  WebAuthnCredential
+} from "@simplewebauthn/server";
 import {
   CODE_TTL_MS,
   RESEND_COOLDOWN_MS,
@@ -59,7 +72,19 @@ import { getPartialRegenerationJob, regenerateSelectedWardrobeItems } from "./ai
 import { deleteOutfitSetImage, generateOutfitSetImage, getOutfitSetImageJob } from "./ai/outfitSetImages.js";
 import { buildCapsuleEventSnapshot, capsuleEventHub } from "./ai/capsuleEvents.js";
 import { buildWardrobePdfInChild } from "./wardrobePdf.js";
-import { checkDatabaseConnection, ensureTables, getProductsByUrlsInOrder } from "./db.js";
+import {
+  checkDatabaseConnection,
+  consumePasskeyChallenge,
+  deletePasskeyByIdForEmail,
+  ensureTables,
+  getPasskeyByCredentialId,
+  getProductsByUrlsInOrder,
+  insertPasskey,
+  insertPasskeyChallenge,
+  listPasskeysByEmail,
+  pruneExpiredPasskeyChallenges,
+  updatePasskeyAuthentication
+} from "./db.js";
 import { configureSharp } from "./ai/sharpConfig.js";
 import { sortWardrobeItems } from "../../shared/wardrobeOrder.js";
 import {
@@ -73,6 +98,30 @@ import {
 import type { ErrorWithCode, WardrobeUiItemLike } from "./ai/types.js";
 
 type CookieMap = Record<string, string>;
+type PasskeyChallengeKind = "registration" | "authentication";
+type PasskeyRecord = {
+  id: string;
+  profileEmail: string;
+  credentialId: string;
+  credentialPublicKey: string;
+  counter: number | string;
+  deviceType?: string | null;
+  backedUp?: boolean | null;
+  transports?: string[] | null;
+  name?: string | null;
+  lastUsedAt?: string | Date | null;
+  createdAt?: string | Date | null;
+  updatedAt?: string | Date | null;
+};
+type PasskeyChallengeRecord = {
+  id: string;
+  kind: string;
+  challenge: string;
+  profileEmail?: string | null;
+  expiresAt?: string | Date;
+  consumedAt?: string | Date | null;
+  createdAt?: string | Date;
+};
 type ProfileSettingsPayload = {
   locale: string;
   theme: string;
@@ -116,6 +165,11 @@ const CLIENT_ROOT_CANDIDATES = [
 const CLIENT_DIST_PATH = CLIENT_DIST_CANDIDATES.find((candidate) => fs.existsSync(candidate)) || CLIENT_DIST_CANDIDATES[0];
 const CLIENT_ROOT = CLIENT_ROOT_CANDIDATES.find((candidate) => fs.existsSync(candidate)) || CLIENT_ROOT_CANDIDATES[0];
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "";
+const PASSKEY_RP_NAME = process.env.PASSKEY_RP_NAME || "Capsule Wardrobe";
+const PASSKEY_RP_ID = process.env.PASSKEY_RP_ID || "localhost";
+const PASSKEY_ORIGIN = process.env.PASSKEY_ORIGIN || "http://localhost:3000";
+const PASSKEY_CHALLENGE_COOKIE = "passkey_challenge";
+const PASSKEY_CHALLENGE_TTL_MS = 5 * 60 * 1000;
 const sharpConfig = configureSharp();
 console.info(
   "[sharp][configured]",
@@ -200,6 +254,38 @@ function setCsrfCookie(res, csrfToken, nodeEnv = NODE_ENV) {
   res.append("Set-Cookie", parts.join("; "));
 }
 
+function setPasskeyChallengeCookie(res, challengeId, nodeEnv = NODE_ENV) {
+  const secure = nodeEnv === "production";
+  const sameSite = secure ? "None" : "Lax";
+  const parts = [
+    `${PASSKEY_CHALLENGE_COOKIE}=${encodeURIComponent(challengeId)}`,
+    "HttpOnly",
+    "Path=/",
+    `Max-Age=${Math.floor(PASSKEY_CHALLENGE_TTL_MS / 1000)}`,
+    `SameSite=${sameSite}`
+  ];
+  if (secure) {
+    parts.push("Secure");
+  }
+  res.append("Set-Cookie", parts.join("; "));
+}
+
+function clearPasskeyChallengeCookie(res, nodeEnv = NODE_ENV) {
+  const secure = nodeEnv === "production";
+  const sameSite = secure ? "None" : "Lax";
+  const parts = [
+    `${PASSKEY_CHALLENGE_COOKIE}=`,
+    "HttpOnly",
+    "Path=/",
+    "Max-Age=0",
+    `SameSite=${sameSite}`
+  ];
+  if (secure) {
+    parts.push("Secure");
+  }
+  res.append("Set-Cookie", parts.join("; "));
+}
+
 function clearSessionCookie(res, nodeEnv = NODE_ENV) {
   const secure = nodeEnv === "production";
   const sameSite = secure ? "None" : "Lax";
@@ -245,6 +331,58 @@ function readCsrfHeader(req) {
 
 function hasOwnProperty(object, key) {
   return Boolean(object) && Object.prototype.hasOwnProperty.call(object, key);
+}
+
+function generatePasskeyChallengeId() {
+  return crypto.randomBytes(32).toString("base64url");
+}
+
+function publicKeyToBase64Url(publicKey: Uint8Array): string {
+  return Buffer.from(publicKey).toString("base64url");
+}
+
+function publicKeyFromBase64Url(publicKey: string): Uint8Array<ArrayBuffer> {
+  const buffer = Buffer.from(publicKey, "base64url");
+  const arrayBuffer = buffer.buffer.slice(
+    buffer.byteOffset,
+    buffer.byteOffset + buffer.byteLength
+  ) as ArrayBuffer;
+  return new Uint8Array(arrayBuffer);
+}
+
+function getPasskeyChallengeId(req): string {
+  return String(parseCookies(req.headers.cookie)[PASSKEY_CHALLENGE_COOKIE] || "").trim();
+}
+
+function toPasskeyMetadata(passkey: PasskeyRecord) {
+  return {
+    id: passkey.id,
+    name: passkey.name || "",
+    deviceType: passkey.deviceType || null,
+    backedUp: passkey.backedUp ?? null,
+    transports: Array.isArray(passkey.transports) ? passkey.transports : [],
+    createdAt: passkey.createdAt || null,
+    lastUsedAt: passkey.lastUsedAt || null
+  };
+}
+
+function toWebAuthnCredential(passkey: PasskeyRecord): WebAuthnCredential {
+  return {
+    id: passkey.credentialId,
+    publicKey: publicKeyFromBase64Url(passkey.credentialPublicKey),
+    counter: Number(passkey.counter || 0),
+    transports: Array.isArray(passkey.transports)
+      ? passkey.transports as AuthenticatorTransportFuture[]
+      : []
+  };
+}
+
+function isRegistrationResponse(payload: unknown): payload is RegistrationResponseJSON {
+  return Boolean(payload && typeof payload === "object" && !Array.isArray(payload) && typeof (payload as { id?: unknown }).id === "string");
+}
+
+function isAuthenticationResponse(payload: unknown): payload is AuthenticationResponseJSON {
+  return isRegistrationResponse(payload);
 }
 
 function isTruthyQueryFlag(value) {
@@ -395,11 +533,26 @@ function createApp({
   authTestMode = AUTH_TEST_MODE,
   googleClientId = GOOGLE_CLIENT_ID,
   googleAuthClient = googleClientId ? new OAuth2Client(googleClientId) : null,
+  passkeyRpName = PASSKEY_RP_NAME,
+  passkeyRpId = PASSKEY_RP_ID,
+  passkeyOrigin = PASSKEY_ORIGIN,
   createPendingCodeImpl = createPendingCode,
   verifyCodeImpl = verifyCode,
   createSessionImpl = createSession,
   getSessionImpl = getSession,
   revokeSessionImpl = revokeSession,
+  listPasskeysImpl = listPasskeysByEmail,
+  insertPasskeyImpl = insertPasskey,
+  getPasskeyByCredentialIdImpl = getPasskeyByCredentialId,
+  updatePasskeyAuthenticationImpl = updatePasskeyAuthentication,
+  deletePasskeyByIdForEmailImpl = deletePasskeyByIdForEmail,
+  insertPasskeyChallengeImpl = insertPasskeyChallenge,
+  consumePasskeyChallengeImpl = consumePasskeyChallenge,
+  pruneExpiredPasskeyChallengesImpl = pruneExpiredPasskeyChallenges,
+  generateRegistrationOptionsImpl = generateRegistrationOptions,
+  verifyRegistrationResponseImpl = verifyRegistrationResponse,
+  generateAuthenticationOptionsImpl = generateAuthenticationOptions,
+  verifyAuthenticationResponseImpl = verifyAuthenticationResponse,
   sendLoginCodeEmailImpl = sendLoginCodeEmail,
   createProfileImpl = createProfile,
   deleteProfileImpl = deleteProfile,
@@ -784,6 +937,229 @@ app.post("/auth/logout", requireTrustedOrigin, requireAuth, requireCsrf, async (
 
 app.get("/auth/me", requireAuth, (req, res) => {
   res.json({ ok: true, user: req.user });
+});
+
+app.get("/auth/passkeys", requireAuth, async (req, res) => {
+  try {
+    const passkeys = await listPasskeysImpl(req.user.email);
+    return res.json({ ok: true, passkeys: passkeys.map(toPasskeyMetadata) });
+  } catch (error) {
+    console.error("[auth/passkeys/list]", error);
+    return res.status(503).json({ error: "service_unavailable" });
+  }
+});
+
+app.post("/auth/passkeys/register/options", requireTrustedOrigin, requireAuth, requireCsrf, async (req, res) => {
+  try {
+    await pruneExpiredPasskeyChallengesImpl();
+    const existingPasskeys = await listPasskeysImpl(req.user.email);
+    const options = await generateRegistrationOptionsImpl({
+      rpName: passkeyRpName,
+      rpID: passkeyRpId,
+      userName: req.user.email,
+      userDisplayName: req.user.email,
+      userID: new TextEncoder().encode(req.user.email),
+      attestationType: "none",
+      supportedAlgorithmIDs: [-7, -257],
+      excludeCredentials: existingPasskeys.map((passkey) => ({
+        id: passkey.credentialId,
+        transports: Array.isArray(passkey.transports)
+          ? passkey.transports as AuthenticatorTransportFuture[]
+          : []
+      })),
+      authenticatorSelection: {
+        residentKey: "preferred",
+        userVerification: "preferred"
+      }
+    });
+    const challengeId = generatePasskeyChallengeId();
+    await insertPasskeyChallengeImpl({
+      id: challengeId,
+      kind: "registration",
+      challenge: options.challenge,
+      profileEmail: req.user.email,
+      expiresAt: new Date(Date.now() + PASSKEY_CHALLENGE_TTL_MS)
+    });
+    setPasskeyChallengeCookie(res, challengeId, nodeEnv);
+    return res.json({ ok: true, options });
+  } catch (error) {
+    console.error("[auth/passkeys/register/options]", error);
+    return res.status(503).json({ error: "service_unavailable" });
+  }
+});
+
+app.post("/auth/passkeys/register/verify", requireTrustedOrigin, requireAuth, requireCsrf, async (req, res) => {
+  const response = req.body?.response;
+  if (!isRegistrationResponse(response)) {
+    return res.status(400).json({ error: "invalid_payload" });
+  }
+
+  const challengeId = getPasskeyChallengeId(req);
+  if (!challengeId) {
+    return res.status(400).json({ error: "passkey_registration_failed" });
+  }
+
+  let challenge: PasskeyChallengeRecord | null;
+  try {
+    challenge = await consumePasskeyChallengeImpl({ id: challengeId, kind: "registration" as PasskeyChallengeKind });
+  } catch (error) {
+    console.error("[auth/passkeys/register/challenge]", error);
+    return res.status(503).json({ error: "service_unavailable" });
+  }
+  clearPasskeyChallengeCookie(res, nodeEnv);
+
+  if (!challenge || challenge.profileEmail !== req.user.email) {
+    return res.status(400).json({ error: "passkey_registration_failed" });
+  }
+
+  let verification;
+  try {
+    verification = await verifyRegistrationResponseImpl({
+      response,
+      expectedChallenge: challenge.challenge,
+      expectedOrigin: passkeyOrigin,
+      expectedRPID: passkeyRpId,
+      requireUserVerification: false,
+      supportedAlgorithmIDs: [-7, -257]
+    });
+  } catch (error) {
+    console.error("[auth/passkeys/register/verify]", error);
+    return res.status(400).json({ error: "passkey_registration_failed" });
+  }
+
+  if (!verification.verified || !verification.registrationInfo) {
+    return res.status(400).json({ error: "passkey_registration_failed" });
+  }
+
+  const { credential, credentialDeviceType, credentialBackedUp } = verification.registrationInfo;
+  try {
+    const passkey = await insertPasskeyImpl({
+      profileEmail: req.user.email,
+      credentialId: credential.id,
+      credentialPublicKey: publicKeyToBase64Url(credential.publicKey),
+      counter: credential.counter,
+      deviceType: credentialDeviceType,
+      backedUp: credentialBackedUp,
+      transports: Array.isArray(credential.transports) ? credential.transports : [],
+      name: "Passkey"
+    });
+    return res.json({ ok: true, passkey: passkey ? toPasskeyMetadata(passkey) : null });
+  } catch (error) {
+    console.error("[auth/passkeys/register/store]", error);
+    return res.status(503).json({ error: "service_unavailable" });
+  }
+});
+
+app.post("/auth/passkeys/authenticate/options", requireTrustedOrigin, async (_req, res) => {
+  try {
+    await pruneExpiredPasskeyChallengesImpl();
+    const options = await generateAuthenticationOptionsImpl({
+      rpID: passkeyRpId,
+      userVerification: "preferred"
+    });
+    const challengeId = generatePasskeyChallengeId();
+    await insertPasskeyChallengeImpl({
+      id: challengeId,
+      kind: "authentication",
+      challenge: options.challenge,
+      profileEmail: null,
+      expiresAt: new Date(Date.now() + PASSKEY_CHALLENGE_TTL_MS)
+    });
+    setPasskeyChallengeCookie(res, challengeId, nodeEnv);
+    return res.json({ ok: true, options });
+  } catch (error) {
+    console.error("[auth/passkeys/authenticate/options]", error);
+    return res.status(503).json({ error: "service_unavailable" });
+  }
+});
+
+app.post("/auth/passkeys/authenticate/verify", requireTrustedOrigin, async (req, res) => {
+  const response = req.body?.response;
+  if (!isAuthenticationResponse(response)) {
+    return res.status(400).json({ error: "invalid_payload" });
+  }
+
+  const challengeId = getPasskeyChallengeId(req);
+  if (!challengeId) {
+    return res.status(400).json({ error: "passkey_login_failed" });
+  }
+
+  let challenge: PasskeyChallengeRecord | null;
+  try {
+    challenge = await consumePasskeyChallengeImpl({ id: challengeId, kind: "authentication" as PasskeyChallengeKind });
+  } catch (error) {
+    console.error("[auth/passkeys/authenticate/challenge]", error);
+    return res.status(503).json({ error: "service_unavailable" });
+  }
+  clearPasskeyChallengeCookie(res, nodeEnv);
+
+  if (!challenge) {
+    return res.status(400).json({ error: "passkey_login_failed" });
+  }
+
+  let passkey: PasskeyRecord | null;
+  try {
+    passkey = await getPasskeyByCredentialIdImpl(response.id);
+  } catch (error) {
+    console.error("[auth/passkeys/authenticate/lookup]", error);
+    return res.status(503).json({ error: "service_unavailable" });
+  }
+  if (!passkey) {
+    return res.status(400).json({ error: "passkey_login_failed" });
+  }
+
+  let verification;
+  try {
+    verification = await verifyAuthenticationResponseImpl({
+      response,
+      expectedChallenge: challenge.challenge,
+      expectedOrigin: passkeyOrigin,
+      expectedRPID: passkeyRpId,
+      credential: toWebAuthnCredential(passkey),
+      requireUserVerification: false
+    });
+  } catch (error) {
+    console.error("[auth/passkeys/authenticate/verify]", error);
+    return res.status(400).json({ error: "passkey_login_failed" });
+  }
+
+  if (!verification.verified) {
+    return res.status(400).json({ error: "passkey_login_failed" });
+  }
+
+  try {
+    await updatePasskeyAuthenticationImpl({
+      credentialId: passkey.credentialId,
+      counter: verification.authenticationInfo.newCounter,
+      deviceType: verification.authenticationInfo.credentialDeviceType,
+      backedUp: verification.authenticationInfo.credentialBackedUp
+    });
+    const { sessionId, session } = await createSessionImpl(passkey.profileEmail);
+    setSessionCookie(res, sessionId, nodeEnv);
+    setCsrfCookie(res, session.csrfToken, nodeEnv);
+    return res.json({ ok: true, user: { email: passkey.profileEmail } });
+  } catch (error) {
+    console.error("[auth/passkeys/authenticate/session]", error);
+    return res.status(503).json({ error: "service_unavailable" });
+  }
+});
+
+app.delete("/auth/passkeys/:id", requireTrustedOrigin, requireAuth, requireCsrf, async (req, res) => {
+  const passkeyId = String(req.params?.id || "").trim();
+  if (!passkeyId) {
+    return res.status(400).json({ error: "invalid_payload" });
+  }
+
+  try {
+    const deleted = await deletePasskeyByIdForEmailImpl({ email: req.user.email, passkeyId });
+    if (!deleted) {
+      return res.status(404).json({ error: "not_found" });
+    }
+    return res.json({ ok: true });
+  } catch (error) {
+    console.error("[auth/passkeys/delete]", error);
+    return res.status(503).json({ error: "service_unavailable" });
+  }
 });
 
 app.get("/profile/status", requireAuth, async (req, res) => {

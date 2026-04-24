@@ -53,6 +53,80 @@ function createDependencies(overrides: DependencyOverrides = {}) {
         : null
     ),
     revokeSessionImpl: async () => {},
+    listPasskeysImpl: async () => [],
+    insertPasskeyImpl: async (_payload) => ({
+      id: "passkey-1",
+      profileEmail: "person@example.com",
+      credentialId: "credential-1",
+      credentialPublicKey: "public-key",
+      counter: 0,
+      deviceType: "multiDevice",
+      backedUp: true,
+      transports: ["internal"],
+      name: "Passkey",
+      lastUsedAt: null,
+      createdAt: new Date(0).toISOString(),
+      updatedAt: new Date(0).toISOString()
+    }),
+    getPasskeyByCredentialIdImpl: async (credentialId) => (
+      credentialId === "credential-1"
+        ? {
+          id: "passkey-1",
+          profileEmail: "person@example.com",
+          credentialId: "credential-1",
+          credentialPublicKey: Buffer.from("public-key").toString("base64url"),
+          counter: 0,
+          deviceType: "multiDevice",
+          backedUp: true,
+          transports: ["internal"],
+          name: "Passkey",
+          lastUsedAt: null,
+          createdAt: new Date(0).toISOString(),
+          updatedAt: new Date(0).toISOString()
+        }
+        : null
+    ),
+    updatePasskeyAuthenticationImpl: async () => null,
+    deletePasskeyByIdForEmailImpl: async () => true,
+    insertPasskeyChallengeImpl: async () => {},
+    consumePasskeyChallengeImpl: async () => null,
+    pruneExpiredPasskeyChallengesImpl: async () => {},
+    generateRegistrationOptionsImpl: async () => ({
+      rp: { name: "Capsule Wardrobe", id: "localhost" },
+      user: { id: "person@example.com", name: "person@example.com", displayName: "person@example.com" },
+      challenge: "registration-challenge",
+      pubKeyCredParams: []
+    }),
+    verifyRegistrationResponseImpl: async () => ({
+      verified: true,
+      registrationInfo: {
+        credential: {
+          id: "credential-1",
+          publicKey: new Uint8Array([1, 2, 3]),
+          counter: 1,
+          transports: ["internal"]
+        },
+        credentialDeviceType: "multiDevice",
+        credentialBackedUp: true
+      }
+    }),
+    generateAuthenticationOptionsImpl: async () => ({
+      challenge: "authentication-challenge",
+      rpId: "localhost",
+      userVerification: "preferred"
+    }),
+    verifyAuthenticationResponseImpl: async () => ({
+      verified: true,
+      authenticationInfo: {
+        credentialID: "credential-1",
+        newCounter: 2,
+        userVerified: true,
+        credentialDeviceType: "multiDevice",
+        credentialBackedUp: true,
+        origin: "https://client.example",
+        rpID: "localhost"
+      }
+    }),
     sendLoginCodeEmailImpl: async () => {},
     createProfileImpl: async (email, payload) => ({ id: "profile-1", email, activeCapsuleId: null, ...payload }),
     deleteProfileImpl: async () => true,
@@ -464,6 +538,201 @@ test("index routes cover logout and csrf enforcement on protected mutations", as
   assert.equal(success.response.status, 200);
   assert.deepEqual(success.json, { ok: true });
   assert.equal(revokedSessionId, SESSION_ID);
+});
+
+test("passkey registration routes require auth, store challenge, and save verified passkey", async (t) => {
+  let storedChallenge: any = null;
+  let insertedPasskey: any = null;
+  const { baseUrl } = await startTestServer(t, {
+    overrides: {
+      insertPasskeyChallengeImpl: async (input) => {
+        storedChallenge = input;
+      },
+      consumePasskeyChallengeImpl: async ({ id, kind }) => (
+        id === "challenge-1" && kind === "registration"
+          ? {
+            id,
+            kind,
+            challenge: "registration-challenge",
+            profileEmail: "person@example.com"
+          }
+          : null
+      ),
+      insertPasskeyImpl: async (input) => {
+        insertedPasskey = input;
+        return {
+          id: "passkey-1",
+          profileEmail: input.profileEmail,
+          credentialId: input.credentialId,
+          credentialPublicKey: input.credentialPublicKey,
+          counter: input.counter,
+          deviceType: input.deviceType,
+          backedUp: input.backedUp,
+          transports: input.transports,
+          name: input.name,
+          lastUsedAt: null,
+          createdAt: new Date(0).toISOString(),
+          updatedAt: new Date(0).toISOString()
+        };
+      }
+    }
+  });
+
+  const unauthorized = await requestJson(baseUrl, "/auth/passkeys/register/options", {
+    method: "POST",
+    origin: TEST_CLIENT_ORIGIN
+  });
+  assert.equal(unauthorized.response.status, 401);
+
+  const options = await requestJson(baseUrl, "/auth/passkeys/register/options", {
+    method: "POST",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN
+  });
+  assert.equal(options.response.status, 200);
+  assert.equal(options.json.options.challenge, "registration-challenge");
+  assert.equal(storedChallenge.kind, "registration");
+  assert.equal(storedChallenge.profileEmail, "person@example.com");
+  assert.ok(options.response.headers.get("set-cookie")?.includes("passkey_challenge="));
+
+  const missingChallenge = await requestJson(baseUrl, "/auth/passkeys/register/verify", {
+    method: "POST",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN,
+    body: { response: { id: "credential-1" } }
+  });
+  assert.equal(missingChallenge.response.status, 400);
+  assert.deepEqual(missingChallenge.json, { error: "passkey_registration_failed" });
+
+  const verified = await requestJson(baseUrl, "/auth/passkeys/register/verify", {
+    method: "POST",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: `${AUTH_COOKIE}; passkey_challenge=challenge-1`,
+    csrfToken: CSRF_TOKEN,
+    body: { response: { id: "credential-1" } }
+  });
+  assert.equal(verified.response.status, 200);
+  assert.equal(insertedPasskey.profileEmail, "person@example.com");
+  assert.equal(insertedPasskey.credentialId, "credential-1");
+  assert.equal(verified.json.passkey.credentialPublicKey, undefined);
+});
+
+test("passkey authentication routes store challenge, reject unknown credentials, and create app session", async (t) => {
+  let storedChallenge: any = null;
+  let updatedAuth: any = null;
+  const { baseUrl } = await startTestServer(t, {
+    overrides: {
+      insertPasskeyChallengeImpl: async (input) => {
+        storedChallenge = input;
+      },
+      consumePasskeyChallengeImpl: async ({ id, kind }) => (
+        id === "challenge-1" && kind === "authentication"
+          ? {
+            id,
+            kind,
+            challenge: "authentication-challenge",
+            profileEmail: null
+          }
+          : null
+      ),
+      updatePasskeyAuthenticationImpl: async (input) => {
+        updatedAuth = input;
+        return null;
+      }
+    }
+  });
+
+  const options = await requestJson(baseUrl, "/auth/passkeys/authenticate/options", {
+    method: "POST",
+    origin: TEST_CLIENT_ORIGIN
+  });
+  assert.equal(options.response.status, 200);
+  assert.equal(options.json.options.challenge, "authentication-challenge");
+  assert.equal(storedChallenge.kind, "authentication");
+  assert.equal(storedChallenge.profileEmail, null);
+  assert.ok(options.response.headers.get("set-cookie")?.includes("passkey_challenge="));
+
+  const unknown = await requestJson(baseUrl, "/auth/passkeys/authenticate/verify", {
+    method: "POST",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: "passkey_challenge=challenge-1",
+    body: { response: { id: "unknown" } }
+  });
+  assert.equal(unknown.response.status, 400);
+  assert.deepEqual(unknown.json, { error: "passkey_login_failed" });
+
+  const success = await requestJson(baseUrl, "/auth/passkeys/authenticate/verify", {
+    method: "POST",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: "passkey_challenge=challenge-1",
+    body: { response: { id: "credential-1" } }
+  });
+  assert.equal(success.response.status, 200);
+  assert.deepEqual(success.json, { ok: true, user: { email: "person@example.com" } });
+  assert.equal(updatedAuth.credentialId, "credential-1");
+  assert.equal(updatedAuth.counter, 2);
+  const setCookie = success.response.headers.get("set-cookie");
+  assert.ok(setCookie?.includes("session="));
+  assert.ok(setCookie?.includes("csrf="));
+});
+
+test("passkey list and delete routes expose metadata and scope deletion to current user", async (t) => {
+  let deleteInput: any = null;
+  const { baseUrl } = await startTestServer(t, {
+    overrides: {
+      listPasskeysImpl: async () => [{
+        id: "passkey-1",
+        profileEmail: "person@example.com",
+        credentialId: "credential-1",
+        credentialPublicKey: "secret-public-key",
+        counter: 0,
+        deviceType: "multiDevice",
+        backedUp: true,
+        transports: ["internal"],
+        name: "Laptop",
+        lastUsedAt: null,
+        createdAt: new Date(0).toISOString(),
+        updatedAt: new Date(0).toISOString()
+      }],
+      deletePasskeyByIdForEmailImpl: async (input) => {
+        deleteInput = input;
+        return input.email === "person@example.com" && input.passkeyId === "passkey-1";
+      }
+    }
+  });
+
+  const list = await requestJson(baseUrl, "/auth/passkeys", {
+    cookie: AUTH_COOKIE
+  });
+  assert.equal(list.response.status, 200);
+  assert.deepEqual(list.json.passkeys[0], {
+    id: "passkey-1",
+    name: "Laptop",
+    deviceType: "multiDevice",
+    backedUp: true,
+    transports: ["internal"],
+    createdAt: new Date(0).toISOString(),
+    lastUsedAt: null
+  });
+
+  const deleted = await requestJson(baseUrl, "/auth/passkeys/passkey-1", {
+    method: "DELETE",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN
+  });
+  assert.equal(deleted.response.status, 200);
+  assert.deepEqual(deleteInput, { email: "person@example.com", passkeyId: "passkey-1" });
+
+  const missing = await requestJson(baseUrl, "/auth/passkeys/other-passkey", {
+    method: "DELETE",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN
+  });
+  assert.equal(missing.response.status, 404);
 });
 
 test("index routes cover profile read endpoints", async (t) => {

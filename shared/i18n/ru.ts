@@ -202,7 +202,8 @@ const ru = {
     signedIn: "Вы вошли в систему.",
     signedOut: "Вы вышли из системы.",
     codeSent: "Код отправлен. Он будет действителен {minutes} минут.",
-    orEmailCode: "Или введите email, чтобы получить код для входа"
+    orEmailCode: "Или введите email, чтобы получить код для входа",
+    signInWithPasskey: "Войти с passkey"
   },
   main: {
     title: "Главная",
@@ -310,6 +311,21 @@ const ru = {
     delete: "Удалить",
     save: "Сохранить",
     close: "Закрыть"
+  },
+  passkeys: {
+    title: "Passkeys",
+    add: "Добавить passkey",
+    remove: "Удалить passkey",
+    removeConfirm: "Удалить этот passkey из аккаунта?",
+    prompt: "Добавить passkey для более быстрого входа?",
+    notNow: "Не сейчас",
+    added: "Passkey добавлен",
+    removed: "Passkey удалён",
+    empty: "Passkeys пока не добавлены.",
+    defaultName: "Passkey",
+    backedUp: "С резервной копией",
+    used: "Уже использовался",
+    loading: "Загружаем passkeys"
   },
   notifications: {
     prompt: {
@@ -444,6 +460,9 @@ const ru = {
     invalidPayload: "Выберите хотя бы один вариант.",
     invalidGoogleToken: "Не удалось войти через Google. Попробуйте снова.",
     googleAuthNotConfigured: "Вход через Google не настроен на сервере.",
+    passkeyNotSupported: "Passkeys не поддерживаются в этом браузере или на этом устройстве.",
+    passkeySetupFailed: "Не удалось настроить passkey.",
+    passkeyLoginFailed: "Не удалось войти с passkey.",
     downloadFailed: "Не удалось сгенерировать PDF капсулы. Попробуйте еще раз.",
     regenerateAllFailed: "Не удалось обновить капсулу. Предыдущая версия восстановлена.",
     regenerateSelectedFailed: "Не удалось обновить выбранные карточки. Попробуйте еще раз."
