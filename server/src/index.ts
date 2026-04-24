@@ -7,6 +7,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { OAuth2Client } from "google-auth-library";
+import { z } from "zod";
 import {
   generateAuthenticationOptions,
   generateRegistrationOptions,
@@ -132,6 +133,36 @@ type ProfileSettingsPayload = {
 type RejectedUrlsValidationResult =
   | { error: "invalid_payload" | "not_found" }
   | { rejectedUrls: string[] };
+
+const webAuthnClientExtensionResultsSchema = z.object({}).passthrough();
+const registrationResponseSchema = z.object({
+  id: z.string(),
+  rawId: z.string(),
+  type: z.string(),
+  authenticatorAttachment: z.string().optional(),
+  clientExtensionResults: webAuthnClientExtensionResultsSchema,
+  response: z.object({
+    clientDataJSON: z.string(),
+    attestationObject: z.string(),
+    transports: z.array(z.string()).optional(),
+    publicKeyAlgorithm: z.number().optional(),
+    publicKey: z.string().optional(),
+    authenticatorData: z.string().optional()
+  }).passthrough()
+}).passthrough();
+const authenticationResponseSchema = z.object({
+  id: z.string(),
+  rawId: z.string(),
+  type: z.string(),
+  authenticatorAttachment: z.string().optional(),
+  clientExtensionResults: webAuthnClientExtensionResultsSchema,
+  response: z.object({
+    clientDataJSON: z.string(),
+    authenticatorData: z.string(),
+    signature: z.string(),
+    userHandle: z.string().optional()
+  }).passthrough()
+}).passthrough();
 
 function isProfileThemeValue(value: string): value is (typeof PROFILE_THEME_VALUES)[number] {
   return (PROFILE_THEME_VALUES as readonly string[]).includes(value);
@@ -378,11 +409,11 @@ function toWebAuthnCredential(passkey: PasskeyRecord): WebAuthnCredential {
 }
 
 function isRegistrationResponse(payload: unknown): payload is RegistrationResponseJSON {
-  return Boolean(payload && typeof payload === "object" && !Array.isArray(payload) && typeof (payload as { id?: unknown }).id === "string");
+  return registrationResponseSchema.safeParse(payload).success;
 }
 
 function isAuthenticationResponse(payload: unknown): payload is AuthenticationResponseJSON {
-  return isRegistrationResponse(payload);
+  return authenticationResponseSchema.safeParse(payload).success;
 }
 
 function isTruthyQueryFlag(value) {

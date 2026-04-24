@@ -293,6 +293,52 @@ async function requestJson(baseUrl, pathname, {
   return { response, json };
 }
 
+function passkeyRegistrationResponse(overrides: Record<string, any> = {}) {
+  const responseOverrides = overrides.response && typeof overrides.response === "object" && !Array.isArray(overrides.response)
+    ? overrides.response
+    : {};
+  const { response: _response, ...topLevelOverrides } = overrides;
+  return {
+    id: "credential-1",
+    rawId: "credential-1",
+    type: "public-key",
+    authenticatorAttachment: "platform",
+    clientExtensionResults: {},
+    response: {
+      clientDataJSON: "client-data",
+      attestationObject: "attestation-object",
+      transports: ["internal"],
+      publicKeyAlgorithm: -7,
+      publicKey: "public-key",
+      authenticatorData: "authenticator-data",
+      ...responseOverrides
+    },
+    ...topLevelOverrides
+  };
+}
+
+function passkeyAuthenticationResponse(overrides: Record<string, any> = {}) {
+  const responseOverrides = overrides.response && typeof overrides.response === "object" && !Array.isArray(overrides.response)
+    ? overrides.response
+    : {};
+  const { response: _response, ...topLevelOverrides } = overrides;
+  return {
+    id: "credential-1",
+    rawId: "credential-1",
+    type: "public-key",
+    authenticatorAttachment: "platform",
+    clientExtensionResults: {},
+    response: {
+      clientDataJSON: "client-data",
+      authenticatorData: "authenticator-data",
+      signature: "signature",
+      userHandle: "person@example.com",
+      ...responseOverrides
+    },
+    ...topLevelOverrides
+  };
+}
+
 test("index routes expose health checks and protected auth status", async (t) => {
   const { baseUrl } = await startTestServer(t);
 
@@ -544,6 +590,7 @@ test("index routes cover logout and csrf enforcement on protected mutations", as
 test("passkey registration routes require auth, store challenge, and save verified passkey", async (t) => {
   let storedChallenge: any = null;
   let insertedPasskey: any = null;
+  let challengeConsumeCount = 0;
   let registrationOptionsInput: any = null;
   let registrationVerifyInput: any = null;
   const { baseUrl } = await startTestServer(t, {
@@ -561,16 +608,17 @@ test("passkey registration routes require auth, store challenge, and save verifi
       insertPasskeyChallengeImpl: async (input) => {
         storedChallenge = input;
       },
-      consumePasskeyChallengeImpl: async ({ id, kind }) => (
-        id === "challenge-1" && kind === "registration"
+      consumePasskeyChallengeImpl: async ({ id, kind }) => {
+        challengeConsumeCount += 1;
+        return id === "challenge-1" && kind === "registration"
           ? {
-            id,
-            kind,
-            challenge: "registration-challenge",
-            profileEmail: "person@example.com"
-          }
-          : null
-      ),
+              id,
+              kind,
+              challenge: "registration-challenge",
+              profileEmail: "person@example.com"
+            }
+          : null;
+      },
       insertPasskeyImpl: async (input) => {
         insertedPasskey = input;
         return {
@@ -627,12 +675,23 @@ test("passkey registration routes require auth, store challenge, and save verifi
   assert.equal(storedChallenge.profileEmail, "person@example.com");
   assert.ok(options.response.headers.get("set-cookie")?.includes("passkey_challenge="));
 
+  const malformed = await requestJson(baseUrl, "/auth/passkeys/register/verify", {
+    method: "POST",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: `${AUTH_COOKIE}; passkey_challenge=challenge-1`,
+    csrfToken: CSRF_TOKEN,
+    body: { response: passkeyRegistrationResponse({ response: { attestationObject: undefined } }) }
+  });
+  assert.equal(malformed.response.status, 400);
+  assert.deepEqual(malformed.json, { error: "invalid_payload" });
+  assert.equal(challengeConsumeCount, 0);
+
   const missingChallenge = await requestJson(baseUrl, "/auth/passkeys/register/verify", {
     method: "POST",
     origin: TEST_CLIENT_ORIGIN,
     cookie: AUTH_COOKIE,
     csrfToken: CSRF_TOKEN,
-    body: { response: { id: "credential-1" } }
+    body: { response: passkeyRegistrationResponse() }
   });
   assert.equal(missingChallenge.response.status, 400);
   assert.deepEqual(missingChallenge.json, { error: "passkey_registration_failed" });
@@ -642,10 +701,17 @@ test("passkey registration routes require auth, store challenge, and save verifi
     origin: TEST_CLIENT_ORIGIN,
     cookie: `${AUTH_COOKIE}; passkey_challenge=challenge-1`,
     csrfToken: CSRF_TOKEN,
-    body: { response: { id: "credential-1" } }
+    body: {
+      response: passkeyRegistrationResponse({
+        extraTopLevel: "kept",
+        response: { extraNested: "kept" }
+      })
+    }
   });
   assert.equal(verified.response.status, 200);
   assert.equal(registrationVerifyInput.requireUserVerification, true);
+  assert.equal(registrationVerifyInput.response.extraTopLevel, "kept");
+  assert.equal(registrationVerifyInput.response.response.extraNested, "kept");
   assert.equal(insertedPasskey.profileEmail, "person@example.com");
   assert.equal(insertedPasskey.credentialId, "credential-1");
   assert.equal(verified.json.passkey.credentialPublicKey, undefined);
@@ -654,6 +720,8 @@ test("passkey registration routes require auth, store challenge, and save verifi
 test("passkey authentication routes store challenge, reject unknown credentials, and create app session", async (t) => {
   let storedChallenge: any = null;
   let updatedAuth: any = null;
+  let challengeConsumeCount = 0;
+  let credentialLookupCount = 0;
   let authenticationOptionsInput: any = null;
   let authenticationVerifyInput: any = null;
   const { baseUrl } = await startTestServer(t, {
@@ -669,16 +737,36 @@ test("passkey authentication routes store challenge, reject unknown credentials,
       insertPasskeyChallengeImpl: async (input) => {
         storedChallenge = input;
       },
-      consumePasskeyChallengeImpl: async ({ id, kind }) => (
-        id === "challenge-1" && kind === "authentication"
+      consumePasskeyChallengeImpl: async ({ id, kind }) => {
+        challengeConsumeCount += 1;
+        return id === "challenge-1" && kind === "authentication"
           ? {
-            id,
-            kind,
-            challenge: "authentication-challenge",
-            profileEmail: null
-          }
-          : null
-      ),
+              id,
+              kind,
+              challenge: "authentication-challenge",
+              profileEmail: null
+            }
+          : null;
+      },
+      getPasskeyByCredentialIdImpl: async (credentialId) => {
+        credentialLookupCount += 1;
+        return credentialId === "credential-1"
+          ? {
+              id: "passkey-1",
+              profileEmail: "person@example.com",
+              credentialId: "credential-1",
+              credentialPublicKey: Buffer.from("public-key").toString("base64url"),
+              counter: 0,
+              deviceType: "multiDevice",
+              backedUp: true,
+              transports: ["internal"],
+              name: "Passkey",
+              lastUsedAt: null,
+              createdAt: new Date(0).toISOString(),
+              updatedAt: new Date(0).toISOString()
+            }
+          : null;
+      },
       updatePasskeyAuthenticationImpl: async (input) => {
         updatedAuth = input;
         return null;
@@ -713,11 +801,22 @@ test("passkey authentication routes store challenge, reject unknown credentials,
   assert.equal(storedChallenge.profileEmail, null);
   assert.ok(options.response.headers.get("set-cookie")?.includes("passkey_challenge="));
 
+  const malformed = await requestJson(baseUrl, "/auth/passkeys/authenticate/verify", {
+    method: "POST",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: "passkey_challenge=challenge-1",
+    body: { response: passkeyAuthenticationResponse({ response: { signature: undefined } }) }
+  });
+  assert.equal(malformed.response.status, 400);
+  assert.deepEqual(malformed.json, { error: "invalid_payload" });
+  assert.equal(challengeConsumeCount, 0);
+  assert.equal(credentialLookupCount, 0);
+
   const unknown = await requestJson(baseUrl, "/auth/passkeys/authenticate/verify", {
     method: "POST",
     origin: TEST_CLIENT_ORIGIN,
     cookie: "passkey_challenge=challenge-1",
-    body: { response: { id: "unknown" } }
+    body: { response: passkeyAuthenticationResponse({ id: "unknown", rawId: "unknown" }) }
   });
   assert.equal(unknown.response.status, 400);
   assert.deepEqual(unknown.json, { error: "passkey_login_failed" });
@@ -726,11 +825,18 @@ test("passkey authentication routes store challenge, reject unknown credentials,
     method: "POST",
     origin: TEST_CLIENT_ORIGIN,
     cookie: "passkey_challenge=challenge-1",
-    body: { response: { id: "credential-1" } }
+    body: {
+      response: passkeyAuthenticationResponse({
+        extraTopLevel: "kept",
+        response: { extraNested: "kept" }
+      })
+    }
   });
   assert.equal(success.response.status, 200);
   assert.deepEqual(success.json, { ok: true, user: { email: "person@example.com" } });
   assert.equal(authenticationVerifyInput.requireUserVerification, true);
+  assert.equal(authenticationVerifyInput.response.extraTopLevel, "kept");
+  assert.equal(authenticationVerifyInput.response.response.extraNested, "kept");
   assert.equal(updatedAuth.credentialId, "credential-1");
   assert.equal(updatedAuth.counter, 2);
   const setCookie = success.response.headers.get("set-cookie");
@@ -781,7 +887,7 @@ test("passkey authentication verify route is rate limited by IP", async (t) => {
       method: "POST",
       origin: TEST_CLIENT_ORIGIN,
       cookie: `passkey_challenge=challenge-${index}`,
-      body: { response: { id: "credential-1" } }
+      body: { response: passkeyAuthenticationResponse() }
     });
     assert.equal(allowed.response.status, 400);
     assert.deepEqual(allowed.json, { error: "passkey_login_failed" });
@@ -791,7 +897,7 @@ test("passkey authentication verify route is rate limited by IP", async (t) => {
     method: "POST",
     origin: TEST_CLIENT_ORIGIN,
     cookie: "passkey_challenge=challenge-over-limit",
-    body: { response: { id: "credential-1" } }
+    body: { response: passkeyAuthenticationResponse() }
   });
   assert.equal(limited.response.status, 429);
   assert.deepEqual(limited.json, { error: "too_many_requests" });
