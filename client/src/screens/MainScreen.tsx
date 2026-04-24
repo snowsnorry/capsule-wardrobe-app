@@ -253,6 +253,16 @@ function resolveOutfitSets(items: MainScreenItem[] = [], outfitSets: OutfitSetLi
     .filter((set): set is ResolvedOutfitSet => Boolean(set));
 }
 
+function resolveOutfitSetImageSrc(image: string | null | undefined): string {
+  const trimmed = String(image || "").trim();
+  if (!trimmed) {
+    return "";
+  }
+  return /^https?:\/\//i.test(trimmed) || /^data:image\//i.test(trimmed)
+    ? trimmed
+    : `data:image/png;base64,${trimmed}`;
+}
+
 const OUTFIT_SET_IMAGE_WIDTH = 896;
 const OUTFIT_SET_IMAGE_HEIGHT = 1195;
 const OUTFIT_SET_IMAGE_ASPECT_RATIO = `${OUTFIT_SET_IMAGE_WIDTH} / ${OUTFIT_SET_IMAGE_HEIGHT}`;
@@ -463,9 +473,7 @@ function MainScreen({
   const isActiveOutfitSetImagePending = activeOutfitSet
     ? pendingImageSetIndexes.includes(activeOutfitSet.index)
     : false;
-  const activeOutfitSetImageSrc = activeOutfitSet?.image
-    ? `data:image/png;base64,${activeOutfitSet.image}`
-    : "";
+  const activeOutfitSetImageSrc = resolveOutfitSetImageSrc(activeOutfitSet?.image);
 
   useEffect(() => {
     if (!searchOpen) {

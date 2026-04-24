@@ -1,0 +1,185 @@
+import { createHash, randomUUID } from "node:crypto";
+import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+
+type R2Config = {
+  accountId: string;
+  bucketName: string;
+  accessKeyId: string;
+  secretAccessKey: string;
+  publicBaseUrl: string;
+  imageKeyPrefix: string;
+};
+
+type S3ClientLike = {
+  send: (command: PutObjectCommand) => Promise<unknown>;
+};
+
+type UploadImageInput = {
+  buffer: Buffer | Uint8Array;
+  mimeType?: string | null;
+  capsuleId?: string | null;
+  setIndex?: number | string | null;
+  namespace?: string | null;
+  env?: NodeJS.ProcessEnv;
+  client?: S3ClientLike;
+};
+
+function normalizeEnvValue(value: unknown): string {
+  return String(value ?? "").trim();
+}
+
+function getRequiredR2Env(env: NodeJS.ProcessEnv, name: string): string {
+  const value = normalizeEnvValue(env[name]);
+  if (!value) {
+    throw new Error(`${name} is not set`);
+  }
+  return value;
+}
+
+function normalizePublicBaseUrl(value: string): string {
+  return value.trim().replace(/\/+$/, "");
+}
+
+function getR2Config(env: NodeJS.ProcessEnv = process.env): R2Config {
+  return {
+    accountId: getRequiredR2Env(env, "R2_ACCOUNT_ID"),
+    bucketName: getRequiredR2Env(env, "R2_BUCKET_NAME"),
+    accessKeyId: getRequiredR2Env(env, "R2_ACCESS_KEY_ID"),
+    secretAccessKey: getRequiredR2Env(env, "R2_SECRET_ACCESS_KEY"),
+    publicBaseUrl: normalizePublicBaseUrl(getRequiredR2Env(env, "R2_PUBLIC_BASE_URL")),
+    imageKeyPrefix: normalizeEnvValue(env.R2_IMAGE_KEY_PREFIX) || "outfit-set-images"
+  };
+}
+
+function buildR2Endpoint(accountId: string): string {
+  return `https://${accountId}.r2.cloudflarestorage.com`;
+}
+
+function createR2Client(config: R2Config): S3ClientLike {
+  return new S3Client({
+    region: "auto",
+    endpoint: buildR2Endpoint(config.accountId),
+    credentials: {
+      accessKeyId: config.accessKeyId,
+      secretAccessKey: config.secretAccessKey
+    }
+  });
+}
+
+function sanitizeKeySegment(value: unknown, fallback: string): string {
+  const sanitized = String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return sanitized || fallback;
+}
+
+function getImageExtension(mimeType: unknown): string {
+  const normalized = String(mimeType || "").trim().toLowerCase();
+  if (normalized === "image/jpeg" || normalized === "image/jpg") {
+    return "jpg";
+  }
+  if (normalized === "image/webp") {
+    return "webp";
+  }
+  return "png";
+}
+
+function buildR2ImageKey({
+  imageKeyPrefix,
+  namespace,
+  capsuleId,
+  setIndex,
+  digest,
+  mimeType
+}: {
+  imageKeyPrefix: string;
+  namespace?: string | null;
+  capsuleId?: string | null;
+  setIndex?: number | string | null;
+  digest: string;
+  mimeType?: string | null;
+}): string {
+  const prefix = sanitizeKeySegment(imageKeyPrefix, "outfit-set-images");
+  const scope = sanitizeKeySegment(namespace, "generated");
+  const capsuleSegment = sanitizeKeySegment(capsuleId, "capsule");
+  const setSegment = sanitizeKeySegment(setIndex, "set");
+  const extension = getImageExtension(mimeType);
+  return `${prefix}/${scope}/${capsuleSegment}/${setSegment}/${digest}.${extension}`;
+}
+
+function buildR2PublicUrl(config: Pick<R2Config, "publicBaseUrl">, key: string): string {
+  return `${config.publicBaseUrl}/${String(key || "").split("/").map(encodeURIComponent).join("/")}`;
+}
+
+async function uploadImageToR2({
+  buffer,
+  mimeType = "image/png",
+  capsuleId = null,
+  setIndex = null,
+  namespace = "generated",
+  env = process.env,
+  client
+}: UploadImageInput): Promise<{ key: string; url: string; digest: string }> {
+  const bytes = Buffer.from(buffer);
+  if (bytes.length === 0) {
+    throw new Error("R2 image upload received an empty buffer");
+  }
+
+  const config = getR2Config(env);
+  const digest = createHash("sha256").update(bytes).digest("hex");
+  const key = buildR2ImageKey({
+    imageKeyPrefix: config.imageKeyPrefix,
+    namespace,
+    capsuleId: capsuleId || randomUUID(),
+    setIndex,
+    digest,
+    mimeType
+  });
+  const s3 = client || createR2Client(config);
+
+  await s3.send(new PutObjectCommand({
+    Bucket: config.bucketName,
+    Key: key,
+    Body: bytes,
+    ContentType: String(mimeType || "image/png"),
+    CacheControl: "public, max-age=31536000, immutable"
+  }));
+
+  return {
+    key,
+    url: buildR2PublicUrl(config, key),
+    digest
+  };
+}
+
+function isHttpImageUrl(value: unknown): boolean {
+  const trimmed = String(value ?? "").trim();
+  return /^https?:\/\//i.test(trimmed);
+}
+
+function decodeLegacyBase64Image(value: unknown): Buffer | null {
+  const trimmed = String(value ?? "").trim();
+  if (!trimmed || isHttpImageUrl(trimmed) || /^data:image\//i.test(trimmed)) {
+    return null;
+  }
+  if (!/^[a-z0-9+/]+={0,2}$/i.test(trimmed) || trimmed.length % 4 === 1) {
+    return null;
+  }
+
+  const buffer = Buffer.from(trimmed, "base64");
+  return buffer.length > 0 ? buffer : null;
+}
+
+export {
+  buildR2Endpoint,
+  buildR2ImageKey,
+  buildR2PublicUrl,
+  createR2Client,
+  decodeLegacyBase64Image,
+  getR2Config,
+  isHttpImageUrl,
+  uploadImageToR2
+};
+export type { R2Config, S3ClientLike };

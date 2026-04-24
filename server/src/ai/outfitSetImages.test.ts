@@ -81,6 +81,7 @@ test("outfitSetImage service starts job and persists generated image", async () 
   const prompts = [];
   const imagePayloads = [];
   const models = [];
+  const uploads = [];
   const service = createOutfitSetImageService({
     getCapsuleImpl: async () => createCapsule(),
     getProfileImpl: async () => buildNormalizedProfileRecord({
@@ -100,6 +101,14 @@ test("outfitSetImage service starts job and persists generated image", async () 
           base64: "generated-base64",
           mimeType: "image/png"
         }
+      };
+    },
+    uploadImageToR2Impl: async (input) => {
+      uploads.push(input);
+      return {
+        key: "outfit-set-images/generated/capsule-1/0/digest.png",
+        url: "https://images.example.com/outfit-set-images/generated/capsule-1/0/digest.png",
+        digest: "digest"
       };
     },
     downloadProductImageAssetsImpl: async () => ({
@@ -152,12 +161,19 @@ test("outfitSetImage service starts job and persists generated image", async () 
   await new Promise((resolve) => setTimeout(resolve, 0));
 
   assert.equal(updates.length, 1);
-  assert.equal(updates[0].data.wardrobe.outfitSets[0].image, "generated-base64");
+  assert.equal(
+    updates[0].data.wardrobe.outfitSets[0].image,
+    "https://images.example.com/outfit-set-images/generated/capsule-1/0/digest.png"
+  );
   assert.equal(updates[0].data.wardrobe.outfitSets[0].imageObsolete, false);
   assert.equal(published.length, 2);
   assert.match(prompts[0], /top-down flat lay photograph/i);
   assert.equal(imagePayloads[0].length, 3);
   assert.deepEqual(models, ["gpt-image-2"]);
+  assert.equal(uploads.length, 1);
+  assert.equal(uploads[0].mimeType, "image/png");
+  assert.equal(uploads[0].capsuleId, "capsule-1");
+  assert.equal(uploads[0].setIndex, 0);
 });
 
 test("outfitSetImage service uses gemini image provider from profile setting", async () => {
@@ -184,6 +200,11 @@ test("outfitSetImage service uses gemini image provider from profile setting", a
         }
       };
     },
+    uploadImageToR2Impl: async () => ({
+      key: "outfit-set-images/generated/capsule-1/0/gemini.png",
+      url: "https://images.example.com/gemini.png",
+      digest: "gemini"
+    }),
     downloadProductImageAssetsImpl: async () => ({
       "top-1": {
         buffer: Buffer.from("top"),
@@ -232,6 +253,35 @@ test("outfitSetImage service uses gemini image provider from profile setting", a
   assert.equal(geminiCalls.length, 1);
   assert.equal(geminiCalls[0].model, "gemini-3-pro-image-preview");
   assert.equal(geminiCalls[0].images.length, 3);
+});
+
+test("outfitSetImage service treats an existing URL image as ready", async () => {
+  const capsule = createCapsule();
+  capsule.draft.data.wardrobe.outfitSets[0].image = "https://images.example.com/existing.png";
+  let generateCalls = 0;
+  const service = createOutfitSetImageService({
+    getCapsuleImpl: async () => capsule,
+    generateImageWithOpenAiImpl: async () => {
+      generateCalls += 1;
+      return {
+        response: null,
+        image: {
+          base64: "generated-base64",
+          mimeType: "image/png"
+        }
+      };
+    }
+  });
+  const res = createResponseRecorder();
+
+  await service.generateOutfitSetImage({
+    user: { email: "person@example.com" },
+    params: { id: "capsule-1", setIndex: "0" }
+  }, res);
+
+  assert.equal(res.statusCode, 200);
+  assert.deepEqual(res.body, { ok: true, status: "ready" });
+  assert.equal(generateCalls, 0);
 });
 
 test("deleteOutfitSetImage clears stored image and publishes updated snapshot", async () => {

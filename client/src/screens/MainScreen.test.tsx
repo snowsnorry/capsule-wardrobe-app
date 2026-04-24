@@ -485,6 +485,23 @@ describe("MainScreen", () => {
     expect(screen.queryByRole("button", { name: "Create image" })).not.toBeInTheDocument();
   });
 
+  test("renders generated outfit set image URL directly", async () => {
+    const user = userEvent.setup();
+
+    renderScreen({
+      items: [
+        { id: "a", url: "https://example.com/a", name: "Shirt", category: "top" },
+        { id: "b", url: "https://example.com/b", name: "Trousers", category: "bottom" },
+        { id: "c", url: "https://example.com/c", name: "Bag", category: "bag" }
+      ],
+      outfitSets: [{ itemIds: ["a", "b", "c"], image: "https://images.example.com/set.png" }]
+    });
+
+    await user.click(screen.getByRole("tab", { name: "Набор 1" }));
+
+    expect(screen.getByTestId("outfit-set-image")).toHaveAttribute("src", "https://images.example.com/set.png");
+  });
+
   test("renders pending placeholders inside an outfit set tab during partial regeneration", async () => {
     const user = userEvent.setup();
 

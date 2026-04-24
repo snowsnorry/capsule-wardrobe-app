@@ -9,6 +9,7 @@ import { logWardrobeInfo } from "./ai.js";
 import { generateImageWithOpenAi } from "./openaiImage.js";
 import { buildOutfitSetDescription } from "./outfitSetImageDescription.js";
 import { downloadProductImageAssets } from "./promptImages.js";
+import { uploadImageToR2 } from "../r2Storage.js";
 
 const PROMPT_TEMPLATE = readFileSync(new URL("../templates/prompt_image.txt", import.meta.url), "utf8");
 const LAST_PROMPT_DIR_URL = new URL("../../../last-prompt/", import.meta.url);
@@ -88,6 +89,7 @@ function createOutfitSetImageService({
   downloadProductImageAssetsImpl = downloadProductImageAssets,
   generateImageWithOpenAiImpl = generateImageWithOpenAi,
   generateImageWithGeminiImpl = generateImageWithGemini,
+  uploadImageToR2Impl = uploadImageToR2,
   buildOutfitSetDescriptionImpl = buildOutfitSetDescription
 } = {}) {
   async function deleteOutfitSetImage(req, res) {
@@ -215,6 +217,15 @@ function createOutfitSetImageService({
           images,
           model: imageLlmResolution.model
         });
+        const generatedImage = result?.image?.base64
+          ? await uploadImageToR2Impl({
+            buffer: Buffer.from(result.image.base64, "base64"),
+            mimeType: result.image.mimeType || "image/png",
+            capsuleId,
+            setIndex,
+            namespace: "generated"
+          })
+          : null;
         logWardrobeInfo("outfit-set-image-llm-completed", {
           llmProvider: imageLlmResolution.provider,
           llmModel: imageLlmResolution.model,
@@ -228,7 +239,7 @@ function createOutfitSetImageService({
           index === setIndex
             ? {
               ...set,
-              image: result?.image?.base64 || null,
+              image: generatedImage?.url || null,
               imageObsolete: false
             }
             : set
