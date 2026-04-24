@@ -1,12 +1,15 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import type { Server } from "node:http";
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import type { OAuth2Client } from "google-auth-library";
 import type { ErrorWithCode } from "./ai/types.js";
 
 process.env.NODE_ENV = "test";
 
-const { createApp } = await import("./index.ts");
+const { createApp, startServer } = await import("./index.ts");
 
 const TEST_CLIENT_ORIGIN = "https://client.example";
 const SESSION_ID = "session-123";
@@ -205,6 +208,11 @@ function createDependencies(overrides: DependencyOverrides = {}) {
         ? { id, name: "Spring edit", expiresAt: new Date(60_000).toISOString() }
         : null
     ),
+    getSharedCapsuleOgMetadataImpl: async (id) => (
+      id === "share-1"
+        ? { title: "Spring edit", description: "", image: "" }
+        : null
+    ),
     importSharedCapsuleImpl: async () => ({
       id: "capsule-imported",
       name: "Spring edit (2)",
@@ -277,6 +285,46 @@ async function startTestServer(testContext, {
   };
 }
 
+async function startSpaFallbackTestServer(testContext, {
+  overrides = {}
+}: {
+  overrides?: DependencyOverrides;
+} = {}): Promise<StartedTestServer> {
+  const deps = createDependencies(overrides);
+  const app = createApp({
+    nodeEnv: "production",
+    clientOrigin: TEST_CLIENT_ORIGIN,
+    ...deps
+  } as any);
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "capsule-og-test-"));
+  await fs.writeFile(
+    path.join(tempDir, "index.html"),
+    "<!doctype html><html><head><title>Capsule Wardrobe</title></head><body><div id=\"root\"></div></body></html>",
+    "utf-8"
+  );
+
+  const server = await startServer({
+    appInstance: app,
+    nodeEnv: "production",
+    ensureTablesImpl: async () => {},
+    port: 0,
+    clientDistPath: tempDir,
+    getSharedCapsuleOgMetadataImpl: deps.getSharedCapsuleOgMetadataImpl
+  } as any);
+
+  testContext.after(async () => {
+    await new Promise<void>((resolve, reject) => {
+      server.close((error) => (error ? reject(error) : resolve()));
+    });
+    await fs.rm(tempDir, { recursive: true, force: true });
+  });
+
+  return {
+    deps,
+    baseUrl: `http://127.0.0.1:${(server.address() as { port: number }).port}`
+  };
+}
+
 async function requestJson(baseUrl, pathname, {
   method = "GET",
   body,
@@ -308,6 +356,14 @@ async function requestJson(baseUrl, pathname, {
   }
 
   return { response, json };
+}
+
+async function requestText(baseUrl, pathname, headers: Record<string, string> = {}) {
+  const response = await fetch(`${baseUrl}${pathname}`, { headers });
+  return {
+    response,
+    text: await response.text()
+  };
 }
 
 function passkeyRegistrationResponse(overrides: Record<string, any> = {}) {
@@ -1752,6 +1808,50 @@ test("share routes create, read, import, and enforce auth boundaries", async (t)
     { type: "import", email: "person@example.com", id: "share-1" },
     { type: "get", id: "expired-share" }
   ]);
+});
+
+test("share fallback injects escaped open graph metadata into capsule html", async (t) => {
+  const { baseUrl } = await startSpaFallbackTestServer(t, {
+    overrides: {
+      getSharedCapsuleOgMetadataImpl: async (id) => (
+        id === "share-1"
+          ? {
+            title: "Spring \"Edit\" & <Capsule>",
+            description: "Formality: Casual. Style: Minimalistic. Occasions: Office, Date night.",
+            image: "https://images.example.com/outfit.jpg?fit=\"cover\"&w=1200"
+          }
+          : null
+      )
+    }
+  });
+
+  const { response, text } = await requestText(baseUrl, "/share/share-1");
+
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get("content-type") || "", /text\/html/);
+  assert.match(text, /<meta property="og:title" content="Spring &quot;Edit&quot; &amp; &lt;Capsule&gt;" \/>/);
+  assert.match(text, /<meta property="og:description" content="Formality: Casual\. Style: Minimalistic\. Occasions: Office, Date night\." \/>/);
+  assert.match(text, /<meta property="og:image" content="https:\/\/images\.example\.com\/outfit\.jpg\?fit=&quot;cover&quot;&amp;w=1200" \/>/);
+  assert.match(text, new RegExp(`<meta property="og:url" content="${baseUrl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\/share\\/share-1" \\/>`));
+  assert.match(text, /<meta property="og:type" content="website" \/>/);
+  assert.equal(text.includes("Additional notes"), false);
+});
+
+test("share fallback leaves capsule html unchanged when shared capsule metadata is unavailable", async (t) => {
+  const { baseUrl } = await startSpaFallbackTestServer(t, {
+    overrides: {
+      getSharedCapsuleOgMetadataImpl: async () => null
+    }
+  });
+
+  const { response, text } = await requestText(baseUrl, "/share/missing-share");
+
+  assert.equal(response.status, 200);
+  assert.match(text, /<title>Capsule Wardrobe<\/title>/);
+  assert.equal(text.includes("property=\"og:title\""), false);
+  assert.equal(text.includes("property=\"og:description\""), false);
+  assert.equal(text.includes("property=\"og:image\""), false);
+  assert.equal(text.includes("property=\"og:url\""), false);
 });
 
 test("index routes map search and health dependency failures", async (t) => {

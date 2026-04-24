@@ -16,6 +16,7 @@ import {
   upsertSharedCapsule
 } from "./db.js";
 import { getProfile, normalizeOccasionList } from "./profileStore.js";
+import { t, translateOption } from "../../shared/i18n/helpers.js";
 
 type CapsuleFilters = {
   formalityLevel: string;
@@ -83,6 +84,12 @@ type SharedCapsuleMetadata = {
   id: string;
   name: string;
   expiresAt: string | Date;
+};
+
+type SharedCapsuleOgMetadata = {
+  title: string;
+  description: string;
+  image: string;
 };
 
 type CapsuleContextProfile = {
@@ -277,6 +284,89 @@ function isShareableCapsuleSnapshot(snapshot: CapsuleSnapshot | null): boolean {
 
 function getCapsuleSnapshotRegeneration(snapshot: CapsuleSnapshot | null): CapsuleRegenerationMarker | null {
   return normalizeCapsuleRegenerationMarker(snapshot?.data?.regeneration);
+}
+
+function firstStringValue(value: unknown): string {
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : "";
+}
+
+function translateCapsuleFilterValue(group: string, value: unknown): string {
+  const normalizedValue = firstStringValue(value);
+  return normalizedValue ? translateOption(group, normalizedValue, "en") : "";
+}
+
+function buildCapsuleFilterSentence(labelKey: string, value: string | string[]): string {
+  const values = Array.isArray(value) ? value : [value];
+  const translatedValues = values.map((item) => String(item || "").trim()).filter(Boolean);
+  if (!translatedValues.length) {
+    return "";
+  }
+
+  return `${t(labelKey, undefined, "en")}: ${translatedValues.join(", ")}`;
+}
+
+function buildSharedCapsuleDescription(filters: CapsuleFilters | null): string {
+  if (!filters) {
+    return "";
+  }
+
+  const sentences = [
+    buildCapsuleFilterSentence("search.fields.formalityLevel", translateCapsuleFilterValue("styles", filters.formalityLevel)),
+    buildCapsuleFilterSentence("search.fields.style", translateCapsuleFilterValue("styles", filters.style)),
+    buildCapsuleFilterSentence(
+      "search.fields.occasions",
+      filters.occasions.map((value) => translateCapsuleFilterValue("occasions", value))
+    ),
+    buildCapsuleFilterSentence(
+      "search.fields.season",
+      filters.season.map((value) => translateCapsuleFilterValue("seasons", value))
+    ),
+    buildCapsuleFilterSentence("search.fields.audience", translateCapsuleFilterValue("audience", filters.audience)),
+    buildCapsuleFilterSentence("search.fields.color", translateCapsuleFilterValue("accentColors", filters.color)),
+    buildCapsuleFilterSentence("search.fields.pattern", translateCapsuleFilterValue("patterns", filters.pattern))
+  ].filter(Boolean);
+
+  return sentences.length ? `${sentences.join(". ")}.` : "";
+}
+
+function getSharedCapsuleImage(snapshot: CapsuleSnapshot | null): string {
+  const wardrobe = snapshot?.data?.wardrobe;
+  const outfitSets = Array.isArray(wardrobe?.outfitSets) ? wardrobe.outfitSets : [];
+  for (const outfitSet of outfitSets) {
+    const image = firstStringValue(outfitSet?.image);
+    if (image) {
+      return image;
+    }
+  }
+
+  const items = Array.isArray(wardrobe?.items) ? wardrobe.items : [];
+  const firstItem = items[0];
+  return firstItem && typeof firstItem === "object" && !Array.isArray(firstItem)
+    ? firstStringValue((firstItem as Record<string, unknown>).image_url)
+    : "";
+}
+
+function buildSharedCapsuleOgMetadata({
+  name,
+  content
+}: {
+  name: unknown;
+  content: unknown;
+}): SharedCapsuleOgMetadata | null {
+  const snapshot = normalizeCapsuleSnapshot(
+    content && typeof content === "object" && !Array.isArray(content)
+      ? (content as Record<string, unknown>)
+      : null
+  );
+  if (!snapshot) {
+    return null;
+  }
+
+  return {
+    title: firstStringValue(name) || DEFAULT_CAPSULE_NAME,
+    description: buildSharedCapsuleDescription(snapshot.filters),
+    image: getSharedCapsuleImage(snapshot)
+  };
 }
 
 function buildSnapshotFromProfile(profile: CapsuleContextProfile | null = null): CapsuleSnapshot | null {
@@ -504,6 +594,19 @@ async function getSharedCapsule(id: string): Promise<SharedCapsuleMetadata | nul
   };
 }
 
+async function getSharedCapsuleOgMetadata(id: string): Promise<SharedCapsuleOgMetadata | null> {
+  const shared = await getValidSharedCapsuleById(String(id || "").trim());
+  if (!shared) {
+    await pruneExpiredSharedCapsules();
+    return null;
+  }
+
+  return buildSharedCapsuleOgMetadata({
+    name: shared.name,
+    content: shared.content
+  });
+}
+
 async function importSharedCapsule(email: string, id: string): Promise<NormalizedCapsuleRecord | null> {
   const shared = await getValidSharedCapsuleById(String(id || "").trim());
   if (!shared) {
@@ -549,6 +652,7 @@ async function deleteCapsule(email: string, capsuleId: string): Promise<boolean>
 export {
   DEFAULT_CAPSULE_NAME,
   buildCapsuleSnapshotWithRegeneration,
+  buildSharedCapsuleOgMetadata,
   buildSnapshotFromProfile,
   buildProfileCapsuleContext,
   createBootstrapCapsule,
@@ -560,6 +664,7 @@ export {
   getEffectiveCapsuleSnapshot,
   getCapsuleSnapshotRegeneration,
   getSharedCapsule,
+  getSharedCapsuleOgMetadata,
   importSharedCapsule,
   isShareableCapsuleSnapshot,
   listRecentCapsules,

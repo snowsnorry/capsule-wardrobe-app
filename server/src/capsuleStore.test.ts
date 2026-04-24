@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { normalizeCapsuleFilters, normalizeCapsuleSnapshot } from "./capsuleStore.js";
+import { buildSharedCapsuleOgMetadata, normalizeCapsuleFilters, normalizeCapsuleSnapshot } from "./capsuleStore.js";
 
 test("normalizeCapsuleFilters drops removed profile occasions and keeps supported values", () => {
   assert.deepEqual(
@@ -54,5 +54,58 @@ test("normalizeCapsuleSnapshot preserves outfit set image payloads", () => {
       image: "base64-image",
       imageObsolete: true
     }]
+  );
+});
+
+test("buildSharedCapsuleOgMetadata formats English filter sentences and prefers outfit set images", () => {
+  const metadata = buildSharedCapsuleOgMetadata({
+    name: "Spring <edit>",
+    content: {
+      filters: {
+        formalityLevel: "casual",
+        style: "minimalistic",
+        occasions: ["office", "date_night"],
+        season: ["spring"],
+        audience: "woman",
+        color: "light blue",
+        pattern: "solid",
+        text: "Do not include this"
+      },
+      data: {
+        wardrobe: {
+          items: [{ image_url: "https://images.example.com/item.jpg" }],
+          outfitSets: [
+            { itemIds: ["top-1"], image: "", imageObsolete: false },
+            { itemIds: ["top-2"], image: "https://images.example.com/outfit.jpg", imageObsolete: false }
+          ]
+        },
+        rejectedUrls: []
+      }
+    }
+  });
+
+  assert.deepEqual(metadata, {
+    title: "Spring <edit>",
+    description: "Formality: Casual. Style: Minimalistic. Occasions: Office, Date night. Season: Spring. Audience: Woman. Color: Light blue. Pattern: Solid.",
+    image: "https://images.example.com/outfit.jpg"
+  });
+});
+
+test("buildSharedCapsuleOgMetadata falls back to the first item image_url", () => {
+  assert.equal(
+    buildSharedCapsuleOgMetadata({
+      name: "Spring edit",
+      content: {
+        filters: {},
+        data: {
+          wardrobe: {
+            items: [{ image_url: "https://images.example.com/item.jpg" }],
+            outfitSets: [{ itemIds: ["top-1"], image: null, imageObsolete: false }]
+          },
+          rejectedUrls: []
+        }
+      }
+    })?.image,
+    "https://images.example.com/item.jpg"
   );
 });

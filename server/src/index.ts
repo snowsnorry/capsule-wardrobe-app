@@ -59,6 +59,7 @@ import {
   getEffectiveCapsuleSnapshot,
   getCapsuleSnapshotRegeneration,
   getSharedCapsule,
+  getSharedCapsuleOgMetadata,
   importSharedCapsule,
   listRecentCapsules,
   normalizeCapsuleSnapshot,
@@ -136,6 +137,11 @@ type ProfileSettingsPayload = {
 type RejectedUrlsValidationResult =
   | { error: "invalid_payload" | "not_found" }
   | { rejectedUrls: string[] };
+type SharedCapsuleOgMetadata = {
+  title?: string | null;
+  description?: string | null;
+  image?: string | null;
+};
 
 const webAuthnClientExtensionResultsSchema = z.object({}).passthrough();
 const registrationResponseSchema = z.object({
@@ -212,6 +218,53 @@ console.info(
     concurrency: sharpConfig.concurrency
   })
 );
+
+function getShareRouteId(pathname: string): string | null {
+  const match = String(pathname || "").match(/^\/share\/([^/]+)\/?$/);
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+function escapeHtmlAttribute(value: unknown): string {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function buildRequestUrl(req): string {
+  const host = req.get("host");
+  if (!host) {
+    return req.originalUrl;
+  }
+  return `${req.protocol}://${host}${req.originalUrl}`;
+}
+
+function injectOpenGraphMetaTags(html: string, metadata: SharedCapsuleOgMetadata, url: string): string {
+  const tags = [
+    `<meta property="og:title" content="${escapeHtmlAttribute(metadata.title)}" />`,
+    `<meta property="og:description" content="${escapeHtmlAttribute(metadata.description)}" />`,
+    `<meta property="og:image" content="${escapeHtmlAttribute(metadata.image)}" />`,
+    `<meta property="og:url" content="${escapeHtmlAttribute(url)}" />`,
+    `<meta property="og:type" content="website" />`
+  ].join("\n    ");
+
+  return html.replace(/<\/head>/i, `    ${tags}\n  </head>`);
+}
+
+async function injectSharedCapsuleMetaTags(html: string, req, getMetadataImpl): Promise<string> {
+  const shareId = getShareRouteId(req.path);
+  if (!shareId) {
+    return html;
+  }
+
+  const metadata = await getMetadataImpl(shareId);
+  if (!metadata) {
+    return html;
+  }
+
+  return injectOpenGraphMetaTags(html, metadata, buildRequestUrl(req));
+}
 
 function buildPdfDownloadFilename(capsuleName) {
   const normalizedName = String(capsuleName || "")
@@ -1773,7 +1826,10 @@ const startServer = async ({
   appInstance = app,
   nodeEnv = NODE_ENV,
   ensureTablesImpl = ensureTables,
-  port = PORT
+  port = PORT,
+  clientDistPath = CLIENT_DIST_PATH,
+  clientRoot = CLIENT_ROOT,
+  getSharedCapsuleOgMetadataImpl = getSharedCapsuleOgMetadata
 } = {}) => {
   await ensureTablesImpl();
 
@@ -1798,24 +1854,31 @@ const startServer = async ({
       }
 
       try {
-        const htmlPath = path.join(CLIENT_ROOT, "index.html");
+        const htmlPath = path.join(clientRoot, "index.html");
         const template = await fs.promises.readFile(htmlPath, "utf-8");
         const html = await vite.transformIndexHtml(req.originalUrl, template);
-        res.status(200).set({ "Content-Type": "text/html" }).end(html);
+        const htmlWithMetaTags = await injectSharedCapsuleMetaTags(html, req, getSharedCapsuleOgMetadataImpl);
+        res.status(200).set({ "Content-Type": "text/html" }).end(htmlWithMetaTags);
       } catch (error) {
         vite.ssrFixStacktrace(error);
         next(error);
       }
       return undefined;
     });
-  } else if (fs.existsSync(CLIENT_DIST_PATH)) {
-    appInstance.use(express.static(CLIENT_DIST_PATH));
+  } else if (fs.existsSync(clientDistPath)) {
+    appInstance.use(express.static(clientDistPath));
 
-    appInstance.get("*", (req, res) => {
+    appInstance.get("*", async (req, res, next) => {
       if (isApiPath(req.path)) {
         return res.status(404).json({ error: "not_found" });
       }
-      return res.sendFile(path.join(CLIENT_DIST_PATH, "index.html"));
+      try {
+        const html = await fs.promises.readFile(path.join(clientDistPath, "index.html"), "utf-8");
+        const htmlWithMetaTags = await injectSharedCapsuleMetaTags(html, req, getSharedCapsuleOgMetadataImpl);
+        return res.status(200).set({ "Content-Type": "text/html" }).end(htmlWithMetaTags);
+      } catch (error) {
+        return next(error);
+      }
     });
   }
 
