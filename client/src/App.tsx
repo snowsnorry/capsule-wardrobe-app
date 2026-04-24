@@ -128,7 +128,6 @@ type WardrobeItem = {
 type CapsuleWardrobeData = {
   items: WardrobeItem[];
   outfitSets?: OutfitSetSnapshot[];
-  reasoning?: string | null;
   rawSelectionText?: string | null;
   swimwearReasoning?: string | null;
   swimwearRawSelectionText?: string | null;
@@ -159,7 +158,7 @@ type WardrobeSnapshot = {
   pendingRegenerationUrls?: string[];
   pendingImageSetIndexes?: number[];
   hasPendingAdditionalItems?: boolean;
-  reasoning?: string | null;
+  rawSelectionText?: string | null;
   error?: string | null;
 };
 
@@ -287,7 +286,6 @@ function normalizeProfileSettings(profile: Partial<ProfileSettings> = {}, email 
 
 function getWardrobeMetadata(wardrobe: CapsuleWardrobeData | null | undefined) {
   return {
-    reasoning: wardrobe?.reasoning || null,
     rawSelectionText: wardrobe?.rawSelectionText || null,
     swimwearReasoning: wardrobe?.swimwearReasoning || null,
     swimwearRawSelectionText: wardrobe?.swimwearRawSelectionText || null
@@ -1414,12 +1412,16 @@ function App() {
     || pendingImageSetIndexes.length > 0
   );
 
-  const logWardrobeReasoning = (reasoning) => {
-    if (typeof reasoning !== "string" || reasoning.trim().length === 0) {
+  const logWardrobeSelection = (rawSelectionText) => {
+    if (typeof rawSelectionText !== "string" || rawSelectionText.trim().length === 0) {
       return;
     }
 
-    console.log("[wardrobe-ai][reasoning]", reasoning);
+    try {
+      console.log("[wardrobe-ai][selection]", JSON.parse(rawSelectionText));
+    } catch {
+      console.log("[wardrobe-ai][selection]", rawSelectionText);
+    }
   };
 
   const handleWardrobeError = () => {
@@ -1505,7 +1507,7 @@ function App() {
       return;
     }
 
-    logWardrobeReasoning(snapshot?.reasoning);
+    logWardrobeSelection(snapshot?.rawSelectionText);
     const currentPendingUrls = pendingRegenerationUrlsRef.current;
     const baseItems = currentPendingUrls.length > 0 ? regenerationBaseItemsRef.current : [];
     setProfileItems((currentItems) => (

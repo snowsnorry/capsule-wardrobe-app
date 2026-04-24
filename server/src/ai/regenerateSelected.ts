@@ -120,7 +120,6 @@ function buildStoredWardrobePayloadFromResult(
         imageObsolete: Boolean((outfitSet as GeneratedOutfitSetLike | undefined)?.imageObsolete)
       }))
       : [],
-    reasoning: result?.reasoning || null,
     rawSelectionText: result?.rawSelectionText || null,
     swimwearReasoning: storedWardrobe?.swimwearReasoning || null,
     swimwearRawSelectionText: storedWardrobe?.swimwearRawSelectionText || null
@@ -648,8 +647,7 @@ async function regenerateCapsuleWardrobe(
       outfitSets: [],
       promptEmbeddings,
       shortCapsuleName: null,
-      rawSelectionText: null,
-      reasoning: null
+      rawSelectionText: null
     };
   }
   const shouldSavePromptDebugArtifacts = process.env.NODE_ENV === "development";
@@ -796,9 +794,6 @@ async function regenerateCapsuleWardrobe(
     shortCapsuleName: null,
     rawSelectionText: typeof selectionResponse?.output_text === "string" && selectionResponse.output_text.trim().length > 0
       ? selectionResponse.output_text.trim()
-      : null,
-    reasoning: typeof parsedSelection === "object" && Object.keys(parsedSelection).length > 0
-      ? JSON.stringify(parsedSelection, null, 2)
       : null
   };
 }
@@ -1005,7 +1000,6 @@ function createPartialRegenerationService({
       const partialPayload = {
         items: partialItems,
         outfitSets: storedWardrobe.outfitSets || [],
-        reasoning: storedWardrobe.reasoning || null,
         rawSelectionText: storedWardrobe.rawSelectionText || null,
         swimwearReasoning: storedWardrobe.swimwearReasoning || null,
         swimwearRawSelectionText: storedWardrobe.swimwearRawSelectionText || null

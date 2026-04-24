@@ -173,12 +173,12 @@ describe("wardrobe api", () => {
   test("regenerateSelectedWardrobeItems posts once and returns payload", async () => {
     requestApi.requestJson.mockResolvedValueOnce({
       items: [{ id: "item-2" }],
-      reasoning: "updated"
+      rawSelectionText: "updated"
     });
 
     await expect(
       regenerateSelectedWardrobeItems({ itemUrls: ["https://example.com/item-1"], capsuleId: "capsule-1" })
-    ).resolves.toEqual({ items: [{ id: "item-2" }], reasoning: "updated" });
+    ).resolves.toEqual({ items: [{ id: "item-2" }], rawSelectionText: "updated" });
 
     expect(requestApi.requestJson).toHaveBeenNthCalledWith(
       1,

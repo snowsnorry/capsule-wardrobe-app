@@ -151,7 +151,6 @@ test("regenerateSelectedWardrobeItems clears completed job and starts a fresh pe
       result: buildStoredWardrobePayload({
         items: [buildWardrobeUiItem({ id: "new-1", url: "https://example.com/new-1", category: "top" })],
         outfitSets: [buildStoredOutfitSet({ itemIds: ["new-1", "new-1", "new-1"], imageObsolete: false })],
-        reasoning: "new-reasoning",
         rawSelectionText: "new-raw",
         swimwearReasoning: "swim-json",
         swimwearRawSelectionText: "swim-raw"
@@ -168,7 +167,6 @@ test("regenerateSelectedWardrobeItems clears completed job and starts a fresh pe
         buildWardrobeUiItem({ id: "bag-1", url: "https://example.com/bag-1", category: "bag" }),
         buildWardrobeUiItem({ id: "top-2", url: "https://example.com/top-2", category: "top" })
       ],
-      reasoning: "regen-json",
       rawSelectionText: "regen-raw"
     }),
     jobs
@@ -312,7 +310,6 @@ test("regenerateSelectedWardrobeItems updates rejected urls, shrinks partial pay
           buildWardrobeUiItem({ id: "top-2", url: "https://example.com/top-2", category: "top" })
         ],
         outfitSets: [{ itemIds: ["bottom-1", "top-2", "bag-1"] }],
-        reasoning: "regen-json",
         rawSelectionText: "regen-raw"
       });
     },
@@ -346,7 +343,6 @@ test("regenerateSelectedWardrobeItems updates rejected urls, shrinks partial pay
             buildWardrobeUiItem({ id: "bag-1", url: "https://example.com/bag-1", category: "bag" })
           ],
           outfitSets: [{ itemIds: ["top-1", "bottom-1", "bag-1"], image: "set-image", imageObsolete: false }],
-          reasoning: "capsule-json",
           rawSelectionText: "capsule-raw",
           swimwearReasoning: "swim-json",
           swimwearRawSelectionText: "swim-raw"
@@ -376,7 +372,6 @@ test("regenerateSelectedWardrobeItems updates rejected urls, shrinks partial pay
             buildWardrobeUiItem({ id: "top-2", url: "https://example.com/top-2", category: "top" })
           ],
           outfitSets: [{ itemIds: ["top-2", "bottom-1", "bag-1"], image: "set-image", imageObsolete: true }],
-          reasoning: "regen-json",
           rawSelectionText: "regen-raw",
           swimwearReasoning: "swim-json",
           swimwearRawSelectionText: "swim-raw"
@@ -452,7 +447,6 @@ test("startPartialRegenerationJob reuses active pending job and marks failures",
 
   resolveRegen(buildWardrobeGenerationResult({
     items: [buildWardrobeUiItem({ id: "bottom-1", category: "bottom", url: undefined, name: undefined, image_url: undefined, audience: undefined })],
-    reasoning: "regen-json",
     rawSelectionText: "regen-raw"
   }));
   await first.promise;
@@ -506,7 +500,6 @@ test("startPartialRegenerationJob stores recomputed outfit sets in the completed
         buildWardrobeUiItem({ id: "top-2", url: "https://example.com/top-2", category: "top" })
       ],
       outfitSets: [{ itemIds: ["bottom-1", "top-2", "bag-1"] }],
-      reasoning: "regen-json",
       rawSelectionText: "regen-raw"
     }),
     jobs: new Map()
@@ -535,7 +528,6 @@ function getStoredProfilePayload() {
       buildWardrobeUiItem({ id: "bag-1", url: "https://example.com/bag-1", category: "bag" })
     ],
     outfitSets: [buildStoredOutfitSet({ itemIds: ["top-1", "bottom-1", "bag-1"], image: "set-image", imageObsolete: false })],
-    reasoning: "capsule-json",
     rawSelectionText: "capsule-raw",
     swimwearReasoning: "swim-json",
     swimwearRawSelectionText: "swim-raw"
@@ -551,7 +543,6 @@ test("startPartialRegenerationJob preserves unchanged set images without marking
         buildWardrobeUiItem({ id: "bottom-2", url: "https://example.com/bottom-2", category: "bottom" }),
         buildWardrobeUiItem({ id: "bag-1", url: "https://example.com/bag-1", category: "bag" })
       ],
-      reasoning: "regen-json",
       rawSelectionText: "regen-raw"
     }),
     jobs: new Map()

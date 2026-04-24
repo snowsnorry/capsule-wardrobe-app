@@ -116,7 +116,6 @@ function buildStoredWardrobePayload(
   return {
     items: overrides.items ?? [],
     outfitSets: overrides.outfitSets ?? [],
-    reasoning: overrides.reasoning ?? null,
     rawSelectionText: overrides.rawSelectionText ?? null,
     swimwearReasoning: overrides.swimwearReasoning ?? null,
     swimwearRawSelectionText: overrides.swimwearRawSelectionText ?? null
@@ -132,7 +131,6 @@ function buildWardrobeGenerationResult(
     outfitSets: overrides.outfitSets ?? [],
     promptEmbeddings: overrides.promptEmbeddings ?? [],
     shortCapsuleName: overrides.shortCapsuleName ?? null,
-    reasoning: overrides.reasoning ?? null,
     rawSelectionText: overrides.rawSelectionText ?? null
   };
 }

@@ -521,7 +521,6 @@ test("getStoredWardrobePayload normalizes legacy arrays and object payloads", ()
     {
       items: [{ id: "1" }],
       outfitSets: [],
-      reasoning: null,
       rawSelectionText: null,
       swimwearReasoning: null,
       swimwearRawSelectionText: null
@@ -533,7 +532,6 @@ test("getStoredWardrobePayload normalizes legacy arrays and object payloads", ()
       items: {
         items: [{ id: "2" }],
         outfitSets: [{ itemIds: ["2"] }],
-        reasoning: "r",
         rawSelectionText: "raw",
         swimwearReasoning: "swim",
         swimwearRawSelectionText: "swim-raw"
@@ -542,7 +540,6 @@ test("getStoredWardrobePayload normalizes legacy arrays and object payloads", ()
     {
       items: [{ id: "2" }],
       outfitSets: [{ itemIds: ["2"] }],
-      reasoning: "r",
       rawSelectionText: "raw",
       swimwearReasoning: "swim",
       swimwearRawSelectionText: "swim-raw"
@@ -585,7 +582,6 @@ test("getCapsuleItems returns pending regenerate payload when partial regenerati
     getProfileImpl: async () => buildNormalizedProfileRecord({ locale: "en" }),
     getCapsuleImpl: async () => createCapsuleWithWardrobe({
       items: [buildWardrobeUiItem({ id: "top-1", url: "https://example.com/top-1", category: "top" })],
-      reasoning: "capsule",
       rawSelectionText: "raw"
     }),
     getPartialRegenerationJobImpl: () => buildPartialRegenerationJobState({
@@ -612,7 +608,6 @@ test("getCapsuleItems returns ready payload from stored wardrobe", async () => {
     getProfileImpl: async () => buildNormalizedProfileRecord({ locale: "en" }),
     getCapsuleImpl: async () => createCapsuleWithWardrobe({
       items: [buildWardrobeUiItem({ id: "top-1", category: "top", url: undefined, name: undefined, image_url: undefined, audience: undefined })],
-      reasoning: "capsule-json",
       rawSelectionText: "raw-selection",
       swimwearReasoning: "swimwear-json"
     }),
@@ -639,7 +634,6 @@ test("getCapsuleItems returns ready payload from stored wardrobe", async () => {
     })
   ]);
   assert.deepEqual(res.body.outfitSets, []);
-  assert.equal(res.body.reasoning, "capsule-json");
   assert.equal(res.body.rawSelectionText, "raw-selection");
   assert.equal(res.body.swimwearReasoning, "swimwear-json");
   assert.equal(res.body.hasPendingAdditionalItems, false);
@@ -656,7 +650,6 @@ test("getCapsuleItems returns extras pending state when extras are still generat
     getProfileImpl: async () => buildNormalizedProfileRecord({ locale: "en" }),
     getCapsuleImpl: async () => createCapsuleWithWardrobe({
       items: [buildWardrobeUiItem({ id: "top-1", category: "top", url: undefined, name: undefined, image_url: undefined, audience: undefined })],
-      reasoning: "capsule-json",
       rawSelectionText: "raw-selection",
       swimwearReasoning: "swimwear-json"
     }),
@@ -698,7 +691,6 @@ test("regenerateCapsuleWardrobe starts a new pending job without clearing stored
         selectedItems: [buildWardrobeUiItem({ id: "top-2", category: "top", url: undefined, name: undefined, image_url: undefined, audience: undefined })],
         promptEmbeddings: [0.1],
         shortCapsuleName: "New Name",
-        reasoning: "reasoning",
         rawSelectionText: "raw"
       });
     },
@@ -755,7 +747,6 @@ test("regenerateCapsuleWardrobe starts a new pending job without clearing stored
           })
         ],
         outfitSets: [],
-        reasoning: "reasoning",
         rawSelectionText: "raw",
         swimwearReasoning: null,
         swimwearRawSelectionText: null
@@ -974,7 +965,6 @@ test("startWardrobeJob stores capsule result and merges swimwear additions when 
       ],
       promptEmbeddings: [0.1],
       outfitSets: [{ itemIds: ["top-1", "bottom-1", "bag-1"] }],
-      reasoning: "capsule-json",
       rawSelectionText: "capsule-raw"
     }),
     updateCapsuleSnapshotImpl: async (email, capsuleId, draft) => {
@@ -1015,7 +1005,6 @@ test("startWardrobeJob stores capsule result and merges swimwear additions when 
             buildWardrobeUiItem({ id: "bag-1", category: "bag", url: undefined, name: undefined, image_url: undefined, audience: undefined })
           ],
           outfitSets: [{ itemIds: ["top-1", "bottom-1", "bag-1"] }],
-          reasoning: "capsule-json",
           rawSelectionText: "capsule-raw",
           swimwearReasoning: null,
           swimwearRawSelectionText: null
@@ -1037,7 +1026,6 @@ test("startWardrobeJob stores capsule result and merges swimwear additions when 
             buildWardrobeUiItem({ id: "top-1", category: "top", url: "https://example.com/top-1", name: "Top 1", image_url: "https://example.com/top-1.jpg", audience: "woman" })
           ],
           outfitSets: [{ itemIds: ["top-1", "bottom-1", "bag-1"] }],
-          reasoning: "capsule-json",
           rawSelectionText: "capsule-raw",
           swimwearReasoning: "swimwear-json",
           swimwearRawSelectionText: "swimwear-raw"

@@ -35,7 +35,6 @@ function createCapsule() {
             { id: "bag-1", image_url: "https://example.com/bag.jpg", category: "bag" }
           ],
           outfitSets: [buildStoredOutfitSet({ itemIds: ["top-1", "bottom-1", "bag-1"] })],
-          reasoning: null,
           rawSelectionText: null,
           swimwearReasoning: null,
           swimwearRawSelectionText: null
@@ -343,7 +342,6 @@ test("deleteOutfitSetImage writes a draft when the capsule only has saved data",
             image: "saved-image",
             imageObsolete: true
           })],
-          reasoning: null,
           rawSelectionText: null,
           swimwearReasoning: null,
           swimwearRawSelectionText: null

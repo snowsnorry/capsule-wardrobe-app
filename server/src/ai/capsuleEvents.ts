@@ -13,7 +13,6 @@ function getStoredWardrobePayload(profile) {
     return {
       items: stored,
       outfitSets: [],
-      reasoning: null,
       rawSelectionText: null,
       swimwearReasoning: null,
       swimwearRawSelectionText: null
@@ -51,12 +50,11 @@ function getStoredWardrobePayload(profile) {
         })
         .filter((set) => set.itemIds.length > 0)
       : [],
-    reasoning: typeof stored.reasoning === "string" && stored.reasoning.trim().length > 0
-      ? stored.reasoning.trim()
-      : null,
     rawSelectionText: typeof stored.rawSelectionText === "string" && stored.rawSelectionText.trim().length > 0
       ? stored.rawSelectionText.trim()
-      : null,
+      : typeof stored.reasoning === "string" && stored.reasoning.trim().length > 0
+        ? stored.reasoning.trim()
+        : null,
     swimwearReasoning: typeof stored.swimwearReasoning === "string" && stored.swimwearReasoning.trim().length > 0
       ? stored.swimwearReasoning.trim()
       : null,
@@ -74,7 +72,6 @@ function buildSnapshotPayload({
   pendingImageSetIndexes = [],
   items = [],
   outfitSets = [],
-  reasoning = null,
   rawSelectionText = null,
   swimwearReasoning = null,
   swimwearRawSelectionText = null,
@@ -88,7 +85,6 @@ function buildSnapshotPayload({
     pendingImageSetIndexes,
     items,
     outfitSets,
-    reasoning,
     rawSelectionText,
     swimwearReasoning,
     swimwearRawSelectionText,
@@ -101,7 +97,6 @@ function buildFailedSnapshot(storedWardrobe, error) {
     status: "failed",
     items: storedWardrobe?.items || [],
     outfitSets: storedWardrobe?.outfitSets || [],
-    reasoning: storedWardrobe?.reasoning || null,
     rawSelectionText:
       typeof error?.rawSelectionText === "string" && error.rawSelectionText.trim().length > 0
         ? error.rawSelectionText.trim()
@@ -146,7 +141,6 @@ function buildCapsuleEventSnapshot({
       pendingImageSetIndexes,
       items: storedWardrobe?.items || [],
       outfitSets: storedWardrobe?.outfitSets || [],
-      reasoning: storedWardrobe?.reasoning || null,
       rawSelectionText: storedWardrobe?.rawSelectionText || null,
       swimwearReasoning: storedWardrobe?.swimwearReasoning || null,
       swimwearRawSelectionText: storedWardrobe?.swimwearRawSelectionText || null
@@ -165,7 +159,6 @@ function buildCapsuleEventSnapshot({
       pendingImageSetIndexes,
       items: storedWardrobe.items,
       outfitSets: storedWardrobe.outfitSets,
-      reasoning: storedWardrobe.reasoning,
       rawSelectionText: storedWardrobe.rawSelectionText,
       swimwearReasoning: storedWardrobe.swimwearReasoning,
       swimwearRawSelectionText: storedWardrobe.swimwearRawSelectionText
@@ -186,7 +179,6 @@ function buildCapsuleEventSnapshot({
       pendingImageSetIndexes,
       items: storedWardrobe?.items || [],
       outfitSets: storedWardrobe?.outfitSets || [],
-      reasoning: storedWardrobe?.reasoning || null,
       rawSelectionText: storedWardrobe?.rawSelectionText || null,
       swimwearReasoning: storedWardrobe?.swimwearReasoning || null,
       swimwearRawSelectionText: storedWardrobe?.swimwearRawSelectionText || null
@@ -199,7 +191,6 @@ function buildCapsuleEventSnapshot({
       pendingImageSetIndexes,
       items: storedWardrobe.items,
       outfitSets: storedWardrobe.outfitSets,
-      reasoning: storedWardrobe.reasoning,
       rawSelectionText: storedWardrobe.rawSelectionText,
       swimwearReasoning: storedWardrobe.swimwearReasoning,
       swimwearRawSelectionText: storedWardrobe.swimwearRawSelectionText

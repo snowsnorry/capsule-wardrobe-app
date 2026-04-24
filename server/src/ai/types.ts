@@ -280,7 +280,6 @@ type GeneratedOutfitSetLike = {
 type StoredWardrobePayloadLike = {
   items: WardrobeUiItemLike[];
   outfitSets: OutfitSetLike[];
-  reasoning: string | null;
   rawSelectionText: string | null;
   swimwearReasoning: string | null;
   swimwearRawSelectionText: string | null;
@@ -332,7 +331,6 @@ type WardrobeGenerationResult = {
   promptEmbeddings: number[];
   shortCapsuleName: string | null;
   rawSelectionText: string | null;
-  reasoning: string | null;
 };
 
 type WardrobeJobState = {

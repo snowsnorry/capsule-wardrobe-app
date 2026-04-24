@@ -288,14 +288,12 @@ function buildErrorLogContext(logContext: LogContextLike | null = null) {
 function buildWardrobePayload({
   items,
   outfitSets = [],
-  reasoning = null,
   rawSelectionText = null,
   swimwearReasoning = null,
   swimwearRawSelectionText = null
 }: {
   items: WardrobeUiItemLike[];
   outfitSets?: GeneratedOutfitSetLike[];
-  reasoning?: string | null;
   rawSelectionText?: string | null;
   swimwearReasoning?: string | null;
   swimwearRawSelectionText?: string | null;
@@ -303,7 +301,6 @@ function buildWardrobePayload({
   return {
     items,
     outfitSets: outfitSets as unknown as StoredWardrobePayloadLike["outfitSets"],
-    reasoning,
     rawSelectionText,
     swimwearReasoning,
     swimwearRawSelectionText
@@ -984,8 +981,7 @@ async function generateCapsuleWardrobe(userProfile = null, logContext = null) {
       outfitSets: [],
       promptEmbeddings,
       shortCapsuleName: null,
-      rawSelectionText: null,
-      reasoning: null
+      rawSelectionText: null
     };
   }
   const shouldSavePromptDebugArtifacts = process.env.NODE_ENV === "development";
@@ -1084,9 +1080,6 @@ async function generateCapsuleWardrobe(userProfile = null, logContext = null) {
     shortCapsuleName: getShortCapsuleName(parsedSelection?.system_evaluation?.short_capsule_name),
     rawSelectionText: typeof selectionResponse?.output_text === "string" && selectionResponse.output_text.trim().length > 0
       ? selectionResponse.output_text.trim()
-      : null,
-    reasoning: typeof parsedSelection === "object" && Object.keys(parsedSelection).length > 0
-      ? JSON.stringify(parsedSelection, null, 2)
       : null
   };
 }
@@ -1194,7 +1187,6 @@ function createWardrobeService({
         const storedCapsule = buildWardrobePayload({
           items,
           outfitSets: wardrobe.outfitSets,
-          reasoning: wardrobe.reasoning,
           rawSelectionText: wardrobe.rawSelectionText
         });
         if (capsuleId) {
@@ -1250,7 +1242,6 @@ function createWardrobeService({
             const finalPayload = buildWardrobePayload({
               items: finalItems,
               outfitSets: wardrobe.outfitSets,
-              reasoning: wardrobe.reasoning,
               rawSelectionText: wardrobe.rawSelectionText,
               swimwearReasoning: swimwear.reasoning,
               swimwearRawSelectionText: swimwear.rawSelectionText
@@ -1384,7 +1375,6 @@ function createWardrobeService({
           hasPendingAdditionalItems: snapshot.hasPendingAdditionalItems,
           items: snapshot.items,
           outfitSets: snapshot.outfitSets,
-          reasoning: snapshot.reasoning,
           rawSelectionText: snapshot.rawSelectionText,
           ...(snapshot.swimwearReasoning ? { swimwearReasoning: snapshot.swimwearReasoning } : {}),
           ...(snapshot.swimwearRawSelectionText ? { swimwearRawSelectionText: snapshot.swimwearRawSelectionText } : {})
@@ -1396,7 +1386,6 @@ function createWardrobeService({
         status: "ready",
         items: snapshot.items,
         outfitSets: snapshot.outfitSets,
-        reasoning: snapshot.reasoning,
         rawSelectionText: snapshot.rawSelectionText,
         ...(snapshot.swimwearReasoning ? { swimwearReasoning: snapshot.swimwearReasoning } : {}),
         ...(snapshot.swimwearRawSelectionText ? { swimwearRawSelectionText: snapshot.swimwearRawSelectionText } : {}),
