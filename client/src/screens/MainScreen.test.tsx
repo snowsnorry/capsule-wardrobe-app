@@ -699,6 +699,44 @@ describe("MainScreen", () => {
     expect(screen.getByRole("link", { name: "Spring edit" })).toHaveAttribute("href", "https://client.example/share/share-1");
   });
 
+  test("shows progress while the share link is being created", async () => {
+    const user = userEvent.setup();
+    let resolveShare: (result: { url: string; expiresAt: string }) => void = () => {};
+    const onShareCapsule = vi.fn(() => new Promise<{ url: string; expiresAt: string }>((resolve) => {
+      resolveShare = resolve;
+    }));
+
+    renderScreen({
+      onShareCapsule,
+      activeCapsule: {
+        id: "capsule-1",
+        name: "Spring edit",
+        draft: {
+          filters: {},
+          data: {
+            wardrobe: { items: [{ url: "https://example.com/1" }] },
+            rejectedUrls: []
+          }
+        },
+        saved: null,
+        status: "new"
+      }
+    });
+
+    await user.click(screen.getByRole("button", { name: "Open capsule menu" }));
+    await user.click(screen.getByRole("menuitem", { name: "Share" }));
+
+    expect(screen.getByRole("progressbar")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Regenerate all" })).toBeDisabled();
+
+    resolveShare({
+      url: "https://client.example/share/share-1",
+      expiresAt: new Date(60_000).toISOString()
+    });
+
+    expect(await screen.findByRole("dialog", { name: "Share capsule" })).toBeInTheDocument();
+  });
+
   test("hides share action for capsules without wardrobe content", async () => {
     const user = userEvent.setup();
 

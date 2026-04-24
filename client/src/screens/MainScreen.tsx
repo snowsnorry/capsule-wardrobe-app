@@ -30,6 +30,7 @@ import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
 import MoreVertRoundedIcon from "@mui/icons-material/MoreVertRounded";
 import ShareRoundedIcon from "@mui/icons-material/ShareRounded";
 import ContentCopyRoundedIcon from "@mui/icons-material/ContentCopyRounded";
+import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
 import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
@@ -412,6 +413,7 @@ function MainScreen({
   const [shareExpiresAt, setShareExpiresAt] = useState<string | Date | null>(null);
   const [shareCapsuleName, setShareCapsuleName] = useState("");
   const [shareCopied, setShareCopied] = useState(false);
+  const [isSharingCapsule, setIsSharingCapsule] = useState(false);
   const [isOutfitSetImageDialogOpen, setIsOutfitSetImageDialogOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState("");
   const [confirmCapsuleId, setConfirmCapsuleId] = useState("");
@@ -448,7 +450,7 @@ function MainScreen({
       : "capsule.revertConfirm";
 
   const selectedCount = selectedRegenerationUrls.length;
-  const isInteractionDisabled = isContentBusy || isInlineRenameSubmitting;
+  const isInteractionDisabled = isContentBusy || isInlineRenameSubmitting || isSharingCapsule;
   const searchGroups = useMemo(() => groupCapsules(searchResults), [searchResults]);
   const activeCapsuleName = activeCapsule?.name || `<${t("capsule.new")}>`;
   const resolvedOutfitSets = useMemo(() => resolveOutfitSets(items, outfitSets), [items, outfitSets]);
@@ -552,19 +554,24 @@ function MainScreen({
     if (!capsule?.id || isInteractionDisabled || !capsuleHasShareableContent(capsule)) {
       return;
     }
-    const result = await onShareCapsule(capsule.id);
-    if (!result) {
-      return;
+    setIsSharingCapsule(true);
+    try {
+      const result = await onShareCapsule(capsule.id);
+      if (!result) {
+        return;
+      }
+      const nextUrl = typeof result?.url === "string" ? result.url : "";
+      if (!nextUrl) {
+        return;
+      }
+      setShareUrl(nextUrl);
+      setShareExpiresAt(result?.expiresAt || null);
+      setShareCapsuleName(capsule.name || activeCapsuleName);
+      setShareCopied(false);
+      setShareDialogOpen(true);
+    } finally {
+      setIsSharingCapsule(false);
     }
-    const nextUrl = typeof result?.url === "string" ? result.url : "";
-    if (!nextUrl) {
-      return;
-    }
-    setShareUrl(nextUrl);
-    setShareExpiresAt(result?.expiresAt || null);
-    setShareCapsuleName(capsule.name || activeCapsuleName);
-    setShareCopied(false);
-    setShareDialogOpen(true);
   };
 
   const handleCopyShareUrl = async () => {
@@ -1077,7 +1084,7 @@ function MainScreen({
                 </Stack>
                 <Box sx={{ position: "relative" }}>
                   <Divider />
-                  {isContentBusy ? (
+                  {isContentBusy || isSharingCapsule ? (
                     <LinearProgress
                       color="success"
                       sx={{
@@ -1655,21 +1662,102 @@ function MainScreen({
                 fullScreen={isOverlaySidebar}
                 fullWidth
                 maxWidth="sm"
+                aria-labelledby="share-link-dialog-title"
+                PaperProps={{
+                  sx: {
+                    borderRadius: isOverlaySidebar ? 0 : "18px",
+                    overflow: "hidden"
+                  }
+                }}
               >
-                <DialogTitle>{t("capsule.shareTitle")}</DialogTitle>
-                <DialogContent>
-                  <Stack spacing={2}>
-                    <DialogContentText>{t("capsule.shareReady")}</DialogContentText>
-                    <Stack direction="row" alignItems="center" spacing={1}>
-                      <Link href={shareUrl} target="_blank" rel="noreferrer" sx={{ minWidth: 0, flex: 1 }} noWrap>
-                        {shareCapsuleName || shareUrl}
+                <DialogTitle sx={{ px: { xs: 2.5, sm: 3 }, pt: 3, pb: 1.5 }}>
+                  <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
+                    <Stack direction="row" alignItems="center" spacing={1.5} sx={{ minWidth: 0 }}>
+                      <Box
+                        sx={{
+                          width: 40,
+                          height: 40,
+                          borderRadius: "12px",
+                          display: "grid",
+                          placeItems: "center",
+                          color: "primary.main",
+                          bgcolor: (theme) => (
+                            theme.palette.mode === "dark"
+                              ? "rgba(73, 163, 163, 0.14)"
+                              : "rgba(28, 124, 124, 0.08)"
+                          )
+                        }}
+                      >
+                        <ShareRoundedIcon fontSize="small" />
+                      </Box>
+                      <Box sx={{ minWidth: 0 }}>
+                        <Typography id="share-link-dialog-title" component="span" variant="h6" sx={{ display: "block", lineHeight: 1.25 }}>
+                          {t("capsule.shareTitle")}
+                        </Typography>
+                      </Box>
+                    </Stack>
+                    <IconButton aria-label={t("actions.close")} onClick={() => setShareDialogOpen(false)} sx={{ flexShrink: 0 }}>
+                      <CloseRoundedIcon />
+                    </IconButton>
+                  </Stack>
+                </DialogTitle>
+                <DialogContent sx={{ px: { xs: 2.5, sm: 3 }, pt: 0.5, pb: 2 }}>
+                  <Stack spacing={1.5}>
+                    <Typography variant="body2" color="text.secondary">
+                      {t("capsule.shareReady")}
+                    </Typography>
+                    <Box
+                      sx={{
+                        display: "grid",
+                        gridTemplateColumns: "minmax(0, 1fr) auto",
+                        alignItems: "center",
+                        gap: 1.25,
+                        p: 1,
+                        pl: 1.5,
+                        border: "1px solid",
+                        borderColor: "divider",
+                        borderRadius: "12px",
+                        bgcolor: (theme) => (
+                          theme.palette.mode === "dark"
+                            ? "rgba(255,255,255,0.035)"
+                            : "rgba(246, 248, 247, 0.92)"
+                        )
+                      }}
+                    >
+                      <Link
+                        href={shareUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        aria-label={shareCapsuleName || shareUrl}
+                        underline="none"
+                        sx={{ minWidth: 0, color: "text.primary" }}
+                      >
+                        <Typography noWrap sx={{ fontWeight: 700, lineHeight: 1.35 }}>
+                          {shareCapsuleName || shareUrl}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" noWrap sx={{ mt: 0.25 }}>
+                          {shareUrl}
+                        </Typography>
                       </Link>
                       <Tooltip title={shareCopied ? t("capsule.shareCopied") : t("capsule.copyShareLink")}>
-                        <IconButton aria-label={t("capsule.copyShareLink")} onClick={handleCopyShareUrl}>
-                          <ContentCopyRoundedIcon />
+                        <IconButton
+                          aria-label={t("capsule.copyShareLink")}
+                          onClick={handleCopyShareUrl}
+                          sx={{
+                            width: 42,
+                            height: 42,
+                            borderRadius: "10px",
+                            color: shareCopied ? "success.main" : "primary.contrastText",
+                            bgcolor: shareCopied ? "success.light" : "primary.main",
+                            "&:hover": {
+                              bgcolor: shareCopied ? "success.light" : "primary.dark"
+                            }
+                          }}
+                        >
+                          {shareCopied ? <CheckRoundedIcon /> : <ContentCopyRoundedIcon />}
                         </IconButton>
                       </Tooltip>
-                    </Stack>
+                    </Box>
                     {shareExpiresAt ? (
                       <Typography variant="body2" color="text.secondary">
                         {t("capsule.shareExpires", { date: new Date(shareExpiresAt).toLocaleString() })}
@@ -1677,8 +1765,8 @@ function MainScreen({
                     ) : null}
                   </Stack>
                 </DialogContent>
-                <DialogActions>
-                  <Button onClick={() => setShareDialogOpen(false)}>{t("actions.close")}</Button>
+                <DialogActions sx={{ px: { xs: 2.5, sm: 3 }, pb: 2.5, pt: 0 }}>
+                  <Button variant="text" onClick={() => setShareDialogOpen(false)}>{t("actions.close")}</Button>
                 </DialogActions>
               </Dialog>
             </Box>
