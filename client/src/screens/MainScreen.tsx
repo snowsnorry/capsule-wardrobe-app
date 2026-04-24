@@ -294,6 +294,12 @@ function CapsuleActionMenu({
         <ListItemIcon><DownloadRoundedIcon fontSize="small" /></ListItemIcon>
         {t("capsule.exportPdf")}
       </MenuItem>
+      {canShare ? (
+        <MenuItem disabled={disabled} onClick={() => { onClose(); onShare(); }}>
+          <ListItemIcon><ShareRoundedIcon fontSize="small" /></ListItemIcon>
+          {t("capsule.share")}
+        </MenuItem>
+      ) : null}
       <Divider />
       <MenuItem disabled={disabled} onClick={() => { onClose(); onRename(); }}>
         <ListItemIcon><DriveFileRenameOutlineRoundedIcon fontSize="small" /></ListItemIcon>
@@ -312,12 +318,6 @@ function CapsuleActionMenu({
         <MenuItem disabled={disabled} onClick={() => { onClose(); onDuplicate(); }}>
           <ListItemIcon sx={{ visibility: "hidden" }} />
           {t("capsule.saveAs")}
-        </MenuItem>
-      ) : null}
-      {canShare ? (
-        <MenuItem disabled={disabled} onClick={() => { onClose(); onShare(); }}>
-          <ListItemIcon><ShareRoundedIcon fontSize="small" /></ListItemIcon>
-          {t("capsule.share")}
         </MenuItem>
       ) : null}
       <Divider />
