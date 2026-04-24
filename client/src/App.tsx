@@ -2013,7 +2013,7 @@ function App() {
               pt: hasBrandedPanelHeader ? { xs: 3, md: 3.25 } : undefined,
               backdropFilter: "blur(8px)",
               minHeight: 0,
-              height: isSignInView ? { xs: "100%", md: "517px" } : "100%",
+              height: isSignInView ? { xs: "100%", md: "532px" } : "100%",
               borderRadius: { xs: 0, md: "22px" },
               display: "flex",
               flexDirection: "column",
