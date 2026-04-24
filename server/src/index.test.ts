@@ -678,6 +678,97 @@ test("passkey authentication routes store challenge, reject unknown credentials,
   assert.ok(setCookie?.includes("csrf="));
 });
 
+test("passkey authentication options route is rate limited by IP", async (t) => {
+  let challengeInsertCount = 0;
+  const { baseUrl } = await startTestServer(t, {
+    overrides: {
+      insertPasskeyChallengeImpl: async () => {
+        challengeInsertCount += 1;
+      }
+    }
+  });
+
+  for (let index = 0; index < 20; index += 1) {
+    const allowed = await requestJson(baseUrl, "/auth/passkeys/authenticate/options", {
+      method: "POST",
+      origin: TEST_CLIENT_ORIGIN
+    });
+    assert.equal(allowed.response.status, 200);
+  }
+
+  const limited = await requestJson(baseUrl, "/auth/passkeys/authenticate/options", {
+    method: "POST",
+    origin: TEST_CLIENT_ORIGIN
+  });
+  assert.equal(limited.response.status, 429);
+  assert.deepEqual(limited.json, { error: "too_many_requests" });
+  assert.equal(challengeInsertCount, 20);
+});
+
+test("passkey authentication verify route is rate limited by IP", async (t) => {
+  let challengeConsumeCount = 0;
+  const { baseUrl } = await startTestServer(t, {
+    overrides: {
+      consumePasskeyChallengeImpl: async () => {
+        challengeConsumeCount += 1;
+        return null;
+      }
+    }
+  });
+
+  for (let index = 0; index < 30; index += 1) {
+    const allowed = await requestJson(baseUrl, "/auth/passkeys/authenticate/verify", {
+      method: "POST",
+      origin: TEST_CLIENT_ORIGIN,
+      cookie: `passkey_challenge=challenge-${index}`,
+      body: { response: { id: "credential-1" } }
+    });
+    assert.equal(allowed.response.status, 400);
+    assert.deepEqual(allowed.json, { error: "passkey_login_failed" });
+  }
+
+  const limited = await requestJson(baseUrl, "/auth/passkeys/authenticate/verify", {
+    method: "POST",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: "passkey_challenge=challenge-over-limit",
+    body: { response: { id: "credential-1" } }
+  });
+  assert.equal(limited.response.status, 429);
+  assert.deepEqual(limited.json, { error: "too_many_requests" });
+  assert.equal(challengeConsumeCount, 30);
+});
+
+test("passkey registration options route is rate limited by IP after auth and csrf checks", async (t) => {
+  let challengeInsertCount = 0;
+  const { baseUrl } = await startTestServer(t, {
+    overrides: {
+      insertPasskeyChallengeImpl: async () => {
+        challengeInsertCount += 1;
+      }
+    }
+  });
+
+  for (let index = 0; index < 10; index += 1) {
+    const allowed = await requestJson(baseUrl, "/auth/passkeys/register/options", {
+      method: "POST",
+      origin: TEST_CLIENT_ORIGIN,
+      cookie: AUTH_COOKIE,
+      csrfToken: CSRF_TOKEN
+    });
+    assert.equal(allowed.response.status, 200);
+  }
+
+  const limited = await requestJson(baseUrl, "/auth/passkeys/register/options", {
+    method: "POST",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN
+  });
+  assert.equal(limited.response.status, 429);
+  assert.deepEqual(limited.json, { error: "too_many_requests" });
+  assert.equal(challengeInsertCount, 10);
+});
+
 test("passkey list and delete routes expose metadata and scope deletion to current user", async (t) => {
   let deleteInput: any = null;
   const { baseUrl } = await startTestServer(t, {

@@ -647,6 +647,30 @@ function createApp({
     message: { error: "too_many_requests" }
   });
 
+  const passkeyAuthenticateOptionsLimiter = rateLimit({
+    windowMs: 10 * 60 * 1000,
+    max: 20,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "too_many_requests" }
+  });
+
+  const passkeyAuthenticateVerifyLimiter = rateLimit({
+    windowMs: 10 * 60 * 1000,
+    max: 30,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "too_many_requests" }
+  });
+
+  const passkeyRegisterOptionsLimiter = rateLimit({
+    windowMs: 10 * 60 * 1000,
+    max: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "too_many_requests" }
+  });
+
   if (nodeEnv !== "development") {
     app.use((req, res, next) => {
       res.header("Access-Control-Allow-Origin", clientOrigin);
@@ -949,7 +973,7 @@ app.get("/auth/passkeys", requireAuth, async (req, res) => {
   }
 });
 
-app.post("/auth/passkeys/register/options", requireTrustedOrigin, requireAuth, requireCsrf, async (req, res) => {
+app.post("/auth/passkeys/register/options", requireTrustedOrigin, requireAuth, requireCsrf, passkeyRegisterOptionsLimiter, async (req, res) => {
   try {
     await pruneExpiredPasskeyChallengesImpl();
     const existingPasskeys = await listPasskeysImpl(req.user.email);
@@ -1050,7 +1074,7 @@ app.post("/auth/passkeys/register/verify", requireTrustedOrigin, requireAuth, re
   }
 });
 
-app.post("/auth/passkeys/authenticate/options", requireTrustedOrigin, async (_req, res) => {
+app.post("/auth/passkeys/authenticate/options", requireTrustedOrigin, passkeyAuthenticateOptionsLimiter, async (_req, res) => {
   try {
     await pruneExpiredPasskeyChallengesImpl();
     const options = await generateAuthenticationOptionsImpl({
@@ -1073,7 +1097,7 @@ app.post("/auth/passkeys/authenticate/options", requireTrustedOrigin, async (_re
   }
 });
 
-app.post("/auth/passkeys/authenticate/verify", requireTrustedOrigin, async (req, res) => {
+app.post("/auth/passkeys/authenticate/verify", requireTrustedOrigin, passkeyAuthenticateVerifyLimiter, async (req, res) => {
   const response = req.body?.response;
   if (!isAuthenticationResponse(response)) {
     return res.status(400).json({ error: "invalid_payload" });
