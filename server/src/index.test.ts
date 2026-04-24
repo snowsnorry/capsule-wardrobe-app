@@ -95,7 +95,8 @@ function createDependencies(overrides: DependencyOverrides = {}) {
       rp: { name: "Capsule Wardrobe", id: "localhost" },
       user: { id: "person@example.com", name: "person@example.com", displayName: "person@example.com" },
       challenge: "registration-challenge",
-      pubKeyCredParams: []
+      pubKeyCredParams: [],
+      authenticatorSelection: { residentKey: "preferred", userVerification: "required" }
     }),
     verifyRegistrationResponseImpl: async () => ({
       verified: true,
@@ -113,7 +114,7 @@ function createDependencies(overrides: DependencyOverrides = {}) {
     generateAuthenticationOptionsImpl: async () => ({
       challenge: "authentication-challenge",
       rpId: "localhost",
-      userVerification: "preferred"
+      userVerification: "required"
     }),
     verifyAuthenticationResponseImpl: async () => ({
       verified: true,
@@ -543,8 +544,20 @@ test("index routes cover logout and csrf enforcement on protected mutations", as
 test("passkey registration routes require auth, store challenge, and save verified passkey", async (t) => {
   let storedChallenge: any = null;
   let insertedPasskey: any = null;
+  let registrationOptionsInput: any = null;
+  let registrationVerifyInput: any = null;
   const { baseUrl } = await startTestServer(t, {
     overrides: {
+      generateRegistrationOptionsImpl: async (input) => {
+        registrationOptionsInput = input;
+        return {
+          rp: { name: "Capsule Wardrobe", id: "localhost" },
+          user: { id: "person@example.com", name: "person@example.com", displayName: "person@example.com" },
+          challenge: "registration-challenge",
+          pubKeyCredParams: [],
+          authenticatorSelection: { residentKey: "preferred", userVerification: "required" }
+        };
+      },
       insertPasskeyChallengeImpl: async (input) => {
         storedChallenge = input;
       },
@@ -574,6 +587,22 @@ test("passkey registration routes require auth, store challenge, and save verifi
           createdAt: new Date(0).toISOString(),
           updatedAt: new Date(0).toISOString()
         };
+      },
+      verifyRegistrationResponseImpl: async (input) => {
+        registrationVerifyInput = input;
+        return {
+          verified: true,
+          registrationInfo: {
+            credential: {
+              id: "credential-1",
+              publicKey: new Uint8Array([1, 2, 3]),
+              counter: 1,
+              transports: ["internal"]
+            },
+            credentialDeviceType: "multiDevice",
+            credentialBackedUp: true
+          }
+        };
       }
     }
   });
@@ -592,6 +621,8 @@ test("passkey registration routes require auth, store challenge, and save verifi
   });
   assert.equal(options.response.status, 200);
   assert.equal(options.json.options.challenge, "registration-challenge");
+  assert.equal(options.json.options.authenticatorSelection.userVerification, "required");
+  assert.equal(registrationOptionsInput.authenticatorSelection.userVerification, "required");
   assert.equal(storedChallenge.kind, "registration");
   assert.equal(storedChallenge.profileEmail, "person@example.com");
   assert.ok(options.response.headers.get("set-cookie")?.includes("passkey_challenge="));
@@ -614,6 +645,7 @@ test("passkey registration routes require auth, store challenge, and save verifi
     body: { response: { id: "credential-1" } }
   });
   assert.equal(verified.response.status, 200);
+  assert.equal(registrationVerifyInput.requireUserVerification, true);
   assert.equal(insertedPasskey.profileEmail, "person@example.com");
   assert.equal(insertedPasskey.credentialId, "credential-1");
   assert.equal(verified.json.passkey.credentialPublicKey, undefined);
@@ -622,8 +654,18 @@ test("passkey registration routes require auth, store challenge, and save verifi
 test("passkey authentication routes store challenge, reject unknown credentials, and create app session", async (t) => {
   let storedChallenge: any = null;
   let updatedAuth: any = null;
+  let authenticationOptionsInput: any = null;
+  let authenticationVerifyInput: any = null;
   const { baseUrl } = await startTestServer(t, {
     overrides: {
+      generateAuthenticationOptionsImpl: async (input) => {
+        authenticationOptionsInput = input;
+        return {
+          challenge: "authentication-challenge",
+          rpId: "localhost",
+          userVerification: "required"
+        };
+      },
       insertPasskeyChallengeImpl: async (input) => {
         storedChallenge = input;
       },
@@ -640,6 +682,21 @@ test("passkey authentication routes store challenge, reject unknown credentials,
       updatePasskeyAuthenticationImpl: async (input) => {
         updatedAuth = input;
         return null;
+      },
+      verifyAuthenticationResponseImpl: async (input) => {
+        authenticationVerifyInput = input;
+        return {
+          verified: true,
+          authenticationInfo: {
+            credentialID: "credential-1",
+            newCounter: 2,
+            userVerified: true,
+            credentialDeviceType: "multiDevice",
+            credentialBackedUp: true,
+            origin: "https://client.example",
+            rpID: "localhost"
+          }
+        };
       }
     }
   });
@@ -650,6 +707,8 @@ test("passkey authentication routes store challenge, reject unknown credentials,
   });
   assert.equal(options.response.status, 200);
   assert.equal(options.json.options.challenge, "authentication-challenge");
+  assert.equal(options.json.options.userVerification, "required");
+  assert.equal(authenticationOptionsInput.userVerification, "required");
   assert.equal(storedChallenge.kind, "authentication");
   assert.equal(storedChallenge.profileEmail, null);
   assert.ok(options.response.headers.get("set-cookie")?.includes("passkey_challenge="));
@@ -671,6 +730,7 @@ test("passkey authentication routes store challenge, reject unknown credentials,
   });
   assert.equal(success.response.status, 200);
   assert.deepEqual(success.json, { ok: true, user: { email: "person@example.com" } });
+  assert.equal(authenticationVerifyInput.requireUserVerification, true);
   assert.equal(updatedAuth.credentialId, "credential-1");
   assert.equal(updatedAuth.counter, 2);
   const setCookie = success.response.headers.get("set-cookie");

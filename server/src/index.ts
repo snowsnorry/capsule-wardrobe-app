@@ -993,7 +993,7 @@ app.post("/auth/passkeys/register/options", requireTrustedOrigin, requireAuth, r
       })),
       authenticatorSelection: {
         residentKey: "preferred",
-        userVerification: "preferred"
+        userVerification: "required"
       }
     });
     const challengeId = generatePasskeyChallengeId();
@@ -1043,7 +1043,7 @@ app.post("/auth/passkeys/register/verify", requireTrustedOrigin, requireAuth, re
       expectedChallenge: challenge.challenge,
       expectedOrigin: passkeyOrigin,
       expectedRPID: passkeyRpId,
-      requireUserVerification: false,
+      requireUserVerification: true,
       supportedAlgorithmIDs: [-7, -257]
     });
   } catch (error) {
@@ -1079,7 +1079,7 @@ app.post("/auth/passkeys/authenticate/options", requireTrustedOrigin, passkeyAut
     await pruneExpiredPasskeyChallengesImpl();
     const options = await generateAuthenticationOptionsImpl({
       rpID: passkeyRpId,
-      userVerification: "preferred"
+      userVerification: "required"
     });
     const challengeId = generatePasskeyChallengeId();
     await insertPasskeyChallengeImpl({
@@ -1140,7 +1140,7 @@ app.post("/auth/passkeys/authenticate/verify", requireTrustedOrigin, passkeyAuth
       expectedOrigin: passkeyOrigin,
       expectedRPID: passkeyRpId,
       credential: toWebAuthnCredential(passkey),
-      requireUserVerification: false
+      requireUserVerification: true
     });
   } catch (error) {
     console.error("[auth/passkeys/authenticate/verify]", error);
