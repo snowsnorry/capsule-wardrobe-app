@@ -86,7 +86,6 @@ Common optional values:
 - `ANTHROPIC_API_KEY` — Claude-backed generation flows
 - `R2_ACCOUNT_ID`, `R2_BUCKET_NAME`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_PUBLIC_BASE_URL` — Cloudflare R2 storage for generated outfit set images; `R2_PUBLIC_BASE_URL` must be a public bucket URL or custom domain
 - `R2_IMAGE_KEY_PREFIX` — optional R2 object key prefix, defaults to `outfit-set-images`
-- `MIGRATE_CAPSULE_IMAGES_TO_R2` — optional startup migration flag for legacy base64 capsule images; set to `true` only when intentionally migrating existing data
 - `PORT` — defaults to `3000`
 - `CLIENT_ORIGIN` — defaults to `http://localhost:5173`
 - `NODE_ENV` — defaults to `development`

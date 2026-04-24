@@ -76,7 +76,6 @@ import { getPartialRegenerationJob, regenerateSelectedWardrobeItems } from "./ai
 import { deleteOutfitSetImage, generateOutfitSetImage, getOutfitSetImageJob } from "./ai/outfitSetImages.js";
 import { buildCapsuleEventSnapshot, capsuleEventHub } from "./ai/capsuleEvents.js";
 import { buildWardrobePdfInChild } from "./wardrobePdf.js";
-import { migrateCapsuleImagesToR2 } from "./migrations/migrateCapsuleImagesToR2.js";
 import {
   checkDatabaseConnection,
   consumePasskeyChallenge,
@@ -228,10 +227,6 @@ function buildPdfDownloadFilename(capsuleName) {
     || "capsule-wardrobe";
   const encodedUtf8Name = encodeURIComponent(`${baseName}.pdf`);
   return `attachment; filename="${asciiFallback}.pdf"; filename*=UTF-8''${encodedUtf8Name}`;
-}
-
-function isCapsuleImagesToR2MigrationEnabled(env = process.env) {
-  return ["1", "true", "yes"].includes(String(env.MIGRATE_CAPSULE_IMAGES_TO_R2 || "").toLowerCase());
 }
 
 function isApiPath(pathname = "") {
@@ -1778,13 +1773,9 @@ const startServer = async ({
   appInstance = app,
   nodeEnv = NODE_ENV,
   ensureTablesImpl = ensureTables,
-  migrateCapsuleImagesToR2Impl = migrateCapsuleImagesToR2,
   port = PORT
 } = {}) => {
   await ensureTablesImpl();
-  if (isCapsuleImagesToR2MigrationEnabled()) {
-    await migrateCapsuleImagesToR2Impl();
-  }
 
   if (nodeEnv === "development") {
     const { createServer: createViteServer } = await import("vite");
