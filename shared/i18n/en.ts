@@ -335,7 +335,8 @@ const en = {
     ready: {
       title: "Your capsule is ready",
       fullBody: "Your new capsule is ready to review. Open the app to see the result.",
-      partialBody: "Your updated selection is ready. Open the app to see the result."
+      partialBody: "Your updated selection is ready. Open the app to see the result.",
+      imageBody: "Your outfit image is ready. Open the app to see the result."
     }
   },
   filters: {

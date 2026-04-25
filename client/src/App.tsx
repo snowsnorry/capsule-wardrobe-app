@@ -633,7 +633,9 @@ function App() {
 
     const bodyKey = kind === "partial"
       ? "notifications.ready.partialBody"
-      : "notifications.ready.fullBody";
+      : kind === "image"
+        ? "notifications.ready.imageBody"
+        : "notifications.ready.fullBody";
 
     try {
       new window.Notification(t("notifications.ready.title"), {
@@ -1538,7 +1540,10 @@ function App() {
     }
 
     if (snapshot?.status === "ready" && !hasPendingOutfitSetImages && normalizedCapsuleId) {
-      sendReadyNotification(pendingNotificationKindRef.current || "full");
+      const pendingNotificationKind = pendingNotificationKindRef.current;
+      if (pendingNotificationKind) {
+        sendReadyNotification(pendingNotificationKind);
+      }
       pendingNotificationKindRef.current = "";
       closeNotificationPrompt();
       try {
@@ -1732,6 +1737,7 @@ function App() {
         setIndex: normalizedSetIndex
       }) as WardrobeMutationResponse;
       if (response?.status === "pending") {
+        startPendingNotificationFlow("image", settingsProfile.imageLlm);
         startCapsuleEventStream(activeCapsuleId);
         return;
       }
@@ -1743,6 +1749,8 @@ function App() {
       }
 
       setPendingImageSetIndexes((current) => current.filter((value) => value !== normalizedSetIndex));
+      pendingNotificationKindRef.current = "";
+      closeNotificationPrompt();
       setStatus((current) => ({
         ...current,
         error: resolveErrorMessage(error)

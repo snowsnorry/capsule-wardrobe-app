@@ -1082,6 +1082,33 @@ describe("App", () => {
     expect(notificationApi.created).not.toHaveBeenCalled();
   });
 
+  test("does not send ready notification for an already ready capsule on bootstrap", async () => {
+    notificationApi.permission = "granted";
+    authApi.fetchCurrentUser.mockResolvedValue({ user: { email: "person@example.com" } });
+    authApi.fetchProfileStatus.mockResolvedValue({ hasProfile: true });
+    authApi.updateProfileLocale.mockResolvedValue({});
+    capsulesApi.fetchCapsuleBootstrap.mockResolvedValue(createBootstrapResponse({
+      locale: "en",
+      llm: "openai:gpt-5.5",
+      activeSnapshot: {
+        status: "ready",
+        items: [
+          { id: "top-1", url: "https://example.com/top-1", name: "Shirt", category: "top" }
+        ],
+        rawSelectionText: "{}"
+      }
+    }));
+    mockProfileOptions();
+
+    renderApp();
+
+    expect(await screen.findByTestId("main-screen")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(capsulesApi.fetchCapsule).toHaveBeenCalledWith("capsule-1");
+    });
+    expect(notificationApi.created).not.toHaveBeenCalled();
+  });
+
   test("sends partial ready notification after selected regeneration completes", async () => {
     notificationApi.permission = "granted";
     authApi.fetchCurrentUser.mockResolvedValue({ user: { email: "person@example.com" } });
