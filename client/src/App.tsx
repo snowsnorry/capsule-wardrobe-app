@@ -811,7 +811,7 @@ function App() {
       return;
     }
 
-    await applyWardrobeSnapshot(snapshot);
+    await applyWardrobeSnapshot(snapshot, capsuleId);
     if (snapshot.status === "pending" && shouldResumeEvents) {
       startCapsuleEventStream(capsuleId);
     }
@@ -1446,7 +1446,8 @@ function App() {
     capsuleEventsAbortRef.current = null;
   };
 
-  const applyWardrobeSnapshot = async (snapshot: WardrobeSnapshot | undefined) => {
+  const applyWardrobeSnapshot = async (snapshot: WardrobeSnapshot | undefined, capsuleId: string | undefined = activeCapsuleId) => {
+    const normalizedCapsuleId = String(capsuleId || "").trim();
     const items = Array.isArray(snapshot?.items) ? snapshot.items : [];
     const outfitSets = normalizeOutfitSets(snapshot?.outfitSets);
     const pendingRegenerationUrls = Array.isArray(snapshot?.pendingRegenerationUrls)
@@ -1477,7 +1478,7 @@ function App() {
       setHasPendingAdditionalItems(false);
       setIsLoadingItems(false);
       setPendingImageSetIndexes(nextPendingImageSetIndexes);
-      setWardrobeLoadedCapsuleId(activeCapsuleId);
+      setWardrobeLoadedCapsuleId(normalizedCapsuleId);
       setStatus((current) => ({
         ...current,
         error: t("errors.regenerateAllFailed")
@@ -1529,19 +1530,19 @@ function App() {
     setIsWardrobePending(false);
     setHasPendingAdditionalItems(false);
     setIsLoadingItems(false);
-    setWardrobeLoadedCapsuleId(snapshot?.status === "ready" ? activeCapsuleId : "");
+    setWardrobeLoadedCapsuleId(snapshot?.status === "ready" ? normalizedCapsuleId : "");
 
     if (snapshot?.status !== "pending" && !hasPendingOutfitSetImages) {
       manualWardrobeRegenerationCapsuleIdRef.current = "";
       stopCapsuleEventStream();
     }
 
-    if (snapshot?.status === "ready" && !hasPendingOutfitSetImages) {
+    if (snapshot?.status === "ready" && !hasPendingOutfitSetImages && normalizedCapsuleId) {
       sendReadyNotification(pendingNotificationKindRef.current || "full");
       pendingNotificationKindRef.current = "";
       closeNotificationPrompt();
       try {
-        const capsuleResult = await fetchCapsule(activeCapsuleId);
+        const capsuleResult = await fetchCapsule(normalizedCapsuleId);
         setActiveCapsuleMeta(capsuleResult.capsule);
         await refreshCapsuleList();
       } catch {
@@ -1568,7 +1569,7 @@ function App() {
           return;
         }
 
-        applyWardrobeSnapshot(event.data).catch(() => {
+        applyWardrobeSnapshot(event.data, normalizedCapsuleId).catch(() => {
           if (!isMountedRef.current) {
             return;
           }
