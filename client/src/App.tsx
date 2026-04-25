@@ -807,12 +807,12 @@ function App() {
     snapshot: WardrobeSnapshot | undefined,
     { shouldResumeEvents = false }: { shouldResumeEvents?: boolean } = {}
   ) => {
-    if (!snapshot || snapshot.status !== "pending") {
+    if (!snapshot) {
       return;
     }
 
     await applyWardrobeSnapshot(snapshot);
-    if (shouldResumeEvents) {
+    if (snapshot.status === "pending" && shouldResumeEvents) {
       startCapsuleEventStream(capsuleId);
     }
   };

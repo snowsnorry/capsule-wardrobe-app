@@ -1375,7 +1375,7 @@ app.get("/capsules/:id", requireAuth, async (req, res) => {
     return res.json({
       ok: true,
       capsule: toCapsuleResponse(capsule),
-      snapshot: getCapsuleEventSnapshot(req.user.email, capsule)
+      snapshot: await getCapsuleEventSnapshot(req.user.email, capsule)
     });
   } catch (error) {
     console.error("[capsules/get]", error);
