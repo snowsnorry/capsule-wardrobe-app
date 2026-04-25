@@ -5,6 +5,11 @@ import { generateJsonWithLlm as generateJsonWithClaude } from "./claude.js";
 import { generateJsonWithLlm as generateJsonWithOpenAi } from "./openai.js";
 import { generateJsonWithLlm as generateJsonWithDeepInfra } from "./deepinfra.js";
 import { generateJsonWithLlm as generateJsonWithGemini } from "./gemini.js";
+import {
+  getPromptTemplateContent,
+  loadPromptTemplate,
+  renderPromptTemplateContent
+} from "./promptTemplates.js";
 import type { JsonSchema, JsonSchemaFormat, UserProfileLike } from "./types.js";
 
 const OPENAI_PROFILE_LLM = "openai:gpt-5.5";
@@ -14,9 +19,12 @@ const DEEPINFRA_ALLOWED_MODELS = [
   "google/gemma-4-31B-it",
   "Qwen/Qwen3-VL-235B-A22B-Instruct"
 ];
-const SYSTEM_PROMPT_TEMPLATE = readFileSync(new URL("../templates/system_prompt.txt", import.meta.url), "utf8");
+const CAPSULE_GENERATION_PROMPT_TEMPLATE = loadPromptTemplate(
+  new URL("../templates/prompt_capsule_generation.yaml", import.meta.url)
+);
+const SYSTEM_PROMPT_TEMPLATE = getPromptTemplateContent(CAPSULE_GENERATION_PROMPT_TEMPLATE, "system");
 const SYSTEM_PROMPT_PARTS = JSON.parse(
-  readFileSync(new URL("../templates/system_prompt_parts.json", import.meta.url), "utf8")
+  readFileSync(new URL("../templates/prompt_capsule_generation_parts.json", import.meta.url), "utf8")
 ) as Record<string, unknown>;
 
 type BuildSystemPromptOptions = {
@@ -327,19 +335,8 @@ function buildSystemPrompt(
     categories_schema: JSON.stringify(buildCapsuleSchema(categories), null, 2)
   };
 
-  let prompt = typeof options.template === "string" ? options.template : SYSTEM_PROMPT_TEMPLATE;
-  for (const [key, value] of Object.entries(replacements)) {
-    prompt = prompt.replaceAll(`{{${key}}}`, value);
-  }
-
-  const unresolvedTokens = prompt.match(/\{\{[a-zA-Z0-9_]+\}\}/g);
-  if (unresolvedTokens?.length) {
-    throw new Error(`Unresolved system prompt placeholders: ${unresolvedTokens.join(", ")}`);
-  }
-
-  return prompt
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
+  const prompt = typeof options.template === "string" ? options.template : SYSTEM_PROMPT_TEMPLATE;
+  return renderPromptTemplateContent(prompt, replacements, "system prompt");
 }
 
 function getProfileLlm(userProfile = null) {

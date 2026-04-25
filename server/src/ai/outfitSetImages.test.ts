@@ -74,6 +74,18 @@ test("buildPromptFromTemplate injects description into prompt template", () => {
   assert.doesNotMatch(prompt, /Source item image URLs:/);
 });
 
+test("buildPromptFromTemplate appends description when YAML user prompt has no placeholder", () => {
+  const prompt = buildPromptFromTemplate([
+    { image_url: "https://example.com/top.jpg" }
+  ], {
+    promptTemplate: "Prompt without placeholder",
+    buildOutfitSetDescriptionImpl: () => "Desc <raw>"
+  });
+
+  assert.equal(prompt, "Prompt without placeholder\n\nDesc <raw>");
+  assert.doesNotMatch(prompt, /&lt;/);
+});
+
 test("outfitSetImage service starts job and persists generated image", async () => {
   const published = [];
   const updates = [];

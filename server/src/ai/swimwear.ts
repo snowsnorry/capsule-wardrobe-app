@@ -1,4 +1,3 @@
-import { readFileSync } from "node:fs";
 import { getSqlClient } from "../db.js";
 import {
   buildCustomJsonObjectFormat,
@@ -7,9 +6,18 @@ import {
   isNoLlmProfileEnabled,
   resolveLlmProvider
 } from "./llm.js";
+import {
+  getPromptTemplateContent,
+  loadPromptTemplate,
+  renderPromptTemplateContent
+} from "./promptTemplates.js";
 import type { LlmUsageLike, SwimwearCandidate, UserProfileLike } from "./types.js";
 
-const PROMPT_TEMPLATE = readFileSync(new URL("../templates/prompt_woman_swimwear.txt", import.meta.url), "utf8");
+const SWIMWEAR_PROMPT_TEMPLATE = loadPromptTemplate(
+  new URL("../templates/prompt_woman_swimwear.yaml", import.meta.url)
+);
+const PROMPT_TEMPLATE = getPromptTemplateContent(SWIMWEAR_PROMPT_TEMPLATE, "user");
+const SYSTEM_PROMPT_TEMPLATE = getPromptTemplateContent(SWIMWEAR_PROMPT_TEMPLATE, "system");
 
 function formatLogValue(value: unknown) {
   if (value === null) {
@@ -196,9 +204,14 @@ function buildSwimwearCandidatesPayload(candidates: SwimwearCandidate[]) {
 }
 
 function getSwimwearPrompt(selectedCapsuleItems: SwimwearCandidate[], candidates: SwimwearCandidate[]) {
-  return PROMPT_TEMPLATE
-    .replace("{{bottoms_context}}", buildBottomsContext(selectedCapsuleItems))
-    .replace("{{swimwear_candidates}}", buildSwimwearCandidatesPayload(candidates));
+  return renderPromptTemplateContent(PROMPT_TEMPLATE, {
+    bottoms_context: buildBottomsContext(selectedCapsuleItems),
+    swimwear_candidates: buildSwimwearCandidatesPayload(candidates)
+  }, "swimwear prompt");
+}
+
+function getSwimwearSystemPrompt() {
+  return SYSTEM_PROMPT_TEMPLATE;
 }
 
 function normalizeSelectedSwimwearIds(value: unknown) {
@@ -412,7 +425,8 @@ async function generateFemaleSwimwear({
       "capsule_swimwear_response",
       "Structured swimwear selection with a brief reasoning and one valid swimsuit or a matching two-piece set.",
       buildSwimwearSchema()
-    )
+    ),
+    systemPrompt: getSwimwearSystemPrompt()
   });
   logWardrobeInfo("swimwear-llm-completed", {
     llmProvider: llmResolution.provider,
@@ -489,6 +503,8 @@ async function generateSwimwearAddition({
 
 export {
   generateSwimwearAddition,
+  getSwimwearPrompt,
+  getSwimwearSystemPrompt,
   shouldGenerateSwimwear,
   normalizeSwimwearSelection
 };

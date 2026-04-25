@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { getCapsule, getEffectiveCapsuleSnapshot, updateCapsuleSnapshot } from "../capsuleStore.js";
 import { getProfile } from "../profileStore.js";
 import { buildCapsuleEventSnapshot, capsuleEventHub } from "./capsuleEvents.js";
@@ -10,8 +10,16 @@ import { generateImageWithOpenAi } from "./openaiImage.js";
 import { buildOutfitSetDescription } from "./outfitSetImageDescription.js";
 import { downloadProductImageAssets } from "./promptImages.js";
 import { uploadImageToR2 } from "../r2Storage.js";
+import {
+  getPromptTemplateContent,
+  loadPromptTemplate,
+  renderPromptTemplateContent
+} from "./promptTemplates.js";
 
-const PROMPT_TEMPLATE = readFileSync(new URL("../templates/prompt_image.txt", import.meta.url), "utf8");
+const IMAGE_GENERATION_PROMPT_TEMPLATE = loadPromptTemplate(
+  new URL("../templates/prompt_image_generation.yaml", import.meta.url)
+);
+const PROMPT_TEMPLATE = getPromptTemplateContent(IMAGE_GENERATION_PROMPT_TEMPLATE, "user");
 const LAST_PROMPT_DIR_URL = new URL("../../../last-prompt/", import.meta.url);
 const outfitSetImageJobs = new Map();
 
@@ -45,8 +53,13 @@ function buildPromptFromTemplate(items, {
   buildOutfitSetDescriptionImpl = buildOutfitSetDescription
 } = {}) {
   const description = buildOutfitSetDescriptionImpl(items);
-  return String(promptTemplate || "")
-    .replaceAll("{{description}}", description);
+  const template = String(promptTemplate || "");
+  const rendered = renderPromptTemplateContent(template, {
+    description
+  }, "outfit set image prompt");
+  return template.includes("{{description}}")
+    ? rendered
+    : [rendered, description].filter((part) => part.trim().length > 0).join("\n\n");
 }
 
 function saveOutfitSetDebugArtifacts({ prompt }) {

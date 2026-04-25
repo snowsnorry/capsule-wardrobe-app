@@ -10,7 +10,7 @@ import {
   renameCapsule,
   updateCapsuleSnapshot
 } from "../capsuleStore.js";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { buildSystemPrompt, getGenerateJsonWithLlm, isNoLlmProfileEnabled, resolveLlmProvider } from "./llm.js";
 import {  getPromptEmbeddings, getWardrobePrompt } from "./voyageai.js";
 import { getCapsuleCategories } from "./categories.js";
@@ -23,6 +23,11 @@ import {
   sumCategoryBytes
 } from "./imagePipeline.js";
 import { getPartialRegenerationJob } from "./regenerateSelected.js";
+import {
+  getPromptTemplateContent,
+  loadPromptTemplate,
+  renderPromptTemplateContent
+} from "./promptTemplates.js";
 import {
   buildCapsuleEventSnapshot,
   capsuleEventHub,
@@ -44,7 +49,10 @@ import type {
   WardrobeUiItemLike
 } from "./types.js";
 
-const PROMPT_TEMPLATE = readFileSync(new URL("../templates/user_prompt.txt", import.meta.url), "utf8");
+const CAPSULE_GENERATION_PROMPT_TEMPLATE = loadPromptTemplate(
+  new URL("../templates/prompt_capsule_generation.yaml", import.meta.url)
+);
+const PROMPT_TEMPLATE = getPromptTemplateContent(CAPSULE_GENERATION_PROMPT_TEMPLATE, "user");
 const COMPLETED_JOB_TTL_MS = 5 * 60 * 1000;
 const LAST_PROMPT_DIR_URL = new URL("../../../last-prompt/", import.meta.url);
 const wardrobeJobs = new Map<string, WardrobeJobState>();
@@ -724,21 +732,20 @@ function getWardrobeSelectionPrompt(userProfile = null, items = [], categories =
   });
   const itemsJson = JSON.stringify(simplifiedItems, null, 2);
 
-  let prompt = PROMPT_TEMPLATE
-    .replace("{{formality_level}}", formalityText)
-    .replace("{{style}}", styleText)
-    .replace("{{occasions}}", occasionsText)
-    .replace("{{season}}", seasonText)
-    .replace("{{audience}}", audienceText)
-    .replace("{{color}}", accentColorText)
-    .replace("{{pattern}}", patternText)
-    .replace("{{additional_info_block}}", additionalInfoBlock)
-    .replace("{{items}}", itemsJson)
-    .replace("{{category_list}}", getCategoryListText(categories))
-    .replace("{{categories_schema}}", getCategorySchema(categories))
-    .replace("{{num_items}}", String(Object.entries(categories).reduce((sum, [, count]) => sum + Number(count), 0)));
-
-  return prompt;
+  return renderPromptTemplateContent(PROMPT_TEMPLATE, {
+    formality_level: formalityText,
+    style: styleText,
+    occasions: occasionsText,
+    season: seasonText,
+    audience: audienceText,
+    color: accentColorText,
+    pattern: patternText,
+    additional_info_block: additionalInfoBlock,
+    items: itemsJson,
+    category_list: getCategoryListText(categories),
+    categories_schema: getCategorySchema(categories),
+    num_items: String(Object.entries(categories).reduce((sum, [, count]) => sum + Number(count), 0))
+  }, "wardrobe selection prompt");
 }
 
 function toWardrobeUiItem(item) {

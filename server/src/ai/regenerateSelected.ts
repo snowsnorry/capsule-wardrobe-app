@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import {
   getProductsByUrlsInOrder,
   getProductsWithEmbeddingsByUrlsInOrder,
@@ -33,6 +33,11 @@ import {
   getStoredWardrobePayload
 } from "./capsuleEvents.js";
 import {
+  getPromptTemplateContent,
+  loadPromptTemplate,
+  renderPromptTemplateContent
+} from "./promptTemplates.js";
+import {
   countItemsByKey,
   enforceCategoryCounts,
   extractLlmUsage,
@@ -54,14 +59,11 @@ import type {
   WardrobeUiItemLike
 } from "./types.js";
 
-const REGENERATE_SELECTED_PROMPT_TEMPLATE = readFileSync(
-  new URL("../templates/user_prompt_regenerate_selected.txt", import.meta.url),
-  "utf8"
+const REGENERATE_SELECTED_PROMPT_TEMPLATE = loadPromptTemplate(
+  new URL("../templates/prompt_regenerate_selected.yaml", import.meta.url)
 );
-const REGENERATE_SELECTED_SYSTEM_PROMPT_TEMPLATE = readFileSync(
-  new URL("../templates/system_prompt_regenerate_selected.txt", import.meta.url),
-  "utf8"
-);
+const REGENERATE_SELECTED_USER_PROMPT_TEMPLATE = getPromptTemplateContent(REGENERATE_SELECTED_PROMPT_TEMPLATE, "user");
+const REGENERATE_SELECTED_SYSTEM_PROMPT_TEMPLATE = getPromptTemplateContent(REGENERATE_SELECTED_PROMPT_TEMPLATE, "system");
 const COMPLETED_JOB_TTL_MS = 5 * 60 * 1000;
 const LAST_PROMPT_DIR_URL = new URL("../../../last-prompt/", import.meta.url);
 const partialRegenerationJobs = new Map<string, PartialRegenerationJobState>();
@@ -367,17 +369,11 @@ function buildRegenerateSelectedPrompt(
     categories_schema: JSON.stringify(buildCapsuleSchema(categories), null, 2)
   };
 
-  let prompt = REGENERATE_SELECTED_PROMPT_TEMPLATE;
-  for (const [key, value] of Object.entries(replacements)) {
-    prompt = prompt.replaceAll(`{{${key}}}`, value);
-  }
-
-  const unresolvedTokens = prompt.match(/\{\{[a-zA-Z0-9_]+\}\}/g);
-  if (unresolvedTokens?.length) {
-    throw new Error(`Unresolved regenerate prompt placeholders: ${unresolvedTokens.join(", ")}`);
-  }
-
-  return prompt;
+  return renderPromptTemplateContent(
+    REGENERATE_SELECTED_USER_PROMPT_TEMPLATE,
+    replacements,
+    "regenerate prompt"
+  );
 }
 
 async function regenerateCapsuleWardrobe(
