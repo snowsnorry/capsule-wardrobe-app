@@ -289,50 +289,55 @@ function CapsuleActionMenu({
   const canSave = capsule?.status === "new" || capsule?.status === "modified";
   const canDuplicate = Boolean(capsule?.saved);
   const canShare = capsuleHasShareableContent(capsule);
+  const handleAction = (event: MouseEvent<HTMLElement>, action: () => void) => {
+    event.currentTarget.blur();
+    onClose();
+    action();
+  };
 
   return (
     <Menu anchorEl={anchorEl} open={open} onClose={onClose}>
       {showRegenerateAll ? (
         <>
-          <MenuItem disabled={disabled} onClick={() => { onClose(); onRegenerateAll?.(); }}>
+          <MenuItem disabled={disabled} onClick={(event) => handleAction(event, () => onRegenerateAll?.())}>
             <ListItemIcon sx={{ visibility: "hidden" }} />
             {t("capsule.regenerateAll")}
           </MenuItem>
           <Divider />
         </>
       ) : null}
-      <MenuItem disabled={disabled} onClick={() => { onClose(); onDownloadPdf(); }}>
+      <MenuItem disabled={disabled} onClick={(event) => handleAction(event, onDownloadPdf)}>
         <ListItemIcon><DownloadRoundedIcon fontSize="small" /></ListItemIcon>
         {t("capsule.exportPdf")}
       </MenuItem>
       {canShare ? (
-        <MenuItem disabled={disabled} onClick={() => { onClose(); onShare(); }}>
+        <MenuItem disabled={disabled} onClick={(event) => handleAction(event, onShare)}>
           <ListItemIcon><ShareRoundedIcon fontSize="small" /></ListItemIcon>
           {t("capsule.share")}
         </MenuItem>
       ) : null}
       <Divider />
-      <MenuItem disabled={disabled} onClick={() => { onClose(); onRename(); }}>
+      <MenuItem disabled={disabled} onClick={(event) => handleAction(event, onRename)}>
         <ListItemIcon><DriveFileRenameOutlineRoundedIcon fontSize="small" /></ListItemIcon>
         {t("capsule.rename")}
       </MenuItem>
       <Divider />
-      <MenuItem disabled={disabled || !canRevert} onClick={() => { onClose(); onRevert(); }}>
+      <MenuItem disabled={disabled || !canRevert} onClick={(event) => handleAction(event, onRevert)}>
         <ListItemIcon><RestoreRoundedIcon fontSize="small" /></ListItemIcon>
         {t("capsule.revert")}
       </MenuItem>
-      <MenuItem disabled={disabled || !canSave} onClick={() => { onClose(); onSave(); }}>
+      <MenuItem disabled={disabled || !canSave} onClick={(event) => handleAction(event, onSave)}>
         <ListItemIcon sx={{ visibility: "hidden" }} />
         {t("actions.save")}
       </MenuItem>
       {canDuplicate ? (
-        <MenuItem disabled={disabled} onClick={() => { onClose(); onDuplicate(); }}>
+        <MenuItem disabled={disabled} onClick={(event) => handleAction(event, onDuplicate)}>
           <ListItemIcon sx={{ visibility: "hidden" }} />
           {t("capsule.saveAs")}
         </MenuItem>
       ) : null}
       <Divider />
-      <MenuItem disabled={disabled} onClick={() => { onClose(); onDelete(); }} sx={{ color: "error.main" }}>
+      <MenuItem disabled={disabled} onClick={(event) => handleAction(event, onDelete)} sx={{ color: "error.main" }}>
         <ListItemIcon sx={{ color: "inherit" }}><DeleteOutlineRoundedIcon fontSize="small" /></ListItemIcon>
         {t("actions.delete")}
       </MenuItem>
