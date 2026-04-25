@@ -363,7 +363,7 @@ test("db integration shapes reduced profile persistence queries", async () => {
       locale: "en",
       fullname: null,
       theme: "system",
-      llm: "openai:gpt-5.4",
+      llm: "openai:gpt-5.5",
       imageLlm: "openai:gpt-image-2"
     }] satisfies ProfileRow[],
     [{
@@ -372,7 +372,7 @@ test("db integration shapes reduced profile persistence queries", async () => {
       locale: "ru",
       fullname: null,
       theme: "system",
-      llm: "openai:gpt-5.4",
+      llm: "openai:gpt-5.5",
       imageLlm: "openai:gpt-image-2"
     }] satisfies ProfileRow[],
     [{

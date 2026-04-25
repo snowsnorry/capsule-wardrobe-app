@@ -68,7 +68,7 @@ function buildNormalizedProfileRecord(
     fullname: null,
     activeCapsuleId: null,
     theme: "system",
-    llm: "openai:gpt-5.4",
+    llm: "openai:gpt-5.5",
     imageLlm: "openai:gpt-image-2",
     ...overrides
   };
@@ -233,7 +233,7 @@ function buildUserProfileLike(
 ): UserProfileLike {
   return {
     locale: "en",
-    llm: "openai:gpt-5.4",
+    llm: "openai:gpt-5.5",
     ...overrides
   };
 }

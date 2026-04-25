@@ -1,6 +1,6 @@
 const PROFILE_THEME_VALUES = ["system", "light", "dark"] as const;
 const PROFILE_LLM_VALUES = [
-  "openai:gpt-5.4",
+  "openai:gpt-5.5",
   "claude:claude-opus-4-7",
   "gemini:gemini-2.5-pro",
   "deepinfra:Qwen/Qwen3-VL-235B-A22B-Instruct",
@@ -13,7 +13,7 @@ const PROFILE_IMAGE_LLM_VALUES = [
 ] as const;
 
 const DEFAULT_PROFILE_THEME = "system";
-const DEFAULT_PROFILE_LLM = "openai:gpt-5.4";
+const DEFAULT_PROFILE_LLM = "openai:gpt-5.5";
 const DEFAULT_PROFILE_IMAGE_LLM = "openai:gpt-image-2";
 
 export {

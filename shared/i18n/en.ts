@@ -277,7 +277,7 @@ const en = {
       dark: "Dark"
     },
     llmOptions: {
-      "openai:gpt-5.4": "OpenAI GPT-5.4",
+      "openai:gpt-5.5": "OpenAI GPT-5.5",
       "claude:claude-opus-4-7": "Claude Opus 4.7",
       "gemini:gemini-2.5-pro": "Gemini 2.5 Pro",
       "deepinfra:Qwen/Qwen3-VL-235B-A22B-Instruct": "Qwen 3",

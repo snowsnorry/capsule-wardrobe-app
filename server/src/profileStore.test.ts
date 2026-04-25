@@ -124,7 +124,7 @@ test("normalizeProfileRecord applies defaults for new profile fields", () => {
     locale: "en",
     fullname: null,
     theme: "system",
-    llm: "openai:gpt-5.4",
+    llm: "openai:gpt-5.5",
     imageLlm: "openai:gpt-image-2"
   };
 

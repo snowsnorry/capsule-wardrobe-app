@@ -437,7 +437,7 @@ async function ensureProfilesTable(): Promise<void> {
       locale text not null,
       fullname text null,
       theme text not null default 'system',
-      llm text not null default 'openai:gpt-5.4',
+      llm text not null default 'openai:gpt-5.5',
       image_llm text not null default 'openai:gpt-image-2',
       created_at timestamptz not null default now(),
       updated_at timestamptz not null default now()
@@ -453,11 +453,11 @@ async function ensureProfilesTable(): Promise<void> {
   `;
   await sql`
     alter table profiles
-    add column if not exists llm text not null default 'openai:gpt-5.4'
+    add column if not exists llm text not null default 'openai:gpt-5.5'
   `;
   await sql`
     alter table profiles
-    alter column llm set default 'openai:gpt-5.4'
+    alter column llm set default 'openai:gpt-5.5'
   `;
   await sql`
     alter table profiles
@@ -469,12 +469,12 @@ async function ensureProfilesTable(): Promise<void> {
   `;
   await sql`
     update profiles
-    set llm = 'openai:gpt-5.4'
+    set llm = 'openai:gpt-5.5'
     where llm = 'openai:gpt-5'
   `;
   await sql`
     update profiles
-    set llm = 'openai:gpt-5.4'
+    set llm = 'openai:gpt-5.5'
     where llm = 'openai:gpt-5.2'
   `;
   await sql`

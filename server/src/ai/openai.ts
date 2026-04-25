@@ -10,7 +10,7 @@ import type {
   ParsedGenerationError
 } from "./types.js";
 
-const DEFAULT_CHAT_MODEL = "gpt-5.4";
+const DEFAULT_CHAT_MODEL = "gpt-5.5";
 const DEFAULT_EMBEDDING_MODEL = "text-embedding-3-small";
 
 let cachedClient = null;

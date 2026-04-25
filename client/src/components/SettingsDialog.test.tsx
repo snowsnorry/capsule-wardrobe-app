@@ -58,7 +58,7 @@ function renderDialog(props: Partial<ComponentProps<typeof SettingsDialog>> = {}
         "settings.themeOptions.dark": "Dark",
         "locale.options.en": "English",
         "locale.options.ru": "Russian",
-        "settings.llmOptions.openai:gpt-5.4": "OpenAI GPT-5.4",
+        "settings.llmOptions.openai:gpt-5.5": "OpenAI GPT-5.5",
         "settings.llmOptions.claude:claude-opus-4-7": "Claude Opus 4.7",
         "settings.llmOptions.gemini:gemini-2.5-pro": "Gemini 2.5 Pro",
         "settings.llmOptions.deepinfra:Qwen/Qwen3-VL-235B-A22B-Instruct": "Qwen 3",
@@ -93,7 +93,7 @@ function renderDialog(props: Partial<ComponentProps<typeof SettingsDialog>> = {}
       email: "ada@example.com",
       locale: "en",
       theme: "system",
-      llm: "openai:gpt-5.4",
+      llm: "openai:gpt-5.5",
       imageLlm: "openai:gpt-image-2"
     },
     onClose: vi.fn(),

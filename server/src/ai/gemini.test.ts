@@ -41,7 +41,7 @@ const SIMPLE_OK_FORMAT: JsonSchemaFormat = {
 test("resolveChatModel keeps only supported gemini profile models", () => {
   assert.equal(resolveChatModel({ llm: "gemini:gemini-2.5-pro" }), "gemini-2.5-pro");
   assert.equal(resolveChatModel({ llm: "gemini:unknown-model" }), ALLOWED_CHAT_MODELS[0]);
-  assert.equal(resolveChatModel({ llm: "openai:gpt-5.4" }), ALLOWED_CHAT_MODELS[0]);
+  assert.equal(resolveChatModel({ llm: "openai:gpt-5.5" }), ALLOWED_CHAT_MODELS[0]);
 });
 
 test("buildGeminiContents emits text and fileData parts", () => {

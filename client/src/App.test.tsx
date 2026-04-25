@@ -197,7 +197,7 @@ vi.mock("./screens/MainScreen", () => ({
             fullname: "Ada Lovelace",
             locale: "ru",
             theme: "dark",
-            llm: "openai:gpt-5.4",
+            llm: "openai:gpt-5.5",
             image_llm: "gemini:gemini-3-pro-image-preview"
           })}
         >
@@ -493,7 +493,7 @@ describe("App", () => {
     authApi.initializeProfile.mockResolvedValue({});
     capsulesApi.fetchCapsuleBootstrap.mockResolvedValue(createBootstrapResponse({
       locale: "en",
-      llm: "openai:gpt-5.4"
+      llm: "openai:gpt-5.5"
     }));
     mockProfileOptions();
 
@@ -544,7 +544,7 @@ describe("App", () => {
     authApi.initializeProfile.mockResolvedValue({});
     capsulesApi.fetchCapsuleBootstrap.mockResolvedValue(createBootstrapResponse({
       locale: "en",
-      llm: "openai:gpt-5.4"
+      llm: "openai:gpt-5.5"
     }));
     mockProfileOptions();
 
@@ -571,7 +571,7 @@ describe("App", () => {
     authApi.initializeProfile.mockResolvedValue({});
     capsulesApi.fetchCapsuleBootstrap.mockResolvedValue(createBootstrapResponse({
       locale: "en",
-      llm: "openai:gpt-5.4"
+      llm: "openai:gpt-5.5"
     }));
     mockProfileOptions();
 
@@ -966,7 +966,7 @@ describe("App", () => {
         email: "person@example.com",
         locale: "ru",
         theme: "dark",
-        llm: "openai:gpt-5.4",
+        llm: "openai:gpt-5.5",
         image_llm: "gemini:gemini-3-pro-image-preview",
         fullname: "Ada Lovelace"
       }
@@ -982,13 +982,13 @@ describe("App", () => {
       expect(authApi.updateProfile).toHaveBeenCalledWith({
         locale: "ru",
         theme: "dark",
-        llm: "openai:gpt-5.4",
+        llm: "openai:gpt-5.5",
         image_llm: "gemini:gemini-3-pro-image-preview",
         fullname: "Ada Lovelace"
       });
     });
     await waitFor(() => {
-      expect(screen.getByText("settings-user:Ada Lovelace:dark:openai:gpt-5.4:gemini:gemini-3-pro-image-preview")).toBeInTheDocument();
+      expect(screen.getByText("settings-user:Ada Lovelace:dark:openai:gpt-5.5:gemini:gemini-3-pro-image-preview")).toBeInTheDocument();
     });
   });
 
@@ -1054,13 +1054,13 @@ describe("App", () => {
     capsulesApi.updateCapsuleFilters.mockResolvedValue({
       capsule: createBootstrapResponse({
         locale: "en",
-        llm: "openai:gpt-5.4"
+        llm: "openai:gpt-5.5"
       }).activeCapsule,
       status: "pending"
     });
     capsulesApi.fetchCapsuleBootstrap.mockResolvedValue(createBootstrapResponse({
       locale: "en",
-      llm: "openai:gpt-5.4"
+      llm: "openai:gpt-5.5"
     }));
     mockProfileOptions();
 
@@ -1101,7 +1101,7 @@ describe("App", () => {
     authApi.updateProfileLocale.mockResolvedValue({});
     capsulesApi.fetchCapsuleBootstrap.mockResolvedValue(createBootstrapResponse({
       locale: "en",
-      llm: "openai:gpt-5.4",
+      llm: "openai:gpt-5.5",
       items: [
         { id: "bottom-1", url: "https://example.com/bottom-1", name: "Trousers", category: "bottom" },
         { id: "top-1", url: "https://example.com/top-1", name: "Shirt", category: "top" }

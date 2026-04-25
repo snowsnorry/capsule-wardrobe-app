@@ -678,7 +678,7 @@ test("regenerateCapsuleWardrobe starts a new pending job without clearing stored
     items: [buildWardrobeUiItem({ id: "top-1", category: "top", url: undefined, name: undefined, image_url: undefined, audience: undefined })]
   });
   const service = createWardrobeService({
-    getProfileImpl: async () => buildNormalizedProfileRecord({ audience: "woman", locale: "en", llm: "openai:gpt-5.4" }),
+    getProfileImpl: async () => buildNormalizedProfileRecord({ audience: "woman", locale: "en", llm: "openai:gpt-5.5" }),
     getCapsuleImpl: async () => createCapsuleWithWardrobe(existingWardrobe),
     updateCapsuleSnapshotImpl: async (email, capsuleId, draft) => {
       updates.push([email, capsuleId, draft]);

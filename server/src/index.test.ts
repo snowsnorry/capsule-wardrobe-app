@@ -146,7 +146,7 @@ function createDependencies(overrides: DependencyOverrides = {}) {
       locale: "en",
       fullname: null,
       theme: "system",
-      llm: "openai:gpt-5.4",
+      llm: "openai:gpt-5.5",
       imageLlm: "openai:gpt-image-2"
     }),
     hasProfileImpl: async () => true,
@@ -158,7 +158,7 @@ function createDependencies(overrides: DependencyOverrides = {}) {
       locale,
       fullname: null,
       theme: "system",
-      llm: "openai:gpt-5.4",
+      llm: "openai:gpt-5.5",
       imageLlm: "openai:gpt-image-2"
     }),
     updateProfileActiveCapsuleIdImpl: async (_email, activeCapsuleId) => ({ activeCapsuleId }),
@@ -1083,7 +1083,7 @@ test("index routes cover profile read endpoints", async (t) => {
   assert.equal(profile.json.profile.activeCapsuleId, "capsule-1");
   assert.equal(profile.json.profile.locale, "en");
   assert.equal(profile.json.profile.theme, "system");
-  assert.equal(profile.json.profile.llm, "openai:gpt-5.4");
+  assert.equal(profile.json.profile.llm, "openai:gpt-5.5");
   assert.equal(profile.json.profile.image_llm, "openai:gpt-image-2");
   assert.equal(profile.json.profile.fullname, null);
 
@@ -1164,7 +1164,7 @@ test("index routes cover profile update, locale update, and delete branches", as
     body: {
       locale: "en",
       theme: "system",
-      llm: "openai:gpt-5.4",
+      llm: "openai:gpt-5.5",
       image_llm: "openai:gpt-image-2",
       fullname: null
     }
@@ -1180,7 +1180,7 @@ test("index routes cover profile update, locale update, and delete branches", as
     body: {
       locale: "en",
       theme: "sepia",
-      llm: "openai:gpt-5.4",
+      llm: "openai:gpt-5.5",
       image_llm: "openai:gpt-image-2",
       fullname: "Ada"
     }

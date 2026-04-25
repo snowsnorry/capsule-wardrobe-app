@@ -260,7 +260,7 @@ describe("SearchScreen", () => {
         email: "person@example.com",
         locale: "en",
         theme: "system",
-        llm: "openai:gpt-5.4"
+        llm: "openai:gpt-5.5"
       },
       onSignOut
     });

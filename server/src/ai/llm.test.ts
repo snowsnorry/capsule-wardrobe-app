@@ -21,8 +21,8 @@ test("resolveLlmProvider maps supported profile llm values to providers", () => 
   );
 
   assert.deepEqual(
-    resolveLlmProvider({ llm: "openai:gpt-5.4" }),
-    { provider: "openai", model: "gpt-5.4", llm: "openai:gpt-5.4", requestedLlm: "openai:gpt-5.4" }
+    resolveLlmProvider({ llm: "openai:gpt-5.5" }),
+    { provider: "openai", model: "gpt-5.5", llm: "openai:gpt-5.5", requestedLlm: "openai:gpt-5.5" }
   );
 
   assert.deepEqual(
@@ -57,9 +57,9 @@ test("resolveLlmProvider maps supported profile llm values to providers", () => 
 });
 
 test("profile llm helpers default to openai and expose no-llm mode", () => {
-  assert.equal(getProfileLlm(null), "openai:gpt-5.4");
+  assert.equal(getProfileLlm(null), "openai:gpt-5.5");
   assert.equal(isNoLlmProfileEnabled({ llm: "none" }), true);
-  assert.equal(isNoLlmProfileEnabled({ llm: "openai:gpt-5.4" }), false);
+  assert.equal(isNoLlmProfileEnabled({ llm: "openai:gpt-5.5" }), false);
 });
 
 test("buildSystemPrompt renders an alternate template with shared placeholder blocks", () => {
@@ -92,7 +92,7 @@ test("buildSystemPrompt renders an alternate template with shared placeholder bl
 });
 
 test("getGenerateJsonWithLlm returns provider-specific generator", () => {
-  assert.equal(getGenerateJsonWithLlm({ llm: "openai:gpt-5.4" }), generateJsonWithOpenAi);
+  assert.equal(getGenerateJsonWithLlm({ llm: "openai:gpt-5.5" }), generateJsonWithOpenAi);
   assert.equal(getGenerateJsonWithLlm({ llm: `claude:${CLAUDE_ALLOWED_MODELS[0]}` }), generateJsonWithClaude);
   assert.equal(getGenerateJsonWithLlm({ llm: GEMINI_PROFILE_LLM }), generateJsonWithGemini);
   assert.equal(getGenerateJsonWithLlm({ llm: "deepinfra:Qwen/Qwen3-VL-235B-A22B-Instruct" }), generateJsonWithDeepInfra);
@@ -109,7 +109,7 @@ test("resolveLlmProvider warns and falls back for unknown model", () => {
   try {
     const resolved = resolveLlmProvider({ llm: "deepinfra:unknown-model" });
     assert.equal(resolved.provider, "openai");
-    assert.equal(resolved.model, "gpt-5.4");
+    assert.equal(resolved.model, "gpt-5.5");
     assert.equal(resolved.fallbackReason, "unknown_model");
   } finally {
     console.warn = originalWarn;
@@ -129,7 +129,7 @@ test("resolveLlmProvider warns and falls back for unknown claude model", () => {
   try {
     const resolved = resolveLlmProvider({ llm: "claude:unknown-model" });
     assert.equal(resolved.provider, "openai");
-    assert.equal(resolved.model, "gpt-5.4");
+    assert.equal(resolved.model, "gpt-5.5");
     assert.equal(resolved.fallbackReason, "unknown_model");
   } finally {
     console.warn = originalWarn;

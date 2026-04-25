@@ -213,7 +213,7 @@ function mockProfileOptions() {
 function createBootstrapResponse({
   items = [],
   locale = "en",
-  llm = "openai:gpt-5.4",
+  llm = "openai:gpt-5.5",
   imageLlm = "openai:gpt-image-2"
 } = {}) {
   return {
@@ -369,7 +369,7 @@ describe("App e2e-style flows", () => {
     authApi.fetchProfileStatus.mockResolvedValue({ hasProfile: false });
     authApi.initializeProfile.mockResolvedValue({});
     authApi.logout.mockResolvedValue({});
-    capsulesApi.fetchCapsuleBootstrap.mockResolvedValue(createBootstrapResponse({ locale: "en", llm: "openai:gpt-5.4" }));
+    capsulesApi.fetchCapsuleBootstrap.mockResolvedValue(createBootstrapResponse({ locale: "en", llm: "openai:gpt-5.5" }));
     mockProfileOptions();
 
     renderApp();

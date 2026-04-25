@@ -162,7 +162,7 @@ function t(key, params) {
         dark: "Dark"
       },
       llmOptions: {
-        "openai:gpt-5.4": "OpenAI GPT-5.4",
+        "openai:gpt-5.5": "OpenAI GPT-5.5",
         "claude:claude-opus-4-7": "Claude Opus 4.7",
         "gemini:gemini-2.5-pro": "Gemini 2.5 Pro",
         "deepinfra:Qwen/Qwen3-VL-235B-A22B-Instruct": "Qwen 3",
@@ -204,7 +204,7 @@ function renderScreen(props = {}, { mobile = false, layoutMode = mobile ? "overl
       email: "person@example.com",
       locale: "en",
       theme: "system",
-      llm: "openai:gpt-5.4"
+      llm: "openai:gpt-5.5"
     },
     onSignOut: vi.fn(),
     onSaveSettings: vi.fn(() => Promise.resolve()),
@@ -1051,7 +1051,7 @@ describe("MainScreen", () => {
         email: "person@example.com",
         locale: "en",
         theme: "system",
-        llm: "openai:gpt-5.4",
+        llm: "openai:gpt-5.5",
         imageLlm: "openai:gpt-image-2"
       },
       onSaveSettings
@@ -1068,7 +1068,7 @@ describe("MainScreen", () => {
 
     await user.click(within(dialog).getByRole("button", { name: "AI" }));
     await user.click(within(dialog).getByRole("combobox", { name: "Stylist Model" }));
-    await user.click(screen.getByRole("option", { name: "settings.llmOptions.openai:gpt-5.4" }));
+    await user.click(screen.getByRole("option", { name: "settings.llmOptions.openai:gpt-5.5" }));
 
     await user.click(within(dialog).getByRole("button", { name: "Account" }));
     const nameInput = within(dialog).getByRole("textbox", { name: "Name" });
@@ -1082,7 +1082,7 @@ describe("MainScreen", () => {
         fullname: "Ada Byron",
         locale: "en",
         theme: "dark",
-        llm: "openai:gpt-5.4",
+        llm: "openai:gpt-5.5",
         image_llm: "openai:gpt-image-2"
       });
     });

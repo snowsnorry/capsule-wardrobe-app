@@ -22,7 +22,7 @@ function assertClaudeImagePart(
 test("resolveChatModel keeps only supported claude profile models", () => {
   assert.equal(resolveChatModel({ llm: "claude:claude-opus-4-7" }), "claude-opus-4-7");
   assert.equal(resolveChatModel({ llm: "claude:unknown-model" }), ALLOWED_CHAT_MODELS[0]);
-  assert.equal(resolveChatModel({ llm: "openai:gpt-5.4" }), ALLOWED_CHAT_MODELS[0]);
+  assert.equal(resolveChatModel({ llm: "openai:gpt-5.5" }), ALLOWED_CHAT_MODELS[0]);
 });
 
 test("buildClaudeSystemPrompt concatenates system and system prompt", () => {
