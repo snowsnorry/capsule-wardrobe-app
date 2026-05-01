@@ -443,25 +443,32 @@ function MainScreen({
   const searchDialogPaperRef = useRef<HTMLDivElement | null>(null);
   const isDeleteConfirm = confirmAction.startsWith("delete");
   const isRegenerateFiltersConfirm = confirmAction === "regenerate-with-filter-changes";
+  const isRegenerateAllConfirm = confirmAction === "regenerate-all";
   const isDeleteOutfitSetImageConfirm = confirmAction === "delete-outfit-set-image";
   const confirmBodyKey = isDeleteOutfitSetImageConfirm
     ? "capsule.deleteOutfitSetImageConfirmBody"
     : isRegenerateFiltersConfirm
       ? "capsule.regenerateWithFilterChangesBody"
-    : isDeleteConfirm
-      ? "capsule.deleteConfirmBody"
-      : "capsule.revertConfirmBody";
+      : isRegenerateAllConfirm
+        ? "capsule.regenerateAllConfirmBody"
+        : isDeleteConfirm
+          ? "capsule.deleteConfirmBody"
+          : "capsule.revertConfirmBody";
   const confirmTitleKey = isDeleteOutfitSetImageConfirm
     ? "capsule.deleteOutfitSetImageTitle"
     : isRegenerateFiltersConfirm
       ? "capsule.regenerateWithFilterChangesTitle"
-    : isDeleteConfirm
-      ? "capsule.deleteTitle"
-      : "capsule.revertTitle";
+      : isRegenerateAllConfirm
+        ? "capsule.regenerateAllTitle"
+        : isDeleteConfirm
+          ? "capsule.deleteTitle"
+          : "capsule.revertTitle";
   const confirmButtonKey = isDeleteConfirm
     ? "capsule.deleteConfirm"
     : isRegenerateFiltersConfirm
       ? "capsule.regenerateWithFilterChangesConfirm"
+      : isRegenerateAllConfirm
+        ? "capsule.regenerateAllConfirm"
       : "capsule.revertConfirm";
 
   const selectedCount = selectedRegenerationUrls.length;
@@ -604,6 +611,13 @@ function MainScreen({
       setConfirmCapsuleId("");
       setConfirmOutfitSetIndex(-1);
       setConfirmAction("regenerate-with-filter-changes");
+      return;
+    }
+
+    if (items.length > 0) {
+      setConfirmCapsuleId("");
+      setConfirmOutfitSetIndex(-1);
+      setConfirmAction("regenerate-all");
       return;
     }
 
@@ -1441,6 +1455,9 @@ function MainScreen({
                       }
                       if (nextConfirmAction === "regenerate-with-filter-changes") {
                         await onApplyFilters();
+                      }
+                      if (nextConfirmAction === "regenerate-all") {
+                        await onRefreshItems();
                       }
                     }}
                   >

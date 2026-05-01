@@ -84,6 +84,9 @@ function t(key, params) {
       revertTitle: "Revert changes",
       deleteConfirmBody: "Are you sure you want to delete this capsule? This action cannot be undone.",
       revertConfirmBody: "Discard the current unsaved changes and restore the last saved version of this capsule?",
+      regenerateAllTitle: "Regenerate capsule?",
+      regenerateAllConfirmBody: "This will replace the current items in this capsule. Continue?",
+      regenerateAllConfirm: "Regenerate",
       deleteConfirm: "Delete",
       revertConfirm: "Revert",
       searchPlaceholder: "Search capsules...",
@@ -244,7 +247,12 @@ describe("MainScreen e2e-style flow", () => {
     await user.click(screen.getByRole("button", { name: "Regenerate all" }));
 
     expect(onDownloadPdf).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("dialog", { name: "Regenerate capsule?" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Regenerate" }));
     expect(onRefreshItems).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
 
     await user.click(screen.getByTestId("clothing-card-https://example.com/a"));
     expect(screen.getByRole("button", { name: "Regenerate Selected (1)" })).toBeInTheDocument();

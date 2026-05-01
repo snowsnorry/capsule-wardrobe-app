@@ -107,6 +107,9 @@ function t(key, params) {
       deleteOutfitSetImageConfirmBody: "Are you sure you want to delete this image? This action cannot be undone.",
       outfitSetImageObsolete: "This image may no longer match the current outfit. Remove it and generate a new one if needed.",
       revertConfirmBody: "Discard the current unsaved changes and restore the last saved version of this capsule?",
+      regenerateAllTitle: "Regenerate capsule?",
+      regenerateAllConfirmBody: "This will replace the current items in this capsule. Continue?",
+      regenerateAllConfirm: "Regenerate",
       regenerateWithFilterChangesTitle: "Apply updated filters?",
       regenerateWithFilterChangesBody: "Your filter changes have not been applied yet. Apply them and generate a new capsule with the updated settings?",
       regenerateWithFilterChangesConfirm: "Apply and regenerate",
@@ -657,6 +660,22 @@ describe("MainScreen", () => {
     expect(onRefreshItems).toHaveBeenCalledTimes(1);
   });
 
+  test("asks before regenerating all items from the mobile header menu when capsule is non-empty", async () => {
+    const user = userEvent.setup();
+    const onRefreshItems = vi.fn();
+
+    renderScreen({
+      items: [{ id: "a", url: "https://example.com/a", name: "Shirt", category: "top" }],
+      onRefreshItems
+    }, { mobile: true });
+
+    await user.click(screen.getByRole("button", { name: "Open capsule menu" }));
+    await user.click(screen.getByRole("menuitem", { name: "Regenerate all" }));
+
+    expect(screen.getByRole("dialog", { name: "Regenerate capsule?" })).toBeInTheDocument();
+    expect(onRefreshItems).not.toHaveBeenCalled();
+  });
+
   test("shows desktop inline rename trigger and keeps it out of the mobile header", async () => {
     const user = userEvent.setup();
 
@@ -788,6 +807,57 @@ describe("MainScreen", () => {
     expect(onRefreshItems).not.toHaveBeenCalled();
   });
 
+  test("regenerates immediately when the capsule has no items", async () => {
+    const user = userEvent.setup();
+    const onRefreshItems = vi.fn();
+
+    renderScreen({ items: [], onRefreshItems });
+
+    await user.click(screen.getByRole("button", { name: "Regenerate all" }));
+
+    expect(onRefreshItems).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("dialog", { name: "Regenerate capsule?" })).not.toBeInTheDocument();
+  });
+
+  test("asks before regenerating all items in a non-empty capsule", async () => {
+    const user = userEvent.setup();
+    const onRefreshItems = vi.fn();
+
+    renderScreen({
+      items: [{ id: "a", url: "https://example.com/a", name: "Shirt", category: "top" }],
+      onRefreshItems
+    });
+
+    await user.click(screen.getByRole("button", { name: "Regenerate all" }));
+
+    expect(screen.getByRole("dialog", { name: "Regenerate capsule?" })).toBeInTheDocument();
+    expect(screen.getByText("This will replace the current items in this capsule. Continue?")).toBeInTheDocument();
+    expect(onRefreshItems).not.toHaveBeenCalled();
+  });
+
+  test("closes non-empty regenerate-all confirmation immediately and refreshes on confirm", async () => {
+    const user = userEvent.setup();
+    let resolveRefresh;
+    const onRefreshItems = vi.fn(() => new Promise((resolve) => {
+      resolveRefresh = resolve;
+    }));
+
+    renderScreen({
+      items: [{ id: "a", url: "https://example.com/a", name: "Shirt", category: "top" }],
+      onRefreshItems
+    });
+
+    await user.click(screen.getByRole("button", { name: "Regenerate all" }));
+    await user.click(screen.getByRole("button", { name: "Regenerate" }));
+
+    expect(onRefreshItems).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+
+    resolveRefresh?.();
+  });
+
   test("disables mobile filters trigger while content is busy", () => {
     const onApplyFilters = vi.fn();
 
@@ -828,6 +898,7 @@ describe("MainScreen", () => {
 
     renderScreen({
       hasFilterChanges: true,
+      items: [{ id: "a", url: "https://example.com/a", name: "Shirt", category: "top" }],
       onRefreshItems,
       onApplyFilters
     });
@@ -838,6 +909,7 @@ describe("MainScreen", () => {
     expect(
       screen.getByText("Your filter changes have not been applied yet. Apply them and generate a new capsule with the updated settings?")
     ).toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "Regenerate capsule?" })).not.toBeInTheDocument();
     expect(onRefreshItems).not.toHaveBeenCalled();
     expect(onApplyFilters).not.toHaveBeenCalled();
   });
