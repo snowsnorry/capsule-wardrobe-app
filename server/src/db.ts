@@ -43,6 +43,7 @@ type PasskeyRow = {
   backedUp: boolean | null;
   transports: string[] | null;
   name: string | null;
+  aaguid: string | null;
   lastUsedAt: string | Date | null;
   createdAt: string | Date;
   updatedAt: string | Date;
@@ -402,10 +403,15 @@ async function ensurePasskeysTables(): Promise<void> {
       backed_up boolean null,
       transports text[] not null default '{}'::text[],
       name text null,
+      aaguid text null,
       last_used_at timestamptz null,
       created_at timestamptz not null default now(),
       updated_at timestamptz not null default now()
     )
+  `;
+  await sql`
+    alter table profile_passkeys
+    add column if not exists aaguid text null
   `;
   await sql`
     create index if not exists profile_passkeys_profile_email_idx
@@ -796,6 +802,7 @@ async function listPasskeysByEmail(email: string): Promise<PasskeyRow[]> {
       backed_up as "backedUp",
       transports,
       name,
+      aaguid,
       last_used_at as "lastUsedAt",
       created_at as "createdAt",
       updated_at as "updatedAt"
@@ -814,7 +821,8 @@ async function insertPasskey({
   deviceType,
   backedUp,
   transports,
-  name
+  name,
+  aaguid
 }: {
   profileEmail: string;
   credentialId: string;
@@ -824,6 +832,7 @@ async function insertPasskey({
   backedUp: boolean | null;
   transports: string[];
   name: string | null;
+  aaguid: string | null;
 }): Promise<PasskeyRow | null> {
   const sql = getSqlClient();
   const row = getFirstRow(await sql<PasskeyRow>`
@@ -835,7 +844,8 @@ async function insertPasskey({
       device_type,
       backed_up,
       transports,
-      name
+      name,
+      aaguid
     )
     values (
       ${profileEmail},
@@ -845,7 +855,8 @@ async function insertPasskey({
       ${deviceType},
       ${backedUp},
       ${transports},
-      ${name}
+      ${name},
+      ${aaguid}
     )
     returning
       id::text as id,
@@ -857,6 +868,7 @@ async function insertPasskey({
       backed_up as "backedUp",
       transports,
       name,
+      aaguid,
       last_used_at as "lastUsedAt",
       created_at as "createdAt",
       updated_at as "updatedAt"
@@ -877,6 +889,7 @@ async function getPasskeyByCredentialId(credentialId: string): Promise<PasskeyRo
       backed_up as "backedUp",
       transports,
       name,
+      aaguid,
       last_used_at as "lastUsedAt",
       created_at as "createdAt",
       updated_at as "updatedAt"
@@ -918,6 +931,7 @@ async function updatePasskeyAuthentication({
       backed_up as "backedUp",
       transports,
       name,
+      aaguid,
       last_used_at as "lastUsedAt",
       created_at as "createdAt",
       updated_at as "updatedAt"

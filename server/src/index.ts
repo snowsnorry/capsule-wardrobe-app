@@ -90,6 +90,7 @@ import {
   pruneExpiredPasskeyChallenges,
   updatePasskeyAuthentication
 } from "./db.js";
+import { getDefaultPasskeyName, normalizePasskeyAaguid } from "./passkeyNames.js";
 import { configureSharp } from "./ai/sharpConfig.js";
 import { sortWardrobeItems } from "../../shared/wardrobeOrder.js";
 import {
@@ -114,6 +115,7 @@ type PasskeyRecord = {
   backedUp?: boolean | null;
   transports?: string[] | null;
   name?: string | null;
+  aaguid?: string | null;
   lastUsedAt?: string | Date | null;
   createdAt?: string | Date | null;
   updatedAt?: string | Date | null;
@@ -1146,7 +1148,8 @@ app.post("/auth/passkeys/register/verify", requireTrustedOrigin, requireAuth, re
     return res.status(400).json({ error: "passkey_registration_failed" });
   }
 
-  const { credential, credentialDeviceType, credentialBackedUp } = verification.registrationInfo;
+  const { aaguid, credential, credentialDeviceType, credentialBackedUp } = verification.registrationInfo;
+  const normalizedAaguid = normalizePasskeyAaguid(aaguid);
   try {
     const passkey = await insertPasskeyImpl({
       profileEmail: req.user.email,
@@ -1156,7 +1159,8 @@ app.post("/auth/passkeys/register/verify", requireTrustedOrigin, requireAuth, re
       deviceType: credentialDeviceType,
       backedUp: credentialBackedUp,
       transports: Array.isArray(credential.transports) ? credential.transports : [],
-      name: "Passkey"
+      name: getDefaultPasskeyName({ aaguid: normalizedAaguid, userAgent: req.headers["user-agent"] }),
+      aaguid: normalizedAaguid
     });
     return res.json({ ok: true, passkey: passkey ? toPasskeyMetadata(passkey) : null });
   } catch (error) {

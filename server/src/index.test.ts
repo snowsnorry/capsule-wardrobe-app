@@ -67,6 +67,7 @@ function createDependencies(overrides: DependencyOverrides = {}) {
       backedUp: true,
       transports: ["internal"],
       name: "Passkey",
+      aaguid: null,
       lastUsedAt: null,
       createdAt: new Date(0).toISOString(),
       updatedAt: new Date(0).toISOString()
@@ -83,6 +84,7 @@ function createDependencies(overrides: DependencyOverrides = {}) {
           backedUp: true,
           transports: ["internal"],
           name: "Passkey",
+          aaguid: null,
           lastUsedAt: null,
           createdAt: new Date(0).toISOString(),
           updatedAt: new Date(0).toISOString()
@@ -704,6 +706,7 @@ test("passkey registration routes require auth, store challenge, and save verifi
           backedUp: input.backedUp,
           transports: input.transports,
           name: input.name,
+          aaguid: input.aaguid,
           lastUsedAt: null,
           createdAt: new Date(0).toISOString(),
           updatedAt: new Date(0).toISOString()
@@ -714,6 +717,7 @@ test("passkey registration routes require auth, store challenge, and save verifi
         return {
           verified: true,
           registrationInfo: {
+            aaguid: "BADA5566-A7AA-401F-BD96-45619A55120D",
             credential: {
               id: "credential-1",
               publicKey: new Uint8Array([1, 2, 3]),
@@ -787,7 +791,138 @@ test("passkey registration routes require auth, store challenge, and save verifi
   assert.equal(registrationVerifyInput.response.response.extraNested, "kept");
   assert.equal(insertedPasskey.profileEmail, "person@example.com");
   assert.equal(insertedPasskey.credentialId, "credential-1");
+  assert.equal(insertedPasskey.aaguid, "bada5566-a7aa-401f-bd96-45619a55120d");
+  assert.equal(insertedPasskey.name, "1Password");
   assert.equal(verified.json.passkey.credentialPublicKey, undefined);
+  assert.equal(verified.json.passkey.aaguid, undefined);
+});
+
+test("passkey registration falls back to user-agent label for unknown AAGUID", async (t) => {
+  let insertedPasskey: any = null;
+  const { baseUrl } = await startTestServer(t, {
+    overrides: {
+      consumePasskeyChallengeImpl: async ({ id, kind }) => (
+        id === "challenge-ua" && kind === "registration"
+          ? {
+              id,
+              kind,
+              challenge: "registration-challenge",
+              profileEmail: "person@example.com"
+            }
+          : null
+      ),
+      insertPasskeyImpl: async (input) => {
+        insertedPasskey = input;
+        return {
+          id: "passkey-1",
+          profileEmail: input.profileEmail,
+          credentialId: input.credentialId,
+          credentialPublicKey: input.credentialPublicKey,
+          counter: input.counter,
+          deviceType: input.deviceType,
+          backedUp: input.backedUp,
+          transports: input.transports,
+          name: input.name,
+          aaguid: input.aaguid,
+          lastUsedAt: null,
+          createdAt: new Date(0).toISOString(),
+          updatedAt: new Date(0).toISOString()
+        };
+      },
+      verifyRegistrationResponseImpl: async () => ({
+        verified: true,
+        registrationInfo: {
+          aaguid: "11111111-2222-3333-4444-555555555555",
+          credential: {
+            id: "credential-1",
+            publicKey: new Uint8Array([1, 2, 3]),
+            counter: 1,
+            transports: ["internal"]
+          },
+          credentialDeviceType: "multiDevice",
+          credentialBackedUp: true
+        }
+      })
+    }
+  });
+
+  const verified = await requestJson(baseUrl, "/auth/passkeys/register/verify", {
+    method: "POST",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: `${AUTH_COOKIE}; passkey_challenge=challenge-ua`,
+    csrfToken: CSRF_TOKEN,
+    headers: {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+    },
+    body: { response: passkeyRegistrationResponse() }
+  });
+
+  assert.equal(verified.response.status, 200);
+  assert.equal(insertedPasskey.aaguid, "11111111-2222-3333-4444-555555555555");
+  assert.equal(insertedPasskey.name, "Windows Chrome");
+});
+
+test("passkey registration falls back to generic name without provider or user-agent label", async (t) => {
+  let insertedPasskey: any = null;
+  const { baseUrl } = await startTestServer(t, {
+    overrides: {
+      consumePasskeyChallengeImpl: async ({ id, kind }) => (
+        id === "challenge-fallback" && kind === "registration"
+          ? {
+              id,
+              kind,
+              challenge: "registration-challenge",
+              profileEmail: "person@example.com"
+            }
+          : null
+      ),
+      insertPasskeyImpl: async (input) => {
+        insertedPasskey = input;
+        return {
+          id: "passkey-1",
+          profileEmail: input.profileEmail,
+          credentialId: input.credentialId,
+          credentialPublicKey: input.credentialPublicKey,
+          counter: input.counter,
+          deviceType: input.deviceType,
+          backedUp: input.backedUp,
+          transports: input.transports,
+          name: input.name,
+          aaguid: input.aaguid,
+          lastUsedAt: null,
+          createdAt: new Date(0).toISOString(),
+          updatedAt: new Date(0).toISOString()
+        };
+      },
+      verifyRegistrationResponseImpl: async () => ({
+        verified: true,
+        registrationInfo: {
+          aaguid: "not-a-guid",
+          credential: {
+            id: "credential-1",
+            publicKey: new Uint8Array([1, 2, 3]),
+            counter: 1,
+            transports: ["internal"]
+          },
+          credentialDeviceType: "multiDevice",
+          credentialBackedUp: true
+        }
+      })
+    }
+  });
+
+  const verified = await requestJson(baseUrl, "/auth/passkeys/register/verify", {
+    method: "POST",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: `${AUTH_COOKIE}; passkey_challenge=challenge-fallback`,
+    csrfToken: CSRF_TOKEN,
+    headers: { "User-Agent": "unknown" },
+    body: { response: passkeyRegistrationResponse() }
+  });
+
+  assert.equal(verified.response.status, 200);
+  assert.equal(insertedPasskey.aaguid, null);
+  assert.equal(insertedPasskey.name, "Passkey");
 });
 
 test("passkey authentication routes store challenge, reject unknown credentials, and create app session", async (t) => {
@@ -1022,6 +1157,7 @@ test("passkey list and delete routes expose metadata and scope deletion to curre
         backedUp: true,
         transports: ["internal"],
         name: "Laptop",
+        aaguid: "bada5566-a7aa-401f-bd96-45619a55120d",
         lastUsedAt: null,
         createdAt: new Date(0).toISOString(),
         updatedAt: new Date(0).toISOString()
@@ -1046,6 +1182,7 @@ test("passkey list and delete routes expose metadata and scope deletion to curre
     createdAt: new Date(0).toISOString(),
     lastUsedAt: null
   });
+  assert.equal(Object.hasOwn(list.json.passkeys[0], "aaguid"), false);
 
   const deleted = await requestJson(baseUrl, "/auth/passkeys/passkey-1", {
     method: "DELETE",
