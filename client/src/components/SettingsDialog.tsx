@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Box,
   Button,
-  Chip,
   Dialog,
   DialogActions,
   DialogContent,
@@ -114,13 +113,29 @@ function normalizeSettingsDraft(settings: SettingsProfile = {}, fallbackEmail = 
   };
 }
 
+function formatPasskeyCreatedAt(createdAt: string | null | undefined, locale: string): { date: string; time: string } | null {
+  if (!createdAt) {
+    return null;
+  }
+
+  const createdDate = new Date(createdAt);
+  if (Number.isNaN(createdDate.getTime())) {
+    return null;
+  }
+
+  return {
+    date: new Intl.DateTimeFormat(locale, { dateStyle: "short" }).format(createdDate),
+    time: new Intl.DateTimeFormat(locale, { timeStyle: "short" }).format(createdDate)
+  };
+}
+
 function SettingsDialog({
   open,
   settings,
   onClose,
   onSave
 }: SettingsDialogProps): ReactElement {
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
   const initialDraft = useMemo(
     () => normalizeSettingsDraft(settings, settings?.email),
     [settings]
@@ -350,41 +365,49 @@ function SettingsDialog({
               {t("passkeys.empty")}
             </Typography>
           ) : null}
-          {passkeys.map((passkey) => (
+          {passkeys.length > 0 ? (
             <Stack
-              key={passkey.id}
-              direction="row"
-              alignItems="center"
-              justifyContent="space-between"
-              spacing={2}
+              divider={<Divider flexItem />}
               sx={{
-                border: "1px solid",
-                borderColor: "divider",
-                borderRadius: 2,
-                px: 1.5,
-                py: 1
+                borderTop: "1px solid",
+                borderBottom: "1px solid",
+                borderColor: "divider"
               }}
             >
-              <Stack spacing={0.5} sx={{ minWidth: 0 }}>
-                <Typography noWrap fontWeight={600}>
-                  {passkey.name || t("passkeys.defaultName")}
-                </Typography>
-                <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
-                  {passkey.deviceType ? <Chip size="small" label={passkey.deviceType} /> : null}
-                  {passkey.backedUp ? <Chip size="small" label={t("passkeys.backedUp")} /> : null}
-                  {passkey.lastUsedAt ? <Chip size="small" label={t("passkeys.used")} /> : null}
-                </Stack>
-              </Stack>
-              <IconButton
-                aria-label={t("passkeys.remove")}
-                color="error"
-                onClick={() => setPasskeyToDelete(passkey)}
-                disabled={isPasskeyLoading}
-              >
-                <DeleteRoundedIcon />
-              </IconButton>
+              {passkeys.map((passkey) => {
+                const createdAt = formatPasskeyCreatedAt(passkey.createdAt, locale);
+
+                return (
+                  <Stack
+                    key={passkey.id}
+                    direction="row"
+                    alignItems="center"
+                    justifyContent="space-between"
+                    spacing={2}
+                    sx={{ py: 1.5 }}
+                  >
+                    <Stack spacing={0.5} sx={{ minWidth: 0 }}>
+                      <Typography noWrap>
+                        {passkey.name || t("passkeys.defaultName")}
+                      </Typography>
+                      {createdAt ? (
+                        <Typography variant="body2" color="text.secondary" noWrap>
+                          {t("passkeys.createdOn", createdAt)}
+                        </Typography>
+                      ) : null}
+                    </Stack>
+                    <IconButton
+                      aria-label={t("passkeys.remove")}
+                      onClick={() => setPasskeyToDelete(passkey)}
+                      disabled={isPasskeyLoading}
+                    >
+                      <DeleteRoundedIcon />
+                    </IconButton>
+                  </Stack>
+                );
+              })}
             </Stack>
-          ))}
+          ) : null}
         </Stack>
       </Stack>
     );

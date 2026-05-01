@@ -34,11 +34,14 @@ function createDeferred() {
 }
 
 function renderDialog(props: Partial<ComponentProps<typeof SettingsDialog>> = {}) {
-  passkeysApiMock.listPasskeys.mockResolvedValue({ passkeys: [] });
+  if (!passkeysApiMock.listPasskeys.getMockImplementation()) {
+    passkeysApiMock.listPasskeys.mockResolvedValue({ passkeys: [] });
+  }
   passkeysApiMock.deletePasskey.mockResolvedValue({});
   passkeysAuthMock.registerPasskey.mockResolvedValue({});
   useI18nMock.mockReturnValue({
-    t: (key: string) => {
+    locale: "en-US",
+    t: (key: string, params?: Record<string, unknown>) => {
       const labels = {
         "settings.title": "Settings",
         "settings.sections.general": "General",
@@ -72,6 +75,7 @@ function renderDialog(props: Partial<ComponentProps<typeof SettingsDialog>> = {}
         "passkeys.removeConfirm": "Remove this passkey?",
         "passkeys.empty": "No passkeys added yet.",
         "passkeys.defaultName": "Passkey",
+        "passkeys.createdOn": "Created on {date} at {time}",
         "passkeys.backedUp": "Backed up",
         "passkeys.used": "Used before",
         "passkeys.loading": "Loading passkeys",
@@ -82,7 +86,11 @@ function renderDialog(props: Partial<ComponentProps<typeof SettingsDialog>> = {}
         "errors.generic": "Something went wrong"
       };
 
-      return labels[key] || key;
+      const label = labels[key] || key;
+      return Object.entries(params || {}).reduce(
+        (value, [paramKey, paramValue]) => value.replace(`{${paramKey}}`, String(paramValue)),
+        label
+      );
     }
   });
 
@@ -141,5 +149,29 @@ describe("SettingsDialog", () => {
 
     deferred.resolve();
     await deferred.promise;
+  });
+
+  test("renders passkeys as plain rows with created timestamps", async () => {
+    const user = userEvent.setup();
+    passkeysApiMock.listPasskeys.mockResolvedValue({
+      passkeys: [{
+        id: "passkey-1",
+        name: "1Password",
+        deviceType: "multiDevice",
+        backedUp: true,
+        lastUsedAt: "2026-05-02T01:47:00.000Z",
+        createdAt: "2026-05-01T01:47:00.000Z"
+      }]
+    });
+
+    renderDialog();
+    await user.click(screen.getByRole("button", { name: "Account" }));
+
+    expect(await screen.findByText("1Password")).toBeInTheDocument();
+    expect(screen.getByText(/Created on .+ at .+/)).toBeInTheDocument();
+    expect(screen.queryByText("multiDevice")).not.toBeInTheDocument();
+    expect(screen.queryByText("Backed up")).not.toBeInTheDocument();
+    expect(screen.queryByText("Used before")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Remove passkey" })).toBeInTheDocument();
   });
 });

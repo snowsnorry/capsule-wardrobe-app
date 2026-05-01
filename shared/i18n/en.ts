@@ -323,6 +323,7 @@ const en = {
     removed: "Passkey removed",
     empty: "No passkeys added yet.",
     defaultName: "Passkey",
+    createdOn: "Created on {date} at {time}",
     backedUp: "Backed up",
     used: "Used before",
     loading: "Loading passkeys"

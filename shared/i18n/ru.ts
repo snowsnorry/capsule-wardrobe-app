@@ -324,6 +324,7 @@ const ru = {
     removed: "Passkey удалён",
     empty: "Passkeys пока не добавлены.",
     defaultName: "Passkey",
+    createdOn: "Создан {date} в {time}",
     backedUp: "С резервной копией",
     used: "Уже использовался",
     loading: "Загружаем passkeys"
