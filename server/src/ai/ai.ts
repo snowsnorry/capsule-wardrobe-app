@@ -812,7 +812,6 @@ async function generateCapsuleWardrobe(userProfile = null, logContext = null) {
         SELECT 
           filtered_items.*,
           -- 4. Calculate Color Rank (FINAL VISUAL SORTING)
-          -- We calculate this AFTER filtering out the excess accent items.
           ROW_NUMBER() OVER (
             PARTITION BY COALESCE(color_base, ARRAY[]::text[])
             ORDER BY 
@@ -823,11 +822,10 @@ async function generateCapsuleWardrobe(userProfile = null, logContext = null) {
           SELECT 
             raw_scored.*,
             -- 3. INDEPENDENT QUOTA RANKING
-            -- We rank accent items and patterned items in completely separate windows.
             ROW_NUMBER() OVER (
-              PARTITION BY is_style_match
+              PARTITION BY style_role
               ORDER BY relevance_score DESC, distance ASC
-            ) as aesthetic_rank,
+            ) as style_rank,
             ROW_NUMBER() OVER (
               PARTITION BY is_color_match
               ORDER BY relevance_score DESC, distance ASC
@@ -842,11 +840,18 @@ async function generateCapsuleWardrobe(userProfile = null, logContext = null) {
               -- 1. Calculate Vector Distance
               embedding <=> ${embeddingVector}::vector as distance,
               
-              -- 1.1 Identify Accent Match (Boolean helper)
-              (
-                ${style}::text IS NOT NULL
-                AND ${style}::text = ANY(COALESCE(style, ARRAY[]::text[]))
-              ) as is_style_match,
+              -- 1.1 Identify Style Role (Accent, Base, Other)
+              CASE
+                WHEN ${style}::text IS NOT NULL 
+                     AND lower(${style}::text) != 'minimalistic'
+                     AND ${style}::text = ANY(COALESCE(style, ARRAY[]::text[]))
+                THEN 'accent'
+                WHEN 'minimalistic' = ANY(COALESCE(style, ARRAY[]::text[]))
+                THEN 'base'
+                ELSE 'other'
+              END as style_role,
+
+              -- Identify Color & Pattern Matches
               (
                 ${color}::text IS NOT NULL
                 AND ${color}::text != ''
@@ -866,14 +871,18 @@ async function generateCapsuleWardrobe(userProfile = null, logContext = null) {
               
               -- 2. Calculate Relevance Score
               (
-                -- Style Match (+20)
+                -- Formality Match (+20)
                 CASE WHEN ${formalityLevel}::text IS NOT NULL
                   AND ${formalityLevel}::text = ANY(COALESCE(formality_level, ARRAY[]::text[]))
                 THEN 20 ELSE 0 END
                 +
-                CASE WHEN ${style}::text IS NOT NULL
-                  AND ${style}::text = ANY(COALESCE(style, ARRAY[]::text[]))
-                THEN 20 ELSE 0 END
+                -- Style Match (+20, fallback +15 for base)
+                CASE 
+                  WHEN ${style}::text IS NOT NULL AND ${style}::text = ANY(COALESCE(style, ARRAY[]::text[])) THEN 20
+                  WHEN ${style}::text IS NOT NULL AND 'minimalistic' = ANY(COALESCE(style, ARRAY[]::text[])) THEN 15
+                  WHEN ${style}::text IS NULL AND 'minimalistic' = ANY(COALESCE(style, ARRAY[]::text[])) THEN 20
+                  ELSE 0 
+                END
                 +
                 -- Occasion Match (+20)
                 CASE WHEN COALESCE(occasions, ARRAY[]::text[]) && ${occasions}::text[]
@@ -930,8 +939,15 @@ async function generateCapsuleWardrobe(userProfile = null, logContext = null) {
         ) filtered_items
         WHERE
           -- !!! INDEPENDENT QUOTA LIMITS !!!
-          -- Rule 1: If it's an aesthetic item, it must be in the top 3 of aesthetics.
-          (is_style_match IS NOT TRUE OR aesthetic_rank <= 3)
+          -- Rule 1: Style Logic (Accent max 3, or Base max 6 if no style is requested)
+          (
+            CASE 
+              WHEN ${style}::text IS NOT NULL THEN 
+                (style_role != 'accent' OR style_rank <= 3)
+              ELSE 
+                (style_role != 'base' OR style_rank <= 6)
+            END
+          )
           AND 
           -- Rule 2: If it's an accent item, it must be in the top 3 of accents.
           (is_color_match IS NOT TRUE OR accent_rank <= 3)
