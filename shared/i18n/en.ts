@@ -399,7 +399,9 @@ const en = {
     searchEarlier: "Earlier",
     outfitSet: "Set {number}",
     closeFilters: "Close filters",
-    openMenu: "Open capsule menu"
+    openMenu: "Open capsule menu",
+    copyProductLinkAddress: "Copy Link Address",
+    showProductInfo: "Show Product Info"
   },
   search: {
     title: "Search",

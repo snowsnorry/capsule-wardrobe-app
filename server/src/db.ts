@@ -172,6 +172,7 @@ type UpsertSearchInput = {
 type SearchProductsInput = {
   queryEmbedding?: number[] | null;
   semanticDistanceThreshold?: number | null;
+  urlPrefix?: string | null;
   brand?: string[];
   priceMin?: number | null;
   priceMax?: number | null;
@@ -1383,6 +1384,7 @@ async function upsertSearchByEmail({
 async function searchProducts({
   queryEmbedding = null,
   semanticDistanceThreshold = null,
+  urlPrefix = null,
   brand = [],
   priceMin = null,
   priceMax = null,
@@ -1405,12 +1407,16 @@ async function searchProducts({
   const embeddingVector = Array.isArray(queryEmbedding) && queryEmbedding.length > 0
     ? `[${queryEmbedding.join(",")}]`
     : null;
+  const normalizedUrlPrefix = typeof urlPrefix === "string" && urlPrefix.trim()
+    ? `${urlPrefix.trim()}%`
+    : null;
 
   const countRow = getFirstRow(await sql<CountRow>`
     select count(*)::integer as total
     from products
     where
       (cardinality(${brand}::text[]) = 0 or lower(coalesce(brand, '')) = any(${brand}::text[]))
+      and (${normalizedUrlPrefix}::text is null or products.url like ${normalizedUrlPrefix})
       and (${priceMin}::double precision is null or price >= ${priceMin})
       and (${priceMax}::double precision is null or price <= ${priceMax})
       and (cardinality(${audience}::text[]) = 0 or lower(coalesce(audience, '')) = any(${audience}::text[]))
@@ -1463,6 +1469,7 @@ async function searchProducts({
     from products
     where
       (cardinality(${brand}::text[]) = 0 or lower(coalesce(brand, '')) = any(${brand}::text[]))
+      and (${normalizedUrlPrefix}::text is null or products.url like ${normalizedUrlPrefix})
       and (${priceMin}::double precision is null or price >= ${priceMin})
       and (${priceMax}::double precision is null or price <= ${priceMax})
       and (cardinality(${audience}::text[]) = 0 or lower(coalesce(audience, '')) = any(${audience}::text[]))

@@ -1,6 +1,6 @@
 import React from "react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 
@@ -39,7 +39,7 @@ vi.mock("../components/ClothingGridPlaceholder", () => ({
   )
 }));
 vi.mock("../components/ClothingCard", () => ({
-  default: ({ item, isSelected, isSelectable, isRegenerating, onToggleSelected }) => (
+  default: ({ item, isSelected, isSelectable, isRegenerating, onToggleSelected, onProductContextMenu }) => (
     <button
       type="button"
       data-testid={`clothing-card-${item.url}`}
@@ -48,6 +48,10 @@ vi.mock("../components/ClothingCard", () => ({
       data-regenerating={String(isRegenerating)}
       disabled={isRegenerating}
       onClick={() => onToggleSelected(item)}
+      onContextMenu={(event) => {
+        event.preventDefault();
+        onProductContextMenu?.(event, item.url, item);
+      }}
     >
       {item.name}
     </button>
@@ -121,7 +125,9 @@ function t(key, params) {
       searchEarlier: "Earlier",
       outfitSet: "Набор {number}",
       closeFilters: "Close filters",
-      openMenu: "Open capsule menu"
+      openMenu: "Open capsule menu",
+      copyProductLinkAddress: "Copy Link Address",
+      showProductInfo: "Show Product Info"
     },
     search: {
       all: "All"
@@ -370,6 +376,31 @@ describe("MainScreen", () => {
 
     await user.click(screen.getByRole("button", { name: "Regenerate Selected (1)" }));
     expect(onRegenerateSelectedItems).toHaveBeenCalledTimes(1);
+  });
+
+  test("opens product context menu to copy URL or show product in search", async () => {
+    const user = userEvent.setup();
+    const writeText = vi.fn(() => Promise.resolve());
+    const onNavigateApp = vi.fn();
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText }
+    });
+
+    renderScreen({
+      items: [
+        { id: "a", url: "https://example.com/a", name: "Shirt", category: "top" }
+      ],
+      onNavigateApp
+    });
+
+    fireEvent.contextMenu(screen.getByTestId("clothing-card-https://example.com/a"));
+    await user.click(screen.getByRole("menuitem", { name: "Copy Link Address" }));
+    expect(writeText).toHaveBeenCalledWith("https://example.com/a");
+
+    fireEvent.contextMenu(screen.getByTestId("clothing-card-https://example.com/a"));
+    await user.click(screen.getByRole("menuitem", { name: "Show Product Info" }));
+    expect(onNavigateApp).toHaveBeenCalledWith("search", { query: "https://example.com/a" });
   });
 
   test("renders outfit tabs and filters cards by wardrobe category order", async () => {

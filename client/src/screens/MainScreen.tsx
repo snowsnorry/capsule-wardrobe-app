@@ -54,6 +54,9 @@ import type { SettingsProfile, SettingsSavePayload } from "../components/Setting
 import type { DialogProps } from "@mui/material/Dialog";
 
 type CapsuleMenuAnchor = HTMLElement | null;
+type AppNavigationOptions = {
+  query?: string;
+};
 type CapsuleLike = {
   id?: string;
   name?: string;
@@ -149,7 +152,7 @@ type MainScreenProps = {
   onTextChange: (value: string) => void;
   onApplyFilters: () => Promise<void> | void;
   onResetFilters: () => Promise<void> | void;
-  onNavigateApp: (nextApp: "capsule" | "search" | "statistics") => void;
+  onNavigateApp: (nextApp: "capsule" | "search" | "statistics", options?: AppNavigationOptions) => void;
   selectedRegenerationUrls: string[];
   partialRegenerationPendingUrls: string[];
   pendingImageSetIndexes?: number[];
@@ -414,6 +417,8 @@ function MainScreen({
   const [headerMenuAnchor, setHeaderMenuAnchor] = useState<CapsuleMenuAnchor>(null);
   const [rowMenuAnchor, setRowMenuAnchor] = useState<CapsuleMenuAnchor>(null);
   const [rowMenuCapsule, setRowMenuCapsule] = useState<CapsuleLike | null>(null);
+  const [productMenuPosition, setProductMenuPosition] = useState<{ mouseX: number; mouseY: number } | null>(null);
+  const [productMenuUrl, setProductMenuUrl] = useState("");
   const [renameOpen, setRenameOpen] = useState(false);
   const [renameValue, setRenameValue] = useState("");
   const [renameCapsuleId, setRenameCapsuleId] = useState("");
@@ -600,6 +605,37 @@ function MainScreen({
     }
     await navigator.clipboard.writeText(shareUrl);
     setShareCopied(true);
+  };
+
+  const handleProductContextMenu = (event: MouseEvent<HTMLElement>, productUrl: string) => {
+    setProductMenuPosition({
+      mouseX: event.clientX + 2,
+      mouseY: event.clientY - 6
+    });
+    setProductMenuUrl(productUrl);
+  };
+
+  const handleCloseProductMenu = () => {
+    setProductMenuPosition(null);
+    setProductMenuUrl("");
+  };
+
+  const handleCopyProductUrl = async () => {
+    const productUrl = productMenuUrl;
+    handleCloseProductMenu();
+    if (!productUrl || typeof navigator === "undefined" || !navigator.clipboard?.writeText) {
+      return;
+    }
+    await navigator.clipboard.writeText(productUrl);
+  };
+
+  const handleShowProductInfo = () => {
+    const productUrl = productMenuUrl;
+    handleCloseProductMenu();
+    if (!productUrl) {
+      return;
+    }
+    onNavigateApp("search", { query: productUrl });
   };
 
   const handleRequestRegenerateAll = async () => {
@@ -1187,6 +1223,7 @@ function MainScreen({
                               isSelected={selectedRegenerationUrls.includes(itemUrl)}
                               isRegenerating={isInteractionDisabled}
                               onToggleSelected={onToggleRegenerationSelection}
+                              onProductContextMenu={handleProductContextMenu}
                               isMobile={isOverlaySidebar}
                             />
                           );
@@ -1853,6 +1890,19 @@ function MainScreen({
           setConfirmAction("delete-row");
         }}
       />
+      <Menu
+        open={Boolean(productMenuPosition)}
+        onClose={handleCloseProductMenu}
+        anchorReference="anchorPosition"
+        anchorPosition={
+          productMenuPosition
+            ? { top: productMenuPosition.mouseY, left: productMenuPosition.mouseX }
+            : undefined
+        }
+      >
+        <MenuItem onClick={handleCopyProductUrl}>{t("capsule.copyProductLinkAddress")}</MenuItem>
+        <MenuItem onClick={handleShowProductInfo}>{t("capsule.showProductInfo")}</MenuItem>
+      </Menu>
     </>
   );
 }

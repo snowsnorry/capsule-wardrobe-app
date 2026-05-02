@@ -400,7 +400,9 @@ const ru = {
     searchEarlier: "Ранее",
     outfitSet: "Набор {number}",
     closeFilters: "Закрыть фильтры",
-    openMenu: "Открыть меню капсулы"
+    openMenu: "Открыть меню капсулы",
+    copyProductLinkAddress: "Скопировать адрес ссылки",
+    showProductInfo: "Показать товар"
   },
   search: {
     title: "Поиск",

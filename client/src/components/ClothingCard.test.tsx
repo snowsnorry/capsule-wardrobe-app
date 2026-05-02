@@ -130,4 +130,38 @@ describe("ClothingCard", () => {
     expect(screen.getByText("Red Jacket")).toBeInTheDocument();
     expect(screen.queryByText("unisex")).not.toBeInTheDocument();
   });
+
+  test("opens product context menu callback for safe product URLs", () => {
+    const onProductContextMenu = vi.fn();
+    renderCard({ onProductContextMenu });
+
+    const link = screen.getByRole("link");
+    const event = new MouseEvent("contextmenu", {
+      bubbles: true,
+      cancelable: true,
+      clientX: 24,
+      clientY: 36
+    });
+
+    link.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(onProductContextMenu).toHaveBeenCalledWith(
+      expect.objectContaining({ clientX: 24, clientY: 36 }),
+      "https://example.com/products/red-jacket",
+      expect.objectContaining({ id: "item-1" })
+    );
+  });
+
+  test("keeps the native context menu when product URL is not safe", () => {
+    const onProductContextMenu = vi.fn();
+    const { container } = renderCard({
+      item: { id: "1", url: "mailto:person@example.com", name: "Linen Shirt", category: "top" },
+      onProductContextMenu
+    });
+
+    fireEvent.contextMenu(container.firstElementChild as Element);
+
+    expect(onProductContextMenu).not.toHaveBeenCalled();
+  });
 });

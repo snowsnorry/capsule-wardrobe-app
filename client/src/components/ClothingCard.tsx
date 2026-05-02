@@ -21,6 +21,7 @@ type ClothingCardProps = {
   isSelected?: boolean;
   isRegenerating?: boolean;
   onToggleSelected?: (item: ClothingCardItem) => void;
+  onProductContextMenu?: (event: MouseEvent<HTMLElement>, productUrl: string, item: ClothingCardItem) => void;
   isMobile?: boolean;
 };
 
@@ -30,6 +31,7 @@ function ClothingCard({
   isSelected = false,
   isRegenerating = false,
   onToggleSelected,
+  onProductContextMenu,
   isMobile = false
 }: ClothingCardProps): ReactElement {
   const { t } = useI18n();
@@ -45,6 +47,14 @@ function ClothingCard({
     if (!isRegenerating && typeof onToggleSelected === "function") {
       onToggleSelected(item);
     }
+  };
+
+  const handleContextMenu = (event: MouseEvent<HTMLElement>) => {
+    if (!productUrl || typeof onProductContextMenu !== "function") {
+      return;
+    }
+    event.preventDefault();
+    onProductContextMenu(event, productUrl, item);
   };
 
   const cardContent = (
@@ -130,6 +140,7 @@ function ClothingCard({
 
   return (
     <Box
+      onContextMenu={handleContextMenu}
       sx={{
         display: "flex",
         flexDirection: "column",

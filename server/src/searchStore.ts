@@ -125,6 +125,20 @@ function normalizeQuery(value: unknown): string {
   return String(value).trim();
 }
 
+function isHttpUrlQuery(query: unknown): boolean {
+  const normalized = normalizeQuery(query);
+  if (!normalized) {
+    return false;
+  }
+
+  try {
+    const url = new URL(normalized);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 function normalizeStringArray(values: unknown): string[] {
   if (typeof values === "string") {
     const normalized = normalizeNullableString(values);
@@ -211,6 +225,10 @@ async function resolveSearchEmbedding({
   query: string;
 }): Promise<number[] | null> {
   if (!query) {
+    return null;
+  }
+
+  if (isHttpUrlQuery(query)) {
     return null;
   }
 
@@ -327,11 +345,12 @@ async function runSavedSearch(email: string, payload: Partial<SearchPayload> = {
   ]);
   assertValidSearchPayload(normalized, options);
 
-  const embedding = await resolveSearchEmbedding({
+  const isUrlSearch = isHttpUrlQuery(normalized.query);
+  const embedding = isUrlSearch ? null : await resolveSearchEmbedding({
     currentSearch,
     query: normalized.query
   });
-  const semanticDistanceThreshold = getSemanticDistanceThreshold(normalized.query);
+  const semanticDistanceThreshold = isUrlSearch ? null : getSemanticDistanceThreshold(normalized.query);
 
   const savedSearch = await upsertSearchByEmail({
     email,
@@ -342,10 +361,11 @@ async function runSavedSearch(email: string, payload: Partial<SearchPayload> = {
   let results = await searchProducts({
     ...normalized,
     queryEmbedding: embedding,
-    semanticDistanceThreshold
+    semanticDistanceThreshold,
+    urlPrefix: isUrlSearch ? normalized.query : null
   });
 
-  if (normalized.query && results.total === 0) {
+  if (!isUrlSearch && normalized.query && results.total === 0) {
     results = await searchProducts({
       ...normalized,
       queryEmbedding: embedding,
@@ -372,6 +392,7 @@ export {
   SEARCH_AUDIENCE_OPTIONS,
   getSemanticDistanceThreshold,
   getRelaxedSemanticDistanceThreshold,
+  isHttpUrlQuery,
   normalizeSearchPayload,
   resolveSearchEmbedding,
   serializeSearchRow,

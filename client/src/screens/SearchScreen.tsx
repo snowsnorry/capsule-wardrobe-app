@@ -65,6 +65,7 @@ type SearchResponse = {
 
 type SearchScreenProps = {
   onNavigateApp: (nextApp: "capsule" | "search" | "statistics") => void;
+  initialQuery?: string;
   userEmail?: string;
   userName?: string;
   settingsProfile?: SettingsProfile | null;
@@ -235,6 +236,7 @@ function ProductDetail({
 
 function SearchScreen({
   onNavigateApp,
+  initialQuery = "",
   userEmail = "",
   userName = "",
   settingsProfile = null,
@@ -274,7 +276,10 @@ function SearchScreen({
           return;
         }
         const nextOptions = buildSearchOptionsPayload(optionsResponse);
-        const nextState = createSearchState(savedResponse.search, nextOptions.priceRange);
+        const normalizedInitialQuery = String(initialQuery || "").trim();
+        const nextState = normalizedInitialQuery
+          ? createSearchState({ query: normalizedInitialQuery, page: 1 }, nextOptions.priceRange)
+          : createSearchState(savedResponse.search, nextOptions.priceRange);
         setOptions(nextOptions);
         setDraftState(nextState);
         const serialized = serializeDraftState(nextState);
@@ -298,7 +303,7 @@ function SearchScreen({
     return () => {
       isActive = false;
     };
-  }, [t]);
+  }, [initialQuery, t]);
 
   const selectedItem = useMemo(
     () => results.find((item) => String(item.id) === String(selectedResultId)) || results[0] || null,

@@ -317,6 +317,26 @@ test("db integration shapes search persistence and searchProducts queries", asyn
   assert.equal(calls[3].values.filter((value) => value === 50).length >= 2, true);
 });
 
+test("db integration filters searchProducts by URL prefix", async () => {
+  const { sql, calls } = createSqlMock([
+    [{ total: 1 }] satisfies CountRow[],
+    [{ id: "prod-1", name: "Linen Shirt", brand: "UNIQLO" }] satisfies ProductSearchRow[]
+  ]);
+  setSqlClientOverride(sql);
+
+  const results = await searchProducts({
+    urlPrefix: "https://example.com/products/linen",
+    page: 1
+  });
+
+  assert.equal(results.total, 1);
+  assert.equal(results.items[0]?.id, "prod-1");
+  assert.match(calls[0].text, /products\.url\s+like/i);
+  assert.match(calls[1].text, /products\.url\s+like/i);
+  assert.equal(calls[0].values.some((value) => value === "https://example.com/products/linen%"), true);
+  assert.equal(calls[1].values.some((value) => value === "https://example.com/products/linen%"), true);
+});
+
 test("db integration applies price range to product stats price buckets", async () => {
   const handlers = [
     [{ total: 1 }] satisfies CountRow[],

@@ -4,6 +4,7 @@ import {
   DEFAULT_SEARCH_STATE,
   getRelaxedSemanticDistanceThreshold,
   getSemanticDistanceThreshold,
+  isHttpUrlQuery,
   normalizeSearchPayload,
   resolveSearchEmbedding,
   serializeSearchRow
@@ -123,6 +124,14 @@ test("getRelaxedSemanticDistanceThreshold adds fallback slack without exceeding 
   );
 });
 
+test("isHttpUrlQuery only accepts http and https URLs", () => {
+  assert.equal(isHttpUrlQuery("https://example.com/products/1"), true);
+  assert.equal(isHttpUrlQuery("http://example.com/products/1"), true);
+  assert.equal(isHttpUrlQuery("linen shirt"), false);
+  assert.equal(isHttpUrlQuery("mailto:person@example.com"), false);
+  assert.equal(isHttpUrlQuery("ftp://example.com/products/1"), false);
+});
+
 test("resolveSearchEmbedding reuses persisted embedding when query is unchanged", async () => {
   const embedding = [0.1, 0.2, 0.3];
 
@@ -147,6 +156,20 @@ test("resolveSearchEmbedding clears embedding for empty query", async () => {
         embedding: [0.1, 0.2, 0.3]
       },
       query: ""
+    });
+
+    assert.equal(result, null);
+  });
+});
+
+test("resolveSearchEmbedding skips embedding for URL queries", async () => {
+  await assert.doesNotReject(async () => {
+    const result = await resolveSearchEmbedding({
+      currentSearch: {
+        query: "https://example.com/products/1",
+        embedding: [0.1, 0.2, 0.3]
+      },
+      query: "https://example.com/products/1"
     });
 
     assert.equal(result, null);

@@ -213,6 +213,12 @@ type WardrobeMutationResponse = {
   status?: string;
 };
 
+type AppRoute = "capsule" | "search" | "statistics" | "share";
+
+type AppNavigationOptions = {
+  query?: string;
+};
+
 const MainScreen = lazy(() => import("./screens/MainScreen"));
 const OnboardingScreen = lazy(() => import("./screens/OnboardingScreen"));
 const ProfileScreen = lazy(() => import("./screens/ProfileScreen"));
@@ -292,7 +298,7 @@ function getWardrobeMetadata(wardrobe: CapsuleWardrobeData | null | undefined) {
   };
 }
 
-function getAppRoute(pathname = "/") {
+function getAppRoute(pathname = "/"): AppRoute {
   if (pathname.startsWith("/share/")) {
     return "share";
   }
@@ -464,6 +470,7 @@ function App() {
   const [appRoute, setAppRoute] = useState(() => (
     typeof window === "undefined" ? "capsule" : getAppRoute(window.location.pathname)
   ));
+  const [searchInitialQuery, setSearchInitialQuery] = useState("");
   const [pendingShareId, setPendingShareId] = useState(() => (
     typeof window === "undefined" ? "" : getShareIdFromPath(window.location.pathname)
   ));
@@ -499,7 +506,11 @@ function App() {
     }
 
     const handlePopState = () => {
-      setAppRoute(getAppRoute(window.location.pathname));
+      const nextRoute = getAppRoute(window.location.pathname);
+      setAppRoute(nextRoute);
+      if (nextRoute !== "search") {
+        setSearchInitialQuery("");
+      }
       setPendingShareId(getShareIdFromPath(window.location.pathname));
     };
 
@@ -1339,7 +1350,7 @@ function App() {
     }
   };
 
-  const handleNavigateApp = (nextApp) => {
+  const handleNavigateApp = (nextApp: Exclude<AppRoute, "share">, options: AppNavigationOptions = {}) => {
     if (typeof window === "undefined") {
       return;
     }
@@ -1351,6 +1362,7 @@ function App() {
     if (window.location.pathname !== nextPath) {
       window.history.pushState({}, "", nextPath);
     }
+    setSearchInitialQuery(nextApp === "search" ? String(options.query || "") : "");
     setAppRoute(getAppRoute(nextPath));
   };
 
@@ -1854,6 +1866,7 @@ function App() {
         return (
           <SearchScreen
             onNavigateApp={handleNavigateApp}
+            initialQuery={searchInitialQuery}
             userEmail={user?.email || ""}
             userName={settingsProfile.fullname}
             settingsProfile={settingsProfile}

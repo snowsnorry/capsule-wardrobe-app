@@ -158,6 +158,30 @@ describe("SearchScreen", () => {
     expect(screen.getByRole("button", { name: "Open user menu" })).toBeInTheDocument();
   });
 
+  test("uses initial query handoff instead of saved filters on first search", async () => {
+    renderScreen({ initialQuery: "https://example.com/products/linen-shirt" });
+
+    expect(await screen.findByDisplayValue("https://example.com/products/linen-shirt")).toBeInTheDocument();
+    expect(searchApi.runSearch).toHaveBeenCalledWith({
+      query: "https://example.com/products/linen-shirt",
+      brand: [],
+      priceMin: null,
+      priceMax: null,
+      audience: [],
+      category: [],
+      season: [],
+      formalityLevel: [],
+      style: [],
+      occasions: [],
+      color: [],
+      pattern: [],
+      silhouette: [],
+      fit: [],
+      closureType: [],
+      page: 1
+    });
+  });
+
   test("desktop filter interactions auto-apply and reset page to 1", async () => {
     renderScreen();
     await screen.findByDisplayValue("linen shirt");
