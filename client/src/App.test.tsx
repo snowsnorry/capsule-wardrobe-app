@@ -96,6 +96,7 @@ vi.mock("./screens/SignInScreen", () => ({
     return (
       <div data-testid="sign-in-screen">
         <div>sign-in-screen:{props.step}</div>
+        <div data-testid="locale-switcher">locale-switcher</div>
         <button
           type="button"
           onClick={() => {
@@ -432,6 +433,7 @@ describe("App", () => {
     renderApp();
 
     expect(await screen.findByTestId("sign-in-screen")).toBeInTheDocument();
+    expect(screen.getByTestId("locale-switcher")).toBeInTheDocument();
     expect(authApi.fetchProfileStatus).not.toHaveBeenCalled();
   });
 
@@ -628,6 +630,7 @@ describe("App", () => {
     renderApp();
 
     expect(await screen.findByTestId("search-screen")).toBeInTheDocument();
+    expect(screen.queryByTestId("locale-switcher")).not.toBeInTheDocument();
     await waitFor(() => {
       expect(capsulesApi.fetchCapsuleBootstrap).toHaveBeenCalled();
     });
@@ -635,10 +638,12 @@ describe("App", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "back-to-capsule" }));
     expect(await screen.findByTestId("main-screen")).toBeInTheDocument();
+    expect(screen.queryByTestId("locale-switcher")).not.toBeInTheDocument();
     expect(wardrobeApi.subscribeCapsuleEvents).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("button", { name: "open-explore" }));
     expect(await screen.findByTestId("search-screen")).toBeInTheDocument();
+    expect(screen.queryByTestId("locale-switcher")).not.toBeInTheDocument();
   });
 
   test("does not auto-regenerate wardrobe after bootstrap when the active capsule has no stored items", async () => {
@@ -668,8 +673,10 @@ describe("App", () => {
     renderApp();
 
     expect(await screen.findByTestId("main-screen")).toBeInTheDocument();
+    expect(screen.queryByTestId("locale-switcher")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "open-statistics" }));
     expect(await screen.findByTestId("statistics-screen")).toBeInTheDocument();
+    expect(screen.queryByTestId("locale-switcher")).not.toBeInTheDocument();
   });
 
   test("opens statistics on direct statistics route after session bootstrap", async () => {

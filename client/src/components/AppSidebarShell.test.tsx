@@ -120,8 +120,15 @@ describe("AppSidebarShell", () => {
 
     renderShell({ onSignOut });
 
+    expect(screen.getByText("Capsule Wardrobe")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Toggle sidebar" })).not.toBeInTheDocument();
+
     await user.click(screen.getByRole("button", { name: "Collapse sidebar" }));
+    expect(screen.queryByText("Capsule Wardrobe")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Toggle sidebar" })).toBeInTheDocument();
+
     await user.click(screen.getByTestId("shell-expand-hitbox"));
+    expect(screen.getByText("Capsule Wardrobe")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Collapse sidebar" })).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Open user menu" }));

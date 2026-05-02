@@ -232,15 +232,38 @@ function AppSidebarShell({
       }}
     >
       <Stack direction="row" alignItems="center" sx={{ minHeight: 64, pt: 2, pb: 1.5 }}>
-        <Box sx={{ width: desktopSidebarRailWidth, display: "flex", justifyContent: "center", flexShrink: 0 }}>
-          <IconButton aria-label="Toggle sidebar" onClick={toggleSidebar} sx={{ width: 40, height: 40 }}>
-            <MenuRoundedIcon />
-          </IconButton>
-        </Box>
+        {isSidebarCollapsed && !isOverlaySidebar ? (
+          <Box sx={{ width: desktopSidebarRailWidth, display: "flex", justifyContent: "center", flexShrink: 0 }}>
+            <IconButton aria-label="Toggle sidebar" onClick={toggleSidebar} sx={{ width: 40, height: 40 }}>
+              <MenuRoundedIcon />
+            </IconButton>
+          </Box>
+        ) : (
+          <Box
+            sx={{
+              minWidth: 0,
+              flex: 1,
+              pl: isOverlaySidebar ? 2 : 2.5,
+              pr: 1
+            }}
+          >
+            <Typography
+              noWrap
+              sx={{
+                fontFamily: '"Leckerli One", cursive',
+                fontSize: { xs: "1.40rem", md: "1.40rem" },
+                lineHeight: 1.1,
+                color: "#8f6f45"
+              }}
+            >
+              {t("appName")}
+            </Typography>
+          </Box>
+        )}
         <Box
           sx={{
             minWidth: 0,
-            flex: 1,
+            flex: isSidebarCollapsed && !isOverlaySidebar ? 1 : "0 0 auto",
             pr: 2,
             opacity: isSidebarCollapsed && !isOverlaySidebar ? 0 : 1,
             transform: isSidebarCollapsed && !isOverlaySidebar ? "translateX(-8px)" : "translateX(0)",

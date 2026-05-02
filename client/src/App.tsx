@@ -73,7 +73,6 @@ import {
 import type { SettingsSavePayload } from "./components/SettingsDialog";
 import AppSidebarNavigation from "./components/AppSidebarNavigation";
 import AppSidebarShell from "./components/AppSidebarShell";
-import LocaleSwitcher from "./components/LocaleSwitcher";
 
 type StatusState = {
   loading: boolean;
@@ -2163,46 +2162,17 @@ function App() {
             onSaveSettings={handleSaveSettingsFromScreen}
             onSignOut={handleRequestSignOut}
             headerContent={({ isOverlaySidebar, openSidebar }) => (
-              <Box
-                sx={{
-                  position: "sticky",
-                  top: 0,
-                  zIndex: 3,
-                  backgroundColor: "background.paper",
-                  pb: 1.5
-                }}
-              >
-                <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
-                  <Stack direction="row" alignItems="center" spacing={1.25}>
-                    {isOverlaySidebar ? (
-                      <IconButton
-                        aria-label="Toggle sidebar"
-                        onClick={openSidebar}
-                        disabled={getActiveSidebarApp() === "capsule" && isContentBusy}
-                      >
-                        <MenuRoundedIcon />
-                      </IconButton>
-                    ) : null}
-                    {!isOverlaySidebar ? (
-                      <Typography
-                        noWrap
-                        sx={{
-                          fontFamily: '"Leckerli One", cursive',
-                          fontSize: "1.85rem",
-                          lineHeight: 1.1,
-                          color: "#8f6f45",
-                          textAlign: "left"
-                        }}
-                      >
-                        {t("appName")}
-                      </Typography>
-                    ) : null}
-                  </Stack>
-                  <Stack direction="row" spacing={1.2} alignItems="center">
-                    <LocaleSwitcher />
-                  </Stack>
-                </Stack>
-              </Box>
+              isOverlaySidebar ? (
+                <Box sx={{ pb: 1.5 }}>
+                  <IconButton
+                    aria-label="Toggle sidebar"
+                    onClick={openSidebar}
+                    disabled={getActiveSidebarApp() === "capsule" && isContentBusy}
+                  >
+                    <MenuRoundedIcon />
+                  </IconButton>
+                </Box>
+              ) : null
             )}
             sidebarBodyContent={({ isOverlaySidebar, isSidebarCollapsed, desktopSidebarRailWidth, expandCollapsedSidebar, closeSidebar }) => {
               const activeSidebarApp = getActiveSidebarApp();
