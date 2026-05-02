@@ -13,12 +13,9 @@ import {
   Typography
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
-import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
+import useMediaQuery from "@mui/material/useMediaQuery";
 import TuneRoundedIcon from "@mui/icons-material/TuneRounded";
 import { fetchSearchOptions, fetchSearchStats } from "../api/search";
-import AppLauncher from "../components/AppLauncher";
-import LocaleSwitcher from "../components/LocaleSwitcher";
-import AppSidebarShell from "../components/AppSidebarShell";
 import SearchFiltersSidebar from "../search/SearchFiltersSidebar";
 import TremorBarChart from "../components/tremor/BarChart";
 import TremorDonutChart from "../components/tremor/DonutChart";
@@ -35,7 +32,6 @@ import {
 } from "../search/searchState";
 import type { SearchDraftState, SearchFilterValue, SearchOptions, SerializedSearchState } from "../search/searchState";
 import { getColorSwatchStyle } from "../../../shared/colorSwatches.js";
-import type { SettingsProfile, SettingsSavePayload } from "../components/SettingsDialog";
 
 type StatisticsStatus = {
   loading: boolean;
@@ -82,12 +78,7 @@ type ColorFillConfig = {
 };
 
 type StatisticsScreenProps = {
-  onNavigateApp: (nextApp: "capsule" | "search" | "statistics") => void;
-  userEmail?: string;
-  userName?: string;
-  settingsProfile?: SettingsProfile | null;
-  onSignOut?: () => void;
-  onSaveSettings?: (settings: SettingsSavePayload) => Promise<void> | void;
+  onNavigateApp: (nextApp: "capsule" | "explore" | "statistics") => void;
 };
 
 const FACET_COLORS = [
@@ -637,14 +628,10 @@ function StatisticsBarChart({
 }
 
 function StatisticsScreen({
-  onNavigateApp,
-  userEmail = "",
-  userName = "",
-  settingsProfile = null,
-  onSignOut = () => {},
-  onSaveSettings = async () => {}
+  onNavigateApp
 }: StatisticsScreenProps): ReactElement {
   const { t, locale } = useI18n();
+  const isMobile = useMediaQuery("(max-width: 1279.95px)");
   const [options, setOptions] = useState<SearchOptions>(EMPTY_SEARCH_OPTIONS);
   const [draftState, setDraftState] = useState<SearchDraftState>(createSearchState(null, EMPTY_SEARCH_OPTIONS.priceRange));
   const [statsState, setStatsState] = useState<StatisticsState>(buildInitialStatsState());
@@ -879,135 +866,77 @@ function StatisticsScreen({
 
   return (
     <>
-      <AppSidebarShell
-        shellTestId="statistics-screen-shell"
-        currentApp="statistics"
-        userEmail={userEmail}
-        userName={userName}
-        settingsProfile={settingsProfile}
-        onSaveSettings={onSaveSettings}
-        onSignOut={onSignOut}
-        headerContent={({ isOverlaySidebar, openSidebar }) => (
+      <Stack spacing={2.4} sx={{ height: "100%", minHeight: 0, overflow: "hidden" }}>
+        {isMobile ? (
+          <Stack spacing={2} sx={{ minHeight: 0, overflowY: "auto", pb: 2 }}>
+            {renderMobileFiltersButton()}
+            {renderSummary()}
+            {status.loading && chartCards.length === 0 ? (
+              <Stack spacing={2}>
+                <Skeleton variant="rounded" height={260} />
+                <Skeleton variant="rounded" height={260} />
+              </Stack>
+            ) : chartCards.length > 0 ? chartCards : (
+              <Typography variant="body2" color="text.secondary">{t("statistics.empty")}</Typography>
+            )}
+          </Stack>
+        ) : (
           <Box
             sx={{
-              position: "sticky",
-              top: 0,
-              zIndex: 3,
-              backgroundColor: "background.paper",
-              pb: 1.5
+              display: "grid",
+              gridTemplateColumns: "320px minmax(0, 1fr)",
+              gap: 3,
+              flex: 1,
+              minHeight: 0,
+              overflow: "hidden"
             }}
           >
-            <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
-              <Stack direction="row" alignItems="center" spacing={1.25}>
-                {isOverlaySidebar ? (
-                  <IconButton aria-label="Toggle sidebar" onClick={openSidebar}>
-                    <MenuRoundedIcon />
-                  </IconButton>
-                ) : null}
-                {!isOverlaySidebar ? (
-                  <Typography
-                    sx={{
-                      fontFamily: '"Leckerli One", cursive',
-                      fontSize: "1.85rem",
-                      lineHeight: 1.1,
-                      color: "#8f6f45"
-                    }}
-                  >
-                    {t("appName")}
-                  </Typography>
-                ) : null}
-              </Stack>
-              <Stack direction="row" spacing={1.2} alignItems="center">
-                <AppLauncher currentApp="statistics" onSelectApp={onNavigateApp} />
-                <LocaleSwitcher />
-              </Stack>
+            <Box
+              sx={{
+                gridRow: "1 / span 2",
+                minHeight: 0,
+                overflowY: "auto",
+                pr: 2.5,
+                borderRight: "1px solid",
+                borderColor: "divider"
+              }}
+            >
+              <SearchFiltersSidebar
+                options={options}
+                draftState={draftState}
+                onDraftStateChange={handleSidebarDraftStateChange}
+                status={status}
+                onApply={handleSubmit}
+                onReset={handleReset}
+                autoApply
+                showApplyButton={false}
+              />
+            </Box>
+            <Stack spacing={2.5} sx={{ minHeight: 0, overflowY: "auto", pr: 0.5, pb: 0.5 }}>
+              {renderSummary()}
+              {status.loading && chartCards.length === 0 ? (
+                <Stack spacing={2}>
+                  <Skeleton variant="rounded" height={260} />
+                  <Skeleton variant="rounded" height={260} />
+                </Stack>
+              ) : chartCards.length > 0 ? (
+                <Box
+                  sx={{
+                    display: "grid",
+                    gridTemplateColumns: { xs: "1fr", lg: "repeat(2, minmax(0, 1fr))" },
+                    gap: 2.25,
+                    alignItems: "stretch"
+                  }}
+                >
+                  {chartCards}
+                </Box>
+              ) : (
+                <Typography variant="body2" color="text.secondary">{t("statistics.empty")}</Typography>
+              )}
             </Stack>
           </Box>
         )}
-        sidebarBodyContent={({ isOverlaySidebar, isSidebarCollapsed, expandCollapsedSidebar }) => (
-          isSidebarCollapsed && !isOverlaySidebar ? (
-            <Box
-              data-testid="collapsed-sidebar-expand-hitbox"
-              onClick={expandCollapsedSidebar}
-              sx={{ flex: 1, height: "100%", cursor: "pointer" }}
-            />
-          ) : null
-        )}
-      >
-        {({ isOverlaySidebar }) => (
-          <Stack spacing={2.4} sx={{ height: "100%", minHeight: 0, overflow: "hidden" }}>
-            {isOverlaySidebar ? (
-              <Stack spacing={2} sx={{ minHeight: 0, overflowY: "auto", pb: 2 }}>
-                {renderMobileFiltersButton()}
-                {renderSummary()}
-                {status.loading && chartCards.length === 0 ? (
-                  <Stack spacing={2}>
-                    <Skeleton variant="rounded" height={260} />
-                    <Skeleton variant="rounded" height={260} />
-                  </Stack>
-                ) : chartCards.length > 0 ? chartCards : (
-                  <Typography variant="body2" color="text.secondary">{t("statistics.empty")}</Typography>
-                )}
-              </Stack>
-            ) : (
-              <Box
-                sx={{
-                  display: "grid",
-                  gridTemplateColumns: "320px minmax(0, 1fr)",
-                  gap: 3,
-                  flex: 1,
-                  minHeight: 0,
-                  overflow: "hidden"
-                }}
-              >
-                <Box
-                  sx={{
-                    gridRow: "1 / span 2",
-                    minHeight: 0,
-                    overflowY: "auto",
-                    pr: 2.5,
-                    borderRight: "1px solid",
-                    borderColor: "divider"
-                  }}
-                >
-                  <SearchFiltersSidebar
-                    options={options}
-                    draftState={draftState}
-                    onDraftStateChange={handleSidebarDraftStateChange}
-                    status={status}
-                    onApply={handleSubmit}
-                    onReset={handleReset}
-                    autoApply
-                    showApplyButton={false}
-                  />
-                </Box>
-                <Stack spacing={2.5} sx={{ minHeight: 0, overflowY: "auto", pr: 0.5, pb: 0.5 }}>
-                  {renderSummary()}
-                  {status.loading && chartCards.length === 0 ? (
-                    <Stack spacing={2}>
-                      <Skeleton variant="rounded" height={260} />
-                      <Skeleton variant="rounded" height={260} />
-                    </Stack>
-                  ) : chartCards.length > 0 ? (
-                    <Box
-                      sx={{
-                        display: "grid",
-                        gridTemplateColumns: { xs: "1fr", lg: "repeat(2, minmax(0, 1fr))" },
-                        gap: 2.25,
-                        alignItems: "stretch"
-                      }}
-                    >
-                      {chartCards}
-                    </Box>
-                  ) : (
-                    <Typography variant="body2" color="text.secondary">{t("statistics.empty")}</Typography>
-                  )}
-                </Stack>
-              </Box>
-            )}
-          </Stack>
-        )}
-      </AppSidebarShell>
+      </Stack>
 
       <Dialog fullScreen open={isFiltersOpen} onClose={() => setIsFiltersOpen(false)}>
         <DialogContent sx={{ px: 3, py: 3 }}>

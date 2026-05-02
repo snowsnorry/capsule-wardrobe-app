@@ -11,6 +11,7 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
+  IconButton,
   LinearProgress,
   Paper,
   Snackbar,
@@ -19,6 +20,7 @@ import {
   Typography,
   useMediaQuery
 } from "@mui/material";
+import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
 import {
   fetchCurrentUser,
   fetchProfileStatus,
@@ -69,6 +71,9 @@ import {
   mergeWardrobeItemsIntoExistingOrder
 } from "../../shared/wardrobeMerge.js";
 import type { SettingsSavePayload } from "./components/SettingsDialog";
+import AppSidebarNavigation from "./components/AppSidebarNavigation";
+import AppSidebarShell from "./components/AppSidebarShell";
+import LocaleSwitcher from "./components/LocaleSwitcher";
 
 type StatusState = {
   loading: boolean;
@@ -151,6 +156,11 @@ type CapsuleMeta = {
   updatedAt?: string;
 };
 
+type CapsuleSidebarActions = {
+  openSearchDialog: () => void;
+  openCapsuleActions: (event: MouseEvent<HTMLElement>, capsule: CapsuleMeta) => void;
+};
+
 type WardrobeSnapshot = {
   status?: string;
   items?: WardrobeItem[];
@@ -213,7 +223,7 @@ type WardrobeMutationResponse = {
   status?: string;
 };
 
-type AppRoute = "capsule" | "search" | "statistics" | "share";
+type AppRoute = "capsule" | "explore" | "statistics" | "share";
 
 type AppNavigationOptions = {
   query?: string;
@@ -302,8 +312,8 @@ function getAppRoute(pathname = "/"): AppRoute {
   if (pathname.startsWith("/share/")) {
     return "share";
   }
-  if (pathname === "/search" || pathname === "/search/") {
-    return "search";
+  if (pathname === "/explore" || pathname === "/explore/") {
+    return "explore";
   }
   if (pathname === "/statistics" || pathname === "/statistics/") {
     return "statistics";
@@ -483,6 +493,7 @@ function App() {
   const capsuleEventsAbortRef = useRef<AbortController | null>(null);
   const manualWardrobeRegenerationCapsuleIdRef = useRef("");
   const pendingNotificationKindRef = useRef("");
+  const capsuleSidebarActionsRef = useRef<CapsuleSidebarActions | null>(null);
 
   const cardPadding = useMemo(() => (isLarge ? 5 : 3), [isLarge]);
   const orderedSeasonOptions = useMemo(() => sortSeasonOptions(seasonOptions), [seasonOptions]);
@@ -508,7 +519,7 @@ function App() {
     const handlePopState = () => {
       const nextRoute = getAppRoute(window.location.pathname);
       setAppRoute(nextRoute);
-      if (nextRoute !== "search") {
+      if (nextRoute !== "explore") {
         setSearchInitialQuery("");
       }
       setPendingShareId(getShareIdFromPath(window.location.pathname));
@@ -1354,16 +1365,36 @@ function App() {
     if (typeof window === "undefined") {
       return;
     }
-    const nextPath = nextApp === "search"
-      ? "/search"
+    const nextPath = nextApp === "explore"
+      ? "/explore"
       : nextApp === "statistics"
         ? "/statistics"
         : "/";
     if (window.location.pathname !== nextPath) {
       window.history.pushState({}, "", nextPath);
     }
-    setSearchInitialQuery(nextApp === "search" ? String(options.query || "") : "");
+    setSearchInitialQuery(nextApp === "explore" ? String(options.query || "") : "");
     setAppRoute(getAppRoute(nextPath));
+  };
+
+  const registerCapsuleSidebarActions = (actions: CapsuleSidebarActions | null) => {
+    capsuleSidebarActionsRef.current = actions;
+  };
+
+  const getActiveSidebarApp = (): "capsule" | "explore" | "statistics" => (
+    appRoute === "explore" || appRoute === "statistics" ? appRoute : "capsule"
+  );
+
+  const handleCreateCapsuleFromSidebar = async (onComplete?: () => void) => {
+    await handleCreateCapsule();
+    handleNavigateApp("capsule");
+    onComplete?.();
+  };
+
+  const handleOpenCapsuleFromSidebar = async (capsuleId: string, onComplete?: () => void) => {
+    handleNavigateApp("capsule");
+    await handleOpenCapsule(capsuleId);
+    onComplete?.();
   };
 
   useEffect(() => {
@@ -1400,7 +1431,7 @@ function App() {
   }, [sessionInitialized, pendingShareId, user, hasProfile, profileCreated]);
 
   const isSignInView = !user;
-  const isSearchView = Boolean(user && (hasProfile || profileCreated) && appRoute === "search");
+  const isSearchView = Boolean(user && (hasProfile || profileCreated) && appRoute === "explore");
   const isStatisticsView = Boolean(user && (hasProfile || profileCreated) && appRoute === "statistics");
   const isMainScreenView = Boolean(
     user && (hasProfile || profileCreated) && currentView === "main" && (appRoute === "capsule" || appRoute === "share")
@@ -1862,16 +1893,11 @@ function App() {
     }
 
     if (hasProfile || profileCreated) {
-      if (appRoute === "search") {
+      if (appRoute === "explore") {
         return (
           <SearchScreen
             onNavigateApp={handleNavigateApp}
             initialQuery={searchInitialQuery}
-            userEmail={user?.email || ""}
-            userName={settingsProfile.fullname}
-            settingsProfile={settingsProfile}
-            onSignOut={handleRequestSignOut}
-            onSaveSettings={handleSaveSettingsFromScreen}
           />
         );
       }
@@ -1880,11 +1906,6 @@ function App() {
         return (
           <StatisticsScreen
             onNavigateApp={handleNavigateApp}
-            userEmail={user?.email || ""}
-            userName={settingsProfile.fullname}
-            settingsProfile={settingsProfile}
-            onSignOut={handleRequestSignOut}
-            onSaveSettings={handleSaveSettingsFromScreen}
           />
         );
       }
@@ -1989,6 +2010,7 @@ function App() {
           onDeleteOutfitSetImage={handleDeleteOutfitSetImage}
           onGenerateOutfitSetImage={handleGenerateOutfitSetImage}
           isPartialRegenerationLoading={isPartialRegenerationLoading}
+          registerCapsuleSidebarActions={registerCapsuleSidebarActions}
         />
       );
     }
@@ -2126,17 +2148,101 @@ function App() {
         ) : null}
 
         {!sessionInitialized ? null : (isMainScreenView || isSearchView || isStatisticsView) ? (
-          <Box
-            sx={{
-              minHeight: 0,
-              height: "100%",
-              overflow: "hidden"
+          <AppSidebarShell
+            shellTestId={
+              isSearchView
+                ? "search-screen-shell"
+                : isStatisticsView
+                  ? "statistics-screen-shell"
+                  : "main-screen-shell"
+            }
+            currentApp={getActiveSidebarApp()}
+            userEmail={user?.email || ""}
+            userName={settingsProfile.fullname}
+            settingsProfile={settingsProfile}
+            onSaveSettings={handleSaveSettingsFromScreen}
+            onSignOut={handleRequestSignOut}
+            headerContent={({ isOverlaySidebar, openSidebar }) => (
+              <Box
+                sx={{
+                  position: "sticky",
+                  top: 0,
+                  zIndex: 3,
+                  backgroundColor: "background.paper",
+                  pb: 1.5
+                }}
+              >
+                <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
+                  <Stack direction="row" alignItems="center" spacing={1.25}>
+                    {isOverlaySidebar ? (
+                      <IconButton
+                        aria-label="Toggle sidebar"
+                        onClick={openSidebar}
+                        disabled={getActiveSidebarApp() === "capsule" && isContentBusy}
+                      >
+                        <MenuRoundedIcon />
+                      </IconButton>
+                    ) : null}
+                    {!isOverlaySidebar ? (
+                      <Typography
+                        noWrap
+                        sx={{
+                          fontFamily: '"Leckerli One", cursive',
+                          fontSize: "1.85rem",
+                          lineHeight: 1.1,
+                          color: "#8f6f45",
+                          textAlign: "left"
+                        }}
+                      >
+                        {t("appName")}
+                      </Typography>
+                    ) : null}
+                  </Stack>
+                  <Stack direction="row" spacing={1.2} alignItems="center">
+                    <LocaleSwitcher />
+                  </Stack>
+                </Stack>
+              </Box>
+            )}
+            sidebarBodyContent={({ isOverlaySidebar, isSidebarCollapsed, desktopSidebarRailWidth, expandCollapsedSidebar, closeSidebar }) => {
+              const activeSidebarApp = getActiveSidebarApp();
+              return (
+                <AppSidebarNavigation
+                  activeApp={activeSidebarApp}
+                  isOverlaySidebar={isOverlaySidebar}
+                  isSidebarCollapsed={isSidebarCollapsed}
+                  desktopSidebarRailWidth={desktopSidebarRailWidth}
+                  isInteractionDisabled={activeSidebarApp === "capsule" && isContentBusy}
+                  capsuleList={capsuleList}
+                  activeCapsuleId={activeCapsuleId}
+                  onNavigateApp={handleNavigateApp}
+                  onCreateCapsule={async () => {
+                    await handleCreateCapsuleFromSidebar(isOverlaySidebar ? closeSidebar : undefined);
+                  }}
+                  onSearchCapsules={() => capsuleSidebarActionsRef.current?.openSearchDialog()}
+                  onOpenCapsule={(capsuleId) => {
+                    void handleOpenCapsuleFromSidebar(capsuleId, isOverlaySidebar ? closeSidebar : undefined);
+                  }}
+                  onOpenCapsuleActions={(event, capsule) => {
+                    capsuleSidebarActionsRef.current?.openCapsuleActions(event, capsule as CapsuleMeta);
+                  }}
+                  capsuleHasUnsavedChanges={(capsule) => capsule?.status === "new" || capsule?.status === "modified"}
+                  onExpandedAction={isOverlaySidebar ? closeSidebar : undefined}
+                  collapsedExpandHitbox={(
+                    <Box
+                      data-testid="collapsed-sidebar-expand-hitbox"
+                      onClick={expandCollapsedSidebar}
+                      sx={{ flex: 1, minHeight: 0, cursor: "pointer" }}
+                    />
+                  )}
+                />
+              );
             }}
           >
             <Suspense fallback={<RoutePanelFallback />}>
               {renderRightPanel()}
             </Suspense>
-          </Box>
+          </AppSidebarShell>
         ) : (
           <Paper
             elevation={0}

@@ -16,17 +16,13 @@ import {
 } from "@mui/material";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import ClearRoundedIcon from "@mui/icons-material/ClearRounded";
-import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import TuneRoundedIcon from "@mui/icons-material/TuneRounded";
 import OpenInNewRoundedIcon from "@mui/icons-material/OpenInNewRounded";
 import { fetchSavedSearch, fetchSearchOptions, runSearch } from "../api/search";
 import { useI18n } from "../i18n/useI18n";
 import { translateOption } from "../i18n";
-import AppLauncher from "../components/AppLauncher";
-import LocaleSwitcher from "../components/LocaleSwitcher";
 import ProductLabelText from "../components/ProductLabelText";
-import AppSidebarShell from "../components/AppSidebarShell";
 import { formatProductLabel } from "../utils/productLabel";
 import { buildProductDetailGroups } from "../../../shared/productDetail.js";
 import { getSafeHttpUrl } from "../../../shared/urlSecurity.js";
@@ -39,7 +35,7 @@ import {
   serializeDraftState
 } from "../search/searchState";
 import type { SearchDraftState, SearchOptions } from "../search/searchState";
-import type { SettingsProfile, SettingsSavePayload } from "../components/SettingsDialog";
+import useMediaQuery from "@mui/material/useMediaQuery";
 
 type SearchResultItem = {
   id: string | number;
@@ -64,13 +60,8 @@ type SearchResponse = {
 };
 
 type SearchScreenProps = {
-  onNavigateApp: (nextApp: "capsule" | "search" | "statistics") => void;
+  onNavigateApp: (nextApp: "capsule" | "explore" | "statistics") => void;
   initialQuery?: string;
-  userEmail?: string;
-  userName?: string;
-  settingsProfile?: SettingsProfile | null;
-  onSignOut?: () => void;
-  onSaveSettings?: (settings: SettingsSavePayload) => Promise<void> | void;
 };
 
 function ProductDetail({
@@ -236,14 +227,10 @@ function ProductDetail({
 
 function SearchScreen({
   onNavigateApp,
-  initialQuery = "",
-  userEmail = "",
-  userName = "",
-  settingsProfile = null,
-  onSignOut = () => {},
-  onSaveSettings = async () => {}
+  initialQuery = ""
 }: SearchScreenProps): ReactElement {
   const { t, locale } = useI18n();
+  const isMobile = useMediaQuery("(max-width: 1279.95px)");
   const [options, setOptions] = useState<SearchOptions>(EMPTY_SEARCH_OPTIONS);
   const [draftState, setDraftState] = useState<SearchDraftState>(createSearchState(null, EMPTY_SEARCH_OPTIONS.priceRange));
   const [results, setResults] = useState<SearchResultItem[]>([]);
@@ -486,118 +473,60 @@ function SearchScreen({
 
   return (
     <>
-      <AppSidebarShell
-        shellTestId="search-screen-shell"
-        currentApp="search"
-        userEmail={userEmail}
-        userName={userName}
-        settingsProfile={settingsProfile}
-        onSaveSettings={onSaveSettings}
-        onSignOut={onSignOut}
-        headerContent={({ isOverlaySidebar, openSidebar }) => (
+      <Stack spacing={2.4} sx={{ height: "100%", minHeight: 0, overflow: "hidden" }}>
+        {isMobile ? (
+          <Stack spacing={2} sx={{ minHeight: 0, overflow: "hidden" }}>
+            {renderSearchBar(true)}
+            <Divider />
+            <Box sx={{ flex: 1, minHeight: 0, overflow: "hidden" }}>{renderResultsList(true)}</Box>
+          </Stack>
+        ) : (
           <Box
             sx={{
-              position: "sticky",
-              top: 0,
-              zIndex: 3,
-              backgroundColor: "background.paper",
-              pb: 1.5
+              display: "grid",
+              gridTemplateColumns: "320px minmax(280px, 420px) minmax(0, 1fr)",
+              gridTemplateRows: "auto minmax(0, 1fr)",
+              gap: 3,
+              flex: 1,
+              minHeight: 0,
+              overflow: "hidden"
             }}
           >
-            <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
-              <Stack direction="row" alignItems="center" spacing={1.25}>
-                {isOverlaySidebar ? (
-                  <IconButton aria-label="Toggle sidebar" onClick={openSidebar}>
-                    <MenuRoundedIcon />
-                  </IconButton>
-                ) : null}
-                {!isOverlaySidebar ? (
-                  <Typography
-                    sx={{
-                      fontFamily: '"Leckerli One", cursive',
-                      fontSize: "1.85rem",
-                      lineHeight: 1.1,
-                      color: "#8f6f45"
-                    }}
-                  >
-                    {t("appName")}
-                  </Typography>
-                ) : null}
-              </Stack>
-              <Stack direction="row" spacing={1.2} alignItems="center">
-                <AppLauncher currentApp="search" onSelectApp={onNavigateApp} />
-                <LocaleSwitcher />
-              </Stack>
-            </Stack>
+            <Box
+              sx={{
+                gridRow: "1 / span 2",
+                minHeight: 0,
+                overflowY: "auto",
+                pr: 2.5,
+                borderRight: "1px solid",
+                borderColor: "divider"
+              }}
+            >
+              <SearchFiltersSidebar
+                options={options}
+                draftState={draftState}
+                onDraftStateChange={handleSidebarDraftStateChange}
+                status={status}
+                onApply={handleSearchSubmit}
+                onReset={handleReset}
+                autoApply
+                showApplyButton={false}
+              />
+            </Box>
+            <Box sx={{ gridColumn: "2 / 4" }}>{renderSearchBar(false)}</Box>
+            <Box sx={{ minHeight: 0, overflow: "hidden" }}>{renderResultsList(false)}</Box>
+            <Box
+              sx={{
+                minHeight: 0,
+                overflowY: "auto",
+                pl: 0.5
+              }}
+            >
+              <ProductDetail item={selectedItem} title={t("search.productCard")} t={t} locale={locale} />
+            </Box>
           </Box>
         )}
-        sidebarBodyContent={({ isOverlaySidebar, isSidebarCollapsed, expandCollapsedSidebar }) => (
-          isSidebarCollapsed && !isOverlaySidebar ? (
-            <Box
-              data-testid="collapsed-sidebar-expand-hitbox"
-              onClick={expandCollapsedSidebar}
-              sx={{ flex: 1, height: "100%", cursor: "pointer" }}
-            />
-          ) : null
-        )}
-      >
-        {({ isOverlaySidebar }) => (
-          <Stack spacing={2.4} sx={{ height: "100%", minHeight: 0, overflow: "hidden" }}>
-            {isOverlaySidebar ? (
-              <Stack spacing={2} sx={{ minHeight: 0, overflow: "hidden" }}>
-                {renderSearchBar(true)}
-                <Divider />
-                <Box sx={{ flex: 1, minHeight: 0, overflow: "hidden" }}>{renderResultsList(true)}</Box>
-              </Stack>
-            ) : (
-              <Box
-                sx={{
-                  display: "grid",
-                  gridTemplateColumns: "320px minmax(280px, 420px) minmax(0, 1fr)",
-                  gridTemplateRows: "auto minmax(0, 1fr)",
-                  gap: 3,
-                  flex: 1,
-                  minHeight: 0,
-                  overflow: "hidden"
-                }}
-              >
-                <Box
-                  sx={{
-                    gridRow: "1 / span 2",
-                    minHeight: 0,
-                    overflowY: "auto",
-                    pr: 2.5,
-                    borderRight: "1px solid",
-                    borderColor: "divider"
-                  }}
-                >
-                  <SearchFiltersSidebar
-                    options={options}
-                    draftState={draftState}
-                    onDraftStateChange={handleSidebarDraftStateChange}
-                    status={status}
-                    onApply={handleSearchSubmit}
-                    onReset={handleReset}
-                    autoApply
-                    showApplyButton={false}
-                  />
-                </Box>
-                <Box sx={{ gridColumn: "2 / 4" }}>{renderSearchBar(false)}</Box>
-                <Box sx={{ minHeight: 0, overflow: "hidden" }}>{renderResultsList(false)}</Box>
-                <Box
-                  sx={{
-                    minHeight: 0,
-                    overflowY: "auto",
-                    pl: 0.5
-                  }}
-                >
-                  <ProductDetail item={selectedItem} title={t("search.productCard")} t={t} locale={locale} />
-                </Box>
-              </Box>
-            )}
-          </Stack>
-        )}
-      </AppSidebarShell>
+      </Stack>
 
       <Dialog fullScreen open={isFiltersOpen} onClose={() => setIsFiltersOpen(false)}>
         <DialogContent sx={{ px: 3, py: 3 }}>

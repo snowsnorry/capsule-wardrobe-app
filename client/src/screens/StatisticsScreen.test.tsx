@@ -165,7 +165,6 @@ describe("StatisticsScreen", () => {
       fit: [],
       closureType: []
     });
-    expect(screen.getByTestId("statistics-screen-shell")).toHaveAttribute("data-sidebar-mode", "desktop-medium");
   });
 
   test("clicking a donut segment toggles the matching filter and refreshes stats", async () => {

@@ -14,11 +14,11 @@ const ru = {
   },
   launcher: {
     open: "Выбрать приложение",
-    capsule: "Capsule",
+    capsule: "Капсула",
     capsuleHint: "Конструктор капсульного гардероба",
-    search: "Search",
-    searchHint: "Поиск товаров",
-    statistics: "Statistics",
+    explore: "Поиск",
+    exploreHint: "Поиск товаров",
+    statistics: "Статистика",
     statisticsHint: "Аналитика поиска"
   },
   options: {

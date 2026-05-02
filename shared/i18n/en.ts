@@ -16,8 +16,8 @@ const en = {
     open: "Choose app",
     capsule: "Capsule",
     capsuleHint: "Capsule wardrobe builder",
-    search: "Search",
-    searchHint: "Product search",
+    explore: "Explore",
+    exploreHint: "Explore product search",
     statistics: "Statistics",
     statisticsHint: "Search analytics"
   },

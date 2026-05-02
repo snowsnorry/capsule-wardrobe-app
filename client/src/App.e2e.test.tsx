@@ -146,8 +146,8 @@ vi.mock("./screens/MainScreen", () => ({
     return (
       <div data-testid="main-screen">
         <div>items:{props.items.length}</div>
-        <button type="button" onClick={() => props.onNavigateApp("search")}>
-          open-search
+        <button type="button" onClick={() => props.onNavigateApp("explore")}>
+          open-explore
         </button>
         <button type="button" onClick={props.onSignOut}>
           sign-out
@@ -345,7 +345,7 @@ describe("App e2e-style flows", () => {
     });
     expect(capsulesApi.createCapsule.mock.calls[0][0]).not.toHaveProperty("draft");
 
-    fireEvent.click(screen.getByRole("button", { name: "open-search" }));
+    fireEvent.click(screen.getByRole("button", { name: "open-explore" }));
     expect(await screen.findByTestId("search-screen")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "back-to-capsule" }));

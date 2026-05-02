@@ -185,8 +185,8 @@ vi.mock("./screens/MainScreen", () => ({
         <button type="button" onClick={() => props.onDownloadPdf()}>
           download-pdf
         </button>
-        <button type="button" onClick={() => props.onNavigateApp("search")}>
-          open-search
+        <button type="button" onClick={() => props.onNavigateApp("explore")}>
+          open-explore
         </button>
         <button type="button" onClick={() => props.onNavigateApp("statistics")}>
           open-statistics
@@ -601,7 +601,7 @@ describe("App", () => {
   });
 
   test("bootstraps an existing profile without redundant locale or wardrobe sync and switches between routes", async () => {
-    window.history.replaceState({}, "", "/search");
+    window.history.replaceState({}, "", "/explore");
     authApi.fetchCurrentUser.mockResolvedValue({ user: { email: "person@example.com" } });
     authApi.fetchProfileStatus.mockResolvedValue({ hasProfile: true });
     capsulesApi.fetchCapsuleBootstrap.mockResolvedValue(createBootstrapResponse({
@@ -637,7 +637,7 @@ describe("App", () => {
     expect(await screen.findByTestId("main-screen")).toBeInTheDocument();
     expect(wardrobeApi.subscribeCapsuleEvents).not.toHaveBeenCalled();
 
-    fireEvent.click(screen.getByRole("button", { name: "open-search" }));
+    fireEvent.click(screen.getByRole("button", { name: "open-explore" }));
     expect(await screen.findByTestId("search-screen")).toBeInTheDocument();
   });
 

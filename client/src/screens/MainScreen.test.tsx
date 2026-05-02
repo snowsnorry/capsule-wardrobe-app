@@ -1,6 +1,6 @@
 import React from "react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 
@@ -70,6 +70,11 @@ const theme = createTheme();
 function t(key, params) {
   const labels = {
     appName: "Capsule Wardrobe",
+    launcher: {
+      capsule: "Capsule",
+      explore: "Explore",
+      statistics: "Statistics"
+    },
     locale: {
       options: {
         en: "English",
@@ -317,33 +322,137 @@ describe("MainScreen", () => {
     expect(screen.getByRole("button", { name: "Regenerate all" })).toBeDisabled();
   });
 
-  test("exposes overlay, medium desktop, and large desktop sidebar modes", async () => {
-    const user = userEvent.setup();
+  test("renders as inner capsule content without owning the app shell", () => {
+    renderScreen({}, { layoutMode: "medium" });
 
-    renderScreen({}, { mobile: true });
-    expect(screen.getByTestId("main-screen-shell")).toHaveAttribute("data-sidebar-mode", "overlay");
-    expect(screen.getByTestId("main-screen-shell")).toHaveAttribute("data-content-alignment", "overlay");
-    await user.click(screen.getByRole("button", { name: "Toggle sidebar" }));
-    expect(await screen.findByText("New capsule")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Collapse sidebar" })).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Collapse sidebar" }));
-    await waitFor(() => {
-      expect(screen.queryByText("New capsule")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("main-screen-shell")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Regenerate all" })).toBeInTheDocument();
+    expect(screen.getByTestId("profile-filters-sidebar")).toBeInTheDocument();
+  });
+
+  test("registers capsule sidebar actions with the persistent app shell", async () => {
+    const user = userEvent.setup();
+    const registerCapsuleSidebarActions = vi.fn();
+
+    renderScreen({ registerCapsuleSidebarActions }, { layoutMode: "medium" });
+
+    const actions = registerCapsuleSidebarActions.mock.calls.at(-1)?.[0];
+    expect(actions).toEqual({
+      openSearchDialog: expect.any(Function),
+      openCapsuleActions: expect.any(Function)
     });
 
-    cleanup();
-    renderScreen({}, { layoutMode: "medium" });
-    expect(screen.getByTestId("main-screen-shell")).toHaveAttribute("data-sidebar-mode", "desktop-medium");
-    expect(screen.getByTestId("main-screen-shell")).toHaveAttribute("data-content-alignment", "centered");
-    expect(screen.getAllByRole("button", { name: "Toggle sidebar" })).toHaveLength(1);
-    expect(screen.getByRole("button", { name: "Collapse sidebar" })).toBeInTheDocument();
+    act(() => {
+      actions.openSearchDialog();
+    });
+    expect(await screen.findByPlaceholderText("Search capsules...")).toBeInTheDocument();
 
-    cleanup();
-    renderScreen({}, { layoutMode: "large" });
-    expect(screen.getByTestId("main-screen-shell")).toHaveAttribute("data-sidebar-mode", "desktop-large");
-    expect(screen.getByTestId("main-screen-shell")).toHaveAttribute("data-content-alignment", "centered");
-    expect(screen.getAllByRole("button", { name: "Toggle sidebar" })).toHaveLength(1);
-    expect(screen.getByRole("button", { name: "Collapse sidebar" })).toBeInTheDocument();
+    const anchor = document.createElement("button");
+    document.body.appendChild(anchor);
+    act(() => {
+      actions.openCapsuleActions({ currentTarget: anchor } as unknown as React.MouseEvent<HTMLElement>, {
+        id: "capsule-1",
+        name: "Spring edit",
+        status: "saved"
+      });
+    });
+    expect(await screen.findByRole("menuitem", { name: "Rename" })).toBeInTheDocument();
+    await user.click(screen.getByRole("menuitem", { name: "Rename" }));
+    expect(await screen.findByRole("dialog", { name: "Rename capsule" })).toBeInTheDocument();
+  });
+
+  test("shows share in the registered sidebar menu for the active generated capsule", async () => {
+    const user = userEvent.setup();
+    const onShareCapsule = vi.fn(() => Promise.resolve({
+      url: "https://client.example/share/share-1",
+      expiresAt: new Date(60_000).toISOString()
+    }));
+    const registerCapsuleSidebarActions = vi.fn();
+
+    renderScreen({
+      activeCapsule: {
+        id: "capsule-1",
+        name: "Spring edit",
+        draft: {
+          filters: {},
+          data: {
+            wardrobe: { items: [{ url: "https://example.com/1" }] },
+            rejectedUrls: []
+          }
+        },
+        saved: null,
+        status: "new"
+      },
+      capsuleList: [{ id: "capsule-1", name: "Spring edit", status: "new" }],
+      onShareCapsule,
+      registerCapsuleSidebarActions
+    });
+
+    const actions = registerCapsuleSidebarActions.mock.calls.at(-1)?.[0];
+    const anchor = document.createElement("button");
+    document.body.appendChild(anchor);
+    act(() => {
+      actions.openCapsuleActions({ currentTarget: anchor } as unknown as React.MouseEvent<HTMLElement>, {
+        id: "capsule-1",
+        name: "Spring edit",
+        status: "new"
+      });
+    });
+    expect(await screen.findByRole("menuitem", { name: "Share" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("menuitem", { name: "Share" }));
+
+    expect(onShareCapsule).toHaveBeenCalledWith("capsule-1");
+    expect(await screen.findByRole("dialog", { name: "Share capsule" })).toBeInTheDocument();
+  });
+
+  test("shows share in the registered sidebar menu for an inactive capsule summary", async () => {
+    const user = userEvent.setup();
+    const onShareCapsule = vi.fn(() => Promise.resolve({
+      url: "https://client.example/share/share-2",
+      expiresAt: new Date(60_000).toISOString()
+    }));
+    const registerCapsuleSidebarActions = vi.fn();
+
+    renderScreen({
+      activeCapsule: {
+        id: "capsule-1",
+        name: "Spring edit",
+        draft: {
+          filters: {},
+          data: {
+            wardrobe: { items: [{ url: "https://example.com/1" }] },
+            rejectedUrls: []
+          }
+        },
+        saved: null,
+        status: "new"
+      },
+      capsuleList: [
+        { id: "capsule-1", name: "Spring edit", status: "new" },
+        { id: "capsule-2", name: "Summer edit", status: "saved" }
+      ],
+      onShareCapsule,
+      registerCapsuleSidebarActions
+    });
+
+    const actions = registerCapsuleSidebarActions.mock.calls.at(-1)?.[0];
+    const anchor = document.createElement("button");
+    document.body.appendChild(anchor);
+    act(() => {
+      actions.openCapsuleActions({ currentTarget: anchor } as unknown as React.MouseEvent<HTMLElement>, {
+        id: "capsule-2",
+        name: "Summer edit",
+        status: "saved"
+      });
+    });
+    expect(await screen.findByRole("menuitem", { name: "Share" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("menuitem", { name: "Share" }));
+
+    expect(onShareCapsule).toHaveBeenCalledWith("capsule-2");
+    expect(await screen.findByRole("dialog", { name: "Share capsule" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Summer edit" })).toHaveAttribute("href", "https://client.example/share/share-2");
   });
 
   test("renders grid items, pending placeholders, and regeneration actions when selection exists", async () => {
@@ -406,7 +515,7 @@ describe("MainScreen", () => {
 
     await user.click(screen.getByTestId("product-menu-https://example.com/a"));
     await user.click(screen.getByRole("menuitem", { name: "Show Product Info" }));
-    expect(onNavigateApp).toHaveBeenCalledWith("search", { query: "https://example.com/a" });
+    expect(onNavigateApp).toHaveBeenCalledWith("explore", { query: "https://example.com/a" });
   });
 
   test("renders outfit tabs and filters cards by wardrobe category order", async () => {
@@ -831,13 +940,10 @@ describe("MainScreen", () => {
       items: [{ id: "a", url: "https://example.com/a", name: "Shirt", category: "top" }]
     });
 
-    expect(screen.getByRole("button", { name: "New capsule" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Search capsules" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Rename capsule Spring edit" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Edit capsule name" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Regenerate all" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Open capsule menu" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Capsule actions Spring edit" })).toBeDisabled();
     expect(screen.getByTestId("clothing-card-https://example.com/a")).toBeDisabled();
 
     expect(onOpenCapsule).not.toHaveBeenCalled();
@@ -1138,113 +1244,18 @@ describe("MainScreen", () => {
     expect(screen.queryByRole("menuitem", { name: "Save as..." })).not.toBeInTheDocument();
   });
 
-  test("opens user menu and signs out", async () => {
-    const user = userEvent.setup();
-    const onSignOut = vi.fn();
-
-    renderScreen({ onSignOut });
-
-    await user.click(screen.getByRole("button", { name: "Open user menu" }));
-    await user.click(screen.getByRole("menuitem", { name: /Sign out|actions\.signOut/i }));
-    expect(onSignOut).toHaveBeenCalledTimes(1);
-  });
-
-  test("opens settings dialog and saves updated profile preferences", async () => {
-    const user = userEvent.setup();
-    const onSaveSettings = vi.fn(() => Promise.resolve());
-
-    renderScreen({
-      userName: "Ada Lovelace",
-      settingsProfile: {
-        fullname: "Ada Lovelace",
-        email: "person@example.com",
-        locale: "en",
-        theme: "system",
-        llm: "openai:gpt-5.5",
-        imageLlm: "openai:gpt-image-2"
-      },
-      onSaveSettings
-    });
-
-    await user.click(screen.getByRole("button", { name: "Open user menu" }));
-    await user.click(screen.getByRole("menuitem", { name: "Settings" }));
-
-    const dialog = screen.getByRole("dialog");
-    expect(within(dialog).getByRole("heading", { name: "Settings" })).toBeInTheDocument();
-
-    await user.click(within(dialog).getByRole("combobox", { name: "Theme" }));
-    await user.click(screen.getByRole("option", { name: "Dark" }));
-
-    await user.click(within(dialog).getByRole("button", { name: "AI" }));
-    await user.click(within(dialog).getByRole("combobox", { name: "Stylist Model" }));
-    await user.click(screen.getByRole("option", { name: "settings.llmOptions.openai:gpt-5.5" }));
-
-    await user.click(within(dialog).getByRole("button", { name: "Account" }));
-    const nameInput = within(dialog).getByRole("textbox", { name: "Name" });
-    await user.clear(nameInput);
-    await user.type(nameInput, "Ada Byron");
-
-    await user.click(within(dialog).getByRole("button", { name: "Save" }));
-
-    await waitFor(() => {
-      expect(onSaveSettings).toHaveBeenCalledWith({
-        fullname: "Ada Byron",
-        locale: "en",
-        theme: "dark",
-        llm: "openai:gpt-5.5",
-        image_llm: "openai:gpt-image-2"
-      });
-    });
-  });
-
-  test("expands a collapsed desktop sidebar when clicking its empty area", async () => {
-    const user = userEvent.setup();
-
+  test("does not render shell-owned user menu, settings, or collapsed sidebar controls directly", () => {
     renderScreen({}, { layoutMode: "medium" });
 
-    await user.click(screen.getByRole("button", { name: "Collapse sidebar" }));
-    expect(screen.queryByText("Your capsules")).not.toBeInTheDocument();
-
-    await user.click(screen.getByTestId("collapsed-sidebar-expand-hitbox"));
-    expect(screen.getByText("Your capsules")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Collapse sidebar" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Open user menu" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Collapse sidebar" })).not.toBeInTheDocument();
+    expect(screen.queryByTestId("collapsed-sidebar-expand-hitbox")).not.toBeInTheDocument();
   });
 
-  test("optimistically highlights a clicked capsule before open request resolves", async () => {
-    const user = userEvent.setup();
-    let resolveOpen;
-    const onOpenCapsule = vi.fn(() => new Promise((resolve) => {
-      resolveOpen = resolve;
-    }));
-
-    renderScreen({
-      activeCapsule: { id: "capsule-1", name: "Spring edit", draft: null, saved: null, status: "saved" },
-      capsuleList: [
-        { id: "capsule-1", name: "Spring edit", status: "saved" },
-        { id: "capsule-2", name: "Summer edit", status: "saved" }
-      ],
-      onOpenCapsule
-    });
-
-    const capsuleList = screen.getByRole("list");
-    const springRow = within(capsuleList).getByText("Spring edit").closest(".MuiListItemButton-root");
-    const summerRow = within(capsuleList).getByText("Summer edit").closest(".MuiListItemButton-root");
-
-    expect(springRow).toHaveClass("Mui-selected");
-    expect(summerRow).not.toHaveClass("Mui-selected");
-
-    await user.click(within(capsuleList).getByText("Summer edit"));
-
-    expect(onOpenCapsule).toHaveBeenCalledWith("capsule-2");
-    expect(summerRow).toHaveClass("Mui-selected");
-    expect(springRow).not.toHaveClass("Mui-selected");
-
-    resolveOpen();
-  });
-
-  test("deletes a sidebar capsule row by its explicit capsule id", async () => {
+  test("deletes a registered sidebar capsule row by its explicit capsule id", async () => {
     const user = userEvent.setup();
     const onDeleteCapsule = vi.fn(() => Promise.resolve());
+    const registerCapsuleSidebarActions = vi.fn();
 
     renderScreen({
       activeCapsule: { id: "capsule-1", name: "Spring edit", draft: null, saved: null, status: "saved" },
@@ -1252,10 +1263,20 @@ describe("MainScreen", () => {
         { id: "capsule-1", name: "Spring edit", status: "saved" },
         { id: "capsule-2", name: "Summer edit", status: "new" }
       ],
-      onDeleteCapsule
+      onDeleteCapsule,
+      registerCapsuleSidebarActions
     });
 
-    await user.click(screen.getByLabelText("Capsule actions Summer edit"));
+    const actions = registerCapsuleSidebarActions.mock.calls.at(-1)?.[0];
+    const anchor = document.createElement("button");
+    document.body.appendChild(anchor);
+    act(() => {
+      actions.openCapsuleActions({ currentTarget: anchor } as unknown as React.MouseEvent<HTMLElement>, {
+        id: "capsule-2",
+        name: "Summer edit",
+        status: "new"
+      });
+    });
     await user.click(screen.getByRole("menuitem", { name: "Delete" }));
     await user.click(screen.getAllByRole("button", { name: "Delete" }).at(-1));
 

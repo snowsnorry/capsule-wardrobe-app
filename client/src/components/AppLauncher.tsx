@@ -5,7 +5,7 @@ import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
 import { useTheme } from "@mui/material/styles";
 import { useI18n } from "../i18n/useI18n";
 
-type AppId = "capsule" | "search" | "statistics";
+type AppId = "capsule" | "explore" | "statistics";
 
 type AppLauncherProps = {
   currentApp?: AppId;
@@ -20,7 +20,7 @@ function AppLauncher({ currentApp = "capsule", onSelectApp }: AppLauncherProps) 
   const isDarkMode = theme.palette.mode === "dark";
   const items: Array<{ id: AppId; label: string; subtitle: string }> = [
     { id: "capsule", label: t("launcher.capsule"), subtitle: t("launcher.capsuleHint") },
-    { id: "search", label: t("launcher.search"), subtitle: t("launcher.searchHint") },
+    { id: "explore", label: t("launcher.explore"), subtitle: t("launcher.exploreHint") },
     { id: "statistics", label: t("launcher.statistics"), subtitle: t("launcher.statisticsHint") }
   ];
 

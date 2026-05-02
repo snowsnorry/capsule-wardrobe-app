@@ -22,8 +22,19 @@ function LocaleSwitcher() {
 
   return (
     <>
-      <IconButton aria-label={t("locale.label")} onClick={handleOpen} size="large">
-        <Box component="span" sx={{ fontSize: "1.3rem" }}>
+      <IconButton
+        aria-label={t("locale.label")}
+        onClick={handleOpen}
+        size="large"
+        sx={{
+          width: 48,
+          height: 48,
+          p: 0,
+          borderRadius: "50%",
+          flexShrink: 0
+        }}
+      >
+        <Box component="span" sx={{ fontSize: "1.3rem", lineHeight: 1 }}>
           {t(`locale.flags.${locale}`)}
         </Box>
       </IconButton>

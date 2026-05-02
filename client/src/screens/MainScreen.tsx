@@ -13,7 +13,6 @@ import {
   IconButton,
   Link,
   LinearProgress,
-  List,
   ListItemButton,
   ListItemIcon,
   ListItemText,
@@ -26,14 +25,11 @@ import {
   Tooltip,
   Typography
 } from "@mui/material";
-import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
 import MoreVertRoundedIcon from "@mui/icons-material/MoreVertRounded";
 import ShareRoundedIcon from "@mui/icons-material/ShareRounded";
 import ContentCopyRoundedIcon from "@mui/icons-material/ContentCopyRounded";
 import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
 import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
-import AddRoundedIcon from "@mui/icons-material/AddRounded";
-import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import TuneRoundedIcon from "@mui/icons-material/TuneRounded";
 import DriveFileRenameOutlineRoundedIcon from "@mui/icons-material/DriveFileRenameOutlineRounded";
 import RestoreRoundedIcon from "@mui/icons-material/RestoreRounded";
@@ -46,11 +42,7 @@ import { useI18n } from "../i18n/useI18n";
 import ClothingGridPlaceholder from "../components/ClothingGridPlaceholder";
 import { ClothingPlaceholderCard } from "../components/ClothingGridPlaceholder";
 import ClothingCard from "../components/ClothingCard";
-import LocaleSwitcher from "../components/LocaleSwitcher";
-import AppLauncher from "../components/AppLauncher";
-import AppSidebarShell from "../components/AppSidebarShell";
 import { sortWardrobeItems } from "../../../shared/wardrobeOrder.js";
-import type { SettingsProfile, SettingsSavePayload } from "../components/SettingsDialog";
 import type { DialogProps } from "@mui/material/Dialog";
 
 type CapsuleMenuAnchor = HTMLElement | null;
@@ -105,9 +97,9 @@ type MainScreenProps = {
   capsuleList?: CapsuleLike[];
   userEmail?: string;
   userName?: string;
-  settingsProfile?: SettingsProfile | null;
+  settingsProfile?: unknown;
   onSignOut?: () => void;
-  onSaveSettings?: (settings: SettingsSavePayload) => Promise<void> | void;
+  onSaveSettings?: (settings: unknown) => Promise<void> | void;
   isSigningOut: boolean;
   onRefreshItems: () => Promise<void> | void;
   onDownloadPdf: (capsuleId?: string) => Promise<void> | void;
@@ -152,7 +144,7 @@ type MainScreenProps = {
   onTextChange: (value: string) => void;
   onApplyFilters: () => Promise<void> | void;
   onResetFilters: () => Promise<void> | void;
-  onNavigateApp: (nextApp: "capsule" | "search" | "statistics", options?: AppNavigationOptions) => void;
+  onNavigateApp: (nextApp: "capsule" | "explore" | "statistics", options?: AppNavigationOptions) => void;
   selectedRegenerationUrls: string[];
   partialRegenerationPendingUrls: string[];
   pendingImageSetIndexes?: number[];
@@ -162,6 +154,10 @@ type MainScreenProps = {
   onDeleteOutfitSetImage?: (setIndex: number) => Promise<void> | void;
   onGenerateOutfitSetImage?: (setIndex: number) => Promise<void> | void;
   isPartialRegenerationLoading: boolean;
+  registerCapsuleSidebarActions?: (actions: {
+    openSearchDialog: () => void;
+    openCapsuleActions: (event: MouseEvent<HTMLElement>, capsule: CapsuleLike) => void;
+  } | null) => void;
 };
 
 function highlightMatch(name: string | undefined, query: string | undefined): ReactNode {
@@ -219,6 +215,18 @@ function capsuleHasShareableContent(capsule: CapsuleLike | null | undefined) {
   const items = snapshot?.data?.wardrobe?.items;
   const regeneration = snapshot?.data?.regeneration;
   return Array.isArray(items) && items.length > 0 && !regeneration;
+}
+
+function capsuleCanRequestShare(capsule: CapsuleLike | null | undefined, { allowUnknownContent = false } = {}) {
+  if (!capsule?.id) {
+    return false;
+  }
+
+  if (capsule.draft || capsule.saved) {
+    return capsuleHasShareableContent(capsule);
+  }
+
+  return allowUnknownContent;
 }
 
 function normalizeCapsuleName(name: string | undefined) {
@@ -285,13 +293,14 @@ function CapsuleActionMenu({
   onSave,
   onDuplicate,
   onShare,
+  allowUnknownShareContent = false,
   onDelete
 }) {
   const { t } = useI18n();
   const canRevert = capsule?.status === "modified";
   const canSave = capsule?.status === "new" || capsule?.status === "modified";
   const canDuplicate = Boolean(capsule?.saved);
-  const canShare = capsuleHasShareableContent(capsule);
+  const canShare = capsuleCanRequestShare(capsule, { allowUnknownContent: allowUnknownShareContent });
   const handleAction = (event: MouseEvent<HTMLElement>, action: () => void) => {
     event.currentTarget.blur();
     onClose();
@@ -351,11 +360,6 @@ function CapsuleActionMenu({
 function MainScreen({
   activeCapsule = null,
   capsuleList = [],
-  userEmail = "",
-  userName = "",
-  settingsProfile = null,
-  onSignOut = () => {},
-  onSaveSettings = async () => {},
   isSigningOut,
   onRefreshItems,
   onDownloadPdf,
@@ -409,7 +413,8 @@ function MainScreen({
   onRegenerateSelectedItems,
   onDeleteOutfitSetImage = async () => {},
   onGenerateOutfitSetImage = () => {},
-  isPartialRegenerationLoading
+  isPartialRegenerationLoading,
+  registerCapsuleSidebarActions
 }: MainScreenProps) {
   const { t } = useI18n();
   const isOverlaySidebar = useMediaQuery("(max-width: 1279.95px)");
@@ -566,6 +571,19 @@ function MainScreen({
     setSearchOpen(true);
   };
 
+  useEffect(() => {
+    registerCapsuleSidebarActions?.({
+      openSearchDialog: () => handleOpenSearchDialog(),
+      openCapsuleActions: (event, capsule) => {
+        const capsuleId = String(capsule?.id || "");
+        const activeId = String(activeCapsule?.id || "");
+        setRowMenuAnchor(event.currentTarget);
+        setRowMenuCapsule(capsuleId && capsuleId === activeId ? { ...capsule, ...activeCapsule } : capsule);
+      }
+    });
+    return () => registerCapsuleSidebarActions?.(null);
+  }, [registerCapsuleSidebarActions, isInteractionDisabled, activeCapsule]);
+
   const handleRequestDuplicate = async (capsule = activeCapsule) => {
     if (!capsule?.id || isInteractionDisabled) {
       return;
@@ -575,8 +593,8 @@ function MainScreen({
     setSaveAsOpen(true);
   };
 
-  const handleShareCapsule = async (capsule = activeCapsule) => {
-    if (!capsule?.id || isInteractionDisabled || !capsuleHasShareableContent(capsule)) {
+  const handleShareCapsule = async (capsule = activeCapsule, { allowUnknownContent = false } = {}) => {
+    if (!capsule?.id || isInteractionDisabled || !capsuleCanRequestShare(capsule, { allowUnknownContent })) {
       return;
     }
     setIsSharingCapsule(true);
@@ -632,7 +650,7 @@ function MainScreen({
     if (!productUrl) {
       return;
     }
-    onNavigateApp("search", { query: productUrl });
+    onNavigateApp("explore", { query: productUrl });
   };
 
   const handleRequestRegenerateAll = async () => {
@@ -698,195 +716,7 @@ function MainScreen({
 
   return (
     <>
-      <AppSidebarShell
-        shellTestId="main-screen-shell"
-        currentApp="capsule"
-        userEmail={userEmail}
-        userName={userName}
-        settingsProfile={settingsProfile}
-        onSaveSettings={onSaveSettings}
-        onSignOut={onSignOut}
-        headerContent={({ isOverlaySidebar, openSidebar }) => (
-          <Box sx={{ position: "sticky", top: 0, zIndex: 2, backgroundColor: "background.paper", pb: 1.5 }}>
-            <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
-              <Stack direction="row" alignItems="center" spacing={1.25}>
-                {isOverlaySidebar ? (
-                  <IconButton aria-label="Toggle sidebar" onClick={openSidebar} disabled={isInteractionDisabled}>
-                    <MenuRoundedIcon />
-                  </IconButton>
-                ) : null}
-                {!isOverlaySidebar ? (
-                  <Typography
-                    noWrap
-                    sx={{
-                      fontFamily: '"Leckerli One", cursive',
-                      fontSize: "1.85rem",
-                      lineHeight: 1.1,
-                      color: "#8f6f45",
-                      textAlign: "left"
-                    }}
-                  >
-                    {t("appName")}
-                  </Typography>
-                ) : null}
-              </Stack>
-              <Stack direction="row" spacing={1.2} alignItems="center">
-                <AppLauncher currentApp="capsule" onSelectApp={onNavigateApp} />
-                <LocaleSwitcher />
-              </Stack>
-            </Stack>
-          </Box>
-        )}
-        sidebarBodyContent={({ isOverlaySidebar, isSidebarCollapsed, desktopSidebarRailWidth, expandCollapsedSidebar, closeSidebar }) => (
-          <>
-            <Stack spacing={0.5} sx={{ px: 0, alignItems: "stretch" }}>
-              <Button
-                variant="text"
-                disabled={isInteractionDisabled}
-                onClick={async () => {
-                  await onCreateCapsule();
-                  if (isOverlaySidebar) {
-                    closeSidebar();
-                  }
-                }}
-                sx={{
-                  justifyContent: "flex-start",
-                  px: 0,
-                  minHeight: 44,
-                  width: "100%",
-                  minWidth: 0
-                }}
-              >
-                <Box sx={{ width: desktopSidebarRailWidth, display: "flex", justifyContent: "center", flexShrink: 0 }}>
-                  <AddRoundedIcon />
-                </Box>
-                <Box
-                  component="span"
-                  sx={{
-                    fontSize: "1rem",
-                    fontWeight: 500,
-                    overflow: "hidden",
-                    whiteSpace: "nowrap",
-                    opacity: isSidebarCollapsed && !isOverlaySidebar ? 0 : 1,
-                    transform: isSidebarCollapsed && !isOverlaySidebar ? "translateX(-8px)" : "translateX(0)",
-                    transition: "opacity 180ms ease, transform 220ms ease"
-                  }}
-                >
-                  {t("capsule.new")}
-                </Box>
-              </Button>
-              <Button
-                variant="text"
-                disabled={isInteractionDisabled}
-                onClick={handleOpenSearchDialog}
-                sx={{
-                  justifyContent: "flex-start",
-                  px: 0,
-                  minHeight: 44,
-                  width: "100%",
-                  minWidth: 0
-                }}
-              >
-                <Box sx={{ width: desktopSidebarRailWidth, display: "flex", justifyContent: "center", flexShrink: 0 }}>
-                  <SearchRoundedIcon />
-                </Box>
-                <Box
-                  component="span"
-                  sx={{
-                    fontSize: "1rem",
-                    fontWeight: 500,
-                    overflow: "hidden",
-                    whiteSpace: "nowrap",
-                    opacity: isSidebarCollapsed && !isOverlaySidebar ? 0 : 1,
-                    transform: isSidebarCollapsed && !isOverlaySidebar ? "translateX(-8px)" : "translateX(0)",
-                    transition: "opacity 180ms ease, transform 220ms ease"
-                  }}
-                >
-                  {t("capsule.search")}
-                </Box>
-              </Button>
-            </Stack>
-
-            {!isSidebarCollapsed || isOverlaySidebar ? (
-              <Typography
-                sx={{
-                  pl: 3,
-                  pr: 3,
-                  pt: 3,
-                  pb: 1,
-                  color: "text.secondary",
-                  fontSize: "0.95rem",
-                  textAlign: "left"
-                }}
-              >
-                {t("capsule.yourCapsules")}
-              </Typography>
-            ) : null}
-
-            {!isSidebarCollapsed || isOverlaySidebar ? (
-              <List sx={{ flex: 1, minHeight: 0, overflowY: "auto", px: 1.5 }}>
-                {capsuleList.map((capsule) => {
-                  const isActive = capsule.id === optimisticActiveCapsuleId;
-                  return (
-                    <ListItemButton
-                      key={capsule.id}
-                      selected={isActive}
-                      disabled={isInteractionDisabled}
-                      onClick={() => handleCapsuleOpen(capsule.id, closeSidebar)}
-                      sx={{
-                        borderRadius: 3,
-                        mb: 0.5,
-                        px: 1.5,
-                        minHeight: 48,
-                        "& .capsule-row-actions": {
-                          opacity: isOverlaySidebar ? 1 : 0,
-                          transition: "opacity 160ms ease"
-                        },
-                        "&:hover .capsule-row-actions": {
-                          opacity: 1
-                        },
-                        "&:focus-within .capsule-row-actions": {
-                          opacity: 1
-                        }
-                      }}
-                    >
-                      <ListItemText
-                        primary={capsule.name}
-                        primaryTypographyProps={{ noWrap: true, fontWeight: isActive ? 600 : 500 }}
-                      />
-                      {capsuleHasUnsavedChanges(capsule) ? (
-                        <Tooltip title={t("capsule.notSaved")}>
-                          <FiberManualRecordRoundedIcon sx={{ fontSize: 10, color: "#2f8f58", mr: 0.75 }} />
-                        </Tooltip>
-                      ) : null}
-                      <IconButton
-                        className="capsule-row-actions"
-                        aria-label={`Capsule actions ${capsule.name}`}
-                        size="small"
-                        disabled={isInteractionDisabled}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          setRowMenuAnchor(event.currentTarget);
-                          setRowMenuCapsule(capsule);
-                        }}
-                      >
-                        <MoreVertRoundedIcon fontSize="small" />
-                      </IconButton>
-                    </ListItemButton>
-                  );
-                })}
-              </List>
-            ) : (
-              <Box
-                data-testid="collapsed-sidebar-expand-hitbox"
-                onClick={expandCollapsedSidebar}
-                sx={{ flex: 1, height: "100%", cursor: "pointer" }}
-              />
-            )}
-          </>
-        )}
-      >
-        {({ isOverlaySidebar }) => {
+      {(() => {
           const nameDialogProps: Partial<DialogProps> = isOverlaySidebar ? { fullScreen: true } : {
             fullWidth: true,
             maxWidth: "sm",
@@ -1835,8 +1665,7 @@ function MainScreen({
               </Dialog>
             </Box>
           );
-        }}
-      </AppSidebarShell>
+        })()}
 
       <CapsuleActionMenu
         anchorEl={headerMenuAnchor}
@@ -1881,7 +1710,8 @@ function MainScreen({
         onSave={() => onSaveCapsule(rowMenuCapsule?.id)}
         onRegenerateAll={() => {}}
         onDuplicate={() => handleRequestDuplicate(rowMenuCapsule)}
-        onShare={() => handleShareCapsule(rowMenuCapsule)}
+        onShare={() => handleShareCapsule(rowMenuCapsule, { allowUnknownContent: true })}
+        allowUnknownShareContent
         onDelete={() => {
           setConfirmCapsuleId(rowMenuCapsule?.id || "");
           setConfirmAction("delete-row");

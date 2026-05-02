@@ -154,8 +154,6 @@ describe("SearchScreen", () => {
     expect(await screen.findByText("55 results")).toBeInTheDocument();
     expect(screen.getAllByText("Linen Shirt").length).toBeGreaterThan(0);
     expect(screen.getAllByText("unisex").length).toBeGreaterThan(0);
-    expect(screen.getByTestId("search-screen-shell")).toHaveAttribute("data-sidebar-mode", "desktop-medium");
-    expect(screen.getByRole("button", { name: "Open user menu" })).toBeInTheDocument();
   });
 
   test("uses initial query handoff instead of saved filters on first search", async () => {
@@ -245,12 +243,6 @@ describe("SearchScreen", () => {
 
     expect(await screen.findByDisplayValue("linen shirt")).toBeInTheDocument();
     expect(screen.queryByText("Capsule Wardrobe")).not.toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Toggle sidebar" }));
-    expect(screen.getByRole("button", { name: "Collapse sidebar" })).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Collapse sidebar" }));
-    await waitFor(() => {
-      expect(screen.queryByRole("button", { name: "Collapse sidebar" })).not.toBeInTheDocument();
-    });
 
     fireEvent.click(screen.getByLabelText("Open filters"));
     expect(await screen.findByText("Filters")).toBeInTheDocument();
@@ -272,32 +264,12 @@ describe("SearchScreen", () => {
     });
   });
 
-  test("desktop sidebar collapses and expands, and user menu opens on search screen", async () => {
-    const user = userEvent.setup();
-    const onSignOut = vi.fn();
-
-    renderScreen({
-      userEmail: "person@example.com",
-      userName: "Person Name",
-      settingsProfile: {
-        fullname: "Person Name",
-        email: "person@example.com",
-        locale: "en",
-        theme: "system",
-        llm: "openai:gpt-5.5"
-      },
-      onSignOut
-    });
+  test("renders as inner explore content without owning sidebar controls", async () => {
+    renderScreen();
 
     expect(await screen.findByDisplayValue("linen shirt")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Collapse sidebar" }));
-    await user.click(screen.getByTestId("collapsed-sidebar-expand-hitbox"));
-    expect(screen.getByRole("button", { name: "Collapse sidebar" })).toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: "Open user menu" }));
-    expect(screen.getByText("Settings")).toBeInTheDocument();
-    await user.click(screen.getByText("Sign out"));
-    expect(onSignOut).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("button", { name: "Collapse sidebar" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Open user menu" })).not.toBeInTheDocument();
   });
 
   test("product detail does not render unsafe product or image urls", async () => {

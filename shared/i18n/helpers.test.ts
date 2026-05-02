@@ -28,6 +28,12 @@ test("t falls back to default locale and interpolates parameters", () => {
   assert.equal(defaultLocale, "en");
 });
 
+test("t translates app launcher labels", () => {
+  assert.equal(t("launcher.capsule", undefined, "ru"), "Капсула");
+  assert.equal(t("launcher.explore", undefined, "ru"), "Поиск");
+  assert.equal(t("launcher.statistics", undefined, "ru"), "Статистика");
+});
+
 test("translateOption humanizes unknown values and translates known ones", () => {
   assert.equal(translateOption("styles", "street_style", "en"), "Street style");
   assert.equal(translateOption("styles", "unknown_style", "en"), "Unknown Style");

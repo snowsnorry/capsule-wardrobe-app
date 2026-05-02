@@ -21,8 +21,8 @@ function renderLauncher(props: Partial<ComponentProps<typeof AppLauncher>> = {})
         "launcher.open": "Open app launcher",
         "launcher.capsule": "Capsule",
         "launcher.capsuleHint": "Switch to the wardrobe capsule",
-        "launcher.search": "Search",
-        "launcher.searchHint": "Switch to search",
+        "launcher.explore": "Explore",
+        "launcher.exploreHint": "Switch to explore",
         "launcher.statistics": "Statistics",
         "launcher.statisticsHint": "Switch to statistics"
       }[key] || key)
@@ -61,9 +61,9 @@ describe("AppLauncher", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "Open app launcher" }));
-    await user.click(screen.getByRole("menuitem", { name: /Search/ }));
+    await user.click(screen.getByRole("menuitem", { name: /Explore/ }));
 
-    expect(onSelectApp).toHaveBeenCalledWith("search");
+    expect(onSelectApp).toHaveBeenCalledWith("explore");
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
   });
 
@@ -73,18 +73,18 @@ describe("AppLauncher", () => {
     const { rerender } = renderLauncher({ currentApp: "capsule", onSelectApp });
 
     await user.click(screen.getByRole("button", { name: "Open app launcher" }));
-    await user.click(screen.getByRole("menuitem", { name: /Search/ }));
+    await user.click(screen.getByRole("menuitem", { name: /Explore/ }));
 
-    expect(onSelectApp).toHaveBeenCalledWith("search");
+    expect(onSelectApp).toHaveBeenCalledWith("explore");
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
 
     rerender(
       <ThemeProvider theme={theme}>
-        <AppLauncher currentApp="search" onSelectApp={vi.fn()} />
+        <AppLauncher currentApp="explore" onSelectApp={vi.fn()} />
       </ThemeProvider>
     );
 
-    expect(screen.getByRole("button", { name: "Open app launcher" })).toHaveTextContent("Search");
+    expect(screen.getByRole("button", { name: "Open app launcher" })).toHaveTextContent("Explore");
   });
 
   test("shows the statistics app and can select it", async () => {

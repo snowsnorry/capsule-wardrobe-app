@@ -18,7 +18,7 @@ import {
   TextField,
   Typography
 } from "@mui/material";
-import DeleteRoundedIcon from "@mui/icons-material/DeleteRounded";
+import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import KeyRoundedIcon from "@mui/icons-material/KeyRounded";
 import type { ReactElement } from "react";
 import { deletePasskey, listPasskeys } from "../api/passkeys";
@@ -384,9 +384,9 @@ function SettingsDialog({
                     alignItems="center"
                     justifyContent="space-between"
                     spacing={2}
-                    sx={{ py: 1.5 }}
+                    sx={{ minWidth: 0, py: 1.5 }}
                   >
-                    <Stack spacing={0.5} sx={{ minWidth: 0 }}>
+                    <Stack spacing={0.5} sx={{ flex: "1 1 auto", minWidth: 0, overflow: "hidden" }}>
                       <Typography noWrap>
                         {passkey.name || t("passkeys.defaultName")}
                       </Typography>
@@ -400,8 +400,9 @@ function SettingsDialog({
                       aria-label={t("passkeys.remove")}
                       onClick={() => setPasskeyToDelete(passkey)}
                       disabled={isPasskeyLoading}
+                      sx={{ flexShrink: 0 }}
                     >
-                      <DeleteRoundedIcon />
+                      <DeleteOutlineRoundedIcon />
                     </IconButton>
                   </Stack>
                 );
@@ -454,7 +455,7 @@ function SettingsDialog({
               </ListItemButton>
             ))}
           </List>
-          <Stack spacing={2}>
+          <Stack spacing={2} sx={{ minWidth: 0 }}>
             <Typography variant="body2" color="text.secondary">
               {t(`settings.sectionHints.${activeSection}`)}
             </Typography>

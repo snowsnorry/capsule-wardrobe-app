@@ -34,7 +34,7 @@ function renderShell(
       <LocaleProvider>
         <AppSidebarShell
           shellTestId="app-sidebar-shell"
-          currentApp="search"
+          currentApp="explore"
           userEmail="person@example.com"
           userName="Person Example"
           settingsProfile={{
