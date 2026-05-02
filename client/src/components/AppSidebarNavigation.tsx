@@ -17,7 +17,7 @@ import FiberManualRecordRoundedIcon from "@mui/icons-material/FiberManualRecordR
 import ManageSearchRoundedIcon from "@mui/icons-material/ManageSearchRounded";
 import MoreVertRoundedIcon from "@mui/icons-material/MoreVertRounded";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
-import ViewInArRoundedIcon from "@mui/icons-material/ViewInArRounded";
+import CheckroomOutlinedIcon from '@mui/icons-material/CheckroomOutlined';
 import { useI18n } from "../i18n/useI18n";
 
 type AppId = "capsule" | "explore" | "statistics";
@@ -161,7 +161,7 @@ function AppSidebarNavigation({
             bgcolor: "transparent"
           }}
         >
-          {renderTopLevelIcon(<ViewInArRoundedIcon />, t("launcher.capsule"), activeApp === "capsule")}
+          {renderTopLevelIcon(<CheckroomOutlinedIcon />, t("launcher.capsule"), activeApp === "capsule")}
           {renderTopLevelLabel(t("launcher.capsule"), activeApp === "capsule")}
         </Button>
       </Box>
