@@ -417,7 +417,7 @@ function MainScreen({
   const [headerMenuAnchor, setHeaderMenuAnchor] = useState<CapsuleMenuAnchor>(null);
   const [rowMenuAnchor, setRowMenuAnchor] = useState<CapsuleMenuAnchor>(null);
   const [rowMenuCapsule, setRowMenuCapsule] = useState<CapsuleLike | null>(null);
-  const [productMenuPosition, setProductMenuPosition] = useState<{ mouseX: number; mouseY: number } | null>(null);
+  const [productMenuAnchor, setProductMenuAnchor] = useState<CapsuleMenuAnchor>(null);
   const [productMenuUrl, setProductMenuUrl] = useState("");
   const [renameOpen, setRenameOpen] = useState(false);
   const [renameValue, setRenameValue] = useState("");
@@ -607,16 +607,13 @@ function MainScreen({
     setShareCopied(true);
   };
 
-  const handleProductContextMenu = (event: MouseEvent<HTMLElement>, productUrl: string) => {
-    setProductMenuPosition({
-      mouseX: event.clientX + 2,
-      mouseY: event.clientY - 6
-    });
+  const handleProductMenuClick = (event: MouseEvent<HTMLButtonElement>, productUrl: string) => {
+    setProductMenuAnchor(event.currentTarget);
     setProductMenuUrl(productUrl);
   };
 
   const handleCloseProductMenu = () => {
-    setProductMenuPosition(null);
+    setProductMenuAnchor(null);
     setProductMenuUrl("");
   };
 
@@ -1223,7 +1220,7 @@ function MainScreen({
                               isSelected={selectedRegenerationUrls.includes(itemUrl)}
                               isRegenerating={isInteractionDisabled}
                               onToggleSelected={onToggleRegenerationSelection}
-                              onProductContextMenu={handleProductContextMenu}
+                              onProductMenuClick={handleProductMenuClick}
                               isMobile={isOverlaySidebar}
                             />
                           );
@@ -1891,14 +1888,9 @@ function MainScreen({
         }}
       />
       <Menu
-        open={Boolean(productMenuPosition)}
+        anchorEl={productMenuAnchor}
+        open={Boolean(productMenuAnchor)}
         onClose={handleCloseProductMenu}
-        anchorReference="anchorPosition"
-        anchorPosition={
-          productMenuPosition
-            ? { top: productMenuPosition.mouseY, left: productMenuPosition.mouseX }
-            : undefined
-        }
       >
         <MenuItem onClick={handleCopyProductUrl}>{t("capsule.copyProductLinkAddress")}</MenuItem>
         <MenuItem onClick={handleShowProductInfo}>{t("capsule.showProductInfo")}</MenuItem>

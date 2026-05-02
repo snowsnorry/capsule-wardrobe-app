@@ -401,6 +401,7 @@ const ru = {
     outfitSet: "Набор {number}",
     closeFilters: "Закрыть фильтры",
     openMenu: "Открыть меню капсулы",
+    openProductMenu: "Открыть меню товара",
     copyProductLinkAddress: "Скопировать адрес ссылки",
     showProductInfo: "Показать товар"
   },

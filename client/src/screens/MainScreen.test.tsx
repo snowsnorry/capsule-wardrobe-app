@@ -39,22 +39,27 @@ vi.mock("../components/ClothingGridPlaceholder", () => ({
   )
 }));
 vi.mock("../components/ClothingCard", () => ({
-  default: ({ item, isSelected, isSelectable, isRegenerating, onToggleSelected, onProductContextMenu }) => (
-    <button
-      type="button"
-      data-testid={`clothing-card-${item.url}`}
-      data-selected={String(isSelected)}
-      data-selectable={String(isSelectable)}
-      data-regenerating={String(isRegenerating)}
-      disabled={isRegenerating}
-      onClick={() => onToggleSelected(item)}
-      onContextMenu={(event) => {
-        event.preventDefault();
-        onProductContextMenu?.(event, item.url, item);
-      }}
-    >
-      {item.name}
-    </button>
+  default: ({ item, isSelected, isSelectable, isRegenerating, onToggleSelected, onProductMenuClick }) => (
+    <div>
+      <button
+        type="button"
+        data-testid={`clothing-card-${item.url}`}
+        data-selected={String(isSelected)}
+        data-selectable={String(isSelectable)}
+        data-regenerating={String(isRegenerating)}
+        disabled={isRegenerating}
+        onClick={() => onToggleSelected(item)}
+      >
+        {item.name}
+      </button>
+      <button
+        type="button"
+        data-testid={`product-menu-${item.url}`}
+        onClick={(event) => onProductMenuClick?.(event, item.url, item)}
+      >
+        menu
+      </button>
+    </div>
   )
 }));
 
@@ -126,6 +131,7 @@ function t(key, params) {
       outfitSet: "Набор {number}",
       closeFilters: "Close filters",
       openMenu: "Open capsule menu",
+      openProductMenu: "Open product menu",
       copyProductLinkAddress: "Copy Link Address",
       showProductInfo: "Show Product Info"
     },
@@ -394,11 +400,11 @@ describe("MainScreen", () => {
       onNavigateApp
     });
 
-    fireEvent.contextMenu(screen.getByTestId("clothing-card-https://example.com/a"));
+    await user.click(screen.getByTestId("product-menu-https://example.com/a"));
     await user.click(screen.getByRole("menuitem", { name: "Copy Link Address" }));
     expect(writeText).toHaveBeenCalledWith("https://example.com/a");
 
-    fireEvent.contextMenu(screen.getByTestId("clothing-card-https://example.com/a"));
+    await user.click(screen.getByTestId("product-menu-https://example.com/a"));
     await user.click(screen.getByRole("menuitem", { name: "Show Product Info" }));
     expect(onNavigateApp).toHaveBeenCalledWith("search", { query: "https://example.com/a" });
   });

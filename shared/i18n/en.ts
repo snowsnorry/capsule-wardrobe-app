@@ -400,6 +400,7 @@ const en = {
     outfitSet: "Set {number}",
     closeFilters: "Close filters",
     openMenu: "Open capsule menu",
+    openProductMenu: "Open product menu",
     copyProductLinkAddress: "Copy Link Address",
     showProductInfo: "Show Product Info"
   },

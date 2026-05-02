@@ -1,4 +1,5 @@
 import { Box, Chip, IconButton, Link as MuiLink, Stack, Typography } from "@mui/material";
+import MoreVertRoundedIcon from "@mui/icons-material/MoreVertRounded";
 import ThumbDownAltOutlinedIcon from "@mui/icons-material/ThumbDownAltOutlined";
 import type { MouseEvent, ReactElement } from "react";
 import { useI18n } from "../i18n/useI18n";
@@ -21,7 +22,7 @@ type ClothingCardProps = {
   isSelected?: boolean;
   isRegenerating?: boolean;
   onToggleSelected?: (item: ClothingCardItem) => void;
-  onProductContextMenu?: (event: MouseEvent<HTMLElement>, productUrl: string, item: ClothingCardItem) => void;
+  onProductMenuClick?: (event: MouseEvent<HTMLButtonElement>, productUrl: string, item: ClothingCardItem) => void;
   isMobile?: boolean;
 };
 
@@ -31,7 +32,7 @@ function ClothingCard({
   isSelected = false,
   isRegenerating = false,
   onToggleSelected,
-  onProductContextMenu,
+  onProductMenuClick,
   isMobile = false
 }: ClothingCardProps): ReactElement {
   const { t } = useI18n();
@@ -39,7 +40,7 @@ function ClothingCard({
   const productUrl = getSafeHttpUrl(item?.url);
   const label = formatProductLabel(item, "");
   const categoryLabel = item?.category ? t(`options.categories.${item.category}`) : "";
-  const showToggleButton = isMobile || isSelected;
+  const showActionButtons = isMobile || isSelected;
 
   const handleToggleSelected = (event: MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
@@ -49,12 +50,13 @@ function ClothingCard({
     }
   };
 
-  const handleContextMenu = (event: MouseEvent<HTMLElement>) => {
-    if (!productUrl || typeof onProductContextMenu !== "function") {
+  const handleProductMenuClick = (event: MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!productUrl || typeof onProductMenuClick !== "function") {
       return;
     }
-    event.preventDefault();
-    onProductContextMenu(event, productUrl, item);
+    onProductMenuClick(event, productUrl, item);
   };
 
   const cardContent = (
@@ -140,7 +142,6 @@ function ClothingCard({
 
   return (
     <Box
-      onContextMenu={handleContextMenu}
       sx={{
         display: "flex",
         flexDirection: "column",
@@ -163,13 +164,13 @@ function ClothingCard({
           WebkitMaskComposite: "xor",
           pointerEvents: "none"
         },
-        ...(isSelectable && !isSelected && !isMobile
+        ...((isSelectable || productUrl) && !isSelected && !isMobile
           ? {
-              "& .wardrobe-card-regenerate": {
+              "& .wardrobe-card-actions": {
                 opacity: 0,
                 visibility: "hidden"
               },
-              "&:hover .wardrobe-card-regenerate": {
+              "&:hover .wardrobe-card-actions, &:focus-within .wardrobe-card-actions": {
                 opacity: 0.72,
                 visibility: "visible"
               }
@@ -191,37 +192,70 @@ function ClothingCard({
           overflow: "hidden"
         }}
       >
-        {isSelectable ? (
-          <IconButton
-            aria-label={t("main.partialRegenerateToggle")}
-            className="wardrobe-card-regenerate"
-            onClick={handleToggleSelected}
-            disabled={isRegenerating}
+        {isSelectable || productUrl ? (
+          <Stack
+            className="wardrobe-card-actions"
+            direction="row"
+            spacing={0.75}
             sx={{
               position: "absolute",
               top: 12,
               right: 12,
               zIndex: 4,
-              width: 36,
-              height: 36,
-              bgcolor: isSelected ? "rgba(17, 17, 17, 0.92)" : "rgba(17, 17, 17, 0.42)",
-              color: isSelected ? "#d24343" : "#fff",
-              opacity: showToggleButton ? 0.72 : undefined,
-              visibility: showToggleButton ? "visible" : undefined,
-              transition: "opacity 160ms ease, background-color 160ms ease, color 160ms ease",
-              "&:hover": {
-                bgcolor: isSelected ? "rgba(17, 17, 17, 0.96)" : "rgba(17, 17, 17, 0.62)",
+              opacity: showActionButtons ? 0.72 : undefined,
+              visibility: showActionButtons ? "visible" : undefined,
+              transition: "opacity 160ms ease, visibility 160ms ease",
+              "&:hover, &:focus-within": {
                 opacity: 1
               },
-              "&.Mui-disabled": {
-                color: isSelected ? "#d24343" : "#fff",
+              "& .wardrobe-card-action-button": {
+                width: 36,
+                height: 36,
+                bgcolor: "rgba(17, 17, 17, 0.42)",
+                color: "#fff",
+                transition: "background-color 160ms ease, color 160ms ease",
+                "&:hover": {
+                  bgcolor: "rgba(17, 17, 17, 0.62)"
+                },
+                "&.Mui-disabled": {
+                  color: "#fff",
+                  bgcolor: "rgba(17, 17, 17, 0.42)",
+                  opacity: showActionButtons ? 0.72 : 0
+                }
+              },
+              "& .wardrobe-card-regenerate.MuiIconButton-root": {
                 bgcolor: isSelected ? "rgba(17, 17, 17, 0.92)" : "rgba(17, 17, 17, 0.42)",
-                opacity: showToggleButton ? 0.72 : 0
+                color: isSelected ? "#d24343" : "#fff",
+                "&:hover": {
+                  bgcolor: isSelected ? "rgba(17, 17, 17, 0.96)" : "rgba(17, 17, 17, 0.62)"
+                },
+                "&.Mui-disabled": {
+                  color: isSelected ? "#d24343" : "#fff",
+                  bgcolor: isSelected ? "rgba(17, 17, 17, 0.92)" : "rgba(17, 17, 17, 0.42)"
+                }
               }
             }}
           >
-            <ThumbDownAltOutlinedIcon fontSize="small" />
-          </IconButton>
+            {isSelectable ? (
+              <IconButton
+                aria-label={t("main.partialRegenerateToggle")}
+                className="wardrobe-card-action-button wardrobe-card-regenerate"
+                onClick={handleToggleSelected}
+                disabled={isRegenerating}
+              >
+                <ThumbDownAltOutlinedIcon fontSize="small" />
+              </IconButton>
+            ) : null}
+            {productUrl ? (
+              <IconButton
+                aria-label={t("capsule.openProductMenu")}
+                className="wardrobe-card-action-button wardrobe-card-product-menu"
+                onClick={handleProductMenuClick}
+              >
+                <MoreVertRoundedIcon fontSize="small" />
+              </IconButton>
+            ) : null}
+          </Stack>
         ) : null}
         <Stack
           direction="row"

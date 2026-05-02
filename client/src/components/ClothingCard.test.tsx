@@ -61,10 +61,12 @@ describe("ClothingCard", () => {
 
   test("keeps the toggle hidden on desktop until selected but shows it on mobile", () => {
     const { container, rerender } = renderCard({ isSelectable: true });
-    const toggleButton = container.querySelector("button");
+    const toggleButton = container.querySelector(".wardrobe-card-regenerate");
+    const menuButton = container.querySelector(".wardrobe-card-product-menu");
 
     expect(toggleButton).toBeInTheDocument();
     expect(toggleButton).not.toBeVisible();
+    expect(menuButton).not.toBeVisible();
 
     rerender(
       <ThemeProvider theme={theme}>
@@ -73,6 +75,7 @@ describe("ClothingCard", () => {
     );
 
     expect(screen.getByRole("button", { name: "main.partialRegenerateToggle" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "capsule.openProductMenu" })).toBeVisible();
   });
 
   test("renders an outbound link with the product image and attributes", () => {
@@ -131,37 +134,28 @@ describe("ClothingCard", () => {
     expect(screen.queryByText("unisex")).not.toBeInTheDocument();
   });
 
-  test("opens product context menu callback for safe product URLs", () => {
-    const onProductContextMenu = vi.fn();
-    renderCard({ onProductContextMenu });
+  test("opens product menu callback for safe product URLs", () => {
+    const onProductMenuClick = vi.fn();
+    renderCard({ onProductMenuClick });
 
-    const link = screen.getByRole("link");
-    const event = new MouseEvent("contextmenu", {
-      bubbles: true,
-      cancelable: true,
-      clientX: 24,
-      clientY: 36
-    });
+    const menuButton = document.querySelector(".wardrobe-card-product-menu");
+    fireEvent.click(menuButton as Element);
 
-    link.dispatchEvent(event);
-
-    expect(event.defaultPrevented).toBe(true);
-    expect(onProductContextMenu).toHaveBeenCalledWith(
-      expect.objectContaining({ clientX: 24, clientY: 36 }),
+    expect(onProductMenuClick).toHaveBeenCalledWith(
+      expect.objectContaining({ target: expect.any(HTMLButtonElement) }),
       "https://example.com/products/red-jacket",
       expect.objectContaining({ id: "item-1" })
     );
   });
 
-  test("keeps the native context menu when product URL is not safe", () => {
-    const onProductContextMenu = vi.fn();
-    const { container } = renderCard({
+  test("does not render product menu button when product URL is not safe", () => {
+    const onProductMenuClick = vi.fn();
+    renderCard({
       item: { id: "1", url: "mailto:person@example.com", name: "Linen Shirt", category: "top" },
-      onProductContextMenu
+      onProductMenuClick
     });
 
-    fireEvent.contextMenu(container.firstElementChild as Element);
-
-    expect(onProductContextMenu).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: "capsule.openProductMenu" })).not.toBeInTheDocument();
+    expect(onProductMenuClick).not.toHaveBeenCalled();
   });
 });
