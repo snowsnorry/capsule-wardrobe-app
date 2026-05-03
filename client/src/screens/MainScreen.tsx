@@ -36,12 +36,16 @@ import RestoreRoundedIcon from "@mui/icons-material/RestoreRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import FiberManualRecordRoundedIcon from "@mui/icons-material/FiberManualRecordRounded";
+import ThumbDownAltOutlinedIcon from "@mui/icons-material/ThumbDownAltOutlined";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import ProfileFiltersSidebar from "../components/ProfileFiltersSidebar";
 import { useI18n } from "../i18n/useI18n";
 import { translateOption } from "../i18n";
-import ClothingGridPlaceholder from "../components/ClothingGridPlaceholder";
-import { ClothingPlaceholderCard } from "../components/ClothingGridPlaceholder";
+import ClothingGridPlaceholder, {
+  ClothingPlaceholderCard,
+  clothingGridGap,
+  clothingGridTemplateColumns
+} from "../components/ClothingGridPlaceholder";
 import ClothingCard from "../components/ClothingCard";
 import { sortWardrobeItems } from "../../../shared/wardrobeOrder.js";
 import type { DialogProps } from "@mui/material/Dialog";
@@ -491,6 +495,8 @@ function MainScreen({
   const [rowMenuCapsule, setRowMenuCapsule] = useState<CapsuleLike | null>(null);
   const [productMenuAnchor, setProductMenuAnchor] = useState<CapsuleMenuAnchor>(null);
   const [productMenuUrl, setProductMenuUrl] = useState("");
+  const [productMenuItem, setProductMenuItem] = useState<MainScreenItem | null>(null);
+  const [isCardSelectionMode, setIsCardSelectionMode] = useState(false);
   const [renameOpen, setRenameOpen] = useState(false);
   const [renameValue, setRenameValue] = useState("");
   const [renameCapsuleId, setRenameCapsuleId] = useState("");
@@ -518,6 +524,7 @@ function MainScreen({
   const [optimisticActiveCapsuleId, setOptimisticActiveCapsuleId] = useState(activeCapsule?.id || "");
   const inlineRenameSubmitGuardRef = useRef(false);
   const searchDialogPaperRef = useRef<HTMLDivElement | null>(null);
+  const previousSelectedCountRef = useRef(selectedRegenerationUrls.length);
   const isDeleteConfirm = confirmAction.startsWith("delete");
   const isRegenerateFiltersConfirm = confirmAction === "regenerate-with-filter-changes";
   const isRegenerateAllConfirm = confirmAction === "regenerate-all";
@@ -549,6 +556,7 @@ function MainScreen({
       : "capsule.revertConfirm";
 
   const selectedCount = selectedRegenerationUrls.length;
+  const showCardSelectionActions = isCardSelectionMode || selectedCount > 0;
   const isInteractionDisabled = isContentBusy || isInlineRenameSubmitting || isSharingCapsule;
   const searchGroups = useMemo(() => groupCapsules(searchResults), [searchResults]);
   const activeCapsuleName = activeCapsule?.name || `<${t("capsule.new")}>`;
@@ -626,6 +634,13 @@ function MainScreen({
       setActiveItemsTab("all");
     }
   }, [activeItemsTab, resolvedOutfitSets]);
+
+  useEffect(() => {
+    if (previousSelectedCountRef.current > 0 && selectedCount === 0) {
+      setIsCardSelectionMode(false);
+    }
+    previousSelectedCountRef.current = selectedCount;
+  }, [selectedCount]);
 
   useEffect(() => {
     setIsInlineRenameActive(false);
@@ -719,14 +734,16 @@ function MainScreen({
     setShareCopied(true);
   };
 
-  const handleProductMenuClick = (event: MouseEvent<HTMLButtonElement>, productUrl: string) => {
+  const handleProductMenuClick = (event: MouseEvent<HTMLButtonElement>, productUrl: string, item: MainScreenItem) => {
     setProductMenuAnchor(event.currentTarget);
     setProductMenuUrl(productUrl);
+    setProductMenuItem(item);
   };
 
   const handleCloseProductMenu = () => {
     setProductMenuAnchor(null);
     setProductMenuUrl("");
+    setProductMenuItem(null);
   };
 
   const handleCopyProductUrl = async () => {
@@ -745,6 +762,16 @@ function MainScreen({
       return;
     }
     onNavigateApp("explore", { query: productUrl, openProductDetail: true });
+  };
+
+  const handleSelectProductForRegeneration = () => {
+    const item = productMenuItem;
+    handleCloseProductMenu();
+    if (!item || isInteractionDisabled) {
+      return;
+    }
+    setIsCardSelectionMode(true);
+    onToggleRegenerationSelection(item);
   };
 
   const handleRequestRegenerateAll = async () => {
@@ -1168,7 +1195,7 @@ function MainScreen({
                     />
                   ) : null}
                 </Box>
-                <Box sx={{ flex: 1, minHeight: 0, overflowY: "auto", px: { xs: 2, md: 3 }, pt: { xs: 1.5, md: 2 }, pb: 2 }}>
+                <Box sx={{ flex: 1, minHeight: 0, overflowY: "auto", px: { xs: 1.25, sm: 2, md: 3 }, pt: { xs: 1.25, md: 2 }, pb: 2 }}>
                   {isLoadingItems ? (
                     <ClothingGridPlaceholder count={12} />
                   ) : (
@@ -1176,12 +1203,8 @@ function MainScreen({
                       <Box
                         sx={{
                           display: "grid",
-                          gridTemplateColumns: {
-                            xs: "1fr",
-                            sm: "repeat(2, minmax(0, 1fr))",
-                            lg: "repeat(2, minmax(0, 1fr))"
-                          },
-                          gap: 2.5,
+                          gridTemplateColumns: clothingGridTemplateColumns,
+                          gap: clothingGridGap,
                           "@media (min-width: 1400px)": {
                             gridTemplateColumns: "repeat(3, minmax(0, 1fr))"
                           },
@@ -1207,6 +1230,7 @@ function MainScreen({
                               item={item}
                               isSelectable={Boolean(itemUrl)}
                               isSelected={selectedRegenerationUrls.includes(itemUrl)}
+                              isSelectionMode={showCardSelectionActions}
                               isRegenerating={isInteractionDisabled}
                               onToggleSelected={onToggleRegenerationSelection}
                               onProductMenuClick={handleProductMenuClick}
@@ -1881,6 +1905,12 @@ function MainScreen({
         open={Boolean(productMenuAnchor)}
         onClose={handleCloseProductMenu}
       >
+        <MenuItem onClick={handleSelectProductForRegeneration}>
+          <ListItemIcon>
+            <ThumbDownAltOutlinedIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>{t("capsule.selectProductForRegeneration")}</ListItemText>
+        </MenuItem>
         <MenuItem onClick={handleCopyProductUrl}>{t("capsule.copyProductLinkAddress")}</MenuItem>
         <MenuItem onClick={handleShowProductInfo}>{t("capsule.showProductInfo")}</MenuItem>
       </Menu>

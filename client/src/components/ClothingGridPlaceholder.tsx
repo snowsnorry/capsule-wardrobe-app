@@ -10,6 +10,17 @@ type ClothingGridPlaceholderProps = {
   inline?: boolean;
 };
 
+const clothingGridTemplateColumns = {
+  xs: "repeat(2, minmax(0, 1fr))",
+  sm: "repeat(2, minmax(0, 1fr))",
+  lg: "repeat(2, minmax(0, 1fr))"
+} as const;
+
+const clothingGridGap = {
+  xs: 1.25,
+  sm: 2.5
+} as const;
+
 function ClothingPlaceholderCard({ placeholderKey }: ClothingPlaceholderCardProps): ReactElement {
   return (
     <Box
@@ -99,12 +110,8 @@ function ClothingGridPlaceholder({
     <Box
       sx={{
         display: "grid",
-        gridTemplateColumns: {
-          xs: "1fr",
-          sm: "repeat(2, minmax(0, 1fr))",
-          lg: "repeat(2, minmax(0, 1fr))"
-        },
-        gap: 2.5,
+        gridTemplateColumns: clothingGridTemplateColumns,
+        gap: clothingGridGap,
         "@media (min-width: 1400px)": {
           gridTemplateColumns: "repeat(3, minmax(0, 1fr))"
         },
@@ -119,4 +126,5 @@ function ClothingGridPlaceholder({
 }
 
 export { ClothingPlaceholderCard };
+export { clothingGridGap, clothingGridTemplateColumns };
 export default ClothingGridPlaceholder;

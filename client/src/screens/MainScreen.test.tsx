@@ -36,29 +36,42 @@ vi.mock("../components/ClothingGridPlaceholder", () => ({
   ),
   ClothingPlaceholderCard: ({ placeholderKey }) => (
     <div data-testid={`placeholder-card-${placeholderKey}`} />
-  )
+  ),
+  clothingGridTemplateColumns: {
+    xs: "repeat(2, minmax(0, 1fr))",
+    sm: "repeat(2, minmax(0, 1fr))",
+    lg: "repeat(2, minmax(0, 1fr))"
+  },
+  clothingGridGap: {
+    xs: 1.25,
+    sm: 2.5
+  }
 }));
 vi.mock("../components/ClothingCard", () => ({
-  default: ({ item, isSelected, isSelectable, isRegenerating, onToggleSelected, onProductMenuClick }) => (
+  default: ({ item, isSelected, isSelectable, isSelectionMode, isRegenerating, onToggleSelected, onProductMenuClick }) => (
     <div>
       <button
         type="button"
         data-testid={`clothing-card-${item.url}`}
         data-selected={String(isSelected)}
         data-selectable={String(isSelectable)}
+        data-selection-mode={String(isSelectionMode)}
         data-regenerating={String(isRegenerating)}
         disabled={isRegenerating}
         onClick={() => onToggleSelected(item)}
       >
         {item.name}
       </button>
-      <button
-        type="button"
-        data-testid={`product-menu-${item.url}`}
-        onClick={(event) => onProductMenuClick?.(event, item.url, item)}
-      >
-        menu
-      </button>
+      {!isSelectionMode ? (
+        <button
+          type="button"
+          data-testid={`product-menu-${item.url}`}
+          data-selection-mode={String(isSelectionMode)}
+          onClick={(event) => onProductMenuClick?.(event, item.url, item)}
+        >
+          menu
+        </button>
+      ) : null}
     </div>
   )
 }));
@@ -139,6 +152,7 @@ function t(key, params) {
       closeFilters: "Close filters",
       openMenu: "Open capsule menu",
       openProductMenu: "Open product menu",
+      selectProductForRegeneration: "Select",
       copyProductLinkAddress: "Copy Link Address",
       showProductInfo: "Show Product Info"
     },
@@ -479,6 +493,7 @@ describe("MainScreen", () => {
 
     expect(screen.getByTestId("placeholder-card-pending-https://example.com/b")).toBeInTheDocument();
     expect(screen.getByTestId("clothing-card-https://example.com/a")).toHaveAttribute("data-selected", "true");
+    expect(screen.getByTestId("clothing-card-https://example.com/a")).toHaveAttribute("data-selection-mode", "true");
     expect(screen.queryByRole("button", { name: "Download capsule PDF" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Refresh wardrobe" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
@@ -512,6 +527,7 @@ describe("MainScreen", () => {
     });
 
     await user.click(screen.getByTestId("product-menu-https://example.com/a"));
+    expect(screen.getByRole("menuitem", { name: "Select" })).toBeInTheDocument();
     await user.click(screen.getByRole("menuitem", { name: "Copy Link Address" }));
     expect(writeText).toHaveBeenCalledWith("https://example.com/a");
 
@@ -521,6 +537,51 @@ describe("MainScreen", () => {
       query: "https://example.com/a",
       openProductDetail: true
     });
+  });
+
+  test("enters and leaves card selection mode through the product menu", async () => {
+    const user = userEvent.setup();
+    const onToggleRegenerationSelection = vi.fn();
+    const props = {
+      items: [
+        { id: "a", url: "https://example.com/a", name: "Shirt", category: "top" }
+      ],
+      onToggleRegenerationSelection
+    };
+    const view = renderScreen(props);
+
+    expect(screen.getByTestId("clothing-card-https://example.com/a")).toHaveAttribute("data-selection-mode", "false");
+    await user.click(screen.getByTestId("product-menu-https://example.com/a"));
+    await user.click(screen.getByRole("menuitem", { name: "Select" }));
+
+    expect(onToggleRegenerationSelection).toHaveBeenCalledWith({ id: "a", url: "https://example.com/a", name: "Shirt", category: "top" });
+    expect(screen.getByTestId("clothing-card-https://example.com/a")).toHaveAttribute("data-selection-mode", "true");
+    expect(screen.queryByTestId("product-menu-https://example.com/a")).not.toBeInTheDocument();
+
+    view.rerender(
+      <ThemeProvider theme={theme}>
+        <MainScreen
+          {...view}
+          {...props}
+          selectedRegenerationUrls={["https://example.com/a"]}
+        />
+      </ThemeProvider>
+    );
+    expect(screen.getByTestId("clothing-card-https://example.com/a")).toHaveAttribute("data-selection-mode", "true");
+
+    view.rerender(
+      <ThemeProvider theme={theme}>
+        <MainScreen
+          {...view}
+          {...props}
+          selectedRegenerationUrls={[]}
+        />
+      </ThemeProvider>
+    );
+    await waitFor(() => {
+      expect(screen.getByTestId("clothing-card-https://example.com/a")).toHaveAttribute("data-selection-mode", "false");
+    });
+    expect(screen.getByTestId("product-menu-https://example.com/a")).toBeInTheDocument();
   });
 
   test("renders capsule metadata with counts and active filters in filter order", () => {

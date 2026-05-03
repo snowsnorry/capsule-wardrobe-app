@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from "vitest";
 import { cleanup, render } from "@testing-library/react";
 
-import ClothingGridPlaceholder from "./ClothingGridPlaceholder";
+import ClothingGridPlaceholder, { clothingGridGap, clothingGridTemplateColumns } from "./ClothingGridPlaceholder";
 
 describe("ClothingGridPlaceholder", () => {
   afterEach(() => {
@@ -13,6 +13,8 @@ describe("ClothingGridPlaceholder", () => {
 
     expect(container.firstElementChild).toBeInTheDocument();
     expect(container.firstElementChild.childElementCount).toBe(3);
+    expect(clothingGridTemplateColumns.xs).toBe("repeat(2, minmax(0, 1fr))");
+    expect(clothingGridGap.xs).toBe(1.25);
   });
 
   test("renders inline placeholders without the outer grid wrapper", () => {

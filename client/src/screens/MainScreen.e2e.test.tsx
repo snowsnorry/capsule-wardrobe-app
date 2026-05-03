@@ -33,14 +33,28 @@ vi.mock("../components/ClothingGridPlaceholder", () => ({
   ),
   ClothingPlaceholderCard: ({ placeholderKey }) => (
     <div data-testid={`placeholder-card-${placeholderKey}`} />
-  )
+  ),
+  clothingGridTemplateColumns: {
+    xs: "repeat(2, minmax(0, 1fr))",
+    sm: "repeat(2, minmax(0, 1fr))",
+    lg: "repeat(2, minmax(0, 1fr))"
+  },
+  clothingGridGap: {
+    xs: 1.25,
+    sm: 2.5
+  }
 }));
 vi.mock("../components/ClothingCard", () => ({
-  default: ({ item, onToggleSelected }) => (
+  default: ({ item, isSelectionMode, onToggleSelected, onProductMenuClick }) => (
     <button
       type="button"
       data-testid={`clothing-card-${item.url}`}
-      onClick={() => onToggleSelected(item)}
+      data-selection-mode={String(isSelectionMode)}
+      onClick={(event) => (
+        isSelectionMode
+          ? onToggleSelected(item)
+          : onProductMenuClick?.(event, item.url, item)
+      )}
     >
       {item.name}
     </button>
@@ -94,7 +108,10 @@ function t(key, params) {
       searchPrevious30Days: "Previous 30 Days",
       searchEarlier: "Earlier",
       closeFilters: "Close filters",
-      openMenu: "Open capsule menu"
+      openMenu: "Open capsule menu",
+      selectProductForRegeneration: "Select",
+      copyProductLinkAddress: "Copy Link Address",
+      showProductInfo: "Show Product Info"
     },
     main: {
       cancelSelection: "Cancel",
@@ -255,6 +272,7 @@ describe("MainScreen e2e-style flow", () => {
     });
 
     await user.click(screen.getByTestId("clothing-card-https://example.com/a"));
+    await user.click(screen.getByRole("menuitem", { name: "Select" }));
     expect(screen.getByRole("button", { name: "Regenerate Selected (1)" })).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Regenerate Selected (1)" }));

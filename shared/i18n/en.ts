@@ -407,6 +407,7 @@ const en = {
     closeFilters: "Close filters",
     openMenu: "Open capsule menu",
     openProductMenu: "Open product menu",
+    selectProductForRegeneration: "Select",
     copyProductLinkAddress: "Copy Link Address",
     showProductInfo: "Show Product Info"
   },

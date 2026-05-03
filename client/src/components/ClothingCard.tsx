@@ -20,6 +20,7 @@ type ClothingCardProps = {
   item: ClothingCardItem;
   isSelectable?: boolean;
   isSelected?: boolean;
+  isSelectionMode?: boolean;
   isRegenerating?: boolean;
   onToggleSelected?: (item: ClothingCardItem) => void;
   onProductMenuClick?: (event: MouseEvent<HTMLButtonElement>, productUrl: string, item: ClothingCardItem) => void;
@@ -30,6 +31,7 @@ function ClothingCard({
   item,
   isSelectable = false,
   isSelected = false,
+  isSelectionMode = false,
   isRegenerating = false,
   onToggleSelected,
   onProductMenuClick,
@@ -40,6 +42,9 @@ function ClothingCard({
   const productUrl = getSafeHttpUrl(item?.url);
   const label = formatProductLabel(item, "");
   const categoryLabel = item?.category ? t(`options.categories.${item.category}`) : "";
+  const showToggleButton = isSelectionMode && isSelectable;
+  const showProductMenuButton = !isSelectionMode && Boolean(productUrl);
+  const showCardActions = showToggleButton || showProductMenuButton;
   const showActionButtons = isMobile || isSelected;
 
   const stopCardActionPropagation = (event: MouseEvent<HTMLElement>) => {
@@ -119,7 +124,7 @@ function ClothingCard({
         position: "relative",
         border: "1px solid rgba(17, 36, 34, 0.08)",
         boxShadow: "0 0px 8px rgba(17, 36, 34, 0.08)",
-        ...((isSelectable || productUrl) && !isSelected && !isMobile
+        ...(showCardActions && !isSelected && !isMobile
           ? {
               "& .wardrobe-card-actions": {
                 opacity: 0,
@@ -142,15 +147,15 @@ function ClothingCard({
           overflow: "hidden"
         }}
       >
-        {isSelectable || productUrl ? (
+        {showCardActions ? (
           <Stack
             className="wardrobe-card-actions"
             direction="row"
-            spacing={0.75}
+            spacing={isMobile ? 0.5 : 0.75}
             sx={{
               position: "absolute",
-              top: 12,
-              right: 12,
+              top: isMobile ? 8 : 12,
+              right: isMobile ? 8 : 12,
               zIndex: 4,
               opacity: showActionButtons ? 0.72 : undefined,
               visibility: showActionButtons ? "visible" : undefined,
@@ -186,7 +191,7 @@ function ClothingCard({
               }
             }}
           >
-            {isSelectable ? (
+            {showToggleButton ? (
               <IconButton
                 aria-label={t("main.partialRegenerateToggle")}
                 className="wardrobe-card-action-button wardrobe-card-regenerate"
@@ -198,7 +203,7 @@ function ClothingCard({
                 <ThumbDownAltOutlinedIcon fontSize="small" />
               </IconButton>
             ) : null}
-            {productUrl ? (
+            {showProductMenuButton ? (
               <IconButton
                 aria-label={t("capsule.openProductMenu")}
                 className="wardrobe-card-action-button wardrobe-card-product-menu"
@@ -214,20 +219,33 @@ function ClothingCard({
         <Stack
           direction="row"
           spacing={1}
-          sx={{ position: "absolute", top: 12, left: 12, zIndex: 1 }}
+          sx={{
+            position: "absolute",
+            top: isMobile ? 8 : 12,
+            left: isMobile ? 8 : 12,
+            zIndex: 1,
+            maxWidth: isMobile ? "calc(100% - 92px)" : undefined
+          }}
         >
           <Chip
             className="wardrobe-card-category"
             label={categoryLabel || item.category || ""}
             size="small"
             sx={{
+              maxWidth: "100%",
+              height: isMobile ? 24 : 28,
               textTransform: "uppercase",
               letterSpacing: "0.08em",
-              fontSize: "12px",
+              fontSize: isMobile ? "10px" : "12px",
               fontWeight: 800,
-              padding: "4px 8px",
+              padding: 0,
               bgcolor: "#dcefeb",
-              color: "#15766f"
+              color: "#15766f",
+              "& .MuiChip-label": {
+                px: isMobile ? 0.75 : 1,
+                overflow: "hidden",
+                textOverflow: "ellipsis"
+              }
             }}
           />
         </Stack>
@@ -253,10 +271,10 @@ function ClothingCard({
         sx={{
           flexShrink: 0,
           flexGrow: 1,
-          px: 2.5,
-          pt: 2,
-          pb: 2.25,
-          minHeight: 64,
+          px: isMobile ? 1 : 2.5,
+          pt: isMobile ? 1 : 2,
+          pb: isMobile ? 1.25 : 2.25,
+          minHeight: isMobile ? 50 : 64,
           justifyContent: "flex-start",
           alignItems: "flex-start",
           backgroundColor: "#fff",
@@ -264,13 +282,22 @@ function ClothingCard({
         }}
       >
         <Typography
+          className="wardrobe-card-title"
           variant="subtitle1"
           sx={{
             color: "#202a33",
             fontWeight: 500,
-            lineHeight: 1.22,
+            lineHeight: isMobile ? 1.18 : 1.22,
             letterSpacing: 0,
-            fontSize: "16px"
+            fontSize: isMobile ? "13px" : "16px",
+            ...(isMobile
+              ? {
+                  display: "-webkit-box",
+                  WebkitBoxOrient: "vertical",
+                  WebkitLineClamp: 2,
+                  overflow: "hidden"
+                }
+              : {})
           }}
         >
           <ProductLabelText

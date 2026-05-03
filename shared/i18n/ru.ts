@@ -408,6 +408,7 @@ const ru = {
     closeFilters: "Закрыть фильтры",
     openMenu: "Открыть меню капсулы",
     openProductMenu: "Открыть меню товара",
+    selectProductForRegeneration: "Выбрать",
     copyProductLinkAddress: "Скопировать адрес ссылки",
     showProductInfo: "Показать товар"
   },

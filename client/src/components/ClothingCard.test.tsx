@@ -44,6 +44,7 @@ describe("ClothingCard", () => {
           <ClothingCard
             item={item}
             isSelectable
+            isSelectionMode
             isMobile
             onToggleSelected={onToggleSelected}
           />
@@ -59,13 +60,13 @@ describe("ClothingCard", () => {
     expect(onParentClick).not.toHaveBeenCalled();
   });
 
-  test("keeps the toggle hidden on desktop until selected but shows it on mobile", () => {
+  test("renders only the product menu by default and keeps it hidden on desktop until hover", () => {
     const { container, rerender } = renderCard({ isSelectable: true });
     const toggleButton = container.querySelector(".wardrobe-card-regenerate");
     const menuButton = container.querySelector(".wardrobe-card-product-menu");
 
-    expect(toggleButton).toBeInTheDocument();
-    expect(toggleButton).not.toBeVisible();
+    expect(toggleButton).not.toBeInTheDocument();
+    expect(menuButton).toBeInTheDocument();
     expect(menuButton).not.toBeVisible();
 
     rerender(
@@ -74,8 +75,15 @@ describe("ClothingCard", () => {
       </ThemeProvider>
     );
 
-    expect(screen.getByRole("button", { name: "main.partialRegenerateToggle" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: "main.partialRegenerateToggle" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "capsule.openProductMenu" })).toBeVisible();
+  });
+
+  test("renders only the selection toggle in selection mode", () => {
+    renderCard({ isSelectable: true, isSelectionMode: true, isMobile: true });
+
+    expect(screen.getByRole("button", { name: "main.partialRegenerateToggle" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: "capsule.openProductMenu" })).not.toBeInTheDocument();
   });
 
   test("renders an outbound link with the product image and attributes", () => {
@@ -101,6 +109,25 @@ describe("ClothingCard", () => {
     expect(details).toContainElement(screen.getByText("Red Jacket"));
     expect(details).not.toContainElement(screen.getByText("options.categories.outerwear"));
     expect(category).toContainElement(screen.getByText("options.categories.outerwear"));
+  });
+
+  test("uses compact mobile typography while keeping action buttons touch sized", () => {
+    const { container } = renderCard({ isSelectable: true, isMobile: true });
+
+    const details = container.querySelector(".wardrobe-card-details");
+    const title = container.querySelector(".wardrobe-card-title");
+    const category = container.querySelector(".wardrobe-card-category");
+    const menuButton = screen.getByRole("button", { name: "capsule.openProductMenu" });
+
+    expect(details).toHaveStyle({ minHeight: "50px" });
+    expect(title).toHaveStyle({
+      fontSize: "13px",
+      overflow: "hidden",
+      WebkitLineClamp: "2"
+    });
+    expect(category).toHaveStyle({ fontSize: "10px", height: "24px" });
+    expect(menuButton).toBeVisible();
+    expect(menuButton).toHaveStyle({ width: "36px", height: "36px" });
   });
 
   test("drops unsafe product and image urls", () => {
