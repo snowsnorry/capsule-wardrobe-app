@@ -31,12 +31,24 @@ vi.mock("../components/ProfileFiltersSidebar", () => ({
   )
 }));
 vi.mock("../components/ClothingGridPlaceholder", () => ({
-  default: ({ count, inline }) => (
-    <div data-testid={inline ? `inline-placeholder-${count}` : "loading-placeholder"} />
+  default: ({ count, inline, mobileColumns }) => (
+    <div
+      data-testid={inline ? `inline-placeholder-${count}` : "loading-placeholder"}
+      data-mobile-columns={String(mobileColumns ?? 2)}
+    />
   ),
   ClothingPlaceholderCard: ({ placeholderKey }) => (
     <div data-testid={`placeholder-card-${placeholderKey}`} />
   ),
+  buildClothingGridTemplateColumns: (mobileColumns = 2) => ({
+    xs: `repeat(${mobileColumns}, minmax(0, 1fr))`,
+    sm: "repeat(2, minmax(0, 1fr))",
+    lg: "repeat(2, minmax(0, 1fr))"
+  }),
+  buildClothingGridGap: (mobileColumns = 2) => ({
+    xs: mobileColumns === 1 ? 1.25 : 0.625,
+    sm: 2.5
+  }),
   clothingGridTemplateColumns: {
     xs: "repeat(2, minmax(0, 1fr))",
     sm: "repeat(2, minmax(0, 1fr))",
@@ -48,7 +60,7 @@ vi.mock("../components/ClothingGridPlaceholder", () => ({
   }
 }));
 vi.mock("../components/ClothingCard", () => ({
-  default: ({ item, isSelected, isSelectable, isSelectionMode, isRegenerating, onToggleSelected, onProductMenuClick }) => (
+  default: ({ item, isSelected, isSelectable, isSelectionMode, isRegenerating, mobileColumns, onToggleSelected, onProductMenuClick }) => (
     <div>
       <button
         type="button"
@@ -57,6 +69,7 @@ vi.mock("../components/ClothingCard", () => ({
         data-selectable={String(isSelectable)}
         data-selection-mode={String(isSelectionMode)}
         data-regenerating={String(isRegenerating)}
+        data-mobile-columns={String(mobileColumns ?? 2)}
         disabled={isRegenerating}
         onClick={() => onToggleSelected(item)}
       >
@@ -153,6 +166,10 @@ function t(key, params) {
       openMenu: "Open capsule menu",
       openProductMenu: "Open product menu",
       selectProductForRegeneration: "Select",
+      cardLayout: "Card layout",
+      cardColumnsOne: "1 column",
+      cardColumnsTwo: "2 columns",
+      cardColumnsThree: "3 columns",
       copyProductLinkAddress: "Copy Link Address",
       showProductInfo: "Show Product Info"
     },
@@ -317,6 +334,7 @@ function renderScreen(props = {}, { mobile = false, layoutMode = mobile ? "overl
 describe("MainScreen", () => {
   beforeEach(() => {
     cleanup();
+    window.localStorage.clear();
     mediaQueryMock.mockReset();
     useI18nMock.mockReset();
   });
@@ -1028,6 +1046,75 @@ describe("MainScreen", () => {
     await user.click(screen.getByRole("button", { name: "Open capsule menu" }));
 
     expect(screen.queryByRole("menuitem", { name: "Share" })).not.toBeInTheDocument();
+  });
+
+  test("shows mobile card layout controls in the header menu with two columns selected by default", async () => {
+    const user = userEvent.setup();
+
+    renderScreen({}, { mobile: true });
+
+    await user.click(screen.getByRole("button", { name: "Open capsule menu" }));
+
+    expect(screen.getByText("Card layout")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "1 column" })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("button", { name: "2 columns" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "3 columns" })).toHaveAttribute("aria-pressed", "false");
+  });
+
+  test("persists mobile card layout changes to localStorage", async () => {
+    const user = userEvent.setup();
+
+    renderScreen({
+      items: [{ id: "a", url: "https://example.com/a", name: "Shirt", category: "top" }]
+    }, { mobile: true });
+
+    await user.click(screen.getByRole("button", { name: "Open capsule menu" }));
+    await user.click(screen.getByRole("button", { name: "1 column" }));
+
+    expect(window.localStorage.getItem("capsule.mobileCardColumns")).toBe("1");
+    expect(screen.getByTestId("clothing-card-https://example.com/a")).toHaveAttribute("data-mobile-columns", "1");
+
+    await user.click(screen.getByRole("button", { name: "3 columns" }));
+    expect(window.localStorage.getItem("capsule.mobileCardColumns")).toBe("3");
+    expect(screen.getByTestId("clothing-card-https://example.com/a")).toHaveAttribute("data-mobile-columns", "3");
+  });
+
+  test("loads stored mobile card layout and falls back for invalid stored values", () => {
+    window.localStorage.setItem("capsule.mobileCardColumns", "3");
+    renderScreen({ isLoadingItems: true }, { mobile: true });
+
+    expect(screen.getByTestId("loading-placeholder")).toHaveAttribute("data-mobile-columns", "3");
+
+    cleanup();
+    window.localStorage.setItem("capsule.mobileCardColumns", "4");
+    renderScreen({ isLoadingItems: true }, { mobile: true });
+
+    expect(screen.getByTestId("loading-placeholder")).toHaveAttribute("data-mobile-columns", "2");
+  });
+
+  test("does not show card layout controls outside the mobile header menu", async () => {
+    const user = userEvent.setup();
+    const registerCapsuleSidebarActions = vi.fn();
+
+    renderScreen({ registerCapsuleSidebarActions });
+
+    await user.click(screen.getByRole("button", { name: "Open capsule menu" }));
+    expect(screen.queryByText("Card layout")).not.toBeInTheDocument();
+
+    await user.keyboard("{Escape}");
+    const actions = registerCapsuleSidebarActions.mock.calls.at(-1)?.[0];
+    const anchor = document.createElement("button");
+    document.body.appendChild(anchor);
+    act(() => {
+      actions.openCapsuleActions({ currentTarget: anchor } as unknown as React.MouseEvent<HTMLElement>, {
+        id: "capsule-1",
+        name: "Spring edit",
+        status: "new"
+      });
+    });
+
+    expect(await screen.findByRole("menuitem", { name: "Rename" })).toBeInTheDocument();
+    expect(screen.queryByText("Card layout")).not.toBeInTheDocument();
   });
 
   test("disables primary capsule controls while content is busy", async () => {

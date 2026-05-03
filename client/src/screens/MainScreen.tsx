@@ -18,11 +18,14 @@ import {
   ListItemText,
   Menu,
   MenuItem,
+  SvgIcon,
   Stack,
   Tab,
   Tabs,
   TextField,
   Tooltip,
+  ToggleButton,
+  ToggleButtonGroup,
   Typography
 } from "@mui/material";
 import MoreVertRoundedIcon from "@mui/icons-material/MoreVertRounded";
@@ -43,8 +46,8 @@ import { useI18n } from "../i18n/useI18n";
 import { translateOption } from "../i18n";
 import ClothingGridPlaceholder, {
   ClothingPlaceholderCard,
-  clothingGridGap,
-  clothingGridTemplateColumns
+  buildClothingGridGap,
+  buildClothingGridTemplateColumns
 } from "../components/ClothingGridPlaceholder";
 import ClothingCard from "../components/ClothingCard";
 import { sortWardrobeItems } from "../../../shared/wardrobeOrder.js";
@@ -349,6 +352,41 @@ const OUTFIT_SET_IMAGE_WIDTH = 896;
 const OUTFIT_SET_IMAGE_HEIGHT = 1195;
 const OUTFIT_SET_IMAGE_ASPECT_RATIO = `${OUTFIT_SET_IMAGE_WIDTH} / ${OUTFIT_SET_IMAGE_HEIGHT}`;
 const OUTFIT_SET_IMAGE_PREVIEW_MAX_WIDTH = OUTFIT_SET_IMAGE_WIDTH / 2;
+const MOBILE_CARD_COLUMNS_STORAGE_KEY = "capsule.mobileCardColumns";
+type MobileCardColumns = 1 | 2 | 3;
+
+function isMobileCardColumns(value: unknown): value is MobileCardColumns {
+  return value === 1 || value === 2 || value === 3;
+}
+
+function readStoredMobileCardColumns(): MobileCardColumns {
+  if (typeof window === "undefined") {
+    return 2;
+  }
+
+  const parsed = Number(window.localStorage?.getItem(MOBILE_CARD_COLUMNS_STORAGE_KEY));
+  return isMobileCardColumns(parsed) ? parsed : 2;
+}
+
+function writeStoredMobileCardColumns(value: MobileCardColumns) {
+  if (typeof window === "undefined") {
+    return;
+  }
+  window.localStorage?.setItem(MOBILE_CARD_COLUMNS_STORAGE_KEY, String(value));
+}
+
+function ColumnLayoutIcon({ columns }: { columns: MobileCardColumns }) {
+  const dividers = columns === 1 ? [] : columns === 2 ? [12] : [8, 16];
+
+  return (
+    <SvgIcon viewBox="0 0 24 24" fontSize="small">
+      <rect x="4" y="6" width="16" height="12" rx="1.6" fill="none" stroke="currentColor" strokeWidth="1.7" />
+      {dividers.map((x) => (
+        <line key={x} x1={x} y1="6.8" x2={x} y2="17.2" stroke="currentColor" strokeWidth="1.5" />
+      ))}
+    </SvgIcon>
+  );
+}
 
 function CapsuleActionMenu({
   anchorEl,
@@ -365,6 +403,9 @@ function CapsuleActionMenu({
   onDuplicate,
   onShare,
   allowUnknownShareContent = false,
+  showCardLayout = false,
+  mobileCardColumns = 2,
+  onMobileCardColumnsChange = undefined,
   onDelete
 }) {
   const { t } = useI18n();
@@ -398,6 +439,52 @@ function CapsuleActionMenu({
           <ListItemIcon><ShareRoundedIcon fontSize="small" /></ListItemIcon>
           {t("capsule.share")}
         </MenuItem>
+      ) : null}
+      {showCardLayout ? (
+        <>
+          <Divider />
+          <Box
+            sx={{
+              px: 2,
+              py: 1.25,
+              display: "grid",
+              gap: 1
+            }}
+          >
+            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, textTransform: "uppercase" }}>
+              {t("capsule.cardLayout")}
+            </Typography>
+            <ToggleButtonGroup
+              exclusive
+              size="small"
+              value={mobileCardColumns}
+              onChange={(_event, value) => {
+                if (isMobileCardColumns(value)) {
+                  onMobileCardColumnsChange?.(value);
+                }
+              }}
+              aria-label={t("capsule.cardLayout")}
+              sx={{
+                alignSelf: "start",
+                "& .MuiToggleButton-root": {
+                  minWidth: 44,
+                  height: 40,
+                  px: 1.25
+                }
+              }}
+            >
+              <ToggleButton value={1} aria-label={t("capsule.cardColumnsOne")} disabled={disabled}>
+                <ColumnLayoutIcon columns={1} />
+              </ToggleButton>
+              <ToggleButton value={2} aria-label={t("capsule.cardColumnsTwo")} disabled={disabled}>
+                <ColumnLayoutIcon columns={2} />
+              </ToggleButton>
+              <ToggleButton value={3} aria-label={t("capsule.cardColumnsThree")} disabled={disabled}>
+                <ColumnLayoutIcon columns={3} />
+              </ToggleButton>
+            </ToggleButtonGroup>
+          </Box>
+        </>
       ) : null}
       <Divider />
       <MenuItem disabled={disabled} onClick={(event) => handleAction(event, onRename)}>
@@ -497,6 +584,7 @@ function MainScreen({
   const [productMenuUrl, setProductMenuUrl] = useState("");
   const [productMenuItem, setProductMenuItem] = useState<MainScreenItem | null>(null);
   const [isCardSelectionMode, setIsCardSelectionMode] = useState(false);
+  const [mobileCardColumns, setMobileCardColumns] = useState<MobileCardColumns>(() => readStoredMobileCardColumns());
   const [renameOpen, setRenameOpen] = useState(false);
   const [renameValue, setRenameValue] = useState("");
   const [renameCapsuleId, setRenameCapsuleId] = useState("");
@@ -557,6 +645,14 @@ function MainScreen({
 
   const selectedCount = selectedRegenerationUrls.length;
   const showCardSelectionActions = isCardSelectionMode || selectedCount > 0;
+  const clothingGridTemplateColumns = useMemo(
+    () => buildClothingGridTemplateColumns(mobileCardColumns),
+    [mobileCardColumns]
+  );
+  const wardrobeGridGap = useMemo(
+    () => buildClothingGridGap(mobileCardColumns),
+    [mobileCardColumns]
+  );
   const isInteractionDisabled = isContentBusy || isInlineRenameSubmitting || isSharingCapsule;
   const searchGroups = useMemo(() => groupCapsules(searchResults), [searchResults]);
   const activeCapsuleName = activeCapsule?.name || `<${t("capsule.new")}>`;
@@ -772,6 +868,11 @@ function MainScreen({
     }
     setIsCardSelectionMode(true);
     onToggleRegenerationSelection(item);
+  };
+
+  const handleMobileCardColumnsChange = (value: MobileCardColumns) => {
+    setMobileCardColumns(value);
+    writeStoredMobileCardColumns(value);
   };
 
   const handleRequestRegenerateAll = async () => {
@@ -1197,14 +1298,14 @@ function MainScreen({
                 </Box>
                 <Box sx={{ flex: 1, minHeight: 0, overflowY: "auto", px: { xs: 1.25, sm: 2, md: 3 }, pt: { xs: 1.25, md: 2 }, pb: 2 }}>
                   {isLoadingItems ? (
-                    <ClothingGridPlaceholder count={12} />
+                    <ClothingGridPlaceholder count={12} mobileColumns={mobileCardColumns} />
                   ) : (
                     <Stack spacing={3} sx={{ minHeight: "100%" }}>
                       <Box
                         sx={{
                           display: "grid",
                           gridTemplateColumns: clothingGridTemplateColumns,
-                          gap: clothingGridGap,
+                          gap: wardrobeGridGap,
                           "@media (min-width: 1400px)": {
                             gridTemplateColumns: "repeat(3, minmax(0, 1fr))"
                           },
@@ -1235,6 +1336,7 @@ function MainScreen({
                               onToggleSelected={onToggleRegenerationSelection}
                               onProductMenuClick={handleProductMenuClick}
                               isMobile={isOverlaySidebar}
+                              mobileColumns={mobileCardColumns}
                             />
                           );
                         })}
@@ -1868,6 +1970,9 @@ function MainScreen({
         onSave={onSaveCapsule}
         onDuplicate={() => handleRequestDuplicate(activeCapsule)}
         onShare={() => handleShareCapsule(activeCapsule)}
+        showCardLayout={isOverlaySidebar}
+        mobileCardColumns={mobileCardColumns}
+        onMobileCardColumnsChange={handleMobileCardColumnsChange}
         onDelete={() => setConfirmAction("delete")}
       />
 

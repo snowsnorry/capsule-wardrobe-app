@@ -25,6 +25,7 @@ type ClothingCardProps = {
   onToggleSelected?: (item: ClothingCardItem) => void;
   onProductMenuClick?: (event: MouseEvent<HTMLButtonElement>, productUrl: string, item: ClothingCardItem) => void;
   isMobile?: boolean;
+  mobileColumns?: 1 | 2 | 3;
 };
 
 function ClothingCard({
@@ -35,7 +36,8 @@ function ClothingCard({
   isRegenerating = false,
   onToggleSelected,
   onProductMenuClick,
-  isMobile = false
+  isMobile = false,
+  mobileColumns = 2
 }: ClothingCardProps): ReactElement {
   const { t } = useI18n();
   const imageUrl = getSafeHttpUrl(item?.image_url);
@@ -46,6 +48,47 @@ function ClothingCard({
   const showProductMenuButton = !isSelectionMode && Boolean(productUrl);
   const showCardActions = showToggleButton || showProductMenuButton;
   const showActionButtons = isMobile || isSelected;
+  const mobileCardMetrics = mobileColumns === 1
+    ? {
+        actionOffset: 12,
+        categoryOffset: 12,
+        categoryHeight: 28,
+        categoryFontSize: "12px",
+        categoryLabelPx: 1,
+        detailPx: 2.5,
+        detailPt: 2,
+        detailPb: 2.25,
+        detailMinHeight: 64,
+        titleFontSize: "16px",
+        titleLineHeight: 1.22
+      }
+    : mobileColumns === 3
+      ? {
+          actionOffset: 6,
+          categoryOffset: 6,
+          categoryHeight: 20,
+          categoryFontSize: "8.5px",
+          categoryLabelPx: 0.5,
+          detailPx: 0.75,
+          detailPt: 0.75,
+          detailPb: 1,
+          detailMinHeight: 42,
+          titleFontSize: "11.5px",
+          titleLineHeight: 1.12
+        }
+      : {
+          actionOffset: 8,
+          categoryOffset: 8,
+          categoryHeight: 24,
+          categoryFontSize: "10px",
+          categoryLabelPx: 0.75,
+          detailPx: 1,
+          detailPt: 1,
+          detailPb: 1.25,
+          detailMinHeight: 50,
+          titleFontSize: "13px",
+          titleLineHeight: 1.18
+        };
 
   const stopCardActionPropagation = (event: MouseEvent<HTMLElement>) => {
     event.preventDefault();
@@ -154,8 +197,8 @@ function ClothingCard({
             spacing={isMobile ? 0.5 : 0.75}
             sx={{
               position: "absolute",
-              top: isMobile ? 8 : 12,
-              right: isMobile ? 8 : 12,
+              top: isMobile ? mobileCardMetrics.actionOffset : 12,
+              right: isMobile ? mobileCardMetrics.actionOffset : 12,
               zIndex: 4,
               opacity: showActionButtons ? 0.72 : undefined,
               visibility: showActionButtons ? "visible" : undefined,
@@ -217,14 +260,19 @@ function ClothingCard({
           </Stack>
         ) : null}
         <Stack
+          className="wardrobe-card-category-wrapper"
           direction="row"
           spacing={1}
           sx={{
             position: "absolute",
-            top: isMobile ? 8 : 12,
-            left: isMobile ? 8 : 12,
+            top: isMobile ? mobileCardMetrics.categoryOffset : 12,
+            left: isMobile ? mobileCardMetrics.categoryOffset : 12,
             zIndex: 1,
-            maxWidth: isMobile ? "calc(100% - 92px)" : undefined
+            maxWidth: isMobile
+              ? mobileColumns === 3
+                ? "calc(100% - 40px)"
+                : "calc(100% - 92px)"
+              : undefined
           }}
         >
           <Chip
@@ -233,16 +281,16 @@ function ClothingCard({
             size="small"
             sx={{
               maxWidth: "100%",
-              height: isMobile ? 24 : 28,
+              height: isMobile ? mobileCardMetrics.categoryHeight : 28,
               textTransform: "uppercase",
               letterSpacing: "0.08em",
-              fontSize: isMobile ? "10px" : "12px",
+              fontSize: isMobile ? mobileCardMetrics.categoryFontSize : "12px",
               fontWeight: 800,
               padding: 0,
               bgcolor: "#dcefeb",
               color: "#15766f",
               "& .MuiChip-label": {
-                px: isMobile ? 0.75 : 1,
+                px: isMobile ? mobileCardMetrics.categoryLabelPx : 1,
                 overflow: "hidden",
                 textOverflow: "ellipsis"
               }
@@ -271,10 +319,10 @@ function ClothingCard({
         sx={{
           flexShrink: 0,
           flexGrow: 1,
-          px: isMobile ? 1 : 2.5,
-          pt: isMobile ? 1 : 2,
-          pb: isMobile ? 1.25 : 2.25,
-          minHeight: isMobile ? 50 : 64,
+          px: isMobile ? mobileCardMetrics.detailPx : 2.5,
+          pt: isMobile ? mobileCardMetrics.detailPt : 2,
+          pb: isMobile ? mobileCardMetrics.detailPb : 2.25,
+          minHeight: isMobile ? mobileCardMetrics.detailMinHeight : 64,
           justifyContent: "flex-start",
           alignItems: "flex-start",
           backgroundColor: "#fff",
@@ -287,9 +335,9 @@ function ClothingCard({
           sx={{
             color: "#202a33",
             fontWeight: 500,
-            lineHeight: isMobile ? 1.18 : 1.22,
+            lineHeight: isMobile ? mobileCardMetrics.titleLineHeight : 1.22,
             letterSpacing: 0,
-            fontSize: isMobile ? "13px" : "16px",
+            fontSize: isMobile ? mobileCardMetrics.titleFontSize : "16px",
             ...(isMobile
               ? {
                   display: "-webkit-box",

@@ -409,6 +409,10 @@ const ru = {
     openMenu: "Открыть меню капсулы",
     openProductMenu: "Открыть меню товара",
     selectProductForRegeneration: "Выбрать",
+    cardLayout: "Вид карточек",
+    cardColumnsOne: "1 колонка",
+    cardColumnsTwo: "2 колонки",
+    cardColumnsThree: "3 колонки",
     copyProductLinkAddress: "Скопировать адрес ссылки",
     showProductInfo: "Показать товар"
   },

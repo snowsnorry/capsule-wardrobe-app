@@ -8,18 +8,32 @@ type ClothingPlaceholderCardProps = {
 type ClothingGridPlaceholderProps = {
   count?: number;
   inline?: boolean;
+  mobileColumns?: MobileCardColumns;
 };
 
-const clothingGridTemplateColumns = {
-  xs: "repeat(2, minmax(0, 1fr))",
-  sm: "repeat(2, minmax(0, 1fr))",
-  lg: "repeat(2, minmax(0, 1fr))"
-} as const;
+type MobileCardColumns = 1 | 2 | 3;
+
+function buildClothingGridTemplateColumns(mobileColumns: MobileCardColumns = 2) {
+  return {
+    xs: `repeat(${mobileColumns}, minmax(0, 1fr))`,
+    sm: "repeat(2, minmax(0, 1fr))",
+    lg: "repeat(2, minmax(0, 1fr))"
+  } as const;
+}
+
+const clothingGridTemplateColumns = buildClothingGridTemplateColumns(2);
 
 const clothingGridGap = {
   xs: 1.25,
   sm: 2.5
 } as const;
+
+function buildClothingGridGap(mobileColumns: MobileCardColumns = 2) {
+  return {
+    xs: mobileColumns === 1 ? clothingGridGap.xs : clothingGridGap.xs / 2,
+    sm: clothingGridGap.sm
+  } as const;
+}
 
 function ClothingPlaceholderCard({ placeholderKey }: ClothingPlaceholderCardProps): ReactElement {
   return (
@@ -100,7 +114,8 @@ function renderPlaceholderCards(count: number): ReactElement[] {
 
 function ClothingGridPlaceholder({
   count = 12,
-  inline = false
+  inline = false,
+  mobileColumns = 2
 }: ClothingGridPlaceholderProps): ReactElement | ReactElement[] {
   if (inline) {
     return renderPlaceholderCards(count);
@@ -110,8 +125,8 @@ function ClothingGridPlaceholder({
     <Box
       sx={{
         display: "grid",
-        gridTemplateColumns: clothingGridTemplateColumns,
-        gap: clothingGridGap,
+        gridTemplateColumns: buildClothingGridTemplateColumns(mobileColumns),
+        gap: buildClothingGridGap(mobileColumns),
         "@media (min-width: 1400px)": {
           gridTemplateColumns: "repeat(3, minmax(0, 1fr))"
         },
@@ -126,5 +141,5 @@ function ClothingGridPlaceholder({
 }
 
 export { ClothingPlaceholderCard };
-export { clothingGridGap, clothingGridTemplateColumns };
+export { buildClothingGridGap, buildClothingGridTemplateColumns, clothingGridGap, clothingGridTemplateColumns };
 export default ClothingGridPlaceholder;

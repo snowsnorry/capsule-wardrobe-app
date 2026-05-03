@@ -1,7 +1,12 @@
 import { afterEach, describe, expect, test } from "vitest";
 import { cleanup, render } from "@testing-library/react";
 
-import ClothingGridPlaceholder, { clothingGridGap, clothingGridTemplateColumns } from "./ClothingGridPlaceholder";
+import ClothingGridPlaceholder, {
+  buildClothingGridGap,
+  buildClothingGridTemplateColumns,
+  clothingGridGap,
+  clothingGridTemplateColumns
+} from "./ClothingGridPlaceholder";
 
 describe("ClothingGridPlaceholder", () => {
   afterEach(() => {
@@ -15,6 +20,22 @@ describe("ClothingGridPlaceholder", () => {
     expect(container.firstElementChild.childElementCount).toBe(3);
     expect(clothingGridTemplateColumns.xs).toBe("repeat(2, minmax(0, 1fr))");
     expect(clothingGridGap.xs).toBe(1.25);
+  });
+
+  test("builds custom mobile grid columns while keeping wider breakpoints stable", () => {
+    expect(buildClothingGridTemplateColumns(1)).toEqual({
+      xs: "repeat(1, minmax(0, 1fr))",
+      sm: "repeat(2, minmax(0, 1fr))",
+      lg: "repeat(2, minmax(0, 1fr))"
+    });
+    expect(buildClothingGridTemplateColumns(3).xs).toBe("repeat(3, minmax(0, 1fr))");
+  });
+
+  test("halves the mobile grid gap for two and three columns", () => {
+    expect(buildClothingGridGap(1).xs).toBe(1.25);
+    expect(buildClothingGridGap(2).xs).toBe(0.625);
+    expect(buildClothingGridGap(3).xs).toBe(0.625);
+    expect(buildClothingGridGap(3).sm).toBe(2.5);
   });
 
   test("renders inline placeholders without the outer grid wrapper", () => {

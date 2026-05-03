@@ -408,6 +408,10 @@ const en = {
     openMenu: "Open capsule menu",
     openProductMenu: "Open product menu",
     selectProductForRegeneration: "Select",
+    cardLayout: "Card layout",
+    cardColumnsOne: "1 column",
+    cardColumnsTwo: "2 columns",
+    cardColumnsThree: "3 columns",
     copyProductLinkAddress: "Copy Link Address",
     showProductInfo: "Show Product Info"
   },

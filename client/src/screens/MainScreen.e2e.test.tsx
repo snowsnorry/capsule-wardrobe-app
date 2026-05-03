@@ -34,6 +34,15 @@ vi.mock("../components/ClothingGridPlaceholder", () => ({
   ClothingPlaceholderCard: ({ placeholderKey }) => (
     <div data-testid={`placeholder-card-${placeholderKey}`} />
   ),
+  buildClothingGridTemplateColumns: (mobileColumns = 2) => ({
+    xs: `repeat(${mobileColumns}, minmax(0, 1fr))`,
+    sm: "repeat(2, minmax(0, 1fr))",
+    lg: "repeat(2, minmax(0, 1fr))"
+  }),
+  buildClothingGridGap: (mobileColumns = 2) => ({
+    xs: mobileColumns === 1 ? 1.25 : 0.625,
+    sm: 2.5
+  }),
   clothingGridTemplateColumns: {
     xs: "repeat(2, minmax(0, 1fr))",
     sm: "repeat(2, minmax(0, 1fr))",
@@ -110,6 +119,10 @@ function t(key, params) {
       closeFilters: "Close filters",
       openMenu: "Open capsule menu",
       selectProductForRegeneration: "Select",
+      cardLayout: "Card layout",
+      cardColumnsOne: "1 column",
+      cardColumnsTwo: "2 columns",
+      cardColumnsThree: "3 columns",
       copyProductLinkAddress: "Copy Link Address",
       showProductInfo: "Show Product Info"
     },
