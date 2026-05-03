@@ -2156,6 +2156,7 @@ function App() {
                   : "main-screen-shell"
             }
             currentApp={getActiveSidebarApp()}
+            contentSurface={isMainScreenView ? "plain" : "panel"}
             userEmail={user?.email || ""}
             userName={settingsProfile.fullname}
             settingsProfile={settingsProfile}

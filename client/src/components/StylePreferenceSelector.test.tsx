@@ -31,7 +31,9 @@ function renderSelector(props: Partial<ComponentProps<typeof StylePreferenceSele
       "profile.stylesTitle": "Styles",
       "profile.stylesHint": "Choose a style",
       "profile.styleCoreTitle": "Core style",
+      "profile.styleCoreHint": "Choose one core style.",
       "profile.styleAestheticTitle": "Aesthetic style",
+      "profile.styleAestheticHint": "Choose optionally one aesthetic.",
       "profile.styleAestheticNotImportant": "Aesthetic not important"
     }[key] || key)
   });
@@ -66,6 +68,8 @@ describe("StylePreferenceSelector", () => {
     const { rerender } = renderSelector();
 
     expect(screen.getByText("Styles")).toBeInTheDocument();
+    expect(screen.getByText("Choose one core style.")).toBeInTheDocument();
+    expect(screen.getByText("Choose optionally one aesthetic.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Casual" })).toHaveClass("MuiChip-filledPrimary");
     expect(screen.getByRole("button", { name: "Aesthetic not important" })).toHaveClass(
       "MuiChip-filledPrimary"
@@ -114,7 +118,9 @@ describe("StylePreferenceSelector", () => {
 
     expect(screen.queryByText("Styles")).not.toBeInTheDocument();
     expect(screen.getByText("Core style")).toBeInTheDocument();
+    expect(screen.getByText("Choose one core style.")).toBeInTheDocument();
     expect(screen.getByText("Aesthetic style")).toBeInTheDocument();
+    expect(screen.getByText("Choose optionally one aesthetic.")).toBeInTheDocument();
   });
 
   test("sorts core by fixed order and aesthetics alphabetically with nullable option first", () => {

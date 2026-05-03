@@ -133,7 +133,9 @@ function t(key, params) {
       searchPrevious7Days: "Previous 7 Days",
       searchPrevious30Days: "Previous 30 Days",
       searchEarlier: "Earlier",
-      outfitSet: "Набор {number}",
+      itemsCount: "{count} items",
+      outfitsCount: "{count} outfits",
+      outfitSet: "Outfit {number}",
       closeFilters: "Close filters",
       openMenu: "Open capsule menu",
       openProductMenu: "Open product menu",
@@ -518,6 +520,45 @@ describe("MainScreen", () => {
     expect(onNavigateApp).toHaveBeenCalledWith("explore", { query: "https://example.com/a" });
   });
 
+  test("renders capsule metadata with counts and active filters in filter order", () => {
+    renderScreen({
+      items: [
+        { id: "a", url: "https://example.com/a", name: "Blazer", category: "outerwear" },
+        { id: "b", url: "https://example.com/b", name: "Shirt", category: "top" },
+        { id: "c", url: "https://example.com/c", name: "Trousers", category: "bottom" }
+      ],
+      outfitSets: [{ itemIds: ["a", "b", "c"] }],
+      selectedStyleCore: "formal",
+      selectedStyleAesthetic: "minimalistic",
+      selectedOccasions: ["office"],
+      selectedSeasons: ["spring"],
+      selectedAudience: "woman",
+      selectedAccentColor: "red",
+      selectedPattern: "stripe",
+      selectedText: "No wool"
+    });
+
+    const expectedSummary = [
+      "3 items",
+      "1 outfits",
+      "Formal / Minimalistic",
+      "Office",
+      "Spring",
+      "Woman",
+      "Red",
+      "Stripe",
+      "No wool"
+    ];
+    const summaryNodes = expectedSummary.map((label) => screen.getByText(label));
+
+    summaryNodes.forEach((node, index) => {
+      if (index === 0) {
+        return;
+      }
+      expect(summaryNodes[index - 1].compareDocumentPosition(node) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+  });
+
   test("renders outfit tabs and filters cards by wardrobe category order", async () => {
     const user = userEvent.setup();
 
@@ -535,10 +576,10 @@ describe("MainScreen", () => {
     });
 
     expect(screen.getByRole("tab", { name: "All" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Набор 1" })).toBeInTheDocument();
-    expect(screen.queryByRole("tab", { name: "Набор 2" })).not.toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Outfit 1" })).toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "Outfit 2" })).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("tab", { name: "Набор 1" }));
+    await user.click(screen.getByRole("tab", { name: "Outfit 1" }));
 
     const cards = screen.getAllByRole("button").filter((node) => (
       node.getAttribute("data-testid")?.startsWith("clothing-card-")
@@ -559,8 +600,8 @@ describe("MainScreen", () => {
     };
     const view = renderScreen(initialProps);
 
-    await user.click(screen.getByRole("tab", { name: "Набор 1" }));
-    expect(screen.queryByRole("tab", { selected: true, name: "Набор 1" })).toBeInTheDocument();
+    await user.click(screen.getByRole("tab", { name: "Outfit 1" }));
+    expect(screen.queryByRole("tab", { selected: true, name: "Outfit 1" })).toBeInTheDocument();
 
     view.rerender(
       <ThemeProvider theme={theme}>
@@ -572,7 +613,7 @@ describe("MainScreen", () => {
       </ThemeProvider>
     );
 
-    expect(screen.queryByRole("tab", { name: "Набор 1" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "Outfit 1" })).not.toBeInTheDocument();
     expect(screen.queryByRole("tab", { name: "All" })).not.toBeInTheDocument();
   });
 
@@ -591,7 +632,7 @@ describe("MainScreen", () => {
     });
 
     expect(screen.queryByRole("button", { name: "Create image" })).not.toBeInTheDocument();
-    await user.click(screen.getByRole("tab", { name: "Набор 1" }));
+    await user.click(screen.getByRole("tab", { name: "Outfit 1" }));
     await user.click(screen.getByRole("button", { name: "Create image" }));
 
     expect(onGenerateOutfitSetImage).toHaveBeenCalledWith(0);
@@ -610,7 +651,7 @@ describe("MainScreen", () => {
       pendingImageSetIndexes: [0]
     });
 
-    await user.click(screen.getByRole("tab", { name: "Набор 1" }));
+    await user.click(screen.getByRole("tab", { name: "Outfit 1" }));
 
     expect(screen.getByTestId("outfit-set-image-placeholder")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Create image" })).not.toBeInTheDocument();
@@ -628,7 +669,7 @@ describe("MainScreen", () => {
       outfitSets: [{ itemIds: ["a", "b", "c"], image: "abc123" }]
     });
 
-    await user.click(screen.getByRole("tab", { name: "Набор 1" }));
+    await user.click(screen.getByRole("tab", { name: "Outfit 1" }));
 
     expect(screen.getByTestId("outfit-set-image")).toHaveAttribute("src", "data:image/png;base64,abc123");
     expect(screen.queryByRole("button", { name: "Create image" })).not.toBeInTheDocument();
@@ -646,7 +687,7 @@ describe("MainScreen", () => {
       outfitSets: [{ itemIds: ["a", "b", "c"], image: "https://images.example.com/set.png" }]
     });
 
-    await user.click(screen.getByRole("tab", { name: "Набор 1" }));
+    await user.click(screen.getByRole("tab", { name: "Outfit 1" }));
 
     expect(screen.getByTestId("outfit-set-image")).toHaveAttribute("src", "https://images.example.com/set.png");
   });
@@ -664,7 +705,7 @@ describe("MainScreen", () => {
       partialRegenerationPendingUrls: ["https://example.com/a"]
     });
 
-    await user.click(screen.getByRole("tab", { name: "Набор 1" }));
+    await user.click(screen.getByRole("tab", { name: "Outfit 1" }));
 
     expect(screen.getByTestId("placeholder-card-pending-https://example.com/a")).toBeInTheDocument();
     expect(screen.getByTestId("clothing-card-https://example.com/b")).toBeInTheDocument();
@@ -687,7 +728,7 @@ describe("MainScreen", () => {
       outfitSets: [{ itemIds: ["a", "b", "c"], image: "abc123", imageObsolete: true }]
     });
 
-    await user.click(screen.getByRole("tab", { name: "Набор 1" }));
+    await user.click(screen.getByRole("tab", { name: "Outfit 1" }));
     expect(
       screen.getByText("This image may no longer match the current outfit. Remove it and generate a new one if needed.")
     ).toBeInTheDocument();
@@ -719,7 +760,7 @@ describe("MainScreen", () => {
       outfitSets: [{ itemIds: ["a", "b", "c"], image: "abc123" }]
     });
 
-    await user.click(screen.getByRole("tab", { name: "Набор 1" }));
+    await user.click(screen.getByRole("tab", { name: "Outfit 1" }));
     await user.click(screen.getByTestId("outfit-set-image"));
 
     expect(screen.getByTestId("outfit-set-image-dialog")).toBeInTheDocument();
@@ -744,7 +785,7 @@ describe("MainScreen", () => {
       onDeleteOutfitSetImage
     });
 
-    await user.click(screen.getByRole("tab", { name: "Набор 1" }));
+    await user.click(screen.getByRole("tab", { name: "Outfit 1" }));
     await user.click(screen.getByRole("button", { name: "Delete image" }));
 
     expect(screen.getByText("Are you sure you want to delete this image? This action cannot be undone.")).toBeInTheDocument();

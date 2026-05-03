@@ -39,6 +39,7 @@ import FiberManualRecordRoundedIcon from "@mui/icons-material/FiberManualRecordR
 import useMediaQuery from "@mui/material/useMediaQuery";
 import ProfileFiltersSidebar from "../components/ProfileFiltersSidebar";
 import { useI18n } from "../i18n/useI18n";
+import { translateOption } from "../i18n";
 import ClothingGridPlaceholder from "../components/ClothingGridPlaceholder";
 import { ClothingPlaceholderCard } from "../components/ClothingGridPlaceholder";
 import ClothingCard from "../components/ClothingCard";
@@ -274,6 +275,71 @@ function resolveOutfitSetImageSrc(image: string | null | undefined): string {
     : `data:image/png;base64,${trimmed}`;
 }
 
+function buildCapsuleSummaryItems({
+  itemCount,
+  outfitCount,
+  selectedStyleCore,
+  selectedStyleAesthetic,
+  selectedOccasions,
+  selectedSeasons,
+  selectedAudience,
+  selectedAccentColor,
+  selectedPattern,
+  selectedText,
+  locale,
+  t
+}: {
+  itemCount: number;
+  outfitCount: number;
+  selectedStyleCore: string | null | undefined;
+  selectedStyleAesthetic: string | null | undefined;
+  selectedOccasions: string[];
+  selectedSeasons: string[];
+  selectedAudience: string | null | undefined;
+  selectedAccentColor: string | null | undefined;
+  selectedPattern: string | null | undefined;
+  selectedText: string;
+  locale: string;
+  t: (key: string, params?: Record<string, unknown>) => string;
+}): string[] {
+  const summary = [
+    t("capsule.itemsCount", { count: itemCount }),
+    t("capsule.outfitsCount", { count: outfitCount })
+  ];
+  const styleCore = selectedStyleCore
+    ? translateOption("styles", selectedStyleCore, locale)
+    : "";
+  const styleAesthetic = selectedStyleAesthetic
+    ? translateOption("styles", selectedStyleAesthetic, locale)
+    : "";
+
+  if (styleCore && styleAesthetic) {
+    summary.push(`${styleCore} / ${styleAesthetic}`);
+  } else if (styleCore) {
+    summary.push(styleCore);
+  }
+
+  summary.push(...selectedOccasions.map((item) => translateOption("occasions", item, locale)));
+  summary.push(...selectedSeasons.map((item) => translateOption("seasons", item, locale)));
+
+  if (selectedAudience && selectedAudience !== "any") {
+    summary.push(translateOption("audience", selectedAudience, locale));
+  }
+  if (selectedAccentColor) {
+    summary.push(translateOption("accentColors", selectedAccentColor, locale));
+  }
+  if (selectedPattern && selectedPattern !== "solid") {
+    summary.push(translateOption("patterns", selectedPattern, locale));
+  }
+
+  const additionalText = String(selectedText || "").trim();
+  if (additionalText) {
+    summary.push(additionalText);
+  }
+
+  return summary.filter(Boolean);
+}
+
 const OUTFIT_SET_IMAGE_WIDTH = 896;
 const OUTFIT_SET_IMAGE_HEIGHT = 1195;
 const OUTFIT_SET_IMAGE_ASPECT_RATIO = `${OUTFIT_SET_IMAGE_WIDTH} / ${OUTFIT_SET_IMAGE_HEIGHT}`;
@@ -416,7 +482,7 @@ function MainScreen({
   isPartialRegenerationLoading,
   registerCapsuleSidebarActions
 }: MainScreenProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const isOverlaySidebar = useMediaQuery("(max-width: 1279.95px)");
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [headerMenuAnchor, setHeaderMenuAnchor] = useState<CapsuleMenuAnchor>(null);
@@ -486,6 +552,33 @@ function MainScreen({
   const searchGroups = useMemo(() => groupCapsules(searchResults), [searchResults]);
   const activeCapsuleName = activeCapsule?.name || `<${t("capsule.new")}>`;
   const resolvedOutfitSets = useMemo(() => resolveOutfitSets(items, outfitSets), [items, outfitSets]);
+  const capsuleSummaryItems = useMemo(() => buildCapsuleSummaryItems({
+    itemCount: items.length,
+    outfitCount: resolvedOutfitSets.length,
+    selectedStyleCore,
+    selectedStyleAesthetic,
+    selectedOccasions,
+    selectedSeasons,
+    selectedAudience,
+    selectedAccentColor,
+    selectedPattern,
+    selectedText,
+    locale,
+    t
+  }), [
+    items.length,
+    resolvedOutfitSets.length,
+    selectedStyleCore,
+    selectedStyleAesthetic,
+    selectedOccasions,
+    selectedSeasons,
+    selectedAudience,
+    selectedAccentColor,
+    selectedPattern,
+    selectedText,
+    locale,
+    t
+  ]);
   const activeOutfitSet = activeItemsTab === "all"
     ? null
     : (resolvedOutfitSets.find((set) => set.id === activeItemsTab) || null);
@@ -753,11 +846,15 @@ function MainScreen({
               <Box
                 sx={{
                   display: { xs: "none", lg: "block" },
-                  pr: { lg: 3 },
-                  borderRight: { lg: "1px solid" },
-                  borderColor: { lg: "divider" },
+                  border: "1px solid",
+                  borderColor: "divider",
+                  borderRadius: "10px",
+                  backgroundColor: "background.paper",
                   minHeight: 0,
-                  overflowY: "auto"
+                  alignSelf: "start",
+                  maxHeight: "100%",
+                  overflowY: "auto",
+                  p: 3
                 }}
               >
                 <ProfileFiltersSidebar
@@ -794,17 +891,25 @@ function MainScreen({
               </Box>
 
               <Stack
-                spacing={resolvedOutfitSets.length > 0 ? 0 : 2.5}
-                sx={{ minWidth: 0, minHeight: 0, overflow: "hidden" }}
+                spacing={0}
+                sx={{
+                  minWidth: 0,
+                  minHeight: 0,
+                  overflow: "hidden",
+                  border: "1px solid",
+                  borderColor: "divider",
+                  borderRadius: "10px",
+                  backgroundColor: "background.paper"
+                }}
               >
                 <Stack
                   direction="row"
                   justifyContent="space-between"
-                  alignItems="center"
+                  alignItems="flex-start"
                   spacing={1}
-                  sx={{ pb: 2.5 }}
+                  sx={{ px: { xs: 2, md: 3 }, pt: { xs: 2, md: 2.5 }, pb: 2 }}
                 >
-                  <Stack direction="row" alignItems="center" spacing={0.75} sx={{ minWidth: 0, flex: 1 }}>
+                  <Stack direction="row" alignItems="flex-start" spacing={0.75} sx={{ minWidth: 0, flex: 1 }}>
                     {isOverlaySidebar && selectedCount === 0 ? (
                       <IconButton
                         aria-label={t("filters.open")}
@@ -816,9 +921,9 @@ function MainScreen({
                       </IconButton>
                     ) : null}
                     {!(isOverlaySidebar && selectedCount > 0) ? (
-                      <>
+                      <Stack spacing={0.75} sx={{ minWidth: 0, flex: 1 }}>
                         {isOverlaySidebar ? (
-                          <>
+                          <Stack direction="row" alignItems="center" spacing={0.75} sx={{ minWidth: 0 }}>
                             <Typography variant="h6" noWrap sx={{ minWidth: 0 }}>
                               {activeCapsuleName}
                             </Typography>
@@ -827,7 +932,7 @@ function MainScreen({
                                 <FiberManualRecordRoundedIcon sx={{ fontSize: 10, color: "#2f8f58", flexShrink: 0 }} />
                               </Tooltip>
                             ) : null}
-                          </>
+                          </Stack>
                         ) : (
                           <Stack
                             direction="row"
@@ -939,7 +1044,33 @@ function MainScreen({
                             )}
                           </Stack>
                         )}
-                      </>
+                        <Stack
+                          direction="row"
+                          flexWrap="wrap"
+                          useFlexGap
+                          gap={0.75}
+                          sx={{ color: "text.secondary", minWidth: 0 }}
+                        >
+                          {capsuleSummaryItems.map((item, index) => (
+                            <Typography
+                              key={`${item}-${index}`}
+                              variant="body2"
+                              component="span"
+                              sx={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 0.75,
+                                "&::before": index === 0 ? undefined : {
+                                  content: '"•"',
+                                  color: "text.disabled"
+                                }
+                              }}
+                            >
+                              {item}
+                            </Typography>
+                          ))}
+                        </Stack>
+                      </Stack>
                     ) : null}
                   </Stack>
                   {selectedCount > 0 ? (
@@ -955,7 +1086,7 @@ function MainScreen({
                     <Stack direction="row" spacing={1} sx={{ minHeight: 40, alignItems: "center" }}>
                       {!isOverlaySidebar ? (
                         <Button
-                          variant="contained"
+                          variant="outlined"
                           onClick={handleRequestRegenerateAll}
                           disabled={isInteractionDisabled}
                         >
@@ -972,6 +1103,36 @@ function MainScreen({
                     </Stack>
                   )}
                 </Stack>
+                {resolvedOutfitSets.length > 0 ? (
+                  <Tabs
+                    value={activeItemsTab}
+                    onChange={(_event, value) => {
+                      if (!isInteractionDisabled) {
+                        setActiveItemsTab(value);
+                      }
+                    }}
+                    variant="scrollable"
+                    scrollButtons="auto"
+                    sx={{
+                      px: { xs: 2, md: 3 },
+                      pt: 0,
+                      pb: 0.5,
+                      "& .MuiTab-root": {
+                        textTransform: "none"
+                      }
+                    }}
+                  >
+                    <Tab value="all" label={t("search.all")} disabled={isInteractionDisabled} />
+                    {resolvedOutfitSets.map((set) => (
+                      <Tab
+                        key={set.id}
+                        value={set.id}
+                        label={t("capsule.outfitSet", { number: set.label })}
+                        disabled={isInteractionDisabled}
+                      />
+                    ))}
+                  </Tabs>
+                ) : null}
                 <Box sx={{ position: "relative" }}>
                   <Divider />
                   {isContentBusy || isSharingCapsule ? (
@@ -986,30 +1147,7 @@ function MainScreen({
                     />
                   ) : null}
                 </Box>
-                {resolvedOutfitSets.length > 0 ? (
-                  <Tabs
-                    value={activeItemsTab}
-                    onChange={(_event, value) => {
-                      if (!isInteractionDisabled) {
-                        setActiveItemsTab(value);
-                      }
-                    }}
-                    variant="scrollable"
-                    scrollButtons="auto"
-                    sx={{ px: { xs: 2, md: 3 }, pt: 0, pb: 0.5 }}
-                  >
-                    <Tab value="all" label={t("search.all")} disabled={isInteractionDisabled} />
-                    {resolvedOutfitSets.map((set) => (
-                      <Tab
-                        key={set.id}
-                        value={set.id}
-                        label={t("capsule.outfitSet", { number: set.label })}
-                        disabled={isInteractionDisabled}
-                      />
-                    ))}
-                  </Tabs>
-                ) : null}
-                <Box sx={{ flex: 1, minHeight: 0, overflowY: "auto", pr: 0.5, pb: 2 }}>
+                <Box sx={{ flex: 1, minHeight: 0, overflowY: "auto", px: { xs: 2, md: 3 }, pt: 2, pb: 2 }}>
                   {isLoadingItems ? (
                     <ClothingGridPlaceholder count={12} />
                   ) : (

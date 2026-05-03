@@ -76,7 +76,9 @@ function renderSidebar(props: Partial<ComponentProps<typeof ProfileFiltersSideba
         "profile.stylesTitle": "Styles",
         "profile.stylesHint": "Hint",
         "profile.styleCoreTitle": "Core style",
+        "profile.styleCoreHint": "Choose one core style.",
         "profile.styleAestheticTitle": "Aesthetic style",
+        "profile.styleAestheticHint": "Choose optionally one aesthetic.",
         "profile.styleAestheticNotImportant": "Aesthetic not important",
         "filters.apply": "Apply",
         "filters.applyDisabledHint": "To apply filters, choose: {items}.",
@@ -222,6 +224,17 @@ describe("ProfileFiltersSidebar", () => {
 
     expect(screen.getByRole("button", { name: "Apply" })).toBeEnabled();
     expect(screen.queryByText(/To apply filters, choose:/)).not.toBeInTheDocument();
+  });
+
+  test("renders compact style sections without the parent style heading", () => {
+    renderSidebar();
+
+    expect(screen.queryByText("Styles")).not.toBeInTheDocument();
+    expect(screen.queryByText("profile.stylesTitle")).not.toBeInTheDocument();
+    expect(screen.getByText("Core style")).toBeInTheDocument();
+    expect(screen.getByText("Choose one core style.")).toBeInTheDocument();
+    expect(screen.getByText("Aesthetic style")).toBeInTheDocument();
+    expect(screen.getByText("Choose optionally one aesthetic.")).toBeInTheDocument();
   });
 
   test("shows a single missing required filter in the apply hint", () => {

@@ -50,6 +50,7 @@ type AppSidebarShellSlot =
 type AppSidebarShellProps = {
   shellTestId?: string;
   currentApp?: string;
+  contentSurface?: "panel" | "plain";
   userEmail?: string;
   userName?: string;
   settingsProfile?: SettingsProfile | null;
@@ -129,6 +130,7 @@ function SidebarCollapseIcon(props: SvgIconProps): ReactElement {
 function AppSidebarShell({
   shellTestId,
   currentApp = "",
+  contentSurface = "panel",
   userEmail = "",
   userName = "",
   settingsProfile = null,
@@ -153,6 +155,7 @@ function AppSidebarShell({
   const desktopSidebarRailWidth = 72;
   const desktopSidebarGap = 12;
   const desktopContentInset = isOverlaySidebar ? 0 : desktopSidebarWidth + desktopSidebarGap;
+  const isPlainContentSurface = contentSurface === "plain";
 
   useEffect(() => {
     if (isOverlaySidebar) {
@@ -368,13 +371,13 @@ function AppSidebarShell({
               maxWidth: isOverlaySidebar ? undefined : "1600px",
               minHeight: 0,
               overflow: "hidden",
-              bgcolor: "background.paper",
-              border: "1px solid",
-              borderColor: "divider",
-              borderRadius: { xs: 0, md: "22px" },
+              bgcolor: isPlainContentSurface ? "transparent" : "background.paper",
+              border: isPlainContentSurface ? "none" : "1px solid",
+              borderColor: isPlainContentSurface ? "transparent" : "divider",
+              borderRadius: isPlainContentSurface ? 0 : { xs: 0, md: "22px" },
               boxShadow: "none",
-              px: { xs: 2, md: 3 },
-              py: { xs: 1.5, md: 2 },
+              px: isPlainContentSurface ? 0 : { xs: 2, md: 3 },
+              py: isPlainContentSurface ? 0 : { xs: 1.5, md: 2 },
               display: "flex",
               flexDirection: "column"
             }}

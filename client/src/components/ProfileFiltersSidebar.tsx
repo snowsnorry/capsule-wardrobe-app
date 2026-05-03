@@ -67,6 +67,21 @@ function sortPatternOptions(patternOptions: ProfileFilterValue[], locale: string
   });
 }
 
+function FilterSectionTitle({ title, hint }: { title: string; hint?: string }): ReactElement {
+  return (
+    <Stack spacing={0.5}>
+      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+        {title}
+      </Typography>
+      {hint ? (
+        <Typography variant="body2" color="text.secondary">
+          {hint}
+        </Typography>
+      ) : null}
+    </Stack>
+  );
+}
+
 function ProfileFiltersSidebar({
   styleOptions,
   occasionOptions,
@@ -125,8 +140,7 @@ function ProfileFiltersSidebar({
     <Stack
       spacing={3.5}
       sx={{
-        height: "100%",
-        minHeight: 0
+        boxSizing: "border-box"
       }}
     >
       <StylePreferenceSelector
@@ -136,15 +150,12 @@ function ProfileFiltersSidebar({
         onSelectStyleCore={onSelectStyleCore}
         onSelectStyleAesthetic={onSelectStyleAesthetic}
         disabled={isInteractionDisabled}
-        titleVariant="h6"
+        showSectionHeading={false}
         bodyVariant="body2"
       />
 
       <Stack spacing={1.5}>
-        <Typography variant="h6">{t("profile.occasionsTitle")}</Typography>
-        <Typography variant="body2" color="text.secondary">
-          {t("profile.occasionsHint")}
-        </Typography>
+        <FilterSectionTitle title={t("profile.occasionsTitle")} hint={t("profile.occasionsHint")} />
         <Stack direction="row" flexWrap="wrap" gap={1}>
           {occasionOptions.map((item) => (
             <Chip
@@ -160,10 +171,7 @@ function ProfileFiltersSidebar({
       </Stack>
 
       <Stack spacing={1.5}>
-        <Typography variant="h6">{t("profile.seasonsTitle")}</Typography>
-        <Typography variant="body2" color="text.secondary">
-          {t("profile.seasonsHint")}
-        </Typography>
+        <FilterSectionTitle title={t("profile.seasonsTitle")} hint={t("profile.seasonsHint")} />
         <Stack direction="row" flexWrap="wrap" gap={1}>
           {seasonOptions.map((item) => (
             <Chip
@@ -179,10 +187,7 @@ function ProfileFiltersSidebar({
       </Stack>
 
       <Stack spacing={1.5}>
-        <Typography variant="h6">{t("profile.audienceTitle")}</Typography>
-        <Typography variant="body2" color="text.secondary">
-          {t("profile.audienceHint")}
-        </Typography>
+        <FilterSectionTitle title={t("profile.audienceTitle")} hint={t("profile.audienceHint")} />
         <Stack direction="row" flexWrap="wrap" gap={1}>
           {audienceOptions.map((item) => (
             <Chip
@@ -198,10 +203,7 @@ function ProfileFiltersSidebar({
       </Stack>
 
       <Stack spacing={1.5}>
-        <Typography variant="h6">{t("profile.accentColorTitle")}</Typography>
-        <Typography variant="body2" color="text.secondary">
-          {t("profile.accentColorHint")}
-        </Typography>
+        <FilterSectionTitle title={t("profile.accentColorTitle")} hint={t("profile.accentColorHint")} />
         <AccentColorChips
           options={accentColorOptions}
           selectedValue={selectedAccentColor}
@@ -211,10 +213,7 @@ function ProfileFiltersSidebar({
       </Stack>
 
       <Stack spacing={1.5}>
-        <Typography variant="h6">{t("profile.patternTitle")}</Typography>
-        <Typography variant="body2" color="text.secondary">
-          {t("profile.patternHint")}
-        </Typography>
+        <FilterSectionTitle title={t("profile.patternTitle")} hint={t("profile.patternHint")} />
         <Stack direction="row" flexWrap="wrap" gap={1}>
           {sortedPatternOptions.map((item) => (
             <Chip
@@ -230,10 +229,7 @@ function ProfileFiltersSidebar({
       </Stack>
 
       <Stack spacing={1.5}>
-        <Typography variant="h6">{t("profile.additionalInfoTitle")}</Typography>
-        <Typography variant="body2" color="text.secondary">
-          {t("profile.additionalInfoHint")}
-        </Typography>
+        <FilterSectionTitle title={t("profile.additionalInfoTitle")} hint={t("profile.additionalInfoHint")} />
         <TextField
           multiline
           minRows={1}
@@ -246,8 +242,11 @@ function ProfileFiltersSidebar({
           InputProps={{
             sx: {
               alignItems: "flex-start",
+              fontSize: "0.875rem",
               "& .MuiInputBase-inputMultiline": {
-                overflowY: "auto !important"
+                overflowY: "auto !important",
+                fontSize: "0.875rem",
+                lineHeight: 1.5
               }
             }
           }}
