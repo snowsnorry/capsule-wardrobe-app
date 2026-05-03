@@ -49,6 +49,7 @@ import type { DialogProps } from "@mui/material/Dialog";
 type CapsuleMenuAnchor = HTMLElement | null;
 type AppNavigationOptions = {
   query?: string;
+  openProductDetail?: boolean;
 };
 type CapsuleLike = {
   id?: string;
@@ -743,7 +744,7 @@ function MainScreen({
     if (!productUrl) {
       return;
     }
-    onNavigateApp("explore", { query: productUrl });
+    onNavigateApp("explore", { query: productUrl, openProductDetail: true });
   };
 
   const handleRequestRegenerateAll = async () => {

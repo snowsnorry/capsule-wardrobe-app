@@ -189,6 +189,15 @@ vi.mock("./screens/MainScreen", () => ({
         <button type="button" onClick={() => props.onNavigateApp("explore")}>
           open-explore
         </button>
+        <button
+          type="button"
+          onClick={() => props.onNavigateApp("explore", {
+            query: "https://example.com/products/linen-shirt",
+            openProductDetail: true
+          })}
+        >
+          open-product-detail
+        </button>
         <button type="button" onClick={() => props.onNavigateApp("statistics")}>
           open-statistics
         </button>
@@ -220,6 +229,8 @@ vi.mock("./screens/SearchScreen", () => ({
   default: function SearchScreenMock(props) {
     return (
       <div data-testid="search-screen">
+        <div>initial-query:{props.initialQuery || ""}</div>
+        <div>auto-open-product-detail:{String(Boolean(props.autoOpenProductDetail))}</div>
         <button type="button" onClick={() => props.onNavigateApp("capsule")}>
           back-to-capsule
         </button>
@@ -644,6 +655,15 @@ describe("App", () => {
     fireEvent.click(screen.getByRole("button", { name: "open-explore" }));
     expect(await screen.findByTestId("search-screen")).toBeInTheDocument();
     expect(screen.queryByTestId("locale-switcher")).not.toBeInTheDocument();
+    expect(screen.getByText("auto-open-product-detail:false")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "back-to-capsule" }));
+    expect(await screen.findByTestId("main-screen")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "open-product-detail" }));
+    expect(await screen.findByTestId("search-screen")).toBeInTheDocument();
+    expect(screen.getByText("initial-query:https://example.com/products/linen-shirt")).toBeInTheDocument();
+    expect(screen.getByText("auto-open-product-detail:true")).toBeInTheDocument();
   });
 
   test("does not auto-regenerate wardrobe after bootstrap when the active capsule has no stored items", async () => {

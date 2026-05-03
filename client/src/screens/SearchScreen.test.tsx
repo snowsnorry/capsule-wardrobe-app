@@ -181,6 +181,65 @@ describe("SearchScreen", () => {
     });
   });
 
+  test("mobile auto-opens product detail for a single handoff result", async () => {
+    searchApi.runSearch.mockResolvedValueOnce(makeResults([
+      {
+        id: "1",
+        name: "Linen Shirt",
+        brand: "UNIQLO",
+        category: "top",
+        url: "https://example.com/products/linen-shirt",
+        description: "Soft linen shirt"
+      }
+    ]));
+
+    renderScreen(
+      {
+        initialQuery: "https://example.com/products/linen-shirt",
+        autoOpenProductDetail: true
+      },
+      { layoutMode: "overlay" }
+    );
+
+    expect(await screen.findByDisplayValue("https://example.com/products/linen-shirt")).toBeInTheDocument();
+    expect(await screen.findByLabelText("Back")).toBeInTheDocument();
+    expect(screen.getByText("Soft linen shirt")).toBeInTheDocument();
+  });
+
+  test("mobile does not auto-open product detail when handoff returns multiple results", async () => {
+    renderScreen(
+      {
+        initialQuery: "https://example.com/products/linen-shirt",
+        autoOpenProductDetail: true
+      },
+      { layoutMode: "overlay" }
+    );
+
+    expect(await screen.findByDisplayValue("https://example.com/products/linen-shirt")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Back")).not.toBeInTheDocument();
+  });
+
+  test("mobile does not auto-open product detail without the handoff flag", async () => {
+    searchApi.runSearch.mockResolvedValueOnce(makeResults([
+      {
+        id: "1",
+        name: "Linen Shirt",
+        brand: "UNIQLO",
+        category: "top",
+        url: "https://example.com/products/linen-shirt",
+        description: "Soft linen shirt"
+      }
+    ]));
+
+    renderScreen(
+      { initialQuery: "https://example.com/products/linen-shirt" },
+      { layoutMode: "overlay" }
+    );
+
+    expect(await screen.findByDisplayValue("https://example.com/products/linen-shirt")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Back")).not.toBeInTheDocument();
+  });
+
   test("desktop filter interactions auto-apply and reset page to 1", async () => {
     renderScreen();
     await screen.findByDisplayValue("linen shirt");

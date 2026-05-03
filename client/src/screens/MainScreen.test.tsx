@@ -517,7 +517,10 @@ describe("MainScreen", () => {
 
     await user.click(screen.getByTestId("product-menu-https://example.com/a"));
     await user.click(screen.getByRole("menuitem", { name: "Show Product Info" }));
-    expect(onNavigateApp).toHaveBeenCalledWith("explore", { query: "https://example.com/a" });
+    expect(onNavigateApp).toHaveBeenCalledWith("explore", {
+      query: "https://example.com/a",
+      openProductDetail: true
+    });
   });
 
   test("renders capsule metadata with counts and active filters in filter order", () => {

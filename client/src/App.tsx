@@ -227,6 +227,7 @@ type AppRoute = "capsule" | "explore" | "statistics" | "share";
 
 type AppNavigationOptions = {
   query?: string;
+  openProductDetail?: boolean;
 };
 
 const MainScreen = lazy(() => import("./screens/MainScreen"));
@@ -481,6 +482,7 @@ function App() {
     typeof window === "undefined" ? "capsule" : getAppRoute(window.location.pathname)
   ));
   const [searchInitialQuery, setSearchInitialQuery] = useState("");
+  const [searchAutoOpenProductDetail, setSearchAutoOpenProductDetail] = useState(false);
   const [pendingShareId, setPendingShareId] = useState(() => (
     typeof window === "undefined" ? "" : getShareIdFromPath(window.location.pathname)
   ));
@@ -521,6 +523,7 @@ function App() {
       setAppRoute(nextRoute);
       if (nextRoute !== "explore") {
         setSearchInitialQuery("");
+        setSearchAutoOpenProductDetail(false);
       }
       setPendingShareId(getShareIdFromPath(window.location.pathname));
     };
@@ -1374,6 +1377,7 @@ function App() {
       window.history.pushState({}, "", nextPath);
     }
     setSearchInitialQuery(nextApp === "explore" ? String(options.query || "") : "");
+    setSearchAutoOpenProductDetail(nextApp === "explore" && Boolean(options.openProductDetail));
     setAppRoute(getAppRoute(nextPath));
   };
 
@@ -1898,6 +1902,7 @@ function App() {
           <SearchScreen
             onNavigateApp={handleNavigateApp}
             initialQuery={searchInitialQuery}
+            autoOpenProductDetail={searchAutoOpenProductDetail}
           />
         );
       }

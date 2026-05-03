@@ -65,6 +65,7 @@ type SearchResponse = {
 type SearchScreenProps = {
   onNavigateApp: (nextApp: "capsule" | "explore" | "statistics") => void;
   initialQuery?: string;
+  autoOpenProductDetail?: boolean;
 };
 
 const SEARCH_AUTO_APPLY_DEBOUNCE_MS = 300;
@@ -232,7 +233,8 @@ function ProductDetail({
 
 function SearchScreen({
   onNavigateApp,
-  initialQuery = ""
+  initialQuery = "",
+  autoOpenProductDetail = false
 }: SearchScreenProps): ReactElement {
   const { t, locale } = useI18n();
   const isMobile = useMediaQuery("(max-width: 1279.95px)");
@@ -273,6 +275,7 @@ function SearchScreen({
 
     const bootstrap = async () => {
       setStatus({ loading: true, error: "" });
+      setIsDetailOpen(false);
       try {
         const [optionsResponse, savedResponse] = await Promise.all([
           fetchSearchOptions({ force: true }),
@@ -296,9 +299,13 @@ function SearchScreen({
           return;
         }
         lastAppliedSearchKeyRef.current = JSON.stringify(serialized);
-        setResults(result.items || []);
+        const nextResults = result.items || [];
+        setResults(nextResults);
         setTotal(result.total || 0);
-        setSelectedResultId(result.items?.[0]?.id ?? null);
+        setSelectedResultId(nextResults[0]?.id ?? null);
+        if (isMobile && autoOpenProductDetail && nextResults.length === 1) {
+          setIsDetailOpen(true);
+        }
         setStatus({ loading: false, error: "" });
       } catch (error) {
         if (!isActive) {
@@ -312,7 +319,7 @@ function SearchScreen({
     return () => {
       isActive = false;
     };
-  }, [initialQuery, t]);
+  }, [autoOpenProductDetail, initialQuery, isMobile, t]);
 
   const selectedItem = useMemo(
     () => results.find((item) => String(item.id) === String(selectedResultId)) || results[0] || null,
