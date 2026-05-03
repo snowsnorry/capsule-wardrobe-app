@@ -54,8 +54,10 @@ type MultiSelectChipsProps = {
 
 function SearchSection({ title, hint, children }: SearchSectionProps) {
   return (
-    <Stack spacing={1.3}>
-      <Typography variant="h6">{title}</Typography>
+    <Stack spacing={1.5}>
+      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+        {title}
+      </Typography>
       {hint ? (
         <Typography variant="body2" color="text.secondary">
           {hint}
@@ -357,7 +359,7 @@ function SearchFiltersSidebar({
         />
       </SearchSection>
 
-      <SearchSection title={t("profile.stylesTitle")}>
+      <Stack spacing={1.5}>
         <Stack spacing={1.5}>
           <Typography variant="body2" sx={{ fontWeight: 600 }}>
             {t("profile.styleCoreTitle")}
@@ -394,7 +396,7 @@ function SearchFiltersSidebar({
             }))}
           />
         </Stack>
-      </SearchSection>
+      </Stack>
 
       <SearchSection title={t("profile.occasionsTitle")}>
         <MultiSelectChips

@@ -332,7 +332,7 @@ describe("SearchScreen", () => {
 
     expect(await screen.findByDisplayValue("linen shirt")).toBeInTheDocument();
 
-    const patternSection = screen.getByRole("heading", { name: "Pattern" }).parentElement;
+    const patternSection = screen.getByText("Pattern").parentElement;
     const patternQueries = within(patternSection);
     const notImportant = patternQueries.getByRole("button", { name: "Not important" });
     const abstract = patternQueries.getByRole("button", { name: "Abstract" });
@@ -349,12 +349,13 @@ describe("SearchScreen", () => {
 
     expect(await screen.findByDisplayValue("linen shirt")).toBeInTheDocument();
 
-    const stylesSection = screen.getByRole("heading", { name: "Style preferences" }).parentElement;
-    const coreLabel = within(stylesSection).getByText("Core");
-    const aestheticsLabel = within(stylesSection).getByText("Aesthetics");
+    expect(screen.queryByText("Style preferences")).not.toBeInTheDocument();
+
+    const coreLabel = screen.getByText("Core");
+    const aestheticsLabel = screen.getByText("Aesthetics");
     const coreContainer = coreLabel.parentElement;
     const aestheticsContainer = aestheticsLabel.parentElement;
-    const seasonsSection = screen.getByRole("heading", { name: "Seasons" }).parentElement;
+    const seasonsSection = screen.getByText("Seasons").parentElement;
 
     const casual = within(coreContainer).getByRole("button", { name: "Casual" });
     const smartCasual = within(coreContainer).getByRole("button", { name: "Smart casual" });
@@ -381,7 +382,7 @@ describe("SearchScreen", () => {
 
     expect(await screen.findByDisplayValue("linen shirt")).toBeInTheDocument();
 
-    const audienceSection = screen.getByRole("heading", { name: "Audience" }).parentElement;
+    const audienceSection = screen.getAllByText("Audience")[0].parentElement;
     const labels = within(audienceSection)
       .getAllByRole("button")
       .map((button) => button.textContent?.trim())

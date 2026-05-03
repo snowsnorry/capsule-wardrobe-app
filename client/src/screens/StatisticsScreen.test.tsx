@@ -208,7 +208,7 @@ describe("StatisticsScreen", () => {
     renderScreen();
     expect((await screen.findAllByText("120")).length).toBeGreaterThan(0);
 
-    const audienceSection = screen.getAllByRole("heading", { name: "Audience" })[0].parentElement;
+    const audienceSection = screen.getAllByText("Audience")[0].parentElement;
     const labels = within(audienceSection)
       .getAllByRole("button")
       .map((button) => button.textContent?.trim())
