@@ -92,6 +92,17 @@ describe("ClothingCard", () => {
     expect(image).toHaveAttribute("alt", item.name);
   });
 
+  test("renders product title in the details area and category over the image", () => {
+    const { container } = renderCard();
+
+    const details = container.querySelector(".wardrobe-card-details");
+    const category = container.querySelector(".wardrobe-card-category");
+
+    expect(details).toContainElement(screen.getByText("Red Jacket"));
+    expect(details).not.toContainElement(screen.getByText("options.categories.outerwear"));
+    expect(category).toContainElement(screen.getByText("options.categories.outerwear"));
+  });
+
   test("drops unsafe product and image urls", () => {
     renderCard({
       item: {

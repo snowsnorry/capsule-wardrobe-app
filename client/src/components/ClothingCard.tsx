@@ -59,7 +59,7 @@ function ClothingCard({
     onProductMenuClick(event, productUrl, item);
   };
 
-  const cardContent = (
+  const imageContent = (
     <>
       {imageUrl ? (
         <Box
@@ -90,14 +90,6 @@ function ClothingCard({
           </Typography>
         </Box>
       )}
-      <Box
-        sx={{
-          position: "absolute",
-          inset: 0,
-          background:
-            "linear-gradient(180deg, rgba(0,0,0,0) 30%, rgba(10,12,12,0.55) 100%)"
-        }}
-      />
       {isSelected ? (
         <Box
           sx={{
@@ -109,34 +101,6 @@ function ClothingCard({
           }}
         />
       ) : null}
-      <Box
-        sx={{
-          position: "absolute",
-          left: 0,
-          right: 0,
-          bottom: 0,
-          p: 2,
-          zIndex: 2
-        }}
-      >
-        <Typography
-          variant="subtitle1"
-          sx={{
-            color: "#fff",
-            fontWeight: 600,
-            textShadow: "0 2px 12px rgba(0,0,0,0.45)"
-          }}
-        >
-          <ProductLabelText
-            item={item}
-            fallbackLabel=""
-            suffixSx={{
-              fontSize: "0.72em",
-              opacity: 0.88
-            }}
-          />
-        </Typography>
-      </Box>
     </>
   );
 
@@ -145,25 +109,13 @@ function ClothingCard({
       sx={{
         display: "flex",
         flexDirection: "column",
-        borderRadius: 0.3,
+        height: "100%",
+        borderRadius: "8px",
         overflow: "hidden",
         backgroundColor: "background.paper",
         position: "relative",
-        boxShadow: "0 16px 40px rgba(17, 36, 34, 0.08)",
-        transition: "transform 200ms ease, box-shadow 200ms ease",
-        "&::before": {
-          content: '""',
-          position: "absolute",
-          inset: 0,
-          borderRadius: 0.3,
-          padding: "1px",
-          background:
-            "linear-gradient(140deg, rgba(28,124,124,0.35), rgba(240,180,41,0.35))",
-          WebkitMask:
-            "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
-          WebkitMaskComposite: "xor",
-          pointerEvents: "none"
-        },
+        border: "1px solid rgba(17, 36, 34, 0.08)",
+        boxShadow: "0 0px 8px rgba(17, 36, 34, 0.08)",
         ...((isSelectable || productUrl) && !isSelected && !isMobile
           ? {
               "& .wardrobe-card-actions": {
@@ -175,19 +127,14 @@ function ClothingCard({
                 visibility: "visible"
               }
             }
-          : {}),
-        "&:hover": {
-          transform: "translateY(-4px)",
-          boxShadow: "0 20px 50px rgba(17, 36, 34, 0.14)"
-        }
+          : {})
       }}
     >
       <Box
         sx={{
           width: "100%",
           aspectRatio: "3 / 4",
-          background:
-            "radial-gradient(circle at top, rgba(28,124,124,0.12), transparent 55%), #f6f4f1",
+          backgroundColor: "#f7f5f1",
           position: "relative",
           overflow: "hidden"
         }}
@@ -263,15 +210,17 @@ function ClothingCard({
           sx={{ position: "absolute", top: 12, left: 12, zIndex: 1 }}
         >
           <Chip
+            className="wardrobe-card-category"
             label={categoryLabel || item.category || ""}
             size="small"
             sx={{
               textTransform: "uppercase",
-              letterSpacing: 0.6,
-              fontSize: "0.65rem",
-              fontWeight: 700,
-              bgcolor: "rgba(28,124,124,0.12)",
-              color: "primary.main"
+              letterSpacing: "0.08em",
+              fontSize: "12px",
+              fontWeight: 800,
+              padding: "4px 8px",
+              bgcolor: "#dcefeb",
+              color: "#15766f"
             }}
           />
         </Stack>
@@ -283,14 +232,50 @@ function ClothingCard({
             underline="none"
             sx={{ position: "absolute", inset: 0, zIndex: 0 }}
           >
-            {cardContent}
+            {imageContent}
           </MuiLink>
         ) : (
           <Box sx={{ position: "absolute", inset: 0, zIndex: 0 }}>
-            {cardContent}
+            {imageContent}
           </Box>
         )}
       </Box>
+      <Stack
+        className="wardrobe-card-details"
+        spacing={1.25}
+        sx={{
+          flexShrink: 0,
+          flexGrow: 1,
+          px: 2.5,
+          pt: 2,
+          pb: 2.25,
+          minHeight: 64,
+          justifyContent: "flex-start",
+          alignItems: "flex-start",
+          backgroundColor: "#fff",
+          borderTop: "1px solid rgba(15, 23, 42, 0.055)"
+        }}
+      >
+        <Typography
+          variant="subtitle1"
+          sx={{
+            color: "#202a33",
+            fontWeight: 500,
+            lineHeight: 1.22,
+            letterSpacing: 0,
+            fontSize: "16px"
+          }}
+        >
+          <ProductLabelText
+            item={item}
+            fallbackLabel=""
+            suffixSx={{
+              fontSize: "0.72em",
+              opacity: 0.72
+            }}
+          />
+        </Typography>
+      </Stack>
     </Box>
   );
 }

@@ -17,24 +17,13 @@ function ClothingPlaceholderCard({ placeholderKey }: ClothingPlaceholderCardProp
       sx={{
         display: "flex",
         flexDirection: "column",
-        borderRadius: 0.3,
+        height: "100%",
+        borderRadius: "8px",
         overflow: "hidden",
         backgroundColor: "background.paper",
         position: "relative",
-        boxShadow: "0 16px 40px rgba(17, 36, 34, 0.08)",
-        "&::before": {
-          content: '""',
-          position: "absolute",
-          inset: 0,
-          borderRadius: 0.3,
-          padding: "1px",
-          background:
-            "linear-gradient(140deg, rgba(28,124,124,0.2), rgba(240,180,41,0.2))",
-          WebkitMask:
-            "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
-          WebkitMaskComposite: "xor",
-          pointerEvents: "none"
-        }
+        border: "1px solid rgba(17, 36, 34, 0.08)",
+        boxShadow: "0 0px 8px rgba(17, 36, 34, 0.08)"
       }}
     >
       <Box
@@ -54,29 +43,34 @@ function ClothingPlaceholderCard({ placeholderKey }: ClothingPlaceholderCardProp
             position: "absolute",
             top: 12,
             left: 12,
-            width: 62,
+            width: 112,
             height: 32,
             borderRadius: "999px",
-            bgcolor: "rgba(28,124,124,0.1)"
+            bgcolor: "#dcefeb"
           }}
         />
+      </Box>
+      <Box
+        sx={{
+          flexShrink: 0,
+          flexGrow: 1,
+          px: 2.5,
+          pt: 2,
+          pb: 2.25,
+          minHeight: 64,
+          backgroundColor: "#fff",
+          borderTop: "1px solid rgba(15, 23, 42, 0.055)"
+        }}
+      >
         <Box
           sx={{
-            position: "absolute",
-            inset: 0,
+            width: "72%",
+            height: 20,
+            borderRadius: "6px",
             background:
-              "linear-gradient(180deg, rgba(0,0,0,0) 30%, rgba(10,12,12,0.2) 100%)"
-          }}
-        />
-        <Box
-          sx={{
-            position: "absolute",
-            left: 16,
-            right: 16,
-            bottom: 16,
-            height: 32,
-            borderRadius: 1.5,
-            bgcolor: "rgba(255,255,255,0.22)"
+              "linear-gradient(110deg, #e5e7eb 8%, #f8fafc 18%, #e5e7eb 33%)",
+            backgroundSize: "200% 100%",
+            animation: "placeholderShimmer 1.3s linear infinite"
           }}
         />
       </Box>
@@ -108,10 +102,15 @@ function ClothingGridPlaceholder({
         gridTemplateColumns: {
           xs: "1fr",
           sm: "repeat(2, minmax(0, 1fr))",
-          lg: "repeat(3, minmax(0, 1fr))",
-          xl: "repeat(4, minmax(0, 1fr))"
+          lg: "repeat(2, minmax(0, 1fr))"
         },
-        gap: 2.5
+        gap: 2.5,
+        "@media (min-width: 1400px)": {
+          gridTemplateColumns: "repeat(3, minmax(0, 1fr))"
+        },
+        "@media (min-width: 1760px)": {
+          gridTemplateColumns: "repeat(4, minmax(0, 1fr))"
+        }
       }}
     >
       {renderPlaceholderCards(count)}

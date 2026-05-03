@@ -1009,7 +1009,7 @@ function MainScreen({
                     ))}
                   </Tabs>
                 ) : null}
-                <Box sx={{ flex: 1, minHeight: 0, overflowY: "auto", pr: 0.5 }}>
+                <Box sx={{ flex: 1, minHeight: 0, overflowY: "auto", pr: 0.5, pb: 2 }}>
                   {isLoadingItems ? (
                     <ClothingGridPlaceholder count={12} />
                   ) : (
