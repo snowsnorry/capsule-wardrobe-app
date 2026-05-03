@@ -371,7 +371,9 @@ function AppSidebarShell({
               maxWidth: isOverlaySidebar ? undefined : "1600px",
               minHeight: 0,
               overflow: "hidden",
-              bgcolor: isPlainContentSurface ? "transparent" : "background.paper",
+              bgcolor: isPlainContentSurface
+                ? (isOverlaySidebar ? "background.paper" : "transparent")
+                : "background.paper",
               border: isPlainContentSurface ? "none" : "1px solid",
               borderColor: isPlainContentSurface ? "transparent" : "divider",
               borderRadius: isPlainContentSurface ? 0 : { xs: 0, md: "22px" },

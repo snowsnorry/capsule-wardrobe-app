@@ -868,7 +868,7 @@ function StatisticsScreen({
     <>
       <Stack spacing={2.4} sx={{ height: "100%", minHeight: 0, overflow: "hidden" }}>
         {isMobile ? (
-          <Stack spacing={2} sx={{ minHeight: 0, overflowY: "auto", pb: 2 }}>
+          <Stack spacing={2} sx={{ minHeight: 0, overflowY: "auto", px: 2, pb: 2 }}>
             {renderMobileFiltersButton()}
             {renderSummary()}
             {status.loading && chartCards.length === 0 ? (

@@ -833,21 +833,18 @@ describe("MainScreen", () => {
     expect(screen.getByRole("button", { name: "Regenerate Selected (1)" })).toBeInTheDocument();
   });
 
-  test("moves regenerate all into the header menu on mobile", async () => {
+  test("renders regenerate all as a mobile header action", async () => {
     const user = userEvent.setup();
     const onRefreshItems = vi.fn();
 
     renderScreen({ onRefreshItems }, { mobile: true });
 
-    expect(screen.queryByRole("button", { name: "Regenerate all" })).not.toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: "Open capsule menu" }));
-    await user.click(screen.getByRole("menuitem", { name: "Regenerate all" }));
+    await user.click(screen.getByRole("button", { name: "Regenerate all" }));
 
     expect(onRefreshItems).toHaveBeenCalledTimes(1);
   });
 
-  test("asks before regenerating all items from the mobile header menu when capsule is non-empty", async () => {
+  test("asks before regenerating all items from the mobile header action when capsule is non-empty", async () => {
     const user = userEvent.setup();
     const onRefreshItems = vi.fn();
 
@@ -856,8 +853,7 @@ describe("MainScreen", () => {
       onRefreshItems
     }, { mobile: true });
 
-    await user.click(screen.getByRole("button", { name: "Open capsule menu" }));
-    await user.click(screen.getByRole("menuitem", { name: "Regenerate all" }));
+    await user.click(screen.getByRole("button", { name: "Regenerate all" }));
 
     expect(screen.getByRole("dialog", { name: "Regenerate capsule?" })).toBeInTheDocument();
     expect(onRefreshItems).not.toHaveBeenCalled();

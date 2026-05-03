@@ -475,9 +475,9 @@ function SearchScreen({
     <>
       <Stack spacing={2.4} sx={{ height: "100%", minHeight: 0, overflow: "hidden" }}>
         {isMobile ? (
-          <Stack spacing={2} sx={{ minHeight: 0, overflow: "hidden" }}>
+          <Stack spacing={2} sx={{ minHeight: 0, overflow: "hidden", px: 2, pb: 2 }}>
             {renderSearchBar(true)}
-            <Divider />
+            <Divider sx={{ mx: -2 }} />
             <Box sx={{ flex: 1, minHeight: 0, overflow: "hidden" }}>{renderResultsList(true)}</Box>
           </Stack>
         ) : (

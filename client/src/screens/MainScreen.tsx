@@ -896,9 +896,9 @@ function MainScreen({
                   minWidth: 0,
                   minHeight: 0,
                   overflow: "hidden",
-                  border: "1px solid",
-                  borderColor: "divider",
-                  borderRadius: "10px",
+                  border: { xs: "none", lg: "1px solid" },
+                  borderColor: { lg: "divider" },
+                  borderRadius: { xs: 0, lg: "10px" },
                   backgroundColor: "background.paper"
                 }}
               >
@@ -907,30 +907,22 @@ function MainScreen({
                   justifyContent="space-between"
                   alignItems="flex-start"
                   spacing={1}
-                  sx={{ px: { xs: 2, md: 3 }, pt: { xs: 2, md: 2.5 }, pb: 2 }}
+                  sx={{ px: { xs: 2, md: 3 }, pt: { xs: 1, md: 2.5 }, pb: { xs: 1.5, md: 2 } }}
                 >
-                  <Stack direction="row" alignItems="flex-start" spacing={0.75} sx={{ minWidth: 0, flex: 1 }}>
-                    {isOverlaySidebar && selectedCount === 0 ? (
-                      <IconButton
-                        aria-label={t("filters.open")}
-                        onClick={() => setIsFiltersOpen(true)}
-                        disabled={isInteractionDisabled}
-                        sx={{ ml: -1 }}
-                      >
-                        <TuneRoundedIcon />
-                      </IconButton>
-                    ) : null}
+                  <Stack spacing={0.75} sx={{ minWidth: 0, flex: 1 }}>
                     {!(isOverlaySidebar && selectedCount > 0) ? (
-                      <Stack spacing={0.75} sx={{ minWidth: 0, flex: 1 }}>
+                      <>
                         {isOverlaySidebar ? (
                           <Stack direction="row" alignItems="center" spacing={0.75} sx={{ minWidth: 0 }}>
-                            <Typography variant="h6" noWrap sx={{ minWidth: 0 }}>
-                              {activeCapsuleName}
-                            </Typography>
-                            {capsuleHasUnsavedChanges(activeCapsule) ? (
-                              <Tooltip title={t("capsule.notSaved")}>
-                                <FiberManualRecordRoundedIcon sx={{ fontSize: 10, color: "#2f8f58", flexShrink: 0 }} />
-                              </Tooltip>
+                            {selectedCount === 0 ? (
+                              <IconButton
+                                aria-label={t("filters.open")}
+                                onClick={() => setIsFiltersOpen(true)}
+                                disabled={isInteractionDisabled}
+                                sx={{ ml: -1, flexShrink: 0 }}
+                              >
+                                <TuneRoundedIcon />
+                              </IconButton>
                             ) : null}
                           </Stack>
                         ) : (
@@ -1044,32 +1036,34 @@ function MainScreen({
                             )}
                           </Stack>
                         )}
-                        <Stack
-                          direction="row"
-                          flexWrap="wrap"
-                          useFlexGap
-                          gap={0.75}
-                          sx={{ color: "text.secondary", minWidth: 0 }}
-                        >
-                          {capsuleSummaryItems.map((item, index) => (
-                            <Typography
-                              key={`${item}-${index}`}
-                              variant="body2"
-                              component="span"
-                              sx={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: 0.75,
-                                "&::before": index === 0 ? undefined : {
-                                  content: '"•"',
-                                  color: "text.disabled"
-                                }
-                              }}
-                            >
-                              {item}
-                            </Typography>
-                          ))}
-                        </Stack>
+                      </>
+                    ) : null}
+                    {!isOverlaySidebar ? (
+                      <Stack
+                        direction="row"
+                        flexWrap="wrap"
+                        useFlexGap
+                        gap={0.75}
+                        sx={{ color: "text.secondary", minWidth: 0 }}
+                      >
+                        {capsuleSummaryItems.map((item, index) => (
+                          <Typography
+                            key={`${item}-${index}`}
+                            variant="body2"
+                            component="span"
+                            sx={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 0.75,
+                              "&::before": index === 0 ? undefined : {
+                                content: '"•"',
+                                color: "text.disabled"
+                              }
+                            }}
+                          >
+                            {item}
+                          </Typography>
+                        ))}
                       </Stack>
                     ) : null}
                   </Stack>
@@ -1084,15 +1078,13 @@ function MainScreen({
                     </Stack>
                   ) : (
                     <Stack direction="row" spacing={1} sx={{ minHeight: 40, alignItems: "center" }}>
-                      {!isOverlaySidebar ? (
-                        <Button
-                          variant="outlined"
-                          onClick={handleRequestRegenerateAll}
-                          disabled={isInteractionDisabled}
-                        >
-                          {t("capsule.regenerateAll")}
-                        </Button>
-                      ) : null}
+                      <Button
+                        variant="outlined"
+                        onClick={handleRequestRegenerateAll}
+                        disabled={isInteractionDisabled}
+                      >
+                        {t("capsule.regenerateAll")}
+                      </Button>
                       <IconButton
                         aria-label={t("capsule.openMenu")}
                         disabled={isInteractionDisabled}
@@ -1103,6 +1095,34 @@ function MainScreen({
                     </Stack>
                   )}
                 </Stack>
+                {isOverlaySidebar && selectedCount === 0 ? (
+                  <Stack
+                    direction="row"
+                    flexWrap="wrap"
+                    useFlexGap
+                    gap={0.75}
+                    sx={{ color: "text.secondary", minWidth: 0, px: 2, pb: 1.5 }}
+                  >
+                    {capsuleSummaryItems.map((item, index) => (
+                      <Typography
+                        key={`${item}-${index}`}
+                        variant="body2"
+                        component="span"
+                        sx={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 0.75,
+                          "&::before": index === 0 ? undefined : {
+                            content: '"•"',
+                            color: "text.disabled"
+                          }
+                        }}
+                      >
+                        {item}
+                      </Typography>
+                    ))}
+                  </Stack>
+                ) : null}
                 {resolvedOutfitSets.length > 0 ? (
                   <Tabs
                     value={activeItemsTab}
@@ -1116,7 +1136,7 @@ function MainScreen({
                     sx={{
                       px: { xs: 2, md: 3 },
                       pt: 0,
-                      pb: 0.5,
+                      pb: { xs: 0, md: 0.5 },
                       "& .MuiTab-root": {
                         textTransform: "none"
                       }
@@ -1147,7 +1167,7 @@ function MainScreen({
                     />
                   ) : null}
                 </Box>
-                <Box sx={{ flex: 1, minHeight: 0, overflowY: "auto", px: { xs: 2, md: 3 }, pt: 2, pb: 2 }}>
+                <Box sx={{ flex: 1, minHeight: 0, overflowY: "auto", px: { xs: 2, md: 3 }, pt: { xs: 1.5, md: 2 }, pb: 2 }}>
                   {isLoadingItems ? (
                     <ClothingGridPlaceholder count={12} />
                   ) : (
@@ -1811,7 +1831,7 @@ function MainScreen({
         onClose={() => setHeaderMenuAnchor(null)}
         capsule={activeCapsule}
         disabled={isInteractionDisabled}
-        showRegenerateAll={isOverlaySidebar && selectedCount === 0}
+        showRegenerateAll={false}
         onRegenerateAll={handleRequestRegenerateAll}
         onDownloadPdf={onDownloadPdf}
         onRename={() => {

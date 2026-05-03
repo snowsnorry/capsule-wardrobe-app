@@ -42,17 +42,20 @@ function ClothingCard({
   const categoryLabel = item?.category ? t(`options.categories.${item.category}`) : "";
   const showActionButtons = isMobile || isSelected;
 
-  const handleToggleSelected = (event: MouseEvent<HTMLButtonElement>) => {
+  const stopCardActionPropagation = (event: MouseEvent<HTMLElement>) => {
     event.preventDefault();
     event.stopPropagation();
+  };
+
+  const handleToggleSelected = (event: MouseEvent<HTMLButtonElement>) => {
+    stopCardActionPropagation(event);
     if (!isRegenerating && typeof onToggleSelected === "function") {
       onToggleSelected(item);
     }
   };
 
   const handleProductMenuClick = (event: MouseEvent<HTMLButtonElement>) => {
-    event.preventDefault();
-    event.stopPropagation();
+    stopCardActionPropagation(event);
     if (!productUrl || typeof onProductMenuClick !== "function") {
       return;
     }
@@ -187,6 +190,8 @@ function ClothingCard({
               <IconButton
                 aria-label={t("main.partialRegenerateToggle")}
                 className="wardrobe-card-action-button wardrobe-card-regenerate"
+                onMouseDown={stopCardActionPropagation}
+                onPointerDown={stopCardActionPropagation}
                 onClick={handleToggleSelected}
                 disabled={isRegenerating}
               >
@@ -197,6 +202,8 @@ function ClothingCard({
               <IconButton
                 aria-label={t("capsule.openProductMenu")}
                 className="wardrobe-card-action-button wardrobe-card-product-menu"
+                onMouseDown={stopCardActionPropagation}
+                onPointerDown={stopCardActionPropagation}
                 onClick={handleProductMenuClick}
               >
                 <MoreVertRoundedIcon fontSize="small" />

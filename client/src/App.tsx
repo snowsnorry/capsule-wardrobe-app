@@ -21,6 +21,7 @@ import {
   useMediaQuery
 } from "@mui/material";
 import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
+import FiberManualRecordRoundedIcon from "@mui/icons-material/FiberManualRecordRounded";
 import {
   fetchCurrentUser,
   fetchProfileStatus,
@@ -2164,15 +2165,26 @@ function App() {
             onSignOut={handleRequestSignOut}
             headerContent={({ isOverlaySidebar, openSidebar }) => (
               isOverlaySidebar ? (
-                <Box sx={{ pb: 1.5 }}>
+                <Stack direction="row" alignItems="center" spacing={1.25} sx={{ px: 2, pt: 1.5, pb: 1 }}>
                   <IconButton
                     aria-label="Toggle sidebar"
                     onClick={openSidebar}
                     disabled={getActiveSidebarApp() === "capsule" && isContentBusy}
+                    sx={{ ml: -1, flexShrink: 0 }}
                   >
                     <MenuRoundedIcon />
                   </IconButton>
-                </Box>
+                  {getActiveSidebarApp() === "capsule" ? (
+                    <Stack direction="row" alignItems="center" spacing={0.75} sx={{ minWidth: 0, flex: "0 1 auto" }}>
+                      <Typography variant="h6" noWrap sx={{ minWidth: 0 }}>
+                        {activeCapsuleMeta?.name || `<${t("capsule.new")}>`}
+                      </Typography>
+                      {activeCapsuleMeta?.status === "new" || activeCapsuleMeta?.status === "modified" ? (
+                        <FiberManualRecordRoundedIcon sx={{ fontSize: 10, color: "#2f8f58", flexShrink: 0 }} />
+                      ) : null}
+                    </Stack>
+                  ) : null}
+                </Stack>
               ) : null
             )}
             sidebarBodyContent={({ isOverlaySidebar, isSidebarCollapsed, desktopSidebarRailWidth, expandCollapsedSidebar, closeSidebar }) => {
