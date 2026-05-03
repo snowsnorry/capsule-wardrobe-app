@@ -15,6 +15,7 @@ import {
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
+import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import TuneRoundedIcon from "@mui/icons-material/TuneRounded";
 import { fetchSearchOptions, fetchSearchStats } from "../api/search";
 import SearchFiltersSidebar from "../search/SearchFiltersSidebar";
@@ -26,12 +27,14 @@ import { useI18n } from "../i18n/useI18n";
 import { translateOption } from "../i18n";
 import {
   EMPTY_SEARCH_OPTIONS,
+  buildActiveFilterChips,
   buildSearchOptionsPayload,
   createSearchState,
+  getFacetLabel,
   serializeDraftState,
   toggleSelection
 } from "../search/searchState";
-import type { SearchDraftState, SearchFilterValue, SearchOptions, SerializedSearchState } from "../search/searchState";
+import type { ActiveFilterChip, SearchDraftState, SearchFilterValue, SearchOptions, SerializedSearchState } from "../search/searchState";
 import { getColorSwatchStyle } from "../../../shared/colorSwatches.js";
 
 type StatisticsStatus = {
@@ -62,14 +65,6 @@ type StatisticsState = {
   total: number;
   stats: Record<string, StatsRow[]>;
   priceBuckets: PriceBucket[];
-};
-
-type ActiveFilterChip = {
-  key: string;
-  field: keyof SearchDraftState | "price";
-  values?: string[];
-  value?: string;
-  label: string;
 };
 
 type ColorFillConfig = {
@@ -176,40 +171,6 @@ function resolveStatisticsTotal(statsState: StatisticsState) {
   return 0;
 }
 
-function getFacetLabel({
-  key,
-  value,
-  optionGroup,
-  options,
-  locale
-}: {
-  key: string;
-  value: string;
-  optionGroup: string;
-  options: SearchOptions;
-  locale: string;
-}) {
-  if (value === "__other__") {
-    return "Other";
-  }
-
-  if (optionGroup === "brand") {
-    const brand = options.brands.find((item) => {
-      const normalizedValue = typeof item === "string" ? item : item?.value;
-      return String(normalizedValue || "").trim().toLowerCase() === value;
-    });
-    if (typeof brand === "string") {
-      return brand;
-    }
-    if (brand?.label) {
-      return brand.label;
-    }
-    return value;
-  }
-
-  return translateOption(optionGroup, value, locale);
-}
-
 function summarizeFacetRows(rows: StatsRow[] = []): StatsRow[] {
   const normalizedRows = Array.isArray(rows) ? rows.filter((row) => row?.count > 0 && row?.value) : [];
   if (normalizedRows.length <= 12) {
@@ -227,64 +188,6 @@ function isFacetValueSelected(state: SearchDraftState, key: keyof SearchDraftSta
   }
   const currentValue = state[key];
   return Array.isArray(currentValue) ? currentValue.includes(value) : currentValue === value;
-}
-
-function buildActiveFilterChips({
-  state,
-  options,
-  locale,
-  t
-}: {
-  state: SearchDraftState;
-  options: SearchOptions;
-  locale: string;
-  t: (key: string, params?: Record<string, unknown>) => string;
-}): ActiveFilterChip[] {
-  const chips: ActiveFilterChip[] = [];
-  const pushFacetChips = (values, title, optionGroup, fieldKey) => {
-    if (!Array.isArray(values) || values.length === 0) {
-      return;
-    }
-
-    const labelValues = values.map((value) => getFacetLabel({
-      key: fieldKey,
-      value,
-      optionGroup,
-      options,
-      locale
-    }));
-
-    chips.push({
-      key: `${fieldKey}:${values.join(",")}`,
-      field: fieldKey,
-      values,
-      label: `${title}: ${labelValues.join(", ")}`
-    });
-  };
-
-  pushFacetChips(state.brand, t("search.filters.brand"), "brand", "brand");
-  pushFacetChips(state.audience, t("profile.audienceTitle"), "audience", "audience");
-  pushFacetChips(state.category, t("search.filters.category"), "categories", "category");
-  pushFacetChips(state.season, t("profile.seasonsTitle"), "seasons", "season");
-  pushFacetChips(state.formalityLevel, t("statistics.charts.formalityLevel"), "styles", "formalityLevel");
-  pushFacetChips(state.style, t("statistics.charts.style"), "styles", "style");
-  pushFacetChips(state.occasions, t("profile.occasionsTitle"), "occasions", "occasions");
-  pushFacetChips(state.color, t("profile.accentColorTitle"), "accentColors", "color");
-  pushFacetChips(state.pattern, t("profile.patternTitle"), "patterns", "pattern");
-  pushFacetChips(state.silhouette, t("search.filters.silhouette"), "silhouettes", "silhouette");
-  pushFacetChips(state.fit, t("search.filters.fit"), "fits", "fit");
-  pushFacetChips(state.closureType, t("search.filters.closureType"), "closureTypes", "closureType");
-
-  if (state.priceEnabled) {
-    chips.push({
-      key: `price:${state.priceMinDraft}:${state.priceMaxDraft}`,
-      field: "price",
-      value: `${state.priceMinDraft}:${state.priceMaxDraft}`,
-    label: `${t("search.filters.price")}: ${formatPrice(locale, Number(state.priceMinDraft))} - ${formatPrice(locale, Number(state.priceMaxDraft))}`
-    });
-  }
-
-  return chips;
 }
 
 function StatisticsCard({
@@ -358,6 +261,8 @@ function StatisticsSummaryCard({
       sx={{
         p: { xs: 2.4, md: 3 },
         minHeight: { xs: 156, md: 156 },
+        height: "auto",
+        flexShrink: 0,
         borderRadius: "5.4px",
         border: "1px solid",
         borderColor: "divider",
@@ -367,11 +272,11 @@ function StatisticsSummaryCard({
     >
       <Box
         sx={{
-          display: "grid",
+          display: { xs: "flex", lg: "grid" },
+          flexDirection: { xs: "column", lg: undefined },
           gridTemplateColumns: { xs: "1fr", lg: "minmax(260px, 340px) minmax(0, 1fr)" },
-          gap: { xs: 2.25, md: 3 },
-          alignItems: "start",
-          height: "100%"
+          gap: { xs: 1.8, md: 3 },
+          alignItems: "start"
         }}
       >
         <Stack spacing={1.2} sx={{ minWidth: 0, flexShrink: 0 }}>
@@ -417,9 +322,11 @@ function StatisticsSummaryCard({
           sx={{
             minWidth: 0,
             width: "100%",
-            alignSelf: "stretch",
+            flexShrink: 0,
+            alignSelf: { xs: "stretch", lg: "stretch" },
             justifyContent: "flex-start",
-            pl: { lg: 1 }
+            pl: { lg: 1 },
+            pt: { xs: 0.4, lg: 0 }
           }}
         >
           <Typography
@@ -733,7 +640,7 @@ function StatisticsScreen({
   };
 
   const activeChips = useMemo(
-    () => buildActiveFilterChips({ state: draftState, options, locale, t }),
+    () => buildActiveFilterChips({ state: draftState, options, locale, t, translateOption }),
     [draftState, locale, options, t]
   );
   const resolvedTotal = useMemo(() => resolveStatisticsTotal(statsState), [statsState]);
@@ -756,11 +663,11 @@ function StatisticsScreen({
               activeValues={(draftState[dimension.key as keyof SearchDraftState] as string[] | undefined) || []}
               onToggleValue={(value) => handleToggleFacetValue(dimension.key as keyof SearchDraftState, value)}
               formatLabel={(value) => getFacetLabel({
-                key: dimension.key,
                 value,
                 optionGroup: dimension.optionGroup,
                 options,
-                locale
+                locale,
+                translateOption
               })}
               getFillConfig={(_value, index) => ({ color: FACET_COLORS[index % FACET_COLORS.length] })}
               locale={locale}
@@ -777,11 +684,11 @@ function StatisticsScreen({
             activeValues={(draftState[dimension.key as keyof SearchDraftState] as string[] | undefined) || []}
             onToggleValue={(value) => handleToggleFacetValue(dimension.key as keyof SearchDraftState, value)}
             formatLabel={(value) => getFacetLabel({
-              key: dimension.key,
               value,
               optionGroup: dimension.optionGroup,
               options,
-              locale
+              locale,
+              translateOption
             })}
             locale={locale}
           />
@@ -811,11 +718,11 @@ function StatisticsScreen({
           activeValues={draftState.color || []}
           onToggleValue={(value) => handleToggleFacetValue("color", value)}
           formatLabel={(value) => getFacetLabel({
-            key: "color",
             value,
             optionGroup: "accentColors",
             options,
-            locale
+            locale,
+            translateOption
           })}
           getFillConfig={(value) => getColorChartFillConfig(value)}
           locale={locale}
@@ -827,7 +734,7 @@ function StatisticsScreen({
   }, [draftState, locale, options, statsState.priceBuckets, statsState.stats, t]);
 
   const renderMobileFiltersButton = () => (
-    <Stack direction="row" justifyContent="flex-end">
+    <Stack direction="row" justifyContent="flex-start">
       <IconButton aria-label={t("filters.open")} onClick={() => setIsFiltersOpen(true)}>
         <TuneRoundedIcon />
       </IconButton>
@@ -909,7 +816,7 @@ function StatisticsScreen({
                 <Typography
                   variant="h6"
                   sx={{
-                    color: "#1f2933",
+                    color: "text.primary",
                     fontSize: "18px",
                     fontWeight: 600,
                     lineHeight: 1.25
@@ -967,15 +874,20 @@ function StatisticsScreen({
         )}
       </Stack>
 
-      <Dialog fullScreen open={isFiltersOpen} onClose={() => setIsFiltersOpen(false)}>
-        <DialogContent sx={{ px: 3, py: 3 }}>
-          <Stack spacing={2.5} sx={{ minHeight: "100%" }}>
+      <Dialog
+        fullScreen
+        open={isFiltersOpen}
+        onClose={() => setIsFiltersOpen(false)}
+        PaperProps={{ sx: { overflowX: "hidden" } }}
+      >
+        <DialogContent sx={{ width: "100%", boxSizing: "border-box", overflowX: "hidden", px: 3, py: 3 }}>
+          <Stack spacing={2.5} sx={{ minHeight: "100%", width: "100%", maxWidth: "100%" }}>
             <Stack spacing={2.5}>
               <Stack direction="row" justifyContent="space-between" alignItems="center">
                 <Typography
                   variant="h6"
                   sx={{
-                    color: "#1f2933",
+                    color: "text.primary",
                     fontSize: "18px",
                     fontWeight: 600,
                     lineHeight: 1.25
@@ -983,11 +895,13 @@ function StatisticsScreen({
                 >
                   {t("filters.title")}
                 </Typography>
-                <Button onClick={() => setIsFiltersOpen(false)}>{t("actions.cancel")}</Button>
+                <IconButton aria-label={t("capsule.closeFilters")} onClick={() => setIsFiltersOpen(false)}>
+                  <CloseRoundedIcon />
+                </IconButton>
               </Stack>
               <Divider />
             </Stack>
-            <Box sx={{ minHeight: 0, overflowY: "auto", pb: 2 }}>
+            <Box sx={{ minHeight: 0, maxWidth: "100%", overflowX: "hidden", overflowY: "auto", pb: 2 }}>
               <SearchFiltersSidebar
                 options={options}
                 draftState={draftState}

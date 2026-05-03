@@ -238,6 +238,8 @@ describe("StatisticsScreen", () => {
     expect((await screen.findAllByText("120")).length).toBeGreaterThan(0);
     await user.click(screen.getByLabelText("Open filters"));
     expect(await screen.findByText("Filters")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Cancel" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Close filters" })).toBeInTheDocument();
   });
 
   test("uses dark chart cards in dark mode", async () => {

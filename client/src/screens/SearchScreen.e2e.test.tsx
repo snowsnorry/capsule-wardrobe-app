@@ -158,7 +158,7 @@ describe("SearchScreen e2e-style flow", () => {
     expect(await screen.findByText("120 results")).toBeInTheDocument();
 
     fireEvent.change(input, { target: { value: "blue cardigan" } });
-    fireEvent.click(screen.getByRole("button", { name: "Search" }));
+    fireEvent.keyDown(input, { key: "Enter" });
 
     await waitFor(() => {
       expect(searchApi.runSearch).toHaveBeenNthCalledWith(

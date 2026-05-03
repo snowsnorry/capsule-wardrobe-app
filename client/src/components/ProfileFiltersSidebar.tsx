@@ -148,7 +148,7 @@ function ProfileFiltersSidebar({
           <Typography
             variant="h6"
             sx={{
-              color: "#1f2933",
+              color: "text.primary",
               fontSize: "18px",
               fontWeight: 600,
               lineHeight: 1.25

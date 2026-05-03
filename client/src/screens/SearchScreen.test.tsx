@@ -124,6 +124,7 @@ describe("SearchScreen", () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     cleanup();
   });
 
@@ -195,7 +196,7 @@ describe("SearchScreen", () => {
     });
   });
 
-  test("search submit and reset update payload and pagination state", async () => {
+  test("query applies on enter, blur, and clear while typing alone does not search", async () => {
     renderScreen();
     const input = await screen.findByPlaceholderText(
       "Search in natural language, for example: relaxed blue linen shirt for summer office days"
@@ -203,7 +204,10 @@ describe("SearchScreen", () => {
     searchApi.runSearch.mockClear();
 
     fireEvent.change(input, { target: { value: "blue cardigan" } });
-    fireEvent.click(screen.getByRole("button", { name: "Search" }));
+    expect(searchApi.runSearch).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: "Search" })).not.toBeInTheDocument();
+
+    fireEvent.keyDown(input, { key: "Enter" });
 
     await waitFor(() => {
       expect(searchApi.runSearch).toHaveBeenCalledWith(expect.objectContaining({
@@ -213,6 +217,33 @@ describe("SearchScreen", () => {
     });
 
     searchApi.runSearch.mockClear();
+    fireEvent.change(input, { target: { value: "black blazer" } });
+    expect(searchApi.runSearch).not.toHaveBeenCalled();
+    fireEvent.blur(input);
+
+    await waitFor(() => {
+      expect(searchApi.runSearch).toHaveBeenCalledWith(expect.objectContaining({
+        query: "black blazer",
+        page: 1
+      }));
+    });
+
+    searchApi.runSearch.mockClear();
+    fireEvent.click(screen.getByLabelText("Clear search"));
+
+    await waitFor(() => {
+      expect(searchApi.runSearch).toHaveBeenCalledWith(expect.objectContaining({
+        query: "",
+        page: 1
+      }));
+    });
+  });
+
+  test("reset updates payload and pagination state", async () => {
+    renderScreen();
+    await screen.findByDisplayValue("linen shirt");
+    searchApi.runSearch.mockClear();
+
     fireEvent.click(screen.getAllByRole("button", { name: "Reset" }).at(-1));
 
     await waitFor(() => {
@@ -237,6 +268,54 @@ describe("SearchScreen", () => {
     });
   });
 
+  test("renders active filter chips without query and deletes a chip with debounced search", async () => {
+    renderScreen();
+    await screen.findByDisplayValue("linen shirt");
+
+    expect(screen.queryByText("Active filters")).not.toBeInTheDocument();
+    expect(screen.getByText("Brand: UNIQLO")).toBeInTheDocument();
+    expect(screen.getByText("Seasons: Summer")).toBeInTheDocument();
+    expect(screen.queryByText(/linen shirt/i, { selector: ".MuiChip-label" })).not.toBeInTheDocument();
+
+    searchApi.runSearch.mockClear();
+    const brandChip = screen.getByText("Brand: UNIQLO").closest(".MuiChip-root");
+    expect(brandChip).not.toBeNull();
+    fireEvent.click(within(brandChip as HTMLElement).getByTestId("CancelIcon"));
+
+    await waitFor(() => {
+      expect(searchApi.runSearch).toHaveBeenCalledWith(expect.objectContaining({
+        brand: [],
+        season: ["summer"],
+        page: 1
+      }));
+    });
+  });
+
+  test("debounces rapid filter changes into one search request", async () => {
+    renderScreen();
+    await screen.findByDisplayValue("linen shirt");
+    searchApi.runSearch.mockClear();
+    vi.useFakeTimers();
+
+    fireEvent.click(screen.getByRole("button", { name: "Top" }));
+    fireEvent.click(screen.getByRole("button", { name: "Bottom" }));
+    fireEvent.click(screen.getByRole("button", { name: "Woman" }));
+
+    expect(searchApi.runSearch).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(299);
+    expect(searchApi.runSearch).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(1);
+
+    expect(searchApi.runSearch).toHaveBeenCalledTimes(1);
+    expect(searchApi.runSearch).toHaveBeenCalledWith(expect.objectContaining({
+      category: ["top", "bottom"],
+      audience: ["woman"],
+      page: 1
+    }));
+  });
+
   test("mobile opens filters dialog and product detail dialog", async () => {
     const user = userEvent.setup();
     renderScreen({}, { layoutMode: "overlay" });
@@ -246,8 +325,36 @@ describe("SearchScreen", () => {
 
     fireEvent.click(screen.getByLabelText("Open filters"));
     expect(await screen.findByText("Filters")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Apply" })).toBeInTheDocument();
 
-    fireEvent.click(screen.getAllByRole("button", { name: "Cancel" })[0]);
+    searchApi.runSearch.mockClear();
+    fireEvent.click(screen.getAllByRole("button", { name: "Bottom" })[0]);
+    await waitFor(() => {
+      expect(searchApi.runSearch).toHaveBeenCalledWith(expect.objectContaining({
+        category: ["bottom"],
+        page: 1
+      }));
+    });
+
+    searchApi.runSearch.mockClear();
+    fireEvent.click(screen.getAllByRole("button", { name: "Reset" }).at(-1));
+    await waitFor(() => {
+      expect(searchApi.runSearch).toHaveBeenCalledWith(expect.objectContaining({
+        query: "",
+        category: [],
+        page: 1
+      }));
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Apply" }));
+    await waitFor(() => {
+      expect(screen.queryByText("Filters")).not.toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByLabelText("Open filters"));
+    expect(await screen.findByText("Filters")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Cancel" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Close filters" }));
     await waitFor(() => {
       expect(screen.queryByText("Filters")).not.toBeInTheDocument();
     });

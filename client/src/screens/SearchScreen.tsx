@@ -3,6 +3,7 @@ import type { KeyboardEvent, ReactElement } from "react";
 import {
   Box,
   Button,
+  Chip,
   CircularProgress,
   Dialog,
   DialogContent,
@@ -16,6 +17,7 @@ import {
 } from "@mui/material";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import ClearRoundedIcon from "@mui/icons-material/ClearRounded";
+import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import TuneRoundedIcon from "@mui/icons-material/TuneRounded";
 import OpenInNewRoundedIcon from "@mui/icons-material/OpenInNewRounded";
@@ -30,11 +32,12 @@ import { getColorSwatchStyle } from "../../../shared/colorSwatches.js";
 import SearchFiltersSidebar from "../search/SearchFiltersSidebar";
 import {
   EMPTY_SEARCH_OPTIONS,
+  buildActiveFilterChips,
   buildSearchOptionsPayload,
   createSearchState,
   serializeDraftState
 } from "../search/searchState";
-import type { SearchDraftState, SearchOptions } from "../search/searchState";
+import type { ActiveFilterChip, SearchDraftState, SearchOptions } from "../search/searchState";
 import useMediaQuery from "@mui/material/useMediaQuery";
 
 type SearchResultItem = {
@@ -63,6 +66,8 @@ type SearchScreenProps = {
   onNavigateApp: (nextApp: "capsule" | "explore" | "statistics") => void;
   initialQuery?: string;
 };
+
+const SEARCH_AUTO_APPLY_DEBOUNCE_MS = 300;
 
 function ProductDetail({
   item,
@@ -240,14 +245,28 @@ function SearchScreen({
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const draftStateRef = useRef(draftState);
+  const searchRequestSeqRef = useRef(0);
+  const debouncedSearchRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastAppliedSearchKeyRef = useRef("");
+  const pendingSearchKeyRef = useRef("");
   const formattedTotal = useMemo(
     () => new Intl.NumberFormat(locale).format(total),
     [locale, total]
+  );
+  const activeChips = useMemo(
+    () => buildActiveFilterChips({ state: draftState, options, locale, t, translateOption }),
+    [draftState, locale, options, t]
   );
 
   useEffect(() => {
     draftStateRef.current = draftState;
   }, [draftState]);
+
+  useEffect(() => () => {
+    if (debouncedSearchRef.current) {
+      clearTimeout(debouncedSearchRef.current);
+    }
+  }, []);
 
   useEffect(() => {
     let isActive = true;
@@ -270,10 +289,13 @@ function SearchScreen({
         setOptions(nextOptions);
         setDraftState(nextState);
         const serialized = serializeDraftState(nextState);
+        const requestSeq = searchRequestSeqRef.current + 1;
+        searchRequestSeqRef.current = requestSeq;
         const result = await runSearch(serialized) as SearchResponse;
-        if (!isActive) {
+        if (!isActive || requestSeq !== searchRequestSeqRef.current) {
           return;
         }
+        lastAppliedSearchKeyRef.current = JSON.stringify(serialized);
         setResults(result.items || []);
         setTotal(result.total || 0);
         setSelectedResultId(result.items?.[0]?.id ?? null);
@@ -299,36 +321,63 @@ function SearchScreen({
 
   const totalPages = Math.max(1, Math.ceil(total / 50));
 
-  const performSearch = async (nextState: SearchDraftState) => {
+  const performSearch = async (nextState: SearchDraftState, { force = false } = {}) => {
     const payload = serializeDraftState(nextState);
+    const payloadKey = JSON.stringify(payload);
+    if (!force && (payloadKey === lastAppliedSearchKeyRef.current || payloadKey === pendingSearchKeyRef.current)) {
+      return;
+    }
+    const requestSeq = searchRequestSeqRef.current + 1;
+    searchRequestSeqRef.current = requestSeq;
+    pendingSearchKeyRef.current = payloadKey;
     setStatus({ loading: true, error: "" });
     try {
       const result = await runSearch(payload) as SearchResponse;
+      if (requestSeq !== searchRequestSeqRef.current) {
+        return;
+      }
+      lastAppliedSearchKeyRef.current = payloadKey;
+      pendingSearchKeyRef.current = "";
       setResults(result.items || []);
       setTotal(result.total || 0);
       setSelectedResultId(result.items?.[0]?.id ?? null);
       setStatus({ loading: false, error: "" });
     } catch (error) {
+      if (requestSeq !== searchRequestSeqRef.current) {
+        return;
+      }
+      pendingSearchKeyRef.current = "";
       setStatus({ loading: false, error: t("errors.generic") });
     }
   };
 
-  const handleSearchSubmit = async () => {
-    const nextState = { ...draftState, page: 1 };
+  const applySearchState = async (nextState: SearchDraftState, { debounce = false } = {}) => {
+    draftStateRef.current = nextState;
     setDraftState(nextState);
+    if (debouncedSearchRef.current) {
+      clearTimeout(debouncedSearchRef.current);
+      debouncedSearchRef.current = null;
+    }
+
+    if (debounce) {
+      debouncedSearchRef.current = setTimeout(() => {
+        debouncedSearchRef.current = null;
+        void performSearch(nextState);
+      }, SEARCH_AUTO_APPLY_DEBOUNCE_MS);
+      return;
+    }
+
     await performSearch(nextState);
   };
 
   const handleReset = async () => {
     const nextState = createSearchState(null, options.priceRange);
-    setDraftState(nextState);
-    await performSearch(nextState);
+    await applySearchState(nextState, { debounce: true });
   };
 
   const handleChangePage = async (_event: unknown, page: number) => {
-    const nextState = { ...draftState, page };
-    setDraftState(nextState);
-    await performSearch(nextState);
+    const nextState = { ...draftStateRef.current, page };
+    await applySearchState(nextState);
   };
 
   const handleSidebarDraftStateChange = async (
@@ -340,20 +389,69 @@ function SearchScreen({
     setDraftState(nextState);
 
     if (submit) {
-      await performSearch(nextState);
+      await applySearchState(nextState, { debounce: true });
     }
   };
 
+  const handleQueryChange = (query: string) => {
+    const nextState = { ...draftStateRef.current, query };
+    draftStateRef.current = nextState;
+    setDraftState(nextState);
+  };
+
+  const applyCurrentQuery = async () => {
+    const nextState = { ...draftStateRef.current, page: 1 };
+    await applySearchState(nextState);
+  };
+
+  const handleClearQuery = async () => {
+    const nextState = { ...draftStateRef.current, query: "", page: 1 };
+    await applySearchState(nextState);
+  };
+
+  const handleDeleteActiveChip = async (chip: ActiveFilterChip) => {
+    if (chip.field === "price") {
+      const nextState = {
+        ...draftStateRef.current,
+        priceEnabled: false,
+        priceMinDraft: options.priceRange.min ?? 0,
+        priceMaxDraft: options.priceRange.max ?? 0,
+        page: 1
+      };
+      await applySearchState(nextState, { debounce: true });
+      return;
+    }
+
+    const nextState = {
+      ...draftStateRef.current,
+      [chip.field]: [],
+      page: 1
+    };
+    await applySearchState(nextState, { debounce: true });
+  };
+
   const renderSearchBar = (isMobile: boolean) => (
-    <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} alignItems={{ sm: "center" }}>
+    <Stack direction="row" spacing={1.2} alignItems="center">
+      {isMobile ? (
+        <IconButton
+          aria-label={t("filters.open")}
+          onClick={() => setIsFiltersOpen(true)}
+          sx={{ flexShrink: 0 }}
+        >
+          <TuneRoundedIcon />
+        </IconButton>
+      ) : null}
       <TextField
         fullWidth
         value={draftState.query}
-        onChange={(event) => setDraftState((current) => ({ ...current, query: event.target.value }))}
+        onChange={(event) => handleQueryChange(event.target.value)}
+        onBlur={() => {
+          void applyCurrentQuery();
+        }}
         onKeyDown={(event: KeyboardEvent<HTMLInputElement>) => {
           if (event.key === "Enter") {
             event.preventDefault();
-            handleSearchSubmit();
+            void applyCurrentQuery();
           }
         }}
         placeholder={t("search.placeholder")}
@@ -368,7 +466,12 @@ function SearchScreen({
               <IconButton
                 edge="end"
                 aria-label={t("search.clear")}
-                onClick={() => setDraftState((current) => ({ ...current, query: "" }))}
+                onMouseDown={(event) => {
+                  event.preventDefault();
+                }}
+                onClick={() => {
+                  void handleClearQuery();
+                }}
                 size="small"
               >
                 <ClearRoundedIcon fontSize="small" />
@@ -377,26 +480,39 @@ function SearchScreen({
           ) : null
         }}
       />
-      <Stack direction="row" spacing={1}>
-        {isMobile ? (
-          <IconButton aria-label={t("filters.open")} onClick={() => setIsFiltersOpen(true)}>
-            <TuneRoundedIcon />
-          </IconButton>
-        ) : null}
-        <Button variant="contained" onClick={handleSearchSubmit} disabled={status.loading}>
-          {t("search.cta")}
-        </Button>
-      </Stack>
     </Stack>
   );
 
   const renderResultsList = (isMobile) => (
     <Stack spacing={2} sx={{ minHeight: 0, height: "100%" }}>
-      <Stack direction="row" justifyContent="space-between" alignItems="center">
-        <Typography variant="overline" color="text.secondary">
-          {t("search.resultsCount", { count: formattedTotal })}
-        </Typography>
-        {status.loading ? <CircularProgress size={18} /> : null}
+      <Stack spacing={1}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center">
+          <Typography variant="overline" color="text.secondary" sx={{ minWidth: 0 }}>
+            {t("search.resultsCount", { count: formattedTotal })}
+          </Typography>
+          {status.loading ? <CircularProgress size={18} /> : null}
+        </Stack>
+        {activeChips.length > 0 ? (
+          <Stack direction="row" flexWrap="wrap" gap={1} useFlexGap>
+            {activeChips.map((chip) => (
+              <Chip
+                key={chip.key}
+                label={chip.label}
+                onDelete={() => {
+                  void handleDeleteActiveChip(chip);
+                }}
+                sx={{
+                  maxWidth: "100%",
+                  "& .MuiChip-label": {
+                    display: "block",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis"
+                  }
+                }}
+              />
+            ))}
+          </Stack>
+        ) : null}
       </Stack>
       <Divider />
       <Stack spacing={1.1} sx={{ flex: 1, minHeight: 0, overflowY: "auto", pr: 0.5 }}>
@@ -508,7 +624,7 @@ function SearchScreen({
                 <Typography
                   variant="h6"
                   sx={{
-                    color: "#1f2933",
+                    color: "text.primary",
                     fontSize: "18px",
                     fontWeight: 600,
                     lineHeight: 1.25
@@ -523,10 +639,12 @@ function SearchScreen({
                 draftState={draftState}
                 onDraftStateChange={handleSidebarDraftStateChange}
                 status={status}
-                onApply={handleSearchSubmit}
+                onApply={async () => {
+                  await applyCurrentQuery();
+                  setIsFiltersOpen(false);
+                }}
                 onReset={handleReset}
                 autoApply
-                showApplyButton={false}
               />
             </Box>
             <Box
@@ -560,15 +678,20 @@ function SearchScreen({
         )}
       </Stack>
 
-      <Dialog fullScreen open={isFiltersOpen} onClose={() => setIsFiltersOpen(false)}>
-        <DialogContent sx={{ px: 3, py: 3 }}>
-          <Stack spacing={2.5} sx={{ minHeight: "100%" }}>
+      <Dialog
+        fullScreen
+        open={isFiltersOpen}
+        onClose={() => setIsFiltersOpen(false)}
+        PaperProps={{ sx: { overflowX: "hidden" } }}
+      >
+        <DialogContent sx={{ width: "100%", boxSizing: "border-box", overflowX: "hidden", px: 3, py: 3 }}>
+          <Stack spacing={2.5} sx={{ minHeight: "100%", width: "100%", maxWidth: "100%" }}>
             <Stack spacing={2.5}>
               <Stack direction="row" justifyContent="space-between" alignItems="center">
                 <Typography
                   variant="h6"
                   sx={{
-                    color: "#1f2933",
+                    color: "text.primary",
                     fontSize: "18px",
                     fontWeight: 600,
                     lineHeight: 1.25
@@ -576,34 +699,39 @@ function SearchScreen({
                 >
                   {t("filters.title")}
                 </Typography>
-                <Button onClick={() => setIsFiltersOpen(false)}>{t("actions.cancel")}</Button>
+                <IconButton aria-label={t("capsule.closeFilters")} onClick={() => setIsFiltersOpen(false)}>
+                  <CloseRoundedIcon />
+                </IconButton>
               </Stack>
               <Divider />
             </Stack>
-            <Box sx={{ minHeight: 0, overflowY: "auto", pb: 2 }}>
+            <Box sx={{ minHeight: 0, maxWidth: "100%", overflowX: "hidden", overflowY: "auto", pb: 2 }}>
               <SearchFiltersSidebar
                 options={options}
                 draftState={draftState}
                 onDraftStateChange={handleSidebarDraftStateChange}
                 status={status}
                 onApply={async () => {
-                  await handleSearchSubmit();
+                  await applyCurrentQuery();
                   setIsFiltersOpen(false);
                 }}
-                onReset={async () => {
-                  await handleReset();
-                  setIsFiltersOpen(false);
-                }}
+                onReset={handleReset}
+                autoApply
               />
             </Box>
           </Stack>
         </DialogContent>
       </Dialog>
 
-      <Dialog fullScreen open={isDetailOpen} onClose={() => setIsDetailOpen(false)}>
-        <DialogContent sx={{ px: 3, py: 3 }}>
-          <Stack spacing={2.5} sx={{ minHeight: "100%" }}>
-            <Box sx={{ minHeight: 0, overflowY: "auto" }}>
+      <Dialog
+        fullScreen
+        open={isDetailOpen}
+        onClose={() => setIsDetailOpen(false)}
+        PaperProps={{ sx: { overflowX: "hidden" } }}
+      >
+        <DialogContent sx={{ width: "100%", boxSizing: "border-box", overflowX: "hidden", px: 3, py: 3 }}>
+          <Stack spacing={2.5} sx={{ minHeight: "100%", width: "100%", maxWidth: "100%" }}>
+            <Box sx={{ minHeight: 0, maxWidth: "100%", overflowX: "hidden", overflowY: "auto" }}>
               <ProductDetail
                 item={selectedItem}
                 title={t("search.productCard")}
