@@ -25,12 +25,13 @@ const clothingGridTemplateColumns = buildClothingGridTemplateColumns(2);
 
 const clothingGridGap = {
   xs: 1.25,
+  xs2: 0.1,
   sm: 2.5
 } as const;
 
 function buildClothingGridGap(mobileColumns: MobileCardColumns = 2) {
   return {
-    xs: mobileColumns === 1 ? clothingGridGap.xs : clothingGridGap.xs / 2,
+    xs: mobileColumns === 1 ? clothingGridGap.xs : clothingGridGap.xs2,
     sm: clothingGridGap.sm
   } as const;
 }

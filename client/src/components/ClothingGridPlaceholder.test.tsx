@@ -33,8 +33,8 @@ describe("ClothingGridPlaceholder", () => {
 
   test("halves the mobile grid gap for two and three columns", () => {
     expect(buildClothingGridGap(1).xs).toBe(1.25);
-    expect(buildClothingGridGap(2).xs).toBe(0.625);
-    expect(buildClothingGridGap(3).xs).toBe(0.625);
+    expect(buildClothingGridGap(2).xs).toBe(0.1);
+    expect(buildClothingGridGap(3).xs).toBe(0.1);
     expect(buildClothingGridGap(3).sm).toBe(2.5);
   });
 

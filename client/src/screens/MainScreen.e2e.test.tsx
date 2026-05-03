@@ -40,7 +40,7 @@ vi.mock("../components/ClothingGridPlaceholder", () => ({
     lg: "repeat(2, minmax(0, 1fr))"
   }),
   buildClothingGridGap: (mobileColumns = 2) => ({
-    xs: mobileColumns === 1 ? 1.25 : 0.625,
+    xs: mobileColumns === 1 ? 1.25 : 0.1,
     sm: 2.5
   }),
   clothingGridTemplateColumns: {
