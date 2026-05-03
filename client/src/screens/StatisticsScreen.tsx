@@ -915,6 +915,7 @@ function StatisticsScreen({
                   await handleReset();
                   setIsFiltersOpen(false);
                 }}
+                autoApply
               />
             </Box>
           </Stack>

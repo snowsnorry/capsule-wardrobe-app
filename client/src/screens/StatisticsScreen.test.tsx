@@ -240,6 +240,23 @@ describe("StatisticsScreen", () => {
     expect(await screen.findByText("Filters")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Cancel" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Close filters" })).toBeInTheDocument();
+
+    searchApi.fetchSearchStats.mockClear();
+    searchApi.fetchSearchStats.mockResolvedValueOnce(makeStats({ total: 37 }));
+    await user.click(screen.getByRole("button", { name: "UNIQLO" }));
+
+    await waitFor(() => {
+      expect(searchApi.fetchSearchStats).toHaveBeenCalledWith(expect.objectContaining({
+        brand: ["uniqlo"]
+      }));
+    });
+
+    await user.click(screen.getByRole("button", { name: "Close filters" }));
+    await waitFor(() => {
+      expect(screen.queryByText("Filters")).not.toBeInTheDocument();
+    });
+    expect(await screen.findByText("Brand: UNIQLO")).toBeInTheDocument();
+    expect((await screen.findAllByText("37")).length).toBeGreaterThan(0);
   });
 
   test("uses dark chart cards in dark mode", async () => {
