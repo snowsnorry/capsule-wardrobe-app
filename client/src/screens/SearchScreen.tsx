@@ -484,8 +484,7 @@ function SearchScreen({
           <Box
             sx={{
               display: "grid",
-              gridTemplateColumns: "320px minmax(280px, 420px) minmax(0, 1fr)",
-              gridTemplateRows: "auto minmax(0, 1fr)",
+              gridTemplateColumns: "320px minmax(0, 1fr)",
               gap: 3,
               flex: 1,
               minHeight: 0,
@@ -494,12 +493,15 @@ function SearchScreen({
           >
             <Box
               sx={{
-                gridRow: "1 / span 2",
                 minHeight: 0,
+                alignSelf: "start",
+                maxHeight: "100%",
                 overflowY: "auto",
-                pr: 2.5,
-                borderRight: "1px solid",
-                borderColor: "divider"
+                border: "1px solid",
+                borderColor: "divider",
+                borderRadius: "10px",
+                backgroundColor: "background.paper",
+                p: 3
               }}
             >
               <SearchFiltersSidebar
@@ -513,16 +515,32 @@ function SearchScreen({
                 showApplyButton={false}
               />
             </Box>
-            <Box sx={{ gridColumn: "2 / 4" }}>{renderSearchBar(false)}</Box>
-            <Box sx={{ minHeight: 0, overflow: "hidden" }}>{renderResultsList(false)}</Box>
             <Box
               sx={{
+                display: "grid",
+                gridTemplateColumns: "minmax(280px, 420px) minmax(0, 1fr)",
+                gridTemplateRows: "auto minmax(0, 1fr)",
+                gap: 3,
                 minHeight: 0,
-                overflowY: "auto",
-                pl: 0.5
+                overflow: "hidden",
+                border: "1px solid",
+                borderColor: "divider",
+                borderRadius: "10px",
+                backgroundColor: "background.paper",
+                p: 3
               }}
             >
-              <ProductDetail item={selectedItem} title={t("search.productCard")} t={t} locale={locale} />
+              <Box sx={{ gridColumn: "1 / 3" }}>{renderSearchBar(false)}</Box>
+              <Box sx={{ minHeight: 0, overflow: "hidden" }}>{renderResultsList(false)}</Box>
+              <Box
+                sx={{
+                  minHeight: 0,
+                  overflowY: "auto",
+                  pl: 0.5
+                }}
+              >
+                <ProductDetail item={selectedItem} title={t("search.productCard")} t={t} locale={locale} />
+              </Box>
             </Box>
           </Box>
         )}

@@ -893,12 +893,15 @@ function StatisticsScreen({
           >
             <Box
               sx={{
-                gridRow: "1 / span 2",
                 minHeight: 0,
+                alignSelf: "start",
+                maxHeight: "100%",
                 overflowY: "auto",
-                pr: 2.5,
-                borderRight: "1px solid",
-                borderColor: "divider"
+                border: "1px solid",
+                borderColor: "divider",
+                borderRadius: "10px",
+                backgroundColor: "background.paper",
+                p: 3
               }}
             >
               <SearchFiltersSidebar
@@ -912,7 +915,18 @@ function StatisticsScreen({
                 showApplyButton={false}
               />
             </Box>
-            <Stack spacing={2.5} sx={{ minHeight: 0, overflowY: "auto", pr: 0.5, pb: 0.5 }}>
+            <Stack
+              spacing={2.5}
+              sx={{
+                minHeight: 0,
+                overflowY: "auto",
+                border: "1px solid",
+                borderColor: "divider",
+                borderRadius: "10px",
+                backgroundColor: "background.paper",
+                p: 3
+              }}
+            >
               {renderSummary()}
               {status.loading && chartCards.length === 0 ? (
                 <Stack spacing={2}>
