@@ -143,6 +143,26 @@ function ProfileFiltersSidebar({
         boxSizing: "border-box"
       }}
     >
+      <Stack spacing={2.5}>
+        <Stack spacing={0.75}>
+          <Typography
+            variant="h6"
+            sx={{
+              color: "#1f2933",
+              fontSize: "18px",
+              fontWeight: 600,
+              lineHeight: 1.25
+            }}
+          >
+            {t("capsule.settingsTitle")}
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.5 }}>
+            {t("capsule.settingsSubtitle")}
+          </Typography>
+        </Stack>
+        <Divider />
+      </Stack>
+
       <StylePreferenceSelector
         styleOptions={styleOptions}
         selectedStyleCore={selectedStyleCore}

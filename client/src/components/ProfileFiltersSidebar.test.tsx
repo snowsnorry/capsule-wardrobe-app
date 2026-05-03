@@ -80,6 +80,8 @@ function renderSidebar(props: Partial<ComponentProps<typeof ProfileFiltersSideba
         "profile.styleAestheticTitle": "Aesthetic style",
         "profile.styleAestheticHint": "Choose optionally one aesthetic.",
         "profile.styleAestheticNotImportant": "Aesthetic not important",
+        "capsule.settingsTitle": "Capsule settings",
+        "capsule.settingsSubtitle": "Adjust the inputs used to build this capsule.",
         "filters.apply": "Apply",
         "filters.applyDisabledHint": "To apply filters, choose: {items}.",
         "filters.applyDisabledUnchangedHint": "Filters have not changed.",
@@ -118,6 +120,13 @@ describe("ProfileFiltersSidebar", () => {
   afterEach(() => {
     cleanup();
     useI18nMock.mockReset();
+  });
+
+  test("renders the capsule settings header", () => {
+    renderSidebar();
+
+    expect(screen.getByRole("heading", { name: "Capsule settings" })).toBeInTheDocument();
+    expect(screen.getByText("Adjust the inputs used to build this capsule.")).toBeInTheDocument();
   });
 
   test("forwards filter interactions to the corresponding callbacks", async () => {

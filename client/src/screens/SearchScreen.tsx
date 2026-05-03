@@ -504,6 +504,20 @@ function SearchScreen({
                 p: 3
               }}
             >
+              <Stack spacing={2.5} sx={{ mb: 3.5 }}>
+                <Typography
+                  variant="h6"
+                  sx={{
+                    color: "#1f2933",
+                    fontSize: "18px",
+                    fontWeight: 600,
+                    lineHeight: 1.25
+                  }}
+                >
+                  {t("filters.title")}
+                </Typography>
+                <Divider />
+              </Stack>
               <SearchFiltersSidebar
                 options={options}
                 draftState={draftState}
@@ -549,9 +563,22 @@ function SearchScreen({
       <Dialog fullScreen open={isFiltersOpen} onClose={() => setIsFiltersOpen(false)}>
         <DialogContent sx={{ px: 3, py: 3 }}>
           <Stack spacing={2.5} sx={{ minHeight: "100%" }}>
-            <Stack direction="row" justifyContent="space-between" alignItems="center">
-              <Typography variant="h5">{t("filters.title")}</Typography>
-              <Button onClick={() => setIsFiltersOpen(false)}>{t("actions.cancel")}</Button>
+            <Stack spacing={2.5}>
+              <Stack direction="row" justifyContent="space-between" alignItems="center">
+                <Typography
+                  variant="h6"
+                  sx={{
+                    color: "#1f2933",
+                    fontSize: "18px",
+                    fontWeight: 600,
+                    lineHeight: 1.25
+                  }}
+                >
+                  {t("filters.title")}
+                </Typography>
+                <Button onClick={() => setIsFiltersOpen(false)}>{t("actions.cancel")}</Button>
+              </Stack>
+              <Divider />
             </Stack>
             <Box sx={{ minHeight: 0, overflowY: "auto", pb: 2 }}>
               <SearchFiltersSidebar

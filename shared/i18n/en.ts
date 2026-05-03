@@ -359,6 +359,8 @@ const en = {
   },
   capsule: {
     new: "New capsule",
+    settingsTitle: "Capsule settings",
+    settingsSubtitle: "Adjust the inputs used to build this capsule.",
     search: "Search capsules",
     yourCapsules: "Your capsules",
     notSaved: "Not saved",

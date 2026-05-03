@@ -360,6 +360,8 @@ const ru = {
   },
   capsule: {
     new: "Новая капсула",
+    settingsTitle: "Настройки капсулы",
+    settingsSubtitle: "Настройте вводные, по которым собирается эта капсула.",
     search: "Поиск капсул",
     yourCapsules: "Ваши капсулы",
     notSaved: "Не сохранено",
