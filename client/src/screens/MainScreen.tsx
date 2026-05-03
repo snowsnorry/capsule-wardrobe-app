@@ -460,6 +460,7 @@ function CapsuleActionMenu({
               value={mobileCardColumns}
               onChange={(_event, value) => {
                 if (isMobileCardColumns(value)) {
+                  onClose();
                   onMobileCardColumnsChange?.(value);
                 }
               }}

@@ -1074,6 +1074,7 @@ describe("MainScreen", () => {
     expect(window.localStorage.getItem("capsule.mobileCardColumns")).toBe("1");
     expect(screen.getByTestId("clothing-card-https://example.com/a")).toHaveAttribute("data-mobile-columns", "1");
 
+    await user.click(screen.getByRole("button", { name: "Open capsule menu" }));
     await user.click(screen.getByRole("button", { name: "3 columns" }));
     expect(window.localStorage.getItem("capsule.mobileCardColumns")).toBe("3");
     expect(screen.getByTestId("clothing-card-https://example.com/a")).toHaveAttribute("data-mobile-columns", "3");
