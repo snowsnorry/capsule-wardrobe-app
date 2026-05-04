@@ -74,7 +74,8 @@ function ClothingCard({
   const categoryName = String(item?.category || "");
   const categoryLabel = categoryName ? t(`options.categories.${categoryName}`) : "";
   const CategoryIcon = categoryIconByName[categoryName];
-  const showCategoryIcon = isMobile && Boolean(CategoryIcon);
+  const categoryDisplayLabel = categoryLabel || categoryName;
+  const showMobileCategoryPrefix = isMobile && Boolean(categoryDisplayLabel);
   const showToggleButton = isSelectionMode && isSelectable;
   const showProductMenuButton = !isSelectionMode && Boolean(productUrl);
   const showCardActions = showToggleButton || showProductMenuButton;
@@ -83,11 +84,6 @@ function ClothingCard({
   const mobileCardMetrics = mobileColumns === 1
     ? {
         actionOffset: 12,
-        categoryOffset: 12,
-        categoryHeight: 28,
-        categoryFontSize: "12px",
-        categoryIconSize: "19px",
-        categoryLabelPx: 1,
         detailPx: 2.5,
         detailPt: 2,
         detailPb: 2.25,
@@ -98,11 +94,6 @@ function ClothingCard({
     : mobileColumns === 3
       ? {
           actionOffset: 6,
-          categoryOffset: 6,
-          categoryHeight: 20,
-          categoryFontSize: "8.5px",
-          categoryIconSize: "14px",
-          categoryLabelPx: 0.5,
           detailPx: 0.75,
           detailPt: 0.75,
           detailPb: 1,
@@ -112,11 +103,6 @@ function ClothingCard({
         }
       : {
           actionOffset: 8,
-          categoryOffset: 8,
-          categoryHeight: 24,
-          categoryFontSize: "10px",
-          categoryIconSize: "16px",
-          categoryLabelPx: 0.75,
           detailPx: 1,
           detailPt: 1,
           detailPb: 1.25,
@@ -313,60 +299,41 @@ function ClothingCard({
             ) : null}
           </Stack>
         ) : null}
-        <Stack
-          className="wardrobe-card-category-wrapper"
-          direction="row"
-          spacing={1}
-          sx={{
-            position: "absolute",
-            top: isMobile ? mobileCardMetrics.categoryOffset : 12,
-            left: isMobile ? mobileCardMetrics.categoryOffset : 12,
-            zIndex: 1,
-            maxWidth: isMobile
-              ? mobileColumns === 3
-                ? "calc(100% - 40px)"
-                : "calc(100% - 92px)"
-              : undefined
-          }}
-        >
-          <Chip
-            className="wardrobe-card-category"
-            aria-label={showCategoryIcon ? categoryLabel || categoryName : undefined}
-            icon={showCategoryIcon && CategoryIcon ? <CategoryIcon aria-hidden="true" focusable="false" /> : undefined}
-            label={showCategoryIcon ? "" : categoryLabel || item.category || ""}
-            size="small"
+        {!isMobile ? (
+          <Stack
+            className="wardrobe-card-category-wrapper"
+            direction="row"
+            spacing={1}
             sx={{
-              maxWidth: "100%",
-              width: showCategoryIcon ? mobileCardMetrics.categoryHeight : undefined,
-              height: isMobile ? mobileCardMetrics.categoryHeight : 28,
-              textTransform: "uppercase",
-              letterSpacing: "0.08em",
-              fontSize: isMobile ? mobileCardMetrics.categoryFontSize : "12px",
-              fontWeight: 800,
-              padding: 0,
-              bgcolor: "#dcefeb",
-              color: "#15766f",
-              ...(showCategoryIcon
-                ? {
-                    minWidth: mobileCardMetrics.categoryHeight,
-                    borderRadius: "999px",
-                    justifyContent: "center",
-                    "& .MuiChip-icon": {
-                      m: 0,
-                      color: "inherit",
-                      fontSize: mobileCardMetrics.categoryIconSize
-                    }
-                  }
-                : {}),
-              "& .MuiChip-label": {
-                display: showCategoryIcon ? "none" : undefined,
-                px: isMobile ? mobileCardMetrics.categoryLabelPx : 1,
-                overflow: "hidden",
-                textOverflow: "ellipsis"
-              }
+              position: "absolute",
+              top: 12,
+              left: 12,
+              zIndex: 1
             }}
-          />
-        </Stack>
+          >
+            <Chip
+              className="wardrobe-card-category"
+              label={categoryDisplayLabel}
+              size="small"
+              sx={{
+                maxWidth: "100%",
+                height: 28,
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+                fontSize: "12px",
+                fontWeight: 800,
+                padding: 0,
+                bgcolor: "#dcefeb",
+                color: "#15766f",
+                "& .MuiChip-label": {
+                  px: 1,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis"
+                }
+              }}
+            />
+          </Stack>
+        ) : null}
         {productUrl ? (
           <MuiLink
             href={productUrl}
@@ -418,6 +385,62 @@ function ClothingCard({
               : {})
           }}
         >
+          {showMobileCategoryPrefix ? (
+            <Box
+              component="span"
+              className="wardrobe-card-title-category-prefix"
+              sx={{
+                display: "inline-flex",
+                alignItems: "center",
+                color: "inherit",
+                verticalAlign: "text-bottom",
+                mr: 0.2
+              }}
+            >
+              {CategoryIcon ? (
+                <Box
+                  component="span"
+                  aria-label={categoryDisplayLabel}
+                  sx={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    color: "inherit",
+                    lineHeight: 1,
+                    verticalAlign: "text-bottom",
+                    "& svg": {
+                      display: "block",
+                      width: "0.9em",
+                      height: "0.9em"
+                    }
+                  }}
+                >
+                  <CategoryIcon aria-hidden="true" focusable="false" />
+                </Box>
+              ) : (
+                <Box
+                  component="span"
+                  className="wardrobe-card-title-category-text"
+                  sx={{
+                    display: "inline",
+                    color: "inherit"
+                  }}
+                >
+                  {categoryDisplayLabel}
+                </Box>
+              )}
+              <Box
+                component="span"
+                className="wardrobe-card-title-separator"
+                aria-hidden="true"
+                sx={{
+                  color: "text.disabled",
+                  mx: 0.4
+                }}
+              >
+                {"•"}
+              </Box>
+            </Box>
+          ) : null}
           <ProductLabelText
             item={item}
             fallbackLabel=""

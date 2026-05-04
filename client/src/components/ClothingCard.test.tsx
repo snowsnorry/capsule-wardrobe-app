@@ -126,24 +126,29 @@ describe("ClothingCard", () => {
     const { container } = renderCard();
 
     const details = container.querySelector(".wardrobe-card-details");
+    const title = container.querySelector(".wardrobe-card-title");
     const category = container.querySelector(".wardrobe-card-category");
 
     expect(details).toContainElement(screen.getByText("Red Jacket"));
+    expect(title).toHaveTextContent("Red Jacket");
+    expect(title).not.toHaveTextContent("options.categories.outerwear");
     expect(details).not.toContainElement(screen.getByText("options.categories.outerwear"));
     expect(category).toContainElement(screen.getByText("options.categories.outerwear"));
   });
 
-  test("uses an accessible icon-only category badge on mobile for known categories", () => {
+  test("moves known category icons into the mobile title prefix", () => {
     const { container } = renderCard({ isMobile: true });
-    const category = container.querySelector(".wardrobe-card-category");
+    const title = container.querySelector(".wardrobe-card-title");
 
-    expect(category).toHaveAttribute("aria-label", "options.categories.outerwear");
-    expect(category).toHaveStyle({ width: "24px", height: "24px" });
-    expect(category?.querySelector("svg")).toBeInTheDocument();
-    expect(category).not.toHaveTextContent("options.categories.outerwear");
+    expect(container.querySelector(".wardrobe-card-category")).not.toBeInTheDocument();
+    expect(title?.querySelector(".wardrobe-card-title-category-prefix svg")).toBeInTheDocument();
+    expect(title?.querySelector(".wardrobe-card-title-category-prefix [aria-label='options.categories.outerwear']")).toBeInTheDocument();
+    expect(title?.querySelector(".wardrobe-card-title-separator")).toHaveTextContent("•");
+    expect(title).toHaveTextContent("Red Jacket");
+    expect(title).not.toHaveTextContent("options.categories.outerwear");
   });
 
-  test("uses the hoodie icon for mobile midlayer category badges", () => {
+  test("uses the hoodie icon for mobile midlayer title prefixes", () => {
     const { container } = renderCard({
       isMobile: true,
       item: {
@@ -151,14 +156,15 @@ describe("ClothingCard", () => {
         category: "midlayer"
       }
     });
-    const category = container.querySelector(".wardrobe-card-category");
+    const title = container.querySelector(".wardrobe-card-title");
 
-    expect(category).toHaveAttribute("aria-label", "options.categories.midlayer");
-    expect(category?.querySelector("svg")).toBeInTheDocument();
-    expect(category).not.toHaveTextContent("options.categories.midlayer");
+    expect(container.querySelector(".wardrobe-card-category")).not.toBeInTheDocument();
+    expect(title?.querySelector(".wardrobe-card-title-category-prefix svg")).toBeInTheDocument();
+    expect(title?.querySelector(".wardrobe-card-title-category-prefix [aria-label='options.categories.midlayer']")).toBeInTheDocument();
+    expect(title).not.toHaveTextContent("options.categories.midlayer");
   });
 
-  test("keeps text category badges on mobile for unknown categories", () => {
+  test("uses text category fallback in the mobile title prefix for unknown categories", () => {
     const { container } = renderCard({
       isMobile: true,
       item: {
@@ -166,11 +172,29 @@ describe("ClothingCard", () => {
         category: "unknown"
       }
     });
-    const category = container.querySelector(".wardrobe-card-category");
+    const title = container.querySelector(".wardrobe-card-title");
 
-    expect(category).not.toHaveAttribute("aria-label");
-    expect(category?.querySelector("svg")).not.toBeInTheDocument();
-    expect(category).toContainElement(screen.getByText("options.categories.unknown"));
+    expect(container.querySelector(".wardrobe-card-category")).not.toBeInTheDocument();
+    expect(title?.querySelector(".wardrobe-card-title-category-prefix svg")).not.toBeInTheDocument();
+    expect(title?.querySelector(".wardrobe-card-title-category-text")).toHaveTextContent("options.categories.unknown");
+    expect(title?.querySelector(".wardrobe-card-title-separator")).toHaveTextContent("•");
+    expect(title).toHaveTextContent("Red Jacket");
+  });
+
+  test("omits the mobile title category prefix when the item has no category", () => {
+    const { container } = renderCard({
+      isMobile: true,
+      item: {
+        ...item,
+        category: null
+      }
+    });
+    const title = container.querySelector(".wardrobe-card-title");
+
+    expect(container.querySelector(".wardrobe-card-category")).not.toBeInTheDocument();
+    expect(title?.querySelector(".wardrobe-card-title-category-prefix")).not.toBeInTheDocument();
+    expect(title?.querySelector(".wardrobe-card-title-separator")).not.toBeInTheDocument();
+    expect(title).toHaveTextContent("Red Jacket");
   });
 
   test("uses compact mobile typography while keeping action buttons touch sized", () => {
@@ -179,7 +203,6 @@ describe("ClothingCard", () => {
     const root = container.querySelector(".wardrobe-card-root");
     const details = container.querySelector(".wardrobe-card-details");
     const title = container.querySelector(".wardrobe-card-title");
-    const category = container.querySelector(".wardrobe-card-category");
     const menuButton = screen.getByRole("button", { name: "capsule.openProductMenu" });
 
     expect(root).toHaveStyle({
@@ -193,8 +216,7 @@ describe("ClothingCard", () => {
       overflow: "hidden",
       WebkitLineClamp: "2"
     });
-    expect(category).toHaveStyle({ fontSize: "10px", height: "24px" });
-    expect(category).toHaveStyle({ width: "24px" });
+    expect(container.querySelector(".wardrobe-card-category")).not.toBeInTheDocument();
     expect(menuButton).toBeVisible();
     expect(menuButton).toHaveStyle({ width: "36px", height: "36px" });
   });
@@ -212,11 +234,7 @@ describe("ClothingCard", () => {
       fontSize: "16px",
       lineHeight: "1.22"
     });
-    expect(container.querySelector(".wardrobe-card-category")).toHaveStyle({
-      width: "28px",
-      fontSize: "12px",
-      height: "28px"
-    });
+    expect(container.querySelector(".wardrobe-card-category")).not.toBeInTheDocument();
   });
 
   test("uses tighter mobile typography for three-column cards while keeping actions touch sized", () => {
@@ -233,11 +251,7 @@ describe("ClothingCard", () => {
       fontSize: "11.5px",
       lineHeight: "1.12"
     });
-    expect(container.querySelector(".wardrobe-card-category")).toHaveStyle({
-      width: "20px",
-      fontSize: "8.5px",
-      height: "20px"
-    });
+    expect(container.querySelector(".wardrobe-card-category")).not.toBeInTheDocument();
     expect(menuButton).toHaveStyle({ width: "36px", height: "36px" });
   });
 
