@@ -221,9 +221,7 @@ describe("ClothingCard", () => {
     expect(menuButton).toHaveStyle({
       width: "34px",
       height: "34px",
-      backgroundColor: "rgba(255, 255, 255, 0.58)",
-      color: "rgba(17, 24, 39, 0.65)",
-      boxShadow: "none"
+      color: "rgba(31, 41, 55, 0.72)"
     });
   });
 
