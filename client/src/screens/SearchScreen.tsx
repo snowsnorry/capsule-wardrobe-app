@@ -13,7 +13,8 @@ import {
   Pagination,
   Stack,
   TextField,
-  Typography
+  Typography,
+  useTheme
 } from "@mui/material";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import ClearRoundedIcon from "@mui/icons-material/ClearRounded";
@@ -90,6 +91,8 @@ function ProductDetail({
   const [displayImageUrl, setDisplayImageUrl] = useState(imageUrl);
   const [imageFallbackAttempted, setImageFallbackAttempted] = useState(false);
   const productLabel = formatProductLabel(item, t("search.untitled"));
+  const theme = useTheme();
+  const isDarkMode = theme.palette.mode === "dark";
 
   useEffect(() => {
     setDisplayImageUrl(imageUrl);
@@ -191,7 +194,7 @@ function ProductDetail({
                   gap: 1.5,
                   p: 1.8,
                   borderRadius: "22px",
-                  backgroundColor: "rgba(31, 41, 51, 0.03)"
+                  backgroundColor: isDarkMode ? "rgb(0, 0, 0)" : "rgba(31, 41, 51, 0.03)"
                 }}
               >
                 {group.items.map((row) => (
