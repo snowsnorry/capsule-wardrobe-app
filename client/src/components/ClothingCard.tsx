@@ -453,7 +453,7 @@ function ClothingCard({
                 className="wardrobe-card-title-separator"
                 aria-hidden="true"
                 sx={{
-                  color: "text.disabled",
+                  color: "inherit",
                   mx: 0.4
                 }}
               >
