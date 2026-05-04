@@ -28,11 +28,17 @@ vi.mock("../components/ProfileFiltersSidebar", () => ({
   )
 }));
 vi.mock("../components/ClothingGridPlaceholder", () => ({
-  default: ({ count, inline }) => (
-    <div data-testid={inline ? `inline-placeholder-${count}` : "loading-placeholder"} />
+  default: ({ count, inline, mobileColumns }) => (
+    <div
+      data-testid={inline ? `inline-placeholder-${count}` : "loading-placeholder"}
+      data-mobile-columns={String(mobileColumns ?? 2)}
+    />
   ),
-  ClothingPlaceholderCard: ({ placeholderKey }) => (
-    <div data-testid={`placeholder-card-${placeholderKey}`} />
+  ClothingPlaceholderCard: ({ placeholderKey, mobileColumns }) => (
+    <div
+      data-testid={`placeholder-card-${placeholderKey}`}
+      data-mobile-columns={String(mobileColumns ?? 2)}
+    />
   ),
   buildClothingGridTemplateColumns: (mobileColumns = 2) => ({
     xs: `repeat(${mobileColumns}, minmax(0, 1fr))`,
@@ -40,7 +46,7 @@ vi.mock("../components/ClothingGridPlaceholder", () => ({
     lg: "repeat(2, minmax(0, 1fr))"
   }),
   buildClothingGridGap: (mobileColumns = 2) => ({
-    xs: mobileColumns === 1 ? 1.25 : 0.1,
+    xs: mobileColumns === 1 ? 1.25 : 0,
     sm: 2.5
   }),
   clothingGridTemplateColumns: {

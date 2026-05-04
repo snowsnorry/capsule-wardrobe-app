@@ -114,11 +114,17 @@ describe("ClothingCard", () => {
   test("uses compact mobile typography while keeping action buttons touch sized", () => {
     const { container } = renderCard({ isSelectable: true, isMobile: true });
 
+    const root = container.querySelector(".wardrobe-card-root");
     const details = container.querySelector(".wardrobe-card-details");
     const title = container.querySelector(".wardrobe-card-title");
     const category = container.querySelector(".wardrobe-card-category");
     const menuButton = screen.getByRole("button", { name: "capsule.openProductMenu" });
 
+    expect(root).toHaveStyle({
+      borderRadius: "0",
+      boxShadow: "none",
+      border: "1px solid rgba(17, 36, 34, 0.44)"
+    });
     expect(details).toHaveStyle({ minHeight: "50px" });
     expect(title).toHaveStyle({
       fontSize: "13px",
@@ -133,6 +139,11 @@ describe("ClothingCard", () => {
   test("uses roomier mobile typography for one-column cards", () => {
     const { container } = renderCard({ isSelectable: true, isMobile: true, mobileColumns: 1 });
 
+    expect(container.querySelector(".wardrobe-card-root")).toHaveStyle({
+      borderRadius: "8px",
+      boxShadow: "0 0px 8px rgba(17, 36, 34, 0.08)",
+      border: "1px solid rgba(17, 36, 34, 0.08)"
+    });
     expect(container.querySelector(".wardrobe-card-details")).toHaveStyle({ minHeight: "64px" });
     expect(container.querySelector(".wardrobe-card-title")).toHaveStyle({
       fontSize: "16px",
@@ -148,6 +159,11 @@ describe("ClothingCard", () => {
     const { container } = renderCard({ isSelectable: true, isMobile: true, mobileColumns: 3 });
     const menuButton = screen.getByRole("button", { name: "capsule.openProductMenu" });
 
+    expect(container.querySelector(".wardrobe-card-root")).toHaveStyle({
+      borderRadius: "0",
+      boxShadow: "none",
+      border: "1px solid rgba(17, 36, 34, 0.44)"
+    });
     expect(container.querySelector(".wardrobe-card-details")).toHaveStyle({ minHeight: "42px" });
     expect(container.querySelector(".wardrobe-card-title")).toHaveStyle({
       fontSize: "11.5px",

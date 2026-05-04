@@ -48,6 +48,7 @@ function ClothingCard({
   const showProductMenuButton = !isSelectionMode && Boolean(productUrl);
   const showCardActions = showToggleButton || showProductMenuButton;
   const showActionButtons = isMobile || isSelected;
+  const isDenseMobileCard = isMobile && mobileColumns !== 1;
   const mobileCardMetrics = mobileColumns === 1
     ? {
         actionOffset: 12,
@@ -157,16 +158,17 @@ function ClothingCard({
 
   return (
     <Box
+      className="wardrobe-card-root"
       sx={{
         display: "flex",
         flexDirection: "column",
         height: "100%",
-        borderRadius: "8px",
+        borderRadius: isDenseMobileCard ? 0 : "8px",
         overflow: "hidden",
         backgroundColor: "background.paper",
         position: "relative",
-        border: "1px solid rgba(17, 36, 34, 0.08)",
-        boxShadow: "0 0px 8px rgba(17, 36, 34, 0.08)",
+        border: isDenseMobileCard ? "0.5px solid rgba(17, 36, 34, 0.44)" : "1px solid rgba(17, 36, 34, 0.08)",
+        boxShadow: isDenseMobileCard ? "none" : "0 0px 8px rgba(17, 36, 34, 0.08)",
         ...(showCardActions && !isSelected && !isMobile
           ? {
               "& .wardrobe-card-actions": {

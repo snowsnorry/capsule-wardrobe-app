@@ -654,6 +654,9 @@ function MainScreen({
     () => buildClothingGridGap(mobileCardColumns),
     [mobileCardColumns]
   );
+  const wardrobeGridPaddingX = mobileCardColumns === 1
+    ? { xs: 1.25, sm: 2, md: 3 }
+    : { xs: 0, sm: 2, md: 3 };
   const isInteractionDisabled = isContentBusy || isInlineRenameSubmitting || isSharingCapsule;
   const searchGroups = useMemo(() => groupCapsules(searchResults), [searchResults]);
   const activeCapsuleName = activeCapsule?.name || `<${t("capsule.new")}>`;
@@ -1297,7 +1300,7 @@ function MainScreen({
                     />
                   ) : null}
                 </Box>
-                <Box sx={{ flex: 1, minHeight: 0, overflowY: "auto", px: { xs: 1.25, sm: 2, md: 3 }, pt: { xs: 1.25, md: 2 }, pb: 2 }}>
+                <Box sx={{ flex: 1, minHeight: 0, overflowY: "auto", px: wardrobeGridPaddingX, pt: { xs: 1.25, md: 2 }, pb: 2 }}>
                   {isLoadingItems ? (
                     <ClothingGridPlaceholder count={12} mobileColumns={mobileCardColumns} />
                   ) : (
@@ -1322,6 +1325,7 @@ function MainScreen({
                               <ClothingPlaceholderCard
                                 key={`pending-${item.url || item.id}`}
                                 placeholderKey={`pending-${item.url || item.id}`}
+                                mobileColumns={mobileCardColumns}
                               />
                             );
                           }
@@ -1341,7 +1345,7 @@ function MainScreen({
                             />
                           );
                         })}
-                        {showAdditionalItemPlaceholder ? <ClothingGridPlaceholder count={1} inline /> : null}
+                        {showAdditionalItemPlaceholder ? <ClothingGridPlaceholder count={1} inline mobileColumns={mobileCardColumns} /> : null}
                       </Box>
 
                       {activeOutfitSet ? (

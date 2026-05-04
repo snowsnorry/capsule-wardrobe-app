@@ -37,8 +37,11 @@ vi.mock("../components/ClothingGridPlaceholder", () => ({
       data-mobile-columns={String(mobileColumns ?? 2)}
     />
   ),
-  ClothingPlaceholderCard: ({ placeholderKey }) => (
-    <div data-testid={`placeholder-card-${placeholderKey}`} />
+  ClothingPlaceholderCard: ({ placeholderKey, mobileColumns }) => (
+    <div
+      data-testid={`placeholder-card-${placeholderKey}`}
+      data-mobile-columns={String(mobileColumns ?? 2)}
+    />
   ),
   buildClothingGridTemplateColumns: (mobileColumns = 2) => ({
     xs: `repeat(${mobileColumns}, minmax(0, 1fr))`,
@@ -46,7 +49,7 @@ vi.mock("../components/ClothingGridPlaceholder", () => ({
     lg: "repeat(2, minmax(0, 1fr))"
   }),
   buildClothingGridGap: (mobileColumns = 2) => ({
-    xs: mobileColumns === 1 ? 1.25 : 0.1,
+    xs: mobileColumns === 1 ? 1.25 : 0,
     sm: 2.5
   }),
   clothingGridTemplateColumns: {
@@ -510,6 +513,7 @@ describe("MainScreen", () => {
     });
 
     expect(screen.getByTestId("placeholder-card-pending-https://example.com/b")).toBeInTheDocument();
+    expect(screen.getByTestId("placeholder-card-pending-https://example.com/b")).toHaveAttribute("data-mobile-columns", "2");
     expect(screen.getByTestId("clothing-card-https://example.com/a")).toHaveAttribute("data-selected", "true");
     expect(screen.getByTestId("clothing-card-https://example.com/a")).toHaveAttribute("data-selection-mode", "true");
     expect(screen.queryByRole("button", { name: "Download capsule PDF" })).not.toBeInTheDocument();
@@ -517,6 +521,7 @@ describe("MainScreen", () => {
     expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Regenerate Selected (1)" })).toBeInTheDocument();
     expect(screen.getByTestId("inline-placeholder-1")).toBeInTheDocument();
+    expect(screen.getByTestId("inline-placeholder-1")).toHaveAttribute("data-mobile-columns", "2");
 
     await user.click(screen.getByTestId("clothing-card-https://example.com/c"));
     expect(onToggleRegenerationSelection).toHaveBeenCalledWith({ id: "c", url: "https://example.com/c", name: "Trousers", category: "bottom" });

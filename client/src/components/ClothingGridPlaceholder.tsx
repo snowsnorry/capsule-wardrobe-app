@@ -3,6 +3,7 @@ import type { ReactElement } from "react";
 
 type ClothingPlaceholderCardProps = {
   placeholderKey: string;
+  mobileColumns?: MobileCardColumns;
 };
 
 type ClothingGridPlaceholderProps = {
@@ -25,7 +26,7 @@ const clothingGridTemplateColumns = buildClothingGridTemplateColumns(2);
 
 const clothingGridGap = {
   xs: 1.25,
-  xs2: 0.1,
+  xs2: 0,
   sm: 2.5
 } as const;
 
@@ -36,20 +37,32 @@ function buildClothingGridGap(mobileColumns: MobileCardColumns = 2) {
   } as const;
 }
 
-function ClothingPlaceholderCard({ placeholderKey }: ClothingPlaceholderCardProps): ReactElement {
+function ClothingPlaceholderCard({
+  placeholderKey,
+  mobileColumns = 2
+}: ClothingPlaceholderCardProps): ReactElement {
+  const isDenseMobileCard = mobileColumns !== 1;
+
   return (
     <Box
       key={placeholderKey}
+      className={`wardrobe-placeholder-card-root${isDenseMobileCard ? " wardrobe-placeholder-card-root-dense" : ""}`}
       sx={{
         display: "flex",
         flexDirection: "column",
         height: "100%",
-        borderRadius: "8px",
+        borderRadius: { xs: isDenseMobileCard ? 0 : "8px", sm: "8px" },
         overflow: "hidden",
         backgroundColor: "background.paper",
         position: "relative",
-        border: "1px solid rgba(17, 36, 34, 0.08)",
-        boxShadow: "0 0px 8px rgba(17, 36, 34, 0.08)"
+        border: {
+          xs: isDenseMobileCard ? "1px solid rgba(17, 36, 34, 0.44)" : "1px solid rgba(17, 36, 34, 0.08)",
+          sm: "1px solid rgba(17, 36, 34, 0.08)"
+        },
+        boxShadow: {
+          xs: isDenseMobileCard ? "none" : "0 0px 8px rgba(17, 36, 34, 0.08)",
+          sm: "0 0px 8px rgba(17, 36, 34, 0.08)"
+        }
       }}
     >
       <Box
@@ -104,11 +117,12 @@ function ClothingPlaceholderCard({ placeholderKey }: ClothingPlaceholderCardProp
   );
 }
 
-function renderPlaceholderCards(count: number): ReactElement[] {
+function renderPlaceholderCards(count: number, mobileColumns: MobileCardColumns): ReactElement[] {
   return Array.from({ length: count }).map((_, index) => (
     <ClothingPlaceholderCard
       key={`placeholder-${index}`}
       placeholderKey={`placeholder-${index}`}
+      mobileColumns={mobileColumns}
     />
   ));
 }
@@ -119,7 +133,7 @@ function ClothingGridPlaceholder({
   mobileColumns = 2
 }: ClothingGridPlaceholderProps): ReactElement | ReactElement[] {
   if (inline) {
-    return renderPlaceholderCards(count);
+    return renderPlaceholderCards(count, mobileColumns);
   }
 
   return (
@@ -136,7 +150,7 @@ function ClothingGridPlaceholder({
         }
       }}
     >
-      {renderPlaceholderCards(count)}
+      {renderPlaceholderCards(count, mobileColumns)}
     </Box>
   );
 }
