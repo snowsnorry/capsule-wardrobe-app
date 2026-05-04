@@ -111,6 +111,46 @@ describe("ClothingCard", () => {
     expect(category).toContainElement(screen.getByText("options.categories.outerwear"));
   });
 
+  test("uses an accessible icon-only category badge on mobile for known categories", () => {
+    const { container } = renderCard({ isMobile: true });
+    const category = container.querySelector(".wardrobe-card-category");
+
+    expect(category).toHaveAttribute("aria-label", "options.categories.outerwear");
+    expect(category).toHaveStyle({ width: "24px", height: "24px" });
+    expect(category?.querySelector("svg")).toBeInTheDocument();
+    expect(category).not.toHaveTextContent("options.categories.outerwear");
+  });
+
+  test("uses the hoodie icon for mobile midlayer category badges", () => {
+    const { container } = renderCard({
+      isMobile: true,
+      item: {
+        ...item,
+        category: "midlayer"
+      }
+    });
+    const category = container.querySelector(".wardrobe-card-category");
+
+    expect(category).toHaveAttribute("aria-label", "options.categories.midlayer");
+    expect(category?.querySelector("svg")).toBeInTheDocument();
+    expect(category).not.toHaveTextContent("options.categories.midlayer");
+  });
+
+  test("keeps text category badges on mobile for unknown categories", () => {
+    const { container } = renderCard({
+      isMobile: true,
+      item: {
+        ...item,
+        category: "unknown"
+      }
+    });
+    const category = container.querySelector(".wardrobe-card-category");
+
+    expect(category).not.toHaveAttribute("aria-label");
+    expect(category?.querySelector("svg")).not.toBeInTheDocument();
+    expect(category).toContainElement(screen.getByText("options.categories.unknown"));
+  });
+
   test("uses compact mobile typography while keeping action buttons touch sized", () => {
     const { container } = renderCard({ isSelectable: true, isMobile: true });
 
@@ -123,7 +163,7 @@ describe("ClothingCard", () => {
     expect(root).toHaveStyle({
       borderRadius: "0",
       boxShadow: "none",
-      border: "1px solid rgba(17, 36, 34, 0.44)"
+      border: "0.5px solid rgba(17, 36, 34, 0.44)"
     });
     expect(details).toHaveStyle({ minHeight: "50px" });
     expect(title).toHaveStyle({
@@ -132,6 +172,7 @@ describe("ClothingCard", () => {
       WebkitLineClamp: "2"
     });
     expect(category).toHaveStyle({ fontSize: "10px", height: "24px" });
+    expect(category).toHaveStyle({ width: "24px" });
     expect(menuButton).toBeVisible();
     expect(menuButton).toHaveStyle({ width: "36px", height: "36px" });
   });
@@ -150,6 +191,7 @@ describe("ClothingCard", () => {
       lineHeight: "1.22"
     });
     expect(container.querySelector(".wardrobe-card-category")).toHaveStyle({
+      width: "28px",
       fontSize: "12px",
       height: "28px"
     });
@@ -162,7 +204,7 @@ describe("ClothingCard", () => {
     expect(container.querySelector(".wardrobe-card-root")).toHaveStyle({
       borderRadius: "0",
       boxShadow: "none",
-      border: "1px solid rgba(17, 36, 34, 0.44)"
+      border: "0.5px solid rgba(17, 36, 34, 0.44)"
     });
     expect(container.querySelector(".wardrobe-card-details")).toHaveStyle({ minHeight: "42px" });
     expect(container.querySelector(".wardrobe-card-title")).toHaveStyle({
@@ -170,6 +212,7 @@ describe("ClothingCard", () => {
       lineHeight: "1.12"
     });
     expect(container.querySelector(".wardrobe-card-category")).toHaveStyle({
+      width: "20px",
       fontSize: "8.5px",
       height: "20px"
     });

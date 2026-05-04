@@ -2,6 +2,18 @@ import { Box, Chip, IconButton, Link as MuiLink, Stack, Typography } from "@mui/
 import MoreVertRoundedIcon from "@mui/icons-material/MoreVertRounded";
 import ThumbDownAltOutlinedIcon from "@mui/icons-material/ThumbDownAltOutlined";
 import type { MouseEvent, ReactElement } from "react";
+import type { IconType } from "react-icons";
+import {
+  GiBelt,
+  GiConverseShoe,
+  GiHoodie,
+  GiLargeDress,
+  GiMonclerJacket,
+  GiShoppingBag,
+  GiSleevelessTop,
+  GiTShirt
+} from "react-icons/gi";
+import { PiPantsFill } from "react-icons/pi";
 import { useI18n } from "../i18n/useI18n";
 import { formatProductLabel } from "../utils/productLabel";
 import ProductLabelText from "./ProductLabelText";
@@ -28,6 +40,18 @@ type ClothingCardProps = {
   mobileColumns?: 1 | 2 | 3;
 };
 
+const categoryIconByName: Record<string, IconType> = {
+  outerwear: GiMonclerJacket,
+  midlayer: GiHoodie,
+  top: GiTShirt,
+  bottom: PiPantsFill,
+  dress: GiLargeDress,
+  belt: GiBelt,
+  shoes: GiConverseShoe,
+  bag: GiShoppingBag,
+  swimwear: GiSleevelessTop
+};
+
 function ClothingCard({
   item,
   isSelectable = false,
@@ -43,7 +67,10 @@ function ClothingCard({
   const imageUrl = getSafeHttpUrl(item?.image_url);
   const productUrl = getSafeHttpUrl(item?.url);
   const label = formatProductLabel(item, "");
-  const categoryLabel = item?.category ? t(`options.categories.${item.category}`) : "";
+  const categoryName = String(item?.category || "");
+  const categoryLabel = categoryName ? t(`options.categories.${categoryName}`) : "";
+  const CategoryIcon = categoryIconByName[categoryName];
+  const showCategoryIcon = isMobile && Boolean(CategoryIcon);
   const showToggleButton = isSelectionMode && isSelectable;
   const showProductMenuButton = !isSelectionMode && Boolean(productUrl);
   const showCardActions = showToggleButton || showProductMenuButton;
@@ -55,6 +82,7 @@ function ClothingCard({
         categoryOffset: 12,
         categoryHeight: 28,
         categoryFontSize: "12px",
+        categoryIconSize: "19px",
         categoryLabelPx: 1,
         detailPx: 2.5,
         detailPt: 2,
@@ -69,6 +97,7 @@ function ClothingCard({
           categoryOffset: 6,
           categoryHeight: 20,
           categoryFontSize: "8.5px",
+          categoryIconSize: "14px",
           categoryLabelPx: 0.5,
           detailPx: 0.75,
           detailPt: 0.75,
@@ -82,6 +111,7 @@ function ClothingCard({
           categoryOffset: 8,
           categoryHeight: 24,
           categoryFontSize: "10px",
+          categoryIconSize: "16px",
           categoryLabelPx: 0.75,
           detailPx: 1,
           detailPt: 1,
@@ -279,10 +309,13 @@ function ClothingCard({
         >
           <Chip
             className="wardrobe-card-category"
-            label={categoryLabel || item.category || ""}
+            aria-label={showCategoryIcon ? categoryLabel || categoryName : undefined}
+            icon={showCategoryIcon && CategoryIcon ? <CategoryIcon aria-hidden="true" focusable="false" /> : undefined}
+            label={showCategoryIcon ? "" : categoryLabel || item.category || ""}
             size="small"
             sx={{
               maxWidth: "100%",
+              width: showCategoryIcon ? mobileCardMetrics.categoryHeight : undefined,
               height: isMobile ? mobileCardMetrics.categoryHeight : 28,
               textTransform: "uppercase",
               letterSpacing: "0.08em",
@@ -291,7 +324,20 @@ function ClothingCard({
               padding: 0,
               bgcolor: "#dcefeb",
               color: "#15766f",
+              ...(showCategoryIcon
+                ? {
+                    minWidth: mobileCardMetrics.categoryHeight,
+                    borderRadius: "999px",
+                    justifyContent: "center",
+                    "& .MuiChip-icon": {
+                      m: 0,
+                      color: "inherit",
+                      fontSize: mobileCardMetrics.categoryIconSize
+                    }
+                  }
+                : {}),
               "& .MuiChip-label": {
+                display: showCategoryIcon ? "none" : undefined,
                 px: isMobile ? mobileCardMetrics.categoryLabelPx : 1,
                 overflow: "hidden",
                 textOverflow: "ellipsis"
