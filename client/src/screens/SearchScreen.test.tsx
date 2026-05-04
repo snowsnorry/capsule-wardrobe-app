@@ -463,6 +463,42 @@ describe("SearchScreen", () => {
     expect(screen.queryByRole("img", { name: "Unsafe Shirt" })).not.toBeInTheDocument();
   });
 
+  test("product detail falls back to the local cached image URL once", async () => {
+    searchApi.runSearch.mockResolvedValue(makeResults([
+      {
+        id: "1",
+        name: "Cached Shirt",
+        brand: "UNIQLO",
+        category: "top",
+        url: "https://example.com/products/cached-shirt",
+        imageUrl: "https://example.com/product.jpg"
+      }
+    ]));
+
+    renderScreen();
+
+    expect(await screen.findByDisplayValue("linen shirt")).toBeInTheDocument();
+    fireEvent.click(screen.getAllByText("Cached Shirt")[0]);
+
+    const image = await screen.findByRole("img", { name: "Cached Shirt" });
+    expect(image).toHaveAttribute("src", "https://example.com/product.jpg");
+
+    fireEvent.error(image);
+
+    await waitFor(() => {
+      expect(image).toHaveAttribute(
+        "src",
+        "/api/images/194d84554407da5269cf7c1181470b9c84ba6c227eef0ed12c0faff0ad2ae92e.jpg"
+      );
+    });
+
+    fireEvent.error(image);
+    expect(image).toHaveAttribute(
+      "src",
+      "/api/images/194d84554407da5269cf7c1181470b9c84ba6c227eef0ed12c0faff0ad2ae92e.jpg"
+    );
+  });
+
   test("shows unisex suffix in search results and product detail for all-audience items", async () => {
     renderScreen();
 

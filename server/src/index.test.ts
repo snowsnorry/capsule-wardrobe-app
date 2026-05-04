@@ -439,6 +439,49 @@ test("index routes expose health checks and protected auth status", async (t) =>
   });
 });
 
+test("image cache route serves cached jpeg files and rejects invalid names", async (t) => {
+  const imageStorageDir = await fs.mkdtemp(path.join(os.tmpdir(), "capsule-image-cache-test-"));
+  t.after(async () => {
+    await fs.rm(imageStorageDir, { recursive: true, force: true });
+  });
+
+  const filename = `${"a".repeat(64)}.jpg`;
+  await fs.writeFile(path.join(imageStorageDir, filename), Buffer.from("cached-image"));
+
+  const { baseUrl } = await startTestServer(t, {
+    overrides: { imageStorageDir }
+  });
+
+  const found = await requestText(baseUrl, `/images/${filename}`);
+  assert.equal(found.response.status, 200);
+  assert.equal(found.response.headers.get("content-type"), "image/jpeg");
+  assert.equal(found.response.headers.get("cache-control"), "public, max-age=3600");
+  assert.equal(found.text, "cached-image");
+
+  const missing = await requestJson(baseUrl, `/images/${"b".repeat(64)}.jpg`);
+  assert.equal(missing.response.status, 404);
+  assert.deepEqual(missing.json, { error: "not_found" });
+
+  for (const invalidPath of [
+    "/images/missing.jpg",
+    `/images/${"g".repeat(64)}.jpg`,
+    `/images/${"a".repeat(64)}.png`,
+    "/images/%2e%2e/secret.jpg"
+  ]) {
+    const invalid = await requestJson(baseUrl, invalidPath);
+    assert.equal(invalid.response.status, 404);
+    assert.deepEqual(invalid.json, { error: "not_found" });
+  }
+});
+
+test("image cache route is treated as an api path by spa fallback", async (t) => {
+  const { baseUrl } = await startSpaFallbackTestServer(t);
+
+  const missing = await requestJson(baseUrl, "/images/missing.jpg");
+  assert.equal(missing.response.status, 404);
+  assert.deepEqual(missing.json, { error: "not_found" });
+});
+
 test("index routes map auth request-code branches", async (t) => {
   t.mock.method(console, "log", () => {});
   t.mock.method(console, "error", () => {});

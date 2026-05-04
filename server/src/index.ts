@@ -92,6 +92,7 @@ import {
 } from "./db.js";
 import { getDefaultPasskeyName, normalizePasskeyAaguid } from "./passkeyNames.js";
 import { configureSharp } from "./ai/sharpConfig.js";
+import { resolveStorageImagesDir } from "./ai/promptImages.js";
 import { sortWardrobeItems } from "../../shared/wardrobeOrder.js";
 import {
   DEFAULT_PROFILE_LLM,
@@ -289,6 +290,7 @@ function isApiPath(pathname = "") {
     pathname.startsWith("/auth") ||
     pathname.startsWith("/capsules") ||
     pathname.startsWith("/shared-capsules") ||
+    pathname.startsWith("/images") ||
     pathname.startsWith("/profile") ||
     pathname.startsWith("/wardrobe") ||
     pathname.startsWith("/health") ||
@@ -686,7 +688,8 @@ function createApp({
   generateOutfitSetImageHandler = generateOutfitSetImage,
   buildWardrobePdfInChildImpl = buildWardrobePdfInChild,
   getProductsByUrlsInOrderImpl = getProductsByUrlsInOrder,
-  checkDatabaseConnectionImpl = checkDatabaseConnection
+  checkDatabaseConnectionImpl = checkDatabaseConnection,
+  imageStorageDir = resolveStorageImagesDir()
 } = {}) {
   const app = express();
   app.set("trust proxy", 1);
@@ -1819,6 +1822,35 @@ app.get("/healthall", async (req, res) => {
     console.error("[healthall]", error);
     return res.status(503).json({ ok: false });
   }
+});
+
+app.get("/images/:filename", async (req, res) => {
+  const filename = String(req.params.filename || "");
+  if (!/^[a-f0-9]{64}\.jpg$/.test(filename)) {
+    return res.status(404).json({ error: "not_found" });
+  }
+
+  const imagePath = path.join(String(imageStorageDir || ""), filename);
+  try {
+    const buffer = await fs.promises.readFile(imagePath);
+    return res
+      .status(200)
+      .set({
+        "Content-Type": "image/jpeg",
+        "Cache-Control": "public, max-age=3600"
+      })
+      .send(buffer);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException)?.code === "ENOENT") {
+      return res.status(404).json({ error: "not_found" });
+    }
+    console.error("[images]", error);
+    return res.status(503).json({ error: "service_unavailable" });
+  }
+});
+
+app.get("/images/*", (_req, res) => {
+  return res.status(404).json({ error: "not_found" });
 });
 
   return app;

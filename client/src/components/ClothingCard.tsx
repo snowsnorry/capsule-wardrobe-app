@@ -1,6 +1,7 @@
 import { Box, Chip, IconButton, Link as MuiLink, Stack, Typography } from "@mui/material";
 import MoreVertRoundedIcon from "@mui/icons-material/MoreVertRounded";
 import ThumbDownAltOutlinedIcon from "@mui/icons-material/ThumbDownAltOutlined";
+import { useEffect, useState } from "react";
 import type { MouseEvent, ReactElement } from "react";
 import type { IconType } from "react-icons";
 import {
@@ -18,6 +19,7 @@ import { useI18n } from "../i18n/useI18n";
 import { formatProductLabel } from "../utils/productLabel";
 import ProductLabelText from "./ProductLabelText";
 import { getSafeHttpUrl } from "../../../shared/urlSecurity.js";
+import { buildCachedProductImageUrl } from "../utils/cachedProductImage";
 
 type ClothingCardItem = {
   id?: string | number | null;
@@ -65,6 +67,8 @@ function ClothingCard({
 }: ClothingCardProps): ReactElement {
   const { t } = useI18n();
   const imageUrl = getSafeHttpUrl(item?.image_url);
+  const [displayImageUrl, setDisplayImageUrl] = useState(imageUrl);
+  const [imageFallbackAttempted, setImageFallbackAttempted] = useState(false);
   const productUrl = getSafeHttpUrl(item?.url);
   const label = formatProductLabel(item, "");
   const categoryName = String(item?.category || "");
@@ -126,6 +130,23 @@ function ClothingCard({
     event.stopPropagation();
   };
 
+  useEffect(() => {
+    setDisplayImageUrl(imageUrl);
+    setImageFallbackAttempted(false);
+  }, [imageUrl]);
+
+  const handleImageError = async () => {
+    if (imageFallbackAttempted) {
+      return;
+    }
+
+    setImageFallbackAttempted(true);
+    const cachedImageUrl = await buildCachedProductImageUrl(item?.image_url);
+    if (cachedImageUrl) {
+      setDisplayImageUrl(cachedImageUrl);
+    }
+  };
+
   const handleToggleSelected = (event: MouseEvent<HTMLButtonElement>) => {
     stopCardActionPropagation(event);
     if (!isRegenerating && typeof onToggleSelected === "function") {
@@ -143,11 +164,12 @@ function ClothingCard({
 
   const imageContent = (
     <>
-      {imageUrl ? (
+      {displayImageUrl ? (
         <Box
           component="img"
-          src={imageUrl}
+          src={displayImageUrl}
           alt={label}
+          onError={handleImageError}
           sx={{
             position: "absolute",
             inset: 0,

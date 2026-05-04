@@ -26,6 +26,7 @@ import { useI18n } from "../i18n/useI18n";
 import { translateOption } from "../i18n";
 import ProductLabelText from "../components/ProductLabelText";
 import { formatProductLabel } from "../utils/productLabel";
+import { buildCachedProductImageUrl } from "../utils/cachedProductImage";
 import { buildProductDetailGroups } from "../../../shared/productDetail.js";
 import { getSafeHttpUrl } from "../../../shared/urlSecurity.js";
 import { getColorSwatchStyle } from "../../../shared/colorSwatches.js";
@@ -86,7 +87,26 @@ function ProductDetail({
   const detailGroups = buildProductDetailGroups(item, { t, translateOption, locale });
   const productUrl = getSafeHttpUrl(item?.url);
   const imageUrl = getSafeHttpUrl(item?.imageUrl);
+  const [displayImageUrl, setDisplayImageUrl] = useState(imageUrl);
+  const [imageFallbackAttempted, setImageFallbackAttempted] = useState(false);
   const productLabel = formatProductLabel(item, t("search.untitled"));
+
+  useEffect(() => {
+    setDisplayImageUrl(imageUrl);
+    setImageFallbackAttempted(false);
+  }, [imageUrl]);
+
+  const handleImageError = async () => {
+    if (imageFallbackAttempted) {
+      return;
+    }
+
+    setImageFallbackAttempted(true);
+    const cachedImageUrl = await buildCachedProductImageUrl(item?.imageUrl);
+    if (cachedImageUrl) {
+      setDisplayImageUrl(cachedImageUrl);
+    }
+  };
 
   return (
     <Stack spacing={2.2} sx={{ height: "100%", minHeight: 0 }}>
@@ -206,11 +226,12 @@ function ProductDetail({
               </Box>
             ))}
           </Stack>
-          {imageUrl ? (
+          {displayImageUrl ? (
             <Box
               component="img"
-              src={imageUrl}
+              src={displayImageUrl}
               alt={item.name || ""}
+              onError={handleImageError}
               sx={{
                 width: "100%",
                 borderRadius: "22px",

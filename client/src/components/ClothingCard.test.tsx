@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import type { ComponentProps } from "react";
 
@@ -98,6 +98,28 @@ describe("ClothingCard", () => {
     expect(link).toHaveAttribute("rel", expect.stringContaining("noreferrer"));
     expect(image).toHaveAttribute("src", item.image_url);
     expect(image).toHaveAttribute("alt", item.name);
+  });
+
+  test("falls back to the local cached image URL once when the original image fails", async () => {
+    renderCard();
+
+    const image = screen.getByRole("img", { name: item.name ?? "" });
+    expect(image).toHaveAttribute("src", item.image_url);
+
+    fireEvent.error(image);
+
+    await waitFor(() => {
+      expect(image).toHaveAttribute(
+        "src",
+        "/api/images/701ef83d3205bee4cedc8663c6a2100ddeaad5bb7f5aeefbabfa58ac0d84c40a.jpg"
+      );
+    });
+
+    fireEvent.error(image);
+    expect(image).toHaveAttribute(
+      "src",
+      "/api/images/701ef83d3205bee4cedc8663c6a2100ddeaad5bb7f5aeefbabfa58ac0d84c40a.jpg"
+    );
   });
 
   test("renders product title in the details area and category over the image", () => {
