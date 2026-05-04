@@ -218,7 +218,13 @@ describe("ClothingCard", () => {
     });
     expect(container.querySelector(".wardrobe-card-category")).not.toBeInTheDocument();
     expect(menuButton).toBeVisible();
-    expect(menuButton).toHaveStyle({ width: "36px", height: "36px" });
+    expect(menuButton).toHaveStyle({
+      width: "34px",
+      height: "34px",
+      backgroundColor: "rgba(255, 255, 255, 0.58)",
+      color: "rgba(17, 24, 39, 0.65)",
+      boxShadow: "none"
+    });
   });
 
   test("uses roomier mobile typography for one-column cards", () => {
@@ -252,7 +258,7 @@ describe("ClothingCard", () => {
       lineHeight: "1.12"
     });
     expect(container.querySelector(".wardrobe-card-category")).not.toBeInTheDocument();
-    expect(menuButton).toHaveStyle({ width: "36px", height: "36px" });
+    expect(menuButton).toHaveStyle({ width: "34px", height: "34px" });
   });
 
   test("drops unsafe product and image urls", () => {

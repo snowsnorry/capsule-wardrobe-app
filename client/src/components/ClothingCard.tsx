@@ -80,6 +80,7 @@ function ClothingCard({
   const showProductMenuButton = !isSelectionMode && Boolean(productUrl);
   const showCardActions = showToggleButton || showProductMenuButton;
   const showActionButtons = isMobile || isSelected;
+  const showMobileProductMenuButton = isMobile && showProductMenuButton;
   const isDenseMobileCard = isMobile && mobileColumns !== 1;
   const mobileCardMetrics = mobileColumns === 1
     ? {
@@ -237,10 +238,10 @@ function ClothingCard({
             spacing={isMobile ? 0.5 : 0.75}
             sx={{
               position: "absolute",
-              top: isMobile ? mobileCardMetrics.actionOffset : 12,
-              right: isMobile ? mobileCardMetrics.actionOffset : 12,
+              top: showMobileProductMenuButton ? 0 : isMobile ? mobileCardMetrics.actionOffset : 12,
+              right: showMobileProductMenuButton ? 0 : isMobile ? mobileCardMetrics.actionOffset : 12,
               zIndex: 4,
-              opacity: showActionButtons ? 0.72 : undefined,
+              opacity: showMobileProductMenuButton ? 1 : showActionButtons ? 0.72 : undefined,
               visibility: showActionButtons ? "visible" : undefined,
               transition: "opacity 160ms ease, visibility 160ms ease",
               "&:hover, &:focus-within": {
@@ -261,6 +262,25 @@ function ClothingCard({
                   opacity: showActionButtons ? 0.72 : 0
                 }
               },
+              ...(showMobileProductMenuButton
+                ? {
+                    "& .wardrobe-card-product-menu.MuiIconButton-root": {
+                      width: 34,
+                      height: 34,
+                      border: 0,
+                      borderRadius: "999px",
+                      bgcolor: "transparent",
+                      color: "rgba(31, 41, 55, 0.72)",
+                      backdropFilter: "none",
+                      WebkitBackdropFilter: "none",
+                      boxShadow: "none",
+                      "&:hover": {
+                        bgcolor: "rgba(255, 255, 255, 0.68)",
+                        color: "rgba(17, 24, 39, 0.78)"
+                      }
+                    }
+                  }
+                : {}),
               "& .wardrobe-card-regenerate.MuiIconButton-root": {
                 bgcolor: isSelected ? "rgba(17, 17, 17, 0.92)" : "rgba(17, 17, 17, 0.42)",
                 color: isSelected ? "#d24343" : "#fff",
