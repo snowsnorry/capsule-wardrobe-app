@@ -10,7 +10,8 @@ test("ACCENT_COLOR_OPTIONS exports the expected ordered contract", () => {
     "pink",
     "yellow",
     "purple",
-    "orange"
+    "orange",
+    "multiple_accent_colors"
   ]);
   assert.equal(new Set(ACCENT_COLOR_OPTIONS).size, ACCENT_COLOR_OPTIONS.length);
 });

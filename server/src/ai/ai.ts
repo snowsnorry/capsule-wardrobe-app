@@ -33,6 +33,10 @@ import {
   capsuleEventHub,
   getStoredWardrobePayload
 } from "./capsuleEvents.js";
+import {
+  buildCapsuleWardrobeSqlParams,
+  queryCapsuleWardrobeItemsForProfile
+} from "./aiSql.js";
 import type {
   CountByKey,
   ErrorWithCode,
@@ -68,10 +72,6 @@ type RequestedWardrobeParams = Partial<{
   pattern: string;
   locale: string;
 }>;
-
-type SqlWardrobeRow = WardrobeUiItemLike & {
-  embedding?: unknown;
-};
 
 type WardrobeServiceDependencies = {
   getProfileImpl?: typeof getProfile;
@@ -782,191 +782,10 @@ async function generateCapsuleWardrobe(userProfile = null, logContext = null) {
   const promptEmbeddings = await getPromptEmbeddings(prompt);
 
   const capsuleCategories = getCapsuleCategories(userProfile);
-  const categories = Object.keys(capsuleCategories);
-  const formalityLevel = userProfile?.formalityLevel ?? null;
-  const style = userProfile?.style ?? null;
-  const occasions = Array.isArray(userProfile?.occasions) ? userProfile.occasions : [];
-  const season = Array.isArray(userProfile?.season) ? userProfile.season : [];
-  const audienceByProfile = {
-    man: ["man", "all"],
-    woman: ["woman", "all"],
-    any: ["man", "woman", "all"]
-  };
-  const audienceFilters = audienceByProfile[userProfile?.audience] || audienceByProfile.any;
-  const color = userProfile?.color ?? null;
-  const pattern = normalizePatternValue(userProfile?.pattern) || "solid";
-  const rejectedUrls = Array.isArray(userProfile?.rejected)
-    ? userProfile.rejected.map((itemUrl) => String(itemUrl || "").trim()).filter(Boolean)
-    : [];
-  const embeddingVector = `[${promptEmbeddings.join(",")}]`;
-  const additionalText = typeof userProfile?.text === "string" ? userProfile.text.trim() : "";
-  // There should be no random noise when the user makes a specific request.
-  const noiseFactor = additionalText ? 0 : 0.05;
+  const sqlParams = buildCapsuleWardrobeSqlParams(userProfile, promptEmbeddings, capsuleCategories);
 
   const sqlStartedAt = Date.now();
-  const itemsResult = await sql<SqlWardrobeRow>`
-    SELECT results.*
-    FROM unnest(${categories}::text[]) AS cats(target_category)
-    CROSS JOIN LATERAL (
-      SELECT * FROM (
-        SELECT 
-          filtered_items.*,
-          -- 4. Calculate Color Rank (FINAL VISUAL SORTING)
-          ROW_NUMBER() OVER (
-            PARTITION BY COALESCE(color_base, ARRAY[]::text[])
-            ORDER BY 
-              relevance_score DESC, 
-              (distance + (RANDOM() * ${noiseFactor}::float)) ASC
-          ) as color_rank
-        FROM (
-          SELECT 
-            raw_scored.*,
-            -- 3. INDEPENDENT QUOTA RANKING
-            ROW_NUMBER() OVER (
-              PARTITION BY style_role
-              ORDER BY relevance_score DESC, distance ASC
-            ) as style_rank,
-            ROW_NUMBER() OVER (
-              PARTITION BY is_color_match
-              ORDER BY relevance_score DESC, distance ASC
-            ) as accent_rank,
-            ROW_NUMBER() OVER (
-              PARTITION BY is_pattern_limited_item
-              ORDER BY relevance_score DESC, distance ASC
-            ) as pattern_rank
-          FROM (
-            SELECT
-              products.*,
-              -- 1. Calculate Vector Distance
-              embedding <=> ${embeddingVector}::vector as distance,
-              
-              -- 1.1 Identify Style Role (Accent, Base, Other)
-              CASE
-                WHEN ${style}::text IS NOT NULL 
-                     AND lower(${style}::text) != 'minimalistic'
-                     AND ${style}::text = ANY(COALESCE(style, ARRAY[]::text[]))
-                THEN 'accent'
-                WHEN 'minimalistic' = ANY(COALESCE(style, ARRAY[]::text[]))
-                THEN 'base'
-                ELSE 'other'
-              END as style_role,
-
-              -- Identify Color & Pattern Matches
-              (
-                ${color}::text IS NOT NULL
-                AND ${color}::text != ''
-                AND ${color}::text = ANY(color_base)
-              ) as is_color_match,
-              (
-                CASE
-                  WHEN lower(${pattern}::text) = 'solid'
-                  THEN FALSE
-                  WHEN ${pattern}::text IS NOT NULL AND ${pattern}::text != ''
-                  THEN lower(COALESCE(pattern, '')) = lower(${pattern}::text)
-                  ELSE pattern IS NOT NULL
-                    AND trim(pattern) != ''
-                    AND lower(pattern) != 'solid'
-                END
-              ) as is_pattern_limited_item,
-              
-              -- 2. Calculate Relevance Score
-              (
-                -- Formality Match (+20)
-                CASE WHEN ${formalityLevel}::text IS NOT NULL
-                  AND ${formalityLevel}::text = ANY(COALESCE(formality_level, ARRAY[]::text[]))
-                THEN 20 ELSE 0 END
-                +
-                -- Style Match (+20, fallback +15 for base)
-                CASE 
-                  WHEN ${style}::text IS NOT NULL AND ${style}::text = ANY(COALESCE(style, ARRAY[]::text[])) THEN 20
-                  WHEN ${style}::text IS NOT NULL AND 'minimalistic' = ANY(COALESCE(style, ARRAY[]::text[])) THEN 15
-                  WHEN ${style}::text IS NULL AND 'minimalistic' = ANY(COALESCE(style, ARRAY[]::text[])) THEN 20
-                  ELSE 0 
-                END
-                +
-                -- Occasion Match (+20)
-                CASE WHEN COALESCE(occasions, ARRAY[]::text[]) && ${occasions}::text[]
-                THEN 20 ELSE 0 END
-                +
-                -- Season Match (+50 or +40 fallback)
-                CASE WHEN COALESCE(season, ARRAY[]::text[]) && ${season}::text[] THEN 50
-                WHEN cardinality(COALESCE(season, ARRAY[]::text[])) = 0 THEN 40
-                ELSE 0 END
-                +
-                -- COLOR BOOST (+20)
-                -- We keep the boost to ensure the allowed color items are the "best" ones.
-                CASE 
-                  WHEN ${color}::text IS NOT NULL AND ${color}::text != ''
-                      AND ${color}::text = ANY(color_base)
-                  THEN 20 ELSE 0 
-                END
-                +
-                -- PATTERN BOOST (+20)
-                CASE
-                  WHEN ${pattern}::text IS NOT NULL AND ${pattern}::text != ''
-                      AND lower(COALESCE(pattern, '')) = lower(${pattern}::text)
-                  THEN 20 ELSE 0
-                END
-              ) as relevance_score
-
-            FROM products
-            WHERE 
-              -- HARD FILTERS
-              category = cats.target_category
-              AND lower(COALESCE(audience, '')) = ANY(${audienceFilters}::text[])
-              AND (
-                CASE
-                  WHEN ${color}::text IS NOT NULL AND ${color}::text != ''
-                  THEN ${color}::text = ANY(COALESCE(color_base, ARRAY[]::text[]))
-                    OR COALESCE(is_neutral, false)
-                  ELSE COALESCE(is_neutral, false)
-                END
-              )
-              AND (
-                CASE
-                  WHEN lower(${pattern}::text) = 'solid'
-                  THEN pattern IS NULL
-                    OR trim(pattern) = ''
-                    OR lower(pattern) = 'solid'
-                  ELSE lower(COALESCE(pattern, '')) = lower(${pattern}::text)
-                    OR pattern IS NULL
-                    OR trim(pattern) = ''
-                    OR lower(pattern) = 'solid'
-                END
-              )
-              AND NOT (products.url = ANY(${rejectedUrls}::text[]))
-          ) raw_scored
-        ) filtered_items
-        WHERE
-          -- !!! INDEPENDENT QUOTA LIMITS !!!
-          -- Rule 1: Style Logic (Accent max 3, or Base max 6 if no style is requested)
-          (
-            CASE 
-              WHEN ${style}::text IS NOT NULL THEN 
-                (style_role != 'accent' OR style_rank <= 3)
-              ELSE 
-                (style_role != 'base' OR style_rank <= 6)
-            END
-          )
-          AND 
-          -- Rule 2: If it's an accent item, it must be in the top 3 of accents.
-          (is_color_match IS NOT TRUE OR accent_rank <= 3)
-          AND 
-          -- Rule 3: If it's a patterned item, it must be in the top 3 of patterns. (WITH BYPASS FOR 'SOLID')
-          (
-            is_pattern_limited_item IS NOT TRUE 
-            OR lower(${pattern}::text) = 'solid'
-            OR pattern_rank <= 3
-          )
-      ) results
-      
-      -- 5. FINAL SORTING STRATEGY
-      ORDER BY 
-        relevance_score DESC, 
-        color_rank ASC,        
-        (distance + (RANDOM() * ${noiseFactor}::float)) ASC
-      LIMIT 10
-    ) results`;
+  const itemsResult = await queryCapsuleWardrobeItemsForProfile(sql, sqlParams);
   const sqlDurationMs = Date.now() - sqlStartedAt;
 
   const items = getSqlRows(itemsResult);

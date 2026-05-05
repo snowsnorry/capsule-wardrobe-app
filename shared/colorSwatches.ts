@@ -80,6 +80,12 @@ const COLOR_SWATCH_DEFINITIONS = Object.freeze({
       background: "linear-gradient(135deg, #ff6b6b 0%, #ffd166 25%, #06d6a0 50%, #4f83cc 75%, #b5179e 100%)"
     }),
     pdfFill: Object.freeze([0.31, 0.514, 0.8])
+  }),
+  multiple_accent_colors: Object.freeze({
+    client: Object.freeze({
+      background: "linear-gradient(135deg, #ff6b6b 0%, #ffd166 25%, #06d6a0 50%, #4f83cc 75%, #b5179e 100%)"
+    }),
+    pdfFill: Object.freeze([0.31, 0.514, 0.8])
   })
 });
 

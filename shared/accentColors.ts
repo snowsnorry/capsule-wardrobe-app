@@ -5,7 +5,8 @@ const ACCENT_COLOR_OPTIONS = [
   "pink",
   "yellow",
   "purple",
-  "orange"
+  "orange",
+  "multiple_accent_colors"
 ];
 
 export { ACCENT_COLOR_OPTIONS };

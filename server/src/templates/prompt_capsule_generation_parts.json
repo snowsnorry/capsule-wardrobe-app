@@ -248,7 +248,7 @@
     "minimalistic": [
       "Absolute Monochrome: 60% black / 30% true grey / 10% white",
       "Ivory & Sand: 60% beige / 30% ivory / 10% gold or brass",
-      "Softened Formal (Zyla's Autumn/Summer): 60% charcoal or aubergine / 30% dove grey / 10% muted white"
+      "Softened Formal (Autumn/Summer): 60% charcoal or aubergine / 30% dove grey / 10% muted white"
     ],
     "street_style": [
       "Concrete Jungle: 60% heather grey / 30% black / 10% stark white",
@@ -257,7 +257,7 @@
     ],
     "romantic": [
       "Dusty Rose Garden: 60% rose beige / 30% soft pink / 10% pearl white",
-      "Watercolor Mist (Kibbe): 60% light blue / 30% lilac / 10% dove grey (fluid blending)",
+      "Watercolor Mist: 60% light blue / 30% lilac / 10% dove grey (fluid blending)",
       "Evening Sensuality: 60% draped navy / 30% deep plum / 10% delicate metallic"
     ],
     "preppy": [
@@ -267,12 +267,12 @@
     ],
     "boho": [
       "Earth & Terracotta: 60% rich brown / 30% burnt orange / 10% sand",
-      "Elegant Bohemian (Zyla): 60% olive drab / 30% mustard / 10% turquoise or copper",
+      "Elegant Bohemian: 60% olive drab / 30% mustard / 10% turquoise or copper",
       "Nomad Spirit: 60% brushed grey / 30% off-white / 10% washed denim blue"
     ],
     "nautical": [
       "Riviera Standard: 60% navy / 30% white / 10% true red",
-      "City Maritime (Flusser): 60% navy / 30% medium grey / 10% white (subdued for urban wear)",
+      "City Maritime: 60% navy / 30% medium grey / 10% white (subdued for urban wear)",
       "Seaside Neutral: 60% navy / 30% beige or khaki / 10% brass metallic"
     ],
     "safari": [
@@ -287,17 +287,17 @@
     ],
     "military": [
       "Field Ops: 60% olive drab / 30% khaki / 10% matte black",
-      "Officer Class (Flusser): 60% navy / 30% charcoal / 10% brass or gold",
+      "Officer Class: 60% navy / 30% charcoal / 10% brass or gold",
       "Stealth Urban: 60% black / 30% gunmetal grey / 10% subtle camo print"
     ],
     "grunge": [
       "Seattle Rain: 60% faded black / 30% charcoal / 10% distressed red",
-      "Chic Grunge (Bornstein): 60% dark wash denim / 30% black / 10% delicate silver",
+      "Chic Grunge: 60% dark wash denim / 30% black / 10% delicate silver",
       "Forest Grunge: 60% faded flannel green / 30% deep brown / 10% black"
     ],
     "sporty": [
       "Tech Runner: 60% black / 30% slate grey / 10% optic yellow",
-      "Sporty Minimalist (Bornstein): 60% black / 30% pristine white / 10% heather grey",
+      "Sporty Minimalist: 60% black / 30% pristine white / 10% heather grey",
       "Olympic Spirit: 60% navy / 30% white / 10% red"
     ],
     "retro": [
@@ -309,7 +309,7 @@
   "palette_by_accent_color": {
     "blue": [
       "Classic High-Contrast: 60% midnight navy / 30% crisp white / 10% cobalt or royal blue",
-      "Muted Cool (Zyla's Summer): 60% charcoal grey / 30% dove grey / 10% ice or powder blue",
+      "Muted Cool (Summer): 60% charcoal grey / 30% dove grey / 10% ice or powder blue",
       "Earthy Warmth: 60% chocolate brown / 30% beige or camel / 10% teal or aquamarine"
     ],
     "green": [
@@ -318,7 +318,7 @@
       "Crisp Preppy: 60% navy / 30% white / 10% seafoam or mint green"
     ],
     "red": [
-      "Riviera Standard (Flusser): 60% navy / 30% white / 10% true red or cherry",
+      "Riviera Standard: 60% navy / 30% white / 10% true red or cherry",
       "Urban Edge: 60% black or charcoal / 30% heather grey / 10% scarlet or ruby",
       "Rich Autumn: 60% camel or khaki / 30% dark brown / 10% brick red or burgundy"
     ],
@@ -328,7 +328,7 @@
       "Muted City: 60% dove grey / 30% charcoal / 10% soft rose"
     ],
     "yellow": [
-      "Complementary Deep (Itten): 60% midnight navy / 30% white / 10% mustard or canary yellow",
+      "Complementary Deep: 60% midnight navy / 30% white / 10% mustard or canary yellow",
       "Earthy Warmth: 60% olive drab / 30% classic khaki / 10% goldenrod or amber",
       "Sleek Monochrome: 60% charcoal / 30% light stone grey / 10% optic yellow (micro-accent only)"
     ],
@@ -338,9 +338,36 @@
       "Warm Contrast: 60% deep brown / 30% beige / 10% rich violet"
     ],
     "orange": [
-      "Complementary Navy (Itten): 60% navy / 30% crisp white / 10% tangerine or burnt orange",
+      "Complementary Navy: 60% navy / 30% crisp white / 10% tangerine or burnt orange",
       "Autumnal Earth: 60% classic khaki / 30% deep brown / 10% rust or terracotta",
       "Urban Neutral: 60% charcoal / 30% olive green / 10% bright orange"
+    ],
+    "multiple_accent_colors": [
+      "Primary Triad: 60% midnight navy / 20% crisp white / 10% true red / 10% canary yellow (micro-accent)",
+      "Complementary Earth: 60% espresso brown / 20% camel / 10% teal or deep aqua / 10% burnt orange",
+      "Analogous Watercolor (Romantic/Classic): 60% dove grey / 20% pearl white / 10% powder blue / 10% soft lilac",
+      "Gamine Staccato (High-Contrast): 60% black / 20% stark white / 10% emerald green / 10% cobalt blue",
+      "Autumn Spice Blend: 60% olive drab / 20% classic khaki / 10% mustard / 10% terracotta or rust",
+      "Preppy/Nautical Harmony: 60% classic navy / 20% light heather grey / 10% cherry red / 10% kelly green",
+      "Jewel Tone Depth (Winter/Summer): 60% charcoal / 20% navy / 10% amethyst purple / 10% ruby red",
+      "Sunset Mirage: 60% deep aubergine (dark purple) / 20% taupe / 10% tangerine / 10% gold or brass",
+      "Urban Acid (Street Style/Grunge): 60% faded black / 20% dark wash denim / 10% neon green (micro) / 10% electric pink (micro)",
+      "Sophisticated Muted: 60% mushroom grey / 20% slate / 10% dusty rose / 10% muted sage green",
+      "\n",
+      "MULTIPLE ACCENT COLORS LOGIC & HARMONY RULES:",
+      "When the \"multiple_accent_colors\" option is selected, you are working with complex color chords (Triads, Tetrads, or Analogous harmonies). You MUST follow these strict guidelines from color theory experts:",
+      "1. The \"Anchor\" Rule (Bases):",
+      "When using multiple vibrant accents, the foundation of the outfit must be impeccably grounded. The 60% (First Base) and 20% (Second/Third Base) colors MUST be solid, sophisticated neutrals (e.g., midnight navy, charcoal, espresso, olive drab, dove grey). Never use an accent color for a main foundational piece (like a winter coat or main trousers) unless the specific Style explicitly demands it.",
+      "2. Itten's Law of Color Luminosity (Contrast of Extension):",
+      "Colors have different visual weights. Yellow is 3 times brighter than violet; orange is twice as bright as blue.",
+      "- High-luminosity accents (yellow, orange, neon) MUST be restricted to \"micro-accents\" (e.g., a stripe in a tie, a logo on a sneaker, a watch dial, or a tiny scarf pattern).",
+      "- Low-luminosity accents (deep red, emerald, teal, plum) can occupy larger accent areas (e.g., a handbag, a pair of shoes, or a fine knit layer).",
+      "3. Style Identity Adaptation:",
+      "- For Romantic / Soft Classic styles: Blend the multiple accents smoothly. Use \"Analogous\" palettes (e.g., blue + lilac) and avoid sharp color-blocking. The effect should be a \"watercolor swirl\".",
+      "- For Gamine / Street Style / Sporty: Enforce sharp, staccato color-blocking. Use \"Primary Triads\" or \"Complementary\" colors (e.g., bold red + bright blue on a black/white background) for an electric, animated look.",
+      "- For Natural / Boho / Safari: Blend rich, earthy accents (mustard + terracotta + teal) using highly tactile textures (suede, linen, leather) to absorb light and reduce harshness.",
+      "4. Pattern Integration:",
+      "The most elegant way to introduce multiple accents is through a single patterned item (e.g., a plaid scarf, a paisley tie, or a floral blouse) that naturally contains both accent colors [16]. You can then \"pull\" one of those accent colors out and repeat it in a solid accessory (e.g., a green/red patterned scarf paired with a solid red bag)."
     ]
   }
 }

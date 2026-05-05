@@ -191,7 +191,7 @@ test("buildSystemPrompt includes accent color defaults when color is provided", 
   const prompt = buildSystemPrompt({ color: "red" });
 
   assert.match(prompt, /PALETTE REFERENCE BY ACCENT COLOR/);
-  assert.match(prompt, /Riviera Standard \(Flusser\): 60% navy \/ 30% white \/ 10% true red or cherry/);
+  assert.match(prompt, /Riviera Standard: 60% navy \/ 30% white \/ 10% true red or cherry/);
   assert.doesNotMatch(prompt, /STYLE LIBRARY/);
 });
 

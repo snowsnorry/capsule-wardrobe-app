@@ -96,7 +96,8 @@ const ru = {
       orange: "Оранжевый",
       denim: "Деним",
       metallic: "Металлик",
-      multicolor: "Мультиколор"
+      multicolor: "Мультиколор",
+      multiple_accent_colors: "Несколько акцентных цветов"
     },
     patterns: {
       abstract: "Абстракция",

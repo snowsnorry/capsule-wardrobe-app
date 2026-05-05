@@ -42,6 +42,14 @@ test("shared color swatches expose consistent client and pdf styles", () => {
     getPdfColorSwatchFill("missing_color"),
     getPdfColorSwatchFill(FALLBACK_COLOR_SWATCH_KEY)
   );
+  assert.deepEqual(
+    getColorSwatchStyle("multiple_accent_colors"),
+    getColorSwatchStyle("multicolor")
+  );
+  assert.deepEqual(
+    getPdfColorSwatchFill("multiple_accent_colors"),
+    getPdfColorSwatchFill("multicolor")
+  );
 });
 
 test("translateOption resolves accent color aliases with spaces and casing", () => {

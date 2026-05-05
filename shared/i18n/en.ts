@@ -96,7 +96,8 @@ const en = {
       orange: "Orange",
       denim: "Denim",
       metallic: "Metallic",
-      multicolor: "Multicolor"
+      multicolor: "Multicolor",
+      multiple_accent_colors: "Multiple accent colors"
     },
     patterns: {
       abstract: "Abstract",
