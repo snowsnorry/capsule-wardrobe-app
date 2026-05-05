@@ -757,6 +757,55 @@ test("regenerateCapsuleWardrobe starts a new pending job without clearing stored
   }]);
 });
 
+test("regenerateCapsuleWardrobe renames an empty new capsule from shortCapsuleName before swimwear completes", async () => {
+  const renamedCapsules = [];
+  const service = createWardrobeService({
+    getProfileImpl: async () => buildNormalizedProfileRecord({ audience: "woman", season: ["summer"], locale: "en" }),
+    getCapsuleImpl: async () => createCapsuleWithWardrobe(null),
+    updateCapsuleSnapshotImpl: async (_email, capsuleId, draft) => (
+      buildNormalizedCapsuleRecord({ id: capsuleId, name: "<New capsule>", draft, saved: null, status: "new" })
+    ),
+    generateCapsuleWardrobeImpl: async () => buildWardrobeGenerationResult({
+      items: [
+        buildWardrobeUiItem({ id: "top-1", category: "top", url: undefined, name: undefined, image_url: undefined, audience: undefined })
+      ],
+      selectedItems: [
+        buildWardrobeUiItem({ id: "top-1", category: "top", url: undefined, name: undefined, image_url: undefined, audience: undefined })
+      ],
+      promptEmbeddings: [0.1],
+      shortCapsuleName: "Resort Core"
+    }),
+    renameCapsuleImpl: async (email, capsuleId, name) => {
+      renamedCapsules.push([email, capsuleId, name]);
+      return buildNormalizedCapsuleRecord({ id: capsuleId, name, draft: createCapsuleWithWardrobe(null).draft, saved: null, status: "new" });
+    },
+    shouldGenerateSwimwearImpl: () => true,
+    generateSwimwearAdditionImpl: async () => ({
+      items: [
+        buildWardrobeUiItem({ id: "swim-1", category: "swimwear", url: "https://example.com/swim-1", name: "Swim 1", image_url: "https://example.com/swim-1.jpg", audience: "woman" })
+      ],
+      reasoning: "swimwear-json",
+      rawSelectionText: "swimwear-raw"
+    }),
+    jobs: new Map(),
+    randomUuidImpl: () => "req-new-name"
+  });
+  const res = createResponseRecorder();
+
+  await service.regenerateCapsuleWardrobe({
+    user: { email: "person@example.com" },
+    params: { id: "capsule-1" }
+  }, res);
+
+  assert.equal(res.statusCode, 202);
+  const job = service.getWardrobeJob("person@example.com", "capsule-1");
+  assert.ok(job);
+  await job.promise;
+
+  assert.equal(job.status, "completed");
+  assert.deepEqual(renamedCapsules, [["person@example.com", "capsule-1", "Resort Core"]]);
+});
+
 test("regenerateCapsuleWardrobe uses profile llm=none instead of query flag", async () => {
   let generatedProfile = null;
   const service = createWardrobeService({

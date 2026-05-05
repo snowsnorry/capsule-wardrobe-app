@@ -1276,6 +1276,9 @@ function createWardrobeService({
       }
 
       const effectiveSnapshot = getEffectiveCapsuleSnapshot(capsule);
+      const storedWardrobeBeforeRegeneration = getStoredWardrobePayload({ items: effectiveSnapshot?.data?.wardrobe });
+      const shouldAutoRenameNewCapsule =
+        capsule?.status === "new" && !storedWardrobeBeforeRegeneration?.items?.length;
       const logContext = {
         capsuleRequestId: randomUuidImpl()
       };
@@ -1301,7 +1304,7 @@ function createWardrobeService({
         noLlm: noLlm || undefined
       }, logContext);
       const job = startWardrobeJob(email, capsuleId, profile, generationCapsule, logContext, {
-        allowAutoRename: false,
+        allowAutoRename: shouldAutoRenameNewCapsule,
         forceEmptyWardrobe: true,
         rollbackSnapshot
       });
