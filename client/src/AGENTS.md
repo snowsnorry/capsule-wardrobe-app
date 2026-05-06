@@ -4,10 +4,14 @@
 This directory contains the React frontend.
 
 Primary areas:
+- `app/` — app shell, route content, state/actions, session bootstrap, navigation, and dialogs
 - `api/` — API-facing client logic
 - `auth/` — browser auth helpers such as passkey/WebAuthn registration and login
 - `components/` — reusable UI
 - `screens/` — page/screen composition
+- `screens/mainScreen/` — main capsule/wardrobe screen composition
+- `screens/searchScreen/` — search screen composition
+- `screens/statisticsScreen/` — statistics screen composition
 - `i18n/` — locale resources and helpers
 - `search/` — search-related behavior
 - `utils/` — utility helpers
@@ -25,9 +29,11 @@ Primary areas:
 ## Validation
 - `npm run test:client`
 - `npm run typecheck:client`
+- After tests and typecheck, run ESLint on changed client source files with zero warnings, for example `npx eslint --max-warnings=0 client/src/path/to/file.tsx`
 
 ## First files to inspect
 - `App.tsx`
+- `app/`
 - `screens/`
 - `components/`
 - `api/`

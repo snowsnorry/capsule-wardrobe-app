@@ -8,30 +8,42 @@ Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, onboard
 ### 1. App startup
 - Root workspace scripts coordinate `client` and `server`
 - Frontend starts via Vite
-- Backend starts from `server/src/index.ts`
+- Client app composition is split across `client/src/App.tsx` and `client/src/app/`
+- Backend starts from `server/src/index.ts`, with route groups under `server/src/routes/`
 
 ### 2. Authentication flow
 - UI initiates auth from the client
-- server entrypoint routes requests
-- auth/session logic lives around `authStore.ts`
+- server auth routes live under `server/src/routes/`
+- auth/session logic lives around `authStore.ts` and `server/src/routes/sessionAuthRoutes.ts`
 - email delivery logic lives in `email.ts`
 - Google and passkey login create the same normal app session as email-code login
 - Passkey/WebAuthn browser work lives in `client/src/auth/passkeys.ts` and API calls in `client/src/api/passkeys.ts`
-- Passkey credentials and short-lived single-use challenges are persisted via `server/src/db.ts`
+- Passkey credentials and short-lived single-use challenges are persisted via `server/src/db.ts` and `server/src/db/passkeys.ts`
 - Passkey RP config uses `PASSKEY_RP_ID` for the visible frontend hostname and `PASSKEY_ORIGIN` for the full visible frontend origin
 - auth test mode exists and should remain usable
 
 ### 3. Profile / onboarding flow
 - screen-level flow lives under `client/src/screens/`
+- app-level profile/session orchestration lives under `client/src/app/`
 - API integration should live in `client/src/api/`
-- persisted server-side behavior likely touches DB-backed modules
+- persisted server-side behavior likely touches DB-backed modules and `server/src/routes/profile*Routes.ts`
 
 ### 4. Capsule / wardrobe flow
 - server-side domain state likely centers on `capsuleStore.ts`
+- capsule read/mutation HTTP behavior lives under `server/src/routes/capsule*Routes.ts`
+- client capsule state/actions live under `client/src/app/` and `client/src/screens/mainScreen/`
 - AI-related generation or enrichment behavior lives under `server/src/ai/`
 
-### 5. Localization flow
+### 5. Search / statistics flow
+- search UI state and filters live under `client/src/search/`
+- search screen composition lives under `client/src/screens/searchScreen/`
+- statistics screen composition lives under `client/src/screens/statisticsScreen/`
+- search API routes live in `server/src/routes/searchRoutes.ts`
+- search persistence is split across `searchStore.ts`, `searchTypes.ts`, and `server/src/db/search*`
+
+### 6. Localization flow
 - locale resources and helpers live under `client/src/i18n/`
+- shared locale option resources live under `shared/i18n/`
 - changes to user-facing copy should preserve EN/RU parity
 
 ## Important files
@@ -48,6 +60,7 @@ Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, onboard
 - `client/render-server.js`
 - `client/netlify/functions/`
 - `client/src/App.tsx`
+- `client/src/app/` — app shell, route content, state/actions, session bootstrap, navigation, and dialogs
 - `client/src/main.tsx`
 - `client/src/theme.ts`
 - `client/src/auth/passkeys.ts`
@@ -56,6 +69,9 @@ Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, onboard
 - `client/src/api/`
 - `client/src/components/`
 - `client/src/screens/`
+- `client/src/screens/mainScreen/`
+- `client/src/screens/searchScreen/`
+- `client/src/screens/statisticsScreen/`
 - `client/src/search/`
 - `client/src/i18n/`
 - `client/src/utils/`
@@ -65,14 +81,22 @@ Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, onboard
 - `server/tsconfig.json`
 - `server/tsconfig.build.json`
 - `server/tsconfig.test.json`
+- `server/tsconfig.src.json`
 - `server/src/index.ts`
 - `server/src/db.ts` — database integration, including passkey credential and challenge persistence
+- `server/src/db/` — split DB modules for auth, schema, passkeys, profiles, capsule data, search, and product options
+- `server/src/routes/` — grouped Express route modules for auth/session, passkeys, profile, capsule, search, health, and images
 - `server/src/email.ts`
 - `server/src/authStore.ts`
 - `server/src/capsuleStore.ts`
+- `server/src/capsuleStoreModel.ts`
 - `server/src/profileStore.ts`
+- `server/src/profileHttp.ts`
 - `server/src/searchStore.ts`
+- `server/src/searchTypes.ts`
+- `server/src/searchValidation.ts`
 - `server/src/serverUrlSecurity.ts`
+- `server/src/wardrobePdf*.ts`
 - `server/src/ai/`
 - `server/src/templates/`
 
@@ -91,8 +115,17 @@ Run from root:
 - `shared/wardrobeOrder.test.ts`
 - `shared/accentColors.test.ts`
 - `shared/colorSwatches.test.ts`
+- `shared/stylePreferences.test.ts`
 - `shared/i18n/helpers.test.ts`
 - `shared/i18n/localeParity.test.ts`
+
+## Quality commands
+- `npm run lint` — ESLint across the repository
+- `npm run lint:strict` — ESLint across the repository with zero warnings allowed
+- `npm run quality:deps` — dependency boundary checks
+- `npm run quality:large-files` — list largest source files
+- `npm run quality:large-files:strict` — fail on files over configured size thresholds
+- `npm run quality:gate` — strict lint, typecheck, tests, dependency checks, and large-file strict check
 
 ## Invariants
 - The repo is a two-workspace monorepo: `client` and `server`
@@ -112,3 +145,4 @@ Run from root:
 4. Make the smallest viable change
 5. Run the narrowest relevant validation
 6. Prefer `npm run typecheck` or workspace `typecheck` when changing TS types or module boundaries
+7. At the end, after tests and typecheck, run ESLint on the changed source files with zero warnings, for example `npx eslint --max-warnings=0 <changed files>`

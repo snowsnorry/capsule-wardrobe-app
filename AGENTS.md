@@ -23,13 +23,19 @@ High-level responsibilities:
 - `server/` — backend app
 - `shared/` — shared TypeScript domain models, helpers, and tests
 - `client/src/api/` — HTTP client calls and API-facing logic
+- `client/src/app/` — app shell, route content, state/actions, session bootstrap, navigation, and dialogs
 - `client/src/auth/` — browser auth helpers such as passkey/WebAuthn flows
 - `client/src/components/` — reusable UI pieces
 - `client/src/i18n/` — localization resources and helpers
 - `client/src/screens/` — page/screen-level UI flows
+- `client/src/screens/mainScreen/` — main capsule/wardrobe screen composition
+- `client/src/screens/searchScreen/` — search screen composition
+- `client/src/screens/statisticsScreen/` — statistics screen composition
 - `client/src/search/` — search-related UI or logic
 - `client/src/utils/` — client utilities
 - `server/src/ai/` — AI-related integrations and orchestration
+- `server/src/db/` — split DB modules for auth, passkeys, profiles, capsule data, search, schema, and product options
+- `server/src/routes/` — grouped Express route modules
 - `server/src/templates/` — server-side templates
 - `server/src/index.ts` — server entrypoint
 - `server/src/db.ts` — database integration
@@ -67,6 +73,12 @@ Tests:
 - `npm run test:server`
 - `npm run test:shared`
 
+Lint and quality:
+- `npm run lint`
+- `npm run lint:strict`
+- `npm run quality:gate`
+- `npm run quality`
+
 ## Working rules
 - Prefer minimal diffs.
 - Do not refactor unrelated files during task-focused work.
@@ -80,11 +92,11 @@ Tests:
 
 ## Change heuristics
 For frontend tasks:
-- first inspect `client/src/App.tsx`, `client/src/screens/`, `client/src/components/`, and `client/src/api/`
+- first inspect `client/src/App.tsx`, `client/src/app/`, `client/src/screens/`, `client/src/components/`, and `client/src/api/`
 
 For backend tasks:
-- first inspect `server/src/index.ts` and the closest domain module (`db.ts`, `email.ts`, `authStore.ts`, `capsuleStore.ts`, `profileStore.ts`, `searchStore.ts`, or `ai/`)
-- for passkey/WebAuthn work, inspect `server/src/index.ts`, `server/src/db.ts`, `client/src/api/passkeys.ts`, and `client/src/auth/passkeys.ts`
+- first inspect `server/src/index.ts`, the closest route module in `server/src/routes/`, and the closest domain module (`db.ts`, `db/`, `email.ts`, `authStore.ts`, `capsuleStore.ts`, `profileStore.ts`, `searchStore.ts`, or `ai/`)
+- for passkey/WebAuthn work, inspect `server/src/index.ts`, `server/src/routes/passkeyRoutes.ts`, `server/src/db.ts`, `server/src/db/passkeys.ts`, `client/src/api/passkeys.ts`, and `client/src/auth/passkeys.ts`
 
 For deployment/config tasks:
 - inspect root `package.json`, `client/netlify.toml`, `client/render-server.js`, `client/vite.config.ts`, and README first
@@ -100,6 +112,7 @@ At minimum:
 - shared logic changes: `npm run test:shared`
 - cross-cutting changes: `npm test`
 - TypeScript-only or contract-shape changes: run the narrowest relevant `typecheck` command
+- after tests and typecheck, run ESLint on the changed source files with zero warnings, for example `npx eslint --max-warnings=0 <changed files>`
 
 ## Avoid
 - Do not invent new architecture not already present in the repo.
