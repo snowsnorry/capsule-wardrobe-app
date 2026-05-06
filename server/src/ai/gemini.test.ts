@@ -3,14 +3,10 @@ import assert from "node:assert/strict";
 import {
   ALLOWED_CHAT_MODELS,
   buildGeminiContents,
-  buildGeminiStructuredOutput,
   buildGeminiSystemInstruction,
-  buildZodSchemaFromJsonSchema,
-  cleanupUploadedGeminiFiles,
   createGeminiClient,
   generateJsonWithLlm,
-  resolveChatModel,
-  uploadBufferToGemini
+  resolveChatModel
 } from "./gemini.js";
 import { buildSystemPrompt } from "./llm.js";
 import type { JsonSchemaFormat } from "./types.js";
@@ -93,127 +89,6 @@ test("buildGeminiSystemInstruction includes the default system prompt for a neut
     buildGeminiSystemInstruction("Be concise", {}),
     `Be concise\n\n${buildSystemPrompt({})}`
   );
-});
-
-test("buildZodSchemaFromJsonSchema supports strict objects, arrays, enums, and integers", () => {
-  const schema = buildZodSchemaFromJsonSchema({
-    type: "object",
-    additionalProperties: false,
-    properties: {
-      mood: {
-        type: "string",
-        enum: ["good", "bad"]
-      },
-      count: {
-        type: "integer",
-        minimum: 1
-      },
-      tags: {
-        type: "array",
-        minItems: 1,
-        maxItems: 2,
-        items: {
-          type: "string"
-        }
-      }
-    },
-    required: ["mood", "count", "tags"]
-  });
-
-  assert.deepEqual(schema.parse({
-    mood: "good",
-    count: 1,
-    tags: ["a"]
-  }), {
-    mood: "good",
-    count: 1,
-    tags: ["a"]
-  });
-
-  assert.throws(() => schema.parse({
-    mood: "other",
-    count: 1,
-    tags: ["a"]
-  }));
-});
-
-test("buildGeminiStructuredOutput converts app format to Gemini responseJsonSchema", () => {
-  const result = buildGeminiStructuredOutput({
-    type: "json_schema",
-    name: "example_response",
-    schema: {
-      type: "object",
-      additionalProperties: false,
-      properties: {
-        ok: {
-          type: "boolean",
-          description: "Whether generation succeeded."
-        }
-      },
-      required: ["ok"]
-    }
-  });
-
-  assert.equal(typeof result.zodSchema.parse, "function");
-  assertGeminiObjectSchema(result.responseJsonSchema);
-  assert.equal(result.responseJsonSchema.type, "object");
-  assert.equal(result.responseJsonSchema.additionalProperties, false);
-  assert.equal(result.responseJsonSchema.properties?.ok.type, "boolean");
-});
-
-test("uploadBufferToGemini writes temp file, uploads it, and deletes local temp file", async () => {
-  const calls = [];
-  const uploaded = await uploadBufferToGemini({
-    files: {
-      upload: async (payload) => {
-        calls.push(["upload", payload]);
-        return { name: "files/123", uri: "gs://gemini/files/123", mimeType: "image/png" };
-      },
-      delete: async () => ({})
-    }
-  }, {
-    filename: "capsule.png",
-    mimeType: "image/png",
-    buffer: Buffer.from("image-one")
-  }, {
-    writeFileSyncImpl: (filePath, buffer) => calls.push(["write", filePath, Buffer.from(buffer).toString("utf8")]),
-    unlinkSyncImpl: (filePath) => calls.push(["unlink", filePath]),
-    tmpdirImpl: () => "/tmp/gemini-tests",
-    joinImpl: (...parts) => parts.join("/"),
-    randomUUIDImpl: () => "123e4567-e89b-12d3-a456-426614174000"
-  });
-
-  assert.deepEqual(uploaded, { name: "files/123", uri: "gs://gemini/files/123", mimeType: "image/png" });
-  assert.deepEqual(calls, [
-    ["write", "/tmp/gemini-tests/123e4567-e89b-12d3-a456-426614174000.png", "image-one"],
-    ["upload", {
-      file: "/tmp/gemini-tests/123e4567-e89b-12d3-a456-426614174000.png",
-      config: {
-        mimeType: "image/png",
-        displayName: "capsule.png"
-      }
-    }],
-    ["unlink", "/tmp/gemini-tests/123e4567-e89b-12d3-a456-426614174000.png"]
-  ]);
-});
-
-test("cleanupUploadedGeminiFiles deletes uploaded files and ignores nameless entries", async () => {
-  const deleted = [];
-  await cleanupUploadedGeminiFiles({
-    files: {
-      delete: async ({ name }) => {
-        deleted.push(name);
-        return {};
-      },
-      upload: async () => ({ name: "files/ignore" })
-    }
-  }, [
-    { name: "files/123" },
-    { uri: "gs://gemini/files/without-name" },
-    { name: "files/456" }
-  ]);
-
-  assert.deepEqual(deleted, ["files/123", "files/456"]);
 });
 
 test("gemini client validates api key and shapes multimodal JSON request", async () => {

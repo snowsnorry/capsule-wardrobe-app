@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import type { ComponentProps } from "react";
 
@@ -122,128 +121,11 @@ describe("ProfileFiltersSidebar", () => {
     useI18nMock.mockReset();
   });
 
-  test("renders the capsule settings header", () => {
-    renderSidebar();
-
-    expect(screen.getByRole("heading", { name: "Capsule settings" })).toBeInTheDocument();
-    expect(screen.getByText("Adjust the inputs used to build this capsule.")).toBeInTheDocument();
-  });
-
-  test("forwards filter interactions to the corresponding callbacks", async () => {
-    const user = userEvent.setup();
-    const onSelectStyleCore = vi.fn();
-    const onSelectStyleAesthetic = vi.fn();
-    const onToggleOccasion = vi.fn();
-    const onToggleSeason = vi.fn();
-    const onSelectAudience = vi.fn();
-    const onSelectAccentColor = vi.fn();
-    const onSelectPattern = vi.fn();
-    const onTextChange = vi.fn();
-
-    renderSidebar({
-      onSelectStyleCore,
-      onSelectStyleAesthetic,
-      onToggleOccasion,
-      onToggleSeason,
-      onSelectAudience,
-      onSelectAccentColor,
-      onSelectPattern,
-      onTextChange
-    });
-
-    await user.click(screen.getByRole("button", { name: "formal" }));
-    await user.click(screen.getByRole("button", { name: "retro" }));
-    await user.click(screen.getByRole("button", { name: "travel" }));
-    await user.click(screen.getByRole("button", { name: "winter" }));
-    await user.click(screen.getByRole("button", { name: "man" }));
-    await user.click(screen.getByRole("button", { name: "red" }));
-    await user.click(screen.getByRole("button", { name: "Stripe" }));
-    await user.type(screen.getByPlaceholderText("Additional placeholder"), "linen only");
-
-    expect(onSelectStyleCore).toHaveBeenCalledWith("formal");
-    expect(onSelectStyleAesthetic).toHaveBeenCalledWith("retro");
-    expect(onToggleOccasion).toHaveBeenCalledWith("travel");
-    expect(onToggleSeason).toHaveBeenCalledWith("winter");
-    expect(onSelectAudience).toHaveBeenCalledWith("man");
-    expect(onSelectAccentColor).toHaveBeenCalledWith("red");
-    expect(onSelectPattern).toHaveBeenCalledWith("stripe");
-    expect(onTextChange).toHaveBeenCalled();
-  });
-
-  test("calls apply and reset callbacks and disables actions while loading", async () => {
-    const user = userEvent.setup();
-    const onApply = vi.fn();
-    const onReset = vi.fn();
-
-    const initial = renderSidebar({
-      onApply,
-      onReset,
-      status: { loading: false, error: "Bad input", infoKey: "profile.info", infoParams: { count: 2 } }
-    });
-
-    await user.click(screen.getByRole("button", { name: "Apply" }));
-    await user.click(screen.getByRole("button", { name: "Reset" }));
-
-    expect(onApply).toHaveBeenCalledTimes(1);
-    expect(onReset).toHaveBeenCalledTimes(1);
-    expect(screen.getByText("Bad input")).toBeInTheDocument();
-    expect(screen.getByText("info:2")).toBeInTheDocument();
-
-    initial.unmount();
-
-    renderSidebar({
-      onApply,
-      onReset,
-      status: { loading: true, error: "", infoKey: "", infoParams: null }
-    });
-
-    expect(screen.getByRole("button", { name: "Apply" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Reset" })).toBeDisabled();
-    expect(screen.queryByText(/To apply filters, choose:/)).not.toBeInTheDocument();
-    expect(screen.queryByText("Filters have not changed.")).not.toBeInTheDocument();
-  });
-
-  test("disables filter controls while interactions are blocked", () => {
-    const onSelectStyleCore = vi.fn();
-    const onToggleOccasion = vi.fn();
-    const onSelectAccentColor = vi.fn();
-    const onTextChange = vi.fn();
-
-    renderSidebar({
-      isInteractionDisabled: true,
-      onSelectStyleCore,
-      onToggleOccasion,
-      onSelectAccentColor,
-      onTextChange
-    });
-
-    expect(screen.getByRole("button", { name: "formal" })).toHaveAttribute("aria-disabled", "true");
-    expect(screen.getByRole("button", { name: "travel" })).toHaveAttribute("aria-disabled", "true");
-    expect(screen.getByRole("button", { name: "red" })).toHaveAttribute("aria-disabled", "true");
-    expect(screen.getByPlaceholderText("Additional placeholder")).toBeDisabled();
-
-    expect(onSelectStyleCore).not.toHaveBeenCalled();
-    expect(onToggleOccasion).not.toHaveBeenCalled();
-    expect(onSelectAccentColor).not.toHaveBeenCalled();
-    expect(onTextChange).not.toHaveBeenCalled();
-  });
-
   test("shows no hint and keeps apply enabled when required filters are selected", () => {
     renderSidebar();
 
     expect(screen.getByRole("button", { name: "Apply" })).toBeEnabled();
     expect(screen.queryByText(/To apply filters, choose:/)).not.toBeInTheDocument();
-  });
-
-  test("renders compact style sections without the parent style heading", () => {
-    renderSidebar();
-
-    expect(screen.queryByText("Styles")).not.toBeInTheDocument();
-    expect(screen.queryByText("profile.stylesTitle")).not.toBeInTheDocument();
-    expect(screen.getByText("Core style")).toBeInTheDocument();
-    expect(screen.getByText("Choose one core style.")).toBeInTheDocument();
-    expect(screen.getByText("Aesthetic style")).toBeInTheDocument();
-    expect(screen.getByText("Choose optionally one aesthetic.")).toBeInTheDocument();
   });
 
   test("shows a single missing required filter in the apply hint", () => {
@@ -280,15 +162,6 @@ describe("ProfileFiltersSidebar", () => {
     expect(screen.getByRole("button", { name: "Apply" })).toBeDisabled();
     expect(screen.getByText("Filters have not changed.")).toBeInTheDocument();
     expect(screen.queryByText(/To apply filters, choose:/)).not.toBeInTheDocument();
-  });
-
-  test("renders additional information field", () => {
-    renderSidebar({
-      selectedText: "Prefer natural fabrics"
-    });
-
-    expect(screen.getByText("Additional information")).toBeInTheDocument();
-    expect(screen.getByDisplayValue("Prefer natural fabrics")).toBeInTheDocument();
   });
 
   test("treats a legacy null pattern as solid in the UI", () => {

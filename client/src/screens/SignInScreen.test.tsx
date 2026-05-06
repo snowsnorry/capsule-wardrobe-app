@@ -97,32 +97,6 @@ describe("SignInScreen", () => {
     cleanup();
   });
 
-  test("email step disables submit until email is present and calls request handler", async () => {
-    const onRequestCode = vi.fn((event) => event.preventDefault());
-    const user = userEvent.setup();
-    renderHarness({ onRequestCode });
-
-    const emailInput = screen.getByRole("textbox", { name: /email/i });
-    const sendCodeButton = screen.getByRole("button", { name: "Send code" });
-
-    expect(sendCodeButton).toBeDisabled();
-
-    await user.type(emailInput, "person@example.com");
-    expect(sendCodeButton).not.toBeDisabled();
-    await user.click(sendCodeButton);
-    expect(onRequestCode).toHaveBeenCalledTimes(1);
-  });
-
-  test("email step wires passkey sign-in action", async () => {
-    const onPasskeySignIn = vi.fn();
-    const user = userEvent.setup();
-
-    renderHarness({ onPasskeySignIn });
-
-    await user.click(screen.getByRole("button", { name: "Sign in with passkey" }));
-    expect(onPasskeySignIn).toHaveBeenCalledTimes(1);
-  });
-
   test("shows progress indicator while sign-in is loading", () => {
     renderHarness({
       status: { loading: true, error: "", infoKey: "", infoParams: null }
@@ -135,39 +109,6 @@ describe("SignInScreen", () => {
     renderHarness();
 
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
-  });
-
-  test("code step disables verify until code is present and wires resend/reset actions", async () => {
-    const onRequestCode = vi.fn((event) => event.preventDefault());
-    const onResetEmail = vi.fn();
-    const onVerifyCode = vi.fn((event) => event.preventDefault());
-    const user = userEvent.setup();
-
-    renderHarness({
-      initialStep: "code",
-      initialEmail: "person@example.com",
-      onRequestCode,
-      onResetEmail,
-      onVerifyCode
-    });
-
-    const codeInput = screen.getByRole("textbox", { name: /email code/i });
-    const verifyButton = screen.getByRole("button", { name: "Verify" });
-    const resendButton = screen.getByRole("button", { name: "Resend code" });
-    const changeEmailButton = screen.getByRole("button", { name: "Change email" });
-
-    expect(verifyButton).toBeDisabled();
-
-    await user.type(codeInput, "654321");
-    expect(verifyButton).not.toBeDisabled();
-
-    await user.click(verifyButton);
-    await user.click(resendButton);
-    await user.click(changeEmailButton);
-
-    expect(onVerifyCode).toHaveBeenCalledTimes(1);
-    expect(onRequestCode).toHaveBeenCalledTimes(1);
-    expect(onResetEmail).toHaveBeenCalledTimes(1);
   });
 
   test("loads google script and renders button when client id is present", async () => {

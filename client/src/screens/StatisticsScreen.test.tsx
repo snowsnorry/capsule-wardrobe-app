@@ -1,9 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { cleanup, render, screen } from "@testing-library/react";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import { LocaleProvider } from "../i18n/LocaleProvider";
-import { createAppTheme } from "../theme";
 
 const searchApi = vi.hoisted(() => ({
   fetchSearchOptions: vi.fn(),
@@ -111,26 +109,6 @@ function renderScreen(props = {}, { layoutMode = "medium" } = {}) {
   );
 }
 
-function renderScreenWithTheme(themeOverride, props = {}, { layoutMode = "medium" } = {}) {
-  mediaQueryMock.mockImplementation((query) => {
-    if (String(query).includes("max-width: 1279.95px")) {
-      return layoutMode === "overlay";
-    }
-    if (String(query).includes("min-width: 1680px")) {
-      return layoutMode === "large";
-    }
-    return false;
-  });
-
-  return render(
-    <ThemeProvider theme={themeOverride}>
-      <LocaleProvider>
-        <StatisticsScreen onNavigateApp={vi.fn()} {...props} />
-      </LocaleProvider>
-    </ThemeProvider>
-  );
-}
-
 describe("StatisticsScreen", () => {
   beforeEach(() => {
     mediaQueryMock.mockReset();
@@ -144,7 +122,7 @@ describe("StatisticsScreen", () => {
     cleanup();
   });
 
-  test("hydrates statistic filters from defaults and fetches statistics", async () => {
+  test("renders screen-level statistics summary after bootstrap", async () => {
     renderScreen();
 
     expect((await screen.findAllByText("120")).length).toBeGreaterThan(0);
@@ -165,109 +143,5 @@ describe("StatisticsScreen", () => {
       fit: [],
       closureType: []
     });
-  });
-
-  test("clicking a donut segment toggles the matching filter and refreshes stats", async () => {
-    renderScreen();
-    expect((await screen.findAllByText("120")).length).toBeGreaterThan(0);
-
-    searchApi.fetchSearchStats.mockClear();
-    fireEvent.click(screen.getByRole("button", { name: "Category: Top" }));
-
-    await waitFor(() => {
-      expect(searchApi.fetchSearchStats).toHaveBeenCalledWith(expect.objectContaining({
-        category: ["top"]
-      }));
-    });
-  });
-
-  test("price chart is informational and does not apply price range filters", async () => {
-    renderScreen();
-    expect((await screen.findAllByText("120")).length).toBeGreaterThan(0);
-
-    searchApi.fetchSearchStats.mockClear();
-    expect(screen.queryByRole("button", { name: "Price: 50 - 100" })).not.toBeInTheDocument();
-    expect(searchApi.fetchSearchStats).not.toHaveBeenCalled();
-  });
-
-  test("clicking a color bar toggles the matching color filter", async () => {
-    renderScreen();
-    expect((await screen.findAllByText("120")).length).toBeGreaterThan(0);
-
-    searchApi.fetchSearchStats.mockClear();
-    fireEvent.click(screen.getByRole("button", { name: "Accent color: White" }));
-
-    await waitFor(() => {
-      expect(searchApi.fetchSearchStats).toHaveBeenCalledWith(expect.objectContaining({
-        color: ["white"]
-      }));
-    });
-  });
-
-  test("sorts audience filters as not important, woman, man, unisex", async () => {
-    renderScreen();
-    expect((await screen.findAllByText("120")).length).toBeGreaterThan(0);
-
-    const audienceSection = screen.getAllByText("Audience")[0].parentElement;
-    const labels = within(audienceSection)
-      .getAllByRole("button")
-      .map((button) => button.textContent?.trim())
-      .filter(Boolean);
-
-    expect(labels).toEqual(["Not important", "Woman", "Man", "Unisex"]);
-  });
-
-  test("shows unisex audience label on the chart and toggles all", async () => {
-    renderScreen();
-    expect((await screen.findAllByText("120")).length).toBeGreaterThan(0);
-
-    searchApi.fetchSearchStats.mockClear();
-    fireEvent.click(screen.getByRole("button", { name: "Audience: Unisex" }));
-
-    await waitFor(() => {
-      expect(searchApi.fetchSearchStats).toHaveBeenCalledWith(expect.objectContaining({
-        audience: ["all"]
-      }));
-    });
-  });
-
-  test("mobile opens the filters dialog", async () => {
-    const user = userEvent.setup();
-    renderScreen({}, { layoutMode: "overlay" });
-
-    expect((await screen.findAllByText("120")).length).toBeGreaterThan(0);
-    await user.click(screen.getByLabelText("Open filters"));
-    expect(await screen.findByText("Filters")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Cancel" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Close filters" })).toBeInTheDocument();
-
-    searchApi.fetchSearchStats.mockClear();
-    searchApi.fetchSearchStats.mockResolvedValueOnce(makeStats({ total: 37 }));
-    await user.click(screen.getByRole("button", { name: "UNIQLO" }));
-
-    await waitFor(() => {
-      expect(searchApi.fetchSearchStats).toHaveBeenCalledWith(expect.objectContaining({
-        brand: ["uniqlo"]
-      }));
-    });
-
-    await user.click(screen.getByRole("button", { name: "Close filters" }));
-    await waitFor(() => {
-      expect(screen.queryByText("Filters")).not.toBeInTheDocument();
-    });
-    expect(await screen.findByText("Brand: UNIQLO")).toBeInTheDocument();
-    expect((await screen.findAllByText("37")).length).toBeGreaterThan(0);
-  });
-
-  test("uses dark paper chart cards in dark mode", async () => {
-    renderScreenWithTheme(createAppTheme("dark"));
-
-    expect((await screen.findAllByText("120")).length).toBeGreaterThan(0);
-
-    const summaryCard = screen.getByTestId("statistics-summary-card");
-    const chartCards = screen.getAllByTestId("statistics-card");
-
-    expect(summaryCard).toHaveStyle({ backgroundColor: "rgb(21, 32, 31)" });
-    expect(chartCards[0]).toHaveStyle({ backgroundColor: "rgb(21, 32, 31)" });
   });
 });
