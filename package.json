@@ -20,10 +20,23 @@
     "test": "npm run test:server && npm run test:client && npm run test:shared",
     "test:server": "npm --workspace server run test",
     "test:client": "npm --workspace client run test",
-    "test:shared": "npm --workspace server exec -- tsx --test ../shared/wardrobeOrder.test.ts ../shared/accentColors.test.ts ../shared/colorSwatches.test.ts ../shared/i18n/helpers.test.ts ../shared/i18n/localeParity.test.ts"
+    "test:shared": "npm --workspace server exec -- tsx --test ../shared/wardrobeOrder.test.ts ../shared/accentColors.test.ts ../shared/colorSwatches.test.ts ../shared/i18n/helpers.test.ts ../shared/i18n/localeParity.test.ts",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "quality:large-files": "find client/src server/src shared -type f \\( -name \"*.ts\" -o -name \"*.tsx\" \\) -not -path \"*/node_modules/*\" -not -path \"*/dist/*\" -exec wc -l {} + | sort -nr | head -40",
+    "quality:deps": "depcruise client/src server/src shared --config .dependency-cruiser.cjs",
+    "quality": "npm run typecheck && npm run lint && npm test && npm run quality:deps && npm run quality:large-files",
+    "quality:fast": "npm run typecheck && npm run lint && npm run quality:large-files"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "concurrently": "^9.1.2",
-    "typescript": "^5.9.3"
+    "dependency-cruiser": "^17.4.0",
+    "eslint": "^10.3.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-unused-imports": "^4.4.1",
+    "globals": "^17.6.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.59.2"
   }
 }
