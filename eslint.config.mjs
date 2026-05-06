@@ -50,7 +50,8 @@ export default tseslint.config(
         project: [
           "./client/tsconfig.json",
           "./server/tsconfig.json",
-          "./server/tsconfig.test.json"
+          "./server/tsconfig.test.json",
+          "./shared/tsconfig.json"
         ],
         tsconfigRootDir: import.meta.dirname
       }

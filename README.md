@@ -173,8 +173,9 @@ Type-check:
 
 ```bash
 npm run typecheck
-npm run client:typecheck
-npm run server:typecheck
+npm run typecheck:client
+npm run typecheck:server
+npm run typecheck:shared
 ```
 
 Run tests:

@@ -26,7 +26,7 @@ Primary areas:
 
 ## Validation
 - `npm run test:server`
-- `npm run server:typecheck`
+- `npm run typecheck:server`
 
 ## First files to inspect
 - `index.ts`

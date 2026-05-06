@@ -24,7 +24,7 @@ Primary areas:
 
 ## Validation
 - `npm run test:client`
-- `npm run client:typecheck`
+- `npm run typecheck:client`
 
 ## First files to inspect
 - `App.tsx`
