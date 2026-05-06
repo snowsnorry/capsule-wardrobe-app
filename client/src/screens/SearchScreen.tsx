@@ -1,35 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { KeyboardEvent, ReactElement } from "react";
+import type { ReactElement } from "react";
 import {
   Box,
-  Chip,
-  CircularProgress,
   Dialog,
   DialogContent,
   Divider,
   IconButton,
-  InputAdornment,
-  Pagination,
   Stack,
-  TextField,
-  Typography,
-  useTheme
+  Typography
 } from "@mui/material";
-import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
-import ClearRoundedIcon from "@mui/icons-material/ClearRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
-import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
-import TuneRoundedIcon from "@mui/icons-material/TuneRounded";
-import OpenInNewRoundedIcon from "@mui/icons-material/OpenInNewRounded";
 import { fetchSavedSearch, fetchSearchOptions, runSearch } from "../api/search";
 import { useI18n } from "../i18n/useI18n";
 import { translateOption } from "../i18n";
-import ProductLabelText from "../components/ProductLabelText";
-import { formatProductLabel } from "../utils/productLabel";
-import { buildCachedProductImageUrl } from "../utils/cachedProductImage";
-import { buildProductDetailGroups } from "../../../shared/productDetail.js";
-import { getSafeHttpUrl } from "../../../shared/urlSecurity.js";
-import { getColorSwatchStyle } from "../../../shared/colorSwatches.js";
 import SearchFiltersSidebar from "../search/SearchFiltersSidebar";
 import {
   EMPTY_SEARCH_OPTIONS,
@@ -40,23 +23,10 @@ import {
 } from "../search/searchState";
 import type { ActiveFilterChip, SearchDraftState, SearchOptions } from "../search/searchState";
 import useMediaQuery from "@mui/material/useMediaQuery";
-
-type SearchResultItem = {
-  id: string | number;
-  name?: string;
-  brand?: string;
-  category?: string;
-  url?: string;
-  imageUrl?: string;
-  description?: string;
-  audience?: string;
-  [key: string]: unknown;
-};
-
-type SearchStatus = {
-  loading: boolean;
-  error: string;
-};
+import SearchBar from "./searchScreen/SearchBar";
+import SearchResultsList from "./searchScreen/SearchResultsList";
+import ProductDetail from "./searchScreen/ProductDetail";
+import type { SearchResultItem, SearchStatus } from "./searchScreen/searchTypes";
 
 type SearchResponse = {
   items?: SearchResultItem[];
@@ -71,191 +41,7 @@ type SearchScreenProps = {
 
 const SEARCH_AUTO_APPLY_DEBOUNCE_MS = 300;
 
-function ProductDetail({
-  item,
-  title,
-  t,
-  locale,
-  mobileBackAction = null
-}: {
-  item: SearchResultItem | null;
-  title: string;
-  t: (key: string, params?: Record<string, unknown>) => string;
-  locale: string;
-  mobileBackAction?: (() => void) | null;
-}): ReactElement {
-  const detailGroups = buildProductDetailGroups(item, { t, translateOption, locale });
-  const productUrl = getSafeHttpUrl(item?.url);
-  const imageUrl = getSafeHttpUrl(item?.imageUrl);
-  const [displayImageUrl, setDisplayImageUrl] = useState(imageUrl);
-  const [imageFallbackAttempted, setImageFallbackAttempted] = useState(false);
-  const productLabel = formatProductLabel(item, t("search.untitled"));
-  const theme = useTheme();
-  const isDarkMode = theme.palette.mode === "dark";
-
-  useEffect(() => {
-    setDisplayImageUrl(imageUrl);
-    setImageFallbackAttempted(false);
-  }, [imageUrl]);
-
-  const handleImageError = async () => {
-    if (imageFallbackAttempted) {
-      return;
-    }
-
-    setImageFallbackAttempted(true);
-    const cachedImageUrl = await buildCachedProductImageUrl(item?.imageUrl);
-    if (cachedImageUrl) {
-      setDisplayImageUrl(cachedImageUrl);
-    }
-  };
-
-  return (
-    <Stack spacing={2.2} sx={{ height: "100%", minHeight: 0 }}>
-      {item ? (
-        <>
-          <Box>
-            <Box sx={{ position: "relative" }}>
-              {mobileBackAction ? (
-                <IconButton
-                  aria-label={t("search.back")}
-                  onClick={mobileBackAction}
-                  sx={{
-                    position: "absolute",
-                    top: -4,
-                    left: -8,
-                    zIndex: 1
-                  }}
-                >
-                  <ArrowBackRoundedIcon />
-                </IconButton>
-              ) : null}
-              <Box
-                component={productUrl ? "a" : "div"}
-                {...(productUrl
-                  ? {
-                      href: productUrl,
-                      target: "_blank",
-                      rel: "noreferrer"
-                    }
-                  : {})}
-                sx={{
-                  color: "#8f6f45",
-                  textDecoration: "none",
-                  display: "block",
-                  "&:hover": productUrl ? { textDecoration: "underline" } : undefined
-                }}
-              >
-                <Typography
-                  component="span"
-                  variant="h5"
-                  sx={{
-                    color: "inherit",
-                    display: "block",
-                    overflowWrap: "anywhere",
-                    textIndent: mobileBackAction ? "40px" : 0
-                  }}
-                >
-                  <ProductLabelText item={item} fallbackLabel={t("search.untitled")} />
-                  {productUrl ? (
-                    <OpenInNewRoundedIcon
-                      sx={{
-                        fontSize: 18,
-                        color: "inherit",
-                        ml: 0.6,
-                        verticalAlign: "middle",
-                        transform: "translateY(-0.04em)"
-                      }}
-                    />
-                  ) : null}
-                </Typography>
-              </Box>
-            </Box>
-            {item.brand ? <Typography variant="h6">{item.brand}</Typography> : null}
-            {item.category ? (
-              <Typography variant="body2" color="text.secondary">
-                {translateOption("categories", item.category, locale)}
-              </Typography>
-            ) : null}
-          </Box>
-          {item.description ? (
-            <Typography variant="body1" color="text.secondary">
-              {item.description}
-            </Typography>
-          ) : null}
-          <Stack spacing={1.4}>
-            {detailGroups.map((group) => (
-              <Box
-                key={group.id}
-                sx={{
-                  display: "grid",
-                  gridTemplateColumns: { xs: "1fr", sm: "repeat(2, minmax(0, 1fr))" },
-                  gap: 1.5,
-                  p: 1.8,
-                  borderRadius: "22px",
-                  backgroundColor: isDarkMode ? "background.default" : "rgba(31, 41, 51, 0.03)"
-                }}
-              >
-                {group.items.map((row) => (
-                  <Box key={row.key}>
-                    <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.35 }}>
-                      {row.label}
-                    </Typography>
-                    <Typography component="div" variant="body2" sx={{ lineHeight: 1.45 }}>
-                      {row.value.kind === "colors" ? (
-                        <Stack direction="row" spacing={0.9} alignItems="center" flexWrap="wrap" useFlexGap>
-                          {row.value.items.map((value) => (
-                            <Stack key={value.key} direction="row" spacing={0.7} alignItems="center">
-                              <Box
-                                sx={{
-                                  width: 12,
-                                  height: 12,
-                                  borderRadius: "999px",
-                                  boxSizing: "border-box",
-                                  flexShrink: 0,
-                                  border: "1px solid #999",
-                                  ...getColorSwatchStyle(value.key)
-                                }}
-                              />
-                              <span>{value.label}</span>
-                            </Stack>
-                          ))}
-                        </Stack>
-                      ) : row.value.text}
-                    </Typography>
-                  </Box>
-                ))}
-              </Box>
-            ))}
-          </Stack>
-          {displayImageUrl ? (
-            <Box
-              component="img"
-              src={displayImageUrl}
-              alt={item.name || ""}
-              onError={handleImageError}
-              sx={{
-                width: "100%",
-                borderRadius: "22px",
-                border: "1px solid",
-                borderColor: "divider",
-                objectFit: "cover",
-                backgroundColor: "background.default"
-              }}
-            />
-          ) : null}
-        </>
-      ) : (
-        <Typography variant="body2" color="text.secondary">
-          {t("search.detailEmpty")}
-        </Typography>
-      )}
-    </Stack>
-  );
-}
-
 function SearchScreen({
-  onNavigateApp,
   initialQuery = "",
   autoOpenProductDetail = false
 }: SearchScreenProps): ReactElement {
@@ -330,7 +116,7 @@ function SearchScreen({
           setIsDetailOpen(true);
         }
         setStatus({ loading: false, error: "" });
-      } catch (error) {
+      } catch {
         if (!isActive) {
           return;
         }
@@ -372,7 +158,7 @@ function SearchScreen({
       setTotal(result.total || 0);
       setSelectedResultId(result.items?.[0]?.id ?? null);
       setStatus({ loading: false, error: "" });
-    } catch (error) {
+    } catch {
       if (requestSeq !== searchRequestSeqRef.current) {
         return;
       }
@@ -460,161 +246,47 @@ function SearchScreen({
     await applySearchState(nextState, { debounce: true });
   };
 
-  const renderSearchBar = (isMobile: boolean) => (
-    <Stack direction="row" spacing={1.2} alignItems="center">
-      {isMobile ? (
-        <IconButton
-          aria-label={t("filters.open")}
-          onClick={() => setIsFiltersOpen(true)}
-          sx={{ flexShrink: 0 }}
-        >
-          <TuneRoundedIcon />
-        </IconButton>
-      ) : null}
-      <TextField
-        fullWidth
-        value={draftState.query}
-        onChange={(event) => handleQueryChange(event.target.value)}
-        onBlur={() => {
-          void applyCurrentQuery();
-        }}
-        onKeyDown={(event: KeyboardEvent<HTMLInputElement>) => {
-          if (event.key === "Enter") {
-            event.preventDefault();
-            void applyCurrentQuery();
-          }
-        }}
-        placeholder={t("search.placeholder")}
-        InputProps={{
-          startAdornment: (
-            <InputAdornment position="start">
-              <SearchRoundedIcon sx={{ color: "text.secondary" }} />
-            </InputAdornment>
-          ),
-          endAdornment: draftState.query ? (
-            <InputAdornment position="end">
-              <IconButton
-                edge="end"
-                aria-label={t("search.clear")}
-                onMouseDown={(event) => {
-                  event.preventDefault();
-                }}
-                onClick={() => {
-                  void handleClearQuery();
-                }}
-                size="small"
-              >
-                <ClearRoundedIcon fontSize="small" />
-              </IconButton>
-            </InputAdornment>
-          ) : null
-        }}
-      />
-    </Stack>
+  const selectResult = (item: SearchResultItem) => {
+    setSelectedResultId(item.id);
+    if (isMobile) {
+      setIsDetailOpen(true);
+    }
+  };
+
+  const searchBar = (forMobile: boolean) => (
+    <SearchBar
+      isMobile={forMobile}
+      query={draftState.query}
+      t={t}
+      onOpenFilters={() => setIsFiltersOpen(true)}
+      onQueryChange={handleQueryChange}
+      onApplyQuery={() => {
+        void applyCurrentQuery();
+      }}
+      onClearQuery={() => {
+        void handleClearQuery();
+      }}
+    />
   );
 
-  const renderResultsList = (isMobile) => (
-    <Stack spacing={2} sx={{ minHeight: 0, height: "100%" }}>
-      <Stack spacing={1}>
-        <Stack direction="row" justifyContent="space-between" alignItems="center">
-          <Typography variant="overline" color="text.secondary" sx={{ minWidth: 0 }}>
-            {t("search.resultsCount", { count: formattedTotal })}
-          </Typography>
-          {status.loading ? <CircularProgress size={18} /> : null}
-        </Stack>
-        {activeChips.length > 0 ? (
-          <Stack direction="row" flexWrap="wrap" gap={1} useFlexGap>
-            {activeChips.map((chip) => (
-              <Chip
-                key={chip.key}
-                label={chip.label}
-                onDelete={() => {
-                  void handleDeleteActiveChip(chip);
-                }}
-                sx={{
-                  maxWidth: "100%",
-                  "& .MuiChip-label": {
-                    display: "block",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis"
-                  }
-                }}
-              />
-            ))}
-          </Stack>
-        ) : null}
-      </Stack>
-      <Divider />
-      <Stack spacing={1.1} sx={{ flex: 1, minHeight: 0, overflowY: "auto", pr: 0.5 }}>
-        {results.length === 0 && !status.loading ? (
-          <Typography variant="body2" color="text.secondary">
-            {t("search.empty")}
-          </Typography>
-        ) : null}
-        {results.map((item) => (
-          <Box
-            key={item.id}
-            role="button"
-            tabIndex={0}
-            onClick={() => {
-              setSelectedResultId(item.id);
-              if (isMobile) {
-                setIsDetailOpen(true);
-              }
-            }}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" || event.key === " ") {
-                event.preventDefault();
-                setSelectedResultId(item.id);
-                if (isMobile) {
-                  setIsDetailOpen(true);
-                }
-              }
-            }}
-            sx={{
-              pl: "10px",
-              pr: 0.5,
-              py: 1.1,
-              borderRadius: 0,
-              cursor: "pointer",
-              border: "none",
-              backgroundColor: String(selectedResultId) === String(item.id) ? "rgba(28, 124, 124, 0.06)" : "transparent",
-              transition: "background-color 160ms ease, transform 160ms ease",
-              outline: "none",
-              "&:hover": {
-                backgroundColor: "rgba(31, 41, 51, 0.035)"
-              }
-            }}
-          >
-            <Typography variant="body1" sx={{ fontWeight: 700 }}>
-              <ProductLabelText item={item} fallbackLabel={t("search.untitled")} />
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {item.brand || t("search.noBrand")}
-            </Typography>
-          </Box>
-        ))}
-      </Stack>
-      {total > 50 ? (
-        <Pagination
-          page={draftState.page}
-          count={totalPages}
-          onChange={handleChangePage}
-          shape="rounded"
-          color="primary"
-          siblingCount={isMobile ? 0 : 1}
-          boundaryCount={isMobile ? 1 : 2}
-          sx={{
-            alignSelf: "center",
-            maxWidth: "100%",
-            "& .MuiPagination-ul": {
-              flexWrap: "nowrap",
-              justifyContent: "center"
-            }
-          }}
-        />
-      ) : null}
-    </Stack>
+  const resultsList = (forMobile: boolean) => (
+    <SearchResultsList
+      isMobile={forMobile}
+      t={t}
+      formattedTotal={formattedTotal}
+      status={status}
+      activeChips={activeChips}
+      results={results}
+      selectedResultId={selectedResultId}
+      total={total}
+      totalPages={totalPages}
+      page={draftState.page}
+      onDeleteActiveChip={(chip) => {
+        void handleDeleteActiveChip(chip);
+      }}
+      onSelectResult={selectResult}
+      onChangePage={handleChangePage}
+    />
   );
 
   return (
@@ -622,9 +294,9 @@ function SearchScreen({
       <Stack spacing={2.4} sx={{ height: "100%", minHeight: 0, overflow: "hidden" }}>
         {isMobile ? (
           <Stack spacing={2} sx={{ minHeight: 0, overflow: "hidden", px: 2, pb: 2 }}>
-            {renderSearchBar(true)}
+            {searchBar(true)}
             <Divider sx={{ mx: -2 }} />
-            <Box sx={{ flex: 1, minHeight: 0, overflow: "hidden" }}>{renderResultsList(true)}</Box>
+            <Box sx={{ flex: 1, minHeight: 0, overflow: "hidden" }}>{resultsList(true)}</Box>
           </Stack>
         ) : (
           <Box
@@ -692,8 +364,8 @@ function SearchScreen({
                 p: 3
               }}
             >
-              <Box sx={{ gridColumn: "1 / 3" }}>{renderSearchBar(false)}</Box>
-              <Box sx={{ minHeight: 0, overflow: "hidden" }}>{renderResultsList(false)}</Box>
+              <Box sx={{ gridColumn: "1 / 3" }}>{searchBar(false)}</Box>
+              <Box sx={{ minHeight: 0, overflow: "hidden" }}>{resultsList(false)}</Box>
               <Box
                 sx={{
                   minHeight: 0,
@@ -701,7 +373,7 @@ function SearchScreen({
                   pl: 0.5
                 }}
               >
-                <ProductDetail item={selectedItem} title={t("search.productCard")} t={t} locale={locale} />
+                <ProductDetail item={selectedItem} t={t} locale={locale} />
               </Box>
             </Box>
           </Box>
@@ -764,7 +436,6 @@ function SearchScreen({
             <Box sx={{ minHeight: 0, maxWidth: "100%", overflowX: "hidden", overflowY: "auto" }}>
               <ProductDetail
                 item={selectedItem}
-                title={t("search.productCard")}
                 t={t}
                 locale={locale}
                 mobileBackAction={() => setIsDetailOpen(false)}

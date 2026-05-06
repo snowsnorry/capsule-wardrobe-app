@@ -23,11 +23,13 @@
     "test:client": "npm --workspace client run test",
     "test:shared": "npm --workspace server exec -- tsx --test ../shared/wardrobeOrder.test.ts ../shared/accentColors.test.ts ../shared/colorSwatches.test.ts ../shared/i18n/helpers.test.ts ../shared/i18n/localeParity.test.ts",
     "lint": "eslint .",
+    "lint:strict": "eslint . --max-warnings=0",
     "lint:fix": "eslint . --fix",
-    "quality:large-files": "find client/src server/src shared -type f \\( -name \"*.ts\" -o -name \"*.tsx\" \\) -not -path \"*/node_modules/*\" -not -path \"*/dist/*\" -exec wc -l {} + | sort -nr | head -40",
+    "quality:large-files": "find client/src server/src shared -type f \\( -name \"*.ts\" -o -name \"*.tsx\" -o -name \"*.js\" -o -name \"*.jsx\" \\) -not -path \"*/node_modules/*\" -not -path \"*/dist/*\" -not -path \"*/build/*\" -exec wc -l {} + | sort -nr | head -40",
+    "quality:large-files:strict": "node scripts/check-large-files.mjs",
     "quality:deps": "depcruise client/src server/src shared --config .dependency-cruiser.cjs",
-    "quality": "npm run typecheck && npm run lint && npm test && npm run quality:deps && npm run quality:large-files",
-    "quality:fast": "npm run typecheck && npm run lint && npm run quality:large-files"
+    "quality:gate": "npm run lint:strict && npm run typecheck && npm test && npm run quality:deps && npm run quality:large-files:strict",
+    "quality": "npm run quality:gate && npm run quality:large-files"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

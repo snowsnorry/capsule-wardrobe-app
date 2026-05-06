@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import { LocaleProvider } from "../i18n/LocaleProvider";
 
@@ -376,7 +375,6 @@ describe("SearchScreen", () => {
   });
 
   test("mobile opens filters dialog and product detail dialog", async () => {
-    const user = userEvent.setup();
     renderScreen({}, { layoutMode: "overlay" });
 
     expect(await screen.findByDisplayValue("linen shirt")).toBeInTheDocument();
