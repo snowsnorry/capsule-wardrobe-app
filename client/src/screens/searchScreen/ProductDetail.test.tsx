@@ -32,24 +32,28 @@ afterEach(() => {
 });
 
 describe("ProductDetail", () => {
-  test("renders safe product links and blocks unsafe URLs", () => {
+  test("renders safe product links and blocks unsafe product and image URLs", () => {
     renderProductDetail({
       id: "safe",
       name: "Safe Coat",
-      url: "https://example.com/coat"
+      url: "https://example.com/coat",
+      imageUrl: "https://example.com/coat.jpg"
     });
 
     expect(screen.getByRole("link", { name: /safe coat/i })).toHaveAttribute("href", "https://example.com/coat");
+    expect(screen.getByRole("img", { name: "Safe Coat" })).toHaveAttribute("src", "https://example.com/coat.jpg");
 
     cleanup();
 
     renderProductDetail({
       id: "unsafe",
       name: "Unsafe Coat",
-      url: "javascript:alert(1)"
+      url: "javascript:alert(1)",
+      imageUrl: "data:text/html,<script>alert(1)</script>"
     });
 
     expect(screen.queryByRole("link", { name: /unsafe coat/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("img", { name: "Unsafe Coat" })).not.toBeInTheDocument();
     expect(screen.getByText("Unsafe Coat")).toBeInTheDocument();
   });
 
@@ -71,5 +75,47 @@ describe("ProductDetail", () => {
       expect(image).toHaveAttribute("src", "/cached-image?url=https%3A%2F%2Fexample.com%2Fcoat.jpg");
     });
     expect(cachedProductImage.buildCachedProductImageUrl).toHaveBeenCalledWith("https://example.com/coat.jpg");
+  });
+
+  test("only attempts cached image fallback once", async () => {
+    cachedProductImage.buildCachedProductImageUrl.mockResolvedValue("/cached-coat.jpg");
+
+    renderProductDetail({
+      id: "coat",
+      name: "Coat",
+      imageUrl: "https://example.com/coat.jpg"
+    });
+
+    const image = screen.getByRole("img", { name: "Coat" });
+    fireEvent.error(image);
+    await waitFor(() => {
+      expect(image).toHaveAttribute("src", "/cached-coat.jpg");
+    });
+
+    fireEvent.error(image);
+    expect(cachedProductImage.buildCachedProductImageUrl).toHaveBeenCalledTimes(1);
+    expect(image).toHaveAttribute("src", "/cached-coat.jpg");
+  });
+
+  test("shows unisex suffix for all-audience items and leaves other items unchanged", () => {
+    renderProductDetail({
+      id: "shirt",
+      name: "Linen Shirt",
+      audience: "all"
+    });
+
+    expect(screen.getByText("Linen Shirt")).toBeInTheDocument();
+    expect(screen.getByText("unisex")).toBeInTheDocument();
+
+    cleanup();
+
+    renderProductDetail({
+      id: "trousers",
+      name: "Wool Trousers",
+      audience: "woman"
+    });
+
+    expect(screen.getByText("Wool Trousers")).toBeInTheDocument();
+    expect(screen.queryByText("unisex")).not.toBeInTheDocument();
   });
 });

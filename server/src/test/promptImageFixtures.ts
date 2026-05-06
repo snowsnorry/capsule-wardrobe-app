@@ -1,0 +1,60 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import sharp from "sharp";
+import { buildLocalImageCachePath } from "../ai/promptImagesShared.js";
+
+function assertCategoryHasBufferProperty(
+  category: unknown
+): asserts category is { buffer: Buffer | Uint8Array | null | undefined } {
+  assert.ok(Boolean(category) && typeof category === "object");
+}
+
+async function createFixtureBuffer(color: string) {
+  return sharp({
+    create: {
+      width: 640,
+      height: 320,
+      channels: 3,
+      background: color
+    }
+  })
+    .png()
+    .toBuffer();
+}
+
+async function withTempDir(testContext: test.TestContext, prefix = "prompt-images-") {
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), prefix));
+  testContext.after(async () => {
+    await rm(tempDir, { recursive: true, force: true });
+  });
+  return tempDir;
+}
+
+async function withCachedImage(testContext: test.TestContext, imageUrl: string, buffer: Buffer | Uint8Array) {
+  const cachePath = buildLocalImageCachePath(imageUrl);
+  await mkdir(path.dirname(cachePath), { recursive: true });
+  await writeFile(cachePath, buffer);
+  testContext.after(async () => {
+    await rm(cachePath, { force: true });
+  });
+  return cachePath;
+}
+
+function createItems(category: string, count: number, imageUrlFactory = (index: number) => `https://example.com/${category}-${index}.png`) {
+  return Array.from({ length: count }, (_, index) => ({
+    id: `${category}-${index + 1}`,
+    category,
+    image_url: imageUrlFactory(index + 1)
+  }));
+}
+
+export {
+  assertCategoryHasBufferProperty,
+  createFixtureBuffer,
+  createItems,
+  withCachedImage,
+  withTempDir
+};
