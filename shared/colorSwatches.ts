@@ -91,23 +91,31 @@ const COLOR_SWATCH_DEFINITIONS = Object.freeze({
 
 const COLOR_SWATCH_KEYS = Object.freeze(Object.keys(COLOR_SWATCH_DEFINITIONS));
 
-function normalizeColorSwatchKey(key) {
+type ColorSwatchKey = keyof typeof COLOR_SWATCH_DEFINITIONS;
+
+function isColorSwatchKey(key: string): key is ColorSwatchKey {
+  return Object.prototype.hasOwnProperty.call(COLOR_SWATCH_DEFINITIONS, key);
+}
+
+function normalizeColorSwatchKey(key: unknown): string {
   return String(key || "")
     .trim()
     .toLowerCase()
     .replace(/[\s-]+/g, "_");
 }
 
-function getColorSwatchDefinition(key) {
+function getColorSwatchDefinition(key: unknown) {
   const normalizedKey = normalizeColorSwatchKey(key);
-  return COLOR_SWATCH_DEFINITIONS[normalizedKey] || COLOR_SWATCH_DEFINITIONS[FALLBACK_COLOR_SWATCH_KEY];
+  return isColorSwatchKey(normalizedKey)
+    ? COLOR_SWATCH_DEFINITIONS[normalizedKey]
+    : COLOR_SWATCH_DEFINITIONS[FALLBACK_COLOR_SWATCH_KEY];
 }
 
-function getColorSwatchStyle(key) {
+function getColorSwatchStyle(key: unknown) {
   return getColorSwatchDefinition(key).client;
 }
 
-function getPdfColorSwatchFill(key) {
+function getPdfColorSwatchFill(key: unknown) {
   return getColorSwatchDefinition(key).pdfFill;
 }
 

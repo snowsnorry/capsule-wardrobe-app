@@ -1,4 +1,45 @@
-function translateComposition(value, translateOption, locale) {
+type TranslateOption = (group: string, value: string, locale: string) => string;
+type Translate = (key: string, params?: Record<string, unknown>, locale?: string) => string;
+type ProductDetailItem = {
+  price?: unknown;
+  currency?: unknown;
+  availability?: string;
+  audience?: string;
+  season?: unknown;
+  formalityLevel?: unknown;
+  style?: unknown;
+  occasions?: unknown;
+  colorBase?: unknown;
+  pattern?: string;
+  finish?: unknown;
+  isNeutral?: unknown;
+  composition?: unknown;
+  silhouette?: string;
+  fit?: string;
+  closureType?: unknown;
+};
+type TextDetailValue = {
+  kind: "text";
+  text: string;
+};
+type ColorDetailValue = {
+  kind: "colors";
+  items: {
+    key: string;
+    label: string;
+  }[];
+};
+type DetailValue = TextDetailValue | ColorDetailValue;
+type DetailRow = {
+  key: string;
+  label: string;
+  value: DetailValue;
+};
+type PendingDetailRow = Omit<DetailRow, "value"> & {
+  value: DetailValue | null;
+};
+
+function translateComposition(value: unknown, translateOption: TranslateOption, locale: string): unknown {
   if (typeof value !== "string") {
     return value;
   }
@@ -11,7 +52,7 @@ function translateComposition(value, translateOption, locale) {
     .join(", ");
 }
 
-function createTextValue(value) {
+function createTextValue(value: unknown): TextDetailValue | null {
   if (value === null || value === undefined) {
     return null;
   }
@@ -20,7 +61,7 @@ function createTextValue(value) {
   return normalized ? { kind: "text", text: normalized } : null;
 }
 
-function createListValue(values = []) {
+function createListValue(values: readonly unknown[] = []): TextDetailValue | null {
   const items = values
     .map((value) => String(value || "").trim())
     .filter(Boolean);
@@ -28,7 +69,11 @@ function createListValue(values = []) {
   return items.length > 0 ? { kind: "text", text: items.join(", ") } : null;
 }
 
-function createColorValue(values = [], translateOption, locale) {
+function createColorValue(
+  values: readonly unknown[] = [],
+  translateOption: TranslateOption,
+  locale: string
+): ColorDetailValue | null {
   const items = values
     .map((value) => String(value || "").trim())
     .filter(Boolean)
@@ -40,8 +85,11 @@ function createColorValue(values = [], translateOption, locale) {
   return items.length > 0 ? { kind: "colors", items } : null;
 }
 
-function buildProductDetailGroups(item, { t, translateOption, locale }) {
-  const detailRows = [
+function buildProductDetailGroups(
+  item: ProductDetailItem | null | undefined,
+  { t, translateOption, locale }: { t: Translate; translateOption: TranslateOption; locale: string }
+) {
+  const detailRows: DetailRow[] = ([
     {
       key: "price",
       label: t("search.fields.price"),
@@ -133,11 +181,11 @@ function buildProductDetailGroups(item, { t, translateOption, locale }) {
           : []
       )
     }
-  ].filter((row) => row.value);
+  ] as PendingDetailRow[]).filter((row): row is DetailRow => Boolean(row.value));
 
-  const getRows = (keys) => keys
+  const getRows = (keys: readonly string[]): DetailRow[] => keys
     .map((key) => detailRows.find((row) => row.key === key))
-    .filter(Boolean);
+    .filter((row): row is DetailRow => Boolean(row));
 
   return [
     {

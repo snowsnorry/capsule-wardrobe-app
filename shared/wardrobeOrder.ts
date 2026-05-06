@@ -1,9 +1,16 @@
 const CATEGORY_ORDER = ["outerwear", "midlayer", "top", "dress", "bottom", "belt", "shoes", "bag", "swimwear"];
 
-function sortWardrobeItems(items = []) {
+type WardrobeOrderItem = {
+  category?: unknown;
+  name?: unknown;
+};
+
+function sortWardrobeItems<T extends WardrobeOrderItem>(items: readonly T[] = []): T[] {
   return [...items].sort((left, right) => {
-    const leftIndex = CATEGORY_ORDER.indexOf(left?.category || "");
-    const rightIndex = CATEGORY_ORDER.indexOf(right?.category || "");
+    const leftCategory = typeof left?.category === "string" ? left.category : "";
+    const rightCategory = typeof right?.category === "string" ? right.category : "";
+    const leftIndex = CATEGORY_ORDER.indexOf(leftCategory);
+    const rightIndex = CATEGORY_ORDER.indexOf(rightCategory);
     const normalizedLeft = leftIndex === -1 ? CATEGORY_ORDER.length : leftIndex;
     const normalizedRight = rightIndex === -1 ? CATEGORY_ORDER.length : rightIndex;
 

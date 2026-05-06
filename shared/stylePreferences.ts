@@ -66,9 +66,13 @@ function partitionStyleValues(items: readonly unknown[] = []): {
 }
 
 function getEnabledStyleValues(items: readonly Partial<StyleOption>[] = []): string[] {
-  return items
-    .filter((item) => item && typeof item.value === "string" && item.disabled !== true)
-    .map((item) => item.value);
+  return items.flatMap((item) => {
+    if (!item || typeof item.value !== "string" || item.disabled === true) {
+      return [];
+    }
+
+    return [item.value];
+  });
 }
 
 function buildFallbackStyleOptions({ disabled = false }: { disabled?: boolean } = {}): {

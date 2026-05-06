@@ -3,7 +3,9 @@ import assert from "node:assert/strict";
 import en from "./en.js";
 import ru from "./ru.js";
 
-function assertSameShape(left, right, path = "") {
+type LocaleShape = null | string | number | boolean | LocaleShape[] | { [key: string]: LocaleShape };
+
+function assertSameShape(left: LocaleShape, right: LocaleShape, path = ""): void {
   assert.equal(typeof left, typeof right, `type mismatch at ${path || "<root>"}`);
 
   if (left === null || right === null || typeof left !== "object") {
@@ -18,7 +20,11 @@ function assertSameShape(left, right, path = "") {
 
   for (const key of leftKeys) {
     const nextPath = path ? `${path}.${key}` : key;
-    assertSameShape(left[key], right[key], nextPath);
+    assertSameShape(
+      (left as { [key: string]: LocaleShape })[key],
+      (right as { [key: string]: LocaleShape })[key],
+      nextPath
+    );
   }
 }
 

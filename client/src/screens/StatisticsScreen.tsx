@@ -386,11 +386,11 @@ function StatisticsSummaryCard({
 
 function getColorChartFillConfig(value: string): ColorFillConfig {
   const swatchStyle = getColorSwatchStyle(value);
-  if (swatchStyle?.bgcolor) {
+  if ("bgcolor" in swatchStyle) {
     return { color: swatchStyle.bgcolor };
   }
 
-  const gradientStops = getGradientStops(swatchStyle?.background);
+  const gradientStops = "background" in swatchStyle ? getGradientStops(swatchStyle.background) : [];
   if (gradientStops.length > 1) {
     const gradientId = `statistics-color-bar-${sanitizeSvgId(value)}`;
     return {

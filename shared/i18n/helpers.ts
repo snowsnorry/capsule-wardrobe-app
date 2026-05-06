@@ -5,45 +5,50 @@ import { normalizeColorSwatchKey } from "../colorSwatches.js";
 const dictionaries = { en, ru };
 const defaultLocale = "en";
 const supportedLocales = ["en", "ru"];
+type Locale = keyof typeof dictionaries;
+type TranslationParams = Record<string, unknown>;
+type TranslationDictionary = Record<string, unknown>;
 
-function normalizeLocale(value = "") {
+function normalizeLocale(value = ""): string {
   return value.toLowerCase().split("-")[0];
 }
 
-function isSupportedLocale(value) {
+function isSupportedLocale(value: string): value is Locale {
   return supportedLocales.includes(value);
 }
 
-function interpolate(template, params = {}) {
+function interpolate(template: string, params: TranslationParams = {}): string {
   return template.replace(/\{(\w+)\}/g, (_, key) => {
     const value = params[key];
     return value === undefined || value === null ? `{${key}}` : String(value);
   });
 }
 
-function resolveTranslationValue(dictionary, key) {
+function resolveTranslationValue(dictionary: unknown, key: string): unknown {
   if (!dictionary || typeof dictionary !== "object" || typeof key !== "string" || key.length === 0) {
     return undefined;
   }
 
+  const root = dictionary as TranslationDictionary;
   if (Object.prototype.hasOwnProperty.call(dictionary, key)) {
-    return dictionary[key];
+    return root[key];
   }
 
   const segments = key.split(".");
-  let current = dictionary;
+  let current: unknown = root;
   let index = 0;
 
   while (current && typeof current === "object" && index < segments.length) {
+    const currentDictionary = current as TranslationDictionary;
     let matched = false;
 
     for (let end = segments.length; end > index; end -= 1) {
       const candidate = segments.slice(index, end).join(".");
-      if (!Object.prototype.hasOwnProperty.call(current, candidate)) {
+      if (!Object.prototype.hasOwnProperty.call(currentDictionary, candidate)) {
         continue;
       }
 
-      current = current[candidate];
+      current = currentDictionary[candidate];
       index = end;
       matched = true;
       break;
@@ -57,8 +62,8 @@ function resolveTranslationValue(dictionary, key) {
   return index === segments.length ? current : undefined;
 }
 
-function t(key, params, locale = defaultLocale) {
-  const dictionary = dictionaries[locale] || dictionaries[defaultLocale];
+function t(key: string, params?: TranslationParams, locale: string = defaultLocale): string {
+  const dictionary = isSupportedLocale(locale) ? dictionaries[locale] : dictionaries[defaultLocale];
   const value = resolveTranslationValue(dictionary, key);
   if (typeof value === "string") {
     return params ? interpolate(value, params) : value;
@@ -74,7 +79,7 @@ function humanizeOptionValue(value = "") {
     .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
-function translateOption(group, value, locale = defaultLocale) {
+function translateOption(group: string, value: string, locale: string = defaultLocale): string {
   const key = `options.${group}.${value}`;
   const translated = t(key, undefined, locale);
   if (translated !== key) {
