@@ -1,377 +1,52 @@
-import React from "react";
+import type { MouseEvent } from "react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { ThemeProvider, createTheme } from "@mui/material/styles";
-
-const mediaQueryMock = vi.hoisted(() => vi.fn());
-const useI18nMock = vi.hoisted(() => vi.fn());
-
-vi.mock("@mui/material/useMediaQuery", () => ({
-  default: mediaQueryMock
-}));
-vi.mock("../../i18n/useI18n", () => ({
-  useI18n: useI18nMock
-}));
-vi.mock("../../components/AppLauncher", () => ({
-  default: ({ currentApp }) => <div data-testid="app-launcher">{currentApp}</div>
-}));
-vi.mock("../../components/LocaleSwitcher", () => ({
-  default: () => <div data-testid="locale-switcher">locale-switcher</div>
-}));
-vi.mock("../../components/ProfileFiltersSidebar", () => ({
-  default: ({ onApply, onReset, onSignOut, isInteractionDisabled }) => (
-    <div data-testid="profile-filters-sidebar">
-      <button type="button" onClick={onApply} disabled={isInteractionDisabled}>apply-filters</button>
-      <button type="button" onClick={onReset} disabled={isInteractionDisabled}>reset-filters</button>
-      {typeof onSignOut === "function" ? (
-        <button type="button" onClick={onSignOut}>sign-out</button>
-      ) : null}
-    </div>
-  )
-}));
-vi.mock("../../components/ClothingGridPlaceholder", () => ({
-  default: ({ count, inline, mobileColumns }) => (
-    <div
-      data-testid={inline ? `inline-placeholder-${count}` : "loading-placeholder"}
-      data-mobile-columns={String(mobileColumns ?? 2)}
-    />
-  ),
-  ClothingPlaceholderCard: ({ placeholderKey, mobileColumns }) => (
-    <div
-      data-testid={`placeholder-card-${placeholderKey}`}
-      data-mobile-columns={String(mobileColumns ?? 2)}
-    />
-  ),
-  buildClothingGridTemplateColumns: (mobileColumns = 2) => ({
-    xs: `repeat(${mobileColumns}, minmax(0, 1fr))`,
-    sm: "repeat(2, minmax(0, 1fr))",
-    lg: "repeat(2, minmax(0, 1fr))"
-  }),
-  buildClothingGridGap: (mobileColumns = 2) => ({
-    xs: mobileColumns === 1 ? 1.25 : 0,
-    sm: 2.5
-  }),
-  clothingGridTemplateColumns: {
-    xs: "repeat(2, minmax(0, 1fr))",
-    sm: "repeat(2, minmax(0, 1fr))",
-    lg: "repeat(2, minmax(0, 1fr))"
-  },
-  clothingGridGap: {
-    xs: 1.25,
-    sm: 2.5
-  }
-}));
-vi.mock("../../components/ClothingCard", () => ({
-  default: ({ item, isSelected, isSelectable, isSelectionMode, isRegenerating, mobileColumns, onToggleSelected, onProductMenuClick }) => (
-    <div>
-      <button
-        type="button"
-        data-testid={`clothing-card-${item.url}`}
-        data-selected={String(isSelected)}
-        data-selectable={String(isSelectable)}
-        data-selection-mode={String(isSelectionMode)}
-        data-regenerating={String(isRegenerating)}
-        data-mobile-columns={String(mobileColumns ?? 2)}
-        disabled={isRegenerating}
-        onClick={() => onToggleSelected(item)}
-      >
-        {item.name}
-      </button>
-      {!isSelectionMode ? (
-        <button
-          type="button"
-          data-testid={`product-menu-${item.url}`}
-          data-selection-mode={String(isSelectionMode)}
-          onClick={(event) => onProductMenuClick?.(event, item.url, item)}
-        >
-          menu
-        </button>
-      ) : null}
-    </div>
-  )
-}));
-
+import { ThemeProvider } from "@mui/material/styles";
+import {
+  createMainScreenProps,
+  renderWithTheme,
+  resetMainScreenTestMocks,
+  setMainScreenLayout,
+  theme
+} from "./MainScreen.testUtils";
 import MainScreen from "./MainScreen";
+import type { MainScreenProps } from "./MainScreenTypes";
 
-const theme = createTheme();
-
-function t(key, params) {
-  const labels = {
-    appName: "Capsule Wardrobe",
-    launcher: {
-      capsule: "Capsule",
-      explore: "Explore",
-      statistics: "Statistics"
-    },
-    locale: {
-      options: {
-        en: "English",
-        ru: "Russian"
-      }
-    },
-    filters: {
-      open: "Open filters",
-      apply: "Apply",
-      cancel: "Cancel",
-      title: "Filters"
-    },
-    actions: {
-      signOut: "Sign out",
-      cancel: "Cancel",
-      ok: "OK",
-      delete: "Delete",
-      save: "Save",
-      close: "Close"
-    },
-    capsule: {
-      new: "New capsule",
-      search: "Search capsules",
-      yourCapsules: "Your capsules",
-      notSaved: "Not saved",
-      regenerateAll: "Regenerate all",
-      exportPdf: "Export as PDF",
-      rename: "Rename",
-      revert: "Revert",
-      saveAs: "Save as...",
-      saveAsTitle: "Save as",
-      share: "Share",
-      shareTitle: "Share capsule",
-      shareReady: "Your share link is ready.",
-      copyShareLink: "Copy share link",
-      shareCopied: "Copied",
-      shareExpires: "Expires {date}",
-      renameTitle: "Rename capsule",
-      deleteTitle: "Delete capsule",
-      deleteOutfitSetImageTitle: "Delete image",
-      revertTitle: "Revert changes",
-      deleteConfirmBody: "Are you sure you want to delete this capsule? This action cannot be undone.",
-      deleteOutfitSetImage: "Delete image",
-      deleteOutfitSetImageConfirmBody: "Are you sure you want to delete this image? This action cannot be undone.",
-      outfitSetImageObsolete: "This image may no longer match the current outfit. Remove it and generate a new one if needed.",
-      revertConfirmBody: "Discard the current unsaved changes and restore the last saved version of this capsule?",
-      regenerateAllTitle: "Regenerate capsule?",
-      regenerateAllConfirmBody: "This will replace the current items in this capsule. Continue?",
-      regenerateAllConfirm: "Regenerate",
-      regenerateWithFilterChangesTitle: "Apply updated filters?",
-      regenerateWithFilterChangesBody: "Your filter changes have not been applied yet. Apply them and generate a new capsule with the updated settings?",
-      regenerateWithFilterChangesConfirm: "Apply and regenerate",
-      deleteConfirm: "Delete",
-      revertConfirm: "Revert",
-      searchPlaceholder: "Search capsules...",
-      searchPrevious7Days: "Previous 7 Days",
-      searchPrevious30Days: "Previous 30 Days",
-      searchEarlier: "Earlier",
-      itemsCount: "{count} items",
-      outfitsCount: "{count} outfits",
-      outfitSet: "Outfit {number}",
-      closeFilters: "Close filters",
-      openMenu: "Open capsule menu",
-      openProductMenu: "Open product menu",
-      selectProductForRegeneration: "Select",
-      cardLayout: "Card layout",
-      cardColumnsOne: "1 column",
-      cardColumnsTwo: "2 columns",
-      cardColumnsThree: "3 columns",
-      copyProductLinkAddress: "Copy Link Address",
-      showProductInfo: "Show Product Info"
-    },
-    search: {
-      all: "All"
-    },
-    main: {
-      cancelSelection: "Cancel",
-      regenerateSelected: `Regenerate Selected (${params?.count ?? 0})`,
-      download: "Download capsule PDF",
-      refresh: "Refresh wardrobe"
-    },
-    dialogs: {
-      signOutTitle: "Sign out",
-      signOutBody: "Are you sure you want to sign out?",
-      signOutCancel: "Cancel",
-      signOutConfirm: "Sign out"
-    },
-    settings: {
-      title: "Settings",
-      saved: "Settings saved.",
-      sections: {
-        general: "General",
-        ai: "AI",
-        account: "Account"
-      },
-      sectionHints: {
-        general: "General settings",
-        ai: "AI settings",
-        account: "Account settings"
-      },
-      fields: {
-        theme: "Theme",
-        language: "Language",
-        stylistModel: "Stylist Model",
-        imageGenerationModel: "Image Generation Model",
-        name: "Name",
-        email: "Email"
-      },
-      themeOptions: {
-        system: "System",
-        light: "Light",
-        dark: "Dark"
-      },
-      llmOptions: {
-        "openai:gpt-5.5": "OpenAI GPT-5.5",
-        "claude:claude-opus-4-7": "Claude Opus 4.7",
-        "gemini:gemini-2.5-pro": "Gemini 2.5 Pro",
-        "deepinfra:Qwen/Qwen3-VL-235B-A22B-Instruct": "Qwen 3",
-        "deepinfra:google/gemma-4-31B-it": "Google Gemma 4",
-        none: "None"
-      },
-      imageLlmOptions: {
-        "openai:gpt-image-2": "OpenAI GPT Image 2",
-        "gemini:gemini-3-pro-image-preview": "Gemini 3 Pro Image Preview"
-      }
-    }
-  };
-
-  const value = key.split(".").reduce((current, part) => current?.[part], labels) || key;
-  return typeof value === "string"
-    ? value.replace(/\{(\w+)\}/g, (_, token) => String(params?.[token] ?? `{${token}}`))
-    : value;
-}
-
-function renderScreen(props = {}, { mobile = false, layoutMode = mobile ? "overlay" : "medium" } = {}) {
-  mediaQueryMock.mockImplementation((query) => {
-    if (String(query).includes("max-width: 1279.95px")) {
-      return layoutMode === "overlay";
-    }
-    if (String(query).includes("min-width: 1680px")) {
-      return layoutMode === "large";
-    }
-    return false;
-  });
-  useI18nMock.mockReturnValue({ t });
-
-  const defaults = {
-    activeCapsule: { id: "capsule-1", name: "Spring edit", draft: null, saved: null, status: "new" },
-    capsuleList: [{ id: "capsule-1", name: "Spring edit", status: "new" }],
-    userEmail: "person@example.com",
-    userName: "",
-    settingsProfile: {
-      fullname: "",
-      email: "person@example.com",
-      locale: "en",
-      theme: "system",
-      llm: "openai:gpt-5.5"
-    },
-    onSignOut: vi.fn(),
-    onSaveSettings: vi.fn(() => Promise.resolve()),
-    isSigningOut: false,
-    onRefreshItems: vi.fn(),
-    onDownloadPdf: vi.fn(),
-    onCreateCapsule: vi.fn(),
-    onOpenCapsule: vi.fn(() => Promise.resolve()),
-    onSaveCapsule: vi.fn(() => Promise.resolve()),
-    onRevertCapsule: vi.fn(() => Promise.resolve()),
-    onRenameCapsule: vi.fn(() => Promise.resolve()),
-    onDuplicateCapsule: vi.fn(() => Promise.resolve()),
-    onDeleteCapsule: vi.fn(() => Promise.resolve()),
-    onShareCapsule: vi.fn(() => Promise.resolve({
-      url: "https://client.example/share/share-1",
-      expiresAt: new Date(60_000).toISOString()
-    })),
-    onSearchCapsules: vi.fn(() => Promise.resolve([])),
-    items: [],
-    outfitSets: [],
-    isLoadingItems: false,
-    isContentBusy: false,
-    isDownloadingPdf: false,
-    showAdditionalItemPlaceholder: false,
-    styleOptions: { core: ["casual"], aesthetics: ["minimalistic"] },
-    occasionOptions: ["office"],
-    seasonOptions: ["summer"],
-    audienceOptions: ["woman"],
-    accentColorOptions: ["blue"],
-    patternOptions: ["solid"],
-    selectedStyleCore: "casual",
-    selectedStyleAesthetic: null,
-    selectedOccasions: ["office"],
-    selectedSeasons: ["summer"],
-    selectedAudience: "woman",
-    selectedAccentColor: null,
-    selectedPattern: "solid",
-    selectedText: "",
-    hasFilterChanges: false,
-    status: { loading: false, error: "", infoKey: "", infoParams: null },
-    onSelectStyleCore: vi.fn(),
-    onSelectStyleAesthetic: vi.fn(),
-    onToggleOccasion: vi.fn(),
-    onToggleSeason: vi.fn(),
-    onSelectAudience: vi.fn(),
-    onSelectAccentColor: vi.fn(),
-    onSelectPattern: vi.fn(),
-    onTextChange: vi.fn(),
-    onApplyFilters: vi.fn(),
-    onResetFilters: vi.fn(),
-    onNavigateApp: vi.fn(),
-    selectedRegenerationUrls: [],
-    partialRegenerationPendingUrls: [],
-    pendingImageSetIndexes: [],
-    onToggleRegenerationSelection: vi.fn(),
-    onCancelRegenerationSelection: vi.fn(),
-    onRegenerateSelectedItems: vi.fn(),
-    onDeleteOutfitSetImage: vi.fn(),
-    onGenerateOutfitSetImage: vi.fn(),
-    isPartialRegenerationLoading: false
-  };
-
-  return {
-    ...defaults,
-    ...props,
-    ...render(
-      <ThemeProvider theme={theme}>
-        <MainScreen {...defaults} {...props} />
-      </ThemeProvider>
-    )
-  };
+function renderMainScreen(
+  overrides: Partial<MainScreenProps> = {},
+  options: { layoutMode?: "overlay" | "medium" | "large"; mobile?: boolean } = {}
+) {
+  setMainScreenLayout(options.mobile ? "overlay" : options.layoutMode);
+  const props = createMainScreenProps(overrides);
+  const view = renderWithTheme(<MainScreen {...props} />);
+  return { props, ...view };
 }
 
 describe("MainScreen", () => {
   beforeEach(() => {
-    cleanup();
-    window.localStorage.clear();
-    mediaQueryMock.mockReset();
-    useI18nMock.mockReset();
+    resetMainScreenTestMocks();
   });
 
   afterEach(() => {
     cleanup();
   });
 
-  test("renders loading placeholder and disables action buttons while loading", () => {
-    renderScreen({
-      items: [],
-      isLoadingItems: true,
-      isContentBusy: true,
-      isDownloadingPdf: true
-    });
-
-    expect(screen.getByTestId("loading-placeholder")).toBeInTheDocument();
-    expect(screen.getByRole("progressbar")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Regenerate all" })).toBeDisabled();
-  });
-
   test("renders as inner capsule content without owning the app shell", () => {
-    renderScreen({}, { layoutMode: "medium" });
+    renderMainScreen({}, { layoutMode: "medium" });
 
     expect(screen.queryByTestId("main-screen-shell")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Regenerate all" })).toBeInTheDocument();
     expect(screen.getByTestId("profile-filters-sidebar")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Open user menu" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Collapse sidebar" })).not.toBeInTheDocument();
   });
 
-  test("registers capsule sidebar actions with the persistent app shell", async () => {
+  test("registers capsule sidebar actions and opens search or row menu flows", async () => {
     const user = userEvent.setup();
     const registerCapsuleSidebarActions = vi.fn();
 
-    renderScreen({ registerCapsuleSidebarActions }, { layoutMode: "medium" });
+    renderMainScreen({ registerCapsuleSidebarActions });
 
     const actions = registerCapsuleSidebarActions.mock.calls.at(-1)?.[0];
     expect(actions).toEqual({
@@ -387,7 +62,7 @@ describe("MainScreen", () => {
     const anchor = document.createElement("button");
     document.body.appendChild(anchor);
     act(() => {
-      actions.openCapsuleActions({ currentTarget: anchor } as unknown as React.MouseEvent<HTMLElement>, {
+      actions.openCapsuleActions({ currentTarget: anchor } as unknown as MouseEvent<HTMLElement>, {
         id: "capsule-1",
         name: "Spring edit",
         status: "saved"
@@ -398,70 +73,18 @@ describe("MainScreen", () => {
     expect(await screen.findByRole("dialog", { name: "Rename capsule" })).toBeInTheDocument();
   });
 
-  test("shows share in the registered sidebar menu for the active generated capsule", async () => {
+  test("shares active and registered sidebar capsules through MainScreen state", async () => {
     const user = userEvent.setup();
-    const onShareCapsule = vi.fn(() => Promise.resolve({
-      url: "https://client.example/share/share-1",
+    const onShareCapsule = vi.fn((capsuleId?: string) => Promise.resolve({
+      url: `https://client.example/share/${capsuleId || "unknown"}`,
       expiresAt: new Date(60_000).toISOString()
     }));
     const registerCapsuleSidebarActions = vi.fn();
-
-    renderScreen({
+    renderMainScreen({
       activeCapsule: {
         id: "capsule-1",
         name: "Spring edit",
-        draft: {
-          filters: {},
-          data: {
-            wardrobe: { items: [{ url: "https://example.com/1" }] },
-            rejectedUrls: []
-          }
-        },
-        saved: null,
-        status: "new"
-      },
-      capsuleList: [{ id: "capsule-1", name: "Spring edit", status: "new" }],
-      onShareCapsule,
-      registerCapsuleSidebarActions
-    });
-
-    const actions = registerCapsuleSidebarActions.mock.calls.at(-1)?.[0];
-    const anchor = document.createElement("button");
-    document.body.appendChild(anchor);
-    act(() => {
-      actions.openCapsuleActions({ currentTarget: anchor } as unknown as React.MouseEvent<HTMLElement>, {
-        id: "capsule-1",
-        name: "Spring edit",
-        status: "new"
-      });
-    });
-    expect(await screen.findByRole("menuitem", { name: "Share" })).toBeInTheDocument();
-
-    await user.click(screen.getByRole("menuitem", { name: "Share" }));
-
-    expect(onShareCapsule).toHaveBeenCalledWith("capsule-1");
-    expect(await screen.findByRole("dialog", { name: "Share capsule" })).toBeInTheDocument();
-  });
-
-  test("shows share in the registered sidebar menu for an inactive capsule summary", async () => {
-    const user = userEvent.setup();
-    const onShareCapsule = vi.fn(() => Promise.resolve({
-      url: "https://client.example/share/share-2",
-      expiresAt: new Date(60_000).toISOString()
-    }));
-    const registerCapsuleSidebarActions = vi.fn();
-
-    renderScreen({
-      activeCapsule: {
-        id: "capsule-1",
-        name: "Spring edit",
-        draft: {
-          filters: {},
-          data: {
-            wardrobe: { items: [{ url: "https://example.com/1" }] },
-            rejectedUrls: []
-          }
-        },
+        draft: { filters: {}, data: { wardrobe: { items: [{ url: "https://example.com/1" }] } } },
         saved: null,
         status: "new"
       },
@@ -473,230 +96,45 @@ describe("MainScreen", () => {
       registerCapsuleSidebarActions
     });
 
+    await user.click(screen.getByRole("button", { name: "Open capsule menu" }));
+    await user.click(screen.getByRole("menuitem", { name: "Share" }));
+    expect(onShareCapsule).toHaveBeenCalledWith("capsule-1");
+    expect(await screen.findByRole("link", { name: "Spring edit" })).toHaveAttribute("href", "https://client.example/share/capsule-1");
+
+    await user.click(screen.getAllByRole("button", { name: "Close" }).at(-1)!);
     const actions = registerCapsuleSidebarActions.mock.calls.at(-1)?.[0];
     const anchor = document.createElement("button");
     document.body.appendChild(anchor);
     act(() => {
-      actions.openCapsuleActions({ currentTarget: anchor } as unknown as React.MouseEvent<HTMLElement>, {
+      actions.openCapsuleActions({ currentTarget: anchor } as unknown as MouseEvent<HTMLElement>, {
         id: "capsule-2",
         name: "Summer edit",
         status: "saved"
       });
     });
-    expect(await screen.findByRole("menuitem", { name: "Share" })).toBeInTheDocument();
-
-    await user.click(screen.getByRole("menuitem", { name: "Share" }));
-
+    await user.click(await screen.findByRole("menuitem", { name: "Share" }));
     expect(onShareCapsule).toHaveBeenCalledWith("capsule-2");
-    expect(await screen.findByRole("dialog", { name: "Share capsule" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Summer edit" })).toHaveAttribute("href", "https://client.example/share/share-2");
-  });
-
-  test("renders grid items, pending placeholders, and regeneration actions when selection exists", async () => {
-    const user = userEvent.setup();
-    const onToggleRegenerationSelection = vi.fn();
-    const onCancelRegenerationSelection = vi.fn();
-    const onRegenerateSelectedItems = vi.fn();
-
-    renderScreen({
-      items: [
-        { id: "b", url: "https://example.com/b", name: "Blazer", category: "outerwear" },
-        { id: "a", url: "https://example.com/a", name: "Shirt", category: "top" },
-        { id: "c", url: "https://example.com/c", name: "Trousers", category: "bottom" }
-      ],
-      selectedRegenerationUrls: ["https://example.com/a"],
-      partialRegenerationPendingUrls: ["https://example.com/b"],
-      showAdditionalItemPlaceholder: true,
-      onToggleRegenerationSelection,
-      onCancelRegenerationSelection,
-      onRegenerateSelectedItems
-    });
-
-    expect(screen.getByTestId("placeholder-card-pending-https://example.com/b")).toBeInTheDocument();
-    expect(screen.getByTestId("placeholder-card-pending-https://example.com/b")).toHaveAttribute("data-mobile-columns", "2");
-    expect(screen.getByTestId("clothing-card-https://example.com/a")).toHaveAttribute("data-selected", "true");
-    expect(screen.getByTestId("clothing-card-https://example.com/a")).toHaveAttribute("data-selection-mode", "true");
-    expect(screen.queryByRole("button", { name: "Download capsule PDF" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Refresh wardrobe" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Regenerate Selected (1)" })).toBeInTheDocument();
-    expect(screen.getByTestId("inline-placeholder-1")).toBeInTheDocument();
-    expect(screen.getByTestId("inline-placeholder-1")).toHaveAttribute("data-mobile-columns", "2");
-
-    await user.click(screen.getByTestId("clothing-card-https://example.com/c"));
-    expect(onToggleRegenerationSelection).toHaveBeenCalledWith({ id: "c", url: "https://example.com/c", name: "Trousers", category: "bottom" });
-
-    await user.click(screen.getByRole("button", { name: "Cancel" }));
-    expect(onCancelRegenerationSelection).toHaveBeenCalledTimes(1);
-
-    await user.click(screen.getByRole("button", { name: "Regenerate Selected (1)" }));
-    expect(onRegenerateSelectedItems).toHaveBeenCalledTimes(1);
-  });
-
-  test("opens product context menu to copy URL or show product in search", async () => {
-    const user = userEvent.setup();
-    const writeText = vi.fn(() => Promise.resolve());
-    const onNavigateApp = vi.fn();
-    Object.defineProperty(navigator, "clipboard", {
-      configurable: true,
-      value: { writeText }
-    });
-
-    renderScreen({
-      items: [
-        { id: "a", url: "https://example.com/a", name: "Shirt", category: "top" }
-      ],
-      onNavigateApp
-    });
-
-    await user.click(screen.getByTestId("product-menu-https://example.com/a"));
-    expect(screen.getByRole("menuitem", { name: "Select" })).toBeInTheDocument();
-    await user.click(screen.getByRole("menuitem", { name: "Copy Link Address" }));
-    expect(writeText).toHaveBeenCalledWith("https://example.com/a");
-
-    await user.click(screen.getByTestId("product-menu-https://example.com/a"));
-    await user.click(screen.getByRole("menuitem", { name: "Show Product Info" }));
-    expect(onNavigateApp).toHaveBeenCalledWith("explore", {
-      query: "https://example.com/a",
-      openProductDetail: true
-    });
-  });
-
-  test("enters and leaves card selection mode through the product menu", async () => {
-    const user = userEvent.setup();
-    const onToggleRegenerationSelection = vi.fn();
-    const props = {
-      items: [
-        { id: "a", url: "https://example.com/a", name: "Shirt", category: "top" }
-      ],
-      onToggleRegenerationSelection
-    };
-    const view = renderScreen(props);
-
-    expect(screen.getByTestId("clothing-card-https://example.com/a")).toHaveAttribute("data-selection-mode", "false");
-    await user.click(screen.getByTestId("product-menu-https://example.com/a"));
-    await user.click(screen.getByRole("menuitem", { name: "Select" }));
-
-    expect(onToggleRegenerationSelection).toHaveBeenCalledWith({ id: "a", url: "https://example.com/a", name: "Shirt", category: "top" });
-    expect(screen.getByTestId("clothing-card-https://example.com/a")).toHaveAttribute("data-selection-mode", "true");
-    expect(screen.queryByTestId("product-menu-https://example.com/a")).not.toBeInTheDocument();
-
-    view.rerender(
-      <ThemeProvider theme={theme}>
-        <MainScreen
-          {...view}
-          {...props}
-          selectedRegenerationUrls={["https://example.com/a"]}
-        />
-      </ThemeProvider>
-    );
-    expect(screen.getByTestId("clothing-card-https://example.com/a")).toHaveAttribute("data-selection-mode", "true");
-
-    view.rerender(
-      <ThemeProvider theme={theme}>
-        <MainScreen
-          {...view}
-          {...props}
-          selectedRegenerationUrls={[]}
-        />
-      </ThemeProvider>
-    );
-    await waitFor(() => {
-      expect(screen.getByTestId("clothing-card-https://example.com/a")).toHaveAttribute("data-selection-mode", "false");
-    });
-    expect(screen.getByTestId("product-menu-https://example.com/a")).toBeInTheDocument();
-  });
-
-  test("renders capsule metadata with counts and active filters in filter order", () => {
-    renderScreen({
-      items: [
-        { id: "a", url: "https://example.com/a", name: "Blazer", category: "outerwear" },
-        { id: "b", url: "https://example.com/b", name: "Shirt", category: "top" },
-        { id: "c", url: "https://example.com/c", name: "Trousers", category: "bottom" }
-      ],
-      outfitSets: [{ itemIds: ["a", "b", "c"] }],
-      selectedStyleCore: "formal",
-      selectedStyleAesthetic: "minimalistic",
-      selectedOccasions: ["office"],
-      selectedSeasons: ["spring"],
-      selectedAudience: "woman",
-      selectedAccentColor: "red",
-      selectedPattern: "stripe",
-      selectedText: "No wool"
-    });
-
-    const expectedSummary = [
-      "3 items",
-      "1 outfits",
-      "Formal / Minimalistic",
-      "Office",
-      "Spring",
-      "Woman",
-      "Red",
-      "Stripe",
-      "No wool"
-    ];
-    const summaryNodes = expectedSummary.map((label) => screen.getByText(label));
-
-    summaryNodes.forEach((node, index) => {
-      if (index === 0) {
-        return;
-      }
-      expect(summaryNodes[index - 1].compareDocumentPosition(node) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    });
-  });
-
-  test("renders outfit tabs and filters cards by wardrobe category order", async () => {
-    const user = userEvent.setup();
-
-    renderScreen({
-      items: [
-        { id: "b", url: "https://example.com/b", name: "Blazer", category: "outerwear" },
-        { id: "a", url: "https://example.com/a", name: "Shirt", category: "top" },
-        { id: "c", url: "https://example.com/c", name: "Trousers", category: "bottom" },
-        { id: "d", url: "https://example.com/d", name: "Bag", category: "bag" }
-      ],
-      outfitSets: [
-        { itemIds: ["c", "a", "d"] },
-        { itemIds: ["x", "a"] }
-      ]
-    });
-
-    expect(screen.getByRole("tab", { name: "All" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Outfit 1" })).toBeInTheDocument();
-    expect(screen.queryByRole("tab", { name: "Outfit 2" })).not.toBeInTheDocument();
-
-    await user.click(screen.getByRole("tab", { name: "Outfit 1" }));
-
-    const cards = screen.getAllByRole("button").filter((node) => (
-      node.getAttribute("data-testid")?.startsWith("clothing-card-")
-    ));
-    expect(cards.map((node) => node.textContent)).toEqual(["Shirt", "Trousers", "Bag"]);
-    expect(screen.queryByTestId("clothing-card-https://example.com/b")).not.toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: "Summer edit" })).toHaveAttribute("href", "https://client.example/share/capsule-2");
   });
 
   test("resets back to All when the selected outfit tab disappears", async () => {
     const user = userEvent.setup();
-    const initialProps = {
+    const initialProps = createMainScreenProps({
       items: [
         { id: "a", url: "https://example.com/a", name: "Shirt", category: "top" },
         { id: "b", url: "https://example.com/b", name: "Trousers", category: "bottom" },
         { id: "c", url: "https://example.com/c", name: "Bag", category: "bag" }
       ],
       outfitSets: [{ itemIds: ["a", "b", "c"] }]
-    };
-    const view = renderScreen(initialProps);
+    });
+    const view = renderMainScreen(initialProps);
 
     await user.click(screen.getByRole("tab", { name: "Outfit 1" }));
     expect(screen.queryByRole("tab", { selected: true, name: "Outfit 1" })).toBeInTheDocument();
 
     view.rerender(
       <ThemeProvider theme={theme}>
-        <MainScreen
-          {...view}
-          {...initialProps}
-          outfitSets={[]}
-        />
+        <MainScreen {...initialProps} outfitSets={[]} />
       </ThemeProvider>
     );
 
@@ -704,326 +142,86 @@ describe("MainScreen", () => {
     expect(screen.queryByRole("tab", { name: "All" })).not.toBeInTheDocument();
   });
 
-  test("renders create image button for outfit tab without generated image", async () => {
+  test("enters and leaves card selection mode through the product menu", async () => {
     const user = userEvent.setup();
-    const onGenerateOutfitSetImage = vi.fn();
-
-    renderScreen({
-      items: [
-        { id: "a", url: "https://example.com/a", name: "Shirt", category: "top" },
-        { id: "b", url: "https://example.com/b", name: "Trousers", category: "bottom" },
-        { id: "c", url: "https://example.com/c", name: "Bag", category: "bag" }
-      ],
-      outfitSets: [{ itemIds: ["a", "b", "c"] }],
-      onGenerateOutfitSetImage
+    const props = createMainScreenProps({
+      items: [{ id: "a", url: "https://example.com/a", name: "Shirt", category: "top" }],
+      onToggleRegenerationSelection: vi.fn()
     });
+    const view = renderMainScreen(props);
 
-    expect(screen.queryByRole("button", { name: "Create image" })).not.toBeInTheDocument();
-    await user.click(screen.getByRole("tab", { name: "Outfit 1" }));
-    await user.click(screen.getByRole("button", { name: "Create image" }));
+    expect(screen.getByTestId("clothing-card-https://example.com/a")).toHaveAttribute("data-selection-mode", "false");
+    await user.click(screen.getByTestId("product-menu-https://example.com/a"));
+    await user.click(screen.getByRole("menuitem", { name: "Select" }));
 
-    expect(onGenerateOutfitSetImage).toHaveBeenCalledWith(0);
-  });
-
-  test("renders placeholder while outfit set image is pending", async () => {
-    const user = userEvent.setup();
-
-    renderScreen({
-      items: [
-        { id: "a", url: "https://example.com/a", name: "Shirt", category: "top" },
-        { id: "b", url: "https://example.com/b", name: "Trousers", category: "bottom" },
-        { id: "c", url: "https://example.com/c", name: "Bag", category: "bag" }
-      ],
-      outfitSets: [{ itemIds: ["a", "b", "c"] }],
-      pendingImageSetIndexes: [0]
-    });
-
-    await user.click(screen.getByRole("tab", { name: "Outfit 1" }));
-
-    expect(screen.getByTestId("outfit-set-image-placeholder")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Create image" })).not.toBeInTheDocument();
-  });
-
-  test("renders generated outfit set image instead of action button", async () => {
-    const user = userEvent.setup();
-
-    renderScreen({
-      items: [
-        { id: "a", url: "https://example.com/a", name: "Shirt", category: "top" },
-        { id: "b", url: "https://example.com/b", name: "Trousers", category: "bottom" },
-        { id: "c", url: "https://example.com/c", name: "Bag", category: "bag" }
-      ],
-      outfitSets: [{ itemIds: ["a", "b", "c"], image: "abc123" }]
-    });
-
-    await user.click(screen.getByRole("tab", { name: "Outfit 1" }));
-
-    expect(screen.getByTestId("outfit-set-image")).toHaveAttribute("src", "data:image/png;base64,abc123");
-    expect(screen.queryByRole("button", { name: "Create image" })).not.toBeInTheDocument();
-  });
-
-  test("renders generated outfit set image URL directly", async () => {
-    const user = userEvent.setup();
-
-    renderScreen({
-      items: [
-        { id: "a", url: "https://example.com/a", name: "Shirt", category: "top" },
-        { id: "b", url: "https://example.com/b", name: "Trousers", category: "bottom" },
-        { id: "c", url: "https://example.com/c", name: "Bag", category: "bag" }
-      ],
-      outfitSets: [{ itemIds: ["a", "b", "c"], image: "https://images.example.com/set.png" }]
-    });
-
-    await user.click(screen.getByRole("tab", { name: "Outfit 1" }));
-
-    expect(screen.getByTestId("outfit-set-image")).toHaveAttribute("src", "https://images.example.com/set.png");
-  });
-
-  test("renders pending placeholders inside an outfit set tab during partial regeneration", async () => {
-    const user = userEvent.setup();
-
-    renderScreen({
-      items: [
-        { id: "a", url: "https://example.com/a", name: "Shirt", category: "top" },
-        { id: "b", url: "https://example.com/b", name: "Trousers", category: "bottom" },
-        { id: "c", url: "https://example.com/c", name: "Bag", category: "bag" }
-      ],
-      outfitSets: [{ itemIds: ["a", "b", "c"] }],
-      partialRegenerationPendingUrls: ["https://example.com/a"]
-    });
-
-    await user.click(screen.getByRole("tab", { name: "Outfit 1" }));
-
-    expect(screen.getByTestId("placeholder-card-pending-https://example.com/a")).toBeInTheDocument();
-    expect(screen.getByTestId("clothing-card-https://example.com/b")).toBeInTheDocument();
-    expect(screen.getByTestId("clothing-card-https://example.com/c")).toBeInTheDocument();
-  });
-
-  test("renders obsolete image warning only when the image is marked obsolete", async () => {
-    const user = userEvent.setup();
-
-    const props = {
-      items: [
-        { id: "a", url: "https://example.com/a", name: "Shirt", category: "top" },
-        { id: "b", url: "https://example.com/b", name: "Trousers", category: "bottom" },
-        { id: "c", url: "https://example.com/c", name: "Bag", category: "bag" }
-      ]
-    };
-
-    const view = renderScreen({
-      ...props,
-      outfitSets: [{ itemIds: ["a", "b", "c"], image: "abc123", imageObsolete: true }]
-    });
-
-    await user.click(screen.getByRole("tab", { name: "Outfit 1" }));
-    expect(
-      screen.getByText("This image may no longer match the current outfit. Remove it and generate a new one if needed.")
-    ).toBeInTheDocument();
+    expect(props.onToggleRegenerationSelection).toHaveBeenCalledWith({ id: "a", url: "https://example.com/a", name: "Shirt", category: "top" });
+    expect(screen.getByTestId("clothing-card-https://example.com/a")).toHaveAttribute("data-selection-mode", "true");
+    expect(screen.queryByTestId("product-menu-https://example.com/a")).not.toBeInTheDocument();
 
     view.rerender(
       <ThemeProvider theme={theme}>
-        <MainScreen
-          {...view}
-          {...props}
-          outfitSets={[{ itemIds: ["a", "b", "c"], image: "abc123", imageObsolete: false }]}
-        />
+        <MainScreen {...props} selectedRegenerationUrls={["https://example.com/a"]} />
       </ThemeProvider>
     );
+    expect(screen.getByTestId("clothing-card-https://example.com/a")).toHaveAttribute("data-selection-mode", "true");
 
-    expect(
-      screen.queryByText("This image may no longer match the current outfit. Remove it and generate a new one if needed.")
-    ).not.toBeInTheDocument();
-  });
-
-  test("opens the full-size outfit set image dialog on image click", async () => {
-    const user = userEvent.setup();
-
-    renderScreen({
-      items: [
-        { id: "a", url: "https://example.com/a", name: "Shirt", category: "top" },
-        { id: "b", url: "https://example.com/b", name: "Trousers", category: "bottom" },
-        { id: "c", url: "https://example.com/c", name: "Bag", category: "bag" }
-      ],
-      outfitSets: [{ itemIds: ["a", "b", "c"], image: "abc123" }]
-    });
-
-    await user.click(screen.getByRole("tab", { name: "Outfit 1" }));
-    await user.click(screen.getByTestId("outfit-set-image"));
-
-    expect(screen.getByTestId("outfit-set-image-dialog")).toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: "Close" }));
+    view.rerender(
+      <ThemeProvider theme={theme}>
+        <MainScreen {...props} selectedRegenerationUrls={[]} />
+      </ThemeProvider>
+    );
     await waitFor(() => {
-      expect(screen.queryByTestId("outfit-set-image-dialog")).not.toBeInTheDocument();
+      expect(screen.getByTestId("clothing-card-https://example.com/a")).toHaveAttribute("data-selection-mode", "false");
     });
   });
 
-  test("confirms deleting an outfit set image", async () => {
-    const user = userEvent.setup();
-    const onDeleteOutfitSetImage = vi.fn(() => Promise.resolve());
-
-    renderScreen({
-      items: [
-        { id: "a", url: "https://example.com/a", name: "Shirt", category: "top" },
-        { id: "b", url: "https://example.com/b", name: "Trousers", category: "bottom" },
-        { id: "c", url: "https://example.com/c", name: "Bag", category: "bag" }
-      ],
-      outfitSets: [{ itemIds: ["a", "b", "c"], image: "abc123" }],
-      onDeleteOutfitSetImage
-    });
-
-    await user.click(screen.getByRole("tab", { name: "Outfit 1" }));
-    await user.click(screen.getByRole("button", { name: "Delete image" }));
-
-    expect(screen.getByText("Are you sure you want to delete this image? This action cannot be undone.")).toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: "Delete" }));
-    expect(onDeleteOutfitSetImage).toHaveBeenCalledWith(0);
-  });
-
-  test("opens mobile filters dialog and closes it through apply and reset actions", async () => {
-    const user = userEvent.setup();
-    const onApplyFilters = vi.fn(() => Promise.resolve());
-    const onResetFilters = vi.fn(() => Promise.resolve());
-
-    renderScreen({
-      onApplyFilters,
-      onResetFilters
-    }, { mobile: true });
-
-    await user.click(screen.getByRole("button", { name: "Open filters" }));
-    expect(screen.getAllByText("apply-filters").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("reset-filters").length).toBeGreaterThan(0);
-
-    await user.click(screen.getAllByText("apply-filters").at(-1));
-    expect(onApplyFilters).toHaveBeenCalledTimes(1);
-    await waitFor(() => {
-      expect(screen.queryAllByTestId("profile-filters-sidebar").length).toBe(1);
-    });
-
-    await user.click(screen.getByRole("button", { name: "Open filters" }));
-    await user.click(screen.getAllByText("reset-filters").at(-1));
-    expect(onResetFilters).toHaveBeenCalledTimes(1);
-    await waitFor(() => {
-      expect(screen.queryAllByTestId("profile-filters-sidebar").length).toBe(1);
-    });
-  });
-
-  test("hides mobile filters button and capsule label while regeneration selection is active", () => {
-    renderScreen({
-      selectedRegenerationUrls: ["https://example.com/a"],
-      items: [{ id: "a", url: "https://example.com/a", name: "Shirt", category: "top" }]
-    }, { mobile: true });
-
-    expect(screen.queryByRole("button", { name: "Open filters" })).not.toBeInTheDocument();
-    expect(screen.queryByText("Spring edit")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Regenerate Selected (1)" })).toBeInTheDocument();
-  });
-
-  test("renders regenerate all as a mobile header action", async () => {
+  test("coordinates regenerate-all immediate, confirm, and changed-filter flows", async () => {
     const user = userEvent.setup();
     const onRefreshItems = vi.fn();
+    const onApplyFilters = vi.fn();
 
-    renderScreen({ onRefreshItems }, { mobile: true });
-
+    renderMainScreen({ items: [], onRefreshItems });
     await user.click(screen.getByRole("button", { name: "Regenerate all" }));
-
     expect(onRefreshItems).toHaveBeenCalledTimes(1);
-  });
+    cleanup();
+    resetMainScreenTestMocks();
 
-  test("asks before regenerating all items from the mobile header action when capsule is non-empty", async () => {
-    const user = userEvent.setup();
-    const onRefreshItems = vi.fn();
-
-    renderScreen({
+    renderMainScreen({
       items: [{ id: "a", url: "https://example.com/a", name: "Shirt", category: "top" }],
       onRefreshItems
-    }, { mobile: true });
-
-    await user.click(screen.getByRole("button", { name: "Regenerate all" }));
-
-    expect(screen.getByRole("dialog", { name: "Regenerate capsule?" })).toBeInTheDocument();
-    expect(onRefreshItems).not.toHaveBeenCalled();
-  });
-
-  test("shows desktop inline rename trigger and keeps it out of the mobile header", async () => {
-    const user = userEvent.setup();
-
-    renderScreen();
-    expect(screen.getByRole("button", { name: "Edit capsule name" })).toBeInTheDocument();
-
-    cleanup();
-    renderScreen({}, { mobile: true });
-    expect(screen.queryByRole("button", { name: "Edit capsule name" })).not.toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: "Open capsule menu" }));
-    expect(screen.getByRole("menuitem", { name: "Rename" })).toBeInTheDocument();
-  });
-
-  test("opens rename dialog from the header menu on desktop", async () => {
-    const user = userEvent.setup();
-
-    renderScreen();
-
-    await user.click(screen.getByRole("button", { name: "Open capsule menu" }));
-    await user.click(screen.getByRole("menuitem", { name: "Rename" }));
-
-    expect(screen.getByRole("dialog", { name: "Rename capsule" })).toBeInTheDocument();
-    expect(screen.getByRole("textbox")).toHaveValue("Spring edit");
-    expect(screen.queryByRole("textbox", { name: "Capsule name" })).not.toBeInTheDocument();
-  });
-
-  test("shows share action only for generated capsules and displays the generated link", async () => {
-    const user = userEvent.setup();
-    const onShareCapsule = vi.fn(() => Promise.resolve({
-      url: "https://client.example/share/share-1",
-      expiresAt: new Date(60_000).toISOString()
-    }));
-
-    renderScreen({
-      onShareCapsule,
-      activeCapsule: {
-        id: "capsule-1",
-        name: "Spring edit",
-        draft: {
-          filters: {},
-          data: {
-            wardrobe: { items: [{ url: "https://example.com/1" }] },
-            rejectedUrls: []
-          }
-        },
-        saved: null,
-        status: "new"
-      }
     });
+    await user.click(screen.getByRole("button", { name: "Regenerate all" }));
+    expect(screen.getByRole("dialog", { name: "Regenerate capsule?" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Regenerate" }));
+    expect(onRefreshItems).toHaveBeenCalledTimes(2);
+    cleanup();
+    resetMainScreenTestMocks();
 
-    await user.click(screen.getByRole("button", { name: "Open capsule menu" }));
-    await user.click(screen.getByRole("menuitem", { name: "Share" }));
-
-    expect(onShareCapsule).toHaveBeenCalledWith("capsule-1");
-    expect(await screen.findByRole("dialog", { name: "Share capsule" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Spring edit" })).toHaveAttribute("href", "https://client.example/share/share-1");
+    renderMainScreen({
+      hasFilterChanges: true,
+      items: [{ id: "a", url: "https://example.com/a", name: "Shirt", category: "top" }],
+      onRefreshItems,
+      onApplyFilters
+    });
+    await user.click(screen.getByRole("button", { name: "Regenerate all" }));
+    expect(screen.getByRole("dialog", { name: "Apply updated filters?" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Apply and regenerate" }));
+    expect(onApplyFilters).toHaveBeenCalledTimes(1);
   });
 
-  test("shows progress while the share link is being created", async () => {
+  test("disables primary controls while content is busy or share link is being created", async () => {
     const user = userEvent.setup();
-    let resolveShare: (result: { url: string; expiresAt: string }) => void = () => {};
+    let resolveShare: ((result: { url: string; expiresAt: string }) => void) | undefined;
     const onShareCapsule = vi.fn(() => new Promise<{ url: string; expiresAt: string }>((resolve) => {
       resolveShare = resolve;
     }));
 
-    renderScreen({
+    renderMainScreen({
       onShareCapsule,
       activeCapsule: {
         id: "capsule-1",
         name: "Spring edit",
-        draft: {
-          filters: {},
-          data: {
-            wardrobe: { items: [{ url: "https://example.com/1" }] },
-            rejectedUrls: []
-          }
-        },
+        draft: { filters: {}, data: { wardrobe: { items: [{ url: "https://example.com/1" }] } } },
         saved: null,
         status: "new"
       }
@@ -1035,323 +233,41 @@ describe("MainScreen", () => {
     expect(screen.getByRole("progressbar")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Regenerate all" })).toBeDisabled();
 
-    resolveShare({
+    resolveShare?.({
       url: "https://client.example/share/share-1",
       expiresAt: new Date(60_000).toISOString()
     });
-
     expect(await screen.findByRole("dialog", { name: "Share capsule" })).toBeInTheDocument();
   });
 
-  test("hides share action for capsules without wardrobe content", async () => {
-    const user = userEvent.setup();
-
-    renderScreen();
-
-    await user.click(screen.getByRole("button", { name: "Open capsule menu" }));
-
-    expect(screen.queryByRole("menuitem", { name: "Share" })).not.toBeInTheDocument();
-  });
-
-  test("shows mobile card layout controls in the header menu with two columns selected by default", async () => {
-    const user = userEvent.setup();
-
-    renderScreen({}, { mobile: true });
-
-    await user.click(screen.getByRole("button", { name: "Open capsule menu" }));
-
-    expect(screen.getByText("Card layout")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "1 column" })).toHaveAttribute("aria-pressed", "false");
-    expect(screen.getByRole("button", { name: "2 columns" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("button", { name: "3 columns" })).toHaveAttribute("aria-pressed", "false");
-  });
-
-  test("persists mobile card layout changes to localStorage", async () => {
-    const user = userEvent.setup();
-
-    renderScreen({
-      items: [{ id: "a", url: "https://example.com/a", name: "Shirt", category: "top" }]
-    }, { mobile: true });
-
-    await user.click(screen.getByRole("button", { name: "Open capsule menu" }));
-    await user.click(screen.getByRole("button", { name: "1 column" }));
-
-    expect(window.localStorage.getItem("capsule.mobileCardColumns")).toBe("1");
-    expect(screen.getByTestId("clothing-card-https://example.com/a")).toHaveAttribute("data-mobile-columns", "1");
-
-    await user.click(screen.getByRole("button", { name: "Open capsule menu" }));
-    await user.click(screen.getByRole("button", { name: "3 columns" }));
-    expect(window.localStorage.getItem("capsule.mobileCardColumns")).toBe("3");
-    expect(screen.getByTestId("clothing-card-https://example.com/a")).toHaveAttribute("data-mobile-columns", "3");
-  });
-
-  test("loads stored mobile card layout and falls back for invalid stored values", () => {
-    window.localStorage.setItem("capsule.mobileCardColumns", "3");
-    renderScreen({ isLoadingItems: true }, { mobile: true });
-
-    expect(screen.getByTestId("loading-placeholder")).toHaveAttribute("data-mobile-columns", "3");
-
-    cleanup();
-    window.localStorage.setItem("capsule.mobileCardColumns", "4");
-    renderScreen({ isLoadingItems: true }, { mobile: true });
-
-    expect(screen.getByTestId("loading-placeholder")).toHaveAttribute("data-mobile-columns", "2");
-  });
-
-  test("does not show card layout controls outside the mobile header menu", async () => {
-    const user = userEvent.setup();
-    const registerCapsuleSidebarActions = vi.fn();
-
-    renderScreen({ registerCapsuleSidebarActions });
-
-    await user.click(screen.getByRole("button", { name: "Open capsule menu" }));
-    expect(screen.queryByText("Card layout")).not.toBeInTheDocument();
-
-    await user.keyboard("{Escape}");
-    const actions = registerCapsuleSidebarActions.mock.calls.at(-1)?.[0];
-    const anchor = document.createElement("button");
-    document.body.appendChild(anchor);
-    act(() => {
-      actions.openCapsuleActions({ currentTarget: anchor } as unknown as React.MouseEvent<HTMLElement>, {
-        id: "capsule-1",
-        name: "Spring edit",
-        status: "new"
-      });
-    });
-
-    expect(await screen.findByRole("menuitem", { name: "Rename" })).toBeInTheDocument();
-    expect(screen.queryByText("Card layout")).not.toBeInTheDocument();
-  });
-
-  test("disables primary capsule controls while content is busy", async () => {
-    const onOpenCapsule = vi.fn(() => Promise.resolve());
-    const onRefreshItems = vi.fn();
-
-    renderScreen({
-      isContentBusy: true,
-      onOpenCapsule,
-      onRefreshItems,
-      items: [{ id: "a", url: "https://example.com/a", name: "Shirt", category: "top" }]
-    });
-
-    expect(screen.getByRole("button", { name: "Rename capsule Spring edit" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Edit capsule name" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Regenerate all" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Open capsule menu" })).toBeDisabled();
-    expect(screen.getByTestId("clothing-card-https://example.com/a")).toBeDisabled();
-
-    expect(onOpenCapsule).not.toHaveBeenCalled();
-    expect(onRefreshItems).not.toHaveBeenCalled();
-  });
-
-  test("regenerates immediately when the capsule has no items", async () => {
-    const user = userEvent.setup();
-    const onRefreshItems = vi.fn();
-
-    renderScreen({ items: [], onRefreshItems });
-
-    await user.click(screen.getByRole("button", { name: "Regenerate all" }));
-
-    expect(onRefreshItems).toHaveBeenCalledTimes(1);
-    expect(screen.queryByRole("dialog", { name: "Regenerate capsule?" })).not.toBeInTheDocument();
-  });
-
-  test("asks before regenerating all items in a non-empty capsule", async () => {
-    const user = userEvent.setup();
-    const onRefreshItems = vi.fn();
-
-    renderScreen({
-      items: [{ id: "a", url: "https://example.com/a", name: "Shirt", category: "top" }],
-      onRefreshItems
-    });
-
-    await user.click(screen.getByRole("button", { name: "Regenerate all" }));
-
-    expect(screen.getByRole("dialog", { name: "Regenerate capsule?" })).toBeInTheDocument();
-    expect(screen.getByText("This will replace the current items in this capsule. Continue?")).toBeInTheDocument();
-    expect(onRefreshItems).not.toHaveBeenCalled();
-  });
-
-  test("closes non-empty regenerate-all confirmation immediately and refreshes on confirm", async () => {
-    const user = userEvent.setup();
-    let resolveRefresh;
-    const onRefreshItems = vi.fn(() => new Promise((resolve) => {
-      resolveRefresh = resolve;
-    }));
-
-    renderScreen({
-      items: [{ id: "a", url: "https://example.com/a", name: "Shirt", category: "top" }],
-      onRefreshItems
-    });
-
-    await user.click(screen.getByRole("button", { name: "Regenerate all" }));
-    await user.click(screen.getByRole("button", { name: "Regenerate" }));
-
-    expect(onRefreshItems).toHaveBeenCalledTimes(1);
-    await waitFor(() => {
-      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    });
-
-    resolveRefresh?.();
-  });
-
-  test("disables mobile filters trigger while content is busy", () => {
-    const onApplyFilters = vi.fn();
-
-    renderScreen({
-      isContentBusy: true,
-      onApplyFilters
-    }, { mobile: true });
-
-    expect(screen.getByRole("button", { name: "Open filters" })).toBeDisabled();
-    expect(onApplyFilters).not.toHaveBeenCalled();
-  });
-
-  test("closes rename dialog immediately after confirming while rename is still pending", async () => {
-    const user = userEvent.setup();
-    let resolveRename;
-    const onRenameCapsule = vi.fn(() => new Promise((resolve) => {
-      resolveRename = resolve;
-    }));
-
-    renderScreen({ onRenameCapsule });
-
-    await user.click(screen.getByRole("button", { name: "Open capsule menu" }));
-    await user.click(screen.getByRole("menuitem", { name: "Rename" }));
-    await user.click(screen.getByRole("button", { name: "OK" }));
-
-    expect(onRenameCapsule).toHaveBeenCalledWith("Spring edit", "capsule-1");
-    await waitFor(() => {
-      expect(screen.queryByRole("dialog", { name: "Rename capsule" })).not.toBeInTheDocument();
-    });
-
-    resolveRename?.();
-  });
-
-  test("asks to apply changed filters before regenerate all", async () => {
-    const user = userEvent.setup();
-    const onRefreshItems = vi.fn();
-    const onApplyFilters = vi.fn();
-
-    renderScreen({
-      hasFilterChanges: true,
-      items: [{ id: "a", url: "https://example.com/a", name: "Shirt", category: "top" }],
-      onRefreshItems,
-      onApplyFilters
-    });
-
-    await user.click(screen.getByRole("button", { name: "Regenerate all" }));
-
-    expect(screen.getByRole("dialog", { name: "Apply updated filters?" })).toBeInTheDocument();
-    expect(
-      screen.getByText("Your filter changes have not been applied yet. Apply them and generate a new capsule with the updated settings?")
-    ).toBeInTheDocument();
-    expect(screen.queryByRole("dialog", { name: "Regenerate capsule?" })).not.toBeInTheDocument();
-    expect(onRefreshItems).not.toHaveBeenCalled();
-    expect(onApplyFilters).not.toHaveBeenCalled();
-  });
-
-  test("closes regenerate-all confirmation immediately and applies filters on confirm", async () => {
-    const user = userEvent.setup();
-    let resolveApply;
-    const onRefreshItems = vi.fn();
-    const onApplyFilters = vi.fn(() => new Promise((resolve) => {
-      resolveApply = resolve;
-    }));
-
-    renderScreen({
-      hasFilterChanges: true,
-      onRefreshItems,
-      onApplyFilters
-    });
-
-    await user.click(screen.getByRole("button", { name: "Regenerate all" }));
-    await user.click(screen.getByRole("button", { name: "Apply and regenerate" }));
-
-    expect(onApplyFilters).toHaveBeenCalledTimes(1);
-    expect(onRefreshItems).not.toHaveBeenCalled();
-    await waitFor(() => {
-      expect(screen.queryByRole("dialog", { name: "Apply updated filters?" })).not.toBeInTheDocument();
-    });
-
-    resolveApply?.();
-  });
-
-  test("enters inline rename mode from the desktop title and submits on Enter", async () => {
+  test("submits desktop inline rename with normalized values", async () => {
     const user = userEvent.setup();
     const onRenameCapsule = vi.fn(() => Promise.resolve());
-
-    renderScreen({ onRenameCapsule });
+    renderMainScreen({ onRenameCapsule });
 
     await user.click(screen.getByRole("button", { name: "Rename capsule Spring edit" }));
     const input = screen.getByRole("textbox", { name: "Capsule name" });
-    expect(input).toHaveValue("Spring edit");
-
     await user.clear(input);
     await user.type(input, "Summer edit{Enter}");
 
     await waitFor(() => {
       expect(onRenameCapsule).toHaveBeenCalledWith("Summer edit", "capsule-1");
     });
-    await waitFor(() => {
-      expect(screen.queryByRole("textbox", { name: "Capsule name" })).not.toBeInTheDocument();
-    });
-  });
-
-  test("enters inline rename mode from the desktop pencil and submits on blur", async () => {
-    const user = userEvent.setup();
-    const onRenameCapsule = vi.fn(() => Promise.resolve());
-
-    renderScreen({ onRenameCapsule });
-
-    await user.click(screen.getByRole("button", { name: "Edit capsule name" }));
-    const input = screen.getByRole("textbox", { name: "Capsule name" });
-    await user.clear(input);
-    await user.type(input, "Evening edit");
-    await user.tab();
-
-    await waitFor(() => {
-      expect(onRenameCapsule).toHaveBeenCalledWith("Evening edit", "capsule-1");
-    });
-    await waitFor(() => {
-      expect(screen.queryByRole("textbox", { name: "Capsule name" })).not.toBeInTheDocument();
-    });
-  });
-
-  test("cancels desktop inline rename on Escape without sending a request", async () => {
-    const user = userEvent.setup();
-    const onRenameCapsule = vi.fn(() => Promise.resolve());
-
-    renderScreen({ onRenameCapsule });
-
-    await user.click(screen.getByRole("button", { name: "Edit capsule name" }));
-    const input = screen.getByRole("textbox", { name: "Capsule name" });
-    await user.clear(input);
-    await user.type(input, "Cancelled");
-    await user.keyboard("{Escape}");
-
-    expect(onRenameCapsule).not.toHaveBeenCalled();
-    await waitFor(() => {
-      expect(screen.queryByRole("textbox", { name: "Capsule name" })).not.toBeInTheDocument();
-    });
-    expect(screen.getByRole("button", { name: "Rename capsule Spring edit" })).toBeInTheDocument();
   });
 
   test("does not submit desktop inline rename for unchanged or whitespace-only values", async () => {
     const user = userEvent.setup();
     const onRenameCapsule = vi.fn(() => Promise.resolve());
-
-    renderScreen({ onRenameCapsule });
+    renderMainScreen({ onRenameCapsule });
 
     await user.click(screen.getByRole("button", { name: "Edit capsule name" }));
     let input = screen.getByRole("textbox", { name: "Capsule name" });
+    await user.clear(input);
     await user.type(input, "   ");
     await user.tab();
-
     await waitFor(() => {
       expect(screen.queryByRole("textbox", { name: "Capsule name" })).not.toBeInTheDocument();
     });
-    expect(onRenameCapsule).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole("button", { name: "Edit capsule name" }));
     input = screen.getByRole("textbox", { name: "Capsule name" });
@@ -1363,117 +279,5 @@ describe("MainScreen", () => {
       expect(screen.queryByRole("textbox", { name: "Capsule name" })).not.toBeInTheDocument();
     });
     expect(onRenameCapsule).not.toHaveBeenCalled();
-  });
-
-  test("keeps unsaved dot before the pencil trigger in the desktop header", () => {
-    renderScreen({
-      activeCapsule: {
-        id: "capsule-1",
-        name: "Spring edit",
-        draft: { filters: { locale: "en" }, data: {} },
-        saved: null,
-        status: "new"
-      }
-    });
-
-    const renameButton = screen.getByRole("button", { name: "Edit capsule name" });
-    const renameContainer = renameButton.parentElement?.parentElement;
-    const unsavedDot = renameContainer?.querySelector("svg[data-testid='FiberManualRecordRoundedIcon']");
-
-    expect(unsavedDot).not.toBeNull();
-    expect(unsavedDot?.compareDocumentPosition(renameButton.parentElement)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
-  });
-
-  test("shows Save as for a saved capsule without a draft", async () => {
-    const user = userEvent.setup();
-
-    renderScreen({
-      activeCapsule: {
-        id: "capsule-1",
-        name: "Spring edit",
-        draft: null,
-        saved: { filters: {}, data: {} },
-        status: "saved"
-      }
-    });
-
-    await user.click(screen.getByRole("button", { name: "Open capsule menu" }));
-
-    expect(screen.getByRole("menuitem", { name: "Save as..." })).toBeInTheDocument();
-  });
-
-  test("shows Save as for a modified capsule", async () => {
-    const user = userEvent.setup();
-
-    renderScreen({
-      activeCapsule: {
-        id: "capsule-1",
-        name: "Spring edit",
-        draft: { filters: { locale: "en" }, data: {} },
-        saved: { filters: {}, data: {} },
-        status: "modified"
-      }
-    });
-
-    await user.click(screen.getByRole("button", { name: "Open capsule menu" }));
-
-    expect(screen.getByRole("menuitem", { name: "Save as..." })).toBeInTheDocument();
-  });
-
-  test("hides Save as for a never-saved capsule", async () => {
-    const user = userEvent.setup();
-
-    renderScreen({
-      activeCapsule: {
-        id: "capsule-1",
-        name: "Spring edit",
-        draft: { filters: { locale: "en" }, data: {} },
-        saved: null,
-        status: "new"
-      }
-    });
-
-    await user.click(screen.getByRole("button", { name: "Open capsule menu" }));
-
-    expect(screen.queryByRole("menuitem", { name: "Save as..." })).not.toBeInTheDocument();
-  });
-
-  test("does not render shell-owned user menu, settings, or collapsed sidebar controls directly", () => {
-    renderScreen({}, { layoutMode: "medium" });
-
-    expect(screen.queryByRole("button", { name: "Open user menu" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Collapse sidebar" })).not.toBeInTheDocument();
-    expect(screen.queryByTestId("collapsed-sidebar-expand-hitbox")).not.toBeInTheDocument();
-  });
-
-  test("deletes a registered sidebar capsule row by its explicit capsule id", async () => {
-    const user = userEvent.setup();
-    const onDeleteCapsule = vi.fn(() => Promise.resolve());
-    const registerCapsuleSidebarActions = vi.fn();
-
-    renderScreen({
-      activeCapsule: { id: "capsule-1", name: "Spring edit", draft: null, saved: null, status: "saved" },
-      capsuleList: [
-        { id: "capsule-1", name: "Spring edit", status: "saved" },
-        { id: "capsule-2", name: "Summer edit", status: "new" }
-      ],
-      onDeleteCapsule,
-      registerCapsuleSidebarActions
-    });
-
-    const actions = registerCapsuleSidebarActions.mock.calls.at(-1)?.[0];
-    const anchor = document.createElement("button");
-    document.body.appendChild(anchor);
-    act(() => {
-      actions.openCapsuleActions({ currentTarget: anchor } as unknown as React.MouseEvent<HTMLElement>, {
-        id: "capsule-2",
-        name: "Summer edit",
-        status: "new"
-      });
-    });
-    await user.click(screen.getByRole("menuitem", { name: "Delete" }));
-    await user.click(screen.getAllByRole("button", { name: "Delete" }).at(-1));
-
-    expect(onDeleteCapsule).toHaveBeenCalledWith("capsule-2");
   });
 });

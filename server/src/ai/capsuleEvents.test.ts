@@ -1,6 +1,43 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildCapsuleEventSnapshot } from "./capsuleEvents.js";
+import {
+  buildCapsuleEventSnapshot,
+  getStoredWardrobePayload
+} from "./capsuleEvents.js";
+
+test("getStoredWardrobePayload normalizes legacy arrays and object payloads", () => {
+  assert.deepEqual(
+    getStoredWardrobePayload({
+      items: [{ id: "1" }]
+    }),
+    {
+      items: [{ id: "1" }],
+      outfitSets: [],
+      rawSelectionText: null,
+      swimwearReasoning: null,
+      swimwearRawSelectionText: null
+    }
+  );
+
+  assert.deepEqual(
+    getStoredWardrobePayload({
+      items: {
+        items: [{ id: "2" }],
+        outfitSets: [{ itemIds: ["2"] }],
+        rawSelectionText: "raw",
+        swimwearReasoning: "swim",
+        swimwearRawSelectionText: "swim-raw"
+      }
+    }),
+    {
+      items: [{ id: "2" }],
+      outfitSets: [{ itemIds: ["2"] }],
+      rawSelectionText: "raw",
+      swimwearReasoning: "swim",
+      swimwearRawSelectionText: "swim-raw"
+    }
+  );
+});
 
 test("buildCapsuleEventSnapshot includes pending outfit set image indexes", () => {
   const snapshot = buildCapsuleEventSnapshot({
