@@ -3,7 +3,7 @@ import {
   buildJsonObjectFormat,
   buildSystemPrompt,
   splitSystemAndUserPrompt
-} from "./llm.js";
+} from "./llmPrompts.js";
 import { releaseImageBuffers } from "./openai.js";
 import type {
   ImageAssetLike,

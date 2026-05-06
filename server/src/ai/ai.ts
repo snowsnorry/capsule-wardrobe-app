@@ -21,7 +21,7 @@ import {
   getProcessMemoryUsage,
   runWithImageWorkSlot
 } from "./imagePipeline.js";
-import { getPartialRegenerationJob } from "./regenerateSelected.js";
+import { getPartialRegenerationJob } from "./partialRegenerationJobs.js";
 import {
   getPromptTemplateContent,
   loadPromptTemplate,

@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { buildSystemPrompt, splitSystemAndUserPrompt } from "./llm.js";
+import { buildSystemPrompt, splitSystemAndUserPrompt } from "./llmPrompts.js";
 import { buildImageDataUrl, releaseImageBuffers } from "./openai.js";
 import type { ImageAssetLike, LlmGenerateOptions, ParsedGenerationError, UserProfileLike } from "./types.js";
 

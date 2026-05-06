@@ -33,6 +33,11 @@ import {
   getStoredWardrobePayload
 } from "./capsuleEvents.js";
 import {
+  createPartialRegenerationJobKey,
+  getPartialRegenerationJobFromStore,
+  partialRegenerationJobs
+} from "./partialRegenerationJobs.js";
+import {
   getPromptTemplateContent,
   loadPromptTemplate,
   renderPromptTemplateContent
@@ -66,7 +71,6 @@ const REGENERATE_SELECTED_USER_PROMPT_TEMPLATE = getPromptTemplateContent(REGENE
 const REGENERATE_SELECTED_SYSTEM_PROMPT_TEMPLATE = getPromptTemplateContent(REGENERATE_SELECTED_PROMPT_TEMPLATE, "system");
 const COMPLETED_JOB_TTL_MS = 5 * 60 * 1000;
 const LAST_PROMPT_DIR_URL = new URL("../../../last-prompt/", import.meta.url);
-const partialRegenerationJobs = new Map<string, PartialRegenerationJobState>();
 
 type SqlWardrobeRow = WardrobeUiItemLike & {
   embedding?: unknown;
@@ -91,12 +95,6 @@ type PartialRegenerationServiceDependencies = {
 
 function getSqlRows<TRow>(result: TRow[] | { count: number }): TRow[] {
   return Array.isArray(result) ? result : [];
-}
-
-function createPartialRegenerationJobKey(email, capsuleId) {
-  const normalizedEmail = String(email || "").trim().toLowerCase();
-  const normalizedCapsuleId = String(capsuleId || "").trim();
-  return normalizedCapsuleId ? `${normalizedEmail}::${normalizedCapsuleId}` : normalizedEmail;
 }
 
 function isValidSelectedItemUrls(itemUrls: unknown): itemUrls is string[] {
@@ -815,18 +813,13 @@ function createPartialRegenerationService({
   }
 
   function getPartialRegenerationJob(email: string, capsuleId: string) {
-    const jobKey = createPartialRegenerationJobKey(email, capsuleId);
-    const job = jobs.get(jobKey);
-    if (!job) {
-      return null;
-    }
-
-    if (job.status !== "pending" && nowMsImpl() - job.updatedAt > COMPLETED_JOB_TTL_MS) {
-      jobs.delete(jobKey);
-      return null;
-    }
-
-    return job;
+    return getPartialRegenerationJobFromStore({
+      email,
+      capsuleId,
+      jobs,
+      nowMs: nowMsImpl(),
+      completedJobTtlMs: COMPLETED_JOB_TTL_MS
+    });
   }
 
   function startPartialRegenerationJob(
