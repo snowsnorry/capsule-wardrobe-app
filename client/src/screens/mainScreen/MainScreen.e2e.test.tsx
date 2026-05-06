@@ -10,16 +10,16 @@ const useI18nMock = vi.hoisted(() => vi.fn());
 vi.mock("@mui/material/useMediaQuery", () => ({
   default: mediaQueryMock
 }));
-vi.mock("../i18n/useI18n", () => ({
+vi.mock("../../i18n/useI18n", () => ({
   useI18n: useI18nMock
 }));
-vi.mock("../components/AppLauncher", () => ({
+vi.mock("../../components/AppLauncher", () => ({
   default: ({ currentApp }) => <div data-testid="app-launcher">{currentApp}</div>
 }));
-vi.mock("../components/LocaleSwitcher", () => ({
+vi.mock("../../components/LocaleSwitcher", () => ({
   default: () => <div data-testid="locale-switcher">locale-switcher</div>
 }));
-vi.mock("../components/ProfileFiltersSidebar", () => ({
+vi.mock("../../components/ProfileFiltersSidebar", () => ({
   default: ({ onApply, onReset }) => (
     <div data-testid="profile-filters-sidebar">
       <button type="button" onClick={onApply}>apply-filters</button>
@@ -27,7 +27,7 @@ vi.mock("../components/ProfileFiltersSidebar", () => ({
     </div>
   )
 }));
-vi.mock("../components/ClothingGridPlaceholder", () => ({
+vi.mock("../../components/ClothingGridPlaceholder", () => ({
   default: ({ count, inline, mobileColumns }) => (
     <div
       data-testid={inline ? `inline-placeholder-${count}` : "loading-placeholder"}
@@ -59,7 +59,7 @@ vi.mock("../components/ClothingGridPlaceholder", () => ({
     sm: 2.5
   }
 }));
-vi.mock("../components/ClothingCard", () => ({
+vi.mock("../../components/ClothingCard", () => ({
   default: ({ item, isSelectionMode, onToggleSelected, onProductMenuClick }) => (
     <button
       type="button"

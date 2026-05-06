@@ -21,9 +21,9 @@ import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import ContentCopyRoundedIcon from "@mui/icons-material/ContentCopyRounded";
 import ShareRoundedIcon from "@mui/icons-material/ShareRounded";
-import ProfileFiltersSidebar from "../components/ProfileFiltersSidebar";
-import { useI18n } from "../i18n/useI18n";
-import { groupCapsules, highlightMatch } from "./mainScreen/MainScreenHelpers";
+import ProfileFiltersSidebar from "../../components/ProfileFiltersSidebar";
+import { useI18n } from "../../i18n/useI18n";
+import { groupCapsules, highlightMatch } from "./MainScreenHelpers";
 import type { CapsuleLike, MainScreenProps } from "./MainScreenTypes";
 
 type ConfirmState = { action: string; capsuleId: string; outfitSetIndex: number };

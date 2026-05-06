@@ -1,18 +1,18 @@
 import type { MouseEvent } from "react";
 import { Alert, Box, Button, IconButton, Stack } from "@mui/material";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
-import ClothingCard from "../components/ClothingCard";
+import ClothingCard from "../../components/ClothingCard";
 import ClothingGridPlaceholder, {
   ClothingPlaceholderCard,
   buildClothingGridGap,
   buildClothingGridTemplateColumns
-} from "../components/ClothingGridPlaceholder";
-import { useI18n } from "../i18n/useI18n";
+} from "../../components/ClothingGridPlaceholder";
+import { useI18n } from "../../i18n/useI18n";
 import {
   OUTFIT_SET_IMAGE_ASPECT_RATIO,
   OUTFIT_SET_IMAGE_PREVIEW_MAX_WIDTH
-} from "./mainScreen/MainScreenHelpers";
-import type { MainScreenItem, MobileCardColumns, ResolvedOutfitSet } from "./mainScreen/MainScreenTypes";
+} from "./MainScreenHelpers";
+import type { MainScreenItem, MobileCardColumns, ResolvedOutfitSet } from "./MainScreenTypes";
 
 type WardrobeProps = {
   activeImageSrc: string;

@@ -4,8 +4,8 @@ import DriveFileRenameOutlineRoundedIcon from "@mui/icons-material/DriveFileRena
 import FiberManualRecordRoundedIcon from "@mui/icons-material/FiberManualRecordRounded";
 import MoreVertRoundedIcon from "@mui/icons-material/MoreVertRounded";
 import TuneRoundedIcon from "@mui/icons-material/TuneRounded";
-import { useI18n } from "../i18n/useI18n";
-import { capsuleHasUnsavedChanges } from "./mainScreen/MainScreenHelpers";
+import { useI18n } from "../../i18n/useI18n";
+import { capsuleHasUnsavedChanges } from "./MainScreenHelpers";
 import type { CapsuleLike } from "./MainScreenTypes";
 
 type InlineRenameState = {

@@ -141,7 +141,7 @@ vi.mock("./screens/OnboardingScreen", () => ({
   }
 }));
 
-vi.mock("./screens/MainScreen", () => ({
+vi.mock("./screens/mainScreen/MainScreen", () => ({
   default: function MainScreenMock(props) {
     return (
       <div data-testid="main-screen">

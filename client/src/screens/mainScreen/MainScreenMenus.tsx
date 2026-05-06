@@ -1,6 +1,6 @@
 import { Menu, MenuItem, ListItemIcon, ListItemText } from "@mui/material";
 import ThumbDownAltOutlinedIcon from "@mui/icons-material/ThumbDownAltOutlined";
-import CapsuleActionMenu from "./mainScreen/CapsuleActionMenu";
+import CapsuleActionMenu from "./CapsuleActionMenu";
 import type { CapsuleLike, CapsuleMenuAnchor, MainScreenItem, MainScreenProps, MobileCardColumns } from "./MainScreenTypes";
 
 type NameDialogState = { type: "rename" | "save-as" | ""; capsuleId: string; value: string };
