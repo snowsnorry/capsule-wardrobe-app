@@ -230,7 +230,7 @@ type AppNavigationOptions = {
   openProductDetail?: boolean;
 };
 
-const MainScreen = lazy(() => import("./screens/MainScreen"));
+const MainScreen = lazy(() => import("./screens/mainScreen/MainScreen"));
 const OnboardingScreen = lazy(() => import("./screens/OnboardingScreen"));
 const ProfileScreen = lazy(() => import("./screens/ProfileScreen"));
 const SearchScreen = lazy(() => import("./screens/SearchScreen"));
