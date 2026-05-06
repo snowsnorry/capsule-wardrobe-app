@@ -1,0 +1,284 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-05-06T00:00:00.000Z",
+  "title": "Design System: Capsule Wardrobe App",
+  "extensions": {
+    "colorMeta": {
+      "wardrobe-teal": {
+        "role": "primary",
+        "displayName": "Wardrobe Teal",
+        "canonical": "#1c7c7c",
+        "tonalRamp": ["#092322", "#0d3635", "#124d4c", "#176665", "#1c7c7c", "#49a3a3", "#8fd0cc", "#dcefeb"]
+      },
+      "wardrobe-teal-dark": {
+        "role": "primary",
+        "displayName": "Dark Wardrobe Teal",
+        "canonical": "#49a3a3",
+        "tonalRamp": ["#092322", "#124d4c", "#1c7c7c", "#49a3a3", "#70bab8", "#9bd5d2", "#c8ebe8", "#edf8f6"]
+      },
+      "wardrobe-gold": {
+        "role": "secondary",
+        "displayName": "Wardrobe Gold",
+        "canonical": "#f0b429",
+        "tonalRamp": ["#332105", "#5a3a08", "#83580d", "#ad7a13", "#d89d1c", "#f0b429", "#f6d778", "#fff4dc"]
+      },
+      "signature-olive-gold": {
+        "role": "secondary",
+        "displayName": "Signature Olive Gold",
+        "canonical": "#8f6f45",
+        "tonalRamp": ["#21180d", "#3a2a17", "#584021", "#735a34", "#8f6f45", "#b39567", "#d8c39a", "#f7ead0"]
+      },
+      "canvas-cream": {
+        "role": "neutral",
+        "displayName": "Canvas Cream",
+        "canonical": "#f7f4ef",
+        "tonalRamp": ["#201d18", "#3b352d", "#665d51", "#918779", "#bcb4a8", "#ddd8cf", "#f0ece5", "#f7f4ef"]
+      },
+      "card-white": {
+        "role": "neutral",
+        "displayName": "Card White",
+        "canonical": "#ffffff",
+        "tonalRamp": ["#20211f", "#42443f", "#686a64", "#92948d", "#bfc1bb", "#e3e5df", "#f8faf4", "#ffffff"]
+      },
+      "ink-slate": {
+        "role": "neutral",
+        "displayName": "Ink Slate",
+        "canonical": "#1f2933",
+        "tonalRamp": ["#0d1115", "#1f2933", "#334454", "#52606d", "#7b8794", "#a8b1ba", "#d5dbe0", "#f4f6f8"]
+      },
+      "secondary-slate": {
+        "role": "neutral",
+        "displayName": "Secondary Slate",
+        "canonical": "#52606d",
+        "tonalRamp": ["#11161a", "#27313a", "#3c4a55", "#52606d", "#71808d", "#9aa6b2", "#c8d0d7", "#eef2f5"]
+      },
+      "category-mint": {
+        "role": "tertiary",
+        "displayName": "Category Mint",
+        "canonical": "#dcefeb",
+        "tonalRamp": ["#092321", "#124a45", "#15766f", "#3fa098", "#80c8c2", "#b8e1dc", "#dcefeb", "#f1faf8"]
+      },
+      "success-green": {
+        "role": "tertiary",
+        "displayName": "Success Green",
+        "canonical": "#2f8f58",
+        "tonalRamp": ["#092015", "#123b24", "#1c5c37", "#2f8f58", "#58ad79", "#8bcea3", "#c5e8d0", "#effaf2"]
+      },
+      "danger-red": {
+        "role": "tertiary",
+        "displayName": "Danger Red",
+        "canonical": "#d24343",
+        "tonalRamp": ["#330b0b", "#5a1515", "#852020", "#ad3030", "#d24343", "#e77878", "#f3b6b6", "#fdecec"]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Rare major screen headings and large empty/loading states."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Main screen headings and major dialog titles."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Sidebar titles, filter titles, statistics card titles, and compact section headers."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Product descriptions, helper text, readable prose, and result rows."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Button labels, chip labels, form labels, and dense filter captions."
+      },
+      "wordmark": {
+        "displayName": "Wordmark",
+        "purpose": "The app name only."
+      }
+    },
+    "shadows": [
+      {
+        "name": "wardrobe-card-rest",
+        "value": "0 0px 8px rgba(17, 36, 34, 0.08)",
+        "purpose": "Default desktop wardrobe cards and placeholders."
+      },
+      {
+        "name": "image-action-float",
+        "value": "0 8px 24px rgba(17, 36, 34, 0.16)",
+        "purpose": "Floating image action buttons on outfit imagery."
+      },
+      {
+        "name": "overlay-panel",
+        "value": "0 14px 32px rgba(31, 41, 51, 0.12)",
+        "purpose": "Dialog-style floating panels in light mode."
+      },
+      {
+        "name": "chart-tooltip",
+        "value": "0 16px 40px rgba(15, 23, 42, 0.12)",
+        "purpose": "Tooltips above charts and dense visualizations."
+      }
+    ],
+    "motion": [
+      {
+        "name": "state-fast",
+        "value": "160ms ease",
+        "purpose": "Hover, opacity, action reveal, and simple state changes."
+      },
+      {
+        "name": "navigation-natural",
+        "value": "240ms cubic-bezier(0.2, 0, 0, 1)",
+        "purpose": "Sidebar collapse and child-list expansion."
+      },
+      {
+        "name": "panel-standard",
+        "value": "240ms ease",
+        "purpose": "Sidebar width and panel padding transitions."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "mobile-overlay-sidebar",
+        "value": "max-width: 1279.95px"
+      },
+      {
+        "name": "large-desktop-sidebar",
+        "value": "min-width: 1680px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Primary action for applying preferences, generating wardrobes, and advancing onboarding.",
+      "html": "<button class=\"ds-btn-primary\">Apply filters</button>",
+      "css": ".ds-btn-primary { background: #1c7c7c; color: #ffffff; border: 0; border-radius: 18px; padding: 6px 16px; min-height: 36px; font-family: \"DM Sans\", Helvetica, sans-serif; font-size: 0.875rem; font-weight: 600; line-height: 1.75; cursor: pointer; transition: background-color 160ms ease, box-shadow 160ms ease; } .ds-btn-primary:hover { background: #176665; } .ds-btn-primary:focus-visible { outline: 3px solid rgba(28, 124, 124, 0.28); outline-offset: 2px; } .ds-btn-primary:disabled { opacity: 0.38; cursor: default; }"
+    },
+    {
+      "name": "Outlined Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Secondary or reset action that should stay quieter than generation and apply actions.",
+      "html": "<button class=\"ds-btn-secondary\">Reset</button>",
+      "css": ".ds-btn-secondary { background: #ffffff; color: #1f2933; border: 1px solid rgba(20, 60, 60, 0.22); border-radius: 18px; padding: 5px 15px; min-height: 36px; font-family: \"DM Sans\", Helvetica, sans-serif; font-size: 0.875rem; font-weight: 600; line-height: 1.75; cursor: pointer; transition: background-color 160ms ease, border-color 160ms ease; } .ds-btn-secondary:hover { background: rgba(31, 41, 51, 0.035); border-color: rgba(20, 60, 60, 0.34); } .ds-btn-secondary:focus-visible { outline: 3px solid rgba(28, 124, 124, 0.24); outline-offset: 2px; }"
+    },
+    {
+      "name": "Selected Filter Chip",
+      "kind": "chip",
+      "refersTo": "chip-selected",
+      "description": "Selected wardrobe preference or active search/statistics filter.",
+      "html": "<button class=\"ds-chip-selected\">Smart casual</button>",
+      "css": ".ds-chip-selected { display: inline-flex; align-items: center; justify-content: center; height: 32px; padding: 0 12px; border: 0; border-radius: 999px; background: #1c7c7c; color: #ffffff; font-family: \"DM Sans\", Helvetica, sans-serif; font-size: 0.8125rem; font-weight: 600; cursor: pointer; transition: background-color 160ms ease; } .ds-chip-selected:hover { background: #176665; } .ds-chip-selected:focus-visible { outline: 3px solid rgba(28, 124, 124, 0.28); outline-offset: 2px; }"
+    },
+    {
+      "name": "Accent Color Chip",
+      "kind": "chip",
+      "refersTo": "chip-selected",
+      "description": "Filter chip with a visible color swatch for wardrobe accent color selection.",
+      "html": "<button class=\"ds-chip-swatch\"><span class=\"ds-chip-swatch-dot\"></span><span>Olive</span></button>",
+      "css": ".ds-chip-swatch { display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px; border: 1px solid rgba(20, 60, 60, 0.16); border-radius: 999px; background: #ffffff; color: #1f2933; font-family: \"DM Sans\", Helvetica, sans-serif; font-size: 0.8125rem; font-weight: 500; cursor: pointer; transition: background-color 160ms ease, border-color 160ms ease; } .ds-chip-swatch:hover { background: rgba(31, 41, 51, 0.035); } .ds-chip-swatch:focus-visible { outline: 3px solid rgba(28, 124, 124, 0.24); outline-offset: 2px; } .ds-chip-swatch-dot { width: 12px; height: 12px; border-radius: 999px; border: 1px solid #999999; background: #6f7d3c; box-sizing: border-box; }"
+    },
+    {
+      "name": "Wardrobe Card",
+      "kind": "card",
+      "refersTo": "wardrobe-card",
+      "description": "Signature clothing card where the garment image dominates and details stay quiet.",
+      "html": "<article class=\"ds-wardrobe-card\"><div class=\"ds-wardrobe-image\"><span class=\"ds-category\">Outerwear</span></div><div class=\"ds-wardrobe-detail\">Wool blend coat</div></article>",
+      "css": ".ds-wardrobe-card { width: 180px; overflow: hidden; border-radius: 8px; border: 1px solid rgba(17, 36, 34, 0.08); background: #ffffff; box-shadow: 0 0px 8px rgba(17, 36, 34, 0.08); font-family: \"DM Sans\", Helvetica, sans-serif; color: #202a33; } .ds-wardrobe-image { position: relative; aspect-ratio: 3 / 4; background: linear-gradient(110deg, #ece8e2 8%, #f6f4f1 18%, #ece8e2 33%); overflow: hidden; } .ds-category { position: absolute; top: 12px; left: 12px; max-width: calc(100% - 24px); height: 28px; display: inline-flex; align-items: center; border-radius: 999px; background: #dcefeb; color: #15766f; padding: 0 8px; text-transform: uppercase; letter-spacing: 0.08em; font-size: 12px; font-weight: 800; } .ds-wardrobe-detail { min-height: 64px; padding: 16px 20px 18px; border-top: 1px solid rgba(15, 23, 42, 0.055); background: #ffffff; font-size: 16px; font-weight: 500; line-height: 1.22; }"
+    },
+    {
+      "name": "Filter Panel",
+      "kind": "card",
+      "refersTo": "sidebar-panel",
+      "description": "Bordered panel for capsule, search, and statistics filters.",
+      "html": "<section class=\"ds-filter-panel\"><h2>Filters</h2><p>Choose the constraints that shape the wardrobe.</p></section>",
+      "css": ".ds-filter-panel { width: 320px; box-sizing: border-box; padding: 24px; border: 1px solid rgba(20, 60, 60, 0.08); border-radius: 10px; background: #ffffff; color: #1f2933; font-family: \"DM Sans\", Helvetica, sans-serif; } .ds-filter-panel h2 { margin: 0 0 8px; font-size: 18px; line-height: 1.25; font-weight: 600; } .ds-filter-panel p { margin: 0; color: #52606d; font-size: 0.875rem; line-height: 1.5; }"
+    },
+    {
+      "name": "Sidebar Navigation Item",
+      "kind": "nav",
+      "refersTo": "sidebar-panel",
+      "description": "Top-level navigation item in the collapsible app sidebar.",
+      "html": "<button class=\"ds-nav-item\"><span class=\"ds-nav-icon\">□</span><span>Capsule</span></button>",
+      "css": ".ds-nav-item { width: 100%; min-height: 48px; display: flex; align-items: center; gap: 12px; padding: 0 14px; border: 0; border-radius: 10px; background: transparent; color: #1f2933; font-family: \"DM Sans\", Helvetica, sans-serif; font-size: 1rem; font-weight: 650; text-align: left; cursor: pointer; transition: background-color 160ms ease, color 160ms ease; } .ds-nav-item:hover { background: rgba(31, 41, 51, 0.035); } .ds-nav-item:focus-visible { outline: 3px solid rgba(28, 124, 124, 0.24); outline-offset: 2px; } .ds-nav-icon { width: 24px; color: #52606d; } .ds-nav-item[aria-current=\"page\"], .ds-nav-item[aria-current=\"page\"] .ds-nav-icon { color: #1c7c7c; }"
+    },
+    {
+      "name": "Search Result Row",
+      "kind": "custom",
+      "refersTo": "sidebar-panel",
+      "description": "Flat selectable row in the product explorer results list.",
+      "html": "<button class=\"ds-result-row\"><strong>Cotton poplin shirt</strong><span>Brand name</span></button>",
+      "css": ".ds-result-row { display: block; width: 100%; padding: 9px 4px 9px 10px; border: 0; border-radius: 0; background: transparent; color: #1f2933; font-family: \"DM Sans\", Helvetica, sans-serif; text-align: left; cursor: pointer; transition: background-color 160ms ease; } .ds-result-row:hover { background: rgba(31, 41, 51, 0.035); } .ds-result-row:focus-visible { outline: 3px solid rgba(28, 124, 124, 0.24); outline-offset: 2px; } .ds-result-row[aria-selected=\"true\"] { background: rgba(28, 124, 124, 0.06); } .ds-result-row strong { display: block; font-size: 1rem; font-weight: 700; line-height: 1.5; } .ds-result-row span { display: block; color: #52606d; font-size: 0.875rem; line-height: 1.43; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Wardrobe Worktable",
+    "overview": "This product should feel like a clean worktable for planning outfits: warm surface, clear tools, visible materials, and no theatrical AI wrapper. The strongest visual asset is always the clothing itself. Panels, filters, charts, and actions exist to help the user shape a capsule wardrobe, not to compete with the garments.\n\nThe visual system is restrained product UI with a personal styling temperature. Cream canvas and white panels keep the workspace soft; muted teal identifies primary action and selected state; amber-gold appears as a brand accent and chart support, never as decoration. The app may include dense filters and statistics, but it must not become a generic SaaS dashboard or a generic AI slop app.",
+    "keyCharacteristics": [
+      "Warm neutral workspace with strict accent discipline.",
+      "Product images and capsule content as the dominant visual signal.",
+      "Familiar MUI controls tuned for wardrobe planning density.",
+      "Sidebar-led navigation with collapsible desktop behavior and full-screen mobile drawers.",
+      "Compact charts and filters that support decisions without analytics theater."
+    ],
+    "rules": [
+      {
+        "name": "The Wardrobe Leads Rule",
+        "body": "Do not use color as decoration around clothing grids. Color may identify state, category, or action; garments must remain visually dominant.",
+        "section": "colors"
+      },
+      {
+        "name": "The Teal Means Action Rule",
+        "body": "Teal is reserved for primary actions, active navigation, selected filters, sliders, pagination, and selected result washes. If teal appears where nothing can be acted on or selected, remove it.",
+        "section": "colors"
+      },
+      {
+        "name": "The No AI Glow Rule",
+        "body": "Do not introduce purple-blue gradients, neon glows, or magical AI color language. The product generates wardrobes, but the interface behaves like a dependable planning tool.",
+        "section": "colors"
+      },
+      {
+        "name": "The One Script Rule",
+        "body": "Leckerli One is only for the app name. Any other script usage weakens the product UI and risks fashion-brand parody.",
+        "section": "typography"
+      },
+      {
+        "name": "The Dense Tool Rule",
+        "body": "Filters, product rows, and statistics use compact type with weight contrast, not oversized headings. This is a working surface.",
+        "section": "typography"
+      },
+      {
+        "name": "The Border Before Shadow Rule",
+        "body": "Panels, sidebars, filters, and chart cards use borders and tonal surfaces first. Add shadow only when a surface is floating above content or an image action needs separation.",
+        "section": "elevation"
+      },
+      {
+        "name": "The No Decorative Glass Rule",
+        "body": "Backdrop blur may exist only on surfaces that need data separation, such as statistics cards. Do not use glassmorphism as a page style.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do keep wardrobe imagery, preference chips, and product details ahead of decorative layout.",
+      "Do use Wardrobe Teal for primary action, active navigation, selected filters, sliders, and selected rows.",
+      "Do use Canvas Cream and Card White as the main workspace layers in light mode.",
+      "Do keep Leckerli One restricted to the app name.",
+      "Do use MUI's familiar controls and states before inventing custom affordances.",
+      "Do keep search and statistics dense enough for repeated product exploration.",
+      "Do keep color swatches visible inside accent-color chips and product-detail rows."
+    ],
+    "donts": [
+      "Don't make the app feel like a generic SaaS dashboard.",
+      "Don't make the app feel like a generic AI slop app.",
+      "Don't use purple-blue AI gradients, neon glows, generic magic sparkles, or prompt-tool styling.",
+      "Don't turn statistics cards into the visual language for the whole product.",
+      "Don't use gradient text.",
+      "Don't use side-stripe borders greater than 1px as decorative accents on cards, list items, callouts, or alerts.",
+      "Don't use decorative glassmorphism as a default page style.",
+      "Don't use the Leckerli One wordmark font in labels, buttons, data, or product names.",
+      "Don't let selected or inactive states rely on color alone."
+    ]
+  }
+}
