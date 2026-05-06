@@ -94,119 +94,156 @@ const SESSION_PRUNE_MIN_INTERVAL_MS = Math.max(
   Number.parseInt(process.env.SESSION_PRUNE_MIN_INTERVAL_MS || "0", 10) || 0
 );
 
-function createAuthStore({
-  getLoginCodeByEmailImpl = getLoginCodeByEmail,
-  verifyAndConsumeLoginCodeImpl = verifyAndConsumeLoginCode,
-  pruneLoginCodesImpl = pruneLoginCodes,
-  upsertLoginCodeImpl = upsertLoginCode,
-  insertSessionImpl = insertSession,
-  getSessionByIdImpl = getSessionById,
-  deleteSessionByIdImpl = deleteSessionById,
-  pruneExpiredSessionsImpl = pruneExpiredSessions,
-  nowMsImpl = () => Date.now(),
-  randomIntImpl = (...args) => crypto.randomInt(...args),
-  randomBytesImpl = (size) => crypto.randomBytes(size),
-  codeSecret = process.env.AUTH_CODE_SECRET,
-  sessionPruneMinIntervalMs = SESSION_PRUNE_MIN_INTERVAL_MS,
-  initialSendState = []
-}: AuthStoreDeps = {}) {
+function createAuthStore(deps: AuthStoreDeps = {}) {
+  return {
+    ...createLoginCodeMethods(getLoginCodeDeps(deps)),
+    ...createSessionMethods(getSessionDeps(deps))
+  };
+}
+
+function getLoginCodeDeps(deps: AuthStoreDeps) {
+  return {
+    getLoginCodeByEmailImpl: deps.getLoginCodeByEmailImpl ?? getLoginCodeByEmail,
+    verifyAndConsumeLoginCodeImpl: deps.verifyAndConsumeLoginCodeImpl ?? verifyAndConsumeLoginCode,
+    pruneLoginCodesImpl: deps.pruneLoginCodesImpl ?? pruneLoginCodes,
+    upsertLoginCodeImpl: deps.upsertLoginCodeImpl ?? upsertLoginCode,
+    nowMsImpl: deps.nowMsImpl ?? (() => Date.now()),
+    randomIntImpl: deps.randomIntImpl ?? ((...args) => crypto.randomInt(...args)),
+    randomBytesImpl: deps.randomBytesImpl ?? ((size) => crypto.randomBytes(size)),
+    codeSecret: deps.codeSecret ?? process.env.AUTH_CODE_SECRET,
+    initialSendState: deps.initialSendState ?? []
+  };
+}
+
+function getSessionDeps(deps: AuthStoreDeps) {
+  return {
+    insertSessionImpl: deps.insertSessionImpl ?? insertSession,
+    getSessionByIdImpl: deps.getSessionByIdImpl ?? getSessionById,
+    deleteSessionByIdImpl: deps.deleteSessionByIdImpl ?? deleteSessionById,
+    pruneExpiredSessionsImpl: deps.pruneExpiredSessionsImpl ?? pruneExpiredSessions,
+    nowMsImpl: deps.nowMsImpl ?? (() => Date.now()),
+    randomBytesImpl: deps.randomBytesImpl ?? ((size) => crypto.randomBytes(size)),
+    sessionPruneMinIntervalMs: deps.sessionPruneMinIntervalMs ?? SESSION_PRUNE_MIN_INTERVAL_MS
+  };
+}
+
+function createLoginCodeMethods({
+  getLoginCodeByEmailImpl,
+  verifyAndConsumeLoginCodeImpl,
+  pruneLoginCodesImpl,
+  upsertLoginCodeImpl,
+  nowMsImpl,
+  randomIntImpl,
+  randomBytesImpl,
+  codeSecret,
+  initialSendState
+}: Required<Pick<AuthStoreDeps,
+  "getLoginCodeByEmailImpl" |
+  "verifyAndConsumeLoginCodeImpl" |
+  "pruneLoginCodesImpl" |
+  "upsertLoginCodeImpl" |
+  "nowMsImpl" |
+  "randomIntImpl" |
+  "randomBytesImpl"
+>> & Pick<AuthStoreDeps, "codeSecret" | "initialSendState">) {
   const sendState = new Map<string, SendStateEntry>(initialSendState);
-  let lastSessionPruneAtMs = 0;
-
-  function nowMs(): number {
-    return nowMsImpl();
-  }
-
-  function cleanupSendState() {
-    const time = nowMs();
-    for (const [email, entry] of sendState) {
-      if (entry.sendWindowStart + 60 * 60 * 1000 <= time) {
-        sendState.delete(email);
-      }
-    }
-  }
-
-  function generateCode(): string {
-    return String(randomIntImpl(100000, 1000000));
-  }
-
-  function generateNonce(): string {
-    return randomBytesImpl(16).toString("hex");
-  }
-
-  function generateCsrfToken(): string {
-    return randomBytesImpl(32).toString("hex");
-  }
-
-  function getCodeSecret(): string {
-    if (!codeSecret) {
-      const error = new Error("AUTH_CODE_SECRET is not set");
-      (error as Error & { code?: string }).code = "missing_auth_code_secret";
-      throw error;
-    }
-    return codeSecret;
-  }
-
-  function hashCode({ email, code, nonce }: { email: string; code: string; nonce: string }): string {
-    return crypto
-      .createHmac("sha256", getCodeSecret())
-      .update(`${email}:${code}:${nonce}`)
-      .digest("hex");
-  }
+  const getCodeSecret = () => requireCodeSecret(codeSecret);
+  const hashCode = ({ email, code, nonce }: { email: string; code: string; nonce: string }): string =>
+    crypto.createHmac("sha256", getCodeSecret()).update(`${email}:${code}:${nonce}`).digest("hex");
 
   async function createPendingCode(email: string): Promise<CreatePendingCodeResult> {
-    cleanupSendState();
-    const time = nowMs();
+    cleanupSendState(sendState, nowMsImpl());
+    const time = nowMsImpl();
     const entry = sendState.get(email);
-
-    if (entry) {
-      if (entry.lastSentAt + RESEND_COOLDOWN_MS > time) {
-        return { ok: false, reason: "cooldown" };
-      }
-      if (entry.sendWindowStart + 60 * 60 * 1000 > time && entry.sendCount >= MAX_CODE_SENDS_PER_HOUR) {
-        return { ok: false, reason: "rate_limit" };
-      }
+    const blockedResult = getSendBlockedResult(entry, time);
+    if (blockedResult) {
+      return blockedResult;
     }
 
-    const code = generateCode();
-    const nonce = generateNonce();
-    const codeHash = hashCode({ email, code, nonce });
-    const expiresAt = new Date(time + CODE_TTL_MS);
-
+    const code = String(randomIntImpl(100000, 1000000));
+    const nonce = randomBytesImpl(16).toString("hex");
     await pruneLoginCodesImpl();
-    await upsertLoginCodeImpl({ email, codeHash, nonce, expiresAt });
-
-    const nextState = {
-      lastSentAt: time,
-      sendWindowStart: entry?.sendWindowStart && entry.sendWindowStart + 60 * 60 * 1000 > time ? entry.sendWindowStart : time,
-      sendCount: entry?.sendWindowStart && entry.sendWindowStart + 60 * 60 * 1000 > time ? entry.sendCount + 1 : 1
-    };
-
-    sendState.set(email, nextState);
+    await upsertLoginCodeImpl({ email, codeHash: hashCode({ email, code, nonce }), nonce, expiresAt: new Date(time + CODE_TTL_MS) });
+    sendState.set(email, getNextSendState(entry, time));
     return { ok: true, code };
   }
 
   async function verifyCode(email: string, code: string): Promise<VerifyCodeResult> {
     const entry = await getLoginCodeByEmailImpl(email);
-
     if (!entry) {
       return { ok: false, reason: "not_found" };
     }
 
-    const candidateHash = hashCode({ email, code, nonce: entry.nonce });
     return verifyAndConsumeLoginCodeImpl({
       email,
-      codeHash: candidateHash,
+      codeHash: hashCode({ email, code, nonce: entry.nonce }),
       maxAttempts: MAX_VERIFY_ATTEMPTS
     });
   }
 
+  return { createPendingCode, verifyCode };
+}
+
+function requireCodeSecret(codeSecret: string | undefined): string {
+  if (codeSecret) {
+    return codeSecret;
+  }
+  const error = new Error("AUTH_CODE_SECRET is not set");
+  (error as Error & { code?: string }).code = "missing_auth_code_secret";
+  throw error;
+}
+
+function cleanupSendState(sendState: Map<string, SendStateEntry>, time: number): void {
+  for (const [email, entry] of sendState) {
+    if (entry.sendWindowStart + 60 * 60 * 1000 <= time) {
+      sendState.delete(email);
+    }
+  }
+}
+
+function getSendBlockedResult(entry: SendStateEntry | undefined, time: number): CreatePendingCodeResult | null {
+  if (!entry) {
+    return null;
+  }
+  if (entry.lastSentAt + RESEND_COOLDOWN_MS > time) {
+    return { ok: false, reason: "cooldown" };
+  }
+  return entry.sendWindowStart + 60 * 60 * 1000 > time && entry.sendCount >= MAX_CODE_SENDS_PER_HOUR
+    ? { ok: false, reason: "rate_limit" }
+    : null;
+}
+
+function getNextSendState(entry: SendStateEntry | undefined, time: number): SendStateEntry {
+  const isSameWindow = Boolean(entry?.sendWindowStart && entry.sendWindowStart + 60 * 60 * 1000 > time);
+  return {
+    lastSentAt: time,
+    sendWindowStart: isSameWindow && entry ? entry.sendWindowStart : time,
+    sendCount: isSameWindow && entry ? entry.sendCount + 1 : 1
+  };
+}
+
+function createSessionMethods({
+  insertSessionImpl,
+  getSessionByIdImpl,
+  deleteSessionByIdImpl,
+  pruneExpiredSessionsImpl,
+  nowMsImpl,
+  randomBytesImpl,
+  sessionPruneMinIntervalMs
+}: Required<Pick<AuthStoreDeps,
+  "insertSessionImpl" |
+  "getSessionByIdImpl" |
+  "deleteSessionByIdImpl" |
+  "pruneExpiredSessionsImpl" |
+  "nowMsImpl" |
+  "randomBytesImpl" |
+  "sessionPruneMinIntervalMs"
+>>) {
+  let lastSessionPruneAtMs = 0;
+
   async function maybePruneExpiredSessions(): Promise<void> {
-    const now = nowMs();
-    if (
-      sessionPruneMinIntervalMs > 0 &&
-      now - lastSessionPruneAtMs < sessionPruneMinIntervalMs
-    ) {
+    const now = nowMsImpl();
+    if (sessionPruneMinIntervalMs > 0 && now - lastSessionPruneAtMs < sessionPruneMinIntervalMs) {
       return;
     }
 
@@ -216,63 +253,53 @@ function createAuthStore({
 
   async function createSession(email: string): Promise<CreatedSession> {
     await maybePruneExpiredSessions();
-
     const sessionId = randomBytesImpl(32).toString("hex");
-    const csrfToken = generateCsrfToken();
-    const createdAt = new Date(nowMs());
+    const csrfToken = randomBytesImpl(32).toString("hex");
+    const createdAt = new Date(nowMsImpl());
     const expiresAt = new Date(createdAt.getTime() + SESSION_TTL_MS);
 
-    await insertSessionImpl({
-      sessionId,
-      email,
-      csrfToken,
-      createdAt,
-      expiresAt
-    });
-
+    await insertSessionImpl({ sessionId, email, csrfToken, createdAt, expiresAt });
     return {
       sessionId,
-      session: {
-        email,
-        csrfToken,
-        createdAt: createdAt.toISOString(),
-        expiresAt: expiresAt.toISOString()
-      }
+      session: { email, csrfToken, createdAt: createdAt.toISOString(), expiresAt: expiresAt.toISOString() }
     };
   }
 
   async function getSession(sessionId: string): Promise<SessionView | null> {
     await maybePruneExpiredSessions();
-
     const session = await getSessionByIdImpl(sessionId);
-    if (!session) {
-      return null;
-    }
-
-    const expiresAt = new Date(session.expiresAt);
-    if (expiresAt.getTime() <= nowMs()) {
-      await deleteSessionByIdImpl(sessionId);
-      return null;
-    }
-
-    return {
-      email: session.email,
-      csrfToken: session.csrfToken,
-      createdAt: new Date(session.createdAt).getTime(),
-      expiresAt: expiresAt.getTime()
-    };
+    return session ? getValidSessionView({ sessionId, session, nowMs: nowMsImpl(), deleteSessionByIdImpl }) : null;
   }
 
   async function revokeSession(sessionId: string): Promise<void> {
     await deleteSessionByIdImpl(sessionId);
   }
 
+  return { createSession, getSession, revokeSession };
+}
+
+async function getValidSessionView({
+  sessionId,
+  session,
+  nowMs,
+  deleteSessionByIdImpl
+}: {
+  sessionId: string;
+  session: SessionRow;
+  nowMs: number;
+  deleteSessionByIdImpl: (sessionId: string) => Promise<void>;
+}): Promise<SessionView | null> {
+  const expiresAt = new Date(session.expiresAt);
+  if (expiresAt.getTime() <= nowMs) {
+    await deleteSessionByIdImpl(sessionId);
+    return null;
+  }
+
   return {
-    createPendingCode,
-    verifyCode,
-    createSession,
-    getSession,
-    revokeSession
+    email: session.email,
+    csrfToken: session.csrfToken,
+    createdAt: new Date(session.createdAt).getTime(),
+    expiresAt: expiresAt.getTime()
   };
 }
 

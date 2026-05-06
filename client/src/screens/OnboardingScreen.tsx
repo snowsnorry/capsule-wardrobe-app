@@ -38,165 +38,109 @@ type OnboardingScreenProps = {
   onFinish: () => void;
 };
 
-function OnboardingScreen({
-  onboardingStep,
-  styleOptions,
-  occasionOptions,
-  seasonOptions,
-  audienceOptions,
-  selectedStyleCore,
-  selectedStyleAesthetic,
-  selectedOccasions,
-  selectedSeasons,
-  selectedAudience,
-  status,
-  onSelectStyleCore,
-  onSelectStyleAesthetic,
-  onToggleOccasion,
-  onToggleSeason,
-  onSelectAudience,
-  onNext,
-  onBack,
-  onFinish
-}: OnboardingScreenProps) {
+function OnboardingHeader({ t }: { t: (key: string) => string }) {
+  return (
+    <Stack spacing={1}>
+      <Stack direction="row" alignItems="center" justifyContent="space-between">
+        <Typography sx={{ fontFamily: '"Leckerli One", cursive', fontSize: "1.85rem", lineHeight: 1.1, color: "#8f6f45", textAlign: "left" }}>
+          {t("appName")}
+        </Typography>
+        <LocaleSwitcher />
+      </Stack>
+      <Typography variant="body2" color="text.secondary">{t("onboarding.subtitle")}</Typography>
+    </Stack>
+  );
+}
+
+function OnboardingChipStep({
+  title,
+  hint,
+  options,
+  selectedValues,
+  selectedValue,
+  optionGroup,
+  locale,
+  onSelect
+}: {
+  title: string;
+  hint: string;
+  options: string[];
+  selectedValues?: string[];
+  selectedValue?: string;
+  optionGroup: "occasions" | "seasons" | "audience";
+  locale: string;
+  onSelect: (value: string) => void;
+}) {
+  return (
+    <Stack spacing={2}>
+      <Typography variant="h6">{title}</Typography>
+      <Typography variant="body2" color="text.secondary">{hint}</Typography>
+      <Stack direction="row" flexWrap="wrap" gap={1}>
+        {options.map((item) => (
+          <Chip key={item} label={translateOption(optionGroup, item, locale)} clickable color={(selectedValues?.includes(item) || selectedValue === item) ? "primary" : "default"} onClick={() => onSelect(item)} />
+        ))}
+      </Stack>
+    </Stack>
+  );
+}
+
+function OnboardingStepContent({ props, t, locale }: { props: OnboardingScreenProps; t: (key: string) => string; locale: string }) {
+  if (props.onboardingStep === 0) {
+    return (
+      <Stack spacing={2}>
+        <Typography variant="h6">{t("onboarding.step1Title")}</Typography>
+        <Typography variant="body2" color="text.secondary">{t("onboarding.step1Hint")}</Typography>
+        <StylePreferenceSelector styleOptions={props.styleOptions} selectedStyleCore={props.selectedStyleCore} selectedStyleAesthetic={props.selectedStyleAesthetic} onSelectStyleCore={props.onSelectStyleCore} onSelectStyleAesthetic={props.onSelectStyleAesthetic} showSectionHeading={false} bodyVariant="body2" />
+      </Stack>
+    );
+  }
+
+  if (props.onboardingStep === 1) {
+    return <OnboardingChipStep title={t("onboarding.step2Title")} hint={t("onboarding.step2Hint")} options={props.occasionOptions} selectedValues={props.selectedOccasions} optionGroup="occasions" locale={locale} onSelect={props.onToggleOccasion} />;
+  }
+
+  if (props.onboardingStep === 2) {
+    return <OnboardingChipStep title={t("onboarding.step3Title")} hint={t("onboarding.step3Hint")} options={props.seasonOptions} selectedValues={props.selectedSeasons} optionGroup="seasons" locale={locale} onSelect={props.onToggleSeason} />;
+  }
+
+  return <OnboardingChipStep title={t("onboarding.step4Title")} hint={t("onboarding.step4Hint")} options={props.audienceOptions} selectedValue={props.selectedAudience} optionGroup="audience" locale={locale} onSelect={props.onSelectAudience} />;
+}
+
+function OnboardingActions({ props, t }: { props: OnboardingScreenProps; t: (key: string) => string }) {
+  const isNextDisabled = (props.onboardingStep === 0 && !props.selectedStyleCore)
+    || (props.onboardingStep === 1 && props.selectedOccasions.length === 0)
+    || (props.onboardingStep === 2 && props.selectedSeasons.length === 0);
+
+  return (
+    <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+      {props.onboardingStep > 0 ? <Button variant="outlined" onClick={props.onBack}>{t("profile.back")}</Button> : null}
+      {props.onboardingStep < 3 ? (
+        <Button variant="contained" onClick={props.onNext} disabled={isNextDisabled}>{t("onboarding.next")}</Button>
+      ) : (
+        <Button variant="contained" onClick={props.onFinish} disabled={!props.selectedAudience}>{t("onboarding.start")}</Button>
+      )}
+    </Stack>
+  );
+}
+
+function OnboardingStatus({ status, t }: { status: ScreenStatus; t: (key: string, params?: Record<string, unknown>) => string }) {
+  return (
+    <>
+      {status.error ? <Typography variant="body2" color="error">{status.error}</Typography> : null}
+      {status.infoKey ? <Typography variant="body2" color="text.secondary">{t(status.infoKey, status.infoParams || undefined)}</Typography> : null}
+    </>
+  );
+}
+
+function OnboardingScreen(props: OnboardingScreenProps) {
   const { t, locale } = useI18n();
   return (
     <Stack spacing={3}>
-      <Stack spacing={1}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between">
-          <Typography
-            sx={{
-              fontFamily: '"Leckerli One", cursive',
-              fontSize: "1.85rem",
-              lineHeight: 1.1,
-              color: "#8f6f45",
-              textAlign: "left"
-            }}
-          >
-            {t("appName")}
-          </Typography>
-          <LocaleSwitcher />
-        </Stack>
-        <Typography variant="body2" color="text.secondary">
-          {t("onboarding.subtitle")}
-        </Typography>
-      </Stack>
-
+      <OnboardingHeader t={t} />
       <Divider />
-
-      {onboardingStep === 0 ? (
-        <Stack spacing={2}>
-          <Typography variant="h6">{t("onboarding.step1Title")}</Typography>
-          <Typography variant="body2" color="text.secondary">
-            {t("onboarding.step1Hint")}
-          </Typography>
-          <StylePreferenceSelector
-            styleOptions={styleOptions}
-            selectedStyleCore={selectedStyleCore}
-            selectedStyleAesthetic={selectedStyleAesthetic}
-            onSelectStyleCore={onSelectStyleCore}
-            onSelectStyleAesthetic={onSelectStyleAesthetic}
-            showSectionHeading={false}
-            bodyVariant="body2"
-          />
-        </Stack>
-      ) : null}
-
-      {onboardingStep === 1 ? (
-        <Stack spacing={2}>
-          <Typography variant="h6">{t("onboarding.step2Title")}</Typography>
-          <Typography variant="body2" color="text.secondary">
-            {t("onboarding.step2Hint")}
-          </Typography>
-          <Stack direction="row" flexWrap="wrap" gap={1}>
-            {occasionOptions.map((item) => (
-              <Chip
-                key={item}
-                label={translateOption("occasions", item, locale)}
-                clickable
-                color={selectedOccasions.includes(item) ? "primary" : "default"}
-                onClick={() => onToggleOccasion(item)}
-              />
-            ))}
-          </Stack>
-        </Stack>
-      ) : null}
-
-      {onboardingStep === 2 ? (
-        <Stack spacing={2}>
-          <Typography variant="h6">{t("onboarding.step3Title")}</Typography>
-          <Typography variant="body2" color="text.secondary">
-            {t("onboarding.step3Hint")}
-          </Typography>
-          <Stack direction="row" flexWrap="wrap" gap={1}>
-            {seasonOptions.map((item) => (
-              <Chip
-                key={item}
-                label={translateOption("seasons", item, locale)}
-                clickable
-                color={selectedSeasons.includes(item) ? "primary" : "default"}
-                onClick={() => onToggleSeason(item)}
-              />
-            ))}
-          </Stack>
-        </Stack>
-      ) : null}
-
-      {onboardingStep === 3 ? (
-        <Stack spacing={2}>
-          <Typography variant="h6">{t("onboarding.step4Title")}</Typography>
-          <Typography variant="body2" color="text.secondary">
-            {t("onboarding.step4Hint")}
-          </Typography>
-          <Stack direction="row" flexWrap="wrap" gap={1}>
-            {audienceOptions.map((item) => (
-              <Chip
-                key={item}
-                label={translateOption("audience", item, locale)}
-                clickable
-                color={selectedAudience === item ? "primary" : "default"}
-                onClick={() => onSelectAudience(item)}
-              />
-            ))}
-          </Stack>
-        </Stack>
-      ) : null}
-
-      <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-        {onboardingStep > 0 ? (
-          <Button variant="outlined" onClick={onBack}>
-            {t("profile.back")}
-          </Button>
-        ) : null}
-        {onboardingStep < 3 ? (
-          <Button
-            variant="contained"
-            onClick={onNext}
-            disabled={
-              (onboardingStep === 0 && !selectedStyleCore) ||
-              (onboardingStep === 1 && selectedOccasions.length === 0) ||
-              (onboardingStep === 2 && selectedSeasons.length === 0)
-            }
-          >
-            {t("onboarding.next")}
-          </Button>
-        ) : (
-          <Button variant="contained" onClick={onFinish} disabled={!selectedAudience}>
-            {t("onboarding.start")}
-          </Button>
-        )}
-      </Stack>
-
-      {status.error ? (
-        <Typography variant="body2" color="error">
-          {status.error}
-        </Typography>
-      ) : null}
-      {status.infoKey ? (
-        <Typography variant="body2" color="text.secondary">
-          {t(status.infoKey, status.infoParams || undefined)}
-        </Typography>
-      ) : null}
+      <OnboardingStepContent props={props} t={t} locale={locale} />
+      <OnboardingActions props={props} t={t} />
+      <OnboardingStatus status={props.status} t={t} />
     </Stack>
   );
 }

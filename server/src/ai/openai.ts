@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { logError, logWarn } from "../logger.js";
 import {
   buildJsonObjectFormat,
   buildSystemPrompt,
@@ -7,7 +8,8 @@ import {
 import type {
   ImageAssetLike,
   LlmGenerateOptions,
-  ParsedGenerationError
+  ParsedGenerationError,
+  UserProfileLike
 } from "./types.js";
 
 const DEFAULT_CHAT_MODEL = "gpt-5.5";
@@ -55,7 +57,7 @@ function buildResponsesInput(user: string, images: ImageAssetLike[] = []) {
   for (const image of images) {
     const imageUrl = buildImageDataUrl(image);
     if (!imageUrl) {
-      console.warn(
+      logWarn(
         "[openai][image-skipped]",
         JSON.stringify({
           category: image?.category ?? null,
@@ -128,9 +130,7 @@ async function generateJsonWithLlm(prompt: string, options: LlmGenerateOptions =
   } = options;
   const client = getOpenAiClient();
   const { system, user } = splitSystemAndUserPrompt(prompt);
-  const systemPrompt = [system, systemPromptOverride || buildSystemPrompt(userProfile)]
-    .filter((part) => typeof part === "string" && part.trim().length > 0)
-    .join("\n\n");
+  const systemPrompt = buildOpenAiSystemPrompt(system, systemPromptOverride, userProfile);
   const input = buildResponsesPayload(user, images);
   onPayloadBuilt?.();
   const requestStartedAt = Date.now();
@@ -150,7 +150,7 @@ async function generateJsonWithLlm(prompt: string, options: LlmGenerateOptions =
       }
     });
   } catch (error) {
-    console.error(
+    logError(
       "[openai][request-failed]",
       JSON.stringify({
         model: DEFAULT_CHAT_MODEL,
@@ -164,24 +164,32 @@ async function generateJsonWithLlm(prompt: string, options: LlmGenerateOptions =
     throw error;
   }
 
-  let content = response?.output_text || "{}";
-  let json;
-  if (content) {
-    content = content.replace(/^[^{]*/, "").replace(/[^}]*$/, "");
-  }
-  try {
-    json = JSON.parse(content);
-  } catch (error) {
-    const parseError = new Error(
-      `Failed to parse JSON response: ${error instanceof Error ? error.message : String(error)}\nResponse content: ${content}`
-    ) as ParsedGenerationError;
-    parseError.rawSelectionText = typeof response?.output_text === "string" && response.output_text.trim().length > 0
-      ? response.output_text.trim()
-      : null;
-    throw parseError;
-  }
+  return { response, json: parseOpenAiJsonResponse(response) };
+}
 
-  return { response, json };
+function buildOpenAiSystemPrompt(system: string, systemPromptOverride: string | null, userProfile: UserProfileLike | null): string {
+  return [system, systemPromptOverride || buildSystemPrompt(userProfile)]
+    .filter((part) => typeof part === "string" && part.trim().length > 0)
+    .join("\n\n");
+}
+
+function parseOpenAiJsonResponse(response): unknown {
+  const content = String(response?.output_text || "{}").replace(/^[^{]*/, "").replace(/[^}]*$/, "");
+  try {
+    return JSON.parse(content);
+  } catch (error) {
+    throw buildOpenAiParseError(error, content, response?.output_text);
+  }
+}
+
+function buildOpenAiParseError(error: unknown, content: string, outputText: unknown): ParsedGenerationError {
+  const parseError = new Error(
+    `Failed to parse JSON response: ${error instanceof Error ? error.message : String(error)}\nResponse content: ${content}`
+  ) as ParsedGenerationError;
+  parseError.rawSelectionText = typeof outputText === "string" && outputText.trim().length > 0
+    ? outputText.trim()
+    : null;
+  return parseError;
 }
 
 export {

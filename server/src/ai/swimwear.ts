@@ -11,174 +11,22 @@ import {
   loadPromptTemplate,
   renderPromptTemplateContent
 } from "./promptTemplates.js";
-import type { LlmUsageLike, SwimwearCandidate, UserProfileLike } from "./types.js";
+import { countItemsByKey, extractLlmUsage, logWardrobeInfo } from "./swimwearLogging.js";
+import type { SwimwearCandidate, UserProfileLike } from "./types.js";
+import {
+  dedupeStrings,
+  formatItemColor,
+  getItemColors,
+  sanitizeProductRow,
+  shouldGenerateSwimwear,
+  toWardrobeUiItem
+} from "./swimwearUtils.js";
 
 const SWIMWEAR_PROMPT_TEMPLATE = loadPromptTemplate(
   new URL("../templates/prompt_woman_swimwear.yaml", import.meta.url)
 );
 const PROMPT_TEMPLATE = getPromptTemplateContent(SWIMWEAR_PROMPT_TEMPLATE, "user");
 const SYSTEM_PROMPT_TEMPLATE = getPromptTemplateContent(SWIMWEAR_PROMPT_TEMPLATE, "system");
-
-function formatLogValue(value: unknown) {
-  if (value === null) {
-    return "null";
-  }
-
-  if (value === undefined) {
-    return "undefined";
-  }
-
-  if (typeof value === "string") {
-    return value;
-  }
-
-  if (typeof value === "number" || typeof value === "boolean") {
-    return String(value);
-  }
-
-  return JSON.stringify(value);
-}
-
-function formatLogPayload(payload: Record<string, unknown> = {}) {
-  return Object.entries(payload)
-    .filter(([, value]) => value !== undefined)
-    .map(([key, value]) => `${key}: ${formatLogValue(value)}`)
-    .join(", ");
-}
-
-function getShortRequestId(logContext: { capsuleRequestId?: string | null } | null = null) {
-  const capsuleRequestId = String(logContext?.capsuleRequestId || "").trim();
-  if (!capsuleRequestId) {
-    return "";
-  }
-
-  return capsuleRequestId.split("-")[0] || capsuleRequestId.slice(0, 8);
-}
-
-function logWardrobeInfo(event: string, payload: Record<string, unknown> = {}, logContext: { capsuleRequestId?: string | null } | null = null) {
-  const shortRequestId = getShortRequestId(logContext);
-  const prefix = shortRequestId
-    ? `[${shortRequestId}][wardrobe-ai][${event}]`
-    : `[wardrobe-ai][${event}]`;
-  const message = formatLogPayload(payload);
-
-  if (message) {
-    console.info(`${prefix} ${message}`);
-    return;
-  }
-
-  console.info(prefix);
-}
-
-function countItemsByKey(items: Array<Record<string, unknown>> = [], key = "category") {
-  return items.reduce<Record<string, number>>((result, item) => {
-    const value = String(item?.[key] || "").trim();
-    if (!value) {
-      return result;
-    }
-
-    result[value] = (result[value] || 0) + 1;
-    return result;
-  }, {});
-}
-
-function extractLlmUsage(usage: LlmUsageLike | null = null) {
-  if (!usage) {
-    return {};
-  }
-
-  const result: Record<string, number> = {};
-
-  if (Number.isFinite(usage.input_tokens)) {
-    result.inputTokens = usage.input_tokens;
-  }
-
-  if (Number.isFinite(usage.output_tokens)) {
-    result.outputTokens = usage.output_tokens;
-  }
-
-  if (Number.isFinite(usage.total_tokens)) {
-    result.totalTokens = usage.total_tokens;
-  }
-
-  const reasoningTokens = usage?.output_tokens_details?.reasoning_tokens;
-  if (Number.isFinite(reasoningTokens)) {
-    result.reasoningTokens = reasoningTokens;
-  }
-
-  return result;
-}
-
-function normalizeSeasonList(season: UserProfileLike["season"]) {
-  if (Array.isArray(season)) {
-    return season
-      .map((value) => String(value || "").trim().toLowerCase())
-      .filter(Boolean);
-  }
-
-  if (typeof season === "string" && season.trim().length > 0) {
-    return [season.trim().toLowerCase()];
-  }
-
-  return [];
-}
-
-function shouldGenerateSwimwear(userProfile: UserProfileLike | null = null) {
-  return normalizeSeasonList(userProfile?.season).includes("summer");
-}
-
-function dedupeStrings(values: string[]) {
-  return [...new Set(values.filter((value) => typeof value === "string" && value.trim().length > 0))];
-}
-
-function getItemColors(items: SwimwearCandidate[], category: string) {
-  return dedupeStrings(
-    items
-      .filter((item) => item?.category === category)
-      .flatMap((item) => Array.isArray(item?.color_base) ? item.color_base : [])
-      .map((value) => String(value || "").trim().toLowerCase())
-  );
-}
-
-function formatItemColor(item: SwimwearCandidate) {
-  const colorParts = [];
-
-  if (Array.isArray(item?.color_base) && item.color_base.length > 0) {
-    colorParts.push(item.color_base.join(", "));
-  }
-
-  if (typeof item?.pattern === "string" && item.pattern.trim().length > 0) {
-    colorParts.push(item.pattern.trim());
-  }
-
-  if (item?.is_neutral) {
-    colorParts.push("neutral");
-  }
-
-  return colorParts.join(", ") || "not specified";
-}
-
-function sanitizeProductRow(item: unknown): SwimwearCandidate | null {
-  if (!item || typeof item !== "object") {
-    return null;
-  }
-
-  const normalized = { ...(item as Record<string, unknown>) } as Record<string, unknown>;
-  delete normalized.embedding;
-  delete normalized.distance;
-  return normalized;
-}
-
-function toWardrobeUiItem(item: SwimwearCandidate) {
-  return {
-    id: item?.id ?? null,
-    url: item?.url ?? "",
-    name: item?.name ?? "",
-    category: item?.category ?? "",
-    image_url: item?.image_url ?? "",
-    audience: item?.audience ?? ""
-  };
-}
 
 function buildBottomsContext(selectedCapsuleItems: SwimwearCandidate[]) {
   const bottoms = selectedCapsuleItems.filter((item) => item?.category === "bottom");
@@ -258,6 +106,43 @@ function selectSwimwearWithoutLlm(candidates: SwimwearCandidate[]) {
     candidates.map((item) => String(item?.id || "").trim()).filter(Boolean),
     candidates
   );
+}
+
+function buildEmptySwimwearResult() {
+  return {
+    items: [],
+    reasoning: null,
+    rawSelectionText: null
+  };
+}
+
+function getTrimmedText(value: unknown) {
+  return typeof value === "string" && value.trim().length > 0
+    ? value.trim()
+    : null;
+}
+
+function buildSwimwearResult(selectedItems: SwimwearCandidate[], reasoning = null, rawSelectionText = null) {
+  return {
+    items: selectedItems.map(toWardrobeUiItem),
+    reasoning,
+    rawSelectionText
+  };
+}
+
+function selectFemaleSwimwearWithoutLlm(candidates, llmResolution, logContext) {
+  logWardrobeInfo("swimwear-llm-skipped", {
+    reason: "profile_llm_none",
+    requestedLlm: llmResolution.requestedLlm,
+    usedModel: null
+  }, logContext);
+  const selectedItems = selectSwimwearWithoutLlm(candidates);
+  logWardrobeInfo("swimwear-nollm-completed", {
+    swimwearItemsTotal: selectedItems.length,
+    swimwearItemsByCategory: countItemsByKey(selectedItems)
+  }, logContext);
+
+  return buildSwimwearResult(selectedItems);
 }
 
 async function selectMaleSwimwear({
@@ -390,30 +275,11 @@ async function generateFemaleSwimwear({
   });
 
   if (candidates.length === 0) {
-    return {
-      items: [],
-      reasoning: null,
-      rawSelectionText: null
-    };
+    return buildEmptySwimwearResult();
   }
 
   if (isNoLlmProfileEnabled(userProfile)) {
-    logWardrobeInfo("swimwear-llm-skipped", {
-      reason: "profile_llm_none",
-      requestedLlm: llmResolution.requestedLlm,
-      usedModel: null
-    }, logContext);
-    const selectedItems = selectSwimwearWithoutLlm(candidates);
-    logWardrobeInfo("swimwear-nollm-completed", {
-      swimwearItemsTotal: selectedItems.length,
-      swimwearItemsByCategory: countItemsByKey(selectedItems)
-    }, logContext);
-
-    return {
-      items: selectedItems.map(toWardrobeUiItem),
-      reasoning: null,
-      rawSelectionText: null
-    };
+    return selectFemaleSwimwearWithoutLlm(candidates, llmResolution, logContext);
   }
 
   const prompt = getSwimwearPrompt(selectedCapsuleItems, candidates);
@@ -443,15 +309,11 @@ async function generateFemaleSwimwear({
     swimwearItemsByCategory: countItemsByKey(selectedItems)
   }, logContext);
 
-  return {
-    items: selectedItems.map(toWardrobeUiItem),
-    reasoning: typeof json?._reasoning === "string" && json._reasoning.trim().length > 0
-      ? json._reasoning.trim()
-      : null,
-    rawSelectionText: typeof response?.output_text === "string" && response.output_text.trim().length > 0
-      ? response.output_text.trim()
-      : null
-  };
+  return buildSwimwearResult(
+    selectedItems,
+    getTrimmedText(json?._reasoning),
+    getTrimmedText(response?.output_text)
+  );
 }
 
 async function generateSwimwearAddition({
@@ -466,11 +328,7 @@ async function generateSwimwearAddition({
   logContext?: { capsuleRequestId?: string | null } | null;
 }) {
   if (!shouldGenerateSwimwear(userProfile)) {
-    return {
-      items: [],
-      reasoning: null,
-      rawSelectionText: null
-    };
+    return buildEmptySwimwearResult();
   }
 
   const sql = getSqlClient();

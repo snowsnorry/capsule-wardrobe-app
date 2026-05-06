@@ -36,7 +36,6 @@ function buildDimensionChartCard({
   const activeValues = (draftState[dimension.key as keyof SearchDraftState] as string[] | undefined) || [];
   const formatLabel = (value: string) => getFacetLabel({ value, optionGroup: dimension.optionGroup, options, locale, translateOption });
   const commonProps = {
-    key: dimension.key,
     title: t(dimension.titleKey),
     subtitle: t("statistics.chartHint"),
     rows,
@@ -48,11 +47,12 @@ function buildDimensionChartCard({
 
   return BAR_CHART_DIMENSION_KEYS.has(dimension.key) ? (
     <StatisticsBarChart
+      key={dimension.key}
       {...commonProps}
       getFillConfig={(_value, index) => ({ color: FACET_COLORS[index % FACET_COLORS.length] })}
     />
   ) : (
-    <StatisticsDonutChart {...commonProps} />
+    <StatisticsDonutChart key={dimension.key} {...commonProps} />
   );
 }
 

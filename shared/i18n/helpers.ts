@@ -24,6 +24,21 @@ function interpolate(template: string, params: TranslationParams = {}): string {
   });
 }
 
+function resolveNextTranslationSegment(
+  dictionary: TranslationDictionary,
+  segments: readonly string[],
+  startIndex: number
+): { value: unknown; nextIndex: number } | null {
+  for (let end = segments.length; end > startIndex; end -= 1) {
+    const candidate = segments.slice(startIndex, end).join(".");
+    if (Object.prototype.hasOwnProperty.call(dictionary, candidate)) {
+      return { value: dictionary[candidate], nextIndex: end };
+    }
+  }
+
+  return null;
+}
+
 function resolveTranslationValue(dictionary: unknown, key: string): unknown {
   if (!dictionary || typeof dictionary !== "object" || typeof key !== "string" || key.length === 0) {
     return undefined;
@@ -39,24 +54,12 @@ function resolveTranslationValue(dictionary: unknown, key: string): unknown {
   let index = 0;
 
   while (current && typeof current === "object" && index < segments.length) {
-    const currentDictionary = current as TranslationDictionary;
-    let matched = false;
-
-    for (let end = segments.length; end > index; end -= 1) {
-      const candidate = segments.slice(index, end).join(".");
-      if (!Object.prototype.hasOwnProperty.call(currentDictionary, candidate)) {
-        continue;
-      }
-
-      current = currentDictionary[candidate];
-      index = end;
-      matched = true;
-      break;
-    }
-
-    if (!matched) {
+    const match = resolveNextTranslationSegment(current as TranslationDictionary, segments, index);
+    if (!match) {
       return undefined;
     }
+    current = match.value;
+    index = match.nextIndex;
   }
 
   return index === segments.length ? current : undefined;

@@ -3,6 +3,7 @@ import {
   PROFILE_IMAGE_LLM_VALUES
 } from "../../../shared/profileSettings.js";
 import type { UserProfileLike } from "./types.js";
+import { logWarn } from "../logger.js";
 
 type ImageLlmResolution =
   | {
@@ -35,7 +36,7 @@ function resolveImageLlmProvider(userProfile: UserProfileLike | null = null): Im
     }
   }
 
-  console.warn("[wardrobe-ai][image-llm-unknown-model]", JSON.stringify({
+  logWarn("[wardrobe-ai][image-llm-unknown-model]", JSON.stringify({
     requestedImageLlm: imageLlm,
     fallbackProvider: "openai",
     fallbackModel: "gpt-image-2"

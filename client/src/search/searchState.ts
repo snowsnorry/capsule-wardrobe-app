@@ -55,6 +55,7 @@ type SearchStateSource = Omit<SearchState, "brand" | "audience" | "category" | "
   fit?: SearchFilterValue | SearchFilterValue[];
   closureType?: SearchFilterValue | SearchFilterValue[];
 };
+type SearchArrayField = keyof Pick<SearchState, "brand" | "audience" | "category" | "season" | "formalityLevel" | "style" | "occasions" | "color" | "pattern" | "silhouette" | "fit" | "closureType">;
 
 type SearchDraftState = SearchState & {
   priceEnabled: boolean;
@@ -113,23 +114,40 @@ const EMPTY_SEARCH_OPTIONS = Object.freeze({
   priceRange: { min: null, max: null }
 }) satisfies SearchOptions;
 
+const SEARCH_ARRAY_FIELDS: readonly SearchArrayField[] = [
+  "brand",
+  "audience",
+  "category",
+  "season",
+  "formalityLevel",
+  "style",
+  "occasions",
+  "color",
+  "pattern",
+  "silhouette",
+  "fit",
+  "closureType"
+];
+
+const SEARCH_OPTION_ARRAY_FIELDS = [
+  "brands", "categories", "seasons", "formalityLevels", "styles", "occasions",
+  "audience", "colors", "patterns", "silhouettes", "fits", "closureTypes"
+] as const;
+
+function normalizeSearchArrayValue(value: SearchFilterValue | SearchFilterValue[] | undefined): SearchFilterValue[] {
+  return Array.isArray(value) ? value : (value ? [value] : []);
+}
+
 function createSearchState(savedSearch: Partial<SearchStateSource> | null | undefined, priceRange: SearchPriceRange): SearchDraftState {
   const base = { ...INITIAL_SEARCH_STATE, ...(savedSearch || {}) };
   const hasPriceBounds = base.priceMin !== null || base.priceMax !== null;
+  const normalizedArrays = Object.fromEntries(
+    SEARCH_ARRAY_FIELDS.map((field) => [field, normalizeSearchArrayValue(base[field])])
+  ) as Pick<SearchState, SearchArrayField>;
+
   return {
     ...base,
-    brand: Array.isArray(base.brand) ? base.brand : (base.brand ? [base.brand] : []),
-    audience: Array.isArray(base.audience) ? base.audience : (base.audience ? [base.audience] : []),
-    category: Array.isArray(base.category) ? base.category : (base.category ? [base.category] : []),
-    season: Array.isArray(base.season) ? base.season : (base.season ? [base.season] : []),
-    formalityLevel: Array.isArray(base.formalityLevel) ? base.formalityLevel : (base.formalityLevel ? [base.formalityLevel] : []),
-    style: Array.isArray(base.style) ? base.style : (base.style ? [base.style] : []),
-    occasions: Array.isArray(base.occasions) ? base.occasions : (base.occasions ? [base.occasions] : []),
-    color: Array.isArray(base.color) ? base.color : (base.color ? [base.color] : []),
-    pattern: Array.isArray(base.pattern) ? base.pattern : (base.pattern ? [base.pattern] : []),
-    silhouette: Array.isArray(base.silhouette) ? base.silhouette : (base.silhouette ? [base.silhouette] : []),
-    fit: Array.isArray(base.fit) ? base.fit : (base.fit ? [base.fit] : []),
-    closureType: Array.isArray(base.closureType) ? base.closureType : (base.closureType ? [base.closureType] : []),
+    ...normalizedArrays,
     priceEnabled: hasPriceBounds,
     priceMinDraft: hasPriceBounds
       ? base.priceMin ?? priceRange.min ?? 0
@@ -240,19 +258,12 @@ function sortAudienceValues(items: SearchFilterValue[]): SearchFilterValue[] {
 }
 
 function buildSearchOptionsPayload(optionsResponse: Partial<SearchOptions> = {}): SearchOptions {
+  const arrayOptions = Object.fromEntries(
+    SEARCH_OPTION_ARRAY_FIELDS.map((field) => [field, optionsResponse[field] || []])
+  ) as Pick<SearchOptions, (typeof SEARCH_OPTION_ARRAY_FIELDS)[number]>;
+
   return {
-    brands: optionsResponse.brands || [],
-    categories: optionsResponse.categories || [],
-    seasons: optionsResponse.seasons || [],
-    formalityLevels: optionsResponse.formalityLevels || [],
-    styles: optionsResponse.styles || [],
-    occasions: optionsResponse.occasions || [],
-    audience: optionsResponse.audience || [],
-    colors: optionsResponse.colors || [],
-    patterns: optionsResponse.patterns || [],
-    silhouettes: optionsResponse.silhouettes || [],
-    fits: optionsResponse.fits || [],
-    closureTypes: optionsResponse.closureTypes || [],
+    ...arrayOptions,
     priceRange: optionsResponse.priceRange || { min: null, max: null }
   };
 }
@@ -363,25 +374,9 @@ function buildActiveFilterChips({
   return chips;
 }
 
-export {
-  AUDIENCE_DISPLAY_ORDER,
-  CORE_DISPLAY_ORDER,
-  EMPTY_SEARCH_OPTIONS,
-  INITIAL_SEARCH_STATE,
-  SEASON_DISPLAY_ORDER,
-  buildSearchOptionsPayload,
-  buildActiveFilterChips,
-  clampPriceValue,
-  createSearchState,
-  getFacetLabel,
-  normalizeBrandOption,
-  serializeDraftState,
-  sortAudienceValues,
-  sortCoreValues,
-  sortItemsByLabel,
-  sortSeasonValues,
-  toggleSelection
-};
+export { AUDIENCE_DISPLAY_ORDER, CORE_DISPLAY_ORDER, EMPTY_SEARCH_OPTIONS, INITIAL_SEARCH_STATE, SEASON_DISPLAY_ORDER };
+export { buildSearchOptionsPayload, buildActiveFilterChips, clampPriceValue, createSearchState, getFacetLabel };
+export { normalizeBrandOption, serializeDraftState, sortAudienceValues, sortCoreValues, sortItemsByLabel, sortSeasonValues, toggleSelection };
 
 export type {
   ActiveFilterChip,

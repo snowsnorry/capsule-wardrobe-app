@@ -1,76 +1,27 @@
 import { GoogleGenAI } from "@google/genai";
-import { randomUUID } from "node:crypto";
-import { writeFileSync, unlinkSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { z } from "zod";
-import { zodToJsonSchema } from "zod-to-json-schema";
 import {
-  buildJsonObjectFormat,
   buildSystemPrompt,
   splitSystemAndUserPrompt
 } from "./llmPrompts.js";
+import { buildGeminiStructuredOutput, buildZodSchemaFromJsonSchema } from "./geminiSchema.js";
 import { releaseImageBuffers } from "./openai.js";
+import { logWarn } from "../logger.js";
+import { cleanupUploadedGeminiFiles, uploadBufferToGemini, uploadImagesToGemini } from "./geminiUploads.js";
 import type {
-  ImageAssetLike,
-  JsonSchema,
-  JsonSchemaFormat,
   LlmGenerateOptions,
   ParsedGenerationError,
   UserProfileLike
 } from "./types.js";
+import type {
+  GeminiClientLike,
+  GeminiGenerateContentResponseLike,
+  GeminiUploadedFileLike
+} from "./geminiTypes.js";
 
 const DEFAULT_CHAT_MODEL = "gemini-2.5-pro";
 const ALLOWED_CHAT_MODELS = ["gemini-2.5-pro"];
 const DEFAULT_API_VERSION = "v1beta";
 const GEMINI_HTTP_TIMEOUT_MS = 2 * 60 * 1000;
-
-type GeminiUploadedFileLike = {
-  uri?: string | null;
-  name?: string | null;
-  mimeType?: string | null;
-};
-
-type GeminiContentPart = { fileData: { fileUri: string; mimeType: string } } | { text: string };
-type GeminiJsonSchemaLike = {
-  type?: string;
-  additionalProperties?: boolean;
-  properties?: Record<string, GeminiJsonSchemaLike>;
-  required?: string[];
-  items?: GeminiJsonSchemaLike;
-};
-type GeminiGenerateContentPayload = {
-  model: string;
-  contents: GeminiContentPart[] | [""];
-  config: {
-    systemInstruction?: string;
-    temperature: number;
-    topP: number;
-    maxOutputTokens: number;
-    responseMimeType: "application/json";
-    responseJsonSchema: GeminiJsonSchemaLike;
-  };
-};
-
-type GeminiGenerateContentResponseLike = {
-  text?: string | null;
-  candidates?: Array<{ finishReason?: string; content?: { parts?: unknown[] } }>;
-};
-
-type GeminiClientLike = {
-  models: {
-    generateContent: (params: GeminiGenerateContentPayload) => Promise<GeminiGenerateContentResponseLike>;
-  };
-  files: {
-    upload: (params: {
-      file: string;
-      config: { mimeType: string; displayName?: string };
-    }) => Promise<GeminiUploadedFileLike>;
-    delete: (params: { name: string }) => Promise<unknown>;
-  };
-  apiKey?: string;
-  apiVersion?: string;
-};
 
 function resolveChatModel(userProfile: UserProfileLike | null = null) {
   const llm = String(userProfile?.llm || "").trim();
@@ -119,138 +70,88 @@ function buildGeminiSystemInstruction(
 
   return [systemText, generatedSystemText]
     .filter((part) => typeof part === "string" && part.trim().length > 0)
-    .join("\n\n");
+	    .join("\n\n");
 }
 
-function buildZodSchemaFromJsonSchema(schema: JsonSchema | undefined | null): z.ZodTypeAny {
-  if (!schema || typeof schema !== "object") {
-    return z.any();
-  }
+type CreateGeminiClientImpl = ({
+  apiKey,
+  apiVersion,
+  httpOptions
+}: {
+  apiKey: string;
+  apiVersion: string;
+  httpOptions: { timeout: number };
+}) => GeminiClientLike;
 
-  const type = Array.isArray(schema.type) ? schema.type : [schema.type];
-  const supportsNull = type.includes("null");
-  const nonNullType = type.find((value) => value !== "null");
-
-  let zodSchema;
-
-  if (Array.isArray(schema.enum) && schema.enum.length > 0) {
-    const enumValues = schema.enum.filter((value): value is string => typeof value === "string");
-    zodSchema = enumValues.length > 0
-      ? z.enum(enumValues as [string, ...string[]])
-      : z.string();
-  } else {
-    switch (nonNullType) {
-      case "object": {
-        const properties = schema.properties && typeof schema.properties === "object" ? schema.properties : {};
-        const required = new Set(Array.isArray(schema.required) ? schema.required : []);
-        const shape = Object.fromEntries(
-          Object.entries(properties).map(([key, value]) => {
-            const propertySchema = buildZodSchemaFromJsonSchema(value);
-            return [key, required.has(key) ? propertySchema : propertySchema.optional()];
-          })
-        );
-        zodSchema = z.object(shape);
-        if (schema.additionalProperties === false) {
-          zodSchema = zodSchema.strict();
-        }
-        break;
-      }
-      case "array": {
-        const itemSchema = buildZodSchemaFromJsonSchema(schema.items);
-        zodSchema = z.array(itemSchema);
-        if (typeof schema.minItems === "number") {
-          zodSchema = zodSchema.min(schema.minItems);
-        }
-        if (typeof schema.maxItems === "number") {
-          zodSchema = zodSchema.max(schema.maxItems);
-        }
-        break;
-      }
-      case "integer":
-        zodSchema = z.number().int();
-        if (typeof schema.minimum === "number") {
-          zodSchema = zodSchema.min(schema.minimum);
-        }
-        if (typeof schema.maximum === "number") {
-          zodSchema = zodSchema.max(schema.maximum);
-        }
-        break;
-      case "number":
-        zodSchema = z.number();
-        if (typeof schema.minimum === "number") {
-          zodSchema = zodSchema.min(schema.minimum);
-        }
-        if (typeof schema.maximum === "number") {
-          zodSchema = zodSchema.max(schema.maximum);
-        }
-        break;
-      case "boolean":
-        zodSchema = z.boolean();
-        break;
-      case "string":
-      default:
-        zodSchema = z.string();
-        break;
-    }
-  }
-
-  if (typeof schema.description === "string" && schema.description.trim().length > 0) {
-    zodSchema = zodSchema.describe(schema.description.trim());
-  } else if (typeof schema.title === "string" && schema.title.trim().length > 0) {
-    zodSchema = zodSchema.describe(schema.title.trim());
-  }
-
-  return supportsNull ? zodSchema.nullable() : zodSchema;
-}
-
-function buildGeminiStructuredOutput(format: JsonSchemaFormat | null = null, userProfile: UserProfileLike | null = null) {
-  const resolvedFormat = format || buildJsonObjectFormat(userProfile);
-  const schema = resolvedFormat?.schema;
-  const zodSchema = buildZodSchemaFromJsonSchema(schema);
-
+const defaultCreateGeminiClient: CreateGeminiClientImpl = ({ apiKey, apiVersion, httpOptions }) => {
+  const sdkClient = new GoogleGenAI({ apiKey, apiVersion, httpOptions });
   return {
-    zodSchema,
-    responseJsonSchema: zodToJsonSchema(zodSchema)
+    apiKey,
+    apiVersion,
+    models: {
+      generateContent: (params) => sdkClient.models.generateContent(params as Parameters<typeof sdkClient.models.generateContent>[0]) as Promise<GeminiGenerateContentResponseLike>
+    },
+    files: {
+      upload: (params) => sdkClient.files.upload(params as Parameters<typeof sdkClient.files.upload>[0]) as Promise<GeminiUploadedFileLike>,
+      delete: (params) => sdkClient.files.delete(params as Parameters<typeof sdkClient.files.delete>[0])
+    }
+  };
+};
+
+function logGeminiFinishReason(response) {
+  const finishReason = response?.candidates?.[0]?.finishReason;
+  if (finishReason && finishReason !== "STOP") {
+    logWarn(`[gemini][generation-aborted] Generation was interrupted by the server: ${finishReason}`);
+  }
+}
+
+function getGeminiResponseContent(response) {
+  const content = typeof response?.text === "string" ? response.text : "{}";
+  return content ? content.replace(/^[^{]*/, "").replace(/[^}]*$/, "") : content;
+}
+
+function getGeminiRawText(response) {
+  return typeof response?.text === "string" && response.text.trim().length > 0
+    ? response.text.trim()
+    : null;
+}
+
+function parseGeminiJsonResponse(response, zodSchema) {
+  const content = getGeminiResponseContent(response);
+  try {
+    return zodSchema.parse(JSON.parse(content));
+  } catch (error) {
+    const parseError = new Error(
+      `Failed to parse JSON response: ${error instanceof Error ? error.message : String(error)}\nResponse content: ${content}`
+    ) as ParsedGenerationError;
+    parseError.rawSelectionText = getGeminiRawText(response);
+    throw parseError;
+  }
+}
+
+function buildGeminiRequestPayload({ userProfile, contents, systemInstruction, responseJsonSchema }) {
+  return {
+    model: resolveChatModel(userProfile),
+    contents,
+    config: {
+      systemInstruction: systemInstruction || undefined,
+      temperature: 0.2,
+      topP: 0.9,
+      maxOutputTokens: 8000,
+      responseMimeType: "application/json",
+      responseJsonSchema
+    }
   };
 }
 
 function createGeminiClient({
-  createClientImpl = ({
-    apiKey,
-    apiVersion,
-    httpOptions
-  }: {
-    apiKey: string;
-    apiVersion: string;
-    httpOptions: { timeout: number };
-  }): GeminiClientLike => {
-    const sdkClient = new GoogleGenAI({ apiKey, apiVersion, httpOptions });
-    return {
-      apiKey,
-      apiVersion,
-      models: {
-        generateContent: (params) => sdkClient.models.generateContent(params as Parameters<typeof sdkClient.models.generateContent>[0]) as Promise<GeminiGenerateContentResponseLike>
-      },
-      files: {
-        upload: (params) => sdkClient.files.upload(params as Parameters<typeof sdkClient.files.upload>[0]) as Promise<GeminiUploadedFileLike>,
-        delete: (params) => sdkClient.files.delete(params as Parameters<typeof sdkClient.files.delete>[0])
-      }
-    };
-  },
+  createClientImpl = defaultCreateGeminiClient,
   getApiKeyImpl = () => process.env.GEMINI_API_KEY,
   cache = true,
   uploadBufferToGeminiImpl = uploadBufferToGemini,
   cleanupUploadedFilesImpl = cleanupUploadedGeminiFiles
 }: {
-  createClientImpl?: ({
-    apiKey,
-    apiVersion,
-    httpOptions
-  }: {
-    apiKey: string;
-    apiVersion: string;
-    httpOptions: { timeout: number };
-  }) => GeminiClientLike;
+  createClientImpl?: CreateGeminiClientImpl;
   getApiKeyImpl?: () => string | undefined;
   cache?: boolean;
   uploadBufferToGeminiImpl?: typeof uploadBufferToGemini;
@@ -299,42 +200,16 @@ function createGeminiClient({
     releaseImageBuffers(images);
     onPayloadBuilt?.();
 
-    const requestPayload = {
-      model: resolveChatModel(userProfile),
+    const requestPayload = buildGeminiRequestPayload({
+      userProfile,
       contents,
-      config: {
-        systemInstruction: systemInstruction || undefined,
-        temperature: 0.2,
-        topP: 0.9,
-        maxOutputTokens: 8000,
-        responseMimeType: "application/json",
-        responseJsonSchema
-      }
-    };
+      systemInstruction,
+      responseJsonSchema
+    });
     try {
       const response = await client.models.generateContent(requestPayload);
-
-      const finishReason = response?.candidates?.[0]?.finishReason;
-      if (finishReason && finishReason !== "STOP") {
-        console.warn(`[gemini][generation-aborted] Generation was interrupted by the server: ${finishReason}`);
-      }
-
-      let content = typeof response?.text === "string" ? response.text : "{}";
-      let json;
-      if (content) {
-        content = content.replace(/^[^{]*/, "").replace(/[^}]*$/, "");
-      }
-      try {
-        json = zodSchema.parse(JSON.parse(content));
-      } catch (error) {
-        const parseError = new Error(
-          `Failed to parse JSON response: ${error instanceof Error ? error.message : String(error)}\nResponse content: ${content}`
-        ) as ParsedGenerationError;
-        parseError.rawSelectionText = typeof response?.text === "string" && response.text.trim().length > 0
-          ? response.text.trim()
-          : null;
-        throw parseError;
-      }
+      logGeminiFinishReason(response);
+      const json = parseGeminiJsonResponse(response, zodSchema);
 
       return {
         response: {
@@ -354,118 +229,6 @@ function createGeminiClient({
   };
 }
 
-async function uploadImagesToGemini(
-  client: Pick<GeminiClientLike, "files">,
-  images: ImageAssetLike[],
-  uploadBufferToGeminiImpl: typeof uploadBufferToGemini
-) {
-  const uploadedFiles: GeminiUploadedFileLike[] = [];
-
-  for (const image of images || []) {
-    const uploadedFile = await uploadBufferToGeminiImpl(client, image);
-    if (uploadedFile) {
-      uploadedFiles.push(uploadedFile);
-    }
-  }
-
-  return uploadedFiles;
-}
-
-function getMimeType(image: ImageAssetLike) {
-  return typeof image?.mimeType === "string" && image.mimeType.trim().length > 0
-    ? image.mimeType.trim()
-    : "image/jpeg";
-}
-
-function getTempFileExtension(mimeType: string) {
-  switch (mimeType) {
-    case "image/png":
-      return ".png";
-    case "image/webp":
-      return ".webp";
-    case "image/gif":
-      return ".gif";
-    case "image/jpeg":
-    case "image/jpg":
-    default:
-      return ".jpg";
-  }
-}
-
-async function uploadBufferToGemini(
-  client: Pick<GeminiClientLike, "files">,
-  image: ImageAssetLike,
-  {
-    writeFileSyncImpl = writeFileSync,
-    unlinkSyncImpl = unlinkSync,
-    tmpdirImpl = tmpdir,
-    joinImpl = join,
-    randomUUIDImpl = randomUUID
-  }: {
-    writeFileSyncImpl?: (path: string, data: Buffer) => void;
-    unlinkSyncImpl?: (path: string) => void;
-    tmpdirImpl?: () => string;
-    joinImpl?: (...parts: string[]) => string;
-    randomUUIDImpl?: () => string;
-  } = {}
-) {
-  const buffer = image?.buffer;
-  if (!Buffer.isBuffer(buffer) || buffer.length === 0) {
-    console.warn(
-      "[gemini][image-skipped]",
-      JSON.stringify({
-        category: image?.category ?? null,
-        filename: image?.filename ?? null,
-        reason: "missing_buffer"
-      })
-    );
-    return null;
-  }
-
-  const mimeType = getMimeType(image);
-  const tempFilePath = joinImpl(tmpdirImpl(), `${randomUUIDImpl()}${getTempFileExtension(mimeType)}`);
-
-  try {
-    writeFileSyncImpl(tempFilePath, buffer);
-    return await client.files.upload({
-      file: tempFilePath,
-      config: {
-        mimeType,
-        displayName: typeof image?.filename === "string" && image.filename.trim().length > 0
-          ? image.filename.trim()
-          : undefined
-      }
-    });
-  } finally {
-    try {
-      unlinkSyncImpl(tempFilePath);
-    } catch {
-      // Ignore cleanup failures for local temp files.
-    }
-  }
-}
-
-async function cleanupUploadedGeminiFiles(
-  client: Pick<GeminiClientLike, "files">,
-  uploadedFiles: GeminiUploadedFileLike[] = []
-) {
-  for (const uploadedFile of uploadedFiles) {
-    const name = typeof uploadedFile?.name === "string" ? uploadedFile.name.trim() : "";
-    if (!name) {
-      continue;
-    }
-
-    try {
-      await client.files.delete({ name });
-    } catch (error) {
-      console.warn("[gemini][file-delete-failed]", JSON.stringify({
-        name,
-        message: error instanceof Error ? error.message : "unknown_error"
-      }));
-    }
-  }
-}
-
 const geminiClient = createGeminiClient();
 const { generateJsonWithLlm, getGeminiClient } = geminiClient;
 
@@ -483,3 +246,7 @@ export {
   uploadBufferToGemini,
   uploadImagesToGemini
 };
+export type {
+  GeminiClientLike,
+  GeminiUploadedFileLike
+} from "./geminiTypes.js";

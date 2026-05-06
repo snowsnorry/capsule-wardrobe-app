@@ -76,32 +76,168 @@ function sortPatternOptions(patternOptions: string[], locale: string) {
   });
 }
 
-function ProfileScreen({
-  styleOptions,
-  occasionOptions,
-  seasonOptions,
-  audienceOptions,
-  accentColorOptions,
-  patternOptions,
+function ProfileChipSection({
+  title,
+  hint,
+  options,
+  selectedValues,
+  onSelect,
+  optionGroup,
+  locale
+}: {
+  title: string;
+  hint: string;
+  options: string[];
+  selectedValues: string[];
+  onSelect: (value: string) => void;
+  optionGroup: "occasions" | "seasons" | "audience" | "patterns";
+  locale: string;
+}) {
+  return (
+    <Stack spacing={2}>
+      <Typography variant="h6">{title}</Typography>
+      <Typography variant="body2" color="text.secondary">{hint}</Typography>
+      <Stack direction="row" flexWrap="wrap" gap={1}>
+        {options.map((item) => (
+          <Chip
+            key={item}
+            label={translateOption(optionGroup, item, locale)}
+            clickable
+            color={selectedValues.includes(item) ? "primary" : "default"}
+            onClick={() => onSelect(item)}
+          />
+        ))}
+      </Stack>
+    </Stack>
+  );
+}
+
+function ProfileActions({
+  status,
   selectedStyleCore,
-  selectedStyleAesthetic,
   selectedOccasions,
   selectedSeasons,
   selectedAudience,
-  selectedAccentColor,
-  selectedPattern,
-  status,
-  onSelectStyleCore,
-  onSelectStyleAesthetic,
-  onToggleOccasion,
-  onToggleSeason,
-  onSelectAudience,
-  onSelectAccentColor,
-  onSelectPattern,
+  onBack,
   onSave,
-  onDelete,
-  onBack
-}: ProfileScreenProps) {
+  onOpenDelete,
+  t
+}: {
+  status: ScreenStatus;
+  selectedStyleCore: string;
+  selectedOccasions: string[];
+  selectedSeasons: string[];
+  selectedAudience: string;
+  onBack: () => void;
+  onSave: () => void;
+  onOpenDelete: () => void;
+  t: (key: string) => string;
+}) {
+  const isSaveDisabled = status.loading
+    || !selectedStyleCore
+    || selectedOccasions.length === 0
+    || selectedSeasons.length === 0
+    || !selectedAudience;
+
+  return (
+    <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+      <Button variant="outlined" onClick={onBack}>{t("profile.back")}</Button>
+      <Button variant="contained" onClick={onSave} disabled={isSaveDisabled}>
+        {t("profile.save")}
+      </Button>
+      <Button variant="text" color="error" onClick={onOpenDelete} disabled={status.loading}>
+        {t("profile.delete")}
+      </Button>
+    </Stack>
+  );
+}
+
+function DeleteProfileDialog({
+  open,
+  loading,
+  onClose,
+  onConfirm,
+  t
+}: {
+  open: boolean;
+  loading: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  t: (key: string) => string;
+}) {
+  return (
+    <Dialog open={open} onClose={onClose}>
+      <DialogTitle>{t("profile.deleteConfirmTitle")}</DialogTitle>
+      <DialogContent>
+        <DialogContentText>{t("profile.deleteConfirmBody")}</DialogContentText>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose} disabled={loading}>{t("profile.deleteConfirmCancel")}</Button>
+        <Button onClick={onConfirm} color="error" variant="contained" disabled={loading}>
+          {t("profile.deleteConfirmConfirm")}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+function ProfilePreferenceSections({
+  props,
+  normalizedSelectedPattern,
+  sortedPatternOptions,
+  onOpenDelete,
+  t,
+  locale
+}: {
+  props: ProfileScreenProps;
+  normalizedSelectedPattern: string;
+  sortedPatternOptions: string[];
+  onOpenDelete: () => void;
+  t: (key: string) => string;
+  locale: string;
+}) {
+  return (
+    <>
+      <StylePreferenceSelector
+        styleOptions={props.styleOptions}
+        selectedStyleCore={props.selectedStyleCore}
+        selectedStyleAesthetic={props.selectedStyleAesthetic}
+        onSelectStyleCore={props.onSelectStyleCore}
+        onSelectStyleAesthetic={props.onSelectStyleAesthetic}
+        titleVariant="h6"
+        bodyVariant="body2"
+      />
+      <ProfileChipSection title={t("profile.occasionsTitle")} hint={t("profile.occasionsHint")} options={props.occasionOptions} selectedValues={props.selectedOccasions} onSelect={props.onToggleOccasion} optionGroup="occasions" locale={locale} />
+      <ProfileChipSection title={t("profile.seasonsTitle")} hint={t("profile.seasonsHint")} options={props.seasonOptions} selectedValues={props.selectedSeasons} onSelect={props.onToggleSeason} optionGroup="seasons" locale={locale} />
+      <ProfileChipSection title={t("profile.audienceTitle")} hint={t("profile.audienceHint")} options={props.audienceOptions} selectedValues={[props.selectedAudience]} onSelect={props.onSelectAudience} optionGroup="audience" locale={locale} />
+      <Stack spacing={2}>
+        <Typography variant="h6">{t("profile.accentColorTitle")}</Typography>
+        <Typography variant="body2" color="text.secondary">{t("profile.accentColorHint")}</Typography>
+        <AccentColorChips options={props.accentColorOptions} selectedValue={props.selectedAccentColor} onSelect={props.onSelectAccentColor} />
+      </Stack>
+      <ProfileChipSection title={t("profile.patternTitle")} hint={t("profile.patternHint")} options={sortedPatternOptions} selectedValues={[normalizedSelectedPattern]} onSelect={props.onSelectPattern} optionGroup="patterns" locale={locale} />
+      <ProfileActions
+        status={props.status}
+        selectedStyleCore={props.selectedStyleCore}
+        selectedOccasions={props.selectedOccasions}
+        selectedSeasons={props.selectedSeasons}
+        selectedAudience={props.selectedAudience}
+        onBack={props.onBack}
+        onSave={props.onSave}
+        onOpenDelete={onOpenDelete}
+        t={t}
+      />
+    </>
+  );
+}
+
+function ProfileScreen(props: ProfileScreenProps) {
+  const {
+    patternOptions,
+    selectedPattern,
+    status,
+    onDelete
+  } = props;
   const { t, locale } = useI18n();
   const normalizedSelectedPattern = selectedPattern ?? "solid";
   const sortedPatternOptions = sortPatternOptions(patternOptions, locale);
@@ -143,121 +279,14 @@ function ProfileScreen({
         {t("profile.subtitle")}
       </Typography>
 
-      <StylePreferenceSelector
-        styleOptions={styleOptions}
-        selectedStyleCore={selectedStyleCore}
-        selectedStyleAesthetic={selectedStyleAesthetic}
-        onSelectStyleCore={onSelectStyleCore}
-        onSelectStyleAesthetic={onSelectStyleAesthetic}
-        titleVariant="h6"
-        bodyVariant="body2"
+      <ProfilePreferenceSections
+        props={props}
+        normalizedSelectedPattern={normalizedSelectedPattern}
+        sortedPatternOptions={sortedPatternOptions}
+        onOpenDelete={handleOpenDelete}
+        t={t}
+        locale={locale}
       />
-
-      <Stack spacing={2}>
-        <Typography variant="h6">{t("profile.occasionsTitle")}</Typography>
-        <Typography variant="body2" color="text.secondary">
-          {t("profile.occasionsHint")}
-        </Typography>
-        <Stack direction="row" flexWrap="wrap" gap={1}>
-          {occasionOptions.map((item) => (
-            <Chip
-              key={item}
-              label={translateOption("occasions", item, locale)}
-              clickable
-              color={selectedOccasions.includes(item) ? "primary" : "default"}
-              onClick={() => onToggleOccasion(item)}
-            />
-          ))}
-        </Stack>
-      </Stack>
-
-      <Stack spacing={2}>
-        <Typography variant="h6">{t("profile.seasonsTitle")}</Typography>
-        <Typography variant="body2" color="text.secondary">
-          {t("profile.seasonsHint")}
-        </Typography>
-        <Stack direction="row" flexWrap="wrap" gap={1}>
-          {seasonOptions.map((item) => (
-            <Chip
-              key={item}
-              label={translateOption("seasons", item, locale)}
-              clickable
-              color={selectedSeasons.includes(item) ? "primary" : "default"}
-              onClick={() => onToggleSeason(item)}
-            />
-          ))}
-        </Stack>
-      </Stack>
-
-      <Stack spacing={2}>
-        <Typography variant="h6">{t("profile.audienceTitle")}</Typography>
-        <Typography variant="body2" color="text.secondary">
-          {t("profile.audienceHint")}
-        </Typography>
-        <Stack direction="row" flexWrap="wrap" gap={1}>
-          {audienceOptions.map((item) => (
-            <Chip
-              key={item}
-              label={translateOption("audience", item, locale)}
-              clickable
-              color={selectedAudience === item ? "primary" : "default"}
-              onClick={() => onSelectAudience(item)}
-            />
-          ))}
-        </Stack>
-      </Stack>
-
-      <Stack spacing={2}>
-        <Typography variant="h6">{t("profile.accentColorTitle")}</Typography>
-        <Typography variant="body2" color="text.secondary">
-          {t("profile.accentColorHint")}
-        </Typography>
-        <AccentColorChips
-          options={accentColorOptions}
-          selectedValue={selectedAccentColor}
-          onSelect={onSelectAccentColor}
-        />
-      </Stack>
-
-      <Stack spacing={2}>
-        <Typography variant="h6">{t("profile.patternTitle")}</Typography>
-        <Typography variant="body2" color="text.secondary">
-          {t("profile.patternHint")}
-        </Typography>
-        <Stack direction="row" flexWrap="wrap" gap={1}>
-          {sortedPatternOptions.map((item) => (
-            <Chip
-              key={item}
-              label={translateOption("patterns", item, locale)}
-              clickable
-              color={normalizedSelectedPattern === item ? "primary" : "default"}
-              onClick={() => onSelectPattern(item)}
-            />
-          ))}
-        </Stack>
-      </Stack>
-
-      <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-        <Button variant="outlined" onClick={onBack}>
-          {t("profile.back")}
-        </Button>
-        <Button
-          variant="contained"
-          onClick={onSave}
-          disabled={
-            status.loading ||
-            !selectedStyleCore ||
-            selectedOccasions.length === 0 ||
-            selectedSeasons.length === 0 ||
-            !selectedAudience
-          }
-        >
-          {t("profile.save")}
-        </Button>
-        <Button variant="text" color="error" onClick={handleOpenDelete} disabled={status.loading}>
-          {t("profile.delete")}
-        </Button>
-      </Stack>
 
       {status.error ? (
         <Typography variant="body2" color="error">
@@ -269,27 +298,13 @@ function ProfileScreen({
           {t(status.infoKey, status.infoParams || undefined)}
         </Typography>
       ) : null}
-      <Dialog open={isDeleteOpen} onClose={handleCloseDelete}>
-        <DialogTitle>{t("profile.deleteConfirmTitle")}</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            {t("profile.deleteConfirmBody")}
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDelete} disabled={status.loading}>
-            {t("profile.deleteConfirmCancel")}
-          </Button>
-          <Button
-            onClick={handleConfirmDelete}
-            color="error"
-            variant="contained"
-            disabled={status.loading}
-          >
-            {t("profile.deleteConfirmConfirm")}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <DeleteProfileDialog
+        open={isDeleteOpen}
+        loading={status.loading}
+        onClose={handleCloseDelete}
+        onConfirm={handleConfirmDelete}
+        t={t}
+      />
     </Stack>
   );
 }

@@ -1,115 +1,65 @@
 function formatItemDescription(item) {
-  const parts = [];
+  const description = ["color", "pattern", "name"]
+    .map((key) => getTrimmedItemValue(item, key))
+    .filter(Boolean)
+    .join(" ");
+  const material = getTrimmedItemValue(item, "materials") || getTrimmedItemValue(item, "material");
+  return material ? `${description} (materials: ${material})`.trim() : description || "Unspecified item";
+}
 
-  const color = String(item?.color || "").trim();
-  const pattern = String(item?.pattern || "").trim();
-  const name = String(item?.name || "").trim();
-  const material = String(item?.materials || item?.material || "").trim();
+function getTrimmedItemValue(item, key) {
+  return String(item?.[key] || "").trim();
+}
 
-  if (color) parts.push(color);
-  if (pattern) parts.push(pattern);
-  if (name) parts.push(name);
+function getGroupedItems(items) {
+  return items.reduce((acc, item) => {
+    const category = String(item?.type || item?.category || "").trim().toLowerCase();
+    return category ? { ...acc, [category]: [...(acc[category] || []), item] } : acc;
+  }, {});
+}
 
-  let description = parts.join(" ");
-  if (material) {
-    description += ` (materials: ${material})`;
+function pushItemLines(lines, items, instruction) {
+  (items || []).forEach((item) => {
+    lines.push(`* **${formatItemDescription(item)}:** ${instruction}`);
+  });
+}
+
+function getCoreLines(groupedItems, hasDress) {
+  const coreLines = [];
+  pushItemLines(coreLines, groupedItems.outerwear, "Placed at the very top, fully open, laid flat to show all silhouette and details (e.g., collar, pockets, buttons).");
+  if (hasDress) {
+    pushItemLines(coreLines, groupedItems.dress, "Laid out centrally, completely flat, showing full length and fit.");
+    return coreLines;
   }
+  pushItemLines(coreLines, groupedItems.midlayer, "LAID OUT COMPLETELY FLAT AND UNFOLDED, placed below the outerwear. Do not fold or layer this item; show its full, uncreased shape exactly as seen in the source image.");
+  pushItemLines(coreLines, groupedItems.top, "LAID OUT COMPLETELY FLAT AND UNFOLDED, placed below the outerwear/midlayer. Do not fold or layer this item; show its full, uncreased shape exactly as seen in the source image.");
+  pushItemLines(coreLines, groupedItems.bottom, "Laid out straight and flat below the top.");
+  return coreLines;
+}
 
-  return description || "Unspecified item";
+function getSideLines(groupedItems) {
+  const sideLines = [];
+  pushItemLines(sideLines, groupedItems.bag, "Placed to the left or right of the central core, showing its full form.");
+  pushItemLines(sideLines, groupedItems.belt, "A coiled or straight detailed belt, placed below the top and above the bottom, or to one side of the central core.");
+  pushItemLines(sideLines, groupedItems.accessories || groupedItems.accessory, "Placed neatly on the side to balance the composition.");
+  return sideLines;
+}
+
+function buildPromptSection(title, lines) {
+  return lines.length > 0 ? `${title}:\n${lines.join("\n")}` : "";
 }
 
 function buildOutfitSetDescription(items = []) {
-  // Group items by their item kind for easy access.
-  const groupedItems = items.reduce((acc, item) => {
-    const category = String(item?.type || item?.category || "").trim().toLowerCase();
-    if (!category) {
-      return acc;
-    }
-    if (!acc[category]) {
-      acc[category] = [];
-    }
-    acc[category].push(item);
-    return acc;
-  }, {});
-
-  const promptSections = [];
+  const groupedItems = getGroupedItems(items);
   const hasDress = Boolean(groupedItems.dress?.length);
-
-  const coreLines = [];
-
-  if (groupedItems.outerwear) {
-    groupedItems.outerwear.forEach((item) => {
-      coreLines.push(`* **${formatItemDescription(item)}:** Placed at the very top, fully open, laid flat to show all silhouette and details (e.g., collar, pockets, buttons).`);
-    });
-  }
-
-  if (hasDress) {
-    groupedItems.dress.forEach((item) => {
-      coreLines.push(`* **${formatItemDescription(item)}:** Laid out centrally, completely flat, showing full length and fit.`);
-    });
-  }
-
-  if (groupedItems.midlayer) {
-    groupedItems.midlayer.forEach((item) => {
-      coreLines.push(`* **${formatItemDescription(item)}:** LAID OUT COMPLETELY FLAT AND UNFOLDED, placed below the outerwear. Do not fold or layer this item; show its full, uncreased shape exactly as seen in the source image.`);
-    });
-  }
-
-  if (!hasDress) {
-    if (groupedItems.top) {
-      groupedItems.top.forEach((item) => {
-        coreLines.push(`* **${formatItemDescription(item)}:** LAID OUT COMPLETELY FLAT AND UNFOLDED, placed below the outerwear/midlayer. Do not fold or layer this item; show its full, uncreased shape exactly as seen in the source image.`);
-      });
-    }
-    if (groupedItems.bottom) {
-      groupedItems.bottom.forEach((item) => {
-        coreLines.push(`* **${formatItemDescription(item)}:** Laid out straight and flat below the top.`);
-      });
-    }
-  }
-
-  if (coreLines.length > 0) {
-    promptSections.push("[**Central Vertical Core (from top to bottom)**]:\n" + coreLines.join("\n"));
-  }
-
-  const sideLines = [];
-
-  if (groupedItems.bag) {
-    groupedItems.bag.forEach((item) => {
-      sideLines.push(`* **${formatItemDescription(item)}:** Placed to the left or right of the central core, showing its full form.`);
-    });
-  }
-
-  if (groupedItems.belt) {
-    groupedItems.belt.forEach((item) => {
-      sideLines.push(`* **${formatItemDescription(item)}:** A coiled or straight detailed belt, placed below the top and above the bottom, or to one side of the central core.`);
-    });
-  }
-
-  const accessories = groupedItems.accessories || groupedItems.accessory;
-  if (accessories) {
-    accessories.forEach((item) => {
-      sideLines.push(`* **${formatItemDescription(item)}:** Placed neatly on the side to balance the composition.`);
-    });
-  }
-
-  if (sideLines.length > 0) {
-    promptSections.push("[**Side Zones (Left and Right)**]:\n" + sideLines.join("\n"));
-  }
-
   const lowerLines = [];
+  pushItemLines(lowerLines, groupedItems.shoes, "A pair placed side-by-side and slightly angled as if walking, below the main apparel.");
 
-  if (groupedItems.shoes) {
-    groupedItems.shoes.forEach((item) => {
-      lowerLines.push(`* **${formatItemDescription(item)}:** A pair placed side-by-side and slightly angled as if walking, below the main apparel.`);
-    });
-  }
-
-  if (lowerLines.length > 0) {
-    promptSections.push("[**Lower Zone (at the very bottom)**]:\n" + lowerLines.join("\n"));
-  }
-
-  return promptSections.join("\n\n");
+  return [
+    buildPromptSection("[**Central Vertical Core (from top to bottom)**]", getCoreLines(groupedItems, hasDress)),
+    buildPromptSection("[**Side Zones (Left and Right)**]", getSideLines(groupedItems)),
+    buildPromptSection("[**Lower Zone (at the very bottom)**]", lowerLines)
+  ].filter(Boolean).join("\n\n");
 }
 
 export {

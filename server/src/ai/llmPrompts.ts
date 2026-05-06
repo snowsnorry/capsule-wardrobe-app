@@ -1,5 +1,4 @@
 import { readFileSync } from "node:fs";
-import { DEFAULT_PROFILE_LLM } from "../../../shared/profileSettings.js";
 import { getCapsuleCategories } from "./categories.js";
 import {
   getPromptTemplateContent,
@@ -7,14 +6,15 @@ import {
   renderPromptTemplateContent
 } from "./promptTemplates.js";
 import type { JsonSchema, JsonSchemaFormat, UserProfileLike } from "./types.js";
-
-const OPENAI_PROFILE_LLM = "openai:gpt-5.5";
-const CLAUDE_ALLOWED_MODELS = ["claude-opus-4-7"];
-const GEMINI_PROFILE_LLM = "gemini:gemini-2.5-pro";
-const DEEPINFRA_ALLOWED_MODELS = [
-  "google/gemma-4-31B-it",
-  "Qwen/Qwen3-VL-235B-A22B-Instruct"
-];
+import {
+  CLAUDE_ALLOWED_MODELS,
+  DEEPINFRA_ALLOWED_MODELS,
+  GEMINI_PROFILE_LLM,
+  OPENAI_PROFILE_LLM,
+  getProfileLlm,
+  isNoLlmProfileEnabled,
+  resolveLlmProvider
+} from "./llmProviders.js";
 const CAPSULE_GENERATION_PROMPT_TEMPLATE = loadPromptTemplate(
   new URL("../templates/prompt_capsule_generation.yaml", import.meta.url)
 );
@@ -248,30 +248,12 @@ function renderStyleLibraryContent(entry: unknown, userProfile: UserProfileLike 
   }
 
   const normalizedEntry = entry as Record<string, unknown>;
-  const audienceConfig = normalizedEntry.audience as Record<string, unknown> | undefined;
-  const formalityConfig = normalizedEntry.formality_level as Record<string, unknown> | undefined;
-  const occasionsConfig = normalizedEntry.occasions as Record<string, unknown> | undefined;
   const template = typeof normalizedEntry.template === "string" ? normalizedEntry.template : "";
   if (!template) {
     return "";
   }
 
-  const audienceKey = normalizeSystemPromptAudience(userProfile?.audience);
-  const formalityLevelKey = normalizeSystemPromptKey(userProfile?.formalityLevel);
-  const occasions = Array.isArray(userProfile?.occasions) ? userProfile.occasions : [];
-  const replacements = {
-    audience: typeof audienceConfig?.[audienceKey] === "string"
-      ? audienceConfig[audienceKey]
-      : "",
-    formality_level: typeof formalityConfig?.[formalityLevelKey] === "string"
-      ? formalityConfig[formalityLevelKey]
-      : "",
-    occasions: occasions
-      .map((occasion) => normalizeSystemPromptKey(occasion))
-      .map((occasionKey) => occasionsConfig?.[occasionKey])
-      .filter((value) => typeof value === "string" && value.trim().length > 0)
-      .join("\n")
-  };
+  const replacements = buildStyleLibraryReplacements(normalizedEntry, userProfile);
 
   let content = template;
   for (const [key, value] of Object.entries(replacements)) {
@@ -281,6 +263,26 @@ function renderStyleLibraryContent(entry: unknown, userProfile: UserProfileLike 
   return content
     .replace(/\n{3,}/g, "\n\n")
     .trim();
+}
+
+function getStringConfigValue(config: unknown, key: string) {
+  return typeof config === "object" && config && typeof (config as Record<string, unknown>)[key] === "string"
+    ? (config as Record<string, string>)[key]
+    : "";
+}
+
+function buildStyleLibraryReplacements(normalizedEntry: Record<string, unknown>, userProfile: UserProfileLike | null = null) {
+  const occasions = Array.isArray(userProfile?.occasions) ? userProfile.occasions : [];
+
+  return {
+    audience: getStringConfigValue(normalizedEntry.audience, normalizeSystemPromptAudience(userProfile?.audience)),
+    formality_level: getStringConfigValue(normalizedEntry.formality_level, normalizeSystemPromptKey(userProfile?.formalityLevel)),
+    occasions: occasions
+      .map((occasion) => normalizeSystemPromptKey(occasion))
+      .map((occasionKey) => getStringConfigValue(normalizedEntry.occasions, occasionKey))
+      .filter((value) => value.trim().length > 0)
+      .join("\n")
+  };
 }
 
 function renderSystemPromptSection(title: string, content: unknown, intro = "") {
@@ -300,10 +302,41 @@ function buildSystemPrompt(
   const accentColorKey = normalizeSystemPromptKey(userProfile?.color);
   const audienceKey = normalizeSystemPromptAudience(userProfile?.audience);
   const formalityLevelKey = normalizeSystemPromptKey(userProfile?.formalityLevel);
-  const categories = options.categories && typeof options.categories === "object"
+  const replacements = buildSystemPromptReplacements({
+    userProfile,
+    styleKey,
+    accentColorKey,
+    audienceKey,
+    formalityLevelKey,
+    categories: resolveSystemPromptCategories(userProfile, options)
+  });
+
+  const prompt = typeof options.template === "string" ? options.template : SYSTEM_PROMPT_TEMPLATE;
+  return renderPromptTemplateContent(prompt, replacements, "system prompt");
+}
+
+function resolveSystemPromptCategories(userProfile: UserProfileLike | null, options: BuildSystemPromptOptions) {
+  return options.categories && typeof options.categories === "object"
     ? options.categories
     : getCapsuleCategories(userProfile);
-  const replacements = {
+}
+
+function buildSystemPromptReplacements({
+  userProfile,
+  styleKey,
+  accentColorKey,
+  audienceKey,
+  formalityLevelKey,
+  categories
+}: {
+  userProfile: UserProfileLike | null;
+  styleKey: string;
+  accentColorKey: string;
+  audienceKey: string;
+  formalityLevelKey: string;
+  categories: Record<string, number>;
+}) {
+  return {
     audience_logic_block: normalizeSystemPromptSectionContent(
       SYSTEM_PROMPT_PARTS.audience_logic?.[audienceKey]
     ),
@@ -329,86 +362,6 @@ function buildSystemPrompt(
       "If the user specifies an accent color, you may use these defaults:"
     ),
     categories_schema: JSON.stringify(buildCapsuleSchema(categories), null, 2)
-  };
-
-  const prompt = typeof options.template === "string" ? options.template : SYSTEM_PROMPT_TEMPLATE;
-  return renderPromptTemplateContent(prompt, replacements, "system prompt");
-}
-
-function getProfileLlm(userProfile = null) {
-  const llm = String(userProfile?.llm || "").trim();
-  return llm || DEFAULT_PROFILE_LLM;
-}
-
-function isNoLlmProfileEnabled(userProfile = null) {
-  return getProfileLlm(userProfile) === "none";
-}
-
-function resolveLlmProvider(userProfile = null) {
-  const llm = getProfileLlm(userProfile);
-
-  if (llm === "none") {
-    return {
-      mode: "none",
-      llm,
-      requestedLlm: llm
-    };
-  }
-
-  if (llm === OPENAI_PROFILE_LLM) {
-    return {
-      provider: "openai",
-      model: "gpt-5.5",
-      llm,
-      requestedLlm: llm
-    };
-  }
-
-  if (llm === GEMINI_PROFILE_LLM) {
-    return {
-      provider: "gemini",
-      model: "gemini-2.5-pro",
-      llm,
-      requestedLlm: llm
-    };
-  }
-
-  if (llm.startsWith("claude:")) {
-    const model = llm.slice("claude:".length).trim();
-    if (CLAUDE_ALLOWED_MODELS.includes(model)) {
-      return {
-        provider: "claude",
-        model,
-        llm,
-        requestedLlm: llm
-      };
-    }
-  }
-
-  if (llm.startsWith("deepinfra:")) {
-    const model = llm.slice("deepinfra:".length).trim();
-    if (DEEPINFRA_ALLOWED_MODELS.includes(model)) {
-      return {
-        provider: "deepinfra",
-        model,
-        llm,
-        requestedLlm: llm
-      };
-    }
-  }
-
-  console.warn("[wardrobe-ai][llm-unknown-model]", JSON.stringify({
-    requestedLlm: llm,
-    fallbackProvider: "openai",
-    fallbackModel: "gpt-5.5"
-  }));
-
-  return {
-    provider: "openai",
-    model: "gpt-5.5",
-    llm: OPENAI_PROFILE_LLM,
-    requestedLlm: llm,
-    fallbackReason: "unknown_model"
   };
 }
 

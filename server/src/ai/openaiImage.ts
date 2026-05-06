@@ -1,5 +1,6 @@
 import OpenAI, { toFile } from "openai";
 import type { ImageAssetLike } from "./types.js";
+import { logWarn } from "../logger.js";
 
 const DEFAULT_IMAGE_MODEL = "gpt-image-2";
 const DEFAULT_OUTPUT_MIME_TYPE = "image/png";
@@ -60,8 +61,8 @@ async function buildOpenAiImageFiles(images: ImageAssetLike[] = []) {
   const files: OpenAiImageFile[] = [];
 
   for (const [index, image] of images.entries()) {
-    if (!Buffer.isBuffer(image?.buffer) || image.buffer.length === 0) {
-      console.warn(
+    if (!hasOpenAiImageBuffer(image)) {
+      logWarn(
         "[openai-image][image-skipped]",
         JSON.stringify({
           category: image?.category ?? null,
@@ -72,13 +73,20 @@ async function buildOpenAiImageFiles(images: ImageAssetLike[] = []) {
       continue;
     }
 
-    const mimeType = typeof image?.mimeType === "string" && image.mimeType.trim().length > 0
-      ? image.mimeType.trim()
-      : "image/jpeg";
-    files.push(await toFile(image.buffer, getImageFileName(image, index), { type: mimeType }));
+    files.push(await toFile(image.buffer, getImageFileName(image, index), { type: getOpenAiImageMimeType(image) }));
   }
 
   return files;
+}
+
+function hasOpenAiImageBuffer(image: ImageAssetLike | null | undefined): image is ImageAssetLike & { buffer: Buffer } {
+  return Buffer.isBuffer(image?.buffer) && image.buffer.length > 0;
+}
+
+function getOpenAiImageMimeType(image: ImageAssetLike): string {
+  return typeof image?.mimeType === "string" && image.mimeType.trim().length > 0
+    ? image.mimeType.trim()
+    : "image/jpeg";
 }
 
 function createOpenAiImageClient({

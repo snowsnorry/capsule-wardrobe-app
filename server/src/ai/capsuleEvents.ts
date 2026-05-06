@@ -1,10 +1,50 @@
 import { createChannel, createSession } from "better-sse";
 import { getCapsuleSnapshotRegeneration, getEffectiveCapsuleSnapshot } from "../capsuleStore.js";
+import type { CapsuleRecord } from "../capsuleStoreModel.js";
 
 function createCapsuleEventKey(email, capsuleId) {
   const normalizedEmail = String(email || "").trim().toLowerCase();
   const normalizedCapsuleId = String(capsuleId || "").trim();
   return normalizedCapsuleId ? `${normalizedEmail}::${normalizedCapsuleId}` : normalizedEmail;
+}
+
+function getTrimmedText(value) {
+  return typeof value === "string" && value.trim().length > 0
+    ? value.trim()
+    : null;
+}
+
+function normalizeOutfitSet(set) {
+  const normalizedSet: {
+    itemIds: string[];
+    image?: string | null;
+    imageObsolete?: boolean;
+  } = {
+    itemIds: Array.isArray(set?.itemIds)
+      ? set.itemIds.map((id) => String(id || "").trim()).filter(Boolean)
+      : []
+  };
+
+  const image = getTrimmedText(set?.image);
+  if (image || (set && typeof set === "object" && "image" in set)) {
+    normalizedSet.image = image;
+  }
+
+  if (set && typeof set === "object" && "imageObsolete" in set) {
+    normalizedSet.imageObsolete = Boolean(set.imageObsolete);
+  }
+
+  return normalizedSet;
+}
+
+function normalizeOutfitSets(value) {
+  return Array.isArray(value)
+    ? value.map(normalizeOutfitSet).filter((set) => set.itemIds.length > 0)
+    : [];
+}
+
+function getStoredRawSelectionText(stored) {
+  return getTrimmedText(stored.rawSelectionText) || getTrimmedText(stored.reasoning);
 }
 
 function getStoredWardrobePayload(profile) {
@@ -25,84 +65,39 @@ function getStoredWardrobePayload(profile) {
 
   return {
     items: Array.isArray(stored.items) ? stored.items : [],
-    outfitSets: Array.isArray(stored.outfitSets)
-      ? stored.outfitSets
-        .map((set) => {
-          const normalizedSet: {
-            itemIds: string[];
-            image?: string;
-            imageObsolete?: boolean;
-          } = {
-            itemIds: Array.isArray(set?.itemIds)
-              ? set.itemIds.map((id) => String(id || "").trim()).filter(Boolean)
-              : []
-          };
-
-          if (typeof set?.image === "string" && set.image.trim().length > 0) {
-            normalizedSet.image = set.image.trim();
-          }
-
-          if (set && typeof set === "object" && "imageObsolete" in set) {
-            normalizedSet.imageObsolete = Boolean(set.imageObsolete);
-          }
-
-          return normalizedSet;
-        })
-        .filter((set) => set.itemIds.length > 0)
-      : [],
-    rawSelectionText: typeof stored.rawSelectionText === "string" && stored.rawSelectionText.trim().length > 0
-      ? stored.rawSelectionText.trim()
-      : typeof stored.reasoning === "string" && stored.reasoning.trim().length > 0
-        ? stored.reasoning.trim()
-        : null,
-    swimwearReasoning: typeof stored.swimwearReasoning === "string" && stored.swimwearReasoning.trim().length > 0
-      ? stored.swimwearReasoning.trim()
-      : null,
-    swimwearRawSelectionText: typeof stored.swimwearRawSelectionText === "string" && stored.swimwearRawSelectionText.trim().length > 0
-      ? stored.swimwearRawSelectionText.trim()
-      : null
+    outfitSets: normalizeOutfitSets(stored.outfitSets),
+    rawSelectionText: getStoredRawSelectionText(stored),
+    swimwearReasoning: getTrimmedText(stored.swimwearReasoning),
+    swimwearRawSelectionText: getTrimmedText(stored.swimwearRawSelectionText)
   };
 }
 
-function buildSnapshotPayload({
-  status = "idle",
-  pendingStage = null,
-  hasPendingAdditionalItems = false,
-  pendingRegenerationUrls = [],
-  pendingImageSetIndexes = [],
-  items = [],
-  outfitSets = [],
-  rawSelectionText = null,
-  swimwearReasoning = null,
-  swimwearRawSelectionText = null,
-  error = null
-} = {}) {
+function buildSnapshotPayload(payload = {}) {
   return {
-    status,
-    pendingStage,
-    hasPendingAdditionalItems,
-    pendingRegenerationUrls,
-    pendingImageSetIndexes,
-    items,
-    outfitSets,
-    rawSelectionText,
-    swimwearReasoning,
-    swimwearRawSelectionText,
-    error
+    status: "idle",
+    pendingStage: null,
+    hasPendingAdditionalItems: false,
+    pendingRegenerationUrls: [],
+    pendingImageSetIndexes: [],
+    items: [],
+    outfitSets: [],
+    rawSelectionText: null,
+    swimwearReasoning: null,
+    swimwearRawSelectionText: null,
+    error: null,
+    ...payload
   };
+}
+
+function getFailedRawSelectionText(storedWardrobe, error) {
+  return getTrimmedText(error?.rawSelectionText) || storedWardrobe?.rawSelectionText || null;
 }
 
 function buildFailedSnapshot(storedWardrobe, error) {
   return buildSnapshotPayload({
     status: "failed",
-    items: storedWardrobe?.items || [],
-    outfitSets: storedWardrobe?.outfitSets || [],
-    rawSelectionText:
-      typeof error?.rawSelectionText === "string" && error.rawSelectionText.trim().length > 0
-        ? error.rawSelectionText.trim()
-        : storedWardrobe?.rawSelectionText || null,
-    swimwearReasoning: storedWardrobe?.swimwearReasoning || null,
-    swimwearRawSelectionText: storedWardrobe?.swimwearRawSelectionText || null,
+    ...getStoredWardrobeSnapshotFields(storedWardrobe),
+    rawSelectionText: getFailedRawSelectionText(storedWardrobe, error),
     error: "service_unavailable"
   });
 }
@@ -115,89 +110,145 @@ function getWardrobeItemUrls(storedWardrobe) {
     : [];
 }
 
-function buildCapsuleEventSnapshot({
-  capsule = null,
-  activeJob = null,
-  partialRegenerationJob = null,
-  outfitSetImageJob = null
-} = {}) {
-  const effectiveSnapshot = getEffectiveCapsuleSnapshot(capsule);
-  const storedWardrobe = getStoredWardrobePayload({ items: effectiveSnapshot?.data?.wardrobe });
-  const fullRegenerationMarker = getCapsuleSnapshotRegeneration(effectiveSnapshot);
-  const pendingImageSetIndexes = Array.isArray(outfitSetImageJob?.pendingSetIndexes)
+function getPendingImageSetIndexes(outfitSetImageJob) {
+  return Array.isArray(outfitSetImageJob?.pendingSetIndexes)
     ? outfitSetImageJob.pendingSetIndexes
       .map((value) => Number.parseInt(value, 10))
       .filter((value) => Number.isInteger(value) && value >= 0)
       .sort((left, right) => left - right)
     : [];
+}
 
-  if (partialRegenerationJob?.status === "pending") {
-    return buildSnapshotPayload({
-      status: "pending",
-      pendingStage: "regenerate",
-      pendingRegenerationUrls: Array.isArray(partialRegenerationJob.pendingItemUrls)
-        ? partialRegenerationJob.pendingItemUrls.map((itemUrl) => String(itemUrl || "").trim()).filter(Boolean)
-        : [],
-      pendingImageSetIndexes,
-      items: storedWardrobe?.items || [],
-      outfitSets: storedWardrobe?.outfitSets || [],
-      rawSelectionText: storedWardrobe?.rawSelectionText || null,
-      swimwearReasoning: storedWardrobe?.swimwearReasoning || null,
-      swimwearRawSelectionText: storedWardrobe?.swimwearRawSelectionText || null
-    });
+function getPendingRegenerationUrls(partialRegenerationJob) {
+  return Array.isArray(partialRegenerationJob?.pendingItemUrls)
+    ? partialRegenerationJob.pendingItemUrls.map((itemUrl) => String(itemUrl || "").trim()).filter(Boolean)
+    : [];
+}
+
+function getStoredWardrobeSnapshotFields(storedWardrobe) {
+  return {
+    items: storedWardrobe?.items || [],
+    outfitSets: storedWardrobe?.outfitSets || [],
+    rawSelectionText: storedWardrobe?.rawSelectionText || null,
+    swimwearReasoning: storedWardrobe?.swimwearReasoning || null,
+    swimwearRawSelectionText: storedWardrobe?.swimwearRawSelectionText || null
+  };
+}
+
+function buildPartialPendingSnapshot(partialRegenerationJob, pendingImageSetIndexes, storedWardrobeFields) {
+  return buildSnapshotPayload({
+    status: "pending",
+    pendingStage: "regenerate",
+    pendingRegenerationUrls: getPendingRegenerationUrls(partialRegenerationJob),
+    pendingImageSetIndexes,
+    ...storedWardrobeFields
+  });
+}
+
+function buildExtrasPendingSnapshot(pendingImageSetIndexes, storedWardrobeFields) {
+  return buildSnapshotPayload({
+    status: "pending",
+    pendingStage: "extras",
+    hasPendingAdditionalItems: true,
+    pendingImageSetIndexes,
+    ...storedWardrobeFields
+  });
+}
+
+function buildFullPendingSnapshot(activeJob, fullRegenerationMarker, storedWardrobe, pendingImageSetIndexes, storedWardrobeFields) {
+  const isPendingExtras = activeJob?.phase === "extras";
+  return buildSnapshotPayload({
+    status: "pending",
+    pendingStage: isPendingExtras ? "extras" : "capsule",
+    hasPendingAdditionalItems: isPendingExtras,
+    pendingRegenerationUrls: isPendingExtras ? [] : getWardrobeItemUrls(storedWardrobe),
+    pendingImageSetIndexes,
+    ...storedWardrobeFields
+  });
+}
+
+function buildReadySnapshot(pendingImageSetIndexes, storedWardrobeFields) {
+  return buildSnapshotPayload({
+    status: "ready",
+    pendingImageSetIndexes,
+    ...storedWardrobeFields
+  });
+}
+
+function isPartialRegenerationPending(partialRegenerationJob) {
+  return partialRegenerationJob?.status === "pending";
+}
+
+function isPartialRegenerationFailed(partialRegenerationJob) {
+  return partialRegenerationJob?.status === "failed";
+}
+
+function isActiveExtrasPendingWithItems(activeJob, storedWardrobe) {
+  return activeJob?.status === "pending" && activeJob.phase === "extras" && Boolean(storedWardrobe?.items?.length);
+}
+
+function isActiveJobFailed(activeJob) {
+  return activeJob?.status === "failed";
+}
+
+function isCapsulePending(activeJob, fullRegenerationMarker) {
+  return activeJob?.status === "pending" || fullRegenerationMarker?.status === "pending";
+}
+
+function hasStoredWardrobeItems(storedWardrobe) {
+  return Boolean(storedWardrobe?.items?.length);
+}
+
+const CAPSULE_SNAPSHOT_BRANCHES = [
+  {
+    matches: ({ partialRegenerationJob }) => isPartialRegenerationPending(partialRegenerationJob),
+    build: ({ partialRegenerationJob, pendingImageSetIndexes, storedWardrobeFields }) => (
+      buildPartialPendingSnapshot(partialRegenerationJob, pendingImageSetIndexes, storedWardrobeFields)
+    )
+  },
+  {
+    matches: ({ partialRegenerationJob }) => isPartialRegenerationFailed(partialRegenerationJob),
+    build: ({ partialRegenerationJob, storedWardrobe }) => buildFailedSnapshot(storedWardrobe, partialRegenerationJob.error)
+  },
+  {
+    matches: ({ activeJob, storedWardrobe }) => isActiveExtrasPendingWithItems(activeJob, storedWardrobe),
+    build: ({ pendingImageSetIndexes, storedWardrobeFields }) => (
+      buildExtrasPendingSnapshot(pendingImageSetIndexes, storedWardrobeFields)
+    )
+  },
+  {
+    matches: ({ activeJob }) => isActiveJobFailed(activeJob),
+    build: ({ activeJob, storedWardrobe }) => buildFailedSnapshot(storedWardrobe, activeJob.error)
+  },
+  {
+    matches: ({ activeJob, fullRegenerationMarker }) => isCapsulePending(activeJob, fullRegenerationMarker),
+    build: ({ activeJob, fullRegenerationMarker, storedWardrobe, pendingImageSetIndexes, storedWardrobeFields }) => (
+      buildFullPendingSnapshot(activeJob, fullRegenerationMarker, storedWardrobe, pendingImageSetIndexes, storedWardrobeFields)
+    )
+  },
+  {
+    matches: ({ storedWardrobe }) => hasStoredWardrobeItems(storedWardrobe),
+    build: ({ pendingImageSetIndexes, storedWardrobeFields }) => buildReadySnapshot(pendingImageSetIndexes, storedWardrobeFields)
   }
+];
 
-  if (partialRegenerationJob?.status === "failed") {
-    return buildFailedSnapshot(storedWardrobe, partialRegenerationJob.error);
-  }
-
-  if (activeJob?.status === "pending" && activeJob.phase === "extras" && storedWardrobe?.items?.length) {
-    return buildSnapshotPayload({
-      status: "pending",
-      pendingStage: "extras",
-      hasPendingAdditionalItems: true,
-      pendingImageSetIndexes,
-      items: storedWardrobe.items,
-      outfitSets: storedWardrobe.outfitSets,
-      rawSelectionText: storedWardrobe.rawSelectionText,
-      swimwearReasoning: storedWardrobe.swimwearReasoning,
-      swimwearRawSelectionText: storedWardrobe.swimwearRawSelectionText
-    });
-  }
-
-  if (activeJob?.status === "failed") {
-    return buildFailedSnapshot(storedWardrobe, activeJob.error);
-  }
-
-  if (activeJob?.status === "pending" || fullRegenerationMarker?.status === "pending") {
-    const isPendingExtras = activeJob?.phase === "extras";
-    return buildSnapshotPayload({
-      status: "pending",
-      pendingStage: isPendingExtras ? "extras" : "capsule",
-      hasPendingAdditionalItems: isPendingExtras,
-      pendingRegenerationUrls: isPendingExtras ? [] : getWardrobeItemUrls(storedWardrobe),
-      pendingImageSetIndexes,
-      items: storedWardrobe?.items || [],
-      outfitSets: storedWardrobe?.outfitSets || [],
-      rawSelectionText: storedWardrobe?.rawSelectionText || null,
-      swimwearReasoning: storedWardrobe?.swimwearReasoning || null,
-      swimwearRawSelectionText: storedWardrobe?.swimwearRawSelectionText || null
-    });
-  }
-
-  if (storedWardrobe?.items?.length) {
-    return buildSnapshotPayload({
-      status: "ready",
-      pendingImageSetIndexes,
-      items: storedWardrobe.items,
-      outfitSets: storedWardrobe.outfitSets,
-      rawSelectionText: storedWardrobe.rawSelectionText,
-      swimwearReasoning: storedWardrobe.swimwearReasoning,
-      swimwearRawSelectionText: storedWardrobe.swimwearRawSelectionText
-    });
-  }
-
-  return buildSnapshotPayload();
+function buildCapsuleEventSnapshot(options: Record<string, unknown> = {}) {
+  const { capsule = null, activeJob = null, partialRegenerationJob = null, outfitSetImageJob = null } = options;
+  const effectiveSnapshot = getEffectiveCapsuleSnapshot(capsule as CapsuleRecord | null);
+  const storedWardrobe = getStoredWardrobePayload({ items: effectiveSnapshot?.data?.wardrobe });
+  const fullRegenerationMarker = getCapsuleSnapshotRegeneration(effectiveSnapshot);
+  const pendingImageSetIndexes = getPendingImageSetIndexes(outfitSetImageJob);
+  const storedWardrobeFields = getStoredWardrobeSnapshotFields(storedWardrobe);
+  const branchContext = {
+    activeJob,
+    fullRegenerationMarker,
+    partialRegenerationJob,
+    pendingImageSetIndexes,
+    storedWardrobe,
+    storedWardrobeFields
+  };
+  const branch = CAPSULE_SNAPSHOT_BRANCHES.find(({ matches }) => matches(branchContext));
+  return branch ? branch.build(branchContext) : buildSnapshotPayload();
 }
 
 function createCapsuleEventHub() {

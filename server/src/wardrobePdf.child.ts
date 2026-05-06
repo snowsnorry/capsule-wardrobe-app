@@ -44,37 +44,44 @@ function createWardrobePdfChildRuntime({
     handled = true;
 
     try {
-      const outputFilePath = String(message?.outputFilePath || "").trim();
-      if (!outputFilePath) {
-        throw new Error("wardrobe_pdf_child_output_path_missing");
-      }
-
+      const payload = getWardrobePdfChildPayload(message);
+      const { outputFilePath } = payload;
       await mkdirImpl(path.dirname(outputFilePath), { recursive: true });
-      const pdfBuffer = await buildWardrobePdfImpl(
-        Array.isArray(message?.products) ? message.products : [],
-        {
-          locale: message?.locale || "en",
-          totalStartedAt: Number.isFinite(message?.totalStartedAt) ? message.totalStartedAt : null
-        }
-      );
+      const pdfBuffer = await buildWardrobePdfImpl(payload.products, payload.options);
       await writeFileImpl(outputFilePath, pdfBuffer);
-
-      sendFinalMessage({
-        ok: true,
-        outputFilePath
-      }, 0);
+      sendFinalMessage({ ok: true, outputFilePath }, 0);
     } catch (error) {
-      sendFinalMessage({
-        ok: false,
-        message: error?.message || "unknown_error",
-        stack: typeof error?.stack === "string" ? error.stack : null
-      }, 1);
+      sendFinalMessage(getWardrobePdfChildErrorMessage(error), 1);
     }
   }
 
   return {
     handleMessage,
     sendFinalMessage
+  };
+}
+
+function getWardrobePdfChildPayload(message) {
+  const outputFilePath = String(message?.outputFilePath || "").trim();
+  if (!outputFilePath) {
+    throw new Error("wardrobe_pdf_child_output_path_missing");
+  }
+
+  return {
+    outputFilePath,
+    products: Array.isArray(message?.products) ? message.products : [],
+    options: {
+      locale: message?.locale || "en",
+      totalStartedAt: Number.isFinite(message?.totalStartedAt) ? message.totalStartedAt : null
+    }
+  };
+}
+
+function getWardrobePdfChildErrorMessage(error) {
+  return {
+    ok: false,
+    message: error?.message || "unknown_error",
+    stack: typeof error?.stack === "string" ? error.stack : null
   };
 }
 

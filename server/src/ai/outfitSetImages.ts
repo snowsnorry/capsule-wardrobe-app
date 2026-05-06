@@ -10,6 +10,7 @@ import { generateImageWithOpenAi } from "./openaiImage.js";
 import { buildOutfitSetDescription } from "./outfitSetImageDescription.js";
 import { downloadProductImageAssets } from "./promptImages.js";
 import { uploadImageToR2 } from "../r2Storage.js";
+import { logError } from "../logger.js";
 import {
   getPromptTemplateContent,
   loadPromptTemplate,
@@ -89,28 +90,58 @@ function resolveTargetSetItems(wardrobe, setIndex) {
     .filter(Boolean);
 }
 
-function createOutfitSetImageService({
-  getCapsuleImpl = getCapsule,
-  getProfileImpl = getProfile,
-  updateCapsuleSnapshotImpl = updateCapsuleSnapshot,
-  publishSnapshotImpl = ((email, capsuleId, snapshot) => capsuleEventHub.publish(email, capsuleId, snapshot)) as (
-    email: string,
-    capsuleId: string,
-    snapshot: unknown
-  ) => void | boolean,
-  buildCapsuleEventSnapshotImpl = buildCapsuleEventSnapshot as (payload?: Record<string, unknown>) => unknown,
-  downloadProductImageAssetsImpl = downloadProductImageAssets,
-  generateImageWithOpenAiImpl = generateImageWithOpenAi,
-  generateImageWithGeminiImpl = generateImageWithGemini,
-  uploadImageToR2Impl = uploadImageToR2,
-  buildOutfitSetDescriptionImpl = buildOutfitSetDescription
-} = {}) {
-  async function deleteOutfitSetImage(req, res) {
-    const email = String(req?.user?.email || "").trim().toLowerCase();
-    const capsuleId = String(req?.params?.id || "").trim();
-    const setIndex = Number.parseInt(String(req?.params?.setIndex || ""), 10);
+function getOutfitSetImageRequestContext(req) {
+  return {
+    email: String(req?.user?.email || "").trim().toLowerCase(),
+    capsuleId: String(req?.params?.id || "").trim(),
+    setIndex: Number.parseInt(String(req?.params?.setIndex || ""), 10)
+  };
+}
 
-    if (!capsuleId || !Number.isInteger(setIndex) || setIndex < 0) {
+function isValidOutfitSetImageRequest({ capsuleId, setIndex }) {
+  return Boolean(capsuleId) && Number.isInteger(setIndex) && setIndex >= 0;
+}
+
+function getOutfitSetsFromSnapshot(effectiveSnapshot) {
+  const wardrobe = effectiveSnapshot?.data?.wardrobe;
+  return {
+    outfitSets: Array.isArray(wardrobe?.outfitSets) ? wardrobe.outfitSets : [],
+    wardrobe
+  };
+}
+
+function publishOutfitSetSnapshot({ email, capsuleId, capsule, publishSnapshotImpl, buildCapsuleEventSnapshotImpl }) {
+  publishSnapshotImpl(email, capsuleId, buildCapsuleEventSnapshotImpl({
+    capsule,
+    outfitSetImageJob: getOutfitSetImageJob(email, capsuleId)
+  }));
+}
+
+function buildOutfitSetSnapshotUpdate(effectiveSnapshot, wardrobe, outfitSets) {
+  return {
+    filters: effectiveSnapshot?.filters,
+    data: {
+      wardrobe: {
+        ...wardrobe,
+        outfitSets
+      },
+      rejectedUrls: effectiveSnapshot?.data?.rejectedUrls || []
+    }
+  };
+}
+
+function createDeleteOutfitSetImage(deps) {
+  const {
+    buildCapsuleEventSnapshotImpl,
+    getCapsuleImpl,
+    publishSnapshotImpl,
+    updateCapsuleSnapshotImpl
+  } = deps;
+
+  return async function deleteOutfitSetImage(req, res) {
+    const { email, capsuleId, setIndex } = getOutfitSetImageRequestContext(req);
+
+    if (!isValidOutfitSetImageRequest({ capsuleId, setIndex })) {
       return res.status(400).json({ error: "invalid_payload" });
     }
 
@@ -120,49 +151,131 @@ function createOutfitSetImageService({
     }
 
     const effectiveSnapshot = getEffectiveCapsuleSnapshot(capsule);
-    const wardrobe = effectiveSnapshot?.data?.wardrobe;
-    const outfitSets = Array.isArray(wardrobe?.outfitSets) ? wardrobe.outfitSets : [];
-    const targetSet = outfitSets[setIndex];
-
-    if (!targetSet) {
+    const { wardrobe, outfitSets } = getOutfitSetsFromSnapshot(effectiveSnapshot);
+    if (!outfitSets[setIndex]) {
       return res.status(404).json({ error: "not_found" });
     }
 
     const nextOutfitSets = outfitSets.map((set, index) => (
-      index === setIndex
-        ? {
-          ...set,
-          image: null,
-          imageObsolete: false
-        }
-        : set
+      index === setIndex ? { ...set, image: null, imageObsolete: false } : set
     ));
+    const updatedCapsule = await updateCapsuleSnapshotImpl(
+      email,
+      capsuleId,
+      buildOutfitSetSnapshotUpdate(effectiveSnapshot, wardrobe, nextOutfitSets)
+    );
 
-    const updatedCapsule = await updateCapsuleSnapshotImpl(email, capsuleId, {
-      filters: effectiveSnapshot?.filters,
-      data: {
-        wardrobe: {
-          ...wardrobe,
-          outfitSets: nextOutfitSets
-        },
-        rejectedUrls: effectiveSnapshot?.data?.rejectedUrls || []
-      }
+    publishOutfitSetSnapshot({
+      email,
+      capsuleId,
+      capsule: updatedCapsule,
+      publishSnapshotImpl,
+      buildCapsuleEventSnapshotImpl
     });
 
-    publishSnapshotImpl(email, capsuleId, buildCapsuleEventSnapshotImpl({
-      capsule: updatedCapsule,
-      outfitSetImageJob: getOutfitSetImageJob(email, capsuleId)
-    }));
-
     return res.json({ ok: true, status: "ready" });
+  };
+}
+
+function buildOutfitSetGeneratedImage(result, { uploadImageToR2Impl, capsuleId, setIndex }) {
+  return result?.image?.base64
+    ? uploadImageToR2Impl({
+      buffer: Buffer.from(result.image.base64, "base64"),
+      mimeType: result.image.mimeType || "image/png",
+      capsuleId,
+      setIndex,
+      namespace: "generated"
+    })
+    : null;
+}
+
+async function generateOutfitSetImageAsset({ deps, email, capsuleId, setIndex, setItems }) {
+  const {
+    buildOutfitSetDescriptionImpl,
+    downloadProductImageAssetsImpl,
+    generateImageWithGeminiImpl,
+    generateImageWithOpenAiImpl,
+    getProfileImpl,
+    uploadImageToR2Impl
+  } = deps;
+  const prompt = buildPromptFromTemplate(setItems, { buildOutfitSetDescriptionImpl });
+  saveOutfitSetDebugArtifacts({ prompt });
+  const imageAssetsById = await downloadProductImageAssetsImpl(setItems);
+  const images = setItems
+    .map((item) => imageAssetsById[String(item?.id || "").trim()] || null)
+    .filter(Boolean);
+  const userProfile = await getProfileImpl(email);
+  const imageLlmResolution = resolveImageLlmProvider(userProfile);
+  const imageLlmStartedAt = Date.now();
+  const generateImageImpl = imageLlmResolution.provider === "gemini"
+    ? generateImageWithGeminiImpl
+    : generateImageWithOpenAiImpl;
+  const result = await generateImageImpl(prompt, {
+    images,
+    model: imageLlmResolution.model
+  });
+  const generatedImage = await buildOutfitSetGeneratedImage(result, { uploadImageToR2Impl, capsuleId, setIndex });
+  logWardrobeInfo("outfit-set-image-llm-completed", {
+    llmProvider: imageLlmResolution.provider,
+    llmModel: imageLlmResolution.model,
+    requestedImageLlm: imageLlmResolution.requestedImageLlm,
+    fallbackReason: imageLlmResolution.fallbackReason,
+    llmDurationMs: Date.now() - imageLlmStartedAt,
+    imageCount: images.length
+  });
+  return generatedImage;
+}
+
+async function runOutfitSetImageJob({ deps, email, capsuleId, setIndex, capsule, effectiveSnapshot, wardrobe, outfitSets, setItems, jobKey }) {
+  const {
+    buildCapsuleEventSnapshotImpl,
+    publishSnapshotImpl,
+    updateCapsuleSnapshotImpl
+  } = deps;
+  let currentCapsule = capsule;
+
+  try {
+    const generatedImage = await generateOutfitSetImageAsset({ deps, email, capsuleId, setIndex, setItems });
+    const nextOutfitSets = outfitSets.map((set, index) => (
+      index === setIndex
+        ? { ...set, image: generatedImage?.url || null, imageObsolete: false }
+        : set
+    ));
+    currentCapsule = await updateCapsuleSnapshotImpl(
+      email,
+      capsuleId,
+      buildOutfitSetSnapshotUpdate(effectiveSnapshot, wardrobe, nextOutfitSets)
+    );
+  } catch (error) {
+    logError("[outfit-set-image]", {
+      message: error?.message || "unknown_error",
+      stack: typeof error?.stack === "string" ? error.stack : null,
+      capsuleId,
+      setIndex
+    });
+  } finally {
+    outfitSetImageJobs.delete(jobKey);
+    publishOutfitSetSnapshot({
+      email,
+      capsuleId,
+      capsule: currentCapsule,
+      publishSnapshotImpl,
+      buildCapsuleEventSnapshotImpl
+    });
   }
+}
 
-  async function generateOutfitSetImage(req, res) {
-    const email = String(req?.user?.email || "").trim().toLowerCase();
-    const capsuleId = String(req?.params?.id || "").trim();
-    const setIndex = Number.parseInt(String(req?.params?.setIndex || ""), 10);
+function createGenerateOutfitSetImage(deps) {
+  const {
+    buildCapsuleEventSnapshotImpl,
+    getCapsuleImpl,
+    publishSnapshotImpl
+  } = deps;
 
-    if (!capsuleId || !Number.isInteger(setIndex) || setIndex < 0) {
+  return async function generateOutfitSetImage(req, res) {
+    const { email, capsuleId, setIndex } = getOutfitSetImageRequestContext(req);
+
+    if (!isValidOutfitSetImageRequest({ capsuleId, setIndex })) {
       return res.status(400).json({ error: "invalid_payload" });
     }
 
@@ -172,10 +285,8 @@ function createOutfitSetImageService({
     }
 
     const effectiveSnapshot = getEffectiveCapsuleSnapshot(capsule);
-    const wardrobe = effectiveSnapshot?.data?.wardrobe;
-    const outfitSets = Array.isArray(wardrobe?.outfitSets) ? wardrobe.outfitSets : [];
+    const { wardrobe, outfitSets } = getOutfitSetsFromSnapshot(effectiveSnapshot);
     const targetSet = outfitSets[setIndex];
-
     if (!targetSet) {
       return res.status(404).json({ error: "not_found" });
     }
@@ -190,108 +301,52 @@ function createOutfitSetImageService({
     }
 
     const jobKey = createOutfitSetImageJobKey(email, capsuleId, setIndex);
-    const existingJob = outfitSetImageJobs.get(jobKey);
-    if (existingJob?.status === "pending") {
+    if (outfitSetImageJobs.get(jobKey)?.status === "pending") {
       return res.status(202).json({ ok: true, status: "pending" });
     }
 
-    const job = {
-      id: randomUUID(),
-      status: "pending",
-      setIndex
-    };
-    outfitSetImageJobs.set(jobKey, job);
-
-    publishSnapshotImpl(email, capsuleId, buildCapsuleEventSnapshotImpl({
-      capsule,
-      outfitSetImageJob: getOutfitSetImageJob(email, capsuleId)
-    }));
-
-    (async () => {
-      let currentCapsule = capsule;
-
-      try {
-        const prompt = buildPromptFromTemplate(setItems, {
-          buildOutfitSetDescriptionImpl
-        });
-        saveOutfitSetDebugArtifacts({ prompt });
-        const imageAssetsById = await downloadProductImageAssetsImpl(setItems);
-        const images = setItems
-          .map((item) => imageAssetsById[String(item?.id || "").trim()] || null)
-          .filter(Boolean);
-
-        const userProfile = await getProfileImpl(email);
-        const imageLlmResolution = resolveImageLlmProvider(userProfile);
-        const imageLlmStartedAt = Date.now();
-        const generateImageImpl = imageLlmResolution.provider === "gemini"
-          ? generateImageWithGeminiImpl
-          : generateImageWithOpenAiImpl;
-        const result = await generateImageImpl(prompt, {
-          images,
-          model: imageLlmResolution.model
-        });
-        const generatedImage = result?.image?.base64
-          ? await uploadImageToR2Impl({
-            buffer: Buffer.from(result.image.base64, "base64"),
-            mimeType: result.image.mimeType || "image/png",
-            capsuleId,
-            setIndex,
-            namespace: "generated"
-          })
-          : null;
-        logWardrobeInfo("outfit-set-image-llm-completed", {
-          llmProvider: imageLlmResolution.provider,
-          llmModel: imageLlmResolution.model,
-          requestedImageLlm: imageLlmResolution.requestedImageLlm,
-          fallbackReason: imageLlmResolution.fallbackReason,
-          llmDurationMs: Date.now() - imageLlmStartedAt,
-          imageCount: images.length
-        });
-
-        const nextOutfitSets = outfitSets.map((set, index) => (
-          index === setIndex
-            ? {
-              ...set,
-              image: generatedImage?.url || null,
-              imageObsolete: false
-            }
-            : set
-        ));
-
-        currentCapsule = await updateCapsuleSnapshotImpl(email, capsuleId, {
-          filters: effectiveSnapshot?.filters,
-          data: {
-            wardrobe: {
-              ...wardrobe,
-              outfitSets: nextOutfitSets
-            },
-            rejectedUrls: effectiveSnapshot?.data?.rejectedUrls || []
-          }
-        });
-      } catch (error) {
-        console.error("[outfit-set-image]", {
-          message: error?.message || "unknown_error",
-          stack: typeof error?.stack === "string" ? error.stack : null,
-          capsuleId,
-          setIndex
-        });
-      } finally {
-        outfitSetImageJobs.delete(jobKey);
-        publishSnapshotImpl(email, capsuleId, buildCapsuleEventSnapshotImpl({
-          capsule: currentCapsule,
-          outfitSetImageJob: getOutfitSetImageJob(email, capsuleId)
-        }));
-      }
-    })();
+    outfitSetImageJobs.set(jobKey, { id: randomUUID(), status: "pending", setIndex });
+    publishOutfitSetSnapshot({ email, capsuleId, capsule, publishSnapshotImpl, buildCapsuleEventSnapshotImpl });
+    runOutfitSetImageJob({ deps, email, capsuleId, setIndex, capsule, effectiveSnapshot, wardrobe, outfitSets, setItems, jobKey });
 
     return res.status(202).json({ ok: true, status: "pending" });
-  }
-
-  return {
-    deleteOutfitSetImage,
-    generateOutfitSetImage
   };
 }
+
+function createOutfitSetImageService({
+  getCapsuleImpl = getCapsule,
+  getProfileImpl = getProfile,
+  updateCapsuleSnapshotImpl = updateCapsuleSnapshot,
+  publishSnapshotImpl = ((email, capsuleId, snapshot) => capsuleEventHub.publish(email, capsuleId, snapshot)) as (
+    email: string,
+    capsuleId: string,
+    snapshot: unknown
+  ) => void | boolean,
+  buildCapsuleEventSnapshotImpl = buildCapsuleEventSnapshot as (payload?: Record<string, unknown>) => unknown,
+  downloadProductImageAssetsImpl = downloadProductImageAssets,
+  generateImageWithOpenAiImpl = generateImageWithOpenAi,
+  generateImageWithGeminiImpl = generateImageWithGemini,
+  uploadImageToR2Impl = uploadImageToR2,
+	  buildOutfitSetDescriptionImpl = buildOutfitSetDescription
+	} = {}) {
+  const deps = {
+    buildCapsuleEventSnapshotImpl,
+    buildOutfitSetDescriptionImpl,
+    downloadProductImageAssetsImpl,
+    generateImageWithGeminiImpl,
+    generateImageWithOpenAiImpl,
+    getCapsuleImpl,
+    getProfileImpl,
+    publishSnapshotImpl,
+    updateCapsuleSnapshotImpl,
+    uploadImageToR2Impl
+  };
+
+	  return {
+    deleteOutfitSetImage: createDeleteOutfitSetImage(deps),
+    generateOutfitSetImage: createGenerateOutfitSetImage(deps)
+	  };
+	}
 
 const outfitSetImageService = createOutfitSetImageService();
 

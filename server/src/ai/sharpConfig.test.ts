@@ -6,12 +6,11 @@ import { SHARP_CONCURRENCY, configureSharp } from "./sharpConfig.js";
 test("configureSharp disables cache and uses default or override concurrency", () => {
   const originalCache = sharp.cache;
   const originalConcurrency = sharp.concurrency;
-  let cacheEnabled = true;
   let concurrencyValue = 0;
 
   sharp.cache = (value) => {
     if (typeof value === "boolean") {
-      cacheEnabled = value;
+      assert.equal(value, false);
     }
     return {
       memory: { current: 0, high: 0, max: 0 },

@@ -9,35 +9,44 @@ function extractFormulaIds(formula) {
 
 function normalizeOutfitSetItemIds(itemIds = [], itemsById = new Map()) {
   const normalizedItemIds = [];
-  const seenCategories = new Set();
   const categories = new Set();
+  const seenCategories = new Set();
 
   for (const itemId of itemIds) {
-    const item = itemsById.get(itemId);
-    if (!item) {
+    const category = getNextOutfitCategory(itemId, itemsById, seenCategories);
+    if (category === null) {
       continue;
     }
 
-    const category = String(item?.category || "").trim();
-    const categoryKey = category || `__missing__:${itemId}`;
-    if (seenCategories.has(categoryKey)) {
-      continue;
-    }
-
-    seenCategories.add(categoryKey);
     normalizedItemIds.push(itemId);
-
     if (category) {
       categories.add(category);
     }
   }
 
-  const hasDress = categories.has("dress");
-  const hasTopAndBottom = categories.has("top") && categories.has("bottom");
-
-  return hasDress || hasTopAndBottom
+  return hasCompleteOutfitCore(categories)
     ? { itemIds: normalizedItemIds }
     : null;
+}
+
+function getNextOutfitCategory(itemId, itemsById, seenCategories) {
+  const item = itemsById.get(itemId);
+  if (!item) {
+    return null;
+  }
+
+  const category = String(item?.category || "").trim();
+  const categoryKey = category || `__missing__:${itemId}`;
+  if (seenCategories.has(categoryKey)) {
+    return null;
+  }
+
+  seenCategories.add(categoryKey);
+  return category;
+}
+
+function hasCompleteOutfitCore(categories) {
+  return categories.has("dress") || (categories.has("top") && categories.has("bottom"));
 }
 
 function buildOutfitSetsFromFormulas(formulas = [], items = []) {

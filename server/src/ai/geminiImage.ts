@@ -66,40 +66,37 @@ function buildGeminiImagePromptParts(prompt, images = []) {
 }
 
 function extractGeneratedImage(response) {
-  const interactionOutputs = Array.isArray(response?.outputs) ? response.outputs : [];
-  for (const output of interactionOutputs) {
-    if (output?.type === "image" && typeof output?.data === "string" && output.data.length > 0) {
-      return {
-        base64: output.data,
-        mimeType: output?.mime_type || "image/png"
-      };
-    }
-  }
+  const image = getInteractionOutputImage(response)
+    || getCandidatePartImage(response)
+    || getGeneratedImage(response);
 
-  const candidateParts = Array.isArray(response?.candidates)
-    ? response.candidates.flatMap((candidate) => candidate?.content?.parts || [])
-    : [];
-  for (const part of candidateParts) {
-    const inlineData = part?.inlineData || part?.inline_data || null;
-    if (typeof inlineData?.data === "string" && inlineData.data.length > 0) {
-      return {
-        base64: inlineData.data,
-        mimeType: inlineData?.mimeType || inlineData?.mime_type || "image/png"
-      };
-    }
+  if (!image) {
+    throw new Error("gemini_image_missing_output");
   }
+  return image;
+}
 
-  const generatedImages = Array.isArray(response?.generatedImages) ? response.generatedImages : [];
-  for (const image of generatedImages) {
-    if (typeof image?.image?.imageBytes === "string" && image.image.imageBytes.length > 0) {
-      return {
-        base64: image.image.imageBytes,
-        mimeType: image.image?.mimeType || "image/png"
-      };
-    }
-  }
+function getInteractionOutputImage(response) {
+  const output = (Array.isArray(response?.outputs) ? response.outputs : [])
+    .find((item) => item?.type === "image" && typeof item?.data === "string" && item.data.length > 0);
+  return output ? { base64: output.data, mimeType: output?.mime_type || "image/png" } : null;
+}
 
-  throw new Error("gemini_image_missing_output");
+function getCandidatePartImage(response) {
+  const part = (Array.isArray(response?.candidates) ? response.candidates : [])
+    .flatMap((candidate) => candidate?.content?.parts || [])
+    .find((item) => {
+      const inlineData = item?.inlineData || item?.inline_data || null;
+      return typeof inlineData?.data === "string" && inlineData.data.length > 0;
+    });
+  const inlineData = part?.inlineData || part?.inline_data || null;
+  return inlineData ? { base64: inlineData.data, mimeType: inlineData?.mimeType || inlineData?.mime_type || "image/png" } : null;
+}
+
+function getGeneratedImage(response) {
+  const image = (Array.isArray(response?.generatedImages) ? response.generatedImages : [])
+    .find((item) => typeof item?.image?.imageBytes === "string" && item.image.imageBytes.length > 0);
+  return image ? { base64: image.image.imageBytes, mimeType: image.image?.mimeType || "image/png" } : null;
 }
 
 function createGeminiImageClient({

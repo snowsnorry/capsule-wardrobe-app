@@ -1,11 +1,12 @@
 import "@testing-library/jest-dom/vitest";
 import { afterAll } from "vitest";
 
-const originalConsoleError = console.error;
+const testConsole = globalThis.console;
+const originalConsoleError = testConsole.error;
 const originalStderrWrite = process.stderr.write.bind(process.stderr);
 type StderrWriteCallback = (error?: Error | null) => void;
 
-function isKnownJsdomCssParseWarning(args) {
+function isKnownJsdomCssParseWarning(args: readonly unknown[]): boolean {
   if (!Array.isArray(args) || args.length === 0) {
     return false;
   }
@@ -16,7 +17,7 @@ function isKnownJsdomCssParseWarning(args) {
     && (secondArg === undefined || String(secondArg).includes("@import \"tailwindcss\";"));
 }
 
-console.error = (...args) => {
+testConsole.error = (...args: unknown[]) => {
   if (isKnownJsdomCssParseWarning(args)) {
     return;
   }
@@ -48,6 +49,6 @@ process.stderr.write = ((chunk: string | Uint8Array, encoding?: BufferEncoding |
 }) as typeof process.stderr.write;
 
 afterAll(() => {
-  console.error = originalConsoleError;
+  testConsole.error = originalConsoleError;
   process.stderr.write = originalStderrWrite as typeof process.stderr.write;
 });

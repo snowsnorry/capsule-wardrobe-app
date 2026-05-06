@@ -38,6 +38,22 @@ type DetailRow = {
 type PendingDetailRow = Omit<DetailRow, "value"> & {
   value: DetailValue | null;
 };
+type ProductDetailContext = {
+  t: Translate;
+  translateOption: TranslateOption;
+  locale: string;
+};
+type DetailField = {
+  key: string;
+  labelKey: string;
+  resolveValue: (item: ProductDetailItem | null | undefined, context: ProductDetailContext) => DetailValue | null;
+};
+
+const detailGroups = [
+  { id: "meta", keys: ["price", "availability", "audience", "season"] },
+  { id: "style", keys: ["formalityLevel", "color", "style", "pattern", "occasions", "neutral"] },
+  { id: "construction", keys: ["composition", "finish", "silhouette", "fit", "closureType"] }
+] as const;
 
 function translateComposition(value: unknown, translateOption: TranslateOption, locale: string): unknown {
   if (typeof value !== "string") {
@@ -85,122 +101,91 @@ function createColorValue(
   return items.length > 0 ? { kind: "colors", items } : null;
 }
 
+function translateArrayField(
+  values: unknown,
+  optionGroup: string,
+  { translateOption, locale }: ProductDetailContext
+): TextDetailValue | null {
+  return createListValue(
+    Array.isArray(values) ? values.map((value) => translateOption(optionGroup, String(value), locale)) : []
+  );
+}
+
+const detailFields: readonly DetailField[] = [
+  {
+    key: "price",
+    labelKey: "search.fields.price",
+    resolveValue: (item) => createTextValue(item?.price != null ? `${item.price}${item.currency ? ` ${item.currency}` : ""}` : null)
+  },
+  {
+    key: "availability",
+    labelKey: "search.fields.availability",
+    resolveValue: (item, context) => createTextValue(item?.availability ? context.translateOption("availability", item.availability, context.locale) : null)
+  },
+  {
+    key: "audience",
+    labelKey: "search.fields.audience",
+    resolveValue: (item, context) => createTextValue(item?.audience ? context.translateOption("audience", item.audience, context.locale) : null)
+  },
+  { key: "season", labelKey: "search.fields.season", resolveValue: (item, context) => translateArrayField(item?.season, "seasons", context) },
+  { key: "formalityLevel", labelKey: "search.fields.formalityLevel", resolveValue: (item, context) => translateArrayField(item?.formalityLevel, "styles", context) },
+  { key: "style", labelKey: "search.fields.style", resolveValue: (item, context) => translateArrayField(item?.style, "styles", context) },
+  { key: "occasions", labelKey: "search.fields.occasions", resolveValue: (item, context) => translateArrayField(item?.occasions, "occasions", context) },
+  {
+    key: "color",
+    labelKey: "search.fields.color",
+    resolveValue: (item, context) => createColorValue(Array.isArray(item?.colorBase) ? item.colorBase : [], context.translateOption, context.locale)
+  },
+  {
+    key: "pattern",
+    labelKey: "search.fields.pattern",
+    resolveValue: (item, context) => createTextValue(item?.pattern ? context.translateOption("patterns", item.pattern, context.locale) : null)
+  },
+  { key: "finish", labelKey: "search.fields.finish", resolveValue: (item) => createTextValue(item?.finish) },
+  {
+    key: "neutral",
+    labelKey: "search.fields.neutral",
+    resolveValue: (item, context) => typeof item?.isNeutral === "boolean"
+      ? createTextValue(item.isNeutral ? context.t("search.yes") : context.t("search.no"))
+      : null
+  },
+  {
+    key: "composition",
+    labelKey: "search.fields.composition",
+    resolveValue: (item, context) => createTextValue(item?.composition ? translateComposition(item.composition, context.translateOption, context.locale) : null)
+  },
+  {
+    key: "silhouette",
+    labelKey: "search.fields.silhouette",
+    resolveValue: (item, context) => createTextValue(item?.silhouette ? context.translateOption("silhouettes", item.silhouette, context.locale) : null)
+  },
+  {
+    key: "fit",
+    labelKey: "search.fields.fit",
+    resolveValue: (item, context) => createTextValue(item?.fit ? context.translateOption("fits", item.fit, context.locale) : null)
+  },
+  { key: "closureType", labelKey: "search.fields.closureType", resolveValue: (item, context) => translateArrayField(item?.closureType, "closureTypes", context) }
+];
+
 function buildProductDetailGroups(
   item: ProductDetailItem | null | undefined,
-  { t, translateOption, locale }: { t: Translate; translateOption: TranslateOption; locale: string }
+  context: ProductDetailContext
 ) {
-  const detailRows: DetailRow[] = ([
-    {
-      key: "price",
-      label: t("search.fields.price"),
-      value: createTextValue(item?.price != null ? `${item.price}${item.currency ? ` ${item.currency}` : ""}` : null)
-    },
-    {
-      key: "availability",
-      label: t("search.fields.availability"),
-      value: createTextValue(item?.availability ? translateOption("availability", item.availability, locale) : null)
-    },
-    {
-      key: "audience",
-      label: t("search.fields.audience"),
-      value: createTextValue(item?.audience ? translateOption("audience", item.audience, locale) : null)
-    },
-    {
-      key: "season",
-      label: t("search.fields.season"),
-      value: createListValue(
-        Array.isArray(item?.season) ? item.season.map((value) => translateOption("seasons", value, locale)) : []
-      )
-    },
-    {
-      key: "formalityLevel",
-      label: t("search.fields.formalityLevel"),
-      value: createListValue(
-        Array.isArray(item?.formalityLevel)
-          ? item.formalityLevel.map((value) => translateOption("styles", value, locale))
-          : []
-      )
-    },
-    {
-      key: "style",
-      label: t("search.fields.style"),
-      value: createListValue(
-        Array.isArray(item?.style) ? item.style.map((value) => translateOption("styles", value, locale)) : []
-      )
-    },
-    {
-      key: "occasions",
-      label: t("search.fields.occasions"),
-      value: createListValue(
-        Array.isArray(item?.occasions)
-          ? item.occasions.map((value) => translateOption("occasions", value, locale))
-          : []
-      )
-    },
-    {
-      key: "color",
-      label: t("search.fields.color"),
-      value: createColorValue(Array.isArray(item?.colorBase) ? item.colorBase : [], translateOption, locale)
-    },
-    {
-      key: "pattern",
-      label: t("search.fields.pattern"),
-      value: createTextValue(item?.pattern ? translateOption("patterns", item.pattern, locale) : null)
-    },
-    {
-      key: "finish",
-      label: t("search.fields.finish"),
-      value: createTextValue(item?.finish)
-    },
-    {
-      key: "neutral",
-      label: t("search.fields.neutral"),
-      value: typeof item?.isNeutral === "boolean" ? createTextValue(item.isNeutral ? t("search.yes") : t("search.no")) : null
-    },
-    {
-      key: "composition",
-      label: t("search.fields.composition"),
-      value: createTextValue(item?.composition ? translateComposition(item.composition, translateOption, locale) : null)
-    },
-    {
-      key: "silhouette",
-      label: t("search.fields.silhouette"),
-      value: createTextValue(item?.silhouette ? translateOption("silhouettes", item.silhouette, locale) : null)
-    },
-    {
-      key: "fit",
-      label: t("search.fields.fit"),
-      value: createTextValue(item?.fit ? translateOption("fits", item.fit, locale) : null)
-    },
-    {
-      key: "closureType",
-      label: t("search.fields.closureType"),
-      value: createListValue(
-        Array.isArray(item?.closureType)
-          ? item.closureType.map((value) => translateOption("closureTypes", value, locale))
-          : []
-      )
-    }
-  ] as PendingDetailRow[]).filter((row): row is DetailRow => Boolean(row.value));
+  const detailRows: DetailRow[] = detailFields
+    .map((field): PendingDetailRow => ({
+      key: field.key,
+      label: context.t(field.labelKey),
+      value: field.resolveValue(item, context)
+    }))
+    .filter((row): row is DetailRow => Boolean(row.value));
 
   const getRows = (keys: readonly string[]): DetailRow[] => keys
     .map((key) => detailRows.find((row) => row.key === key))
     .filter((row): row is DetailRow => Boolean(row));
 
-  return [
-    {
-      id: "meta",
-      items: getRows(["price", "availability", "audience", "season"])
-    },
-    {
-      id: "style",
-      items: getRows(["formalityLevel", "color", "style", "pattern", "occasions", "neutral"])
-    },
-    {
-      id: "construction",
-      items: getRows(["composition", "finish", "silhouette", "fit", "closureType"])
-    }
-  ].filter((group) => group.items.length > 0);
+  return detailGroups
+    .map((group) => ({ id: group.id, items: getRows(group.keys) }))
+    .filter((group) => group.items.length > 0);
 }
 
 export { buildProductDetailGroups, translateComposition };

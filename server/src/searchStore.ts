@@ -17,44 +17,12 @@ import {
 } from "./db.js";
 import { getStyles } from "./profileStore.js";
 import { getPromptEmbeddings } from "./ai/voyageai.js";
-
-type SearchPayload = {
-  query: string;
-  brand: string[];
-  priceMin: number | null;
-  priceMax: number | null;
-  audience: string[];
-  category: string[];
-  season: string[];
-  formalityLevel: string[];
-  style: string[];
-  occasions: string[];
-  color: string[];
-  pattern: string[];
-  silhouette: string[];
-  fit: string[];
-  closureType: string[];
-  page: number;
-};
+import { assertValidSearchPayload } from "./searchValidation.js";
+import type { SearchOptions, SearchPayload } from "./searchTypes.js";
+export type { SearchOptions, SearchPayload } from "./searchTypes.js";
 
 type SearchRow = Partial<SearchPayload> & {
   embedding?: number[] | null;
-};
-
-type SearchOptions = {
-  brands: Array<string | { value?: string | null }>;
-  categories: string[];
-  seasons: string[];
-  formalityLevels: string[];
-  styles: string[];
-  occasions: string[];
-  audience: string[];
-  colors: string[];
-  patterns: string[];
-  silhouettes: string[];
-  fits: string[];
-  closureTypes: string[];
-  priceRange: unknown;
 };
 
 type SearchResults = {
@@ -240,50 +208,6 @@ async function resolveSearchEmbedding({
   }
 
   return getPromptEmbeddings(query);
-}
-
-function isAllowedNullableValue(value: string | null, allowedItems: readonly string[]): boolean {
-  return value === null || allowedItems.includes(value);
-}
-
-function isAllowedArrayValue(values: readonly string[], allowedItems: readonly string[]): boolean {
-  return values.every((value) => allowedItems.includes(value));
-}
-
-function getAllowedBrandValues(brandOptions: SearchOptions["brands"] = []): string[] {
-  return brandOptions
-    .map((item) => (typeof item === "string" ? item : item?.value))
-    .filter(Boolean);
-}
-
-function assertValidSearchPayload(normalized: SearchPayload, options: SearchOptions): void {
-  const allowedBrandValues = getAllowedBrandValues(options.brands);
-
-  if (
-    !isAllowedArrayValue(normalized.brand, allowedBrandValues) ||
-    !isAllowedArrayValue(normalized.audience, options.audience) ||
-    !isAllowedArrayValue(normalized.category, options.categories) ||
-    !isAllowedArrayValue(normalized.formalityLevel, options.formalityLevels) ||
-    !isAllowedArrayValue(normalized.style, options.styles) ||
-    !isAllowedArrayValue(normalized.color, options.colors) ||
-    !isAllowedArrayValue(normalized.pattern, options.patterns) ||
-    !isAllowedArrayValue(normalized.silhouette, options.silhouettes) ||
-    !isAllowedArrayValue(normalized.fit, options.fits) ||
-    !isAllowedArrayValue(normalized.closureType, options.closureTypes) ||
-    !isAllowedArrayValue(normalized.season, options.seasons) ||
-    !isAllowedArrayValue(normalized.occasions, options.occasions) ||
-    Number.isNaN(normalized.priceMin) ||
-    Number.isNaN(normalized.priceMax) ||
-    (
-      normalized.priceMin !== null &&
-      normalized.priceMax !== null &&
-      normalized.priceMin > normalized.priceMax
-    )
-  ) {
-    const error = new Error("invalid_payload");
-    (error as Error & { code?: string }).code = "invalid_payload";
-    throw error;
-  }
 }
 
 async function getSearchOptions(email: string): Promise<SearchOptions> {

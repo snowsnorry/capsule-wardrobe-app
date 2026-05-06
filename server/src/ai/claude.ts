@@ -5,6 +5,7 @@ import {
   splitSystemAndUserPrompt
 } from "./llmPrompts.js";
 import { releaseImageBuffers } from "./openai.js";
+import { logWarn } from "../logger.js";
 import type {
   ImageAssetLike,
   JsonSchema,
@@ -74,35 +75,16 @@ function buildClaudeSystemPrompt(
 }
 
 function buildClaudeMessages(user: string, images: ImageAssetLike[] = []) {
-  const content: Array<
-    | { type: "image"; source: { type: "base64"; media_type: string; data: string } }
-    | { type: "text"; text: string }
-  > = [];
+  const content: ClaudeMessageContent[] = [];
   const userText = String(user || "").trim();
 
   for (const image of images) {
-    if (!Buffer.isBuffer(image?.buffer) || image.buffer.length === 0) {
-      console.warn(
-        "[claude][image-skipped]",
-        JSON.stringify({
-          category: image?.category ?? null,
-          filename: image?.filename ?? null,
-          reason: "missing_buffer"
-        })
-      );
+    const imageContent = buildClaudeImageContent(image);
+    if (!imageContent) {
       continue;
     }
 
-    content.push({
-      type: "image",
-      source: {
-        type: "base64",
-        media_type: typeof image?.mimeType === "string" && image.mimeType.trim().length > 0
-          ? normalizeClaudeImageMimeType(image.mimeType)
-          : "image/jpeg",
-        data: image.buffer.toString("base64")
-      }
-    });
+    content.push(imageContent);
   }
 
   if (userText) {
@@ -116,6 +98,35 @@ function buildClaudeMessages(user: string, images: ImageAssetLike[] = []) {
     role: "user",
     content: content.length > 0 ? content : [{ type: "text", text: "" }]
   }];
+}
+
+function buildClaudeImageContent(image: ImageAssetLike | null | undefined): ClaudeMessageContent | null {
+  if (!Buffer.isBuffer(image?.buffer) || image.buffer.length === 0) {
+    logWarn(
+      "[claude][image-skipped]",
+      JSON.stringify({
+        category: image?.category ?? null,
+        filename: image?.filename ?? null,
+        reason: "missing_buffer"
+      })
+    );
+    return null;
+  }
+
+  return {
+    type: "image",
+    source: {
+      type: "base64",
+      media_type: getClaudeImageMimeType(image),
+      data: image.buffer.toString("base64")
+    }
+  };
+}
+
+function getClaudeImageMimeType(image: ImageAssetLike): "image/png" | "image/jpeg" | "image/gif" | "image/webp" {
+  return typeof image?.mimeType === "string" && image.mimeType.trim().length > 0
+    ? normalizeClaudeImageMimeType(image.mimeType)
+    : "image/jpeg";
 }
 
 function normalizeClaudeImageMimeType(mimeType: string): "image/png" | "image/jpeg" | "image/gif" | "image/webp" {
@@ -189,6 +200,24 @@ function extractClaudeResponseText(
     .trim();
 }
 
+function parseClaudeJsonResponse(response: ClaudeResponseLike) {
+  let content = extractClaudeResponseText(response) || "{}";
+  if (content) {
+    content = content.replace(/^[^{]*/, "").replace(/[^}]*$/, "");
+  }
+
+  try {
+    return JSON.parse(content);
+  } catch (error) {
+    const parseError = new Error(
+      `Failed to parse JSON response: ${error instanceof Error ? error.message : String(error)}\nResponse content: ${content}`
+    ) as ParsedGenerationError;
+    const rawSelectionText = extractClaudeResponseText(response);
+    parseError.rawSelectionText = rawSelectionText.length > 0 ? rawSelectionText : null;
+    throw parseError;
+  }
+}
+
 function createClaudeClient({
   createClientImpl = ({ apiKey }: { apiKey: string }): ClaudeClientLike => {
     const sdkClient = new Anthropic({ apiKey, maxRetries: 0 });
@@ -252,21 +281,7 @@ function createClaudeClient({
       max_tokens: 8000
     });
 
-    let content = extractClaudeResponseText(response) || "{}";
-    let json;
-    if (content) {
-      content = content.replace(/^[^{]*/, "").replace(/[^}]*$/, "");
-    }
-    try {
-      json = JSON.parse(content);
-    } catch (error) {
-      const parseError = new Error(
-        `Failed to parse JSON response: ${error instanceof Error ? error.message : String(error)}\nResponse content: ${content}`
-      ) as ParsedGenerationError;
-      const rawSelectionText = extractClaudeResponseText(response);
-      parseError.rawSelectionText = rawSelectionText.length > 0 ? rawSelectionText : null;
-      throw parseError;
-    }
+    const json = parseClaudeJsonResponse(response);
 
     return {
       response: {
