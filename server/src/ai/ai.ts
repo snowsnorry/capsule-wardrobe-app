@@ -19,8 +19,7 @@ import { buildPromptDebugImagesInChild } from "./promptImages.js";
 import { buildOutfitSetsFromFormulas, getOutfitFormulas } from "./outfitSets.js";
 import {
   getProcessMemoryUsage,
-  runWithImageWorkSlot,
-  sumCategoryBytes
+  runWithImageWorkSlot
 } from "./imagePipeline.js";
 import { getPartialRegenerationJob } from "./regenerateSelected.js";
 import {
@@ -441,8 +440,8 @@ function enforceCategoryCounts(selectedItems, normalizedItems, categories, capsu
   const allowedCategories = new Set(categoryOrder);
   const categoryIndexByName = new Map(categoryOrder.map((category, index) => [category, index]));
   let effectiveStyle = normalizeCapsuleConstraintValue(capsuleParams?.style);
-  let effectiveColor = normalizeCapsuleConstraintValue(capsuleParams?.color);
-  let effectivePattern = normalizePatternValue(capsuleParams?.pattern) || "solid";
+  const effectiveColor = normalizeCapsuleConstraintValue(capsuleParams?.color);
+  const effectivePattern = normalizePatternValue(capsuleParams?.pattern) || "solid";
   const hasExplicitStyle = Boolean(effectiveStyle);
   const seenPoolIds = new Set();
   const poolByCategory = new Map(categoryOrder.map((category) => [category, []]));

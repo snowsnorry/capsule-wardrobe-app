@@ -216,7 +216,7 @@ test("createSession prunes expired sessions, inserts session, and respects prune
 });
 
 test("getSession normalizes valid sessions and deletes expired sessions", async () => {
-  let now = 50_000;
+  const now = 50_000;
   const deletedIds: string[] = [];
   const store = createAuthStore({
     codeSecret: "secret",
