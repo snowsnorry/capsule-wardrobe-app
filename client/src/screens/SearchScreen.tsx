@@ -194,7 +194,7 @@ function ProductDetail({
                   gap: 1.5,
                   p: 1.8,
                   borderRadius: "22px",
-                  backgroundColor: isDarkMode ? "rgb(0, 0, 0)" : "rgba(31, 41, 51, 0.03)"
+                  backgroundColor: isDarkMode ? "background.default" : "rgba(31, 41, 51, 0.03)"
                 }}
               >
                 {group.items.map((row) => (

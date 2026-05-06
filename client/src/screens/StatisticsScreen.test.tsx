@@ -259,7 +259,7 @@ describe("StatisticsScreen", () => {
     expect((await screen.findAllByText("37")).length).toBeGreaterThan(0);
   });
 
-  test("uses dark chart cards in dark mode", async () => {
+  test("uses dark paper chart cards in dark mode", async () => {
     renderScreenWithTheme(createAppTheme("dark"));
 
     expect((await screen.findAllByText("120")).length).toBeGreaterThan(0);
@@ -267,7 +267,7 @@ describe("StatisticsScreen", () => {
     const summaryCard = screen.getByTestId("statistics-summary-card");
     const chartCards = screen.getAllByTestId("statistics-card");
 
-    expect(summaryCard).toHaveStyle({ backgroundColor: "rgb(0, 0, 0)" });
-    expect(chartCards[0]).toHaveStyle({ backgroundColor: "rgb(0, 0, 0)" });
+    expect(summaryCard).toHaveStyle({ backgroundColor: "rgb(21, 32, 31)" });
+    expect(chartCards[0]).toHaveStyle({ backgroundColor: "rgb(21, 32, 31)" });
   });
 });

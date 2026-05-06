@@ -201,6 +201,7 @@ function StatisticsCard({
 }) {
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === "dark";
+  const cardBackground = isDarkMode ? theme.palette.background.paper : "rgba(252, 251, 249, 0.72)";
 
   return (
     <Stack
@@ -212,18 +213,17 @@ function StatisticsCard({
         minWidth: 0,
         flexShrink: 0,
         overflow: "hidden",
-        borderRadius: "5.4px",
+        borderRadius: "8px",
         border: "1px solid",
         borderColor: "divider",
-        bgcolor: isDarkMode ? "#000000" : "rgba(255,255,255,0.55)",
-        color: isDarkMode ? "#ffffff" : "text.primary",
-        backdropFilter: "blur(8px)"
+        bgcolor: cardBackground,
+        color: "text.primary"
       }}
     >
       <Box>
-        <Typography variant="h6" sx={{ color: isDarkMode ? "#ffffff" : "text.primary" }}>{title}</Typography>
+        <Typography variant="h6" sx={{ color: "text.primary" }}>{title}</Typography>
         {subtitle ? (
-          <Typography variant="body2" sx={{ color: isDarkMode ? "rgba(255,255,255,0.74)" : "text.secondary" }}>
+          <Typography variant="body2" color="text.secondary">
             {subtitle}
           </Typography>
         ) : null}
@@ -254,6 +254,9 @@ function StatisticsSummaryCard({
 }) {
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === "dark";
+  const cardBackground = isDarkMode ? theme.palette.background.paper : "rgba(252, 251, 249, 0.82)";
+  const subtleChipBackground = isDarkMode ? "rgba(238, 245, 243, 0.08)" : undefined;
+  const subtleChipDeleteColor = isDarkMode ? "rgba(238, 245, 243, 0.68)" : undefined;
 
   return (
     <Box
@@ -263,11 +266,10 @@ function StatisticsSummaryCard({
         minHeight: { xs: 156, md: 156 },
         height: "auto",
         flexShrink: 0,
-        borderRadius: "5.4px",
+        borderRadius: "10px",
         border: "1px solid",
         borderColor: "divider",
-        bgcolor: isDarkMode ? "#000000" : "rgba(255,255,255,0.72)",
-        backdropFilter: "blur(8px)"
+        bgcolor: cardBackground
       }}
     >
       <Box
@@ -285,7 +287,7 @@ function StatisticsSummaryCard({
             sx={{
               textTransform: "uppercase",
               letterSpacing: "0.08em",
-              color: isDarkMode ? "rgba(255,255,255,0.68)" : "text.secondary"
+              color: "text.secondary"
             }}
           >
             {title}
@@ -297,7 +299,7 @@ function StatisticsSummaryCard({
                 lineHeight: 1,
                 fontSize: { xs: "1.5rem", md: "1.5rem" },
                 fontWeight: 600,
-                color: isDarkMode ? "#ffffff" : "text.primary"
+                color: "text.primary"
               }}
             >
               {totalLabel}
@@ -310,7 +312,7 @@ function StatisticsSummaryCard({
               maxWidth: 560,
               lineHeight: 1.5,
               pr: { lg: 2 },
-              color: isDarkMode ? "rgba(255,255,255,0.74)" : "text.secondary"
+              color: "text.secondary"
             }}
           >
             {subtitle}
@@ -334,7 +336,7 @@ function StatisticsSummaryCard({
             sx={{
               textTransform: "uppercase",
               letterSpacing: "0.08em",
-              color: isDarkMode ? "rgba(255,255,255,0.68)" : "text.secondary"
+              color: "text.secondary"
             }}
           >
             {chips.length > 0 ? activeFiltersLabel : ""}
@@ -348,15 +350,15 @@ function StatisticsSummaryCard({
                   onDelete={() => onDeleteChip(chip)}
                   sx={{
                     maxWidth: "100%",
-                    bgcolor: isDarkMode ? "rgba(255,255,255,0.08)" : undefined,
-                    color: isDarkMode ? "#ffffff" : undefined,
+                    bgcolor: subtleChipBackground,
+                    color: isDarkMode ? "text.primary" : undefined,
                     "& .MuiChip-label": {
                       display: "block",
                       overflow: "hidden",
                       textOverflow: "ellipsis"
                     },
                     "& .MuiChip-deleteIcon": {
-                      color: isDarkMode ? "rgba(255,255,255,0.72)" : undefined
+                      color: subtleChipDeleteColor
                     }
                   }}
                 />
@@ -372,7 +374,7 @@ function StatisticsSummaryCard({
                 alignItems: "center"
               }}
             >
-              <Typography variant="body2" sx={{ color: isDarkMode ? "rgba(255,255,255,0.74)" : "text.secondary" }}>
+              <Typography variant="body2" color="text.secondary">
                 {noActiveFiltersLabel}
               </Typography>
             </Box>
