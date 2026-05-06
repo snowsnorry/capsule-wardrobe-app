@@ -738,7 +738,6 @@ async function regenerateCapsuleWardrobe(
   });
   promptDebugImages.categories = [];
   promptDebugImages.stitched = null;
-  currentCapsuleCollage = null;
   logWardrobeInfo("capsule-llm-completed", {
     llmProvider: llmResolution.provider,
     llmModel: llmResolution.model,

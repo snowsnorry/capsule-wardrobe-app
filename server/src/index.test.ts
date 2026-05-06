@@ -31,14 +31,61 @@ type RequestJsonOptions = {
 };
 type RequestJsonResult = {
   response: Response;
-  json: any;
+  json: TestResponseJson;
+};
+type CreateAppOptions = NonNullable<Parameters<typeof createApp>[0]>;
+type StartServerOptions = Parameters<typeof startServer>[0];
+type MutableRecord = Record<string, unknown>;
+type TestResponseJson = MutableRecord & {
+  error?: string;
+  ok?: boolean;
+  capsuleId?: string;
+  name?: string;
+  options?: MutableRecord & {
+    challenge?: string;
+    userVerification?: string;
+    authenticatorSelection?: MutableRecord & {
+      userVerification?: string;
+    };
+  };
+  passkey?: MutableRecord;
+  passkeys?: MutableRecord[];
+  profile?: MutableRecord & {
+    audience?: unknown;
+  };
+  snapshot?: MutableRecord;
+};
+type PasskeyInsertPayload = MutableRecord & {
+  profileEmail: string;
+  credentialId: string;
+  aaguid: string | null;
+  name: string;
+};
+type PasskeyChallengePayload = MutableRecord & {
+  id: string;
+  kind: string;
+  profileEmail?: string | null;
+};
+type RegistrationOptionsInput = MutableRecord & {
+  authenticatorSelection: MutableRecord & {
+    userVerification?: string;
+  };
+};
+type AuthenticationOptionsInput = MutableRecord & {
+  userVerification?: string;
+};
+type WebAuthnVerifyInput = MutableRecord & {
+  requireUserVerification?: boolean;
+  response: MutableRecord & {
+    response: MutableRecord;
+  };
 };
 
 function createDependencies(overrides: DependencyOverrides = {}) {
   return {
     createPendingCodeImpl: async () => ({ ok: true, code: "654321" }),
     verifyCodeImpl: async () => ({ ok: true }),
-    createSessionImpl: async (email) => ({
+    createSessionImpl: async (email: string) => ({
       sessionId: SESSION_ID,
       session: {
         email,
@@ -51,7 +98,9 @@ function createDependencies(overrides: DependencyOverrides = {}) {
       sessionId === SESSION_ID
         ? {
           email: "person@example.com",
-          csrfToken: CSRF_TOKEN
+          csrfToken: CSRF_TOKEN,
+          createdAt: new Date(0).toISOString(),
+          expiresAt: new Date(60_000).toISOString()
         }
         : null
     ),
@@ -269,7 +318,7 @@ async function startTestServer(testContext, {
     googleClientId,
     googleAuthClient: googleAuthClient as OAuth2Client | null,
     ...deps
-  } as any);
+  } as unknown as CreateAppOptions);
 
   const server = await new Promise<Server>((resolve) => {
     const nextServer = app.listen(0, "127.0.0.1", () => resolve(nextServer));
@@ -297,7 +346,7 @@ async function startSpaFallbackTestServer(testContext, {
     nodeEnv: "production",
     clientOrigin: TEST_CLIENT_ORIGIN,
     ...deps
-  } as any);
+  } as unknown as CreateAppOptions);
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "capsule-og-test-"));
   await fs.writeFile(
     path.join(tempDir, "index.html"),
@@ -312,7 +361,7 @@ async function startSpaFallbackTestServer(testContext, {
     port: 0,
     clientDistPath: tempDir,
     getSharedCapsuleOgMetadataImpl: deps.getSharedCapsuleOgMetadataImpl
-  } as any);
+  } as unknown as StartServerOptions);
 
   testContext.after(async () => {
     await new Promise<void>((resolve, reject) => {
@@ -368,9 +417,11 @@ async function requestText(baseUrl, pathname, headers: Record<string, string> = 
   };
 }
 
-function passkeyRegistrationResponse(overrides: Record<string, any> = {}) {
-  const responseOverrides = overrides.response && typeof overrides.response === "object" && !Array.isArray(overrides.response)
-    ? overrides.response
+function passkeyRegistrationResponse(overrides: Record<string, unknown> = {}) {
+  const responseOverrides: Record<string, unknown> = overrides.response
+    && typeof overrides.response === "object"
+    && !Array.isArray(overrides.response)
+    ? overrides.response as Record<string, unknown>
     : {};
   const { response: _response, ...topLevelOverrides } = overrides;
   return {
@@ -392,9 +443,11 @@ function passkeyRegistrationResponse(overrides: Record<string, any> = {}) {
   };
 }
 
-function passkeyAuthenticationResponse(overrides: Record<string, any> = {}) {
-  const responseOverrides = overrides.response && typeof overrides.response === "object" && !Array.isArray(overrides.response)
-    ? overrides.response
+function passkeyAuthenticationResponse(overrides: Record<string, unknown> = {}) {
+  const responseOverrides: Record<string, unknown> = overrides.response
+    && typeof overrides.response === "object"
+    && !Array.isArray(overrides.response)
+    ? overrides.response as Record<string, unknown>
     : {};
   const { response: _response, ...topLevelOverrides } = overrides;
   return {
@@ -706,11 +759,11 @@ test("index routes cover logout and csrf enforcement on protected mutations", as
 });
 
 test("passkey registration routes require auth, store challenge, and save verified passkey", async (t) => {
-  let storedChallenge: any = null;
-  let insertedPasskey: any = null;
+  let storedChallenge: PasskeyChallengePayload | null = null;
+  let insertedPasskey: PasskeyInsertPayload | null = null;
   let challengeConsumeCount = 0;
-  let registrationOptionsInput: any = null;
-  let registrationVerifyInput: any = null;
+  let registrationOptionsInput: RegistrationOptionsInput | null = null;
+  let registrationVerifyInput: WebAuthnVerifyInput | null = null;
   const { baseUrl } = await startTestServer(t, {
     overrides: {
       generateRegistrationOptionsImpl: async (input) => {
@@ -841,7 +894,7 @@ test("passkey registration routes require auth, store challenge, and save verifi
 });
 
 test("passkey registration falls back to user-agent label for unknown AAGUID", async (t) => {
-  let insertedPasskey: any = null;
+  let insertedPasskey: PasskeyInsertPayload | null = null;
   const { baseUrl } = await startTestServer(t, {
     overrides: {
       consumePasskeyChallengeImpl: async ({ id, kind }) => (
@@ -906,7 +959,7 @@ test("passkey registration falls back to user-agent label for unknown AAGUID", a
 });
 
 test("passkey registration falls back to generic name without provider or user-agent label", async (t) => {
-  let insertedPasskey: any = null;
+  let insertedPasskey: PasskeyInsertPayload | null = null;
   const { baseUrl } = await startTestServer(t, {
     overrides: {
       consumePasskeyChallengeImpl: async ({ id, kind }) => (
@@ -969,12 +1022,12 @@ test("passkey registration falls back to generic name without provider or user-a
 });
 
 test("passkey authentication routes store challenge, reject unknown credentials, and create app session", async (t) => {
-  let storedChallenge: any = null;
-  let updatedAuth: any = null;
+  let storedChallenge: PasskeyChallengePayload | null = null;
+  let updatedAuth: MutableRecord | null = null;
   let challengeConsumeCount = 0;
   let credentialLookupCount = 0;
-  let authenticationOptionsInput: any = null;
-  let authenticationVerifyInput: any = null;
+  let authenticationOptionsInput: AuthenticationOptionsInput | null = null;
+  let authenticationVerifyInput: WebAuthnVerifyInput | null = null;
   const { baseUrl } = await startTestServer(t, {
     overrides: {
       generateAuthenticationOptionsImpl: async (input) => {
@@ -1187,7 +1240,7 @@ test("passkey registration options route is rate limited by IP after auth and cs
 });
 
 test("passkey list and delete routes expose metadata and scope deletion to current user", async (t) => {
-  let deleteInput: any = null;
+  let deleteInput: MutableRecord | null = null;
   const { baseUrl } = await startTestServer(t, {
     overrides: {
       listPasskeysImpl: async () => [{
@@ -1901,7 +1954,7 @@ test("rejected urls patch rejects unknown urls and missing wardrobe", async (t) 
 });
 
 test("share routes create, read, import, and enforce auth boundaries", async (t) => {
-  const calls: any[] = [];
+  const calls: unknown[] = [];
   const expiresAt = new Date(60_000).toISOString();
   const { baseUrl } = await startTestServer(t, {
     overrides: {

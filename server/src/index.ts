@@ -271,7 +271,10 @@ async function injectSharedCapsuleMetaTags(html: string, req, getMetadataImpl): 
 
 function buildPdfDownloadFilename(capsuleName) {
   const normalizedName = String(capsuleName || "")
-    .replace(/[\u0000-\u001f\u007f]/g, " ")
+    .replaceAll(
+      /[\s\S]/g,
+      (char) => (char.charCodeAt(0) <= 0x1f || char.charCodeAt(0) === 0x7f ? " " : char)
+    )
     .replace(/[\\/:"*?<>|]+/g, " ")
     .trim()
     .replace(/\s+/g, " ");
@@ -1017,7 +1020,7 @@ app.post("/auth/google", requireTrustedOrigin, async (req, res) => {
     return res.status(503).json({ error: "google_auth_not_configured" });
   }
 
-  let email = "";
+  let email: string;
   try {
     const ticket = await googleAuthClient.verifyIdToken({
       idToken,
@@ -1679,7 +1682,9 @@ app.post("/capsules/:id/pdf", requireTrustedOrigin, requireAuth, requireCsrf, as
     if (items.length === 0) {
       return res.status(404).json({ error: "not_found" });
     }
-    const productUrls = items.map((item) => String(item?.url || "").trim()).filter(Boolean);
+    const productUrls = items
+      .map((item) => String((item as { url?: unknown })?.url || "").trim())
+      .filter(Boolean);
     const products = await getProductsByUrlsInOrderImpl(productUrls);
     if (products.length === 0) {
       return res.status(404).json({ error: "not_found" });

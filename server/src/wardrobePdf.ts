@@ -183,7 +183,10 @@ function resolveFontPath(candidates) {
 }
 
 function hasNonLatinText(value) {
-  return /[^\u0000-\u024f]/.test(String(value || ""));
+  return Array.from(String(value || "")).some((char) => {
+    const codePoint = char.codePointAt(0) ?? 0;
+    return codePoint > 0x024f;
+  });
 }
 
 function productNeedsUnicodeFallback(product, locale) {
@@ -802,7 +805,7 @@ async function drawProductPage(pdfDoc, product, locale, fonts, imageAssetsById =
   });
 
   const assetKey = String(product?.id || "");
-  let imageBytes = await loadImageBytes(
+  const imageBytes = await loadImageBytes(
     product?.imageUrl,
     imageAssetsById[assetKey] || null,
     {
@@ -828,10 +831,9 @@ async function drawProductPage(pdfDoc, product, locale, fonts, imageAssetsById =
     return;
   }
 
-  let embeddedImage = imageBytes.kind === "jpg"
+  const embeddedImage = imageBytes.kind === "jpg"
     ? await pdfDoc.embedJpg(imageBytes.bytes)
     : await pdfDoc.embedPng(imageBytes.bytes);
-  imageBytes = null;
   const scaled = embeddedImage.scaleToFit(imageBounds.width - 2, imageBounds.height - 2);
   const imageX = imageBounds.x + ((imageBounds.width - scaled.width) / 2);
   const imageY = imageBounds.y + ((imageBounds.height - scaled.height) / 2);
@@ -842,7 +844,6 @@ async function drawProductPage(pdfDoc, product, locale, fonts, imageAssetsById =
     width: scaled.width,
     height: scaled.height
   });
-  embeddedImage = null;
 }
 
 async function buildWardrobePdf(products, { locale = "en", imageAssetsById = {}, totalStartedAt = null } = {}) {
@@ -1153,17 +1154,16 @@ function createWardrobePdfJobManager({
       wardrobePdfJobs.delete(email);
     }
 
-    let profile = null;
     let wardrobePayload = options.wardrobePayload || null;
     let locale = options.locale || null;
 
     if (!wardrobePayload || !locale) {
-      profile = await getProfileByEmail(email);
+      const profile = await getProfileByEmail(email);
       if (!profile) {
         return null;
       }
       wardrobePayload = wardrobePayload || profile.items;
-      locale = locale || profile.locale;
+      locale = locale || String(profile.locale || "en");
     }
 
     const items = sortWardrobeItems(getStoredWardrobeItems({ items: wardrobePayload }));

@@ -41,8 +41,8 @@ test("buildOpenAiImageFiles converts only valid buffers", async () => {
 });
 
 test("openai image client uses generate when no reference images are provided", async () => {
-  let generatePayload: Record<string, any> | null = null;
-  let editPayload: Record<string, any> | null = null;
+  let generatePayload: Record<string, unknown> | null = null;
+  let editPayload: Record<string, unknown> | null = null;
   const client = createOpenAiImageClient({
     cache: false,
     getApiKeyImpl: () => "openai-key",
@@ -83,8 +83,8 @@ test("openai image client uses generate when no reference images are provided", 
 });
 
 test("openai image client uses edit when reference images are provided", async () => {
-  let generatePayload: Record<string, any> | null = null;
-  let editPayload: Record<string, any> | null = null;
+  let generatePayload: Record<string, unknown> | null = null;
+  let editPayload: (Record<string, unknown> & { image?: { name?: string }[] }) | null = null;
   const client = createOpenAiImageClient({
     cache: false,
     getApiKeyImpl: () => "openai-key",

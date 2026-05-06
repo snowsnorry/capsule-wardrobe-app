@@ -696,9 +696,10 @@ function App() {
         setHasProfile(false);
         setSettingsProfile(normalizeProfileSettings());
       } finally {
-        if (!isActive) return;
-        setIsCheckingSession(false);
-        setSessionInitialized(true);
+        if (isActive) {
+          setIsCheckingSession(false);
+          setSessionInitialized(true);
+        }
       }
     };
 
@@ -1125,7 +1126,7 @@ function App() {
     } catch (error) {
       const message = resolveErrorMessage(error);
       setStatus({ loading: false, error: message, infoKey: "", infoParams: null });
-      throw new Error(message);
+      throw new Error(message, { cause: error });
     }
   };
 

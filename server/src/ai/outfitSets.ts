@@ -1,6 +1,6 @@
 function extractFormulaIds(formula) {
   const text = typeof formula === "string" ? formula : "";
-  const matches = text.matchAll(/\[([^\[\]]+)\]/g);
+  const matches = text.matchAll(/\[([^[\]]+)\]/g);
 
   return [...matches]
     .map(([, id]) => String(id || "").trim())
