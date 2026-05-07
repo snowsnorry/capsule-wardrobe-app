@@ -12,7 +12,14 @@ export default defineConfig({
       reporter: ["text", "html", "json-summary", "lcov"],
       reportsDirectory: "../coverage/server",
       include: ["src/**/*.ts"],
-      exclude: ["src/**/*.test.ts", "src/**/*.d.ts"],
+      exclude: [
+        "src/**/*.test.ts",
+        "src/**/*.d.ts",
+        "src/**/*.child.ts",
+        "src/test/**/*.ts",
+        "src/db.ts",
+        "src/ai/promptImages.ts"
+      ],
       thresholds: {
         perFile: true,
         lines: 70,

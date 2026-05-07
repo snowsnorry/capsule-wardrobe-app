@@ -437,3 +437,112 @@ test("getCapsuleItems clears stale full regeneration marker when no job is activ
     }
   }]]);
 });
+
+test("getCapsuleItems maps invalid capsule requests and missing capsules to client errors", async () => {
+  const invalidService = createWardrobeService({
+    getProfileImpl: async () => buildNormalizedProfileRecord({ locale: "en" }),
+    getCapsuleImpl: async () => createCapsuleWithWardrobe(null),
+    jobs: new Map()
+  });
+  const invalidRes = createResponseRecorder();
+
+  await invalidService.getCapsuleItems({
+    user: { email: "person@example.com" },
+    params: { id: " " }
+  }, invalidRes);
+
+  expect(invalidRes.statusCode).toBe(400);
+  expect(invalidRes.body).toEqual({ error: "invalid_payload" });
+
+  const missingService = createWardrobeService({
+    getProfileImpl: async () => buildNormalizedProfileRecord({ locale: "en" }),
+    getCapsuleImpl: async () => null,
+    jobs: new Map()
+  });
+  const missingRes = createResponseRecorder();
+
+  await missingService.getCapsuleItems({
+    user: { email: "person@example.com" },
+    params: { id: "capsule-1" }
+  }, missingRes);
+
+  expect(missingRes.statusCode).toBe(404);
+  expect(missingRes.body).toEqual({ error: "not_found" });
+});
+
+test("regenerateCapsuleWardrobe returns pending for active partial and wardrobe jobs", async () => {
+  const partialService = createWardrobeService({
+    getProfileImpl: async () => buildNormalizedProfileRecord({ locale: "en" }),
+    getCapsuleImpl: async () => createCapsuleWithWardrobe(null),
+    getPartialRegenerationJobImpl: () => buildPartialRegenerationJobState(),
+    jobs: new Map()
+  });
+  const partialRes = createResponseRecorder();
+
+  await partialService.regenerateCapsuleWardrobe({
+    user: { email: "person@example.com" },
+    params: { id: "capsule-1" }
+  }, partialRes);
+
+  expect(partialRes.statusCode).toBe(202);
+  expect(partialRes.body).toEqual({
+    ok: true,
+    status: "pending",
+    pendingStage: "regenerate"
+  });
+
+  const jobs = new Map([
+    ["person@example.com::capsule-1", buildWardrobeJobState({
+      phase: "extras",
+      updatedAt: Date.now()
+    })]
+  ]);
+  const activeJobService = createWardrobeService({
+    getProfileImpl: async () => buildNormalizedProfileRecord({ locale: "en" }),
+    getCapsuleImpl: async () => createCapsuleWithWardrobe(null),
+    jobs
+  });
+  const activeJobRes = createResponseRecorder();
+
+  await activeJobService.regenerateCapsuleWardrobe({
+    user: { email: "person@example.com" },
+    params: { id: "capsule-1" }
+  }, activeJobRes);
+
+  expect(activeJobRes.statusCode).toBe(202);
+  expect(activeJobRes.body).toEqual({
+    ok: true,
+    status: "pending",
+    pendingStage: "extras",
+    hasPendingAdditionalItems: true
+  });
+});
+
+test("regenerateCapsuleWardrobe surfaces startup service errors with raw selection text", async () => {
+  const service = createWardrobeService({
+    getProfileImpl: async () => buildNormalizedProfileRecord({ locale: "en" }),
+    getCapsuleImpl: async () => createCapsuleWithWardrobe(null),
+    updateCapsuleSnapshotImpl: async () => {
+      throw Object.assign(new Error("llm unavailable"), { rawSelectionText: "raw-choice" });
+    },
+    jobs: new Map()
+  });
+  const originalError = console.error;
+  console.error = () => {};
+
+  try {
+    const res = createResponseRecorder();
+    await service.regenerateCapsuleWardrobe({
+      user: { email: "person@example.com" },
+      params: { id: "capsule-1" }
+    }, res);
+
+    expect(res.statusCode).toBe(503);
+    expect(res.body).toEqual({
+      error: "service_unavailable",
+      rawSelectionText: "raw-choice"
+    });
+  } finally {
+    console.error = originalError;
+  }
+});
