@@ -321,6 +321,8 @@ describe("MainScreenDialogs", () => {
     });
 
     expect(screen.getByTestId("outfit-set-image-dialog")).toBeInTheDocument();
+    expect(screen.getByTestId("outfit-set-image-dialog-paper")).toBeInTheDocument();
+    expect(document.head.textContent).toContain("background-color:transparent;box-shadow:none;");
     await user.click(screen.getByRole("button", { name: "Close" }));
 
     await waitFor(() => {

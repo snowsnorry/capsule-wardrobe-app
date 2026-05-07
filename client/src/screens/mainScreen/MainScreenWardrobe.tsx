@@ -1,5 +1,5 @@
 import type { MouseEvent } from "react";
-import { Alert, Box, Button, IconButton, Stack } from "@mui/material";
+import { Alert, Box, Button, Divider, IconButton, Stack } from "@mui/material";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import ClothingCard from "../../components/ClothingCard";
 import ClothingGridPlaceholder, {
@@ -43,6 +43,7 @@ function OutfitImagePlaceholder() {
         aspectRatio: OUTFIT_SET_IMAGE_ASPECT_RATIO,
         background: "linear-gradient(110deg, #ece8e2 8%, #f6f4f1 18%, #ece8e2 33%)",
         backgroundSize: "200% 100%",
+        borderRadius: "8px",
         animation: "placeholderShimmer 1.3s linear infinite"
       }}
     />
@@ -67,7 +68,7 @@ function OutfitImageBlock({ props }: { props: WardrobeProps }) {
           <IconButton aria-label={t("capsule.deleteOutfitSetImage")} disabled={props.disabled} onClick={() => props.onDeleteImage(set.index)} sx={{ position: "absolute", top: 12, right: 12, zIndex: 1, bgcolor: "rgba(255,255,255,0.9)", color: "error.main" }}>
             <DeleteOutlineRoundedIcon />
           </IconButton>
-          <Box component="img" src={props.activeImageSrc} alt={`Outfit set ${set.label}`} data-testid="outfit-set-image" onClick={props.onImageClick} sx={{ width: "auto", maxWidth: "100%", display: "block", border: "1px solid", borderColor: "divider", cursor: "zoom-in" }} />
+          <Box component="img" src={props.activeImageSrc} alt={`Outfit set ${set.label}`} data-testid="outfit-set-image" onClick={props.onImageClick} sx={{ width: "auto", maxWidth: "100%", display: "block", border: "1px solid", borderColor: "divider", borderRadius: "8px", cursor: "zoom-in" }} />
         </Box>
       ) : null}
       {!props.isImagePending && !props.activeImageSrc ? (
@@ -109,6 +110,7 @@ function MainScreenWardrobe(props: WardrobeProps) {
       ) : (
         <Stack spacing={3} sx={{ minHeight: "100%" }}>
           <WardrobeGrid props={props} />
+          {props.activeSet ? <Divider data-testid="outfit-set-image-divider" flexItem /> : null}
           <OutfitImageBlock props={props} />
         </Stack>
       )}

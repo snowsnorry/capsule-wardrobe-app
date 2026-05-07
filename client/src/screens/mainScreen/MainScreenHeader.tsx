@@ -79,7 +79,17 @@ function InlineTitle({ activeCapsule, activeName, disabled, inlineRename }: Pick
   }
 
   return (
-    <Stack direction="row" alignItems="center" spacing={0.75} sx={{ minWidth: 0 }}>
+    <Stack
+      direction="row"
+      alignItems="center"
+      spacing={0.75}
+      sx={{
+        minWidth: 0,
+        "&:hover .capsule-title-edit-action, &:focus-within .capsule-title-edit-action": {
+          opacity: 1
+        }
+      }}
+    >
       <Box component="button" type="button" aria-label={`Rename capsule ${activeName}`} disabled={disabled} onClick={inlineRename.start} sx={{ p: 0, border: 0, background: "transparent", color: "inherit", minWidth: 0 }}>
         <Typography variant="h6" noWrap>{activeName}</Typography>
       </Box>
@@ -88,7 +98,17 @@ function InlineTitle({ activeCapsule, activeName, disabled, inlineRename }: Pick
           <FiberManualRecordRoundedIcon sx={{ fontSize: 10, color: "#2f8f58" }} />
         </Tooltip>
       ) : null}
-      <Box sx={{ width: 32, display: "flex", justifyContent: "center", flexShrink: 0 }}>
+      <Box
+        className="capsule-title-edit-action"
+        sx={{
+          width: 32,
+          display: "flex",
+          justifyContent: "center",
+          flexShrink: 0,
+          opacity: 0,
+          transition: "opacity 120ms ease"
+        }}
+      >
         <IconButton aria-label="Edit capsule name" size="small" disabled={disabled} onClick={inlineRename.start}>
           <DriveFileRenameOutlineRoundedIcon fontSize="small" />
         </IconButton>

@@ -86,6 +86,7 @@ describe("MainScreenWardrobe", () => {
       onGenerateImage
     });
 
+    expect(screen.getByTestId("outfit-set-image-divider")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Create image" }));
     expect(onGenerateImage).toHaveBeenCalledWith(0);
   });
@@ -113,6 +114,7 @@ describe("MainScreenWardrobe", () => {
 
     await user.click(screen.getByTestId("outfit-set-image"));
     expect(screen.getByTestId("outfit-set-image")).toHaveAttribute("src", "data:image/png;base64,abc123");
+    expect(screen.getByTestId("outfit-set-image-divider")).toBeInTheDocument();
     expect(onImageClick).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole("button", { name: "Create image" })).not.toBeInTheDocument();
   });
