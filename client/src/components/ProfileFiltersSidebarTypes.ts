@@ -50,8 +50,4 @@ type ProfileFiltersSidebarProps = {
   resetLabelKey?: string;
 };
 
-export type {
-  ProfileFiltersSidebarProps,
-  ProfileFiltersStatus,
-  ProfileFilterValue,
-};
+export type { ProfileFiltersSidebarProps, ProfileFilterValue };

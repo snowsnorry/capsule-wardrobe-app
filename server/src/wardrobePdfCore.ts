@@ -17,7 +17,6 @@ import { logError } from "./logger.js";
 import type {
   ProfileWithItemsLike,
   PromptImageAsset,
-  WardrobePdfJobState,
   WardrobeUiItemLike,
 } from "./ai/types.js";
 
@@ -30,7 +29,7 @@ export const BLOCK_RADIUS = 16.5;
 export const LINK_COLOR = rgb(0.56, 0.44, 0.27);
 export const SUBTLE_BLOCK_COLOR = rgb(0.96, 0.965, 0.972);
 export const IMAGE_BACKGROUND_COLOR = rgb(0.97, 0.96, 0.94);
-export const require = createRequire(import.meta.url);
+const require = createRequire(import.meta.url);
 export const DM_SANS_REGULAR_PATH =
   require.resolve("@fontsource/dm-sans/files/dm-sans-latin-400-normal.woff");
 export const DM_SANS_BOLD_PATH =
@@ -47,11 +46,6 @@ export const FALLBACK_BOLD_FONT_CANDIDATES = [
 ];
 export const WARDROBE_PDF_POLL_AFTER_MS = 2000;
 export const PDF_JOB_TTL_MS = 5 * 60 * 1000;
-export const wardrobePdfJobs = new Map<string, WardrobePdfJobState>();
-export const DEFAULT_PDF_IMAGE_TARGET_SIZE = {
-  width: Math.round((CONTENT_WIDTH - 2) * 2),
-  height: Math.round((PAGE_HEIGHT - PAGE_MARGIN * 2) * 2),
-};
 export const WARDROBE_PDF_CHILD_TIMEOUT_MS =
   Number.parseInt(process.env.WARDROBE_PDF_CHILD_TIMEOUT_MS || "", 10) ||
   180000;
@@ -108,7 +102,7 @@ export type ChildMessage =
       stack?: string | null;
     };
 
-export type WardrobePdfChildProcessLike = {
+type WardrobePdfChildProcessLike = {
   on: (event: string, handler: (...args: unknown[]) => void) => unknown;
   removeListener: (
     event: string,

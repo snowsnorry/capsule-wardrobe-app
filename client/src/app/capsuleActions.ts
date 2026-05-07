@@ -3,7 +3,6 @@ import {
   deleteCapsule,
   duplicateCapsule,
   fetchCapsule,
-  fetchRecentCapsules,
   renameCapsule,
   revertCapsule,
   saveCapsule,
@@ -13,6 +12,7 @@ import {
 import { initialStatus } from "./appConstants";
 import { buildEmptyCapsuleDraft } from "./capsuleState";
 import { fromContext, type AppActionContext } from "./actionContext";
+import { refreshCapsuleList } from "./capsuleListActions";
 import type {
   CapsuleDraft,
   CapsuleListResponse,
@@ -20,14 +20,6 @@ import type {
   CapsuleMutationResponse,
   WardrobeSnapshot,
 } from "./appTypes";
-
-export async function refreshCapsuleList(context: AppActionContext) {
-  const result = (await fetchRecentCapsules()) as CapsuleListResponse;
-  fromContext<(value: CapsuleMeta[]) => void>(
-    context,
-    "setCapsuleList",
-  )(result.capsules || []);
-}
 
 async function runContentOperation(
   context: AppActionContext,
@@ -200,6 +192,7 @@ export async function searchUserCapsules(query: string) {
   return result.capsules || [];
 }
 
+export { refreshCapsuleList } from "./capsuleListActions";
 export {
   importSharedCapsuleToApp,
   shareCurrentCapsule,

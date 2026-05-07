@@ -91,7 +91,6 @@ function getDefaultPasskeyName({
 }
 
 export {
-  PASSKEY_FALLBACK_NAME,
   getDefaultPasskeyName,
   getPasskeyProviderName,
   getUserAgentPasskeyLabel,

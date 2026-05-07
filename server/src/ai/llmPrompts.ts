@@ -14,9 +14,7 @@ import {
 } from "./llmJsonFormats.js";
 import {
   CLAUDE_ALLOWED_MODELS,
-  DEEPINFRA_ALLOWED_MODELS,
   GEMINI_PROFILE_LLM,
-  OPENAI_PROFILE_LLM,
   getProfileLlm,
   isNoLlmProfileEnabled,
   resolveLlmProvider,
@@ -290,9 +288,7 @@ function buildSystemPromptReplacements({
 
 export {
   CLAUDE_ALLOWED_MODELS,
-  DEEPINFRA_ALLOWED_MODELS,
   GEMINI_PROFILE_LLM,
-  OPENAI_PROFILE_LLM,
   buildCapsuleSchema,
   buildCustomJsonObjectFormat,
   buildJsonObjectFormat,

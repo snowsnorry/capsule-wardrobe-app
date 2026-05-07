@@ -1,10 +1,4 @@
-export {
-  AUDIENCE_DISPLAY_ORDER,
-  CORE_DISPLAY_ORDER,
-  EMPTY_SEARCH_OPTIONS,
-  INITIAL_SEARCH_STATE,
-  SEASON_DISPLAY_ORDER,
-} from "./searchStateConstants";
+export { EMPTY_SEARCH_OPTIONS } from "./searchStateConstants";
 export {
   clampPriceValue,
   createSearchState,
@@ -23,11 +17,8 @@ export { buildActiveFilterChips, getFacetLabel } from "./searchStateChips";
 
 export type {
   ActiveFilterChip,
-  SearchBrandOption,
   SearchDraftState,
   SearchFilterValue,
   SearchOptions,
-  SearchPriceRange,
-  SearchState,
   SerializedSearchState,
 } from "./searchStateTypes";

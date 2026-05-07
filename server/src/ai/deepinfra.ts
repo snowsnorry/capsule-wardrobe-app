@@ -9,7 +9,6 @@ import {
   collectStreamText,
   estimateJsonByteLength,
   extractChunkText,
-  extractResponseText,
   parseDeepInfraJsonResponse,
 } from "./deepinfraResponse.js";
 import type { LlmGenerateOptions, UserProfileLike } from "./types.js";
@@ -344,8 +343,7 @@ function resolveChatModel(userProfile: UserProfileLike | null = null) {
 }
 
 const deepInfraClient = createDeepInfraClient();
-const { generateJsonWithLlm, getOpenAiClient, getPromptEmbeddings } =
-  deepInfraClient;
+const { generateJsonWithLlm } = deepInfraClient;
 
 export {
   createDeepInfraClient,
@@ -354,9 +352,6 @@ export {
   collectStreamText,
   estimateJsonByteLength,
   extractChunkText,
-  extractResponseText,
   generateJsonWithLlm,
-  getOpenAiClient,
-  getPromptEmbeddings,
   resolveChatModel,
 };

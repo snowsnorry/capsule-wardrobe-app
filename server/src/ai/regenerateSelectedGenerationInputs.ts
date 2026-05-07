@@ -14,7 +14,7 @@ const AUDIENCE_FILTERS_BY_PROFILE = {
   any: ["man", "woman", "all"],
 };
 
-export function getProductUrls(items) {
+function getProductUrls(items) {
   return Array.isArray(items)
     ? items.map((item) => String(item?.url || "").trim()).filter(Boolean)
     : [];

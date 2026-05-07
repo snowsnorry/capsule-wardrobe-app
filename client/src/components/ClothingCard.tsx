@@ -191,6 +191,4 @@ function useClothingCardImageState(imageUrl: string | null) {
     setImageFallbackAttempted,
   };
 }
-
-export type { ClothingCardItem } from "./ClothingCardTypes";
 export default ClothingCard;

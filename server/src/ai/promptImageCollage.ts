@@ -320,10 +320,4 @@ async function buildPromptDebugImagesForCategory({
   };
 }
 
-export {
-  buildCategoryImage,
-  buildPromptDebugImages,
-  buildPromptDebugImagesForCategory,
-  createCategoryOverlaySvg,
-  createIntermediateCollageDirectory,
-};
+export { buildPromptDebugImages, buildPromptDebugImagesForCategory };

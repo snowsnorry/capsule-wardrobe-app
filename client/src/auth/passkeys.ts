@@ -90,4 +90,3 @@ export {
   normalizePasskeyError,
   registerPasskey,
 };
-export type { PasskeyFlowError, PasskeyFlowResult };

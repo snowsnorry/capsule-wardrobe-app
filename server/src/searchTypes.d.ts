@@ -17,7 +17,7 @@ export type SearchPayload = {
   page: number;
 };
 
-export type SearchOptionItem = {
+type SearchOptionItem = {
   value?: string | null;
   label?: string | null;
 };

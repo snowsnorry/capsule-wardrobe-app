@@ -109,11 +109,6 @@ function buildResponsesPayload(user: string, images: ImageAssetLike[] = []) {
   return input;
 }
 
-async function getPromptEmbeddings(prompt: string) {
-  const client = getOpenAiClient();
-  return getPromptEmbeddingsWithClient(client, prompt);
-}
-
 async function getPromptEmbeddingsWithClient(client, prompt: string) {
   const response = await client.embeddings.create({
     model: DEFAULT_EMBEDDING_MODEL,
@@ -226,7 +221,6 @@ function buildOpenAiParseError(
 
 export {
   generateJsonWithLlm,
-  getPromptEmbeddings,
   buildImageDataUrl,
   buildOpenAiParseError,
   buildOpenAiSystemPrompt,

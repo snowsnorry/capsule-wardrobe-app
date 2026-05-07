@@ -11,21 +11,18 @@ function isPlainRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === "object" && !Array.isArray(value));
 }
 
-export function firstStringValue(value: unknown): string {
+function firstStringValue(value: unknown): string {
   return typeof value === "string" && value.trim().length > 0
     ? value.trim()
     : "";
 }
 
-export function translateCapsuleFilterValue(
-  group: string,
-  value: unknown,
-): string {
+function translateCapsuleFilterValue(group: string, value: unknown): string {
   const normalizedValue = firstStringValue(value);
   return normalizedValue ? translateOption(group, normalizedValue, "en") : "";
 }
 
-export function buildCapsuleFilterSentence(
+function buildCapsuleFilterSentence(
   labelKey: string,
   value: string | string[],
 ): string {
@@ -40,9 +37,7 @@ export function buildCapsuleFilterSentence(
   return `${t(labelKey, undefined, "en")}: ${translatedValues.join(", ")}`;
 }
 
-export function buildSharedCapsuleDescription(
-  filters: CapsuleFilters | null,
-): string {
+function buildSharedCapsuleDescription(filters: CapsuleFilters | null): string {
   if (!filters) {
     return "";
   }
@@ -85,9 +80,7 @@ export function buildSharedCapsuleDescription(
   return sentences.length ? `${sentences.join(". ")}.` : "";
 }
 
-export function getSharedCapsuleImage(
-  snapshot: CapsuleSnapshot | null,
-): string {
+function getSharedCapsuleImage(snapshot: CapsuleSnapshot | null): string {
   const wardrobe = snapshot?.data?.wardrobe;
   const outfitSets = Array.isArray(wardrobe?.outfitSets)
     ? wardrobe.outfitSets

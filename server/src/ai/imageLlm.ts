@@ -56,4 +56,3 @@ function resolveImageLlmProvider(
 }
 
 export { getProfileImageLlm, resolveImageLlmProvider };
-export type { ImageLlmResolution };

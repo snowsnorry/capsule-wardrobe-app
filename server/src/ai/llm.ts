@@ -22,17 +22,12 @@ function getGenerateJsonWithLlm(userProfile = null) {
 
 export {
   CLAUDE_ALLOWED_MODELS,
-  DEEPINFRA_ALLOWED_MODELS,
   GEMINI_PROFILE_LLM,
-  OPENAI_PROFILE_LLM,
   buildCapsuleSchema,
   buildCustomJsonObjectFormat,
-  buildJsonObjectFormat,
   buildSwimwearSchema,
   buildSystemPrompt,
-  getProfileLlm,
   isNoLlmProfileEnabled,
-  renderStyleLibraryContent,
   resolveLlmProvider,
   splitSystemAndUserPrompt,
 } from "./llmPrompts.js";

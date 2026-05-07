@@ -11,7 +11,6 @@ const {
 export {
   countItemsByKey,
   extractLlmUsage,
-  getRequestedWardrobeParams,
   logWardrobeInfo,
 } from "./aiCommon.js";
 export { enforceCategoryCounts } from "./aiCategoryEnforcement.js";

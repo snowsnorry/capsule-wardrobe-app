@@ -1,54 +1,16 @@
 import {
   regenerateCapsuleWardrobe,
   regenerateSelectedWardrobeItems,
-  subscribeCapsuleEvents,
 } from "../api/wardrobe";
 import { downloadCapsulePdf } from "../api/capsules";
 import { fromContext, type AppActionContext } from "./actionContext";
-import type {
-  WardrobeItem,
-  WardrobeMutationResponse,
-  WardrobeSnapshot,
-} from "./appTypes";
-
-export function handleWardrobeError(context: AppActionContext) {
-  fromContext<(value: []) => void>(context, "setProfileItems")([]);
-  fromContext<(value: []) => void>(context, "setProfileOutfitSets")([]);
-  fromContext<(value: []) => void>(context, "setPendingImageSetIndexes")([]);
-  fromContext<(value: []) => void>(context, "setSelectedRegenerationUrls")([]);
-  fromContext<(value: []) => void>(
-    context,
-    "setPartialRegenerationPendingUrls",
-  )([]);
-  fromContext<(value: boolean) => void>(
-    context,
-    "setIsPartialRegenerationLoading",
-  )(false);
-  fromContext<(value: boolean) => void>(context, "setIsWardrobePending")(false);
-  fromContext<(value: boolean) => void>(
-    context,
-    "setHasPendingAdditionalItems",
-  )(false);
-  fromContext<(value: boolean) => void>(context, "setIsLoadingItems")(false);
-}
-
-export function stopCapsuleEventStream(context: AppActionContext) {
-  const abortRef = fromContext<{ current: AbortController | null }>(
-    context,
-    "capsuleEventsAbortRef",
-  );
-  if (!abortRef.current) return;
-  abortRef.current.abort();
-  abortRef.current = null;
-}
-
-function clearNotificationFlow(context: AppActionContext) {
-  fromContext<{ current: string }>(
-    context,
-    "pendingNotificationKindRef",
-  ).current = "";
-  fromContext<() => void>(context, "closeNotificationPrompt")();
-}
+import {
+  clearNotificationFlow,
+  handleWardrobeError,
+  startCapsuleEventStream,
+  stopCapsuleEventStream,
+} from "./wardrobeStreamActions";
+import type { WardrobeItem, WardrobeMutationResponse } from "./appTypes";
 
 function failWardrobeStream(context: AppActionContext, error?: unknown) {
   stopCapsuleEventStream(context);
@@ -66,57 +28,6 @@ function failWardrobeStream(context: AppActionContext, error?: unknown) {
       )(error),
     }));
   }
-}
-
-export function startCapsuleEventStream(
-  context: AppActionContext,
-  capsuleId: string | undefined,
-) {
-  const normalizedCapsuleId = String(capsuleId || "").trim();
-  if (!normalizedCapsuleId) return Promise.resolve();
-
-  stopCapsuleEventStream(context);
-  const abortController = new AbortController();
-  fromContext<{ current: AbortController | null }>(
-    context,
-    "capsuleEventsAbortRef",
-  ).current = abortController;
-
-  return subscribeCapsuleEvents({
-    capsuleId: normalizedCapsuleId,
-    signal: abortController.signal,
-    onMessage(event) {
-      if (
-        event.event !== "snapshot" ||
-        !fromContext<{ current: boolean }>(context, "isMountedRef").current
-      )
-        return;
-      fromContext<
-        (snapshot?: WardrobeSnapshot, capsuleId?: string) => Promise<void>
-      >(context, "applyWardrobeSnapshot")(
-        event.data,
-        normalizedCapsuleId,
-      ).catch(() => {
-        if (
-          fromContext<{ current: boolean }>(context, "isMountedRef").current
-        ) {
-          failWardrobeStream(context);
-        }
-      });
-    },
-    onError(error) {
-      if (fromContext<{ current: boolean }>(context, "isMountedRef").current) {
-        failWardrobeStream(context, error);
-      }
-    },
-  }).catch((error) => {
-    if (
-      !abortController.signal.aborted &&
-      fromContext<{ current: boolean }>(context, "isMountedRef").current
-    ) {
-      failWardrobeStream(context, error);
-    }
-  });
 }
 
 export async function refreshWardrobe(context: AppActionContext) {
@@ -275,6 +186,11 @@ export {
   deleteGeneratedOutfitSetImage,
   generateOutfitSetImage,
 } from "./wardrobeImageActions";
+export {
+  handleWardrobeError,
+  startCapsuleEventStream,
+  stopCapsuleEventStream,
+} from "./wardrobeStreamActions";
 
 function preparePartialRegeneration(
   context: AppActionContext,

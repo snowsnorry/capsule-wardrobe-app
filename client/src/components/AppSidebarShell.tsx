@@ -197,10 +197,4 @@ function AppSidebarShell({
     </>
   );
 }
-
-export type {
-  AppSidebarShellContext,
-  AppSidebarShellProps,
-  AppSidebarShellSlot,
-} from "./AppSidebarShellTypes";
 export default AppSidebarShell;

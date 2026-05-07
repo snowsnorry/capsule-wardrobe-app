@@ -304,13 +304,4 @@ function CardImageFrame({
   );
 }
 
-export {
-  CardImageFrame,
-  CategoryChip,
-  ClothingCardDetails,
-  ClothingCardView,
-  ProductImageContent,
-  getCardRootSx,
-  getMobileCardMetrics,
-};
-export type { MobileCardMetrics } from "./ClothingCardTypes";
+export { ClothingCardView, getMobileCardMetrics };

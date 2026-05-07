@@ -138,4 +138,3 @@ async function querySearchProductItems(
 }
 
 export { querySearchProductCount, querySearchProductItems };
-export type { SearchQueryParams };

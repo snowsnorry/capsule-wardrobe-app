@@ -5,7 +5,6 @@ import { buildCanonicalPatternOptions } from "../../../shared/patternOptions.js"
 import { ProfileFiltersSidebarFrame } from "./ProfileFiltersSidebarSections";
 import type {
   ProfileFiltersSidebarProps,
-  ProfileFiltersStatus,
   ProfileFilterValue,
 } from "./ProfileFiltersSidebarTypes";
 
@@ -79,6 +78,4 @@ function ProfileFiltersSidebar(
     />
   );
 }
-
-export type { ProfileFiltersSidebarProps, ProfileFiltersStatus };
 export default ProfileFiltersSidebar;

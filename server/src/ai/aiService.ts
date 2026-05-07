@@ -10,14 +10,9 @@ import {
   shouldGenerateSwimwear,
 } from "./swimwear.js";
 import { getPartialRegenerationJob } from "./partialRegenerationJobs.js";
-import {
-  buildCapsuleEventSnapshot,
-  capsuleEventHub,
-  getStoredWardrobePayload,
-} from "./capsuleEvents.js";
+import { buildCapsuleEventSnapshot, capsuleEventHub } from "./capsuleEvents.js";
 import { generateCapsuleWardrobe } from "./aiGeneration.js";
 import {
-  createWardrobeJobKey,
   getWardrobeJobForService,
   startWardrobeJobForService,
 } from "./wardrobeJobService.js";
@@ -32,10 +27,6 @@ import type {
 } from "./wardrobeServiceTypes.js";
 
 const wardrobeJobs = new Map();
-
-export function hasStoredWardrobeItems(profile) {
-  return Boolean(getStoredWardrobePayload(profile)?.items?.length);
-}
 
 function withDefault<T>(value: T | undefined, defaultValue: T) {
   return value === undefined ? defaultValue : value;
@@ -133,5 +124,3 @@ export function createWardrobeService(
     startWardrobeJob,
   };
 }
-
-export { createWardrobeJobKey };

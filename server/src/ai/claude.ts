@@ -347,7 +347,7 @@ function createClaudeClient({
 }
 
 const claudeClient = createClaudeClient();
-const { generateJsonWithLlm, getClaudeClient } = claudeClient;
+const { generateJsonWithLlm } = claudeClient;
 
 export {
   ALLOWED_CHAT_MODELS,
@@ -357,7 +357,6 @@ export {
   createClaudeClient,
   extractClaudeResponseText,
   generateJsonWithLlm,
-  getClaudeClient,
   sanitizeClaudeJsonSchema,
   resolveChatModel,
 };

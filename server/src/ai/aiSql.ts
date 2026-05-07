@@ -178,8 +178,4 @@ export {
   queryCapsuleWardrobeItemsForMultipleAccentColors,
   queryCapsuleWardrobeItemsForProfile,
 };
-export type {
-  CapsuleWardrobeSqlClient,
-  CapsuleWardrobeSqlParams,
-  CapsuleWardrobeSqlRow,
-} from "./aiSqlTypes.js";
+export type { CapsuleWardrobeSqlClient } from "./aiSqlTypes.js";

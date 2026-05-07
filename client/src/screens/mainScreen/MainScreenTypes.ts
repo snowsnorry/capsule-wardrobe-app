@@ -2,7 +2,7 @@ import type { MouseEvent } from "react";
 
 export type CapsuleMenuAnchor = HTMLElement | null;
 
-export type AppNavigationOptions = {
+type AppNavigationOptions = {
   query?: string;
   openProductDetail?: boolean;
 };
@@ -29,14 +29,14 @@ export type MainScreenItem = {
   [key: string]: unknown;
 };
 
-export type ScreenStatus = {
+type ScreenStatus = {
   loading: boolean;
   error: string;
   infoKey: string;
   infoParams: Record<string, unknown> | null;
 };
 
-export type StyleOptions = {
+type StyleOptions = {
   core: string[];
   aesthetics: string[];
 };

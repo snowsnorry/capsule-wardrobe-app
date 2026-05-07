@@ -110,9 +110,7 @@ function resolveLlmProvider(userProfile = null): LlmProviderResolution {
 
 export {
   CLAUDE_ALLOWED_MODELS,
-  DEEPINFRA_ALLOWED_MODELS,
   GEMINI_PROFILE_LLM,
-  OPENAI_PROFILE_LLM,
   getProfileLlm,
   isNoLlmProfileEnabled,
   resolveLlmProvider,

@@ -32,7 +32,7 @@ import { getSafeHttpUrl } from "../../shared/urlSecurity.js";
 import { translateOption } from "../../shared/i18n/helpers.js";
 import { buildProductDetailGroups } from "../../shared/productDetail.js";
 
-export async function drawProductPage(
+async function drawProductPage(
   pdfDoc,
   { product, locale, fonts, imageAssetsById = {}, imageLoadStats = null },
 ) {

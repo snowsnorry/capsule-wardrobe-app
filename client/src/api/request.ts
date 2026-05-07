@@ -158,4 +158,4 @@ function clearRequestCache() {
 }
 
 export { request, requestJson, getCachedJson, clearRequestCache };
-export type { JsonObject, RequestError, RequestErrorData };
+export type { JsonObject };

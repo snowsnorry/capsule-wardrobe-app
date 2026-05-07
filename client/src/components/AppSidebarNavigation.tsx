@@ -10,7 +10,6 @@ import {
 import type {
   AppId,
   AppSidebarNavigationProps,
-  CapsuleNavItem,
 } from "./AppSidebarNavigationTypes";
 
 function AppSidebarNavigation({
@@ -80,5 +79,4 @@ function AppSidebarNavigation({
   );
 }
 
-export type { AppId as AppSidebarNavigationAppId, CapsuleNavItem };
 export default AppSidebarNavigation;

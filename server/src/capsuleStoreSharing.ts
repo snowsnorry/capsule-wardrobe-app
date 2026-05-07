@@ -10,7 +10,7 @@ import {
 } from "./capsuleStoreModel.js";
 import { buildSharedCapsuleOgMetadata } from "./capsuleShareMetadata.js";
 
-export function buildShareUrl(clientOrigin: string, shareId: string): string {
+function buildShareUrl(clientOrigin: string, shareId: string): string {
   const origin =
     String(clientOrigin || "").replace(/\/+$/, "") || "http://localhost:5173";
   return `${origin}/share/${encodeURIComponent(shareId)}`;

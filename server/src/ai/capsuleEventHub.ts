@@ -72,4 +72,4 @@ function createCapsuleEventHub() {
   };
 }
 
-export { createCapsuleEventHub, createCapsuleEventKey };
+export { createCapsuleEventHub };

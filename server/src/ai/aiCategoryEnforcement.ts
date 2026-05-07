@@ -2,11 +2,8 @@ export {
   formatProfileValues,
   getCategoryListText,
   getCategorySchema,
-  getFirstNonMinimalisticStyle,
-  getNormalizedItemStyles,
   getSelectedIdsFromCapsule,
   getShortCapsuleName,
-  normalizeCapsuleConstraintValue,
   normalizePatternValue,
 } from "./aiCategoryHelpers.js";
 import {
@@ -16,13 +13,13 @@ import {
   normalizePatternValue,
 } from "./aiCategoryHelpers.js";
 
-export function isStyleMatched(item, targetStyle) {
+function isStyleMatched(item, targetStyle) {
   return (
     Boolean(targetStyle) && getNormalizedItemStyles(item).includes(targetStyle)
   );
 }
 
-export function isStyleSafe(item, targetStyle) {
+function isStyleSafe(item, targetStyle) {
   if (!targetStyle) {
     return true;
   }
@@ -38,7 +35,7 @@ export function isStyleSafe(item, targetStyle) {
   return nonMinimalisticStyles.every((style) => style === targetStyle);
 }
 
-export function isColorMatched(item, targetColor) {
+function isColorMatched(item, targetColor) {
   return (
     Boolean(targetColor) &&
     Array.isArray(item?.color_base) &&
@@ -46,11 +43,11 @@ export function isColorMatched(item, targetColor) {
   );
 }
 
-export function isNeutralItem(item) {
+function isNeutralItem(item) {
   return item?.is_neutral === true;
 }
 
-export function isPatternMatched(item, targetPattern) {
+function isPatternMatched(item, targetPattern) {
   if (!targetPattern || targetPattern === "solid") {
     return false;
   }
@@ -58,7 +55,7 @@ export function isPatternMatched(item, targetPattern) {
   return normalizePatternValue(item?.pattern) === targetPattern;
 }
 
-export function hasSolidOrNullPattern(item) {
+function hasSolidOrNullPattern(item) {
   const normalizedPattern = normalizePatternValue(item?.pattern);
   return normalizedPattern === null || normalizedPattern === "solid";
 }

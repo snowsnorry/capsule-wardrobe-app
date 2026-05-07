@@ -367,8 +367,5 @@ function buildPromptImagesChildMessage(
 export {
   buildPromptDebugImagesInChild,
   deserializePromptDebugImagesFromIpc,
-  isSerializedIpcBuffer,
-  isValidPromptImagesIpcPayload,
-  normalizeIpcBuffer,
   serializePromptDebugImagesForIpc,
 };

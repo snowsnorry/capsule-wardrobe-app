@@ -1,9 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 import { buildSystemPrompt, splitSystemAndUserPrompt } from "./llmPrompts.js";
-import {
-  buildGeminiStructuredOutput,
-  buildZodSchemaFromJsonSchema,
-} from "./geminiSchema.js";
+import { buildGeminiStructuredOutput } from "./geminiSchema.js";
 import { releaseImageBuffers } from "./openai.js";
 import { logWarn } from "../logger.js";
 import {
@@ -276,23 +273,13 @@ function buildGeminiGenerationResult(response, json) {
 }
 
 const geminiClient = createGeminiClient();
-const { generateJsonWithLlm, getGeminiClient } = geminiClient;
+const { generateJsonWithLlm } = geminiClient;
 
 export {
   ALLOWED_CHAT_MODELS,
   buildGeminiContents,
-  buildGeminiStructuredOutput,
   buildGeminiSystemInstruction,
-  buildZodSchemaFromJsonSchema,
-  cleanupUploadedGeminiFiles,
   createGeminiClient,
   generateJsonWithLlm,
-  getGeminiClient,
   resolveChatModel,
-  uploadBufferToGemini,
-  uploadImagesToGemini,
 };
-export type {
-  GeminiClientLike,
-  GeminiUploadedFileLike,
-} from "./geminiTypes.js";

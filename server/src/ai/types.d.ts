@@ -62,11 +62,6 @@ type LlmGenerateOptions = {
   onPayloadBuilt?: (() => void) | null;
 };
 
-type LlmGenerationResult<TJson = unknown, TResponse = unknown> = {
-  response: TResponse;
-  json: TJson;
-};
-
 type LlmUsageLike = {
   input_tokens?: number;
   output_tokens?: number;
@@ -143,32 +138,6 @@ type StoredWardrobePayloadLike = {
   swimwearRawSelectionText: string | null;
 };
 
-type CapsuleDataLike = {
-  wardrobe?: StoredWardrobePayloadLike | null;
-  rejectedUrls?: string[] | null;
-  regeneration?: {
-    status?: string | null;
-    kind?: string | null;
-    startedAt?: string | null;
-    requestId?: string | null;
-  } | null;
-};
-
-type CapsuleSnapshotLike = {
-  filters?: Record<string, unknown> | null;
-  data?: CapsuleDataLike | null;
-};
-
-type CapsuleRecordLike = {
-  id?: string | null;
-  name?: string | null;
-  draft?: CapsuleSnapshotLike | null;
-  saved?: CapsuleSnapshotLike | null;
-  status?: string | null;
-  createdAt?: string | Date | null;
-  updatedAt?: string | Date | null;
-};
-
 type LogContextLike = {
   capsuleRequestId?: string | null;
   startedAt?: number | null;
@@ -237,8 +206,6 @@ type WardrobePdfBuildChildOptions = {
 };
 
 export type {
-  CapsuleRecordLike,
-  CapsuleSnapshotLike,
   CountByKey,
   ErrorWithCode,
   GeneratedOutfitSetLike,
@@ -247,15 +214,12 @@ export type {
   JsonSchemaFormat,
   LogContextLike,
   LlmGenerateOptions,
-  LlmGenerationResult,
   LlmUsageLike,
   LlmUsageSummary,
-  OutfitSetLike,
   ParsedGenerationError,
   PartialRegenerationJobState,
   StoredWardrobePayloadLike,
   SwimwearCandidate,
-  SwimwearType,
   UserProfileLike,
   WardrobeGenerationResult,
   WardrobeJobState,
@@ -267,7 +231,6 @@ export type {
 export type {
   PromptDebugImageCategory,
   PromptDebugImageCategoryManifest,
-  PromptDebugImageItemManifest,
   PromptDebugImageManifest,
   PromptDebugImageResult,
   PromptDebugImageStitched,
@@ -277,7 +240,6 @@ export type {
   PromptImageItemLike,
   PromptImageTimingKey,
   PromptImageTimings,
-  PromptImagesChildFailurePayload,
   PromptImagesChildMessage,
   PromptImagesChildPayload,
   PromptImagesChildSuccessPayload,

@@ -45,7 +45,6 @@ function getPartialRegenerationJob(email: string, capsuleId: string) {
 }
 
 export {
-  COMPLETED_PARTIAL_REGENERATION_JOB_TTL_MS,
   createPartialRegenerationJobKey,
   getPartialRegenerationJob,
   getPartialRegenerationJobFromStore,

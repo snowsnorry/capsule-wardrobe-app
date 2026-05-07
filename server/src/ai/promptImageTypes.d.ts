@@ -145,7 +145,6 @@ type PromptImagesChildPayload =
 export type {
   PromptDebugImageCategory,
   PromptDebugImageCategoryManifest,
-  PromptDebugImageItemManifest,
   PromptDebugImageManifest,
   PromptDebugImageResult,
   PromptDebugImageStitched,
@@ -155,7 +154,6 @@ export type {
   PromptImageItemLike,
   PromptImageTimingKey,
   PromptImageTimings,
-  PromptImagesChildFailurePayload,
   PromptImagesChildMessage,
   PromptImagesChildPayload,
   PromptImagesChildSuccessPayload,

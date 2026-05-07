@@ -28,13 +28,13 @@ export const TILE_LABEL_BACKGROUND_HEIGHT = 34;
 export const TILE_LABEL_BACKGROUND_MIN_WIDTH = 54;
 export const TILE_LABEL_BACKGROUND_PADDING_X = 10;
 export const HEADER_FONT_SIZE = 42;
-export const REQUEST_TIMEOUT_MS = 15000;
+const REQUEST_TIMEOUT_MS = 15000;
 export const CATEGORY_COLLAGE_JPEG_QUALITY = 60;
-export const NORMALIZED_IMAGE_JPEG_QUALITY = 80;
+const NORMALIZED_IMAGE_JPEG_QUALITY = 80;
 export const PDF_IMAGE_JPEG_QUALITY = 76;
 export const MAX_SOURCE_IMAGE_PIXELS =
   Number.parseInt(process.env.MAX_SOURCE_IMAGE_PIXELS || "", 10) || 16000000;
-export const REQUEST_IMAGE_WIDTH =
+const REQUEST_IMAGE_WIDTH =
   Number.parseInt(process.env.PROMPT_IMAGE_REQUEST_WIDTH || "", 10) || 1000;
 export const PROMPT_IMAGES_CHILD_TIMEOUT_MS =
   Number.parseInt(process.env.PROMPT_IMAGES_CHILD_TIMEOUT_MS || "", 10) ||
@@ -44,7 +44,7 @@ export const PROMPT_CATEGORY_DOWNLOAD_CONCURRENCY =
   5;
 export const STITCHED_COLLAGE_FILENAME = "categories-stitched.jpg";
 
-export type PromptImagesChildProcessLike = {
+type PromptImagesChildProcessLike = {
   on: (event: string, handler: (...args: unknown[]) => void) => unknown;
   removeListener: (
     event: string,
@@ -76,7 +76,7 @@ export type PromptDebugImageCategoryManifestSource =
     items: NonNullable<PromptDebugImageCategory["items"]>;
   };
 
-export function isNodeErrorWithCode(
+function isNodeErrorWithCode(
   error: unknown,
   code: string,
 ): error is NodeJS.ErrnoException {
@@ -109,7 +109,7 @@ export function resolvePromptImagesChildExecArgv(childEntryUrl: URL) {
     : [];
 }
 
-export function findRepositoryRoot(startDir: string) {
+function findRepositoryRoot(startDir: string) {
   let currentDir = path.resolve(startDir);
 
   while (true) {
@@ -143,7 +143,7 @@ export function resolveStorageImagesDir(moduleUrl = import.meta.url) {
   return fileURLToPath(new URL("../../../storage/images/", moduleUrl));
 }
 
-export const STORAGE_IMAGES_DIR = resolveStorageImagesDir();
+const STORAGE_IMAGES_DIR = resolveStorageImagesDir();
 
 export function nowMs() {
   return Date.now();

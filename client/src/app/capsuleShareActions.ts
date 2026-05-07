@@ -1,6 +1,6 @@
 import { importSharedCapsule, shareCapsule } from "../api/capsules";
 import { fromContext, type AppActionContext } from "./actionContext";
-import { refreshCapsuleList } from "./capsuleActions";
+import { refreshCapsuleList } from "./capsuleListActions";
 import type { CapsuleMeta, CapsuleMutationResponse } from "./appTypes";
 
 export async function shareCurrentCapsule(

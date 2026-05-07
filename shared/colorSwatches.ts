@@ -123,7 +123,6 @@ function getPdfColorSwatchFill(key: unknown) {
 }
 
 export {
-  COLOR_SWATCH_DEFINITIONS,
   COLOR_SWATCH_KEYS,
   FALLBACK_COLOR_SWATCH_KEY,
   normalizeColorSwatchKey,

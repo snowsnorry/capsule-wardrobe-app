@@ -81,7 +81,6 @@ function sumImageAssetBytesById(
 
 export {
   IMAGE_DOWNLOAD_CONCURRENCY,
-  IMAGE_WORK_MAX_CONCURRENCY,
   getProcessMemoryUsage,
   runWithImageWorkSlot,
   sumCategoryBytes,

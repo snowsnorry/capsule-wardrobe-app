@@ -74,4 +74,4 @@ function getOutfitFormulas(parsedSelection = null) {
     : [];
 }
 
-export { buildOutfitSetsFromFormulas, extractFormulaIds, getOutfitFormulas };
+export { buildOutfitSetsFromFormulas, getOutfitFormulas };

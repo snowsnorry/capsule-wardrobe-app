@@ -88,4 +88,4 @@ function queryRegenerationCandidateItems(
 }
 
 export { queryRegenerationCandidateItems };
-export type { RegenerateSelectedSqlClient, RegenerateSelectedSqlParams };
+export type { RegenerateSelectedSqlClient };

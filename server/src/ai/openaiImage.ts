@@ -189,7 +189,6 @@ function createOpenAiImageClient({
 const openAiImageClient = createOpenAiImageClient();
 
 export {
-  DEFAULT_IMAGE_MODEL,
   buildOpenAiImageFiles,
   createOpenAiImageClient,
   extractGeneratedImage,
@@ -197,4 +196,3 @@ export {
 
 export const generateImageWithOpenAi =
   openAiImageClient.generateImageWithOpenAi;
-export const getOpenAiImageClient = openAiImageClient.getOpenAiImageClient;

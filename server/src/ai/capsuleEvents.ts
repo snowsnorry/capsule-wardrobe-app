@@ -3,10 +3,7 @@ import {
   getEffectiveCapsuleSnapshot,
 } from "../capsuleStore.js";
 import type { CapsuleRecord } from "../capsuleStoreModel.js";
-import {
-  createCapsuleEventHub,
-  createCapsuleEventKey,
-} from "./capsuleEventHub.js";
+import { createCapsuleEventHub } from "./capsuleEventHub.js";
 
 function getTrimmedText(value) {
   return typeof value === "string" && value.trim().length > 0
@@ -319,10 +316,4 @@ function buildCapsuleEventSnapshot(options: Record<string, unknown> = {}) {
 
 const capsuleEventHub = createCapsuleEventHub();
 
-export {
-  buildCapsuleEventSnapshot,
-  capsuleEventHub,
-  createCapsuleEventHub,
-  createCapsuleEventKey,
-  getStoredWardrobePayload,
-};
+export { buildCapsuleEventSnapshot, capsuleEventHub, getStoredWardrobePayload };

@@ -208,7 +208,6 @@ function createGeminiImageClient({
 const geminiImageClient = createGeminiImageClient();
 
 export {
-  DEFAULT_IMAGE_MODEL,
   buildGeminiImagePromptParts,
   createGeminiImageClient,
   extractGeneratedImage,
@@ -216,4 +215,3 @@ export {
 
 export const generateImageWithGemini =
   geminiImageClient.generateImageWithGemini;
-export const getGeminiImageClient = geminiImageClient.getGeminiImageClient;

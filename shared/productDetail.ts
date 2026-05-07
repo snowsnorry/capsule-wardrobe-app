@@ -305,4 +305,4 @@ function buildProductDetailGroups(
     .filter((group) => group.items.length > 0);
 }
 
-export { buildProductDetailGroups, translateComposition };
+export { buildProductDetailGroups };

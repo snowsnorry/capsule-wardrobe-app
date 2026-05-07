@@ -11,7 +11,7 @@ export type CapsuleFilters = {
   text: string;
 };
 
-export type OutfitSetPayload = {
+type OutfitSetPayload = {
   itemIds: string[];
   image: string | null;
   imageObsolete: boolean;
@@ -146,7 +146,7 @@ function getRawSelectionText(payload: Record<string, unknown>): string | null {
   );
 }
 
-export function normalizeWardrobePayload(
+function normalizeWardrobePayload(
   payload: Record<string, unknown> | null = null,
 ): WardrobePayload | null {
   if (!isPlainRecord(payload)) {
@@ -196,7 +196,7 @@ export function normalizeCapsuleFilters(
   };
 }
 
-export function normalizeCapsuleRegenerationMarker(
+function normalizeCapsuleRegenerationMarker(
   value: unknown,
 ): CapsuleRegenerationMarker | null {
   if (!isPlainRecord(value)) {
@@ -307,9 +307,7 @@ export function getEffectiveCapsuleSnapshot(
   return normalized?.draft || normalized?.saved || null;
 }
 
-export function capsuleSnapshotHasWardrobe(
-  snapshot: CapsuleSnapshot | null,
-): boolean {
+function capsuleSnapshotHasWardrobe(snapshot: CapsuleSnapshot | null): boolean {
   const items = snapshot?.data?.wardrobe?.items;
   return Array.isArray(items) && items.length > 0;
 }

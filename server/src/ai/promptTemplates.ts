@@ -177,4 +177,3 @@ export {
   parsePromptTemplateYaml,
   renderPromptTemplateContent,
 };
-export type { PromptTemplate };

@@ -1,11 +1,9 @@
 import { getCapsule } from "../capsuleStore.js";
 import { getProfile } from "../profileStore.js";
 import type {
-  GeneratedOutfitSetLike,
   PartialRegenerationJobState,
   ProfileWithItemsLike,
   StoredWardrobePayloadLike,
-  UserProfileLike,
   WardrobeGenerationResult,
   WardrobeJobState,
   WardrobeUiItemLike,
@@ -88,17 +86,6 @@ function buildWardrobeUiItem(
     category: "top",
     image_url: "https://example.com/item-1.jpg",
     audience: "woman",
-    ...overrides,
-  };
-}
-
-function buildGeneratedOutfitSet(
-  overrides: Partial<GeneratedOutfitSetLike> = {},
-): GeneratedOutfitSetLike {
-  return {
-    itemIds: ["item-1", "item-2", "item-3"],
-    image: null,
-    imageObsolete: false,
     ...overrides,
   };
 }
@@ -236,16 +223,6 @@ function buildPartialRegenerationJobState(
   };
 }
 
-function buildUserProfileLike(
-  overrides: Partial<UserProfileLike> = {},
-): UserProfileLike {
-  return {
-    locale: "en",
-    llm: "openai:gpt-5.5",
-    ...overrides,
-  };
-}
-
 function buildProfileWithItems(
   overrides: Partial<ProfileWithItemsLike> = {},
 ): ProfileWithItemsLike {
@@ -291,7 +268,6 @@ function buildProductRow(
 
 export {
   buildCapsuleSnapshot,
-  buildGeneratedOutfitSet,
   buildNormalizedCapsuleRecord,
   buildNormalizedProfileRecord,
   buildPartialRegenerationJobState,
@@ -299,7 +275,6 @@ export {
   buildProfileWithItems,
   buildStoredOutfitSet,
   buildStoredWardrobePayload,
-  buildUserProfileLike,
   buildWardrobeGenerationResult,
   buildWardrobeJobState,
   buildWardrobeUiItem,

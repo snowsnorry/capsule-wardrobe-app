@@ -14,7 +14,6 @@ import type {
   PriceControls,
   SearchFilterItems,
   SearchFiltersSidebarProps,
-  SearchFiltersStatus,
   SearchStateUpdater,
 } from "./SearchFiltersSidebarTypes";
 
@@ -205,8 +204,3 @@ function SearchFiltersSidebar(props: SearchFiltersSidebarProps) {
 }
 
 export default SearchFiltersSidebar;
-export type {
-  SearchFiltersSidebarProps,
-  SearchFiltersStatus,
-  SearchStateUpdater,
-};

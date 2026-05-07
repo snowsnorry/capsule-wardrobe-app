@@ -2,10 +2,7 @@ import {
   buildProfileCapsuleContext,
   getEffectiveCapsuleSnapshot,
 } from "../capsuleStore.js";
-import {
-  buildCapsuleEventSnapshot,
-  getStoredWardrobePayload,
-} from "./capsuleEvents.js";
+
 import {
   createPartialRegenerationJobKey,
   getPartialRegenerationJobFromStore,
@@ -18,7 +15,7 @@ import {
 import { logError } from "../logger.js";
 import type { PartialRegenerationJobState } from "./types.js";
 
-export const COMPLETED_JOB_TTL_MS = 5 * 60 * 1000;
+const COMPLETED_JOB_TTL_MS = 5 * 60 * 1000;
 
 function scheduleJobCleanup(
   deps,
@@ -201,12 +198,4 @@ export function startPartialRegenerationJobForService(
     job,
   });
   return job;
-}
-
-export function buildCapsuleEventSnapshotForService(payload) {
-  return buildCapsuleEventSnapshot(payload);
-}
-
-export function getStoredWardrobePayloadForService(payload) {
-  return getStoredWardrobePayload(payload);
 }

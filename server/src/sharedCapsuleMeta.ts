@@ -1,6 +1,6 @@
 import { CLIENT_ORIGIN } from "./appConfig.js";
 
-export type SharedCapsuleOgMetadata = {
+type SharedCapsuleOgMetadata = {
   title?: string | null;
   description?: string | null;
   image?: string | null;

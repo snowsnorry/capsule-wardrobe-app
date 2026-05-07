@@ -28,7 +28,7 @@
     "quality:large-files": "find client/src server/src shared -type f \\( -name \"*.ts\" -o -name \"*.tsx\" -o -name \"*.js\" -o -name \"*.jsx\" \\) -not -path \"*/node_modules/*\" -not -path \"*/dist/*\" -not -path \"*/build/*\" -exec wc -l {} + | sort -nr | head -40",
     "quality:large-files:strict": "node scripts/check-large-files.mjs",
     "quality:deps": "depcruise client/src server/src shared --config .dependency-cruiser.cjs",
-    "quality:gate": "npm run lint:strict && npm run typecheck && npm test && npm run quality:deps && npm run quality:large-files:strict && npm run coverage && npm run format:check && npm run quality:cycles",
+    "quality:gate": "npm run lint:strict && npm run typecheck && npm test && npm run quality:deps && npm run quality:large-files:strict && npm run coverage && npm run format:check && npm run quality:cycles && npm run quality:unused",
     "quality": "npm run quality:gate && npm run quality:large-files",
     "coverage": "vitest run --coverage",
     "coverage:client": "vitest run --coverage --project client",
@@ -38,7 +38,7 @@
     "format:check": "prettier --check \"client/src/**/*.{ts,tsx,js,jsx,css,scss}\" \"server/src/**/*.{ts,tsx,js,jsx}\" \"shared/**/*.{ts,tsx,js,jsx}\"",
     "security:audit": "npm audit --audit-level=high",
     "quality:unused": "knip",
-    "quality:cycles": "madge client/src server/src shared --extensions ts,tsx --circular"
+    "quality:cycles": "madge client/src/**/*.{ts,tsx} server/src/**/*.ts shared/**/*.ts --extensions ts,tsx --circular"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

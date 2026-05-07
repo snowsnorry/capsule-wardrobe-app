@@ -226,8 +226,4 @@ async function downloadProductImageAssets(items: PromptImageItemLike[] = []) {
   );
 }
 
-export {
-  downloadProductImageAsset,
-  downloadPromptImageAsset,
-  downloadProductImageAssets,
-};
+export { downloadPromptImageAsset, downloadProductImageAssets };

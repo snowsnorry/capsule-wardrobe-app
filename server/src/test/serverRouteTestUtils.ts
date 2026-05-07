@@ -6,7 +6,6 @@ export {
   SESSION_ID,
   TEST_CLIENT_ORIGIN,
 } from "./serverRouteTestConstants.js";
-export { createDependencies } from "./serverRouteTestDependencies.js";
 export {
   passkeyAuthenticationResponse,
   passkeyRegistrationResponse,
@@ -19,15 +18,9 @@ export {
 
 export type {
   AuthenticationOptionsInput,
-  CleanupContext,
-  DependencyOverrides,
   MutableRecord,
   PasskeyChallengePayload,
   PasskeyInsertPayload,
   RegistrationOptionsInput,
-  RequestJsonOptions,
-  RequestJsonResult,
-  StartedTestServer,
-  TestResponseJson,
   WebAuthnVerifyInput,
 } from "./serverRouteTestTypes.js";

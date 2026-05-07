@@ -20,7 +20,7 @@ export type RequestJsonResult = {
   json: TestResponseJson;
 };
 export type MutableRecord = Record<string, unknown>;
-export type TestResponseJson = MutableRecord & {
+type TestResponseJson = MutableRecord & {
   error?: string;
   ok?: boolean;
   capsuleId?: string;

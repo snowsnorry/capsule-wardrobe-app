@@ -22,7 +22,6 @@ import {
   getCapsuleIdValue,
   getCapsuleSnapshotRegeneration,
   getEffectiveCapsuleSnapshot,
-  isShareableCapsuleSnapshot,
   normalizeCapsuleFilters,
   normalizeCapsuleRecord,
   normalizeCapsuleSnapshot,
@@ -324,7 +323,6 @@ function createCapsuleStore(deps: CapsuleStoreDeps = {}) {
 const defaultCapsuleStore = createCapsuleStore();
 
 const {
-  createBootstrapCapsule,
   createCapsule,
   createCapsuleShare,
   deleteCapsule,
@@ -344,12 +342,10 @@ const {
 } = defaultCapsuleStore;
 
 export {
-  DEFAULT_CAPSULE_NAME,
   buildCapsuleSnapshotWithRegeneration,
   buildSharedCapsuleOgMetadata,
   buildSnapshotFromProfile,
   buildProfileCapsuleContext,
-  createBootstrapCapsule,
   createCapsule,
   createCapsuleShare,
   createCapsuleStore,
@@ -361,10 +357,8 @@ export {
   getSharedCapsule,
   getSharedCapsuleOgMetadata,
   importSharedCapsule,
-  isShareableCapsuleSnapshot,
   listRecentCapsules,
   normalizeCapsuleFilters,
-  normalizeCapsuleRecord,
   normalizeCapsuleSnapshot,
   resolveActiveCapsule,
   revertCapsule,

@@ -151,4 +151,4 @@ function ClothingCardDetails({
   );
 }
 
-export { CategoryPrefix, ClothingCardDetails };
+export { ClothingCardDetails };

@@ -189,10 +189,7 @@ export {
   buildR2Endpoint,
   buildR2ImageKey,
   buildR2PublicUrl,
-  createR2Client,
   decodeLegacyBase64Image,
   getR2Config,
-  isHttpImageUrl,
   uploadImageToR2,
 };
-export type { R2Config, S3ClientLike };

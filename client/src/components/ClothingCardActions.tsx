@@ -126,4 +126,3 @@ function CardActions(props: CardActionProps) {
 }
 
 export { CardActions };
-export type { CardActionProps } from "./ClothingCardTypes";

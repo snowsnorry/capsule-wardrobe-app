@@ -3,7 +3,7 @@ import {
   generateOutfitSetImage as requestOutfitSetImageGeneration,
 } from "../api/wardrobe";
 import { fromContext, type AppActionContext } from "./actionContext";
-import { startCapsuleEventStream } from "./wardrobeActions";
+import { startCapsuleEventStream } from "./wardrobeStreamActions";
 import type { OutfitSetSnapshot, WardrobeMutationResponse } from "./appTypes";
 
 function clearNotificationFlow(context: AppActionContext) {

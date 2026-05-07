@@ -81,9 +81,7 @@ export function publicKeyToBase64Url(publicKey: Uint8Array): string {
   return Buffer.from(publicKey).toString("base64url");
 }
 
-export function publicKeyFromBase64Url(
-  publicKey: string,
-): Uint8Array<ArrayBuffer> {
+function publicKeyFromBase64Url(publicKey: string): Uint8Array<ArrayBuffer> {
   const buffer = Buffer.from(publicKey, "base64url");
   const arrayBuffer = buffer.buffer.slice(
     buffer.byteOffset,

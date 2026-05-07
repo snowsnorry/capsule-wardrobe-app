@@ -274,5 +274,5 @@ function SettingsDialog({
   );
 }
 
-export type { SettingsDialogProps, SettingsProfile, SettingsSavePayload };
+export type { SettingsProfile, SettingsSavePayload };
 export default SettingsDialog;

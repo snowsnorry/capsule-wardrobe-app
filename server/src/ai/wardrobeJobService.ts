@@ -72,7 +72,7 @@ export function getWardrobeJobForService(
   return job;
 }
 
-export function scheduleWardrobeJobCleanup(
+function scheduleWardrobeJobCleanup(
   deps: WardrobeServiceRuntimeDeps,
   jobKey: string,
   job: WardrobeJobState,

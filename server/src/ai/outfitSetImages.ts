@@ -369,10 +369,8 @@ const outfitSetImageService = createOutfitSetImageService();
 
 export {
   buildPromptFromTemplate,
-  createOutfitSetImageJobKey,
   createOutfitSetImageService,
   getOutfitSetImageJob,
-  saveOutfitSetDebugArtifacts,
 };
 
 export const deleteOutfitSetImage = outfitSetImageService.deleteOutfitSetImage;

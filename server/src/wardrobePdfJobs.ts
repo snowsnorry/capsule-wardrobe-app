@@ -26,8 +26,6 @@ import {
   setWardrobePdfJob,
 } from "./wardrobePdfJobRegistry.js";
 
-export { getWardrobePdfJob } from "./wardrobePdfJobRegistry.js";
-
 type WardrobePdfJobManagerDeps = {
   getProfileByEmail?: typeof getProfile;
   getProfilePdfByEmail?: (

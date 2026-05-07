@@ -9,8 +9,8 @@ import type {
   ResolvedOutfitSet,
 } from "./MainScreenTypes";
 
-export const OUTFIT_SET_IMAGE_WIDTH = 896;
-export const OUTFIT_SET_IMAGE_HEIGHT = 1195;
+const OUTFIT_SET_IMAGE_WIDTH = 896;
+const OUTFIT_SET_IMAGE_HEIGHT = 1195;
 export const OUTFIT_SET_IMAGE_ASPECT_RATIO = `${OUTFIT_SET_IMAGE_WIDTH} / ${OUTFIT_SET_IMAGE_HEIGHT}`;
 export const OUTFIT_SET_IMAGE_PREVIEW_MAX_WIDTH = OUTFIT_SET_IMAGE_WIDTH / 2;
 

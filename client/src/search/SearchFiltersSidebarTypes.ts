@@ -73,7 +73,6 @@ export type {
   PriceControls,
   SearchFilterItems,
   SearchFiltersSidebarProps,
-  SearchFiltersStatus,
   SearchStateUpdater,
   SelectItem,
   UpdateDraftState,

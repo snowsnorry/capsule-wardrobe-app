@@ -1,14 +1,6 @@
 export {
-  TILE_SIZE,
-  GRID_COLUMNS,
-  GRID_ROWS,
-  GRID_WIDTH,
-  GRID_HEIGHT,
-  HEADER_HEIGHT,
-  MAX_ITEMS_PER_CATEGORY,
   buildLocalImageCachePath,
   resolveStorageImagesDir,
-  getOriginalImageUrl,
   groupPromptImageItemsByCategory,
   readImageFromLocalCache,
   resolveSourceImageUrl,
@@ -23,7 +15,4 @@ export {
   serializePromptDebugImagesForIpc,
   deserializePromptDebugImagesFromIpc,
 } from "./promptImagesIpc.js";
-export {
-  preparePdfImageAsset,
-  preparePdfImageAssets,
-} from "./promptImagesPdf.js";
+export { preparePdfImageAssets } from "./promptImagesPdf.js";

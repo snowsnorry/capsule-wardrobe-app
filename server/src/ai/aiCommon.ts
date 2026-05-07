@@ -1,6 +1,5 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { buildSystemPrompt } from "./llm.js";
-import { getProcessMemoryUsage } from "./imagePipeline.js";
 import { logInfo } from "../logger.js";
 import type {
   CountByKey,
@@ -32,7 +31,7 @@ export function getSqlRows<TRow>(result: TRow[] | { count: number }): TRow[] {
   return Array.isArray(result) ? result : [];
 }
 
-export function formatLogValue(value) {
+function formatLogValue(value) {
   if (value === null) {
     return "null";
   }
@@ -81,17 +80,6 @@ export function logWardrobeInfo(event, payload = {}, logContext = null) {
   }
 
   logInfo(prefix);
-}
-
-export function logWardrobeMemory(event, payload = {}, logContext = null) {
-  logWardrobeInfo(
-    event,
-    {
-      ...payload,
-      ...getProcessMemoryUsage(),
-    },
-    logContext,
-  );
 }
 
 export function buildLastPromptArtifact(prompt, userProfile = null) {

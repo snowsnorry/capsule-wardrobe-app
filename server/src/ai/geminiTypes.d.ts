@@ -56,9 +56,6 @@ type GeminiClientLike = {
 
 export type {
   GeminiClientLike,
-  GeminiContentPart,
-  GeminiGenerateContentPayload,
   GeminiGenerateContentResponseLike,
-  GeminiJsonSchemaLike,
   GeminiUploadedFileLike,
 };

@@ -92,20 +92,6 @@ function getEnabledStyleValues(
   });
 }
 
-function buildFallbackStyleOptions({
-  disabled = false,
-}: { disabled?: boolean } = {}): {
-  core: StyleOption[];
-  aesthetics: StyleOption[];
-} {
-  return {
-    core: CORE_STYLE_ORDER.map((item) => makeStyleOption(item, disabled)),
-    aesthetics: AESTHETICS_STYLE_ORDER.map((item) =>
-      makeStyleOption(item, disabled),
-    ),
-  };
-}
-
 function inferStyleSelections(stylePreferences: readonly unknown[] = []): {
   styleCore: string | null;
   styleAesthetic: string | null;
@@ -130,11 +116,9 @@ function buildStylePreferenceArray(
 
 export {
   CORE_STYLE_ORDER,
-  AESTHETICS_STYLE_ORDER,
   normalizeStyleValue,
   partitionStyleValues,
   getEnabledStyleValues,
-  buildFallbackStyleOptions,
   inferStyleSelections,
   buildStylePreferenceArray,
 };

@@ -11,7 +11,6 @@ export {
   buildRegenerateSelectedSystemPrompt,
   buildRegenerateSelectedPrompt,
 } from "./regenerateSelectedPrompt.js";
-export { regenerateCapsuleWardrobe } from "./regenerateSelectedGeneration.js";
 export { createPartialRegenerationService };
 export {
   getPartialRegenerationJob,

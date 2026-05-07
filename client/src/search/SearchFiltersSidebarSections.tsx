@@ -264,4 +264,3 @@ function SearchFiltersSidebarFrame({
 }
 
 export { SearchFiltersSidebarFrame };
-export type { PriceControls, SearchFilterItems };

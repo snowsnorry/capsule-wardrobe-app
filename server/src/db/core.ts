@@ -3,8 +3,8 @@ import { neon } from "@neondatabase/serverless";
 
 export const SEARCH_PAGE_SIZE = 50;
 
-export type JsonObject = Record<string, unknown>;
-export type SqlCountResult = { count: number };
+type JsonObject = Record<string, unknown>;
+type SqlCountResult = { count: number };
 export type SqlResultLike<TRow = unknown> = TRow[] | SqlCountResult;
 export type SqlClientLike = {
   <TRow = unknown>(
@@ -293,7 +293,7 @@ export type UpsertSharedCapsuleInput = {
   expiresAt: string | Date;
 };
 
-export let sqlClientOverride: SqlClientLike | null = null;
+let sqlClientOverride: SqlClientLike | null = null;
 
 export function getResultRows<TRow>(result: SqlResultLike<TRow>): TRow[] {
   return Array.isArray(result) ? result : [];

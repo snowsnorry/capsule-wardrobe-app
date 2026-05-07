@@ -24,7 +24,6 @@ import {
   isHttpUrlQuery,
   resolveSearchEmbedding,
 } from "./searchSemantic.js";
-export type { SearchOptions, SearchPayload } from "./searchTypes.js";
 
 type SearchRow = Partial<SearchPayload> & {
   embedding?: number[] | null;
@@ -324,7 +323,6 @@ const { getSearchOptions, getSavedSearch, runSavedSearch, getSearchStats } =
 
 export {
   DEFAULT_SEARCH_STATE,
-  SEARCH_AUDIENCE_OPTIONS,
   getSemanticDistanceThreshold,
   getRelaxedSemanticDistanceThreshold,
   isHttpUrlQuery,

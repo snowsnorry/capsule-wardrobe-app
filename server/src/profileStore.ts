@@ -115,8 +115,6 @@ const PROFILE_SEASON_OPTIONS = [
   "winter",
 ] as const;
 
-const PROFILE_PATTERN_OPTIONS = buildCanonicalPatternOptions();
-
 const audienceOptions = ["man", "woman", "any"] as const;
 
 function buildPatternOptions(
@@ -363,9 +361,6 @@ export {
   normalizeOccasionList,
   normalizeAccentColor as normalizeColor,
   createProfileStore,
-  PROFILE_FORMALITY_LEVEL_OPTIONS,
-  PROFILE_STYLE_OPTIONS,
   PROFILE_OCCASION_OPTIONS,
   PROFILE_SEASON_OPTIONS,
-  PROFILE_PATTERN_OPTIONS,
 };

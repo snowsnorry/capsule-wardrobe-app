@@ -16,7 +16,7 @@ export async function checkDatabaseConnection(): Promise<DatabaseConnectionRow |
   return row;
 }
 
-export async function ensureLoginCodesTable(): Promise<void> {
+async function ensureLoginCodesTable(): Promise<void> {
   const sql = getSqlClient();
   await sql`
     create table if not exists login_codes (
@@ -30,7 +30,7 @@ export async function ensureLoginCodesTable(): Promise<void> {
   `;
 }
 
-export async function ensureSessionsTable(): Promise<void> {
+async function ensureSessionsTable(): Promise<void> {
   const sql = getSqlClient();
   await sql`
     create table if not exists user_sessions (
