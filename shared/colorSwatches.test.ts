@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect } from "vitest";
 import en from "./i18n/en.js";
 import ru from "./i18n/ru.js";
 import {
@@ -21,38 +20,23 @@ for (const locale of [
     const dictionary = locale[1];
     const accentColors = dictionary?.options?.accentColors || {};
 
-    assert.deepEqual(
-      Object.keys(accentColors).sort(),
-      [...COLOR_SWATCH_KEYS].sort()
-    );
+    expect(Object.keys(accentColors).sort()).toEqual([...COLOR_SWATCH_KEYS].sort());
   });
 }
 
 test("shared color swatches expose consistent client and pdf styles", () => {
-  assert.deepEqual(getColorSwatchStyle("light_blue"), { bgcolor: "#38bdf8" });
-  assert.deepEqual(getColorSwatchStyle("light blue"), { bgcolor: "#38bdf8" });
-  assert.deepEqual(getPdfColorSwatchFill("light_blue"), [0.220, 0.741, 0.973]);
-  assert.deepEqual(getPdfColorSwatchFill("light blue"), [0.220, 0.741, 0.973]);
-  assert.equal(normalizeColorSwatchKey("Light Blue"), "light_blue");
-  assert.deepEqual(
-    getColorSwatchStyle("missing_color"),
-    getColorSwatchStyle(FALLBACK_COLOR_SWATCH_KEY)
-  );
-  assert.deepEqual(
-    getPdfColorSwatchFill("missing_color"),
-    getPdfColorSwatchFill(FALLBACK_COLOR_SWATCH_KEY)
-  );
-  assert.deepEqual(
-    getColorSwatchStyle("multiple_accent_colors"),
-    getColorSwatchStyle("multicolor")
-  );
-  assert.deepEqual(
-    getPdfColorSwatchFill("multiple_accent_colors"),
-    getPdfColorSwatchFill("multicolor")
-  );
+  expect(getColorSwatchStyle("light_blue")).toEqual({ bgcolor: "#38bdf8" });
+  expect(getColorSwatchStyle("light blue")).toEqual({ bgcolor: "#38bdf8" });
+  expect(getPdfColorSwatchFill("light_blue")).toEqual([0.220, 0.741, 0.973]);
+  expect(getPdfColorSwatchFill("light blue")).toEqual([0.220, 0.741, 0.973]);
+  expect(normalizeColorSwatchKey("Light Blue")).toBe("light_blue");
+  expect(getColorSwatchStyle("missing_color")).toEqual(getColorSwatchStyle(FALLBACK_COLOR_SWATCH_KEY));
+  expect(getPdfColorSwatchFill("missing_color")).toEqual(getPdfColorSwatchFill(FALLBACK_COLOR_SWATCH_KEY));
+  expect(getColorSwatchStyle("multiple_accent_colors")).toEqual(getColorSwatchStyle("multicolor"));
+  expect(getPdfColorSwatchFill("multiple_accent_colors")).toEqual(getPdfColorSwatchFill("multicolor"));
 });
 
 test("translateOption resolves accent color aliases with spaces and casing", () => {
-  assert.equal(translateOption("accentColors", "light blue", "en"), "Light blue");
-  assert.equal(translateOption("accentColors", "Light Blue", "ru"), "Голубой");
+  expect(translateOption("accentColors", "light blue", "en")).toBe("Light blue");
+  expect(translateOption("accentColors", "Light Blue", "ru")).toBe("Голубой");
 });

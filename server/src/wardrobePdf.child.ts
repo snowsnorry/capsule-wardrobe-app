@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { configureSharp } from "./ai/sharpConfig.js";
 import { buildWardrobePdf } from "./wardrobePdf.js";
 
@@ -87,8 +88,10 @@ function getWardrobePdfChildErrorMessage(error) {
 
 const wardrobePdfChildRuntime = createWardrobePdfChildRuntime();
 
-process.once("message", (message) => {
-  wardrobePdfChildRuntime.handleMessage(message);
-});
+if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
+  process.once("message", (message) => {
+    wardrobePdfChildRuntime.handleMessage(message);
+  });
+}
 
 export { createWardrobePdfChildRuntime };

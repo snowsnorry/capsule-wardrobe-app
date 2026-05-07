@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect } from "vitest";
 import {
   buildPromptDebugImageCategory,
   buildPromptDebugImageResult,
@@ -11,7 +10,7 @@ import {
 } from "./testDoubles.js";
 
 test("prompt image fixture builders apply defaults and overrides", () => {
-  assert.deepEqual(buildPromptDebugImageStitched({ category: "all" }), {
+  expect(buildPromptDebugImageStitched({ category: "all" })).toEqual({
     category: "all",
     mimeType: "image/jpeg",
     filename: "categories-stitched.jpg",
@@ -20,7 +19,7 @@ test("prompt image fixture builders apply defaults and overrides", () => {
     buffer: Buffer.from("stitched")
   });
 
-  assert.deepEqual(buildPromptDebugImageCategory({ category: "bottom", buffer: Buffer.from("bottom") }), {
+  expect(buildPromptDebugImageCategory({ category: "bottom", buffer: Buffer.from("bottom") })).toEqual({
     category: "bottom",
     mimeType: "image/jpeg",
     filename: "category-top.jpg",
@@ -33,29 +32,29 @@ test("prompt image fixture builders apply defaults and overrides", () => {
   });
 
   const result = buildPromptDebugImageResult({ skippedCount: 3 });
-  assert.equal(result.skippedCount, 3);
-  assert.equal(result.categories.length, 1);
-  assert.equal(result.timings?.networkFetchMs, 0);
+  expect(result.skippedCount).toBe(3);
+  expect(result.categories.length).toBe(1);
+  expect(result.timings?.networkFetchMs).toBe(0);
 });
 
 test("response test doubles create json, text, and binary responses", async () => {
   const jsonResponse = createJsonResponse({ ok: true }, { status: 201 });
-  assert.equal(jsonResponse.status, 201);
-  assert.equal(jsonResponse.headers.get("content-type"), "application/json");
-  assert.deepEqual(await jsonResponse.json(), { ok: true });
+  expect(jsonResponse.status).toBe(201);
+  expect(jsonResponse.headers.get("content-type")).toBe("application/json");
+  expect(await jsonResponse.json()).toEqual({ ok: true });
 
   const textResponse = createTextResponse("hello", {
     headers: {
       "x-test": "1"
     }
   });
-  assert.equal(textResponse.status, 200);
-  assert.equal(textResponse.headers.get("x-test"), "1");
-  assert.equal(await textResponse.text(), "hello");
+  expect(textResponse.status).toBe(200);
+  expect(textResponse.headers.get("x-test")).toBe("1");
+  expect(await textResponse.text()).toBe("hello");
 
   const binaryResponse = createBinaryResponse(Buffer.from("bytes"), { status: 202 });
-  assert.equal(binaryResponse.status, 202);
-  assert.equal(Buffer.from(await binaryResponse.arrayBuffer()).toString("utf8"), "bytes");
+  expect(binaryResponse.status).toBe(202);
+  expect(Buffer.from(await binaryResponse.arrayBuffer()).toString("utf8")).toBe("bytes");
 });
 
 test("createMockChildProcess exposes child process event and lifecycle helpers", async () => {
@@ -67,13 +66,13 @@ test("createMockChildProcess exposes child process event and lifecycle helpers",
   });
   child.emit("message", { ok: true });
 
-  assert.deepEqual(received, { ok: true });
-  assert.equal(child.pid, 1234);
-  assert.equal(child.connected, true);
-  assert.equal(child.kill(), true);
-  assert.equal(child.ref(), child);
-  assert.equal(child.unref(), child);
-  assert.equal(child.disconnect(), child);
+  expect(received).toEqual({ ok: true });
+  expect(child.pid).toBe(1234);
+  expect(child.connected).toBe(true);
+  expect(child.kill()).toBe(true);
+  expect(child.ref()).toBe(child);
+  expect(child.unref()).toBe(child);
+  expect(child.disconnect()).toBe(child);
 
   await new Promise<void>((resolve, reject) => {
     child.send?.({ ok: true }, (error) => {

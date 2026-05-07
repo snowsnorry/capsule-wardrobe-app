@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect } from "vitest";
 import fs from "node:fs";
 import { createStartServer } from "./serverStartup.js";
 
@@ -69,7 +68,7 @@ test("development startup wires Vite middleware and serves transformed capsule h
       };
     },
     readFileImpl: (async (filePath) => {
-      assert.equal(filePath, "/client/index.html");
+      expect(filePath).toBe("/client/index.html");
       return "<html>";
     }) as unknown as typeof fs.promises.readFile,
     injectSharedCapsuleMetaTagsImpl: async (html, req) => `${html}:meta:${req.path}`,
@@ -77,24 +76,24 @@ test("development startup wires Vite middleware and serves transformed capsule h
     logInfoImpl: (message) => logMessages.push(message)
   });
 
-  assert.deepEqual(viteOptions[0].server.middlewareMode, true);
-  assert.equal(app.calls[0].type, "use");
-  assert.equal(app.calls[0].args[0], "vite-middleware");
-  assert.equal(app.calls[1].type, "use");
-  assert.equal(app.calls[1].args[0], "*");
-  assert.deepEqual(app.calls.at(-1), { type: "listen", port: 4123 });
-  assert.deepEqual(logMessages, ["Server listening on http://localhost:4123"]);
+  expect(viteOptions[0].server.middlewareMode).toEqual(true);
+  expect(app.calls[0].type).toBe("use");
+  expect(app.calls[0].args[0]).toBe("vite-middleware");
+  expect(app.calls[1].type).toBe("use");
+  expect(app.calls[1].args[0]).toBe("*");
+  expect(app.calls.at(-1)).toEqual({ type: "listen", port: 4123 });
+  expect(logMessages).toEqual(["Server listening on http://localhost:4123"]);
 
   const handler = app.calls[1].args[1];
   await handler({ path: "/api/search", originalUrl: "/api/search" }, createResponse(), (error) => nextCalls.push(error));
-  assert.equal(nextCalls.length, 1);
-  assert.equal(nextCalls[0], undefined);
+  expect(nextCalls.length).toBe(1);
+  expect(nextCalls[0]).toBe(undefined);
 
   const pageResponse = createResponse();
   await handler({ path: "/share/abc", originalUrl: "/share/abc?x=1" }, pageResponse, (error) => nextCalls.push(error));
-  assert.equal(pageResponse.statusCode, 200);
-  assert.deepEqual(pageResponse.headers, { "Content-Type": "text/html" });
-  assert.equal(pageResponse.body, "<html>:/share/abc?x=1:meta:/share/abc");
+  expect(pageResponse.statusCode).toBe(200);
+  expect(pageResponse.headers).toEqual({ "Content-Type": "text/html" });
+  expect(pageResponse.body).toBe("<html>:/share/abc?x=1:meta:/share/abc");
 });
 
 test("development startup fixes Vite stack traces before forwarding html errors", async () => {
@@ -121,8 +120,8 @@ test("development startup fixes Vite stack traces before forwarding html errors"
   const handler = app.calls[1].args[1];
   await handler({ path: "/share/abc", originalUrl: "/share/abc" }, createResponse(), (error) => nextCalls.push(error));
 
-  assert.deepEqual(fixedErrors, [thrown]);
-  assert.deepEqual(nextCalls, [thrown]);
+  expect(fixedErrors).toEqual([thrown]);
+  expect(nextCalls).toEqual([thrown]);
 });
 
 test("production startup serves static files, spa html, and api 404s when client dist exists", async () => {
@@ -137,11 +136,11 @@ test("production startup serves static files, spa html, and api 404s when client
     ensureTablesImpl: async () => {},
     existsSyncImpl: (filePath) => filePath === "/dist/client",
     expressStaticImpl: (filePath) => {
-      assert.equal(filePath, "/dist/client");
+      expect(filePath).toBe("/dist/client");
       return staticMiddleware;
     },
     readFileImpl: (async (filePath) => {
-      assert.equal(filePath, "/dist/client/index.html");
+      expect(filePath).toBe("/dist/client/index.html");
       return "<html>";
     }) as unknown as typeof fs.promises.readFile,
     injectSharedCapsuleMetaTagsImpl: async (html, req) => `${html}:meta:${req.path}`,
@@ -149,22 +148,22 @@ test("production startup serves static files, spa html, and api 404s when client
     logInfoImpl: () => {}
   });
 
-  assert.deepEqual(app.calls[0], { type: "use", args: [staticMiddleware] });
-  assert.equal(app.calls[1].type, "get");
-  assert.equal(app.calls[1].args[0], "*");
+  expect(app.calls[0]).toEqual({ type: "use", args: [staticMiddleware] });
+  expect(app.calls[1].type).toBe("get");
+  expect(app.calls[1].args[0]).toBe("*");
 
   const handler = app.calls[1].args[1];
   const apiResponse = createResponse();
   await handler({ path: "/api/missing" }, apiResponse, (error) => nextCalls.push(error));
-  assert.equal(apiResponse.statusCode, 404);
-  assert.deepEqual(apiResponse.body, { error: "not_found" });
+  expect(apiResponse.statusCode).toBe(404);
+  expect(apiResponse.body).toEqual({ error: "not_found" });
 
   const pageResponse = createResponse();
   await handler({ path: "/share/abc" }, pageResponse, (error) => nextCalls.push(error));
-  assert.equal(pageResponse.statusCode, 200);
-  assert.deepEqual(pageResponse.headers, { "Content-Type": "text/html" });
-  assert.equal(pageResponse.body, "<html>:meta:/share/abc");
-  assert.deepEqual(nextCalls, []);
+  expect(pageResponse.statusCode).toBe(200);
+  expect(pageResponse.headers).toEqual({ "Content-Type": "text/html" });
+  expect(pageResponse.body).toBe("<html>:meta:/share/abc");
+  expect(nextCalls).toEqual([]);
 });
 
 test("production startup forwards spa html read failures", async () => {
@@ -187,7 +186,7 @@ test("production startup forwards spa html read failures", async () => {
   const handler = app.calls[1].args[1];
   await handler({ path: "/share/abc" }, createResponse(), (error) => nextCalls.push(error));
 
-  assert.deepEqual(nextCalls, [thrown]);
+  expect(nextCalls).toEqual([thrown]);
 });
 
 test("production startup skips spa fallback when client dist is absent", async () => {
@@ -205,7 +204,7 @@ test("production startup skips spa fallback when client dist is absent", async (
     logInfoImpl: (message) => logMessages.push(message)
   });
 
-  assert.deepEqual(ensureCalls, ["ensure"]);
-  assert.deepEqual(app.calls, [{ type: "listen", port: 5310 }]);
-  assert.deepEqual(logMessages, ["Server listening on http://localhost:5310"]);
+  expect(ensureCalls).toEqual(["ensure"]);
+  expect(app.calls).toEqual([{ type: "listen", port: 5310 }]);
+  expect(logMessages).toEqual(["Server listening on http://localhost:5310"]);
 });

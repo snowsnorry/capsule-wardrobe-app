@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect } from "vitest";
 import {
   getPromptTemplateContent,
   parsePromptTemplateYaml,
@@ -19,9 +18,9 @@ messages:
       User {{value}}
 `);
 
-  assert.equal(template.name, "sample");
-  assert.equal(getPromptTemplateContent(template, "system"), "System {{value}}");
-  assert.equal(getPromptTemplateContent(template, "user"), "User {{value}}");
+  expect(template.name).toBe("sample");
+  expect(getPromptTemplateContent(template, "system")).toBe("System {{value}}");
+  expect(getPromptTemplateContent(template, "user")).toBe("User {{value}}");
 });
 
 test("parsePromptTemplateYaml supports user-only templates", () => {
@@ -34,8 +33,8 @@ messages:
       Draw {{description}}
 `);
 
-  assert.equal(getPromptTemplateContent(template, "system"), "");
-  assert.equal(getPromptTemplateContent(template, "user"), "Draw {{description}}");
+  expect(getPromptTemplateContent(template, "system")).toBe("");
+  expect(getPromptTemplateContent(template, "user")).toBe("Draw {{description}}");
 });
 
 test("renderPromptTemplateContent renders Mustache placeholders without HTML escaping", () => {
@@ -43,25 +42,19 @@ test("renderPromptTemplateContent renders Mustache placeholders without HTML esc
     payload: "{\"name\":\"A&B\",\"items\":[\"<top>\"]}"
   });
 
-  assert.equal(rendered, "JSON: {\"name\":\"A&B\",\"items\":[\"<top>\"]}");
+  expect(rendered).toBe("JSON: {\"name\":\"A&B\",\"items\":[\"<top>\"]}");
 });
 
 test("renderPromptTemplateContent throws for unresolved placeholders", () => {
-  assert.throws(
-    () => renderPromptTemplateContent("Hello {{name}} {{missing}}", { name: "Ada" }, "test prompt"),
-    /Unresolved test prompt placeholders: \{\{missing\}\}/
-  );
+  expect(() => renderPromptTemplateContent("Hello {{name}} {{missing}}", { name: "Ada" }, "test prompt")).toThrow(/Unresolved test prompt placeholders: \{\{missing\}\}/);
 });
 
 test("parsePromptTemplateYaml rejects invalid messages", () => {
-  assert.throws(
-    () => parsePromptTemplateYaml(`
+  expect(() => parsePromptTemplateYaml(`
 version: 1
 name: bad
 messages:
   - role: assistant
     content: Nope
-`),
-    /unsupported role/
-  );
+`)).toThrow(/unsupported role/);
 });

@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect } from "vitest";
 import {
   buildWardrobePdf,
   buildWardrobePdfInChild,
@@ -9,9 +8,9 @@ import {
 } from "./wardrobePdf.js";
 
 test("wardrobe pdf facade re-exports PDF helpers and job manager", () => {
-  assert.equal(typeof buildWardrobePdf, "function");
-  assert.equal(typeof buildWardrobePdfInChild, "function");
-  assert.equal(typeof createWardrobePdfJobManager, "function");
-  assert.equal(typeof resolveWardrobePdfChildEntryUrl, "function");
-  assert.equal(typeof resolveWardrobePdfChildExecArgv, "function");
+  expect(typeof buildWardrobePdf).toBe("function");
+  expect(typeof buildWardrobePdfInChild).toBe("function");
+  expect(typeof createWardrobePdfJobManager).toBe("function");
+  expect(typeof resolveWardrobePdfChildEntryUrl).toBe("function");
+  expect(typeof resolveWardrobePdfChildExecArgv).toBe("function");
 });

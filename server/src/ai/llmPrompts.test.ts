@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect } from "vitest";
 import {
   buildCapsuleSchema,
   buildSystemPrompt,
@@ -10,16 +9,16 @@ import { getCapsuleCategories } from "./categories.js";
 test("buildCapsuleSchema reflects the default capsule counts", () => {
   const schema = buildCapsuleSchema(getCapsuleCategories());
 
-  assert.deepEqual(schema.required, ["bottom", "top", "outerwear", "shoes", "belt", "bag"]);
-  assert.equal(schema.properties.bottom.minItems, 3);
-  assert.equal(schema.properties.top.maxItems, 3);
-  assert.equal(schema.properties.outerwear.maxItems, 1);
+  expect(schema.required).toEqual(["bottom", "top", "outerwear", "shoes", "belt", "bag"]);
+  expect(schema.properties.bottom.minItems).toBe(3);
+  expect(schema.properties.top.maxItems).toBe(3);
+  expect(schema.properties.outerwear.maxItems).toBe(1);
 });
 
 test("buildCapsuleSchema reflects dynamic categories for women in spring and summer", () => {
   const schema = buildCapsuleSchema(getCapsuleCategories({ audience: "woman", season: ["spring", "summer"] }));
 
-  assert.deepEqual(schema.required, [
+  expect(schema.required).toEqual([
     "bottom",
     "top",
     "outerwear",
@@ -29,10 +28,10 @@ test("buildCapsuleSchema reflects dynamic categories for women in spring and sum
     "dress",
     "midlayer"
   ]);
-  assert.equal(schema.properties.dress.minItems, 2);
-  assert.equal(schema.properties.dress.maxItems, 2);
-  assert.equal(schema.properties.midlayer.minItems, 2);
-  assert.equal(schema.properties.outerwear.minItems, 2);
+  expect(schema.properties.dress.minItems).toBe(2);
+  expect(schema.properties.dress.maxItems).toBe(2);
+  expect(schema.properties.midlayer.minItems).toBe(2);
+  expect(schema.properties.outerwear.minItems).toBe(2);
 });
 
 test("buildSystemPrompt renders an alternate template with shared placeholder blocks", () => {
@@ -54,31 +53,31 @@ test("buildSystemPrompt renders an alternate template with shared placeholder bl
     ].join("\n\n")
   });
 
-  assert.match(prompt, /ALT PROMPT/);
-  assert.match(prompt, /- woman:/);
-  assert.match(prompt, /- formal:/);
-  assert.match(prompt, /- winter:/);
-  assert.match(prompt, /STYLE LIBRARY/);
-  assert.match(prompt, /PALETTE REFERENCE BY STYLE/);
-  assert.match(prompt, /PALETTE REFERENCE BY ACCENT COLOR/);
-  assert.doesNotMatch(prompt, /\{\{/);
+  expect(prompt).toMatch(/ALT PROMPT/);
+  expect(prompt).toMatch(/- woman:/);
+  expect(prompt).toMatch(/- formal:/);
+  expect(prompt).toMatch(/- winter:/);
+  expect(prompt).toMatch(/STYLE LIBRARY/);
+  expect(prompt).toMatch(/PALETTE REFERENCE BY STYLE/);
+  expect(prompt).toMatch(/PALETTE REFERENCE BY ACCENT COLOR/);
+  expect(prompt).not.toMatch(/\{\{/);
 });
 
 test("buildSystemPrompt returns the base template without dynamic sections by default", () => {
   const prompt = buildSystemPrompt({});
 
-  assert.match(prompt, /CORE CONSTRAINTS/);
-  assert.match(prompt, /AUDIENCE LOGIC/);
-  assert.match(prompt, /FORMALITY LOGIC/);
-  assert.match(prompt, /SEASONALITY AND LAYERING/);
-  assert.match(prompt, /- not important: Activate relaxed-fit \/ unisex logic/);
-  assert.match(prompt, /- Specifics: Linen for summer\/safari; silk for romantic\/formal; heavy wool for winter\./);
-  assert.doesNotMatch(prompt, /- casual:/);
-  assert.doesNotMatch(prompt, /- summer:/);
-  assert.doesNotMatch(prompt, /STYLE LIBRARY/);
-  assert.doesNotMatch(prompt, /PALETTE REFERENCE BY STYLE/);
-  assert.doesNotMatch(prompt, /PALETTE REFERENCE BY ACCENT COLOR/);
-  assert.doesNotMatch(prompt, /\{\{/);
+  expect(prompt).toMatch(/CORE CONSTRAINTS/);
+  expect(prompt).toMatch(/AUDIENCE LOGIC/);
+  expect(prompt).toMatch(/FORMALITY LOGIC/);
+  expect(prompt).toMatch(/SEASONALITY AND LAYERING/);
+  expect(prompt).toMatch(/- not important: Activate relaxed-fit \/ unisex logic/);
+  expect(prompt).toMatch(/- Specifics: Linen for summer\/safari; silk for romantic\/formal; heavy wool for winter\./);
+  expect(prompt).not.toMatch(/- casual:/);
+  expect(prompt).not.toMatch(/- summer:/);
+  expect(prompt).not.toMatch(/STYLE LIBRARY/);
+  expect(prompt).not.toMatch(/PALETTE REFERENCE BY STYLE/);
+  expect(prompt).not.toMatch(/PALETTE REFERENCE BY ACCENT COLOR/);
+  expect(prompt).not.toMatch(/\{\{/);
 });
 
 test("buildSystemPrompt includes style-specific sections when style is provided", () => {
@@ -89,13 +88,13 @@ test("buildSystemPrompt includes style-specific sections when style is provided"
     occasions: ["everyday_errands"]
   });
 
-  assert.match(prompt, /STYLE LIBRARY/);
-  assert.match(prompt, /Minimalistic/);
-  assert.match(prompt, /- Audience: - woman: silk slip midi skirts, crisp poplin button-downs/);
-  assert.match(prompt, /- Formality Scaling: - smart_casual: black turtlenecks, crisp shirts, classic blazers, sleek loafers/);
-  assert.match(prompt, /- Occasion Adaptation: - everyday_errands: elevated basics \(white tee, straight jeans\), structured oversized wool coat/);
-  assert.match(prompt, /PALETTE REFERENCE BY STYLE/);
-  assert.doesNotMatch(prompt, /PALETTE REFERENCE BY ACCENT COLOR/);
+  expect(prompt).toMatch(/STYLE LIBRARY/);
+  expect(prompt).toMatch(/Minimalistic/);
+  expect(prompt).toMatch(/- Audience: - woman: silk slip midi skirts, crisp poplin button-downs/);
+  expect(prompt).toMatch(/- Formality Scaling: - smart_casual: black turtlenecks, crisp shirts, classic blazers, sleek loafers/);
+  expect(prompt).toMatch(/- Occasion Adaptation: - everyday_errands: elevated basics \(white tee, straight jeans\), structured oversized wool coat/);
+  expect(prompt).toMatch(/PALETTE REFERENCE BY STYLE/);
+  expect(prompt).not.toMatch(/PALETTE REFERENCE BY ACCENT COLOR/);
 });
 
 test("buildSystemPrompt injects audience, formality, and selected seasons", () => {
@@ -105,11 +104,11 @@ test("buildSystemPrompt injects audience, formality, and selected seasons", () =
     season: ["spring", "winter"]
   });
 
-  assert.match(prompt, /- woman: Allow diverse silhouettes based on Yin\/Yang balance, including A-line, fitted, flowing, waist-accentuating items, skirts, dresses, and delicate detailing/);
-  assert.match(prompt, /- formal: Enforce strict dress-code\./);
-  assert.match(prompt, /- spring\/autumn: Light-to-medium layering; transitional outerwear \(trench coats, light leather, denim jackets\) preferred\./);
-  assert.match(prompt, /- winter: Insulating layers and thermal logic required\./);
-  assert.doesNotMatch(prompt, /- summer: Lightweight, breathable fabrics; suppress heavy midlayers\./);
+  expect(prompt).toMatch(/- woman: Allow diverse silhouettes based on Yin\/Yang balance, including A-line, fitted, flowing, waist-accentuating items, skirts, dresses, and delicate detailing/);
+  expect(prompt).toMatch(/- formal: Enforce strict dress-code\./);
+  expect(prompt).toMatch(/- spring\/autumn: Light-to-medium layering; transitional outerwear \(trench coats, light leather, denim jackets\) preferred\./);
+  expect(prompt).toMatch(/- winter: Insulating layers and thermal logic required\./);
+  expect(prompt).not.toMatch(/- summer: Lightweight, breathable fabrics; suppress heavy midlayers\./);
 });
 
 test("buildSystemPrompt includes spring/autumn line when autumn is selected", () => {
@@ -117,17 +116,17 @@ test("buildSystemPrompt includes spring/autumn line when autumn is selected", ()
     season: ["autumn"]
   });
 
-  assert.match(prompt, /- spring\/autumn: Light-to-medium layering; transitional outerwear \(trench coats, light leather, denim jackets\) preferred\./);
-  assert.doesNotMatch(prompt, /- summer: Lightweight, breathable fabrics; suppress heavy midlayers\./);
-  assert.doesNotMatch(prompt, /- winter: Insulating layers, heavy wool, and thermal logic required\./);
+  expect(prompt).toMatch(/- spring\/autumn: Light-to-medium layering; transitional outerwear \(trench coats, light leather, denim jackets\) preferred\./);
+  expect(prompt).not.toMatch(/- summer: Lightweight, breathable fabrics; suppress heavy midlayers\./);
+  expect(prompt).not.toMatch(/- winter: Insulating layers, heavy wool, and thermal logic required\./);
 });
 
 test("buildSystemPrompt includes accent color defaults when color is provided", () => {
   const prompt = buildSystemPrompt({ color: "red" });
 
-  assert.match(prompt, /PALETTE REFERENCE BY ACCENT COLOR/);
-  assert.match(prompt, /Riviera Standard: 60% navy \/ 30% white \/ 10% true red or cherry/);
-  assert.doesNotMatch(prompt, /STYLE LIBRARY/);
+  expect(prompt).toMatch(/PALETTE REFERENCE BY ACCENT COLOR/);
+  expect(prompt).toMatch(/Riviera Standard: 60% navy \/ 30% white \/ 10% true red or cherry/);
+  expect(prompt).not.toMatch(/STYLE LIBRARY/);
 });
 
 test("buildSystemPrompt combines style and accent color sections", () => {
@@ -139,10 +138,10 @@ test("buildSystemPrompt combines style and accent color sections", () => {
     occasions: ["office"]
   });
 
-  assert.match(prompt, /STYLE LIBRARY/);
-  assert.match(prompt, /PALETTE REFERENCE BY STYLE/);
-  assert.match(prompt, /PALETTE REFERENCE BY ACCENT COLOR/);
-  assert.doesNotMatch(prompt, /\{\{/);
+  expect(prompt).toMatch(/STYLE LIBRARY/);
+  expect(prompt).toMatch(/PALETTE REFERENCE BY STYLE/);
+  expect(prompt).toMatch(/PALETTE REFERENCE BY ACCENT COLOR/);
+  expect(prompt).not.toMatch(/\{\{/);
 });
 
 test("renderStyleLibraryContent injects only the requested fields and joins occasions with newlines", () => {
@@ -168,10 +167,10 @@ test("renderStyleLibraryContent injects only the requested fields and joins occa
     occasions: ["office", "brunch_in_the_city"]
   });
 
-  assert.match(content, /- not important: boxy architectural silhouettes, drop-shoulder tees/);
-  assert.match(content, /- smart_casual: turtlenecks, poplin shirts, sleek loafers/);
-  assert.match(content, /- office: tailored separates in navy, grey, muted neutrals\n- brunch_in_the_city: cashmere sweater \+ relaxed trousers/);
-  assert.doesNotMatch(content, /\{\{/);
+  expect(content).toMatch(/- not important: boxy architectural silhouettes, drop-shoulder tees/);
+  expect(content).toMatch(/- smart_casual: turtlenecks, poplin shirts, sleek loafers/);
+  expect(content).toMatch(/- office: tailored separates in navy, grey, muted neutrals\n- brunch_in_the_city: cashmere sweater \+ relaxed trousers/);
+  expect(content).not.toMatch(/\{\{/);
 });
 
 test("buildSystemPrompt includes retro sections when retro is configured", () => {
@@ -182,7 +181,7 @@ test("buildSystemPrompt includes retro sections when retro is configured", () =>
     occasions: ["date_night"]
   });
 
-  assert.match(prompt, /STYLE LIBRARY/);
-  assert.match(prompt, /Retro/);
-  assert.match(prompt, /PALETTE REFERENCE BY STYLE/);
+  expect(prompt).toMatch(/STYLE LIBRARY/);
+  expect(prompt).toMatch(/Retro/);
+  expect(prompt).toMatch(/PALETTE REFERENCE BY STYLE/);
 });

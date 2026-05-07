@@ -18,6 +18,10 @@ export type StartedTestServer = {
   deps: Record<string, unknown>;
   baseUrl: string;
 };
+type CleanupContext = {
+  after?: (cleanup: () => Promise<void>) => void;
+  onTestFinished?: (cleanup: () => Promise<void>) => void;
+};
 export type RequestJsonOptions = {
   method?: string;
   body?: unknown;
@@ -292,7 +296,21 @@ export function createDependencies(overrides: DependencyOverrides = {}) {
   };
 }
 
-export async function startTestServer(testContext, {
+function registerCleanup(testContext: CleanupContext, cleanup: () => Promise<void>): void {
+  if (typeof testContext.onTestFinished === "function") {
+    testContext.onTestFinished(cleanup);
+    return;
+  }
+
+  if (typeof testContext.after === "function") {
+    testContext.after(cleanup);
+    return;
+  }
+
+  throw new Error("test cleanup context is missing");
+}
+
+export async function startTestServer(testContext: CleanupContext, {
   nodeEnv = "production",
   authTestMode = false,
   googleClientId = "google-client-id",
@@ -319,7 +337,7 @@ export async function startTestServer(testContext, {
     const nextServer = app.listen(0, "127.0.0.1", () => resolve(nextServer));
   });
 
-  testContext.after(async () => {
+  registerCleanup(testContext, async () => {
     await new Promise<void>((resolve, reject) => {
       server.close((error) => (error ? reject(error) : resolve()));
     });
@@ -331,7 +349,7 @@ export async function startTestServer(testContext, {
   };
 }
 
-export async function startSpaFallbackTestServer(testContext, {
+export async function startSpaFallbackTestServer(testContext: CleanupContext, {
   overrides = {}
 }: {
   overrides?: DependencyOverrides;
@@ -358,7 +376,7 @@ export async function startSpaFallbackTestServer(testContext, {
     getSharedCapsuleOgMetadataImpl: deps.getSharedCapsuleOgMetadataImpl
   });
 
-  testContext.after(async () => {
+  registerCleanup(testContext, async () => {
     await new Promise<void>((resolve, reject) => {
       server.close((error) => (error ? reject(error) : resolve()));
     });

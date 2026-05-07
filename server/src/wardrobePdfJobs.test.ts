@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect } from "vitest";
 import { createWardrobePdfJobManager } from "./wardrobePdfJobs.js";
 import {
   buildNormalizedProfileRecord,
@@ -56,10 +55,10 @@ test("wardrobe pdf endpoint returns stored attachment when pdf already exists", 
     res
   );
 
-  assert.equal(res.statusCode, 200);
-  assert.equal(res.headers["Content-Type"], "application/pdf");
-  assert.equal(res.headers["Content-Disposition"], 'attachment; filename="capsule-wardrobe.pdf"');
-  assert.equal(String(res.body), "stored-pdf");
+  expect(res.statusCode).toBe(200);
+  expect(res.headers["Content-Type"]).toBe("application/pdf");
+  expect(res.headers["Content-Disposition"]).toBe('attachment; filename="capsule-wardrobe.pdf"');
+  expect(String(res.body)).toBe("stored-pdf");
 });
 
 test("wardrobe pdf endpoint returns pending and starts job when pdf is missing", async () => {
@@ -105,16 +104,16 @@ test("wardrobe pdf endpoint returns pending and starts job when pdf is missing",
     res
   );
 
-  assert.equal(res.statusCode, 202);
-  assert.equal(res.body.status, "pending");
-  assert.equal(res.body.pollAfterMs, 2000);
+  expect(res.statusCode).toBe(202);
+  expect(res.body.status).toBe("pending");
+  expect(res.body.pollAfterMs).toBe(2000);
 
   const job = manager.getWardrobePdfJob("person@example.com");
-  assert.ok(job);
+  expect(job).toBeTruthy();
   await job.promise;
 
-  assert.deepEqual(receivedUrls, ["https://example.com/top-1", "https://example.com/top-2", "https://example.com/bag-1"]);
-  assert.equal(String(updatedPdf), "pdf:https://example.com/top-1,https://example.com/top-2,https://example.com/bag-1");
+  expect(receivedUrls).toEqual(["https://example.com/top-1", "https://example.com/top-2", "https://example.com/bag-1"]);
+  expect(String(updatedPdf)).toBe("pdf:https://example.com/top-1,https://example.com/top-2,https://example.com/bag-1");
 });
 
 test("ensureWardrobePdfJob reuses active pending job for same generation", async () => {
@@ -156,7 +155,7 @@ test("ensureWardrobePdfJob reuses active pending job for same generation", async
     locale: "en"
   });
 
-  assert.equal(first, second);
+  expect(first).toBe(second);
   await first.promise;
-  assert.equal(buildCount, 1);
+  expect(buildCount).toBe(1);
 });

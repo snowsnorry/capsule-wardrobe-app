@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect } from "vitest";
 import {
   ALLOWED_CHAT_MODELS,
   buildGeminiContents,
@@ -18,7 +17,7 @@ function assertGeminiObjectSchema(
   additionalProperties?: boolean;
   properties?: Record<string, { type?: string }>;
 } {
-  assert.ok(Boolean(schema) && typeof schema === "object" && !Array.isArray(schema));
+  expect(Boolean(schema) && typeof schema === "object" && !Array.isArray(schema)).toBeTruthy();
 }
 
 const SIMPLE_OK_FORMAT: JsonSchemaFormat = {
@@ -35,9 +34,9 @@ const SIMPLE_OK_FORMAT: JsonSchemaFormat = {
 };
 
 test("resolveChatModel keeps only supported gemini profile models", () => {
-  assert.equal(resolveChatModel({ llm: "gemini:gemini-2.5-pro" }), "gemini-2.5-pro");
-  assert.equal(resolveChatModel({ llm: "gemini:unknown-model" }), ALLOWED_CHAT_MODELS[0]);
-  assert.equal(resolveChatModel({ llm: "openai:gpt-5.5" }), ALLOWED_CHAT_MODELS[0]);
+  expect(resolveChatModel({ llm: "gemini:gemini-2.5-pro" })).toBe("gemini-2.5-pro");
+  expect(resolveChatModel({ llm: "gemini:unknown-model" })).toBe(ALLOWED_CHAT_MODELS[0]);
+  expect(resolveChatModel({ llm: "openai:gpt-5.5" })).toBe(ALLOWED_CHAT_MODELS[0]);
 });
 
 test("buildGeminiContents emits text and fileData parts", () => {
@@ -46,13 +45,13 @@ test("buildGeminiContents emits text and fileData parts", () => {
     mimeType: "image/png"
   }]);
 
-  assert.deepEqual(content[0], {
+  expect(content[0]).toEqual({
     fileData: {
       fileUri: "gs://gemini/files/123",
       mimeType: "image/png"
     }
   });
-  assert.deepEqual(content[1], { text: "Describe capsule" });
+  expect(content[1]).toEqual({ text: "Describe capsule" });
 });
 
 test("buildGeminiSystemInstruction concatenates system and system prompt", () => {
@@ -62,32 +61,22 @@ test("buildGeminiSystemInstruction concatenates system and system prompt", () =>
     season: ["winter"]
   };
 
-  assert.equal(
-    buildGeminiSystemInstruction("Be concise", userProfile),
-    `Be concise\n\n${buildSystemPrompt(userProfile)}`
+  expect(buildGeminiSystemInstruction("Be concise", userProfile)).toBe(`Be concise\n\n${buildSystemPrompt(userProfile)}`
   );
 });
 
 test("buildGeminiSystemInstruction uses explicit system prompt override", () => {
-  assert.equal(
-    buildGeminiSystemInstruction("Be concise", { style: "minimalistic" }, "Override system"),
-    "Be concise\n\nOverride system"
-  );
+  expect(buildGeminiSystemInstruction("Be concise", { style: "minimalistic" }, "Override system")).toBe("Be concise\n\nOverride system");
 });
 
 test("buildGeminiSystemInstruction returns only system prompt when system is empty", () => {
   const userProfile = { style: "minimalistic" };
 
-  assert.equal(
-    buildGeminiSystemInstruction("", userProfile),
-    buildSystemPrompt(userProfile)
-  );
+  expect(buildGeminiSystemInstruction("", userProfile)).toBe(buildSystemPrompt(userProfile));
 });
 
 test("buildGeminiSystemInstruction includes the default system prompt for a neutral profile", () => {
-  assert.equal(
-    buildGeminiSystemInstruction("Be concise", {}),
-    `Be concise\n\n${buildSystemPrompt({})}`
+  expect(buildGeminiSystemInstruction("Be concise", {})).toBe(`Be concise\n\n${buildSystemPrompt({})}`
   );
 });
 
@@ -132,11 +121,11 @@ test("gemini client validates api key and shapes multimodal JSON request", async
 
   const first = client.getGeminiClient();
   const second = client.getGeminiClient();
-  assert.equal(createdCount, 1);
-  assert.equal(first, second);
-  assert.equal(first.apiKey, "gem-key");
-  assert.equal(first.apiVersion, "v1beta");
-  assert.deepEqual(clientInitOptions, {
+  expect(createdCount).toBe(1);
+  expect(first).toBe(second);
+  expect(first.apiKey).toBe("gem-key");
+  expect(first.apiVersion).toBe("v1beta");
+  expect(clientInitOptions).toEqual({
     apiKey: "gem-key",
     apiVersion: "v1beta",
     httpOptions: {
@@ -163,35 +152,32 @@ test("gemini client validates api key and shapes multimodal JSON request", async
     }
   });
 
-  assert.deepEqual(result.json, { ok: true });
-  assert.equal(requestPayload.model, "gemini-2.5-pro");
-  assert.equal(
-    requestPayload.config.systemInstruction,
-    buildSystemPrompt({
+  expect(result.json).toEqual({ ok: true });
+  expect(requestPayload.model).toBe("gemini-2.5-pro");
+  expect(requestPayload.config.systemInstruction).toBe(buildSystemPrompt({
       llm: "gemini:gemini-2.5-pro",
       audience: "woman",
       formalityLevel: "formal",
       season: ["winter"]
-    })
-  );
-  assert.equal(requestPayload.config.responseMimeType, "application/json");
+    }));
+  expect(requestPayload.config.responseMimeType).toBe("application/json");
   assertGeminiObjectSchema(requestPayload.config.responseJsonSchema);
-  assert.equal(requestPayload.config.responseJsonSchema.type, "object");
-  assert.equal(requestPayload.config.responseJsonSchema.properties?.ok.type, "boolean");
-  assert.deepEqual(requestPayload.contents[0], {
+  expect(requestPayload.config.responseJsonSchema.type).toBe("object");
+  expect(requestPayload.config.responseJsonSchema.properties?.ok.type).toBe("boolean");
+  expect(requestPayload.contents[0]).toEqual({
     fileData: {
       fileUri: "gs://gemini/files/1",
       mimeType: "image/png"
     }
   });
-  assert.equal(requestPayload.contents[1].text, "Return JSON");
-  assert.equal(payloadBuiltCalls, 1);
-  assert.equal(images[0].buffer, null);
-  assert.deepEqual(uploadedImages, [null]);
-  assert.deepEqual(deletedImages, ["files/1"]);
+  expect(requestPayload.contents[1].text).toBe("Return JSON");
+  expect(payloadBuiltCalls).toBe(1);
+  expect(images[0].buffer).toBe(null);
+  expect(uploadedImages).toEqual([null]);
+  expect(deletedImages).toEqual(["files/1"]);
 
   const missingKeyClient = createGeminiClient({ getApiKeyImpl: () => "" });
-  assert.throws(() => missingKeyClient.getGeminiClient(), /GEMINI_API_KEY is not set/);
+  expect(() => missingKeyClient.getGeminiClient()).toThrow(/GEMINI_API_KEY is not set/);
 });
 
 test("gemini uses only system prompt as systemInstruction when prompt has no System block", async () => {
@@ -223,8 +209,8 @@ test("gemini uses only system prompt as systemInstruction when prompt has no Sys
     format: SIMPLE_OK_FORMAT
   });
 
-  assert.equal(requestPayload.config.systemInstruction, buildSystemPrompt(userProfile));
-  assert.equal(requestPayload.contents[0].text, "Return JSON");
+  expect(requestPayload.config.systemInstruction).toBe(buildSystemPrompt(userProfile));
+  expect(requestPayload.contents[0].text).toBe("Return JSON");
 });
 
 test("gemini generateJsonWithLlm throws for invalid JSON", async () => {
@@ -241,10 +227,7 @@ test("gemini generateJsonWithLlm throws for invalid JSON", async () => {
     })
   });
 
-  await assert.rejects(
-    () => client.generateJsonWithLlm("User: Return JSON"),
-    /Failed to parse JSON response/
-  );
+  await expect(() => client.generateJsonWithLlm("User: Return JSON")).rejects.toThrow(/Failed to parse JSON response/);
 });
 
 test("gemini generateJsonWithLlm throws when parsed JSON does not satisfy the schema", async () => {
@@ -261,14 +244,11 @@ test("gemini generateJsonWithLlm throws when parsed JSON does not satisfy the sc
     })
   });
 
-  await assert.rejects(
-    () => client.generateJsonWithLlm("User: Return JSON", {
+  await expect(() => client.generateJsonWithLlm("User: Return JSON", {
       format: {
         ...SIMPLE_OK_FORMAT
       }
-    }),
-    /Failed to parse JSON response/
-  );
+    })).rejects.toThrow(/Failed to parse JSON response/);
 });
 
 test("gemini does not retry transient transport failures", async () => {
@@ -289,17 +269,14 @@ test("gemini does not retry transient transport failures", async () => {
     })
   });
 
-  await assert.rejects(
-    () => client.generateJsonWithLlm("User: Return JSON"),
-    /fetch failed/
-  );
+  await expect(() => client.generateJsonWithLlm("User: Return JSON")).rejects.toThrow(/fetch failed/);
 });
 
 test("module-level gemini generateJsonWithLlm validates api key", async () => {
   const originalApiKey = process.env.GEMINI_API_KEY;
   process.env.GEMINI_API_KEY = "";
   try {
-    await assert.rejects(() => generateJsonWithLlm("User: Return JSON"), /GEMINI_API_KEY is not set/);
+    await expect(() => generateJsonWithLlm("User: Return JSON")).rejects.toThrow(/GEMINI_API_KEY is not set/);
   } finally {
     process.env.GEMINI_API_KEY = originalApiKey;
   }

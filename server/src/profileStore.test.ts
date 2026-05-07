@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect } from "vitest";
 import {
   buildPatternOptions,
   createProfileStore,
@@ -64,45 +63,42 @@ function shouldResetRejected(current: RejectedResetProfile, next: RejectedResetP
 }
 
 test("normalizeFormalityLevel keeps only known core styles", () => {
-  assert.equal(normalizeFormalityLevel(" smart_casual "), "smart_casual");
-  assert.equal(normalizeFormalityLevel("retro"), null);
+  expect(normalizeFormalityLevel(" smart_casual ")).toBe("smart_casual");
+  expect(normalizeFormalityLevel("retro")).toBe(null);
 });
 
 test("normalizeStyle normalizes optional style values", () => {
-  assert.equal(normalizeStyle(" avant_garde "), "avant_garde");
-  assert.equal(normalizeStyle(""), null);
-  assert.equal(normalizeStyle(null), null);
+  expect(normalizeStyle(" avant_garde ")).toBe("avant_garde");
+  expect(normalizeStyle("")).toBe(null);
+  expect(normalizeStyle(null)).toBe(null);
 });
 
 test("normalizeColor keeps only allowed accent colors", () => {
-  assert.equal(normalizeColor(" Red "), "red");
-  assert.equal(normalizeColor("ultraviolet"), null);
-  assert.equal(normalizeColor(""), null);
+  expect(normalizeColor(" Red ")).toBe("red");
+  expect(normalizeColor("ultraviolet")).toBe(null);
+  expect(normalizeColor("")).toBe(null);
 });
 
 test("normalizeOccasion keeps only supported profile occasions", () => {
-  assert.equal(normalizeOccasion(" everyday_errands "), "everyday_errands");
-  assert.equal(normalizeOccasion("school_drop-off"), null);
-  assert.equal(normalizeOccasion("weekend_with_family"), null);
+  expect(normalizeOccasion(" everyday_errands ")).toBe("everyday_errands");
+  expect(normalizeOccasion("school_drop-off")).toBe(null);
+  expect(normalizeOccasion("weekend_with_family")).toBe(null);
 });
 
 test("normalizeOccasionList keeps supported profile occasions in first-seen order", () => {
-  assert.deepEqual(
-    normalizeOccasionList(["office", "school_drop-off", "everyday_errands", "office", "weekend_with_family"]),
-    ["office", "everyday_errands"]
-  );
+  expect(normalizeOccasionList(["office", "school_drop-off", "everyday_errands", "office", "weekend_with_family"])).toEqual(["office", "everyday_errands"]);
 });
 
 test("getAudienceOptions returns supported profile audiences", () => {
-  assert.deepEqual(getAudienceOptions(), ["man", "woman", "any"]);
+  expect(getAudienceOptions()).toEqual(["man", "woman", "any"]);
 });
 
 test("getFormalityLevels returns fixed schema-based values", async () => {
-  assert.deepEqual(await getFormalityLevels("user@example.com"), ["casual", "smart_casual", "formal"]);
+  expect(await getFormalityLevels("user@example.com")).toEqual(["casual", "smart_casual", "formal"]);
 });
 
 test("getStyles returns fixed schema-based values", async () => {
-  assert.deepEqual(await getStyles("user@example.com"), [
+  expect(await getStyles("user@example.com")).toEqual([
     "minimalistic",
     "street_style",
     "romantic",
@@ -119,28 +115,28 @@ test("getStyles returns fixed schema-based values", async () => {
 });
 
 test("getOccasions returns fixed schema-based values in schema order", async () => {
-  assert.deepEqual(await getOccasions("user@example.com"), PROFILE_OCCASION_OPTIONS);
+  expect(await getOccasions("user@example.com")).toEqual(PROFILE_OCCASION_OPTIONS);
 });
 
 test("getSeasons returns fixed schema-based values in schema order", async () => {
-  assert.deepEqual(await getSeasons("user@example.com"), PROFILE_SEASON_OPTIONS);
+  expect(await getSeasons("user@example.com")).toEqual(PROFILE_SEASON_OPTIONS);
 });
 
 test("buildPatternOptions keeps all product-backed values and forces solid first", () => {
   const options = buildPatternOptions(["paisley", "snake", "check", "unknown", "stripe", "logo"]);
 
-  assert.equal(options[0], "solid");
-  assert.ok(options.includes("argyle"));
-  assert.ok(options.includes("graphic"));
-  assert.ok(options.includes("unknown"));
+  expect(options[0]).toBe("solid");
+  expect(options.includes("argyle")).toBeTruthy();
+  expect(options.includes("graphic")).toBeTruthy();
+  expect(options.includes("unknown")).toBeTruthy();
 });
 
 test("buildPatternOptions keeps current valid profile pattern even if absent in products", () => {
   const options = buildPatternOptions(["stripe"], "lace");
 
-  assert.equal(options[0], "solid");
-  assert.ok(options.includes("lace"));
-  assert.ok(options.includes("stripe"));
+  expect(options[0]).toBe("solid");
+  expect(options.includes("lace")).toBeTruthy();
+  expect(options.includes("stripe")).toBeTruthy();
 });
 
 test("normalizeProfileRecord applies defaults for new profile fields", () => {
@@ -164,10 +160,7 @@ test("normalizeProfileRecord applies defaults for new profile fields", () => {
     imageLlm: "openai:gpt-image-2"
   };
 
-  assert.deepEqual(
-    normalizeProfileRecord(input),
-    expected
-  );
+  expect(normalizeProfileRecord(input)).toEqual(expected);
 });
 
 test("normalizeProfileRecord keeps a supported claude llm selection", () => {
@@ -181,17 +174,11 @@ test("normalizeProfileRecord keeps a supported claude llm selection", () => {
     imageLlm: "gemini:gemini-3-pro-image-preview"
   };
 
-  assert.deepEqual(
-    normalizeProfileRecord(input),
-    input
-  );
+  expect(normalizeProfileRecord(input)).toEqual(input);
 });
 
 test("rejected ids are deduped and trimmed", () => {
-  assert.deepEqual(
-    normalizeRejected({ rejected: [" 123 ", "123", "", "456", " 456 "] }),
-    ["123", "456"]
-  );
+  expect(normalizeRejected({ rejected: [" 123 ", "123", "", "456", " 456 "] })).toEqual(["123", "456"]);
 });
 
 test("changing locale alone does not require rejected reset", () => {
@@ -210,7 +197,7 @@ test("changing locale alone does not require rejected reset", () => {
     locale: "ru"
   };
 
-  assert.equal(shouldResetRejected(current, next), false);
+  expect(shouldResetRejected(current, next)).toBe(false);
 });
 
 test("changing capsule-defining filters requires rejected reset", () => {
@@ -228,7 +215,7 @@ test("changing capsule-defining filters requires rejected reset", () => {
     color: "blue"
   };
 
-  assert.equal(shouldResetRejected(current, next), true);
+  expect(shouldResetRejected(current, next)).toBe(true);
 });
 
 test("createProfileStore delegates profile persistence and normalizes returned records", async () => {
@@ -271,20 +258,20 @@ test("createProfileStore delegates profile persistence and normalizes returned r
     }
   });
 
-  assert.equal((await store.getProfile("person@example.com"))?.fullname, "Ada");
-  assert.equal(await store.hasProfile("person@example.com"), true);
-  assert.equal((await store.createProfile("new@example.com", {}))?.locale, "en");
-  assert.equal((await store.updateProfile("person@example.com", {
+  expect((await store.getProfile("person@example.com"))?.fullname).toBe("Ada");
+  expect(await store.hasProfile("person@example.com")).toBe(true);
+  expect((await store.createProfile("new@example.com", {}))?.locale).toBe("en");
+  expect((await store.updateProfile("person@example.com", {
     locale: "ru",
     fullname: "  Ada Lovelace  ",
     theme: "dark",
     llm: "invalid",
     imageLlm: "invalid"
-  }))?.llm, "openai:gpt-5.5");
-  assert.equal((await store.updateProfileLocale("person@example.com", "ru"))?.locale, "ru");
-  assert.equal(await store.deleteProfile("person@example.com"), true);
-  assert.equal((await store.updateProfileActiveCapsuleId("person@example.com", "capsule-2"))?.activeCapsuleId, "capsule-2");
-  assert.equal(calls.length, 7);
+  }))?.llm).toBe("openai:gpt-5.5");
+  expect((await store.updateProfileLocale("person@example.com", "ru"))?.locale).toBe("ru");
+  expect(await store.deleteProfile("person@example.com")).toBe(true);
+  expect((await store.updateProfileActiveCapsuleId("person@example.com", "capsule-2"))?.activeCapsuleId).toBe("capsule-2");
+  expect(calls.length).toBe(7);
 });
 
 test("createProfileStore builds pattern options and falls back when product lookup fails", async () => {
@@ -301,7 +288,7 @@ test("createProfileStore builds pattern options and falls back when product look
     }
   });
 
-  assert.ok((await store.getPatternOptions("person@example.com")).includes("houndstooth"));
-  assert.deepEqual(await failingStore.getPatternOptions("person@example.com"), buildPatternOptions([]));
-  assert.equal(errors.length, 1);
+  expect((await store.getPatternOptions("person@example.com")).includes("houndstooth")).toBeTruthy();
+  expect(await failingStore.getPatternOptions("person@example.com")).toEqual(buildPatternOptions([]));
+  expect(errors.length).toBe(1);
 });

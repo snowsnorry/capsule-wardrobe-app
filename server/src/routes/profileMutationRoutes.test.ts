@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect } from "vitest";
 import { AUTH_COOKIE, CSRF_TOKEN, TEST_CLIENT_ORIGIN, requestJson, startTestServer } from "../test/serverRouteTestUtils.js";
 
 test("profile initialize route maps validation, conflict, and success branches", async (t) => {
@@ -13,8 +12,8 @@ test("profile initialize route maps validation, conflict, and success branches",
       locale: "de"
     }
   });
-  assert.equal(invalid.response.status, 400);
-  assert.deepEqual(invalid.json, { error: "invalid_payload" });
+  expect(invalid.response.status).toBe(400);
+  expect(invalid.json).toEqual({ error: "invalid_payload" });
 
   const existsServer = await startTestServer(t, {
     overrides: {
@@ -30,8 +29,8 @@ test("profile initialize route maps validation, conflict, and success branches",
       locale: "en"
     }
   });
-  assert.equal(exists.response.status, 409);
-  assert.deepEqual(exists.json, { error: "profile_exists" });
+  expect(exists.response.status).toBe(409);
+  expect(exists.json).toEqual({ error: "profile_exists" });
 
   const successServer = await startTestServer(t);
   const success = await requestJson(successServer.baseUrl, "/profile/initialize", {
@@ -43,9 +42,9 @@ test("profile initialize route maps validation, conflict, and success branches",
       locale: "en"
     }
   });
-  assert.equal(success.response.status, 200);
-  assert.equal(success.json.ok, true);
-  assert.equal(success.json.profile.locale, "en");
+  expect(success.response.status).toBe(200);
+  expect(success.json.ok).toBe(true);
+  expect(success.json.profile.locale).toBe("en");
 });
 
 test("profile mutation routes cover update, locale update, and delete branches", async (t) => {
@@ -70,8 +69,8 @@ test("profile mutation routes cover update, locale update, and delete branches",
       fullname: null
     }
   });
-  assert.equal(updateNotFound.response.status, 404);
-  assert.deepEqual(updateNotFound.json, { error: "not_found" });
+  expect(updateNotFound.response.status).toBe(404);
+  expect(updateNotFound.json).toEqual({ error: "not_found" });
 
   const invalidProfilePayload = await requestJson(notFoundUpdateServer.baseUrl, "/profile/me", {
     method: "PATCH",
@@ -86,8 +85,8 @@ test("profile mutation routes cover update, locale update, and delete branches",
       fullname: "Ada"
     }
   });
-  assert.equal(invalidProfilePayload.response.status, 400);
-  assert.deepEqual(invalidProfilePayload.json, { error: "invalid_payload" });
+  expect(invalidProfilePayload.response.status).toBe(400);
+  expect(invalidProfilePayload.json).toEqual({ error: "invalid_payload" });
 
   const invalidLocale = await requestJson(notFoundUpdateServer.baseUrl, "/profile/locale", {
     method: "PATCH",
@@ -96,8 +95,8 @@ test("profile mutation routes cover update, locale update, and delete branches",
     csrfToken: CSRF_TOKEN,
     body: { locale: "de" }
   });
-  assert.equal(invalidLocale.response.status, 400);
-  assert.deepEqual(invalidLocale.json, { error: "invalid_payload" });
+  expect(invalidLocale.response.status).toBe(400);
+  expect(invalidLocale.json).toEqual({ error: "invalid_payload" });
 
   const localeNotFound = await requestJson(notFoundUpdateServer.baseUrl, "/profile/locale", {
     method: "PATCH",
@@ -106,8 +105,8 @@ test("profile mutation routes cover update, locale update, and delete branches",
     csrfToken: CSRF_TOKEN,
     body: { locale: "ru" }
   });
-  assert.equal(localeNotFound.response.status, 404);
-  assert.deepEqual(localeNotFound.json, { error: "not_found" });
+  expect(localeNotFound.response.status).toBe(404);
+  expect(localeNotFound.json).toEqual({ error: "not_found" });
 
   const deleteNotFound = await requestJson(notFoundUpdateServer.baseUrl, "/profile/me", {
     method: "DELETE",
@@ -115,8 +114,8 @@ test("profile mutation routes cover update, locale update, and delete branches",
     cookie: AUTH_COOKIE,
     csrfToken: CSRF_TOKEN
   });
-  assert.equal(deleteNotFound.response.status, 404);
-  assert.deepEqual(deleteNotFound.json, { error: "not_found" });
+  expect(deleteNotFound.response.status).toBe(404);
+  expect(deleteNotFound.json).toEqual({ error: "not_found" });
 
   const successServer = await startTestServer(t);
   const updateSuccess = await requestJson(successServer.baseUrl, "/profile/me", {
@@ -132,13 +131,13 @@ test("profile mutation routes cover update, locale update, and delete branches",
       fullname: "  Ada Lovelace  "
     }
   });
-  assert.equal(updateSuccess.response.status, 200);
-  assert.equal(updateSuccess.json.ok, true);
-  assert.equal(updateSuccess.json.profile.locale, "ru");
-  assert.equal(updateSuccess.json.profile.theme, "dark");
-  assert.equal(updateSuccess.json.profile.llm, "claude:claude-opus-4-7");
-  assert.equal(updateSuccess.json.profile.image_llm, "gemini:gemini-3-pro-image-preview");
-  assert.equal(updateSuccess.json.profile.fullname, "Ada Lovelace");
+  expect(updateSuccess.response.status).toBe(200);
+  expect(updateSuccess.json.ok).toBe(true);
+  expect(updateSuccess.json.profile.locale).toBe("ru");
+  expect(updateSuccess.json.profile.theme).toBe("dark");
+  expect(updateSuccess.json.profile.llm).toBe("claude:claude-opus-4-7");
+  expect(updateSuccess.json.profile.image_llm).toBe("gemini:gemini-3-pro-image-preview");
+  expect(updateSuccess.json.profile.fullname).toBe("Ada Lovelace");
 
   const localeSuccess = await requestJson(successServer.baseUrl, "/profile/locale", {
     method: "PATCH",
@@ -147,8 +146,8 @@ test("profile mutation routes cover update, locale update, and delete branches",
     csrfToken: CSRF_TOKEN,
     body: { locale: "ru" }
   });
-  assert.equal(localeSuccess.response.status, 200);
-  assert.equal(localeSuccess.json.profile.locale, "ru");
+  expect(localeSuccess.response.status).toBe(200);
+  expect(localeSuccess.json.profile.locale).toBe("ru");
 
   const deleteSuccess = await requestJson(successServer.baseUrl, "/profile/me", {
     method: "DELETE",
@@ -156,6 +155,6 @@ test("profile mutation routes cover update, locale update, and delete branches",
     cookie: AUTH_COOKIE,
     csrfToken: CSRF_TOKEN
   });
-  assert.equal(deleteSuccess.response.status, 200);
-  assert.deepEqual(deleteSuccess.json, { ok: true });
+  expect(deleteSuccess.response.status).toBe(200);
+  expect(deleteSuccess.json).toEqual({ ok: true });
 });

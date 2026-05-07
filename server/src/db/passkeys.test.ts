@@ -1,5 +1,4 @@
-import test, { afterEach } from "node:test";
-import assert from "node:assert/strict";
+import { test, expect, afterEach } from "vitest";
 import { setSqlClientOverride, type PasskeyChallengeRow, type PasskeyRow, type SqlClientLike, type SqlResultLike } from "./core.js";
 import {
   consumePasskeyChallenge,
@@ -57,8 +56,8 @@ const challengeRow: PasskeyChallengeRow = {
 };
 
 test("normalizePasskeyRow coerces counters and missing transports", () => {
-  assert.equal(normalizePasskeyRow(null), null);
-  assert.deepEqual(normalizePasskeyRow(passkeyRow), {
+  expect(normalizePasskeyRow(null)).toBe(null);
+  expect(normalizePasskeyRow(passkeyRow)).toEqual({
     ...passkeyRow,
     counter: 7,
     transports: []
@@ -74,12 +73,12 @@ test("passkey credential helpers normalize selected and returned rows", async ()
     [{ id: "passkey-1" }]
   ]);
 
-  assert.deepEqual(await listPasskeysByEmail("person@example.com"), [{
+  expect(await listPasskeysByEmail("person@example.com")).toEqual([{
     ...passkeyRow,
     counter: 7,
     transports: []
   }]);
-  assert.deepEqual(await insertPasskey({
+  expect(await insertPasskey({
     profileEmail: "person@example.com",
     credentialId: "credential",
     credentialPublicKey: "public-key",
@@ -89,22 +88,22 @@ test("passkey credential helpers normalize selected and returned rows", async ()
     transports: ["usb"],
     name: "Security key",
     aaguid: "aaguid"
-  }), {
+  })).toEqual({
     ...passkeyRow,
     counter: 7,
     transports: []
   });
-  assert.equal((await getPasskeyByCredentialId("credential"))?.counter, 7);
-  assert.equal((await updatePasskeyAuthentication({
+  expect((await getPasskeyByCredentialId("credential"))?.counter).toBe(7);
+  expect((await updatePasskeyAuthentication({
     credentialId: "credential",
     counter: 8,
     deviceType: null,
     backedUp: null
-  }))?.credentialId, "credential");
-  assert.equal(await deletePasskeyByIdForEmail({
+  }))?.credentialId).toBe("credential");
+  expect(await deletePasskeyByIdForEmail({
     email: "person@example.com",
     passkeyId: "passkey-1"
-  }), true);
+  })).toBe(true);
 });
 
 test("passkey challenge helpers store, consume, prune, and return null for missing rows", async () => {
@@ -118,13 +117,13 @@ test("passkey challenge helpers store, consume, prune, and return null for missi
     profileEmail: null,
     expiresAt
   });
-  assert.deepEqual(await consumePasskeyChallenge({
+  expect(await consumePasskeyChallenge({
     id: "challenge-1",
     kind: "authentication"
-  }), challengeRow);
+  })).toEqual(challengeRow);
   await pruneExpiredPasskeyChallenges();
-  assert.equal(await consumePasskeyChallenge({ id: "missing", kind: "authentication" }), null);
-  assert.deepEqual(values[0], ["challenge-1", "registration", "challenge", null, expiresAt]);
-  assert.ok(statements.some((statement) => statement.includes("set consumed_at = now()")));
-  assert.ok(statements.some((statement) => statement.includes("where expires_at <= now() or consumed_at is not null")));
+  expect(await consumePasskeyChallenge({ id: "missing", kind: "authentication" })).toBe(null);
+  expect(values[0]).toEqual(["challenge-1", "registration", "challenge", null, expiresAt]);
+  expect(statements.some((statement) => statement.includes("set consumed_at = now()"))).toBeTruthy();
+  expect(statements.some((statement) => statement.includes("where expires_at <= now() or consumed_at is not null"))).toBeTruthy();
 });

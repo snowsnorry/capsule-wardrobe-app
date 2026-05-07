@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect } from "vitest";
 import { buildOutfitSetDescription } from "./outfitSetImageDescription.js";
 
 test("buildOutfitSetDescription tolerates items without type", () => {
@@ -9,8 +8,8 @@ test("buildOutfitSetDescription tolerates items without type", () => {
     { id: "3", name: "Bag", type: "bag" }
   ]);
 
-  assert.match(description, /Shirt/);
-  assert.match(description, /Bag/);
+  expect(description).toMatch(/Shirt/);
+  expect(description).toMatch(/Bag/);
 });
 
 test("buildOutfitSetDescription falls back to category when type is absent", () => {
@@ -21,8 +20,8 @@ test("buildOutfitSetDescription falls back to category when type is absent", () 
     { id: "4", name: "Bag", category: "bag" }
   ]);
 
-  assert.match(description, /Blazer/);
-  assert.match(description, /Knit/);
-  assert.match(description, /Trousers/);
-  assert.match(description, /Bag/);
+  expect(description).toMatch(/Blazer/);
+  expect(description).toMatch(/Knit/);
+  expect(description).toMatch(/Trousers/);
+  expect(description).toMatch(/Bag/);
 });

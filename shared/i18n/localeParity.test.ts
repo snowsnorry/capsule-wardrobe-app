@@ -1,22 +1,21 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect } from "vitest";
 import en from "./en.js";
 import ru from "./ru.js";
 
 type LocaleShape = null | string | number | boolean | LocaleShape[] | { [key: string]: LocaleShape };
 
 function assertSameShape(left: LocaleShape, right: LocaleShape, path = ""): void {
-  assert.equal(typeof left, typeof right, `type mismatch at ${path || "<root>"}`);
+  expect(typeof left).toBe(typeof right);
 
   if (left === null || right === null || typeof left !== "object") {
     return;
   }
 
-  assert.equal(Array.isArray(left), Array.isArray(right), `array mismatch at ${path || "<root>"}`);
+  expect(Array.isArray(left)).toBe(Array.isArray(right));
 
   const leftKeys = Object.keys(left).sort();
   const rightKeys = Object.keys(right).sort();
-  assert.deepEqual(leftKeys, rightKeys, `key mismatch at ${path || "<root>"}`);
+  expect(leftKeys).toEqual(rightKeys);
 
   for (const key of leftKeys) {
     const nextPath = path ? `${path}.${key}` : key;

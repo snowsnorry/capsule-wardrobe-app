@@ -1,20 +1,16 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect } from "vitest";
 import {
   enforceCategoryCounts,
   getSelectedIdsFromCapsule
 } from "./aiCategoryEnforcement.js";
 
 test("getSelectedIdsFromCapsule flattens only non-empty ids from capsule object", () => {
-  assert.deepEqual(
-    getSelectedIdsFromCapsule({
+  expect(getSelectedIdsFromCapsule({
       top: ["1", "2", ""],
       bottom: ["3"],
       bag: null,
       misc: "nope"
-    }),
-    ["1", "2", "3"]
-  );
+    })).toEqual(["1", "2", "3"]);
 });
 
 test("enforceCategoryCounts limits style-matched additions to four when alternatives exist", () => {
@@ -42,14 +38,9 @@ test("enforceCategoryCounts limits style-matched additions to four when alternat
     }
   );
 
-  assert.equal(balancedItems.length, 5);
-  assert.equal(
-    balancedItems.filter((item) => Array.isArray(item.style) && item.style.includes("minimalistic")).length,
-    4
-  );
-  assert.ok(
-    balancedItems.some((item) => !Array.isArray(item.style) || !item.style.includes("minimalistic"))
-  );
+  expect(balancedItems.length).toBe(5);
+  expect(balancedItems.filter((item) => Array.isArray(item.style) && item.style.includes("minimalistic")).length).toBe(4);
+  expect(balancedItems.some((item) => !Array.isArray(item.style) || !item.style.includes("minimalistic"))).toBeTruthy();
 });
 
 test("enforceCategoryCounts limits accent color additions to three and then prefers neutral items", () => {
@@ -74,17 +65,12 @@ test("enforceCategoryCounts limits accent color additions to three and then pref
     }
   );
 
-  assert.equal(balancedItems.length, 4);
-  assert.equal(
-    balancedItems.filter((item) => Array.isArray(item.color_base) && item.color_base.includes("red")).length,
-    3
-  );
-  assert.ok(
-    balancedItems.some((item) => !Array.isArray(item.color_base) || !item.color_base.includes("red"))
-  );
-  assert.ok(balancedItems.every((item) => (
+  expect(balancedItems.length).toBe(4);
+  expect(balancedItems.filter((item) => Array.isArray(item.color_base) && item.color_base.includes("red")).length).toBe(3);
+  expect(balancedItems.some((item) => !Array.isArray(item.color_base) || !item.color_base.includes("red"))).toBeTruthy();
+  expect(balancedItems.every((item) => (
     (Array.isArray(item.color_base) && item.color_base.includes("red")) || item.is_neutral === true
-  )));
+  ))).toBeTruthy();
 });
 
 test("enforceCategoryCounts spreads accent color items across categories before reusing the same category", () => {
@@ -116,10 +102,10 @@ test("enforceCategoryCounts spreads accent color items across categories before 
     return result;
   }, {});
 
-  assert.equal(redByCategory.top, 1);
-  assert.equal(redByCategory.bottom, 1);
-  assert.equal(redByCategory.shoe, 1);
-  assert.ok(balancedItems.some((item) => item.id === "top-3"));
+  expect(redByCategory.top).toBe(1);
+  expect(redByCategory.bottom).toBe(1);
+  expect(redByCategory.shoe).toBe(1);
+  expect(balancedItems.some((item) => item.id === "top-3")).toBeTruthy();
 });
 
 test("enforceCategoryCounts counts preselected items toward style and color limits", () => {
@@ -149,16 +135,10 @@ test("enforceCategoryCounts counts preselected items toward style and color limi
     }
   );
 
-  assert.equal(
-    balancedItems.filter((item) => Array.isArray(item.style) && item.style.includes("minimalistic")).length,
-    3
-  );
-  assert.equal(
-    balancedItems.filter((item) => Array.isArray(item.color_base) && item.color_base.includes("red")).length,
-    3
-  );
-  assert.ok(balancedItems.some((item) => item.id === "bottom-3"));
-  assert.ok(balancedItems.some((item) => item.id === "shoe-2"));
+  expect(balancedItems.filter((item) => Array.isArray(item.style) && item.style.includes("minimalistic")).length).toBe(3);
+  expect(balancedItems.filter((item) => Array.isArray(item.color_base) && item.color_base.includes("red")).length).toBe(3);
+  expect(balancedItems.some((item) => item.id === "bottom-3")).toBeTruthy();
+  expect(balancedItems.some((item) => item.id === "shoe-2")).toBeTruthy();
 });
 
 test("enforceCategoryCounts keeps only one target pattern item and prefers solid or null for the rest", () => {
@@ -179,17 +159,12 @@ test("enforceCategoryCounts keeps only one target pattern item and prefers solid
     }
   );
 
-  assert.equal(
-    balancedItems.filter((item) => String(item.pattern || "").toLowerCase() === "floral").length,
-    1
-  );
-  assert.ok(
-    balancedItems.every((item) => (
+  expect(balancedItems.filter((item) => String(item.pattern || "").toLowerCase() === "floral").length).toBe(1);
+  expect(balancedItems.every((item) => (
       String(item.pattern || "").toLowerCase() === "floral"
       || item.pattern === null
       || String(item.pattern).toLowerCase() === "solid"
-    ))
-  );
+    ))).toBeTruthy();
 });
 
 test("enforceCategoryCounts falls back when only target pattern items are available", () => {
@@ -207,10 +182,7 @@ test("enforceCategoryCounts falls back when only target pattern items are availa
     }
   );
 
-  assert.deepEqual(
-    balancedItems.map((item) => item.id),
-    ["top-1", "top-2"]
-  );
+  expect(balancedItems.map((item) => item.id)).toEqual(["top-1", "top-2"]);
 });
 
 test("enforceCategoryCounts falls back to violating constraints when needed to fill category quotas", () => {
@@ -228,11 +200,8 @@ test("enforceCategoryCounts falls back to violating constraints when needed to f
     }
   );
 
-  assert.equal(balancedItems.length, 2);
-  assert.deepEqual(
-    balancedItems.map((item) => item.id),
-    ["top-1", "top-2"]
-  );
+  expect(balancedItems.length).toBe(2);
+  expect(balancedItems.map((item) => item.id)).toEqual(["top-1", "top-2"]);
 });
 
 test("enforceCategoryCounts keeps no-accent mode neutral unless fallback is required", () => {
@@ -254,11 +223,11 @@ test("enforceCategoryCounts keeps no-accent mode neutral unless fallback is requ
     }
   );
 
-  assert.equal(balancedItems.filter((item) => item.is_neutral === true).length, 3);
-  assert.ok(balancedItems.some((item) => item.id === "top-3"));
-  assert.ok(balancedItems.some((item) => item.id === "bottom-2"));
-  assert.ok(balancedItems.some((item) => item.id === "shoe-2"));
-  assert.ok(balancedItems.some((item) => item.is_neutral !== true));
+  expect(balancedItems.filter((item) => item.is_neutral === true).length).toBe(3);
+  expect(balancedItems.some((item) => item.id === "top-3")).toBeTruthy();
+  expect(balancedItems.some((item) => item.id === "bottom-2")).toBeTruthy();
+  expect(balancedItems.some((item) => item.id === "shoe-2")).toBeTruthy();
+  expect(balancedItems.some((item) => item.is_neutral !== true)).toBeTruthy();
 });
 
 test("enforceCategoryCounts keeps solid-only mode free of prints unless fallback is required", () => {
@@ -276,16 +245,11 @@ test("enforceCategoryCounts keeps solid-only mode free of prints unless fallback
     }
   );
 
-  assert.equal(
-    balancedItems.filter((item) => {
+  expect(balancedItems.filter((item) => {
       const normalizedPattern = String(item.pattern || "").toLowerCase();
       return normalizedPattern !== "" && normalizedPattern !== "solid";
-    }).length,
-    1
-  );
-  assert.ok(
-    balancedItems.some((item) => item.pattern === null || String(item.pattern).toLowerCase() === "solid")
-  );
+    }).length).toBe(1);
+  expect(balancedItems.some((item) => item.pattern === null || String(item.pattern).toLowerCase() === "solid")).toBeTruthy();
 });
 
 test("enforceCategoryCounts infers style from first non-minimalistic item and still allows minimalistic items", () => {
@@ -306,15 +270,13 @@ test("enforceCategoryCounts infers style from first non-minimalistic item and st
     }
   );
 
-  assert.ok(balancedItems.some((item) => item.id === "top-1"));
-  assert.ok(balancedItems.some((item) => item.id === "top-2"));
-  assert.ok(balancedItems.some((item) => item.id === "bottom-2"));
-  assert.ok(
-    balancedItems.every((item) => {
+  expect(balancedItems.some((item) => item.id === "top-1")).toBeTruthy();
+  expect(balancedItems.some((item) => item.id === "top-2")).toBeTruthy();
+  expect(balancedItems.some((item) => item.id === "bottom-2")).toBeTruthy();
+  expect(balancedItems.every((item) => {
       const styles = Array.isArray(item.style) ? item.style : [];
       return styles.includes("sporty") || styles.includes("minimalistic");
-    })
-  );
+    })).toBeTruthy();
 });
 
 test("enforceCategoryCounts infers constraints from preselected items before filling categories", () => {
@@ -336,10 +298,7 @@ test("enforceCategoryCounts infers constraints from preselected items before fil
     }
   );
 
-  assert.deepEqual(
-    balancedItems.map((item) => item.id),
-    ["top-1", "bottom-1", "shoe-1"]
-  );
+  expect(balancedItems.map((item) => item.id)).toEqual(["top-1", "bottom-1", "shoe-1"]);
 });
 
 test("enforceCategoryCounts infers mixed style targets from the first non-minimalistic style", () => {
@@ -358,10 +317,7 @@ test("enforceCategoryCounts infers mixed style targets from the first non-minima
     }
   );
 
-  assert.deepEqual(
-    balancedItems.map((item) => item.id),
-    ["top-1", "bottom-1", "shoe-1"]
-  );
+  expect(balancedItems.map((item) => item.id)).toEqual(["top-1", "bottom-1", "shoe-1"]);
 });
 
 test("enforceCategoryCounts preserves unique ids when selected and candidate pools overlap", () => {
@@ -379,8 +335,5 @@ test("enforceCategoryCounts preserves unique ids when selected and candidate poo
     }
   );
 
-  assert.deepEqual(
-    balancedItems.map((item) => item.id),
-    ["top-1", "top-2"]
-  );
+  expect(balancedItems.map((item) => item.id)).toEqual(["top-1", "top-2"]);
 });

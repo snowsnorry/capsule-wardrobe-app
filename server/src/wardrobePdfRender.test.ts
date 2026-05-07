@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect } from "vitest";
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
@@ -10,12 +9,12 @@ async function withCachedImage(testContext, imageUrl, buffer) {
   const cachePath = buildLocalImageCachePath(imageUrl);
   await mkdir(path.dirname(cachePath), { recursive: true });
   await writeFile(cachePath, buffer);
-  testContext.after(async () => {
+  testContext.onTestFinished(async () => {
     await rm(cachePath, { force: true });
   });
 }
 
-test("buildWardrobePdf consumes prepared image assets as pages are rendered", async () => {
+test("buildWardrobePdf consumes prepared image assets as pages are rendered", async (t) => {
   const imageBuffer = await sharp({
     create: {
       width: 600,
@@ -46,8 +45,8 @@ test("buildWardrobePdf consumes prepared image assets as pages are rendered", as
     imageAssetsById
   });
 
-  assert.ok(Buffer.isBuffer(pdfBuffer));
-  assert.equal(Object.keys(imageAssetsById).length, 0);
+  expect(Buffer.isBuffer(pdfBuffer)).toBeTruthy();
+  expect(Object.keys(imageAssetsById).length).toBe(0);
 });
 
 test("buildWardrobePdf uses local cached image before remote fetch", async (t) => {
@@ -67,7 +66,7 @@ test("buildWardrobePdf uses local cached image before remote fetch", async (t) =
     throw new Error("fetch_should_not_be_called");
   };
 
-  t.after(() => {
+  t.onTestFinished(() => {
     globalThis.fetch = originalFetch;
   });
 
@@ -82,8 +81,8 @@ test("buildWardrobePdf uses local cached image before remote fetch", async (t) =
     locale: "en"
   });
 
-  assert.ok(Buffer.isBuffer(pdfBuffer));
-  assert.ok(pdfBuffer.length > 0);
+  expect(Buffer.isBuffer(pdfBuffer)).toBeTruthy();
+  expect(pdfBuffer.length > 0).toBeTruthy();
 });
 
 test("buildWardrobePdf renders fallback title and image placeholder without remote image", async (t) => {
@@ -91,7 +90,7 @@ test("buildWardrobePdf renders fallback title and image placeholder without remo
   globalThis.fetch = async () => {
     throw new Error("fetch_should_not_be_called");
   };
-  t.after(() => {
+  t.onTestFinished(() => {
     globalThis.fetch = originalFetch;
   });
 
@@ -108,6 +107,6 @@ test("buildWardrobePdf renders fallback title and image placeholder without remo
     totalStartedAt: Date.now()
   });
 
-  assert.ok(Buffer.isBuffer(pdfBuffer));
-  assert.ok(pdfBuffer.length > 0);
+  expect(Buffer.isBuffer(pdfBuffer)).toBeTruthy();
+  expect(pdfBuffer.length > 0).toBeTruthy();
 });

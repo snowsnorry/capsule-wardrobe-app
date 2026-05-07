@@ -1,5 +1,4 @@
-import assert from "node:assert/strict";
-import { test } from "node:test";
+import { test, expect } from "vitest";
 import { queryRegenerationCandidateItems } from "./regenerateSelectedSql.js";
 import type { RegenerateSelectedSqlClient } from "./regenerateSelectedSql.js";
 
@@ -24,13 +23,13 @@ test("queryRegenerationCandidateItems builds the expected parameterized regenera
     style: "minimalistic"
   });
 
-  assert.deepEqual(result, [{ id: "candidate-1", url: "https://example.test/p1", embedding: [1, 2, 3] }]);
-  assert.equal(calls.length, 1);
-  assert.match(calls[0].text, /FROM unnest\(\?::text\[\]\) AS cats/);
-  assert.match(calls[0].text, /PARTITION BY COALESCE\(color_base/);
-  assert.match(calls[0].text, /NOT \(products\.url = ANY\(\?::text\[\]\)\)/);
-  assert.equal(calls[0].values.length, 33);
-  assert.deepEqual(calls[0].values.slice(0, 7), [
+  expect(result).toEqual([{ id: "candidate-1", url: "https://example.test/p1", embedding: [1, 2, 3] }]);
+  expect(calls.length).toBe(1);
+  expect(calls[0].text).toMatch(/FROM unnest\(\?::text\[\]\) AS cats/);
+  expect(calls[0].text).toMatch(/PARTITION BY COALESCE\(color_base/);
+  expect(calls[0].text).toMatch(/NOT \(products\.url = ANY\(\?::text\[\]\)\)/);
+  expect(calls[0].values.length).toBe(33);
+  expect(calls[0].values.slice(0, 7)).toEqual([
     ["top", "bottom"],
     0.05,
     "[0.1,0.2]",
@@ -39,7 +38,7 @@ test("queryRegenerationCandidateItems builds the expected parameterized regenera
     "blue",
     "blue"
   ]);
-  assert.deepEqual(calls[0].values.slice(24), [
+  expect(calls[0].values.slice(24)).toEqual([
     ["woman", "all"],
     "blue",
     "blue",

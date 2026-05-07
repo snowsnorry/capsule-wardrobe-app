@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect, vi } from "vitest";
 import type { ErrorWithCode } from "../ai/types.js";
 import { AUTH_COOKIE, CSRF_TOKEN, TEST_CLIENT_ORIGIN, requestJson, startTestServer } from "../test/serverRouteTestUtils.js";
 
@@ -9,15 +8,15 @@ test("search routes expose options, saved search, run, and stats", async (t) => 
   const searchOptions = await requestJson(baseUrl, "/search/options", {
     cookie: AUTH_COOKIE
   });
-  assert.equal(searchOptions.response.status, 200);
-  assert.equal(searchOptions.json.ok, true);
-  assert.deepEqual(searchOptions.json.audience, ["woman", "man", "all"]);
+  expect(searchOptions.response.status).toBe(200);
+  expect(searchOptions.json.ok).toBe(true);
+  expect(searchOptions.json.audience).toEqual(["woman", "man", "all"]);
 
   const savedSearch = await requestJson(baseUrl, "/search/me", {
     cookie: AUTH_COOKIE
   });
-  assert.equal(savedSearch.response.status, 200);
-  assert.deepEqual(savedSearch.json, {
+  expect(savedSearch.response.status).toBe(200);
+  expect(savedSearch.json).toEqual({
     ok: true,
     search: { query: "coat", page: 1 }
   });
@@ -29,8 +28,8 @@ test("search routes expose options, saved search, run, and stats", async (t) => 
     csrfToken: CSRF_TOKEN,
     body: { query: "coat" }
   });
-  assert.equal(searchRun.response.status, 200);
-  assert.equal(searchRun.json.ok, true);
+  expect(searchRun.response.status).toBe(200);
+  expect(searchRun.json.ok).toBe(true);
 
   const searchStats = await requestJson(baseUrl, "/search/stats", {
     method: "POST",
@@ -39,8 +38,8 @@ test("search routes expose options, saved search, run, and stats", async (t) => 
     csrfToken: CSRF_TOKEN,
     body: { category: ["top"] }
   });
-  assert.equal(searchStats.response.status, 200);
-  assert.deepEqual(searchStats.json, {
+  expect(searchStats.response.status).toBe(200);
+  expect(searchStats.json).toEqual({
     ok: true,
     total: 3,
     stats: { category: [{ value: "top", count: 3 }] },
@@ -49,7 +48,7 @@ test("search routes expose options, saved search, run, and stats", async (t) => 
 });
 
 test("search run maps invalid payload failures", async (t) => {
-  t.mock.method(console, "error", () => {});
+  vi.spyOn(console, "error").mockImplementation(() => {});
 
   const failingSearchServer = await startTestServer(t, {
     overrides: {
@@ -68,12 +67,12 @@ test("search run maps invalid payload failures", async (t) => {
     csrfToken: CSRF_TOKEN,
     body: { query: "coat" }
   });
-  assert.equal(invalidSearch.response.status, 400);
-  assert.deepEqual(invalidSearch.json, { error: "invalid_payload" });
+  expect(invalidSearch.response.status).toBe(400);
+  expect(invalidSearch.json).toEqual({ error: "invalid_payload" });
 });
 
 test("search routes map options, saved search, run, and stats failures", async (t) => {
-  t.mock.method(console, "error", () => {});
+  vi.spyOn(console, "error").mockImplementation(() => {});
 
   const failingOptionsServer = await startTestServer(t, {
     overrides: {
@@ -85,8 +84,8 @@ test("search routes map options, saved search, run, and stats failures", async (
   const optionsFailure = await requestJson(failingOptionsServer.baseUrl, "/search/options", {
     cookie: AUTH_COOKIE
   });
-  assert.equal(optionsFailure.response.status, 503);
-  assert.deepEqual(optionsFailure.json, { error: "service_unavailable" });
+  expect(optionsFailure.response.status).toBe(503);
+  expect(optionsFailure.json).toEqual({ error: "service_unavailable" });
 
   const failingSavedServer = await startTestServer(t, {
     overrides: {
@@ -98,8 +97,8 @@ test("search routes map options, saved search, run, and stats failures", async (
   const savedFailure = await requestJson(failingSavedServer.baseUrl, "/search/me", {
     cookie: AUTH_COOKIE
   });
-  assert.equal(savedFailure.response.status, 503);
-  assert.deepEqual(savedFailure.json, { error: "service_unavailable" });
+  expect(savedFailure.response.status).toBe(503);
+  expect(savedFailure.json).toEqual({ error: "service_unavailable" });
 
   const failingRunServer = await startTestServer(t, {
     overrides: {
@@ -115,8 +114,8 @@ test("search routes map options, saved search, run, and stats failures", async (
     csrfToken: CSRF_TOKEN,
     body: { query: "coat" }
   });
-  assert.equal(runFailure.response.status, 503);
-  assert.deepEqual(runFailure.json, { error: "service_unavailable" });
+  expect(runFailure.response.status).toBe(503);
+  expect(runFailure.json).toEqual({ error: "service_unavailable" });
 
   const failingStatsServer = await startTestServer(t, {
     overrides: {
@@ -134,8 +133,8 @@ test("search routes map options, saved search, run, and stats failures", async (
     csrfToken: CSRF_TOKEN,
     body: { query: "coat" }
   });
-  assert.equal(invalidStats.response.status, 400);
-  assert.deepEqual(invalidStats.json, { error: "invalid_payload" });
+  expect(invalidStats.response.status).toBe(400);
+  expect(invalidStats.json).toEqual({ error: "invalid_payload" });
 
   const unavailableStatsServer = await startTestServer(t, {
     overrides: {
@@ -151,6 +150,6 @@ test("search routes map options, saved search, run, and stats failures", async (
     csrfToken: CSRF_TOKEN,
     body: { query: "coat" }
   });
-  assert.equal(statsFailure.response.status, 503);
-  assert.deepEqual(statsFailure.json, { error: "service_unavailable" });
+  expect(statsFailure.response.status).toBe(503);
+  expect(statsFailure.json).toEqual({ error: "service_unavailable" });
 });

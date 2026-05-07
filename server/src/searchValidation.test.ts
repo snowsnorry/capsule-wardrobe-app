@@ -1,5 +1,4 @@
-import assert from "node:assert/strict";
-import { test } from "node:test";
+import { test, expect } from "vitest";
 import { assertValidSearchPayload } from "./searchValidation.js";
 import type { SearchOptions, SearchPayload } from "./searchTypes.js";
 
@@ -41,22 +40,24 @@ function payload(overrides: Partial<SearchPayload> = {}): SearchPayload {
   };
 }
 
+function expectInvalidPayload(fn: () => void): void {
+  try {
+    fn();
+  } catch (error) {
+    expect(error).toMatchObject({ message: "invalid_payload", code: "invalid_payload" });
+    return;
+  }
+
+  throw new Error("Expected invalid_payload error");
+}
+
 test("assertValidSearchPayload accepts allowed facets and valid price ranges", () => {
-  assert.doesNotThrow(() => assertValidSearchPayload(payload({ brand: ["cos"] }), options));
-  assert.doesNotThrow(() => assertValidSearchPayload(payload({ priceMin: null, priceMax: null }), options));
+  expect(() => assertValidSearchPayload(payload({ brand: ["cos"] }), options)).not.toThrow();
+  expect(() => assertValidSearchPayload(payload({ priceMin: null, priceMax: null }), options)).not.toThrow();
 });
 
 test("assertValidSearchPayload rejects unknown facets and invalid price ranges", () => {
-  assert.throws(
-    () => assertValidSearchPayload(payload({ category: ["dress"] }), options),
-    { message: "invalid_payload", code: "invalid_payload" }
-  );
-  assert.throws(
-    () => assertValidSearchPayload(payload({ priceMin: 150, priceMax: 100 }), options),
-    { message: "invalid_payload", code: "invalid_payload" }
-  );
-  assert.throws(
-    () => assertValidSearchPayload(payload({ priceMin: Number.NaN, priceMax: 100 }), options),
-    { message: "invalid_payload", code: "invalid_payload" }
-  );
+  expectInvalidPayload(() => assertValidSearchPayload(payload({ category: ["dress"] }), options));
+  expectInvalidPayload(() => assertValidSearchPayload(payload({ priceMin: 150, priceMax: 100 }), options));
+  expectInvalidPayload(() => assertValidSearchPayload(payload({ priceMin: Number.NaN, priceMax: 100 }), options));
 });

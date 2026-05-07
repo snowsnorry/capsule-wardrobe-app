@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect } from "vitest";
 import {
   buildLastPromptArtifact,
   buildRegeneratedItemsFormat,
@@ -28,7 +27,7 @@ test("buildRegenerateSelectedPrompt includes optional additional information", (
     { top: 1 }
   );
 
-  assert.match(prompt, /Important Additional Information: Prefer natural fabrics/);
+  expect(prompt).toMatch(/Important Additional Information: Prefer natural fabrics/);
 });
 
 test("buildRegenerateSelectedPrompt omits additional information line when text is blank", () => {
@@ -45,7 +44,7 @@ test("buildRegenerateSelectedPrompt omits additional information line when text 
     { top: 1 }
   );
 
-  assert.doesNotMatch(prompt, /Important Additional Information:/);
+  expect(prompt).not.toMatch(/Important Additional Information:/);
 });
 
 test("buildRegenerateSelectedSystemPrompt uses partial regeneration template and shared blocks", () => {
@@ -57,24 +56,23 @@ test("buildRegenerateSelectedSystemPrompt uses partial regeneration template and
     color: "red"
   });
 
-  assert.match(prompt, /Select targeted replacement items/);
-  assert.match(prompt, /Current Capsule/);
-  assert.match(prompt, /"regenerated_items"/);
-  assert.match(prompt, /- woman:/);
-  assert.match(prompt, /PALETTE REFERENCE BY ACCENT COLOR/);
-  assert.doesNotMatch(prompt, /"capsule":/);
-  assert.doesNotMatch(prompt, /\{\{/);
+  expect(prompt).toMatch(/Select targeted replacement items/);
+  expect(prompt).toMatch(/Current Capsule/);
+  expect(prompt).toMatch(/"regenerated_items"/);
+  expect(prompt).toMatch(/- woman:/);
+  expect(prompt).toMatch(/PALETTE REFERENCE BY ACCENT COLOR/);
+  expect(prompt).not.toMatch(/"capsule":/);
+  expect(prompt).not.toMatch(/\{\{/);
 });
 
 test("partial regeneration helpers normalize SQL rows, selected urls, and stored payloads", () => {
-  assert.deepEqual(getSqlRows([{ id: "1" }]), [{ id: "1" }]);
-  assert.deepEqual(getSqlRows({ count: 0 }), []);
-  assert.equal(isValidSelectedItemUrls([" https://example.test/a "]), true);
-  assert.equal(isValidSelectedItemUrls([""]), false);
-  assert.equal(isValidSelectedItemUrls("not-array"), false);
+  expect(getSqlRows([{ id: "1" }])).toEqual([{ id: "1" }]);
+  expect(getSqlRows({ count: 0 })).toEqual([]);
+  expect(isValidSelectedItemUrls([" https://example.test/a "])).toBe(true);
+  expect(isValidSelectedItemUrls([""])).toBe(false);
+  expect(isValidSelectedItemUrls("not-array")).toBe(false);
 
-  assert.deepEqual(
-    buildStoredWardrobePayloadFromResult(
+  expect(buildStoredWardrobePayloadFromResult(
       {
         items: [{ id: "top-1" }],
         outfitSets: [
@@ -90,8 +88,7 @@ test("partial regeneration helpers normalize SQL rows, selected urls, and stored
         swimwearReasoning: "reason",
         swimwearRawSelectionText: "swimwear raw"
       }
-    ),
-    {
+    )).toEqual({
       items: [{ id: "top-1" }],
       outfitSets: [
         { itemIds: ["top-1", "2"], image: "image.jpg", imageObsolete: true },
@@ -100,8 +97,7 @@ test("partial regeneration helpers normalize SQL rows, selected urls, and stored
       rawSelectionText: "raw",
       swimwearReasoning: "reason",
       swimwearRawSelectionText: "swimwear raw"
-    }
-  );
+    });
 });
 
 test("remapOutfitSetsAfterPartialRegeneration remaps replaced items and marks changed images obsolete", () => {
@@ -116,20 +112,19 @@ test("remapOutfitSetsAfterPartialRegeneration remaps replaced items and marks ch
     ]
   });
 
-  assert.deepEqual(result, [
+  expect(result).toEqual([
     { itemIds: ["new-id"], image: "image.jpg", imageObsolete: true },
     { itemIds: ["keep-id"], image: null, imageObsolete: true }
   ]);
 });
 
 test("prompt formatting helpers simplify values and generated schema", () => {
-  assert.equal(formatProfileValues([" office ", "", "travel"]), " office , travel");
-  assert.equal(formatProfileValues([]), "Not specified");
-  assert.equal(formatProfileValues([""]), "Not specified");
-  assert.equal(getCategoryListText({ top: 2, bottom: 0, bag: 1.5, shoes: 1 }), "2 top, 1 shoes");
+  expect(formatProfileValues([" office ", "", "travel"])).toBe(" office , travel");
+  expect(formatProfileValues([])).toBe("Not specified");
+  expect(formatProfileValues([""])).toBe("Not specified");
+  expect(getCategoryListText({ top: 2, bottom: 0, bag: 1.5, shoes: 1 })).toBe("2 top, 1 shoes");
 
-  assert.deepEqual(
-    simplifyPromptItems([
+  expect(simplifyPromptItems([
       {
         id: "top-1",
         name: "Top",
@@ -152,8 +147,7 @@ test("prompt formatting helpers simplify values and generated schema", () => {
         formalityLevel: ["formal"],
         style: null
       }
-    ]),
-    [
+    ])).toEqual([
       {
         id: "top-1",
         name: "Top",
@@ -176,19 +170,15 @@ test("prompt formatting helpers simplify values and generated schema", () => {
         fit: "",
         silhouette: ""
       }
-    ]
-  );
+    ]);
 
   const format = buildRegeneratedItemsFormat({ top: 1 });
-  assert.equal(format.name, "capsule_regenerate_selected_response");
-  assert.deepEqual(format.schema.required, ["system_evaluation", "item_details", "regenerated_items"]);
+  expect(format.name).toBe("capsule_regenerate_selected_response");
+  expect(format.schema.required).toEqual(["system_evaluation", "item_details", "regenerated_items"]);
 });
 
 test("last prompt artifact uses explicit or generated system prompt and ignores non-string prompt", () => {
-  assert.equal(buildLastPromptArtifact(null), "");
-  assert.equal(buildLastPromptArtifact("User prompt", null, "System prompt"), "System:\nSystem prompt\n\nUser:\nUser prompt");
-  assert.match(
-    buildLastPromptArtifact("User prompt", { audience: "woman", pattern: "solid" }),
-    /System:\n[\s\S]+User:\nUser prompt/
-  );
+  expect(buildLastPromptArtifact(null)).toBe("");
+  expect(buildLastPromptArtifact("User prompt", null, "System prompt")).toBe("System:\nSystem prompt\n\nUser:\nUser prompt");
+  expect(buildLastPromptArtifact("User prompt", { audience: "woman", pattern: "solid" })).toMatch(/System:\n[\s\S]+User:\nUser prompt/);
 });

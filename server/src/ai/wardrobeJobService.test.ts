@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect } from "vitest";
 import { createWardrobeService } from "./aiService.js";
 import {
   buildCapsuleSnapshot,
@@ -45,7 +44,7 @@ test("startWardrobeJob reuses active pending job for the same email", async () =
     createCapsuleWithWardrobe(null)
   );
 
-  assert.equal(first, second);
+  expect(first).toBe(second);
 
   resolveGeneration(buildWardrobeGenerationResult({
     items: [buildWardrobeUiItem({ id: "top-1", category: "top", url: undefined, name: undefined, image_url: undefined, audience: undefined })],
@@ -99,9 +98,9 @@ test("startWardrobeJob stores capsule result and merges swimwear additions when 
   );
   await job.promise;
 
-  assert.equal(job.status, "completed");
-  assert.equal(job.phase, "completed");
-  assert.deepEqual(updates, [
+  expect(job.status).toBe("completed");
+  expect(job.phase).toBe("completed");
+  expect(updates).toEqual([
     ["person@example.com", "capsule-1", {
       filters: createCapsuleWithWardrobe().draft.filters,
       data: {
@@ -177,7 +176,7 @@ test("startWardrobeJob renames a new capsule from stylist short_capsule_name on 
   );
   await job.promise;
 
-  assert.deepEqual(renamedCapsules, [["person@example.com", "capsule-1", "City Core"]]);
+  expect(renamedCapsules).toEqual([["person@example.com", "capsule-1", "City Core"]]);
 });
 
 test("startWardrobeJob does not rename capsule when wardrobe content already exists", async () => {
@@ -216,7 +215,7 @@ test("startWardrobeJob does not rename capsule when wardrobe content already exi
   );
   await job.promise;
 
-  assert.equal(renameCallCount, 0);
+  expect(renameCallCount).toBe(0);
 });
 
 test("startWardrobeJob marks job failed when capsule generation returns no usable items", async () => {
@@ -240,14 +239,14 @@ test("startWardrobeJob marks job failed when capsule generation returns no usabl
     );
     await job.promise;
 
-    assert.equal(job.status, "failed");
-    assert.equal(job.phase, "failed");
-    assert.match((job.error as Error).message, /no valid wardrobe items/i);
+    expect(job.status).toBe("failed");
+    expect(job.phase).toBe("failed");
+    expect((job.error as Error).message).toMatch(/no valid wardrobe items/i);
   } finally {
     console.error = originalError;
   }
 
-  assert.equal(calls.length, 1);
-  assert.equal(calls[0][0], "[wardrobe-ai]");
-  assert.match(String((calls[0][2] as Error | undefined)?.message || ""), /no valid wardrobe items/i);
+  expect(calls.length).toBe(1);
+  expect(calls[0][0]).toBe("[wardrobe-ai]");
+  expect(String((calls[0][2] as Error | undefined)?.message || "")).toMatch(/no valid wardrobe items/i);
 });

@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect } from "vitest";
 import {
   getWardrobeSelectionPrompt,
   toWardrobeUiItem
@@ -18,7 +17,7 @@ test("getWardrobeSelectionPrompt includes optional additional information", () =
     { top: 1 }
   );
 
-  assert.match(prompt, /Important Additional Information: Prefer natural fabrics/);
+  expect(prompt).toMatch(/Important Additional Information: Prefer natural fabrics/);
 });
 
 test("getWardrobeSelectionPrompt omits additional information line when text is blank", () => {
@@ -34,7 +33,7 @@ test("getWardrobeSelectionPrompt omits additional information line when text is 
     { top: 1 }
   );
 
-  assert.doesNotMatch(prompt, /Important Additional Information:/);
+  expect(prompt).not.toMatch(/Important Additional Information:/);
 });
 
 test("getWardrobeSelectionPrompt includes no-accent and solid guidance by default", () => {
@@ -51,27 +50,24 @@ test("getWardrobeSelectionPrompt includes no-accent and solid guidance by defaul
     { top: 1 }
   );
 
-  assert.match(prompt, /No accent color \(keep the capsule fully neutral\)/);
-  assert.match(prompt, /solid \(no print\)/);
+  expect(prompt).toMatch(/No accent color \(keep the capsule fully neutral\)/);
+  expect(prompt).toMatch(/solid \(no print\)/);
 });
 
 test("toWardrobeUiItem preserves audience for downstream UI labeling", () => {
-  assert.deepEqual(
-    toWardrobeUiItem({
+  expect(toWardrobeUiItem({
       id: "top-1",
       url: "https://example.com/top-1",
       name: "Pocketable Parka",
       category: "outerwear",
       image_url: "https://example.com/top-1.jpg",
       audience: "all"
-    }),
-    {
+    })).toEqual({
       id: "top-1",
       url: "https://example.com/top-1",
       name: "Pocketable Parka",
       category: "outerwear",
       image_url: "https://example.com/top-1.jpg",
       audience: "all"
-    }
-  );
+    });
 });

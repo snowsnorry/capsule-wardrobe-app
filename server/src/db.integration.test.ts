@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect, afterEach } from "vitest";
 import {
   setSqlClientOverride,
   checkDatabaseConnection,
@@ -117,7 +116,7 @@ function createSqlMock(handlers: SqlResultHandler[]) {
   return { sql, calls };
 }
 
-test.afterEach(() => {
+afterEach(() => {
   setSqlClientOverride(null);
 });
 
@@ -152,18 +151,18 @@ test("db integration shapes login code persistence and verification queries", as
     maxAttempts: 5
   });
 
-  assert.equal(stored?.email, "user@example.com");
-  assert.deepEqual(invalid, { ok: false, reason: "invalid" });
+  expect(stored?.email).toBe("user@example.com");
+  expect(invalid).toEqual({ ok: false, reason: "invalid" });
 
-  assert.match(calls[0].text, /insert into login_codes/i);
-  assert.deepEqual(calls[0].values, ["user@example.com", "hash-1", "nonce-1", expiresAt]);
-  assert.match(calls[1].text, /select\s+email,\s+"codeHash"/i);
-  assert.deepEqual(calls[1].values, ["user@example.com"]);
-  assert.match(calls[2].text, /update login_codes\s+set "consumedAt" = now\(\)/i);
-  assert.deepEqual(calls[2].values, ["user@example.com", 5, "wrong-hash"]);
-  assert.match(calls[3].text, /set attempts = attempts \+ 1/i);
-  assert.deepEqual(calls[3].values, ["user@example.com", 5, "wrong-hash"]);
-  assert.equal(calls.length, 4);
+  expect(calls[0].text).toMatch(/insert into login_codes/i);
+  expect(calls[0].values).toEqual(["user@example.com", "hash-1", "nonce-1", expiresAt]);
+  expect(calls[1].text).toMatch(/select\s+email,\s+"codeHash"/i);
+  expect(calls[1].values).toEqual(["user@example.com"]);
+  expect(calls[2].text).toMatch(/update login_codes\s+set "consumedAt" = now\(\)/i);
+  expect(calls[2].values).toEqual(["user@example.com", 5, "wrong-hash"]);
+  expect(calls[3].text).toMatch(/set attempts = attempts \+ 1/i);
+  expect(calls[3].values).toEqual(["user@example.com", 5, "wrong-hash"]);
+  expect(calls.length).toBe(4);
 });
 
 test("db integration shapes session persistence queries", async () => {
@@ -194,14 +193,14 @@ test("db integration shapes session persistence queries", async () => {
   await deleteSessionById("sess-1");
   await pruneExpiredSessions();
 
-  assert.equal(session?.sessionId, "sess-1");
-  assert.match(calls[0].text, /insert into user_sessions/i);
-  assert.deepEqual(calls[0].values, ["sess-1", "user@example.com", "csrf-1", createdAt, expiresAt]);
-  assert.match(calls[1].text, /from user_sessions/i);
-  assert.deepEqual(calls[1].values, ["sess-1"]);
-  assert.match(calls[2].text, /delete from user_sessions where "sessionId" =/i);
-  assert.deepEqual(calls[2].values, ["sess-1"]);
-  assert.match(calls[3].text, /delete from user_sessions where "expiresAt" <= now\(\)/i);
+  expect(session?.sessionId).toBe("sess-1");
+  expect(calls[0].text).toMatch(/insert into user_sessions/i);
+  expect(calls[0].values).toEqual(["sess-1", "user@example.com", "csrf-1", createdAt, expiresAt]);
+  expect(calls[1].text).toMatch(/from user_sessions/i);
+  expect(calls[1].values).toEqual(["sess-1"]);
+  expect(calls[2].text).toMatch(/delete from user_sessions where "sessionId" =/i);
+  expect(calls[2].values).toEqual(["sess-1"]);
+  expect(calls[3].text).toMatch(/delete from user_sessions where "expiresAt" <= now\(\)/i);
 });
 
 test("db integration shapes search persistence and searchProducts queries", async () => {
@@ -297,24 +296,24 @@ test("db integration shapes search persistence and searchProducts queries", asyn
     page: 2
   });
 
-  assert.equal(saved?.email, "user@example.com");
-  assert.equal(upserted?.page, 2);
-  assert.equal(results.total, 1);
-  assert.equal(results.page, 2);
-  assert.equal(results.pageSize, 50);
-  assert.equal(results.items[0]?.id, "prod-1");
+  expect(saved?.email).toBe("user@example.com");
+  expect(upserted?.page).toBe(2);
+  expect(results.total).toBe(1);
+  expect(results.page).toBe(2);
+  expect(results.pageSize).toBe(50);
+  expect(results.items[0]?.id).toBe("prod-1");
 
-  assert.match(calls[0].text, /from search\s+where email =/i);
-  assert.deepEqual(calls[0].values, ["user@example.com"]);
-  assert.match(calls[1].text, /insert into search/i);
-  assert.equal(calls[1].values[0], "user@example.com");
-  assert.equal(calls[1].values[2], JSON.stringify([0.1, 0.2]));
-  assert.match(calls[2].text, /select count\(\*\)::integer as total\s+from products/i);
-  assert.equal(calls[2].values[0][0], "uniqlo");
-  assert.equal(calls[2].values.some((value) => value === "[0.1,0.2]"), true);
-  assert.equal(calls[2].values.some((value) => value === 0.35), true);
-  assert.match(calls[3].text, /case[\s\S]*embedding <=>[\s\S]*as distance/i);
-  assert.equal(calls[3].values.filter((value) => value === 50).length >= 2, true);
+  expect(calls[0].text).toMatch(/from search\s+where email =/i);
+  expect(calls[0].values).toEqual(["user@example.com"]);
+  expect(calls[1].text).toMatch(/insert into search/i);
+  expect(calls[1].values[0]).toBe("user@example.com");
+  expect(calls[1].values[2]).toBe(JSON.stringify([0.1, 0.2]));
+  expect(calls[2].text).toMatch(/select count\(\*\)::integer as total\s+from products/i);
+  expect(calls[2].values[0][0]).toBe("uniqlo");
+  expect(calls[2].values.some((value) => value === "[0.1,0.2]")).toBe(true);
+  expect(calls[2].values.some((value) => value === 0.35)).toBe(true);
+  expect(calls[3].text).toMatch(/case[\s\S]*embedding <=>[\s\S]*as distance/i);
+  expect(calls[3].values.filter((value) => value === 50).length >= 2).toBe(true);
 });
 
 test("db integration filters searchProducts by URL prefix", async () => {
@@ -329,12 +328,12 @@ test("db integration filters searchProducts by URL prefix", async () => {
     page: 1
   });
 
-  assert.equal(results.total, 1);
-  assert.equal(results.items[0]?.id, "prod-1");
-  assert.match(calls[0].text, /products\.url\s+like/i);
-  assert.match(calls[1].text, /products\.url\s+like/i);
-  assert.equal(calls[0].values.some((value) => value === "https://example.com/products/linen%"), true);
-  assert.equal(calls[1].values.some((value) => value === "https://example.com/products/linen%"), true);
+  expect(results.total).toBe(1);
+  expect(results.items[0]?.id).toBe("prod-1");
+  expect(calls[0].text).toMatch(/products\.url\s+like/i);
+  expect(calls[1].text).toMatch(/products\.url\s+like/i);
+  expect(calls[0].values.some((value) => value === "https://example.com/products/linen%")).toBe(true);
+  expect(calls[1].values.some((value) => value === "https://example.com/products/linen%")).toBe(true);
 });
 
 test("db integration applies price range to product stats price buckets", async () => {
@@ -363,16 +362,16 @@ test("db integration applies price range to product stats price buckets", async 
   });
 
   const priceBucketQuery = calls.at(-1);
-  assert.equal(stats.total, 1);
-  assert.equal(stats.priceBuckets.length, 100);
-  assert.deepEqual(stats.priceBuckets[0], { key: "20:20.6", min: 20, max: 20.6, count: 1 });
-  assert.deepEqual(stats.priceBuckets.at(-1), { key: "79.4:80", min: 79.4, max: 80, count: 0 });
-  assert.match(priceBucketQuery.text, /with filtered as/i);
-  assert.match(priceBucketQuery.text, /price >=/i);
-  assert.match(priceBucketQuery.text, /price <=/i);
-  assert.equal(priceBucketQuery.values.includes(20), true);
-  assert.equal(priceBucketQuery.values.includes(80), true);
-  assert.equal(calls.length, 14);
+  expect(stats.total).toBe(1);
+  expect(stats.priceBuckets.length).toBe(100);
+  expect(stats.priceBuckets[0]).toEqual({ key: "20:20.6", min: 20, max: 20.6, count: 1 });
+  expect(stats.priceBuckets.at(-1)).toEqual({ key: "79.4:80", min: 79.4, max: 80, count: 0 });
+  expect(priceBucketQuery.text).toMatch(/with filtered as/i);
+  expect(priceBucketQuery.text).toMatch(/price >=/i);
+  expect(priceBucketQuery.text).toMatch(/price <=/i);
+  expect(priceBucketQuery.values.includes(20)).toBe(true);
+  expect(priceBucketQuery.values.includes(80)).toBe(true);
+  expect(calls.length).toBe(14);
 });
 
 test("db integration shapes reduced profile persistence queries", async () => {
@@ -424,14 +423,14 @@ test("db integration shapes reduced profile persistence queries", async () => {
   });
   const deleted = await deleteProfileByEmail("user@example.com");
 
-  assert.equal(deleted, true);
+  expect(deleted).toBe(true);
 
-  assert.match(calls[0].text, /insert into profiles/i);
-  assert.deepEqual(calls[0].values, ["user@example.com", "en"]);
-  assert.match(calls[1].text, /update profiles\s+set[\s\S]*locale =/i);
-  assert.deepEqual(calls[1].values, ["ru", "user@example.com"]);
-  assert.match(calls[2].text, /update profiles\s+set[\s\S]*fullname =/i);
-  assert.deepEqual(calls[2].values, [
+  expect(calls[0].text).toMatch(/insert into profiles/i);
+  expect(calls[0].values).toEqual(["user@example.com", "en"]);
+  expect(calls[1].text).toMatch(/update profiles\s+set[\s\S]*locale =/i);
+  expect(calls[1].values).toEqual(["ru", "user@example.com"]);
+  expect(calls[2].text).toMatch(/update profiles\s+set[\s\S]*fullname =/i);
+  expect(calls[2].values).toEqual([
     "ru",
     "Ada Lovelace",
     "dark",
@@ -439,8 +438,8 @@ test("db integration shapes reduced profile persistence queries", async () => {
     "gemini:gemini-3-pro-image-preview",
     "user@example.com"
   ]);
-  assert.match(calls[3].text, /delete from capsules/i);
-  assert.match(calls[4].text, /delete from profiles/i);
+  expect(calls[3].text).toMatch(/delete from capsules/i);
+  expect(calls[4].text).toMatch(/delete from profiles/i);
 });
 
 test("db integration checkDatabaseConnection selects current database metadata", async () => {
@@ -451,6 +450,6 @@ test("db integration checkDatabaseConnection selects current database metadata",
 
   const row = await checkDatabaseConnection();
 
-  assert.equal(row.database, "capsule");
-  assert.match(calls[0].text, /current_database\(\) as database/i);
+  expect(row.database).toBe("capsule");
+  expect(calls[0].text).toMatch(/current_database\(\) as database/i);
 });

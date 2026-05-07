@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect } from "vitest";
 import {
   DEFAULT_SEARCH_STATE,
   createSearchStore,
@@ -35,8 +34,7 @@ function createSearchStoreDeps(overrides = {}) {
 }
 
 test("normalizeSearchPayload normalizes nullable scalar filters and arrays", () => {
-  assert.deepEqual(
-    normalizeSearchPayload({
+  expect(normalizeSearchPayload({
       query: "  linen summer shirt ",
       brand: [" Cos ", "cos", "", null],
       audience: [" WOMAN ", "woman"],
@@ -53,8 +51,7 @@ test("normalizeSearchPayload normalizes nullable scalar filters and arrays", () 
       priceMin: 12.5,
       priceMax: 99,
       page: 2
-    }),
-    {
+    })).toEqual({
       query: "linen summer shirt",
       brand: ["cos"],
       priceMin: 12.5,
@@ -71,23 +68,21 @@ test("normalizeSearchPayload normalizes nullable scalar filters and arrays", () 
       fit: ["tailored"],
       closureType: ["buttons"],
       page: 2
-    }
-  );
+    });
 });
 
 test("normalizeSearchPayload keeps invalid numeric values as NaN for validation", () => {
   const result = normalizeSearchPayload({ priceMin: "abc", priceMax: "" });
-  assert.equal(Number.isNaN(result.priceMin), true);
-  assert.equal(result.priceMax, null);
+  expect(Number.isNaN(result.priceMin)).toBe(true);
+  expect(result.priceMax).toBe(null);
 });
 
 test("serializeSearchRow returns normalized defaults when row is missing", () => {
-  assert.deepEqual(serializeSearchRow(null), DEFAULT_SEARCH_STATE);
+  expect(serializeSearchRow(null)).toEqual(DEFAULT_SEARCH_STATE);
 });
 
 test("serializeSearchRow maps persisted row fields to client shape", () => {
-  assert.deepEqual(
-    serializeSearchRow({
+  expect(serializeSearchRow({
       query: "blue blazer",
       brand: ["cos"],
       priceMin: 10,
@@ -104,8 +99,7 @@ test("serializeSearchRow maps persisted row fields to client shape", () => {
       fit: ["tailored"],
       closureType: ["zip"],
       page: 3
-    }),
-    {
+    })).toEqual({
       query: "blue blazer",
       brand: ["cos"],
       priceMin: 10,
@@ -122,82 +116,70 @@ test("serializeSearchRow maps persisted row fields to client shape", () => {
       fit: ["tailored"],
       closureType: ["zip"],
       page: 3
-    }
-  );
+    });
 });
 
 test("getSemanticDistanceThreshold returns adaptive thresholds by query length", () => {
-  assert.equal(getSemanticDistanceThreshold(""), null);
-  assert.equal(getSemanticDistanceThreshold("linen shirt"), 0.4);
-  assert.equal(getSemanticDistanceThreshold("relaxed linen shirt for spring office"), 0.35);
-  assert.equal(
-    getSemanticDistanceThreshold("relaxed linen shirt for spring office days with minimalistic tailoring and soft structure"),
-    0.31
-  );
+  expect(getSemanticDistanceThreshold("")).toBe(null);
+  expect(getSemanticDistanceThreshold("linen shirt")).toBe(0.4);
+  expect(getSemanticDistanceThreshold("relaxed linen shirt for spring office")).toBe(0.35);
+  expect(getSemanticDistanceThreshold("relaxed linen shirt for spring office days with minimalistic tailoring and soft structure")).toBe(0.31);
 });
 
 test("getRelaxedSemanticDistanceThreshold adds fallback slack without exceeding cap", () => {
-  assert.equal(getRelaxedSemanticDistanceThreshold(""), null);
-  assert.ok(Math.abs(getRelaxedSemanticDistanceThreshold("linen shirt") - 0.48) < 1e-9);
-  assert.ok(
-    Math.abs(
+  expect(getRelaxedSemanticDistanceThreshold("")).toBe(null);
+  expect(Math.abs(getRelaxedSemanticDistanceThreshold("linen shirt") - 0.48) < 1e-9).toBeTruthy();
+  expect(Math.abs(
       getRelaxedSemanticDistanceThreshold(
         "relaxed linen shirt for spring office days with minimalistic tailoring and soft structure"
       ) - 0.39
-    ) < 1e-9
-  );
+    ) < 1e-9).toBeTruthy();
 });
 
 test("isHttpUrlQuery only accepts http and https URLs", () => {
-  assert.equal(isHttpUrlQuery("https://example.com/products/1"), true);
-  assert.equal(isHttpUrlQuery("http://example.com/products/1"), true);
-  assert.equal(isHttpUrlQuery("linen shirt"), false);
-  assert.equal(isHttpUrlQuery("mailto:person@example.com"), false);
-  assert.equal(isHttpUrlQuery("ftp://example.com/products/1"), false);
+  expect(isHttpUrlQuery("https://example.com/products/1")).toBe(true);
+  expect(isHttpUrlQuery("http://example.com/products/1")).toBe(true);
+  expect(isHttpUrlQuery("linen shirt")).toBe(false);
+  expect(isHttpUrlQuery("mailto:person@example.com")).toBe(false);
+  expect(isHttpUrlQuery("ftp://example.com/products/1")).toBe(false);
 });
 
 test("resolveSearchEmbedding reuses persisted embedding when query is unchanged", async () => {
   const embedding = [0.1, 0.2, 0.3];
 
-  await assert.doesNotReject(async () => {
-    const result = await resolveSearchEmbedding({
-      currentSearch: {
-        query: "blue blazer",
-        embedding
-      },
-      query: "blue blazer"
-    });
-
-    assert.equal(result, embedding);
+  const result = await resolveSearchEmbedding({
+    currentSearch: {
+      query: "blue blazer",
+      embedding
+    },
+    query: "blue blazer"
   });
+
+  expect(result).toBe(embedding);
 });
 
 test("resolveSearchEmbedding clears embedding for empty query", async () => {
-  await assert.doesNotReject(async () => {
-    const result = await resolveSearchEmbedding({
-      currentSearch: {
-        query: "blue blazer",
-        embedding: [0.1, 0.2, 0.3]
-      },
-      query: ""
-    });
-
-    assert.equal(result, null);
+  const result = await resolveSearchEmbedding({
+    currentSearch: {
+      query: "blue blazer",
+      embedding: [0.1, 0.2, 0.3]
+    },
+    query: ""
   });
+
+  expect(result).toBe(null);
 });
 
 test("resolveSearchEmbedding skips embedding for URL queries", async () => {
-  await assert.doesNotReject(async () => {
-    const result = await resolveSearchEmbedding({
-      currentSearch: {
-        query: "https://example.com/products/1",
-        embedding: [0.1, 0.2, 0.3]
-      },
-      query: "https://example.com/products/1"
-    });
-
-    assert.equal(result, null);
+  const result = await resolveSearchEmbedding({
+    currentSearch: {
+      query: "https://example.com/products/1",
+      embedding: [0.1, 0.2, 0.3]
+    },
+    query: "https://example.com/products/1"
   });
+
+  expect(result).toBe(null);
 });
 
 test("createSearchStore builds options and saved search from injected persistence", async () => {
@@ -209,7 +191,7 @@ test("createSearchStore builds options and saved search from injected persistenc
     })
   }));
 
-  assert.deepEqual(await store.getSearchOptions("person@example.com"), {
+  expect(await store.getSearchOptions("person@example.com")).toEqual({
     brands: [{ value: "cos", label: "COS" }],
     categories: ["top"],
     seasons: ["summer"],
@@ -225,7 +207,7 @@ test("createSearchStore builds options and saved search from injected persistenc
     priceRange: { min: 10, max: 100 }
   });
 
-  assert.equal((await store.getSavedSearch("person@example.com")).query, " saved ");
+  expect((await store.getSavedSearch("person@example.com")).query).toBe(" saved ");
 });
 
 test("runSavedSearch uses URL prefix for URL queries and skips embeddings", async () => {
@@ -250,11 +232,11 @@ test("runSavedSearch uses URL prefix for URL queries and skips embeddings", asyn
     category: ["top"]
   });
 
-  assert.equal(result.total, 1);
-  assert.equal(upsertCalls[0].embedding, null);
-  assert.equal(productCalls.length, 1);
-  assert.equal(productCalls[0].urlPrefix, "https://example.com/products/1");
-  assert.equal(productCalls[0].queryEmbedding, null);
+  expect(result.total).toBe(1);
+  expect(upsertCalls[0].embedding).toBe(null);
+  expect(productCalls.length).toBe(1);
+  expect(productCalls[0].urlPrefix).toBe("https://example.com/products/1");
+  expect(productCalls[0].queryEmbedding).toBe(null);
 });
 
 test("runSavedSearch retries text searches with relaxed semantic threshold when first result is empty", async () => {
@@ -273,11 +255,11 @@ test("runSavedSearch retries text searches with relaxed semantic threshold when 
     category: ["top"]
   });
 
-  assert.equal(result.total, 2);
-  assert.equal(productCalls.length, 2);
-  assert.equal(productCalls[0].semanticDistanceThreshold, 0.4);
-  assert.ok(Math.abs(productCalls[1].semanticDistanceThreshold - 0.48) < 1e-9);
-  assert.deepEqual(result.savedSearch.category, ["top"]);
+  expect(result.total).toBe(2);
+  expect(productCalls.length).toBe(2);
+  expect(productCalls[0].semanticDistanceThreshold).toBe(0.4);
+  expect(Math.abs(productCalls[1].semanticDistanceThreshold - 0.48) < 1e-9).toBeTruthy();
+  expect(result.savedSearch.category).toEqual(["top"]);
 });
 
 test("getSearchStats validates payload and delegates normalized filters", async () => {
@@ -289,11 +271,8 @@ test("getSearchStats validates payload and delegates normalized filters", async 
     }
   }));
 
-  assert.deepEqual(await store.getSearchStats("person@example.com", { category: ["top"] }), { ok: true });
-  assert.deepEqual(statsPayload.category, ["top"]);
+  expect(await store.getSearchStats("person@example.com", { category: ["top"] })).toEqual({ ok: true });
+  expect(statsPayload.category).toEqual(["top"]);
 
-  await assert.rejects(
-    () => store.getSearchStats("person@example.com", { category: ["dress"] }),
-    /invalid_payload/
-  );
+  await expect(() => store.getSearchStats("person@example.com", { category: ["dress"] })).rejects.toThrow(/invalid_payload/);
 });

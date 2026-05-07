@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect } from "vitest";
 import {
   AUTH_COOKIE,
   CSRF_TOKEN,
@@ -90,7 +89,7 @@ test("passkey registration routes require auth, store challenge, and save verifi
     method: "POST",
     origin: TEST_CLIENT_ORIGIN
   });
-  assert.equal(unauthorized.response.status, 401);
+  expect(unauthorized.response.status).toBe(401);
 
   const options = await requestJson(baseUrl, "/auth/passkeys/register/options", {
     method: "POST",
@@ -98,13 +97,13 @@ test("passkey registration routes require auth, store challenge, and save verifi
     cookie: AUTH_COOKIE,
     csrfToken: CSRF_TOKEN
   });
-  assert.equal(options.response.status, 200);
-  assert.equal(options.json.options.challenge, "registration-challenge");
-  assert.equal(options.json.options.authenticatorSelection.userVerification, "required");
-  assert.equal(registrationOptionsInput.authenticatorSelection.userVerification, "required");
-  assert.equal(storedChallenge.kind, "registration");
-  assert.equal(storedChallenge.profileEmail, "person@example.com");
-  assert.ok(options.response.headers.get("set-cookie")?.includes("passkey_challenge="));
+  expect(options.response.status).toBe(200);
+  expect(options.json.options.challenge).toBe("registration-challenge");
+  expect(options.json.options.authenticatorSelection.userVerification).toBe("required");
+  expect(registrationOptionsInput.authenticatorSelection.userVerification).toBe("required");
+  expect(storedChallenge.kind).toBe("registration");
+  expect(storedChallenge.profileEmail).toBe("person@example.com");
+  expect(options.response.headers.get("set-cookie")?.includes("passkey_challenge=")).toBeTruthy();
 
   const malformed = await requestJson(baseUrl, "/auth/passkeys/register/verify", {
     method: "POST",
@@ -113,9 +112,9 @@ test("passkey registration routes require auth, store challenge, and save verifi
     csrfToken: CSRF_TOKEN,
     body: { response: passkeyRegistrationResponse({ response: { attestationObject: undefined } }) }
   });
-  assert.equal(malformed.response.status, 400);
-  assert.deepEqual(malformed.json, { error: "invalid_payload" });
-  assert.equal(challengeConsumeCount, 0);
+  expect(malformed.response.status).toBe(400);
+  expect(malformed.json).toEqual({ error: "invalid_payload" });
+  expect(challengeConsumeCount).toBe(0);
 
   const missingChallenge = await requestJson(baseUrl, "/auth/passkeys/register/verify", {
     method: "POST",
@@ -124,8 +123,8 @@ test("passkey registration routes require auth, store challenge, and save verifi
     csrfToken: CSRF_TOKEN,
     body: { response: passkeyRegistrationResponse() }
   });
-  assert.equal(missingChallenge.response.status, 400);
-  assert.deepEqual(missingChallenge.json, { error: "passkey_registration_failed" });
+  expect(missingChallenge.response.status).toBe(400);
+  expect(missingChallenge.json).toEqual({ error: "passkey_registration_failed" });
 
   const verified = await requestJson(baseUrl, "/auth/passkeys/register/verify", {
     method: "POST",
@@ -139,16 +138,16 @@ test("passkey registration routes require auth, store challenge, and save verifi
       })
     }
   });
-  assert.equal(verified.response.status, 200);
-  assert.equal(registrationVerifyInput.requireUserVerification, true);
-  assert.equal(registrationVerifyInput.response.extraTopLevel, "kept");
-  assert.equal(registrationVerifyInput.response.response.extraNested, "kept");
-  assert.equal(insertedPasskey.profileEmail, "person@example.com");
-  assert.equal(insertedPasskey.credentialId, "credential-1");
-  assert.equal(insertedPasskey.aaguid, "bada5566-a7aa-401f-bd96-45619a55120d");
-  assert.equal(insertedPasskey.name, "1Password");
-  assert.equal(verified.json.passkey.credentialPublicKey, undefined);
-  assert.equal(verified.json.passkey.aaguid, undefined);
+  expect(verified.response.status).toBe(200);
+  expect(registrationVerifyInput.requireUserVerification).toBe(true);
+  expect(registrationVerifyInput.response.extraTopLevel).toBe("kept");
+  expect(registrationVerifyInput.response.response.extraNested).toBe("kept");
+  expect(insertedPasskey.profileEmail).toBe("person@example.com");
+  expect(insertedPasskey.credentialId).toBe("credential-1");
+  expect(insertedPasskey.aaguid).toBe("bada5566-a7aa-401f-bd96-45619a55120d");
+  expect(insertedPasskey.name).toBe("1Password");
+  expect(verified.json.passkey.credentialPublicKey).toBe(undefined);
+  expect(verified.json.passkey.aaguid).toBe(undefined);
 });
 
 test("passkey registration falls back to user-agent label for unknown AAGUID", async (t) => {
@@ -211,9 +210,9 @@ test("passkey registration falls back to user-agent label for unknown AAGUID", a
     body: { response: passkeyRegistrationResponse() }
   });
 
-  assert.equal(verified.response.status, 200);
-  assert.equal(insertedPasskey.aaguid, "11111111-2222-3333-4444-555555555555");
-  assert.equal(insertedPasskey.name, "Windows Chrome");
+  expect(verified.response.status).toBe(200);
+  expect(insertedPasskey.aaguid).toBe("11111111-2222-3333-4444-555555555555");
+  expect(insertedPasskey.name).toBe("Windows Chrome");
 });
 
 test("passkey registration falls back to generic name without provider or user-agent label", async (t) => {
@@ -274,9 +273,9 @@ test("passkey registration falls back to generic name without provider or user-a
     body: { response: passkeyRegistrationResponse() }
   });
 
-  assert.equal(verified.response.status, 200);
-  assert.equal(insertedPasskey.aaguid, null);
-  assert.equal(insertedPasskey.name, "Passkey");
+  expect(verified.response.status).toBe(200);
+  expect(insertedPasskey.aaguid).toBe(null);
+  expect(insertedPasskey.name).toBe("Passkey");
 });
 
 test("passkey authentication routes store challenge, reject unknown credentials, and create app session", async (t) => {
@@ -355,13 +354,13 @@ test("passkey authentication routes store challenge, reject unknown credentials,
     method: "POST",
     origin: TEST_CLIENT_ORIGIN
   });
-  assert.equal(options.response.status, 200);
-  assert.equal(options.json.options.challenge, "authentication-challenge");
-  assert.equal(options.json.options.userVerification, "required");
-  assert.equal(authenticationOptionsInput.userVerification, "required");
-  assert.equal(storedChallenge.kind, "authentication");
-  assert.equal(storedChallenge.profileEmail, null);
-  assert.ok(options.response.headers.get("set-cookie")?.includes("passkey_challenge="));
+  expect(options.response.status).toBe(200);
+  expect(options.json.options.challenge).toBe("authentication-challenge");
+  expect(options.json.options.userVerification).toBe("required");
+  expect(authenticationOptionsInput.userVerification).toBe("required");
+  expect(storedChallenge.kind).toBe("authentication");
+  expect(storedChallenge.profileEmail).toBe(null);
+  expect(options.response.headers.get("set-cookie")?.includes("passkey_challenge=")).toBeTruthy();
 
   const malformed = await requestJson(baseUrl, "/auth/passkeys/authenticate/verify", {
     method: "POST",
@@ -369,10 +368,10 @@ test("passkey authentication routes store challenge, reject unknown credentials,
     cookie: "passkey_challenge=challenge-1",
     body: { response: passkeyAuthenticationResponse({ response: { signature: undefined } }) }
   });
-  assert.equal(malformed.response.status, 400);
-  assert.deepEqual(malformed.json, { error: "invalid_payload" });
-  assert.equal(challengeConsumeCount, 0);
-  assert.equal(credentialLookupCount, 0);
+  expect(malformed.response.status).toBe(400);
+  expect(malformed.json).toEqual({ error: "invalid_payload" });
+  expect(challengeConsumeCount).toBe(0);
+  expect(credentialLookupCount).toBe(0);
 
   const unknown = await requestJson(baseUrl, "/auth/passkeys/authenticate/verify", {
     method: "POST",
@@ -380,8 +379,8 @@ test("passkey authentication routes store challenge, reject unknown credentials,
     cookie: "passkey_challenge=challenge-1",
     body: { response: passkeyAuthenticationResponse({ id: "unknown", rawId: "unknown" }) }
   });
-  assert.equal(unknown.response.status, 400);
-  assert.deepEqual(unknown.json, { error: "passkey_login_failed" });
+  expect(unknown.response.status).toBe(400);
+  expect(unknown.json).toEqual({ error: "passkey_login_failed" });
 
   const success = await requestJson(baseUrl, "/auth/passkeys/authenticate/verify", {
     method: "POST",
@@ -394,16 +393,16 @@ test("passkey authentication routes store challenge, reject unknown credentials,
       })
     }
   });
-  assert.equal(success.response.status, 200);
-  assert.deepEqual(success.json, { ok: true, user: { email: "person@example.com" } });
-  assert.equal(authenticationVerifyInput.requireUserVerification, true);
-  assert.equal(authenticationVerifyInput.response.extraTopLevel, "kept");
-  assert.equal(authenticationVerifyInput.response.response.extraNested, "kept");
-  assert.equal(updatedAuth.credentialId, "credential-1");
-  assert.equal(updatedAuth.counter, 2);
+  expect(success.response.status).toBe(200);
+  expect(success.json).toEqual({ ok: true, user: { email: "person@example.com" } });
+  expect(authenticationVerifyInput.requireUserVerification).toBe(true);
+  expect(authenticationVerifyInput.response.extraTopLevel).toBe("kept");
+  expect(authenticationVerifyInput.response.response.extraNested).toBe("kept");
+  expect(updatedAuth.credentialId).toBe("credential-1");
+  expect(updatedAuth.counter).toBe(2);
   const setCookie = success.response.headers.get("set-cookie");
-  assert.ok(setCookie?.includes("session="));
-  assert.ok(setCookie?.includes("csrf="));
+  expect(setCookie?.includes("session=")).toBeTruthy();
+  expect(setCookie?.includes("csrf=")).toBeTruthy();
 });
 
 test("passkey authentication options route is rate limited by IP", async (t) => {
@@ -421,16 +420,16 @@ test("passkey authentication options route is rate limited by IP", async (t) => 
       method: "POST",
       origin: TEST_CLIENT_ORIGIN
     });
-    assert.equal(allowed.response.status, 200);
+    expect(allowed.response.status).toBe(200);
   }
 
   const limited = await requestJson(baseUrl, "/auth/passkeys/authenticate/options", {
     method: "POST",
     origin: TEST_CLIENT_ORIGIN
   });
-  assert.equal(limited.response.status, 429);
-  assert.deepEqual(limited.json, { error: "too_many_requests" });
-  assert.equal(challengeInsertCount, 20);
+  expect(limited.response.status).toBe(429);
+  expect(limited.json).toEqual({ error: "too_many_requests" });
+  expect(challengeInsertCount).toBe(20);
 });
 
 test("passkey authentication verify route is rate limited by IP", async (t) => {
@@ -451,8 +450,8 @@ test("passkey authentication verify route is rate limited by IP", async (t) => {
       cookie: `passkey_challenge=challenge-${index}`,
       body: { response: passkeyAuthenticationResponse() }
     });
-    assert.equal(allowed.response.status, 400);
-    assert.deepEqual(allowed.json, { error: "passkey_login_failed" });
+    expect(allowed.response.status).toBe(400);
+    expect(allowed.json).toEqual({ error: "passkey_login_failed" });
   }
 
   const limited = await requestJson(baseUrl, "/auth/passkeys/authenticate/verify", {
@@ -461,9 +460,9 @@ test("passkey authentication verify route is rate limited by IP", async (t) => {
     cookie: "passkey_challenge=challenge-over-limit",
     body: { response: passkeyAuthenticationResponse() }
   });
-  assert.equal(limited.response.status, 429);
-  assert.deepEqual(limited.json, { error: "too_many_requests" });
-  assert.equal(challengeConsumeCount, 30);
+  expect(limited.response.status).toBe(429);
+  expect(limited.json).toEqual({ error: "too_many_requests" });
+  expect(challengeConsumeCount).toBe(30);
 });
 
 test("passkey registration options route is rate limited by IP after auth and csrf checks", async (t) => {
@@ -483,7 +482,7 @@ test("passkey registration options route is rate limited by IP after auth and cs
       cookie: AUTH_COOKIE,
       csrfToken: CSRF_TOKEN
     });
-    assert.equal(allowed.response.status, 200);
+    expect(allowed.response.status).toBe(200);
   }
 
   const limited = await requestJson(baseUrl, "/auth/passkeys/register/options", {
@@ -492,9 +491,9 @@ test("passkey registration options route is rate limited by IP after auth and cs
     cookie: AUTH_COOKIE,
     csrfToken: CSRF_TOKEN
   });
-  assert.equal(limited.response.status, 429);
-  assert.deepEqual(limited.json, { error: "too_many_requests" });
-  assert.equal(challengeInsertCount, 10);
+  expect(limited.response.status).toBe(429);
+  expect(limited.json).toEqual({ error: "too_many_requests" });
+  expect(challengeInsertCount).toBe(10);
 });
 
 test("passkey list and delete routes expose metadata and scope deletion to current user", async (t) => {
@@ -526,8 +525,8 @@ test("passkey list and delete routes expose metadata and scope deletion to curre
   const list = await requestJson(baseUrl, "/auth/passkeys", {
     cookie: AUTH_COOKIE
   });
-  assert.equal(list.response.status, 200);
-  assert.deepEqual(list.json.passkeys[0], {
+  expect(list.response.status).toBe(200);
+  expect(list.json.passkeys[0]).toEqual({
     id: "passkey-1",
     name: "Laptop",
     deviceType: "multiDevice",
@@ -536,7 +535,7 @@ test("passkey list and delete routes expose metadata and scope deletion to curre
     createdAt: new Date(0).toISOString(),
     lastUsedAt: null
   });
-  assert.equal(Object.hasOwn(list.json.passkeys[0], "aaguid"), false);
+  expect(Object.hasOwn(list.json.passkeys[0], "aaguid")).toBe(false);
 
   const deleted = await requestJson(baseUrl, "/auth/passkeys/passkey-1", {
     method: "DELETE",
@@ -544,8 +543,8 @@ test("passkey list and delete routes expose metadata and scope deletion to curre
     cookie: AUTH_COOKIE,
     csrfToken: CSRF_TOKEN
   });
-  assert.equal(deleted.response.status, 200);
-  assert.deepEqual(deleteInput, { email: "person@example.com", passkeyId: "passkey-1" });
+  expect(deleted.response.status).toBe(200);
+  expect(deleteInput).toEqual({ email: "person@example.com", passkeyId: "passkey-1" });
 
   const missing = await requestJson(baseUrl, "/auth/passkeys/other-passkey", {
     method: "DELETE",
@@ -553,5 +552,5 @@ test("passkey list and delete routes expose metadata and scope deletion to curre
     cookie: AUTH_COOKIE,
     csrfToken: CSRF_TOKEN
   });
-  assert.equal(missing.response.status, 404);
+  expect(missing.response.status).toBe(404);
 });

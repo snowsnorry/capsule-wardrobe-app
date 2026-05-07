@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect } from "vitest";
 import {
   CANONICAL_PATTERN_OPTIONS,
   buildCanonicalPatternOptions,
@@ -7,13 +6,13 @@ import {
 } from "./patternOptions.js";
 
 test("normalizePatternOption trims and lowercases string values", () => {
-  assert.equal(normalizePatternOption("  Stripe  "), "stripe");
-  assert.equal(normalizePatternOption("POLKA_DOT"), "polka_dot");
+  expect(normalizePatternOption("  Stripe  ")).toBe("stripe");
+  expect(normalizePatternOption("POLKA_DOT")).toBe("polka_dot");
 });
 
 test("normalizePatternOption rejects non-string values", () => {
-  assert.equal(normalizePatternOption(null), "");
-  assert.equal(normalizePatternOption(12), "");
+  expect(normalizePatternOption(null)).toBe("");
+  expect(normalizePatternOption(12)).toBe("");
 });
 
 test("buildCanonicalPatternOptions returns canonical values plus unique custom extras", () => {
@@ -22,10 +21,10 @@ test("buildCanonicalPatternOptions returns canonical values plus unique custom e
     "Micro Check"
   );
 
-  assert.deepEqual(options.slice(0, CANONICAL_PATTERN_OPTIONS.length), [...CANONICAL_PATTERN_OPTIONS]);
-  assert.deepEqual(options.slice(CANONICAL_PATTERN_OPTIONS.length), ["plaid", "micro check"]);
+  expect(options.slice(0, CANONICAL_PATTERN_OPTIONS.length)).toEqual([...CANONICAL_PATTERN_OPTIONS]);
+  expect(options.slice(CANONICAL_PATTERN_OPTIONS.length)).toEqual(["plaid", "micro check"]);
 });
 
 test("buildCanonicalPatternOptions handles omitted inputs", () => {
-  assert.deepEqual(buildCanonicalPatternOptions(), [...CANONICAL_PATTERN_OPTIONS]);
+  expect(buildCanonicalPatternOptions()).toEqual([...CANONICAL_PATTERN_OPTIONS]);
 });

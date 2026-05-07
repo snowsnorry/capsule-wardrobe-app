@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect } from "vitest";
 import {
   buildSharedCapsuleOgMetadata,
   createCapsuleStore,
@@ -44,17 +43,13 @@ function capsuleRow(overrides = {}) {
 }
 
 test("normalizeCapsuleFilters drops removed profile occasions and keeps supported values", () => {
-  assert.deepEqual(
-    normalizeCapsuleFilters({
+  expect(normalizeCapsuleFilters({
       occasions: ["office", "school_drop-off", "everyday_errands", "weekend_with_family", "office"]
-    }).occasions,
-    ["office", "everyday_errands"]
-  );
+    }).occasions).toEqual(["office", "everyday_errands"]);
 });
 
 test("normalizeCapsuleSnapshot sanitizes saved profile occasions on read and write", () => {
-  assert.deepEqual(
-    normalizeCapsuleSnapshot({
+  expect(normalizeCapsuleSnapshot({
       filters: {
         formalityLevel: "",
         style: null,
@@ -69,14 +64,11 @@ test("normalizeCapsuleSnapshot sanitizes saved profile occasions on read and wri
         wardrobe: null,
         rejectedUrls: []
       }
-    })?.filters?.occasions,
-    ["office"]
-  );
+    })?.filters?.occasions).toEqual(["office"]);
 });
 
 test("normalizeCapsuleSnapshot preserves outfit set image payloads", () => {
-  assert.deepEqual(
-    normalizeCapsuleSnapshot({
+  expect(normalizeCapsuleSnapshot({
       filters: {},
       data: {
         wardrobe: {
@@ -89,13 +81,11 @@ test("normalizeCapsuleSnapshot preserves outfit set image payloads", () => {
         },
         rejectedUrls: []
       }
-    })?.data?.wardrobe?.outfitSets,
-    [{
+    })?.data?.wardrobe?.outfitSets).toEqual([{
       itemIds: ["top-1", "bottom-1", "bag-1"],
       image: "base64-image",
       imageObsolete: true
-    }]
-  );
+    }]);
 });
 
 test("buildSharedCapsuleOgMetadata formats English filter sentences and prefers outfit set images", () => {
@@ -125,7 +115,7 @@ test("buildSharedCapsuleOgMetadata formats English filter sentences and prefers 
     }
   });
 
-  assert.deepEqual(metadata, {
+  expect(metadata).toEqual({
     title: "Spring <edit>",
     description: "Formality: Casual. Style: Minimalistic. Occasions: Office, Date night. Season: Spring. Audience: Woman. Color: Light blue. Pattern: Solid.",
     image: "https://images.example.com/outfit.jpg"
@@ -133,8 +123,7 @@ test("buildSharedCapsuleOgMetadata formats English filter sentences and prefers 
 });
 
 test("buildSharedCapsuleOgMetadata falls back to the first item image_url", () => {
-  assert.equal(
-    buildSharedCapsuleOgMetadata({
+  expect(buildSharedCapsuleOgMetadata({
       name: "Spring edit",
       content: {
         filters: {},
@@ -146,9 +135,7 @@ test("buildSharedCapsuleOgMetadata falls back to the first item image_url", () =
           rejectedUrls: []
         }
       }
-    })?.image,
-    "https://images.example.com/item.jpg"
-  );
+    })?.image).toBe("https://images.example.com/item.jpg");
 });
 
 test("createCapsuleStore creates unique capsules and resolves active capsules", async () => {
@@ -173,15 +160,15 @@ test("createCapsuleStore creates unique capsules and resolves active capsules", 
     name: "Spring edit",
     draft: { filters: { audience: "woman" }, data: { wardrobe: null, rejectedUrls: [] } }
   });
-  assert.equal(created?.name, "Spring edit (2)");
+  expect(created?.name).toBe("Spring edit (2)");
 
   const active = await store.resolveActiveCapsule("person@example.com");
-  assert.equal(active?.id, "recent-1");
-  assert.deepEqual(calls.map((call) => call.type), ["create", "active", "active"]);
+  expect(active?.id).toBe("recent-1");
+  expect(calls.map((call) => call.type)).toEqual(["create", "active", "active"]);
 
   names = [];
   const bootstrap = await store.createBootstrapCapsule("person@example.com");
-  assert.equal(bootstrap?.id, "capsule-new");
+  expect(bootstrap?.id).toBe("capsule-new");
 });
 
 test("createCapsuleStore delegates lookup, update, duplicate, state, and delete operations", async () => {
@@ -221,19 +208,19 @@ test("createCapsuleStore delegates lookup, update, duplicate, state, and delete 
     getProfileImpl: async () => ({ email: "person@example.com", activeCapsuleId: "capsule-1" })
   });
 
-  assert.equal((await store.getCapsule("person@example.com", "capsule-1"))?.id, "capsule-1");
-  assert.equal((await store.getCapsule("person@example.com", "missing")), null);
-  assert.equal((await store.listRecentCapsules("person@example.com", 3))[0].id, "recent-1");
-  assert.equal((await store.searchCapsules("person@example.com", "spring", 4))[0].id, "search-1");
-  assert.equal((await store.updateCapsuleSnapshot("person@example.com", "capsule-1", { filters: {} }))?.draft?.data?.rejectedUrls?.length, 0);
-  assert.equal((await store.renameCapsule("person@example.com", "capsule-1", "Copy"))?.name, "Copy (1)");
-  assert.equal((await store.saveCapsule("person@example.com", "capsule-1"))?.status, "saved");
-  assert.equal((await store.revertCapsule("person@example.com", "capsule-1"))?.status, "saved");
-  assert.equal((await store.duplicateCapsule("person@example.com", "capsule-1", "Copy"))?.id, "copy-1");
-  assert.equal(await store.duplicateCapsule("person@example.com", "missing", "Copy"), null);
-  assert.equal(await store.deleteCapsule("person@example.com", "missing"), false);
-  assert.equal(await store.deleteCapsule("person@example.com", "capsule-1"), true);
-  assert.ok(calls.some((call) => call.type === "active" && call.payload.activeCapsuleId === "recent-1"));
+  expect((await store.getCapsule("person@example.com", "capsule-1"))?.id).toBe("capsule-1");
+  expect((await store.getCapsule("person@example.com", "missing"))).toBe(null);
+  expect((await store.listRecentCapsules("person@example.com", 3))[0].id).toBe("recent-1");
+  expect((await store.searchCapsules("person@example.com", "spring", 4))[0].id).toBe("search-1");
+  expect((await store.updateCapsuleSnapshot("person@example.com", "capsule-1", { filters: {} }))?.draft?.data?.rejectedUrls?.length).toBe(0);
+  expect((await store.renameCapsule("person@example.com", "capsule-1", "Copy"))?.name).toBe("Copy (1)");
+  expect((await store.saveCapsule("person@example.com", "capsule-1"))?.status).toBe("saved");
+  expect((await store.revertCapsule("person@example.com", "capsule-1"))?.status).toBe("saved");
+  expect((await store.duplicateCapsule("person@example.com", "capsule-1", "Copy"))?.id).toBe("copy-1");
+  expect(await store.duplicateCapsule("person@example.com", "missing", "Copy")).toBe(null);
+  expect(await store.deleteCapsule("person@example.com", "missing")).toBe(false);
+  expect(await store.deleteCapsule("person@example.com", "capsule-1")).toBe(true);
+  expect(calls.some((call) => call.type === "active" && call.payload.activeCapsuleId === "recent-1")).toBeTruthy();
 });
 
 test("createCapsuleStore shares, imports, prunes, and rejects unshareable capsules", async () => {
@@ -275,31 +262,25 @@ test("createCapsuleStore shares, imports, prunes, and rejects unshareable capsul
     }
   });
 
-  assert.equal(await store.createCapsuleShare("person@example.com", "missing", "https://client.example"), null);
+  expect(await store.createCapsuleShare("person@example.com", "missing", "https://client.example")).toBe(null);
   const share = await store.createCapsuleShare("person@example.com", "capsule-1", "https://client.example/");
-  assert.deepEqual(share, {
+  expect(share).toEqual({
     id: "share id",
     url: "https://client.example/share/share%20id",
     expiresAt: new Date(604800000).toISOString()
   });
-  await assert.rejects(
-    () => store.createCapsuleShare("person@example.com", "unshareable", ""),
-    /capsule_not_shareable/
-  );
+  await expect(() => store.createCapsuleShare("person@example.com", "unshareable", "")).rejects.toThrow(/capsule_not_shareable/);
 
-  assert.deepEqual(await store.getSharedCapsule(" share-1 "), {
+  expect(await store.getSharedCapsule(" share-1 ")).toEqual({
     id: "share-1",
     name: "Shared capsule",
     expiresAt: timestamp
   });
-  assert.equal(await store.getSharedCapsule("missing"), null);
-  assert.equal((await store.getSharedCapsuleOgMetadata("share-1"))?.title, "Shared capsule");
-  assert.equal(await store.getSharedCapsuleOgMetadata("missing"), null);
-  assert.equal((await store.importSharedCapsule("person@example.com", "share-1"))?.id, "imported-1");
-  assert.equal(await store.importSharedCapsule("missing@example.com", "missing"), null);
-  await assert.rejects(
-    () => store.importSharedCapsule("person@example.com", "bad-share"),
-    /capsule_not_shareable/
-  );
-  assert.ok(calls.filter((call) => call.type === "prune").length >= 3);
+  expect(await store.getSharedCapsule("missing")).toBe(null);
+  expect((await store.getSharedCapsuleOgMetadata("share-1"))?.title).toBe("Shared capsule");
+  expect(await store.getSharedCapsuleOgMetadata("missing")).toBe(null);
+  expect((await store.importSharedCapsule("person@example.com", "share-1"))?.id).toBe("imported-1");
+  expect(await store.importSharedCapsule("missing@example.com", "missing")).toBe(null);
+  await expect(() => store.importSharedCapsule("person@example.com", "bad-share")).rejects.toThrow(/capsule_not_shareable/);
+  expect(calls.filter((call) => call.type === "prune").length >= 3).toBeTruthy();
 });

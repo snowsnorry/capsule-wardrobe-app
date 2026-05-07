@@ -1,4 +1,6 @@
 import "dotenv/config";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { configureSharp } from "./sharpConfig.js";
 import {
   buildPromptDebugImages,
@@ -76,8 +78,10 @@ function createPromptImagesChildRuntime({
 
 const promptImagesChildRuntime = createPromptImagesChildRuntime();
 
-process.once("message", (message) => {
-  promptImagesChildRuntime.handleMessage(message);
-});
+if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
+  process.once("message", (message) => {
+    promptImagesChildRuntime.handleMessage(message);
+  });
+}
 
 export { createPromptImagesChildRuntime };

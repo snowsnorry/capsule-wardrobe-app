@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect } from "vitest";
 import sharp from "sharp";
 import { SHARP_CONCURRENCY, configureSharp } from "./sharpConfig.js";
 
@@ -10,7 +9,7 @@ test("configureSharp disables cache and uses default or override concurrency", (
 
   sharp.cache = (value) => {
     if (typeof value === "boolean") {
-      assert.equal(value, false);
+      expect(value).toBe(false);
     }
     return {
       memory: { current: 0, high: 0, max: 0 },
@@ -27,7 +26,7 @@ test("configureSharp disables cache and uses default or override concurrency", (
 
   try {
     const defaultConfig = configureSharp();
-    assert.deepEqual(defaultConfig, {
+    expect(defaultConfig).toEqual({
       cache: {
         memory: { current: 0, high: 0, max: 0 },
         files: { current: 0, max: 0 },
@@ -37,7 +36,7 @@ test("configureSharp disables cache and uses default or override concurrency", (
     });
 
     const overrideConfig = configureSharp(7);
-    assert.deepEqual(overrideConfig, {
+    expect(overrideConfig).toEqual({
       cache: {
         memory: { current: 0, high: 0, max: 0 },
         files: { current: 0, max: 0 },

@@ -1,9 +1,8 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect, vi } from "vitest";
 import { AUTH_COOKIE, requestJson, startTestServer } from "../test/serverRouteTestUtils.js";
 
 test("profile status maps auth store failures", async (t) => {
-  t.mock.method(console, "error", () => {});
+  vi.spyOn(console, "error").mockImplementation(() => {});
 
   const failingAuthServer = await startTestServer(t, {
     overrides: {
@@ -15,8 +14,8 @@ test("profile status maps auth store failures", async (t) => {
   const authFailure = await requestJson(failingAuthServer.baseUrl, "/profile/status", {
     cookie: AUTH_COOKIE
   });
-  assert.equal(authFailure.response.status, 503);
-  assert.deepEqual(authFailure.json, { error: "service_unavailable" });
+  expect(authFailure.response.status).toBe(503);
+  expect(authFailure.json).toEqual({ error: "service_unavailable" });
 });
 
 test("profile read routes expose status, profile, and wardrobe filters", async (t) => {
@@ -25,26 +24,26 @@ test("profile read routes expose status, profile, and wardrobe filters", async (
   const status = await requestJson(baseUrl, "/profile/status", {
     cookie: AUTH_COOKIE
   });
-  assert.equal(status.response.status, 200);
-  assert.deepEqual(status.json, { ok: true, hasProfile: true });
+  expect(status.response.status).toBe(200);
+  expect(status.json).toEqual({ ok: true, hasProfile: true });
 
   const profile = await requestJson(baseUrl, "/profile/me", {
     cookie: AUTH_COOKIE
   });
-  assert.equal(profile.response.status, 200);
-  assert.equal(profile.json.ok, true);
-  assert.equal(profile.json.profile.email, "person@example.com");
-  assert.equal(profile.json.profile.activeCapsuleId, "capsule-1");
-  assert.equal(profile.json.profile.locale, "en");
-  assert.equal(profile.json.profile.theme, "system");
-  assert.equal(profile.json.profile.llm, "openai:gpt-5.5");
-  assert.equal(profile.json.profile.image_llm, "openai:gpt-image-2");
-  assert.equal(profile.json.profile.fullname, null);
+  expect(profile.response.status).toBe(200);
+  expect(profile.json.ok).toBe(true);
+  expect(profile.json.profile.email).toBe("person@example.com");
+  expect(profile.json.profile.activeCapsuleId).toBe("capsule-1");
+  expect(profile.json.profile.locale).toBe("en");
+  expect(profile.json.profile.theme).toBe("system");
+  expect(profile.json.profile.llm).toBe("openai:gpt-5.5");
+  expect(profile.json.profile.image_llm).toBe("openai:gpt-image-2");
+  expect(profile.json.profile.fullname).toBe(null);
 
   const wardrobeFilters = await requestJson(baseUrl, "/wardrobe/filters", {
     cookie: AUTH_COOKIE
   });
-  assert.deepEqual(wardrobeFilters.json, {
+  expect(wardrobeFilters.json).toEqual({
     ok: true,
     formalityLevels: ["casual", "formal"],
     styles: ["minimalistic", "sporty"],
@@ -56,7 +55,7 @@ test("profile read routes expose status, profile, and wardrobe filters", async (
 });
 
 test("profile read routes map missing profile and store failures", async (t) => {
-  t.mock.method(console, "error", () => {});
+  vi.spyOn(console, "error").mockImplementation(() => {});
 
   const missingProfileServer = await startTestServer(t, {
     overrides: {
@@ -66,8 +65,8 @@ test("profile read routes map missing profile and store failures", async (t) => 
   const missingProfile = await requestJson(missingProfileServer.baseUrl, "/profile/me", {
     cookie: AUTH_COOKIE
   });
-  assert.equal(missingProfile.response.status, 404);
-  assert.deepEqual(missingProfile.json, { error: "not_found" });
+  expect(missingProfile.response.status).toBe(404);
+  expect(missingProfile.json).toEqual({ error: "not_found" });
 
   const failingProfileServer = await startTestServer(t, {
     overrides: {
@@ -79,8 +78,8 @@ test("profile read routes map missing profile and store failures", async (t) => 
   const profileFailure = await requestJson(failingProfileServer.baseUrl, "/profile/me", {
     cookie: AUTH_COOKIE
   });
-  assert.equal(profileFailure.response.status, 503);
-  assert.deepEqual(profileFailure.json, { error: "service_unavailable" });
+  expect(profileFailure.response.status).toBe(503);
+  expect(profileFailure.json).toEqual({ error: "service_unavailable" });
 
   const failingFiltersServer = await startTestServer(t, {
     overrides: {
@@ -92,6 +91,6 @@ test("profile read routes map missing profile and store failures", async (t) => 
   const filtersFailure = await requestJson(failingFiltersServer.baseUrl, "/wardrobe/filters", {
     cookie: AUTH_COOKIE
   });
-  assert.equal(filtersFailure.response.status, 503);
-  assert.deepEqual(filtersFailure.json, { error: "service_unavailable" });
+  expect(filtersFailure.response.status).toBe(503);
+  expect(filtersFailure.json).toEqual({ error: "service_unavailable" });
 });

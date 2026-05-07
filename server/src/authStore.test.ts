@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect } from "vitest";
 import crypto from "node:crypto";
 import {
   CODE_TTL_MS,
@@ -68,19 +67,16 @@ test("createPendingCode stores hashed login code with generated nonce and expiry
 
   const result = await store.createPendingCode("person@example.com");
 
-  assert.deepEqual(result, { ok: true, code: "123456" });
-  assert.equal(pruned, 1);
-  assert.ok(upsertPayload);
-  assert.equal(upsertPayload.email, "person@example.com");
-  assert.equal(upsertPayload.nonce, "11".repeat(16));
-  assert.equal(upsertPayload.expiresAt.toISOString(), new Date(now + CODE_TTL_MS).toISOString());
-  assert.equal(
-    upsertPayload.codeHash,
-    crypto
+  expect(result).toEqual({ ok: true, code: "123456" });
+  expect(pruned).toBe(1);
+  expect(upsertPayload).toBeTruthy();
+  expect(upsertPayload.email).toBe("person@example.com");
+  expect(upsertPayload.nonce).toBe("11".repeat(16));
+  expect(upsertPayload.expiresAt.toISOString()).toBe(new Date(now + CODE_TTL_MS).toISOString());
+  expect(upsertPayload.codeHash).toBe(crypto
       .createHmac("sha256", "secret")
       .update(`person@example.com:123456:${"11".repeat(16)}`)
-      .digest("hex")
-  );
+      .digest("hex"));
 });
 
 test("createPendingCode enforces resend cooldown and hourly limit", async () => {
@@ -95,15 +91,15 @@ test("createPendingCode enforces resend cooldown and hourly limit", async () => 
   });
 
   const first = await store.createPendingCode("person@example.com");
-  assert.equal(first.ok, true);
+  expect(first.ok).toBe(true);
 
   const cooldown = await store.createPendingCode("person@example.com");
-  assert.deepEqual(cooldown, { ok: false, reason: "cooldown" });
+  expect(cooldown).toEqual({ ok: false, reason: "cooldown" });
 
   for (let index = 1; index < MAX_CODE_SENDS_PER_HOUR; index += 1) {
     now += RESEND_COOLDOWN_MS + 1;
     const result = await store.createPendingCode("person@example.com");
-    assert.equal(result.ok, true);
+    expect(result.ok).toBe(true);
   }
 
   now += RESEND_COOLDOWN_MS + 1;
@@ -126,7 +122,7 @@ test("createPendingCode enforces resend cooldown and hourly limit", async () => 
     ] satisfies [string, SendStateEntry][]
   });
   const rateLimited = await rateLimitedStore.createPendingCode("person@example.com");
-  assert.deepEqual(rateLimited, { ok: false, reason: "rate_limit" });
+  expect(rateLimited).toEqual({ ok: false, reason: "rate_limit" });
 });
 
 test("createPendingCode resets hourly window after stale send state is cleaned up", async () => {
@@ -140,11 +136,11 @@ test("createPendingCode resets hourly window after stale send state is cleaned u
     upsertLoginCodeImpl: async () => {}
   });
 
-  assert.equal((await store.createPendingCode("person@example.com")).ok, true);
+  expect((await store.createPendingCode("person@example.com")).ok).toBe(true);
 
   now += 60 * 60 * 1000 + 1;
   const afterCleanup = await store.createPendingCode("person@example.com");
-  assert.deepEqual(afterCleanup, { ok: true, code: "222222" });
+  expect(afterCleanup).toEqual({ ok: true, code: "222222" });
 });
 
 test("verifyCode returns not_found without stored login code and hashes candidate for verification", async () => {
@@ -163,12 +159,12 @@ test("verifyCode returns not_found without stored login code and hashes candidat
   });
 
   const missing = await store.verifyCode("missing@example.com", "123456");
-  assert.deepEqual(missing, { ok: false, reason: "not_found" });
+  expect(missing).toEqual({ ok: false, reason: "not_found" });
 
   const success = await store.verifyCode("found@example.com", "654321");
-  assert.deepEqual(success, { ok: true });
-  assert.ok(verifyPayload);
-  assert.deepEqual(verifyPayload, {
+  expect(success).toEqual({ ok: true });
+  expect(verifyPayload).toBeTruthy();
+  expect(verifyPayload).toEqual({
     email: "found@example.com",
     codeHash: crypto
       .createHmac("sha256", "secret")
@@ -201,18 +197,18 @@ test("createSession prunes expired sessions, inserts session, and respects prune
   });
 
   const first = await store.createSession("person@example.com");
-  assert.equal(pruneCalls, 1);
-  assert.equal(first.sessionId, "aa".repeat(32));
-  assert.equal(first.session.csrfToken, "bb".repeat(32));
-  assert.equal(inserted[0].expiresAt.toISOString(), new Date(now + SESSION_TTL_MS).toISOString());
+  expect(pruneCalls).toBe(1);
+  expect(first.sessionId).toBe("aa".repeat(32));
+  expect(first.session.csrfToken).toBe("bb".repeat(32));
+  expect(inserted[0].expiresAt.toISOString()).toBe(new Date(now + SESSION_TTL_MS).toISOString());
 
   now += 1_000;
   await store.createSession("person@example.com");
-  assert.equal(pruneCalls, 1);
+  expect(pruneCalls).toBe(1);
 
   now += 6_000;
   await store.createSession("person@example.com");
-  assert.equal(pruneCalls, 2);
+  expect(pruneCalls).toBe(2);
 });
 
 test("getSession normalizes valid sessions and deletes expired sessions", async () => {
@@ -246,12 +242,12 @@ test("getSession normalizes valid sessions and deletes expired sessions", async 
     }
   });
 
-  assert.equal(await store.getSession("missing"), null);
-  assert.equal(await store.getSession("expired"), null);
-  assert.deepEqual(deletedIds, ["expired"]);
+  expect(await store.getSession("missing")).toBe(null);
+  expect(await store.getSession("expired")).toBe(null);
+  expect(deletedIds).toEqual(["expired"]);
 
   const valid = await store.getSession("valid");
-  assert.deepEqual(valid, {
+  expect(valid).toEqual({
     email: "person@example.com",
     csrfToken: "csrf",
     createdAt: now - 1000,
@@ -269,5 +265,5 @@ test("revokeSession deletes persisted session by id", async () => {
   });
 
   await store.revokeSession("session-42");
-  assert.deepEqual(deletedIds, ["session-42"]);
+  expect(deletedIds).toEqual(["session-42"]);
 });

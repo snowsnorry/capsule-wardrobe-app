@@ -1,5 +1,4 @@
-import test, { afterEach } from "node:test";
-import assert from "node:assert/strict";
+import { test, expect, afterEach } from "vitest";
 import { setSqlClientOverride, type CapsuleRow, type SharedCapsuleRow, type SqlClientLike, type SqlResultLike } from "./core.js";
 import {
   createCapsuleRecord,
@@ -68,59 +67,59 @@ test("capsule record helpers map rows, json payloads, and query values", async (
     [capsule]
   ]);
 
-  assert.deepEqual(await createCapsuleRecord({
+  expect(await createCapsuleRecord({
     email: "person@example.com",
     name: "Work",
     draft: { selected: ["a"] },
     saved: null
-  }), capsule);
-  assert.deepEqual(await getCapsuleByIdForEmail({ email: "person@example.com", capsuleId: "capsule-1" }), capsule);
-  assert.deepEqual(await listRecentCapsulesByEmail({ email: "person@example.com", limit: 3 }), [capsule]);
-  assert.deepEqual(await searchCapsulesByEmail({ email: "person@example.com", query: " Work ", limit: 2 }), [capsule]);
-  assert.deepEqual(await listCapsuleNamesByEmail("person@example.com"), ["Work"]);
-  assert.deepEqual(await updateCapsuleSnapshotByIdForEmail({
+  })).toEqual(capsule);
+  expect(await getCapsuleByIdForEmail({ email: "person@example.com", capsuleId: "capsule-1" })).toEqual(capsule);
+  expect(await listRecentCapsulesByEmail({ email: "person@example.com", limit: 3 })).toEqual([capsule]);
+  expect(await searchCapsulesByEmail({ email: "person@example.com", query: " Work ", limit: 2 })).toEqual([capsule]);
+  expect(await listCapsuleNamesByEmail("person@example.com")).toEqual(["Work"]);
+  expect(await updateCapsuleSnapshotByIdForEmail({
     email: "person@example.com",
     capsuleId: "capsule-1",
     draft: { selected: ["b"] }
-  }), capsule);
-  assert.deepEqual(await renameCapsuleByIdForEmail({
+  })).toEqual(capsule);
+  expect(await renameCapsuleByIdForEmail({
     email: "person@example.com",
     capsuleId: "capsule-1",
     name: "Travel"
-  }), capsule);
-  assert.deepEqual(await saveCapsuleByIdForEmail({ email: "person@example.com", capsuleId: "capsule-1" }), capsule);
-  assert.deepEqual(await revertCapsuleDraftByIdForEmail({ email: "person@example.com", capsuleId: "capsule-1" }), capsule);
-  assert.equal(values[0][2], JSON.stringify({ selected: ["a"] }));
-  assert.equal(values[3][1], "%work%");
-  assert.equal(values[5][0], JSON.stringify({ selected: ["b"] }));
+  })).toEqual(capsule);
+  expect(await saveCapsuleByIdForEmail({ email: "person@example.com", capsuleId: "capsule-1" })).toEqual(capsule);
+  expect(await revertCapsuleDraftByIdForEmail({ email: "person@example.com", capsuleId: "capsule-1" })).toEqual(capsule);
+  expect(values[0][2]).toBe(JSON.stringify({ selected: ["a"] }));
+  expect(values[3][1]).toBe("%work%");
+  expect(values[5][0]).toBe(JSON.stringify({ selected: ["b"] }));
 });
 
 test("capsule helpers return null or booleans for empty mutation results", async () => {
   useQueuedSql([[], [], [], [{ id: "capsule-1" }], []]);
 
-  assert.equal(await createCapsuleRecord({ email: "person@example.com", name: "Work" }), null);
-  assert.equal(await getCapsuleByIdForEmail({ email: "person@example.com", capsuleId: "missing" }), null);
-  assert.equal(await updateCapsuleSnapshotByIdForEmail({
+  expect(await createCapsuleRecord({ email: "person@example.com", name: "Work" })).toBe(null);
+  expect(await getCapsuleByIdForEmail({ email: "person@example.com", capsuleId: "missing" })).toBe(null);
+  expect(await updateCapsuleSnapshotByIdForEmail({
     email: "person@example.com",
     capsuleId: "missing",
     draft: null
-  }), null);
-  assert.equal(await deleteCapsuleByIdForEmail({ email: "person@example.com", capsuleId: "capsule-1" }), true);
-  assert.equal(await deleteCapsuleByIdForEmail({ email: "person@example.com", capsuleId: "missing" }), false);
+  })).toBe(null);
+  expect(await deleteCapsuleByIdForEmail({ email: "person@example.com", capsuleId: "capsule-1" })).toBe(true);
+  expect(await deleteCapsuleByIdForEmail({ email: "person@example.com", capsuleId: "missing" })).toBe(false);
 });
 
 test("shared capsule helpers upsert, read, and prune shared records", async () => {
   const { statements, values } = useQueuedSql([[sharedCapsule], [sharedCapsule], []]);
 
-  assert.deepEqual(await upsertSharedCapsule({
+  expect(await upsertSharedCapsule({
     profileEmail: "person@example.com",
     name: "Work",
     content: { items: [] },
     contentHash: "hash",
     expiresAt: "expires"
-  }), sharedCapsule);
-  assert.deepEqual(await getValidSharedCapsuleById("share-1"), sharedCapsule);
+  })).toEqual(sharedCapsule);
+  expect(await getValidSharedCapsuleById("share-1")).toEqual(sharedCapsule);
   await pruneExpiredSharedCapsules();
-  assert.equal(values[0][2], JSON.stringify({ items: [] }));
-  assert.ok(statements.at(-1)?.includes("delete from shared_capsules where expires_at < now()"));
+  expect(values[0][2]).toBe(JSON.stringify({ items: [] }));
+  expect(statements.at(-1)?.includes("delete from shared_capsules where expires_at < now()")).toBeTruthy();
 });

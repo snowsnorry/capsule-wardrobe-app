@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect } from "vitest";
 import {
   addLinkAnnotation,
   drawColorValue,
@@ -39,11 +38,11 @@ function createPageRecorder() {
 test("text helpers split long words, truncate punctuation, draw, and measure text blocks", () => {
   const font = createFont(1);
 
-  assert.deepEqual(splitTextIntoLines("", font, 10, 30), []);
-  assert.deepEqual(splitTextIntoLines("alpha beta", font, 10, 50), ["alpha", "beta"]);
-  assert.deepEqual(splitTextIntoLines("abcdefgh", font, 10, 30), ["abc", "def", "gh"]);
-  assert.deepEqual(truncateLines(["One,", "Two!", "Three"], 2), ["One,", "Two..."]);
-  assert.deepEqual(truncateLines(["One"], 2), ["One"]);
+  expect(splitTextIntoLines("", font, 10, 30)).toEqual([]);
+  expect(splitTextIntoLines("alpha beta", font, 10, 50)).toEqual(["alpha", "beta"]);
+  expect(splitTextIntoLines("abcdefgh", font, 10, 30)).toEqual(["abc", "def", "gh"]);
+  expect(truncateLines(["One,", "Two!", "Three"], 2)).toEqual(["One,", "Two..."]);
+  expect(truncateLines(["One"], 2)).toEqual(["One"]);
 
   const page = createPageRecorder();
   const cursorY = drawTextBlock(page, "alpha beta gamma", {
@@ -56,21 +55,21 @@ test("text helpers split long words, truncate punctuation, draw, and measure tex
     maxLines: 2
   });
 
-  assert.equal(cursorY, 72);
-  assert.deepEqual(page.calls.map((call) => call.text), ["alpha", "beta..."]);
-  assert.equal(measureTextBlockHeight("alpha beta gamma", {
+  expect(cursorY).toBe(72);
+  expect(page.calls.map((call) => call.text)).toEqual(["alpha", "beta..."]);
+  expect(measureTextBlockHeight("alpha beta gamma", {
     font,
     size: 10,
     lineHeight: 14,
     width: 60,
     maxLines: 2
-  }), 28);
-  assert.equal(measureTextBlockHeight("", {
+  })).toBe(28);
+  expect(measureTextBlockHeight("", {
     font,
     size: 10,
     lineHeight: 14,
     width: 60
-  }), 0);
+  })).toBe(0);
 });
 
 test("rounded rectangles clamp radius and draw border and fill shapes", () => {
@@ -87,10 +86,10 @@ test("rounded rectangles clamp radius and draw border and fill shapes", () => {
     borderWidth: 2
   });
 
-  assert.equal(page.calls.filter((call) => call.type === "rectangle").length, 4);
-  assert.equal(page.calls.filter((call) => call.type === "circle").length, 8);
-  assert.equal(page.calls[0].options.color, "border");
-  assert.equal(page.calls[6].options.color, "fill");
+  expect(page.calls.filter((call) => call.type === "rectangle").length).toBe(4);
+  expect(page.calls.filter((call) => call.type === "circle").length).toBe(8);
+  expect(page.calls[0].options.color).toBe("border");
+  expect(page.calls[6].options.color).toBe("fill");
 
   const flatPage = createPageRecorder();
   drawRoundedRect(flatPage, {
@@ -101,8 +100,8 @@ test("rounded rectangles clamp radius and draw border and fill shapes", () => {
     radius: -1,
     color: "fill"
   });
-  assert.equal(flatPage.calls[0].options.width, 20);
-  assert.equal(flatPage.calls[2].options.size, 0);
+  expect(flatPage.calls[0].options.width).toBe(20);
+  expect(flatPage.calls[2].options.size).toBe(0);
 });
 
 test("link annotations are skipped without URLs and appended to page annotations", () => {
@@ -136,15 +135,15 @@ test("link annotations are skipped without URLs and appended to page annotations
   };
 
   addLinkAnnotation(pdfDoc, page, "", { x: 1, y: 2, width: 3, height: 4 });
-  assert.equal(page.node.Annots(), undefined);
+  expect(page.node.Annots()).toBe(undefined);
 
   addLinkAnnotation(pdfDoc, page, "https://example.com/1", { x: 1, y: 2, width: 3, height: 4 });
-  assert.equal(registered.length, 1);
-  assert.equal(setCalls.length, 1);
+  expect(registered.length).toBe(1);
+  expect(setCalls.length).toBe(1);
 
   addLinkAnnotation(pdfDoc, page, "https://example.com/2", { x: 5, y: 6, width: 7, height: 8 });
-  assert.equal(registered.length, 2);
-  assert.deepEqual(pushed, [{ ref: 2 }]);
+  expect(registered.length).toBe(2);
+  expect(pushed).toEqual([{ ref: 2 }]);
 });
 
 test("color rows draw swatches, skip blank labels, and wrap within max width", () => {
@@ -162,15 +161,15 @@ test("color rows draw swatches, skip blank labels, and wrap within max width", (
     }
   };
 
-  assert.equal(getRowText(row), "Red, Blue,  ");
-  assert.equal(getRowText({ value: { text: "Plain text" } }), "Plain text");
-  assert.equal(getRowText(null), "");
+  expect(getRowText(row)).toBe("Red, Blue,  ");
+  expect(getRowText({ value: { text: "Plain text" } })).toBe("Plain text");
+  expect(getRowText(null)).toBe("");
 
   drawColorValue(page, row, { x: 10, y: 100, maxWidth: 28, fonts });
 
-  assert.equal(page.calls.filter((call) => call.type === "circle").length, 2);
-  assert.deepEqual(page.calls.filter((call) => call.type === "text").map((call) => call.text), ["Red", "Blue"]);
-  assert.ok(page.calls.find((call) => call.type === "text" && call.text === "Blue").options.y < 100);
+  expect(page.calls.filter((call) => call.type === "circle").length).toBe(2);
+  expect(page.calls.filter((call) => call.type === "text").map((call) => call.text)).toEqual(["Red", "Blue"]);
+  expect(page.calls.find((call) => call.type === "text" && call.text === "Blue").options.y < 100).toBeTruthy();
 });
 
 test("detail groups lay out mixed text and color rows in two columns", () => {
@@ -195,9 +194,9 @@ test("detail groups lay out mixed text and color rows in two columns", () => {
     fonts
   });
 
-  assert.ok(nextY < 300);
-  assert.ok(page.calls.some((call) => call.type === "rectangle"));
-  assert.ok(page.calls.some((call) => call.type === "circle"));
-  assert.ok(page.calls.some((call) => call.type === "text" && call.text === "Brand"));
-  assert.ok(page.calls.some((call) => call.type === "text" && call.text === "Capsule"));
+  expect(nextY < 300).toBeTruthy();
+  expect(page.calls.some((call) => call.type === "rectangle")).toBeTruthy();
+  expect(page.calls.some((call) => call.type === "circle")).toBeTruthy();
+  expect(page.calls.some((call) => call.type === "text" && call.text === "Brand")).toBeTruthy();
+  expect(page.calls.some((call) => call.type === "text" && call.text === "Capsule")).toBeTruthy();
 });

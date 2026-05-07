@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect } from "vitest";
 import {
   createEmailSender,
   escapeHtml,
@@ -19,10 +18,7 @@ type RequestInitCapture = {
 };
 
 test("escapeHtml escapes critical HTML characters", () => {
-  assert.equal(
-    escapeHtml(`a&<>"'`),
-    "a&amp;&lt;&gt;&quot;&#039;"
-  );
+  expect(escapeHtml(`a&<>"'`)).toBe("a&amp;&lt;&gt;&quot;&#039;");
 });
 
 test("renderLoginCodeEmailHtml injects escaped values and selects locale template", () => {
@@ -31,18 +27,18 @@ test("renderLoginCodeEmailHtml injects escaped values and selects locale templat
     expiresInMinutes: `5"`,
     locale: "en"
   });
-  assert.match(enHtml, /Sign in with this code/);
-  assert.ok(enHtml.includes("&lt;123&amp;&gt;"));
-  assert.ok(enHtml.includes("5&quot; minute"));
+  expect(enHtml).toMatch(/Sign in with this code/);
+  expect(enHtml.includes("&lt;123&amp;&gt;")).toBeTruthy();
+  expect(enHtml.includes("5&quot; minute")).toBeTruthy();
 
   const ruHtml = renderLoginCodeEmailHtml({
     code: "654321",
     expiresInMinutes: 3,
     locale: "ru"
   });
-  assert.match(ruHtml, /Войдите с этим кодом/);
-  assert.ok(ruHtml.includes("654321"));
-  assert.ok(ruHtml.includes("3 мин."));
+  expect(ruHtml).toMatch(/Войдите с этим кодом/);
+  expect(ruHtml.includes("654321")).toBeTruthy();
+  expect(ruHtml.includes("3 мин.")).toBeTruthy();
 });
 
 test("getRequiredEnv throws a typed error for missing values", () => {
@@ -50,10 +46,11 @@ test("getRequiredEnv throws a typed error for missing values", () => {
   delete process.env.TEST_EMAIL_ENV_MISSING;
 
   try {
-    assert.throws(
-      () => getRequiredEnv("TEST_EMAIL_ENV_MISSING"),
-      (error) => (error as EmailError | undefined)?.code === "missing_email_env"
-    );
+    getRequiredEnv("TEST_EMAIL_ENV_MISSING");
+    throw new Error("Expected getRequiredEnv to throw");
+  } catch (error) {
+    expect((error as Error).message).toMatch(/TEST_EMAIL_ENV_MISSING is not set/);
+    expect((error as EmailError | undefined)?.code).toBe("missing_email_env");
   } finally {
     if (original !== undefined) {
       process.env.TEST_EMAIL_ENV_MISSING = original;
@@ -85,18 +82,18 @@ test("sendLoginCodeEmail builds english resend payload with normalized locale an
     expiresInMs: 1
   });
 
-  assert.equal(requestUrl, "https://api.resend.com/emails");
-  assert.ok(requestInit);
-  assert.equal(requestInit.method, "POST");
-  assert.equal(requestInit.headers.Authorization, "Bearer resend-key");
+  expect(requestUrl).toBe("https://api.resend.com/emails");
+  expect(requestInit).toBeTruthy();
+  expect(requestInit.method).toBe("POST");
+  expect(requestInit.headers.Authorization).toBe("Bearer resend-key");
 
   const payload = JSON.parse(requestInit.body);
-  assert.deepEqual(payload.to, ["person@example.com"]);
-  assert.equal(payload.from, "hello@example.com");
-  assert.equal(payload.subject, "Your Capsule Wardrobe sign-in code");
-  assert.match(payload.text, /Your sign-in code is: 123456/);
-  assert.match(payload.text, /expires in 1 minute\(s\)/);
-  assert.match(payload.html, /Sign in with this code/);
+  expect(payload.to).toEqual(["person@example.com"]);
+  expect(payload.from).toBe("hello@example.com");
+  expect(payload.subject).toBe("Your Capsule Wardrobe sign-in code");
+  expect(payload.text).toMatch(/Your sign-in code is: 123456/);
+  expect(payload.text).toMatch(/expires in 1 minute\(s\)/);
+  expect(payload.html).toMatch(/Sign in with this code/);
 });
 
 test("sendLoginCodeEmail builds russian resend payload and throws on resend failure", async () => {
@@ -115,20 +112,17 @@ test("sendLoginCodeEmail builds russian resend payload and throws on resend fail
     }
   });
 
-  await assert.rejects(
-    () => sendLoginCodeEmail({
+  await expect(sendLoginCodeEmail({
       email: "person@example.com",
       code: "654321",
       locale: "ru",
       expiresInMs: 2 * 60 * 1000
-    }),
-    (error) => (error as EmailError | undefined)?.code === "email_send_failed"
-  );
+    })).rejects.toMatchObject({ code: "email_send_failed" });
 
-  assert.ok(requestInit);
+  expect(requestInit).toBeTruthy();
   const payload = JSON.parse(requestInit.body);
-  assert.equal(payload.subject, "Код входа в Capsule Wardrobe");
-  assert.match(payload.text, /Ваш код для входа: 654321/);
-  assert.match(payload.text, /Код действует 2 мин/);
-  assert.match(payload.html, /Войдите с этим кодом/);
+  expect(payload.subject).toBe("Код входа в Capsule Wardrobe");
+  expect(payload.text).toMatch(/Ваш код для входа: 654321/);
+  expect(payload.text).toMatch(/Код действует 2 мин/);
+  expect(payload.html).toMatch(/Войдите с этим кодом/);
 });

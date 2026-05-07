@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect } from "vitest";
 import {
   buildShiftedTargetVector,
   normalizeEmbeddingVector,
@@ -12,38 +11,35 @@ function magnitude(vector) {
 
 test("normalizeVector returns unit-length vector", () => {
   const normalized = normalizeVector([3, 4]);
-  assert.ok(Math.abs(magnitude(normalized) - 1) < 1e-12);
-  assert.ok(Math.abs(normalized[0] - 0.6) < 1e-12);
-  assert.ok(Math.abs(normalized[1] - 0.8) < 1e-12);
+  expect(Math.abs(magnitude(normalized) - 1) < 1e-12).toBeTruthy();
+  expect(Math.abs(normalized[0] - 0.6) < 1e-12).toBeTruthy();
+  expect(Math.abs(normalized[1] - 0.8) < 1e-12).toBeTruthy();
 });
 
 test("buildShiftedTargetVector returns normalized target when rejected vectors are empty", () => {
   const shifted = buildShiftedTargetVector([3, 4], []);
-  assert.ok(Math.abs(magnitude(shifted) - 1) < 1e-12);
-  assert.ok(Math.abs(shifted[0] - 0.6) < 1e-12);
-  assert.ok(Math.abs(shifted[1] - 0.8) < 1e-12);
+  expect(Math.abs(magnitude(shifted) - 1) < 1e-12).toBeTruthy();
+  expect(Math.abs(shifted[0] - 0.6) < 1e-12).toBeTruthy();
+  expect(Math.abs(shifted[1] - 0.8) < 1e-12).toBeTruthy();
 });
 
 test("buildShiftedTargetVector shifts away from rejected centroid and normalizes", () => {
   const shifted = buildShiftedTargetVector([1, 0], [[1, 0], [0, 1]], 0.2);
-  assert.ok(Math.abs(magnitude(shifted) - 1) < 1e-12);
-  assert.ok(shifted[0] > shifted[1]);
+  expect(Math.abs(magnitude(shifted) - 1) < 1e-12).toBeTruthy();
+  expect(shifted[0] > shifted[1]).toBeTruthy();
 });
 
 test("buildShiftedTargetVector falls back to normalized target when shift magnitude becomes zero", () => {
   const shifted = buildShiftedTargetVector([1, 0], [[5, 0]], 0.2);
-  assert.deepEqual(shifted, [1, 0]);
+  expect(shifted).toEqual([1, 0]);
 });
 
 test("buildShiftedTargetVector throws on rejected vector dimension mismatch", () => {
-  assert.throws(
-    () => buildShiftedTargetVector([1, 0], [[1, 0, 0]]),
-    /dimensions/
-  );
+  expect(() => buildShiftedTargetVector([1, 0], [[1, 0, 0]])).toThrow(/dimensions/);
 });
 
 test("normalizeEmbeddingVector parses numeric arrays and rejects invalid values", () => {
-  assert.deepEqual(normalizeEmbeddingVector(["1", 2, "3.5"]), [1, 2, 3.5]);
-  assert.equal(normalizeEmbeddingVector([]), null);
-  assert.equal(normalizeEmbeddingVector(["x", 1]), null);
+  expect(normalizeEmbeddingVector(["1", 2, "3.5"])).toEqual([1, 2, 3.5]);
+  expect(normalizeEmbeddingVector([])).toBe(null);
+  expect(normalizeEmbeddingVector(["x", 1])).toBe(null);
 });

@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect } from "vitest";
 import {
   CLAUDE_ALLOWED_MODELS,
   GEMINI_PROFILE_LLM,
@@ -9,51 +8,36 @@ import {
 } from "./llmPrompts.js";
 
 test("resolveLlmProvider maps supported profile llm values to providers", () => {
-  assert.deepEqual(
-    resolveLlmProvider({ llm: "none" }),
-    { mode: "none", llm: "none", requestedLlm: "none" }
-  );
+  expect(resolveLlmProvider({ llm: "none" })).toEqual({ mode: "none", llm: "none", requestedLlm: "none" });
 
-  assert.deepEqual(
-    resolveLlmProvider({ llm: "openai:gpt-5.5" }),
-    { provider: "openai", model: "gpt-5.5", llm: "openai:gpt-5.5", requestedLlm: "openai:gpt-5.5" }
-  );
+  expect(resolveLlmProvider({ llm: "openai:gpt-5.5" })).toEqual({ provider: "openai", model: "gpt-5.5", llm: "openai:gpt-5.5", requestedLlm: "openai:gpt-5.5" });
 
-  assert.deepEqual(
-    resolveLlmProvider({ llm: "deepinfra:google/gemma-4-31B-it" }),
-    {
+  expect(resolveLlmProvider({ llm: "deepinfra:google/gemma-4-31B-it" })).toEqual({
       provider: "deepinfra",
       model: "google/gemma-4-31B-it",
       llm: "deepinfra:google/gemma-4-31B-it",
       requestedLlm: "deepinfra:google/gemma-4-31B-it"
-    }
-  );
+    });
 
-  assert.deepEqual(
-    resolveLlmProvider({ llm: `claude:${CLAUDE_ALLOWED_MODELS[0]}` }),
-    {
+  expect(resolveLlmProvider({ llm: `claude:${CLAUDE_ALLOWED_MODELS[0]}` })).toEqual({
       provider: "claude",
       model: CLAUDE_ALLOWED_MODELS[0],
       llm: `claude:${CLAUDE_ALLOWED_MODELS[0]}`,
       requestedLlm: `claude:${CLAUDE_ALLOWED_MODELS[0]}`
-    }
-  );
+    });
 
-  assert.deepEqual(
-    resolveLlmProvider({ llm: GEMINI_PROFILE_LLM }),
-    {
+  expect(resolveLlmProvider({ llm: GEMINI_PROFILE_LLM })).toEqual({
       provider: "gemini",
       model: "gemini-2.5-pro",
       llm: GEMINI_PROFILE_LLM,
       requestedLlm: GEMINI_PROFILE_LLM
-    }
-  );
+    });
 });
 
 test("profile llm helpers default to openai and expose no-llm mode", () => {
-  assert.equal(getProfileLlm(null), "openai:gpt-5.5");
-  assert.equal(isNoLlmProfileEnabled({ llm: "none" }), true);
-  assert.equal(isNoLlmProfileEnabled({ llm: "openai:gpt-5.5" }), false);
+  expect(getProfileLlm(null)).toBe("openai:gpt-5.5");
+  expect(isNoLlmProfileEnabled({ llm: "none" })).toBe(true);
+  expect(isNoLlmProfileEnabled({ llm: "openai:gpt-5.5" })).toBe(false);
 });
 
 test("resolveLlmProvider warns and falls back for unknown model", () => {
@@ -65,15 +49,15 @@ test("resolveLlmProvider warns and falls back for unknown model", () => {
 
   try {
     const resolved = resolveLlmProvider({ llm: "deepinfra:unknown-model" });
-    assert.equal(resolved.provider, "openai");
-    assert.equal(resolved.model, "gpt-5.5");
-    assert.equal(resolved.fallbackReason, "unknown_model");
+    expect(resolved.provider).toBe("openai");
+    expect(resolved.model).toBe("gpt-5.5");
+    expect(resolved.fallbackReason).toBe("unknown_model");
   } finally {
     console.warn = originalWarn;
   }
 
-  assert.equal(calls.length, 1);
-  assert.equal(calls[0][0], "[wardrobe-ai][llm-unknown-model]");
+  expect(calls.length).toBe(1);
+  expect(calls[0][0]).toBe("[wardrobe-ai][llm-unknown-model]");
 });
 
 test("resolveLlmProvider warns and falls back for unknown claude model", () => {
@@ -85,13 +69,13 @@ test("resolveLlmProvider warns and falls back for unknown claude model", () => {
 
   try {
     const resolved = resolveLlmProvider({ llm: "claude:unknown-model" });
-    assert.equal(resolved.provider, "openai");
-    assert.equal(resolved.model, "gpt-5.5");
-    assert.equal(resolved.fallbackReason, "unknown_model");
+    expect(resolved.provider).toBe("openai");
+    expect(resolved.model).toBe("gpt-5.5");
+    expect(resolved.fallbackReason).toBe("unknown_model");
   } finally {
     console.warn = originalWarn;
   }
 
-  assert.equal(calls.length, 1);
-  assert.equal(calls[0][0], "[wardrobe-ai][llm-unknown-model]");
+  expect(calls.length).toBe(1);
+  expect(calls[0][0]).toBe("[wardrobe-ai][llm-unknown-model]");
 });

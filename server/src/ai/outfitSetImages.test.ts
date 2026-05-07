@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect } from "vitest";
 import { buildPromptFromTemplate, createOutfitSetImageService } from "./outfitSetImages.js";
 import {
   buildCapsuleSnapshot,
@@ -57,8 +56,8 @@ test("outfitSetImage service validates missing set index", async () => {
     params: { id: "capsule-1", setIndex: "bad" }
   }, res);
 
-  assert.equal(res.statusCode, 400);
-  assert.deepEqual(res.body, { error: "invalid_payload" });
+  expect(res.statusCode).toBe(400);
+  expect(res.body).toEqual({ error: "invalid_payload" });
 });
 
 test("buildPromptFromTemplate injects description into prompt template", () => {
@@ -70,8 +69,8 @@ test("buildPromptFromTemplate injects description into prompt template", () => {
     buildOutfitSetDescriptionImpl: () => "Desc"
   });
 
-  assert.match(prompt, /Desc/);
-  assert.doesNotMatch(prompt, /Source item image URLs:/);
+  expect(prompt).toMatch(/Desc/);
+  expect(prompt).not.toMatch(/Source item image URLs:/);
 });
 
 test("buildPromptFromTemplate appends description when YAML user prompt has no placeholder", () => {
@@ -82,8 +81,8 @@ test("buildPromptFromTemplate appends description when YAML user prompt has no p
     buildOutfitSetDescriptionImpl: () => "Desc <raw>"
   });
 
-  assert.equal(prompt, "Prompt without placeholder\n\nDesc <raw>");
-  assert.doesNotMatch(prompt, /&lt;/);
+  expect(prompt).toBe("Prompt without placeholder\n\nDesc <raw>");
+  expect(prompt).not.toMatch(/&lt;/);
 });
 
 test("outfitSetImage service starts job and persists generated image", async () => {
@@ -166,25 +165,22 @@ test("outfitSetImage service starts job and persists generated image", async () 
     params: { id: "capsule-1", setIndex: "0" }
   }, res);
 
-  assert.equal(res.statusCode, 202);
-  assert.deepEqual(res.body, { ok: true, status: "pending" });
+  expect(res.statusCode).toBe(202);
+  expect(res.body).toEqual({ ok: true, status: "pending" });
 
   await new Promise((resolve) => setTimeout(resolve, 0));
 
-  assert.equal(updates.length, 1);
-  assert.equal(
-    updates[0].data.wardrobe.outfitSets[0].image,
-    "https://images.example.com/outfit-set-images/generated/capsule-1/0/digest.png"
-  );
-  assert.equal(updates[0].data.wardrobe.outfitSets[0].imageObsolete, false);
-  assert.equal(published.length, 2);
-  assert.match(prompts[0], /top-down flat lay photograph/i);
-  assert.equal(imagePayloads[0].length, 3);
-  assert.deepEqual(models, ["gpt-image-2"]);
-  assert.equal(uploads.length, 1);
-  assert.equal(uploads[0].mimeType, "image/png");
-  assert.equal(uploads[0].capsuleId, "capsule-1");
-  assert.equal(uploads[0].setIndex, 0);
+  expect(updates.length).toBe(1);
+  expect(updates[0].data.wardrobe.outfitSets[0].image).toBe("https://images.example.com/outfit-set-images/generated/capsule-1/0/digest.png");
+  expect(updates[0].data.wardrobe.outfitSets[0].imageObsolete).toBe(false);
+  expect(published.length).toBe(2);
+  expect(prompts[0]).toMatch(/top-down flat lay photograph/i);
+  expect(imagePayloads[0].length).toBe(3);
+  expect(models).toEqual(["gpt-image-2"]);
+  expect(uploads.length).toBe(1);
+  expect(uploads[0].mimeType).toBe("image/png");
+  expect(uploads[0].capsuleId).toBe("capsule-1");
+  expect(uploads[0].setIndex).toBe(0);
 });
 
 test("outfitSetImage service uses gemini image provider from profile setting", async () => {
@@ -257,13 +253,13 @@ test("outfitSetImage service uses gemini image provider from profile setting", a
     params: { id: "capsule-1", setIndex: "0" }
   }, res);
 
-  assert.equal(res.statusCode, 202);
+  expect(res.statusCode).toBe(202);
   await new Promise((resolve) => setTimeout(resolve, 0));
 
-  assert.equal(openAiCalls.length, 0);
-  assert.equal(geminiCalls.length, 1);
-  assert.equal(geminiCalls[0].model, "gemini-3-pro-image-preview");
-  assert.equal(geminiCalls[0].images.length, 3);
+  expect(openAiCalls.length).toBe(0);
+  expect(geminiCalls.length).toBe(1);
+  expect(geminiCalls[0].model).toBe("gemini-3-pro-image-preview");
+  expect(geminiCalls[0].images.length).toBe(3);
 });
 
 test("outfitSetImage service treats an existing URL image as ready", async () => {
@@ -290,9 +286,9 @@ test("outfitSetImage service treats an existing URL image as ready", async () =>
     params: { id: "capsule-1", setIndex: "0" }
   }, res);
 
-  assert.equal(res.statusCode, 200);
-  assert.deepEqual(res.body, { ok: true, status: "ready" });
-  assert.equal(generateCalls, 0);
+  expect(res.statusCode).toBe(200);
+  expect(res.body).toEqual({ ok: true, status: "ready" });
+  expect(generateCalls).toBe(0);
 });
 
 test("outfitSetImage service maps missing capsule, missing set, and invalid item payloads", async () => {
@@ -304,8 +300,8 @@ test("outfitSetImage service maps missing capsule, missing set, and invalid item
     user: { email: "person@example.com" },
     params: { id: "capsule-1", setIndex: "0" }
   }, missingCapsuleRes);
-  assert.equal(missingCapsuleRes.statusCode, 404);
-  assert.deepEqual(missingCapsuleRes.body, { error: "not_found" });
+  expect(missingCapsuleRes.statusCode).toBe(404);
+  expect(missingCapsuleRes.body).toEqual({ error: "not_found" });
 
   const missingSetService = createOutfitSetImageService({
     getCapsuleImpl: async () => createCapsule()
@@ -315,8 +311,8 @@ test("outfitSetImage service maps missing capsule, missing set, and invalid item
     user: { email: "person@example.com" },
     params: { id: "capsule-1", setIndex: "3" }
   }, missingSetRes);
-  assert.equal(missingSetRes.statusCode, 404);
-  assert.deepEqual(missingSetRes.body, { error: "not_found" });
+  expect(missingSetRes.statusCode).toBe(404);
+  expect(missingSetRes.body).toEqual({ error: "not_found" });
 
   const invalidCapsule = createCapsule();
   invalidCapsule.draft.data.wardrobe.outfitSets[0].itemIds = ["top-1"];
@@ -328,8 +324,8 @@ test("outfitSetImage service maps missing capsule, missing set, and invalid item
     user: { email: "person@example.com" },
     params: { id: "capsule-1", setIndex: "0" }
   }, invalidItemsRes);
-  assert.equal(invalidItemsRes.statusCode, 400);
-  assert.deepEqual(invalidItemsRes.body, { error: "invalid_payload" });
+  expect(invalidItemsRes.statusCode).toBe(400);
+  expect(invalidItemsRes.body).toEqual({ error: "invalid_payload" });
 });
 
 test("outfitSetImage service reuses an active pending image job", async () => {
@@ -365,11 +361,11 @@ test("outfitSetImage service reuses an active pending image job", async () => {
     params: { id: "capsule-1", setIndex: "0" }
   }, secondRes);
 
-  assert.equal(firstRes.statusCode, 202);
-  assert.deepEqual(firstRes.body, { ok: true, status: "pending" });
-  assert.equal(secondRes.statusCode, 202);
-  assert.deepEqual(secondRes.body, { ok: true, status: "pending" });
-  assert.equal(generationCalls, 0);
+  expect(firstRes.statusCode).toBe(202);
+  expect(firstRes.body).toEqual({ ok: true, status: "pending" });
+  expect(secondRes.statusCode).toBe(202);
+  expect(secondRes.body).toEqual({ ok: true, status: "pending" });
+  expect(generationCalls).toBe(0);
 });
 
 test("deleteOutfitSetImage clears stored image and publishes updated snapshot", async () => {
@@ -403,12 +399,12 @@ test("deleteOutfitSetImage clears stored image and publishes updated snapshot", 
     params: { id: "capsule-1", setIndex: "0" }
   }, res);
 
-  assert.equal(res.statusCode, 200);
-  assert.deepEqual(res.body, { ok: true, status: "ready" });
-  assert.equal(updates.length, 1);
-  assert.equal(updates[0].data.wardrobe.outfitSets[0].image, null);
-  assert.equal(updates[0].data.wardrobe.outfitSets[0].imageObsolete, false);
-  assert.equal(published.length, 1);
+  expect(res.statusCode).toBe(200);
+  expect(res.body).toEqual({ ok: true, status: "ready" });
+  expect(updates.length).toBe(1);
+  expect(updates[0].data.wardrobe.outfitSets[0].image).toBe(null);
+  expect(updates[0].data.wardrobe.outfitSets[0].imageObsolete).toBe(false);
+  expect(published.length).toBe(1);
 });
 
 test("deleteOutfitSetImage writes a draft when the capsule only has saved data", async () => {
@@ -462,10 +458,10 @@ test("deleteOutfitSetImage writes a draft when the capsule only has saved data",
     params: { id: "capsule-1", setIndex: "0" }
   }, res);
 
-  assert.equal(res.statusCode, 200);
-  assert.equal(updates.length, 1);
-  assert.equal(updates[0].data.wardrobe.outfitSets[0].image, null);
-  assert.equal(updates[0].data.wardrobe.outfitSets[0].imageObsolete, false);
-  assert.equal(savedOnlyCapsule.saved.data.wardrobe.outfitSets[0].image, "saved-image");
-  assert.equal(published.length, 1);
+  expect(res.statusCode).toBe(200);
+  expect(updates.length).toBe(1);
+  expect(updates[0].data.wardrobe.outfitSets[0].image).toBe(null);
+  expect(updates[0].data.wardrobe.outfitSets[0].imageObsolete).toBe(false);
+  expect(savedOnlyCapsule.saved.data.wardrobe.outfitSets[0].image).toBe("saved-image");
+  expect(published.length).toBe(1);
 });

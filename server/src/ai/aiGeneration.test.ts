@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect, vi } from "vitest";
 import { createGenerateCapsuleWardrobe } from "./aiGeneration.js";
 
 function createWardrobeRows() {
@@ -72,11 +71,11 @@ test("generateCapsuleWardrobe builds a no-LLM result from SQL candidates", async
     llm: "none"
   });
 
-  assert.deepEqual(result.promptEmbeddings, [0.1, 0.2]);
-  assert.equal(result.rawSelectionText, null);
-  assert.equal(result.shortCapsuleName, null);
-  assert.deepEqual(result.items.map((item) => item.id).sort(), ["bag-1", "bottom-1", "top-1"]);
-  assert.deepEqual(result.selectedItems.map((item) => item.embedding), [undefined, undefined, undefined]);
+  expect(result.promptEmbeddings).toEqual([0.1, 0.2]);
+  expect(result.rawSelectionText).toBe(null);
+  expect(result.shortCapsuleName).toBe(null);
+  expect(result.items.map((item) => item.id).sort()).toEqual(["bag-1", "bottom-1", "top-1"]);
+  expect(result.selectedItems.map((item) => item.embedding)).toEqual([undefined, undefined, undefined]);
 });
 
 test("generateCapsuleWardrobe uses LLM selection, prompt images, and short capsule name", async () => {
@@ -117,24 +116,24 @@ test("generateCapsuleWardrobe uses LLM selection, prompt images, and short capsu
     style: "minimalistic"
   });
 
-  assert.equal(imageCalls.length, 1);
-  assert.equal(llmCalls.length, 1);
-  assert.equal(llmCalls[0].images.length, 1);
-  assert.equal(llmCalls[0].images[0].buffer.toString(), "stitched");
-  assert.deepEqual(result.items.map((item) => item.id).sort(), ["bag-1", "bottom-1", "top-1"]);
-  assert.equal(result.shortCapsuleName, "Weekend Capsule");
-  assert.equal(result.rawSelectionText, "Raw selected text");
+  expect(imageCalls.length).toBe(1);
+  expect(llmCalls.length).toBe(1);
+  expect(llmCalls[0].images.length).toBe(1);
+  expect(llmCalls[0].images[0].buffer.toString()).toBe("stitched");
+  expect(result.items.map((item) => item.id).sort()).toEqual(["bag-1", "bottom-1", "top-1"]);
+  expect(result.shortCapsuleName).toBe("Weekend Capsule");
+  expect(result.rawSelectionText).toBe("Raw selected text");
 });
 
-test("generateCapsuleWardrobe continues without prompt images and reports empty selections", async (t) => {
-  t.mock.method(console, "warn", () => {});
+test("generateCapsuleWardrobe continues without prompt images and reports empty selections", async () => {
+  vi.spyOn(console, "warn").mockImplementation(() => {});
 
   const generateCapsuleWardrobe = createGenerateCapsuleWardrobe(createBaseDeps({
     buildPromptDebugImagesInChildImpl: async () => {
       throw new Error("prompt_images_child_exit:1");
     },
     getGenerateJsonWithLlmImpl: () => async (_prompt, options) => {
-      assert.deepEqual(options.images, []);
+      expect(options.images).toEqual([]);
       return {
         response: {
           output_text: "not json",
@@ -147,7 +146,7 @@ test("generateCapsuleWardrobe continues without prompt images and reports empty 
   }));
 
   const result = await generateCapsuleWardrobe({ audience: "woman", season: ["spring"] });
-  assert.deepEqual(result.items.map((item) => item.id).sort(), ["bag-1", "bottom-1", "top-1"]);
+  expect(result.items.map((item) => item.id).sort()).toEqual(["bag-1", "bottom-1", "top-1"]);
 });
 
 test("generateCapsuleWardrobe rejects empty no-LLM SQL results", async () => {
@@ -156,8 +155,5 @@ test("generateCapsuleWardrobe rejects empty no-LLM SQL results", async () => {
     queryCapsuleWardrobeItemsForProfileImpl: async () => []
   }));
 
-  await assert.rejects(
-    () => generateCapsuleWardrobe({ audience: "woman", season: ["spring"], llm: "none" }),
-    /SQL returned no valid wardrobe items/
-  );
+  await expect(() => generateCapsuleWardrobe({ audience: "woman", season: ["spring"], llm: "none" })).rejects.toThrow(/SQL returned no valid wardrobe items/);
 });

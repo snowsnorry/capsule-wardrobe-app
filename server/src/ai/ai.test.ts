@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect } from "vitest";
 import {
   createWardrobeService,
   enforceCategoryCounts,
@@ -14,14 +13,14 @@ import {
 } from "./ai.js";
 
 test("ai facade exposes wardrobe service methods and compatibility exports", () => {
-  assert.equal(typeof createWardrobeService, "function");
-  assert.equal(typeof getCapsuleItems, "function");
-  assert.equal(typeof getWardrobeJob, "function");
-  assert.equal(typeof regenerateCapsuleWardrobe, "function");
-  assert.equal(typeof startWardrobeJob, "function");
-  assert.equal(typeof enforceCategoryCounts, "function");
-  assert.equal(typeof getSelectedIdsFromCapsule, "function");
-  assert.equal(typeof getStoredWardrobePayload, "function");
-  assert.equal(typeof getWardrobeSelectionPrompt, "function");
-  assert.equal(typeof toWardrobeUiItem, "function");
+  expect(typeof createWardrobeService).toBe("function");
+  expect(typeof getCapsuleItems).toBe("function");
+  expect(typeof getWardrobeJob).toBe("function");
+  expect(typeof regenerateCapsuleWardrobe).toBe("function");
+  expect(typeof startWardrobeJob).toBe("function");
+  expect(typeof enforceCategoryCounts).toBe("function");
+  expect(typeof getSelectedIdsFromCapsule).toBe("function");
+  expect(typeof getStoredWardrobePayload).toBe("function");
+  expect(typeof getWardrobeSelectionPrompt).toBe("function");
+  expect(typeof toWardrobeUiItem).toBe("function");
 });

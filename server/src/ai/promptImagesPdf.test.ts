@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect } from "vitest";
 import sharp from "sharp";
 import { preparePdfImageAsset, preparePdfImageAssets } from "./promptImagesPdf.js";
 import type { PromptImageAsset } from "./types.js";
@@ -25,18 +24,18 @@ test("preparePdfImageAssets resizes normalized images for pdf", async () => {
     height: 400
   });
 
-  assert.ok(prepared["top-1"]);
-  assert.equal(prepared["top-1"].preparedForPdf, true);
-  assert.equal(prepared["top-1"].kind, "jpg");
+  expect(prepared["top-1"]).toBeTruthy();
+  expect(prepared["top-1"].preparedForPdf).toBe(true);
+  expect(prepared["top-1"].kind).toBe("jpg");
   const metadata = await sharp(prepared["top-1"].buffer).metadata();
-  assert.equal(metadata.format, "jpeg");
-  assert.ok((metadata.width || 0) <= 600);
-  assert.ok((metadata.height || 0) <= 400);
+  expect(metadata.format).toBe("jpeg");
+  expect((metadata.width || 0) <= 600).toBeTruthy();
+  expect((metadata.height || 0) <= 400).toBeTruthy();
 });
 
 test("preparePdfImageAsset skips missing buffers and clamps target dimensions", async () => {
-  assert.equal(await preparePdfImageAsset(null), null);
-  assert.equal(await preparePdfImageAsset({ imageUrl: "missing", mimeType: "image/png" } as PromptImageAsset), null);
+  expect(await preparePdfImageAsset(null)).toBe(null);
+  expect(await preparePdfImageAsset({ imageUrl: "missing", mimeType: "image/png" } as PromptImageAsset)).toBe(null);
 
   const source = await sharp({
     create: {
@@ -51,9 +50,9 @@ test("preparePdfImageAsset skips missing buffers and clamps target dimensions", 
     height: Number.NaN
   });
 
-  assert.equal(prepared?.mimeType, "image/jpeg");
-  assert.equal(prepared?.width, 1);
-  assert.equal(prepared?.height, 1);
+  expect(prepared?.mimeType).toBe("image/jpeg");
+  expect(prepared?.width).toBe(1);
+  expect(prepared?.height).toBe(1);
 });
 
 test("preparePdfImageAssets filters assets without buffers", async () => {
@@ -61,5 +60,5 @@ test("preparePdfImageAssets filters assets without buffers", async () => {
     empty: { imageUrl: "empty", mimeType: "image/jpeg" } as PromptImageAsset
   });
 
-  assert.deepEqual(prepared, {});
+  expect(prepared).toEqual({});
 });

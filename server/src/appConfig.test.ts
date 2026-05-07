@@ -1,8 +1,8 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect, vi } from "vitest";
 
-async function importAppConfig(suffix: string) {
-  return import(`./appConfig.ts?${suffix}`);
+async function importAppConfig() {
+  vi.resetModules();
+  return import("./appConfig.js");
 }
 
 test("appConfig reads environment overrides and auth test mode variants", async () => {
@@ -27,20 +27,20 @@ test("appConfig reads environment overrides and auth test mode variants", async 
     process.env.PASSKEY_RP_ID = "example.test";
     process.env.PASSKEY_ORIGIN = "https://example.test";
 
-    const overridden = await importAppConfig("overridden");
-    assert.equal(overridden.PORT, "4444");
-    assert.equal(overridden.CLIENT_ORIGIN, "https://client.example.test");
-    assert.equal(overridden.NODE_ENV, "test");
-    assert.equal(overridden.AUTH_TEST_MODE, true);
-    assert.equal(overridden.GOOGLE_CLIENT_ID, "google-client");
-    assert.equal(overridden.PASSKEY_RP_NAME, "Wardrobe");
-    assert.equal(overridden.PASSKEY_RP_ID, "example.test");
-    assert.equal(overridden.PASSKEY_ORIGIN, "https://example.test");
+    const overridden = await importAppConfig();
+    expect(overridden.PORT).toBe("4444");
+    expect(overridden.CLIENT_ORIGIN).toBe("https://client.example.test");
+    expect(overridden.NODE_ENV).toBe("test");
+    expect(overridden.AUTH_TEST_MODE).toBe(true);
+    expect(overridden.GOOGLE_CLIENT_ID).toBe("google-client");
+    expect(overridden.PASSKEY_RP_NAME).toBe("Wardrobe");
+    expect(overridden.PASSKEY_RP_ID).toBe("example.test");
+    expect(overridden.PASSKEY_ORIGIN).toBe("https://example.test");
 
     process.env.NODE_ENV = "production";
     process.env.AUTH_TEST_MODE = "true";
-    const production = await importAppConfig("production");
-    assert.equal(production.AUTH_TEST_MODE, false);
+    const production = await importAppConfig();
+    expect(production.AUTH_TEST_MODE).toBe(false);
   } finally {
     for (const [key, value] of Object.entries(original)) {
       if (value === undefined) {

@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect } from "vitest";
 import {
   buildDisplayWardrobeItems,
   mergeWardrobeItemsIntoExistingOrder,
@@ -8,9 +7,9 @@ import {
 } from "./wardrobeMerge.js";
 
 test("normalizeWardrobeItemUrl trims item URLs and handles missing items", () => {
-  assert.equal(normalizeWardrobeItemUrl({ url: " https://example.com/a " }), "https://example.com/a");
-  assert.equal(normalizeWardrobeItemUrl(null), "");
-  assert.equal(normalizeWardrobeItemUrl(undefined), "");
+  expect(normalizeWardrobeItemUrl({ url: " https://example.com/a " })).toBe("https://example.com/a");
+  expect(normalizeWardrobeItemUrl(null)).toBe("");
+  expect(normalizeWardrobeItemUrl(undefined)).toBe("");
 });
 
 test("buildDisplayWardrobeItems sorts array inputs and ignores non-array inputs", () => {
@@ -19,8 +18,8 @@ test("buildDisplayWardrobeItems sorts array inputs and ignores non-array inputs"
     { id: "top", category: "top", name: "Shirt" }
   ];
 
-  assert.deepEqual(buildDisplayWardrobeItems(items).map((item) => item.id), ["top", "bottom"]);
-  assert.deepEqual(buildDisplayWardrobeItems("not an array"), []);
+  expect(buildDisplayWardrobeItems(items).map((item) => item.id)).toEqual(["top", "bottom"]);
+  expect(buildDisplayWardrobeItems("not an array")).toEqual([]);
 });
 
 test("mergeWardrobeItemsWithMetadata returns ordered next items when no pending URLs exist", () => {
@@ -33,8 +32,8 @@ test("mergeWardrobeItemsWithMetadata returns ordered next items when no pending 
     pendingUrls: [" "]
   });
 
-  assert.deepEqual(result.items.map((item) => item.id), ["top", "bottom"]);
-  assert.equal(result.replacementMap.size, 0);
+  expect(result.items.map((item) => item.id)).toEqual(["top", "bottom"]);
+  expect(result.replacementMap.size).toBe(0);
 });
 
 test("mergeWardrobeItemsWithMetadata preserves existing order and maps replacements", () => {
@@ -53,8 +52,8 @@ test("mergeWardrobeItemsWithMetadata preserves existing order and maps replaceme
     pendingUrls: [" top-url ", "shoes-url"]
   });
 
-  assert.deepEqual(result.items.map((item) => item.id), ["keep-new", "new-top", "new-shoes", "extra-bag"]);
-  assert.deepEqual([...result.replacementMap.entries()], [
+  expect(result.items.map((item) => item.id)).toEqual(["keep-new", "new-top", "new-shoes", "extra-bag"]);
+  expect([...result.replacementMap.entries()]).toEqual([
     ["replace-top", "new-top"],
     ["replace-shoes", "new-shoes"]
   ]);
@@ -72,18 +71,15 @@ test("mergeWardrobeItemsWithMetadata falls back to available replacements and cu
     pendingUrls: ["old-top-url", "old-bag-url"]
   });
 
-  assert.deepEqual(result.items.map((item) => item.id), ["new-bottom", "old-bag"]);
-  assert.deepEqual([...result.replacementMap.entries()], [
+  expect(result.items.map((item) => item.id)).toEqual(["new-bottom", "old-bag"]);
+  expect([...result.replacementMap.entries()]).toEqual([
     ["old-top", "new-bottom"],
     ["old-bag", "old-bag"]
   ]);
 });
 
 test("mergeWardrobeItemsIntoExistingOrder returns only merged items", () => {
-  assert.deepEqual(
-    mergeWardrobeItemsIntoExistingOrder({
+  expect(mergeWardrobeItemsIntoExistingOrder({
       nextItems: [{ id: "top", url: "top-url", category: "top", name: "Top" }]
-    }).map((item) => item.id),
-    ["top"]
-  );
+    }).map((item) => item.id)).toEqual(["top"]);
 });

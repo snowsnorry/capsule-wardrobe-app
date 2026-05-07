@@ -1,5 +1,4 @@
-import test, { afterEach } from "node:test";
-import assert from "node:assert/strict";
+import { test, expect, afterEach } from "vitest";
 import { setSqlClientOverride, type SqlClientLike, type SqlResultLike } from "./core.js";
 import {
   getDistinctProductBrands,
@@ -50,17 +49,17 @@ test("product option lookups normalize rows and filter blank values", async () =
     [{ value: "black" }]
   ]);
 
-  assert.equal(await hasProfileByEmail("person@example.com"), true);
-  assert.deepEqual(await getDistinctProductFormalityLevels(), ["casual"]);
-  assert.deepEqual(await getDistinctProductOccasions(), ["office"]);
-  assert.deepEqual(await getDistinctProductSeasons(), ["spring"]);
-  assert.deepEqual(await getDistinctProductPatterns(), ["solid"]);
-  assert.deepEqual(await getDistinctProductBrands(), [{ value: "acme", label: "ACME" }]);
-  assert.deepEqual(await getDistinctProductCategories(), ["top"]);
-  assert.deepEqual(await getDistinctProductSilhouettes(), ["straight"]);
-  assert.deepEqual(await getDistinctProductFits(), ["relaxed"]);
-  assert.deepEqual(await getDistinctProductClosureTypes(), ["zip"]);
-  assert.deepEqual(await getDistinctProductColors(), ["black"]);
+  expect(await hasProfileByEmail("person@example.com")).toBe(true);
+  expect(await getDistinctProductFormalityLevels()).toEqual(["casual"]);
+  expect(await getDistinctProductOccasions()).toEqual(["office"]);
+  expect(await getDistinctProductSeasons()).toEqual(["spring"]);
+  expect(await getDistinctProductPatterns()).toEqual(["solid"]);
+  expect(await getDistinctProductBrands()).toEqual([{ value: "acme", label: "ACME" }]);
+  expect(await getDistinctProductCategories()).toEqual(["top"]);
+  expect(await getDistinctProductSilhouettes()).toEqual(["straight"]);
+  expect(await getDistinctProductFits()).toEqual(["relaxed"]);
+  expect(await getDistinctProductClosureTypes()).toEqual(["zip"]);
+  expect(await getDistinctProductColors()).toEqual(["black"]);
 });
 
 test("getProductPriceRange converts database numeric values and keeps missing bounds null", async () => {
@@ -69,8 +68,8 @@ test("getProductPriceRange converts database numeric values and keeps missing bo
     [{ min: null, max: undefined }]
   ]);
 
-  assert.deepEqual(await getProductPriceRange(), { min: 12.5, max: 99 });
-  assert.deepEqual(await getProductPriceRange(), { min: null, max: null });
+  expect(await getProductPriceRange()).toEqual({ min: 12.5, max: 99 });
+  expect(await getProductPriceRange()).toEqual({ min: null, max: null });
 });
 
 test("product url lookups short-circuit empty input and preserve normalized url order", async () => {
@@ -101,12 +100,12 @@ test("product url lookups short-circuit empty input and preserve normalized url 
   };
   const { values } = useQueuedSql([[product], [{ ...product, embedding: [0.1, 0.2] }]]);
 
-  assert.deepEqual(await getProductsByUrlsInOrder([]), []);
-  assert.deepEqual(await getProductsByUrlsInOrder([" ", null]), []);
-  assert.deepEqual(await getProductsByUrlsInOrder([" https://example.com/shirt ", ""]), [product]);
-  assert.deepEqual(await getProductsWithEmbeddingsByUrlsInOrder(["https://example.com/shirt"]), [
+  expect(await getProductsByUrlsInOrder([])).toEqual([]);
+  expect(await getProductsByUrlsInOrder([" ", null])).toEqual([]);
+  expect(await getProductsByUrlsInOrder([" https://example.com/shirt ", ""])).toEqual([product]);
+  expect(await getProductsWithEmbeddingsByUrlsInOrder(["https://example.com/shirt"])).toEqual([
     { ...product, embedding: [0.1, 0.2] }
   ]);
-  assert.deepEqual(values[0], [["https://example.com/shirt"]]);
-  assert.deepEqual(values[1], [["https://example.com/shirt"]]);
+  expect(values[0]).toEqual([["https://example.com/shirt"]]);
+  expect(values[1]).toEqual([["https://example.com/shirt"]]);
 });

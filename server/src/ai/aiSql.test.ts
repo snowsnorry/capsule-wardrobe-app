@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect } from "vitest";
 import {
   buildCapsuleWardrobeSqlParams,
   queryCapsuleWardrobeItems,
@@ -50,17 +49,17 @@ test("buildCapsuleWardrobeSqlParams preserves defaults and profile filters", () 
     { top: 2, bottom: 1 }
   );
 
-  assert.deepEqual(params.categories, ["top", "bottom"]);
-  assert.equal(params.formalityLevel, "casual");
-  assert.equal(params.style, "classic");
-  assert.deepEqual(params.occasions, []);
-  assert.deepEqual(params.season, []);
-  assert.deepEqual(params.audienceFilters, ["man", "woman", "all"]);
-  assert.equal(params.color, "blue");
-  assert.equal(params.pattern, "plaid");
-  assert.deepEqual(params.rejectedUrls, ["https://example.com/one"]);
-  assert.equal(params.embeddingVector, "[0.12,-0.34]");
-  assert.equal(params.noiseFactor, 0);
+  expect(params.categories).toEqual(["top", "bottom"]);
+  expect(params.formalityLevel).toBe("casual");
+  expect(params.style).toBe("classic");
+  expect(params.occasions).toEqual([]);
+  expect(params.season).toEqual([]);
+  expect(params.audienceFilters).toEqual(["man", "woman", "all"]);
+  expect(params.color).toBe("blue");
+  expect(params.pattern).toBe("plaid");
+  expect(params.rejectedUrls).toEqual(["https://example.com/one"]);
+  expect(params.embeddingVector).toBe("[0.12,-0.34]");
+  expect(params.noiseFactor).toBe(0);
 });
 
 test("buildCapsuleWardrobeSqlParams falls back to solid pattern and random noise without additional text", () => {
@@ -74,11 +73,11 @@ test("buildCapsuleWardrobeSqlParams falls back to solid pattern and random noise
     { shoe: 1 }
   );
 
-  assert.deepEqual(params.categories, ["shoe"]);
-  assert.deepEqual(params.audienceFilters, ["woman", "all"]);
-  assert.equal(params.pattern, "solid");
-  assert.equal(params.embeddingVector, "[]");
-  assert.equal(params.noiseFactor, 0.05);
+  expect(params.categories).toEqual(["shoe"]);
+  expect(params.audienceFilters).toEqual(["woman", "all"]);
+  expect(params.pattern).toBe("solid");
+  expect(params.embeddingVector).toBe("[]");
+  expect(params.noiseFactor).toBe(0.05);
 });
 
 test("queryCapsuleWardrobeItemsForProfile dispatches regular and multiple accent SQL branches", async () => {
@@ -100,8 +99,8 @@ test("queryCapsuleWardrobeItemsForProfile dispatches regular and multiple accent
     buildBaseSqlParams({ color: "multiple_accent_colors" })
   );
 
-  assert.deepEqual(regular.calls, directRegular.calls);
-  assert.deepEqual(multiple.calls, directMultiple.calls);
+  expect(regular.calls).toEqual(directRegular.calls);
+  expect(multiple.calls).toEqual(directMultiple.calls);
 });
 
 test("multiple accent SQL query uses neutral/non-neutral color logic", async () => {
@@ -112,17 +111,17 @@ test("multiple accent SQL query uses neutral/non-neutral color logic", async () 
   await queryCapsuleWardrobeItems(regular.sql, params);
   await queryCapsuleWardrobeItemsForMultipleAccentColors(multiple.sql, params);
 
-  assert.equal(regular.calls.length, 1);
-  assert.equal(multiple.calls.length, 1);
-  assert.notDeepEqual(multiple.calls, regular.calls);
+  expect(regular.calls.length).toBe(1);
+  expect(multiple.calls.length).toBe(1);
+  expect(multiple.calls).not.toEqual(regular.calls);
 
   const multipleSqlText = multiple.calls[0].strings.join("?");
-  assert.match(multipleSqlText, /neutrality_rank/);
-  assert.match(multipleSqlText, /is_non_neutral_color/);
-  assert.match(multipleSqlText, /cardinality\(COALESCE\(color_base, ARRAY\[\]::text\[\]\)\) > 0/);
-  assert.match(multipleSqlText, /neutrality_rank <= 4/);
-  assert.doesNotMatch(multipleSqlText, /is_color_match/);
-  assert.doesNotMatch(multipleSqlText, /accent_rank/);
+  expect(multipleSqlText).toMatch(/neutrality_rank/);
+  expect(multipleSqlText).toMatch(/is_non_neutral_color/);
+  expect(multipleSqlText).toMatch(/cardinality\(COALESCE\(color_base, ARRAY\[\]::text\[\]\)\) > 0/);
+  expect(multipleSqlText).toMatch(/neutrality_rank <= 4/);
+  expect(multipleSqlText).not.toMatch(/is_color_match/);
+  expect(multipleSqlText).not.toMatch(/accent_rank/);
 
-  assert.ok(!multiple.calls[0].values.includes("multiple_accent_colors"));
+  expect(!multiple.calls[0].values.includes("multiple_accent_colors")).toBeTruthy();
 });

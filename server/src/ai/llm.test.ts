@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect } from "vitest";
 import {
   CLAUDE_ALLOWED_MODELS,
   GEMINI_PROFILE_LLM,
@@ -11,9 +10,9 @@ import { generateJsonWithLlm as generateJsonWithGemini } from "./gemini.js";
 import { generateJsonWithLlm as generateJsonWithOpenAi } from "./openai.js";
 
 test("getGenerateJsonWithLlm returns provider-specific generator", () => {
-  assert.equal(getGenerateJsonWithLlm({ llm: "openai:gpt-5.5" }), generateJsonWithOpenAi);
-  assert.equal(getGenerateJsonWithLlm({ llm: `claude:${CLAUDE_ALLOWED_MODELS[0]}` }), generateJsonWithClaude);
-  assert.equal(getGenerateJsonWithLlm({ llm: GEMINI_PROFILE_LLM }), generateJsonWithGemini);
-  assert.equal(getGenerateJsonWithLlm({ llm: "deepinfra:Qwen/Qwen3-VL-235B-A22B-Instruct" }), generateJsonWithDeepInfra);
-  assert.equal(getGenerateJsonWithLlm({ llm: "none" }), null);
+  expect(getGenerateJsonWithLlm({ llm: "openai:gpt-5.5" })).toBe(generateJsonWithOpenAi);
+  expect(getGenerateJsonWithLlm({ llm: `claude:${CLAUDE_ALLOWED_MODELS[0]}` })).toBe(generateJsonWithClaude);
+  expect(getGenerateJsonWithLlm({ llm: GEMINI_PROFILE_LLM })).toBe(generateJsonWithGemini);
+  expect(getGenerateJsonWithLlm({ llm: "deepinfra:Qwen/Qwen3-VL-235B-A22B-Instruct" })).toBe(generateJsonWithDeepInfra);
+  expect(getGenerateJsonWithLlm({ llm: "none" })).toBe(null);
 });

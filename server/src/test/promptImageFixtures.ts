@@ -1,15 +1,16 @@
-import test from "node:test";
-import assert from "node:assert/strict";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import sharp from "sharp";
+import type { TestContext } from "vitest";
 import { buildLocalImageCachePath } from "../ai/promptImagesShared.js";
 
 function assertCategoryHasBufferProperty(
   category: unknown
 ): asserts category is { buffer: Buffer | Uint8Array | null | undefined } {
-  assert.ok(Boolean(category) && typeof category === "object");
+  if (!category || typeof category !== "object") {
+    throw new Error("Expected category object");
+  }
 }
 
 async function createFixtureBuffer(color: string) {
@@ -25,19 +26,19 @@ async function createFixtureBuffer(color: string) {
     .toBuffer();
 }
 
-async function withTempDir(testContext: test.TestContext, prefix = "prompt-images-") {
+async function withTempDir(testContext: TestContext, prefix = "prompt-images-") {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), prefix));
-  testContext.after(async () => {
+  testContext.onTestFinished(async () => {
     await rm(tempDir, { recursive: true, force: true });
   });
   return tempDir;
 }
 
-async function withCachedImage(testContext: test.TestContext, imageUrl: string, buffer: Buffer | Uint8Array) {
+async function withCachedImage(testContext: TestContext, imageUrl: string, buffer: Buffer | Uint8Array) {
   const cachePath = buildLocalImageCachePath(imageUrl);
   await mkdir(path.dirname(cachePath), { recursive: true });
   await writeFile(cachePath, buffer);
-  testContext.after(async () => {
+  testContext.onTestFinished(async () => {
     await rm(cachePath, { force: true });
   });
   return cachePath;

@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect } from "vitest";
 import { writeFile } from "node:fs/promises";
 import {
   buildWardrobePdfInChild
@@ -48,7 +47,7 @@ test("buildWardrobePdfInChild uses the runtime-matching child entry and execArgv
   );
 
   const childEntryUrl = resolveWardrobePdfChildEntryUrl();
-  assert.equal(forkPath, childEntryUrl.pathname);
-  assert.deepEqual(forkOptions?.execArgv, resolveWardrobePdfChildExecArgv(childEntryUrl));
-  assert.equal(String(pdfBuffer), "pdf");
+  expect(forkPath).toBe(childEntryUrl.pathname);
+  expect(forkOptions?.execArgv).toEqual(resolveWardrobePdfChildExecArgv(childEntryUrl));
+  expect(String(pdfBuffer)).toBe("pdf");
 });

@@ -1,26 +1,21 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect } from "vitest";
 import {
   buildCapsuleEventSnapshot,
   getStoredWardrobePayload
 } from "./capsuleEvents.js";
 
 test("getStoredWardrobePayload normalizes legacy arrays and object payloads", () => {
-  assert.deepEqual(
-    getStoredWardrobePayload({
+  expect(getStoredWardrobePayload({
       items: [{ id: "1" }]
-    }),
-    {
+    })).toEqual({
       items: [{ id: "1" }],
       outfitSets: [],
       rawSelectionText: null,
       swimwearReasoning: null,
       swimwearRawSelectionText: null
-    }
-  );
+    });
 
-  assert.deepEqual(
-    getStoredWardrobePayload({
+  expect(getStoredWardrobePayload({
       items: {
         items: [{ id: "2" }],
         outfitSets: [{ itemIds: ["2"] }],
@@ -28,15 +23,13 @@ test("getStoredWardrobePayload normalizes legacy arrays and object payloads", ()
         swimwearReasoning: "swim",
         swimwearRawSelectionText: "swim-raw"
       }
-    }),
-    {
+    })).toEqual({
       items: [{ id: "2" }],
       outfitSets: [{ itemIds: ["2"] }],
       rawSelectionText: "raw",
       swimwearReasoning: "swim",
       swimwearRawSelectionText: "swim-raw"
-    }
-  );
+    });
 });
 
 test("buildCapsuleEventSnapshot includes pending outfit set image indexes", () => {
@@ -63,8 +56,8 @@ test("buildCapsuleEventSnapshot includes pending outfit set image indexes", () =
     }
   });
 
-  assert.deepEqual(snapshot.pendingImageSetIndexes, [0, 1]);
-  assert.deepEqual(snapshot.outfitSets, [{
+  expect(snapshot.pendingImageSetIndexes).toEqual([0, 1]);
+  expect(snapshot.outfitSets).toEqual([{
     itemIds: ["top-1", "bottom-1", "bag-1"],
     image: "base64",
     imageObsolete: false
@@ -102,9 +95,9 @@ test("buildCapsuleEventSnapshot marks stored item urls as pending during full re
     }
   });
 
-  assert.equal(snapshot.status, "pending");
-  assert.equal(snapshot.pendingStage, "capsule");
-  assert.deepEqual(snapshot.pendingRegenerationUrls, [
+  expect(snapshot.status).toBe("pending");
+  expect(snapshot.pendingStage).toBe("capsule");
+  expect(snapshot.pendingRegenerationUrls).toEqual([
     "https://example.com/top-1",
     "https://example.com/bottom-1"
   ]);

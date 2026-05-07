@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect } from "vitest";
 import {
   cleanupUploadedGeminiFiles,
   uploadBufferToGemini
@@ -27,8 +26,8 @@ test("uploadBufferToGemini writes temp file, uploads it, and deletes local temp 
     randomUUIDImpl: () => "123e4567-e89b-12d3-a456-426614174000"
   });
 
-  assert.deepEqual(uploaded, { name: "files/123", uri: "gs://gemini/files/123", mimeType: "image/png" });
-  assert.deepEqual(calls, [
+  expect(uploaded).toEqual({ name: "files/123", uri: "gs://gemini/files/123", mimeType: "image/png" });
+  expect(calls).toEqual([
     ["write", "/tmp/gemini-tests/123e4567-e89b-12d3-a456-426614174000.png", "image-one"],
     ["upload", {
       file: "/tmp/gemini-tests/123e4567-e89b-12d3-a456-426614174000.png",
@@ -57,5 +56,5 @@ test("cleanupUploadedGeminiFiles deletes uploaded files and ignores nameless ent
     { name: "files/456" }
   ]);
 
-  assert.deepEqual(deleted, ["files/123", "files/456"]);
+  expect(deleted).toEqual(["files/123", "files/456"]);
 });

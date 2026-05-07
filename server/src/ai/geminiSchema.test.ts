@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect } from "vitest";
 import {
   buildGeminiStructuredOutput,
   buildZodSchemaFromJsonSchema
@@ -12,7 +11,7 @@ function assertGeminiObjectSchema(
   additionalProperties?: boolean;
   properties?: Record<string, { type?: string }>;
 } {
-  assert.ok(Boolean(schema) && typeof schema === "object" && !Array.isArray(schema));
+  expect(Boolean(schema) && typeof schema === "object" && !Array.isArray(schema)).toBeTruthy();
 }
 
 test("buildZodSchemaFromJsonSchema supports strict objects, arrays, enums, and integers", () => {
@@ -40,21 +39,21 @@ test("buildZodSchemaFromJsonSchema supports strict objects, arrays, enums, and i
     required: ["mood", "count", "tags"]
   });
 
-  assert.deepEqual(schema.parse({
+  expect(schema.parse({
     mood: "good",
     count: 1,
     tags: ["a"]
-  }), {
+  })).toEqual({
     mood: "good",
     count: 1,
     tags: ["a"]
   });
 
-  assert.throws(() => schema.parse({
+  expect(() => schema.parse({
     mood: "other",
     count: 1,
     tags: ["a"]
-  }));
+  })).toThrow();
 });
 
 test("buildGeminiStructuredOutput converts app format to Gemini responseJsonSchema", () => {
@@ -74,9 +73,9 @@ test("buildGeminiStructuredOutput converts app format to Gemini responseJsonSche
     }
   });
 
-  assert.equal(typeof result.zodSchema.parse, "function");
+  expect(typeof result.zodSchema.parse).toBe("function");
   assertGeminiObjectSchema(result.responseJsonSchema);
-  assert.equal(result.responseJsonSchema.type, "object");
-  assert.equal(result.responseJsonSchema.additionalProperties, false);
-  assert.equal(result.responseJsonSchema.properties?.ok.type, "boolean");
+  expect(result.responseJsonSchema.type).toBe("object");
+  expect(result.responseJsonSchema.additionalProperties).toBe(false);
+  expect(result.responseJsonSchema.properties?.ok.type).toBe("boolean");
 });

@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect } from "vitest";
 import { createWardrobePdfChildRuntime } from "./wardrobePdf.child.ts";
 
 function createSendSpy() {
@@ -49,24 +48,24 @@ test("wardrobePdf child writes built PDF and exits 0 on success", async () => {
     totalStartedAt: 123
   });
 
-  assert.deepEqual(mkdirCalls, [{
+  expect(mkdirCalls).toEqual([{
     dirPath: "/tmp/capsule/out",
     options: { recursive: true }
   }]);
-  assert.deepEqual(buildCalls, [{
+  expect(buildCalls).toEqual([{
     products: [{ id: "p1" }],
     options: { locale: "ru", totalStartedAt: 123 }
   }]);
-  assert.deepEqual(writeCalls, [{
+  expect(writeCalls).toEqual([{
     filePath: "/tmp/capsule/out/wardrobe.pdf",
     buffer: pdfBuffer
   }]);
-  assert.deepEqual(sendSpy.calls, [{
+  expect(sendSpy.calls).toEqual([{
     ok: true,
     outputFilePath: "/tmp/capsule/out/wardrobe.pdf"
   }]);
-  assert.deepEqual(disconnects, [true]);
-  assert.deepEqual(exits, [0]);
+  expect(disconnects).toEqual([true]);
+  expect(exits).toEqual([0]);
 });
 
 test("wardrobePdf child defaults locale and totalStartedAt for invalid input", async () => {
@@ -92,7 +91,7 @@ test("wardrobePdf child defaults locale and totalStartedAt for invalid input", a
     totalStartedAt: "bad-start"
   });
 
-  assert.deepEqual(buildCalls, [{
+  expect(buildCalls).toEqual([{
     products: [],
     options: { locale: "en", totalStartedAt: null }
   }]);
@@ -112,11 +111,11 @@ test("wardrobePdf child sends error payload when outputFilePath is missing", asy
 
   await runtime.handleMessage({});
 
-  assert.equal(sendSpy.calls.length, 1);
-  assert.equal(sendSpy.calls[0].ok, false);
-  assert.equal(sendSpy.calls[0].message, "wardrobe_pdf_child_output_path_missing");
-  assert.match(sendSpy.calls[0].stack, /wardrobe_pdf_child_output_path_missing/);
-  assert.deepEqual(exits, [1]);
+  expect(sendSpy.calls.length).toBe(1);
+  expect(sendSpy.calls[0].ok).toBe(false);
+  expect(sendSpy.calls[0].message).toBe("wardrobe_pdf_child_output_path_missing");
+  expect(sendSpy.calls[0].stack).toMatch(/wardrobe_pdf_child_output_path_missing/);
+  expect(exits).toEqual([1]);
 });
 
 test("wardrobePdf child sends build errors and exits 1", async () => {
@@ -138,11 +137,11 @@ test("wardrobePdf child sends build errors and exits 1", async () => {
 
   await runtime.handleMessage({ outputFilePath: "/tmp/capsule/out.pdf" });
 
-  assert.equal(sendSpy.calls.length, 1);
-  assert.equal(sendSpy.calls[0].ok, false);
-  assert.equal(sendSpy.calls[0].message, "pdf_build_failed");
-  assert.match(sendSpy.calls[0].stack, /pdf_build_failed/);
-  assert.deepEqual(exits, [1]);
+  expect(sendSpy.calls.length).toBe(1);
+  expect(sendSpy.calls[0].ok).toBe(false);
+  expect(sendSpy.calls[0].message).toBe("pdf_build_failed");
+  expect(sendSpy.calls[0].stack).toMatch(/pdf_build_failed/);
+  expect(exits).toEqual([1]);
 });
 
 test("wardrobePdf child ignores duplicate messages", async () => {
@@ -164,8 +163,8 @@ test("wardrobePdf child ignores duplicate messages", async () => {
   await runtime.handleMessage({ outputFilePath: "/tmp/capsule/one.pdf", products: [{ id: 1 }] });
   await runtime.handleMessage({ outputFilePath: "/tmp/capsule/two.pdf", products: [{ id: 2 }] });
 
-  assert.deepEqual(buildCalls, [[{ id: 1 }]]);
-  assert.deepEqual(sendSpy.calls, [{ ok: true, outputFilePath: "/tmp/capsule/one.pdf" }]);
+  expect(buildCalls).toEqual([[{ id: 1 }]]);
+  expect(sendSpy.calls).toEqual([{ ok: true, outputFilePath: "/tmp/capsule/one.pdf" }]);
 });
 
 test("wardrobePdf child exits even when process.send is unavailable", async () => {
@@ -185,5 +184,5 @@ test("wardrobePdf child exits even when process.send is unavailable", async () =
 
   await runtime.handleMessage({ outputFilePath: "/tmp/capsule/no-ipc.pdf" });
 
-  assert.deepEqual(exits, [0]);
+  expect(exits).toEqual([0]);
 });

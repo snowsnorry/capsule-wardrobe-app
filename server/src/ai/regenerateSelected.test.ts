@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect } from "vitest";
 import {
   buildRegenerateSelectedPrompt,
   buildRegenerateSelectedSystemPrompt,
@@ -10,11 +9,11 @@ import {
 } from "./regenerateSelected.js";
 
 test("regenerateSelected barrel exposes prompt and service entrypoints", () => {
-  assert.equal(typeof buildRegenerateSelectedPrompt, "function");
-  assert.equal(typeof buildRegenerateSelectedSystemPrompt, "function");
-  assert.equal(typeof createPartialRegenerationService, "function");
-  assert.equal(typeof getPartialRegenerationJob, "function");
-  assert.equal(typeof regenerateSelectedWardrobeItems, "function");
-  assert.equal(typeof startPartialRegenerationJob, "function");
-  assert.equal(getPartialRegenerationJob("missing@example.com", "capsule-1"), null);
+  expect(typeof buildRegenerateSelectedPrompt).toBe("function");
+  expect(typeof buildRegenerateSelectedSystemPrompt).toBe("function");
+  expect(typeof createPartialRegenerationService).toBe("function");
+  expect(typeof getPartialRegenerationJob).toBe("function");
+  expect(typeof regenerateSelectedWardrobeItems).toBe("function");
+  expect(typeof startPartialRegenerationJob).toBe("function");
+  expect(getPartialRegenerationJob("missing@example.com", "capsule-1")).toBe(null);
 });

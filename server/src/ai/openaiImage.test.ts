@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect } from "vitest";
 import {
   buildOpenAiImageFiles,
   createOpenAiImageClient,
@@ -7,18 +6,15 @@ import {
 } from "./openaiImage.js";
 
 test("extractGeneratedImage reads base64 image output", () => {
-  assert.deepEqual(
-    extractGeneratedImage({
+  expect(extractGeneratedImage({
       output_format: "webp",
       data: [{
         b64_json: "image-base64"
       }]
-    }),
-    {
+    })).toEqual({
       base64: "image-base64",
       mimeType: "image/webp"
-    }
-  );
+    });
 });
 
 test("buildOpenAiImageFiles converts only valid buffers", async () => {
@@ -35,9 +31,9 @@ test("buildOpenAiImageFiles converts only valid buffers", async () => {
     }
   ]);
 
-  assert.equal(files.length, 1);
-  assert.equal(files[0].name, "photo.png");
-  assert.equal(files[0].type, "image/png");
+  expect(files.length).toBe(1);
+  expect(files[0].name).toBe("photo.png");
+  expect(files[0].type).toBe("image/png");
 });
 
 test("openai image client uses generate when no reference images are provided", async () => {
@@ -47,7 +43,7 @@ test("openai image client uses generate when no reference images are provided", 
     cache: false,
     getApiKeyImpl: () => "openai-key",
     createClientImpl: ({ apiKey }) => {
-      assert.equal(apiKey, "openai-key");
+      expect(apiKey).toBe("openai-key");
       return {
         images: {
           generate: async (payload) => {
@@ -70,13 +66,13 @@ test("openai image client uses generate when no reference images are provided", 
     model: "gpt-image-2"
   });
 
-  assert.deepEqual(generatePayload, {
+  expect(generatePayload).toEqual({
     model: "gpt-image-2",
     prompt: "draw outfit",
     n: 1
   });
-  assert.equal(editPayload, null);
-  assert.deepEqual(result.image, {
+  expect(editPayload).toBe(null);
+  expect(result.image).toEqual({
     base64: "generated-base64",
     mimeType: "image/png"
   });
@@ -114,14 +110,14 @@ test("openai image client uses edit when reference images are provided", async (
     }]
   });
 
-  assert.equal(generatePayload, null);
-  assert.ok(editPayload);
-  assert.equal(editPayload.model, "gpt-image-2");
-  assert.equal(editPayload.prompt, "edit outfit");
-  assert.equal(editPayload.n, 1);
-  assert.equal(editPayload.image.length, 1);
-  assert.equal(editPayload.image[0].name, "top.jpg");
-  assert.deepEqual(result.image, {
+  expect(generatePayload).toBe(null);
+  expect(editPayload).toBeTruthy();
+  expect(editPayload.model).toBe("gpt-image-2");
+  expect(editPayload.prompt).toBe("edit outfit");
+  expect(editPayload.n).toBe(1);
+  expect(editPayload.image.length).toBe(1);
+  expect(editPayload.image[0].name).toBe("top.jpg");
+  expect(result.image).toEqual({
     base64: "edited-base64",
     mimeType: "image/jpeg"
   });

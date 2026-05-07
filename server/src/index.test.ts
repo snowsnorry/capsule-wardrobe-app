@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect } from "vitest";
 import {
   AUTH_COOKIE,
   requestJson,
@@ -12,14 +11,14 @@ test("index app wires representative registered routes", async (t) => {
   const { baseUrl } = await startTestServer(t);
 
   const health = await requestJson(baseUrl, "/health");
-  assert.equal(health.response.status, 200);
-  assert.deepEqual(health.json, { ok: true });
+  expect(health.response.status).toBe(200);
+  expect(health.json).toEqual({ ok: true });
 
   const authorized = await requestJson(baseUrl, "/auth/me", {
     cookie: AUTH_COOKIE
   });
-  assert.equal(authorized.response.status, 200);
-  assert.deepEqual(authorized.json, {
+  expect(authorized.response.status).toBe(200);
+  expect(authorized.json).toEqual({
     ok: true,
     user: { email: "person@example.com" }
   });
@@ -29,8 +28,8 @@ test("image cache route is treated as an api path by spa fallback", async (t) =>
   const { baseUrl } = await startSpaFallbackTestServer(t);
 
   const missing = await requestJson(baseUrl, "/images/missing.jpg");
-  assert.equal(missing.response.status, 404);
-  assert.deepEqual(missing.json, { error: "not_found" });
+  expect(missing.response.status).toBe(404);
+  expect(missing.json).toEqual({ error: "not_found" });
 });
 
 test("share fallback injects escaped open graph metadata into capsule html", async (t) => {
@@ -50,14 +49,14 @@ test("share fallback injects escaped open graph metadata into capsule html", asy
 
   const { response, text } = await requestText(baseUrl, "/share/share-1");
 
-  assert.equal(response.status, 200);
-  assert.match(response.headers.get("content-type") || "", /text\/html/);
-  assert.match(text, /<meta property="og:title" content="Spring &quot;Edit&quot; &amp; &lt;Capsule&gt;" \/>/);
-  assert.match(text, /<meta property="og:description" content="Formality: Casual\. Style: Minimalistic\. Occasions: Office, Date night\." \/>/);
-  assert.match(text, /<meta property="og:image" content="https:\/\/images\.example\.com\/outfit\.jpg\?fit=&quot;cover&quot;&amp;w=1200" \/>/);
-  assert.match(text, new RegExp(`<meta property="og:url" content="${baseUrl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\/share\\/share-1" \\/>`));
-  assert.match(text, /<meta property="og:type" content="website" \/>/);
-  assert.equal(text.includes("Additional notes"), false);
+  expect(response.status).toBe(200);
+  expect(response.headers.get("content-type") || "").toMatch(/text\/html/);
+  expect(text).toMatch(/<meta property="og:title" content="Spring &quot;Edit&quot; &amp; &lt;Capsule&gt;" \/>/);
+  expect(text).toMatch(/<meta property="og:description" content="Formality: Casual\. Style: Minimalistic\. Occasions: Office, Date night\." \/>/);
+  expect(text).toMatch(/<meta property="og:image" content="https:\/\/images\.example\.com\/outfit\.jpg\?fit=&quot;cover&quot;&amp;w=1200" \/>/);
+  expect(text).toMatch(new RegExp(`<meta property="og:url" content="${baseUrl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\/share\\/share-1" \\/>`));
+  expect(text).toMatch(/<meta property="og:type" content="website" \/>/);
+  expect(text.includes("Additional notes")).toBe(false);
 });
 
 test("share fallback leaves capsule html unchanged when shared capsule metadata is unavailable", async (t) => {
@@ -69,10 +68,10 @@ test("share fallback leaves capsule html unchanged when shared capsule metadata 
 
   const { response, text } = await requestText(baseUrl, "/share/missing-share");
 
-  assert.equal(response.status, 200);
-  assert.match(text, /<title>Capsule Wardrobe<\/title>/);
-  assert.equal(text.includes("property=\"og:title\""), false);
-  assert.equal(text.includes("property=\"og:description\""), false);
-  assert.equal(text.includes("property=\"og:image\""), false);
-  assert.equal(text.includes("property=\"og:url\""), false);
+  expect(response.status).toBe(200);
+  expect(text).toMatch(/<title>Capsule Wardrobe<\/title>/);
+  expect(text.includes("property=\"og:title\"")).toBe(false);
+  expect(text.includes("property=\"og:description\"")).toBe(false);
+  expect(text.includes("property=\"og:image\"")).toBe(false);
+  expect(text.includes("property=\"og:url\"")).toBe(false);
 });

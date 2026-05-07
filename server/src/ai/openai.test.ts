@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect, vi } from "vitest";
 import {
   buildImageDataUrl,
   buildOpenAiParseError,
@@ -22,7 +21,41 @@ function assertResponsesUserContent(
   | { type: "input_image"; image_url: string; detail: "high" }
   | { type: "input_text"; text: string }
 > {
-  assert.ok(Array.isArray(content));
+  if (!Array.isArray(content)) {
+    throw new Error("Expected responses content array");
+  }
+}
+
+function assertResponsesInput(
+  input: ReturnType<typeof buildResponsesInput>
+): asserts input is Array<{
+  role: string;
+  content: Array<
+    | { type: "input_image"; image_url: string; detail: "high" }
+    | { type: "input_text"; text: string }
+  >;
+}> {
+  if (!Array.isArray(input)) {
+    throw new Error("Expected responses input array");
+  }
+}
+
+function assertInputImage(
+  part: { type: "input_image"; image_url: string; detail: "high" } | { type: "input_text"; text: string }
+): asserts part is { type: "input_image"; image_url: string; detail: "high" } {
+  expect(part.type).toBe("input_image");
+  if (part.type !== "input_image") {
+    throw new Error("Expected input_image part");
+  }
+}
+
+function assertInputText(
+  part: { type: "input_image"; image_url: string; detail: "high" } | { type: "input_text"; text: string }
+): asserts part is { type: "input_text"; text: string } {
+  expect(part.type).toBe("input_text");
+  if (part.type !== "input_text") {
+    throw new Error("Expected input_text part");
+  }
 }
 
 test("buildImageDataUrl returns a base64 data URL for buffered images", () => {
@@ -31,11 +64,11 @@ test("buildImageDataUrl returns a base64 data URL for buffered images", () => {
     buffer: Buffer.from("hello world")
   });
 
-  assert.match(dataUrl, /^data:image\/png;base64,/);
+  expect(dataUrl).toMatch(/^data:image\/png;base64,/);
 });
 
 test("buildResponsesInput keeps text-only payloads as a string", () => {
-  assert.equal(buildResponsesInput("hello", []), "hello");
+  expect(buildResponsesInput("hello", [])).toBe("hello");
 });
 
 test("buildResponsesInput creates multimodal content with input_text and input_image items", () => {
@@ -54,15 +87,15 @@ test("buildResponsesInput creates multimodal content with input_text and input_i
     }
   ]);
 
-  assert.ok(Array.isArray(input));
-  assert.equal(input[0].role, "user");
+  assertResponsesInput(input);
+  expect(input[0].role).toBe("user");
   assertResponsesUserContent(input[0].content);
-  assert.equal(input[0].content[0].type, "input_image");
-  assert.equal(input[0].content[1].type, "input_image");
-  assert.equal(input[0].content[2].type, "input_text");
-  assert.match(input[0].content[0].image_url, /^data:image\/png;base64,/);
-  assert.equal(input[0].content[0].detail, "high");
-  assert.equal(input[0].content[2].text, "describe this");
+  assertInputImage(input[0].content[0]);
+  assertInputImage(input[0].content[1]);
+  assertInputText(input[0].content[2]);
+  expect(input[0].content[0].image_url).toMatch(/^data:image\/png;base64,/);
+  expect(input[0].content[0].detail).toBe("high");
+  expect(input[0].content[2].text).toBe("describe this");
 });
 
 test("buildResponsesInput keeps multimodal payloads user-only", () => {
@@ -73,12 +106,12 @@ test("buildResponsesInput keeps multimodal payloads user-only", () => {
     }
   ]);
 
-  assert.ok(Array.isArray(input));
-  assert.equal(input.length, 1);
-  assert.equal(input[0].role, "user");
+  assertResponsesInput(input);
+  expect(input.length).toBe(1);
+  expect(input[0].role).toBe("user");
   assertResponsesUserContent(input[0].content);
-  assert.equal(input[0].content[0].type, "input_image");
-  assert.equal(input[0].content[1].type, "input_text");
+  assertInputImage(input[0].content[0]);
+  assertInputText(input[0].content[1]);
 });
 
 test("buildResponsesPayload releases source image buffers after payload construction", () => {
@@ -92,13 +125,13 @@ test("buildResponsesPayload releases source image buffers after payload construc
 
   const input = buildResponsesPayload("describe this", images);
 
-  assert.ok(Array.isArray(input));
+  assertResponsesInput(input);
   assertResponsesUserContent(input[0].content);
-  assert.equal(images[0].buffer, null);
-  assert.equal(input[0].content[0].type, "input_image");
-  assert.equal(input[0].content[1].type, "input_text");
-  assert.match(input[0].content[0].image_url, /^data:image\/jpeg;base64,/);
-  assert.equal(input[0].content[1].text, "describe this");
+  expect(images[0].buffer).toBe(null);
+  assertInputImage(input[0].content[0]);
+  assertInputText(input[0].content[1]);
+  expect(input[0].content[0].image_url).toMatch(/^data:image\/jpeg;base64,/);
+  expect(input[0].content[1].text).toBe("describe this");
 });
 
 test("buildResponsesInput accepts prompt image collages deserialized from IPC payloads", () => {
@@ -127,17 +160,17 @@ test("buildResponsesInput accepts prompt image collages deserialized from IPC pa
 
   const input = buildResponsesInput("describe this", [promptImages.stitched]);
 
-  assert.ok(Array.isArray(input));
+  assertResponsesInput(input);
   assertResponsesUserContent(input[0].content);
-  assert.equal(input[0].content[0].type, "input_image");
-  assert.equal(input[0].content[1].type, "input_text");
-  assert.match(input[0].content[0].image_url, /^data:image\/jpeg;base64,/);
-  assert.equal(input[0].content[1].text, "describe this");
+  assertInputImage(input[0].content[0]);
+  assertInputText(input[0].content[1]);
+  expect(input[0].content[0].image_url).toMatch(/^data:image\/jpeg;base64,/);
+  expect(input[0].content[1].text).toBe("describe this");
 });
 
-test("buildResponsesInput skips invalid image buffers and releaseImageBuffers clears mutable buffers", (t) => {
+test("buildResponsesInput skips invalid image buffers and releaseImageBuffers clears mutable buffers", () => {
   const warnings = [];
-  t.mock.method(console, "warn", (...args) => {
+  vi.spyOn(console, "warn").mockImplementation((...args) => {
     warnings.push(args);
   });
 
@@ -156,45 +189,38 @@ test("buildResponsesInput skips invalid image buffers and releaseImageBuffers cl
 
   const input = buildResponsesInput("", images);
 
-  assert.ok(Array.isArray(input));
+  assertResponsesInput(input);
   assertResponsesUserContent(input[0].content);
-  assert.equal(input[0].content.length, 1);
-  assert.equal(input[0].content[0].type, "input_image");
+  expect(input[0].content.length).toBe(1);
+  assertInputImage(input[0].content[0]);
 
   releaseImageBuffers(images);
-  assert.equal(images[0].buffer, null);
-  assert.equal(images[1].buffer, null);
-  assert.equal(warnings.length, 1);
-  assert.equal(warnings[0][0], "[openai][image-skipped]");
+  expect(images[0].buffer).toBe(null);
+  expect(images[1].buffer).toBe(null);
+  expect(warnings.length).toBe(1);
+  expect(warnings[0][0]).toBe("[openai][image-skipped]");
 });
 
 test("OpenAI response helpers build system prompts and parse JSON from noisy output", () => {
-  assert.equal(
-    buildOpenAiSystemPrompt("System", "Override", { style: "minimalistic" }),
-    "System\n\nOverride"
-  );
-  assert.match(buildOpenAiSystemPrompt("", null, { audience: "woman" }), /capsule wardrobe generator/i);
+  expect(buildOpenAiSystemPrompt("System", "Override", { style: "minimalistic" })).toBe("System\n\nOverride");
+  expect(buildOpenAiSystemPrompt("", null, { audience: "woman" })).toMatch(/capsule wardrobe generator/i);
 
-  assert.deepEqual(
-    parseOpenAiJsonResponse({
+  expect(parseOpenAiJsonResponse({
       output_text: "prefix {\"ok\":true,\"items\":[1]} suffix"
-    }),
-    { ok: true, items: [1] }
-  );
+    })).toEqual({ ok: true, items: [1] });
 });
 
 test("OpenAI parse errors preserve raw non-empty response text", () => {
-  assert.throws(
-    () => parseOpenAiJsonResponse({ output_text: "not json" }),
-    (error) => {
-      assert.match((error as Error).message, /Failed to parse JSON response/);
-      assert.equal((error as Error & { rawSelectionText?: string | null }).rawSelectionText, "not json");
-      return true;
-    }
-  );
+  try {
+    parseOpenAiJsonResponse({ output_text: "not json" });
+    throw new Error("Expected parseOpenAiJsonResponse to throw");
+  } catch (error) {
+    expect((error as Error).message).toMatch(/Failed to parse JSON response/);
+    expect((error as Error & { rawSelectionText?: string | null }).rawSelectionText).toBe("not json");
+  }
 
   const error = buildOpenAiParseError(new Error("bad"), "{", " raw ");
-  assert.equal(error.rawSelectionText, "raw");
+  expect(error.rawSelectionText).toBe("raw");
 });
 
 test("OpenAI client helpers shape embedding and response requests", async () => {
@@ -215,8 +241,8 @@ test("OpenAI client helpers shape embedding and response requests", async () => 
     }
   };
 
-  assert.deepEqual(await getPromptEmbeddingsWithClient(client, "capsule prompt"), [0.1, 0.2]);
-  assert.deepEqual(embeddingCalls[0], {
+  expect(await getPromptEmbeddingsWithClient(client, "capsule prompt")).toEqual([0.1, 0.2]);
+  expect(embeddingCalls[0]).toEqual({
     model: "text-embedding-3-small",
     input: "capsule prompt",
     encoding_format: "float"
@@ -237,41 +263,35 @@ test("OpenAI client helpers shape embedding and response requests", async () => 
     systemPrompt: "Override"
   });
 
-  assert.deepEqual(result.json, { ok: true });
-  assert.equal(image.buffer, null);
-  assert.equal(responseCalls.length, 1);
-  assert.equal(responseCalls[0].model, "gpt-5.5");
-  assert.match(responseCalls[0].instructions, /Rules/);
-  assert.match(responseCalls[0].instructions, /Override/);
-  assert.equal(responseCalls[0].text.format.type, "json_schema");
-  assert.ok(Array.isArray(responseCalls[0].input));
+  expect(result.json).toEqual({ ok: true });
+  expect(image.buffer).toBe(null);
+  expect(responseCalls.length).toBe(1);
+  expect(responseCalls[0].model).toBe("gpt-5.5");
+  expect(responseCalls[0].instructions).toMatch(/Rules/);
+  expect(responseCalls[0].instructions).toMatch(/Override/);
+  expect(responseCalls[0].text.format.type).toBe("json_schema");
+  expect(Array.isArray(responseCalls[0].input)).toBeTruthy();
 });
 
-test("OpenAI client helpers reject invalid embeddings and rethrow response failures", async (t) => {
-  await assert.rejects(
-    () => getPromptEmbeddingsWithClient({
+test("OpenAI client helpers reject invalid embeddings and rethrow response failures", async () => {
+  await expect(() => getPromptEmbeddingsWithClient({
       embeddings: {
         create: async () => ({ data: [{ embedding: [] }] })
       }
-    }, "prompt"),
-    /Failed to compute prompt embeddings/
-  );
+    }, "prompt")).rejects.toThrow(/Failed to compute prompt embeddings/);
 
   const errors = [];
-  t.mock.method(console, "error", (...args) => {
+  vi.spyOn(console, "error").mockImplementation((...args) => {
     errors.push(args);
   });
 
-  await assert.rejects(
-    () => generateJsonWithLlmWithClient({
+  await expect(() => generateJsonWithLlmWithClient({
       responses: {
         create: async () => {
           throw new Error("transport");
         }
       }
-    }, "User only"),
-    /transport/
-  );
-  assert.equal(errors.length, 1);
-  assert.equal(errors[0][0], "[openai][request-failed]");
+    }, "User only")).rejects.toThrow(/transport/);
+  expect(errors.length).toBe(1);
+  expect(errors[0][0]).toBe("[openai][request-failed]");
 });

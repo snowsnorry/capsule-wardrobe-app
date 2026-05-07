@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect, vi } from "vitest";
 import { createRegenerateCapsuleWardrobe } from "./regenerateSelectedGeneration.js";
 
 const currentItems = [
@@ -76,10 +75,10 @@ test("regenerateCapsuleWardrobe builds a no-LLM replacement from SQL candidates"
 
   const result = await regenerateCapsuleWardrobe(createProfile({ llm: "none" }), selectedProducts);
 
-  assert.deepEqual(result.promptEmbeddings, [0.5, 0.5]);
-  assert.deepEqual(result.selectedItems.map((item) => item.id), ["top-new"]);
-  assert.deepEqual(result.items.map((item) => item.id), ["bottom-1", "bag-1", "top-new"]);
-  assert.equal(result.rawSelectionText, null);
+  expect(result.promptEmbeddings).toEqual([0.5, 0.5]);
+  expect(result.selectedItems.map((item) => item.id)).toEqual(["top-new"]);
+  expect(result.items.map((item) => item.id)).toEqual(["bottom-1", "bag-1", "top-new"]);
+  expect(result.rawSelectionText).toBe(null);
 });
 
 test("regenerateCapsuleWardrobe uses current capsule and candidate images for LLM selection", async () => {
@@ -116,16 +115,16 @@ test("regenerateCapsuleWardrobe uses current capsule and candidate images for LL
 
   const result = await regenerateCapsuleWardrobe(createProfile(), selectedProducts);
 
-  assert.deepEqual(imageCalls.map((call) => call.type), ["candidates", "current"]);
-  assert.equal(llmCalls.length, 1);
-  assert.equal(llmCalls[0].images.length, 2);
-  assert.match(llmCalls[0].systemPrompt, /Current Capsule/);
-  assert.deepEqual(result.items.map((item) => item.id), ["bottom-1", "bag-1", "top-new"]);
-  assert.equal(result.rawSelectionText, "Raw regeneration");
+  expect(imageCalls.map((call) => call.type)).toEqual(["candidates", "current"]);
+  expect(llmCalls.length).toBe(1);
+  expect(llmCalls[0].images.length).toBe(2);
+  expect(llmCalls[0].systemPrompt).toMatch(/Current Capsule/);
+  expect(result.items.map((item) => item.id)).toEqual(["bottom-1", "bag-1", "top-new"]);
+  expect(result.rawSelectionText).toBe("Raw regeneration");
 });
 
-test("regenerateCapsuleWardrobe handles image failures and empty LLM payloads", async (t) => {
-  t.mock.method(console, "warn", () => {});
+test("regenerateCapsuleWardrobe handles image failures and empty LLM payloads", async () => {
+  vi.spyOn(console, "warn").mockImplementation(() => {});
 
   const regenerateCapsuleWardrobe = createRegenerateCapsuleWardrobe(createBaseDeps({
     buildPromptDebugImagesInChildImpl: async () => {
@@ -135,7 +134,7 @@ test("regenerateCapsuleWardrobe handles image failures and empty LLM payloads", 
       throw new Error("current_collage_failed");
     },
     getGenerateJsonWithLlmImpl: () => async (_prompt, options) => {
-      assert.deepEqual(options.images, []);
+      expect(options.images).toEqual([]);
       return {
         response: { output_text: "empty" },
         json: {}
@@ -145,23 +144,17 @@ test("regenerateCapsuleWardrobe handles image failures and empty LLM payloads", 
 
   const result = await regenerateCapsuleWardrobe(createProfile(), selectedProducts);
 
-  assert.deepEqual(result.items.map((item) => item.id), ["bottom-1", "bag-1", "top-new"]);
-  assert.equal(result.rawSelectionText, "empty");
+  expect(result.items.map((item) => item.id)).toEqual(["bottom-1", "bag-1", "top-new"]);
+  expect(result.rawSelectionText).toBe("empty");
 });
 
 test("regenerateCapsuleWardrobe rejects requests without selected product categories or SQL candidates", async () => {
   const regenerateCapsuleWardrobe = createRegenerateCapsuleWardrobe(createBaseDeps());
-  await assert.rejects(
-    () => regenerateCapsuleWardrobe(createProfile(), []),
-    /No selected product categories/
-  );
+  await expect(() => regenerateCapsuleWardrobe(createProfile(), [])).rejects.toThrow(/No selected product categories/);
 
   const noCandidateRegeneration = createRegenerateCapsuleWardrobe(createBaseDeps({
     isNoLlmProfileEnabledImpl: () => true,
     queryRegenerationCandidateItemsImpl: async () => []
   }));
-  await assert.rejects(
-    () => noCandidateRegeneration(createProfile({ llm: "none" }), selectedProducts),
-    /SQL returned no valid regenerated items/
-  );
+  await expect(() => noCandidateRegeneration(createProfile({ llm: "none" }), selectedProducts)).rejects.toThrow(/SQL returned no valid regenerated items/);
 });

@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect } from "vitest";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -14,7 +13,7 @@ import {
 } from "./promptImageArtifacts.js";
 
 test("stripCategoryBuffer and normalizeManifestCategory coerce missing category fields", () => {
-  assert.deepEqual(stripCategoryBuffer({ buffer: Buffer.from("ignored"), items: "bad" } as never), {
+  expect(stripCategoryBuffer({ buffer: Buffer.from("ignored"), items: "bad" } as never)).toEqual({
     category: "",
     mimeType: "image/jpeg",
     filename: "",
@@ -25,8 +24,7 @@ test("stripCategoryBuffer and normalizeManifestCategory coerce missing category 
     items: []
   });
 
-  assert.deepEqual(
-    normalizeManifestCategory({
+  expect(normalizeManifestCategory({
       category: "top",
       mimeType: "image/png",
       filename: "top.png",
@@ -35,8 +33,7 @@ test("stripCategoryBuffer and normalizeManifestCategory coerce missing category 
       downloadedCount: 1,
       skippedCount: 0,
       items: [{ id: "top-1" }]
-    }),
-    {
+    })).toEqual({
       category: "top",
       mimeType: "image/png",
       filename: "top.png",
@@ -45,8 +42,7 @@ test("stripCategoryBuffer and normalizeManifestCategory coerce missing category 
       downloadedCount: 1,
       skippedCount: 0,
       items: [{ id: "top-1" }]
-    }
-  );
+    });
 });
 
 test("stitchCategoryImagesVertically returns null for empty or unreadable category files", async () => {
@@ -55,8 +51,8 @@ test("stitchCategoryImagesVertically returns null for empty or unreadable catego
     const invalidFile = join(dir, "invalid.jpg");
     await writeFile(invalidFile, "not an image");
 
-    assert.equal(await stitchCategoryImagesVertically([]), null);
-    assert.equal(await stitchCategoryImagesVertically([{ file: invalidFile, totalItems: 1 }]), null);
+    expect(await stitchCategoryImagesVertically([])).toBe(null);
+    expect(await stitchCategoryImagesVertically([{ file: invalidFile, totalItems: 1 }])).toBe(null);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
@@ -75,9 +71,9 @@ test("stitchCategoryImagesVertically builds a stitched jpeg and saveDebugArtifac
       { file: bottomFile, totalItems: 1 }
     ]);
 
-    assert.equal(stitched?.category, "all-categories");
-    assert.equal(stitched?.totalItems, 3);
-    assert.equal(stitched?.categoryCount, 2);
+    expect(stitched?.category).toBe("all-categories");
+    expect(stitched?.totalItems).toBe(3);
+    expect(stitched?.categoryCount).toBe(2);
 
     await saveDebugArtifacts({
       categories: [{
@@ -97,27 +93,24 @@ test("stitchCategoryImagesVertically builds a stitched jpeg and saveDebugArtifac
     });
 
     const manifest = JSON.parse(await readFile(join(dir, "manifest.json"), "utf8"));
-    assert.equal(manifest.outputDir.replace(/\/$/, ""), dir);
-    assert.equal(manifest.stitched.categoryCount, 2);
-    assert.equal(manifest.categories[0].category, "top");
-    assert.ok(manifest.files.some((file: string) => file.endsWith("categories-stitched.jpg")));
+    expect(manifest.outputDir.replace(/\/$/, "")).toBe(dir);
+    expect(manifest.stitched.categoryCount).toBe(2);
+    expect(manifest.categories[0].category).toBe("top");
+    expect(manifest.files.some((file: string) => file.endsWith("categories-stitched.jpg"))).toBeTruthy();
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
 });
 
 test("saveDebugArtifacts requires output dir and timings merge defaults", async () => {
-  await assert.rejects(
-    () => saveDebugArtifacts({
+  await expect(() => saveDebugArtifacts({
       categories: [],
       cachedCount: 0,
       downloadedCount: 0,
       skippedCount: 0,
       debugOutputDir: null
-    }),
-    /debugOutputDir is required/
-  );
+    })).rejects.toThrow(/debugOutputDir is required/);
 
-  assert.equal(getNormalizedPromptImageTimings({ networkFetchMs: 12 }).networkFetchMs, 12);
-  assert.equal(getNormalizedPromptImageTimings(null).cacheLookupMs, 0);
+  expect(getNormalizedPromptImageTimings({ networkFetchMs: 12 }).networkFetchMs).toBe(12);
+  expect(getNormalizedPromptImageTimings(null).cacheLookupMs).toBe(0);
 });

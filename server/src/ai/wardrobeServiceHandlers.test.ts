@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect } from "vitest";
 import { createWardrobeService } from "./aiService.js";
 import {
   buildCapsuleSnapshot,
@@ -73,11 +72,11 @@ test("getCapsuleItems returns pending regenerate payload when partial regenerati
     params: { id: "capsule-1" }
   }, res);
 
-  assert.equal(res.statusCode, 202);
-  assert.equal(res.body.pendingStage, "regenerate");
-  assert.deepEqual(res.body.pendingRegenerationUrls, ["https://example.com/top-1"]);
-  assert.deepEqual(toItemIdentity(res.body.items), [{ id: "top-1", url: "https://example.com/top-1", category: "top" }]);
-  assert.deepEqual(res.body.outfitSets, []);
+  expect(res.statusCode).toBe(202);
+  expect(res.body.pendingStage).toBe("regenerate");
+  expect(res.body.pendingRegenerationUrls).toEqual(["https://example.com/top-1"]);
+  expect(toItemIdentity(res.body.items)).toEqual([{ id: "top-1", url: "https://example.com/top-1", category: "top" }]);
+  expect(res.body.outfitSets).toEqual([]);
 });
 
 test("getCapsuleItems returns ready payload from stored wardrobe", async () => {
@@ -97,10 +96,10 @@ test("getCapsuleItems returns ready payload from stored wardrobe", async () => {
     params: { id: "capsule-1" }
   }, res);
 
-  assert.equal(res.statusCode, 200);
-  assert.equal(res.body.ok, true);
-  assert.equal(res.body.status, "ready");
-  assert.deepEqual(res.body.items, [
+  expect(res.statusCode).toBe(200);
+  expect(res.body.ok).toBe(true);
+  expect(res.body.status).toBe("ready");
+  expect(res.body.items).toEqual([
     buildWardrobeUiItem({
       id: "top-1",
       category: "top",
@@ -110,10 +109,10 @@ test("getCapsuleItems returns ready payload from stored wardrobe", async () => {
       audience: undefined
     })
   ]);
-  assert.deepEqual(res.body.outfitSets, []);
-  assert.equal(res.body.rawSelectionText, "raw-selection");
-  assert.equal(res.body.swimwearReasoning, "swimwear-json");
-  assert.equal(res.body.hasPendingAdditionalItems, false);
+  expect(res.body.outfitSets).toEqual([]);
+  expect(res.body.rawSelectionText).toBe("raw-selection");
+  expect(res.body.swimwearReasoning).toBe("swimwear-json");
+  expect(res.body.hasPendingAdditionalItems).toBe(false);
 });
 
 test("getCapsuleItems returns extras pending state when extras are still generating", async () => {
@@ -139,11 +138,11 @@ test("getCapsuleItems returns extras pending state when extras are still generat
     params: { id: "capsule-1" }
   }, res);
 
-  assert.equal(res.statusCode, 202);
-  assert.equal(res.body.pendingStage, "extras");
-  assert.equal(res.body.hasPendingAdditionalItems, true);
-  assert.deepEqual(toItemCategoryIdentity(res.body.items), [{ id: "top-1", category: "top" }]);
-  assert.deepEqual(res.body.outfitSets, []);
+  expect(res.statusCode).toBe(202);
+  expect(res.body.pendingStage).toBe("extras");
+  expect(res.body.hasPendingAdditionalItems).toBe(true);
+  expect(toItemCategoryIdentity(res.body.items)).toEqual([{ id: "top-1", category: "top" }]);
+  expect(res.body.outfitSets).toEqual([]);
 });
 
 test("regenerateCapsuleWardrobe starts a new pending job without clearing stored items", async () => {
@@ -186,9 +185,9 @@ test("regenerateCapsuleWardrobe starts a new pending job without clearing stored
     params: { id: "capsule-1" }
   }, res);
 
-  assert.equal(res.statusCode, 202);
-  assert.equal(res.body.pendingStage, "capsule");
-  assert.deepEqual(updates[0], ["person@example.com", "capsule-1", {
+  expect(res.statusCode).toBe(202);
+  expect(res.body.pendingStage).toBe("capsule");
+  expect(updates[0]).toEqual(["person@example.com", "capsule-1", {
     filters: createCapsuleWithWardrobe().draft.filters,
     data: {
       wardrobe: existingWardrobe,
@@ -203,13 +202,13 @@ test("regenerateCapsuleWardrobe starts a new pending job without clearing stored
   }]);
 
   const job = service.getWardrobeJob("person@example.com", "capsule-1");
-  assert.ok(job);
+  expect(job).toBeTruthy();
   await job.promise;
 
-  assert.deepEqual(generatedProfile.items, null);
-  assert.equal(job.status, "completed");
-  assert.equal(renameCallCount, 0);
-  assert.deepEqual(updates[1], ["person@example.com", "capsule-1", {
+  expect(generatedProfile.items).toEqual(null);
+  expect(job.status).toBe("completed");
+  expect(renameCallCount).toBe(0);
+  expect(updates[1]).toEqual(["person@example.com", "capsule-1", {
     filters: createCapsuleWithWardrobe().draft.filters,
     data: {
       wardrobe: {
@@ -274,13 +273,13 @@ test("regenerateCapsuleWardrobe renames an empty new capsule from shortCapsuleNa
     params: { id: "capsule-1" }
   }, res);
 
-  assert.equal(res.statusCode, 202);
+  expect(res.statusCode).toBe(202);
   const job = service.getWardrobeJob("person@example.com", "capsule-1");
-  assert.ok(job);
+  expect(job).toBeTruthy();
   await job.promise;
 
-  assert.equal(job.status, "completed");
-  assert.deepEqual(renamedCapsules, [["person@example.com", "capsule-1", "Resort Core"]]);
+  expect(job.status).toBe("completed");
+  expect(renamedCapsules).toEqual([["person@example.com", "capsule-1", "Resort Core"]]);
 });
 
 test("regenerateCapsuleWardrobe uses profile llm=none instead of query flag", async () => {
@@ -311,9 +310,9 @@ test("regenerateCapsuleWardrobe uses profile llm=none instead of query flag", as
   }, res);
 
   const job = service.getWardrobeJob("person@example.com", "capsule-1");
-  assert.ok(job);
+  expect(job).toBeTruthy();
   await job.promise;
-  assert.equal(generatedProfile.llm, "none");
+  expect(generatedProfile.llm).toBe("none");
 });
 
 test("regenerateCapsuleWardrobe restores stored items and clears pending marker when generation fails", async () => {
@@ -346,13 +345,13 @@ test("regenerateCapsuleWardrobe restores stored items and clears pending marker 
       params: { id: "capsule-1" }
     }, res);
 
-    assert.equal(res.statusCode, 202);
+    expect(res.statusCode).toBe(202);
     const job = service.getWardrobeJob("person@example.com", "capsule-1");
-    assert.ok(job);
+    expect(job).toBeTruthy();
     await job.promise;
 
-    assert.equal(job.status, "failed");
-    assert.deepEqual(updates[1], ["person@example.com", "capsule-1", {
+    expect(job.status).toBe("failed");
+    expect(updates[1]).toEqual(["person@example.com", "capsule-1", {
       filters: createCapsuleWithWardrobe().draft.filters,
       data: {
         wardrobe: existingWardrobe,
@@ -386,12 +385,12 @@ test("getCapsuleItems surfaces failed job as service_unavailable and drops stale
     params: { id: "capsule-1" }
   }, res);
 
-  assert.equal(res.statusCode, 503);
-  assert.deepEqual(res.body, {
+  expect(res.statusCode).toBe(503);
+  expect(res.body).toEqual({
     error: "service_unavailable",
     rawSelectionText: "llm raw"
   });
-  assert.equal(jobs.has("person@example.com::capsule-1"), false);
+  expect(jobs.has("person@example.com::capsule-1")).toBe(false);
 });
 
 test("getCapsuleItems clears stale full regeneration marker when no job is active", async () => {
@@ -428,8 +427,8 @@ test("getCapsuleItems clears stale full regeneration marker when no job is activ
     params: { id: "capsule-1" }
   }, res);
 
-  assert.equal(res.statusCode, 503);
-  assert.deepEqual(updates, [["person@example.com", "capsule-1", {
+  expect(res.statusCode).toBe(503);
+  expect(updates).toEqual([["person@example.com", "capsule-1", {
     filters: createCapsuleWithWardrobe().draft.filters,
     data: {
       wardrobe: existingWardrobe,

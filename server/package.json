@@ -6,11 +6,11 @@
     "dev": "NODE_ENV=development tsx src/index.ts",
     "dev:test-auth": "AUTH_TEST_MODE=true NODE_ENV=development tsx src/index.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
-    "test": "tsx --test --test-concurrency=1 $(find src -name '*.test.ts' | sort)",
+    "test": "vitest run",
     "build": "tsc -p tsconfig.build.json && mkdir -p dist/server/src && cp -R src/templates dist/server/src/templates",
     "prestart": "npm run build",
     "start": "node ./dist/server/src/index.js",
-    "coverage": "c8 --all --per-file --report-dir ../coverage/server --reporter=text --reporter=html --reporter=json-summary --reporter=lcov --include \"src/**/*.ts\" --exclude \"src/**/*.test.ts\" --exclude \"src/**/*.d.ts\" --check-coverage --lines 70 --functions 70 --branches 60 --statements 70 tsx --test --test-concurrency=1 $(find src -name '*.test.ts' | sort)"
+    "coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.54.0",
@@ -41,6 +41,8 @@
     "@types/mustache": "^4.2.6",
     "@types/node": "^25.6.0",
     "tsx": "^4.21.0",
-    "vite": "^6.2.0"
+    "@vitest/coverage-v8": "^4.1.5",
+    "vite": "^6.2.0",
+    "vitest": "^4.1.2"
   }
 }

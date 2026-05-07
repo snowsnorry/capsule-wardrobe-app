@@ -21,7 +21,7 @@
     "test": "npm run test:server && npm run test:client && npm run test:shared",
     "test:server": "npm --workspace server run test",
     "test:client": "npm --workspace client run test",
-    "test:shared": "node scripts/run-shared-tests.mjs",
+    "test:shared": "vitest run --config vitest.shared.config.ts",
     "lint": "eslint .",
     "lint:strict": "eslint . --max-warnings=0",
     "lint:fix": "eslint . --fix",
@@ -32,12 +32,12 @@
     "quality": "npm run quality:gate && npm run quality:large-files",
     "coverage:client": "npm --workspace client run coverage",
     "coverage:server": "npm --workspace server run coverage",
-    "coverage:shared": "c8 --all --per-file --report-dir coverage/shared --reporter=text --reporter=html --reporter=json-summary --reporter=lcov --src shared --include \"**/*.ts\" --exclude \"**/*.test.ts\" --exclude \"**/*.d.ts\" --check-coverage --lines 70 --functions 70 --branches 60 --statements 70 node scripts/run-shared-tests.mjs",
+    "coverage:shared": "vitest run --config vitest.shared.config.ts --coverage",
     "coverage": "npm run coverage:client && npm run coverage:server && npm run coverage:shared"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "c8": "^11.0.0",
+    "@vitest/coverage-v8": "^4.1.5",
     "concurrently": "^9.1.2",
     "dependency-cruiser": "^17.4.0",
     "eslint": "^10.3.0",
@@ -45,6 +45,7 @@
     "eslint-plugin-unused-imports": "^4.4.1",
     "globals": "^17.6.0",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.59.2"
+    "typescript-eslint": "^8.59.2",
+    "vitest": "^4.1.2"
   }
 }

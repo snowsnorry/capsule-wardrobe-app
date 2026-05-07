@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect } from "vitest";
 import {
   createOllamaClient,
   DEFAULT_OLLAMA_CHAT_MODEL,
@@ -32,15 +31,15 @@ test("ollama client shapes embedding and generation requests", async () => {
   });
 
   const embedding = await client.getPromptEmbeddings("prompt");
-  assert.deepEqual(embedding, [0.1, 0.2]);
-  assert.deepEqual(embeddingsPayload, {
+  expect(embedding).toEqual([0.1, 0.2]);
+  expect(embeddingsPayload).toEqual({
     model: DEFAULT_OLLAMA_EMBEDDING_MODEL,
     prompt: "prompt"
   });
 
   const generated = await client.generateJsonWithLlm("Return JSON");
-  assert.deepEqual(generated.json, { ok: true });
-  assert.deepEqual(generatePayload, {
+  expect(generated.json).toEqual({ ok: true });
+  expect(generatePayload).toEqual({
     model: DEFAULT_OLLAMA_CHAT_MODEL,
     prompt: "Return JSON",
     format: "json"
@@ -52,17 +51,11 @@ test("ollama client throws for invalid embedding payload and invalid json output
     embeddingsImpl: async () => ({ embedding: [] }),
     generateImpl: async () => createGenerateResponse("{}")
   });
-  await assert.rejects(
-    () => badEmbeddingClient.getPromptEmbeddings("prompt"),
-    /Failed to compute prompt embeddings/
-  );
+  await expect(() => badEmbeddingClient.getPromptEmbeddings("prompt")).rejects.toThrow(/Failed to compute prompt embeddings/);
 
   const badJsonClient = createOllamaClient({
     embeddingsImpl: async () => ({ embedding: [1] }),
     generateImpl: async () => createGenerateResponse("not-json")
   });
-  await assert.rejects(
-    () => badJsonClient.generateJsonWithLlm("prompt"),
-    new RegExp(`Failed to parse JSON response from ${DEFAULT_OLLAMA_CHAT_MODEL}`)
-  );
+  await expect(() => badJsonClient.generateJsonWithLlm("prompt")).rejects.toThrow(new RegExp(`Failed to parse JSON response from ${DEFAULT_OLLAMA_CHAT_MODEL}`));
 });

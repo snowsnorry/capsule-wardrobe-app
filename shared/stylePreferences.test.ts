@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect } from "vitest";
 import {
   buildStylePreferenceArray,
   getEnabledStyleValues,
@@ -8,8 +7,7 @@ import {
 } from "./stylePreferences.js";
 
 test("partitionStyleValues groups known styles and appends unknown styles to aesthetics", () => {
-  assert.deepEqual(
-    partitionStyleValues([
+  expect(partitionStyleValues([
       "sporty",
       "casual",
       "avant_garde",
@@ -17,8 +15,7 @@ test("partitionStyleValues groups known styles and appends unknown styles to aes
       "street_style",
       "smart_casual",
       "casual"
-    ]),
-    {
+    ])).toEqual({
       core: [
         { value: "casual", disabled: false },
         { value: "smart_casual", disabled: false },
@@ -39,34 +36,24 @@ test("partitionStyleValues groups known styles and appends unknown styles to aes
         { value: "sporty", disabled: false },
         { value: "avant_garde", disabled: false }
       ]
-    }
-  );
+    });
 });
 
 test("inferStyleSelections extracts core and aesthetics from legacy style arrays", () => {
-  assert.deepEqual(
-    inferStyleSelections(["retro", "formal", "avant_garde"]),
-    { styleCore: "formal", styleAesthetic: "retro" }
-  );
-  assert.deepEqual(
-    inferStyleSelections(["avant_garde"]),
-    { styleCore: null, styleAesthetic: "avant_garde" }
-  );
+  expect(inferStyleSelections(["retro", "formal", "avant_garde"])).toEqual({ styleCore: "formal", styleAesthetic: "retro" });
+  expect(inferStyleSelections(["avant_garde"])).toEqual({ styleCore: null, styleAesthetic: "avant_garde" });
 });
 
 test("buildStylePreferenceArray removes nulls and duplicates", () => {
-  assert.deepEqual(buildStylePreferenceArray("formal", null), ["formal"]);
-  assert.deepEqual(buildStylePreferenceArray("formal", "formal"), ["formal"]);
-  assert.deepEqual(buildStylePreferenceArray("formal", "retro"), ["formal", "retro"]);
+  expect(buildStylePreferenceArray("formal", null)).toEqual(["formal"]);
+  expect(buildStylePreferenceArray("formal", "formal")).toEqual(["formal"]);
+  expect(buildStylePreferenceArray("formal", "retro")).toEqual(["formal", "retro"]);
 });
 
 test("getEnabledStyleValues filters out disabled options", () => {
-  assert.deepEqual(
-    getEnabledStyleValues([
+  expect(getEnabledStyleValues([
       { value: "casual", disabled: false },
       { value: "formal", disabled: true },
       { value: "retro", disabled: false }
-    ]),
-    ["casual", "retro"]
-  );
+    ])).toEqual(["casual", "retro"]);
 });

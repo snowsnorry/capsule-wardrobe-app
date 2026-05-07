@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect } from "vitest";
 import { createPromptImagesChildRuntime } from "./promptImages.child.ts";
 
 function createSendSpy() {
@@ -40,18 +39,18 @@ test("promptImages child sends serialized payload and exits 0 on success", async
 
   await runtime.handleMessage({ normalizedItems: [{ id: "look-1" }] });
 
-  assert.deepEqual(buildCalls, [{
+  expect(buildCalls).toEqual([{
     normalizedItems: [{ id: "look-1" }],
     saveDebugArtifacts: false
   }]);
-  assert.deepEqual(serializeCalls, [{ stitchedRows: [{ id: "row-1" }] }]);
-  assert.deepEqual(sendSpy.calls, [{
+  expect(serializeCalls).toEqual([{ stitchedRows: [{ id: "row-1" }] }]);
+  expect(sendSpy.calls).toEqual([{
     ok: true,
     groups: [{ id: "row-1" }],
     totals: 1
   }]);
-  assert.deepEqual(disconnects, [true]);
-  assert.deepEqual(exits, [0]);
+  expect(disconnects).toEqual([true]);
+  expect(exits).toEqual([0]);
 });
 
 test("promptImages child falls back to empty normalizedItems array", async () => {
@@ -73,7 +72,7 @@ test("promptImages child falls back to empty normalizedItems array", async () =>
 
   await runtime.handleMessage({ normalizedItems: "bad-shape" });
 
-  assert.deepEqual(buildCalls, [{
+  expect(buildCalls).toEqual([{
     normalizedItems: [],
     saveDebugArtifacts: false
   }]);
@@ -97,11 +96,11 @@ test("promptImages child sends error payload and exits 1 on failure", async () =
 
   await runtime.handleMessage({ normalizedItems: [] });
 
-  assert.equal(sendSpy.calls.length, 1);
-  assert.equal(sendSpy.calls[0].ok, false);
-  assert.equal(sendSpy.calls[0].message, "prompt_images_failed");
-  assert.match(sendSpy.calls[0].stack, /prompt_images_failed/);
-  assert.deepEqual(exits, [1]);
+  expect(sendSpy.calls.length).toBe(1);
+  expect(sendSpy.calls[0].ok).toBe(false);
+  expect(sendSpy.calls[0].message).toBe("prompt_images_failed");
+  expect(sendSpy.calls[0].stack).toMatch(/prompt_images_failed/);
+  expect(exits).toEqual([1]);
 });
 
 test("promptImages child ignores duplicate messages", async () => {
@@ -124,12 +123,12 @@ test("promptImages child ignores duplicate messages", async () => {
   await runtime.handleMessage({ normalizedItems: [{ id: 1 }] });
   await runtime.handleMessage({ normalizedItems: [{ id: 2 }] });
 
-  assert.equal(buildCalls.length, 1);
-  assert.deepEqual(buildCalls[0], {
+  expect(buildCalls.length).toBe(1);
+  expect(buildCalls[0]).toEqual({
     normalizedItems: [{ id: 1 }],
     saveDebugArtifacts: false
   });
-  assert.deepEqual(sendSpy.calls, [{ ok: true, result: 1 }]);
+  expect(sendSpy.calls).toEqual([{ ok: true, result: 1 }]);
 });
 
 test("promptImages child exits even when process.send is unavailable", async () => {
@@ -150,5 +149,5 @@ test("promptImages child exits even when process.send is unavailable", async () 
 
   await runtime.handleMessage({ normalizedItems: [] });
 
-  assert.deepEqual(exits, [0]);
+  expect(exits).toEqual([0]);
 });

@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect } from "vitest";
 import { CATEGORY_ORDER, sortWardrobeItems } from "./wardrobeOrder.js";
 
 test("sortWardrobeItems orders known categories by priority and names within a category", () => {
@@ -12,8 +11,8 @@ test("sortWardrobeItems orders known categories by priority and names within a c
 
   const sorted = sortWardrobeItems(items);
 
-  assert.deepEqual(sorted.map((item) => item.id), ["1", "2", "3", "4"]);
-  assert.deepEqual(items.map((item) => item.id), ["3", "1", "2", "4"]);
+  expect(sorted.map((item) => item.id)).toEqual(["1", "2", "3", "4"]);
+  expect(items.map((item) => item.id)).toEqual(["3", "1", "2", "4"]);
 });
 
 test("sortWardrobeItems pushes unknown categories after known ones and sorts them by name", () => {
@@ -25,6 +24,6 @@ test("sortWardrobeItems pushes unknown categories after known ones and sorts the
 
   const sorted = sortWardrobeItems(items);
 
-  assert.deepEqual(sorted.map((item) => item.id), ["3", "1", "2"]);
-  assert.equal(CATEGORY_ORDER.at(-1), "swimwear");
+  expect(sorted.map((item) => item.id)).toEqual(["3", "1", "2"]);
+  expect(CATEGORY_ORDER.at(-1)).toBe("swimwear");
 });

@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect } from "vitest";
 import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
@@ -29,7 +28,7 @@ test("buildPromptDebugImages writes category images with expected geometry and m
     return createBinaryResponse(blueBuffer, { status: 200 });
   };
 
-  t.after(() => {
+  t.onTestFinished(() => {
     globalThis.fetch = originalFetch;
   });
 
@@ -42,34 +41,34 @@ test("buildPromptDebugImages writes category images with expected geometry and m
     debugOutputDir: outputDir
   });
 
-  assert.equal(result.cachedCount, 0);
-  assert.equal(result.downloadedCount, 3);
-  assert.equal(result.skippedCount, 0);
-  assert.equal(result.categories.length, 2);
-  assert.ok(Buffer.isBuffer(result.stitched.buffer));
+  expect(result.cachedCount).toBe(0);
+  expect(result.downloadedCount).toBe(3);
+  expect(result.skippedCount).toBe(0);
+  expect(result.categories.length).toBe(2);
+  expect(Buffer.isBuffer(result.stitched.buffer)).toBeTruthy();
 
   const topCategory = result.categories.find((entry) => entry.category === "top");
-  assert.ok(topCategory);
+  expect(topCategory).toBeTruthy();
   assertCategoryHasBufferProperty(topCategory);
-  assert.equal(topCategory.mimeType, "image/jpeg");
-  assert.equal(topCategory.buffer, undefined);
+  expect(topCategory.mimeType).toBe("image/jpeg");
+  expect(topCategory.buffer).toBe(undefined);
 
   const metadata = await sharp(path.join(outputDir, "category-top.jpg")).metadata();
-  assert.equal(metadata.width, GRID_WIDTH);
-  assert.equal(metadata.height, GRID_HEIGHT + HEADER_HEIGHT);
+  expect(metadata.width).toBe(GRID_WIDTH);
+  expect(metadata.height).toBe(GRID_HEIGHT + HEADER_HEIGHT);
   const stitchedMetadata = await sharp(result.stitched.buffer).metadata();
-  assert.equal(stitchedMetadata.width, GRID_WIDTH);
-  assert.equal(stitchedMetadata.height, (GRID_HEIGHT + HEADER_HEIGHT) * 2);
+  expect(stitchedMetadata.width).toBe(GRID_WIDTH);
+  expect(stitchedMetadata.height).toBe((GRID_HEIGHT + HEADER_HEIGHT) * 2);
 
   const manifest = JSON.parse(await readFile(path.join(outputDir, "manifest.json"), "utf8"));
-  assert.equal(manifest.cachedCount, 0);
-  assert.equal(manifest.downloadedCount, 3);
-  assert.equal(manifest.stitched.file, path.join(outputDir, "categories-stitched.jpg"));
-  assert.equal(manifest.categories.length, 2);
-  assert.equal(manifest.categories[0].cachedCount, 0);
-  assert.equal(manifest.categories[0].items[0].status, "downloaded");
-  assert.equal(manifest.categories[0].items[0].source, "download");
-  assert.equal(manifest.categories[0].items[0].tileFile, undefined);
+  expect(manifest.cachedCount).toBe(0);
+  expect(manifest.downloadedCount).toBe(3);
+  expect(manifest.stitched.file).toBe(path.join(outputDir, "categories-stitched.jpg"));
+  expect(manifest.categories.length).toBe(2);
+  expect(manifest.categories[0].cachedCount).toBe(0);
+  expect(manifest.categories[0].items[0].status).toBe("downloaded");
+  expect(manifest.categories[0].items[0].source).toBe("download");
+  expect(manifest.categories[0].items[0].tileFile).toBe(undefined);
 });
 
 test("buildPromptDebugImages keeps collages in memory when debug saving is disabled", async (t) => {
@@ -79,7 +78,7 @@ test("buildPromptDebugImages keeps collages in memory when debug saving is disab
 
   globalThis.fetch = async () => createBinaryResponse(redBuffer, { status: 200 });
 
-  t.after(() => {
+  t.onTestFinished(() => {
     globalThis.fetch = originalFetch;
   });
 
@@ -89,13 +88,13 @@ test("buildPromptDebugImages keeps collages in memory when debug saving is disab
     debugOutputDir: outputDir
   });
 
-  assert.equal(result.categories.length, 1);
-  assert.ok(Buffer.isBuffer(result.stitched.buffer));
+  expect(result.categories.length).toBe(1);
+  expect(Buffer.isBuffer(result.stitched.buffer)).toBeTruthy();
   assertCategoryHasBufferProperty(result.categories[0]);
-  assert.equal(result.categories[0].buffer, undefined);
-  await assert.rejects(access(path.join(outputDir, "manifest.json")));
-  await assert.rejects(access(path.join(outputDir, "category-top.jpg")));
-  await assert.rejects(access(path.join(outputDir, "categories-stitched.jpg")));
+  expect(result.categories[0].buffer).toBe(undefined);
+  await expect(access(path.join(outputDir, "manifest.json"))).rejects.toThrow();
+  await expect(access(path.join(outputDir, "category-top.jpg"))).rejects.toThrow();
+  await expect(access(path.join(outputDir, "categories-stitched.jpg"))).rejects.toThrow();
 });
 
 test("buildPromptDebugImages skips failed downloads and still produces outputs", async (t) => {
@@ -110,7 +109,7 @@ test("buildPromptDebugImages skips failed downloads and still produces outputs",
     return createBinaryResponse(redBuffer, { status: 200 });
   };
 
-  t.after(() => {
+  t.onTestFinished(() => {
     globalThis.fetch = originalFetch;
   });
 
@@ -123,18 +122,18 @@ test("buildPromptDebugImages skips failed downloads and still produces outputs",
     debugOutputDir: outputDir
   });
 
-  assert.equal(result.downloadedCount, 1);
-  assert.equal(result.cachedCount, 0);
-  assert.equal(result.skippedCount, 1);
-  assert.ok(Buffer.isBuffer(result.stitched.buffer));
+  expect(result.downloadedCount).toBe(1);
+  expect(result.cachedCount).toBe(0);
+  expect(result.skippedCount).toBe(1);
+  expect(Buffer.isBuffer(result.stitched.buffer)).toBeTruthy();
 
   const manifest = JSON.parse(await readFile(path.join(outputDir, "manifest.json"), "utf8"));
-  assert.equal(manifest.categories[0].items[1].status, "skipped");
-  assert.equal(manifest.categories[0].items[1].reason, "socket_hang_up");
+  expect(manifest.categories[0].items[1].status).toBe("skipped");
+  expect(manifest.categories[0].items[1].reason).toBe("socket_hang_up");
 
   const metadata = await sharp(path.join(outputDir, "category-top.jpg")).metadata();
-  assert.equal(metadata.width, GRID_WIDTH);
-  assert.equal(metadata.height, GRID_HEIGHT + HEADER_HEIGHT);
+  expect(metadata.width).toBe(GRID_WIDTH);
+  expect(metadata.height).toBe(GRID_HEIGHT + HEADER_HEIGHT);
 });
 
 test("buildPromptDebugImages uses local cached image before remote fetch", async (t) => {
@@ -155,7 +154,7 @@ test("buildPromptDebugImages uses local cached image before remote fetch", async
     throw new Error("fetch_should_not_be_called");
   };
 
-  t.after(() => {
+  t.onTestFinished(() => {
     globalThis.fetch = originalFetch;
   });
 
@@ -169,12 +168,12 @@ test("buildPromptDebugImages uses local cached image before remote fetch", async
     debugOutputDir: outputDir
   });
 
-  assert.equal(result.cachedCount, 1);
-  assert.equal(result.downloadedCount, 0);
-  assert.equal(result.skippedCount, 0);
+  expect(result.cachedCount).toBe(1);
+  expect(result.downloadedCount).toBe(0);
+  expect(result.skippedCount).toBe(0);
 
   const manifest = JSON.parse(await readFile(path.join(outputDir, "manifest.json"), "utf8"));
-  assert.equal(manifest.categories[0].items[0].source, "cache");
+  expect(manifest.categories[0].items[0].source).toBe("cache");
 });
 
 test("buildPromptDebugImages does not return a normalized image map", async (t) => {
@@ -183,7 +182,7 @@ test("buildPromptDebugImages does not return a normalized image map", async (t) 
 
   globalThis.fetch = async () => createBinaryResponse(redBuffer, { status: 200 });
 
-  t.after(() => {
+  t.onTestFinished(() => {
     globalThis.fetch = originalFetch;
   });
 
@@ -191,5 +190,5 @@ test("buildPromptDebugImages does not return a normalized image map", async (t) 
     normalizedItems: createItems("top", 1)
   });
 
-  assert.equal("downloadedImagesById" in result, false);
+  expect("downloadedImagesById" in result).toBe(false);
 });

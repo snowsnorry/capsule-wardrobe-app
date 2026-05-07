@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect } from "vitest";
 import {
   defaultLocale,
   isSupportedLocale,
@@ -10,40 +9,39 @@ import {
 } from "./helpers.js";
 
 test("normalizeLocale lowercases and strips region suffixes", () => {
-  assert.equal(normalizeLocale("EN-us"), "en");
-  assert.equal(normalizeLocale("ru-RU"), "ru");
-  assert.equal(normalizeLocale(""), "");
+  expect(normalizeLocale("EN-us")).toBe("en");
+  expect(normalizeLocale("ru-RU")).toBe("ru");
+  expect(normalizeLocale("")).toBe("");
 });
 
 test("isSupportedLocale reports supported locales only", () => {
-  assert.equal(isSupportedLocale("en"), true);
-  assert.equal(isSupportedLocale("ru"), true);
-  assert.equal(isSupportedLocale("de"), false);
+  expect(isSupportedLocale("en")).toBe(true);
+  expect(isSupportedLocale("ru")).toBe(true);
+  expect(isSupportedLocale("de")).toBe(false);
 });
 
 test("t falls back to default locale and interpolates parameters", () => {
-  assert.equal(t("auth.codeSent", { minutes: 5 }, "ru"), "Код отправлен. Он будет действителен 5 минут.");
-  assert.equal(t("appName", undefined, "de"), "Capsule Wardrobe");
-  assert.equal(t("missing.path", undefined, "en"), "missing.path");
-  assert.equal(defaultLocale, "en");
+  expect(t("auth.codeSent", { minutes: 5 }, "ru")).toBe("Код отправлен. Он будет действителен 5 минут.");
+  expect(t("appName", undefined, "de")).toBe("Capsule Wardrobe");
+  expect(t("missing.path", undefined, "en")).toBe("missing.path");
+  expect(defaultLocale).toBe("en");
 });
 
 test("t translates app launcher labels", () => {
-  assert.equal(t("launcher.capsule", undefined, "ru"), "Капсула");
-  assert.equal(t("launcher.explore", undefined, "ru"), "Поиск");
-  assert.equal(t("launcher.statistics", undefined, "ru"), "Статистика");
+  expect(t("launcher.capsule", undefined, "ru")).toBe("Капсула");
+  expect(t("launcher.explore", undefined, "ru")).toBe("Поиск");
+  expect(t("launcher.statistics", undefined, "ru")).toBe("Статистика");
 });
 
 test("translateOption humanizes unknown values and translates known ones", () => {
-  assert.equal(translateOption("styles", "street_style", "en"), "Street style");
-  assert.equal(translateOption("styles", "unknown_style", "en"), "Unknown Style");
+  expect(translateOption("styles", "street_style", "en")).toBe("Street style");
+  expect(translateOption("styles", "unknown_style", "en")).toBe("Unknown Style");
 });
 
 test("t resolves dictionary keys that contain dots", () => {
-  assert.equal(t("settings.llmOptions.openai:gpt-5.5", undefined, "en"), "OpenAI GPT-5.5");
-  assert.equal(t("settings.llmOptions.claude:claude-opus-4-7", undefined, "en"), "Claude Opus 4.7");
-  assert.equal(
-    resolveTranslationValue(
+  expect(t("settings.llmOptions.openai:gpt-5.5", undefined, "en")).toBe("OpenAI GPT-5.5");
+  expect(t("settings.llmOptions.claude:claude-opus-4-7", undefined, "en")).toBe("Claude Opus 4.7");
+  expect(resolveTranslationValue(
       {
         settings: {
           llmOptions: {
@@ -53,7 +51,5 @@ test("t resolves dictionary keys that contain dots", () => {
         }
       },
       "settings.llmOptions.claude:claude-opus-4-7"
-    ),
-    "Claude Opus 4.7"
-  );
+    )).toBe("Claude Opus 4.7");
 });

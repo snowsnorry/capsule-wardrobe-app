@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect, vi } from "vitest";
 import { AUTH_COOKIE, CSRF_TOKEN, TEST_CLIENT_ORIGIN, requestJson, startTestServer } from "../test/serverRouteTestUtils.js";
 
 test("capsule action routes cover wardrobe handlers and pdf download", async (t) => {
@@ -32,9 +31,9 @@ test("capsule action routes cover wardrobe handlers and pdf download", async (t)
   const wardrobe = await requestJson(baseUrl, "/capsules/capsule-1/events", {
     cookie: AUTH_COOKIE
   });
-  assert.equal(wardrobe.response.status, 200);
-  assert.equal(wardrobeCalled, true);
-  assert.equal(wardrobe.json.snapshot.status, "ready");
+  expect(wardrobe.response.status).toBe(200);
+  expect(wardrobeCalled).toBe(true);
+  expect(wardrobe.json.snapshot.status).toBe("ready");
 
   const fullRegenerate = await requestJson(baseUrl, "/capsules/capsule-1/regenerate", {
     method: "POST",
@@ -42,8 +41,8 @@ test("capsule action routes cover wardrobe handlers and pdf download", async (t)
     cookie: AUTH_COOKIE,
     csrfToken: CSRF_TOKEN
   });
-  assert.equal(fullRegenerate.response.status, 202);
-  assert.equal(fullRegenerateCalled, true);
+  expect(fullRegenerate.response.status).toBe(202);
+  expect(fullRegenerateCalled).toBe(true);
 
   const regenerate = await requestJson(baseUrl, "/capsules/capsule-1/regenerate-selected", {
     method: "POST",
@@ -52,8 +51,8 @@ test("capsule action routes cover wardrobe handlers and pdf download", async (t)
     csrfToken: CSRF_TOKEN,
     body: { itemUrls: ["https://example.com/1"] }
   });
-  assert.equal(regenerate.response.status, 200);
-  assert.equal(regenerateCalled, true);
+  expect(regenerate.response.status).toBe(200);
+  expect(regenerateCalled).toBe(true);
 
   const outfitSetImage = await requestJson(baseUrl, "/capsules/capsule-1/outfit-sets/0/image", {
     method: "POST",
@@ -61,13 +60,13 @@ test("capsule action routes cover wardrobe handlers and pdf download", async (t)
     cookie: AUTH_COOKIE,
     csrfToken: CSRF_TOKEN
   });
-  assert.equal(outfitSetImage.response.status, 202);
-  assert.deepEqual(outfitSetImage.json, { ok: true, status: "pending" });
+  expect(outfitSetImage.response.status).toBe(202);
+  expect(outfitSetImage.json).toEqual({ ok: true, status: "pending" });
 
   const removedWardrobeRoute = await requestJson(baseUrl, "/capsules/capsule-1/items", {
     cookie: AUTH_COOKIE
   });
-  assert.equal(removedWardrobeRoute.response.status, 404);
+  expect(removedWardrobeRoute.response.status).toBe(404);
 
   const pdf = await requestJson(baseUrl, "/capsules/capsule-1/pdf", {
     method: "POST",
@@ -75,12 +74,9 @@ test("capsule action routes cover wardrobe handlers and pdf download", async (t)
     cookie: AUTH_COOKIE,
     csrfToken: CSRF_TOKEN
   });
-  assert.equal(pdf.response.status, 200);
-  assert.equal(pdfLocale, "en");
-  assert.equal(
-    pdf.response.headers.get("content-disposition"),
-    `attachment; filename="New-capsule.pdf"; filename*=UTF-8''${encodeURIComponent("New capsule.pdf")}`
-  );
+  expect(pdf.response.status).toBe(200);
+  expect(pdfLocale).toBe("en");
+  expect(pdf.response.headers.get("content-disposition")).toBe(`attachment; filename="New-capsule.pdf"; filename*=UTF-8''${encodeURIComponent("New capsule.pdf")}`);
 });
 
 test("capsule creation only accepts name and filters and initializes server-owned data", async (t) => {
@@ -113,8 +109,8 @@ test("capsule creation only accepts name and filters and initializes server-owne
     }
   });
 
-  assert.equal(result.response.status, 201);
-  assert.deepEqual(receivedPayload, {
+  expect(result.response.status).toBe(201);
+  expect(receivedPayload).toEqual({
     name: "Spring edit",
     draft: {
       filters: {
@@ -157,8 +153,8 @@ test("capsule creation rejects client-supplied state-bearing fields", async (t) 
     }
   });
 
-  assert.equal(result.response.status, 400);
-  assert.deepEqual(result.json, { error: "invalid_payload" });
+  expect(result.response.status).toBe(400);
+  expect(result.json).toEqual({ error: "invalid_payload" });
 });
 
 test("filters patch only accepts filters and resets draft data", async (t) => {
@@ -192,8 +188,8 @@ test("filters patch only accepts filters and resets draft data", async (t) => {
     }
   });
 
-  assert.equal(result.response.status, 200);
-  assert.deepEqual(receivedDraft, {
+  expect(result.response.status).toBe(200);
+  expect(receivedDraft).toEqual({
     filters: {
       formalityLevel: "casual",
       style: "minimalistic",
@@ -239,8 +235,8 @@ test("filters patch can trigger regenerate via query flag after saving filters",
     }
   });
 
-  assert.equal(result.response.status, 202);
-  assert.deepEqual(calls, [
+  expect(result.response.status).toBe(202);
+  expect(calls).toEqual([
     {
       type: "update",
       draft: {
@@ -290,8 +286,8 @@ test("rejected urls patch validates against current capsule wardrobe", async (t)
     }
   });
 
-  assert.equal(result.response.status, 200);
-  assert.deepEqual(receivedDraft, {
+  expect(result.response.status).toBe(200);
+  expect(receivedDraft).toEqual({
     filters: {
       formalityLevel: "casual",
       style: "minimalistic",
@@ -328,8 +324,8 @@ test("rejected urls patch rejects unknown urls and missing wardrobe", async (t) 
     }
   });
 
-  assert.equal(invalid.response.status, 400);
-  assert.deepEqual(invalid.json, { error: "invalid_payload" });
+  expect(invalid.response.status).toBe(400);
+  expect(invalid.json).toEqual({ error: "invalid_payload" });
 
   const noWardrobeServer = await startTestServer(t, {
     overrides: {
@@ -368,8 +364,8 @@ test("rejected urls patch rejects unknown urls and missing wardrobe", async (t) 
     }
   });
 
-  assert.equal(notFound.response.status, 404);
-  assert.deepEqual(notFound.json, { error: "not_found" });
+  expect(notFound.response.status).toBe(404);
+  expect(notFound.json).toEqual({ error: "not_found" });
 });
 
 test("capsule mutation state and metadata routes map success and missing records", async (t) => {
@@ -409,8 +405,8 @@ test("capsule mutation state and metadata routes map success and missing records
     cookie: AUTH_COOKIE,
     csrfToken: CSRF_TOKEN
   });
-  assert.equal(save.response.status, 200);
-  assert.equal((save.json.capsule as { id?: string }).id, "capsule-1");
+  expect(save.response.status).toBe(200);
+  expect((save.json.capsule as { id?: string }).id).toBe("capsule-1");
 
   const revert = await requestJson(baseUrl, "/capsules/capsule-1/revert", {
     method: "POST",
@@ -418,8 +414,8 @@ test("capsule mutation state and metadata routes map success and missing records
     cookie: AUTH_COOKIE,
     csrfToken: CSRF_TOKEN
   });
-  assert.equal(revert.response.status, 200);
-  assert.equal((revert.json.capsule as { name?: string }).name, "Reverted");
+  expect(revert.response.status).toBe(200);
+  expect((revert.json.capsule as { name?: string }).name).toBe("Reverted");
 
   const rename = await requestJson(baseUrl, "/capsules/capsule-1/rename", {
     method: "PATCH",
@@ -428,8 +424,8 @@ test("capsule mutation state and metadata routes map success and missing records
     csrfToken: CSRF_TOKEN,
     body: { name: "Travel edit" }
   });
-  assert.equal(rename.response.status, 200);
-  assert.equal((rename.json.capsule as { name?: string }).name, "Travel edit");
+  expect(rename.response.status).toBe(200);
+  expect((rename.json.capsule as { name?: string }).name).toBe("Travel edit");
 
   const invalidRename = await requestJson(baseUrl, "/capsules/capsule-1/rename", {
     method: "PATCH",
@@ -438,8 +434,8 @@ test("capsule mutation state and metadata routes map success and missing records
     csrfToken: CSRF_TOKEN,
     body: { name: "  " }
   });
-  assert.equal(invalidRename.response.status, 400);
-  assert.deepEqual(invalidRename.json, { error: "invalid_payload" });
+  expect(invalidRename.response.status).toBe(400);
+  expect(invalidRename.json).toEqual({ error: "invalid_payload" });
 
   const duplicate = await requestJson(baseUrl, "/capsules/capsule-1/duplicate", {
     method: "POST",
@@ -448,8 +444,8 @@ test("capsule mutation state and metadata routes map success and missing records
     csrfToken: CSRF_TOKEN,
     body: { name: "Copy name" }
   });
-  assert.equal(duplicate.response.status, 201);
-  assert.equal((duplicate.json.capsule as { id?: string }).id, "capsule-copy");
+  expect(duplicate.response.status).toBe(201);
+  expect((duplicate.json.capsule as { id?: string }).id).toBe("capsule-copy");
 
   const select = await requestJson(baseUrl, "/capsules/capsule-1/select", {
     method: "POST",
@@ -457,8 +453,8 @@ test("capsule mutation state and metadata routes map success and missing records
     cookie: AUTH_COOKIE,
     csrfToken: CSRF_TOKEN
   });
-  assert.equal(select.response.status, 200);
-  assert.equal(select.json.activeCapsuleId, "capsule-1");
+  expect(select.response.status).toBe(200);
+  expect(select.json.activeCapsuleId).toBe("capsule-1");
 
   const deleted = await requestJson(baseUrl, "/capsules/capsule-1", {
     method: "DELETE",
@@ -466,10 +462,10 @@ test("capsule mutation state and metadata routes map success and missing records
     cookie: AUTH_COOKIE,
     csrfToken: CSRF_TOKEN
   });
-  assert.equal(deleted.response.status, 200);
-  assert.equal((deleted.json.activeCapsule as { id?: string }).id, "capsule-1");
+  expect(deleted.response.status).toBe(200);
+  expect((deleted.json.activeCapsule as { id?: string }).id).toBe("capsule-1");
 
-  assert.deepEqual(calls, [
+  expect(calls).toEqual([
     { type: "save", id: "capsule-1" },
     { type: "revert", id: "capsule-1" },
     { type: "rename", id: "capsule-1", name: "Travel edit" },
@@ -480,7 +476,7 @@ test("capsule mutation state and metadata routes map success and missing records
 });
 
 test("capsule mutation routes map store failures and not-found responses", async (t) => {
-  t.mock.method(console, "error", () => {});
+  vi.spyOn(console, "error").mockImplementation(() => {});
 
   const failingCreateServer = await startTestServer(t, {
     overrides: {
@@ -496,8 +492,8 @@ test("capsule mutation routes map store failures and not-found responses", async
     csrfToken: CSRF_TOKEN,
     body: { name: "Spring edit", filters: {} }
   });
-  assert.equal(createFailure.response.status, 503);
-  assert.deepEqual(createFailure.json, { error: "service_unavailable" });
+  expect(createFailure.response.status).toBe(503);
+  expect(createFailure.json).toEqual({ error: "service_unavailable" });
 
   const missingMutationsServer = await startTestServer(t, {
     overrides: {
@@ -517,8 +513,8 @@ test("capsule mutation routes map store failures and not-found responses", async
     csrfToken: CSRF_TOKEN,
     body: { filters: {} }
   });
-  assert.equal(filtersMissing.response.status, 404);
-  assert.deepEqual(filtersMissing.json, { error: "not_found" });
+  expect(filtersMissing.response.status).toBe(404);
+  expect(filtersMissing.json).toEqual({ error: "not_found" });
 
   const rejectedMissing = await requestJson(missingMutationsServer.baseUrl, "/capsules/capsule-1/rejected-urls", {
     method: "PATCH",
@@ -527,8 +523,8 @@ test("capsule mutation routes map store failures and not-found responses", async
     csrfToken: CSRF_TOKEN,
     body: { rejectedUrls: [] }
   });
-  assert.equal(rejectedMissing.response.status, 404);
-  assert.deepEqual(rejectedMissing.json, { error: "not_found" });
+  expect(rejectedMissing.response.status).toBe(404);
+  expect(rejectedMissing.json).toEqual({ error: "not_found" });
 
   const saveMissing = await requestJson(missingMutationsServer.baseUrl, "/capsules/capsule-1/save", {
     method: "POST",
@@ -536,8 +532,8 @@ test("capsule mutation routes map store failures and not-found responses", async
     cookie: AUTH_COOKIE,
     csrfToken: CSRF_TOKEN
   });
-  assert.equal(saveMissing.response.status, 404);
-  assert.deepEqual(saveMissing.json, { error: "not_found" });
+  expect(saveMissing.response.status).toBe(404);
+  expect(saveMissing.json).toEqual({ error: "not_found" });
 
   const revertMissing = await requestJson(missingMutationsServer.baseUrl, "/capsules/capsule-1/revert", {
     method: "POST",
@@ -545,8 +541,8 @@ test("capsule mutation routes map store failures and not-found responses", async
     cookie: AUTH_COOKIE,
     csrfToken: CSRF_TOKEN
   });
-  assert.equal(revertMissing.response.status, 404);
-  assert.deepEqual(revertMissing.json, { error: "not_found" });
+  expect(revertMissing.response.status).toBe(404);
+  expect(revertMissing.json).toEqual({ error: "not_found" });
 
   const renameMissing = await requestJson(missingMutationsServer.baseUrl, "/capsules/capsule-1/rename", {
     method: "PATCH",
@@ -555,8 +551,8 @@ test("capsule mutation routes map store failures and not-found responses", async
     csrfToken: CSRF_TOKEN,
     body: { name: "Travel edit" }
   });
-  assert.equal(renameMissing.response.status, 404);
-  assert.deepEqual(renameMissing.json, { error: "not_found" });
+  expect(renameMissing.response.status).toBe(404);
+  expect(renameMissing.json).toEqual({ error: "not_found" });
 
   const duplicateMissing = await requestJson(missingMutationsServer.baseUrl, "/capsules/capsule-1/duplicate", {
     method: "POST",
@@ -564,8 +560,8 @@ test("capsule mutation routes map store failures and not-found responses", async
     cookie: AUTH_COOKIE,
     csrfToken: CSRF_TOKEN
   });
-  assert.equal(duplicateMissing.response.status, 404);
-  assert.deepEqual(duplicateMissing.json, { error: "not_found" });
+  expect(duplicateMissing.response.status).toBe(404);
+  expect(duplicateMissing.json).toEqual({ error: "not_found" });
 
   const selectMissing = await requestJson(missingMutationsServer.baseUrl, "/capsules/capsule-1/select", {
     method: "POST",
@@ -573,8 +569,8 @@ test("capsule mutation routes map store failures and not-found responses", async
     cookie: AUTH_COOKIE,
     csrfToken: CSRF_TOKEN
   });
-  assert.equal(selectMissing.response.status, 404);
-  assert.deepEqual(selectMissing.json, { error: "not_found" });
+  expect(selectMissing.response.status).toBe(404);
+  expect(selectMissing.json).toEqual({ error: "not_found" });
 
   const deleteMissing = await requestJson(missingMutationsServer.baseUrl, "/capsules/capsule-1", {
     method: "DELETE",
@@ -582,12 +578,12 @@ test("capsule mutation routes map store failures and not-found responses", async
     cookie: AUTH_COOKIE,
     csrfToken: CSRF_TOKEN
   });
-  assert.equal(deleteMissing.response.status, 404);
-  assert.deepEqual(deleteMissing.json, { error: "not_found" });
+  expect(deleteMissing.response.status).toBe(404);
+  expect(deleteMissing.json).toEqual({ error: "not_found" });
 });
 
 test("capsule pdf route maps missing inputs and build failures", async (t) => {
-  t.mock.method(console, "error", () => {});
+  vi.spyOn(console, "error").mockImplementation(() => {});
 
   const noItemsServer = await startTestServer(t, {
     overrides: {
@@ -600,8 +596,8 @@ test("capsule pdf route maps missing inputs and build failures", async (t) => {
     cookie: AUTH_COOKIE,
     csrfToken: CSRF_TOKEN
   });
-  assert.equal(noItems.response.status, 404);
-  assert.deepEqual(noItems.json, { error: "not_found" });
+  expect(noItems.response.status).toBe(404);
+  expect(noItems.json).toEqual({ error: "not_found" });
 
   const noProductsServer = await startTestServer(t, {
     overrides: {
@@ -614,8 +610,8 @@ test("capsule pdf route maps missing inputs and build failures", async (t) => {
     cookie: AUTH_COOKIE,
     csrfToken: CSRF_TOKEN
   });
-  assert.equal(noProducts.response.status, 404);
-  assert.deepEqual(noProducts.json, { error: "not_found" });
+  expect(noProducts.response.status).toBe(404);
+  expect(noProducts.json).toEqual({ error: "not_found" });
 
   const failingPdfServer = await startTestServer(t, {
     overrides: {
@@ -630,6 +626,6 @@ test("capsule pdf route maps missing inputs and build failures", async (t) => {
     cookie: AUTH_COOKIE,
     csrfToken: CSRF_TOKEN
   });
-  assert.equal(pdfFailure.response.status, 503);
-  assert.deepEqual(pdfFailure.json, { error: "service_unavailable" });
+  expect(pdfFailure.response.status).toBe(503);
+  expect(pdfFailure.json).toEqual({ error: "service_unavailable" });
 });

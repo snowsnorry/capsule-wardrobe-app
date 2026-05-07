@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect, vi } from "vitest";
 import { AUTH_COOKIE, CSRF_TOKEN, TEST_CLIENT_ORIGIN, requestJson, startTestServer } from "../test/serverRouteTestUtils.js";
 
 test("capsule events initial snapshot includes pending outfit set image indexes", async (t) => {
@@ -48,8 +47,8 @@ test("capsule events initial snapshot includes pending outfit set image indexes"
     cookie: AUTH_COOKIE
   });
 
-  assert.equal(response.response.status, 200);
-  assert.deepEqual(streamedSnapshot?.pendingImageSetIndexes, [0]);
+  expect(response.response.status).toBe(200);
+  expect(streamedSnapshot?.pendingImageSetIndexes).toEqual([0]);
 });
 
 test("share routes create, read, import, and enforce auth boundaries", async (t) => {
@@ -87,14 +86,14 @@ test("share routes create, read, import, and enforce auth boundaries", async (t)
     origin: TEST_CLIENT_ORIGIN,
     csrfToken: CSRF_TOKEN
   });
-  assert.equal(missingAuth.response.status, 401);
+  expect(missingAuth.response.status).toBe(401);
 
   const missingCsrf = await requestJson(baseUrl, "/capsules/capsule-1/share", {
     method: "POST",
     origin: TEST_CLIENT_ORIGIN,
     cookie: AUTH_COOKIE
   });
-  assert.equal(missingCsrf.response.status, 403);
+  expect(missingCsrf.response.status).toBe(403);
 
   const created = await requestJson(baseUrl, "/capsules/capsule-1/share", {
     method: "POST",
@@ -102,8 +101,8 @@ test("share routes create, read, import, and enforce auth boundaries", async (t)
     cookie: AUTH_COOKIE,
     csrfToken: CSRF_TOKEN
   });
-  assert.equal(created.response.status, 201);
-  assert.deepEqual(created.json, {
+  expect(created.response.status).toBe(201);
+  expect(created.json).toEqual({
     ok: true,
     id: "share-1",
     url: `${TEST_CLIENT_ORIGIN}/share/share-1`,
@@ -111,8 +110,8 @@ test("share routes create, read, import, and enforce auth boundaries", async (t)
   });
 
   const metadata = await requestJson(baseUrl, "/shared-capsules/share-1");
-  assert.equal(metadata.response.status, 200);
-  assert.deepEqual(metadata.json, {
+  expect(metadata.response.status).toBe(200);
+  expect(metadata.json).toEqual({
     ok: true,
     id: "share-1",
     name: "Spring edit",
@@ -125,15 +124,15 @@ test("share routes create, read, import, and enforce auth boundaries", async (t)
     cookie: AUTH_COOKIE,
     csrfToken: CSRF_TOKEN
   });
-  assert.equal(imported.response.status, 201);
-  assert.equal(imported.json.capsuleId, "capsule-imported");
-  assert.equal(imported.json.name, "Spring edit (2)");
+  expect(imported.response.status).toBe(201);
+  expect(imported.json.capsuleId).toBe("capsule-imported");
+  expect(imported.json.name).toBe("Spring edit (2)");
 
   const expired = await requestJson(baseUrl, "/shared-capsules/expired-share");
-  assert.equal(expired.response.status, 404);
-  assert.deepEqual(expired.json, { error: "shared_capsule_unavailable" });
+  expect(expired.response.status).toBe(404);
+  expect(expired.json).toEqual({ error: "shared_capsule_unavailable" });
 
-  assert.deepEqual(calls, [
+  expect(calls).toEqual([
     { type: "create", email: "person@example.com", capsuleId: "capsule-1", clientOrigin: TEST_CLIENT_ORIGIN },
     { type: "get", id: "share-1" },
     { type: "import", email: "person@example.com", id: "share-1" },
@@ -163,35 +162,35 @@ test("capsule read routes expose bootstrap, recent, search, and lookup fallbacks
   const bootstrap = await requestJson(baseUrl, "/capsules/bootstrap", {
     cookie: AUTH_COOKIE
   });
-  assert.equal(bootstrap.response.status, 200);
-  assert.equal(bootstrap.json.ok, true);
-  assert.equal((bootstrap.json.activeCapsule as { id?: string }).id, "capsule-1");
+  expect(bootstrap.response.status).toBe(200);
+  expect(bootstrap.json.ok).toBe(true);
+  expect((bootstrap.json.activeCapsule as { id?: string }).id).toBe("capsule-1");
 
   const recent = await requestJson(baseUrl, "/capsules/recent", {
     cookie: AUTH_COOKIE
   });
-  assert.equal(recent.response.status, 200);
-  assert.equal(recent.json.capsules[0].id, "capsule-1");
+  expect(recent.response.status).toBe(200);
+  expect(recent.json.capsules[0].id).toBe("capsule-1");
 
   const emptySearch = await requestJson(baseUrl, "/capsules/search", {
     cookie: AUTH_COOKIE
   });
-  assert.equal(emptySearch.response.status, 200);
-  assert.equal(emptySearch.json.capsules[0].id, "capsule-1");
+  expect(emptySearch.response.status).toBe(200);
+  expect(emptySearch.json.capsules[0].id).toBe("capsule-1");
 
   const querySearch = await requestJson(baseUrl, "/capsules/search?q=office", {
     cookie: AUTH_COOKIE
   });
-  assert.equal(querySearch.response.status, 200);
-  assert.equal(querySearch.json.capsules[0].id, "capsule-2");
+  expect(querySearch.response.status).toBe(200);
+  expect(querySearch.json.capsules[0].id).toBe("capsule-2");
 
   const capsule = await requestJson(baseUrl, "/capsules/capsule-1", {
     cookie: AUTH_COOKIE
   });
-  assert.equal(capsule.response.status, 200);
-  assert.equal((capsule.json.capsule as { id?: string }).id, "capsule-1");
+  expect(capsule.response.status).toBe(200);
+  expect((capsule.json.capsule as { id?: string }).id).toBe("capsule-1");
 
-  assert.deepEqual(calls, [
+  expect(calls).toEqual([
     { type: "recent", limit: 10 },
     { type: "recent", limit: 10 },
     { type: "recent", limit: 25 },
@@ -201,7 +200,7 @@ test("capsule read routes expose bootstrap, recent, search, and lookup fallbacks
 });
 
 test("capsule read and share routes map missing records and service failures", async (t) => {
-  t.mock.method(console, "error", () => {});
+  vi.spyOn(console, "error").mockImplementation(() => {});
 
   const failingBootstrapServer = await startTestServer(t, {
     overrides: {
@@ -213,8 +212,8 @@ test("capsule read and share routes map missing records and service failures", a
   const bootstrapFailure = await requestJson(failingBootstrapServer.baseUrl, "/capsules/bootstrap", {
     cookie: AUTH_COOKIE
   });
-  assert.equal(bootstrapFailure.response.status, 503);
-  assert.deepEqual(bootstrapFailure.json, { error: "service_unavailable" });
+  expect(bootstrapFailure.response.status).toBe(503);
+  expect(bootstrapFailure.json).toEqual({ error: "service_unavailable" });
 
   const failingRecentServer = await startTestServer(t, {
     overrides: {
@@ -226,8 +225,8 @@ test("capsule read and share routes map missing records and service failures", a
   const recentFailure = await requestJson(failingRecentServer.baseUrl, "/capsules/recent", {
     cookie: AUTH_COOKIE
   });
-  assert.equal(recentFailure.response.status, 503);
-  assert.deepEqual(recentFailure.json, { error: "service_unavailable" });
+  expect(recentFailure.response.status).toBe(503);
+  expect(recentFailure.json).toEqual({ error: "service_unavailable" });
 
   const failingSearchServer = await startTestServer(t, {
     overrides: {
@@ -239,8 +238,8 @@ test("capsule read and share routes map missing records and service failures", a
   const searchFailure = await requestJson(failingSearchServer.baseUrl, "/capsules/search?q=office", {
     cookie: AUTH_COOKIE
   });
-  assert.equal(searchFailure.response.status, 503);
-  assert.deepEqual(searchFailure.json, { error: "service_unavailable" });
+  expect(searchFailure.response.status).toBe(503);
+  expect(searchFailure.json).toEqual({ error: "service_unavailable" });
 
   const missingCapsuleServer = await startTestServer(t, {
     overrides: {
@@ -250,8 +249,8 @@ test("capsule read and share routes map missing records and service failures", a
   const missingCapsule = await requestJson(missingCapsuleServer.baseUrl, "/capsules/missing", {
     cookie: AUTH_COOKIE
   });
-  assert.equal(missingCapsule.response.status, 404);
-  assert.deepEqual(missingCapsule.json, { error: "not_found" });
+  expect(missingCapsule.response.status).toBe(404);
+  expect(missingCapsule.json).toEqual({ error: "not_found" });
 
   const unavailableShareServer = await startTestServer(t, {
     overrides: {
@@ -268,12 +267,12 @@ test("capsule read and share routes map missing records and service failures", a
     cookie: AUTH_COOKIE,
     csrfToken: CSRF_TOKEN
   });
-  assert.equal(missingShare.response.status, 404);
-  assert.deepEqual(missingShare.json, { error: "not_found" });
+  expect(missingShare.response.status).toBe(404);
+  expect(missingShare.json).toEqual({ error: "not_found" });
 
   const sharedFailure = await requestJson(unavailableShareServer.baseUrl, "/shared-capsules/share-1");
-  assert.equal(sharedFailure.response.status, 503);
-  assert.deepEqual(sharedFailure.json, { error: "service_unavailable" });
+  expect(sharedFailure.response.status).toBe(503);
+  expect(sharedFailure.json).toEqual({ error: "service_unavailable" });
 
   const missingImport = await requestJson(unavailableShareServer.baseUrl, "/shared-capsules/share-1/import", {
     method: "POST",
@@ -281,8 +280,8 @@ test("capsule read and share routes map missing records and service failures", a
     cookie: AUTH_COOKIE,
     csrfToken: CSRF_TOKEN
   });
-  assert.equal(missingImport.response.status, 404);
-  assert.deepEqual(missingImport.json, { error: "shared_capsule_unavailable" });
+  expect(missingImport.response.status).toBe(404);
+  expect(missingImport.json).toEqual({ error: "shared_capsule_unavailable" });
 
   const notShareableServer = await startTestServer(t, {
     overrides: {
@@ -302,8 +301,8 @@ test("capsule read and share routes map missing records and service failures", a
     cookie: AUTH_COOKIE,
     csrfToken: CSRF_TOKEN
   });
-  assert.equal(notShareable.response.status, 400);
-  assert.deepEqual(notShareable.json, { error: "capsule_not_shareable" });
+  expect(notShareable.response.status).toBe(400);
+  expect(notShareable.json).toEqual({ error: "capsule_not_shareable" });
 
   const notImportable = await requestJson(notShareableServer.baseUrl, "/shared-capsules/share-1/import", {
     method: "POST",
@@ -311,6 +310,6 @@ test("capsule read and share routes map missing records and service failures", a
     cookie: AUTH_COOKIE,
     csrfToken: CSRF_TOKEN
   });
-  assert.equal(notImportable.response.status, 400);
-  assert.deepEqual(notImportable.json, { error: "capsule_not_shareable" });
+  expect(notImportable.response.status).toBe(400);
+  expect(notImportable.json).toEqual({ error: "capsule_not_shareable" });
 });

@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect } from "vitest";
 import sharp from "sharp";
 import { downloadProductImageAssets } from "./promptImageDownloads.js";
 import { createBinaryResponse } from "../test/testDoubles.js";
@@ -23,19 +22,19 @@ test("downloadProductImageAssets normalizes downloaded files to jpeg", async (t)
     }
   });
 
-  t.after(() => {
+  t.onTestFinished(() => {
     globalThis.fetch = originalFetch;
   });
 
   const assets = await downloadProductImageAssets(createItems("top", 1));
   const asset = assets["top-1"];
 
-  assert.ok(asset);
-  assert.equal(asset.mimeType, "image/jpeg");
-  assert.equal(asset.source, "download");
-  assert.ok(Buffer.isBuffer(asset.buffer));
+  expect(asset).toBeTruthy();
+  expect(asset.mimeType).toBe("image/jpeg");
+  expect(asset.source).toBe("download");
+  expect(Buffer.isBuffer(asset.buffer)).toBeTruthy();
   const metadata = await sharp(asset.buffer).metadata();
-  assert.equal(metadata.format, "jpeg");
+  expect(metadata.format).toBe("jpeg");
 });
 
 test("downloadProductImageAssets uses local cached jpeg before remote fetch", async (t) => {
@@ -55,7 +54,7 @@ test("downloadProductImageAssets uses local cached jpeg before remote fetch", as
     throw new Error("fetch_should_not_be_called");
   };
 
-  t.after(() => {
+  t.onTestFinished(() => {
     globalThis.fetch = originalFetch;
   });
 
@@ -66,11 +65,11 @@ test("downloadProductImageAssets uses local cached jpeg before remote fetch", as
   }]);
 
   const asset = assets["top-1"];
-  assert.ok(asset);
-  assert.equal(asset.source, "cache");
-  assert.equal(asset.originalImageUrl, imageUrl);
+  expect(asset).toBeTruthy();
+  expect(asset.source).toBe("cache");
+  expect(asset.originalImageUrl).toBe(imageUrl);
   const metadata = await sharp(asset.buffer).metadata();
-  assert.equal(metadata.format, "jpeg");
+  expect(metadata.format).toBe("jpeg");
 });
 
 test("downloadProductImageAssets replaces width placeholder in image url before fetch", async (t) => {
@@ -83,7 +82,7 @@ test("downloadProductImageAssets replaces width placeholder in image url before 
     return createBinaryResponse(fixtureBuffer, { status: 200 });
   };
 
-  t.after(() => {
+  t.onTestFinished(() => {
     globalThis.fetch = originalFetch;
   });
 
@@ -93,6 +92,6 @@ test("downloadProductImageAssets replaces width placeholder in image url before 
     image_url: "https://static.zara.net/image.jpg?ts=1773310573314&w={width}"
   }]);
 
-  assert.equal(requestedUrls.length, 1);
-  assert.equal(requestedUrls[0], "https://static.zara.net/image.jpg?ts=1773310573314&w=1000");
+  expect(requestedUrls.length).toBe(1);
+  expect(requestedUrls[0]).toBe("https://static.zara.net/image.jpg?ts=1773310573314&w=1000");
 });

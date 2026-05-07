@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect } from "vitest";
 import {
   buildPromptDebugImages,
   buildPromptDebugImagesInChild,
@@ -10,10 +9,10 @@ import {
 } from "./promptImages.js";
 
 test("promptImages barrel exposes prompt image module entrypoints", () => {
-  assert.equal(typeof buildPromptDebugImages, "function");
-  assert.equal(typeof buildPromptDebugImagesInChild, "function");
-  assert.equal(typeof downloadProductImageAssets, "function");
-  assert.equal(typeof groupPromptImageItemsByCategory, "function");
-  assert.equal(typeof preparePdfImageAssets, "function");
-  assert.equal(resolveSourceImageUrl("https://example.com/image.jpg?w={width}"), "https://example.com/image.jpg?w=1000");
+  expect(typeof buildPromptDebugImages).toBe("function");
+  expect(typeof buildPromptDebugImagesInChild).toBe("function");
+  expect(typeof downloadProductImageAssets).toBe("function");
+  expect(typeof groupPromptImageItemsByCategory).toBe("function");
+  expect(typeof preparePdfImageAssets).toBe("function");
+  expect(resolveSourceImageUrl("https://example.com/image.jpg?w={width}")).toBe("https://example.com/image.jpg?w=1000");
 });

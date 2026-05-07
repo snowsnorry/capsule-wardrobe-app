@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect } from "vitest";
 import {
   buildGeminiImagePromptParts,
   createGeminiImageClient,
@@ -7,12 +6,10 @@ import {
 } from "./geminiImage.js";
 
 test("buildGeminiImagePromptParts creates text and inlineData parts", () => {
-  assert.deepEqual(
-    buildGeminiImagePromptParts("draw outfit", [{
+  expect(buildGeminiImagePromptParts("draw outfit", [{
       mimeType: "image/png",
       buffer: Buffer.from("img")
-    }]),
-    [
+    }])).toEqual([
       { text: "draw outfit" },
       {
         inlineData: {
@@ -20,44 +17,36 @@ test("buildGeminiImagePromptParts creates text and inlineData parts", () => {
           data: Buffer.from("img").toString("base64")
         }
       }
-    ]
-  );
+    ]);
 });
 
 test("buildGeminiImagePromptParts skips blank text and missing image buffers", () => {
-  assert.deepEqual(
-    buildGeminiImagePromptParts(" ", [
+  expect(buildGeminiImagePromptParts(" ", [
       { mimeType: "image/png", buffer: Buffer.alloc(0) },
       { buffer: Buffer.from("img") }
-    ]),
-    [{
+    ])).toEqual([{
       inlineData: {
         mimeType: "image/jpeg",
         data: Buffer.from("img").toString("base64")
       }
-    }]
-  );
+    }]);
 });
 
 test("extractGeneratedImage reads interactions image output", () => {
-  assert.deepEqual(
-    extractGeneratedImage({
+  expect(extractGeneratedImage({
       outputs: [{
         type: "image",
         data: "abc123",
         mime_type: "image/png"
       }]
-    }),
-    {
+    })).toEqual({
       base64: "abc123",
       mimeType: "image/png"
-    }
-  );
+    });
 });
 
 test("extractGeneratedImage falls back to inlineData candidate parts", () => {
-  assert.deepEqual(
-    extractGeneratedImage({
+  expect(extractGeneratedImage({
       candidates: [{
         content: {
           parts: [{
@@ -68,17 +57,14 @@ test("extractGeneratedImage falls back to inlineData candidate parts", () => {
           }]
         }
       }]
-    }),
-    {
+    })).toEqual({
       base64: "xyz789",
       mimeType: "image/jpeg"
-    }
-  );
+    });
 });
 
 test("extractGeneratedImage supports inline_data and generatedImages response shapes", () => {
-  assert.deepEqual(
-    extractGeneratedImage({
+  expect(extractGeneratedImage({
       candidates: [{
         content: {
           parts: [{
@@ -89,34 +75,26 @@ test("extractGeneratedImage supports inline_data and generatedImages response sh
           }]
         }
       }]
-    }),
-    {
+    })).toEqual({
       base64: "snake-case",
       mimeType: "image/webp"
-    }
-  );
+    });
 
-  assert.deepEqual(
-    extractGeneratedImage({
+  expect(extractGeneratedImage({
       generatedImages: [{
         image: {
           imageBytes: "generated",
           mimeType: "image/jpeg"
         }
       }]
-    }),
-    {
+    })).toEqual({
       base64: "generated",
       mimeType: "image/jpeg"
-    }
-  );
+    });
 });
 
 test("extractGeneratedImage throws when no image is present", () => {
-  assert.throws(
-    () => extractGeneratedImage({ outputs: [{ type: "text", data: "nope" }] }),
-    /gemini_image_missing_output/
-  );
+  expect(() => extractGeneratedImage({ outputs: [{ type: "text", data: "nope" }] })).toThrow(/gemini_image_missing_output/);
 });
 
 test("gemini image client builds interactions payload and returns base64 image", async () => {
@@ -124,8 +102,8 @@ test("gemini image client builds interactions payload and returns base64 image",
   const client = createGeminiImageClient({
     getApiKeyImpl: () => "gem-key",
     createClientImpl: ({ apiKey, apiVersion }) => {
-      assert.equal(apiKey, "gem-key");
-      assert.equal(apiVersion, "v1beta");
+      expect(apiKey).toBe("gem-key");
+      expect(apiVersion).toBe("v1beta");
       return {
         models: {
           generateContent: async (payload) => {
@@ -157,8 +135,8 @@ test("gemini image client builds interactions payload and returns base64 image",
     model: "gemini-3.1-flash-image-preview"
   });
 
-  assert.equal(requestPayload.model, "gemini-3.1-flash-image-preview");
-  assert.deepEqual(requestPayload.contents, [
+  expect(requestPayload.model).toBe("gemini-3.1-flash-image-preview");
+  expect(requestPayload.contents).toEqual([
     { text: "draw outfit" },
     {
       inlineData: {
@@ -167,20 +145,17 @@ test("gemini image client builds interactions payload and returns base64 image",
       }
     }
   ]);
-  assert.deepEqual(requestPayload.config, {
+  expect(requestPayload.config).toEqual({
     responseModalities: ["IMAGE"]
   });
-  assert.deepEqual(result.image, {
+  expect(result.image).toEqual({
     base64: "image-base64",
     mimeType: "image/png"
   });
 });
 
 test("gemini image client validates api key, caches client, and exposes payload hook", async () => {
-  assert.throws(
-    () => createGeminiImageClient({ getApiKeyImpl: () => "" }).getGeminiImageClient(),
-    /GEMINI_API_KEY is not set/
-  );
+  expect(() => createGeminiImageClient({ getApiKeyImpl: () => "" }).getGeminiImageClient()).toThrow(/GEMINI_API_KEY is not set/);
 
   let createCalls = 0;
   const payloads = [];
@@ -206,15 +181,15 @@ test("gemini image client validates api key, caches client, and exposes payload 
     }
   });
 
-  assert.equal(client.getGeminiImageClient(), client.getGeminiImageClient());
+  expect(client.getGeminiImageClient()).toBe(client.getGeminiImageClient());
   const result = await client.generateImageWithGemini("", {
     onPayloadBuilt: (payload) => {
       payload.model = "hooked-model";
     }
   });
 
-  assert.equal(createCalls, 1);
-  assert.equal(payloads[0].model, "hooked-model");
-  assert.deepEqual(payloads[0].contents, []);
-  assert.equal(result.image.base64, "generated");
+  expect(createCalls).toBe(1);
+  expect(payloads[0].model).toBe("hooked-model");
+  expect(payloads[0].contents).toEqual([]);
+  expect(result.image.base64).toBe("generated");
 });

@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect } from "vitest";
 import { createPartialRegenerationService } from "./regenerateSelectedService.js";
 import {
   buildCapsuleSnapshot,
@@ -76,9 +75,9 @@ test("regenerateSelectedWardrobeItems returns pending payload when job is alread
     body: { itemUrls: ["https://example.com/top-1"] }
   }, res);
 
-  assert.equal(res.statusCode, 202);
-  assert.equal(res.body.pendingStage, "regenerate");
-  assert.deepEqual(res.body, {
+  expect(res.statusCode).toBe(202);
+  expect(res.body.pendingStage).toBe("regenerate");
+  expect(res.body).toEqual({
     ok: true,
     status: "pending",
     pendingStage: "regenerate"
@@ -122,18 +121,18 @@ test("regenerateSelectedWardrobeItems clears completed job and starts a fresh pe
     body: { itemUrls: ["https://example.com/top-1"] }
   }, res);
 
-  assert.equal(res.statusCode, 202);
-  assert.deepEqual(res.body, {
+  expect(res.statusCode).toBe(202);
+  expect(res.body).toEqual({
     ok: true,
     status: "pending",
     pendingStage: "regenerate"
   });
-  assert.equal(jobs.has("person@example.com::capsule-1"), true);
+  expect(jobs.has("person@example.com::capsule-1")).toBe(true);
 
   const job = service.getPartialRegenerationJob("person@example.com", "capsule-1");
-  assert.ok(job);
+  expect(job).toBeTruthy();
   await job.promise;
-  assert.deepEqual(job.result.outfitSets, [{ itemIds: ["top-2", "bottom-1", "bag-1"], image: "set-image", imageObsolete: true }]);
+  expect(job.result.outfitSets).toEqual([{ itemIds: ["top-2", "bottom-1", "bag-1"], image: "set-image", imageObsolete: true }]);
 });
 
 test("regenerateSelectedWardrobeItems returns service_unavailable for failed job and clears it", async () => {
@@ -165,16 +164,16 @@ test("regenerateSelectedWardrobeItems returns service_unavailable for failed job
       body: { itemUrls: ["https://example.com/top-1"] }
     }, res);
 
-    assert.equal(res.statusCode, 503);
-    assert.deepEqual(res.body, { error: "service_unavailable" });
-    assert.equal(jobs.has("person@example.com::capsule-1"), false);
+    expect(res.statusCode).toBe(503);
+    expect(res.body).toEqual({ error: "service_unavailable" });
+    expect(jobs.has("person@example.com::capsule-1")).toBe(false);
   } finally {
     console.error = originalError;
   }
 
-  assert.equal(calls.length, 1);
-  assert.equal(calls[0][0], "[wardrobe-ai][regenerate-selected]");
-  assert.match(String((calls[0][1] as Error | undefined)?.message || ""), /DATABASE_URL is not set/i);
+  expect(calls.length).toBe(1);
+  expect(calls[0][0]).toBe("[wardrobe-ai][regenerate-selected]");
+  expect(String((calls[0][1] as Error | undefined)?.message || "")).toMatch(/DATABASE_URL is not set/i);
 });
 
 test("regenerateSelectedWardrobeItems validates selected urls and missing wardrobe", async () => {
@@ -189,8 +188,8 @@ test("regenerateSelectedWardrobeItems validates selected urls and missing wardro
     params: { id: "capsule-1" },
     body: { itemUrls: [] }
   }, invalidPayloadRes);
-  assert.equal(invalidPayloadRes.statusCode, 400);
-  assert.deepEqual(invalidPayloadRes.body, { error: "invalid_payload" });
+  expect(invalidPayloadRes.statusCode).toBe(400);
+  expect(invalidPayloadRes.body).toEqual({ error: "invalid_payload" });
 
   const noWardrobeService = createPartialRegenerationService({
     getProfileImpl: async () => createProfile(),
@@ -209,8 +208,8 @@ test("regenerateSelectedWardrobeItems validates selected urls and missing wardro
     params: { id: "capsule-1" },
     body: { itemUrls: ["https://example.com/top-1"] }
   }, noWardrobeRes);
-  assert.equal(noWardrobeRes.statusCode, 404);
-  assert.deepEqual(noWardrobeRes.body, { error: "not_found" });
+  expect(noWardrobeRes.statusCode).toBe(404);
+  expect(noWardrobeRes.body).toEqual({ error: "not_found" });
 });
 
 test("regenerateSelectedWardrobeItems rejects unknown urls from request", async () => {
@@ -227,8 +226,8 @@ test("regenerateSelectedWardrobeItems rejects unknown urls from request", async 
     body: { itemUrls: ["https://example.com/missing-url"] }
   }, res);
 
-  assert.equal(res.statusCode, 400);
-  assert.deepEqual(res.body, { error: "invalid_payload" });
+  expect(res.statusCode).toBe(400);
+  expect(res.body).toEqual({ error: "invalid_payload" });
 });
 
 test("regenerateSelectedWardrobeItems updates rejected urls, shrinks partial payload, and starts pending job", async () => {
@@ -267,14 +266,14 @@ test("regenerateSelectedWardrobeItems updates rejected urls, shrinks partial pay
     body: { itemUrls: ["https://example.com/top-1"] }
   }, res);
 
-  assert.equal(res.statusCode, 202);
-  assert.equal(res.body.pendingStage, "regenerate");
-  assert.deepEqual(res.body, {
+  expect(res.statusCode).toBe(202);
+  expect(res.body.pendingStage).toBe("regenerate");
+  expect(res.body).toEqual({
     ok: true,
     status: "pending",
     pendingStage: "regenerate"
   });
-  assert.deepEqual(draftUpdates[0], [
+  expect(draftUpdates[0]).toEqual([
     "person@example.com",
     "capsule-1",
     {
@@ -297,12 +296,12 @@ test("regenerateSelectedWardrobeItems updates rejected urls, shrinks partial pay
   ]);
 
   const job = service.getPartialRegenerationJob("person@example.com", "capsule-1");
-  assert.ok(job);
+  expect(job).toBeTruthy();
   await job.promise;
 
-  assert.deepEqual(toItemIdentity(regeneratedSelectedProducts), [{ id: "top-1", url: "https://example.com/top-1", category: "top" }]);
-  assert.equal(regeneratedProfile.rejected.includes("https://example.com/top-1"), true);
-  assert.deepEqual(draftUpdates[1], [
+  expect(toItemIdentity(regeneratedSelectedProducts)).toEqual([{ id: "top-1", url: "https://example.com/top-1", category: "top" }]);
+  expect(regeneratedProfile.rejected.includes("https://example.com/top-1")).toBe(true);
+  expect(draftUpdates[1]).toEqual([
     "person@example.com",
     "capsule-1",
     {
@@ -354,9 +353,9 @@ test("regenerateSelectedWardrobeItems uses profile llm=none instead of query fla
   }, res);
 
   const job = service.getPartialRegenerationJob("person@example.com", "capsule-1");
-  assert.ok(job);
+  expect(job).toBeTruthy();
   await job.promise;
-  assert.equal(regeneratedProfile.llm, "none");
+  expect(regeneratedProfile.llm).toBe("none");
 });
 
 test("startPartialRegenerationJob reuses active pending job and marks failures", async () => {
@@ -386,7 +385,7 @@ test("startPartialRegenerationJob reuses active pending job and marks failures",
     [{ id: "top-1", url: "https://example.com/top-1", category: "top" }],
     getStoredProfilePayload()
   );
-  assert.equal(first, second);
+  expect(first).toBe(second);
 
   resolveRegen(buildWardrobeGenerationResult({
     items: [buildWardrobeUiItem({ id: "bottom-1", category: "bottom", url: undefined, name: undefined, image_url: undefined, audience: undefined })],
@@ -418,15 +417,15 @@ test("startPartialRegenerationJob reuses active pending job and marks failures",
     );
     await failed.promise;
 
-    assert.equal(failed.status, "failed");
-    assert.equal(failed.phase, "failed");
+    expect(failed.status).toBe("failed");
+    expect(failed.phase).toBe("failed");
   } finally {
     console.error = originalError;
   }
 
-  assert.equal(calls.length, 1);
-  assert.equal(calls[0][0], "[wardrobe-ai][regenerate-selected]");
-  assert.match(String((calls[0][1] as Error | undefined)?.message || ""), /regen_failed/i);
+  expect(calls.length).toBe(1);
+  expect(calls[0][0]).toBe("[wardrobe-ai][regenerate-selected]");
+  expect(String((calls[0][1] as Error | undefined)?.message || "")).toMatch(/regen_failed/i);
 });
 
 test("startPartialRegenerationJob stores recomputed outfit sets in the completed payload", async () => {
@@ -458,9 +457,9 @@ test("startPartialRegenerationJob stores recomputed outfit sets in the completed
   );
   await job.promise;
 
-  assert.equal(job.status, "completed");
-  assert.deepEqual(job.result.outfitSets, [{ itemIds: ["top-2", "bottom-1", "bag-1"], image: "set-image", imageObsolete: true }]);
-  assert.deepEqual(updates[0][2].data.wardrobe.outfitSets, [{ itemIds: ["top-2", "bottom-1", "bag-1"], image: "set-image", imageObsolete: true }]);
+  expect(job.status).toBe("completed");
+  expect(job.result.outfitSets).toEqual([{ itemIds: ["top-2", "bottom-1", "bag-1"], image: "set-image", imageObsolete: true }]);
+  expect(updates[0][2].data.wardrobe.outfitSets).toEqual([{ itemIds: ["top-2", "bottom-1", "bag-1"], image: "set-image", imageObsolete: true }]);
 });
 
 test("startPartialRegenerationJob preserves unchanged set images without marking them obsolete", async () => {
@@ -502,7 +501,7 @@ test("startPartialRegenerationJob preserves unchanged set images without marking
   );
   await job.promise;
 
-  assert.deepEqual(job.result.outfitSets, [
+  expect(job.result.outfitSets).toEqual([
     { itemIds: ["top-1", "bottom-2", "bag-1"], image: "set-image", imageObsolete: true },
     { itemIds: ["top-1", "bag-1", "bag-1"], image: "stable-image", imageObsolete: false }
   ]);

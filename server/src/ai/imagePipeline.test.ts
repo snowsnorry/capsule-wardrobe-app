@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect } from "vitest";
 import {
   getProcessMemoryUsage,
   runWithImageWorkSlot,
@@ -26,27 +25,24 @@ test("runWithImageWorkSlot serializes image-heavy work by default", async () => 
     })
   ]);
 
-  assert.equal(maxActive, 1);
+  expect(maxActive).toBe(1);
 });
 
 test("runWithImageWorkSlot releases slots after failures and byte helpers sum buffers", async () => {
-  await assert.rejects(
-    runWithImageWorkSlot("failing-job", async () => {
+  await expect(runWithImageWorkSlot("failing-job", async () => {
       throw new Error("failed");
-    }),
-    /failed/
-  );
+    })).rejects.toThrow(/failed/);
 
   const result = await runWithImageWorkSlot("next-job", () => "ok");
-  assert.equal(result, "ok");
-  assert.equal(sumCategoryBytes([{ buffer: Buffer.alloc(2) }, { buffer: null }, {}]), 2);
-  assert.equal(sumImageAssetBytesById({
+  expect(result).toBe("ok");
+  expect(sumCategoryBytes([{ buffer: Buffer.alloc(2) }, { buffer: null }, {}])).toBe(2);
+  expect(sumImageAssetBytesById({
     a: { buffer: Buffer.alloc(3) },
     b: { buffer: null },
     c: {}
-  }), 3);
+  })).toBe(3);
 
   const memory = getProcessMemoryUsage();
-  assert.equal(typeof memory.rssBytes, "number");
-  assert.equal(typeof memory.heapUsedBytes, "number");
+  expect(typeof memory.rssBytes).toBe("number");
+  expect(typeof memory.heapUsedBytes).toBe("number");
 });

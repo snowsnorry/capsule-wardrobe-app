@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect } from "vitest";
 import { t, translateOption } from "./i18n/helpers.js";
 import { buildProductDetailGroups } from "./productDetail.js";
 
@@ -24,8 +23,8 @@ test("product detail formatter uses locale-specific labels", () => {
     locale: "ru"
   });
 
-  assert.equal(enGroups[0].items[0].label, "Price");
-  assert.equal(ruGroups[0].items[0].label, "Цена");
-  assert.equal(enGroups[1].items[0].label, "Color");
-  assert.equal(ruGroups[1].items[0].label, "Цвет");
+  expect(enGroups[0].items[0].label).toBe("Price");
+  expect(ruGroups[0].items[0].label).toBe("Цена");
+  expect(enGroups[1].items[0].label).toBe("Color");
+  expect(ruGroups[1].items[0].label).toBe("Цвет");
 });

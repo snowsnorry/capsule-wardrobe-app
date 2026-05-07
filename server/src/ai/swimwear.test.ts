@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect } from "vitest";
 import {
   createGenerateSwimwearAddition,
   getSwimwearPrompt,
@@ -10,10 +9,10 @@ import {
 import type { SwimwearCandidate } from "./types.js";
 
 test("shouldGenerateSwimwear returns true only when summer is present", () => {
-  assert.equal(shouldGenerateSwimwear({ season: ["spring"] }), false);
-  assert.equal(shouldGenerateSwimwear({ season: ["spring", "summer"] }), true);
-  assert.equal(shouldGenerateSwimwear({ season: "summer" }), true);
-  assert.equal(shouldGenerateSwimwear(null), false);
+  expect(shouldGenerateSwimwear({ season: ["spring"] })).toBe(false);
+  expect(shouldGenerateSwimwear({ season: ["spring", "summer"] })).toBe(true);
+  expect(shouldGenerateSwimwear({ season: "summer" })).toBe(true);
+  expect(shouldGenerateSwimwear(null)).toBe(false);
 });
 
 test("getSwimwearPrompt renders YAML user message and keeps JSON unescaped", () => {
@@ -22,14 +21,14 @@ test("getSwimwearPrompt renders YAML user message and keeps JSON unescaped", () 
     [{ id: "swim-1", name: "One <Piece>", swimwear_type: "swimsuit", color_base: ["black"], style: ["minimalistic"] }]
   );
 
-  assert.match(prompt, /CAPSULE BOTTOMS/);
-  assert.match(prompt, /Black & White Bottom/);
-  assert.match(prompt, /One <Piece>/);
-  assert.doesNotMatch(prompt, /&amp;|&lt;|&gt;|\{\{/);
+  expect(prompt).toMatch(/CAPSULE BOTTOMS/);
+  expect(prompt).toMatch(/Black & White Bottom/);
+  expect(prompt).toMatch(/One <Piece>/);
+  expect(prompt).not.toMatch(/&amp;|&lt;|&gt;|\{\{/);
 });
 
 test("getSwimwearSystemPrompt returns the YAML system message", () => {
-  assert.match(getSwimwearSystemPrompt(), /expert AI fashion stylist/);
+  expect(getSwimwearSystemPrompt()).toMatch(/expert AI fashion stylist/);
 });
 
 test("normalizeSwimwearSelection keeps a single swimsuit when swimsuit and extras are mixed", () => {
@@ -39,10 +38,7 @@ test("normalizeSwimwearSelection keeps a single swimsuit when swimsuit and extra
     { id: "3", swimwear_type: "swimwear_bottom" }
   ];
 
-  assert.deepEqual(
-    normalizeSwimwearSelection(["2", "1", "3"], candidates),
-    [{ id: "1", swimwear_type: "swimsuit" }]
-  );
+  expect(normalizeSwimwearSelection(["2", "1", "3"], candidates)).toEqual([{ id: "1", swimwear_type: "swimsuit" }]);
 });
 
 test("normalizeSwimwearSelection keeps a valid top and bottom pair", () => {
@@ -51,10 +47,7 @@ test("normalizeSwimwearSelection keeps a valid top and bottom pair", () => {
     { id: "2", swimwear_type: "swimwear_bottom" }
   ];
 
-  assert.deepEqual(
-    normalizeSwimwearSelection(["1", "2"], candidates),
-    candidates
-  );
+  expect(normalizeSwimwearSelection(["1", "2"], candidates)).toEqual(candidates);
 });
 
 test("normalizeSwimwearSelection backfills missing bottom from ranked candidates", () => {
@@ -64,13 +57,10 @@ test("normalizeSwimwearSelection backfills missing bottom from ranked candidates
     { id: "3", swimwear_type: "swimsuit" }
   ];
 
-  assert.deepEqual(
-    normalizeSwimwearSelection(["1"], candidates),
-    [
+  expect(normalizeSwimwearSelection(["1"], candidates)).toEqual([
       { id: "1", swimwear_type: "swimwear_top" },
       { id: "2", swimwear_type: "swimwear_bottom" }
-    ]
-  );
+    ]);
 });
 
 test("normalizeSwimwearSelection backfills missing top from ranked candidates", () => {
@@ -79,19 +69,16 @@ test("normalizeSwimwearSelection backfills missing top from ranked candidates", 
     { id: "2", swimwear_type: "swimwear_bottom" }
   ];
 
-  assert.deepEqual(
-    normalizeSwimwearSelection(["2"], candidates),
-    [
+  expect(normalizeSwimwearSelection(["2"], candidates)).toEqual([
       { id: "1", swimwear_type: "swimwear_top" },
       { id: "2", swimwear_type: "swimwear_bottom" }
-    ]
-  );
+    ]);
 });
 
 test("normalizeSwimwearSelection returns empty array when pair cannot be completed", () => {
   const candidates: SwimwearCandidate[] = [{ id: "1", swimwear_type: "swimwear_top" }];
 
-  assert.deepEqual(normalizeSwimwearSelection(["1"], candidates), []);
+  expect(normalizeSwimwearSelection(["1"], candidates)).toEqual([]);
 });
 
 test("generateSwimwearAddition skips non-summer profiles and selects male swimwear from SQL", async () => {
@@ -117,8 +104,8 @@ test("generateSwimwearAddition skips non-summer profiles and selects male swimwe
     selectedCapsuleItems: [],
     promptEmbeddings: [0.1, 0.2]
   });
-  assert.deepEqual(skipped, { items: [], reasoning: null, rawSelectionText: null });
-  assert.equal(sqlCalls.length, 0);
+  expect(skipped).toEqual({ items: [], reasoning: null, rawSelectionText: null });
+  expect(sqlCalls.length).toBe(0);
 
   const result = await generateSwimwearAddition({
     userProfile: { audience: "man", season: ["summer"], style: "sporty" },
@@ -126,9 +113,9 @@ test("generateSwimwearAddition skips non-summer profiles and selects male swimwe
     promptEmbeddings: [0.1, 0.2]
   });
 
-  assert.equal(sqlCalls.length, 1);
-  assert.equal(result.items.length, 1);
-  assert.deepEqual(result.items[0], {
+  expect(sqlCalls.length).toBe(1);
+  expect(result.items.length).toBe(1);
+  expect(result.items[0]).toEqual({
     id: "swim-1",
     url: "https://example.com/swim-1",
     name: "Swim Shorts",
@@ -168,9 +155,9 @@ test("generateSwimwearAddition selects female swimwear without LLM when profile 
     promptEmbeddings: [0.1, 0.2]
   });
 
-  assert.deepEqual(result.items.map((item) => item.id), ["top-1", "bottom-1"]);
-  assert.equal(result.reasoning, null);
-  assert.equal(result.rawSelectionText, null);
+  expect(result.items.map((item) => item.id)).toEqual(["top-1", "bottom-1"]);
+  expect(result.reasoning).toBe(null);
+  expect(result.rawSelectionText).toBe(null);
 });
 
 test("generateSwimwearAddition uses LLM selection and preserves reasoning text for female profiles", async () => {
@@ -214,12 +201,12 @@ test("generateSwimwearAddition uses LLM selection and preserves reasoning text f
     promptEmbeddings: [0.1, 0.2]
   });
 
-  assert.equal(llmCalls.length, 1);
-  assert.match(llmCalls[0].prompt, /Minimal Swimsuit/);
-  assert.equal(llmCalls[0].options.systemPrompt, getSwimwearSystemPrompt());
-  assert.deepEqual(result.items.map((item) => item.id), ["swimsuit-1"]);
-  assert.equal(result.reasoning, "Best color match");
-  assert.equal(result.rawSelectionText, "Raw text");
+  expect(llmCalls.length).toBe(1);
+  expect(llmCalls[0].prompt).toMatch(/Minimal Swimsuit/);
+  expect(llmCalls[0].options.systemPrompt).toBe(getSwimwearSystemPrompt());
+  expect(result.items.map((item) => item.id)).toEqual(["swimsuit-1"]);
+  expect(result.reasoning).toBe("Best color match");
+  expect(result.rawSelectionText).toBe("Raw text");
 });
 
 test("generateSwimwearAddition returns empty result when female SQL has no candidates", async () => {
@@ -233,5 +220,5 @@ test("generateSwimwearAddition returns empty result when female SQL has no candi
     promptEmbeddings: [0.1, 0.2]
   });
 
-  assert.deepEqual(result, { items: [], reasoning: null, rawSelectionText: null });
+  expect(result).toEqual({ items: [], reasoning: null, rawSelectionText: null });
 });
