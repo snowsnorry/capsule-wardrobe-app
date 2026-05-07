@@ -21,7 +21,7 @@
     "test": "npm run test:server && npm run test:client && npm run test:shared",
     "test:server": "npm --workspace server run test",
     "test:client": "npm --workspace client run test",
-    "test:shared": "npm --workspace server exec -- tsx --test ../shared/wardrobeOrder.test.ts ../shared/accentColors.test.ts ../shared/colorSwatches.test.ts ../shared/i18n/helpers.test.ts ../shared/i18n/localeParity.test.ts",
+    "test:shared": "node scripts/run-shared-tests.mjs",
     "lint": "eslint .",
     "lint:strict": "eslint . --max-warnings=0",
     "lint:fix": "eslint . --fix",
@@ -32,7 +32,7 @@
     "quality": "npm run quality:gate && npm run quality:large-files",
     "coverage:client": "npm --workspace client run coverage",
     "coverage:server": "npm --workspace server run coverage",
-    "coverage:shared": "c8 --report-dir coverage/shared --reporter=text --reporter=html --reporter=json-summary --reporter=lcov --include \"shared/**/*.ts\" --exclude \"shared/**/*.test.ts\" --exclude \"shared/**/*.d.ts\" --check-coverage --lines 70 --functions 70 --branches 60 --statements 70 npm --workspace server exec -- tsx --test ../shared/**/*.test.ts",
+    "coverage:shared": "c8 --all --per-file --report-dir coverage/shared --reporter=text --reporter=html --reporter=json-summary --reporter=lcov --src shared --include \"**/*.ts\" --exclude \"**/*.test.ts\" --exclude \"**/*.d.ts\" --check-coverage --lines 70 --functions 70 --branches 60 --statements 70 node scripts/run-shared-tests.mjs",
     "coverage": "npm run coverage:client && npm run coverage:server && npm run coverage:shared"
   },
   "devDependencies": {
