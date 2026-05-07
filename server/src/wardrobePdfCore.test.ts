@@ -1,4 +1,4 @@
-import { test, expect } from "vitest";
+import { test, expect, vi } from "vitest";
 import sharp from "sharp";
 import {
   createWardrobePdfGenerationKey,
@@ -174,6 +174,7 @@ test("loadImageBytes downloads external images and tracks failures without throw
     }) as Response;
   t.onTestFinished(() => {
     globalThis.fetch = originalFetch;
+    vi.restoreAllMocks();
   });
 
   const downloaded = await loadImageBytes(
@@ -192,6 +193,13 @@ test("loadImageBytes downloads external images and tracks failures without throw
       headers: new Headers(),
       arrayBuffer: async () => new ArrayBuffer(0),
     }) as Response;
+  const originalError = console.error;
+  vi.spyOn(console, "error").mockImplementation((...args) => {
+    if (args[0] === "[wardrobe-pdf][image]") {
+      return;
+    }
+    originalError(...args);
+  });
   expect(
     await loadImageBytes("https://example.com/fail.png", null, null, stats),
   ).toBe(null);

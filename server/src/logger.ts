@@ -1,5 +1,9 @@
 import { inspect } from "node:util";
 
+const isTestEnv =
+  process.env.NODE_ENV === "test" || process.env.VITEST === "true";
+const defaultStdoutWrite = process.stdout.write;
+
 function formatLogValue(value: unknown): string {
   if (typeof value === "string") {
     return value;
@@ -20,6 +24,7 @@ function writeLog(
 }
 
 export function logInfo(...values: unknown[]): void {
+  if (isTestEnv && process.stdout.write === defaultStdoutWrite) return;
   writeLog(process.stdout, values);
 }
 

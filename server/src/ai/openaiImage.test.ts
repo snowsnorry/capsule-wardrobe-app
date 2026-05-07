@@ -1,4 +1,4 @@
-import { test, expect } from "vitest";
+import { test, expect, vi } from "vitest";
 import {
   buildOpenAiImageFiles,
   createOpenAiImageClient,
@@ -21,7 +21,18 @@ test("extractGeneratedImage reads base64 image output", () => {
   });
 });
 
-test("buildOpenAiImageFiles converts only valid buffers", async () => {
+test("buildOpenAiImageFiles converts only valid buffers", async (t) => {
+  const originalWarn = console.warn;
+  vi.spyOn(console, "warn").mockImplementation((...args) => {
+    if (args[0] === "[openai-image][image-skipped]") {
+      return;
+    }
+    originalWarn(...args);
+  });
+  t.onTestFinished(() => {
+    vi.restoreAllMocks();
+  });
+
   const files = await buildOpenAiImageFiles([
     {
       filename: "photo.png",

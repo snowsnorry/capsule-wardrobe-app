@@ -1,4 +1,4 @@
-import { test, expect } from "vitest";
+import { test, expect, vi } from "vitest";
 import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
@@ -113,6 +113,13 @@ test("buildPromptDebugImages skips failed downloads and still produces outputs",
   const outputDir = await withTempDir(t);
   const redBuffer = await createFixtureBuffer("#cc0000");
   const originalFetch = globalThis.fetch;
+  const originalWarn = console.warn;
+  vi.spyOn(console, "warn").mockImplementation((...args) => {
+    if (args[0] === "[prompt-images][asset-download-failed]") {
+      return;
+    }
+    originalWarn(...args);
+  });
 
   globalThis.fetch = async (url) => {
     if (String(url).includes("bad")) {
@@ -123,6 +130,7 @@ test("buildPromptDebugImages skips failed downloads and still produces outputs",
 
   t.onTestFinished(() => {
     globalThis.fetch = originalFetch;
+    vi.restoreAllMocks();
   });
 
   const result = await buildPromptDebugImages({
