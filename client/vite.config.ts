@@ -6,6 +6,7 @@ export default defineConfig(() => {
   return {
     plugins: [react(), tailwindcss()],
     test: {
+      name: 'client',
       environment: "jsdom",
       setupFiles: "./src/test/setup.ts",
       css: true,
