@@ -26,7 +26,7 @@ function enableTsChildProcess(testContext: TestContext): void {
   });
 }
 
-test("prompt image IPC serialization round-trips collages back to buffers", async (t) => {
+test("prompt image IPC serialization round-trips collages back to buffers", async (_t) => {
   const fixtureBuffer = await createFixtureBuffer("#8844aa");
   const serialized = serializePromptDebugImagesForIpc({
     cachedCount: 1,
@@ -66,7 +66,7 @@ test("prompt image IPC serialization round-trips collages back to buffers", asyn
   expect(deserialized.categories[0].buffer).toBe(null);
 });
 
-test("buildPromptDebugImagesInChild resolves buffered collages from child success payload", async (t) => {
+test("buildPromptDebugImagesInChild resolves buffered collages from child success payload", async (_t) => {
   const result = await buildPromptDebugImagesInChild({
     normalizedItems: [
       { id: "top-1", category: "top", image_url: "https://example.com/top-1.png" },
@@ -186,7 +186,7 @@ test("buildPromptDebugImagesInChild saves debug artifacts when enabled", async (
   expect(manifest.categories.length).toBe(1);
 });
 
-test("buildPromptDebugImagesInChild rejects on child-reported failure", async (t) => {
+test("buildPromptDebugImagesInChild rejects on child-reported failure", async (_t) => {
   await expect(buildPromptDebugImagesInChild({
       normalizedItems: [{ id: "top-1", category: "top", image_url: "https://example.com/top-1.png" }],
       forkImpl: () => {
@@ -210,7 +210,7 @@ test("buildPromptDebugImagesInChild rejects on child-reported failure", async (t
     })).rejects.toThrow(/child_failed/);
 });
 
-test("buildPromptDebugImagesInChild rejects on unexpected child exit", async (t) => {
+test("buildPromptDebugImagesInChild rejects on unexpected child exit", async (_t) => {
   await expect(buildPromptDebugImagesInChild({
       normalizedItems: [{ id: "top-1", category: "top", image_url: "https://example.com/top-1.png" }],
       forkImpl: () => {

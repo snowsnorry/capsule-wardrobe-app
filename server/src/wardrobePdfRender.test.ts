@@ -14,7 +14,7 @@ async function withCachedImage(testContext, imageUrl, buffer) {
   });
 }
 
-test("buildWardrobePdf consumes prepared image assets as pages are rendered", async (t) => {
+test("buildWardrobePdf consumes prepared image assets as pages are rendered", async (_t) => {
   const imageBuffer = await sharp({
     create: {
       width: 600,

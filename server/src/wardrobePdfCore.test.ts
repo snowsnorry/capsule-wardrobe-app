@@ -78,7 +78,7 @@ test("wardrobe pdf core helpers normalize logging, locale, stored data, and gene
   expect(key).toMatch(/bottom:Jeans/);
 });
 
-test("image byte helpers normalize nulls, mime types, resizing, and asset fallbacks", async (t) => {
+test("image byte helpers normalize nulls, mime types, resizing, and asset fallbacks", async (_t) => {
   const pngBuffer = await createPngBuffer();
   const jpgBuffer = await sharp(pngBuffer).jpeg().toBuffer();
 
