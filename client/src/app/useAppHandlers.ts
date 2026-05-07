@@ -106,6 +106,71 @@ export function useAppHandlers({
       String(shareMetadata?.id || pendingShareId || "").trim(),
     );
 
+  return buildAppHandlers({
+    activeCapsuleId,
+    capsuleSidebarActionsRef,
+    getAppActionContext,
+    handleApplyCapsuleFilters,
+    handleCreateCapsule,
+    handleDeleteCapsule,
+    handleDuplicateCapsule,
+    handleImportSharedCapsule,
+    handleNavigateApp,
+    handleOpenCapsule,
+    handleRenameCapsule,
+    handleRevertCapsule,
+    handleSaveCapsule,
+    sessionActionContext,
+    setCurrentView,
+    setIsSignOutConfirmOpen,
+    setSelectedRegenerationUrls,
+  });
+}
+
+type BuildAppHandlersOptions = Pick<
+  UseAppHandlersOptions,
+  | "activeCapsuleId"
+  | "capsuleSidebarActionsRef"
+  | "getAppActionContext"
+  | "sessionActionContext"
+  | "setCurrentView"
+  | "setIsSignOutConfirmOpen"
+  | "setSelectedRegenerationUrls"
+> & {
+  handleApplyCapsuleFilters: () => Promise<void>;
+  handleCreateCapsule: () => Promise<void>;
+  handleDeleteCapsule: (capsuleId?: string) => Promise<void>;
+  handleDuplicateCapsule: (name: string, capsuleId?: string) => Promise<void>;
+  handleImportSharedCapsule: () => Promise<void>;
+  handleNavigateApp: (
+    nextApp: Exclude<AppRoute, "share">,
+    options?: AppNavigationOptions,
+  ) => void;
+  handleOpenCapsule: (capsuleId: string) => Promise<void>;
+  handleRenameCapsule: (name: string, capsuleId?: string) => Promise<void>;
+  handleRevertCapsule: (capsuleId?: string) => Promise<void>;
+  handleSaveCapsule: (capsuleId?: string) => Promise<void>;
+};
+
+function buildAppHandlers({
+  activeCapsuleId,
+  capsuleSidebarActionsRef,
+  getAppActionContext,
+  handleApplyCapsuleFilters,
+  handleCreateCapsule,
+  handleDeleteCapsule,
+  handleDuplicateCapsule,
+  handleImportSharedCapsule,
+  handleNavigateApp,
+  handleOpenCapsule,
+  handleRenameCapsule,
+  handleRevertCapsule,
+  handleSaveCapsule,
+  sessionActionContext,
+  setCurrentView,
+  setIsSignOutConfirmOpen,
+  setSelectedRegenerationUrls,
+}: BuildAppHandlersOptions) {
   return {
     handleApplyCapsuleFilters,
     handleBackOnboarding: () => backOnboarding(getAppActionContext()),

@@ -1,6 +1,10 @@
 import OpenAI from "openai";
 import { buildSystemPrompt, splitSystemAndUserPrompt } from "./llmPrompts.js";
-import { buildImageDataUrl, releaseImageBuffers } from "./openai.js";
+import { releaseImageBuffers } from "./openai.js";
+import {
+  buildChatMessages,
+  type DeepInfraChatMessageContent,
+} from "./deepinfraChatMessages.js";
 import {
   collectStreamText,
   estimateJsonByteLength,
@@ -8,11 +12,7 @@ import {
   extractResponseText,
   parseDeepInfraJsonResponse,
 } from "./deepinfraResponse.js";
-import type {
-  ImageAssetLike,
-  LlmGenerateOptions,
-  UserProfileLike,
-} from "./types.js";
+import type { LlmGenerateOptions, UserProfileLike } from "./types.js";
 import { logWarn } from "../logger.js";
 
 const OPENAI_BASE_URL = "https://api.deepinfra.com/v1/openai";
@@ -29,10 +29,6 @@ type DeepInfraEmbeddingsClient = {
   }) => Promise<{ data?: Array<{ embedding?: number[] }> }>;
 };
 
-type DeepInfraChatMessageContent =
-  | { type: "image_url"; image_url: { url: string } }
-  | { type: "text"; text: string };
-
 type DeepInfraChatCompletionPayload = {
   model: string;
   messages: Array<
@@ -47,6 +43,10 @@ type DeepInfraChatCompletionPayload = {
   response_format: { type: "json_object" };
   stream: true;
 };
+type DeepInfraChatCompletionRequest = Omit<
+  DeepInfraChatCompletionPayload,
+  "stream"
+>;
 
 type DeepInfraChatCompletionsClient = {
   create: (
@@ -97,19 +97,22 @@ function buildDeepInfraPayload({
   systemPrompt: string;
   messages: DeepInfraChatMessageContent[];
 }) {
+  const chatMessages: DeepInfraChatCompletionRequest["messages"] = [];
+  if (systemPrompt) {
+    chatMessages.push({ role: "system", content: systemPrompt });
+  }
+  chatMessages.push({ role: "user", content: messages });
+
   return {
     model,
-    messages: [
-      ...(systemPrompt ? [{ role: "system", content: systemPrompt }] : []),
-      { role: "user", content: messages },
-    ],
+    messages: chatMessages,
     temperature: 0.2,
     top_p: 0.9,
     frequency_penalty: 0,
     presence_penalty: 0,
     max_tokens: 10000,
     response_format: { type: "json_object" },
-  };
+  } satisfies DeepInfraChatCompletionRequest;
 }
 
 function logDeepInfraRequestFailure({
@@ -277,36 +280,17 @@ function createDeepInfraClient({
     const requestStartedAt = nowImpl();
     releaseImageBuffers(images);
     onPayloadBuilt?.();
-    let stream;
-    try {
-      stream = await client.chat.completions.create({
-        ...payload,
-        stream: true,
-      });
-    } catch (error) {
-      logDeepInfraRequestFailure({
-        error,
-        model,
-        requestStartedAt,
-        imageCount: Array.isArray(images) ? images.length : 0,
-        payloadBytes,
-        nowImpl,
-        warnImpl,
-      });
-      throw error;
-    }
+    const stream = await createDeepInfraResponseStream(client, payload, {
+      imageCount: Array.isArray(images) ? images.length : 0,
+      model,
+      nowImpl,
+      payloadBytes,
+      requestStartedAt,
+      warnImpl,
+    });
 
     const content = await collectStreamText(stream);
-    const response = {
-      choices: [
-        {
-          message: {
-            content,
-          },
-        },
-      ],
-      output_text: content,
-    };
+    const response = buildDeepInfraTextResponse(content);
     const json = parseDeepInfraJsonResponse(content);
 
     return {
@@ -316,6 +300,35 @@ function createDeepInfraClient({
   }
 
   return { generateJsonWithLlm, getOpenAiClient, getPromptEmbeddings };
+}
+
+function buildDeepInfraTextResponse(content: string) {
+  return {
+    choices: [
+      {
+        message: {
+          content,
+        },
+      },
+    ],
+    output_text: content,
+  };
+}
+
+async function createDeepInfraResponseStream(
+  client: DeepInfraClientLike,
+  payload: ReturnType<typeof buildDeepInfraPayload>,
+  logContext: Omit<DeepInfraRequestLogContext, "error">,
+) {
+  try {
+    return await client.chat.completions.create({
+      ...payload,
+      stream: true,
+    });
+  } catch (error) {
+    logDeepInfraRequestFailure({ error, ...logContext });
+    throw error;
+  }
 }
 
 function resolveChatModel(userProfile: UserProfileLike | null = null) {
@@ -328,48 +341,6 @@ function resolveChatModel(userProfile: UserProfileLike | null = null) {
   }
 
   return DEFAULT_CHAT_MODEL;
-}
-
-function buildChatMessages(
-  user: string,
-  images: ImageAssetLike[] = [],
-): DeepInfraChatMessageContent[] {
-  const content: Array<
-    | { type: "image_url"; image_url: { url: string } }
-    | { type: "text"; text: string }
-  > = [];
-  const userText = String(user || "").trim();
-
-  for (const image of images) {
-    const imageUrl = buildImageDataUrl(image);
-    if (!imageUrl) {
-      logWarn(
-        "[deepinfra][image-skipped]",
-        JSON.stringify({
-          category: image?.category ?? null,
-          filename: image?.filename ?? null,
-          reason: "missing_buffer",
-        }),
-      );
-      continue;
-    }
-
-    content.push({
-      type: "image_url",
-      image_url: {
-        url: imageUrl,
-      },
-    });
-  }
-
-  if (userText) {
-    content.push({
-      type: "text",
-      text: userText,
-    });
-  }
-
-  return content.length > 0 ? content : [{ type: "text", text: "" }];
 }
 
 const deepInfraClient = createDeepInfraClient();

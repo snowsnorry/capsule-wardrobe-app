@@ -1,0 +1,139 @@
+import { Stack } from "@mui/material";
+import AccentColorChips from "../components/AccentColorChips";
+import {
+  MultiSelectChips,
+  SearchSection,
+  updateMultiValue,
+} from "./SearchFiltersControls";
+import type { SearchDraftState } from "./searchState";
+import type {
+  SearchFilterItems,
+  SearchFiltersSidebarProps,
+  UpdateDraftState,
+} from "./SearchFiltersSidebarTypes";
+
+function SearchFacetSections({
+  draftState,
+  filterItems,
+  options,
+  updateDraftState,
+  t,
+}: {
+  draftState: SearchDraftState;
+  filterItems: SearchFilterItems;
+  options: SearchFiltersSidebarProps["options"];
+  updateDraftState: UpdateDraftState;
+  t: (key: string) => string;
+}) {
+  return (
+    <>
+      <SearchSection title={t("profile.audienceTitle")}>
+        <MultiSelectChips
+          items={filterItems.audienceItems}
+          values={draftState.audience}
+          defaultLabel={t("search.notImportant")}
+          onToggle={(value) =>
+            updateDraftState(updateMultiValue("audience", value))
+          }
+        />
+      </SearchSection>
+      <SearchSection title={t("search.filters.category")}>
+        <MultiSelectChips
+          items={filterItems.categoryItems}
+          values={draftState.category}
+          defaultLabel={t("search.all")}
+          onToggle={(value) =>
+            updateDraftState(updateMultiValue("category", value))
+          }
+        />
+      </SearchSection>
+      <SearchSection title={t("profile.seasonsTitle")}>
+        <MultiSelectChips
+          items={filterItems.seasonItems}
+          values={draftState.season}
+          defaultLabel={t("search.all")}
+          onToggle={(value) =>
+            updateDraftState(updateMultiValue("season", value))
+          }
+        />
+      </SearchSection>
+      <SearchSection title={t("profile.occasionsTitle")}>
+        <MultiSelectChips
+          items={filterItems.occasionItems}
+          values={draftState.occasions}
+          defaultLabel={t("search.notImportant")}
+          onToggle={(value) =>
+            updateDraftState(updateMultiValue("occasions", value))
+          }
+        />
+      </SearchSection>
+      <SearchSection title={t("profile.accentColorTitle")}>
+        <AccentColorChips
+          options={options.colors}
+          selectedValues={draftState.color}
+          emptyLabel={t("search.notImportant")}
+          onToggle={(value) =>
+            updateDraftState(updateMultiValue("color", value))
+          }
+        />
+      </SearchSection>
+    </>
+  );
+}
+
+function SearchProductAttributeSections({
+  draftState,
+  filterItems,
+  updateDraftState,
+  t,
+}: {
+  draftState: SearchDraftState;
+  filterItems: SearchFilterItems;
+  updateDraftState: UpdateDraftState;
+  t: (key: string) => string;
+}) {
+  return (
+    <Stack spacing={3.2}>
+      <SearchSection title={t("profile.patternTitle")}>
+        <MultiSelectChips
+          items={filterItems.patternItems}
+          values={draftState.pattern}
+          defaultLabel={t("search.notImportant")}
+          onToggle={(value) =>
+            updateDraftState(updateMultiValue("pattern", value))
+          }
+        />
+      </SearchSection>
+      <SearchSection title={t("search.filters.silhouette")}>
+        <MultiSelectChips
+          items={filterItems.silhouetteItems}
+          values={draftState.silhouette}
+          defaultLabel={t("search.notImportant")}
+          onToggle={(value) =>
+            updateDraftState(updateMultiValue("silhouette", value))
+          }
+        />
+      </SearchSection>
+      <SearchSection title={t("search.filters.fit")}>
+        <MultiSelectChips
+          items={filterItems.fitItems}
+          values={draftState.fit}
+          defaultLabel={t("search.notImportant")}
+          onToggle={(value) => updateDraftState(updateMultiValue("fit", value))}
+        />
+      </SearchSection>
+      <SearchSection title={t("search.filters.closureType")}>
+        <MultiSelectChips
+          items={filterItems.closureTypeItems}
+          values={draftState.closureType}
+          defaultLabel={t("search.notImportant")}
+          onToggle={(value) =>
+            updateDraftState(updateMultiValue("closureType", value))
+          }
+        />
+      </SearchSection>
+    </Stack>
+  );
+}
+
+export { SearchFacetSections, SearchProductAttributeSections };

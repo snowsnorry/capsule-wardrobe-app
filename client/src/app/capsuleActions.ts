@@ -4,12 +4,10 @@ import {
   duplicateCapsule,
   fetchCapsule,
   fetchRecentCapsules,
-  importSharedCapsule,
   renameCapsule,
   revertCapsule,
   saveCapsule,
   searchCapsules,
-  shareCapsule,
   updateCapsuleFilters,
 } from "../api/capsules";
 import { initialStatus } from "./appConstants";
@@ -202,6 +200,11 @@ export async function searchUserCapsules(query: string) {
   return result.capsules || [];
 }
 
+export {
+  importSharedCapsuleToApp,
+  shareCurrentCapsule,
+} from "./capsuleShareActions";
+
 export async function resetProfileFilters(context: AppActionContext) {
   fromContext<(value: unknown) => void>(context, "setStatus")(initialStatus);
   fromContext<(value: []) => void>(context, "setSelectedRegenerationUrls")([]);
@@ -345,82 +348,4 @@ function startFilterRegeneration(
     return;
   }
   fromContext<(value: boolean) => void>(context, "setIsLoadingItems")(false);
-}
-
-export async function shareCurrentCapsule(
-  context: AppActionContext,
-  capsuleId: string,
-) {
-  if (!capsuleId) return {};
-  try {
-    return (await shareCapsule(capsuleId)) as {
-      url?: string;
-      expiresAt?: string | Date;
-    };
-  } catch (error) {
-    fromContext<(value: unknown) => void>(
-      context,
-      "setStatus",
-    )({
-      loading: false,
-      error: fromContext<(error: unknown) => string>(
-        context,
-        "resolveErrorMessage",
-      )(error),
-      infoKey: "",
-      infoParams: null,
-    });
-    return {};
-  }
-}
-
-export async function importSharedCapsuleToApp(
-  context: AppActionContext,
-  shareId: string,
-) {
-  if (!shareId) return;
-  fromContext<(value: boolean) => void>(context, "setIsShareLoading")(true);
-  try {
-    const result = (await importSharedCapsule(
-      shareId,
-    )) as CapsuleMutationResponse;
-    if (result.capsule) {
-      fromContext<(capsule?: CapsuleMeta | null) => void>(
-        context,
-        "applyCapsuleState",
-      )(result.capsule);
-    }
-    await refreshCapsuleList(context);
-    fromContext<(value: unknown) => void>(
-      context,
-      "setStatus",
-    )({
-      loading: false,
-      error: "",
-      infoKey: "capsule.shareImported",
-      infoParams: null,
-    });
-    fromContext<() => void>(context, "clearShareRoute")();
-  } catch (error) {
-    fromContext<(value: unknown) => void>(
-      context,
-      "setStatus",
-    )({
-      loading: false,
-      error: fromContext<(error: unknown) => string>(
-        context,
-        "resolveErrorMessage",
-      )(error),
-      infoKey: "",
-      infoParams: null,
-    });
-    fromContext<() => void>(context, "clearShareRoute")();
-  } finally {
-    if (fromContext<{ current: boolean }>(context, "isMountedRef").current) {
-      fromContext<(value: boolean) => void>(
-        context,
-        "setIsShareLoading",
-      )(false);
-    }
-  }
 }

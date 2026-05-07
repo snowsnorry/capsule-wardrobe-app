@@ -19,16 +19,10 @@ type AppLauncherProps = {
   onSelectApp?: (appId: AppId) => void;
 };
 
-function AppLauncher({
-  currentApp = "capsule",
-  onSelectApp,
-}: AppLauncherProps) {
-  const { t } = useI18n();
-  const theme = useTheme();
-  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
-  const isOpen = Boolean(anchorEl);
-  const isDarkMode = theme.palette.mode === "dark";
-  const items: Array<{ id: AppId; label: string; subtitle: string }> = [
+type LauncherItem = { id: AppId; label: string; subtitle: string };
+
+function buildLauncherItems(t: (key: string) => string): LauncherItem[] {
+  return [
     {
       id: "capsule",
       label: t("launcher.capsule"),
@@ -45,6 +39,18 @@ function AppLauncher({
       subtitle: t("launcher.statisticsHint"),
     },
   ];
+}
+
+function AppLauncher({
+  currentApp = "capsule",
+  onSelectApp,
+}: AppLauncherProps) {
+  const { t } = useI18n();
+  const theme = useTheme();
+  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
+  const isOpen = Boolean(anchorEl);
+  const isDarkMode = theme.palette.mode === "dark";
+  const items = buildLauncherItems(t);
 
   return (
     <>
@@ -83,42 +89,59 @@ function AppLauncher({
       </ButtonBase>
       <Menu anchorEl={anchorEl} open={isOpen} onClose={() => setAnchorEl(null)}>
         {items.map((item) => (
-          <MenuItem
+          <AppLauncherMenuItem
             key={item.id}
-            onClick={() => {
-              setAnchorEl(null);
-              onSelectApp?.(item.id);
-            }}
-            sx={{ minWidth: 220 }}
-          >
-            <Stack
-              direction="row"
-              spacing={1.5}
-              alignItems="flex-start"
-              sx={{ width: "100%" }}
-            >
-              <Box
-                sx={{
-                  pt: 0.2,
-                  color:
-                    currentApp === item.id ? "primary.main" : "transparent",
-                }}
-              >
-                <CheckRoundedIcon fontSize="small" />
-              </Box>
-              <Box sx={{ minWidth: 0 }}>
-                <Typography variant="body2" sx={{ fontWeight: 700 }}>
-                  {item.label}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {item.subtitle}
-                </Typography>
-              </Box>
-            </Stack>
-          </MenuItem>
+            item={item}
+            isSelected={currentApp === item.id}
+            onSelectApp={onSelectApp}
+            onClose={() => setAnchorEl(null)}
+          />
         ))}
       </Menu>
     </>
+  );
+}
+
+function AppLauncherMenuItem({
+  item,
+  isSelected,
+  onClose,
+  onSelectApp,
+}: {
+  item: LauncherItem;
+  isSelected: boolean;
+  onClose: () => void;
+  onSelectApp?: (appId: AppId) => void;
+}) {
+  return (
+    <MenuItem
+      onClick={() => {
+        onClose();
+        onSelectApp?.(item.id);
+      }}
+      sx={{ minWidth: 220 }}
+    >
+      <Stack
+        direction="row"
+        spacing={1.5}
+        alignItems="flex-start"
+        sx={{ width: "100%" }}
+      >
+        <Box
+          sx={{ pt: 0.2, color: isSelected ? "primary.main" : "transparent" }}
+        >
+          <CheckRoundedIcon fontSize="small" />
+        </Box>
+        <Box sx={{ minWidth: 0 }}>
+          <Typography variant="body2" sx={{ fontWeight: 700 }}>
+            {item.label}
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            {item.subtitle}
+          </Typography>
+        </Box>
+      </Stack>
+    </MenuItem>
   );
 }
 

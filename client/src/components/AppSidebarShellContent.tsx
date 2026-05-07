@@ -1,22 +1,16 @@
-import type { MouseEvent, ReactElement, ReactNode, RefObject } from "react";
+import type { MouseEvent, ReactNode } from "react";
 import {
   Avatar,
   Box,
   Button,
   Divider,
-  Drawer,
   IconButton,
-  ListItemIcon,
-  Menu,
-  MenuItem,
   Stack,
-  SvgIcon,
   Typography,
 } from "@mui/material";
 import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
-import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
-import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
-import type { SvgIconProps } from "@mui/material/SvgIcon";
+import { SidebarFrame, UserMenu } from "./AppSidebarShellContentMenus";
+import SidebarCollapseIcon from "./SidebarCollapseIcon";
 import type {
   AppSidebarShellContext,
   AppSidebarShellSlot,
@@ -29,37 +23,6 @@ function renderShellSlot(
   context: AppSidebarShellContext,
 ): ReactNode {
   return typeof slot === "function" ? slot(context) : slot;
-}
-
-function SidebarCollapseIcon(props: SvgIconProps): ReactElement {
-  return (
-    <SvgIcon {...props} viewBox="-0.5 -0.5 16 16">
-      <path
-        d="M12.7769375 14.284625H2.2230625c-0.8326875 0 -1.5076875 -0.675 -1.5076875 -1.5076875l0 -10.553875c0 -0.8326875 0.675 -1.5076875 1.5076875 -1.5076875h10.553875c0.8326875 0 1.5076875 0.675 1.5076875 1.5076875v10.553875c0 0.8326875 -0.675 1.5076875 -1.5076875 1.5076875Z"
-        fill="none"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="1"
-      />
-      <path
-        d="M3.9192500000000003 5.9923125 2.6 7.5l1.3192499999999998 1.5076875"
-        fill="none"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="1"
-      />
-      <path
-        d="M5.615375 14.284625V0.7153750000000001"
-        fill="none"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="1"
-      />
-    </SvgIcon>
-  );
 }
 
 function SidebarHeader({
@@ -286,28 +249,6 @@ function SidebarContent({
   );
 }
 
-function SidebarFrame({
-  sidebarContent,
-  context,
-}: {
-  sidebarContent: ReactNode;
-  context: AppSidebarShellContext;
-}) {
-  if (context.isOverlaySidebar) {
-    return (
-      <Drawer open={context.isSidebarOpen} onClose={context.closeSidebar}>
-        {sidebarContent}
-      </Drawer>
-    );
-  }
-
-  return (
-    <Box sx={{ position: "fixed", top: 0, left: 0, bottom: 0, zIndex: 1200 }}>
-      {sidebarContent}
-    </Box>
-  );
-}
-
 function getContentSurfaceSx({
   isOverlaySidebar,
   isPlainContentSurface,
@@ -413,58 +354,6 @@ function ShellMainContent({
         </Box>
       </Box>
     </Stack>
-  );
-}
-
-function UserMenu({
-  anchorEl,
-  paperRef,
-  onClose,
-  onOpenSettings,
-  onSignOut,
-  t,
-}: {
-  anchorEl: HTMLElement | null;
-  paperRef: RefObject<HTMLDivElement | null>;
-  onClose: () => void;
-  onOpenSettings: () => void;
-  onSignOut: () => void;
-  t: Translate;
-}) {
-  return (
-    <Menu
-      anchorEl={anchorEl}
-      open={Boolean(anchorEl)}
-      onClose={onClose}
-      disableRestoreFocus
-      anchorOrigin={{ vertical: "center", horizontal: "right" }}
-      transformOrigin={{ vertical: "center", horizontal: "left" }}
-      slotProps={{ paper: { ref: paperRef, sx: { ml: 1 } } }}
-    >
-      <MenuItem
-        onClick={() => {
-          onClose();
-          onOpenSettings();
-        }}
-      >
-        <ListItemIcon>
-          <SettingsRoundedIcon fontSize="small" />
-        </ListItemIcon>
-        {t("settings.title")}
-      </MenuItem>
-      <Divider />
-      <MenuItem
-        onClick={() => {
-          onClose();
-          onSignOut();
-        }}
-      >
-        <ListItemIcon>
-          <LogoutRoundedIcon fontSize="small" />
-        </ListItemIcon>
-        {t("actions.signOut")}
-      </MenuItem>
-    </Menu>
   );
 }
 

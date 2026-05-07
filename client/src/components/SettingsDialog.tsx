@@ -111,46 +111,11 @@ function useSettingsPasskeys({
   const [passkeyToDelete, setPasskeyToDelete] =
     useState<PasskeyMetadata | null>(null);
 
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-
-    let isActive = true;
-    setIsPasskeyLoading(true);
-    listPasskeys()
-      .then((response) => {
-        if (isActive) {
-          setPasskeys(
-            Array.isArray(response.passkeys)
-              ? (response.passkeys as PasskeyMetadata[])
-              : [],
-          );
-        }
-      })
-      .catch(() => {
-        if (isActive) {
-          setPasskeys([]);
-        }
-      })
-      .finally(() => {
-        if (isActive) {
-          setIsPasskeyLoading(false);
-        }
-      });
-
-    return () => {
-      isActive = false;
-    };
-  }, [open]);
+  usePasskeyListLoader({ open, setIsPasskeyLoading, setPasskeys });
 
   const refreshPasskeys = async () => {
     const response = await listPasskeys();
-    setPasskeys(
-      Array.isArray(response.passkeys)
-        ? (response.passkeys as PasskeyMetadata[])
-        : [],
-    );
+    setPasskeys(normalizePasskeys(response));
   };
 
   const handleAddPasskey = async () => {
@@ -217,6 +182,45 @@ function useSettingsPasskeys({
     handleDeletePasskey,
     closePasskeyDelete,
   };
+}
+
+function normalizePasskeys(response: { passkeys?: unknown }) {
+  return Array.isArray(response.passkeys)
+    ? (response.passkeys as PasskeyMetadata[])
+    : [];
+}
+
+function usePasskeyListLoader({
+  open,
+  setIsPasskeyLoading,
+  setPasskeys,
+}: {
+  open: boolean;
+  setIsPasskeyLoading: (isLoading: boolean) => void;
+  setPasskeys: (passkeys: PasskeyMetadata[]) => void;
+}) {
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    let isActive = true;
+    setIsPasskeyLoading(true);
+    listPasskeys()
+      .then((response) => {
+        if (isActive) setPasskeys(normalizePasskeys(response));
+      })
+      .catch(() => {
+        if (isActive) setPasskeys([]);
+      })
+      .finally(() => {
+        if (isActive) setIsPasskeyLoading(false);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [open, setIsPasskeyLoading, setPasskeys]);
 }
 
 function SettingsDialog({

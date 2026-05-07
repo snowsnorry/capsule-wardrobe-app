@@ -1,16 +1,14 @@
-import {
-  CODE_TTL_MS,
-  MAX_CODE_SENDS_PER_HOUR,
-  MAX_VERIFY_ATTEMPTS,
-  RESEND_COOLDOWN_MS,
-} from "../authStore.js";
-import { GOOGLE_CLIENT_ID, SUPPORTED_LOCALES } from "../appConfig.js";
+import { GOOGLE_CLIENT_ID } from "../appConfig.js";
 import {
   clearSessionCookie,
   setCsrfCookie,
   setSessionCookie,
 } from "../httpCookies.js";
-import { logError, logInfo } from "../logger.js";
+import { logError } from "../logger.js";
+import {
+  createRequestCodeHandler,
+  createVerifyCodeHandler,
+} from "./sessionEmailCodeHandlers.js";
 
 export function registerSessionAuthRoutes(app, context) {
   registerEmailCodeRoutes(app, context);
@@ -31,95 +29,21 @@ function registerEmailCodeRoutes(app, context) {
     verifyCodeLimiter,
   } = context;
 
-  app.post("/auth/request-code", requestCodeLimiter, async (req, res) => {
-    const email = String(req.body?.email || "")
-      .trim()
-      .toLowerCase();
-    const locale = String(req.body?.locale || "")
-      .trim()
-      .toLowerCase();
-    const emailLocale = SUPPORTED_LOCALES.has(locale) ? locale : "en";
-    if (!email || !email.includes("@")) {
-      return res.status(400).json({ error: "invalid_email" });
-    }
-
-    let result;
-    try {
-      result = await createPendingCodeImpl(email);
-    } catch (error) {
-      logError("[auth/request-code]", error);
-      return res.status(503).json({ error: "service_unavailable" });
-    }
-
-    const blockedResponse = sendCodeBlockedResponse(res, result);
-    if (blockedResponse) {
-      return blockedResponse;
-    }
-
-    if (authTestMode) {
-      const expiresInMinutes = Math.max(
-        1,
-        Math.ceil(CODE_TTL_MS / (60 * 1000)),
-      );
-      logInfo(
-        `[auth/test-mode] Sign-in code for ${email}: ${result.code} (expires in ${expiresInMinutes} minute(s))`,
-      );
-      return res.json({ ok: true, expiresInMs: CODE_TTL_MS });
-    }
-
-    try {
-      await sendLoginCodeEmailImpl({
-        email,
-        code: result.code,
-        locale: emailLocale,
-        expiresInMs: CODE_TTL_MS,
-      });
-    } catch (error) {
-      logError("[auth/send-code-email]", error);
-      return res.status(503).json({ error: "email_unavailable" });
-    }
-    return res.json({ ok: true, expiresInMs: CODE_TTL_MS });
-  });
+  app.post(
+    "/auth/request-code",
+    requestCodeLimiter,
+    createRequestCodeHandler({
+      authTestMode,
+      createPendingCodeImpl,
+      sendLoginCodeEmailImpl,
+    }),
+  );
 
   app.post(
     "/auth/verify-code",
     requireTrustedOrigin,
     verifyCodeLimiter,
-    async (req, res) => {
-      const email = String(req.body?.email || "")
-        .trim()
-        .toLowerCase();
-      const code = String(req.body?.code || "").trim();
-      if (!email || !code) {
-        return res.status(400).json({ error: "invalid_payload" });
-      }
-
-      let result;
-      try {
-        result = await verifyCodeImpl(email, code);
-      } catch (error) {
-        logError("[auth/verify-code]", error);
-        return res.status(503).json({ error: "service_unavailable" });
-      }
-
-      const invalidCodeResponse = verifyCodeFailureResponse(res, result);
-      if (invalidCodeResponse) {
-        return invalidCodeResponse;
-      }
-
-      let created;
-      try {
-        created = await createSessionImpl(email);
-      } catch (error) {
-        logError("[auth/create-session]", error);
-        return res.status(503).json({ error: "service_unavailable" });
-      }
-
-      const { sessionId, session } = created;
-      setSessionCookie(res, sessionId, nodeEnv);
-      setCsrfCookie(res, session.csrfToken, nodeEnv);
-      return res.json({ ok: true, user: { email: session.email } });
-    },
+    createVerifyCodeHandler({ createSessionImpl, nodeEnv, verifyCodeImpl }),
   );
 }
 
@@ -194,34 +118,4 @@ function registerSessionLifecycleRoutes(app, context) {
   app.get("/auth/me", requireAuth, (req, res) => {
     res.json({ ok: true, user: req.user });
   });
-}
-
-function sendCodeBlockedResponse(res, result) {
-  if (result.ok) {
-    return null;
-  }
-  if (result.reason === "cooldown") {
-    return res
-      .status(429)
-      .json({ error: "cooldown", retryAfterMs: RESEND_COOLDOWN_MS });
-  }
-  return result.reason === "rate_limit"
-    ? res
-        .status(429)
-        .json({ error: "rate_limit", maxPerHour: MAX_CODE_SENDS_PER_HOUR })
-    : null;
-}
-
-function verifyCodeFailureResponse(res, result) {
-  if (result.ok) {
-    return null;
-  }
-  if (result.reason === "expired") {
-    return res.status(400).json({ error: "expired" });
-  }
-  return result.reason === "max_attempts"
-    ? res
-        .status(429)
-        .json({ error: "max_attempts", maxAttempts: MAX_VERIFY_ATTEMPTS })
-    : res.status(400).json({ error: "invalid" });
 }

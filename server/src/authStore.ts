@@ -9,6 +9,12 @@ import {
   deleteSessionById,
   pruneExpiredSessions,
 } from "./db.js";
+import {
+  SESSION_TTL_MS,
+  createSessionMethods,
+  type PersistedSession,
+  type SessionRow,
+} from "./authSessionStore.js";
 
 type LoginCodeRow = {
   nonce: string;
@@ -18,38 +24,6 @@ type VerifyCodeResult = {
   ok: boolean;
   reason?: string;
   [key: string]: unknown;
-};
-
-type SessionRow = {
-  email: string;
-  csrfToken: string;
-  createdAt: string | Date;
-  expiresAt: string | Date;
-};
-
-type PersistedSession = {
-  sessionId: string;
-  email: string;
-  csrfToken: string;
-  createdAt: Date;
-  expiresAt: Date;
-};
-
-type SessionView = {
-  email: string;
-  csrfToken: string;
-  createdAt: number;
-  expiresAt: number;
-};
-
-type CreatedSession = {
-  sessionId: string;
-  session: {
-    email: string;
-    csrfToken: string;
-    createdAt: string;
-    expiresAt: string;
-  };
 };
 
 type SendStateEntry = {
@@ -92,7 +66,6 @@ const CODE_TTL_MS = 5 * 60 * 1000;
 const RESEND_COOLDOWN_MS = 60 * 1000;
 const MAX_CODE_SENDS_PER_HOUR = 60;
 const MAX_VERIFY_ATTEMPTS = 5;
-const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const SESSION_PRUNE_MIN_INTERVAL_MS = Math.max(
   0,
   Number.parseInt(process.env.SESSION_PRUNE_MIN_INTERVAL_MS || "0", 10) || 0,
@@ -267,111 +240,6 @@ function getNextSendState(
     lastSentAt: time,
     sendWindowStart: isSameWindow && entry ? entry.sendWindowStart : time,
     sendCount: isSameWindow && entry ? entry.sendCount + 1 : 1,
-  };
-}
-
-function createSessionMethods({
-  insertSessionImpl,
-  getSessionByIdImpl,
-  deleteSessionByIdImpl,
-  pruneExpiredSessionsImpl,
-  nowMsImpl,
-  randomBytesImpl,
-  sessionPruneMinIntervalMs,
-}: Required<
-  Pick<
-    AuthStoreDeps,
-    | "insertSessionImpl"
-    | "getSessionByIdImpl"
-    | "deleteSessionByIdImpl"
-    | "pruneExpiredSessionsImpl"
-    | "nowMsImpl"
-    | "randomBytesImpl"
-    | "sessionPruneMinIntervalMs"
-  >
->) {
-  let lastSessionPruneAtMs = 0;
-
-  async function maybePruneExpiredSessions(): Promise<void> {
-    const now = nowMsImpl();
-    if (
-      sessionPruneMinIntervalMs > 0 &&
-      now - lastSessionPruneAtMs < sessionPruneMinIntervalMs
-    ) {
-      return;
-    }
-
-    await pruneExpiredSessionsImpl();
-    lastSessionPruneAtMs = now;
-  }
-
-  async function createSession(email: string): Promise<CreatedSession> {
-    await maybePruneExpiredSessions();
-    const sessionId = randomBytesImpl(32).toString("hex");
-    const csrfToken = randomBytesImpl(32).toString("hex");
-    const createdAt = new Date(nowMsImpl());
-    const expiresAt = new Date(createdAt.getTime() + SESSION_TTL_MS);
-
-    await insertSessionImpl({
-      sessionId,
-      email,
-      csrfToken,
-      createdAt,
-      expiresAt,
-    });
-    return {
-      sessionId,
-      session: {
-        email,
-        csrfToken,
-        createdAt: createdAt.toISOString(),
-        expiresAt: expiresAt.toISOString(),
-      },
-    };
-  }
-
-  async function getSession(sessionId: string): Promise<SessionView | null> {
-    await maybePruneExpiredSessions();
-    const session = await getSessionByIdImpl(sessionId);
-    return session
-      ? getValidSessionView({
-          sessionId,
-          session,
-          nowMs: nowMsImpl(),
-          deleteSessionByIdImpl,
-        })
-      : null;
-  }
-
-  async function revokeSession(sessionId: string): Promise<void> {
-    await deleteSessionByIdImpl(sessionId);
-  }
-
-  return { createSession, getSession, revokeSession };
-}
-
-async function getValidSessionView({
-  sessionId,
-  session,
-  nowMs,
-  deleteSessionByIdImpl,
-}: {
-  sessionId: string;
-  session: SessionRow;
-  nowMs: number;
-  deleteSessionByIdImpl: (sessionId: string) => Promise<void>;
-}): Promise<SessionView | null> {
-  const expiresAt = new Date(session.expiresAt);
-  if (expiresAt.getTime() <= nowMs) {
-    await deleteSessionByIdImpl(sessionId);
-    return null;
-  }
-
-  return {
-    email: session.email,
-    csrfToken: session.csrfToken,
-    createdAt: new Date(session.createdAt).getTime(),
-    expiresAt: expiresAt.getTime(),
   };
 }
 

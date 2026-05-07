@@ -14,8 +14,8 @@ import {
   buildRegenerateSelectedPrompt,
   buildRegenerateSelectedSystemPrompt,
   buildRegeneratedItemsFormat,
-  saveLastPromptArtifacts,
 } from "./regenerateSelectedPrompt.js";
+import { saveLastPromptArtifacts } from "./regenerateSelectedArtifacts.js";
 import { logWarn } from "../logger.js";
 
 export function buildNoLlmRegenerationResult({

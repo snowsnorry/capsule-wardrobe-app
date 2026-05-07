@@ -64,6 +64,22 @@ function buildClothingCardActionProps({
   return showCardActions ? { ...actionState, ...handlers, t } : null;
 }
 
+function getClothingCardLabels(
+  item: ClothingCardItem,
+  t: (key: string) => string,
+) {
+  const categoryName = String(item?.category || "");
+  const categoryLabel = categoryName
+    ? t(`options.categories.${categoryName}`)
+    : "";
+
+  return {
+    categoryDisplayLabel: categoryLabel || categoryName,
+    categoryName,
+    label: formatProductLabel(item, ""),
+  };
+}
+
 function ClothingCard(props: ClothingCardProps): ReactElement {
   const {
     item,
@@ -78,15 +94,12 @@ function ClothingCard(props: ClothingCardProps): ReactElement {
   } = normalizeClothingCardProps(props);
   const { t } = useI18n();
   const imageUrl = getSafeHttpUrl(item?.image_url);
-  const [displayImageUrl, setDisplayImageUrl] = useState(imageUrl);
-  const [imageFallbackAttempted, setImageFallbackAttempted] = useState(false);
+  const imageState = useClothingCardImageState(imageUrl);
   const productUrl = getSafeHttpUrl(item?.url);
-  const label = formatProductLabel(item, "");
-  const categoryName = String(item?.category || "");
-  const categoryLabel = categoryName
-    ? t(`options.categories.${categoryName}`)
-    : "";
-  const categoryDisplayLabel = categoryLabel || categoryName;
+  const { categoryDisplayLabel, categoryName, label } = getClothingCardLabels(
+    item,
+    t,
+  );
   const mobileCardMetrics = getMobileCardMetrics(mobileColumns);
   const showToggleButton = isSelectionMode && isSelectable;
   const showProductMenuButton = !isSelectionMode && Boolean(productUrl);
@@ -94,24 +107,19 @@ function ClothingCard(props: ClothingCardProps): ReactElement {
   const showMobileProductMenuButton = isMobile && showProductMenuButton;
   const showActionButtons = isMobile || isSelected;
 
-  useEffect(() => {
-    setDisplayImageUrl(imageUrl);
-    setImageFallbackAttempted(false);
-  }, [imageUrl]);
-
   const stopCardActionPropagation = (event: MouseEvent<HTMLElement>) => {
     event.preventDefault();
     event.stopPropagation();
   };
 
   const handleImageError = async () => {
-    if (imageFallbackAttempted) {
+    if (imageState.imageFallbackAttempted) {
       return;
     }
-    setImageFallbackAttempted(true);
+    imageState.setImageFallbackAttempted(true);
     const cachedImageUrl = await buildCachedProductImageUrl(item?.image_url);
     if (cachedImageUrl) {
-      setDisplayImageUrl(cachedImageUrl);
+      imageState.setDisplayImageUrl(cachedImageUrl);
     }
   };
 
@@ -151,7 +159,7 @@ function ClothingCard(props: ClothingCardProps): ReactElement {
   return (
     <ClothingCardView
       item={item}
-      displayImageUrl={displayImageUrl}
+      displayImageUrl={imageState.displayImageUrl}
       productUrl={productUrl}
       label={label}
       isMobile={isMobile}
@@ -165,6 +173,23 @@ function ClothingCard(props: ClothingCardProps): ReactElement {
       onImageError={handleImageError}
     />
   );
+}
+
+function useClothingCardImageState(imageUrl: string | null) {
+  const [displayImageUrl, setDisplayImageUrl] = useState(imageUrl);
+  const [imageFallbackAttempted, setImageFallbackAttempted] = useState(false);
+
+  useEffect(() => {
+    setDisplayImageUrl(imageUrl);
+    setImageFallbackAttempted(false);
+  }, [imageUrl]);
+
+  return {
+    displayImageUrl,
+    imageFallbackAttempted,
+    setDisplayImageUrl,
+    setImageFallbackAttempted,
+  };
 }
 
 export type { ClothingCardItem } from "./ClothingCardTypes";

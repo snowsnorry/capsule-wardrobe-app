@@ -1,6 +1,6 @@
 import { test, expect } from "vitest";
+import { buildLastPromptArtifact } from "./regenerateSelectedArtifacts.js";
 import {
-  buildLastPromptArtifact,
   buildRegeneratedItemsFormat,
   buildRegenerateSelectedPrompt,
   buildRegenerateSelectedSystemPrompt,

@@ -1,7 +1,6 @@
 import type { MouseEvent } from "react";
 import {
   Box,
-  Button,
   IconButton,
   List,
   ListItemButton,
@@ -10,10 +9,9 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import FiberManualRecordRoundedIcon from "@mui/icons-material/FiberManualRecordRounded";
 import MoreVertRoundedIcon from "@mui/icons-material/MoreVertRounded";
-import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
+import { CapsulePrimaryActions } from "./AppSidebarCapsuleActions";
 import type { CapsuleNavItem } from "./AppSidebarNavigationTypes";
 
 const naturalEase = "cubic-bezier(0.2, 0, 0, 1)";
@@ -22,16 +20,6 @@ const expandedCapsuleChildrenMaxHeight = "calc(100vh - 260px)";
 const capsuleRailOffset = "30px";
 
 type Translate = (key: string) => string;
-
-const capsulePrimaryActionSx = {
-  justifyContent: "flex-start",
-  minHeight: 44,
-  ml: -1.5,
-  pl: 1.5,
-  pr: 0,
-  borderRadius: 999,
-  color: "primary.main",
-} as const;
 
 function getCapsuleRowSx(isOverlaySidebar: boolean) {
   return {
@@ -194,49 +182,6 @@ function CapsuleRow({
   );
 }
 
-function CapsulePrimaryActions({
-  capsuleChildTabIndex,
-  isInteractionDisabled,
-  onCreateCapsule,
-  onSearchCapsules,
-  t,
-}: {
-  capsuleChildTabIndex: number;
-  isInteractionDisabled: boolean;
-  onCreateCapsule?: () => Promise<void> | void;
-  onSearchCapsules?: () => void;
-  t: Translate;
-}) {
-  return (
-    <>
-      <Button
-        variant="text"
-        tabIndex={capsuleChildTabIndex}
-        disabled={isInteractionDisabled || !onCreateCapsule}
-        onClick={() => void onCreateCapsule?.()}
-        sx={capsulePrimaryActionSx}
-      >
-        <AddRoundedIcon sx={{ mr: 2.2 }} />
-        <Box component="span" sx={{ fontWeight: 550 }}>
-          {t("capsule.new")}
-        </Box>
-      </Button>
-      <Button
-        variant="text"
-        tabIndex={capsuleChildTabIndex}
-        disabled={isInteractionDisabled || !onSearchCapsules}
-        onClick={onSearchCapsules}
-        sx={capsulePrimaryActionSx}
-      >
-        <SearchRoundedIcon sx={{ mr: 2.2 }} />
-        <Box component="span" sx={{ fontWeight: 550 }}>
-          {t("capsule.search")}
-        </Box>
-      </Button>
-    </>
-  );
-}
-
 function CapsuleList({
   capsuleList,
   activeCapsuleId,
@@ -315,21 +260,7 @@ function CapsuleChildren({
     <Box
       data-testid="capsule-sidebar-children"
       aria-hidden={!showCapsuleChildren}
-      sx={{
-        display: "grid",
-        flex: "0 1 auto",
-        minHeight: 0,
-        maxHeight: showCapsuleChildren
-          ? expandedCapsuleChildrenMaxHeight
-          : "0px",
-        gridTemplateRows: showCapsuleChildren ? "minmax(0, 1fr)" : "0fr",
-        opacity: showCapsuleChildren ? 1 : 0,
-        overflow: "hidden",
-        transition: motionTransition,
-        "@media (prefers-reduced-motion: reduce)": {
-          transition: "none",
-        },
-      }}
+      sx={getCapsuleChildrenSx(showCapsuleChildren)}
     >
       <Stack
         sx={{
@@ -374,6 +305,22 @@ function CapsuleChildren({
       </Stack>
     </Box>
   );
+}
+
+function getCapsuleChildrenSx(showCapsuleChildren: boolean) {
+  return {
+    display: "grid",
+    flex: "0 1 auto",
+    minHeight: 0,
+    maxHeight: showCapsuleChildren ? expandedCapsuleChildrenMaxHeight : "0px",
+    gridTemplateRows: showCapsuleChildren ? "minmax(0, 1fr)" : "0fr",
+    opacity: showCapsuleChildren ? 1 : 0,
+    overflow: "hidden",
+    transition: motionTransition,
+    "@media (prefers-reduced-motion: reduce)": {
+      transition: "none",
+    },
+  } as const;
 }
 
 export { CapsuleChildren };

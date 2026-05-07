@@ -6,8 +6,9 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import type { ReactElement } from "react";
 import AccentColorChips from "./AccentColorChips";
+import { FilterSectionTitle } from "./ProfileFilterSectionTitle";
+import { ProfileSignOutAction } from "./ProfileFiltersSidebarActions";
 import StylePreferenceSelector from "./StylePreferenceSelector";
 import { translateOption } from "../i18n";
 import type {
@@ -16,27 +17,6 @@ import type {
 } from "./ProfileFiltersSidebarTypes";
 
 type Translate = (key: string, params?: Record<string, unknown>) => string;
-
-function FilterSectionTitle({
-  title,
-  hint,
-}: {
-  title: string;
-  hint?: string;
-}): ReactElement {
-  return (
-    <Stack spacing={0.5}>
-      <Typography variant="body2" sx={{ fontWeight: 600 }}>
-        {title}
-      </Typography>
-      {hint ? (
-        <Typography variant="body2" color="text.secondary">
-          {hint}
-        </Typography>
-      ) : null}
-    </Stack>
-  );
-}
 
 function ProfileFilterChipSection({
   title,
@@ -212,59 +192,23 @@ function ProfileFilterActions({
   );
 }
 
-function ProfileSignOutAction({
-  onSignOut,
-  isSigningOut,
-  t,
-}: {
-  onSignOut?: () => void;
-  isSigningOut?: boolean;
-  t: Translate;
-}) {
-  if (typeof onSignOut !== "function") {
-    return null;
-  }
-
-  return (
-    <Stack sx={{ mt: "auto" }} spacing={2}>
-      <Divider />
-      <Button
-        variant="outlined"
-        color="error"
-        onClick={onSignOut}
-        disabled={isSigningOut}
-        sx={{ alignSelf: "flex-start", borderRadius: "999px", px: 2.5 }}
-      >
-        {t("actions.signOut")}
-      </Button>
-    </Stack>
-  );
-}
-
-function ProfileFiltersSidebarFrame({
+function ProfileFilterControls({
+  disabled,
+  locale,
+  normalizedSelectedPattern,
   props,
   sortedPatternOptions,
-  normalizedSelectedPattern,
-  missingRequiredFilters,
-  showUnchangedFiltersHint,
-  isApplyDisabled,
   t,
-  locale,
 }: {
+  disabled: boolean;
+  locale: string;
+  normalizedSelectedPattern: ProfileFilterValue;
   props: ProfileFiltersSidebarProps;
   sortedPatternOptions: ProfileFilterValue[];
-  normalizedSelectedPattern: ProfileFilterValue;
-  missingRequiredFilters: string[];
-  showUnchangedFiltersHint: boolean;
-  isApplyDisabled: boolean;
   t: Translate;
-  locale: string;
 }) {
-  const disabled = Boolean(props.isInteractionDisabled);
-
   return (
-    <Stack spacing={3.5} sx={{ boxSizing: "border-box" }}>
-      <ProfileFiltersHeader t={t} />
+    <>
       <StylePreferenceSelector
         styleOptions={props.styleOptions}
         selectedStyleCore={props.selectedStyleCore}
@@ -305,18 +249,7 @@ function ProfileFiltersSidebarFrame({
         disabled={disabled}
         onSelect={props.onSelectAudience}
       />
-      <Stack spacing={1.5}>
-        <FilterSectionTitle
-          title={t("profile.accentColorTitle")}
-          hint={t("profile.accentColorHint")}
-        />
-        <AccentColorChips
-          options={props.accentColorOptions}
-          selectedValue={props.selectedAccentColor}
-          onSelect={props.onSelectAccentColor}
-          disabled={disabled}
-        />
-      </Stack>
+      <ProfileAccentColorSection disabled={disabled} props={props} t={t} />
       <ProfileFilterChipSection
         title={t("profile.patternTitle")}
         hint={t("profile.patternHint")}
@@ -326,6 +259,67 @@ function ProfileFiltersSidebarFrame({
         locale={locale}
         disabled={disabled}
         onSelect={props.onSelectPattern}
+      />
+    </>
+  );
+}
+
+function ProfileAccentColorSection({
+  disabled,
+  props,
+  t,
+}: {
+  disabled: boolean;
+  props: ProfileFiltersSidebarProps;
+  t: Translate;
+}) {
+  return (
+    <Stack spacing={1.5}>
+      <FilterSectionTitle
+        title={t("profile.accentColorTitle")}
+        hint={t("profile.accentColorHint")}
+      />
+      <AccentColorChips
+        options={props.accentColorOptions}
+        selectedValue={props.selectedAccentColor}
+        onSelect={props.onSelectAccentColor}
+        disabled={disabled}
+      />
+    </Stack>
+  );
+}
+
+function ProfileFiltersSidebarFrame({
+  props,
+  sortedPatternOptions,
+  normalizedSelectedPattern,
+  missingRequiredFilters,
+  showUnchangedFiltersHint,
+  isApplyDisabled,
+  t,
+  locale,
+}: {
+  props: ProfileFiltersSidebarProps;
+  sortedPatternOptions: ProfileFilterValue[];
+  normalizedSelectedPattern: ProfileFilterValue;
+  missingRequiredFilters: string[];
+  showUnchangedFiltersHint: boolean;
+  isApplyDisabled: boolean;
+  t: Translate;
+  locale: string;
+}) {
+  const disabled = Boolean(props.isInteractionDisabled);
+
+  return (
+    <Stack spacing={3.5} sx={{ boxSizing: "border-box" }}>
+      <ProfileFiltersHeader t={t} />
+      <ProfileFilterControls
+        disabled={disabled}
+        locale={locale}
+        normalizedSelectedPattern={normalizedSelectedPattern}
+        props={props}
+        sortedPatternOptions={sortedPatternOptions}
+        t={t}
       />
       <ProfileTextSection
         selectedText={props.selectedText}

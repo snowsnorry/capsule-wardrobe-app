@@ -102,84 +102,128 @@ function pushSearchFacetChips(
     translateOption: (group: string, value: string, locale: string) => string;
   },
 ) {
-  const pushFacetChips = (
-    values: string[],
-    title: string,
-    optionGroup: string,
-    fieldKey: keyof SearchDraftState,
-  ) => {
-    if (!Array.isArray(values) || values.length === 0) {
-      return;
-    }
+  for (const facet of getSearchFacetChipConfigs(state, t)) {
+    pushFacetChips(chips, facet, { locale, options, translateOption });
+  }
+}
 
-    const labelValues = values.map((value) =>
-      getFacetLabel({
-        value,
-        optionGroup,
-        options,
-        locale,
-        translateOption,
-      }),
-    );
+function getSearchFacetChipConfigs(
+  state: SearchDraftState,
+  t: SearchTranslator,
+) {
+  return [
+    {
+      values: state.brand,
+      title: t("search.filters.brand"),
+      optionGroup: "brand",
+      field: "brand",
+    },
+    {
+      values: state.audience,
+      title: t("profile.audienceTitle"),
+      optionGroup: "audience",
+      field: "audience",
+    },
+    {
+      values: state.category,
+      title: t("search.filters.category"),
+      optionGroup: "categories",
+      field: "category",
+    },
+    {
+      values: state.season,
+      title: t("profile.seasonsTitle"),
+      optionGroup: "seasons",
+      field: "season",
+    },
+    {
+      values: state.formalityLevel,
+      title: t("statistics.charts.formalityLevel"),
+      optionGroup: "styles",
+      field: "formalityLevel",
+    },
+    {
+      values: state.style,
+      title: t("statistics.charts.style"),
+      optionGroup: "styles",
+      field: "style",
+    },
+    {
+      values: state.occasions,
+      title: t("profile.occasionsTitle"),
+      optionGroup: "occasions",
+      field: "occasions",
+    },
+    {
+      values: state.color,
+      title: t("profile.accentColorTitle"),
+      optionGroup: "accentColors",
+      field: "color",
+    },
+    {
+      values: state.pattern,
+      title: t("profile.patternTitle"),
+      optionGroup: "patterns",
+      field: "pattern",
+    },
+    {
+      values: state.silhouette,
+      title: t("search.filters.silhouette"),
+      optionGroup: "silhouettes",
+      field: "silhouette",
+    },
+    {
+      values: state.fit,
+      title: t("search.filters.fit"),
+      optionGroup: "fits",
+      field: "fit",
+    },
+    {
+      values: state.closureType,
+      title: t("search.filters.closureType"),
+      optionGroup: "closureTypes",
+      field: "closureType",
+    },
+  ] as Array<{
+    field: keyof SearchDraftState;
+    optionGroup: string;
+    title: string;
+    values: string[];
+  }>;
+}
 
-    chips.push({
-      key: `${fieldKey}:${values.join(",")}`,
-      field: fieldKey,
-      values,
-      label: `${title}: ${labelValues.join(", ")}`,
-    });
-  };
-
-  pushFacetChips(state.brand, t("search.filters.brand"), "brand", "brand");
-  pushFacetChips(
-    state.audience,
-    t("profile.audienceTitle"),
-    "audience",
-    "audience",
+function pushFacetChips(
+  chips: ActiveFilterChip[],
+  facet: {
+    field: keyof SearchDraftState;
+    optionGroup: string;
+    title: string;
+    values: string[];
+  },
+  {
+    locale,
+    options,
+    translateOption,
+  }: {
+    locale: string;
+    options: SearchOptions;
+    translateOption: (group: string, value: string, locale: string) => string;
+  },
+) {
+  if (!Array.isArray(facet.values) || facet.values.length === 0) return;
+  const labelValues = facet.values.map((value) =>
+    getFacetLabel({
+      value,
+      optionGroup: facet.optionGroup,
+      options,
+      locale,
+      translateOption,
+    }),
   );
-  pushFacetChips(
-    state.category,
-    t("search.filters.category"),
-    "categories",
-    "category",
-  );
-  pushFacetChips(state.season, t("profile.seasonsTitle"), "seasons", "season");
-  pushFacetChips(
-    state.formalityLevel,
-    t("statistics.charts.formalityLevel"),
-    "styles",
-    "formalityLevel",
-  );
-  pushFacetChips(state.style, t("statistics.charts.style"), "styles", "style");
-  pushFacetChips(
-    state.occasions,
-    t("profile.occasionsTitle"),
-    "occasions",
-    "occasions",
-  );
-  pushFacetChips(
-    state.color,
-    t("profile.accentColorTitle"),
-    "accentColors",
-    "color",
-  );
-  pushFacetChips(
-    state.pattern,
-    t("profile.patternTitle"),
-    "patterns",
-    "pattern",
-  );
-  pushFacetChips(
-    state.silhouette,
-    t("search.filters.silhouette"),
-    "silhouettes",
-    "silhouette",
-  );
-  pushFacetChips(state.fit, t("search.filters.fit"), "fits", "fit");
-  pushFacetChips(
-    state.closureType,
-    t("search.filters.closureType"),
-    "closureTypes",
-    "closureType",
-  );
+  chips.push({
+    key: `${facet.field}:${facet.values.join(",")}`,
+    field: facet.field,
+    values: facet.values,
+    label: `${facet.title}: ${labelValues.join(", ")}`,
+  });
 }

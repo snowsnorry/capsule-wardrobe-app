@@ -342,17 +342,24 @@ async function buildPromptDebugImagesAllInChild({
     child.on("error", onError);
     child.on("exit", onExit);
 
-    const message: PromptImagesChildMessage = {
-      normalizedItems,
-      downloadConcurrency: PROMPT_CATEGORY_DOWNLOAD_CONCURRENCY,
-    };
-
-    child.send(message, (error: Error | null) => {
-      if (error && !childExited) {
-        rejectOnce(error);
-      }
-    });
+    child.send(
+      buildPromptImagesChildMessage(normalizedItems),
+      (error: Error | null) => {
+        if (error && !childExited) {
+          rejectOnce(error);
+        }
+      },
+    );
   });
+}
+
+function buildPromptImagesChildMessage(
+  normalizedItems: PromptImageItemLike[],
+): PromptImagesChildMessage {
+  return {
+    normalizedItems,
+    downloadConcurrency: PROMPT_CATEGORY_DOWNLOAD_CONCURRENCY,
+  };
 }
 
 export {

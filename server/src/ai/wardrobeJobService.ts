@@ -20,6 +20,10 @@ import type {
   StartWardrobeJobInput,
   WardrobeServiceRuntimeDeps,
 } from "./wardrobeServiceTypes.js";
+import {
+  publishWardrobeSnapshot,
+  updateWardrobeCapsuleSnapshot,
+} from "./wardrobeJobSnapshots.js";
 
 const COMPLETED_JOB_TTL_MS = 5 * 60 * 1000;
 
@@ -79,44 +83,6 @@ export function scheduleWardrobeJobCleanup(
     }
   }, COMPLETED_JOB_TTL_MS);
   cleanupTimer?.unref?.();
-}
-
-function publishWardrobeSnapshot(deps, email, capsuleId, capsule, job) {
-  deps.publishSnapshotImpl(
-    email,
-    capsuleId,
-    deps.buildCapsuleEventSnapshotImpl({ capsule, activeJob: job }),
-  );
-}
-
-function buildWardrobeSnapshot(baseSnapshot, payload) {
-  return {
-    filters: baseSnapshot?.filters,
-    data: {
-      wardrobe: payload,
-      rejectedUrls: [],
-      regeneration: null,
-    },
-  };
-}
-
-async function updateWardrobeCapsuleSnapshot({
-  deps,
-  email,
-  capsuleId,
-  capsule,
-  baseSnapshot,
-  payload,
-}) {
-  const snapshot = buildWardrobeSnapshot(baseSnapshot, payload);
-  if (capsuleId) {
-    return deps.updateCapsuleSnapshotImpl(email, capsuleId, snapshot);
-  }
-
-  return {
-    ...capsule,
-    draft: snapshot,
-  };
 }
 
 function isFirstContentGenerationForNewCapsule(capsule, baseSnapshot) {

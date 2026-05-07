@@ -18,9 +18,7 @@ import {
 import { getProfile } from "./profileStore.js";
 import {
   DEFAULT_CAPSULE_NAME,
-  SHARE_TTL_MS,
   buildCapsuleSnapshotWithRegeneration,
-  buildSharedCapsuleOgMetadata,
   getCapsuleIdValue,
   getCapsuleSnapshotRegeneration,
   getEffectiveCapsuleSnapshot,
@@ -33,6 +31,15 @@ import {
   type SharedCapsuleOgMetadata,
   type SharedCapsuleResult,
 } from "./capsuleStoreModel.js";
+import { buildSharedCapsuleOgMetadata } from "./capsuleShareMetadata.js";
+import {
+  createCapsuleShareForStore,
+  getSharedCapsuleForStore,
+  getSharedCapsuleOgMetadataForStore,
+  importSharedCapsuleForStore,
+} from "./capsuleStoreSharing.js";
+import { deleteCapsuleForStore } from "./capsuleStoreDelete.js";
+import { buildUniqueCapsuleNameForStore } from "./capsuleStoreNaming.js";
 import {
   buildProfileCapsuleContext,
   buildSnapshotFromProfile,
@@ -62,25 +69,6 @@ function createCapsuleStore(deps: CapsuleStoreDeps = {}) {
     upsertSharedCapsuleImpl = upsertSharedCapsule,
     nowImpl = Date.now,
   } = deps;
-
-  async function buildUniqueCapsuleName(
-    email: string,
-    preferredName: string = DEFAULT_CAPSULE_NAME,
-  ): Promise<string> {
-    const baseName =
-      String(preferredName || DEFAULT_CAPSULE_NAME).trim() ||
-      DEFAULT_CAPSULE_NAME;
-    const existingNames = await listCapsuleNamesByEmailImpl(email);
-    if (!existingNames.includes(baseName)) {
-      return baseName;
-    }
-
-    let index = 1;
-    while (existingNames.includes(`${baseName} (${index})`)) {
-      index += 1;
-    }
-    return `${baseName} (${index})`;
-  }
 
   async function setActiveCapsuleId(
     email: string,
@@ -129,9 +117,10 @@ function createCapsuleStore(deps: CapsuleStoreDeps = {}) {
       setActive?: boolean;
     } = {},
   ): Promise<NormalizedCapsuleRecord | null> {
-    const resolvedName = await buildUniqueCapsuleName(
+    const resolvedName = await buildUniqueCapsuleNameForStore(
       email,
       name || DEFAULT_CAPSULE_NAME,
+      listCapsuleNamesByEmailImpl,
     );
     const capsule = normalizeCapsuleRecord(
       await createCapsuleRecordImpl({
@@ -196,7 +185,11 @@ function createCapsuleStore(deps: CapsuleStoreDeps = {}) {
     capsuleId: string,
     name: string,
   ): Promise<NormalizedCapsuleRecord | null> {
-    const resolvedName = await buildUniqueCapsuleName(email, name);
+    const resolvedName = await buildUniqueCapsuleNameForStore(
+      email,
+      name,
+      listCapsuleNamesByEmailImpl,
+    );
     return normalizeCapsuleRecord(
       await renameCapsuleByIdForEmailImpl({
         email,
@@ -242,78 +235,40 @@ function createCapsuleStore(deps: CapsuleStoreDeps = {}) {
     });
   }
 
-  function buildShareUrl(clientOrigin: string, shareId: string): string {
-    const origin =
-      String(clientOrigin || "").replace(/\/+$/, "") || "http://localhost:5173";
-    return `${origin}/share/${encodeURIComponent(shareId)}`;
-  }
-
   async function createCapsuleShare(
     email: string,
     capsuleId: string,
     clientOrigin: string,
   ): Promise<SharedCapsuleResult | null> {
-    const capsule = await getCapsule(email, capsuleId);
-    if (!capsule) {
-      return null;
-    }
-
-    const snapshot = capsule.draft || capsule.saved || null;
-    if (!isShareableCapsuleSnapshot(snapshot)) {
-      const error = new Error("capsule_not_shareable");
-      (error as Error & { code?: string }).code = "capsule_not_shareable";
-      throw error;
-    }
-
-    await pruneExpiredSharedCapsulesImpl();
-    const expiresAt = new Date(nowImpl() + SHARE_TTL_MS);
-    const shared = await upsertSharedCapsuleImpl({
-      profileEmail: email,
-      name: String(capsule.name || DEFAULT_CAPSULE_NAME),
-      content: snapshot as unknown as Record<string, unknown>,
-      contentHash: hashCapsuleContentImpl(snapshot),
-      expiresAt,
+    return createCapsuleShareForStore({
+      email,
+      capsuleId,
+      clientOrigin,
+      getCapsuleImpl: getCapsule,
+      pruneExpiredSharedCapsulesImpl,
+      nowImpl,
+      upsertSharedCapsuleImpl,
+      hashCapsuleContentImpl,
     });
-
-    if (!shared) {
-      return null;
-    }
-
-    return {
-      id: shared.id,
-      url: buildShareUrl(clientOrigin, shared.id),
-      expiresAt: shared.expiresAt,
-    };
   }
 
   async function getSharedCapsule(
     id: string,
   ): Promise<SharedCapsuleMetadata | null> {
-    const shared = await getValidSharedCapsuleByIdImpl(String(id || "").trim());
-    if (!shared) {
-      await pruneExpiredSharedCapsulesImpl();
-      return null;
-    }
-
-    return {
-      id: shared.id,
-      name: shared.name,
-      expiresAt: shared.expiresAt,
-    };
+    return getSharedCapsuleForStore({
+      id,
+      getValidSharedCapsuleByIdImpl,
+      pruneExpiredSharedCapsulesImpl,
+    });
   }
 
   async function getSharedCapsuleOgMetadata(
     id: string,
   ): Promise<SharedCapsuleOgMetadata | null> {
-    const shared = await getValidSharedCapsuleByIdImpl(String(id || "").trim());
-    if (!shared) {
-      await pruneExpiredSharedCapsulesImpl();
-      return null;
-    }
-
-    return buildSharedCapsuleOgMetadata({
-      name: shared.name,
-      content: shared.content,
+    return getSharedCapsuleOgMetadataForStore({
+      id,
+      getValidSharedCapsuleByIdImpl,
+      pruneExpiredSharedCapsulesImpl,
     });
   }
 
@@ -321,24 +276,12 @@ function createCapsuleStore(deps: CapsuleStoreDeps = {}) {
     email: string,
     id: string,
   ): Promise<NormalizedCapsuleRecord | null> {
-    const shared = await getValidSharedCapsuleByIdImpl(String(id || "").trim());
-    if (!shared) {
-      await pruneExpiredSharedCapsulesImpl();
-      return null;
-    }
-
-    const content = normalizeCapsuleSnapshot(shared.content);
-    if (!isShareableCapsuleSnapshot(content)) {
-      const error = new Error("capsule_not_shareable");
-      (error as Error & { code?: string }).code = "capsule_not_shareable";
-      throw error;
-    }
-
-    return createCapsule(email, {
-      name: shared.name,
-      draft: null,
-      saved: content,
-      setActive: true,
+    return importSharedCapsuleForStore({
+      email,
+      id,
+      getValidSharedCapsuleByIdImpl,
+      pruneExpiredSharedCapsulesImpl,
+      createCapsuleImpl: createCapsule,
     });
   }
 
@@ -346,27 +289,18 @@ function createCapsuleStore(deps: CapsuleStoreDeps = {}) {
     email: string,
     capsuleId: string,
   ): Promise<boolean> {
-    const deleted = await deleteCapsuleByIdForEmailImpl({ email, capsuleId });
-    if (!deleted) {
-      return false;
-    }
-
-    const profile = await getProfileImpl(email);
-    if (profile?.activeCapsuleId === capsuleId) {
-      const [recentCapsule] = await listRecentCapsules(email, 1);
-      if (recentCapsule) {
-        await setActiveCapsuleId(email, getCapsuleIdValue(recentCapsule));
-      } else {
-        const capsule = await createBootstrapCapsule(email);
-        await setActiveCapsuleId(email, getCapsuleIdValue(capsule));
-      }
-    }
-
-    return true;
+    return deleteCapsuleForStore({
+      email,
+      capsuleId,
+      deleteCapsuleByIdForEmailImpl,
+      getProfileImpl,
+      listRecentCapsulesImpl: listRecentCapsules,
+      setActiveCapsuleIdImpl: setActiveCapsuleId,
+      createBootstrapCapsuleImpl: createBootstrapCapsule,
+    });
   }
 
   return {
-    buildUniqueCapsuleName,
     createBootstrapCapsule,
     createCapsule,
     createCapsuleShare,

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { fetchSearchOptions, fetchSearchStats } from "../../api/search";
 import { translateOption } from "../../i18n";
@@ -6,14 +6,8 @@ import {
   EMPTY_SEARCH_OPTIONS,
   buildActiveFilterChips,
   buildSearchOptionsPayload,
-  toggleSelection,
 } from "../../search/searchState";
-import type {
-  ActiveFilterChip,
-  SearchDraftState,
-  SearchFilterValue,
-  SearchOptions,
-} from "../../search/searchState";
+import type { SearchDraftState, SearchOptions } from "../../search/searchState";
 import {
   buildInitialStatsState,
   createEmptyStatisticsSearchState,
@@ -26,6 +20,7 @@ import type {
   StatisticsState,
   StatisticsStatus,
 } from "./statisticsTypes";
+import useStatisticsActions from "./useStatisticsActions";
 
 type Translate = (key: string, params?: Record<string, unknown>) => string;
 
@@ -103,22 +98,6 @@ export function useStatisticsStats({ t, locale }: UseStatisticsStatsParams) {
     draftStateRef.current = draftState;
   }, [draftState]);
 
-  const refreshStats = useCallback(
-    async (nextState: SearchDraftState) => {
-      setStatus({ loading: true, error: "" });
-      try {
-        const result = (await fetchSearchStats(
-          serializeStatisticsState(nextState),
-        )) as SearchStatsResponse;
-        setStatsState(normalizeStatsResponse(result));
-        setStatus({ loading: false, error: "" });
-      } catch {
-        setStatus({ loading: false, error: t("errors.generic") });
-      }
-    },
-    [t],
-  );
-
   useBootstrapStatistics({
     t,
     setOptions,
@@ -127,79 +106,14 @@ export function useStatisticsStats({ t, locale }: UseStatisticsStatsParams) {
     setStatus,
   });
 
-  const submit = useCallback(async () => {
-    const nextState = { ...draftStateRef.current, page: 1 };
-    draftStateRef.current = nextState;
-    setDraftState(nextState);
-    await refreshStats(nextState);
-  }, [refreshStats]);
-
-  const reset = useCallback(async () => {
-    const nextState = createEmptyStatisticsSearchState(options.priceRange);
-    draftStateRef.current = nextState;
-    setDraftState(nextState);
-    await refreshStats(nextState);
-  }, [options.priceRange, refreshStats]);
-
-  const updateDraftState = useCallback(
-    async (
-      updater:
-        | SearchDraftState
-        | ((current: SearchDraftState) => SearchDraftState),
-      { submit: shouldSubmit = false } = {},
-    ) => {
-      const nextState =
-        typeof updater === "function"
-          ? updater(draftStateRef.current)
-          : updater;
-      draftStateRef.current = nextState;
-      setDraftState(nextState);
-      if (shouldSubmit) {
-        await refreshStats(nextState);
-      }
-    },
-    [refreshStats],
-  );
-
-  const toggleFacetValue = useCallback(
-    async (fieldKey: keyof SearchDraftState, value: SearchFilterValue) => {
-      await updateDraftState(
-        (current) => ({
-          ...current,
-          [fieldKey]: toggleSelection(
-            value,
-            Array.isArray(current[fieldKey]) ? current[fieldKey] : [],
-          ),
-          page: 1,
-        }),
-        { submit: true },
-      );
-    },
-    [updateDraftState],
-  );
-
-  const deleteActiveChip = useCallback(
-    (chip: ActiveFilterChip) => {
-      if (chip.field === "price") {
-        updateDraftState(
-          (current) => ({
-            ...current,
-            priceEnabled: false,
-            priceMinDraft: options.priceRange.min ?? 0,
-            priceMaxDraft: options.priceRange.max ?? 0,
-            page: 1,
-          }),
-          { submit: true },
-        );
-        return;
-      }
-      updateDraftState(
-        (current) => ({ ...current, [chip.field]: [], page: 1 }),
-        { submit: true },
-      );
-    },
-    [options.priceRange.max, options.priceRange.min, updateDraftState],
-  );
+  const actions = useStatisticsActions({
+    draftStateRef,
+    options,
+    setDraftState,
+    setStatsState,
+    setStatus,
+    t,
+  });
 
   const activeChips = useMemo(
     () =>
@@ -220,10 +134,6 @@ export function useStatisticsStats({ t, locale }: UseStatisticsStatsParams) {
     status,
     activeChips,
     resolvedTotal: resolveStatisticsTotal(statsState),
-    submit,
-    reset,
-    updateDraftState,
-    toggleFacetValue,
-    deleteActiveChip,
+    ...actions,
   };
 }

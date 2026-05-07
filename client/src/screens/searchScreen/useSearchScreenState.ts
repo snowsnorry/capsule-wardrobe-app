@@ -1,14 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { MutableRefObject } from "react";
 import {
   fetchSavedSearch,
   fetchSearchOptions,
   runSearch,
 } from "../../api/search";
-import { translateOption } from "../../i18n";
 import {
   EMPTY_SEARCH_OPTIONS,
-  buildActiveFilterChips,
   buildSearchOptionsPayload,
   createSearchState,
   serializeDraftState,
@@ -18,6 +16,7 @@ import type {
   SearchDraftState,
   SearchOptions,
 } from "../../search/searchState";
+import useSearchScreenDerivedState from "./useSearchScreenDerivedState";
 import type { SearchResultItem, SearchStatus } from "./searchTypes";
 
 type SearchResponse = {
@@ -91,28 +90,15 @@ function useSearchScreenState(params: UseSearchScreenStateParams) {
   };
   runtimeRef.current = runtime;
   const actions = createSearchActions(runtime);
-  const formattedTotal = useMemo(
-    () => new Intl.NumberFormat(params.locale).format(total),
-    [params.locale, total],
-  );
-  const activeChips = useMemo(
-    () =>
-      buildActiveFilterChips({
-        state: draftState,
-        options,
-        locale: params.locale,
-        t: params.t,
-        translateOption,
-      }),
-    [draftState, options, params.locale, params.t],
-  );
-  const selectedItem = useMemo(
-    () =>
-      results.find((item) => String(item.id) === String(selectedResultId)) ||
-      results[0] ||
-      null,
-    [results, selectedResultId],
-  );
+  const derivedState = useSearchScreenDerivedState({
+    draftState,
+    locale: params.locale,
+    options,
+    results,
+    selectedResultId,
+    t: params.t,
+    total,
+  });
 
   useEffect(() => {
     draftStateRef.current = draftState;
@@ -131,14 +117,14 @@ function useSearchScreenState(params: UseSearchScreenStateParams) {
 
   return {
     ...actions,
-    activeChips,
+    activeChips: derivedState.activeChips,
     draftState,
-    formattedTotal,
+    formattedTotal: derivedState.formattedTotal,
     isDetailOpen,
     isFiltersOpen,
     options,
     results,
-    selectedItem,
+    selectedItem: derivedState.selectedItem,
     selectedResultId,
     setIsDetailOpen,
     setIsFiltersOpen,

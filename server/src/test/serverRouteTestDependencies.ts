@@ -210,6 +210,13 @@ function createCapsuleDependencies() {
       status: "new",
       ...payload,
     }),
+    ...createCapsuleShareDependencies(),
+    ...createCapsuleMutationDependencies(),
+  };
+}
+
+function createCapsuleShareDependencies() {
+  return {
     createCapsuleShareImpl: async () => ({
       id: "share-1",
       url: `${TEST_CLIENT_ORIGIN}/share/share-1`,
@@ -236,6 +243,11 @@ function createCapsuleDependencies() {
       },
       status: "saved",
     }),
+  };
+}
+
+function createCapsuleMutationDependencies() {
+  return {
     updateCapsuleSnapshotImpl: async (_email, _id, draft) => ({
       id: "capsule-1",
       draft,

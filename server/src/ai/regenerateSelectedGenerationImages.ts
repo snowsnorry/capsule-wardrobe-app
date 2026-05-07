@@ -1,6 +1,6 @@
 import { logWarn } from "../logger.js";
 import { logWardrobeInfo } from "./ai.js";
-import { LAST_PROMPT_DIR_URL } from "./regenerateSelectedPrompt.js";
+import { LAST_PROMPT_DIR_URL } from "./regenerateSelectedArtifacts.js";
 
 export async function buildRegenerationPromptImages({
   normalizedItems,

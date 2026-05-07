@@ -253,15 +253,7 @@ function createGeminiClient({
       const response = await client.models.generateContent(requestPayload);
       logGeminiFinishReason(response);
       const json = parseGeminiJsonResponse(response, zodSchema);
-
-      return {
-        response: {
-          ...response,
-          output_text:
-            typeof response?.text === "string" ? response.text : null,
-        },
-        json,
-      };
+      return buildGeminiGenerationResult(response, json);
     } finally {
       await cleanupUploadedFilesImpl(client, uploadedFiles);
     }
@@ -270,6 +262,16 @@ function createGeminiClient({
   return {
     generateJsonWithLlm,
     getGeminiClient,
+  };
+}
+
+function buildGeminiGenerationResult(response, json) {
+  return {
+    response: {
+      ...response,
+      output_text: typeof response?.text === "string" ? response.text : null,
+    },
+    json,
   };
 }
 

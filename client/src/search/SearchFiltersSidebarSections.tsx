@@ -1,100 +1,29 @@
 import {
   Box,
   Button,
-  Chip,
   Slider,
   Stack,
   TextField,
   Typography,
 } from "@mui/material";
-import type { ReactNode } from "react";
-import AccentColorChips from "../components/AccentColorChips";
 import { translateOption } from "../i18n";
 import {
-  sortCoreValues,
-  sortItemsByLabel,
-  toggleSelection,
-} from "./searchState";
+  MultiSelectChips,
+  SearchSection,
+  updateMultiValue,
+} from "./SearchFiltersControls";
+import {
+  SearchFacetSections,
+  SearchProductAttributeSections,
+} from "./SearchFiltersFacetSections";
+import { sortCoreValues, sortItemsByLabel } from "./searchState";
 import type { SearchDraftState } from "./searchState";
 import type {
   PriceControls,
   SearchFilterItems,
   SearchFiltersSidebarProps,
-  SelectItem,
   UpdateDraftState,
 } from "./SearchFiltersSidebarTypes";
-
-function SearchSection({
-  title,
-  hint,
-  children,
-}: {
-  title: string;
-  hint?: string;
-  children: ReactNode;
-}) {
-  return (
-    <Stack spacing={1.5}>
-      <Typography variant="body2" sx={{ fontWeight: 600 }}>
-        {title}
-      </Typography>
-      {hint ? (
-        <Typography variant="body2" color="text.secondary">
-          {hint}
-        </Typography>
-      ) : null}
-      {children}
-    </Stack>
-  );
-}
-
-function MultiSelectChips({
-  items,
-  values,
-  onToggle,
-  defaultLabel,
-  defaultPosition = "start",
-}: {
-  items: SelectItem[];
-  values: string[];
-  onToggle: (value: string | null) => void;
-  defaultLabel?: string;
-  defaultPosition?: "start" | "end";
-}) {
-  const defaultChip = defaultLabel ? (
-    <Chip
-      label={defaultLabel}
-      clickable
-      color={values.length === 0 ? "primary" : "default"}
-      onClick={() => onToggle(null)}
-    />
-  ) : null;
-
-  return (
-    <Stack direction="row" flexWrap="wrap" gap={1}>
-      {defaultPosition === "start" ? defaultChip : null}
-      {items.map((item) => (
-        <Chip
-          key={item.value}
-          label={item.label}
-          clickable
-          color={values.includes(item.value) ? "primary" : "default"}
-          onClick={() => onToggle(item.value)}
-        />
-      ))}
-      {defaultPosition === "end" ? defaultChip : null}
-    </Stack>
-  );
-}
-
-function updateMultiValue(field: keyof SearchDraftState, value: string | null) {
-  return (current: SearchDraftState) => ({
-    ...current,
-    [field]:
-      value === null ? [] : toggleSelection(value, current[field] as string[]),
-    page: 1,
-  });
-}
 
 function SearchPriceSection({
   draftState,
@@ -303,36 +232,13 @@ function SearchFiltersSidebarFrame({
         updateDraftState={updateDraftState}
         t={t}
       />
-      <SearchSection title={t("profile.audienceTitle")}>
-        <MultiSelectChips
-          items={filterItems.audienceItems}
-          values={draftState.audience}
-          defaultLabel={t("search.notImportant")}
-          onToggle={(value) =>
-            updateDraftState(updateMultiValue("audience", value))
-          }
-        />
-      </SearchSection>
-      <SearchSection title={t("search.filters.category")}>
-        <MultiSelectChips
-          items={filterItems.categoryItems}
-          values={draftState.category}
-          defaultLabel={t("search.all")}
-          onToggle={(value) =>
-            updateDraftState(updateMultiValue("category", value))
-          }
-        />
-      </SearchSection>
-      <SearchSection title={t("profile.seasonsTitle")}>
-        <MultiSelectChips
-          items={filterItems.seasonItems}
-          values={draftState.season}
-          defaultLabel={t("search.all")}
-          onToggle={(value) =>
-            updateDraftState(updateMultiValue("season", value))
-          }
-        />
-      </SearchSection>
+      <SearchFacetSections
+        draftState={draftState}
+        filterItems={filterItems}
+        options={props.options}
+        updateDraftState={updateDraftState}
+        t={t}
+      />
       <SearchStyleSections
         options={props.options}
         draftState={draftState}
@@ -340,64 +246,12 @@ function SearchFiltersSidebarFrame({
         updateDraftState={updateDraftState}
         t={t}
       />
-      <SearchSection title={t("profile.occasionsTitle")}>
-        <MultiSelectChips
-          items={filterItems.occasionItems}
-          values={draftState.occasions}
-          defaultLabel={t("search.notImportant")}
-          onToggle={(value) =>
-            updateDraftState(updateMultiValue("occasions", value))
-          }
-        />
-      </SearchSection>
-      <SearchSection title={t("profile.accentColorTitle")}>
-        <AccentColorChips
-          options={props.options.colors}
-          selectedValues={draftState.color}
-          emptyLabel={t("search.notImportant")}
-          onToggle={(value) =>
-            updateDraftState(updateMultiValue("color", value))
-          }
-        />
-      </SearchSection>
-      <SearchSection title={t("profile.patternTitle")}>
-        <MultiSelectChips
-          items={filterItems.patternItems}
-          values={draftState.pattern}
-          defaultLabel={t("search.notImportant")}
-          onToggle={(value) =>
-            updateDraftState(updateMultiValue("pattern", value))
-          }
-        />
-      </SearchSection>
-      <SearchSection title={t("search.filters.silhouette")}>
-        <MultiSelectChips
-          items={filterItems.silhouetteItems}
-          values={draftState.silhouette}
-          defaultLabel={t("search.notImportant")}
-          onToggle={(value) =>
-            updateDraftState(updateMultiValue("silhouette", value))
-          }
-        />
-      </SearchSection>
-      <SearchSection title={t("search.filters.fit")}>
-        <MultiSelectChips
-          items={filterItems.fitItems}
-          values={draftState.fit}
-          defaultLabel={t("search.notImportant")}
-          onToggle={(value) => updateDraftState(updateMultiValue("fit", value))}
-        />
-      </SearchSection>
-      <SearchSection title={t("search.filters.closureType")}>
-        <MultiSelectChips
-          items={filterItems.closureTypeItems}
-          values={draftState.closureType}
-          defaultLabel={t("search.notImportant")}
-          onToggle={(value) =>
-            updateDraftState(updateMultiValue("closureType", value))
-          }
-        />
-      </SearchSection>
+      <SearchProductAttributeSections
+        draftState={draftState}
+        filterItems={filterItems}
+        updateDraftState={updateDraftState}
+        t={t}
+      />
       <SearchFiltersFooter
         status={props.status}
         onApply={props.onApply}

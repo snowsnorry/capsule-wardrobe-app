@@ -1,5 +1,4 @@
 import { randomUUID } from "node:crypto";
-import { mkdirSync, writeFileSync } from "node:fs";
 import {
   getCapsule,
   getEffectiveCapsuleSnapshot,
@@ -12,89 +11,24 @@ import { resolveImageLlmProvider } from "./imageLlm.js";
 import { logWardrobeInfo } from "./ai.js";
 import { generateImageWithOpenAi } from "./openaiImage.js";
 import { buildOutfitSetDescription } from "./outfitSetImageDescription.js";
+import {
+  buildPromptFromTemplate,
+  saveOutfitSetDebugArtifacts,
+} from "./outfitSetImagePrompt.js";
+import {
+  createOutfitSetImageJobKey,
+  deleteOutfitSetImageJob,
+  getOutfitSetImageJob,
+  getOutfitSetImageJobByKey,
+  setPendingOutfitSetImageJob,
+} from "./outfitSetImageJobs.js";
+import {
+  getOutfitSetImageRequestContext,
+  isValidOutfitSetImageRequest,
+} from "./outfitSetImageRequest.js";
 import { downloadProductImageAssets } from "./promptImages.js";
 import { uploadImageToR2 } from "../r2Storage.js";
 import { logError } from "../logger.js";
-import {
-  getPromptTemplateContent,
-  loadPromptTemplate,
-  renderPromptTemplateContent,
-} from "./promptTemplates.js";
-
-const IMAGE_GENERATION_PROMPT_TEMPLATE = loadPromptTemplate(
-  new URL("../templates/prompt_image_generation.yaml", import.meta.url),
-);
-const PROMPT_TEMPLATE = getPromptTemplateContent(
-  IMAGE_GENERATION_PROMPT_TEMPLATE,
-  "user",
-);
-const LAST_PROMPT_DIR_URL = new URL("../../../last-prompt/", import.meta.url);
-const outfitSetImageJobs = new Map();
-
-function createOutfitSetImageJobKey(email, capsuleId, setIndex) {
-  return `${String(email || "")
-    .trim()
-    .toLowerCase()}::${String(capsuleId || "").trim()}::${Number.parseInt(setIndex, 10)}`;
-}
-
-function getOutfitSetImageJob(email, capsuleId) {
-  const emailPrefix = `${String(email || "")
-    .trim()
-    .toLowerCase()}::${String(capsuleId || "").trim()}::`;
-  const pendingSetIndexes = [];
-
-  for (const [key, job] of outfitSetImageJobs.entries()) {
-    if (!key.startsWith(emailPrefix) || job?.status !== "pending") {
-      continue;
-    }
-    pendingSetIndexes.push(job.setIndex);
-  }
-
-  if (pendingSetIndexes.length === 0) {
-    return null;
-  }
-
-  return {
-    status: "pending",
-    pendingSetIndexes: pendingSetIndexes.sort((left, right) => left - right),
-  };
-}
-
-function buildPromptFromTemplate(
-  items,
-  {
-    promptTemplate = PROMPT_TEMPLATE,
-    buildOutfitSetDescriptionImpl = buildOutfitSetDescription,
-  } = {},
-) {
-  const description = buildOutfitSetDescriptionImpl(items);
-  const template = String(promptTemplate || "");
-  const rendered = renderPromptTemplateContent(
-    template,
-    {
-      description,
-    },
-    "outfit set image prompt",
-  );
-  return template.includes("{{description}}")
-    ? rendered
-    : [rendered, description]
-        .filter((part) => part.trim().length > 0)
-        .join("\n\n");
-}
-
-function saveOutfitSetDebugArtifacts({ prompt }) {
-  if (process.env.NODE_ENV !== "development") {
-    return;
-  }
-
-  mkdirSync(LAST_PROMPT_DIR_URL, { recursive: true });
-  writeFileSync(
-    new URL("outfit_set_last_prompt.txt", LAST_PROMPT_DIR_URL),
-    String(prompt || ""),
-    "utf8",
-  );
-}
 
 function resolveTargetSetItems(wardrobe, setIndex) {
   const items = Array.isArray(wardrobe?.items) ? wardrobe.items : [];
@@ -114,20 +48,6 @@ function resolveTargetSetItems(wardrobe, setIndex) {
   return (Array.isArray(targetSet?.itemIds) ? targetSet.itemIds : [])
     .map((itemId) => itemsById.get(String(itemId || "").trim()))
     .filter(Boolean);
-}
-
-function getOutfitSetImageRequestContext(req) {
-  return {
-    email: String(req?.user?.email || "")
-      .trim()
-      .toLowerCase(),
-    capsuleId: String(req?.params?.id || "").trim(),
-    setIndex: Number.parseInt(String(req?.params?.setIndex || ""), 10),
-  };
-}
-
-function isValidOutfitSetImageRequest({ capsuleId, setIndex }) {
-  return Boolean(capsuleId) && Number.isInteger(setIndex) && setIndex >= 0;
 }
 
 function getOutfitSetsFromSnapshot(effectiveSnapshot) {
@@ -326,7 +246,7 @@ async function runOutfitSetImageJob({
       setIndex,
     });
   } finally {
-    outfitSetImageJobs.delete(jobKey);
+    deleteOutfitSetImageJob(jobKey);
     publishOutfitSetSnapshot({
       email,
       capsuleId,
@@ -374,11 +294,11 @@ function createGenerateOutfitSetImage(deps) {
     }
 
     const jobKey = createOutfitSetImageJobKey(email, capsuleId, setIndex);
-    if (outfitSetImageJobs.get(jobKey)?.status === "pending") {
+    if (getOutfitSetImageJobByKey(jobKey)?.status === "pending") {
       return res.status(202).json({ ok: true, status: "pending" });
     }
 
-    outfitSetImageJobs.set(jobKey, {
+    setPendingOutfitSetImageJob(jobKey, {
       id: randomUUID(),
       status: "pending",
       setIndex,

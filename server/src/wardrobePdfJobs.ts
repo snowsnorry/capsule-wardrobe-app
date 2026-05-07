@@ -7,12 +7,9 @@ import type {
   WardrobePdfJobState,
 } from "./ai/types.js";
 import {
-  WARDROBE_PDF_POLL_AFTER_MS,
-  PDF_JOB_TTL_MS,
   createWardrobePdfGenerationKey,
   getPdfLocale,
   getStoredWardrobeItems,
-  normalizeStoredPdf,
   type ProductLike,
   type ProfileWithPdfResult,
   type UpdateProfilePdfImpl,
@@ -20,34 +17,16 @@ import {
 } from "./wardrobePdfCore.js";
 import { buildWardrobePdfInChild } from "./wardrobePdfChildRunner.js";
 import { logError, logWarn } from "./logger.js";
+import { createDownloadWardrobePdf } from "./wardrobePdfDownload.js";
+import {
+  deleteWardrobePdfJob,
+  getWardrobePdfJob,
+  isCurrentWardrobePdfJob,
+  scheduleWardrobePdfJobCleanup,
+  setWardrobePdfJob,
+} from "./wardrobePdfJobRegistry.js";
 
-const wardrobePdfJobs = new Map<string, WardrobePdfJobState>();
-
-export function scheduleWardrobePdfJobCleanup(
-  email: string,
-  job: WardrobePdfJobState,
-) {
-  const timer = setTimeout(() => {
-    if (wardrobePdfJobs.get(email) === job && job.status !== "pending") {
-      wardrobePdfJobs.delete(email);
-    }
-  }, PDF_JOB_TTL_MS);
-  timer.unref?.();
-}
-
-export function getWardrobePdfJob(email: string) {
-  const job = wardrobePdfJobs.get(email);
-  if (!job) {
-    return null;
-  }
-
-  if (job.status !== "pending" && Date.now() - job.updatedAt > PDF_JOB_TTL_MS) {
-    wardrobePdfJobs.delete(email);
-    return null;
-  }
-
-  return job;
-}
+export { getWardrobePdfJob } from "./wardrobePdfJobRegistry.js";
 
 type WardrobePdfJobManagerDeps = {
   getProfileByEmail?: typeof getProfile;
@@ -173,7 +152,7 @@ async function buildAndStoreWardrobePdf({
     buildPdfInChild(products, pdfLocale, { totalStartedAt: job.startedAt }),
   );
 
-  if (wardrobePdfJobs.get(email) !== job) {
+  if (!isCurrentWardrobePdfJob(email, job)) {
     return;
   }
 
@@ -268,7 +247,7 @@ function createStartWardrobePdfJob({
       error: null,
       promise: null,
     };
-    wardrobePdfJobs.set(email, job);
+    setWardrobePdfJob(email, job);
 
     job.promise = (async () => {
       try {
@@ -286,7 +265,7 @@ function createStartWardrobePdfJob({
           updateProfilePdfByEmail,
         });
       } catch (error) {
-        if (wardrobePdfJobs.get(email) !== job) {
+        if (!isCurrentWardrobePdfJob(email, job)) {
           return;
         }
         job.status = "failed";
@@ -346,7 +325,7 @@ function createEnsureWardrobePdfJob({
     }
 
     if (existing?.status === "failed") {
-      wardrobePdfJobs.delete(email);
+      deleteWardrobePdfJob(email);
     }
 
     const resolvedOptions = await resolveEnsureOptions(email, options);
@@ -365,57 +344,6 @@ function createEnsureWardrobePdfJob({
   }
 
   return ensureWardrobePdfJob;
-}
-
-function createDownloadWardrobePdf({
-  loadProfileWithPdf,
-  ensureWardrobePdfJob,
-}: {
-  loadProfileWithPdf: (email: string) => Promise<ProfileWithPdfResult>;
-  ensureWardrobePdfJob: (
-    email: string,
-    options?: WardrobePdfJobOptions,
-  ) => Promise<WardrobePdfJobState | null>;
-}) {
-  async function downloadWardrobePdf(req, res) {
-    try {
-      const email = req.user.email;
-      const { profile, pdf } = await loadProfileWithPdf(email);
-      const storedWardrobeItems = sortWardrobeItems(
-        getStoredWardrobeItems(profile),
-      );
-
-      if (storedWardrobeItems.length === 0) {
-        return res.status(404).json({ error: "not_found" });
-      }
-
-      const storedPdf = normalizeStoredPdf(pdf);
-      if (storedPdf) {
-        res.setHeader("Content-Type", "application/pdf");
-        res.setHeader(
-          "Content-Disposition",
-          'attachment; filename="capsule-wardrobe.pdf"',
-        );
-        return res.status(200).send(storedPdf);
-      }
-
-      await ensureWardrobePdfJob(email, {
-        wardrobePayload: profile?.items,
-        locale: typeof profile?.locale === "string" ? profile.locale : null,
-      });
-
-      return res.status(202).json({
-        ok: true,
-        status: "pending",
-        pollAfterMs: WARDROBE_PDF_POLL_AFTER_MS,
-      });
-    } catch (error) {
-      logError("[wardrobe-pdf]", error);
-      return res.status(503).json({ error: "service_unavailable" });
-    }
-  }
-
-  return downloadWardrobePdf;
 }
 
 export function createWardrobePdfJobManager({

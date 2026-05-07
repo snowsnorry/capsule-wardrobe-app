@@ -108,13 +108,7 @@ function InlineTitle({
       direction="row"
       alignItems="center"
       spacing={0.75}
-      sx={{
-        minWidth: 0,
-        "&:hover .capsule-title-edit-action, &:focus-within .capsule-title-edit-action":
-          {
-            opacity: 1,
-          },
-      }}
+      sx={inlineTitleSx}
     >
       <Box
         component="button"
@@ -164,6 +158,14 @@ function InlineTitle({
     </Stack>
   );
 }
+
+const inlineTitleSx = {
+  minWidth: 0,
+  "&:hover .capsule-title-edit-action, &:focus-within .capsule-title-edit-action":
+    {
+      opacity: 1,
+    },
+} as const;
 
 function HeaderActions({
   disabled,
