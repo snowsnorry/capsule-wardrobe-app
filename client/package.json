@@ -8,7 +8,9 @@
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.node.json --noEmit",
     "test": "vitest run",
     "preview": "vite preview",
-    "start:render": "node render-server.js"
+    "start:render": "node render-server.js",
+    "coverage": "vitest run --coverage",
+    "coverage:strict": "vitest run --coverage"
   },
   "dependencies": {
     "@emotion/react": "^11.11.4",
@@ -36,6 +38,7 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^4.2.0",
+    "@vitest/coverage-v8": "^4.1.5",
     "jsdom": "^25.0.1",
     "vite": "^6.2.0",
     "vitest": "^4.1.2"

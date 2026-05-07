@@ -8,7 +8,28 @@ export default defineConfig(() => {
     test: {
       environment: "jsdom",
       setupFiles: "./src/test/setup.ts",
-      css: true
+      css: true,
+      coverage: {
+        provider: "v8",
+        reporter: ["text", "html", "json-summary", "lcov"],
+        reportsDirectory: "./coverage",
+        include: ["src/**/*.{ts,tsx}"],
+        exclude: [
+          "src/**/*.test.{ts,tsx}",
+          "src/**/*.spec.{ts,tsx}",
+          "src/**/*.d.ts",
+          "src/**/index.ts",
+          "src/**/index.tsx",
+          "src/main.tsx",
+          "src/vite-env.d.ts"
+        ],
+        thresholds: {
+          lines: 70,
+          functions: 70,
+          branches: 60,
+          statements: 70
+        }
+      }
     },
     server: {
       watch: {

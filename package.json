@@ -28,11 +28,16 @@
     "quality:large-files": "find client/src server/src shared -type f \\( -name \"*.ts\" -o -name \"*.tsx\" -o -name \"*.js\" -o -name \"*.jsx\" \\) -not -path \"*/node_modules/*\" -not -path \"*/dist/*\" -not -path \"*/build/*\" -exec wc -l {} + | sort -nr | head -40",
     "quality:large-files:strict": "node scripts/check-large-files.mjs",
     "quality:deps": "depcruise client/src server/src shared --config .dependency-cruiser.cjs",
-    "quality:gate": "npm run lint:strict && npm run typecheck && npm test && npm run quality:deps && npm run quality:large-files:strict",
-    "quality": "npm run quality:gate && npm run quality:large-files"
+    "quality:gate": "npm run lint:strict && npm run typecheck && npm test && npm run quality:deps && npm run quality:large-files:strict && npm run coverage",
+    "quality": "npm run quality:gate && npm run quality:large-files",
+    "coverage:client": "npm --workspace client run coverage",
+    "coverage:server": "npm --workspace server run coverage",
+    "coverage:shared": "c8 --report-dir coverage/shared --reporter=text --reporter=html --reporter=json-summary --reporter=lcov --include \"shared/**/*.ts\" --exclude \"shared/**/*.test.ts\" --exclude \"shared/**/*.d.ts\" --check-coverage --lines 70 --functions 70 --branches 60 --statements 70 npm --workspace server exec -- tsx --test ../shared/**/*.test.ts",
+    "coverage": "npm run coverage:client && npm run coverage:server && npm run coverage:shared"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "c8": "^11.0.0",
     "concurrently": "^9.1.2",
     "dependency-cruiser": "^17.4.0",
     "eslint": "^10.3.0",
