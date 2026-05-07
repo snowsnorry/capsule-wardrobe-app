@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { MouseEvent } from "react";
 import { Box, Divider, LinearProgress, Stack } from "@mui/material";
+import type { Theme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import { useI18n } from "../../i18n/useI18n";
 import MainScreenDialogs from "./MainScreenDialogs";
@@ -22,6 +23,15 @@ import type { CapsuleLike, CapsuleMenuAnchor, MainScreenItem, MainScreenProps, M
 
 type SearchState = { open: boolean; query: string; results: CapsuleLike[]; loading: boolean };
 type ShareState = { open: boolean; url: string; expiresAt: string | Date | null; name: string; copied: boolean; loading: boolean };
+
+const capsulePanelSx = (theme: Theme) => ({
+  minWidth: 0,
+  minHeight: 0,
+  overflow: "hidden",
+  border: { lg: `1px solid ${theme.palette.divider}` },
+  borderRadius: { lg: "10px" },
+  backgroundColor: "background.paper"
+});
 
 function canStartShare(capsule: CapsuleLike | null | undefined, disabled: boolean, allowUnknownContent: boolean) {
   return Boolean(capsule?.id) && !disabled && capsuleCanRequestShare(capsule, { allowUnknownContent });
@@ -225,7 +235,7 @@ function MainScreen(props: MainScreenProps) {
     <>
       <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: "320px minmax(0, 1fr)" }, gap: 3, flex: 1, minHeight: 0, overflow: "hidden" }}>
         <MainScreenSidebar props={props} disabled={interactionDisabled} isSigningOut={props.isSigningOut} />
-        <Stack spacing={0} sx={{ minWidth: 0, minHeight: 0, overflow: "hidden", border: { lg: "1px solid" }, borderColor: "divider", borderRadius: { lg: "10px" }, backgroundColor: "background.paper" }}>
+        <Stack spacing={0} sx={capsulePanelSx}>
           <MainScreenHeader activeCapsule={props.activeCapsule} activeName={activeName} disabled={interactionDisabled} inlineRename={inlineRename} isOverlay={isOverlaySidebar} selectedCount={selectedCount} summary={summary} onCancelSelection={props.onCancelRegenerationSelection} onOpenFilters={() => setFiltersOpen(true)} onOpenMenu={(event) => setHeaderMenuAnchor(event.currentTarget)} onRegenerateAll={requestRegenerateAll} onRegenerateSelected={props.onRegenerateSelectedItems} />
           <MainScreenTabs activeTab={activeTab} disabled={interactionDisabled} isOverlay={isOverlaySidebar} selectedCount={selectedCount} sets={resolvedSets} summary={summary} onChange={setActiveTab} />
           <Divider />
