@@ -98,6 +98,13 @@ export default tseslint.config(
     }
   },
   {
+    files: ["shared/i18n/*.ts"],
+    rules: {
+      "max-lines": "off",
+      "max-lines-per-function": "off"
+    }
+  },
+  {
     files: ["**/*.test.{ts,tsx}", "**/*.spec.{ts,tsx}"],
     rules: {
       "max-lines": "off",
