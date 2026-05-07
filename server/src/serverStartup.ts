@@ -43,7 +43,6 @@ export function createStartServer(app) {
         server: {
           middlewareMode: true,
           watch: {
-            // 1Password env mounts can be FIFOs and emit frequent fs events.
             // Ignore client env files to avoid endless Vite restarts in dev middleware mode.
             ignored: ["**/.env", "**/.env.*"],
           },

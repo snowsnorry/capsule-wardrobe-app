@@ -1,0 +1,9 @@
+{
+  "workspaces": {
+    "server": {
+      "ignore": [
+        "src/express.d.ts"
+      ]
+    }
+  }
+}

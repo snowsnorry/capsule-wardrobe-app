@@ -35,7 +35,6 @@ export default defineConfig(() => {
     },
     server: {
       watch: {
-        // 1Password env mounts can be FIFOs and emit frequent fs events.
         // Ignore env files to avoid endless Vite restarts in local dev.
         ignored: ["**/.env", "**/.env.*"]
       },

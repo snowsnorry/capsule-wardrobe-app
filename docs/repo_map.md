@@ -58,7 +58,6 @@ Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, onboard
 - `client/tsconfig.json`
 - `client/vite.config.ts`
 - `client/render-server.js`
-- `client/netlify/functions/`
 - `client/src/App.tsx`
 - `client/src/app/` — app shell, route content, state/actions, session bootstrap, navigation, and dialogs
 - `client/src/main.tsx`
@@ -140,7 +139,7 @@ Run from root:
 - Passkey challenges are single-use and stored separately from normal app sessions
 - Passkey API responses must never expose stored credential public keys
 - DB/env wiring should remain explicit and stable
-- Netlify proxy path and Render deployment path are both first-class deployment concerns
+- Render deployment path is a first-class deployment concern
 
 ## Safe edit strategy
 1. Identify the owning workspace

@@ -10,7 +10,7 @@ Full-stack TypeScript monorepo for a capsule wardrobe application. The project c
 - Persistence: Postgres
 - Email auth delivery: Resend
 - Optional auth provider: Google Sign-In
-- Deployment paths: Render single-service, Netlify static client + BFF proxy
+- Deployment path: Render single-service
 
 ## What the app does
 
@@ -251,20 +251,6 @@ Optional:
 
 - `GOOGLE_CLIENT_ID`
 - AI provider keys you actually use
-
-### Netlify static client + BFF proxy
-
-The frontend can also be deployed as a static app on Netlify with API requests routed through `client/netlify/functions/bff.js`.
-
-Related files:
-
-- [client/netlify.toml](client/netlify.toml)
-- [client/netlify/functions/bff.js](netlify/functions/bff.js)
-
-Important env:
-
-- `BFF_UPSTREAM_ORIGIN=https://your-backend.example.com`
-- `BFF_STRIP_PREFIXES=/api`
 
 ### Render client-only proxy server
 

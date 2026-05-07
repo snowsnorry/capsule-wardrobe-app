@@ -15,7 +15,6 @@ High-level responsibilities:
 - Persistence: Postgres
 - Email auth delivery: Resend
 - Passkey/WebAuthn auth: SimpleWebAuthn with DB-backed short-lived challenges
-- Netlify deployment path exists for the client with a BFF proxy
 - Render single-service deployment is supported
 
 ## Directory map
@@ -105,7 +104,7 @@ For backend tasks:
 - for passkey/WebAuthn work, inspect `server/src/index.ts`, `server/src/routes/passkeyRoutes.ts`, `server/src/db.ts`, `server/src/db/passkeys.ts`, `client/src/api/passkeys.ts`, and `client/src/auth/passkeys.ts`
 
 For deployment/config tasks:
-- inspect root `package.json`, `client/netlify.toml`, `client/render-server.js`, `client/vite.config.ts`, and README first
+- inspect root `package.json`, `client/render-server.js`, `client/vite.config.ts`, and README first
 
 ## Validation expectations
 After editing files, check test coverage, ESLint, and test pass status before handing off. Prefer the narrowest relevant validation first:

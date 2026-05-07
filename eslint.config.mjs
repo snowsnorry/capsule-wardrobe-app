@@ -15,7 +15,6 @@ export default tseslint.config(
       "coverage/**",
       "client/dist/**",
       "server/dist/**",
-      "client/netlify/functions/**",
       ".dependency-cruiser.cjs"
     ]
   },
