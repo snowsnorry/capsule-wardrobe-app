@@ -8,7 +8,6 @@
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
     "test": "vitest run",
     "build": "tsc -p tsconfig.build.json && mkdir -p dist/server/src && cp -R src/templates dist/server/src/templates",
-    "prestart": "npm run build",
     "start": "node ./dist/server/src/index.js",
     "coverage": "vitest run --coverage"
   },
