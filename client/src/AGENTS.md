@@ -30,6 +30,8 @@ Primary areas:
 - `npm run test:client`
 - `npm run coverage:client`
 - `npm run typecheck:client`
+- At the end of the work, after the final file edits, run `npm run format`.
+- If `npm run format` changes files, include those formatter changes in the diff.
 - After editing files, verify test coverage, test pass status, and ESLint before handing off.
 - After tests, coverage, and typecheck, run ESLint on changed client source files with zero warnings, for example `npx eslint --max-warnings=0 client/src/path/to/file.tsx`
 

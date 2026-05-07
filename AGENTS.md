@@ -81,6 +81,8 @@ Coverage:
 Lint and quality:
 - `npm run lint`
 - `npm run lint:strict`
+- `npm run format`
+- `npm run format:check`
 - `npm run quality:gate`
 - `npm run quality`
 
@@ -111,6 +113,8 @@ After editing files, check test coverage, ESLint, and test pass status before ha
 - workspace-local tests for the changed area
 - then broader repo tests if the change crosses boundaries
 - coverage for the changed area, or full coverage for cross-cutting changes
+- At the end of the work, after the final file edits, run `npm run format`, then `npm run lint:strict`.
+- if `npm run format` changes files, include those formatter changes in the diff
 
 At minimum:
 - UI-only changes: `npm run test:client` and `npm run coverage:client`

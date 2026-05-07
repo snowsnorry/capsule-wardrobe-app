@@ -121,6 +121,8 @@ Run from root:
 ## Quality commands
 - `npm run lint` — ESLint across the repository
 - `npm run lint:strict` — ESLint across the repository with zero warnings allowed
+- `npm run format` — Prettier write pass for client, server, and shared source files
+- `npm run format:check` — Prettier check for client, server, and shared source files
 - `npm run coverage` — coverage for client, server, and shared tests
 - `npm run coverage:client` — client coverage via Vitest
 - `npm run coverage:server` — server coverage via Vitest
@@ -149,4 +151,6 @@ Run from root:
 5. Run the narrowest relevant tests
 6. Check coverage for the changed area, or run `npm run coverage` for cross-cutting changes
 7. Prefer `npm run typecheck` or workspace `typecheck` when changing TS types or module boundaries
-8. At the end, after tests, coverage, and typecheck, run ESLint on the changed source files with zero warnings, for example `npx eslint --max-warnings=0 <changed files>`
+8. At the end of the work, after the final file edits, run `npm run format`.
+9. If `npm run format` changes files, include those formatter changes in the diff
+10. At the end, after tests, coverage, typecheck, and format, run ESLint on the changed source files with zero warnings, for example `npx eslint --max-warnings=0 <changed files>`

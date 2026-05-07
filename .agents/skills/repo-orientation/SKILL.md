@@ -32,6 +32,8 @@ Use this skill to get oriented before changing or reviewing code in this repo.
 - External library, SDK, CLI, framework, or cloud-service questions: follow the repo `AGENTS.md` Context7 rule before answering or coding against current docs.
 
 ## Validation Guide
+- At the end of the work, after the final file edits, run `npm run format`, then `npm run lint:strict`.
+- If `npm run format` changes files, include those formatter changes in the diff.
 - UI-only client changes: `npm run test:client`, `npm run coverage:client`, then ESLint on changed files with `--max-warnings=0`.
 - Client TypeScript or module-boundary changes: add `npm run typecheck:client`.
 - Server-only changes: `npm run test:server`, `npm run coverage:server`, then ESLint on changed files with `--max-warnings=0`.
