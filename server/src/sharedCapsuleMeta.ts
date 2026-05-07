@@ -1,3 +1,5 @@
+import { CLIENT_ORIGIN } from "./appConfig.js";
+
 export type SharedCapsuleOgMetadata = {
   title?: string | null;
   description?: string | null;
@@ -17,12 +19,21 @@ function escapeHtmlAttribute(value: unknown): string {
     .replace(/>/g, "&gt;");
 }
 
-function buildRequestUrl(req): string {
-  const host = req.get("host");
-  if (!host) {
-    return req.originalUrl;
+function resolveClientOrigin(clientOrigin = CLIENT_ORIGIN): string {
+  const rawOrigin = String(clientOrigin || "").trim() || "http://localhost:5173";
+  const originWithProtocol = /^[a-z][a-z\d+.-]*:\/\//i.test(rawOrigin)
+    ? rawOrigin
+    : `http://${rawOrigin}`;
+
+  try {
+    return new URL(originWithProtocol).origin;
+  } catch {
+    return "http://localhost:5173";
   }
-  return `${req.protocol}://${host}${req.originalUrl}`;
+}
+
+function buildSharedCapsuleUrl(req, clientOrigin = CLIENT_ORIGIN): string {
+  return `${resolveClientOrigin(clientOrigin)}${req.originalUrl}`;
 }
 
 function injectOpenGraphMetaTags(html: string, metadata: SharedCapsuleOgMetadata, url: string): string {
@@ -37,7 +48,12 @@ function injectOpenGraphMetaTags(html: string, metadata: SharedCapsuleOgMetadata
   return html.replace(/<\/head>/i, `    ${tags}\n  </head>`);
 }
 
-export async function injectSharedCapsuleMetaTags(html: string, req, getMetadataImpl): Promise<string> {
+export async function injectSharedCapsuleMetaTags(
+  html: string,
+  req,
+  getMetadataImpl,
+  { clientOrigin = CLIENT_ORIGIN } = {}
+): Promise<string> {
   const shareId = getShareRouteId(req.path);
   if (!shareId) {
     return html;
@@ -48,5 +64,5 @@ export async function injectSharedCapsuleMetaTags(html: string, req, getMetadata
     return html;
   }
 
-  return injectOpenGraphMetaTags(html, metadata, buildRequestUrl(req));
+  return injectOpenGraphMetaTags(html, metadata, buildSharedCapsuleUrl(req, clientOrigin));
 }

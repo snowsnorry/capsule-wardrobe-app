@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import express from "express";
 import { ensureTables } from "./db.js";
-import { CLIENT_DIST_PATH, CLIENT_ROOT, NODE_ENV, PORT } from "./appConfig.js";
+import { CLIENT_DIST_PATH, CLIENT_ORIGIN, CLIENT_ROOT, NODE_ENV, PORT } from "./appConfig.js";
 import { getSharedCapsuleOgMetadata } from "./capsuleStore.js";
 import { isApiPath } from "./capsuleHttp.js";
 import { injectSharedCapsuleMetaTags } from "./sharedCapsuleMeta.js";
@@ -15,6 +15,7 @@ export function createStartServer(app) {
   nodeEnv = NODE_ENV,
   ensureTablesImpl = ensureTables,
   port = PORT,
+  clientOrigin = CLIENT_ORIGIN,
   clientDistPath = CLIENT_DIST_PATH,
   clientRoot = CLIENT_ROOT,
   getSharedCapsuleOgMetadataImpl = getSharedCapsuleOgMetadata,
@@ -52,7 +53,7 @@ export function createStartServer(app) {
         const htmlPath = path.join(clientRoot, "index.html");
         const template = await readFileImpl(htmlPath, "utf-8");
         const html = await vite.transformIndexHtml(req.originalUrl, template);
-        const htmlWithMetaTags = await injectSharedCapsuleMetaTagsImpl(html, req, getSharedCapsuleOgMetadataImpl);
+        const htmlWithMetaTags = await injectSharedCapsuleMetaTagsImpl(html, req, getSharedCapsuleOgMetadataImpl, { clientOrigin });
         res.status(200).set({ "Content-Type": "text/html" }).end(htmlWithMetaTags);
       } catch (error) {
         vite.ssrFixStacktrace(error);
@@ -69,7 +70,7 @@ export function createStartServer(app) {
       }
       try {
         const html = await readFileImpl(path.join(clientDistPath, "index.html"), "utf-8");
-        const htmlWithMetaTags = await injectSharedCapsuleMetaTagsImpl(html, req, getSharedCapsuleOgMetadataImpl);
+        const htmlWithMetaTags = await injectSharedCapsuleMetaTagsImpl(html, req, getSharedCapsuleOgMetadataImpl, { clientOrigin });
         return res.status(200).set({ "Content-Type": "text/html" }).end(htmlWithMetaTags);
       } catch (error) {
         return next(error);

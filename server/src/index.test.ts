@@ -1,6 +1,7 @@
 import { test, expect } from "vitest";
 import {
   AUTH_COOKIE,
+  TEST_CLIENT_ORIGIN,
   requestJson,
   requestText,
   startSpaFallbackTestServer,
@@ -54,7 +55,7 @@ test("share fallback injects escaped open graph metadata into capsule html", asy
   expect(text).toMatch(/<meta property="og:title" content="Spring &quot;Edit&quot; &amp; &lt;Capsule&gt;" \/>/);
   expect(text).toMatch(/<meta property="og:description" content="Formality: Casual\. Style: Minimalistic\. Occasions: Office, Date night\." \/>/);
   expect(text).toMatch(/<meta property="og:image" content="https:\/\/images\.example\.com\/outfit\.jpg\?fit=&quot;cover&quot;&amp;w=1200" \/>/);
-  expect(text).toMatch(new RegExp(`<meta property="og:url" content="${baseUrl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\/share\\/share-1" \\/>`));
+  expect(text).toMatch(new RegExp(`<meta property="og:url" content="${TEST_CLIENT_ORIGIN.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\/share\\/share-1" \\/>`));
   expect(text).toMatch(/<meta property="og:type" content="website" \/>/);
   expect(text.includes("Additional notes")).toBe(false);
 });

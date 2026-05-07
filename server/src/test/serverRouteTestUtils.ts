@@ -372,6 +372,7 @@ export async function startSpaFallbackTestServer(testContext: CleanupContext, {
     nodeEnv: "production",
     ensureTablesImpl: async () => {},
     port: 0,
+    clientOrigin: TEST_CLIENT_ORIGIN,
     clientDistPath: tempDir,
     getSharedCapsuleOgMetadataImpl: deps.getSharedCapsuleOgMetadataImpl
   });
