@@ -21,6 +21,15 @@ import type {
 
 type Translate = (key: string, params?: Record<string, unknown>) => string;
 
+type StatisticsActionsParams = {
+  draftStateRef: MutableRefObject<SearchDraftState>;
+  options: SearchOptions;
+  setDraftState: (value: SearchDraftState) => void;
+  setStatsState: (value: StatisticsState) => void;
+  setStatus: (value: StatisticsStatus) => void;
+  t: Translate;
+};
+
 function useStatisticsActions({
   draftStateRef,
   options,
@@ -28,14 +37,7 @@ function useStatisticsActions({
   setStatsState,
   setStatus,
   t,
-}: {
-  draftStateRef: MutableRefObject<SearchDraftState>;
-  options: SearchOptions;
-  setDraftState: (value: SearchDraftState) => void;
-  setStatsState: (value: StatisticsState) => void;
-  setStatus: (value: StatisticsStatus) => void;
-  t: Translate;
-}) {
+}: StatisticsActionsParams) {
   const refreshStats = useCallback(
     async (nextState: SearchDraftState) => {
       setStatus({ loading: true, error: "" });

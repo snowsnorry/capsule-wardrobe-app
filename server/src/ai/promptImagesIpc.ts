@@ -250,13 +250,15 @@ async function buildPromptDebugImagesInChild({
   return result;
 }
 
+type BuildPromptDebugImagesAllInChildParams = {
+  normalizedItems?: PromptImageItemLike[];
+  forkImpl?: PromptImagesFork;
+};
+
 async function buildPromptDebugImagesAllInChild({
   normalizedItems = [],
   forkImpl = nodeFork,
-}: {
-  normalizedItems?: PromptImageItemLike[];
-  forkImpl?: PromptImagesFork;
-} = {}) {
+}: BuildPromptDebugImagesAllInChildParams = {}) {
   return new Promise<PromptDebugImageResult>((resolve, reject) => {
     const childEntryUrl = resolvePromptImagesChildEntryUrl();
     const child = forkImpl(fileURLToPath(childEntryUrl), {
