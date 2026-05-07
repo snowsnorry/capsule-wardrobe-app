@@ -145,6 +145,16 @@ function selectFemaleSwimwearWithoutLlm(candidates, llmResolution, logContext) {
   return buildSwimwearResult(selectedItems);
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function createSwimwearDeps(deps: Record<string, any> = {}) {
+  return {
+    getSqlClientImpl: deps.getSqlClientImpl || getSqlClient,
+    getGenerateJsonWithLlmImpl: deps.getGenerateJsonWithLlmImpl || getGenerateJsonWithLlm,
+    isNoLlmProfileEnabledImpl: deps.isNoLlmProfileEnabledImpl || isNoLlmProfileEnabled,
+    resolveLlmProviderImpl: deps.resolveLlmProviderImpl || resolveLlmProvider
+  };
+}
+
 async function selectMaleSwimwear({
   sql,
   targetStyle,
@@ -249,19 +259,22 @@ async function selectFemaleSwimwear({
   return candidates;
 }
 
+// eslint-disable-next-line complexity
 async function generateFemaleSwimwear({
   userProfile,
   selectedCapsuleItems,
   promptEmbeddings,
-  logContext = null
+  logContext = null,
+  deps = createSwimwearDeps()
 }: {
   userProfile: UserProfileLike | null;
   selectedCapsuleItems: SwimwearCandidate[];
   promptEmbeddings: number[];
   logContext?: { capsuleRequestId?: string | null } | null;
+  deps?: ReturnType<typeof createSwimwearDeps>;
 }) {
-  const llmResolution = resolveLlmProvider(userProfile);
-  const sql = getSqlClient();
+  const llmResolution = deps.resolveLlmProviderImpl(userProfile);
+  const sql = deps.getSqlClientImpl();
   const embeddingVector = `[${promptEmbeddings.join(",")}]`;
   const targetStyle = userProfile?.style ?? null;
   const bottomColors = getItemColors(selectedCapsuleItems, "bottom");
@@ -278,13 +291,13 @@ async function generateFemaleSwimwear({
     return buildEmptySwimwearResult();
   }
 
-  if (isNoLlmProfileEnabled(userProfile)) {
+  if (deps.isNoLlmProfileEnabledImpl(userProfile)) {
     return selectFemaleSwimwearWithoutLlm(candidates, llmResolution, logContext);
   }
 
   const prompt = getSwimwearPrompt(selectedCapsuleItems, candidates);
   const llmStartedAt = Date.now();
-  const generateJsonWithLlm = getGenerateJsonWithLlm(userProfile);
+  const generateJsonWithLlm = deps.getGenerateJsonWithLlmImpl(userProfile);
   const { response, json } = await generateJsonWithLlm(prompt, {
     userProfile,
     format: buildCustomJsonObjectFormat(
@@ -316,50 +329,63 @@ async function generateFemaleSwimwear({
   );
 }
 
-async function generateSwimwearAddition({
-  userProfile,
-  selectedCapsuleItems,
-  promptEmbeddings,
-  logContext = null
-}: {
-  userProfile: UserProfileLike | null;
-  selectedCapsuleItems: SwimwearCandidate[];
-  promptEmbeddings: number[];
-  logContext?: { capsuleRequestId?: string | null } | null;
-}) {
-  if (!shouldGenerateSwimwear(userProfile)) {
-    return buildEmptySwimwearResult();
-  }
+function createGenerateSwimwearAddition(deps = {}) {
+  const resolvedDeps = createSwimwearDeps(deps);
 
-  const sql = getSqlClient();
-  const embeddingVector = `[${promptEmbeddings.join(",")}]`;
-  const targetStyle = userProfile?.style ?? null;
+  return async function generateSwimwearAddition({
+    userProfile,
+    selectedCapsuleItems,
+    promptEmbeddings,
+    logContext = null
+  }: {
+    userProfile: UserProfileLike | null;
+    selectedCapsuleItems: SwimwearCandidate[];
+    promptEmbeddings: number[];
+    logContext?: { capsuleRequestId?: string | null } | null;
+  }) {
+    if (!shouldGenerateSwimwear(userProfile)) {
+      return buildEmptySwimwearResult();
+    }
 
-  if (userProfile?.audience === "woman") {
-    return generateFemaleSwimwear({ userProfile, selectedCapsuleItems, promptEmbeddings, logContext });
-  }
+    const sql = resolvedDeps.getSqlClientImpl();
+    const embeddingVector = `[${promptEmbeddings.join(",")}]`;
+    const targetStyle = userProfile?.style ?? null;
 
-  const topColors = getItemColors(selectedCapsuleItems, "top");
-  const items = await selectMaleSwimwear({
-    sql,
-    targetStyle,
-    topColors,
-    embeddingVector,
-    logContext
-  });
-  logWardrobeInfo("swimwear-completed", {
-    swimwearItemsTotal: items.length,
-    swimwearItemsByCategory: countItemsByKey(items)
-  }, logContext);
+    if (userProfile?.audience === "woman") {
+      return generateFemaleSwimwear({
+        userProfile,
+        selectedCapsuleItems,
+        promptEmbeddings,
+        logContext,
+        deps: resolvedDeps
+      });
+    }
 
-  return {
-    items: items.map(toWardrobeUiItem),
-    reasoning: null,
-    rawSelectionText: null
+    const topColors = getItemColors(selectedCapsuleItems, "top");
+    const items = await selectMaleSwimwear({
+      sql,
+      targetStyle,
+      topColors,
+      embeddingVector,
+      logContext
+    });
+    logWardrobeInfo("swimwear-completed", {
+      swimwearItemsTotal: items.length,
+      swimwearItemsByCategory: countItemsByKey(items)
+    }, logContext);
+
+    return {
+      items: items.map(toWardrobeUiItem),
+      reasoning: null,
+      rawSelectionText: null
+    };
   };
 }
 
+const generateSwimwearAddition = createGenerateSwimwearAddition();
+
 export {
+  createGenerateSwimwearAddition,
   generateSwimwearAddition,
   getSwimwearPrompt,
   getSwimwearSystemPrompt,

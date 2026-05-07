@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   buildPatternOptions,
+  createProfileStore,
   getFormalityLevels,
   getStyles,
   PROFILE_OCCASION_OPTIONS,
@@ -228,4 +229,79 @@ test("changing capsule-defining filters requires rejected reset", () => {
   };
 
   assert.equal(shouldResetRejected(current, next), true);
+});
+
+test("createProfileStore delegates profile persistence and normalizes returned records", async () => {
+  const calls: unknown[] = [];
+  const store = createProfileStore({
+    getProfileByEmailImpl: async (email) => {
+      calls.push({ type: "get", email });
+      return {
+        email,
+        fullname: " Ada ",
+        activeCapsuleId: " capsule-1 ",
+        theme: "dark",
+        llm: "openai:gpt-5.5",
+        imageLlm: "openai:gpt-image-2"
+      };
+    },
+    hasProfileByEmailImpl: async (email) => {
+      calls.push({ type: "has", email });
+      return true;
+    },
+    createProfileRecordImpl: async (payload) => {
+      calls.push({ type: "create", payload });
+      return { email: payload.email, locale: payload.locale };
+    },
+    updateProfileByEmailImpl: async (payload) => {
+      calls.push({ type: "update", payload });
+      return payload;
+    },
+    updateProfileLocaleByEmailImpl: async (payload) => {
+      calls.push({ type: "locale", payload });
+      return payload;
+    },
+    deleteProfileByEmailImpl: async (email) => {
+      calls.push({ type: "delete", email });
+      return true;
+    },
+    updateProfileActiveCapsuleIdByEmailImpl: async (payload) => {
+      calls.push({ type: "active", payload });
+      return payload;
+    }
+  });
+
+  assert.equal((await store.getProfile("person@example.com"))?.fullname, "Ada");
+  assert.equal(await store.hasProfile("person@example.com"), true);
+  assert.equal((await store.createProfile("new@example.com", {}))?.locale, "en");
+  assert.equal((await store.updateProfile("person@example.com", {
+    locale: "ru",
+    fullname: "  Ada Lovelace  ",
+    theme: "dark",
+    llm: "invalid",
+    imageLlm: "invalid"
+  }))?.llm, "openai:gpt-5.5");
+  assert.equal((await store.updateProfileLocale("person@example.com", "ru"))?.locale, "ru");
+  assert.equal(await store.deleteProfile("person@example.com"), true);
+  assert.equal((await store.updateProfileActiveCapsuleId("person@example.com", "capsule-2"))?.activeCapsuleId, "capsule-2");
+  assert.equal(calls.length, 7);
+});
+
+test("createProfileStore builds pattern options and falls back when product lookup fails", async () => {
+  const errors = [];
+  const store = createProfileStore({
+    getDistinctProductPatternsImpl: async () => ["stripe", "houndstooth"]
+  });
+  const failingStore = createProfileStore({
+    getDistinctProductPatternsImpl: async () => {
+      throw new Error("db failed");
+    },
+    logErrorImpl: (...args) => {
+      errors.push(args);
+    }
+  });
+
+  assert.ok((await store.getPatternOptions("person@example.com")).includes("houndstooth"));
+  assert.deepEqual(await failingStore.getPatternOptions("person@example.com"), buildPatternOptions([]));
+  assert.equal(errors.length, 1);
 });

@@ -17,8 +17,13 @@ export type SearchPayload = {
   page: number;
 };
 
+export type SearchOptionItem = {
+  value?: string | null;
+  label?: string | null;
+};
+
 export type SearchOptions = {
-  brands: Array<string | { value?: string | null }>;
+  brands: Array<string | SearchOptionItem>;
   categories: string[];
   seasons: string[];
   formalityLevels: string[];

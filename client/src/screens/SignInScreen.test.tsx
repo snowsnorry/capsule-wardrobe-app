@@ -151,6 +151,70 @@ describe("SignInScreen", () => {
     const callback = initialize.mock.calls[0][0].callback as (response: { credential?: string | null }) => void;
     callback({ credential: "  google-credential  " });
     expect(onGoogleCredential).toHaveBeenCalledWith("google-credential");
+    callback({ credential: "   " });
+    expect(onGoogleCredential).toHaveBeenCalledTimes(1);
+  });
+
+  test("uses an already available google identity client without adding a script", async () => {
+    const initialize = vi.fn();
+    const renderButton = vi.fn();
+    const appendChildSpy = vi.spyOn(document.head, "appendChild");
+    window.google = {
+      accounts: {
+        id: {
+          initialize,
+          renderButton
+        }
+      }
+    };
+
+    renderHarness({ googleClientId: "client-id-123" });
+
+    await waitFor(() => {
+      expect(initialize).toHaveBeenCalledWith(expect.objectContaining({
+        client_id: "client-id-123"
+      }));
+      expect(renderButton).toHaveBeenCalledTimes(1);
+    });
+    expect(appendChildSpy).not.toHaveBeenCalled();
+  });
+
+  test("waits for an existing google script element to load", async () => {
+    const initialize = vi.fn();
+    const renderButton = vi.fn();
+    const script = document.createElement("script");
+    script.src = "https://accounts.google.com/gsi/client";
+    document.head.appendChild(script);
+
+    renderHarness({ googleClientId: "client-id-123" });
+
+    window.google = {
+      accounts: {
+        id: {
+          initialize,
+          renderButton
+        }
+      }
+    };
+    script.dispatchEvent(new Event("load"));
+
+    await waitFor(() => {
+      expect(initialize).toHaveBeenCalledTimes(1);
+      expect(renderButton).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  test("skips google button setup outside the email step", () => {
+    const appendChildSpy = vi.spyOn(document.head, "appendChild");
+
+    renderHarness({
+      initialStep: "code",
+      initialEmail: "person@example.com",
+      googleClientId: "client-id-123"
+    });
+
+    expect(screen.getByRole("textbox", { name: /code/i })).toBeInTheDocument();
+    expect(appendChildSpy).not.toHaveBeenCalled();
   });
 
   test("google script load failure keeps email flow usable", async () => {

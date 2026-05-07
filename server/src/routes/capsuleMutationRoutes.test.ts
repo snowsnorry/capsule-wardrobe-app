@@ -371,3 +371,265 @@ test("rejected urls patch rejects unknown urls and missing wardrobe", async (t) 
   assert.equal(notFound.response.status, 404);
   assert.deepEqual(notFound.json, { error: "not_found" });
 });
+
+test("capsule mutation state and metadata routes map success and missing records", async (t) => {
+  const calls: unknown[] = [];
+  const { baseUrl } = await startTestServer(t, {
+    overrides: {
+      saveCapsuleImpl: async (_email, id) => {
+        calls.push({ type: "save", id });
+        return { id, name: "Saved", draft: null, saved: { filters: {}, data: {} }, status: "saved" };
+      },
+      revertCapsuleImpl: async (_email, id) => {
+        calls.push({ type: "revert", id });
+        return { id, name: "Reverted", draft: null, saved: { filters: {}, data: {} }, status: "saved" };
+      },
+      renameCapsuleImpl: async (_email, id, name) => {
+        calls.push({ type: "rename", id, name });
+        return { id, name, draft: null, saved: null, status: "new" };
+      },
+      duplicateCapsuleImpl: async (_email, id, name) => {
+        calls.push({ type: "duplicate", id, name });
+        return { id: "capsule-copy", name: name || "Copy", draft: null, saved: { filters: {}, data: {} }, status: "saved" };
+      },
+      updateProfileActiveCapsuleIdImpl: async (_email, activeCapsuleId) => {
+        calls.push({ type: "select", activeCapsuleId });
+        return { activeCapsuleId };
+      },
+      deleteCapsuleImpl: async (_email, id) => {
+        calls.push({ type: "delete", id });
+        return true;
+      }
+    }
+  });
+
+  const save = await requestJson(baseUrl, "/capsules/capsule-1/save", {
+    method: "POST",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN
+  });
+  assert.equal(save.response.status, 200);
+  assert.equal((save.json.capsule as { id?: string }).id, "capsule-1");
+
+  const revert = await requestJson(baseUrl, "/capsules/capsule-1/revert", {
+    method: "POST",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN
+  });
+  assert.equal(revert.response.status, 200);
+  assert.equal((revert.json.capsule as { name?: string }).name, "Reverted");
+
+  const rename = await requestJson(baseUrl, "/capsules/capsule-1/rename", {
+    method: "PATCH",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN,
+    body: { name: "Travel edit" }
+  });
+  assert.equal(rename.response.status, 200);
+  assert.equal((rename.json.capsule as { name?: string }).name, "Travel edit");
+
+  const invalidRename = await requestJson(baseUrl, "/capsules/capsule-1/rename", {
+    method: "PATCH",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN,
+    body: { name: "  " }
+  });
+  assert.equal(invalidRename.response.status, 400);
+  assert.deepEqual(invalidRename.json, { error: "invalid_payload" });
+
+  const duplicate = await requestJson(baseUrl, "/capsules/capsule-1/duplicate", {
+    method: "POST",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN,
+    body: { name: "Copy name" }
+  });
+  assert.equal(duplicate.response.status, 201);
+  assert.equal((duplicate.json.capsule as { id?: string }).id, "capsule-copy");
+
+  const select = await requestJson(baseUrl, "/capsules/capsule-1/select", {
+    method: "POST",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN
+  });
+  assert.equal(select.response.status, 200);
+  assert.equal(select.json.activeCapsuleId, "capsule-1");
+
+  const deleted = await requestJson(baseUrl, "/capsules/capsule-1", {
+    method: "DELETE",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN
+  });
+  assert.equal(deleted.response.status, 200);
+  assert.equal((deleted.json.activeCapsule as { id?: string }).id, "capsule-1");
+
+  assert.deepEqual(calls, [
+    { type: "save", id: "capsule-1" },
+    { type: "revert", id: "capsule-1" },
+    { type: "rename", id: "capsule-1", name: "Travel edit" },
+    { type: "duplicate", id: "capsule-1", name: "Copy name" },
+    { type: "select", activeCapsuleId: "capsule-1" },
+    { type: "delete", id: "capsule-1" }
+  ]);
+});
+
+test("capsule mutation routes map store failures and not-found responses", async (t) => {
+  t.mock.method(console, "error", () => {});
+
+  const failingCreateServer = await startTestServer(t, {
+    overrides: {
+      createCapsuleImpl: async () => {
+        throw new Error("create_failed");
+      }
+    }
+  });
+  const createFailure = await requestJson(failingCreateServer.baseUrl, "/capsules", {
+    method: "POST",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN,
+    body: { name: "Spring edit", filters: {} }
+  });
+  assert.equal(createFailure.response.status, 503);
+  assert.deepEqual(createFailure.json, { error: "service_unavailable" });
+
+  const missingMutationsServer = await startTestServer(t, {
+    overrides: {
+      updateCapsuleSnapshotImpl: async () => null,
+      saveCapsuleImpl: async () => null,
+      revertCapsuleImpl: async () => null,
+      renameCapsuleImpl: async () => null,
+      duplicateCapsuleImpl: async () => null,
+      getCapsuleImpl: async () => null,
+      deleteCapsuleImpl: async () => false
+    }
+  });
+  const filtersMissing = await requestJson(missingMutationsServer.baseUrl, "/capsules/capsule-1/filters", {
+    method: "PATCH",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN,
+    body: { filters: {} }
+  });
+  assert.equal(filtersMissing.response.status, 404);
+  assert.deepEqual(filtersMissing.json, { error: "not_found" });
+
+  const rejectedMissing = await requestJson(missingMutationsServer.baseUrl, "/capsules/capsule-1/rejected-urls", {
+    method: "PATCH",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN,
+    body: { rejectedUrls: [] }
+  });
+  assert.equal(rejectedMissing.response.status, 404);
+  assert.deepEqual(rejectedMissing.json, { error: "not_found" });
+
+  const saveMissing = await requestJson(missingMutationsServer.baseUrl, "/capsules/capsule-1/save", {
+    method: "POST",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN
+  });
+  assert.equal(saveMissing.response.status, 404);
+  assert.deepEqual(saveMissing.json, { error: "not_found" });
+
+  const revertMissing = await requestJson(missingMutationsServer.baseUrl, "/capsules/capsule-1/revert", {
+    method: "POST",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN
+  });
+  assert.equal(revertMissing.response.status, 404);
+  assert.deepEqual(revertMissing.json, { error: "not_found" });
+
+  const renameMissing = await requestJson(missingMutationsServer.baseUrl, "/capsules/capsule-1/rename", {
+    method: "PATCH",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN,
+    body: { name: "Travel edit" }
+  });
+  assert.equal(renameMissing.response.status, 404);
+  assert.deepEqual(renameMissing.json, { error: "not_found" });
+
+  const duplicateMissing = await requestJson(missingMutationsServer.baseUrl, "/capsules/capsule-1/duplicate", {
+    method: "POST",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN
+  });
+  assert.equal(duplicateMissing.response.status, 404);
+  assert.deepEqual(duplicateMissing.json, { error: "not_found" });
+
+  const selectMissing = await requestJson(missingMutationsServer.baseUrl, "/capsules/capsule-1/select", {
+    method: "POST",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN
+  });
+  assert.equal(selectMissing.response.status, 404);
+  assert.deepEqual(selectMissing.json, { error: "not_found" });
+
+  const deleteMissing = await requestJson(missingMutationsServer.baseUrl, "/capsules/capsule-1", {
+    method: "DELETE",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN
+  });
+  assert.equal(deleteMissing.response.status, 404);
+  assert.deepEqual(deleteMissing.json, { error: "not_found" });
+});
+
+test("capsule pdf route maps missing inputs and build failures", async (t) => {
+  t.mock.method(console, "error", () => {});
+
+  const noItemsServer = await startTestServer(t, {
+    overrides: {
+      getCapsuleImpl: async () => ({ id: "capsule-1", name: "Empty", draft: null, saved: null, status: "new" })
+    }
+  });
+  const noItems = await requestJson(noItemsServer.baseUrl, "/capsules/capsule-1/pdf", {
+    method: "POST",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN
+  });
+  assert.equal(noItems.response.status, 404);
+  assert.deepEqual(noItems.json, { error: "not_found" });
+
+  const noProductsServer = await startTestServer(t, {
+    overrides: {
+      getProductsByUrlsInOrderImpl: async () => []
+    }
+  });
+  const noProducts = await requestJson(noProductsServer.baseUrl, "/capsules/capsule-1/pdf", {
+    method: "POST",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN
+  });
+  assert.equal(noProducts.response.status, 404);
+  assert.deepEqual(noProducts.json, { error: "not_found" });
+
+  const failingPdfServer = await startTestServer(t, {
+    overrides: {
+      buildWardrobePdfInChildImpl: async () => {
+        throw new Error("pdf_failed");
+      }
+    }
+  });
+  const pdfFailure = await requestJson(failingPdfServer.baseUrl, "/capsules/capsule-1/pdf", {
+    method: "POST",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN
+  });
+  assert.equal(pdfFailure.response.status, 503);
+  assert.deepEqual(pdfFailure.json, { error: "service_unavailable" });
+});

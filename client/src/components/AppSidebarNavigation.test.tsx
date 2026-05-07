@@ -91,4 +91,60 @@ describe("AppSidebarNavigation", () => {
       expect(getComputedStyle(button).borderRadius).toBe(getComputedStyle(capsuleRow).borderRadius);
     }
   });
+
+  test("uses the default unsaved-change predicate when none is supplied", () => {
+    const { container } = renderNavigation({
+      capsuleHasUnsavedChanges: undefined
+    });
+
+    expect(container.querySelector(".capsule-row-unsaved-dot")).not.toBeInTheDocument();
+  });
+
+  test("wires navigation and capsule callbacks in expanded and collapsed modes", async () => {
+    const user = userEvent.setup();
+    const onNavigateApp = vi.fn();
+    const onCreateCapsule = vi.fn();
+    const onSearchCapsules = vi.fn();
+    const onOpenCapsule = vi.fn();
+    const onOpenCapsuleActions = vi.fn();
+    const onExpandedAction = vi.fn();
+
+    const { rerender } = renderNavigation({
+      onNavigateApp,
+      onCreateCapsule,
+      onSearchCapsules,
+      onOpenCapsule,
+      onOpenCapsuleActions,
+      onExpandedAction
+    });
+
+    await user.click(screen.getByRole("button", { name: "Explore" }));
+    await user.click(screen.getByRole("button", { name: "New capsule" }));
+    await user.click(screen.getByRole("button", { name: "Search capsules" }));
+    await user.click(screen.getByRole("button", { name: "Modified capsule" }));
+    await user.click(screen.getByRole("button", { name: "Capsule actions Modified capsule" }));
+
+    expect(onNavigateApp).toHaveBeenCalledWith("explore");
+    expect(onExpandedAction).toHaveBeenCalled();
+    expect(onCreateCapsule).toHaveBeenCalled();
+    expect(onSearchCapsules).toHaveBeenCalled();
+    expect(onOpenCapsule).toHaveBeenCalledWith("capsule-1");
+    expect(onOpenCapsuleActions).toHaveBeenCalled();
+
+    rerender(
+      <ThemeProvider theme={theme}>
+        <AppSidebarNavigation
+          activeApp="explore"
+          isOverlaySidebar={false}
+          isSidebarCollapsed
+          desktopSidebarRailWidth={72}
+          capsuleList={[]}
+          onNavigateApp={onNavigateApp}
+          collapsedExpandHitbox={<button type="button">expand</button>}
+        />
+      </ThemeProvider>
+    );
+
+    expect(screen.getByRole("button", { name: "expand" })).toBeInTheDocument();
+  });
 });

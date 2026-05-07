@@ -108,6 +108,63 @@ describe("wardrobe api", () => {
     });
   });
 
+  test("subscribeCapsuleEvents validates stream opening responses", async () => {
+    fetchEventSourceApi.fetchEventSource.mockImplementation(async (_url, options) => {
+      await options.onopen({
+        ok: true,
+        status: 200,
+        headers: { get: () => "text/event-stream; charset=utf-8" }
+      });
+      await expect(options.onopen({
+        ok: false,
+        status: 404,
+        headers: { get: () => "application/json" }
+      })).rejects.toThrow("request_failed_404");
+      await expect(options.onopen({
+        ok: false,
+        status: 503,
+        headers: { get: () => "application/json" }
+      })).rejects.toThrow("request_failed_503");
+    });
+
+    await subscribeCapsuleEvents({ capsuleId: "capsule-1" });
+
+    expect(fetchEventSourceApi.fetchEventSource).toHaveBeenCalledTimes(1);
+  });
+
+  test("subscribeCapsuleEvents reports fatal event payload errors but ignores aborts", async () => {
+    const onError = vi.fn();
+    const abortController = new AbortController();
+    fetchEventSourceApi.fetchEventSource.mockImplementation(async (_url, options) => {
+      expect(() => options.onmessage({ data: "{not-json" })).toThrow("invalid_event_payload");
+      expect(options.onerror(new Error("invalid_event_payload"))).toBe(1000);
+
+      abortController.abort();
+      expect(options.onerror(new Error("aborted"))).toBeUndefined();
+    });
+
+    await subscribeCapsuleEvents({ capsuleId: "capsule-1", onError, signal: abortController.signal });
+
+    expect(onError).not.toHaveBeenCalled();
+  });
+
+  test("subscribeCapsuleEvents uses default event name and empty payload fallbacks", async () => {
+    const onMessage = vi.fn();
+    fetchEventSourceApi.fetchEventSource.mockImplementation(async (_url, options) => {
+      options.onmessage({});
+      expect(() => options.onclose()).toThrow("event_stream_closed");
+      expect(options.onerror(new Error("retry"))).toBe(1000);
+    });
+
+    await subscribeCapsuleEvents({ onMessage });
+
+    expect(fetchEventSourceApi.fetchEventSource).toHaveBeenCalledWith(
+      "https://api.example.test/capsules//events",
+      expect.any(Object)
+    );
+    expect(onMessage).toHaveBeenCalledWith({ event: "message", data: {} });
+  });
+
   test("regenerateCapsuleWardrobe posts to the capsule-centric route", async () => {
     await regenerateCapsuleWardrobe({ capsuleId: "capsule-1" });
 
@@ -221,6 +278,22 @@ describe("wardrobe api", () => {
         method: "POST",
         credentials: "include"
       }
+    );
+  });
+
+  test("image helpers normalize blank capsule ids and string set indexes", async () => {
+    await generateOutfitSetImage({ capsuleId: " ", setIndex: "3" });
+    await deleteOutfitSetImage({ setIndex: undefined });
+
+    expect(requestApi.requestJson).toHaveBeenNthCalledWith(
+      1,
+      "https://api.example.test/capsules//outfit-sets/3/image",
+      expect.objectContaining({ method: "POST" })
+    );
+    expect(requestApi.requestJson).toHaveBeenNthCalledWith(
+      2,
+      "https://api.example.test/capsules//outfit-sets/NaN/image",
+      expect.objectContaining({ method: "DELETE" })
     );
   });
 

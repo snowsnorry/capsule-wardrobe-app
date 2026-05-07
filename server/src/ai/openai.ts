@@ -108,6 +108,10 @@ function buildResponsesPayload(user: string, images: ImageAssetLike[] = []) {
 
 async function getPromptEmbeddings(prompt: string) {
   const client = getOpenAiClient();
+  return getPromptEmbeddingsWithClient(client, prompt);
+}
+
+async function getPromptEmbeddingsWithClient(client, prompt: string) {
   const response = await client.embeddings.create({
     model: DEFAULT_EMBEDDING_MODEL,
     input: prompt,
@@ -121,6 +125,10 @@ async function getPromptEmbeddings(prompt: string) {
 }
 
 async function generateJsonWithLlm(prompt: string, options: LlmGenerateOptions = {}) {
+  return generateJsonWithLlmWithClient(getOpenAiClient(), prompt, options);
+}
+
+async function generateJsonWithLlmWithClient(client, prompt: string, options: LlmGenerateOptions = {}) {
   const {
     userProfile = null,
     format = null,
@@ -128,7 +136,6 @@ async function generateJsonWithLlm(prompt: string, options: LlmGenerateOptions =
     systemPrompt: systemPromptOverride = null,
     onPayloadBuilt = null
   } = options;
-  const client = getOpenAiClient();
   const { system, user } = splitSystemAndUserPrompt(prompt);
   const systemPrompt = buildOpenAiSystemPrompt(system, systemPromptOverride, userProfile);
   const input = buildResponsesPayload(user, images);
@@ -196,7 +203,12 @@ export {
   generateJsonWithLlm,
   getPromptEmbeddings,
   buildImageDataUrl,
+  buildOpenAiParseError,
+  buildOpenAiSystemPrompt,
   buildResponsesInput,
   buildResponsesPayload,
+  generateJsonWithLlmWithClient,
+  parseOpenAiJsonResponse,
+  getPromptEmbeddingsWithClient,
   releaseImageBuffers
 };

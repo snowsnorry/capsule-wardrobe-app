@@ -9,6 +9,7 @@ import { injectSharedCapsuleMetaTags } from "./sharedCapsuleMeta.js";
 import { logInfo } from "./logger.js";
 
 export function createStartServer(app) {
+  /* eslint-disable complexity */
   return async ({
   appInstance = app,
   nodeEnv = NODE_ENV,
@@ -16,12 +17,19 @@ export function createStartServer(app) {
   port = PORT,
   clientDistPath = CLIENT_DIST_PATH,
   clientRoot = CLIENT_ROOT,
-  getSharedCapsuleOgMetadataImpl = getSharedCapsuleOgMetadata
+  getSharedCapsuleOgMetadataImpl = getSharedCapsuleOgMetadata,
+  createViteServerImpl = null,
+  existsSyncImpl = fs.existsSync,
+  readFileImpl = fs.promises.readFile,
+  expressStaticImpl = express.static,
+  injectSharedCapsuleMetaTagsImpl = injectSharedCapsuleMetaTags,
+  isApiPathImpl = isApiPath,
+  logInfoImpl = logInfo
 } = {}) => {
   await ensureTablesImpl();
 
   if (nodeEnv === "development") {
-    const { createServer: createViteServer } = await import("vite");
+    const createViteServer = createViteServerImpl || (await import("vite")).createServer;
     const vite = await createViteServer({
       root: CLIENT_ROOT,
       server: {
@@ -36,15 +44,15 @@ export function createStartServer(app) {
     appInstance.use(vite.middlewares);
 
     appInstance.use("*", async (req, res, next) => {
-      if (isApiPath(req.path)) {
+      if (isApiPathImpl(req.path)) {
         return next();
       }
 
       try {
         const htmlPath = path.join(clientRoot, "index.html");
-        const template = await fs.promises.readFile(htmlPath, "utf-8");
+        const template = await readFileImpl(htmlPath, "utf-8");
         const html = await vite.transformIndexHtml(req.originalUrl, template);
-        const htmlWithMetaTags = await injectSharedCapsuleMetaTags(html, req, getSharedCapsuleOgMetadataImpl);
+        const htmlWithMetaTags = await injectSharedCapsuleMetaTagsImpl(html, req, getSharedCapsuleOgMetadataImpl);
         res.status(200).set({ "Content-Type": "text/html" }).end(htmlWithMetaTags);
       } catch (error) {
         vite.ssrFixStacktrace(error);
@@ -52,16 +60,16 @@ export function createStartServer(app) {
       }
       return undefined;
     });
-  } else if (fs.existsSync(clientDistPath)) {
-    appInstance.use(express.static(clientDistPath));
+  } else if (existsSyncImpl(clientDistPath)) {
+    appInstance.use(expressStaticImpl(clientDistPath));
 
     appInstance.get("*", async (req, res, next) => {
-      if (isApiPath(req.path)) {
+      if (isApiPathImpl(req.path)) {
         return res.status(404).json({ error: "not_found" });
       }
       try {
-        const html = await fs.promises.readFile(path.join(clientDistPath, "index.html"), "utf-8");
-        const htmlWithMetaTags = await injectSharedCapsuleMetaTags(html, req, getSharedCapsuleOgMetadataImpl);
+        const html = await readFileImpl(path.join(clientDistPath, "index.html"), "utf-8");
+        const htmlWithMetaTags = await injectSharedCapsuleMetaTagsImpl(html, req, getSharedCapsuleOgMetadataImpl);
         return res.status(200).set({ "Content-Type": "text/html" }).end(htmlWithMetaTags);
       } catch (error) {
         return next(error);
@@ -70,7 +78,8 @@ export function createStartServer(app) {
   }
 
   return appInstance.listen(port, () => {
-    logInfo(`Server listening on http://localhost:${port}`);
+    logInfoImpl(`Server listening on http://localhost:${port}`);
   });
   };
+  /* eslint-enable complexity */
 }

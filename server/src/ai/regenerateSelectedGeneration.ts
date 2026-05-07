@@ -25,6 +25,24 @@ const AUDIENCE_FILTERS_BY_PROFILE = {
   any: ["man", "woman", "all"]
 };
 
+// eslint-disable-next-line complexity, @typescript-eslint/no-explicit-any
+function createRegenerationDeps(deps: Record<string, any> = {}) {
+  return {
+    buildPromptDebugImagesForCategoryImpl: deps.buildPromptDebugImagesForCategoryImpl || buildPromptDebugImagesForCategory,
+    buildPromptDebugImagesInChildImpl: deps.buildPromptDebugImagesInChildImpl || buildPromptDebugImagesInChild,
+    getGenerateJsonWithLlmImpl: deps.getGenerateJsonWithLlmImpl || getGenerateJsonWithLlm,
+    getProductsByUrlsInOrderImpl: deps.getProductsByUrlsInOrderImpl || getProductsByUrlsInOrder,
+    getProductsWithEmbeddingsByUrlsInOrderImpl: deps.getProductsWithEmbeddingsByUrlsInOrderImpl || getProductsWithEmbeddingsByUrlsInOrder,
+    getPromptEmbeddingsImpl: deps.getPromptEmbeddingsImpl || getPromptEmbeddings,
+    getSqlClientImpl: deps.getSqlClientImpl || getSqlClient,
+    getWardrobePromptImpl: deps.getWardrobePromptImpl || getWardrobePrompt,
+    isNoLlmProfileEnabledImpl: deps.isNoLlmProfileEnabledImpl || isNoLlmProfileEnabled,
+    queryRegenerationCandidateItemsImpl: deps.queryRegenerationCandidateItemsImpl || queryRegenerationCandidateItems,
+    resolveLlmProviderImpl: deps.resolveLlmProviderImpl || resolveLlmProvider,
+    runWithImageWorkSlotImpl: deps.runWithImageWorkSlotImpl || runWithImageWorkSlot
+  };
+}
+
 function getProductUrls(items) {
   return Array.isArray(items)
     ? items.map((item) => String(item?.url || "").trim()).filter(Boolean)
@@ -77,9 +95,9 @@ function getAudienceFilters(userProfile) {
   return AUDIENCE_FILTERS_BY_PROFILE[userProfile?.audience] || AUDIENCE_FILTERS_BY_PROFILE.any;
 }
 
-async function buildRegenerationInputs(userProfile, products) {
-  const prompt = getWardrobePrompt(userProfile);
-  const promptEmbeddings = await getPromptEmbeddings(prompt);
+async function buildRegenerationInputs(userProfile, products, deps) {
+  const prompt = deps.getWardrobePromptImpl(userProfile);
+  const promptEmbeddings = await deps.getPromptEmbeddingsImpl(prompt);
   const storedWardrobe = getStoredWardrobePayload(userProfile);
   const selectedProducts = Array.isArray(products) ? products : [];
   const selectedProductUrls = getProductUrls(selectedProducts);
@@ -87,7 +105,7 @@ async function buildRegenerationInputs(userProfile, products) {
   const currentCapsuleItems = Array.isArray(storedWardrobe?.items)
     ? storedWardrobe.items.filter((item) => !selectedProductUrlSet.has(String(item?.url || "").trim()))
     : [];
-  const currentCapsulePromptItems = await getProductsByUrlsInOrder(getProductUrls(currentCapsuleItems));
+  const currentCapsulePromptItems = await deps.getProductsByUrlsInOrderImpl(getProductUrls(currentCapsuleItems));
   const capsuleCategories = buildSelectedCapsuleCategories(userProfile, selectedProducts);
   const categories = Object.keys(capsuleCategories);
 
@@ -105,10 +123,10 @@ async function buildRegenerationInputs(userProfile, products) {
   };
 }
 
-async function buildRegenerationSqlParams(userProfile, inputs) {
+async function buildRegenerationSqlParams(userProfile, inputs, deps) {
   const rejectedUrls = getRejectedUrls(userProfile);
   const negativePromptingUrls = [...new Set([...rejectedUrls, ...inputs.selectedProductUrls])];
-  const rejectedProducts = await getProductsWithEmbeddingsByUrlsInOrder(negativePromptingUrls);
+  const rejectedProducts = await deps.getProductsWithEmbeddingsByUrlsInOrderImpl(negativePromptingUrls);
   const rejectedVectors = rejectedProducts
     .map((product) => normalizeEmbeddingVector(product?.embedding))
     .filter(Boolean);
@@ -129,11 +147,11 @@ async function buildRegenerationSqlParams(userProfile, inputs) {
   };
 }
 
-async function getRegenerationCandidates(sql, sqlParams, logContext) {
+async function getRegenerationCandidates(sql, sqlParams, logContext, deps) {
   const sqlStartedAt = Date.now();
-  const itemsResult = await queryRegenerationCandidateItems(sql, sqlParams);
+  const itemsResult = await deps.queryRegenerationCandidateItemsImpl(sql, sqlParams);
   const normalizedItems = getSqlRows(itemsResult).map((item) => {
-    const normalized = { ...item };
+    const normalized = { ...(item as Record<string, unknown>) };
     delete normalized.embedding;
     return normalized;
   });
@@ -169,17 +187,17 @@ function buildNoLlmRegenerationResult({ normalizedItems, capsuleCategories, user
   };
 }
 
-async function buildRegenerationPromptImages({ normalizedItems, currentCapsuleItems, logContext }) {
+async function buildRegenerationPromptImages({ normalizedItems, currentCapsuleItems, logContext, deps }) {
   const shouldSavePromptDebugArtifacts = process.env.NODE_ENV === "development";
-  const promptDebugImages = await buildRegenerationCandidateImages(normalizedItems, shouldSavePromptDebugArtifacts, logContext);
-  const currentCapsuleCollage = await buildCurrentCapsuleCollage(currentCapsuleItems, logContext);
+  const promptDebugImages = await buildRegenerationCandidateImages(normalizedItems, shouldSavePromptDebugArtifacts, logContext, deps);
+  const currentCapsuleCollage = await buildCurrentCapsuleCollage(currentCapsuleItems, logContext, deps);
   return { currentCapsuleCollage, promptDebugImages };
 }
 
-async function buildRegenerationCandidateImages(normalizedItems, shouldSavePromptDebugArtifacts, logContext) {
+async function buildRegenerationCandidateImages(normalizedItems, shouldSavePromptDebugArtifacts, logContext, deps) {
   try {
     const imageFetchStartedAt = Date.now();
-    const promptDebugImages = await runWithImageWorkSlot("capsule-images", async () => buildPromptDebugImagesInChild({
+    const promptDebugImages = await deps.runWithImageWorkSlotImpl("capsule-images", async () => deps.buildPromptDebugImagesInChildImpl({
       normalizedItems,
       saveDebugArtifacts: shouldSavePromptDebugArtifacts,
       debugOutputDir: shouldSavePromptDebugArtifacts ? LAST_PROMPT_DIR_URL : null
@@ -205,15 +223,15 @@ function logPromptImageBuildFailure(error, logContext) {
   logWarn("[prompt-images][build-failed]", JSON.stringify({ message: error?.message || "unknown_error" }));
 }
 
-async function buildCurrentCapsuleCollage(currentCapsuleItems, logContext) {
+async function buildCurrentCapsuleCollage(currentCapsuleItems, logContext, deps) {
   if (currentCapsuleItems.length === 0) {
     return null;
   }
 
   try {
     const currentCapsuleImageStartedAt = Date.now();
-    const currentCapsuleImage = await runWithImageWorkSlot("capsule-images", async () => (
-      buildPromptDebugImagesForCategory({ category: "Current Capsule", items: currentCapsuleItems })
+    const currentCapsuleImage = await deps.runWithImageWorkSlotImpl("capsule-images", async () => (
+      deps.buildPromptDebugImagesForCategoryImpl({ category: "Current Capsule", items: currentCapsuleItems })
     ));
     const currentCapsuleCollage = currentCapsuleImage?.category || null;
     logWardrobeInfo(
@@ -243,12 +261,12 @@ function getStylistImages(currentCapsuleCollage, promptDebugImages) {
   return currentCapsuleCollage ? [currentCapsuleCollage, ...generatedImages] : generatedImages;
 }
 
-async function generateRegenerationSelection({ userProfile, normalizedItems, currentCapsulePromptItems, capsuleCategories, promptDebugImages, currentCapsuleCollage, llmResolution, logContext }) {
+async function generateRegenerationSelection({ userProfile, normalizedItems, currentCapsulePromptItems, capsuleCategories, promptDebugImages, currentCapsuleCollage, llmResolution, logContext, deps }) {
   const selectionPrompt = buildRegenerateSelectedPrompt(userProfile, normalizedItems, currentCapsulePromptItems, capsuleCategories);
   const selectionSystemPrompt = buildRegenerateSelectedSystemPrompt(userProfile, capsuleCategories);
   saveLastPromptArtifacts({ prompt: selectionPrompt, currentCapsuleCollage, userProfile, systemPrompt: selectionSystemPrompt });
   const llmStartedAt = Date.now();
-  const generateJsonWithLlm = getGenerateJsonWithLlm(userProfile);
+  const generateJsonWithLlm = deps.getGenerateJsonWithLlmImpl(userProfile);
   const { response: selectionResponse, json: parsedSelection } = await generateJsonWithLlm(selectionPrompt, {
     userProfile,
     format: buildRegeneratedItemsFormat(capsuleCategories),
@@ -323,35 +341,43 @@ function buildRegenerationResult({ parsedSelection, selectionResponse, normalize
   };
 }
 
-export async function regenerateCapsuleWardrobe(
-  userProfile: UserProfileLike | null = null,
-  products: WardrobeUiItemLike[] | null = null,
-  logContext: LogContextLike | null = null
-): Promise<WardrobeGenerationResult> {
-  const llmResolution = resolveLlmProvider(userProfile);
-  const sql = getSqlClient();
-  const inputs = await buildRegenerationInputs(userProfile, products);
-  const sqlParams = await buildRegenerationSqlParams(userProfile, inputs);
-  const normalizedItems = await getRegenerationCandidates(sql, sqlParams, logContext);
-  if (isNoLlmProfileEnabled(userProfile)) {
-    return buildNoLlmRegenerationResult({ normalizedItems, llmResolution, logContext, userProfile, ...inputs });
-  }
-  const { currentCapsuleCollage, promptDebugImages } = await buildRegenerationPromptImages({
-    currentCapsuleItems: inputs.currentCapsuleItems,
-    normalizedItems,
-    logContext
-  });
-  const { parsedSelection, selectionResponse } = await generateRegenerationSelection({
-    userProfile,
-    normalizedItems,
-    currentCapsulePromptItems: inputs.currentCapsulePromptItems,
-    capsuleCategories: inputs.capsuleCategories,
-    promptDebugImages,
-    currentCapsuleCollage,
-    llmResolution,
-    logContext
-  });
-  logInfo("[wardrobe-ai][selected-json]", JSON.stringify(parsedSelection));
-  logEmptyRegenerationSelection(parsedSelection, selectionResponse);
-  return buildRegenerationResult({ parsedSelection, selectionResponse, normalizedItems, userProfile, ...inputs });
+export function createRegenerateCapsuleWardrobe(deps = {}) {
+  const resolvedDeps = createRegenerationDeps(deps);
+
+  return async function regenerateCapsuleWardrobe(
+    userProfile: UserProfileLike | null = null,
+    products: WardrobeUiItemLike[] | null = null,
+    logContext: LogContextLike | null = null
+  ): Promise<WardrobeGenerationResult> {
+    const llmResolution = resolvedDeps.resolveLlmProviderImpl(userProfile);
+    const sql = resolvedDeps.getSqlClientImpl();
+    const inputs = await buildRegenerationInputs(userProfile, products, resolvedDeps);
+    const sqlParams = await buildRegenerationSqlParams(userProfile, inputs, resolvedDeps);
+    const normalizedItems = await getRegenerationCandidates(sql, sqlParams, logContext, resolvedDeps);
+    if (resolvedDeps.isNoLlmProfileEnabledImpl(userProfile)) {
+      return buildNoLlmRegenerationResult({ normalizedItems, llmResolution, logContext, userProfile, ...inputs });
+    }
+    const { currentCapsuleCollage, promptDebugImages } = await buildRegenerationPromptImages({
+      currentCapsuleItems: inputs.currentCapsuleItems,
+      normalizedItems,
+      logContext,
+      deps: resolvedDeps
+    });
+    const { parsedSelection, selectionResponse } = await generateRegenerationSelection({
+      userProfile,
+      normalizedItems,
+      currentCapsulePromptItems: inputs.currentCapsulePromptItems,
+      capsuleCategories: inputs.capsuleCategories,
+      promptDebugImages,
+      currentCapsuleCollage,
+      llmResolution,
+      logContext,
+      deps: resolvedDeps
+    });
+    logInfo("[wardrobe-ai][selected-json]", JSON.stringify(parsedSelection));
+    logEmptyRegenerationSelection(parsedSelection, selectionResponse);
+    return buildRegenerationResult({ parsedSelection, selectionResponse, normalizedItems, userProfile, ...inputs });
+  };
 }
+
+export const regenerateCapsuleWardrobe = createRegenerateCapsuleWardrobe();

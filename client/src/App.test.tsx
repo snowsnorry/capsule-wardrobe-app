@@ -58,10 +58,13 @@ vi.mock("./screens/LoadingScreen", () => ({
 }));
 
 vi.mock("./screens/SignInScreen", () => ({
-  default: function SignInScreenMock() {
+  default: function SignInScreenMock(props: { onVerifyCode: (event: { preventDefault: () => void }) => Promise<void> }) {
     return (
       <div data-testid="sign-in-screen">
         <div data-testid="locale-switcher">locale-switcher</div>
+        <button type="button" onClick={() => void props.onVerifyCode({ preventDefault: vi.fn() })}>
+          verify-code
+        </button>
       </div>
     );
   }
@@ -232,5 +235,23 @@ describe("App", () => {
 
     expect(await screen.findByTestId("main-screen")).toBeInTheDocument();
     expect(authApi.updateProfileLocale).not.toHaveBeenCalled();
+  });
+
+  test("retries profile status after verifying a code", async () => {
+    authApi.fetchCurrentUser.mockRejectedValue(new Error("unauthorized"));
+    authApi.verifyLoginCode.mockResolvedValue({ user: { email: "person@example.com" } });
+    authApi.fetchProfileStatus
+      .mockRejectedValueOnce(new Error("temporary"))
+      .mockRejectedValueOnce(new Error("temporary"))
+      .mockResolvedValue({ hasProfile: true });
+
+    renderApp();
+
+    fireEvent.click(await screen.findByRole("button", { name: "verify-code" }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("main-screen")).toBeInTheDocument();
+    });
+    expect(authApi.fetchProfileStatus).toHaveBeenCalledTimes(3);
   });
 });

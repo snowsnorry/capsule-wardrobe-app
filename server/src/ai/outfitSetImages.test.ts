@@ -295,6 +295,83 @@ test("outfitSetImage service treats an existing URL image as ready", async () =>
   assert.equal(generateCalls, 0);
 });
 
+test("outfitSetImage service maps missing capsule, missing set, and invalid item payloads", async () => {
+  const missingCapsuleService = createOutfitSetImageService({
+    getCapsuleImpl: async () => null
+  });
+  const missingCapsuleRes = createResponseRecorder();
+  await missingCapsuleService.generateOutfitSetImage({
+    user: { email: "person@example.com" },
+    params: { id: "capsule-1", setIndex: "0" }
+  }, missingCapsuleRes);
+  assert.equal(missingCapsuleRes.statusCode, 404);
+  assert.deepEqual(missingCapsuleRes.body, { error: "not_found" });
+
+  const missingSetService = createOutfitSetImageService({
+    getCapsuleImpl: async () => createCapsule()
+  });
+  const missingSetRes = createResponseRecorder();
+  await missingSetService.generateOutfitSetImage({
+    user: { email: "person@example.com" },
+    params: { id: "capsule-1", setIndex: "3" }
+  }, missingSetRes);
+  assert.equal(missingSetRes.statusCode, 404);
+  assert.deepEqual(missingSetRes.body, { error: "not_found" });
+
+  const invalidCapsule = createCapsule();
+  invalidCapsule.draft.data.wardrobe.outfitSets[0].itemIds = ["top-1"];
+  const invalidItemsService = createOutfitSetImageService({
+    getCapsuleImpl: async () => invalidCapsule
+  });
+  const invalidItemsRes = createResponseRecorder();
+  await invalidItemsService.generateOutfitSetImage({
+    user: { email: "person@example.com" },
+    params: { id: "capsule-1", setIndex: "0" }
+  }, invalidItemsRes);
+  assert.equal(invalidItemsRes.statusCode, 400);
+  assert.deepEqual(invalidItemsRes.body, { error: "invalid_payload" });
+});
+
+test("outfitSetImage service reuses an active pending image job", async () => {
+  let generationCalls = 0;
+  const service = createOutfitSetImageService({
+    getCapsuleImpl: async () => createCapsule(),
+    getProfileImpl: async () => buildNormalizedProfileRecord({
+      imageLlm: "openai:gpt-image-2"
+    }),
+    publishSnapshotImpl: () => {},
+    downloadProductImageAssetsImpl: async () => new Promise(() => {}),
+    generateImageWithOpenAiImpl: async () => {
+      generationCalls += 1;
+      return {
+        response: null,
+        image: {
+          base64: "generated-base64",
+          mimeType: "image/png"
+        }
+      };
+    }
+  });
+
+  const firstRes = createResponseRecorder();
+  await service.generateOutfitSetImage({
+    user: { email: "person@example.com" },
+    params: { id: "capsule-1", setIndex: "0" }
+  }, firstRes);
+
+  const secondRes = createResponseRecorder();
+  await service.generateOutfitSetImage({
+    user: { email: "person@example.com" },
+    params: { id: "capsule-1", setIndex: "0" }
+  }, secondRes);
+
+  assert.equal(firstRes.statusCode, 202);
+  assert.deepEqual(firstRes.body, { ok: true, status: "pending" });
+  assert.equal(secondRes.statusCode, 202);
+  assert.deepEqual(secondRes.body, { ok: true, status: "pending" });
+  assert.equal(generationCalls, 0);
+});
+
 test("deleteOutfitSetImage clears stored image and publishes updated snapshot", async () => {
   const published = [];
   const updates = [];

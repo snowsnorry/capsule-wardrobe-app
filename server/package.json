@@ -6,11 +6,11 @@
     "dev": "NODE_ENV=development tsx src/index.ts",
     "dev:test-auth": "AUTH_TEST_MODE=true NODE_ENV=development tsx src/index.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
-    "test": "tsx --test src/**/*.test.ts",
+    "test": "tsx --test --test-concurrency=1 $(find src -name '*.test.ts' | sort)",
     "build": "tsc -p tsconfig.build.json && mkdir -p dist/server/src && cp -R src/templates dist/server/src/templates",
     "prestart": "npm run build",
     "start": "node ./dist/server/src/index.js",
-    "coverage": "c8 --all --per-file --report-dir ../coverage/server --reporter=text --reporter=html --reporter=json-summary --reporter=lcov --include \"src/**/*.ts\" --exclude \"src/**/*.test.ts\" --exclude \"src/**/*.d.ts\" --check-coverage --lines 70 --functions 70 --branches 60 --statements 70 tsx --test src/**/*.test.ts"
+    "coverage": "c8 --all --per-file --report-dir ../coverage/server --reporter=text --reporter=html --reporter=json-summary --reporter=lcov --include \"src/**/*.ts\" --exclude \"src/**/*.test.ts\" --exclude \"src/**/*.d.ts\" --check-coverage --lines 70 --functions 70 --branches 60 --statements 70 tsx --test --test-concurrency=1 $(find src -name '*.test.ts' | sort)"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.54.0",

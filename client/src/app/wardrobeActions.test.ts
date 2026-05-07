@@ -1,14 +1,23 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
+import type { Mock } from "vitest";
 import { downloadCapsulePdf } from "../api/capsules";
 import {
+  deleteOutfitSetImage,
+  generateOutfitSetImage,
+  regenerateCapsuleWardrobe,
   regenerateSelectedWardrobeItems,
   subscribeCapsuleEvents
 } from "../api/wardrobe";
 import {
+  deleteGeneratedOutfitSetImage,
   downloadWardrobePdf,
+  generateOutfitSetImage as generateOutfitSetImageAction,
+  handleWardrobeError,
+  refreshWardrobe,
   regenerateSelectedItems,
   startCapsuleEventStream,
-  stopCapsuleEventStream
+  stopCapsuleEventStream,
+  toggleRegenerationSelection
 } from "./wardrobeActions";
 import { createActionContext } from "./testUtils";
 
@@ -23,6 +32,10 @@ vi.mock("../api/wardrobe", () => ({
   subscribeCapsuleEvents: vi.fn()
 }));
 
+function mockCalls(fn: unknown) {
+  return (fn as Mock).mock.calls;
+}
+
 describe("wardrobeActions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -30,13 +43,44 @@ describe("wardrobeActions", () => {
 
   test("downloadWardrobePdf toggles the PDF busy flag around the API call", async () => {
     vi.mocked(downloadCapsulePdf).mockResolvedValue(undefined);
-    const context = createActionContext();
+    const context = createActionContext({
+      applyWardrobeSnapshot: vi.fn(async () => undefined)
+    });
 
     await downloadWardrobePdf(context, "capsule-1");
 
     expect(context.setIsDownloadingWardrobePdf).toHaveBeenNthCalledWith(1, true);
     expect(downloadCapsulePdf).toHaveBeenCalledWith("capsule-1");
     expect(context.setIsDownloadingWardrobePdf).toHaveBeenLastCalledWith(false);
+  });
+
+  test("downloadWardrobePdf reports download failures and skips missing capsule ids", async () => {
+    vi.mocked(downloadCapsulePdf).mockRejectedValue(new Error("network"));
+    const context = createActionContext({
+      applyWardrobeSnapshot: vi.fn(async () => undefined)
+    });
+
+    await downloadWardrobePdf(context, "");
+    await downloadWardrobePdf(context, "capsule-1");
+
+    expect(downloadCapsulePdf).toHaveBeenCalledTimes(1);
+    expect(context.setStatus).toHaveBeenCalledWith(expect.any(Function));
+    const statusUpdater = mockCalls(context.setStatus).at(-1)?.[0] as (current: unknown) => unknown;
+    expect(statusUpdater({ error: "" })).toEqual({ error: "Download failed" });
+    expect(context.setIsDownloadingWardrobePdf).toHaveBeenLastCalledWith(false);
+  });
+
+  test("handleWardrobeError clears wardrobe and pending regeneration state", () => {
+    const context = createActionContext();
+
+    handleWardrobeError(context);
+
+    expect(context.setProfileItems).toHaveBeenCalledWith([]);
+    expect(context.setProfileOutfitSets).toHaveBeenCalledWith([]);
+    expect(context.setPendingImageSetIndexes).toHaveBeenCalledWith([]);
+    expect(context.setIsWardrobePending).toHaveBeenCalledWith(false);
+    expect(context.setHasPendingAdditionalItems).toHaveBeenCalledWith(false);
+    expect(context.setIsLoadingItems).toHaveBeenCalledWith(false);
   });
 
   test("regenerateSelectedItems sends selected urls and subscribes to capsule events when pending", async () => {
@@ -62,6 +106,75 @@ describe("wardrobeActions", () => {
     expect(subscribeCapsuleEvents).toHaveBeenCalledWith(expect.objectContaining({ capsuleId: "capsule-1" }));
   });
 
+  test("regenerateSelectedItems handles guards, immediate responses, and errors", async () => {
+    const guardedContext = createActionContext({
+      selectedRegenerationUrls: [],
+      isPartialRegenerationLoading: false
+    });
+    await regenerateSelectedItems(guardedContext);
+    expect(regenerateSelectedWardrobeItems).not.toHaveBeenCalled();
+
+    vi.mocked(regenerateSelectedWardrobeItems).mockResolvedValueOnce({ status: "ready" });
+    const readyContext = createActionContext({
+      selectedRegenerationUrls: ["https://example.com/top-1"],
+      profileItems: [{ id: "top-1", url: "https://example.com/top-1" }]
+    });
+    await regenerateSelectedItems(readyContext);
+    expect(readyContext.setIsPartialRegenerationLoading).toHaveBeenLastCalledWith(false);
+
+    vi.mocked(regenerateSelectedWardrobeItems).mockRejectedValueOnce(new Error("invalid_payload"));
+    const failingContext = createActionContext({
+      selectedRegenerationUrls: ["https://example.com/top-1"],
+      profileItems: [{ id: "top-1", url: "https://example.com/top-1" }]
+    });
+    await regenerateSelectedItems(failingContext);
+    expect(failingContext.setProfileItems).toHaveBeenCalledWith([{ id: "top-1", url: "https://example.com/top-1" }]);
+    expect(failingContext.closeNotificationPrompt).toHaveBeenCalled();
+    expect(failingContext.setStatus).toHaveBeenCalledWith(expect.any(Function));
+    const invalidPayloadUpdater = mockCalls(failingContext.setStatus).at(-1)?.[0] as (current: unknown) => unknown;
+    expect(invalidPayloadUpdater({ error: "" })).toEqual({ error: "invalid_payload" });
+
+    vi.mocked(regenerateSelectedWardrobeItems).mockRejectedValueOnce(new Error("network"));
+    const genericFailingContext = createActionContext({
+      selectedRegenerationUrls: ["https://example.com/top-1"],
+      profileItems: null
+    });
+    await regenerateSelectedItems(genericFailingContext);
+    const genericUpdater = mockCalls(genericFailingContext.setStatus).at(-1)?.[0] as (current: unknown) => unknown;
+    expect(genericUpdater({ error: "" })).toEqual({ error: "Failed to regenerate selected items" });
+  });
+
+  test("toggleRegenerationSelection toggles valid urls only when idle", () => {
+    const context = createActionContext();
+
+    toggleRegenerationSelection(context, { url: " https://example.com/top-1 " });
+    toggleRegenerationSelection(createActionContext({ isPartialRegenerationLoading: true }), { url: "https://example.com/top-2" });
+    toggleRegenerationSelection(context, { url: " " });
+
+    expect(context.setSelectedRegenerationUrls).toHaveBeenCalledWith(expect.any(Function));
+    const updater = mockCalls(context.setSelectedRegenerationUrls)[0][0] as (current: string[]) => string[];
+    expect(updater([])).toEqual(["https://example.com/top-1"]);
+    expect(updater(["https://example.com/top-1"])).toEqual([]);
+  });
+
+  test("refreshWardrobe starts pending streams or reports failures", async () => {
+    vi.mocked(regenerateCapsuleWardrobe).mockResolvedValueOnce({ status: "pending" });
+    const context = createActionContext();
+
+    await refreshWardrobe(context);
+
+    expect(context.setSelectedRegenerationUrls).toHaveBeenCalledWith([]);
+    expect(regenerateCapsuleWardrobe).toHaveBeenCalledWith({ capsuleId: "capsule-1" });
+    expect(subscribeCapsuleEvents).toHaveBeenCalledWith(expect.objectContaining({ capsuleId: "capsule-1" }));
+
+    vi.mocked(regenerateCapsuleWardrobe).mockRejectedValueOnce(new Error("boom"));
+    await refreshWardrobe(context);
+
+    expect(context.setStatus).toHaveBeenCalledWith(expect.any(Function));
+    const updater = mockCalls(context.setStatus).at(-1)?.[0] as (current: unknown) => unknown;
+    expect(updater({ error: "" })).toEqual({ error: "boom" });
+  });
+
   test("startCapsuleEventStream subscribes and stopCapsuleEventStream aborts the stream", () => {
     vi.mocked(subscribeCapsuleEvents).mockReturnValue(new Promise(() => undefined));
     const context = createActionContext();
@@ -77,5 +190,99 @@ describe("wardrobeActions", () => {
     stopCapsuleEventStream(context);
 
     expect(abortRef.current).toBe(null);
+  });
+
+  test("startCapsuleEventStream applies snapshots and maps stream errors", async () => {
+    vi.mocked(subscribeCapsuleEvents).mockImplementation(async (options) => {
+      options.onMessage({ event: "snapshot", data: { status: "ready" } });
+      options.onMessage({ event: "message", data: {} });
+      options.onError(new Error("stream"));
+    });
+    const context = createActionContext({
+      applyWardrobeSnapshot: vi.fn(async () => undefined)
+    });
+
+    await startCapsuleEventStream(context, " capsule-1 ");
+
+    expect(context.applyWardrobeSnapshot).toHaveBeenCalledWith({ status: "ready" }, "capsule-1");
+    expect(context.closeNotificationPrompt).toHaveBeenCalled();
+    expect(context.setStatus).toHaveBeenCalledWith(expect.any(Function));
+    const updater = mockCalls(context.setStatus).at(-1)?.[0] as (current: unknown) => unknown;
+    expect(updater({ error: "" })).toEqual({ error: "stream" });
+  });
+
+  test("startCapsuleEventStream fails safely when snapshot application rejects or subscription rejects", async () => {
+    vi.mocked(subscribeCapsuleEvents).mockImplementationOnce(async (options) => {
+      options.onMessage({ event: "snapshot", data: { status: "ready" } });
+      await Promise.resolve();
+    });
+    const context = createActionContext({
+      applyWardrobeSnapshot: vi.fn(async () => {
+        throw new Error("apply failed");
+      })
+    });
+
+    await startCapsuleEventStream(context, "capsule-1");
+    await Promise.resolve();
+
+    expect(context.closeNotificationPrompt).toHaveBeenCalled();
+
+    vi.mocked(subscribeCapsuleEvents).mockRejectedValueOnce(new Error("subscribe failed"));
+    const rejectedContext = createActionContext();
+    await startCapsuleEventStream(rejectedContext, "capsule-1");
+    expect(rejectedContext.setStatus).toHaveBeenCalledWith(expect.any(Function));
+  });
+
+  test("generateOutfitSetImage handles pending, ready, invalid, and failing requests", async () => {
+    vi.mocked(generateOutfitSetImage).mockResolvedValueOnce({ status: "pending" });
+    const context = createActionContext();
+
+    await generateOutfitSetImageAction(context, "2");
+
+    expect(context.setPendingImageSetIndexes).toHaveBeenCalledWith(expect.any(Function));
+    expect(generateOutfitSetImage).toHaveBeenCalledWith({ capsuleId: "capsule-1", setIndex: 2 });
+    expect(context.startPendingNotificationFlow).toHaveBeenCalledWith("image", "openai:gpt-image-2");
+    const pendingUpdater = mockCalls(context.setPendingImageSetIndexes)[0][0] as (current: number[]) => number[];
+    expect(pendingUpdater([1])).toEqual([1, 2]);
+    expect(pendingUpdater([2])).toEqual([2]);
+
+    vi.mocked(generateOutfitSetImage).mockResolvedValueOnce({ status: "ready" });
+    await generateOutfitSetImageAction(context, 3);
+    expect(context.setPendingImageSetIndexes).toHaveBeenLastCalledWith(expect.any(Function));
+    const clearUpdater = mockCalls(context.setPendingImageSetIndexes).at(-1)?.[0] as (current: number[]) => number[];
+    expect(clearUpdater([1, 3])).toEqual([1]);
+
+    await generateOutfitSetImageAction(context, -1);
+    expect(generateOutfitSetImage).toHaveBeenCalledTimes(2);
+
+    vi.mocked(generateOutfitSetImage).mockRejectedValueOnce(new Error("failed"));
+    await generateOutfitSetImageAction(context, 4);
+    expect(context.closeNotificationPrompt).toHaveBeenCalled();
+    expect(context.setStatus).toHaveBeenCalledWith(expect.any(Function));
+  });
+
+  test("deleteGeneratedOutfitSetImage clears stored image and manages busy state", async () => {
+    vi.mocked(deleteOutfitSetImage).mockResolvedValue({});
+    const context = createActionContext();
+
+    await deleteGeneratedOutfitSetImage(context, "1");
+
+    expect(context.setIsContentOperationLoading).toHaveBeenNthCalledWith(1, true);
+    expect(deleteOutfitSetImage).toHaveBeenCalledWith({ capsuleId: "capsule-1", setIndex: 1 });
+    expect(context.setProfileOutfitSets).toHaveBeenCalledWith(expect.any(Function));
+    const outfitUpdater = mockCalls(context.setProfileOutfitSets)[0][0] as (current: { image: string | null; imageObsolete: boolean }[]) => unknown;
+    expect(outfitUpdater([
+      { image: "keep.jpg", imageObsolete: true },
+      { image: "remove.jpg", imageObsolete: true }
+    ])).toEqual([
+      { image: "keep.jpg", imageObsolete: true },
+      { image: null, imageObsolete: false }
+    ]);
+    expect(subscribeCapsuleEvents).toHaveBeenCalledWith(expect.objectContaining({ capsuleId: "capsule-1" }));
+    expect(context.setIsContentOperationLoading).toHaveBeenLastCalledWith(false);
+
+    vi.mocked(deleteOutfitSetImage).mockRejectedValueOnce(new Error("failed"));
+    await deleteGeneratedOutfitSetImage(context, 2);
+    expect(context.setStatus).toHaveBeenCalledWith(expect.any(Function));
   });
 });

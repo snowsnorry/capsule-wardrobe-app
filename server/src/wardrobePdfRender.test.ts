@@ -85,3 +85,29 @@ test("buildWardrobePdf uses local cached image before remote fetch", async (t) =
   assert.ok(Buffer.isBuffer(pdfBuffer));
   assert.ok(pdfBuffer.length > 0);
 });
+
+test("buildWardrobePdf renders fallback title and image placeholder without remote image", async (t) => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => {
+    throw new Error("fetch_should_not_be_called");
+  };
+  t.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  const pdfBuffer = await buildWardrobePdf([{
+    id: "",
+    name: "",
+    category: "",
+    imageUrl: "",
+    brand: "",
+    description: "",
+    url: "not-a-url"
+  }], {
+    locale: "en",
+    totalStartedAt: Date.now()
+  });
+
+  assert.ok(Buffer.isBuffer(pdfBuffer));
+  assert.ok(pdfBuffer.length > 0);
+});

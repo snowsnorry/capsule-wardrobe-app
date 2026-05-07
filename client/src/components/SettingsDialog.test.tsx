@@ -174,4 +174,66 @@ describe("SettingsDialog", () => {
     expect(screen.queryByText("Used before")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Remove passkey" })).toBeInTheDocument();
   });
+
+  test("adds passkeys, ignores cancellations, and maps unsupported errors", async () => {
+    const user = userEvent.setup();
+    passkeysApiMock.listPasskeys
+      .mockResolvedValueOnce({ passkeys: [] })
+      .mockResolvedValueOnce({ passkeys: [{ id: "passkey-1", name: "New key", createdAt: "2026-05-01T01:47:00.000Z" }] });
+
+    renderDialog();
+    await user.click(screen.getByRole("button", { name: "Account" }));
+    await user.click(await screen.findByRole("button", { name: "Add passkey" }));
+
+    expect(passkeysAuthMock.registerPasskey).toHaveBeenCalledTimes(1);
+    expect(await screen.findByText("New key")).toBeInTheDocument();
+
+    passkeysAuthMock.registerPasskey.mockRejectedValueOnce(new Error("passkey_cancelled"));
+    await user.click(screen.getByRole("button", { name: "Add passkey" }));
+    expect(screen.queryByText("Passkey setup failed.")).not.toBeInTheDocument();
+
+    passkeysAuthMock.registerPasskey.mockRejectedValueOnce(new Error("passkey_not_supported"));
+    await user.click(screen.getByRole("button", { name: "Add passkey" }));
+    expect(await screen.findByText("Passkeys are not supported.")).toBeInTheDocument();
+  });
+
+  test("confirms passkey deletion and reports delete failures", async () => {
+    const user = userEvent.setup();
+    passkeysApiMock.listPasskeys.mockResolvedValue({
+      passkeys: [{ id: "passkey-1", name: "1Password", createdAt: "2026-05-01T01:47:00.000Z" }]
+    });
+    passkeysApiMock.deletePasskey.mockRejectedValueOnce(new Error("delete failed"));
+
+    renderDialog();
+    await user.click(screen.getByRole("button", { name: "Account" }));
+    await user.click(await screen.findByRole("button", { name: "Remove passkey" }));
+    expect(screen.getByText("Remove this passkey?")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Remove passkey" }));
+
+    expect(await screen.findByText("delete failed")).toBeInTheDocument();
+
+    passkeysApiMock.deletePasskey.mockResolvedValueOnce({});
+    await user.click(screen.getByRole("button", { name: "Remove passkey" }));
+    await user.click(screen.getByRole("button", { name: "Remove passkey" }));
+    expect(passkeysApiMock.deletePasskey).toHaveBeenLastCalledWith("passkey-1");
+  });
+
+  test("closes and shows save errors without closing the dialog", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    const onSave = vi.fn(async () => {
+      throw new Error("save failed");
+    });
+
+    renderDialog({ onClose, onSave });
+    await user.click(screen.getByRole("button", { name: "Account" }));
+    await user.click(screen.getByLabelText("Name"));
+    await user.keyboard(" Jr.");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(await screen.findByText("save failed")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(onClose).toHaveBeenCalled();
+  });
 });

@@ -148,6 +148,25 @@ describe("MainScreenDialogs", () => {
     expect(onDuplicateCapsule).toHaveBeenCalledWith("Spring copy", "capsule-1");
   });
 
+  test("updates and cancels name dialog without submitting", async () => {
+    const user = userEvent.setup();
+    const onRenameCapsule = vi.fn(() => Promise.resolve());
+    renderDialogs({
+      initialNameDialog: { type: "rename", capsuleId: "capsule-1", value: "Spring edit" },
+      propsOverrides: { onRenameCapsule }
+    });
+
+    await user.clear(screen.getByRole("textbox"));
+    expect(screen.getByRole("button", { name: "OK" })).toBeDisabled();
+    await user.type(screen.getByRole("textbox"), "Travel edit");
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(onRenameCapsule).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog", { name: "Rename capsule" })).not.toBeInTheDocument();
+    });
+  });
+
   test("runs regenerate and apply-filter confirm actions", async () => {
     const user = userEvent.setup();
     const onRefreshItems = vi.fn(() => Promise.resolve());
@@ -207,6 +226,67 @@ describe("MainScreenDialogs", () => {
     await user.click(screen.getByRole("button", { name: "Revert" }));
     expect(onRevertCapsule).toHaveBeenCalledWith("capsule-2");
     expect(onCloseRowMenu).toHaveBeenCalledTimes(2);
+  });
+
+  test("runs capsule-level delete and revert confirm actions", async () => {
+    const user = userEvent.setup();
+    const onDeleteCapsule = vi.fn(() => Promise.resolve());
+    const onRevertCapsule = vi.fn(() => Promise.resolve());
+    renderDialogs({
+      initialConfirm: { action: "delete", capsuleId: "", outfitSetIndex: -1 },
+      propsOverrides: { onDeleteCapsule, onRevertCapsule }
+    });
+
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+    expect(onDeleteCapsule).toHaveBeenCalledWith();
+
+    cleanup();
+    renderDialogs({
+      initialConfirm: { action: "revert", capsuleId: "", outfitSetIndex: -1 },
+      propsOverrides: { onDeleteCapsule, onRevertCapsule }
+    });
+    await user.click(screen.getByRole("button", { name: "Revert" }));
+    expect(onRevertCapsule).toHaveBeenCalledWith();
+  });
+
+  test("ignores image delete confirm without a valid outfit set index", async () => {
+    const user = userEvent.setup();
+    const onDeleteOutfitSetImage = vi.fn(() => Promise.resolve());
+    renderDialogs({
+      initialConfirm: { action: "delete-outfit-set-image", capsuleId: "", outfitSetIndex: -1 },
+      propsOverrides: { onDeleteOutfitSetImage }
+    });
+
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+
+    expect(onDeleteOutfitSetImage).not.toHaveBeenCalled();
+  });
+
+  test("updates search dialog query, opens a result, and closes the dialog", async () => {
+    const user = userEvent.setup();
+    const onOpenCapsule = vi.fn(() => Promise.resolve());
+    renderDialogs({
+      initialSearch: {
+        open: true,
+        query: "spring",
+        loading: true,
+        results: [
+          { id: "capsule-1", name: "Spring edit", status: "new" },
+          { id: "capsule-2", name: "Earlier travel", status: "modified" }
+        ]
+      },
+      propsOverrides: { onOpenCapsule }
+    });
+
+    expect(screen.getByRole("progressbar")).toBeInTheDocument();
+    await user.clear(screen.getByPlaceholderText("Search capsules..."));
+    await user.type(screen.getByPlaceholderText("Search capsules..."), "travel");
+    await user.click(screen.getByRole("button", { name: /Earlier travel/ }));
+
+    expect(onOpenCapsule).toHaveBeenCalledWith("capsule-2");
+    await waitFor(() => {
+      expect(screen.queryByPlaceholderText("Search capsules...")).not.toBeInTheDocument();
+    });
   });
 
   test("renders share dialog link and copies its URL", async () => {

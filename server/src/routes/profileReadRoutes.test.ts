@@ -54,3 +54,44 @@ test("profile read routes expose status, profile, and wardrobe filters", async (
     patterns: ["striped", "plain"]
   });
 });
+
+test("profile read routes map missing profile and store failures", async (t) => {
+  t.mock.method(console, "error", () => {});
+
+  const missingProfileServer = await startTestServer(t, {
+    overrides: {
+      getProfileImpl: async () => null
+    }
+  });
+  const missingProfile = await requestJson(missingProfileServer.baseUrl, "/profile/me", {
+    cookie: AUTH_COOKIE
+  });
+  assert.equal(missingProfile.response.status, 404);
+  assert.deepEqual(missingProfile.json, { error: "not_found" });
+
+  const failingProfileServer = await startTestServer(t, {
+    overrides: {
+      getProfileImpl: async () => {
+        throw new Error("profile_store_down");
+      }
+    }
+  });
+  const profileFailure = await requestJson(failingProfileServer.baseUrl, "/profile/me", {
+    cookie: AUTH_COOKIE
+  });
+  assert.equal(profileFailure.response.status, 503);
+  assert.deepEqual(profileFailure.json, { error: "service_unavailable" });
+
+  const failingFiltersServer = await startTestServer(t, {
+    overrides: {
+      getSeasonsImpl: async () => {
+        throw new Error("options_store_down");
+      }
+    }
+  });
+  const filtersFailure = await requestJson(failingFiltersServer.baseUrl, "/wardrobe/filters", {
+    cookie: AUTH_COOKIE
+  });
+  assert.equal(filtersFailure.response.status, 503);
+  assert.deepEqual(filtersFailure.json, { error: "service_unavailable" });
+});

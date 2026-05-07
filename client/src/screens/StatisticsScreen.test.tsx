@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import { LocaleProvider } from "../i18n/LocaleProvider";
 
@@ -142,6 +142,26 @@ describe("StatisticsScreen", () => {
       silhouette: [],
       fit: [],
       closureType: []
+    });
+  });
+
+  test("opens mobile filters dialog and closes it after apply and reset", async () => {
+    renderScreen({}, { layoutMode: "overlay" });
+
+    expect((await screen.findAllByText("120")).length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole("button", { name: "Open filters" }));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Apply" }));
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Open filters" }));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole("button", { name: "Reset" }).at(-1));
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     });
   });
 });

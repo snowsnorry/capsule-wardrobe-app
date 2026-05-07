@@ -77,6 +77,28 @@ function StatisticsStatsHarness() {
       >
         delete category chip
       </button>
+      <button
+        type="button"
+        onClick={() => statistics.deleteActiveChip({
+          key: "price",
+          field: "price",
+          value: "10:150",
+          label: "$10-$150"
+        })}
+      >
+        delete price chip
+      </button>
+      <button
+        type="button"
+        onClick={() => statistics.updateDraftState((current) => ({
+          ...current,
+          priceEnabled: true,
+          priceMinDraft: 20,
+          priceMaxDraft: 80
+        }), { submit: true })}
+      >
+        enable price
+      </button>
     </div>
   );
 }
@@ -152,6 +174,45 @@ describe("useStatisticsStats", () => {
         category: [],
         color: []
       }));
+    });
+  });
+
+  test("handles price chips and failed stats refreshes", async () => {
+    const user = userEvent.setup();
+    render(<StatisticsStatsHarness />);
+    expect(await screen.findByText("120")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "enable price" }));
+    await waitFor(() => {
+      expect(searchApi.fetchSearchStats).toHaveBeenLastCalledWith(expect.objectContaining({
+        priceMin: 20,
+        priceMax: 80
+      }));
+    });
+
+    await user.click(screen.getByRole("button", { name: "delete price chip" }));
+    await waitFor(() => {
+      expect(searchApi.fetchSearchStats).toHaveBeenLastCalledWith(expect.objectContaining({
+        priceMin: null,
+        priceMax: null
+      }));
+    });
+
+    searchApi.fetchSearchStats.mockRejectedValueOnce(new Error("failed"));
+    await user.click(screen.getByRole("button", { name: "submit" }));
+
+    await waitFor(() => {
+      expect(searchApi.fetchSearchStats).toHaveBeenCalled();
+    });
+  });
+
+  test("surfaces bootstrap failures without updating inactive state", async () => {
+    searchApi.fetchSearchOptions.mockRejectedValueOnce(new Error("failed"));
+
+    render(<StatisticsStatsHarness />);
+
+    await waitFor(() => {
+      expect(searchApi.fetchSearchOptions).toHaveBeenCalledWith({ force: true });
     });
   });
 });

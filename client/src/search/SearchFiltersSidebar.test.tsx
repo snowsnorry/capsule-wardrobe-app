@@ -126,4 +126,104 @@ describe("SearchFiltersSidebar", () => {
     fireEvent.click(screen.getAllByRole("button", { name: "Reset" }).at(-1) as HTMLElement);
     expect(onReset).toHaveBeenCalledTimes(1);
   });
+
+  test("updates price controls, default chips, and manual apply state", () => {
+    const onDraftStateChange = vi.fn();
+    const onApply = vi.fn();
+    renderSidebar({
+      onDraftStateChange,
+      onApply,
+      autoApply: false,
+      showApplyButton: true,
+      status: { loading: false, error: "Filter error" }
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "UNIQLO" }));
+    expect(onDraftStateChange).toHaveBeenLastCalledWith(expect.any(Function), { submit: false });
+    let nextState = onDraftStateChange.mock.calls.at(-1)[0](createSearchState(null, options.priceRange));
+    expect(nextState.brand).toEqual(["uniqlo"]);
+
+    fireEvent.click(screen.getAllByRole("button", { name: "All" })[0]);
+    nextState = onDraftStateChange.mock.calls.at(-1)[0]({ ...createSearchState(null, options.priceRange), brand: ["uniqlo"] });
+    expect(nextState.brand).toEqual([]);
+
+    const minInput = screen.getByLabelText("Min");
+    fireEvent.change(minInput, { target: { value: "200" } });
+    expect(onDraftStateChange).toHaveBeenLastCalledWith(expect.any(Function), { submit: false });
+    fireEvent.keyDown(minInput, { key: "Enter" });
+    nextState = onDraftStateChange.mock.calls.at(-1)[0]({
+      ...createSearchState(null, options.priceRange),
+      priceMinDraft: 200,
+      priceMaxDraft: 150
+    });
+    expect(nextState.priceMinDraft).toBe(150);
+    expect(nextState.priceMaxDraft).toBe(150);
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Reset" })[0]);
+    nextState = onDraftStateChange.mock.calls.at(-1)[0](createSearchState(null, options.priceRange));
+    expect(nextState).toMatchObject({ priceEnabled: true, priceMinDraft: 10, priceMaxDraft: 150, page: 1 });
+
+    fireEvent.click(screen.getByRole("button", { name: "Apply" }));
+    expect(onApply).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("Filter error")).toBeInTheDocument();
+  });
+
+  test("updates all lower filter sections and max price blur", () => {
+    const onDraftStateChange = vi.fn();
+    renderSidebar({
+      onDraftStateChange,
+      draftState: createSearchState({
+        audience: ["woman"],
+        season: ["summer"],
+        formalityLevel: ["casual"],
+        style: ["boho"],
+        occasions: ["office"],
+        color: ["blue"],
+        pattern: ["solid"],
+        silhouette: ["straight"],
+        fit: ["regular"],
+        closureType: ["button"],
+        priceMin: 10,
+        priceMax: 150
+      }, options.priceRange)
+    });
+
+    const assertToggle = (
+      buttonName: string,
+      stateOverride: Record<string, unknown>,
+      field: string,
+      expected: string[]
+    ) => {
+      fireEvent.click(screen.getByRole("button", { name: buttonName }));
+      const nextState = onDraftStateChange.mock.calls.at(-1)[0]({
+        ...createSearchState(null, options.priceRange),
+        ...stateOverride
+      });
+      expect(nextState[field]).toEqual(expected);
+      expect(nextState.page).toBe(1);
+    };
+
+    assertToggle("Woman", { audience: ["woman"] }, "audience", []);
+    assertToggle("Spring", { season: [] }, "season", ["spring"]);
+    assertToggle("Casual", { formalityLevel: ["casual"] }, "formalityLevel", []);
+    assertToggle("Boho", { style: ["boho"] }, "style", []);
+    assertToggle("Office", { occasions: ["office"] }, "occasions", []);
+    assertToggle("blue", { color: ["blue"] }, "color", []);
+    assertToggle("Solid", { pattern: ["solid"] }, "pattern", []);
+    assertToggle("Straight", { silhouette: ["straight"] }, "silhouette", []);
+    assertToggle("Regular", { fit: ["regular"] }, "fit", []);
+    assertToggle("Button", { closureType: ["button"] }, "closureType", []);
+
+    const maxInput = screen.getByLabelText("Max");
+    fireEvent.change(maxInput, { target: { value: "1" } });
+    expect(onDraftStateChange).toHaveBeenLastCalledWith(expect.any(Function), { submit: false });
+    fireEvent.blur(maxInput);
+    const nextState = onDraftStateChange.mock.calls.at(-1)[0]({
+      ...createSearchState(null, options.priceRange),
+      priceMinDraft: 10,
+      priceMaxDraft: 1
+    });
+    expect(nextState.priceMinDraft).toBe(10);
+    expect(nextState.priceMaxDraft).toBe(10);
+  });
 });

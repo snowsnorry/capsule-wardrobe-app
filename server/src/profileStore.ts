@@ -147,16 +147,6 @@ async function getSeasons(_email: string): Promise<ProfileSeason[]> {
   return [...PROFILE_SEASON_OPTIONS];
 }
 
-async function getPatternOptions(_email: string): Promise<string[]> {
-  try {
-    const values = await getDistinctProductPatterns();
-    return buildPatternOptions(values);
-  } catch (error) {
-    logError("[profile/patterns]", error);
-    return buildPatternOptions([]);
-  }
-}
-
 function getAudienceOptions(): readonly string[] {
   return audienceOptions;
 }
@@ -187,23 +177,49 @@ function normalizeProfileRecord(profile: ProfileRecord | null): NormalizedProfil
   };
 }
 
+type ProfileStoreDeps = {
+  getProfileByEmailImpl?: (email: string) => Promise<ProfileRecord | null>;
+  hasProfileByEmailImpl?: (email: string) => Promise<boolean>;
+  createProfileRecordImpl?: (payload: { email: string; locale: string }) => Promise<ProfileRecord | null>;
+  updateProfileByEmailImpl?: (payload: ProfilePayload & { email: string }) => Promise<ProfileRecord | null>;
+  updateProfileLocaleByEmailImpl?: (payload: { email: string; locale: string }) => Promise<ProfileRecord | null>;
+  deleteProfileByEmailImpl?: (email: string) => Promise<boolean>;
+  updateProfileActiveCapsuleIdByEmailImpl?: (payload: {
+    email: string;
+    activeCapsuleId: string | null;
+  }) => Promise<ProfileRecord | null>;
+  getDistinctProductPatternsImpl?: () => Promise<unknown[]>;
+  logErrorImpl?: typeof logError;
+};
+
+function createProfileStore({
+  getProfileByEmailImpl = getProfileByEmail,
+  hasProfileByEmailImpl = hasProfileByEmail,
+  createProfileRecordImpl = createProfileRecord,
+  updateProfileByEmailImpl = updateProfileByEmail,
+  updateProfileLocaleByEmailImpl = updateProfileLocaleByEmail,
+  deleteProfileByEmailImpl = deleteProfileByEmail,
+  updateProfileActiveCapsuleIdByEmailImpl = updateProfileActiveCapsuleIdByEmail,
+  getDistinctProductPatternsImpl = getDistinctProductPatterns,
+  logErrorImpl = logError
+}: ProfileStoreDeps = {}) {
 async function getProfile(email: string): Promise<NormalizedProfileRecord | null> {
-  return normalizeProfileRecord(await getProfileByEmail(email));
+  return normalizeProfileRecord(await getProfileByEmailImpl(email));
 }
 
 async function hasProfile(email: string): Promise<boolean> {
-  return hasProfileByEmail(email);
+  return hasProfileByEmailImpl(email);
 }
 
 async function createProfile(email: string, data: ProfilePayload): Promise<NormalizedProfileRecord | null> {
-  return normalizeProfileRecord(await createProfileRecord({
+  return normalizeProfileRecord(await createProfileRecordImpl({
     email,
     locale: data.locale || "en"
   }));
 }
 
 async function updateProfile(email: string, data: ProfilePayload): Promise<NormalizedProfileRecord | null> {
-  return normalizeProfileRecord(await updateProfileByEmail({
+  return normalizeProfileRecord(await updateProfileByEmailImpl({
     email,
     locale: data.locale || "en",
     fullname: normalizeProfileFullname(data.fullname),
@@ -235,19 +251,53 @@ function normalizeProfileImageLlm(value: unknown): ProfileImageLlm {
 }
 
 async function updateProfileLocale(email: string, locale: string): Promise<NormalizedProfileRecord | null> {
-  return normalizeProfileRecord(await updateProfileLocaleByEmail({ email, locale }));
+  return normalizeProfileRecord(await updateProfileLocaleByEmailImpl({ email, locale }));
 }
 
 async function deleteProfile(email: string): Promise<boolean> {
-  return deleteProfileByEmail(email);
+  return deleteProfileByEmailImpl(email);
 }
 
 async function updateProfileActiveCapsuleId(
   email: string,
   activeCapsuleId: string | null
 ): Promise<NormalizedProfileRecord | null> {
-  return normalizeProfileRecord(await updateProfileActiveCapsuleIdByEmail({ email, activeCapsuleId }));
+  return normalizeProfileRecord(await updateProfileActiveCapsuleIdByEmailImpl({ email, activeCapsuleId }));
 }
+
+async function getPatternOptions(_email: string): Promise<string[]> {
+  try {
+    const values = await getDistinctProductPatternsImpl();
+    return buildPatternOptions(values);
+  } catch (error) {
+    logErrorImpl("[profile/patterns]", error);
+    return buildPatternOptions([]);
+  }
+}
+
+return {
+  getProfile,
+  hasProfile,
+  createProfile,
+  updateProfile,
+  updateProfileLocale,
+  deleteProfile,
+  updateProfileActiveCapsuleId,
+  getPatternOptions
+};
+}
+
+const defaultProfileStore = createProfileStore();
+const {
+  getProfile,
+  hasProfile,
+  createProfile,
+  updateProfile,
+  updateProfileLocale,
+  deleteProfile,
+  updateProfileActiveCapsuleId,
+  getPatternOptions
+} = defaultProfileStore;
 
 export {
   getProfile,
@@ -270,6 +320,7 @@ export {
   normalizeOccasion,
   normalizeOccasionList,
   normalizeAccentColor as normalizeColor,
+  createProfileStore,
   PROFILE_FORMALITY_LEVEL_OPTIONS,
   PROFILE_STYLE_OPTIONS,
   PROFILE_OCCASION_OPTIONS,

@@ -140,3 +140,177 @@ test("share routes create, read, import, and enforce auth boundaries", async (t)
     { type: "get", id: "expired-share" }
   ]);
 });
+
+test("capsule read routes expose bootstrap, recent, search, and lookup fallbacks", async (t) => {
+  const calls: unknown[] = [];
+  const { baseUrl } = await startTestServer(t, {
+    overrides: {
+      listRecentCapsulesImpl: async (_email, limit) => {
+        calls.push({ type: "recent", limit });
+        return [{ id: "capsule-1", name: "Spring edit", status: "saved" }];
+      },
+      searchCapsulesImpl: async (_email, query, limit) => {
+        calls.push({ type: "search", query, limit });
+        return [{ id: "capsule-2", name: "Office edit", status: "saved" }];
+      },
+      setActiveCapsuleIdImpl: async (_email, capsuleId) => {
+        calls.push({ type: "set-active", capsuleId });
+        return { activeCapsuleId: capsuleId };
+      }
+    }
+  });
+
+  const bootstrap = await requestJson(baseUrl, "/capsules/bootstrap", {
+    cookie: AUTH_COOKIE
+  });
+  assert.equal(bootstrap.response.status, 200);
+  assert.equal(bootstrap.json.ok, true);
+  assert.equal((bootstrap.json.activeCapsule as { id?: string }).id, "capsule-1");
+
+  const recent = await requestJson(baseUrl, "/capsules/recent", {
+    cookie: AUTH_COOKIE
+  });
+  assert.equal(recent.response.status, 200);
+  assert.equal(recent.json.capsules[0].id, "capsule-1");
+
+  const emptySearch = await requestJson(baseUrl, "/capsules/search", {
+    cookie: AUTH_COOKIE
+  });
+  assert.equal(emptySearch.response.status, 200);
+  assert.equal(emptySearch.json.capsules[0].id, "capsule-1");
+
+  const querySearch = await requestJson(baseUrl, "/capsules/search?q=office", {
+    cookie: AUTH_COOKIE
+  });
+  assert.equal(querySearch.response.status, 200);
+  assert.equal(querySearch.json.capsules[0].id, "capsule-2");
+
+  const capsule = await requestJson(baseUrl, "/capsules/capsule-1", {
+    cookie: AUTH_COOKIE
+  });
+  assert.equal(capsule.response.status, 200);
+  assert.equal((capsule.json.capsule as { id?: string }).id, "capsule-1");
+
+  assert.deepEqual(calls, [
+    { type: "recent", limit: 10 },
+    { type: "recent", limit: 10 },
+    { type: "recent", limit: 25 },
+    { type: "search", query: "office", limit: 25 },
+    { type: "set-active", capsuleId: "capsule-1" }
+  ]);
+});
+
+test("capsule read and share routes map missing records and service failures", async (t) => {
+  t.mock.method(console, "error", () => {});
+
+  const failingBootstrapServer = await startTestServer(t, {
+    overrides: {
+      resolveActiveCapsuleImpl: async () => {
+        throw new Error("capsule_store_down");
+      }
+    }
+  });
+  const bootstrapFailure = await requestJson(failingBootstrapServer.baseUrl, "/capsules/bootstrap", {
+    cookie: AUTH_COOKIE
+  });
+  assert.equal(bootstrapFailure.response.status, 503);
+  assert.deepEqual(bootstrapFailure.json, { error: "service_unavailable" });
+
+  const failingRecentServer = await startTestServer(t, {
+    overrides: {
+      listRecentCapsulesImpl: async () => {
+        throw new Error("capsule_store_down");
+      }
+    }
+  });
+  const recentFailure = await requestJson(failingRecentServer.baseUrl, "/capsules/recent", {
+    cookie: AUTH_COOKIE
+  });
+  assert.equal(recentFailure.response.status, 503);
+  assert.deepEqual(recentFailure.json, { error: "service_unavailable" });
+
+  const failingSearchServer = await startTestServer(t, {
+    overrides: {
+      searchCapsulesImpl: async () => {
+        throw new Error("capsule_search_down");
+      }
+    }
+  });
+  const searchFailure = await requestJson(failingSearchServer.baseUrl, "/capsules/search?q=office", {
+    cookie: AUTH_COOKIE
+  });
+  assert.equal(searchFailure.response.status, 503);
+  assert.deepEqual(searchFailure.json, { error: "service_unavailable" });
+
+  const missingCapsuleServer = await startTestServer(t, {
+    overrides: {
+      getCapsuleImpl: async () => null
+    }
+  });
+  const missingCapsule = await requestJson(missingCapsuleServer.baseUrl, "/capsules/missing", {
+    cookie: AUTH_COOKIE
+  });
+  assert.equal(missingCapsule.response.status, 404);
+  assert.deepEqual(missingCapsule.json, { error: "not_found" });
+
+  const unavailableShareServer = await startTestServer(t, {
+    overrides: {
+      createCapsuleShareImpl: async () => null,
+      getSharedCapsuleImpl: async () => {
+        throw new Error("share_store_down");
+      },
+      importSharedCapsuleImpl: async () => null
+    }
+  });
+  const missingShare = await requestJson(unavailableShareServer.baseUrl, "/capsules/capsule-1/share", {
+    method: "POST",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN
+  });
+  assert.equal(missingShare.response.status, 404);
+  assert.deepEqual(missingShare.json, { error: "not_found" });
+
+  const sharedFailure = await requestJson(unavailableShareServer.baseUrl, "/shared-capsules/share-1");
+  assert.equal(sharedFailure.response.status, 503);
+  assert.deepEqual(sharedFailure.json, { error: "service_unavailable" });
+
+  const missingImport = await requestJson(unavailableShareServer.baseUrl, "/shared-capsules/share-1/import", {
+    method: "POST",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN
+  });
+  assert.equal(missingImport.response.status, 404);
+  assert.deepEqual(missingImport.json, { error: "shared_capsule_unavailable" });
+
+  const notShareableServer = await startTestServer(t, {
+    overrides: {
+      createCapsuleShareImpl: async () => {
+        const error = new Error("capsule_not_shareable");
+        throw error;
+      },
+      importSharedCapsuleImpl: async () => {
+        const error = new Error("capsule_not_shareable");
+        throw error;
+      }
+    }
+  });
+  const notShareable = await requestJson(notShareableServer.baseUrl, "/capsules/capsule-1/share", {
+    method: "POST",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN
+  });
+  assert.equal(notShareable.response.status, 400);
+  assert.deepEqual(notShareable.json, { error: "capsule_not_shareable" });
+
+  const notImportable = await requestJson(notShareableServer.baseUrl, "/shared-capsules/share-1/import", {
+    method: "POST",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN
+  });
+  assert.equal(notImportable.response.status, 400);
+  assert.deepEqual(notImportable.json, { error: "capsule_not_shareable" });
+});

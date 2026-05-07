@@ -14,13 +14,29 @@ import { enforceCategoryCounts, getSelectedIdsFromCapsule, getShortCapsuleName }
 import { getWardrobeSelectionPrompt, toWardrobeUiItem } from "./aiSelectionPrompt.js";
 import { logInfo, logWarn } from "../logger.js";
 
-async function getNormalizedWardrobeItems(userProfile, promptEmbeddings, capsuleCategories, logContext) {
-  const sqlParams = buildCapsuleWardrobeSqlParams(userProfile, promptEmbeddings, capsuleCategories);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function createCapsuleGenerationDeps(deps: Record<string, any> = {}) {
+  return {
+    buildCapsuleWardrobeSqlParamsImpl: deps.buildCapsuleWardrobeSqlParamsImpl || buildCapsuleWardrobeSqlParams,
+    buildPromptDebugImagesInChildImpl: deps.buildPromptDebugImagesInChildImpl || buildPromptDebugImagesInChild,
+    getGenerateJsonWithLlmImpl: deps.getGenerateJsonWithLlmImpl || getGenerateJsonWithLlm,
+    getPromptEmbeddingsImpl: deps.getPromptEmbeddingsImpl || getPromptEmbeddings,
+    getWardrobePromptImpl: deps.getWardrobePromptImpl || getWardrobePrompt,
+    isNoLlmProfileEnabledImpl: deps.isNoLlmProfileEnabledImpl || isNoLlmProfileEnabled,
+    queryCapsuleWardrobeItemsForProfileImpl: deps.queryCapsuleWardrobeItemsForProfileImpl || queryCapsuleWardrobeItemsForProfile,
+    resolveLlmProviderImpl: deps.resolveLlmProviderImpl || resolveLlmProvider,
+    runWithImageWorkSlotImpl: deps.runWithImageWorkSlotImpl || runWithImageWorkSlot,
+    getSqlClientImpl: deps.getSqlClientImpl || getSqlClient
+  };
+}
+
+async function getNormalizedWardrobeItems(userProfile, promptEmbeddings, capsuleCategories, logContext, deps) {
+  const sqlParams = deps.buildCapsuleWardrobeSqlParamsImpl(userProfile, promptEmbeddings, capsuleCategories);
   const sqlStartedAt = Date.now();
-  const itemsResult = await queryCapsuleWardrobeItemsForProfile(getSqlClient(), sqlParams);
+  const itemsResult = await deps.queryCapsuleWardrobeItemsForProfileImpl(deps.getSqlClientImpl(), sqlParams);
   const items = getSqlRows(itemsResult);
   const normalizedItems = items.map((item) => {
-    const normalized = { ...item };
+    const normalized = { ...(item as Record<string, unknown>) };
     delete normalized.embedding;
     return normalized;
   });
@@ -61,12 +77,12 @@ function buildNoLlmCapsuleResult({ normalizedItems, capsuleCategories, userProfi
   };
 }
 
-async function getPromptDebugImages(normalizedItems, logContext): Promise<PromptDebugImageResult> {
+async function getPromptDebugImages(normalizedItems, logContext, deps): Promise<PromptDebugImageResult> {
   const shouldSavePromptDebugArtifacts = process.env.NODE_ENV === "development";
 
   try {
     const imageFetchStartedAt = Date.now();
-    const promptDebugImages = await runWithImageWorkSlot("capsule-images", async () => buildPromptDebugImagesInChild({
+    const promptDebugImages = await deps.runWithImageWorkSlotImpl("capsule-images", async () => deps.buildPromptDebugImagesInChildImpl({
       normalizedItems,
       saveDebugArtifacts: shouldSavePromptDebugArtifacts,
       debugOutputDir: shouldSavePromptDebugArtifacts
@@ -99,11 +115,11 @@ async function getPromptDebugImages(normalizedItems, logContext): Promise<Prompt
   }
 }
 
-async function generateSelection({ userProfile, normalizedItems, capsuleCategories, promptDebugImages, llmResolution, logContext }) {
+async function generateSelection({ userProfile, normalizedItems, capsuleCategories, promptDebugImages, llmResolution, logContext, deps }) {
   const selectionPrompt = getWardrobeSelectionPrompt(userProfile, normalizedItems, capsuleCategories);
   saveLastPromptArtifacts(selectionPrompt, userProfile);
   const llmStartedAt = Date.now();
-  const generateJsonWithLlm = getGenerateJsonWithLlm(userProfile);
+  const generateJsonWithLlm = deps.getGenerateJsonWithLlmImpl(userProfile);
   const stylistImages = promptDebugImages.stitched
     ? [promptDebugImages.stitched]
     : promptDebugImages.categories;
@@ -157,48 +173,55 @@ function getRawSelectionText(selectionResponse) {
     : null;
 }
 
-export async function generateCapsuleWardrobe(userProfile = null, logContext = null) {
-  const llmResolution = resolveLlmProvider(userProfile);
-  const prompt = getWardrobePrompt(userProfile);
-  const promptEmbeddings = await getPromptEmbeddings(prompt);
-  const capsuleCategories = getCapsuleCategories(userProfile);
-  const normalizedItems = await getNormalizedWardrobeItems(userProfile, promptEmbeddings, capsuleCategories, logContext);
-  const noLlm = isNoLlmProfileEnabled(userProfile);
+export function createGenerateCapsuleWardrobe(deps = {}) {
+  const resolvedDeps = createCapsuleGenerationDeps(deps);
 
-  if (noLlm) {
-    return buildNoLlmCapsuleResult({ normalizedItems, capsuleCategories, userProfile, promptEmbeddings, llmResolution, logContext });
-  }
+  return async function generateCapsuleWardrobe(userProfile = null, logContext = null) {
+    const llmResolution = resolvedDeps.resolveLlmProviderImpl(userProfile);
+    const prompt = resolvedDeps.getWardrobePromptImpl(userProfile);
+    const promptEmbeddings = await resolvedDeps.getPromptEmbeddingsImpl(prompt);
+    const capsuleCategories = getCapsuleCategories(userProfile);
+    const normalizedItems = await getNormalizedWardrobeItems(userProfile, promptEmbeddings, capsuleCategories, logContext, resolvedDeps);
+    const noLlm = resolvedDeps.isNoLlmProfileEnabledImpl(userProfile);
 
-  const promptDebugImages = await getPromptDebugImages(normalizedItems, logContext);
-  const { selectionResponse, parsedSelection } = await generateSelection({
-    userProfile,
-    normalizedItems,
-    capsuleCategories,
-    promptDebugImages,
-    llmResolution,
-    logContext
-  });
-  logInfo("[wardrobe-ai][selected-json]", JSON.stringify(parsedSelection));
-  logEmptySelectionResponse(parsedSelection, selectionResponse);
+    if (noLlm) {
+      return buildNoLlmCapsuleResult({ normalizedItems, capsuleCategories, userProfile, promptEmbeddings, llmResolution, logContext });
+    }
 
-  const selectedIds = getSelectedIdsFromCapsule(parsedSelection?.capsule);
-  const uniqueSelectedIds = [...new Set(selectedIds.map((id) => String(id)))];
-  const itemsById = new Map(normalizedItems.map((item) => [String(item.id), item]));
-  const selectedItems = uniqueSelectedIds
-    .map((id) => itemsById.get(String(id)))
-    .filter(Boolean);
-  const balancedItems = enforceCategoryCounts(selectedItems, normalizedItems, capsuleCategories, userProfile);
+    const promptDebugImages = await getPromptDebugImages(normalizedItems, logContext, resolvedDeps);
+    const { selectionResponse, parsedSelection } = await generateSelection({
+      userProfile,
+      normalizedItems,
+      capsuleCategories,
+      promptDebugImages,
+      llmResolution,
+      logContext,
+      deps: resolvedDeps
+    });
+    logInfo("[wardrobe-ai][selected-json]", JSON.stringify(parsedSelection));
+    logEmptySelectionResponse(parsedSelection, selectionResponse);
 
-  if (balancedItems.length === 0) {
-    throw new Error("Model returned no valid selected_ids");
-  }
+    const selectedIds = getSelectedIdsFromCapsule(parsedSelection?.capsule);
+    const uniqueSelectedIds = [...new Set(selectedIds.map((id) => String(id)))];
+    const itemsById = new Map(normalizedItems.map((item) => [String(item.id), item]));
+    const selectedItems = uniqueSelectedIds
+      .map((id) => itemsById.get(String(id)))
+      .filter(Boolean);
+    const balancedItems = enforceCategoryCounts(selectedItems, normalizedItems, capsuleCategories, userProfile);
 
-  return {
-    items: balancedItems.map(toWardrobeUiItem),
-    selectedItems: balancedItems,
-    outfitSets: buildOutfitSetsFromFormulas(getOutfitFormulas(parsedSelection), balancedItems),
-    promptEmbeddings,
-    shortCapsuleName: getShortCapsuleName(parsedSelection?.system_evaluation?.short_capsule_name),
-    rawSelectionText: getRawSelectionText(selectionResponse)
+    if (balancedItems.length === 0) {
+      throw new Error("Model returned no valid selected_ids");
+    }
+
+    return {
+      items: balancedItems.map(toWardrobeUiItem),
+      selectedItems: balancedItems,
+      outfitSets: buildOutfitSetsFromFormulas(getOutfitFormulas(parsedSelection), balancedItems),
+      promptEmbeddings,
+      shortCapsuleName: getShortCapsuleName(parsedSelection?.system_evaluation?.short_capsule_name),
+      rawSelectionText: getRawSelectionText(selectionResponse)
+    };
   };
 }
+
+export const generateCapsuleWardrobe = createGenerateCapsuleWardrobe();
