@@ -1,18 +1,36 @@
-import type { AppActionContext } from "./actionContext";
-
-type PresentationModelInput = {
-  actions: AppActionContext;
-  handlers: Record<string, unknown>;
-  layout: AppActionContext;
-  notifications: AppActionContext;
-  options: AppActionContext;
-  session: AppActionContext;
-  share: AppActionContext;
-  theme: unknown;
-  view: AppActionContext;
+type PresentationModelInput<
+  Actions extends object,
+  Handlers extends object,
+  Layout extends object,
+  Notifications extends object,
+  Options extends object,
+  Session extends object,
+  Share extends object,
+  View extends object,
+  Theme,
+> = {
+  actions: Actions;
+  handlers: Handlers;
+  layout: Layout;
+  notifications: Notifications;
+  options: Options;
+  session: Session;
+  share: Share;
+  theme: Theme;
+  view: View;
 };
 
-export function buildAppPresentationModel({
+export function buildAppPresentationModel<
+  Actions extends object,
+  Handlers extends object,
+  Layout extends object,
+  Notifications extends object,
+  Options extends object,
+  Session extends object,
+  Share extends object,
+  View extends object,
+  Theme,
+>({
   actions,
   handlers,
   layout,
@@ -22,7 +40,17 @@ export function buildAppPresentationModel({
   share,
   theme,
   view,
-}: PresentationModelInput) {
+}: PresentationModelInput<
+  Actions,
+  Handlers,
+  Layout,
+  Notifications,
+  Options,
+  Session,
+  Share,
+  View,
+  Theme
+>) {
   return {
     ...actions,
     ...handlers,

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import type { ComponentProps } from "react";
 
@@ -225,5 +226,31 @@ describe("ProfileFiltersSidebar", () => {
     expect(
       solid.compareDocumentPosition(argyle) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
+  });
+
+  test("omits optional section hints and sign-out action when they are not provided", () => {
+    renderSidebar({
+      selectedOccasions: [],
+      onSignOut: undefined,
+    });
+
+    expect(screen.getByText("Occasions")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Sign out" }),
+    ).not.toBeInTheDocument();
+  });
+
+  test("disables and calls the profile sign-out action", async () => {
+    const user = userEvent.setup();
+    const onSignOut = vi.fn();
+
+    renderSidebar({ onSignOut, isSigningOut: true });
+    expect(screen.getByRole("button", { name: "Sign out" })).toBeDisabled();
+
+    cleanup();
+    renderSidebar({ onSignOut, isSigningOut: false });
+    await user.click(screen.getByRole("button", { name: "Sign out" }));
+
+    expect(onSignOut).toHaveBeenCalledTimes(1);
   });
 });

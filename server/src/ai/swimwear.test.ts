@@ -43,6 +43,35 @@ test("getSwimwearPrompt renders YAML user message and keeps JSON unescaped", () 
   expect(prompt).not.toMatch(/&amp;|&lt;|&gt;|\{\{/);
 });
 
+test("getSwimwearPrompt uses meaningful defaults for incomplete items", () => {
+  const prompt = getSwimwearPrompt(
+    [
+      {
+        category: "bottom",
+        color_base: [],
+      },
+    ],
+    [
+      {
+        id: null,
+        name: null,
+        swimwear_type: null,
+        pattern: "   ",
+        style: "sporty" as never,
+        color_base: [],
+      },
+    ],
+  );
+
+  expect(prompt).toContain("Unnamed item");
+  expect(prompt).toContain("ID: unknown");
+  expect(prompt).toContain('"id": null');
+  expect(prompt).toContain('"name": ""');
+  expect(prompt).toContain('"swimwear_type": "swimsuit"');
+  expect(prompt).toContain('"pattern": "solid"');
+  expect(prompt).toContain('"style": []');
+});
+
 test("getSwimwearSystemPrompt returns the YAML system message", () => {
   expect(getSwimwearSystemPrompt()).toMatch(/expert AI fashion stylist/);
 });

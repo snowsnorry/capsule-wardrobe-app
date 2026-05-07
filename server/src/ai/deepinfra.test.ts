@@ -1,4 +1,4 @@
-import { test, expect } from "vitest";
+import { test, expect, vi } from "vitest";
 import {
   ALLOWED_CHAT_MODELS,
   buildChatMessages,
@@ -99,6 +99,38 @@ test("buildChatMessages emits multimodal user content and preserves images", () 
     type: "text",
     text: "Describe capsule",
   });
+});
+
+test("buildChatMessages trims empty prompts and skips unusable image assets", () => {
+  const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+  try {
+    expect(buildChatMessages("   ")).toEqual([{ type: "text", text: "" }]);
+
+    const content = buildChatMessages("Describe remaining images", [
+      {
+        category: "top",
+        filename: "missing.jpg",
+        buffer: null,
+      },
+      {
+        buffer: Buffer.from("image-two"),
+      },
+    ]);
+
+    assertDeepInfraImagePart(content[0]);
+    expect(content[0].image_url.url).toMatch(/^data:image\/png;base64,/);
+    expect(content[1]).toEqual({
+      type: "text",
+      text: "Describe remaining images",
+    });
+    expect(warn).toHaveBeenCalledWith(
+      "[deepinfra][image-skipped]",
+      expect.stringContaining('"filename":"missing.jpg"'),
+    );
+  } finally {
+    warn.mockRestore();
+  }
 });
 
 test("estimateJsonByteLength returns a utf8 byte count for json payloads", () => {

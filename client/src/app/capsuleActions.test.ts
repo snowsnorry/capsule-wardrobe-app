@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi, type Mock } from "vitest";
 import {
   applyCapsuleFilters,
   createNewCapsule,
@@ -9,6 +9,7 @@ import {
   renameCurrentCapsule,
   resetProfileFilters,
   revertCurrentCapsule,
+  refreshCapsuleList,
   saveCurrentCapsule,
   searchUserCapsules,
   shareCurrentCapsule,
@@ -200,6 +201,15 @@ describe("capsuleActions", () => {
     expect(searchCapsules).toHaveBeenCalledWith("spring");
   });
 
+  test("refreshCapsuleList falls back to an empty list when the response omits capsules", async () => {
+    vi.mocked(fetchRecentCapsules).mockResolvedValueOnce({});
+    const context = createActionContext();
+
+    await refreshCapsuleList(context);
+
+    expect(context.setCapsuleList).toHaveBeenCalledWith([]);
+  });
+
   test("resetProfileFilters restores the active capsule or reports errors", async () => {
     vi.mocked(fetchCapsule).mockResolvedValueOnce({
       capsule: createTestCapsule({ id: "capsule-1" }),
@@ -249,6 +259,53 @@ describe("capsuleActions", () => {
       infoKey: "",
       infoParams: null,
     });
+  });
+
+  test("current capsule mutations skip inactive capsule state updates", async () => {
+    vi.mocked(saveCapsule).mockResolvedValue({
+      capsule: createTestCapsule({ id: "capsule-2", status: "saved" }),
+    });
+    vi.mocked(revertCapsule).mockResolvedValue({
+      capsule: createTestCapsule({ id: "capsule-2", status: "saved" }),
+    });
+    vi.mocked(renameCapsule).mockResolvedValue({
+      capsule: createTestCapsule({ id: "capsule-2", name: "Other" }),
+    });
+    vi.mocked(deleteCapsule).mockResolvedValue({});
+    const context = createActionContext({ activeCapsuleId: "capsule-1" });
+
+    await saveCurrentCapsule(context, "capsule-2");
+    await revertCurrentCapsule(context, "capsule-2");
+    await renameCurrentCapsule(context, "Other", "capsule-2");
+    await deleteCurrentCapsule(context, "capsule-2");
+
+    expect(context.setActiveCapsuleMeta).not.toHaveBeenCalled();
+    expect(context.applyCapsuleState).not.toHaveBeenCalledWith(
+      expect.objectContaining({ id: "capsule-2" }),
+    );
+  });
+
+  test("applyCapsuleFilters preserves local draft when API omits the capsule", async () => {
+    vi.mocked(updateCapsuleFilters).mockResolvedValueOnce({});
+    const draft = createTestDraft({ text: "Keep linen options" });
+    const current = createTestCapsule({ name: "Current draft" });
+    const context = createActionContext({
+      buildCurrentDraftSnapshot: vi.fn(() => draft),
+    });
+
+    await applyCapsuleFilters(context);
+
+    const updater = (context.setActiveCapsuleMeta as Mock).mock.calls[0][0] as (
+      capsule: ReturnType<typeof createTestCapsule>,
+    ) => ReturnType<typeof createTestCapsule>;
+    expect(updater(current)).toEqual({
+      ...current,
+      draft: {
+        filters: draft.filters,
+        data: { wardrobe: null, rejectedUrls: [] },
+      },
+    });
+    expect(updater(null)).toBeNull();
   });
 
   test("shareCurrentCapsule returns an empty object for missing ids and mapped errors", async () => {

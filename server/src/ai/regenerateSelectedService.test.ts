@@ -1,4 +1,4 @@
-import { test, expect } from "vitest";
+import { test, expect, vi } from "vitest";
 import { createPartialRegenerationService } from "./regenerateSelectedService.js";
 import {
   buildCapsuleSnapshot,
@@ -737,6 +737,113 @@ test("startPartialRegenerationJob preserves unchanged set images without marking
       imageObsolete: false,
     },
   ]);
+});
+
+test("startPartialRegenerationJob trims pending urls, uses generated request ids, and cleans completed jobs", async () => {
+  const jobs = new Map();
+  const timeouts = [];
+  const service = createPartialRegenerationService({
+    updateCapsuleSnapshotImpl: async (_email, capsuleId, draft) =>
+      buildNormalizedCapsuleRecord({ id: capsuleId, draft, saved: null }),
+    regenerateCapsuleWardrobeImpl: async () =>
+      buildWardrobeGenerationResult({
+        items: [
+          buildWardrobeUiItem({
+            id: "top-2",
+            url: "https://example.com/top-2",
+            category: "top",
+          }),
+        ],
+      }),
+    jobs,
+    randomUuidImpl: () => "generated-regen-id",
+    setTimeoutImpl: ((callback) => {
+      timeouts.push(callback);
+      return { unref: vi.fn() };
+    }) as never,
+  });
+
+  const job = service.startPartialRegenerationJob(
+    "person@example.com",
+    "capsule-1",
+    createProfile(),
+    createCapsule(),
+    [
+      { id: "top-1", url: " https://example.com/top-1 ", category: "top" },
+      { id: "missing-url", url: "   ", category: "top" },
+      { id: "null-url", url: null, category: "top" },
+    ],
+    getStoredProfilePayload(),
+  );
+
+  expect(job.capsuleRequestId).toBe("generated-regen-id");
+  expect(job.pendingItemUrls).toEqual(["https://example.com/top-1"]);
+  await job.promise;
+  expect(jobs.has("person@example.com::capsule-1")).toBe(true);
+
+  timeouts[0]();
+
+  expect(jobs.has("person@example.com::capsule-1")).toBe(false);
+});
+
+test("startPartialRegenerationJob updates an unsaved capsule draft without a capsule id", async () => {
+  const updateCapsuleSnapshotImpl = vi.fn();
+  const publishSnapshotImpl = vi.fn();
+  const buildCapsuleEventSnapshotImpl = vi.fn((snapshot) => snapshot);
+  const service = createPartialRegenerationService({
+    updateCapsuleSnapshotImpl,
+    publishSnapshotImpl,
+    buildCapsuleEventSnapshotImpl,
+    regenerateCapsuleWardrobeImpl: async () =>
+      buildWardrobeGenerationResult({
+        items: [
+          buildWardrobeUiItem({
+            id: "top-2",
+            url: "https://example.com/top-2",
+            category: "top",
+          }),
+        ],
+      }),
+    jobs: new Map(),
+  });
+  const capsule = createCapsule();
+
+  const job = service.startPartialRegenerationJob(
+    "person@example.com",
+    "",
+    createProfile(),
+    capsule,
+    [{ id: "top-1", url: "https://example.com/top-1", category: "top" }],
+    getStoredProfilePayload(),
+  );
+  await job.promise;
+
+  expect(updateCapsuleSnapshotImpl).not.toHaveBeenCalled();
+  expect(job.status).toBe("completed");
+  expect(buildCapsuleEventSnapshotImpl).toHaveBeenCalledWith({
+    capsule: expect.objectContaining({
+      draft: expect.objectContaining({
+        data: expect.objectContaining({
+          wardrobe: expect.objectContaining({
+            items: [expect.objectContaining({ id: "top-2" })],
+          }),
+        }),
+      }),
+    }),
+    partialRegenerationJob: job,
+  });
+  expect(publishSnapshotImpl).toHaveBeenCalledWith("person@example.com", "", {
+    capsule: expect.objectContaining({
+      draft: expect.objectContaining({
+        data: expect.objectContaining({
+          wardrobe: expect.objectContaining({
+            items: [expect.objectContaining({ id: "top-2" })],
+          }),
+        }),
+      }),
+    }),
+    partialRegenerationJob: job,
+  });
 });
 
 function getStoredProfilePayload() {

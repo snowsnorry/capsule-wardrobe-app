@@ -341,6 +341,138 @@ describe("MainScreen", () => {
     ).toBeInTheDocument();
   });
 
+  test("marks pending outfit images and regenerating cards while content is busy", async () => {
+    const user = userEvent.setup();
+    renderMainScreen({
+      isContentBusy: true,
+      items: [
+        {
+          id: "a",
+          url: "https://example.com/a",
+          name: "Shirt",
+          category: "top",
+        },
+        {
+          id: "b",
+          url: "https://example.com/b",
+          name: "Trousers",
+          category: "bottom",
+        },
+        {
+          id: "c",
+          url: "https://example.com/c",
+          name: "Bag",
+          category: "bag",
+        },
+      ],
+      outfitSets: [
+        { itemIds: ["a", "b", "c"], image: "data:image/png;base64,old" },
+      ],
+    });
+
+    expect(screen.getByRole("progressbar")).toBeInTheDocument();
+    expect(
+      screen.getByTestId("clothing-card-https://example.com/a"),
+    ).toHaveAttribute("data-regenerating", "true");
+
+    cleanup();
+    resetMainScreenTestMocks();
+    renderMainScreen({
+      pendingImageSetIndexes: [0],
+      items: [
+        {
+          id: "a",
+          url: "https://example.com/a",
+          name: "Shirt",
+          category: "top",
+        },
+        {
+          id: "b",
+          url: "https://example.com/b",
+          name: "Trousers",
+          category: "bottom",
+        },
+        {
+          id: "c",
+          url: "https://example.com/c",
+          name: "Bag",
+          category: "bag",
+        },
+      ],
+      outfitSets: [
+        { itemIds: ["a", "b", "c"], image: "data:image/png;base64,old" },
+      ],
+    });
+
+    await user.click(screen.getByRole("tab", { name: "Outfit 1" }));
+    expect(
+      screen.getByTestId("outfit-set-image-placeholder"),
+    ).toBeInTheDocument();
+  });
+
+  test("opens outfit image dialog, confirms image deletion, and closes sidebar row menus", async () => {
+    const user = userEvent.setup();
+    const onDeleteOutfitSetImage = vi.fn(() => Promise.resolve());
+    const onDeleteCapsule = vi.fn(() => Promise.resolve());
+    const registerCapsuleSidebarActions = vi.fn();
+    renderMainScreen({
+      onDeleteOutfitSetImage,
+      onDeleteCapsule,
+      registerCapsuleSidebarActions,
+      items: [
+        {
+          id: "a",
+          url: "https://example.com/a",
+          name: "Shirt",
+          category: "top",
+        },
+        {
+          id: "b",
+          url: "https://example.com/b",
+          name: "Trousers",
+          category: "bottom",
+        },
+        {
+          id: "c",
+          url: "https://example.com/c",
+          name: "Bag",
+          category: "bag",
+        },
+      ],
+      outfitSets: [
+        { itemIds: ["a", "b", "c"], image: "data:image/png;base64,set" },
+      ],
+    });
+
+    await user.click(screen.getByRole("tab", { name: "Outfit 1" }));
+    await user.click(screen.getByTestId("outfit-set-image"));
+    expect(screen.getByTestId("outfit-set-image-dialog")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Close" }));
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("outfit-set-image-dialog"),
+      ).not.toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole("button", { name: "Delete image" }));
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+    expect(onDeleteOutfitSetImage).toHaveBeenCalledWith(0);
+
+    const actions = registerCapsuleSidebarActions.mock.calls.at(-1)?.[0];
+    const anchor = document.createElement("button");
+    document.body.appendChild(anchor);
+    act(() => {
+      actions.openCapsuleActions(
+        { currentTarget: anchor } as unknown as MouseEvent<HTMLElement>,
+        { id: "capsule-2", name: "Travel edit", status: "saved" },
+      );
+    });
+    await user.click(await screen.findByRole("menuitem", { name: "Delete" }));
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+
+    expect(onDeleteCapsule).toHaveBeenCalledWith("capsule-2");
+  });
+
   test("submits desktop inline rename with normalized values", async () => {
     const user = userEvent.setup();
     const onRenameCapsule = vi.fn(() => Promise.resolve());

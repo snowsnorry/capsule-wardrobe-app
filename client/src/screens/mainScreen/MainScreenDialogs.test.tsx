@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { ComponentProps } from "react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { cleanup, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
   createMainScreenProps,
@@ -429,5 +429,40 @@ describe("MainScreenDialogs", () => {
         screen.queryByTestId("outfit-set-image-dialog"),
       ).not.toBeInTheDocument();
     });
+  });
+
+  test("keeps disabled media dialogs open and handles missing image sources", async () => {
+    renderDialogs({
+      initialFiltersOpen: true,
+      initialImageDialogOpen: true,
+      interactionDisabled: true,
+      activeImageSrc: "",
+      activeSetLabel: undefined,
+    });
+
+    expect(screen.getByTestId("profile-filters-sidebar")).toBeInTheDocument();
+    expect(screen.getByTestId("outfit-set-image-dialog")).toBeInTheDocument();
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
+
+    const closeButtons = screen.getAllByRole("button", { name: "Close" });
+    expect(closeButtons.at(-1)).toBeDisabled();
+
+    expect(screen.getByTestId("outfit-set-image-dialog")).toBeInTheDocument();
+  });
+
+  test("respects disabled state when dialogs receive backdrop or escape close events", async () => {
+    renderDialogs({
+      initialFiltersOpen: true,
+      initialImageDialogOpen: true,
+      interactionDisabled: true,
+      activeImageSrc: "data:image/png;base64,abc123",
+    });
+
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    expect(screen.getByTestId("profile-filters-sidebar")).toBeInTheDocument();
+    expect(screen.getByTestId("outfit-set-image-dialog")).toBeInTheDocument();
+
+    expect(screen.getByRole("button", { name: "Close" })).toBeDisabled();
   });
 });

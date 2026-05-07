@@ -256,4 +256,35 @@ describe("useStatisticsStats", () => {
       });
     });
   });
+
+  test("does not request stats when options resolve after unmount", async () => {
+    let resolveOptions: (value: ReturnType<typeof makeOptions>) => void;
+    searchApi.fetchSearchOptions.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveOptions = resolve;
+      }),
+    );
+
+    const view = render(<StatisticsStatsHarness />);
+    view.unmount();
+    resolveOptions!(makeOptions());
+
+    await waitFor(() => {
+      expect(searchApi.fetchSearchOptions).toHaveBeenCalledWith({
+        force: true,
+      });
+    });
+    expect(searchApi.fetchSearchStats).not.toHaveBeenCalled();
+  });
+
+  test("surfaces stats bootstrap failures after options load", async () => {
+    searchApi.fetchSearchStats.mockRejectedValueOnce(new Error("failed"));
+
+    render(<StatisticsStatsHarness />);
+
+    await waitFor(() => {
+      expect(searchApi.fetchSearchStats).toHaveBeenCalled();
+    });
+    expect(screen.getByTestId("total")).toHaveTextContent("0");
+  });
 });

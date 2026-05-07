@@ -7,7 +7,28 @@ import {
   resolveSourceImageUrl,
   resolveStorageImagesDir,
 } from "./promptImagesShared.js";
+import { createCategoryOverlaySvg } from "./promptImageCategoryOverlay.js";
 import { createItems } from "../test/promptImageFixtures.js";
+import type { PromptImageDownloadResult } from "./types.js";
+
+function createDownloadResult(
+  overrides: Partial<PromptImageDownloadResult> = {},
+): PromptImageDownloadResult {
+  return {
+    id: "item-1",
+    category: "top",
+    source: "download",
+    imageUrl: "https://example.com/item-1.jpg",
+    originalImageUrl: "https://example.com/item-1.jpg",
+    status: "downloaded",
+    reason: null,
+    mimeType: "image/jpeg",
+    buffer: Buffer.from("image"),
+    width: 100,
+    height: 100,
+    ...overrides,
+  };
+}
 
 test("groupPromptImageItemsByCategory preserves order and caps each category at 10 items", () => {
   const groups = groupPromptImageItemsByCategory([
@@ -62,4 +83,23 @@ test("resolveStorageImagesDir points dist builds at the repository storage cache
   );
 
   expect(resolveStorageImagesDir(distModuleUrl)).toBe(expectedStorageDir);
+});
+
+test("createCategoryOverlaySvg escapes category and item labels and skips blank ids", () => {
+  const svg = createCategoryOverlaySvg("tops & <shirts>", [
+    {
+      item: { id: "item-1 & <tag>" },
+      result: createDownloadResult({ id: "item-1 & <tag>" }),
+      slotIndex: 0,
+    },
+    {
+      item: { id: "" },
+      result: createDownloadResult({ id: "" }),
+      slotIndex: 1,
+    },
+  ]).toString("utf8");
+
+  expect(svg).toContain("Category: tops &amp; &lt;shirts&gt;");
+  expect(svg).toContain("item-1 &amp; &lt;tag&gt;");
+  expect(svg).not.toContain("slotIndex");
 });
