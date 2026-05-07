@@ -12,17 +12,25 @@ type OllamaGenerateResponseLike = {
 };
 
 function createOllamaClient({
-  embeddingsImpl = (payload: { model: string; prompt: string }) => ollama.embeddings(payload),
+  embeddingsImpl = (payload: { model: string; prompt: string }) =>
+    ollama.embeddings(payload),
   generateImpl = (payload: { model: string; prompt: string; format: "json" }) =>
-    ollama.generate(payload) as Promise<OllamaGenerateResponseLike>
+    ollama.generate(payload) as Promise<OllamaGenerateResponseLike>,
 }: {
-  embeddingsImpl?: (payload: { model: string; prompt: string }) => Promise<OllamaEmbeddingResponseLike>;
-  generateImpl?: (payload: { model: string; prompt: string; format: "json" }) => Promise<OllamaGenerateResponseLike>;
+  embeddingsImpl?: (payload: {
+    model: string;
+    prompt: string;
+  }) => Promise<OllamaEmbeddingResponseLike>;
+  generateImpl?: (payload: {
+    model: string;
+    prompt: string;
+    format: "json";
+  }) => Promise<OllamaGenerateResponseLike>;
 } = {}) {
   async function getPromptEmbeddings(prompt: string) {
     const response = await embeddingsImpl({
       model: DEFAULT_OLLAMA_EMBEDDING_MODEL,
-      prompt
+      prompt,
     });
     const embedding = response?.embedding;
     if (!Array.isArray(embedding) || embedding.length === 0) {
@@ -35,14 +43,16 @@ function createOllamaClient({
     const response = await generateImpl({
       model: DEFAULT_OLLAMA_CHAT_MODEL,
       prompt,
-      format: "json"
+      format: "json",
     });
 
     let json;
     try {
       json = JSON.parse(response?.response || "{}");
     } catch {
-      throw new Error(`Failed to parse JSON response from ${DEFAULT_OLLAMA_CHAT_MODEL}`);
+      throw new Error(
+        `Failed to parse JSON response from ${DEFAULT_OLLAMA_CHAT_MODEL}`,
+      );
     }
 
     return { response, json };
@@ -59,5 +69,5 @@ export {
   DEFAULT_OLLAMA_CHAT_MODEL,
   DEFAULT_OLLAMA_EMBEDDING_MODEL,
   getPromptEmbeddings,
-  generateJsonWithLlm
+  generateJsonWithLlm,
 };

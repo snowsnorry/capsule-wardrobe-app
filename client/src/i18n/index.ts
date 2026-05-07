@@ -4,5 +4,5 @@ export {
   defaultLocale,
   supportedLocales,
   normalizeLocale,
-  isSupportedLocale
+  isSupportedLocale,
 } from "../../../shared/i18n/helpers.js";

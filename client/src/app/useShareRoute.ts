@@ -8,7 +8,9 @@ type UseShareRouteOptions = {
   isMountedRef: { current: boolean };
   pendingShareId: string;
   profileCreated: boolean;
-  resolveErrorMessage: (error: { message?: string } | null | undefined) => string;
+  resolveErrorMessage: (
+    error: { message?: string } | null | undefined,
+  ) => string;
   sessionInitialized: boolean;
   setStatus: (status: StatusState) => void;
   user: UserLike | null;
@@ -19,12 +21,14 @@ function canLoadShareMetadata(options: UseShareRouteOptions) {
     options.sessionInitialized &&
     options.pendingShareId &&
     options.user &&
-    (options.hasProfile || options.profileCreated)
+    (options.hasProfile || options.profileCreated),
   );
 }
 
 export function useShareRoute(options: UseShareRouteOptions) {
-  const [shareMetadata, setShareMetadata] = useState<ShareMetadata | null>(null);
+  const [shareMetadata, setShareMetadata] = useState<ShareMetadata | null>(
+    null,
+  );
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
   const [isShareLoading, setIsShareLoading] = useState(false);
 
@@ -53,7 +57,12 @@ export function useShareRoute(options: UseShareRouteOptions) {
         if (!isActive || !options.isMountedRef.current) {
           return;
         }
-        options.setStatus({ loading: false, error: options.resolveErrorMessage(error), infoKey: "", infoParams: null });
+        options.setStatus({
+          loading: false,
+          error: options.resolveErrorMessage(error),
+          infoKey: "",
+          infoParams: null,
+        });
         clearShareRoute();
       })
       .finally(() => {
@@ -72,6 +81,6 @@ export function useShareRoute(options: UseShareRouteOptions) {
     isShareDialogOpen,
     isShareLoading,
     setIsShareLoading,
-    shareMetadata
+    shareMetadata,
   };
 }

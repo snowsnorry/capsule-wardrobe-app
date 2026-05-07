@@ -1,12 +1,29 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { cleanup, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { renderWithTheme, resetMainScreenTestMocks } from "./MainScreen.testUtils";
+import {
+  renderWithTheme,
+  resetMainScreenTestMocks,
+} from "./MainScreen.testUtils";
 import MainScreenTabs from "./MainScreenTabs";
 
 const sets = [
-  { id: "set-1", index: 0, label: 1, items: [], image: null, imageObsolete: false },
-  { id: "set-2", index: 1, label: 2, items: [], image: null, imageObsolete: false }
+  {
+    id: "set-1",
+    index: 0,
+    label: 1,
+    items: [],
+    image: null,
+    imageObsolete: false,
+  },
+  {
+    id: "set-2",
+    index: 1,
+    label: 2,
+    items: [],
+    image: null,
+    imageObsolete: false,
+  },
 ];
 
 describe("MainScreenTabs", () => {
@@ -30,7 +47,7 @@ describe("MainScreenTabs", () => {
         sets={sets}
         summary={["2 items", "2 outfits"]}
         onChange={onChange}
-      />
+      />,
     );
 
     expect(screen.getByText("2 items")).toBeInTheDocument();
@@ -52,7 +69,7 @@ describe("MainScreenTabs", () => {
         sets={sets}
         summary={["2 items"]}
         onChange={onChange}
-      />
+      />,
     );
 
     expect(screen.queryByText("2 items")).not.toBeInTheDocument();
@@ -71,7 +88,7 @@ describe("MainScreenTabs", () => {
         sets={[]}
         summary={[]}
         onChange={vi.fn()}
-      />
+      />,
     );
 
     expect(container).toBeEmptyDOMElement();

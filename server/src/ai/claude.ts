@@ -2,7 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import {
   buildJsonObjectFormat,
   buildSystemPrompt,
-  splitSystemAndUserPrompt
+  splitSystemAndUserPrompt,
 } from "./llmPrompts.js";
 import { releaseImageBuffers } from "./openai.js";
 import { logWarn } from "../logger.js";
@@ -12,18 +12,29 @@ import type {
   JsonSchemaFormat,
   LlmGenerateOptions,
   ParsedGenerationError,
-  UserProfileLike
+  UserProfileLike,
 } from "./types.js";
 
 const DEFAULT_CHAT_MODEL = "claude-opus-4-7";
 const ALLOWED_CHAT_MODELS = ["claude-opus-4-7"];
 
 type ClaudeResponseLike = {
-  content?: Array<{ type?: string; text?: string | null; [key: string]: unknown }>;
+  content?: Array<{
+    type?: string;
+    text?: string | null;
+    [key: string]: unknown;
+  }>;
 };
 
 type ClaudeMessageContent =
-  | { type: "image"; source: { type: "base64"; media_type: "image/png" | "image/jpeg" | "image/gif" | "image/webp"; data: string } }
+  | {
+      type: "image";
+      source: {
+        type: "base64";
+        media_type: "image/png" | "image/jpeg" | "image/gif" | "image/webp";
+        data: string;
+      };
+    }
   | { type: "text"; text: string };
 
 type ClaudeMessagesCreatePayload = {
@@ -45,7 +56,9 @@ type ClaudeMessagesCreatePayload = {
 type ClaudeClientLike = {
   apiKey?: string;
   messages: {
-    create: (payload: ClaudeMessagesCreatePayload) => Promise<ClaudeResponseLike>;
+    create: (
+      payload: ClaudeMessagesCreatePayload,
+    ) => Promise<ClaudeResponseLike>;
   };
 };
 
@@ -64,10 +77,11 @@ function resolveChatModel(userProfile: UserProfileLike | null = null) {
 function buildClaudeSystemPrompt(
   system = "",
   userProfile: UserProfileLike | null = null,
-  systemPromptOverride: string | null = null
+  systemPromptOverride: string | null = null,
 ) {
   const systemText = String(system || "").trim();
-  const generatedSystemText = systemPromptOverride || buildSystemPrompt(userProfile);
+  const generatedSystemText =
+    systemPromptOverride || buildSystemPrompt(userProfile);
 
   return [systemText, generatedSystemText]
     .filter((part) => typeof part === "string" && part.trim().length > 0)
@@ -90,25 +104,29 @@ function buildClaudeMessages(user: string, images: ImageAssetLike[] = []) {
   if (userText) {
     content.push({
       type: "text",
-      text: userText
+      text: userText,
     });
   }
 
-  return [{
-    role: "user",
-    content: content.length > 0 ? content : [{ type: "text", text: "" }]
-  }];
+  return [
+    {
+      role: "user",
+      content: content.length > 0 ? content : [{ type: "text", text: "" }],
+    },
+  ];
 }
 
-function buildClaudeImageContent(image: ImageAssetLike | null | undefined): ClaudeMessageContent | null {
+function buildClaudeImageContent(
+  image: ImageAssetLike | null | undefined,
+): ClaudeMessageContent | null {
   if (!Buffer.isBuffer(image?.buffer) || image.buffer.length === 0) {
     logWarn(
       "[claude][image-skipped]",
       JSON.stringify({
         category: image?.category ?? null,
         filename: image?.filename ?? null,
-        reason: "missing_buffer"
-      })
+        reason: "missing_buffer",
+      }),
     );
     return null;
   }
@@ -118,19 +136,27 @@ function buildClaudeImageContent(image: ImageAssetLike | null | undefined): Clau
     source: {
       type: "base64",
       media_type: getClaudeImageMimeType(image),
-      data: image.buffer.toString("base64")
-    }
+      data: image.buffer.toString("base64"),
+    },
   };
 }
 
-function getClaudeImageMimeType(image: ImageAssetLike): "image/png" | "image/jpeg" | "image/gif" | "image/webp" {
+function getClaudeImageMimeType(
+  image: ImageAssetLike,
+): "image/png" | "image/jpeg" | "image/gif" | "image/webp" {
   return typeof image?.mimeType === "string" && image.mimeType.trim().length > 0
     ? normalizeClaudeImageMimeType(image.mimeType)
     : "image/jpeg";
 }
 
-function normalizeClaudeImageMimeType(mimeType: string): "image/png" | "image/jpeg" | "image/gif" | "image/webp" {
-  switch (String(mimeType || "").trim().toLowerCase()) {
+function normalizeClaudeImageMimeType(
+  mimeType: string,
+): "image/png" | "image/jpeg" | "image/gif" | "image/webp" {
+  switch (
+    String(mimeType || "")
+      .trim()
+      .toLowerCase()
+  ) {
     case "image/png":
       return "image/png";
     case "image/gif":
@@ -144,7 +170,9 @@ function normalizeClaudeImageMimeType(mimeType: string): "image/png" | "image/jp
   }
 }
 
-function sanitizeClaudeJsonSchema(schema: JsonSchema | JsonSchema[] | unknown): JsonSchema | JsonSchema[] | unknown {
+function sanitizeClaudeJsonSchema(
+  schema: JsonSchema | JsonSchema[] | unknown,
+): JsonSchema | JsonSchema[] | unknown {
   if (Array.isArray(schema)) {
     return schema.map((item) => sanitizeClaudeJsonSchema(item));
   }
@@ -171,7 +199,10 @@ function sanitizeClaudeJsonSchema(schema: JsonSchema | JsonSchema[] | unknown): 
   return normalized;
 }
 
-function buildClaudeOutputConfig(format: JsonSchemaFormat | null = null, userProfile: UserProfileLike | null = null) {
+function buildClaudeOutputConfig(
+  format: JsonSchemaFormat | null = null,
+  userProfile: UserProfileLike | null = null,
+) {
   const resolvedFormat = format || buildJsonObjectFormat(userProfile);
   const schema = resolvedFormat?.schema;
 
@@ -182,20 +213,28 @@ function buildClaudeOutputConfig(format: JsonSchemaFormat | null = null, userPro
   return {
     format: {
       type: "json_schema",
-      schema: sanitizeClaudeJsonSchema(schema)
-    }
+      schema: sanitizeClaudeJsonSchema(schema),
+    },
   };
 }
 
 function extractClaudeResponseText(
-  response: { content?: Array<{ type?: string; text?: string | null; [key: string]: unknown }> } | null = null
+  response: {
+    content?: Array<{
+      type?: string;
+      text?: string | null;
+      [key: string]: unknown;
+    }>;
+  } | null = null,
 ) {
   if (!Array.isArray(response?.content)) {
     return "";
   }
 
   return response.content
-    .map((part) => (part?.type === "text" && typeof part.text === "string" ? part.text : ""))
+    .map((part) =>
+      part?.type === "text" && typeof part.text === "string" ? part.text : "",
+    )
     .join("")
     .trim();
 }
@@ -210,10 +249,11 @@ function parseClaudeJsonResponse(response: ClaudeResponseLike) {
     return JSON.parse(content);
   } catch (error) {
     const parseError = new Error(
-      `Failed to parse JSON response: ${error instanceof Error ? error.message : String(error)}\nResponse content: ${content}`
+      `Failed to parse JSON response: ${error instanceof Error ? error.message : String(error)}\nResponse content: ${content}`,
     ) as ParsedGenerationError;
     const rawSelectionText = extractClaudeResponseText(response);
-    parseError.rawSelectionText = rawSelectionText.length > 0 ? rawSelectionText : null;
+    parseError.rawSelectionText =
+      rawSelectionText.length > 0 ? rawSelectionText : null;
     throw parseError;
   }
 }
@@ -225,13 +265,14 @@ function createClaudeClient({
       apiKey,
       messages: {
         create: (payload) =>
-          sdkClient.messages.create(payload as Parameters<typeof sdkClient.messages.create>[0])
-            .then((response) => response as ClaudeResponseLike)
-      }
+          sdkClient.messages
+            .create(payload as Parameters<typeof sdkClient.messages.create>[0])
+            .then((response) => response as ClaudeResponseLike),
+      },
     };
   },
   getApiKeyImpl = () => process.env.ANTHROPIC_API_KEY,
-  cache = true
+  cache = true,
 }: {
   createClientImpl?: ({ apiKey }: { apiKey: string }) => ClaudeClientLike;
   getApiKeyImpl?: () => string | undefined;
@@ -257,17 +298,24 @@ function createClaudeClient({
     return client;
   }
 
-  async function generateJsonWithLlm(prompt: string, options: LlmGenerateOptions = {}) {
+  async function generateJsonWithLlm(
+    prompt: string,
+    options: LlmGenerateOptions = {},
+  ) {
     const {
       userProfile = null,
       format = null,
       images = [],
       systemPrompt: systemPromptOverride = null,
-      onPayloadBuilt = null
+      onPayloadBuilt = null,
     } = options;
     const client = getClaudeClient();
     const { system, user } = splitSystemAndUserPrompt(prompt);
-    const systemPrompt = buildClaudeSystemPrompt(system, userProfile, systemPromptOverride);
+    const systemPrompt = buildClaudeSystemPrompt(
+      system,
+      userProfile,
+      systemPromptOverride,
+    );
     const messages = buildClaudeMessages(user, images);
     const outputConfig = buildClaudeOutputConfig(format, userProfile);
     releaseImageBuffers(images);
@@ -278,7 +326,7 @@ function createClaudeClient({
       system: systemPrompt || undefined,
       messages,
       output_config: outputConfig,
-      max_tokens: 8000
+      max_tokens: 8000,
     });
 
     const json = parseClaudeJsonResponse(response);
@@ -286,15 +334,15 @@ function createClaudeClient({
     return {
       response: {
         ...response,
-        output_text: extractClaudeResponseText(response)
+        output_text: extractClaudeResponseText(response),
       },
-      json
+      json,
     };
   }
 
   return {
     generateJsonWithLlm,
-    getClaudeClient
+    getClaudeClient,
   };
 }
 
@@ -311,5 +359,5 @@ export {
   generateJsonWithLlm,
   getClaudeClient,
   sanitizeClaudeJsonSchema,
-  resolveChatModel
+  resolveChatModel,
 };

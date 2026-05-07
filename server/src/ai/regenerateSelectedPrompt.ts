@@ -1,6 +1,14 @@
 import { mkdirSync, writeFileSync } from "node:fs";
-import { buildCapsuleSchema, buildCustomJsonObjectFormat, buildSystemPrompt } from "./llm.js";
-import { getPromptTemplateContent, loadPromptTemplate, renderPromptTemplateContent } from "./promptTemplates.js";
+import {
+  buildCapsuleSchema,
+  buildCustomJsonObjectFormat,
+  buildSystemPrompt,
+} from "./llm.js";
+import {
+  getPromptTemplateContent,
+  loadPromptTemplate,
+  renderPromptTemplateContent,
+} from "./promptTemplates.js";
 import { mergeWardrobeItemsWithMetadata } from "../../../shared/wardrobeMerge.js";
 import type {
   CountByKey,
@@ -9,15 +17,24 @@ import type {
   StoredWardrobePayloadLike,
   UserProfileLike,
   WardrobeGenerationResult,
-  WardrobeUiItemLike
+  WardrobeUiItemLike,
 } from "./types.js";
 
 const REGENERATE_SELECTED_PROMPT_TEMPLATE = loadPromptTemplate(
-  new URL("../templates/prompt_regenerate_selected.yaml", import.meta.url)
+  new URL("../templates/prompt_regenerate_selected.yaml", import.meta.url),
 );
-const REGENERATE_SELECTED_USER_PROMPT_TEMPLATE = getPromptTemplateContent(REGENERATE_SELECTED_PROMPT_TEMPLATE, "user");
-const REGENERATE_SELECTED_SYSTEM_PROMPT_TEMPLATE = getPromptTemplateContent(REGENERATE_SELECTED_PROMPT_TEMPLATE, "system");
-export const LAST_PROMPT_DIR_URL = new URL("../../../last-prompt/", import.meta.url);
+const REGENERATE_SELECTED_USER_PROMPT_TEMPLATE = getPromptTemplateContent(
+  REGENERATE_SELECTED_PROMPT_TEMPLATE,
+  "user",
+);
+const REGENERATE_SELECTED_SYSTEM_PROMPT_TEMPLATE = getPromptTemplateContent(
+  REGENERATE_SELECTED_PROMPT_TEMPLATE,
+  "system",
+);
+export const LAST_PROMPT_DIR_URL = new URL(
+  "../../../last-prompt/",
+  import.meta.url,
+);
 
 export type SqlWardrobeRow = WardrobeUiItemLike & {
   embedding?: unknown;
@@ -27,22 +44,28 @@ export function getSqlRows<TRow>(result: TRow[] | { count: number }): TRow[] {
   return Array.isArray(result) ? result : [];
 }
 
-export function isValidSelectedItemUrls(itemUrls: unknown): itemUrls is string[] {
-  return Array.isArray(itemUrls) && itemUrls.length > 0 && itemUrls.every((itemUrl) => (
-    typeof itemUrl === "string" && itemUrl.trim().length > 0
-  ));
+export function isValidSelectedItemUrls(
+  itemUrls: unknown,
+): itemUrls is string[] {
+  return (
+    Array.isArray(itemUrls) &&
+    itemUrls.length > 0 &&
+    itemUrls.every(
+      (itemUrl) => typeof itemUrl === "string" && itemUrl.trim().length > 0,
+    )
+  );
 }
 
 export function buildStoredWardrobePayloadFromResult(
   result: Partial<WardrobeGenerationResult> = {},
-  storedWardrobe: StoredWardrobePayloadLike | null = null
+  storedWardrobe: StoredWardrobePayloadLike | null = null,
 ): StoredWardrobePayloadLike {
   return {
     items: Array.isArray(result?.items) ? result.items : [],
     outfitSets: normalizeGeneratedOutfitSets(result?.outfitSets),
     rawSelectionText: result?.rawSelectionText || null,
     swimwearReasoning: storedWardrobe?.swimwearReasoning || null,
-    swimwearRawSelectionText: storedWardrobe?.swimwearRawSelectionText || null
+    swimwearRawSelectionText: storedWardrobe?.swimwearRawSelectionText || null,
   };
 }
 
@@ -58,8 +81,11 @@ function normalizeGeneratedOutfitSet(outfitSet) {
     itemIds: Array.isArray(generatedOutfitSet?.itemIds)
       ? generatedOutfitSet.itemIds.map((itemId) => String(itemId))
       : [],
-    image: typeof generatedOutfitSet?.image === "string" ? generatedOutfitSet.image ?? null : null,
-    imageObsolete: Boolean(generatedOutfitSet?.imageObsolete)
+    image:
+      typeof generatedOutfitSet?.image === "string"
+        ? (generatedOutfitSet.image ?? null)
+        : null,
+    imageObsolete: Boolean(generatedOutfitSet?.imageObsolete),
   };
 }
 
@@ -67,12 +93,12 @@ export function remapOutfitSetsAfterPartialRegeneration({
   currentItems = [],
   nextItems = [],
   pendingUrls = [],
-  outfitSets = []
+  outfitSets = [],
 } = {}) {
   const { replacementMap } = mergeWardrobeItemsWithMetadata({
     currentItems,
     nextItems,
-    pendingUrls
+    pendingUrls,
   });
 
   return (Array.isArray(outfitSets) ? outfitSets : [])
@@ -95,12 +121,16 @@ export function remapOutfitSetsAfterPartialRegeneration({
 
       return {
         itemIds: nextItemIds,
-        image: typeof set?.image === "string" && set.image.trim().length > 0
-          ? set.image.trim()
-          : null,
-        imageObsolete: hasChanges && typeof set?.image === "string" && set.image.trim().length > 0
-          ? true
-          : Boolean(set?.imageObsolete)
+        image:
+          typeof set?.image === "string" && set.image.trim().length > 0
+            ? set.image.trim()
+            : null,
+        imageObsolete:
+          hasChanges &&
+          typeof set?.image === "string" &&
+          set.image.trim().length > 0
+            ? true
+            : Boolean(set?.imageObsolete),
       };
     })
     .filter((set) => Array.isArray(set?.itemIds) && set.itemIds.length > 0);
@@ -111,8 +141,9 @@ export function formatProfileValues(values: string[] | null | undefined) {
     return "Not specified";
   }
 
-  const formatted = values
-    .filter((value) => typeof value === "string" && value.trim().length > 0);
+  const formatted = values.filter(
+    (value) => typeof value === "string" && value.trim().length > 0,
+  );
   if (formatted.length === 0) {
     return "Not specified";
   }
@@ -136,7 +167,7 @@ function getPromptItemColors(item) {
     getPromptItemBaseColors(item),
     getTrimmedText(item?.pattern) || "",
     getTrimmedText(item?.finish) || "",
-    item?.is_neutral || item?.isNeutral ? "neutral" : ""
+    item?.is_neutral || item?.isNeutral ? "neutral" : "",
   ].filter(Boolean);
 }
 
@@ -176,7 +207,7 @@ function simplifyPromptItem(item) {
     style: Array.isArray(item?.style) ? item.style : [],
     materials: getPromptItemValue(item, "composition"),
     fit: getTrimmedText(item?.fit) || "",
-    silhouette: getTrimmedText(item?.silhouette) || ""
+    silhouette: getTrimmedText(item?.silhouette) || "",
   };
 }
 
@@ -194,17 +225,17 @@ export function buildRegeneratedItemsFormat(categories) {
           required: ["overall_explanation", "outfit_formulas"],
           properties: {
             overall_explanation: {
-              type: "string"
+              type: "string",
             },
             outfit_formulas: {
               type: "array",
               items: {
-                type: "string"
+                type: "string",
               },
               minItems: 3,
-              maxItems: 4
-            }
-          }
+              maxItems: 4,
+            },
+          },
         },
         item_details: {
           type: "array",
@@ -216,50 +247,57 @@ export function buildRegeneratedItemsFormat(categories) {
               id: { type: "string" },
               role: {
                 type: "string",
-                enum: ["anchor", "connector", "accent"]
+                enum: ["anchor", "connector", "accent"],
               },
               reason: { type: "string" },
               compatibility: { type: "string" },
-              warning: { type: "string" }
-            }
-          }
+              warning: { type: "string" },
+            },
+          },
         },
-        regenerated_items: buildCapsuleSchema(categories)
+        regenerated_items: buildCapsuleSchema(categories),
       },
-      required: ["system_evaluation", "item_details", "regenerated_items"]
-    }
+      required: ["system_evaluation", "item_details", "regenerated_items"],
+    },
   );
 }
 
 export function buildRegenerateSelectedSystemPrompt(
   userProfile: UserProfileLike | null = null,
-  categories: CountByKey | null = null
+  categories: CountByKey | null = null,
 ) {
   return buildSystemPrompt(userProfile, {
     categories,
-    template: REGENERATE_SELECTED_SYSTEM_PROMPT_TEMPLATE
+    template: REGENERATE_SELECTED_SYSTEM_PROMPT_TEMPLATE,
   });
 }
 
-export function buildLastPromptArtifact(prompt, userProfile = null, systemPrompt = "") {
+export function buildLastPromptArtifact(
+  prompt,
+  userProfile = null,
+  systemPrompt = "",
+) {
   if (typeof prompt !== "string") {
     return "";
   }
 
-  const resolvedSystemPrompt = typeof systemPrompt === "string" && systemPrompt.trim().length > 0
-    ? systemPrompt
-    : buildRegenerateSelectedSystemPrompt(userProfile);
+  const resolvedSystemPrompt =
+    typeof systemPrompt === "string" && systemPrompt.trim().length > 0
+      ? systemPrompt
+      : buildRegenerateSelectedSystemPrompt(userProfile);
   return [
     resolvedSystemPrompt ? `System:\n${resolvedSystemPrompt}` : "",
-    `User:\n${prompt}`
-  ].filter(Boolean).join("\n\n");
+    `User:\n${prompt}`,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
 }
 
 export function saveLastPromptArtifacts({
   prompt,
   currentCapsuleCollage,
   userProfile = null,
-  systemPrompt = ""
+  systemPrompt = "",
 }: {
   prompt?: string | null;
   currentCapsuleCollage?: PromptDebugImageCategory | null;
@@ -276,14 +314,14 @@ export function saveLastPromptArtifacts({
     writeFileSync(
       new URL("last_prompt.txt", LAST_PROMPT_DIR_URL),
       buildLastPromptArtifact(prompt, userProfile, systemPrompt),
-      "utf8"
+      "utf8",
     );
   }
 
   if (currentCapsuleCollage?.buffer) {
     writeFileSync(
       new URL("current-capsule.jpg", LAST_PROMPT_DIR_URL),
-      currentCapsuleCollage.buffer
+      currentCapsuleCollage.buffer,
     );
   }
 }
@@ -292,14 +330,19 @@ export function buildRegenerateSelectedPrompt(
   userProfile: UserProfileLike | null = null,
   candidateItems: WardrobeUiItemLike[] = [],
   currentCapsuleItems: WardrobeUiItemLike[] = [],
-  categories: CountByKey = {}
+  categories: CountByKey = {},
 ) {
-  const replacements = buildRegenerateSelectedReplacements(userProfile, candidateItems, currentCapsuleItems, categories);
+  const replacements = buildRegenerateSelectedReplacements(
+    userProfile,
+    candidateItems,
+    currentCapsuleItems,
+    categories,
+  );
 
   return renderPromptTemplateContent(
     REGENERATE_SELECTED_USER_PROMPT_TEMPLATE,
     replacements,
-    "regenerate prompt"
+    "regenerate prompt",
   );
 }
 
@@ -320,22 +363,36 @@ function buildRegenerateSelectedReplacements(
   userProfile: UserProfileLike | null,
   candidateItems: WardrobeUiItemLike[],
   currentCapsuleItems: WardrobeUiItemLike[],
-  categories: CountByKey
+  categories: CountByKey,
 ) {
   const additionalText = getTrimmedText(userProfile?.text);
 
   return {
     audience: userProfile?.audience || "any",
     occasions: formatProfileValues(userProfile?.occasions),
-    formality_level: formatPromptText(userProfile?.formalityLevel, "Not specified"),
+    formality_level: formatPromptText(
+      userProfile?.formalityLevel,
+      "Not specified",
+    ),
     style: formatPromptText(userProfile?.style, "Not specified"),
-    color: formatPromptText(userProfile?.color, "No accent color (keep the capsule fully neutral)"),
+    color: formatPromptText(
+      userProfile?.color,
+      "No accent color (keep the capsule fully neutral)",
+    ),
     pattern: formatPromptPattern(userProfile?.pattern),
-    additional_info_block: additionalText ? `Important Additional Information: ${additionalText}` : "",
-    current_capsule_items: JSON.stringify(simplifyPromptItems(currentCapsuleItems), null, 2),
+    additional_info_block: additionalText
+      ? `Important Additional Information: ${additionalText}`
+      : "",
+    current_capsule_items: JSON.stringify(
+      simplifyPromptItems(currentCapsuleItems),
+      null,
+      2,
+    ),
     category_list: getCategoryListText(categories),
     items: JSON.stringify(simplifyPromptItems(candidateItems), null, 2),
-    num_items: String(Object.values(categories).reduce((sum, count) => sum + Number(count), 0)),
-    categories_schema: JSON.stringify(buildCapsuleSchema(categories), null, 2)
+    num_items: String(
+      Object.values(categories).reduce((sum, count) => sum + Number(count), 0),
+    ),
+    categories_schema: JSON.stringify(buildCapsuleSchema(categories), null, 2),
   };
 }

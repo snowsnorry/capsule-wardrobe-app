@@ -2,15 +2,20 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 
 const requestApi = vi.hoisted(() => ({
   getCachedJson: vi.fn(),
-  requestJson: vi.fn()
+  requestJson: vi.fn(),
 }));
 
 vi.mock("./request", () => requestApi);
 vi.mock("./config", () => ({
-  API_BASE_URL: "https://api.example.test"
+  API_BASE_URL: "https://api.example.test",
 }));
 
-import { fetchSavedSearch, fetchSearchOptions, fetchSearchStats, runSearch } from "./search";
+import {
+  fetchSavedSearch,
+  fetchSearchOptions,
+  fetchSearchStats,
+  runSearch,
+} from "./search";
 
 describe("search api", () => {
   beforeEach(() => {
@@ -30,8 +35,8 @@ describe("search api", () => {
       {
         credentials: "include",
         ttlMs: 1000,
-        force: false
-      }
+        force: false,
+      },
     );
     expect(requestApi.getCachedJson).toHaveBeenNthCalledWith(
       2,
@@ -39,8 +44,8 @@ describe("search api", () => {
       {
         credentials: "include",
         ttlMs: 1000,
-        force: true
-      }
+        force: true,
+      },
     );
   });
 
@@ -54,8 +59,8 @@ describe("search api", () => {
       {
         credentials: "include",
         ttlMs: 1000,
-        force: false
-      }
+        force: false,
+      },
     );
     expect(requestApi.getCachedJson).toHaveBeenNthCalledWith(
       2,
@@ -63,8 +68,8 @@ describe("search api", () => {
       {
         credentials: "include",
         ttlMs: 1000,
-        force: true
-      }
+        force: true,
+      },
     );
   });
 
@@ -72,7 +77,7 @@ describe("search api", () => {
     const payload = {
       query: "linen shirt",
       brand: ["uniqlo"],
-      page: 2
+      page: 2,
     };
 
     await runSearch(payload);
@@ -83,8 +88,8 @@ describe("search api", () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify(payload)
-      }
+        body: JSON.stringify(payload),
+      },
     );
   });
 
@@ -92,19 +97,19 @@ describe("search api", () => {
     requestApi.requestJson.mockResolvedValue({
       items: [{ id: "product-1" }],
       total: 1,
-      savedSearch: { page: 1 }
+      savedSearch: { page: 1 },
     });
 
     await expect(runSearch({ query: "dress" })).resolves.toEqual({
       items: [{ id: "product-1" }],
       total: 1,
-      savedSearch: { page: 1 }
+      savedSearch: { page: 1 },
     });
   });
 
   test("fetchSearchStats posts serialized payload to the authenticated statistics endpoint", async () => {
     const payload = {
-      category: ["top"]
+      category: ["top"],
     };
 
     await fetchSearchStats(payload);
@@ -115,8 +120,8 @@ describe("search api", () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify(payload)
-      }
+        body: JSON.stringify(payload),
+      },
     );
   });
 });

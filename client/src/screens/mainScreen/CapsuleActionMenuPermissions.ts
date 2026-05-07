@@ -10,12 +10,14 @@ export type CapsuleMenuPermissions = {
 
 export function getCapsuleMenuPermissions(
   capsule: CapsuleLike | null | undefined,
-  allowUnknownShareContent: boolean
+  allowUnknownShareContent: boolean,
 ): CapsuleMenuPermissions {
   return {
     canRevert: capsule?.status === "modified",
     canSave: capsule?.status === "new" || capsule?.status === "modified",
     canDuplicate: Boolean(capsule?.saved),
-    canShare: capsuleCanRequestShare(capsule, { allowUnknownContent: allowUnknownShareContent })
+    canShare: capsuleCanRequestShare(capsule, {
+      allowUnknownContent: allowUnknownShareContent,
+    }),
   };
 }

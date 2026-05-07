@@ -2,17 +2,21 @@ import type { ReactNode } from "react";
 import { render } from "@testing-library/react";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import { vi } from "vitest";
-import type { MainScreenItem, MainScreenProps, MobileCardColumns } from "./MainScreenTypes";
+import type {
+  MainScreenItem,
+  MainScreenProps,
+  MobileCardColumns,
+} from "./MainScreenTypes";
 
 const mediaQueryMock = vi.hoisted(() => vi.fn());
 const useI18nMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@mui/material/useMediaQuery", () => ({
-  default: mediaQueryMock
+  default: mediaQueryMock,
 }));
 
 vi.mock("../../i18n/useI18n", () => ({
-  useI18n: useI18nMock
+  useI18n: useI18nMock,
 }));
 
 vi.mock("../../components/ProfileFiltersSidebar", () => ({
@@ -20,7 +24,7 @@ vi.mock("../../components/ProfileFiltersSidebar", () => ({
     onApply,
     onReset,
     onSignOut,
-    isInteractionDisabled
+    isInteractionDisabled,
   }: {
     onApply: () => void;
     onReset: () => void;
@@ -28,33 +32,41 @@ vi.mock("../../components/ProfileFiltersSidebar", () => ({
     isInteractionDisabled?: boolean;
   }) => (
     <div data-testid="profile-filters-sidebar">
-      <button type="button" onClick={onApply} disabled={isInteractionDisabled}>apply-filters</button>
-      <button type="button" onClick={onReset} disabled={isInteractionDisabled}>reset-filters</button>
+      <button type="button" onClick={onApply} disabled={isInteractionDisabled}>
+        apply-filters
+      </button>
+      <button type="button" onClick={onReset} disabled={isInteractionDisabled}>
+        reset-filters
+      </button>
       {typeof onSignOut === "function" ? (
-        <button type="button" onClick={onSignOut}>sign-out</button>
+        <button type="button" onClick={onSignOut}>
+          sign-out
+        </button>
       ) : null}
     </div>
-  )
+  ),
 }));
 
 vi.mock("../../components/ClothingGridPlaceholder", () => ({
   default: ({
     count,
     inline,
-    mobileColumns
+    mobileColumns,
   }: {
     count: number;
     inline?: boolean;
     mobileColumns?: MobileCardColumns;
   }) => (
     <div
-      data-testid={inline ? `inline-placeholder-${count}` : "loading-placeholder"}
+      data-testid={
+        inline ? `inline-placeholder-${count}` : "loading-placeholder"
+      }
       data-mobile-columns={String(mobileColumns ?? 2)}
     />
   ),
   ClothingPlaceholderCard: ({
     placeholderKey,
-    mobileColumns
+    mobileColumns,
   }: {
     placeholderKey: string;
     mobileColumns?: MobileCardColumns;
@@ -67,21 +79,21 @@ vi.mock("../../components/ClothingGridPlaceholder", () => ({
   buildClothingGridTemplateColumns: (mobileColumns: MobileCardColumns = 2) => ({
     xs: `repeat(${mobileColumns}, minmax(0, 1fr))`,
     sm: "repeat(2, minmax(0, 1fr))",
-    lg: "repeat(2, minmax(0, 1fr))"
+    lg: "repeat(2, minmax(0, 1fr))",
   }),
   buildClothingGridGap: (mobileColumns: MobileCardColumns = 2) => ({
     xs: mobileColumns === 1 ? 1.25 : 0,
-    sm: 2.5
+    sm: 2.5,
   }),
   clothingGridTemplateColumns: {
     xs: "repeat(2, minmax(0, 1fr))",
     sm: "repeat(2, minmax(0, 1fr))",
-    lg: "repeat(2, minmax(0, 1fr))"
+    lg: "repeat(2, minmax(0, 1fr))",
   },
   clothingGridGap: {
     xs: 1.25,
-    sm: 2.5
-  }
+    sm: 2.5,
+  },
 }));
 
 vi.mock("../../components/ClothingCard", () => ({
@@ -93,7 +105,7 @@ vi.mock("../../components/ClothingCard", () => ({
     isRegenerating,
     mobileColumns,
     onToggleSelected,
-    onProductMenuClick
+    onProductMenuClick,
   }: {
     item: MainScreenItem;
     isSelected?: boolean;
@@ -105,7 +117,7 @@ vi.mock("../../components/ClothingCard", () => ({
     onProductMenuClick?: (
       event: React.MouseEvent<HTMLButtonElement>,
       url: string,
-      item: MainScreenItem
+      item: MainScreenItem,
     ) => void;
   }) => (
     <div>
@@ -127,13 +139,15 @@ vi.mock("../../components/ClothingCard", () => ({
           type="button"
           data-testid={`product-menu-${item.url}`}
           data-selection-mode={String(isSelectionMode)}
-          onClick={(event) => onProductMenuClick?.(event, String(item.url || ""), item)}
+          onClick={(event) =>
+            onProductMenuClick?.(event, String(item.url || ""), item)
+          }
         >
           menu
         </button>
       ) : null}
     </div>
-  )
+  ),
 }));
 
 export const theme = createTheme();
@@ -147,7 +161,7 @@ export function t(key: string, params?: TranslationParams) {
       open: "Open filters",
       apply: "Apply",
       cancel: "Cancel",
-      title: "Filters"
+      title: "Filters",
     },
     actions: {
       signOut: "Sign out",
@@ -155,7 +169,7 @@ export function t(key: string, params?: TranslationParams) {
       ok: "OK",
       delete: "Delete",
       save: "Save",
-      close: "Close"
+      close: "Close",
     },
     capsule: {
       new: "New capsule",
@@ -178,16 +192,22 @@ export function t(key: string, params?: TranslationParams) {
       deleteTitle: "Delete capsule",
       deleteOutfitSetImageTitle: "Delete image",
       revertTitle: "Revert changes",
-      deleteConfirmBody: "Are you sure you want to delete this capsule? This action cannot be undone.",
+      deleteConfirmBody:
+        "Are you sure you want to delete this capsule? This action cannot be undone.",
       deleteOutfitSetImage: "Delete image",
-      deleteOutfitSetImageConfirmBody: "Are you sure you want to delete this image? This action cannot be undone.",
-      outfitSetImageObsolete: "This image may no longer match the current outfit. Remove it and generate a new one if needed.",
-      revertConfirmBody: "Discard the current unsaved changes and restore the last saved version of this capsule?",
+      deleteOutfitSetImageConfirmBody:
+        "Are you sure you want to delete this image? This action cannot be undone.",
+      outfitSetImageObsolete:
+        "This image may no longer match the current outfit. Remove it and generate a new one if needed.",
+      revertConfirmBody:
+        "Discard the current unsaved changes and restore the last saved version of this capsule?",
       regenerateAllTitle: "Regenerate capsule?",
-      regenerateAllConfirmBody: "This will replace the current items in this capsule. Continue?",
+      regenerateAllConfirmBody:
+        "This will replace the current items in this capsule. Continue?",
       regenerateAllConfirm: "Regenerate",
       regenerateWithFilterChangesTitle: "Apply updated filters?",
-      regenerateWithFilterChangesBody: "Your filter changes have not been applied yet. Apply them and generate a new capsule with the updated settings?",
+      regenerateWithFilterChangesBody:
+        "Your filter changes have not been applied yet. Apply them and generate a new capsule with the updated settings?",
       regenerateWithFilterChangesConfirm: "Apply and regenerate",
       deleteConfirm: "Delete",
       revertConfirm: "Revert",
@@ -207,25 +227,33 @@ export function t(key: string, params?: TranslationParams) {
       cardColumnsTwo: "2 columns",
       cardColumnsThree: "3 columns",
       copyProductLinkAddress: "Copy Link Address",
-      showProductInfo: "Show Product Info"
+      showProductInfo: "Show Product Info",
     },
     search: {
-      all: "All"
+      all: "All",
     },
     main: {
       cancelSelection: "Cancel",
       regenerateSelected: `Regenerate Selected (${String(params?.count ?? 0)})`,
       download: "Download capsule PDF",
-      refresh: "Refresh wardrobe"
+      refresh: "Refresh wardrobe",
     },
-    settings: { title: "Settings", saved: "Settings saved." }
+    settings: { title: "Settings", saved: "Settings saved." },
   };
 
-  const value = key.split(".").reduce<unknown>((current, part) => (
-    current && typeof current === "object" ? (current as Record<string, unknown>)[part] : undefined
-  ), labels);
+  const value = key
+    .split(".")
+    .reduce<unknown>(
+      (current, part) =>
+        current && typeof current === "object"
+          ? (current as Record<string, unknown>)[part]
+          : undefined,
+      labels,
+    );
   return typeof value === "string"
-    ? value.replace(/\{(\w+)\}/g, (_match, token: string) => String(params?.[token] ?? `{${token}}`))
+    ? value.replace(/\{(\w+)\}/g, (_match, token: string) =>
+        String(params?.[token] ?? `{${token}}`),
+      )
     : key;
 }
 
@@ -236,7 +264,9 @@ export function resetMainScreenTestMocks() {
   useI18nMock.mockReturnValue({ t, locale: "en" });
 }
 
-export function setMainScreenLayout(layoutMode: "overlay" | "medium" | "large" = "medium") {
+export function setMainScreenLayout(
+  layoutMode: "overlay" | "medium" | "large" = "medium",
+) {
   mediaQueryMock.mockImplementation((query: string) => {
     if (String(query).includes("max-width: 1279.95px")) {
       return layoutMode === "overlay";
@@ -252,9 +282,17 @@ export function renderWithTheme(children: ReactNode) {
   return render(<ThemeProvider theme={theme}>{children}</ThemeProvider>);
 }
 
-export function createMainScreenProps(overrides: Partial<MainScreenProps> = {}): MainScreenProps {
+export function createMainScreenProps(
+  overrides: Partial<MainScreenProps> = {},
+): MainScreenProps {
   return {
-    activeCapsule: { id: "capsule-1", name: "Spring edit", draft: null, saved: null, status: "new" },
+    activeCapsule: {
+      id: "capsule-1",
+      name: "Spring edit",
+      draft: null,
+      saved: null,
+      status: "new",
+    },
     capsuleList: [{ id: "capsule-1", name: "Spring edit", status: "new" }],
     userEmail: "person@example.com",
     userName: "",
@@ -263,7 +301,7 @@ export function createMainScreenProps(overrides: Partial<MainScreenProps> = {}):
       email: "person@example.com",
       locale: "en",
       theme: "system",
-      llm: "openai:gpt-5.5"
+      llm: "openai:gpt-5.5",
     },
     onSignOut: vi.fn(),
     onSaveSettings: vi.fn(() => Promise.resolve()),
@@ -277,10 +315,12 @@ export function createMainScreenProps(overrides: Partial<MainScreenProps> = {}):
     onRenameCapsule: vi.fn(() => Promise.resolve()),
     onDuplicateCapsule: vi.fn(() => Promise.resolve()),
     onDeleteCapsule: vi.fn(() => Promise.resolve()),
-    onShareCapsule: vi.fn(() => Promise.resolve({
-      url: "https://client.example/share/share-1",
-      expiresAt: new Date(60_000).toISOString()
-    })),
+    onShareCapsule: vi.fn(() =>
+      Promise.resolve({
+        url: "https://client.example/share/share-1",
+        expiresAt: new Date(60_000).toISOString(),
+      }),
+    ),
     onSearchCapsules: vi.fn(() => Promise.resolve([])),
     items: [],
     outfitSets: [],
@@ -324,6 +364,6 @@ export function createMainScreenProps(overrides: Partial<MainScreenProps> = {}):
     onDeleteOutfitSetImage: vi.fn(),
     onGenerateOutfitSetImage: vi.fn(),
     isPartialRegenerationLoading: false,
-    ...overrides
+    ...overrides,
   };
 }

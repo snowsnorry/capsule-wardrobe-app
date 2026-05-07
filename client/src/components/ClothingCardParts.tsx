@@ -9,12 +9,16 @@ import {
   GiMonclerJacket,
   GiShoppingBag,
   GiSleevelessTop,
-  GiTShirt
+  GiTShirt,
 } from "react-icons/gi";
 import { PiPantsFill } from "react-icons/pi";
 import ProductLabelText from "./ProductLabelText";
 import { CardActions } from "./ClothingCardActions";
-import type { CardActionProps, ClothingCardItem, MobileCardMetrics } from "./ClothingCardTypes";
+import type {
+  CardActionProps,
+  ClothingCardItem,
+  MobileCardMetrics,
+} from "./ClothingCardTypes";
 
 const categoryIconByName: Record<string, IconType> = {
   outerwear: GiMonclerJacket,
@@ -25,7 +29,7 @@ const categoryIconByName: Record<string, IconType> = {
   belt: GiBelt,
   shoes: GiConverseShoe,
   bag: GiShoppingBag,
-  swimwear: GiSleevelessTop
+  swimwear: GiSleevelessTop,
 };
 
 function getMobileCardMetrics(mobileColumns: 1 | 2 | 3): MobileCardMetrics {
@@ -37,7 +41,7 @@ function getMobileCardMetrics(mobileColumns: 1 | 2 | 3): MobileCardMetrics {
       detailPb: 2.25,
       detailMinHeight: 64,
       titleFontSize: "16px",
-      titleLineHeight: 1.22
+      titleLineHeight: 1.22,
     };
   }
 
@@ -49,7 +53,7 @@ function getMobileCardMetrics(mobileColumns: 1 | 2 | 3): MobileCardMetrics {
       detailPb: 1,
       detailMinHeight: 42,
       titleFontSize: "11.5px",
-      titleLineHeight: 1.12
+      titleLineHeight: 1.12,
     };
   }
 
@@ -60,7 +64,7 @@ function getMobileCardMetrics(mobileColumns: 1 | 2 | 3): MobileCardMetrics {
     detailPb: 1.25,
     detailMinHeight: 50,
     titleFontSize: "13px",
-    titleLineHeight: 1.18
+    titleLineHeight: 1.18,
   };
 }
 
@@ -68,7 +72,7 @@ function getCardRootSx({
   isDenseMobileCard,
   showCardActions,
   isSelected,
-  isMobile
+  isMobile,
 }: {
   isDenseMobileCard: boolean;
   showCardActions: boolean;
@@ -83,20 +87,23 @@ function getCardRootSx({
     overflow: "hidden",
     backgroundColor: "background.paper",
     position: "relative",
-    border: isDenseMobileCard ? "0.5px solid rgba(17, 36, 34, 0.44)" : "1px solid rgba(17, 36, 34, 0.08)",
+    border: isDenseMobileCard
+      ? "0.5px solid rgba(17, 36, 34, 0.44)"
+      : "1px solid rgba(17, 36, 34, 0.08)",
     boxShadow: isDenseMobileCard ? "none" : "0 0px 8px rgba(17, 36, 34, 0.08)",
     ...(showCardActions && !isSelected && !isMobile
       ? {
           "& .wardrobe-card-actions": {
             opacity: 0,
-            visibility: "hidden"
+            visibility: "hidden",
           },
-          "&:hover .wardrobe-card-actions, &:focus-within .wardrobe-card-actions": {
-            opacity: 0.72,
-            visibility: "visible"
-          }
+          "&:hover .wardrobe-card-actions, &:focus-within .wardrobe-card-actions":
+            {
+              opacity: 0.72,
+              visibility: "visible",
+            },
         }
-      : {})
+      : {}),
   } as const;
 }
 
@@ -104,7 +111,7 @@ function ProductImageContent({
   displayImageUrl,
   label,
   isSelected,
-  onImageError
+  onImageError,
 }: {
   displayImageUrl: string | null;
   label: string;
@@ -119,14 +126,41 @@ function ProductImageContent({
           src={displayImageUrl}
           alt={label}
           onError={onImageError}
-          sx={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }}
+          sx={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            objectPosition: "center",
+          }}
         />
       ) : (
-        <Box sx={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", px: 2 }}>
-          <Typography variant="body2" color="text.secondary" align="center">{label}</Typography>
+        <Box
+          sx={{
+            height: "100%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            px: 2,
+          }}
+        >
+          <Typography variant="body2" color="text.secondary" align="center">
+            {label}
+          </Typography>
         </Box>
       )}
-      {isSelected ? <Box sx={{ position: "absolute", inset: 0, backgroundColor: "rgba(0, 0, 0, 0.38)", zIndex: 1, pointerEvents: "none" }} /> : null}
+      {isSelected ? (
+        <Box
+          sx={{
+            position: "absolute",
+            inset: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.38)",
+            zIndex: 1,
+            pointerEvents: "none",
+          }}
+        />
+      ) : null}
     </>
   );
 }
@@ -139,7 +173,7 @@ function ClothingCardImageSection({
   isMobile,
   categoryDisplayLabel,
   actionProps,
-  onImageError
+  onImageError,
 }: {
   productUrl: string | null;
   displayImageUrl: string | null;
@@ -151,11 +185,24 @@ function ClothingCardImageSection({
   onImageError: () => void;
 }) {
   return (
-    <Box sx={{ width: "100%", aspectRatio: "3 / 4", backgroundColor: "#f7f5f1", position: "relative", overflow: "hidden" }}>
+    <Box
+      sx={{
+        width: "100%",
+        aspectRatio: "3 / 4",
+        backgroundColor: "#f7f5f1",
+        position: "relative",
+        overflow: "hidden",
+      }}
+    >
       {actionProps ? <CardActions {...actionProps} /> : null}
       {!isMobile ? <CategoryChip label={categoryDisplayLabel} /> : null}
       <CardImageFrame productUrl={productUrl}>
-        <ProductImageContent displayImageUrl={displayImageUrl} label={label} isSelected={isSelected} onImageError={onImageError} />
+        <ProductImageContent
+          displayImageUrl={displayImageUrl}
+          label={label}
+          isSelected={isSelected}
+          onImageError={onImageError}
+        />
       </CardImageFrame>
     </Box>
   );
@@ -174,7 +221,7 @@ function ClothingCardView({
   showCardActions,
   actionProps,
   mobileCardMetrics,
-  onImageError
+  onImageError,
 }: {
   item: ClothingCardItem;
   displayImageUrl: string | null;
@@ -197,7 +244,7 @@ function ClothingCardView({
         isDenseMobileCard: isMobile && mobileColumns !== 1,
         showCardActions,
         isSelected,
-        isMobile
+        isMobile,
       })}
     >
       <ClothingCardImageSection
@@ -224,7 +271,12 @@ function ClothingCardView({
 
 function CategoryChip({ label }: { label: string }) {
   return (
-    <Stack className="wardrobe-card-category-wrapper" direction="row" spacing={1} sx={{ position: "absolute", top: 12, left: 12, zIndex: 1 }}>
+    <Stack
+      className="wardrobe-card-category-wrapper"
+      direction="row"
+      spacing={1}
+      sx={{ position: "absolute", top: 12, left: 12, zIndex: 1 }}
+    >
       <Chip
         className="wardrobe-card-category"
         label={label}
@@ -239,7 +291,11 @@ function CategoryChip({ label }: { label: string }) {
           padding: 0,
           bgcolor: "#dcefeb",
           color: "#15766f",
-          "& .MuiChip-label": { px: 1, overflow: "hidden", textOverflow: "ellipsis" }
+          "& .MuiChip-label": {
+            px: 1,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          },
         }}
       />
     </Stack>
@@ -248,25 +304,33 @@ function CategoryChip({ label }: { label: string }) {
 
 function CardImageFrame({
   children,
-  productUrl
+  productUrl,
 }: {
   children: ReactNode;
   productUrl: string | null;
 }) {
   if (productUrl) {
     return (
-      <MuiLink href={productUrl} target="_blank" rel="noopener noreferrer" underline="none" sx={{ position: "absolute", inset: 0, zIndex: 0 }}>
+      <MuiLink
+        href={productUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        underline="none"
+        sx={{ position: "absolute", inset: 0, zIndex: 0 }}
+      >
         {children}
       </MuiLink>
     );
   }
 
-  return <Box sx={{ position: "absolute", inset: 0, zIndex: 0 }}>{children}</Box>;
+  return (
+    <Box sx={{ position: "absolute", inset: 0, zIndex: 0 }}>{children}</Box>
+  );
 }
 
 function CategoryPrefix({
   categoryName,
-  categoryDisplayLabel
+  categoryDisplayLabel,
 }: {
   categoryName: string;
   categoryDisplayLabel: string;
@@ -274,15 +338,49 @@ function CategoryPrefix({
   const CategoryIcon = categoryIconByName[categoryName];
 
   return (
-    <Box component="span" className="wardrobe-card-title-category-prefix" sx={{ display: "inline-flex", alignItems: "center", color: "inherit", verticalAlign: "text-bottom", mr: 0.2 }}>
+    <Box
+      component="span"
+      className="wardrobe-card-title-category-prefix"
+      sx={{
+        display: "inline-flex",
+        alignItems: "center",
+        color: "inherit",
+        verticalAlign: "text-bottom",
+        mr: 0.2,
+      }}
+    >
       {CategoryIcon ? (
-        <Box component="span" aria-label={categoryDisplayLabel} sx={{ display: "inline-flex", alignItems: "center", color: "inherit", lineHeight: 1, verticalAlign: "text-bottom", "& svg": { display: "block", width: "0.9em", height: "0.9em" } }}>
+        <Box
+          component="span"
+          aria-label={categoryDisplayLabel}
+          sx={{
+            display: "inline-flex",
+            alignItems: "center",
+            color: "inherit",
+            lineHeight: 1,
+            verticalAlign: "text-bottom",
+            "& svg": { display: "block", width: "0.9em", height: "0.9em" },
+          }}
+        >
           <CategoryIcon aria-hidden="true" focusable="false" />
         </Box>
       ) : (
-        <Box component="span" className="wardrobe-card-title-category-text" sx={{ display: "inline", color: "inherit" }}>{categoryDisplayLabel}</Box>
+        <Box
+          component="span"
+          className="wardrobe-card-title-category-text"
+          sx={{ display: "inline", color: "inherit" }}
+        >
+          {categoryDisplayLabel}
+        </Box>
       )}
-      <Box component="span" className="wardrobe-card-title-separator" aria-hidden="true" sx={{ color: "inherit", mx: 0.4 }}>{"•"}</Box>
+      <Box
+        component="span"
+        className="wardrobe-card-title-separator"
+        aria-hidden="true"
+        sx={{ color: "inherit", mx: 0.4 }}
+      >
+        {"•"}
+      </Box>
     </Box>
   );
 }
@@ -293,7 +391,7 @@ function ClothingCardDetails({
   mobileCardMetrics,
   showMobileCategoryPrefix,
   categoryName,
-  categoryDisplayLabel
+  categoryDisplayLabel,
 }: {
   item: ClothingCardItem;
   isMobile: boolean;
@@ -303,7 +401,22 @@ function ClothingCardDetails({
   categoryDisplayLabel: string;
 }): ReactElement {
   return (
-    <Stack className="wardrobe-card-details" spacing={1.25} sx={{ flexShrink: 0, flexGrow: 1, px: isMobile ? mobileCardMetrics.detailPx : 2.5, pt: isMobile ? mobileCardMetrics.detailPt : 2, pb: isMobile ? mobileCardMetrics.detailPb : 2.25, minHeight: isMobile ? mobileCardMetrics.detailMinHeight : 64, justifyContent: "flex-start", alignItems: "flex-start", backgroundColor: "#fff", borderTop: "1px solid rgba(15, 23, 42, 0.055)" }}>
+    <Stack
+      className="wardrobe-card-details"
+      spacing={1.25}
+      sx={{
+        flexShrink: 0,
+        flexGrow: 1,
+        px: isMobile ? mobileCardMetrics.detailPx : 2.5,
+        pt: isMobile ? mobileCardMetrics.detailPt : 2,
+        pb: isMobile ? mobileCardMetrics.detailPb : 2.25,
+        minHeight: isMobile ? mobileCardMetrics.detailMinHeight : 64,
+        justifyContent: "flex-start",
+        alignItems: "flex-start",
+        backgroundColor: "#fff",
+        borderTop: "1px solid rgba(15, 23, 42, 0.055)",
+      }}
+    >
       <Typography
         className="wardrobe-card-title"
         variant="subtitle1"
@@ -313,11 +426,27 @@ function ClothingCardDetails({
           lineHeight: isMobile ? mobileCardMetrics.titleLineHeight : 1.22,
           letterSpacing: 0,
           fontSize: isMobile ? mobileCardMetrics.titleFontSize : "16px",
-          ...(isMobile ? { display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 2, overflow: "hidden" } : {})
+          ...(isMobile
+            ? {
+                display: "-webkit-box",
+                WebkitBoxOrient: "vertical",
+                WebkitLineClamp: 2,
+                overflow: "hidden",
+              }
+            : {}),
         }}
       >
-        {showMobileCategoryPrefix ? <CategoryPrefix categoryName={categoryName} categoryDisplayLabel={categoryDisplayLabel} /> : null}
-        <ProductLabelText item={item} fallbackLabel="" suffixSx={{ fontSize: "0.72em", opacity: 0.72 }} />
+        {showMobileCategoryPrefix ? (
+          <CategoryPrefix
+            categoryName={categoryName}
+            categoryDisplayLabel={categoryDisplayLabel}
+          />
+        ) : null}
+        <ProductLabelText
+          item={item}
+          fallbackLabel=""
+          suffixSx={{ fontSize: "0.72em", opacity: 0.72 }}
+        />
       </Typography>
     </Stack>
   );
@@ -330,6 +459,6 @@ export {
   ClothingCardView,
   ProductImageContent,
   getCardRootSx,
-  getMobileCardMetrics
+  getMobileCardMetrics,
 };
 export type { MobileCardMetrics } from "./ClothingCardTypes";

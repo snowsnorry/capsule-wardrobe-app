@@ -8,7 +8,7 @@ import { LocaleProvider } from "../i18n/LocaleProvider";
 const mediaQueryMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@mui/material/useMediaQuery", () => ({
-  default: mediaQueryMock
+  default: mediaQueryMock,
 }));
 
 import AppSidebarShell from "./AppSidebarShell";
@@ -17,7 +17,9 @@ const theme = createTheme();
 
 function renderShell(
   props: Partial<ComponentProps<typeof AppSidebarShell>> = {},
-  { layoutMode = "medium" }: { layoutMode?: "overlay" | "medium" | "large" } = {}
+  {
+    layoutMode = "medium",
+  }: { layoutMode?: "overlay" | "medium" | "large" } = {},
 ) {
   mediaQueryMock.mockImplementation((query) => {
     if (String(query).includes("max-width: 1279.95px")) {
@@ -42,7 +44,7 @@ function renderShell(
             email: "person@example.com",
             locale: "en",
             theme: "system",
-            llm: "openai:gpt-5.5"
+            llm: "openai:gpt-5.5",
           }}
           onSaveSettings={vi.fn(() => Promise.resolve())}
           onSignOut={vi.fn()}
@@ -56,21 +58,29 @@ function renderShell(
               header
             </div>
           )}
-          sidebarBodyContent={({ isSidebarCollapsed, isOverlaySidebar, expandCollapsedSidebar }) => (
+          sidebarBodyContent={({
+            isSidebarCollapsed,
+            isOverlaySidebar,
+            expandCollapsedSidebar,
+          }) =>
             isSidebarCollapsed && !isOverlaySidebar ? (
-              <button type="button" data-testid="shell-expand-hitbox" onClick={expandCollapsedSidebar}>
+              <button
+                type="button"
+                data-testid="shell-expand-hitbox"
+                onClick={expandCollapsedSidebar}
+              >
                 expand
               </button>
             ) : (
               <div>sidebar-body</div>
             )
-          )}
+          }
           {...props}
         >
           <div>content</div>
         </AppSidebarShell>
       </LocaleProvider>
-    </ThemeProvider>
+    </ThemeProvider>,
   );
 }
 
@@ -86,18 +96,36 @@ describe("AppSidebarShell", () => {
 
   test("renders overlay, medium desktop, and large desktop modes", () => {
     renderShell({}, { layoutMode: "overlay" });
-    expect(screen.getByTestId("app-sidebar-shell")).toHaveAttribute("data-sidebar-mode", "overlay");
-    expect(screen.getByTestId("app-sidebar-shell")).toHaveAttribute("data-content-alignment", "overlay");
+    expect(screen.getByTestId("app-sidebar-shell")).toHaveAttribute(
+      "data-sidebar-mode",
+      "overlay",
+    );
+    expect(screen.getByTestId("app-sidebar-shell")).toHaveAttribute(
+      "data-content-alignment",
+      "overlay",
+    );
 
     cleanup();
     renderShell({}, { layoutMode: "medium" });
-    expect(screen.getByTestId("app-sidebar-shell")).toHaveAttribute("data-sidebar-mode", "desktop-medium");
-    expect(screen.getByTestId("app-sidebar-shell")).toHaveAttribute("data-content-alignment", "centered");
+    expect(screen.getByTestId("app-sidebar-shell")).toHaveAttribute(
+      "data-sidebar-mode",
+      "desktop-medium",
+    );
+    expect(screen.getByTestId("app-sidebar-shell")).toHaveAttribute(
+      "data-content-alignment",
+      "centered",
+    );
 
     cleanup();
     renderShell({}, { layoutMode: "large" });
-    expect(screen.getByTestId("app-sidebar-shell")).toHaveAttribute("data-sidebar-mode", "desktop-large");
-    expect(screen.getByTestId("app-sidebar-shell")).toHaveAttribute("data-content-alignment", "centered");
+    expect(screen.getByTestId("app-sidebar-shell")).toHaveAttribute(
+      "data-sidebar-mode",
+      "desktop-large",
+    );
+    expect(screen.getByTestId("app-sidebar-shell")).toHaveAttribute(
+      "data-content-alignment",
+      "centered",
+    );
   });
 
   test("opens overlay sidebar, supports collapsing, and opens user settings menu", async () => {
@@ -107,10 +135,14 @@ describe("AppSidebarShell", () => {
     renderShell({ onSignOut }, { layoutMode: "overlay" });
 
     await user.click(screen.getByRole("button", { name: "open-sidebar" }));
-    expect(screen.getByRole("button", { name: "Collapse sidebar" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Collapse sidebar" }),
+    ).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Collapse sidebar" }));
     await waitFor(() => {
-      expect(screen.queryByRole("button", { name: "Collapse sidebar" })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Collapse sidebar" }),
+      ).not.toBeInTheDocument();
     });
   });
 
@@ -121,15 +153,21 @@ describe("AppSidebarShell", () => {
     renderShell({ onSignOut });
 
     expect(screen.getByText("Capsule Wardrobe")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Toggle sidebar" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Toggle sidebar" }),
+    ).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Collapse sidebar" }));
     expect(screen.queryByText("Capsule Wardrobe")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Toggle sidebar" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Toggle sidebar" }),
+    ).toBeInTheDocument();
 
     await user.click(screen.getByTestId("shell-expand-hitbox"));
     expect(screen.getByText("Capsule Wardrobe")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Collapse sidebar" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Collapse sidebar" }),
+    ).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Open user menu" }));
     await user.click(screen.getByText("Settings"));
@@ -150,15 +188,23 @@ describe("AppSidebarShell", () => {
 
     const initial = renderShell();
     await user.click(screen.getByRole("button", { name: "Collapse sidebar" }));
-    expect(window.localStorage.getItem("capsule.appSidebarCollapsed")).toBe("true");
+    expect(window.localStorage.getItem("capsule.appSidebarCollapsed")).toBe(
+      "true",
+    );
 
     initial.unmount();
     renderShell();
-    expect(screen.queryByRole("button", { name: "Collapse sidebar" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Collapse sidebar" }),
+    ).not.toBeInTheDocument();
     expect(screen.getByTestId("shell-expand-hitbox")).toBeInTheDocument();
 
     await user.click(screen.getByTestId("shell-expand-hitbox"));
-    expect(window.localStorage.getItem("capsule.appSidebarCollapsed")).toBe("false");
-    expect(screen.getByRole("button", { name: "Collapse sidebar" })).toBeInTheDocument();
+    expect(window.localStorage.getItem("capsule.appSidebarCollapsed")).toBe(
+      "false",
+    );
+    expect(
+      screen.getByRole("button", { name: "Collapse sidebar" }),
+    ).toBeInTheDocument();
   });
 });

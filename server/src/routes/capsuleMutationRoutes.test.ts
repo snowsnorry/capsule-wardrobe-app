@@ -1,5 +1,11 @@
 import { test, expect, vi } from "vitest";
-import { AUTH_COOKIE, CSRF_TOKEN, TEST_CLIENT_ORIGIN, requestJson, startTestServer } from "../test/serverRouteTestUtils.js";
+import {
+  AUTH_COOKIE,
+  CSRF_TOKEN,
+  TEST_CLIENT_ORIGIN,
+  requestJson,
+  startTestServer,
+} from "../test/serverRouteTestUtils.js";
 
 test("capsule action routes cover wardrobe handlers and pdf download", async (t) => {
   let wardrobeCalled = false;
@@ -24,59 +30,77 @@ test("capsule action routes cover wardrobe handlers and pdf download", async (t)
       buildWardrobePdfInChildImpl: async (_products, locale) => {
         pdfLocale = locale;
         return Buffer.from("pdf");
-      }
-    }
+      },
+    },
   });
 
   const wardrobe = await requestJson(baseUrl, "/capsules/capsule-1/events", {
-    cookie: AUTH_COOKIE
+    cookie: AUTH_COOKIE,
   });
   expect(wardrobe.response.status).toBe(200);
   expect(wardrobeCalled).toBe(true);
   expect(wardrobe.json.snapshot.status).toBe("ready");
 
-  const fullRegenerate = await requestJson(baseUrl, "/capsules/capsule-1/regenerate", {
-    method: "POST",
-    origin: TEST_CLIENT_ORIGIN,
-    cookie: AUTH_COOKIE,
-    csrfToken: CSRF_TOKEN
-  });
+  const fullRegenerate = await requestJson(
+    baseUrl,
+    "/capsules/capsule-1/regenerate",
+    {
+      method: "POST",
+      origin: TEST_CLIENT_ORIGIN,
+      cookie: AUTH_COOKIE,
+      csrfToken: CSRF_TOKEN,
+    },
+  );
   expect(fullRegenerate.response.status).toBe(202);
   expect(fullRegenerateCalled).toBe(true);
 
-  const regenerate = await requestJson(baseUrl, "/capsules/capsule-1/regenerate-selected", {
-    method: "POST",
-    origin: TEST_CLIENT_ORIGIN,
-    cookie: AUTH_COOKIE,
-    csrfToken: CSRF_TOKEN,
-    body: { itemUrls: ["https://example.com/1"] }
-  });
+  const regenerate = await requestJson(
+    baseUrl,
+    "/capsules/capsule-1/regenerate-selected",
+    {
+      method: "POST",
+      origin: TEST_CLIENT_ORIGIN,
+      cookie: AUTH_COOKIE,
+      csrfToken: CSRF_TOKEN,
+      body: { itemUrls: ["https://example.com/1"] },
+    },
+  );
   expect(regenerate.response.status).toBe(200);
   expect(regenerateCalled).toBe(true);
 
-  const outfitSetImage = await requestJson(baseUrl, "/capsules/capsule-1/outfit-sets/0/image", {
-    method: "POST",
-    origin: TEST_CLIENT_ORIGIN,
-    cookie: AUTH_COOKIE,
-    csrfToken: CSRF_TOKEN
-  });
+  const outfitSetImage = await requestJson(
+    baseUrl,
+    "/capsules/capsule-1/outfit-sets/0/image",
+    {
+      method: "POST",
+      origin: TEST_CLIENT_ORIGIN,
+      cookie: AUTH_COOKIE,
+      csrfToken: CSRF_TOKEN,
+    },
+  );
   expect(outfitSetImage.response.status).toBe(202);
   expect(outfitSetImage.json).toEqual({ ok: true, status: "pending" });
 
-  const removedWardrobeRoute = await requestJson(baseUrl, "/capsules/capsule-1/items", {
-    cookie: AUTH_COOKIE
-  });
+  const removedWardrobeRoute = await requestJson(
+    baseUrl,
+    "/capsules/capsule-1/items",
+    {
+      cookie: AUTH_COOKIE,
+    },
+  );
   expect(removedWardrobeRoute.response.status).toBe(404);
 
   const pdf = await requestJson(baseUrl, "/capsules/capsule-1/pdf", {
     method: "POST",
     origin: TEST_CLIENT_ORIGIN,
     cookie: AUTH_COOKIE,
-    csrfToken: CSRF_TOKEN
+    csrfToken: CSRF_TOKEN,
   });
   expect(pdf.response.status).toBe(200);
   expect(pdfLocale).toBe("en");
-  expect(pdf.response.headers.get("content-disposition")).toBe(`attachment; filename="New-capsule.pdf"; filename*=UTF-8''${encodeURIComponent("New capsule.pdf")}`);
+  expect(pdf.response.headers.get("content-disposition")).toBe(
+    `attachment; filename="New-capsule.pdf"; filename*=UTF-8''${encodeURIComponent("New capsule.pdf")}`,
+  );
 });
 
 test("capsule creation only accepts name and filters and initializes server-owned data", async (t) => {
@@ -85,9 +109,14 @@ test("capsule creation only accepts name and filters and initializes server-owne
     overrides: {
       createCapsuleImpl: async (_email, payload) => {
         receivedPayload = payload;
-        return { id: "capsule-2", draft: payload.draft, saved: null, status: "new" };
-      }
-    }
+        return {
+          id: "capsule-2",
+          draft: payload.draft,
+          saved: null,
+          status: "new",
+        };
+      },
+    },
   });
 
   const result = await requestJson(baseUrl, "/capsules", {
@@ -104,9 +133,9 @@ test("capsule creation only accepts name and filters and initializes server-owne
         season: ["spring"],
         audience: "woman",
         color: "red",
-        pattern: "striped"
-      }
-    }
+        pattern: "striped",
+      },
+    },
   });
 
   expect(result.response.status).toBe(201);
@@ -121,15 +150,15 @@ test("capsule creation only accepts name and filters and initializes server-owne
         audience: "woman",
         color: "red",
         pattern: "striped",
-        text: ""
+        text: "",
       },
       data: {
         wardrobe: null,
-        rejectedUrls: []
-      }
+        rejectedUrls: [],
+      },
     },
     saved: null,
-    setActive: true
+    setActive: true,
   });
 });
 
@@ -147,10 +176,10 @@ test("capsule creation rejects client-supplied state-bearing fields", async (t) 
         filters: { audience: "woman" },
         data: {
           wardrobe: { items: [{ url: "https://malicious.example/item" }] },
-          rejectedUrls: ["https://malicious.example/rejected"]
-        }
-      }
-    }
+          rejectedUrls: ["https://malicious.example/rejected"],
+        },
+      },
+    },
   });
 
   expect(result.response.status).toBe(400);
@@ -164,8 +193,8 @@ test("filters patch only accepts filters and resets draft data", async (t) => {
       updateCapsuleSnapshotImpl: async (_email, _id, draft) => {
         receivedDraft = draft;
         return { id: "capsule-1", draft, saved: null, status: "new" };
-      }
-    }
+      },
+    },
   });
 
   const result = await requestJson(baseUrl, "/capsules/capsule-1/filters", {
@@ -183,9 +212,9 @@ test("filters patch only accepts filters and resets draft data", async (t) => {
         color: "red",
         pattern: "striped",
         text: "  Prefer natural fabrics  ",
-        ignoredField: "ignored"
-      }
-    }
+        ignoredField: "ignored",
+      },
+    },
   });
 
   expect(result.response.status).toBe(200);
@@ -198,12 +227,12 @@ test("filters patch only accepts filters and resets draft data", async (t) => {
       audience: "woman",
       color: "red",
       pattern: "striped",
-      text: "Prefer natural fabrics"
+      text: "Prefer natural fabrics",
     },
     data: {
       wardrobe: null,
-      rejectedUrls: []
-    }
+      rejectedUrls: [],
+    },
   });
 });
 
@@ -218,22 +247,26 @@ test("filters patch can trigger regenerate via query flag after saving filters",
       regenerateCapsuleWardrobeHandler: async (req, res) => {
         calls.push({ type: "regenerate", query: req.query });
         return res.status(202).json({ ok: true, status: "pending" });
-      }
-    }
+      },
+    },
   });
 
-  const result = await requestJson(baseUrl, "/capsules/capsule-1/filters?regenerate=true", {
-    method: "PATCH",
-    origin: TEST_CLIENT_ORIGIN,
-    cookie: AUTH_COOKIE,
-    csrfToken: CSRF_TOKEN,
-    body: {
-      filters: {
-        audience: "woman",
-        season: ["summer"]
-      }
-    }
-  });
+  const result = await requestJson(
+    baseUrl,
+    "/capsules/capsule-1/filters?regenerate=true",
+    {
+      method: "PATCH",
+      origin: TEST_CLIENT_ORIGIN,
+      cookie: AUTH_COOKIE,
+      csrfToken: CSRF_TOKEN,
+      body: {
+        filters: {
+          audience: "woman",
+          season: ["summer"],
+        },
+      },
+    },
+  );
 
   expect(result.response.status).toBe(202);
   expect(calls).toEqual([
@@ -248,20 +281,20 @@ test("filters patch can trigger regenerate via query flag after saving filters",
           season: ["summer"],
           color: null,
           pattern: "solid",
-          text: ""
+          text: "",
         },
         data: {
           wardrobe: null,
-          rejectedUrls: []
-        }
-      }
+          rejectedUrls: [],
+        },
+      },
     },
     {
       type: "regenerate",
       query: {
-        regenerate: "true"
-      }
-    }
+        regenerate: "true",
+      },
+    },
   ]);
 });
 
@@ -272,19 +305,23 @@ test("rejected urls patch validates against current capsule wardrobe", async (t)
       updateCapsuleSnapshotImpl: async (_email, _id, draft) => {
         receivedDraft = draft;
         return { id: "capsule-1", draft, saved: null, status: "new" };
-      }
-    }
+      },
+    },
   });
 
-  const result = await requestJson(baseUrl, "/capsules/capsule-1/rejected-urls", {
-    method: "PATCH",
-    origin: TEST_CLIENT_ORIGIN,
-    cookie: AUTH_COOKIE,
-    csrfToken: CSRF_TOKEN,
-    body: {
-      rejectedUrls: ["https://example.com/1", "https://example.com/1"]
-    }
-  });
+  const result = await requestJson(
+    baseUrl,
+    "/capsules/capsule-1/rejected-urls",
+    {
+      method: "PATCH",
+      origin: TEST_CLIENT_ORIGIN,
+      cookie: AUTH_COOKIE,
+      csrfToken: CSRF_TOKEN,
+      body: {
+        rejectedUrls: ["https://example.com/1", "https://example.com/1"],
+      },
+    },
+  );
 
   expect(result.response.status).toBe(200);
   expect(receivedDraft).toEqual({
@@ -296,7 +333,7 @@ test("rejected urls patch validates against current capsule wardrobe", async (t)
       audience: "woman",
       color: null,
       pattern: "solid",
-      text: ""
+      text: "",
     },
     data: {
       wardrobe: {
@@ -304,25 +341,29 @@ test("rejected urls patch validates against current capsule wardrobe", async (t)
         outfitSets: [],
         rawSelectionText: null,
         swimwearReasoning: null,
-        swimwearRawSelectionText: null
+        swimwearRawSelectionText: null,
       },
-      rejectedUrls: ["https://example.com/1"]
-    }
+      rejectedUrls: ["https://example.com/1"],
+    },
   });
 });
 
 test("rejected urls patch rejects unknown urls and missing wardrobe", async (t) => {
   const { baseUrl } = await startTestServer(t);
 
-  const invalid = await requestJson(baseUrl, "/capsules/capsule-1/rejected-urls", {
-    method: "PATCH",
-    origin: TEST_CLIENT_ORIGIN,
-    cookie: AUTH_COOKIE,
-    csrfToken: CSRF_TOKEN,
-    body: {
-      rejectedUrls: ["https://example.com/unknown"]
-    }
-  });
+  const invalid = await requestJson(
+    baseUrl,
+    "/capsules/capsule-1/rejected-urls",
+    {
+      method: "PATCH",
+      origin: TEST_CLIENT_ORIGIN,
+      cookie: AUTH_COOKIE,
+      csrfToken: CSRF_TOKEN,
+      body: {
+        rejectedUrls: ["https://example.com/unknown"],
+      },
+    },
+  );
 
   expect(invalid.response.status).toBe(400);
   expect(invalid.json).toEqual({ error: "invalid_payload" });
@@ -341,28 +382,32 @@ test("rejected urls patch rejects unknown urls and missing wardrobe", async (t) 
             audience: "woman",
             color: null,
             pattern: "solid",
-            text: ""
+            text: "",
           },
           data: {
             wardrobe: null,
-            rejectedUrls: []
-          }
+            rejectedUrls: [],
+          },
         },
         saved: null,
-        status: "new"
-      })
-    }
+        status: "new",
+      }),
+    },
   });
 
-  const notFound = await requestJson(noWardrobeServer.baseUrl, "/capsules/capsule-1/rejected-urls", {
-    method: "PATCH",
-    origin: TEST_CLIENT_ORIGIN,
-    cookie: AUTH_COOKIE,
-    csrfToken: CSRF_TOKEN,
-    body: {
-      rejectedUrls: ["https://example.com/1"]
-    }
-  });
+  const notFound = await requestJson(
+    noWardrobeServer.baseUrl,
+    "/capsules/capsule-1/rejected-urls",
+    {
+      method: "PATCH",
+      origin: TEST_CLIENT_ORIGIN,
+      cookie: AUTH_COOKIE,
+      csrfToken: CSRF_TOKEN,
+      body: {
+        rejectedUrls: ["https://example.com/1"],
+      },
+    },
+  );
 
   expect(notFound.response.status).toBe(404);
   expect(notFound.json).toEqual({ error: "not_found" });
@@ -374,11 +419,23 @@ test("capsule mutation state and metadata routes map success and missing records
     overrides: {
       saveCapsuleImpl: async (_email, id) => {
         calls.push({ type: "save", id });
-        return { id, name: "Saved", draft: null, saved: { filters: {}, data: {} }, status: "saved" };
+        return {
+          id,
+          name: "Saved",
+          draft: null,
+          saved: { filters: {}, data: {} },
+          status: "saved",
+        };
       },
       revertCapsuleImpl: async (_email, id) => {
         calls.push({ type: "revert", id });
-        return { id, name: "Reverted", draft: null, saved: { filters: {}, data: {} }, status: "saved" };
+        return {
+          id,
+          name: "Reverted",
+          draft: null,
+          saved: { filters: {}, data: {} },
+          status: "saved",
+        };
       },
       renameCapsuleImpl: async (_email, id, name) => {
         calls.push({ type: "rename", id, name });
@@ -386,7 +443,13 @@ test("capsule mutation state and metadata routes map success and missing records
       },
       duplicateCapsuleImpl: async (_email, id, name) => {
         calls.push({ type: "duplicate", id, name });
-        return { id: "capsule-copy", name: name || "Copy", draft: null, saved: { filters: {}, data: {} }, status: "saved" };
+        return {
+          id: "capsule-copy",
+          name: name || "Copy",
+          draft: null,
+          saved: { filters: {}, data: {} },
+          status: "saved",
+        };
       },
       updateProfileActiveCapsuleIdImpl: async (_email, activeCapsuleId) => {
         calls.push({ type: "select", activeCapsuleId });
@@ -395,15 +458,15 @@ test("capsule mutation state and metadata routes map success and missing records
       deleteCapsuleImpl: async (_email, id) => {
         calls.push({ type: "delete", id });
         return true;
-      }
-    }
+      },
+    },
   });
 
   const save = await requestJson(baseUrl, "/capsules/capsule-1/save", {
     method: "POST",
     origin: TEST_CLIENT_ORIGIN,
     cookie: AUTH_COOKIE,
-    csrfToken: CSRF_TOKEN
+    csrfToken: CSRF_TOKEN,
   });
   expect(save.response.status).toBe(200);
   expect((save.json.capsule as { id?: string }).id).toBe("capsule-1");
@@ -412,7 +475,7 @@ test("capsule mutation state and metadata routes map success and missing records
     method: "POST",
     origin: TEST_CLIENT_ORIGIN,
     cookie: AUTH_COOKIE,
-    csrfToken: CSRF_TOKEN
+    csrfToken: CSRF_TOKEN,
   });
   expect(revert.response.status).toBe(200);
   expect((revert.json.capsule as { name?: string }).name).toBe("Reverted");
@@ -422,28 +485,36 @@ test("capsule mutation state and metadata routes map success and missing records
     origin: TEST_CLIENT_ORIGIN,
     cookie: AUTH_COOKIE,
     csrfToken: CSRF_TOKEN,
-    body: { name: "Travel edit" }
+    body: { name: "Travel edit" },
   });
   expect(rename.response.status).toBe(200);
   expect((rename.json.capsule as { name?: string }).name).toBe("Travel edit");
 
-  const invalidRename = await requestJson(baseUrl, "/capsules/capsule-1/rename", {
-    method: "PATCH",
-    origin: TEST_CLIENT_ORIGIN,
-    cookie: AUTH_COOKIE,
-    csrfToken: CSRF_TOKEN,
-    body: { name: "  " }
-  });
+  const invalidRename = await requestJson(
+    baseUrl,
+    "/capsules/capsule-1/rename",
+    {
+      method: "PATCH",
+      origin: TEST_CLIENT_ORIGIN,
+      cookie: AUTH_COOKIE,
+      csrfToken: CSRF_TOKEN,
+      body: { name: "  " },
+    },
+  );
   expect(invalidRename.response.status).toBe(400);
   expect(invalidRename.json).toEqual({ error: "invalid_payload" });
 
-  const duplicate = await requestJson(baseUrl, "/capsules/capsule-1/duplicate", {
-    method: "POST",
-    origin: TEST_CLIENT_ORIGIN,
-    cookie: AUTH_COOKIE,
-    csrfToken: CSRF_TOKEN,
-    body: { name: "Copy name" }
-  });
+  const duplicate = await requestJson(
+    baseUrl,
+    "/capsules/capsule-1/duplicate",
+    {
+      method: "POST",
+      origin: TEST_CLIENT_ORIGIN,
+      cookie: AUTH_COOKIE,
+      csrfToken: CSRF_TOKEN,
+      body: { name: "Copy name" },
+    },
+  );
   expect(duplicate.response.status).toBe(201);
   expect((duplicate.json.capsule as { id?: string }).id).toBe("capsule-copy");
 
@@ -451,7 +522,7 @@ test("capsule mutation state and metadata routes map success and missing records
     method: "POST",
     origin: TEST_CLIENT_ORIGIN,
     cookie: AUTH_COOKIE,
-    csrfToken: CSRF_TOKEN
+    csrfToken: CSRF_TOKEN,
   });
   expect(select.response.status).toBe(200);
   expect(select.json.activeCapsuleId).toBe("capsule-1");
@@ -460,7 +531,7 @@ test("capsule mutation state and metadata routes map success and missing records
     method: "DELETE",
     origin: TEST_CLIENT_ORIGIN,
     cookie: AUTH_COOKIE,
-    csrfToken: CSRF_TOKEN
+    csrfToken: CSRF_TOKEN,
   });
   expect(deleted.response.status).toBe(200);
   expect((deleted.json.activeCapsule as { id?: string }).id).toBe("capsule-1");
@@ -471,7 +542,7 @@ test("capsule mutation state and metadata routes map success and missing records
     { type: "rename", id: "capsule-1", name: "Travel edit" },
     { type: "duplicate", id: "capsule-1", name: "Copy name" },
     { type: "select", activeCapsuleId: "capsule-1" },
-    { type: "delete", id: "capsule-1" }
+    { type: "delete", id: "capsule-1" },
   ]);
 });
 
@@ -482,16 +553,20 @@ test("capsule mutation routes map store failures and not-found responses", async
     overrides: {
       createCapsuleImpl: async () => {
         throw new Error("create_failed");
-      }
-    }
+      },
+    },
   });
-  const createFailure = await requestJson(failingCreateServer.baseUrl, "/capsules", {
-    method: "POST",
-    origin: TEST_CLIENT_ORIGIN,
-    cookie: AUTH_COOKIE,
-    csrfToken: CSRF_TOKEN,
-    body: { name: "Spring edit", filters: {} }
-  });
+  const createFailure = await requestJson(
+    failingCreateServer.baseUrl,
+    "/capsules",
+    {
+      method: "POST",
+      origin: TEST_CLIENT_ORIGIN,
+      cookie: AUTH_COOKIE,
+      csrfToken: CSRF_TOKEN,
+      body: { name: "Spring edit", filters: {} },
+    },
+  );
   expect(createFailure.response.status).toBe(503);
   expect(createFailure.json).toEqual({ error: "service_unavailable" });
 
@@ -503,81 +578,113 @@ test("capsule mutation routes map store failures and not-found responses", async
       renameCapsuleImpl: async () => null,
       duplicateCapsuleImpl: async () => null,
       getCapsuleImpl: async () => null,
-      deleteCapsuleImpl: async () => false
-    }
+      deleteCapsuleImpl: async () => false,
+    },
   });
-  const filtersMissing = await requestJson(missingMutationsServer.baseUrl, "/capsules/capsule-1/filters", {
-    method: "PATCH",
-    origin: TEST_CLIENT_ORIGIN,
-    cookie: AUTH_COOKIE,
-    csrfToken: CSRF_TOKEN,
-    body: { filters: {} }
-  });
+  const filtersMissing = await requestJson(
+    missingMutationsServer.baseUrl,
+    "/capsules/capsule-1/filters",
+    {
+      method: "PATCH",
+      origin: TEST_CLIENT_ORIGIN,
+      cookie: AUTH_COOKIE,
+      csrfToken: CSRF_TOKEN,
+      body: { filters: {} },
+    },
+  );
   expect(filtersMissing.response.status).toBe(404);
   expect(filtersMissing.json).toEqual({ error: "not_found" });
 
-  const rejectedMissing = await requestJson(missingMutationsServer.baseUrl, "/capsules/capsule-1/rejected-urls", {
-    method: "PATCH",
-    origin: TEST_CLIENT_ORIGIN,
-    cookie: AUTH_COOKIE,
-    csrfToken: CSRF_TOKEN,
-    body: { rejectedUrls: [] }
-  });
+  const rejectedMissing = await requestJson(
+    missingMutationsServer.baseUrl,
+    "/capsules/capsule-1/rejected-urls",
+    {
+      method: "PATCH",
+      origin: TEST_CLIENT_ORIGIN,
+      cookie: AUTH_COOKIE,
+      csrfToken: CSRF_TOKEN,
+      body: { rejectedUrls: [] },
+    },
+  );
   expect(rejectedMissing.response.status).toBe(404);
   expect(rejectedMissing.json).toEqual({ error: "not_found" });
 
-  const saveMissing = await requestJson(missingMutationsServer.baseUrl, "/capsules/capsule-1/save", {
-    method: "POST",
-    origin: TEST_CLIENT_ORIGIN,
-    cookie: AUTH_COOKIE,
-    csrfToken: CSRF_TOKEN
-  });
+  const saveMissing = await requestJson(
+    missingMutationsServer.baseUrl,
+    "/capsules/capsule-1/save",
+    {
+      method: "POST",
+      origin: TEST_CLIENT_ORIGIN,
+      cookie: AUTH_COOKIE,
+      csrfToken: CSRF_TOKEN,
+    },
+  );
   expect(saveMissing.response.status).toBe(404);
   expect(saveMissing.json).toEqual({ error: "not_found" });
 
-  const revertMissing = await requestJson(missingMutationsServer.baseUrl, "/capsules/capsule-1/revert", {
-    method: "POST",
-    origin: TEST_CLIENT_ORIGIN,
-    cookie: AUTH_COOKIE,
-    csrfToken: CSRF_TOKEN
-  });
+  const revertMissing = await requestJson(
+    missingMutationsServer.baseUrl,
+    "/capsules/capsule-1/revert",
+    {
+      method: "POST",
+      origin: TEST_CLIENT_ORIGIN,
+      cookie: AUTH_COOKIE,
+      csrfToken: CSRF_TOKEN,
+    },
+  );
   expect(revertMissing.response.status).toBe(404);
   expect(revertMissing.json).toEqual({ error: "not_found" });
 
-  const renameMissing = await requestJson(missingMutationsServer.baseUrl, "/capsules/capsule-1/rename", {
-    method: "PATCH",
-    origin: TEST_CLIENT_ORIGIN,
-    cookie: AUTH_COOKIE,
-    csrfToken: CSRF_TOKEN,
-    body: { name: "Travel edit" }
-  });
+  const renameMissing = await requestJson(
+    missingMutationsServer.baseUrl,
+    "/capsules/capsule-1/rename",
+    {
+      method: "PATCH",
+      origin: TEST_CLIENT_ORIGIN,
+      cookie: AUTH_COOKIE,
+      csrfToken: CSRF_TOKEN,
+      body: { name: "Travel edit" },
+    },
+  );
   expect(renameMissing.response.status).toBe(404);
   expect(renameMissing.json).toEqual({ error: "not_found" });
 
-  const duplicateMissing = await requestJson(missingMutationsServer.baseUrl, "/capsules/capsule-1/duplicate", {
-    method: "POST",
-    origin: TEST_CLIENT_ORIGIN,
-    cookie: AUTH_COOKIE,
-    csrfToken: CSRF_TOKEN
-  });
+  const duplicateMissing = await requestJson(
+    missingMutationsServer.baseUrl,
+    "/capsules/capsule-1/duplicate",
+    {
+      method: "POST",
+      origin: TEST_CLIENT_ORIGIN,
+      cookie: AUTH_COOKIE,
+      csrfToken: CSRF_TOKEN,
+    },
+  );
   expect(duplicateMissing.response.status).toBe(404);
   expect(duplicateMissing.json).toEqual({ error: "not_found" });
 
-  const selectMissing = await requestJson(missingMutationsServer.baseUrl, "/capsules/capsule-1/select", {
-    method: "POST",
-    origin: TEST_CLIENT_ORIGIN,
-    cookie: AUTH_COOKIE,
-    csrfToken: CSRF_TOKEN
-  });
+  const selectMissing = await requestJson(
+    missingMutationsServer.baseUrl,
+    "/capsules/capsule-1/select",
+    {
+      method: "POST",
+      origin: TEST_CLIENT_ORIGIN,
+      cookie: AUTH_COOKIE,
+      csrfToken: CSRF_TOKEN,
+    },
+  );
   expect(selectMissing.response.status).toBe(404);
   expect(selectMissing.json).toEqual({ error: "not_found" });
 
-  const deleteMissing = await requestJson(missingMutationsServer.baseUrl, "/capsules/capsule-1", {
-    method: "DELETE",
-    origin: TEST_CLIENT_ORIGIN,
-    cookie: AUTH_COOKIE,
-    csrfToken: CSRF_TOKEN
-  });
+  const deleteMissing = await requestJson(
+    missingMutationsServer.baseUrl,
+    "/capsules/capsule-1",
+    {
+      method: "DELETE",
+      origin: TEST_CLIENT_ORIGIN,
+      cookie: AUTH_COOKIE,
+      csrfToken: CSRF_TOKEN,
+    },
+  );
   expect(deleteMissing.response.status).toBe(404);
   expect(deleteMissing.json).toEqual({ error: "not_found" });
 });
@@ -587,29 +694,43 @@ test("capsule pdf route maps missing inputs and build failures", async (t) => {
 
   const noItemsServer = await startTestServer(t, {
     overrides: {
-      getCapsuleImpl: async () => ({ id: "capsule-1", name: "Empty", draft: null, saved: null, status: "new" })
-    }
+      getCapsuleImpl: async () => ({
+        id: "capsule-1",
+        name: "Empty",
+        draft: null,
+        saved: null,
+        status: "new",
+      }),
+    },
   });
-  const noItems = await requestJson(noItemsServer.baseUrl, "/capsules/capsule-1/pdf", {
-    method: "POST",
-    origin: TEST_CLIENT_ORIGIN,
-    cookie: AUTH_COOKIE,
-    csrfToken: CSRF_TOKEN
-  });
+  const noItems = await requestJson(
+    noItemsServer.baseUrl,
+    "/capsules/capsule-1/pdf",
+    {
+      method: "POST",
+      origin: TEST_CLIENT_ORIGIN,
+      cookie: AUTH_COOKIE,
+      csrfToken: CSRF_TOKEN,
+    },
+  );
   expect(noItems.response.status).toBe(404);
   expect(noItems.json).toEqual({ error: "not_found" });
 
   const noProductsServer = await startTestServer(t, {
     overrides: {
-      getProductsByUrlsInOrderImpl: async () => []
-    }
+      getProductsByUrlsInOrderImpl: async () => [],
+    },
   });
-  const noProducts = await requestJson(noProductsServer.baseUrl, "/capsules/capsule-1/pdf", {
-    method: "POST",
-    origin: TEST_CLIENT_ORIGIN,
-    cookie: AUTH_COOKIE,
-    csrfToken: CSRF_TOKEN
-  });
+  const noProducts = await requestJson(
+    noProductsServer.baseUrl,
+    "/capsules/capsule-1/pdf",
+    {
+      method: "POST",
+      origin: TEST_CLIENT_ORIGIN,
+      cookie: AUTH_COOKIE,
+      csrfToken: CSRF_TOKEN,
+    },
+  );
   expect(noProducts.response.status).toBe(404);
   expect(noProducts.json).toEqual({ error: "not_found" });
 
@@ -617,15 +738,19 @@ test("capsule pdf route maps missing inputs and build failures", async (t) => {
     overrides: {
       buildWardrobePdfInChildImpl: async () => {
         throw new Error("pdf_failed");
-      }
-    }
+      },
+    },
   });
-  const pdfFailure = await requestJson(failingPdfServer.baseUrl, "/capsules/capsule-1/pdf", {
-    method: "POST",
-    origin: TEST_CLIENT_ORIGIN,
-    cookie: AUTH_COOKIE,
-    csrfToken: CSRF_TOKEN
-  });
+  const pdfFailure = await requestJson(
+    failingPdfServer.baseUrl,
+    "/capsules/capsule-1/pdf",
+    {
+      method: "POST",
+      origin: TEST_CLIENT_ORIGIN,
+      cookie: AUTH_COOKIE,
+      csrfToken: CSRF_TOKEN,
+    },
+  );
   expect(pdfFailure.response.status).toBe(503);
   expect(pdfFailure.json).toEqual({ error: "service_unavailable" });
 });

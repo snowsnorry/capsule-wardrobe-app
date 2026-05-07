@@ -37,4 +37,8 @@ type AppSidebarShellProps = {
   children?: AppSidebarShellSlot;
 };
 
-export type { AppSidebarShellContext, AppSidebarShellProps, AppSidebarShellSlot };
+export type {
+  AppSidebarShellContext,
+  AppSidebarShellProps,
+  AppSidebarShellSlot,
+};

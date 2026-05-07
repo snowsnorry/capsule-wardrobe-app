@@ -1,13 +1,21 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import { LocaleProvider } from "../i18n/LocaleProvider";
 
-const localeSwitcherMock = vi.hoisted(() => vi.fn(() => <div data-testid="locale-switcher" />));
+const localeSwitcherMock = vi.hoisted(() =>
+  vi.fn(() => <div data-testid="locale-switcher" />),
+);
 
 vi.mock("../components/LocaleSwitcher", () => ({
-  default: localeSwitcherMock
+  default: localeSwitcherMock,
 }));
 
 import ProfileScreen from "./ProfileScreen";
@@ -20,7 +28,7 @@ function renderScreen(props = {}, { locale = "en" } = {}) {
   const defaults = {
     styleOptions: {
       core: ["casual", "formal"],
-      aesthetics: ["minimalistic", "retro"]
+      aesthetics: ["minimalistic", "retro"],
     },
     occasionOptions: ["office", "date_night"],
     seasonOptions: ["summer", "winter"],
@@ -44,7 +52,7 @@ function renderScreen(props = {}, { locale = "en" } = {}) {
     onSelectPattern: vi.fn(),
     onSave: vi.fn(),
     onDelete: vi.fn(),
-    onBack: vi.fn()
+    onBack: vi.fn(),
   };
 
   return {
@@ -55,8 +63,8 @@ function renderScreen(props = {}, { locale = "en" } = {}) {
         <LocaleProvider>
           <ProfileScreen {...defaults} {...props} />
         </LocaleProvider>
-      </ThemeProvider>
-    )
+      </ThemeProvider>,
+    ),
   };
 }
 
@@ -78,7 +86,7 @@ describe("ProfileScreen", () => {
 
     renderScreen({
       onSave,
-      onBack
+      onBack,
     });
 
     const saveButton = screen.getByRole("button", { name: "Save changes" });
@@ -96,7 +104,7 @@ describe("ProfileScreen", () => {
       selectedStyleCore: "",
       selectedOccasions: [],
       selectedSeasons: [],
-      selectedAudience: ""
+      selectedAudience: "",
     });
 
     expect(screen.getByRole("button", { name: "Save changes" })).toBeDisabled();
@@ -112,15 +120,18 @@ describe("ProfileScreen", () => {
     const onSelectAccentColor = vi.fn();
     const onSelectPattern = vi.fn();
 
-    renderScreen({
-      onSelectStyleCore,
-      onSelectStyleAesthetic,
-      onToggleOccasion,
-      onToggleSeason,
-      onSelectAudience,
-      onSelectAccentColor,
-      onSelectPattern
-    }, { locale: "ru" });
+    renderScreen(
+      {
+        onSelectStyleCore,
+        onSelectStyleAesthetic,
+        onToggleOccasion,
+        onToggleSeason,
+        onSelectAudience,
+        onSelectAccentColor,
+        onSelectPattern,
+      },
+      { locale: "ru" },
+    );
 
     await user.click(screen.getByRole("button", { name: "Официальный" }));
     await user.click(screen.getByRole("button", { name: "Минималистичный" }));
@@ -168,40 +179,50 @@ describe("ProfileScreen", () => {
         loading: true,
         error: "something went wrong",
         infoKey: "profile.updated",
-        infoParams: null
-      }
+        infoParams: null,
+      },
     });
 
     expect(screen.getByRole("button", { name: "Save changes" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Delete profile" })).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Delete profile" }),
+    ).toBeDisabled();
     expect(screen.getByText("something went wrong")).toBeInTheDocument();
     expect(screen.getByText("Profile updated.")).toBeInTheDocument();
   });
 
   test("renders solid as selected for a legacy null pattern", () => {
     renderScreen({
-      selectedPattern: null
+      selectedPattern: null,
     });
 
-    expect(screen.getByRole("button", { name: "Solid" })).toHaveClass("MuiChip-filledPrimary");
+    expect(screen.getByRole("button", { name: "Solid" })).toHaveClass(
+      "MuiChip-filledPrimary",
+    );
   });
 
   test("sorts pattern chips alphabetically by label with solid pinned first", () => {
     renderScreen({
-      patternOptions: ["stripe", "solid", "abstract"]
+      patternOptions: ["stripe", "solid", "abstract"],
     });
 
     const solid = screen.getByRole("button", { name: "Solid" });
     const abstract = screen.getByRole("button", { name: "Abstract" });
     const stripe = screen.getByRole("button", { name: "Stripe" });
 
-    expect(solid.compareDocumentPosition(abstract) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(abstract.compareDocumentPosition(stripe) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(
+      solid.compareDocumentPosition(abstract) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      abstract.compareDocumentPosition(stripe) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   test("renders the full canonical pattern list on the main screen", () => {
     renderScreen({
-      patternOptions: ["stripe", "solid", "abstract"]
+      patternOptions: ["stripe", "solid", "abstract"],
     });
 
     const solid = screen.getByRole("button", { name: "Solid" });
@@ -210,6 +231,8 @@ describe("ProfileScreen", () => {
 
     expect(argyle).toBeInTheDocument();
     expect(graphic).toBeInTheDocument();
-    expect(solid.compareDocumentPosition(argyle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(
+      solid.compareDocumentPosition(argyle) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 });

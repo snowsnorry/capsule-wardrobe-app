@@ -97,7 +97,9 @@ function isPlainRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function trimmedString(value: unknown): string {
-  return typeof value === "string" && value.trim().length > 0 ? value.trim() : "";
+  return typeof value === "string" && value.trim().length > 0
+    ? value.trim()
+    : "";
 }
 
 function nullableTrimmedString(value: unknown): string | null {
@@ -107,7 +109,11 @@ function nullableTrimmedString(value: unknown): string | null {
 
 function uniqueTrimmedStrings(values: unknown): string[] {
   return Array.isArray(values)
-    ? [...new Set(values.map((value) => String(value || "").trim()).filter(Boolean))]
+    ? [
+        ...new Set(
+          values.map((value) => String(value || "").trim()).filter(Boolean),
+        ),
+      ]
     : [];
 }
 
@@ -119,24 +125,31 @@ function normalizeOutfitSetPayload(value: unknown): OutfitSetPayload | null {
   const itemIds = uniqueTrimmedStrings(value.itemIds);
   return itemIds.length > 0
     ? {
-      itemIds,
-      image: nullableTrimmedString(value.image),
-      imageObsolete: Boolean(value.imageObsolete)
-    }
+        itemIds,
+        image: nullableTrimmedString(value.image),
+        imageObsolete: Boolean(value.imageObsolete),
+      }
     : null;
 }
 
 function normalizeOutfitSetPayloads(value: unknown): OutfitSetPayload[] {
   return Array.isArray(value)
-    ? value.map(normalizeOutfitSetPayload).filter((set): set is OutfitSetPayload => Boolean(set))
+    ? value
+        .map(normalizeOutfitSetPayload)
+        .filter((set): set is OutfitSetPayload => Boolean(set))
     : [];
 }
 
 function getRawSelectionText(payload: Record<string, unknown>): string | null {
-  return nullableTrimmedString(payload.rawSelectionText) || nullableTrimmedString(payload.reasoning);
+  return (
+    nullableTrimmedString(payload.rawSelectionText) ||
+    nullableTrimmedString(payload.reasoning)
+  );
 }
 
-export function normalizeWardrobePayload(payload: Record<string, unknown> | null = null): WardrobePayload | null {
+export function normalizeWardrobePayload(
+  payload: Record<string, unknown> | null = null,
+): WardrobePayload | null {
   if (!isPlainRecord(payload)) {
     return null;
   }
@@ -146,11 +159,15 @@ export function normalizeWardrobePayload(payload: Record<string, unknown> | null
     outfitSets: normalizeOutfitSetPayloads(payload.outfitSets),
     rawSelectionText: getRawSelectionText(payload),
     swimwearReasoning: nullableTrimmedString(payload.swimwearReasoning),
-    swimwearRawSelectionText: nullableTrimmedString(payload.swimwearRawSelectionText)
+    swimwearRawSelectionText: nullableTrimmedString(
+      payload.swimwearRawSelectionText,
+    ),
   };
 }
 
-export function normalizeCapsuleFilters(filters: Record<string, unknown> | null = null): CapsuleFilters {
+export function normalizeCapsuleFilters(
+  filters: Record<string, unknown> | null = null,
+): CapsuleFilters {
   if (!filters || typeof filters !== "object" || Array.isArray(filters)) {
     return {
       formalityLevel: "",
@@ -160,23 +177,29 @@ export function normalizeCapsuleFilters(filters: Record<string, unknown> | null 
       audience: "",
       color: null,
       pattern: "solid",
-      text: ""
+      text: "",
     };
   }
 
   return {
-    formalityLevel: typeof filters.formalityLevel === "string" ? filters.formalityLevel : "",
+    formalityLevel:
+      typeof filters.formalityLevel === "string" ? filters.formalityLevel : "",
     style: typeof filters.style === "string" ? filters.style : null,
     occasions: normalizeOccasionList(filters.occasions),
     season: Array.isArray(filters.season) ? filters.season.filter(Boolean) : [],
     audience: typeof filters.audience === "string" ? filters.audience : "",
     color: typeof filters.color === "string" ? filters.color : null,
     pattern: normalizeCapsulePattern(filters.pattern),
-    text: typeof filters.text === "string" && filters.text.trim() ? filters.text.trim() : ""
+    text:
+      typeof filters.text === "string" && filters.text.trim()
+        ? filters.text.trim()
+        : "",
   };
 }
 
-export function normalizeCapsuleRegenerationMarker(value: unknown): CapsuleRegenerationMarker | null {
+export function normalizeCapsuleRegenerationMarker(
+  value: unknown,
+): CapsuleRegenerationMarker | null {
   if (!isPlainRecord(value)) {
     return null;
   }
@@ -194,31 +217,39 @@ export function normalizeCapsuleRegenerationMarker(value: unknown): CapsuleRegen
     status: "pending",
     kind: "full",
     startedAt,
-    requestId
+    requestId,
   };
 }
 
-export function normalizeCapsuleSnapshot(snapshot: Record<string, unknown> | null = null): CapsuleSnapshot | null {
+export function normalizeCapsuleSnapshot(
+  snapshot: Record<string, unknown> | null = null,
+): CapsuleSnapshot | null {
   if (!isPlainRecord(snapshot)) {
     return null;
   }
 
-  const snapshotFilters = isPlainRecord(snapshot.filters) ? snapshot.filters : null;
+  const snapshotFilters = isPlainRecord(snapshot.filters)
+    ? snapshot.filters
+    : null;
   const snapshotData = isPlainRecord(snapshot.data) ? snapshot.data : null;
 
   return {
     filters: normalizeCapsuleFilters(snapshotFilters),
     data: {
-      wardrobe: normalizeWardrobePayload(isPlainRecord(snapshotData?.wardrobe) ? snapshotData.wardrobe : null),
+      wardrobe: normalizeWardrobePayload(
+        isPlainRecord(snapshotData?.wardrobe) ? snapshotData.wardrobe : null,
+      ),
       rejectedUrls: uniqueTrimmedStrings(snapshotData?.rejectedUrls),
-      regeneration: normalizeCapsuleRegenerationMarker(snapshotData?.regeneration)
-    }
+      regeneration: normalizeCapsuleRegenerationMarker(
+        snapshotData?.regeneration,
+      ),
+    },
   };
 }
 
 export function buildCapsuleSnapshotWithRegeneration(
   snapshot: CapsuleSnapshot | null,
-  regeneration: CapsuleRegenerationMarker | null
+  regeneration: CapsuleRegenerationMarker | null,
 ): CapsuleSnapshot | null {
   if (!snapshot) {
     return null;
@@ -229,16 +260,22 @@ export function buildCapsuleSnapshotWithRegeneration(
     data: {
       wardrobe: snapshot.data?.wardrobe || null,
       rejectedUrls: snapshot.data?.rejectedUrls || [],
-      regeneration
-    }
+      regeneration,
+    },
   });
 }
 
-export function getCapsuleIdValue(capsule: { id?: unknown } | null): string | null {
-  return typeof capsule?.id === "string" && capsule.id.trim() ? capsule.id : null;
+export function getCapsuleIdValue(
+  capsule: { id?: unknown } | null,
+): string | null {
+  return typeof capsule?.id === "string" && capsule.id.trim()
+    ? capsule.id
+    : null;
 }
 
-export function normalizeCapsuleRecord(capsule: CapsuleRecord | null): NormalizedCapsuleRecord | null {
+export function normalizeCapsuleRecord(
+  capsule: CapsuleRecord | null,
+): NormalizedCapsuleRecord | null {
   if (!capsule) {
     return null;
   }
@@ -252,47 +289,70 @@ export function normalizeCapsuleRecord(capsule: CapsuleRecord | null): Normalize
   if (hasSaved && !hasDraft) {
     status = "saved";
   } else if (hasSaved && hasDraft) {
-    status = JSON.stringify(saved) === JSON.stringify(draft) ? "saved" : "modified";
+    status =
+      JSON.stringify(saved) === JSON.stringify(draft) ? "saved" : "modified";
   }
 
   return {
     ...capsule,
     draft,
     saved,
-    status
+    status,
   };
 }
 
-export function getEffectiveCapsuleSnapshot(capsule: CapsuleRecord | null): CapsuleSnapshot | null {
+export function getEffectiveCapsuleSnapshot(
+  capsule: CapsuleRecord | null,
+): CapsuleSnapshot | null {
   const normalized = normalizeCapsuleRecord(capsule);
   return normalized?.draft || normalized?.saved || null;
 }
 
-export function capsuleSnapshotHasWardrobe(snapshot: CapsuleSnapshot | null): boolean {
+export function capsuleSnapshotHasWardrobe(
+  snapshot: CapsuleSnapshot | null,
+): boolean {
   const items = snapshot?.data?.wardrobe?.items;
   return Array.isArray(items) && items.length > 0;
 }
 
-export function isShareableCapsuleSnapshot(snapshot: CapsuleSnapshot | null): boolean {
-  return Boolean(snapshot && capsuleSnapshotHasWardrobe(snapshot) && !getCapsuleSnapshotRegeneration(snapshot));
+export function isShareableCapsuleSnapshot(
+  snapshot: CapsuleSnapshot | null,
+): boolean {
+  return Boolean(
+    snapshot &&
+    capsuleSnapshotHasWardrobe(snapshot) &&
+    !getCapsuleSnapshotRegeneration(snapshot),
+  );
 }
 
-export function getCapsuleSnapshotRegeneration(snapshot: CapsuleSnapshot | null): CapsuleRegenerationMarker | null {
+export function getCapsuleSnapshotRegeneration(
+  snapshot: CapsuleSnapshot | null,
+): CapsuleRegenerationMarker | null {
   return normalizeCapsuleRegenerationMarker(snapshot?.data?.regeneration);
 }
 
 export function firstStringValue(value: unknown): string {
-  return typeof value === "string" && value.trim().length > 0 ? value.trim() : "";
+  return typeof value === "string" && value.trim().length > 0
+    ? value.trim()
+    : "";
 }
 
-export function translateCapsuleFilterValue(group: string, value: unknown): string {
+export function translateCapsuleFilterValue(
+  group: string,
+  value: unknown,
+): string {
   const normalizedValue = firstStringValue(value);
   return normalizedValue ? translateOption(group, normalizedValue, "en") : "";
 }
 
-export function buildCapsuleFilterSentence(labelKey: string, value: string | string[]): string {
+export function buildCapsuleFilterSentence(
+  labelKey: string,
+  value: string | string[],
+): string {
   const values = Array.isArray(value) ? value : [value];
-  const translatedValues = values.map((item) => String(item || "").trim()).filter(Boolean);
+  const translatedValues = values
+    .map((item) => String(item || "").trim())
+    .filter(Boolean);
   if (!translatedValues.length) {
     return "";
   }
@@ -300,33 +360,58 @@ export function buildCapsuleFilterSentence(labelKey: string, value: string | str
   return `${t(labelKey, undefined, "en")}: ${translatedValues.join(", ")}`;
 }
 
-export function buildSharedCapsuleDescription(filters: CapsuleFilters | null): string {
+export function buildSharedCapsuleDescription(
+  filters: CapsuleFilters | null,
+): string {
   if (!filters) {
     return "";
   }
 
   const sentences = [
-    buildCapsuleFilterSentence("search.fields.formalityLevel", translateCapsuleFilterValue("styles", filters.formalityLevel)),
-    buildCapsuleFilterSentence("search.fields.style", translateCapsuleFilterValue("styles", filters.style)),
+    buildCapsuleFilterSentence(
+      "search.fields.formalityLevel",
+      translateCapsuleFilterValue("styles", filters.formalityLevel),
+    ),
+    buildCapsuleFilterSentence(
+      "search.fields.style",
+      translateCapsuleFilterValue("styles", filters.style),
+    ),
     buildCapsuleFilterSentence(
       "search.fields.occasions",
-      filters.occasions.map((value) => translateCapsuleFilterValue("occasions", value))
+      filters.occasions.map((value) =>
+        translateCapsuleFilterValue("occasions", value),
+      ),
     ),
     buildCapsuleFilterSentence(
       "search.fields.season",
-      filters.season.map((value) => translateCapsuleFilterValue("seasons", value))
+      filters.season.map((value) =>
+        translateCapsuleFilterValue("seasons", value),
+      ),
     ),
-    buildCapsuleFilterSentence("search.fields.audience", translateCapsuleFilterValue("audience", filters.audience)),
-    buildCapsuleFilterSentence("search.fields.color", translateCapsuleFilterValue("accentColors", filters.color)),
-    buildCapsuleFilterSentence("search.fields.pattern", translateCapsuleFilterValue("patterns", filters.pattern))
+    buildCapsuleFilterSentence(
+      "search.fields.audience",
+      translateCapsuleFilterValue("audience", filters.audience),
+    ),
+    buildCapsuleFilterSentence(
+      "search.fields.color",
+      translateCapsuleFilterValue("accentColors", filters.color),
+    ),
+    buildCapsuleFilterSentence(
+      "search.fields.pattern",
+      translateCapsuleFilterValue("patterns", filters.pattern),
+    ),
   ].filter(Boolean);
 
   return sentences.length ? `${sentences.join(". ")}.` : "";
 }
 
-export function getSharedCapsuleImage(snapshot: CapsuleSnapshot | null): string {
+export function getSharedCapsuleImage(
+  snapshot: CapsuleSnapshot | null,
+): string {
   const wardrobe = snapshot?.data?.wardrobe;
-  const outfitSets = Array.isArray(wardrobe?.outfitSets) ? wardrobe.outfitSets : [];
+  const outfitSets = Array.isArray(wardrobe?.outfitSets)
+    ? wardrobe.outfitSets
+    : [];
   for (const outfitSet of outfitSets) {
     const image = firstStringValue(outfitSet?.image);
     if (image) {
@@ -340,7 +425,7 @@ export function getSharedCapsuleImage(snapshot: CapsuleSnapshot | null): string 
 
 export function buildSharedCapsuleOgMetadata({
   name,
-  content
+  content,
 }: {
   name: unknown;
   content: unknown;
@@ -348,7 +433,7 @@ export function buildSharedCapsuleOgMetadata({
   const snapshot = normalizeCapsuleSnapshot(
     content && typeof content === "object" && !Array.isArray(content)
       ? (content as Record<string, unknown>)
-      : null
+      : null,
   );
   if (!snapshot) {
     return null;
@@ -357,6 +442,6 @@ export function buildSharedCapsuleOgMetadata({
   return {
     title: firstStringValue(name) || DEFAULT_CAPSULE_NAME,
     description: buildSharedCapsuleDescription(snapshot.filters),
-    image: getSharedCapsuleImage(snapshot)
+    image: getSharedCapsuleImage(snapshot),
   };
 }

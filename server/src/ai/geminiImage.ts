@@ -35,7 +35,9 @@ type GeminiImageGenerateContentResponse = {
 
 type GeminiImageClientLike = {
   models: {
-    generateContent: (payload: GeminiImageGenerateContentPayload) => Promise<GeminiImageGenerateContentResponse>;
+    generateContent: (
+      payload: GeminiImageGenerateContentPayload,
+    ) => Promise<GeminiImageGenerateContentResponse>;
   };
 };
 
@@ -54,11 +56,13 @@ function buildGeminiImagePromptParts(prompt, images = []) {
 
     promptParts.push({
       inlineData: {
-        mimeType: typeof image?.mimeType === "string" && image.mimeType.trim().length > 0
-          ? image.mimeType.trim()
-          : "image/jpeg",
-        data: image.buffer.toString("base64")
-      }
+        mimeType:
+          typeof image?.mimeType === "string" &&
+          image.mimeType.trim().length > 0
+            ? image.mimeType.trim()
+            : "image/jpeg",
+        data: image.buffer.toString("base64"),
+      },
     });
   }
 
@@ -66,9 +70,10 @@ function buildGeminiImagePromptParts(prompt, images = []) {
 }
 
 function extractGeneratedImage(response) {
-  const image = getInteractionOutputImage(response)
-    || getCandidatePartImage(response)
-    || getGeneratedImage(response);
+  const image =
+    getInteractionOutputImage(response) ||
+    getCandidatePartImage(response) ||
+    getGeneratedImage(response);
 
   if (!image) {
     throw new Error("gemini_image_missing_output");
@@ -77,9 +82,17 @@ function extractGeneratedImage(response) {
 }
 
 function getInteractionOutputImage(response) {
-  const output = (Array.isArray(response?.outputs) ? response.outputs : [])
-    .find((item) => item?.type === "image" && typeof item?.data === "string" && item.data.length > 0);
-  return output ? { base64: output.data, mimeType: output?.mime_type || "image/png" } : null;
+  const output = (
+    Array.isArray(response?.outputs) ? response.outputs : []
+  ).find(
+    (item) =>
+      item?.type === "image" &&
+      typeof item?.data === "string" &&
+      item.data.length > 0,
+  );
+  return output
+    ? { base64: output.data, mimeType: output?.mime_type || "image/png" }
+    : null;
 }
 
 function getCandidatePartImage(response) {
@@ -90,28 +103,57 @@ function getCandidatePartImage(response) {
       return typeof inlineData?.data === "string" && inlineData.data.length > 0;
     });
   const inlineData = part?.inlineData || part?.inline_data || null;
-  return inlineData ? { base64: inlineData.data, mimeType: inlineData?.mimeType || inlineData?.mime_type || "image/png" } : null;
+  return inlineData
+    ? {
+        base64: inlineData.data,
+        mimeType: inlineData?.mimeType || inlineData?.mime_type || "image/png",
+      }
+    : null;
 }
 
 function getGeneratedImage(response) {
-  const image = (Array.isArray(response?.generatedImages) ? response.generatedImages : [])
-    .find((item) => typeof item?.image?.imageBytes === "string" && item.image.imageBytes.length > 0);
-  return image ? { base64: image.image.imageBytes, mimeType: image.image?.mimeType || "image/png" } : null;
+  const image = (
+    Array.isArray(response?.generatedImages) ? response.generatedImages : []
+  ).find(
+    (item) =>
+      typeof item?.image?.imageBytes === "string" &&
+      item.image.imageBytes.length > 0,
+  );
+  return image
+    ? {
+        base64: image.image.imageBytes,
+        mimeType: image.image?.mimeType || "image/png",
+      }
+    : null;
 }
 
 function createGeminiImageClient({
-  createClientImpl = ({ apiKey, apiVersion }: { apiKey: string; apiVersion: string }): GeminiImageClientLike => {
+  createClientImpl = ({
+    apiKey,
+    apiVersion,
+  }: {
+    apiKey: string;
+    apiVersion: string;
+  }): GeminiImageClientLike => {
     const sdkClient = new GoogleGenAI({ apiKey, apiVersion });
     return {
       models: {
         generateContent: (payload: GeminiImageGenerateContentPayload) =>
-          sdkClient.models.generateContent(payload as Parameters<typeof sdkClient.models.generateContent>[0]) as Promise<GeminiImageGenerateContentResponse>
-      }
+          sdkClient.models.generateContent(
+            payload as Parameters<typeof sdkClient.models.generateContent>[0],
+          ) as Promise<GeminiImageGenerateContentResponse>,
+      },
     };
   },
-  getApiKeyImpl = () => process.env.GEMINI_API_KEY
+  getApiKeyImpl = () => process.env.GEMINI_API_KEY,
 }: {
-  createClientImpl?: ({ apiKey, apiVersion }: { apiKey: string; apiVersion: string }) => GeminiImageClientLike;
+  createClientImpl?: ({
+    apiKey,
+    apiVersion,
+  }: {
+    apiKey: string;
+    apiVersion: string;
+  }) => GeminiImageClientLike;
   getApiKeyImpl?: () => string | undefined;
 } = {}) {
   let cachedClient = null;
@@ -128,18 +170,14 @@ function createGeminiImageClient({
 
     cachedClient = createClientImpl({
       apiKey,
-      apiVersion: DEFAULT_API_VERSION
+      apiVersion: DEFAULT_API_VERSION,
     });
     return cachedClient;
   }
 
   async function generateImageWithGemini(
     prompt,
-    {
-      images = [],
-      model = DEFAULT_IMAGE_MODEL,
-      onPayloadBuilt = null
-    } = {}
+    { images = [], model = DEFAULT_IMAGE_MODEL, onPayloadBuilt = null } = {},
   ) {
     const client = getGeminiImageClient();
     const promptParts = buildGeminiImagePromptParts(prompt, images);
@@ -147,9 +185,9 @@ function createGeminiImageClient({
       model,
       contents: promptParts,
       config: {
-        responseModalities: ["IMAGE"]
-      }
-    }
+        responseModalities: ["IMAGE"],
+      },
+    };
 
     onPayloadBuilt?.(requestPayload);
 
@@ -157,13 +195,13 @@ function createGeminiImageClient({
 
     return {
       response,
-      image: extractGeneratedImage(response)
+      image: extractGeneratedImage(response),
     };
   }
 
   return {
     generateImageWithGemini,
-    getGeminiImageClient
+    getGeminiImageClient,
   };
 }
 
@@ -173,8 +211,9 @@ export {
   DEFAULT_IMAGE_MODEL,
   buildGeminiImagePromptParts,
   createGeminiImageClient,
-  extractGeneratedImage
+  extractGeneratedImage,
 };
 
-export const generateImageWithGemini = geminiImageClient.generateImageWithGemini;
+export const generateImageWithGemini =
+  geminiImageClient.generateImageWithGemini;
 export const getGeminiImageClient = geminiImageClient.getGeminiImageClient;

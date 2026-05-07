@@ -1,10 +1,13 @@
 import { useCallback, useMemo, useState } from "react";
-import { clearProfileOptionsCache, loadProfileOptions } from "../api/profileOptionsCache";
+import {
+  clearProfileOptionsCache,
+  loadProfileOptions,
+} from "../api/profileOptionsCache";
 import {
   FALLBACK_AUDIENCE_OPTIONS,
   FALLBACK_OCCASION_OPTIONS,
   FALLBACK_SEASON_OPTIONS,
-  FALLBACK_STYLE_OPTIONS
+  FALLBACK_STYLE_OPTIONS,
 } from "./appConstants";
 import { sortSeasonOptions } from "./capsuleState";
 import type { ProfileOptionsResult } from "./appTypes";
@@ -15,7 +18,10 @@ export function useProfileOptions() {
   const [seasonOptions, setSeasonOptions] = useState<string[]>([]);
   const [audienceOptions, setAudienceOptions] = useState<string[]>([]);
   const [patternOptions, setPatternOptions] = useState<string[]>([]);
-  const orderedSeasonOptions = useMemo(() => sortSeasonOptions(seasonOptions), [seasonOptions]);
+  const orderedSeasonOptions = useMemo(
+    () => sortSeasonOptions(seasonOptions),
+    [seasonOptions],
+  );
 
   const resetProfileOptions = useCallback(() => {
     clearProfileOptionsCache();
@@ -34,42 +40,47 @@ export function useProfileOptions() {
     setPatternOptions([]);
   }, []);
 
-  const preloadOnboardingOptions = useCallback(async ({ useFallback = false }: { useFallback?: boolean } = {}) => {
-    try {
-      const result = await loadProfileOptions() as ProfileOptionsResult;
-      setStyleOptions(result.styles);
-      setOccasionOptions(result.occasions);
-      setSeasonOptions(result.seasons);
-      setAudienceOptions(result.audience);
-      setPatternOptions(result.patterns);
-    } catch (error) {
-      if (!useFallback) {
-        throw error;
+  const preloadOnboardingOptions = useCallback(
+    async ({ useFallback = false }: { useFallback?: boolean } = {}) => {
+      try {
+        const result = (await loadProfileOptions()) as ProfileOptionsResult;
+        setStyleOptions(result.styles);
+        setOccasionOptions(result.occasions);
+        setSeasonOptions(result.seasons);
+        setAudienceOptions(result.audience);
+        setPatternOptions(result.patterns);
+      } catch (error) {
+        if (!useFallback) {
+          throw error;
+        }
+        applyFallbackOptions();
       }
-      applyFallbackOptions();
-    }
-  }, [applyFallbackOptions]);
+    },
+    [applyFallbackOptions],
+  );
 
-  const ensureOptionsLoaded = useCallback(async ({ useFallback = false }: { useFallback?: boolean } = {}) => {
-    const optionsLoaded = (
-      Array.isArray(styleOptions.core) &&
-      Array.isArray(styleOptions.aesthetics) &&
-      occasionOptions.length > 0 &&
-      seasonOptions.length > 0 &&
-      audienceOptions.length > 0 &&
-      Array.isArray(patternOptions)
-    );
-    if (!optionsLoaded) {
-      await preloadOnboardingOptions({ useFallback });
-    }
-  }, [
-    audienceOptions.length,
-    occasionOptions.length,
-    patternOptions,
-    preloadOnboardingOptions,
-    seasonOptions.length,
-    styleOptions
-  ]);
+  const ensureOptionsLoaded = useCallback(
+    async ({ useFallback = false }: { useFallback?: boolean } = {}) => {
+      const optionsLoaded =
+        Array.isArray(styleOptions.core) &&
+        Array.isArray(styleOptions.aesthetics) &&
+        occasionOptions.length > 0 &&
+        seasonOptions.length > 0 &&
+        audienceOptions.length > 0 &&
+        Array.isArray(patternOptions);
+      if (!optionsLoaded) {
+        await preloadOnboardingOptions({ useFallback });
+      }
+    },
+    [
+      audienceOptions.length,
+      occasionOptions.length,
+      patternOptions,
+      preloadOnboardingOptions,
+      seasonOptions.length,
+      styleOptions,
+    ],
+  );
 
   return {
     styleOptions,
@@ -80,6 +91,6 @@ export function useProfileOptions() {
     patternOptions,
     ensureOptionsLoaded,
     preloadOnboardingOptions,
-    resetProfileOptions
+    resetProfileOptions,
   };
 }

@@ -13,7 +13,7 @@ import {
   searchCapsulesByEmail,
   updateCapsuleSnapshotByIdForEmail,
   updateProfileActiveCapsuleIdByEmail,
-  upsertSharedCapsule
+  upsertSharedCapsule,
 } from "./db.js";
 import { getProfile } from "./profileStore.js";
 import {
@@ -31,9 +31,12 @@ import {
   type NormalizedCapsuleRecord,
   type SharedCapsuleMetadata,
   type SharedCapsuleOgMetadata,
-  type SharedCapsuleResult
+  type SharedCapsuleResult,
 } from "./capsuleStoreModel.js";
-import { buildProfileCapsuleContext, buildSnapshotFromProfile } from "./capsuleStoreContext.js";
+import {
+  buildProfileCapsuleContext,
+  buildSnapshotFromProfile,
+} from "./capsuleStoreContext.js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type CapsuleStoreDeps = Record<string, any>;
@@ -57,11 +60,16 @@ function createCapsuleStore(deps: CapsuleStoreDeps = {}) {
     updateCapsuleSnapshotByIdForEmailImpl = updateCapsuleSnapshotByIdForEmail,
     updateProfileActiveCapsuleIdByEmailImpl = updateProfileActiveCapsuleIdByEmail,
     upsertSharedCapsuleImpl = upsertSharedCapsule,
-    nowImpl = Date.now
+    nowImpl = Date.now,
   } = deps;
 
-  async function buildUniqueCapsuleName(email: string, preferredName: string = DEFAULT_CAPSULE_NAME): Promise<string> {
-    const baseName = String(preferredName || DEFAULT_CAPSULE_NAME).trim() || DEFAULT_CAPSULE_NAME;
+  async function buildUniqueCapsuleName(
+    email: string,
+    preferredName: string = DEFAULT_CAPSULE_NAME,
+  ): Promise<string> {
+    const baseName =
+      String(preferredName || DEFAULT_CAPSULE_NAME).trim() ||
+      DEFAULT_CAPSULE_NAME;
     const existingNames = await listCapsuleNamesByEmailImpl(email);
     if (!existingNames.includes(baseName)) {
       return baseName;
@@ -74,57 +82,84 @@ function createCapsuleStore(deps: CapsuleStoreDeps = {}) {
     return `${baseName} (${index})`;
   }
 
-  async function setActiveCapsuleId(email: string, activeCapsuleId: string | null) {
+  async function setActiveCapsuleId(
+    email: string,
+    activeCapsuleId: string | null,
+  ) {
     return updateProfileActiveCapsuleIdByEmailImpl({ email, activeCapsuleId });
   }
 
-  async function getCapsule(email: string, capsuleId: string): Promise<NormalizedCapsuleRecord | null> {
-    return normalizeCapsuleRecord(await getCapsuleByIdForEmailImpl({ email, capsuleId }));
+  async function getCapsule(
+    email: string,
+    capsuleId: string,
+  ): Promise<NormalizedCapsuleRecord | null> {
+    return normalizeCapsuleRecord(
+      await getCapsuleByIdForEmailImpl({ email, capsuleId }),
+    );
   }
 
-  async function listRecentCapsules(email: string, limit: number = 10): Promise<NormalizedCapsuleRecord[]> {
+  async function listRecentCapsules(
+    email: string,
+    limit: number = 10,
+  ): Promise<NormalizedCapsuleRecord[]> {
     const rows = await listRecentCapsulesByEmailImpl({ email, limit });
     return rows.map(normalizeCapsuleRecord);
   }
 
-  async function searchCapsules(email: string, query: string, limit: number = 25): Promise<NormalizedCapsuleRecord[]> {
+  async function searchCapsules(
+    email: string,
+    query: string,
+    limit: number = 25,
+  ): Promise<NormalizedCapsuleRecord[]> {
     const rows = await searchCapsulesByEmailImpl({ email, query, limit });
     return rows.map(normalizeCapsuleRecord);
   }
 
-  async function createCapsule(email: string, {
-    name,
-    draft = null,
-    saved = null,
-    setActive = true
-  }: {
-    name?: string;
-    draft?: Record<string, unknown> | null;
-    saved?: Record<string, unknown> | null;
-    setActive?: boolean;
-  } = {}): Promise<NormalizedCapsuleRecord | null> {
-    const resolvedName = await buildUniqueCapsuleName(email, name || DEFAULT_CAPSULE_NAME);
-    const capsule = normalizeCapsuleRecord(await createCapsuleRecordImpl({
+  async function createCapsule(
+    email: string,
+    {
+      name,
+      draft = null,
+      saved = null,
+      setActive = true,
+    }: {
+      name?: string;
+      draft?: Record<string, unknown> | null;
+      saved?: Record<string, unknown> | null;
+      setActive?: boolean;
+    } = {},
+  ): Promise<NormalizedCapsuleRecord | null> {
+    const resolvedName = await buildUniqueCapsuleName(
       email,
-      name: resolvedName,
-      draft: normalizeCapsuleSnapshot(draft),
-      saved: normalizeCapsuleSnapshot(saved)
-    }));
+      name || DEFAULT_CAPSULE_NAME,
+    );
+    const capsule = normalizeCapsuleRecord(
+      await createCapsuleRecordImpl({
+        email,
+        name: resolvedName,
+        draft: normalizeCapsuleSnapshot(draft),
+        saved: normalizeCapsuleSnapshot(saved),
+      }),
+    );
     if (capsule && setActive) {
       await setActiveCapsuleId(email, getCapsuleIdValue(capsule));
     }
     return capsule;
   }
 
-  async function createBootstrapCapsule(email: string): Promise<NormalizedCapsuleRecord | null> {
+  async function createBootstrapCapsule(
+    email: string,
+  ): Promise<NormalizedCapsuleRecord | null> {
     const profile = await getProfileImpl(email);
     return createCapsule(email, {
       draft: buildSnapshotFromProfile(profile),
-      setActive: true
+      setActive: true,
     });
   }
 
-  async function resolveActiveCapsule(email: string): Promise<NormalizedCapsuleRecord | null> {
+  async function resolveActiveCapsule(
+    email: string,
+  ): Promise<NormalizedCapsuleRecord | null> {
     const profile = await getProfileImpl(email);
     if (profile?.activeCapsuleId) {
       const activeCapsule = await getCapsule(email, profile.activeCapsuleId);
@@ -145,32 +180,54 @@ function createCapsuleStore(deps: CapsuleStoreDeps = {}) {
   async function updateCapsuleSnapshot(
     email: string,
     capsuleId: string,
-    draft: Record<string, unknown> | null
+    draft: Record<string, unknown> | null,
   ): Promise<NormalizedCapsuleRecord | null> {
-    return normalizeCapsuleRecord(await updateCapsuleSnapshotByIdForEmailImpl({
-      email,
-      capsuleId,
-      draft: normalizeCapsuleSnapshot(draft)
-    }));
+    return normalizeCapsuleRecord(
+      await updateCapsuleSnapshotByIdForEmailImpl({
+        email,
+        capsuleId,
+        draft: normalizeCapsuleSnapshot(draft),
+      }),
+    );
   }
 
-  async function renameCapsule(email: string, capsuleId: string, name: string): Promise<NormalizedCapsuleRecord | null> {
+  async function renameCapsule(
+    email: string,
+    capsuleId: string,
+    name: string,
+  ): Promise<NormalizedCapsuleRecord | null> {
     const resolvedName = await buildUniqueCapsuleName(email, name);
-    return normalizeCapsuleRecord(await renameCapsuleByIdForEmailImpl({ email, capsuleId, name: resolvedName }));
+    return normalizeCapsuleRecord(
+      await renameCapsuleByIdForEmailImpl({
+        email,
+        capsuleId,
+        name: resolvedName,
+      }),
+    );
   }
 
-  async function saveCapsule(email: string, capsuleId: string): Promise<NormalizedCapsuleRecord | null> {
-    return normalizeCapsuleRecord(await saveCapsuleByIdForEmailImpl({ email, capsuleId }));
+  async function saveCapsule(
+    email: string,
+    capsuleId: string,
+  ): Promise<NormalizedCapsuleRecord | null> {
+    return normalizeCapsuleRecord(
+      await saveCapsuleByIdForEmailImpl({ email, capsuleId }),
+    );
   }
 
-  async function revertCapsule(email: string, capsuleId: string): Promise<NormalizedCapsuleRecord | null> {
-    return normalizeCapsuleRecord(await revertCapsuleDraftByIdForEmailImpl({ email, capsuleId }));
+  async function revertCapsule(
+    email: string,
+    capsuleId: string,
+  ): Promise<NormalizedCapsuleRecord | null> {
+    return normalizeCapsuleRecord(
+      await revertCapsuleDraftByIdForEmailImpl({ email, capsuleId }),
+    );
   }
 
   async function duplicateCapsule(
     email: string,
     capsuleId: string,
-    name: string = DEFAULT_CAPSULE_NAME
+    name: string = DEFAULT_CAPSULE_NAME,
   ): Promise<NormalizedCapsuleRecord | null> {
     const capsule = await getCapsule(email, capsuleId);
     if (!capsule) {
@@ -181,19 +238,20 @@ function createCapsuleStore(deps: CapsuleStoreDeps = {}) {
     return createCapsule(email, {
       name,
       draft: null,
-      saved: effectiveSnapshot
+      saved: effectiveSnapshot,
     });
   }
 
   function buildShareUrl(clientOrigin: string, shareId: string): string {
-    const origin = String(clientOrigin || "").replace(/\/+$/, "") || "http://localhost:5173";
+    const origin =
+      String(clientOrigin || "").replace(/\/+$/, "") || "http://localhost:5173";
     return `${origin}/share/${encodeURIComponent(shareId)}`;
   }
 
   async function createCapsuleShare(
     email: string,
     capsuleId: string,
-    clientOrigin: string
+    clientOrigin: string,
   ): Promise<SharedCapsuleResult | null> {
     const capsule = await getCapsule(email, capsuleId);
     if (!capsule) {
@@ -214,7 +272,7 @@ function createCapsuleStore(deps: CapsuleStoreDeps = {}) {
       name: String(capsule.name || DEFAULT_CAPSULE_NAME),
       content: snapshot as unknown as Record<string, unknown>,
       contentHash: hashCapsuleContentImpl(snapshot),
-      expiresAt
+      expiresAt,
     });
 
     if (!shared) {
@@ -224,11 +282,13 @@ function createCapsuleStore(deps: CapsuleStoreDeps = {}) {
     return {
       id: shared.id,
       url: buildShareUrl(clientOrigin, shared.id),
-      expiresAt: shared.expiresAt
+      expiresAt: shared.expiresAt,
     };
   }
 
-  async function getSharedCapsule(id: string): Promise<SharedCapsuleMetadata | null> {
+  async function getSharedCapsule(
+    id: string,
+  ): Promise<SharedCapsuleMetadata | null> {
     const shared = await getValidSharedCapsuleByIdImpl(String(id || "").trim());
     if (!shared) {
       await pruneExpiredSharedCapsulesImpl();
@@ -238,11 +298,13 @@ function createCapsuleStore(deps: CapsuleStoreDeps = {}) {
     return {
       id: shared.id,
       name: shared.name,
-      expiresAt: shared.expiresAt
+      expiresAt: shared.expiresAt,
     };
   }
 
-  async function getSharedCapsuleOgMetadata(id: string): Promise<SharedCapsuleOgMetadata | null> {
+  async function getSharedCapsuleOgMetadata(
+    id: string,
+  ): Promise<SharedCapsuleOgMetadata | null> {
     const shared = await getValidSharedCapsuleByIdImpl(String(id || "").trim());
     if (!shared) {
       await pruneExpiredSharedCapsulesImpl();
@@ -251,11 +313,14 @@ function createCapsuleStore(deps: CapsuleStoreDeps = {}) {
 
     return buildSharedCapsuleOgMetadata({
       name: shared.name,
-      content: shared.content
+      content: shared.content,
     });
   }
 
-  async function importSharedCapsule(email: string, id: string): Promise<NormalizedCapsuleRecord | null> {
+  async function importSharedCapsule(
+    email: string,
+    id: string,
+  ): Promise<NormalizedCapsuleRecord | null> {
     const shared = await getValidSharedCapsuleByIdImpl(String(id || "").trim());
     if (!shared) {
       await pruneExpiredSharedCapsulesImpl();
@@ -273,11 +338,14 @@ function createCapsuleStore(deps: CapsuleStoreDeps = {}) {
       name: shared.name,
       draft: null,
       saved: content,
-      setActive: true
+      setActive: true,
     });
   }
 
-  async function deleteCapsule(email: string, capsuleId: string): Promise<boolean> {
+  async function deleteCapsule(
+    email: string,
+    capsuleId: string,
+  ): Promise<boolean> {
     const deleted = await deleteCapsuleByIdForEmailImpl({ email, capsuleId });
     if (!deleted) {
       return false;
@@ -315,7 +383,7 @@ function createCapsuleStore(deps: CapsuleStoreDeps = {}) {
     searchCapsules,
     setActiveCapsuleId,
     updateCapsuleSnapshot,
-    renameCapsule
+    renameCapsule,
   };
 }
 
@@ -338,7 +406,7 @@ const {
   searchCapsules,
   setActiveCapsuleId,
   updateCapsuleSnapshot,
-  renameCapsule
+  renameCapsule,
 } = defaultCapsuleStore;
 
 export {
@@ -370,5 +438,5 @@ export {
   searchCapsules,
   setActiveCapsuleId,
   updateCapsuleSnapshot,
-  renameCapsule
+  renameCapsule,
 };

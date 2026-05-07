@@ -7,8 +7,14 @@ import AppSnackbars from "./AppSnackbars";
 
 export type AppPresentationModel = Record<string, unknown>;
 
-export default function AppPresentation({ model }: { model: AppPresentationModel }) {
-  const routeContent = <AppRouteContent {...(model as ComponentProps<typeof AppRouteContent>)} />;
+export default function AppPresentation({
+  model,
+}: {
+  model: AppPresentationModel;
+}) {
+  const routeContent = (
+    <AppRouteContent {...(model as ComponentProps<typeof AppRouteContent>)} />
+  );
 
   return (
     <AppRootView

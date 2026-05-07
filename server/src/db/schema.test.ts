@@ -1,5 +1,9 @@
 import { test, expect, afterEach } from "vitest";
-import { setSqlClientOverride, type SqlClientLike, type SqlResultLike } from "./core.js";
+import {
+  setSqlClientOverride,
+  type SqlClientLike,
+  type SqlResultLike,
+} from "./core.js";
 import {
   checkDatabaseConnection,
   ensureAuthTables,
@@ -8,13 +12,16 @@ import {
   ensureProfilesTable,
   ensureSearchTable,
   ensureSharedCapsulesTable,
-  ensureTables
+  ensureTables,
 } from "./schema.js";
 
 function createSqlRecorder(results: SqlResultLike[] = []) {
   const statements: string[] = [];
   const values: unknown[][] = [];
-  const sql = (async (strings: TemplateStringsArray, ...queryValues: readonly unknown[]) => {
+  const sql = (async (
+    strings: TemplateStringsArray,
+    ...queryValues: readonly unknown[]
+  ) => {
     statements.push(strings.join("?").replace(/\s+/g, " ").trim());
     values.push([...queryValues]);
     return results.shift() ?? [];
@@ -33,7 +40,7 @@ test("checkDatabaseConnection returns the first database probe row", async () =>
 
   expect(await checkDatabaseConnection()).toEqual({
     database: "capsule",
-    now: "2026-05-07T00:00:00Z"
+    now: "2026-05-07T00:00:00Z",
   });
 });
 
@@ -47,16 +54,48 @@ test("ensure auth, profile, passkey, capsule, shared capsule, and search schemas
   await ensureSharedCapsulesTable();
   await ensureSearchTable();
 
-  expect(statements.some((statement) => statement.includes("create table if not exists login_codes"))).toBeTruthy();
-  expect(statements.some((statement) => statement.includes("create table if not exists user_sessions"))).toBeTruthy();
-  expect(statements.some((statement) => statement.includes("create table if not exists profiles"))).toBeTruthy();
-  expect(statements.some((statement) => statement.includes("profiles_theme_check"))).toBeTruthy();
-  expect(statements.some((statement) => statement.includes("profiles_llm_check"))).toBeTruthy();
-  expect(statements.some((statement) => statement.includes("profile_passkeys"))).toBeTruthy();
-  expect(statements.some((statement) => statement.includes("passkey_challenges"))).toBeTruthy();
-  expect(statements.some((statement) => statement.includes("create table if not exists capsules"))).toBeTruthy();
-  expect(statements.some((statement) => statement.includes("create table if not exists shared_capsules"))).toBeTruthy();
-  expect(statements.some((statement) => statement.includes("create table if not exists search"))).toBeTruthy();
+  expect(
+    statements.some((statement) =>
+      statement.includes("create table if not exists login_codes"),
+    ),
+  ).toBeTruthy();
+  expect(
+    statements.some((statement) =>
+      statement.includes("create table if not exists user_sessions"),
+    ),
+  ).toBeTruthy();
+  expect(
+    statements.some((statement) =>
+      statement.includes("create table if not exists profiles"),
+    ),
+  ).toBeTruthy();
+  expect(
+    statements.some((statement) => statement.includes("profiles_theme_check")),
+  ).toBeTruthy();
+  expect(
+    statements.some((statement) => statement.includes("profiles_llm_check")),
+  ).toBeTruthy();
+  expect(
+    statements.some((statement) => statement.includes("profile_passkeys")),
+  ).toBeTruthy();
+  expect(
+    statements.some((statement) => statement.includes("passkey_challenges")),
+  ).toBeTruthy();
+  expect(
+    statements.some((statement) =>
+      statement.includes("create table if not exists capsules"),
+    ),
+  ).toBeTruthy();
+  expect(
+    statements.some((statement) =>
+      statement.includes("create table if not exists shared_capsules"),
+    ),
+  ).toBeTruthy();
+  expect(
+    statements.some((statement) =>
+      statement.includes("create table if not exists search"),
+    ),
+  ).toBeTruthy();
 });
 
 test("ensureTables runs every schema group in dependency order", async () => {
@@ -71,6 +110,8 @@ test("ensureTables runs every schema group in dependency order", async () => {
   expect(joined).toMatch(/create table if not exists capsules/);
   expect(joined).toMatch(/create table if not exists shared_capsules/);
   expect(joined).toMatch(/create table if not exists search/);
-  expect(joined.indexOf("create table if not exists profiles")
-      < joined.indexOf("create table if not exists profile_passkeys")).toBeTruthy();
+  expect(
+    joined.indexOf("create table if not exists profiles") <
+      joined.indexOf("create table if not exists profile_passkeys"),
+  ).toBeTruthy();
 });

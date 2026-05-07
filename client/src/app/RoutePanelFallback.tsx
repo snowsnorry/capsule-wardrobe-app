@@ -8,7 +8,7 @@ export default function RoutePanelFallback() {
         minHeight: 0,
         display: "flex",
         alignItems: "center",
-        px: { xs: 3, md: 4 }
+        px: { xs: 3, md: 4 },
       }}
     >
       <LinearProgress aria-label="Loading section" sx={{ width: "100%" }} />

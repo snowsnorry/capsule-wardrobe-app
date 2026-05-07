@@ -5,18 +5,26 @@ const {
   getCapsuleItems,
   getWardrobeJob,
   regenerateCapsuleWardrobe,
-  startWardrobeJob
+  startWardrobeJob,
 } = wardrobeService;
 
-export { countItemsByKey, extractLlmUsage, getRequestedWardrobeParams, logWardrobeInfo } from "./aiCommon.js";
+export {
+  countItemsByKey,
+  extractLlmUsage,
+  getRequestedWardrobeParams,
+  logWardrobeInfo,
+} from "./aiCommon.js";
 export { enforceCategoryCounts } from "./aiCategoryEnforcement.js";
 export { getSelectedIdsFromCapsule } from "./aiCategoryEnforcement.js";
-export { getWardrobeSelectionPrompt, toWardrobeUiItem } from "./aiSelectionPrompt.js";
+export {
+  getWardrobeSelectionPrompt,
+  toWardrobeUiItem,
+} from "./aiSelectionPrompt.js";
 export { createWardrobeService };
 export {
   getCapsuleItems,
   getWardrobeJob,
   regenerateCapsuleWardrobe,
-  startWardrobeJob
+  startWardrobeJob,
 };
 export { getStoredWardrobePayload } from "./capsuleEvents.js";

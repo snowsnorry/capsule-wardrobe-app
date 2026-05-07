@@ -7,9 +7,15 @@ export type JsonObject = Record<string, unknown>;
 export type SqlCountResult = { count: number };
 export type SqlResultLike<TRow = unknown> = TRow[] | SqlCountResult;
 export type SqlClientLike = {
-  <TRow = unknown>(strings: TemplateStringsArray, ...values: readonly unknown[]): Promise<SqlResultLike<TRow>>;
+  <TRow = unknown>(
+    strings: TemplateStringsArray,
+    ...values: readonly unknown[]
+  ): Promise<SqlResultLike<TRow>>;
 };
-export type HasAffectedRowsResult = SqlResultLike<{ id?: string; email?: string }>;
+export type HasAffectedRowsResult = SqlResultLike<{
+  id?: string;
+  email?: string;
+}>;
 
 export type DatabaseConnectionRow = {
   database: string;
@@ -69,7 +75,12 @@ export type BooleanFlagRow = { hasProfile?: unknown };
 export type NumericRangeRow = { min: unknown; max: unknown };
 export type CountRow = { total?: unknown };
 export type FacetRow = { value: unknown; count: unknown };
-export type PriceBucketRow = { bucket?: unknown; count: unknown; rangeMin: unknown; rangeMax: unknown };
+export type PriceBucketRow = {
+  bucket?: unknown;
+  count: unknown;
+  rangeMin: unknown;
+  rangeMax: unknown;
+};
 
 export type PriceBucket = {
   key: string;
@@ -115,9 +126,10 @@ export type ProductSearchRow = ProductRow & {
   distance: number | string | null;
 };
 
-export type ProductWithEmbeddingRow = ProductRow & JsonObject & {
-  embedding?: unknown;
-};
+export type ProductWithEmbeddingRow = ProductRow &
+  JsonObject & {
+    embedding?: unknown;
+  };
 
 export type SearchRow = {
   email: string;
@@ -319,20 +331,28 @@ export function toOptionalNumber(value: unknown): number | null {
   return value === null || value === undefined ? null : Number(value);
 }
 
-export function normalizeSearchRow(row: SearchRowQuery | null): SearchRow | null {
+export function normalizeSearchRow(
+  row: SearchRowQuery | null,
+): SearchRow | null {
   if (!row) {
     return null;
   }
 
   return {
     ...row,
-    embedding: Array.isArray(row.embedding) ? row.embedding.filter((value): value is number => typeof value === "number") : null,
+    embedding: Array.isArray(row.embedding)
+      ? row.embedding.filter(
+          (value): value is number => typeof value === "number",
+        )
+      : null,
     priceMin: toOptionalNumber(row.priceMin),
-    priceMax: toOptionalNumber(row.priceMax)
+    priceMax: toOptionalNumber(row.priceMax),
   };
 }
 
-export function isPriceBucket(row: PriceBucket | BucketRangeRow): row is PriceBucket {
+export function isPriceBucket(
+  row: PriceBucket | BucketRangeRow,
+): row is PriceBucket {
   return "min" in row && "max" in row;
 }
 
@@ -349,11 +369,15 @@ export function getSqlClient(): SqlClientLike {
   return neon(databaseUrl) as SqlClientLike;
 }
 
-export function setSqlClientOverride(client: SqlClientLike | null | undefined): void {
+export function setSqlClientOverride(
+  client: SqlClientLike | null | undefined,
+): void {
   sqlClientOverride = client || null;
 }
 
-export function hasAffectedRows(result: HasAffectedRowsResult | null | undefined): boolean {
+export function hasAffectedRows(
+  result: HasAffectedRowsResult | null | undefined,
+): boolean {
   if (!result) {
     return false;
   }

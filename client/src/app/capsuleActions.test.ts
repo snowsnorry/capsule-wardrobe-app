@@ -11,9 +11,13 @@ import {
   revertCurrentCapsule,
   saveCurrentCapsule,
   searchUserCapsules,
-  shareCurrentCapsule
+  shareCurrentCapsule,
 } from "./capsuleActions";
-import { createActionContext, createTestCapsule, createTestDraft } from "./testUtils";
+import {
+  createActionContext,
+  createTestCapsule,
+  createTestDraft,
+} from "./testUtils";
 import {
   duplicateCapsule,
   createCapsule,
@@ -26,7 +30,7 @@ import {
   saveCapsule,
   searchCapsules,
   shareCapsule,
-  updateCapsuleFilters
+  updateCapsuleFilters,
 } from "../api/capsules";
 
 vi.mock("../api/capsules", () => ({
@@ -41,18 +45,20 @@ vi.mock("../api/capsules", () => ({
   saveCapsule: vi.fn(),
   searchCapsules: vi.fn(),
   shareCapsule: vi.fn(),
-  updateCapsuleFilters: vi.fn()
+  updateCapsuleFilters: vi.fn(),
 }));
 
 describe("capsuleActions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(fetchRecentCapsules).mockResolvedValue({ capsules: [createTestCapsule()] });
+    vi.mocked(fetchRecentCapsules).mockResolvedValue({
+      capsules: [createTestCapsule()],
+    });
   });
 
   test("does not write capsule draft before filters are explicitly applied", () => {
     const context = createActionContext({
-      setSelectedStyle: vi.fn()
+      setSelectedStyle: vi.fn(),
     });
 
     expect(updateCapsuleFilters).not.toHaveBeenCalled();
@@ -60,9 +66,13 @@ describe("capsuleActions", () => {
   });
 
   test("applyCapsuleFilters preserves optional text in the API payload", async () => {
-    vi.mocked(updateCapsuleFilters).mockResolvedValue({ capsule: createTestCapsule() });
+    vi.mocked(updateCapsuleFilters).mockResolvedValue({
+      capsule: createTestCapsule(),
+    });
     const context = createActionContext({
-      buildCurrentDraftSnapshot: vi.fn(() => createTestDraft({ text: "Prefer natural fabrics" }))
+      buildCurrentDraftSnapshot: vi.fn(() =>
+        createTestDraft({ text: "Prefer natural fabrics" }),
+      ),
     });
 
     await applyCapsuleFilters(context);
@@ -70,51 +80,72 @@ describe("capsuleActions", () => {
     expect(updateCapsuleFilters).toHaveBeenCalledWith(
       "capsule-1",
       expect.objectContaining({ text: "Prefer natural fabrics" }),
-      { regenerate: true }
+      { regenerate: true },
     );
     expect(context.setIsLoadingItems).toHaveBeenCalledWith(false);
   });
 
   test("createNewCapsule creates an empty capsule and refreshes the list", async () => {
-    vi.mocked(createCapsule).mockResolvedValue({ capsule: createTestCapsule({ id: "capsule-2" }) });
+    vi.mocked(createCapsule).mockResolvedValue({
+      capsule: createTestCapsule({ id: "capsule-2" }),
+    });
     const context = createActionContext();
 
     await createNewCapsule(context);
 
-    expect(context.setIsContentOperationLoading).toHaveBeenNthCalledWith(1, true);
+    expect(context.setIsContentOperationLoading).toHaveBeenNthCalledWith(
+      1,
+      true,
+    );
     expect(createCapsule).toHaveBeenCalledWith({
-      filters: expect.objectContaining({ pattern: "solid" })
+      filters: expect.objectContaining({ pattern: "solid" }),
     });
-    expect(context.applyCapsuleState).toHaveBeenCalledWith(expect.objectContaining({ id: "capsule-2" }));
-    expect(context.setCapsuleList).toHaveBeenCalledWith([expect.objectContaining({ id: "capsule-1" })]);
-    expect(context.setIsContentOperationLoading).toHaveBeenLastCalledWith(false);
+    expect(context.applyCapsuleState).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "capsule-2" }),
+    );
+    expect(context.setCapsuleList).toHaveBeenCalledWith([
+      expect.objectContaining({ id: "capsule-1" }),
+    ]);
+    expect(context.setIsContentOperationLoading).toHaveBeenLastCalledWith(
+      false,
+    );
   });
 
   test("openCapsule applies capsule state and resumes snapshot events", async () => {
     vi.mocked(fetchCapsule).mockResolvedValue({
       capsule: createTestCapsule({ id: "capsule-2" }),
-      snapshot: { status: "ready", items: [{ id: "top-1" }] }
+      snapshot: { status: "ready", items: [{ id: "top-1" }] },
     });
     const context = createActionContext({
-      restoreCapsuleSnapshot: vi.fn(async () => undefined)
+      restoreCapsuleSnapshot: vi.fn(async () => undefined),
     });
 
     await openCapsule(context, "capsule-2");
 
     expect(fetchCapsule).toHaveBeenCalledWith("capsule-2");
-    expect(context.applyCapsuleState).toHaveBeenCalledWith(expect.objectContaining({ id: "capsule-2" }));
+    expect(context.applyCapsuleState).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "capsule-2" }),
+    );
     expect(context.restoreCapsuleSnapshot).toHaveBeenCalledWith(
       "capsule-2",
       { status: "ready", items: [{ id: "top-1" }] },
-      { shouldResumeEvents: true }
+      { shouldResumeEvents: true },
     );
   });
 
   test("current capsule mutations update only the active capsule", async () => {
-    vi.mocked(saveCapsule).mockResolvedValue({ capsule: createTestCapsule({ status: "saved" }) });
-    vi.mocked(revertCapsule).mockResolvedValue({ capsule: createTestCapsule({ status: "saved" }) });
-    vi.mocked(renameCapsule).mockResolvedValue({ capsule: createTestCapsule({ name: "Renamed" }) });
-    vi.mocked(deleteCapsule).mockResolvedValue({ activeCapsule: createTestCapsule({ id: "capsule-2" }) });
+    vi.mocked(saveCapsule).mockResolvedValue({
+      capsule: createTestCapsule({ status: "saved" }),
+    });
+    vi.mocked(revertCapsule).mockResolvedValue({
+      capsule: createTestCapsule({ status: "saved" }),
+    });
+    vi.mocked(renameCapsule).mockResolvedValue({
+      capsule: createTestCapsule({ name: "Renamed" }),
+    });
+    vi.mocked(deleteCapsule).mockResolvedValue({
+      activeCapsule: createTestCapsule({ id: "capsule-2" }),
+    });
     const context = createActionContext();
 
     await saveCurrentCapsule(context, "capsule-1");
@@ -127,24 +158,37 @@ describe("capsuleActions", () => {
     expect(revertCapsule).toHaveBeenCalledWith("capsule-1");
     expect(renameCapsule).toHaveBeenCalledWith("capsule-1", "Renamed");
     expect(deleteCapsule).toHaveBeenCalledWith("capsule-1");
-    expect(context.setActiveCapsuleMeta).toHaveBeenCalledWith(expect.objectContaining({ status: "saved" }));
-    expect(context.applyCapsuleState).toHaveBeenCalledWith(expect.objectContaining({ id: "capsule-2" }));
+    expect(context.setActiveCapsuleMeta).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "saved" }),
+    );
+    expect(context.applyCapsuleState).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "capsule-2" }),
+    );
     expect(saveCapsule).toHaveBeenCalledTimes(1);
   });
 
   test("duplicateCurrentCapsule switches to the duplicate without reverting the source capsule", async () => {
     vi.mocked(duplicateCapsule).mockResolvedValue({
-      capsule: createTestCapsule({ id: "capsule-2", name: "Copied capsule", status: "saved" })
+      capsule: createTestCapsule({
+        id: "capsule-2",
+        name: "Copied capsule",
+        status: "saved",
+      }),
     });
     const context = createActionContext();
 
     await duplicateCurrentCapsule(context, "Copied capsule", "capsule-1");
 
-    expect(duplicateCapsule).toHaveBeenCalledWith("capsule-1", "Copied capsule");
-    expect(context.applyCapsuleState).toHaveBeenCalledWith(expect.objectContaining({
-      id: "capsule-2",
-      name: "Copied capsule"
-    }));
+    expect(duplicateCapsule).toHaveBeenCalledWith(
+      "capsule-1",
+      "Copied capsule",
+    );
+    expect(context.applyCapsuleState).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "capsule-2",
+        name: "Copied capsule",
+      }),
+    );
     expect(revertCapsule).not.toHaveBeenCalled();
   });
 
@@ -157,14 +201,18 @@ describe("capsuleActions", () => {
   });
 
   test("resetProfileFilters restores the active capsule or reports errors", async () => {
-    vi.mocked(fetchCapsule).mockResolvedValueOnce({ capsule: createTestCapsule({ id: "capsule-1" }) });
+    vi.mocked(fetchCapsule).mockResolvedValueOnce({
+      capsule: createTestCapsule({ id: "capsule-1" }),
+    });
     const context = createActionContext();
 
     await resetProfileFilters(context);
 
     expect(context.setSelectedRegenerationUrls).toHaveBeenCalledWith([]);
     expect(context.setPartialRegenerationPendingUrls).toHaveBeenCalledWith([]);
-    expect(context.applyCapsuleState).toHaveBeenCalledWith(expect.objectContaining({ id: "capsule-1" }));
+    expect(context.applyCapsuleState).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "capsule-1" }),
+    );
 
     vi.mocked(fetchCapsule).mockRejectedValueOnce(new Error("boom"));
     await resetProfileFilters(context);
@@ -173,12 +221,15 @@ describe("capsuleActions", () => {
       loading: false,
       error: "boom",
       infoKey: "",
-      infoParams: null
+      infoParams: null,
     });
   });
 
   test("applyCapsuleFilters handles pending and failing regeneration", async () => {
-    vi.mocked(updateCapsuleFilters).mockResolvedValueOnce({ status: "pending", capsule: createTestCapsule() });
+    vi.mocked(updateCapsuleFilters).mockResolvedValueOnce({
+      status: "pending",
+      capsule: createTestCapsule(),
+    });
     const context = createActionContext();
 
     await applyCapsuleFilters(context);
@@ -187,14 +238,16 @@ describe("capsuleActions", () => {
     expect(context.startCapsuleEventStream).toHaveBeenCalledWith("capsule-1");
     expect(context.setIsLoadingItems).not.toHaveBeenLastCalledWith(false);
 
-    vi.mocked(updateCapsuleFilters).mockRejectedValueOnce(new Error("invalid_payload"));
+    vi.mocked(updateCapsuleFilters).mockRejectedValueOnce(
+      new Error("invalid_payload"),
+    );
     await applyCapsuleFilters(context);
 
     expect(context.setStatus).toHaveBeenLastCalledWith({
       loading: false,
       error: "invalid_payload",
       infoKey: "",
-      infoParams: null
+      infoParams: null,
     });
   });
 
@@ -203,22 +256,30 @@ describe("capsuleActions", () => {
 
     await expect(shareCurrentCapsule(context, "")).resolves.toEqual({});
 
-    vi.mocked(shareCapsule).mockResolvedValueOnce({ url: "https://share.example.test" });
-    await expect(shareCurrentCapsule(context, "capsule-1")).resolves.toEqual({ url: "https://share.example.test" });
+    vi.mocked(shareCapsule).mockResolvedValueOnce({
+      url: "https://share.example.test",
+    });
+    await expect(shareCurrentCapsule(context, "capsule-1")).resolves.toEqual({
+      url: "https://share.example.test",
+    });
 
-    vi.mocked(shareCapsule).mockRejectedValueOnce(new Error("capsule_not_shareable"));
-    await expect(shareCurrentCapsule(context, "capsule-1")).resolves.toEqual({});
+    vi.mocked(shareCapsule).mockRejectedValueOnce(
+      new Error("capsule_not_shareable"),
+    );
+    await expect(shareCurrentCapsule(context, "capsule-1")).resolves.toEqual(
+      {},
+    );
     expect(context.setStatus).toHaveBeenLastCalledWith({
       loading: false,
       error: "capsule_not_shareable",
       infoKey: "",
-      infoParams: null
+      infoParams: null,
     });
   });
 
   test("importSharedCapsuleToApp imports, refreshes list, and clears the share route", async () => {
     vi.mocked(importSharedCapsule).mockResolvedValue({
-      capsule: createTestCapsule({ id: "capsule-2", name: "Shared edit" })
+      capsule: createTestCapsule({ id: "capsule-2", name: "Shared edit" }),
     });
     const context = createActionContext();
 
@@ -226,7 +287,9 @@ describe("capsuleActions", () => {
 
     expect(context.setIsShareLoading).toHaveBeenCalledWith(true);
     expect(importSharedCapsule).toHaveBeenCalledWith("share-1");
-    expect(context.applyCapsuleState).toHaveBeenCalledWith(expect.objectContaining({ id: "capsule-2" }));
+    expect(context.applyCapsuleState).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "capsule-2" }),
+    );
     expect(fetchRecentCapsules).toHaveBeenCalled();
     expect(context.clearShareRoute).toHaveBeenCalled();
     expect(context.setIsShareLoading).toHaveBeenLastCalledWith(false);
@@ -239,7 +302,9 @@ describe("capsuleActions", () => {
 
     expect(importSharedCapsule).not.toHaveBeenCalled();
 
-    vi.mocked(importSharedCapsule).mockRejectedValueOnce(new Error("not_found"));
+    vi.mocked(importSharedCapsule).mockRejectedValueOnce(
+      new Error("not_found"),
+    );
     await importSharedCapsuleToApp(context, "share-1");
 
     expect(context.clearShareRoute).toHaveBeenCalled();
@@ -247,11 +312,13 @@ describe("capsuleActions", () => {
       loading: false,
       error: "not_found",
       infoKey: "",
-      infoParams: null
+      infoParams: null,
     });
 
     vi.mocked(importSharedCapsule).mockResolvedValueOnce({});
-    const unmountedContext = createActionContext({ isMountedRef: { current: false } });
+    const unmountedContext = createActionContext({
+      isMountedRef: { current: false },
+    });
     await importSharedCapsuleToApp(unmountedContext, "share-2");
 
     expect(unmountedContext.setIsShareLoading).toHaveBeenCalledWith(true);

@@ -4,12 +4,15 @@ import {
   queryCapsuleWardrobeItems,
   queryCapsuleWardrobeItemsForMultipleAccentColors,
   queryCapsuleWardrobeItemsForProfile,
-  type CapsuleWardrobeSqlClient
+  type CapsuleWardrobeSqlClient,
 } from "./aiSql.js";
 
 function createSqlRecorder() {
   const calls: { strings: string[]; values: readonly unknown[] }[] = [];
-  const sql = (async (strings: TemplateStringsArray, ...values: readonly unknown[]) => {
+  const sql = (async (
+    strings: TemplateStringsArray,
+    ...values: readonly unknown[]
+  ) => {
     calls.push({ strings: [...strings], values });
     return [];
   }) as CapsuleWardrobeSqlClient;
@@ -30,7 +33,7 @@ function buildBaseSqlParams(overrides = {}) {
     rejectedUrls: ["https://example.com/rejected"],
     embeddingVector: "[0.1,0.2]",
     noiseFactor: 0.05,
-    ...overrides
+    ...overrides,
   };
 }
 
@@ -43,10 +46,10 @@ test("buildCapsuleWardrobeSqlParams preserves defaults and profile filters", () 
       color: "blue",
       pattern: "  Plaid ",
       rejected: [" https://example.com/one ", "", null],
-      text: "Prefer natural fabrics"
+      text: "Prefer natural fabrics",
     },
     [0.12, -0.34],
-    { top: 2, bottom: 1 }
+    { top: 2, bottom: 1 },
   );
 
   expect(params.categories).toEqual(["top", "bottom"]);
@@ -67,10 +70,10 @@ test("buildCapsuleWardrobeSqlParams falls back to solid pattern and random noise
     {
       audience: "woman",
       pattern: "   ",
-      text: "   "
+      text: "   ",
     },
     [],
-    { shoe: 1 }
+    { shoe: 1 },
   );
 
   expect(params.categories).toEqual(["shoe"]);
@@ -82,21 +85,27 @@ test("buildCapsuleWardrobeSqlParams falls back to solid pattern and random noise
 
 test("queryCapsuleWardrobeItemsForProfile dispatches regular and multiple accent SQL branches", async () => {
   const regular = createSqlRecorder();
-  await queryCapsuleWardrobeItemsForProfile(regular.sql, buildBaseSqlParams({ color: "red" }));
+  await queryCapsuleWardrobeItemsForProfile(
+    regular.sql,
+    buildBaseSqlParams({ color: "red" }),
+  );
 
   const directRegular = createSqlRecorder();
-  await queryCapsuleWardrobeItems(directRegular.sql, buildBaseSqlParams({ color: "red" }));
+  await queryCapsuleWardrobeItems(
+    directRegular.sql,
+    buildBaseSqlParams({ color: "red" }),
+  );
 
   const multiple = createSqlRecorder();
   await queryCapsuleWardrobeItemsForProfile(
     multiple.sql,
-    buildBaseSqlParams({ color: "multiple_accent_colors" })
+    buildBaseSqlParams({ color: "multiple_accent_colors" }),
   );
 
   const directMultiple = createSqlRecorder();
   await queryCapsuleWardrobeItemsForMultipleAccentColors(
     directMultiple.sql,
-    buildBaseSqlParams({ color: "multiple_accent_colors" })
+    buildBaseSqlParams({ color: "multiple_accent_colors" }),
   );
 
   expect(regular.calls).toEqual(directRegular.calls);
@@ -118,10 +127,14 @@ test("multiple accent SQL query uses neutral/non-neutral color logic", async () 
   const multipleSqlText = multiple.calls[0].strings.join("?");
   expect(multipleSqlText).toMatch(/neutrality_rank/);
   expect(multipleSqlText).toMatch(/is_non_neutral_color/);
-  expect(multipleSqlText).toMatch(/cardinality\(COALESCE\(color_base, ARRAY\[\]::text\[\]\)\) > 0/);
+  expect(multipleSqlText).toMatch(
+    /cardinality\(COALESCE\(color_base, ARRAY\[\]::text\[\]\)\) > 0/,
+  );
   expect(multipleSqlText).toMatch(/neutrality_rank <= 4/);
   expect(multipleSqlText).not.toMatch(/is_color_match/);
   expect(multipleSqlText).not.toMatch(/accent_rank/);
 
-  expect(!multiple.calls[0].values.includes("multiple_accent_colors")).toBeTruthy();
+  expect(
+    !multiple.calls[0].values.includes("multiple_accent_colors"),
+  ).toBeTruthy();
 });

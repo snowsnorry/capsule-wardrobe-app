@@ -1,5 +1,10 @@
 import { SESSION_TTL_MS } from "./authStore.js";
-import { CLIENT_ORIGIN, NODE_ENV, PASSKEY_CHALLENGE_COOKIE, PASSKEY_CHALLENGE_TTL_MS } from "./appConfig.js";
+import {
+  CLIENT_ORIGIN,
+  NODE_ENV,
+  PASSKEY_CHALLENGE_COOKIE,
+  PASSKEY_CHALLENGE_TTL_MS,
+} from "./appConfig.js";
 
 export type CookieMap = Record<string, string>;
 
@@ -26,52 +31,80 @@ function appendCookie(res, parts: string[], secure: boolean) {
 
 export function setSessionCookie(res, sessionId, nodeEnv = NODE_ENV) {
   const secure = nodeEnv === "production";
-  appendCookie(res, [
-    `session=${encodeURIComponent(sessionId)}`,
-    "HttpOnly",
-    "Path=/",
-    `Max-Age=${Math.floor(SESSION_TTL_MS / 1000)}`,
-    `SameSite=${secure ? "None" : "Lax"}`
-  ], secure);
+  appendCookie(
+    res,
+    [
+      `session=${encodeURIComponent(sessionId)}`,
+      "HttpOnly",
+      "Path=/",
+      `Max-Age=${Math.floor(SESSION_TTL_MS / 1000)}`,
+      `SameSite=${secure ? "None" : "Lax"}`,
+    ],
+    secure,
+  );
 }
 
 export function setCsrfCookie(res, csrfToken, nodeEnv = NODE_ENV) {
   const secure = nodeEnv === "production";
-  appendCookie(res, [
-    `csrf=${encodeURIComponent(csrfToken)}`,
-    "Path=/",
-    `Max-Age=${Math.floor(SESSION_TTL_MS / 1000)}`,
-    `SameSite=${secure ? "None" : "Lax"}`
-  ], secure);
+  appendCookie(
+    res,
+    [
+      `csrf=${encodeURIComponent(csrfToken)}`,
+      "Path=/",
+      `Max-Age=${Math.floor(SESSION_TTL_MS / 1000)}`,
+      `SameSite=${secure ? "None" : "Lax"}`,
+    ],
+    secure,
+  );
 }
 
-export function setPasskeyChallengeCookie(res, challengeId, nodeEnv = NODE_ENV) {
+export function setPasskeyChallengeCookie(
+  res,
+  challengeId,
+  nodeEnv = NODE_ENV,
+) {
   const secure = nodeEnv === "production";
-  appendCookie(res, [
-    `${PASSKEY_CHALLENGE_COOKIE}=${encodeURIComponent(challengeId)}`,
-    "HttpOnly",
-    "Path=/",
-    `Max-Age=${Math.floor(PASSKEY_CHALLENGE_TTL_MS / 1000)}`,
-    `SameSite=${secure ? "None" : "Lax"}`
-  ], secure);
+  appendCookie(
+    res,
+    [
+      `${PASSKEY_CHALLENGE_COOKIE}=${encodeURIComponent(challengeId)}`,
+      "HttpOnly",
+      "Path=/",
+      `Max-Age=${Math.floor(PASSKEY_CHALLENGE_TTL_MS / 1000)}`,
+      `SameSite=${secure ? "None" : "Lax"}`,
+    ],
+    secure,
+  );
 }
 
 export function clearPasskeyChallengeCookie(res, nodeEnv = NODE_ENV) {
   const secure = nodeEnv === "production";
-  appendCookie(res, [
-    `${PASSKEY_CHALLENGE_COOKIE}=`,
-    "HttpOnly",
-    "Path=/",
-    "Max-Age=0",
-    `SameSite=${secure ? "None" : "Lax"}`
-  ], secure);
+  appendCookie(
+    res,
+    [
+      `${PASSKEY_CHALLENGE_COOKIE}=`,
+      "HttpOnly",
+      "Path=/",
+      "Max-Age=0",
+      `SameSite=${secure ? "None" : "Lax"}`,
+    ],
+    secure,
+  );
 }
 
 export function clearSessionCookie(res, nodeEnv = NODE_ENV) {
   const secure = nodeEnv === "production";
   const sameSite = secure ? "None" : "Lax";
-  appendCookie(res, ["session=", "HttpOnly", "Path=/", "Max-Age=0", `SameSite=${sameSite}`], secure);
-  appendCookie(res, ["csrf=", "Path=/", "Max-Age=0", `SameSite=${sameSite}`], secure);
+  appendCookie(
+    res,
+    ["session=", "HttpOnly", "Path=/", "Max-Age=0", `SameSite=${sameSite}`],
+    secure,
+  );
+  appendCookie(
+    res,
+    ["csrf=", "Path=/", "Max-Age=0", `SameSite=${sameSite}`],
+    secure,
+  );
 }
 
 export function isTrustedOrigin(req, clientOrigin = CLIENT_ORIGIN) {

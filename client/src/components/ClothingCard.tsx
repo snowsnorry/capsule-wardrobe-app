@@ -4,10 +4,7 @@ import { useI18n } from "../i18n/useI18n";
 import { formatProductLabel } from "../utils/productLabel";
 import { getSafeHttpUrl } from "../../../shared/urlSecurity.js";
 import { buildCachedProductImageUrl } from "../utils/cachedProductImage";
-import {
-  ClothingCardView,
-  getMobileCardMetrics
-} from "./ClothingCardParts";
+import { ClothingCardView, getMobileCardMetrics } from "./ClothingCardParts";
 import type { ClothingCardItem } from "./ClothingCardTypes";
 
 type ClothingCardProps = {
@@ -17,7 +14,11 @@ type ClothingCardProps = {
   isSelectionMode?: boolean;
   isRegenerating?: boolean;
   onToggleSelected?: (item: ClothingCardItem) => void;
-  onProductMenuClick?: (event: MouseEvent<HTMLButtonElement>, productUrl: string, item: ClothingCardItem) => void;
+  onProductMenuClick?: (
+    event: MouseEvent<HTMLButtonElement>,
+    productUrl: string,
+    item: ClothingCardItem,
+  ) => void;
   isMobile?: boolean;
   mobileColumns?: 1 | 2 | 3;
 };
@@ -32,7 +33,7 @@ function normalizeClothingCardProps(props: ClothingCardProps) {
     onToggleSelected: props.onToggleSelected,
     onProductMenuClick: props.onProductMenuClick,
     isMobile: props.isMobile ?? false,
-    mobileColumns: props.mobileColumns ?? 2
+    mobileColumns: props.mobileColumns ?? 2,
   };
 }
 
@@ -40,7 +41,7 @@ function buildClothingCardActionProps({
   showCardActions,
   actionState,
   handlers,
-  t
+  t,
 }: {
   showCardActions: boolean;
   actionState: {
@@ -73,7 +74,7 @@ function ClothingCard(props: ClothingCardProps): ReactElement {
     onToggleSelected,
     onProductMenuClick,
     isMobile,
-    mobileColumns
+    mobileColumns,
   } = normalizeClothingCardProps(props);
   const { t } = useI18n();
   const imageUrl = getSafeHttpUrl(item?.image_url);
@@ -82,7 +83,9 @@ function ClothingCard(props: ClothingCardProps): ReactElement {
   const productUrl = getSafeHttpUrl(item?.url);
   const label = formatProductLabel(item, "");
   const categoryName = String(item?.category || "");
-  const categoryLabel = categoryName ? t(`options.categories.${categoryName}`) : "";
+  const categoryLabel = categoryName
+    ? t(`options.categories.${categoryName}`)
+    : "";
   const categoryDisplayLabel = categoryLabel || categoryName;
   const mobileCardMetrics = getMobileCardMetrics(mobileColumns);
   const showToggleButton = isSelectionMode && isSelectable;
@@ -127,9 +130,22 @@ function ClothingCard(props: ClothingCardProps): ReactElement {
   };
   const actionProps = buildClothingCardActionProps({
     showCardActions,
-    actionState: { isMobile, isSelected, isRegenerating, showToggleButton, showProductMenuButton, showMobileProductMenuButton, showActionButtons, mobileCardMetrics },
-    handlers: { onToggleSelected: handleToggleSelected, onProductMenuClick: handleProductMenuClick, stopPropagation: stopCardActionPropagation },
-    t
+    actionState: {
+      isMobile,
+      isSelected,
+      isRegenerating,
+      showToggleButton,
+      showProductMenuButton,
+      showMobileProductMenuButton,
+      showActionButtons,
+      mobileCardMetrics,
+    },
+    handlers: {
+      onToggleSelected: handleToggleSelected,
+      onProductMenuClick: handleProductMenuClick,
+      stopPropagation: stopCardActionPropagation,
+    },
+    t,
   });
 
   return (

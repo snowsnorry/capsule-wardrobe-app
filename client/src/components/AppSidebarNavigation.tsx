@@ -5,12 +5,12 @@ import { CapsuleChildren } from "./AppSidebarCapsuleNavigation";
 import {
   CapsuleTopLevelNavigation,
   SidebarNavigationDivider,
-  SidebarSecondaryNavigation
+  SidebarSecondaryNavigation,
 } from "./AppSidebarNavigationParts";
 import type {
   AppId,
   AppSidebarNavigationProps,
-  CapsuleNavItem
+  CapsuleNavItem,
 } from "./AppSidebarNavigationTypes";
 
 function AppSidebarNavigation({
@@ -28,7 +28,7 @@ function AppSidebarNavigation({
   onOpenCapsuleActions,
   capsuleHasUnsavedChanges = () => false,
   onExpandedAction,
-  collapsedExpandHitbox = null
+  collapsedExpandHitbox = null,
 }: AppSidebarNavigationProps): ReactElement {
   const { t } = useI18n();
   const isCollapsedDesktop = isSidebarCollapsed && !isOverlaySidebar;

@@ -2,17 +2,19 @@ import { test, expect } from "vitest";
 import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
+import { buildPromptDebugImages } from "./promptImageCollage.js";
 import {
-  buildPromptDebugImages
-} from "./promptImageCollage.js";
-import { GRID_HEIGHT, GRID_WIDTH, HEADER_HEIGHT } from "./promptImagesShared.js";
+  GRID_HEIGHT,
+  GRID_WIDTH,
+  HEADER_HEIGHT,
+} from "./promptImagesShared.js";
 import { createBinaryResponse } from "../test/testDoubles.js";
 import {
   assertCategoryHasBufferProperty,
   createFixtureBuffer,
   createItems,
   withCachedImage,
-  withTempDir
+  withTempDir,
 } from "../test/promptImageFixtures.js";
 
 test("buildPromptDebugImages writes category images with expected geometry and manifest", async (t) => {
@@ -33,12 +35,9 @@ test("buildPromptDebugImages writes category images with expected geometry and m
   });
 
   const result = await buildPromptDebugImages({
-    normalizedItems: [
-      ...createItems("top", 2),
-      ...createItems("bottom", 1)
-    ],
+    normalizedItems: [...createItems("top", 2), ...createItems("bottom", 1)],
     saveDebugArtifacts: true,
-    debugOutputDir: outputDir
+    debugOutputDir: outputDir,
   });
 
   expect(result.cachedCount).toBe(0);
@@ -47,23 +46,31 @@ test("buildPromptDebugImages writes category images with expected geometry and m
   expect(result.categories.length).toBe(2);
   expect(Buffer.isBuffer(result.stitched.buffer)).toBeTruthy();
 
-  const topCategory = result.categories.find((entry) => entry.category === "top");
+  const topCategory = result.categories.find(
+    (entry) => entry.category === "top",
+  );
   expect(topCategory).toBeTruthy();
   assertCategoryHasBufferProperty(topCategory);
   expect(topCategory.mimeType).toBe("image/jpeg");
   expect(topCategory.buffer).toBe(undefined);
 
-  const metadata = await sharp(path.join(outputDir, "category-top.jpg")).metadata();
+  const metadata = await sharp(
+    path.join(outputDir, "category-top.jpg"),
+  ).metadata();
   expect(metadata.width).toBe(GRID_WIDTH);
   expect(metadata.height).toBe(GRID_HEIGHT + HEADER_HEIGHT);
   const stitchedMetadata = await sharp(result.stitched.buffer).metadata();
   expect(stitchedMetadata.width).toBe(GRID_WIDTH);
   expect(stitchedMetadata.height).toBe((GRID_HEIGHT + HEADER_HEIGHT) * 2);
 
-  const manifest = JSON.parse(await readFile(path.join(outputDir, "manifest.json"), "utf8"));
+  const manifest = JSON.parse(
+    await readFile(path.join(outputDir, "manifest.json"), "utf8"),
+  );
   expect(manifest.cachedCount).toBe(0);
   expect(manifest.downloadedCount).toBe(3);
-  expect(manifest.stitched.file).toBe(path.join(outputDir, "categories-stitched.jpg"));
+  expect(manifest.stitched.file).toBe(
+    path.join(outputDir, "categories-stitched.jpg"),
+  );
   expect(manifest.categories.length).toBe(2);
   expect(manifest.categories[0].cachedCount).toBe(0);
   expect(manifest.categories[0].items[0].status).toBe("downloaded");
@@ -76,7 +83,8 @@ test("buildPromptDebugImages keeps collages in memory when debug saving is disab
   const redBuffer = await createFixtureBuffer("#cc0000");
   const originalFetch = globalThis.fetch;
 
-  globalThis.fetch = async () => createBinaryResponse(redBuffer, { status: 200 });
+  globalThis.fetch = async () =>
+    createBinaryResponse(redBuffer, { status: 200 });
 
   t.onTestFinished(() => {
     globalThis.fetch = originalFetch;
@@ -85,7 +93,7 @@ test("buildPromptDebugImages keeps collages in memory when debug saving is disab
   const result = await buildPromptDebugImages({
     normalizedItems: createItems("top", 2),
     saveDebugArtifacts: false,
-    debugOutputDir: outputDir
+    debugOutputDir: outputDir,
   });
 
   expect(result.categories.length).toBe(1);
@@ -93,8 +101,12 @@ test("buildPromptDebugImages keeps collages in memory when debug saving is disab
   assertCategoryHasBufferProperty(result.categories[0]);
   expect(result.categories[0].buffer).toBe(undefined);
   await expect(access(path.join(outputDir, "manifest.json"))).rejects.toThrow();
-  await expect(access(path.join(outputDir, "category-top.jpg"))).rejects.toThrow();
-  await expect(access(path.join(outputDir, "categories-stitched.jpg"))).rejects.toThrow();
+  await expect(
+    access(path.join(outputDir, "category-top.jpg")),
+  ).rejects.toThrow();
+  await expect(
+    access(path.join(outputDir, "categories-stitched.jpg")),
+  ).rejects.toThrow();
 });
 
 test("buildPromptDebugImages skips failed downloads and still produces outputs", async (t) => {
@@ -115,11 +127,19 @@ test("buildPromptDebugImages skips failed downloads and still produces outputs",
 
   const result = await buildPromptDebugImages({
     normalizedItems: [
-      { id: "top-1", category: "top", image_url: "https://example.com/good-top.png" },
-      { id: "top-2", category: "top", image_url: "https://example.com/bad-top.png" }
+      {
+        id: "top-1",
+        category: "top",
+        image_url: "https://example.com/good-top.png",
+      },
+      {
+        id: "top-2",
+        category: "top",
+        image_url: "https://example.com/bad-top.png",
+      },
     ],
     saveDebugArtifacts: true,
-    debugOutputDir: outputDir
+    debugOutputDir: outputDir,
   });
 
   expect(result.downloadedCount).toBe(1);
@@ -127,11 +147,15 @@ test("buildPromptDebugImages skips failed downloads and still produces outputs",
   expect(result.skippedCount).toBe(1);
   expect(Buffer.isBuffer(result.stitched.buffer)).toBeTruthy();
 
-  const manifest = JSON.parse(await readFile(path.join(outputDir, "manifest.json"), "utf8"));
+  const manifest = JSON.parse(
+    await readFile(path.join(outputDir, "manifest.json"), "utf8"),
+  );
   expect(manifest.categories[0].items[1].status).toBe("skipped");
   expect(manifest.categories[0].items[1].reason).toBe("socket_hang_up");
 
-  const metadata = await sharp(path.join(outputDir, "category-top.jpg")).metadata();
+  const metadata = await sharp(
+    path.join(outputDir, "category-top.jpg"),
+  ).metadata();
   expect(metadata.width).toBe(GRID_WIDTH);
   expect(metadata.height).toBe(GRID_HEIGHT + HEADER_HEIGHT);
 });
@@ -143,10 +167,13 @@ test("buildPromptDebugImages uses local cached image before remote fetch", async
       width: 900,
       height: 600,
       channels: 3,
-      background: "#d97706"
-    }
-  }).jpeg({ quality: 80 }).toBuffer();
-  const imageUrl = "https://static.zara.net/image.jpg?ts=1773310573314&w={width}";
+      background: "#d97706",
+    },
+  })
+    .jpeg({ quality: 80 })
+    .toBuffer();
+  const imageUrl =
+    "https://static.zara.net/image.jpg?ts=1773310573314&w={width}";
   await withCachedImage(t, imageUrl, cachedJpeg);
   const originalFetch = globalThis.fetch;
 
@@ -159,20 +186,24 @@ test("buildPromptDebugImages uses local cached image before remote fetch", async
   });
 
   const result = await buildPromptDebugImages({
-    normalizedItems: [{
-      id: "top-1",
-      category: "top",
-      image_url: imageUrl
-    }],
+    normalizedItems: [
+      {
+        id: "top-1",
+        category: "top",
+        image_url: imageUrl,
+      },
+    ],
     saveDebugArtifacts: true,
-    debugOutputDir: outputDir
+    debugOutputDir: outputDir,
   });
 
   expect(result.cachedCount).toBe(1);
   expect(result.downloadedCount).toBe(0);
   expect(result.skippedCount).toBe(0);
 
-  const manifest = JSON.parse(await readFile(path.join(outputDir, "manifest.json"), "utf8"));
+  const manifest = JSON.parse(
+    await readFile(path.join(outputDir, "manifest.json"), "utf8"),
+  );
   expect(manifest.categories[0].items[0].source).toBe("cache");
 });
 
@@ -180,14 +211,15 @@ test("buildPromptDebugImages does not return a normalized image map", async (t) 
   const redBuffer = await createFixtureBuffer("#cc0000");
   const originalFetch = globalThis.fetch;
 
-  globalThis.fetch = async () => createBinaryResponse(redBuffer, { status: 200 });
+  globalThis.fetch = async () =>
+    createBinaryResponse(redBuffer, { status: 200 });
 
   t.onTestFinished(() => {
     globalThis.fetch = originalFetch;
   });
 
   const result = await buildPromptDebugImages({
-    normalizedItems: createItems("top", 1)
+    normalizedItems: createItems("top", 1),
   });
 
   expect("downloadedImagesById" in result).toBe(false);

@@ -15,8 +15,10 @@ type AppSnackbarsProps = {
 function NotificationPromptSnackbar({
   open,
   t,
-  onRequestNotificationPermission
-}: Pick<AppSnackbarsProps, "t" | "onRequestNotificationPermission"> & { open: boolean }) {
+  onRequestNotificationPermission,
+}: Pick<AppSnackbarsProps, "t" | "onRequestNotificationPermission"> & {
+  open: boolean;
+}) {
   return (
     <Snackbar
       open={open}
@@ -26,7 +28,7 @@ function NotificationPromptSnackbar({
     >
       <Alert
         severity="info"
-        action={(
+        action={
           <Button
             size="small"
             variant="text"
@@ -35,17 +37,16 @@ function NotificationPromptSnackbar({
               color: "primary.main",
               fontWeight: 700,
               "&:hover": {
-                backgroundColor: (theme) => (
+                backgroundColor: (theme) =>
                   theme.palette.mode === "dark"
                     ? "rgba(73, 163, 163, 0.14)"
-                    : "rgba(28, 124, 124, 0.08)"
-                )
-              }
+                    : "rgba(28, 124, 124, 0.08)",
+              },
             }}
           >
             {t("notifications.prompt.action")}
           </Button>
-        )}
+        }
         sx={{
           width: "min(680px, calc(100vw - 32px))",
           alignItems: "center",
@@ -53,13 +54,12 @@ function NotificationPromptSnackbar({
           backgroundColor: "background.paper",
           border: "1px solid",
           borderColor: "divider",
-          boxShadow: (theme) => (
+          boxShadow: (theme) =>
             theme.palette.mode === "dark"
               ? "0 14px 36px rgba(0, 0, 0, 0.34)"
-              : "0 14px 32px rgba(31, 41, 51, 0.12)"
-          ),
+              : "0 14px 32px rgba(31, 41, 51, 0.12)",
           "& .MuiAlert-icon": { color: "#8f6f45" },
-          "& .MuiAlert-message": { py: 1 }
+          "& .MuiAlert-message": { py: 1 },
         }}
       >
         {t("notifications.prompt.message")}
@@ -72,13 +72,20 @@ function PasskeyPromptSnackbar({
   passkeyPrompt,
   t,
   onAddPasskey,
-  onDismissPasskey
-}: Pick<AppSnackbarsProps, "passkeyPrompt" | "t" | "onAddPasskey" | "onDismissPasskey">) {
+  onDismissPasskey,
+}: Pick<
+  AppSnackbarsProps,
+  "passkeyPrompt" | "t" | "onAddPasskey" | "onDismissPasskey"
+>) {
   return (
-    <Snackbar open={passkeyPrompt.open} autoHideDuration={null} anchorOrigin={{ vertical: "bottom", horizontal: "center" }}>
+    <Snackbar
+      open={passkeyPrompt.open}
+      autoHideDuration={null}
+      anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+    >
       <Alert
         severity="info"
-        action={(
+        action={
           <Stack direction="row" spacing={1}>
             <Button
               size="small"
@@ -99,7 +106,7 @@ function PasskeyPromptSnackbar({
               {t("passkeys.notNow")}
             </Button>
           </Stack>
-        )}
+        }
         sx={{
           width: "min(680px, calc(100vw - 32px))",
           alignItems: "center",
@@ -107,11 +114,10 @@ function PasskeyPromptSnackbar({
           backgroundColor: "background.paper",
           border: "1px solid",
           borderColor: "divider",
-          boxShadow: (theme) => (
+          boxShadow: (theme) =>
             theme.palette.mode === "dark"
               ? "0 14px 36px rgba(0, 0, 0, 0.34)"
-              : "0 14px 32px rgba(31, 41, 51, 0.12)"
-          )
+              : "0 14px 32px rgba(31, 41, 51, 0.12)",
         }}
       >
         {t("passkeys.prompt")}
@@ -128,7 +134,7 @@ export default function AppSnackbars({
   onRequestNotificationPermission,
   onAddPasskey,
   onDismissPasskey,
-  onClearError
+  onClearError,
 }: AppSnackbarsProps) {
   return (
     <>
@@ -143,8 +149,17 @@ export default function AppSnackbars({
         onAddPasskey={onAddPasskey}
         onDismissPasskey={onDismissPasskey}
       />
-      <Snackbar open={Boolean(status.error)} autoHideDuration={6000} onClose={onClearError} anchorOrigin={{ vertical: "bottom", horizontal: "center" }}>
-        <Alert severity="error" onClose={onClearError} sx={{ width: "min(680px, calc(100vw - 32px))" }}>
+      <Snackbar
+        open={Boolean(status.error)}
+        autoHideDuration={6000}
+        onClose={onClearError}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          severity="error"
+          onClose={onClearError}
+          sx={{ width: "min(680px, calc(100vw - 32px))" }}
+        >
           {status.error}
         </Alert>
       </Snackbar>

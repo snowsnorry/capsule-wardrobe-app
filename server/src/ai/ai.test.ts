@@ -9,7 +9,7 @@ import {
   getWardrobeSelectionPrompt,
   regenerateCapsuleWardrobe,
   startWardrobeJob,
-  toWardrobeUiItem
+  toWardrobeUiItem,
 } from "./ai.js";
 
 test("ai facade exposes wardrobe service methods and compatibility exports", () => {

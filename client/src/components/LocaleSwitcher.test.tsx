@@ -6,7 +6,7 @@ import { ThemeProvider, createTheme } from "@mui/material/styles";
 const useI18nMock = vi.hoisted(() => vi.fn());
 
 vi.mock("../i18n/useI18n", () => ({
-  useI18n: useI18nMock
+  useI18n: useI18nMock,
 }));
 
 import LocaleSwitcher from "./LocaleSwitcher";
@@ -26,8 +26,8 @@ function renderSwitcher(props = {}) {
         "locale.flags.en": "EN",
         "locale.flags.ru": "RU",
         "locale.options.en": "English",
-        "locale.options.ru": "Russian"
-      }[key] || key)
+        "locale.options.ru": "Russian",
+      })[key] || key,
   });
 
   return {
@@ -35,8 +35,8 @@ function renderSwitcher(props = {}) {
     ...render(
       <ThemeProvider theme={theme}>
         <LocaleSwitcher {...props} />
-      </ThemeProvider>
-    )
+      </ThemeProvider>,
+    ),
   };
 }
 
@@ -60,6 +60,8 @@ describe("LocaleSwitcher", () => {
   test("renders the current locale flag on the trigger", () => {
     renderSwitcher();
 
-    expect(screen.getByRole("button", { name: "Language" })).toHaveTextContent("EN");
+    expect(screen.getByRole("button", { name: "Language" })).toHaveTextContent(
+      "EN",
+    );
   });
 });

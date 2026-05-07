@@ -18,20 +18,26 @@ function createContext() {
     setSelectedPattern: vi.fn(),
     setSelectedSeason: vi.fn(),
     setSelectedStyle: vi.fn(),
-    setSelectedText: vi.fn()
+    setSelectedText: vi.fn(),
   };
 }
 
 describe("capsuleStateActions", () => {
-  test.each([null, ""])("normalizes legacy pattern %s to solid in UI state", (pattern) => {
-    const context = createContext();
-    const draft = createTestDraft({ pattern });
+  test.each([null, ""])(
+    "normalizes legacy pattern %s to solid in UI state",
+    (pattern) => {
+      const context = createContext();
+      const draft = createTestDraft({ pattern });
 
-    applyCapsuleStateToApp(context, createTestCapsule({
-      draft,
-      effective: draft
-    }));
+      applyCapsuleStateToApp(
+        context,
+        createTestCapsule({
+          draft,
+          effective: draft,
+        }),
+      );
 
-    expect(context.setSelectedPattern).toHaveBeenCalledWith("solid");
-  });
+      expect(context.setSelectedPattern).toHaveBeenCalledWith("solid");
+    },
+  );
 });

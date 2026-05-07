@@ -3,11 +3,13 @@ import { listPasskeys } from "../api/passkeys";
 import { isPasskeySupported, registerPasskey } from "../auth/passkeys";
 import {
   initialPasskeyPrompt,
-  PASSKEY_PROMPT_DISMISSED_STORAGE_KEY
+  PASSKEY_PROMPT_DISMISSED_STORAGE_KEY,
 } from "./appConstants";
 import type { StatusState } from "./appTypes";
 
-type ResolveErrorMessage = (error: { message?: string } | null | undefined) => string;
+type ResolveErrorMessage = (
+  error: { message?: string } | null | undefined,
+) => string;
 type SetStatus = (status: StatusState) => void;
 
 function markPasskeyPromptDismissed() {
@@ -23,7 +25,10 @@ function shouldSkipPasskeyPrompt() {
   );
 }
 
-export function usePasskeyPrompt(resolveErrorMessage: ResolveErrorMessage, setStatus: SetStatus) {
+export function usePasskeyPrompt(
+  resolveErrorMessage: ResolveErrorMessage,
+  setStatus: SetStatus,
+) {
   const [passkeyPrompt, setPasskeyPrompt] = useState(initialPasskeyPrompt);
 
   const closePasskeyPrompt = useCallback(() => {
@@ -41,7 +46,7 @@ export function usePasskeyPrompt(resolveErrorMessage: ResolveErrorMessage, setSt
     }
 
     try {
-      const response = await listPasskeys() as { passkeys?: unknown[] };
+      const response = (await listPasskeys()) as { passkeys?: unknown[] };
       if (Array.isArray(response.passkeys) && response.passkeys.length === 0) {
         setPasskeyPrompt({ open: true, loading: false });
       }
@@ -56,14 +61,25 @@ export function usePasskeyPrompt(resolveErrorMessage: ResolveErrorMessage, setSt
       await registerPasskey();
       markPasskeyPromptDismissed();
       setPasskeyPrompt(initialPasskeyPrompt);
-      setStatus({ loading: false, error: "", infoKey: "passkeys.added", infoParams: null });
+      setStatus({
+        loading: false,
+        error: "",
+        infoKey: "passkeys.added",
+        infoParams: null,
+      });
     } catch (error) {
-      const message = error instanceof Error && error.message === "passkey_cancelled"
-        ? ""
-        : resolveErrorMessage(error);
+      const message =
+        error instanceof Error && error.message === "passkey_cancelled"
+          ? ""
+          : resolveErrorMessage(error);
       setPasskeyPrompt({ open: Boolean(message), loading: false });
       if (message) {
-        setStatus({ loading: false, error: message, infoKey: "", infoParams: null });
+        setStatus({
+          loading: false,
+          error: message,
+          infoKey: "",
+          infoParams: null,
+        });
       }
     }
   }, [resolveErrorMessage, setStatus]);
@@ -72,6 +88,6 @@ export function usePasskeyPrompt(resolveErrorMessage: ResolveErrorMessage, setSt
     dismissPasskeyPrompt,
     handleAddPasskeyFromPrompt,
     maybeShowPasskeyPrompt,
-    passkeyPrompt
+    passkeyPrompt,
   };
 }

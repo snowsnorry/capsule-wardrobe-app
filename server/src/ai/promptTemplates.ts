@@ -20,7 +20,10 @@ function normalizeTemplateRole(value: unknown): PromptTemplateRole | null {
   return role === "system" || role === "user" ? role : null;
 }
 
-function parsePromptTemplateYaml(source: string, sourceName = "prompt template"): PromptTemplate {
+function parsePromptTemplateYaml(
+  source: string,
+  sourceName = "prompt template",
+): PromptTemplate {
   const parsed = parseYaml(source);
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
     throw new Error(`Invalid ${sourceName}: expected a YAML object`);
@@ -48,37 +51,47 @@ function parsePromptTemplateYaml(source: string, sourceName = "prompt template")
     name,
     messages: messages.map((message, index) => {
       if (!message || typeof message !== "object" || Array.isArray(message)) {
-        throw new Error(`Invalid ${sourceName}: message ${index + 1} must be an object`);
+        throw new Error(
+          `Invalid ${sourceName}: message ${index + 1} must be an object`,
+        );
       }
 
       const messageRecord = message as Record<string, unknown>;
       const role = normalizeTemplateRole(messageRecord.role);
-      const content = typeof messageRecord.content === "string" ? messageRecord.content : "";
+      const content =
+        typeof messageRecord.content === "string" ? messageRecord.content : "";
 
       if (!role) {
-        throw new Error(`Invalid ${sourceName}: message ${index + 1} has unsupported role`);
+        throw new Error(
+          `Invalid ${sourceName}: message ${index + 1} has unsupported role`,
+        );
       }
 
       if (!content.trim()) {
-        throw new Error(`Invalid ${sourceName}: message ${index + 1} has empty content`);
+        throw new Error(
+          `Invalid ${sourceName}: message ${index + 1} has empty content`,
+        );
       }
 
       return {
         role,
-        content
+        content,
       };
-    })
+    }),
   };
 }
 
 function loadPromptTemplate(templateUrl: URL): PromptTemplate {
   return parsePromptTemplateYaml(
     readFileSync(templateUrl, "utf8"),
-    templateUrl.pathname
+    templateUrl.pathname,
   );
 }
 
-function getPromptTemplateContent(template: PromptTemplate, role: PromptTemplateRole) {
+function getPromptTemplateContent(
+  template: PromptTemplate,
+  role: PromptTemplateRole,
+) {
   return template.messages
     .filter((message) => message.role === role)
     .map((message) => message.content.trim())
@@ -87,14 +100,21 @@ function getPromptTemplateContent(template: PromptTemplate, role: PromptTemplate
 }
 
 function hasTemplateValue(view: Record<string, unknown>, key: string) {
-  const path = key.split(".").map((part) => part.trim()).filter(Boolean);
+  const path = key
+    .split(".")
+    .map((part) => part.trim())
+    .filter(Boolean);
   if (path.length === 0) {
     return false;
   }
 
   let current: unknown = view;
   for (const part of path) {
-    if (!current || typeof current !== "object" || !Object.prototype.hasOwnProperty.call(current, part)) {
+    if (
+      !current ||
+      typeof current !== "object" ||
+      !Object.prototype.hasOwnProperty.call(current, part)
+    ) {
       return false;
     }
     current = (current as Record<string, unknown>)[part];
@@ -103,9 +123,14 @@ function hasTemplateValue(view: Record<string, unknown>, key: string) {
   return true;
 }
 
-function getMissingTemplateKeys(template: string, view: Record<string, unknown>) {
+function getMissingTemplateKeys(
+  template: string,
+  view: Record<string, unknown>,
+) {
   const keys = new Set<string>();
-  for (const match of template.matchAll(/\{\{\{?\s*([#/^!>&=]?)\s*([^{}\s][^{}]*?)\s*\}?\}\}/g)) {
+  for (const match of template.matchAll(
+    /\{\{\{?\s*([#/^!>&=]?)\s*([^{}\s][^{}]*?)\s*\}?\}\}/g,
+  )) {
     const sigil = match[1];
     if (sigil && sigil !== "&") {
       continue;
@@ -124,32 +149,32 @@ function getMissingTemplateKeys(template: string, view: Record<string, unknown>)
 function renderPromptTemplateContent(
   template: string,
   view: Record<string, unknown> = {},
-  errorPrefix = "prompt"
+  errorPrefix = "prompt",
 ) {
   const missingKeys = getMissingTemplateKeys(template, view);
   if (missingKeys.length > 0) {
-    throw new Error(`Unresolved ${errorPrefix} placeholders: ${missingKeys.map((key) => `{{${key}}}`).join(", ")}`);
+    throw new Error(
+      `Unresolved ${errorPrefix} placeholders: ${missingKeys.map((key) => `{{${key}}}`).join(", ")}`,
+    );
   }
 
   const rendered = Mustache.render(template, view, undefined, {
-    escape: (value) => String(value)
+    escape: (value) => String(value),
   });
   const unresolvedTokens = rendered.match(/\{\{[a-zA-Z0-9_]+\}\}/g);
   if (unresolvedTokens?.length) {
-    throw new Error(`Unresolved ${errorPrefix} placeholders: ${unresolvedTokens.join(", ")}`);
+    throw new Error(
+      `Unresolved ${errorPrefix} placeholders: ${unresolvedTokens.join(", ")}`,
+    );
   }
 
-  return rendered
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
+  return rendered.replace(/\n{3,}/g, "\n\n").trim();
 }
 
 export {
   getPromptTemplateContent,
   loadPromptTemplate,
   parsePromptTemplateYaml,
-  renderPromptTemplateContent
+  renderPromptTemplateContent,
 };
-export type {
-  PromptTemplate
-};
+export type { PromptTemplate };

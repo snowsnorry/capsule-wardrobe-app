@@ -1,6 +1,7 @@
 const PASSKEY_FALLBACK_NAME = "Passkey";
 
-const AAGUID_UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+const AAGUID_UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 const PASSKEY_PROVIDER_BY_AAGUID: Record<string, string> = {
   "bada5566-a7aa-401f-bd96-45619a55120d": "1Password",
@@ -19,7 +20,7 @@ const PASSKEY_PROVIDER_BY_AAGUID: Record<string, string> = {
   "6ab56fad-881f-4a43-acb2-0be065924522": "YubiKey",
   "b2c1a50b-dad8-4dc7-ba4d-0ce9597904bc": "YubiKey",
   "20ac7a17-c814-4833-93fe-539f0d5e3389": "YubiKey",
-  "4599062e-6926-4fe7-9566-9e8fb1aedaa0": "YubiKey"
+  "4599062e-6926-4fe7-9566-9e8fb1aedaa0": "YubiKey",
 };
 
 function normalizePasskeyAaguid(aaguid: unknown): string | null {
@@ -52,7 +53,11 @@ function getUserAgentPasskeyLabel(userAgent: unknown): string | null {
 
 function getUserAgentOs(userAgent: string): string | null {
   if (/\biphone\b/i.test(userAgent)) return "iPhone";
-  if (/\bipad\b/i.test(userAgent) || /\bmacintosh\b/i.test(userAgent) && /\bmobile\//i.test(userAgent)) return "iPad";
+  if (
+    /\bipad\b/i.test(userAgent) ||
+    (/\bmacintosh\b/i.test(userAgent) && /\bmobile\//i.test(userAgent))
+  )
+    return "iPad";
   if (/\bandroid\b/i.test(userAgent)) return "Android";
   if (/\bwindows nt\b/i.test(userAgent)) return "Windows";
   if (/\bmac os x\b|\bmacintosh\b/i.test(userAgent)) return "macOS";
@@ -62,16 +67,27 @@ function getUserAgentOs(userAgent: string): string | null {
 
 function getUserAgentBrowser(userAgent: string): string | null {
   if (/\bedg\//i.test(userAgent)) return "Edge";
-  if (/\bfirefox\//i.test(userAgent) || /\bfxios\//i.test(userAgent)) return "Firefox";
-  if (/\bcrios\//i.test(userAgent) || /\bchrome\//i.test(userAgent)) return "Chrome";
-  if (/\bsafari\//i.test(userAgent) && /\bversion\//i.test(userAgent)) return "Safari";
+  if (/\bfirefox\//i.test(userAgent) || /\bfxios\//i.test(userAgent))
+    return "Firefox";
+  if (/\bcrios\//i.test(userAgent) || /\bchrome\//i.test(userAgent))
+    return "Chrome";
+  if (/\bsafari\//i.test(userAgent) && /\bversion\//i.test(userAgent))
+    return "Safari";
   return null;
 }
 
-function getDefaultPasskeyName({ aaguid, userAgent }: { aaguid: unknown; userAgent: unknown }): string {
-  return getPasskeyProviderName(aaguid)
-    || getUserAgentPasskeyLabel(userAgent)
-    || PASSKEY_FALLBACK_NAME;
+function getDefaultPasskeyName({
+  aaguid,
+  userAgent,
+}: {
+  aaguid: unknown;
+  userAgent: unknown;
+}): string {
+  return (
+    getPasskeyProviderName(aaguid) ||
+    getUserAgentPasskeyLabel(userAgent) ||
+    PASSKEY_FALLBACK_NAME
+  );
 }
 
 export {
@@ -79,5 +95,5 @@ export {
   getDefaultPasskeyName,
   getPasskeyProviderName,
   getUserAgentPasskeyLabel,
-  normalizePasskeyAaguid
+  normalizePasskeyAaguid,
 };

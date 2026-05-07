@@ -5,14 +5,14 @@ import {
   generateAuthenticationOptions,
   generateRegistrationOptions,
   verifyAuthenticationResponse,
-  verifyRegistrationResponse
+  verifyRegistrationResponse,
 } from "@simplewebauthn/server";
 import {
   createPendingCode,
   verifyCode,
   createSession,
   getSession,
-  revokeSession
+  revokeSession,
 } from "./authStore.js";
 import { sendLoginCodeEmail } from "./email.js";
 import {
@@ -28,7 +28,7 @@ import {
   hasProfile,
   updateProfile,
   updateProfileLocale,
-  updateProfileActiveCapsuleId
+  updateProfileActiveCapsuleId,
 } from "./profileStore.js";
 import {
   createCapsule,
@@ -47,13 +47,28 @@ import {
   saveCapsule,
   searchCapsules,
   setActiveCapsuleId,
-  updateCapsuleSnapshot
+  updateCapsuleSnapshot,
 } from "./capsuleStore.js";
-import { getSearchOptions, getSavedSearch, getSearchStats, runSavedSearch } from "./searchStore.js";
+import {
+  getSearchOptions,
+  getSavedSearch,
+  getSearchStats,
+  runSavedSearch,
+} from "./searchStore.js";
 import { getWardrobeJob, regenerateCapsuleWardrobe } from "./ai/ai.js";
-import { getPartialRegenerationJob, regenerateSelectedWardrobeItems } from "./ai/regenerateSelected.js";
-import { deleteOutfitSetImage, generateOutfitSetImage, getOutfitSetImageJob } from "./ai/outfitSetImages.js";
-import { buildCapsuleEventSnapshot, capsuleEventHub } from "./ai/capsuleEvents.js";
+import {
+  getPartialRegenerationJob,
+  regenerateSelectedWardrobeItems,
+} from "./ai/regenerateSelected.js";
+import {
+  deleteOutfitSetImage,
+  generateOutfitSetImage,
+  getOutfitSetImageJob,
+} from "./ai/outfitSetImages.js";
+import {
+  buildCapsuleEventSnapshot,
+  capsuleEventHub,
+} from "./ai/capsuleEvents.js";
 import { buildWardrobePdfInChild } from "./wardrobePdf.js";
 import {
   checkDatabaseConnection,
@@ -65,7 +80,7 @@ import {
   insertPasskeyChallenge,
   listPasskeysByEmail,
   pruneExpiredPasskeyChallenges,
-  updatePasskeyAuthentication
+  updatePasskeyAuthentication,
 } from "./db.js";
 import { configureSharp } from "./ai/sharpConfig.js";
 import {
@@ -75,9 +90,12 @@ import {
   NODE_ENV,
   PASSKEY_ORIGIN,
   PASSKEY_RP_ID,
-  PASSKEY_RP_NAME
+  PASSKEY_RP_NAME,
 } from "./appConfig.js";
-import { normalizeProfileSettingsPayload, toProfileResponse } from "./profileHttp.js";
+import {
+  normalizeProfileSettingsPayload,
+  toProfileResponse,
+} from "./profileHttp.js";
 import {
   buildCapsuleDraftFromFilters,
   buildPdfDownloadFilename,
@@ -89,10 +107,15 @@ import {
   hasUnexpectedRejectedUrlsFields,
   isTruthyQueryFlag,
   toCapsuleResponse,
-  toCapsuleSummary
+  toCapsuleSummary,
 } from "./capsuleHttp.js";
 import { createStartServer } from "./serverStartup.js";
-import { applyCorsMiddleware, applySecurityMiddleware, createRateLimiters, createRequestGuards } from "./appMiddleware.js";
+import {
+  applyCorsMiddleware,
+  applySecurityMiddleware,
+  createRateLimiters,
+  createRequestGuards,
+} from "./appMiddleware.js";
 import { createCapsuleEventHandlers } from "./capsuleEventHttp.js";
 import { registerPasskeyRoutes } from "./routes/passkeyRoutes.js";
 import { registerProfileReadRoutes } from "./routes/profileReadRoutes.js";
@@ -110,11 +133,17 @@ logInfo(
   "[sharp][configured]",
   JSON.stringify({
     cache: sharpConfig.cache,
-    concurrency: sharpConfig.concurrency
-  })
+    concurrency: sharpConfig.concurrency,
+  }),
 );
 
-function resolveGoogleAuthClient({ googleAuthClient, googleClientId }: { googleAuthClient?: unknown; googleClientId?: string | null }) {
+function resolveGoogleAuthClient({
+  googleAuthClient,
+  googleClientId,
+}: {
+  googleAuthClient?: unknown;
+  googleClientId?: string | null;
+}) {
   if (googleAuthClient !== undefined) {
     return googleAuthClient;
   }
@@ -123,9 +152,10 @@ function resolveGoogleAuthClient({ googleAuthClient, googleClientId }: { googleA
 }
 
 function createAppDependencies(options: Record<string, unknown> = {}) {
-  const googleClientId = options.googleClientId === undefined
-    ? GOOGLE_CLIENT_ID
-    : options.googleClientId as string | null;
+  const googleClientId =
+    options.googleClientId === undefined
+      ? GOOGLE_CLIENT_ID
+      : (options.googleClientId as string | null);
   return {
     authTestMode: AUTH_TEST_MODE,
     buildWardrobePdfInChildImpl: buildWardrobePdfInChild,
@@ -197,7 +227,7 @@ function createAppDependencies(options: Record<string, unknown> = {}) {
     verifyCodeImpl: verifyCode,
     verifyRegistrationResponseImpl: verifyRegistrationResponse,
     ...options,
-    googleAuthClient: resolveGoogleAuthClient({ ...options, googleClientId })
+    googleAuthClient: resolveGoogleAuthClient({ ...options, googleClientId }),
   };
 }
 
@@ -206,7 +236,10 @@ function createExpressApp(deps) {
   app.set("trust proxy", 1);
   app.use(express.json({ limit: "100kb" }));
   applySecurityMiddleware(app, deps.nodeEnv);
-  applyCorsMiddleware(app, { nodeEnv: deps.nodeEnv, clientOrigin: deps.clientOrigin });
+  applyCorsMiddleware(app, {
+    nodeEnv: deps.nodeEnv,
+    clientOrigin: deps.clientOrigin,
+  });
   return app;
 }
 
@@ -215,7 +248,7 @@ function createAppRouteContext(deps) {
   const guards = createRequestGuards({
     nodeEnv: deps.nodeEnv,
     clientOrigin: deps.clientOrigin,
-    getSessionImpl: deps.getSessionImpl
+    getSessionImpl: deps.getSessionImpl,
   });
   const eventHandlers = createCapsuleEventHandlers({
     getCapsuleImpl: deps.getCapsuleImpl,
@@ -223,7 +256,7 @@ function createAppRouteContext(deps) {
     getPartialRegenerationJobImpl: deps.getPartialRegenerationJobImpl,
     getWardrobeJobImpl: deps.getWardrobeJobImpl,
     streamCapsuleEventsImpl: deps.streamCapsuleEventsImpl,
-    updateCapsuleSnapshotImpl: deps.updateCapsuleSnapshotImpl
+    updateCapsuleSnapshotImpl: deps.updateCapsuleSnapshotImpl,
   });
 
   return {
@@ -246,7 +279,7 @@ function createAppRouteContext(deps) {
     normalizeProfileSettingsPayload,
     toCapsuleResponse,
     toCapsuleSummary,
-    toProfileResponse
+    toProfileResponse,
   };
 }
 

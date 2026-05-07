@@ -14,7 +14,7 @@ import {
   normalizeColor,
   getAudienceOptions,
   getOccasions,
-  getSeasons
+  getSeasons,
 } from "./profileStore.js";
 
 type ProfileRecordFixture = {
@@ -43,22 +43,32 @@ type RejectedResetProfile = {
 };
 
 function normalizeRejected(profile: RejectedProfile): string[] {
-  return [...new Set(
-    (Array.isArray(profile?.rejected) ? profile.rejected : [])
-      .map((value) => String(value || "").trim())
-      .filter(Boolean)
-  )];
+  return [
+    ...new Set(
+      (Array.isArray(profile?.rejected) ? profile.rejected : [])
+        .map((value) => String(value || "").trim())
+        .filter(Boolean),
+    ),
+  ];
 }
 
-function shouldResetRejected(current: RejectedResetProfile, next: RejectedResetProfile): boolean {
+function shouldResetRejected(
+  current: RejectedResetProfile,
+  next: RejectedResetProfile,
+): boolean {
   return (
-    current.formalityLevel !== normalizeFormalityLevel(next.formalityLevel)
-    || current.style !== normalizeStyle(next.style)
-    || JSON.stringify(current.occasions || []) !== JSON.stringify(next.occasions || [])
-    || JSON.stringify(current.season || []) !== JSON.stringify(next.season || [])
-    || current.audience !== next.audience
-    || current.color !== normalizeColor(next.color)
-    || current.pattern !== (typeof next.pattern === "string" && next.pattern.trim() ? next.pattern.trim().toLowerCase() : null)
+    current.formalityLevel !== normalizeFormalityLevel(next.formalityLevel) ||
+    current.style !== normalizeStyle(next.style) ||
+    JSON.stringify(current.occasions || []) !==
+      JSON.stringify(next.occasions || []) ||
+    JSON.stringify(current.season || []) !==
+      JSON.stringify(next.season || []) ||
+    current.audience !== next.audience ||
+    current.color !== normalizeColor(next.color) ||
+    current.pattern !==
+      (typeof next.pattern === "string" && next.pattern.trim()
+        ? next.pattern.trim().toLowerCase()
+        : null)
   );
 }
 
@@ -86,7 +96,15 @@ test("normalizeOccasion keeps only supported profile occasions", () => {
 });
 
 test("normalizeOccasionList keeps supported profile occasions in first-seen order", () => {
-  expect(normalizeOccasionList(["office", "school_drop-off", "everyday_errands", "office", "weekend_with_family"])).toEqual(["office", "everyday_errands"]);
+  expect(
+    normalizeOccasionList([
+      "office",
+      "school_drop-off",
+      "everyday_errands",
+      "office",
+      "weekend_with_family",
+    ]),
+  ).toEqual(["office", "everyday_errands"]);
 });
 
 test("getAudienceOptions returns supported profile audiences", () => {
@@ -94,7 +112,11 @@ test("getAudienceOptions returns supported profile audiences", () => {
 });
 
 test("getFormalityLevels returns fixed schema-based values", async () => {
-  expect(await getFormalityLevels("user@example.com")).toEqual(["casual", "smart_casual", "formal"]);
+  expect(await getFormalityLevels("user@example.com")).toEqual([
+    "casual",
+    "smart_casual",
+    "formal",
+  ]);
 });
 
 test("getStyles returns fixed schema-based values", async () => {
@@ -110,12 +132,14 @@ test("getStyles returns fixed schema-based values", async () => {
     "equestrian",
     "military",
     "grunge",
-    "sporty"
+    "sporty",
   ]);
 });
 
 test("getOccasions returns fixed schema-based values in schema order", async () => {
-  expect(await getOccasions("user@example.com")).toEqual(PROFILE_OCCASION_OPTIONS);
+  expect(await getOccasions("user@example.com")).toEqual(
+    PROFILE_OCCASION_OPTIONS,
+  );
 });
 
 test("getSeasons returns fixed schema-based values in schema order", async () => {
@@ -123,7 +147,14 @@ test("getSeasons returns fixed schema-based values in schema order", async () =>
 });
 
 test("buildPatternOptions keeps all product-backed values and forces solid first", () => {
-  const options = buildPatternOptions(["paisley", "snake", "check", "unknown", "stripe", "logo"]);
+  const options = buildPatternOptions([
+    "paisley",
+    "snake",
+    "check",
+    "unknown",
+    "stripe",
+    "logo",
+  ]);
 
   expect(options[0]).toBe("solid");
   expect(options.includes("argyle")).toBeTruthy();
@@ -147,7 +178,7 @@ test("normalizeProfileRecord applies defaults for new profile fields", () => {
     fullname: "  ",
     theme: "invalid",
     llm: "",
-    imageLlm: ""
+    imageLlm: "",
   };
 
   const expected: ProfileRecordFixture = {
@@ -157,7 +188,7 @@ test("normalizeProfileRecord applies defaults for new profile fields", () => {
     fullname: null,
     theme: "system",
     llm: "openai:gpt-5.5",
-    imageLlm: "openai:gpt-image-2"
+    imageLlm: "openai:gpt-image-2",
   };
 
   expect(normalizeProfileRecord(input)).toEqual(expected);
@@ -171,14 +202,16 @@ test("normalizeProfileRecord keeps a supported claude llm selection", () => {
     fullname: "Ada",
     theme: "dark",
     llm: "claude:claude-opus-4-7",
-    imageLlm: "gemini:gemini-3-pro-image-preview"
+    imageLlm: "gemini:gemini-3-pro-image-preview",
   };
 
   expect(normalizeProfileRecord(input)).toEqual(input);
 });
 
 test("rejected ids are deduped and trimmed", () => {
-  expect(normalizeRejected({ rejected: [" 123 ", "123", "", "456", " 456 "] })).toEqual(["123", "456"]);
+  expect(
+    normalizeRejected({ rejected: [" 123 ", "123", "", "456", " 456 "] }),
+  ).toEqual(["123", "456"]);
 });
 
 test("changing locale alone does not require rejected reset", () => {
@@ -190,11 +223,11 @@ test("changing locale alone does not require rejected reset", () => {
     audience: "woman",
     color: "red",
     pattern: "solid",
-    locale: "en"
+    locale: "en",
   };
   const next = {
     ...current,
-    locale: "ru"
+    locale: "ru",
   };
 
   expect(shouldResetRejected(current, next)).toBe(false);
@@ -208,11 +241,11 @@ test("changing capsule-defining filters requires rejected reset", () => {
     season: ["spring"],
     audience: "woman",
     color: "red",
-    pattern: "solid"
+    pattern: "solid",
   };
   const next = {
     ...current,
-    color: "blue"
+    color: "blue",
   };
 
   expect(shouldResetRejected(current, next)).toBe(true);
@@ -229,7 +262,7 @@ test("createProfileStore delegates profile persistence and normalizes returned r
         activeCapsuleId: " capsule-1 ",
         theme: "dark",
         llm: "openai:gpt-5.5",
-        imageLlm: "openai:gpt-image-2"
+        imageLlm: "openai:gpt-image-2",
       };
     },
     hasProfileByEmailImpl: async (email) => {
@@ -255,29 +288,42 @@ test("createProfileStore delegates profile persistence and normalizes returned r
     updateProfileActiveCapsuleIdByEmailImpl: async (payload) => {
       calls.push({ type: "active", payload });
       return payload;
-    }
+    },
   });
 
   expect((await store.getProfile("person@example.com"))?.fullname).toBe("Ada");
   expect(await store.hasProfile("person@example.com")).toBe(true);
   expect((await store.createProfile("new@example.com", {}))?.locale).toBe("en");
-  expect((await store.updateProfile("person@example.com", {
-    locale: "ru",
-    fullname: "  Ada Lovelace  ",
-    theme: "dark",
-    llm: "invalid",
-    imageLlm: "invalid"
-  }))?.llm).toBe("openai:gpt-5.5");
-  expect((await store.updateProfileLocale("person@example.com", "ru"))?.locale).toBe("ru");
+  expect(
+    (
+      await store.updateProfile("person@example.com", {
+        locale: "ru",
+        fullname: "  Ada Lovelace  ",
+        theme: "dark",
+        llm: "invalid",
+        imageLlm: "invalid",
+      })
+    )?.llm,
+  ).toBe("openai:gpt-5.5");
+  expect(
+    (await store.updateProfileLocale("person@example.com", "ru"))?.locale,
+  ).toBe("ru");
   expect(await store.deleteProfile("person@example.com")).toBe(true);
-  expect((await store.updateProfileActiveCapsuleId("person@example.com", "capsule-2"))?.activeCapsuleId).toBe("capsule-2");
+  expect(
+    (
+      await store.updateProfileActiveCapsuleId(
+        "person@example.com",
+        "capsule-2",
+      )
+    )?.activeCapsuleId,
+  ).toBe("capsule-2");
   expect(calls.length).toBe(7);
 });
 
 test("createProfileStore builds pattern options and falls back when product lookup fails", async () => {
   const errors = [];
   const store = createProfileStore({
-    getDistinctProductPatternsImpl: async () => ["stripe", "houndstooth"]
+    getDistinctProductPatternsImpl: async () => ["stripe", "houndstooth"],
   });
   const failingStore = createProfileStore({
     getDistinctProductPatternsImpl: async () => {
@@ -285,10 +331,16 @@ test("createProfileStore builds pattern options and falls back when product look
     },
     logErrorImpl: (...args) => {
       errors.push(args);
-    }
+    },
   });
 
-  expect((await store.getPatternOptions("person@example.com")).includes("houndstooth")).toBeTruthy();
-  expect(await failingStore.getPatternOptions("person@example.com")).toEqual(buildPatternOptions([]));
+  expect(
+    (await store.getPatternOptions("person@example.com")).includes(
+      "houndstooth",
+    ),
+  ).toBeTruthy();
+  expect(await failingStore.getPatternOptions("person@example.com")).toEqual(
+    buildPatternOptions([]),
+  );
   expect(errors.length).toBe(1);
 });

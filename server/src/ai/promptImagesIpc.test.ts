@@ -6,14 +6,18 @@ import sharp from "sharp";
 import {
   buildPromptDebugImagesInChild,
   deserializePromptDebugImagesFromIpc,
-  serializePromptDebugImagesForIpc
+  serializePromptDebugImagesForIpc,
 } from "./promptImagesIpc.js";
-import { GRID_HEIGHT, GRID_WIDTH, HEADER_HEIGHT } from "./promptImagesShared.js";
+import {
+  GRID_HEIGHT,
+  GRID_WIDTH,
+  HEADER_HEIGHT,
+} from "./promptImagesShared.js";
 import {
   assertCategoryHasBufferProperty,
   createFixtureBuffer,
   withCachedImage,
-  withTempDir
+  withTempDir,
 } from "../test/promptImageFixtures.js";
 
 function enableTsChildProcess(testContext: TestContext): void {
@@ -38,18 +42,20 @@ test("prompt image IPC serialization round-trips collages back to buffers", asyn
       buffer: fixtureBuffer,
       filename: "categories-stitched.jpg",
       totalItems: 1,
-      categoryCount: 1
+      categoryCount: 1,
     },
-    categories: [{
-      category: "top",
-      mimeType: "image/jpeg",
-      filename: "category-top.jpg",
-      totalItems: 1,
-      cachedCount: 1,
-      downloadedCount: 1,
-      skippedCount: 0,
-      items: []
-    }]
+    categories: [
+      {
+        category: "top",
+        mimeType: "image/jpeg",
+        filename: "category-top.jpg",
+        totalItems: 1,
+        cachedCount: 1,
+        downloadedCount: 1,
+        skippedCount: 0,
+        items: [],
+      },
+    ],
   });
 
   const deserialized = deserializePromptDebugImagesFromIpc(serialized);
@@ -69,8 +75,16 @@ test("prompt image IPC serialization round-trips collages back to buffers", asyn
 test("buildPromptDebugImagesInChild resolves buffered collages from child success payload", async (_t) => {
   const result = await buildPromptDebugImagesInChild({
     normalizedItems: [
-      { id: "top-1", category: "top", image_url: "https://example.com/top-1.png" },
-      { id: "bottom-1", category: "bottom", image_url: "https://example.com/bottom-1.png" }
+      {
+        id: "top-1",
+        category: "top",
+        image_url: "https://example.com/top-1.png",
+      },
+      {
+        id: "bottom-1",
+        category: "bottom",
+        image_url: "https://example.com/bottom-1.png",
+      },
     ],
     forkImpl: (_modulePath, _options) => {
       const handlers = new Map();
@@ -94,7 +108,7 @@ test("buildPromptDebugImagesInChild resolves buffered collages from child succes
               filename: "categories-stitched.jpg",
               totalItems: 2,
               categoryCount: 2,
-              buffer: Buffer.from("child-image-stitched")
+              buffer: Buffer.from("child-image-stitched"),
             },
             categories: [
               {
@@ -105,7 +119,7 @@ test("buildPromptDebugImagesInChild resolves buffered collages from child succes
                 cachedCount: 1,
                 downloadedCount: 0,
                 skippedCount: 0,
-                items: []
+                items: [],
               },
               {
                 category: "bottom",
@@ -115,14 +129,14 @@ test("buildPromptDebugImagesInChild resolves buffered collages from child succes
                 cachedCount: 0,
                 downloadedCount: 1,
                 skippedCount: 0,
-                items: []
-              }
-            ]
+                items: [],
+              },
+            ],
           });
           handlers.get("exit")?.(0, null);
-        }
+        },
       };
-    }
+    },
   });
 
   expect(result.cachedCount).toBe(1);
@@ -143,11 +157,13 @@ test("buildPromptDebugImagesInChild works with a real child process", async (t) 
   await withCachedImage(t, imageUrl, fixtureBuffer);
 
   const result = await buildPromptDebugImagesInChild({
-    normalizedItems: [{
-      id: "top-1",
-      category: "top",
-      image_url: imageUrl
-    }]
+    normalizedItems: [
+      {
+        id: "top-1",
+        category: "top",
+        image_url: imageUrl,
+      },
+    ],
   });
 
   expect(result.cachedCount).toBe(1);
@@ -168,27 +184,40 @@ test("buildPromptDebugImagesInChild saves debug artifacts when enabled", async (
   await withCachedImage(t, imageUrl, fixtureBuffer);
 
   const result = await buildPromptDebugImagesInChild({
-    normalizedItems: [{
-      id: "top-1",
-      category: "top",
-      image_url: imageUrl
-    }],
+    normalizedItems: [
+      {
+        id: "top-1",
+        category: "top",
+        image_url: imageUrl,
+      },
+    ],
     saveDebugArtifacts: true,
-    debugOutputDir: outputDir
+    debugOutputDir: outputDir,
   });
 
   expect(result.cachedCount).toBe(1);
   expect(result.downloadedCount).toBe(0);
-  const manifest = JSON.parse(await readFile(path.join(outputDir, "manifest.json"), "utf8"));
+  const manifest = JSON.parse(
+    await readFile(path.join(outputDir, "manifest.json"), "utf8"),
+  );
   expect(manifest.cachedCount).toBe(1);
   expect(manifest.downloadedCount).toBe(0);
-  expect(manifest.stitched.file).toBe(path.join(outputDir, "categories-stitched.jpg"));
+  expect(manifest.stitched.file).toBe(
+    path.join(outputDir, "categories-stitched.jpg"),
+  );
   expect(manifest.categories.length).toBe(1);
 });
 
 test("buildPromptDebugImagesInChild rejects on child-reported failure", async (_t) => {
-  await expect(buildPromptDebugImagesInChild({
-      normalizedItems: [{ id: "top-1", category: "top", image_url: "https://example.com/top-1.png" }],
+  await expect(
+    buildPromptDebugImagesInChild({
+      normalizedItems: [
+        {
+          id: "top-1",
+          category: "top",
+          image_url: "https://example.com/top-1.png",
+        },
+      ],
       forkImpl: () => {
         const handlers = new Map();
         return {
@@ -202,17 +231,25 @@ test("buildPromptDebugImagesInChild rejects on child-reported failure", async (_
           send() {
             handlers.get("message")?.({
               ok: false,
-              message: "child_failed"
+              message: "child_failed",
             });
-          }
+          },
         };
-      }
-    })).rejects.toThrow(/child_failed/);
+      },
+    }),
+  ).rejects.toThrow(/child_failed/);
 });
 
 test("buildPromptDebugImagesInChild rejects on unexpected child exit", async (_t) => {
-  await expect(buildPromptDebugImagesInChild({
-      normalizedItems: [{ id: "top-1", category: "top", image_url: "https://example.com/top-1.png" }],
+  await expect(
+    buildPromptDebugImagesInChild({
+      normalizedItems: [
+        {
+          id: "top-1",
+          category: "top",
+          image_url: "https://example.com/top-1.png",
+        },
+      ],
       forkImpl: () => {
         const handlers = new Map();
         return {
@@ -225,8 +262,9 @@ test("buildPromptDebugImagesInChild rejects on unexpected child exit", async (_t
           kill() {},
           send() {
             handlers.get("exit")?.(1, "SIGTERM");
-          }
+          },
         };
-      }
-    })).rejects.toThrow(/prompt_images_child_exit:1:SIGTERM/);
+      },
+    }),
+  ).rejects.toThrow(/prompt_images_child_exit:1:SIGTERM/);
 });

@@ -1,13 +1,14 @@
-import type {
-  WardrobeUiItemLike
-} from "./types.js";
+import type { WardrobeUiItemLike } from "./types.js";
 
 type CapsuleWardrobeSqlRow = WardrobeUiItemLike & {
   embedding?: unknown;
 };
 
 type CapsuleWardrobeSqlClient = {
-  <TRow = unknown>(strings: TemplateStringsArray, ...values: readonly unknown[]): Promise<TRow[] | { count: number }>;
+  <TRow = unknown>(
+    strings: TemplateStringsArray,
+    ...values: readonly unknown[]
+  ): Promise<TRow[] | { count: number }>;
 };
 
 type CapsuleWardrobeSqlParams = {
@@ -27,5 +28,5 @@ type CapsuleWardrobeSqlParams = {
 export type {
   CapsuleWardrobeSqlClient,
   CapsuleWardrobeSqlParams,
-  CapsuleWardrobeSqlRow
+  CapsuleWardrobeSqlRow,
 };

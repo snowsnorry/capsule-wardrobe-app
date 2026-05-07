@@ -12,13 +12,19 @@ import {
   type SearchProductsResult,
   type SearchRow,
   type SearchRowQuery,
-  type UpsertSearchInput
+  type UpsertSearchInput,
 } from "./core.js";
-import { querySearchProductCount, querySearchProductItems } from "./searchProductQueries.js";
+import {
+  querySearchProductCount,
+  querySearchProductItems,
+} from "./searchProductQueries.js";
 
-export async function getSearchByEmail(email: string): Promise<SearchRow | null> {
+export async function getSearchByEmail(
+  email: string,
+): Promise<SearchRow | null> {
   const sql = getSqlClient();
-  const row = getFirstRow(await sql<SearchRowQuery>`
+  const row = getFirstRow(
+    await sql<SearchRowQuery>`
     select
       email,
       query,
@@ -43,7 +49,8 @@ export async function getSearchByEmail(email: string): Promise<SearchRow | null>
     from search
     where email = ${email}
     limit 1
-  `);
+  `,
+  );
   return normalizeSearchRow(row);
 }
 
@@ -65,10 +72,11 @@ export async function upsertSearchByEmail({
   silhouette,
   fit,
   closureType,
-  page
+  page,
 }: UpsertSearchInput): Promise<SearchRow | null> {
-	  const sql = getSqlClient();
-	  const row = getFirstRow(await sql<SearchRowQuery>`
+  const sql = getSqlClient();
+  const row = getFirstRow(
+    await sql<SearchRowQuery>`
 	    insert into search (
 	      email, query, embedding, brand, price_min, price_max, audience, category, season,
 	      formality_level, style, occasions, color, pattern, silhouette, fit, closure_type, page
@@ -92,11 +100,14 @@ export async function upsertSearchByEmail({
 	      audience, category, season, formality_level as "formalityLevel", style, occasions,
 	      color, pattern, silhouette, fit, closure_type as "closureType", page,
 	      created_at as "createdAt", updated_at as "updatedAt"
-	  `);
+	  `,
+  );
   return normalizeSearchRow(row);
 }
 
-export async function searchProducts(input: SearchProductsInput = {}): Promise<SearchProductsResult> {
+export async function searchProducts(
+  input: SearchProductsInput = {},
+): Promise<SearchProductsResult> {
   const sql = getSqlClient();
   const currentPage = getSearchPage(input.page);
   const offset = (currentPage - 1) * SEARCH_PAGE_SIZE;
@@ -104,14 +115,14 @@ export async function searchProducts(input: SearchProductsInput = {}): Promise<S
 
   const [countRow, items] = await Promise.all([
     querySearchProductCount(sql, searchQueryParams),
-    querySearchProductItems(sql, { ...searchQueryParams, offset })
+    querySearchProductItems(sql, { ...searchQueryParams, offset }),
   ]);
 
   return {
     items,
     total: Number(countRow?.total || 0),
     page: currentPage,
-    pageSize: SEARCH_PAGE_SIZE
+    pageSize: SEARCH_PAGE_SIZE,
   };
 }
 
@@ -153,20 +164,27 @@ function buildSearchQueryParams(input) {
     season: getSearchArray(input, "season"),
     semanticDistanceThreshold: input.semanticDistanceThreshold ?? null,
     silhouette: getSearchArray(input, "silhouette"),
-    style: getSearchArray(input, "style")
+    style: getSearchArray(input, "style"),
   };
 }
 
-export function normalizeFacetRows(rows: FacetRow[] = []): Array<{ value: string; count: number }> {
+export function normalizeFacetRows(
+  rows: FacetRow[] = [],
+): Array<{ value: string; count: number }> {
   return rows
     .map((row) => ({
-      value: String(row?.value || "").trim().toLowerCase(),
-      count: Number(row?.count || 0)
+      value: String(row?.value || "")
+        .trim()
+        .toLowerCase(),
+      count: Number(row?.count || 0),
     }))
     .filter((row) => row.value && row.count > 0);
 }
 
-export function buildPriceBuckets(rows: PriceBucketRow[] = [], bucketCount: number): PriceBucket[] {
+export function buildPriceBuckets(
+  rows: PriceBucketRow[] = [],
+  bucketCount: number,
+): PriceBucket[] {
   const normalizedRows = rows
     .map(normalizePriceBucketRow)
     .filter((row): row is PriceBucket | BucketRangeRow => Boolean(row));
@@ -177,17 +195,35 @@ export function buildPriceBuckets(rows: PriceBucketRow[] = [], bucketCount: numb
 
   const firstRow = normalizedRows[0];
   if (isPriceBucket(firstRow)) {
-    return [{ key: `${firstRow.min}:${firstRow.max}`, min: firstRow.min, max: firstRow.max, count: firstRow.count }];
+    return [
+      {
+        key: `${firstRow.min}:${firstRow.max}`,
+        min: firstRow.min,
+        max: firstRow.max,
+        count: firstRow.count,
+      },
+    ];
   }
 
-  const rangeRows = normalizedRows.filter((row): row is BucketRangeRow => !isPriceBucket(row));
+  const rangeRows = normalizedRows.filter(
+    (row): row is BucketRangeRow => !isPriceBucket(row),
+  );
   const { rangeMin, rangeMax } = firstRow;
-  const countByBucket = new Map(rangeRows.map((row) => [row.bucket, row.count]));
+  const countByBucket = new Map(
+    rangeRows.map((row) => [row.bucket, row.count]),
+  );
   const step = (rangeMax - rangeMin) / bucketCount;
 
-  return Array.from({ length: bucketCount }, (_, index) => (
-    buildPriceBucketRange({ index, bucketCount, rangeMin, rangeMax, step, countByBucket })
-  ));
+  return Array.from({ length: bucketCount }, (_, index) =>
+    buildPriceBucketRange({
+      index,
+      bucketCount,
+      rangeMin,
+      rangeMax,
+      step,
+      countByBucket,
+    }),
+  );
 }
 
 function normalizePriceBucketRow(row): PriceBucket | BucketRangeRow | null {
@@ -206,14 +242,23 @@ function normalizePriceBucketRow(row): PriceBucket | BucketRangeRow | null {
 }
 
 function isValidBucketRange({ bucket, count, rangeMin, rangeMax }) {
-  return Number.isInteger(bucket)
-    && bucket > 0
-    && count >= 0
-    && Number.isFinite(rangeMin)
-    && Number.isFinite(rangeMax);
+  return (
+    Number.isInteger(bucket) &&
+    bucket > 0 &&
+    count >= 0 &&
+    Number.isFinite(rangeMin) &&
+    Number.isFinite(rangeMax)
+  );
 }
 
-function buildPriceBucketRange({ index, bucketCount, rangeMin, rangeMax, step, countByBucket }) {
+function buildPriceBucketRange({
+  index,
+  bucketCount,
+  rangeMin,
+  rangeMax,
+  step,
+  countByBucket,
+}) {
   const bucket = index + 1;
   const min = rangeMin + step * index;
   const max = bucket === bucketCount ? rangeMax : rangeMin + step * bucket;
@@ -222,6 +267,6 @@ function buildPriceBucketRange({ index, bucketCount, rangeMin, rangeMax, step, c
     key: `${min}:${max}`,
     min,
     max,
-    count: countByBucket.get(bucket) || 0
+    count: countByBucket.get(bucket) || 0,
   };
 }

@@ -1,12 +1,18 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import type { ComponentProps } from "react";
 
 vi.mock("../i18n/useI18n", () => ({
   useI18n: () => ({
-    t: (key: string) => key
-  })
+    t: (key: string) => key,
+  }),
 }));
 
 import ClothingCard from "./ClothingCard";
@@ -18,14 +24,14 @@ const item: ComponentProps<typeof ClothingCard>["item"] = {
   name: "Red Jacket",
   category: "outerwear",
   image_url: "https://example.com/red-jacket.jpg",
-  url: "https://example.com/products/red-jacket"
+  url: "https://example.com/products/red-jacket",
 };
 
 function renderCard(props: Partial<ComponentProps<typeof ClothingCard>> = {}) {
   return render(
     <ThemeProvider theme={theme}>
       <ClothingCard item={item} {...props} />
-    </ThemeProvider>
+    </ThemeProvider>,
   );
 }
 
@@ -49,10 +55,12 @@ describe("ClothingCard", () => {
             onToggleSelected={onToggleSelected}
           />
         </div>
-      </ThemeProvider>
+      </ThemeProvider>,
     );
 
-    const toggleButton = screen.getByRole("button", { name: "main.partialRegenerateToggle" });
+    const toggleButton = screen.getByRole("button", {
+      name: "main.partialRegenerateToggle",
+    });
     fireEvent.click(toggleButton);
 
     expect(onToggleSelected).toHaveBeenCalledTimes(1);
@@ -72,18 +80,26 @@ describe("ClothingCard", () => {
     rerender(
       <ThemeProvider theme={theme}>
         <ClothingCard item={item} isSelectable isMobile />
-      </ThemeProvider>
+      </ThemeProvider>,
     );
 
-    expect(screen.queryByRole("button", { name: "main.partialRegenerateToggle" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "capsule.openProductMenu" })).toBeVisible();
+    expect(
+      screen.queryByRole("button", { name: "main.partialRegenerateToggle" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "capsule.openProductMenu" }),
+    ).toBeVisible();
   });
 
   test("renders only the selection toggle in selection mode", () => {
     renderCard({ isSelectable: true, isSelectionMode: true, isMobile: true });
 
-    expect(screen.getByRole("button", { name: "main.partialRegenerateToggle" })).toBeVisible();
-    expect(screen.queryByRole("button", { name: "capsule.openProductMenu" })).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "main.partialRegenerateToggle" }),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole("button", { name: "capsule.openProductMenu" }),
+    ).not.toBeInTheDocument();
   });
 
   test("renders an outbound link with the product image and attributes", () => {
@@ -111,14 +127,14 @@ describe("ClothingCard", () => {
     await waitFor(() => {
       expect(image).toHaveAttribute(
         "src",
-        "/api/images/701ef83d3205bee4cedc8663c6a2100ddeaad5bb7f5aeefbabfa58ac0d84c40a.jpg"
+        "/api/images/701ef83d3205bee4cedc8663c6a2100ddeaad5bb7f5aeefbabfa58ac0d84c40a.jpg",
       );
     });
 
     fireEvent.error(image);
     expect(image).toHaveAttribute(
       "src",
-      "/api/images/701ef83d3205bee4cedc8663c6a2100ddeaad5bb7f5aeefbabfa58ac0d84c40a.jpg"
+      "/api/images/701ef83d3205bee4cedc8663c6a2100ddeaad5bb7f5aeefbabfa58ac0d84c40a.jpg",
     );
   });
 
@@ -132,18 +148,32 @@ describe("ClothingCard", () => {
     expect(details).toContainElement(screen.getByText("Red Jacket"));
     expect(title).toHaveTextContent("Red Jacket");
     expect(title).not.toHaveTextContent("options.categories.outerwear");
-    expect(details).not.toContainElement(screen.getByText("options.categories.outerwear"));
-    expect(category).toContainElement(screen.getByText("options.categories.outerwear"));
+    expect(details).not.toContainElement(
+      screen.getByText("options.categories.outerwear"),
+    );
+    expect(category).toContainElement(
+      screen.getByText("options.categories.outerwear"),
+    );
   });
 
   test("moves known category icons into the mobile title prefix", () => {
     const { container } = renderCard({ isMobile: true });
     const title = container.querySelector(".wardrobe-card-title");
 
-    expect(container.querySelector(".wardrobe-card-category")).not.toBeInTheDocument();
-    expect(title?.querySelector(".wardrobe-card-title-category-prefix svg")).toBeInTheDocument();
-    expect(title?.querySelector(".wardrobe-card-title-category-prefix [aria-label='options.categories.outerwear']")).toBeInTheDocument();
-    expect(title?.querySelector(".wardrobe-card-title-separator")).toHaveTextContent("•");
+    expect(
+      container.querySelector(".wardrobe-card-category"),
+    ).not.toBeInTheDocument();
+    expect(
+      title?.querySelector(".wardrobe-card-title-category-prefix svg"),
+    ).toBeInTheDocument();
+    expect(
+      title?.querySelector(
+        ".wardrobe-card-title-category-prefix [aria-label='options.categories.outerwear']",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      title?.querySelector(".wardrobe-card-title-separator"),
+    ).toHaveTextContent("•");
     expect(title).toHaveTextContent("Red Jacket");
     expect(title).not.toHaveTextContent("options.categories.outerwear");
   });
@@ -153,14 +183,22 @@ describe("ClothingCard", () => {
       isMobile: true,
       item: {
         ...item,
-        category: "midlayer"
-      }
+        category: "midlayer",
+      },
     });
     const title = container.querySelector(".wardrobe-card-title");
 
-    expect(container.querySelector(".wardrobe-card-category")).not.toBeInTheDocument();
-    expect(title?.querySelector(".wardrobe-card-title-category-prefix svg")).toBeInTheDocument();
-    expect(title?.querySelector(".wardrobe-card-title-category-prefix [aria-label='options.categories.midlayer']")).toBeInTheDocument();
+    expect(
+      container.querySelector(".wardrobe-card-category"),
+    ).not.toBeInTheDocument();
+    expect(
+      title?.querySelector(".wardrobe-card-title-category-prefix svg"),
+    ).toBeInTheDocument();
+    expect(
+      title?.querySelector(
+        ".wardrobe-card-title-category-prefix [aria-label='options.categories.midlayer']",
+      ),
+    ).toBeInTheDocument();
     expect(title).not.toHaveTextContent("options.categories.midlayer");
   });
 
@@ -169,15 +207,23 @@ describe("ClothingCard", () => {
       isMobile: true,
       item: {
         ...item,
-        category: "unknown"
-      }
+        category: "unknown",
+      },
     });
     const title = container.querySelector(".wardrobe-card-title");
 
-    expect(container.querySelector(".wardrobe-card-category")).not.toBeInTheDocument();
-    expect(title?.querySelector(".wardrobe-card-title-category-prefix svg")).not.toBeInTheDocument();
-    expect(title?.querySelector(".wardrobe-card-title-category-text")).toHaveTextContent("options.categories.unknown");
-    expect(title?.querySelector(".wardrobe-card-title-separator")).toHaveTextContent("•");
+    expect(
+      container.querySelector(".wardrobe-card-category"),
+    ).not.toBeInTheDocument();
+    expect(
+      title?.querySelector(".wardrobe-card-title-category-prefix svg"),
+    ).not.toBeInTheDocument();
+    expect(
+      title?.querySelector(".wardrobe-card-title-category-text"),
+    ).toHaveTextContent("options.categories.unknown");
+    expect(
+      title?.querySelector(".wardrobe-card-title-separator"),
+    ).toHaveTextContent("•");
     expect(title).toHaveTextContent("Red Jacket");
   });
 
@@ -186,14 +232,20 @@ describe("ClothingCard", () => {
       isMobile: true,
       item: {
         ...item,
-        category: null
-      }
+        category: null,
+      },
     });
     const title = container.querySelector(".wardrobe-card-title");
 
-    expect(container.querySelector(".wardrobe-card-category")).not.toBeInTheDocument();
-    expect(title?.querySelector(".wardrobe-card-title-category-prefix")).not.toBeInTheDocument();
-    expect(title?.querySelector(".wardrobe-card-title-separator")).not.toBeInTheDocument();
+    expect(
+      container.querySelector(".wardrobe-card-category"),
+    ).not.toBeInTheDocument();
+    expect(
+      title?.querySelector(".wardrobe-card-title-category-prefix"),
+    ).not.toBeInTheDocument();
+    expect(
+      title?.querySelector(".wardrobe-card-title-separator"),
+    ).not.toBeInTheDocument();
     expect(title).toHaveTextContent("Red Jacket");
   });
 
@@ -203,59 +255,81 @@ describe("ClothingCard", () => {
     const root = container.querySelector(".wardrobe-card-root");
     const details = container.querySelector(".wardrobe-card-details");
     const title = container.querySelector(".wardrobe-card-title");
-    const menuButton = screen.getByRole("button", { name: "capsule.openProductMenu" });
+    const menuButton = screen.getByRole("button", {
+      name: "capsule.openProductMenu",
+    });
 
     expect(root).toHaveStyle({
       borderRadius: "0",
       boxShadow: "none",
-      border: "0.5px solid rgba(17, 36, 34, 0.44)"
+      border: "0.5px solid rgba(17, 36, 34, 0.44)",
     });
     expect(details).toHaveStyle({ minHeight: "50px" });
     expect(title).toHaveStyle({
       fontSize: "13px",
       overflow: "hidden",
-      WebkitLineClamp: "2"
+      WebkitLineClamp: "2",
     });
-    expect(container.querySelector(".wardrobe-card-category")).not.toBeInTheDocument();
+    expect(
+      container.querySelector(".wardrobe-card-category"),
+    ).not.toBeInTheDocument();
     expect(menuButton).toBeVisible();
     expect(menuButton).toHaveStyle({
       width: "34px",
       height: "34px",
-      color: "rgba(31, 41, 55, 0.72)"
+      color: "rgba(31, 41, 55, 0.72)",
     });
   });
 
   test("uses roomier mobile typography for one-column cards", () => {
-    const { container } = renderCard({ isSelectable: true, isMobile: true, mobileColumns: 1 });
+    const { container } = renderCard({
+      isSelectable: true,
+      isMobile: true,
+      mobileColumns: 1,
+    });
 
     expect(container.querySelector(".wardrobe-card-root")).toHaveStyle({
       borderRadius: "8px",
       boxShadow: "0 0px 8px rgba(17, 36, 34, 0.08)",
-      border: "1px solid rgba(17, 36, 34, 0.08)"
+      border: "1px solid rgba(17, 36, 34, 0.08)",
     });
-    expect(container.querySelector(".wardrobe-card-details")).toHaveStyle({ minHeight: "64px" });
+    expect(container.querySelector(".wardrobe-card-details")).toHaveStyle({
+      minHeight: "64px",
+    });
     expect(container.querySelector(".wardrobe-card-title")).toHaveStyle({
       fontSize: "16px",
-      lineHeight: "1.22"
+      lineHeight: "1.22",
     });
-    expect(container.querySelector(".wardrobe-card-category")).not.toBeInTheDocument();
+    expect(
+      container.querySelector(".wardrobe-card-category"),
+    ).not.toBeInTheDocument();
   });
 
   test("uses tighter mobile typography for three-column cards while keeping actions touch sized", () => {
-    const { container } = renderCard({ isSelectable: true, isMobile: true, mobileColumns: 3 });
-    const menuButton = screen.getByRole("button", { name: "capsule.openProductMenu" });
+    const { container } = renderCard({
+      isSelectable: true,
+      isMobile: true,
+      mobileColumns: 3,
+    });
+    const menuButton = screen.getByRole("button", {
+      name: "capsule.openProductMenu",
+    });
 
     expect(container.querySelector(".wardrobe-card-root")).toHaveStyle({
       borderRadius: "0",
       boxShadow: "none",
-      border: "0.5px solid rgba(17, 36, 34, 0.44)"
+      border: "0.5px solid rgba(17, 36, 34, 0.44)",
     });
-    expect(container.querySelector(".wardrobe-card-details")).toHaveStyle({ minHeight: "42px" });
+    expect(container.querySelector(".wardrobe-card-details")).toHaveStyle({
+      minHeight: "42px",
+    });
     expect(container.querySelector(".wardrobe-card-title")).toHaveStyle({
       fontSize: "11.5px",
-      lineHeight: "1.12"
+      lineHeight: "1.12",
     });
-    expect(container.querySelector(".wardrobe-card-category")).not.toBeInTheDocument();
+    expect(
+      container.querySelector(".wardrobe-card-category"),
+    ).not.toBeInTheDocument();
     expect(menuButton).toHaveStyle({ width: "34px", height: "34px" });
   });
 
@@ -264,12 +338,16 @@ describe("ClothingCard", () => {
       item: {
         ...item,
         url: "javascript:alert(1)",
-        image_url: "data:text/html,<script>alert(1)</script>"
-      }
+        image_url: "data:text/html,<script>alert(1)</script>",
+      },
     });
 
-    expect(screen.queryByRole("link", { name: /Red Jacket/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole("img", { name: item.name ?? "" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: /Red Jacket/ }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("img", { name: item.name ?? "" }),
+    ).not.toBeInTheDocument();
     expect(screen.getAllByText("Red Jacket").length).toBeGreaterThan(0);
   });
 
@@ -277,24 +355,29 @@ describe("ClothingCard", () => {
     renderCard({
       item: {
         ...item,
-        audience: "all"
-      }
+        audience: "all",
+      },
     });
 
     const expectedLabel = "Red Jacket unisex";
 
     expect(screen.getByText("Red Jacket")).toBeInTheDocument();
     expect(screen.getByText("unisex")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Red Jacket unisex/ })).toHaveAttribute("href", item.url);
-    expect(screen.getByRole("img", { name: expectedLabel })).toHaveAttribute("alt", expectedLabel);
+    expect(
+      screen.getByRole("link", { name: /Red Jacket unisex/ }),
+    ).toHaveAttribute("href", item.url);
+    expect(screen.getByRole("img", { name: expectedLabel })).toHaveAttribute(
+      "alt",
+      expectedLabel,
+    );
   });
 
   test("does not append unisex suffix for non-all audiences", () => {
     renderCard({
       item: {
         ...item,
-        audience: "woman"
-      }
+        audience: "woman",
+      },
     });
 
     expect(screen.getByText("Red Jacket")).toBeInTheDocument();
@@ -311,18 +394,25 @@ describe("ClothingCard", () => {
     expect(onProductMenuClick).toHaveBeenCalledWith(
       expect.objectContaining({ target: expect.any(HTMLButtonElement) }),
       "https://example.com/products/red-jacket",
-      expect.objectContaining({ id: "item-1" })
+      expect.objectContaining({ id: "item-1" }),
     );
   });
 
   test("does not render product menu button when product URL is not safe", () => {
     const onProductMenuClick = vi.fn();
     renderCard({
-      item: { id: "1", url: "mailto:person@example.com", name: "Linen Shirt", category: "top" },
-      onProductMenuClick
+      item: {
+        id: "1",
+        url: "mailto:person@example.com",
+        name: "Linen Shirt",
+        category: "top",
+      },
+      onProductMenuClick,
     });
 
-    expect(screen.queryByRole("button", { name: "capsule.openProductMenu" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "capsule.openProductMenu" }),
+    ).not.toBeInTheDocument();
     expect(onProductMenuClick).not.toHaveBeenCalled();
   });
 });

@@ -4,9 +4,13 @@ const COMPLETED_PARTIAL_REGENERATION_JOB_TTL_MS = 5 * 60 * 1000;
 const partialRegenerationJobs = new Map<string, PartialRegenerationJobState>();
 
 function createPartialRegenerationJobKey(email: string, capsuleId: string) {
-  const normalizedEmail = String(email || "").trim().toLowerCase();
+  const normalizedEmail = String(email || "")
+    .trim()
+    .toLowerCase();
   const normalizedCapsuleId = String(capsuleId || "").trim();
-  return normalizedCapsuleId ? `${normalizedEmail}::${normalizedCapsuleId}` : normalizedEmail;
+  return normalizedCapsuleId
+    ? `${normalizedEmail}::${normalizedCapsuleId}`
+    : normalizedEmail;
 }
 
 function getPartialRegenerationJobFromStore({
@@ -14,7 +18,7 @@ function getPartialRegenerationJobFromStore({
   capsuleId,
   jobs = partialRegenerationJobs,
   nowMs = Date.now(),
-  completedJobTtlMs = COMPLETED_PARTIAL_REGENERATION_JOB_TTL_MS
+  completedJobTtlMs = COMPLETED_PARTIAL_REGENERATION_JOB_TTL_MS,
 }: {
   email: string;
   capsuleId: string;
@@ -45,6 +49,5 @@ export {
   createPartialRegenerationJobKey,
   getPartialRegenerationJob,
   getPartialRegenerationJobFromStore,
-  partialRegenerationJobs
+  partialRegenerationJobs,
 };
-

@@ -7,27 +7,29 @@ import type { ComponentProps } from "react";
 const useI18nMock = vi.hoisted(() => vi.fn());
 
 vi.mock("../i18n/useI18n", () => ({
-  useI18n: useI18nMock
+  useI18n: useI18nMock,
 }));
 vi.mock("../i18n", () => ({
-  translateOption: (_group: string, value: string) => value
+  translateOption: (_group: string, value: string) => value,
 }));
 
 import AccentColorChips from "./AccentColorChips";
 
 const theme = createTheme();
 
-function renderChips(props: Partial<ComponentProps<typeof AccentColorChips>> = {}) {
+function renderChips(
+  props: Partial<ComponentProps<typeof AccentColorChips>> = {},
+) {
   useI18nMock.mockReturnValue({
     locale: "en",
     t: (key: string) =>
       ({
-        "profile.accentColorNotImportant": "No accent color"
-      }[key] || key)
+        "profile.accentColorNotImportant": "No accent color",
+      })[key] || key,
   });
 
   const defaults: ComponentProps<typeof AccentColorChips> = {
-    options: ["blue", "red"]
+    options: ["blue", "red"],
   };
 
   return {
@@ -36,8 +38,8 @@ function renderChips(props: Partial<ComponentProps<typeof AccentColorChips>> = {
     ...render(
       <ThemeProvider theme={theme}>
         <AccentColorChips {...defaults} {...props} />
-      </ThemeProvider>
-    )
+      </ThemeProvider>,
+    ),
   };
 }
 
@@ -53,12 +55,18 @@ describe("AccentColorChips", () => {
 
     renderChips({
       selectedValue: "blue",
-      onSelect
+      onSelect,
     });
 
-    expect(screen.getByRole("button", { name: "blue" })).toHaveClass("MuiChip-filledPrimary");
-    expect(screen.getByRole("button", { name: "red" })).toHaveClass("MuiChip-filledDefault");
-    expect(screen.getByRole("button", { name: "No accent color" })).toHaveClass("MuiChip-filledDefault");
+    expect(screen.getByRole("button", { name: "blue" })).toHaveClass(
+      "MuiChip-filledPrimary",
+    );
+    expect(screen.getByRole("button", { name: "red" })).toHaveClass(
+      "MuiChip-filledDefault",
+    );
+    expect(screen.getByRole("button", { name: "No accent color" })).toHaveClass(
+      "MuiChip-filledDefault",
+    );
 
     await user.click(screen.getByRole("button", { name: "red" }));
     await user.click(screen.getByRole("button", { name: "No accent color" }));
@@ -73,11 +81,15 @@ describe("AccentColorChips", () => {
 
     renderChips({
       selectedValues: ["red"],
-      onToggle
+      onToggle,
     });
 
-    expect(screen.getByRole("button", { name: "red" })).toHaveClass("MuiChip-filledPrimary");
-    expect(screen.getByRole("button", { name: "blue" })).toHaveClass("MuiChip-filledDefault");
+    expect(screen.getByRole("button", { name: "red" })).toHaveClass(
+      "MuiChip-filledPrimary",
+    );
+    expect(screen.getByRole("button", { name: "blue" })).toHaveClass(
+      "MuiChip-filledDefault",
+    );
 
     await user.click(screen.getByRole("button", { name: "blue" }));
     expect(onToggle).toHaveBeenCalledWith("blue");
@@ -87,9 +99,11 @@ describe("AccentColorChips", () => {
     renderChips({
       selectedValues: [],
       onToggle: vi.fn(),
-      emptyLabel: "Not important"
+      emptyLabel: "Not important",
     });
 
-    expect(screen.getByRole("button", { name: "Not important" })).toHaveClass("MuiChip-filledPrimary");
+    expect(screen.getByRole("button", { name: "Not important" })).toHaveClass(
+      "MuiChip-filledPrimary",
+    );
   });
 });

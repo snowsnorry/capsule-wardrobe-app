@@ -1,5 +1,11 @@
 import { test, expect, vi } from "vitest";
-import { AUTH_COOKIE, CSRF_TOKEN, TEST_CLIENT_ORIGIN, requestJson, startTestServer } from "../test/serverRouteTestUtils.js";
+import {
+  AUTH_COOKIE,
+  CSRF_TOKEN,
+  TEST_CLIENT_ORIGIN,
+  requestJson,
+  startTestServer,
+} from "../test/serverRouteTestUtils.js";
 
 test("capsule events initial snapshot includes pending outfit set image indexes", async (t) => {
   let streamedSnapshot = null;
@@ -17,34 +23,34 @@ test("capsule events initial snapshot includes pending outfit set image indexes"
             audience: "woman",
             color: null,
             pattern: "solid",
-            text: ""
+            text: "",
           },
           data: {
             wardrobe: {
               items: [{ id: "top-1", category: "top" }],
-              outfitSets: [{ itemIds: ["top-1", "bottom-1", "bag-1"] }]
+              outfitSets: [{ itemIds: ["top-1", "bottom-1", "bag-1"] }],
             },
-            rejectedUrls: []
-          }
+            rejectedUrls: [],
+          },
         },
         saved: null,
         status: "new",
         createdAt: new Date(0).toISOString(),
-        updatedAt: new Date(0).toISOString()
+        updatedAt: new Date(0).toISOString(),
       }),
       getOutfitSetImageJobImpl: () => ({
         status: "pending",
-        pendingSetIndexes: [0]
+        pendingSetIndexes: [0],
       }),
       streamCapsuleEventsImpl: async (_req, res, { snapshot }) => {
         streamedSnapshot = snapshot;
         res.json({ ok: true, snapshot });
-      }
-    }
+      },
+    },
   });
 
   const response = await requestJson(baseUrl, "/capsules/capsule-1/events", {
-    cookie: AUTH_COOKIE
+    cookie: AUTH_COOKIE,
   });
 
   expect(response.response.status).toBe(200);
@@ -61,7 +67,7 @@ test("share routes create, read, import, and enforce auth boundaries", async (t)
         return {
           id: "share-1",
           url: `${clientOrigin}/share/share-1`,
-          expiresAt
+          expiresAt,
         };
       },
       getSharedCapsuleImpl: async (id) => {
@@ -74,24 +80,30 @@ test("share routes create, read, import, and enforce auth boundaries", async (t)
           id: "capsule-imported",
           name: "Spring edit (2)",
           draft: null,
-          saved: { filters: {}, data: { wardrobe: { items: [{ url: "https://example.com/1" }] }, rejectedUrls: [] } },
-          status: "saved"
+          saved: {
+            filters: {},
+            data: {
+              wardrobe: { items: [{ url: "https://example.com/1" }] },
+              rejectedUrls: [],
+            },
+          },
+          status: "saved",
         };
-      }
-    }
+      },
+    },
   });
 
   const missingAuth = await requestJson(baseUrl, "/capsules/capsule-1/share", {
     method: "POST",
     origin: TEST_CLIENT_ORIGIN,
-    csrfToken: CSRF_TOKEN
+    csrfToken: CSRF_TOKEN,
   });
   expect(missingAuth.response.status).toBe(401);
 
   const missingCsrf = await requestJson(baseUrl, "/capsules/capsule-1/share", {
     method: "POST",
     origin: TEST_CLIENT_ORIGIN,
-    cookie: AUTH_COOKIE
+    cookie: AUTH_COOKIE,
   });
   expect(missingCsrf.response.status).toBe(403);
 
@@ -99,14 +111,14 @@ test("share routes create, read, import, and enforce auth boundaries", async (t)
     method: "POST",
     origin: TEST_CLIENT_ORIGIN,
     cookie: AUTH_COOKIE,
-    csrfToken: CSRF_TOKEN
+    csrfToken: CSRF_TOKEN,
   });
   expect(created.response.status).toBe(201);
   expect(created.json).toEqual({
     ok: true,
     id: "share-1",
     url: `${TEST_CLIENT_ORIGIN}/share/share-1`,
-    expiresAt
+    expiresAt,
   });
 
   const metadata = await requestJson(baseUrl, "/shared-capsules/share-1");
@@ -115,15 +127,19 @@ test("share routes create, read, import, and enforce auth boundaries", async (t)
     ok: true,
     id: "share-1",
     name: "Spring edit",
-    expiresAt
+    expiresAt,
   });
 
-  const imported = await requestJson(baseUrl, "/shared-capsules/share-1/import", {
-    method: "POST",
-    origin: TEST_CLIENT_ORIGIN,
-    cookie: AUTH_COOKIE,
-    csrfToken: CSRF_TOKEN
-  });
+  const imported = await requestJson(
+    baseUrl,
+    "/shared-capsules/share-1/import",
+    {
+      method: "POST",
+      origin: TEST_CLIENT_ORIGIN,
+      cookie: AUTH_COOKIE,
+      csrfToken: CSRF_TOKEN,
+    },
+  );
   expect(imported.response.status).toBe(201);
   expect(imported.json.capsuleId).toBe("capsule-imported");
   expect(imported.json.name).toBe("Spring edit (2)");
@@ -133,10 +149,15 @@ test("share routes create, read, import, and enforce auth boundaries", async (t)
   expect(expired.json).toEqual({ error: "shared_capsule_unavailable" });
 
   expect(calls).toEqual([
-    { type: "create", email: "person@example.com", capsuleId: "capsule-1", clientOrigin: TEST_CLIENT_ORIGIN },
+    {
+      type: "create",
+      email: "person@example.com",
+      capsuleId: "capsule-1",
+      clientOrigin: TEST_CLIENT_ORIGIN,
+    },
     { type: "get", id: "share-1" },
     { type: "import", email: "person@example.com", id: "share-1" },
-    { type: "get", id: "expired-share" }
+    { type: "get", id: "expired-share" },
   ]);
 });
 
@@ -155,37 +176,39 @@ test("capsule read routes expose bootstrap, recent, search, and lookup fallbacks
       setActiveCapsuleIdImpl: async (_email, capsuleId) => {
         calls.push({ type: "set-active", capsuleId });
         return { activeCapsuleId: capsuleId };
-      }
-    }
+      },
+    },
   });
 
   const bootstrap = await requestJson(baseUrl, "/capsules/bootstrap", {
-    cookie: AUTH_COOKIE
+    cookie: AUTH_COOKIE,
   });
   expect(bootstrap.response.status).toBe(200);
   expect(bootstrap.json.ok).toBe(true);
-  expect((bootstrap.json.activeCapsule as { id?: string }).id).toBe("capsule-1");
+  expect((bootstrap.json.activeCapsule as { id?: string }).id).toBe(
+    "capsule-1",
+  );
 
   const recent = await requestJson(baseUrl, "/capsules/recent", {
-    cookie: AUTH_COOKIE
+    cookie: AUTH_COOKIE,
   });
   expect(recent.response.status).toBe(200);
   expect(recent.json.capsules[0].id).toBe("capsule-1");
 
   const emptySearch = await requestJson(baseUrl, "/capsules/search", {
-    cookie: AUTH_COOKIE
+    cookie: AUTH_COOKIE,
   });
   expect(emptySearch.response.status).toBe(200);
   expect(emptySearch.json.capsules[0].id).toBe("capsule-1");
 
   const querySearch = await requestJson(baseUrl, "/capsules/search?q=office", {
-    cookie: AUTH_COOKIE
+    cookie: AUTH_COOKIE,
   });
   expect(querySearch.response.status).toBe(200);
   expect(querySearch.json.capsules[0].id).toBe("capsule-2");
 
   const capsule = await requestJson(baseUrl, "/capsules/capsule-1", {
-    cookie: AUTH_COOKIE
+    cookie: AUTH_COOKIE,
   });
   expect(capsule.response.status).toBe(200);
   expect((capsule.json.capsule as { id?: string }).id).toBe("capsule-1");
@@ -195,7 +218,7 @@ test("capsule read routes expose bootstrap, recent, search, and lookup fallbacks
     { type: "recent", limit: 10 },
     { type: "recent", limit: 25 },
     { type: "search", query: "office", limit: 25 },
-    { type: "set-active", capsuleId: "capsule-1" }
+    { type: "set-active", capsuleId: "capsule-1" },
   ]);
 });
 
@@ -206,12 +229,16 @@ test("capsule read and share routes map missing records and service failures", a
     overrides: {
       resolveActiveCapsuleImpl: async () => {
         throw new Error("capsule_store_down");
-      }
-    }
+      },
+    },
   });
-  const bootstrapFailure = await requestJson(failingBootstrapServer.baseUrl, "/capsules/bootstrap", {
-    cookie: AUTH_COOKIE
-  });
+  const bootstrapFailure = await requestJson(
+    failingBootstrapServer.baseUrl,
+    "/capsules/bootstrap",
+    {
+      cookie: AUTH_COOKIE,
+    },
+  );
   expect(bootstrapFailure.response.status).toBe(503);
   expect(bootstrapFailure.json).toEqual({ error: "service_unavailable" });
 
@@ -219,12 +246,16 @@ test("capsule read and share routes map missing records and service failures", a
     overrides: {
       listRecentCapsulesImpl: async () => {
         throw new Error("capsule_store_down");
-      }
-    }
+      },
+    },
   });
-  const recentFailure = await requestJson(failingRecentServer.baseUrl, "/capsules/recent", {
-    cookie: AUTH_COOKIE
-  });
+  const recentFailure = await requestJson(
+    failingRecentServer.baseUrl,
+    "/capsules/recent",
+    {
+      cookie: AUTH_COOKIE,
+    },
+  );
   expect(recentFailure.response.status).toBe(503);
   expect(recentFailure.json).toEqual({ error: "service_unavailable" });
 
@@ -232,23 +263,31 @@ test("capsule read and share routes map missing records and service failures", a
     overrides: {
       searchCapsulesImpl: async () => {
         throw new Error("capsule_search_down");
-      }
-    }
+      },
+    },
   });
-  const searchFailure = await requestJson(failingSearchServer.baseUrl, "/capsules/search?q=office", {
-    cookie: AUTH_COOKIE
-  });
+  const searchFailure = await requestJson(
+    failingSearchServer.baseUrl,
+    "/capsules/search?q=office",
+    {
+      cookie: AUTH_COOKIE,
+    },
+  );
   expect(searchFailure.response.status).toBe(503);
   expect(searchFailure.json).toEqual({ error: "service_unavailable" });
 
   const missingCapsuleServer = await startTestServer(t, {
     overrides: {
-      getCapsuleImpl: async () => null
-    }
+      getCapsuleImpl: async () => null,
+    },
   });
-  const missingCapsule = await requestJson(missingCapsuleServer.baseUrl, "/capsules/missing", {
-    cookie: AUTH_COOKIE
-  });
+  const missingCapsule = await requestJson(
+    missingCapsuleServer.baseUrl,
+    "/capsules/missing",
+    {
+      cookie: AUTH_COOKIE,
+    },
+  );
   expect(missingCapsule.response.status).toBe(404);
   expect(missingCapsule.json).toEqual({ error: "not_found" });
 
@@ -258,28 +297,39 @@ test("capsule read and share routes map missing records and service failures", a
       getSharedCapsuleImpl: async () => {
         throw new Error("share_store_down");
       },
-      importSharedCapsuleImpl: async () => null
-    }
+      importSharedCapsuleImpl: async () => null,
+    },
   });
-  const missingShare = await requestJson(unavailableShareServer.baseUrl, "/capsules/capsule-1/share", {
-    method: "POST",
-    origin: TEST_CLIENT_ORIGIN,
-    cookie: AUTH_COOKIE,
-    csrfToken: CSRF_TOKEN
-  });
+  const missingShare = await requestJson(
+    unavailableShareServer.baseUrl,
+    "/capsules/capsule-1/share",
+    {
+      method: "POST",
+      origin: TEST_CLIENT_ORIGIN,
+      cookie: AUTH_COOKIE,
+      csrfToken: CSRF_TOKEN,
+    },
+  );
   expect(missingShare.response.status).toBe(404);
   expect(missingShare.json).toEqual({ error: "not_found" });
 
-  const sharedFailure = await requestJson(unavailableShareServer.baseUrl, "/shared-capsules/share-1");
+  const sharedFailure = await requestJson(
+    unavailableShareServer.baseUrl,
+    "/shared-capsules/share-1",
+  );
   expect(sharedFailure.response.status).toBe(503);
   expect(sharedFailure.json).toEqual({ error: "service_unavailable" });
 
-  const missingImport = await requestJson(unavailableShareServer.baseUrl, "/shared-capsules/share-1/import", {
-    method: "POST",
-    origin: TEST_CLIENT_ORIGIN,
-    cookie: AUTH_COOKIE,
-    csrfToken: CSRF_TOKEN
-  });
+  const missingImport = await requestJson(
+    unavailableShareServer.baseUrl,
+    "/shared-capsules/share-1/import",
+    {
+      method: "POST",
+      origin: TEST_CLIENT_ORIGIN,
+      cookie: AUTH_COOKIE,
+      csrfToken: CSRF_TOKEN,
+    },
+  );
   expect(missingImport.response.status).toBe(404);
   expect(missingImport.json).toEqual({ error: "shared_capsule_unavailable" });
 
@@ -292,24 +342,32 @@ test("capsule read and share routes map missing records and service failures", a
       importSharedCapsuleImpl: async () => {
         const error = new Error("capsule_not_shareable");
         throw error;
-      }
-    }
+      },
+    },
   });
-  const notShareable = await requestJson(notShareableServer.baseUrl, "/capsules/capsule-1/share", {
-    method: "POST",
-    origin: TEST_CLIENT_ORIGIN,
-    cookie: AUTH_COOKIE,
-    csrfToken: CSRF_TOKEN
-  });
+  const notShareable = await requestJson(
+    notShareableServer.baseUrl,
+    "/capsules/capsule-1/share",
+    {
+      method: "POST",
+      origin: TEST_CLIENT_ORIGIN,
+      cookie: AUTH_COOKIE,
+      csrfToken: CSRF_TOKEN,
+    },
+  );
   expect(notShareable.response.status).toBe(400);
   expect(notShareable.json).toEqual({ error: "capsule_not_shareable" });
 
-  const notImportable = await requestJson(notShareableServer.baseUrl, "/shared-capsules/share-1/import", {
-    method: "POST",
-    origin: TEST_CLIENT_ORIGIN,
-    cookie: AUTH_COOKIE,
-    csrfToken: CSRF_TOKEN
-  });
+  const notImportable = await requestJson(
+    notShareableServer.baseUrl,
+    "/shared-capsules/share-1/import",
+    {
+      method: "POST",
+      origin: TEST_CLIENT_ORIGIN,
+      cookie: AUTH_COOKIE,
+      csrfToken: CSRF_TOKEN,
+    },
+  );
   expect(notImportable.response.status).toBe(400);
   expect(notImportable.json).toEqual({ error: "capsule_not_shareable" });
 });

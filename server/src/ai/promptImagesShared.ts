@@ -9,7 +9,7 @@ import type {
   PromptDebugImageCategory,
   PromptImageItemLike,
   PromptImageTimingKey,
-  PromptImageTimings
+  PromptImageTimings,
 } from "./types.js";
 
 export const TILE_SIZE = 320;
@@ -32,29 +32,54 @@ export const REQUEST_TIMEOUT_MS = 15000;
 export const CATEGORY_COLLAGE_JPEG_QUALITY = 60;
 export const NORMALIZED_IMAGE_JPEG_QUALITY = 80;
 export const PDF_IMAGE_JPEG_QUALITY = 76;
-export const MAX_SOURCE_IMAGE_PIXELS = Number.parseInt(process.env.MAX_SOURCE_IMAGE_PIXELS || "", 10) || 16000000;
-export const REQUEST_IMAGE_WIDTH = Number.parseInt(process.env.PROMPT_IMAGE_REQUEST_WIDTH || "", 10) || 1000;
-export const PROMPT_IMAGES_CHILD_TIMEOUT_MS = Number.parseInt(process.env.PROMPT_IMAGES_CHILD_TIMEOUT_MS || "", 10) || 120000;
-export const PROMPT_CATEGORY_DOWNLOAD_CONCURRENCY = Number.parseInt(process.env.PROMPT_CATEGORY_DOWNLOAD_CONCURRENCY || "", 10) || 5;
+export const MAX_SOURCE_IMAGE_PIXELS =
+  Number.parseInt(process.env.MAX_SOURCE_IMAGE_PIXELS || "", 10) || 16000000;
+export const REQUEST_IMAGE_WIDTH =
+  Number.parseInt(process.env.PROMPT_IMAGE_REQUEST_WIDTH || "", 10) || 1000;
+export const PROMPT_IMAGES_CHILD_TIMEOUT_MS =
+  Number.parseInt(process.env.PROMPT_IMAGES_CHILD_TIMEOUT_MS || "", 10) ||
+  120000;
+export const PROMPT_CATEGORY_DOWNLOAD_CONCURRENCY =
+  Number.parseInt(process.env.PROMPT_CATEGORY_DOWNLOAD_CONCURRENCY || "", 10) ||
+  5;
 export const STITCHED_COLLAGE_FILENAME = "categories-stitched.jpg";
 
 export type PromptImagesChildProcessLike = {
   on: (event: string, handler: (...args: unknown[]) => void) => unknown;
-  removeListener: (event: string, handler: (...args: unknown[]) => void) => unknown;
+  removeListener: (
+    event: string,
+    handler: (...args: unknown[]) => void,
+  ) => unknown;
   kill: () => unknown;
   send: (message: unknown, callback?: (error: Error | null) => void) => unknown;
 };
 
-export type PromptImagesFork = (modulePath: string, options?: Record<string, unknown>) => PromptImagesChildProcessLike;
-export type PromptImageTimingState = PromptImageTimings | Partial<PromptImageTimings> | null | undefined;
-export type PromptDebugImageCategoryWithFile = PromptDebugImageCategory & { file: string };
-export type PromptDebugImageCategoryWithoutBuffer = Omit<PromptDebugImageCategory, "buffer" | "bufferBase64" | "file">;
-export type PromptDebugImageCategoryManifestSource = PromptDebugImageCategoryWithoutBuffer & {
-  filename: string;
-  items: NonNullable<PromptDebugImageCategory["items"]>;
+export type PromptImagesFork = (
+  modulePath: string,
+  options?: Record<string, unknown>,
+) => PromptImagesChildProcessLike;
+export type PromptImageTimingState =
+  | PromptImageTimings
+  | Partial<PromptImageTimings>
+  | null
+  | undefined;
+export type PromptDebugImageCategoryWithFile = PromptDebugImageCategory & {
+  file: string;
 };
+export type PromptDebugImageCategoryWithoutBuffer = Omit<
+  PromptDebugImageCategory,
+  "buffer" | "bufferBase64" | "file"
+>;
+export type PromptDebugImageCategoryManifestSource =
+  PromptDebugImageCategoryWithoutBuffer & {
+    filename: string;
+    items: NonNullable<PromptDebugImageCategory["items"]>;
+  };
 
-export function isNodeErrorWithCode(error: unknown, code: string): error is NodeJS.ErrnoException {
+export function isNodeErrorWithCode(
+  error: unknown,
+  code: string,
+): error is NodeJS.ErrnoException {
   return error instanceof Error && "code" in error && error.code === code;
 }
 
@@ -64,8 +89,12 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
 
 export function resolvePromptImagesChildEntryUrl() {
   const currentModulePath = fileURLToPath(import.meta.url);
-  const preferredExtension = path.extname(currentModulePath) === ".js" ? ".js" : ".ts";
-  const preferredUrl = new URL(`./promptImages.child${preferredExtension}`, import.meta.url);
+  const preferredExtension =
+    path.extname(currentModulePath) === ".js" ? ".js" : ".ts";
+  const preferredUrl = new URL(
+    `./promptImages.child${preferredExtension}`,
+    import.meta.url,
+  );
   if (existsSync(fileURLToPath(preferredUrl))) {
     return preferredUrl;
   }
@@ -75,7 +104,9 @@ export function resolvePromptImagesChildEntryUrl() {
 }
 
 export function resolvePromptImagesChildExecArgv(childEntryUrl: URL) {
-  return path.extname(fileURLToPath(childEntryUrl)) === ".ts" ? [...process.execArgv] : [];
+  return path.extname(fileURLToPath(childEntryUrl)) === ".ts"
+    ? [...process.execArgv]
+    : [];
 }
 
 export function findRepositoryRoot(startDir: string) {
@@ -127,11 +158,15 @@ export function createPromptImageTimings(): PromptImageTimings {
     collageEncodeMs: 0,
     debugSaveMs: 0,
     categoryBuildMs: 0,
-    childRoundTripMs: 0
+    childRoundTripMs: 0,
   };
 }
 
-export function addTiming(timings: PromptImageTimingState, key: PromptImageTimingKey, startedAt: number) {
+export function addTiming(
+  timings: PromptImageTimingState,
+  key: PromptImageTimingKey,
+  startedAt: number,
+) {
   if (!timings || !key || !Number.isFinite(startedAt)) {
     return;
   }
@@ -144,7 +179,7 @@ export function escapeXml(value: unknown) {
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
-    .replaceAll("\"", "&quot;")
+    .replaceAll('"', "&quot;")
     .replaceAll("'", "&apos;");
 }
 
@@ -158,7 +193,9 @@ export function sanitizeFileName(value: unknown) {
   return sanitized || "unknown";
 }
 
-export function groupPromptImageItemsByCategory(normalizedItems: PromptImageItemLike[] = []): Map<string, PromptImageItemLike[]> {
+export function groupPromptImageItemsByCategory(
+  normalizedItems: PromptImageItemLike[] = [],
+): Map<string, PromptImageItemLike[]> {
   const groups = new Map<string, PromptImageItemLike[]>();
 
   for (const item of normalizedItems) {
@@ -190,7 +227,11 @@ export async function ensureCleanDirectory(outputDir: string) {
   await mkdir(outputDir, { recursive: true });
 }
 
-export async function mapWithConcurrency<T, R>(items: T[], concurrency: number, mapper: (item: T, index: number) => Promise<R> | R): Promise<R[]> {
+export async function mapWithConcurrency<T, R>(
+  items: T[],
+  concurrency: number,
+  mapper: (item: T, index: number) => Promise<R> | R,
+): Promise<R[]> {
   const results = new Array(items.length);
   let currentIndex = 0;
 
@@ -208,24 +249,34 @@ export async function mapWithConcurrency<T, R>(items: T[], concurrency: number, 
   }
 
   await Promise.all(
-    Array.from({ length: Math.min(concurrency, items.length || 1) }, () => worker())
+    Array.from({ length: Math.min(concurrency, items.length || 1) }, () =>
+      worker(),
+    ),
   );
 
   return results;
 }
 
 export function getRequestSignal() {
-  if (typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function") {
+  if (
+    typeof AbortSignal !== "undefined" &&
+    typeof AbortSignal.timeout === "function"
+  ) {
     return AbortSignal.timeout(REQUEST_TIMEOUT_MS);
   }
 
   return undefined;
 }
 
-export function getMetadataDimensions(metadata: { width?: number | null; height?: number | null } | null | undefined) {
+export function getMetadataDimensions(
+  metadata:
+    | { width?: number | null; height?: number | null }
+    | null
+    | undefined,
+) {
   return {
     width: typeof metadata?.width === "number" ? metadata.width : null,
-    height: typeof metadata?.height === "number" ? metadata.height : null
+    height: typeof metadata?.height === "number" ? metadata.height : null,
   };
 }
 
@@ -239,7 +290,9 @@ export function resolveSourceImageUrl(imageUrl: unknown) {
     return "";
   }
 
-  return getSafeServerFetchUrl(trimmed.replaceAll("{width}", String(REQUEST_IMAGE_WIDTH)));
+  return getSafeServerFetchUrl(
+    trimmed.replaceAll("{width}", String(REQUEST_IMAGE_WIDTH)),
+  );
 }
 
 export function getOriginalImageUrl(imageUrl: unknown) {
@@ -267,7 +320,7 @@ export async function readImageFromLocalCache(imageUrl: unknown) {
       buffer,
       mimeType: "image/jpeg",
       originalImageUrl,
-      cachePath
+      cachePath,
     };
   } catch (error) {
     if (isNodeErrorWithCode(error, "ENOENT")) {
@@ -277,10 +330,13 @@ export async function readImageFromLocalCache(imageUrl: unknown) {
   }
 }
 
-export function createSharpPipeline(buffer: Buffer | Uint8Array | string, { autoRotate = true }: { autoRotate?: boolean } = {}) {
+export function createSharpPipeline(
+  buffer: Buffer | Uint8Array | string,
+  { autoRotate = true }: { autoRotate?: boolean } = {},
+) {
   const pipeline = sharp(buffer, {
     failOn: "none",
-    limitInputPixels: MAX_SOURCE_IMAGE_PIXELS
+    limitInputPixels: MAX_SOURCE_IMAGE_PIXELS,
   });
 
   if (autoRotate) {
@@ -298,7 +354,7 @@ export async function normalizeDownloadedImage(buffer: Buffer | Uint8Array) {
     .jpeg({
       quality: NORMALIZED_IMAGE_JPEG_QUALITY,
       mozjpeg: true,
-      progressive: true
+      progressive: true,
     })
     .toBuffer();
 
@@ -308,17 +364,20 @@ export async function normalizeDownloadedImage(buffer: Buffer | Uint8Array) {
     buffer: normalizedBuffer,
     mimeType: "image/jpeg",
     width,
-    height
+    height,
   };
 }
 
-export async function buildPromptTileCompositeInput(buffer: Buffer | Uint8Array, { autoRotate = true }: { autoRotate?: boolean } = {}) {
+export async function buildPromptTileCompositeInput(
+  buffer: Buffer | Uint8Array,
+  { autoRotate = true }: { autoRotate?: boolean } = {},
+) {
   const { data, info } = await createSharpPipeline(buffer, { autoRotate })
     .resize(TILE_SIZE, TILE_SIZE, {
       fit: "contain",
       withoutEnlargement: true,
       background: BACKGROUND_COLOR,
-      fastShrinkOnLoad: true
+      fastShrinkOnLoad: true,
     })
     .flatten({ background: BACKGROUND_COLOR })
     .raw()
@@ -329,7 +388,7 @@ export async function buildPromptTileCompositeInput(buffer: Buffer | Uint8Array,
     raw: {
       width: info.width,
       height: info.height,
-      channels: info.channels
-    }
+      channels: info.channels,
+    },
   };
 }

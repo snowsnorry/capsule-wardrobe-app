@@ -2,14 +2,23 @@ import type { ComponentProps } from "react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { renderWithTheme, resetMainScreenTestMocks } from "./MainScreen.testUtils";
+import {
+  renderWithTheme,
+  resetMainScreenTestMocks,
+} from "./MainScreen.testUtils";
 import MainScreenHeader from "./MainScreenHeader";
 
 type HeaderProps = ComponentProps<typeof MainScreenHeader>;
 
 function createHeaderProps(overrides: Partial<HeaderProps> = {}): HeaderProps {
   return {
-    activeCapsule: { id: "capsule-1", name: "Spring edit", draft: null, saved: null, status: "saved" },
+    activeCapsule: {
+      id: "capsule-1",
+      name: "Spring edit",
+      draft: null,
+      saved: null,
+      status: "saved",
+    },
     activeName: "Spring edit",
     disabled: false,
     inlineRename: {
@@ -18,7 +27,7 @@ function createHeaderProps(overrides: Partial<HeaderProps> = {}): HeaderProps {
       setValue: vi.fn(),
       start: vi.fn(),
       cancel: vi.fn(),
-      submit: vi.fn(() => Promise.resolve())
+      submit: vi.fn(() => Promise.resolve()),
     },
     isOverlay: false,
     selectedCount: 0,
@@ -28,7 +37,7 @@ function createHeaderProps(overrides: Partial<HeaderProps> = {}): HeaderProps {
     onOpenMenu: vi.fn(),
     onRegenerateAll: vi.fn(),
     onRegenerateSelected: vi.fn(),
-    ...overrides
+    ...overrides,
   };
 }
 
@@ -52,7 +61,9 @@ describe("MainScreenHeader", () => {
     const onOpenMenu = vi.fn();
     renderHeader({ onRegenerateAll, onOpenMenu });
 
-    expect(screen.getByRole("button", { name: "Rename capsule Spring edit" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Rename capsule Spring edit" }),
+    ).toBeInTheDocument();
     expect(screen.getByText("3 items")).toBeInTheDocument();
     expect(screen.getByText("1 outfits")).toBeInTheDocument();
 
@@ -69,11 +80,17 @@ describe("MainScreenHeader", () => {
     const onRegenerateSelected = vi.fn();
     renderHeader({ selectedCount: 2, onCancelSelection, onRegenerateSelected });
 
-    expect(screen.queryByRole("button", { name: "Regenerate all" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Open capsule menu" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Regenerate all" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Open capsule menu" }),
+    ).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Cancel" }));
-    await user.click(screen.getByRole("button", { name: "Regenerate Selected (2)" }));
+    await user.click(
+      screen.getByRole("button", { name: "Regenerate Selected (2)" }),
+    );
 
     expect(onCancelSelection).toHaveBeenCalledTimes(1);
     expect(onRegenerateSelected).toHaveBeenCalledTimes(1);
@@ -85,14 +102,34 @@ describe("MainScreenHeader", () => {
     const setValue = vi.fn();
     const submit = vi.fn(() => Promise.resolve());
     const cancel = vi.fn();
-    renderHeader({ inlineRename: { active: false, value: "Spring edit", setValue, start, submit, cancel } });
+    renderHeader({
+      inlineRename: {
+        active: false,
+        value: "Spring edit",
+        setValue,
+        start,
+        submit,
+        cancel,
+      },
+    });
 
-    await user.click(screen.getByRole("button", { name: "Rename capsule Spring edit" }));
+    await user.click(
+      screen.getByRole("button", { name: "Rename capsule Spring edit" }),
+    );
     await user.click(screen.getByRole("button", { name: "Edit capsule name" }));
     expect(start).toHaveBeenCalledTimes(2);
 
     cleanup();
-    renderHeader({ inlineRename: { active: true, value: "Spring edit", setValue, start, submit, cancel } });
+    renderHeader({
+      inlineRename: {
+        active: true,
+        value: "Spring edit",
+        setValue,
+        start,
+        submit,
+        cancel,
+      },
+    });
     const input = screen.getByRole("textbox", { name: "Capsule name" });
     fireEvent.change(input, { target: { value: "Summer edit" } });
     await user.keyboard("{Enter}");
@@ -107,7 +144,13 @@ describe("MainScreenHeader", () => {
   test("submits inline rename on blur", async () => {
     const user = userEvent.setup();
     const submit = vi.fn(() => Promise.resolve());
-    renderHeader({ inlineRename: { ...createHeaderProps().inlineRename, active: true, submit } });
+    renderHeader({
+      inlineRename: {
+        ...createHeaderProps().inlineRename,
+        active: true,
+        submit,
+      },
+    });
 
     await user.click(screen.getByRole("textbox", { name: "Capsule name" }));
     await user.tab();
@@ -120,10 +163,14 @@ describe("MainScreenHeader", () => {
   test("keeps mobile filters button and summary out while selection is active", () => {
     renderHeader({ isOverlay: true, selectedCount: 1 });
 
-    expect(screen.queryByRole("button", { name: "Open filters" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Open filters" }),
+    ).not.toBeInTheDocument();
     expect(screen.queryByText("Spring edit")).not.toBeInTheDocument();
     expect(screen.queryByText("3 items")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Regenerate Selected (1)" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Regenerate Selected (1)" }),
+    ).toBeInTheDocument();
   });
 
   test("keeps unsaved dot before the pencil trigger in the desktop header", () => {
@@ -133,15 +180,21 @@ describe("MainScreenHeader", () => {
         name: "Spring edit",
         draft: { filters: { locale: "en" }, data: {} },
         saved: null,
-        status: "new"
-      }
+        status: "new",
+      },
     });
 
-    const renameButton = screen.getByRole("button", { name: "Edit capsule name" });
+    const renameButton = screen.getByRole("button", {
+      name: "Edit capsule name",
+    });
     const renameContainer = renameButton.parentElement?.parentElement;
-    const unsavedDot = renameContainer?.querySelector("svg[data-testid='FiberManualRecordRoundedIcon']");
+    const unsavedDot = renameContainer?.querySelector(
+      "svg[data-testid='FiberManualRecordRoundedIcon']",
+    );
 
     expect(unsavedDot).not.toBeNull();
-    expect(unsavedDot?.compareDocumentPosition(renameButton.parentElement)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(
+      unsavedDot?.compareDocumentPosition(renameButton.parentElement),
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
 });

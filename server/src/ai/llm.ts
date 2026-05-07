@@ -34,9 +34,7 @@ export {
   isNoLlmProfileEnabled,
   renderStyleLibraryContent,
   resolveLlmProvider,
-  splitSystemAndUserPrompt
+  splitSystemAndUserPrompt,
 } from "./llmPrompts.js";
 
-export {
-  getGenerateJsonWithLlm
-};
+export { getGenerateJsonWithLlm };

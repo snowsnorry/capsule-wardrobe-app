@@ -1,13 +1,13 @@
 import {
   browserSupportsWebAuthn,
   startAuthentication,
-  startRegistration
+  startRegistration,
 } from "@simplewebauthn/browser";
 import {
   getPasskeyAuthenticationOptions,
   getPasskeyRegistrationOptions,
   verifyPasskeyAuthentication,
-  verifyPasskeyRegistration
+  verifyPasskeyRegistration,
 } from "../api/passkeys";
 import type { JsonObject } from "../api/request";
 
@@ -21,7 +21,10 @@ function isPasskeySupported(): boolean {
 }
 
 function normalizePasskeyError(error: unknown): PasskeyFlowError {
-  const name = error && typeof error === "object" ? String((error as { name?: unknown }).name || "") : "";
+  const name =
+    error && typeof error === "object"
+      ? String((error as { name?: unknown }).name || "")
+      : "";
   const message = error instanceof Error ? error.message : String(error || "");
   const normalized = new Error(message || "passkey_failed") as PasskeyFlowError;
 
@@ -31,7 +34,10 @@ function normalizePasskeyError(error: unknown): PasskeyFlowError {
     return normalized;
   }
 
-  if (message === "passkey_login_failed" || message === "passkey_registration_failed") {
+  if (
+    message === "passkey_login_failed" ||
+    message === "passkey_registration_failed"
+  ) {
     normalized.code = message;
     normalized.message = message;
     return normalized;
@@ -52,7 +58,7 @@ async function registerPasskey(): Promise<PasskeyFlowResult> {
   try {
     const optionsResponse = await getPasskeyRegistrationOptions();
     const attestationResponse = await startRegistration({
-      optionsJSON: optionsResponse.options as never
+      optionsJSON: optionsResponse.options as never,
     });
     return verifyPasskeyRegistration(attestationResponse);
   } catch (error) {
@@ -70,7 +76,7 @@ async function authenticateWithPasskey(): Promise<PasskeyFlowResult> {
   try {
     const optionsResponse = await getPasskeyAuthenticationOptions();
     const assertionResponse = await startAuthentication({
-      optionsJSON: optionsResponse.options as never
+      optionsJSON: optionsResponse.options as never,
     });
     return verifyPasskeyAuthentication(assertionResponse);
   } catch (error) {
@@ -82,6 +88,6 @@ export {
   authenticateWithPasskey,
   isPasskeySupported,
   normalizePasskeyError,
-  registerPasskey
+  registerPasskey,
 };
 export type { PasskeyFlowError, PasskeyFlowResult };

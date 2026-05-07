@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import App from "./App";
 import { LocaleProvider } from "./i18n/LocaleProvider";
 
@@ -14,7 +20,7 @@ const authApi = vi.hoisted(() => ({
   signInWithGoogle: vi.fn(),
   updateProfile: vi.fn(),
   updateProfileLocale: vi.fn(),
-  verifyLoginCode: vi.fn()
+  verifyLoginCode: vi.fn(),
 }));
 
 const capsulesApi = vi.hoisted(() => ({
@@ -32,12 +38,12 @@ const capsulesApi = vi.hoisted(() => ({
   saveCapsule: vi.fn(),
   searchCapsules: vi.fn(),
   shareCapsule: vi.fn(),
-  updateCapsuleFilters: vi.fn()
+  updateCapsuleFilters: vi.fn(),
 }));
 
 const profileOptionsApi = vi.hoisted(() => ({
   clearProfileOptionsCache: vi.fn(),
-  loadProfileOptions: vi.fn()
+  loadProfileOptions: vi.fn(),
 }));
 
 const wardrobeApi = vi.hoisted(() => ({
@@ -45,7 +51,7 @@ const wardrobeApi = vi.hoisted(() => ({
   generateOutfitSetImage: vi.fn(),
   regenerateCapsuleWardrobe: vi.fn(),
   regenerateSelectedWardrobeItems: vi.fn(),
-  subscribeCapsuleEvents: vi.fn()
+  subscribeCapsuleEvents: vi.fn(),
 }));
 
 vi.mock("./api/auth", () => authApi);
@@ -54,28 +60,35 @@ vi.mock("./api/profileOptionsCache", () => profileOptionsApi);
 vi.mock("./api/wardrobe", () => wardrobeApi);
 
 vi.mock("./screens/LoadingScreen", () => ({
-  default: () => <div data-testid="loading-screen">loading-screen</div>
+  default: () => <div data-testid="loading-screen">loading-screen</div>,
 }));
 
 vi.mock("./screens/SignInScreen", () => ({
-  default: function SignInScreenMock(props: { onVerifyCode: (event: { preventDefault: () => void }) => Promise<void> }) {
+  default: function SignInScreenMock(props: {
+    onVerifyCode: (event: { preventDefault: () => void }) => Promise<void>;
+  }) {
     return (
       <div data-testid="sign-in-screen">
         <div data-testid="locale-switcher">locale-switcher</div>
-        <button type="button" onClick={() => void props.onVerifyCode({ preventDefault: vi.fn() })}>
+        <button
+          type="button"
+          onClick={() => void props.onVerifyCode({ preventDefault: vi.fn() })}
+        >
           verify-code
         </button>
       </div>
     );
-  }
+  },
 }));
 
 vi.mock("./screens/OnboardingScreen", () => ({
-  default: () => <div data-testid="onboarding-screen">onboarding-screen</div>
+  default: () => <div data-testid="onboarding-screen">onboarding-screen</div>,
 }));
 
 vi.mock("./screens/mainScreen/MainScreen", () => ({
-  default: function MainScreenMock(props: { onNavigateApp: (route: "capsule" | "explore" | "statistics") => void }) {
+  default: function MainScreenMock(props: {
+    onNavigateApp: (route: "capsule" | "explore" | "statistics") => void;
+  }) {
     return (
       <div data-testid="main-screen">
         <button type="button" onClick={() => props.onNavigateApp("explore")}>
@@ -86,11 +99,13 @@ vi.mock("./screens/mainScreen/MainScreen", () => ({
         </button>
       </div>
     );
-  }
+  },
 }));
 
 vi.mock("./screens/SearchScreen", () => ({
-  default: function SearchScreenMock(props: { onNavigateApp: (route: "capsule") => void }) {
+  default: function SearchScreenMock(props: {
+    onNavigateApp: (route: "capsule") => void;
+  }) {
     return (
       <div data-testid="search-screen">
         <button type="button" onClick={() => props.onNavigateApp("capsule")}>
@@ -98,22 +113,22 @@ vi.mock("./screens/SearchScreen", () => ({
         </button>
       </div>
     );
-  }
+  },
 }));
 
 vi.mock("./screens/StatisticsScreen", () => ({
-  default: () => <div data-testid="statistics-screen">statistics-screen</div>
+  default: () => <div data-testid="statistics-screen">statistics-screen</div>,
 }));
 
 vi.mock("./screens/ProfileScreen", () => ({
-  default: () => <div data-testid="profile-screen">profile-screen</div>
+  default: () => <div data-testid="profile-screen">profile-screen</div>,
 }));
 
 function renderApp() {
   return render(
     <LocaleProvider>
       <App />
-    </LocaleProvider>
+    </LocaleProvider>,
   );
 }
 
@@ -130,15 +145,15 @@ function createBootstrapResponse({ locale = "en" } = {}) {
         audience: "woman",
         color: null,
         pattern: "solid",
-        text: ""
+        text: "",
       },
       data: {
         wardrobe: { items: [] },
-        rejectedUrls: []
-      }
+        rejectedUrls: [],
+      },
     },
     saved: null,
-    status: "new"
+    status: "new",
   };
 
   return {
@@ -148,10 +163,10 @@ function createBootstrapResponse({ locale = "en" } = {}) {
       theme: "system",
       llm: "none",
       image_llm: "openai:gpt-image-2",
-      fullname: ""
+      fullname: "",
     },
     activeCapsule,
-    capsules: [{ id: "capsule-1", name: "Spring edit", status: "new" }]
+    capsules: [{ id: "capsule-1", name: "Spring edit", status: "new" }],
   };
 }
 
@@ -159,12 +174,12 @@ function mockProfileOptions() {
   profileOptionsApi.loadProfileOptions.mockResolvedValue({
     styles: {
       core: ["casual", "smart_casual", "formal"],
-      aesthetics: ["minimalistic"]
+      aesthetics: ["minimalistic"],
     },
     occasions: ["office"],
     seasons: ["spring", "summer"],
     audience: ["woman", "man", "any"],
-    patterns: ["solid"]
+    patterns: ["solid"],
   });
 }
 
@@ -175,9 +190,15 @@ describe("App", () => {
     window.localStorage.clear();
     window.history.replaceState({}, "", "/");
     mockProfileOptions();
-    capsulesApi.fetchCapsuleBootstrap.mockResolvedValue(createBootstrapResponse());
-    capsulesApi.fetchRecentCapsules.mockResolvedValue({ capsules: [{ id: "capsule-1", name: "Spring edit", status: "new" }] });
-    capsulesApi.fetchCapsule.mockResolvedValue({ capsule: createBootstrapResponse().activeCapsule });
+    capsulesApi.fetchCapsuleBootstrap.mockResolvedValue(
+      createBootstrapResponse(),
+    );
+    capsulesApi.fetchRecentCapsules.mockResolvedValue({
+      capsules: [{ id: "capsule-1", name: "Spring edit", status: "new" }],
+    });
+    capsulesApi.fetchCapsule.mockResolvedValue({
+      capsule: createBootstrapResponse().activeCapsule,
+    });
     authApi.updateProfileLocale.mockResolvedValue({});
   });
 
@@ -196,7 +217,9 @@ describe("App", () => {
   });
 
   test("bootstraps an existing profile and switches between app routes", async () => {
-    authApi.fetchCurrentUser.mockResolvedValue({ user: { email: "person@example.com" } });
+    authApi.fetchCurrentUser.mockResolvedValue({
+      user: { email: "person@example.com" },
+    });
     authApi.fetchProfileStatus.mockResolvedValue({ hasProfile: true });
 
     renderApp();
@@ -218,7 +241,9 @@ describe("App", () => {
 
   test("opens statistics on direct statistics route after session bootstrap", async () => {
     window.history.replaceState({}, "", "/statistics");
-    authApi.fetchCurrentUser.mockResolvedValue({ user: { email: "person@example.com" } });
+    authApi.fetchCurrentUser.mockResolvedValue({
+      user: { email: "person@example.com" },
+    });
     authApi.fetchProfileStatus.mockResolvedValue({ hasProfile: true });
 
     renderApp();
@@ -227,9 +252,13 @@ describe("App", () => {
   });
 
   test("does not patch profile locale during bootstrap when the persisted locale already came from the server", async () => {
-    authApi.fetchCurrentUser.mockResolvedValue({ user: { email: "person@example.com" } });
+    authApi.fetchCurrentUser.mockResolvedValue({
+      user: { email: "person@example.com" },
+    });
     authApi.fetchProfileStatus.mockResolvedValue({ hasProfile: true });
-    capsulesApi.fetchCapsuleBootstrap.mockResolvedValue(createBootstrapResponse({ locale: "ru" }));
+    capsulesApi.fetchCapsuleBootstrap.mockResolvedValue(
+      createBootstrapResponse({ locale: "ru" }),
+    );
 
     renderApp();
 
@@ -239,7 +268,9 @@ describe("App", () => {
 
   test("retries profile status after verifying a code", async () => {
     authApi.fetchCurrentUser.mockRejectedValue(new Error("unauthorized"));
-    authApi.verifyLoginCode.mockResolvedValue({ user: { email: "person@example.com" } });
+    authApi.verifyLoginCode.mockResolvedValue({
+      user: { email: "person@example.com" },
+    });
     authApi.fetchProfileStatus
       .mockRejectedValueOnce(new Error("temporary"))
       .mockRejectedValueOnce(new Error("temporary"))

@@ -28,7 +28,7 @@ function ProductDetail({
   item,
   t,
   locale,
-  mobileBackAction = null
+  mobileBackAction = null,
 }: ProductDetailProps): ReactElement {
   if (!item) {
     return (
@@ -42,7 +42,12 @@ function ProductDetail({
 
   return (
     <Stack spacing={2.2} sx={{ height: "100%", minHeight: 0 }}>
-      <ProductHeader item={item} t={t} locale={locale} mobileBackAction={mobileBackAction} />
+      <ProductHeader
+        item={item}
+        t={t}
+        locale={locale}
+        mobileBackAction={mobileBackAction}
+      />
       {item.description ? (
         <Typography variant="body1" color="text.secondary">
           {item.description}
@@ -58,8 +63,9 @@ function ProductHeader({
   item,
   t,
   locale,
-  mobileBackAction
-}: Required<Pick<ProductDetailProps, "item" | "t" | "locale">> & Pick<ProductDetailProps, "mobileBackAction">) {
+  mobileBackAction,
+}: Required<Pick<ProductDetailProps, "item" | "t" | "locale">> &
+  Pick<ProductDetailProps, "mobileBackAction">) {
   const productUrl = getSafeHttpUrl(item.url);
 
   return (
@@ -73,7 +79,7 @@ function ProductHeader({
               position: "absolute",
               top: -4,
               left: -8,
-              zIndex: 1
+              zIndex: 1,
             }}
           >
             <ArrowBackRoundedIcon />
@@ -85,14 +91,14 @@ function ProductHeader({
             ? {
                 href: productUrl,
                 target: "_blank",
-                rel: "noreferrer"
+                rel: "noreferrer",
               }
             : {})}
           sx={{
             color: "#8f6f45",
             textDecoration: "none",
             display: "block",
-            "&:hover": productUrl ? { textDecoration: "underline" } : undefined
+            "&:hover": productUrl ? { textDecoration: "underline" } : undefined,
           }}
         >
           <Typography
@@ -102,11 +108,16 @@ function ProductHeader({
               color: "inherit",
               display: "block",
               overflowWrap: "anywhere",
-              textIndent: mobileBackAction ? "40px" : 0
+              textIndent: mobileBackAction ? "40px" : 0,
             }}
           >
-            <ProductLabelText item={item} fallbackLabel={t("search.untitled")} />
-            {productUrl ? <OpenInNewRoundedIcon sx={externalLinkIconSx} /> : null}
+            <ProductLabelText
+              item={item}
+              fallbackLabel={t("search.untitled")}
+            />
+            {productUrl ? (
+              <OpenInNewRoundedIcon sx={externalLinkIconSx} />
+            ) : null}
           </Typography>
         </Box>
       </Box>
@@ -121,7 +132,11 @@ function ProductHeader({
 }
 
 function ProductDetailGroups({ item, t, locale }: DetailGroupsProps) {
-  const detailGroups = buildProductDetailGroups(item, { t, translateOption, locale });
+  const detailGroups = buildProductDetailGroups(item, {
+    t,
+    translateOption,
+    locale,
+  });
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === "dark";
 
@@ -136,18 +151,30 @@ function ProductDetailGroups({ item, t, locale }: DetailGroupsProps) {
             gap: 1.5,
             p: 1.8,
             borderRadius: "22px",
-            backgroundColor: isDarkMode ? "background.default" : "rgba(31, 41, 51, 0.03)"
+            backgroundColor: isDarkMode
+              ? "background.default"
+              : "rgba(31, 41, 51, 0.03)",
           }}
         >
           {group.items.map((row) => (
             <Box key={row.key}>
-              <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.35 }}>
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{ display: "block", mb: 0.35 }}
+              >
                 {row.label}
               </Typography>
-              <Typography component="div" variant="body2" sx={{ lineHeight: 1.45 }}>
+              <Typography
+                component="div"
+                variant="body2"
+                sx={{ lineHeight: 1.45 }}
+              >
                 {row.value.kind === "colors" ? (
                   <ColorValues values={row.value.items} />
-                ) : row.value.text}
+                ) : (
+                  row.value.text
+                )}
               </Typography>
             </Box>
           ))}
@@ -157,11 +184,26 @@ function ProductDetailGroups({ item, t, locale }: DetailGroupsProps) {
   );
 }
 
-function ColorValues({ values }: { values: Array<{ key: string; label: string }> }) {
+function ColorValues({
+  values,
+}: {
+  values: Array<{ key: string; label: string }>;
+}) {
   return (
-    <Stack direction="row" spacing={0.9} alignItems="center" flexWrap="wrap" useFlexGap>
+    <Stack
+      direction="row"
+      spacing={0.9}
+      alignItems="center"
+      flexWrap="wrap"
+      useFlexGap
+    >
       {values.map((value) => (
-        <Stack key={value.key} direction="row" spacing={0.7} alignItems="center">
+        <Stack
+          key={value.key}
+          direction="row"
+          spacing={0.7}
+          alignItems="center"
+        >
           <Box
             sx={{
               width: 12,
@@ -170,7 +212,7 @@ function ColorValues({ values }: { values: Array<{ key: string; label: string }>
               boxSizing: "border-box",
               flexShrink: 0,
               border: "1px solid #999",
-              ...getColorSwatchStyle(value.key)
+              ...getColorSwatchStyle(value.key),
             }}
           />
           <span>{value.label}</span>
@@ -218,7 +260,7 @@ function ProductImage({ item }: { item: SearchResultItem }) {
         border: "1px solid",
         borderColor: "divider",
         objectFit: "cover",
-        backgroundColor: "background.default"
+        backgroundColor: "background.default",
       }}
     />
   );
@@ -229,7 +271,7 @@ const externalLinkIconSx = {
   color: "inherit",
   ml: 0.6,
   verticalAlign: "middle",
-  transform: "translateY(-0.04em)"
+  transform: "translateY(-0.04em)",
 };
 
 export default ProductDetail;

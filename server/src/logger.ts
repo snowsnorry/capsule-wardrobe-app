@@ -12,7 +12,10 @@ function formatLogValue(value: unknown): string {
   return inspect(value, { depth: 6, breakLength: 120 });
 }
 
-function writeLog(stream: NodeJS.WriteStream, values: readonly unknown[]): void {
+function writeLog(
+  stream: NodeJS.WriteStream,
+  values: readonly unknown[],
+): void {
   stream.write(`${values.map(formatLogValue).join(" ")}\n`);
 }
 

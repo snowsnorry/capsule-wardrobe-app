@@ -2,7 +2,7 @@ import { test, expect } from "vitest";
 import {
   CANONICAL_PATTERN_OPTIONS,
   buildCanonicalPatternOptions,
-  normalizePatternOption
+  normalizePatternOption,
 } from "./patternOptions.js";
 
 test("normalizePatternOption trims and lowercases string values", () => {
@@ -18,13 +18,20 @@ test("normalizePatternOption rejects non-string values", () => {
 test("buildCanonicalPatternOptions returns canonical values plus unique custom extras", () => {
   const options = buildCanonicalPatternOptions(
     ["stripe", " Plaid ", "plaid", "", null, "GRAPHIC"],
-    "Micro Check"
+    "Micro Check",
   );
 
-  expect(options.slice(0, CANONICAL_PATTERN_OPTIONS.length)).toEqual([...CANONICAL_PATTERN_OPTIONS]);
-  expect(options.slice(CANONICAL_PATTERN_OPTIONS.length)).toEqual(["plaid", "micro check"]);
+  expect(options.slice(0, CANONICAL_PATTERN_OPTIONS.length)).toEqual([
+    ...CANONICAL_PATTERN_OPTIONS,
+  ]);
+  expect(options.slice(CANONICAL_PATTERN_OPTIONS.length)).toEqual([
+    "plaid",
+    "micro check",
+  ]);
 });
 
 test("buildCanonicalPatternOptions handles omitted inputs", () => {
-  expect(buildCanonicalPatternOptions()).toEqual([...CANONICAL_PATTERN_OPTIONS]);
+  expect(buildCanonicalPatternOptions()).toEqual([
+    ...CANONICAL_PATTERN_OPTIONS,
+  ]);
 });

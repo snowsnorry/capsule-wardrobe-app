@@ -8,7 +8,7 @@ function createSendSpy() {
     send(message, callback) {
       calls.push(message);
       callback?.();
-    }
+    },
   };
 }
 
@@ -34,21 +34,25 @@ test("promptImages child sends serialized payload and exits 0 on success", async
     },
     exitImpl(code) {
       exits.push(code);
-    }
+    },
   });
 
   await runtime.handleMessage({ normalizedItems: [{ id: "look-1" }] });
 
-  expect(buildCalls).toEqual([{
-    normalizedItems: [{ id: "look-1" }],
-    saveDebugArtifacts: false
-  }]);
+  expect(buildCalls).toEqual([
+    {
+      normalizedItems: [{ id: "look-1" }],
+      saveDebugArtifacts: false,
+    },
+  ]);
   expect(serializeCalls).toEqual([{ stitchedRows: [{ id: "row-1" }] }]);
-  expect(sendSpy.calls).toEqual([{
-    ok: true,
-    groups: [{ id: "row-1" }],
-    totals: 1
-  }]);
+  expect(sendSpy.calls).toEqual([
+    {
+      ok: true,
+      groups: [{ id: "row-1" }],
+      totals: 1,
+    },
+  ]);
   expect(disconnects).toEqual([true]);
   expect(exits).toEqual([0]);
 });
@@ -67,15 +71,17 @@ test("promptImages child falls back to empty normalizedItems array", async () =>
     sendImpl(_message, callback) {
       callback?.();
     },
-    exitImpl() {}
+    exitImpl() {},
   });
 
   await runtime.handleMessage({ normalizedItems: "bad-shape" });
 
-  expect(buildCalls).toEqual([{
-    normalizedItems: [],
-    saveDebugArtifacts: false
-  }]);
+  expect(buildCalls).toEqual([
+    {
+      normalizedItems: [],
+      saveDebugArtifacts: false,
+    },
+  ]);
 });
 
 test("promptImages child sends error payload and exits 1 on failure", async () => {
@@ -91,7 +97,7 @@ test("promptImages child sends error payload and exits 1 on failure", async () =
     disconnectImpl() {},
     exitImpl(code) {
       exits.push(code);
-    }
+    },
   });
 
   await runtime.handleMessage({ normalizedItems: [] });
@@ -117,7 +123,7 @@ test("promptImages child ignores duplicate messages", async () => {
     },
     sendImpl: sendSpy.send,
     disconnectImpl() {},
-    exitImpl() {}
+    exitImpl() {},
   });
 
   await runtime.handleMessage({ normalizedItems: [{ id: 1 }] });
@@ -126,7 +132,7 @@ test("promptImages child ignores duplicate messages", async () => {
   expect(buildCalls.length).toBe(1);
   expect(buildCalls[0]).toEqual({
     normalizedItems: [{ id: 1 }],
-    saveDebugArtifacts: false
+    saveDebugArtifacts: false,
   });
   expect(sendSpy.calls).toEqual([{ ok: true, result: 1 }]);
 });
@@ -144,7 +150,7 @@ test("promptImages child exits even when process.send is unavailable", async () 
     sendImpl: undefined,
     exitImpl(code) {
       exits.push(code);
-    }
+    },
   });
 
   await runtime.handleMessage({ normalizedItems: [] });

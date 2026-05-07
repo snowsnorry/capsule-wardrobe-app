@@ -5,7 +5,7 @@ import type {
   CurrentUserResponse,
   ProfileSettings,
   ProfileStatusResponse,
-  UserLike
+  UserLike,
 } from "./appTypes";
 
 type UseSessionBootstrapOptions = {
@@ -20,8 +20,11 @@ type UseSessionBootstrapOptions = {
   setUser: (user: UserLike | null) => void;
 };
 
-async function loadProfileState(options: UseSessionBootstrapOptions, user: UserLike | null) {
-  const profileStatus = await fetchProfileStatus() as ProfileStatusResponse;
+async function loadProfileState(
+  options: UseSessionBootstrapOptions,
+  user: UserLike | null,
+) {
+  const profileStatus = (await fetchProfileStatus()) as ProfileStatusResponse;
   options.setHasProfile(profileStatus.hasProfile);
   options.setProfileCreated(profileStatus.hasProfile);
 
@@ -30,7 +33,10 @@ async function loadProfileState(options: UseSessionBootstrapOptions, user: UserL
     return;
   }
 
-  await Promise.all([options.ensureOptionsLoaded(), options.bootstrapCapsules(user?.email)]);
+  await Promise.all([
+    options.ensureOptionsLoaded(),
+    options.bootstrapCapsules(user?.email),
+  ]);
 }
 
 export function useSessionBootstrap(options: UseSessionBootstrapOptions) {
@@ -46,7 +52,7 @@ export function useSessionBootstrap(options: UseSessionBootstrapOptions) {
       const currentOptions = optionsRef.current;
       currentOptions.setIsCheckingSession(true);
       try {
-        const current = await fetchCurrentUser() as CurrentUserResponse;
+        const current = (await fetchCurrentUser()) as CurrentUserResponse;
         if (!isActive) return;
         currentOptions.setUser(current.user);
         await loadProfileState(currentOptions, current.user);

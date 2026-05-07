@@ -10,7 +10,9 @@ function normalizeHostForIpCheck(hostname: string = ""): string {
 }
 
 function isLocalHostname(hostname: string = ""): boolean {
-  const normalized = String(hostname || "").trim().toLowerCase();
+  const normalized = String(hostname || "")
+    .trim()
+    .toLowerCase();
   return normalized === "localhost" || normalized.endsWith(".localhost");
 }
 
@@ -40,8 +42,4 @@ function getSafeServerFetchUrl(rawValue: unknown): string {
   }
 }
 
-export {
-  getSafeServerFetchUrl,
-  isLocalHostname,
-  normalizeHostForIpCheck
-};
+export { getSafeServerFetchUrl, isLocalHostname, normalizeHostForIpCheck };

@@ -2,19 +2,23 @@ import { test, expect } from "vitest";
 import {
   buildOpenAiImageFiles,
   createOpenAiImageClient,
-  extractGeneratedImage
+  extractGeneratedImage,
 } from "./openaiImage.js";
 
 test("extractGeneratedImage reads base64 image output", () => {
-  expect(extractGeneratedImage({
+  expect(
+    extractGeneratedImage({
       output_format: "webp",
-      data: [{
-        b64_json: "image-base64"
-      }]
-    })).toEqual({
-      base64: "image-base64",
-      mimeType: "image/webp"
-    });
+      data: [
+        {
+          b64_json: "image-base64",
+        },
+      ],
+    }),
+  ).toEqual({
+    base64: "image-base64",
+    mimeType: "image/webp",
+  });
 });
 
 test("buildOpenAiImageFiles converts only valid buffers", async () => {
@@ -22,13 +26,13 @@ test("buildOpenAiImageFiles converts only valid buffers", async () => {
     {
       filename: "photo.png",
       mimeType: "image/png",
-      buffer: Buffer.from("photo")
+      buffer: Buffer.from("photo"),
     },
     {
       filename: "missing.jpg",
       mimeType: "image/jpeg",
-      buffer: null
-    }
+      buffer: null,
+    },
   ]);
 
   expect(files.length).toBe(1);
@@ -50,37 +54,39 @@ test("openai image client uses generate when no reference images are provided", 
             generatePayload = payload;
             return {
               output_format: "png",
-              data: [{ b64_json: "generated-base64" }]
+              data: [{ b64_json: "generated-base64" }],
             };
           },
           edit: async (payload) => {
             editPayload = payload;
             throw new Error("unexpected_edit_call");
-          }
-        }
+          },
+        },
       };
-    }
+    },
   });
 
   const result = await client.generateImageWithOpenAi("draw outfit", {
-    model: "gpt-image-2"
+    model: "gpt-image-2",
   });
 
   expect(generatePayload).toEqual({
     model: "gpt-image-2",
     prompt: "draw outfit",
-    n: 1
+    n: 1,
   });
   expect(editPayload).toBe(null);
   expect(result.image).toEqual({
     base64: "generated-base64",
-    mimeType: "image/png"
+    mimeType: "image/png",
   });
 });
 
 test("openai image client uses edit when reference images are provided", async () => {
   let generatePayload: Record<string, unknown> | null = null;
-  let editPayload: (Record<string, unknown> & { image?: { name?: string }[] }) | null = null;
+  let editPayload:
+    | (Record<string, unknown> & { image?: { name?: string }[] })
+    | null = null;
   const client = createOpenAiImageClient({
     cache: false,
     getApiKeyImpl: () => "openai-key",
@@ -94,20 +100,22 @@ test("openai image client uses edit when reference images are provided", async (
           editPayload = payload;
           return {
             output_format: "jpeg",
-            data: [{ b64_json: "edited-base64" }]
+            data: [{ b64_json: "edited-base64" }],
           };
-        }
-      }
-    })
+        },
+      },
+    }),
   });
 
   const result = await client.generateImageWithOpenAi("edit outfit", {
     model: "gpt-image-2",
-    images: [{
-      filename: "top.jpg",
-      mimeType: "image/jpeg",
-      buffer: Buffer.from("top")
-    }]
+    images: [
+      {
+        filename: "top.jpg",
+        mimeType: "image/jpeg",
+        buffer: Buffer.from("top"),
+      },
+    ],
   });
 
   expect(generatePayload).toBe(null);
@@ -119,6 +127,6 @@ test("openai image client uses edit when reference images are provided", async (
   expect(editPayload.image[0].name).toBe("top.jpg");
   expect(result.image).toEqual({
     base64: "edited-base64",
-    mimeType: "image/jpeg"
+    mimeType: "image/jpeg",
   });
 });

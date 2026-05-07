@@ -4,47 +4,57 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import sharp from "sharp";
 import { rgb } from "pdf-lib";
-import { readImageFromLocalCache, resolveSourceImageUrl } from "./ai/promptImages.js";
+import {
+  readImageFromLocalCache,
+  resolveSourceImageUrl,
+} from "./ai/promptImages.js";
 import { sortWardrobeItems } from "../../shared/wardrobeOrder.js";
-import { isSupportedLocale, normalizeLocale } from "../../shared/i18n/helpers.js";
+import {
+  isSupportedLocale,
+  normalizeLocale,
+} from "../../shared/i18n/helpers.js";
 import { logError, logInfo } from "./logger.js";
 import type {
   ProfileWithItemsLike,
   PromptImageAsset,
   WardrobePdfJobState,
-  WardrobeUiItemLike
+  WardrobeUiItemLike,
 } from "./ai/types.js";
 
 export const PAGE_WIDTH = 595.28;
 export const PAGE_HEIGHT = 841.89;
 export const PAGE_MARGIN = 54;
-export const CONTENT_WIDTH = PAGE_WIDTH - (PAGE_MARGIN * 2);
+export const CONTENT_WIDTH = PAGE_WIDTH - PAGE_MARGIN * 2;
 export const BOX_PADDING = 13;
 export const BLOCK_RADIUS = 16.5;
 export const LINK_COLOR = rgb(0.56, 0.44, 0.27);
 export const SUBTLE_BLOCK_COLOR = rgb(0.96, 0.965, 0.972);
 export const IMAGE_BACKGROUND_COLOR = rgb(0.97, 0.96, 0.94);
 export const require = createRequire(import.meta.url);
-export const DM_SANS_REGULAR_PATH = require.resolve("@fontsource/dm-sans/files/dm-sans-latin-400-normal.woff");
-export const DM_SANS_BOLD_PATH = require.resolve("@fontsource/dm-sans/files/dm-sans-latin-700-normal.woff");
+export const DM_SANS_REGULAR_PATH =
+  require.resolve("@fontsource/dm-sans/files/dm-sans-latin-400-normal.woff");
+export const DM_SANS_BOLD_PATH =
+  require.resolve("@fontsource/dm-sans/files/dm-sans-latin-700-normal.woff");
 export const FALLBACK_REGULAR_FONT_CANDIDATES = [
   "/System/Library/Fonts/Supplemental/Arial.ttf",
   "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-  "/usr/share/fonts/dejavu/DejaVuSans.ttf"
+  "/usr/share/fonts/dejavu/DejaVuSans.ttf",
 ];
 export const FALLBACK_BOLD_FONT_CANDIDATES = [
   "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
   "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-  "/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf"
+  "/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf",
 ];
 export const WARDROBE_PDF_POLL_AFTER_MS = 2000;
 export const PDF_JOB_TTL_MS = 5 * 60 * 1000;
 export const wardrobePdfJobs = new Map<string, WardrobePdfJobState>();
 export const DEFAULT_PDF_IMAGE_TARGET_SIZE = {
   width: Math.round((CONTENT_WIDTH - 2) * 2),
-  height: Math.round((PAGE_HEIGHT - (PAGE_MARGIN * 2)) * 2)
+  height: Math.round((PAGE_HEIGHT - PAGE_MARGIN * 2) * 2),
 };
-export const WARDROBE_PDF_CHILD_TIMEOUT_MS = Number.parseInt(process.env.WARDROBE_PDF_CHILD_TIMEOUT_MS || "", 10) || 180000;
+export const WARDROBE_PDF_CHILD_TIMEOUT_MS =
+  Number.parseInt(process.env.WARDROBE_PDF_CHILD_TIMEOUT_MS || "", 10) ||
+  180000;
 
 export type PdfImageBytes = {
   kind: "jpg" | "png";
@@ -84,31 +94,38 @@ export type UpdateProfilePdfImpl = (
   options?: {
     expectedItems?: WardrobePdfJobOptions["wardrobePayload"];
     expectedLocale?: string | null;
-  }
+  },
 ) => Promise<unknown>;
 
 export type ChildMessage =
   | {
-    ok: true;
-    outputFilePath?: string | null;
-  }
+      ok: true;
+      outputFilePath?: string | null;
+    }
   | {
-    ok: false;
-    message?: string | null;
-    stack?: string | null;
-  };
+      ok: false;
+      message?: string | null;
+      stack?: string | null;
+    };
 
 export type WardrobePdfChildProcessLike = {
   on: (event: string, handler: (...args: unknown[]) => void) => unknown;
-  removeListener: (event: string, handler: (...args: unknown[]) => void) => unknown;
+  removeListener: (
+    event: string,
+    handler: (...args: unknown[]) => void,
+  ) => unknown;
   kill: () => unknown;
   send: (message: unknown, callback?: (error: Error | null) => void) => unknown;
 };
 
 export function resolveWardrobePdfChildEntryUrl() {
   const currentModulePath = fileURLToPath(import.meta.url);
-  const preferredExtension = path.extname(currentModulePath) === ".js" ? ".js" : ".ts";
-  const preferredUrl = new URL(`./wardrobePdf.child${preferredExtension}`, import.meta.url);
+  const preferredExtension =
+    path.extname(currentModulePath) === ".js" ? ".js" : ".ts";
+  const preferredUrl = new URL(
+    `./wardrobePdf.child${preferredExtension}`,
+    import.meta.url,
+  );
   if (existsSync(fileURLToPath(preferredUrl))) {
     return preferredUrl;
   }
@@ -118,10 +135,15 @@ export function resolveWardrobePdfChildEntryUrl() {
 }
 
 export function resolveWardrobePdfChildExecArgv(childEntryUrl: URL) {
-  return path.extname(fileURLToPath(childEntryUrl)) === ".ts" ? process.execArgv : [];
+  return path.extname(fileURLToPath(childEntryUrl)) === ".ts"
+    ? process.execArgv
+    : [];
 }
 
-export type WardrobePdfForkLike = (modulePath: string, options?: Record<string, unknown>) => WardrobePdfChildProcessLike;
+export type WardrobePdfForkLike = (
+  modulePath: string,
+  options?: Record<string, unknown>,
+) => WardrobePdfChildProcessLike;
 
 export function formatLogValue(value) {
   if (value === null) {
@@ -185,12 +207,15 @@ export function productNeedsUnicodeFallback(product, locale) {
     product?.name,
     product?.brand,
     product?.description,
-    product?.url
+    product?.url,
   ].some(hasNonLatinText);
 }
 
 export function getStoredWardrobeItems(profile: unknown): WardrobeUiItemLike[] {
-  const stored = (profile && typeof profile === "object" ? (profile as { items?: unknown }).items : undefined);
+  const stored =
+    profile && typeof profile === "object"
+      ? (profile as { items?: unknown }).items
+      : undefined;
 
   if (Array.isArray(stored)) {
     return stored;
@@ -201,14 +226,19 @@ export function getStoredWardrobeItems(profile: unknown): WardrobeUiItemLike[] {
   }
 
   return Array.isArray((stored as { items?: unknown }).items)
-    ? ((stored as { items: WardrobeUiItemLike[] }).items)
+    ? (stored as { items: WardrobeUiItemLike[] }).items
     : [];
 }
 
-export function createWardrobePdfGenerationKey({ items = [], locale = "en" } = {}) {
+export function createWardrobePdfGenerationKey({
+  items = [],
+  locale = "en",
+} = {}) {
   return JSON.stringify({
     locale,
-    items: sortWardrobeItems(items).map((item) => String(item?.url || item?.id || `${item?.category}:${item?.name}`))
+    items: sortWardrobeItems(items).map((item) =>
+      String(item?.url || item?.id || `${item?.category}:${item?.name}`),
+    ),
   });
 }
 
@@ -239,7 +269,7 @@ export function getPdfLocale(rawLocale) {
 
 export async function normalizeImageBytes(
   buffer: Buffer | Uint8Array | null | undefined,
-  mimeType = ""
+  mimeType = "",
 ): Promise<PdfImageBytes | null> {
   if (!buffer) {
     return null;
@@ -263,7 +293,7 @@ export async function normalizeImageBytes(
 export async function preparePdfImageBytes(
   buffer: Buffer | Uint8Array | null | undefined,
   mimeType = "",
-  { width, height, autoRotate = true }: PdfTargetSize
+  { width, height, autoRotate = true }: PdfTargetSize,
 ): Promise<PdfImageBytes | null> {
   if (!buffer) {
     return null;
@@ -277,27 +307,36 @@ export async function preparePdfImageBytes(
     image.rotate();
   }
   const metadata = await image.metadata().catch(() => null);
-  const hasAlpha = metadata?.hasAlpha === true || String(mimeType || "").toLowerCase().includes("png");
+  const hasAlpha =
+    metadata?.hasAlpha === true ||
+    String(mimeType || "")
+      .toLowerCase()
+      .includes("png");
 
   const resized = image.resize(targetWidth, targetHeight, {
     fit: "inside",
-    withoutEnlargement: true
+    withoutEnlargement: true,
   });
 
   if (hasAlpha) {
-    const pngBuffer = await resized.png({
-      compressionLevel: 9,
-      palette: true,
-      quality: 80
-    }).toBuffer();
+    const pngBuffer = await resized
+      .png({
+        compressionLevel: 9,
+        palette: true,
+        quality: 80,
+      })
+      .toBuffer();
     return { kind: "png", bytes: pngBuffer };
   }
 
-  const jpgBuffer = await resized.flatten({ background: "#f7f4ef" }).jpeg({
-    quality: 76,
-    mozjpeg: true,
-    progressive: true
-  }).toBuffer();
+  const jpgBuffer = await resized
+    .flatten({ background: "#f7f4ef" })
+    .jpeg({
+      quality: 76,
+      mozjpeg: true,
+      progressive: true,
+    })
+    .toBuffer();
   return { kind: "jpg", bytes: jpgBuffer };
 }
 
@@ -305,8 +344,11 @@ export async function loadImageBytes(
   imageUrl: string | null | undefined,
   imageAsset: PromptImageAsset | null = null,
   targetSize: PdfTargetSize | null = null,
-  imageLoadStats: { cachedCount: number; downloadedCount: number } | null = null
-) : Promise<PdfImageBytes | null> {
+  imageLoadStats: {
+    cachedCount: number;
+    downloadedCount: number;
+  } | null = null,
+): Promise<PdfImageBytes | null> {
   const stats = imageLoadStats || { cachedCount: 0, downloadedCount: 0 };
   const resolvedImageUrl = resolveSourceImageUrl(imageUrl);
   const assetBytes = await getPdfImageAssetBytes(imageAsset, targetSize);
@@ -315,12 +357,20 @@ export async function loadImageBytes(
     return assetBytes;
   }
 
-  if (typeof resolvedImageUrl !== "string" || resolvedImageUrl.trim().length === 0) {
+  if (
+    typeof resolvedImageUrl !== "string" ||
+    resolvedImageUrl.trim().length === 0
+  ) {
     return null;
   }
 
   try {
-    return await getCachedOrDownloadedPdfImageBytes({ imageUrl, resolvedImageUrl, targetSize, stats });
+    return await getCachedOrDownloadedPdfImageBytes({
+      imageUrl,
+      resolvedImageUrl,
+      targetSize,
+      stats,
+    });
   } catch (error) {
     logError("[wardrobe-pdf][image]", resolvedImageUrl, error);
     return null;
@@ -329,7 +379,7 @@ export async function loadImageBytes(
 
 async function getPdfImageAssetBytes(
   imageAsset: PromptImageAsset | null,
-  targetSize: PdfTargetSize | null
+  targetSize: PdfTargetSize | null,
 ): Promise<PdfImageBytes | null> {
   if (!imageAsset?.buffer) {
     return null;
@@ -348,7 +398,7 @@ async function getCachedOrDownloadedPdfImageBytes({
   imageUrl,
   resolvedImageUrl,
   targetSize,
-  stats
+  stats,
 }: {
   imageUrl: string | null | undefined;
   resolvedImageUrl: string;
@@ -367,14 +417,18 @@ async function getCachedOrDownloadedPdfImageBytes({
 
 async function getDownloadedPdfImageBytes(
   resolvedImageUrl: string,
-  targetSize: PdfTargetSize | null
+  targetSize: PdfTargetSize | null,
 ): Promise<PdfImageBytes | null> {
-  const response = await fetch(resolvedImageUrl, { signal: AbortSignal.timeout(10000) });
+  const response = await fetch(resolvedImageUrl, {
+    signal: AbortSignal.timeout(10000),
+  });
   if (!response.ok) {
     throw new Error(`image_fetch_failed_${response.status}`);
   }
 
-  const contentType = String(response.headers.get("content-type") || "").toLowerCase();
+  const contentType = String(
+    response.headers.get("content-type") || "",
+  ).toLowerCase();
   const sourceBuffer = Buffer.from(await response.arrayBuffer());
   return targetSize
     ? preparePdfImageBytes(sourceBuffer, contentType, targetSize)

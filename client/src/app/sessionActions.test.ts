@@ -6,7 +6,7 @@ import {
   resetToEmail,
   signOut,
   verifyCode,
-  type SessionActionContext
+  type SessionActionContext,
 } from "./sessionActions";
 import { createTestProfile, testStatus } from "./testUtils";
 
@@ -16,18 +16,20 @@ const authApi = vi.hoisted(() => ({
   logout: vi.fn(),
   requestLoginCode: vi.fn(),
   signInWithGoogle: vi.fn(),
-  verifyLoginCode: vi.fn()
+  verifyLoginCode: vi.fn(),
 }));
 
 vi.mock("../api/auth", () => authApi);
 
 const passkeyAuth = vi.hoisted(() => ({
-  authenticateWithPasskey: vi.fn()
+  authenticateWithPasskey: vi.fn(),
 }));
 
 vi.mock("../auth/passkeys", () => passkeyAuth);
 
-function createSessionContext(overrides: Partial<SessionActionContext> = {}): SessionActionContext {
+function createSessionContext(
+  overrides: Partial<SessionActionContext> = {},
+): SessionActionContext {
   return {
     bootstrapCapsules: vi.fn(async () => createTestProfile()),
     closeNotificationPrompt: vi.fn(),
@@ -53,7 +55,7 @@ function createSessionContext(overrides: Partial<SessionActionContext> = {}): Se
     setStatus: vi.fn(),
     setStep: vi.fn(),
     setUser: vi.fn(),
-    ...overrides
+    ...overrides,
   };
 }
 
@@ -68,41 +70,64 @@ describe("sessionActions", () => {
 
     await requestCode(context, { preventDefault: vi.fn() } as never);
 
-    expect(authApi.requestLoginCode).toHaveBeenCalledWith("person@example.com", "en");
+    expect(authApi.requestLoginCode).toHaveBeenCalledWith(
+      "person@example.com",
+      "en",
+    );
     expect(context.setStatus).toHaveBeenLastCalledWith({
       loading: false,
       error: "",
       infoKey: "auth.codeSent",
-      infoParams: { minutes: 5 }
+      infoParams: { minutes: 5 },
     });
     expect(context.setStep).toHaveBeenCalledWith("code");
   });
 
   test("verifyCode prepares onboarding when the signed-in user has no profile", async () => {
-    authApi.verifyLoginCode.mockResolvedValue({ user: { email: "person@example.com" } });
+    authApi.verifyLoginCode.mockResolvedValue({
+      user: { email: "person@example.com" },
+    });
     authApi.fetchProfileStatus.mockResolvedValue({ hasProfile: false });
     const context = createSessionContext();
 
     await verifyCode(context, { preventDefault: vi.fn() } as never);
 
-    expect(authApi.verifyLoginCode).toHaveBeenCalledWith("person@example.com", "654321");
-    expect(context.preloadOnboardingOptions).toHaveBeenCalledWith({ useFallback: true });
+    expect(authApi.verifyLoginCode).toHaveBeenCalledWith(
+      "person@example.com",
+      "654321",
+    );
+    expect(context.preloadOnboardingOptions).toHaveBeenCalledWith({
+      useFallback: true,
+    });
     expect(context.resetOnboardingSelections).toHaveBeenCalled();
     expect(context.setOnboardingStep).toHaveBeenCalledWith(0);
     expect(context.setHasProfile).toHaveBeenCalledWith(false);
-    expect(context.setUser).toHaveBeenCalledWith({ email: "person@example.com" });
+    expect(context.setUser).toHaveBeenCalledWith({
+      email: "person@example.com",
+    });
   });
 
   test("verifyCode bootstraps an existing profile and can show the passkey prompt", async () => {
-    authApi.verifyLoginCode.mockResolvedValue({ user: { email: "person@example.com" } });
+    authApi.verifyLoginCode.mockResolvedValue({
+      user: { email: "person@example.com" },
+    });
     authApi.fetchProfileStatus.mockResolvedValue({ hasProfile: true });
     const context = createSessionContext();
 
     await verifyCode(context, { preventDefault: vi.fn() } as never);
 
-    expect(context.ensureOptionsLoaded).toHaveBeenCalledWith({ useFallback: true });
-    expect(context.bootstrapCapsules).toHaveBeenCalledWith("person@example.com");
-    expect(context.setStatus).toHaveBeenLastCalledWith({ loading: false, error: "", infoKey: "auth.signedIn", infoParams: null });
+    expect(context.ensureOptionsLoaded).toHaveBeenCalledWith({
+      useFallback: true,
+    });
+    expect(context.bootstrapCapsules).toHaveBeenCalledWith(
+      "person@example.com",
+    );
+    expect(context.setStatus).toHaveBeenLastCalledWith({
+      loading: false,
+      error: "",
+      infoKey: "auth.signedIn",
+      infoParams: null,
+    });
     expect(context.maybeShowPasskeyPrompt).toHaveBeenCalled();
   });
 
@@ -120,7 +145,10 @@ describe("sessionActions", () => {
     expect(context.closeNotificationPrompt).toHaveBeenCalled();
     expect(context.resetProfileOptions).toHaveBeenCalled();
     expect(context.resetNavigation).toHaveBeenCalled();
-    expect(context.setStatus).toHaveBeenLastCalledWith({ ...testStatus, infoKey: "auth.signedOut" });
+    expect(context.setStatus).toHaveBeenLastCalledWith({
+      ...testStatus,
+      infoKey: "auth.signedOut",
+    });
   });
 
   test("requestCode and verifyCode map failures and clear stale codes", async () => {
@@ -132,7 +160,7 @@ describe("sessionActions", () => {
       loading: false,
       error: "invalid_email",
       infoKey: "",
-      infoParams: null
+      infoParams: null,
     });
 
     authApi.verifyLoginCode.mockRejectedValueOnce(new Error("expired"));
@@ -143,28 +171,36 @@ describe("sessionActions", () => {
   });
 
   test("googleCredential applies auth results and reports failures", async () => {
-    authApi.signInWithGoogle.mockResolvedValueOnce({ user: { email: "person@example.com" } });
+    authApi.signInWithGoogle.mockResolvedValueOnce({
+      user: { email: "person@example.com" },
+    });
     authApi.fetchProfileStatus.mockResolvedValueOnce({ hasProfile: true });
     const context = createSessionContext();
 
     await googleCredential(context, "token-1");
 
     expect(authApi.signInWithGoogle).toHaveBeenCalledWith("token-1");
-    expect(context.bootstrapCapsules).toHaveBeenCalledWith("person@example.com");
+    expect(context.bootstrapCapsules).toHaveBeenCalledWith(
+      "person@example.com",
+    );
 
-    authApi.signInWithGoogle.mockRejectedValueOnce(new Error("invalid_google_token"));
+    authApi.signInWithGoogle.mockRejectedValueOnce(
+      new Error("invalid_google_token"),
+    );
     await googleCredential(context, "bad-token");
     expect(context.setUser).toHaveBeenCalledWith(null);
     expect(context.setStatus).toHaveBeenLastCalledWith({
       loading: false,
       error: "invalid_google_token",
       infoKey: "",
-      infoParams: null
+      infoParams: null,
     });
   });
 
   test("passkeySignIn clears request cache and does not show prompt", async () => {
-    passkeyAuth.authenticateWithPasskey.mockResolvedValueOnce({ user: { email: "person@example.com" } });
+    passkeyAuth.authenticateWithPasskey.mockResolvedValueOnce({
+      user: { email: "person@example.com" },
+    });
     authApi.fetchProfileStatus.mockResolvedValueOnce({ hasProfile: true });
     const context = createSessionContext();
 
@@ -173,15 +209,22 @@ describe("sessionActions", () => {
     expect(passkeyAuth.authenticateWithPasskey).toHaveBeenCalledTimes(1);
     expect(authApi.clearRequestCache).toHaveBeenCalledTimes(1);
     expect(context.maybeShowPasskeyPrompt).not.toHaveBeenCalled();
-    expect(context.setStatus).toHaveBeenLastCalledWith({ loading: false, error: "", infoKey: "auth.signedIn", infoParams: null });
+    expect(context.setStatus).toHaveBeenLastCalledWith({
+      loading: false,
+      error: "",
+      infoKey: "auth.signedIn",
+      infoParams: null,
+    });
 
-    passkeyAuth.authenticateWithPasskey.mockRejectedValueOnce(new Error("passkey_failed"));
+    passkeyAuth.authenticateWithPasskey.mockRejectedValueOnce(
+      new Error("passkey_failed"),
+    );
     await passkeySignIn(context);
     expect(context.setStatus).toHaveBeenLastCalledWith({
       loading: false,
       error: "passkey_failed",
       infoKey: "",
-      infoParams: null
+      infoParams: null,
     });
   });
 
@@ -196,7 +239,7 @@ describe("sessionActions", () => {
       loading: false,
       error: "network",
       infoKey: "",
-      infoParams: null
+      infoParams: null,
     });
     expect(context.setStep).toHaveBeenCalledWith("email");
     expect(context.setCode).toHaveBeenCalledWith("");

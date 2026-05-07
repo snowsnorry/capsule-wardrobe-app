@@ -16,16 +16,19 @@ const mobileProductMenuSx = {
     boxShadow: "none",
     "&:hover": {
       bgcolor: "rgba(255, 255, 255, 0.68)",
-      color: "rgba(17, 24, 39, 0.78)"
-    }
-  }
+      color: "rgba(17, 24, 39, 0.78)",
+    },
+  },
 } as const;
 
 function getActionOffset({
   showMobileProductMenuButton,
   isMobile,
-  mobileCardMetrics
-}: Pick<CardActionProps, "showMobileProductMenuButton" | "isMobile" | "mobileCardMetrics">) {
+  mobileCardMetrics,
+}: Pick<
+  CardActionProps,
+  "showMobileProductMenuButton" | "isMobile" | "mobileCardMetrics"
+>) {
   if (showMobileProductMenuButton) {
     return 0;
   }
@@ -34,15 +37,19 @@ function getActionOffset({
 }
 
 function getRegenerateButtonSx(isSelected: boolean) {
-  const backgroundColor = isSelected ? "rgba(17, 17, 17, 0.92)" : "rgba(17, 17, 17, 0.42)";
-  const hoverBackgroundColor = isSelected ? "rgba(17, 17, 17, 0.96)" : "rgba(17, 17, 17, 0.62)";
+  const backgroundColor = isSelected
+    ? "rgba(17, 17, 17, 0.92)"
+    : "rgba(17, 17, 17, 0.42)";
+  const hoverBackgroundColor = isSelected
+    ? "rgba(17, 17, 17, 0.96)"
+    : "rgba(17, 17, 17, 0.62)";
   const color = isSelected ? "#d24343" : "#fff";
 
   return {
     bgcolor: backgroundColor,
     color,
     "&:hover": { bgcolor: hoverBackgroundColor },
-    "&.Mui-disabled": { color, bgcolor: backgroundColor }
+    "&.Mui-disabled": { color, bgcolor: backgroundColor },
   } as const;
 }
 
@@ -50,7 +57,9 @@ function getActionStackSx(props: CardActionProps) {
   const actionOffset = getActionOffset(props);
   const actionOpacity = props.showMobileProductMenuButton
     ? 1
-    : props.showActionButtons ? 0.72 : undefined;
+    : props.showActionButtons
+      ? 0.72
+      : undefined;
 
   return {
     position: "absolute",
@@ -68,10 +77,16 @@ function getActionStackSx(props: CardActionProps) {
       color: "#fff",
       transition: "background-color 160ms ease, color 160ms ease",
       "&:hover": { bgcolor: "rgba(17, 17, 17, 0.62)" },
-      "&.Mui-disabled": { color: "#fff", bgcolor: "rgba(17, 17, 17, 0.42)", opacity: props.showActionButtons ? 0.72 : 0 }
+      "&.Mui-disabled": {
+        color: "#fff",
+        bgcolor: "rgba(17, 17, 17, 0.42)",
+        opacity: props.showActionButtons ? 0.72 : 0,
+      },
     },
     ...(props.showMobileProductMenuButton ? mobileProductMenuSx : {}),
-    "& .wardrobe-card-regenerate.MuiIconButton-root": getRegenerateButtonSx(props.isSelected)
+    "& .wardrobe-card-regenerate.MuiIconButton-root": getRegenerateButtonSx(
+      props.isSelected,
+    ),
   } as const;
 }
 
@@ -84,12 +99,25 @@ function CardActions(props: CardActionProps) {
       sx={getActionStackSx(props)}
     >
       {props.showToggleButton ? (
-        <IconButton aria-label={props.t("main.partialRegenerateToggle")} className="wardrobe-card-action-button wardrobe-card-regenerate" onMouseDown={props.stopPropagation} onPointerDown={props.stopPropagation} onClick={props.onToggleSelected} disabled={props.isRegenerating}>
+        <IconButton
+          aria-label={props.t("main.partialRegenerateToggle")}
+          className="wardrobe-card-action-button wardrobe-card-regenerate"
+          onMouseDown={props.stopPropagation}
+          onPointerDown={props.stopPropagation}
+          onClick={props.onToggleSelected}
+          disabled={props.isRegenerating}
+        >
           <ThumbDownAltOutlinedIcon fontSize="small" />
         </IconButton>
       ) : null}
       {props.showProductMenuButton ? (
-        <IconButton aria-label={props.t("capsule.openProductMenu")} className="wardrobe-card-action-button wardrobe-card-product-menu" onMouseDown={props.stopPropagation} onPointerDown={props.stopPropagation} onClick={props.onProductMenuClick}>
+        <IconButton
+          aria-label={props.t("capsule.openProductMenu")}
+          className="wardrobe-card-action-button wardrobe-card-product-menu"
+          onMouseDown={props.stopPropagation}
+          onPointerDown={props.stopPropagation}
+          onClick={props.onProductMenuClick}
+        >
           <MoreVertRoundedIcon fontSize="small" />
         </IconButton>
       ) : null}

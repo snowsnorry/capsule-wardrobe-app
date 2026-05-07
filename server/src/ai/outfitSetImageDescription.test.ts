@@ -5,7 +5,7 @@ test("buildOutfitSetDescription tolerates items without type", () => {
   const description = buildOutfitSetDescription([
     { id: "1", name: "Shirt", type: "top", color: "white" },
     { id: "2", name: "Trousers", color: "black" },
-    { id: "3", name: "Bag", type: "bag" }
+    { id: "3", name: "Bag", type: "bag" },
   ]);
 
   expect(description).toMatch(/Shirt/);
@@ -17,7 +17,7 @@ test("buildOutfitSetDescription falls back to category when type is absent", () 
     { id: "1", name: "Blazer", category: "outerwear" },
     { id: "2", name: "Knit", category: "midlayer" },
     { id: "3", name: "Trousers", category: "bottom" },
-    { id: "4", name: "Bag", category: "bag" }
+    { id: "4", name: "Bag", category: "bag" },
   ]);
 
   expect(description).toMatch(/Blazer/);

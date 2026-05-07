@@ -1,5 +1,12 @@
 import { useState, type MouseEvent } from "react";
-import { Box, ButtonBase, Menu, MenuItem, Stack, Typography } from "@mui/material";
+import {
+  Box,
+  ButtonBase,
+  Menu,
+  MenuItem,
+  Stack,
+  Typography,
+} from "@mui/material";
 import AppsRoundedIcon from "@mui/icons-material/AppsRounded";
 import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
 import { useTheme } from "@mui/material/styles";
@@ -12,23 +19,40 @@ type AppLauncherProps = {
   onSelectApp?: (appId: AppId) => void;
 };
 
-function AppLauncher({ currentApp = "capsule", onSelectApp }: AppLauncherProps) {
+function AppLauncher({
+  currentApp = "capsule",
+  onSelectApp,
+}: AppLauncherProps) {
   const { t } = useI18n();
   const theme = useTheme();
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const isOpen = Boolean(anchorEl);
   const isDarkMode = theme.palette.mode === "dark";
   const items: Array<{ id: AppId; label: string; subtitle: string }> = [
-    { id: "capsule", label: t("launcher.capsule"), subtitle: t("launcher.capsuleHint") },
-    { id: "explore", label: t("launcher.explore"), subtitle: t("launcher.exploreHint") },
-    { id: "statistics", label: t("launcher.statistics"), subtitle: t("launcher.statisticsHint") }
+    {
+      id: "capsule",
+      label: t("launcher.capsule"),
+      subtitle: t("launcher.capsuleHint"),
+    },
+    {
+      id: "explore",
+      label: t("launcher.explore"),
+      subtitle: t("launcher.exploreHint"),
+    },
+    {
+      id: "statistics",
+      label: t("launcher.statistics"),
+      subtitle: t("launcher.statisticsHint"),
+    },
   ];
 
   return (
     <>
       <ButtonBase
         aria-label={t("launcher.open")}
-        onClick={(event: MouseEvent<HTMLElement>) => setAnchorEl(event.currentTarget)}
+        onClick={(event: MouseEvent<HTMLElement>) =>
+          setAnchorEl(event.currentTarget)
+        }
         sx={{
           borderRadius: "999px",
           px: 1.4,
@@ -41,13 +65,19 @@ function AppLauncher({ currentApp = "capsule", onSelectApp }: AppLauncherProps) 
             : "linear-gradient(135deg, rgba(127, 84, 38, 0.14), rgba(240, 180, 41, 0.14) 58%, rgba(255, 244, 220, 0.88))",
           boxShadow: isDarkMode
             ? "inset 0 1px 0 rgba(255,255,255,0.06), 0 10px 20px rgba(0, 0, 0, 0.28)"
-            : "inset 0 1px 0 rgba(255,255,255,0.7), 0 8px 18px rgba(127, 84, 38, 0.08)"
+            : "inset 0 1px 0 rgba(255,255,255,0.7), 0 8px 18px rgba(127, 84, 38, 0.08)",
         }}
       >
         <Stack direction="row" spacing={1} alignItems="center">
-          <AppsRoundedIcon sx={{ color: isDarkMode ? "#f0d39a" : "#7f5426", fontSize: 18 }} />
-          <Typography variant="body2" sx={{ fontWeight: 700, color: isDarkMode ? "#f7ead0" : "#7f5426" }}>
-            {items.find((item) => item.id === currentApp)?.label || t("launcher.capsule")}
+          <AppsRoundedIcon
+            sx={{ color: isDarkMode ? "#f0d39a" : "#7f5426", fontSize: 18 }}
+          />
+          <Typography
+            variant="body2"
+            sx={{ fontWeight: 700, color: isDarkMode ? "#f7ead0" : "#7f5426" }}
+          >
+            {items.find((item) => item.id === currentApp)?.label ||
+              t("launcher.capsule")}
           </Typography>
         </Stack>
       </ButtonBase>
@@ -61,8 +91,19 @@ function AppLauncher({ currentApp = "capsule", onSelectApp }: AppLauncherProps) 
             }}
             sx={{ minWidth: 220 }}
           >
-            <Stack direction="row" spacing={1.5} alignItems="flex-start" sx={{ width: "100%" }}>
-              <Box sx={{ pt: 0.2, color: currentApp === item.id ? "primary.main" : "transparent" }}>
+            <Stack
+              direction="row"
+              spacing={1.5}
+              alignItems="flex-start"
+              sx={{ width: "100%" }}
+            >
+              <Box
+                sx={{
+                  pt: 0.2,
+                  color:
+                    currentApp === item.id ? "primary.main" : "transparent",
+                }}
+              >
                 <CheckRoundedIcon fontSize="small" />
               </Box>
               <Box sx={{ minWidth: 0 }}>

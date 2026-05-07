@@ -3,11 +3,11 @@ import type { ChildProcess } from "node:child_process";
 import type {
   PromptDebugImageResult,
   PromptDebugImageCategory,
-  PromptDebugImageStitched
+  PromptDebugImageStitched,
 } from "../ai/types.js";
 
 function buildPromptDebugImageStitched(
-  overrides: Partial<PromptDebugImageStitched> = {}
+  overrides: Partial<PromptDebugImageStitched> = {},
 ): PromptDebugImageStitched {
   return {
     category: "all-categories",
@@ -16,12 +16,12 @@ function buildPromptDebugImageStitched(
     totalItems: 1,
     categoryCount: 1,
     buffer: Buffer.from("stitched"),
-    ...overrides
+    ...overrides,
   };
 }
 
 function buildPromptDebugImageCategory(
-  overrides: Partial<PromptDebugImageCategory> = {}
+  overrides: Partial<PromptDebugImageCategory> = {},
 ): PromptDebugImageCategory {
   return {
     category: "top",
@@ -33,12 +33,12 @@ function buildPromptDebugImageCategory(
     skippedCount: 0,
     items: [],
     buffer: null,
-    ...overrides
+    ...overrides,
   };
 }
 
 function buildPromptDebugImageResult(
-  overrides: Partial<PromptDebugImageResult> = {}
+  overrides: Partial<PromptDebugImageResult> = {},
 ): PromptDebugImageResult {
   return {
     cachedCount: 0,
@@ -54,36 +54,42 @@ function buildPromptDebugImageResult(
       collageEncodeMs: 0,
       debugSaveMs: 0,
       categoryBuildMs: 0,
-      childRoundTripMs: 0
+      childRoundTripMs: 0,
     },
-    ...overrides
+    ...overrides,
   };
 }
 
-function createJsonResponse(payload: unknown, init: ResponseInit = {}): Response {
+function createJsonResponse(
+  payload: unknown,
+  init: ResponseInit = {},
+): Response {
   return new Response(JSON.stringify(payload), {
     status: init.status ?? 200,
     headers: {
       "content-type": "application/json",
-      ...(init.headers ?? {})
-    }
+      ...(init.headers ?? {}),
+    },
   });
 }
 
 function createTextResponse(body: string, init: ResponseInit = {}): Response {
   return new Response(body, {
     status: init.status ?? 200,
-    headers: init.headers
+    headers: init.headers,
   });
 }
 
-function createBinaryResponse(body: Buffer | Uint8Array, init: ResponseInit = {}): Response {
+function createBinaryResponse(
+  body: Buffer | Uint8Array,
+  init: ResponseInit = {},
+): Response {
   const bytes = Buffer.isBuffer(body) ? body : Buffer.from(body);
   const payload = new ArrayBuffer(bytes.byteLength);
   new Uint8Array(payload).set(bytes);
   return new Response(payload, {
     status: init.status ?? 200,
-    headers: init.headers
+    headers: init.headers,
   });
 }
 
@@ -105,27 +111,28 @@ function createMockChildProcess(): ChildProcess {
       process.stdout,
       process.stderr,
       process.stdout,
-      process.stderr
+      process.stderr,
     ] as [
       typeof process.stdin,
       typeof process.stdout,
       typeof process.stderr,
       typeof process.stdout,
-      typeof process.stderr
+      typeof process.stderr,
     ],
     channel: null,
     send(
       message: unknown,
       sendHandleOrCallback?: unknown,
       optionsOrCallback?: unknown,
-      callback?: (error: Error | null) => void
+      callback?: (error: Error | null) => void,
     ) {
       void message;
-      const resolvedCallback = typeof sendHandleOrCallback === "function"
-        ? sendHandleOrCallback
-        : typeof optionsOrCallback === "function"
-          ? optionsOrCallback
-          : callback;
+      const resolvedCallback =
+        typeof sendHandleOrCallback === "function"
+          ? sendHandleOrCallback
+          : typeof optionsOrCallback === "function"
+            ? optionsOrCallback
+            : callback;
       resolvedCallback?.(null);
       return true;
     },
@@ -143,7 +150,7 @@ function createMockChildProcess(): ChildProcess {
     },
     [Symbol.dispose]() {
       return undefined;
-    }
+    },
   });
 
   return child as ChildProcess;
@@ -156,5 +163,5 @@ export {
   createBinaryResponse,
   createJsonResponse,
   createMockChildProcess,
-  createTextResponse
+  createTextResponse,
 };

@@ -1,7 +1,7 @@
 import type { Dispatch, SetStateAction } from "react";
 import {
   buildDisplayWardrobeItems,
-  mergeWardrobeItemsIntoExistingOrder
+  mergeWardrobeItemsIntoExistingOrder,
 } from "../../../shared/wardrobeMerge.js";
 import { normalizeOutfitSets } from "./capsuleState";
 import type {
@@ -9,7 +9,7 @@ import type {
   OutfitSetSnapshot,
   StatusState,
   WardrobeItem,
-  WardrobeSnapshot
+  WardrobeSnapshot,
 } from "./appTypes";
 
 type StateSetter<T> = Dispatch<SetStateAction<T>>;
@@ -17,7 +17,9 @@ type StateSetter<T> = Dispatch<SetStateAction<T>>;
 type WardrobeSnapshotContext = {
   activeCapsuleId: string;
   closeNotificationPrompt: () => void;
-  fetchCapsule: (capsuleId: string) => Promise<{ capsule?: CapsuleMeta | null }>;
+  fetchCapsule: (
+    capsuleId: string,
+  ) => Promise<{ capsule?: CapsuleMeta | null }>;
   manualWardrobeRegenerationCapsuleIdRef: { current: string };
   pendingNotificationKindRef: { current: string };
   pendingRegenerationUrlsRef: { current: string[] };
@@ -52,7 +54,9 @@ type NormalizedWardrobeSnapshot = {
 
 function normalizePendingUrls(snapshot: WardrobeSnapshot | undefined) {
   return Array.isArray(snapshot?.pendingRegenerationUrls)
-    ? snapshot.pendingRegenerationUrls.map((itemUrl) => String(itemUrl || "").trim()).filter(Boolean)
+    ? snapshot.pendingRegenerationUrls
+        .map((itemUrl) => String(itemUrl || "").trim())
+        .filter(Boolean)
     : [];
 }
 
@@ -68,7 +72,7 @@ function normalizePendingImageIndexes(snapshot: WardrobeSnapshot | undefined) {
 
 function normalizeWardrobeSnapshot(
   snapshot: WardrobeSnapshot | undefined,
-  capsuleId: string | undefined
+  capsuleId: string | undefined,
 ): NormalizedWardrobeSnapshot {
   const pendingImageSetIndexes = normalizePendingImageIndexes(snapshot);
   return {
@@ -79,7 +83,7 @@ function normalizeWardrobeSnapshot(
     outfitSets: normalizeOutfitSets(snapshot?.outfitSets),
     pendingImageSetIndexes,
     pendingRegenerationUrls: normalizePendingUrls(snapshot),
-    status: snapshot?.status
+    status: snapshot?.status,
   };
 }
 
@@ -94,7 +98,7 @@ function renderItems(items: WardrobeItem[]) {
 
 function applyFailedWardrobeSnapshot(
   context: WardrobeSnapshotContext,
-  snapshot: NormalizedWardrobeSnapshot
+  snapshot: NormalizedWardrobeSnapshot,
 ) {
   context.manualWardrobeRegenerationCapsuleIdRef.current = "";
   context.pendingNotificationKindRef.current = "";
@@ -112,51 +116,59 @@ function applyFailedWardrobeSnapshot(
   context.setPendingImageSetIndexes(snapshot.pendingImageSetIndexes);
   context.setStatus((current) => ({
     ...current,
-    error: context.t("errors.regenerateAllFailed")
+    error: context.t("errors.regenerateAllFailed"),
   }));
 }
 
 function applyPendingWardrobeSnapshot(
   context: WardrobeSnapshotContext,
-  snapshot: NormalizedWardrobeSnapshot
+  snapshot: NormalizedWardrobeSnapshot,
 ) {
-  context.setProfileItems((currentItems) => (
+  context.setProfileItems((currentItems) =>
     snapshot.pendingRegenerationUrls.length > 0
-      ? mergeWardrobeItemsIntoExistingOrder({
-        currentItems,
-        nextItems: snapshot.items,
-        pendingUrls: snapshot.pendingRegenerationUrls
-      }) as WardrobeItem[]
-      : renderItems(snapshot.items)
-  ));
+      ? (mergeWardrobeItemsIntoExistingOrder({
+          currentItems,
+          nextItems: snapshot.items,
+          pendingUrls: snapshot.pendingRegenerationUrls,
+        }) as WardrobeItem[])
+      : renderItems(snapshot.items),
+  );
   context.setSelectedRegenerationUrls([]);
   context.pendingRegenerationUrlsRef.current = snapshot.pendingRegenerationUrls;
   context.setPartialRegenerationPendingUrls(snapshot.pendingRegenerationUrls);
-  context.setIsPartialRegenerationLoading(snapshot.pendingRegenerationUrls.length > 0);
+  context.setIsPartialRegenerationLoading(
+    snapshot.pendingRegenerationUrls.length > 0,
+  );
   context.setProfileOutfitSets(snapshot.outfitSets);
   context.setPendingImageSetIndexes(snapshot.pendingImageSetIndexes);
   context.setIsWardrobePending(true);
   context.setHasPendingAdditionalItems(snapshot.hasPendingAdditionalItems);
-  context.setIsLoadingItems(snapshot.items.length === 0 && !snapshot.hasPendingAdditionalItems);
+  context.setIsLoadingItems(
+    snapshot.items.length === 0 && !snapshot.hasPendingAdditionalItems,
+  );
 }
 
-function mergeReadyItems(context: WardrobeSnapshotContext, items: WardrobeItem[]) {
+function mergeReadyItems(
+  context: WardrobeSnapshotContext,
+  items: WardrobeItem[],
+) {
   const pendingUrls = context.pendingRegenerationUrlsRef.current;
-  const baseItems = pendingUrls.length > 0 ? context.regenerationBaseItemsRef.current : [];
-  context.setProfileItems((currentItems) => (
+  const baseItems =
+    pendingUrls.length > 0 ? context.regenerationBaseItemsRef.current : [];
+  context.setProfileItems((currentItems) =>
     pendingUrls.length > 0
-      ? mergeWardrobeItemsIntoExistingOrder({
-        currentItems: baseItems.length > 0 ? baseItems : currentItems,
-        nextItems: items,
-        pendingUrls
-      }) as WardrobeItem[]
-      : renderItems(items)
-  ));
+      ? (mergeWardrobeItemsIntoExistingOrder({
+          currentItems: baseItems.length > 0 ? baseItems : currentItems,
+          nextItems: items,
+          pendingUrls,
+        }) as WardrobeItem[])
+      : renderItems(items),
+  );
 }
 
 async function refreshReadyCapsule(
   context: WardrobeSnapshotContext,
-  snapshot: NormalizedWardrobeSnapshot
+  snapshot: NormalizedWardrobeSnapshot,
 ) {
   const notificationKind = context.pendingNotificationKindRef.current;
   if (notificationKind) {
@@ -176,7 +188,7 @@ async function refreshReadyCapsule(
 
 async function applyReadyWardrobeSnapshot(
   context: WardrobeSnapshotContext,
-  snapshot: NormalizedWardrobeSnapshot
+  snapshot: NormalizedWardrobeSnapshot,
 ) {
   mergeReadyItems(context, snapshot.items);
   context.setSelectedRegenerationUrls([]);
@@ -194,7 +206,11 @@ async function applyReadyWardrobeSnapshot(
     context.stopCapsuleEventStream();
   }
 
-  if (snapshot.status === "ready" && !snapshot.hasPendingOutfitSetImages && snapshot.capsuleId) {
+  if (
+    snapshot.status === "ready" &&
+    !snapshot.hasPendingOutfitSetImages &&
+    snapshot.capsuleId
+  ) {
     await refreshReadyCapsule(context, snapshot);
   }
 }
@@ -202,7 +218,7 @@ async function applyReadyWardrobeSnapshot(
 export async function applyWardrobeSnapshotToApp(
   context: WardrobeSnapshotContext,
   snapshot: WardrobeSnapshot | undefined,
-  capsuleId: string | undefined = context.activeCapsuleId
+  capsuleId: string | undefined = context.activeCapsuleId,
 ) {
   const normalized = normalizeWardrobeSnapshot(snapshot, capsuleId);
 

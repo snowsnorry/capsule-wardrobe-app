@@ -1,9 +1,15 @@
 import { rgb } from "pdf-lib";
 import { getPdfColorSwatchFill } from "../../shared/colorSwatches.js";
-import { BOX_PADDING, BLOCK_RADIUS, SUBTLE_BLOCK_COLOR } from "./wardrobePdfCore.js";
+import {
+  BOX_PADDING,
+  BLOCK_RADIUS,
+  SUBTLE_BLOCK_COLOR,
+} from "./wardrobePdfCore.js";
 
 export function splitTextIntoLines(text, font, fontSize, maxWidth) {
-  const rawWords = String(text || "").split(/\s+/).filter(Boolean);
+  const rawWords = String(text || "")
+    .split(/\s+/)
+    .filter(Boolean);
   if (rawWords.length === 0) {
     return [];
   }
@@ -60,25 +66,28 @@ export function truncateLines(lines, maxLines) {
   return truncated;
 }
 
-export function drawRoundedRect(page, {
-  x,
-  y,
-  width,
-  height,
-  radius,
-  color,
-  borderColor,
-  borderWidth = 0
-}: {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  radius: number;
-  color: unknown;
-  borderColor?: unknown;
-  borderWidth?: number;
-}) {
+export function drawRoundedRect(
+  page,
+  {
+    x,
+    y,
+    width,
+    height,
+    radius,
+    color,
+    borderColor,
+    borderWidth = 0,
+  }: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    radius: number;
+    color: unknown;
+    borderColor?: unknown;
+    borderWidth?: number;
+  },
+) {
   const r = Math.max(0, Math.min(radius, width / 2, height / 2));
 
   if (borderColor && borderWidth > 0) {
@@ -88,7 +97,7 @@ export function drawRoundedRect(page, {
       width,
       height,
       radius: r,
-      color: borderColor
+      color: borderColor,
     });
     drawRoundedRect(page, {
       x: x + borderWidth,
@@ -96,7 +105,7 @@ export function drawRoundedRect(page, {
       width: Math.max(0, width - borderWidth * 2),
       height: Math.max(0, height - borderWidth * 2),
       radius: Math.max(0, r - borderWidth),
-      color
+      color,
     });
     return;
   }
@@ -106,38 +115,38 @@ export function drawRoundedRect(page, {
     y,
     width: Math.max(0, width - r * 2),
     height,
-    color
+    color,
   });
   page.drawRectangle({
     x,
     y: y + r,
     width,
     height: Math.max(0, height - r * 2),
-    color
+    color,
   });
   page.drawCircle({
     x: x + r,
     y: y + r,
     size: r,
-    color
+    color,
   });
   page.drawCircle({
     x: x + width - r,
     y: y + r,
     size: r,
-    color
+    color,
   });
   page.drawCircle({
     x: x + r,
     y: y + height - r,
     size: r,
-    color
+    color,
   });
   page.drawCircle({
     x: x + width - r,
     y: y + height - r,
     size: r,
-    color
+    color,
   });
 }
 
@@ -154,8 +163,8 @@ export function addLinkAnnotation(pdfDoc, page, url, rect) {
     A: {
       Type: "Action",
       S: "URI",
-      URI: url
-    }
+      URI: url,
+    },
   });
   const annotationRef = pdfDoc.context.register(annotation);
   const annots = page.node.Annots();
@@ -175,10 +184,13 @@ export function drawTextBlock(page, text, options) {
     size,
     lineHeight,
     color = rgb(0.12, 0.16, 0.2),
-    maxLines = Infinity
+    maxLines = Infinity,
   } = options;
 
-  const lines = truncateLines(splitTextIntoLines(text, font, size, width), maxLines);
+  const lines = truncateLines(
+    splitTextIntoLines(text, font, size, width),
+    maxLines,
+  );
   let cursorY = y;
 
   for (const line of lines) {
@@ -189,14 +201,14 @@ export function drawTextBlock(page, text, options) {
   return cursorY;
 }
 
-export function measureTextBlockHeight(text, {
-  font,
-  size,
-  lineHeight,
-  width,
-  maxLines = Infinity
-}) {
-  const lines = truncateLines(splitTextIntoLines(text, font, size, width), maxLines);
+export function measureTextBlockHeight(
+  text,
+  { font, size, lineHeight, width, maxLines = Infinity },
+) {
+  const lines = truncateLines(
+    splitTextIntoLines(text, font, size, width),
+    maxLines,
+  );
   return lines.length === 0 ? 0 : lines.length * lineHeight;
 }
 
@@ -226,7 +238,7 @@ export function drawColorValue(page, row, { x, y, maxWidth, fonts }) {
     }
 
     const labelWidth = regularFont.widthOfTextAtSize(label, fontSize);
-    const itemWidth = (swatchRadius * 2) + swatchGap + labelWidth;
+    const itemWidth = swatchRadius * 2 + swatchGap + labelWidth;
     if (cursorX > x && cursorX + itemWidth > x + maxWidth) {
       cursorX = x;
       cursorY -= lineHeight;
@@ -239,14 +251,14 @@ export function drawColorValue(page, row, { x, y, maxWidth, fonts }) {
       size: swatchRadius,
       color: rgb(fillR, fillG, fillB),
       borderColor: rgb(0.6, 0.6, 0.6),
-      borderWidth: 0.6
+      borderWidth: 0.6,
     });
     page.drawText(label, {
-      x: cursorX + (swatchRadius * 2) + swatchGap,
+      x: cursorX + swatchRadius * 2 + swatchGap,
       y: cursorY - 2,
       font: regularFont,
       size: fontSize,
-      color: rgb(0.12, 0.16, 0.2)
+      color: rgb(0.12, 0.16, 0.2),
     });
     cursorX += itemWidth + itemGap;
   }
@@ -268,18 +280,18 @@ export function drawDetailGroup(page, group, { startX, startY, width, fonts }) {
       size: rowLabelSize,
       lineHeight: rowLabelLineHeight,
       width: columnWidth,
-      maxLines: 2
+      maxLines: 2,
     });
     const valueHeight = measureTextBlockHeight(getRowText(row), {
       font: regularFont,
       size: rowValueSize,
       lineHeight: rowValueLineHeight,
       width: columnWidth,
-      maxLines: 4
+      maxLines: 4,
     });
     return {
       ...row,
-      height: labelHeight + valueHeight + 7
+      height: labelHeight + valueHeight + 7,
     };
   });
 
@@ -291,22 +303,23 @@ export function drawDetailGroup(page, group, { startX, startY, width, fonts }) {
     return {
       ...row,
       column: targetColumn,
-      offsetY
+      offsetY,
     };
   });
 
-  const boxHeight = Math.max(columnHeights[0], columnHeights[1]) + BOX_PADDING * 2 - 6;
+  const boxHeight =
+    Math.max(columnHeights[0], columnHeights[1]) + BOX_PADDING * 2 - 6;
   drawRoundedRect(page, {
     x: startX,
     y: startY - boxHeight,
     width,
     height: boxHeight,
     radius: BLOCK_RADIUS,
-    color: SUBTLE_BLOCK_COLOR
+    color: SUBTLE_BLOCK_COLOR,
   });
 
   for (const row of positionedRows) {
-    const rowX = startX + BOX_PADDING + (row.column * (columnWidth + columnGap));
+    const rowX = startX + BOX_PADDING + row.column * (columnWidth + columnGap);
     let rowY = startY - BOX_PADDING - row.offsetY - rowLabelLineHeight;
     rowY = drawTextBlock(page, row.label, {
       x: rowX,
@@ -316,10 +329,15 @@ export function drawDetailGroup(page, group, { startX, startY, width, fonts }) {
       size: rowLabelSize,
       lineHeight: rowLabelLineHeight,
       color: rgb(0.43, 0.48, 0.53),
-      maxLines: 2
+      maxLines: 2,
     });
     if (row?.value?.kind === "colors") {
-      drawColorValue(page, row, { x: rowX, y: rowY - 2, maxWidth: columnWidth, fonts });
+      drawColorValue(page, row, {
+        x: rowX,
+        y: rowY - 2,
+        maxWidth: columnWidth,
+        fonts,
+      });
     } else {
       drawTextBlock(page, getRowText(row), {
         x: rowX,
@@ -329,7 +347,7 @@ export function drawDetailGroup(page, group, { startX, startY, width, fonts }) {
         size: rowValueSize,
         lineHeight: rowValueLineHeight,
         color: rgb(0.12, 0.16, 0.2),
-        maxLines: 4
+        maxLines: 4,
       });
     }
   }

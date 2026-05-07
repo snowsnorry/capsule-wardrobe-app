@@ -83,7 +83,10 @@ export type CapsuleMeta = {
 
 export type CapsuleSidebarActions = {
   openSearchDialog: () => void;
-  openCapsuleActions: (event: MouseEvent<HTMLElement>, capsule: CapsuleMeta) => void;
+  openCapsuleActions: (
+    event: MouseEvent<HTMLElement>,
+    capsule: CapsuleMeta,
+  ) => void;
 };
 
 export type WardrobeSnapshot = {

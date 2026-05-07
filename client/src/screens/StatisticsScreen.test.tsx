@@ -1,24 +1,32 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import { LocaleProvider } from "../i18n/LocaleProvider";
 
 const searchApi = vi.hoisted(() => ({
   fetchSearchOptions: vi.fn(),
-  fetchSearchStats: vi.fn()
+  fetchSearchStats: vi.fn(),
 }));
 
 const mediaQueryMock = vi.hoisted(() => vi.fn());
 
 vi.mock("../api/search", () => searchApi);
 vi.mock("@mui/material/useMediaQuery", () => ({
-  default: mediaQueryMock
+  default: mediaQueryMock,
 }));
 vi.mock("../components/AppLauncher", () => ({
-  default: ({ currentApp }) => <div data-testid="app-launcher">{currentApp}</div>
+  default: ({ currentApp }) => (
+    <div data-testid="app-launcher">{currentApp}</div>
+  ),
 }));
 vi.mock("../components/LocaleSwitcher", () => ({
-  default: () => <div data-testid="locale-switcher">locale-switcher</div>
+  default: () => <div data-testid="locale-switcher">locale-switcher</div>,
 }));
 vi.mock("../components/AccentColorChips", () => ({
   default: ({ options = [], selectedValues = [], onToggle }) => (
@@ -34,7 +42,7 @@ vi.mock("../components/AccentColorChips", () => ({
         </button>
       ))}
     </div>
-  )
+  ),
 }));
 
 import StatisticsScreen from "./StatisticsScreen";
@@ -55,7 +63,7 @@ function makeOptions() {
     silhouettes: ["straight"],
     fits: ["regular"],
     closureTypes: ["button"],
-    priceRange: { min: 10, max: 150 }
+    priceRange: { min: 10, max: 150 },
   };
 }
 
@@ -65,27 +73,25 @@ function makeStats(overrides = {}) {
     stats: {
       category: [
         { value: "top", count: 70 },
-        { value: "bottom", count: 50 }
+        { value: "bottom", count: 50 },
       ],
       audience: [
         { value: "woman", count: 80 },
         { value: "all", count: 40 },
-        { value: "man", count: 20 }
+        { value: "man", count: 20 },
       ],
-      brand: [
-        { value: "uniqlo", count: 20 }
-      ],
+      brand: [{ value: "uniqlo", count: 20 }],
       color: [
         { value: "blue", count: 90 },
-        { value: "white", count: 30 }
-      ]
+        { value: "white", count: 30 },
+      ],
     },
     priceBuckets: [
       { key: "10:50", min: 10, max: 50, count: 30 },
       { key: "50:100", min: 50, max: 100, count: 45 },
-      { key: "100:150", min: 100, max: 150, count: 45 }
+      { key: "100:150", min: 100, max: 150, count: 45 },
     ],
-    ...overrides
+    ...overrides,
   };
 }
 
@@ -105,7 +111,7 @@ function renderScreen(props = {}, { layoutMode = "medium" } = {}) {
       <LocaleProvider>
         <StatisticsScreen onNavigateApp={vi.fn()} {...props} />
       </LocaleProvider>
-    </ThemeProvider>
+    </ThemeProvider>,
   );
 }
 
@@ -141,7 +147,7 @@ describe("StatisticsScreen", () => {
       pattern: [],
       silhouette: [],
       fit: [],
-      closureType: []
+      closureType: [],
     });
   });
 

@@ -34,7 +34,8 @@
     "coverage:client": "vitest run --coverage --project client",
     "coverage:server": "vitest run --coverage --project server",
     "coverage:shared": "vitest run --coverage --project shared",
-    "format:check": "prettier --check .",
+    "format": "prettier --write \"client/src/**/*.{ts,tsx,js,jsx,css,scss}\" \"server/src/**/*.{ts,tsx,js,jsx}\" \"shared/**/*.{ts,tsx,js,jsx}\"",
+    "format:check": "prettier --check \"client/src/**/*.{ts,tsx,js,jsx,css,scss}\" \"server/src/**/*.{ts,tsx,js,jsx}\" \"shared/**/*.{ts,tsx,js,jsx}\"",
     "security:audit": "npm audit --audit-level=high",
     "quality:unused": "knip",
     "quality:cycles": "madge client/src server/src shared --extensions ts,tsx --circular"

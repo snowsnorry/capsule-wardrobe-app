@@ -3,18 +3,22 @@ import { getProfileImageLlm, resolveImageLlmProvider } from "./imageLlm.js";
 
 test("image llm helpers resolve defaults and supported providers", () => {
   expect(getProfileImageLlm(null)).toBe("openai:gpt-image-2");
-  expect(getProfileImageLlm({ imageLlm: " gemini:gemini-3-pro-image-preview " })).toBe("gemini:gemini-3-pro-image-preview");
+  expect(
+    getProfileImageLlm({ imageLlm: " gemini:gemini-3-pro-image-preview " }),
+  ).toBe("gemini:gemini-3-pro-image-preview");
   expect(resolveImageLlmProvider({ imageLlm: "openai:gpt-image-2" })).toEqual({
     provider: "openai",
     model: "gpt-image-2",
     imageLlm: "openai:gpt-image-2",
-    requestedImageLlm: "openai:gpt-image-2"
+    requestedImageLlm: "openai:gpt-image-2",
   });
-  expect(resolveImageLlmProvider({ imageLlm: "gemini:gemini-3-pro-image-preview" })).toEqual({
+  expect(
+    resolveImageLlmProvider({ imageLlm: "gemini:gemini-3-pro-image-preview" }),
+  ).toEqual({
     provider: "gemini",
     model: "gemini-3-pro-image-preview",
     imageLlm: "gemini:gemini-3-pro-image-preview",
-    requestedImageLlm: "gemini:gemini-3-pro-image-preview"
+    requestedImageLlm: "gemini:gemini-3-pro-image-preview",
   });
 });
 

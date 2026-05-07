@@ -8,15 +8,21 @@ import {
   type PriceBucketRow,
   type SearchProductsInput,
   type SqlClientLike,
-  type SqlResultLike
+  type SqlResultLike,
 } from "./core.js";
 import { buildPriceBuckets, normalizeFacetRows } from "./searchPersistence.js";
 
 const PRICE_BUCKET_COUNT = 100;
 
-type SearchStatsInput = Omit<SearchProductsInput, "queryEmbedding" | "semanticDistanceThreshold" | "page">;
+type SearchStatsInput = Omit<
+  SearchProductsInput,
+  "queryEmbedding" | "semanticDistanceThreshold" | "page"
+>;
 type SearchStatsFilters = Required<Omit<SearchStatsInput, "urlPrefix">>;
-type SearchStatsFacetKey = Exclude<keyof SearchStatsFilters, "priceMin" | "priceMax">;
+type SearchStatsFacetKey = Exclude<
+  keyof SearchStatsFilters,
+  "priceMin" | "priceMax"
+>;
 
 type SearchStatsResult = {
   total: number;
@@ -47,7 +53,7 @@ const FACETS: SearchFacetConfig[] = [
   { key: "pattern", column: "pattern", mode: "scalar" },
   { key: "silhouette", column: "silhouette", mode: "scalar" },
   { key: "fit", column: "fit", mode: "scalar" },
-  { key: "closureType", column: "closure_type", mode: "array" }
+  { key: "closureType", column: "closure_type", mode: "array" },
 ];
 
 const DEFAULT_FILTERS: SearchStatsFilters = {
@@ -64,14 +70,16 @@ const DEFAULT_FILTERS: SearchStatsFilters = {
   pattern: [],
   silhouette: [],
   fit: [],
-  closureType: []
+  closureType: [],
 };
 
 function withDefault<T>(value: T | undefined, defaultValue: T) {
   return value === undefined ? defaultValue : value;
 }
 
-function normalizeSearchStatsInput(input: SearchStatsInput = {}): SearchStatsFilters {
+function normalizeSearchStatsInput(
+  input: SearchStatsInput = {},
+): SearchStatsFilters {
   return {
     brand: withDefault(input.brand, DEFAULT_FILTERS.brand),
     priceMin: withDefault(input.priceMin, DEFAULT_FILTERS.priceMin),
@@ -79,18 +87,26 @@ function normalizeSearchStatsInput(input: SearchStatsInput = {}): SearchStatsFil
     audience: withDefault(input.audience, DEFAULT_FILTERS.audience),
     category: withDefault(input.category, DEFAULT_FILTERS.category),
     season: withDefault(input.season, DEFAULT_FILTERS.season),
-    formalityLevel: withDefault(input.formalityLevel, DEFAULT_FILTERS.formalityLevel),
+    formalityLevel: withDefault(
+      input.formalityLevel,
+      DEFAULT_FILTERS.formalityLevel,
+    ),
     style: withDefault(input.style, DEFAULT_FILTERS.style),
     occasions: withDefault(input.occasions, DEFAULT_FILTERS.occasions),
     color: withDefault(input.color, DEFAULT_FILTERS.color),
     pattern: withDefault(input.pattern, DEFAULT_FILTERS.pattern),
     silhouette: withDefault(input.silhouette, DEFAULT_FILTERS.silhouette),
     fit: withDefault(input.fit, DEFAULT_FILTERS.fit),
-    closureType: withDefault(input.closureType, DEFAULT_FILTERS.closureType)
+    closureType: withDefault(input.closureType, DEFAULT_FILTERS.closureType),
   };
 }
 
-function addSqlValue(sql: BuiltSql, before: string, value: unknown, after = "") {
+function addSqlValue(
+  sql: BuiltSql,
+  before: string,
+  value: unknown,
+  after = "",
+) {
   sql.strings[sql.strings.length - 1] += before;
   sql.values.push(value);
   sql.strings.push(after);
@@ -102,33 +118,54 @@ function addCondition(sql: BuiltSql, conditionIndex: number) {
   }
 }
 
-function addScalarFilter(sql: BuiltSql, facet: SearchFacetConfig, value: string[]) {
+function addScalarFilter(
+  sql: BuiltSql,
+  facet: SearchFacetConfig,
+  value: string[],
+) {
   addSqlValue(
     sql,
     `(cardinality(`,
     value,
-    `::text[]) = 0 or lower(coalesce(${facet.column}, '')) = any(`
+    `::text[]) = 0 or lower(coalesce(${facet.column}, '')) = any(`,
   );
   addSqlValue(sql, "", value, "::text[]))");
 }
 
-function addArrayFilter(sql: BuiltSql, facet: SearchFacetConfig, value: string[]) {
+function addArrayFilter(
+  sql: BuiltSql,
+  facet: SearchFacetConfig,
+  value: string[],
+) {
   addSqlValue(
     sql,
     `(cardinality(`,
     value,
-    `::text[]) = 0 or coalesce(${facet.column}, array[]::text[]) && `
+    `::text[]) = 0 or coalesce(${facet.column}, array[]::text[]) && `,
   );
   addSqlValue(sql, "", value, "::text[])");
 }
 
-function addPriceFilter(sql: BuiltSql, column: "priceMin" | "priceMax", value: number | null) {
+function addPriceFilter(
+  sql: BuiltSql,
+  column: "priceMin" | "priceMax",
+  value: number | null,
+) {
   const operator = column === "priceMin" ? ">=" : "<=";
-  addSqlValue(sql, `(`, value, `::double precision is null or price ${operator} `);
+  addSqlValue(
+    sql,
+    `(`,
+    value,
+    `::double precision is null or price ${operator} `,
+  );
   addSqlValue(sql, "", value, ")");
 }
 
-function addFilterCondition(sql: BuiltSql, filters: SearchStatsFilters, facet: SearchFacetConfig) {
+function addFilterCondition(
+  sql: BuiltSql,
+  filters: SearchStatsFilters,
+  facet: SearchFacetConfig,
+) {
   const value = filters[facet.key] as string[];
   if (facet.mode === "array") {
     addArrayFilter(sql, facet, value);
@@ -137,7 +174,10 @@ function addFilterCondition(sql: BuiltSql, filters: SearchStatsFilters, facet: S
   addScalarFilter(sql, facet, value);
 }
 
-function buildWhereSql(filters: SearchStatsFilters, excludedFacetKey: SearchStatsFacetKey | null = null) {
+function buildWhereSql(
+  filters: SearchStatsFilters,
+  excludedFacetKey: SearchStatsFacetKey | null = null,
+) {
   const sql: BuiltSql = { strings: ["\n      where\n        "], values: [] };
   let conditionIndex = 0;
   for (const facet of FACETS) {
@@ -157,7 +197,9 @@ function buildWhereSql(filters: SearchStatsFilters, excludedFacetKey: SearchStat
 
 function toTemplateStringsArray(strings: string[]) {
   const raw = [...strings];
-  return Object.assign([...strings], { raw }) as unknown as TemplateStringsArray;
+  return Object.assign([...strings], {
+    raw,
+  }) as unknown as TemplateStringsArray;
 }
 
 function mergeSql(start: string, middle: BuiltSql, end = "") {
@@ -166,20 +208,28 @@ function mergeSql(start: string, middle: BuiltSql, end = "") {
   strings[strings.length - 1] += end;
   return {
     strings: toTemplateStringsArray(strings),
-    values: middle.values
+    values: middle.values,
   };
 }
 
-function queryBuiltSql<TRow>(sql: SqlClientLike, start: string, middle: BuiltSql, end = "") {
+function queryBuiltSql<TRow>(
+  sql: SqlClientLike,
+  start: string,
+  middle: BuiltSql,
+  end = "",
+) {
   const query = mergeSql(start, middle, end);
   return sql<TRow>(query.strings, ...query.values);
 }
 
 function queryCount(sql: SqlClientLike, filters: SearchStatsFilters) {
-  return queryBuiltSql<CountRow>(sql, `
+  return queryBuiltSql<CountRow>(
+    sql,
+    `
       select count(*)::integer as total
       from products`,
-  buildWhereSql(filters));
+    buildWhereSql(filters),
+  );
 }
 
 function getFacetSelect(facet: SearchFacetConfig) {
@@ -197,31 +247,38 @@ function getFacetSelect(facet: SearchFacetConfig) {
 }
 
 function getFacetEnd(facet: SearchFacetConfig) {
-  const emptyFilter = facet.mode === "array"
-    ? "\n      ) values_table\n      where value <> ''"
-    : `\n        and coalesce(${facet.column}, '') <> ''`;
+  const emptyFilter =
+    facet.mode === "array"
+      ? "\n      ) values_table\n      where value <> ''"
+      : `\n        and coalesce(${facet.column}, '') <> ''`;
   return `${emptyFilter}
       group by 1
       order by count desc, value asc
     `;
 }
 
-function queryFacet(sql: SqlClientLike, filters: SearchStatsFilters, facet: SearchFacetConfig) {
+function queryFacet(
+  sql: SqlClientLike,
+  filters: SearchStatsFilters,
+  facet: SearchFacetConfig,
+) {
   return queryBuiltSql<FacetRow>(
     sql,
     getFacetSelect(facet),
     buildWhereSql(filters, facet.key),
-    getFacetEnd(facet)
+    getFacetEnd(facet),
   );
 }
 
 function queryPriceBuckets(sql: SqlClientLike, filters: SearchStatsFilters) {
-  return queryBuiltSql<PriceBucketRow>(sql, `
+  return queryBuiltSql<PriceBucketRow>(
+    sql,
+    `
       with filtered as (
         select price
         from products`,
-  buildWhereSql(filters),
-  `
+    buildWhereSql(filters),
+    `
           and price is not null
       ),
       bounds as (
@@ -249,7 +306,8 @@ function queryPriceBuckets(sql: SqlClientLike, filters: SearchStatsFilters) {
       where bucket is not null
       group by bucket
       order by bucket asc
-    `);
+    `,
+  );
 }
 
 function buildStatsResult(rows: SqlResultLike[]): SearchStatsResult {
@@ -258,24 +316,31 @@ function buildStatsResult(rows: SqlResultLike[]): SearchStatsResult {
   const stats = Object.fromEntries(
     FACETS.map((facet, index) => [
       facet.key,
-      normalizeFacetRows(getResultRows(facetRows[index] as SqlResultLike<FacetRow>))
-    ])
+      normalizeFacetRows(
+        getResultRows(facetRows[index] as SqlResultLike<FacetRow>),
+      ),
+    ]),
   ) as SearchStatsResult["stats"];
 
   return {
     total: Number(getFirstRow(countRow as SqlResultLike<CountRow>)?.total || 0),
     stats,
-    priceBuckets: buildPriceBuckets(getResultRows(priceRows as SqlResultLike<PriceBucketRow>), PRICE_BUCKET_COUNT)
+    priceBuckets: buildPriceBuckets(
+      getResultRows(priceRows as SqlResultLike<PriceBucketRow>),
+      PRICE_BUCKET_COUNT,
+    ),
   };
 }
 
-export async function searchProductStats(input: SearchStatsInput = {}): Promise<SearchStatsResult> {
+export async function searchProductStats(
+  input: SearchStatsInput = {},
+): Promise<SearchStatsResult> {
   const sql = getSqlClient();
   const filters = normalizeSearchStatsInput(input);
   const rows = await Promise.all([
     queryCount(sql, filters),
     ...FACETS.map((facet) => queryFacet(sql, filters, facet)),
-    queryPriceBuckets(sql, filters)
+    queryPriceBuckets(sql, filters),
   ]);
 
   return buildStatsResult(rows);

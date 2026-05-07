@@ -5,12 +5,15 @@ import {
   type CreateProfileInput,
   type ProfileRow,
   type UpdateProfileActiveCapsuleInput,
-  type UpdateProfileInput
+  type UpdateProfileInput,
 } from "./core.js";
 
-export async function getProfileByEmail(email: string): Promise<ProfileRow | null> {
+export async function getProfileByEmail(
+  email: string,
+): Promise<ProfileRow | null> {
   const sql = getSqlClient();
-  const row = getFirstRow(await sql<ProfileRow>`
+  const row = getFirstRow(
+    await sql<ProfileRow>`
     select
       email,
       active_capsule_id as "activeCapsuleId",
@@ -24,16 +27,18 @@ export async function getProfileByEmail(email: string): Promise<ProfileRow | nul
     from profiles
     where email = ${email}
     limit 1
-  `);
+  `,
+  );
   return row || null;
 }
 
 export async function createProfileRecord({
   email,
-  locale
+  locale,
 }: CreateProfileInput): Promise<ProfileRow | null> {
   const sql = getSqlClient();
-  const row = getFirstRow(await sql<ProfileRow>`
+  const row = getFirstRow(
+    await sql<ProfileRow>`
     insert into profiles (
       email,
       active_capsule_id,
@@ -55,13 +60,18 @@ export async function createProfileRecord({
       image_llm as "imageLlm",
       created_at as "createdAt",
       updated_at as "updatedAt"
-  `);
+  `,
+  );
   return row || null;
 }
 
-export async function updateProfileLocaleByEmail({ email, locale }: CreateProfileInput): Promise<ProfileRow | null> {
+export async function updateProfileLocaleByEmail({
+  email,
+  locale,
+}: CreateProfileInput): Promise<ProfileRow | null> {
   const sql = getSqlClient();
-  const row = getFirstRow(await sql<ProfileRow>`
+  const row = getFirstRow(
+    await sql<ProfileRow>`
     update profiles
     set
       locale = ${locale},
@@ -77,7 +87,8 @@ export async function updateProfileLocaleByEmail({ email, locale }: CreateProfil
       image_llm as "imageLlm",
       created_at as "createdAt",
       updated_at as "updatedAt"
-  `);
+  `,
+  );
   return row || null;
 }
 
@@ -87,10 +98,11 @@ export async function updateProfileByEmail({
   fullname,
   theme,
   llm,
-  imageLlm
+  imageLlm,
 }: UpdateProfileInput): Promise<ProfileRow | null> {
   const sql = getSqlClient();
-  const row = getFirstRow(await sql<ProfileRow>`
+  const row = getFirstRow(
+    await sql<ProfileRow>`
     update profiles
     set
       locale = ${locale},
@@ -110,16 +122,18 @@ export async function updateProfileByEmail({
       image_llm as "imageLlm",
       created_at as "createdAt",
       updated_at as "updatedAt"
-  `);
+  `,
+  );
   return row || null;
 }
 
 export async function updateProfileActiveCapsuleIdByEmail({
   email,
-  activeCapsuleId
+  activeCapsuleId,
 }: UpdateProfileActiveCapsuleInput): Promise<ProfileRow | null> {
   const sql = getSqlClient();
-  const row = getFirstRow(await sql<ProfileRow>`
+  const row = getFirstRow(
+    await sql<ProfileRow>`
     update profiles
     set
       active_capsule_id = ${activeCapsuleId},
@@ -135,7 +149,8 @@ export async function updateProfileActiveCapsuleIdByEmail({
       image_llm as "imageLlm",
       created_at as "createdAt",
       updated_at as "updatedAt"
-  `);
+  `,
+  );
   return row || null;
 }
 

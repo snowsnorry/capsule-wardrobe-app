@@ -17,14 +17,12 @@ export default function AppRootView({
   routeContent,
   shell,
   snackbars,
-  theme
+  theme,
 }: AppRootViewProps) {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <AppShellContent {...shell}>
-        {routeContent}
-      </AppShellContent>
+      <AppShellContent {...shell}>{routeContent}</AppShellContent>
       <AppSnackbars {...snackbars} />
       <AppDialogs {...dialogs} />
     </ThemeProvider>

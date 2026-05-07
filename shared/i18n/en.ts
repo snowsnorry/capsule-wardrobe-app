@@ -2,17 +2,18 @@ import options from "./enOptions.js";
 
 const en = {
   appName: "Capsule Wardrobe",
-  marketingHeadline: "Build your personal capsule wardrobe and manage outfits in one place.",
+  marketingHeadline:
+    "Build your personal capsule wardrobe and manage outfits in one place.",
   locale: {
     label: "Language",
     options: {
       en: "English",
-      ru: "Russian"
+      ru: "Russian",
     },
     flags: {
       en: "🇺🇸",
-      ru: "🇷🇺"
-    }
+      ru: "🇷🇺",
+    },
   },
   launcher: {
     open: "Choose app",
@@ -21,7 +22,7 @@ const en = {
     explore: "Explore",
     exploreHint: "Explore product search",
     statistics: "Statistics",
-    statisticsHint: "Search analytics"
+    statisticsHint: "Search analytics",
   },
   options,
   auth: {
@@ -36,7 +37,8 @@ const en = {
     verify: "Verify",
     resendCode: "Resend code",
     changeEmail: "Change email",
-    tosNotice: "By clicking “Send code”, you agree to the Terms of Service and Privacy Policy.",
+    tosNotice:
+      "By clicking “Send code”, you agree to the Terms of Service and Privacy Policy.",
     learnMore: "Learn more",
     checkingSession: "Checking session",
     signedIn: "You are signed in.",
@@ -44,7 +46,7 @@ const en = {
     codeSent: "Code sent. It will be valid for {minutes} minutes.",
     orEmailCode: "Or enter your email to receive a sign-in code",
     signInWithPasskey: "Sign in with passkey",
-    signInProgress: "Signing in"
+    signInProgress: "Signing in",
   },
   main: {
     title: "Main",
@@ -54,10 +56,11 @@ const en = {
     partialRegenerateToggle: "Mark item for partial regeneration",
     cancelSelection: "Cancel",
     regenerateSelected: "Regenerate Selected ({count})",
-    placeholder: "Your profile is ready. The main screen will appear here next.",
+    placeholder:
+      "Your profile is ready. The main screen will appear here next.",
     menuOpen: "Open menu",
     menuProfile: "Profile",
-    menuSignOut: "Sign out"
+    menuSignOut: "Sign out",
   },
   profile: {
     title: "Profile",
@@ -82,16 +85,18 @@ const en = {
     patternHint: "Select one pattern.",
     patternNotImportant: "Not important",
     additionalInfoTitle: "Additional information",
-    additionalInfoHint: "Add any extra preferences or constraints for this capsule.",
+    additionalInfoHint:
+      "Add any extra preferences or constraints for this capsule.",
     additionalInfoPlaceholder: "Anything the stylist should keep in mind",
     back: "Back",
     save: "Save changes",
     delete: "Delete profile",
     updated: "Profile updated.",
     deleteConfirmTitle: "Delete profile",
-    deleteConfirmBody: "Are you sure you want to delete your profile? This action cannot be undone.",
+    deleteConfirmBody:
+      "Are you sure you want to delete your profile? This action cannot be undone.",
     deleteConfirmCancel: "Cancel",
-    deleteConfirmConfirm: "Delete"
+    deleteConfirmConfirm: "Delete",
   },
   settings: {
     title: "Settings",
@@ -99,12 +104,12 @@ const en = {
     sections: {
       general: "General",
       ai: "AI",
-      account: "Account"
+      account: "Account",
     },
     sectionHints: {
       general: "Choose your visual and language preferences.",
       ai: "Pick which stylist model to save on your profile.",
-      account: "Review your account details."
+      account: "Review your account details.",
     },
     fields: {
       theme: "Theme",
@@ -112,12 +117,12 @@ const en = {
       stylistModel: "Stylist Model",
       imageGenerationModel: "Image Generation Model",
       name: "Name",
-      email: "Email"
+      email: "Email",
     },
     themeOptions: {
       system: "System",
       light: "Light",
-      dark: "Dark"
+      dark: "Dark",
     },
     llmOptions: {
       "openai:gpt-5.5": "OpenAI GPT-5.5",
@@ -125,12 +130,12 @@ const en = {
       "gemini:gemini-2.5-pro": "Gemini 2.5 Pro",
       "deepinfra:Qwen/Qwen3-VL-235B-A22B-Instruct": "Qwen 3",
       "deepinfra:google/gemma-4-31B-it": "Google Gemma 4",
-      none: "None"
+      none: "None",
     },
     imageLlmOptions: {
       "openai:gpt-image-2": "OpenAI GPT Image 2",
-      "gemini:gemini-3-pro-image-preview": "Gemini 3 Pro Image Preview"
-    }
+      "gemini:gemini-3-pro-image-preview": "Gemini 3 Pro Image Preview",
+    },
   },
   onboarding: {
     title: "Welcome",
@@ -143,9 +148,10 @@ const en = {
     step3Hint: "Choose the season or seasons this wardrobe is for.",
     step4Title: "Step 4 · Audience",
     step4Hint: "Choose who this wardrobe is for.",
-    completedHint: "Your profile is ready. You can change these choices anytime in profile settings.",
+    completedHint:
+      "Your profile is ready. You can change these choices anytime in profile settings.",
     next: "Next",
-    start: "Start"
+    start: "Start",
   },
   actions: {
     signOut: "Sign out",
@@ -153,7 +159,7 @@ const en = {
     ok: "OK",
     delete: "Delete",
     save: "Save",
-    close: "Close"
+    close: "Close",
   },
   passkeys: {
     title: "Passkeys",
@@ -169,19 +175,22 @@ const en = {
     createdOn: "Created on {date} at {time}",
     backedUp: "Backed up",
     used: "Used before",
-    loading: "Loading passkeys"
+    loading: "Loading passkeys",
   },
   notifications: {
     prompt: {
-      message: "Capsule generation usually takes about a minute. Enable notifications and we will let you know when your result is ready.",
-      action: "Enable notifications"
+      message:
+        "Capsule generation usually takes about a minute. Enable notifications and we will let you know when your result is ready.",
+      action: "Enable notifications",
     },
     ready: {
       title: "Your capsule is ready",
-      fullBody: "Your new capsule is ready to review. Open the app to see the result.",
-      partialBody: "Your updated selection is ready. Open the app to see the result.",
-      imageBody: "Your outfit image is ready. Open the app to see the result."
-    }
+      fullBody:
+        "Your new capsule is ready to review. Open the app to see the result.",
+      partialBody:
+        "Your updated selection is ready. Open the app to see the result.",
+      imageBody: "Your outfit image is ready. Open the app to see the result.",
+    },
   },
   filters: {
     title: "Filters",
@@ -195,8 +204,8 @@ const en = {
       styleCore: "a core style",
       occasions: "at least one occasion",
       seasons: "at least one season",
-      audience: "an audience"
-    }
+      audience: "an audience",
+    },
   },
   capsule: {
     new: "New capsule",
@@ -218,23 +227,29 @@ const en = {
     shareCopied: "Copied",
     shareExpires: "Expires {date}",
     shareImportTitle: "Save shared capsule?",
-    shareImportBody: "Save capsule \"{name}\" to your capsules?",
+    shareImportBody: 'Save capsule "{name}" to your capsules?',
     shareImportConfirm: "Save capsule",
     shareImported: "Shared capsule saved.",
     renameTitle: "Rename capsule",
     deleteTitle: "Delete capsule",
     revertTitle: "Revert changes",
-    deleteConfirmBody: "Are you sure you want to delete this capsule? This action cannot be undone.",
+    deleteConfirmBody:
+      "Are you sure you want to delete this capsule? This action cannot be undone.",
     deleteOutfitSetImageTitle: "Delete image",
     deleteOutfitSetImage: "Delete image",
-    deleteOutfitSetImageConfirmBody: "Are you sure you want to delete this image? This action cannot be undone.",
-    outfitSetImageObsolete: "This image may no longer match the current outfit. Remove it and generate a new one if needed.",
-    revertConfirmBody: "Discard the current unsaved changes and restore the last saved version of this capsule?",
+    deleteOutfitSetImageConfirmBody:
+      "Are you sure you want to delete this image? This action cannot be undone.",
+    outfitSetImageObsolete:
+      "This image may no longer match the current outfit. Remove it and generate a new one if needed.",
+    revertConfirmBody:
+      "Discard the current unsaved changes and restore the last saved version of this capsule?",
     regenerateAllTitle: "Regenerate capsule?",
-    regenerateAllConfirmBody: "This will replace the current items in this capsule. Continue?",
+    regenerateAllConfirmBody:
+      "This will replace the current items in this capsule. Continue?",
     regenerateAllConfirm: "Regenerate",
     regenerateWithFilterChangesTitle: "Apply updated filters?",
-    regenerateWithFilterChangesBody: "Your filter changes have not been applied yet. Apply them and generate a new capsule with the updated settings?",
+    regenerateWithFilterChangesBody:
+      "Your filter changes have not been applied yet. Apply them and generate a new capsule with the updated settings?",
     regenerateWithFilterChangesConfirm: "Apply and regenerate",
     deleteConfirm: "Delete",
     revertConfirm: "Revert",
@@ -254,11 +269,12 @@ const en = {
     cardColumnsTwo: "2 columns",
     cardColumnsThree: "3 columns",
     copyProductLinkAddress: "Copy Link Address",
-    showProductInfo: "Show Product Info"
+    showProductInfo: "Show Product Info",
   },
   search: {
     title: "Search",
-    placeholder: "Search in natural language, for example: relaxed blue linen shirt for summer office days",
+    placeholder:
+      "Search in natural language, for example: relaxed blue linen shirt for summer office days",
     cta: "Search",
     clear: "Clear search",
     productCard: "Product card",
@@ -282,7 +298,7 @@ const en = {
       category: "Category",
       silhouette: "Silhouette",
       fit: "Fit",
-      closureType: "Closure type"
+      closureType: "Closure type",
     },
     fields: {
       price: "Price",
@@ -299,13 +315,14 @@ const en = {
       composition: "Composition",
       silhouette: "Silhouette",
       fit: "Fit",
-      closureType: "Closure type"
-    }
+      closureType: "Closure type",
+    },
   },
   statistics: {
     title: "Statistics",
     total: "Total",
-    totalHint: "Charts are calculated for the full result set after all current filters are applied.",
+    totalHint:
+      "Charts are calculated for the full result set after all current filters are applied.",
     activeFilters: "Active filters",
     empty: "No data available for the current filters.",
     noActiveFilters: "No active filters.",
@@ -314,8 +331,8 @@ const en = {
     priceHint: "Click a bar to narrow the search to that price bucket.",
     charts: {
       formalityLevel: "Formality",
-      style: "Style"
-    }
+      style: "Style",
+    },
   },
   errors: {
     generic: "Something went wrong. Please try again.",
@@ -334,17 +351,19 @@ const en = {
     passkeySetupFailed: "Passkey setup failed.",
     passkeyLoginFailed: "Passkey login failed.",
     downloadFailed: "Failed to generate the capsule PDF. Please try again.",
-    regenerateAllFailed: "Failed to regenerate the capsule. Your previous capsule was restored.",
-    regenerateSelectedFailed: "Failed to regenerate the selected items. Please try again.",
+    regenerateAllFailed:
+      "Failed to regenerate the capsule. Your previous capsule was restored.",
+    regenerateSelectedFailed:
+      "Failed to regenerate the selected items. Please try again.",
     capsuleNotShareable: "Capsule has no shareable content.",
-    sharedCapsuleUnavailable: "This shared capsule is unavailable or expired."
+    sharedCapsuleUnavailable: "This shared capsule is unavailable or expired.",
   },
   dialogs: {
     signOutTitle: "Sign out",
     signOutBody: "Are you sure you want to sign out?",
     signOutCancel: "Cancel",
-    signOutConfirm: "Sign out"
-  }
+    signOutConfirm: "Sign out",
+  },
 };
 
 export default en;

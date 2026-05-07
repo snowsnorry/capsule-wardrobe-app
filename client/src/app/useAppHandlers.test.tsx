@@ -16,14 +16,14 @@ const capsuleActions = vi.hoisted(() => ({
   revertCurrentCapsule: vi.fn(),
   saveCurrentCapsule: vi.fn(),
   searchUserCapsules: vi.fn(),
-  shareCurrentCapsule: vi.fn()
+  shareCurrentCapsule: vi.fn(),
 }));
 const profileActions = vi.hoisted(() => ({
   backOnboarding: vi.fn(),
   deleteUserProfile: vi.fn(),
   finishOnboarding: vi.fn(),
   nextOnboarding: vi.fn(),
-  saveSettings: vi.fn()
+  saveSettings: vi.fn(),
 }));
 const wardrobeActions = vi.hoisted(() => ({
   deleteGeneratedOutfitSetImage: vi.fn(),
@@ -31,7 +31,7 @@ const wardrobeActions = vi.hoisted(() => ({
   generateOutfitSetImage: vi.fn(),
   refreshWardrobe: vi.fn(),
   regenerateSelectedItems: vi.fn(),
-  toggleRegenerationSelection: vi.fn()
+  toggleRegenerationSelection: vi.fn(),
 }));
 const sessionActions = vi.hoisted(() => ({
   googleCredential: vi.fn(),
@@ -39,7 +39,7 @@ const sessionActions = vi.hoisted(() => ({
   requestCode: vi.fn(),
   resetToEmail: vi.fn(),
   signOut: vi.fn(),
-  verifyCode: vi.fn()
+  verifyCode: vi.fn(),
 }));
 
 vi.mock("./capsuleActions", () => capsuleActions);
@@ -72,7 +72,7 @@ function createSessionContext(): SessionActionContext {
     setSettingsProfile: vi.fn(),
     setStatus: vi.fn(),
     setStep: vi.fn(),
-    setUser: vi.fn()
+    setUser: vi.fn(),
   };
 }
 
@@ -86,20 +86,24 @@ describe("useAppHandlers", () => {
     const setSelectedRegenerationUrls = vi.fn();
     const capsuleSidebarActionsRef = { current: null };
     capsuleActions.searchUserCapsules.mockResolvedValue([{ id: "capsule-2" }]);
-    capsuleActions.shareCurrentCapsule.mockResolvedValue({ url: "https://share.example.test" });
+    capsuleActions.shareCurrentCapsule.mockResolvedValue({
+      url: "https://share.example.test",
+    });
 
-    const { result } = renderHook(() => useAppHandlers({
-      activeCapsuleId: "capsule-1",
-      capsuleSidebarActionsRef,
-      getAppActionContext: () => actionContext,
-      navigateApp,
-      pendingShareId: "share-pending",
-      setCurrentView,
-      setIsSignOutConfirmOpen,
-      setSelectedRegenerationUrls,
-      shareMetadata: { id: "share-meta" },
-      sessionActionContext
-    }));
+    const { result } = renderHook(() =>
+      useAppHandlers({
+        activeCapsuleId: "capsule-1",
+        capsuleSidebarActionsRef,
+        getAppActionContext: () => actionContext,
+        navigateApp,
+        pendingShareId: "share-pending",
+        setCurrentView,
+        setIsSignOutConfirmOpen,
+        setSelectedRegenerationUrls,
+        shareMetadata: { id: "share-meta" },
+        sessionActionContext,
+      }),
+    );
 
     result.current.handleNavigateApp("explore", { query: "linen" });
     result.current.handleBackToMain();
@@ -124,7 +128,9 @@ describe("useAppHandlers", () => {
     await result.current.handlePasskeySignIn();
     await result.current.handleRefreshWardrobe();
     await result.current.handleRegenerateSelectedItems();
-    await result.current.handleRequestCode({ preventDefault: vi.fn() } as never);
+    await result.current.handleRequestCode({
+      preventDefault: vi.fn(),
+    } as never);
     result.current.handleRequestSignOut();
     await result.current.handleResetProfileFilters();
     await result.current.handleSaveProfile();
@@ -133,33 +139,52 @@ describe("useAppHandlers", () => {
       locale: "en",
       theme: "system",
       llm: "none",
-      image_llm: "openai:gpt-image-2"
+      image_llm: "openai:gpt-image-2",
     });
     await result.current.handleSearchCapsules("spring");
     await result.current.handleShareCapsule();
-    result.current.handleToggleRegenerationSelection({ url: "https://example.com/top" });
+    result.current.handleToggleRegenerationSelection({
+      url: "https://example.com/top",
+    });
     await result.current.handleVerifyCode({ preventDefault: vi.fn() } as never);
-    result.current.registerCapsuleSidebarActions({ openSearchDialog: vi.fn(), openCapsuleActions: vi.fn() });
+    result.current.registerCapsuleSidebarActions({
+      openSearchDialog: vi.fn(),
+      openCapsuleActions: vi.fn(),
+    });
     result.current.resetToEmail();
     await result.current.signOut();
 
     expect(navigateApp).toHaveBeenCalledWith("explore", { query: "linen" });
     expect(setCurrentView).toHaveBeenCalledWith("main");
     expect(setSelectedRegenerationUrls).toHaveBeenCalledWith([]);
-    expect(capsuleActions.openCapsule).toHaveBeenCalledWith(actionContext, "capsule-2");
-    expect(capsuleActions.importSharedCapsuleToApp).toHaveBeenCalledWith(actionContext, "share-meta");
-    expect(wardrobeActions.downloadWardrobePdf).toHaveBeenCalledWith(actionContext, "capsule-1");
+    expect(capsuleActions.openCapsule).toHaveBeenCalledWith(
+      actionContext,
+      "capsule-2",
+    );
+    expect(capsuleActions.importSharedCapsuleToApp).toHaveBeenCalledWith(
+      actionContext,
+      "share-meta",
+    );
+    expect(wardrobeActions.downloadWardrobePdf).toHaveBeenCalledWith(
+      actionContext,
+      "capsule-1",
+    );
     expect(profileActions.saveSettings).toHaveBeenCalledWith(actionContext, {
       fullname: "Ada",
       locale: "en",
       theme: "system",
       llm: "none",
-      image_llm: "openai:gpt-image-2"
+      image_llm: "openai:gpt-image-2",
     });
-    expect(sessionActions.googleCredential).toHaveBeenCalledWith(sessionActionContext, "token");
+    expect(sessionActions.googleCredential).toHaveBeenCalledWith(
+      sessionActionContext,
+      "token",
+    );
     expect(setIsSignOutConfirmOpen).toHaveBeenCalledWith(true);
-    expect(capsuleSidebarActionsRef.current).toEqual(expect.objectContaining({
-      openSearchDialog: expect.any(Function)
-    }));
+    expect(capsuleSidebarActionsRef.current).toEqual(
+      expect.objectContaining({
+        openSearchDialog: expect.any(Function),
+      }),
+    );
   });
 });

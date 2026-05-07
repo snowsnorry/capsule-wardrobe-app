@@ -90,19 +90,18 @@ export function createDependencies(overrides: DependencyOverrides = {}) {
         email,
         csrfToken: CSRF_TOKEN,
         createdAt: new Date(0).toISOString(),
-        expiresAt: new Date(60_000).toISOString()
-      }
+        expiresAt: new Date(60_000).toISOString(),
+      },
     }),
-    getSessionImpl: async (sessionId) => (
+    getSessionImpl: async (sessionId) =>
       sessionId === SESSION_ID
         ? {
-          email: "person@example.com",
-          csrfToken: CSRF_TOKEN,
-          createdAt: new Date(0).toISOString(),
-          expiresAt: new Date(60_000).toISOString()
-        }
-        : null
-    ),
+            email: "person@example.com",
+            csrfToken: CSRF_TOKEN,
+            createdAt: new Date(0).toISOString(),
+            expiresAt: new Date(60_000).toISOString(),
+          }
+        : null,
     revokeSessionImpl: async () => {},
     listPasskeysImpl: async () => [],
     insertPasskeyImpl: async (_payload) => ({
@@ -118,27 +117,27 @@ export function createDependencies(overrides: DependencyOverrides = {}) {
       aaguid: null,
       lastUsedAt: null,
       createdAt: new Date(0).toISOString(),
-      updatedAt: new Date(0).toISOString()
+      updatedAt: new Date(0).toISOString(),
     }),
-    getPasskeyByCredentialIdImpl: async (credentialId) => (
+    getPasskeyByCredentialIdImpl: async (credentialId) =>
       credentialId === "credential-1"
         ? {
-          id: "passkey-1",
-          profileEmail: "person@example.com",
-          credentialId: "credential-1",
-          credentialPublicKey: Buffer.from("public-key").toString("base64url"),
-          counter: 0,
-          deviceType: "multiDevice",
-          backedUp: true,
-          transports: ["internal"],
-          name: "Passkey",
-          aaguid: null,
-          lastUsedAt: null,
-          createdAt: new Date(0).toISOString(),
-          updatedAt: new Date(0).toISOString()
-        }
-        : null
-    ),
+            id: "passkey-1",
+            profileEmail: "person@example.com",
+            credentialId: "credential-1",
+            credentialPublicKey:
+              Buffer.from("public-key").toString("base64url"),
+            counter: 0,
+            deviceType: "multiDevice",
+            backedUp: true,
+            transports: ["internal"],
+            name: "Passkey",
+            aaguid: null,
+            lastUsedAt: null,
+            createdAt: new Date(0).toISOString(),
+            updatedAt: new Date(0).toISOString(),
+          }
+        : null,
     updatePasskeyAuthenticationImpl: async () => null,
     deletePasskeyByIdForEmailImpl: async () => true,
     insertPasskeyChallengeImpl: async () => {},
@@ -146,10 +145,17 @@ export function createDependencies(overrides: DependencyOverrides = {}) {
     pruneExpiredPasskeyChallengesImpl: async () => {},
     generateRegistrationOptionsImpl: async () => ({
       rp: { name: "Capsule Wardrobe", id: "localhost" },
-      user: { id: "person@example.com", name: "person@example.com", displayName: "person@example.com" },
+      user: {
+        id: "person@example.com",
+        name: "person@example.com",
+        displayName: "person@example.com",
+      },
       challenge: "registration-challenge",
       pubKeyCredParams: [],
-      authenticatorSelection: { residentKey: "preferred", userVerification: "required" }
+      authenticatorSelection: {
+        residentKey: "preferred",
+        userVerification: "required",
+      },
     }),
     verifyRegistrationResponseImpl: async () => ({
       verified: true,
@@ -158,16 +164,16 @@ export function createDependencies(overrides: DependencyOverrides = {}) {
           id: "credential-1",
           publicKey: new Uint8Array([1, 2, 3]),
           counter: 1,
-          transports: ["internal"]
+          transports: ["internal"],
         },
         credentialDeviceType: "multiDevice",
-        credentialBackedUp: true
-      }
+        credentialBackedUp: true,
+      },
     }),
     generateAuthenticationOptionsImpl: async () => ({
       challenge: "authentication-challenge",
       rpId: "localhost",
-      userVerification: "required"
+      userVerification: "required",
     }),
     verifyAuthenticationResponseImpl: async () => ({
       verified: true,
@@ -178,11 +184,16 @@ export function createDependencies(overrides: DependencyOverrides = {}) {
         credentialDeviceType: "multiDevice",
         credentialBackedUp: true,
         origin: "https://client.example",
-        rpID: "localhost"
-      }
+        rpID: "localhost",
+      },
     }),
     sendLoginCodeEmailImpl: async () => {},
-    createProfileImpl: async (email, payload) => ({ id: "profile-1", email, activeCapsuleId: null, ...payload }),
+    createProfileImpl: async (email, payload) => ({
+      id: "profile-1",
+      email,
+      activeCapsuleId: null,
+      ...payload,
+    }),
     deleteProfileImpl: async () => true,
     getFormalityLevelsImpl: async () => ["casual", "formal"],
     getStylesImpl: async () => ["minimalistic", "sporty"],
@@ -197,10 +208,15 @@ export function createDependencies(overrides: DependencyOverrides = {}) {
       fullname: null,
       theme: "system",
       llm: "openai:gpt-5.5",
-      imageLlm: "openai:gpt-image-2"
+      imageLlm: "openai:gpt-image-2",
     }),
     hasProfileImpl: async () => true,
-    updateProfileImpl: async (email, payload) => ({ id: "profile-1", email, activeCapsuleId: "capsule-1", ...payload }),
+    updateProfileImpl: async (email, payload) => ({
+      id: "profile-1",
+      email,
+      activeCapsuleId: "capsule-1",
+      ...payload,
+    }),
     updateProfileLocaleImpl: async (email, locale) => ({
       id: "profile-1",
       email,
@@ -209,9 +225,11 @@ export function createDependencies(overrides: DependencyOverrides = {}) {
       fullname: null,
       theme: "system",
       llm: "openai:gpt-5.5",
-      imageLlm: "openai:gpt-image-2"
+      imageLlm: "openai:gpt-image-2",
     }),
-    updateProfileActiveCapsuleIdImpl: async (_email, activeCapsuleId) => ({ activeCapsuleId }),
+    updateProfileActiveCapsuleIdImpl: async (_email, activeCapsuleId) => ({
+      activeCapsuleId,
+    }),
     resolveActiveCapsuleImpl: async () => ({
       id: "capsule-1",
       name: "<New capsule>",
@@ -219,7 +237,7 @@ export function createDependencies(overrides: DependencyOverrides = {}) {
       saved: null,
       status: "new",
       createdAt: new Date(0).toISOString(),
-      updatedAt: new Date(0).toISOString()
+      updatedAt: new Date(0).toISOString(),
     }),
     listRecentCapsulesImpl: async () => [],
     searchCapsulesImpl: async () => [],
@@ -235,68 +253,120 @@ export function createDependencies(overrides: DependencyOverrides = {}) {
           audience: "woman",
           color: null,
           pattern: "solid",
-          text: ""
+          text: "",
         },
         data: {
           wardrobe: { items: [{ url: "https://example.com/1" }] },
-          rejectedUrls: []
-        }
+          rejectedUrls: [],
+        },
       },
       saved: null,
       status: "new",
       createdAt: new Date(0).toISOString(),
-      updatedAt: new Date(0).toISOString()
+      updatedAt: new Date(0).toISOString(),
     }),
-    createCapsuleImpl: async (_email, payload) => ({ id: "capsule-2", status: "new", ...payload }),
+    createCapsuleImpl: async (_email, payload) => ({
+      id: "capsule-2",
+      status: "new",
+      ...payload,
+    }),
     createCapsuleShareImpl: async () => ({
       id: "share-1",
       url: `${TEST_CLIENT_ORIGIN}/share/share-1`,
-      expiresAt: new Date(60_000).toISOString()
+      expiresAt: new Date(60_000).toISOString(),
     }),
-    getSharedCapsuleImpl: async (id) => (
+    getSharedCapsuleImpl: async (id) =>
       id === "share-1"
         ? { id, name: "Spring edit", expiresAt: new Date(60_000).toISOString() }
-        : null
-    ),
-    getSharedCapsuleOgMetadataImpl: async (id) => (
+        : null,
+    getSharedCapsuleOgMetadataImpl: async (id) =>
       id === "share-1"
         ? { title: "Spring edit", description: "", image: "" }
-        : null
-    ),
+        : null,
     importSharedCapsuleImpl: async () => ({
       id: "capsule-imported",
       name: "Spring edit (2)",
       draft: null,
-      saved: { filters: {}, data: { wardrobe: { items: [{ url: "https://example.com/1" }] }, rejectedUrls: [] } },
-      status: "saved"
+      saved: {
+        filters: {},
+        data: {
+          wardrobe: { items: [{ url: "https://example.com/1" }] },
+          rejectedUrls: [],
+        },
+      },
+      status: "saved",
     }),
-    updateCapsuleSnapshotImpl: async (_email, _id, draft) => ({ id: "capsule-1", draft, saved: null, status: "new" }),
-    saveCapsuleImpl: async () => ({ id: "capsule-1", draft: null, saved: { filters: {}, data: {} }, status: "saved" }),
-    revertCapsuleImpl: async () => ({ id: "capsule-1", draft: null, saved: { filters: {}, data: {} }, status: "saved" }),
-    renameCapsuleImpl: async (_email, id, name) => ({ id, name, draft: null, saved: null, status: "new" }),
-    duplicateCapsuleImpl: async () => ({ id: "capsule-3", name: "<New capsule (1)>", draft: null, saved: { filters: {}, data: {} }, status: "saved" }),
+    updateCapsuleSnapshotImpl: async (_email, _id, draft) => ({
+      id: "capsule-1",
+      draft,
+      saved: null,
+      status: "new",
+    }),
+    saveCapsuleImpl: async () => ({
+      id: "capsule-1",
+      draft: null,
+      saved: { filters: {}, data: {} },
+      status: "saved",
+    }),
+    revertCapsuleImpl: async () => ({
+      id: "capsule-1",
+      draft: null,
+      saved: { filters: {}, data: {} },
+      status: "saved",
+    }),
+    renameCapsuleImpl: async (_email, id, name) => ({
+      id,
+      name,
+      draft: null,
+      saved: null,
+      status: "new",
+    }),
+    duplicateCapsuleImpl: async () => ({
+      id: "capsule-3",
+      name: "<New capsule (1)>",
+      draft: null,
+      saved: { filters: {}, data: {} },
+      status: "saved",
+    }),
     deleteCapsuleImpl: async () => true,
     setActiveCapsuleIdImpl: async () => ({ activeCapsuleId: "capsule-1" }),
     getSearchOptionsImpl: async () => ({
       brands: [{ value: "zara", label: "Zara" }],
-      audience: ["woman", "man", "all"]
+      audience: ["woman", "man", "all"],
     }),
     getSavedSearchImpl: async () => ({ query: "coat", page: 1 }),
-    getSearchStatsImpl: async () => ({ total: 3, stats: { category: [{ value: "top", count: 3 }] }, priceBuckets: [] }),
-    runSavedSearchImpl: async (_email, payload) => ({ items: [{ id: "1" }], total: 1, search: payload }),
+    getSearchStatsImpl: async () => ({
+      total: 3,
+      stats: { category: [{ value: "top", count: 3 }] },
+      priceBuckets: [],
+    }),
+    runSavedSearchImpl: async (_email, payload) => ({
+      items: [{ id: "1" }],
+      total: 1,
+      search: payload,
+    }),
     getOutfitSetImageJobImpl: async () => null,
-    streamCapsuleEventsImpl: async (_req, res, { snapshot }) => res.json({ ok: true, snapshot }),
-    regenerateCapsuleWardrobeHandler: async (_req, res) => res.status(202).json({ ok: true, status: "pending", items: [] }),
-    regenerateSelectedCapsuleItemsHandler: async (_req, res) => res.json({ ok: true, items: [] }),
-    generateOutfitSetImageHandler: async (_req, res) => res.status(202).json({ ok: true, status: "pending" }),
+    streamCapsuleEventsImpl: async (_req, res, { snapshot }) =>
+      res.json({ ok: true, snapshot }),
+    regenerateCapsuleWardrobeHandler: async (_req, res) =>
+      res.status(202).json({ ok: true, status: "pending", items: [] }),
+    regenerateSelectedCapsuleItemsHandler: async (_req, res) =>
+      res.json({ ok: true, items: [] }),
+    generateOutfitSetImageHandler: async (_req, res) =>
+      res.status(202).json({ ok: true, status: "pending" }),
     buildWardrobePdfInChildImpl: async () => Buffer.from("pdf"),
-    getProductsByUrlsInOrderImpl: async () => [{ url: "https://example.com/1" }],
+    getProductsByUrlsInOrderImpl: async () => [
+      { url: "https://example.com/1" },
+    ],
     checkDatabaseConnectionImpl: async () => {},
-    ...overrides
+    ...overrides,
   };
 }
 
-function registerCleanup(testContext: CleanupContext, cleanup: () => Promise<void>): void {
+function registerCleanup(
+  testContext: CleanupContext,
+  cleanup: () => Promise<void>,
+): void {
   if (typeof testContext.onTestFinished === "function") {
     testContext.onTestFinished(cleanup);
     return;
@@ -310,19 +380,22 @@ function registerCleanup(testContext: CleanupContext, cleanup: () => Promise<voi
   throw new Error("test cleanup context is missing");
 }
 
-export async function startTestServer(testContext: CleanupContext, {
-  nodeEnv = "production",
-  authTestMode = false,
-  googleClientId = "google-client-id",
-  googleAuthClient = null,
-  overrides = {}
-}: {
-  nodeEnv?: string;
-  authTestMode?: boolean;
-  googleClientId?: string;
-  googleAuthClient?: unknown | null;
-  overrides?: DependencyOverrides;
-} = {}): Promise<StartedTestServer> {
+export async function startTestServer(
+  testContext: CleanupContext,
+  {
+    nodeEnv = "production",
+    authTestMode = false,
+    googleClientId = "google-client-id",
+    googleAuthClient = null,
+    overrides = {},
+  }: {
+    nodeEnv?: string;
+    authTestMode?: boolean;
+    googleClientId?: string;
+    googleAuthClient?: unknown | null;
+    overrides?: DependencyOverrides;
+  } = {},
+): Promise<StartedTestServer> {
   const deps = createDependencies(overrides);
   const app = createApp({
     nodeEnv,
@@ -330,7 +403,7 @@ export async function startTestServer(testContext: CleanupContext, {
     authTestMode,
     googleClientId,
     googleAuthClient,
-    ...deps
+    ...deps,
   });
 
   const server = await new Promise<Server>((resolve) => {
@@ -345,26 +418,29 @@ export async function startTestServer(testContext: CleanupContext, {
 
   return {
     deps,
-    baseUrl: `http://127.0.0.1:${(server.address() as { port: number }).port}`
+    baseUrl: `http://127.0.0.1:${(server.address() as { port: number }).port}`,
   };
 }
 
-export async function startSpaFallbackTestServer(testContext: CleanupContext, {
-  overrides = {}
-}: {
-  overrides?: DependencyOverrides;
-} = {}): Promise<StartedTestServer> {
+export async function startSpaFallbackTestServer(
+  testContext: CleanupContext,
+  {
+    overrides = {},
+  }: {
+    overrides?: DependencyOverrides;
+  } = {},
+): Promise<StartedTestServer> {
   const deps = createDependencies(overrides);
   const app = createApp({
     nodeEnv: "production",
     clientOrigin: TEST_CLIENT_ORIGIN,
-    ...deps
+    ...deps,
   });
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "capsule-og-test-"));
   await fs.writeFile(
     path.join(tempDir, "index.html"),
-    "<!doctype html><html><head><title>Capsule Wardrobe</title></head><body><div id=\"root\"></div></body></html>",
-    "utf-8"
+    '<!doctype html><html><head><title>Capsule Wardrobe</title></head><body><div id="root"></div></body></html>',
+    "utf-8",
   );
 
   const server = await startServer({
@@ -374,7 +450,7 @@ export async function startSpaFallbackTestServer(testContext: CleanupContext, {
     port: 0,
     clientOrigin: TEST_CLIENT_ORIGIN,
     clientDistPath: tempDir,
-    getSharedCapsuleOgMetadataImpl: deps.getSharedCapsuleOgMetadataImpl
+    getSharedCapsuleOgMetadataImpl: deps.getSharedCapsuleOgMetadataImpl,
   });
 
   registerCleanup(testContext, async () => {
@@ -386,18 +462,22 @@ export async function startSpaFallbackTestServer(testContext: CleanupContext, {
 
   return {
     deps,
-    baseUrl: `http://127.0.0.1:${(server.address() as { port: number }).port}`
+    baseUrl: `http://127.0.0.1:${(server.address() as { port: number }).port}`,
   };
 }
 
-export async function requestJson(baseUrl, pathname, {
-  method = "GET",
-  body,
-  cookie,
-  csrfToken,
-  origin,
-  headers = {}
-}: RequestJsonOptions = {}): Promise<RequestJsonResult> {
+export async function requestJson(
+  baseUrl,
+  pathname,
+  {
+    method = "GET",
+    body,
+    cookie,
+    csrfToken,
+    origin,
+    headers = {},
+  }: RequestJsonOptions = {},
+): Promise<RequestJsonResult> {
   const response = await fetch(`${baseUrl}${pathname}`, {
     method,
     headers: {
@@ -405,9 +485,9 @@ export async function requestJson(baseUrl, pathname, {
       ...(cookie ? { cookie } : {}),
       ...(csrfToken ? { "X-CSRF-Token": csrfToken } : {}),
       ...(origin ? { origin } : {}),
-      ...headers
+      ...headers,
     },
-    body: body === undefined ? undefined : JSON.stringify(body)
+    body: body === undefined ? undefined : JSON.stringify(body),
   });
 
   const text = await response.text();
@@ -423,20 +503,27 @@ export async function requestJson(baseUrl, pathname, {
   return { response, json };
 }
 
-export async function requestText(baseUrl, pathname, headers: Record<string, string> = {}) {
+export async function requestText(
+  baseUrl,
+  pathname,
+  headers: Record<string, string> = {},
+) {
   const response = await fetch(`${baseUrl}${pathname}`, { headers });
   return {
     response,
-    text: await response.text()
+    text: await response.text(),
   };
 }
 
-export function passkeyRegistrationResponse(overrides: Record<string, unknown> = {}) {
-  const responseOverrides: Record<string, unknown> = overrides.response
-    && typeof overrides.response === "object"
-    && !Array.isArray(overrides.response)
-    ? overrides.response as Record<string, unknown>
-    : {};
+export function passkeyRegistrationResponse(
+  overrides: Record<string, unknown> = {},
+) {
+  const responseOverrides: Record<string, unknown> =
+    overrides.response &&
+    typeof overrides.response === "object" &&
+    !Array.isArray(overrides.response)
+      ? (overrides.response as Record<string, unknown>)
+      : {};
   const { response: _response, ...topLevelOverrides } = overrides;
   return {
     id: "credential-1",
@@ -451,18 +538,21 @@ export function passkeyRegistrationResponse(overrides: Record<string, unknown> =
       publicKeyAlgorithm: -7,
       publicKey: "public-key",
       authenticatorData: "authenticator-data",
-      ...responseOverrides
+      ...responseOverrides,
     },
-    ...topLevelOverrides
+    ...topLevelOverrides,
   };
 }
 
-export function passkeyAuthenticationResponse(overrides: Record<string, unknown> = {}) {
-  const responseOverrides: Record<string, unknown> = overrides.response
-    && typeof overrides.response === "object"
-    && !Array.isArray(overrides.response)
-    ? overrides.response as Record<string, unknown>
-    : {};
+export function passkeyAuthenticationResponse(
+  overrides: Record<string, unknown> = {},
+) {
+  const responseOverrides: Record<string, unknown> =
+    overrides.response &&
+    typeof overrides.response === "object" &&
+    !Array.isArray(overrides.response)
+      ? (overrides.response as Record<string, unknown>)
+      : {};
   const { response: _response, ...topLevelOverrides } = overrides;
   return {
     id: "credential-1",
@@ -475,8 +565,8 @@ export function passkeyAuthenticationResponse(overrides: Record<string, unknown>
       authenticatorData: "authenticator-data",
       signature: "signature",
       userHandle: "person@example.com",
-      ...responseOverrides
+      ...responseOverrides,
     },
-    ...topLevelOverrides
+    ...topLevelOverrides,
   };
 }

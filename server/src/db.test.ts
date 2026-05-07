@@ -1,5 +1,10 @@
 import { test, expect } from "vitest";
-import { buildPriceBuckets, hasAffectedRows, hashCapsuleContent, stableStringify } from "./db.js";
+import {
+  buildPriceBuckets,
+  hasAffectedRows,
+  hashCapsuleContent,
+  stableStringify,
+} from "./db.js";
 
 test("db facade re-exports core and search persistence helpers", () => {
   expect(typeof hasAffectedRows).toBe("function");

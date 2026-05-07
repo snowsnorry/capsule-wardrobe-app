@@ -1,12 +1,18 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import SearchResultsList from "./SearchResultsList";
 
 const t = (key: string, params?: Record<string, unknown>) => {
   const labels: Record<string, string> = {
     "search.empty": "No results",
     "search.noBrand": "No brand",
-    "search.untitled": "Untitled"
+    "search.untitled": "Untitled",
   };
   if (key === "search.resultsCount") {
     return `${params?.count} results`;
@@ -22,7 +28,7 @@ const baseProps = {
   activeChips: [],
   results: [
     { id: "1", name: "Linen Shirt", brand: "UNIQLO", audience: "all" },
-    { id: "2", name: "Wool Trousers", brand: "COS", audience: "woman" }
+    { id: "2", name: "Wool Trousers", brand: "COS", audience: "woman" },
   ],
   selectedResultId: "1",
   total: 55,
@@ -30,7 +36,7 @@ const baseProps = {
   page: 1,
   onDeleteActiveChip: vi.fn(),
   onSelectResult: vi.fn(),
-  onChangePage: vi.fn()
+  onChangePage: vi.fn(),
 };
 
 afterEach(() => {
@@ -46,13 +52,22 @@ describe("SearchResultsList", () => {
     expect(screen.getByText("Linen Shirt")).toBeInTheDocument();
     expect(screen.getByText("unisex")).toBeInTheDocument();
     expect(screen.getByText("Wool Trousers")).toBeInTheDocument();
-    expect(screen.getAllByRole("button").some((button) => button.textContent === "2")).toBe(true);
+    expect(
+      screen
+        .getAllByRole("button")
+        .some((button) => button.textContent === "2"),
+    ).toBe(true);
   });
 
   test("selects results and deletes active chips", () => {
     const onDeleteActiveChip = vi.fn();
     const onSelectResult = vi.fn();
-    const chip = { key: "brand:uniqlo", field: "brand" as const, values: ["uniqlo"], label: "Brand: UNIQLO" };
+    const chip = {
+      key: "brand:uniqlo",
+      field: "brand" as const,
+      values: ["uniqlo"],
+      label: "Brand: UNIQLO",
+    };
 
     render(
       <SearchResultsList
@@ -60,11 +75,13 @@ describe("SearchResultsList", () => {
         activeChips={[chip]}
         onDeleteActiveChip={onDeleteActiveChip}
         onSelectResult={onSelectResult}
-      />
+      />,
     );
 
     fireEvent.click(screen.getByText("Wool Trousers"));
-    expect(onSelectResult).toHaveBeenCalledWith(expect.objectContaining({ id: "2" }));
+    expect(onSelectResult).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "2" }),
+    );
 
     const chipRoot = screen.getByText("Brand: UNIQLO").closest(".MuiChip-root");
     expect(chipRoot).not.toBeNull();
@@ -73,7 +90,15 @@ describe("SearchResultsList", () => {
   });
 
   test("renders empty state when not loading", () => {
-    render(<SearchResultsList {...baseProps} formattedTotal="0" results={[]} total={0} totalPages={1} />);
+    render(
+      <SearchResultsList
+        {...baseProps}
+        formattedTotal="0"
+        results={[]}
+        total={0}
+        totalPages={1}
+      />,
+    );
 
     expect(screen.getByText("0 results")).toBeInTheDocument();
     expect(screen.getByText("No results")).toBeInTheDocument();

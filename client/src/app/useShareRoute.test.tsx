@@ -4,7 +4,7 @@ import { fetchSharedCapsule } from "../api/capsules";
 import { useShareRoute } from "./useShareRoute";
 
 vi.mock("../api/capsules", () => ({
-  fetchSharedCapsule: vi.fn()
+  fetchSharedCapsule: vi.fn(),
 }));
 
 function Harness({
@@ -12,7 +12,7 @@ function Harness({
   pendingShareId = "share-1",
   profileCreated = false,
   sessionInitialized = true,
-  user = { email: "person@example.com" }
+  user = { email: "person@example.com" },
 }: Partial<Parameters<typeof useShareRoute>[0]> = {}) {
   const result = useShareRoute({
     clearNavigationShareRoute: vi.fn(),
@@ -25,7 +25,7 @@ function Harness({
     setStatus: vi.fn((status) => {
       window.sessionStorage.setItem("status-error", status.error);
     }),
-    user
+    user,
   });
 
   return (
@@ -51,7 +51,7 @@ describe("useShareRoute", () => {
     vi.mocked(fetchSharedCapsule).mockResolvedValue({
       id: "share-1",
       name: "Shared edit",
-      expiresAt: new Date(60_000).toISOString()
+      expiresAt: new Date(60_000).toISOString(),
     });
 
     render(<Harness />);
@@ -73,12 +73,16 @@ describe("useShareRoute", () => {
   });
 
   test("sets an error and clears route state when share metadata is unavailable", async () => {
-    vi.mocked(fetchSharedCapsule).mockRejectedValue(new Error("shared_capsule_unavailable"));
+    vi.mocked(fetchSharedCapsule).mockRejectedValue(
+      new Error("shared_capsule_unavailable"),
+    );
 
     render(<Harness />);
 
     await waitFor(() => {
-      expect(window.sessionStorage.getItem("status-error")).toBe("shared_capsule_unavailable");
+      expect(window.sessionStorage.getItem("status-error")).toBe(
+        "shared_capsule_unavailable",
+      );
     });
     expect(screen.getByTestId("dialog-open")).toHaveTextContent("false");
   });

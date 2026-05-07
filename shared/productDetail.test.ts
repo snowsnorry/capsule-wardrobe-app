@@ -9,18 +9,18 @@ test("product detail formatter uses locale-specific labels", () => {
     audience: "woman",
     season: ["spring"],
     colorBase: ["blue"],
-    isNeutral: false
+    isNeutral: false,
   };
 
   const enGroups = buildProductDetailGroups(item, {
     t: (key, params) => t(key, params, "en"),
     translateOption,
-    locale: "en"
+    locale: "en",
   });
   const ruGroups = buildProductDetailGroups(item, {
     t: (key, params) => t(key, params, "ru"),
     translateOption,
-    locale: "ru"
+    locale: "ru",
   });
 
   expect(enGroups[0].items[0].label).toBe("Price");

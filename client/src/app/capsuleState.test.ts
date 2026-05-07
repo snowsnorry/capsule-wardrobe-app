@@ -7,28 +7,31 @@ import {
   getEffectiveCapsule,
   getWardrobeMetadata,
   normalizeOutfitSets,
-  sortSeasonOptions
+  sortSeasonOptions,
 } from "./capsuleState";
 import { createTestCapsule, createTestDraft } from "./testUtils";
 
 describe("capsuleState", () => {
   test("sortSeasonOptions applies display order before alphabetical fallback", () => {
-    expect(sortSeasonOptions(["autumn", "resort", "summer", "spring"])).toEqual([
-      "spring",
-      "summer",
-      "autumn",
-      "resort"
-    ]);
+    expect(sortSeasonOptions(["autumn", "resort", "summer", "spring"])).toEqual(
+      ["spring", "summer", "autumn", "resort"],
+    );
   });
 
   test("normalizes outfit sets to valid item ids and image state", () => {
-    expect(normalizeOutfitSets([
-      { itemIds: [" top-1 ", "", null], image: " https://image ", imageObsolete: 1 },
-      { itemIds: [] },
-      { itemIds: ["bottom-1"], image: " " }
-    ])).toEqual([
+    expect(
+      normalizeOutfitSets([
+        {
+          itemIds: [" top-1 ", "", null],
+          image: " https://image ",
+          imageObsolete: 1,
+        },
+        { itemIds: [] },
+        { itemIds: ["bottom-1"], image: " " },
+      ]),
+    ).toEqual([
       { itemIds: ["top-1"], image: "https://image", imageObsolete: true },
-      { itemIds: ["bottom-1"], image: null, imageObsolete: false }
+      { itemIds: ["bottom-1"], image: null, imageObsolete: false },
     ]);
     expect(normalizeOutfitSets(null)).toEqual([]);
   });
@@ -39,7 +42,12 @@ describe("capsuleState", () => {
     expect(buildCapsuleStatus(null)).toBe("new");
     expect(buildCapsuleStatus({ saved, draft: null })).toBe("saved");
     expect(buildCapsuleStatus({ saved, draft: saved })).toBe("saved");
-    expect(buildCapsuleStatus({ saved, draft: createTestDraft({ text: "changed" }) })).toBe("modified");
+    expect(
+      buildCapsuleStatus({
+        saved,
+        draft: createTestDraft({ text: "changed" }),
+      }),
+    ).toBe("modified");
     expect(buildCapsuleStatus({ saved: null, draft: saved })).toBe("new");
   });
 
@@ -54,13 +62,15 @@ describe("capsuleState", () => {
 
   test("builds draft snapshots with wardrobe metadata and rejected url fallback", () => {
     const activeCapsuleMeta = createTestCapsule({
-      draft: createTestDraft()
+      draft: createTestDraft(),
     });
 
     const snapshot = buildDraftSnapshotFromState({
       activeCapsuleMeta,
       profileItems: [{ id: "top-1" }],
-      profileOutfitSets: [{ itemIds: ["top-1"], image: null, imageObsolete: false }],
+      profileOutfitSets: [
+        { itemIds: ["top-1"], image: null, imageObsolete: false },
+      ],
       selectedAudience: "woman",
       selectedColor: "blue",
       selectedFormalityLevel: "casual",
@@ -68,37 +78,52 @@ describe("capsuleState", () => {
       selectedPattern: "solid",
       selectedSeason: ["summer"],
       selectedStyle: "minimalistic",
-      selectedText: "linen"
+      selectedText: "linen",
     });
 
     expect(snapshot.data.wardrobe?.items).toEqual([{ id: "top-1" }]);
-    expect(snapshot.data.wardrobe?.outfitSets).toEqual([{ itemIds: ["top-1"], image: null, imageObsolete: false }]);
+    expect(snapshot.data.wardrobe?.outfitSets).toEqual([
+      { itemIds: ["top-1"], image: null, imageObsolete: false },
+    ]);
     expect(snapshot.filters).toMatchObject({ color: "blue", text: "linen" });
   });
 
   test("compares filters by normalized values", () => {
-    expect(areFiltersEqual(
-      { occasions: ["office", "travel"], season: ["summer", "spring"], text: " linen " },
-      { occasions: ["travel", "office"], season: ["spring", "summer"], text: "linen", pattern: "" }
-    )).toBe(true);
+    expect(
+      areFiltersEqual(
+        {
+          occasions: ["office", "travel"],
+          season: ["summer", "spring"],
+          text: " linen ",
+        },
+        {
+          occasions: ["travel", "office"],
+          season: ["spring", "summer"],
+          text: "linen",
+          pattern: "",
+        },
+      ),
+    ).toBe(true);
     expect(areFiltersEqual({ color: "blue" }, { color: "green" })).toBe(false);
   });
 
   test("extracts wardrobe metadata with null fallbacks", () => {
-    expect(getWardrobeMetadata({
-      items: [],
+    expect(
+      getWardrobeMetadata({
+        items: [],
+        rawSelectionText: "raw",
+        swimwearReasoning: "reason",
+        swimwearRawSelectionText: "swim raw",
+      }),
+    ).toEqual({
       rawSelectionText: "raw",
       swimwearReasoning: "reason",
-      swimwearRawSelectionText: "swim raw"
-    })).toEqual({
-      rawSelectionText: "raw",
-      swimwearReasoning: "reason",
-      swimwearRawSelectionText: "swim raw"
+      swimwearRawSelectionText: "swim raw",
     });
     expect(getWardrobeMetadata(null)).toEqual({
       rawSelectionText: null,
       swimwearReasoning: null,
-      swimwearRawSelectionText: null
+      swimwearRawSelectionText: null,
     });
   });
 });

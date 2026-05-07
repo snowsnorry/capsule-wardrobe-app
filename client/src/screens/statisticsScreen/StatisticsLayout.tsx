@@ -7,7 +7,7 @@ import {
   IconButton,
   Skeleton,
   Stack,
-  Typography
+  Typography,
 } from "@mui/material";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import TuneRoundedIcon from "@mui/icons-material/TuneRounded";
@@ -30,7 +30,7 @@ type SearchFiltersSidebarProps = Parameters<typeof SearchFiltersSidebar>[0];
 function FiltersHeader({
   title,
   closeLabel,
-  onClose
+  onClose,
 }: {
   title: string;
   closeLabel?: string;
@@ -45,7 +45,7 @@ function FiltersHeader({
             color: "text.primary",
             fontSize: "18px",
             fontWeight: 600,
-            lineHeight: 1.25
+            lineHeight: 1.25,
           }}
         >
           {title}
@@ -68,7 +68,7 @@ function StatisticsFiltersPanel({
   status,
   onDraftStateChange,
   onApply,
-  onReset
+  onReset,
 }: FiltersProps) {
   return (
     <Box
@@ -81,7 +81,7 @@ function StatisticsFiltersPanel({
         borderColor: "divider",
         borderRadius: "10px",
         backgroundColor: "background.paper",
-        p: 3
+        p: 3,
       }}
     >
       <Stack spacing={2.5} sx={{ mb: 3.5 }}>
@@ -105,7 +105,7 @@ function StatisticsChartsPanel({
   summary,
   chartCards,
   status,
-  emptyLabel
+  emptyLabel,
 }: {
   summary: ReactNode;
   chartCards: ReactNode[];
@@ -128,7 +128,9 @@ function StatisticsChartsPanel({
     return (
       <>
         {summary}
-        <Typography variant="body2" color="text.secondary">{emptyLabel}</Typography>
+        <Typography variant="body2" color="text.secondary">
+          {emptyLabel}
+        </Typography>
       </>
     );
   }
@@ -141,7 +143,7 @@ function StatisticsChartsPanel({
           display: "grid",
           gridTemplateColumns: { xs: "1fr", lg: "repeat(2, minmax(0, 1fr))" },
           gap: 2.25,
-          alignItems: "stretch"
+          alignItems: "stretch",
         }}
       >
         {chartCards}
@@ -156,7 +158,7 @@ export function StatisticsMobileLayout({
   summary,
   chartCards,
   status,
-  emptyLabel
+  emptyLabel,
 }: {
   openFiltersLabel: string;
   onOpenFilters: () => void;
@@ -192,7 +194,7 @@ export function StatisticsDesktopLayout({
   onReset,
   summary,
   chartCards,
-  emptyLabel
+  emptyLabel,
 }: FiltersProps & {
   summary: ReactNode;
   chartCards: ReactNode[];
@@ -206,7 +208,7 @@ export function StatisticsDesktopLayout({
         gap: 3,
         flex: 1,
         minHeight: 0,
-        overflow: "hidden"
+        overflow: "hidden",
       }}
     >
       <StatisticsFiltersPanel
@@ -227,7 +229,7 @@ export function StatisticsDesktopLayout({
           borderColor: "divider",
           borderRadius: "10px",
           backgroundColor: "background.paper",
-          p: 3
+          p: 3,
         }}
       >
         <StatisticsChartsPanel
@@ -251,7 +253,7 @@ export function StatisticsFiltersDialog({
   onDraftStateChange,
   onApply,
   onReset,
-  onClose
+  onClose,
 }: FiltersProps & {
   open: boolean;
   closeLabel: string;
@@ -264,10 +266,33 @@ export function StatisticsFiltersDialog({
       onClose={onClose}
       PaperProps={{ sx: { overflowX: "hidden" } }}
     >
-      <DialogContent sx={{ width: "100%", boxSizing: "border-box", overflowX: "hidden", px: 3, py: 3 }}>
-        <Stack spacing={2.5} sx={{ minHeight: "100%", width: "100%", maxWidth: "100%" }}>
-          <FiltersHeader title={title} closeLabel={closeLabel} onClose={onClose} />
-          <Box sx={{ minHeight: 0, maxWidth: "100%", overflowX: "hidden", overflowY: "auto", pb: 2 }}>
+      <DialogContent
+        sx={{
+          width: "100%",
+          boxSizing: "border-box",
+          overflowX: "hidden",
+          px: 3,
+          py: 3,
+        }}
+      >
+        <Stack
+          spacing={2.5}
+          sx={{ minHeight: "100%", width: "100%", maxWidth: "100%" }}
+        >
+          <FiltersHeader
+            title={title}
+            closeLabel={closeLabel}
+            onClose={onClose}
+          />
+          <Box
+            sx={{
+              minHeight: 0,
+              maxWidth: "100%",
+              overflowX: "hidden",
+              overflowY: "auto",
+              pb: 2,
+            }}
+          >
             <SearchFiltersSidebar
               options={options}
               draftState={draftState}

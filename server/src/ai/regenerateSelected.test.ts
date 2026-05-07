@@ -5,7 +5,7 @@ import {
   createPartialRegenerationService,
   getPartialRegenerationJob,
   regenerateSelectedWardrobeItems,
-  startPartialRegenerationJob
+  startPartialRegenerationJob,
 } from "./regenerateSelected.js";
 
 test("regenerateSelected barrel exposes prompt and service entrypoints", () => {
@@ -15,5 +15,7 @@ test("regenerateSelected barrel exposes prompt and service entrypoints", () => {
   expect(typeof getPartialRegenerationJob).toBe("function");
   expect(typeof regenerateSelectedWardrobeItems).toBe("function");
   expect(typeof startPartialRegenerationJob).toBe("function");
-  expect(getPartialRegenerationJob("missing@example.com", "capsule-1")).toBe(null);
+  expect(getPartialRegenerationJob("missing@example.com", "capsule-1")).toBe(
+    null,
+  );
 });

@@ -1,6 +1,10 @@
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
-import { isTrustedOrigin, parseCookies, readCsrfHeader } from "./httpCookies.js";
+import {
+  isTrustedOrigin,
+  parseCookies,
+  readCsrfHeader,
+} from "./httpCookies.js";
 import { logError } from "./logger.js";
 
 export function applySecurityMiddleware(app, nodeEnv) {
@@ -17,15 +21,15 @@ export function applySecurityMiddleware(app, nodeEnv) {
               "'self'",
               "'unsafe-inline'",
               "https://fonts.googleapis.com",
-              "https://accounts.google.com"
+              "https://accounts.google.com",
             ],
             imgSrc: ["'self'", "data:", "https:"],
             fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"],
             connectSrc: ["'self'", "https:"],
-            frameSrc: ["'self'", "https://accounts.google.com"]
-          }
-        }
-      })
+            frameSrc: ["'self'", "https://accounts.google.com"],
+          },
+        },
+      }),
     );
     return;
   }
@@ -33,8 +37,8 @@ export function applySecurityMiddleware(app, nodeEnv) {
   app.use(
     helmet({
       crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
-      contentSecurityPolicy: false
-    })
+      contentSecurityPolicy: false,
+    }),
   );
 }
 
@@ -45,36 +49,36 @@ export function createRateLimiters() {
       max: 30,
       standardHeaders: true,
       legacyHeaders: false,
-      message: { error: "too_many_requests" }
+      message: { error: "too_many_requests" },
     }),
     verifyCodeLimiter: rateLimit({
       windowMs: 15 * 60 * 1000,
       max: 60,
       standardHeaders: true,
       legacyHeaders: false,
-      message: { error: "too_many_requests" }
+      message: { error: "too_many_requests" },
     }),
     passkeyAuthenticateOptionsLimiter: rateLimit({
       windowMs: 10 * 60 * 1000,
       max: 20,
       standardHeaders: true,
       legacyHeaders: false,
-      message: { error: "too_many_requests" }
+      message: { error: "too_many_requests" },
     }),
     passkeyAuthenticateVerifyLimiter: rateLimit({
       windowMs: 10 * 60 * 1000,
       max: 30,
       standardHeaders: true,
       legacyHeaders: false,
-      message: { error: "too_many_requests" }
+      message: { error: "too_many_requests" },
     }),
     passkeyRegisterOptionsLimiter: rateLimit({
       windowMs: 10 * 60 * 1000,
       max: 10,
       standardHeaders: true,
       legacyHeaders: false,
-      message: { error: "too_many_requests" }
-    })
+      message: { error: "too_many_requests" },
+    }),
   };
 }
 
@@ -126,7 +130,7 @@ export function createRequestGuards({ nodeEnv, clientOrigin, getSessionImpl }) {
     req.user = { email: session.email };
     req.auth = {
       sessionId,
-      csrfToken: session.csrfToken
+      csrfToken: session.csrfToken,
     };
     return next();
   }
@@ -141,7 +145,10 @@ export function createRequestGuards({ nodeEnv, clientOrigin, getSessionImpl }) {
       return res.status(403).json({ error: "csrf_invalid" });
     }
 
-    if (csrfFromCookie !== csrfFromHeader || csrfFromHeader !== csrfFromSession) {
+    if (
+      csrfFromCookie !== csrfFromHeader ||
+      csrfFromHeader !== csrfFromSession
+    ) {
       return res.status(403).json({ error: "csrf_invalid" });
     }
 

@@ -8,15 +8,17 @@ import {
   generateJsonWithLlmWithClient,
   getPromptEmbeddingsWithClient,
   parseOpenAiJsonResponse,
-  releaseImageBuffers
+  releaseImageBuffers,
 } from "./openai.js";
 import { deserializePromptDebugImagesFromIpc } from "./promptImages.js";
 
 function assertResponsesUserContent(
-  content: string | Array<
-    | { type: "input_image"; image_url: string; detail: "high" }
-    | { type: "input_text"; text: string }
-  >
+  content:
+    | string
+    | Array<
+        | { type: "input_image"; image_url: string; detail: "high" }
+        | { type: "input_text"; text: string }
+      >,
 ): asserts content is Array<
   | { type: "input_image"; image_url: string; detail: "high" }
   | { type: "input_text"; text: string }
@@ -27,7 +29,7 @@ function assertResponsesUserContent(
 }
 
 function assertResponsesInput(
-  input: ReturnType<typeof buildResponsesInput>
+  input: ReturnType<typeof buildResponsesInput>,
 ): asserts input is Array<{
   role: string;
   content: Array<
@@ -41,7 +43,9 @@ function assertResponsesInput(
 }
 
 function assertInputImage(
-  part: { type: "input_image"; image_url: string; detail: "high" } | { type: "input_text"; text: string }
+  part:
+    | { type: "input_image"; image_url: string; detail: "high" }
+    | { type: "input_text"; text: string },
 ): asserts part is { type: "input_image"; image_url: string; detail: "high" } {
   expect(part.type).toBe("input_image");
   if (part.type !== "input_image") {
@@ -50,7 +54,9 @@ function assertInputImage(
 }
 
 function assertInputText(
-  part: { type: "input_image"; image_url: string; detail: "high" } | { type: "input_text"; text: string }
+  part:
+    | { type: "input_image"; image_url: string; detail: "high" }
+    | { type: "input_text"; text: string },
 ): asserts part is { type: "input_text"; text: string } {
   expect(part.type).toBe("input_text");
   if (part.type !== "input_text") {
@@ -61,7 +67,7 @@ function assertInputText(
 test("buildImageDataUrl returns a base64 data URL for buffered images", () => {
   const dataUrl = buildImageDataUrl({
     mimeType: "image/png",
-    buffer: Buffer.from("hello world")
+    buffer: Buffer.from("hello world"),
   });
 
   expect(dataUrl).toMatch(/^data:image\/png;base64,/);
@@ -77,14 +83,14 @@ test("buildResponsesInput creates multimodal content with input_text and input_i
       mimeType: "image/png",
       buffer: Buffer.from("image-one"),
       category: "top",
-      filename: "category-top.png"
+      filename: "category-top.png",
     },
     {
       mimeType: "image/png",
       buffer: Buffer.from("image-two"),
       category: "bottom",
-      filename: "category-bottom.png"
-    }
+      filename: "category-bottom.png",
+    },
   ]);
 
   assertResponsesInput(input);
@@ -102,8 +108,8 @@ test("buildResponsesInput keeps multimodal payloads user-only", () => {
   const input = buildResponsesInput("describe this", [
     {
       mimeType: "image/png",
-      buffer: Buffer.from("image-one")
-    }
+      buffer: Buffer.from("image-one"),
+    },
   ]);
 
   assertResponsesInput(input);
@@ -119,8 +125,8 @@ test("buildResponsesPayload releases source image buffers after payload construc
     {
       mimeType: "image/jpeg",
       buffer: Buffer.from("image-one"),
-      category: "top"
-    }
+      category: "top",
+    },
   ];
 
   const input = buildResponsesPayload("describe this", images);
@@ -144,18 +150,20 @@ test("buildResponsesInput accepts prompt image collages deserialized from IPC pa
       filename: "categories-stitched.jpg",
       totalItems: 1,
       categoryCount: 1,
-      buffer: Buffer.from("image-one")
+      buffer: Buffer.from("image-one"),
     },
-    categories: [{
-      category: "top",
-      mimeType: "image/jpeg",
-      filename: "category-top.jpg",
-      totalItems: 1,
-      downloadedCount: 1,
-      skippedCount: 0,
-      items: [],
-      buffer: Buffer.from("image-one")
-    }]
+    categories: [
+      {
+        category: "top",
+        mimeType: "image/jpeg",
+        filename: "category-top.jpg",
+        totalItems: 1,
+        downloadedCount: 1,
+        skippedCount: 0,
+        items: [],
+        buffer: Buffer.from("image-one"),
+      },
+    ],
   });
 
   const input = buildResponsesInput("describe this", [promptImages.stitched]);
@@ -179,12 +187,12 @@ test("buildResponsesInput skips invalid image buffers and releaseImageBuffers cl
       mimeType: "image/png",
       buffer: Buffer.alloc(0),
       category: "top",
-      filename: "empty.png"
+      filename: "empty.png",
     },
     {
       mimeType: "image/webp",
-      buffer: Buffer.from("image")
-    }
+      buffer: Buffer.from("image"),
+    },
   ];
 
   const input = buildResponsesInput("", images);
@@ -202,12 +210,18 @@ test("buildResponsesInput skips invalid image buffers and releaseImageBuffers cl
 });
 
 test("OpenAI response helpers build system prompts and parse JSON from noisy output", () => {
-  expect(buildOpenAiSystemPrompt("System", "Override", { style: "minimalistic" })).toBe("System\n\nOverride");
-  expect(buildOpenAiSystemPrompt("", null, { audience: "woman" })).toMatch(/capsule wardrobe generator/i);
+  expect(
+    buildOpenAiSystemPrompt("System", "Override", { style: "minimalistic" }),
+  ).toBe("System\n\nOverride");
+  expect(buildOpenAiSystemPrompt("", null, { audience: "woman" })).toMatch(
+    /capsule wardrobe generator/i,
+  );
 
-  expect(parseOpenAiJsonResponse({
-      output_text: "prefix {\"ok\":true,\"items\":[1]} suffix"
-    })).toEqual({ ok: true, items: [1] });
+  expect(
+    parseOpenAiJsonResponse({
+      output_text: 'prefix {"ok":true,"items":[1]} suffix',
+    }),
+  ).toEqual({ ok: true, items: [1] });
 });
 
 test("OpenAI parse errors preserve raw non-empty response text", () => {
@@ -216,7 +230,9 @@ test("OpenAI parse errors preserve raw non-empty response text", () => {
     throw new Error("Expected parseOpenAiJsonResponse to throw");
   } catch (error) {
     expect((error as Error).message).toMatch(/Failed to parse JSON response/);
-    expect((error as Error & { rawSelectionText?: string | null }).rawSelectionText).toBe("not json");
+    expect(
+      (error as Error & { rawSelectionText?: string | null }).rawSelectionText,
+    ).toBe("not json");
   }
 
   const error = buildOpenAiParseError(new Error("bad"), "{", " raw ");
@@ -231,37 +247,43 @@ test("OpenAI client helpers shape embedding and response requests", async () => 
       create: async (payload) => {
         embeddingCalls.push(payload);
         return { data: [{ embedding: [0.1, 0.2] }] };
-      }
+      },
     },
     responses: {
       create: async (payload) => {
         responseCalls.push(payload);
-        return { output_text: "{\"ok\":true}", usage: { total_tokens: 3 } };
-      }
-    }
+        return { output_text: '{"ok":true}', usage: { total_tokens: 3 } };
+      },
+    },
   };
 
-  expect(await getPromptEmbeddingsWithClient(client, "capsule prompt")).toEqual([0.1, 0.2]);
+  expect(await getPromptEmbeddingsWithClient(client, "capsule prompt")).toEqual(
+    [0.1, 0.2],
+  );
   expect(embeddingCalls[0]).toEqual({
     model: "text-embedding-3-small",
     input: "capsule prompt",
-    encoding_format: "float"
+    encoding_format: "float",
   });
 
   const image = {
     mimeType: "image/png",
-    buffer: Buffer.from("image")
+    buffer: Buffer.from("image"),
   };
-  const result = await generateJsonWithLlmWithClient(client, "System: Rules\n\nUser: Pick items", {
-    images: [image],
-    format: {
-      type: "json_schema",
-      name: "test_schema",
-      schema: { type: "object", additionalProperties: true },
-      strict: true
+  const result = await generateJsonWithLlmWithClient(
+    client,
+    "System: Rules\n\nUser: Pick items",
+    {
+      images: [image],
+      format: {
+        type: "json_schema",
+        name: "test_schema",
+        schema: { type: "object", additionalProperties: true },
+        strict: true,
+      },
+      systemPrompt: "Override",
     },
-    systemPrompt: "Override"
-  });
+  );
 
   expect(result.json).toEqual({ ok: true });
   expect(image.buffer).toBe(null);
@@ -274,24 +296,34 @@ test("OpenAI client helpers shape embedding and response requests", async () => 
 });
 
 test("OpenAI client helpers reject invalid embeddings and rethrow response failures", async () => {
-  await expect(() => getPromptEmbeddingsWithClient({
-      embeddings: {
-        create: async () => ({ data: [{ embedding: [] }] })
-      }
-    }, "prompt")).rejects.toThrow(/Failed to compute prompt embeddings/);
+  await expect(() =>
+    getPromptEmbeddingsWithClient(
+      {
+        embeddings: {
+          create: async () => ({ data: [{ embedding: [] }] }),
+        },
+      },
+      "prompt",
+    ),
+  ).rejects.toThrow(/Failed to compute prompt embeddings/);
 
   const errors = [];
   vi.spyOn(console, "error").mockImplementation((...args) => {
     errors.push(args);
   });
 
-  await expect(() => generateJsonWithLlmWithClient({
-      responses: {
-        create: async () => {
-          throw new Error("transport");
-        }
-      }
-    }, "User only")).rejects.toThrow(/transport/);
+  await expect(() =>
+    generateJsonWithLlmWithClient(
+      {
+        responses: {
+          create: async () => {
+            throw new Error("transport");
+          },
+        },
+      },
+      "User only",
+    ),
+  ).rejects.toThrow(/transport/);
   expect(errors.length).toBe(1);
   expect(errors[0][0]).toBe("[openai][request-failed]");
 });

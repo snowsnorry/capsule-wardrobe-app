@@ -138,7 +138,9 @@ type PromptImagesChildFailurePayload = {
   stack?: string;
 };
 
-type PromptImagesChildPayload = PromptImagesChildSuccessPayload | PromptImagesChildFailurePayload;
+type PromptImagesChildPayload =
+  | PromptImagesChildSuccessPayload
+  | PromptImagesChildFailurePayload;
 
 export type {
   PromptDebugImageCategory,
@@ -157,5 +159,5 @@ export type {
   PromptImagesChildMessage,
   PromptImagesChildPayload,
   PromptImagesChildSuccessPayload,
-  SerializedIpcBuffer
+  SerializedIpcBuffer,
 };

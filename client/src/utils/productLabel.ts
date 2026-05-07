@@ -1,7 +1,10 @@
-type ProductLabelItem = {
-  name?: string | null;
-  audience?: string | null;
-} | null | undefined;
+type ProductLabelItem =
+  | {
+      name?: string | null;
+      audience?: string | null;
+    }
+  | null
+  | undefined;
 
 function getProductLabelParts(item: ProductLabelItem, fallbackLabel = "") {
   const baseLabel = String(item?.name || "").trim();
@@ -9,15 +12,18 @@ function getProductLabelParts(item: ProductLabelItem, fallbackLabel = "") {
     return {
       baseLabel: fallbackLabel,
       suffixLabel: "",
-      accessibilityLabel: fallbackLabel
+      accessibilityLabel: fallbackLabel,
     };
   }
 
-  const isUnisex = String(item?.audience || "").trim().toLowerCase() === "all";
+  const isUnisex =
+    String(item?.audience || "")
+      .trim()
+      .toLowerCase() === "all";
   return {
     baseLabel,
     suffixLabel: isUnisex ? "unisex" : "",
-    accessibilityLabel: isUnisex ? `${baseLabel} unisex` : baseLabel
+    accessibilityLabel: isUnisex ? `${baseLabel} unisex` : baseLabel,
   };
 }
 

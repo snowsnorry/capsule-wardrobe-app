@@ -1,5 +1,9 @@
 import { test, expect, vi } from "vitest";
-import { AUTH_COOKIE, requestJson, startTestServer } from "../test/serverRouteTestUtils.js";
+import {
+  AUTH_COOKIE,
+  requestJson,
+  startTestServer,
+} from "../test/serverRouteTestUtils.js";
 
 test("profile status maps auth store failures", async (t) => {
   vi.spyOn(console, "error").mockImplementation(() => {});
@@ -8,12 +12,16 @@ test("profile status maps auth store failures", async (t) => {
     overrides: {
       getSessionImpl: async () => {
         throw new Error("session_store_down");
-      }
-    }
+      },
+    },
   });
-  const authFailure = await requestJson(failingAuthServer.baseUrl, "/profile/status", {
-    cookie: AUTH_COOKIE
-  });
+  const authFailure = await requestJson(
+    failingAuthServer.baseUrl,
+    "/profile/status",
+    {
+      cookie: AUTH_COOKIE,
+    },
+  );
   expect(authFailure.response.status).toBe(503);
   expect(authFailure.json).toEqual({ error: "service_unavailable" });
 });
@@ -22,13 +30,13 @@ test("profile read routes expose status, profile, and wardrobe filters", async (
   const { baseUrl } = await startTestServer(t);
 
   const status = await requestJson(baseUrl, "/profile/status", {
-    cookie: AUTH_COOKIE
+    cookie: AUTH_COOKIE,
   });
   expect(status.response.status).toBe(200);
   expect(status.json).toEqual({ ok: true, hasProfile: true });
 
   const profile = await requestJson(baseUrl, "/profile/me", {
-    cookie: AUTH_COOKIE
+    cookie: AUTH_COOKIE,
   });
   expect(profile.response.status).toBe(200);
   expect(profile.json.ok).toBe(true);
@@ -41,7 +49,7 @@ test("profile read routes expose status, profile, and wardrobe filters", async (
   expect(profile.json.profile.fullname).toBe(null);
 
   const wardrobeFilters = await requestJson(baseUrl, "/wardrobe/filters", {
-    cookie: AUTH_COOKIE
+    cookie: AUTH_COOKIE,
   });
   expect(wardrobeFilters.json).toEqual({
     ok: true,
@@ -50,7 +58,7 @@ test("profile read routes expose status, profile, and wardrobe filters", async (
     occasions: ["office", "date_night"],
     seasons: ["spring", "summer"],
     audience: ["man", "woman", "any"],
-    patterns: ["striped", "plain"]
+    patterns: ["striped", "plain"],
   });
 });
 
@@ -59,12 +67,16 @@ test("profile read routes map missing profile and store failures", async (t) => 
 
   const missingProfileServer = await startTestServer(t, {
     overrides: {
-      getProfileImpl: async () => null
-    }
+      getProfileImpl: async () => null,
+    },
   });
-  const missingProfile = await requestJson(missingProfileServer.baseUrl, "/profile/me", {
-    cookie: AUTH_COOKIE
-  });
+  const missingProfile = await requestJson(
+    missingProfileServer.baseUrl,
+    "/profile/me",
+    {
+      cookie: AUTH_COOKIE,
+    },
+  );
   expect(missingProfile.response.status).toBe(404);
   expect(missingProfile.json).toEqual({ error: "not_found" });
 
@@ -72,12 +84,16 @@ test("profile read routes map missing profile and store failures", async (t) => 
     overrides: {
       getProfileImpl: async () => {
         throw new Error("profile_store_down");
-      }
-    }
+      },
+    },
   });
-  const profileFailure = await requestJson(failingProfileServer.baseUrl, "/profile/me", {
-    cookie: AUTH_COOKIE
-  });
+  const profileFailure = await requestJson(
+    failingProfileServer.baseUrl,
+    "/profile/me",
+    {
+      cookie: AUTH_COOKIE,
+    },
+  );
   expect(profileFailure.response.status).toBe(503);
   expect(profileFailure.json).toEqual({ error: "service_unavailable" });
 
@@ -85,12 +101,16 @@ test("profile read routes map missing profile and store failures", async (t) => 
     overrides: {
       getSeasonsImpl: async () => {
         throw new Error("options_store_down");
-      }
-    }
+      },
+    },
   });
-  const filtersFailure = await requestJson(failingFiltersServer.baseUrl, "/wardrobe/filters", {
-    cookie: AUTH_COOKIE
-  });
+  const filtersFailure = await requestJson(
+    failingFiltersServer.baseUrl,
+    "/wardrobe/filters",
+    {
+      cookie: AUTH_COOKIE,
+    },
+  );
   expect(filtersFailure.response.status).toBe(503);
   expect(filtersFailure.json).toEqual({ error: "service_unavailable" });
 });

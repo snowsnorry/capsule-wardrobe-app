@@ -5,10 +5,12 @@ import userEvent from "@testing-library/user-event";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import { LocaleProvider } from "../i18n/LocaleProvider";
 
-const localeSwitcherMock = vi.hoisted(() => vi.fn(() => <div data-testid="locale-switcher" />));
+const localeSwitcherMock = vi.hoisted(() =>
+  vi.fn(() => <div data-testid="locale-switcher" />),
+);
 
 vi.mock("../components/LocaleSwitcher", () => ({
-  default: localeSwitcherMock
+  default: localeSwitcherMock,
 }));
 
 import OnboardingScreen from "./OnboardingScreen";
@@ -22,7 +24,7 @@ function renderScreen(props = {}, { locale = "en" } = {}) {
     onboardingStep: 0,
     styleOptions: {
       core: ["casual", "formal"],
-      aesthetics: ["minimalistic", "retro"]
+      aesthetics: ["minimalistic", "retro"],
     },
     occasionOptions: ["office", "date_night"],
     seasonOptions: ["summer", "winter"],
@@ -40,7 +42,7 @@ function renderScreen(props = {}, { locale = "en" } = {}) {
     onSelectAudience: vi.fn(),
     onNext: vi.fn(),
     onBack: vi.fn(),
-    onFinish: vi.fn()
+    onFinish: vi.fn(),
   };
 
   const renderResult = render(
@@ -48,13 +50,13 @@ function renderScreen(props = {}, { locale = "en" } = {}) {
       <LocaleProvider>
         <OnboardingScreen {...defaults} {...props} />
       </LocaleProvider>
-    </ThemeProvider>
+    </ThemeProvider>,
   );
 
   return {
     ...defaults,
     ...props,
-    ...renderResult
+    ...renderResult,
   };
 }
 
@@ -79,7 +81,7 @@ describe("OnboardingScreen", () => {
       selectedStyleCore: "",
       onNext,
       onSelectStyleCore,
-      onSelectStyleAesthetic
+      onSelectStyleAesthetic,
     });
 
     expect(screen.getByText("Step 1 · Style preferences")).toBeInTheDocument();
@@ -104,7 +106,7 @@ describe("OnboardingScreen", () => {
       selectedOccasions: [],
       onNext,
       onToggleOccasion,
-      onToggleSeason
+      onToggleSeason,
     });
 
     expect(screen.getByRole("button", { name: "Back" })).toBeInTheDocument();
@@ -127,7 +129,12 @@ describe("OnboardingScreen", () => {
             selectedOccasions={["office"]}
             selectedSeasons={[]}
             selectedAudience=""
-            status={{ loading: false, error: "", infoKey: "", infoParams: null }}
+            status={{
+              loading: false,
+              error: "",
+              infoKey: "",
+              infoParams: null,
+            }}
             onSelectStyleCore={vi.fn()}
             onSelectStyleAesthetic={vi.fn()}
             onToggleOccasion={onToggleOccasion}
@@ -138,7 +145,7 @@ describe("OnboardingScreen", () => {
             onFinish={vi.fn()}
           />
         </LocaleProvider>
-      </ThemeProvider>
+      </ThemeProvider>,
     );
 
     expect(screen.getByText("Step 3 · Seasons")).toBeInTheDocument();
@@ -160,7 +167,12 @@ describe("OnboardingScreen", () => {
             selectedOccasions={["office"]}
             selectedSeasons={["winter"]}
             selectedAudience=""
-            status={{ loading: false, error: "", infoKey: "", infoParams: null }}
+            status={{
+              loading: false,
+              error: "",
+              infoKey: "",
+              infoParams: null,
+            }}
             onSelectStyleCore={vi.fn()}
             onSelectStyleAesthetic={vi.fn()}
             onToggleOccasion={onToggleOccasion}
@@ -171,7 +183,7 @@ describe("OnboardingScreen", () => {
             onFinish={vi.fn()}
           />
         </LocaleProvider>
-      </ThemeProvider>
+      </ThemeProvider>,
     );
 
     expect(screen.getByRole("button", { name: "Next" })).toBeEnabled();
@@ -193,7 +205,7 @@ describe("OnboardingScreen", () => {
       selectedAudience: "",
       onFinish,
       onSelectAudience,
-      onBack
+      onBack,
     });
 
     expect(screen.getByRole("button", { name: "Back" })).toBeInTheDocument();
@@ -209,7 +221,7 @@ describe("OnboardingScreen", () => {
             onboardingStep={3}
             styleOptions={{
               core: ["casual", "formal"],
-              aesthetics: ["minimalistic", "retro"]
+              aesthetics: ["minimalistic", "retro"],
             }}
             occasionOptions={["office", "date_night"]}
             seasonOptions={["summer", "winter"]}
@@ -219,7 +231,12 @@ describe("OnboardingScreen", () => {
             selectedOccasions={["office"]}
             selectedSeasons={["summer"]}
             selectedAudience="woman"
-            status={{ loading: false, error: "", infoKey: "", infoParams: null }}
+            status={{
+              loading: false,
+              error: "",
+              infoKey: "",
+              infoParams: null,
+            }}
             onSelectStyleCore={vi.fn()}
             onSelectStyleAesthetic={vi.fn()}
             onToggleOccasion={vi.fn()}
@@ -230,7 +247,7 @@ describe("OnboardingScreen", () => {
             onFinish={onFinish}
           />
         </LocaleProvider>
-      </ThemeProvider>
+      </ThemeProvider>,
     );
 
     expect(screen.getByRole("button", { name: "Start" })).toBeEnabled();
@@ -247,7 +264,7 @@ describe("OnboardingScreen", () => {
       selectedStyleCore: "casual",
       selectedOccasions: ["office"],
       selectedSeasons: ["summer"],
-      onBack
+      onBack,
     });
 
     await user.click(screen.getByRole("button", { name: "Back" }));
@@ -260,11 +277,15 @@ describe("OnboardingScreen", () => {
         loading: false,
         error: "something went wrong",
         infoKey: "onboarding.completedHint",
-        infoParams: null
-      }
+        infoParams: null,
+      },
     });
 
     expect(screen.getByText("something went wrong")).toBeInTheDocument();
-    expect(screen.getByText("Your profile is ready. You can change these choices anytime in profile settings.")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Your profile is ready. You can change these choices anytime in profile settings.",
+      ),
+    ).toBeInTheDocument();
   });
 });

@@ -14,7 +14,7 @@ test("appConfig reads environment overrides and auth test mode variants", async 
     GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
     PASSKEY_RP_NAME: process.env.PASSKEY_RP_NAME,
     PASSKEY_RP_ID: process.env.PASSKEY_RP_ID,
-    PASSKEY_ORIGIN: process.env.PASSKEY_ORIGIN
+    PASSKEY_ORIGIN: process.env.PASSKEY_ORIGIN,
   };
 
   try {

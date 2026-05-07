@@ -1,8 +1,14 @@
 import { test, expect } from "vitest";
-import { ALLOWED_HTTP_PROTOCOLS, getSafeHttpUrl, isSafeHttpUrl } from "./urlSecurity.js";
+import {
+  ALLOWED_HTTP_PROTOCOLS,
+  getSafeHttpUrl,
+  isSafeHttpUrl,
+} from "./urlSecurity.js";
 
 test("getSafeHttpUrl accepts http and https URLs", () => {
-  expect(getSafeHttpUrl(" https://example.com/path?q=1 ")).toBe("https://example.com/path?q=1");
+  expect(getSafeHttpUrl(" https://example.com/path?q=1 ")).toBe(
+    "https://example.com/path?q=1",
+  );
   expect(getSafeHttpUrl("http://example.com")).toBe("http://example.com/");
 });
 

@@ -6,7 +6,7 @@ import ClothingGridPlaceholder, {
   buildClothingGridGap,
   buildClothingGridTemplateColumns,
   clothingGridGap,
-  clothingGridTemplateColumns
+  clothingGridTemplateColumns,
 } from "./ClothingGridPlaceholder";
 
 describe("ClothingGridPlaceholder", () => {
@@ -27,9 +27,11 @@ describe("ClothingGridPlaceholder", () => {
     expect(buildClothingGridTemplateColumns(1)).toEqual({
       xs: "repeat(1, minmax(0, 1fr))",
       sm: "repeat(2, minmax(0, 1fr))",
-      lg: "repeat(2, minmax(0, 1fr))"
+      lg: "repeat(2, minmax(0, 1fr))",
     });
-    expect(buildClothingGridTemplateColumns(3).xs).toBe("repeat(3, minmax(0, 1fr))");
+    expect(buildClothingGridTemplateColumns(3).xs).toBe(
+      "repeat(3, minmax(0, 1fr))",
+    );
   });
 
   test("removes the mobile grid gap for two and three columns", () => {
@@ -48,13 +50,25 @@ describe("ClothingGridPlaceholder", () => {
 
   test("marks two and three column placeholders for dense mobile card chrome", () => {
     const { container, rerender } = render(
-      <ClothingPlaceholderCard placeholderKey="placeholder" mobileColumns={3} />
+      <ClothingPlaceholderCard
+        placeholderKey="placeholder"
+        mobileColumns={3}
+      />,
     );
 
-    expect(container.firstElementChild).toHaveClass("wardrobe-placeholder-card-root-dense");
+    expect(container.firstElementChild).toHaveClass(
+      "wardrobe-placeholder-card-root-dense",
+    );
 
-    rerender(<ClothingPlaceholderCard placeholderKey="placeholder" mobileColumns={1} />);
+    rerender(
+      <ClothingPlaceholderCard
+        placeholderKey="placeholder"
+        mobileColumns={1}
+      />,
+    );
 
-    expect(container.firstElementChild).not.toHaveClass("wardrobe-placeholder-card-root-dense");
+    expect(container.firstElementChild).not.toHaveClass(
+      "wardrobe-placeholder-card-root-dense",
+    );
   });
 });

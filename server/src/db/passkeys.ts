@@ -4,7 +4,7 @@ import {
   getSqlClient,
   hasAffectedRows,
   type PasskeyChallengeRow,
-  type PasskeyRow
+  type PasskeyRow,
 } from "./core.js";
 
 export function normalizePasskeyRow(row: PasskeyRow | null): PasskeyRow | null {
@@ -14,13 +14,16 @@ export function normalizePasskeyRow(row: PasskeyRow | null): PasskeyRow | null {
   return {
     ...row,
     counter: Number(row.counter || 0),
-    transports: Array.isArray(row.transports) ? row.transports : []
+    transports: Array.isArray(row.transports) ? row.transports : [],
   };
 }
 
-export async function listPasskeysByEmail(email: string): Promise<PasskeyRow[]> {
+export async function listPasskeysByEmail(
+  email: string,
+): Promise<PasskeyRow[]> {
   const sql = getSqlClient();
-  const rows = getResultRows(await sql<PasskeyRow>`
+  const rows = getResultRows(
+    await sql<PasskeyRow>`
     select
       id::text as id,
       profile_email as "profileEmail",
@@ -38,7 +41,8 @@ export async function listPasskeysByEmail(email: string): Promise<PasskeyRow[]> 
     from profile_passkeys
     where profile_email = ${email}
     order by created_at desc
-  `);
+  `,
+  );
   return rows.map((row) => normalizePasskeyRow(row)).filter(Boolean);
 }
 
@@ -51,7 +55,7 @@ export async function insertPasskey({
   backedUp,
   transports,
   name,
-  aaguid
+  aaguid,
 }: {
   profileEmail: string;
   credentialId: string;
@@ -64,7 +68,8 @@ export async function insertPasskey({
   aaguid: string | null;
 }): Promise<PasskeyRow | null> {
   const sql = getSqlClient();
-  const row = getFirstRow(await sql<PasskeyRow>`
+  const row = getFirstRow(
+    await sql<PasskeyRow>`
     insert into profile_passkeys (
       profile_email,
       credential_id,
@@ -101,13 +106,17 @@ export async function insertPasskey({
       last_used_at as "lastUsedAt",
       created_at as "createdAt",
       updated_at as "updatedAt"
-  `);
+  `,
+  );
   return normalizePasskeyRow(row);
 }
 
-export async function getPasskeyByCredentialId(credentialId: string): Promise<PasskeyRow | null> {
+export async function getPasskeyByCredentialId(
+  credentialId: string,
+): Promise<PasskeyRow | null> {
   const sql = getSqlClient();
-  const row = getFirstRow(await sql<PasskeyRow>`
+  const row = getFirstRow(
+    await sql<PasskeyRow>`
     select
       id::text as id,
       profile_email as "profileEmail",
@@ -125,7 +134,8 @@ export async function getPasskeyByCredentialId(credentialId: string): Promise<Pa
     from profile_passkeys
     where credential_id = ${credentialId}
     limit 1
-  `);
+  `,
+  );
   return normalizePasskeyRow(row);
 }
 
@@ -133,7 +143,7 @@ export async function updatePasskeyAuthentication({
   credentialId,
   counter,
   deviceType,
-  backedUp
+  backedUp,
 }: {
   credentialId: string;
   counter: number;
@@ -141,7 +151,8 @@ export async function updatePasskeyAuthentication({
   backedUp: boolean | null;
 }): Promise<PasskeyRow | null> {
   const sql = getSqlClient();
-  const row = getFirstRow(await sql<PasskeyRow>`
+  const row = getFirstRow(
+    await sql<PasskeyRow>`
     update profile_passkeys
     set
       counter = ${counter},
@@ -164,13 +175,14 @@ export async function updatePasskeyAuthentication({
       last_used_at as "lastUsedAt",
       created_at as "createdAt",
       updated_at as "updatedAt"
-  `);
+  `,
+  );
   return normalizePasskeyRow(row);
 }
 
 export async function deletePasskeyByIdForEmail({
   email,
-  passkeyId
+  passkeyId,
 }: {
   email: string;
   passkeyId: string;
@@ -189,7 +201,7 @@ export async function insertPasskeyChallenge({
   kind,
   challenge,
   profileEmail,
-  expiresAt
+  expiresAt,
 }: {
   id: string;
   kind: string;
@@ -206,13 +218,14 @@ export async function insertPasskeyChallenge({
 
 export async function consumePasskeyChallenge({
   id,
-  kind
+  kind,
 }: {
   id: string;
   kind: string;
 }): Promise<PasskeyChallengeRow | null> {
   const sql = getSqlClient();
-  const row = getFirstRow(await sql<PasskeyChallengeRow>`
+  const row = getFirstRow(
+    await sql<PasskeyChallengeRow>`
     update passkey_challenges
     set consumed_at = now()
     where
@@ -228,7 +241,8 @@ export async function consumePasskeyChallenge({
       expires_at as "expiresAt",
       consumed_at as "consumedAt",
       created_at as "createdAt"
-  `);
+  `,
+  );
   return row || null;
 }
 

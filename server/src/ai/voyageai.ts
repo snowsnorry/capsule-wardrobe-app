@@ -8,7 +8,10 @@ type VoyageResponseLike = {
   json?: () => Promise<unknown>;
 };
 
-type VoyageFetchLike = (input: string, init?: RequestInit) => Promise<VoyageResponseLike>;
+type VoyageFetchLike = (
+  input: string,
+  init?: RequestInit,
+) => Promise<VoyageResponseLike>;
 
 function createVoyageClient({
   fetchImpl = fetch as VoyageFetchLike,
@@ -18,28 +21,32 @@ function createVoyageClient({
       throw new Error("VOYAGE_API_KEY is not set");
     }
     return apiKey;
-  }
+  },
 } = {}) {
   async function getPromptEmbeddings(prompt) {
     const response = await fetchImpl(VOYAGE_API_URL, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${getVoyageApiKeyImpl()}`,
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
         input: prompt,
         model: DEFAULT_EMBEDDING_MODEL,
-        input_type: "query"
-      })
+        input_type: "query",
+      }),
     });
 
     if (!response.ok) {
       const details = response.text ? await response.text() : "";
-      throw new Error(`Failed to compute prompt embeddings: ${response.status} ${details}`);
+      throw new Error(
+        `Failed to compute prompt embeddings: ${response.status} ${details}`,
+      );
     }
 
-    const payload = await (response.json ? response.json() : Promise.resolve({})) as { data?: Array<{ embedding?: number[] }> };
+    const payload = (await (response.json
+      ? response.json()
+      : Promise.resolve({}))) as { data?: Array<{ embedding?: number[] }> };
     const embedding = payload?.data?.[0]?.embedding;
     if (!Array.isArray(embedding) || embedding.length === 0) {
       throw new Error("Failed to compute prompt embeddings");
@@ -67,16 +74,18 @@ function createVoyageClient({
 function getWardrobePrompt(userProfile = null) {
   const queryParts = [
     `Looking for ${getAudiencePromptText(userProfile)} fashion items and clothing.`,
-    `Suitable for a ${userProfile?.formalityLevel || "any"} dress code during the ${getSeasonPromptText(userProfile)} season.`
+    `Suitable for a ${userProfile?.formalityLevel || "any"} dress code during the ${getSeasonPromptText(userProfile)} season.`,
   ];
 
   queryParts.push(...getOptionalPromptParts(userProfile));
-  return queryParts.join(' ');
+  return queryParts.join(" ");
 }
 
 function getAudiencePromptText(userProfile) {
   const audienceRaw = userProfile?.audience || "any";
-  return audienceRaw === "any" ? "versatile (men's and women's)" : `${audienceRaw}'s`;
+  return audienceRaw === "any"
+    ? "versatile (men's and women's)"
+    : `${audienceRaw}'s`;
 }
 
 function getSeasonPromptText(userProfile) {
@@ -93,18 +102,20 @@ function getOptionalPromptParts(userProfile) {
     userProfile?.style ? `Designed in a ${userProfile.style} style.` : "",
     userProfile?.color ? `Preferred color: ${userProfile.color}.` : "",
     userProfile?.pattern ? `Features a ${userProfile.pattern} pattern.` : "",
-    getAdditionalPromptPart(userProfile)
+    getAdditionalPromptPart(userProfile),
   ].filter(Boolean);
 }
 
 function getOccasionPromptPart(userProfile) {
-  return Array.isArray(userProfile?.occasions) && userProfile.occasions.length > 0
+  return Array.isArray(userProfile?.occasions) &&
+    userProfile.occasions.length > 0
     ? `Ideal for ${userProfile.occasions.join(", ")}.`
     : "";
 }
 
 function getAdditionalPromptPart(userProfile) {
-  const additionalText = typeof userProfile?.text === "string" ? userProfile.text.trim() : "";
+  const additionalText =
+    typeof userProfile?.text === "string" ? userProfile.text.trim() : "";
   return additionalText ? `Additional request: ${additionalText}.` : "";
 }
 

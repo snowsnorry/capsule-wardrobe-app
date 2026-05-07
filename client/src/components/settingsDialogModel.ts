@@ -1,4 +1,8 @@
-import { PROFILE_IMAGE_LLM_VALUES, PROFILE_LLM_VALUES, PROFILE_THEME_VALUES } from "../../../shared/profileSettings.js";
+import {
+  PROFILE_IMAGE_LLM_VALUES,
+  PROFILE_LLM_VALUES,
+  PROFILE_THEME_VALUES,
+} from "../../../shared/profileSettings.js";
 
 export const SETTINGS_SECTIONS = ["general", "ai", "account"] as const;
 export const LANGUAGE_OPTIONS = ["en", "ru"] as const;
@@ -56,8 +60,13 @@ export type SettingsDialogProps = {
   onSave: (settings: SettingsSavePayload) => Promise<void> | void;
 };
 
-function isOneOf<T extends string>(options: readonly T[], value: string | null | undefined): value is T {
-  return typeof value === "string" && options.some((option) => option === value);
+function isOneOf<T extends string>(
+  options: readonly T[],
+  value: string | null | undefined,
+): value is T {
+  return (
+    typeof value === "string" && options.some((option) => option === value)
+  );
 }
 
 export function normalizeLocaleValue(value: string): SettingsLocale {
@@ -73,21 +82,31 @@ export function normalizeLlmValue(value: string): SettingsLlm {
 }
 
 export function normalizeImageLlmValue(value: string): SettingsImageLlm {
-  return isOneOf(PROFILE_IMAGE_LLM_OPTIONS, value) ? value : "openai:gpt-image-2";
+  return isOneOf(PROFILE_IMAGE_LLM_OPTIONS, value)
+    ? value
+    : "openai:gpt-image-2";
 }
 
-export function normalizeSettingsDraft(settings: SettingsProfile = {}, fallbackEmail = ""): SettingsDraft {
+export function normalizeSettingsDraft(
+  settings: SettingsProfile = {},
+  fallbackEmail = "",
+): SettingsDraft {
   return {
     fullname: typeof settings.fullname === "string" ? settings.fullname : "",
     email: String(settings.email || fallbackEmail || "").trim(),
     locale: isOneOf(LANGUAGE_OPTIONS, settings.locale) ? settings.locale : "en",
     theme: normalizeThemeValue(String(settings.theme || "")),
     llm: normalizeLlmValue(String(settings.llm || "")),
-    imageLlm: normalizeImageLlmValue(String(settings.imageLlm || settings.image_llm || ""))
+    imageLlm: normalizeImageLlmValue(
+      String(settings.imageLlm || settings.image_llm || ""),
+    ),
   };
 }
 
-export function formatPasskeyCreatedAt(createdAt: string | null | undefined, locale: string): { date: string; time: string } | null {
+export function formatPasskeyCreatedAt(
+  createdAt: string | null | undefined,
+  locale: string,
+): { date: string; time: string } | null {
   if (!createdAt) {
     return null;
   }
@@ -98,7 +117,11 @@ export function formatPasskeyCreatedAt(createdAt: string | null | undefined, loc
   }
 
   return {
-    date: new Intl.DateTimeFormat(locale, { dateStyle: "short" }).format(createdDate),
-    time: new Intl.DateTimeFormat(locale, { timeStyle: "short" }).format(createdDate)
+    date: new Intl.DateTimeFormat(locale, { dateStyle: "short" }).format(
+      createdDate,
+    ),
+    time: new Intl.DateTimeFormat(locale, { timeStyle: "short" }).format(
+      createdDate,
+    ),
   };
 }

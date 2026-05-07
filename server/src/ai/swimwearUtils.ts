@@ -3,7 +3,11 @@ import type { SwimwearCandidate, UserProfileLike } from "./types.js";
 function normalizeSeasonList(season: UserProfileLike["season"]) {
   if (Array.isArray(season)) {
     return season
-      .map((value) => String(value || "").trim().toLowerCase())
+      .map((value) =>
+        String(value || "")
+          .trim()
+          .toLowerCase(),
+      )
       .filter(Boolean);
   }
 
@@ -19,15 +23,27 @@ function shouldGenerateSwimwear(userProfile: UserProfileLike | null = null) {
 }
 
 function dedupeStrings(values: string[]) {
-  return [...new Set(values.filter((value) => typeof value === "string" && value.trim().length > 0))];
+  return [
+    ...new Set(
+      values.filter(
+        (value) => typeof value === "string" && value.trim().length > 0,
+      ),
+    ),
+  ];
 }
 
 function getItemColors(items: SwimwearCandidate[], category: string) {
   return dedupeStrings(
     items
       .filter((item) => item?.category === category)
-      .flatMap((item) => Array.isArray(item?.color_base) ? item.color_base : [])
-      .map((value) => String(value || "").trim().toLowerCase())
+      .flatMap((item) =>
+        Array.isArray(item?.color_base) ? item.color_base : [],
+      )
+      .map((value) =>
+        String(value || "")
+          .trim()
+          .toLowerCase(),
+      ),
   );
 }
 
@@ -54,13 +70,20 @@ function sanitizeProductRow(item: unknown): SwimwearCandidate | null {
     return null;
   }
 
-  const normalized = { ...(item as Record<string, unknown>) } as Record<string, unknown>;
+  const normalized = { ...(item as Record<string, unknown>) } as Record<
+    string,
+    unknown
+  >;
   delete normalized.embedding;
   delete normalized.distance;
   return normalized;
 }
 
-function getItemValue(item: SwimwearCandidate, key: keyof SwimwearCandidate, fallback: unknown = "") {
+function getItemValue(
+  item: SwimwearCandidate,
+  key: keyof SwimwearCandidate,
+  fallback: unknown = "",
+) {
   return item?.[key] ?? fallback;
 }
 
@@ -71,7 +94,7 @@ function toWardrobeUiItem(item: SwimwearCandidate) {
     name: getItemValue(item, "name"),
     category: getItemValue(item, "category"),
     image_url: getItemValue(item, "image_url"),
-    audience: getItemValue(item, "audience")
+    audience: getItemValue(item, "audience"),
   };
 }
 
@@ -81,5 +104,5 @@ export {
   getItemColors,
   sanitizeProductRow,
   shouldGenerateSwimwear,
-  toWardrobeUiItem
+  toWardrobeUiItem,
 };

@@ -1,39 +1,81 @@
 import { getSqlClient } from "../db.js";
-import { getGenerateJsonWithLlm, isNoLlmProfileEnabled, resolveLlmProvider } from "./llm.js";
+import {
+  getGenerateJsonWithLlm,
+  isNoLlmProfileEnabled,
+  resolveLlmProvider,
+} from "./llm.js";
 import { getPromptEmbeddings, getWardrobePrompt } from "./voyageai.js";
 import { getCapsuleCategories } from "./categories.js";
 import { buildPromptDebugImagesInChild } from "./promptImages.js";
-import { buildOutfitSetsFromFormulas, getOutfitFormulas } from "./outfitSets.js";
+import {
+  buildOutfitSetsFromFormulas,
+  getOutfitFormulas,
+} from "./outfitSets.js";
 import { runWithImageWorkSlot } from "./imagePipeline.js";
-import { buildCapsuleWardrobeSqlParams, queryCapsuleWardrobeItemsForProfile } from "./aiSql.js";
-import type {
-  PromptDebugImageResult
-} from "./types.js";
-import { countItemsByKey, extractLlmUsage, getSqlRows, logWardrobeInfo, saveLastPromptArtifacts } from "./aiCommon.js";
-import { enforceCategoryCounts, getSelectedIdsFromCapsule, getShortCapsuleName } from "./aiCategoryEnforcement.js";
-import { getWardrobeSelectionPrompt, toWardrobeUiItem } from "./aiSelectionPrompt.js";
+import {
+  buildCapsuleWardrobeSqlParams,
+  queryCapsuleWardrobeItemsForProfile,
+} from "./aiSql.js";
+import type { PromptDebugImageResult } from "./types.js";
+import {
+  countItemsByKey,
+  extractLlmUsage,
+  getSqlRows,
+  logWardrobeInfo,
+  saveLastPromptArtifacts,
+} from "./aiCommon.js";
+import {
+  enforceCategoryCounts,
+  getSelectedIdsFromCapsule,
+  getShortCapsuleName,
+} from "./aiCategoryEnforcement.js";
+import {
+  getWardrobeSelectionPrompt,
+  toWardrobeUiItem,
+} from "./aiSelectionPrompt.js";
 import { logInfo, logWarn } from "../logger.js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function createCapsuleGenerationDeps(deps: Record<string, any> = {}) {
   return {
-    buildCapsuleWardrobeSqlParamsImpl: deps.buildCapsuleWardrobeSqlParamsImpl || buildCapsuleWardrobeSqlParams,
-    buildPromptDebugImagesInChildImpl: deps.buildPromptDebugImagesInChildImpl || buildPromptDebugImagesInChild,
-    getGenerateJsonWithLlmImpl: deps.getGenerateJsonWithLlmImpl || getGenerateJsonWithLlm,
-    getPromptEmbeddingsImpl: deps.getPromptEmbeddingsImpl || getPromptEmbeddings,
+    buildCapsuleWardrobeSqlParamsImpl:
+      deps.buildCapsuleWardrobeSqlParamsImpl || buildCapsuleWardrobeSqlParams,
+    buildPromptDebugImagesInChildImpl:
+      deps.buildPromptDebugImagesInChildImpl || buildPromptDebugImagesInChild,
+    getGenerateJsonWithLlmImpl:
+      deps.getGenerateJsonWithLlmImpl || getGenerateJsonWithLlm,
+    getPromptEmbeddingsImpl:
+      deps.getPromptEmbeddingsImpl || getPromptEmbeddings,
     getWardrobePromptImpl: deps.getWardrobePromptImpl || getWardrobePrompt,
-    isNoLlmProfileEnabledImpl: deps.isNoLlmProfileEnabledImpl || isNoLlmProfileEnabled,
-    queryCapsuleWardrobeItemsForProfileImpl: deps.queryCapsuleWardrobeItemsForProfileImpl || queryCapsuleWardrobeItemsForProfile,
+    isNoLlmProfileEnabledImpl:
+      deps.isNoLlmProfileEnabledImpl || isNoLlmProfileEnabled,
+    queryCapsuleWardrobeItemsForProfileImpl:
+      deps.queryCapsuleWardrobeItemsForProfileImpl ||
+      queryCapsuleWardrobeItemsForProfile,
     resolveLlmProviderImpl: deps.resolveLlmProviderImpl || resolveLlmProvider,
-    runWithImageWorkSlotImpl: deps.runWithImageWorkSlotImpl || runWithImageWorkSlot,
-    getSqlClientImpl: deps.getSqlClientImpl || getSqlClient
+    runWithImageWorkSlotImpl:
+      deps.runWithImageWorkSlotImpl || runWithImageWorkSlot,
+    getSqlClientImpl: deps.getSqlClientImpl || getSqlClient,
   };
 }
 
-async function getNormalizedWardrobeItems(userProfile, promptEmbeddings, capsuleCategories, logContext, deps) {
-  const sqlParams = deps.buildCapsuleWardrobeSqlParamsImpl(userProfile, promptEmbeddings, capsuleCategories);
+async function getNormalizedWardrobeItems(
+  userProfile,
+  promptEmbeddings,
+  capsuleCategories,
+  logContext,
+  deps,
+) {
+  const sqlParams = deps.buildCapsuleWardrobeSqlParamsImpl(
+    userProfile,
+    promptEmbeddings,
+    capsuleCategories,
+  );
   const sqlStartedAt = Date.now();
-  const itemsResult = await deps.queryCapsuleWardrobeItemsForProfileImpl(deps.getSqlClientImpl(), sqlParams);
+  const itemsResult = await deps.queryCapsuleWardrobeItemsForProfileImpl(
+    deps.getSqlClientImpl(),
+    sqlParams,
+  );
   const items = getSqlRows(itemsResult);
   const normalizedItems = items.map((item) => {
     const normalized = { ...(item as Record<string, unknown>) };
@@ -41,31 +83,55 @@ async function getNormalizedWardrobeItems(userProfile, promptEmbeddings, capsule
     return normalized;
   });
 
-  logWardrobeInfo("capsule-sql-completed", {
-    sqlDurationMs: Date.now() - sqlStartedAt,
-    sqlItemsTotal: normalizedItems.length,
-    sqlItemsByCategory: countItemsByKey(normalizedItems)
-  }, logContext);
+  logWardrobeInfo(
+    "capsule-sql-completed",
+    {
+      sqlDurationMs: Date.now() - sqlStartedAt,
+      sqlItemsTotal: normalizedItems.length,
+      sqlItemsByCategory: countItemsByKey(normalizedItems),
+    },
+    logContext,
+  );
 
   return normalizedItems;
 }
 
-function buildNoLlmCapsuleResult({ normalizedItems, capsuleCategories, userProfile, promptEmbeddings, llmResolution, logContext }) {
-  logWardrobeInfo("capsule-llm-skipped", {
-    reason: "profile_llm_none",
-    requestedLlm: llmResolution.requestedLlm,
-    usedModel: null
-  }, logContext);
-  const balancedItems = enforceCategoryCounts([], normalizedItems, capsuleCategories, userProfile);
+function buildNoLlmCapsuleResult({
+  normalizedItems,
+  capsuleCategories,
+  userProfile,
+  promptEmbeddings,
+  llmResolution,
+  logContext,
+}) {
+  logWardrobeInfo(
+    "capsule-llm-skipped",
+    {
+      reason: "profile_llm_none",
+      requestedLlm: llmResolution.requestedLlm,
+      usedModel: null,
+    },
+    logContext,
+  );
+  const balancedItems = enforceCategoryCounts(
+    [],
+    normalizedItems,
+    capsuleCategories,
+    userProfile,
+  );
 
   if (balancedItems.length === 0) {
     throw new Error("SQL returned no valid wardrobe items");
   }
 
-  logWardrobeInfo("capsule-nollm-completed", {
-    selectedItemsTotal: balancedItems.length,
-    selectedItemsByCategory: countItemsByKey(balancedItems)
-  }, logContext);
+  logWardrobeInfo(
+    "capsule-nollm-completed",
+    {
+      selectedItemsTotal: balancedItems.length,
+      selectedItemsByCategory: countItemsByKey(balancedItems),
+    },
+    logContext,
+  );
 
   return {
     items: balancedItems.map(toWardrobeUiItem),
@@ -73,74 +139,107 @@ function buildNoLlmCapsuleResult({ normalizedItems, capsuleCategories, userProfi
     outfitSets: [],
     promptEmbeddings,
     shortCapsuleName: null,
-    rawSelectionText: null
+    rawSelectionText: null,
   };
 }
 
-async function getPromptDebugImages(normalizedItems, logContext, deps): Promise<PromptDebugImageResult> {
+async function getPromptDebugImages(
+  normalizedItems,
+  logContext,
+  deps,
+): Promise<PromptDebugImageResult> {
   const shouldSavePromptDebugArtifacts = process.env.NODE_ENV === "development";
 
   try {
     const imageFetchStartedAt = Date.now();
-    const promptDebugImages = await deps.runWithImageWorkSlotImpl("capsule-images", async () => deps.buildPromptDebugImagesInChildImpl({
-      normalizedItems,
-      saveDebugArtifacts: shouldSavePromptDebugArtifacts,
-      debugOutputDir: shouldSavePromptDebugArtifacts
-        ? new URL("../../../last-prompt/", import.meta.url)
-        : null
-    }));
+    const promptDebugImages = await deps.runWithImageWorkSlotImpl(
+      "capsule-images",
+      async () =>
+        deps.buildPromptDebugImagesInChildImpl({
+          normalizedItems,
+          saveDebugArtifacts: shouldSavePromptDebugArtifacts,
+          debugOutputDir: shouldSavePromptDebugArtifacts
+            ? new URL("../../../last-prompt/", import.meta.url)
+            : null,
+        }),
+    );
 
-    logWardrobeInfo("capsule-images-ready", {
-      imageFetchDurationMs: Date.now() - imageFetchStartedAt,
-      requestedCount: normalizedItems.length,
-      cachedCount: promptDebugImages.cachedCount || 0,
-      downloadedCount: promptDebugImages.downloadedCount || 0,
-      skippedCount: promptDebugImages.skippedCount || 0
-    }, logContext);
+    logWardrobeInfo(
+      "capsule-images-ready",
+      {
+        imageFetchDurationMs: Date.now() - imageFetchStartedAt,
+        requestedCount: normalizedItems.length,
+        cachedCount: promptDebugImages.cachedCount || 0,
+        downloadedCount: promptDebugImages.downloadedCount || 0,
+        skippedCount: promptDebugImages.skippedCount || 0,
+      },
+      logContext,
+    );
 
     return promptDebugImages;
   } catch (error) {
     if (String(error?.message || "").startsWith("prompt_images_child_exit:")) {
-      logWardrobeInfo("capsule-images-child-exit", {
-        message: error.message
-      }, logContext);
+      logWardrobeInfo(
+        "capsule-images-child-exit",
+        {
+          message: error.message,
+        },
+        logContext,
+      );
     }
     logWarn(
       "[prompt-images][build-failed]",
       JSON.stringify({
-        message: error?.message || "unknown_error"
-      })
+        message: error?.message || "unknown_error",
+      }),
     );
     return { categories: [], stitched: null };
   }
 }
 
-async function generateSelection({ userProfile, normalizedItems, capsuleCategories, promptDebugImages, llmResolution, logContext, deps }) {
-  const selectionPrompt = getWardrobeSelectionPrompt(userProfile, normalizedItems, capsuleCategories);
+async function generateSelection({
+  userProfile,
+  normalizedItems,
+  capsuleCategories,
+  promptDebugImages,
+  llmResolution,
+  logContext,
+  deps,
+}) {
+  const selectionPrompt = getWardrobeSelectionPrompt(
+    userProfile,
+    normalizedItems,
+    capsuleCategories,
+  );
   saveLastPromptArtifacts(selectionPrompt, userProfile);
   const llmStartedAt = Date.now();
   const generateJsonWithLlm = deps.getGenerateJsonWithLlmImpl(userProfile);
   const stylistImages = promptDebugImages.stitched
     ? [promptDebugImages.stitched]
     : promptDebugImages.categories;
-  const { response: selectionResponse, json: parsedSelection } = await generateJsonWithLlm(selectionPrompt, {
-    userProfile,
-    images: stylistImages,
-    onPayloadBuilt: () => {
-      promptDebugImages.categories = [];
-      promptDebugImages.stitched = null;
-    }
-  });
+  const { response: selectionResponse, json: parsedSelection } =
+    await generateJsonWithLlm(selectionPrompt, {
+      userProfile,
+      images: stylistImages,
+      onPayloadBuilt: () => {
+        promptDebugImages.categories = [];
+        promptDebugImages.stitched = null;
+      },
+    });
   promptDebugImages.categories = [];
   promptDebugImages.stitched = null;
-  logWardrobeInfo("capsule-llm-completed", {
-    llmProvider: llmResolution.provider,
-    llmModel: llmResolution.model,
-    requestedLlm: llmResolution.requestedLlm,
-    fallbackReason: llmResolution.fallbackReason,
-    llmDurationMs: Date.now() - llmStartedAt,
-    ...extractLlmUsage(selectionResponse?.usage)
-  }, logContext);
+  logWardrobeInfo(
+    "capsule-llm-completed",
+    {
+      llmProvider: llmResolution.provider,
+      llmModel: llmResolution.model,
+      requestedLlm: llmResolution.requestedLlm,
+      fallbackReason: llmResolution.fallbackReason,
+      llmDurationMs: Date.now() - llmStartedAt,
+      ...extractLlmUsage(selectionResponse?.usage),
+    },
+    logContext,
+  );
 
   return { parsedSelection, selectionResponse };
 }
@@ -152,7 +251,7 @@ function logEmptySelectionResponse(parsedSelection, selectionResponse) {
 
   logWarn(
     "[wardrobe-ai][selected-json-empty]",
-    JSON.stringify(buildEmptySelectionLogPayload(selectionResponse))
+    JSON.stringify(buildEmptySelectionLogPayload(selectionResponse)),
   );
 }
 
@@ -163,12 +262,13 @@ function buildEmptySelectionLogPayload(selectionResponse) {
     outputParsed: selectionResponse?.output_parsed ?? null,
     finishReason: selectionResponse?.status ?? null,
     incompleteDetails: selectionResponse?.incomplete_details ?? null,
-    usage: selectionResponse?.usage ?? null
+    usage: selectionResponse?.usage ?? null,
   };
 }
 
 function getRawSelectionText(selectionResponse) {
-  return typeof selectionResponse?.output_text === "string" && selectionResponse.output_text.trim().length > 0
+  return typeof selectionResponse?.output_text === "string" &&
+    selectionResponse.output_text.trim().length > 0
     ? selectionResponse.output_text.trim()
     : null;
 }
@@ -176,19 +276,39 @@ function getRawSelectionText(selectionResponse) {
 export function createGenerateCapsuleWardrobe(deps = {}) {
   const resolvedDeps = createCapsuleGenerationDeps(deps);
 
-  return async function generateCapsuleWardrobe(userProfile = null, logContext = null) {
+  return async function generateCapsuleWardrobe(
+    userProfile = null,
+    logContext = null,
+  ) {
     const llmResolution = resolvedDeps.resolveLlmProviderImpl(userProfile);
     const prompt = resolvedDeps.getWardrobePromptImpl(userProfile);
     const promptEmbeddings = await resolvedDeps.getPromptEmbeddingsImpl(prompt);
     const capsuleCategories = getCapsuleCategories(userProfile);
-    const normalizedItems = await getNormalizedWardrobeItems(userProfile, promptEmbeddings, capsuleCategories, logContext, resolvedDeps);
+    const normalizedItems = await getNormalizedWardrobeItems(
+      userProfile,
+      promptEmbeddings,
+      capsuleCategories,
+      logContext,
+      resolvedDeps,
+    );
     const noLlm = resolvedDeps.isNoLlmProfileEnabledImpl(userProfile);
 
     if (noLlm) {
-      return buildNoLlmCapsuleResult({ normalizedItems, capsuleCategories, userProfile, promptEmbeddings, llmResolution, logContext });
+      return buildNoLlmCapsuleResult({
+        normalizedItems,
+        capsuleCategories,
+        userProfile,
+        promptEmbeddings,
+        llmResolution,
+        logContext,
+      });
     }
 
-    const promptDebugImages = await getPromptDebugImages(normalizedItems, logContext, resolvedDeps);
+    const promptDebugImages = await getPromptDebugImages(
+      normalizedItems,
+      logContext,
+      resolvedDeps,
+    );
     const { selectionResponse, parsedSelection } = await generateSelection({
       userProfile,
       normalizedItems,
@@ -196,18 +316,25 @@ export function createGenerateCapsuleWardrobe(deps = {}) {
       promptDebugImages,
       llmResolution,
       logContext,
-      deps: resolvedDeps
+      deps: resolvedDeps,
     });
     logInfo("[wardrobe-ai][selected-json]", JSON.stringify(parsedSelection));
     logEmptySelectionResponse(parsedSelection, selectionResponse);
 
     const selectedIds = getSelectedIdsFromCapsule(parsedSelection?.capsule);
     const uniqueSelectedIds = [...new Set(selectedIds.map((id) => String(id)))];
-    const itemsById = new Map(normalizedItems.map((item) => [String(item.id), item]));
+    const itemsById = new Map(
+      normalizedItems.map((item) => [String(item.id), item]),
+    );
     const selectedItems = uniqueSelectedIds
       .map((id) => itemsById.get(String(id)))
       .filter(Boolean);
-    const balancedItems = enforceCategoryCounts(selectedItems, normalizedItems, capsuleCategories, userProfile);
+    const balancedItems = enforceCategoryCounts(
+      selectedItems,
+      normalizedItems,
+      capsuleCategories,
+      userProfile,
+    );
 
     if (balancedItems.length === 0) {
       throw new Error("Model returned no valid selected_ids");
@@ -216,10 +343,15 @@ export function createGenerateCapsuleWardrobe(deps = {}) {
     return {
       items: balancedItems.map(toWardrobeUiItem),
       selectedItems: balancedItems,
-      outfitSets: buildOutfitSetsFromFormulas(getOutfitFormulas(parsedSelection), balancedItems),
+      outfitSets: buildOutfitSetsFromFormulas(
+        getOutfitFormulas(parsedSelection),
+        balancedItems,
+      ),
       promptEmbeddings,
-      shortCapsuleName: getShortCapsuleName(parsedSelection?.system_evaluation?.short_capsule_name),
-      rawSelectionText: getRawSelectionText(selectionResponse)
+      shortCapsuleName: getShortCapsuleName(
+        parsedSelection?.system_evaluation?.short_capsule_name,
+      ),
+      rawSelectionText: getRawSelectionText(selectionResponse),
     };
   };
 }

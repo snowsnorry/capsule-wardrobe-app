@@ -8,10 +8,13 @@ import type {
   ProfileSettings,
   StatusState,
   UserLike,
-  WardrobeItem
+  WardrobeItem,
 } from "./appTypes";
 import type { SettingsSavePayload } from "../components/SettingsDialog";
-import { FALLBACK_ACCENT_COLOR_OPTIONS, GOOGLE_CLIENT_ID } from "./appConstants";
+import {
+  FALLBACK_ACCENT_COLOR_OPTIONS,
+  GOOGLE_CLIENT_ID,
+} from "./appConstants";
 
 const MainScreen = lazy(() => import("../screens/mainScreen/MainScreen"));
 const OnboardingScreen = lazy(() => import("../screens/OnboardingScreen"));
@@ -24,7 +27,7 @@ type TranslationFn = (key: string, params?: Record<string, unknown>) => string;
 type ToggleSelectionFn = (
   value: string,
   selected: string[],
-  setter: Dispatch<SetStateAction<string[]>>
+  setter: Dispatch<SetStateAction<string[]>>,
 ) => void;
 
 type SharedFilterProps = {
@@ -89,21 +92,30 @@ type AppRouteContentProps = SharedFilterProps & {
   onCancelRegenerationSelection: () => void;
   onCreateCapsule: () => Promise<void>;
   onDeleteCapsule: (capsuleId?: string) => Promise<void>;
-  onDeleteOutfitSetImage: (setIndex: number | string | null | undefined) => Promise<void>;
+  onDeleteOutfitSetImage: (
+    setIndex: number | string | null | undefined,
+  ) => Promise<void>;
   onDeleteProfile: () => Promise<void>;
   onDownloadWardrobePdf: (capsuleId?: string) => Promise<void>;
   onDuplicateCapsule: (name: string, capsuleId?: string) => Promise<void>;
   onFinishOnboarding: () => Promise<void>;
-  onGenerateOutfitSetImage: (setIndex: number | string | null | undefined) => Promise<void>;
+  onGenerateOutfitSetImage: (
+    setIndex: number | string | null | undefined,
+  ) => Promise<void>;
   onGoogleCredential: (idToken: string) => Promise<void>;
-  onNavigateApp: (nextApp: Exclude<AppRoute, "share">, options?: AppNavigationOptions) => void;
+  onNavigateApp: (
+    nextApp: Exclude<AppRoute, "share">,
+    options?: AppNavigationOptions,
+  ) => void;
   onNextOnboarding: () => void;
   onOpenCapsule: (capsuleId: string) => Promise<void>;
   onPasskeySignIn: () => Promise<void>;
   onRefreshWardrobe: () => Promise<void>;
   onRegenerateSelectedItems: () => Promise<void>;
   onRenameCapsule: (name: string, capsuleId?: string) => Promise<void>;
-  onRequestCode: (event: FormEvent<HTMLFormElement> | MouseEvent<HTMLButtonElement>) => Promise<void>;
+  onRequestCode: (
+    event: FormEvent<HTMLFormElement> | MouseEvent<HTMLButtonElement>,
+  ) => Promise<void>;
   onRequestSignOut: () => void;
   onResetEmail: () => void;
   onResetProfileFilters: () => Promise<void>;
@@ -112,13 +124,20 @@ type AppRouteContentProps = SharedFilterProps & {
   onSaveProfile: () => Promise<void>;
   onSaveSettings: (nextSettings: SettingsSavePayload) => Promise<void>;
   onSearchCapsules: (query: string) => Promise<CapsuleMeta[]>;
-  onShareCapsule: (capsuleId?: string) => Promise<{ url?: string; expiresAt?: string | Date }>;
+  onShareCapsule: (
+    capsuleId?: string,
+  ) => Promise<{ url?: string; expiresAt?: string | Date }>;
   onToggleRegenerationSelection: (item: WardrobeItem) => void;
   onVerifyCode: (event: FormEvent<HTMLFormElement>) => Promise<void>;
-  registerCapsuleSidebarActions: (actions: {
-    openSearchDialog: () => void;
-    openCapsuleActions: (event: MouseEvent<HTMLElement>, capsule: CapsuleMeta) => void;
-  } | null) => void;
+  registerCapsuleSidebarActions: (
+    actions: {
+      openSearchDialog: () => void;
+      openCapsuleActions: (
+        event: MouseEvent<HTMLElement>,
+        capsule: CapsuleMeta,
+      ) => void;
+    } | null,
+  ) => void;
   setCode: (value: string) => void;
   setEmail: (value: string) => void;
 };
@@ -143,8 +162,20 @@ function ProfileRoute(props: AppRouteContentProps) {
       status={props.status}
       onSelectStyleCore={props.setSelectedFormalityLevel}
       onSelectStyleAesthetic={props.setSelectedStyle}
-      onToggleOccasion={(value) => props.toggleSelection(value, props.selectedOccasions, props.setSelectedOccasions)}
-      onToggleSeason={(value) => props.toggleSelection(value, props.selectedSeason, props.setSelectedSeason)}
+      onToggleOccasion={(value) =>
+        props.toggleSelection(
+          value,
+          props.selectedOccasions,
+          props.setSelectedOccasions,
+        )
+      }
+      onToggleSeason={(value) =>
+        props.toggleSelection(
+          value,
+          props.selectedSeason,
+          props.setSelectedSeason,
+        )
+      }
       onSelectAudience={props.setSelectedAudience}
       onSelectAccentColor={props.setSelectedColor}
       onSelectPattern={props.setSelectedPattern}
@@ -202,8 +233,20 @@ function MainRoute(props: AppRouteContentProps) {
       status={props.status}
       onSelectStyleCore={props.setSelectedFormalityLevel}
       onSelectStyleAesthetic={props.setSelectedStyle}
-      onToggleOccasion={(value) => props.toggleSelection(value, props.selectedOccasions, props.setSelectedOccasions)}
-      onToggleSeason={(value) => props.toggleSelection(value, props.selectedSeason, props.setSelectedSeason)}
+      onToggleOccasion={(value) =>
+        props.toggleSelection(
+          value,
+          props.selectedOccasions,
+          props.setSelectedOccasions,
+        )
+      }
+      onToggleSeason={(value) =>
+        props.toggleSelection(
+          value,
+          props.selectedSeason,
+          props.setSelectedSeason,
+        )
+      }
       onSelectAudience={props.setSelectedAudience}
       onSelectAccentColor={props.setSelectedColor}
       onSelectPattern={props.setSelectedPattern}
@@ -241,8 +284,20 @@ function OnboardingRoute(props: AppRouteContentProps) {
       status={props.status}
       onSelectStyleCore={props.setSelectedFormalityLevel}
       onSelectStyleAesthetic={props.setSelectedStyle}
-      onToggleOccasion={(value) => props.toggleSelection(value, props.selectedOccasions, props.setSelectedOccasions)}
-      onToggleSeason={(value) => props.toggleSelection(value, props.selectedSeason, props.setSelectedSeason)}
+      onToggleOccasion={(value) =>
+        props.toggleSelection(
+          value,
+          props.selectedOccasions,
+          props.setSelectedOccasions,
+        )
+      }
+      onToggleSeason={(value) =>
+        props.toggleSelection(
+          value,
+          props.selectedSeason,
+          props.setSelectedSeason,
+        )
+      }
       onSelectAudience={props.setSelectedAudience}
       onNext={props.onNextOnboarding}
       onBack={props.onBackOnboarding}
@@ -290,7 +345,11 @@ export default function AppRouteContent(props: AppRouteContentProps) {
       return <StatisticsScreen onNavigateApp={props.onNavigateApp} />;
     }
 
-    return props.currentView === "profile" ? <ProfileRoute {...props} /> : <MainRoute {...props} />;
+    return props.currentView === "profile" ? (
+      <ProfileRoute {...props} />
+    ) : (
+      <MainRoute {...props} />
+    );
   }
 
   return <OnboardingRoute {...props} />;

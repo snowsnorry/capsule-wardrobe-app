@@ -2,12 +2,12 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 
 const requestApi = vi.hoisted(() => ({
   request: vi.fn(),
-  requestJson: vi.fn()
+  requestJson: vi.fn(),
 }));
 
 vi.mock("./request", () => requestApi);
 vi.mock("./config", () => ({
-  API_BASE_URL: "https://api.example.test"
+  API_BASE_URL: "https://api.example.test",
 }));
 
 import {
@@ -26,7 +26,7 @@ import {
   selectCapsule,
   shareCapsule,
   updateCapsuleFilters,
-  updateCapsuleRejectedUrls
+  updateCapsuleRejectedUrls,
 } from "./capsules";
 
 describe("capsules api", () => {
@@ -41,18 +41,18 @@ describe("capsules api", () => {
     await createCapsule({
       name: "Spring edit",
       filters: {
-        audience: "woman"
+        audience: "woman",
       },
       draft: {
         filters: { audience: "man" },
         data: {
           wardrobe: { items: [{ url: "https://example.com/1" }] },
-          rejectedUrls: ["https://example.com/1"]
-        }
+          rejectedUrls: ["https://example.com/1"],
+        },
       },
       saved: {
-        filters: { audience: "man" }
-      }
+        filters: { audience: "man" },
+      },
     });
 
     expect(requestApi.requestJson).toHaveBeenCalledWith(
@@ -64,24 +64,24 @@ describe("capsules api", () => {
         body: JSON.stringify({
           name: "Spring edit",
           filters: {
-            audience: "woman"
-          }
-        })
-      }
+            audience: "woman",
+          },
+        }),
+      },
     );
   });
 
   test("createCapsule omits blank name and invalid filters", async () => {
     await createCapsule({
       name: " ",
-      filters: null
+      filters: null,
     });
 
     expect(requestApi.requestJson).toHaveBeenCalledWith(
       "https://api.example.test/capsules",
       expect.objectContaining({
-        body: JSON.stringify({})
-      })
+        body: JSON.stringify({}),
+      }),
     );
   });
 
@@ -92,21 +92,41 @@ describe("capsules api", () => {
     await searchCapsules(" linen jacket ");
     await searchCapsules(" ");
 
-    expect(requestApi.requestJson).toHaveBeenNthCalledWith(1, "https://api.example.test/capsules/bootstrap", {
-      credentials: "include"
-    });
-    expect(requestApi.requestJson).toHaveBeenNthCalledWith(2, "https://api.example.test/capsules/recent", {
-      credentials: "include"
-    });
-    expect(requestApi.requestJson).toHaveBeenNthCalledWith(3, "https://api.example.test/capsules/capsule-1", {
-      credentials: "include"
-    });
-    expect(requestApi.requestJson).toHaveBeenNthCalledWith(4, "https://api.example.test/capsules/search?q=linen%20jacket", {
-      credentials: "include"
-    });
-    expect(requestApi.requestJson).toHaveBeenNthCalledWith(5, "https://api.example.test/capsules/search", {
-      credentials: "include"
-    });
+    expect(requestApi.requestJson).toHaveBeenNthCalledWith(
+      1,
+      "https://api.example.test/capsules/bootstrap",
+      {
+        credentials: "include",
+      },
+    );
+    expect(requestApi.requestJson).toHaveBeenNthCalledWith(
+      2,
+      "https://api.example.test/capsules/recent",
+      {
+        credentials: "include",
+      },
+    );
+    expect(requestApi.requestJson).toHaveBeenNthCalledWith(
+      3,
+      "https://api.example.test/capsules/capsule-1",
+      {
+        credentials: "include",
+      },
+    );
+    expect(requestApi.requestJson).toHaveBeenNthCalledWith(
+      4,
+      "https://api.example.test/capsules/search?q=linen%20jacket",
+      {
+        credentials: "include",
+      },
+    );
+    expect(requestApi.requestJson).toHaveBeenNthCalledWith(
+      5,
+      "https://api.example.test/capsules/search",
+      {
+        credentials: "include",
+      },
+    );
   });
 
   test("capsule mutation helpers use explicit filters and rejected urls routes", async () => {
@@ -121,9 +141,9 @@ describe("capsules api", () => {
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          filters: { audience: "woman" }
-        })
-      }
+          filters: { audience: "woman" },
+        }),
+      },
     );
 
     expect(requestApi.requestJson).toHaveBeenNthCalledWith(
@@ -134,14 +154,18 @@ describe("capsules api", () => {
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          rejectedUrls: ["https://example.com/1"]
-        })
-      }
+          rejectedUrls: ["https://example.com/1"],
+        }),
+      },
     );
   });
 
   test("updateCapsuleFilters appends only regenerate query flag when requested", async () => {
-    await updateCapsuleFilters("capsule-1", { audience: "woman" }, { regenerate: true });
+    await updateCapsuleFilters(
+      "capsule-1",
+      { audience: "woman" },
+      { regenerate: true },
+    );
 
     expect(requestApi.requestJson).toHaveBeenCalledWith(
       "https://api.example.test/capsules/capsule-1/filters?regenerate=true",
@@ -150,9 +174,9 @@ describe("capsules api", () => {
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          filters: { audience: "woman" }
-        })
-      }
+          filters: { audience: "woman" },
+        }),
+      },
     );
   });
 
@@ -166,23 +190,23 @@ describe("capsules api", () => {
       "https://api.example.test/capsules/capsule-1/share",
       {
         method: "POST",
-        credentials: "include"
-      }
+        credentials: "include",
+      },
     );
     expect(requestApi.requestJson).toHaveBeenNthCalledWith(
       2,
       "https://api.example.test/shared-capsules/share%2F1",
       {
-        credentials: "include"
-      }
+        credentials: "include",
+      },
     );
     expect(requestApi.requestJson).toHaveBeenNthCalledWith(
       3,
       "https://api.example.test/shared-capsules/share%2F1/import",
       {
         method: "POST",
-        credentials: "include"
-      }
+        credentials: "include",
+      },
     );
   });
 
@@ -195,39 +219,67 @@ describe("capsules api", () => {
     await selectCapsule("capsule-1");
     await deleteCapsule("capsule-1");
 
-    expect(requestApi.requestJson).toHaveBeenNthCalledWith(1, "https://api.example.test/capsules/capsule-1/save", {
-      method: "POST",
-      credentials: "include"
-    });
-    expect(requestApi.requestJson).toHaveBeenNthCalledWith(2, "https://api.example.test/capsules/capsule-1/revert", {
-      method: "POST",
-      credentials: "include"
-    });
-    expect(requestApi.requestJson).toHaveBeenNthCalledWith(3, "https://api.example.test/capsules/capsule-1/rename", {
-      method: "PATCH",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: "Renamed" })
-    });
-    expect(requestApi.requestJson).toHaveBeenNthCalledWith(4, "https://api.example.test/capsules/capsule-1/duplicate", {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({})
-    });
-    expect(requestApi.requestJson).toHaveBeenNthCalledWith(5, "https://api.example.test/capsules/capsule-1/duplicate", {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: "Copy" })
-    });
-    expect(requestApi.requestJson).toHaveBeenNthCalledWith(6, "https://api.example.test/capsules/capsule-1/select", {
-      method: "POST",
-      credentials: "include"
-    });
-    expect(requestApi.requestJson).toHaveBeenNthCalledWith(7, "https://api.example.test/capsules/capsule-1", {
-      method: "DELETE",
-      credentials: "include"
-    });
+    expect(requestApi.requestJson).toHaveBeenNthCalledWith(
+      1,
+      "https://api.example.test/capsules/capsule-1/save",
+      {
+        method: "POST",
+        credentials: "include",
+      },
+    );
+    expect(requestApi.requestJson).toHaveBeenNthCalledWith(
+      2,
+      "https://api.example.test/capsules/capsule-1/revert",
+      {
+        method: "POST",
+        credentials: "include",
+      },
+    );
+    expect(requestApi.requestJson).toHaveBeenNthCalledWith(
+      3,
+      "https://api.example.test/capsules/capsule-1/rename",
+      {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "Renamed" }),
+      },
+    );
+    expect(requestApi.requestJson).toHaveBeenNthCalledWith(
+      4,
+      "https://api.example.test/capsules/capsule-1/duplicate",
+      {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      },
+    );
+    expect(requestApi.requestJson).toHaveBeenNthCalledWith(
+      5,
+      "https://api.example.test/capsules/capsule-1/duplicate",
+      {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "Copy" }),
+      },
+    );
+    expect(requestApi.requestJson).toHaveBeenNthCalledWith(
+      6,
+      "https://api.example.test/capsules/capsule-1/select",
+      {
+        method: "POST",
+        credentials: "include",
+      },
+    );
+    expect(requestApi.requestJson).toHaveBeenNthCalledWith(
+      7,
+      "https://api.example.test/capsules/capsule-1",
+      {
+        method: "DELETE",
+        credentials: "include",
+      },
+    );
   });
 });

@@ -6,9 +6,13 @@ import {
   estimateJsonByteLength,
   extractChunkText,
   extractResponseText,
-  parseDeepInfraJsonResponse
+  parseDeepInfraJsonResponse,
 } from "./deepinfraResponse.js";
-import type { ImageAssetLike, LlmGenerateOptions, UserProfileLike } from "./types.js";
+import type {
+  ImageAssetLike,
+  LlmGenerateOptions,
+  UserProfileLike,
+} from "./types.js";
 import { logWarn } from "../logger.js";
 
 const OPENAI_BASE_URL = "https://api.deepinfra.com/v1/openai";
@@ -16,10 +20,13 @@ const DEFAULT_CHAT_MODEL = "google/gemma-4-31B-it";
 const DEFAULT_EMBEDDING_MODEL = "google/embeddinggemma-300m";
 const ALLOWED_CHAT_MODELS = [
   "google/gemma-4-31B-it",
-  "Qwen/Qwen3-VL-235B-A22B-Instruct"
+  "Qwen/Qwen3-VL-235B-A22B-Instruct",
 ];
 type DeepInfraEmbeddingsClient = {
-  create: (payload: { model: string; input: string }) => Promise<{ data?: Array<{ embedding?: number[] }> }>;
+  create: (payload: {
+    model: string;
+    input: string;
+  }) => Promise<{ data?: Array<{ embedding?: number[] }> }>;
 };
 
 type DeepInfraChatMessageContent =
@@ -42,7 +49,9 @@ type DeepInfraChatCompletionPayload = {
 };
 
 type DeepInfraChatCompletionsClient = {
-  create: (payload: DeepInfraChatCompletionPayload) => Promise<AsyncIterable<unknown>>;
+  create: (
+    payload: DeepInfraChatCompletionPayload,
+  ) => Promise<AsyncIterable<unknown>>;
 };
 
 type DeepInfraClientLike = {
@@ -68,7 +77,7 @@ type DeepInfraRequestLogContext = {
 function buildDeepInfraSystemPrompt({
   system,
   systemPromptOverride,
-  userProfile
+  userProfile,
 }: {
   system: string;
   systemPromptOverride: string | null;
@@ -82,7 +91,7 @@ function buildDeepInfraSystemPrompt({
 function buildDeepInfraPayload({
   model,
   systemPrompt,
-  messages
+  messages,
 }: {
   model: string;
   systemPrompt: string;
@@ -92,14 +101,14 @@ function buildDeepInfraPayload({
     model,
     messages: [
       ...(systemPrompt ? [{ role: "system", content: systemPrompt }] : []),
-      { role: "user", content: messages }
+      { role: "user", content: messages },
     ],
     temperature: 0.2,
     top_p: 0.9,
     frequency_penalty: 0,
     presence_penalty: 0,
     max_tokens: 10000,
-    response_format: { type: "json_object" }
+    response_format: { type: "json_object" },
   };
 }
 
@@ -110,14 +119,19 @@ function logDeepInfraRequestFailure({
   imageCount,
   payloadBytes,
   nowImpl,
-  warnImpl
+  warnImpl,
 }: DeepInfraRequestLogContext) {
   const requestError = error as {
     status?: number;
     request_id?: string;
     code?: string;
     type?: string;
-    cause?: { name?: string; message?: string; code?: string; errno?: string | number };
+    cause?: {
+      name?: string;
+      message?: string;
+      code?: string;
+      errno?: string | number;
+    };
   };
   warnImpl(
     "[deepinfra][request-failed]",
@@ -133,15 +147,15 @@ function logDeepInfraRequestFailure({
       causeName: requestError.cause?.name ?? null,
       causeMessage: requestError.cause?.message ?? null,
       causeCode: requestError.cause?.code ?? null,
-      causeErrno: requestError.cause?.errno ?? null
-    })
+      causeErrno: requestError.cause?.errno ?? null,
+    }),
   );
 }
 
 function createSdkDeepInfraClient({
   apiKey,
   baseURL,
-  maxRetries
+  maxRetries,
 }: {
   apiKey: string;
   baseURL: string;
@@ -153,24 +167,34 @@ function createSdkDeepInfraClient({
     baseURL,
     maxRetries,
     embeddings: {
-      create: (payload) => sdkClient.embeddings.create(payload as Parameters<typeof sdkClient.embeddings.create>[0])
+      create: (payload) =>
+        sdkClient.embeddings.create(
+          payload as Parameters<typeof sdkClient.embeddings.create>[0],
+        ),
     },
     chat: {
       completions: {
         create: (payload) =>
-          sdkClient.chat.completions.create(payload as Parameters<typeof sdkClient.chat.completions.create>[0])
-            .then((response) => response as AsyncIterable<unknown>)
-      }
-    }
+          sdkClient.chat.completions
+            .create(
+              payload as Parameters<
+                typeof sdkClient.chat.completions.create
+              >[0],
+            )
+            .then((response) => response as AsyncIterable<unknown>),
+      },
+    },
   };
 }
 
-function createPromptEmbeddingsGetter(getOpenAiClient: () => DeepInfraClientLike) {
+function createPromptEmbeddingsGetter(
+  getOpenAiClient: () => DeepInfraClientLike,
+) {
   return async function getPromptEmbeddings(prompt: string) {
     const client = getOpenAiClient();
     const response = await client.embeddings.create({
       model: DEFAULT_EMBEDDING_MODEL,
-      input: prompt
+      input: prompt,
     });
     const embedding = response?.data?.[0]?.embedding;
     if (!Array.isArray(embedding) || embedding.length === 0) {
@@ -185,9 +209,17 @@ function createDeepInfraClient({
   getApiKeyImpl = () => process.env.DEEPINFRA_API_KEY,
   cache = true,
   nowImpl = () => Date.now(),
-  warnImpl = (...args) => logWarn(...args)
+  warnImpl = (...args) => logWarn(...args),
 }: {
-  createClientImpl?: ({ apiKey, baseURL, maxRetries }: { apiKey: string; baseURL: string; maxRetries: number }) => DeepInfraClientLike;
+  createClientImpl?: ({
+    apiKey,
+    baseURL,
+    maxRetries,
+  }: {
+    apiKey: string;
+    baseURL: string;
+    maxRetries: number;
+  }) => DeepInfraClientLike;
   getApiKeyImpl?: () => string | undefined;
   cache?: boolean;
   nowImpl?: () => number;
@@ -207,7 +239,7 @@ function createDeepInfraClient({
     const client = createClientImpl({
       apiKey,
       baseURL: OPENAI_BASE_URL,
-      maxRetries: 0
+      maxRetries: 0,
     });
 
     if (cache) {
@@ -219,19 +251,26 @@ function createDeepInfraClient({
 
   const getPromptEmbeddings = createPromptEmbeddingsGetter(getOpenAiClient);
 
-  async function generateJsonWithLlm(prompt: string, options: LlmGenerateOptions = {}) {
+  async function generateJsonWithLlm(
+    prompt: string,
+    options: LlmGenerateOptions = {},
+  ) {
     const {
       userProfile = null,
       format = null,
       images = [],
       systemPrompt: systemPromptOverride = null,
-      onPayloadBuilt = null
+      onPayloadBuilt = null,
     } = options;
     const client = getOpenAiClient();
     const { system, user } = splitSystemAndUserPrompt(prompt);
     void format;
     const messages = buildChatMessages(user, images);
-    const systemPrompt = buildDeepInfraSystemPrompt({ system, systemPromptOverride, userProfile });
+    const systemPrompt = buildDeepInfraSystemPrompt({
+      system,
+      systemPromptOverride,
+      userProfile,
+    });
     const model = resolveChatModel(userProfile);
     const payload = buildDeepInfraPayload({ model, systemPrompt, messages });
     const payloadBytes = estimateJsonByteLength(payload);
@@ -242,7 +281,7 @@ function createDeepInfraClient({
     try {
       stream = await client.chat.completions.create({
         ...payload,
-        stream: true
+        stream: true,
       });
     } catch (error) {
       logDeepInfraRequestFailure({
@@ -252,25 +291,27 @@ function createDeepInfraClient({
         imageCount: Array.isArray(images) ? images.length : 0,
         payloadBytes,
         nowImpl,
-        warnImpl
+        warnImpl,
       });
       throw error;
     }
 
     const content = await collectStreamText(stream);
     const response = {
-      choices: [{
-        message: {
-          content
-        }
-      }],
-      output_text: content
+      choices: [
+        {
+          message: {
+            content,
+          },
+        },
+      ],
+      output_text: content,
     };
     const json = parseDeepInfraJsonResponse(content);
 
     return {
       response,
-      json
+      json,
     };
   }
 
@@ -289,7 +330,10 @@ function resolveChatModel(userProfile: UserProfileLike | null = null) {
   return DEFAULT_CHAT_MODEL;
 }
 
-function buildChatMessages(user: string, images: ImageAssetLike[] = []): DeepInfraChatMessageContent[] {
+function buildChatMessages(
+  user: string,
+  images: ImageAssetLike[] = [],
+): DeepInfraChatMessageContent[] {
   const content: Array<
     | { type: "image_url"; image_url: { url: string } }
     | { type: "text"; text: string }
@@ -304,8 +348,8 @@ function buildChatMessages(user: string, images: ImageAssetLike[] = []): DeepInf
         JSON.stringify({
           category: image?.category ?? null,
           filename: image?.filename ?? null,
-          reason: "missing_buffer"
-        })
+          reason: "missing_buffer",
+        }),
       );
       continue;
     }
@@ -313,15 +357,15 @@ function buildChatMessages(user: string, images: ImageAssetLike[] = []): DeepInf
     content.push({
       type: "image_url",
       image_url: {
-        url: imageUrl
-      }
+        url: imageUrl,
+      },
     });
   }
 
   if (userText) {
     content.push({
       type: "text",
-      text: userText
+      text: userText,
     });
   }
 
@@ -329,11 +373,8 @@ function buildChatMessages(user: string, images: ImageAssetLike[] = []): DeepInf
 }
 
 const deepInfraClient = createDeepInfraClient();
-const {
-  generateJsonWithLlm,
-  getOpenAiClient,
-  getPromptEmbeddings
-} = deepInfraClient;
+const { generateJsonWithLlm, getOpenAiClient, getPromptEmbeddings } =
+  deepInfraClient;
 
 export {
   createDeepInfraClient,
@@ -346,5 +387,5 @@ export {
   generateJsonWithLlm,
   getOpenAiClient,
   getPromptEmbeddings,
-  resolveChatModel
+  resolveChatModel,
 };

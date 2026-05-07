@@ -6,26 +6,29 @@ import {
   createDeepInfraClient,
   estimateJsonByteLength,
   extractChunkText,
-  resolveChatModel
+  resolveChatModel,
 } from "./deepinfra.js";
 import { buildSystemPrompt, splitSystemAndUserPrompt } from "./llm.js";
 
-function assertDeepInfraImagePart(
-  part: { type?: string; image_url?: { url?: string } }
-): asserts part is { type: "image_url"; image_url: { url: string } } {
+function assertDeepInfraImagePart(part: {
+  type?: string;
+  image_url?: { url?: string };
+}): asserts part is { type: "image_url"; image_url: { url: string } } {
   expect(part.type).toBe("image_url");
 }
 
 test("splitSystemAndUserPrompt extracts system and user sections or falls back to plain user text", () => {
-  expect(splitSystemAndUserPrompt("System: Be concise\nUser: Return JSON")).toEqual({
-      system: "Be concise",
-      user: "Return JSON"
-    });
+  expect(
+    splitSystemAndUserPrompt("System: Be concise\nUser: Return JSON"),
+  ).toEqual({
+    system: "Be concise",
+    user: "Return JSON",
+  });
 
   expect(splitSystemAndUserPrompt("Plain prompt")).toEqual({
-      system: "",
-      user: "Plain prompt"
-    });
+    system: "",
+    user: "Plain prompt",
+  });
 });
 
 test("deepinfra client validates api key and caches constructed client", () => {
@@ -39,19 +42,19 @@ test("deepinfra client validates api key and caches constructed client", () => {
         baseURL,
         maxRetries,
         embeddings: {
-          create: async () => ({ data: [{ embedding: [1] }] })
+          create: async () => ({ data: [{ embedding: [1] }] }),
         },
         chat: {
           completions: {
             create: async () => ({
               async *[Symbol.asyncIterator]() {
                 yield { choices: [{ delta: { content: "{}" } }] };
-              }
-            })
-          }
-        }
+              },
+            }),
+          },
+        },
       };
-    }
+    },
   });
 
   const first = client.getOpenAiClient();
@@ -63,52 +66,68 @@ test("deepinfra client validates api key and caches constructed client", () => {
   expect(first.maxRetries).toBe(0);
 
   const missingKeyClient = createDeepInfraClient({
-    getApiKeyImpl: () => ""
+    getApiKeyImpl: () => "",
   });
-  expect(() => missingKeyClient.getOpenAiClient()).toThrow(/DEEPINFRA_API_KEY is not set/);
+  expect(() => missingKeyClient.getOpenAiClient()).toThrow(
+    /DEEPINFRA_API_KEY is not set/,
+  );
 });
 
 test("resolveChatModel keeps only supported deepinfra profile models", () => {
-  expect(resolveChatModel({ llm: "deepinfra:Qwen/Qwen3-VL-235B-A22B-Instruct" })).toBe("Qwen/Qwen3-VL-235B-A22B-Instruct");
-  expect(resolveChatModel({ llm: "deepinfra:not-supported" })).toBe(ALLOWED_CHAT_MODELS[0]);
-  expect(resolveChatModel({ llm: "openai:gpt-5.5" })).toBe(ALLOWED_CHAT_MODELS[0]);
+  expect(
+    resolveChatModel({ llm: "deepinfra:Qwen/Qwen3-VL-235B-A22B-Instruct" }),
+  ).toBe("Qwen/Qwen3-VL-235B-A22B-Instruct");
+  expect(resolveChatModel({ llm: "deepinfra:not-supported" })).toBe(
+    ALLOWED_CHAT_MODELS[0],
+  );
+  expect(resolveChatModel({ llm: "openai:gpt-5.5" })).toBe(
+    ALLOWED_CHAT_MODELS[0],
+  );
 });
 
 test("buildChatMessages emits multimodal user content and preserves images", () => {
-  const content = buildChatMessages("Describe capsule", [{
-    mimeType: "image/png",
-    buffer: Buffer.from("image-one")
-  }]);
+  const content = buildChatMessages("Describe capsule", [
+    {
+      mimeType: "image/png",
+      buffer: Buffer.from("image-one"),
+    },
+  ]);
 
   assertDeepInfraImagePart(content[0]);
   expect(content[0].image_url.url).toMatch(/^data:image\/png;base64,/);
   expect(content[1]).toEqual({
     type: "text",
-    text: "Describe capsule"
+    text: "Describe capsule",
   });
 });
 
 test("estimateJsonByteLength returns a utf8 byte count for json payloads", () => {
-  expect(estimateJsonByteLength({ ok: true })).toBe(Buffer.byteLength("{\"ok\":true}", "utf8"));
+  expect(estimateJsonByteLength({ ok: true })).toBe(
+    Buffer.byteLength('{"ok":true}', "utf8"),
+  );
 });
 
 test("extractChunkText and collectStreamText accumulate streaming delta content", async () => {
-  expect(extractChunkText({
-    choices: [{ delta: { content: "{\"ok\":" } }]
-  })).toBe("{\"ok\":");
-  expect(extractChunkText({
-    choices: [{ delta: { content: [{ text: "true" }, { text: "}" }] } }]
-  })).toBe("true}");
+  expect(
+    extractChunkText({
+      choices: [{ delta: { content: '{"ok":' } }],
+    }),
+  ).toBe('{"ok":');
+  expect(
+    extractChunkText({
+      choices: [{ delta: { content: [{ text: "true" }, { text: "}" }] } }],
+    }),
+  ).toBe("true}");
 
   const stream = {
     async *[Symbol.asyncIterator]() {
-      yield { choices: [{ delta: { content: "{\"ok\":" } }] };
+      yield { choices: [{ delta: { content: '{"ok":' } }] };
       yield { choices: [{ delta: { content: "true" } }] };
       yield { choices: [{ delta: { content: "}" } }] };
-    }
+    },
   };
 
-  expect(await collectStreamText(stream)).toBe("{\"ok\":true}");
+  expect(await collectStreamText(stream)).toBe('{"ok":true}');
 });
 
 test("deepinfra client shapes embedding and chat requests and parses JSON output", async () => {
@@ -121,7 +140,7 @@ test("deepinfra client shapes embedding and chat requests and parses JSON output
         create: async (payload) => {
           embeddingPayload = payload;
           return { data: [{ embedding: [0.4, 0.5] }] };
-        }
+        },
       },
       chat: {
         completions: {
@@ -130,27 +149,29 @@ test("deepinfra client shapes embedding and chat requests and parses JSON output
             return {
               async *[Symbol.asyncIterator]() {
                 yield { choices: [{ delta: { content: "noise before " } }] };
-                yield { choices: [{ delta: { content: "{\"ok\":true}" } }] };
+                yield { choices: [{ delta: { content: '{"ok":true}' } }] };
                 yield { choices: [{ delta: { content: " trailing" } }] };
-              }
+              },
             };
-          }
-        }
-      }
-    })
+          },
+        },
+      },
+    }),
   });
 
   const embedding = await client.getPromptEmbeddings("prompt");
   expect(embedding).toEqual([0.4, 0.5]);
   expect(embeddingPayload).toEqual({
     model: "google/embeddinggemma-300m",
-    input: "prompt"
+    input: "prompt",
   });
 
-  const images = [{
-    mimeType: "image/png",
-    buffer: Buffer.from("image-one")
-  }];
+  const images = [
+    {
+      mimeType: "image/png",
+      buffer: Buffer.from("image-one"),
+    },
+  ];
   let payloadBuiltCalls = 0;
 
   const userProfile = { llm: "deepinfra:Qwen/Qwen3-VL-235B-A22B-Instruct" };
@@ -160,7 +181,7 @@ test("deepinfra client shapes embedding and chat requests and parses JSON output
     images,
     onPayloadBuilt: () => {
       payloadBuiltCalls += 1;
-    }
+    },
   });
   expect(result.json).toEqual({ ok: true });
   expect(chatPayload.model).toBe("Qwen/Qwen3-VL-235B-A22B-Instruct");
@@ -173,18 +194,18 @@ test("deepinfra client shapes embedding and chat requests and parses JSON output
         {
           type: "image_url",
           image_url: {
-            url: chatPayload.messages[1].content[0].image_url.url
-          }
+            url: chatPayload.messages[1].content[0].image_url.url,
+          },
         },
-        { type: "text", text: "Return JSON" }
-      ]
-    }
+        { type: "text", text: "Return JSON" },
+      ],
+    },
   ]);
   expect(chatPayload.response_format).toEqual({ type: "json_object" });
   expect(chatPayload.stream).toBe(true);
   expect(payloadBuiltCalls).toBe(1);
   expect(images[0].buffer).toBe(null);
-  expect(result.response.output_text).toBe("noise before {\"ok\":true} trailing");
+  expect(result.response.output_text).toBe('noise before {"ok":true} trailing');
 });
 
 test("deepinfra client uses explicit system prompt override", async () => {
@@ -193,7 +214,7 @@ test("deepinfra client uses explicit system prompt override", async () => {
     getApiKeyImpl: () => "deep-key",
     createClientImpl: () => ({
       embeddings: {
-        create: async () => ({ data: [{ embedding: [0.4, 0.5] }] })
+        create: async () => ({ data: [{ embedding: [0.4, 0.5] }] }),
       },
       chat: {
         completions: {
@@ -201,18 +222,18 @@ test("deepinfra client uses explicit system prompt override", async () => {
             chatPayload = payload;
             return {
               async *[Symbol.asyncIterator]() {
-                yield { choices: [{ delta: { content: "{\"ok\":true}" } }] };
-              }
+                yield { choices: [{ delta: { content: '{"ok":true}' } }] };
+              },
             };
-          }
-        }
-      }
-    })
+          },
+        },
+      },
+    }),
   });
 
   await client.generateJsonWithLlm("System: Be concise\nUser: Return JSON", {
     userProfile: { llm: "deepinfra:google/gemma-4-31B-it" },
-    systemPrompt: "Override system"
+    systemPrompt: "Override system",
   });
 
   expect(chatPayload.messages[0].content).toBe("Be concise\n\nOverride system");
@@ -223,39 +244,43 @@ test("deepinfra client throws for invalid embedding and invalid chat JSON", asyn
     getApiKeyImpl: () => "deep-key",
     createClientImpl: () => ({
       embeddings: {
-        create: async () => ({ data: [{ embedding: [] }] })
+        create: async () => ({ data: [{ embedding: [] }] }),
       },
       chat: {
         completions: {
           create: async () => ({
             async *[Symbol.asyncIterator]() {
               yield { choices: [{ delta: { content: "{}" } }] };
-            }
-          })
-        }
-      }
-    })
+            },
+          }),
+        },
+      },
+    }),
   });
-  await expect(() => badEmbeddingClient.getPromptEmbeddings("prompt")).rejects.toThrow(/Failed to compute prompt embeddings/);
+  await expect(() =>
+    badEmbeddingClient.getPromptEmbeddings("prompt"),
+  ).rejects.toThrow(/Failed to compute prompt embeddings/);
 
   const badJsonClient = createDeepInfraClient({
     getApiKeyImpl: () => "deep-key",
     createClientImpl: () => ({
       embeddings: {
-        create: async () => ({ data: [{ embedding: [1] }] })
+        create: async () => ({ data: [{ embedding: [1] }] }),
       },
       chat: {
         completions: {
           create: async () => ({
             async *[Symbol.asyncIterator]() {
               yield { choices: [{ delta: { content: "not-json" } }] };
-            }
-          })
-        }
-      }
-    })
+            },
+          }),
+        },
+      },
+    }),
   });
-  await expect(() => badJsonClient.generateJsonWithLlm("User: Return JSON")).rejects.toThrow(/Failed to parse JSON response/);
+  await expect(() =>
+    badJsonClient.generateJsonWithLlm("User: Return JSON"),
+  ).rejects.toThrow(/Failed to parse JSON response/);
 });
 
 test("deepinfra client logs transport diagnostics before rethrowing request errors", async () => {
@@ -265,7 +290,7 @@ test("deepinfra client logs transport diagnostics before rethrowing request erro
     name: "FetchError",
     message: "socket hang up",
     code: "ECONNRESET",
-    errno: "ECONNRESET"
+    errno: "ECONNRESET",
   };
 
   const client = createDeepInfraClient({
@@ -280,22 +305,24 @@ test("deepinfra client logs transport diagnostics before rethrowing request erro
     warnImpl: (...args) => warnings.push(args),
     createClientImpl: () => ({
       embeddings: {
-        create: async () => ({ data: [{ embedding: [1] }] })
+        create: async () => ({ data: [{ embedding: [1] }] }),
       },
       chat: {
         completions: {
           create: async () => {
             throw error;
-          }
-        }
-      }
-    })
+          },
+        },
+      },
+    }),
   });
 
-  await expect(() => client.generateJsonWithLlm("System: Be concise\nUser: Return JSON", {
+  await expect(() =>
+    client.generateJsonWithLlm("System: Be concise\nUser: Return JSON", {
       userProfile: { llm: "deepinfra:Qwen/Qwen3-VL-235B-A22B-Instruct" },
-      images: [{ mimeType: "image/png", buffer: Buffer.from("image-one") }]
-    })).rejects.toThrow(/Connection error/);
+      images: [{ mimeType: "image/png", buffer: Buffer.from("image-one") }],
+    }),
+  ).rejects.toThrow(/Connection error/);
 
   expect(warnings.length).toBe(1);
   expect(warnings[0][0]).toBe("[deepinfra][request-failed]");

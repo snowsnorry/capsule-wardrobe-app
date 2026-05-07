@@ -3,14 +3,19 @@ import type { AppNavigationOptions, AppRoute } from "./appTypes";
 import { getAppRoute, getShareIdFromPath } from "./appRouting";
 
 export function useAppNavigation() {
-  const [appRoute, setAppRoute] = useState<AppRoute>(() => (
-    typeof window === "undefined" ? "capsule" : getAppRoute(window.location.pathname)
-  ));
+  const [appRoute, setAppRoute] = useState<AppRoute>(() =>
+    typeof window === "undefined"
+      ? "capsule"
+      : getAppRoute(window.location.pathname),
+  );
   const [searchInitialQuery, setSearchInitialQuery] = useState("");
-  const [searchAutoOpenProductDetail, setSearchAutoOpenProductDetail] = useState(false);
-  const [pendingShareId, setPendingShareId] = useState(() => (
-    typeof window === "undefined" ? "" : getShareIdFromPath(window.location.pathname)
-  ));
+  const [searchAutoOpenProductDetail, setSearchAutoOpenProductDetail] =
+    useState(false);
+  const [pendingShareId, setPendingShareId] = useState(() =>
+    typeof window === "undefined"
+      ? ""
+      : getShareIdFromPath(window.location.pathname),
+  );
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -33,26 +38,40 @@ export function useAppNavigation() {
     };
   }, []);
 
-  const navigateApp = useCallback((nextApp: Exclude<AppRoute, "share">, options: AppNavigationOptions = {}) => {
-    if (typeof window === "undefined") {
-      return;
-    }
-    const nextPath = nextApp === "explore"
-      ? "/explore"
-      : nextApp === "statistics"
-        ? "/statistics"
-        : "/";
-    if (window.location.pathname !== nextPath) {
-      window.history.pushState({}, "", nextPath);
-    }
-    setSearchInitialQuery(nextApp === "explore" ? String(options.query || "") : "");
-    setSearchAutoOpenProductDetail(nextApp === "explore" && Boolean(options.openProductDetail));
-    setAppRoute(getAppRoute(nextPath));
-  }, []);
+  const navigateApp = useCallback(
+    (
+      nextApp: Exclude<AppRoute, "share">,
+      options: AppNavigationOptions = {},
+    ) => {
+      if (typeof window === "undefined") {
+        return;
+      }
+      const nextPath =
+        nextApp === "explore"
+          ? "/explore"
+          : nextApp === "statistics"
+            ? "/statistics"
+            : "/";
+      if (window.location.pathname !== nextPath) {
+        window.history.pushState({}, "", nextPath);
+      }
+      setSearchInitialQuery(
+        nextApp === "explore" ? String(options.query || "") : "",
+      );
+      setSearchAutoOpenProductDetail(
+        nextApp === "explore" && Boolean(options.openProductDetail),
+      );
+      setAppRoute(getAppRoute(nextPath));
+    },
+    [],
+  );
 
   const clearShareRoute = useCallback(() => {
     setPendingShareId("");
-    if (typeof window !== "undefined" && window.location.pathname.startsWith("/share/")) {
+    if (
+      typeof window !== "undefined" &&
+      window.location.pathname.startsWith("/share/")
+    ) {
       window.history.replaceState({}, "", "/");
     }
     setAppRoute("capsule");
@@ -77,6 +96,6 @@ export function useAppNavigation() {
     setAppRoute,
     clearShareRoute,
     navigateApp,
-    resetNavigation
+    resetNavigation,
   };
 }

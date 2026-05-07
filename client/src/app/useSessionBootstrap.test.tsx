@@ -6,15 +6,21 @@ import { createTestProfile } from "./testUtils";
 
 vi.mock("../api/auth", () => ({
   fetchCurrentUser: vi.fn(),
-  fetchProfileStatus: vi.fn()
+  fetchProfileStatus: vi.fn(),
 }));
 
-function Harness({ options }: { options: Parameters<typeof useSessionBootstrap>[0] }) {
+function Harness({
+  options,
+}: {
+  options: Parameters<typeof useSessionBootstrap>[0];
+}) {
   useSessionBootstrap(options);
   return <div />;
 }
 
-function createOptions(overrides: Partial<Parameters<typeof useSessionBootstrap>[0]> = {}) {
+function createOptions(
+  overrides: Partial<Parameters<typeof useSessionBootstrap>[0]> = {},
+) {
   return {
     bootstrapCapsules: vi.fn(async () => createTestProfile()),
     ensureOptionsLoaded: vi.fn(async () => undefined),
@@ -25,7 +31,7 @@ function createOptions(overrides: Partial<Parameters<typeof useSessionBootstrap>
     setSessionInitialized: vi.fn(),
     setSettingsProfile: vi.fn(),
     setUser: vi.fn(),
-    ...overrides
+    ...overrides,
   };
 }
 
@@ -39,7 +45,9 @@ describe("useSessionBootstrap", () => {
   });
 
   test("bootstraps an existing profile with options and capsules", async () => {
-    vi.mocked(fetchCurrentUser).mockResolvedValue({ user: { email: "person@example.com" } });
+    vi.mocked(fetchCurrentUser).mockResolvedValue({
+      user: { email: "person@example.com" },
+    });
     vi.mocked(fetchProfileStatus).mockResolvedValue({ hasProfile: true });
     const options = createOptions();
 
@@ -48,15 +56,21 @@ describe("useSessionBootstrap", () => {
     await waitFor(() => {
       expect(options.setSessionInitialized).toHaveBeenCalledWith(true);
     });
-    expect(options.setUser).toHaveBeenCalledWith({ email: "person@example.com" });
+    expect(options.setUser).toHaveBeenCalledWith({
+      email: "person@example.com",
+    });
     expect(options.setHasProfile).toHaveBeenCalledWith(true);
     expect(options.ensureOptionsLoaded).toHaveBeenCalled();
-    expect(options.bootstrapCapsules).toHaveBeenCalledWith("person@example.com");
+    expect(options.bootstrapCapsules).toHaveBeenCalledWith(
+      "person@example.com",
+    );
     expect(options.preloadOnboardingOptions).not.toHaveBeenCalled();
   });
 
   test("preloads onboarding options for users without a profile", async () => {
-    vi.mocked(fetchCurrentUser).mockResolvedValue({ user: { email: "person@example.com" } });
+    vi.mocked(fetchCurrentUser).mockResolvedValue({
+      user: { email: "person@example.com" },
+    });
     vi.mocked(fetchProfileStatus).mockResolvedValue({ hasProfile: false });
     const options = createOptions();
 
@@ -82,11 +96,13 @@ describe("useSessionBootstrap", () => {
     });
     expect(options.setUser).toHaveBeenCalledWith(null);
     expect(options.setHasProfile).toHaveBeenCalledWith(false);
-    expect(options.setSettingsProfile).toHaveBeenCalledWith(expect.objectContaining({
-      locale: "en",
-      theme: "system",
-      llm: "openai:gpt-5.5"
-    }));
+    expect(options.setSettingsProfile).toHaveBeenCalledWith(
+      expect.objectContaining({
+        locale: "en",
+        theme: "system",
+        llm: "openai:gpt-5.5",
+      }),
+    );
     expect(fetchProfileStatus).not.toHaveBeenCalled();
   });
 });

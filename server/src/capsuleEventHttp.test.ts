@@ -14,7 +14,7 @@ function createResponse() {
       this.body = payload;
       this.headersSent = true;
       return this;
-    }
+    },
   };
 }
 
@@ -26,14 +26,14 @@ function createCapsule(overrides = {}) {
       data: {
         wardrobe: {
           items: [{ id: "top-1", category: "top" }],
-          outfitSets: []
+          outfitSets: [],
         },
         rejectedUrls: [],
-        regeneration: null
-      }
+        regeneration: null,
+      },
     },
     saved: null,
-    ...overrides
+    ...overrides,
   };
 }
 
@@ -43,26 +43,31 @@ function createHandlers(overrides = {}) {
     getOutfitSetImageJobImpl: () => null,
     getPartialRegenerationJobImpl: () => null,
     getWardrobeJobImpl: () => null,
-    streamCapsuleEventsImpl: async (_req, res, { snapshot }) => res.json({ snapshot }),
-    updateCapsuleSnapshotImpl: async (_email, _capsuleId, snapshot) => createCapsule({ draft: snapshot }),
-    ...overrides
+    streamCapsuleEventsImpl: async (_req, res, { snapshot }) =>
+      res.json({ snapshot }),
+    updateCapsuleSnapshotImpl: async (_email, _capsuleId, snapshot) =>
+      createCapsule({ draft: snapshot }),
+    ...overrides,
   });
 }
 
 test("streamCapsuleEventsHandler validates capsule id and missing capsules", async () => {
   const handlers = createHandlers({
-    getCapsuleImpl: async () => null
+    getCapsuleImpl: async () => null,
   });
 
   const missingId = createResponse();
-  await handlers.streamCapsuleEventsHandler({ params: {}, user: { email: "person@example.com" } }, missingId);
+  await handlers.streamCapsuleEventsHandler(
+    { params: {}, user: { email: "person@example.com" } },
+    missingId,
+  );
   expect(missingId.statusCode).toBe(400);
   expect(missingId.body).toEqual({ error: "invalid_payload" });
 
   const missingCapsule = createResponse();
   await handlers.streamCapsuleEventsHandler(
     { params: { id: "capsule-1" }, user: { email: "person@example.com" } },
-    missingCapsule
+    missingCapsule,
   );
   expect(missingCapsule.statusCode).toBe(404);
   expect(missingCapsule.body).toEqual({ error: "not_found" });
@@ -75,24 +80,30 @@ test("getCapsuleEventSnapshot clears stale regeneration markers", async () => {
     updateCapsuleSnapshotImpl: async (_email, _capsuleId, snapshot) => {
       updates.push(snapshot);
       return createCapsule({ draft: snapshot });
-    }
+    },
   });
 
-  const snapshot = await handlers.getCapsuleEventSnapshot("person@example.com", createCapsule({
-    draft: {
-      filters: {},
-      data: {
-        wardrobe: { items: [{ id: "top-1", category: "top" }], outfitSets: [] },
-        rejectedUrls: [],
-        regeneration: {
-          status: "pending",
-          kind: "full",
-          startedAt: new Date(0).toISOString(),
-          requestId: "request-1"
-        }
-      }
-    }
-  }));
+  const snapshot = await handlers.getCapsuleEventSnapshot(
+    "person@example.com",
+    createCapsule({
+      draft: {
+        filters: {},
+        data: {
+          wardrobe: {
+            items: [{ id: "top-1", category: "top" }],
+            outfitSets: [],
+          },
+          rejectedUrls: [],
+          regeneration: {
+            status: "pending",
+            kind: "full",
+            startedAt: new Date(0).toISOString(),
+            requestId: "request-1",
+          },
+        },
+      },
+    }),
+  );
 
   expect(updates.length).toBe(1);
   expect(snapshot.status).toBe("failed");
@@ -102,7 +113,7 @@ test("streamCapsuleEventsHandler streams snapshots and maps unhandled errors", a
   const streamed = createResponse();
   await createHandlers().streamCapsuleEventsHandler(
     { params: { id: "capsule-1" }, user: { email: "person@example.com" } },
-    streamed
+    streamed,
   );
   expect(streamed.statusCode).toBe(200);
   expect(streamed.body).toBeTruthy();
@@ -116,10 +127,10 @@ test("streamCapsuleEventsHandler streams snapshots and maps unhandled errors", a
   await createHandlers({
     streamCapsuleEventsImpl: async () => {
       throw new Error("stream failed");
-    }
+    },
   }).streamCapsuleEventsHandler(
     { params: { id: "capsule-1" }, user: { email: "person@example.com" } },
-    failed
+    failed,
   );
   expect(failed.statusCode).toBe(503);
   expect(failed.body).toEqual({ error: "service_unavailable" });
@@ -129,10 +140,10 @@ test("streamCapsuleEventsHandler streams snapshots and maps unhandled errors", a
   await createHandlers({
     streamCapsuleEventsImpl: async () => {
       throw new Error("stream failed");
-    }
+    },
   }).streamCapsuleEventsHandler(
     { params: { id: "capsule-1" }, user: { email: "person@example.com" } },
-    headersAlreadySent
+    headersAlreadySent,
   );
   expect(headersAlreadySent.body).toBe(null);
   expect(errors.length).toBe(2);

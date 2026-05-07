@@ -7,13 +7,15 @@ import { ThemeProvider, createTheme } from "@mui/material/styles";
 import { LocaleProvider } from "../i18n/LocaleProvider";
 
 const mediaQueryMock = vi.hoisted(() => vi.fn());
-const localeSwitcherMock = vi.hoisted(() => vi.fn(() => <div data-testid="locale-switcher" />));
+const localeSwitcherMock = vi.hoisted(() =>
+  vi.fn(() => <div data-testid="locale-switcher" />),
+);
 
 vi.mock("@mui/material/useMediaQuery", () => ({
-  default: mediaQueryMock
+  default: mediaQueryMock,
 }));
 vi.mock("../components/LocaleSwitcher", () => ({
-  default: localeSwitcherMock
+  default: localeSwitcherMock,
 }));
 
 import SignInScreen from "./SignInScreen";
@@ -28,7 +30,9 @@ type RenderHarnessOptions = {
   status?: ComponentProps<typeof SignInScreen>["status"];
   onRequestCode?: ComponentProps<typeof SignInScreen>["onRequestCode"];
   onVerifyCode?: ComponentProps<typeof SignInScreen>["onVerifyCode"];
-  onGoogleCredential?: ComponentProps<typeof SignInScreen>["onGoogleCredential"];
+  onGoogleCredential?: ComponentProps<
+    typeof SignInScreen
+  >["onGoogleCredential"];
   onPasskeySignIn?: ComponentProps<typeof SignInScreen>["onPasskeySignIn"];
   onResetEmail?: ComponentProps<typeof SignInScreen>["onResetEmail"];
 };
@@ -43,7 +47,7 @@ function renderHarness({
   onVerifyCode = vi.fn(),
   onGoogleCredential = vi.fn(),
   onPasskeySignIn = vi.fn(),
-  onResetEmail = vi.fn()
+  onResetEmail = vi.fn(),
 }: RenderHarnessOptions = {}) {
   function Harness() {
     const [email, setEmail] = React.useState(initialEmail);
@@ -78,8 +82,8 @@ function renderHarness({
         <LocaleProvider>
           <Harness />
         </LocaleProvider>
-      </ThemeProvider>
-    )
+      </ThemeProvider>,
+    ),
   };
 }
 
@@ -89,7 +93,9 @@ describe("SignInScreen", () => {
     mediaQueryMock.mockReturnValue(false);
     localeSwitcherMock.mockClear();
     vi.restoreAllMocks();
-    document.head.querySelectorAll('script[src="https://accounts.google.com/gsi/client"]').forEach((node) => node.remove());
+    document.head
+      .querySelectorAll('script[src="https://accounts.google.com/gsi/client"]')
+      .forEach((node) => node.remove());
     delete window.google;
   });
 
@@ -99,10 +105,12 @@ describe("SignInScreen", () => {
 
   test("shows progress indicator while sign-in is loading", () => {
     renderHarness({
-      status: { loading: true, error: "", infoKey: "", infoParams: null }
+      status: { loading: true, error: "", infoKey: "", infoParams: null },
     });
 
-    expect(screen.getByRole("progressbar", { name: "Signing in" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("progressbar", { name: "Signing in" }),
+    ).toBeInTheDocument();
   });
 
   test("hides progress indicator when sign-in is idle", () => {
@@ -115,40 +123,47 @@ describe("SignInScreen", () => {
     const initialize = vi.fn();
     const renderButton = vi.fn();
     const onGoogleCredential = vi.fn();
-    const appendChildSpy = vi.spyOn(document.head, "appendChild").mockImplementation((node) => {
-      window.google = {
-        accounts: {
-          id: {
-            initialize,
-            renderButton
+    const appendChildSpy = vi
+      .spyOn(document.head, "appendChild")
+      .mockImplementation((node) => {
+        window.google = {
+          accounts: {
+            id: {
+              initialize,
+              renderButton,
+            },
+          },
+        };
+        queueMicrotask(() => {
+          if (node instanceof HTMLScriptElement) {
+            node.onload?.(new Event("load"));
           }
-        }
-      };
-      queueMicrotask(() => {
-        if (node instanceof HTMLScriptElement) {
-          node.onload?.(new Event("load"));
-        }
+        });
+        return node;
       });
-      return node;
-    });
 
     renderHarness({
       googleClientId: "client-id-123",
-      onGoogleCredential
+      onGoogleCredential,
     });
 
     await waitFor(() => {
       expect(appendChildSpy).toHaveBeenCalledTimes(1);
       expect(initialize).toHaveBeenCalledWith({
         client_id: "client-id-123",
-        callback: expect.any(Function)
+        callback: expect.any(Function),
       });
-      expect(renderButton).toHaveBeenCalledWith(expect.any(HTMLDivElement), expect.objectContaining({
-        locale: "en"
-      }));
+      expect(renderButton).toHaveBeenCalledWith(
+        expect.any(HTMLDivElement),
+        expect.objectContaining({
+          locale: "en",
+        }),
+      );
     });
 
-    const callback = initialize.mock.calls[0][0].callback as (response: { credential?: string | null }) => void;
+    const callback = initialize.mock.calls[0][0].callback as (response: {
+      credential?: string | null;
+    }) => void;
     callback({ credential: "  google-credential  " });
     expect(onGoogleCredential).toHaveBeenCalledWith("google-credential");
     callback({ credential: "   " });
@@ -163,17 +178,19 @@ describe("SignInScreen", () => {
       accounts: {
         id: {
           initialize,
-          renderButton
-        }
-      }
+          renderButton,
+        },
+      },
     };
 
     renderHarness({ googleClientId: "client-id-123" });
 
     await waitFor(() => {
-      expect(initialize).toHaveBeenCalledWith(expect.objectContaining({
-        client_id: "client-id-123"
-      }));
+      expect(initialize).toHaveBeenCalledWith(
+        expect.objectContaining({
+          client_id: "client-id-123",
+        }),
+      );
       expect(renderButton).toHaveBeenCalledTimes(1);
     });
     expect(appendChildSpy).not.toHaveBeenCalled();
@@ -192,9 +209,9 @@ describe("SignInScreen", () => {
       accounts: {
         id: {
           initialize,
-          renderButton
-        }
-      }
+          renderButton,
+        },
+      },
     };
     script.dispatchEvent(new Event("load"));
 
@@ -210,7 +227,7 @@ describe("SignInScreen", () => {
     renderHarness({
       initialStep: "code",
       initialEmail: "person@example.com",
-      googleClientId: "client-id-123"
+      googleClientId: "client-id-123",
     });
 
     expect(screen.getByRole("textbox", { name: /code/i })).toBeInTheDocument();
@@ -218,18 +235,20 @@ describe("SignInScreen", () => {
   });
 
   test("google script load failure keeps email flow usable", async () => {
-    const appendChildSpy = vi.spyOn(document.head, "appendChild").mockImplementation((node) => {
-      queueMicrotask(() => {
-        if (node instanceof HTMLScriptElement) {
-          node.onerror?.(new Event("error"));
-        }
+    const appendChildSpy = vi
+      .spyOn(document.head, "appendChild")
+      .mockImplementation((node) => {
+        queueMicrotask(() => {
+          if (node instanceof HTMLScriptElement) {
+            node.onerror?.(new Event("error"));
+          }
+        });
+        return node;
       });
-      return node;
-    });
     const user = userEvent.setup();
 
     renderHarness({
-      googleClientId: "client-id-123"
+      googleClientId: "client-id-123",
     });
 
     await waitFor(() => {

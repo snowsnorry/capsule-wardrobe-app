@@ -5,14 +5,14 @@ import {
   MAX_ITEMS_PER_CATEGORY,
   groupPromptImageItemsByCategory,
   resolveSourceImageUrl,
-  resolveStorageImagesDir
+  resolveStorageImagesDir,
 } from "./promptImagesShared.js";
 import { createItems } from "../test/promptImageFixtures.js";
 
 test("groupPromptImageItemsByCategory preserves order and caps each category at 10 items", () => {
   const groups = groupPromptImageItemsByCategory([
     ...createItems("top", MAX_ITEMS_PER_CATEGORY + 2),
-    ...createItems("bottom", 3)
+    ...createItems("bottom", 3),
   ]);
 
   expect([...groups.keys()]).toEqual(["top", "bottom"]);
@@ -23,27 +23,43 @@ test("groupPromptImageItemsByCategory preserves order and caps each category at 
 });
 
 test("resolveSourceImageUrl rejects localhost and literal IP hosts for server-side fetches", () => {
-  expect(resolveSourceImageUrl("https://example.com/image.jpg?w={width}")).toBe("https://example.com/image.jpg?w=1000");
+  expect(resolveSourceImageUrl("https://example.com/image.jpg?w={width}")).toBe(
+    "https://example.com/image.jpg?w=1000",
+  );
   expect(resolveSourceImageUrl("https://localhost/image.jpg")).toBe("");
   expect(resolveSourceImageUrl("https://cdn.localhost/image.jpg")).toBe("");
   expect(resolveSourceImageUrl("http://127.0.0.1/image.jpg")).toBe("");
   expect(resolveSourceImageUrl("http://10.0.0.15/image.jpg")).toBe("");
-  expect(resolveSourceImageUrl("http://169.254.169.254/latest/meta-data")).toBe("");
+  expect(resolveSourceImageUrl("http://169.254.169.254/latest/meta-data")).toBe(
+    "",
+  );
   expect(resolveSourceImageUrl("http://[::1]/image.jpg")).toBe("");
-  expect(resolveSourceImageUrl("https://[2606:4700:4700::1111]/image.jpg")).toBe("");
+  expect(
+    resolveSourceImageUrl("https://[2606:4700:4700::1111]/image.jpg"),
+  ).toBe("");
 });
 
 test("resolveSourceImageUrl only allows http and https schemes", () => {
-  expect(resolveSourceImageUrl("https://example.com/image.jpg?w={width}")).toBe("https://example.com/image.jpg?w=1000");
-  expect(resolveSourceImageUrl("http://example.com/image.jpg")).toBe("http://example.com/image.jpg");
+  expect(resolveSourceImageUrl("https://example.com/image.jpg?w={width}")).toBe(
+    "https://example.com/image.jpg?w=1000",
+  );
+  expect(resolveSourceImageUrl("http://example.com/image.jpg")).toBe(
+    "http://example.com/image.jpg",
+  );
   expect(resolveSourceImageUrl("javascript:alert(1)")).toBe("");
   expect(resolveSourceImageUrl("data:image/png;base64,abc")).toBe("");
   expect(resolveSourceImageUrl("file:///etc/passwd")).toBe("");
 });
 
 test("resolveStorageImagesDir points dist builds at the repository storage cache", () => {
-  const distModuleUrl = new URL("../../dist/server/src/ai/promptImages.js", import.meta.url).href;
-  const expectedStorageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../storage/images");
+  const distModuleUrl = new URL(
+    "../../dist/server/src/ai/promptImages.js",
+    import.meta.url,
+  ).href;
+  const expectedStorageDir = path.resolve(
+    path.dirname(fileURLToPath(import.meta.url)),
+    "../../../storage/images",
+  );
 
   expect(resolveStorageImagesDir(distModuleUrl)).toBe(expectedStorageDir);
 });

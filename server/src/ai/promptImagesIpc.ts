@@ -6,7 +6,7 @@ import type {
   PromptImagesChildMessage,
   PromptImagesChildPayload,
   PromptImagesChildSuccessPayload,
-  SerializedIpcBuffer
+  SerializedIpcBuffer,
 } from "./types.js";
 import {
   PROMPT_IMAGES_CHILD_TIMEOUT_MS,
@@ -19,35 +19,46 @@ import {
   nowMs,
   resolvePromptImagesChildEntryUrl,
   resolvePromptImagesChildExecArgv,
-  type PromptImagesFork
+  type PromptImagesFork,
 } from "./promptImagesShared.js";
-import { getNormalizedPromptImageTimings, saveDebugArtifacts } from "./promptImageArtifacts.js";
+import {
+  getNormalizedPromptImageTimings,
+  saveDebugArtifacts,
+} from "./promptImageArtifacts.js";
 import { logWarn } from "../logger.js";
 
-function serializePromptDebugImagesForIpc(result: PromptDebugImageResult = {}): PromptDebugImageResult {
+function serializePromptDebugImagesForIpc(
+  result: PromptDebugImageResult = {},
+): PromptDebugImageResult {
   return {
     cachedCount: Number(result?.cachedCount) || 0,
     downloadedCount: Number(result?.downloadedCount) || 0,
     skippedCount: Number(result?.skippedCount) || 0,
-    timings: isRecord(result.timings) ? getNormalizedPromptImageTimings(result.timings) : undefined,
+    timings: isRecord(result.timings)
+      ? getNormalizedPromptImageTimings(result.timings)
+      : undefined,
     stitched: serializePromptStitchedImage(result.stitched),
-    categories: Array.isArray(result?.categories) ? result.categories.map(serializePromptCategoryImage) : []
+    categories: Array.isArray(result?.categories)
+      ? result.categories.map(serializePromptCategoryImage)
+      : [],
   };
 }
 
-function serializePromptStitchedImage(stitched: PromptDebugImageResult["stitched"]) {
+function serializePromptStitchedImage(
+  stitched: PromptDebugImageResult["stitched"],
+) {
   return stitched
     ? {
-      ...getPromptStitchedMetadata(stitched),
-      buffer: normalizeDirectIpcBuffer(stitched.buffer)
-    }
+        ...getPromptStitchedMetadata(stitched),
+        buffer: normalizeDirectIpcBuffer(stitched.buffer),
+      }
     : null;
 }
 
 function serializePromptCategoryImage(category) {
   return {
     ...getPromptCategoryMetadata(category),
-    buffer: normalizeDirectIpcBuffer(category?.buffer)
+    buffer: normalizeDirectIpcBuffer(category?.buffer),
   };
 }
 
@@ -57,7 +68,7 @@ function getPromptStitchedMetadata(stitched) {
     mimeType: getIpcString(stitched?.mimeType, "image/jpeg"),
     filename: getIpcString(stitched?.filename, STITCHED_COLLAGE_FILENAME),
     totalItems: getIpcNumber(stitched?.totalItems),
-    categoryCount: getIpcNumber(stitched?.categoryCount)
+    categoryCount: getIpcNumber(stitched?.categoryCount),
   };
 }
 
@@ -70,7 +81,7 @@ function getPromptCategoryMetadata(category) {
     cachedCount: getIpcNumber(category?.cachedCount),
     downloadedCount: getIpcNumber(category?.downloadedCount),
     skippedCount: getIpcNumber(category?.skippedCount),
-    items: Array.isArray(category?.items) ? category.items : []
+    items: Array.isArray(category?.items) ? category.items : [],
   };
 }
 
@@ -85,7 +96,9 @@ function getIpcNumber(value: unknown): number {
 function normalizeDirectIpcBuffer(value: unknown): Buffer | null {
   return Buffer.isBuffer(value)
     ? value
-    : value instanceof Uint8Array ? Buffer.from(value) : null;
+    : value instanceof Uint8Array
+      ? Buffer.from(value)
+      : null;
 }
 
 function isSerializedIpcBuffer(value: unknown): value is SerializedIpcBuffer {
@@ -93,9 +106,11 @@ function isSerializedIpcBuffer(value: unknown): value is SerializedIpcBuffer {
     return false;
   }
 
-  return value.type === "Buffer"
-    && Array.isArray(value.data)
-    && value.data.every((entry) => Number.isInteger(entry));
+  return (
+    value.type === "Buffer" &&
+    Array.isArray(value.data) &&
+    value.data.every((entry) => Number.isInteger(entry))
+  );
 }
 
 function normalizeIpcBuffer(value: unknown): Buffer | null {
@@ -114,38 +129,54 @@ function normalizeIpcBuffer(value: unknown): Buffer | null {
   return null;
 }
 
-function deserializePromptDebugImagesFromIpc(payload: PromptDebugImageResult = {}): PromptDebugImageResult {
+function deserializePromptDebugImagesFromIpc(
+  payload: PromptDebugImageResult = {},
+): PromptDebugImageResult {
   return {
     cachedCount: Number(payload?.cachedCount) || 0,
     downloadedCount: Number(payload?.downloadedCount) || 0,
     skippedCount: Number(payload?.skippedCount) || 0,
-    timings: getNormalizedPromptImageTimings(isRecord(payload.timings) ? payload.timings : undefined),
+    timings: getNormalizedPromptImageTimings(
+      isRecord(payload.timings) ? payload.timings : undefined,
+    ),
     stitched: deserializePromptStitchedImage(payload.stitched),
-    categories: Array.isArray(payload?.categories) ? payload.categories.map(deserializePromptCategoryImage) : []
+    categories: Array.isArray(payload?.categories)
+      ? payload.categories.map(deserializePromptCategoryImage)
+      : [],
   };
 }
 
-function deserializePromptStitchedImage(stitched: PromptDebugImageResult["stitched"]) {
+function deserializePromptStitchedImage(
+  stitched: PromptDebugImageResult["stitched"],
+) {
   return stitched
     ? {
-      ...getPromptStitchedMetadata(stitched),
-      buffer: normalizeIpcBuffer(stitched?.buffer) || normalizeBase64IpcBuffer(stitched?.bufferBase64)
-    }
+        ...getPromptStitchedMetadata(stitched),
+        buffer:
+          normalizeIpcBuffer(stitched?.buffer) ||
+          normalizeBase64IpcBuffer(stitched?.bufferBase64),
+      }
     : null;
 }
 
 function deserializePromptCategoryImage(category) {
   return {
     ...getPromptCategoryMetadata(category),
-    buffer: normalizeIpcBuffer(category?.buffer) || normalizeBase64IpcBuffer(category?.bufferBase64)
+    buffer:
+      normalizeIpcBuffer(category?.buffer) ||
+      normalizeBase64IpcBuffer(category?.bufferBase64),
   };
 }
 
 function normalizeBase64IpcBuffer(value: unknown): Buffer | null {
-  return typeof value === "string" && value.length > 0 ? Buffer.from(value, "base64") : null;
+  return typeof value === "string" && value.length > 0
+    ? Buffer.from(value, "base64")
+    : null;
 }
 
-function isValidPromptImagesIpcPayload(message: unknown): message is PromptImagesChildSuccessPayload {
+function isValidPromptImagesIpcPayload(
+  message: unknown,
+): message is PromptImagesChildSuccessPayload {
   if (!isRecord(message)) {
     return false;
   }
@@ -155,16 +186,17 @@ function isValidPromptImagesIpcPayload(message: unknown): message is PromptImage
     return false;
   }
 
-  const hasValidStitched = payload.stitched != null && (
-    normalizeIpcBuffer(payload.stitched?.buffer) !== null
-    || typeof payload.stitched?.bufferBase64 === "string"
-  );
+  const hasValidStitched =
+    payload.stitched != null &&
+    (normalizeIpcBuffer(payload.stitched?.buffer) !== null ||
+      typeof payload.stitched?.bufferBase64 === "string");
 
-  const allCategoriesValid = payload.categories.every((category) => (
-    normalizeIpcBuffer(category?.buffer) !== null
-    || typeof category?.bufferBase64 === "string"
-    || category?.buffer == null
-  ));
+  const allCategoriesValid = payload.categories.every(
+    (category) =>
+      normalizeIpcBuffer(category?.buffer) !== null ||
+      typeof category?.bufferBase64 === "string" ||
+      category?.buffer == null,
+  );
 
   return hasValidStitched || allCategoriesValid;
 }
@@ -173,7 +205,7 @@ async function buildPromptDebugImagesInChild({
   normalizedItems = [],
   debugOutputDir = null,
   saveDebugArtifacts: shouldSaveDebugArtifacts = false,
-  forkImpl = nodeFork
+  forkImpl = nodeFork,
 }: {
   normalizedItems?: PromptImageItemLike[];
   debugOutputDir?: string | URL | null;
@@ -181,13 +213,17 @@ async function buildPromptDebugImagesInChild({
   forkImpl?: PromptImagesFork;
 } = {}) {
   const childRoundTripStartedAt = nowMs();
-  const result: PromptDebugImageResult = await buildPromptDebugImagesAllInChild({
-    normalizedItems,
-    forkImpl
-  });
+  const result: PromptDebugImageResult = await buildPromptDebugImagesAllInChild(
+    {
+      normalizedItems,
+      forkImpl,
+    },
+  );
   result.timings = {
     ...createPromptImageTimings(),
-    ...(result.timings && typeof result.timings === "object" ? result.timings : {})
+    ...(result.timings && typeof result.timings === "object"
+      ? result.timings
+      : {}),
   };
   addTiming(result.timings, "childRoundTripMs", childRoundTripStartedAt);
 
@@ -200,11 +236,14 @@ async function buildPromptDebugImagesInChild({
         cachedCount: result.cachedCount,
         downloadedCount: result.downloadedCount,
         skippedCount: result.skippedCount,
-        debugOutputDir
+        debugOutputDir,
       });
       addTiming(result.timings, "debugSaveMs", debugSaveStartedAt);
     } catch (error) {
-      logWarn("[prompt-images][debug-save-failed]", JSON.stringify({ message: getErrorMessage(error) }));
+      logWarn(
+        "[prompt-images][debug-save-failed]",
+        JSON.stringify({ message: getErrorMessage(error) }),
+      );
     }
   }
 
@@ -213,7 +252,7 @@ async function buildPromptDebugImagesInChild({
 
 async function buildPromptDebugImagesAllInChild({
   normalizedItems = [],
-  forkImpl = nodeFork
+  forkImpl = nodeFork,
 }: {
   normalizedItems?: PromptImageItemLike[];
   forkImpl?: PromptImagesFork;
@@ -222,7 +261,7 @@ async function buildPromptDebugImagesAllInChild({
     const childEntryUrl = resolvePromptImagesChildEntryUrl();
     const child = forkImpl(fileURLToPath(childEntryUrl), {
       stdio: ["ignore", "inherit", "inherit", "ipc"],
-      execArgv: resolvePromptImagesChildExecArgv(childEntryUrl)
+      execArgv: resolvePromptImagesChildExecArgv(childEntryUrl),
     });
     let settled = false;
     let childExited = false;
@@ -271,8 +310,13 @@ async function buildPromptDebugImagesAllInChild({
       }
 
       if (message?.ok === false) {
-        const error = new Error(String(message?.message || "prompt_images_child_failed"));
-        if (typeof message?.stack === "string" && message.stack.trim().length > 0) {
+        const error = new Error(
+          String(message?.message || "prompt_images_child_failed"),
+        );
+        if (
+          typeof message?.stack === "string" &&
+          message.stack.trim().length > 0
+        ) {
           error.stack = message.stack;
         }
         rejectOnce(error);
@@ -286,7 +330,11 @@ async function buildPromptDebugImagesAllInChild({
     function onExit(code: number | null, signal: NodeJS.Signals | null) {
       childExited = true;
       if (!settled) {
-        rejectOnce(new Error(`prompt_images_child_exit:${code ?? "null"}:${signal ?? "null"}`));
+        rejectOnce(
+          new Error(
+            `prompt_images_child_exit:${code ?? "null"}:${signal ?? "null"}`,
+          ),
+        );
       }
     }
 
@@ -296,7 +344,7 @@ async function buildPromptDebugImagesAllInChild({
 
     const message: PromptImagesChildMessage = {
       normalizedItems,
-      downloadConcurrency: PROMPT_CATEGORY_DOWNLOAD_CONCURRENCY
+      downloadConcurrency: PROMPT_CATEGORY_DOWNLOAD_CONCURRENCY,
     };
 
     child.send(message, (error: Error | null) => {
@@ -313,5 +361,5 @@ export {
   isSerializedIpcBuffer,
   isValidPromptImagesIpcPayload,
   normalizeIpcBuffer,
-  serializePromptDebugImagesForIpc
+  serializePromptDebugImagesForIpc,
 };

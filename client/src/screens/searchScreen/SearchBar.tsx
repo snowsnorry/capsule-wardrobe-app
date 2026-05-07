@@ -21,12 +21,16 @@ function SearchBar({
   onOpenFilters,
   onQueryChange,
   onApplyQuery,
-  onClearQuery
+  onClearQuery,
 }: SearchBarProps): ReactElement {
   return (
     <Stack direction="row" spacing={1.2} alignItems="center">
       {isMobile ? (
-        <IconButton aria-label={t("filters.open")} onClick={onOpenFilters} sx={{ flexShrink: 0 }}>
+        <IconButton
+          aria-label={t("filters.open")}
+          onClick={onOpenFilters}
+          sx={{ flexShrink: 0 }}
+        >
           <TuneRoundedIcon />
         </IconButton>
       ) : null}
@@ -62,7 +66,7 @@ function SearchBar({
                 <ClearRoundedIcon fontSize="small" />
               </IconButton>
             </InputAdornment>
-          ) : null
+          ) : null,
         }}
       />
     </Stack>

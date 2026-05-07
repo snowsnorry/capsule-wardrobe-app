@@ -1,19 +1,25 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import { LocaleProvider } from "../i18n/LocaleProvider";
 
 const searchApi = vi.hoisted(() => ({
   fetchSavedSearch: vi.fn(),
   fetchSearchOptions: vi.fn(),
-  runSearch: vi.fn()
+  runSearch: vi.fn(),
 }));
 
 const mediaQueryMock = vi.hoisted(() => vi.fn());
 
 vi.mock("../api/search", () => searchApi);
 vi.mock("@mui/material/useMediaQuery", () => ({
-  default: mediaQueryMock
+  default: mediaQueryMock,
 }));
 vi.mock("../components/AccentColorChips", () => ({
   default: ({ options = [], selectedValues = [], onToggle }) => (
@@ -29,7 +35,7 @@ vi.mock("../components/AccentColorChips", () => ({
         </button>
       ))}
     </div>
-  )
+  ),
 }));
 
 import SearchScreen from "./SearchScreen";
@@ -52,7 +58,7 @@ function renderScreen(props = {}, { layoutMode = "medium" } = {}) {
       <LocaleProvider>
         <SearchScreen onNavigateApp={vi.fn()} {...props} />
       </LocaleProvider>
-    </ThemeProvider>
+    </ThemeProvider>,
   );
 }
 
@@ -70,7 +76,7 @@ function makeOptions() {
     silhouettes: ["straight"],
     fits: ["regular"],
     closureTypes: ["button"],
-    priceRange: { min: 10, max: 150 }
+    priceRange: { min: 10, max: 150 },
   };
 }
 
@@ -93,8 +99,8 @@ function makeSavedSearch(overrides = {}) {
       priceMin: null,
       priceMax: null,
       page: 3,
-      ...overrides
-    }
+      ...overrides,
+    },
   };
 }
 
@@ -110,10 +116,28 @@ describe("SearchScreen", () => {
     searchApi.runSearch.mockReset();
     searchApi.fetchSearchOptions.mockResolvedValue(makeOptions());
     searchApi.fetchSavedSearch.mockResolvedValue(makeSavedSearch());
-    searchApi.runSearch.mockResolvedValue(makeResults([
-      { id: "1", name: "Linen Shirt", brand: "UNIQLO", category: "top", url: "https://example.com/1", audience: "all" },
-      { id: "2", name: "Wool Trousers", brand: "COS", category: "bottom", url: "https://example.com/2" }
-    ], 55));
+    searchApi.runSearch.mockResolvedValue(
+      makeResults(
+        [
+          {
+            id: "1",
+            name: "Linen Shirt",
+            brand: "UNIQLO",
+            category: "top",
+            url: "https://example.com/1",
+            audience: "all",
+          },
+          {
+            id: "2",
+            name: "Wool Trousers",
+            brand: "COS",
+            category: "bottom",
+            url: "https://example.com/2",
+          },
+        ],
+        55,
+      ),
+    );
   });
 
   afterEach(() => {
@@ -126,12 +150,14 @@ describe("SearchScreen", () => {
     expect(await screen.findByDisplayValue("linen shirt")).toBeInTheDocument();
     expect(searchApi.fetchSearchOptions).toHaveBeenCalledWith({ force: true });
     expect(searchApi.fetchSavedSearch).toHaveBeenCalledWith({ force: true });
-    expect(searchApi.runSearch).toHaveBeenCalledWith(expect.objectContaining({
-      query: "linen shirt",
-      brand: ["uniqlo"],
-      season: ["summer"],
-      page: 3
-    }));
+    expect(searchApi.runSearch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        query: "linen shirt",
+        brand: ["uniqlo"],
+        season: ["summer"],
+        page: 3,
+      }),
+    );
     expect(await screen.findByText("55 results")).toBeInTheDocument();
     expect(screen.getAllByText("Linen Shirt").length).toBeGreaterThan(0);
     expect(screen.getAllByText("unisex").length).toBeGreaterThan(0);
@@ -140,7 +166,11 @@ describe("SearchScreen", () => {
   test("initial query handoff replaces saved filters on first search", async () => {
     renderScreen({ initialQuery: "https://example.com/products/linen-shirt" });
 
-    expect(await screen.findByDisplayValue("https://example.com/products/linen-shirt")).toBeInTheDocument();
+    expect(
+      await screen.findByDisplayValue(
+        "https://example.com/products/linen-shirt",
+      ),
+    ).toBeInTheDocument();
     expect(searchApi.runSearch).toHaveBeenCalledWith({
       query: "https://example.com/products/linen-shirt",
       brand: [],
@@ -157,7 +187,7 @@ describe("SearchScreen", () => {
       silhouette: [],
       fit: [],
       closureType: [],
-      page: 1
+      page: 1,
     });
   });
 

@@ -14,7 +14,7 @@ type EventMessage = {
 type EventStreamLike = {
   fetchEventSource: (
     url: string,
-    options: Record<string, unknown>
+    options: Record<string, unknown>,
   ) => Promise<unknown>;
 };
 type CapsuleEventMessage = {
@@ -40,12 +40,15 @@ type OutfitSetMutationInput = WardrobeMutationInput & {
   setIndex?: number | string;
 };
 
-let fetchEventSourcePromise: Promise<EventStreamLike["fetchEventSource"]> | null = null;
+let fetchEventSourcePromise: Promise<
+  EventStreamLike["fetchEventSource"]
+> | null = null;
 
 function loadFetchEventSource(): Promise<EventStreamLike["fetchEventSource"]> {
   if (!fetchEventSourcePromise) {
-    fetchEventSourcePromise = import("@microsoft/fetch-event-source")
-      .then((module) => module.fetchEventSource);
+    fetchEventSourcePromise = import("@microsoft/fetch-event-source").then(
+      (module) => module.fetchEventSource,
+    );
   }
 
   return fetchEventSourcePromise;
@@ -67,83 +70,118 @@ async function subscribeCapsuleEvents({
   capsuleId,
   signal,
   onMessage = () => {},
-  onError = () => {}
+  onError = () => {},
 }: CapsuleEventSubscription = {}): Promise<unknown> {
   const normalizedCapsuleId = String(capsuleId || "").trim();
   const fetchEventSource = await loadFetchEventSource();
-  return fetchEventSource(`${API_BASE_URL}/capsules/${normalizedCapsuleId}/events`, {
-    credentials: "include",
-    signal,
-    openWhenHidden: true,
-    async onopen(response: CapsuleStreamResponse) {
-      const contentType = (response.headers.get("content-type") || "").toLowerCase();
-      if (response.ok && contentType.includes("text/event-stream")) {
-        return;
-      }
+  return fetchEventSource(
+    `${API_BASE_URL}/capsules/${normalizedCapsuleId}/events`,
+    {
+      credentials: "include",
+      signal,
+      openWhenHidden: true,
+      async onopen(response: CapsuleStreamResponse) {
+        const contentType = (
+          response.headers.get("content-type") || ""
+        ).toLowerCase();
+        if (response.ok && contentType.includes("text/event-stream")) {
+          return;
+        }
 
-      if (response.status >= 400 && response.status < 500 && response.status !== 429) {
-        throw new FatalError(`request_failed_${response.status}`);
-      }
+        if (
+          response.status >= 400 &&
+          response.status < 500 &&
+          response.status !== 429
+        ) {
+          throw new FatalError(`request_failed_${response.status}`);
+        }
 
-      throw new RetriableError(`request_failed_${response.status}`);
+        throw new RetriableError(`request_failed_${response.status}`);
+      },
+      onmessage(event: CapsuleEventMessage) {
+        onMessage({
+          event: event.event || "message",
+          data: parseEventPayload(event.data),
+        });
+      },
+      onclose() {
+        throw new RetriableError("event_stream_closed");
+      },
+      onerror(error: Error) {
+        if (signal?.aborted) {
+          return undefined;
+        }
+
+        if (error instanceof FatalError) {
+          onError(error);
+          throw error;
+        }
+
+        return 1000;
+      },
     },
-    onmessage(event: CapsuleEventMessage) {
-      onMessage({
-        event: event.event || "message",
-        data: parseEventPayload(event.data)
-      });
-    },
-    onclose() {
-      throw new RetriableError("event_stream_closed");
-    },
-    onerror(error: Error) {
-      if (signal?.aborted) {
-        return undefined;
-      }
-
-      if (error instanceof FatalError) {
-        onError(error);
-        throw error;
-      }
-
-      return 1000;
-    }
-  });
+  );
 }
 
-async function regenerateCapsuleWardrobe({ capsuleId }: WardrobeMutationInput): Promise<WardrobeResponse> {
-  return requestJson(`${API_BASE_URL}/capsules/${String(capsuleId || "").trim()}/regenerate`, {
-    method: "POST",
-    credentials: "include"
-  });
+async function regenerateCapsuleWardrobe({
+  capsuleId,
+}: WardrobeMutationInput): Promise<WardrobeResponse> {
+  return requestJson(
+    `${API_BASE_URL}/capsules/${String(capsuleId || "").trim()}/regenerate`,
+    {
+      method: "POST",
+      credentials: "include",
+    },
+  );
 }
 
 async function regenerateSelectedWardrobeItems({
   itemUrls,
-  capsuleId
+  capsuleId,
 }: SelectedWardrobeMutationInput): Promise<WardrobeResponse> {
-  return requestJson(`${API_BASE_URL}/capsules/${String(capsuleId || "").trim()}/regenerate-selected`, {
-    method: "POST",
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/json"
+  return requestJson(
+    `${API_BASE_URL}/capsules/${String(capsuleId || "").trim()}/regenerate-selected`,
+    {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ itemUrls }),
     },
-    body: JSON.stringify({ itemUrls })
-  });
+  );
 }
 
-async function generateOutfitSetImage({ capsuleId, setIndex }: OutfitSetMutationInput): Promise<WardrobeResponse> {
-  return requestJson(`${API_BASE_URL}/capsules/${String(capsuleId || "").trim()}/outfit-sets/${Number.parseInt(String(setIndex ?? ""), 10)}/image`, {
-    method: "POST",
-    credentials: "include"
-  });
+async function generateOutfitSetImage({
+  capsuleId,
+  setIndex,
+}: OutfitSetMutationInput): Promise<WardrobeResponse> {
+  return requestJson(
+    `${API_BASE_URL}/capsules/${String(capsuleId || "").trim()}/outfit-sets/${Number.parseInt(String(setIndex ?? ""), 10)}/image`,
+    {
+      method: "POST",
+      credentials: "include",
+    },
+  );
 }
 
-async function deleteOutfitSetImage({ capsuleId, setIndex }: OutfitSetMutationInput): Promise<WardrobeResponse> {
-  return requestJson(`${API_BASE_URL}/capsules/${String(capsuleId || "").trim()}/outfit-sets/${Number.parseInt(String(setIndex ?? ""), 10)}/image`, {
-    method: "DELETE",
-    credentials: "include"
-  });
+async function deleteOutfitSetImage({
+  capsuleId,
+  setIndex,
+}: OutfitSetMutationInput): Promise<WardrobeResponse> {
+  return requestJson(
+    `${API_BASE_URL}/capsules/${String(capsuleId || "").trim()}/outfit-sets/${Number.parseInt(String(setIndex ?? ""), 10)}/image`,
+    {
+      method: "DELETE",
+      credentials: "include",
+    },
+  );
 }
 
-export { deleteOutfitSetImage, generateOutfitSetImage, regenerateCapsuleWardrobe, regenerateSelectedWardrobeItems, subscribeCapsuleEvents };
+export {
+  deleteOutfitSetImage,
+  generateOutfitSetImage,
+  regenerateCapsuleWardrobe,
+  regenerateSelectedWardrobeItems,
+  subscribeCapsuleEvents,
+};

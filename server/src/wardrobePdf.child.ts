@@ -8,18 +8,33 @@ import { buildWardrobePdf } from "./wardrobePdf.js";
 configureSharp();
 
 function createWardrobePdfChildRuntime({
-  mkdirImpl = mkdir as (path: string, options?: Record<string, unknown>) => Promise<unknown>,
-  writeFileImpl = writeFile as (path: string, buffer: Buffer) => Promise<unknown>,
-  buildWardrobePdfImpl = buildWardrobePdf as (products: unknown[], options?: { locale?: string; totalStartedAt?: number | null }) => Promise<Buffer>,
+  mkdirImpl = mkdir as (
+    path: string,
+    options?: Record<string, unknown>,
+  ) => Promise<unknown>,
+  writeFileImpl = writeFile as (
+    path: string,
+    buffer: Buffer,
+  ) => Promise<unknown>,
+  buildWardrobePdfImpl = buildWardrobePdf as (
+    products: unknown[],
+    options?: { locale?: string; totalStartedAt?: number | null },
+  ) => Promise<Buffer>,
   sendImpl = process.send?.bind(process),
   disconnectImpl = process.disconnect?.bind(process),
   exitImpl = (code: number) => {
     process.exit(code);
-  }
+  },
 }: {
-  mkdirImpl?: (path: string, options?: Record<string, unknown>) => Promise<unknown>;
+  mkdirImpl?: (
+    path: string,
+    options?: Record<string, unknown>,
+  ) => Promise<unknown>;
   writeFileImpl?: (path: string, buffer: Buffer) => Promise<unknown>;
-  buildWardrobePdfImpl?: (products: unknown[], options?: { locale?: string; totalStartedAt?: number | null }) => Promise<Buffer>;
+  buildWardrobePdfImpl?: (
+    products: unknown[],
+    options?: { locale?: string; totalStartedAt?: number | null },
+  ) => Promise<Buffer>;
   sendImpl?: ((message: unknown, callback?: () => void) => unknown) | undefined;
   disconnectImpl?: (() => unknown) | undefined;
   exitImpl?: (code: number) => void;
@@ -48,7 +63,10 @@ function createWardrobePdfChildRuntime({
       const payload = getWardrobePdfChildPayload(message);
       const { outputFilePath } = payload;
       await mkdirImpl(path.dirname(outputFilePath), { recursive: true });
-      const pdfBuffer = await buildWardrobePdfImpl(payload.products, payload.options);
+      const pdfBuffer = await buildWardrobePdfImpl(
+        payload.products,
+        payload.options,
+      );
       await writeFileImpl(outputFilePath, pdfBuffer);
       sendFinalMessage({ ok: true, outputFilePath }, 0);
     } catch (error) {
@@ -58,7 +76,7 @@ function createWardrobePdfChildRuntime({
 
   return {
     handleMessage,
-    sendFinalMessage
+    sendFinalMessage,
   };
 }
 
@@ -73,8 +91,10 @@ function getWardrobePdfChildPayload(message) {
     products: Array.isArray(message?.products) ? message.products : [],
     options: {
       locale: message?.locale || "en",
-      totalStartedAt: Number.isFinite(message?.totalStartedAt) ? message.totalStartedAt : null
-    }
+      totalStartedAt: Number.isFinite(message?.totalStartedAt)
+        ? message.totalStartedAt
+        : null,
+    },
   };
 }
 
@@ -82,13 +102,16 @@ function getWardrobePdfChildErrorMessage(error) {
   return {
     ok: false,
     message: error?.message || "unknown_error",
-    stack: typeof error?.stack === "string" ? error.stack : null
+    stack: typeof error?.stack === "string" ? error.stack : null,
   };
 }
 
 const wardrobePdfChildRuntime = createWardrobePdfChildRuntime();
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
+if (
+  process.argv[1] &&
+  fileURLToPath(import.meta.url) === path.resolve(process.argv[1])
+) {
   process.once("message", (message) => {
     wardrobePdfChildRuntime.handleMessage(message);
   });

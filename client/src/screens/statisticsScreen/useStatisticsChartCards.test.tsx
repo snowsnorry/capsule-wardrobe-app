@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import { useStatisticsChartCards } from "./useStatisticsChartCards";
 import { createEmptyStatisticsSearchState } from "./statisticsState";
@@ -19,7 +25,7 @@ vi.mock("../../components/AccentColorChips", () => ({
         </button>
       ))}
     </div>
-  )
+  ),
 }));
 
 const theme = createTheme();
@@ -38,27 +44,29 @@ function makeOptions(): SearchOptions {
     silhouettes: ["straight"],
     fits: ["regular"],
     closureTypes: ["button"],
-    priceRange: { min: 10, max: 150 }
+    priceRange: { min: 10, max: 150 },
   };
 }
 
 function t(key: string) {
-  return {
-    "search.filters.price": "Price",
-    "search.filters.brand": "Brand",
-    "search.filters.category": "Category",
-    "profile.seasonsTitle": "Seasons",
-    "profile.audienceTitle": "Audience",
-    "statistics.charts.formalityLevel": "Formality",
-    "statistics.charts.style": "Style",
-    "profile.occasionsTitle": "Occasions",
-    "profile.patternTitle": "Pattern",
-    "search.filters.silhouette": "Silhouette",
-    "search.filters.fit": "Fit",
-    "search.filters.closureType": "Closure",
-    "profile.accentColorTitle": "Accent color",
-    "statistics.chartHint": "Chart hint"
-  }[key] || key;
+  return (
+    {
+      "search.filters.price": "Price",
+      "search.filters.brand": "Brand",
+      "search.filters.category": "Category",
+      "profile.seasonsTitle": "Seasons",
+      "profile.audienceTitle": "Audience",
+      "statistics.charts.formalityLevel": "Formality",
+      "statistics.charts.style": "Style",
+      "profile.occasionsTitle": "Occasions",
+      "profile.patternTitle": "Pattern",
+      "search.filters.silhouette": "Silhouette",
+      "search.filters.fit": "Fit",
+      "search.filters.closureType": "Closure",
+      "profile.accentColorTitle": "Accent color",
+      "statistics.chartHint": "Chart hint",
+    }[key] || key
+  );
 }
 
 function ChartCardsHarness({ onToggleFacetValue = vi.fn() } = {}) {
@@ -71,25 +79,25 @@ function ChartCardsHarness({ onToggleFacetValue = vi.fn() } = {}) {
       stats: {
         category: [
           { value: "top", count: 70 },
-          { value: "bottom", count: 50 }
+          { value: "bottom", count: 50 },
         ],
         audience: [
           { value: "woman", count: 80 },
           { value: "all", count: 40 },
-          { value: "man", count: 20 }
+          { value: "man", count: 20 },
         ],
         color: [
           { value: "blue", count: 90 },
-          { value: "white", count: 30 }
-        ]
+          { value: "white", count: 30 },
+        ],
       },
       priceBuckets: [
         { key: "10:50", min: 10, max: 50, count: 30 },
-        { key: "50:100", min: 50, max: 100, count: 45 }
-      ]
+        { key: "50:100", min: 50, max: 100, count: 45 },
+      ],
     },
     t,
-    onToggleFacetValue
+    onToggleFacetValue,
   });
 
   return <ThemeProvider theme={theme}>{cards}</ThemeProvider>;
@@ -106,7 +114,9 @@ describe("useStatisticsChartCards", () => {
     const cards = screen.getAllByTestId("statistics-card");
     expect(within(cards[0]).getByText("Price")).toBeInTheDocument();
     expect(within(cards[1]).getByText("Accent color")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Price: 50 - 100" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Price: 50 - 100" }),
+    ).not.toBeInTheDocument();
   });
 
   test("shows unisex audience label on the chart and toggles all", () => {

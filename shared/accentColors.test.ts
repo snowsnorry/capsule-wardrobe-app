@@ -10,7 +10,7 @@ test("ACCENT_COLOR_OPTIONS exports the expected ordered contract", () => {
     "yellow",
     "purple",
     "orange",
-    "multiple_accent_colors"
+    "multiple_accent_colors",
   ]);
   expect(new Set(ACCENT_COLOR_OPTIONS).size).toBe(ACCENT_COLOR_OPTIONS.length);
 });

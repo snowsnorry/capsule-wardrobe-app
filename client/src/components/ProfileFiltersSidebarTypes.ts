@@ -1,9 +1,13 @@
 import type AccentColorChips from "./AccentColorChips";
 import type StylePreferenceSelector from "./StylePreferenceSelector";
 
-type StyleOptions = Parameters<typeof StylePreferenceSelector>[0]["styleOptions"];
+type StyleOptions = Parameters<
+  typeof StylePreferenceSelector
+>[0]["styleOptions"];
 type AccentColorOptions = Parameters<typeof AccentColorChips>[0]["options"];
-type AccentColorValue = Parameters<NonNullable<Parameters<typeof AccentColorChips>[0]["onSelect"]>>[0];
+type AccentColorValue = Parameters<
+  NonNullable<Parameters<typeof AccentColorChips>[0]["onSelect"]>
+>[0];
 type ProfileFilterValue = string;
 
 type ProfileFiltersStatus = {
@@ -46,4 +50,8 @@ type ProfileFiltersSidebarProps = {
   resetLabelKey?: string;
 };
 
-export type { ProfileFiltersSidebarProps, ProfileFiltersStatus, ProfileFilterValue };
+export type {
+  ProfileFiltersSidebarProps,
+  ProfileFiltersStatus,
+  ProfileFilterValue,
+};

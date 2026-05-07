@@ -68,9 +68,17 @@ export type MainScreenProps = {
   onSaveCapsule?: (capsuleId?: string) => Promise<void> | void;
   onRevertCapsule?: (capsuleId?: string) => Promise<void> | void;
   onRenameCapsule?: (name: string, capsuleId?: string) => Promise<void> | void;
-  onDuplicateCapsule?: (name: string, capsuleId?: string) => Promise<void> | void;
+  onDuplicateCapsule?: (
+    name: string,
+    capsuleId?: string,
+  ) => Promise<void> | void;
   onDeleteCapsule?: (capsuleId?: string) => Promise<void> | void;
-  onShareCapsule?: (capsuleId?: string) => Promise<{ url?: string; expiresAt?: string | Date } | void> | { url?: string; expiresAt?: string | Date } | void;
+  onShareCapsule?: (
+    capsuleId?: string,
+  ) =>
+    | Promise<{ url?: string; expiresAt?: string | Date } | void>
+    | { url?: string; expiresAt?: string | Date }
+    | void;
   onSearchCapsules?: (query: string) => Promise<CapsuleLike[]> | CapsuleLike[];
   items: MainScreenItem[];
   outfitSets?: OutfitSetLike[];
@@ -104,7 +112,10 @@ export type MainScreenProps = {
   onTextChange: (value: string) => void;
   onApplyFilters: () => Promise<void> | void;
   onResetFilters: () => Promise<void> | void;
-  onNavigateApp: (nextApp: "capsule" | "explore" | "statistics", options?: AppNavigationOptions) => void;
+  onNavigateApp: (
+    nextApp: "capsule" | "explore" | "statistics",
+    options?: AppNavigationOptions,
+  ) => void;
   selectedRegenerationUrls: string[];
   partialRegenerationPendingUrls: string[];
   pendingImageSetIndexes?: number[];
@@ -114,8 +125,13 @@ export type MainScreenProps = {
   onDeleteOutfitSetImage?: (setIndex: number) => Promise<void> | void;
   onGenerateOutfitSetImage?: (setIndex: number) => Promise<void> | void;
   isPartialRegenerationLoading: boolean;
-  registerCapsuleSidebarActions?: (actions: {
-    openSearchDialog: () => void;
-    openCapsuleActions: (event: MouseEvent<HTMLElement>, capsule: CapsuleLike) => void;
-  } | null) => void;
+  registerCapsuleSidebarActions?: (
+    actions: {
+      openSearchDialog: () => void;
+      openCapsuleActions: (
+        event: MouseEvent<HTMLElement>,
+        capsule: CapsuleLike,
+      ) => void;
+    } | null,
+  ) => void;
 };

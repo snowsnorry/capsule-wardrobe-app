@@ -1,25 +1,34 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import { LocaleProvider } from "../i18n/LocaleProvider";
 
 const searchApi = vi.hoisted(() => ({
   fetchSavedSearch: vi.fn(),
   fetchSearchOptions: vi.fn(),
-  runSearch: vi.fn()
+  runSearch: vi.fn(),
 }));
 
 const mediaQueryMock = vi.hoisted(() => vi.fn());
 
 vi.mock("../api/search", () => searchApi);
 vi.mock("@mui/material/useMediaQuery", () => ({
-  default: mediaQueryMock
+  default: mediaQueryMock,
 }));
 vi.mock("../components/AppLauncher", () => ({
-  default: ({ currentApp }) => <div data-testid="app-launcher">{currentApp}</div>
+  default: ({ currentApp }) => (
+    <div data-testid="app-launcher">{currentApp}</div>
+  ),
 }));
 vi.mock("../components/LocaleSwitcher", () => ({
-  default: () => <div data-testid="locale-switcher">locale-switcher</div>
+  default: () => <div data-testid="locale-switcher">locale-switcher</div>,
 }));
 vi.mock("../components/AccentColorChips", () => ({
   default: ({ options = [], selectedValues = [], onToggle }) => (
@@ -35,7 +44,7 @@ vi.mock("../components/AccentColorChips", () => ({
         </button>
       ))}
     </div>
-  )
+  ),
 }));
 
 import SearchScreen from "./SearchScreen";
@@ -48,7 +57,7 @@ function renderScreen(props = {}) {
       <LocaleProvider>
         <SearchScreen onNavigateApp={vi.fn()} {...props} />
       </LocaleProvider>
-    </ThemeProvider>
+    </ThemeProvider>,
   );
 }
 
@@ -74,7 +83,7 @@ describe("SearchScreen e2e-style flow", () => {
       silhouettes: ["straight"],
       fits: ["regular"],
       closureTypes: ["button"],
-      priceRange: { min: 10, max: 150 }
+      priceRange: { min: 10, max: 150 },
     });
     searchApi.fetchSavedSearch.mockResolvedValue({
       search: {
@@ -93,8 +102,8 @@ describe("SearchScreen e2e-style flow", () => {
         closureType: [],
         priceMin: null,
         priceMax: null,
-        page: 1
-      }
+        page: 1,
+      },
     });
   });
 
@@ -112,10 +121,10 @@ describe("SearchScreen e2e-style flow", () => {
             brand: "UNIQLO",
             category: "top",
             url: "https://example.com/1",
-            description: "Soft linen shirt"
-          }
+            description: "Soft linen shirt",
+          },
         ],
-        total: 120
+        total: 120,
       })
       .mockResolvedValueOnce({
         items: [
@@ -125,10 +134,10 @@ describe("SearchScreen e2e-style flow", () => {
             brand: "ARKET",
             category: "top",
             url: "https://example.com/2",
-            description: "Lightweight merino layer"
-          }
+            description: "Lightweight merino layer",
+          },
         ],
-        total: 120
+        total: 120,
       })
       .mockResolvedValueOnce({
         items: [
@@ -138,7 +147,7 @@ describe("SearchScreen e2e-style flow", () => {
             brand: "COS",
             category: "outerwear",
             url: "https://example.com/3",
-            description: "Tailored wool coat"
+            description: "Tailored wool coat",
           },
           {
             id: "4",
@@ -146,10 +155,10 @@ describe("SearchScreen e2e-style flow", () => {
             brand: "COS",
             category: "bottom",
             url: "https://example.com/4",
-            description: "Structured cotton trousers"
-          }
+            description: "Structured cotton trousers",
+          },
         ],
-        total: 120
+        total: 120,
       });
 
     renderScreen();
@@ -163,7 +172,7 @@ describe("SearchScreen e2e-style flow", () => {
     await waitFor(() => {
       expect(searchApi.runSearch).toHaveBeenNthCalledWith(
         2,
-        expect.objectContaining({ query: "blue cardigan", page: 1 })
+        expect.objectContaining({ query: "blue cardigan", page: 1 }),
       );
     });
     await waitFor(() => {
@@ -175,23 +184,31 @@ describe("SearchScreen e2e-style flow", () => {
     await waitFor(() => {
       expect(searchApi.runSearch).toHaveBeenNthCalledWith(
         3,
-        expect.objectContaining({ query: "blue cardigan", page: 2 })
+        expect.objectContaining({ query: "blue cardigan", page: 2 }),
       );
     });
 
-    const resultButton = screen.getByRole("button", { name: /Olive Trousers COS/i });
+    const resultButton = screen.getByRole("button", {
+      name: /Olive Trousers COS/i,
+    });
     fireEvent.click(resultButton);
 
     await waitFor(() => {
       expect(screen.getAllByText("Olive Trousers").length).toBeGreaterThan(0);
-      expect(screen.getByText("Structured cotton trousers")).toBeInTheDocument();
+      expect(
+        screen.getByText("Structured cotton trousers"),
+      ).toBeInTheDocument();
     });
 
-    const productLink = screen.getAllByRole("link", { name: /Olive Trousers/i })[0];
+    const productLink = screen.getAllByRole("link", {
+      name: /Olive Trousers/i,
+    })[0];
     expect(productLink).toHaveAttribute("href", "https://example.com/4");
 
     const resultsRegion = resultButton.closest("div");
     expect(resultsRegion).not.toBeNull();
-    expect(within(resultsRegion).getByText("Olive Trousers")).toBeInTheDocument();
+    expect(
+      within(resultsRegion).getByText("Olive Trousers"),
+    ).toBeInTheDocument();
   });
 });

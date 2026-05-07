@@ -8,14 +8,14 @@ import {
   getRowText,
   measureTextBlockHeight,
   splitTextIntoLines,
-  truncateLines
+  truncateLines,
 } from "./wardrobePdfDrawing.js";
 
 function createFont(widthFactor = 0.5) {
   return {
     widthOfTextAtSize(text, size) {
       return String(text).length * size * widthFactor;
-    }
+    },
   };
 }
 
@@ -31,7 +31,7 @@ function createPageRecorder() {
     },
     drawText(text, options) {
       calls.push({ type: "text", text, options });
-    }
+    },
   };
 }
 
@@ -39,9 +39,19 @@ test("text helpers split long words, truncate punctuation, draw, and measure tex
   const font = createFont(1);
 
   expect(splitTextIntoLines("", font, 10, 30)).toEqual([]);
-  expect(splitTextIntoLines("alpha beta", font, 10, 50)).toEqual(["alpha", "beta"]);
-  expect(splitTextIntoLines("abcdefgh", font, 10, 30)).toEqual(["abc", "def", "gh"]);
-  expect(truncateLines(["One,", "Two!", "Three"], 2)).toEqual(["One,", "Two..."]);
+  expect(splitTextIntoLines("alpha beta", font, 10, 50)).toEqual([
+    "alpha",
+    "beta",
+  ]);
+  expect(splitTextIntoLines("abcdefgh", font, 10, 30)).toEqual([
+    "abc",
+    "def",
+    "gh",
+  ]);
+  expect(truncateLines(["One,", "Two!", "Three"], 2)).toEqual([
+    "One,",
+    "Two...",
+  ]);
   expect(truncateLines(["One"], 2)).toEqual(["One"]);
 
   const page = createPageRecorder();
@@ -52,24 +62,28 @@ test("text helpers split long words, truncate punctuation, draw, and measure tex
     font,
     size: 10,
     lineHeight: 14,
-    maxLines: 2
+    maxLines: 2,
   });
 
   expect(cursorY).toBe(72);
   expect(page.calls.map((call) => call.text)).toEqual(["alpha", "beta..."]);
-  expect(measureTextBlockHeight("alpha beta gamma", {
-    font,
-    size: 10,
-    lineHeight: 14,
-    width: 60,
-    maxLines: 2
-  })).toBe(28);
-  expect(measureTextBlockHeight("", {
-    font,
-    size: 10,
-    lineHeight: 14,
-    width: 60
-  })).toBe(0);
+  expect(
+    measureTextBlockHeight("alpha beta gamma", {
+      font,
+      size: 10,
+      lineHeight: 14,
+      width: 60,
+      maxLines: 2,
+    }),
+  ).toBe(28);
+  expect(
+    measureTextBlockHeight("", {
+      font,
+      size: 10,
+      lineHeight: 14,
+      width: 60,
+    }),
+  ).toBe(0);
 });
 
 test("rounded rectangles clamp radius and draw border and fill shapes", () => {
@@ -83,7 +97,7 @@ test("rounded rectangles clamp radius and draw border and fill shapes", () => {
     radius: 50,
     color: "fill",
     borderColor: "border",
-    borderWidth: 2
+    borderWidth: 2,
   });
 
   expect(page.calls.filter((call) => call.type === "rectangle").length).toBe(4);
@@ -98,7 +112,7 @@ test("rounded rectangles clamp radius and draw border and fill shapes", () => {
     width: 20,
     height: 10,
     radius: -1,
-    color: "fill"
+    color: "fill",
   });
   expect(flatPage.calls[0].options.width).toBe(20);
   expect(flatPage.calls[2].options.size).toBe(0);
@@ -114,8 +128,8 @@ test("link annotations are skipped without URLs and appended to page annotations
       register(value) {
         registered.push(value);
         return { ref: registered.length };
-      }
-    }
+      },
+    },
   };
   const pushed = [];
   const setCalls = [];
@@ -128,20 +142,30 @@ test("link annotations are skipped without URLs and appended to page annotations
       set(name, value) {
         setCalls.push({ name, value });
         this.annots = {
-          push: (ref) => pushed.push(ref)
+          push: (ref) => pushed.push(ref),
         };
-      }
-    }
+      },
+    },
   };
 
   addLinkAnnotation(pdfDoc, page, "", { x: 1, y: 2, width: 3, height: 4 });
   expect(page.node.Annots()).toBe(undefined);
 
-  addLinkAnnotation(pdfDoc, page, "https://example.com/1", { x: 1, y: 2, width: 3, height: 4 });
+  addLinkAnnotation(pdfDoc, page, "https://example.com/1", {
+    x: 1,
+    y: 2,
+    width: 3,
+    height: 4,
+  });
   expect(registered.length).toBe(1);
   expect(setCalls.length).toBe(1);
 
-  addLinkAnnotation(pdfDoc, page, "https://example.com/2", { x: 5, y: 6, width: 7, height: 8 });
+  addLinkAnnotation(pdfDoc, page, "https://example.com/2", {
+    x: 5,
+    y: 6,
+    width: 7,
+    height: 8,
+  });
   expect(registered.length).toBe(2);
   expect(pushed).toEqual([{ ref: 2 }]);
 });
@@ -156,9 +180,9 @@ test("color rows draw swatches, skip blank labels, and wrap within max width", (
       items: [
         { key: "red", label: "Red" },
         { key: "blue", label: "Blue" },
-        { key: "empty", label: " " }
-      ]
-    }
+        { key: "empty", label: " " },
+      ],
+    },
   };
 
   expect(getRowText(row)).toBe("Red, Blue,  ");
@@ -168,35 +192,51 @@ test("color rows draw swatches, skip blank labels, and wrap within max width", (
   drawColorValue(page, row, { x: 10, y: 100, maxWidth: 28, fonts });
 
   expect(page.calls.filter((call) => call.type === "circle").length).toBe(2);
-  expect(page.calls.filter((call) => call.type === "text").map((call) => call.text)).toEqual(["Red", "Blue"]);
-  expect(page.calls.find((call) => call.type === "text" && call.text === "Blue").options.y < 100).toBeTruthy();
+  expect(
+    page.calls.filter((call) => call.type === "text").map((call) => call.text),
+  ).toEqual(["Red", "Blue"]);
+  expect(
+    page.calls.find((call) => call.type === "text" && call.text === "Blue")
+      .options.y < 100,
+  ).toBeTruthy();
 });
 
 test("detail groups lay out mixed text and color rows in two columns", () => {
   const page = createPageRecorder();
   const fonts = { regularFont: createFont(0.5), boldFont: createFont(0.5) };
-  const nextY = drawDetailGroup(page, {
-    items: [
-      { label: "Brand", value: { text: "Capsule" } },
-      { label: "Description", value: { text: "Soft structured jacket for office looks" } },
-      {
-        label: "Colors",
-        value: {
-          kind: "colors",
-          items: [{ key: "black", label: "Black" }]
-        }
-      }
-    ]
-  }, {
-    startX: 20,
-    startY: 300,
-    width: 240,
-    fonts
-  });
+  const nextY = drawDetailGroup(
+    page,
+    {
+      items: [
+        { label: "Brand", value: { text: "Capsule" } },
+        {
+          label: "Description",
+          value: { text: "Soft structured jacket for office looks" },
+        },
+        {
+          label: "Colors",
+          value: {
+            kind: "colors",
+            items: [{ key: "black", label: "Black" }],
+          },
+        },
+      ],
+    },
+    {
+      startX: 20,
+      startY: 300,
+      width: 240,
+      fonts,
+    },
+  );
 
   expect(nextY < 300).toBeTruthy();
   expect(page.calls.some((call) => call.type === "rectangle")).toBeTruthy();
   expect(page.calls.some((call) => call.type === "circle")).toBeTruthy();
-  expect(page.calls.some((call) => call.type === "text" && call.text === "Brand")).toBeTruthy();
-  expect(page.calls.some((call) => call.type === "text" && call.text === "Capsule")).toBeTruthy();
+  expect(
+    page.calls.some((call) => call.type === "text" && call.text === "Brand"),
+  ).toBeTruthy();
+  expect(
+    page.calls.some((call) => call.type === "text" && call.text === "Capsule"),
+  ).toBeTruthy();
 });

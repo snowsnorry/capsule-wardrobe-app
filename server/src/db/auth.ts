@@ -3,7 +3,7 @@ import {
   getSqlClient,
   type LoginCodeRow,
   type SessionRow,
-  type VerifyAndConsumeLoginCodeResult
+  type VerifyAndConsumeLoginCodeResult,
 } from "./core.js";
 
 export async function pruneLoginCodes(): Promise<void> {
@@ -15,7 +15,7 @@ export async function upsertLoginCode({
   email,
   codeHash,
   nonce,
-  expiresAt
+  expiresAt,
 }: {
   email: string;
   codeHash: string;
@@ -36,9 +36,12 @@ export async function upsertLoginCode({
   `;
 }
 
-export async function getLoginCodeByEmail(email: string): Promise<LoginCodeRow | null> {
+export async function getLoginCodeByEmail(
+  email: string,
+): Promise<LoginCodeRow | null> {
   const sql = getSqlClient();
-  const entry = getFirstRow(await sql<LoginCodeRow>`
+  const entry = getFirstRow(
+    await sql<LoginCodeRow>`
     select
       email,
       "codeHash",
@@ -49,14 +52,15 @@ export async function getLoginCodeByEmail(email: string): Promise<LoginCodeRow |
     from login_codes
     where email = ${email}
     limit 1
-  `);
+  `,
+  );
   return entry || null;
 }
 
 export async function verifyAndConsumeLoginCode({
   email,
   codeHash,
-  maxAttempts
+  maxAttempts,
 }: {
   email: string;
   codeHash: string;
@@ -64,7 +68,8 @@ export async function verifyAndConsumeLoginCode({
 }): Promise<VerifyAndConsumeLoginCodeResult> {
   const sql = getSqlClient();
 
-  const consumed = getFirstRow(await sql<{ email: string }>`
+  const consumed = getFirstRow(
+    await sql<{ email: string }>`
     update login_codes
     set "consumedAt" = now()
     where
@@ -74,12 +79,14 @@ export async function verifyAndConsumeLoginCode({
       and attempts < ${maxAttempts}
       and "codeHash" = ${codeHash}
     returning email
-  `);
+  `,
+  );
   if (consumed) {
     return { ok: true };
   }
 
-  const incremented = getFirstRow(await sql<{ attempts: number }>`
+  const incremented = getFirstRow(
+    await sql<{ attempts: number }>`
     update login_codes
     set attempts = attempts + 1
     where
@@ -89,17 +96,20 @@ export async function verifyAndConsumeLoginCode({
       and attempts < ${maxAttempts}
       and "codeHash" <> ${codeHash}
     returning attempts
-  `);
+  `,
+  );
   if (incremented) {
     return { ok: false, reason: "invalid" };
   }
 
-  const entry = getFirstRow(await sql<Pick<LoginCodeRow, "expiresAt" | "attempts" | "consumedAt">>`
+  const entry = getFirstRow(
+    await sql<Pick<LoginCodeRow, "expiresAt" | "attempts" | "consumedAt">>`
     select "expiresAt", attempts, "consumedAt"
     from login_codes
     where email = ${email}
     limit 1
-  `);
+  `,
+  );
   if (!entry) {
     return { ok: false, reason: "not_found" };
   }
@@ -126,7 +136,7 @@ export async function insertSession({
   email,
   csrfToken,
   createdAt,
-  expiresAt
+  expiresAt,
 }: SessionRow): Promise<void> {
   const sql = getSqlClient();
   await sql`
@@ -135,14 +145,18 @@ export async function insertSession({
   `;
 }
 
-export async function getSessionById(sessionId: string): Promise<SessionRow | null> {
+export async function getSessionById(
+  sessionId: string,
+): Promise<SessionRow | null> {
   const sql = getSqlClient();
-  const session = getFirstRow(await sql<SessionRow>`
+  const session = getFirstRow(
+    await sql<SessionRow>`
     select "sessionId", email, "csrfToken", "createdAt", "expiresAt"
     from user_sessions
     where "sessionId" = ${sessionId}
     limit 1
-  `);
+  `,
+  );
   return session || null;
 }
 

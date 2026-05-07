@@ -13,7 +13,9 @@ async function sha256Hex(value: string): Promise<string> {
   return bytesToHex(new Uint8Array(digest));
 }
 
-async function buildCachedProductImageUrl(originalImageUrl: unknown): Promise<string> {
+async function buildCachedProductImageUrl(
+  originalImageUrl: unknown,
+): Promise<string> {
   const original = String(originalImageUrl ?? "").trim();
   if (!getSafeHttpUrl(original)) {
     return "";

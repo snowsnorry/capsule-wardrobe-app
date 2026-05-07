@@ -2,7 +2,11 @@ import { test, expect } from "vitest";
 import sharp from "sharp";
 import { downloadProductImageAssets } from "./promptImageDownloads.js";
 import { createBinaryResponse } from "../test/testDoubles.js";
-import { createFixtureBuffer, createItems, withCachedImage } from "../test/promptImageFixtures.js";
+import {
+  createFixtureBuffer,
+  createItems,
+  withCachedImage,
+} from "../test/promptImageFixtures.js";
 
 test("downloadProductImageAssets normalizes downloaded files to jpeg", async (t) => {
   const transparentBuffer = await sharp({
@@ -10,17 +14,20 @@ test("downloadProductImageAssets normalizes downloaded files to jpeg", async (t)
       width: 300,
       height: 180,
       channels: 4,
-      background: { r: 10, g: 120, b: 240, alpha: 0.3 }
-    }
-  }).png().toBuffer();
+      background: { r: 10, g: 120, b: 240, alpha: 0.3 },
+    },
+  })
+    .png()
+    .toBuffer();
   const originalFetch = globalThis.fetch;
 
-  globalThis.fetch = async () => createBinaryResponse(transparentBuffer, {
-    status: 200,
-    headers: {
-      "content-type": "image/png"
-    }
-  });
+  globalThis.fetch = async () =>
+    createBinaryResponse(transparentBuffer, {
+      status: 200,
+      headers: {
+        "content-type": "image/png",
+      },
+    });
 
   t.onTestFinished(() => {
     globalThis.fetch = originalFetch;
@@ -38,15 +45,18 @@ test("downloadProductImageAssets normalizes downloaded files to jpeg", async (t)
 });
 
 test("downloadProductImageAssets uses local cached jpeg before remote fetch", async (t) => {
-  const imageUrl = "https://static.zara.net/image.jpg?ts=1773310573314&w={width}";
+  const imageUrl =
+    "https://static.zara.net/image.jpg?ts=1773310573314&w={width}";
   const cachedJpeg = await sharp({
     create: {
       width: 1000,
       height: 700,
       channels: 3,
-      background: "#1d4ed8"
-    }
-  }).jpeg({ quality: 80 }).toBuffer();
+      background: "#1d4ed8",
+    },
+  })
+    .jpeg({ quality: 80 })
+    .toBuffer();
   await withCachedImage(t, imageUrl, cachedJpeg);
   const originalFetch = globalThis.fetch;
 
@@ -58,11 +68,13 @@ test("downloadProductImageAssets uses local cached jpeg before remote fetch", as
     globalThis.fetch = originalFetch;
   });
 
-  const assets = await downloadProductImageAssets([{
-    id: "top-1",
-    category: "top",
-    image_url: imageUrl
-  }]);
+  const assets = await downloadProductImageAssets([
+    {
+      id: "top-1",
+      category: "top",
+      image_url: imageUrl,
+    },
+  ]);
 
   const asset = assets["top-1"];
   expect(asset).toBeTruthy();
@@ -86,12 +98,16 @@ test("downloadProductImageAssets replaces width placeholder in image url before 
     globalThis.fetch = originalFetch;
   });
 
-  await downloadProductImageAssets([{
-    id: "top-1",
-    category: "top",
-    image_url: "https://static.zara.net/image.jpg?ts=1773310573314&w={width}"
-  }]);
+  await downloadProductImageAssets([
+    {
+      id: "top-1",
+      category: "top",
+      image_url: "https://static.zara.net/image.jpg?ts=1773310573314&w={width}",
+    },
+  ]);
 
   expect(requestedUrls.length).toBe(1);
-  expect(requestedUrls[0]).toBe("https://static.zara.net/image.jpg?ts=1773310573314&w=1000");
+  expect(requestedUrls[0]).toBe(
+    "https://static.zara.net/image.jpg?ts=1773310573314&w=1000",
+  );
 });

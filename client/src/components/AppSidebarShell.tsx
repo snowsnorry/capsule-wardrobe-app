@@ -7,9 +7,12 @@ import {
   ShellMainContent,
   SidebarContent,
   SidebarFrame,
-  UserMenu
+  UserMenu,
 } from "./AppSidebarShellContent";
-import type { AppSidebarShellContext, AppSidebarShellProps } from "./AppSidebarShellTypes";
+import type {
+  AppSidebarShellContext,
+  AppSidebarShellProps,
+} from "./AppSidebarShellTypes";
 
 const SIDEBAR_COLLAPSED_STORAGE_KEY = "capsule.appSidebarCollapsed";
 
@@ -25,7 +28,7 @@ function writeSharedDesktopSidebarCollapsed(value: boolean): void {
   if (typeof window !== "undefined") {
     window.localStorage.setItem(
       SIDEBAR_COLLAPSED_STORAGE_KEY,
-      value ? "true" : "false"
+      value ? "true" : "false",
     );
   }
 }
@@ -34,10 +37,12 @@ function getUserInitials(fullname: string, email: string): string {
   const trimmedName = String(fullname || "").trim();
   if (trimmedName) {
     const parts = trimmedName.split(/\s+/).filter(Boolean);
-    return parts
-      .slice(0, 2)
-      .map((part) => part[0]?.toUpperCase() || "")
-      .join("") || "U";
+    return (
+      parts
+        .slice(0, 2)
+        .map((part) => part[0]?.toUpperCase() || "")
+        .join("") || "U"
+    );
   }
 
   const normalizedEmail = String(email || "").trim();
@@ -49,11 +54,15 @@ function useAppSidebarShellContext(currentApp: string): AppSidebarShellContext {
   const isLargeDesktopSidebar = useMediaQuery("(min-width: 1680px)");
   const isMediumDesktopSidebar = !isOverlaySidebar && !isLargeDesktopSidebar;
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => readSharedDesktopSidebarCollapsed());
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() =>
+    readSharedDesktopSidebarCollapsed(),
+  );
   const desktopSidebarWidth = isSidebarCollapsed ? 72 : 296;
   const desktopSidebarRailWidth = 72;
   const desktopSidebarGap = 12;
-  const desktopContentInset = isOverlaySidebar ? 0 : desktopSidebarWidth + desktopSidebarGap;
+  const desktopContentInset = isOverlaySidebar
+    ? 0
+    : desktopSidebarWidth + desktopSidebarGap;
 
   useEffect(() => {
     if (isOverlaySidebar) {
@@ -106,7 +115,7 @@ function useAppSidebarShellContext(currentApp: string): AppSidebarShellContext {
     closeSidebar,
     toggleSidebar,
     collapseSidebar,
-    expandCollapsedSidebar
+    expandCollapsedSidebar,
   };
 }
 
@@ -121,11 +130,13 @@ function AppSidebarShell({
   onSignOut = () => {},
   headerContent,
   sidebarBodyContent,
-  children
+  children,
 }: AppSidebarShellProps): ReactElement {
   const { t } = useI18n();
   const shellContext = useAppSidebarShellContext(currentApp);
-  const [userMenuAnchor, setUserMenuAnchor] = useState<HTMLElement | null>(null);
+  const [userMenuAnchor, setUserMenuAnchor] = useState<HTMLElement | null>(
+    null,
+  );
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const userMenuPaperRef = useRef<HTMLDivElement | null>(null);
   const displayName = String(userName || "").trim();
@@ -148,7 +159,9 @@ function AppSidebarShell({
       userEmail={userEmail}
       sidebarBodyContent={sidebarBodyContent}
       context={shellContext}
-      onOpenUserMenu={(event: MouseEvent<HTMLElement>) => setUserMenuAnchor(event.currentTarget)}
+      onOpenUserMenu={(event: MouseEvent<HTMLElement>) =>
+        setUserMenuAnchor(event.currentTarget)
+      }
       t={t}
     />
   );
@@ -176,7 +189,7 @@ function AppSidebarShell({
         open={isSettingsOpen}
         settings={{
           ...(settingsProfile ?? {}),
-          email: userEmail
+          email: userEmail,
         }}
         onClose={() => setIsSettingsOpen(false)}
         onSave={onSaveSettings}
@@ -185,5 +198,9 @@ function AppSidebarShell({
   );
 }
 
-export type { AppSidebarShellContext, AppSidebarShellProps, AppSidebarShellSlot } from "./AppSidebarShellTypes";
+export type {
+  AppSidebarShellContext,
+  AppSidebarShellProps,
+  AppSidebarShellSlot,
+} from "./AppSidebarShellTypes";
 export default AppSidebarShell;

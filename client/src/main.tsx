@@ -21,5 +21,5 @@ root.render(
     <LocaleProvider>
       <App />
     </LocaleProvider>
-  </React.StrictMode>
+  </React.StrictMode>,
 );

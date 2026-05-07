@@ -21,8 +21,4 @@ function isSafeHttpUrl(rawValue: unknown): boolean {
   return getSafeHttpUrl(rawValue).length > 0;
 }
 
-export {
-  ALLOWED_HTTP_PROTOCOLS,
-  getSafeHttpUrl,
-  isSafeHttpUrl
-};
+export { ALLOWED_HTTP_PROTOCOLS, getSafeHttpUrl, isSafeHttpUrl };

@@ -6,17 +6,26 @@ import {
   EMPTY_SEARCH_OPTIONS,
   buildActiveFilterChips,
   buildSearchOptionsPayload,
-  toggleSelection
+  toggleSelection,
 } from "../../search/searchState";
-import type { ActiveFilterChip, SearchDraftState, SearchFilterValue, SearchOptions } from "../../search/searchState";
+import type {
+  ActiveFilterChip,
+  SearchDraftState,
+  SearchFilterValue,
+  SearchOptions,
+} from "../../search/searchState";
 import {
   buildInitialStatsState,
   createEmptyStatisticsSearchState,
   normalizeStatsResponse,
   resolveStatisticsTotal,
-  serializeStatisticsState
+  serializeStatisticsState,
 } from "./statisticsState";
-import type { SearchStatsResponse, StatisticsState, StatisticsStatus } from "./statisticsTypes";
+import type {
+  SearchStatsResponse,
+  StatisticsState,
+  StatisticsStatus,
+} from "./statisticsTypes";
 
 type Translate = (key: string, params?: Record<string, unknown>) => string;
 
@@ -30,7 +39,7 @@ function useBootstrapStatistics({
   setOptions,
   setDraftState,
   setStatsState,
-  setStatus
+  setStatus,
 }: {
   t: Translate;
   setOptions: Dispatch<SetStateAction<SearchOptions>>;
@@ -50,10 +59,14 @@ function useBootstrapStatistics({
         }
 
         const nextOptions = buildSearchOptionsPayload(optionsResponse);
-        const nextState = createEmptyStatisticsSearchState(nextOptions.priceRange);
+        const nextState = createEmptyStatisticsSearchState(
+          nextOptions.priceRange,
+        );
         setOptions(nextOptions);
         setDraftState(nextState);
-        const result = await fetchSearchStats(serializeStatisticsState(nextState)) as SearchStatsResponse;
+        const result = (await fetchSearchStats(
+          serializeStatisticsState(nextState),
+        )) as SearchStatsResponse;
         if (isActive) {
           setStatsState(normalizeStatsResponse(result));
           setStatus({ loading: false, error: "" });
@@ -75,28 +88,44 @@ function useBootstrapStatistics({
 export function useStatisticsStats({ t, locale }: UseStatisticsStatsParams) {
   const [options, setOptions] = useState<SearchOptions>(EMPTY_SEARCH_OPTIONS);
   const [draftState, setDraftState] = useState<SearchDraftState>(
-    createEmptyStatisticsSearchState(EMPTY_SEARCH_OPTIONS.priceRange)
+    createEmptyStatisticsSearchState(EMPTY_SEARCH_OPTIONS.priceRange),
   );
-  const [statsState, setStatsState] = useState<StatisticsState>(buildInitialStatsState());
-  const [status, setStatus] = useState<StatisticsStatus>({ loading: true, error: "" });
+  const [statsState, setStatsState] = useState<StatisticsState>(
+    buildInitialStatsState(),
+  );
+  const [status, setStatus] = useState<StatisticsStatus>({
+    loading: true,
+    error: "",
+  });
   const draftStateRef = useRef(draftState);
 
   useEffect(() => {
     draftStateRef.current = draftState;
   }, [draftState]);
 
-  const refreshStats = useCallback(async (nextState: SearchDraftState) => {
-    setStatus({ loading: true, error: "" });
-    try {
-      const result = await fetchSearchStats(serializeStatisticsState(nextState)) as SearchStatsResponse;
-      setStatsState(normalizeStatsResponse(result));
-      setStatus({ loading: false, error: "" });
-    } catch {
-      setStatus({ loading: false, error: t("errors.generic") });
-    }
-  }, [t]);
+  const refreshStats = useCallback(
+    async (nextState: SearchDraftState) => {
+      setStatus({ loading: true, error: "" });
+      try {
+        const result = (await fetchSearchStats(
+          serializeStatisticsState(nextState),
+        )) as SearchStatsResponse;
+        setStatsState(normalizeStatsResponse(result));
+        setStatus({ loading: false, error: "" });
+      } catch {
+        setStatus({ loading: false, error: t("errors.generic") });
+      }
+    },
+    [t],
+  );
 
-  useBootstrapStatistics({ t, setOptions, setDraftState, setStatsState, setStatus });
+  useBootstrapStatistics({
+    t,
+    setOptions,
+    setDraftState,
+    setStatsState,
+    setStatus,
+  });
 
   const submit = useCallback(async () => {
     const nextState = { ...draftStateRef.current, page: 1 };
@@ -112,43 +141,76 @@ export function useStatisticsStats({ t, locale }: UseStatisticsStatsParams) {
     await refreshStats(nextState);
   }, [options.priceRange, refreshStats]);
 
-  const updateDraftState = useCallback(async (
-    updater: SearchDraftState | ((current: SearchDraftState) => SearchDraftState),
-    { submit: shouldSubmit = false } = {}
-  ) => {
-    const nextState = typeof updater === "function" ? updater(draftStateRef.current) : updater;
-    draftStateRef.current = nextState;
-    setDraftState(nextState);
-    if (shouldSubmit) {
-      await refreshStats(nextState);
-    }
-  }, [refreshStats]);
+  const updateDraftState = useCallback(
+    async (
+      updater:
+        | SearchDraftState
+        | ((current: SearchDraftState) => SearchDraftState),
+      { submit: shouldSubmit = false } = {},
+    ) => {
+      const nextState =
+        typeof updater === "function"
+          ? updater(draftStateRef.current)
+          : updater;
+      draftStateRef.current = nextState;
+      setDraftState(nextState);
+      if (shouldSubmit) {
+        await refreshStats(nextState);
+      }
+    },
+    [refreshStats],
+  );
 
-  const toggleFacetValue = useCallback(async (fieldKey: keyof SearchDraftState, value: SearchFilterValue) => {
-    await updateDraftState((current) => ({
-      ...current,
-      [fieldKey]: toggleSelection(value, Array.isArray(current[fieldKey]) ? current[fieldKey] : []),
-      page: 1
-    }), { submit: true });
-  }, [updateDraftState]);
+  const toggleFacetValue = useCallback(
+    async (fieldKey: keyof SearchDraftState, value: SearchFilterValue) => {
+      await updateDraftState(
+        (current) => ({
+          ...current,
+          [fieldKey]: toggleSelection(
+            value,
+            Array.isArray(current[fieldKey]) ? current[fieldKey] : [],
+          ),
+          page: 1,
+        }),
+        { submit: true },
+      );
+    },
+    [updateDraftState],
+  );
 
-  const deleteActiveChip = useCallback((chip: ActiveFilterChip) => {
-    if (chip.field === "price") {
-      updateDraftState((current) => ({
-        ...current,
-        priceEnabled: false,
-        priceMinDraft: options.priceRange.min ?? 0,
-        priceMaxDraft: options.priceRange.max ?? 0,
-        page: 1
-      }), { submit: true });
-      return;
-    }
-    updateDraftState((current) => ({ ...current, [chip.field]: [], page: 1 }), { submit: true });
-  }, [options.priceRange.max, options.priceRange.min, updateDraftState]);
+  const deleteActiveChip = useCallback(
+    (chip: ActiveFilterChip) => {
+      if (chip.field === "price") {
+        updateDraftState(
+          (current) => ({
+            ...current,
+            priceEnabled: false,
+            priceMinDraft: options.priceRange.min ?? 0,
+            priceMaxDraft: options.priceRange.max ?? 0,
+            page: 1,
+          }),
+          { submit: true },
+        );
+        return;
+      }
+      updateDraftState(
+        (current) => ({ ...current, [chip.field]: [], page: 1 }),
+        { submit: true },
+      );
+    },
+    [options.priceRange.max, options.priceRange.min, updateDraftState],
+  );
 
   const activeChips = useMemo(
-    () => buildActiveFilterChips({ state: draftState, options, locale, t, translateOption }),
-    [draftState, locale, options, t]
+    () =>
+      buildActiveFilterChips({
+        state: draftState,
+        options,
+        locale,
+        t,
+        translateOption,
+      }),
+    [draftState, locale, options, t],
   );
 
   return {
@@ -162,6 +224,6 @@ export function useStatisticsStats({ t, locale }: UseStatisticsStatsParams) {
     reset,
     updateDraftState,
     toggleFacetValue,
-    deleteActiveChip
+    deleteActiveChip,
   };
 }

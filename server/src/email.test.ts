@@ -3,7 +3,7 @@ import {
   createEmailSender,
   escapeHtml,
   getRequiredEnv,
-  renderLoginCodeEmailHtml
+  renderLoginCodeEmailHtml,
 } from "./email.js";
 
 type EmailError = Error & { code?: string };
@@ -25,7 +25,7 @@ test("renderLoginCodeEmailHtml injects escaped values and selects locale templat
   const enHtml = renderLoginCodeEmailHtml({
     code: `<123&>`,
     expiresInMinutes: `5"`,
-    locale: "en"
+    locale: "en",
   });
   expect(enHtml).toMatch(/Sign in with this code/);
   expect(enHtml.includes("&lt;123&amp;&gt;")).toBeTruthy();
@@ -34,7 +34,7 @@ test("renderLoginCodeEmailHtml injects escaped values and selects locale templat
   const ruHtml = renderLoginCodeEmailHtml({
     code: "654321",
     expiresInMinutes: 3,
-    locale: "ru"
+    locale: "ru",
   });
   expect(ruHtml).toMatch(/Войдите с этим кодом/);
   expect(ruHtml.includes("654321")).toBeTruthy();
@@ -49,7 +49,9 @@ test("getRequiredEnv throws a typed error for missing values", () => {
     getRequiredEnv("TEST_EMAIL_ENV_MISSING");
     throw new Error("Expected getRequiredEnv to throw");
   } catch (error) {
-    expect((error as Error).message).toMatch(/TEST_EMAIL_ENV_MISSING is not set/);
+    expect((error as Error).message).toMatch(
+      /TEST_EMAIL_ENV_MISSING is not set/,
+    );
     expect((error as EmailError | undefined)?.code).toBe("missing_email_env");
   } finally {
     if (original !== undefined) {
@@ -62,24 +64,23 @@ test("sendLoginCodeEmail builds english resend payload with normalized locale an
   let requestUrl: string | null = null;
   let requestInit: RequestInitCapture | null = null;
   const sendLoginCodeEmail = createEmailSender({
-    getRequiredEnvImpl: (name) => (
-      name === "RESEND_API_KEY" ? "resend-key" : "hello@example.com"
-    ),
+    getRequiredEnvImpl: (name) =>
+      name === "RESEND_API_KEY" ? "resend-key" : "hello@example.com",
     fetchImpl: async (url, init) => {
       requestUrl = url;
       requestInit = init;
       return {
         ok: true,
-        text: async () => ""
+        text: async () => "",
       };
-    }
+    },
   });
 
   await sendLoginCodeEmail({
     email: "person@example.com",
     code: "123456",
     locale: "de",
-    expiresInMs: 1
+    expiresInMs: 1,
   });
 
   expect(requestUrl).toBe("https://api.resend.com/emails");
@@ -99,25 +100,26 @@ test("sendLoginCodeEmail builds english resend payload with normalized locale an
 test("sendLoginCodeEmail builds russian resend payload and throws on resend failure", async () => {
   let requestInit: RequestInitCapture | null = null;
   const sendLoginCodeEmail = createEmailSender({
-    getRequiredEnvImpl: (name) => (
-      name === "RESEND_API_KEY" ? "resend-key" : "hello@example.com"
-    ),
+    getRequiredEnvImpl: (name) =>
+      name === "RESEND_API_KEY" ? "resend-key" : "hello@example.com",
     fetchImpl: async (_url, init) => {
       requestInit = init;
       return {
         ok: false,
         status: 502,
-        text: async () => "bad gateway"
+        text: async () => "bad gateway",
       };
-    }
+    },
   });
 
-  await expect(sendLoginCodeEmail({
+  await expect(
+    sendLoginCodeEmail({
       email: "person@example.com",
       code: "654321",
       locale: "ru",
-      expiresInMs: 2 * 60 * 1000
-    })).rejects.toMatchObject({ code: "email_send_failed" });
+      expiresInMs: 2 * 60 * 1000,
+    }),
+  ).rejects.toMatchObject({ code: "email_send_failed" });
 
   expect(requestInit).toBeTruthy();
   const payload = JSON.parse(requestInit.body);

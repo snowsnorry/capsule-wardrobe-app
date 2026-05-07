@@ -6,7 +6,7 @@ import type {
   MainScreenItem,
   MobileCardColumns,
   OutfitSetLike,
-  ResolvedOutfitSet
+  ResolvedOutfitSet,
 } from "./MainScreenTypes";
 
 export const OUTFIT_SET_IMAGE_WIDTH = 896;
@@ -16,7 +16,10 @@ export const OUTFIT_SET_IMAGE_PREVIEW_MAX_WIDTH = OUTFIT_SET_IMAGE_WIDTH / 2;
 
 const MOBILE_CARD_COLUMNS_STORAGE_KEY = "capsule.mobileCardColumns";
 
-export function highlightMatch(name: string | undefined, query: string | undefined): ReactNode {
+export function highlightMatch(
+  name: string | undefined,
+  query: string | undefined,
+): ReactNode {
   const label = String(name || "");
   const normalizedQuery = String(query || "").trim();
   if (!normalizedQuery) {
@@ -62,18 +65,28 @@ export function groupCapsules(items: CapsuleLike[] = []) {
   }, {});
 }
 
-export function capsuleHasUnsavedChanges(capsule: CapsuleLike | null | undefined) {
+export function capsuleHasUnsavedChanges(
+  capsule: CapsuleLike | null | undefined,
+) {
   return capsule?.status === "new" || capsule?.status === "modified";
 }
 
 function capsuleHasShareableContent(capsule: CapsuleLike | null | undefined) {
-  const snapshot = (capsule?.draft || capsule?.saved) as { data?: { wardrobe?: { items?: unknown[]; regeneration?: unknown } | null; regeneration?: unknown } } | null;
+  const snapshot = (capsule?.draft || capsule?.saved) as {
+    data?: {
+      wardrobe?: { items?: unknown[]; regeneration?: unknown } | null;
+      regeneration?: unknown;
+    };
+  } | null;
   const items = snapshot?.data?.wardrobe?.items;
   const regeneration = snapshot?.data?.regeneration;
   return Array.isArray(items) && items.length > 0 && !regeneration;
 }
 
-export function capsuleCanRequestShare(capsule: CapsuleLike | null | undefined, { allowUnknownContent = false } = {}) {
+export function capsuleCanRequestShare(
+  capsule: CapsuleLike | null | undefined,
+  { allowUnknownContent = false } = {},
+) {
   if (!capsule?.id) {
     return false;
   }
@@ -89,38 +102,46 @@ export function normalizeCapsuleName(name: string | undefined) {
   return String(name || "").trim();
 }
 
-export function resolveOutfitSets(items: MainScreenItem[] = [], outfitSets: OutfitSetLike[] = []): ResolvedOutfitSet[] {
+export function resolveOutfitSets(
+  items: MainScreenItem[] = [],
+  outfitSets: OutfitSetLike[] = [],
+): ResolvedOutfitSet[] {
   const itemsById = new Map<string, MainScreenItem>(
     (Array.isArray(items) ? items : [])
       .map((item): [string, MainScreenItem] | null => {
         const id = String(item?.id || "").trim();
         return id ? [id, item] : null;
       })
-      .filter((entry): entry is [string, MainScreenItem] => Boolean(entry))
+      .filter((entry): entry is [string, MainScreenItem] => Boolean(entry)),
   );
 
   return (Array.isArray(outfitSets) ? outfitSets : [])
     .map((set, index) => {
-      const resolvedItems = sortWardrobeItems((Array.isArray(set?.itemIds) ? set.itemIds : [])
-        .map((id) => itemsById.get(String(id || "").trim()))
-        .filter((item): item is MainScreenItem => Boolean(item)));
+      const resolvedItems = sortWardrobeItems(
+        (Array.isArray(set?.itemIds) ? set.itemIds : [])
+          .map((id) => itemsById.get(String(id || "").trim()))
+          .filter((item): item is MainScreenItem => Boolean(item)),
+      );
       return resolvedItems.length >= 3
         ? {
-          id: `set-${index + 1}`,
-          index,
-          label: index + 1,
-          items: resolvedItems,
-          image: typeof set?.image === "string" && set.image.trim().length > 0
-            ? set.image.trim()
-            : null,
-          imageObsolete: Boolean(set?.imageObsolete)
-        }
+            id: `set-${index + 1}`,
+            index,
+            label: index + 1,
+            items: resolvedItems,
+            image:
+              typeof set?.image === "string" && set.image.trim().length > 0
+                ? set.image.trim()
+                : null,
+            imageObsolete: Boolean(set?.imageObsolete),
+          }
         : null;
     })
     .filter((set): set is ResolvedOutfitSet => Boolean(set));
 }
 
-export function resolveOutfitSetImageSrc(image: string | null | undefined): string {
+export function resolveOutfitSetImageSrc(
+  image: string | null | undefined,
+): string {
   const trimmed = String(image || "").trim();
   if (!trimmed) {
     return "";
@@ -133,7 +154,7 @@ export function resolveOutfitSetImageSrc(image: string | null | undefined): stri
 function resolveStyleSummaryItems({
   selectedStyleCore,
   selectedStyleAesthetic,
-  locale
+  locale,
 }: {
   selectedStyleCore: string | null | undefined;
   selectedStyleAesthetic: string | null | undefined;
@@ -157,9 +178,11 @@ function translateOptionalFilterItem(
   namespace: string,
   value: string | null | undefined,
   locale: string,
-  shouldInclude = Boolean(value)
+  shouldInclude = Boolean(value),
 ) {
-  return value && shouldInclude ? [translateOption(namespace, value, locale)] : [];
+  return value && shouldInclude
+    ? [translateOption(namespace, value, locale)]
+    : [];
 }
 
 export function buildCapsuleSummaryItems({
@@ -174,7 +197,7 @@ export function buildCapsuleSummaryItems({
   selectedPattern,
   selectedText,
   locale,
-  t
+  t,
 }: {
   itemCount: number;
   outfitCount: number;
@@ -191,20 +214,50 @@ export function buildCapsuleSummaryItems({
 }): string[] {
   const summary = [
     t("capsule.itemsCount", { count: itemCount }),
-    t("capsule.outfitsCount", { count: outfitCount })
+    t("capsule.outfitsCount", { count: outfitCount }),
   ];
-  summary.push(...resolveStyleSummaryItems({ selectedStyleCore, selectedStyleAesthetic, locale }));
-  summary.push(...selectedOccasions.map((item) => translateOption("occasions", item, locale)));
-  summary.push(...selectedSeasons.map((item) => translateOption("seasons", item, locale)));
-  summary.push(...translateOptionalFilterItem("audience", selectedAudience, locale, selectedAudience !== "any"));
-  summary.push(...translateOptionalFilterItem("accentColors", selectedAccentColor, locale));
-  summary.push(...translateOptionalFilterItem("patterns", selectedPattern, locale, selectedPattern !== "solid"));
+  summary.push(
+    ...resolveStyleSummaryItems({
+      selectedStyleCore,
+      selectedStyleAesthetic,
+      locale,
+    }),
+  );
+  summary.push(
+    ...selectedOccasions.map((item) =>
+      translateOption("occasions", item, locale),
+    ),
+  );
+  summary.push(
+    ...selectedSeasons.map((item) => translateOption("seasons", item, locale)),
+  );
+  summary.push(
+    ...translateOptionalFilterItem(
+      "audience",
+      selectedAudience,
+      locale,
+      selectedAudience !== "any",
+    ),
+  );
+  summary.push(
+    ...translateOptionalFilterItem("accentColors", selectedAccentColor, locale),
+  );
+  summary.push(
+    ...translateOptionalFilterItem(
+      "patterns",
+      selectedPattern,
+      locale,
+      selectedPattern !== "solid",
+    ),
+  );
   summary.push(...[String(selectedText || "").trim()].filter(Boolean));
 
   return summary.filter(Boolean);
 }
 
-export function isMobileCardColumns(value: unknown): value is MobileCardColumns {
+export function isMobileCardColumns(
+  value: unknown,
+): value is MobileCardColumns {
   return value === 1 || value === 2 || value === 3;
 }
 
@@ -213,7 +266,9 @@ export function readStoredMobileCardColumns(): MobileCardColumns {
     return 2;
   }
 
-  const parsed = Number(window.localStorage?.getItem(MOBILE_CARD_COLUMNS_STORAGE_KEY));
+  const parsed = Number(
+    window.localStorage?.getItem(MOBILE_CARD_COLUMNS_STORAGE_KEY),
+  );
   return isMobileCardColumns(parsed) ? parsed : 2;
 }
 

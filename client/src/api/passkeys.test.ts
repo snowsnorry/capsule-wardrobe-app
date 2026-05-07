@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 const requestApi = vi.hoisted(() => ({
-  requestJson: vi.fn()
+  requestJson: vi.fn(),
 }));
 
 vi.mock("./request", () => requestApi);
 vi.mock("./config", () => ({
-  API_BASE_URL: "https://api.example.test"
+  API_BASE_URL: "https://api.example.test",
 }));
 
 import {
@@ -15,7 +15,7 @@ import {
   getPasskeyRegistrationOptions,
   listPasskeys,
   verifyPasskeyAuthentication,
-  verifyPasskeyRegistration
+  verifyPasskeyRegistration,
 } from "./passkeys";
 
 describe("passkeys api", () => {
@@ -33,12 +33,12 @@ describe("passkeys api", () => {
     expect(requestApi.requestJson).toHaveBeenNthCalledWith(
       1,
       "https://api.example.test/auth/passkeys",
-      { credentials: "include" }
+      { credentials: "include" },
     );
     expect(requestApi.requestJson).toHaveBeenNthCalledWith(
       2,
       "https://api.example.test/auth/passkeys/register/options",
-      { method: "POST", credentials: "include" }
+      { method: "POST", credentials: "include" },
     );
     expect(requestApi.requestJson).toHaveBeenNthCalledWith(
       3,
@@ -47,13 +47,13 @@ describe("passkeys api", () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ response: { id: "credential-id" } })
-      }
+        body: JSON.stringify({ response: { id: "credential-id" } }),
+      },
     );
     expect(requestApi.requestJson).toHaveBeenNthCalledWith(
       4,
       "https://api.example.test/auth/passkeys/passkey%201",
-      { method: "DELETE", credentials: "include" }
+      { method: "DELETE", credentials: "include" },
     );
   });
 
@@ -64,7 +64,7 @@ describe("passkeys api", () => {
     expect(requestApi.requestJson).toHaveBeenNthCalledWith(
       1,
       "https://api.example.test/auth/passkeys/authenticate/options",
-      { method: "POST", credentials: "include" }
+      { method: "POST", credentials: "include" },
     );
     expect(requestApi.requestJson).toHaveBeenNthCalledWith(
       2,
@@ -73,8 +73,8 @@ describe("passkeys api", () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ response: { id: "credential-id" } })
-      }
+        body: JSON.stringify({ response: { id: "credential-id" } }),
+      },
     );
   });
 });

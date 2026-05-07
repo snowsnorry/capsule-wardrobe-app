@@ -1,7 +1,10 @@
 import type { SqlWardrobeRow } from "./regenerateSelectedPrompt.js";
 
 type RegenerateSelectedSqlClient = {
-  <TRow = unknown>(strings: TemplateStringsArray, ...values: readonly unknown[]): Promise<TRow[] | { count: number }>;
+  <TRow = unknown>(
+    strings: TemplateStringsArray,
+    ...values: readonly unknown[]
+  ): Promise<TRow[] | { count: number }>;
 };
 
 type RegenerateSelectedSqlParams = {
@@ -31,8 +34,8 @@ function queryRegenerationCandidateItems(
     occasions,
     pattern,
     season,
-    style
-  }: RegenerateSelectedSqlParams
+    style,
+  }: RegenerateSelectedSqlParams,
 ) {
   return sql<SqlWardrobeRow>`
     SELECT results.*

@@ -25,7 +25,7 @@ const CANONICAL_PATTERN_OPTIONS = Object.freeze([
   "stripe",
   "tie_dye",
   "waffle",
-  "zebra"
+  "zebra",
 ] as const);
 
 function normalizePatternOption(value: unknown): string {
@@ -34,14 +34,18 @@ function normalizePatternOption(value: unknown): string {
 
 function buildCanonicalPatternOptions(
   patternOptions: readonly unknown[] = [],
-  currentPattern: unknown = null
+  currentPattern: unknown = null,
 ): string[] {
   const seen = new Set<string>();
   const extras: string[] = [];
 
   for (const value of [...patternOptions, currentPattern]) {
     const normalized = normalizePatternOption(value);
-    if (!normalized || seen.has(normalized) || (CANONICAL_PATTERN_OPTIONS as readonly string[]).includes(normalized)) {
+    if (
+      !normalized ||
+      seen.has(normalized) ||
+      (CANONICAL_PATTERN_OPTIONS as readonly string[]).includes(normalized)
+    ) {
       continue;
     }
     seen.add(normalized);
@@ -54,5 +58,5 @@ function buildCanonicalPatternOptions(
 export {
   CANONICAL_PATTERN_OPTIONS,
   buildCanonicalPatternOptions,
-  normalizePatternOption
+  normalizePatternOption,
 };

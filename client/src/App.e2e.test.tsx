@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import App from "./App";
 import { LocaleProvider } from "./i18n/LocaleProvider";
 
@@ -15,12 +21,12 @@ const authApi = vi.hoisted(() => ({
   requestLoginCode: vi.fn(),
   verifyLoginCode: vi.fn(),
   signInWithGoogle: vi.fn(),
-  clearRequestCache: vi.fn()
+  clearRequestCache: vi.fn(),
 }));
 
 const profileOptionsApi = vi.hoisted(() => ({
   clearProfileOptionsCache: vi.fn(),
-  loadProfileOptions: vi.fn()
+  loadProfileOptions: vi.fn(),
 }));
 
 const wardrobeStream = vi.hoisted(() => ({
@@ -32,13 +38,13 @@ const wardrobeStream = vi.hoisted(() => ({
   },
   reset() {
     this.listeners.clear();
-  }
+  },
 }));
 
 const wardrobeApi = vi.hoisted(() => ({
   subscribeCapsuleEvents: vi.fn(),
   regenerateCapsuleWardrobe: vi.fn(),
-  regenerateSelectedWardrobeItems: vi.fn()
+  regenerateSelectedWardrobeItems: vi.fn(),
 }));
 
 const notificationApi = vi.hoisted(() => {
@@ -55,7 +61,7 @@ const notificationApi = vi.hoisted(() => {
       api.nextPermission = "default";
       api.created.mockReset();
       api.requestPermission.mockClear();
-    }
+    },
   };
   return api;
 });
@@ -74,7 +80,7 @@ const capsulesApi = vi.hoisted(() => ({
   searchCapsules: vi.fn(),
   selectCapsule: vi.fn(),
   updateCapsuleFilters: vi.fn(),
-  updateCapsuleRejectedUrls: vi.fn()
+  updateCapsuleRejectedUrls: vi.fn(),
 }));
 
 vi.mock("./api/auth", () => authApi);
@@ -83,7 +89,7 @@ vi.mock("./api/wardrobe", () => wardrobeApi);
 vi.mock("./api/capsules", () => capsulesApi);
 
 vi.mock("./screens/LoadingScreen", () => ({
-  default: () => <div data-testid="loading-screen">loading-screen</div>
+  default: () => <div data-testid="loading-screen">loading-screen</div>,
 }));
 
 vi.mock("./screens/SignInScreen", () => ({
@@ -115,7 +121,7 @@ vi.mock("./screens/SignInScreen", () => ({
         </button>
       </div>
     );
-  }
+  },
 }));
 
 vi.mock("./screens/OnboardingScreen", () => ({
@@ -138,7 +144,7 @@ vi.mock("./screens/OnboardingScreen", () => ({
         </button>
       </div>
     );
-  }
+  },
 }));
 
 vi.mock("./screens/mainScreen/MainScreen", () => ({
@@ -154,11 +160,11 @@ vi.mock("./screens/mainScreen/MainScreen", () => ({
         </button>
       </div>
     );
-  }
+  },
 }));
 
 vi.mock("./screens/ProfileScreen", () => ({
-  default: () => <div data-testid="profile-screen">profile-screen</div>
+  default: () => <div data-testid="profile-screen">profile-screen</div>,
 }));
 
 vi.mock("./screens/SearchScreen", () => ({
@@ -170,14 +176,14 @@ vi.mock("./screens/SearchScreen", () => ({
         </button>
       </div>
     );
-  }
+  },
 }));
 
 function renderApp() {
   return render(
     <LocaleProvider>
       <App />
-    </LocaleProvider>
+    </LocaleProvider>,
   );
 }
 
@@ -190,7 +196,7 @@ function installNotificationMock() {
     configurable: true,
     get() {
       return notificationApi.permission;
-    }
+    },
   });
   MockNotification.requestPermission = notificationApi.requestPermission;
   globalThis.Notification = MockNotification as unknown as typeof Notification;
@@ -201,12 +207,12 @@ function mockProfileOptions() {
   profileOptionsApi.loadProfileOptions.mockResolvedValue({
     styles: {
       core: ["casual", "smart_casual", "formal"],
-      aesthetics: ["minimalistic"]
+      aesthetics: ["minimalistic"],
     },
     occasions: ["office"],
     seasons: ["summer"],
     audience: ["woman", "man", "any"],
-    patterns: ["solid"]
+    patterns: ["solid"],
   });
 }
 
@@ -214,7 +220,7 @@ function createBootstrapResponse({
   items = [],
   locale = "en",
   llm = "openai:gpt-5.5",
-  imageLlm = "openai:gpt-image-2"
+  imageLlm = "openai:gpt-image-2",
 } = {}) {
   return {
     profile: { locale, llm, image_llm: imageLlm },
@@ -229,12 +235,12 @@ function createBootstrapResponse({
           season: ["summer"],
           audience: "woman",
           color: null,
-          pattern: "solid"
+          pattern: "solid",
         },
         data: {
           wardrobe: { items },
-          rejectedUrls: []
-        }
+          rejectedUrls: [],
+        },
       },
       saved: null,
       effective: {
@@ -245,16 +251,16 @@ function createBootstrapResponse({
           season: ["summer"],
           audience: "woman",
           color: null,
-          pattern: "solid"
+          pattern: "solid",
         },
         data: {
           wardrobe: { items },
-          rejectedUrls: []
-        }
+          rejectedUrls: [],
+        },
       },
-      status: "new"
+      status: "new",
     },
-    capsules: [{ id: "capsule-1", name: "Spring edit", status: "new" }]
+    capsules: [{ id: "capsule-1", name: "Spring edit", status: "new" }],
   };
 }
 
@@ -289,22 +295,44 @@ describe("App e2e-style flows", () => {
     wardrobeApi.regenerateSelectedWardrobeItems.mockReset();
     Object.values(capsulesApi).forEach((mockFn) => mockFn.mockReset());
 
-    wardrobeApi.subscribeCapsuleEvents.mockImplementation(({ onMessage, signal }) => {
-      wardrobeStream.listeners.add(onMessage);
-      signal?.addEventListener("abort", () => {
-        wardrobeStream.listeners.delete(onMessage);
-      }, { once: true });
-      return new Promise(() => {});
+    wardrobeApi.subscribeCapsuleEvents.mockImplementation(
+      ({ onMessage, signal }) => {
+        wardrobeStream.listeners.add(onMessage);
+        signal?.addEventListener(
+          "abort",
+          () => {
+            wardrobeStream.listeners.delete(onMessage);
+          },
+          { once: true },
+        );
+        return new Promise(() => {});
+      },
+    );
+    wardrobeApi.regenerateCapsuleWardrobe.mockResolvedValue({
+      ok: true,
+      status: "pending",
     });
-    wardrobeApi.regenerateCapsuleWardrobe.mockResolvedValue({ ok: true, status: "pending" });
-    wardrobeApi.regenerateSelectedWardrobeItems.mockResolvedValue({ ok: true, status: "pending" });
+    wardrobeApi.regenerateSelectedWardrobeItems.mockResolvedValue({
+      ok: true,
+      status: "pending",
+    });
 
     authApi.updateProfileLocale.mockResolvedValue({});
-    capsulesApi.fetchCapsuleBootstrap.mockResolvedValue(createBootstrapResponse());
-    capsulesApi.fetchRecentCapsules.mockResolvedValue({ capsules: [{ id: "capsule-1", name: "Spring edit", status: "new" }] });
-    capsulesApi.fetchCapsule.mockResolvedValue({ capsule: createBootstrapResponse().activeCapsule });
-    capsulesApi.createCapsule.mockResolvedValue({ capsule: createBootstrapResponse().activeCapsule });
-    capsulesApi.updateCapsuleFilters.mockResolvedValue({ capsule: createBootstrapResponse().activeCapsule });
+    capsulesApi.fetchCapsuleBootstrap.mockResolvedValue(
+      createBootstrapResponse(),
+    );
+    capsulesApi.fetchRecentCapsules.mockResolvedValue({
+      capsules: [{ id: "capsule-1", name: "Spring edit", status: "new" }],
+    });
+    capsulesApi.fetchCapsule.mockResolvedValue({
+      capsule: createBootstrapResponse().activeCapsule,
+    });
+    capsulesApi.createCapsule.mockResolvedValue({
+      capsule: createBootstrapResponse().activeCapsule,
+    });
+    capsulesApi.updateCapsuleFilters.mockResolvedValue({
+      capsule: createBootstrapResponse().activeCapsule,
+    });
   });
 
   afterEach(() => {
@@ -314,7 +342,9 @@ describe("App e2e-style flows", () => {
   test("covers auth happy path through onboarding, wardrobe load, search navigation, and sign-out", async () => {
     authApi.fetchCurrentUser.mockRejectedValue(new Error("unauthorized"));
     authApi.requestLoginCode.mockResolvedValue({ expiresInMs: 300000 });
-    authApi.verifyLoginCode.mockResolvedValue({ user: { email: "flow@example.com" } });
+    authApi.verifyLoginCode.mockResolvedValue({
+      user: { email: "flow@example.com" },
+    });
     authApi.fetchProfileStatus.mockResolvedValue({ hasProfile: false });
     authApi.initializeProfile.mockResolvedValue({});
     authApi.logout.mockResolvedValue({});
@@ -326,7 +356,10 @@ describe("App e2e-style flows", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "request-code" }));
     await waitFor(() => {
-      expect(authApi.requestLoginCode).toHaveBeenCalledWith(expect.any(String), "en");
+      expect(authApi.requestLoginCode).toHaveBeenCalledWith(
+        expect.any(String),
+        "en",
+      );
     });
 
     fireEvent.click(screen.getByRole("button", { name: "verify-code" }));
@@ -338,12 +371,16 @@ describe("App e2e-style flows", () => {
     await waitFor(() => {
       expect(authApi.initializeProfile).toHaveBeenCalledTimes(1);
       expect(capsulesApi.createCapsule).toHaveBeenCalledWith({
-        filters: expect.any(Object)
+        filters: expect.any(Object),
       });
-      expect(wardrobeApi.regenerateCapsuleWardrobe).toHaveBeenCalledWith({ capsuleId: "capsule-1" });
+      expect(wardrobeApi.regenerateCapsuleWardrobe).toHaveBeenCalledWith({
+        capsuleId: "capsule-1",
+      });
       expect(wardrobeApi.subscribeCapsuleEvents).toHaveBeenCalled();
     });
-    expect(capsulesApi.createCapsule.mock.calls[0][0]).not.toHaveProperty("draft");
+    expect(capsulesApi.createCapsule.mock.calls[0][0]).not.toHaveProperty(
+      "draft",
+    );
 
     fireEvent.click(screen.getByRole("button", { name: "open-explore" }));
     expect(await screen.findByTestId("search-screen")).toBeInTheDocument();
@@ -353,7 +390,11 @@ describe("App e2e-style flows", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "sign-out" }));
     expect(screen.getByRole("dialog")).toBeInTheDocument();
-    expect(screen.getByText(/Are you sure you want to sign out\?|Вы уверены, что хотите выйти\?/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /Are you sure you want to sign out\?|Вы уверены, что хотите выйти\?/i,
+      ),
+    ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /Sign out|Выйти/i }));
     expect(await screen.findByTestId("sign-in-screen")).toBeInTheDocument();
     expect(authApi.logout).toHaveBeenCalledTimes(1);
@@ -365,11 +406,15 @@ describe("App e2e-style flows", () => {
     notificationApi.nextPermission = "granted";
     authApi.fetchCurrentUser.mockRejectedValue(new Error("unauthorized"));
     authApi.requestLoginCode.mockResolvedValue({ expiresInMs: 300000 });
-    authApi.verifyLoginCode.mockResolvedValue({ user: { email: "flow@example.com" } });
+    authApi.verifyLoginCode.mockResolvedValue({
+      user: { email: "flow@example.com" },
+    });
     authApi.fetchProfileStatus.mockResolvedValue({ hasProfile: false });
     authApi.initializeProfile.mockResolvedValue({});
     authApi.logout.mockResolvedValue({});
-    capsulesApi.fetchCapsuleBootstrap.mockResolvedValue(createBootstrapResponse({ locale: "en", llm: "openai:gpt-5.5" }));
+    capsulesApi.fetchCapsuleBootstrap.mockResolvedValue(
+      createBootstrapResponse({ locale: "en", llm: "openai:gpt-5.5" }),
+    );
     mockProfileOptions();
 
     renderApp();
@@ -380,8 +425,14 @@ describe("App e2e-style flows", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "finish-onboarding" }));
 
-    expect(await screen.findByText("Capsule generation usually takes about a minute. Enable notifications and we will let you know when your result is ready.")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Enable notifications" }));
+    expect(
+      await screen.findByText(
+        "Capsule generation usually takes about a minute. Enable notifications and we will let you know when your result is ready.",
+      ),
+    ).toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Enable notifications" }),
+    );
 
     await waitFor(() => {
       expect(notificationApi.requestPermission).toHaveBeenCalledTimes(1);
@@ -390,12 +441,19 @@ describe("App e2e-style flows", () => {
     wardrobeStream.emit({ status: "ready", items: [] });
 
     await waitFor(() => {
-      expect(notificationApi.created).toHaveBeenCalledWith("Your capsule is ready", {
-        body: "Your new capsule is ready to review. Open the app to see the result."
-      });
+      expect(notificationApi.created).toHaveBeenCalledWith(
+        "Your capsule is ready",
+        {
+          body: "Your new capsule is ready to review. Open the app to see the result.",
+        },
+      );
     });
     await waitFor(() => {
-      expect(screen.queryByText("Capsule generation usually takes about a minute. Enable notifications and we will let you know when your result is ready.")).not.toBeInTheDocument();
+      expect(
+        screen.queryByText(
+          "Capsule generation usually takes about a minute. Enable notifications and we will let you know when your result is ready.",
+        ),
+      ).not.toBeInTheDocument();
     });
   });
 });

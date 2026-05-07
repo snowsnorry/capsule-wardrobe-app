@@ -5,13 +5,15 @@ import AppSnackbars from "./AppSnackbars";
 import { testStatus } from "./testUtils";
 
 function t(key: string) {
-  return {
-    "notifications.prompt.action": "Enable",
-    "notifications.prompt.message": "Get notified",
-    "passkeys.add": "Add passkey",
-    "passkeys.notNow": "Not now",
-    "passkeys.prompt": "Secure your account"
-  }[key] || key;
+  return (
+    {
+      "notifications.prompt.action": "Enable",
+      "notifications.prompt.message": "Get notified",
+      "passkeys.add": "Add passkey",
+      "passkeys.notNow": "Not now",
+      "passkeys.prompt": "Secure your account",
+    }[key] || key
+  );
 }
 
 describe("AppSnackbars", () => {
@@ -32,7 +34,7 @@ describe("AppSnackbars", () => {
         onAddPasskey={onAddPasskey}
         onDismissPasskey={onDismissPasskey}
         onClearError={vi.fn()}
-      />
+      />,
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Enable" }));
@@ -59,7 +61,7 @@ describe("AppSnackbars", () => {
         onAddPasskey={vi.fn()}
         onDismissPasskey={vi.fn()}
         onClearError={onClearError}
-      />
+      />,
     );
 
     expect(screen.getByText("Something failed")).toBeInTheDocument();
@@ -80,7 +82,7 @@ describe("AppSnackbars", () => {
           onDismissPasskey={vi.fn()}
           onClearError={vi.fn()}
         />
-      </ThemeProvider>
+      </ThemeProvider>,
     );
 
     expect(screen.getByText("Get notified")).toBeInTheDocument();

@@ -7,20 +7,22 @@ import { createAppTheme } from "../../theme";
 
 const searchApi = vi.hoisted(() => ({
   fetchSearchOptions: vi.fn(),
-  fetchSearchStats: vi.fn()
+  fetchSearchStats: vi.fn(),
 }));
 
 const mediaQueryMock = vi.hoisted(() => vi.fn());
 
 vi.mock("../../api/search", () => searchApi);
 vi.mock("@mui/material/useMediaQuery", () => ({
-  default: mediaQueryMock
+  default: mediaQueryMock,
 }));
 vi.mock("../../components/AppLauncher", () => ({
-  default: ({ currentApp }) => <div data-testid="app-launcher">{currentApp}</div>
+  default: ({ currentApp }) => (
+    <div data-testid="app-launcher">{currentApp}</div>
+  ),
 }));
 vi.mock("../../components/LocaleSwitcher", () => ({
-  default: () => <div data-testid="locale-switcher">locale-switcher</div>
+  default: () => <div data-testid="locale-switcher">locale-switcher</div>,
 }));
 
 import StatisticsScreen from "../StatisticsScreen";
@@ -41,7 +43,7 @@ function makeOptions() {
     silhouettes: ["straight"],
     fits: ["regular"],
     closureTypes: ["button"],
-    priceRange: { min: 10, max: 150 }
+    priceRange: { min: 10, max: 150 },
   };
 }
 
@@ -51,17 +53,18 @@ function makeStats(overrides = {}) {
     stats: {
       category: [
         { value: "top", count: 70 },
-        { value: "bottom", count: 50 }
-      ]
+        { value: "bottom", count: 50 },
+      ],
     },
-    priceBuckets: [
-      { key: "10:50", min: 10, max: 50, count: 30 }
-    ],
-    ...overrides
+    priceBuckets: [{ key: "10:50", min: 10, max: 50, count: 30 }],
+    ...overrides,
   };
 }
 
-function renderScreen(props = {}, { layoutMode = "medium", themeOverride = theme } = {}) {
+function renderScreen(
+  props = {},
+  { layoutMode = "medium", themeOverride = theme } = {},
+) {
   mediaQueryMock.mockImplementation((query) => {
     if (String(query).includes("max-width: 1279.95px")) {
       return layoutMode === "overlay";
@@ -77,7 +80,7 @@ function renderScreen(props = {}, { layoutMode = "medium", themeOverride = theme
       <LocaleProvider>
         <StatisticsScreen onNavigateApp={vi.fn()} {...props} />
       </LocaleProvider>
-    </ThemeProvider>
+    </ThemeProvider>,
   );
 }
 
@@ -101,17 +104,23 @@ describe("StatisticsLayout", () => {
     expect((await screen.findAllByText("120")).length).toBeGreaterThan(0);
     await user.click(screen.getByLabelText("Open filters"));
     expect(await screen.findByText("Filters")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Cancel" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Close filters" })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Cancel" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Close filters" }),
+    ).toBeInTheDocument();
 
     searchApi.fetchSearchStats.mockClear();
     searchApi.fetchSearchStats.mockResolvedValueOnce(makeStats({ total: 37 }));
     await user.click(screen.getByRole("button", { name: "UNIQLO" }));
 
     await waitFor(() => {
-      expect(searchApi.fetchSearchStats).toHaveBeenCalledWith(expect.objectContaining({
-        brand: ["uniqlo"]
-      }));
+      expect(searchApi.fetchSearchStats).toHaveBeenCalledWith(
+        expect.objectContaining({
+          brand: ["uniqlo"],
+        }),
+      );
     });
 
     await user.click(screen.getByRole("button", { name: "Close filters" }));

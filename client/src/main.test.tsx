@@ -5,16 +5,18 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 const renderMock = vi.fn();
 const createRootMock = vi.fn(() => ({ render: renderMock }));
 const appMock = vi.fn(() => null);
-const localeProviderMock = vi.fn(({ children }: PropsWithChildren) => <>{children}</>);
+const localeProviderMock = vi.fn(({ children }: PropsWithChildren) => (
+  <>{children}</>
+));
 
 vi.mock("react-dom/client", () => ({
-  createRoot: createRootMock
+  createRoot: createRootMock,
 }));
 vi.mock("./App", () => ({
-  default: appMock
+  default: appMock,
 }));
 vi.mock("./i18n/LocaleProvider", () => ({
-  LocaleProvider: localeProviderMock
+  LocaleProvider: localeProviderMock,
 }));
 
 describe("main entrypoint", () => {
@@ -33,16 +35,24 @@ describe("main entrypoint", () => {
   test("renders the app tree into the root element", async () => {
     await import("./main");
 
-    expect(createRootMock).toHaveBeenCalledWith(document.getElementById("root"));
+    expect(createRootMock).toHaveBeenCalledWith(
+      document.getElementById("root"),
+    );
     expect(renderMock).toHaveBeenCalledTimes(1);
 
     const tree = renderMock.mock.calls[0][0];
     const localeProvider = tree.props.children;
-    const providerChildren = React.Children.toArray(localeProvider.props.children);
+    const providerChildren = React.Children.toArray(
+      localeProvider.props.children,
+    );
 
     expect(tree.type).toBe(React.StrictMode);
     expect(localeProvider.type).toBe(localeProviderMock);
-    expect(providerChildren.some((child) => React.isValidElement(child) && child.type === appMock)).toBe(true);
+    expect(
+      providerChildren.some(
+        (child) => React.isValidElement(child) && child.type === appMock,
+      ),
+    ).toBe(true);
   });
 });
 
@@ -58,6 +68,10 @@ describe("theme contract", () => {
     expect(theme.typography.fontFamily).toContain("DM Sans");
     expect(theme.shape.borderRadius).toBe(18);
     expect(theme.components.MuiButton.defaultProps.disableElevation).toBe(true);
-    expect(theme.components.MuiCssBaseline.styleOverrides["@keyframes placeholderShimmer"]).toBeDefined();
+    expect(
+      theme.components.MuiCssBaseline.styleOverrides[
+        "@keyframes placeholderShimmer"
+      ],
+    ).toBeDefined();
   });
 });

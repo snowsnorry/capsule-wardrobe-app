@@ -21,7 +21,7 @@ export function buildAppPresentationModel({
   session,
   share,
   theme,
-  view
+  view,
 }: PresentationModelInput) {
   return {
     ...actions,
@@ -32,6 +32,6 @@ export function buildAppPresentationModel({
     ...session,
     ...share,
     ...view,
-    theme
+    theme,
   };
 }

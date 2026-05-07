@@ -20,45 +20,55 @@ test("buildWardrobePdf consumes prepared image assets as pages are rendered", as
       width: 600,
       height: 400,
       channels: 3,
-      background: "#aa6644"
-    }
-  }).jpeg({ quality: 80 }).toBuffer();
+      background: "#aa6644",
+    },
+  })
+    .jpeg({ quality: 80 })
+    .toBuffer();
   const imageAssetsById = {
     "top-1": {
       buffer: imageBuffer,
       mimeType: "image/jpeg",
       kind: "jpg",
       preparedForPdf: true,
-      imageUrl: "https://example.com/top-1.jpg"
-    }
+      imageUrl: "https://example.com/top-1.jpg",
+    },
   };
 
-  const pdfBuffer = await buildWardrobePdf([{
-    id: "top-1",
-    name: "Top",
-    category: "top",
-    imageUrl: "https://example.com/top-1.jpg",
-    brand: "Brand",
-    description: "Description"
-  }], {
-    locale: "ru",
-    imageAssetsById
-  });
+  const pdfBuffer = await buildWardrobePdf(
+    [
+      {
+        id: "top-1",
+        name: "Top",
+        category: "top",
+        imageUrl: "https://example.com/top-1.jpg",
+        brand: "Brand",
+        description: "Description",
+      },
+    ],
+    {
+      locale: "ru",
+      imageAssetsById,
+    },
+  );
 
   expect(Buffer.isBuffer(pdfBuffer)).toBeTruthy();
   expect(Object.keys(imageAssetsById).length).toBe(0);
 });
 
 test("buildWardrobePdf uses local cached image before remote fetch", async (t) => {
-  const imageUrl = "https://static.zara.net/image.jpg?ts=1773310573314&w={width}";
+  const imageUrl =
+    "https://static.zara.net/image.jpg?ts=1773310573314&w={width}";
   const cachedJpeg = await sharp({
     create: {
       width: 1000,
       height: 700,
       channels: 3,
-      background: "#0f766e"
-    }
-  }).jpeg({ quality: 80 }).toBuffer();
+      background: "#0f766e",
+    },
+  })
+    .jpeg({ quality: 80 })
+    .toBuffer();
   await withCachedImage(t, imageUrl, cachedJpeg);
   const originalFetch = globalThis.fetch;
 
@@ -70,16 +80,21 @@ test("buildWardrobePdf uses local cached image before remote fetch", async (t) =
     globalThis.fetch = originalFetch;
   });
 
-  const pdfBuffer = await buildWardrobePdf([{
-    id: "top-1",
-    name: "Top",
-    category: "top",
-    imageUrl,
-    brand: "Brand",
-    description: "Description"
-  }], {
-    locale: "en"
-  });
+  const pdfBuffer = await buildWardrobePdf(
+    [
+      {
+        id: "top-1",
+        name: "Top",
+        category: "top",
+        imageUrl,
+        brand: "Brand",
+        description: "Description",
+      },
+    ],
+    {
+      locale: "en",
+    },
+  );
 
   expect(Buffer.isBuffer(pdfBuffer)).toBeTruthy();
   expect(pdfBuffer.length > 0).toBeTruthy();
@@ -94,18 +109,23 @@ test("buildWardrobePdf renders fallback title and image placeholder without remo
     globalThis.fetch = originalFetch;
   });
 
-  const pdfBuffer = await buildWardrobePdf([{
-    id: "",
-    name: "",
-    category: "",
-    imageUrl: "",
-    brand: "",
-    description: "",
-    url: "not-a-url"
-  }], {
-    locale: "en",
-    totalStartedAt: Date.now()
-  });
+  const pdfBuffer = await buildWardrobePdf(
+    [
+      {
+        id: "",
+        name: "",
+        category: "",
+        imageUrl: "",
+        brand: "",
+        description: "",
+        url: "not-a-url",
+      },
+    ],
+    {
+      locale: "en",
+      totalStartedAt: Date.now(),
+    },
+  );
 
   expect(Buffer.isBuffer(pdfBuffer)).toBeTruthy();
   expect(pdfBuffer.length > 0).toBeTruthy();

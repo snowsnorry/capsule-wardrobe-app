@@ -18,7 +18,7 @@ function createAppRecorder() {
       calls.push({ type: "listen", port });
       callback?.();
       return { close() {} };
-    }
+    },
   };
   return app;
 }
@@ -43,7 +43,7 @@ function createResponse() {
     json(body) {
       this.body = body;
       return this;
-    }
+    },
   };
 }
 
@@ -64,16 +64,17 @@ test("development startup wires Vite middleware and serves transformed capsule h
       return {
         middlewares: "vite-middleware",
         transformIndexHtml: async (url, html) => `${html}:${url}`,
-        ssrFixStacktrace: (error) => fixedErrors.push(error)
+        ssrFixStacktrace: (error) => fixedErrors.push(error),
       };
     },
     readFileImpl: (async (filePath) => {
       expect(filePath).toBe("/client/index.html");
       return "<html>";
     }) as unknown as typeof fs.promises.readFile,
-    injectSharedCapsuleMetaTagsImpl: async (html, req) => `${html}:meta:${req.path}`,
+    injectSharedCapsuleMetaTagsImpl: async (html, req) =>
+      `${html}:meta:${req.path}`,
     isApiPathImpl: (requestPath) => requestPath.startsWith("/api"),
-    logInfoImpl: (message) => logMessages.push(message)
+    logInfoImpl: (message) => logMessages.push(message),
   });
 
   expect(viteOptions[0].server.middlewareMode).toEqual(true);
@@ -85,12 +86,20 @@ test("development startup wires Vite middleware and serves transformed capsule h
   expect(logMessages).toEqual(["Server listening on http://localhost:4123"]);
 
   const handler = app.calls[1].args[1];
-  await handler({ path: "/api/search", originalUrl: "/api/search" }, createResponse(), (error) => nextCalls.push(error));
+  await handler(
+    { path: "/api/search", originalUrl: "/api/search" },
+    createResponse(),
+    (error) => nextCalls.push(error),
+  );
   expect(nextCalls.length).toBe(1);
   expect(nextCalls[0]).toBe(undefined);
 
   const pageResponse = createResponse();
-  await handler({ path: "/share/abc", originalUrl: "/share/abc?x=1" }, pageResponse, (error) => nextCalls.push(error));
+  await handler(
+    { path: "/share/abc", originalUrl: "/share/abc?x=1" },
+    pageResponse,
+    (error) => nextCalls.push(error),
+  );
   expect(pageResponse.statusCode).toBe(200);
   expect(pageResponse.headers).toEqual({ "Content-Type": "text/html" });
   expect(pageResponse.body).toBe("<html>:/share/abc?x=1:meta:/share/abc");
@@ -108,17 +117,21 @@ test("development startup fixes Vite stack traces before forwarding html errors"
     createViteServerImpl: async () => ({
       middlewares: "vite-middleware",
       transformIndexHtml: async () => "<html>",
-      ssrFixStacktrace: (error) => fixedErrors.push(error)
+      ssrFixStacktrace: (error) => fixedErrors.push(error),
     }),
     readFileImpl: async () => {
       throw thrown;
     },
     isApiPathImpl: () => false,
-    logInfoImpl: () => {}
+    logInfoImpl: () => {},
   });
 
   const handler = app.calls[1].args[1];
-  await handler({ path: "/share/abc", originalUrl: "/share/abc" }, createResponse(), (error) => nextCalls.push(error));
+  await handler(
+    { path: "/share/abc", originalUrl: "/share/abc" },
+    createResponse(),
+    (error) => nextCalls.push(error),
+  );
 
   expect(fixedErrors).toEqual([thrown]);
   expect(nextCalls).toEqual([thrown]);
@@ -143,9 +156,10 @@ test("production startup serves static files, spa html, and api 404s when client
       expect(filePath).toBe("/dist/client/index.html");
       return "<html>";
     }) as unknown as typeof fs.promises.readFile,
-    injectSharedCapsuleMetaTagsImpl: async (html, req) => `${html}:meta:${req.path}`,
+    injectSharedCapsuleMetaTagsImpl: async (html, req) =>
+      `${html}:meta:${req.path}`,
     isApiPathImpl: (requestPath) => requestPath.startsWith("/api"),
-    logInfoImpl: () => {}
+    logInfoImpl: () => {},
   });
 
   expect(app.calls[0]).toEqual({ type: "use", args: [staticMiddleware] });
@@ -154,12 +168,16 @@ test("production startup serves static files, spa html, and api 404s when client
 
   const handler = app.calls[1].args[1];
   const apiResponse = createResponse();
-  await handler({ path: "/api/missing" }, apiResponse, (error) => nextCalls.push(error));
+  await handler({ path: "/api/missing" }, apiResponse, (error) =>
+    nextCalls.push(error),
+  );
   expect(apiResponse.statusCode).toBe(404);
   expect(apiResponse.body).toEqual({ error: "not_found" });
 
   const pageResponse = createResponse();
-  await handler({ path: "/share/abc" }, pageResponse, (error) => nextCalls.push(error));
+  await handler({ path: "/share/abc" }, pageResponse, (error) =>
+    nextCalls.push(error),
+  );
   expect(pageResponse.statusCode).toBe(200);
   expect(pageResponse.headers).toEqual({ "Content-Type": "text/html" });
   expect(pageResponse.body).toBe("<html>:meta:/share/abc");
@@ -180,11 +198,13 @@ test("production startup forwards spa html read failures", async () => {
       throw thrown;
     },
     isApiPathImpl: () => false,
-    logInfoImpl: () => {}
+    logInfoImpl: () => {},
   });
 
   const handler = app.calls[1].args[1];
-  await handler({ path: "/share/abc" }, createResponse(), (error) => nextCalls.push(error));
+  await handler({ path: "/share/abc" }, createResponse(), (error) =>
+    nextCalls.push(error),
+  );
 
   expect(nextCalls).toEqual([thrown]);
 });
@@ -201,7 +221,7 @@ test("production startup skips spa fallback when client dist is absent", async (
       ensureCalls.push("ensure");
     },
     existsSyncImpl: () => false,
-    logInfoImpl: (message) => logMessages.push(message)
+    logInfoImpl: (message) => logMessages.push(message),
   });
 
   expect(ensureCalls).toEqual(["ensure"]);

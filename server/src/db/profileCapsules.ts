@@ -9,17 +9,18 @@ import {
   type RenameCapsuleInput,
   type SharedCapsuleRow,
   type UpdateCapsuleSnapshotInput,
-  type UpsertSharedCapsuleInput
+  type UpsertSharedCapsuleInput,
 } from "./core.js";
 
 export async function createCapsuleRecord({
   email,
   name,
   draft = null,
-  saved = null
+  saved = null,
 }: CreateCapsuleInput): Promise<CapsuleRow | null> {
   const sql = getSqlClient();
-  const row = getFirstRow(await sql<CapsuleRow>`
+  const row = getFirstRow(
+    await sql<CapsuleRow>`
     insert into capsules (
       email,
       name,
@@ -40,13 +41,18 @@ export async function createCapsuleRecord({
       saved,
       created_at as "createdAt",
       updated_at as "updatedAt"
-  `);
+  `,
+  );
   return row || null;
 }
 
-export async function getCapsuleByIdForEmail({ email, capsuleId }: CapsuleLookupInput): Promise<CapsuleRow | null> {
+export async function getCapsuleByIdForEmail({
+  email,
+  capsuleId,
+}: CapsuleLookupInput): Promise<CapsuleRow | null> {
   const sql = getSqlClient();
-  const row = getFirstRow(await sql<CapsuleRow>`
+  const row = getFirstRow(
+    await sql<CapsuleRow>`
     select
       id,
       email,
@@ -58,19 +64,21 @@ export async function getCapsuleByIdForEmail({ email, capsuleId }: CapsuleLookup
     from capsules
     where email = ${email} and id = ${capsuleId}
     limit 1
-  `);
+  `,
+  );
   return row || null;
 }
 
 export async function listRecentCapsulesByEmail({
   email,
-  limit = 10
+  limit = 10,
 }: {
   email: string;
   limit?: number;
 }): Promise<CapsuleRow[]> {
   const sql = getSqlClient();
-  return getResultRows(await sql<CapsuleRow>`
+  return getResultRows(
+    await sql<CapsuleRow>`
     select
       id,
       email,
@@ -83,21 +91,25 @@ export async function listRecentCapsulesByEmail({
     where email = ${email}
     order by updated_at desc, created_at desc
     limit ${limit}
-  `);
+  `,
+  );
 }
 
 export async function searchCapsulesByEmail({
   email,
   query,
-  limit = 25
+  limit = 25,
 }: {
   email: string;
   query: string;
   limit?: number;
 }): Promise<CapsuleRow[]> {
   const sql = getSqlClient();
-  const normalizedQuery = `%${String(query || "").trim().toLowerCase()}%`;
-  return getResultRows(await sql<CapsuleRow>`
+  const normalizedQuery = `%${String(query || "")
+    .trim()
+    .toLowerCase()}%`;
+  return getResultRows(
+    await sql<CapsuleRow>`
     select
       id,
       email,
@@ -111,26 +123,32 @@ export async function searchCapsulesByEmail({
       and lower(name) like ${normalizedQuery}
     order by updated_at desc, created_at desc
     limit ${limit}
-  `);
+  `,
+  );
 }
 
-export async function listCapsuleNamesByEmail(email: string): Promise<string[]> {
+export async function listCapsuleNamesByEmail(
+  email: string,
+): Promise<string[]> {
   const sql = getSqlClient();
-  const rows = getResultRows(await sql<{ name: string | null }>`
+  const rows = getResultRows(
+    await sql<{ name: string | null }>`
     select name
     from capsules
     where email = ${email}
-  `);
+  `,
+  );
   return rows.map((row) => String(row?.name || "").trim()).filter(Boolean);
 }
 
 export async function updateCapsuleSnapshotByIdForEmail({
   email,
   capsuleId,
-  draft
+  draft,
 }: UpdateCapsuleSnapshotInput): Promise<CapsuleRow | null> {
   const sql = getSqlClient();
-  const row = getFirstRow(await sql<CapsuleRow>`
+  const row = getFirstRow(
+    await sql<CapsuleRow>`
     update capsules
     set
       draft = ${draft === null ? null : JSON.stringify(draft)},
@@ -144,17 +162,19 @@ export async function updateCapsuleSnapshotByIdForEmail({
       saved,
       created_at as "createdAt",
       updated_at as "updatedAt"
-  `);
+  `,
+  );
   return row || null;
 }
 
 export async function renameCapsuleByIdForEmail({
   email,
   capsuleId,
-  name
+  name,
 }: RenameCapsuleInput): Promise<CapsuleRow | null> {
   const sql = getSqlClient();
-  const row = getFirstRow(await sql<CapsuleRow>`
+  const row = getFirstRow(
+    await sql<CapsuleRow>`
     update capsules
     set
       name = ${name},
@@ -168,13 +188,18 @@ export async function renameCapsuleByIdForEmail({
       saved,
       created_at as "createdAt",
       updated_at as "updatedAt"
-  `);
+  `,
+  );
   return row || null;
 }
 
-export async function saveCapsuleByIdForEmail({ email, capsuleId }: CapsuleLookupInput): Promise<CapsuleRow | null> {
+export async function saveCapsuleByIdForEmail({
+  email,
+  capsuleId,
+}: CapsuleLookupInput): Promise<CapsuleRow | null> {
   const sql = getSqlClient();
-  const row = getFirstRow(await sql<CapsuleRow>`
+  const row = getFirstRow(
+    await sql<CapsuleRow>`
     update capsules
     set
       saved = coalesce(draft, saved),
@@ -189,13 +214,18 @@ export async function saveCapsuleByIdForEmail({ email, capsuleId }: CapsuleLooku
       saved,
       created_at as "createdAt",
       updated_at as "updatedAt"
-  `);
+  `,
+  );
   return row || null;
 }
 
-export async function revertCapsuleDraftByIdForEmail({ email, capsuleId }: CapsuleLookupInput): Promise<CapsuleRow | null> {
+export async function revertCapsuleDraftByIdForEmail({
+  email,
+  capsuleId,
+}: CapsuleLookupInput): Promise<CapsuleRow | null> {
   const sql = getSqlClient();
-  const row = getFirstRow(await sql<CapsuleRow>`
+  const row = getFirstRow(
+    await sql<CapsuleRow>`
     update capsules
     set
       draft = null,
@@ -209,11 +239,15 @@ export async function revertCapsuleDraftByIdForEmail({ email, capsuleId }: Capsu
       saved,
       created_at as "createdAt",
       updated_at as "updatedAt"
-  `);
+  `,
+  );
   return row || null;
 }
 
-export async function deleteCapsuleByIdForEmail({ email, capsuleId }: CapsuleLookupInput): Promise<boolean> {
+export async function deleteCapsuleByIdForEmail({
+  email,
+  capsuleId,
+}: CapsuleLookupInput): Promise<boolean> {
   const sql = getSqlClient();
   const result = await sql`
     delete from capsules
@@ -228,10 +262,11 @@ export async function upsertSharedCapsule({
   name,
   content,
   contentHash,
-  expiresAt
+  expiresAt,
 }: UpsertSharedCapsuleInput): Promise<SharedCapsuleRow | null> {
   const sql = getSqlClient();
-  const row = getFirstRow(await sql<SharedCapsuleRow>`
+  const row = getFirstRow(
+    await sql<SharedCapsuleRow>`
     insert into shared_capsules (
       profile_email,
       name,
@@ -259,13 +294,17 @@ export async function upsertSharedCapsule({
       expires_at as "expiresAt",
       created_at as "createdAt",
       updated_at as "updatedAt"
-  `);
+  `,
+  );
   return row || null;
 }
 
-export async function getValidSharedCapsuleById(id: string): Promise<SharedCapsuleRow | null> {
+export async function getValidSharedCapsuleById(
+  id: string,
+): Promise<SharedCapsuleRow | null> {
   const sql = getSqlClient();
-  const row = getFirstRow(await sql<SharedCapsuleRow>`
+  const row = getFirstRow(
+    await sql<SharedCapsuleRow>`
     select
       id,
       profile_email as "profileEmail",
@@ -278,7 +317,8 @@ export async function getValidSharedCapsuleById(id: string): Promise<SharedCapsu
     from shared_capsules
     where id = ${id} and expires_at > now()
     limit 1
-  `);
+  `,
+  );
   return row || null;
 }
 

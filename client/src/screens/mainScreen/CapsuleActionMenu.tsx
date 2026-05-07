@@ -9,7 +9,7 @@ import {
   ToggleButton,
   ToggleButtonGroup,
   type Theme,
-  Typography
+  Typography,
 } from "@mui/material";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
@@ -20,7 +20,11 @@ import { useI18n } from "../../i18n/useI18n";
 import { isMobileCardColumns } from "./MainScreenHelpers";
 import { getCapsuleMenuPermissions } from "./CapsuleActionMenuPermissions";
 import ColumnLayoutIcon from "./ColumnLayoutIcon";
-import type { CapsuleLike, CapsuleMenuAnchor, MobileCardColumns } from "./MainScreenTypes";
+import type {
+  CapsuleLike,
+  CapsuleMenuAnchor,
+  MobileCardColumns,
+} from "./MainScreenTypes";
 
 type CapsuleActionMenuProps = {
   anchorEl: CapsuleMenuAnchor;
@@ -60,7 +64,7 @@ function ActionMenuItem({
   onAction,
   onClose,
   sx,
-  children
+  children,
 }: ActionMenuItemProps) {
   const handleClick = (event: MouseEvent<HTMLElement>) => {
     event.currentTarget.blur();
@@ -70,7 +74,9 @@ function ActionMenuItem({
 
   return (
     <MenuItem disabled={disabled} onClick={handleClick} sx={sx}>
-      <ListItemIcon sx={reserveIconSpace ? { visibility: "hidden" } : undefined}>
+      <ListItemIcon
+        sx={reserveIconSpace ? { visibility: "hidden" } : undefined}
+      >
         {icon}
       </ListItemIcon>
       {children}
@@ -82,7 +88,7 @@ function ShareMenuItem({
   show,
   disabled,
   onClose,
-  onShare
+  onShare,
 }: {
   show: boolean;
   disabled: boolean;
@@ -110,7 +116,7 @@ function RegenerateAllMenuSection({
   show,
   disabled,
   onClose,
-  onRegenerateAll
+  onRegenerateAll,
 }: {
   show: boolean;
   disabled: boolean;
@@ -142,7 +148,7 @@ function CardLayoutMenuSection({
   disabled,
   mobileCardColumns,
   onClose,
-  onMobileCardColumnsChange
+  onMobileCardColumnsChange,
 }: {
   show: boolean;
   disabled: boolean;
@@ -163,10 +169,14 @@ function CardLayoutMenuSection({
           px: 2,
           py: 1.25,
           display: "grid",
-          gap: 1
+          gap: 1,
         }}
       >
-        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, textTransform: "uppercase" }}>
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          sx={{ fontWeight: 700, textTransform: "uppercase" }}
+        >
           {t("capsule.cardLayout")}
         </Typography>
         <ToggleButtonGroup
@@ -185,17 +195,29 @@ function CardLayoutMenuSection({
             "& .MuiToggleButton-root": {
               minWidth: 44,
               height: 40,
-              px: 1.25
-            }
+              px: 1.25,
+            },
           }}
         >
-          <ToggleButton value={1} aria-label={t("capsule.cardColumnsOne")} disabled={disabled}>
+          <ToggleButton
+            value={1}
+            aria-label={t("capsule.cardColumnsOne")}
+            disabled={disabled}
+          >
             <ColumnLayoutIcon columns={1} />
           </ToggleButton>
-          <ToggleButton value={2} aria-label={t("capsule.cardColumnsTwo")} disabled={disabled}>
+          <ToggleButton
+            value={2}
+            aria-label={t("capsule.cardColumnsTwo")}
+            disabled={disabled}
+          >
             <ColumnLayoutIcon columns={2} />
           </ToggleButton>
-          <ToggleButton value={3} aria-label={t("capsule.cardColumnsThree")} disabled={disabled}>
+          <ToggleButton
+            value={3}
+            aria-label={t("capsule.cardColumnsThree")}
+            disabled={disabled}
+          >
             <ColumnLayoutIcon columns={3} />
           </ToggleButton>
         </ToggleButtonGroup>
@@ -214,7 +236,7 @@ function CapsuleEditMenuSection({
   onRevert,
   onSave,
   onDuplicate,
-  onDelete
+  onDelete,
 }: {
   disabled: boolean;
   canRevert: boolean;
@@ -249,11 +271,21 @@ function CapsuleEditMenuSection({
       >
         {t("capsule.revert")}
       </ActionMenuItem>
-      <ActionMenuItem disabled={disabled || !canSave} reserveIconSpace onAction={onSave} onClose={onClose}>
+      <ActionMenuItem
+        disabled={disabled || !canSave}
+        reserveIconSpace
+        onAction={onSave}
+        onClose={onClose}
+      >
         {t("actions.save")}
       </ActionMenuItem>
       {canDuplicate ? (
-        <ActionMenuItem disabled={disabled} reserveIconSpace onAction={onDuplicate} onClose={onClose}>
+        <ActionMenuItem
+          disabled={disabled}
+          reserveIconSpace
+          onAction={onDuplicate}
+          onClose={onClose}
+        >
           {t("capsule.saveAs")}
         </ActionMenuItem>
       ) : null}
@@ -263,7 +295,10 @@ function CapsuleEditMenuSection({
         icon={<DeleteOutlineRoundedIcon fontSize="small" />}
         onAction={onDelete}
         onClose={onClose}
-        sx={{ color: "error.main", "& .MuiListItemIcon-root": { color: "inherit" } }}
+        sx={{
+          color: "error.main",
+          "& .MuiListItemIcon-root": { color: "inherit" },
+        }}
       >
         {t("actions.delete")}
       </ActionMenuItem>
@@ -289,10 +324,13 @@ function CapsuleActionMenu({
   showCardLayout = false,
   mobileCardColumns = 2,
   onMobileCardColumnsChange = undefined,
-  onDelete
+  onDelete,
 }: CapsuleActionMenuProps) {
   const { t } = useI18n();
-  const permissions = getCapsuleMenuPermissions(capsule, allowUnknownShareContent);
+  const permissions = getCapsuleMenuPermissions(
+    capsule,
+    allowUnknownShareContent,
+  );
 
   return (
     <Menu anchorEl={anchorEl} open={open} onClose={onClose}>
@@ -310,7 +348,12 @@ function CapsuleActionMenu({
       >
         {t("capsule.exportPdf")}
       </ActionMenuItem>
-      <ShareMenuItem show={permissions.canShare} disabled={disabled} onClose={onClose} onShare={onShare} />
+      <ShareMenuItem
+        show={permissions.canShare}
+        disabled={disabled}
+        onClose={onClose}
+        onShare={onShare}
+      />
       <CardLayoutMenuSection
         show={showCardLayout}
         disabled={disabled}

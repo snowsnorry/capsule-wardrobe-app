@@ -1,16 +1,18 @@
 import {
   getFirstRow,
   getSqlClient,
-  type DatabaseConnectionRow
+  type DatabaseConnectionRow,
 } from "./core.js";
 
 export async function checkDatabaseConnection(): Promise<DatabaseConnectionRow | null> {
   const sql = getSqlClient();
-  const row = getFirstRow(await sql<DatabaseConnectionRow>`
+  const row = getFirstRow(
+    await sql<DatabaseConnectionRow>`
     select
       current_database() as database,
       now() as now
-  `);
+  `,
+  );
   return row;
 }
 
@@ -93,7 +95,9 @@ export async function ensureProfilesTable(): Promise<void> {
   await ensureProfilesSettingsConstraints(sql);
 }
 
-async function ensureProfilesBaseTable(sql: ReturnType<typeof getSqlClient>): Promise<void> {
+async function ensureProfilesBaseTable(
+  sql: ReturnType<typeof getSqlClient>,
+): Promise<void> {
   await sql`
     create table if not exists profiles (
       email text primary key,
@@ -109,7 +113,9 @@ async function ensureProfilesBaseTable(sql: ReturnType<typeof getSqlClient>): Pr
   `;
 }
 
-async function ensureProfilesSettingColumns(sql: ReturnType<typeof getSqlClient>): Promise<void> {
+async function ensureProfilesSettingColumns(
+  sql: ReturnType<typeof getSqlClient>,
+): Promise<void> {
   await sql`
     alter table profiles
     add column if not exists fullname text null
@@ -146,7 +152,9 @@ async function ensureProfilesSettingColumns(sql: ReturnType<typeof getSqlClient>
   `;
 }
 
-async function ensureProfilesSettingsConstraints(sql: ReturnType<typeof getSqlClient>): Promise<void> {
+async function ensureProfilesSettingsConstraints(
+  sql: ReturnType<typeof getSqlClient>,
+): Promise<void> {
   await sql`
     do $$
     begin

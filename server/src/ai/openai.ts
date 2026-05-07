@@ -3,13 +3,13 @@ import { logError, logWarn } from "../logger.js";
 import {
   buildJsonObjectFormat,
   buildSystemPrompt,
-  splitSystemAndUserPrompt
+  splitSystemAndUserPrompt,
 } from "./llmPrompts.js";
 import type {
   ImageAssetLike,
   LlmGenerateOptions,
   ParsedGenerationError,
-  UserProfileLike
+  UserProfileLike,
 } from "./types.js";
 
 const DEFAULT_CHAT_MODEL = "gpt-5.5";
@@ -30,15 +30,16 @@ function getOpenAiClient() {
   cachedClient = new OpenAI({
     apiKey,
     timeout: 3 * 1000 * 60,
-    maxRetries: 0
+    maxRetries: 0,
   });
   return cachedClient;
 }
 
 function buildImageDataUrl(image: ImageAssetLike) {
-  const mimeType = typeof image?.mimeType === "string" && image.mimeType.trim().length > 0
-    ? image.mimeType.trim()
-    : "image/png";
+  const mimeType =
+    typeof image?.mimeType === "string" && image.mimeType.trim().length > 0
+      ? image.mimeType.trim()
+      : "image/png";
 
   if (!Buffer.isBuffer(image?.buffer) || image.buffer.length === 0) {
     return null;
@@ -62,8 +63,8 @@ function buildResponsesInput(user: string, images: ImageAssetLike[] = []) {
         JSON.stringify({
           category: image?.category ?? null,
           filename: image?.filename ?? null,
-          reason: "missing_buffer"
-        })
+          reason: "missing_buffer",
+        }),
       );
       continue;
     }
@@ -71,14 +72,14 @@ function buildResponsesInput(user: string, images: ImageAssetLike[] = []) {
     content.push({
       type: "input_image",
       image_url: imageUrl,
-      detail: "high"
+      detail: "high",
     });
   }
 
   if (userText) {
     content.push({
       type: "input_text",
-      text: userText
+      text: userText,
     });
   }
 
@@ -86,10 +87,12 @@ function buildResponsesInput(user: string, images: ImageAssetLike[] = []) {
     return content[0].text;
   }
 
-  return [{
-    role: "user",
-    content
-  }];
+  return [
+    {
+      role: "user",
+      content,
+    },
+  ];
 }
 
 function releaseImageBuffers(images: ImageAssetLike[] = []) {
@@ -115,7 +118,7 @@ async function getPromptEmbeddingsWithClient(client, prompt: string) {
   const response = await client.embeddings.create({
     model: DEFAULT_EMBEDDING_MODEL,
     input: prompt,
-    encoding_format: "float"
+    encoding_format: "float",
   });
   const embedding = response?.data?.[0]?.embedding;
   if (!Array.isArray(embedding) || embedding.length === 0) {
@@ -124,20 +127,31 @@ async function getPromptEmbeddingsWithClient(client, prompt: string) {
   return embedding;
 }
 
-async function generateJsonWithLlm(prompt: string, options: LlmGenerateOptions = {}) {
+async function generateJsonWithLlm(
+  prompt: string,
+  options: LlmGenerateOptions = {},
+) {
   return generateJsonWithLlmWithClient(getOpenAiClient(), prompt, options);
 }
 
-async function generateJsonWithLlmWithClient(client, prompt: string, options: LlmGenerateOptions = {}) {
+async function generateJsonWithLlmWithClient(
+  client,
+  prompt: string,
+  options: LlmGenerateOptions = {},
+) {
   const {
     userProfile = null,
     format = null,
     images = [],
     systemPrompt: systemPromptOverride = null,
-    onPayloadBuilt = null
+    onPayloadBuilt = null,
   } = options;
   const { system, user } = splitSystemAndUserPrompt(prompt);
-  const systemPrompt = buildOpenAiSystemPrompt(system, systemPromptOverride, userProfile);
+  const systemPrompt = buildOpenAiSystemPrompt(
+    system,
+    systemPromptOverride,
+    userProfile,
+  );
   const input = buildResponsesPayload(user, images);
   onPayloadBuilt?.();
   const requestStartedAt = Date.now();
@@ -148,13 +162,13 @@ async function generateJsonWithLlmWithClient(client, prompt: string, options: Ll
       model: DEFAULT_CHAT_MODEL,
       instructions: systemPrompt || undefined,
       input,
-      reasoning: {"effort": "low"},
+      reasoning: { effort: "low" },
       // temperature: 0.2,
       // top_p: 0.9,
       max_output_tokens: 10000,
       text: {
-        format: format || buildJsonObjectFormat(userProfile)
-      }
+        format: format || buildJsonObjectFormat(userProfile),
+      },
     });
   } catch (error) {
     logError(
@@ -164,9 +178,9 @@ async function generateJsonWithLlmWithClient(client, prompt: string, options: Ll
         durationMs: Date.now() - requestStartedAt,
         imageCount: Array.isArray(images) ? images.length : 0,
         hasSystemPrompt: Boolean(systemPrompt),
-        userChars: user.length
+        userChars: user.length,
       }),
-      error
+      error,
     );
     throw error;
   }
@@ -174,14 +188,20 @@ async function generateJsonWithLlmWithClient(client, prompt: string, options: Ll
   return { response, json: parseOpenAiJsonResponse(response) };
 }
 
-function buildOpenAiSystemPrompt(system: string, systemPromptOverride: string | null, userProfile: UserProfileLike | null): string {
+function buildOpenAiSystemPrompt(
+  system: string,
+  systemPromptOverride: string | null,
+  userProfile: UserProfileLike | null,
+): string {
   return [system, systemPromptOverride || buildSystemPrompt(userProfile)]
     .filter((part) => typeof part === "string" && part.trim().length > 0)
     .join("\n\n");
 }
 
 function parseOpenAiJsonResponse(response): unknown {
-  const content = String(response?.output_text || "{}").replace(/^[^{]*/, "").replace(/[^}]*$/, "");
+  const content = String(response?.output_text || "{}")
+    .replace(/^[^{]*/, "")
+    .replace(/[^}]*$/, "");
   try {
     return JSON.parse(content);
   } catch (error) {
@@ -189,13 +209,18 @@ function parseOpenAiJsonResponse(response): unknown {
   }
 }
 
-function buildOpenAiParseError(error: unknown, content: string, outputText: unknown): ParsedGenerationError {
+function buildOpenAiParseError(
+  error: unknown,
+  content: string,
+  outputText: unknown,
+): ParsedGenerationError {
   const parseError = new Error(
-    `Failed to parse JSON response: ${error instanceof Error ? error.message : String(error)}\nResponse content: ${content}`
+    `Failed to parse JSON response: ${error instanceof Error ? error.message : String(error)}\nResponse content: ${content}`,
   ) as ParsedGenerationError;
-  parseError.rawSelectionText = typeof outputText === "string" && outputText.trim().length > 0
-    ? outputText.trim()
-    : null;
+  parseError.rawSelectionText =
+    typeof outputText === "string" && outputText.trim().length > 0
+      ? outputText.trim()
+      : null;
   return parseError;
 }
 
@@ -210,5 +235,5 @@ export {
   generateJsonWithLlmWithClient,
   parseOpenAiJsonResponse,
   getPromptEmbeddingsWithClient,
-  releaseImageBuffers
+  releaseImageBuffers,
 };

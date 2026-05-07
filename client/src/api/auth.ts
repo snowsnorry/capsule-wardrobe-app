@@ -5,21 +5,27 @@ import type { JsonObject } from "./request";
 type AuthResponse = JsonObject;
 type ProfileUpdatePayload = Record<string, unknown>;
 
-async function requestLoginCode(email: string, locale: string): Promise<AuthResponse> {
+async function requestLoginCode(
+  email: string,
+  locale: string,
+): Promise<AuthResponse> {
   return requestJson(`${API_BASE_URL}/auth/request-code`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
-    body: JSON.stringify({ email, locale })
+    body: JSON.stringify({ email, locale }),
   });
 }
 
-async function verifyLoginCode(email: string, code: string): Promise<AuthResponse> {
+async function verifyLoginCode(
+  email: string,
+  code: string,
+): Promise<AuthResponse> {
   return requestJson(`${API_BASE_URL}/auth/verify-code`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
-    body: JSON.stringify({ email, code })
+    body: JSON.stringify({ email, code }),
   });
 }
 
@@ -28,34 +34,34 @@ async function signInWithGoogle(idToken: string): Promise<AuthResponse> {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
-    body: JSON.stringify({ idToken })
+    body: JSON.stringify({ idToken }),
   });
 }
 
 async function fetchProfileStatus(): Promise<AuthResponse> {
   return getCachedJson(`${API_BASE_URL}/profile/status`, {
     credentials: "include",
-    ttlMs: 1000
+    ttlMs: 1000,
   });
 }
 
 async function fetchProfile(): Promise<AuthResponse> {
   return getCachedJson(`${API_BASE_URL}/profile/me`, {
     credentials: "include",
-    ttlMs: 1000
+    ttlMs: 1000,
   });
 }
 
 async function fetchCurrentUser(): Promise<AuthResponse> {
   return getCachedJson(`${API_BASE_URL}/auth/me`, {
     credentials: "include",
-    ttlMs: 1000
+    ttlMs: 1000,
   });
 }
 
 async function fetchWardrobeFilters(): Promise<AuthResponse> {
   return requestJson(`${API_BASE_URL}/wardrobe/filters`, {
-    credentials: "include"
+    credentials: "include",
   });
 }
 
@@ -64,16 +70,18 @@ async function initializeProfile(locale: string): Promise<AuthResponse> {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
-    body: JSON.stringify({ locale })
+    body: JSON.stringify({ locale }),
   });
 }
 
-async function updateProfile(profile: ProfileUpdatePayload): Promise<AuthResponse> {
+async function updateProfile(
+  profile: ProfileUpdatePayload,
+): Promise<AuthResponse> {
   return requestJson(`${API_BASE_URL}/profile/me`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
-    body: JSON.stringify(profile)
+    body: JSON.stringify(profile),
   });
 }
 
@@ -82,21 +90,21 @@ async function updateProfileLocale(locale: string): Promise<AuthResponse> {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
-    body: JSON.stringify({ locale })
+    body: JSON.stringify({ locale }),
   });
 }
 
 async function deleteProfile(): Promise<AuthResponse> {
   return requestJson(`${API_BASE_URL}/profile/me`, {
     method: "DELETE",
-    credentials: "include"
+    credentials: "include",
   });
 }
 
 async function logout(): Promise<AuthResponse> {
   return requestJson(`${API_BASE_URL}/auth/logout`, {
     method: "POST",
-    credentials: "include"
+    credentials: "include",
   });
 }
 
@@ -113,5 +121,5 @@ export {
   updateProfileLocale,
   deleteProfile,
   clearRequestCache,
-  logout
+  logout,
 };

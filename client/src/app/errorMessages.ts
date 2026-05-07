@@ -15,12 +15,12 @@ const ERROR_MESSAGE_KEYS: Record<string, string> = {
   passkey_login_failed: "errors.passkeyLoginFailed",
   passkey_failed: "errors.passkeyLoginFailed",
   capsule_not_shareable: "errors.capsuleNotShareable",
-  shared_capsule_unavailable: "errors.sharedCapsuleUnavailable"
+  shared_capsule_unavailable: "errors.sharedCapsuleUnavailable",
 };
 
 export function resolveAppErrorMessage(
   error: { message?: string } | null | undefined,
-  t: (key: string, params?: Record<string, unknown>) => string
+  t: (key: string, params?: Record<string, unknown>) => string,
 ) {
   if (error?.message === "passkey_cancelled") {
     return "";

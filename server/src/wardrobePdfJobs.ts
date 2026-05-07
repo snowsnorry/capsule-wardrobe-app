@@ -4,15 +4,29 @@ import { sortWardrobeItems } from "../../shared/wardrobeOrder.js";
 import { runWithImageWorkSlot } from "./ai/imagePipeline.js";
 import type {
   WardrobePdfBuildChildOptions,
-  WardrobePdfJobState
+  WardrobePdfJobState,
 } from "./ai/types.js";
-import { WARDROBE_PDF_POLL_AFTER_MS, PDF_JOB_TTL_MS, createWardrobePdfGenerationKey, getPdfLocale, getStoredWardrobeItems, normalizeStoredPdf, type ProductLike, type ProfileWithPdfResult, type UpdateProfilePdfImpl, type WardrobePdfJobOptions } from "./wardrobePdfCore.js";
+import {
+  WARDROBE_PDF_POLL_AFTER_MS,
+  PDF_JOB_TTL_MS,
+  createWardrobePdfGenerationKey,
+  getPdfLocale,
+  getStoredWardrobeItems,
+  normalizeStoredPdf,
+  type ProductLike,
+  type ProfileWithPdfResult,
+  type UpdateProfilePdfImpl,
+  type WardrobePdfJobOptions,
+} from "./wardrobePdfCore.js";
 import { buildWardrobePdfInChild } from "./wardrobePdfChildRunner.js";
 import { logError, logWarn } from "./logger.js";
 
 const wardrobePdfJobs = new Map<string, WardrobePdfJobState>();
 
-export function scheduleWardrobePdfJobCleanup(email: string, job: WardrobePdfJobState) {
+export function scheduleWardrobePdfJobCleanup(
+  email: string,
+  job: WardrobePdfJobState,
+) {
   const timer = setTimeout(() => {
     if (wardrobePdfJobs.get(email) === job && job.status !== "pending") {
       wardrobePdfJobs.delete(email);
@@ -37,48 +51,72 @@ export function getWardrobePdfJob(email: string) {
 
 type WardrobePdfJobManagerDeps = {
   getProfileByEmail?: typeof getProfile;
-  getProfilePdfByEmail?: (email: string) => Promise<Buffer | Uint8Array | number[] | null>;
-  getProfileWithPdfByEmail?: ((email: string) => Promise<ProfileWithPdfResult>) | null;
+  getProfilePdfByEmail?: (
+    email: string,
+  ) => Promise<Buffer | Uint8Array | number[] | null>;
+  getProfileWithPdfByEmail?:
+    | ((email: string) => Promise<ProfileWithPdfResult>)
+    | null;
   updateProfilePdfByEmail?: UpdateProfilePdfImpl;
   getProducts?: typeof getProductsByUrlsInOrder;
-  buildPdfInChild?: (products: ProductLike[], locale?: string, options?: WardrobePdfBuildChildOptions) => Promise<Buffer>;
+  buildPdfInChild?: (
+    products: ProductLike[],
+    locale?: string,
+    options?: WardrobePdfBuildChildOptions,
+  ) => Promise<Buffer>;
 };
 
-type StartWardrobePdfJobDeps = Required<Pick<WardrobePdfJobManagerDeps, "getProfileByEmail" | "updateProfilePdfByEmail" | "getProducts" | "buildPdfInChild">>;
+type StartWardrobePdfJobDeps = Required<
+  Pick<
+    WardrobePdfJobManagerDeps,
+    | "getProfileByEmail"
+    | "updateProfilePdfByEmail"
+    | "getProducts"
+    | "buildPdfInChild"
+  >
+>;
 type WardrobePdfItemLike = { url?: unknown };
 
 function createLoadProfileWithPdf({
   getProfileByEmail,
   getProfilePdfByEmail,
-  getProfileWithPdfByEmail
-}: Required<Pick<WardrobePdfJobManagerDeps, "getProfileByEmail" | "getProfilePdfByEmail">> & Pick<WardrobePdfJobManagerDeps, "getProfileWithPdfByEmail">) {
-  const loadProfileWithPdf = getProfileWithPdfByEmail
-    || (async (email) => ({
+  getProfileWithPdfByEmail,
+}: Required<
+  Pick<WardrobePdfJobManagerDeps, "getProfileByEmail" | "getProfilePdfByEmail">
+> &
+  Pick<WardrobePdfJobManagerDeps, "getProfileWithPdfByEmail">) {
+  const loadProfileWithPdf =
+    getProfileWithPdfByEmail ||
+    (async (email) => ({
       profile: await getProfileByEmail(email),
-      pdf: await getProfilePdfByEmail(email)
+      pdf: await getProfilePdfByEmail(email),
     }));
 
   return loadProfileWithPdf as (email: string) => Promise<ProfileWithPdfResult>;
 }
 
-function resolveWardrobePdfJobInput(email: string, job: WardrobePdfJobState, options: {
-  resolvedItems: WardrobePdfItemLike[];
-  resolvedLocale: string;
-  locale: string | null;
-  getProfileByEmail: typeof getProfile;
-}) {
+function resolveWardrobePdfJobInput(
+  email: string,
+  job: WardrobePdfJobState,
+  options: {
+    resolvedItems: WardrobePdfItemLike[];
+    resolvedLocale: string;
+    locale: string | null;
+    getProfileByEmail: typeof getProfile;
+  },
+) {
   return (async () => {
     if (options.resolvedItems.length > 0 && options.locale) {
       return {
         items: options.resolvedItems,
-        pdfLocale: options.resolvedLocale
+        pdfLocale: options.resolvedLocale,
       };
     }
 
     const profile = await options.getProfileByEmail(email);
     return {
       items: sortWardrobeItems(getStoredWardrobeItems(profile)),
-      pdfLocale: getPdfLocale(profile?.locale)
+      pdfLocale: getPdfLocale(profile?.locale),
     };
   })();
 }
@@ -92,7 +130,7 @@ async function buildAndStoreWardrobePdf({
   expectedLocale,
   getProducts,
   buildPdfInChild,
-  updateProfilePdfByEmail
+  updateProfilePdfByEmail,
 }: {
   email: string;
   job: WardrobePdfJobState;
@@ -101,19 +139,30 @@ async function buildAndStoreWardrobePdf({
   expectedItems: unknown;
   expectedLocale: string | null;
   getProducts: typeof getProductsByUrlsInOrder;
-  buildPdfInChild: (products: ProductLike[], locale?: string, options?: WardrobePdfBuildChildOptions) => Promise<Buffer>;
+  buildPdfInChild: (
+    products: ProductLike[],
+    locale?: string,
+    options?: WardrobePdfBuildChildOptions,
+  ) => Promise<Buffer>;
   updateProfilePdfByEmail: UpdateProfilePdfImpl;
 }) {
-  const productUrls = items.map((item) => String(item?.url || "").trim()).filter(Boolean);
+  const productUrls = items
+    .map((item) => String(item?.url || "").trim())
+    .filter(Boolean);
   if (productUrls.length === 0) {
     throw new Error("wardrobe_pdf_items_missing");
   }
 
   const products = await getProducts(productUrls);
-  const foundUrls = new Set(products.map((product) => String(product?.url || "")));
+  const foundUrls = new Set(
+    products.map((product) => String(product?.url || "")),
+  );
   const missingUrls = productUrls.filter((url) => !foundUrls.has(url));
   if (missingUrls.length > 0) {
-    logWarn("[wardrobe-pdf][missing-products]", JSON.stringify({ email, missingUrls }));
+    logWarn(
+      "[wardrobe-pdf][missing-products]",
+      JSON.stringify({ email, missingUrls }),
+    );
   }
 
   if (products.length === 0) {
@@ -121,14 +170,17 @@ async function buildAndStoreWardrobePdf({
   }
 
   const pdfBuffer = await runWithImageWorkSlot("wardrobe-pdf-build", () =>
-    buildPdfInChild(products, pdfLocale, { totalStartedAt: job.startedAt })
+    buildPdfInChild(products, pdfLocale, { totalStartedAt: job.startedAt }),
   );
 
   if (wardrobePdfJobs.get(email) !== job) {
     return;
   }
 
-  const updatedProfile = await updateProfilePdfByEmail(email, pdfBuffer, { expectedItems, expectedLocale });
+  const updatedProfile = await updateProfilePdfByEmail(email, pdfBuffer, {
+    expectedItems,
+    expectedLocale,
+  });
   job.status = "completed";
   job.updatedAt = Date.now();
   if (!updatedProfile) {
@@ -147,7 +199,7 @@ async function runWardrobePdfJob({
   getProfileByEmail,
   getProducts,
   buildPdfInChild,
-  updateProfilePdfByEmail
+  updateProfilePdfByEmail,
 }: {
   email: string;
   job: WardrobePdfJobState;
@@ -161,7 +213,7 @@ async function runWardrobePdfJob({
     resolvedItems,
     resolvedLocale,
     locale,
-    getProfileByEmail
+    getProfileByEmail,
   });
 
   await buildAndStoreWardrobePdf({
@@ -173,7 +225,7 @@ async function runWardrobePdfJob({
     expectedLocale,
     getProducts,
     buildPdfInChild,
-    updateProfilePdfByEmail
+    updateProfilePdfByEmail,
   });
 }
 
@@ -181,27 +233,30 @@ function createStartWardrobePdfJob({
   getProfileByEmail,
   updateProfilePdfByEmail,
   getProducts,
-  buildPdfInChild
+  buildPdfInChild,
 }: StartWardrobePdfJobDeps) {
-  function startWardrobePdfJob(email: string, {
-    wardrobePayload = null,
-    locale = null
-  }: WardrobePdfJobOptions = {}) {
+  function startWardrobePdfJob(
+    email: string,
+    { wardrobePayload = null, locale = null }: WardrobePdfJobOptions = {},
+  ) {
     const expectedItems = wardrobePayload ?? null;
     const expectedLocale = locale ?? null;
     const resolvedItems = sortWardrobeItems(
       wardrobePayload && !Array.isArray(wardrobePayload)
         ? getStoredWardrobeItems({ items: wardrobePayload })
-        : getStoredWardrobeItems({ items: wardrobePayload })
+        : getStoredWardrobeItems({ items: wardrobePayload }),
     );
     const resolvedLocale = getPdfLocale(locale);
     const generationKey = createWardrobePdfGenerationKey({
       items: resolvedItems,
-      locale: resolvedLocale
+      locale: resolvedLocale,
     });
     const existing = getWardrobePdfJob(email);
 
-    if (existing?.status === "pending" && existing.generationKey === generationKey) {
+    if (
+      existing?.status === "pending" &&
+      existing.generationKey === generationKey
+    ) {
       return existing;
     }
 
@@ -211,7 +266,7 @@ function createStartWardrobePdfJob({
       startedAt: Date.now(),
       generationKey,
       error: null,
-      promise: null
+      promise: null,
     };
     wardrobePdfJobs.set(email, job);
 
@@ -228,7 +283,7 @@ function createStartWardrobePdfJob({
           getProfileByEmail,
           getProducts,
           buildPdfInChild,
-          updateProfilePdfByEmail
+          updateProfilePdfByEmail,
         });
       } catch (error) {
         if (wardrobePdfJobs.get(email) !== job) {
@@ -251,12 +306,18 @@ function createStartWardrobePdfJob({
 
 function createEnsureWardrobePdfJob({
   getProfileByEmail,
-  startWardrobePdfJob
+  startWardrobePdfJob,
 }: {
   getProfileByEmail: typeof getProfile;
-  startWardrobePdfJob: (email: string, options?: WardrobePdfJobOptions) => WardrobePdfJobState;
+  startWardrobePdfJob: (
+    email: string,
+    options?: WardrobePdfJobOptions,
+  ) => WardrobePdfJobState;
 }) {
-  async function resolveEnsureOptions(email: string, options: WardrobePdfJobOptions) {
+  async function resolveEnsureOptions(
+    email: string,
+    options: WardrobePdfJobOptions,
+  ) {
     const wardrobePayload = options.wardrobePayload || null;
     const locale = options.locale || null;
 
@@ -271,11 +332,14 @@ function createEnsureWardrobePdfJob({
 
     return {
       wardrobePayload: wardrobePayload || profile.items,
-      locale: locale || String(profile.locale || "en")
+      locale: locale || String(profile.locale || "en"),
     };
   }
 
-  async function ensureWardrobePdfJob(email: string, options: WardrobePdfJobOptions = {}) {
+  async function ensureWardrobePdfJob(
+    email: string,
+    options: WardrobePdfJobOptions = {},
+  ) {
     const existing = getWardrobePdfJob(email);
     if (existing?.status === "pending") {
       return existing;
@@ -290,7 +354,9 @@ function createEnsureWardrobePdfJob({
       return null;
     }
 
-    const items = sortWardrobeItems(getStoredWardrobeItems({ items: resolvedOptions.wardrobePayload }));
+    const items = sortWardrobeItems(
+      getStoredWardrobeItems({ items: resolvedOptions.wardrobePayload }),
+    );
     if (items.length === 0) {
       return null;
     }
@@ -303,16 +369,21 @@ function createEnsureWardrobePdfJob({
 
 function createDownloadWardrobePdf({
   loadProfileWithPdf,
-  ensureWardrobePdfJob
+  ensureWardrobePdfJob,
 }: {
   loadProfileWithPdf: (email: string) => Promise<ProfileWithPdfResult>;
-  ensureWardrobePdfJob: (email: string, options?: WardrobePdfJobOptions) => Promise<WardrobePdfJobState | null>;
+  ensureWardrobePdfJob: (
+    email: string,
+    options?: WardrobePdfJobOptions,
+  ) => Promise<WardrobePdfJobState | null>;
 }) {
   async function downloadWardrobePdf(req, res) {
     try {
       const email = req.user.email;
       const { profile, pdf } = await loadProfileWithPdf(email);
-      const storedWardrobeItems = sortWardrobeItems(getStoredWardrobeItems(profile));
+      const storedWardrobeItems = sortWardrobeItems(
+        getStoredWardrobeItems(profile),
+      );
 
       if (storedWardrobeItems.length === 0) {
         return res.status(404).json({ error: "not_found" });
@@ -321,19 +392,22 @@ function createDownloadWardrobePdf({
       const storedPdf = normalizeStoredPdf(pdf);
       if (storedPdf) {
         res.setHeader("Content-Type", "application/pdf");
-        res.setHeader("Content-Disposition", 'attachment; filename="capsule-wardrobe.pdf"');
+        res.setHeader(
+          "Content-Disposition",
+          'attachment; filename="capsule-wardrobe.pdf"',
+        );
         return res.status(200).send(storedPdf);
       }
 
       await ensureWardrobePdfJob(email, {
         wardrobePayload: profile?.items,
-        locale: typeof profile?.locale === "string" ? profile.locale : null
+        locale: typeof profile?.locale === "string" ? profile.locale : null,
       });
 
       return res.status(202).json({
         ok: true,
         status: "pending",
-        pollAfterMs: WARDROBE_PDF_POLL_AFTER_MS
+        pollAfterMs: WARDROBE_PDF_POLL_AFTER_MS,
       });
     } catch (error) {
       logError("[wardrobe-pdf]", error);
@@ -350,27 +424,32 @@ export function createWardrobePdfJobManager({
   getProfileWithPdfByEmail = null,
   updateProfilePdfByEmail = async () => ({ email: "unknown@example.com" }),
   getProducts = getProductsByUrlsInOrder,
-  buildPdfInChild = buildWardrobePdfInChild
+  buildPdfInChild = buildWardrobePdfInChild,
 }: WardrobePdfJobManagerDeps = {}) {
   const loadProfileWithPdf = createLoadProfileWithPdf({
     getProfileByEmail,
     getProfilePdfByEmail,
-    getProfileWithPdfByEmail
+    getProfileWithPdfByEmail,
   });
   const startWardrobePdfJob = createStartWardrobePdfJob({
     getProfileByEmail,
     updateProfilePdfByEmail,
     getProducts,
-    buildPdfInChild
+    buildPdfInChild,
   });
   const ensureWardrobePdfJob = createEnsureWardrobePdfJob({
     getProfileByEmail,
-    startWardrobePdfJob
+    startWardrobePdfJob,
   });
   const downloadWardrobePdf = createDownloadWardrobePdf({
     loadProfileWithPdf,
-    ensureWardrobePdfJob
+    ensureWardrobePdfJob,
   });
 
-  return { startWardrobePdfJob, ensureWardrobePdfJob, getWardrobePdfJob, downloadWardrobePdf };
+  return {
+    startWardrobePdfJob,
+    ensureWardrobePdfJob,
+    getWardrobePdfJob,
+    downloadWardrobePdf,
+  };
 }

@@ -6,7 +6,7 @@ test("sortWardrobeItems orders known categories by priority and names within a c
     { id: "3", category: "top", name: "Zulu Shirt" },
     { id: "1", category: "outerwear", name: "Blazer" },
     { id: "2", category: "top", name: "Alpha Shirt" },
-    { id: "4", category: "bottom", name: "Trousers" }
+    { id: "4", category: "bottom", name: "Trousers" },
   ];
 
   const sorted = sortWardrobeItems(items);
@@ -19,7 +19,7 @@ test("sortWardrobeItems pushes unknown categories after known ones and sorts the
   const items = [
     { id: "2", category: "mystery", name: "Beta" },
     { id: "1", category: "unknown", name: "Alpha" },
-    { id: "3", category: "bag", name: "Carryall" }
+    { id: "3", category: "bag", name: "Carryall" },
   ];
 
   const sorted = sortWardrobeItems(items);

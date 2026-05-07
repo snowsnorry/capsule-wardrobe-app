@@ -216,7 +216,11 @@ type PartialRegenerationJobState = {
 
 type ProfileWithItemsLike = {
   locale?: string | null;
-  items?: StoredWardrobePayloadLike | { items?: WardrobeUiItemLike[] | null } | WardrobeUiItemLike[] | null;
+  items?:
+    | StoredWardrobePayloadLike
+    | { items?: WardrobeUiItemLike[] | null }
+    | WardrobeUiItemLike[]
+    | null;
 };
 
 type WardrobePdfJobState = {
@@ -258,7 +262,7 @@ export type {
   WardrobePdfBuildChildOptions,
   WardrobePdfJobState,
   WardrobeUiItemLike,
-  ProfileWithItemsLike
+  ProfileWithItemsLike,
 };
 export type {
   PromptDebugImageCategory,
@@ -277,5 +281,5 @@ export type {
   PromptImagesChildMessage,
   PromptImagesChildPayload,
   PromptImagesChildSuccessPayload,
-  SerializedIpcBuffer
+  SerializedIpcBuffer,
 } from "./promptImageTypes.js";

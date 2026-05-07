@@ -8,7 +8,7 @@ import type {
   SessionStep,
   StatusState,
   UserLike,
-  WardrobeItem
+  WardrobeItem,
 } from "./appTypes";
 
 export function useAppState() {
@@ -33,20 +33,34 @@ export function useAppState() {
   const [profileCreated, setProfileCreated] = useState(false);
   const [currentView, setCurrentView] = useState("main");
   const [profileItems, setProfileItems] = useState<WardrobeItem[] | null>(null);
-  const [profileOutfitSets, setProfileOutfitSets] = useState<OutfitSetSnapshot[]>([]);
-  const [settingsProfile, setSettingsProfile] = useState(() => normalizeProfileSettings());
+  const [profileOutfitSets, setProfileOutfitSets] = useState<
+    OutfitSetSnapshot[]
+  >([]);
+  const [settingsProfile, setSettingsProfile] = useState(() =>
+    normalizeProfileSettings(),
+  );
   const [activeCapsuleId, setActiveCapsuleId] = useState("");
-  const [activeCapsuleMeta, setActiveCapsuleMeta] = useState<CapsuleMeta | null>(null);
+  const [activeCapsuleMeta, setActiveCapsuleMeta] =
+    useState<CapsuleMeta | null>(null);
   const [capsuleList, setCapsuleList] = useState<CapsuleMeta[]>([]);
   const [isLoadingItems, setIsLoadingItems] = useState(false);
-  const [isContentOperationLoading, setIsContentOperationLoading] = useState(false);
-  const [isDownloadingWardrobePdf, setIsDownloadingWardrobePdf] = useState(false);
-  const [selectedRegenerationUrls, setSelectedRegenerationUrls] = useState<string[]>([]);
-  const [partialRegenerationPendingUrls, setPartialRegenerationPendingUrls] = useState<string[]>([]);
-  const [pendingImageSetIndexes, setPendingImageSetIndexes] = useState<number[]>([]);
-  const [isPartialRegenerationLoading, setIsPartialRegenerationLoading] = useState(false);
+  const [isContentOperationLoading, setIsContentOperationLoading] =
+    useState(false);
+  const [isDownloadingWardrobePdf, setIsDownloadingWardrobePdf] =
+    useState(false);
+  const [selectedRegenerationUrls, setSelectedRegenerationUrls] = useState<
+    string[]
+  >([]);
+  const [partialRegenerationPendingUrls, setPartialRegenerationPendingUrls] =
+    useState<string[]>([]);
+  const [pendingImageSetIndexes, setPendingImageSetIndexes] = useState<
+    number[]
+  >([]);
+  const [isPartialRegenerationLoading, setIsPartialRegenerationLoading] =
+    useState(false);
   const [isWardrobePending, setIsWardrobePending] = useState(false);
-  const [hasPendingAdditionalItems, setHasPendingAdditionalItems] = useState(false);
+  const [hasPendingAdditionalItems, setHasPendingAdditionalItems] =
+    useState(false);
   const isMountedRef = useRef(true);
   const pendingRegenerationUrlsRef = useRef<string[]>([]);
   const regenerationBaseItemsRef = useRef<WardrobeItem[]>([]);
@@ -56,19 +70,82 @@ export function useAppState() {
   const capsuleSidebarActionsRef = useRef<CapsuleSidebarActions | null>(null);
 
   return {
-    activeCapsuleId, activeCapsuleMeta, capsuleEventsAbortRef, capsuleList, capsuleSidebarActionsRef, code, currentView,
-    email, hasPendingAdditionalItems, hasProfile, isCheckingSession, isContentOperationLoading, isDownloadingWardrobePdf,
-    isLoadingItems, isMountedRef, isPartialRegenerationLoading, isSignOutConfirmOpen, isWardrobePending,
-    manualWardrobeRegenerationCapsuleIdRef, onboardingStep, partialRegenerationPendingUrls, pendingImageSetIndexes,
-    pendingNotificationKindRef, pendingRegenerationUrlsRef, profileCreated, profileItems, profileOutfitSets,
-    regenerationBaseItemsRef, selectedAudience, selectedColor, selectedFormalityLevel, selectedOccasions, selectedPattern,
-    selectedRegenerationUrls, selectedSeason, selectedStyle, selectedText, sessionInitialized, setActiveCapsuleId,
-    setActiveCapsuleMeta, setCapsuleList, setCode, setCurrentView, setEmail, setHasPendingAdditionalItems, setHasProfile,
-    setIsCheckingSession, setIsContentOperationLoading, setIsDownloadingWardrobePdf, setIsLoadingItems,
-    setIsPartialRegenerationLoading, setIsSignOutConfirmOpen, setIsWardrobePending, setOnboardingStep,
-    setPartialRegenerationPendingUrls, setPendingImageSetIndexes, setProfileCreated, setProfileItems, setProfileOutfitSets,
-    setSelectedAudience, setSelectedColor, setSelectedFormalityLevel, setSelectedOccasions, setSelectedPattern,
-    setSelectedRegenerationUrls, setSelectedSeason, setSelectedStyle, setSelectedText, setSessionInitialized,
-    setSettingsProfile, setStatus, setStep, setUser, settingsProfile, status, step, user
+    activeCapsuleId,
+    activeCapsuleMeta,
+    capsuleEventsAbortRef,
+    capsuleList,
+    capsuleSidebarActionsRef,
+    code,
+    currentView,
+    email,
+    hasPendingAdditionalItems,
+    hasProfile,
+    isCheckingSession,
+    isContentOperationLoading,
+    isDownloadingWardrobePdf,
+    isLoadingItems,
+    isMountedRef,
+    isPartialRegenerationLoading,
+    isSignOutConfirmOpen,
+    isWardrobePending,
+    manualWardrobeRegenerationCapsuleIdRef,
+    onboardingStep,
+    partialRegenerationPendingUrls,
+    pendingImageSetIndexes,
+    pendingNotificationKindRef,
+    pendingRegenerationUrlsRef,
+    profileCreated,
+    profileItems,
+    profileOutfitSets,
+    regenerationBaseItemsRef,
+    selectedAudience,
+    selectedColor,
+    selectedFormalityLevel,
+    selectedOccasions,
+    selectedPattern,
+    selectedRegenerationUrls,
+    selectedSeason,
+    selectedStyle,
+    selectedText,
+    sessionInitialized,
+    setActiveCapsuleId,
+    setActiveCapsuleMeta,
+    setCapsuleList,
+    setCode,
+    setCurrentView,
+    setEmail,
+    setHasPendingAdditionalItems,
+    setHasProfile,
+    setIsCheckingSession,
+    setIsContentOperationLoading,
+    setIsDownloadingWardrobePdf,
+    setIsLoadingItems,
+    setIsPartialRegenerationLoading,
+    setIsSignOutConfirmOpen,
+    setIsWardrobePending,
+    setOnboardingStep,
+    setPartialRegenerationPendingUrls,
+    setPendingImageSetIndexes,
+    setProfileCreated,
+    setProfileItems,
+    setProfileOutfitSets,
+    setSelectedAudience,
+    setSelectedColor,
+    setSelectedFormalityLevel,
+    setSelectedOccasions,
+    setSelectedPattern,
+    setSelectedRegenerationUrls,
+    setSelectedSeason,
+    setSelectedStyle,
+    setSelectedText,
+    setSessionInitialized,
+    setSettingsProfile,
+    setStatus,
+    setStep,
+    setUser,
+    settingsProfile,
+    status,
+    step,
+    user,
   };
 }

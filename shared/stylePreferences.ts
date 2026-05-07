@@ -4,7 +4,13 @@ type StyleOption = {
   disabled: boolean;
 };
 
-const CORE_STYLE_ORDER = ["casual", "smart_casual", "formal", "minimalistic", "street_style"] as const;
+const CORE_STYLE_ORDER = [
+  "casual",
+  "smart_casual",
+  "formal",
+  "minimalistic",
+  "street_style",
+] as const;
 const AESTHETICS_STYLE_ORDER = [
   "romantic",
   "preppy",
@@ -15,7 +21,7 @@ const AESTHETICS_STYLE_ORDER = [
   "equestrian",
   "military",
   "grunge",
-  "sporty"
+  "sporty",
 ] as const;
 
 const CORE_STYLE_SET = new Set<string>(CORE_STYLE_ORDER);
@@ -55,17 +61,28 @@ function partitionStyleValues(items: readonly unknown[] = []): {
 } {
   const normalized = dedupeStyleValues(items);
   const available = new Set(normalized);
-  const core = CORE_STYLE_ORDER.map((item) => makeStyleOption(item, !available.has(item)));
-  const aesthetics = AESTHETICS_STYLE_ORDER.map((item) => makeStyleOption(item, !available.has(item)));
-  const extras = normalized.filter((item) => !CORE_STYLE_SET.has(item) && !AESTHETICS_STYLE_SET.has(item));
+  const core = CORE_STYLE_ORDER.map((item) =>
+    makeStyleOption(item, !available.has(item)),
+  );
+  const aesthetics = AESTHETICS_STYLE_ORDER.map((item) =>
+    makeStyleOption(item, !available.has(item)),
+  );
+  const extras = normalized.filter(
+    (item) => !CORE_STYLE_SET.has(item) && !AESTHETICS_STYLE_SET.has(item),
+  );
 
   return {
     core,
-    aesthetics: [...aesthetics, ...extras.map((item) => makeStyleOption(item, false))]
+    aesthetics: [
+      ...aesthetics,
+      ...extras.map((item) => makeStyleOption(item, false)),
+    ],
   };
 }
 
-function getEnabledStyleValues(items: readonly Partial<StyleOption>[] = []): string[] {
+function getEnabledStyleValues(
+  items: readonly Partial<StyleOption>[] = [],
+): string[] {
   return items.flatMap((item) => {
     if (!item || typeof item.value !== "string" || item.disabled === true) {
       return [];
@@ -75,13 +92,17 @@ function getEnabledStyleValues(items: readonly Partial<StyleOption>[] = []): str
   });
 }
 
-function buildFallbackStyleOptions({ disabled = false }: { disabled?: boolean } = {}): {
+function buildFallbackStyleOptions({
+  disabled = false,
+}: { disabled?: boolean } = {}): {
   core: StyleOption[];
   aesthetics: StyleOption[];
 } {
   return {
     core: CORE_STYLE_ORDER.map((item) => makeStyleOption(item, disabled)),
-    aesthetics: AESTHETICS_STYLE_ORDER.map((item) => makeStyleOption(item, disabled))
+    aesthetics: AESTHETICS_STYLE_ORDER.map((item) =>
+      makeStyleOption(item, disabled),
+    ),
   };
 }
 
@@ -92,12 +113,18 @@ function inferStyleSelections(stylePreferences: readonly unknown[] = []): {
   const normalized = dedupeStyleValues(stylePreferences);
   const styleCore = normalized.find((item) => CORE_STYLE_SET.has(item)) || null;
   const styleAesthetic =
-    normalized.find((item) => AESTHETICS_STYLE_SET.has(item) || (!CORE_STYLE_SET.has(item) && item)) || null;
+    normalized.find(
+      (item) =>
+        AESTHETICS_STYLE_SET.has(item) || (!CORE_STYLE_SET.has(item) && item),
+    ) || null;
 
   return { styleCore, styleAesthetic };
 }
 
-function buildStylePreferenceArray(styleCore: unknown, styleAesthetic: unknown): string[] {
+function buildStylePreferenceArray(
+  styleCore: unknown,
+  styleAesthetic: unknown,
+): string[] {
   return dedupeStyleValues([styleCore, styleAesthetic]);
 }
 
@@ -109,5 +136,5 @@ export {
   getEnabledStyleValues,
   buildFallbackStyleOptions,
   inferStyleSelections,
-  buildStylePreferenceArray
+  buildStylePreferenceArray,
 };

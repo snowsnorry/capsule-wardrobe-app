@@ -1,45 +1,88 @@
-import { getProductsByUrlsInOrder, getProductsWithEmbeddingsByUrlsInOrder, getSqlClient } from "../db.js";
-import { getGenerateJsonWithLlm, isNoLlmProfileEnabled, resolveLlmProvider } from "./llm.js";
-import { buildPromptDebugImagesForCategory, buildPromptDebugImagesInChild } from "./promptImages.js";
+import {
+  getProductsByUrlsInOrder,
+  getProductsWithEmbeddingsByUrlsInOrder,
+  getSqlClient,
+} from "../db.js";
+import {
+  getGenerateJsonWithLlm,
+  isNoLlmProfileEnabled,
+  resolveLlmProvider,
+} from "./llm.js";
+import {
+  buildPromptDebugImagesForCategory,
+  buildPromptDebugImagesInChild,
+} from "./promptImages.js";
 import { runWithImageWorkSlot } from "./imagePipeline.js";
 import { getCapsuleCategories } from "./categories.js";
-import { buildOutfitSetsFromFormulas, getOutfitFormulas } from "./outfitSets.js";
-import { buildShiftedTargetVector, normalizeEmbeddingVector } from "./vectorMath.js";
+import {
+  buildOutfitSetsFromFormulas,
+  getOutfitFormulas,
+} from "./outfitSets.js";
+import {
+  buildShiftedTargetVector,
+  normalizeEmbeddingVector,
+} from "./vectorMath.js";
 import { getPromptEmbeddings, getWardrobePrompt } from "./voyageai.js";
-import { countItemsByKey, enforceCategoryCounts, extractLlmUsage, getSelectedIdsFromCapsule, logWardrobeInfo, toWardrobeUiItem } from "./ai.js";
+import {
+  countItemsByKey,
+  enforceCategoryCounts,
+  extractLlmUsage,
+  getSelectedIdsFromCapsule,
+  logWardrobeInfo,
+  toWardrobeUiItem,
+} from "./ai.js";
 import { getStoredWardrobePayload } from "./capsuleEvents.js";
 import type {
   CountByKey,
   LogContextLike,
   UserProfileLike,
   WardrobeGenerationResult,
-  WardrobeUiItemLike
+  WardrobeUiItemLike,
 } from "./types.js";
-import { LAST_PROMPT_DIR_URL, buildRegenerateSelectedPrompt, buildRegenerateSelectedSystemPrompt, buildRegeneratedItemsFormat, getSqlRows, saveLastPromptArtifacts } from "./regenerateSelectedPrompt.js";
+import {
+  LAST_PROMPT_DIR_URL,
+  buildRegenerateSelectedPrompt,
+  buildRegenerateSelectedSystemPrompt,
+  buildRegeneratedItemsFormat,
+  getSqlRows,
+  saveLastPromptArtifacts,
+} from "./regenerateSelectedPrompt.js";
 import { queryRegenerationCandidateItems } from "./regenerateSelectedSql.js";
 import { logInfo, logWarn } from "../logger.js";
 
 const AUDIENCE_FILTERS_BY_PROFILE = {
   man: ["man", "all"],
   woman: ["woman", "all"],
-  any: ["man", "woman", "all"]
+  any: ["man", "woman", "all"],
 };
 
 // eslint-disable-next-line complexity, @typescript-eslint/no-explicit-any
 function createRegenerationDeps(deps: Record<string, any> = {}) {
   return {
-    buildPromptDebugImagesForCategoryImpl: deps.buildPromptDebugImagesForCategoryImpl || buildPromptDebugImagesForCategory,
-    buildPromptDebugImagesInChildImpl: deps.buildPromptDebugImagesInChildImpl || buildPromptDebugImagesInChild,
-    getGenerateJsonWithLlmImpl: deps.getGenerateJsonWithLlmImpl || getGenerateJsonWithLlm,
-    getProductsByUrlsInOrderImpl: deps.getProductsByUrlsInOrderImpl || getProductsByUrlsInOrder,
-    getProductsWithEmbeddingsByUrlsInOrderImpl: deps.getProductsWithEmbeddingsByUrlsInOrderImpl || getProductsWithEmbeddingsByUrlsInOrder,
-    getPromptEmbeddingsImpl: deps.getPromptEmbeddingsImpl || getPromptEmbeddings,
+    buildPromptDebugImagesForCategoryImpl:
+      deps.buildPromptDebugImagesForCategoryImpl ||
+      buildPromptDebugImagesForCategory,
+    buildPromptDebugImagesInChildImpl:
+      deps.buildPromptDebugImagesInChildImpl || buildPromptDebugImagesInChild,
+    getGenerateJsonWithLlmImpl:
+      deps.getGenerateJsonWithLlmImpl || getGenerateJsonWithLlm,
+    getProductsByUrlsInOrderImpl:
+      deps.getProductsByUrlsInOrderImpl || getProductsByUrlsInOrder,
+    getProductsWithEmbeddingsByUrlsInOrderImpl:
+      deps.getProductsWithEmbeddingsByUrlsInOrderImpl ||
+      getProductsWithEmbeddingsByUrlsInOrder,
+    getPromptEmbeddingsImpl:
+      deps.getPromptEmbeddingsImpl || getPromptEmbeddings,
     getSqlClientImpl: deps.getSqlClientImpl || getSqlClient,
     getWardrobePromptImpl: deps.getWardrobePromptImpl || getWardrobePrompt,
-    isNoLlmProfileEnabledImpl: deps.isNoLlmProfileEnabledImpl || isNoLlmProfileEnabled,
-    queryRegenerationCandidateItemsImpl: deps.queryRegenerationCandidateItemsImpl || queryRegenerationCandidateItems,
+    isNoLlmProfileEnabledImpl:
+      deps.isNoLlmProfileEnabledImpl || isNoLlmProfileEnabled,
+    queryRegenerationCandidateItemsImpl:
+      deps.queryRegenerationCandidateItemsImpl ||
+      queryRegenerationCandidateItems,
     resolveLlmProviderImpl: deps.resolveLlmProviderImpl || resolveLlmProvider,
-    runWithImageWorkSlotImpl: deps.runWithImageWorkSlotImpl || runWithImageWorkSlot
+    runWithImageWorkSlotImpl:
+      deps.runWithImageWorkSlotImpl || runWithImageWorkSlot,
   };
 }
 
@@ -49,7 +92,9 @@ function getProductUrls(items) {
     : [];
 }
 
-function countSelectedCategories(selectedProducts: WardrobeUiItemLike[]): CountByKey {
+function countSelectedCategories(
+  selectedProducts: WardrobeUiItemLike[],
+): CountByKey {
   return selectedProducts.reduce<CountByKey>((result, item) => {
     const category = String(item?.category || "").trim();
     if (category) {
@@ -59,7 +104,10 @@ function countSelectedCategories(selectedProducts: WardrobeUiItemLike[]): CountB
   }, {});
 }
 
-function buildSelectedCapsuleCategories(userProfile, selectedProducts: WardrobeUiItemLike[]) {
+function buildSelectedCapsuleCategories(
+  userProfile,
+  selectedProducts: WardrobeUiItemLike[],
+) {
   const selectedCategoryCounts = countSelectedCategories(selectedProducts);
   const capsuleCategories: CountByKey = {};
   for (const category of Object.keys(getCapsuleCategories(userProfile))) {
@@ -80,19 +128,25 @@ function getProfileList(value) {
 }
 
 function getRegenerationPattern(userProfile) {
-  return typeof userProfile?.pattern === "string" && userProfile.pattern.trim().length > 0
+  return typeof userProfile?.pattern === "string" &&
+    userProfile.pattern.trim().length > 0
     ? userProfile.pattern.trim().toLowerCase()
     : "solid";
 }
 
 function getRejectedUrls(userProfile) {
   return Array.isArray(userProfile?.rejected)
-    ? userProfile.rejected.map((itemUrl) => String(itemUrl || "").trim()).filter(Boolean)
+    ? userProfile.rejected
+        .map((itemUrl) => String(itemUrl || "").trim())
+        .filter(Boolean)
     : [];
 }
 
 function getAudienceFilters(userProfile) {
-  return AUDIENCE_FILTERS_BY_PROFILE[userProfile?.audience] || AUDIENCE_FILTERS_BY_PROFILE.any;
+  return (
+    AUDIENCE_FILTERS_BY_PROFILE[userProfile?.audience] ||
+    AUDIENCE_FILTERS_BY_PROFILE.any
+  );
 }
 
 async function buildRegenerationInputs(userProfile, products, deps) {
@@ -103,10 +157,17 @@ async function buildRegenerationInputs(userProfile, products, deps) {
   const selectedProductUrls = getProductUrls(selectedProducts);
   const selectedProductUrlSet = new Set(selectedProductUrls);
   const currentCapsuleItems = Array.isArray(storedWardrobe?.items)
-    ? storedWardrobe.items.filter((item) => !selectedProductUrlSet.has(String(item?.url || "").trim()))
+    ? storedWardrobe.items.filter(
+        (item) => !selectedProductUrlSet.has(String(item?.url || "").trim()),
+      )
     : [];
-  const currentCapsulePromptItems = await deps.getProductsByUrlsInOrderImpl(getProductUrls(currentCapsuleItems));
-  const capsuleCategories = buildSelectedCapsuleCategories(userProfile, selectedProducts);
+  const currentCapsulePromptItems = await deps.getProductsByUrlsInOrderImpl(
+    getProductUrls(currentCapsuleItems),
+  );
+  const capsuleCategories = buildSelectedCapsuleCategories(
+    userProfile,
+    selectedProducts,
+  );
   const categories = Object.keys(capsuleCategories);
 
   if (categories.length === 0) {
@@ -119,96 +180,164 @@ async function buildRegenerationInputs(userProfile, products, deps) {
     currentCapsulePromptItems,
     promptEmbeddings,
     selectedProductUrls,
-    storedWardrobeProductUrls: getProductUrls(storedWardrobe?.items)
+    storedWardrobeProductUrls: getProductUrls(storedWardrobe?.items),
   };
 }
 
 async function buildRegenerationSqlParams(userProfile, inputs, deps) {
   const rejectedUrls = getRejectedUrls(userProfile);
-  const negativePromptingUrls = [...new Set([...rejectedUrls, ...inputs.selectedProductUrls])];
-  const rejectedProducts = await deps.getProductsWithEmbeddingsByUrlsInOrderImpl(negativePromptingUrls);
+  const negativePromptingUrls = [
+    ...new Set([...rejectedUrls, ...inputs.selectedProductUrls]),
+  ];
+  const rejectedProducts =
+    await deps.getProductsWithEmbeddingsByUrlsInOrderImpl(
+      negativePromptingUrls,
+    );
   const rejectedVectors = rejectedProducts
     .map((product) => normalizeEmbeddingVector(product?.embedding))
     .filter(Boolean);
-  const shiftedPromptEmbeddings = buildShiftedTargetVector(inputs.promptEmbeddings, rejectedVectors, 0.3);
+  const shiftedPromptEmbeddings = buildShiftedTargetVector(
+    inputs.promptEmbeddings,
+    rejectedVectors,
+    0.3,
+  );
 
   return {
     audienceFilters: getAudienceFilters(userProfile),
     categories: Object.keys(inputs.capsuleCategories),
     color: userProfile?.color ?? null,
     embeddingVector: `[${shiftedPromptEmbeddings.join(",")}]`,
-    excludedUrls: [...new Set([...inputs.storedWardrobeProductUrls, ...rejectedUrls])],
+    excludedUrls: [
+      ...new Set([...inputs.storedWardrobeProductUrls, ...rejectedUrls]),
+    ],
     formalityLevel: userProfile?.formalityLevel ?? null,
     noiseFactor: 0.05,
     occasions: getProfileList(userProfile?.occasions),
     pattern: getRegenerationPattern(userProfile),
     season: getProfileList(userProfile?.season),
-    style: userProfile?.style ?? null
+    style: userProfile?.style ?? null,
   };
 }
 
 async function getRegenerationCandidates(sql, sqlParams, logContext, deps) {
   const sqlStartedAt = Date.now();
-  const itemsResult = await deps.queryRegenerationCandidateItemsImpl(sql, sqlParams);
+  const itemsResult = await deps.queryRegenerationCandidateItemsImpl(
+    sql,
+    sqlParams,
+  );
   const normalizedItems = getSqlRows(itemsResult).map((item) => {
     const normalized = { ...(item as Record<string, unknown>) };
     delete normalized.embedding;
     return normalized;
   });
-  logWardrobeInfo("capsule-sql-completed", {
-    sqlDurationMs: Date.now() - sqlStartedAt,
-    sqlItemsTotal: normalizedItems.length,
-    sqlItemsByCategory: countItemsByKey(normalizedItems)
-  }, logContext);
+  logWardrobeInfo(
+    "capsule-sql-completed",
+    {
+      sqlDurationMs: Date.now() - sqlStartedAt,
+      sqlItemsTotal: normalizedItems.length,
+      sqlItemsByCategory: countItemsByKey(normalizedItems),
+    },
+    logContext,
+  );
   return normalizedItems;
 }
 
-function buildNoLlmRegenerationResult({ normalizedItems, capsuleCategories, userProfile, currentCapsuleItems, promptEmbeddings, llmResolution, logContext }) {
-  logWardrobeInfo("capsule-llm-skipped", {
-    reason: "profile_llm_none",
-    requestedLlm: llmResolution.requestedLlm,
-    usedModel: null
-  }, logContext);
-  const balancedItems = enforceCategoryCounts([], normalizedItems, capsuleCategories, userProfile);
+function buildNoLlmRegenerationResult({
+  normalizedItems,
+  capsuleCategories,
+  userProfile,
+  currentCapsuleItems,
+  promptEmbeddings,
+  llmResolution,
+  logContext,
+}) {
+  logWardrobeInfo(
+    "capsule-llm-skipped",
+    {
+      reason: "profile_llm_none",
+      requestedLlm: llmResolution.requestedLlm,
+      usedModel: null,
+    },
+    logContext,
+  );
+  const balancedItems = enforceCategoryCounts(
+    [],
+    normalizedItems,
+    capsuleCategories,
+    userProfile,
+  );
   if (balancedItems.length === 0) {
     throw new Error("SQL returned no valid regenerated items");
   }
-  logWardrobeInfo("capsule-nollm-completed", {
-    selectedItemsTotal: balancedItems.length,
-    selectedItemsByCategory: countItemsByKey(balancedItems)
-  }, logContext);
+  logWardrobeInfo(
+    "capsule-nollm-completed",
+    {
+      selectedItemsTotal: balancedItems.length,
+      selectedItemsByCategory: countItemsByKey(balancedItems),
+    },
+    logContext,
+  );
   return {
     items: [...currentCapsuleItems, ...balancedItems.map(toWardrobeUiItem)],
     selectedItems: balancedItems,
     outfitSets: [],
     promptEmbeddings,
     shortCapsuleName: null,
-    rawSelectionText: null
+    rawSelectionText: null,
   };
 }
 
-async function buildRegenerationPromptImages({ normalizedItems, currentCapsuleItems, logContext, deps }) {
+async function buildRegenerationPromptImages({
+  normalizedItems,
+  currentCapsuleItems,
+  logContext,
+  deps,
+}) {
   const shouldSavePromptDebugArtifacts = process.env.NODE_ENV === "development";
-  const promptDebugImages = await buildRegenerationCandidateImages(normalizedItems, shouldSavePromptDebugArtifacts, logContext, deps);
-  const currentCapsuleCollage = await buildCurrentCapsuleCollage(currentCapsuleItems, logContext, deps);
+  const promptDebugImages = await buildRegenerationCandidateImages(
+    normalizedItems,
+    shouldSavePromptDebugArtifacts,
+    logContext,
+    deps,
+  );
+  const currentCapsuleCollage = await buildCurrentCapsuleCollage(
+    currentCapsuleItems,
+    logContext,
+    deps,
+  );
   return { currentCapsuleCollage, promptDebugImages };
 }
 
-async function buildRegenerationCandidateImages(normalizedItems, shouldSavePromptDebugArtifacts, logContext, deps) {
+async function buildRegenerationCandidateImages(
+  normalizedItems,
+  shouldSavePromptDebugArtifacts,
+  logContext,
+  deps,
+) {
   try {
     const imageFetchStartedAt = Date.now();
-    const promptDebugImages = await deps.runWithImageWorkSlotImpl("capsule-images", async () => deps.buildPromptDebugImagesInChildImpl({
-      normalizedItems,
-      saveDebugArtifacts: shouldSavePromptDebugArtifacts,
-      debugOutputDir: shouldSavePromptDebugArtifacts ? LAST_PROMPT_DIR_URL : null
-    }));
-    logWardrobeInfo("capsule-images-ready", {
-      imageFetchDurationMs: Date.now() - imageFetchStartedAt,
-      requestedCount: normalizedItems.length,
-      cachedCount: promptDebugImages.cachedCount || 0,
-      downloadedCount: promptDebugImages.downloadedCount || 0,
-      skippedCount: promptDebugImages.skippedCount || 0
-    }, logContext);
+    const promptDebugImages = await deps.runWithImageWorkSlotImpl(
+      "capsule-images",
+      async () =>
+        deps.buildPromptDebugImagesInChildImpl({
+          normalizedItems,
+          saveDebugArtifacts: shouldSavePromptDebugArtifacts,
+          debugOutputDir: shouldSavePromptDebugArtifacts
+            ? LAST_PROMPT_DIR_URL
+            : null,
+        }),
+    );
+    logWardrobeInfo(
+      "capsule-images-ready",
+      {
+        imageFetchDurationMs: Date.now() - imageFetchStartedAt,
+        requestedCount: normalizedItems.length,
+        cachedCount: promptDebugImages.cachedCount || 0,
+        downloadedCount: promptDebugImages.downloadedCount || 0,
+        skippedCount: promptDebugImages.skippedCount || 0,
+      },
+      logContext,
+    );
     return promptDebugImages;
   } catch (error) {
     logPromptImageBuildFailure(error, logContext);
@@ -218,92 +347,155 @@ async function buildRegenerationCandidateImages(normalizedItems, shouldSavePromp
 
 function logPromptImageBuildFailure(error, logContext) {
   if (String(error?.message || "").startsWith("prompt_images_child_exit:")) {
-    logWardrobeInfo("capsule-images-child-exit", { message: error.message }, logContext);
+    logWardrobeInfo(
+      "capsule-images-child-exit",
+      { message: error.message },
+      logContext,
+    );
   }
-  logWarn("[prompt-images][build-failed]", JSON.stringify({ message: error?.message || "unknown_error" }));
+  logWarn(
+    "[prompt-images][build-failed]",
+    JSON.stringify({ message: error?.message || "unknown_error" }),
+  );
 }
 
-async function buildCurrentCapsuleCollage(currentCapsuleItems, logContext, deps) {
+async function buildCurrentCapsuleCollage(
+  currentCapsuleItems,
+  logContext,
+  deps,
+) {
   if (currentCapsuleItems.length === 0) {
     return null;
   }
 
   try {
     const currentCapsuleImageStartedAt = Date.now();
-    const currentCapsuleImage = await deps.runWithImageWorkSlotImpl("capsule-images", async () => (
-      deps.buildPromptDebugImagesForCategoryImpl({ category: "Current Capsule", items: currentCapsuleItems })
-    ));
+    const currentCapsuleImage = await deps.runWithImageWorkSlotImpl(
+      "capsule-images",
+      async () =>
+        deps.buildPromptDebugImagesForCategoryImpl({
+          category: "Current Capsule",
+          items: currentCapsuleItems,
+        }),
+    );
     const currentCapsuleCollage = currentCapsuleImage?.category || null;
     logWardrobeInfo(
       "current-capsule-collage-ready",
-      buildCurrentCapsuleCollageLogPayload(currentCapsuleCollage, currentCapsuleItems, currentCapsuleImageStartedAt),
-      logContext
+      buildCurrentCapsuleCollageLogPayload(
+        currentCapsuleCollage,
+        currentCapsuleItems,
+        currentCapsuleImageStartedAt,
+      ),
+      logContext,
     );
     return currentCapsuleCollage;
   } catch (error) {
-    logWarn("[prompt-images][current-capsule-build-failed]", JSON.stringify({ message: error?.message || "unknown_error" }));
+    logWarn(
+      "[prompt-images][current-capsule-build-failed]",
+      JSON.stringify({ message: error?.message || "unknown_error" }),
+    );
     return null;
   }
 }
 
-function buildCurrentCapsuleCollageLogPayload(currentCapsuleCollage, currentCapsuleItems, currentCapsuleImageStartedAt) {
+function buildCurrentCapsuleCollageLogPayload(
+  currentCapsuleCollage,
+  currentCapsuleItems,
+  currentCapsuleImageStartedAt,
+) {
   return {
     imageFetchDurationMs: Date.now() - currentCapsuleImageStartedAt,
     currentCapsuleItemsTotal: currentCapsuleItems.length,
     cachedCount: currentCapsuleCollage?.cachedCount || 0,
     downloadedCount: currentCapsuleCollage?.downloadedCount || 0,
-    skippedCount: currentCapsuleCollage?.skippedCount || 0
+    skippedCount: currentCapsuleCollage?.skippedCount || 0,
   };
 }
 
 function getStylistImages(currentCapsuleCollage, promptDebugImages) {
-  const generatedImages = promptDebugImages.stitched ? [promptDebugImages.stitched] : promptDebugImages.categories;
-  return currentCapsuleCollage ? [currentCapsuleCollage, ...generatedImages] : generatedImages;
+  const generatedImages = promptDebugImages.stitched
+    ? [promptDebugImages.stitched]
+    : promptDebugImages.categories;
+  return currentCapsuleCollage
+    ? [currentCapsuleCollage, ...generatedImages]
+    : generatedImages;
 }
 
-async function generateRegenerationSelection({ userProfile, normalizedItems, currentCapsulePromptItems, capsuleCategories, promptDebugImages, currentCapsuleCollage, llmResolution, logContext, deps }) {
-  const selectionPrompt = buildRegenerateSelectedPrompt(userProfile, normalizedItems, currentCapsulePromptItems, capsuleCategories);
-  const selectionSystemPrompt = buildRegenerateSelectedSystemPrompt(userProfile, capsuleCategories);
-  saveLastPromptArtifacts({ prompt: selectionPrompt, currentCapsuleCollage, userProfile, systemPrompt: selectionSystemPrompt });
+async function generateRegenerationSelection({
+  userProfile,
+  normalizedItems,
+  currentCapsulePromptItems,
+  capsuleCategories,
+  promptDebugImages,
+  currentCapsuleCollage,
+  llmResolution,
+  logContext,
+  deps,
+}) {
+  const selectionPrompt = buildRegenerateSelectedPrompt(
+    userProfile,
+    normalizedItems,
+    currentCapsulePromptItems,
+    capsuleCategories,
+  );
+  const selectionSystemPrompt = buildRegenerateSelectedSystemPrompt(
+    userProfile,
+    capsuleCategories,
+  );
+  saveLastPromptArtifacts({
+    prompt: selectionPrompt,
+    currentCapsuleCollage,
+    userProfile,
+    systemPrompt: selectionSystemPrompt,
+  });
   const llmStartedAt = Date.now();
   const generateJsonWithLlm = deps.getGenerateJsonWithLlmImpl(userProfile);
-  const { response: selectionResponse, json: parsedSelection } = await generateJsonWithLlm(selectionPrompt, {
-    userProfile,
-    format: buildRegeneratedItemsFormat(capsuleCategories),
-    images: getStylistImages(currentCapsuleCollage, promptDebugImages),
-    systemPrompt: selectionSystemPrompt,
-    onPayloadBuilt: () => {
-      promptDebugImages.categories = [];
-      promptDebugImages.stitched = null;
-    }
-  });
+  const { response: selectionResponse, json: parsedSelection } =
+    await generateJsonWithLlm(selectionPrompt, {
+      userProfile,
+      format: buildRegeneratedItemsFormat(capsuleCategories),
+      images: getStylistImages(currentCapsuleCollage, promptDebugImages),
+      systemPrompt: selectionSystemPrompt,
+      onPayloadBuilt: () => {
+        promptDebugImages.categories = [];
+        promptDebugImages.stitched = null;
+      },
+    });
   promptDebugImages.categories = [];
   promptDebugImages.stitched = null;
-  logWardrobeInfo("capsule-llm-completed", {
-    llmProvider: llmResolution.provider,
-    llmModel: llmResolution.model,
-    requestedLlm: llmResolution.requestedLlm,
-    fallbackReason: llmResolution.fallbackReason,
-    llmDurationMs: Date.now() - llmStartedAt,
-    ...extractLlmUsage(selectionResponse?.usage)
-  }, logContext);
+  logWardrobeInfo(
+    "capsule-llm-completed",
+    {
+      llmProvider: llmResolution.provider,
+      llmModel: llmResolution.model,
+      requestedLlm: llmResolution.requestedLlm,
+      fallbackReason: llmResolution.fallbackReason,
+      llmDurationMs: Date.now() - llmStartedAt,
+      ...extractLlmUsage(selectionResponse?.usage),
+    },
+    logContext,
+  );
   return { parsedSelection, selectionResponse };
 }
 
 function getRawSelectionText(selectionResponse) {
-  return typeof selectionResponse?.output_text === "string" && selectionResponse.output_text.trim().length > 0
+  return typeof selectionResponse?.output_text === "string" &&
+    selectionResponse.output_text.trim().length > 0
     ? selectionResponse.output_text.trim()
     : null;
 }
 
 function logEmptyRegenerationSelection(parsedSelection, selectionResponse) {
-  if (parsedSelection?.regenerated_items && typeof parsedSelection.regenerated_items === "object") {
+  if (
+    parsedSelection?.regenerated_items &&
+    typeof parsedSelection.regenerated_items === "object"
+  ) {
     return;
   }
 
   logWarn(
     "[wardrobe-ai][selected-json-empty]",
-    JSON.stringify(buildEmptySelectionLogPayload(selectionResponse))
+    JSON.stringify(buildEmptySelectionLogPayload(selectionResponse)),
   );
 }
 
@@ -314,30 +506,53 @@ function buildEmptySelectionLogPayload(selectionResponse) {
     outputParsed: selectionResponse?.output_parsed ?? null,
     finishReason: selectionResponse?.status ?? null,
     incompleteDetails: selectionResponse?.incomplete_details ?? null,
-    usage: selectionResponse?.usage ?? null
+    usage: selectionResponse?.usage ?? null,
   };
 }
 
-function buildRegenerationResult({ parsedSelection, selectionResponse, normalizedItems, capsuleCategories, userProfile, currentCapsuleItems, promptEmbeddings }) {
-  const selectedIds = getSelectedIdsFromCapsule(parsedSelection?.regenerated_items);
+function buildRegenerationResult({
+  parsedSelection,
+  selectionResponse,
+  normalizedItems,
+  capsuleCategories,
+  userProfile,
+  currentCapsuleItems,
+  promptEmbeddings,
+}) {
+  const selectedIds = getSelectedIdsFromCapsule(
+    parsedSelection?.regenerated_items,
+  );
   const uniqueSelectedIds = [...new Set(selectedIds.map((id) => String(id)))];
-  const itemsById = new Map(normalizedItems.map((item) => [String(item.id), item]));
+  const itemsById = new Map(
+    normalizedItems.map((item) => [String(item.id), item]),
+  );
   const selectedItems = uniqueSelectedIds
     .map((id) => itemsById.get(String(id)))
     .filter(Boolean);
-  const balancedItems = enforceCategoryCounts(selectedItems, normalizedItems, capsuleCategories, userProfile);
+  const balancedItems = enforceCategoryCounts(
+    selectedItems,
+    normalizedItems,
+    capsuleCategories,
+    userProfile,
+  );
   if (balancedItems.length === 0) {
     throw new Error("Model returned no valid selected_ids");
   }
-  const nextWardrobeItems = [...currentCapsuleItems, ...balancedItems.map(toWardrobeUiItem)];
+  const nextWardrobeItems = [
+    ...currentCapsuleItems,
+    ...balancedItems.map(toWardrobeUiItem),
+  ];
 
   return {
     items: nextWardrobeItems,
     selectedItems: balancedItems,
-    outfitSets: buildOutfitSetsFromFormulas(getOutfitFormulas(parsedSelection), nextWardrobeItems),
+    outfitSets: buildOutfitSetsFromFormulas(
+      getOutfitFormulas(parsedSelection),
+      nextWardrobeItems,
+    ),
     promptEmbeddings,
     shortCapsuleName: null,
-    rawSelectionText: getRawSelectionText(selectionResponse)
+    rawSelectionText: getRawSelectionText(selectionResponse),
   };
 }
 
@@ -347,36 +562,63 @@ export function createRegenerateCapsuleWardrobe(deps = {}) {
   return async function regenerateCapsuleWardrobe(
     userProfile: UserProfileLike | null = null,
     products: WardrobeUiItemLike[] | null = null,
-    logContext: LogContextLike | null = null
+    logContext: LogContextLike | null = null,
   ): Promise<WardrobeGenerationResult> {
     const llmResolution = resolvedDeps.resolveLlmProviderImpl(userProfile);
     const sql = resolvedDeps.getSqlClientImpl();
-    const inputs = await buildRegenerationInputs(userProfile, products, resolvedDeps);
-    const sqlParams = await buildRegenerationSqlParams(userProfile, inputs, resolvedDeps);
-    const normalizedItems = await getRegenerationCandidates(sql, sqlParams, logContext, resolvedDeps);
-    if (resolvedDeps.isNoLlmProfileEnabledImpl(userProfile)) {
-      return buildNoLlmRegenerationResult({ normalizedItems, llmResolution, logContext, userProfile, ...inputs });
-    }
-    const { currentCapsuleCollage, promptDebugImages } = await buildRegenerationPromptImages({
-      currentCapsuleItems: inputs.currentCapsuleItems,
-      normalizedItems,
-      logContext,
-      deps: resolvedDeps
-    });
-    const { parsedSelection, selectionResponse } = await generateRegenerationSelection({
+    const inputs = await buildRegenerationInputs(
       userProfile,
-      normalizedItems,
-      currentCapsulePromptItems: inputs.currentCapsulePromptItems,
-      capsuleCategories: inputs.capsuleCategories,
-      promptDebugImages,
-      currentCapsuleCollage,
-      llmResolution,
+      products,
+      resolvedDeps,
+    );
+    const sqlParams = await buildRegenerationSqlParams(
+      userProfile,
+      inputs,
+      resolvedDeps,
+    );
+    const normalizedItems = await getRegenerationCandidates(
+      sql,
+      sqlParams,
       logContext,
-      deps: resolvedDeps
-    });
+      resolvedDeps,
+    );
+    if (resolvedDeps.isNoLlmProfileEnabledImpl(userProfile)) {
+      return buildNoLlmRegenerationResult({
+        normalizedItems,
+        llmResolution,
+        logContext,
+        userProfile,
+        ...inputs,
+      });
+    }
+    const { currentCapsuleCollage, promptDebugImages } =
+      await buildRegenerationPromptImages({
+        currentCapsuleItems: inputs.currentCapsuleItems,
+        normalizedItems,
+        logContext,
+        deps: resolvedDeps,
+      });
+    const { parsedSelection, selectionResponse } =
+      await generateRegenerationSelection({
+        userProfile,
+        normalizedItems,
+        currentCapsulePromptItems: inputs.currentCapsulePromptItems,
+        capsuleCategories: inputs.capsuleCategories,
+        promptDebugImages,
+        currentCapsuleCollage,
+        llmResolution,
+        logContext,
+        deps: resolvedDeps,
+      });
     logInfo("[wardrobe-ai][selected-json]", JSON.stringify(parsedSelection));
     logEmptyRegenerationSelection(parsedSelection, selectionResponse);
-    return buildRegenerationResult({ parsedSelection, selectionResponse, normalizedItems, userProfile, ...inputs });
+    return buildRegenerationResult({
+      parsedSelection,
+      selectionResponse,
+      normalizedItems,
+      userProfile,
+      ...inputs,
+    });
   };
 }
 

@@ -8,22 +8,39 @@ function Harness() {
     <div>
       <div data-testid="route">{navigation.appRoute}</div>
       <div data-testid="query">{navigation.searchInitialQuery}</div>
-      <div data-testid="auto-open">{String(navigation.searchAutoOpenProductDetail)}</div>
+      <div data-testid="auto-open">
+        {String(navigation.searchAutoOpenProductDetail)}
+      </div>
       <div data-testid="share-id">{navigation.pendingShareId}</div>
-      <button type="button" onClick={() => navigation.navigateApp("explore")}>explore</button>
+      <button type="button" onClick={() => navigation.navigateApp("explore")}>
+        explore
+      </button>
       <button
         type="button"
-        onClick={() => navigation.navigateApp("explore", {
-          query: "https://example.com/products/linen-shirt",
-          openProductDetail: true
-        })}
+        onClick={() =>
+          navigation.navigateApp("explore", {
+            query: "https://example.com/products/linen-shirt",
+            openProductDetail: true,
+          })
+        }
       >
         product
       </button>
-      <button type="button" onClick={() => navigation.navigateApp("statistics")}>statistics</button>
-      <button type="button" onClick={() => navigation.navigateApp("capsule")}>capsule</button>
-      <button type="button" onClick={() => navigation.clearShareRoute()}>clear-share</button>
-      <button type="button" onClick={() => navigation.resetNavigation()}>reset</button>
+      <button
+        type="button"
+        onClick={() => navigation.navigateApp("statistics")}
+      >
+        statistics
+      </button>
+      <button type="button" onClick={() => navigation.navigateApp("capsule")}>
+        capsule
+      </button>
+      <button type="button" onClick={() => navigation.clearShareRoute()}>
+        clear-share
+      </button>
+      <button type="button" onClick={() => navigation.resetNavigation()}>
+        reset
+      </button>
     </div>
   );
 }
@@ -36,7 +53,7 @@ describe("useAppNavigation", () => {
 
   test.each([
     ["/explore", "explore"],
-    ["/statistics", "statistics"]
+    ["/statistics", "statistics"],
   ])("initializes route state from %s", (path, route) => {
     window.history.replaceState({}, "", path);
 
@@ -52,7 +69,9 @@ describe("useAppNavigation", () => {
 
     expect(window.location.pathname).toBe("/explore");
     expect(screen.getByTestId("route")).toHaveTextContent("explore");
-    expect(screen.getByTestId("query")).toHaveTextContent("https://example.com/products/linen-shirt");
+    expect(screen.getByTestId("query")).toHaveTextContent(
+      "https://example.com/products/linen-shirt",
+    );
     expect(screen.getByTestId("auto-open")).toHaveTextContent("true");
 
     fireEvent.click(screen.getByRole("button", { name: "statistics" }));

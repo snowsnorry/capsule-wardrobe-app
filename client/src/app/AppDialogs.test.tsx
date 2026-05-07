@@ -12,7 +12,7 @@ function t(key: string, params?: Record<string, unknown>) {
     "dialogs.signOutBody": "You will need to sign in again.",
     "dialogs.signOutCancel": "Stay",
     "dialogs.signOutConfirm": "Sign out",
-    "dialogs.signOutTitle": "Sign out?"
+    "dialogs.signOutTitle": "Sign out?",
   };
   return messages[key] || key;
 }
@@ -36,13 +36,16 @@ describe("AppDialogs", () => {
         onImportSharedCapsule={onImportSharedCapsule}
         onCloseSignOutConfirm={vi.fn()}
         onLogout={vi.fn()}
-      />
+      />,
     );
 
     expect(screen.getByText("Import Spring edit?")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Import" }));
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
-    fireEvent.keyDown(screen.getAllByRole("presentation")[0].firstChild as Element, { key: "Escape" });
+    fireEvent.keyDown(
+      screen.getAllByRole("presentation")[0].firstChild as Element,
+      { key: "Escape" },
+    );
 
     expect(onImportSharedCapsule).toHaveBeenCalledTimes(1);
     expect(onClearShareRoute).toHaveBeenCalled();
@@ -64,10 +67,12 @@ describe("AppDialogs", () => {
         onImportSharedCapsule={vi.fn()}
         onCloseSignOutConfirm={onCloseSignOutConfirm}
         onLogout={onLogout}
-      />
+      />,
     );
 
-    expect(screen.getByText("You will need to sign in again.")).toBeInTheDocument();
+    expect(
+      screen.getByText("You will need to sign in again."),
+    ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Stay" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Sign out" })).toBeDisabled();
     expect(onCloseSignOutConfirm).not.toHaveBeenCalled();
@@ -89,10 +94,13 @@ describe("AppDialogs", () => {
         onImportSharedCapsule={vi.fn()}
         onCloseSignOutConfirm={onCloseSignOutConfirm}
         onLogout={vi.fn()}
-      />
+      />,
     );
 
-    fireEvent.keyDown(screen.getAllByRole("presentation")[0].firstChild as Element, { key: "Escape" });
+    fireEvent.keyDown(
+      screen.getAllByRole("presentation")[0].firstChild as Element,
+      { key: "Escape" },
+    );
 
     expect(onCloseSignOutConfirm).toHaveBeenCalled();
   });

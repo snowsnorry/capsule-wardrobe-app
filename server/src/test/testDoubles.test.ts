@@ -6,7 +6,7 @@ import {
   createBinaryResponse,
   createJsonResponse,
   createMockChildProcess,
-  createTextResponse
+  createTextResponse,
 } from "./testDoubles.js";
 
 test("prompt image fixture builders apply defaults and overrides", () => {
@@ -16,10 +16,15 @@ test("prompt image fixture builders apply defaults and overrides", () => {
     filename: "categories-stitched.jpg",
     totalItems: 1,
     categoryCount: 1,
-    buffer: Buffer.from("stitched")
+    buffer: Buffer.from("stitched"),
   });
 
-  expect(buildPromptDebugImageCategory({ category: "bottom", buffer: Buffer.from("bottom") })).toEqual({
+  expect(
+    buildPromptDebugImageCategory({
+      category: "bottom",
+      buffer: Buffer.from("bottom"),
+    }),
+  ).toEqual({
     category: "bottom",
     mimeType: "image/jpeg",
     filename: "category-top.jpg",
@@ -28,7 +33,7 @@ test("prompt image fixture builders apply defaults and overrides", () => {
     downloadedCount: 1,
     skippedCount: 0,
     items: [],
-    buffer: Buffer.from("bottom")
+    buffer: Buffer.from("bottom"),
   });
 
   const result = buildPromptDebugImageResult({ skippedCount: 3 });
@@ -45,16 +50,20 @@ test("response test doubles create json, text, and binary responses", async () =
 
   const textResponse = createTextResponse("hello", {
     headers: {
-      "x-test": "1"
-    }
+      "x-test": "1",
+    },
   });
   expect(textResponse.status).toBe(200);
   expect(textResponse.headers.get("x-test")).toBe("1");
   expect(await textResponse.text()).toBe("hello");
 
-  const binaryResponse = createBinaryResponse(Buffer.from("bytes"), { status: 202 });
+  const binaryResponse = createBinaryResponse(Buffer.from("bytes"), {
+    status: 202,
+  });
   expect(binaryResponse.status).toBe(202);
-  expect(Buffer.from(await binaryResponse.arrayBuffer()).toString("utf8")).toBe("bytes");
+  expect(Buffer.from(await binaryResponse.arrayBuffer()).toString("utf8")).toBe(
+    "bytes",
+  );
 });
 
 test("createMockChildProcess exposes child process event and lifecycle helpers", async () => {

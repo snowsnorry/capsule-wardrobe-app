@@ -8,13 +8,14 @@ import type ProfileFiltersSidebar from "./ProfileFiltersSidebar";
 
 vi.mock("../i18n", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../i18n")>()),
-  translateOption: (_group: string, value: string) => ({
-    solid: "Solid",
-    stripe: "Stripe",
-    abstract: "Abstract",
-    argyle: "Argyle",
-    graphic: "Graphic"
-  }[value] || value)
+  translateOption: (_group: string, value: string) =>
+    ({
+      solid: "Solid",
+      stripe: "Stripe",
+      abstract: "Abstract",
+      argyle: "Argyle",
+      graphic: "Graphic",
+    })[value] || value,
 }));
 
 const theme = createTheme();
@@ -45,7 +46,7 @@ function t(key: string, params?: Record<string, unknown>) {
     "filters.applyDisabledHint": "To apply filters, choose: {items}.",
     "filters.applyDisabledUnchangedHint": "Filters have not changed.",
     "filters.reset": "Reset",
-    "actions.signOut": "Sign out"
+    "actions.signOut": "Sign out",
   };
 
   if (key === "profile.info" && params?.count) {
@@ -54,7 +55,9 @@ function t(key: string, params?: Record<string, unknown>) {
 
   const label = labels[key] || key;
   return params
-    ? label.replace(/\{(\w+)\}/g, (_, paramKey) => String(params[paramKey] ?? `{${paramKey}}`))
+    ? label.replace(/\{(\w+)\}/g, (_, paramKey) =>
+        String(params[paramKey] ?? `{${paramKey}}`),
+      )
     : label;
 }
 
@@ -64,7 +67,7 @@ function renderFrame({
   normalizedSelectedPattern = "solid",
   missingRequiredFilters = [],
   showUnchangedFiltersHint = false,
-  isApplyDisabled = false
+  isApplyDisabled = false,
 }: {
   props?: Partial<ComponentProps<typeof ProfileFiltersSidebar>>;
   sortedPatternOptions?: string[];
@@ -74,7 +77,10 @@ function renderFrame({
   isApplyDisabled?: boolean;
 } = {}) {
   const defaults: ComponentProps<typeof ProfileFiltersSidebar> = {
-    styleOptions: { core: ["casual", "formal"], aesthetics: ["minimalistic", "retro"] },
+    styleOptions: {
+      core: ["casual", "formal"],
+      aesthetics: ["minimalistic", "retro"],
+    },
     occasionOptions: ["office", "travel"],
     seasonOptions: ["summer", "winter"],
     audienceOptions: ["woman", "man", "any"],
@@ -101,7 +107,7 @@ function renderFrame({
     onApply: vi.fn(),
     onReset: vi.fn(),
     onSignOut: vi.fn(),
-    isSigningOut: false
+    isSigningOut: false,
   };
   const mergedProps = { ...defaults, ...props };
 
@@ -119,8 +125,8 @@ function renderFrame({
           t={t}
           locale="en"
         />
-      </ThemeProvider>
-    )
+      </ThemeProvider>,
+    ),
   };
 }
 
@@ -132,8 +138,12 @@ describe("ProfileFiltersSidebarSections", () => {
   test("renders the capsule settings header", () => {
     renderFrame();
 
-    expect(screen.getByRole("heading", { name: "Capsule settings" })).toBeInTheDocument();
-    expect(screen.getByText("Adjust the inputs used to build this capsule.")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Capsule settings" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Adjust the inputs used to build this capsule."),
+    ).toBeInTheDocument();
   });
 
   test("forwards filter interactions to the corresponding callbacks", async () => {
@@ -156,8 +166,8 @@ describe("ProfileFiltersSidebarSections", () => {
         onSelectAudience,
         onSelectAccentColor,
         onSelectPattern,
-        onTextChange
-      }
+        onTextChange,
+      },
     });
 
     await user.click(screen.getByRole("button", { name: "formal" }));
@@ -167,7 +177,10 @@ describe("ProfileFiltersSidebarSections", () => {
     await user.click(screen.getByRole("button", { name: "man" }));
     await user.click(screen.getByRole("button", { name: "red" }));
     await user.click(screen.getByRole("button", { name: "Stripe" }));
-    await user.type(screen.getByPlaceholderText("Additional placeholder"), "linen only");
+    await user.type(
+      screen.getByPlaceholderText("Additional placeholder"),
+      "linen only",
+    );
 
     expect(onSelectStyleCore).toHaveBeenCalledWith("formal");
     expect(onSelectStyleAesthetic).toHaveBeenCalledWith("retro");
@@ -188,8 +201,13 @@ describe("ProfileFiltersSidebarSections", () => {
       props: {
         onApply,
         onReset,
-        status: { loading: false, error: "Bad input", infoKey: "profile.info", infoParams: { count: 2 } }
-      }
+        status: {
+          loading: false,
+          error: "Bad input",
+          infoKey: "profile.info",
+          infoParams: { count: 2 },
+        },
+      },
     });
 
     await user.click(screen.getByRole("button", { name: "Apply" }));
@@ -206,15 +224,19 @@ describe("ProfileFiltersSidebarSections", () => {
       props: {
         onApply,
         onReset,
-        status: { loading: true, error: "", infoKey: "", infoParams: null }
+        status: { loading: true, error: "", infoKey: "", infoParams: null },
       },
-      isApplyDisabled: true
+      isApplyDisabled: true,
     });
 
     expect(screen.getByRole("button", { name: "Apply" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Reset" })).toBeDisabled();
-    expect(screen.queryByText(/To apply filters, choose:/)).not.toBeInTheDocument();
-    expect(screen.queryByText("Filters have not changed.")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/To apply filters, choose:/),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Filters have not changed."),
+    ).not.toBeInTheDocument();
   });
 
   test("disables filter controls while interactions are blocked", () => {
@@ -229,14 +251,25 @@ describe("ProfileFiltersSidebarSections", () => {
         onSelectStyleCore,
         onToggleOccasion,
         onSelectAccentColor,
-        onTextChange
-      }
+        onTextChange,
+      },
     });
 
-    expect(screen.getByRole("button", { name: "formal" })).toHaveAttribute("aria-disabled", "true");
-    expect(screen.getByRole("button", { name: "travel" })).toHaveAttribute("aria-disabled", "true");
-    expect(screen.getByRole("button", { name: "red" })).toHaveAttribute("aria-disabled", "true");
-    expect(screen.getByPlaceholderText("Additional placeholder")).toBeDisabled();
+    expect(screen.getByRole("button", { name: "formal" })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+    expect(screen.getByRole("button", { name: "travel" })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+    expect(screen.getByRole("button", { name: "red" })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+    expect(
+      screen.getByPlaceholderText("Additional placeholder"),
+    ).toBeDisabled();
 
     expect(onSelectStyleCore).not.toHaveBeenCalled();
     expect(onToggleOccasion).not.toHaveBeenCalled();
@@ -252,17 +285,21 @@ describe("ProfileFiltersSidebarSections", () => {
     expect(screen.getByText("Core")).toBeInTheDocument();
     expect(screen.getByText("Choose one core style.")).toBeInTheDocument();
     expect(screen.getByText("Aesthetics")).toBeInTheDocument();
-    expect(screen.getByText("Choose optionally one aesthetic.")).toBeInTheDocument();
+    expect(
+      screen.getByText("Choose optionally one aesthetic."),
+    ).toBeInTheDocument();
   });
 
   test("renders additional information field", () => {
     renderFrame({
       props: {
-        selectedText: "Prefer natural fabrics"
-      }
+        selectedText: "Prefer natural fabrics",
+      },
     });
 
     expect(screen.getByText("Additional information")).toBeInTheDocument();
-    expect(screen.getByDisplayValue("Prefer natural fabrics")).toBeInTheDocument();
+    expect(
+      screen.getByDisplayValue("Prefer natural fabrics"),
+    ).toBeInTheDocument();
   });
 });

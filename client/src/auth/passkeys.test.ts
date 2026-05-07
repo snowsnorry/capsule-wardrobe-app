@@ -3,13 +3,13 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 const simpleWebAuthnMock = vi.hoisted(() => ({
   browserSupportsWebAuthn: vi.fn(),
   startAuthentication: vi.fn(),
-  startRegistration: vi.fn()
+  startRegistration: vi.fn(),
 }));
 const passkeysApiMock = vi.hoisted(() => ({
   getPasskeyAuthenticationOptions: vi.fn(),
   getPasskeyRegistrationOptions: vi.fn(),
   verifyPasskeyAuthentication: vi.fn(),
-  verifyPasskeyRegistration: vi.fn()
+  verifyPasskeyRegistration: vi.fn(),
 }));
 
 vi.mock("@simplewebauthn/browser", () => simpleWebAuthnMock);
@@ -19,7 +19,7 @@ import {
   authenticateWithPasskey,
   isPasskeySupported,
   normalizePasskeyError,
-  registerPasskey
+  registerPasskey,
 } from "./passkeys";
 
 describe("passkey browser helper", () => {
@@ -32,10 +32,18 @@ describe("passkey browser helper", () => {
     passkeysApiMock.verifyPasskeyAuthentication.mockReset();
     passkeysApiMock.verifyPasskeyRegistration.mockReset();
     simpleWebAuthnMock.browserSupportsWebAuthn.mockReturnValue(true);
-    passkeysApiMock.getPasskeyRegistrationOptions.mockResolvedValue({ options: { challenge: "register" } });
-    passkeysApiMock.getPasskeyAuthenticationOptions.mockResolvedValue({ options: { challenge: "auth" } });
-    simpleWebAuthnMock.startRegistration.mockResolvedValue({ id: "new-credential" });
-    simpleWebAuthnMock.startAuthentication.mockResolvedValue({ id: "credential" });
+    passkeysApiMock.getPasskeyRegistrationOptions.mockResolvedValue({
+      options: { challenge: "register" },
+    });
+    passkeysApiMock.getPasskeyAuthenticationOptions.mockResolvedValue({
+      options: { challenge: "auth" },
+    });
+    simpleWebAuthnMock.startRegistration.mockResolvedValue({
+      id: "new-credential",
+    });
+    simpleWebAuthnMock.startAuthentication.mockResolvedValue({
+      id: "credential",
+    });
     passkeysApiMock.verifyPasskeyRegistration.mockResolvedValue({ ok: true });
     passkeysApiMock.verifyPasskeyAuthentication.mockResolvedValue({ ok: true });
   });
@@ -49,26 +57,32 @@ describe("passkey browser helper", () => {
     await registerPasskey();
 
     expect(simpleWebAuthnMock.startRegistration).toHaveBeenCalledWith({
-      optionsJSON: { challenge: "register" }
+      optionsJSON: { challenge: "register" },
     });
-    expect(passkeysApiMock.verifyPasskeyRegistration).toHaveBeenCalledWith({ id: "new-credential" });
+    expect(passkeysApiMock.verifyPasskeyRegistration).toHaveBeenCalledWith({
+      id: "new-credential",
+    });
   });
 
   test("authenticateWithPasskey gets options, starts authentication, and verifies response", async () => {
     await authenticateWithPasskey();
 
     expect(simpleWebAuthnMock.startAuthentication).toHaveBeenCalledWith({
-      optionsJSON: { challenge: "auth" }
+      optionsJSON: { challenge: "auth" },
     });
-    expect(passkeysApiMock.verifyPasskeyAuthentication).toHaveBeenCalledWith({ id: "credential" });
+    expect(passkeysApiMock.verifyPasskeyAuthentication).toHaveBeenCalledWith({
+      id: "credential",
+    });
   });
 
   test("normalizes browser cancellation", async () => {
-    simpleWebAuthnMock.startAuthentication.mockRejectedValue(new DOMException("cancelled", "NotAllowedError"));
+    simpleWebAuthnMock.startAuthentication.mockRejectedValue(
+      new DOMException("cancelled", "NotAllowedError"),
+    );
 
     await expect(authenticateWithPasskey()).rejects.toMatchObject({
       message: "passkey_cancelled",
-      code: "passkey_cancelled"
+      code: "passkey_cancelled",
     });
   });
 
@@ -77,28 +91,32 @@ describe("passkey browser helper", () => {
 
     await expect(registerPasskey()).rejects.toMatchObject({
       message: "passkey_not_supported",
-      code: "passkey_not_supported"
+      code: "passkey_not_supported",
     });
     await expect(authenticateWithPasskey()).rejects.toMatchObject({
       message: "passkey_not_supported",
-      code: "passkey_not_supported"
+      code: "passkey_not_supported",
     });
     expect(simpleWebAuthnMock.startRegistration).not.toHaveBeenCalled();
     expect(simpleWebAuthnMock.startAuthentication).not.toHaveBeenCalled();
   });
 
   test("normalizes known API errors and unknown values", () => {
-    expect(normalizePasskeyError(new Error("passkey_login_failed"))).toMatchObject({
+    expect(
+      normalizePasskeyError(new Error("passkey_login_failed")),
+    ).toMatchObject({
       message: "passkey_login_failed",
-      code: "passkey_login_failed"
+      code: "passkey_login_failed",
     });
-    expect(normalizePasskeyError(new DOMException("aborted", "AbortError"))).toMatchObject({
+    expect(
+      normalizePasskeyError(new DOMException("aborted", "AbortError")),
+    ).toMatchObject({
       message: "passkey_cancelled",
-      code: "passkey_cancelled"
+      code: "passkey_cancelled",
     });
     expect(normalizePasskeyError("boom")).toMatchObject({
       message: "passkey_failed",
-      code: "passkey_failed"
+      code: "passkey_failed",
     });
   });
 });

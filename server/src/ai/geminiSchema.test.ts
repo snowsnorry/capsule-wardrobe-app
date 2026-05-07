@@ -1,17 +1,17 @@
 import { test, expect } from "vitest";
 import {
   buildGeminiStructuredOutput,
-  buildZodSchemaFromJsonSchema
+  buildZodSchemaFromJsonSchema,
 } from "./geminiSchema.js";
 
-function assertGeminiObjectSchema(
-  schema: unknown
-): asserts schema is {
+function assertGeminiObjectSchema(schema: unknown): asserts schema is {
   type?: string;
   additionalProperties?: boolean;
   properties?: Record<string, { type?: string }>;
 } {
-  expect(Boolean(schema) && typeof schema === "object" && !Array.isArray(schema)).toBeTruthy();
+  expect(
+    Boolean(schema) && typeof schema === "object" && !Array.isArray(schema),
+  ).toBeTruthy();
 }
 
 test("buildZodSchemaFromJsonSchema supports strict objects, arrays, enums, and integers", () => {
@@ -21,39 +21,43 @@ test("buildZodSchemaFromJsonSchema supports strict objects, arrays, enums, and i
     properties: {
       mood: {
         type: "string",
-        enum: ["good", "bad"]
+        enum: ["good", "bad"],
       },
       count: {
         type: "integer",
-        minimum: 1
+        minimum: 1,
       },
       tags: {
         type: "array",
         minItems: 1,
         maxItems: 2,
         items: {
-          type: "string"
-        }
-      }
+          type: "string",
+        },
+      },
     },
-    required: ["mood", "count", "tags"]
+    required: ["mood", "count", "tags"],
   });
 
-  expect(schema.parse({
+  expect(
+    schema.parse({
+      mood: "good",
+      count: 1,
+      tags: ["a"],
+    }),
+  ).toEqual({
     mood: "good",
     count: 1,
-    tags: ["a"]
-  })).toEqual({
-    mood: "good",
-    count: 1,
-    tags: ["a"]
+    tags: ["a"],
   });
 
-  expect(() => schema.parse({
-    mood: "other",
-    count: 1,
-    tags: ["a"]
-  })).toThrow();
+  expect(() =>
+    schema.parse({
+      mood: "other",
+      count: 1,
+      tags: ["a"],
+    }),
+  ).toThrow();
 });
 
 test("buildGeminiStructuredOutput converts app format to Gemini responseJsonSchema", () => {
@@ -66,11 +70,11 @@ test("buildGeminiStructuredOutput converts app format to Gemini responseJsonSche
       properties: {
         ok: {
           type: "boolean",
-          description: "Whether generation succeeded."
-        }
+          description: "Whether generation succeeded.",
+        },
       },
-      required: ["ok"]
-    }
+      required: ["ok"],
+    },
   });
 
   expect(typeof result.zodSchema.parse).toBe("function");

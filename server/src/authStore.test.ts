@@ -6,7 +6,7 @@ import {
   MAX_CODE_SENDS_PER_HOUR,
   MAX_VERIFY_ATTEMPTS,
   SESSION_TTL_MS,
-  createAuthStore
+  createAuthStore,
 } from "./authStore.js";
 
 type LoginCodeUpsertPayload = {
@@ -62,7 +62,7 @@ test("createPendingCode stores hashed login code with generated nonce and expiry
     },
     upsertLoginCodeImpl: async (payload) => {
       upsertPayload = payload;
-    }
+    },
   });
 
   const result = await store.createPendingCode("person@example.com");
@@ -72,11 +72,15 @@ test("createPendingCode stores hashed login code with generated nonce and expiry
   expect(upsertPayload).toBeTruthy();
   expect(upsertPayload.email).toBe("person@example.com");
   expect(upsertPayload.nonce).toBe("11".repeat(16));
-  expect(upsertPayload.expiresAt.toISOString()).toBe(new Date(now + CODE_TTL_MS).toISOString());
-  expect(upsertPayload.codeHash).toBe(crypto
+  expect(upsertPayload.expiresAt.toISOString()).toBe(
+    new Date(now + CODE_TTL_MS).toISOString(),
+  );
+  expect(upsertPayload.codeHash).toBe(
+    crypto
       .createHmac("sha256", "secret")
       .update(`person@example.com:123456:${"11".repeat(16)}`)
-      .digest("hex"));
+      .digest("hex"),
+  );
 });
 
 test("createPendingCode enforces resend cooldown and hourly limit", async () => {
@@ -85,9 +89,15 @@ test("createPendingCode enforces resend cooldown and hourly limit", async () => 
     codeSecret: "secret",
     nowMsImpl: () => now,
     randomIntImpl: () => 111111,
-    randomBytesImpl: createRandomBytesQueue(Array.from({ length: 70 }, (_, index) => String(index + 10).padStart(2, "0").repeat(16))),
+    randomBytesImpl: createRandomBytesQueue(
+      Array.from({ length: 70 }, (_, index) =>
+        String(index + 10)
+          .padStart(2, "0")
+          .repeat(16),
+      ),
+    ),
     pruneLoginCodesImpl: async () => {},
-    upsertLoginCodeImpl: async () => {}
+    upsertLoginCodeImpl: async () => {},
   });
 
   const first = await store.createPendingCode("person@example.com");
@@ -115,13 +125,14 @@ test("createPendingCode enforces resend cooldown and hourly limit", async () => 
         "person@example.com",
         {
           lastSentAt: now - RESEND_COOLDOWN_MS - 1,
-          sendWindowStart: now - (60 * 60 * 1000) + 10_000,
-          sendCount: MAX_CODE_SENDS_PER_HOUR
-        }
-      ]
-    ] satisfies [string, SendStateEntry][]
+          sendWindowStart: now - 60 * 60 * 1000 + 10_000,
+          sendCount: MAX_CODE_SENDS_PER_HOUR,
+        },
+      ],
+    ] satisfies [string, SendStateEntry][],
   });
-  const rateLimited = await rateLimitedStore.createPendingCode("person@example.com");
+  const rateLimited =
+    await rateLimitedStore.createPendingCode("person@example.com");
   expect(rateLimited).toEqual({ ok: false, reason: "rate_limit" });
 });
 
@@ -133,7 +144,7 @@ test("createPendingCode resets hourly window after stale send state is cleaned u
     randomIntImpl: () => 222222,
     randomBytesImpl: createRandomBytesQueue(["22".repeat(16), "33".repeat(16)]),
     pruneLoginCodesImpl: async () => {},
-    upsertLoginCodeImpl: async () => {}
+    upsertLoginCodeImpl: async () => {},
   });
 
   expect((await store.createPendingCode("person@example.com")).ok).toBe(true);
@@ -147,15 +158,12 @@ test("verifyCode returns not_found without stored login code and hashes candidat
   let verifyPayload: VerifyPayload | null = null;
   const store = createAuthStore({
     codeSecret: "secret",
-    getLoginCodeByEmailImpl: async (email) => (
-      email === "found@example.com"
-        ? { nonce: "44".repeat(16) }
-        : null
-    ),
+    getLoginCodeByEmailImpl: async (email) =>
+      email === "found@example.com" ? { nonce: "44".repeat(16) } : null,
     verifyAndConsumeLoginCodeImpl: async (payload) => {
       verifyPayload = payload;
       return { ok: true };
-    }
+    },
   });
 
   const missing = await store.verifyCode("missing@example.com", "123456");
@@ -170,7 +178,7 @@ test("verifyCode returns not_found without stored login code and hashes candidat
       .createHmac("sha256", "secret")
       .update(`found@example.com:654321:${"44".repeat(16)}`)
       .digest("hex"),
-    maxAttempts: MAX_VERIFY_ATTEMPTS
+    maxAttempts: MAX_VERIFY_ATTEMPTS,
   });
 });
 
@@ -185,7 +193,7 @@ test("createSession prunes expired sessions, inserts session, and respects prune
       "aa".repeat(32),
       "bb".repeat(32),
       "cc".repeat(32),
-      "dd".repeat(32)
+      "dd".repeat(32),
     ]),
     sessionPruneMinIntervalMs: 5_000,
     pruneExpiredSessionsImpl: async () => {
@@ -193,14 +201,16 @@ test("createSession prunes expired sessions, inserts session, and respects prune
     },
     insertSessionImpl: async (payload) => {
       inserted.push(payload);
-    }
+    },
   });
 
   const first = await store.createSession("person@example.com");
   expect(pruneCalls).toBe(1);
   expect(first.sessionId).toBe("aa".repeat(32));
   expect(first.session.csrfToken).toBe("bb".repeat(32));
-  expect(inserted[0].expiresAt.toISOString()).toBe(new Date(now + SESSION_TTL_MS).toISOString());
+  expect(inserted[0].expiresAt.toISOString()).toBe(
+    new Date(now + SESSION_TTL_MS).toISOString(),
+  );
 
   now += 1_000;
   await store.createSession("person@example.com");
@@ -227,19 +237,19 @@ test("getSession normalizes valid sessions and deletes expired sessions", async 
           email: "person@example.com",
           csrfToken: "csrf",
           createdAt: new Date(now - 1000).toISOString(),
-          expiresAt: new Date(now - 1).toISOString()
+          expiresAt: new Date(now - 1).toISOString(),
         };
       }
       return {
         email: "person@example.com",
         csrfToken: "csrf",
         createdAt: new Date(now - 1000).toISOString(),
-        expiresAt: new Date(now + 5000).toISOString()
+        expiresAt: new Date(now + 5000).toISOString(),
       };
     },
     deleteSessionByIdImpl: async (sessionId) => {
       deletedIds.push(sessionId);
-    }
+    },
   });
 
   expect(await store.getSession("missing")).toBe(null);
@@ -251,7 +261,7 @@ test("getSession normalizes valid sessions and deletes expired sessions", async 
     email: "person@example.com",
     csrfToken: "csrf",
     createdAt: now - 1000,
-    expiresAt: now + 5000
+    expiresAt: now + 5000,
   });
 });
 
@@ -261,7 +271,7 @@ test("revokeSession deletes persisted session by id", async () => {
     codeSecret: "secret",
     deleteSessionByIdImpl: async (sessionId) => {
       deletedIds.push(sessionId);
-    }
+    },
   });
 
   await store.revokeSession("session-42");

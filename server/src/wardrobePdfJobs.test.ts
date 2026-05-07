@@ -3,7 +3,7 @@ import { createWardrobePdfJobManager } from "./wardrobePdfJobs.js";
 import {
   buildNormalizedProfileRecord,
   buildProductRow,
-  buildProfileWithItems
+  buildProfileWithItems,
 } from "./test/domainFixtures.js";
 
 function createResponseRecorder() {
@@ -25,7 +25,7 @@ function createResponseRecorder() {
     send(payload) {
       this.body = payload;
       return this;
-    }
+    },
   };
 }
 
@@ -49,26 +49,28 @@ test("wardrobe pdf endpoint returns stored attachment when pdf already exists", 
           items: [
             { id: "bag-1", category: "bag", name: "B Bag" },
             { id: "top-2", category: "top", name: "Z Top" },
-            { id: "top-1", category: "top", name: "A Top" }
-          ]
-        }
-      })
+            { id: "top-1", category: "top", name: "A Top" },
+          ],
+        },
+      }),
     }),
-    getProfilePdfByEmail: async () => Buffer.from("stored-pdf")
+    getProfilePdfByEmail: async () => Buffer.from("stored-pdf"),
   });
 
   const res = createResponseRecorder();
   await manager.downloadWardrobePdf(
     {
       user: { email: "person@example.com" },
-      body: { locale: "ru-RU" }
+      body: { locale: "ru-RU" },
     },
-    res
+    res,
   );
 
   expect(res.statusCode).toBe(200);
   expect(res.headers["Content-Type"]).toBe("application/pdf");
-  expect(res.headers["Content-Disposition"]).toBe('attachment; filename="capsule-wardrobe.pdf"');
+  expect(res.headers["Content-Disposition"]).toBe(
+    'attachment; filename="capsule-wardrobe.pdf"',
+  );
   expect(String(res.body)).toBe("stored-pdf");
 });
 
@@ -81,12 +83,27 @@ test("wardrobe pdf endpoint returns pending and starts job when pdf is missing",
       ...buildProfileWithItems({
         items: {
           items: [
-            { id: "bag-1", url: "https://example.com/bag-1", category: "bag", name: "Bag" },
-            { id: "top-2", url: "https://example.com/top-2", category: "top", name: "Z Top" },
-            { id: "top-1", url: "https://example.com/top-1", category: "top", name: "A Top" }
-          ]
-        }
-      })
+            {
+              id: "bag-1",
+              url: "https://example.com/bag-1",
+              category: "bag",
+              name: "Bag",
+            },
+            {
+              id: "top-2",
+              url: "https://example.com/top-2",
+              category: "top",
+              name: "Z Top",
+            },
+            {
+              id: "top-1",
+              url: "https://example.com/top-1",
+              category: "top",
+              name: "A Top",
+            },
+          ],
+        },
+      }),
     }),
     getProfilePdfByEmail: async () => null,
     updateProfilePdfByEmail: async (_email, pdf) => {
@@ -95,24 +112,27 @@ test("wardrobe pdf endpoint returns pending and starts job when pdf is missing",
     },
     getProducts: async (urls) => {
       receivedUrls = urls;
-      return urls.map((url) => buildProductRow({
-        id: String(url),
-        url: String(url),
-        name: String(url),
-        category: String(url).includes("bag") ? "bag" : "top",
-        imageUrl: ""
-      }));
+      return urls.map((url) =>
+        buildProductRow({
+          id: String(url),
+          url: String(url),
+          name: String(url),
+          category: String(url).includes("bag") ? "bag" : "top",
+          imageUrl: "",
+        }),
+      );
     },
-    buildPdfInChild: async (products) => Buffer.from(`pdf:${products.map((product) => product.id).join(",")}`)
+    buildPdfInChild: async (products) =>
+      Buffer.from(`pdf:${products.map((product) => product.id).join(",")}`),
   });
 
   const res = createResponseRecorder();
   await manager.downloadWardrobePdf(
     {
       user: { email: "person@example.com" },
-      body: {}
+      body: {},
     },
-    res
+    res,
   );
 
   expect(res.statusCode).toBe(202);
@@ -123,8 +143,14 @@ test("wardrobe pdf endpoint returns pending and starts job when pdf is missing",
   expect(job).toBeTruthy();
   await job.promise;
 
-  expect(receivedUrls).toEqual(["https://example.com/top-1", "https://example.com/top-2", "https://example.com/bag-1"]);
-  expect(String(updatedPdf)).toBe("pdf:https://example.com/top-1,https://example.com/top-2,https://example.com/bag-1");
+  expect(receivedUrls).toEqual([
+    "https://example.com/top-1",
+    "https://example.com/top-2",
+    "https://example.com/bag-1",
+  ]);
+  expect(String(updatedPdf)).toBe(
+    "pdf:https://example.com/top-1,https://example.com/top-2,https://example.com/bag-1",
+  );
 });
 
 test("ensureWardrobePdfJob reuses active pending job for same generation", async () => {
@@ -134,36 +160,60 @@ test("ensureWardrobePdfJob reuses active pending job for same generation", async
       ...buildNormalizedProfileRecord({ locale: "en" }),
       ...buildProfileWithItems({
         items: {
-          items: [{ id: "top-1", url: "https://example.com/top-1", category: "top", name: "A Top" }]
-        }
-      })
+          items: [
+            {
+              id: "top-1",
+              url: "https://example.com/top-1",
+              category: "top",
+              name: "A Top",
+            },
+          ],
+        },
+      }),
     }),
-    getProducts: async (urls) => urls.map((url) => buildProductRow({
-      id: String(url),
-      url: String(url),
-      name: String(url),
-      category: "top",
-      imageUrl: ""
-    })),
+    getProducts: async (urls) =>
+      urls.map((url) =>
+        buildProductRow({
+          id: String(url),
+          url: String(url),
+          name: String(url),
+          category: "top",
+          imageUrl: "",
+        }),
+      ),
     updateProfilePdfByEmail: async () => ({ email: "person@example.com" }),
     buildPdfInChild: async () => {
       buildCount += 1;
       await new Promise((resolve) => setTimeout(resolve, 5));
       return Buffer.from("pdf");
-    }
+    },
   });
 
   const first = await manager.ensureWardrobePdfJob("person@example.com", {
     wardrobePayload: {
-      items: [{ id: "top-1", url: "https://example.com/top-1", category: "top", name: "A Top" }]
+      items: [
+        {
+          id: "top-1",
+          url: "https://example.com/top-1",
+          category: "top",
+          name: "A Top",
+        },
+      ],
     },
-    locale: "en"
+    locale: "en",
   });
   const second = await manager.ensureWardrobePdfJob("person@example.com", {
     wardrobePayload: {
-      items: [{ id: "top-1", url: "https://example.com/top-1", category: "top", name: "A Top" }]
+      items: [
+        {
+          id: "top-1",
+          url: "https://example.com/top-1",
+          category: "top",
+          name: "A Top",
+        },
+      ],
     },
-    locale: "en"
+    locale: "en",
   });
 
   expect(first).toBe(second);
@@ -174,32 +224,52 @@ test("ensureWardrobePdfJob reuses active pending job for same generation", async
 test("wardrobe pdf job fails for missing items or products", async () => {
   await withMutedPdfLogs(async () => {
     const missingItemsManager = createWardrobePdfJobManager({
-      getProfileByEmail: async () => buildNormalizedProfileRecord({ locale: "en" }),
-      updateProfilePdfByEmail: async () => ({ email: "missing-items@example.com" }),
+      getProfileByEmail: async () =>
+        buildNormalizedProfileRecord({ locale: "en" }),
+      updateProfilePdfByEmail: async () => ({
+        email: "missing-items@example.com",
+      }),
       getProducts: async () => [],
-      buildPdfInChild: async () => Buffer.from("pdf")
+      buildPdfInChild: async () => Buffer.from("pdf"),
     });
-    const missingItemsJob = missingItemsManager.startWardrobePdfJob("missing-items@example.com", {
-      wardrobePayload: { items: [{ id: "top-1", category: "top" }] },
-      locale: "en"
-    });
+    const missingItemsJob = missingItemsManager.startWardrobePdfJob(
+      "missing-items@example.com",
+      {
+        wardrobePayload: { items: [{ id: "top-1", category: "top" }] },
+        locale: "en",
+      },
+    );
     await missingItemsJob.promise;
     expect(missingItemsJob.status).toBe("failed");
-    expect((missingItemsJob.error as Error).message).toBe("wardrobe_pdf_items_missing");
+    expect((missingItemsJob.error as Error).message).toBe(
+      "wardrobe_pdf_items_missing",
+    );
 
     const missingProductsManager = createWardrobePdfJobManager({
-      getProfileByEmail: async () => buildNormalizedProfileRecord({ locale: "en" }),
-      updateProfilePdfByEmail: async () => ({ email: "missing-products@example.com" }),
+      getProfileByEmail: async () =>
+        buildNormalizedProfileRecord({ locale: "en" }),
+      updateProfilePdfByEmail: async () => ({
+        email: "missing-products@example.com",
+      }),
       getProducts: async () => [],
-      buildPdfInChild: async () => Buffer.from("pdf")
+      buildPdfInChild: async () => Buffer.from("pdf"),
     });
-    const missingProductsJob = missingProductsManager.startWardrobePdfJob("missing-products@example.com", {
-      wardrobePayload: { items: [{ id: "top-1", url: "https://example.com/top-1", category: "top" }] },
-      locale: "en"
-    });
+    const missingProductsJob = missingProductsManager.startWardrobePdfJob(
+      "missing-products@example.com",
+      {
+        wardrobePayload: {
+          items: [
+            { id: "top-1", url: "https://example.com/top-1", category: "top" },
+          ],
+        },
+        locale: "en",
+      },
+    );
     await missingProductsJob.promise;
     expect(missingProductsJob.status).toBe("failed");
-    expect((missingProductsJob.error as Error).message).toBe("wardrobe_pdf_products_missing");
+    expect((missingProductsJob.error as Error).message).toBe(
+      "wardrobe_pdf_products_missing",
+    );
   });
 });
 
@@ -213,40 +283,58 @@ test("ensureWardrobePdfJob returns null for missing profile or empty wardrobe an
       }
       return {
         ...buildNormalizedProfileRecord({ locale: "en" }),
-        ...buildProfileWithItems({ items: { items: [] } })
+        ...buildProfileWithItems({ items: { items: [] } }),
       };
     },
-    getProducts: async (urls) => urls
-      .filter((url) => String(url).includes("top-2"))
-      .map((url) => buildProductRow({
-        id: String(url),
-        url: String(url),
-        name: String(url),
-        category: "top",
-        imageUrl: ""
-      })),
+    getProducts: async (urls) =>
+      urls
+        .filter((url) => String(url).includes("top-2"))
+        .map((url) =>
+          buildProductRow({
+            id: String(url),
+            url: String(url),
+            name: String(url),
+            category: "top",
+            imageUrl: "",
+          }),
+        ),
     updateProfilePdfByEmail: async () => ({ email: "person@example.com" }),
-    buildPdfInChild: async () => Buffer.from("pdf")
+    buildPdfInChild: async () => Buffer.from("pdf"),
   });
 
-  await expect(manager.ensureWardrobePdfJob("missing-profile@example.com")).resolves.toBeNull();
-  await expect(manager.ensureWardrobePdfJob("empty-profile@example.com")).resolves.toBeNull();
+  await expect(
+    manager.ensureWardrobePdfJob("missing-profile@example.com"),
+  ).resolves.toBeNull();
+  await expect(
+    manager.ensureWardrobePdfJob("empty-profile@example.com"),
+  ).resolves.toBeNull();
   expect(profileCalls).toBe(2);
 
   const failed = await withMutedPdfLogs(async () => {
     const job = manager.startWardrobePdfJob("restart-failed@example.com", {
-      wardrobePayload: { items: [{ id: "top-1", url: "https://example.com/top-1", category: "top" }] },
-      locale: "en"
+      wardrobePayload: {
+        items: [
+          { id: "top-1", url: "https://example.com/top-1", category: "top" },
+        ],
+      },
+      locale: "en",
     });
     await job.promise;
     return job;
   });
   expect(failed.status).toBe("failed");
 
-  const restarted = await manager.ensureWardrobePdfJob("restart-failed@example.com", {
-    wardrobePayload: { items: [{ id: "top-2", url: "https://example.com/top-2", category: "top" }] },
-    locale: "en"
-  });
+  const restarted = await manager.ensureWardrobePdfJob(
+    "restart-failed@example.com",
+    {
+      wardrobePayload: {
+        items: [
+          { id: "top-2", url: "https://example.com/top-2", category: "top" },
+        ],
+      },
+      locale: "en",
+    },
+  );
   expect(restarted).not.toBe(failed);
   await restarted?.promise;
   expect(restarted?.status).toBe("completed");
@@ -257,14 +345,17 @@ test("downloadWardrobePdf returns not found for empty wardrobes and service unav
     getProfileWithPdfByEmail: async () => ({
       profile: {
         ...buildNormalizedProfileRecord({ locale: "en" }),
-        ...buildProfileWithItems({ items: { items: [] } })
+        ...buildProfileWithItems({ items: { items: [] } }),
       },
-      pdf: null
-    })
+      pdf: null,
+    }),
   });
   const emptyRes = createResponseRecorder();
 
-  await emptyManager.downloadWardrobePdf({ user: { email: "empty@example.com" } }, emptyRes);
+  await emptyManager.downloadWardrobePdf(
+    { user: { email: "empty@example.com" } },
+    emptyRes,
+  );
 
   expect(emptyRes.statusCode).toBe(404);
   expect(emptyRes.body).toEqual({ error: "not_found" });
@@ -272,12 +363,15 @@ test("downloadWardrobePdf returns not found for empty wardrobes and service unav
   const failingManager = createWardrobePdfJobManager({
     getProfileWithPdfByEmail: async () => {
       throw new Error("db failed");
-    }
+    },
   });
   const failingRes = createResponseRecorder();
 
   await withMutedPdfLogs(async () => {
-    await failingManager.downloadWardrobePdf({ user: { email: "failing@example.com" } }, failingRes);
+    await failingManager.downloadWardrobePdf(
+      { user: { email: "failing@example.com" } },
+      failingRes,
+    );
   });
 
   expect(failingRes.statusCode).toBe(503);
@@ -286,15 +380,18 @@ test("downloadWardrobePdf returns not found for empty wardrobes and service unav
 
 test("completed pdf jobs expire from the in-memory registry", async () => {
   const manager = createWardrobePdfJobManager({
-    getProducts: async (urls) => urls.map((url) => buildProductRow({
-      id: String(url),
-      url: String(url),
-      name: String(url),
-      category: "top",
-      imageUrl: ""
-    })),
+    getProducts: async (urls) =>
+      urls.map((url) =>
+        buildProductRow({
+          id: String(url),
+          url: String(url),
+          name: String(url),
+          category: "top",
+          imageUrl: "",
+        }),
+      ),
     updateProfilePdfByEmail: async () => ({ email: "expiring@example.com" }),
-    buildPdfInChild: async () => Buffer.from("pdf")
+    buildPdfInChild: async () => Buffer.from("pdf"),
   });
   const oldJob = {
     status: "completed",
@@ -302,12 +399,16 @@ test("completed pdf jobs expire from the in-memory registry", async () => {
     startedAt: 0,
     generationKey: "old",
     error: null,
-    promise: Promise.resolve()
+    promise: Promise.resolve(),
   };
 
   manager.startWardrobePdfJob("expiring@example.com", {
-    wardrobePayload: { items: [{ id: "top-1", url: "https://example.com/top-1", category: "top" }] },
-    locale: "en"
+    wardrobePayload: {
+      items: [
+        { id: "top-1", url: "https://example.com/top-1", category: "top" },
+      ],
+    },
+    locale: "en",
   });
   const current = manager.getWardrobePdfJob("expiring@example.com");
   Object.assign(current, oldJob);

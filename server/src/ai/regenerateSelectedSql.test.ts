@@ -4,9 +4,18 @@ import type { RegenerateSelectedSqlClient } from "./regenerateSelectedSql.js";
 
 test("queryRegenerationCandidateItems builds the expected parameterized regeneration query", async () => {
   const calls: Array<{ text: string; values: readonly unknown[] }> = [];
-  const sql: RegenerateSelectedSqlClient = async <TRow = unknown>(strings, ...values) => {
+  const sql: RegenerateSelectedSqlClient = async <TRow = unknown>(
+    strings,
+    ...values
+  ) => {
     calls.push({ text: strings.join("?"), values });
-    return [{ id: "candidate-1", url: "https://example.test/p1", embedding: [1, 2, 3] }] as TRow[];
+    return [
+      {
+        id: "candidate-1",
+        url: "https://example.test/p1",
+        embedding: [1, 2, 3],
+      },
+    ] as TRow[];
   };
 
   const result = await queryRegenerationCandidateItems(sql, {
@@ -20,10 +29,12 @@ test("queryRegenerationCandidateItems builds the expected parameterized regenera
     occasions: ["office"],
     pattern: "solid",
     season: ["summer"],
-    style: "minimalistic"
+    style: "minimalistic",
   });
 
-  expect(result).toEqual([{ id: "candidate-1", url: "https://example.test/p1", embedding: [1, 2, 3] }]);
+  expect(result).toEqual([
+    { id: "candidate-1", url: "https://example.test/p1", embedding: [1, 2, 3] },
+  ]);
   expect(calls.length).toBe(1);
   expect(calls[0].text).toMatch(/FROM unnest\(\?::text\[\]\) AS cats/);
   expect(calls[0].text).toMatch(/PARTITION BY COALESCE\(color_base/);
@@ -36,7 +47,7 @@ test("queryRegenerationCandidateItems builds the expected parameterized regenera
     "minimalistic",
     "minimalistic",
     "blue",
-    "blue"
+    "blue",
   ]);
   expect(calls[0].values.slice(24)).toEqual([
     ["woman", "all"],
@@ -47,6 +58,6 @@ test("queryRegenerationCandidateItems builds the expected parameterized regenera
     "solid",
     ["https://example.test/old"],
     "solid",
-    0.05
+    0.05,
   ]);
 });

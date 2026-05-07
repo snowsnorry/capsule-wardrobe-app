@@ -6,23 +6,26 @@ import type { ComponentProps } from "react";
 
 vi.mock("../i18n/useI18n", () => ({
   useI18n: () => ({
-    t: (key: string) => ({
-      "launcher.capsule": "Capsule",
-      "launcher.explore": "Explore",
-      "launcher.statistics": "Statistics",
-      "capsule.new": "New capsule",
-      "capsule.search": "Search capsules",
-      "capsule.yourCapsules": "Your capsules",
-      "capsule.notSaved": "Not saved"
-    }[key] || key)
-  })
+    t: (key: string) =>
+      ({
+        "launcher.capsule": "Capsule",
+        "launcher.explore": "Explore",
+        "launcher.statistics": "Statistics",
+        "capsule.new": "New capsule",
+        "capsule.search": "Search capsules",
+        "capsule.yourCapsules": "Your capsules",
+        "capsule.notSaved": "Not saved",
+      })[key] || key,
+  }),
 }));
 
 import AppSidebarNavigation from "./AppSidebarNavigation";
 
 const theme = createTheme();
 
-function renderNavigation(props: Partial<ComponentProps<typeof AppSidebarNavigation>> = {}) {
+function renderNavigation(
+  props: Partial<ComponentProps<typeof AppSidebarNavigation>> = {},
+) {
   return render(
     <ThemeProvider theme={theme}>
       <AppSidebarNavigation
@@ -37,7 +40,7 @@ function renderNavigation(props: Partial<ComponentProps<typeof AppSidebarNavigat
         capsuleHasUnsavedChanges={() => true}
         {...props}
       />
-    </ThemeProvider>
+    </ThemeProvider>,
   );
 }
 
@@ -49,7 +52,9 @@ describe("AppSidebarNavigation", () => {
   test("keeps the desktop capsule action out of the row width until hover or focus", () => {
     const { container } = renderNavigation();
 
-    const rowAction = screen.getByRole("button", { name: "Capsule actions Modified capsule" });
+    const rowAction = screen.getByRole("button", {
+      name: "Capsule actions Modified capsule",
+    });
     const unsavedDot = container.querySelector(".capsule-row-unsaved-dot");
 
     expect(unsavedDot).toBeVisible();
@@ -63,13 +68,17 @@ describe("AppSidebarNavigation", () => {
 
     await user.hover(screen.getByRole("button", { name: "Modified capsule" }));
 
-    expect(await screen.findByRole("tooltip")).toHaveTextContent("Modified capsule");
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "Modified capsule",
+    );
   });
 
   test("keeps the mobile capsule action and unsaved dot visible together", () => {
     const { container } = renderNavigation({ isOverlaySidebar: true });
 
-    const rowAction = screen.getByRole("button", { name: "Capsule actions Modified capsule" });
+    const rowAction = screen.getByRole("button", {
+      name: "Capsule actions Modified capsule",
+    });
     const unsavedDot = container.querySelector(".capsule-row-unsaved-dot");
 
     expect(unsavedDot).toBeVisible();
@@ -84,20 +93,24 @@ describe("AppSidebarNavigation", () => {
 
     for (const button of [
       screen.getByRole("button", { name: "New capsule" }),
-      screen.getByRole("button", { name: "Search capsules" })
+      screen.getByRole("button", { name: "Search capsules" }),
     ]) {
       expect(getComputedStyle(button).marginLeft).toBe("-12px");
       expect(getComputedStyle(button).paddingLeft).toBe("12px");
-      expect(getComputedStyle(button).borderRadius).toBe(getComputedStyle(capsuleRow).borderRadius);
+      expect(getComputedStyle(button).borderRadius).toBe(
+        getComputedStyle(capsuleRow).borderRadius,
+      );
     }
   });
 
   test("uses the default unsaved-change predicate when none is supplied", () => {
     const { container } = renderNavigation({
-      capsuleHasUnsavedChanges: undefined
+      capsuleHasUnsavedChanges: undefined,
     });
 
-    expect(container.querySelector(".capsule-row-unsaved-dot")).not.toBeInTheDocument();
+    expect(
+      container.querySelector(".capsule-row-unsaved-dot"),
+    ).not.toBeInTheDocument();
   });
 
   test("wires navigation and capsule callbacks in expanded and collapsed modes", async () => {
@@ -115,14 +128,16 @@ describe("AppSidebarNavigation", () => {
       onSearchCapsules,
       onOpenCapsule,
       onOpenCapsuleActions,
-      onExpandedAction
+      onExpandedAction,
     });
 
     await user.click(screen.getByRole("button", { name: "Explore" }));
     await user.click(screen.getByRole("button", { name: "New capsule" }));
     await user.click(screen.getByRole("button", { name: "Search capsules" }));
     await user.click(screen.getByRole("button", { name: "Modified capsule" }));
-    await user.click(screen.getByRole("button", { name: "Capsule actions Modified capsule" }));
+    await user.click(
+      screen.getByRole("button", { name: "Capsule actions Modified capsule" }),
+    );
 
     expect(onNavigateApp).toHaveBeenCalledWith("explore");
     expect(onExpandedAction).toHaveBeenCalled();
@@ -142,7 +157,7 @@ describe("AppSidebarNavigation", () => {
           onNavigateApp={onNavigateApp}
           collapsedExpandHitbox={<button type="button">expand</button>}
         />
-      </ThemeProvider>
+      </ThemeProvider>,
     );
 
     expect(screen.getByRole("button", { name: "expand" })).toBeInTheDocument();

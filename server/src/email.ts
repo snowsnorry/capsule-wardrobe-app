@@ -5,10 +5,24 @@ import { fileURLToPath } from "node:url";
 const RESEND_API_URL = "https://api.resend.com/emails";
 const DEFAULT_CODE_TTL_MS = 5 * 60 * 1000;
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const SIGNIN_EMAIL_TEMPLATE_EN_PATH = join(__dirname, "templates", "signin_email.html");
-const SIGNIN_EMAIL_TEMPLATE_RU_PATH = join(__dirname, "templates", "signin_email.ru.html");
-const SIGNIN_EMAIL_TEMPLATE_EN = readFileSync(SIGNIN_EMAIL_TEMPLATE_EN_PATH, "utf8");
-const SIGNIN_EMAIL_TEMPLATE_RU = readFileSync(SIGNIN_EMAIL_TEMPLATE_RU_PATH, "utf8");
+const SIGNIN_EMAIL_TEMPLATE_EN_PATH = join(
+  __dirname,
+  "templates",
+  "signin_email.html",
+);
+const SIGNIN_EMAIL_TEMPLATE_RU_PATH = join(
+  __dirname,
+  "templates",
+  "signin_email.ru.html",
+);
+const SIGNIN_EMAIL_TEMPLATE_EN = readFileSync(
+  SIGNIN_EMAIL_TEMPLATE_EN_PATH,
+  "utf8",
+);
+const SIGNIN_EMAIL_TEMPLATE_RU = readFileSync(
+  SIGNIN_EMAIL_TEMPLATE_RU_PATH,
+  "utf8",
+);
 
 type SupportedLocale = "en" | "ru";
 
@@ -56,7 +70,7 @@ type FetchLike = (
       "Content-Type": "application/json";
     };
     body: string;
-  }
+  },
 ) => Promise<FetchResponseLike>;
 
 type CreateEmailSenderDeps = {
@@ -90,11 +104,12 @@ function escapeHtml(value: string | number): string {
 function renderLoginCodeEmailHtml({
   code,
   expiresInMinutes,
-  locale
+  locale,
 }: RenderLoginCodeEmailHtmlInput): string {
   const safeCode = escapeHtml(code);
   const safeMinutes = escapeHtml(expiresInMinutes);
-  const template = locale === "ru" ? SIGNIN_EMAIL_TEMPLATE_RU : SIGNIN_EMAIL_TEMPLATE_EN;
+  const template =
+    locale === "ru" ? SIGNIN_EMAIL_TEMPLATE_RU : SIGNIN_EMAIL_TEMPLATE_EN;
 
   return template
     .replaceAll("{{CODE}}", safeCode)
@@ -103,13 +118,13 @@ function renderLoginCodeEmailHtml({
 
 function createEmailSender({
   fetchImpl = fetch as FetchLike,
-  getRequiredEnvImpl = getRequiredEnv
+  getRequiredEnvImpl = getRequiredEnv,
 }: CreateEmailSenderDeps = {}) {
   return async function sendLoginCodeEmail({
     email,
     code,
     locale = "en",
-    expiresInMs = DEFAULT_CODE_TTL_MS
+    expiresInMs = DEFAULT_CODE_TTL_MS,
   }: SendLoginCodeEmailInput): Promise<void> {
     const apiKey = getRequiredEnvImpl("RESEND_API_KEY");
     const from = getRequiredEnvImpl("RESEND_FROM_EMAIL");
@@ -118,7 +133,7 @@ function createEmailSender({
     const html = renderLoginCodeEmailHtml({
       code,
       expiresInMinutes,
-      locale: normalizedLocale
+      locale: normalizedLocale,
     });
     const subject =
       normalizedLocale === "ru"
@@ -130,13 +145,13 @@ function createEmailSender({
             `Ваш код для входа: ${code}`,
             "",
             `Код действует ${expiresInMinutes} мин.`,
-            "Если вы не запрашивали этот код, просто проигнорируйте письмо."
+            "Если вы не запрашивали этот код, просто проигнорируйте письмо.",
           ].join("\n")
         : [
             `Your sign-in code is: ${code}`,
             "",
             `This code expires in ${expiresInMinutes} minute(s).`,
-            "If you did not request this code, you can ignore this email."
+            "If you did not request this code, you can ignore this email.",
           ].join("\n");
 
     const resendPayload: ResendEmailPayload = {
@@ -144,21 +159,23 @@ function createEmailSender({
       to: [email],
       subject,
       html,
-      text
+      text,
     };
 
     const response = await fetchImpl(RESEND_API_URL, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
       },
-      body: JSON.stringify(resendPayload)
+      body: JSON.stringify(resendPayload),
     });
 
     if (!response.ok) {
       const details = await response.text();
-      const error = new Error(`Failed to send email via Resend: ${response.status} ${details}`);
+      const error = new Error(
+        `Failed to send email via Resend: ${response.status} ${details}`,
+      );
       (error as EmailError).code = "email_send_failed";
       throw error;
     }
@@ -172,5 +189,5 @@ export {
   escapeHtml,
   getRequiredEnv,
   renderLoginCodeEmailHtml,
-  sendLoginCodeEmail
+  sendLoginCodeEmail,
 };

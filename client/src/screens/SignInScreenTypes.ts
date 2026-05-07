@@ -15,7 +15,9 @@ type SignInScreenProps = {
   googleClientId: string;
   onEmailChange: (nextEmail: string) => void;
   onCodeChange: (nextCode: string) => void;
-  onRequestCode: (event: FormEvent<HTMLFormElement> | MouseEvent<HTMLButtonElement>) => void;
+  onRequestCode: (
+    event: FormEvent<HTMLFormElement> | MouseEvent<HTMLButtonElement>,
+  ) => void;
   onVerifyCode: (event: FormEvent<HTMLFormElement>) => void;
   onGoogleCredential: (credential: string) => void;
   onPasskeySignIn: () => void;

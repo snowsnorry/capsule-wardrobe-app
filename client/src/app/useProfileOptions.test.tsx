@@ -1,11 +1,14 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
-import { clearProfileOptionsCache, loadProfileOptions } from "../api/profileOptionsCache";
+import {
+  clearProfileOptionsCache,
+  loadProfileOptions,
+} from "../api/profileOptionsCache";
 import { useProfileOptions } from "./useProfileOptions";
 
 vi.mock("../api/profileOptionsCache", () => ({
   clearProfileOptionsCache: vi.fn(),
-  loadProfileOptions: vi.fn()
+  loadProfileOptions: vi.fn(),
 }));
 
 describe("useProfileOptions", () => {
@@ -16,7 +19,7 @@ describe("useProfileOptions", () => {
       occasions: ["office"],
       seasons: ["winter", "spring"],
       audience: ["woman"],
-      patterns: ["solid"]
+      patterns: ["solid"],
     });
   });
 
@@ -46,7 +49,9 @@ describe("useProfileOptions", () => {
     vi.mocked(loadProfileOptions).mockRejectedValue(new Error("failed"));
     const { result } = renderHook(() => useProfileOptions());
 
-    await expect(result.current.preloadOnboardingOptions()).rejects.toThrow("failed");
+    await expect(result.current.preloadOnboardingOptions()).rejects.toThrow(
+      "failed",
+    );
     await result.current.preloadOnboardingOptions({ useFallback: true });
 
     await waitFor(() => {

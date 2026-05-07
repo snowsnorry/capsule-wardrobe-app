@@ -2,17 +2,18 @@ import options from "./ruOptions.js";
 
 const ru = {
   appName: "Capsule Wardrobe",
-  marketingHeadline: "Соберите персональный капсульный гардероб и управляйте образами в одном месте.",
+  marketingHeadline:
+    "Соберите персональный капсульный гардероб и управляйте образами в одном месте.",
   locale: {
     label: "Язык",
     options: {
       en: "Английский",
-      ru: "Русский"
+      ru: "Русский",
     },
     flags: {
       en: "🇺🇸",
-      ru: "🇷🇺"
-    }
+      ru: "🇷🇺",
+    },
   },
   launcher: {
     open: "Выбрать приложение",
@@ -21,7 +22,7 @@ const ru = {
     explore: "Поиск",
     exploreHint: "Поиск товаров",
     statistics: "Статистика",
-    statisticsHint: "Аналитика поиска"
+    statisticsHint: "Аналитика поиска",
   },
   options,
   auth: {
@@ -45,7 +46,7 @@ const ru = {
     codeSent: "Код отправлен. Он будет действителен {minutes} минут.",
     orEmailCode: "Или введите email, чтобы получить код для входа",
     signInWithPasskey: "Войти с passkey",
-    signInProgress: "Выполняем вход"
+    signInProgress: "Выполняем вход",
   },
   main: {
     title: "Главная",
@@ -58,7 +59,7 @@ const ru = {
     placeholder: "Ваш профиль готов. Основной экран появится здесь позже.",
     menuOpen: "Открыть меню",
     menuProfile: "Профиль",
-    menuSignOut: "Выйти"
+    menuSignOut: "Выйти",
   },
   profile: {
     title: "Профиль",
@@ -83,16 +84,18 @@ const ru = {
     patternHint: "Выберите один паттерн.",
     patternNotImportant: "Не принципиально",
     additionalInfoTitle: "Дополнительная информация",
-    additionalInfoHint: "Добавьте любые дополнительные пожелания или ограничения для этой капсулы.",
+    additionalInfoHint:
+      "Добавьте любые дополнительные пожелания или ограничения для этой капсулы.",
     additionalInfoPlaceholder: "Что еще важно учесть стилисту",
     back: "Назад",
     save: "Сохранить изменения",
     delete: "Удалить профиль",
     updated: "Профиль обновлен.",
     deleteConfirmTitle: "Удалить профиль",
-    deleteConfirmBody: "Вы уверены, что хотите удалить профиль? Это действие нельзя отменить.",
+    deleteConfirmBody:
+      "Вы уверены, что хотите удалить профиль? Это действие нельзя отменить.",
     deleteConfirmCancel: "Отмена",
-    deleteConfirmConfirm: "Удалить"
+    deleteConfirmConfirm: "Удалить",
   },
   settings: {
     title: "Настройки",
@@ -100,12 +103,12 @@ const ru = {
     sections: {
       general: "Основные",
       ai: "AI",
-      account: "Аккаунт"
+      account: "Аккаунт",
     },
     sectionHints: {
       general: "Выберите визуальные параметры и язык интерфейса.",
       ai: "Выберите модель стилиста, которую нужно сохранить в профиле.",
-      account: "Просмотрите данные учетной записи."
+      account: "Просмотрите данные учетной записи.",
     },
     fields: {
       theme: "Тема",
@@ -113,12 +116,12 @@ const ru = {
       stylistModel: "Модель стилиста",
       imageGenerationModel: "Модель генерации изображений",
       name: "Имя",
-      email: "Email"
+      email: "Email",
     },
     themeOptions: {
       system: "Системная",
       light: "Светлая",
-      dark: "Тёмная"
+      dark: "Тёмная",
     },
     llmOptions: {
       "openai:gpt-5.5": "OpenAI GPT-5.5",
@@ -126,12 +129,12 @@ const ru = {
       "gemini:gemini-2.5-pro": "Gemini 2.5 Pro",
       "deepinfra:Qwen/Qwen3-VL-235B-A22B-Instruct": "Qwen 3",
       "deepinfra:google/gemma-4-31B-it": "Google Gemma 4",
-      none: "None"
+      none: "None",
     },
     imageLlmOptions: {
       "openai:gpt-image-2": "OpenAI GPT Image 2",
-      "gemini:gemini-3-pro-image-preview": "Gemini 3 Pro Image Preview"
-    }
+      "gemini:gemini-3-pro-image-preview": "Gemini 3 Pro Image Preview",
+    },
   },
   onboarding: {
     title: "Добро пожаловать",
@@ -144,9 +147,10 @@ const ru = {
     step3Hint: "Выберите время года, для которого собирается гардероб.",
     step4Title: "Шаг 4 · Для кого",
     step4Hint: "Выберите, для кого подбирается гардероб.",
-    completedHint: "Профиль готов. Вы сможете изменить выбор в настройках профиля.",
+    completedHint:
+      "Профиль готов. Вы сможете изменить выбор в настройках профиля.",
     next: "Далее",
-    start: "Начать"
+    start: "Начать",
   },
   actions: {
     signOut: "Выйти",
@@ -154,7 +158,7 @@ const ru = {
     ok: "ОК",
     delete: "Удалить",
     save: "Сохранить",
-    close: "Закрыть"
+    close: "Закрыть",
   },
   passkeys: {
     title: "Passkeys",
@@ -170,19 +174,23 @@ const ru = {
     createdOn: "Создан {date} в {time}",
     backedUp: "С резервной копией",
     used: "Уже использовался",
-    loading: "Загружаем passkeys"
+    loading: "Загружаем passkeys",
   },
   notifications: {
     prompt: {
-      message: "Подбор капсулы обычно занимает около минуты. Включите уведомления, и мы сообщим, когда результат будет готов.",
-      action: "Включить уведомления"
+      message:
+        "Подбор капсулы обычно занимает около минуты. Включите уведомления, и мы сообщим, когда результат будет готов.",
+      action: "Включить уведомления",
     },
     ready: {
       title: "Капсула готова",
-      fullBody: "Новая подборка уже доступна. Откройте страницу, чтобы посмотреть результат.",
-      partialBody: "Обновлённые вещи уже готовы. Откройте страницу, чтобы посмотреть результат.",
-      imageBody: "Картинка образа готова. Откройте страницу, чтобы посмотреть результат."
-    }
+      fullBody:
+        "Новая подборка уже доступна. Откройте страницу, чтобы посмотреть результат.",
+      partialBody:
+        "Обновлённые вещи уже готовы. Откройте страницу, чтобы посмотреть результат.",
+      imageBody:
+        "Картинка образа готова. Откройте страницу, чтобы посмотреть результат.",
+    },
   },
   filters: {
     title: "Фильтры",
@@ -196,8 +204,8 @@ const ru = {
       styleCore: "основной стиль",
       occasions: "хотя бы один повод",
       seasons: "хотя бы один сезон",
-      audience: "аудиторию"
-    }
+      audience: "аудиторию",
+    },
   },
   capsule: {
     new: "Новая капсула",
@@ -219,23 +227,29 @@ const ru = {
     shareCopied: "Скопировано",
     shareExpires: "Истекает {date}",
     shareImportTitle: "Сохранить общую капсулу?",
-    shareImportBody: "Сохранить капсулу \"{name}\" в ваши капсулы?",
+    shareImportBody: 'Сохранить капсулу "{name}" в ваши капсулы?',
     shareImportConfirm: "Сохранить капсулу",
     shareImported: "Общая капсула сохранена.",
     renameTitle: "Переименовать капсулу",
     deleteTitle: "Удалить капсулу",
     revertTitle: "Откатить изменения",
-    deleteConfirmBody: "Вы уверены, что хотите удалить эту капсулу? Это действие нельзя отменить.",
+    deleteConfirmBody:
+      "Вы уверены, что хотите удалить эту капсулу? Это действие нельзя отменить.",
     deleteOutfitSetImageTitle: "Удалить изображение",
     deleteOutfitSetImage: "Удалить изображение",
-    deleteOutfitSetImageConfirmBody: "Вы уверены, что хотите удалить это изображение? Это действие нельзя отменить.",
-    outfitSetImageObsolete: "Это изображение может больше не соответствовать текущему образу. Удалите его и при необходимости сгенерируйте новое.",
-    revertConfirmBody: "Отменить текущие несохраненные изменения и вернуть последнюю сохраненную версию капсулы?",
+    deleteOutfitSetImageConfirmBody:
+      "Вы уверены, что хотите удалить это изображение? Это действие нельзя отменить.",
+    outfitSetImageObsolete:
+      "Это изображение может больше не соответствовать текущему образу. Удалите его и при необходимости сгенерируйте новое.",
+    revertConfirmBody:
+      "Отменить текущие несохраненные изменения и вернуть последнюю сохраненную версию капсулы?",
     regenerateAllTitle: "Обновить капсулу?",
-    regenerateAllConfirmBody: "Текущие товары в этой капсуле будут заменены. Продолжить?",
+    regenerateAllConfirmBody:
+      "Текущие товары в этой капсуле будут заменены. Продолжить?",
     regenerateAllConfirm: "Обновить",
     regenerateWithFilterChangesTitle: "Применить обновленные фильтры?",
-    regenerateWithFilterChangesBody: "Изменения фильтров еще не были применены. Применить их и сгенерировать новую капсулу с обновленными параметрами?",
+    regenerateWithFilterChangesBody:
+      "Изменения фильтров еще не были применены. Применить их и сгенерировать новую капсулу с обновленными параметрами?",
     regenerateWithFilterChangesConfirm: "Применить и обновить",
     deleteConfirm: "Удалить",
     revertConfirm: "Откатить",
@@ -255,11 +269,12 @@ const ru = {
     cardColumnsTwo: "2 колонки",
     cardColumnsThree: "3 колонки",
     copyProductLinkAddress: "Скопировать адрес ссылки",
-    showProductInfo: "Показать товар"
+    showProductInfo: "Показать товар",
   },
   search: {
     title: "Поиск",
-    placeholder: "Ищите на естественном языке, например: свободная голубая льняная рубашка для летнего офиса",
+    placeholder:
+      "Ищите на естественном языке, например: свободная голубая льняная рубашка для летнего офиса",
     cta: "Искать",
     clear: "Очистить поиск",
     productCard: "Карточка товара",
@@ -283,7 +298,7 @@ const ru = {
       category: "Категория",
       silhouette: "Силуэт",
       fit: "Посадка",
-      closureType: "Тип застежки"
+      closureType: "Тип застежки",
     },
     fields: {
       price: "Цена",
@@ -300,23 +315,25 @@ const ru = {
       composition: "Состав",
       silhouette: "Силуэт",
       fit: "Посадка",
-      closureType: "Тип застежки"
-    }
+      closureType: "Тип застежки",
+    },
   },
   statistics: {
     title: "Statistics",
     total: "Всего",
-    totalHint: "Графики считаются по полному набору результатов с учетом всех текущих фильтров.",
+    totalHint:
+      "Графики считаются по полному набору результатов с учетом всех текущих фильтров.",
     activeFilters: "Активные фильтры",
     empty: "Для текущих фильтров нет данных.",
     noActiveFilters: "Активных фильтров нет.",
     refresh: "Обновить",
-    chartHint: "Нажмите на сегмент, чтобы наложить или снять соответствующий фильтр.",
+    chartHint:
+      "Нажмите на сегмент, чтобы наложить или снять соответствующий фильтр.",
     priceHint: "Нажмите на столбец, чтобы сузить поиск до этого диапазона цен.",
     charts: {
       formalityLevel: "Формальность",
-      style: "Стиль"
-    }
+      style: "Стиль",
+    },
   },
   errors: {
     generic: "Что-то пошло не так. Попробуйте еще раз.",
@@ -331,21 +348,25 @@ const ru = {
     invalidPayload: "Выберите хотя бы один вариант.",
     invalidGoogleToken: "Не удалось войти через Google. Попробуйте снова.",
     googleAuthNotConfigured: "Вход через Google не настроен на сервере.",
-    passkeyNotSupported: "Passkeys не поддерживаются в этом браузере или на этом устройстве.",
+    passkeyNotSupported:
+      "Passkeys не поддерживаются в этом браузере или на этом устройстве.",
     passkeySetupFailed: "Не удалось настроить passkey.",
     passkeyLoginFailed: "Не удалось войти с passkey.",
     downloadFailed: "Не удалось сгенерировать PDF капсулы. Попробуйте еще раз.",
-    regenerateAllFailed: "Не удалось обновить капсулу. Предыдущая версия восстановлена.",
-    regenerateSelectedFailed: "Не удалось обновить выбранные карточки. Попробуйте еще раз.",
+    regenerateAllFailed:
+      "Не удалось обновить капсулу. Предыдущая версия восстановлена.",
+    regenerateSelectedFailed:
+      "Не удалось обновить выбранные карточки. Попробуйте еще раз.",
     capsuleNotShareable: "В капсуле нет содержимого, которым можно поделиться.",
-    sharedCapsuleUnavailable: "Эта общая капсула недоступна или срок ссылки истек."
+    sharedCapsuleUnavailable:
+      "Эта общая капсула недоступна или срок ссылки истек.",
   },
   dialogs: {
     signOutTitle: "Выйти",
     signOutBody: "Вы уверены, что хотите выйти?",
     signOutCancel: "Отмена",
-    signOutConfirm: "Выйти"
-  }
+    signOutConfirm: "Выйти",
+  },
 };
 
 export default ru;

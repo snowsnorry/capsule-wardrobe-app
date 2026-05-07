@@ -4,34 +4,47 @@ import {
   GEMINI_PROFILE_LLM,
   getProfileLlm,
   isNoLlmProfileEnabled,
-  resolveLlmProvider
+  resolveLlmProvider,
 } from "./llmPrompts.js";
 
 test("resolveLlmProvider maps supported profile llm values to providers", () => {
-  expect(resolveLlmProvider({ llm: "none" })).toEqual({ mode: "none", llm: "none", requestedLlm: "none" });
+  expect(resolveLlmProvider({ llm: "none" })).toEqual({
+    mode: "none",
+    llm: "none",
+    requestedLlm: "none",
+  });
 
-  expect(resolveLlmProvider({ llm: "openai:gpt-5.5" })).toEqual({ provider: "openai", model: "gpt-5.5", llm: "openai:gpt-5.5", requestedLlm: "openai:gpt-5.5" });
+  expect(resolveLlmProvider({ llm: "openai:gpt-5.5" })).toEqual({
+    provider: "openai",
+    model: "gpt-5.5",
+    llm: "openai:gpt-5.5",
+    requestedLlm: "openai:gpt-5.5",
+  });
 
-  expect(resolveLlmProvider({ llm: "deepinfra:google/gemma-4-31B-it" })).toEqual({
-      provider: "deepinfra",
-      model: "google/gemma-4-31B-it",
-      llm: "deepinfra:google/gemma-4-31B-it",
-      requestedLlm: "deepinfra:google/gemma-4-31B-it"
-    });
+  expect(
+    resolveLlmProvider({ llm: "deepinfra:google/gemma-4-31B-it" }),
+  ).toEqual({
+    provider: "deepinfra",
+    model: "google/gemma-4-31B-it",
+    llm: "deepinfra:google/gemma-4-31B-it",
+    requestedLlm: "deepinfra:google/gemma-4-31B-it",
+  });
 
-  expect(resolveLlmProvider({ llm: `claude:${CLAUDE_ALLOWED_MODELS[0]}` })).toEqual({
-      provider: "claude",
-      model: CLAUDE_ALLOWED_MODELS[0],
-      llm: `claude:${CLAUDE_ALLOWED_MODELS[0]}`,
-      requestedLlm: `claude:${CLAUDE_ALLOWED_MODELS[0]}`
-    });
+  expect(
+    resolveLlmProvider({ llm: `claude:${CLAUDE_ALLOWED_MODELS[0]}` }),
+  ).toEqual({
+    provider: "claude",
+    model: CLAUDE_ALLOWED_MODELS[0],
+    llm: `claude:${CLAUDE_ALLOWED_MODELS[0]}`,
+    requestedLlm: `claude:${CLAUDE_ALLOWED_MODELS[0]}`,
+  });
 
   expect(resolveLlmProvider({ llm: GEMINI_PROFILE_LLM })).toEqual({
-      provider: "gemini",
-      model: "gemini-2.5-pro",
-      llm: GEMINI_PROFILE_LLM,
-      requestedLlm: GEMINI_PROFILE_LLM
-    });
+    provider: "gemini",
+    model: "gemini-2.5-pro",
+    llm: GEMINI_PROFILE_LLM,
+    requestedLlm: GEMINI_PROFILE_LLM,
+  });
 });
 
 test("profile llm helpers default to openai and expose no-llm mode", () => {

@@ -10,7 +10,7 @@ describe("LoadingScreen", () => {
     render(
       <LocaleProvider>
         <LoadingScreen />
-      </LocaleProvider>
+      </LocaleProvider>,
     );
 
     expect(screen.getByText("Checking session")).toBeInTheDocument();

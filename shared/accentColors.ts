@@ -6,7 +6,7 @@ const ACCENT_COLOR_OPTIONS = [
   "yellow",
   "purple",
   "orange",
-  "multiple_accent_colors"
+  "multiple_accent_colors",
 ];
 
 export { ACCENT_COLOR_OPTIONS };

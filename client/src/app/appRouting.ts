@@ -18,6 +18,10 @@ export function getShareIdFromPath(pathname = "") {
   return match?.[1] ? decodeURIComponent(match[1]) : "";
 }
 
-export function getActiveSidebarApp(appRoute: AppRoute): "capsule" | "explore" | "statistics" {
-  return appRoute === "explore" || appRoute === "statistics" ? appRoute : "capsule";
+export function getActiveSidebarApp(
+  appRoute: AppRoute,
+): "capsule" | "explore" | "statistics" {
+  return appRoute === "explore" || appRoute === "statistics"
+    ? appRoute
+    : "capsule";
 }

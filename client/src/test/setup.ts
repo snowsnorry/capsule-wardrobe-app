@@ -12,9 +12,12 @@ function isKnownJsdomCssParseWarning(args: readonly unknown[]): boolean {
   }
 
   const [firstArg, secondArg] = args;
-  return typeof firstArg === "string"
-    && firstArg.includes("Could not parse CSS stylesheet")
-    && (secondArg === undefined || String(secondArg).includes("@import \"tailwindcss\";"));
+  return (
+    typeof firstArg === "string" &&
+    firstArg.includes("Could not parse CSS stylesheet") &&
+    (secondArg === undefined ||
+      String(secondArg).includes('@import "tailwindcss";'))
+  );
 }
 
 testConsole.error = (...args: unknown[]) => {
@@ -24,13 +27,21 @@ testConsole.error = (...args: unknown[]) => {
   originalConsoleError(...args);
 };
 
-process.stderr.write = ((chunk: string | Uint8Array, encoding?: BufferEncoding | StderrWriteCallback, callback?: StderrWriteCallback) => {
-  const text = typeof chunk === "string"
-    ? chunk
-    : Buffer.from(chunk).toString(typeof encoding === "string" ? encoding : undefined);
-  const isKnownJsdomCssParseBlock = typeof text === "string"
-    && text.includes("Could not parse CSS stylesheet")
-    && text.includes("/client/src/index.css");
+process.stderr.write = ((
+  chunk: string | Uint8Array,
+  encoding?: BufferEncoding | StderrWriteCallback,
+  callback?: StderrWriteCallback,
+) => {
+  const text =
+    typeof chunk === "string"
+      ? chunk
+      : Buffer.from(chunk).toString(
+          typeof encoding === "string" ? encoding : undefined,
+        );
+  const isKnownJsdomCssParseBlock =
+    typeof text === "string" &&
+    text.includes("Could not parse CSS stylesheet") &&
+    text.includes("/client/src/index.css");
 
   if (isKnownJsdomCssParseBlock) {
     if (typeof encoding === "function") {

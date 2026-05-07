@@ -3,12 +3,9 @@ export {
   setSqlClientOverride,
   stableStringify,
   hashCapsuleContent,
-  hasAffectedRows
+  hasAffectedRows,
 } from "./db/core.js";
-export {
-  checkDatabaseConnection,
-  ensureTables
-} from "./db/schema.js";
+export { checkDatabaseConnection, ensureTables } from "./db/schema.js";
 export {
   pruneLoginCodes,
   upsertLoginCode,
@@ -25,7 +22,7 @@ export {
   deletePasskeyByIdForEmail,
   insertPasskeyChallenge,
   consumePasskeyChallenge,
-  pruneExpiredPasskeyChallenges
+  pruneExpiredPasskeyChallenges,
 } from "./db/auth.js";
 export {
   hasProfileByEmail,
@@ -41,17 +38,15 @@ export {
   getDistinctProductColors,
   getProductPriceRange,
   getProductsByUrlsInOrder,
-  getProductsWithEmbeddingsByUrlsInOrder
+  getProductsWithEmbeddingsByUrlsInOrder,
 } from "./db/productOptions.js";
 export {
   buildPriceBuckets,
   getSearchByEmail,
   upsertSearchByEmail,
-  searchProducts
+  searchProducts,
 } from "./db/searchPersistence.js";
-export {
-  searchProductStats
-} from "./db/searchStats.js";
+export { searchProductStats } from "./db/searchStats.js";
 export {
   getProfileByEmail,
   createProfileRecord,
@@ -71,5 +66,5 @@ export {
   upsertSharedCapsule,
   getValidSharedCapsuleById,
   pruneExpiredSharedCapsules,
-  deleteProfileByEmail
+  deleteProfileByEmail,
 } from "./db/profileCapsules.js";

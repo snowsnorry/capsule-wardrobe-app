@@ -4,37 +4,62 @@ import { fireEvent, render, screen } from "@testing-library/react";
 vi.mock("../../search/SearchFiltersSidebar", () => ({
   default: ({ onApply, onReset }) => (
     <div>
-      <button type="button" onClick={onApply}>apply filters</button>
-      <button type="button" onClick={onReset}>reset filters</button>
+      <button type="button" onClick={onApply}>
+        apply filters
+      </button>
+      <button type="button" onClick={onReset}>
+        reset filters
+      </button>
     </div>
-  )
+  ),
 }));
 vi.mock("./ProductDetail", () => ({
   default: ({ item, mobileBackAction }) => (
     <div>
       <span>detail {item?.id || "none"}</span>
-      {mobileBackAction ? <button type="button" onClick={mobileBackAction}>back detail</button> : null}
+      {mobileBackAction ? (
+        <button type="button" onClick={mobileBackAction}>
+          back detail
+        </button>
+      ) : null}
     </div>
-  )
+  ),
 }));
 vi.mock("./SearchBar", () => ({
   default: ({ onApplyQuery, onClearQuery, onOpenFilters, onQueryChange }) => (
     <div>
-      <button type="button" onClick={onOpenFilters}>open filters</button>
-      <button type="button" onClick={onApplyQuery}>apply query</button>
-      <button type="button" onClick={onClearQuery}>clear query</button>
-      <button type="button" onClick={() => onQueryChange("linen")}>change query</button>
+      <button type="button" onClick={onOpenFilters}>
+        open filters
+      </button>
+      <button type="button" onClick={onApplyQuery}>
+        apply query
+      </button>
+      <button type="button" onClick={onClearQuery}>
+        clear query
+      </button>
+      <button type="button" onClick={() => onQueryChange("linen")}>
+        change query
+      </button>
     </div>
-  )
+  ),
 }));
 vi.mock("./SearchResultsList", () => ({
   default: ({ onChangePage, onDeleteActiveChip, onSelectResult }) => (
     <div>
-      <button type="button" onClick={() => onSelectResult({ id: "item-2" })}>select result</button>
-      <button type="button" onClick={() => onChangePage(2)}>page 2</button>
-      <button type="button" onClick={() => onDeleteActiveChip({ field: "category", value: "top" })}>delete chip</button>
+      <button type="button" onClick={() => onSelectResult({ id: "item-2" })}>
+        select result
+      </button>
+      <button type="button" onClick={() => onChangePage(2)}>
+        page 2
+      </button>
+      <button
+        type="button"
+        onClick={() => onDeleteActiveChip({ field: "category", value: "top" })}
+      >
+        delete chip
+      </button>
     </div>
-  )
+  ),
 }));
 
 import { SearchScreenDesktop, SearchScreenMobile } from "./SearchScreenLayout";
@@ -59,7 +84,7 @@ function createSearch() {
     setIsFiltersOpen: vi.fn(),
     status: { loading: false, error: "" },
     total: 1,
-    totalPages: 2
+    totalPages: 2,
   };
 }
 
@@ -83,13 +108,22 @@ describe("SearchScreenLayout", () => {
     expect(search.changeQuery).toHaveBeenCalledWith("linen");
     expect(search.selectResult).toHaveBeenCalledWith({ id: "item-2" });
     expect(search.changePage).toHaveBeenCalledWith(2);
-    expect(search.deleteActiveChip).toHaveBeenCalledWith({ field: "category", value: "top" });
+    expect(search.deleteActiveChip).toHaveBeenCalledWith({
+      field: "category",
+      value: "top",
+    });
   });
 
   test("desktop layout applies filters and closes the filter panel", async () => {
     const search = createSearch();
 
-    render(<SearchScreenDesktop search={search as never} t={(key) => key} locale="en" />);
+    render(
+      <SearchScreenDesktop
+        search={search as never}
+        t={(key) => key}
+        locale="en"
+      />,
+    );
 
     fireEvent.click(screen.getByRole("button", { name: "apply filters" }));
     fireEvent.click(screen.getByRole("button", { name: "reset filters" }));

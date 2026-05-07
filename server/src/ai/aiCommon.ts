@@ -11,7 +11,7 @@ import type {
   LlmUsageSummary,
   StoredWardrobePayloadLike,
   UserProfileLike,
-  WardrobeUiItemLike
+  WardrobeUiItemLike,
 } from "./types.js";
 
 const LAST_PROMPT_DIR_URL = new URL("../../../last-prompt/", import.meta.url);
@@ -84,10 +84,14 @@ export function logWardrobeInfo(event, payload = {}, logContext = null) {
 }
 
 export function logWardrobeMemory(event, payload = {}, logContext = null) {
-  logWardrobeInfo(event, {
-    ...payload,
-    ...getProcessMemoryUsage()
-  }, logContext);
+  logWardrobeInfo(
+    event,
+    {
+      ...payload,
+      ...getProcessMemoryUsage(),
+    },
+    logContext,
+  );
 }
 
 export function buildLastPromptArtifact(prompt, userProfile = null) {
@@ -96,10 +100,9 @@ export function buildLastPromptArtifact(prompt, userProfile = null) {
   }
 
   const systemPrompt = buildSystemPrompt(userProfile);
-  return [
-    systemPrompt ? `System:\n${systemPrompt}` : "",
-    `User:\n${prompt}`
-  ].filter(Boolean).join("\n\n");
+  return [systemPrompt ? `System:\n${systemPrompt}` : "", `User:\n${prompt}`]
+    .filter(Boolean)
+    .join("\n\n");
 }
 
 export function saveLastPromptArtifacts(prompt, userProfile = null) {
@@ -111,11 +114,14 @@ export function saveLastPromptArtifacts(prompt, userProfile = null) {
   writeFileSync(
     new URL("last_prompt.txt", LAST_PROMPT_DIR_URL),
     buildLastPromptArtifact(prompt, userProfile),
-    "utf8"
+    "utf8",
   );
 }
 
-export function countItemsByKey(items: WardrobeUiItemLike[] = [], key = "category"): CountByKey {
+export function countItemsByKey(
+  items: WardrobeUiItemLike[] = [],
+  key = "category",
+): CountByKey {
   return items.reduce<CountByKey>((result, item) => {
     const value = String(item?.[key] || "").trim();
     if (!value) {
@@ -129,7 +135,7 @@ export function countItemsByKey(items: WardrobeUiItemLike[] = [], key = "categor
 
 export function getRequestedWardrobeParams(
   userProfile: UserProfileLike | null = null,
-  { forceRefresh = false }: { forceRefresh?: boolean } = {}
+  { forceRefresh = false }: { forceRefresh?: boolean } = {},
 ): RequestedWardrobeParams {
   const params: RequestedWardrobeParams = {};
 
@@ -137,7 +143,14 @@ export function getRequestedWardrobeParams(
     params.forceRefresh = true;
   }
 
-  addRequestedStringParams(params, userProfile, ["formalityLevel", "style", "audience", "color", "pattern", "locale"]);
+  addRequestedStringParams(params, userProfile, [
+    "formalityLevel",
+    "style",
+    "audience",
+    "color",
+    "pattern",
+    "locale",
+  ]);
   addRequestedArrayParams(params, userProfile, ["occasions", "season"]);
   return params;
 }
@@ -145,10 +158,11 @@ export function getRequestedWardrobeParams(
 function addRequestedStringParams(
   params: RequestedWardrobeParams,
   userProfile: UserProfileLike | null,
-  keys: ReadonlyArray<keyof RequestedWardrobeParams>
+  keys: ReadonlyArray<keyof RequestedWardrobeParams>,
 ): void {
   for (const key of keys) {
-    const value = typeof userProfile?.[key] === "string" ? userProfile[key].trim() : "";
+    const value =
+      typeof userProfile?.[key] === "string" ? userProfile[key].trim() : "";
     if (value) {
       params[key] = value as never;
     }
@@ -158,11 +172,13 @@ function addRequestedStringParams(
 function addRequestedArrayParams(
   params: RequestedWardrobeParams,
   userProfile: UserProfileLike | null,
-  keys: ReadonlyArray<"occasions" | "season">
+  keys: ReadonlyArray<"occasions" | "season">,
 ): void {
   for (const key of keys) {
     const values = Array.isArray(userProfile?.[key])
-      ? userProfile[key].filter((value) => typeof value === "string" && value.trim().length > 0)
+      ? userProfile[key].filter(
+          (value) => typeof value === "string" && value.trim().length > 0,
+        )
       : [];
     if (values.length > 0) {
       params[key] = values;
@@ -170,7 +186,10 @@ function addRequestedArrayParams(
   }
 }
 
-export function getRequiredCapsule<TCapsule>(capsuleId: string, capsule: TCapsule | null): TCapsule {
+export function getRequiredCapsule<TCapsule>(
+  capsuleId: string,
+  capsule: TCapsule | null,
+): TCapsule {
   if (!capsuleId) {
     const error = new Error("invalid_payload") as ErrorWithCode;
     error.code = "invalid_payload";
@@ -186,7 +205,9 @@ export function getRequiredCapsule<TCapsule>(capsuleId: string, capsule: TCapsul
   return capsule;
 }
 
-export function extractLlmUsage(usage: LlmUsageLike | null = null): LlmUsageSummary {
+export function extractLlmUsage(
+  usage: LlmUsageLike | null = null,
+): LlmUsageSummary {
   if (!usage || typeof usage !== "object") {
     return {};
   }
@@ -219,7 +240,7 @@ export function buildErrorLogContext(logContext: LogContextLike | null = null) {
   }
 
   return {
-    capsuleRequestId: logContext.capsuleRequestId
+    capsuleRequestId: logContext.capsuleRequestId,
   };
 }
 
@@ -228,7 +249,7 @@ export function buildWardrobePayload({
   outfitSets = [],
   rawSelectionText = null,
   swimwearReasoning = null,
-  swimwearRawSelectionText = null
+  swimwearRawSelectionText = null,
 }: {
   items: WardrobeUiItemLike[];
   outfitSets?: GeneratedOutfitSetLike[];
@@ -238,9 +259,10 @@ export function buildWardrobePayload({
 }): StoredWardrobePayloadLike {
   return {
     items,
-    outfitSets: outfitSets as unknown as StoredWardrobePayloadLike["outfitSets"],
+    outfitSets:
+      outfitSets as unknown as StoredWardrobePayloadLike["outfitSets"],
     rawSelectionText,
     swimwearReasoning,
-    swimwearRawSelectionText
+    swimwearRawSelectionText,
   };
 }

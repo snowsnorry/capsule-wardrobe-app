@@ -4,7 +4,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { logWarn } from "../logger.js";
 import type { ImageAssetLike } from "./types.js";
-import type { GeminiClientLike, GeminiUploadedFileLike } from "./geminiTypes.js";
+import type {
+  GeminiClientLike,
+  GeminiUploadedFileLike,
+} from "./geminiTypes.js";
 
 function getMimeType(image: ImageAssetLike) {
   return typeof image?.mimeType === "string" && image.mimeType.trim().length > 0
@@ -39,8 +42,8 @@ function logSkippedGeminiImage(image: ImageAssetLike) {
     JSON.stringify({
       category: image?.category ?? null,
       filename: image?.filename ?? null,
-      reason: "missing_buffer"
-    })
+      reason: "missing_buffer",
+    }),
   );
 }
 
@@ -52,14 +55,14 @@ async function uploadBufferToGemini(
     unlinkSyncImpl = unlinkSync,
     tmpdirImpl = tmpdir,
     joinImpl = join,
-    randomUUIDImpl = randomUUID
+    randomUUIDImpl = randomUUID,
   }: {
     writeFileSyncImpl?: (path: string, data: Buffer) => void;
     unlinkSyncImpl?: (path: string) => void;
     tmpdirImpl?: () => string;
     joinImpl?: (...parts: string[]) => string;
     randomUUIDImpl?: () => string;
-  } = {}
+  } = {},
 ) {
   const buffer = image?.buffer;
   if (!Buffer.isBuffer(buffer) || buffer.length === 0) {
@@ -68,7 +71,10 @@ async function uploadBufferToGemini(
   }
 
   const mimeType = getMimeType(image);
-  const tempFilePath = joinImpl(tmpdirImpl(), `${randomUUIDImpl()}${getTempFileExtension(mimeType)}`);
+  const tempFilePath = joinImpl(
+    tmpdirImpl(),
+    `${randomUUIDImpl()}${getTempFileExtension(mimeType)}`,
+  );
 
   try {
     writeFileSyncImpl(tempFilePath, buffer);
@@ -76,8 +82,8 @@ async function uploadBufferToGemini(
       file: tempFilePath,
       config: {
         mimeType,
-        displayName: getGeminiDisplayName(image)
-      }
+        displayName: getGeminiDisplayName(image),
+      },
     });
   } finally {
     try {
@@ -91,7 +97,7 @@ async function uploadBufferToGemini(
 async function uploadImagesToGemini(
   client: Pick<GeminiClientLike, "files">,
   images: ImageAssetLike[],
-  uploadBufferToGeminiImpl: typeof uploadBufferToGemini
+  uploadBufferToGeminiImpl: typeof uploadBufferToGemini,
 ) {
   const uploadedFiles: GeminiUploadedFileLike[] = [];
 
@@ -107,10 +113,11 @@ async function uploadImagesToGemini(
 
 async function cleanupUploadedGeminiFiles(
   client: Pick<GeminiClientLike, "files">,
-  uploadedFiles: GeminiUploadedFileLike[] = []
+  uploadedFiles: GeminiUploadedFileLike[] = [],
 ) {
   for (const uploadedFile of uploadedFiles) {
-    const name = typeof uploadedFile?.name === "string" ? uploadedFile.name.trim() : "";
+    const name =
+      typeof uploadedFile?.name === "string" ? uploadedFile.name.trim() : "";
     if (!name) {
       continue;
     }
@@ -118,10 +125,13 @@ async function cleanupUploadedGeminiFiles(
     try {
       await client.files.delete({ name });
     } catch (error) {
-      logWarn("[gemini][file-delete-failed]", JSON.stringify({
-        name,
-        message: error instanceof Error ? error.message : "unknown_error"
-      }));
+      logWarn(
+        "[gemini][file-delete-failed]",
+        JSON.stringify({
+          name,
+          message: error instanceof Error ? error.message : "unknown_error",
+        }),
+      );
     }
   }
 }
@@ -129,5 +139,5 @@ async function cleanupUploadedGeminiFiles(
 export {
   cleanupUploadedGeminiFiles,
   uploadBufferToGemini,
-  uploadImagesToGemini
+  uploadImagesToGemini,
 };

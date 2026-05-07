@@ -3,7 +3,11 @@ import type { ComponentProps } from "react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { createMainScreenProps, renderWithTheme, resetMainScreenTestMocks } from "./MainScreen.testUtils";
+import {
+  createMainScreenProps,
+  renderWithTheme,
+  resetMainScreenTestMocks,
+} from "./MainScreen.testUtils";
 import MainScreenDialogs from "./MainScreenDialogs";
 
 type DialogsProps = ComponentProps<typeof MainScreenDialogs>;
@@ -20,11 +24,18 @@ function DialogHarness({
   initialImageDialogOpen = false,
   initialNameDialog = { type: "", capsuleId: "", value: "" },
   initialSearch = { open: false, query: "", results: [], loading: false },
-  initialShare = { open: false, url: "", expiresAt: null, name: "", copied: false, loading: false },
+  initialShare = {
+    open: false,
+    url: "",
+    expiresAt: null,
+    name: "",
+    copied: false,
+    loading: false,
+  },
   interactionDisabled = false,
   isOverlay = false,
   onCloseRowMenu = vi.fn(),
-  propsOverrides = {}
+  propsOverrides = {},
 }: {
   activeImageSrc?: string;
   activeSetLabel?: number;
@@ -41,10 +52,15 @@ function DialogHarness({
 }) {
   const [confirm, setConfirm] = useState(initialConfirm);
   const [filtersOpen, setFiltersOpen] = useState(initialFiltersOpen);
-  const [imageDialogOpen, setImageDialogOpen] = useState(initialImageDialogOpen);
+  const [imageDialogOpen, setImageDialogOpen] = useState(
+    initialImageDialogOpen,
+  );
   const [nameDialog, setNameDialog] = useState(initialNameDialog);
   const [search, setSearch] = useState(initialSearch);
-  const [share, setShare] = useState<ShareState>({ loading: false, ...initialShare });
+  const [share, setShare] = useState<ShareState>({
+    loading: false,
+    ...initialShare,
+  });
   const props = createMainScreenProps(propsOverrides);
 
   return (
@@ -92,45 +108,58 @@ describe("MainScreenDialogs", () => {
     renderDialogs({
       initialFiltersOpen: true,
       isOverlay: true,
-      propsOverrides: { onApplyFilters, onResetFilters }
+      propsOverrides: { onApplyFilters, onResetFilters },
     });
 
     expect(screen.getAllByTestId("profile-filters-sidebar")).toHaveLength(1);
     await user.click(screen.getByText("apply-filters"));
     expect(onApplyFilters).toHaveBeenCalledTimes(1);
     await waitFor(() => {
-      expect(screen.queryByTestId("profile-filters-sidebar")).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId("profile-filters-sidebar"),
+      ).not.toBeInTheDocument();
     });
 
     cleanup();
     renderDialogs({
       initialFiltersOpen: true,
       isOverlay: true,
-      propsOverrides: { onApplyFilters, onResetFilters }
+      propsOverrides: { onApplyFilters, onResetFilters },
     });
     await user.click(screen.getByText("reset-filters"));
     expect(onResetFilters).toHaveBeenCalledTimes(1);
     await waitFor(() => {
-      expect(screen.queryByTestId("profile-filters-sidebar")).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId("profile-filters-sidebar"),
+      ).not.toBeInTheDocument();
     });
   });
 
   test("closes rename dialog immediately and calls rename callback", async () => {
     const user = userEvent.setup();
     let resolveRename: (() => void) | undefined;
-    const onRenameCapsule = vi.fn(() => new Promise<void>((resolve) => {
-      resolveRename = resolve;
-    }));
+    const onRenameCapsule = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveRename = resolve;
+        }),
+    );
     renderDialogs({
-      initialNameDialog: { type: "rename", capsuleId: "capsule-1", value: "Spring edit" },
-      propsOverrides: { onRenameCapsule }
+      initialNameDialog: {
+        type: "rename",
+        capsuleId: "capsule-1",
+        value: "Spring edit",
+      },
+      propsOverrides: { onRenameCapsule },
     });
 
     await user.click(screen.getByRole("button", { name: "OK" }));
 
     expect(onRenameCapsule).toHaveBeenCalledWith("Spring edit", "capsule-1");
     await waitFor(() => {
-      expect(screen.queryByRole("dialog", { name: "Rename capsule" })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("dialog", { name: "Rename capsule" }),
+      ).not.toBeInTheDocument();
     });
     resolveRename?.();
   });
@@ -139,8 +168,12 @@ describe("MainScreenDialogs", () => {
     const user = userEvent.setup();
     const onDuplicateCapsule = vi.fn(() => Promise.resolve());
     renderDialogs({
-      initialNameDialog: { type: "save-as", capsuleId: "capsule-1", value: "Spring copy" },
-      propsOverrides: { onDuplicateCapsule }
+      initialNameDialog: {
+        type: "save-as",
+        capsuleId: "capsule-1",
+        value: "Spring copy",
+      },
+      propsOverrides: { onDuplicateCapsule },
     });
 
     await user.click(screen.getByRole("button", { name: "OK" }));
@@ -152,8 +185,12 @@ describe("MainScreenDialogs", () => {
     const user = userEvent.setup();
     const onRenameCapsule = vi.fn(() => Promise.resolve());
     renderDialogs({
-      initialNameDialog: { type: "rename", capsuleId: "capsule-1", value: "Spring edit" },
-      propsOverrides: { onRenameCapsule }
+      initialNameDialog: {
+        type: "rename",
+        capsuleId: "capsule-1",
+        value: "Spring edit",
+      },
+      propsOverrides: { onRenameCapsule },
     });
 
     await user.clear(screen.getByRole("textbox"));
@@ -163,7 +200,9 @@ describe("MainScreenDialogs", () => {
 
     expect(onRenameCapsule).not.toHaveBeenCalled();
     await waitFor(() => {
-      expect(screen.queryByRole("dialog", { name: "Rename capsule" })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("dialog", { name: "Rename capsule" }),
+      ).not.toBeInTheDocument();
     });
   });
 
@@ -172,23 +211,39 @@ describe("MainScreenDialogs", () => {
     const onRefreshItems = vi.fn(() => Promise.resolve());
     const onApplyFilters = vi.fn(() => Promise.resolve());
     renderDialogs({
-      initialConfirm: { action: "regenerate-all", capsuleId: "", outfitSetIndex: -1 },
-      propsOverrides: { onRefreshItems, onApplyFilters }
+      initialConfirm: {
+        action: "regenerate-all",
+        capsuleId: "",
+        outfitSetIndex: -1,
+      },
+      propsOverrides: { onRefreshItems, onApplyFilters },
     });
 
-    expect(screen.getByText("This will replace the current items in this capsule. Continue?")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "This will replace the current items in this capsule. Continue?",
+      ),
+    ).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Regenerate" }));
     expect(onRefreshItems).toHaveBeenCalledTimes(1);
     await waitFor(() => {
-      expect(screen.queryByRole("dialog", { name: "Regenerate capsule?" })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("dialog", { name: "Regenerate capsule?" }),
+      ).not.toBeInTheDocument();
     });
 
     cleanup();
     renderDialogs({
-      initialConfirm: { action: "regenerate-with-filter-changes", capsuleId: "", outfitSetIndex: -1 },
-      propsOverrides: { onRefreshItems, onApplyFilters }
+      initialConfirm: {
+        action: "regenerate-with-filter-changes",
+        capsuleId: "",
+        outfitSetIndex: -1,
+      },
+      propsOverrides: { onRefreshItems, onApplyFilters },
     });
-    await user.click(screen.getByRole("button", { name: "Apply and regenerate" }));
+    await user.click(
+      screen.getByRole("button", { name: "Apply and regenerate" }),
+    );
     expect(onApplyFilters).toHaveBeenCalledTimes(1);
   });
 
@@ -199,9 +254,17 @@ describe("MainScreenDialogs", () => {
     const onRevertCapsule = vi.fn(() => Promise.resolve());
     const onCloseRowMenu = vi.fn();
     renderDialogs({
-      initialConfirm: { action: "delete-outfit-set-image", capsuleId: "", outfitSetIndex: 2 },
-      propsOverrides: { onDeleteOutfitSetImage, onDeleteCapsule, onRevertCapsule },
-      onCloseRowMenu
+      initialConfirm: {
+        action: "delete-outfit-set-image",
+        capsuleId: "",
+        outfitSetIndex: 2,
+      },
+      propsOverrides: {
+        onDeleteOutfitSetImage,
+        onDeleteCapsule,
+        onRevertCapsule,
+      },
+      onCloseRowMenu,
     });
 
     await user.click(screen.getByRole("button", { name: "Delete" }));
@@ -209,9 +272,17 @@ describe("MainScreenDialogs", () => {
 
     cleanup();
     renderDialogs({
-      initialConfirm: { action: "delete-row", capsuleId: "capsule-2", outfitSetIndex: -1 },
-      propsOverrides: { onDeleteOutfitSetImage, onDeleteCapsule, onRevertCapsule },
-      onCloseRowMenu
+      initialConfirm: {
+        action: "delete-row",
+        capsuleId: "capsule-2",
+        outfitSetIndex: -1,
+      },
+      propsOverrides: {
+        onDeleteOutfitSetImage,
+        onDeleteCapsule,
+        onRevertCapsule,
+      },
+      onCloseRowMenu,
     });
     await user.click(screen.getByRole("button", { name: "Delete" }));
     expect(onDeleteCapsule).toHaveBeenCalledWith("capsule-2");
@@ -219,9 +290,17 @@ describe("MainScreenDialogs", () => {
 
     cleanup();
     renderDialogs({
-      initialConfirm: { action: "revert-row", capsuleId: "capsule-2", outfitSetIndex: -1 },
-      propsOverrides: { onDeleteOutfitSetImage, onDeleteCapsule, onRevertCapsule },
-      onCloseRowMenu
+      initialConfirm: {
+        action: "revert-row",
+        capsuleId: "capsule-2",
+        outfitSetIndex: -1,
+      },
+      propsOverrides: {
+        onDeleteOutfitSetImage,
+        onDeleteCapsule,
+        onRevertCapsule,
+      },
+      onCloseRowMenu,
     });
     await user.click(screen.getByRole("button", { name: "Revert" }));
     expect(onRevertCapsule).toHaveBeenCalledWith("capsule-2");
@@ -234,7 +313,7 @@ describe("MainScreenDialogs", () => {
     const onRevertCapsule = vi.fn(() => Promise.resolve());
     renderDialogs({
       initialConfirm: { action: "delete", capsuleId: "", outfitSetIndex: -1 },
-      propsOverrides: { onDeleteCapsule, onRevertCapsule }
+      propsOverrides: { onDeleteCapsule, onRevertCapsule },
     });
 
     await user.click(screen.getByRole("button", { name: "Delete" }));
@@ -243,7 +322,7 @@ describe("MainScreenDialogs", () => {
     cleanup();
     renderDialogs({
       initialConfirm: { action: "revert", capsuleId: "", outfitSetIndex: -1 },
-      propsOverrides: { onDeleteCapsule, onRevertCapsule }
+      propsOverrides: { onDeleteCapsule, onRevertCapsule },
     });
     await user.click(screen.getByRole("button", { name: "Revert" }));
     expect(onRevertCapsule).toHaveBeenCalledWith();
@@ -253,8 +332,12 @@ describe("MainScreenDialogs", () => {
     const user = userEvent.setup();
     const onDeleteOutfitSetImage = vi.fn(() => Promise.resolve());
     renderDialogs({
-      initialConfirm: { action: "delete-outfit-set-image", capsuleId: "", outfitSetIndex: -1 },
-      propsOverrides: { onDeleteOutfitSetImage }
+      initialConfirm: {
+        action: "delete-outfit-set-image",
+        capsuleId: "",
+        outfitSetIndex: -1,
+      },
+      propsOverrides: { onDeleteOutfitSetImage },
     });
 
     await user.click(screen.getByRole("button", { name: "Delete" }));
@@ -272,20 +355,25 @@ describe("MainScreenDialogs", () => {
         loading: true,
         results: [
           { id: "capsule-1", name: "Spring edit", status: "new" },
-          { id: "capsule-2", name: "Earlier travel", status: "modified" }
-        ]
+          { id: "capsule-2", name: "Earlier travel", status: "modified" },
+        ],
       },
-      propsOverrides: { onOpenCapsule }
+      propsOverrides: { onOpenCapsule },
     });
 
     expect(screen.getByRole("progressbar")).toBeInTheDocument();
     await user.clear(screen.getByPlaceholderText("Search capsules..."));
-    await user.type(screen.getByPlaceholderText("Search capsules..."), "travel");
+    await user.type(
+      screen.getByPlaceholderText("Search capsules..."),
+      "travel",
+    );
     await user.click(screen.getByRole("button", { name: /Earlier travel/ }));
 
     expect(onOpenCapsule).toHaveBeenCalledWith("capsule-2");
     await waitFor(() => {
-      expect(screen.queryByPlaceholderText("Search capsules...")).not.toBeInTheDocument();
+      expect(
+        screen.queryByPlaceholderText("Search capsules..."),
+      ).not.toBeInTheDocument();
     });
   });
 
@@ -294,7 +382,7 @@ describe("MainScreenDialogs", () => {
     const writeText = vi.fn(() => Promise.resolve());
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
-      value: { writeText }
+      value: { writeText },
     });
     renderDialogs({
       initialShare: {
@@ -303,30 +391,43 @@ describe("MainScreenDialogs", () => {
         expiresAt: new Date(60_000).toISOString(),
         name: "Spring edit",
         copied: false,
-        loading: false
-      }
+        loading: false,
+      },
     });
 
-    expect(screen.getByRole("dialog", { name: "Share capsule" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Spring edit" })).toHaveAttribute("href", "https://client.example/share/share-1");
+    expect(
+      screen.getByRole("dialog", { name: "Share capsule" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Spring edit" })).toHaveAttribute(
+      "href",
+      "https://client.example/share/share-1",
+    );
     await user.click(screen.getByRole("button", { name: "Copy share link" }));
-    expect(writeText).toHaveBeenCalledWith("https://client.example/share/share-1");
+    expect(writeText).toHaveBeenCalledWith(
+      "https://client.example/share/share-1",
+    );
   });
 
   test("opens and closes full-size outfit set image dialog", async () => {
     const user = userEvent.setup();
     renderDialogs({
       activeImageSrc: "data:image/png;base64,abc123",
-      initialImageDialogOpen: true
+      initialImageDialogOpen: true,
     });
 
     expect(screen.getByTestId("outfit-set-image-dialog")).toBeInTheDocument();
-    expect(screen.getByTestId("outfit-set-image-dialog-paper")).toBeInTheDocument();
-    expect(document.head.textContent).toContain("background-color:transparent;box-shadow:none;");
+    expect(
+      screen.getByTestId("outfit-set-image-dialog-paper"),
+    ).toBeInTheDocument();
+    expect(document.head.textContent).toContain(
+      "background-color:transparent;box-shadow:none;",
+    );
     await user.click(screen.getByRole("button", { name: "Close" }));
 
     await waitFor(() => {
-      expect(screen.queryByTestId("outfit-set-image-dialog")).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId("outfit-set-image-dialog"),
+      ).not.toBeInTheDocument();
     });
   });
 });

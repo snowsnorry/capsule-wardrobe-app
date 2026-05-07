@@ -9,7 +9,7 @@ import type {
   PromptDebugImageResult,
   PromptDebugImageStitched,
   PromptDebugImageStitchedManifest,
-  PromptImageTimings
+  PromptImageTimings,
 } from "./types.js";
 import {
   BACKGROUND_COLOR,
@@ -19,10 +19,12 @@ import {
   getMetadataDimensions,
   type PromptDebugImageCategoryManifestSource,
   type PromptDebugImageCategoryWithFile,
-  type PromptDebugImageCategoryWithoutBuffer
+  type PromptDebugImageCategoryWithoutBuffer,
 } from "./promptImagesShared.js";
 
-function stripCategoryBuffer(category: PromptDebugImageCategory = {}): PromptDebugImageCategoryWithoutBuffer {
+function stripCategoryBuffer(
+  category: PromptDebugImageCategory = {},
+): PromptDebugImageCategoryWithoutBuffer {
   return {
     category: getCategoryString(category.category, ""),
     mimeType: getCategoryString(category.mimeType, "image/jpeg"),
@@ -31,7 +33,7 @@ function stripCategoryBuffer(category: PromptDebugImageCategory = {}): PromptDeb
     cachedCount: getCategoryNumber(category.cachedCount),
     downloadedCount: getCategoryNumber(category.downloadedCount),
     skippedCount: getCategoryNumber(category.skippedCount),
-    items: getCategoryItems(category.items)
+    items: getCategoryItems(category.items),
   };
 }
 
@@ -43,38 +45,48 @@ function getCategoryNumber(value: unknown): number {
   return Number(value) || 0;
 }
 
-function getCategoryItems(value: unknown): PromptDebugImageCategoryWithoutBuffer["items"] {
+function getCategoryItems(
+  value: unknown,
+): PromptDebugImageCategoryWithoutBuffer["items"] {
   return Array.isArray(value) ? value : [];
 }
 
-function normalizeManifestCategory(category: PromptDebugImageCategory = {}): PromptDebugImageCategoryManifestSource {
+function normalizeManifestCategory(
+  category: PromptDebugImageCategory = {},
+): PromptDebugImageCategoryManifestSource {
   const stripped = stripCategoryBuffer(category);
 
   return {
     ...stripped,
     filename: stripped.filename,
-    items: stripped.items
+    items: stripped.items,
   };
 }
 
-async function stitchCategoryImagesVertically(categories: PromptDebugImageCategoryWithFile[] = []): Promise<PromptDebugImageStitched | null> {
-  const validCategories = categories.filter((category) => category.file.length > 0);
+async function stitchCategoryImagesVertically(
+  categories: PromptDebugImageCategoryWithFile[] = [],
+): Promise<PromptDebugImageStitched | null> {
+  const validCategories = categories.filter(
+    (category) => category.file.length > 0,
+  );
   if (validCategories.length === 0) {
     return null;
   }
 
-  const metadata = await Promise.all(validCategories.map(async (category) => {
-    const image = sharp(category.file, {
-      failOn: "none",
-      limitInputPixels: false
-    });
-    const info = await image.metadata().catch(() => ({}));
-    const { width, height } = getMetadataDimensions(info);
-    return {
-      width: width || 0,
-      height: height || 0
-    };
-  }));
+  const metadata = await Promise.all(
+    validCategories.map(async (category) => {
+      const image = sharp(category.file, {
+        failOn: "none",
+        limitInputPixels: false,
+      });
+      const info = await image.metadata().catch(() => ({}));
+      const { width, height } = getMetadataDimensions(info);
+      return {
+        width: width || 0,
+        height: height || 0,
+      };
+    }),
+  );
 
   const width = Math.max(...metadata.map((entry) => entry.width));
   const height = metadata.reduce((sum, entry) => sum + entry.height, 0);
@@ -84,29 +96,30 @@ async function stitchCategoryImagesVertically(categories: PromptDebugImageCatego
   }
 
   let offsetTop = 0;
-  const composites: Array<{ input: string; left: number; top: number }> = validCategories.map((category, index) => {
-    const composite = {
-      input: category.file,
-      left: 0,
-      top: offsetTop
-    };
-    offsetTop += metadata[index].height;
-    return composite;
-  });
+  const composites: Array<{ input: string; left: number; top: number }> =
+    validCategories.map((category, index) => {
+      const composite = {
+        input: category.file,
+        left: 0,
+        top: offsetTop,
+      };
+      offsetTop += metadata[index].height;
+      return composite;
+    });
 
   const buffer = await sharp({
     create: {
       width,
       height,
       channels: 3,
-      background: BACKGROUND_COLOR
-    }
+      background: BACKGROUND_COLOR,
+    },
   })
     .composite(composites)
     .jpeg({
       quality: CATEGORY_COLLAGE_JPEG_QUALITY,
       mozjpeg: false,
-      progressive: false
+      progressive: false,
     })
     .toBuffer();
 
@@ -115,8 +128,11 @@ async function stitchCategoryImagesVertically(categories: PromptDebugImageCatego
     mimeType: "image/jpeg",
     buffer,
     filename: STITCHED_COLLAGE_FILENAME,
-    totalItems: validCategories.reduce((sum, category) => sum + (Number(category?.totalItems) || 0), 0),
-    categoryCount: validCategories.length
+    totalItems: validCategories.reduce(
+      (sum, category) => sum + (Number(category?.totalItems) || 0),
+      0,
+    ),
+    categoryCount: validCategories.length,
   };
 }
 
@@ -126,7 +142,7 @@ async function saveDebugArtifacts({
   cachedCount,
   downloadedCount,
   skippedCount,
-  debugOutputDir
+  debugOutputDir,
 }: {
   categories: PromptDebugImageCategory[];
   stitched?: PromptDebugImageStitched | null;
@@ -136,12 +152,15 @@ async function saveDebugArtifacts({
   debugOutputDir: string | URL | null;
 }) {
   if (!debugOutputDir) {
-    throw new Error("debugOutputDir is required when saveDebugArtifacts is enabled");
+    throw new Error(
+      "debugOutputDir is required when saveDebugArtifacts is enabled",
+    );
   }
 
-  const resolvedOutputDir = debugOutputDir instanceof URL
-    ? fileURLToPath(debugOutputDir)
-    : path.resolve(String(debugOutputDir));
+  const resolvedOutputDir =
+    debugOutputDir instanceof URL
+      ? fileURLToPath(debugOutputDir)
+      : path.resolve(String(debugOutputDir));
 
   const files: string[] = [];
   const manifestCategories: PromptDebugImageCategoryManifest[] = [];
@@ -157,20 +176,23 @@ async function saveDebugArtifacts({
       cachedCount: categoryEntry.cachedCount,
       downloadedCount: categoryEntry.downloadedCount,
       skippedCount: categoryEntry.skippedCount,
-      items: categoryEntry.items
+      items: categoryEntry.items,
     });
   }
 
   let stitchedManifest: PromptDebugImageStitchedManifest | null = null;
   if (stitched?.buffer) {
-    const stitchedFile = path.join(resolvedOutputDir, stitched.filename || STITCHED_COLLAGE_FILENAME);
+    const stitchedFile = path.join(
+      resolvedOutputDir,
+      stitched.filename || STITCHED_COLLAGE_FILENAME,
+    );
     await writeFile(stitchedFile, stitched.buffer);
     files.push(stitchedFile);
     stitchedManifest = {
       category: stitched.category || "all-categories",
       file: stitchedFile,
       totalItems: Number(stitched.totalItems) || 0,
-      categoryCount: Number(stitched.categoryCount) || 0
+      categoryCount: Number(stitched.categoryCount) || 0,
     };
   }
 
@@ -182,26 +204,26 @@ async function saveDebugArtifacts({
     skippedCount,
     files,
     stitched: stitchedManifest,
-    categories: manifestCategories
+    categories: manifestCategories,
   };
 
   const manifestPath = path.join(resolvedOutputDir, "manifest.json");
   await writeFile(manifestPath, JSON.stringify(manifest, null, 2), "utf8");
 }
 
-function getNormalizedPromptImageTimings(timings: PromptDebugImageResult["timings"]): PromptImageTimings {
+function getNormalizedPromptImageTimings(
+  timings: PromptDebugImageResult["timings"],
+): PromptImageTimings {
   return {
     ...createPromptImageTimings(),
-    ...(timings || {})
+    ...(timings || {}),
   };
 }
-
-
 
 export {
   getNormalizedPromptImageTimings,
   normalizeManifestCategory,
   saveDebugArtifacts,
   stitchCategoryImagesVertically,
-  stripCategoryBuffer
+  stripCategoryBuffer,
 };

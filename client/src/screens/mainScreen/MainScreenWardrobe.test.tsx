@@ -2,18 +2,28 @@ import type { ComponentProps } from "react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { cleanup, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { renderWithTheme, resetMainScreenTestMocks } from "./MainScreen.testUtils";
+import {
+  renderWithTheme,
+  resetMainScreenTestMocks,
+} from "./MainScreen.testUtils";
 import MainScreenWardrobe from "./MainScreenWardrobe";
 
 type WardrobeProps = ComponentProps<typeof MainScreenWardrobe>;
 
 const items = [
   { id: "a", url: "https://example.com/a", name: "Shirt", category: "top" },
-  { id: "b", url: "https://example.com/b", name: "Trousers", category: "bottom" },
-  { id: "c", url: "https://example.com/c", name: "Bag", category: "bag" }
+  {
+    id: "b",
+    url: "https://example.com/b",
+    name: "Trousers",
+    category: "bottom",
+  },
+  { id: "c", url: "https://example.com/c", name: "Bag", category: "bag" },
 ];
 
-function createWardrobeProps(overrides: Partial<WardrobeProps> = {}): WardrobeProps {
+function createWardrobeProps(
+  overrides: Partial<WardrobeProps> = {},
+): WardrobeProps {
   return {
     activeImageSrc: "",
     activeSet: null,
@@ -32,7 +42,7 @@ function createWardrobeProps(overrides: Partial<WardrobeProps> = {}): WardrobePr
     onImageClick: vi.fn(),
     onProductMenuClick: vi.fn(),
     onToggleSelected: vi.fn(),
-    ...overrides
+    ...overrides,
   };
 }
 
@@ -53,7 +63,10 @@ describe("MainScreenWardrobe", () => {
   test("renders loading placeholder with configured mobile columns", () => {
     renderWardrobe({ isLoading: true, mobileColumns: 3 });
 
-    expect(screen.getByTestId("loading-placeholder")).toHaveAttribute("data-mobile-columns", "3");
+    expect(screen.getByTestId("loading-placeholder")).toHaveAttribute(
+      "data-mobile-columns",
+      "3",
+    );
   });
 
   test("renders grid items, pending placeholders, selected state, and extra placeholder", async () => {
@@ -65,13 +78,22 @@ describe("MainScreenWardrobe", () => {
       partialPendingUrls: ["https://example.com/b"],
       selectionMode: true,
       showAdditionalItemPlaceholder: true,
-      onToggleSelected
+      onToggleSelected,
     });
 
-    expect(screen.getByTestId("placeholder-card-pending-https://example.com/b")).toHaveAttribute("data-mobile-columns", "2");
-    expect(screen.getByTestId("clothing-card-https://example.com/a")).toHaveAttribute("data-selected", "true");
-    expect(screen.getByTestId("clothing-card-https://example.com/a")).toHaveAttribute("data-selection-mode", "true");
-    expect(screen.getByTestId("inline-placeholder-1")).toHaveAttribute("data-mobile-columns", "2");
+    expect(
+      screen.getByTestId("placeholder-card-pending-https://example.com/b"),
+    ).toHaveAttribute("data-mobile-columns", "2");
+    expect(
+      screen.getByTestId("clothing-card-https://example.com/a"),
+    ).toHaveAttribute("data-selected", "true");
+    expect(
+      screen.getByTestId("clothing-card-https://example.com/a"),
+    ).toHaveAttribute("data-selection-mode", "true");
+    expect(screen.getByTestId("inline-placeholder-1")).toHaveAttribute(
+      "data-mobile-columns",
+      "2",
+    );
 
     await user.click(screen.getByTestId("clothing-card-https://example.com/c"));
     expect(onToggleSelected).toHaveBeenCalledWith(items[2]);
@@ -81,9 +103,16 @@ describe("MainScreenWardrobe", () => {
     const user = userEvent.setup();
     const onGenerateImage = vi.fn();
     renderWardrobe({
-      activeSet: { id: "set-1", index: 0, label: 1, items, image: null, imageObsolete: false },
+      activeSet: {
+        id: "set-1",
+        index: 0,
+        label: 1,
+        items,
+        image: null,
+        imageObsolete: false,
+      },
       visibleItems: items,
-      onGenerateImage
+      onGenerateImage,
     });
 
     expect(screen.getByTestId("outfit-set-image-divider")).toBeInTheDocument();
@@ -93,13 +122,24 @@ describe("MainScreenWardrobe", () => {
 
   test("renders placeholder while outfit set image is pending", () => {
     renderWardrobe({
-      activeSet: { id: "set-1", index: 0, label: 1, items, image: null, imageObsolete: false },
+      activeSet: {
+        id: "set-1",
+        index: 0,
+        label: 1,
+        items,
+        image: null,
+        imageObsolete: false,
+      },
       isImagePending: true,
-      visibleItems: items
+      visibleItems: items,
     });
 
-    expect(screen.getByTestId("outfit-set-image-placeholder")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Create image" })).not.toBeInTheDocument();
+    expect(
+      screen.getByTestId("outfit-set-image-placeholder"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Create image" }),
+    ).not.toBeInTheDocument();
   });
 
   test("renders generated image and opens full-size callback on click", async () => {
@@ -107,16 +147,28 @@ describe("MainScreenWardrobe", () => {
     const onImageClick = vi.fn();
     renderWardrobe({
       activeImageSrc: "data:image/png;base64,abc123",
-      activeSet: { id: "set-1", index: 0, label: 1, items, image: "abc123", imageObsolete: false },
+      activeSet: {
+        id: "set-1",
+        index: 0,
+        label: 1,
+        items,
+        image: "abc123",
+        imageObsolete: false,
+      },
       visibleItems: items,
-      onImageClick
+      onImageClick,
     });
 
     await user.click(screen.getByTestId("outfit-set-image"));
-    expect(screen.getByTestId("outfit-set-image")).toHaveAttribute("src", "data:image/png;base64,abc123");
+    expect(screen.getByTestId("outfit-set-image")).toHaveAttribute(
+      "src",
+      "data:image/png;base64,abc123",
+    );
     expect(screen.getByTestId("outfit-set-image-divider")).toBeInTheDocument();
     expect(onImageClick).toHaveBeenCalledTimes(1);
-    expect(screen.queryByRole("button", { name: "Create image" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Create image" }),
+    ).not.toBeInTheDocument();
   });
 
   test("passes through generated image URLs directly", () => {
@@ -128,34 +180,55 @@ describe("MainScreenWardrobe", () => {
         label: 1,
         items,
         image: "https://images.example.com/set.png",
-        imageObsolete: false
+        imageObsolete: false,
       },
-      visibleItems: items
+      visibleItems: items,
     });
 
-    expect(screen.getByTestId("outfit-set-image")).toHaveAttribute("src", "https://images.example.com/set.png");
+    expect(screen.getByTestId("outfit-set-image")).toHaveAttribute(
+      "src",
+      "https://images.example.com/set.png",
+    );
   });
 
   test("renders obsolete image warning only when image is marked obsolete", () => {
     renderWardrobe({
       activeImageSrc: "data:image/png;base64,abc123",
-      activeSet: { id: "set-1", index: 0, label: 1, items, image: "abc123", imageObsolete: true },
-      visibleItems: items
+      activeSet: {
+        id: "set-1",
+        index: 0,
+        label: 1,
+        items,
+        image: "abc123",
+        imageObsolete: true,
+      },
+      visibleItems: items,
     });
 
     expect(
-      screen.getByText("This image may no longer match the current outfit. Remove it and generate a new one if needed.")
+      screen.getByText(
+        "This image may no longer match the current outfit. Remove it and generate a new one if needed.",
+      ),
     ).toBeInTheDocument();
 
     cleanup();
     renderWardrobe({
       activeImageSrc: "data:image/png;base64,abc123",
-      activeSet: { id: "set-1", index: 0, label: 1, items, image: "abc123", imageObsolete: false },
-      visibleItems: items
+      activeSet: {
+        id: "set-1",
+        index: 0,
+        label: 1,
+        items,
+        image: "abc123",
+        imageObsolete: false,
+      },
+      visibleItems: items,
     });
 
     expect(
-      screen.queryByText("This image may no longer match the current outfit. Remove it and generate a new one if needed.")
+      screen.queryByText(
+        "This image may no longer match the current outfit. Remove it and generate a new one if needed.",
+      ),
     ).not.toBeInTheDocument();
   });
 
@@ -164,9 +237,16 @@ describe("MainScreenWardrobe", () => {
     const onDeleteImage = vi.fn();
     renderWardrobe({
       activeImageSrc: "data:image/png;base64,abc123",
-      activeSet: { id: "set-2", index: 1, label: 2, items, image: "abc123", imageObsolete: false },
+      activeSet: {
+        id: "set-2",
+        index: 1,
+        label: 2,
+        items,
+        image: "abc123",
+        imageObsolete: false,
+      },
       visibleItems: items,
-      onDeleteImage
+      onDeleteImage,
     });
 
     await user.click(screen.getByRole("button", { name: "Delete image" }));

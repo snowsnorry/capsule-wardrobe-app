@@ -2,7 +2,7 @@ import {
   buildCapsuleStatus,
   buildEmptyCapsuleDraft,
   getEffectiveCapsule,
-  normalizeOutfitSets
+  normalizeOutfitSets,
 } from "./capsuleState";
 import { buildDisplayWardrobeItems } from "../../../shared/wardrobeMerge.js";
 import type { CapsuleMeta, WardrobeItem } from "./appTypes";
@@ -45,9 +45,13 @@ function fallbackNullableString(value: unknown) {
   return typeof value === "string" ? value : null;
 }
 
-function applyCapsuleFilters(context: ApplyCapsuleStateContext, capsule: CapsuleMeta) {
+function applyCapsuleFilters(
+  context: ApplyCapsuleStateContext,
+  capsule: CapsuleMeta,
+) {
   const effective = getEffectiveCapsule(capsule) || buildEmptyCapsuleDraft();
-  const filters: Partial<ReturnType<typeof buildEmptyCapsuleDraft>["filters"]> = effective.filters || {};
+  const filters: Partial<ReturnType<typeof buildEmptyCapsuleDraft>["filters"]> =
+    effective.filters || {};
   context.setSelectedFormalityLevel(fallbackString(filters.formalityLevel));
   context.setSelectedStyle(fallbackNullableString(filters.style));
   context.setSelectedOccasions(fallbackStringArray(filters.occasions));
@@ -62,7 +66,7 @@ function applyCapsuleFilters(context: ApplyCapsuleStateContext, capsule: Capsule
 export function applyCapsuleStateToApp(
   context: ApplyCapsuleStateContext,
   capsule: CapsuleMeta | null | undefined,
-  { capsules = null as CapsuleMeta[] | null } = {}
+  { capsules = null as CapsuleMeta[] | null } = {},
 ) {
   if (!capsule) {
     return;
@@ -73,10 +77,16 @@ export function applyCapsuleStateToApp(
   context.setActiveCapsuleId(capsule.id || "");
   context.setActiveCapsuleMeta({
     ...capsule,
-    status: capsule.status || buildCapsuleStatus(capsule)
+    status: capsule.status || buildCapsuleStatus(capsule),
   });
-  context.setProfileItems(buildDisplayWardrobeItems(effective.data?.wardrobe?.items || []) as WardrobeItem[]);
-  context.setProfileOutfitSets(normalizeOutfitSets(effective.data?.wardrobe?.outfitSets));
+  context.setProfileItems(
+    buildDisplayWardrobeItems(
+      effective.data?.wardrobe?.items || [],
+    ) as WardrobeItem[],
+  );
+  context.setProfileOutfitSets(
+    normalizeOutfitSets(effective.data?.wardrobe?.outfitSets),
+  );
   context.setPendingImageSetIndexes([]);
 
   if (Array.isArray(capsules)) {

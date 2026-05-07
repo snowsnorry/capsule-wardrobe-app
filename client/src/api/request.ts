@@ -35,8 +35,12 @@ function tryParseJson(text: string): JsonValue | null {
   }
 }
 
-async function readResponseBody(response: ResponseLike): Promise<JsonValue | JsonObject | null> {
-  const contentType = (response.headers.get("content-type") || "").toLowerCase();
+async function readResponseBody(
+  response: ResponseLike,
+): Promise<JsonValue | JsonObject | null> {
+  const contentType = (
+    response.headers.get("content-type") || ""
+  ).toLowerCase();
   const text = await response.text();
   if (!text) {
     return null;
@@ -69,12 +73,17 @@ function getErrorMessage(data: JsonValue | null, status: number): string {
   return `request_failed_${status}`;
 }
 
-async function requestJson(url: string, options: RequestInit = {}): Promise<JsonObject> {
+async function requestJson(
+  url: string,
+  options: RequestInit = {},
+): Promise<JsonObject> {
   const response = await request(url, options);
   const data = await readResponseBody(response);
 
   if (!response.ok) {
-    const error = new Error(getErrorMessage(data, response.status)) as RequestError;
+    const error = new Error(
+      getErrorMessage(data, response.status),
+    ) as RequestError;
     error.data = data;
     error.status = response.status;
     throw error;
@@ -87,12 +96,19 @@ async function requestJson(url: string, options: RequestInit = {}): Promise<Json
   return {};
 }
 
-async function request(url: string, options: RequestInit = {}): Promise<Response> {
+async function request(
+  url: string,
+  options: RequestInit = {},
+): Promise<Response> {
   const method = String(options.method || "GET").toUpperCase();
   const headers = new Headers(options.headers || {});
   const isStateChanging = !["GET", "HEAD", "OPTIONS"].includes(method);
 
-  if (isStateChanging && !headers.has(CSRF_HEADER) && typeof document !== "undefined") {
+  if (
+    isStateChanging &&
+    !headers.has(CSRF_HEADER) &&
+    typeof document !== "undefined"
+  ) {
     const csrfToken = document.cookie
       .split(";")
       .map((part) => part.trim())
@@ -106,13 +122,13 @@ async function request(url: string, options: RequestInit = {}): Promise<Response
   return fetch(url, {
     ...options,
     method,
-    headers
+    headers,
   });
 }
 
 async function getCachedJson(
   url: string,
-  { ttlMs = 1000, force = false, ...options }: CachedJsonOptions = {}
+  { ttlMs = 1000, force = false, ...options }: CachedJsonOptions = {},
 ): Promise<JsonObject> {
   const key = getCacheKey(url, options);
   const now = Date.now();

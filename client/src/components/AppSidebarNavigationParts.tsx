@@ -1,11 +1,5 @@
 import type { ReactElement } from "react";
-import {
-  Box,
-  Button,
-  Divider,
-  Stack,
-  Tooltip
-} from "@mui/material";
+import { Box, Button, Divider, Stack, Tooltip } from "@mui/material";
 import BarChartRoundedIcon from "@mui/icons-material/BarChartRounded";
 import ManageSearchRoundedIcon from "@mui/icons-material/ManageSearchRounded";
 import CheckroomOutlinedIcon from "@mui/icons-material/CheckroomOutlined";
@@ -27,11 +21,15 @@ function getTopLevelButtonSx(isCollapsedDesktop: boolean) {
     borderRadius: isCollapsedDesktop ? 0 : 2.5,
     color: "text.primary",
     bgcolor: "transparent",
-    "&.Mui-disabled": { color: "text.disabled" }
+    "&.Mui-disabled": { color: "text.disabled" },
   } as const;
 }
 
-function TopLevelLabel({ label, isActive, isCollapsedDesktop }: {
+function TopLevelLabel({
+  label,
+  isActive,
+  isCollapsedDesktop,
+}: {
   label: string;
   isActive: boolean;
   isCollapsedDesktop: boolean;
@@ -50,7 +48,7 @@ function TopLevelLabel({ label, isActive, isCollapsedDesktop }: {
         overflow: "hidden",
         opacity: isCollapsedDesktop ? 0 : 1,
         transform: isCollapsedDesktop ? "translateX(-8px)" : "translateX(0)",
-        transition: "opacity 180ms ease, transform 220ms ease"
+        transition: "opacity 180ms ease, transform 220ms ease",
       }}
     >
       {label}
@@ -63,7 +61,7 @@ function TopLevelIcon({
   label,
   isActive,
   isCollapsedDesktop,
-  desktopSidebarRailWidth
+  desktopSidebarRailWidth,
 }: {
   icon: ReactElement;
   label: string;
@@ -75,12 +73,16 @@ function TopLevelIcon({
     <Tooltip title={isCollapsedDesktop ? label : ""} placement="right">
       <Box
         sx={{
-          width: isCollapsedDesktop ? desktopSidebarRailWidth : topLevelIconRailWidth,
+          width: isCollapsedDesktop
+            ? desktopSidebarRailWidth
+            : topLevelIconRailWidth,
           display: "flex",
           justifyContent: "center",
           flexShrink: 0,
-          transform: isCollapsedDesktop ? "none" : `translateX(${expandedTopLevelIconShift})`,
-          color: isActive ? "primary.main" : "text.secondary"
+          transform: isCollapsedDesktop
+            ? "none"
+            : `translateX(${expandedTopLevelIconShift})`,
+          color: isActive ? "primary.main" : "text.secondary",
         }}
       >
         {icon}
@@ -97,7 +99,7 @@ function SidebarTopLevelButton({
   isInteractionDisabled,
   isCollapsedDesktop,
   desktopSidebarRailWidth,
-  onClick
+  onClick,
 }: {
   label: string;
   icon: ReactElement;
@@ -114,7 +116,10 @@ function SidebarTopLevelButton({
       aria-label={label}
       disabled={isInteractionDisabled}
       onClick={onClick}
-      sx={{ ...getTopLevelButtonSx(isCollapsedDesktop), bgcolor: "transparent" }}
+      sx={{
+        ...getTopLevelButtonSx(isCollapsedDesktop),
+        bgcolor: "transparent",
+      }}
     >
       <TopLevelIcon
         icon={icon}
@@ -123,12 +128,20 @@ function SidebarTopLevelButton({
         isCollapsedDesktop={isCollapsedDesktop}
         desktopSidebarRailWidth={desktopSidebarRailWidth}
       />
-      <TopLevelLabel label={label} isActive={isActive} isCollapsedDesktop={isCollapsedDesktop} />
+      <TopLevelLabel
+        label={label}
+        isActive={isActive}
+        isCollapsedDesktop={isCollapsedDesktop}
+      />
     </Button>
   );
 }
 
-function SidebarNavigationDivider({ showCapsuleChildren }: { showCapsuleChildren: boolean }) {
+function SidebarNavigationDivider({
+  showCapsuleChildren,
+}: {
+  showCapsuleChildren: boolean;
+}) {
   return (
     <Divider
       sx={{
@@ -137,8 +150,8 @@ function SidebarNavigationDivider({ showCapsuleChildren }: { showCapsuleChildren
         opacity: showCapsuleChildren ? 1 : 0,
         transition: `margin 240ms ${naturalEase}, opacity 160ms ease-in-out`,
         "@media (prefers-reduced-motion: reduce)": {
-          transition: "none"
-        }
+          transition: "none",
+        },
       }}
     />
   );
@@ -151,7 +164,7 @@ function SidebarSecondaryNavigation({
   showCapsuleChildren,
   desktopSidebarRailWidth,
   onNavigateApp,
-  t
+  t,
 }: {
   activeApp: AppId;
   isInteractionDisabled: boolean;
@@ -169,8 +182,8 @@ function SidebarSecondaryNavigation({
         mt: showCapsuleChildren ? 0 : 0.5,
         transition: `margin 240ms ${naturalEase}`,
         "@media (prefers-reduced-motion: reduce)": {
-          transition: "none"
-        }
+          transition: "none",
+        },
       }}
     >
       <SidebarTopLevelButton
@@ -202,7 +215,7 @@ function CapsuleTopLevelNavigation({
   isCollapsedDesktop,
   desktopSidebarRailWidth,
   onNavigateApp,
-  t
+  t,
 }: {
   isActive: boolean;
   isExpanded: boolean;
@@ -231,5 +244,5 @@ function CapsuleTopLevelNavigation({
 export {
   CapsuleTopLevelNavigation,
   SidebarNavigationDivider,
-  SidebarSecondaryNavigation
+  SidebarSecondaryNavigation,
 };

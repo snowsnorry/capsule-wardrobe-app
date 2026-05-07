@@ -1,9 +1,20 @@
 import { useEffect, useRef } from "react";
-import { Divider, LinearProgress, Link, Stack, Typography } from "@mui/material";
+import {
+  Divider,
+  LinearProgress,
+  Link,
+  Stack,
+  Typography,
+} from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import { useI18n } from "../i18n/useI18n";
-import { CodeStepForm, EmailStepForm, SignInHeader, SignInStatusMessages } from "./SignInScreenParts";
+import {
+  CodeStepForm,
+  EmailStepForm,
+  SignInHeader,
+  SignInStatusMessages,
+} from "./SignInScreenParts";
 import type { SignInScreenProps } from "./SignInScreenTypes";
 
 const GOOGLE_GSI_SCRIPT_SRC = "https://accounts.google.com/gsi/client";
@@ -26,7 +37,7 @@ type GoogleAccountsId = {
       width: number;
       text: string;
       locale: string;
-    }
+    },
   ) => void;
 };
 
@@ -46,7 +57,9 @@ function ensureGoogleScriptLoaded(): Promise<void> {
   }
 
   return new Promise((resolve, reject) => {
-    const existing = document.querySelector<HTMLScriptElement>(`script[src="${GOOGLE_GSI_SCRIPT_SRC}"]`);
+    const existing = document.querySelector<HTMLScriptElement>(
+      `script[src="${GOOGLE_GSI_SCRIPT_SRC}"]`,
+    );
     if (existing) {
       if (window.google?.accounts?.id) {
         resolve();
@@ -89,7 +102,7 @@ function useGoogleSignInButton({
   step,
   googleClientId,
   googleLocale,
-  onGoogleCredential
+  onGoogleCredential,
 }: {
   step: SignInScreenProps["step"];
   googleClientId: string;
@@ -97,7 +110,8 @@ function useGoogleSignInButton({
   onGoogleCredential: (credential: string) => void;
 }) {
   const googleButtonRef = useRef<HTMLDivElement | null>(null);
-  const googleCredentialHandlerRef = useRef<SignInScreenProps["onGoogleCredential"]>(onGoogleCredential);
+  const googleCredentialHandlerRef =
+    useRef<SignInScreenProps["onGoogleCredential"]>(onGoogleCredential);
 
   useEffect(() => {
     googleCredentialHandlerRef.current = onGoogleCredential;
@@ -116,7 +130,11 @@ function useGoogleSignInButton({
         return;
       }
 
-      if (isCancelled || !googleButtonRef.current || !window.google?.accounts?.id) {
+      if (
+        isCancelled ||
+        !googleButtonRef.current ||
+        !window.google?.accounts?.id
+      ) {
         return;
       }
 
@@ -127,7 +145,7 @@ function useGoogleSignInButton({
           if (credential) {
             googleCredentialHandlerRef.current?.(credential);
           }
-        }
+        },
       });
 
       googleButtonRef.current.innerHTML = "";
@@ -137,7 +155,7 @@ function useGoogleSignInButton({
         size: "large",
         width: 320,
         text: "continue_with",
-        locale: googleLocale
+        locale: googleLocale,
       });
     };
 
@@ -163,13 +181,18 @@ function SignInScreen({
   onVerifyCode,
   onGoogleCredential,
   onPasskeySignIn,
-  onResetEmail
+  onResetEmail,
 }: SignInScreenProps) {
   const { t, locale } = useI18n();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const googleLocale = ["en", "ru"].includes(locale) ? locale : "en";
-  const googleButtonRef = useGoogleSignInButton({ step, googleClientId, googleLocale, onGoogleCredential });
+  const googleButtonRef = useGoogleSignInButton({
+    step,
+    googleClientId,
+    googleLocale,
+    onGoogleCredential,
+  });
 
   return (
     <Stack spacing={3}>
@@ -177,7 +200,9 @@ function SignInScreen({
 
       <Stack spacing={0}>
         <Divider />
-        {status.loading ? <LinearProgress aria-label={t("auth.signInProgress")} /> : null}
+        {status.loading ? (
+          <LinearProgress aria-label={t("auth.signInProgress")} />
+        ) : null}
       </Stack>
 
       {step === "email" ? (

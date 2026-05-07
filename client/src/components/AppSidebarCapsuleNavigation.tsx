@@ -8,7 +8,7 @@ import {
   ListItemText,
   Stack,
   Tooltip,
-  Typography
+  Typography,
 } from "@mui/material";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import FiberManualRecordRoundedIcon from "@mui/icons-material/FiberManualRecordRounded";
@@ -30,7 +30,7 @@ const capsulePrimaryActionSx = {
   pl: 1.5,
   pr: 0,
   borderRadius: 999,
-  color: "primary.main"
+  color: "primary.main",
 } as const;
 
 function getCapsuleRowSx(isOverlaySidebar: boolean) {
@@ -41,7 +41,7 @@ function getCapsuleRowSx(isOverlaySidebar: boolean) {
     minHeight: 48,
     "& .capsule-row-unsaved-dot": {
       opacity: 1,
-      transition: "opacity 120ms ease"
+      transition: "opacity 120ms ease",
     },
     "& .capsule-row-actions": {
       opacity: isOverlaySidebar ? 1 : 0,
@@ -51,29 +51,38 @@ function getCapsuleRowSx(isOverlaySidebar: boolean) {
       p: isOverlaySidebar ? 0.5 : 0,
       overflow: "hidden",
       pointerEvents: isOverlaySidebar ? "auto" : "none",
-      transition: "opacity 160ms ease, width 160ms ease, padding 160ms ease"
+      transition: "opacity 160ms ease, width 160ms ease, padding 160ms ease",
     },
-    ...(!isOverlaySidebar ? {
-      "&:hover .capsule-row-unsaved-dot, &:focus-within .capsule-row-unsaved-dot": {
-        opacity: 0
-      }
-    } : {}),
+    ...(!isOverlaySidebar
+      ? {
+          "&:hover .capsule-row-unsaved-dot, &:focus-within .capsule-row-unsaved-dot":
+            {
+              opacity: 0,
+            },
+        }
+      : {}),
     "&:hover .capsule-row-actions": {
       opacity: 1,
       width: 32,
       p: 0.5,
-      pointerEvents: "auto"
+      pointerEvents: "auto",
     },
     "&:focus-within .capsule-row-actions": {
       opacity: 1,
       width: 32,
       p: 0.5,
-      pointerEvents: "auto"
-    }
+      pointerEvents: "auto",
+    },
   } as const;
 }
 
-function CapsuleUnsavedDot({ isVisible, label }: { isVisible: boolean; label: string }) {
+function CapsuleUnsavedDot({
+  isVisible,
+  label,
+}: {
+  isVisible: boolean;
+  label: string;
+}) {
   if (!isVisible) {
     return null;
   }
@@ -93,13 +102,16 @@ function CapsuleActionsButton({
   capsuleName,
   capsuleChildTabIndex,
   isInteractionDisabled,
-  onOpenCapsuleActions
+  onOpenCapsuleActions,
 }: {
   capsule: CapsuleNavItem;
   capsuleName: string;
   capsuleChildTabIndex: number;
   isInteractionDisabled: boolean;
-  onOpenCapsuleActions?: (event: MouseEvent<HTMLElement>, capsule: CapsuleNavItem) => void;
+  onOpenCapsuleActions?: (
+    event: MouseEvent<HTMLElement>,
+    capsule: CapsuleNavItem,
+  ) => void;
 }) {
   if (!onOpenCapsuleActions) {
     return null;
@@ -131,7 +143,7 @@ function CapsuleRow({
   capsuleHasUnsavedChanges,
   onOpenCapsule,
   onOpenCapsuleActions,
-  notSavedLabel
+  notSavedLabel,
 }: {
   capsule: CapsuleNavItem;
   activeCapsuleId: string;
@@ -140,7 +152,10 @@ function CapsuleRow({
   isOverlaySidebar: boolean;
   capsuleHasUnsavedChanges: (capsule: CapsuleNavItem) => boolean;
   onOpenCapsule?: (capsuleId: string) => void;
-  onOpenCapsuleActions?: (event: MouseEvent<HTMLElement>, capsule: CapsuleNavItem) => void;
+  onOpenCapsuleActions?: (
+    event: MouseEvent<HTMLElement>,
+    capsule: CapsuleNavItem,
+  ) => void;
   notSavedLabel: string;
 }) {
   const capsuleId = String(capsule.id || "");
@@ -153,14 +168,20 @@ function CapsuleRow({
         tabIndex={capsuleChildTabIndex}
         selected={isActive}
         disabled={isInteractionDisabled}
-        onClick={() => capsuleId ? onOpenCapsule?.(capsuleId) : undefined}
+        onClick={() => (capsuleId ? onOpenCapsule?.(capsuleId) : undefined)}
         sx={getCapsuleRowSx(isOverlaySidebar)}
       >
         <ListItemText
           primary={capsuleName}
-          primaryTypographyProps={{ noWrap: true, fontWeight: isActive ? 700 : 500 }}
+          primaryTypographyProps={{
+            noWrap: true,
+            fontWeight: isActive ? 700 : 500,
+          }}
         />
-        <CapsuleUnsavedDot isVisible={capsuleHasUnsavedChanges(capsule)} label={notSavedLabel} />
+        <CapsuleUnsavedDot
+          isVisible={capsuleHasUnsavedChanges(capsule)}
+          label={notSavedLabel}
+        />
         <CapsuleActionsButton
           capsule={capsule}
           capsuleName={capsuleName}
@@ -178,7 +199,7 @@ function CapsulePrimaryActions({
   isInteractionDisabled,
   onCreateCapsule,
   onSearchCapsules,
-  t
+  t,
 }: {
   capsuleChildTabIndex: number;
   isInteractionDisabled: boolean;
@@ -196,7 +217,9 @@ function CapsulePrimaryActions({
         sx={capsulePrimaryActionSx}
       >
         <AddRoundedIcon sx={{ mr: 2.2 }} />
-        <Box component="span" sx={{ fontWeight: 550 }}>{t("capsule.new")}</Box>
+        <Box component="span" sx={{ fontWeight: 550 }}>
+          {t("capsule.new")}
+        </Box>
       </Button>
       <Button
         variant="text"
@@ -206,7 +229,9 @@ function CapsulePrimaryActions({
         sx={capsulePrimaryActionSx}
       >
         <SearchRoundedIcon sx={{ mr: 2.2 }} />
-        <Box component="span" sx={{ fontWeight: 550 }}>{t("capsule.search")}</Box>
+        <Box component="span" sx={{ fontWeight: 550 }}>
+          {t("capsule.search")}
+        </Box>
       </Button>
     </>
   );
@@ -221,7 +246,7 @@ function CapsuleList({
   capsuleHasUnsavedChanges,
   onOpenCapsule,
   onOpenCapsuleActions,
-  t
+  t,
 }: {
   capsuleList: CapsuleNavItem[];
   activeCapsuleId: string;
@@ -230,7 +255,10 @@ function CapsuleList({
   isOverlaySidebar: boolean;
   capsuleHasUnsavedChanges: (capsule: CapsuleNavItem) => boolean;
   onOpenCapsule?: (capsuleId: string) => void;
-  onOpenCapsuleActions?: (event: MouseEvent<HTMLElement>, capsule: CapsuleNavItem) => void;
+  onOpenCapsuleActions?: (
+    event: MouseEvent<HTMLElement>,
+    capsule: CapsuleNavItem,
+  ) => void;
   t: Translate;
 }) {
   return (
@@ -265,7 +293,7 @@ function CapsuleChildren({
   onOpenCapsule,
   onOpenCapsuleActions,
   capsuleHasUnsavedChanges,
-  t
+  t,
 }: {
   showCapsuleChildren: boolean;
   capsuleChildTabIndex: number;
@@ -276,7 +304,10 @@ function CapsuleChildren({
   onCreateCapsule?: () => Promise<void> | void;
   onSearchCapsules?: () => void;
   onOpenCapsule?: (capsuleId: string) => void;
-  onOpenCapsuleActions?: (event: MouseEvent<HTMLElement>, capsule: CapsuleNavItem) => void;
+  onOpenCapsuleActions?: (
+    event: MouseEvent<HTMLElement>,
+    capsule: CapsuleNavItem,
+  ) => void;
   capsuleHasUnsavedChanges: (capsule: CapsuleNavItem) => boolean;
   t: Translate;
 }) {
@@ -288,14 +319,16 @@ function CapsuleChildren({
         display: "grid",
         flex: "0 1 auto",
         minHeight: 0,
-        maxHeight: showCapsuleChildren ? expandedCapsuleChildrenMaxHeight : "0px",
+        maxHeight: showCapsuleChildren
+          ? expandedCapsuleChildrenMaxHeight
+          : "0px",
         gridTemplateRows: showCapsuleChildren ? "minmax(0, 1fr)" : "0fr",
         opacity: showCapsuleChildren ? 1 : 0,
         overflow: "hidden",
         transition: motionTransition,
         "@media (prefers-reduced-motion: reduce)": {
-          transition: "none"
-        }
+          transition: "none",
+        },
       }}
     >
       <Stack
@@ -306,7 +339,7 @@ function CapsuleChildren({
           mr: 1.5,
           pl: 2.5,
           borderLeft: "2px solid",
-          borderColor: "divider"
+          borderColor: "divider",
         }}
       >
         <CapsulePrimaryActions
@@ -316,8 +349,14 @@ function CapsuleChildren({
           onSearchCapsules={onSearchCapsules}
           t={t}
         />
-        <Stack direction="row" alignItems="center" sx={{ pt: 2, pb: 1, minHeight: 40 }}>
-          <Typography sx={{ color: "text.secondary", fontSize: "0.95rem", flex: 1 }}>
+        <Stack
+          direction="row"
+          alignItems="center"
+          sx={{ pt: 2, pb: 1, minHeight: 40 }}
+        >
+          <Typography
+            sx={{ color: "text.secondary", fontSize: "0.95rem", flex: 1 }}
+          >
             {t("capsule.yourCapsules")}
           </Typography>
         </Stack>

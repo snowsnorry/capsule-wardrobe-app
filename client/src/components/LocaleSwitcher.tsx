@@ -1,5 +1,12 @@
 import { useState, type MouseEvent } from "react";
-import { Box, IconButton, Menu, MenuItem, Stack, Typography } from "@mui/material";
+import {
+  Box,
+  IconButton,
+  Menu,
+  MenuItem,
+  Stack,
+  Typography,
+} from "@mui/material";
 import { useI18n } from "../i18n/useI18n";
 
 function LocaleSwitcher() {
@@ -31,7 +38,7 @@ function LocaleSwitcher() {
           height: 48,
           p: 0,
           borderRadius: "50%",
-          flexShrink: 0
+          flexShrink: 0,
         }}
       >
         <Box component="span" sx={{ fontSize: "1.3rem", lineHeight: 1 }}>
@@ -45,7 +52,9 @@ function LocaleSwitcher() {
               <Box component="span" sx={{ fontSize: "1.1rem" }}>
                 {t(`locale.flags.${code}`)}
               </Box>
-              <Typography variant="body2">{t(`locale.options.${code}`)}</Typography>
+              <Typography variant="body2">
+                {t(`locale.options.${code}`)}
+              </Typography>
             </Stack>
           </MenuItem>
         ))}

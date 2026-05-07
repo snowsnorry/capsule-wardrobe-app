@@ -14,13 +14,21 @@ function buildEnumZodSchema(schema: JsonSchema) {
 }
 
 function buildObjectZodSchema(schema: JsonSchema) {
-  const properties = schema.properties && typeof schema.properties === "object" ? schema.properties : {};
-  const required = new Set(Array.isArray(schema.required) ? schema.required : []);
+  const properties =
+    schema.properties && typeof schema.properties === "object"
+      ? schema.properties
+      : {};
+  const required = new Set(
+    Array.isArray(schema.required) ? schema.required : [],
+  );
   const shape = Object.fromEntries(
     Object.entries(properties).map(([key, value]) => {
       const propertySchema = buildZodSchemaFromJsonSchema(value);
-      return [key, required.has(key) ? propertySchema : propertySchema.optional()];
-    })
+      return [
+        key,
+        required.has(key) ? propertySchema : propertySchema.optional(),
+      ];
+    }),
   );
   const zodSchema = z.object(shape);
   return schema.additionalProperties === false ? zodSchema.strict() : zodSchema;
@@ -49,11 +57,13 @@ function buildNumberZodSchema(schema: JsonSchema, integer = false) {
 }
 
 function describeZodSchema(zodSchema: z.ZodTypeAny, schema: JsonSchema) {
-  const description = typeof schema.description === "string" && schema.description.trim().length > 0
-    ? schema.description.trim()
-    : typeof schema.title === "string" && schema.title.trim().length > 0
-      ? schema.title.trim()
-      : null;
+  const description =
+    typeof schema.description === "string" &&
+    schema.description.trim().length > 0
+      ? schema.description.trim()
+      : typeof schema.title === "string" && schema.title.trim().length > 0
+        ? schema.title.trim()
+        : null;
 
   return description ? zodSchema.describe(description) : zodSchema;
 }
@@ -80,7 +90,9 @@ function buildNonNullableZodSchema(schema: JsonSchema, nonNullType: unknown) {
   }
 }
 
-function buildZodSchemaFromJsonSchema(schema: JsonSchema | undefined | null): z.ZodTypeAny {
+function buildZodSchemaFromJsonSchema(
+  schema: JsonSchema | undefined | null,
+): z.ZodTypeAny {
   if (!schema || typeof schema !== "object") {
     return z.any();
   }
@@ -88,22 +100,25 @@ function buildZodSchemaFromJsonSchema(schema: JsonSchema | undefined | null): z.
   const type = Array.isArray(schema.type) ? schema.type : [schema.type];
   const supportsNull = type.includes("null");
   const nonNullType = type.find((value) => value !== "null");
-  const zodSchema = describeZodSchema(buildNonNullableZodSchema(schema, nonNullType), schema);
+  const zodSchema = describeZodSchema(
+    buildNonNullableZodSchema(schema, nonNullType),
+    schema,
+  );
 
   return supportsNull ? zodSchema.nullable() : zodSchema;
 }
 
-function buildGeminiStructuredOutput(format: JsonSchemaFormat | null = null, userProfile: UserProfileLike | null = null) {
+function buildGeminiStructuredOutput(
+  format: JsonSchemaFormat | null = null,
+  userProfile: UserProfileLike | null = null,
+) {
   const resolvedFormat = format || buildJsonObjectFormat(userProfile);
   const zodSchema = buildZodSchemaFromJsonSchema(resolvedFormat?.schema);
 
   return {
     zodSchema,
-    responseJsonSchema: zodToJsonSchema(zodSchema)
+    responseJsonSchema: zodToJsonSchema(zodSchema),
   };
 }
 
-export {
-  buildGeminiStructuredOutput,
-  buildZodSchemaFromJsonSchema
-};
+export { buildGeminiStructuredOutput, buildZodSchemaFromJsonSchema };

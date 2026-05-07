@@ -1,15 +1,23 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { MutableRefObject } from "react";
-import { fetchSavedSearch, fetchSearchOptions, runSearch } from "../../api/search";
+import {
+  fetchSavedSearch,
+  fetchSearchOptions,
+  runSearch,
+} from "../../api/search";
 import { translateOption } from "../../i18n";
 import {
   EMPTY_SEARCH_OPTIONS,
   buildActiveFilterChips,
   buildSearchOptionsPayload,
   createSearchState,
-  serializeDraftState
+  serializeDraftState,
 } from "../../search/searchState";
-import type { ActiveFilterChip, SearchDraftState, SearchOptions } from "../../search/searchState";
+import type {
+  ActiveFilterChip,
+  SearchDraftState,
+  SearchOptions,
+} from "../../search/searchState";
 import type { SearchResultItem, SearchStatus } from "./searchTypes";
 
 type SearchResponse = {
@@ -45,11 +53,18 @@ const SEARCH_AUTO_APPLY_DEBOUNCE_MS = 300;
 
 function useSearchScreenState(params: UseSearchScreenStateParams) {
   const [options, setOptions] = useState<SearchOptions>(EMPTY_SEARCH_OPTIONS);
-  const [draftState, setDraftState] = useState<SearchDraftState>(createSearchState(null, EMPTY_SEARCH_OPTIONS.priceRange));
+  const [draftState, setDraftState] = useState<SearchDraftState>(
+    createSearchState(null, EMPTY_SEARCH_OPTIONS.priceRange),
+  );
   const [results, setResults] = useState<SearchResultItem[]>([]);
   const [total, setTotal] = useState(0);
-  const [selectedResultId, setSelectedResultId] = useState<string | number | null>(null);
-  const [status, setStatus] = useState<SearchStatus>({ loading: true, error: "" });
+  const [selectedResultId, setSelectedResultId] = useState<
+    string | number | null
+  >(null);
+  const [status, setStatus] = useState<SearchStatus>({
+    loading: true,
+    error: "",
+  });
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const draftStateRef = useRef(draftState);
@@ -72,18 +87,31 @@ function useSearchScreenState(params: UseSearchScreenStateParams) {
     searchRequestSeqRef,
     debouncedSearchRef,
     lastAppliedSearchKeyRef,
-    pendingSearchKeyRef
+    pendingSearchKeyRef,
   };
   runtimeRef.current = runtime;
   const actions = createSearchActions(runtime);
-  const formattedTotal = useMemo(() => new Intl.NumberFormat(params.locale).format(total), [params.locale, total]);
+  const formattedTotal = useMemo(
+    () => new Intl.NumberFormat(params.locale).format(total),
+    [params.locale, total],
+  );
   const activeChips = useMemo(
-    () => buildActiveFilterChips({ state: draftState, options, locale: params.locale, t: params.t, translateOption }),
-    [draftState, options, params.locale, params.t]
+    () =>
+      buildActiveFilterChips({
+        state: draftState,
+        options,
+        locale: params.locale,
+        t: params.t,
+        translateOption,
+      }),
+    [draftState, options, params.locale, params.t],
   );
   const selectedItem = useMemo(
-    () => results.find((item) => String(item.id) === String(selectedResultId)) || results[0] || null,
-    [results, selectedResultId]
+    () =>
+      results.find((item) => String(item.id) === String(selectedResultId)) ||
+      results[0] ||
+      null,
+    [results, selectedResultId],
   );
 
   useEffect(() => {
@@ -91,8 +119,15 @@ function useSearchScreenState(params: UseSearchScreenStateParams) {
   }, [draftState]);
   useEffect(() => () => clearPendingSearch(debouncedSearchRef), []);
   useEffect(() => {
-    return runtimeRef.current ? runBootstrapEffect(runtimeRef.current) : undefined;
-  }, [params.autoOpenProductDetail, params.initialQuery, params.isMobile, params.t]);
+    return runtimeRef.current
+      ? runBootstrapEffect(runtimeRef.current)
+      : undefined;
+  }, [
+    params.autoOpenProductDetail,
+    params.initialQuery,
+    params.isMobile,
+    params.t,
+  ]);
 
   return {
     ...actions,
@@ -109,12 +144,15 @@ function useSearchScreenState(params: UseSearchScreenStateParams) {
     setIsFiltersOpen,
     status,
     total,
-    totalPages: Math.max(1, Math.ceil(total / 50))
+    totalPages: Math.max(1, Math.ceil(total / 50)),
   };
 }
 
 function createSearchActions(runtime: SearchRuntime) {
-  const applySearchState = async (nextState: SearchDraftState, { debounce = false } = {}) => {
+  const applySearchState = async (
+    nextState: SearchDraftState,
+    { debounce = false } = {},
+  ) => {
     runtime.draftStateRef.current = nextState;
     runtime.setDraftState(nextState);
     clearPendingSearch(runtime.debouncedSearchRef);
@@ -131,42 +169,64 @@ function createSearchActions(runtime: SearchRuntime) {
   };
 
   return {
-    applyCurrentQuery: () => applySearchState({ ...runtime.draftStateRef.current, page: 1 }),
-    changePage: (_event: unknown, page: number) => applySearchState({ ...runtime.draftStateRef.current, page }),
+    applyCurrentQuery: () =>
+      applySearchState({ ...runtime.draftStateRef.current, page: 1 }),
+    changePage: (_event: unknown, page: number) =>
+      applySearchState({ ...runtime.draftStateRef.current, page }),
     changeQuery: (query: string) => {
       const nextState = { ...runtime.draftStateRef.current, query };
       runtime.draftStateRef.current = nextState;
       runtime.setDraftState(nextState);
     },
-    changeSidebarDraft: async (updater: SearchDraftState | ((current: SearchDraftState) => SearchDraftState), { submit = false } = {}) => {
-      const nextState = typeof updater === "function" ? updater(runtime.draftStateRef.current) : updater;
+    changeSidebarDraft: async (
+      updater:
+        | SearchDraftState
+        | ((current: SearchDraftState) => SearchDraftState),
+      { submit = false } = {},
+    ) => {
+      const nextState =
+        typeof updater === "function"
+          ? updater(runtime.draftStateRef.current)
+          : updater;
       runtime.draftStateRef.current = nextState;
       runtime.setDraftState(nextState);
       if (submit) {
         await applySearchState(nextState, { debounce: true });
       }
     },
-    clearQuery: () => applySearchState({ ...runtime.draftStateRef.current, query: "", page: 1 }),
-    deleteActiveChip: (chip: ActiveFilterChip) => applySearchState(getStateWithoutChip(runtime, chip), { debounce: true }),
-    resetSearch: () => applySearchState(createSearchState(null, runtime.options.priceRange), { debounce: true }),
+    clearQuery: () =>
+      applySearchState({
+        ...runtime.draftStateRef.current,
+        query: "",
+        page: 1,
+      }),
+    deleteActiveChip: (chip: ActiveFilterChip) =>
+      applySearchState(getStateWithoutChip(runtime, chip), { debounce: true }),
+    resetSearch: () =>
+      applySearchState(createSearchState(null, runtime.options.priceRange), {
+        debounce: true,
+      }),
     selectResult: (item: SearchResultItem) => {
       runtime.setSelectedResultId(item.id);
       if (runtime.isMobile) {
         runtime.setIsDetailOpen(true);
       }
-    }
+    },
   };
 }
 
-function getStateWithoutChip(runtime: SearchRuntime, chip: ActiveFilterChip): SearchDraftState {
+function getStateWithoutChip(
+  runtime: SearchRuntime,
+  chip: ActiveFilterChip,
+): SearchDraftState {
   return chip.field === "price"
     ? {
-      ...runtime.draftStateRef.current,
-      priceEnabled: false,
-      priceMinDraft: runtime.options.priceRange.min ?? 0,
-      priceMaxDraft: runtime.options.priceRange.max ?? 0,
-      page: 1
-    }
+        ...runtime.draftStateRef.current,
+        priceEnabled: false,
+        priceMinDraft: runtime.options.priceRange.min ?? 0,
+        priceMaxDraft: runtime.options.priceRange.max ?? 0,
+        page: 1,
+      }
     : { ...runtime.draftStateRef.current, [chip.field]: [], page: 1 };
 }
 
@@ -178,10 +238,18 @@ function runBootstrapEffect(runtime: SearchRuntime): () => void {
   };
 }
 
-async function runTrackedSearch(runtime: SearchRuntime, nextState: SearchDraftState, force: boolean): Promise<void> {
+async function runTrackedSearch(
+  runtime: SearchRuntime,
+  nextState: SearchDraftState,
+  force: boolean,
+): Promise<void> {
   const payload = serializeDraftState(nextState);
   const payloadKey = JSON.stringify(payload);
-  if (!force && (payloadKey === runtime.lastAppliedSearchKeyRef.current || payloadKey === runtime.pendingSearchKeyRef.current)) {
+  if (
+    !force &&
+    (payloadKey === runtime.lastAppliedSearchKeyRef.current ||
+      payloadKey === runtime.pendingSearchKeyRef.current)
+  ) {
     return;
   }
 
@@ -189,7 +257,7 @@ async function runTrackedSearch(runtime: SearchRuntime, nextState: SearchDraftSt
   runtime.pendingSearchKeyRef.current = payloadKey;
   runtime.setStatus({ loading: true, error: "" });
   try {
-    const result = await runSearch(payload) as SearchResponse;
+    const result = (await runSearch(payload)) as SearchResponse;
     if (requestSeq === runtime.searchRequestSeqRef.current) {
       runtime.lastAppliedSearchKeyRef.current = payloadKey;
       runtime.pendingSearchKeyRef.current = "";
@@ -200,19 +268,26 @@ async function runTrackedSearch(runtime: SearchRuntime, nextState: SearchDraftSt
   }
 }
 
-async function bootstrapSearch(runtime: SearchRuntime, isActive: () => boolean): Promise<void> {
+async function bootstrapSearch(
+  runtime: SearchRuntime,
+  isActive: () => boolean,
+): Promise<void> {
   runtime.setStatus({ loading: true, error: "" });
   runtime.setIsDetailOpen(false);
   try {
     const [optionsResponse, savedResponse] = await Promise.all([
       fetchSearchOptions({ force: true }),
-      fetchSavedSearch({ force: true })
+      fetchSavedSearch({ force: true }),
     ]);
     if (!isActive()) {
       return;
     }
     const nextOptions = buildSearchOptionsPayload(optionsResponse);
-    const nextState = buildInitialSearchState(runtime.initialQuery, nextOptions, savedResponse.search);
+    const nextState = buildInitialSearchState(
+      runtime.initialQuery,
+      nextOptions,
+      savedResponse.search,
+    );
     runtime.setOptions(nextOptions);
     runtime.setDraftState(nextState);
     runtime.draftStateRef.current = nextState;
@@ -224,29 +299,50 @@ async function bootstrapSearch(runtime: SearchRuntime, isActive: () => boolean):
   }
 }
 
-function buildInitialSearchState(initialQuery: string, nextOptions: SearchOptions, savedSearch: unknown): SearchDraftState {
+function buildInitialSearchState(
+  initialQuery: string,
+  nextOptions: SearchOptions,
+  savedSearch: unknown,
+): SearchDraftState {
   const normalizedInitialQuery = String(initialQuery || "").trim();
   return normalizedInitialQuery
-    ? createSearchState({ query: normalizedInitialQuery, page: 1 }, nextOptions.priceRange)
-    : createSearchState(savedSearch as Partial<SearchDraftState>, nextOptions.priceRange);
+    ? createSearchState(
+        { query: normalizedInitialQuery, page: 1 },
+        nextOptions.priceRange,
+      )
+    : createSearchState(
+        savedSearch as Partial<SearchDraftState>,
+        nextOptions.priceRange,
+      );
 }
 
-async function runBootstrapSearch(runtime: SearchRuntime, nextState: SearchDraftState, isActive: () => boolean): Promise<void> {
+async function runBootstrapSearch(
+  runtime: SearchRuntime,
+  nextState: SearchDraftState,
+  isActive: () => boolean,
+): Promise<void> {
   const serialized = serializeDraftState(nextState);
   const requestSeq = bumpSearchRequestSeq(runtime);
-  const result = await runSearch(serialized) as SearchResponse;
+  const result = (await runSearch(serialized)) as SearchResponse;
   if (!isActive() || requestSeq !== runtime.searchRequestSeqRef.current) {
     return;
   }
 
   runtime.lastAppliedSearchKeyRef.current = JSON.stringify(serialized);
   applySearchResult(runtime, result);
-  if (runtime.isMobile && runtime.autoOpenProductDetail && (result.items || []).length === 1) {
+  if (
+    runtime.isMobile &&
+    runtime.autoOpenProductDetail &&
+    (result.items || []).length === 1
+  ) {
     runtime.setIsDetailOpen(true);
   }
 }
 
-function applySearchResult(runtime: SearchRuntime, result: SearchResponse): void {
+function applySearchResult(
+  runtime: SearchRuntime,
+  result: SearchResponse,
+): void {
   const nextResults = result.items || [];
   runtime.setResults(nextResults);
   runtime.setTotal(result.total || 0);
@@ -267,7 +363,9 @@ function bumpSearchRequestSeq(runtime: SearchRuntime): number {
   return requestSeq;
 }
 
-function clearPendingSearch(debouncedSearchRef: MutableRefObject<ReturnType<typeof setTimeout> | null>): void {
+function clearPendingSearch(
+  debouncedSearchRef: MutableRefObject<ReturnType<typeof setTimeout> | null>,
+): void {
   if (debouncedSearchRef.current) {
     clearTimeout(debouncedSearchRef.current);
     debouncedSearchRef.current = null;
@@ -275,4 +373,6 @@ function clearPendingSearch(debouncedSearchRef: MutableRefObject<ReturnType<type
 }
 
 export default useSearchScreenState;
-export type SearchScreenStateController = ReturnType<typeof useSearchScreenState>;
+export type SearchScreenStateController = ReturnType<
+  typeof useSearchScreenState
+>;

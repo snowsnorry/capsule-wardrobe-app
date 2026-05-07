@@ -4,15 +4,17 @@ import type {
   CapsuleFilters,
   CapsuleRecord,
   CapsuleSnapshot,
-  WardrobePayload
+  WardrobePayload,
 } from "./capsuleStoreModel.js";
 import {
   normalizeCapsulePattern,
   normalizeCapsuleSnapshot,
-  getEffectiveCapsuleSnapshot
+  getEffectiveCapsuleSnapshot,
 } from "./capsuleStoreModel.js";
 
-export function buildSnapshotFromProfile(_profile: CapsuleContextProfile | null = null): CapsuleSnapshot | null {
+export function buildSnapshotFromProfile(
+  _profile: CapsuleContextProfile | null = null,
+): CapsuleSnapshot | null {
   return normalizeCapsuleSnapshot({
     filters: {
       formalityLevel: "",
@@ -22,20 +24,20 @@ export function buildSnapshotFromProfile(_profile: CapsuleContextProfile | null 
       audience: "",
       color: null,
       pattern: "solid",
-      text: ""
+      text: "",
     },
     data: {
       wardrobe: null,
       rejectedUrls: [],
-      regeneration: null
-    }
+      regeneration: null,
+    },
   });
 }
 
 export function buildProfileCapsuleContext(
   profile: CapsuleContextProfile | null = null,
   capsule: CapsuleRecord | null = null,
-  options: BuildProfileCapsuleContextOptions = {}
+  options: BuildProfileCapsuleContextOptions = {},
 ): Record<string, unknown> {
   const snapshot = getEffectiveCapsuleSnapshot(capsule);
   const filters = getProfileContextFilters(snapshot, profile);
@@ -45,7 +47,7 @@ export function buildProfileCapsuleContext(
     pattern: normalizeCapsulePattern(filters?.pattern),
     locale: getProfileContextLocale(profile),
     items: getProfileContextWardrobe(snapshot, options),
-    rejected: getProfileContextRejectedUrls(snapshot)
+    rejected: getProfileContextRejectedUrls(snapshot),
   };
 }
 
@@ -56,32 +58,42 @@ const emptyProfileFilterContext = {
   season: [],
   audience: "",
   color: null,
-  text: ""
+  text: "",
 } as const;
 
 function getProfileContextFilters(
   snapshot: CapsuleSnapshot | null,
-  profile: CapsuleContextProfile | null
+  profile: CapsuleContextProfile | null,
 ): CapsuleFilters | null {
-  return snapshot?.filters ?? buildSnapshotFromProfile(profile)?.filters ?? null;
+  return (
+    snapshot?.filters ?? buildSnapshotFromProfile(profile)?.filters ?? null
+  );
 }
 
-function getProfileContextLocale(profile: CapsuleContextProfile | null): string {
-  return typeof profile?.locale === "string" && profile.locale ? profile.locale : "en";
+function getProfileContextLocale(
+  profile: CapsuleContextProfile | null,
+): string {
+  return typeof profile?.locale === "string" && profile.locale
+    ? profile.locale
+    : "en";
 }
 
 function getProfileContextWardrobe(
   snapshot: CapsuleSnapshot | null,
-  options: BuildProfileCapsuleContextOptions
+  options: BuildProfileCapsuleContextOptions,
 ): WardrobePayload | null {
-  return options.forceEmptyWardrobe ? null : snapshot?.data?.wardrobe ?? null;
+  return options.forceEmptyWardrobe ? null : (snapshot?.data?.wardrobe ?? null);
 }
 
-function getProfileContextRejectedUrls(snapshot: CapsuleSnapshot | null): string[] {
+function getProfileContextRejectedUrls(
+  snapshot: CapsuleSnapshot | null,
+): string[] {
   return snapshot?.data?.rejectedUrls ?? [];
 }
 
-function buildProfileFilterContext(filters: CapsuleFilters | null): Record<string, unknown> {
+function buildProfileFilterContext(
+  filters: CapsuleFilters | null,
+): Record<string, unknown> {
   if (!filters) {
     return { ...emptyProfileFilterContext };
   }
@@ -93,6 +105,6 @@ function buildProfileFilterContext(filters: CapsuleFilters | null): Record<strin
     season: filters.season,
     audience: filters.audience,
     color: filters.color,
-    text: filters.text
+    text: filters.text,
   };
 }

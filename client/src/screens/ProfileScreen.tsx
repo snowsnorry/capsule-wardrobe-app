@@ -10,7 +10,7 @@ import {
   DialogTitle,
   Divider,
   Stack,
-  Typography
+  Typography,
 } from "@mui/material";
 import LocaleSwitcher from "../components/LocaleSwitcher";
 import AccentColorChips from "../components/AccentColorChips";
@@ -71,7 +71,7 @@ function sortPatternOptions(patternOptions: string[], locale: string) {
 
     return translateOption("patterns", left, locale).localeCompare(
       translateOption("patterns", right, locale),
-      locale
+      locale,
     );
   });
 }
@@ -83,7 +83,7 @@ function ProfileChipSection({
   selectedValues,
   onSelect,
   optionGroup,
-  locale
+  locale,
 }: {
   title: string;
   hint: string;
@@ -96,7 +96,9 @@ function ProfileChipSection({
   return (
     <Stack spacing={2}>
       <Typography variant="h6">{title}</Typography>
-      <Typography variant="body2" color="text.secondary">{hint}</Typography>
+      <Typography variant="body2" color="text.secondary">
+        {hint}
+      </Typography>
       <Stack direction="row" flexWrap="wrap" gap={1}>
         {options.map((item) => (
           <Chip
@@ -121,7 +123,7 @@ function ProfileActions({
   onBack,
   onSave,
   onOpenDelete,
-  t
+  t,
 }: {
   status: ScreenStatus;
   selectedStyleCore: string;
@@ -133,19 +135,27 @@ function ProfileActions({
   onOpenDelete: () => void;
   t: (key: string) => string;
 }) {
-  const isSaveDisabled = status.loading
-    || !selectedStyleCore
-    || selectedOccasions.length === 0
-    || selectedSeasons.length === 0
-    || !selectedAudience;
+  const isSaveDisabled =
+    status.loading ||
+    !selectedStyleCore ||
+    selectedOccasions.length === 0 ||
+    selectedSeasons.length === 0 ||
+    !selectedAudience;
 
   return (
     <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-      <Button variant="outlined" onClick={onBack}>{t("profile.back")}</Button>
+      <Button variant="outlined" onClick={onBack}>
+        {t("profile.back")}
+      </Button>
       <Button variant="contained" onClick={onSave} disabled={isSaveDisabled}>
         {t("profile.save")}
       </Button>
-      <Button variant="text" color="error" onClick={onOpenDelete} disabled={status.loading}>
+      <Button
+        variant="text"
+        color="error"
+        onClick={onOpenDelete}
+        disabled={status.loading}
+      >
         {t("profile.delete")}
       </Button>
     </Stack>
@@ -157,7 +167,7 @@ function DeleteProfileDialog({
   loading,
   onClose,
   onConfirm,
-  t
+  t,
 }: {
   open: boolean;
   loading: boolean;
@@ -172,8 +182,15 @@ function DeleteProfileDialog({
         <DialogContentText>{t("profile.deleteConfirmBody")}</DialogContentText>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} disabled={loading}>{t("profile.deleteConfirmCancel")}</Button>
-        <Button onClick={onConfirm} color="error" variant="contained" disabled={loading}>
+        <Button onClick={onClose} disabled={loading}>
+          {t("profile.deleteConfirmCancel")}
+        </Button>
+        <Button
+          onClick={onConfirm}
+          color="error"
+          variant="contained"
+          disabled={loading}
+        >
           {t("profile.deleteConfirmConfirm")}
         </Button>
       </DialogActions>
@@ -187,7 +204,7 @@ function ProfilePreferenceSections({
   sortedPatternOptions,
   onOpenDelete,
   t,
-  locale
+  locale,
 }: {
   props: ProfileScreenProps;
   normalizedSelectedPattern: string;
@@ -207,15 +224,53 @@ function ProfilePreferenceSections({
         titleVariant="h6"
         bodyVariant="body2"
       />
-      <ProfileChipSection title={t("profile.occasionsTitle")} hint={t("profile.occasionsHint")} options={props.occasionOptions} selectedValues={props.selectedOccasions} onSelect={props.onToggleOccasion} optionGroup="occasions" locale={locale} />
-      <ProfileChipSection title={t("profile.seasonsTitle")} hint={t("profile.seasonsHint")} options={props.seasonOptions} selectedValues={props.selectedSeasons} onSelect={props.onToggleSeason} optionGroup="seasons" locale={locale} />
-      <ProfileChipSection title={t("profile.audienceTitle")} hint={t("profile.audienceHint")} options={props.audienceOptions} selectedValues={[props.selectedAudience]} onSelect={props.onSelectAudience} optionGroup="audience" locale={locale} />
+      <ProfileChipSection
+        title={t("profile.occasionsTitle")}
+        hint={t("profile.occasionsHint")}
+        options={props.occasionOptions}
+        selectedValues={props.selectedOccasions}
+        onSelect={props.onToggleOccasion}
+        optionGroup="occasions"
+        locale={locale}
+      />
+      <ProfileChipSection
+        title={t("profile.seasonsTitle")}
+        hint={t("profile.seasonsHint")}
+        options={props.seasonOptions}
+        selectedValues={props.selectedSeasons}
+        onSelect={props.onToggleSeason}
+        optionGroup="seasons"
+        locale={locale}
+      />
+      <ProfileChipSection
+        title={t("profile.audienceTitle")}
+        hint={t("profile.audienceHint")}
+        options={props.audienceOptions}
+        selectedValues={[props.selectedAudience]}
+        onSelect={props.onSelectAudience}
+        optionGroup="audience"
+        locale={locale}
+      />
       <Stack spacing={2}>
         <Typography variant="h6">{t("profile.accentColorTitle")}</Typography>
-        <Typography variant="body2" color="text.secondary">{t("profile.accentColorHint")}</Typography>
-        <AccentColorChips options={props.accentColorOptions} selectedValue={props.selectedAccentColor} onSelect={props.onSelectAccentColor} />
+        <Typography variant="body2" color="text.secondary">
+          {t("profile.accentColorHint")}
+        </Typography>
+        <AccentColorChips
+          options={props.accentColorOptions}
+          selectedValue={props.selectedAccentColor}
+          onSelect={props.onSelectAccentColor}
+        />
       </Stack>
-      <ProfileChipSection title={t("profile.patternTitle")} hint={t("profile.patternHint")} options={sortedPatternOptions} selectedValues={[normalizedSelectedPattern]} onSelect={props.onSelectPattern} optionGroup="patterns" locale={locale} />
+      <ProfileChipSection
+        title={t("profile.patternTitle")}
+        hint={t("profile.patternHint")}
+        options={sortedPatternOptions}
+        selectedValues={[normalizedSelectedPattern]}
+        onSelect={props.onSelectPattern}
+        optionGroup="patterns"
+        locale={locale}
+      />
       <ProfileActions
         status={props.status}
         selectedStyleCore={props.selectedStyleCore}
@@ -232,12 +287,7 @@ function ProfilePreferenceSections({
 }
 
 function ProfileScreen(props: ProfileScreenProps) {
-  const {
-    patternOptions,
-    selectedPattern,
-    status,
-    onDelete
-  } = props;
+  const { patternOptions, selectedPattern, status, onDelete } = props;
   const { t, locale } = useI18n();
   const normalizedSelectedPattern = selectedPattern ?? "solid";
   const sortedPatternOptions = sortPatternOptions(patternOptions, locale);
@@ -264,10 +314,14 @@ function ProfileScreen(props: ProfileScreenProps) {
           top: 0,
           zIndex: 1,
           backgroundColor: "background.paper",
-          pb: 1
+          pb: 1,
         }}
       >
-        <Stack direction="row" alignItems="center" justifyContent="space-between">
+        <Stack
+          direction="row"
+          alignItems="center"
+          justifyContent="space-between"
+        >
           <Typography variant="h4">{t("profile.title")}</Typography>
           <LocaleSwitcher />
         </Stack>

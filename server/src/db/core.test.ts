@@ -1,5 +1,9 @@
 import { test, expect } from "vitest";
-import { hasAffectedRows, hashCapsuleContent, stableStringify } from "./core.js";
+import {
+  hasAffectedRows,
+  hashCapsuleContent,
+  stableStringify,
+} from "./core.js";
 
 type HasAffectedRowsInput =
   | { email: string }[]
@@ -9,13 +13,21 @@ type HasAffectedRowsInput =
   | Record<string, never>;
 
 test("hasAffectedRows handles Neon-style returned rows", () => {
-  expect(hasAffectedRows([{ email: "user@example.com" }] satisfies HasAffectedRowsInput)).toBe(true);
+  expect(
+    hasAffectedRows([
+      { email: "user@example.com" },
+    ] satisfies HasAffectedRowsInput),
+  ).toBe(true);
   expect(hasAffectedRows([] satisfies HasAffectedRowsInput)).toBe(false);
 });
 
 test("hasAffectedRows handles drivers that return count", () => {
-  expect(hasAffectedRows({ count: 1 } satisfies HasAffectedRowsInput)).toBe(true);
-  expect(hasAffectedRows({ count: 0 } satisfies HasAffectedRowsInput)).toBe(false);
+  expect(hasAffectedRows({ count: 1 } satisfies HasAffectedRowsInput)).toBe(
+    true,
+  );
+  expect(hasAffectedRows({ count: 0 } satisfies HasAffectedRowsInput)).toBe(
+    false,
+  );
 });
 
 test("hasAffectedRows returns false for unsupported payloads", () => {

@@ -6,7 +6,10 @@ class ResizeObserverMock {
   constructor(private readonly callback: ResizeObserverCallback) {}
 
   observe(target: Element) {
-    this.callback([{ target } as ResizeObserverEntry], this as unknown as ResizeObserver);
+    this.callback(
+      [{ target } as ResizeObserverEntry],
+      this as unknown as ResizeObserver,
+    );
   }
 
   disconnect() {}
@@ -25,7 +28,9 @@ describe("ChartContainer", () => {
       callback(0);
       return 1;
     });
-    vi.spyOn(window, "cancelAnimationFrame").mockImplementation(() => undefined);
+    vi.spyOn(window, "cancelAnimationFrame").mockImplementation(
+      () => undefined,
+    );
     vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
       width: 320,
       height: 180,
@@ -35,13 +40,15 @@ describe("ChartContainer", () => {
       left: 0,
       right: 320,
       bottom: 180,
-      toJSON: () => ({})
+      toJSON: () => ({}),
     });
 
     render(
-      <ChartContainer renderChart={({ width, height }) => <span>{`${width}x${height}`}</span>}>
+      <ChartContainer
+        renderChart={({ width, height }) => <span>{`${width}x${height}`}</span>}
+      >
         <span>legend</span>
-      </ChartContainer>
+      </ChartContainer>,
     );
 
     expect(await screen.findByText("320x180")).toBeInTheDocument();
@@ -51,7 +58,11 @@ describe("ChartContainer", () => {
   test("falls back to zero dimensions when ResizeObserver is unavailable", async () => {
     vi.stubGlobal("ResizeObserver", undefined);
 
-    render(<ChartContainer renderChart={({ width, height }) => <span>{`${width}x${height}`}</span>} />);
+    render(
+      <ChartContainer
+        renderChart={({ width, height }) => <span>{`${width}x${height}`}</span>}
+      />,
+    );
 
     await waitFor(() => {
       expect(screen.getByText("0x0")).toBeInTheDocument();

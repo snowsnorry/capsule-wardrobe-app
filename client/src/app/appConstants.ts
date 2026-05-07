@@ -1,23 +1,28 @@
 import { ACCENT_COLOR_OPTIONS } from "../../../shared/accentColors.js";
-import type { NotificationPromptState, PasskeyPromptState, StatusState } from "./appTypes";
+import type {
+  NotificationPromptState,
+  PasskeyPromptState,
+  StatusState,
+} from "./appTypes";
 
 export const initialStatus: StatusState = {
   loading: false,
   error: "",
   infoKey: "",
-  infoParams: null
+  infoParams: null,
 };
 
 export const initialNotificationPrompt: NotificationPromptState = {
-  open: false
+  open: false,
 };
 
 export const initialPasskeyPrompt: PasskeyPromptState = {
   open: false,
-  loading: false
+  loading: false,
 };
 
-export const PASSKEY_PROMPT_DISMISSED_STORAGE_KEY = "capsule.passkeyPromptDismissed";
+export const PASSKEY_PROMPT_DISMISSED_STORAGE_KEY =
+  "capsule.passkeyPromptDismissed";
 
 export const FALLBACK_STYLE_OPTIONS = {
   core: ["casual", "smart_casual", "formal"],
@@ -33,15 +38,15 @@ export const FALLBACK_STYLE_OPTIONS = {
     "equestrian",
     "military",
     "grunge",
-    "sporty"
-  ]
+    "sporty",
+  ],
 };
 
 export const FALLBACK_OCCASION_OPTIONS = [
   "office",
   "brunch_in_the_city",
   "date_night",
-  "everyday_errands"
+  "everyday_errands",
 ];
 
 export const FALLBACK_SEASON_OPTIONS = ["spring", "summer", "autumn", "winter"];

@@ -8,7 +8,7 @@ import { formatCount } from "./statisticsScreen/StatisticsCharts";
 import {
   StatisticsDesktopLayout,
   StatisticsFiltersDialog,
-  StatisticsMobileLayout
+  StatisticsMobileLayout,
 } from "./statisticsScreen/StatisticsLayout";
 import { useStatisticsChartCards } from "./statisticsScreen/useStatisticsChartCards";
 import { useStatisticsStats } from "./statisticsScreen/useStatisticsStats";
@@ -18,7 +18,7 @@ type StatisticsScreenProps = {
 };
 
 function StatisticsScreen({
-  onNavigateApp: _onNavigateApp
+  onNavigateApp: _onNavigateApp,
 }: StatisticsScreenProps): ReactElement {
   const { t, locale } = useI18n();
   const isMobile = useMediaQuery("(max-width: 1279.95px)");
@@ -30,7 +30,7 @@ function StatisticsScreen({
     options: statistics.options,
     statsState: statistics.statsState,
     t,
-    onToggleFacetValue: statistics.toggleFacetValue
+    onToggleFacetValue: statistics.toggleFacetValue,
   });
 
   const summary = (
@@ -48,7 +48,10 @@ function StatisticsScreen({
 
   return (
     <>
-      <Stack spacing={2.4} sx={{ height: "100%", minHeight: 0, overflow: "hidden" }}>
+      <Stack
+        spacing={2.4}
+        sx={{ height: "100%", minHeight: 0, overflow: "hidden" }}
+      >
         {isMobile ? (
           <StatisticsMobileLayout
             openFiltersLabel={t("filters.open")}

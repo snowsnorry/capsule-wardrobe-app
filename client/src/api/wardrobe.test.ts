@@ -1,18 +1,18 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 const fetchEventSourceApi = vi.hoisted(() => ({
-  fetchEventSource: vi.fn()
+  fetchEventSource: vi.fn(),
 }));
 
 const requestApi = vi.hoisted(() => ({
   request: vi.fn(),
-  requestJson: vi.fn()
+  requestJson: vi.fn(),
 }));
 
 vi.mock("@microsoft/fetch-event-source", () => fetchEventSourceApi);
 vi.mock("./request", () => requestApi);
 vi.mock("./config", () => ({
-  API_BASE_URL: "https://api.example.test"
+  API_BASE_URL: "https://api.example.test",
 }));
 
 import { downloadCapsulePdf } from "./capsules";
@@ -21,7 +21,7 @@ import {
   generateOutfitSetImage,
   regenerateCapsuleWardrobe,
   regenerateSelectedWardrobeItems,
-  subscribeCapsuleEvents
+  subscribeCapsuleEvents,
 } from "./wardrobe";
 
 type HeaderMap = Record<string, string>;
@@ -35,7 +35,7 @@ function createResponse({
   jsonData = undefined,
   jsonError = null,
   blobData = null,
-  headers = {}
+  headers = {},
 }: {
   blobData?: Blob | null;
   headers?: HeaderMap;
@@ -50,7 +50,7 @@ function createResponse({
     headers: {
       get(name) {
         return headers[String(name).toLowerCase()] ?? null;
-      }
+      },
     },
     async json() {
       if (jsonError) {
@@ -60,7 +60,7 @@ function createResponse({
     },
     async blob() {
       return blobData ?? new Blob(["pdf"]);
-    }
+    },
   };
 }
 
@@ -75,7 +75,7 @@ describe("wardrobe api", () => {
     window.history.replaceState({}, "", "/");
     vi.stubGlobal("URL", {
       createObjectURL: vi.fn(() => "blob:wardrobe-pdf"),
-      revokeObjectURL: vi.fn()
+      revokeObjectURL: vi.fn(),
     });
   });
 
@@ -85,12 +85,14 @@ describe("wardrobe api", () => {
 
   test("subscribeCapsuleEvents delegates to fetch-event-source and parses snapshot payloads", async () => {
     const onMessage = vi.fn();
-    fetchEventSourceApi.fetchEventSource.mockImplementation(async (_url, options) => {
-      options.onmessage({
-        event: "snapshot",
-        data: JSON.stringify({ status: "ready", items: [{ id: "look-1" }] })
-      });
-    });
+    fetchEventSourceApi.fetchEventSource.mockImplementation(
+      async (_url, options) => {
+        options.onmessage({
+          event: "snapshot",
+          data: JSON.stringify({ status: "ready", items: [{ id: "look-1" }] }),
+        });
+      },
+    );
 
     await subscribeCapsuleEvents({ capsuleId: "capsule-1", onMessage });
 
@@ -99,33 +101,39 @@ describe("wardrobe api", () => {
       "https://api.example.test/capsules/capsule-1/events",
       expect.objectContaining({
         credentials: "include",
-        openWhenHidden: true
-      })
+        openWhenHidden: true,
+      }),
     );
     expect(onMessage).toHaveBeenCalledWith({
       event: "snapshot",
-      data: { status: "ready", items: [{ id: "look-1" }] }
+      data: { status: "ready", items: [{ id: "look-1" }] },
     });
   });
 
   test("subscribeCapsuleEvents validates stream opening responses", async () => {
-    fetchEventSourceApi.fetchEventSource.mockImplementation(async (_url, options) => {
-      await options.onopen({
-        ok: true,
-        status: 200,
-        headers: { get: () => "text/event-stream; charset=utf-8" }
-      });
-      await expect(options.onopen({
-        ok: false,
-        status: 404,
-        headers: { get: () => "application/json" }
-      })).rejects.toThrow("request_failed_404");
-      await expect(options.onopen({
-        ok: false,
-        status: 503,
-        headers: { get: () => "application/json" }
-      })).rejects.toThrow("request_failed_503");
-    });
+    fetchEventSourceApi.fetchEventSource.mockImplementation(
+      async (_url, options) => {
+        await options.onopen({
+          ok: true,
+          status: 200,
+          headers: { get: () => "text/event-stream; charset=utf-8" },
+        });
+        await expect(
+          options.onopen({
+            ok: false,
+            status: 404,
+            headers: { get: () => "application/json" },
+          }),
+        ).rejects.toThrow("request_failed_404");
+        await expect(
+          options.onopen({
+            ok: false,
+            status: 503,
+            headers: { get: () => "application/json" },
+          }),
+        ).rejects.toThrow("request_failed_503");
+      },
+    );
 
     await subscribeCapsuleEvents({ capsuleId: "capsule-1" });
 
@@ -135,32 +143,42 @@ describe("wardrobe api", () => {
   test("subscribeCapsuleEvents reports fatal event payload errors but ignores aborts", async () => {
     const onError = vi.fn();
     const abortController = new AbortController();
-    fetchEventSourceApi.fetchEventSource.mockImplementation(async (_url, options) => {
-      expect(() => options.onmessage({ data: "{not-json" })).toThrow("invalid_event_payload");
-      expect(options.onerror(new Error("invalid_event_payload"))).toBe(1000);
+    fetchEventSourceApi.fetchEventSource.mockImplementation(
+      async (_url, options) => {
+        expect(() => options.onmessage({ data: "{not-json" })).toThrow(
+          "invalid_event_payload",
+        );
+        expect(options.onerror(new Error("invalid_event_payload"))).toBe(1000);
 
-      abortController.abort();
-      expect(options.onerror(new Error("aborted"))).toBeUndefined();
+        abortController.abort();
+        expect(options.onerror(new Error("aborted"))).toBeUndefined();
+      },
+    );
+
+    await subscribeCapsuleEvents({
+      capsuleId: "capsule-1",
+      onError,
+      signal: abortController.signal,
     });
-
-    await subscribeCapsuleEvents({ capsuleId: "capsule-1", onError, signal: abortController.signal });
 
     expect(onError).not.toHaveBeenCalled();
   });
 
   test("subscribeCapsuleEvents uses default event name and empty payload fallbacks", async () => {
     const onMessage = vi.fn();
-    fetchEventSourceApi.fetchEventSource.mockImplementation(async (_url, options) => {
-      options.onmessage({});
-      expect(() => options.onclose()).toThrow("event_stream_closed");
-      expect(options.onerror(new Error("retry"))).toBe(1000);
-    });
+    fetchEventSourceApi.fetchEventSource.mockImplementation(
+      async (_url, options) => {
+        options.onmessage({});
+        expect(() => options.onclose()).toThrow("event_stream_closed");
+        expect(options.onerror(new Error("retry"))).toBe(1000);
+      },
+    );
 
     await subscribeCapsuleEvents({ onMessage });
 
     expect(fetchEventSourceApi.fetchEventSource).toHaveBeenCalledWith(
       "https://api.example.test/capsules//events",
-      expect.any(Object)
+      expect.any(Object),
     );
     expect(onMessage).toHaveBeenCalledWith({ event: "message", data: {} });
   });
@@ -168,10 +186,13 @@ describe("wardrobe api", () => {
   test("regenerateCapsuleWardrobe posts to the capsule-centric route", async () => {
     await regenerateCapsuleWardrobe({ capsuleId: "capsule-1" });
 
-    expect(requestApi.requestJson).toHaveBeenCalledWith("https://api.example.test/capsules/capsule-1/regenerate", {
-      method: "POST",
-      credentials: "include"
-    });
+    expect(requestApi.requestJson).toHaveBeenCalledWith(
+      "https://api.example.test/capsules/capsule-1/regenerate",
+      {
+        method: "POST",
+        credentials: "include",
+      },
+    );
   });
 
   test("downloadCapsulePdf downloads blob and revokes object url", async () => {
@@ -188,14 +209,16 @@ describe("wardrobe api", () => {
       return element;
     });
 
-    requestApi.request.mockResolvedValueOnce(createResponse({
-      status: 200,
-      ok: true,
-      blobData: new Blob(["pdf-binary"], { type: "application/pdf" }),
-      headers: {
-        "content-disposition": `attachment; filename="Spring-edit.pdf"; filename*=UTF-8''${encodeURIComponent("Spring edit.pdf")}`
-      }
-    }) as Response);
+    requestApi.request.mockResolvedValueOnce(
+      createResponse({
+        status: 200,
+        ok: true,
+        blobData: new Blob(["pdf-binary"], { type: "application/pdf" }),
+        headers: {
+          "content-disposition": `attachment; filename="Spring-edit.pdf"; filename*=UTF-8''${encodeURIComponent("Spring edit.pdf")}`,
+        },
+      }) as Response,
+    );
 
     await downloadCapsulePdf("capsule-1");
 
@@ -204,8 +227,8 @@ describe("wardrobe api", () => {
       "https://api.example.test/capsules/capsule-1/pdf",
       {
         method: "POST",
-        credentials: "include"
-      }
+        credentials: "include",
+      },
     );
     expect(URL.createObjectURL).toHaveBeenCalledTimes(1);
     expect(anchorMethods.click).toHaveBeenCalledTimes(1);
@@ -215,27 +238,35 @@ describe("wardrobe api", () => {
   });
 
   test("downloadCapsulePdf surfaces endpoint errors after parse fallback", async () => {
-    requestApi.request.mockResolvedValue(createResponse({
-      ok: false,
-      status: 503,
-      jsonError: new Error("invalid_json")
-    }) as Response);
+    requestApi.request.mockResolvedValue(
+      createResponse({
+        ok: false,
+        status: 503,
+        jsonError: new Error("invalid_json"),
+      }) as Response,
+    );
 
     await expect(downloadCapsulePdf("capsule-1")).rejects.toMatchObject({
       message: "request_failed_503",
-      status: 503
+      status: 503,
     });
   });
 
   test("regenerateSelectedWardrobeItems posts once and returns payload", async () => {
     requestApi.requestJson.mockResolvedValueOnce({
       items: [{ id: "item-2" }],
-      rawSelectionText: "updated"
+      rawSelectionText: "updated",
     });
 
     await expect(
-      regenerateSelectedWardrobeItems({ itemUrls: ["https://example.com/item-1"], capsuleId: "capsule-1" })
-    ).resolves.toEqual({ items: [{ id: "item-2" }], rawSelectionText: "updated" });
+      regenerateSelectedWardrobeItems({
+        itemUrls: ["https://example.com/item-1"],
+        capsuleId: "capsule-1",
+      }),
+    ).resolves.toEqual({
+      items: [{ id: "item-2" }],
+      rawSelectionText: "updated",
+    });
 
     expect(requestApi.requestJson).toHaveBeenNthCalledWith(
       1,
@@ -244,40 +275,50 @@ describe("wardrobe api", () => {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ itemUrls: ["https://example.com/item-1"] })
-      }
+        body: JSON.stringify({ itemUrls: ["https://example.com/item-1"] }),
+      },
     );
   });
 
   test("regenerateSelectedWardrobeItems propagates structured endpoint errors", async () => {
-    requestApi.requestJson.mockRejectedValue(Object.assign(new Error("invalid_payload"), {
-      status: 422,
-      data: { error: "invalid_payload", rejected: ["item-1"] }
-    }));
+    requestApi.requestJson.mockRejectedValue(
+      Object.assign(new Error("invalid_payload"), {
+        status: 422,
+        data: { error: "invalid_payload", rejected: ["item-1"] },
+      }),
+    );
 
     await expect(
-      regenerateSelectedWardrobeItems({ itemUrls: ["https://example.com/item-1"], capsuleId: "capsule-1" })
+      regenerateSelectedWardrobeItems({
+        itemUrls: ["https://example.com/item-1"],
+        capsuleId: "capsule-1",
+      }),
     ).rejects.toMatchObject({
       message: "invalid_payload",
       status: 422,
-      data: { error: "invalid_payload", rejected: ["item-1"] }
+      data: { error: "invalid_payload", rejected: ["item-1"] },
     });
   });
 
   test("generateOutfitSetImage posts to the outfit-set image route", async () => {
-    requestApi.requestJson.mockResolvedValueOnce({ ok: true, status: "pending" });
-
-    await expect(generateOutfitSetImage({ capsuleId: "capsule-1", setIndex: 2 })).resolves.toEqual({
+    requestApi.requestJson.mockResolvedValueOnce({
       ok: true,
-      status: "pending"
+      status: "pending",
+    });
+
+    await expect(
+      generateOutfitSetImage({ capsuleId: "capsule-1", setIndex: 2 }),
+    ).resolves.toEqual({
+      ok: true,
+      status: "pending",
     });
 
     expect(requestApi.requestJson).toHaveBeenCalledWith(
       "https://api.example.test/capsules/capsule-1/outfit-sets/2/image",
       {
         method: "POST",
-        credentials: "include"
-      }
+        credentials: "include",
+      },
     );
   });
 
@@ -288,29 +329,31 @@ describe("wardrobe api", () => {
     expect(requestApi.requestJson).toHaveBeenNthCalledWith(
       1,
       "https://api.example.test/capsules//outfit-sets/3/image",
-      expect.objectContaining({ method: "POST" })
+      expect.objectContaining({ method: "POST" }),
     );
     expect(requestApi.requestJson).toHaveBeenNthCalledWith(
       2,
       "https://api.example.test/capsules//outfit-sets/NaN/image",
-      expect.objectContaining({ method: "DELETE" })
+      expect.objectContaining({ method: "DELETE" }),
     );
   });
 
   test("deleteOutfitSetImage deletes through the outfit-set image route", async () => {
     requestApi.requestJson.mockResolvedValueOnce({ ok: true, status: "ready" });
 
-    await expect(deleteOutfitSetImage({ capsuleId: "capsule-1", setIndex: 2 })).resolves.toEqual({
+    await expect(
+      deleteOutfitSetImage({ capsuleId: "capsule-1", setIndex: 2 }),
+    ).resolves.toEqual({
       ok: true,
-      status: "ready"
+      status: "ready",
     });
 
     expect(requestApi.requestJson).toHaveBeenCalledWith(
       "https://api.example.test/capsules/capsule-1/outfit-sets/2/image",
       {
         method: "DELETE",
-        credentials: "include"
-      }
+        credentials: "include",
+      },
     );
   });
 });

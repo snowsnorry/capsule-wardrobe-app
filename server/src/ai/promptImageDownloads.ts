@@ -4,7 +4,7 @@ import { logWarn } from "../logger.js";
 import type {
   PromptImageDownloadResult,
   PromptImageItemLike,
-  PromptImageTimings
+  PromptImageTimings,
 } from "./types.js";
 import {
   MAX_SOURCE_IMAGE_PIXELS,
@@ -17,7 +17,7 @@ import {
   normalizeDownloadedImage,
   nowMs,
   readImageFromLocalCache,
-  resolveSourceImageUrl
+  resolveSourceImageUrl,
 } from "./promptImagesShared.js";
 
 function getDownloadIdentity(item: PromptImageItemLike) {
@@ -25,11 +25,14 @@ function getDownloadIdentity(item: PromptImageItemLike) {
     id: String(item?.id ?? ""),
     category: item?.category ?? "",
     imageUrl: resolveSourceImageUrl(item?.image_url),
-    originalImageUrl: getOriginalImageUrl(item?.image_url)
+    originalImageUrl: getOriginalImageUrl(item?.image_url),
   };
 }
 
-function buildSkippedDownloadResult(identity, reason): PromptImageDownloadResult {
+function buildSkippedDownloadResult(
+  identity,
+  reason,
+): PromptImageDownloadResult {
   return {
     ...identity,
     source: null,
@@ -38,12 +41,18 @@ function buildSkippedDownloadResult(identity, reason): PromptImageDownloadResult
     mimeType: null,
     buffer: null,
     width: null,
-    height: null
+    height: null,
   };
 }
 
-async function buildCachedDownloadResult(identity, cachedImage, includeOriginalMimeType = false) {
-  const metadata = await sharp(cachedImage.buffer).metadata().catch(() => ({}));
+async function buildCachedDownloadResult(
+  identity,
+  cachedImage,
+  includeOriginalMimeType = false,
+) {
+  const metadata = await sharp(cachedImage.buffer)
+    .metadata()
+    .catch(() => ({}));
   const { width, height } = getMetadataDimensions(metadata);
   return {
     ...identity,
@@ -53,15 +62,17 @@ async function buildCachedDownloadResult(identity, cachedImage, includeOriginalM
     reason: null,
     mimeType: cachedImage.mimeType,
     buffer: cachedImage.buffer,
-    originalMimeType: includeOriginalMimeType ? cachedImage.mimeType : undefined,
+    originalMimeType: includeOriginalMimeType
+      ? cachedImage.mimeType
+      : undefined,
     width,
-    height
+    height,
   };
 }
 
 async function fetchImageResponse(imageUrl) {
   const response = await fetch(imageUrl, {
-    signal: getRequestSignal()
+    signal: getRequestSignal(),
   });
 
   if (!response.ok) {
@@ -84,12 +95,14 @@ function logDownloadFailure(identity, reason) {
       id: identity.id,
       category: identity.category,
       imageUrl: identity.imageUrl,
-      reason
-    })
+      reason,
+    }),
   );
 }
 
-async function downloadProductImageAsset(item: PromptImageItemLike): Promise<PromptImageDownloadResult> {
+async function downloadProductImageAsset(
+  item: PromptImageItemLike,
+): Promise<PromptImageDownloadResult> {
   const identity = getDownloadIdentity(item);
 
   if (!identity.imageUrl) {
@@ -103,7 +116,9 @@ async function downloadProductImageAsset(item: PromptImageItemLike): Promise<Pro
     }
 
     const response = await fetchImageResponse(identity.imageUrl);
-    const mimeType = String(response.headers.get("content-type") || "").toLowerCase() || "application/octet-stream";
+    const mimeType =
+      String(response.headers.get("content-type") || "").toLowerCase() ||
+      "application/octet-stream";
     const sourceBuffer = Buffer.from(await response.arrayBuffer());
     const normalized = await normalizeDownloadedImage(sourceBuffer);
 
@@ -116,7 +131,7 @@ async function downloadProductImageAsset(item: PromptImageItemLike): Promise<Pro
       buffer: normalized.buffer,
       originalMimeType: mimeType,
       width: normalized.width,
-      height: normalized.height
+      height: normalized.height,
     };
   } catch (error) {
     const reason = getDownloadFailureReason(error);
@@ -127,7 +142,7 @@ async function downloadProductImageAsset(item: PromptImageItemLike): Promise<Pro
 
 async function downloadPromptImageAsset(
   item: PromptImageItemLike,
-  timings: PromptImageTimings | null = null
+  timings: PromptImageTimings | null = null,
 ): Promise<PromptImageDownloadResult> {
   const identity = getDownloadIdentity(item);
 
@@ -141,7 +156,10 @@ async function downloadPromptImageAsset(
     addTiming(timings, "cacheLookupMs", cacheLookupStartedAt);
     if (cachedImage?.buffer) {
       const inspectStartedAt = nowMs();
-      const cachedResult = await buildCachedDownloadResult(identity, cachedImage);
+      const cachedResult = await buildCachedDownloadResult(
+        identity,
+        cachedImage,
+      );
       addTiming(timings, "sourceInspectMs", inspectStartedAt);
       return cachedResult;
     }
@@ -154,8 +172,10 @@ async function downloadPromptImageAsset(
     const inspectStartedAt = nowMs();
     const metadata = await sharp(sourceBuffer, {
       failOn: "none",
-      limitInputPixels: MAX_SOURCE_IMAGE_PIXELS
-    }).metadata().catch(() => ({}));
+      limitInputPixels: MAX_SOURCE_IMAGE_PIXELS,
+    })
+      .metadata()
+      .catch(() => ({}));
     addTiming(timings, "sourceInspectMs", inspectStartedAt);
     const { width, height } = getMetadataDimensions(metadata);
 
@@ -164,10 +184,12 @@ async function downloadPromptImageAsset(
       source: "download",
       status: "downloaded",
       reason: null,
-      mimeType: String(response.headers.get("content-type") || "").toLowerCase() || "application/octet-stream",
+      mimeType:
+        String(response.headers.get("content-type") || "").toLowerCase() ||
+        "application/octet-stream",
       buffer: sourceBuffer,
       width,
-      height
+      height,
     };
   } catch (error) {
     const reason = getDownloadFailureReason(error);
@@ -180,22 +202,32 @@ async function downloadProductImageAssets(items: PromptImageItemLike[] = []) {
   const downloadResults = await mapWithConcurrency(
     items,
     IMAGE_DOWNLOAD_CONCURRENCY,
-    (item) => downloadProductImageAsset(item)
+    (item) => downloadProductImageAsset(item),
   );
 
   return Object.fromEntries(
     downloadResults
-      .filter((result) => result.status === "downloaded" && result.id && result.buffer)
-      .map((result) => [result.id, {
-        buffer: result.buffer,
-        mimeType: result.mimeType,
-        source: result.source,
-        imageUrl: result.imageUrl,
-        originalImageUrl: result.originalImageUrl,
-        width: result.width,
-        height: result.height
-      }])
+      .filter(
+        (result) =>
+          result.status === "downloaded" && result.id && result.buffer,
+      )
+      .map((result) => [
+        result.id,
+        {
+          buffer: result.buffer,
+          mimeType: result.mimeType,
+          source: result.source,
+          imageUrl: result.imageUrl,
+          originalImageUrl: result.originalImageUrl,
+          width: result.width,
+          height: result.height,
+        },
+      ]),
   );
 }
 
-export { downloadProductImageAsset, downloadPromptImageAsset, downloadProductImageAssets };
+export {
+  downloadProductImageAsset,
+  downloadPromptImageAsset,
+  downloadProductImageAssets,
+};

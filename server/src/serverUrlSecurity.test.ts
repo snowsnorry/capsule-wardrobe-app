@@ -2,7 +2,7 @@ import { test, expect } from "vitest";
 import {
   getSafeServerFetchUrl,
   isLocalHostname,
-  normalizeHostForIpCheck
+  normalizeHostForIpCheck,
 } from "./serverUrlSecurity.js";
 
 test("normalizeHostForIpCheck trims, lowercases, and removes ipv6 brackets", () => {
@@ -24,7 +24,11 @@ test("getSafeServerFetchUrl rejects localhost hosts and literal ip hosts", () =>
 });
 
 test("getSafeServerFetchUrl keeps valid external http and https urls", () => {
-  expect(getSafeServerFetchUrl("https://example.com/image.jpg")).toBe("https://example.com/image.jpg");
-  expect(getSafeServerFetchUrl("http://cdn.example.com/path?q=1")).toBe("http://cdn.example.com/path?q=1");
+  expect(getSafeServerFetchUrl("https://example.com/image.jpg")).toBe(
+    "https://example.com/image.jpg",
+  );
+  expect(getSafeServerFetchUrl("http://cdn.example.com/path?q=1")).toBe(
+    "http://cdn.example.com/path?q=1",
+  );
   expect(getSafeServerFetchUrl("ftp://example.com/image.jpg")).toBe("");
 });

@@ -2,9 +2,7 @@ function extractFormulaIds(formula) {
   const text = typeof formula === "string" ? formula : "";
   const matches = text.matchAll(/\[([^[\]]+)\]/g);
 
-  return [...matches]
-    .map(([, id]) => String(id || "").trim())
-    .filter(Boolean);
+  return [...matches].map(([, id]) => String(id || "").trim()).filter(Boolean);
 }
 
 function normalizeOutfitSetItemIds(itemIds = [], itemsById = new Map()) {
@@ -46,7 +44,10 @@ function getNextOutfitCategory(itemId, itemsById, seenCategories) {
 }
 
 function hasCompleteOutfitCore(categories) {
-  return categories.has("dress") || (categories.has("top") && categories.has("bottom"));
+  return (
+    categories.has("dress") ||
+    (categories.has("top") && categories.has("bottom"))
+  );
 }
 
 function buildOutfitSetsFromFormulas(formulas = [], items = []) {
@@ -54,12 +55,14 @@ function buildOutfitSetsFromFormulas(formulas = [], items = []) {
   const itemsById = new Map(
     normalizedItems
       .map((item) => [String(item?.id || "").trim(), item] as const)
-      .filter(([id]) => Boolean(id))
+      .filter(([id]) => Boolean(id)),
   );
 
   return (Array.isArray(formulas) ? formulas : [])
     .map((formula) => {
-      const itemIds = extractFormulaIds(formula).filter((id) => itemsById.has(id));
+      const itemIds = extractFormulaIds(formula).filter((id) =>
+        itemsById.has(id),
+      );
       return normalizeOutfitSetItemIds(itemIds, itemsById);
     })
     .filter(Boolean);
@@ -71,8 +74,4 @@ function getOutfitFormulas(parsedSelection = null) {
     : [];
 }
 
-export {
-  buildOutfitSetsFromFormulas,
-  extractFormulaIds,
-  getOutfitFormulas
-};
+export { buildOutfitSetsFromFormulas, extractFormulaIds, getOutfitFormulas };

@@ -46,8 +46,11 @@ function getR2Config(env: NodeJS.ProcessEnv = process.env): R2Config {
     bucketName: getRequiredR2Env(env, "R2_BUCKET_NAME"),
     accessKeyId: getRequiredR2Env(env, "R2_ACCESS_KEY_ID"),
     secretAccessKey: getRequiredR2Env(env, "R2_SECRET_ACCESS_KEY"),
-    publicBaseUrl: normalizePublicBaseUrl(getRequiredR2Env(env, "R2_PUBLIC_BASE_URL")),
-    imageKeyPrefix: normalizeEnvValue(env.R2_IMAGE_KEY_PREFIX) || "outfit-set-images"
+    publicBaseUrl: normalizePublicBaseUrl(
+      getRequiredR2Env(env, "R2_PUBLIC_BASE_URL"),
+    ),
+    imageKeyPrefix:
+      normalizeEnvValue(env.R2_IMAGE_KEY_PREFIX) || "outfit-set-images",
   };
 }
 
@@ -61,8 +64,8 @@ function createR2Client(config: R2Config): S3ClientLike {
     endpoint: buildR2Endpoint(config.accountId),
     credentials: {
       accessKeyId: config.accessKeyId,
-      secretAccessKey: config.secretAccessKey
-    }
+      secretAccessKey: config.secretAccessKey,
+    },
   });
 }
 
@@ -76,7 +79,9 @@ function sanitizeKeySegment(value: unknown, fallback: string): string {
 }
 
 function getImageExtension(mimeType: unknown): string {
-  const normalized = String(mimeType || "").trim().toLowerCase();
+  const normalized = String(mimeType || "")
+    .trim()
+    .toLowerCase();
   if (normalized === "image/jpeg" || normalized === "image/jpg") {
     return "jpg";
   }
@@ -92,7 +97,7 @@ function buildR2ImageKey({
   capsuleId,
   setIndex,
   digest,
-  mimeType
+  mimeType,
 }: {
   imageKeyPrefix: string;
   namespace?: string | null;
@@ -109,8 +114,14 @@ function buildR2ImageKey({
   return `${prefix}/${scope}/${capsuleSegment}/${setSegment}/${digest}.${extension}`;
 }
 
-function buildR2PublicUrl(config: Pick<R2Config, "publicBaseUrl">, key: string): string {
-  return `${config.publicBaseUrl}/${String(key || "").split("/").map(encodeURIComponent).join("/")}`;
+function buildR2PublicUrl(
+  config: Pick<R2Config, "publicBaseUrl">,
+  key: string,
+): string {
+  return `${config.publicBaseUrl}/${String(key || "")
+    .split("/")
+    .map(encodeURIComponent)
+    .join("/")}`;
 }
 
 async function uploadImageToR2({
@@ -120,7 +131,7 @@ async function uploadImageToR2({
   setIndex = null,
   namespace = "generated",
   env = process.env,
-  client
+  client,
 }: UploadImageInput): Promise<{ key: string; url: string; digest: string }> {
   const bytes = Buffer.from(buffer);
   if (bytes.length === 0) {
@@ -135,22 +146,24 @@ async function uploadImageToR2({
     capsuleId: capsuleId || randomUUID(),
     setIndex,
     digest,
-    mimeType
+    mimeType,
   });
   const s3 = client || createR2Client(config);
 
-  await s3.send(new PutObjectCommand({
-    Bucket: config.bucketName,
-    Key: key,
-    Body: bytes,
-    ContentType: String(mimeType || "image/png"),
-    CacheControl: "public, max-age=31536000, immutable"
-  }));
+  await s3.send(
+    new PutObjectCommand({
+      Bucket: config.bucketName,
+      Key: key,
+      Body: bytes,
+      ContentType: String(mimeType || "image/png"),
+      CacheControl: "public, max-age=31536000, immutable",
+    }),
+  );
 
   return {
     key,
     url: buildR2PublicUrl(config, key),
-    digest
+    digest,
   };
 }
 
@@ -180,6 +193,6 @@ export {
   decodeLegacyBase64Image,
   getR2Config,
   isHttpImageUrl,
-  uploadImageToR2
+  uploadImageToR2,
 };
 export type { R2Config, S3ClientLike };

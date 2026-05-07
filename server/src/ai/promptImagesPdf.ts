@@ -1,19 +1,17 @@
 import sharp from "sharp";
 import { IMAGE_DOWNLOAD_CONCURRENCY } from "./imagePipeline.js";
-import type {
-  PromptImageAsset
-} from "./types.js";
+import type { PromptImageAsset } from "./types.js";
 import {
   BACKGROUND_COLOR,
   PDF_IMAGE_JPEG_QUALITY,
   createSharpPipeline,
   getMetadataDimensions,
-  mapWithConcurrency
+  mapWithConcurrency,
 } from "./promptImagesShared.js";
 
 async function preparePdfImageAsset(
   imageAsset: PromptImageAsset | null | undefined,
-  { width, height }: { width?: number; height?: number } = {}
+  { width, height }: { width?: number; height?: number } = {},
 ) {
   if (!imageAsset?.buffer) {
     return null;
@@ -25,17 +23,19 @@ async function preparePdfImageAsset(
     .resize(targetWidth, targetHeight, {
       fit: "inside",
       withoutEnlargement: true,
-      background: BACKGROUND_COLOR
+      background: BACKGROUND_COLOR,
     })
     .flatten({ background: BACKGROUND_COLOR })
     .jpeg({
       quality: PDF_IMAGE_JPEG_QUALITY,
       mozjpeg: true,
-      progressive: true
+      progressive: true,
     })
     .toBuffer();
 
-  const metadata = await sharp(buffer).metadata().catch(() => ({}));
+  const metadata = await sharp(buffer)
+    .metadata()
+    .catch(() => ({}));
   const dimensions = getMetadataDimensions(metadata);
 
   return {
@@ -45,19 +45,25 @@ async function preparePdfImageAsset(
     preparedForPdf: true,
     imageUrl: imageAsset.imageUrl || "",
     width: dimensions.width,
-    height: dimensions.height
+    height: dimensions.height,
   };
 }
 
 async function preparePdfImageAssets(
   imageAssetsById: Record<string, PromptImageAsset> = {},
-  targetSize?: { width?: number; height?: number }
+  targetSize?: { width?: number; height?: number },
 ) {
-  const entries = Object.entries(imageAssetsById).filter(([, asset]) => Boolean(asset?.buffer));
-  const preparedEntries = await mapWithConcurrency(entries, IMAGE_DOWNLOAD_CONCURRENCY, async ([id, asset]) => {
-    const prepared = await preparePdfImageAsset(asset, targetSize);
-    return prepared ? [id, prepared] : null;
-  });
+  const entries = Object.entries(imageAssetsById).filter(([, asset]) =>
+    Boolean(asset?.buffer),
+  );
+  const preparedEntries = await mapWithConcurrency(
+    entries,
+    IMAGE_DOWNLOAD_CONCURRENCY,
+    async ([id, asset]) => {
+      const prepared = await preparePdfImageAsset(asset, targetSize);
+      return prepared ? [id, prepared] : null;
+    },
+  );
 
   return Object.fromEntries(preparedEntries.filter(Boolean));
 }

@@ -20,7 +20,8 @@ function escapeHtmlAttribute(value: unknown): string {
 }
 
 function resolveClientOrigin(clientOrigin = CLIENT_ORIGIN): string {
-  const rawOrigin = String(clientOrigin || "").trim() || "http://localhost:5173";
+  const rawOrigin =
+    String(clientOrigin || "").trim() || "http://localhost:5173";
   const originWithProtocol = /^[a-z][a-z\d+.-]*:\/\//i.test(rawOrigin)
     ? rawOrigin
     : `http://${rawOrigin}`;
@@ -36,13 +37,17 @@ function buildSharedCapsuleUrl(req, clientOrigin = CLIENT_ORIGIN): string {
   return `${resolveClientOrigin(clientOrigin)}${req.originalUrl}`;
 }
 
-function injectOpenGraphMetaTags(html: string, metadata: SharedCapsuleOgMetadata, url: string): string {
+function injectOpenGraphMetaTags(
+  html: string,
+  metadata: SharedCapsuleOgMetadata,
+  url: string,
+): string {
   const tags = [
     `<meta property="og:title" content="${escapeHtmlAttribute(metadata.title)}" />`,
     `<meta property="og:description" content="${escapeHtmlAttribute(metadata.description)}" />`,
     `<meta property="og:image" content="${escapeHtmlAttribute(metadata.image)}" />`,
     `<meta property="og:url" content="${escapeHtmlAttribute(url)}" />`,
-    `<meta property="og:type" content="website" />`
+    `<meta property="og:type" content="website" />`,
   ].join("\n    ");
 
   return html.replace(/<\/head>/i, `    ${tags}\n  </head>`);
@@ -52,7 +57,7 @@ export async function injectSharedCapsuleMetaTags(
   html: string,
   req,
   getMetadataImpl,
-  { clientOrigin = CLIENT_ORIGIN } = {}
+  { clientOrigin = CLIENT_ORIGIN } = {},
 ): Promise<string> {
   const shareId = getShareRouteId(req.path);
   if (!shareId) {
@@ -64,5 +69,9 @@ export async function injectSharedCapsuleMetaTags(
     return html;
   }
 
-  return injectOpenGraphMetaTags(html, metadata, buildSharedCapsuleUrl(req, clientOrigin));
+  return injectOpenGraphMetaTags(
+    html,
+    metadata,
+    buildSharedCapsuleUrl(req, clientOrigin),
+  );
 }

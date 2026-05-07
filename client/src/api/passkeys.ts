@@ -6,47 +6,54 @@ type PasskeyResponse = JsonObject;
 
 async function listPasskeys(): Promise<PasskeyResponse> {
   return requestJson(`${API_BASE_URL}/auth/passkeys`, {
-    credentials: "include"
+    credentials: "include",
   });
 }
 
 async function getPasskeyRegistrationOptions(): Promise<PasskeyResponse> {
   return requestJson(`${API_BASE_URL}/auth/passkeys/register/options`, {
     method: "POST",
-    credentials: "include"
+    credentials: "include",
   });
 }
 
-async function verifyPasskeyRegistration(response: unknown): Promise<PasskeyResponse> {
+async function verifyPasskeyRegistration(
+  response: unknown,
+): Promise<PasskeyResponse> {
   return requestJson(`${API_BASE_URL}/auth/passkeys/register/verify`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
-    body: JSON.stringify({ response })
+    body: JSON.stringify({ response }),
   });
 }
 
 async function getPasskeyAuthenticationOptions(): Promise<PasskeyResponse> {
   return requestJson(`${API_BASE_URL}/auth/passkeys/authenticate/options`, {
     method: "POST",
-    credentials: "include"
+    credentials: "include",
   });
 }
 
-async function verifyPasskeyAuthentication(response: unknown): Promise<PasskeyResponse> {
+async function verifyPasskeyAuthentication(
+  response: unknown,
+): Promise<PasskeyResponse> {
   return requestJson(`${API_BASE_URL}/auth/passkeys/authenticate/verify`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
-    body: JSON.stringify({ response })
+    body: JSON.stringify({ response }),
   });
 }
 
 async function deletePasskey(id: string): Promise<PasskeyResponse> {
-  return requestJson(`${API_BASE_URL}/auth/passkeys/${encodeURIComponent(id)}`, {
-    method: "DELETE",
-    credentials: "include"
-  });
+  return requestJson(
+    `${API_BASE_URL}/auth/passkeys/${encodeURIComponent(id)}`,
+    {
+      method: "DELETE",
+      credentials: "include",
+    },
+  );
 }
 
 export {
@@ -55,5 +62,5 @@ export {
   verifyPasskeyRegistration,
   getPasskeyAuthenticationOptions,
   verifyPasskeyAuthentication,
-  deletePasskey
+  deletePasskey,
 };

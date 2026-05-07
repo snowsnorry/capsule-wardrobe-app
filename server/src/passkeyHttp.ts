@@ -4,7 +4,7 @@ import type {
   AuthenticationResponseJSON,
   AuthenticatorTransportFuture,
   RegistrationResponseJSON,
-  WebAuthnCredential
+  WebAuthnCredential,
 } from "@simplewebauthn/server";
 import { PASSKEY_CHALLENGE_COOKIE } from "./appConfig.js";
 import { parseCookies } from "./httpCookies.js";
@@ -36,34 +36,42 @@ export type PasskeyChallengeRecord = {
 };
 
 const webAuthnClientExtensionResultsSchema = z.object({}).passthrough();
-const registrationResponseSchema = z.object({
-  id: z.string(),
-  rawId: z.string(),
-  type: z.string(),
-  authenticatorAttachment: z.string().optional(),
-  clientExtensionResults: webAuthnClientExtensionResultsSchema,
-  response: z.object({
-    clientDataJSON: z.string(),
-    attestationObject: z.string(),
-    transports: z.array(z.string()).optional(),
-    publicKeyAlgorithm: z.number().optional(),
-    publicKey: z.string().optional(),
-    authenticatorData: z.string().optional()
-  }).passthrough()
-}).passthrough();
-const authenticationResponseSchema = z.object({
-  id: z.string(),
-  rawId: z.string(),
-  type: z.string(),
-  authenticatorAttachment: z.string().optional(),
-  clientExtensionResults: webAuthnClientExtensionResultsSchema,
-  response: z.object({
-    clientDataJSON: z.string(),
-    authenticatorData: z.string(),
-    signature: z.string(),
-    userHandle: z.string().optional()
-  }).passthrough()
-}).passthrough();
+const registrationResponseSchema = z
+  .object({
+    id: z.string(),
+    rawId: z.string(),
+    type: z.string(),
+    authenticatorAttachment: z.string().optional(),
+    clientExtensionResults: webAuthnClientExtensionResultsSchema,
+    response: z
+      .object({
+        clientDataJSON: z.string(),
+        attestationObject: z.string(),
+        transports: z.array(z.string()).optional(),
+        publicKeyAlgorithm: z.number().optional(),
+        publicKey: z.string().optional(),
+        authenticatorData: z.string().optional(),
+      })
+      .passthrough(),
+  })
+  .passthrough();
+const authenticationResponseSchema = z
+  .object({
+    id: z.string(),
+    rawId: z.string(),
+    type: z.string(),
+    authenticatorAttachment: z.string().optional(),
+    clientExtensionResults: webAuthnClientExtensionResultsSchema,
+    response: z
+      .object({
+        clientDataJSON: z.string(),
+        authenticatorData: z.string(),
+        signature: z.string(),
+        userHandle: z.string().optional(),
+      })
+      .passthrough(),
+  })
+  .passthrough();
 
 export function generatePasskeyChallengeId() {
   return crypto.randomBytes(32).toString("base64url");
@@ -73,17 +81,21 @@ export function publicKeyToBase64Url(publicKey: Uint8Array): string {
   return Buffer.from(publicKey).toString("base64url");
 }
 
-export function publicKeyFromBase64Url(publicKey: string): Uint8Array<ArrayBuffer> {
+export function publicKeyFromBase64Url(
+  publicKey: string,
+): Uint8Array<ArrayBuffer> {
   const buffer = Buffer.from(publicKey, "base64url");
   const arrayBuffer = buffer.buffer.slice(
     buffer.byteOffset,
-    buffer.byteOffset + buffer.byteLength
+    buffer.byteOffset + buffer.byteLength,
   ) as ArrayBuffer;
   return new Uint8Array(arrayBuffer);
 }
 
 export function getPasskeyChallengeId(req): string {
-  return String(parseCookies(req.headers.cookie)[PASSKEY_CHALLENGE_COOKIE] || "").trim();
+  return String(
+    parseCookies(req.headers.cookie)[PASSKEY_CHALLENGE_COOKIE] || "",
+  ).trim();
 }
 
 export function toPasskeyMetadata(passkey: PasskeyRecord) {
@@ -94,25 +106,31 @@ export function toPasskeyMetadata(passkey: PasskeyRecord) {
     backedUp: passkey.backedUp ?? null,
     transports: Array.isArray(passkey.transports) ? passkey.transports : [],
     createdAt: passkey.createdAt || null,
-    lastUsedAt: passkey.lastUsedAt || null
+    lastUsedAt: passkey.lastUsedAt || null,
   };
 }
 
-export function toWebAuthnCredential(passkey: PasskeyRecord): WebAuthnCredential {
+export function toWebAuthnCredential(
+  passkey: PasskeyRecord,
+): WebAuthnCredential {
   return {
     id: passkey.credentialId,
     publicKey: publicKeyFromBase64Url(passkey.credentialPublicKey),
     counter: Number(passkey.counter || 0),
     transports: Array.isArray(passkey.transports)
-      ? passkey.transports as AuthenticatorTransportFuture[]
-      : []
+      ? (passkey.transports as AuthenticatorTransportFuture[])
+      : [],
   };
 }
 
-export function isRegistrationResponse(payload: unknown): payload is RegistrationResponseJSON {
+export function isRegistrationResponse(
+  payload: unknown,
+): payload is RegistrationResponseJSON {
   return registrationResponseSchema.safeParse(payload).success;
 }
 
-export function isAuthenticationResponse(payload: unknown): payload is AuthenticationResponseJSON {
+export function isAuthenticationResponse(
+  payload: unknown,
+): payload is AuthenticationResponseJSON {
   return authenticationResponseSchema.safeParse(payload).success;
 }

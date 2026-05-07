@@ -1,5 +1,11 @@
 import { test, expect, afterEach } from "vitest";
-import { setSqlClientOverride, type PasskeyChallengeRow, type PasskeyRow, type SqlClientLike, type SqlResultLike } from "./core.js";
+import {
+  setSqlClientOverride,
+  type PasskeyChallengeRow,
+  type PasskeyRow,
+  type SqlClientLike,
+  type SqlResultLike,
+} from "./core.js";
 import {
   consumePasskeyChallenge,
   deletePasskeyByIdForEmail,
@@ -9,13 +15,16 @@ import {
   listPasskeysByEmail,
   normalizePasskeyRow,
   pruneExpiredPasskeyChallenges,
-  updatePasskeyAuthentication
+  updatePasskeyAuthentication,
 } from "./passkeys.js";
 
 function useQueuedSql(results: SqlResultLike[]) {
   const statements: string[] = [];
   const values: unknown[][] = [];
-  const sql = (async (strings: TemplateStringsArray, ...queryValues: readonly unknown[]) => {
+  const sql = (async (
+    strings: TemplateStringsArray,
+    ...queryValues: readonly unknown[]
+  ) => {
     statements.push(strings.join("?").replace(/\s+/g, " ").trim());
     values.push([...queryValues]);
     return results.shift() ?? [];
@@ -42,7 +51,7 @@ const passkeyRow: PasskeyRow = {
   aaguid: "aaguid",
   lastUsedAt: null,
   createdAt: "created",
-  updatedAt: "updated"
+  updatedAt: "updated",
 };
 
 const challengeRow: PasskeyChallengeRow = {
@@ -52,7 +61,7 @@ const challengeRow: PasskeyChallengeRow = {
   profileEmail: "person@example.com",
   expiresAt: "expires",
   consumedAt: null,
-  createdAt: "created"
+  createdAt: "created",
 };
 
 test("normalizePasskeyRow coerces counters and missing transports", () => {
@@ -60,7 +69,7 @@ test("normalizePasskeyRow coerces counters and missing transports", () => {
   expect(normalizePasskeyRow(passkeyRow)).toEqual({
     ...passkeyRow,
     counter: 7,
-    transports: []
+    transports: [],
   });
 });
 
@@ -70,40 +79,50 @@ test("passkey credential helpers normalize selected and returned rows", async ()
     [passkeyRow],
     [passkeyRow],
     [passkeyRow],
-    [{ id: "passkey-1" }]
+    [{ id: "passkey-1" }],
   ]);
 
-  expect(await listPasskeysByEmail("person@example.com")).toEqual([{
+  expect(await listPasskeysByEmail("person@example.com")).toEqual([
+    {
+      ...passkeyRow,
+      counter: 7,
+      transports: [],
+    },
+  ]);
+  expect(
+    await insertPasskey({
+      profileEmail: "person@example.com",
+      credentialId: "credential",
+      credentialPublicKey: "public-key",
+      counter: 7,
+      deviceType: "singleDevice",
+      backedUp: false,
+      transports: ["usb"],
+      name: "Security key",
+      aaguid: "aaguid",
+    }),
+  ).toEqual({
     ...passkeyRow,
     counter: 7,
-    transports: []
-  }]);
-  expect(await insertPasskey({
-    profileEmail: "person@example.com",
-    credentialId: "credential",
-    credentialPublicKey: "public-key",
-    counter: 7,
-    deviceType: "singleDevice",
-    backedUp: false,
-    transports: ["usb"],
-    name: "Security key",
-    aaguid: "aaguid"
-  })).toEqual({
-    ...passkeyRow,
-    counter: 7,
-    transports: []
+    transports: [],
   });
   expect((await getPasskeyByCredentialId("credential"))?.counter).toBe(7);
-  expect((await updatePasskeyAuthentication({
-    credentialId: "credential",
-    counter: 8,
-    deviceType: null,
-    backedUp: null
-  }))?.credentialId).toBe("credential");
-  expect(await deletePasskeyByIdForEmail({
-    email: "person@example.com",
-    passkeyId: "passkey-1"
-  })).toBe(true);
+  expect(
+    (
+      await updatePasskeyAuthentication({
+        credentialId: "credential",
+        counter: 8,
+        deviceType: null,
+        backedUp: null,
+      })
+    )?.credentialId,
+  ).toBe("credential");
+  expect(
+    await deletePasskeyByIdForEmail({
+      email: "person@example.com",
+      passkeyId: "passkey-1",
+    }),
+  ).toBe(true);
 });
 
 test("passkey challenge helpers store, consume, prune, and return null for missing rows", async () => {
@@ -115,15 +134,35 @@ test("passkey challenge helpers store, consume, prune, and return null for missi
     kind: "registration",
     challenge: "challenge",
     profileEmail: null,
-    expiresAt
+    expiresAt,
   });
-  expect(await consumePasskeyChallenge({
-    id: "challenge-1",
-    kind: "authentication"
-  })).toEqual(challengeRow);
+  expect(
+    await consumePasskeyChallenge({
+      id: "challenge-1",
+      kind: "authentication",
+    }),
+  ).toEqual(challengeRow);
   await pruneExpiredPasskeyChallenges();
-  expect(await consumePasskeyChallenge({ id: "missing", kind: "authentication" })).toBe(null);
-  expect(values[0]).toEqual(["challenge-1", "registration", "challenge", null, expiresAt]);
-  expect(statements.some((statement) => statement.includes("set consumed_at = now()"))).toBeTruthy();
-  expect(statements.some((statement) => statement.includes("where expires_at <= now() or consumed_at is not null"))).toBeTruthy();
+  expect(
+    await consumePasskeyChallenge({ id: "missing", kind: "authentication" }),
+  ).toBe(null);
+  expect(values[0]).toEqual([
+    "challenge-1",
+    "registration",
+    "challenge",
+    null,
+    expiresAt,
+  ]);
+  expect(
+    statements.some((statement) =>
+      statement.includes("set consumed_at = now()"),
+    ),
+  ).toBeTruthy();
+  expect(
+    statements.some((statement) =>
+      statement.includes(
+        "where expires_at <= now() or consumed_at is not null",
+      ),
+    ),
+  ).toBeTruthy();
 });

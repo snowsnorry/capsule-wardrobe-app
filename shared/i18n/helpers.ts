@@ -27,7 +27,7 @@ function interpolate(template: string, params: TranslationParams = {}): string {
 function resolveNextTranslationSegment(
   dictionary: TranslationDictionary,
   segments: readonly string[],
-  startIndex: number
+  startIndex: number,
 ): { value: unknown; nextIndex: number } | null {
   for (let end = segments.length; end > startIndex; end -= 1) {
     const candidate = segments.slice(startIndex, end).join(".");
@@ -40,7 +40,12 @@ function resolveNextTranslationSegment(
 }
 
 function resolveTranslationValue(dictionary: unknown, key: string): unknown {
-  if (!dictionary || typeof dictionary !== "object" || typeof key !== "string" || key.length === 0) {
+  if (
+    !dictionary ||
+    typeof dictionary !== "object" ||
+    typeof key !== "string" ||
+    key.length === 0
+  ) {
     return undefined;
   }
 
@@ -54,7 +59,11 @@ function resolveTranslationValue(dictionary: unknown, key: string): unknown {
   let index = 0;
 
   while (current && typeof current === "object" && index < segments.length) {
-    const match = resolveNextTranslationSegment(current as TranslationDictionary, segments, index);
+    const match = resolveNextTranslationSegment(
+      current as TranslationDictionary,
+      segments,
+      index,
+    );
     if (!match) {
       return undefined;
     }
@@ -65,8 +74,14 @@ function resolveTranslationValue(dictionary: unknown, key: string): unknown {
   return index === segments.length ? current : undefined;
 }
 
-function t(key: string, params?: TranslationParams, locale: string = defaultLocale): string {
-  const dictionary = isSupportedLocale(locale) ? dictionaries[locale] : dictionaries[defaultLocale];
+function t(
+  key: string,
+  params?: TranslationParams,
+  locale: string = defaultLocale,
+): string {
+  const dictionary = isSupportedLocale(locale)
+    ? dictionaries[locale]
+    : dictionaries[defaultLocale];
   const value = resolveTranslationValue(dictionary, key);
   if (typeof value === "string") {
     return params ? interpolate(value, params) : value;
@@ -82,7 +97,11 @@ function humanizeOptionValue(value = "") {
     .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
-function translateOption(group: string, value: string, locale: string = defaultLocale): string {
+function translateOption(
+  group: string,
+  value: string,
+  locale: string = defaultLocale,
+): string {
   const key = `options.${group}.${value}`;
   const translated = t(key, undefined, locale);
   if (translated !== key) {
@@ -101,4 +120,12 @@ function translateOption(group: string, value: string, locale: string = defaultL
   return humanizeOptionValue(value);
 }
 
-export { t, translateOption, defaultLocale, supportedLocales, normalizeLocale, isSupportedLocale, resolveTranslationValue };
+export {
+  t,
+  translateOption,
+  defaultLocale,
+  supportedLocales,
+  normalizeLocale,
+  isSupportedLocale,
+  resolveTranslationValue,
+};

@@ -33,7 +33,7 @@ describe("useI18n", () => {
     render(
       <LocaleProvider>
         <Consumer />
-      </LocaleProvider>
+      </LocaleProvider>,
     );
 
     expect(screen.getByTestId("locale")).toHaveTextContent("en");

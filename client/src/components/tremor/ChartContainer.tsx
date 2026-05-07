@@ -15,12 +15,20 @@ type ChartContainerProps = {
   sx?: SxProps<Theme>;
 };
 
-function ChartContainer({ children, className, renderChart, sx }: ChartContainerProps) {
+function ChartContainer({
+  children,
+  className,
+  renderChart,
+  sx,
+}: ChartContainerProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [dimensions, setDimensions] = useState<ChartDimensions | null>(null);
 
   useEffect(() => {
-    if (typeof window === "undefined" || typeof window.ResizeObserver === "undefined") {
+    if (
+      typeof window === "undefined" ||
+      typeof window.ResizeObserver === "undefined"
+    ) {
       setDimensions({ width: 0, height: 0 });
       return undefined;
     }
@@ -41,7 +49,11 @@ function ChartContainer({ children, className, renderChart, sx }: ChartContainer
         if (nextWidth <= 0 || nextHeight <= 0) {
           return null;
         }
-        if (current && current.width === nextWidth && current.height === nextHeight) {
+        if (
+          current &&
+          current.width === nextWidth &&
+          current.height === nextHeight
+        ) {
           return current;
         }
         return { width: nextWidth, height: nextHeight };
@@ -72,7 +84,7 @@ function ChartContainer({ children, className, renderChart, sx }: ChartContainer
         position: "relative",
         minWidth: 0,
         minHeight: 0,
-        ...sx
+        ...sx,
       }}
     >
       {dimensions ? renderChart(dimensions) : null}

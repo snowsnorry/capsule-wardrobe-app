@@ -2,7 +2,10 @@ import type { ComponentProps } from "react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { cleanup, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { renderWithTheme, resetMainScreenTestMocks } from "./MainScreen.testUtils";
+import {
+  renderWithTheme,
+  resetMainScreenTestMocks,
+} from "./MainScreen.testUtils";
 import CapsuleActionMenu from "./CapsuleActionMenu";
 
 type CapsuleActionMenuProps = ComponentProps<typeof CapsuleActionMenu>;
@@ -13,12 +16,20 @@ function createAnchor() {
   return anchor;
 }
 
-function createCapsuleActionMenuProps(overrides: Partial<CapsuleActionMenuProps> = {}): CapsuleActionMenuProps {
+function createCapsuleActionMenuProps(
+  overrides: Partial<CapsuleActionMenuProps> = {},
+): CapsuleActionMenuProps {
   return {
     anchorEl: createAnchor(),
     open: true,
     onClose: vi.fn(),
-    capsule: { id: "capsule-1", name: "Spring edit", draft: null, saved: null, status: "new" },
+    capsule: {
+      id: "capsule-1",
+      name: "Spring edit",
+      draft: null,
+      saved: null,
+      status: "new",
+    },
     disabled: false,
     showRegenerateAll: false,
     onRegenerateAll: vi.fn(),
@@ -33,11 +44,13 @@ function createCapsuleActionMenuProps(overrides: Partial<CapsuleActionMenuProps>
     mobileCardColumns: 2,
     onMobileCardColumnsChange: vi.fn(),
     onDelete: vi.fn(),
-    ...overrides
+    ...overrides,
   };
 }
 
-function renderCapsuleActionMenu(overrides: Partial<CapsuleActionMenuProps> = {}) {
+function renderCapsuleActionMenu(
+  overrides: Partial<CapsuleActionMenuProps> = {},
+) {
   const props = createCapsuleActionMenuProps(overrides);
   return { props, ...renderWithTheme(<CapsuleActionMenu {...props} />) };
 }
@@ -58,12 +71,18 @@ describe("CapsuleActionMenu", () => {
     renderCapsuleActionMenu({
       showCardLayout: true,
       mobileCardColumns: 2,
-      onMobileCardColumnsChange
+      onMobileCardColumnsChange,
     });
 
     expect(screen.getByText("Card layout")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "1 column" })).toHaveAttribute("aria-pressed", "false");
-    expect(screen.getByRole("button", { name: "2 columns" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "1 column" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+    expect(screen.getByRole("button", { name: "2 columns" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
 
     await user.click(screen.getByRole("button", { name: "3 columns" }));
     expect(onMobileCardColumnsChange).toHaveBeenCalledWith(3);
@@ -80,11 +99,13 @@ describe("CapsuleActionMenu", () => {
         name: "Spring edit",
         draft: null,
         saved: { filters: {}, data: {} },
-        status: "saved"
-      }
+        status: "saved",
+      },
     });
 
-    expect(screen.getByRole("menuitem", { name: "Save as..." })).toBeInTheDocument();
+    expect(
+      screen.getByRole("menuitem", { name: "Save as..." }),
+    ).toBeInTheDocument();
 
     cleanup();
     renderCapsuleActionMenu({
@@ -93,11 +114,13 @@ describe("CapsuleActionMenu", () => {
         name: "Spring edit",
         draft: { filters: { locale: "en" }, data: {} },
         saved: null,
-        status: "new"
-      }
+        status: "new",
+      },
     });
 
-    expect(screen.queryByRole("menuitem", { name: "Save as..." })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("menuitem", { name: "Save as..." }),
+    ).not.toBeInTheDocument();
   });
 
   test("shows share only for shareable capsules or unknown row content when allowed", () => {
@@ -105,10 +128,12 @@ describe("CapsuleActionMenu", () => {
       capsule: {
         id: "capsule-1",
         name: "Spring edit",
-        draft: { data: { wardrobe: { items: [{ url: "https://example.com/1" }] } } },
+        draft: {
+          data: { wardrobe: { items: [{ url: "https://example.com/1" }] } },
+        },
         saved: null,
-        status: "new"
-      }
+        status: "new",
+      },
     });
 
     expect(screen.getByRole("menuitem", { name: "Share" })).toBeInTheDocument();
@@ -116,22 +141,26 @@ describe("CapsuleActionMenu", () => {
     cleanup();
     renderCapsuleActionMenu({
       capsule: { id: "capsule-2", name: "Summer edit", status: "saved" },
-      allowUnknownShareContent: true
+      allowUnknownShareContent: true,
     });
     expect(screen.getByRole("menuitem", { name: "Share" })).toBeInTheDocument();
 
     cleanup();
     renderCapsuleActionMenu({
-      capsule: { id: "capsule-3", name: "Empty edit", status: "new" }
+      capsule: { id: "capsule-3", name: "Empty edit", status: "new" },
     });
-    expect(screen.queryByRole("menuitem", { name: "Share" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("menuitem", { name: "Share" }),
+    ).not.toBeInTheDocument();
   });
 
   test("does not call action callbacks while disabled", async () => {
     const onDownloadPdf = vi.fn();
     renderCapsuleActionMenu({ disabled: true, onDownloadPdf });
 
-    expect(screen.getByRole("menuitem", { name: "Export as PDF" })).toHaveAttribute("aria-disabled", "true");
+    expect(
+      screen.getByRole("menuitem", { name: "Export as PDF" }),
+    ).toHaveAttribute("aria-disabled", "true");
     expect(onDownloadPdf).not.toHaveBeenCalled();
   });
 });

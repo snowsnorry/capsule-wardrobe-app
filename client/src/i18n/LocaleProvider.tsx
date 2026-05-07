@@ -1,4 +1,11 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import { defaultLocale, isSupportedLocale, normalizeLocale } from "./index";
 
 const STORAGE_KEY = "locale";
@@ -18,7 +25,7 @@ const noopSetLocale: LocaleContextValue["setLocale"] = () => {};
 
 const LocaleContext = createContext<LocaleContextValue>({
   locale: defaultLocale,
-  setLocale: noopSetLocale
+  setLocale: noopSetLocale,
 });
 
 const getInitialLocale = (): LocaleValue => {
@@ -31,7 +38,8 @@ const getInitialLocale = (): LocaleValue => {
     return stored as LocaleValue;
   }
 
-  const browserLocale = window.navigator.language || window.navigator.languages?.[0];
+  const browserLocale =
+    window.navigator.language || window.navigator.languages?.[0];
   const normalized = normalizeLocale(browserLocale);
   if (isSupportedLocale(normalized)) {
     return normalized as LocaleValue;
@@ -54,7 +62,9 @@ function LocaleProvider({ children }: LocaleProviderProps) {
 
   const value = useMemo(() => ({ locale, setLocale }), [locale, setLocale]);
 
-  return <LocaleContext.Provider value={value}>{children}</LocaleContext.Provider>;
+  return (
+    <LocaleContext.Provider value={value}>{children}</LocaleContext.Provider>
+  );
 }
 
 function useLocale(): LocaleContextValue {

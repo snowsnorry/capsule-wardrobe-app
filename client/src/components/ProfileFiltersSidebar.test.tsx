@@ -6,25 +6,31 @@ import type { ComponentProps } from "react";
 const useI18nMock = vi.hoisted(() => vi.fn());
 
 vi.mock("../i18n/useI18n", () => ({
-  useI18n: useI18nMock
+  useI18n: useI18nMock,
 }));
 vi.mock("../i18n", () => ({
-  translateOption: (_group: string, value: string) => ({
-    solid: "Solid",
-    stripe: "Stripe",
-    abstract: "Abstract",
-    argyle: "Argyle",
-    graphic: "Graphic"
-  }[value] || value)
+  translateOption: (_group: string, value: string) =>
+    ({
+      solid: "Solid",
+      stripe: "Stripe",
+      abstract: "Abstract",
+      argyle: "Argyle",
+      graphic: "Graphic",
+    })[value] || value,
 }));
 
 import ProfileFiltersSidebar from "./ProfileFiltersSidebar";
 
 const theme = createTheme();
 
-function renderSidebar(props: Partial<ComponentProps<typeof ProfileFiltersSidebar>> = {}) {
+function renderSidebar(
+  props: Partial<ComponentProps<typeof ProfileFiltersSidebar>> = {},
+) {
   const defaults: ComponentProps<typeof ProfileFiltersSidebar> = {
-    styleOptions: { core: ["casual", "formal"], aesthetics: ["minimalistic", "retro"] },
+    styleOptions: {
+      core: ["casual", "formal"],
+      aesthetics: ["minimalistic", "retro"],
+    },
     occasionOptions: ["office", "travel"],
     seasonOptions: ["summer", "winter"],
     audienceOptions: ["woman", "man", "any"],
@@ -51,7 +57,7 @@ function renderSidebar(props: Partial<ComponentProps<typeof ProfileFiltersSideba
     onApply: vi.fn(),
     onReset: vi.fn(),
     onSignOut: vi.fn(),
-    isSigningOut: false
+    isSigningOut: false,
   };
 
   useI18nMock.mockReturnValue({
@@ -80,7 +86,8 @@ function renderSidebar(props: Partial<ComponentProps<typeof ProfileFiltersSideba
         "profile.styleAestheticHint": "Choose optionally one aesthetic.",
         "profile.styleAestheticNotImportant": "Aesthetic not important",
         "capsule.settingsTitle": "Capsule settings",
-        "capsule.settingsSubtitle": "Adjust the inputs used to build this capsule.",
+        "capsule.settingsSubtitle":
+          "Adjust the inputs used to build this capsule.",
         "filters.apply": "Apply",
         "filters.applyDisabledHint": "To apply filters, choose: {items}.",
         "filters.applyDisabledUnchangedHint": "Filters have not changed.",
@@ -90,7 +97,7 @@ function renderSidebar(props: Partial<ComponentProps<typeof ProfileFiltersSideba
         "filters.required.audience": "an audience",
         "filters.reset": "Reset",
         "actions.signOut": "Sign out",
-        "main.partialRegenerateToggle": "Toggle"
+        "main.partialRegenerateToggle": "Toggle",
       };
 
       if (key === "profile.info" && params?.count) {
@@ -99,9 +106,11 @@ function renderSidebar(props: Partial<ComponentProps<typeof ProfileFiltersSideba
 
       const label = labels[key] || key;
       return params
-        ? label.replace(/\{(\w+)\}/g, (_, paramKey) => String(params[paramKey] ?? `{${paramKey}}`))
+        ? label.replace(/\{(\w+)\}/g, (_, paramKey) =>
+            String(params[paramKey] ?? `{${paramKey}}`),
+          )
         : label;
-    }
+    },
   });
 
   return {
@@ -110,8 +119,8 @@ function renderSidebar(props: Partial<ComponentProps<typeof ProfileFiltersSideba
     ...render(
       <ThemeProvider theme={theme}>
         <ProfileFiltersSidebar {...defaults} {...props} />
-      </ThemeProvider>
-    )
+      </ThemeProvider>,
+    ),
   };
 }
 
@@ -125,16 +134,20 @@ describe("ProfileFiltersSidebar", () => {
     renderSidebar();
 
     expect(screen.getByRole("button", { name: "Apply" })).toBeEnabled();
-    expect(screen.queryByText(/To apply filters, choose:/)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/To apply filters, choose:/),
+    ).not.toBeInTheDocument();
   });
 
   test("shows a single missing required filter in the apply hint", () => {
     renderSidebar({
-      selectedAudience: ""
+      selectedAudience: "",
     });
 
     expect(screen.getByRole("button", { name: "Apply" })).toBeDisabled();
-    expect(screen.getByText("To apply filters, choose: an audience.")).toBeInTheDocument();
+    expect(
+      screen.getByText("To apply filters, choose: an audience."),
+    ).toBeInTheDocument();
   });
 
   test("shows all missing required filters in the apply hint", () => {
@@ -142,53 +155,65 @@ describe("ProfileFiltersSidebar", () => {
       selectedStyleCore: "",
       selectedOccasions: [],
       selectedSeasons: [],
-      selectedAudience: ""
+      selectedAudience: "",
     });
 
     expect(screen.getByRole("button", { name: "Apply" })).toBeDisabled();
     expect(
       screen.getByText(
-        "To apply filters, choose: a core style, at least one occasion, at least one season, an audience."
-      )
+        "To apply filters, choose: a core style, at least one occasion, at least one season, an audience.",
+      ),
     ).toBeInTheDocument();
-    expect(screen.queryByText("Filters have not changed.")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Filters have not changed."),
+    ).not.toBeInTheDocument();
   });
 
   test("shows an unchanged hint and disables apply when filters did not change", () => {
     renderSidebar({
-      hasFilterChanges: false
+      hasFilterChanges: false,
     });
 
     expect(screen.getByRole("button", { name: "Apply" })).toBeDisabled();
     expect(screen.getByText("Filters have not changed.")).toBeInTheDocument();
-    expect(screen.queryByText(/To apply filters, choose:/)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/To apply filters, choose:/),
+    ).not.toBeInTheDocument();
   });
 
   test("treats a legacy null pattern as solid in the UI", () => {
     renderSidebar({
-      selectedPattern: null
+      selectedPattern: null,
     });
 
-    expect(screen.getByRole("button", { name: "Solid" })).toHaveClass("MuiChip-filledPrimary");
+    expect(screen.getByRole("button", { name: "Solid" })).toHaveClass(
+      "MuiChip-filledPrimary",
+    );
     expect(screen.queryByText("Pattern not important")).not.toBeInTheDocument();
   });
 
   test("sorts pattern chips alphabetically by label with solid pinned first", () => {
     renderSidebar({
-      patternOptions: ["stripe", "solid", "abstract"]
+      patternOptions: ["stripe", "solid", "abstract"],
     });
 
     const solid = screen.getByRole("button", { name: "Solid" });
     const abstract = screen.getByRole("button", { name: "Abstract" });
     const stripe = screen.getByRole("button", { name: "Stripe" });
 
-    expect(solid.compareDocumentPosition(abstract) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(abstract.compareDocumentPosition(stripe) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(
+      solid.compareDocumentPosition(abstract) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      abstract.compareDocumentPosition(stripe) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   test("renders the full canonical pattern list in the sidebar", () => {
     renderSidebar({
-      patternOptions: ["stripe", "solid", "abstract"]
+      patternOptions: ["stripe", "solid", "abstract"],
     });
 
     const solid = screen.getByRole("button", { name: "Solid" });
@@ -197,6 +222,8 @@ describe("ProfileFiltersSidebar", () => {
 
     expect(argyle).toBeInTheDocument();
     expect(graphic).toBeInTheDocument();
-    expect(solid.compareDocumentPosition(argyle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(
+      solid.compareDocumentPosition(argyle) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 });

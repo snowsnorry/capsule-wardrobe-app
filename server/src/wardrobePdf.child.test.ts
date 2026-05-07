@@ -8,7 +8,7 @@ function createSendSpy() {
     send(message, callback) {
       calls.push(message);
       callback?.();
-    }
+    },
   };
 }
 
@@ -38,32 +38,40 @@ test("wardrobePdf child writes built PDF and exits 0 on success", async () => {
     },
     exitImpl(code) {
       exits.push(code);
-    }
+    },
   });
 
   await runtime.handleMessage({
     outputFilePath: "/tmp/capsule/out/wardrobe.pdf",
     products: [{ id: "p1" }],
     locale: "ru",
-    totalStartedAt: 123
+    totalStartedAt: 123,
   });
 
-  expect(mkdirCalls).toEqual([{
-    dirPath: "/tmp/capsule/out",
-    options: { recursive: true }
-  }]);
-  expect(buildCalls).toEqual([{
-    products: [{ id: "p1" }],
-    options: { locale: "ru", totalStartedAt: 123 }
-  }]);
-  expect(writeCalls).toEqual([{
-    filePath: "/tmp/capsule/out/wardrobe.pdf",
-    buffer: pdfBuffer
-  }]);
-  expect(sendSpy.calls).toEqual([{
-    ok: true,
-    outputFilePath: "/tmp/capsule/out/wardrobe.pdf"
-  }]);
+  expect(mkdirCalls).toEqual([
+    {
+      dirPath: "/tmp/capsule/out",
+      options: { recursive: true },
+    },
+  ]);
+  expect(buildCalls).toEqual([
+    {
+      products: [{ id: "p1" }],
+      options: { locale: "ru", totalStartedAt: 123 },
+    },
+  ]);
+  expect(writeCalls).toEqual([
+    {
+      filePath: "/tmp/capsule/out/wardrobe.pdf",
+      buffer: pdfBuffer,
+    },
+  ]);
+  expect(sendSpy.calls).toEqual([
+    {
+      ok: true,
+      outputFilePath: "/tmp/capsule/out/wardrobe.pdf",
+    },
+  ]);
   expect(disconnects).toEqual([true]);
   expect(exits).toEqual([0]);
 });
@@ -81,20 +89,22 @@ test("wardrobePdf child defaults locale and totalStartedAt for invalid input", a
     sendImpl(_message, callback) {
       callback?.();
     },
-    exitImpl() {}
+    exitImpl() {},
   });
 
   await runtime.handleMessage({
     outputFilePath: "/tmp/capsule/defaults.pdf",
     products: "bad-products",
     locale: "",
-    totalStartedAt: "bad-start"
+    totalStartedAt: "bad-start",
   });
 
-  expect(buildCalls).toEqual([{
-    products: [],
-    options: { locale: "en", totalStartedAt: null }
-  }]);
+  expect(buildCalls).toEqual([
+    {
+      products: [],
+      options: { locale: "en", totalStartedAt: null },
+    },
+  ]);
 });
 
 test("wardrobePdf child sends error payload when outputFilePath is missing", async () => {
@@ -106,15 +116,19 @@ test("wardrobePdf child sends error payload when outputFilePath is missing", asy
     disconnectImpl() {},
     exitImpl(code) {
       exits.push(code);
-    }
+    },
   });
 
   await runtime.handleMessage({});
 
   expect(sendSpy.calls.length).toBe(1);
   expect(sendSpy.calls[0].ok).toBe(false);
-  expect(sendSpy.calls[0].message).toBe("wardrobe_pdf_child_output_path_missing");
-  expect(sendSpy.calls[0].stack).toMatch(/wardrobe_pdf_child_output_path_missing/);
+  expect(sendSpy.calls[0].message).toBe(
+    "wardrobe_pdf_child_output_path_missing",
+  );
+  expect(sendSpy.calls[0].stack).toMatch(
+    /wardrobe_pdf_child_output_path_missing/,
+  );
   expect(exits).toEqual([1]);
 });
 
@@ -132,7 +146,7 @@ test("wardrobePdf child sends build errors and exits 1", async () => {
     disconnectImpl() {},
     exitImpl(code) {
       exits.push(code);
-    }
+    },
   });
 
   await runtime.handleMessage({ outputFilePath: "/tmp/capsule/out.pdf" });
@@ -157,14 +171,22 @@ test("wardrobePdf child ignores duplicate messages", async () => {
     },
     sendImpl: sendSpy.send,
     disconnectImpl() {},
-    exitImpl() {}
+    exitImpl() {},
   });
 
-  await runtime.handleMessage({ outputFilePath: "/tmp/capsule/one.pdf", products: [{ id: 1 }] });
-  await runtime.handleMessage({ outputFilePath: "/tmp/capsule/two.pdf", products: [{ id: 2 }] });
+  await runtime.handleMessage({
+    outputFilePath: "/tmp/capsule/one.pdf",
+    products: [{ id: 1 }],
+  });
+  await runtime.handleMessage({
+    outputFilePath: "/tmp/capsule/two.pdf",
+    products: [{ id: 2 }],
+  });
 
   expect(buildCalls).toEqual([[{ id: 1 }]]);
-  expect(sendSpy.calls).toEqual([{ ok: true, outputFilePath: "/tmp/capsule/one.pdf" }]);
+  expect(sendSpy.calls).toEqual([
+    { ok: true, outputFilePath: "/tmp/capsule/one.pdf" },
+  ]);
 });
 
 test("wardrobePdf child exits even when process.send is unavailable", async () => {
@@ -179,7 +201,7 @@ test("wardrobePdf child exits even when process.send is unavailable", async () =
     sendImpl: undefined,
     exitImpl(code) {
       exits.push(code);
-    }
+    },
   });
 
   await runtime.handleMessage({ outputFilePath: "/tmp/capsule/no-ipc.pdf" });

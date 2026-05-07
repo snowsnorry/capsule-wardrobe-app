@@ -1,10 +1,25 @@
-import type { CapsuleWardrobeSqlClient, CapsuleWardrobeSqlParams, CapsuleWardrobeSqlRow } from "./aiSqlTypes.js";
+import type {
+  CapsuleWardrobeSqlClient,
+  CapsuleWardrobeSqlParams,
+  CapsuleWardrobeSqlRow,
+} from "./aiSqlTypes.js";
 
 async function queryCapsuleWardrobeItemsForMultipleAccentColors(
   sql: CapsuleWardrobeSqlClient,
-  params: CapsuleWardrobeSqlParams
+  params: CapsuleWardrobeSqlParams,
 ) {
-  const { categories, formalityLevel, style, occasions, season, audienceFilters, pattern, rejectedUrls, embeddingVector, noiseFactor } = params;
+  const {
+    categories,
+    formalityLevel,
+    style,
+    occasions,
+    season,
+    audienceFilters,
+    pattern,
+    rejectedUrls,
+    embeddingVector,
+    noiseFactor,
+  } = params;
 
   return sql<CapsuleWardrobeSqlRow>`
     SELECT results.*
@@ -87,6 +102,5 @@ async function queryCapsuleWardrobeItemsForMultipleAccentColors(
       LIMIT 10
     ) results`;
 }
-
 
 export { queryCapsuleWardrobeItemsForMultipleAccentColors };

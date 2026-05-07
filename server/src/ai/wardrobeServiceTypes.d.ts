@@ -1,13 +1,21 @@
 import type { getProfile } from "../profileStore.js";
-import type { getCapsule, getEffectiveCapsuleSnapshot, renameCapsule, updateCapsuleSnapshot } from "../capsuleStore.js";
+import type {
+  getCapsule,
+  getEffectiveCapsuleSnapshot,
+  renameCapsule,
+  updateCapsuleSnapshot,
+} from "../capsuleStore.js";
 import type { buildCapsuleEventSnapshot } from "./capsuleEvents.js";
-import type { generateSwimwearAddition, shouldGenerateSwimwear } from "./swimwear.js";
+import type {
+  generateSwimwearAddition,
+  shouldGenerateSwimwear,
+} from "./swimwear.js";
 import type {
   LogContextLike,
   PartialRegenerationJobState,
   UserProfileLike,
   WardrobeGenerationResult,
-  WardrobeJobState
+  WardrobeJobState,
 } from "./types.js";
 
 type WardrobeServiceDependencies = {
@@ -17,13 +25,20 @@ type WardrobeServiceDependencies = {
   updateCapsuleSnapshotImpl?: typeof updateCapsuleSnapshot;
   generateCapsuleWardrobeImpl?: (
     userProfile?: UserProfileLike | null,
-    logContext?: LogContextLike | null
+    logContext?: LogContextLike | null,
   ) => Promise<WardrobeGenerationResult>;
   shouldGenerateSwimwearImpl?: typeof shouldGenerateSwimwear;
   generateSwimwearAdditionImpl?: typeof generateSwimwearAddition;
-  getPartialRegenerationJobImpl?: (email: string, capsuleId: string) => PartialRegenerationJobState | null;
+  getPartialRegenerationJobImpl?: (
+    email: string,
+    capsuleId: string,
+  ) => PartialRegenerationJobState | null;
   buildCapsuleEventSnapshotImpl?: typeof buildCapsuleEventSnapshot;
-  publishSnapshotImpl?: (email: string, capsuleId: string, snapshot: unknown) => void;
+  publishSnapshotImpl?: (
+    email: string,
+    capsuleId: string,
+    snapshot: unknown,
+  ) => void;
   jobs?: Map<string, WardrobeJobState>;
   nowMsImpl?: () => number;
   setTimeoutImpl?: typeof setTimeout;
@@ -47,7 +62,10 @@ type StartWardrobeJobInput = {
   options?: StartWardrobeJobOptions;
 };
 
-type WardrobeJobGetter = (email: string, capsuleId: string) => WardrobeJobState | null;
+type WardrobeJobGetter = (
+  email: string,
+  capsuleId: string,
+) => WardrobeJobState | null;
 type WardrobeJobStarter = (input: StartWardrobeJobInput) => WardrobeJobState;
 
 export type {
@@ -56,5 +74,5 @@ export type {
   WardrobeJobGetter,
   WardrobeJobStarter,
   WardrobeServiceDependencies,
-  WardrobeServiceRuntimeDeps
+  WardrobeServiceRuntimeDeps,
 };

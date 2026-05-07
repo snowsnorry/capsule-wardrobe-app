@@ -8,14 +8,14 @@ import SettingsDialog from "./SettingsDialog";
 const useI18nMock = vi.hoisted(() => vi.fn());
 const passkeysApiMock = vi.hoisted(() => ({
   deletePasskey: vi.fn(),
-  listPasskeys: vi.fn()
+  listPasskeys: vi.fn(),
 }));
 const passkeysAuthMock = vi.hoisted(() => ({
-  registerPasskey: vi.fn()
+  registerPasskey: vi.fn(),
 }));
 
 vi.mock("../i18n/useI18n", () => ({
-  useI18n: useI18nMock
+  useI18n: useI18nMock,
 }));
 vi.mock("../api/passkeys", () => passkeysApiMock);
 vi.mock("../auth/passkeys", () => passkeysAuthMock);
@@ -33,7 +33,9 @@ function createDeferred() {
   return { promise, resolve, reject };
 }
 
-function renderDialog(props: Partial<ComponentProps<typeof SettingsDialog>> = {}) {
+function renderDialog(
+  props: Partial<ComponentProps<typeof SettingsDialog>> = {},
+) {
   if (!passkeysApiMock.listPasskeys.getMockImplementation()) {
     passkeysApiMock.listPasskeys.mockResolvedValue({ passkeys: [] });
   }
@@ -47,8 +49,10 @@ function renderDialog(props: Partial<ComponentProps<typeof SettingsDialog>> = {}
         "settings.sections.general": "General",
         "settings.sections.ai": "AI",
         "settings.sections.account": "Account",
-        "settings.sectionHints.general": "Choose your visual and language preferences.",
-        "settings.sectionHints.ai": "Pick which stylist model to save on your profile.",
+        "settings.sectionHints.general":
+          "Choose your visual and language preferences.",
+        "settings.sectionHints.ai":
+          "Pick which stylist model to save on your profile.",
         "settings.sectionHints.account": "Review your account details.",
         "settings.fields.theme": "Theme",
         "settings.fields.language": "Language",
@@ -64,11 +68,13 @@ function renderDialog(props: Partial<ComponentProps<typeof SettingsDialog>> = {}
         "settings.llmOptions.openai:gpt-5.5": "OpenAI GPT-5.5",
         "settings.llmOptions.claude:claude-opus-4-7": "Claude Opus 4.7",
         "settings.llmOptions.gemini:gemini-2.5-pro": "Gemini 2.5 Pro",
-        "settings.llmOptions.deepinfra:Qwen/Qwen3-VL-235B-A22B-Instruct": "Qwen 3",
+        "settings.llmOptions.deepinfra:Qwen/Qwen3-VL-235B-A22B-Instruct":
+          "Qwen 3",
         "settings.llmOptions.deepinfra:google/gemma-4-31B-it": "Google Gemma 4",
         "settings.llmOptions.none": "None",
         "settings.imageLlmOptions.openai:gpt-image-2": "OpenAI GPT Image 2",
-        "settings.imageLlmOptions.gemini:gemini-3-pro-image-preview": "Gemini 3 Pro Image Preview",
+        "settings.imageLlmOptions.gemini:gemini-3-pro-image-preview":
+          "Gemini 3 Pro Image Preview",
         "passkeys.title": "Passkeys",
         "passkeys.add": "Add passkey",
         "passkeys.remove": "Remove passkey",
@@ -83,15 +89,16 @@ function renderDialog(props: Partial<ComponentProps<typeof SettingsDialog>> = {}
         "errors.passkeyNotSupported": "Passkeys are not supported.",
         "actions.cancel": "Cancel",
         "actions.save": "Save",
-        "errors.generic": "Something went wrong"
+        "errors.generic": "Something went wrong",
       };
 
       const label = labels[key] || key;
       return Object.entries(params || {}).reduce(
-        (value, [paramKey, paramValue]) => value.replace(`{${paramKey}}`, String(paramValue)),
-        label
+        (value, [paramKey, paramValue]) =>
+          value.replace(`{${paramKey}}`, String(paramValue)),
+        label,
       );
-    }
+    },
   });
 
   const defaults: ComponentProps<typeof SettingsDialog> = {
@@ -102,10 +109,10 @@ function renderDialog(props: Partial<ComponentProps<typeof SettingsDialog>> = {}
       locale: "en",
       theme: "system",
       llm: "openai:gpt-5.5",
-      imageLlm: "openai:gpt-image-2"
+      imageLlm: "openai:gpt-image-2",
     },
     onClose: vi.fn(),
-    onSave: vi.fn(() => Promise.resolve())
+    onSave: vi.fn(() => Promise.resolve()),
   };
 
   return {
@@ -113,8 +120,8 @@ function renderDialog(props: Partial<ComponentProps<typeof SettingsDialog>> = {}
     ...render(
       <ThemeProvider theme={theme}>
         <SettingsDialog {...defaults} {...props} />
-      </ThemeProvider>
-    )
+      </ThemeProvider>,
+    ),
   };
 }
 
@@ -139,8 +146,12 @@ describe("SettingsDialog", () => {
     await user.click(screen.getByRole("button", { name: "AI" }));
     await user.click(screen.getByRole("combobox", { name: "Stylist Model" }));
     await user.click(screen.getByRole("option", { name: "Qwen 3" }));
-    await user.click(screen.getByRole("combobox", { name: "Image Generation Model" }));
-    await user.click(screen.getByRole("option", { name: "Gemini 3 Pro Image Preview" }));
+    await user.click(
+      screen.getByRole("combobox", { name: "Image Generation Model" }),
+    );
+    await user.click(
+      screen.getByRole("option", { name: "Gemini 3 Pro Image Preview" }),
+    );
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     expect(screen.getByRole("progressbar")).toBeInTheDocument();
@@ -154,14 +165,16 @@ describe("SettingsDialog", () => {
   test("renders passkeys as plain rows with created timestamps", async () => {
     const user = userEvent.setup();
     passkeysApiMock.listPasskeys.mockResolvedValue({
-      passkeys: [{
-        id: "passkey-1",
-        name: "1Password",
-        deviceType: "multiDevice",
-        backedUp: true,
-        lastUsedAt: "2026-05-02T01:47:00.000Z",
-        createdAt: "2026-05-01T01:47:00.000Z"
-      }]
+      passkeys: [
+        {
+          id: "passkey-1",
+          name: "1Password",
+          deviceType: "multiDevice",
+          backedUp: true,
+          lastUsedAt: "2026-05-02T01:47:00.000Z",
+          createdAt: "2026-05-01T01:47:00.000Z",
+        },
+      ],
     });
 
     renderDialog();
@@ -172,41 +185,69 @@ describe("SettingsDialog", () => {
     expect(screen.queryByText("multiDevice")).not.toBeInTheDocument();
     expect(screen.queryByText("Backed up")).not.toBeInTheDocument();
     expect(screen.queryByText("Used before")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Remove passkey" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Remove passkey" }),
+    ).toBeInTheDocument();
   });
 
   test("adds passkeys, ignores cancellations, and maps unsupported errors", async () => {
     const user = userEvent.setup();
     passkeysApiMock.listPasskeys
       .mockResolvedValueOnce({ passkeys: [] })
-      .mockResolvedValueOnce({ passkeys: [{ id: "passkey-1", name: "New key", createdAt: "2026-05-01T01:47:00.000Z" }] });
+      .mockResolvedValueOnce({
+        passkeys: [
+          {
+            id: "passkey-1",
+            name: "New key",
+            createdAt: "2026-05-01T01:47:00.000Z",
+          },
+        ],
+      });
 
     renderDialog();
     await user.click(screen.getByRole("button", { name: "Account" }));
-    await user.click(await screen.findByRole("button", { name: "Add passkey" }));
+    await user.click(
+      await screen.findByRole("button", { name: "Add passkey" }),
+    );
 
     expect(passkeysAuthMock.registerPasskey).toHaveBeenCalledTimes(1);
     expect(await screen.findByText("New key")).toBeInTheDocument();
 
-    passkeysAuthMock.registerPasskey.mockRejectedValueOnce(new Error("passkey_cancelled"));
+    passkeysAuthMock.registerPasskey.mockRejectedValueOnce(
+      new Error("passkey_cancelled"),
+    );
     await user.click(screen.getByRole("button", { name: "Add passkey" }));
     expect(screen.queryByText("Passkey setup failed.")).not.toBeInTheDocument();
 
-    passkeysAuthMock.registerPasskey.mockRejectedValueOnce(new Error("passkey_not_supported"));
+    passkeysAuthMock.registerPasskey.mockRejectedValueOnce(
+      new Error("passkey_not_supported"),
+    );
     await user.click(screen.getByRole("button", { name: "Add passkey" }));
-    expect(await screen.findByText("Passkeys are not supported.")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Passkeys are not supported."),
+    ).toBeInTheDocument();
   });
 
   test("confirms passkey deletion and reports delete failures", async () => {
     const user = userEvent.setup();
     passkeysApiMock.listPasskeys.mockResolvedValue({
-      passkeys: [{ id: "passkey-1", name: "1Password", createdAt: "2026-05-01T01:47:00.000Z" }]
+      passkeys: [
+        {
+          id: "passkey-1",
+          name: "1Password",
+          createdAt: "2026-05-01T01:47:00.000Z",
+        },
+      ],
     });
-    passkeysApiMock.deletePasskey.mockRejectedValueOnce(new Error("delete failed"));
+    passkeysApiMock.deletePasskey.mockRejectedValueOnce(
+      new Error("delete failed"),
+    );
 
     renderDialog();
     await user.click(screen.getByRole("button", { name: "Account" }));
-    await user.click(await screen.findByRole("button", { name: "Remove passkey" }));
+    await user.click(
+      await screen.findByRole("button", { name: "Remove passkey" }),
+    );
     expect(screen.getByText("Remove this passkey?")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Remove passkey" }));
 

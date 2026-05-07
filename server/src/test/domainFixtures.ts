@@ -8,11 +8,15 @@ import type {
   UserProfileLike,
   WardrobeGenerationResult,
   WardrobeJobState,
-  WardrobeUiItemLike
+  WardrobeUiItemLike,
 } from "../ai/types.js";
 
-type NormalizedProfileRecord = NonNullable<Awaited<ReturnType<typeof getProfile>>>;
-type NormalizedCapsuleRecord = NonNullable<Awaited<ReturnType<typeof getCapsule>>>;
+type NormalizedProfileRecord = NonNullable<
+  Awaited<ReturnType<typeof getProfile>>
+>;
+type NormalizedCapsuleRecord = NonNullable<
+  Awaited<ReturnType<typeof getCapsule>>
+>;
 type CapsuleSnapshot = NonNullable<NormalizedCapsuleRecord["draft"]>;
 type OutfitSet = StoredWardrobePayloadLike["outfitSets"][number];
 type WardrobeUiItemFixture = WardrobeUiItemLike & {
@@ -60,7 +64,7 @@ type CapsuleSnapshotOverrides = {
 };
 
 function buildNormalizedProfileRecord(
-  overrides: Partial<NormalizedProfileRecord> = {}
+  overrides: Partial<NormalizedProfileRecord> = {},
 ): NormalizedProfileRecord {
   return {
     email: "person@example.com",
@@ -70,12 +74,12 @@ function buildNormalizedProfileRecord(
     theme: "system",
     llm: "openai:gpt-5.5",
     imageLlm: "openai:gpt-image-2",
-    ...overrides
+    ...overrides,
   };
 }
 
 function buildWardrobeUiItem(
-  overrides: Partial<WardrobeUiItemLike> = {}
+  overrides: Partial<WardrobeUiItemLike> = {},
 ): WardrobeUiItemFixture {
   return {
     id: "item-1",
@@ -84,46 +88,44 @@ function buildWardrobeUiItem(
     category: "top",
     image_url: "https://example.com/item-1.jpg",
     audience: "woman",
-    ...overrides
+    ...overrides,
   };
 }
 
 function buildGeneratedOutfitSet(
-  overrides: Partial<GeneratedOutfitSetLike> = {}
+  overrides: Partial<GeneratedOutfitSetLike> = {},
 ): GeneratedOutfitSetLike {
   return {
     itemIds: ["item-1", "item-2", "item-3"],
     image: null,
     imageObsolete: false,
-    ...overrides
+    ...overrides,
   };
 }
 
-function buildStoredOutfitSet(
-  overrides: Partial<OutfitSet> = {}
-): OutfitSet {
+function buildStoredOutfitSet(overrides: Partial<OutfitSet> = {}): OutfitSet {
   return {
     itemIds: ["item-1", "item-2", "item-3"],
     image: null,
     imageObsolete: false,
-    ...overrides
+    ...overrides,
   };
 }
 
 function buildStoredWardrobePayload(
-  overrides: Partial<StoredWardrobePayloadLike> = {}
+  overrides: Partial<StoredWardrobePayloadLike> = {},
 ): StoredWardrobePayloadLike {
   return {
     items: overrides.items ?? [],
     outfitSets: overrides.outfitSets ?? [],
     rawSelectionText: overrides.rawSelectionText ?? null,
     swimwearReasoning: overrides.swimwearReasoning ?? null,
-    swimwearRawSelectionText: overrides.swimwearRawSelectionText ?? null
+    swimwearRawSelectionText: overrides.swimwearRawSelectionText ?? null,
   };
 }
 
 function buildWardrobeGenerationResult(
-  overrides: Partial<WardrobeGenerationResult> = {}
+  overrides: Partial<WardrobeGenerationResult> = {},
 ): WardrobeGenerationResult {
   return {
     items: overrides.items ?? [],
@@ -131,12 +133,12 @@ function buildWardrobeGenerationResult(
     outfitSets: overrides.outfitSets ?? [],
     promptEmbeddings: overrides.promptEmbeddings ?? [],
     shortCapsuleName: overrides.shortCapsuleName ?? null,
-    rawSelectionText: overrides.rawSelectionText ?? null
+    rawSelectionText: overrides.rawSelectionText ?? null,
   };
 }
 
 function buildCapsuleSnapshot(
-  overrides: CapsuleSnapshotOverrides = {}
+  overrides: CapsuleSnapshotOverrides = {},
 ): CapsuleSnapshot {
   return {
     filters: {
@@ -148,29 +150,37 @@ function buildCapsuleSnapshot(
       color: null,
       pattern: "solid",
       text: "",
-      ...overrides.filters
+      ...overrides.filters,
     },
     data: {
       wardrobe: overrides.data?.wardrobe ?? null,
       rejectedUrls: overrides.data?.rejectedUrls ?? [],
-      regeneration: overrides.data?.regeneration ?? null
-    }
+      regeneration: overrides.data?.regeneration ?? null,
+    },
   };
 }
 
 function normalizeFixtureCapsuleSnapshot(
-  snapshot: CapsuleSnapshot | Record<string, unknown> | null | undefined
+  snapshot: CapsuleSnapshot | Record<string, unknown> | null | undefined,
 ): CapsuleSnapshot | null {
   if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot)) {
     return null;
   }
 
-  const filters = "filters" in snapshot && snapshot.filters && typeof snapshot.filters === "object" && !Array.isArray(snapshot.filters)
-    ? snapshot.filters as Partial<CapsuleSnapshot["filters"]>
-    : undefined;
-  const data = "data" in snapshot && snapshot.data && typeof snapshot.data === "object" && !Array.isArray(snapshot.data)
-    ? snapshot.data as CapsuleSnapshotOverrides["data"]
-    : undefined;
+  const filters =
+    "filters" in snapshot &&
+    snapshot.filters &&
+    typeof snapshot.filters === "object" &&
+    !Array.isArray(snapshot.filters)
+      ? (snapshot.filters as Partial<CapsuleSnapshot["filters"]>)
+      : undefined;
+  const data =
+    "data" in snapshot &&
+    snapshot.data &&
+    typeof snapshot.data === "object" &&
+    !Array.isArray(snapshot.data)
+      ? (snapshot.data as CapsuleSnapshotOverrides["data"])
+      : undefined;
 
   return buildCapsuleSnapshot({ filters, data });
 }
@@ -179,26 +189,24 @@ function buildNormalizedCapsuleRecord(
   overrides: Omit<Partial<NormalizedCapsuleRecord>, "draft" | "saved"> & {
     draft?: CapsuleSnapshot | Record<string, unknown> | null;
     saved?: CapsuleSnapshot | Record<string, unknown> | null;
-  } = {}
+  } = {},
 ): NormalizedCapsuleRecord {
-  const {
-    draft,
-    saved,
-    status,
-    ...rest
-  } = overrides;
+  const { draft, saved, status, ...rest } = overrides;
 
   return {
     id: "capsule-1",
-    draft: draft === undefined ? buildCapsuleSnapshot() : normalizeFixtureCapsuleSnapshot(draft),
+    draft:
+      draft === undefined
+        ? buildCapsuleSnapshot()
+        : normalizeFixtureCapsuleSnapshot(draft),
     saved: normalizeFixtureCapsuleSnapshot(saved),
     status: (status ?? "new") as NormalizedCapsuleRecord["status"],
-    ...rest
+    ...rest,
   };
 }
 
 function buildWardrobeJobState(
-  overrides: Partial<WardrobeJobState> = {}
+  overrides: Partial<WardrobeJobState> = {},
 ): WardrobeJobState {
   return {
     capsuleRequestId: "req-1",
@@ -208,12 +216,12 @@ function buildWardrobeJobState(
     promise: null,
     phase: "capsule",
     result: null,
-    ...overrides
+    ...overrides,
   };
 }
 
 function buildPartialRegenerationJobState(
-  overrides: Partial<PartialRegenerationJobState> = {}
+  overrides: Partial<PartialRegenerationJobState> = {},
 ): PartialRegenerationJobState {
   return {
     capsuleRequestId: "regen-req-1",
@@ -224,34 +232,34 @@ function buildPartialRegenerationJobState(
     pendingItemUrls: [],
     result: null,
     promise: null,
-    ...overrides
+    ...overrides,
   };
 }
 
 function buildUserProfileLike(
-  overrides: Partial<UserProfileLike> = {}
+  overrides: Partial<UserProfileLike> = {},
 ): UserProfileLike {
   return {
     locale: "en",
     llm: "openai:gpt-5.5",
-    ...overrides
+    ...overrides,
   };
 }
 
 function buildProfileWithItems(
-  overrides: Partial<ProfileWithItemsLike> = {}
+  overrides: Partial<ProfileWithItemsLike> = {},
 ): ProfileWithItemsLike {
   return {
     locale: "en",
     items: {
-      items: []
+      items: [],
     },
-    ...overrides
+    ...overrides,
   };
 }
 
 function buildProductRow(
-  overrides: Partial<ProductRowLike> = {}
+  overrides: Partial<ProductRowLike> = {},
 ): ProductRowLike {
   return {
     id: "product-1",
@@ -277,7 +285,7 @@ function buildProductRow(
     silhouette: null,
     fit: null,
     closureType: null,
-    ...overrides
+    ...overrides,
   };
 }
 
@@ -294,5 +302,5 @@ export {
   buildUserProfileLike,
   buildWardrobeGenerationResult,
   buildWardrobeJobState,
-  buildWardrobeUiItem
+  buildWardrobeUiItem,
 };

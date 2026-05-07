@@ -6,12 +6,17 @@ type SearchFiltersStatus = {
   error: string;
 };
 
-type SearchStateUpdater = SearchDraftState | ((current: SearchDraftState) => SearchDraftState);
+type SearchStateUpdater =
+  | SearchDraftState
+  | ((current: SearchDraftState) => SearchDraftState);
 
 type SearchFiltersSidebarProps = {
   options: SearchOptions;
   draftState: SearchDraftState;
-  onDraftStateChange: (updater: SearchStateUpdater, options?: { submit?: boolean }) => void | Promise<void>;
+  onDraftStateChange: (
+    updater: SearchStateUpdater,
+    options?: { submit?: boolean },
+  ) => void | Promise<void>;
   status: SearchFiltersStatus;
   onApply: () => void | Promise<void>;
   onReset: () => void | Promise<void>;
@@ -40,14 +45,29 @@ type PriceControls = {
   sliderMin: number;
   sliderMax: number;
   priceRange: number[];
-  handlePriceSliderChange: (_event: Event, nextValue: number | number[]) => void;
-  handlePriceSliderCommit: (_event: Event | React.SyntheticEvent<Element, Event>, nextValue: number | number[]) => void;
-  handlePriceInputChange: (field: "priceMinDraft" | "priceMaxDraft") => (event: ChangeEvent<HTMLInputElement>) => void;
-  handlePriceInputBlur: (field: "priceMinDraft" | "priceMaxDraft") => () => void;
-  handlePriceInputKeyDown: (field: "priceMinDraft" | "priceMaxDraft") => (event: KeyboardEvent<HTMLInputElement>) => void;
+  handlePriceSliderChange: (
+    _event: Event,
+    nextValue: number | number[],
+  ) => void;
+  handlePriceSliderCommit: (
+    _event: Event | React.SyntheticEvent<Element, Event>,
+    nextValue: number | number[],
+  ) => void;
+  handlePriceInputChange: (
+    field: "priceMinDraft" | "priceMaxDraft",
+  ) => (event: ChangeEvent<HTMLInputElement>) => void;
+  handlePriceInputBlur: (
+    field: "priceMinDraft" | "priceMaxDraft",
+  ) => () => void;
+  handlePriceInputKeyDown: (
+    field: "priceMinDraft" | "priceMaxDraft",
+  ) => (event: KeyboardEvent<HTMLInputElement>) => void;
 };
 
-type UpdateDraftState = (updater: SearchStateUpdater, options?: { submit?: boolean }) => void;
+type UpdateDraftState = (
+  updater: SearchStateUpdater,
+  options?: { submit?: boolean },
+) => void;
 
 export type {
   PriceControls,
@@ -56,5 +76,5 @@ export type {
   SearchFiltersStatus,
   SearchStateUpdater,
   SelectItem,
-  UpdateDraftState
+  UpdateDraftState,
 };

@@ -11,25 +11,32 @@ function estimateJsonByteLength(value) {
 function parseDeepInfraJsonResponse(content: string) {
   let normalizedContent = content;
   if (normalizedContent) {
-    normalizedContent = normalizedContent.replace(/^[^{]*/, "").replace(/[^}]*$/, "");
+    normalizedContent = normalizedContent
+      .replace(/^[^{]*/, "")
+      .replace(/[^}]*$/, "");
   }
 
   try {
     return JSON.parse(normalizedContent);
   } catch (error) {
     const parseError = new Error(
-      `Failed to parse JSON response: ${error instanceof Error ? error.message : String(error)}\nResponse content: ${normalizedContent}`
+      `Failed to parse JSON response: ${error instanceof Error ? error.message : String(error)}\nResponse content: ${normalizedContent}`,
     ) as ParsedGenerationError;
-    parseError.rawSelectionText = typeof content === "string" && content.trim().length > 0
-      ? content.trim()
-      : null;
+    parseError.rawSelectionText =
+      typeof content === "string" && content.trim().length > 0
+        ? content.trim()
+        : null;
     throw parseError;
   }
 }
 
-function extractResponseText(response: {
-  choices?: Array<{ message?: { content?: string | Array<string | { text?: string | null }> } }>;
-} | null = null) {
+function extractResponseText(
+  response: {
+    choices?: Array<{
+      message?: { content?: string | Array<string | { text?: string | null }> };
+    }>;
+  } | null = null,
+) {
   const content = response?.choices?.[0]?.message?.content;
 
   if (typeof content === "string") {
@@ -66,9 +73,13 @@ async function collectStreamText(stream: AsyncIterable<unknown>) {
   return content;
 }
 
-function extractChunkText(chunk: {
-  choices?: Array<{ delta?: { content?: string | Array<string | { text?: string | null }> } }>;
-} | null = null) {
+function extractChunkText(
+  chunk: {
+    choices?: Array<{
+      delta?: { content?: string | Array<string | { text?: string | null }> };
+    }>;
+  } | null = null,
+) {
   const delta = chunk?.choices?.[0]?.delta;
   const content = delta?.content;
 
@@ -100,5 +111,5 @@ export {
   estimateJsonByteLength,
   extractChunkText,
   extractResponseText,
-  parseDeepInfraJsonResponse
+  parseDeepInfraJsonResponse,
 };

@@ -7,11 +7,11 @@ import {
   CodeStepForm,
   EmailStepForm,
   SignInHeader,
-  SignInStatusMessages
+  SignInStatusMessages,
 } from "./SignInScreenParts";
 
 vi.mock("../components/LocaleSwitcher", () => ({
-  default: () => <div data-testid="locale-switcher" />
+  default: () => <div data-testid="locale-switcher" />,
 }));
 
 const theme = createTheme();
@@ -31,11 +31,13 @@ function t(key: string, params?: Record<string, unknown>) {
     "auth.verify": "Verify",
     "auth.resendCode": "Resend code",
     "auth.changeEmail": "Change email",
-    "auth.info": "Info {count}"
+    "auth.info": "Info {count}",
   };
   const label = labels[key] || key;
   return params
-    ? label.replace(/\{(\w+)\}/g, (_, paramKey) => String(params[paramKey] ?? `{${paramKey}}`))
+    ? label.replace(/\{(\w+)\}/g, (_, paramKey) =>
+        String(params[paramKey] ?? `{${paramKey}}`),
+      )
     : label;
 }
 
@@ -71,7 +73,7 @@ describe("SignInScreenParts", () => {
         onRequestCode={onRequestCode}
         onPasskeySignIn={vi.fn()}
         t={t}
-      />
+      />,
     );
 
     const emailInput = screen.getByRole("textbox", { name: /email/i });
@@ -91,9 +93,11 @@ describe("SignInScreenParts", () => {
           onPasskeySignIn={vi.fn()}
           t={t}
         />
-      </ThemeProvider>
+      </ThemeProvider>,
     );
-    expect(screen.getByRole("button", { name: "Send code" })).not.toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Send code" }),
+    ).not.toBeDisabled();
     await user.click(screen.getByRole("button", { name: "Send code" }));
     expect(onRequestCode).toHaveBeenCalledTimes(1);
   });
@@ -112,10 +116,12 @@ describe("SignInScreenParts", () => {
         onRequestCode={vi.fn()}
         onPasskeySignIn={onPasskeySignIn}
         t={t}
-      />
+      />,
     );
 
-    await user.click(screen.getByRole("button", { name: "Sign in with passkey" }));
+    await user.click(
+      screen.getByRole("button", { name: "Sign in with passkey" }),
+    );
     expect(onPasskeySignIn).toHaveBeenCalledTimes(1);
   });
 
@@ -138,7 +144,7 @@ describe("SignInScreenParts", () => {
         onVerifyCode={onVerifyCode}
         onResetEmail={onResetEmail}
         t={t}
-      />
+      />,
     );
 
     const codeInput = screen.getByRole("textbox", { name: /email code/i });
@@ -156,7 +162,7 @@ describe("SignInScreenParts", () => {
           onResetEmail={onResetEmail}
           t={t}
         />
-      </ThemeProvider>
+      </ThemeProvider>,
     );
     expect(screen.getByRole("button", { name: "Verify" })).not.toBeDisabled();
 
@@ -172,9 +178,14 @@ describe("SignInScreenParts", () => {
   test("status messages render error and translated info", () => {
     renderWithTheme(
       <SignInStatusMessages
-        status={{ loading: false, error: "Bad code", infoKey: "auth.info", infoParams: { count: 2 } }}
+        status={{
+          loading: false,
+          error: "Bad code",
+          infoKey: "auth.info",
+          infoParams: { count: 2 },
+        }}
         t={t}
-      />
+      />,
     );
 
     expect(screen.getByText("Bad code")).toBeInTheDocument();

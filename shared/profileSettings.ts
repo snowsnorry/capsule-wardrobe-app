@@ -5,11 +5,11 @@ const PROFILE_LLM_VALUES = [
   "gemini:gemini-2.5-pro",
   "deepinfra:Qwen/Qwen3-VL-235B-A22B-Instruct",
   "deepinfra:google/gemma-4-31B-it",
-  "none"
+  "none",
 ] as const;
 const PROFILE_IMAGE_LLM_VALUES = [
   "openai:gpt-image-2",
-  "gemini:gemini-3-pro-image-preview"
+  "gemini:gemini-3-pro-image-preview",
 ] as const;
 
 const DEFAULT_PROFILE_THEME = "system";
@@ -22,5 +22,5 @@ export {
   PROFILE_IMAGE_LLM_VALUES,
   DEFAULT_PROFILE_THEME,
   DEFAULT_PROFILE_LLM,
-  DEFAULT_PROFILE_IMAGE_LLM
+  DEFAULT_PROFILE_IMAGE_LLM,
 };

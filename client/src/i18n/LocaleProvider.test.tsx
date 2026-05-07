@@ -31,7 +31,7 @@ describe("LocaleProvider", () => {
     render(
       <LocaleProvider>
         <Consumer />
-      </LocaleProvider>
+      </LocaleProvider>,
     );
 
     expect(screen.getByTestId("locale")).toHaveTextContent("ru");
@@ -49,7 +49,7 @@ describe("LocaleProvider", () => {
     render(
       <LocaleProvider>
         <Consumer />
-      </LocaleProvider>
+      </LocaleProvider>,
     );
 
     expect(screen.getByTestId("locale")).toHaveTextContent("ru");

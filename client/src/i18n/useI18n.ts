@@ -13,7 +13,10 @@ type UseI18nResult = {
 
 function useI18n(): UseI18nResult {
   const { locale, setLocale } = useLocale();
-  const t = useCallback((key, params) => translate(key, params, locale), [locale]);
+  const t = useCallback(
+    (key, params) => translate(key, params, locale),
+    [locale],
+  );
 
   return { locale, setLocale, supportedLocales, t };
 }

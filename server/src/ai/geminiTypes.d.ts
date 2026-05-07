@@ -4,7 +4,9 @@ type GeminiUploadedFileLike = {
   mimeType?: string | null;
 };
 
-type GeminiContentPart = { fileData: { fileUri: string; mimeType: string } } | { text: string };
+type GeminiContentPart =
+  | { fileData: { fileUri: string; mimeType: string } }
+  | { text: string };
 
 type GeminiJsonSchemaLike = {
   type?: string;
@@ -29,12 +31,17 @@ type GeminiGenerateContentPayload = {
 
 type GeminiGenerateContentResponseLike = {
   text?: string | null;
-  candidates?: Array<{ finishReason?: string; content?: { parts?: unknown[] } }>;
+  candidates?: Array<{
+    finishReason?: string;
+    content?: { parts?: unknown[] };
+  }>;
 };
 
 type GeminiClientLike = {
   models: {
-    generateContent: (params: GeminiGenerateContentPayload) => Promise<GeminiGenerateContentResponseLike>;
+    generateContent: (
+      params: GeminiGenerateContentPayload,
+    ) => Promise<GeminiGenerateContentResponseLike>;
   };
   files: {
     upload: (params: {
@@ -53,5 +60,5 @@ export type {
   GeminiGenerateContentPayload,
   GeminiGenerateContentResponseLike,
   GeminiJsonSchemaLike,
-  GeminiUploadedFileLike
+  GeminiUploadedFileLike,
 };

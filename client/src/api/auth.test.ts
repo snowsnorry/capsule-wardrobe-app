@@ -3,12 +3,12 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 const requestApi = vi.hoisted(() => ({
   clearRequestCache: vi.fn(),
   getCachedJson: vi.fn(),
-  requestJson: vi.fn()
+  requestJson: vi.fn(),
 }));
 
 vi.mock("./request", () => requestApi);
 vi.mock("./config", () => ({
-  API_BASE_URL: "https://api.example.test"
+  API_BASE_URL: "https://api.example.test",
 }));
 
 import {
@@ -23,7 +23,7 @@ import {
   updateProfile,
   updateProfileLocale,
   deleteProfile,
-  logout
+  logout,
 } from "./auth";
 
 describe("auth api", () => {
@@ -44,8 +44,8 @@ describe("auth api", () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ email: "person@example.com", locale: "ru" })
-      }
+        body: JSON.stringify({ email: "person@example.com", locale: "ru" }),
+      },
     );
   });
 
@@ -60,8 +60,8 @@ describe("auth api", () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ email: "person@example.com", code: "654321" })
-      }
+        body: JSON.stringify({ email: "person@example.com", code: "654321" }),
+      },
     );
     expect(requestApi.requestJson).toHaveBeenNthCalledWith(
       2,
@@ -70,8 +70,8 @@ describe("auth api", () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ idToken: "google-token" })
-      }
+        body: JSON.stringify({ idToken: "google-token" }),
+      },
     );
   });
 
@@ -83,17 +83,17 @@ describe("auth api", () => {
     expect(requestApi.getCachedJson).toHaveBeenNthCalledWith(
       1,
       "https://api.example.test/profile/status",
-      { credentials: "include", ttlMs: 1000 }
+      { credentials: "include", ttlMs: 1000 },
     );
     expect(requestApi.getCachedJson).toHaveBeenNthCalledWith(
       2,
       "https://api.example.test/profile/me",
-      { credentials: "include", ttlMs: 1000 }
+      { credentials: "include", ttlMs: 1000 },
     );
     expect(requestApi.getCachedJson).toHaveBeenNthCalledWith(
       3,
       "https://api.example.test/auth/me",
-      { credentials: "include", ttlMs: 1000 }
+      { credentials: "include", ttlMs: 1000 },
     );
   });
 
@@ -102,7 +102,7 @@ describe("auth api", () => {
 
     expect(requestApi.requestJson).toHaveBeenCalledWith(
       "https://api.example.test/wardrobe/filters",
-      { credentials: "include" }
+      { credentials: "include" },
     );
   });
 
@@ -113,7 +113,7 @@ describe("auth api", () => {
       theme: "dark",
       llm: "openai:gpt-5.5",
       image_llm: "openai:gpt-image-2",
-      fullname: "Ada Lovelace"
+      fullname: "Ada Lovelace",
     });
     await updateProfileLocale("ru");
 
@@ -124,8 +124,8 @@ describe("auth api", () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ locale: "en" })
-      }
+        body: JSON.stringify({ locale: "en" }),
+      },
     );
     expect(requestApi.requestJson).toHaveBeenNthCalledWith(
       2,
@@ -139,9 +139,9 @@ describe("auth api", () => {
           theme: "dark",
           llm: "openai:gpt-5.5",
           image_llm: "openai:gpt-image-2",
-          fullname: "Ada Lovelace"
-        })
-      }
+          fullname: "Ada Lovelace",
+        }),
+      },
     );
     expect(requestApi.requestJson).toHaveBeenNthCalledWith(
       3,
@@ -150,8 +150,8 @@ describe("auth api", () => {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ locale: "ru" })
-      }
+        body: JSON.stringify({ locale: "ru" }),
+      },
     );
   });
 
@@ -164,16 +164,16 @@ describe("auth api", () => {
       "https://api.example.test/profile/me",
       {
         method: "DELETE",
-        credentials: "include"
-      }
+        credentials: "include",
+      },
     );
     expect(requestApi.requestJson).toHaveBeenNthCalledWith(
       2,
       "https://api.example.test/auth/logout",
       {
         method: "POST",
-        credentials: "include"
-      }
+        credentials: "include",
+      },
     );
   });
 });

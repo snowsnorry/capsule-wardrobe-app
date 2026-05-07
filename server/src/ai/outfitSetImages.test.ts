@@ -1,10 +1,13 @@
 import { test, expect } from "vitest";
-import { buildPromptFromTemplate, createOutfitSetImageService } from "./outfitSetImages.js";
+import {
+  buildPromptFromTemplate,
+  createOutfitSetImageService,
+} from "./outfitSetImages.js";
 import {
   buildCapsuleSnapshot,
   buildNormalizedCapsuleRecord,
   buildNormalizedProfileRecord,
-  buildStoredOutfitSet
+  buildStoredOutfitSet,
 } from "../test/domainFixtures.js";
 
 function createResponseRecorder() {
@@ -18,7 +21,7 @@ function createResponseRecorder() {
     json(payload) {
       this.body = payload;
       return this;
-    }
+    },
   };
 }
 
@@ -29,57 +32,78 @@ function createCapsule() {
       data: {
         wardrobe: {
           items: [
-            { id: "top-1", image_url: "https://example.com/top.jpg", category: "top" },
-            { id: "bottom-1", image_url: "https://example.com/bottom.jpg", category: "bottom" },
-            { id: "bag-1", image_url: "https://example.com/bag.jpg", category: "bag" }
+            {
+              id: "top-1",
+              image_url: "https://example.com/top.jpg",
+              category: "top",
+            },
+            {
+              id: "bottom-1",
+              image_url: "https://example.com/bottom.jpg",
+              category: "bottom",
+            },
+            {
+              id: "bag-1",
+              image_url: "https://example.com/bag.jpg",
+              category: "bag",
+            },
           ],
-          outfitSets: [buildStoredOutfitSet({ itemIds: ["top-1", "bottom-1", "bag-1"] })],
+          outfitSets: [
+            buildStoredOutfitSet({ itemIds: ["top-1", "bottom-1", "bag-1"] }),
+          ],
           rawSelectionText: null,
           swimwearReasoning: null,
-          swimwearRawSelectionText: null
+          swimwearRawSelectionText: null,
         },
-        rejectedUrls: []
-      }
+        rejectedUrls: [],
+      },
     }),
-    saved: null
+    saved: null,
   });
 }
 
 test("outfitSetImage service validates missing set index", async () => {
   const service = createOutfitSetImageService({
-    getCapsuleImpl: async () => createCapsule()
+    getCapsuleImpl: async () => createCapsule(),
   });
   const res = createResponseRecorder();
 
-  await service.generateOutfitSetImage({
-    user: { email: "person@example.com" },
-    params: { id: "capsule-1", setIndex: "bad" }
-  }, res);
+  await service.generateOutfitSetImage(
+    {
+      user: { email: "person@example.com" },
+      params: { id: "capsule-1", setIndex: "bad" },
+    },
+    res,
+  );
 
   expect(res.statusCode).toBe(400);
   expect(res.body).toEqual({ error: "invalid_payload" });
 });
 
 test("buildPromptFromTemplate injects description into prompt template", () => {
-  const prompt = buildPromptFromTemplate([
-    { image_url: "https://example.com/top.jpg" },
-    { image_url: "https://example.com/bottom.jpg" }
-  ], {
-    promptTemplate: "Prompt\n{{description}}",
-    buildOutfitSetDescriptionImpl: () => "Desc"
-  });
+  const prompt = buildPromptFromTemplate(
+    [
+      { image_url: "https://example.com/top.jpg" },
+      { image_url: "https://example.com/bottom.jpg" },
+    ],
+    {
+      promptTemplate: "Prompt\n{{description}}",
+      buildOutfitSetDescriptionImpl: () => "Desc",
+    },
+  );
 
   expect(prompt).toMatch(/Desc/);
   expect(prompt).not.toMatch(/Source item image URLs:/);
 });
 
 test("buildPromptFromTemplate appends description when YAML user prompt has no placeholder", () => {
-  const prompt = buildPromptFromTemplate([
-    { image_url: "https://example.com/top.jpg" }
-  ], {
-    promptTemplate: "Prompt without placeholder",
-    buildOutfitSetDescriptionImpl: () => "Desc <raw>"
-  });
+  const prompt = buildPromptFromTemplate(
+    [{ image_url: "https://example.com/top.jpg" }],
+    {
+      promptTemplate: "Prompt without placeholder",
+      buildOutfitSetDescriptionImpl: () => "Desc <raw>",
+    },
+  );
 
   expect(prompt).toBe("Prompt without placeholder\n\nDesc <raw>");
   expect(prompt).not.toMatch(/&lt;/);
@@ -94,9 +118,10 @@ test("outfitSetImage service starts job and persists generated image", async () 
   const uploads = [];
   const service = createOutfitSetImageService({
     getCapsuleImpl: async () => createCapsule(),
-    getProfileImpl: async () => buildNormalizedProfileRecord({
-      imageLlm: "openai:gpt-image-2"
-    }),
+    getProfileImpl: async () =>
+      buildNormalizedProfileRecord({
+        imageLlm: "openai:gpt-image-2",
+      }),
     buildCapsuleEventSnapshotImpl: (payload) => payload,
     publishSnapshotImpl: (...args) => {
       published.push(args);
@@ -109,8 +134,8 @@ test("outfitSetImage service starts job and persists generated image", async () 
         response: null,
         image: {
           base64: "generated-base64",
-          mimeType: "image/png"
-        }
+          mimeType: "image/png",
+        },
       };
     },
     uploadImageToR2Impl: async (input) => {
@@ -118,7 +143,7 @@ test("outfitSetImage service starts job and persists generated image", async () 
       return {
         key: "outfit-set-images/generated/capsule-1/0/digest.png",
         url: "https://images.example.com/outfit-set-images/generated/capsule-1/0/digest.png",
-        digest: "digest"
+        digest: "digest",
       };
     },
     downloadProductImageAssetsImpl: async () => ({
@@ -129,7 +154,7 @@ test("outfitSetImage service starts job and persists generated image", async () 
         imageUrl: "https://example.com/top.jpg",
         originalImageUrl: "https://example.com/top.jpg",
         width: 100,
-        height: 100
+        height: 100,
       },
       "bottom-1": {
         buffer: Buffer.from("bottom"),
@@ -138,7 +163,7 @@ test("outfitSetImage service starts job and persists generated image", async () 
         imageUrl: "https://example.com/bottom.jpg",
         originalImageUrl: "https://example.com/bottom.jpg",
         width: 100,
-        height: 100
+        height: 100,
       },
       "bag-1": {
         buffer: Buffer.from("bag"),
@@ -147,23 +172,26 @@ test("outfitSetImage service starts job and persists generated image", async () 
         imageUrl: "https://example.com/bag.jpg",
         originalImageUrl: "https://example.com/bag.jpg",
         width: 100,
-        height: 100
-      }
+        height: 100,
+      },
     }),
     updateCapsuleSnapshotImpl: async (_email, _capsuleId, draft) => {
       updates.push(draft);
       return buildNormalizedCapsuleRecord({
         ...createCapsule(),
-        draft
+        draft,
       });
-    }
+    },
   });
   const res = createResponseRecorder();
 
-  await service.generateOutfitSetImage({
-    user: { email: "person@example.com" },
-    params: { id: "capsule-1", setIndex: "0" }
-  }, res);
+  await service.generateOutfitSetImage(
+    {
+      user: { email: "person@example.com" },
+      params: { id: "capsule-1", setIndex: "0" },
+    },
+    res,
+  );
 
   expect(res.statusCode).toBe(202);
   expect(res.body).toEqual({ ok: true, status: "pending" });
@@ -171,7 +199,9 @@ test("outfitSetImage service starts job and persists generated image", async () 
   await new Promise((resolve) => setTimeout(resolve, 0));
 
   expect(updates.length).toBe(1);
-  expect(updates[0].data.wardrobe.outfitSets[0].image).toBe("https://images.example.com/outfit-set-images/generated/capsule-1/0/digest.png");
+  expect(updates[0].data.wardrobe.outfitSets[0].image).toBe(
+    "https://images.example.com/outfit-set-images/generated/capsule-1/0/digest.png",
+  );
   expect(updates[0].data.wardrobe.outfitSets[0].imageObsolete).toBe(false);
   expect(published.length).toBe(2);
   expect(prompts[0]).toMatch(/top-down flat lay photograph/i);
@@ -188,9 +218,10 @@ test("outfitSetImage service uses gemini image provider from profile setting", a
   const openAiCalls = [];
   const service = createOutfitSetImageService({
     getCapsuleImpl: async () => createCapsule(),
-    getProfileImpl: async () => buildNormalizedProfileRecord({
-      imageLlm: "gemini:gemini-3-pro-image-preview"
-    }),
+    getProfileImpl: async () =>
+      buildNormalizedProfileRecord({
+        imageLlm: "gemini:gemini-3-pro-image-preview",
+      }),
     buildCapsuleEventSnapshotImpl: (payload) => payload,
     publishSnapshotImpl: () => {},
     generateImageWithOpenAiImpl: async (...args) => {
@@ -203,14 +234,14 @@ test("outfitSetImage service uses gemini image provider from profile setting", a
         response: null,
         image: {
           base64: "generated-by-gemini",
-          mimeType: "image/png"
-        }
+          mimeType: "image/png",
+        },
       };
     },
     uploadImageToR2Impl: async () => ({
       key: "outfit-set-images/generated/capsule-1/0/gemini.png",
       url: "https://images.example.com/gemini.png",
-      digest: "gemini"
+      digest: "gemini",
     }),
     downloadProductImageAssetsImpl: async () => ({
       "top-1": {
@@ -220,7 +251,7 @@ test("outfitSetImage service uses gemini image provider from profile setting", a
         imageUrl: "https://example.com/top.jpg",
         originalImageUrl: "https://example.com/top.jpg",
         width: 100,
-        height: 100
+        height: 100,
       },
       "bottom-1": {
         buffer: Buffer.from("bottom"),
@@ -229,7 +260,7 @@ test("outfitSetImage service uses gemini image provider from profile setting", a
         imageUrl: "https://example.com/bottom.jpg",
         originalImageUrl: "https://example.com/bottom.jpg",
         width: 100,
-        height: 100
+        height: 100,
       },
       "bag-1": {
         buffer: Buffer.from("bag"),
@@ -238,20 +269,24 @@ test("outfitSetImage service uses gemini image provider from profile setting", a
         imageUrl: "https://example.com/bag.jpg",
         originalImageUrl: "https://example.com/bag.jpg",
         width: 100,
-        height: 100
-      }
+        height: 100,
+      },
     }),
-    updateCapsuleSnapshotImpl: async (_email, _capsuleId, draft) => buildNormalizedCapsuleRecord({
-      ...createCapsule(),
-      draft
-    })
+    updateCapsuleSnapshotImpl: async (_email, _capsuleId, draft) =>
+      buildNormalizedCapsuleRecord({
+        ...createCapsule(),
+        draft,
+      }),
   });
   const res = createResponseRecorder();
 
-  await service.generateOutfitSetImage({
-    user: { email: "person@example.com" },
-    params: { id: "capsule-1", setIndex: "0" }
-  }, res);
+  await service.generateOutfitSetImage(
+    {
+      user: { email: "person@example.com" },
+      params: { id: "capsule-1", setIndex: "0" },
+    },
+    res,
+  );
 
   expect(res.statusCode).toBe(202);
   await new Promise((resolve) => setTimeout(resolve, 0));
@@ -264,7 +299,8 @@ test("outfitSetImage service uses gemini image provider from profile setting", a
 
 test("outfitSetImage service treats an existing URL image as ready", async () => {
   const capsule = createCapsule();
-  capsule.draft.data.wardrobe.outfitSets[0].image = "https://images.example.com/existing.png";
+  capsule.draft.data.wardrobe.outfitSets[0].image =
+    "https://images.example.com/existing.png";
   let generateCalls = 0;
   const service = createOutfitSetImageService({
     getCapsuleImpl: async () => capsule,
@@ -274,17 +310,20 @@ test("outfitSetImage service treats an existing URL image as ready", async () =>
         response: null,
         image: {
           base64: "generated-base64",
-          mimeType: "image/png"
-        }
+          mimeType: "image/png",
+        },
       };
-    }
+    },
   });
   const res = createResponseRecorder();
 
-  await service.generateOutfitSetImage({
-    user: { email: "person@example.com" },
-    params: { id: "capsule-1", setIndex: "0" }
-  }, res);
+  await service.generateOutfitSetImage(
+    {
+      user: { email: "person@example.com" },
+      params: { id: "capsule-1", setIndex: "0" },
+    },
+    res,
+  );
 
   expect(res.statusCode).toBe(200);
   expect(res.body).toEqual({ ok: true, status: "ready" });
@@ -293,37 +332,46 @@ test("outfitSetImage service treats an existing URL image as ready", async () =>
 
 test("outfitSetImage service maps missing capsule, missing set, and invalid item payloads", async () => {
   const missingCapsuleService = createOutfitSetImageService({
-    getCapsuleImpl: async () => null
+    getCapsuleImpl: async () => null,
   });
   const missingCapsuleRes = createResponseRecorder();
-  await missingCapsuleService.generateOutfitSetImage({
-    user: { email: "person@example.com" },
-    params: { id: "capsule-1", setIndex: "0" }
-  }, missingCapsuleRes);
+  await missingCapsuleService.generateOutfitSetImage(
+    {
+      user: { email: "person@example.com" },
+      params: { id: "capsule-1", setIndex: "0" },
+    },
+    missingCapsuleRes,
+  );
   expect(missingCapsuleRes.statusCode).toBe(404);
   expect(missingCapsuleRes.body).toEqual({ error: "not_found" });
 
   const missingSetService = createOutfitSetImageService({
-    getCapsuleImpl: async () => createCapsule()
+    getCapsuleImpl: async () => createCapsule(),
   });
   const missingSetRes = createResponseRecorder();
-  await missingSetService.generateOutfitSetImage({
-    user: { email: "person@example.com" },
-    params: { id: "capsule-1", setIndex: "3" }
-  }, missingSetRes);
+  await missingSetService.generateOutfitSetImage(
+    {
+      user: { email: "person@example.com" },
+      params: { id: "capsule-1", setIndex: "3" },
+    },
+    missingSetRes,
+  );
   expect(missingSetRes.statusCode).toBe(404);
   expect(missingSetRes.body).toEqual({ error: "not_found" });
 
   const invalidCapsule = createCapsule();
   invalidCapsule.draft.data.wardrobe.outfitSets[0].itemIds = ["top-1"];
   const invalidItemsService = createOutfitSetImageService({
-    getCapsuleImpl: async () => invalidCapsule
+    getCapsuleImpl: async () => invalidCapsule,
   });
   const invalidItemsRes = createResponseRecorder();
-  await invalidItemsService.generateOutfitSetImage({
-    user: { email: "person@example.com" },
-    params: { id: "capsule-1", setIndex: "0" }
-  }, invalidItemsRes);
+  await invalidItemsService.generateOutfitSetImage(
+    {
+      user: { email: "person@example.com" },
+      params: { id: "capsule-1", setIndex: "0" },
+    },
+    invalidItemsRes,
+  );
   expect(invalidItemsRes.statusCode).toBe(400);
   expect(invalidItemsRes.body).toEqual({ error: "invalid_payload" });
 });
@@ -332,9 +380,10 @@ test("outfitSetImage service reuses an active pending image job", async () => {
   let generationCalls = 0;
   const service = createOutfitSetImageService({
     getCapsuleImpl: async () => createCapsule(),
-    getProfileImpl: async () => buildNormalizedProfileRecord({
-      imageLlm: "openai:gpt-image-2"
-    }),
+    getProfileImpl: async () =>
+      buildNormalizedProfileRecord({
+        imageLlm: "openai:gpt-image-2",
+      }),
     publishSnapshotImpl: () => {},
     downloadProductImageAssetsImpl: async () => new Promise(() => {}),
     generateImageWithOpenAiImpl: async () => {
@@ -343,23 +392,29 @@ test("outfitSetImage service reuses an active pending image job", async () => {
         response: null,
         image: {
           base64: "generated-base64",
-          mimeType: "image/png"
-        }
+          mimeType: "image/png",
+        },
       };
-    }
+    },
   });
 
   const firstRes = createResponseRecorder();
-  await service.generateOutfitSetImage({
-    user: { email: "person@example.com" },
-    params: { id: "capsule-1", setIndex: "0" }
-  }, firstRes);
+  await service.generateOutfitSetImage(
+    {
+      user: { email: "person@example.com" },
+      params: { id: "capsule-1", setIndex: "0" },
+    },
+    firstRes,
+  );
 
   const secondRes = createResponseRecorder();
-  await service.generateOutfitSetImage({
-    user: { email: "person@example.com" },
-    params: { id: "capsule-1", setIndex: "0" }
-  }, secondRes);
+  await service.generateOutfitSetImage(
+    {
+      user: { email: "person@example.com" },
+      params: { id: "capsule-1", setIndex: "0" },
+    },
+    secondRes,
+  );
 
   expect(firstRes.statusCode).toBe(202);
   expect(firstRes.body).toEqual({ ok: true, status: "pending" });
@@ -372,11 +427,13 @@ test("deleteOutfitSetImage clears stored image and publishes updated snapshot", 
   const published = [];
   const updates = [];
   const capsuleWithImage = createCapsule();
-  capsuleWithImage.draft.data.wardrobe.outfitSets = [{
-    itemIds: ["top-1", "bottom-1", "bag-1"],
-    image: "abc123",
-    imageObsolete: true
-  }];
+  capsuleWithImage.draft.data.wardrobe.outfitSets = [
+    {
+      itemIds: ["top-1", "bottom-1", "bag-1"],
+      image: "abc123",
+      imageObsolete: true,
+    },
+  ];
 
   const service = createOutfitSetImageService({
     getCapsuleImpl: async () => capsuleWithImage,
@@ -388,16 +445,19 @@ test("deleteOutfitSetImage clears stored image and publishes updated snapshot", 
       updates.push(draft);
       return buildNormalizedCapsuleRecord({
         ...capsuleWithImage,
-        draft
+        draft,
       });
-    }
+    },
   });
   const res = createResponseRecorder();
 
-  await service.deleteOutfitSetImage({
-    user: { email: "person@example.com" },
-    params: { id: "capsule-1", setIndex: "0" }
-  }, res);
+  await service.deleteOutfitSetImage(
+    {
+      user: { email: "person@example.com" },
+      params: { id: "capsule-1", setIndex: "0" },
+    },
+    res,
+  );
 
   expect(res.statusCode).toBe(200);
   expect(res.body).toEqual({ ok: true, status: "ready" });
@@ -418,22 +478,36 @@ test("deleteOutfitSetImage writes a draft when the capsule only has saved data",
       data: {
         wardrobe: {
           items: [
-            { id: "top-1", image_url: "https://example.com/top.jpg", category: "top" },
-            { id: "bottom-1", image_url: "https://example.com/bottom.jpg", category: "bottom" },
-            { id: "bag-1", image_url: "https://example.com/bag.jpg", category: "bag" }
+            {
+              id: "top-1",
+              image_url: "https://example.com/top.jpg",
+              category: "top",
+            },
+            {
+              id: "bottom-1",
+              image_url: "https://example.com/bottom.jpg",
+              category: "bottom",
+            },
+            {
+              id: "bag-1",
+              image_url: "https://example.com/bag.jpg",
+              category: "bag",
+            },
           ],
-          outfitSets: [buildStoredOutfitSet({
-            itemIds: ["top-1", "bottom-1", "bag-1"],
-            image: "saved-image",
-            imageObsolete: true
-          })],
+          outfitSets: [
+            buildStoredOutfitSet({
+              itemIds: ["top-1", "bottom-1", "bag-1"],
+              image: "saved-image",
+              imageObsolete: true,
+            }),
+          ],
           rawSelectionText: null,
           swimwearReasoning: null,
-          swimwearRawSelectionText: null
+          swimwearRawSelectionText: null,
         },
-        rejectedUrls: []
-      }
-    })
+        rejectedUrls: [],
+      },
+    }),
   });
 
   const service = createOutfitSetImageService({
@@ -447,21 +521,26 @@ test("deleteOutfitSetImage writes a draft when the capsule only has saved data",
       return buildNormalizedCapsuleRecord({
         ...savedOnlyCapsule,
         draft,
-        saved: savedOnlyCapsule.saved
+        saved: savedOnlyCapsule.saved,
       });
-    }
+    },
   });
   const res = createResponseRecorder();
 
-  await service.deleteOutfitSetImage({
-    user: { email: "person@example.com" },
-    params: { id: "capsule-1", setIndex: "0" }
-  }, res);
+  await service.deleteOutfitSetImage(
+    {
+      user: { email: "person@example.com" },
+      params: { id: "capsule-1", setIndex: "0" },
+    },
+    res,
+  );
 
   expect(res.statusCode).toBe(200);
   expect(updates.length).toBe(1);
   expect(updates[0].data.wardrobe.outfitSets[0].image).toBe(null);
   expect(updates[0].data.wardrobe.outfitSets[0].imageObsolete).toBe(false);
-  expect(savedOnlyCapsule.saved.data.wardrobe.outfitSets[0].image).toBe("saved-image");
+  expect(savedOnlyCapsule.saved.data.wardrobe.outfitSets[0].image).toBe(
+    "saved-image",
+  );
   expect(published.length).toBe(1);
 });

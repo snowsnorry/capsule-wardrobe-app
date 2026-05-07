@@ -10,22 +10,26 @@ test("getWardrobePrompt builds a semantic query from profile filters", () => {
     style: "minimalistic",
     color: "burgundy",
     pattern: "striped",
-    text: "Prefer natural fabrics and no oversized fits"
+    text: "Prefer natural fabrics and no oversized fits",
   });
 
   expect(prompt).toMatch(/Looking for woman's fashion items and clothing\./);
-  expect(prompt).toMatch(/Suitable for a smart_casual dress code during the spring, summer season\./);
+  expect(prompt).toMatch(
+    /Suitable for a smart_casual dress code during the spring, summer season\./,
+  );
   expect(prompt).toMatch(/Ideal for office, brunch\./);
   expect(prompt).toMatch(/Designed in a minimalistic style\./);
   expect(prompt).toMatch(/Preferred color: burgundy\./);
   expect(prompt).toMatch(/Features a striped pattern\./);
-  expect(prompt).toMatch(/Additional request: Prefer natural fabrics and no oversized fits\./);
+  expect(prompt).toMatch(
+    /Additional request: Prefer natural fabrics and no oversized fits\./,
+  );
 });
 
 test("getWardrobePrompt omits additional request for blank text", () => {
   const prompt = getWardrobePrompt({
     audience: "woman",
-    text: "   "
+    text: "   ",
   });
 
   expect(prompt).not.toMatch(/Additional request:/);
@@ -42,10 +46,10 @@ test("voyage client requires api key and shapes embedding request", async () => 
       return {
         ok: true,
         json: async () => ({
-          data: [{ embedding: [0.1, 0.2, 0.3] }]
-        })
+          data: [{ embedding: [0.1, 0.2, 0.3] }],
+        }),
       };
-    }
+    },
   });
 
   const embedding = await client.getPromptEmbeddings("capsule prompt");
@@ -56,7 +60,7 @@ test("voyage client requires api key and shapes embedding request", async () => 
   expect(JSON.parse(requestInit.body)).toEqual({
     input: "capsule prompt",
     model: "voyage-4-large",
-    input_type: "query"
+    input_type: "query",
   });
 });
 
@@ -67,26 +71,32 @@ test("voyage client throws for missing key, http failure, and invalid embedding 
     },
     fetchImpl: async () => {
       throw new Error("fetch should not be called");
-    }
+    },
   });
-  await expect(() => missingKeyClient.getPromptEmbeddings("prompt")).rejects.toThrow(/VOYAGE_API_KEY is not set/);
+  await expect(() =>
+    missingKeyClient.getPromptEmbeddings("prompt"),
+  ).rejects.toThrow(/VOYAGE_API_KEY is not set/);
 
   const httpFailureClient = createVoyageClient({
     getVoyageApiKeyImpl: () => "voyage-key",
     fetchImpl: async () => ({
       ok: false,
       status: 502,
-      text: async () => "bad gateway"
-    })
+      text: async () => "bad gateway",
+    }),
   });
-  await expect(() => httpFailureClient.getPromptEmbeddings("prompt")).rejects.toThrow(/Failed to compute prompt embeddings: 502 bad gateway/);
+  await expect(() =>
+    httpFailureClient.getPromptEmbeddings("prompt"),
+  ).rejects.toThrow(/Failed to compute prompt embeddings: 502 bad gateway/);
 
   const invalidPayloadClient = createVoyageClient({
     getVoyageApiKeyImpl: () => "voyage-key",
     fetchImpl: async () => ({
       ok: true,
-      json: async () => ({ data: [{ embedding: [] }] })
-    })
+      json: async () => ({ data: [{ embedding: [] }] }),
+    }),
   });
-  await expect(() => invalidPayloadClient.getPromptEmbeddings("prompt")).rejects.toThrow(/Failed to compute prompt embeddings/);
+  await expect(() =>
+    invalidPayloadClient.getPromptEmbeddings("prompt"),
+  ).rejects.toThrow(/Failed to compute prompt embeddings/);
 });

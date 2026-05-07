@@ -2,7 +2,11 @@ import { useMemo } from "react";
 import type { ReactNode } from "react";
 import { translateOption } from "../../i18n";
 import { getFacetLabel } from "../../search/searchState";
-import type { SearchDraftState, SearchFilterValue, SearchOptions } from "../../search/searchState";
+import type {
+  SearchDraftState,
+  SearchFilterValue,
+  SearchOptions,
+} from "../../search/searchState";
 import {
   BAR_CHART_DIMENSION_KEYS,
   CHART_DIMENSIONS,
@@ -10,7 +14,7 @@ import {
   PriceLineChart,
   StatisticsBarChart,
   StatisticsDonutChart,
-  getColorChartFillConfig
+  getColorChartFillConfig,
 } from "./StatisticsCharts";
 import type { StatisticsState } from "./statisticsTypes";
 
@@ -23,7 +27,7 @@ function buildDimensionChartCard({
   options,
   rows,
   t,
-  onToggleFacetValue
+  onToggleFacetValue,
 }: {
   dimension: (typeof CHART_DIMENSIONS)[number];
   draftState: SearchDraftState;
@@ -31,25 +35,41 @@ function buildDimensionChartCard({
   options: SearchOptions;
   rows: StatisticsState["stats"][string];
   t: Translate;
-  onToggleFacetValue: (fieldKey: keyof SearchDraftState, value: SearchFilterValue) => Promise<void>;
+  onToggleFacetValue: (
+    fieldKey: keyof SearchDraftState,
+    value: SearchFilterValue,
+  ) => Promise<void>;
 }) {
-  const activeValues = (draftState[dimension.key as keyof SearchDraftState] as string[] | undefined) || [];
-  const formatLabel = (value: string) => getFacetLabel({ value, optionGroup: dimension.optionGroup, options, locale, translateOption });
+  const activeValues =
+    (draftState[dimension.key as keyof SearchDraftState] as
+      | string[]
+      | undefined) || [];
+  const formatLabel = (value: string) =>
+    getFacetLabel({
+      value,
+      optionGroup: dimension.optionGroup,
+      options,
+      locale,
+      translateOption,
+    });
   const commonProps = {
     title: t(dimension.titleKey),
     subtitle: t("statistics.chartHint"),
     rows,
     activeValues,
-    onToggleValue: (value: string) => onToggleFacetValue(dimension.key as keyof SearchDraftState, value),
+    onToggleValue: (value: string) =>
+      onToggleFacetValue(dimension.key as keyof SearchDraftState, value),
     formatLabel,
-    locale
+    locale,
   };
 
   return BAR_CHART_DIMENSION_KEYS.has(dimension.key) ? (
     <StatisticsBarChart
       key={dimension.key}
       {...commonProps}
-      getFillConfig={(_value, index) => ({ color: FACET_COLORS[index % FACET_COLORS.length] })}
+      getFillConfig={(_value, index) => ({
+        color: FACET_COLORS[index % FACET_COLORS.length],
+      })}
     />
   ) : (
     <StatisticsDonutChart key={dimension.key} {...commonProps} />
@@ -62,14 +82,17 @@ function buildColorChartCard({
   locale,
   options,
   t,
-  onToggleFacetValue
+  onToggleFacetValue,
 }: {
   colorRows: StatisticsState["stats"][string];
   draftState: SearchDraftState;
   locale: string;
   options: SearchOptions;
   t: Translate;
-  onToggleFacetValue: (fieldKey: keyof SearchDraftState, value: SearchFilterValue) => Promise<void>;
+  onToggleFacetValue: (
+    fieldKey: keyof SearchDraftState,
+    value: SearchFilterValue,
+  ) => Promise<void>;
 }) {
   return (
     <StatisticsBarChart
@@ -79,7 +102,15 @@ function buildColorChartCard({
       rows={colorRows}
       activeValues={draftState.color || []}
       onToggleValue={(value) => onToggleFacetValue("color", value)}
-      formatLabel={(value) => getFacetLabel({ value, optionGroup: "accentColors", options, locale, translateOption })}
+      formatLabel={(value) =>
+        getFacetLabel({
+          value,
+          optionGroup: "accentColors",
+          options,
+          locale,
+          translateOption,
+        })
+      }
       getFillConfig={(value) => getColorChartFillConfig(value)}
       locale={locale}
     />
@@ -92,24 +123,35 @@ export function useStatisticsChartCards({
   options,
   statsState,
   t,
-  onToggleFacetValue
+  onToggleFacetValue,
 }: {
   draftState: SearchDraftState;
   locale: string;
   options: SearchOptions;
   statsState: StatisticsState;
   t: Translate;
-  onToggleFacetValue: (fieldKey: keyof SearchDraftState, value: SearchFilterValue) => Promise<void>;
+  onToggleFacetValue: (
+    fieldKey: keyof SearchDraftState,
+    value: SearchFilterValue,
+  ) => Promise<void>;
 }): ReactNode[] {
   return useMemo(() => {
-    const cards = CHART_DIMENSIONS
-      .map((dimension) => {
-        const rows = Array.isArray(statsState.stats[dimension.key]) ? statsState.stats[dimension.key] : [];
-        return rows.length > 0
-          ? buildDimensionChartCard({ dimension, draftState, locale, options, rows, t, onToggleFacetValue })
-          : null;
-      })
-      .filter(Boolean);
+    const cards = CHART_DIMENSIONS.map((dimension) => {
+      const rows = Array.isArray(statsState.stats[dimension.key])
+        ? statsState.stats[dimension.key]
+        : [];
+      return rows.length > 0
+        ? buildDimensionChartCard({
+            dimension,
+            draftState,
+            locale,
+            options,
+            rows,
+            t,
+            onToggleFacetValue,
+          })
+        : null;
+    }).filter(Boolean);
 
     if (statsState.priceBuckets.length > 0) {
       cards.unshift(
@@ -118,15 +160,36 @@ export function useStatisticsChartCards({
           title={t("search.filters.price")}
           buckets={statsState.priceBuckets}
           locale={locale}
-        />
+        />,
       );
     }
 
-    const colorRows = Array.isArray(statsState.stats.color) ? statsState.stats.color : [];
+    const colorRows = Array.isArray(statsState.stats.color)
+      ? statsState.stats.color
+      : [];
     if (colorRows.length > 0) {
-      cards.splice(1, 0, buildColorChartCard({ colorRows, draftState, locale, options, t, onToggleFacetValue }));
+      cards.splice(
+        1,
+        0,
+        buildColorChartCard({
+          colorRows,
+          draftState,
+          locale,
+          options,
+          t,
+          onToggleFacetValue,
+        }),
+      );
     }
 
     return cards;
-  }, [draftState, locale, onToggleFacetValue, options, statsState.priceBuckets, statsState.stats, t]);
+  }, [
+    draftState,
+    locale,
+    onToggleFacetValue,
+    options,
+    statsState.priceBuckets,
+    statsState.stats,
+    t,
+  ]);
 }

@@ -5,7 +5,7 @@ import {
   downloadProductImageAssets,
   groupPromptImageItemsByCategory,
   preparePdfImageAssets,
-  resolveSourceImageUrl
+  resolveSourceImageUrl,
 } from "./promptImages.js";
 
 test("promptImages barrel exposes prompt image module entrypoints", () => {
@@ -14,5 +14,7 @@ test("promptImages barrel exposes prompt image module entrypoints", () => {
   expect(typeof downloadProductImageAssets).toBe("function");
   expect(typeof groupPromptImageItemsByCategory).toBe("function");
   expect(typeof preparePdfImageAssets).toBe("function");
-  expect(resolveSourceImageUrl("https://example.com/image.jpg?w={width}")).toBe("https://example.com/image.jpg?w=1000");
+  expect(resolveSourceImageUrl("https://example.com/image.jpg?w={width}")).toBe(
+    "https://example.com/image.jpg?w=1000",
+  );
 });

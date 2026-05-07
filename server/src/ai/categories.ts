@@ -4,7 +4,7 @@ const _CATEGORIES: Record<string, number> = {
   outerwear: 1,
   shoes: 2,
   belt: 1,
-  bag: 2
+  bag: 2,
 };
 
 const MIDLAYER_SEASONS = new Set(["winter", "autumn", "spring"]);
@@ -12,7 +12,11 @@ const MIDLAYER_SEASONS = new Set(["winter", "autumn", "spring"]);
 function normalizeSeasons(season) {
   if (Array.isArray(season)) {
     return season
-      .map((value) => String(value || "").trim().toLowerCase())
+      .map((value) =>
+        String(value || "")
+          .trim()
+          .toLowerCase(),
+      )
       .filter(Boolean);
   }
 
@@ -25,9 +29,13 @@ function normalizeSeasons(season) {
 
 function getCapsuleCategories(userProfile = null) {
   const categories = { ..._CATEGORIES };
-  const audience = String(userProfile?.audience || "").trim().toLowerCase();
+  const audience = String(userProfile?.audience || "")
+    .trim()
+    .toLowerCase();
   const seasons = normalizeSeasons(userProfile?.season);
-  const hasMidlayerSeason = seasons.some((season) => MIDLAYER_SEASONS.has(season));
+  const hasMidlayerSeason = seasons.some((season) =>
+    MIDLAYER_SEASONS.has(season),
+  );
   const hasSummer = seasons.includes("summer");
 
   if (audience === "woman") {

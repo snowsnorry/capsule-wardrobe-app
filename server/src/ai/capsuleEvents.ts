@@ -1,11 +1,18 @@
 import { createChannel, createSession } from "better-sse";
-import { getCapsuleSnapshotRegeneration, getEffectiveCapsuleSnapshot } from "../capsuleStore.js";
+import {
+  getCapsuleSnapshotRegeneration,
+  getEffectiveCapsuleSnapshot,
+} from "../capsuleStore.js";
 import type { CapsuleRecord } from "../capsuleStoreModel.js";
 
 function createCapsuleEventKey(email, capsuleId) {
-  const normalizedEmail = String(email || "").trim().toLowerCase();
+  const normalizedEmail = String(email || "")
+    .trim()
+    .toLowerCase();
   const normalizedCapsuleId = String(capsuleId || "").trim();
-  return normalizedCapsuleId ? `${normalizedEmail}::${normalizedCapsuleId}` : normalizedEmail;
+  return normalizedCapsuleId
+    ? `${normalizedEmail}::${normalizedCapsuleId}`
+    : normalizedEmail;
 }
 
 function getTrimmedText(value) {
@@ -22,7 +29,7 @@ function normalizeOutfitSet(set) {
   } = {
     itemIds: Array.isArray(set?.itemIds)
       ? set.itemIds.map((id) => String(id || "").trim()).filter(Boolean)
-      : []
+      : [],
   };
 
   const image = getTrimmedText(set?.image);
@@ -44,7 +51,9 @@ function normalizeOutfitSets(value) {
 }
 
 function getStoredRawSelectionText(stored) {
-  return getTrimmedText(stored.rawSelectionText) || getTrimmedText(stored.reasoning);
+  return (
+    getTrimmedText(stored.rawSelectionText) || getTrimmedText(stored.reasoning)
+  );
 }
 
 function getStoredWardrobePayload(profile) {
@@ -55,7 +64,7 @@ function getStoredWardrobePayload(profile) {
       outfitSets: [],
       rawSelectionText: null,
       swimwearReasoning: null,
-      swimwearRawSelectionText: null
+      swimwearRawSelectionText: null,
     };
   }
 
@@ -68,7 +77,7 @@ function getStoredWardrobePayload(profile) {
     outfitSets: normalizeOutfitSets(stored.outfitSets),
     rawSelectionText: getStoredRawSelectionText(stored),
     swimwearReasoning: getTrimmedText(stored.swimwearReasoning),
-    swimwearRawSelectionText: getTrimmedText(stored.swimwearRawSelectionText)
+    swimwearRawSelectionText: getTrimmedText(stored.swimwearRawSelectionText),
   };
 }
 
@@ -85,12 +94,16 @@ function buildSnapshotPayload(payload = {}) {
     swimwearReasoning: null,
     swimwearRawSelectionText: null,
     error: null,
-    ...payload
+    ...payload,
   };
 }
 
 function getFailedRawSelectionText(storedWardrobe, error) {
-  return getTrimmedText(error?.rawSelectionText) || storedWardrobe?.rawSelectionText || null;
+  return (
+    getTrimmedText(error?.rawSelectionText) ||
+    storedWardrobe?.rawSelectionText ||
+    null
+  );
 }
 
 function buildFailedSnapshot(storedWardrobe, error) {
@@ -98,30 +111,32 @@ function buildFailedSnapshot(storedWardrobe, error) {
     status: "failed",
     ...getStoredWardrobeSnapshotFields(storedWardrobe),
     rawSelectionText: getFailedRawSelectionText(storedWardrobe, error),
-    error: "service_unavailable"
+    error: "service_unavailable",
   });
 }
 
 function getWardrobeItemUrls(storedWardrobe) {
   return Array.isArray(storedWardrobe?.items)
     ? storedWardrobe.items
-      .map((item) => String(item?.url || "").trim())
-      .filter(Boolean)
+        .map((item) => String(item?.url || "").trim())
+        .filter(Boolean)
     : [];
 }
 
 function getPendingImageSetIndexes(outfitSetImageJob) {
   return Array.isArray(outfitSetImageJob?.pendingSetIndexes)
     ? outfitSetImageJob.pendingSetIndexes
-      .map((value) => Number.parseInt(value, 10))
-      .filter((value) => Number.isInteger(value) && value >= 0)
-      .sort((left, right) => left - right)
+        .map((value) => Number.parseInt(value, 10))
+        .filter((value) => Number.isInteger(value) && value >= 0)
+        .sort((left, right) => left - right)
     : [];
 }
 
 function getPendingRegenerationUrls(partialRegenerationJob) {
   return Array.isArray(partialRegenerationJob?.pendingItemUrls)
-    ? partialRegenerationJob.pendingItemUrls.map((itemUrl) => String(itemUrl || "").trim()).filter(Boolean)
+    ? partialRegenerationJob.pendingItemUrls
+        .map((itemUrl) => String(itemUrl || "").trim())
+        .filter(Boolean)
     : [];
 }
 
@@ -131,39 +146,54 @@ function getStoredWardrobeSnapshotFields(storedWardrobe) {
     outfitSets: storedWardrobe?.outfitSets || [],
     rawSelectionText: storedWardrobe?.rawSelectionText || null,
     swimwearReasoning: storedWardrobe?.swimwearReasoning || null,
-    swimwearRawSelectionText: storedWardrobe?.swimwearRawSelectionText || null
+    swimwearRawSelectionText: storedWardrobe?.swimwearRawSelectionText || null,
   };
 }
 
-function buildPartialPendingSnapshot(partialRegenerationJob, pendingImageSetIndexes, storedWardrobeFields) {
+function buildPartialPendingSnapshot(
+  partialRegenerationJob,
+  pendingImageSetIndexes,
+  storedWardrobeFields,
+) {
   return buildSnapshotPayload({
     status: "pending",
     pendingStage: "regenerate",
     pendingRegenerationUrls: getPendingRegenerationUrls(partialRegenerationJob),
     pendingImageSetIndexes,
-    ...storedWardrobeFields
+    ...storedWardrobeFields,
   });
 }
 
-function buildExtrasPendingSnapshot(pendingImageSetIndexes, storedWardrobeFields) {
+function buildExtrasPendingSnapshot(
+  pendingImageSetIndexes,
+  storedWardrobeFields,
+) {
   return buildSnapshotPayload({
     status: "pending",
     pendingStage: "extras",
     hasPendingAdditionalItems: true,
     pendingImageSetIndexes,
-    ...storedWardrobeFields
+    ...storedWardrobeFields,
   });
 }
 
-function buildFullPendingSnapshot(activeJob, fullRegenerationMarker, storedWardrobe, pendingImageSetIndexes, storedWardrobeFields) {
+function buildFullPendingSnapshot(
+  activeJob,
+  fullRegenerationMarker,
+  storedWardrobe,
+  pendingImageSetIndexes,
+  storedWardrobeFields,
+) {
   const isPendingExtras = activeJob?.phase === "extras";
   return buildSnapshotPayload({
     status: "pending",
     pendingStage: isPendingExtras ? "extras" : "capsule",
     hasPendingAdditionalItems: isPendingExtras,
-    pendingRegenerationUrls: isPendingExtras ? [] : getWardrobeItemUrls(storedWardrobe),
+    pendingRegenerationUrls: isPendingExtras
+      ? []
+      : getWardrobeItemUrls(storedWardrobe),
     pendingImageSetIndexes,
-    ...storedWardrobeFields
+    ...storedWardrobeFields,
   });
 }
 
@@ -171,7 +201,7 @@ function buildReadySnapshot(pendingImageSetIndexes, storedWardrobeFields) {
   return buildSnapshotPayload({
     status: "ready",
     pendingImageSetIndexes,
-    ...storedWardrobeFields
+    ...storedWardrobeFields,
   });
 }
 
@@ -184,7 +214,11 @@ function isPartialRegenerationFailed(partialRegenerationJob) {
 }
 
 function isActiveExtrasPendingWithItems(activeJob, storedWardrobe) {
-  return activeJob?.status === "pending" && activeJob.phase === "extras" && Boolean(storedWardrobe?.items?.length);
+  return (
+    activeJob?.status === "pending" &&
+    activeJob.phase === "extras" &&
+    Boolean(storedWardrobe?.items?.length)
+  );
 }
 
 function isActiveJobFailed(activeJob) {
@@ -192,7 +226,10 @@ function isActiveJobFailed(activeJob) {
 }
 
 function isCapsulePending(activeJob, fullRegenerationMarker) {
-  return activeJob?.status === "pending" || fullRegenerationMarker?.status === "pending";
+  return (
+    activeJob?.status === "pending" ||
+    fullRegenerationMarker?.status === "pending"
+  );
 }
 
 function hasStoredWardrobeItems(storedWardrobe) {
@@ -201,42 +238,76 @@ function hasStoredWardrobeItems(storedWardrobe) {
 
 const CAPSULE_SNAPSHOT_BRANCHES = [
   {
-    matches: ({ partialRegenerationJob }) => isPartialRegenerationPending(partialRegenerationJob),
-    build: ({ partialRegenerationJob, pendingImageSetIndexes, storedWardrobeFields }) => (
-      buildPartialPendingSnapshot(partialRegenerationJob, pendingImageSetIndexes, storedWardrobeFields)
-    )
+    matches: ({ partialRegenerationJob }) =>
+      isPartialRegenerationPending(partialRegenerationJob),
+    build: ({
+      partialRegenerationJob,
+      pendingImageSetIndexes,
+      storedWardrobeFields,
+    }) =>
+      buildPartialPendingSnapshot(
+        partialRegenerationJob,
+        pendingImageSetIndexes,
+        storedWardrobeFields,
+      ),
   },
   {
-    matches: ({ partialRegenerationJob }) => isPartialRegenerationFailed(partialRegenerationJob),
-    build: ({ partialRegenerationJob, storedWardrobe }) => buildFailedSnapshot(storedWardrobe, partialRegenerationJob.error)
+    matches: ({ partialRegenerationJob }) =>
+      isPartialRegenerationFailed(partialRegenerationJob),
+    build: ({ partialRegenerationJob, storedWardrobe }) =>
+      buildFailedSnapshot(storedWardrobe, partialRegenerationJob.error),
   },
   {
-    matches: ({ activeJob, storedWardrobe }) => isActiveExtrasPendingWithItems(activeJob, storedWardrobe),
-    build: ({ pendingImageSetIndexes, storedWardrobeFields }) => (
-      buildExtrasPendingSnapshot(pendingImageSetIndexes, storedWardrobeFields)
-    )
+    matches: ({ activeJob, storedWardrobe }) =>
+      isActiveExtrasPendingWithItems(activeJob, storedWardrobe),
+    build: ({ pendingImageSetIndexes, storedWardrobeFields }) =>
+      buildExtrasPendingSnapshot(pendingImageSetIndexes, storedWardrobeFields),
   },
   {
     matches: ({ activeJob }) => isActiveJobFailed(activeJob),
-    build: ({ activeJob, storedWardrobe }) => buildFailedSnapshot(storedWardrobe, activeJob.error)
+    build: ({ activeJob, storedWardrobe }) =>
+      buildFailedSnapshot(storedWardrobe, activeJob.error),
   },
   {
-    matches: ({ activeJob, fullRegenerationMarker }) => isCapsulePending(activeJob, fullRegenerationMarker),
-    build: ({ activeJob, fullRegenerationMarker, storedWardrobe, pendingImageSetIndexes, storedWardrobeFields }) => (
-      buildFullPendingSnapshot(activeJob, fullRegenerationMarker, storedWardrobe, pendingImageSetIndexes, storedWardrobeFields)
-    )
+    matches: ({ activeJob, fullRegenerationMarker }) =>
+      isCapsulePending(activeJob, fullRegenerationMarker),
+    build: ({
+      activeJob,
+      fullRegenerationMarker,
+      storedWardrobe,
+      pendingImageSetIndexes,
+      storedWardrobeFields,
+    }) =>
+      buildFullPendingSnapshot(
+        activeJob,
+        fullRegenerationMarker,
+        storedWardrobe,
+        pendingImageSetIndexes,
+        storedWardrobeFields,
+      ),
   },
   {
     matches: ({ storedWardrobe }) => hasStoredWardrobeItems(storedWardrobe),
-    build: ({ pendingImageSetIndexes, storedWardrobeFields }) => buildReadySnapshot(pendingImageSetIndexes, storedWardrobeFields)
-  }
+    build: ({ pendingImageSetIndexes, storedWardrobeFields }) =>
+      buildReadySnapshot(pendingImageSetIndexes, storedWardrobeFields),
+  },
 ];
 
 function buildCapsuleEventSnapshot(options: Record<string, unknown> = {}) {
-  const { capsule = null, activeJob = null, partialRegenerationJob = null, outfitSetImageJob = null } = options;
-  const effectiveSnapshot = getEffectiveCapsuleSnapshot(capsule as CapsuleRecord | null);
-  const storedWardrobe = getStoredWardrobePayload({ items: effectiveSnapshot?.data?.wardrobe });
-  const fullRegenerationMarker = getCapsuleSnapshotRegeneration(effectiveSnapshot);
+  const {
+    capsule = null,
+    activeJob = null,
+    partialRegenerationJob = null,
+    outfitSetImageJob = null,
+  } = options;
+  const effectiveSnapshot = getEffectiveCapsuleSnapshot(
+    capsule as CapsuleRecord | null,
+  );
+  const storedWardrobe = getStoredWardrobePayload({
+    items: effectiveSnapshot?.data?.wardrobe,
+  });
+  const fullRegenerationMarker =
+    getCapsuleSnapshotRegeneration(effectiveSnapshot);
   const pendingImageSetIndexes = getPendingImageSetIndexes(outfitSetImageJob);
   const storedWardrobeFields = getStoredWardrobeSnapshotFields(storedWardrobe);
   const branchContext = {
@@ -245,9 +316,11 @@ function buildCapsuleEventSnapshot(options: Record<string, unknown> = {}) {
     partialRegenerationJob,
     pendingImageSetIndexes,
     storedWardrobe,
-    storedWardrobeFields
+    storedWardrobeFields,
   };
-  const branch = CAPSULE_SNAPSHOT_BRANCHES.find(({ matches }) => matches(branchContext));
+  const branch = CAPSULE_SNAPSHOT_BRANCHES.find(({ matches }) =>
+    matches(branchContext),
+  );
   return branch ? branch.build(branchContext) : buildSnapshotPayload();
 }
 
@@ -275,8 +348,8 @@ function createCapsuleEventHub() {
       keepAlive: 10000,
       headers: {
         "Cache-Control": "no-cache, no-transform",
-        Connection: "keep-alive"
-      }
+        Connection: "keep-alive",
+      },
     });
 
     channel.register(session);
@@ -309,7 +382,7 @@ function createCapsuleEventHub() {
   return {
     getSessionCount,
     publish,
-    subscribe
+    subscribe,
   };
 }
 
@@ -320,5 +393,5 @@ export {
   capsuleEventHub,
   createCapsuleEventHub,
   createCapsuleEventKey,
-  getStoredWardrobePayload
+  getStoredWardrobePayload,
 };

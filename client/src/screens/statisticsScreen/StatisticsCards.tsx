@@ -6,7 +6,7 @@ import type { ActiveFilterChip } from "../../search/searchState";
 export function StatisticsCard({
   title,
   subtitle,
-  children
+  children,
 }: {
   title: string;
   subtitle?: string;
@@ -14,7 +14,9 @@ export function StatisticsCard({
 }) {
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === "dark";
-  const cardBackground = isDarkMode ? theme.palette.background.paper : "rgba(252, 251, 249, 0.72)";
+  const cardBackground = isDarkMode
+    ? theme.palette.background.paper
+    : "rgba(252, 251, 249, 0.72)";
 
   return (
     <Stack
@@ -30,11 +32,13 @@ export function StatisticsCard({
         border: "1px solid",
         borderColor: "divider",
         bgcolor: cardBackground,
-        color: "text.primary"
+        color: "text.primary",
       }}
     >
       <Box>
-        <Typography variant="h6" sx={{ color: "text.primary" }}>{title}</Typography>
+        <Typography variant="h6" sx={{ color: "text.primary" }}>
+          {title}
+        </Typography>
         {subtitle ? (
           <Typography variant="body2" color="text.secondary">
             {subtitle}
@@ -50,7 +54,7 @@ function SummaryMetric({
   title,
   subtitle,
   totalLabel,
-  isLoading
+  isLoading,
 }: {
   title: string;
   subtitle: string;
@@ -64,7 +68,7 @@ function SummaryMetric({
         sx={{
           textTransform: "uppercase",
           letterSpacing: "0.08em",
-          color: "text.secondary"
+          color: "text.secondary",
         }}
       >
         {title}
@@ -72,13 +76,26 @@ function SummaryMetric({
       <Stack direction="row" alignItems="center" spacing={1.2}>
         <Typography
           variant="h2"
-          sx={{ lineHeight: 1, fontSize: { xs: "1.5rem", md: "1.5rem" }, fontWeight: 600, color: "text.primary" }}
+          sx={{
+            lineHeight: 1,
+            fontSize: { xs: "1.5rem", md: "1.5rem" },
+            fontWeight: 600,
+            color: "text.primary",
+          }}
         >
           {totalLabel}
         </Typography>
         {isLoading ? <CircularProgress size={20} /> : null}
       </Stack>
-      <Typography variant="body2" sx={{ maxWidth: 560, lineHeight: 1.5, pr: { lg: 2 }, color: "text.secondary" }}>
+      <Typography
+        variant="body2"
+        sx={{
+          maxWidth: 560,
+          lineHeight: 1.5,
+          pr: { lg: 2 },
+          color: "text.secondary",
+        }}
+      >
         {subtitle}
       </Typography>
     </Stack>
@@ -90,7 +107,7 @@ function ActiveFilterChips({
   onDeleteChip,
   activeFiltersLabel,
   noActiveFiltersLabel,
-  isDarkMode
+  isDarkMode,
 }: {
   chips: ActiveFilterChip[];
   onDeleteChip: (chip: ActiveFilterChip) => void;
@@ -98,16 +115,42 @@ function ActiveFilterChips({
   noActiveFiltersLabel: string;
   isDarkMode: boolean;
 }) {
-  const subtleChipBackground = isDarkMode ? "rgba(238, 245, 243, 0.08)" : undefined;
-  const subtleChipDeleteColor = isDarkMode ? "rgba(238, 245, 243, 0.68)" : undefined;
+  const subtleChipBackground = isDarkMode
+    ? "rgba(238, 245, 243, 0.08)"
+    : undefined;
+  const subtleChipDeleteColor = isDarkMode
+    ? "rgba(238, 245, 243, 0.68)"
+    : undefined;
 
   return (
-    <Stack spacing={1.2} sx={{ minWidth: 0, width: "100%", flexShrink: 0, alignSelf: "stretch", pl: { lg: 1 } }}>
-      <Typography variant="caption" sx={{ textTransform: "uppercase", letterSpacing: "0.08em", color: "text.secondary" }}>
+    <Stack
+      spacing={1.2}
+      sx={{
+        minWidth: 0,
+        width: "100%",
+        flexShrink: 0,
+        alignSelf: "stretch",
+        pl: { lg: 1 },
+      }}
+    >
+      <Typography
+        variant="caption"
+        sx={{
+          textTransform: "uppercase",
+          letterSpacing: "0.08em",
+          color: "text.secondary",
+        }}
+      >
         {chips.length > 0 ? activeFiltersLabel : ""}
       </Typography>
       {chips.length > 0 ? (
-        <Stack direction="row" flexWrap="wrap" gap={1} useFlexGap sx={{ alignContent: "flex-start" }}>
+        <Stack
+          direction="row"
+          flexWrap="wrap"
+          gap={1}
+          useFlexGap
+          sx={{ alignContent: "flex-start" }}
+        >
           {chips.map((chip) => (
             <Chip
               key={chip.key}
@@ -117,8 +160,12 @@ function ActiveFilterChips({
                 maxWidth: "100%",
                 bgcolor: subtleChipBackground,
                 color: isDarkMode ? "text.primary" : undefined,
-                "& .MuiChip-label": { display: "block", overflow: "hidden", textOverflow: "ellipsis" },
-                "& .MuiChip-deleteIcon": { color: subtleChipDeleteColor }
+                "& .MuiChip-label": {
+                  display: "block",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                },
+                "& .MuiChip-deleteIcon": { color: subtleChipDeleteColor },
               }}
             />
           ))}
@@ -142,7 +189,7 @@ export function StatisticsSummaryCard({
   isLoading,
   onDeleteChip,
   activeFiltersLabel,
-  noActiveFiltersLabel
+  noActiveFiltersLabel,
 }: {
   title: string;
   subtitle: string;
@@ -155,7 +202,9 @@ export function StatisticsSummaryCard({
 }) {
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === "dark";
-  const cardBackground = isDarkMode ? theme.palette.background.paper : "rgba(252, 251, 249, 0.82)";
+  const cardBackground = isDarkMode
+    ? theme.palette.background.paper
+    : "rgba(252, 251, 249, 0.82)";
 
   return (
     <Box
@@ -168,19 +217,27 @@ export function StatisticsSummaryCard({
         borderRadius: "10px",
         border: "1px solid",
         borderColor: "divider",
-        bgcolor: cardBackground
+        bgcolor: cardBackground,
       }}
     >
       <Box
         sx={{
           display: { xs: "flex", lg: "grid" },
           flexDirection: { xs: "column", lg: undefined },
-          gridTemplateColumns: { xs: "1fr", lg: "minmax(260px, 340px) minmax(0, 1fr)" },
+          gridTemplateColumns: {
+            xs: "1fr",
+            lg: "minmax(260px, 340px) minmax(0, 1fr)",
+          },
           gap: { xs: 1.8, md: 3 },
-          alignItems: "start"
+          alignItems: "start",
         }}
       >
-        <SummaryMetric title={title} subtitle={subtitle} totalLabel={totalLabel} isLoading={isLoading} />
+        <SummaryMetric
+          title={title}
+          subtitle={subtitle}
+          totalLabel={totalLabel}
+          isLoading={isLoading}
+        />
         <ActiveFilterChips
           chips={chips}
           onDeleteChip={onDeleteChip}

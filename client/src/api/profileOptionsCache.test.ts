@@ -1,9 +1,12 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { fetchWardrobeFilters } from "./auth";
-import { clearProfileOptionsCache, loadProfileOptions } from "./profileOptionsCache";
+import {
+  clearProfileOptionsCache,
+  loadProfileOptions,
+} from "./profileOptionsCache";
 
 vi.mock("./auth", () => ({
-  fetchWardrobeFilters: vi.fn()
+  fetchWardrobeFilters: vi.fn(),
 }));
 
 describe("profileOptionsCache", () => {
@@ -19,7 +22,7 @@ describe("profileOptionsCache", () => {
       occasions: ["office"],
       seasons: ["summer"],
       audience: ["woman"],
-      patterns: ["solid"]
+      patterns: ["solid"],
     });
 
     const first = await loadProfileOptions();
@@ -31,31 +34,34 @@ describe("profileOptionsCache", () => {
     expect(first).toEqual({
       styles: {
         core: ["casual"],
-        aesthetics: ["minimalistic"]
+        aesthetics: ["minimalistic"],
       },
       occasions: ["office"],
       seasons: ["summer"],
       audience: ["woman"],
-      patterns: ["solid"]
+      patterns: ["solid"],
     });
   });
 
   test("shares an in-flight request and falls back to empty arrays for missing fields", async () => {
     vi.mocked(fetchWardrobeFilters).mockResolvedValue({});
 
-    const [first, second] = await Promise.all([loadProfileOptions(), loadProfileOptions()]);
+    const [first, second] = await Promise.all([
+      loadProfileOptions(),
+      loadProfileOptions(),
+    ]);
 
     expect(fetchWardrobeFilters).toHaveBeenCalledTimes(1);
     expect(first).toBe(second);
     expect(first).toEqual({
       styles: {
         core: [],
-        aesthetics: []
+        aesthetics: [],
       },
       occasions: [],
       seasons: [],
       audience: [],
-      patterns: []
+      patterns: [],
     });
   });
 

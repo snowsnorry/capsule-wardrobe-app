@@ -4,7 +4,7 @@ import {
   DialogActions,
   DialogContent,
   DialogContentText,
-  DialogTitle
+  DialogTitle,
 } from "@mui/material";
 import type { ShareMetadata, StatusState } from "./appTypes";
 
@@ -31,7 +31,7 @@ export default function AppDialogs({
   onClearShareRoute,
   onImportSharedCapsule,
   onCloseSignOutConfirm,
-  onLogout
+  onLogout,
 }: AppDialogsProps) {
   return (
     <>
@@ -56,7 +56,11 @@ export default function AppDialogs({
           <Button disabled={isShareLoading} onClick={onClearShareRoute}>
             {t("actions.cancel")}
           </Button>
-          <Button variant="contained" disabled={isShareLoading} onClick={onImportSharedCapsule}>
+          <Button
+            variant="contained"
+            disabled={isShareLoading}
+            onClick={onImportSharedCapsule}
+          >
             {t("capsule.shareImportConfirm")}
           </Button>
         </DialogActions>
@@ -75,7 +79,10 @@ export default function AppDialogs({
           {t("dialogs.signOutTitle")}
         </DialogTitle>
         <DialogContent sx={{ pt: 0.5, pb: 0 }}>
-          <DialogContentText id="sign-out-dialog-description" sx={{ color: "text.secondary" }}>
+          <DialogContentText
+            id="sign-out-dialog-description"
+            sx={{ color: "text.secondary" }}
+          >
             {t("dialogs.signOutBody")}
           </DialogContentText>
         </DialogContent>
@@ -83,7 +90,12 @@ export default function AppDialogs({
           <Button disabled={status.loading} onClick={onCloseSignOutConfirm}>
             {t("dialogs.signOutCancel")}
           </Button>
-          <Button color="error" variant="contained" disabled={status.loading} onClick={onLogout}>
+          <Button
+            color="error"
+            variant="contained"
+            disabled={status.loading}
+            onClick={onLogout}
+          >
             {t("dialogs.signOutConfirm")}
           </Button>
         </DialogActions>

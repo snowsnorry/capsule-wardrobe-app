@@ -13,7 +13,7 @@ type ProductLabelTextProps = {
 function ProductLabelText({
   item,
   fallbackLabel = "",
-  suffixSx = {}
+  suffixSx = {},
 }: ProductLabelTextProps) {
   const { baseLabel, suffixLabel } = getProductLabelParts(item, fallbackLabel);
   if (!suffixLabel) {
@@ -35,7 +35,7 @@ function ProductLabelText({
           opacity: 0.82,
           verticalAlign: "baseline",
           whiteSpace: "nowrap",
-          ...suffixSx
+          ...suffixSx,
         }}
       >
         {suffixLabel}

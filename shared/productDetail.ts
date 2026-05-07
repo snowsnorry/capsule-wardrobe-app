@@ -1,5 +1,9 @@
 type TranslateOption = (group: string, value: string, locale: string) => string;
-type Translate = (key: string, params?: Record<string, unknown>, locale?: string) => string;
+type Translate = (
+  key: string,
+  params?: Record<string, unknown>,
+  locale?: string,
+) => string;
 type ProductDetailItem = {
   price?: unknown;
   currency?: unknown;
@@ -46,16 +50,36 @@ type ProductDetailContext = {
 type DetailField = {
   key: string;
   labelKey: string;
-  resolveValue: (item: ProductDetailItem | null | undefined, context: ProductDetailContext) => DetailValue | null;
+  resolveValue: (
+    item: ProductDetailItem | null | undefined,
+    context: ProductDetailContext,
+  ) => DetailValue | null;
 };
 
 const detailGroups = [
   { id: "meta", keys: ["price", "availability", "audience", "season"] },
-  { id: "style", keys: ["formalityLevel", "color", "style", "pattern", "occasions", "neutral"] },
-  { id: "construction", keys: ["composition", "finish", "silhouette", "fit", "closureType"] }
+  {
+    id: "style",
+    keys: [
+      "formalityLevel",
+      "color",
+      "style",
+      "pattern",
+      "occasions",
+      "neutral",
+    ],
+  },
+  {
+    id: "construction",
+    keys: ["composition", "finish", "silhouette", "fit", "closureType"],
+  },
 ] as const;
 
-function translateComposition(value: unknown, translateOption: TranslateOption, locale: string): unknown {
+function translateComposition(
+  value: unknown,
+  translateOption: TranslateOption,
+  locale: string,
+): unknown {
   if (typeof value !== "string") {
     return value;
   }
@@ -77,7 +101,9 @@ function createTextValue(value: unknown): TextDetailValue | null {
   return normalized ? { kind: "text", text: normalized } : null;
 }
 
-function createListValue(values: readonly unknown[] = []): TextDetailValue | null {
+function createListValue(
+  values: readonly unknown[] = [],
+): TextDetailValue | null {
   const items = values
     .map((value) => String(value || "").trim())
     .filter(Boolean);
@@ -88,14 +114,14 @@ function createListValue(values: readonly unknown[] = []): TextDetailValue | nul
 function createColorValue(
   values: readonly unknown[] = [],
   translateOption: TranslateOption,
-  locale: string
+  locale: string,
 ): ColorDetailValue | null {
   const items = values
     .map((value) => String(value || "").trim())
     .filter(Boolean)
     .map((value) => ({
       key: value,
-      label: translateOption("accentColors", value, locale)
+      label: translateOption("accentColors", value, locale),
     }));
 
   return items.length > 0 ? { kind: "colors", items } : null;
@@ -104,10 +130,14 @@ function createColorValue(
 function translateArrayField(
   values: unknown,
   optionGroup: string,
-  { translateOption, locale }: ProductDetailContext
+  { translateOption, locale }: ProductDetailContext,
 ): TextDetailValue | null {
   return createListValue(
-    Array.isArray(values) ? values.map((value) => translateOption(optionGroup, String(value), locale)) : []
+    Array.isArray(values)
+      ? values.map((value) =>
+          translateOption(optionGroup, String(value), locale),
+        )
+      : [],
   );
 }
 
@@ -115,73 +145,160 @@ const detailFields: readonly DetailField[] = [
   {
     key: "price",
     labelKey: "search.fields.price",
-    resolveValue: (item) => createTextValue(item?.price != null ? `${item.price}${item.currency ? ` ${item.currency}` : ""}` : null)
+    resolveValue: (item) =>
+      createTextValue(
+        item?.price != null
+          ? `${item.price}${item.currency ? ` ${item.currency}` : ""}`
+          : null,
+      ),
   },
   {
     key: "availability",
     labelKey: "search.fields.availability",
-    resolveValue: (item, context) => createTextValue(item?.availability ? context.translateOption("availability", item.availability, context.locale) : null)
+    resolveValue: (item, context) =>
+      createTextValue(
+        item?.availability
+          ? context.translateOption(
+              "availability",
+              item.availability,
+              context.locale,
+            )
+          : null,
+      ),
   },
   {
     key: "audience",
     labelKey: "search.fields.audience",
-    resolveValue: (item, context) => createTextValue(item?.audience ? context.translateOption("audience", item.audience, context.locale) : null)
+    resolveValue: (item, context) =>
+      createTextValue(
+        item?.audience
+          ? context.translateOption("audience", item.audience, context.locale)
+          : null,
+      ),
   },
-  { key: "season", labelKey: "search.fields.season", resolveValue: (item, context) => translateArrayField(item?.season, "seasons", context) },
-  { key: "formalityLevel", labelKey: "search.fields.formalityLevel", resolveValue: (item, context) => translateArrayField(item?.formalityLevel, "styles", context) },
-  { key: "style", labelKey: "search.fields.style", resolveValue: (item, context) => translateArrayField(item?.style, "styles", context) },
-  { key: "occasions", labelKey: "search.fields.occasions", resolveValue: (item, context) => translateArrayField(item?.occasions, "occasions", context) },
+  {
+    key: "season",
+    labelKey: "search.fields.season",
+    resolveValue: (item, context) =>
+      translateArrayField(item?.season, "seasons", context),
+  },
+  {
+    key: "formalityLevel",
+    labelKey: "search.fields.formalityLevel",
+    resolveValue: (item, context) =>
+      translateArrayField(item?.formalityLevel, "styles", context),
+  },
+  {
+    key: "style",
+    labelKey: "search.fields.style",
+    resolveValue: (item, context) =>
+      translateArrayField(item?.style, "styles", context),
+  },
+  {
+    key: "occasions",
+    labelKey: "search.fields.occasions",
+    resolveValue: (item, context) =>
+      translateArrayField(item?.occasions, "occasions", context),
+  },
   {
     key: "color",
     labelKey: "search.fields.color",
-    resolveValue: (item, context) => createColorValue(Array.isArray(item?.colorBase) ? item.colorBase : [], context.translateOption, context.locale)
+    resolveValue: (item, context) =>
+      createColorValue(
+        Array.isArray(item?.colorBase) ? item.colorBase : [],
+        context.translateOption,
+        context.locale,
+      ),
   },
   {
     key: "pattern",
     labelKey: "search.fields.pattern",
-    resolveValue: (item, context) => createTextValue(item?.pattern ? context.translateOption("patterns", item.pattern, context.locale) : null)
+    resolveValue: (item, context) =>
+      createTextValue(
+        item?.pattern
+          ? context.translateOption("patterns", item.pattern, context.locale)
+          : null,
+      ),
   },
-  { key: "finish", labelKey: "search.fields.finish", resolveValue: (item) => createTextValue(item?.finish) },
+  {
+    key: "finish",
+    labelKey: "search.fields.finish",
+    resolveValue: (item) => createTextValue(item?.finish),
+  },
   {
     key: "neutral",
     labelKey: "search.fields.neutral",
-    resolveValue: (item, context) => typeof item?.isNeutral === "boolean"
-      ? createTextValue(item.isNeutral ? context.t("search.yes") : context.t("search.no"))
-      : null
+    resolveValue: (item, context) =>
+      typeof item?.isNeutral === "boolean"
+        ? createTextValue(
+            item.isNeutral ? context.t("search.yes") : context.t("search.no"),
+          )
+        : null,
   },
   {
     key: "composition",
     labelKey: "search.fields.composition",
-    resolveValue: (item, context) => createTextValue(item?.composition ? translateComposition(item.composition, context.translateOption, context.locale) : null)
+    resolveValue: (item, context) =>
+      createTextValue(
+        item?.composition
+          ? translateComposition(
+              item.composition,
+              context.translateOption,
+              context.locale,
+            )
+          : null,
+      ),
   },
   {
     key: "silhouette",
     labelKey: "search.fields.silhouette",
-    resolveValue: (item, context) => createTextValue(item?.silhouette ? context.translateOption("silhouettes", item.silhouette, context.locale) : null)
+    resolveValue: (item, context) =>
+      createTextValue(
+        item?.silhouette
+          ? context.translateOption(
+              "silhouettes",
+              item.silhouette,
+              context.locale,
+            )
+          : null,
+      ),
   },
   {
     key: "fit",
     labelKey: "search.fields.fit",
-    resolveValue: (item, context) => createTextValue(item?.fit ? context.translateOption("fits", item.fit, context.locale) : null)
+    resolveValue: (item, context) =>
+      createTextValue(
+        item?.fit
+          ? context.translateOption("fits", item.fit, context.locale)
+          : null,
+      ),
   },
-  { key: "closureType", labelKey: "search.fields.closureType", resolveValue: (item, context) => translateArrayField(item?.closureType, "closureTypes", context) }
+  {
+    key: "closureType",
+    labelKey: "search.fields.closureType",
+    resolveValue: (item, context) =>
+      translateArrayField(item?.closureType, "closureTypes", context),
+  },
 ];
 
 function buildProductDetailGroups(
   item: ProductDetailItem | null | undefined,
-  context: ProductDetailContext
+  context: ProductDetailContext,
 ) {
   const detailRows: DetailRow[] = detailFields
-    .map((field): PendingDetailRow => ({
-      key: field.key,
-      label: context.t(field.labelKey),
-      value: field.resolveValue(item, context)
-    }))
+    .map(
+      (field): PendingDetailRow => ({
+        key: field.key,
+        label: context.t(field.labelKey),
+        value: field.resolveValue(item, context),
+      }),
+    )
     .filter((row): row is DetailRow => Boolean(row.value));
 
-  const getRows = (keys: readonly string[]): DetailRow[] => keys
-    .map((key) => detailRows.find((row) => row.key === key))
-    .filter((row): row is DetailRow => Boolean(row));
+  const getRows = (keys: readonly string[]): DetailRow[] =>
+    keys
+      .map((key) => detailRows.find((row) => row.key === key))
+      .filter((row): row is DetailRow => Boolean(row));
 
   return detailGroups
     .map((group) => ({ id: group.id, items: getRows(group.keys) }))

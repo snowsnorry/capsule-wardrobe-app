@@ -22,13 +22,16 @@ function AccentColorChips({
   selectedValue = null,
   onSelect,
   emptyLabel,
-  disabled = false
+  disabled = false,
 }: AccentColorChipsProps) {
   const { t, locale } = useI18n();
-  const isMultiSelect = Array.isArray(selectedValues) && typeof onToggle === "function";
+  const isMultiSelect =
+    Array.isArray(selectedValues) && typeof onToggle === "function";
   const activeValues = isMultiSelect
     ? selectedValues
-    : (selectedValue ? [selectedValue] : []);
+    : selectedValue
+      ? [selectedValue]
+      : [];
   const emptyChipLabel = emptyLabel || t("profile.accentColorNotImportant");
 
   const handleToggle = (value: AccentColorValue | null) => {
@@ -67,7 +70,7 @@ function AccentColorChips({
                   borderRadius: "999px",
                   boxSizing: "border-box",
                   border: "1px solid #999",
-                  ...getColorSwatchStyle(item)
+                  ...getColorSwatchStyle(item),
                 }}
               />
               <span>{translateOption("accentColors", item, locale)}</span>

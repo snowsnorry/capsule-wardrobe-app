@@ -8,7 +8,7 @@ import type {
   PromptDebugImageCategory,
   PromptImageDownloadResult,
   PromptImageItemLike,
-  PromptImageTimings
+  PromptImageTimings,
 } from "./types.js";
 import {
   CATEGORY_COLLAGE_JPEG_QUALITY,
@@ -37,19 +37,23 @@ import {
   BORDER_WIDTH,
   GRID_COLOR,
   groupPromptImageItemsByCategory,
-  type PromptDebugImageCategoryWithFile
+  type PromptDebugImageCategoryWithFile,
 } from "./promptImagesShared.js";
 import { downloadPromptImageAsset } from "./promptImageDownloads.js";
 import { logWarn } from "../logger.js";
 import {
   saveDebugArtifacts,
   stitchCategoryImagesVertically,
-  stripCategoryBuffer
+  stripCategoryBuffer,
 } from "./promptImageArtifacts.js";
 
 function createCategoryOverlaySvg(
   category: string,
-  entries: Array<{ item: PromptImageItemLike; result: PromptImageDownloadResult; slotIndex: number }>
+  entries: Array<{
+    item: PromptImageItemLike;
+    result: PromptImageDownloadResult;
+    slotIndex: number;
+  }>,
 ) {
   const width = GRID_WIDTH;
   const height = HEADER_HEIGHT + GRID_HEIGHT;
@@ -57,20 +61,20 @@ function createCategoryOverlaySvg(
     `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">`,
     `<rect x="0" y="0" width="${width}" height="${HEADER_HEIGHT}" fill="${BACKGROUND_COLOR}"/>`,
     `<text x="${width / 2}" y="${Math.round(HEADER_HEIGHT / 2)}" text-anchor="middle" dominant-baseline="middle" fill="${GRID_COLOR}" font-size="${HEADER_FONT_SIZE}" font-family="Arial, Helvetica, sans-serif" font-weight="700">Category: ${escapeXml(category)}</text>`,
-    `<rect x="${BORDER_WIDTH / 2}" y="${HEADER_HEIGHT + BORDER_WIDTH / 2}" width="${GRID_WIDTH - BORDER_WIDTH}" height="${GRID_HEIGHT - BORDER_WIDTH}" fill="none" stroke="${GRID_COLOR}" stroke-width="${BORDER_WIDTH}"/>`
+    `<rect x="${BORDER_WIDTH / 2}" y="${HEADER_HEIGHT + BORDER_WIDTH / 2}" width="${GRID_WIDTH - BORDER_WIDTH}" height="${GRID_HEIGHT - BORDER_WIDTH}" fill="none" stroke="${GRID_COLOR}" stroke-width="${BORDER_WIDTH}"/>`,
   ];
 
   for (let column = 1; column < GRID_COLUMNS; column += 1) {
     const x = column * TILE_SIZE;
     parts.push(
-      `<line x1="${x}" y1="${HEADER_HEIGHT}" x2="${x}" y2="${HEADER_HEIGHT + GRID_HEIGHT}" stroke="${GRID_COLOR}" stroke-width="${BORDER_WIDTH}"/>`
+      `<line x1="${x}" y1="${HEADER_HEIGHT}" x2="${x}" y2="${HEADER_HEIGHT + GRID_HEIGHT}" stroke="${GRID_COLOR}" stroke-width="${BORDER_WIDTH}"/>`,
     );
   }
 
   for (let row = 1; row < GRID_ROWS; row += 1) {
     const y = HEADER_HEIGHT + row * TILE_SIZE;
     parts.push(
-      `<line x1="0" y1="${y}" x2="${GRID_WIDTH}" y2="${y}" stroke="${GRID_COLOR}" stroke-width="${BORDER_WIDTH}"/>`
+      `<line x1="0" y1="${y}" x2="${GRID_WIDTH}" y2="${y}" stroke="${GRID_COLOR}" stroke-width="${BORDER_WIDTH}"/>`,
     );
   }
 
@@ -86,12 +90,15 @@ function createCategoryOverlaySvg(
     const y = HEADER_HEIGHT + row * TILE_SIZE + 36;
     const approximateLabelWidth = Math.max(
       TILE_LABEL_BACKGROUND_MIN_WIDTH,
-      Math.round(String(entry.item?.id ?? "").length * (TILE_LABEL_FONT_SIZE * 0.64) + TILE_LABEL_BACKGROUND_PADDING_X * 2)
+      Math.round(
+        String(entry.item?.id ?? "").length * (TILE_LABEL_FONT_SIZE * 0.64) +
+          TILE_LABEL_BACKGROUND_PADDING_X * 2,
+      ),
     );
 
     parts.push(
       `<rect x="${x - TILE_LABEL_BACKGROUND_PADDING_X}" y="${y - TILE_LABEL_BACKGROUND_HEIGHT + 4}" width="${approximateLabelWidth}" height="${TILE_LABEL_BACKGROUND_HEIGHT}" rx="6" ry="6" fill="${LABEL_BACKGROUND_COLOR}" fill-opacity="0.94"/>`,
-      `<text x="${x}" y="${y}" fill="${GRID_COLOR}" font-size="${TILE_LABEL_FONT_SIZE}" font-family="Arial, Helvetica, sans-serif" font-weight="700">${label}</text>`
+      `<text x="${x}" y="${y}" fill="${GRID_COLOR}" font-size="${TILE_LABEL_FONT_SIZE}" font-family="Arial, Helvetica, sans-serif" font-weight="700">${label}</text>`,
     );
   }
 
@@ -102,12 +109,20 @@ function createCategoryOverlaySvg(
 async function buildCategoryImage({
   category,
   entries,
-  timings = null
+  timings = null,
 }: {
   category: string;
-  entries: Array<{ item: PromptImageItemLike; result: PromptImageDownloadResult; slotIndex: number }>;
+  entries: Array<{
+    item: PromptImageItemLike;
+    result: PromptImageDownloadResult;
+    slotIndex: number;
+  }>;
   timings?: PromptImageTimings | null;
-}): Promise<{ buffer: Buffer; mimeType: string; manifestEntries: NonNullable<PromptDebugImageCategory["items"]> }> {
+}): Promise<{
+  buffer: Buffer;
+  mimeType: string;
+  manifestEntries: NonNullable<PromptDebugImageCategory["items"]>;
+}> {
   const composites = [];
   const manifestEntries: NonNullable<PromptDebugImageCategory["items"]> = [];
 
@@ -121,19 +136,20 @@ async function buildCategoryImage({
       try {
         const tileStartedAt = nowMs();
         const tile = await buildPromptTileCompositeInput(entry.result.buffer, {
-          autoRotate: entry.result.source !== "cache"
+          autoRotate: entry.result.source !== "cache",
         });
         addTiming(timings, "tileBuildMs", tileStartedAt);
         composites.push({
           input: tile.input,
           raw: tile.raw,
           left,
-          top
+          top,
         });
       } catch (error) {
-        const reason = error instanceof Error && error.name === "TimeoutError"
-          ? "timeout"
-          : getErrorMessage(error, "tile_build_failed");
+        const reason =
+          error instanceof Error && error.name === "TimeoutError"
+            ? "timeout"
+            : getErrorMessage(error, "tile_build_failed");
 
         logWarn(
           "[prompt-images][tile-build-failed]",
@@ -141,8 +157,8 @@ async function buildCategoryImage({
             id: entry.result.id,
             category,
             imageUrl: entry.result.imageUrl,
-            reason
-          })
+            reason,
+          }),
         );
 
         entry.result.status = "skipped";
@@ -157,7 +173,7 @@ async function buildCategoryImage({
       imageUrl: entry.result.imageUrl,
       originalImageUrl: entry.result.originalImageUrl,
       status: entry.result.status,
-      reason: entry.result.reason
+      reason: entry.result.reason,
     });
   }
 
@@ -169,17 +185,14 @@ async function buildCategoryImage({
       width: GRID_WIDTH,
       height: HEADER_HEIGHT + GRID_HEIGHT,
       channels: 3,
-      background: BACKGROUND_COLOR
-    }
+      background: BACKGROUND_COLOR,
+    },
   })
-    .composite([
-      ...composites,
-      { input: overlaySvg, left: 0, top: 0 }
-    ])
+    .composite([...composites, { input: overlaySvg, left: 0, top: 0 }])
     .jpeg({
       quality: CATEGORY_COLLAGE_JPEG_QUALITY,
       mozjpeg: false,
-      progressive: false
+      progressive: false,
     })
     .toBuffer();
   addTiming(timings, "collageEncodeMs", collageStartedAt);
@@ -187,44 +200,47 @@ async function buildCategoryImage({
   return {
     buffer,
     mimeType: "image/jpeg",
-    manifestEntries
+    manifestEntries,
   };
 }
 
 async function createIntermediateCollageDirectory({
   debugOutputDir = null,
-  saveDebugArtifacts = false
+  saveDebugArtifacts = false,
 }: {
   debugOutputDir?: string | URL | null;
   saveDebugArtifacts?: boolean;
 } = {}): Promise<{ directory: string; shouldCleanup: boolean }> {
   if (saveDebugArtifacts) {
     if (!debugOutputDir) {
-      throw new Error("debugOutputDir is required when saveDebugArtifacts is enabled");
+      throw new Error(
+        "debugOutputDir is required when saveDebugArtifacts is enabled",
+      );
     }
 
-    const resolvedOutputDir = debugOutputDir instanceof URL
-      ? fileURLToPath(debugOutputDir)
-      : path.resolve(String(debugOutputDir));
+    const resolvedOutputDir =
+      debugOutputDir instanceof URL
+        ? fileURLToPath(debugOutputDir)
+        : path.resolve(String(debugOutputDir));
 
     await ensureCleanDirectory(resolvedOutputDir);
 
     return {
       directory: resolvedOutputDir,
-      shouldCleanup: false
+      shouldCleanup: false,
     };
   }
 
   return {
     directory: await mkdtemp(path.join(os.tmpdir(), "prompt-images-")),
-    shouldCleanup: true
+    shouldCleanup: true,
   };
 }
 
 async function buildPromptDebugImages({
   normalizedItems = [],
   debugOutputDir = null,
-  saveDebugArtifacts: shouldSaveDebugArtifacts = false
+  saveDebugArtifacts: shouldSaveDebugArtifacts = false,
 }: {
   normalizedItems?: PromptImageItemLike[];
   debugOutputDir?: string | URL | null;
@@ -236,10 +252,11 @@ async function buildPromptDebugImages({
   let downloadedCount = 0;
   let skippedCount = 0;
   const timings = createPromptImageTimings();
-  const { directory: collageDirectory, shouldCleanup } = await createIntermediateCollageDirectory({
-    debugOutputDir,
-    saveDebugArtifacts: shouldSaveDebugArtifacts
-  });
+  const { directory: collageDirectory, shouldCleanup } =
+    await createIntermediateCollageDirectory({
+      debugOutputDir,
+      saveDebugArtifacts: shouldSaveDebugArtifacts,
+    });
 
   try {
     for (const [category, items] of groupedItems.entries()) {
@@ -247,13 +264,16 @@ async function buildPromptDebugImages({
         category,
         items,
         downloadConcurrency: IMAGE_DOWNLOAD_CONCURRENCY,
-        timings
+        timings,
       });
-      const categoryFile = path.join(collageDirectory, categoryResult.category.filename);
+      const categoryFile = path.join(
+        collageDirectory,
+        categoryResult.category.filename,
+      );
       await writeFile(categoryFile, categoryResult.category.buffer);
       categories.push({
         ...stripCategoryBuffer(categoryResult.category),
-        file: categoryFile
+        file: categoryFile,
       });
       cachedCount += categoryResult.cachedCount;
       downloadedCount += categoryResult.downloadedCount;
@@ -272,11 +292,14 @@ async function buildPromptDebugImages({
           cachedCount,
           downloadedCount,
           skippedCount,
-          debugOutputDir
+          debugOutputDir,
         });
         addTiming(timings, "debugSaveMs", debugSaveStartedAt);
       } catch (error) {
-        logWarn("[prompt-images][debug-save-failed]", JSON.stringify({ message: getErrorMessage(error) }));
+        logWarn(
+          "[prompt-images][debug-save-failed]",
+          JSON.stringify({ message: getErrorMessage(error) }),
+        );
       }
     }
 
@@ -286,7 +309,7 @@ async function buildPromptDebugImages({
       cachedCount,
       downloadedCount,
       skippedCount,
-      timings
+      timings,
     };
   } finally {
     if (shouldCleanup) {
@@ -299,7 +322,7 @@ async function buildPromptDebugImagesForCategory({
   category = "",
   items = [],
   downloadConcurrency = IMAGE_DOWNLOAD_CONCURRENCY,
-  timings = null
+  timings = null,
 }: {
   category?: string;
   items?: PromptImageItemLike[];
@@ -316,7 +339,7 @@ async function buildPromptDebugImagesForCategory({
   const downloadResults = await mapWithConcurrency(
     items,
     downloadConcurrency,
-    (item) => downloadPromptImageAsset(item, timings)
+    (item) => downloadPromptImageAsset(item, timings),
   );
 
   let cachedCount = 0;
@@ -337,13 +360,13 @@ async function buildPromptDebugImagesForCategory({
   const entries = items.map((item, slotIndex) => ({
     item,
     result: downloadResults[slotIndex],
-    slotIndex
+    slotIndex,
   }));
 
   const { buffer, mimeType, manifestEntries } = await buildCategoryImage({
     category,
     entries,
-    timings
+    timings,
   });
   addTiming(timings, "categoryBuildMs", categoryStartedAt);
 
@@ -357,11 +380,11 @@ async function buildPromptDebugImagesForCategory({
       cachedCount,
       downloadedCount,
       skippedCount,
-      items: manifestEntries
+      items: manifestEntries,
     },
     cachedCount,
     downloadedCount,
-    skippedCount
+    skippedCount,
   };
 }
 

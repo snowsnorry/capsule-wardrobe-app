@@ -20,7 +20,10 @@ type AppSidebarNavigationProps = {
   onCreateCapsule?: () => Promise<void> | void;
   onSearchCapsules?: () => void;
   onOpenCapsule?: (capsuleId: string) => void;
-  onOpenCapsuleActions?: (event: MouseEvent<HTMLElement>, capsule: CapsuleNavItem) => void;
+  onOpenCapsuleActions?: (
+    event: MouseEvent<HTMLElement>,
+    capsule: CapsuleNavItem,
+  ) => void;
   capsuleHasUnsavedChanges?: (capsule: CapsuleNavItem) => boolean;
   onExpandedAction?: () => void;
   collapsedExpandHitbox?: ReactNode;

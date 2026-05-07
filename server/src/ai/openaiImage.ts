@@ -18,7 +18,9 @@ type OpenAiImageResponse = {
 
 type OpenAiImageClientLike = {
   images: {
-    generate: (payload: Record<string, unknown>) => Promise<OpenAiImageResponse>;
+    generate: (
+      payload: Record<string, unknown>,
+    ) => Promise<OpenAiImageResponse>;
     edit: (payload: Record<string, unknown>) => Promise<OpenAiImageResponse>;
   };
 };
@@ -26,7 +28,9 @@ type OpenAiImageClientLike = {
 let cachedClient: OpenAiImageClientLike | null = null;
 
 function getOutputMimeType(response: OpenAiImageResponse | null | undefined) {
-  const outputFormat = String(response?.output_format || "png").trim().toLowerCase();
+  const outputFormat = String(response?.output_format || "png")
+    .trim()
+    .toLowerCase();
   if (outputFormat === "jpeg" || outputFormat === "jpg") {
     return "image/jpeg";
   }
@@ -36,13 +40,15 @@ function getOutputMimeType(response: OpenAiImageResponse | null | undefined) {
   return DEFAULT_OUTPUT_MIME_TYPE;
 }
 
-function extractGeneratedImage(response: OpenAiImageResponse | null | undefined) {
+function extractGeneratedImage(
+  response: OpenAiImageResponse | null | undefined,
+) {
   const images = Array.isArray(response?.data) ? response.data : [];
   for (const image of images) {
     if (typeof image?.b64_json === "string" && image.b64_json.length > 0) {
       return {
         base64: image.b64_json,
-        mimeType: getOutputMimeType(response)
+        mimeType: getOutputMimeType(response),
       };
     }
   }
@@ -51,9 +57,10 @@ function extractGeneratedImage(response: OpenAiImageResponse | null | undefined)
 }
 
 function getImageFileName(image: ImageAssetLike, index: number) {
-  const filename = typeof image?.filename === "string" && image.filename.trim().length > 0
-    ? image.filename.trim()
-    : `image-${index + 1}.jpg`;
+  const filename =
+    typeof image?.filename === "string" && image.filename.trim().length > 0
+      ? image.filename.trim()
+      : `image-${index + 1}.jpg`;
   return filename;
 }
 
@@ -67,19 +74,25 @@ async function buildOpenAiImageFiles(images: ImageAssetLike[] = []) {
         JSON.stringify({
           category: image?.category ?? null,
           filename: image?.filename ?? null,
-          reason: "missing_buffer"
-        })
+          reason: "missing_buffer",
+        }),
       );
       continue;
     }
 
-    files.push(await toFile(image.buffer, getImageFileName(image, index), { type: getOpenAiImageMimeType(image) }));
+    files.push(
+      await toFile(image.buffer, getImageFileName(image, index), {
+        type: getOpenAiImageMimeType(image),
+      }),
+    );
   }
 
   return files;
 }
 
-function hasOpenAiImageBuffer(image: ImageAssetLike | null | undefined): image is ImageAssetLike & { buffer: Buffer } {
+function hasOpenAiImageBuffer(
+  image: ImageAssetLike | null | undefined,
+): image is ImageAssetLike & { buffer: Buffer } {
   return Buffer.isBuffer(image?.buffer) && image.buffer.length > 0;
 }
 
@@ -90,13 +103,14 @@ function getOpenAiImageMimeType(image: ImageAssetLike): string {
 }
 
 function createOpenAiImageClient({
-  createClientImpl = ({ apiKey }: { apiKey: string }): OpenAiImageClientLike => new OpenAI({
-    apiKey,
-    timeout: 3 * 1000 * 60,
-    maxRetries: 0
-  }) as unknown as OpenAiImageClientLike,
+  createClientImpl = ({ apiKey }: { apiKey: string }): OpenAiImageClientLike =>
+    new OpenAI({
+      apiKey,
+      timeout: 3 * 1000 * 60,
+      maxRetries: 0,
+    }) as unknown as OpenAiImageClientLike,
   getApiKeyImpl = () => process.env.OPENAI_API_KEY,
-  cache = true
+  cache = true,
 }: {
   createClientImpl?: ({ apiKey }: { apiKey: string }) => OpenAiImageClientLike;
   getApiKeyImpl?: () => string | undefined;
@@ -130,43 +144,45 @@ function createOpenAiImageClient({
     {
       images = [],
       model = DEFAULT_IMAGE_MODEL,
-      onPayloadBuilt = null
+      onPayloadBuilt = null,
     }: {
       images?: ImageAssetLike[];
       model?: string;
       onPayloadBuilt?: ((payload: Record<string, unknown>) => void) | null;
-    } = {}
+    } = {},
   ) {
     const client = getOpenAiImageClient();
     const imageFiles = await buildOpenAiImageFiles(images);
-    const requestPayload = imageFiles.length > 0
-      ? {
-        model,
-        prompt,
-        image: imageFiles,
-        n: 1
-      }
-      : {
-        model,
-        prompt,
-        n: 1
-      };
+    const requestPayload =
+      imageFiles.length > 0
+        ? {
+            model,
+            prompt,
+            image: imageFiles,
+            n: 1,
+          }
+        : {
+            model,
+            prompt,
+            n: 1,
+          };
 
     onPayloadBuilt?.(requestPayload);
 
-    const response = imageFiles.length > 0
-      ? await client.images.edit(requestPayload)
-      : await client.images.generate(requestPayload);
+    const response =
+      imageFiles.length > 0
+        ? await client.images.edit(requestPayload)
+        : await client.images.generate(requestPayload);
 
     return {
       response,
-      image: extractGeneratedImage(response)
+      image: extractGeneratedImage(response),
     };
   }
 
   return {
     generateImageWithOpenAi,
-    getOpenAiImageClient
+    getOpenAiImageClient,
   };
 }
 
@@ -176,8 +192,9 @@ export {
   DEFAULT_IMAGE_MODEL,
   buildOpenAiImageFiles,
   createOpenAiImageClient,
-  extractGeneratedImage
+  extractGeneratedImage,
 };
 
-export const generateImageWithOpenAi = openAiImageClient.generateImageWithOpenAi;
+export const generateImageWithOpenAi =
+  openAiImageClient.generateImageWithOpenAi;
 export const getOpenAiImageClient = openAiImageClient.getOpenAiImageClient;

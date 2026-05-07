@@ -13,7 +13,7 @@ import {
   searchProductStats,
   searchProducts,
   upsertSearchByEmail,
-  getDistinctProductFormalityLevels
+  getDistinctProductFormalityLevels,
 } from "./db.js";
 import { getStyles } from "./profileStore.js";
 import { getPromptEmbeddings } from "./ai/voyageai.js";
@@ -46,7 +46,7 @@ const DEFAULT_SEARCH_STATE = Object.freeze({
   silhouette: [],
   fit: [],
   closureType: [],
-  page: 1
+  page: 1,
 } as SearchPayload);
 
 const SEARCH_AUDIENCE_OPTIONS = Object.freeze(["woman", "man", "all"] as const);
@@ -59,7 +59,7 @@ function getSemanticDistanceThreshold(query: string = ""): number | null {
   }
 
   if (normalizedLength < 20) {
-    return 0.40;
+    return 0.4;
   }
 
   if (normalizedLength < 60) {
@@ -69,13 +69,15 @@ function getSemanticDistanceThreshold(query: string = ""): number | null {
   return 0.31;
 }
 
-function getRelaxedSemanticDistanceThreshold(query: string = ""): number | null {
+function getRelaxedSemanticDistanceThreshold(
+  query: string = "",
+): number | null {
   const baseThreshold = getSemanticDistanceThreshold(query);
   if (baseThreshold === null) {
     return null;
   }
 
-  return Math.min(baseThreshold + 0.08, 0.50);
+  return Math.min(baseThreshold + 0.08, 0.5);
 }
 
 function normalizeNullableString(value: unknown): string | null {
@@ -115,11 +117,11 @@ function normalizeStringArray(values: unknown): string[] {
   if (!Array.isArray(values)) {
     return [];
   }
-  return [...new Set(
-    values
-      .map((value) => normalizeNullableString(value))
-      .filter(Boolean)
-  )];
+  return [
+    ...new Set(
+      values.map((value) => normalizeNullableString(value)).filter(Boolean),
+    ),
+  ];
 }
 
 function normalizePriceValue(value: unknown): number | null {
@@ -135,7 +137,9 @@ function normalizePage(value: unknown): number {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : 1;
 }
 
-function normalizeSearchPayload(payload: Partial<Record<keyof SearchPayload, unknown>> = {}): SearchPayload {
+function normalizeSearchPayload(
+  payload: Partial<Record<keyof SearchPayload, unknown>> = {},
+): SearchPayload {
   return {
     query: normalizeQuery(payload.query),
     brand: normalizeStringArray(payload.brand),
@@ -152,7 +156,7 @@ function normalizeSearchPayload(payload: Partial<Record<keyof SearchPayload, unk
     silhouette: normalizeStringArray(payload.silhouette),
     fit: normalizeStringArray(payload.fit),
     closureType: normalizeStringArray(payload.closureType),
-    page: normalizePage(payload.page)
+    page: normalizePage(payload.page),
   };
 }
 
@@ -164,8 +168,14 @@ function serializeSearchRow(row: SearchRow | null = null): SearchPayload {
   return {
     query: typeof row.query === "string" ? row.query : "",
     brand: normalizeStringArray(row.brand),
-    priceMin: row.priceMin === null || row.priceMin === undefined ? null : Number(row.priceMin),
-    priceMax: row.priceMax === null || row.priceMax === undefined ? null : Number(row.priceMax),
+    priceMin:
+      row.priceMin === null || row.priceMin === undefined
+        ? null
+        : Number(row.priceMin),
+    priceMax:
+      row.priceMax === null || row.priceMax === undefined
+        ? null
+        : Number(row.priceMax),
     audience: normalizeStringArray(row.audience),
     category: normalizeStringArray(row.category),
     season: normalizeStringArray(row.season),
@@ -177,7 +187,7 @@ function serializeSearchRow(row: SearchRow | null = null): SearchPayload {
     silhouette: normalizeStringArray(row.silhouette),
     fit: normalizeStringArray(row.fit),
     closureType: normalizeStringArray(row.closureType),
-    page: normalizePage(row.page)
+    page: normalizePage(row.page),
   };
 }
 
@@ -187,7 +197,7 @@ function normalizeStoredEmbedding(value: unknown): number[] | null {
 
 async function resolveSearchEmbedding({
   currentSearch,
-  query
+  query,
 }: {
   currentSearch: SearchRow | null | undefined;
   query: string;
@@ -224,8 +234,12 @@ type SearchStoreDeps = {
   getDistinctProductClosureTypesImpl?: () => Promise<string[]>;
   getProductPriceRangeImpl?: () => Promise<unknown>;
   getSearchByEmailImpl?: (email: string) => Promise<SearchRow | null>;
-  upsertSearchByEmailImpl?: (payload: SearchPayload & { email: string; embedding: number[] | null }) => Promise<SearchRow | null>;
-  searchProductsImpl?: (payload: Record<string, unknown>) => Promise<SearchResults>;
+  upsertSearchByEmailImpl?: (
+    payload: SearchPayload & { email: string; embedding: number[] | null },
+  ) => Promise<SearchRow | null>;
+  searchProductsImpl?: (
+    payload: Record<string, unknown>,
+  ) => Promise<SearchResults>;
   searchProductStatsImpl?: (payload: SearchPayload) => Promise<unknown>;
   resolveSearchEmbeddingImpl?: typeof resolveSearchEmbedding;
 };
@@ -248,124 +262,132 @@ function createSearchStore({
   upsertSearchByEmailImpl = upsertSearchByEmail,
   searchProductsImpl = searchProducts,
   searchProductStatsImpl = searchProductStats,
-  resolveSearchEmbeddingImpl = resolveSearchEmbedding
+  resolveSearchEmbeddingImpl = resolveSearchEmbedding,
 }: SearchStoreDeps = {}) {
-async function getSearchOptions(email: string): Promise<SearchOptions> {
-  const [
-    brands,
-    categories,
-    seasons,
-    formalityLevels,
-    styles,
-    occasions,
-    colors,
-    patterns,
-    silhouettes,
-    fits,
-    closureTypes,
-    priceRange
-  ] = await Promise.all([
-    getDistinctProductBrandsImpl(),
-    getDistinctProductCategoriesImpl(),
-    getDistinctProductSeasonsImpl(),
-    getDistinctProductFormalityLevelsImpl(),
-    getStylesImpl(email),
-    getDistinctProductOccasionsImpl(),
-    getDistinctProductColorsImpl(),
-    getDistinctProductPatternsImpl(),
-    getDistinctProductSilhouettesImpl(),
-    getDistinctProductFitsImpl(),
-    getDistinctProductClosureTypesImpl(),
-    getProductPriceRangeImpl()
-  ]);
+  async function getSearchOptions(email: string): Promise<SearchOptions> {
+    const [
+      brands,
+      categories,
+      seasons,
+      formalityLevels,
+      styles,
+      occasions,
+      colors,
+      patterns,
+      silhouettes,
+      fits,
+      closureTypes,
+      priceRange,
+    ] = await Promise.all([
+      getDistinctProductBrandsImpl(),
+      getDistinctProductCategoriesImpl(),
+      getDistinctProductSeasonsImpl(),
+      getDistinctProductFormalityLevelsImpl(),
+      getStylesImpl(email),
+      getDistinctProductOccasionsImpl(),
+      getDistinctProductColorsImpl(),
+      getDistinctProductPatternsImpl(),
+      getDistinctProductSilhouettesImpl(),
+      getDistinctProductFitsImpl(),
+      getDistinctProductClosureTypesImpl(),
+      getProductPriceRangeImpl(),
+    ]);
 
-  return {
-    brands,
-    categories,
-    seasons,
-    formalityLevels,
-    styles,
-    occasions,
-    audience: [...SEARCH_AUDIENCE_OPTIONS],
-    colors,
-    patterns,
-    silhouettes,
-    fits,
-    closureTypes,
-    priceRange
-  };
-}
+    return {
+      brands,
+      categories,
+      seasons,
+      formalityLevels,
+      styles,
+      occasions,
+      audience: [...SEARCH_AUDIENCE_OPTIONS],
+      colors,
+      patterns,
+      silhouettes,
+      fits,
+      closureTypes,
+      priceRange,
+    };
+  }
 
-async function getSavedSearch(email: string): Promise<SearchPayload> {
-  const row = await getSearchByEmailImpl(email);
-  return serializeSearchRow(row);
-}
+  async function getSavedSearch(email: string): Promise<SearchPayload> {
+    const row = await getSearchByEmailImpl(email);
+    return serializeSearchRow(row);
+  }
 
-async function runSavedSearch(email: string, payload: Partial<SearchPayload> = {}): Promise<SearchResults & { savedSearch: SearchPayload }> {
-  const normalized = normalizeSearchPayload(payload);
-  const [options, currentSearch] = await Promise.all([
-    getSearchOptions(email),
-    getSearchByEmailImpl(email)
-  ]);
-  assertValidSearchPayload(normalized, options);
+  async function runSavedSearch(
+    email: string,
+    payload: Partial<SearchPayload> = {},
+  ): Promise<SearchResults & { savedSearch: SearchPayload }> {
+    const normalized = normalizeSearchPayload(payload);
+    const [options, currentSearch] = await Promise.all([
+      getSearchOptions(email),
+      getSearchByEmailImpl(email),
+    ]);
+    assertValidSearchPayload(normalized, options);
 
-  const isUrlSearch = isHttpUrlQuery(normalized.query);
-  const embedding = isUrlSearch ? null : await resolveSearchEmbeddingImpl({
-    currentSearch,
-    query: normalized.query
-  });
-  const semanticDistanceThreshold = isUrlSearch ? null : getSemanticDistanceThreshold(normalized.query);
+    const isUrlSearch = isHttpUrlQuery(normalized.query);
+    const embedding = isUrlSearch
+      ? null
+      : await resolveSearchEmbeddingImpl({
+          currentSearch,
+          query: normalized.query,
+        });
+    const semanticDistanceThreshold = isUrlSearch
+      ? null
+      : getSemanticDistanceThreshold(normalized.query);
 
-  const savedSearch = await upsertSearchByEmailImpl({
-    email,
-    ...normalized,
-    embedding
-  });
+    const savedSearch = await upsertSearchByEmailImpl({
+      email,
+      ...normalized,
+      embedding,
+    });
 
-  let results = await searchProductsImpl({
-    ...normalized,
-    queryEmbedding: embedding,
-    semanticDistanceThreshold,
-    urlPrefix: isUrlSearch ? normalized.query : null
-  });
-
-  if (!isUrlSearch && normalized.query && results.total === 0) {
-    results = await searchProductsImpl({
+    let results = await searchProductsImpl({
       ...normalized,
       queryEmbedding: embedding,
-      semanticDistanceThreshold: getRelaxedSemanticDistanceThreshold(normalized.query)
+      semanticDistanceThreshold,
+      urlPrefix: isUrlSearch ? normalized.query : null,
     });
+
+    if (!isUrlSearch && normalized.query && results.total === 0) {
+      results = await searchProductsImpl({
+        ...normalized,
+        queryEmbedding: embedding,
+        semanticDistanceThreshold: getRelaxedSemanticDistanceThreshold(
+          normalized.query,
+        ),
+      });
+    }
+
+    return {
+      ...results,
+      savedSearch: serializeSearchRow(savedSearch),
+    };
+  }
+
+  async function getSearchStats(
+    email: string,
+    payload: Partial<SearchPayload> = {},
+  ): Promise<unknown> {
+    const normalized = normalizeSearchPayload(payload);
+    const options = await getSearchOptions(email);
+    assertValidSearchPayload(normalized, options);
+
+    return searchProductStatsImpl(normalized);
   }
 
   return {
-    ...results,
-    savedSearch: serializeSearchRow(savedSearch)
+    getSearchOptions,
+    getSavedSearch,
+    runSavedSearch,
+    getSearchStats,
   };
 }
 
-async function getSearchStats(email: string, payload: Partial<SearchPayload> = {}): Promise<unknown> {
-  const normalized = normalizeSearchPayload(payload);
-  const options = await getSearchOptions(email);
-  assertValidSearchPayload(normalized, options);
-
-  return searchProductStatsImpl(normalized);
-}
-
-return {
-  getSearchOptions,
-  getSavedSearch,
-  runSavedSearch,
-  getSearchStats
-};
-}
-
 const defaultSearchStore = createSearchStore();
-const {
-  getSearchOptions,
-  getSavedSearch,
-  runSavedSearch,
-  getSearchStats
-} = defaultSearchStore;
+const { getSearchOptions, getSavedSearch, runSavedSearch, getSearchStats } =
+  defaultSearchStore;
 
 export {
   DEFAULT_SEARCH_STATE,
@@ -380,5 +402,5 @@ export {
   getSearchOptions,
   getSavedSearch,
   runSavedSearch,
-  getSearchStats
+  getSearchStats,
 };

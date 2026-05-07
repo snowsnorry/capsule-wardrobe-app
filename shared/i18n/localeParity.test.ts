@@ -2,9 +2,19 @@ import { test, expect } from "vitest";
 import en from "./en.js";
 import ru from "./ru.js";
 
-type LocaleShape = null | string | number | boolean | LocaleShape[] | { [key: string]: LocaleShape };
+type LocaleShape =
+  | null
+  | string
+  | number
+  | boolean
+  | LocaleShape[]
+  | { [key: string]: LocaleShape };
 
-function assertSameShape(left: LocaleShape, right: LocaleShape, path = ""): void {
+function assertSameShape(
+  left: LocaleShape,
+  right: LocaleShape,
+  path = "",
+): void {
   expect(typeof left).toBe(typeof right);
 
   if (left === null || right === null || typeof left !== "object") {
@@ -22,7 +32,7 @@ function assertSameShape(left: LocaleShape, right: LocaleShape, path = ""): void
     assertSameShape(
       (left as { [key: string]: LocaleShape })[key],
       (right as { [key: string]: LocaleShape })[key],
-      nextPath
+      nextPath,
     );
   }
 }

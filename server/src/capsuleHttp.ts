@@ -1,7 +1,7 @@
 import {
   buildSnapshotFromProfile,
   getEffectiveCapsuleSnapshot,
-  normalizeCapsuleSnapshot
+  normalizeCapsuleSnapshot,
 } from "./capsuleStore.js";
 import type { WardrobeUiItemLike } from "./ai/types.js";
 import { sortWardrobeItems } from "../../shared/wardrobeOrder.js";
@@ -12,19 +12,18 @@ type RejectedUrlsValidationResult =
 
 export function buildPdfDownloadFilename(capsuleName) {
   const normalizedName = String(capsuleName || "")
-    .replaceAll(
-      /[\s\S]/g,
-      (char) => (char.charCodeAt(0) <= 0x1f || char.charCodeAt(0) === 0x7f ? " " : char)
+    .replaceAll(/[\s\S]/g, (char) =>
+      char.charCodeAt(0) <= 0x1f || char.charCodeAt(0) === 0x7f ? " " : char,
     )
     .replace(/[\\/:"*?<>|]+/g, " ")
     .trim()
     .replace(/\s+/g, " ");
   const baseName = normalizedName || "capsule-wardrobe";
-  const asciiFallback = baseName
-    .replace(/[^\x20-\x7e]/g, "")
-    .trim()
-    .replace(/\s+/g, "-")
-    || "capsule-wardrobe";
+  const asciiFallback =
+    baseName
+      .replace(/[^\x20-\x7e]/g, "")
+      .trim()
+      .replace(/\s+/g, "-") || "capsule-wardrobe";
   const encodedUtf8Name = encodeURIComponent(`${baseName}.pdf`);
   return `attachment; filename="${asciiFallback}.pdf"; filename*=UTF-8''${encodedUtf8Name}`;
 }
@@ -50,7 +49,11 @@ export function hasOwnProperty(object, key) {
 }
 
 export function isTruthyQueryFlag(value) {
-  return ["1", "true", "yes", "on"].includes(String(value || "").trim().toLowerCase());
+  return ["1", "true", "yes", "on"].includes(
+    String(value || "")
+      .trim()
+      .toLowerCase(),
+  );
 }
 
 export function hasUnexpectedCapsuleCreateFields(payload = {}) {
@@ -84,26 +87,31 @@ export function buildCapsuleDraftFromFilters(profile, filters = null) {
   }
 
   const normalizedFilters = normalizeCapsuleSnapshot({
-    filters
+    filters,
   })?.filters;
 
   return {
     filters: normalizedFilters || buildSnapshotFromProfile(profile)?.filters,
     data: {
       wardrobe: null,
-      rejectedUrls: []
-    }
+      rejectedUrls: [],
+    },
   };
 }
 
-export function getValidatedRejectedUrls(capsule, rejectedUrls): RejectedUrlsValidationResult | null {
+export function getValidatedRejectedUrls(
+  capsule,
+  rejectedUrls,
+): RejectedUrlsValidationResult | null {
   if (!Array.isArray(rejectedUrls)) {
     return null;
   }
 
   const effectiveSnapshot = getEffectiveCapsuleSnapshot(capsule);
-  const wardrobeItems: WardrobeUiItemLike[] = Array.isArray(effectiveSnapshot?.data?.wardrobe?.items)
-    ? effectiveSnapshot.data.wardrobe.items as WardrobeUiItemLike[]
+  const wardrobeItems: WardrobeUiItemLike[] = Array.isArray(
+    effectiveSnapshot?.data?.wardrobe?.items,
+  )
+    ? (effectiveSnapshot.data.wardrobe.items as WardrobeUiItemLike[])
     : [];
 
   if (wardrobeItems.length === 0) {
@@ -111,9 +119,7 @@ export function getValidatedRejectedUrls(capsule, rejectedUrls): RejectedUrlsVal
   }
 
   const allowedUrls = new Set(
-    wardrobeItems
-      .map((item) => String(item?.url || "").trim())
-      .filter(Boolean)
+    wardrobeItems.map((item) => String(item?.url || "").trim()).filter(Boolean),
   );
 
   if (allowedUrls.size === 0) {
@@ -147,7 +153,7 @@ export function toCapsuleSummary(capsule) {
     updatedAt: capsule.updatedAt,
     hasDraft: Boolean(capsule.draft),
     hasSaved: Boolean(capsule.saved),
-    filters: effective?.filters || null
+    filters: effective?.filters || null,
   };
 }
 
@@ -156,13 +162,14 @@ export function toCapsuleResponse(capsule) {
     ...toCapsuleSummary(capsule),
     draft: capsule.draft,
     saved: capsule.saved,
-    effective: getEffectiveCapsuleSnapshot(capsule)
+    effective: getEffectiveCapsuleSnapshot(capsule),
   };
 }
 
 export function getCapsuleItems(capsule) {
   const effective = getEffectiveCapsuleSnapshot(capsule);
   const wardrobe = effective?.data?.wardrobe;
-  return Array.isArray(wardrobe?.items) ? sortWardrobeItems(wardrobe.items) : [];
+  return Array.isArray(wardrobe?.items)
+    ? sortWardrobeItems(wardrobe.items)
+    : [];
 }
-

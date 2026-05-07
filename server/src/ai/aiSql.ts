@@ -1,12 +1,9 @@
-import type {
-  CountByKey,
-  UserProfileLike
-} from "./types.js";
+import type { CountByKey, UserProfileLike } from "./types.js";
 import { queryCapsuleWardrobeItemsForMultipleAccentColors } from "./aiSqlMultipleAccent.js";
 import type {
   CapsuleWardrobeSqlClient,
   CapsuleWardrobeSqlParams,
-  CapsuleWardrobeSqlRow
+  CapsuleWardrobeSqlRow,
 } from "./aiSqlTypes.js";
 
 const MULTIPLE_ACCENT_COLORS = "multiple_accent_colors";
@@ -14,7 +11,7 @@ const MULTIPLE_ACCENT_COLORS = "multiple_accent_colors";
 const AUDIENCE_FILTERS_BY_PROFILE = {
   man: ["man", "all"],
   woman: ["woman", "all"],
-  any: ["man", "woman", "all"]
+  any: ["man", "woman", "all"],
 };
 
 function normalizePatternValue(value) {
@@ -28,7 +25,9 @@ function getSqlPattern(value) {
 }
 
 function getAudienceFilters(audience) {
-  return AUDIENCE_FILTERS_BY_PROFILE[audience] || AUDIENCE_FILTERS_BY_PROFILE.any;
+  return (
+    AUDIENCE_FILTERS_BY_PROFILE[audience] || AUDIENCE_FILTERS_BY_PROFILE.any
+  );
 }
 
 function getProfileStringArray(value) {
@@ -42,7 +41,8 @@ function getRejectedUrls(value) {
 }
 
 function getSqlNoiseFactor(userProfile: UserProfileLike | null) {
-  const additionalText = typeof userProfile?.text === "string" ? userProfile.text.trim() : "";
+  const additionalText =
+    typeof userProfile?.text === "string" ? userProfile.text.trim() : "";
   return additionalText ? 0 : 0.05;
 }
 
@@ -56,14 +56,14 @@ function getProfileSqlFilters(userProfile: UserProfileLike | null) {
     color: userProfile?.color ?? null,
     pattern: getSqlPattern(userProfile?.pattern),
     rejectedUrls: getRejectedUrls(userProfile?.rejected),
-    noiseFactor: getSqlNoiseFactor(userProfile)
+    noiseFactor: getSqlNoiseFactor(userProfile),
   };
 }
 
 function buildCapsuleWardrobeSqlParams(
   userProfile: UserProfileLike | null = null,
   promptEmbeddings: number[] = [],
-  capsuleCategories: CountByKey
+  capsuleCategories: CountByKey,
 ): CapsuleWardrobeSqlParams {
   return {
     categories: Object.keys(capsuleCategories),
@@ -74,9 +74,21 @@ function buildCapsuleWardrobeSqlParams(
 
 async function queryCapsuleWardrobeItems(
   sql: CapsuleWardrobeSqlClient,
-  params: CapsuleWardrobeSqlParams
+  params: CapsuleWardrobeSqlParams,
 ) {
-  const { categories, formalityLevel, style, occasions, season, audienceFilters, color, pattern, rejectedUrls, embeddingVector, noiseFactor } = params;
+  const {
+    categories,
+    formalityLevel,
+    style,
+    occasions,
+    season,
+    audienceFilters,
+    color,
+    pattern,
+    rejectedUrls,
+    embeddingVector,
+    noiseFactor,
+  } = params;
 
   return sql<CapsuleWardrobeSqlRow>`
     SELECT results.*
@@ -165,7 +177,7 @@ async function queryCapsuleWardrobeItems(
 
 function queryCapsuleWardrobeItemsForProfile(
   sql: CapsuleWardrobeSqlClient,
-  params: CapsuleWardrobeSqlParams
+  params: CapsuleWardrobeSqlParams,
 ) {
   if (params.color === MULTIPLE_ACCENT_COLORS) {
     return queryCapsuleWardrobeItemsForMultipleAccentColors(sql, params);
@@ -178,10 +190,10 @@ export {
   buildCapsuleWardrobeSqlParams,
   queryCapsuleWardrobeItems,
   queryCapsuleWardrobeItemsForMultipleAccentColors,
-  queryCapsuleWardrobeItemsForProfile
+  queryCapsuleWardrobeItemsForProfile,
 };
 export type {
   CapsuleWardrobeSqlClient,
   CapsuleWardrobeSqlParams,
-  CapsuleWardrobeSqlRow
+  CapsuleWardrobeSqlRow,
 } from "./aiSqlTypes.js";

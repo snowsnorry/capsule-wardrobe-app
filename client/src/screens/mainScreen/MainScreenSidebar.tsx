@@ -19,7 +19,7 @@ function MainScreenSidebar({ props, disabled, isSigningOut }: SidebarProps) {
         backgroundColor: "background.paper",
         minHeight: 0,
         overflowY: "auto",
-        p: 3
+        p: 3,
       }}
     >
       <ProfileFiltersSidebar

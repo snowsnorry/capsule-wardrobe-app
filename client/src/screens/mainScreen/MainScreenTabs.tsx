@@ -4,7 +4,13 @@ import type { ResolvedOutfitSet } from "./MainScreenTypes";
 
 function MobileSummary({ items }: { items: string[] }) {
   return (
-    <Stack direction="row" flexWrap="wrap" useFlexGap gap={0.75} sx={{ color: "text.secondary", minWidth: 0, px: 2, pb: 1.5 }}>
+    <Stack
+      direction="row"
+      flexWrap="wrap"
+      useFlexGap
+      gap={0.75}
+      sx={{ color: "text.secondary", minWidth: 0, px: 2, pb: 1.5 }}
+    >
       {items.map((item, index) => (
         <Typography
           key={`${item}-${index}`}
@@ -13,7 +19,10 @@ function MobileSummary({ items }: { items: string[] }) {
           sx={{
             display: "inline-flex",
             gap: 0.75,
-            "&::before": index === 0 ? undefined : { content: '"•"', color: "text.disabled" }
+            "&::before":
+              index === 0
+                ? undefined
+                : { content: '"•"', color: "text.disabled" },
           }}
         >
           {item}
@@ -30,7 +39,7 @@ function MainScreenTabs({
   selectedCount,
   sets,
   summary,
-  onChange
+  onChange,
 }: {
   activeTab: string;
   disabled: boolean;
@@ -44,7 +53,9 @@ function MainScreenTabs({
 
   return (
     <>
-      {isOverlay && selectedCount === 0 ? <MobileSummary items={summary} /> : null}
+      {isOverlay && selectedCount === 0 ? (
+        <MobileSummary items={summary} />
+      ) : null}
       {sets.length > 0 ? (
         <Box>
           <Tabs
@@ -54,11 +65,19 @@ function MainScreenTabs({
             }}
             variant="scrollable"
             scrollButtons="auto"
-            sx={{ px: { xs: 2, md: 3 }, "& .MuiTab-root": { textTransform: "none" } }}
+            sx={{
+              px: { xs: 2, md: 3 },
+              "& .MuiTab-root": { textTransform: "none" },
+            }}
           >
             <Tab value="all" label={t("search.all")} disabled={disabled} />
             {sets.map((set) => (
-              <Tab key={set.id} value={set.id} label={t("capsule.outfitSet", { number: set.label })} disabled={disabled} />
+              <Tab
+                key={set.id}
+                value={set.id}
+                label={t("capsule.outfitSet", { number: set.label })}
+                disabled={disabled}
+              />
             ))}
           </Tabs>
         </Box>

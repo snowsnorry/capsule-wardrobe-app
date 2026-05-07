@@ -5,7 +5,7 @@ import useSearchScreenState from "./useSearchScreenState";
 const searchApi = vi.hoisted(() => ({
   fetchSavedSearch: vi.fn(),
   fetchSearchOptions: vi.fn(),
-  runSearch: vi.fn()
+  runSearch: vi.fn(),
 }));
 
 vi.mock("../../api/search", () => searchApi);
@@ -25,7 +25,7 @@ const t = (key: string, params?: Record<string, unknown>) => {
     "search.filters.silhouette": "Silhouette",
     "search.filters.fit": "Fit",
     "search.filters.closureType": "Closure",
-    "search.filters.price": "Price"
+    "search.filters.price": "Price",
   };
   if (key === "search.resultsCount") {
     return `${params?.count} results`;
@@ -47,7 +47,7 @@ function makeOptions() {
     silhouettes: ["straight"],
     fits: ["regular"],
     closureTypes: ["button"],
-    priceRange: { min: 10, max: 150 }
+    priceRange: { min: 10, max: 150 },
   };
 }
 
@@ -70,20 +70,22 @@ function makeSavedSearch(overrides = {}) {
       priceMin: null,
       priceMax: null,
       page: 3,
-      ...overrides
-    }
+      ...overrides,
+    },
   };
 }
 
 function renderSearchState(overrides = {}) {
-  return renderHook(() => useSearchScreenState({
-    initialQuery: "",
-    autoOpenProductDetail: false,
-    isMobile: false,
-    locale: "en",
-    t,
-    ...overrides
-  }));
+  return renderHook(() =>
+    useSearchScreenState({
+      initialQuery: "",
+      autoOpenProductDetail: false,
+      isMobile: false,
+      locale: "en",
+      t,
+      ...overrides,
+    }),
+  );
 }
 
 async function waitForBootstrap() {
@@ -102,9 +104,9 @@ describe("useSearchScreenState", () => {
     searchApi.runSearch.mockResolvedValue({
       items: [
         { id: "1", name: "Linen Shirt", brand: "UNIQLO", audience: "all" },
-        { id: "2", name: "Wool Trousers", brand: "COS" }
+        { id: "2", name: "Wool Trousers", brand: "COS" },
       ],
-      total: 55
+      total: 55,
     });
   });
 
@@ -139,16 +141,20 @@ describe("useSearchScreenState", () => {
       silhouette: [],
       fit: [],
       closureType: [],
-      page: 3
+      page: 3,
     });
   });
 
   test("uses initial query handoff instead of saved filters on first search", async () => {
-    const { result } = renderSearchState({ initialQuery: "https://example.com/products/linen-shirt" });
+    const { result } = renderSearchState({
+      initialQuery: "https://example.com/products/linen-shirt",
+    });
 
     await waitForBootstrap();
 
-    expect(result.current.draftState.query).toBe("https://example.com/products/linen-shirt");
+    expect(result.current.draftState.query).toBe(
+      "https://example.com/products/linen-shirt",
+    );
     expect(searchApi.runSearch).toHaveBeenCalledWith({
       query: "https://example.com/products/linen-shirt",
       brand: [],
@@ -165,20 +171,26 @@ describe("useSearchScreenState", () => {
       silhouette: [],
       fit: [],
       closureType: [],
-      page: 1
+      page: 1,
     });
   });
 
   test("mobile auto-opens product detail only for a single handoff result with flag", async () => {
     searchApi.runSearch.mockResolvedValueOnce({
-      items: [{ id: "1", name: "Linen Shirt", url: "https://example.com/products/linen-shirt" }],
-      total: 1
+      items: [
+        {
+          id: "1",
+          name: "Linen Shirt",
+          url: "https://example.com/products/linen-shirt",
+        },
+      ],
+      total: 1,
     });
 
     const { result } = renderSearchState({
       initialQuery: "https://example.com/products/linen-shirt",
       autoOpenProductDetail: true,
-      isMobile: true
+      isMobile: true,
     });
 
     await waitFor(() => {
@@ -190,15 +202,15 @@ describe("useSearchScreenState", () => {
     searchApi.runSearch.mockResolvedValueOnce({
       items: [
         { id: "1", name: "Linen Shirt" },
-        { id: "2", name: "Wool Trousers" }
+        { id: "2", name: "Wool Trousers" },
       ],
-      total: 2
+      total: 2,
     });
 
     const multiple = renderSearchState({
       initialQuery: "https://example.com/products/linen-shirt",
       autoOpenProductDetail: true,
-      isMobile: true
+      isMobile: true,
     });
     await waitForBootstrap();
     expect(multiple.result.current.isDetailOpen).toBe(false);
@@ -217,10 +229,12 @@ describe("useSearchScreenState", () => {
     await act(async () => {
       await result.current.applyCurrentQuery();
     });
-    expect(searchApi.runSearch).toHaveBeenCalledWith(expect.objectContaining({
-      query: "blue cardigan",
-      page: 1
-    }));
+    expect(searchApi.runSearch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        query: "blue cardigan",
+        page: 1,
+      }),
+    );
 
     searchApi.runSearch.mockClear();
     act(() => {
@@ -229,19 +243,23 @@ describe("useSearchScreenState", () => {
     await act(async () => {
       await result.current.applyCurrentQuery();
     });
-    expect(searchApi.runSearch).toHaveBeenCalledWith(expect.objectContaining({
-      query: "black blazer",
-      page: 1
-    }));
+    expect(searchApi.runSearch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        query: "black blazer",
+        page: 1,
+      }),
+    );
 
     searchApi.runSearch.mockClear();
     await act(async () => {
       await result.current.clearQuery();
     });
-    expect(searchApi.runSearch).toHaveBeenCalledWith(expect.objectContaining({
-      query: "",
-      page: 1
-    }));
+    expect(searchApi.runSearch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        query: "",
+        page: 1,
+      }),
+    );
   });
 
   test("reset and chip deletion debounce search updates", async () => {
@@ -258,11 +276,13 @@ describe("useSearchScreenState", () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(300);
     });
-    expect(searchApi.runSearch).toHaveBeenCalledWith(expect.objectContaining({
-      brand: [],
-      season: ["summer"],
-      page: 1
-    }));
+    expect(searchApi.runSearch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        brand: [],
+        season: ["summer"],
+        page: 1,
+      }),
+    );
 
     searchApi.runSearch.mockClear();
     act(() => {
@@ -287,7 +307,7 @@ describe("useSearchScreenState", () => {
       silhouette: [],
       fit: [],
       closureType: [],
-      page: 1
+      page: 1,
     });
   });
 
@@ -298,9 +318,23 @@ describe("useSearchScreenState", () => {
     searchApi.runSearch.mockClear();
 
     act(() => {
-      result.current.changeSidebarDraft((current) => ({ ...current, category: ["top"], page: 1 }), { submit: true });
-      result.current.changeSidebarDraft((current) => ({ ...current, category: ["top", "bottom"], page: 1 }), { submit: true });
-      result.current.changeSidebarDraft((current) => ({ ...current, category: ["top", "bottom"], audience: ["woman"], page: 1 }), { submit: true });
+      result.current.changeSidebarDraft(
+        (current) => ({ ...current, category: ["top"], page: 1 }),
+        { submit: true },
+      );
+      result.current.changeSidebarDraft(
+        (current) => ({ ...current, category: ["top", "bottom"], page: 1 }),
+        { submit: true },
+      );
+      result.current.changeSidebarDraft(
+        (current) => ({
+          ...current,
+          category: ["top", "bottom"],
+          audience: ["woman"],
+          page: 1,
+        }),
+        { submit: true },
+      );
     });
 
     await act(async () => {
@@ -313,10 +347,12 @@ describe("useSearchScreenState", () => {
     });
 
     expect(searchApi.runSearch).toHaveBeenCalledTimes(1);
-    expect(searchApi.runSearch).toHaveBeenCalledWith(expect.objectContaining({
-      category: ["top", "bottom"],
-      audience: ["woman"],
-      page: 1
-    }));
+    expect(searchApi.runSearch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        category: ["top", "bottom"],
+        audience: ["woman"],
+        page: 1,
+      }),
+    );
   });
 });

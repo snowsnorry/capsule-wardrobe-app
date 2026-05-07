@@ -5,50 +5,80 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 vi.mock("../screens/mainScreen/MainScreen", () => ({
-  default: ({ onToggleOccasion, onToggleSeason, onOpenCapsule, items, userEmail }) => (
+  default: ({
+    onToggleOccasion,
+    onToggleSeason,
+    onOpenCapsule,
+    items,
+    userEmail,
+  }) => (
     <div>
-      <span>main:{userEmail}:{items.length}</span>
-      <button type="button" onClick={() => onToggleOccasion("office")}>main-occasion</button>
-      <button type="button" onClick={() => onToggleSeason("summer")}>main-season</button>
-      <button type="button" onClick={() => onOpenCapsule("capsule-1")}>open-capsule</button>
+      <span>
+        main:{userEmail}:{items.length}
+      </span>
+      <button type="button" onClick={() => onToggleOccasion("office")}>
+        main-occasion
+      </button>
+      <button type="button" onClick={() => onToggleSeason("summer")}>
+        main-season
+      </button>
+      <button type="button" onClick={() => onOpenCapsule("capsule-1")}>
+        open-capsule
+      </button>
     </div>
-  )
+  ),
 }));
 
 vi.mock("../screens/ProfileScreen", () => ({
   default: ({ onToggleOccasion, onToggleSeason, onBack }) => (
     <div>
-      <button type="button" onClick={() => onToggleOccasion("office")}>profile-occasion</button>
-      <button type="button" onClick={() => onToggleSeason("summer")}>profile-season</button>
-      <button type="button" onClick={onBack}>profile-back</button>
+      <button type="button" onClick={() => onToggleOccasion("office")}>
+        profile-occasion
+      </button>
+      <button type="button" onClick={() => onToggleSeason("summer")}>
+        profile-season
+      </button>
+      <button type="button" onClick={onBack}>
+        profile-back
+      </button>
     </div>
-  )
+  ),
 }));
 
 vi.mock("../screens/OnboardingScreen", () => ({
   default: ({ onToggleOccasion, onToggleSeason, onNext }) => (
     <div>
-      <button type="button" onClick={() => onToggleOccasion("office")}>onboarding-occasion</button>
-      <button type="button" onClick={() => onToggleSeason("summer")}>onboarding-season</button>
-      <button type="button" onClick={onNext}>onboarding-next</button>
+      <button type="button" onClick={() => onToggleOccasion("office")}>
+        onboarding-occasion
+      </button>
+      <button type="button" onClick={() => onToggleSeason("summer")}>
+        onboarding-season
+      </button>
+      <button type="button" onClick={onNext}>
+        onboarding-next
+      </button>
     </div>
-  )
+  ),
 }));
 
 vi.mock("../screens/SearchScreen", () => ({
   default: ({ initialQuery, autoOpenProductDetail }) => (
-    <div>search:{initialQuery}:{String(autoOpenProductDetail)}</div>
-  )
+    <div>
+      search:{initialQuery}:{String(autoOpenProductDetail)}
+    </div>
+  ),
 }));
 
 vi.mock("../screens/StatisticsScreen", () => ({
-  default: () => <div>statistics</div>
+  default: () => <div>statistics</div>,
 }));
 
 vi.mock("../screens/SignInScreen", () => ({
   default: ({ email, onEmailChange }) => (
-    <button type="button" onClick={() => onEmailChange("next@example.com")}>sign-in:{email}</button>
-  )
+    <button type="button" onClick={() => onEmailChange("next@example.com")}>
+      sign-in:{email}
+    </button>
+  ),
 }));
 
 import AppRouteContent from "./AppRouteContent";
@@ -84,7 +114,7 @@ function makeProps(overrides: Record<string, unknown> = {}) {
       locale: "en",
       theme: "system",
       llm: "openai:gpt-5.5",
-      imageLlm: "openai:gpt-image-2"
+      imageLlm: "openai:gpt-image-2",
     },
     status: { loading: false, error: "", infoKey: "", infoParams: null },
     styleOptions: { core: ["casual"], aesthetics: ["minimal"] },
@@ -151,7 +181,7 @@ function makeProps(overrides: Record<string, unknown> = {}) {
     setSelectedPattern: vi.fn(),
     setSelectedText: vi.fn(),
     toggleSelection: vi.fn(),
-    ...overrides
+    ...overrides,
   };
 }
 
@@ -163,7 +193,7 @@ function renderRoute(props: Record<string, unknown>) {
   return render(
     <Suspense fallback={<div>loading</div>}>
       <AppRouteContent {...routeProps(props)} />
-    </Suspense>
+    </Suspense>,
   );
 }
 
@@ -182,7 +212,9 @@ describe("AppRouteContent", () => {
     const setEmail = vi.fn();
     renderRoute({ user: null, setEmail });
 
-    await user.click(await screen.findByRole("button", { name: "sign-in:person@example.com" }));
+    await user.click(
+      await screen.findByRole("button", { name: "sign-in:person@example.com" }),
+    );
 
     expect(setEmail).toHaveBeenCalledWith("next@example.com");
   });
@@ -191,7 +223,7 @@ describe("AppRouteContent", () => {
     const { rerender } = renderRoute({
       appRoute: "explore",
       searchInitialQuery: "linen",
-      searchAutoOpenProductDetail: true
+      searchAutoOpenProductDetail: true,
     });
 
     expect(await screen.findByText("search:linen:true")).toBeInTheDocument();
@@ -199,7 +231,7 @@ describe("AppRouteContent", () => {
     rerender(
       <Suspense fallback={<div>loading</div>}>
         <AppRouteContent {...routeProps({ appRoute: "statistics" })} />
-      </Suspense>
+      </Suspense>,
     );
     expect(await screen.findByText("statistics")).toBeInTheDocument();
   });
@@ -210,15 +242,25 @@ describe("AppRouteContent", () => {
     render(
       <Suspense fallback={<div>loading</div>}>
         <AppRouteContent {...props} />
-      </Suspense>
+      </Suspense>,
     );
 
-    await user.click(await screen.findByRole("button", { name: "main-occasion" }));
+    await user.click(
+      await screen.findByRole("button", { name: "main-occasion" }),
+    );
     await user.click(screen.getByRole("button", { name: "main-season" }));
     await user.click(screen.getByRole("button", { name: "open-capsule" }));
 
-    expect(props.toggleSelection).toHaveBeenCalledWith("office", [], props.setSelectedOccasions);
-    expect(props.toggleSelection).toHaveBeenCalledWith("summer", [], props.setSelectedSeason);
+    expect(props.toggleSelection).toHaveBeenCalledWith(
+      "office",
+      [],
+      props.setSelectedOccasions,
+    );
+    expect(props.toggleSelection).toHaveBeenCalledWith(
+      "summer",
+      [],
+      props.setSelectedSeason,
+    );
     expect(props.onOpenCapsule).toHaveBeenCalledWith("capsule-1");
   });
 
@@ -228,23 +270,46 @@ describe("AppRouteContent", () => {
     const { rerender } = render(
       <Suspense fallback={<div>loading</div>}>
         <AppRouteContent {...profileProps} />
-      </Suspense>
+      </Suspense>,
     );
 
-    await user.click(await screen.findByRole("button", { name: "profile-occasion" }));
+    await user.click(
+      await screen.findByRole("button", { name: "profile-occasion" }),
+    );
     await user.click(screen.getByRole("button", { name: "profile-season" }));
-    expect(profileProps.toggleSelection).toHaveBeenCalledWith("office", [], profileProps.setSelectedOccasions);
-    expect(profileProps.toggleSelection).toHaveBeenCalledWith("summer", [], profileProps.setSelectedSeason);
+    expect(profileProps.toggleSelection).toHaveBeenCalledWith(
+      "office",
+      [],
+      profileProps.setSelectedOccasions,
+    );
+    expect(profileProps.toggleSelection).toHaveBeenCalledWith(
+      "summer",
+      [],
+      profileProps.setSelectedSeason,
+    );
 
-    const onboardingProps = routeProps({ hasProfile: false, profileCreated: false });
+    const onboardingProps = routeProps({
+      hasProfile: false,
+      profileCreated: false,
+    });
     rerender(
       <Suspense fallback={<div>loading</div>}>
         <AppRouteContent {...onboardingProps} />
-      </Suspense>
+      </Suspense>,
     );
-    await user.click(await screen.findByRole("button", { name: "onboarding-occasion" }));
+    await user.click(
+      await screen.findByRole("button", { name: "onboarding-occasion" }),
+    );
     await user.click(screen.getByRole("button", { name: "onboarding-season" }));
-    expect(onboardingProps.toggleSelection).toHaveBeenCalledWith("office", [], onboardingProps.setSelectedOccasions);
-    expect(onboardingProps.toggleSelection).toHaveBeenCalledWith("summer", [], onboardingProps.setSelectedSeason);
+    expect(onboardingProps.toggleSelection).toHaveBeenCalledWith(
+      "office",
+      [],
+      onboardingProps.setSelectedOccasions,
+    );
+    expect(onboardingProps.toggleSelection).toHaveBeenCalledWith(
+      "summer",
+      [],
+      onboardingProps.setSelectedSeason,
+    );
   });
 });

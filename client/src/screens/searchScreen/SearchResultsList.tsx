@@ -1,5 +1,13 @@
 import type { ReactElement } from "react";
-import { Box, Chip, CircularProgress, Divider, Pagination, Stack, Typography } from "@mui/material";
+import {
+  Box,
+  Chip,
+  CircularProgress,
+  Divider,
+  Pagination,
+  Stack,
+  Typography,
+} from "@mui/material";
 import ProductLabelText from "../../components/ProductLabelText";
 import type { ActiveFilterChip } from "../../search/searchState";
 import type { SearchResultItem, SearchStatus } from "./searchTypes";
@@ -33,7 +41,7 @@ function SearchResultsList({
   page,
   onDeleteActiveChip,
   onSelectResult,
-  onChangePage
+  onChangePage,
 }: SearchResultsListProps): ReactElement {
   return (
     <Stack spacing={2} sx={{ minHeight: 0, height: "100%" }}>
@@ -45,7 +53,10 @@ function SearchResultsList({
         onDeleteActiveChip={onDeleteActiveChip}
       />
       <Divider />
-      <Stack spacing={1.1} sx={{ flex: 1, minHeight: 0, overflowY: "auto", pr: 0.5 }}>
+      <Stack
+        spacing={1.1}
+        sx={{ flex: 1, minHeight: 0, overflowY: "auto", pr: 0.5 }}
+      >
         {results.length === 0 && !status.loading ? (
           <Typography variant="body2" color="text.secondary">
             {t("search.empty")}
@@ -76,8 +87,8 @@ function SearchResultsList({
             maxWidth: "100%",
             "& .MuiPagination-ul": {
               flexWrap: "nowrap",
-              justifyContent: "center"
-            }
+              justifyContent: "center",
+            },
           }}
         />
       ) : null}
@@ -90,12 +101,19 @@ function ResultsHeader({
   formattedTotal,
   status,
   activeChips,
-  onDeleteActiveChip
-}: Pick<SearchResultsListProps, "t" | "formattedTotal" | "status" | "activeChips" | "onDeleteActiveChip">) {
+  onDeleteActiveChip,
+}: Pick<
+  SearchResultsListProps,
+  "t" | "formattedTotal" | "status" | "activeChips" | "onDeleteActiveChip"
+>) {
   return (
     <Stack spacing={1}>
       <Stack direction="row" justifyContent="space-between" alignItems="center">
-        <Typography variant="overline" color="text.secondary" sx={{ minWidth: 0 }}>
+        <Typography
+          variant="overline"
+          color="text.secondary"
+          sx={{ minWidth: 0 }}
+        >
           {t("search.resultsCount", { count: formattedTotal })}
         </Typography>
         {status.loading ? <CircularProgress size={18} /> : null}
@@ -112,8 +130,8 @@ function ResultsHeader({
                 "& .MuiChip-label": {
                   display: "block",
                   overflow: "hidden",
-                  textOverflow: "ellipsis"
-                }
+                  textOverflow: "ellipsis",
+                },
               }}
             />
           ))}
@@ -128,7 +146,7 @@ function ResultListItem({
   isMobile,
   isSelected,
   t,
-  onSelectResult
+  onSelectResult,
 }: {
   item: SearchResultItem;
   isMobile: boolean;
@@ -154,12 +172,14 @@ function ResultListItem({
         borderRadius: 0,
         cursor: "pointer",
         border: "none",
-        backgroundColor: isSelected ? "rgba(28, 124, 124, 0.06)" : "transparent",
+        backgroundColor: isSelected
+          ? "rgba(28, 124, 124, 0.06)"
+          : "transparent",
         transition: "background-color 160ms ease, transform 160ms ease",
         outline: "none",
         "&:hover": {
-          backgroundColor: "rgba(31, 41, 51, 0.035)"
-        }
+          backgroundColor: "rgba(31, 41, 51, 0.035)",
+        },
       }}
       data-mobile-result={isMobile ? "true" : undefined}
     >

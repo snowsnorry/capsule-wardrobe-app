@@ -28,13 +28,19 @@ let cachedPatterns: string[] | null = null;
 let inFlight: Promise<CachedProfileOptions> | null = null;
 
 async function loadProfileOptions(): Promise<CachedProfileOptions> {
-  if (cachedStyles && cachedOccasions && cachedSeasons && cachedAudience && cachedPatterns) {
+  if (
+    cachedStyles &&
+    cachedOccasions &&
+    cachedSeasons &&
+    cachedAudience &&
+    cachedPatterns
+  ) {
     return {
       styles: cachedStyles,
       occasions: cachedOccasions,
       seasons: cachedSeasons,
       audience: cachedAudience,
-      patterns: cachedPatterns
+      patterns: cachedPatterns,
     };
   }
 
@@ -43,7 +49,7 @@ async function loadProfileOptions(): Promise<CachedProfileOptions> {
       .then((filters: WardrobeFiltersResponse) => {
         cachedStyles = {
           core: filters.formalityLevels || [],
-          aesthetics: filters.styles || []
+          aesthetics: filters.styles || [],
         };
         cachedOccasions = filters.occasions || [];
         cachedSeasons = filters.seasons || [];
@@ -54,7 +60,7 @@ async function loadProfileOptions(): Promise<CachedProfileOptions> {
           occasions: cachedOccasions,
           seasons: cachedSeasons,
           audience: cachedAudience,
-          patterns: cachedPatterns
+          patterns: cachedPatterns,
         };
       })
       .finally(() => {

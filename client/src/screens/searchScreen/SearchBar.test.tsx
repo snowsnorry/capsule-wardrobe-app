@@ -6,7 +6,7 @@ const t = (key: string) => {
   const labels: Record<string, string> = {
     "filters.open": "Open filters",
     "search.clear": "Clear search",
-    "search.placeholder": "Search products"
+    "search.placeholder": "Search products",
   };
   return labels[key] ?? key;
 };
@@ -29,7 +29,7 @@ describe("SearchBar", () => {
         onQueryChange={onQueryChange}
         onApplyQuery={onApplyQuery}
         onClearQuery={vi.fn()}
-      />
+      />,
     );
 
     const input = screen.getByPlaceholderText("Search products");
@@ -55,7 +55,7 @@ describe("SearchBar", () => {
         onQueryChange={vi.fn()}
         onApplyQuery={vi.fn()}
         onClearQuery={onClearQuery}
-      />
+      />,
     );
 
     fireEvent.click(screen.getByLabelText("Open filters"));

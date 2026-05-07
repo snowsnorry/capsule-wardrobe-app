@@ -14,7 +14,7 @@ test("configureSharp disables cache and uses default or override concurrency", (
     return {
       memory: { current: 0, high: 0, max: 0 },
       files: { current: 0, max: 0 },
-      items: { current: 0, max: 0 }
+      items: { current: 0, max: 0 },
     };
   };
   sharp.concurrency = (value) => {
@@ -30,9 +30,9 @@ test("configureSharp disables cache and uses default or override concurrency", (
       cache: {
         memory: { current: 0, high: 0, max: 0 },
         files: { current: 0, max: 0 },
-        items: { current: 0, max: 0 }
+        items: { current: 0, max: 0 },
       },
-      concurrency: SHARP_CONCURRENCY
+      concurrency: SHARP_CONCURRENCY,
     });
 
     const overrideConfig = configureSharp(7);
@@ -40,9 +40,9 @@ test("configureSharp disables cache and uses default or override concurrency", (
       cache: {
         memory: { current: 0, high: 0, max: 0 },
         files: { current: 0, max: 0 },
-        items: { current: 0, max: 0 }
+        items: { current: 0, max: 0 },
       },
-      concurrency: 7
+      concurrency: 7,
     });
   } finally {
     sharp.cache = originalCache;

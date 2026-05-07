@@ -28,7 +28,9 @@ export function formatLogPayload(payload: Record<string, unknown> = {}) {
     .join(", ");
 }
 
-export function getShortRequestId(logContext: { capsuleRequestId?: string | null } | null = null) {
+export function getShortRequestId(
+  logContext: { capsuleRequestId?: string | null } | null = null,
+) {
   const capsuleRequestId = String(logContext?.capsuleRequestId || "").trim();
   if (!capsuleRequestId) {
     return "";
@@ -37,7 +39,11 @@ export function getShortRequestId(logContext: { capsuleRequestId?: string | null
   return capsuleRequestId.split("-")[0] || capsuleRequestId.slice(0, 8);
 }
 
-export function logWardrobeInfo(event: string, payload: Record<string, unknown> = {}, logContext: { capsuleRequestId?: string | null } | null = null) {
+export function logWardrobeInfo(
+  event: string,
+  payload: Record<string, unknown> = {},
+  logContext: { capsuleRequestId?: string | null } | null = null,
+) {
   const shortRequestId = getShortRequestId(logContext);
   const prefix = shortRequestId
     ? `[${shortRequestId}][wardrobe-ai][${event}]`
@@ -52,7 +58,10 @@ export function logWardrobeInfo(event: string, payload: Record<string, unknown> 
   logInfo(prefix);
 }
 
-export function countItemsByKey(items: Array<Record<string, unknown>> = [], key = "category") {
+export function countItemsByKey(
+  items: Array<Record<string, unknown>> = [],
+  key = "category",
+) {
   return items.reduce<Record<string, number>>((result, item) => {
     const value = String(item?.[key] || "").trim();
     if (!value) {
@@ -90,4 +99,3 @@ export function extractLlmUsage(usage: LlmUsageLike | null = null) {
 
   return result;
 }
-

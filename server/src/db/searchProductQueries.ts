@@ -4,7 +4,7 @@ import {
   getResultRows,
   getSqlClient,
   type CountRow,
-  type ProductSearchRow
+  type ProductSearchRow,
 } from "./core.js";
 
 type SearchQueryParams = {
@@ -31,26 +31,30 @@ type SearchItemsQueryParams = SearchQueryParams & {
   offset: number;
 };
 
-async function querySearchProductCount(sql: ReturnType<typeof getSqlClient>, {
-  audience,
-  brand,
-  category,
-  closureType,
-  color,
-  embeddingVector,
-  fit,
-  formalityLevel,
-  normalizedUrlPrefix,
-  occasions,
-  pattern,
-  priceMax,
-  priceMin,
-  season,
-  semanticDistanceThreshold,
-  silhouette,
-  style
-}: SearchQueryParams): Promise<CountRow | null> {
-  return getFirstRow(await sql<CountRow>`
+async function querySearchProductCount(
+  sql: ReturnType<typeof getSqlClient>,
+  {
+    audience,
+    brand,
+    category,
+    closureType,
+    color,
+    embeddingVector,
+    fit,
+    formalityLevel,
+    normalizedUrlPrefix,
+    occasions,
+    pattern,
+    priceMax,
+    priceMin,
+    season,
+    semanticDistanceThreshold,
+    silhouette,
+    style,
+  }: SearchQueryParams,
+): Promise<CountRow | null> {
+  return getFirstRow(
+    await sql<CountRow>`
     select count(*)::integer as total
     from products
     where
@@ -70,30 +74,35 @@ async function querySearchProductCount(sql: ReturnType<typeof getSqlClient>, {
       and (cardinality(${fit}::text[]) = 0 or lower(coalesce(fit, '')) = any(${fit}::text[]))
       and (cardinality(${closureType}::text[]) = 0 or coalesce(closure_type, array[]::text[]) && ${closureType}::text[])
       and (${embeddingVector}::text is null or ${semanticDistanceThreshold}::double precision is null or embedding <=> ${embeddingVector}::vector <= ${semanticDistanceThreshold})
-  `);
+  `,
+  );
 }
 
-async function querySearchProductItems(sql: ReturnType<typeof getSqlClient>, {
-  audience,
-  brand,
-  category,
-  closureType,
-  color,
-  embeddingVector,
-  fit,
-  formalityLevel,
-  normalizedUrlPrefix,
-  occasions,
-  offset,
-  pattern,
-  priceMax,
-  priceMin,
-  season,
-  semanticDistanceThreshold,
-  silhouette,
-  style
-}: SearchItemsQueryParams): Promise<ProductSearchRow[]> {
-  return getResultRows(await sql<ProductSearchRow>`
+async function querySearchProductItems(
+  sql: ReturnType<typeof getSqlClient>,
+  {
+    audience,
+    brand,
+    category,
+    closureType,
+    color,
+    embeddingVector,
+    fit,
+    formalityLevel,
+    normalizedUrlPrefix,
+    occasions,
+    offset,
+    pattern,
+    priceMax,
+    priceMin,
+    season,
+    semanticDistanceThreshold,
+    silhouette,
+    style,
+  }: SearchItemsQueryParams,
+): Promise<ProductSearchRow[]> {
+  return getResultRows(
+    await sql<ProductSearchRow>`
     select id, name, url, description, brand, price, currency, availability, image_url as "imageUrl",
       audience, category, season, formality_level as "formalityLevel", style, occasions,
       color_base as "colorBase", pattern, finish, is_neutral as "isNeutral", composition,
@@ -124,7 +133,8 @@ async function querySearchProductItems(sql: ReturnType<typeof getSqlClient>, {
       lower(coalesce(name, '')) asc
     limit ${SEARCH_PAGE_SIZE}
     offset ${offset}
-  `);
+  `,
+  );
 }
 
 export { querySearchProductCount, querySearchProductItems };

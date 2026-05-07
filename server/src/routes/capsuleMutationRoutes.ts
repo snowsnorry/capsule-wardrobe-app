@@ -5,58 +5,96 @@ function isObjectPayload(body) {
 }
 
 function registerCapsuleCreateRoutes(app, context) {
-  const { hasOwnProperty, requireTrustedOrigin, requireAuth, requireCsrf } = context;
+  const { hasOwnProperty, requireTrustedOrigin, requireAuth, requireCsrf } =
+    context;
 
-  app.post("/capsules", requireTrustedOrigin, requireAuth, requireCsrf, async (req, res) => {
-    if (!isObjectPayload(req.body) || context.hasUnexpectedCapsuleCreateFields(req.body)) {
-      return res.status(400).json({ error: "invalid_payload" });
-    }
-
-    try {
-      const profile = await context.getProfileImpl(req.user.email);
-      const capsule = await context.createCapsuleImpl(req.user.email, {
-        name: String(req.body?.name || "").trim() || undefined,
-        draft: context.buildCapsuleDraftFromFilters(profile, req.body?.filters),
-        saved: null,
-        setActive: true
-      });
-      return res.status(201).json({ ok: true, capsule: context.toCapsuleResponse(capsule) });
-    } catch (error) {
-      logError("[capsules/create]", error);
-      return res.status(503).json({ error: "service_unavailable" });
-    }
-  });
-
-  app.patch("/capsules/:id/filters", requireTrustedOrigin, requireAuth, requireCsrf, async (req, res) => {
-    if (!isObjectPayload(req.body) || context.hasUnexpectedCapsuleFiltersFields(req.body) || !hasOwnProperty(req.body, "filters")) {
-      return res.status(400).json({ error: "invalid_payload" });
-    }
-
-    try {
-      const nextDraft = {
-        filters: context.normalizeCapsuleSnapshot({ filters: req.body?.filters })?.filters,
-        data: { wardrobe: null, rejectedUrls: [] }
-      };
-      const capsule = await context.updateCapsuleSnapshotImpl(req.user.email, req.params.id, nextDraft);
-      if (!capsule) {
-        return res.status(404).json({ error: "not_found" });
+  app.post(
+    "/capsules",
+    requireTrustedOrigin,
+    requireAuth,
+    requireCsrf,
+    async (req, res) => {
+      if (
+        !isObjectPayload(req.body) ||
+        context.hasUnexpectedCapsuleCreateFields(req.body)
+      ) {
+        return res.status(400).json({ error: "invalid_payload" });
       }
 
-      if (context.isTruthyQueryFlag(req.query?.regenerate)) {
-        return context.regenerateCapsuleWardrobeHandler(req, res);
+      try {
+        const profile = await context.getProfileImpl(req.user.email);
+        const capsule = await context.createCapsuleImpl(req.user.email, {
+          name: String(req.body?.name || "").trim() || undefined,
+          draft: context.buildCapsuleDraftFromFilters(
+            profile,
+            req.body?.filters,
+          ),
+          saved: null,
+          setActive: true,
+        });
+        return res
+          .status(201)
+          .json({ ok: true, capsule: context.toCapsuleResponse(capsule) });
+      } catch (error) {
+        logError("[capsules/create]", error);
+        return res.status(503).json({ error: "service_unavailable" });
+      }
+    },
+  );
+
+  app.patch(
+    "/capsules/:id/filters",
+    requireTrustedOrigin,
+    requireAuth,
+    requireCsrf,
+    async (req, res) => {
+      if (
+        !isObjectPayload(req.body) ||
+        context.hasUnexpectedCapsuleFiltersFields(req.body) ||
+        !hasOwnProperty(req.body, "filters")
+      ) {
+        return res.status(400).json({ error: "invalid_payload" });
       }
 
-      return res.json({ ok: true, capsule: context.toCapsuleResponse(capsule) });
-    } catch (error) {
-      logError("[capsules/filters]", error);
-      return res.status(503).json({ error: "service_unavailable" });
-    }
-  });
+      try {
+        const nextDraft = {
+          filters: context.normalizeCapsuleSnapshot({
+            filters: req.body?.filters,
+          })?.filters,
+          data: { wardrobe: null, rejectedUrls: [] },
+        };
+        const capsule = await context.updateCapsuleSnapshotImpl(
+          req.user.email,
+          req.params.id,
+          nextDraft,
+        );
+        if (!capsule) {
+          return res.status(404).json({ error: "not_found" });
+        }
+
+        if (context.isTruthyQueryFlag(req.query?.regenerate)) {
+          return context.regenerateCapsuleWardrobeHandler(req, res);
+        }
+
+        return res.json({
+          ok: true,
+          capsule: context.toCapsuleResponse(capsule),
+        });
+      } catch (error) {
+        logError("[capsules/filters]", error);
+        return res.status(503).json({ error: "service_unavailable" });
+      }
+    },
+  );
 }
 
 function getRejectedUrlsPayloadError(body, context) {
   const { hasOwnProperty } = context;
-  if (!isObjectPayload(body) || context.hasUnexpectedRejectedUrlsFields(body) || !hasOwnProperty(body, "rejectedUrls")) {
+  if (
+    !isObjectPayload(body) ||
+    context.hasUnexpectedRejectedUrlsFields(body) ||
+    !hasOwnProperty(body, "rejectedUrls")
+  ) {
     return "invalid_payload";
   }
 
@@ -92,20 +130,33 @@ async function updateRejectedUrls(req, res, context) {
       return res.status(404).json({ error: "not_found" });
     }
 
-    const validationResult = context.getValidatedRejectedUrls(capsule, req.body?.rejectedUrls);
-    const validationResponse = getRejectedUrlsValidationResponse(validationResult);
+    const validationResult = context.getValidatedRejectedUrls(
+      capsule,
+      req.body?.rejectedUrls,
+    );
+    const validationResponse =
+      getRejectedUrlsValidationResponse(validationResult);
     if (validationResponse) {
-      return res.status(validationResponse.status).json({ error: validationResponse.error });
+      return res
+        .status(validationResponse.status)
+        .json({ error: validationResponse.error });
     }
 
     const effectiveSnapshot = context.getEffectiveCapsuleSnapshot(capsule);
-    const nextCapsule = await context.updateCapsuleSnapshotImpl(req.user.email, req.params.id, {
-      filters: effectiveSnapshot?.filters,
-      data: {
-        wardrobe: effectiveSnapshot?.data?.wardrobe || null,
-        rejectedUrls: validationResult && "rejectedUrls" in validationResult ? validationResult.rejectedUrls : []
-      }
-    });
+    const nextCapsule = await context.updateCapsuleSnapshotImpl(
+      req.user.email,
+      req.params.id,
+      {
+        filters: effectiveSnapshot?.filters,
+        data: {
+          wardrobe: effectiveSnapshot?.data?.wardrobe || null,
+          rejectedUrls:
+            validationResult && "rejectedUrls" in validationResult
+              ? validationResult.rejectedUrls
+              : [],
+        },
+      },
+    );
 
     return sendCapsuleMutationResponse(res, nextCapsule, context);
   } catch (error) {
@@ -120,128 +171,215 @@ function registerRejectedUrlRoute(app, context) {
     context.requireTrustedOrigin,
     context.requireAuth,
     context.requireCsrf,
-    (req, res) => updateRejectedUrls(req, res, context)
+    (req, res) => updateRejectedUrls(req, res, context),
   );
 }
 
 function registerCapsuleStateRoutes(app, context) {
   const { requireTrustedOrigin, requireAuth, requireCsrf } = context;
 
-  app.post("/capsules/:id/save", requireTrustedOrigin, requireAuth, requireCsrf, async (req, res) => {
-    try {
-      const capsule = await context.saveCapsuleImpl(req.user.email, req.params.id);
-      return capsule
-        ? res.json({ ok: true, capsule: context.toCapsuleResponse(capsule) })
-        : res.status(404).json({ error: "not_found" });
-    } catch (error) {
-      logError("[capsules/save]", error);
-      return res.status(503).json({ error: "service_unavailable" });
-    }
-  });
+  app.post(
+    "/capsules/:id/save",
+    requireTrustedOrigin,
+    requireAuth,
+    requireCsrf,
+    async (req, res) => {
+      try {
+        const capsule = await context.saveCapsuleImpl(
+          req.user.email,
+          req.params.id,
+        );
+        return capsule
+          ? res.json({ ok: true, capsule: context.toCapsuleResponse(capsule) })
+          : res.status(404).json({ error: "not_found" });
+      } catch (error) {
+        logError("[capsules/save]", error);
+        return res.status(503).json({ error: "service_unavailable" });
+      }
+    },
+  );
 
-  app.post("/capsules/:id/revert", requireTrustedOrigin, requireAuth, requireCsrf, async (req, res) => {
-    try {
-      const capsule = await context.revertCapsuleImpl(req.user.email, req.params.id);
-      return capsule
-        ? res.json({ ok: true, capsule: context.toCapsuleResponse(capsule) })
-        : res.status(404).json({ error: "not_found" });
-    } catch (error) {
-      logError("[capsules/revert]", error);
-      return res.status(503).json({ error: "service_unavailable" });
-    }
-  });
+  app.post(
+    "/capsules/:id/revert",
+    requireTrustedOrigin,
+    requireAuth,
+    requireCsrf,
+    async (req, res) => {
+      try {
+        const capsule = await context.revertCapsuleImpl(
+          req.user.email,
+          req.params.id,
+        );
+        return capsule
+          ? res.json({ ok: true, capsule: context.toCapsuleResponse(capsule) })
+          : res.status(404).json({ error: "not_found" });
+      } catch (error) {
+        logError("[capsules/revert]", error);
+        return res.status(503).json({ error: "service_unavailable" });
+      }
+    },
+  );
 }
 
 function registerCapsuleMetadataRoutes(app, context) {
   const { requireTrustedOrigin, requireAuth, requireCsrf } = context;
 
-  app.patch("/capsules/:id/rename", requireTrustedOrigin, requireAuth, requireCsrf, async (req, res) => {
-    try {
-      const name = String(req.body?.name || "").trim();
-      if (!name) {
-        return res.status(400).json({ error: "invalid_payload" });
+  app.patch(
+    "/capsules/:id/rename",
+    requireTrustedOrigin,
+    requireAuth,
+    requireCsrf,
+    async (req, res) => {
+      try {
+        const name = String(req.body?.name || "").trim();
+        if (!name) {
+          return res.status(400).json({ error: "invalid_payload" });
+        }
+        const capsule = await context.renameCapsuleImpl(
+          req.user.email,
+          req.params.id,
+          name,
+        );
+        return capsule
+          ? res.json({ ok: true, capsule: context.toCapsuleResponse(capsule) })
+          : res.status(404).json({ error: "not_found" });
+      } catch (error) {
+        logError("[capsules/rename]", error);
+        return res.status(503).json({ error: "service_unavailable" });
       }
-      const capsule = await context.renameCapsuleImpl(req.user.email, req.params.id, name);
-      return capsule
-        ? res.json({ ok: true, capsule: context.toCapsuleResponse(capsule) })
-        : res.status(404).json({ error: "not_found" });
-    } catch (error) {
-      logError("[capsules/rename]", error);
-      return res.status(503).json({ error: "service_unavailable" });
-    }
-  });
+    },
+  );
 
-  app.post("/capsules/:id/duplicate", requireTrustedOrigin, requireAuth, requireCsrf, async (req, res) => {
-    try {
-      const capsule = await context.duplicateCapsuleImpl(req.user.email, req.params.id, String(req.body?.name || "").trim() || undefined);
-      return capsule
-        ? res.status(201).json({ ok: true, capsule: context.toCapsuleResponse(capsule) })
-        : res.status(404).json({ error: "not_found" });
-    } catch (error) {
-      logError("[capsules/duplicate]", error);
-      return res.status(503).json({ error: "service_unavailable" });
-    }
-  });
+  app.post(
+    "/capsules/:id/duplicate",
+    requireTrustedOrigin,
+    requireAuth,
+    requireCsrf,
+    async (req, res) => {
+      try {
+        const capsule = await context.duplicateCapsuleImpl(
+          req.user.email,
+          req.params.id,
+          String(req.body?.name || "").trim() || undefined,
+        );
+        return capsule
+          ? res
+              .status(201)
+              .json({ ok: true, capsule: context.toCapsuleResponse(capsule) })
+          : res.status(404).json({ error: "not_found" });
+      } catch (error) {
+        logError("[capsules/duplicate]", error);
+        return res.status(503).json({ error: "service_unavailable" });
+      }
+    },
+  );
 }
 
 function registerCapsuleSelectionRoutes(app, context) {
   const { requireTrustedOrigin, requireAuth, requireCsrf } = context;
 
-  app.post("/capsules/:id/select", requireTrustedOrigin, requireAuth, requireCsrf, async (req, res) => {
-    try {
-      const capsule = await context.getCapsuleImpl(req.user.email, req.params.id);
-      if (!capsule) {
-        return res.status(404).json({ error: "not_found" });
+  app.post(
+    "/capsules/:id/select",
+    requireTrustedOrigin,
+    requireAuth,
+    requireCsrf,
+    async (req, res) => {
+      try {
+        const capsule = await context.getCapsuleImpl(
+          req.user.email,
+          req.params.id,
+        );
+        if (!capsule) {
+          return res.status(404).json({ error: "not_found" });
+        }
+        const profile = await context.updateProfileActiveCapsuleIdImpl(
+          req.user.email,
+          capsule.id,
+        );
+        return res.json({
+          ok: true,
+          activeCapsuleId: profile?.activeCapsuleId || capsule.id,
+        });
+      } catch (error) {
+        logError("[capsules/select]", error);
+        return res.status(503).json({ error: "service_unavailable" });
       }
-      const profile = await context.updateProfileActiveCapsuleIdImpl(req.user.email, capsule.id);
-      return res.json({ ok: true, activeCapsuleId: profile?.activeCapsuleId || capsule.id });
-    } catch (error) {
-      logError("[capsules/select]", error);
-      return res.status(503).json({ error: "service_unavailable" });
-    }
-  });
+    },
+  );
 
-  app.delete("/capsules/:id", requireTrustedOrigin, requireAuth, requireCsrf, async (req, res) => {
-    try {
-      const deleted = await context.deleteCapsuleImpl(req.user.email, req.params.id);
-      if (!deleted) {
-        return res.status(404).json({ error: "not_found" });
+  app.delete(
+    "/capsules/:id",
+    requireTrustedOrigin,
+    requireAuth,
+    requireCsrf,
+    async (req, res) => {
+      try {
+        const deleted = await context.deleteCapsuleImpl(
+          req.user.email,
+          req.params.id,
+        );
+        if (!deleted) {
+          return res.status(404).json({ error: "not_found" });
+        }
+        const activeCapsule = await context.resolveActiveCapsuleImpl(
+          req.user.email,
+        );
+        return res.json({
+          ok: true,
+          activeCapsule: context.toCapsuleResponse(activeCapsule),
+        });
+      } catch (error) {
+        logError("[capsules/delete]", error);
+        return res.status(503).json({ error: "service_unavailable" });
       }
-      const activeCapsule = await context.resolveActiveCapsuleImpl(req.user.email);
-      return res.json({ ok: true, activeCapsule: context.toCapsuleResponse(activeCapsule) });
-    } catch (error) {
-      logError("[capsules/delete]", error);
-      return res.status(503).json({ error: "service_unavailable" });
-    }
-  });
+    },
+  );
 }
 
 function registerCapsulePdfRoute(app, context) {
-  app.post("/capsules/:id/pdf", context.requireTrustedOrigin, context.requireAuth, context.requireCsrf, async (req, res) => {
-    try {
-      const capsule = await context.getCapsuleImpl(req.user.email, req.params.id);
-      if (!capsule) {
-        return res.status(404).json({ error: "not_found" });
+  app.post(
+    "/capsules/:id/pdf",
+    context.requireTrustedOrigin,
+    context.requireAuth,
+    context.requireCsrf,
+    async (req, res) => {
+      try {
+        const capsule = await context.getCapsuleImpl(
+          req.user.email,
+          req.params.id,
+        );
+        if (!capsule) {
+          return res.status(404).json({ error: "not_found" });
+        }
+        const profile = await context.getProfileImpl(req.user.email);
+        const items = context.getCapsuleItems(capsule);
+        if (items.length === 0) {
+          return res.status(404).json({ error: "not_found" });
+        }
+        const productUrls = items
+          .map((item) => String((item as { url?: unknown })?.url || "").trim())
+          .filter(Boolean);
+        const products =
+          await context.getProductsByUrlsInOrderImpl(productUrls);
+        if (products.length === 0) {
+          return res.status(404).json({ error: "not_found" });
+        }
+        const pdfBuffer = await context.buildWardrobePdfInChildImpl(
+          products,
+          String(profile?.locale || "en"),
+        );
+        res.setHeader("Content-Type", "application/pdf");
+        res.setHeader(
+          "Content-Disposition",
+          context.buildPdfDownloadFilename(capsule?.name),
+        );
+        return res.status(200).send(pdfBuffer);
+      } catch (error) {
+        logError("[capsules/pdf]", error);
+        return res.status(503).json({ error: "service_unavailable" });
       }
-      const profile = await context.getProfileImpl(req.user.email);
-      const items = context.getCapsuleItems(capsule);
-      if (items.length === 0) {
-        return res.status(404).json({ error: "not_found" });
-      }
-      const productUrls = items.map((item) => String((item as { url?: unknown })?.url || "").trim()).filter(Boolean);
-      const products = await context.getProductsByUrlsInOrderImpl(productUrls);
-      if (products.length === 0) {
-        return res.status(404).json({ error: "not_found" });
-      }
-      const pdfBuffer = await context.buildWardrobePdfInChildImpl(products, String(profile?.locale || "en"));
-      res.setHeader("Content-Type", "application/pdf");
-      res.setHeader("Content-Disposition", context.buildPdfDownloadFilename(capsule?.name));
-      return res.status(200).send(pdfBuffer);
-    } catch (error) {
-      logError("[capsules/pdf]", error);
-      return res.status(503).json({ error: "service_unavailable" });
-    }
-  });
+    },
+  );
 }
 
 export function registerCapsuleMutationRoutes(app, context) {

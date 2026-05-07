@@ -4,9 +4,12 @@ import {
   clearPasskeyChallengeCookie,
   setCsrfCookie,
   setPasskeyChallengeCookie,
-  setSessionCookie
+  setSessionCookie,
 } from "../httpCookies.js";
-import { getDefaultPasskeyName, normalizePasskeyAaguid } from "../passkeyNames.js";
+import {
+  getDefaultPasskeyName,
+  normalizePasskeyAaguid,
+} from "../passkeyNames.js";
 import { logError } from "../logger.js";
 import {
   generatePasskeyChallengeId,
@@ -18,7 +21,7 @@ import {
   toWebAuthnCredential,
   type PasskeyChallengeKind,
   type PasskeyChallengeRecord,
-  type PasskeyRecord
+  type PasskeyRecord,
 } from "../passkeyHttp.js";
 
 export function registerPasskeyRoutes(app, context) {
@@ -29,19 +32,16 @@ export function registerPasskeyRoutes(app, context) {
 }
 
 function registerPasskeyListRoute(app, context) {
-  const {
-    listPasskeysImpl,
-    requireAuth
-  } = context;
+  const { listPasskeysImpl, requireAuth } = context;
 
   app.get("/auth/passkeys", requireAuth, async (req, res) => {
-  try {
-    const passkeys = await listPasskeysImpl(req.user.email);
-    return res.json({ ok: true, passkeys: passkeys.map(toPasskeyMetadata) });
-  } catch (error) {
-    logError("[auth/passkeys/list]", error);
-    return res.status(503).json({ error: "service_unavailable" });
-  }
+    try {
+      const passkeys = await listPasskeysImpl(req.user.email);
+      return res.json({ ok: true, passkeys: passkeys.map(toPasskeyMetadata) });
+    } catch (error) {
+      logError("[auth/passkeys/list]", error);
+      return res.status(503).json({ error: "service_unavailable" });
+    }
   });
 }
 
@@ -62,42 +62,49 @@ function registerPasskeyRegistrationOptionsRoute(app, context) {
     pruneExpiredPasskeyChallengesImpl,
     requireAuth,
     requireCsrf,
-    requireTrustedOrigin
+    requireTrustedOrigin,
   } = context;
 
-  app.post("/auth/passkeys/register/options", requireTrustedOrigin, requireAuth, requireCsrf, passkeyRegisterOptionsLimiter, async (req, res) => {
-  try {
-    await pruneExpiredPasskeyChallengesImpl();
-    const existingPasskeys = await listPasskeysImpl(req.user.email);
-    const options = await generateRegistrationOptionsImpl({
-      rpName: passkeyRpName,
-      rpID: passkeyRpId,
-      userName: req.user.email,
-      userDisplayName: req.user.email,
-      userID: new TextEncoder().encode(req.user.email),
-      attestationType: "none",
-      supportedAlgorithmIDs: [-7, -257],
-      excludeCredentials: existingPasskeys.map(toExcludedPasskeyCredential),
-      authenticatorSelection: {
-        residentKey: "preferred",
-        userVerification: "required"
+  app.post(
+    "/auth/passkeys/register/options",
+    requireTrustedOrigin,
+    requireAuth,
+    requireCsrf,
+    passkeyRegisterOptionsLimiter,
+    async (req, res) => {
+      try {
+        await pruneExpiredPasskeyChallengesImpl();
+        const existingPasskeys = await listPasskeysImpl(req.user.email);
+        const options = await generateRegistrationOptionsImpl({
+          rpName: passkeyRpName,
+          rpID: passkeyRpId,
+          userName: req.user.email,
+          userDisplayName: req.user.email,
+          userID: new TextEncoder().encode(req.user.email),
+          attestationType: "none",
+          supportedAlgorithmIDs: [-7, -257],
+          excludeCredentials: existingPasskeys.map(toExcludedPasskeyCredential),
+          authenticatorSelection: {
+            residentKey: "preferred",
+            userVerification: "required",
+          },
+        });
+        const challengeId = generatePasskeyChallengeId();
+        await insertPasskeyChallengeImpl({
+          id: challengeId,
+          kind: "registration",
+          challenge: options.challenge,
+          profileEmail: req.user.email,
+          expiresAt: new Date(Date.now() + PASSKEY_CHALLENGE_TTL_MS),
+        });
+        setPasskeyChallengeCookie(res, challengeId, nodeEnv);
+        return res.json({ ok: true, options });
+      } catch (error) {
+        logError("[auth/passkeys/register/options]", error);
+        return res.status(503).json({ error: "service_unavailable" });
       }
-    });
-    const challengeId = generatePasskeyChallengeId();
-    await insertPasskeyChallengeImpl({
-      id: challengeId,
-      kind: "registration",
-      challenge: options.challenge,
-      profileEmail: req.user.email,
-      expiresAt: new Date(Date.now() + PASSKEY_CHALLENGE_TTL_MS)
-    });
-    setPasskeyChallengeCookie(res, challengeId, nodeEnv);
-    return res.json({ ok: true, options });
-  } catch (error) {
-    logError("[auth/passkeys/register/options]", error);
-    return res.status(503).json({ error: "service_unavailable" });
-  }
-  });
+    },
+  );
 }
 
 function registerPasskeyRegistrationVerifyRoute(app, context) {
@@ -110,72 +117,88 @@ function registerPasskeyRegistrationVerifyRoute(app, context) {
     requireAuth,
     requireCsrf,
     requireTrustedOrigin,
-    verifyRegistrationResponseImpl
+    verifyRegistrationResponseImpl,
   } = context;
 
-  app.post("/auth/passkeys/register/verify", requireTrustedOrigin, requireAuth, requireCsrf, async (req, res) => {
-  const response = req.body?.response;
-  if (!isRegistrationResponse(response)) {
-    return res.status(400).json({ error: "invalid_payload" });
-  }
+  app.post(
+    "/auth/passkeys/register/verify",
+    requireTrustedOrigin,
+    requireAuth,
+    requireCsrf,
+    async (req, res) => {
+      const response = req.body?.response;
+      if (!isRegistrationResponse(response)) {
+        return res.status(400).json({ error: "invalid_payload" });
+      }
 
-  const challengeId = getPasskeyChallengeId(req);
-  if (!challengeId) {
-    return res.status(400).json({ error: "passkey_registration_failed" });
-  }
+      const challengeId = getPasskeyChallengeId(req);
+      if (!challengeId) {
+        return res.status(400).json({ error: "passkey_registration_failed" });
+      }
 
-  let challenge: PasskeyChallengeRecord | null;
-  try {
-    challenge = await consumePasskeyChallengeImpl({ id: challengeId, kind: "registration" as PasskeyChallengeKind });
-  } catch (error) {
-    logError("[auth/passkeys/register/challenge]", error);
-    return res.status(503).json({ error: "service_unavailable" });
-  }
-  clearPasskeyChallengeCookie(res, nodeEnv);
+      let challenge: PasskeyChallengeRecord | null;
+      try {
+        challenge = await consumePasskeyChallengeImpl({
+          id: challengeId,
+          kind: "registration" as PasskeyChallengeKind,
+        });
+      } catch (error) {
+        logError("[auth/passkeys/register/challenge]", error);
+        return res.status(503).json({ error: "service_unavailable" });
+      }
+      clearPasskeyChallengeCookie(res, nodeEnv);
 
-  if (!challenge || challenge.profileEmail !== req.user.email) {
-    return res.status(400).json({ error: "passkey_registration_failed" });
-  }
+      if (!challenge || challenge.profileEmail !== req.user.email) {
+        return res.status(400).json({ error: "passkey_registration_failed" });
+      }
 
-  let verification;
-  try {
-    verification = await verifyRegistrationResponseImpl({
-      response,
-      expectedChallenge: challenge.challenge,
-      expectedOrigin: passkeyOrigin,
-      expectedRPID: passkeyRpId,
-      requireUserVerification: true,
-      supportedAlgorithmIDs: [-7, -257]
-    });
-  } catch (error) {
-    logError("[auth/passkeys/register/verify]", error);
-    return res.status(400).json({ error: "passkey_registration_failed" });
-  }
+      let verification;
+      try {
+        verification = await verifyRegistrationResponseImpl({
+          response,
+          expectedChallenge: challenge.challenge,
+          expectedOrigin: passkeyOrigin,
+          expectedRPID: passkeyRpId,
+          requireUserVerification: true,
+          supportedAlgorithmIDs: [-7, -257],
+        });
+      } catch (error) {
+        logError("[auth/passkeys/register/verify]", error);
+        return res.status(400).json({ error: "passkey_registration_failed" });
+      }
 
-  if (!hasVerifiedRegistrationInfo(verification)) {
-    return res.status(400).json({ error: "passkey_registration_failed" });
-  }
+      if (!hasVerifiedRegistrationInfo(verification)) {
+        return res.status(400).json({ error: "passkey_registration_failed" });
+      }
 
-  const { aaguid, credential, credentialDeviceType, credentialBackedUp } = verification.registrationInfo;
-  const normalizedAaguid = normalizePasskeyAaguid(aaguid);
-  try {
-    const passkey = await insertPasskeyImpl({
-      profileEmail: req.user.email,
-      credentialId: credential.id,
-      credentialPublicKey: publicKeyToBase64Url(credential.publicKey),
-      counter: credential.counter,
-      deviceType: credentialDeviceType,
-      backedUp: credentialBackedUp,
-      transports: getCredentialTransports(credential),
-      name: getDefaultPasskeyName({ aaguid: normalizedAaguid, userAgent: req.headers["user-agent"] }),
-      aaguid: normalizedAaguid
-    });
-    return res.json({ ok: true, passkey: passkey ? toPasskeyMetadata(passkey) : null });
-  } catch (error) {
-    logError("[auth/passkeys/register/store]", error);
-    return res.status(503).json({ error: "service_unavailable" });
-  }
-  });
+      const { aaguid, credential, credentialDeviceType, credentialBackedUp } =
+        verification.registrationInfo;
+      const normalizedAaguid = normalizePasskeyAaguid(aaguid);
+      try {
+        const passkey = await insertPasskeyImpl({
+          profileEmail: req.user.email,
+          credentialId: credential.id,
+          credentialPublicKey: publicKeyToBase64Url(credential.publicKey),
+          counter: credential.counter,
+          deviceType: credentialDeviceType,
+          backedUp: credentialBackedUp,
+          transports: getCredentialTransports(credential),
+          name: getDefaultPasskeyName({
+            aaguid: normalizedAaguid,
+            userAgent: req.headers["user-agent"],
+          }),
+          aaguid: normalizedAaguid,
+        });
+        return res.json({
+          ok: true,
+          passkey: passkey ? toPasskeyMetadata(passkey) : null,
+        });
+      } catch (error) {
+        logError("[auth/passkeys/register/store]", error);
+        return res.status(503).json({ error: "service_unavailable" });
+      }
+    },
+  );
 }
 
 function registerPasskeyAuthenticationRoutes(app, context) {
@@ -191,31 +214,36 @@ function registerPasskeyAuthenticationOptionsRoute(app, context) {
     passkeyAuthenticateOptionsLimiter,
     passkeyRpId,
     pruneExpiredPasskeyChallengesImpl,
-    requireTrustedOrigin
+    requireTrustedOrigin,
   } = context;
 
-  app.post("/auth/passkeys/authenticate/options", requireTrustedOrigin, passkeyAuthenticateOptionsLimiter, async (_req, res) => {
-  try {
-    await pruneExpiredPasskeyChallengesImpl();
-    const options = await generateAuthenticationOptionsImpl({
-      rpID: passkeyRpId,
-      userVerification: "required"
-    });
-    const challengeId = generatePasskeyChallengeId();
-    await insertPasskeyChallengeImpl({
-      id: challengeId,
-      kind: "authentication",
-      challenge: options.challenge,
-      profileEmail: null,
-      expiresAt: new Date(Date.now() + PASSKEY_CHALLENGE_TTL_MS)
-    });
-    setPasskeyChallengeCookie(res, challengeId, nodeEnv);
-    return res.json({ ok: true, options });
-  } catch (error) {
-    logError("[auth/passkeys/authenticate/options]", error);
-    return res.status(503).json({ error: "service_unavailable" });
-  }
-  });
+  app.post(
+    "/auth/passkeys/authenticate/options",
+    requireTrustedOrigin,
+    passkeyAuthenticateOptionsLimiter,
+    async (_req, res) => {
+      try {
+        await pruneExpiredPasskeyChallengesImpl();
+        const options = await generateAuthenticationOptionsImpl({
+          rpID: passkeyRpId,
+          userVerification: "required",
+        });
+        const challengeId = generatePasskeyChallengeId();
+        await insertPasskeyChallengeImpl({
+          id: challengeId,
+          kind: "authentication",
+          challenge: options.challenge,
+          profileEmail: null,
+          expiresAt: new Date(Date.now() + PASSKEY_CHALLENGE_TTL_MS),
+        });
+        setPasskeyChallengeCookie(res, challengeId, nodeEnv);
+        return res.json({ ok: true, options });
+      } catch (error) {
+        logError("[auth/passkeys/authenticate/options]", error);
+        return res.status(503).json({ error: "service_unavailable" });
+      }
+    },
+  );
 }
 
 function registerPasskeyAuthenticationVerifyRoute(app, context) {
@@ -229,79 +257,89 @@ function registerPasskeyAuthenticationVerifyRoute(app, context) {
     passkeyRpId,
     requireTrustedOrigin,
     updatePasskeyAuthenticationImpl,
-    verifyAuthenticationResponseImpl
+    verifyAuthenticationResponseImpl,
   } = context;
 
-  app.post("/auth/passkeys/authenticate/verify", requireTrustedOrigin, passkeyAuthenticateVerifyLimiter, async (req, res) => {
-  const response = req.body?.response;
-  if (!isAuthenticationResponse(response)) {
-    return res.status(400).json({ error: "invalid_payload" });
-  }
+  app.post(
+    "/auth/passkeys/authenticate/verify",
+    requireTrustedOrigin,
+    passkeyAuthenticateVerifyLimiter,
+    async (req, res) => {
+      const response = req.body?.response;
+      if (!isAuthenticationResponse(response)) {
+        return res.status(400).json({ error: "invalid_payload" });
+      }
 
-  const challengeId = getPasskeyChallengeId(req);
-  if (!challengeId) {
-    return res.status(400).json({ error: "passkey_login_failed" });
-  }
+      const challengeId = getPasskeyChallengeId(req);
+      if (!challengeId) {
+        return res.status(400).json({ error: "passkey_login_failed" });
+      }
 
-  let challenge: PasskeyChallengeRecord | null;
-  try {
-    challenge = await consumePasskeyChallengeImpl({ id: challengeId, kind: "authentication" as PasskeyChallengeKind });
-  } catch (error) {
-    logError("[auth/passkeys/authenticate/challenge]", error);
-    return res.status(503).json({ error: "service_unavailable" });
-  }
-  clearPasskeyChallengeCookie(res, nodeEnv);
+      let challenge: PasskeyChallengeRecord | null;
+      try {
+        challenge = await consumePasskeyChallengeImpl({
+          id: challengeId,
+          kind: "authentication" as PasskeyChallengeKind,
+        });
+      } catch (error) {
+        logError("[auth/passkeys/authenticate/challenge]", error);
+        return res.status(503).json({ error: "service_unavailable" });
+      }
+      clearPasskeyChallengeCookie(res, nodeEnv);
 
-  if (!challenge) {
-    return res.status(400).json({ error: "passkey_login_failed" });
-  }
+      if (!challenge) {
+        return res.status(400).json({ error: "passkey_login_failed" });
+      }
 
-  let passkey: PasskeyRecord | null;
-  try {
-    passkey = await getPasskeyByCredentialIdImpl(response.id);
-  } catch (error) {
-    logError("[auth/passkeys/authenticate/lookup]", error);
-    return res.status(503).json({ error: "service_unavailable" });
-  }
-  if (!passkey) {
-    return res.status(400).json({ error: "passkey_login_failed" });
-  }
+      let passkey: PasskeyRecord | null;
+      try {
+        passkey = await getPasskeyByCredentialIdImpl(response.id);
+      } catch (error) {
+        logError("[auth/passkeys/authenticate/lookup]", error);
+        return res.status(503).json({ error: "service_unavailable" });
+      }
+      if (!passkey) {
+        return res.status(400).json({ error: "passkey_login_failed" });
+      }
 
-  let verification;
-  try {
-    verification = await verifyAuthenticationResponseImpl({
-      response,
-      expectedChallenge: challenge.challenge,
-      expectedOrigin: passkeyOrigin,
-      expectedRPID: passkeyRpId,
-      credential: toWebAuthnCredential(passkey),
-      requireUserVerification: true
-    });
-  } catch (error) {
-    logError("[auth/passkeys/authenticate/verify]", error);
-    return res.status(400).json({ error: "passkey_login_failed" });
-  }
+      let verification;
+      try {
+        verification = await verifyAuthenticationResponseImpl({
+          response,
+          expectedChallenge: challenge.challenge,
+          expectedOrigin: passkeyOrigin,
+          expectedRPID: passkeyRpId,
+          credential: toWebAuthnCredential(passkey),
+          requireUserVerification: true,
+        });
+      } catch (error) {
+        logError("[auth/passkeys/authenticate/verify]", error);
+        return res.status(400).json({ error: "passkey_login_failed" });
+      }
 
-  if (!verification.verified) {
-    return res.status(400).json({ error: "passkey_login_failed" });
-  }
+      if (!verification.verified) {
+        return res.status(400).json({ error: "passkey_login_failed" });
+      }
 
-  try {
-    await updatePasskeyAuthenticationImpl({
-      credentialId: passkey.credentialId,
-      counter: verification.authenticationInfo.newCounter,
-      deviceType: verification.authenticationInfo.credentialDeviceType,
-      backedUp: verification.authenticationInfo.credentialBackedUp
-    });
-    const { sessionId, session } = await createSessionImpl(passkey.profileEmail);
-    setSessionCookie(res, sessionId, nodeEnv);
-    setCsrfCookie(res, session.csrfToken, nodeEnv);
-    return res.json({ ok: true, user: { email: passkey.profileEmail } });
-  } catch (error) {
-    logError("[auth/passkeys/authenticate/session]", error);
-    return res.status(503).json({ error: "service_unavailable" });
-  }
-  });
+      try {
+        await updatePasskeyAuthenticationImpl({
+          credentialId: passkey.credentialId,
+          counter: verification.authenticationInfo.newCounter,
+          deviceType: verification.authenticationInfo.credentialDeviceType,
+          backedUp: verification.authenticationInfo.credentialBackedUp,
+        });
+        const { sessionId, session } = await createSessionImpl(
+          passkey.profileEmail,
+        );
+        setSessionCookie(res, sessionId, nodeEnv);
+        setCsrfCookie(res, session.csrfToken, nodeEnv);
+        return res.json({ ok: true, user: { email: passkey.profileEmail } });
+      } catch (error) {
+        logError("[auth/passkeys/authenticate/session]", error);
+        return res.status(503).json({ error: "service_unavailable" });
+      }
+    },
+  );
 }
 
 function registerPasskeyDeleteRoute(app, context) {
@@ -309,34 +347,46 @@ function registerPasskeyDeleteRoute(app, context) {
     deletePasskeyByIdForEmailImpl,
     requireAuth,
     requireCsrf,
-    requireTrustedOrigin
+    requireTrustedOrigin,
   } = context;
 
-  app.delete("/auth/passkeys/:id", requireTrustedOrigin, requireAuth, requireCsrf, async (req, res) => {
-  const passkeyId = String(req.params?.id || "").trim();
-  if (!passkeyId) {
-    return res.status(400).json({ error: "invalid_payload" });
-  }
+  app.delete(
+    "/auth/passkeys/:id",
+    requireTrustedOrigin,
+    requireAuth,
+    requireCsrf,
+    async (req, res) => {
+      const passkeyId = String(req.params?.id || "").trim();
+      if (!passkeyId) {
+        return res.status(400).json({ error: "invalid_payload" });
+      }
 
-  try {
-    const deleted = await deletePasskeyByIdForEmailImpl({ email: req.user.email, passkeyId });
-    if (!deleted) {
-      return res.status(404).json({ error: "not_found" });
-    }
-    return res.json({ ok: true });
-  } catch (error) {
-    logError("[auth/passkeys/delete]", error);
-    return res.status(503).json({ error: "service_unavailable" });
-  }
-  });
+      try {
+        const deleted = await deletePasskeyByIdForEmailImpl({
+          email: req.user.email,
+          passkeyId,
+        });
+        if (!deleted) {
+          return res.status(404).json({ error: "not_found" });
+        }
+        return res.json({ ok: true });
+      } catch (error) {
+        logError("[auth/passkeys/delete]", error);
+        return res.status(503).json({ error: "service_unavailable" });
+      }
+    },
+  );
 }
 
-function toExcludedPasskeyCredential(passkey): { id: string; transports: AuthenticatorTransportFuture[] } {
+function toExcludedPasskeyCredential(passkey): {
+  id: string;
+  transports: AuthenticatorTransportFuture[];
+} {
   return {
     id: passkey.credentialId,
     transports: Array.isArray(passkey.transports)
-      ? passkey.transports as AuthenticatorTransportFuture[]
-      : []
+      ? (passkey.transports as AuthenticatorTransportFuture[])
+      : [],
   };
 }
 

@@ -5,7 +5,7 @@ import {
   AreaChart as RechartsLineChart,
   Tooltip,
   XAxis,
-  YAxis
+  YAxis,
 } from "recharts";
 import { getTooltipStyle, getTooltipTextStyle } from "./chartUtils";
 import ChartContainer from "./ChartContainer";
@@ -26,10 +26,18 @@ type LineChartProps = {
   labelFormatter?: (payload?: LineChartDatum) => string;
 };
 
-function LineChart({ data, index, category, valueFormatter, labelFormatter }: LineChartProps) {
+function LineChart({
+  data,
+  index,
+  category,
+  valueFormatter,
+  labelFormatter,
+}: LineChartProps) {
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === "dark";
-  const gridColor = isDarkMode ? "rgba(255,255,255,0.14)" : "rgba(148, 163, 184, 0.16)";
+  const gridColor = isDarkMode
+    ? "rgba(255,255,255,0.14)"
+    : "rgba(148, 163, 184, 0.16)";
   const tickColor = isDarkMode ? "rgba(255,255,255,0.78)" : "#667085";
   const areaColor = isDarkMode ? "#a78bfa" : "#8884d8";
   const tooltipStyle = getTooltipStyle(isDarkMode);
@@ -38,7 +46,12 @@ function LineChart({ data, index, category, valueFormatter, labelFormatter }: Li
   return (
     <ChartContainer
       renderChart={({ width, height }) => (
-        <RechartsLineChart width={width} height={height} data={data} margin={{ top: 24, right: 24, left: 8, bottom: 15 }}>
+        <RechartsLineChart
+          width={width}
+          height={height}
+          data={data}
+          margin={{ top: 24, right: 24, left: 8, bottom: 15 }}
+        >
           <CartesianGrid vertical={false} stroke={gridColor} />
           <XAxis
             dataKey={index}
@@ -51,9 +64,14 @@ function LineChart({ data, index, category, valueFormatter, labelFormatter }: Li
           />
           <YAxis width="auto" tick={{ fontSize: 11, fill: tickColor }} />
           <Tooltip
-            formatter={(value: number | string, _name: string, item: TooltipPayloadItem) => [
+            formatter={(
+              value: number | string,
+              _name: string,
+              item: TooltipPayloadItem,
+            ) => [
               valueFormatter(Number(value || 0)),
-              labelFormatter?.(item?.payload) || `${item?.payload?.[index] || ""} EUR`
+              labelFormatter?.(item?.payload) ||
+                `${item?.payload?.[index] || ""} EUR`,
             ]}
             labelFormatter={() => ""}
             contentStyle={tooltipStyle}
@@ -67,7 +85,12 @@ function LineChart({ data, index, category, valueFormatter, labelFormatter }: Li
             fill={areaColor}
             strokeWidth={1}
             dot={false}
-            activeDot={{ r: 5, stroke: "#ffffff", strokeWidth: 2, fill: areaColor }}
+            activeDot={{
+              r: 5,
+              stroke: "#ffffff",
+              strokeWidth: 2,
+              fill: areaColor,
+            }}
             isAnimationActive
             animationDuration={320}
           />
@@ -75,9 +98,10 @@ function LineChart({ data, index, category, valueFormatter, labelFormatter }: Li
       )}
       sx={{
         height: 360,
-        "& .recharts-surface:focus, & .recharts-surface:focus-visible, & [tabindex]:focus, & [tabindex]:focus-visible": {
-          outline: "none"
-        }
+        "& .recharts-surface:focus, & .recharts-surface:focus-visible, & [tabindex]:focus, & [tabindex]:focus-visible":
+          {
+            outline: "none",
+          },
       }}
     />
   );

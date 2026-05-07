@@ -29,8 +29,10 @@ function sortCoreOptions(items: StyleOption[]): StyleOption[] {
   return [...items].sort((left, right) => {
     const leftIndex = CORE_DISPLAY_ORDER.indexOf(left as CoreDisplayStyle);
     const rightIndex = CORE_DISPLAY_ORDER.indexOf(right as CoreDisplayStyle);
-    const normalizedLeft = leftIndex === -1 ? CORE_DISPLAY_ORDER.length : leftIndex;
-    const normalizedRight = rightIndex === -1 ? CORE_DISPLAY_ORDER.length : rightIndex;
+    const normalizedLeft =
+      leftIndex === -1 ? CORE_DISPLAY_ORDER.length : leftIndex;
+    const normalizedRight =
+      rightIndex === -1 ? CORE_DISPLAY_ORDER.length : rightIndex;
 
     if (normalizedLeft !== normalizedRight) {
       return normalizedLeft - normalizedRight;
@@ -40,13 +42,16 @@ function sortCoreOptions(items: StyleOption[]): StyleOption[] {
   });
 }
 
-function sortAestheticOptions(items: StyleOption[], locale: string): StyleOption[] {
-  return [...items].sort((left, right) => (
+function sortAestheticOptions(
+  items: StyleOption[],
+  locale: string,
+): StyleOption[] {
+  return [...items].sort((left, right) =>
     translateOption("styles", left, locale).localeCompare(
       translateOption("styles", right, locale),
-      locale
-    )
-  ));
+      locale,
+    ),
+  );
 }
 
 function StylePreferenceSelector({
@@ -58,17 +63,22 @@ function StylePreferenceSelector({
   disabled = false,
   showSectionHeading = true,
   titleVariant = "h5",
-  bodyVariant = "body1"
+  bodyVariant = "body1",
 }: StylePreferenceSelectorProps) {
   const { t, locale } = useI18n();
   const coreOptions = sortCoreOptions(styleOptions?.core || []);
-  const aestheticsOptions = sortAestheticOptions(styleOptions?.aesthetics || [], locale);
+  const aestheticsOptions = sortAestheticOptions(
+    styleOptions?.aesthetics || [],
+    locale,
+  );
 
   return (
     <Stack spacing={2}>
       {showSectionHeading ? (
         <Stack spacing={1.5}>
-          <Typography variant={titleVariant}>{t("profile.stylesTitle")}</Typography>
+          <Typography variant={titleVariant}>
+            {t("profile.stylesTitle")}
+          </Typography>
           <Typography variant={bodyVariant} color="text.secondary">
             {t("profile.stylesHint")}
           </Typography>

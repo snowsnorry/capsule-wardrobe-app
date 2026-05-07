@@ -5,7 +5,7 @@ import {
   normalizeLocale,
   resolveTranslationValue,
   t,
-  translateOption
+  translateOption,
 } from "./helpers.js";
 
 test("normalizeLocale lowercases and strips region suffixes", () => {
@@ -21,7 +21,9 @@ test("isSupportedLocale reports supported locales only", () => {
 });
 
 test("t falls back to default locale and interpolates parameters", () => {
-  expect(t("auth.codeSent", { minutes: 5 }, "ru")).toBe("Код отправлен. Он будет действителен 5 минут.");
+  expect(t("auth.codeSent", { minutes: 5 }, "ru")).toBe(
+    "Код отправлен. Он будет действителен 5 минут.",
+  );
   expect(t("appName", undefined, "de")).toBe("Capsule Wardrobe");
   expect(t("missing.path", undefined, "en")).toBe("missing.path");
   expect(defaultLocale).toBe("en");
@@ -35,21 +37,29 @@ test("t translates app launcher labels", () => {
 
 test("translateOption humanizes unknown values and translates known ones", () => {
   expect(translateOption("styles", "street_style", "en")).toBe("Street style");
-  expect(translateOption("styles", "unknown_style", "en")).toBe("Unknown Style");
+  expect(translateOption("styles", "unknown_style", "en")).toBe(
+    "Unknown Style",
+  );
 });
 
 test("t resolves dictionary keys that contain dots", () => {
-  expect(t("settings.llmOptions.openai:gpt-5.5", undefined, "en")).toBe("OpenAI GPT-5.5");
-  expect(t("settings.llmOptions.claude:claude-opus-4-7", undefined, "en")).toBe("Claude Opus 4.7");
-  expect(resolveTranslationValue(
+  expect(t("settings.llmOptions.openai:gpt-5.5", undefined, "en")).toBe(
+    "OpenAI GPT-5.5",
+  );
+  expect(t("settings.llmOptions.claude:claude-opus-4-7", undefined, "en")).toBe(
+    "Claude Opus 4.7",
+  );
+  expect(
+    resolveTranslationValue(
       {
         settings: {
           llmOptions: {
             "openai:gpt-5.5": "OpenAI GPT-5.5",
-            "claude:claude-opus-4-7": "Claude Opus 4.7"
-          }
-        }
+            "claude:claude-opus-4-7": "Claude Opus 4.7",
+          },
+        },
       },
-      "settings.llmOptions.claude:claude-opus-4-7"
-    )).toBe("Claude Opus 4.7");
+      "settings.llmOptions.claude:claude-opus-4-7",
+    ),
+  ).toBe("Claude Opus 4.7");
 });

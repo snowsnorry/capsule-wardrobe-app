@@ -1,18 +1,24 @@
 import { getCapsuleCategories } from "./categories.js";
-import { getPromptTemplateContent, loadPromptTemplate, renderPromptTemplateContent } from "./promptTemplates.js";
-
+import {
+  getPromptTemplateContent,
+  loadPromptTemplate,
+  renderPromptTemplateContent,
+} from "./promptTemplates.js";
 
 import {
   formatProfileValues,
   getCategoryListText,
   getCategorySchema,
-  normalizePatternValue
+  normalizePatternValue,
 } from "./aiCategoryEnforcement.js";
 
 const CAPSULE_GENERATION_PROMPT_TEMPLATE = loadPromptTemplate(
-  new URL("../templates/prompt_capsule_generation.yaml", import.meta.url)
+  new URL("../templates/prompt_capsule_generation.yaml", import.meta.url),
 );
-const PROMPT_TEMPLATE = getPromptTemplateContent(CAPSULE_GENERATION_PROMPT_TEMPLATE, "user");
+const PROMPT_TEMPLATE = getPromptTemplateContent(
+  CAPSULE_GENERATION_PROMPT_TEMPLATE,
+  "user",
+);
 
 function formatStringOrDefault(value, fallback) {
   return typeof value === "string" && value.trim().length > 0
@@ -29,12 +35,18 @@ function getSelectionPatternText(userProfile) {
 }
 
 function getAdditionalInfoBlock(userProfile) {
-  const additionalText = typeof userProfile?.text === "string" ? userProfile.text.trim() : "";
-  return additionalText ? `Important Additional Information: ${additionalText}` : "";
+  const additionalText =
+    typeof userProfile?.text === "string" ? userProfile.text.trim() : "";
+  return additionalText
+    ? `Important Additional Information: ${additionalText}`
+    : "";
 }
 
 function getWardrobeSelectionReplacements(userProfile, items, categories) {
-  const formalityText = formatStringOrDefault(userProfile?.formalityLevel, "Not specified");
+  const formalityText = formatStringOrDefault(
+    userProfile?.formalityLevel,
+    "Not specified",
+  );
   const styleText = formatStringOrDefault(userProfile?.style, "Not specified");
   const simplifiedItems = items.map(toPromptItem);
 
@@ -44,13 +56,21 @@ function getWardrobeSelectionReplacements(userProfile, items, categories) {
     occasions: formatProfileValues(userProfile?.occasions),
     season: formatProfileValues(userProfile?.season),
     audience: userProfile?.audience || "any",
-    color: formatStringOrDefault(userProfile?.color, "No accent color (keep the capsule fully neutral)"),
+    color: formatStringOrDefault(
+      userProfile?.color,
+      "No accent color (keep the capsule fully neutral)",
+    ),
     pattern: getSelectionPatternText(userProfile),
     additional_info_block: getAdditionalInfoBlock(userProfile),
     items: JSON.stringify(simplifiedItems, null, 2),
     category_list: getCategoryListText(categories),
     categories_schema: getCategorySchema(categories),
-    num_items: String(Object.entries(categories).reduce((sum, [, count]) => sum + Number(count), 0))
+    num_items: String(
+      Object.entries(categories).reduce(
+        (sum, [, count]) => sum + Number(count),
+        0,
+      ),
+    ),
   };
 }
 
@@ -59,7 +79,7 @@ function formatItemColorParts(item) {
     Array.isArray(item?.color_base) ? item.color_base.join(", ") : "",
     typeof item?.pattern === "string" ? item.pattern.trim() : "",
     typeof item?.finish === "string" ? item.finish.trim() : "",
-    item?.is_neutral ? "neutral" : ""
+    item?.is_neutral ? "neutral" : "",
   ].filter((value) => value);
 }
 
@@ -81,15 +101,19 @@ function toPromptItem(item) {
     style: getItemArray(item, "style"),
     materials: getItemValue(item, "composition"),
     fit: formatStringOrDefault(item?.fit, ""),
-    silhouette: formatStringOrDefault(item?.silhouette, "")
+    silhouette: formatStringOrDefault(item?.silhouette, ""),
   };
 }
 
-export function getWardrobeSelectionPrompt(userProfile = null, items = [], categories = getCapsuleCategories(userProfile)) {
+export function getWardrobeSelectionPrompt(
+  userProfile = null,
+  items = [],
+  categories = getCapsuleCategories(userProfile),
+) {
   return renderPromptTemplateContent(
     PROMPT_TEMPLATE,
     getWardrobeSelectionReplacements(userProfile, items, categories),
-    "wardrobe selection prompt"
+    "wardrobe selection prompt",
   );
 }
 
@@ -100,7 +124,7 @@ export function toWardrobeUiItem(item) {
     name: getItemValue(item, "name"),
     category: getItemValue(item, "category"),
     image_url: getItemValue(item, "image_url"),
-    audience: getItemValue(item, "audience")
+    audience: getItemValue(item, "audience"),
   };
 }
 
@@ -109,7 +133,9 @@ export function appendUniqueWardrobeItems(items, extraItems) {
   const seenKeys = new Set();
 
   for (const item of [...items, ...extraItems]) {
-    const key = String(item?.url || item?.id || `${item?.category}:${item?.name}`);
+    const key = String(
+      item?.url || item?.id || `${item?.category}:${item?.name}`,
+    );
     if (!key || seenKeys.has(key)) {
       continue;
     }

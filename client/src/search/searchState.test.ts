@@ -3,27 +3,30 @@ import {
   buildSearchOptionsPayload,
   createSearchState,
   EMPTY_SEARCH_OPTIONS,
-  serializeDraftState
+  serializeDraftState,
 } from "./searchState";
 
 describe("searchState", () => {
   test("createSearchState normalizes scalar and array filters for shared search screens", () => {
-    const state = createSearchState({
-      brand: "uniqlo",
-      audience: "woman",
-      category: "top",
-      season: ["summer"],
-      formalityLevel: "casual",
-      style: "minimalistic",
-      occasions: "office",
-      color: "blue",
-      pattern: "stripe",
-      silhouette: "relaxed",
-      fit: "regular",
-      closureType: "button",
-      priceMin: 20,
-      priceMax: 80
-    }, { min: 10, max: 100 });
+    const state = createSearchState(
+      {
+        brand: "uniqlo",
+        audience: "woman",
+        category: "top",
+        season: ["summer"],
+        formalityLevel: "casual",
+        style: "minimalistic",
+        occasions: "office",
+        color: "blue",
+        pattern: "stripe",
+        silhouette: "relaxed",
+        fit: "regular",
+        closureType: "button",
+        priceMin: 20,
+        priceMax: 80,
+      },
+      { min: 10, max: 100 },
+    );
 
     expect(state.brand).toEqual(["uniqlo"]);
     expect(state.audience).toEqual(["woman"]);
@@ -43,7 +46,7 @@ describe("searchState", () => {
       priceEnabled: true,
       priceMinDraft: 15,
       priceMaxDraft: 90,
-      page: 3
+      page: 3,
     };
 
     expect(serializeDraftState(nextState)).toEqual({
@@ -62,19 +65,21 @@ describe("searchState", () => {
       silhouette: [],
       fit: [],
       closureType: [],
-      page: 3
+      page: 3,
     });
   });
 
   test("buildSearchOptionsPayload maps API responses to a stable options shape", () => {
-    expect(buildSearchOptionsPayload({
-      brands: [{ value: "uniqlo", label: "UNIQLO" }],
-      categories: ["top"]
-    })).toEqual({
+    expect(
+      buildSearchOptionsPayload({
+        brands: [{ value: "uniqlo", label: "UNIQLO" }],
+        categories: ["top"],
+      }),
+    ).toEqual({
       ...EMPTY_SEARCH_OPTIONS,
       brands: [{ value: "uniqlo", label: "UNIQLO" }],
       categories: ["top"],
-      priceRange: { min: null, max: null }
+      priceRange: { min: null, max: null },
     });
   });
 });

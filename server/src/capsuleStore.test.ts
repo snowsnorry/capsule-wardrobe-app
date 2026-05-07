@@ -3,7 +3,7 @@ import {
   buildSharedCapsuleOgMetadata,
   createCapsuleStore,
   normalizeCapsuleFilters,
-  normalizeCapsuleSnapshot
+  normalizeCapsuleSnapshot,
 } from "./capsuleStore.js";
 
 const timestamp = new Date(0).toISOString();
@@ -28,28 +28,41 @@ function capsuleRow(overrides = {}) {
         audience: "woman",
         color: null,
         pattern: "solid",
-        text: ""
+        text: "",
       },
       data: {
-        wardrobe: { items: [{ id: "top-1", image_url: "https://images.example.com/top.jpg" }] },
-        rejectedUrls: []
-      }
+        wardrobe: {
+          items: [
+            { id: "top-1", image_url: "https://images.example.com/top.jpg" },
+          ],
+        },
+        rejectedUrls: [],
+      },
     },
     status: "saved",
     createdAt: timestamp,
     updatedAt: timestamp,
-    ...overrides
+    ...overrides,
   };
 }
 
 test("normalizeCapsuleFilters drops removed profile occasions and keeps supported values", () => {
-  expect(normalizeCapsuleFilters({
-      occasions: ["office", "school_drop-off", "everyday_errands", "weekend_with_family", "office"]
-    }).occasions).toEqual(["office", "everyday_errands"]);
+  expect(
+    normalizeCapsuleFilters({
+      occasions: [
+        "office",
+        "school_drop-off",
+        "everyday_errands",
+        "weekend_with_family",
+        "office",
+      ],
+    }).occasions,
+  ).toEqual(["office", "everyday_errands"]);
 });
 
 test("normalizeCapsuleSnapshot sanitizes saved profile occasions on read and write", () => {
-  expect(normalizeCapsuleSnapshot({
+  expect(
+    normalizeCapsuleSnapshot({
       filters: {
         formalityLevel: "",
         style: null,
@@ -58,34 +71,41 @@ test("normalizeCapsuleSnapshot sanitizes saved profile occasions on read and wri
         audience: "",
         color: null,
         pattern: "solid",
-        text: ""
+        text: "",
       },
       data: {
         wardrobe: null,
-        rejectedUrls: []
-      }
-    })?.filters?.occasions).toEqual(["office"]);
+        rejectedUrls: [],
+      },
+    })?.filters?.occasions,
+  ).toEqual(["office"]);
 });
 
 test("normalizeCapsuleSnapshot preserves outfit set image payloads", () => {
-  expect(normalizeCapsuleSnapshot({
+  expect(
+    normalizeCapsuleSnapshot({
       filters: {},
       data: {
         wardrobe: {
           items: [],
-          outfitSets: [{
-            itemIds: ["top-1", "bottom-1", "bag-1"],
-            image: "base64-image",
-            imageObsolete: true
-          }]
+          outfitSets: [
+            {
+              itemIds: ["top-1", "bottom-1", "bag-1"],
+              image: "base64-image",
+              imageObsolete: true,
+            },
+          ],
         },
-        rejectedUrls: []
-      }
-    })?.data?.wardrobe?.outfitSets).toEqual([{
+        rejectedUrls: [],
+      },
+    })?.data?.wardrobe?.outfitSets,
+  ).toEqual([
+    {
       itemIds: ["top-1", "bottom-1", "bag-1"],
       image: "base64-image",
-      imageObsolete: true
-    }]);
+      imageObsolete: true,
+    },
+  ]);
 });
 
 test("buildSharedCapsuleOgMetadata formats English filter sentences and prefers outfit set images", () => {
@@ -100,42 +120,51 @@ test("buildSharedCapsuleOgMetadata formats English filter sentences and prefers 
         audience: "woman",
         color: "light blue",
         pattern: "solid",
-        text: "Do not include this"
+        text: "Do not include this",
       },
       data: {
         wardrobe: {
           items: [{ image_url: "https://images.example.com/item.jpg" }],
           outfitSets: [
             { itemIds: ["top-1"], image: "", imageObsolete: false },
-            { itemIds: ["top-2"], image: "https://images.example.com/outfit.jpg", imageObsolete: false }
-          ]
+            {
+              itemIds: ["top-2"],
+              image: "https://images.example.com/outfit.jpg",
+              imageObsolete: false,
+            },
+          ],
         },
-        rejectedUrls: []
-      }
-    }
+        rejectedUrls: [],
+      },
+    },
   });
 
   expect(metadata).toEqual({
     title: "Spring <edit>",
-    description: "Formality: Casual. Style: Minimalistic. Occasions: Office, Date night. Season: Spring. Audience: Woman. Color: Light blue. Pattern: Solid.",
-    image: "https://images.example.com/outfit.jpg"
+    description:
+      "Formality: Casual. Style: Minimalistic. Occasions: Office, Date night. Season: Spring. Audience: Woman. Color: Light blue. Pattern: Solid.",
+    image: "https://images.example.com/outfit.jpg",
   });
 });
 
 test("buildSharedCapsuleOgMetadata falls back to the first item image_url", () => {
-  expect(buildSharedCapsuleOgMetadata({
+  expect(
+    buildSharedCapsuleOgMetadata({
       name: "Spring edit",
       content: {
         filters: {},
         data: {
           wardrobe: {
             items: [{ image_url: "https://images.example.com/item.jpg" }],
-            outfitSets: [{ itemIds: ["top-1"], image: null, imageObsolete: false }]
+            outfitSets: [
+              { itemIds: ["top-1"], image: null, imageObsolete: false },
+            ],
           },
-          rejectedUrls: []
-        }
-      }
-    })?.image).toBe("https://images.example.com/item.jpg");
+          rejectedUrls: [],
+        },
+      },
+    })?.image,
+  ).toBe("https://images.example.com/item.jpg");
 });
 
 test("createCapsuleStore creates unique capsules and resolves active capsules", async () => {
@@ -145,26 +174,45 @@ test("createCapsuleStore creates unique capsules and resolves active capsules", 
     listCapsuleNamesByEmailImpl: async () => names,
     createCapsuleRecordImpl: async (payload) => {
       calls.push({ type: "create", payload });
-      return capsuleRow({ id: "capsule-new", name: payload.name, draft: payload.draft, saved: payload.saved, status: "new" });
+      return capsuleRow({
+        id: "capsule-new",
+        name: payload.name,
+        draft: payload.draft,
+        saved: payload.saved,
+        status: "new",
+      });
     },
     updateProfileActiveCapsuleIdByEmailImpl: async (payload) => {
       calls.push({ type: "active", payload });
       return payload;
     },
-    getProfileImpl: async () => ({ email: "person@example.com", activeCapsuleId: "missing-capsule", audience: "woman" }),
+    getProfileImpl: async () => ({
+      email: "person@example.com",
+      activeCapsuleId: "missing-capsule",
+      audience: "woman",
+    }),
     getCapsuleByIdForEmailImpl: async () => null,
-    listRecentCapsulesByEmailImpl: async () => [capsuleRow({ id: "recent-1", name: "Recent" })]
+    listRecentCapsulesByEmailImpl: async () => [
+      capsuleRow({ id: "recent-1", name: "Recent" }),
+    ],
   });
 
   const created = await store.createCapsule("person@example.com", {
     name: "Spring edit",
-    draft: { filters: { audience: "woman" }, data: { wardrobe: null, rejectedUrls: [] } }
+    draft: {
+      filters: { audience: "woman" },
+      data: { wardrobe: null, rejectedUrls: [] },
+    },
   });
   expect(created?.name).toBe("Spring edit (2)");
 
   const active = await store.resolveActiveCapsule("person@example.com");
   expect(active?.id).toBe("recent-1");
-  expect(calls.map((call) => call.type)).toEqual(["create", "active", "active"]);
+  expect(calls.map((call) => call.type)).toEqual([
+    "create",
+    "active",
+    "active",
+  ]);
 
   names = [];
   const bootstrap = await store.createBootstrapCapsule("person@example.com");
@@ -175,9 +223,8 @@ test("createCapsuleStore delegates lookup, update, duplicate, state, and delete 
   const calls: StoreCall[] = [];
   const store = createCapsuleStore({
     listCapsuleNamesByEmailImpl: async () => ["Copy"],
-    getCapsuleByIdForEmailImpl: async ({ capsuleId }) => (
-      capsuleId === "missing" ? null : capsuleRow({ id: capsuleId })
-    ),
+    getCapsuleByIdForEmailImpl: async ({ capsuleId }) =>
+      capsuleId === "missing" ? null : capsuleRow({ id: capsuleId }),
     listRecentCapsulesByEmailImpl: async ({ limit }) => {
       calls.push({ type: "recent", limit });
       return [capsuleRow({ id: "recent-1" })];
@@ -188,39 +235,88 @@ test("createCapsuleStore delegates lookup, update, duplicate, state, and delete 
     },
     updateCapsuleSnapshotByIdForEmailImpl: async (payload) => {
       calls.push({ type: "update", payload });
-      return capsuleRow({ id: payload.capsuleId, draft: payload.draft, saved: null, status: "new" });
+      return capsuleRow({
+        id: payload.capsuleId,
+        draft: payload.draft,
+        saved: null,
+        status: "new",
+      });
     },
     renameCapsuleByIdForEmailImpl: async (payload) => {
       calls.push({ type: "rename", payload });
       return capsuleRow({ id: payload.capsuleId, name: payload.name });
     },
-    saveCapsuleByIdForEmailImpl: async (payload) => capsuleRow({ id: payload.capsuleId, draft: null, status: "saved" }),
-    revertCapsuleDraftByIdForEmailImpl: async (payload) => capsuleRow({ id: payload.capsuleId, draft: null, status: "saved" }),
+    saveCapsuleByIdForEmailImpl: async (payload) =>
+      capsuleRow({ id: payload.capsuleId, draft: null, status: "saved" }),
+    revertCapsuleDraftByIdForEmailImpl: async (payload) =>
+      capsuleRow({ id: payload.capsuleId, draft: null, status: "saved" }),
     createCapsuleRecordImpl: async (payload) => {
       calls.push({ type: "create", payload });
-      return capsuleRow({ id: "copy-1", name: payload.name, draft: payload.draft, saved: payload.saved });
+      return capsuleRow({
+        id: "copy-1",
+        name: payload.name,
+        draft: payload.draft,
+        saved: payload.saved,
+      });
     },
     updateProfileActiveCapsuleIdByEmailImpl: async (payload) => {
       calls.push({ type: "active", payload });
       return payload;
     },
-    deleteCapsuleByIdForEmailImpl: async ({ capsuleId }) => capsuleId !== "missing",
-    getProfileImpl: async () => ({ email: "person@example.com", activeCapsuleId: "capsule-1" })
+    deleteCapsuleByIdForEmailImpl: async ({ capsuleId }) =>
+      capsuleId !== "missing",
+    getProfileImpl: async () => ({
+      email: "person@example.com",
+      activeCapsuleId: "capsule-1",
+    }),
   });
 
-  expect((await store.getCapsule("person@example.com", "capsule-1"))?.id).toBe("capsule-1");
-  expect((await store.getCapsule("person@example.com", "missing"))).toBe(null);
-  expect((await store.listRecentCapsules("person@example.com", 3))[0].id).toBe("recent-1");
-  expect((await store.searchCapsules("person@example.com", "spring", 4))[0].id).toBe("search-1");
-  expect((await store.updateCapsuleSnapshot("person@example.com", "capsule-1", { filters: {} }))?.draft?.data?.rejectedUrls?.length).toBe(0);
-  expect((await store.renameCapsule("person@example.com", "capsule-1", "Copy"))?.name).toBe("Copy (1)");
-  expect((await store.saveCapsule("person@example.com", "capsule-1"))?.status).toBe("saved");
-  expect((await store.revertCapsule("person@example.com", "capsule-1"))?.status).toBe("saved");
-  expect((await store.duplicateCapsule("person@example.com", "capsule-1", "Copy"))?.id).toBe("copy-1");
-  expect(await store.duplicateCapsule("person@example.com", "missing", "Copy")).toBe(null);
-  expect(await store.deleteCapsule("person@example.com", "missing")).toBe(false);
-  expect(await store.deleteCapsule("person@example.com", "capsule-1")).toBe(true);
-  expect(calls.some((call) => call.type === "active" && call.payload.activeCapsuleId === "recent-1")).toBeTruthy();
+  expect((await store.getCapsule("person@example.com", "capsule-1"))?.id).toBe(
+    "capsule-1",
+  );
+  expect(await store.getCapsule("person@example.com", "missing")).toBe(null);
+  expect((await store.listRecentCapsules("person@example.com", 3))[0].id).toBe(
+    "recent-1",
+  );
+  expect(
+    (await store.searchCapsules("person@example.com", "spring", 4))[0].id,
+  ).toBe("search-1");
+  expect(
+    (
+      await store.updateCapsuleSnapshot("person@example.com", "capsule-1", {
+        filters: {},
+      })
+    )?.draft?.data?.rejectedUrls?.length,
+  ).toBe(0);
+  expect(
+    (await store.renameCapsule("person@example.com", "capsule-1", "Copy"))
+      ?.name,
+  ).toBe("Copy (1)");
+  expect(
+    (await store.saveCapsule("person@example.com", "capsule-1"))?.status,
+  ).toBe("saved");
+  expect(
+    (await store.revertCapsule("person@example.com", "capsule-1"))?.status,
+  ).toBe("saved");
+  expect(
+    (await store.duplicateCapsule("person@example.com", "capsule-1", "Copy"))
+      ?.id,
+  ).toBe("copy-1");
+  expect(
+    await store.duplicateCapsule("person@example.com", "missing", "Copy"),
+  ).toBe(null);
+  expect(await store.deleteCapsule("person@example.com", "missing")).toBe(
+    false,
+  );
+  expect(await store.deleteCapsule("person@example.com", "capsule-1")).toBe(
+    true,
+  );
+  expect(
+    calls.some(
+      (call) =>
+        call.type === "active" && call.payload.activeCapsuleId === "recent-1",
+    ),
+  ).toBeTruthy();
 });
 
 test("createCapsuleStore shares, imports, prunes, and rejects unshareable capsules", async () => {
@@ -228,14 +324,16 @@ test("createCapsuleStore shares, imports, prunes, and rejects unshareable capsul
   const sharedContent = capsuleRow().saved;
   const store = createCapsuleStore({
     nowImpl: () => 0,
-    getCapsuleByIdForEmailImpl: async ({ capsuleId }) => (
+    getCapsuleByIdForEmailImpl: async ({ capsuleId }) =>
       capsuleId === "missing"
         ? null
         : capsuleRow({
-          id: capsuleId,
-          draft: capsuleId === "unshareable" ? { filters: {}, data: { wardrobe: null, rejectedUrls: [] } } : null
-        })
-    ),
+            id: capsuleId,
+            draft:
+              capsuleId === "unshareable"
+                ? { filters: {}, data: { wardrobe: null, rejectedUrls: [] } }
+                : null,
+          }),
     pruneExpiredSharedCapsulesImpl: async () => {
       calls.push({ type: "prune" });
     },
@@ -244,43 +342,79 @@ test("createCapsuleStore shares, imports, prunes, and rejects unshareable capsul
       return { id: "share id", expiresAt: payload.expiresAt.toISOString() };
     },
     hashCapsuleContentImpl: () => "content-hash",
-    getValidSharedCapsuleByIdImpl: async (id) => (
+    getValidSharedCapsuleByIdImpl: async (id) =>
       id === "share-1"
-        ? { id, name: "Shared capsule", content: sharedContent, expiresAt: timestamp }
+        ? {
+            id,
+            name: "Shared capsule",
+            content: sharedContent,
+            expiresAt: timestamp,
+          }
         : id === "bad-share"
-          ? { id, name: "Bad", content: { filters: {}, data: { wardrobe: null } }, expiresAt: timestamp }
-          : null
-    ),
+          ? {
+              id,
+              name: "Bad",
+              content: { filters: {}, data: { wardrobe: null } },
+              expiresAt: timestamp,
+            }
+          : null,
     listCapsuleNamesByEmailImpl: async () => [],
     createCapsuleRecordImpl: async (payload) => {
       calls.push({ type: "create", payload });
-      return capsuleRow({ id: "imported-1", name: payload.name, draft: payload.draft, saved: payload.saved });
+      return capsuleRow({
+        id: "imported-1",
+        name: payload.name,
+        draft: payload.draft,
+        saved: payload.saved,
+      });
     },
     updateProfileActiveCapsuleIdByEmailImpl: async (payload) => {
       calls.push({ type: "active", payload });
       return payload;
-    }
+    },
   });
 
-  expect(await store.createCapsuleShare("person@example.com", "missing", "https://client.example")).toBe(null);
-  const share = await store.createCapsuleShare("person@example.com", "capsule-1", "https://client.example/");
+  expect(
+    await store.createCapsuleShare(
+      "person@example.com",
+      "missing",
+      "https://client.example",
+    ),
+  ).toBe(null);
+  const share = await store.createCapsuleShare(
+    "person@example.com",
+    "capsule-1",
+    "https://client.example/",
+  );
   expect(share).toEqual({
     id: "share id",
     url: "https://client.example/share/share%20id",
-    expiresAt: new Date(604800000).toISOString()
+    expiresAt: new Date(604800000).toISOString(),
   });
-  await expect(() => store.createCapsuleShare("person@example.com", "unshareable", "")).rejects.toThrow(/capsule_not_shareable/);
+  await expect(() =>
+    store.createCapsuleShare("person@example.com", "unshareable", ""),
+  ).rejects.toThrow(/capsule_not_shareable/);
 
   expect(await store.getSharedCapsule(" share-1 ")).toEqual({
     id: "share-1",
     name: "Shared capsule",
-    expiresAt: timestamp
+    expiresAt: timestamp,
   });
   expect(await store.getSharedCapsule("missing")).toBe(null);
-  expect((await store.getSharedCapsuleOgMetadata("share-1"))?.title).toBe("Shared capsule");
+  expect((await store.getSharedCapsuleOgMetadata("share-1"))?.title).toBe(
+    "Shared capsule",
+  );
   expect(await store.getSharedCapsuleOgMetadata("missing")).toBe(null);
-  expect((await store.importSharedCapsule("person@example.com", "share-1"))?.id).toBe("imported-1");
-  expect(await store.importSharedCapsule("missing@example.com", "missing")).toBe(null);
-  await expect(() => store.importSharedCapsule("person@example.com", "bad-share")).rejects.toThrow(/capsule_not_shareable/);
-  expect(calls.filter((call) => call.type === "prune").length >= 3).toBeTruthy();
+  expect(
+    (await store.importSharedCapsule("person@example.com", "share-1"))?.id,
+  ).toBe("imported-1");
+  expect(
+    await store.importSharedCapsule("missing@example.com", "missing"),
+  ).toBe(null);
+  await expect(() =>
+    store.importSharedCapsule("person@example.com", "bad-share"),
+  ).rejects.toThrow(/capsule_not_shareable/);
+  expect(
+    calls.filter((call) => call.type === "prune").length >= 3,
+  ).toBeTruthy();
 });

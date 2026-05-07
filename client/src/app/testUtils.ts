@@ -4,7 +4,7 @@ import type {
   CapsuleMeta,
   ProfileSettings,
   StatusState,
-  WardrobeItem
+  WardrobeItem,
 } from "./appTypes";
 import type { AppActionContext } from "./actionContext";
 
@@ -12,13 +12,13 @@ export const testStatus: StatusState = {
   loading: false,
   error: "",
   infoKey: "",
-  infoParams: null
+  infoParams: null,
 };
 
 export function createTestDraft({
   items = [],
   pattern = "solid",
-  text = ""
+  text = "",
 }: {
   items?: WardrobeItem[];
   pattern?: string | null;
@@ -33,16 +33,18 @@ export function createTestDraft({
       audience: "woman",
       color: null,
       pattern: pattern as string,
-      text
+      text,
     },
     data: {
       wardrobe: { items, outfitSets: [] },
-      rejectedUrls: []
-    }
+      rejectedUrls: [],
+    },
   };
 }
 
-export function createTestCapsule(overrides: Partial<CapsuleMeta> = {}): CapsuleMeta {
+export function createTestCapsule(
+  overrides: Partial<CapsuleMeta> = {},
+): CapsuleMeta {
   const draft = createTestDraft();
   return {
     id: "capsule-1",
@@ -51,11 +53,13 @@ export function createTestCapsule(overrides: Partial<CapsuleMeta> = {}): Capsule
     saved: null,
     effective: draft,
     status: "new",
-    ...overrides
+    ...overrides,
   };
 }
 
-export function createTestProfile(overrides: Partial<ProfileSettings> = {}): ProfileSettings {
+export function createTestProfile(
+  overrides: Partial<ProfileSettings> = {},
+): ProfileSettings {
   return {
     email: "person@example.com",
     locale: "en",
@@ -63,11 +67,13 @@ export function createTestProfile(overrides: Partial<ProfileSettings> = {}): Pro
     theme: "system",
     llm: "none",
     imageLlm: "openai:gpt-image-2",
-    ...overrides
+    ...overrides,
   };
 }
 
-export function createActionContext(overrides: AppActionContext = {}): AppActionContext {
+export function createActionContext(
+  overrides: AppActionContext = {},
+): AppActionContext {
   return {
     activeCapsuleId: "capsule-1",
     applyCapsuleState: vi.fn(),
@@ -87,7 +93,10 @@ export function createActionContext(overrides: AppActionContext = {}): AppAction
     pendingRegenerationUrlsRef: { current: [] },
     profileItems: [],
     regenerationBaseItemsRef: { current: [] },
-    resolveErrorMessage: vi.fn((error: { message?: string } | null | undefined) => error?.message || "resolved error"),
+    resolveErrorMessage: vi.fn(
+      (error: { message?: string } | null | undefined) =>
+        error?.message || "resolved error",
+    ),
     selectedAudience: "woman",
     selectedFormalityLevel: "casual",
     selectedOccasions: ["office"],
@@ -118,12 +127,17 @@ export function createActionContext(overrides: AppActionContext = {}): AppAction
     shareMetadata: { id: "share-1", name: "Shared edit" },
     startCapsuleEventStream: vi.fn(),
     startPendingNotificationFlow: vi.fn(),
-    t: vi.fn((key: string) => ({
-      "errors.downloadFailed": "Download failed",
-      "errors.regenerateAllFailed": "Failed to regenerate the capsule. Your previous capsule was restored.",
-      "errors.regenerateSelectedFailed": "Failed to regenerate selected items"
-    }[key] || key)),
+    t: vi.fn(
+      (key: string) =>
+        ({
+          "errors.downloadFailed": "Download failed",
+          "errors.regenerateAllFailed":
+            "Failed to regenerate the capsule. Your previous capsule was restored.",
+          "errors.regenerateSelectedFailed":
+            "Failed to regenerate selected items",
+        })[key] || key,
+    ),
     user: { email: "person@example.com" },
-    ...overrides
+    ...overrides,
   };
 }

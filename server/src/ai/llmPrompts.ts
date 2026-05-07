@@ -3,7 +3,7 @@ import { getCapsuleCategories } from "./categories.js";
 import {
   getPromptTemplateContent,
   loadPromptTemplate,
-  renderPromptTemplateContent
+  renderPromptTemplateContent,
 } from "./promptTemplates.js";
 import type { JsonSchema, JsonSchemaFormat, UserProfileLike } from "./types.js";
 import {
@@ -13,14 +13,23 @@ import {
   OPENAI_PROFILE_LLM,
   getProfileLlm,
   isNoLlmProfileEnabled,
-  resolveLlmProvider
+  resolveLlmProvider,
 } from "./llmProviders.js";
 const CAPSULE_GENERATION_PROMPT_TEMPLATE = loadPromptTemplate(
-  new URL("../templates/prompt_capsule_generation.yaml", import.meta.url)
+  new URL("../templates/prompt_capsule_generation.yaml", import.meta.url),
 );
-const SYSTEM_PROMPT_TEMPLATE = getPromptTemplateContent(CAPSULE_GENERATION_PROMPT_TEMPLATE, "system");
+const SYSTEM_PROMPT_TEMPLATE = getPromptTemplateContent(
+  CAPSULE_GENERATION_PROMPT_TEMPLATE,
+  "system",
+);
 const SYSTEM_PROMPT_PARTS = JSON.parse(
-  readFileSync(new URL("../templates/prompt_capsule_generation_parts.json", import.meta.url), "utf8")
+  readFileSync(
+    new URL(
+      "../templates/prompt_capsule_generation_parts.json",
+      import.meta.url,
+    ),
+    "utf8",
+  ),
 ) as Record<string, unknown>;
 
 type BuildSystemPromptOptions = {
@@ -37,10 +46,10 @@ function buildCapsuleSchema(categories: Record<string, number>): JsonSchema {
       type: "array",
       description: `Exactly ${count} selected item ids for the ${category} category.`,
       items: {
-        type: "string"
+        type: "string",
       },
       minItems: count,
-      maxItems: count
+      maxItems: count,
     };
     required.push(category);
   }
@@ -49,7 +58,7 @@ function buildCapsuleSchema(categories: Record<string, number>): JsonSchema {
     type: "object",
     additionalProperties: false,
     properties,
-    required
+    required,
   };
 }
 
@@ -60,29 +69,37 @@ function buildSwimwearSchema(): JsonSchema {
     properties: {
       _reasoning: {
         type: "string",
-        description: "Briefly explain which bottom you matched the swimwear to and why."
+        description:
+          "Briefly explain which bottom you matched the swimwear to and why.",
       },
       swimwear: {
         type: "array",
-        description: "Either one swimsuit id or two ids that form a swimwear top and bottom set.",
+        description:
+          "Either one swimsuit id or two ids that form a swimwear top and bottom set.",
         items: {
-          type: "string"
+          type: "string",
         },
         minItems: 1,
-        maxItems: 2
-      }
+        maxItems: 2,
+      },
     },
-    required: ["_reasoning", "swimwear"]
+    required: ["_reasoning", "swimwear"],
   };
 }
 
-function buildJsonObjectFormat(userProfile: UserProfileLike | null = null): JsonSchemaFormat {
+function buildJsonObjectFormat(
+  userProfile: UserProfileLike | null = null,
+): JsonSchemaFormat {
   const categories = getCapsuleCategories(userProfile);
-  const num_items = Object.entries(categories).reduce((sum, [, count]) => sum + count, 0);
+  const num_items = Object.entries(categories).reduce(
+    (sum, [, count]) => sum + count,
+    0,
+  );
   return {
     type: "json_schema",
     name: "capsule_wardrobe_response",
-    description: "Structured capsule wardrobe selection with brief reasoning and exact category counts.",
+    description:
+      "Structured capsule wardrobe selection with brief reasoning and exact category counts.",
     schema: {
       type: "object",
       additionalProperties: false,
@@ -90,26 +107,32 @@ function buildJsonObjectFormat(userProfile: UserProfileLike | null = null): Json
         system_evaluation: {
           type: "object",
           additionalProperties: false,
-          required: ["short_capsule_name", "overall_explanation", "outfit_formulas"],
+          required: [
+            "short_capsule_name",
+            "overall_explanation",
+            "outfit_formulas",
+          ],
           properties: {
             short_capsule_name: {
               type: "string",
-              description: "Give this capsule a short meaningful name"
+              description: "Give this capsule a short meaningful name",
             },
             overall_explanation: {
               type: "string",
-              description: "Briefly explain why this capsule works well as a dense, cohesive system..."
+              description:
+                "Briefly explain why this capsule works well as a dense, cohesive system...",
             },
             outfit_formulas: {
               type: "array",
-              description: "Provide 4-6 highly wearable outfit formulas using the selected items (reference them by basic name AND ID in [] - IMPORTANT). Every outfit formula must contain either top + bottom or dress. CRITICAL: Every single ID mentioned here MUST explicitly exist in the final 'capsule' object below. Do NOT invent IDs.",
+              description:
+                "Provide 4-6 highly wearable outfit formulas using the selected items (reference them by basic name AND ID in [] - IMPORTANT). Every outfit formula must contain either top + bottom or dress. CRITICAL: Every single ID mentioned here MUST explicitly exist in the final 'capsule' object below. Do NOT invent IDs.",
               items: {
-                type: "string"
+                type: "string",
               },
               minItems: 4,
-              maxItems: 6
-            }
-          }
+              maxItems: 6,
+            },
+          },
         },
         item_details: {
           type: "array",
@@ -121,45 +144,52 @@ function buildJsonObjectFormat(userProfile: UserProfileLike | null = null): Json
             properties: {
               id: {
                 type: "string",
-                description: "CRITICAL: This MUST exactly match a selected candidate ID that is present in the final 'capsule' object. Do not hallucinate IDs."
+                description:
+                  "CRITICAL: This MUST exactly match a selected candidate ID that is present in the final 'capsule' object. Do not hallucinate IDs.",
               },
               role: {
                 type: "string",
                 description: "key, basic, or accent",
-                enum: ["key", "basic", "accent"]
+                enum: ["key", "basic", "accent"],
               },
               reason: {
                 type: "string",
-                description: "Brief reason for selection (e.g., silhouette balance, visual harmony)"
+                description:
+                  "Brief reason for selection (e.g., silhouette balance, visual harmony)",
               },
               compatibility: {
                 type: "string",
-                description: "Note how many/which items this pairs with - the exact IDs of other items IN THE CAPSULE this pairs with. Do NOT reference IDs that are not in your final selection."
+                description:
+                  "Note how many/which items this pairs with - the exact IDs of other items IN THE CAPSULE this pairs with. Do NOT reference IDs that are not in your final selection.",
               },
               warning: {
                 type: "string",
-                description: "Any styling friction or limitation (or 'None')"
-              }
-            }
+                description: "Any styling friction or limitation (or 'None')",
+              },
+            },
           },
           minItems: num_items,
-          maxItems: num_items
+          maxItems: num_items,
         },
-        capsule: buildCapsuleSchema(categories)
+        capsule: buildCapsuleSchema(categories),
       },
-      required: ["system_evaluation", "item_details", "capsule"]
+      required: ["system_evaluation", "item_details", "capsule"],
     },
-    strict: true
+    strict: true,
   };
 }
 
-function buildCustomJsonObjectFormat(name: string, description: string, schema: JsonSchema): JsonSchemaFormat {
+function buildCustomJsonObjectFormat(
+  name: string,
+  description: string,
+  schema: JsonSchema,
+): JsonSchemaFormat {
   return {
     type: "json_schema",
     name,
     description,
     schema,
-    strict: false
+    strict: false,
   };
 }
 
@@ -173,13 +203,13 @@ function splitSystemAndUserPrompt(prompt: string) {
   if (systemStart === -1 || userStart === -1 || userStart < systemStart) {
     return {
       system: "",
-      user: source.trim()
+      user: source.trim(),
     };
   }
 
   return {
     system: source.slice(systemStart + systemMarker.length, userStart).trim(),
-    user: source.slice(userStart + userMarker.length).trim()
+    user: source.slice(userStart + userMarker.length).trim(),
   };
 }
 
@@ -217,7 +247,10 @@ function normalizeSystemPromptSeasonList(value: unknown) {
   return normalized ? [normalized] : [];
 }
 
-function renderSeasonalityLogicContent(entry: unknown, userProfile: UserProfileLike | null = null) {
+function renderSeasonalityLogicContent(
+  entry: unknown,
+  userProfile: UserProfileLike | null = null,
+) {
   if (!entry || typeof entry !== "object") {
     return "";
   }
@@ -231,7 +264,10 @@ function renderSeasonalityLogicContent(entry: unknown, userProfile: UserProfileL
     lines.push(normalizedEntry.summer);
   }
 
-  if ((seasons.has("spring") || seasons.has("autumn")) && typeof normalizedEntry.spring_autumn === "string") {
+  if (
+    (seasons.has("spring") || seasons.has("autumn")) &&
+    typeof normalizedEntry.spring_autumn === "string"
+  ) {
     lines.push(normalizedEntry.spring_autumn);
   }
 
@@ -242,50 +278,76 @@ function renderSeasonalityLogicContent(entry: unknown, userProfile: UserProfileL
   return lines.join("\n").trim();
 }
 
-function renderStyleLibraryContent(entry: unknown, userProfile: UserProfileLike | null = null) {
+function renderStyleLibraryContent(
+  entry: unknown,
+  userProfile: UserProfileLike | null = null,
+) {
   if (!entry || typeof entry !== "object") {
     return "";
   }
 
   const normalizedEntry = entry as Record<string, unknown>;
-  const template = typeof normalizedEntry.template === "string" ? normalizedEntry.template : "";
+  const template =
+    typeof normalizedEntry.template === "string"
+      ? normalizedEntry.template
+      : "";
   if (!template) {
     return "";
   }
 
-  const replacements = buildStyleLibraryReplacements(normalizedEntry, userProfile);
+  const replacements = buildStyleLibraryReplacements(
+    normalizedEntry,
+    userProfile,
+  );
 
   let content = template;
   for (const [key, value] of Object.entries(replacements)) {
     content = content.replaceAll(`{{${key}}}`, value);
   }
 
-  return content
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
+  return content.replace(/\n{3,}/g, "\n\n").trim();
 }
 
 function getStringConfigValue(config: unknown, key: string) {
-  return typeof config === "object" && config && typeof (config as Record<string, unknown>)[key] === "string"
+  return typeof config === "object" &&
+    config &&
+    typeof (config as Record<string, unknown>)[key] === "string"
     ? (config as Record<string, string>)[key]
     : "";
 }
 
-function buildStyleLibraryReplacements(normalizedEntry: Record<string, unknown>, userProfile: UserProfileLike | null = null) {
-  const occasions = Array.isArray(userProfile?.occasions) ? userProfile.occasions : [];
+function buildStyleLibraryReplacements(
+  normalizedEntry: Record<string, unknown>,
+  userProfile: UserProfileLike | null = null,
+) {
+  const occasions = Array.isArray(userProfile?.occasions)
+    ? userProfile.occasions
+    : [];
 
   return {
-    audience: getStringConfigValue(normalizedEntry.audience, normalizeSystemPromptAudience(userProfile?.audience)),
-    formality_level: getStringConfigValue(normalizedEntry.formality_level, normalizeSystemPromptKey(userProfile?.formalityLevel)),
+    audience: getStringConfigValue(
+      normalizedEntry.audience,
+      normalizeSystemPromptAudience(userProfile?.audience),
+    ),
+    formality_level: getStringConfigValue(
+      normalizedEntry.formality_level,
+      normalizeSystemPromptKey(userProfile?.formalityLevel),
+    ),
     occasions: occasions
       .map((occasion) => normalizeSystemPromptKey(occasion))
-      .map((occasionKey) => getStringConfigValue(normalizedEntry.occasions, occasionKey))
+      .map((occasionKey) =>
+        getStringConfigValue(normalizedEntry.occasions, occasionKey),
+      )
       .filter((value) => value.trim().length > 0)
-      .join("\n")
+      .join("\n"),
   };
 }
 
-function renderSystemPromptSection(title: string, content: unknown, intro = "") {
+function renderSystemPromptSection(
+  title: string,
+  content: unknown,
+  intro = "",
+) {
   const normalizedContent = normalizeSystemPromptSectionContent(content);
   if (!normalizedContent) {
     return "";
@@ -296,26 +358,34 @@ function renderSystemPromptSection(title: string, content: unknown, intro = "") 
 
 function buildSystemPrompt(
   userProfile: UserProfileLike | null = null,
-  options: BuildSystemPromptOptions = {}
+  options: BuildSystemPromptOptions = {},
 ) {
   const styleKey = normalizeSystemPromptKey(userProfile?.style);
   const accentColorKey = normalizeSystemPromptKey(userProfile?.color);
   const audienceKey = normalizeSystemPromptAudience(userProfile?.audience);
-  const formalityLevelKey = normalizeSystemPromptKey(userProfile?.formalityLevel);
+  const formalityLevelKey = normalizeSystemPromptKey(
+    userProfile?.formalityLevel,
+  );
   const replacements = buildSystemPromptReplacements({
     userProfile,
     styleKey,
     accentColorKey,
     audienceKey,
     formalityLevelKey,
-    categories: resolveSystemPromptCategories(userProfile, options)
+    categories: resolveSystemPromptCategories(userProfile, options),
   });
 
-  const prompt = typeof options.template === "string" ? options.template : SYSTEM_PROMPT_TEMPLATE;
+  const prompt =
+    typeof options.template === "string"
+      ? options.template
+      : SYSTEM_PROMPT_TEMPLATE;
   return renderPromptTemplateContent(prompt, replacements, "system prompt");
 }
 
-function resolveSystemPromptCategories(userProfile: UserProfileLike | null, options: BuildSystemPromptOptions) {
+function resolveSystemPromptCategories(
+  userProfile: UserProfileLike | null,
+  options: BuildSystemPromptOptions,
+) {
   return options.categories && typeof options.categories === "object"
     ? options.categories
     : getCapsuleCategories(userProfile);
@@ -327,7 +397,7 @@ function buildSystemPromptReplacements({
   accentColorKey,
   audienceKey,
   formalityLevelKey,
-  categories
+  categories,
 }: {
   userProfile: UserProfileLike | null;
   styleKey: string;
@@ -338,30 +408,33 @@ function buildSystemPromptReplacements({
 }) {
   return {
     audience_logic_block: normalizeSystemPromptSectionContent(
-      SYSTEM_PROMPT_PARTS.audience_logic?.[audienceKey]
+      SYSTEM_PROMPT_PARTS.audience_logic?.[audienceKey],
     ),
     formality_logic_block: normalizeSystemPromptSectionContent(
-      SYSTEM_PROMPT_PARTS.formality_logic?.[formalityLevelKey]
+      SYSTEM_PROMPT_PARTS.formality_logic?.[formalityLevelKey],
     ),
     seasonality_logic_block: renderSeasonalityLogicContent(
       SYSTEM_PROMPT_PARTS.seasonality_logic,
-      userProfile
+      userProfile,
     ),
     style_library_block: renderSystemPromptSection(
       "STYLE LIBRARY",
-      renderStyleLibraryContent(SYSTEM_PROMPT_PARTS.style_library?.[styleKey], userProfile)
+      renderStyleLibraryContent(
+        SYSTEM_PROMPT_PARTS.style_library?.[styleKey],
+        userProfile,
+      ),
     ),
     style_palette_block: renderSystemPromptSection(
       "PALETTE REFERENCE BY STYLE",
       SYSTEM_PROMPT_PARTS.palette_by_style?.[styleKey],
-      "Use these as preferred defaults when no better user constraint overrides them."
+      "Use these as preferred defaults when no better user constraint overrides them.",
     ),
     accent_color_palette_block: renderSystemPromptSection(
       "PALETTE REFERENCE BY ACCENT COLOR",
       SYSTEM_PROMPT_PARTS.palette_by_accent_color?.[accentColorKey],
-      "If the user specifies an accent color, you may use these defaults:"
+      "If the user specifies an accent color, you may use these defaults:",
     ),
-    categories_schema: JSON.stringify(buildCapsuleSchema(categories), null, 2)
+    categories_schema: JSON.stringify(buildCapsuleSchema(categories), null, 2),
   };
 }
 
@@ -379,5 +452,5 @@ export {
   isNoLlmProfileEnabled,
   renderStyleLibraryContent,
   resolveLlmProvider,
-  splitSystemAndUserPrompt
+  splitSystemAndUserPrompt,
 };

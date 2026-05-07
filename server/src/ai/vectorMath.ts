@@ -21,7 +21,11 @@ function normalizeVector(vector = []) {
   return normalizedInput.map((value) => value / magnitude);
 }
 
-function buildShiftedTargetVector(targetVector, rejectedVectors = [], alpha = 0.2) {
+function buildShiftedTargetVector(
+  targetVector,
+  rejectedVectors = [],
+  alpha = 0.2,
+) {
   const normalizedTarget = normalizeVector(targetVector);
   if (!Array.isArray(rejectedVectors) || rejectedVectors.length === 0) {
     return normalizedTarget;
@@ -42,11 +46,18 @@ function buildShiftedTargetVector(targetVector, rejectedVectors = [], alpha = 0.
     });
   });
 
-  const centroid = Array.from({ length: dimension }, (_, index) => (
-    usableRejectedVectors.reduce((sum, vector) => sum + vector[index], 0) / usableRejectedVectors.length
-  ));
-  const shiftedVector = normalizedTarget.map((value, index) => value - (Number(alpha) * centroid[index]));
-  const shiftedMagnitude = Math.sqrt(shiftedVector.reduce((sum, value) => sum + (value * value), 0));
+  const centroid = Array.from(
+    { length: dimension },
+    (_, index) =>
+      usableRejectedVectors.reduce((sum, vector) => sum + vector[index], 0) /
+      usableRejectedVectors.length,
+  );
+  const shiftedVector = normalizedTarget.map(
+    (value, index) => value - Number(alpha) * centroid[index],
+  );
+  const shiftedMagnitude = Math.sqrt(
+    shiftedVector.reduce((sum, value) => sum + value * value, 0),
+  );
 
   if (shiftedMagnitude === 0) {
     return normalizedTarget;
@@ -61,7 +72,9 @@ function normalizeEmbeddingVector(value) {
   }
 
   const normalized = value.map((entry) => Number(entry));
-  return normalized.every((entry) => Number.isFinite(entry)) ? normalized : null;
+  return normalized.every((entry) => Number.isFinite(entry))
+    ? normalized
+    : null;
 }
 
 export { buildShiftedTargetVector, normalizeEmbeddingVector, normalizeVector };

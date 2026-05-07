@@ -6,7 +6,7 @@ import {
   buildR2PublicUrl,
   decodeLegacyBase64Image,
   getR2Config,
-  uploadImageToR2
+  uploadImageToR2,
 } from "./r2Storage.js";
 
 const testEnv = {
@@ -15,7 +15,7 @@ const testEnv = {
   R2_ACCESS_KEY_ID: "access-key",
   R2_SECRET_ACCESS_KEY: "secret-key",
   R2_PUBLIC_BASE_URL: "https://images.example.com/",
-  R2_IMAGE_KEY_PREFIX: "capsule image assets"
+  R2_IMAGE_KEY_PREFIX: "capsule image assets",
 } as NodeJS.ProcessEnv;
 
 test("getR2Config validates required env and normalizes public URL", () => {
@@ -25,23 +25,34 @@ test("getR2Config validates required env and normalizes public URL", () => {
     accessKeyId: "access-key",
     secretAccessKey: "secret-key",
     publicBaseUrl: "https://images.example.com",
-    imageKeyPrefix: "capsule image assets"
+    imageKeyPrefix: "capsule image assets",
   });
 
-  expect(() => getR2Config({ ...testEnv, R2_BUCKET_NAME: "" })).toThrow(/R2_BUCKET_NAME is not set/);
+  expect(() => getR2Config({ ...testEnv, R2_BUCKET_NAME: "" })).toThrow(
+    /R2_BUCKET_NAME is not set/,
+  );
 });
 
 test("R2 helpers build endpoint, object keys, and public URLs", () => {
-  expect(buildR2Endpoint("account-1")).toBe("https://account-1.r2.cloudflarestorage.com");
-  expect(buildR2ImageKey({
+  expect(buildR2Endpoint("account-1")).toBe(
+    "https://account-1.r2.cloudflarestorage.com",
+  );
+  expect(
+    buildR2ImageKey({
       imageKeyPrefix: "outfit set images",
       namespace: "generated",
       capsuleId: "Capsule 1",
       setIndex: 2,
       digest: "abc123",
-      mimeType: "image/jpeg"
-    })).toBe("outfit-set-images/generated/capsule-1/2/abc123.jpg");
-  expect(buildR2PublicUrl({ publicBaseUrl: "https://images.example.com" }, "folder/a b.png")).toBe("https://images.example.com/folder/a%20b.png");
+      mimeType: "image/jpeg",
+    }),
+  ).toBe("outfit-set-images/generated/capsule-1/2/abc123.jpg");
+  expect(
+    buildR2PublicUrl(
+      { publicBaseUrl: "https://images.example.com" },
+      "folder/a b.png",
+    ),
+  ).toBe("https://images.example.com/folder/a%20b.png");
 });
 
 test("uploadImageToR2 sends PutObjectCommand and returns public URL", async () => {
@@ -50,7 +61,7 @@ test("uploadImageToR2 sends PutObjectCommand and returns public URL", async () =
     send: async (command: PutObjectCommand) => {
       commands.push(command);
       return {};
-    }
+    },
   };
 
   const uploaded = await uploadImageToR2({
@@ -60,20 +71,32 @@ test("uploadImageToR2 sends PutObjectCommand and returns public URL", async () =
     setIndex: 0,
     namespace: "generated",
     env: testEnv,
-    client
+    client,
   });
 
   expect(commands.length).toBe(1);
   expect(commands[0].input.Bucket).toBe("capsule-images");
   expect(commands[0].input.ContentType).toBe("image/png");
-  expect(commands[0].input.CacheControl).toBe("public, max-age=31536000, immutable");
-  expect(String(commands[0].input.Key)).toMatch(/^capsule-image-assets\/generated\/capsule-1\/0\/[a-f0-9]{64}\.png$/);
-  expect(uploaded.url).toBe(`https://images.example.com/${commands[0].input.Key}`);
+  expect(commands[0].input.CacheControl).toBe(
+    "public, max-age=31536000, immutable",
+  );
+  expect(String(commands[0].input.Key)).toMatch(
+    /^capsule-image-assets\/generated\/capsule-1\/0\/[a-f0-9]{64}\.png$/,
+  );
+  expect(uploaded.url).toBe(
+    `https://images.example.com/${commands[0].input.Key}`,
+  );
 });
 
 test("decodeLegacyBase64Image skips URLs, data URLs, and invalid values", () => {
-  expect(decodeLegacyBase64Image("https://images.example.com/set.png")).toBe(null);
+  expect(decodeLegacyBase64Image("https://images.example.com/set.png")).toBe(
+    null,
+  );
   expect(decodeLegacyBase64Image("data:image/png;base64,abc")).toBe(null);
   expect(decodeLegacyBase64Image("not base64!")).toBe(null);
-  expect(decodeLegacyBase64Image(Buffer.from("image").toString("base64"))?.toString("utf8")).toBe("image");
+  expect(
+    decodeLegacyBase64Image(Buffer.from("image").toString("base64"))?.toString(
+      "utf8",
+    ),
+  ).toBe("image");
 });

@@ -7,14 +7,16 @@ import type { ComponentProps } from "react";
 const useI18nMock = vi.hoisted(() => vi.fn());
 
 vi.mock("../i18n/useI18n", () => ({
-  useI18n: useI18nMock
+  useI18n: useI18nMock,
 }));
 
 import AppLauncher from "./AppLauncher";
 
 const theme = createTheme();
 
-function renderLauncher(props: Partial<ComponentProps<typeof AppLauncher>> = {}) {
+function renderLauncher(
+  props: Partial<ComponentProps<typeof AppLauncher>> = {},
+) {
   useI18nMock.mockReturnValue({
     t: (key) =>
       ({
@@ -24,13 +26,13 @@ function renderLauncher(props: Partial<ComponentProps<typeof AppLauncher>> = {})
         "launcher.explore": "Explore",
         "launcher.exploreHint": "Switch to explore",
         "launcher.statistics": "Statistics",
-        "launcher.statisticsHint": "Switch to statistics"
-      }[key] || key)
+        "launcher.statisticsHint": "Switch to statistics",
+      })[key] || key,
   });
 
   const defaults: ComponentProps<typeof AppLauncher> = {
     currentApp: "capsule",
-    onSelectApp: vi.fn()
+    onSelectApp: vi.fn(),
   };
 
   return {
@@ -39,8 +41,8 @@ function renderLauncher(props: Partial<ComponentProps<typeof AppLauncher>> = {})
     ...render(
       <ThemeProvider theme={theme}>
         <AppLauncher {...defaults} {...props} />
-      </ThemeProvider>
-    )
+      </ThemeProvider>,
+    ),
   };
 }
 
@@ -56,9 +58,9 @@ describe("AppLauncher", () => {
 
     renderLauncher({ onSelectApp, currentApp: "capsule" });
 
-    expect(screen.getByRole("button", { name: "Open app launcher" })).toHaveTextContent(
-      "Capsule"
-    );
+    expect(
+      screen.getByRole("button", { name: "Open app launcher" }),
+    ).toHaveTextContent("Capsule");
 
     await user.click(screen.getByRole("button", { name: "Open app launcher" }));
     await user.click(screen.getByRole("menuitem", { name: /Explore/ }));
@@ -81,10 +83,12 @@ describe("AppLauncher", () => {
     rerender(
       <ThemeProvider theme={theme}>
         <AppLauncher currentApp="explore" onSelectApp={vi.fn()} />
-      </ThemeProvider>
+      </ThemeProvider>,
     );
 
-    expect(screen.getByRole("button", { name: "Open app launcher" })).toHaveTextContent("Explore");
+    expect(
+      screen.getByRole("button", { name: "Open app launcher" }),
+    ).toHaveTextContent("Explore");
   });
 
   test("shows the statistics app and can select it", async () => {

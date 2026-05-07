@@ -27,4 +27,3 @@ export type StatisticsState = {
   stats: Record<string, StatsRow[]>;
   priceBuckets: PriceBucket[];
 };
-

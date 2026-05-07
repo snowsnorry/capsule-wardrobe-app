@@ -4,7 +4,7 @@ import {
   buildWardrobePdfInChild,
   createWardrobePdfJobManager,
   resolveWardrobePdfChildEntryUrl,
-  resolveWardrobePdfChildExecArgv
+  resolveWardrobePdfChildExecArgv,
 } from "./wardrobePdf.js";
 
 test("wardrobe pdf facade re-exports PDF helpers and job manager", () => {
