@@ -122,10 +122,14 @@ Run from root:
 ## Quality commands
 - `npm run lint` — ESLint across the repository
 - `npm run lint:strict` — ESLint across the repository with zero warnings allowed
+- `npm run coverage` — coverage for client, server, and shared tests
+- `npm run coverage:client` — client coverage via Vitest
+- `npm run coverage:server` — server coverage via Vitest
+- `npm run coverage:shared` — shared coverage via Vitest
 - `npm run quality:deps` — dependency boundary checks
 - `npm run quality:large-files` — list largest source files
 - `npm run quality:large-files:strict` — fail on files over configured size thresholds
-- `npm run quality:gate` — strict lint, typecheck, tests, dependency checks, and large-file strict check
+- `npm run quality:gate` — strict lint, typecheck, tests, dependency checks, large-file strict check, and coverage
 
 ## Invariants
 - The repo is a two-workspace monorepo: `client` and `server`
@@ -143,6 +147,7 @@ Run from root:
 2. Identify the owning module
 3. Inspect closest tests
 4. Make the smallest viable change
-5. Run the narrowest relevant validation
-6. Prefer `npm run typecheck` or workspace `typecheck` when changing TS types or module boundaries
-7. At the end, after tests and typecheck, run ESLint on the changed source files with zero warnings, for example `npx eslint --max-warnings=0 <changed files>`
+5. Run the narrowest relevant tests
+6. Check coverage for the changed area, or run `npm run coverage` for cross-cutting changes
+7. Prefer `npm run typecheck` or workspace `typecheck` when changing TS types or module boundaries
+8. At the end, after tests, coverage, and typecheck, run ESLint on the changed source files with zero warnings, for example `npx eslint --max-warnings=0 <changed files>`

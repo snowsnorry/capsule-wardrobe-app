@@ -28,8 +28,10 @@ Primary areas:
 
 ## Validation
 - `npm run test:client`
+- `npm run coverage:client`
 - `npm run typecheck:client`
-- After tests and typecheck, run ESLint on changed client source files with zero warnings, for example `npx eslint --max-warnings=0 client/src/path/to/file.tsx`
+- After editing files, verify test coverage, test pass status, and ESLint before handing off.
+- After tests, coverage, and typecheck, run ESLint on changed client source files with zero warnings, for example `npx eslint --max-warnings=0 client/src/path/to/file.tsx`
 
 ## First files to inspect
 - `App.tsx`

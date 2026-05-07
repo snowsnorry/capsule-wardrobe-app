@@ -73,6 +73,12 @@ Tests:
 - `npm run test:server`
 - `npm run test:shared`
 
+Coverage:
+- `npm run coverage`
+- `npm run coverage:client`
+- `npm run coverage:server`
+- `npm run coverage:shared`
+
 Lint and quality:
 - `npm run lint`
 - `npm run lint:strict`
@@ -102,17 +108,18 @@ For deployment/config tasks:
 - inspect root `package.json`, `client/netlify.toml`, `client/render-server.js`, `client/vite.config.ts`, and README first
 
 ## Validation expectations
-After edits, prefer the narrowest relevant validation first:
+After editing files, check test coverage, ESLint, and test pass status before handing off. Prefer the narrowest relevant validation first:
 - workspace-local tests for the changed area
 - then broader repo tests if the change crosses boundaries
+- coverage for the changed area, or full coverage for cross-cutting changes
 
 At minimum:
-- UI-only changes: `npm run test:client`
-- server-only changes: `npm run test:server`
-- shared logic changes: `npm run test:shared`
-- cross-cutting changes: `npm test`
+- UI-only changes: `npm run test:client` and `npm run coverage:client`
+- server-only changes: `npm run test:server` and `npm run coverage:server`
+- shared logic changes: `npm run test:shared` and `npm run coverage:shared`
+- cross-cutting changes: `npm test` and `npm run coverage`
 - TypeScript-only or contract-shape changes: run the narrowest relevant `typecheck` command
-- after tests and typecheck, run ESLint on the changed source files with zero warnings, for example `npx eslint --max-warnings=0 <changed files>`
+- after tests, coverage, and typecheck, run ESLint on the changed source files with zero warnings, for example `npx eslint --max-warnings=0 <changed files>`
 
 ## Avoid
 - Do not invent new architecture not already present in the repo.

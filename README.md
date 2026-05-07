@@ -187,6 +187,17 @@ npm run test:server
 npm run test:shared
 ```
 
+Check coverage:
+
+```bash
+npm run coverage
+npm run coverage:client
+npm run coverage:server
+npm run coverage:shared
+```
+
+After editing files, verify that relevant tests pass, coverage remains acceptable, and ESLint has zero warnings for the changed source files. For cross-cutting changes, prefer `npm run quality:gate`.
+
 ## Health checks
 
 Backend health endpoint:

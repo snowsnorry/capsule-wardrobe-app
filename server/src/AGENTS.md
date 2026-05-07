@@ -33,8 +33,10 @@ Primary areas:
 
 ## Validation
 - `npm run test:server`
+- `npm run coverage:server`
 - `npm run typecheck:server`
-- After tests and typecheck, run ESLint on changed server source files with zero warnings, for example `npx eslint --max-warnings=0 server/src/path/to/file.ts`
+- After editing files, verify test coverage, test pass status, and ESLint before handing off.
+- After tests, coverage, and typecheck, run ESLint on changed server source files with zero warnings, for example `npx eslint --max-warnings=0 server/src/path/to/file.ts`
 
 ## First files to inspect
 - `index.ts`
