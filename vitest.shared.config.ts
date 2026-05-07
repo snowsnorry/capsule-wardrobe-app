@@ -13,6 +13,7 @@ export default defineConfig({
       include: ["shared/**/*.ts"],
       exclude: ["shared/**/*.test.ts", "shared/**/*.d.ts"],
       thresholds: {
+        perFile: true,
         lines: 70,
         functions: 70,
         branches: 60,
