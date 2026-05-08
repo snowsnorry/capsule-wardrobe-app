@@ -148,6 +148,17 @@ describe("ClothingCard", () => {
     expect(details).toContainElement(screen.getByText("Red Jacket"));
     expect(title).toHaveTextContent("Red Jacket");
     expect(title).not.toHaveTextContent("options.categories.outerwear");
+    expect(details).toHaveStyle({
+      display: "grid",
+      alignContent: "center",
+      width: "100%",
+    });
+    expect(title).toHaveStyle({
+      width: "100%",
+      overflow: "hidden",
+      WebkitLineClamp: "3",
+      overflowWrap: "anywhere",
+    });
     expect(details).not.toContainElement(
       screen.getByText("options.categories.outerwear"),
     );

@@ -102,16 +102,18 @@ function ClothingCardDetails({
   return (
     <Stack
       className="wardrobe-card-details"
-      spacing={1.25}
       sx={{
+        display: "grid",
+        alignContent: "center",
+        rowGap: isMobile ? 0.5 : 0.75,
         flexShrink: 0,
         flexGrow: 1,
+        width: "100%",
+        minWidth: 0,
         px: isMobile ? mobileCardMetrics.detailPx : 2.5,
         pt: isMobile ? mobileCardMetrics.detailPt : 2,
         pb: isMobile ? mobileCardMetrics.detailPb : 2.25,
         minHeight: isMobile ? mobileCardMetrics.detailMinHeight : 64,
-        justifyContent: "flex-start",
-        alignItems: "flex-start",
         backgroundColor: "#fffdf9",
         borderTop: "1px solid rgba(15, 23, 42, 0.055)",
       }}
@@ -121,18 +123,18 @@ function ClothingCardDetails({
         variant="subtitle1"
         sx={{
           color: "#1f2933",
-          fontWeight: 500,
+          width: "100%",
+          minWidth: 0,
+          maxWidth: "100%",
+          fontWeight: 600,
           lineHeight: isMobile ? mobileCardMetrics.titleLineHeight : 1.22,
           letterSpacing: 0,
           fontSize: isMobile ? mobileCardMetrics.titleFontSize : "16px",
-          ...(isMobile
-            ? {
-                display: "-webkit-box",
-                WebkitBoxOrient: "vertical",
-                WebkitLineClamp: 2,
-                overflow: "hidden",
-              }
-            : {}),
+          display: "-webkit-box",
+          WebkitBoxOrient: "vertical",
+          WebkitLineClamp: isMobile ? 2 : 3,
+          overflow: "hidden",
+          overflowWrap: "anywhere",
         }}
       >
         {showMobileCategoryPrefix ? (
