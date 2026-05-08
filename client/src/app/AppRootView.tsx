@@ -4,6 +4,7 @@ import type { ComponentProps, ReactNode } from "react";
 import type AppDialogs from "./AppDialogs";
 import AppShellContent from "./AppShellContent";
 import type AppSnackbars from "./AppSnackbars";
+import RoutePanelFallback from "./RoutePanelFallback";
 
 const LazyAppDialogs = lazy(() => import("./AppDialogs"));
 const LazyAppSnackbars = lazy(() => import("./AppSnackbars"));
@@ -33,7 +34,9 @@ export default function AppRootView({
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <AppShellContent {...shell}>{routeContent}</AppShellContent>
+      <AppShellContent {...shell}>
+        <Suspense fallback={<RoutePanelFallback />}>{routeContent}</Suspense>
+      </AppShellContent>
       <Suspense fallback={null}>
         {shouldRenderSnackbars ? <LazyAppSnackbars {...snackbars} /> : null}
         {shouldRenderDialogs ? <LazyAppDialogs {...dialogs} /> : null}
