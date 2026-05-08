@@ -5,8 +5,8 @@ import type { CardActionProps } from "./ClothingCardTypes";
 
 const mobileProductMenuSx = {
   "& .wardrobe-card-product-menu.MuiIconButton-root": {
-    width: 34,
-    height: 34,
+    width: 44,
+    height: 44,
     border: 0,
     borderRadius: "999px",
     bgcolor: "transparent",

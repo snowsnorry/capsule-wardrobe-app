@@ -286,8 +286,8 @@ describe("ClothingCard", () => {
     ).not.toBeInTheDocument();
     expect(menuButton).toBeVisible();
     expect(menuButton).toHaveStyle({
-      width: "34px",
-      height: "34px",
+      width: "44px",
+      height: "44px",
       color: "rgba(31, 41, 55, 0.72)",
     });
   });
@@ -341,7 +341,7 @@ describe("ClothingCard", () => {
     expect(
       container.querySelector(".wardrobe-card-category"),
     ).not.toBeInTheDocument();
-    expect(menuButton).toHaveStyle({ width: "34px", height: "34px" });
+    expect(menuButton).toHaveStyle({ width: "44px", height: "44px" });
   });
 
   test("drops unsafe product and image urls", () => {
