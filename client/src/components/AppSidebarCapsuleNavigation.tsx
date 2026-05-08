@@ -19,15 +19,17 @@ const motionTransition = `grid-template-rows 240ms ${naturalEase}, max-height 24
 const expandedCapsuleChildrenMaxHeight = "calc(100vh - 260px)";
 const capsuleChildrenContentInset = 4.5;
 const capsuleChildrenInlineEndInset = 1.5;
+const capsuleHighlightInlineStartInset = 1.5;
 const capsuleRowTextInset = 1.5;
 
 type Translate = (key: string) => string;
 
 function getCapsuleRowSx(isOverlaySidebar: boolean) {
   return {
-    borderRadius: 999,
+    borderRadius: "8px",
     mb: 0.25,
-    px: capsuleRowTextInset,
+    pl: capsuleChildrenContentInset,
+    pr: capsuleRowTextInset,
     minHeight: 40,
     columnGap: 0.5,
     "& .capsule-row-unsaved-dot": {
@@ -240,7 +242,7 @@ function CapsuleSectionLabel({ label }: { label: string }) {
         minHeight: 32,
         pt: 1.5,
         pb: 0.5,
-        pl: capsuleRowTextInset,
+        pl: "10px",
       }}
     >
       <Typography
@@ -302,7 +304,7 @@ function CapsuleChildren({
           overflow: "hidden",
           ml: 0,
           mr: capsuleChildrenInlineEndInset,
-          pl: capsuleChildrenContentInset,
+          pl: capsuleHighlightInlineStartInset,
         }}
       >
         <CapsulePrimaryActions

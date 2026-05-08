@@ -86,19 +86,44 @@ describe("AppSidebarNavigation", () => {
     expect(getComputedStyle(rowAction).width).toBe("32px");
   });
 
-  test("extends the new and search capsule hover area left without moving content", () => {
+  test("insets the active capsule highlight without clipping or moving content", () => {
     renderNavigation();
 
+    const topLevelCapsule = screen.getByRole("button", { name: "Capsule" });
     const capsuleRow = screen.getByRole("button", { name: "Modified capsule" });
+    const capsuleChildren = screen.getByTestId("capsule-sidebar-children");
+    const capsuleContent = capsuleChildren.firstElementChild;
+    const capsuleSectionLabel = screen.getByText("Your capsules").parentElement;
+
+    expect(capsuleContent).not.toBeNull();
+    expect(getComputedStyle(capsuleContent as Element).paddingLeft).toBe(
+      "12px",
+    );
+    expect(capsuleSectionLabel).not.toBeNull();
+    expect(getComputedStyle(capsuleSectionLabel as Element).paddingLeft).toBe(
+      "10px",
+    );
+    expect(getComputedStyle(capsuleRow).borderRadius).toBe("8px");
+    expect(getComputedStyle(capsuleRow).marginLeft).toBe("0px");
+    expect(getComputedStyle(capsuleRow).paddingLeft).toBe("36px");
+    expect(getComputedStyle(capsuleRow).paddingRight).toBe("12px");
 
     for (const button of [
       screen.getByRole("button", { name: "New capsule" }),
       screen.getByRole("button", { name: "Search capsules" }),
     ]) {
-      expect(getComputedStyle(button).marginLeft).toBe("-12px");
-      expect(getComputedStyle(button).paddingLeft).toBe("12px");
+      const iconRail = button.querySelector(".capsule-primary-action-icon");
+
+      expect(iconRail).not.toBeNull();
+      expect(getComputedStyle(button).width).toBe("100%");
+      expect(getComputedStyle(button).marginLeft).toBe("0px");
+      expect(getComputedStyle(button).paddingLeft).toBe("0px");
       expect(getComputedStyle(button).borderRadius).toBe(
-        getComputedStyle(capsuleRow).borderRadius,
+        getComputedStyle(topLevelCapsule).borderRadius,
+      );
+      expect(getComputedStyle(iconRail as Element).width).toBe("60px");
+      expect(getComputedStyle(iconRail as Element).transform).toBe(
+        "translateX(-12px)",
       );
     }
   });

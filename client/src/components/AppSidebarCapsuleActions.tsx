@@ -1,17 +1,29 @@
 import { Box, Button } from "@mui/material";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
+import {
+  expandedTopLevelIconShift,
+  topLevelIconRailWidth,
+} from "./AppSidebarNavigationParts";
 
 type Translate = (key: string) => string;
 
 const capsulePrimaryActionSx = {
   justifyContent: "flex-start",
   minHeight: 44,
-  ml: -1.5,
-  pl: 1.5,
-  pr: 0,
-  borderRadius: 999,
+  width: "100%",
+  minWidth: 0,
+  px: 0,
+  borderRadius: "8px",
   color: "primary.main",
+} as const;
+
+const capsulePrimaryActionIconSx = {
+  width: topLevelIconRailWidth,
+  display: "flex",
+  justifyContent: "center",
+  flexShrink: 0,
+  transform: `translateX(${expandedTopLevelIconShift})`,
 } as const;
 
 function CapsulePrimaryActions({
@@ -36,7 +48,12 @@ function CapsulePrimaryActions({
         onClick={() => void onCreateCapsule?.()}
         sx={capsulePrimaryActionSx}
       >
-        <AddRoundedIcon sx={{ mr: 2.2 }} />
+        <Box
+          className="capsule-primary-action-icon"
+          sx={capsulePrimaryActionIconSx}
+        >
+          <AddRoundedIcon />
+        </Box>
         <Box component="span" sx={{ fontWeight: 550 }}>
           {t("capsule.new")}
         </Box>
@@ -48,7 +65,12 @@ function CapsulePrimaryActions({
         onClick={onSearchCapsules}
         sx={capsulePrimaryActionSx}
       >
-        <SearchRoundedIcon sx={{ mr: 2.2 }} />
+        <Box
+          className="capsule-primary-action-icon"
+          sx={capsulePrimaryActionIconSx}
+        >
+          <SearchRoundedIcon />
+        </Box>
         <Box component="span" sx={{ fontWeight: 550 }}>
           {t("capsule.search")}
         </Box>

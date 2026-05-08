@@ -6,8 +6,8 @@ import CheckroomOutlinedIcon from "@mui/icons-material/CheckroomOutlined";
 import type { AppId } from "./AppSidebarNavigationTypes";
 
 const naturalEase = "cubic-bezier(0.2, 0, 0, 1)";
-const topLevelIconRailWidth = "60px";
-const expandedTopLevelIconShift = "-12px";
+export const topLevelIconRailWidth = "60px";
+export const expandedTopLevelIconShift = "-12px";
 
 type Translate = (key: string) => string;
 
@@ -18,7 +18,7 @@ function getTopLevelButtonSx(isCollapsedDesktop: boolean) {
     minHeight: 48,
     width: "100%",
     minWidth: 0,
-    borderRadius: isCollapsedDesktop ? 0 : 2.5,
+    borderRadius: isCollapsedDesktop ? 0 : "8px",
     color: "text.primary",
     bgcolor: "transparent",
     "&.Mui-disabled": { color: "text.disabled" },
