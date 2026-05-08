@@ -7,7 +7,6 @@ import {
   verifyLoginCode,
 } from "../api/auth";
 import { clearRequestCache } from "../api/auth";
-import { authenticateWithPasskey } from "../auth/passkeys";
 import { initialStatus } from "./appConstants";
 import { normalizeProfileSettings } from "./profileSettings";
 import type {
@@ -205,6 +204,7 @@ export async function passkeySignIn(context: SessionActionContext) {
     infoParams: null,
   });
   try {
+    const { authenticateWithPasskey } = await import("../auth/passkeys");
     const result = (await authenticateWithPasskey()) as AuthResultResponse;
     clearRequestCache();
     await applyAuthResult(context, result, false);

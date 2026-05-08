@@ -389,7 +389,7 @@ describe("App e2e-style flows", () => {
     expect(await screen.findByTestId("main-screen")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "sign-out" }));
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
     expect(
       screen.getByText(
         /Are you sure you want to sign out\?|Вы уверены, что хотите выйти\?/i,

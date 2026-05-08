@@ -1,7 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import type { MouseEvent, ReactElement } from "react";
-import SettingsDialog from "./SettingsDialog";
 import { useI18n } from "../i18n/useI18n";
 import {
   ShellMainContent,
@@ -15,6 +14,7 @@ import type {
 } from "./AppSidebarShellTypes";
 
 const SIDEBAR_COLLAPSED_STORAGE_KEY = "capsule.appSidebarCollapsed";
+const SettingsDialog = lazy(() => import("./SettingsDialog"));
 
 function readSharedDesktopSidebarCollapsed(): boolean {
   if (typeof window === "undefined") {
@@ -185,15 +185,19 @@ function AppSidebarShell({
         t={t}
       />
 
-      <SettingsDialog
-        open={isSettingsOpen}
-        settings={{
-          ...(settingsProfile ?? {}),
-          email: userEmail,
-        }}
-        onClose={() => setIsSettingsOpen(false)}
-        onSave={onSaveSettings}
-      />
+      {isSettingsOpen ? (
+        <Suspense fallback={null}>
+          <SettingsDialog
+            open={isSettingsOpen}
+            settings={{
+              ...(settingsProfile ?? {}),
+              email: userEmail,
+            }}
+            onClose={() => setIsSettingsOpen(false)}
+            onSave={onSaveSettings}
+          />
+        </Suspense>
+      ) : null}
     </>
   );
 }

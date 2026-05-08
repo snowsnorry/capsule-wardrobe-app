@@ -1,6 +1,5 @@
 import { useCallback, useState } from "react";
 import { listPasskeys } from "../api/passkeys";
-import { isPasskeySupported, registerPasskey } from "../auth/passkeys";
 import {
   initialPasskeyPrompt,
   PASSKEY_PROMPT_DISMISSED_STORAGE_KEY,
@@ -41,11 +40,15 @@ export function usePasskeyPrompt(
   }, [closePasskeyPrompt]);
 
   const maybeShowPasskeyPrompt = useCallback(async () => {
-    if (!isPasskeySupported() || shouldSkipPasskeyPrompt()) {
+    if (shouldSkipPasskeyPrompt()) {
       return;
     }
 
     try {
+      const { isPasskeySupported } = await import("../auth/passkeys");
+      if (!isPasskeySupported()) {
+        return;
+      }
       const response = (await listPasskeys()) as { passkeys?: unknown[] };
       if (Array.isArray(response.passkeys) && response.passkeys.length === 0) {
         setPasskeyPrompt({ open: true, loading: false });
@@ -58,6 +61,7 @@ export function usePasskeyPrompt(
   const handleAddPasskeyFromPrompt = useCallback(async () => {
     setPasskeyPrompt({ open: true, loading: true });
     try {
+      const { registerPasskey } = await import("../auth/passkeys");
       await registerPasskey();
       markPasskeyPromptDismissed();
       setPasskeyPrompt(initialPasskeyPrompt);
