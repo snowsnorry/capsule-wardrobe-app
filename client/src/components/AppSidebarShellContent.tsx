@@ -190,9 +190,9 @@ function SidebarUserButton({
 const sidebarAvatarSx = {
   width: 36,
   height: 36,
-  bgcolor: "secondary.light",
-  color: "text.primary",
-  fontWeight: 700,
+  bgcolor: "var(--cw-color-user-avatar-bg)",
+  color: "var(--cw-color-user-avatar-ink)",
+  fontWeight: 650,
 } as const;
 
 function SidebarContent({

@@ -16,6 +16,8 @@ const paletteTokens = {
     primaryContrast: "#fbfffd",
     secondaryMain: "#b68416",
     secondaryLight: "#f7e5b5",
+    userAvatarBg: "oklch(93% 0.035 82)",
+    userAvatarInk: "oklch(38% 0.035 75)",
     successMain: "#2f8f58",
     errorMain: "#d24343",
     warningMain: "#9b6a05",
@@ -33,6 +35,8 @@ const paletteTokens = {
     primaryContrast: "#081111",
     secondaryMain: "#f0b429",
     secondaryLight: "#4a3814",
+    userAvatarBg: "oklch(28% 0.035 80)",
+    userAvatarInk: "oklch(78% 0.08 82)",
     successMain: "#66c58a",
     errorMain: "#ff8d86",
     warningMain: "#f0b429",
@@ -191,6 +195,8 @@ function createComponentOverrides(mode: ThemeMode): Components<Theme> {
           "--cw-color-gold-wash": isDark
             ? "oklch(30% 0.045 80)"
             : "oklch(94% 0.055 82)",
+          "--cw-color-user-avatar-bg": tokens.userAvatarBg,
+          "--cw-color-user-avatar-ink": tokens.userAvatarInk,
           "--cw-color-surface-warm": isDark
             ? "oklch(18% 0.014 180)"
             : "oklch(98% 0.008 72)",
