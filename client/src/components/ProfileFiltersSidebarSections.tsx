@@ -62,13 +62,21 @@ function ProfileFilterChipSection({
   );
 }
 
-function ProfileFiltersHeader({ t }: { t: Translate }) {
+function ProfileFiltersHeader({
+  showTitle,
+  t,
+}: {
+  showTitle: boolean;
+  t: Translate;
+}) {
   return (
     <Stack spacing={2.5}>
       <Stack spacing={0.75}>
-        <Typography variant="h6" sx={{ color: "text.primary" }}>
-          {t("capsule.settingsTitle")}
-        </Typography>
+        {showTitle ? (
+          <Typography variant="h6" sx={{ color: "text.primary" }}>
+            {t("capsule.settingsTitle")}
+          </Typography>
+        ) : null}
         <Typography variant="body2" color="text.secondary">
           {t("capsule.settingsSubtitle")}
         </Typography>
@@ -297,7 +305,10 @@ function ProfileFiltersSidebarFrame({
 
   return (
     <Stack spacing={3.5} sx={{ boxSizing: "border-box" }}>
-      <ProfileFiltersHeader t={t} />
+      <ProfileFiltersHeader
+        showTitle={props.showSettingsTitle !== false}
+        t={t}
+      />
       <ProfileFilterControls
         disabled={disabled}
         locale={locale}

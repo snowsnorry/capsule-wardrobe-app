@@ -4,6 +4,7 @@ import {
   DialogContent,
   DialogTitle,
   IconButton,
+  Typography,
 } from "@mui/material";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import ProfileFiltersSidebar from "../../components/ProfileFiltersSidebar";
@@ -30,7 +31,12 @@ export function FiltersDialog({
       onClose={() => !disabled && setOpen(false)}
       fullScreen={isOverlay}
     >
-      <DialogTitle>
+      <DialogTitle sx={isOverlay ? mobileFiltersDialogTitleSx : undefined}>
+        {isOverlay ? (
+          <Typography component="span" variant="h6">
+            {t("capsule.settingsTitle")}
+          </Typography>
+        ) : null}
         <IconButton
           aria-label={t("capsule.closeFilters")}
           disabled={disabled}
@@ -52,11 +58,19 @@ export function FiltersDialog({
           }}
           onSignOut={null}
           isInteractionDisabled={disabled}
+          showSettingsTitle={!isOverlay}
         />
       </DialogContent>
     </Dialog>
   );
 }
+
+const mobileFiltersDialogTitleSx = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 2,
+} as const;
 
 export function ImageDialog({
   src,

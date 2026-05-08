@@ -32,11 +32,13 @@ vi.mock("../../components/ProfileFiltersSidebar", () => ({
   default: ({
     onApply,
     onReset,
+    showSettingsTitle,
   }: {
     onApply: () => void;
     onReset: () => void;
+    showSettingsTitle?: boolean;
   }) => (
-    <div>
+    <div data-show-settings-title={String(showSettingsTitle)}>
       <button type="button" onClick={onApply}>
         apply-filters
       </button>
@@ -53,6 +55,7 @@ vi.mock("../../i18n/useI18n", () => ({
       ({
         "actions.close": "Close",
         "capsule.closeFilters": "Close filters",
+        "capsule.settingsTitle": "Capsule settings",
       })[key] || key,
   }),
 }));
@@ -98,6 +101,32 @@ describe("MainScreenMediaDialogs", () => {
       screen.getAllByRole("button", { name: "mock-dialog-close" }).at(-1)!,
     );
     expect(setOpen).not.toHaveBeenCalled();
+  });
+
+  test("FiltersDialog renders the settings title in the mobile dialog header", () => {
+    const props = {
+      onApplyFilters: vi.fn(),
+      onResetFilters: vi.fn(),
+    };
+
+    render(
+      <FiltersDialog
+        props={props as never}
+        disabled={false}
+        open
+        isOverlay
+        setOpen={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Capsule settings")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Close filters" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("apply-filters").parentElement).toHaveAttribute(
+      "data-show-settings-title",
+      "false",
+    );
   });
 
   test("ImageDialog only closes from dialog onClose while interactions are enabled", async () => {

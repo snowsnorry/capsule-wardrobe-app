@@ -48,6 +48,7 @@ type ProfileFiltersSidebarProps = {
   isSigningOut?: boolean;
   isInteractionDisabled?: boolean;
   resetLabelKey?: string;
+  showSettingsTitle?: boolean;
 };
 
 export type { ProfileFiltersSidebarProps, ProfileFilterValue };

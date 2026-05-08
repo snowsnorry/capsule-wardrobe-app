@@ -146,6 +146,17 @@ describe("ProfileFiltersSidebarSections", () => {
     ).toBeInTheDocument();
   });
 
+  test("can keep the subtitle while moving the settings title outside", () => {
+    renderFrame({ props: { showSettingsTitle: false } });
+
+    expect(
+      screen.queryByRole("heading", { name: "Capsule settings" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText("Adjust the inputs used to build this capsule."),
+    ).toBeInTheDocument();
+  });
+
   test("forwards filter interactions to the corresponding callbacks", async () => {
     const user = userEvent.setup();
     const onSelectStyleCore = vi.fn();
