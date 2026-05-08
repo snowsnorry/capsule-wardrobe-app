@@ -255,7 +255,8 @@ function SettingsSectionsList({
 
 const settingsSectionsListSx = {
   py: 0,
-  borderRight: { sm: "1px solid", borderColor: { sm: "divider" } },
+  borderRight: { sm: "1px solid" },
+  borderColor: { sm: "divider" },
   pr: { sm: 2 },
 } as const;
 
