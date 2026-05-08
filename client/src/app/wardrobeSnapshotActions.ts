@@ -52,6 +52,10 @@ type NormalizedWardrobeSnapshot = {
   status: WardrobeSnapshot["status"];
 };
 
+type ApplyWardrobeSnapshotOptions = {
+  refreshReadyCapsule?: boolean;
+};
+
 function normalizePendingUrls(snapshot: WardrobeSnapshot | undefined) {
   return Array.isArray(snapshot?.pendingRegenerationUrls)
     ? snapshot.pendingRegenerationUrls
@@ -189,6 +193,9 @@ async function refreshReadyCapsule(
 async function applyReadyWardrobeSnapshot(
   context: WardrobeSnapshotContext,
   snapshot: NormalizedWardrobeSnapshot,
+  {
+    refreshReadyCapsule: shouldRefreshReadyCapsule = true,
+  }: ApplyWardrobeSnapshotOptions = {},
 ) {
   mergeReadyItems(context, snapshot.items);
   context.setSelectedRegenerationUrls([]);
@@ -207,6 +214,7 @@ async function applyReadyWardrobeSnapshot(
   }
 
   if (
+    shouldRefreshReadyCapsule &&
     snapshot.status === "ready" &&
     !snapshot.hasPendingOutfitSetImages &&
     snapshot.capsuleId
@@ -219,6 +227,7 @@ export async function applyWardrobeSnapshotToApp(
   context: WardrobeSnapshotContext,
   snapshot: WardrobeSnapshot | undefined,
   capsuleId: string | undefined = context.activeCapsuleId,
+  options: ApplyWardrobeSnapshotOptions = {},
 ) {
   const normalized = normalizeWardrobeSnapshot(snapshot, capsuleId);
 
@@ -232,5 +241,5 @@ export async function applyWardrobeSnapshotToApp(
     return;
   }
 
-  await applyReadyWardrobeSnapshot(context, normalized);
+  await applyReadyWardrobeSnapshot(context, normalized, options);
 }

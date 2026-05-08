@@ -116,6 +116,33 @@ describe("wardrobeSnapshotActions", () => {
     expect(context.stopCapsuleEventStream).toHaveBeenCalled();
   });
 
+  test("ready snapshot can skip capsule metadata refresh", async () => {
+    const context = createSnapshotContext();
+
+    await applyWardrobeSnapshotToApp(
+      context,
+      {
+        status: "ready",
+        items: [{ id: "top-1", url: "https://example.com/top-1" }],
+      },
+      "capsule-1",
+      { refreshReadyCapsule: false },
+    );
+
+    expect(context.fetchCapsule).not.toHaveBeenCalled();
+    expect(context.refreshCapsuleList).not.toHaveBeenCalled();
+    const setProfileItems = context.setProfileItems.mock.calls[0][0] as (
+      items: WardrobeItem[],
+    ) => WardrobeItem[];
+    expect(setProfileItems([])).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ url: "https://example.com/top-1" }),
+      ]),
+    );
+    expect(context.setIsWardrobePending).toHaveBeenCalledWith(false);
+    expect(context.stopCapsuleEventStream).toHaveBeenCalled();
+  });
+
   test("partial regeneration keeps regenerated items in the original placeholder slots", async () => {
     const baseItems = [
       {

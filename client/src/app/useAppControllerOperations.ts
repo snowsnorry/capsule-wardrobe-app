@@ -34,6 +34,7 @@ export type AppControllerOperations = {
   applyWardrobeSnapshot: (
     snapshot: WardrobeSnapshot | undefined,
     capsuleId?: string,
+    options?: { refreshReadyCapsule?: boolean },
   ) => Promise<void>;
   bootstrapCapsules: (email?: string) => Promise<ProfileSettings>;
   buildCurrentDraftSnapshot: (options?: {
@@ -93,11 +94,13 @@ export function useAppControllerOperations({
   operations.applyWardrobeSnapshot = async (
     snapshot,
     capsuleId = appState.activeCapsuleId,
+    options = {},
   ) => {
     await applyWardrobeSnapshotToApp(
       buildWardrobeSnapshotContext({ appState, notifications, operations, t }),
       snapshot,
       capsuleId,
+      options,
     );
   };
   operations.startCapsuleEventStream = (capsuleId) =>
@@ -247,6 +250,7 @@ async function restoreCapsuleSnapshot(
   await operations.applyWardrobeSnapshot(
     result.activeSnapshot,
     result.activeCapsule?.id,
+    { refreshReadyCapsule: false },
   );
   if (result.activeSnapshot.status === "pending") {
     operations.startCapsuleEventStream(result.activeCapsule?.id);

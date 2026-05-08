@@ -132,7 +132,16 @@ function renderApp() {
   );
 }
 
-function createBootstrapResponse({ locale = "en" } = {}) {
+function createBootstrapResponse({
+  activeSnapshot,
+  locale = "en",
+}: {
+  activeSnapshot?: {
+    status?: string;
+    items?: { id?: string; url?: string; category?: string }[];
+  };
+  locale?: string;
+} = {}) {
   const activeCapsule = {
     id: "capsule-1",
     name: "Spring edit",
@@ -166,6 +175,7 @@ function createBootstrapResponse({ locale = "en" } = {}) {
       fullname: "",
     },
     activeCapsule,
+    activeSnapshot,
     capsules: [{ id: "capsule-1", name: "Spring edit", status: "new" }],
   };
 }
@@ -237,6 +247,36 @@ describe("App", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "open-statistics" }));
     expect(await screen.findByTestId("statistics-screen")).toBeInTheDocument();
+  });
+
+  test("uses bootstrap capsule data without fetching active capsule or recent capsules", async () => {
+    authApi.fetchCurrentUser.mockResolvedValue({
+      user: { email: "person@example.com" },
+    });
+    authApi.fetchProfileStatus.mockResolvedValue({ hasProfile: true });
+    capsulesApi.fetchCapsuleBootstrap.mockResolvedValue(
+      createBootstrapResponse({
+        activeSnapshot: {
+          status: "ready",
+          items: [
+            {
+              id: "top-1",
+              url: "https://example.com/top-1",
+              category: "top",
+            },
+          ],
+        },
+      }),
+    );
+
+    renderApp();
+
+    expect(await screen.findByTestId("main-screen")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(capsulesApi.fetchCapsuleBootstrap).toHaveBeenCalledTimes(1);
+    });
+    expect(capsulesApi.fetchCapsule).not.toHaveBeenCalled();
+    expect(capsulesApi.fetchRecentCapsules).not.toHaveBeenCalled();
   });
 
   test("opens statistics on direct statistics route after session bootstrap", async () => {
