@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { ThemeProvider, createTheme } from "@mui/material/styles";
 import type { ReactNode } from "react";
 import { FiltersDialog, ImageDialog } from "./MainScreenMediaDialogs";
 
@@ -156,5 +157,56 @@ describe("MainScreenMediaDialogs", () => {
       screen.getAllByRole("button", { name: "mock-dialog-close" }).at(-1)!,
     );
     expect(setOpen).not.toHaveBeenCalled();
+  });
+
+  test("ImageDialog closes from empty preview space but not from the image", async () => {
+    const user = userEvent.setup();
+    const setOpen = vi.fn();
+
+    render(
+      <ImageDialog
+        src="data:image/png;base64,abc"
+        label={2}
+        disabled={false}
+        open
+        setOpen={setOpen}
+      />,
+    );
+
+    await user.click(screen.getByRole("img", { name: "Outfit set 2" }));
+    expect(setOpen).not.toHaveBeenCalled();
+
+    await user.click(screen.getByTestId("outfit-set-image-dialog"));
+    expect(setOpen).toHaveBeenCalledWith(false);
+
+    setOpen.mockClear();
+    render(
+      <ImageDialog
+        src="data:image/png;base64,abc"
+        disabled
+        open
+        setOpen={setOpen}
+      />,
+    );
+
+    await user.click(screen.getAllByTestId("outfit-set-image-dialog").at(-1)!);
+    expect(setOpen).not.toHaveBeenCalled();
+  });
+
+  test("ImageDialog close button keeps a contrasting icon color in dark mode", () => {
+    render(
+      <ThemeProvider theme={createTheme({ palette: { mode: "dark" } })}>
+        <ImageDialog
+          src="data:image/png;base64,abc"
+          disabled={false}
+          open
+          setOpen={vi.fn()}
+        />
+      </ThemeProvider>,
+    );
+
+    expect(screen.getByRole("button", { name: "Close" })).toHaveStyle({
+      color: "rgb(0, 0, 0)",
+    });
   });
 });

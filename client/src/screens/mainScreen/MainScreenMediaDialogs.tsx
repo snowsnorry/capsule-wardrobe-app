@@ -99,6 +99,7 @@ export function ImageDialog({
     >
       <Box
         data-testid="outfit-set-image-dialog"
+        onClick={() => !disabled && setOpen(false)}
         sx={{
           width: "100vw",
           height: "100vh",
@@ -117,6 +118,10 @@ export function ImageDialog({
             top: 16,
             right: 16,
             bgcolor: "rgba(255,255,255,0.9)",
+            color: "common.black",
+            "&:hover": {
+              bgcolor: "rgba(255,255,255,1)",
+            },
           }}
         >
           <CloseRoundedIcon />
@@ -126,6 +131,7 @@ export function ImageDialog({
             component="img"
             src={src}
             alt={`Outfit set ${label || ""}`}
+            onClick={(event) => event.stopPropagation()}
             sx={{
               maxWidth: "calc(100vw - 32px)",
               maxHeight: "calc(100vh - 32px)",

@@ -239,6 +239,8 @@ const ru = {
     deleteOutfitSetImage: "Удалить изображение",
     deleteOutfitSetImageConfirmBody:
       "Вы уверены, что хотите удалить это изображение? Это действие нельзя отменить.",
+    openOutfitSetImagePreview:
+      "Открыть предпросмотр изображения образа {number}",
     outfitSetImageObsolete:
       "Это изображение может больше не соответствовать текущему образу. Удалите его и при необходимости сгенерируйте новое.",
     revertConfirmBody:

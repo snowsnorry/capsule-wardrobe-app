@@ -1,5 +1,13 @@
 import type { MouseEvent } from "react";
-import { Alert, Box, Button, Divider, IconButton, Stack } from "@mui/material";
+import {
+  Alert,
+  Box,
+  Button,
+  ButtonBase,
+  Divider,
+  IconButton,
+  Stack,
+} from "@mui/material";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import ClothingCard from "../../components/ClothingCard";
 import ClothingGridPlaceholder, {
@@ -59,6 +67,29 @@ function OutfitImagePlaceholder() {
   );
 }
 
+const outfitImagePreviewButtonSx = {
+  display: "block",
+  maxWidth: "100%",
+  borderRadius: "8px",
+  cursor: "zoom-in",
+  p: 0,
+  textAlign: "left",
+  "&:focus-visible": {
+    outline: "3px solid",
+    outlineColor: "primary.main",
+    outlineOffset: 3,
+  },
+} as const;
+
+const outfitImageSx = {
+  width: "auto",
+  maxWidth: "100%",
+  display: "block",
+  border: "1px solid",
+  borderColor: "divider",
+  borderRadius: "8px",
+} as const;
+
 function OutfitImageBlock({ props }: { props: WardrobeProps }) {
   const { t } = useI18n();
   const set = props.activeSet;
@@ -103,22 +134,21 @@ function OutfitImageBlock({ props }: { props: WardrobeProps }) {
           >
             <DeleteOutlineRoundedIcon />
           </IconButton>
-          <Box
-            component="img"
-            src={props.activeImageSrc}
-            alt={`Outfit set ${set.label}`}
-            data-testid="outfit-set-image"
+          <ButtonBase
+            aria-label={t("capsule.openOutfitSetImagePreview", {
+              number: set.label,
+            })}
             onClick={props.onImageClick}
-            sx={{
-              width: "auto",
-              maxWidth: "100%",
-              display: "block",
-              border: "1px solid",
-              borderColor: "divider",
-              borderRadius: "8px",
-              cursor: "zoom-in",
-            }}
-          />
+            sx={outfitImagePreviewButtonSx}
+          >
+            <Box
+              component="img"
+              src={props.activeImageSrc}
+              alt={`Outfit set ${set.label}`}
+              data-testid="outfit-set-image"
+              sx={outfitImageSx}
+            />
+          </ButtonBase>
         </Box>
       ) : null}
       {!props.isImagePending && !props.activeImageSrc ? (

@@ -445,7 +445,14 @@ describe("MainScreen", () => {
     });
 
     await user.click(screen.getByRole("tab", { name: "Outfit 1" }));
-    await user.click(screen.getByTestId("outfit-set-image"));
+    const outfitImagePreview = screen.getByRole("button", {
+      name: "Open outfit 1 image preview",
+    });
+    expect(outfitImagePreview).toBeInTheDocument();
+    expect(screen.getByTestId("outfit-set-image")).toBeInTheDocument();
+    outfitImagePreview.focus();
+    expect(outfitImagePreview).toHaveFocus();
+    await user.keyboard("{Enter}");
     expect(screen.getByTestId("outfit-set-image-dialog")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Close" }));
     await waitFor(() => {

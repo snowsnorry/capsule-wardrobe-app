@@ -239,6 +239,7 @@ const en = {
     deleteOutfitSetImage: "Delete image",
     deleteOutfitSetImageConfirmBody:
       "Are you sure you want to delete this image? This action cannot be undone.",
+    openOutfitSetImagePreview: "Open outfit {number} image preview",
     outfitSetImageObsolete:
       "This image may no longer match the current outfit. Remove it and generate a new one if needed.",
     revertConfirmBody:
