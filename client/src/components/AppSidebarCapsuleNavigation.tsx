@@ -17,16 +17,19 @@ import type { CapsuleNavItem } from "./AppSidebarNavigationTypes";
 const naturalEase = "cubic-bezier(0.2, 0, 0, 1)";
 const motionTransition = `grid-template-rows 240ms ${naturalEase}, max-height 240ms ${naturalEase}, opacity 180ms ease-in-out`;
 const expandedCapsuleChildrenMaxHeight = "calc(100vh - 260px)";
-const capsuleRailOffset = "30px";
+const capsuleChildrenContentInset = 4.5;
+const capsuleChildrenInlineEndInset = 1.5;
+const capsuleRowTextInset = 1.5;
 
 type Translate = (key: string) => string;
 
 function getCapsuleRowSx(isOverlaySidebar: boolean) {
   return {
     borderRadius: 999,
-    mb: 0.5,
-    px: 2,
-    minHeight: 48,
+    mb: 0.25,
+    px: capsuleRowTextInset,
+    minHeight: 40,
+    columnGap: 0.5,
     "& .capsule-row-unsaved-dot": {
       opacity: 1,
       transition: "opacity 120ms ease",
@@ -207,7 +210,9 @@ function CapsuleList({
   t: Translate;
 }) {
   return (
-    <List sx={{ flex: 1, minHeight: 0, overflowY: "auto", px: 0, pb: 1 }}>
+    <List
+      sx={{ flex: 1, minHeight: 0, overflowY: "auto", px: 0, pt: 0, pb: 1 }}
+    >
       {capsuleList.map((capsule) => (
         <CapsuleRow
           key={String(capsule.id || "")}
@@ -223,6 +228,35 @@ function CapsuleList({
         />
       ))}
     </List>
+  );
+}
+
+function CapsuleSectionLabel({ label }: { label: string }) {
+  return (
+    <Stack
+      direction="row"
+      alignItems="center"
+      sx={{
+        minHeight: 32,
+        pt: 1.5,
+        pb: 0.5,
+        pl: capsuleRowTextInset,
+      }}
+    >
+      <Typography
+        sx={{
+          color: "text.secondary",
+          flex: 1,
+          fontSize: "0.75rem",
+          fontWeight: 700,
+          letterSpacing: "0.04em",
+          lineHeight: 1.4,
+          textTransform: "uppercase",
+        }}
+      >
+        {label}
+      </Typography>
+    </Stack>
   );
 }
 
@@ -266,11 +300,9 @@ function CapsuleChildren({
         sx={{
           minHeight: 0,
           overflow: "hidden",
-          ml: capsuleRailOffset,
-          mr: 1.5,
-          pl: 2.5,
-          borderLeft: "2px solid",
-          borderColor: "divider",
+          ml: 0,
+          mr: capsuleChildrenInlineEndInset,
+          pl: capsuleChildrenContentInset,
         }}
       >
         <CapsulePrimaryActions
@@ -280,17 +312,7 @@ function CapsuleChildren({
           onSearchCapsules={onSearchCapsules}
           t={t}
         />
-        <Stack
-          direction="row"
-          alignItems="center"
-          sx={{ pt: 2, pb: 1, minHeight: 40 }}
-        >
-          <Typography
-            sx={{ color: "text.secondary", fontSize: "0.95rem", flex: 1 }}
-          >
-            {t("capsule.yourCapsules")}
-          </Typography>
-        </Stack>
+        <CapsuleSectionLabel label={t("capsule.yourCapsules")} />
         <CapsuleList
           capsuleList={capsuleList}
           activeCapsuleId={activeCapsuleId}
