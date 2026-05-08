@@ -7,7 +7,7 @@ import type { AppId } from "./AppSidebarNavigationTypes";
 
 const naturalEase = "cubic-bezier(0.2, 0, 0, 1)";
 export const topLevelIconRailWidth = "60px";
-export const expandedTopLevelIconShift = "-12px";
+export const expandedTopLevelIconShift = "-6px";
 
 type Translate = (key: string) => string;
 

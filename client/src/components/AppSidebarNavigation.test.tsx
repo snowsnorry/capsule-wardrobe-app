@@ -23,6 +23,11 @@ import AppSidebarNavigation from "./AppSidebarNavigation";
 
 const theme = createTheme();
 
+function getTranslateX(transform: string): number {
+  const match = transform.match(/translateX\((-?\d+(?:\.\d+)?)px\)/);
+  return match ? Number(match[1]) : 0;
+}
+
 function renderNavigation(
   props: Partial<ComponentProps<typeof AppSidebarNavigation>> = {},
 ) {
@@ -123,9 +128,57 @@ describe("AppSidebarNavigation", () => {
       );
       expect(getComputedStyle(iconRail as Element).width).toBe("60px");
       expect(getComputedStyle(iconRail as Element).transform).toBe(
-        "translateX(-12px)",
+        "translateX(-6px)",
       );
     }
+  });
+
+  test("aligns expanded top-level icon centers with the collapsed rail", () => {
+    const desktopSidebarRailWidth = 72;
+    const expandedSidebarPadding = 12;
+    const { rerender } = renderNavigation({
+      desktopSidebarRailWidth,
+      activeApp: "explore",
+    });
+
+    const expandedExploreIconRail = screen.getByRole("button", {
+      name: "Explore",
+    }).firstElementChild;
+
+    expect(expandedExploreIconRail).not.toBeNull();
+    const expandedStyle = getComputedStyle(expandedExploreIconRail as Element);
+    const expandedIconCenter =
+      expandedSidebarPadding +
+      Number.parseFloat(expandedStyle.width) / 2 +
+      getTranslateX(expandedStyle.transform);
+
+    rerender(
+      <ThemeProvider theme={theme}>
+        <AppSidebarNavigation
+          activeApp="explore"
+          isOverlaySidebar={false}
+          isSidebarCollapsed
+          desktopSidebarRailWidth={desktopSidebarRailWidth}
+          capsuleList={[]}
+          onNavigateApp={vi.fn()}
+        />
+      </ThemeProvider>,
+    );
+
+    const collapsedExploreIconRail = screen.getByRole("button", {
+      name: "Explore",
+    }).firstElementChild;
+
+    expect(collapsedExploreIconRail).not.toBeNull();
+    const collapsedStyle = getComputedStyle(
+      collapsedExploreIconRail as Element,
+    );
+    const collapsedIconCenter =
+      Number.parseFloat(collapsedStyle.width) / 2 +
+      getTranslateX(collapsedStyle.transform);
+
+    expect(expandedIconCenter).toBe(collapsedIconCenter);
+    expect(collapsedIconCenter).toBe(desktopSidebarRailWidth / 2);
   });
 
   test("uses the default unsaved-change predicate when none is supplied", () => {
