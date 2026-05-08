@@ -84,12 +84,31 @@ describe("tremor charts", () => {
     await waitFor(() => {
       expect(document.querySelector(".recharts-wrapper")).toBeInTheDocument();
     });
+    expect(
+      Array.from(document.head.querySelectorAll("style")).some((style) =>
+        style.textContent?.includes(
+          ".recharts-surface:focus-visible .recharts-bar-rectangle",
+        ),
+      ),
+    ).toBe(true);
 
     fireEvent.click(screen.getByRole("button", { name: "Category: Top" }));
 
     expect(onValueChange).toHaveBeenCalledWith(
       expect.objectContaining({ rawValue: "top" }),
     );
+
+    fireEvent.focus(screen.getByRole("button", { name: "Category: Top" }));
+    await waitFor(() => {
+      expect(
+        document.querySelector('[stroke-width="2.5"]'),
+      ).toBeInTheDocument();
+    });
+    const focusedBar = document.querySelector('[stroke-width="2.5"]');
+    expect(focusedBar).toHaveStyle({
+      filter: "drop-shadow(0 0 5px rgba(28, 124, 124, 0.55)) brightness(1.08)",
+    });
+    expect(focusedBar).toHaveAttribute("stroke-width", "2.5");
   });
 
   test("DonutChart renders legend rows and omits other bucket actions", async () => {
@@ -126,6 +145,13 @@ describe("tremor charts", () => {
     await waitFor(() => {
       expect(document.querySelector(".recharts-wrapper")).toBeInTheDocument();
     });
+    expect(
+      Array.from(document.head.querySelectorAll("style")).some((style) =>
+        style.textContent?.includes(
+          ".recharts-surface:focus-visible .recharts-pie-sector",
+        ),
+      ),
+    ).toBe(true);
 
     expect(screen.getByText("Blue")).toBeInTheDocument();
     expect(
@@ -135,6 +161,18 @@ describe("tremor charts", () => {
     expect(onValueChange).toHaveBeenCalledWith(
       expect.objectContaining({ rawValue: "blue" }),
     );
+
+    fireEvent.focus(screen.getByRole("button", { name: "Color: Blue" }));
+    await waitFor(() => {
+      expect(
+        document.querySelector('[stroke-width="2.5"]'),
+      ).toBeInTheDocument();
+    });
+    const focusedSector = document.querySelector('[stroke-width="2.5"]');
+    expect(focusedSector).toHaveStyle({
+      filter: "drop-shadow(0 0 6px rgba(28, 124, 124, 0.55)) brightness(1.08)",
+    });
+    expect(focusedSector).toHaveAttribute("stroke-width", "2.5");
   });
 
   test("LineChart renders without a custom label formatter", async () => {
@@ -150,5 +188,12 @@ describe("tremor charts", () => {
     await waitFor(() => {
       expect(document.querySelector(".recharts-wrapper")).toBeInTheDocument();
     });
+    expect(
+      Array.from(document.head.querySelectorAll("style")).some((style) =>
+        style.textContent?.includes(
+          ".recharts-surface:focus-visible .recharts-area-curve",
+        ),
+      ),
+    ).toBe(true);
   });
 });

@@ -6,6 +6,7 @@ import {
   screen,
   within,
 } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import SearchResultsList from "./SearchResultsList";
 
 const t = (key: string, params?: Record<string, unknown>) => {
@@ -87,6 +88,30 @@ describe("SearchResultsList", () => {
     expect(chipRoot).not.toBeNull();
     fireEvent.click(within(chipRoot as HTMLElement).getByTestId("CancelIcon"));
     expect(onDeleteActiveChip).toHaveBeenCalledWith(chip);
+  });
+
+  test("keeps custom result rows keyboard operable with a visible focus style", async () => {
+    const user = userEvent.setup();
+    const onSelectResult = vi.fn();
+
+    render(
+      <SearchResultsList {...baseProps} onSelectResult={onSelectResult} />,
+    );
+
+    const resultRow = screen.getByRole("button", { name: /Wool Trousers/ });
+    await user.tab();
+    await user.tab();
+    await user.keyboard("{Enter}");
+
+    expect(resultRow).toHaveFocus();
+    expect(onSelectResult).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "2" }),
+    );
+    expect(
+      Array.from(document.head.querySelectorAll("style")).some((style) =>
+        style.textContent?.includes("inset 0 0 0 2px"),
+      ),
+    ).toBe(true);
   });
 
   test("renders empty state when not loading", () => {

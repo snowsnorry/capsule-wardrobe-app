@@ -1,5 +1,6 @@
 import { Box, Stack, Typography, useTheme } from "@mui/material";
 import type { CSSProperties } from "react";
+import { useState } from "react";
 import { Cell, Pie, PieChart, Tooltip } from "recharts";
 import { getTooltipStyle, getTooltipTextStyle } from "./chartUtils";
 import ChartContainer from "./ChartContainer";
@@ -43,6 +44,7 @@ function DonutChart({
 }: DonutChartProps) {
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === "dark";
+  const [focusedValue, setFocusedValue] = useState<string | null>(null);
   const hasSelection = activeValues.length > 0;
   const strokeColor = isDarkMode
     ? "rgba(238, 245, 243, 0.34)"
@@ -67,10 +69,13 @@ function DonutChart({
         gap: 2,
         alignItems: "center",
         overflow: "hidden",
-        "& .recharts-surface:focus, & .recharts-surface:focus-visible, & .recharts-sector:focus, & .recharts-sector:focus-visible, & [tabindex]:focus, & [tabindex]:focus-visible":
-          {
-            outline: "none",
-          },
+        "& .recharts-surface:focus": {
+          outline: "none",
+        },
+        "& .recharts-surface:focus-visible .recharts-pie-sector": {
+          filter:
+            "drop-shadow(0 0 5px rgba(28, 124, 124, 0.42)) brightness(1.04)",
+        },
       }}
     >
       <ChartContainer
@@ -79,6 +84,7 @@ function DonutChart({
             activeStrokeColor={activeStrokeColor}
             category={category}
             data={data}
+            focusedValue={focusedValue}
             hasSelection={hasSelection}
             height={height}
             index={index}
@@ -96,6 +102,7 @@ function DonutChart({
       <DonutA11yButtons
         data={data}
         index={index}
+        onFocusValue={setFocusedValue}
         onValueChange={onValueChange}
       />
     </Box>
@@ -106,6 +113,7 @@ function DonutPie({
   activeStrokeColor,
   category,
   data,
+  focusedValue,
   hasSelection,
   height,
   index,
@@ -145,7 +153,7 @@ function DonutPie({
         outerRadius="82%"
         paddingAngle={data.length > 1 ? 1.5 : 0}
         strokeWidth={1}
-        isAnimationActive
+        isAnimationActive={focusedValue === null}
         animationDuration={320}
         onClick={(entry: unknown) => {
           if (isDonutChartDatum(entry) && !entry.isOther && entry.rawValue) {
@@ -158,17 +166,23 @@ function DonutPie({
             key={row.rawValue}
             fill={row.color}
             fillOpacity={
-              row.isOther
-                ? 0.34
-                : hasSelection
-                  ? row.isActive
-                    ? 1
-                    : 0.42
-                  : 0.92
+              focusedValue === row.rawValue
+                ? 1
+                : row.isOther
+                  ? 0.34
+                  : hasSelection
+                    ? row.isActive
+                      ? 1
+                      : 0.42
+                    : 0.92
             }
-            stroke={row.isActive ? activeStrokeColor : strokeColor}
-            strokeWidth={1}
-            style={getDonutCellStyle(row)}
+            stroke={
+              focusedValue === row.rawValue || row.isActive
+                ? activeStrokeColor
+                : strokeColor
+            }
+            strokeWidth={focusedValue === row.rawValue ? 2.5 : 1}
+            style={getDonutCellStyle(row, focusedValue === row.rawValue)}
           />
         ))}
       </Pie>
@@ -176,11 +190,17 @@ function DonutPie({
   );
 }
 
-function getDonutCellStyle(row: DonutChartDatum): CSSProperties {
+function getDonutCellStyle(
+  row: DonutChartDatum,
+  isFocused: boolean,
+): CSSProperties {
   return {
     cursor: row.isOther ? "default" : "pointer",
+    filter: isFocused
+      ? "drop-shadow(0 0 6px rgba(28, 124, 124, 0.55)) brightness(1.08)"
+      : undefined,
     transition:
-      "fill-opacity 180ms ease, stroke 180ms ease, stroke-width 180ms ease",
+      "filter 180ms ease, fill-opacity 180ms ease, stroke 180ms ease, stroke-width 180ms ease",
   };
 }
 
@@ -255,7 +275,7 @@ function DonutLegendItem({ hasSelection, index, row }) {
   );
 }
 
-function DonutA11yButtons({ data, index, onValueChange }) {
+function DonutA11yButtons({ data, index, onFocusValue, onValueChange }) {
   return (
     <Box
       sx={{
@@ -266,6 +286,7 @@ function DonutA11yButtons({ data, index, onValueChange }) {
         m: -1,
         overflow: "hidden",
         clip: "rect(0 0 0 0)",
+        clipPath: "inset(50%)",
         whiteSpace: "nowrap",
         border: 0,
       }}
@@ -276,7 +297,9 @@ function DonutA11yButtons({ data, index, onValueChange }) {
             key={row.rawValue}
             type="button"
             aria-label={`${row.groupLabel}: ${row[index]}`}
+            onBlur={() => onFocusValue(null)}
             onClick={() => onValueChange?.(row)}
+            onFocus={() => onFocusValue(row.rawValue)}
           />
         ),
       )}

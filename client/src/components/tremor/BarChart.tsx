@@ -1,5 +1,6 @@
 import { Box, useTheme } from "@mui/material";
 import type { CSSProperties, ReactElement } from "react";
+import { useState } from "react";
 import {
   Bar,
   BarChart as RechartsBarChart,
@@ -59,6 +60,7 @@ function BarChart({
 }: BarChartProps) {
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === "dark";
+  const [focusedValue, setFocusedValue] = useState<string | null>(null);
   const hasSelection = activeValues.length > 0;
   const activeLabels = new Set(
     data.filter((row) => row.isActive).map((row) => row[index]),
@@ -73,6 +75,7 @@ function BarChart({
           category={category}
           colors={colors}
           data={data}
+          focusedValue={focusedValue}
           hasSelection={hasSelection}
           height={height}
           index={index}
@@ -83,10 +86,13 @@ function BarChart({
       )}
       sx={{
         height: 360,
-        "& .recharts-surface:focus, & .recharts-surface:focus-visible, & .recharts-rectangle:focus, & .recharts-rectangle:focus-visible, & [tabindex]:focus, & [tabindex]:focus-visible":
-          {
-            outline: "none",
-          },
+        "& .recharts-surface:focus": {
+          outline: "none",
+        },
+        "& .recharts-surface:focus-visible .recharts-bar-rectangle": {
+          filter:
+            "drop-shadow(0 0 4px rgba(28, 124, 124, 0.42)) brightness(1.04)",
+        },
       }}
     >
       <Box
@@ -98,6 +104,7 @@ function BarChart({
           m: -1,
           overflow: "hidden",
           clip: "rect(0 0 0 0)",
+          clipPath: "inset(50%)",
           whiteSpace: "nowrap",
           border: 0,
         }}
@@ -105,6 +112,7 @@ function BarChart({
         <BarChartA11yButtons
           data={data}
           index={index}
+          onFocusValue={setFocusedValue}
           onValueChange={onValueChange}
         />
       </Box>
@@ -136,6 +144,7 @@ function BarChartPlot({
   category,
   colors,
   data,
+  focusedValue,
   hasSelection,
   height,
   index,
@@ -184,7 +193,7 @@ function BarChartPlot({
         dataKey={category}
         radius={[0, 0, 0, 0]}
         maxBarSize={18}
-        isAnimationActive
+        isAnimationActive={focusedValue === null}
         animationDuration={320}
         onClick={(entry: unknown) => {
           if (isBarChartDatum(entry) && entry.rawValue) {
@@ -196,12 +205,22 @@ function BarChartPlot({
           <Cell
             key={row.rawValue}
             fill={row.color}
-            fillOpacity={hasSelection ? (row.isActive ? 1 : 0.46) : 1}
-            stroke={
-              row.isActive ? colors.activeStrokeColor : colors.strokeColor
+            fillOpacity={
+              focusedValue === row.rawValue
+                ? 1
+                : hasSelection
+                  ? row.isActive
+                    ? 1
+                    : 0.46
+                  : 1
             }
-            strokeWidth={1}
-            style={barCellStyle}
+            stroke={
+              focusedValue === row.rawValue || row.isActive
+                ? colors.activeStrokeColor
+                : colors.strokeColor
+            }
+            strokeWidth={focusedValue === row.rawValue ? 2.5 : 1}
+            style={getBarCellStyle(focusedValue === row.rawValue)}
           />
         ))}
       </Bar>
@@ -271,19 +290,26 @@ function BarChartXAxis({ activeLabels, colors, hasSelection, index }) {
   );
 }
 
-const barCellStyle = {
-  cursor: "pointer",
-  transition:
-    "fill-opacity 180ms ease, stroke 180ms ease, stroke-width 180ms ease",
-} as CSSProperties;
+function getBarCellStyle(isFocused: boolean): CSSProperties {
+  return {
+    cursor: "pointer",
+    filter: isFocused
+      ? "drop-shadow(0 0 5px rgba(28, 124, 124, 0.55)) brightness(1.08)"
+      : undefined,
+    transition:
+      "filter 180ms ease, fill-opacity 180ms ease, stroke 180ms ease, stroke-width 180ms ease",
+  };
+}
 
-function BarChartA11yButtons({ data, index, onValueChange }) {
+function BarChartA11yButtons({ data, index, onFocusValue, onValueChange }) {
   return data.map((row) => (
     <button
       key={row.rawValue}
       type="button"
       aria-label={`${row.groupLabel}: ${row[index]}`}
+      onBlur={() => onFocusValue(null)}
       onClick={() => onValueChange?.(row)}
+      onFocus={() => onFocusValue(row.rawValue)}
     />
   ));
 }

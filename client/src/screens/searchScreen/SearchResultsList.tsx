@@ -177,12 +177,16 @@ function ResultListItem({
           ? "var(--cw-color-action-wash)"
           : "transparent",
         transition:
-          "background-color 160ms ease, border-color 160ms ease, transform 160ms ease",
-        outline: "none",
+          "background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease",
         "&:hover": {
           backgroundColor: isSelected
             ? "var(--cw-color-action-wash)"
             : "var(--cw-color-action-hover)",
+        },
+        "&:focus-visible": {
+          outline: "none",
+          borderColor: "primary.main",
+          boxShadow: "inset 0 0 0 2px var(--cw-color-primary)",
         },
       }}
       data-mobile-result={isMobile ? "true" : undefined}

@@ -79,6 +79,7 @@ function LineChart({
             labelStyle={tooltipTextStyle}
           />
           <Area
+            className="tremor-line-chart-area"
             type="monotone"
             dataKey={category}
             stroke={areaColor}
@@ -98,10 +99,18 @@ function LineChart({
       )}
       sx={{
         height: 360,
-        "& .recharts-surface:focus, & .recharts-surface:focus-visible, & [tabindex]:focus, & [tabindex]:focus-visible":
-          {
-            outline: "none",
-          },
+        "& .recharts-surface:focus": {
+          outline: "none",
+        },
+        "& .recharts-surface:focus-visible .recharts-area-area": {
+          filter: "brightness(1.08)",
+          opacity: 0.42,
+        },
+        "& .recharts-surface:focus-visible .recharts-area-curve": {
+          filter:
+            "drop-shadow(0 0 5px rgba(28, 124, 124, 0.55)) brightness(1.08)",
+          strokeWidth: 3,
+        },
       }}
     />
   );
