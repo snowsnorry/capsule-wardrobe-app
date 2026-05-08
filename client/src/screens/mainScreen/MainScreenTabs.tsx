@@ -1,44 +1,11 @@
-import { Box, Stack, Tab, Tabs, Typography } from "@mui/material";
+import { Box, Tab, Tabs } from "@mui/material";
 import { useI18n } from "../../i18n/useI18n";
 import type { ResolvedOutfitSet } from "./MainScreenTypes";
-
-function MobileSummary({ items }: { items: string[] }) {
-  return (
-    <Stack
-      direction="row"
-      flexWrap="wrap"
-      useFlexGap
-      gap={0.75}
-      sx={{ color: "text.secondary", minWidth: 0, px: 2, pb: 1.5 }}
-    >
-      {items.map((item, index) => (
-        <Typography
-          key={`${item}-${index}`}
-          variant="body2"
-          component="span"
-          sx={{
-            display: "inline-flex",
-            gap: 0.75,
-            "&::before":
-              index === 0
-                ? undefined
-                : { content: '"•"', color: "text.disabled" },
-          }}
-        >
-          {item}
-        </Typography>
-      ))}
-    </Stack>
-  );
-}
 
 function MainScreenTabs({
   activeTab,
   disabled,
-  isOverlay,
-  selectedCount,
   sets,
-  summary,
   onChange,
 }: {
   activeTab: string;
@@ -53,9 +20,6 @@ function MainScreenTabs({
 
   return (
     <>
-      {isOverlay && selectedCount === 0 ? (
-        <MobileSummary items={summary} />
-      ) : null}
       {sets.length > 0 ? (
         <Box>
           <Tabs

@@ -35,7 +35,7 @@ describe("MainScreenTabs", () => {
     cleanup();
   });
 
-  test("shows overlay summary and changes active outfit set", async () => {
+  test("changes active outfit set without duplicating overlay summary", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
     renderWithTheme(
@@ -50,8 +50,8 @@ describe("MainScreenTabs", () => {
       />,
     );
 
-    expect(screen.getByText("2 items")).toBeInTheDocument();
-    expect(screen.getByText("2 outfits")).toBeInTheDocument();
+    expect(screen.queryByText("2 items")).not.toBeInTheDocument();
+    expect(screen.queryByText("2 outfits")).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("tab", { name: "Outfit 2" }));
 

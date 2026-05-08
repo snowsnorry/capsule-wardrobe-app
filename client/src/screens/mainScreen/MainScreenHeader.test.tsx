@@ -173,6 +173,16 @@ describe("MainScreenHeader", () => {
     ).toBeInTheDocument();
   });
 
+  test("shows mobile filters button and summary when selection is inactive", () => {
+    renderHeader({ isOverlay: true, selectedCount: 0 });
+
+    expect(
+      screen.getByRole("button", { name: "Open filters" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("3 items")).toBeInTheDocument();
+    expect(screen.getByText("1 outfits")).toBeInTheDocument();
+  });
+
   test("keeps unsaved dot before the pencil trigger in the desktop header", () => {
     renderHeader({
       activeCapsule: {
