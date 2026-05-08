@@ -12,7 +12,6 @@ import { LocaleProvider } from "./i18n/LocaleProvider";
 const authApi = vi.hoisted(() => ({
   fetchCurrentUser: vi.fn(),
   fetchProfile: vi.fn(),
-  fetchProfileStatus: vi.fn(),
   updateProfile: vi.fn(),
   updateProfileLocale: vi.fn(),
   deleteProfile: vi.fn(),
@@ -223,6 +222,7 @@ function createBootstrapResponse({
   imageLlm = "openai:gpt-image-2",
 } = {}) {
   return {
+    hasProfile: true,
     profile: { locale, llm, image_llm: imageLlm },
     activeCapsule: {
       id: "capsule-1",
@@ -275,7 +275,6 @@ describe("App e2e-style flows", () => {
 
     authApi.fetchCurrentUser.mockReset();
     authApi.fetchProfile.mockReset();
-    authApi.fetchProfileStatus.mockReset();
     authApi.updateProfile.mockReset();
     authApi.updateProfileLocale.mockReset();
     authApi.deleteProfile.mockReset();
@@ -345,7 +344,13 @@ describe("App e2e-style flows", () => {
     authApi.verifyLoginCode.mockResolvedValue({
       user: { email: "flow@example.com" },
     });
-    authApi.fetchProfileStatus.mockResolvedValue({ hasProfile: false });
+    capsulesApi.fetchCapsuleBootstrap.mockResolvedValue({
+      hasProfile: false,
+      profile: null,
+      activeCapsule: null,
+      activeSnapshot: null,
+      capsules: [],
+    });
     authApi.initializeProfile.mockResolvedValue({});
     authApi.logout.mockResolvedValue({});
     mockProfileOptions();
@@ -409,12 +414,15 @@ describe("App e2e-style flows", () => {
     authApi.verifyLoginCode.mockResolvedValue({
       user: { email: "flow@example.com" },
     });
-    authApi.fetchProfileStatus.mockResolvedValue({ hasProfile: false });
+    capsulesApi.fetchCapsuleBootstrap.mockResolvedValue({
+      hasProfile: false,
+      profile: null,
+      activeCapsule: null,
+      activeSnapshot: null,
+      capsules: [],
+    });
     authApi.initializeProfile.mockResolvedValue({});
     authApi.logout.mockResolvedValue({});
-    capsulesApi.fetchCapsuleBootstrap.mockResolvedValue(
-      createBootstrapResponse({ locale: "en", llm: "openai:gpt-5.5" }),
-    );
     mockProfileOptions();
 
     renderApp();

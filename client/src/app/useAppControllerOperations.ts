@@ -17,11 +17,11 @@ import type { useProfileOptions } from "./useProfileOptions";
 import type { useShareRoute } from "./useShareRoute";
 import type {
   CapsuleBootstrapResponse,
+  CapsuleBootstrapResult,
   CapsuleDraft,
   CapsuleMeta,
   CapsuleWardrobeData,
   OutfitSetSnapshot,
-  ProfileSettings,
   WardrobeItem,
   WardrobeSnapshot,
 } from "./appTypes";
@@ -36,7 +36,7 @@ export type AppControllerOperations = {
     capsuleId?: string,
     options?: { refreshReadyCapsule?: boolean },
   ) => Promise<void>;
-  bootstrapCapsules: (email?: string) => Promise<ProfileSettings>;
+  bootstrapCapsules: (email?: string) => Promise<CapsuleBootstrapResult>;
   buildCurrentDraftSnapshot: (options?: {
     wardrobe?:
       | CapsuleWardrobeData
@@ -107,6 +107,12 @@ export function useAppControllerOperations({
     startWardrobeEventStream(operations.getAppActionContext(), capsuleId);
   operations.bootstrapCapsules = async (email = appState.user?.email) => {
     const result = (await fetchCapsuleBootstrap()) as CapsuleBootstrapResponse;
+    if (!result.hasProfile) {
+      return {
+        ...normalizeProfileSettings({}, email),
+        hasProfile: false,
+      };
+    }
     const normalizedProfile = normalizeProfileSettings(result.profile, email);
     appState.setSettingsProfile(normalizedProfile);
     if (normalizedProfile.locale) setLocale(normalizedProfile.locale);
@@ -114,7 +120,7 @@ export function useAppControllerOperations({
       capsules: result.capsules || [],
     });
     await restoreCapsuleSnapshot(operations, result);
-    return normalizedProfile;
+    return { ...normalizedProfile, hasProfile: true };
   };
   operations.getAppActionContext = () =>
     buildDefaultActionContext({

@@ -12,7 +12,6 @@ import { createTestProfile, testStatus } from "./testUtils";
 
 const authApi = vi.hoisted(() => ({
   clearRequestCache: vi.fn(),
-  fetchProfileStatus: vi.fn(),
   logout: vi.fn(),
   requestLoginCode: vi.fn(),
   signInWithGoogle: vi.fn(),
@@ -20,6 +19,13 @@ const authApi = vi.hoisted(() => ({
 }));
 
 vi.mock("../api/auth", () => authApi);
+
+const mainScreenLoader = vi.hoisted(() => ({
+  preloadMainScreen: vi.fn(),
+  shouldPreloadMainScreenForCurrentPath: vi.fn(() => true),
+}));
+
+vi.mock("./mainScreenLoader", () => mainScreenLoader);
 
 const passkeyAuth = vi.hoisted(() => ({
   authenticateWithPasskey: vi.fn(),
@@ -31,7 +37,10 @@ function createSessionContext(
   overrides: Partial<SessionActionContext> = {},
 ): SessionActionContext {
   return {
-    bootstrapCapsules: vi.fn(async () => createTestProfile()),
+    bootstrapCapsules: vi.fn(async () => ({
+      ...createTestProfile(),
+      hasProfile: true,
+    })),
     closeNotificationPrompt: vi.fn(),
     code: "654321",
     email: "person@example.com",
@@ -62,6 +71,9 @@ function createSessionContext(
 describe("sessionActions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mainScreenLoader.shouldPreloadMainScreenForCurrentPath.mockReturnValue(
+      true,
+    );
   });
 
   test("requestCode sends the trimmed email with current locale and moves to code step", async () => {
@@ -87,8 +99,12 @@ describe("sessionActions", () => {
     authApi.verifyLoginCode.mockResolvedValue({
       user: { email: "person@example.com" },
     });
-    authApi.fetchProfileStatus.mockResolvedValue({ hasProfile: false });
-    const context = createSessionContext();
+    const context = createSessionContext({
+      bootstrapCapsules: vi.fn(async () => ({
+        ...createTestProfile(),
+        hasProfile: false,
+      })),
+    });
 
     await verifyCode(context, { preventDefault: vi.fn() } as never);
 
@@ -105,13 +121,13 @@ describe("sessionActions", () => {
     expect(context.setUser).toHaveBeenCalledWith({
       email: "person@example.com",
     });
+    expect(mainScreenLoader.preloadMainScreen).toHaveBeenCalledTimes(1);
   });
 
   test("verifyCode bootstraps an existing profile and can show the passkey prompt", async () => {
     authApi.verifyLoginCode.mockResolvedValue({
       user: { email: "person@example.com" },
     });
-    authApi.fetchProfileStatus.mockResolvedValue({ hasProfile: true });
     const context = createSessionContext();
 
     await verifyCode(context, { preventDefault: vi.fn() } as never);
@@ -129,6 +145,21 @@ describe("sessionActions", () => {
       infoParams: null,
     });
     expect(context.maybeShowPasskeyPrompt).toHaveBeenCalled();
+    expect(mainScreenLoader.preloadMainScreen).toHaveBeenCalledTimes(1);
+  });
+
+  test("verifyCode skips MainScreen preload when the current route cannot render it", async () => {
+    authApi.verifyLoginCode.mockResolvedValue({
+      user: { email: "person@example.com" },
+    });
+    mainScreenLoader.shouldPreloadMainScreenForCurrentPath.mockReturnValue(
+      false,
+    );
+    const context = createSessionContext();
+
+    await verifyCode(context, { preventDefault: vi.fn() } as never);
+
+    expect(mainScreenLoader.preloadMainScreen).not.toHaveBeenCalled();
   });
 
   test("signOut clears cached client state and resets navigation/profile options", async () => {
@@ -174,7 +205,6 @@ describe("sessionActions", () => {
     authApi.signInWithGoogle.mockResolvedValueOnce({
       user: { email: "person@example.com" },
     });
-    authApi.fetchProfileStatus.mockResolvedValueOnce({ hasProfile: true });
     const context = createSessionContext();
 
     await googleCredential(context, "token-1");
@@ -201,7 +231,6 @@ describe("sessionActions", () => {
     passkeyAuth.authenticateWithPasskey.mockResolvedValueOnce({
       user: { email: "person@example.com" },
     });
-    authApi.fetchProfileStatus.mockResolvedValueOnce({ hasProfile: true });
     const context = createSessionContext();
 
     await passkeySignIn(context);

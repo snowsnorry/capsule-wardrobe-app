@@ -1,6 +1,5 @@
 import type { FormEvent, MouseEvent } from "react";
 import {
-  fetchProfileStatus,
   logout,
   requestLoginCode,
   signInWithGoogle,
@@ -8,17 +7,21 @@ import {
 } from "../api/auth";
 import { clearRequestCache } from "../api/auth";
 import { initialStatus } from "./appConstants";
+import {
+  preloadMainScreen,
+  shouldPreloadMainScreenForCurrentPath,
+} from "./mainScreenLoader";
 import { normalizeProfileSettings } from "./profileSettings";
 import type {
   AuthResultResponse,
+  CapsuleBootstrapResult,
   ProfileSettings,
-  ProfileStatusResponse,
   StatusState,
   UserLike,
 } from "./appTypes";
 
 export type SessionActionContext = {
-  bootstrapCapsules: (email?: string) => Promise<unknown>;
+  bootstrapCapsules: (email?: string) => Promise<CapsuleBootstrapResult>;
   closeNotificationPrompt: () => void;
   code: string;
   email: string;
@@ -91,10 +94,13 @@ async function prepareSignedInProfile(
   context: SessionActionContext,
   userEmail: string | undefined,
 ) {
-  await Promise.all([
-    context.ensureOptionsLoaded({ useFallback: true }),
+  const bootstrap = await context.retry(() =>
     context.bootstrapCapsules(userEmail),
-  ]);
+  );
+  if (bootstrap.hasProfile) {
+    await context.ensureOptionsLoaded({ useFallback: true });
+  }
+  return bootstrap;
 }
 
 async function prepareOnboardingProfile(
@@ -118,20 +124,22 @@ async function applyAuthResult(
   result: AuthResultResponse,
   showPasskeyPrompt: boolean,
 ) {
-  const profileStatus = await context.retry(
-    () => fetchProfileStatus() as Promise<ProfileStatusResponse>,
-  );
-  context.setHasProfile(profileStatus.hasProfile);
-  context.setProfileCreated(profileStatus.hasProfile);
+  const user = result.user || null;
+  if (user && shouldPreloadMainScreenForCurrentPath()) {
+    preloadMainScreen();
+  }
 
-  if (!profileStatus.hasProfile) {
-    await prepareOnboardingProfile(context, result.user?.email);
-    context.setUser(result.user);
+  const bootstrap = await prepareSignedInProfile(context, user?.email);
+  context.setHasProfile(bootstrap.hasProfile);
+  context.setProfileCreated(bootstrap.hasProfile);
+
+  if (!bootstrap.hasProfile) {
+    await prepareOnboardingProfile(context, user?.email);
+    context.setUser(user);
     return;
   }
 
-  await prepareSignedInProfile(context, result.user?.email);
-  context.setUser(result.user);
+  context.setUser(user);
   context.setStatus({
     loading: false,
     error: "",

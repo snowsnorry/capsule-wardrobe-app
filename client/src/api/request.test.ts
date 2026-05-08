@@ -116,8 +116,8 @@ describe("request api", () => {
         }),
     );
 
-    const first = getCachedJson("/profile/status", { ttlMs: 1000 });
-    const second = getCachedJson("/profile/status", { ttlMs: 1000 });
+    const first = getCachedJson("/profile/me", { ttlMs: 1000 });
+    const second = getCachedJson("/profile/me", { ttlMs: 1000 });
 
     expect(fetch).toHaveBeenCalledTimes(1);
 
@@ -131,7 +131,7 @@ describe("request api", () => {
     await expect(first).resolves.toEqual({ hasProfile: true });
     await expect(second).resolves.toEqual({ hasProfile: true });
 
-    const third = await getCachedJson("/profile/status", { ttlMs: 1000 });
+    const third = await getCachedJson("/profile/me", { ttlMs: 1000 });
     expect(third).toEqual({ hasProfile: true });
     expect(fetch).toHaveBeenCalledTimes(1);
 
@@ -144,7 +144,7 @@ describe("request api", () => {
     );
 
     await expect(
-      getCachedJson("/profile/status", { ttlMs: 1000 }),
+      getCachedJson("/profile/me", { ttlMs: 1000 }),
     ).resolves.toEqual({ hasProfile: false });
     expect(fetch).toHaveBeenCalledTimes(2);
   });

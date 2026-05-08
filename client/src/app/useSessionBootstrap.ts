@@ -1,15 +1,19 @@
 import { useEffect, useRef } from "react";
-import { fetchCurrentUser, fetchProfileStatus } from "../api/auth";
+import { fetchCurrentUser } from "../api/auth";
+import {
+  preloadMainScreen,
+  shouldPreloadMainScreenForCurrentPath,
+} from "./mainScreenLoader";
 import { normalizeProfileSettings } from "./profileSettings";
 import type {
+  CapsuleBootstrapResult,
   CurrentUserResponse,
   ProfileSettings,
-  ProfileStatusResponse,
   UserLike,
 } from "./appTypes";
 
 type UseSessionBootstrapOptions = {
-  bootstrapCapsules: (email?: string) => Promise<ProfileSettings>;
+  bootstrapCapsules: (email?: string) => Promise<CapsuleBootstrapResult>;
   ensureOptionsLoaded: () => Promise<void>;
   preloadOnboardingOptions: () => Promise<void>;
   setHasProfile: (hasProfile: boolean) => void;
@@ -24,19 +28,16 @@ async function loadProfileState(
   options: UseSessionBootstrapOptions,
   user: UserLike | null,
 ) {
-  const profileStatus = (await fetchProfileStatus()) as ProfileStatusResponse;
-  options.setHasProfile(profileStatus.hasProfile);
-  options.setProfileCreated(profileStatus.hasProfile);
+  const bootstrap = await options.bootstrapCapsules(user?.email);
+  options.setHasProfile(bootstrap.hasProfile);
+  options.setProfileCreated(bootstrap.hasProfile);
 
-  if (!profileStatus.hasProfile) {
+  if (!bootstrap.hasProfile) {
     await options.preloadOnboardingOptions();
     return;
   }
 
-  await Promise.all([
-    options.ensureOptionsLoaded(),
-    options.bootstrapCapsules(user?.email),
-  ]);
+  await options.ensureOptionsLoaded();
 }
 
 export function useSessionBootstrap(options: UseSessionBootstrapOptions) {
@@ -54,8 +55,17 @@ export function useSessionBootstrap(options: UseSessionBootstrapOptions) {
       try {
         const current = (await fetchCurrentUser()) as CurrentUserResponse;
         if (!isActive) return;
-        currentOptions.setUser(current.user);
-        await loadProfileState(currentOptions, current.user);
+        const user = current.user || null;
+        currentOptions.setUser(user);
+        if (!user) {
+          currentOptions.setHasProfile(false);
+          currentOptions.setSettingsProfile(normalizeProfileSettings());
+          return;
+        }
+        if (shouldPreloadMainScreenForCurrentPath()) {
+          preloadMainScreen();
+        }
+        await loadProfileState(currentOptions, user);
       } catch {
         if (!isActive) return;
         currentOptions.setUser(null);

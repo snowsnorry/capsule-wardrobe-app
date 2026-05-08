@@ -38,13 +38,6 @@ async function signInWithGoogle(idToken: string): Promise<AuthResponse> {
   });
 }
 
-async function fetchProfileStatus(): Promise<AuthResponse> {
-  return getCachedJson(`${API_BASE_URL}/profile/status`, {
-    credentials: "include",
-    ttlMs: 1000,
-  });
-}
-
 async function fetchProfile(): Promise<AuthResponse> {
   return getCachedJson(`${API_BASE_URL}/profile/me`, {
     credentials: "include",
@@ -113,7 +106,6 @@ export {
   verifyLoginCode,
   signInWithGoogle,
   fetchCurrentUser,
-  fetchProfileStatus,
   fetchProfile,
   fetchWardrobeFilters,
   initializeProfile,

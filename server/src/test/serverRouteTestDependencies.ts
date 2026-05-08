@@ -145,7 +145,6 @@ function createProfileDependencies() {
       llm: "openai:gpt-5.5",
       imageLlm: "openai:gpt-image-2",
     }),
-    hasProfileImpl: async () => true,
     updateProfileImpl: async (email, payload) => ({
       id: "profile-1",
       email,

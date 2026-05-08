@@ -24,10 +24,21 @@ function registerCapsuleBootstrapRoutes(app, context) {
   app.get("/capsules/bootstrap", requireAuth, async (req, res) => {
     try {
       const profile = await getProfileImpl(req.user.email);
+      if (!profile) {
+        return res.json({
+          ok: true,
+          hasProfile: false,
+          profile: null,
+          activeCapsule: null,
+          activeSnapshot: null,
+          capsules: [],
+        });
+      }
       const activeCapsule = await resolveActiveCapsuleImpl(req.user.email);
       const recentCapsules = await listRecentCapsulesImpl(req.user.email, 10);
       return res.json({
         ok: true,
+        hasProfile: true,
         profile: toProfileResponse(profile),
         activeCapsule: toCapsuleResponse(activeCapsule),
         activeSnapshot: await getCapsuleEventSnapshot(

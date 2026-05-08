@@ -5,35 +5,13 @@ import {
   startTestServer,
 } from "../test/serverRouteTestUtils.js";
 
-test("profile status maps auth store failures", async (t) => {
-  vi.spyOn(console, "error").mockImplementation(() => {});
-
-  const failingAuthServer = await startTestServer(t, {
-    overrides: {
-      getSessionImpl: async () => {
-        throw new Error("session_store_down");
-      },
-    },
-  });
-  const authFailure = await requestJson(
-    failingAuthServer.baseUrl,
-    "/profile/status",
-    {
-      cookie: AUTH_COOKIE,
-    },
-  );
-  expect(authFailure.response.status).toBe(503);
-  expect(authFailure.json).toEqual({ error: "service_unavailable" });
-});
-
-test("profile read routes expose status, profile, and wardrobe filters", async (t) => {
+test("profile read routes expose profile and wardrobe filters", async (t) => {
   const { baseUrl } = await startTestServer(t);
 
   const status = await requestJson(baseUrl, "/profile/status", {
     cookie: AUTH_COOKIE,
   });
-  expect(status.response.status).toBe(200);
-  expect(status.json).toEqual({ ok: true, hasProfile: true });
+  expect(status.response.status).toBe(404);
 
   const profile = await requestJson(baseUrl, "/profile/me", {
     cookie: AUTH_COOKIE,

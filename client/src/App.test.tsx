@@ -13,7 +13,6 @@ const authApi = vi.hoisted(() => ({
   clearRequestCache: vi.fn(),
   deleteProfile: vi.fn(),
   fetchCurrentUser: vi.fn(),
-  fetchProfileStatus: vi.fn(),
   initializeProfile: vi.fn(),
   logout: vi.fn(),
   requestLoginCode: vi.fn(),
@@ -166,6 +165,7 @@ function createBootstrapResponse({
   };
 
   return {
+    hasProfile: true,
     profile: {
       email: "person@example.com",
       locale,
@@ -223,14 +223,13 @@ describe("App", () => {
 
     expect(await screen.findByTestId("sign-in-screen")).toBeInTheDocument();
     expect(screen.getByTestId("locale-switcher")).toBeInTheDocument();
-    expect(authApi.fetchProfileStatus).not.toHaveBeenCalled();
+    expect(capsulesApi.fetchCapsuleBootstrap).not.toHaveBeenCalled();
   });
 
   test("bootstraps an existing profile and switches between app routes", async () => {
     authApi.fetchCurrentUser.mockResolvedValue({
       user: { email: "person@example.com" },
     });
-    authApi.fetchProfileStatus.mockResolvedValue({ hasProfile: true });
 
     renderApp();
 
@@ -253,7 +252,6 @@ describe("App", () => {
     authApi.fetchCurrentUser.mockResolvedValue({
       user: { email: "person@example.com" },
     });
-    authApi.fetchProfileStatus.mockResolvedValue({ hasProfile: true });
     capsulesApi.fetchCapsuleBootstrap.mockResolvedValue(
       createBootstrapResponse({
         activeSnapshot: {
@@ -284,7 +282,6 @@ describe("App", () => {
     authApi.fetchCurrentUser.mockResolvedValue({
       user: { email: "person@example.com" },
     });
-    authApi.fetchProfileStatus.mockResolvedValue({ hasProfile: true });
 
     renderApp();
 
@@ -295,7 +292,6 @@ describe("App", () => {
     authApi.fetchCurrentUser.mockResolvedValue({
       user: { email: "person@example.com" },
     });
-    authApi.fetchProfileStatus.mockResolvedValue({ hasProfile: true });
     capsulesApi.fetchCapsuleBootstrap.mockResolvedValue(
       createBootstrapResponse({ locale: "ru" }),
     );
@@ -306,15 +302,15 @@ describe("App", () => {
     expect(authApi.updateProfileLocale).not.toHaveBeenCalled();
   });
 
-  test("retries profile status after verifying a code", async () => {
+  test("retries capsule bootstrap after verifying a code", async () => {
     authApi.fetchCurrentUser.mockRejectedValue(new Error("unauthorized"));
     authApi.verifyLoginCode.mockResolvedValue({
       user: { email: "person@example.com" },
     });
-    authApi.fetchProfileStatus
+    capsulesApi.fetchCapsuleBootstrap
       .mockRejectedValueOnce(new Error("temporary"))
       .mockRejectedValueOnce(new Error("temporary"))
-      .mockResolvedValue({ hasProfile: true });
+      .mockResolvedValue(createBootstrapResponse());
 
     renderApp();
 
@@ -323,6 +319,6 @@ describe("App", () => {
     await waitFor(() => {
       expect(screen.getByTestId("main-screen")).toBeInTheDocument();
     });
-    expect(authApi.fetchProfileStatus).toHaveBeenCalledTimes(3);
+    expect(capsulesApi.fetchCapsuleBootstrap).toHaveBeenCalledTimes(3);
   });
 });

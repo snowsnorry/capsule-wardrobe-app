@@ -115,20 +115,21 @@ export type CurrentUserResponse = {
   user?: UserLike | null;
 };
 
-export type ProfileStatusResponse = {
-  hasProfile?: boolean;
-};
-
 export type AuthResultResponse = {
   user?: UserLike | null;
   expiresInMs?: number;
 };
 
 export type CapsuleBootstrapResponse = {
+  hasProfile?: boolean;
   profile?: Partial<ProfileSettings>;
   activeCapsule?: CapsuleMeta | null;
   capsules?: CapsuleMeta[];
   activeSnapshot?: WardrobeSnapshot;
+};
+
+export type CapsuleBootstrapResult = ProfileSettings & {
+  hasProfile: boolean;
 };
 
 export type CapsuleListResponse = {

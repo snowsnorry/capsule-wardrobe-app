@@ -185,6 +185,7 @@ test("capsule read routes expose bootstrap, recent, search, and lookup fallbacks
   });
   expect(bootstrap.response.status).toBe(200);
   expect(bootstrap.json.ok).toBe(true);
+  expect(bootstrap.json.hasProfile).toBe(true);
   expect((bootstrap.json.activeCapsule as { id?: string }).id).toBe(
     "capsule-1",
   );
@@ -220,6 +221,38 @@ test("capsule read routes expose bootstrap, recent, search, and lookup fallbacks
     { type: "search", query: "office", limit: 25 },
     { type: "set-active", capsuleId: "capsule-1" },
   ]);
+});
+
+test("capsule bootstrap returns missing profile status without capsule lookups", async (t) => {
+  const calls: unknown[] = [];
+  const { baseUrl } = await startTestServer(t, {
+    overrides: {
+      getProfileImpl: async () => null,
+      resolveActiveCapsuleImpl: async () => {
+        calls.push({ type: "active" });
+        return null;
+      },
+      listRecentCapsulesImpl: async () => {
+        calls.push({ type: "recent" });
+        return [];
+      },
+    },
+  });
+
+  const bootstrap = await requestJson(baseUrl, "/capsules/bootstrap", {
+    cookie: AUTH_COOKIE,
+  });
+
+  expect(bootstrap.response.status).toBe(200);
+  expect(bootstrap.json).toEqual({
+    ok: true,
+    hasProfile: false,
+    profile: null,
+    activeCapsule: null,
+    activeSnapshot: null,
+    capsules: [],
+  });
+  expect(calls).toEqual([]);
 });
 
 test("capsule read and share routes map missing records and service failures", async (t) => {

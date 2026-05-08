@@ -15,7 +15,6 @@ import {
   requestLoginCode,
   verifyLoginCode,
   signInWithGoogle,
-  fetchProfileStatus,
   fetchProfile,
   fetchCurrentUser,
   fetchWardrobeFilters,
@@ -76,22 +75,16 @@ describe("auth api", () => {
   });
 
   test("cached auth/profile reads use include credentials and expected ttl", async () => {
-    await fetchProfileStatus();
     await fetchProfile();
     await fetchCurrentUser();
 
     expect(requestApi.getCachedJson).toHaveBeenNthCalledWith(
       1,
-      "https://api.example.test/profile/status",
-      { credentials: "include", ttlMs: 1000 },
-    );
-    expect(requestApi.getCachedJson).toHaveBeenNthCalledWith(
-      2,
       "https://api.example.test/profile/me",
       { credentials: "include", ttlMs: 1000 },
     );
     expect(requestApi.getCachedJson).toHaveBeenNthCalledWith(
-      3,
+      2,
       "https://api.example.test/auth/me",
       { credentials: "include", ttlMs: 1000 },
     );

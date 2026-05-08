@@ -9,20 +9,9 @@ export function registerProfileReadRoutes(app, context) {
     getProfileImpl,
     getSeasonsImpl,
     getStylesImpl,
-    hasProfileImpl,
     requireAuth,
     toProfileResponse,
   } = context;
-
-  app.get("/profile/status", requireAuth, async (req, res) => {
-    try {
-      const exists = await hasProfileImpl(req.user.email);
-      return res.json({ ok: true, hasProfile: exists });
-    } catch (error) {
-      logError("[profile/status]", error);
-      return res.status(503).json({ error: "service_unavailable" });
-    }
-  });
 
   app.get("/profile/me", requireAuth, async (req, res) => {
     try {

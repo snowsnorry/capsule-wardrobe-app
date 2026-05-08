@@ -15,8 +15,9 @@ import {
   FALLBACK_ACCENT_COLOR_OPTIONS,
   GOOGLE_CLIENT_ID,
 } from "./appConstants";
+import { importMainScreen } from "./mainScreenLoader";
 
-const MainScreen = lazy(() => import("../screens/mainScreen/MainScreen"));
+const MainScreen = lazy(importMainScreen);
 const OnboardingScreen = lazy(() => import("../screens/OnboardingScreen"));
 const ProfileScreen = lazy(() => import("../screens/ProfileScreen"));
 const SearchScreen = lazy(() => import("../screens/SearchScreen"));
