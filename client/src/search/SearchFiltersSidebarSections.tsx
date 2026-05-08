@@ -90,7 +90,7 @@ function SearchPriceSection({
             onClick={() =>
               updateDraftState((current) => ({
                 ...current,
-                priceEnabled: true,
+                priceEnabled: false,
                 priceMinDraft: sliderMin,
                 priceMaxDraft: sliderMax,
                 page: 1,

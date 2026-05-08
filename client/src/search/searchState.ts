@@ -2,6 +2,7 @@ export { EMPTY_SEARCH_OPTIONS } from "./searchStateConstants";
 export {
   clampPriceValue,
   createSearchState,
+  isFullPriceRange,
   serializeDraftState,
   toggleSelection,
 } from "./searchStateDraft";

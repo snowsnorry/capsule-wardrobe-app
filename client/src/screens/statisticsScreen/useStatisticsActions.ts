@@ -43,7 +43,7 @@ function useStatisticsActions({
       setStatus({ loading: true, error: "" });
       try {
         const result = (await fetchSearchStats(
-          serializeStatisticsState(nextState),
+          serializeStatisticsState(nextState, options.priceRange),
         )) as SearchStatsResponse;
         setStatsState(normalizeStatsResponse(result));
         setStatus({ loading: false, error: "" });
@@ -51,7 +51,7 @@ function useStatisticsActions({
         setStatus({ loading: false, error: t("errors.generic") });
       }
     },
-    [setStatsState, setStatus, t],
+    [options.priceRange, setStatsState, setStatus, t],
   );
   const updateDraftState = useCallback(
     async (

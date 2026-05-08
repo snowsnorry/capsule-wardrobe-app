@@ -4,6 +4,7 @@ import type {
   SearchOptions,
   SearchTranslator,
 } from "./searchStateTypes";
+import { isFullPriceRange } from "./searchStateDraft";
 
 function formatSearchPrice(locale: string, value: number): string {
   return new Intl.NumberFormat(locale, {
@@ -74,7 +75,14 @@ export function buildActiveFilterChips({
     translateOption,
   });
 
-  if (state.priceEnabled) {
+  if (
+    state.priceEnabled &&
+    !isFullPriceRange(
+      state.priceMinDraft,
+      state.priceMaxDraft,
+      options.priceRange,
+    )
+  ) {
     chips.push({
       key: `price:${state.priceMinDraft}:${state.priceMaxDraft}`,
       field: "price",

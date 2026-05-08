@@ -3,6 +3,7 @@ import { useI18n } from "../i18n/useI18n";
 import { translateOption } from "../i18n";
 import {
   clampPriceValue,
+  isFullPriceRange,
   normalizeBrandOption,
   sortAudienceValues,
   sortItemsByLabel,
@@ -86,7 +87,10 @@ function createPriceControls({
     updateDraftState(
       (current) => ({
         ...current,
-        priceEnabled: true,
+        priceEnabled: !isFullPriceRange(nextValue[0], nextValue[1], {
+          min: sliderMin,
+          max: sliderMax,
+        }),
         priceMinDraft: nextValue[0],
         priceMaxDraft: nextValue[1],
         page: 1,
@@ -168,7 +172,10 @@ function normalizePriceDraftOnBlur(
 
   return {
     ...current,
-    priceEnabled: true,
+    priceEnabled: !isFullPriceRange(nextMin, nextMax, {
+      min: sliderMin,
+      max: sliderMax,
+    }),
     priceMinDraft: Math.min(nextMin, nextMax),
     priceMaxDraft: Math.max(nextMax, nextMin),
     page: 1,

@@ -124,6 +124,22 @@ function StatisticsStatsHarness() {
       >
         enable price
       </button>
+      <button
+        type="button"
+        onClick={() =>
+          statistics.updateDraftState(
+            (current) => ({
+              ...current,
+              priceEnabled: true,
+              priceMinDraft: 10,
+              priceMaxDraft: 150,
+            }),
+            { submit: true },
+          )
+        }
+      >
+        full price
+      </button>
     </div>
   );
 }
@@ -216,6 +232,29 @@ describe("useStatisticsStats", () => {
     const user = userEvent.setup();
     render(<StatisticsStatsHarness />);
     expect(await screen.findByText("120")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "enable price" }));
+    await waitFor(() => {
+      expect(searchApi.fetchSearchStats).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          priceMin: 20,
+          priceMax: 80,
+        }),
+      );
+    });
+
+    await user.click(screen.getByRole("button", { name: "full price" }));
+    await waitFor(() => {
+      expect(searchApi.fetchSearchStats).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          priceMin: null,
+          priceMax: null,
+        }),
+      );
+    });
+    expect(screen.getByTestId("chips")).not.toHaveTextContent(
+      "search.filters.price",
+    );
 
     await user.click(screen.getByRole("button", { name: "enable price" }));
     await waitFor(() => {

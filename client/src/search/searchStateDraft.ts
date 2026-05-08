@@ -23,7 +23,13 @@ export function createSearchState(
   priceRange: SearchPriceRange,
 ): SearchDraftState {
   const base = { ...INITIAL_SEARCH_STATE, ...(savedSearch || {}) };
-  const hasPriceBounds = base.priceMin !== null || base.priceMax !== null;
+  const rangeMin = priceRange.min ?? 0;
+  const rangeMax = priceRange.max ?? 0;
+  const priceMinDraft = base.priceMin ?? rangeMin;
+  const priceMaxDraft = base.priceMax ?? rangeMax;
+  const hasPriceBounds =
+    (base.priceMin !== null || base.priceMax !== null) &&
+    !isFullPriceRange(priceMinDraft, priceMaxDraft, priceRange);
   const normalizedArrays = Object.fromEntries(
     SEARCH_ARRAY_FIELDS.map((field) => [
       field,
@@ -35,12 +41,8 @@ export function createSearchState(
     ...base,
     ...normalizedArrays,
     priceEnabled: hasPriceBounds,
-    priceMinDraft: hasPriceBounds
-      ? (base.priceMin ?? priceRange.min ?? 0)
-      : (priceRange.min ?? 0),
-    priceMaxDraft: hasPriceBounds
-      ? (base.priceMax ?? priceRange.max ?? 0)
-      : (priceRange.max ?? 0),
+    priceMinDraft: hasPriceBounds ? priceMinDraft : rangeMin,
+    priceMaxDraft: hasPriceBounds ? priceMaxDraft : rangeMax,
   };
 }
 
@@ -58,12 +60,20 @@ export function clampPriceValue(
 
 export function serializeDraftState(
   state: SearchDraftState,
+  priceRange?: SearchPriceRange,
 ): SerializedSearchState {
+  const hasPriceFilter =
+    state.priceEnabled &&
+    !(
+      priceRange &&
+      isFullPriceRange(state.priceMinDraft, state.priceMaxDraft, priceRange)
+    );
+
   return {
     query: state.query,
     brand: state.brand,
-    priceMin: state.priceEnabled ? Number(state.priceMinDraft) : null,
-    priceMax: state.priceEnabled ? Number(state.priceMaxDraft) : null,
+    priceMin: hasPriceFilter ? Number(state.priceMinDraft) : null,
+    priceMax: hasPriceFilter ? Number(state.priceMaxDraft) : null,
     audience: state.audience,
     category: state.category,
     season: state.season,
@@ -77,6 +87,16 @@ export function serializeDraftState(
     closureType: state.closureType,
     page: state.page,
   };
+}
+
+export function isFullPriceRange(
+  priceMin: number | string | null | undefined,
+  priceMax: number | string | null | undefined,
+  priceRange: SearchPriceRange,
+): boolean {
+  const rangeMin = priceRange.min ?? 0;
+  const rangeMax = priceRange.max ?? 0;
+  return Number(priceMin) === rangeMin && Number(priceMax) === rangeMax;
 }
 
 export function toggleSelection(

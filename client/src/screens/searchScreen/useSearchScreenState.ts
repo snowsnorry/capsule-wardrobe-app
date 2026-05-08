@@ -229,7 +229,7 @@ async function runTrackedSearch(
   nextState: SearchDraftState,
   force: boolean,
 ): Promise<void> {
-  const payload = serializeDraftState(nextState);
+  const payload = serializeDraftState(nextState, runtime.options.priceRange);
   const payloadKey = JSON.stringify(payload);
   if (
     !force &&
@@ -307,7 +307,7 @@ async function runBootstrapSearch(
   nextState: SearchDraftState,
   isActive: () => boolean,
 ): Promise<void> {
-  const serialized = serializeDraftState(nextState);
+  const serialized = serializeDraftState(nextState, runtime.options.priceRange);
   const requestSeq = bumpSearchRequestSeq(runtime);
   const result = (await runSearch(serialized)) as SearchResponse;
   if (!isActive() || requestSeq !== runtime.searchRequestSeqRef.current) {

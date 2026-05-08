@@ -18,8 +18,9 @@ export function buildInitialStatsState(): StatisticsState {
 
 export function serializeStatisticsState(
   state: SearchDraftState,
+  priceRange?: Parameters<typeof serializeDraftState>[1],
 ): Omit<SerializedSearchState, "query" | "page"> {
-  const payload = serializeDraftState(state);
+  const payload = serializeDraftState(state, priceRange);
   delete payload.query;
   delete payload.page;
   return payload;

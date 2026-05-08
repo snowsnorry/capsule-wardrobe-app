@@ -69,6 +69,39 @@ describe("searchState", () => {
     });
   });
 
+  test("treats the full available price range as no active price filter", () => {
+    const priceRange = { min: 10, max: 150 };
+    const state = createSearchState(
+      { priceMin: 10, priceMax: 150 },
+      priceRange,
+    );
+
+    expect(state).toMatchObject({
+      priceEnabled: false,
+      priceMinDraft: 10,
+      priceMaxDraft: 150,
+    });
+    expect(
+      serializeDraftState(
+        { ...state, priceEnabled: true, priceMinDraft: 10, priceMaxDraft: 150 },
+        priceRange,
+      ),
+    ).toMatchObject({
+      priceMin: null,
+      priceMax: null,
+    });
+  });
+
+  test("keeps partial saved price bounds active", () => {
+    const state = createSearchState({ priceMax: 100 }, { min: 10, max: 150 });
+
+    expect(state).toMatchObject({
+      priceEnabled: true,
+      priceMinDraft: 10,
+      priceMaxDraft: 100,
+    });
+  });
+
   test("buildSearchOptionsPayload maps API responses to a stable options shape", () => {
     expect(
       buildSearchOptionsPayload({

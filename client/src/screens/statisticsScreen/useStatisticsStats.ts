@@ -60,7 +60,7 @@ function useBootstrapStatistics({
         setOptions(nextOptions);
         setDraftState(nextState);
         const result = (await fetchSearchStats(
-          serializeStatisticsState(nextState),
+          serializeStatisticsState(nextState, nextOptions.priceRange),
         )) as SearchStatsResponse;
         if (isActive) {
           setStatsState(normalizeStatsResponse(result));

@@ -239,7 +239,7 @@ describe("SearchFiltersSidebar", () => {
       createSearchState(null, options.priceRange),
     );
     expect(nextState).toMatchObject({
-      priceEnabled: true,
+      priceEnabled: false,
       priceMinDraft: 10,
       priceMaxDraft: 150,
       page: 1,
@@ -317,5 +317,38 @@ describe("SearchFiltersSidebar", () => {
     });
     expect(nextState.priceMinDraft).toBe(10);
     expect(nextState.priceMaxDraft).toBe(10);
+  });
+
+  test("does not enable the price filter when full range inputs only blur", () => {
+    const onDraftStateChange = vi.fn();
+    renderSidebar({ onDraftStateChange });
+
+    const minInput = screen.getByLabelText("Min");
+    fireEvent.focus(minInput);
+    fireEvent.blur(minInput);
+
+    let nextState = onDraftStateChange.mock.calls.at(-1)[0](
+      createSearchState(null, options.priceRange),
+    );
+    expect(nextState).toMatchObject({
+      priceEnabled: false,
+      priceMinDraft: 10,
+      priceMaxDraft: 150,
+      page: 1,
+    });
+
+    const maxInput = screen.getByLabelText("Max");
+    fireEvent.focus(maxInput);
+    fireEvent.blur(maxInput);
+
+    nextState = onDraftStateChange.mock.calls.at(-1)[0](
+      createSearchState(null, options.priceRange),
+    );
+    expect(nextState).toMatchObject({
+      priceEnabled: false,
+      priceMinDraft: 10,
+      priceMaxDraft: 150,
+      page: 1,
+    });
   });
 });
