@@ -144,7 +144,7 @@ function OutfitImageBlock({ props }: { props: WardrobeProps }) {
             <Box
               component="img"
               src={props.activeImageSrc}
-              alt={`Outfit set ${set.label}`}
+              alt={t("capsule.outfitSetImageAlt", { number: set.label })}
               data-testid="outfit-set-image"
               sx={outfitImageSx}
             />
@@ -157,7 +157,7 @@ function OutfitImageBlock({ props }: { props: WardrobeProps }) {
           disabled={props.disabled}
           onClick={() => props.onGenerateImage?.(set.index)}
         >
-          Create image
+          {t("capsule.createOutfitSetImage")}
         </Button>
       ) : null}
     </Stack>

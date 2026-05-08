@@ -35,6 +35,16 @@ test("t translates app launcher labels", () => {
   expect(t("launcher.statistics", undefined, "ru")).toBe("Статистика");
 });
 
+test("t translates capsule action and outfit image accessibility labels", () => {
+  expect(t("capsule.openCapsuleActions", { name: "Лето" }, "ru")).toBe(
+    "Действия с капсулой Лето",
+  );
+  expect(t("capsule.outfitSetImageAlt", { number: 2 }, "ru")).toBe("Образ 2");
+  expect(t("capsule.createOutfitSetImage", undefined, "ru")).toBe(
+    "Создать изображение",
+  );
+});
+
 test("translateOption humanizes unknown values and translates known ones", () => {
   expect(translateOption("styles", "street_style", "en")).toBe("Street style");
   expect(translateOption("styles", "unknown_style", "en")).toBe(

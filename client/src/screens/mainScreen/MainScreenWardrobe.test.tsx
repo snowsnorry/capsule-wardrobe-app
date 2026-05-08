@@ -164,6 +164,10 @@ describe("MainScreenWardrobe", () => {
       "src",
       "data:image/png;base64,abc123",
     );
+    expect(screen.getByTestId("outfit-set-image")).toHaveAttribute(
+      "alt",
+      "Outfit set 1",
+    );
     expect(screen.getByTestId("outfit-set-image-divider")).toBeInTheDocument();
     expect(onImageClick).toHaveBeenCalledTimes(1);
     expect(

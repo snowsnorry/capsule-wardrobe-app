@@ -22,7 +22,7 @@ const capsuleChildrenInlineEndInset = 1.5;
 const capsuleHighlightInlineStartInset = 1.5;
 const capsuleRowTextInset = 1.5;
 
-type Translate = (key: string) => string;
+type Translate = (key: string, params?: Record<string, unknown>) => string;
 
 function getCapsuleRowSx(isOverlaySidebar: boolean) {
   return {
@@ -96,6 +96,7 @@ function CapsuleActionsButton({
   capsuleChildTabIndex,
   isInteractionDisabled,
   onOpenCapsuleActions,
+  t,
 }: {
   capsule: CapsuleNavItem;
   capsuleName: string;
@@ -105,6 +106,7 @@ function CapsuleActionsButton({
     event: MouseEvent<HTMLElement>,
     capsule: CapsuleNavItem,
   ) => void;
+  t: Translate;
 }) {
   if (!onOpenCapsuleActions) {
     return null;
@@ -113,7 +115,7 @@ function CapsuleActionsButton({
   return (
     <IconButton
       className="capsule-row-actions"
-      aria-label={`Capsule actions ${capsuleName}`}
+      aria-label={t("capsule.openCapsuleActions", { name: capsuleName })}
       size="small"
       tabIndex={capsuleChildTabIndex}
       disabled={isInteractionDisabled}
@@ -137,6 +139,7 @@ function CapsuleRow({
   onOpenCapsule,
   onOpenCapsuleActions,
   notSavedLabel,
+  t,
 }: {
   capsule: CapsuleNavItem;
   activeCapsuleId: string;
@@ -150,6 +153,7 @@ function CapsuleRow({
     capsule: CapsuleNavItem,
   ) => void;
   notSavedLabel: string;
+  t: Translate;
 }) {
   const capsuleId = String(capsule.id || "");
   const capsuleName = String(capsule.name || "");
@@ -181,6 +185,7 @@ function CapsuleRow({
           capsuleChildTabIndex={capsuleChildTabIndex}
           isInteractionDisabled={isInteractionDisabled}
           onOpenCapsuleActions={onOpenCapsuleActions}
+          t={t}
         />
       </ListItemButton>
     </Tooltip>
@@ -227,6 +232,7 @@ function CapsuleList({
           onOpenCapsule={onOpenCapsule}
           onOpenCapsuleActions={onOpenCapsuleActions}
           notSavedLabel={t("capsule.notSaved")}
+          t={t}
         />
       ))}
     </List>

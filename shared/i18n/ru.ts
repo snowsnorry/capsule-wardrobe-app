@@ -239,10 +239,13 @@ const ru = {
     deleteOutfitSetImage: "Удалить изображение",
     deleteOutfitSetImageConfirmBody:
       "Вы уверены, что хотите удалить это изображение? Это действие нельзя отменить.",
+    createOutfitSetImage: "Создать изображение",
+    outfitSetImageAlt: "Образ {number}",
     openOutfitSetImagePreview:
       "Открыть предпросмотр изображения образа {number}",
     outfitSetImageObsolete:
       "Это изображение может больше не соответствовать текущему образу. Удалите его и при необходимости сгенерируйте новое.",
+    openCapsuleActions: "Действия с капсулой {name}",
     revertConfirmBody:
       "Отменить текущие несохраненные изменения и вернуть последнюю сохраненную версию капсулы?",
     regenerateAllTitle: "Обновить капсулу?",

@@ -6,16 +6,22 @@ import type { ComponentProps } from "react";
 
 vi.mock("../i18n/useI18n", () => ({
   useI18n: () => ({
-    t: (key: string) =>
-      ({
-        "launcher.capsule": "Capsule",
-        "launcher.explore": "Explore",
-        "launcher.statistics": "Statistics",
-        "capsule.new": "New capsule",
-        "capsule.search": "Search capsules",
-        "capsule.yourCapsules": "Your capsules",
-        "capsule.notSaved": "Not saved",
-      })[key] || key,
+    t: (key: string, params?: Record<string, unknown>) => {
+      const value =
+        {
+          "launcher.capsule": "Capsule",
+          "launcher.explore": "Explore",
+          "launcher.statistics": "Statistics",
+          "capsule.new": "New capsule",
+          "capsule.search": "Search capsules",
+          "capsule.yourCapsules": "Your capsules",
+          "capsule.notSaved": "Not saved",
+          "capsule.openCapsuleActions": "Capsule actions {name}",
+        }[key] || key;
+      return value.replace(/\{(\w+)\}/g, (_match, token: string) =>
+        String(params?.[token] ?? `{${token}}`),
+      );
+    },
   }),
 }));
 

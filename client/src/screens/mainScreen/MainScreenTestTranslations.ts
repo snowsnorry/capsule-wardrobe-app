@@ -42,9 +42,12 @@ const labels = {
     deleteOutfitSetImage: "Delete image",
     deleteOutfitSetImageConfirmBody:
       "Are you sure you want to delete this image? This action cannot be undone.",
+    createOutfitSetImage: "Create image",
+    outfitSetImageAlt: "Outfit set {number}",
     openOutfitSetImagePreview: "Open outfit {number} image preview",
     outfitSetImageObsolete:
       "This image may no longer match the current outfit. Remove it and generate a new one if needed.",
+    openCapsuleActions: "Capsule actions {name}",
     revertConfirmBody:
       "Discard the current unsaved changes and restore the last saved version of this capsule?",
     regenerateAllTitle: "Regenerate capsule?",
