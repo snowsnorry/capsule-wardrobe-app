@@ -128,10 +128,7 @@ function MarketingPanel({
         sx={{
           mt: { xs: 0.15, md: 0.1 },
           maxWidth: { xs: "14ch", md: "20ch" },
-          fontSize: { xs: "1.46rem", sm: "1.7rem", md: "2rem", lg: "2.28rem" },
-          lineHeight: { xs: 1.2, md: 1.16 },
-          letterSpacing: "-0.015em",
-          fontWeight: 600,
+          fontWeight: 700,
         }}
       >
         {t("marketingHeadline")}
@@ -177,7 +174,7 @@ function SidebarHeader(
           {props.activeCapsuleMeta?.status === "new" ||
           props.activeCapsuleMeta?.status === "modified" ? (
             <FiberManualRecordRoundedIcon
-              sx={{ fontSize: 10, color: "#2f8f58", flexShrink: 0 }}
+              sx={{ fontSize: 10, color: "success.main", flexShrink: 0 }}
             />
           ) : null}
         </Stack>

@@ -69,7 +69,8 @@ function AccentColorChips({
                   height: 12,
                   borderRadius: "999px",
                   boxSizing: "border-box",
-                  border: "1px solid #999",
+                  border: "1px solid",
+                  borderColor: "divider",
                   ...getColorSwatchStyle(item),
                 }}
               />

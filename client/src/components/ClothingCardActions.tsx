@@ -43,7 +43,7 @@ function getRegenerateButtonSx(isSelected: boolean) {
   const hoverBackgroundColor = isSelected
     ? "rgba(17, 17, 17, 0.96)"
     : "rgba(17, 17, 17, 0.62)";
-  const color = isSelected ? "#d24343" : "#fff";
+  const color = isSelected ? "error.main" : "#fbfffd";
 
   return {
     bgcolor: backgroundColor,
@@ -74,11 +74,11 @@ function getActionStackSx(props: CardActionProps) {
       width: 36,
       height: 36,
       bgcolor: "rgba(17, 17, 17, 0.42)",
-      color: "#fff",
+      color: "#fbfffd",
       transition: "background-color 160ms ease, color 160ms ease",
       "&:hover": { bgcolor: "rgba(17, 17, 17, 0.62)" },
       "&.Mui-disabled": {
-        color: "#fff",
+        color: "#fbfffd",
         bgcolor: "rgba(17, 17, 17, 0.42)",
         opacity: props.showActionButtons ? 0.72 : 0,
       },

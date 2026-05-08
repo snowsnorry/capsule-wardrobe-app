@@ -9,15 +9,15 @@ import {
 describe("chartUtils", () => {
   test("returns light and dark tooltip styles", () => {
     expect(getTooltipStyle(false)).toMatchObject({
-      background: "rgba(255,255,255,0.98)",
-      color: "#111111",
+      background: "rgba(255, 253, 249, 0.98)",
+      color: "#1f2933",
     });
     expect(getTooltipStyle(true)).toMatchObject({
-      background: "rgba(0,0,0,0.96)",
-      color: "#ffffff",
+      background: "rgba(8, 17, 17, 0.96)",
+      color: "#eef5f3",
     });
-    expect(getTooltipTextStyle(false)).toEqual({ color: "#111111" });
-    expect(getTooltipTextStyle(true)).toEqual({ color: "#ffffff" });
+    expect(getTooltipTextStyle(false)).toEqual({ color: "#1f2933" });
+    expect(getTooltipTextStyle(true)).toEqual({ color: "#eef5f3" });
   });
 
   test("extracts hex gradient stops and normalizes SVG ids", () => {

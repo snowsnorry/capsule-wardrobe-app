@@ -77,7 +77,7 @@ function SidebarHeader({
               fontFamily: '"Leckerli One", cursive',
               fontSize: { xs: "1.40rem", md: "1.40rem" },
               lineHeight: 1.1,
-              color: "#8f6f45",
+              color: "secondary.main",
             }}
           >
             {t("appName")}
@@ -148,9 +148,7 @@ function SidebarUserButton({
           flexShrink: 0,
         }}
       >
-        <Avatar sx={{ width: 36, height: 36, bgcolor: "#9aa4a6" }}>
-          {avatarInitials}
-        </Avatar>
+        <Avatar sx={sidebarAvatarSx}>{avatarInitials}</Avatar>
       </Box>
       {!isSidebarCollapsed || isOverlaySidebar ? (
         <Stack
@@ -189,6 +187,14 @@ function SidebarUserButton({
   );
 }
 
+const sidebarAvatarSx = {
+  width: 36,
+  height: 36,
+  bgcolor: "secondary.light",
+  color: "text.primary",
+  fontWeight: 700,
+} as const;
+
 function SidebarContent({
   avatarInitials,
   displayName,
@@ -215,7 +221,7 @@ function SidebarContent({
         width: isOverlaySidebar ? "min(92vw, 360px)" : desktopSidebarWidth,
         bgcolor: (theme) =>
           theme.palette.mode === "dark"
-            ? "#1e1f20"
+            ? "var(--cw-color-surface-warm)"
             : theme.palette.background.paper,
         color: "text.primary",
         borderRight: "1px solid",

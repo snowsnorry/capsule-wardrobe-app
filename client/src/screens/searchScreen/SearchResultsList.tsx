@@ -169,16 +169,20 @@ function ResultListItem({
         pl: "10px",
         pr: 0.5,
         py: 1.1,
-        borderRadius: 0,
+        borderRadius: "8px",
         cursor: "pointer",
-        border: "none",
+        border: "1px solid",
+        borderColor: isSelected ? "primary.main" : "transparent",
         backgroundColor: isSelected
-          ? "rgba(28, 124, 124, 0.06)"
+          ? "var(--cw-color-action-wash)"
           : "transparent",
-        transition: "background-color 160ms ease, transform 160ms ease",
+        transition:
+          "background-color 160ms ease, border-color 160ms ease, transform 160ms ease",
         outline: "none",
         "&:hover": {
-          backgroundColor: "rgba(31, 41, 51, 0.035)",
+          backgroundColor: isSelected
+            ? "var(--cw-color-action-wash)"
+            : "var(--cw-color-action-hover)",
         },
       }}
       data-mobile-result={isMobile ? "true" : undefined}

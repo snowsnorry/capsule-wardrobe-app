@@ -36,10 +36,10 @@ function LineChart({
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === "dark";
   const gridColor = isDarkMode
-    ? "rgba(255,255,255,0.14)"
+    ? "rgba(238, 245, 243, 0.14)"
     : "rgba(148, 163, 184, 0.16)";
-  const tickColor = isDarkMode ? "rgba(255,255,255,0.78)" : "#667085";
-  const areaColor = isDarkMode ? "#a78bfa" : "#8884d8";
+  const tickColor = isDarkMode ? "rgba(238, 245, 243, 0.78)" : "#667085";
+  const areaColor = isDarkMode ? "#49a3a3" : "#1c7c7c";
   const tooltipStyle = getTooltipStyle(isDarkMode);
   const tooltipTextStyle = getTooltipTextStyle(isDarkMode);
 
@@ -87,7 +87,7 @@ function LineChart({
             dot={false}
             activeDot={{
               r: 5,
-              stroke: "#ffffff",
+              stroke: isDarkMode ? "#15201f" : "#fffdf9",
               strokeWidth: 2,
               fill: areaColor,
             }}

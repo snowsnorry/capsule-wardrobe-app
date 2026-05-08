@@ -66,22 +66,10 @@ function ProfileFiltersHeader({ t }: { t: Translate }) {
   return (
     <Stack spacing={2.5}>
       <Stack spacing={0.75}>
-        <Typography
-          variant="h6"
-          sx={{
-            color: "text.primary",
-            fontSize: "18px",
-            fontWeight: 600,
-            lineHeight: 1.25,
-          }}
-        >
+        <Typography variant="h6" sx={{ color: "text.primary" }}>
           {t("capsule.settingsTitle")}
         </Typography>
-        <Typography
-          variant="body2"
-          color="text.secondary"
-          sx={{ lineHeight: 1.5 }}
-        >
+        <Typography variant="body2" color="text.secondary">
           {t("capsule.settingsSubtitle")}
         </Typography>
       </Stack>
@@ -119,11 +107,8 @@ function ProfileTextSection({
         InputProps={{
           sx: {
             alignItems: "flex-start",
-            fontSize: "0.875rem",
             "& .MuiInputBase-inputMultiline": {
               overflowY: "auto !important",
-              fontSize: "0.875rem",
-              lineHeight: 1.5,
             },
           },
         }}

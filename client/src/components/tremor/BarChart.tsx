@@ -115,15 +115,17 @@ function BarChart({
 function getBarChartColors(isDarkMode: boolean) {
   return {
     tickColor: isDarkMode ? "#f5f5f5" : "#475467",
-    selectedTickColor: isDarkMode ? "#ffffff" : "#000000",
-    secondaryTickColor: isDarkMode ? "rgba(255,255,255,0.76)" : "#667085",
+    selectedTickColor: isDarkMode ? "#eef5f3" : "#1f2933",
+    secondaryTickColor: isDarkMode ? "rgba(238, 245, 243, 0.76)" : "#667085",
     gridColor: isDarkMode
-      ? "rgba(255,255,255,0.14)"
+      ? "rgba(238, 245, 243, 0.14)"
       : "rgba(148, 163, 184, 0.16)",
-    strokeColor: isDarkMode ? "rgba(255,255,255,0.34)" : "rgba(0,0,0,0.22)",
+    strokeColor: isDarkMode
+      ? "rgba(238, 245, 243, 0.34)"
+      : "rgba(31, 41, 51, 0.22)",
     activeStrokeColor: isDarkMode
-      ? "rgba(255,255,255,0.56)"
-      : "rgba(0,0,0,0.42)",
+      ? "rgba(238, 245, 243, 0.56)"
+      : "rgba(31, 41, 51, 0.42)",
     tooltipStyle: getTooltipStyle(isDarkMode),
     tooltipTextStyle: getTooltipTextStyle(isDarkMode),
   };
@@ -164,7 +166,7 @@ function BarChartPlot({
         tick={{ fontSize: 11, fill: colors.secondaryTickColor }}
       />
       <Tooltip
-        cursor={{ fill: "rgba(143,111,69,0.05)" }}
+        cursor={{ fill: "rgba(143, 111, 69, 0.05)" }}
         formatter={(
           value: number | string,
           _name: string,

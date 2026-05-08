@@ -45,11 +45,11 @@ function DonutChart({
   const isDarkMode = theme.palette.mode === "dark";
   const hasSelection = activeValues.length > 0;
   const strokeColor = isDarkMode
-    ? "rgba(255,255,255,0.34)"
-    : "rgba(0,0,0,0.22)";
+    ? "rgba(238, 245, 243, 0.34)"
+    : "rgba(31, 41, 51, 0.22)";
   const activeStrokeColor = isDarkMode
-    ? "rgba(255,255,255,0.56)"
-    : "rgba(0,0,0,0.42)";
+    ? "rgba(238, 245, 243, 0.56)"
+    : "rgba(31, 41, 51, 0.42)";
   const tooltipStyle = getTooltipStyle(isDarkMode);
   const tooltipTextStyle = getTooltipTextStyle(isDarkMode);
 

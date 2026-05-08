@@ -63,6 +63,8 @@ describe("theme contract", () => {
 
     expect(theme.palette.primary.main).toBe("#1c7c7c");
     expect(theme.palette.background.default).toBe("#f7f4ef");
+    expect(theme.palette.background.paper).toBe("#fffdf9");
+    expect(theme.palette.success.main).toBe("#2f8f58");
     expect(darkTheme.palette.mode).toBe("dark");
     expect(darkTheme.palette.background.default).toBe("#101817");
     expect(theme.typography.fontFamily).toContain("DM Sans");

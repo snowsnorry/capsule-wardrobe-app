@@ -49,15 +49,7 @@ function SearchFiltersDialog({
               justifyContent="space-between"
               alignItems="center"
             >
-              <Typography
-                variant="h6"
-                sx={{
-                  color: "text.primary",
-                  fontSize: "18px",
-                  fontWeight: 600,
-                  lineHeight: 1.25,
-                }}
-              >
+              <Typography variant="h6" sx={{ color: "text.primary" }}>
                 {t("filters.title")}
               </Typography>
               <IconButton

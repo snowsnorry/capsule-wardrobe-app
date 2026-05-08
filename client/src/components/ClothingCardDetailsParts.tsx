@@ -112,7 +112,7 @@ function ClothingCardDetails({
         minHeight: isMobile ? mobileCardMetrics.detailMinHeight : 64,
         justifyContent: "flex-start",
         alignItems: "flex-start",
-        backgroundColor: "#fff",
+        backgroundColor: "#fffdf9",
         borderTop: "1px solid rgba(15, 23, 42, 0.055)",
       }}
     >
@@ -120,7 +120,7 @@ function ClothingCardDetails({
         className="wardrobe-card-title"
         variant="subtitle1"
         sx={{
-          color: "#202a33",
+          color: "#1f2933",
           fontWeight: 500,
           lineHeight: isMobile ? mobileCardMetrics.titleLineHeight : 1.22,
           letterSpacing: 0,

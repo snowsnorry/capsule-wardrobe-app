@@ -30,7 +30,7 @@ function SignInHeader({
             fontFamily: '"Leckerli One", cursive',
             fontSize: "1.85rem",
             lineHeight: 1.1,
-            color: "#8f6f45",
+            color: "secondary.main",
             textAlign: "left",
           }}
         >
@@ -71,7 +71,7 @@ function PasskeySignInButton({
           justifyContent: "center",
           borderRadius: "4px",
           borderColor: "#dadce0",
-          backgroundColor: "#fff",
+          backgroundColor: "#fffdf9",
           color: "#3c4043",
           fontFamily: "Roboto, arial, sans-serif",
           fontSize: "14px",

@@ -95,7 +95,7 @@ function ProductHeader({
               }
             : {})}
           sx={{
-            color: "#8f6f45",
+            color: "secondary.main",
             textDecoration: "none",
             display: "block",
             "&:hover": productUrl ? { textDecoration: "underline" } : undefined,
@@ -153,7 +153,7 @@ function ProductDetailGroups({ item, t, locale }: DetailGroupsProps) {
             borderRadius: "22px",
             backgroundColor: isDarkMode
               ? "background.default"
-              : "rgba(31, 41, 51, 0.03)",
+              : "var(--cw-color-surface-warm)",
           }}
         >
           {group.items.map((row) => (
@@ -211,7 +211,8 @@ function ColorValues({
               borderRadius: "999px",
               boxSizing: "border-box",
               flexShrink: 0,
-              border: "1px solid #999",
+              border: "1px solid",
+              borderColor: "divider",
               ...getColorSwatchStyle(value.key),
             }}
           />

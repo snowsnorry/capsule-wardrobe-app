@@ -101,7 +101,7 @@ function ClothingPlaceholderCard({
           pt: 2,
           pb: 2.25,
           minHeight: 64,
-          backgroundColor: "#fff",
+          backgroundColor: "background.paper",
           borderTop: "1px solid rgba(15, 23, 42, 0.055)",
         }}
       >

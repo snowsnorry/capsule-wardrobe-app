@@ -67,7 +67,7 @@ function SummaryMetric({
         variant="body2"
         sx={{
           textTransform: "uppercase",
-          letterSpacing: "0.08em",
+          fontWeight: 650,
           color: "text.secondary",
         }}
       >
@@ -78,9 +78,10 @@ function SummaryMetric({
           variant="h2"
           sx={{
             lineHeight: 1,
-            fontSize: { xs: "1.5rem", md: "1.5rem" },
-            fontWeight: 600,
+            fontSize: "1.5rem",
+            fontWeight: 700,
             color: "text.primary",
+            fontVariantNumeric: "tabular-nums",
           }}
         >
           {totalLabel}
@@ -91,7 +92,6 @@ function SummaryMetric({
         variant="body2"
         sx={{
           maxWidth: 560,
-          lineHeight: 1.5,
           pr: { lg: 2 },
           color: "text.secondary",
         }}
@@ -137,7 +137,7 @@ function ActiveFilterChips({
         variant="caption"
         sx={{
           textTransform: "uppercase",
-          letterSpacing: "0.08em",
+          fontWeight: 650,
           color: "text.secondary",
         }}
       >

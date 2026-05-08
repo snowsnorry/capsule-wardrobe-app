@@ -92,15 +92,7 @@ function SearchDesktopFilters({
       }}
     >
       <Stack spacing={2.5} sx={{ mb: 3.5 }}>
-        <Typography
-          variant="h6"
-          sx={{
-            color: "text.primary",
-            fontSize: "18px",
-            fontWeight: 600,
-            lineHeight: 1.25,
-          }}
-        >
+        <Typography variant="h6" sx={{ color: "text.primary" }}>
           {t("filters.title")}
         </Typography>
         <Divider />

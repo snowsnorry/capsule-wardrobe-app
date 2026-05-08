@@ -61,7 +61,7 @@ function getCardRootSx({
     height: "100%",
     borderRadius: isDenseMobileCard ? 0 : "8px",
     overflow: "hidden",
-    backgroundColor: "background.paper",
+    backgroundColor: "#fffdf9",
     position: "relative",
     border: isDenseMobileCard
       ? "0.5px solid rgba(17, 36, 34, 0.44)"
@@ -258,6 +258,10 @@ function CategoryChip({ label }: { label: string }) {
         label={label}
         size="small"
         sx={{
+          "&&": {
+            bgcolor: "#dcefeb",
+            color: "#15766f",
+          },
           maxWidth: "100%",
           height: 28,
           textTransform: "uppercase",
@@ -265,8 +269,6 @@ function CategoryChip({ label }: { label: string }) {
           fontSize: "12px",
           fontWeight: 800,
           padding: 0,
-          bgcolor: "#dcefeb",
-          color: "#15766f",
           "& .MuiChip-label": {
             px: 1,
             overflow: "hidden",

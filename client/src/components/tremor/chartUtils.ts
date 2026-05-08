@@ -4,25 +4,25 @@ function getTooltipStyle(isDarkMode = false): CSSProperties {
   if (isDarkMode) {
     return {
       borderRadius: 14,
-      border: "1px solid rgba(255,255,255,0.18)",
-      background: "rgba(0,0,0,0.96)",
-      boxShadow: "0 16px 40px rgba(0,0,0,0.4)",
-      color: "#ffffff",
+      border: "1px solid rgba(238, 245, 243, 0.18)",
+      background: "rgba(8, 17, 17, 0.96)",
+      boxShadow: "0 16px 40px rgba(8, 17, 17, 0.4)",
+      color: "#eef5f3",
     };
   }
 
   return {
     borderRadius: 14,
     border: "1px solid rgba(148, 163, 184, 0.24)",
-    background: "rgba(255,255,255,0.98)",
+    background: "rgba(255, 253, 249, 0.98)",
     boxShadow: "0 16px 40px rgba(15, 23, 42, 0.12)",
-    color: "#111111",
+    color: "#1f2933",
   };
 }
 
 function getTooltipTextStyle(isDarkMode = false): CSSProperties {
   return {
-    color: isDarkMode ? "#ffffff" : "#111111",
+    color: isDarkMode ? "#eef5f3" : "#1f2933",
   };
 }
 
