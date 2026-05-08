@@ -232,6 +232,12 @@ The system is mostly flat and layered through tone, borders, and image framing. 
 
 Wardrobe cards are the signature component. The image occupies a 3:4 frame and must remain the main content. Details are quiet: product label, optional category prefix on mobile, and small contextual action buttons that reveal only when useful. Selection mode dims the image with a dark overlay and changes the regeneration/rejection action state.
 
+**Product Surface Exception:** Wardrobe card image frames and product card
+detail surfaces intentionally stay light in every theme. Many catalog images
+ship on white or near-white backgrounds, so forcing these surfaces dark makes
+the product imagery look broken instead of themed. Keep the app shell and
+supporting panels theme-aware, but do not force product image surfaces dark.
+
 ### Statistics Cards
 
 Statistics cards are dense, compact, and chart-led. Use the existing chart palette for distinct categorical data, but avoid importing that saturation into the rest of the app shell. The statistics screen supports product understanding; it should not become the product's visual identity.
