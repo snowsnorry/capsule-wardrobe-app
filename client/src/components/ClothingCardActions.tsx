@@ -71,8 +71,8 @@ function getActionStackSx(props: CardActionProps) {
     transition: "opacity 160ms ease, visibility 160ms ease",
     "&:hover, &:focus-within": { opacity: 1 },
     "& .wardrobe-card-action-button": {
-      width: 36,
-      height: 36,
+      width: 44,
+      height: 44,
       bgcolor: "rgba(17, 17, 17, 0.42)",
       color: "#fbfffd",
       transition: "background-color 160ms ease, color 160ms ease",
