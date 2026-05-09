@@ -48,10 +48,7 @@ describe("ProductDetail", () => {
     );
     expect(
       await screen.findByRole("img", { name: "Safe Coat" }),
-    ).toHaveAttribute(
-      "src",
-      "https://assets.capsule-wardrobe.org/thumbnails/51a18f55e3d9f73fb210334f8bac6cfa32141edc9c72f3781560a8f371d3031b_640.webp",
-    );
+    ).toHaveAttribute("src", "https://example.com/coat.jpg");
 
     cleanup();
 
@@ -71,7 +68,7 @@ describe("ProductDetail", () => {
     expect(screen.getByText("Unsafe Coat")).toBeInTheDocument();
   });
 
-  test("falls back from thumbnails to the original image", async () => {
+  test("uses the original product image without thumbnail srcset", async () => {
     renderProductDetail({
       id: "coat",
       name: "Coat",
@@ -79,20 +76,11 @@ describe("ProductDetail", () => {
     });
 
     const image = await screen.findByRole("img", { name: "Coat" });
-    expect(image).toHaveAttribute(
-      "src",
-      "https://assets.capsule-wardrobe.org/thumbnails/51a18f55e3d9f73fb210334f8bac6cfa32141edc9c72f3781560a8f371d3031b_640.webp",
-    );
-
-    fireEvent.error(image);
-
-    await waitFor(() => {
-      expect(image).toHaveAttribute("src", "https://example.com/coat.jpg");
-    });
+    expect(image).toHaveAttribute("src", "https://example.com/coat.jpg");
     expect(image).not.toHaveAttribute("srcset");
   });
 
-  test("removes the detail image after the original image also fails", async () => {
+  test("removes the detail image after the original image fails", async () => {
     renderProductDetail({
       id: "coat",
       name: "Coat",
@@ -100,11 +88,6 @@ describe("ProductDetail", () => {
     });
 
     const image = await screen.findByRole("img", { name: "Coat" });
-    fireEvent.error(image);
-    await waitFor(() => {
-      expect(image).toHaveAttribute("src", "https://example.com/coat.jpg");
-    });
-
     fireEvent.error(image);
     await waitFor(() => {
       expect(screen.queryByRole("img", { name: "Coat" })).toBeNull();

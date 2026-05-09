@@ -5,10 +5,6 @@ import OpenInNewRoundedIcon from "@mui/icons-material/OpenInNewRounded";
 import { Box, IconButton, Stack, Typography, useTheme } from "@mui/material";
 import ProductLabelText from "../../components/ProductLabelText";
 import { translateOption } from "../../i18n";
-import {
-  buildProductImageThumbnails,
-  type ProductImageThumbnails,
-} from "../../utils/productImageThumbnails";
 import { getColorSwatchStyle } from "../../../../shared/colorSwatches.js";
 import { buildProductDetailGroups } from "../../../../shared/productDetail.js";
 import { getSafeHttpUrl } from "../../../../shared/urlSecurity.js";
@@ -25,12 +21,6 @@ type DetailGroupsProps = {
   item: SearchResultItem;
   t: ProductDetailProps["t"];
   locale: string;
-};
-
-type ProductImageSource = {
-  src: string;
-  srcSet?: string;
-  sizes?: string;
 };
 
 function ProductDetail({
@@ -234,64 +224,24 @@ function ColorValues({
 
 function ProductImage({ item }: { item: SearchResultItem }) {
   const imageUrl = getSafeHttpUrl(item.imageUrl);
-  const [displayImageSource, setDisplayImageSource] =
-    useState<ProductImageSource | null>(null);
-  const [imageMode, setImageMode] = useState<
-    "loading" | "thumbnail" | "original" | "missing"
-  >("loading");
+  const [imageFailed, setImageFailed] = useState(false);
 
   useEffect(() => {
-    let isActive = true;
-
-    setDisplayImageSource(null);
-    setImageMode(imageUrl ? "loading" : "missing");
-
-    if (!imageUrl) {
-      return () => {
-        isActive = false;
-      };
-    }
-
-    buildProductImageThumbnails(item?.imageUrl).then((thumbnails) => {
-      if (!isActive) {
-        return;
-      }
-
-      if (thumbnails) {
-        setDisplayImageSource(toProductImageSource(thumbnails));
-        setImageMode("thumbnail");
-      } else {
-        setDisplayImageSource({ src: imageUrl });
-        setImageMode("original");
-      }
-    });
-
-    return () => {
-      isActive = false;
-    };
-  }, [imageUrl, item?.imageUrl]);
+    setImageFailed(false);
+  }, [imageUrl]);
 
   const handleImageError = () => {
-    if (imageMode === "thumbnail" && imageUrl) {
-      setDisplayImageSource({ src: imageUrl });
-      setImageMode("original");
-      return;
-    }
-
-    setDisplayImageSource(null);
-    setImageMode("missing");
+    setImageFailed(true);
   };
 
-  if (!displayImageSource) {
+  if (!imageUrl || imageFailed) {
     return null;
   }
 
   return (
     <Box
       component="img"
-      src={displayImageSource.src}
-      srcSet={displayImageSource.srcSet}
-      sizes={displayImageSource.sizes}
+      src={imageUrl}
       alt={item.name || ""}
       onError={handleImageError}
       sx={{
@@ -304,16 +254,6 @@ function ProductImage({ item }: { item: SearchResultItem }) {
       }}
     />
   );
-}
-
-function toProductImageSource(
-  thumbnails: ProductImageThumbnails,
-): ProductImageSource {
-  return {
-    src: thumbnails.src,
-    srcSet: thumbnails.srcSet,
-    sizes: thumbnails.sizes,
-  };
 }
 
 const externalLinkIconSx = {
