@@ -33,7 +33,6 @@ export function isApiPath(pathname = "") {
     pathname.startsWith("/auth") ||
     pathname.startsWith("/capsules") ||
     pathname.startsWith("/shared-capsules") ||
-    pathname.startsWith("/images") ||
     pathname.startsWith("/profile") ||
     pathname.startsWith("/wardrobe") ||
     pathname.startsWith("/health") ||

@@ -124,7 +124,6 @@ import { registerSearchRoutes } from "./routes/searchRoutes.js";
 import { registerProfileMutationRoutes } from "./routes/profileMutationRoutes.js";
 import { registerHealthImageRoutes } from "./routes/healthImageRoutes.js";
 import { registerSessionAuthRoutes } from "./routes/sessionAuthRoutes.js";
-import { resolveStorageImagesDir } from "./ai/promptImages.js";
 import { logError, logInfo } from "./logger.js";
 
 const sharpConfig = configureSharp();
@@ -193,7 +192,6 @@ function createAppDependencies(options: Record<string, unknown> = {}) {
     getStylesImpl: getStyles,
     getWardrobeJobImpl: getWardrobeJob,
     googleClientId,
-    imageStorageDir: resolveStorageImagesDir(),
     importSharedCapsuleImpl: importSharedCapsule,
     insertPasskeyChallengeImpl: insertPasskeyChallenge,
     insertPasskeyImpl: insertPasskey,

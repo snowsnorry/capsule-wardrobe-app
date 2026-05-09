@@ -2,6 +2,7 @@ import { Box, Chip, Link as MuiLink, Stack, Typography } from "@mui/material";
 import type { ReactNode } from "react";
 import { CardActions } from "./ClothingCardActions";
 import { ClothingCardDetails } from "./ClothingCardDetailsParts";
+import { ClothingCardImagePlaceholder } from "./ClothingCardImagePlaceholder";
 import type {
   CardActionProps,
   ClothingCardItem,
@@ -84,22 +85,32 @@ function getCardRootSx({
 }
 
 function ProductImageContent({
-  displayImageUrl,
+  displayImageSource,
+  showImageNotFound,
+  showImagePlaceholder,
   label,
   isSelected,
   onImageError,
 }: {
-  displayImageUrl: string | null;
+  displayImageSource: {
+    src: string;
+    srcSet?: string;
+    sizes?: string;
+  } | null;
+  showImageNotFound: boolean;
+  showImagePlaceholder: boolean;
   label: string;
   isSelected: boolean;
   onImageError: () => void;
 }) {
   return (
     <>
-      {displayImageUrl ? (
+      {displayImageSource ? (
         <Box
           component="img"
-          src={displayImageUrl}
+          src={displayImageSource.src}
+          srcSet={displayImageSource.srcSet}
+          sizes={displayImageSource.sizes}
           alt={label}
           onError={onImageError}
           sx={{
@@ -119,11 +130,16 @@ function ProductImageContent({
             alignItems: "center",
             justifyContent: "center",
             px: 2,
+            textAlign: "center",
           }}
         >
-          <Typography variant="body2" color="text.secondary" align="center">
-            {label}
-          </Typography>
+          {!showImagePlaceholder ? null : showImageNotFound ? (
+            <ClothingCardImagePlaceholder label={label} />
+          ) : (
+            <Typography variant="body2" color="text.secondary" align="center">
+              {label}
+            </Typography>
+          )}
         </Box>
       )}
       {isSelected ? (
@@ -143,7 +159,9 @@ function ProductImageContent({
 
 function ClothingCardImageSection({
   productUrl,
-  displayImageUrl,
+  displayImageSource,
+  showImageNotFound,
+  showImagePlaceholder,
   label,
   isSelected,
   isMobile,
@@ -152,7 +170,13 @@ function ClothingCardImageSection({
   onImageError,
 }: {
   productUrl: string | null;
-  displayImageUrl: string | null;
+  displayImageSource: {
+    src: string;
+    srcSet?: string;
+    sizes?: string;
+  } | null;
+  showImageNotFound: boolean;
+  showImagePlaceholder: boolean;
   label: string;
   isSelected: boolean;
   isMobile: boolean;
@@ -174,7 +198,9 @@ function ClothingCardImageSection({
       {!isMobile ? <CategoryChip label={categoryDisplayLabel} /> : null}
       <CardImageFrame productUrl={productUrl}>
         <ProductImageContent
-          displayImageUrl={displayImageUrl}
+          displayImageSource={displayImageSource}
+          showImageNotFound={showImageNotFound}
+          showImagePlaceholder={showImagePlaceholder}
           label={label}
           isSelected={isSelected}
           onImageError={onImageError}
@@ -186,7 +212,9 @@ function ClothingCardImageSection({
 
 function ClothingCardView({
   item,
-  displayImageUrl,
+  displayImageSource,
+  showImageNotFound,
+  showImagePlaceholder,
   productUrl,
   label,
   isMobile,
@@ -200,7 +228,13 @@ function ClothingCardView({
   onImageError,
 }: {
   item: ClothingCardItem;
-  displayImageUrl: string | null;
+  displayImageSource: {
+    src: string;
+    srcSet?: string;
+    sizes?: string;
+  } | null;
+  showImageNotFound: boolean;
+  showImagePlaceholder: boolean;
   productUrl: string | null;
   label: string;
   isMobile: boolean;
@@ -225,7 +259,9 @@ function ClothingCardView({
     >
       <ClothingCardImageSection
         productUrl={productUrl}
-        displayImageUrl={displayImageUrl}
+        displayImageSource={displayImageSource}
+        showImageNotFound={showImageNotFound}
+        showImagePlaceholder={showImagePlaceholder}
         label={label}
         isSelected={isSelected}
         isMobile={isMobile}

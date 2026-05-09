@@ -5,7 +5,10 @@ import OpenInNewRoundedIcon from "@mui/icons-material/OpenInNewRounded";
 import { Box, IconButton, Stack, Typography, useTheme } from "@mui/material";
 import ProductLabelText from "../../components/ProductLabelText";
 import { translateOption } from "../../i18n";
-import { buildCachedProductImageUrl } from "../../utils/cachedProductImage";
+import {
+  buildProductImageThumbnails,
+  type ProductImageThumbnails,
+} from "../../utils/productImageThumbnails";
 import { getColorSwatchStyle } from "../../../../shared/colorSwatches.js";
 import { buildProductDetailGroups } from "../../../../shared/productDetail.js";
 import { getSafeHttpUrl } from "../../../../shared/urlSecurity.js";
@@ -22,6 +25,12 @@ type DetailGroupsProps = {
   item: SearchResultItem;
   t: ProductDetailProps["t"];
   locale: string;
+};
+
+type ProductImageSource = {
+  src: string;
+  srcSet?: string;
+  sizes?: string;
 };
 
 function ProductDetail({
@@ -225,34 +234,64 @@ function ColorValues({
 
 function ProductImage({ item }: { item: SearchResultItem }) {
   const imageUrl = getSafeHttpUrl(item.imageUrl);
-  const [displayImageUrl, setDisplayImageUrl] = useState(imageUrl);
-  const [imageFallbackAttempted, setImageFallbackAttempted] = useState(false);
+  const [displayImageSource, setDisplayImageSource] =
+    useState<ProductImageSource | null>(null);
+  const [imageMode, setImageMode] = useState<
+    "loading" | "thumbnail" | "original" | "missing"
+  >("loading");
 
   useEffect(() => {
-    setDisplayImageUrl(imageUrl);
-    setImageFallbackAttempted(false);
-  }, [imageUrl]);
+    let isActive = true;
 
-  const handleImageError = async () => {
-    if (imageFallbackAttempted) {
+    setDisplayImageSource(null);
+    setImageMode(imageUrl ? "loading" : "missing");
+
+    if (!imageUrl) {
+      return () => {
+        isActive = false;
+      };
+    }
+
+    buildProductImageThumbnails(item?.imageUrl).then((thumbnails) => {
+      if (!isActive) {
+        return;
+      }
+
+      if (thumbnails) {
+        setDisplayImageSource(toProductImageSource(thumbnails));
+        setImageMode("thumbnail");
+      } else {
+        setDisplayImageSource({ src: imageUrl });
+        setImageMode("original");
+      }
+    });
+
+    return () => {
+      isActive = false;
+    };
+  }, [imageUrl, item?.imageUrl]);
+
+  const handleImageError = () => {
+    if (imageMode === "thumbnail" && imageUrl) {
+      setDisplayImageSource({ src: imageUrl });
+      setImageMode("original");
       return;
     }
 
-    setImageFallbackAttempted(true);
-    const cachedImageUrl = await buildCachedProductImageUrl(item?.imageUrl);
-    if (cachedImageUrl) {
-      setDisplayImageUrl(cachedImageUrl);
-    }
+    setDisplayImageSource(null);
+    setImageMode("missing");
   };
 
-  if (!displayImageUrl) {
+  if (!displayImageSource) {
     return null;
   }
 
   return (
     <Box
       component="img"
-      src={displayImageUrl}
+      src={displayImageSource.src}
+      srcSet={displayImageSource.srcSet}
+      sizes={displayImageSource.sizes}
       alt={item.name || ""}
       onError={handleImageError}
       sx={{
@@ -265,6 +304,16 @@ function ProductImage({ item }: { item: SearchResultItem }) {
       }}
     />
   );
+}
+
+function toProductImageSource(
+  thumbnails: ProductImageThumbnails,
+): ProductImageSource {
+  return {
+    src: thumbnails.src,
+    srcSet: thumbnails.srcSet,
+    sizes: thumbnails.sizes,
+  };
 }
 
 const externalLinkIconSx = {

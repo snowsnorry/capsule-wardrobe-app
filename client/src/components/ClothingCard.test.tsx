@@ -102,40 +102,55 @@ describe("ClothingCard", () => {
     ).not.toBeInTheDocument();
   });
 
-  test("renders an outbound link with the product image and attributes", () => {
+  test("renders an outbound link with the product thumbnail image and attributes", async () => {
     renderCard();
 
+    const image = await screen.findByRole("img", { name: item.name ?? "" });
     const link = screen.getByRole("link", { name: /Red Jacket/ });
-    const image = screen.getByRole("img", { name: item.name ?? "" });
+    const digest =
+      "701ef83d3205bee4cedc8663c6a2100ddeaad5bb7f5aeefbabfa58ac0d84c40a";
 
     expect(link).toHaveAttribute("href", item.url);
     expect(link).toHaveAttribute("target", "_blank");
     expect(link).toHaveAttribute("rel", expect.stringContaining("noopener"));
     expect(link).toHaveAttribute("rel", expect.stringContaining("noreferrer"));
-    expect(image).toHaveAttribute("src", item.image_url);
+    expect(image).toHaveAttribute(
+      "src",
+      `https://assets.capsule-wardrobe.org/thumbnails/${digest}_640.webp`,
+    );
+    expect(image).toHaveAttribute(
+      "srcset",
+      `https://assets.capsule-wardrobe.org/thumbnails/${digest}_320.webp 320w, https://assets.capsule-wardrobe.org/thumbnails/${digest}_480.webp 480w, https://assets.capsule-wardrobe.org/thumbnails/${digest}_640.webp 640w`,
+    );
+    expect(image).toHaveAttribute(
+      "sizes",
+      "(max-width: 600px) calc((100vw - 48px) / 2), 285px",
+    );
     expect(image).toHaveAttribute("alt", item.name);
   });
 
-  test("falls back to the local cached image URL once when the original image fails", async () => {
+  test("falls back from thumbnails to the original image and then a 404 placeholder", async () => {
     renderCard();
 
-    const image = screen.getByRole("img", { name: item.name ?? "" });
-    expect(image).toHaveAttribute("src", item.image_url);
+    const image = await screen.findByRole("img", { name: item.name ?? "" });
+    expect(image).toHaveAttribute(
+      "src",
+      "https://assets.capsule-wardrobe.org/thumbnails/701ef83d3205bee4cedc8663c6a2100ddeaad5bb7f5aeefbabfa58ac0d84c40a_640.webp",
+    );
 
     fireEvent.error(image);
 
     await waitFor(() => {
-      expect(image).toHaveAttribute(
-        "src",
-        "/api/images/701ef83d3205bee4cedc8663c6a2100ddeaad5bb7f5aeefbabfa58ac0d84c40a.jpg",
-      );
+      expect(image).toHaveAttribute("src", item.image_url);
     });
+    expect(image).not.toHaveAttribute("srcset");
 
     fireEvent.error(image);
-    expect(image).toHaveAttribute(
-      "src",
-      "/api/images/701ef83d3205bee4cedc8663c6a2100ddeaad5bb7f5aeefbabfa58ac0d84c40a.jpg",
-    );
+    await waitFor(() => {
+      expect(screen.queryByRole("img", { name: item.name ?? "" })).toBeNull();
+    });
+    expect(screen.getByText("404")).toBeInTheDocument();
+    expect(screen.getAllByText("Red Jacket").length).toBeGreaterThan(0);
   });
 
   test("renders product title in the details area and category over the image", () => {
@@ -292,12 +307,13 @@ describe("ClothingCard", () => {
     });
   });
 
-  test("uses roomier mobile typography for one-column cards", () => {
+  test("uses roomier mobile typography for one-column cards", async () => {
     const { container } = renderCard({
       isSelectable: true,
       isMobile: true,
       mobileColumns: 1,
     });
+    const image = await screen.findByRole("img", { name: item.name ?? "" });
 
     expect(container.querySelector(".wardrobe-card-root")).toHaveStyle({
       borderRadius: "8px",
@@ -314,14 +330,16 @@ describe("ClothingCard", () => {
     expect(
       container.querySelector(".wardrobe-card-category"),
     ).not.toBeInTheDocument();
+    expect(image).toHaveAttribute("sizes", "(max-width: 600px) 100vw, 285px");
   });
 
-  test("uses tighter mobile typography for three-column cards while keeping actions touch sized", () => {
+  test("uses tighter mobile typography for three-column cards while keeping actions touch sized", async () => {
     const { container } = renderCard({
       isSelectable: true,
       isMobile: true,
       mobileColumns: 3,
     });
+    const image = await screen.findByRole("img", { name: item.name ?? "" });
     const menuButton = screen.getByRole("button", {
       name: "capsule.openProductMenu",
     });
@@ -341,6 +359,10 @@ describe("ClothingCard", () => {
     expect(
       container.querySelector(".wardrobe-card-category"),
     ).not.toBeInTheDocument();
+    expect(image).toHaveAttribute(
+      "sizes",
+      "(max-width: 600px) 33.333vw, 285px",
+    );
     expect(menuButton).toHaveStyle({ width: "44px", height: "44px" });
   });
 
@@ -362,7 +384,7 @@ describe("ClothingCard", () => {
     expect(screen.getAllByText("Red Jacket").length).toBeGreaterThan(0);
   });
 
-  test("appends unisex suffix for all-audience products", () => {
+  test("appends unisex suffix for all-audience products", async () => {
     renderCard({
       item: {
         ...item,
@@ -374,13 +396,11 @@ describe("ClothingCard", () => {
 
     expect(screen.getByText("Red Jacket")).toBeInTheDocument();
     expect(screen.getByText("unisex")).toBeInTheDocument();
+    const image = await screen.findByRole("img", { name: expectedLabel });
     expect(
       screen.getByRole("link", { name: /Red Jacket unisex/ }),
     ).toHaveAttribute("href", item.url);
-    expect(screen.getByRole("img", { name: expectedLabel })).toHaveAttribute(
-      "alt",
-      expectedLabel,
-    );
+    expect(image).toHaveAttribute("alt", expectedLabel);
   });
 
   test("does not append unisex suffix for non-all audiences", () => {

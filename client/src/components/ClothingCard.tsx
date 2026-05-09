@@ -3,9 +3,19 @@ import type { MouseEvent, ReactElement } from "react";
 import { useI18n } from "../i18n/useI18n";
 import { formatProductLabel } from "../utils/productLabel";
 import { getSafeHttpUrl } from "../../../shared/urlSecurity.js";
-import { buildCachedProductImageUrl } from "../utils/cachedProductImage";
+import {
+  buildProductImageThumbnailSizes,
+  buildProductImageThumbnails,
+  type ProductImageThumbnails,
+} from "../utils/productImageThumbnails";
 import { ClothingCardView, getMobileCardMetrics } from "./ClothingCardParts";
 import type { ClothingCardItem } from "./ClothingCardTypes";
+
+type ClothingCardImageSource = {
+  src: string;
+  srcSet?: string;
+  sizes?: string;
+};
 
 type ClothingCardProps = {
   item: ClothingCardItem;
@@ -94,7 +104,12 @@ function ClothingCard(props: ClothingCardProps): ReactElement {
   } = normalizeClothingCardProps(props);
   const { t } = useI18n();
   const imageUrl = getSafeHttpUrl(item?.image_url);
-  const imageState = useClothingCardImageState(imageUrl);
+  const imageState = useResponsiveClothingCardImageState(
+    item?.image_url,
+    imageUrl,
+    isMobile,
+    mobileColumns,
+  );
   const productUrl = getSafeHttpUrl(item?.url);
   const { categoryDisplayLabel, categoryName, label } = getClothingCardLabels(
     item,
@@ -110,17 +125,6 @@ function ClothingCard(props: ClothingCardProps): ReactElement {
   const stopCardActionPropagation = (event: MouseEvent<HTMLElement>) => {
     event.preventDefault();
     event.stopPropagation();
-  };
-
-  const handleImageError = async () => {
-    if (imageState.imageFallbackAttempted) {
-      return;
-    }
-    imageState.setImageFallbackAttempted(true);
-    const cachedImageUrl = await buildCachedProductImageUrl(item?.image_url);
-    if (cachedImageUrl) {
-      imageState.setDisplayImageUrl(cachedImageUrl);
-    }
   };
 
   const handleToggleSelected = (event: MouseEvent<HTMLButtonElement>) => {
@@ -159,7 +163,9 @@ function ClothingCard(props: ClothingCardProps): ReactElement {
   return (
     <ClothingCardView
       item={item}
-      displayImageUrl={imageState.displayImageUrl}
+      displayImageSource={imageState.displayImageSource}
+      showImageNotFound={imageState.imageMode === "missing"}
+      showImagePlaceholder={imageState.imageMode !== "loading"}
       productUrl={productUrl}
       label={label}
       isMobile={isMobile}
@@ -170,25 +176,91 @@ function ClothingCard(props: ClothingCardProps): ReactElement {
       showCardActions={showCardActions}
       actionProps={actionProps}
       mobileCardMetrics={mobileCardMetrics}
-      onImageError={handleImageError}
+      onImageError={imageState.handleImageError}
     />
   );
 }
 
-function useClothingCardImageState(imageUrl: string | null) {
-  const [displayImageUrl, setDisplayImageUrl] = useState(imageUrl);
-  const [imageFallbackAttempted, setImageFallbackAttempted] = useState(false);
+function toClothingCardImageSource(
+  thumbnails: ProductImageThumbnails,
+): ClothingCardImageSource {
+  return {
+    src: thumbnails.src,
+    srcSet: thumbnails.srcSet,
+    sizes: thumbnails.sizes,
+  };
+}
+
+function useResponsiveClothingCardImageState(
+  originalImageUrl: unknown,
+  safeImageUrl: string | null,
+  isMobile: boolean,
+  mobileColumns: 1 | 2 | 3,
+) {
+  return useClothingCardImageState(
+    originalImageUrl,
+    safeImageUrl,
+    buildProductImageThumbnailSizes({ isMobile, mobileColumns }),
+  );
+}
+
+function useClothingCardImageState(
+  originalImageUrl: unknown,
+  safeImageUrl: string | null,
+  imageSizes: string,
+) {
+  const [displayImageSource, setDisplayImageSource] =
+    useState<ClothingCardImageSource | null>(null);
+  const [imageMode, setImageMode] = useState<
+    "loading" | "thumbnail" | "original" | "missing"
+  >("loading");
 
   useEffect(() => {
-    setDisplayImageUrl(imageUrl);
-    setImageFallbackAttempted(false);
-  }, [imageUrl]);
+    let isActive = true;
+
+    setDisplayImageSource(null);
+    setImageMode(safeImageUrl ? "loading" : "missing");
+
+    if (!safeImageUrl) {
+      return () => {
+        isActive = false;
+      };
+    }
+
+    buildProductImageThumbnails(originalImageUrl, { sizes: imageSizes }).then(
+      (thumbnails) => {
+        if (!isActive) {
+          return;
+        }
+
+        if (thumbnails) {
+          setDisplayImageSource(toClothingCardImageSource(thumbnails));
+          setImageMode("thumbnail");
+        } else {
+          setDisplayImageSource({ src: safeImageUrl });
+          setImageMode("original");
+        }
+      },
+    );
+
+    return () => {
+      isActive = false;
+    };
+  }, [imageSizes, originalImageUrl, safeImageUrl]);
 
   return {
-    displayImageUrl,
-    imageFallbackAttempted,
-    setDisplayImageUrl,
-    setImageFallbackAttempted,
+    displayImageSource,
+    imageMode,
+    handleImageError() {
+      if (imageMode === "thumbnail" && safeImageUrl) {
+        setDisplayImageSource({ src: safeImageUrl });
+        setImageMode("original");
+        return;
+      }
+
+      setDisplayImageSource(null);
+      setImageMode("missing");
+    },
   };
 }
 export default ClothingCard;

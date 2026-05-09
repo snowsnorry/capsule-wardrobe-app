@@ -99,6 +99,7 @@ See [server/.env.example](server/.env.example) for the baseline template.
 ### Client env
 
 - `VITE_API_BASE_URL` — defaults to `/api`
+- `VITE_THUMBNAIL_ASSET_BASE_URL` — thumbnail URL prefix, defaults to `https://assets.capsule-wardrobe.org/thumbnails`
 - `VITE_GOOGLE_CLIENT_ID` — Google Sign-In client ID for the frontend
 - `BFF_UPSTREAM_ORIGIN` — upstream backend origin for proxy-based deployments
 - `BFF_STRIP_PREFIXES` — path prefixes stripped by the BFF, default `/api`

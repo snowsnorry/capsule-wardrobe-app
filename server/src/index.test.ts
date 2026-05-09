@@ -25,12 +25,14 @@ test("index app wires representative registered routes", async (t) => {
   });
 });
 
-test("image cache route is treated as an api path by spa fallback", async (t) => {
+test("image cache path is no longer treated as an api path by spa fallback", async (t) => {
   const { baseUrl } = await startSpaFallbackTestServer(t);
 
-  const missing = await requestJson(baseUrl, "/images/missing.jpg");
-  expect(missing.response.status).toBe(404);
-  expect(missing.json).toEqual({ error: "not_found" });
+  const { response, text } = await requestText(baseUrl, "/images/missing.jpg");
+
+  expect(response.status).toBe(200);
+  expect(response.headers.get("content-type") || "").toMatch(/text\/html/);
+  expect(text).toContain("<title>Capsule Wardrobe</title>");
 });
 
 test("share fallback injects escaped open graph metadata into capsule html", async (t) => {

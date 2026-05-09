@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { afterEach, describe, expect, test } from "vitest";
 import {
   cleanup,
   fireEvent,
@@ -8,12 +8,6 @@ import {
 } from "@testing-library/react";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import ProductDetail from "./ProductDetail";
-
-const cachedProductImage = vi.hoisted(() => ({
-  buildCachedProductImageUrl: vi.fn(),
-}));
-
-vi.mock("../../utils/cachedProductImage", () => cachedProductImage);
 
 const theme = createTheme();
 
@@ -37,11 +31,10 @@ const renderProductDetail = (
 
 afterEach(() => {
   cleanup();
-  vi.clearAllMocks();
 });
 
 describe("ProductDetail", () => {
-  test("renders safe product links and blocks unsafe product and image URLs", () => {
+  test("renders safe product links and blocks unsafe product and image URLs", async () => {
     renderProductDetail({
       id: "safe",
       name: "Safe Coat",
@@ -53,9 +46,11 @@ describe("ProductDetail", () => {
       "href",
       "https://example.com/coat",
     );
-    expect(screen.getByRole("img", { name: "Safe Coat" })).toHaveAttribute(
+    expect(
+      await screen.findByRole("img", { name: "Safe Coat" }),
+    ).toHaveAttribute(
       "src",
-      "https://example.com/coat.jpg",
+      "https://assets.capsule-wardrobe.org/thumbnails/51a18f55e3d9f73fb210334f8bac6cfa32141edc9c72f3781560a8f371d3031b_640.webp",
     );
 
     cleanup();
@@ -76,55 +71,44 @@ describe("ProductDetail", () => {
     expect(screen.getByText("Unsafe Coat")).toBeInTheDocument();
   });
 
-  test("falls back to a cached image when the original image fails", async () => {
-    cachedProductImage.buildCachedProductImageUrl.mockResolvedValue(
-      "/cached-image?url=https%3A%2F%2Fexample.com%2Fcoat.jpg",
-    );
-
+  test("falls back from thumbnails to the original image", async () => {
     renderProductDetail({
       id: "coat",
       name: "Coat",
       imageUrl: "https://example.com/coat.jpg",
     });
 
-    const image = screen.getByRole("img", { name: "Coat" });
-    expect(image).toHaveAttribute("src", "https://example.com/coat.jpg");
+    const image = await screen.findByRole("img", { name: "Coat" });
+    expect(image).toHaveAttribute(
+      "src",
+      "https://assets.capsule-wardrobe.org/thumbnails/51a18f55e3d9f73fb210334f8bac6cfa32141edc9c72f3781560a8f371d3031b_640.webp",
+    );
 
     fireEvent.error(image);
 
     await waitFor(() => {
-      expect(image).toHaveAttribute(
-        "src",
-        "/cached-image?url=https%3A%2F%2Fexample.com%2Fcoat.jpg",
-      );
+      expect(image).toHaveAttribute("src", "https://example.com/coat.jpg");
     });
-    expect(cachedProductImage.buildCachedProductImageUrl).toHaveBeenCalledWith(
-      "https://example.com/coat.jpg",
-    );
+    expect(image).not.toHaveAttribute("srcset");
   });
 
-  test("only attempts cached image fallback once", async () => {
-    cachedProductImage.buildCachedProductImageUrl.mockResolvedValue(
-      "/cached-coat.jpg",
-    );
-
+  test("removes the detail image after the original image also fails", async () => {
     renderProductDetail({
       id: "coat",
       name: "Coat",
       imageUrl: "https://example.com/coat.jpg",
     });
 
-    const image = screen.getByRole("img", { name: "Coat" });
+    const image = await screen.findByRole("img", { name: "Coat" });
     fireEvent.error(image);
     await waitFor(() => {
-      expect(image).toHaveAttribute("src", "/cached-coat.jpg");
+      expect(image).toHaveAttribute("src", "https://example.com/coat.jpg");
     });
 
     fireEvent.error(image);
-    expect(cachedProductImage.buildCachedProductImageUrl).toHaveBeenCalledTimes(
-      1,
-    );
-    expect(image).toHaveAttribute("src", "/cached-coat.jpg");
+    await waitFor(() => {
+      expect(screen.queryByRole("img", { name: "Coat" })).toBeNull();
+    });
   });
 
   test("shows unisex suffix for all-audience items and leaves other items unchanged", () => {
