@@ -14,6 +14,119 @@ import { isApiPath } from "./capsuleHttp.js";
 import { injectSharedCapsuleMetaTags } from "./sharedCapsuleMeta.js";
 import { logInfo } from "./logger.js";
 
+const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
+const HTML_CACHE_CONTROL = "no-store";
+
+function setStaticHtmlHeaders(res, filePath) {
+  if (path.basename(filePath) === "index.html") {
+    res.setHeader("Cache-Control", HTML_CACHE_CONTROL);
+  }
+}
+
+async function configureDevelopmentApp({
+  appInstance,
+  clientOrigin,
+  clientRoot,
+  createViteServerImpl,
+  getSharedCapsuleOgMetadataImpl,
+  injectSharedCapsuleMetaTagsImpl,
+  isApiPathImpl,
+  readFileImpl,
+}) {
+  const createViteServer =
+    createViteServerImpl || (await import("vite")).createServer;
+  const vite = await createViteServer({
+    root: CLIENT_ROOT,
+    server: {
+      middlewareMode: true,
+      watch: {
+        // Ignore client env files to avoid endless Vite restarts in dev middleware mode.
+        ignored: ["**/.env", "**/.env.*"],
+      },
+    },
+  });
+  appInstance.use(vite.middlewares);
+
+  appInstance.use("*", async (req, res, next) => {
+    if (isApiPathImpl(req.path)) {
+      return next();
+    }
+
+    try {
+      const htmlPath = path.join(clientRoot, "index.html");
+      const template = await readFileImpl(htmlPath, "utf-8");
+      const html = await vite.transformIndexHtml(req.originalUrl, template);
+      const htmlWithMetaTags = await injectSharedCapsuleMetaTagsImpl(
+        html,
+        req,
+        getSharedCapsuleOgMetadataImpl,
+        { clientOrigin },
+      );
+      res
+        .status(200)
+        .set({ "Content-Type": "text/html" })
+        .end(htmlWithMetaTags);
+    } catch (error) {
+      vite.ssrFixStacktrace(error);
+      next(error);
+    }
+    return undefined;
+  });
+}
+
+function configureProductionApp({
+  appInstance,
+  clientDistPath,
+  clientOrigin,
+  expressStaticImpl,
+  getSharedCapsuleOgMetadataImpl,
+  injectSharedCapsuleMetaTagsImpl,
+  isApiPathImpl,
+  readFileImpl,
+}) {
+  appInstance.use(
+    "/assets",
+    expressStaticImpl(path.join(clientDistPath, "assets"), {
+      immutable: true,
+      index: false,
+      maxAge: ONE_YEAR_MS,
+    }),
+  );
+  appInstance.use(
+    expressStaticImpl(clientDistPath, {
+      index: false,
+      setHeaders: setStaticHtmlHeaders,
+    }),
+  );
+
+  appInstance.get("*", async (req, res, next) => {
+    if (isApiPathImpl(req.path)) {
+      return res.status(404).json({ error: "not_found" });
+    }
+    try {
+      const html = await readFileImpl(
+        path.join(clientDistPath, "index.html"),
+        "utf-8",
+      );
+      const htmlWithMetaTags = await injectSharedCapsuleMetaTagsImpl(
+        html,
+        req,
+        getSharedCapsuleOgMetadataImpl,
+        { clientOrigin },
+      );
+      return res
+        .status(200)
+        .set({
+          "Cache-Control": HTML_CACHE_CONTROL,
+          "Content-Type": "text/html",
+        })
+        .end(htmlWithMetaTags);
+    } catch (error) {
+      return next(error);
+    }
+  });
+}
+
 export function createStartServer(app) {
   /* eslint-disable complexity */
   return async ({
@@ -36,70 +149,26 @@ export function createStartServer(app) {
     await ensureTablesImpl();
 
     if (nodeEnv === "development") {
-      const createViteServer =
-        createViteServerImpl || (await import("vite")).createServer;
-      const vite = await createViteServer({
-        root: CLIENT_ROOT,
-        server: {
-          middlewareMode: true,
-          watch: {
-            // Ignore client env files to avoid endless Vite restarts in dev middleware mode.
-            ignored: ["**/.env", "**/.env.*"],
-          },
-        },
-      });
-      appInstance.use(vite.middlewares);
-
-      appInstance.use("*", async (req, res, next) => {
-        if (isApiPathImpl(req.path)) {
-          return next();
-        }
-
-        try {
-          const htmlPath = path.join(clientRoot, "index.html");
-          const template = await readFileImpl(htmlPath, "utf-8");
-          const html = await vite.transformIndexHtml(req.originalUrl, template);
-          const htmlWithMetaTags = await injectSharedCapsuleMetaTagsImpl(
-            html,
-            req,
-            getSharedCapsuleOgMetadataImpl,
-            { clientOrigin },
-          );
-          res
-            .status(200)
-            .set({ "Content-Type": "text/html" })
-            .end(htmlWithMetaTags);
-        } catch (error) {
-          vite.ssrFixStacktrace(error);
-          next(error);
-        }
-        return undefined;
+      await configureDevelopmentApp({
+        appInstance,
+        clientOrigin,
+        clientRoot,
+        createViteServerImpl,
+        getSharedCapsuleOgMetadataImpl,
+        injectSharedCapsuleMetaTagsImpl,
+        isApiPathImpl,
+        readFileImpl,
       });
     } else if (existsSyncImpl(clientDistPath)) {
-      appInstance.use(expressStaticImpl(clientDistPath));
-
-      appInstance.get("*", async (req, res, next) => {
-        if (isApiPathImpl(req.path)) {
-          return res.status(404).json({ error: "not_found" });
-        }
-        try {
-          const html = await readFileImpl(
-            path.join(clientDistPath, "index.html"),
-            "utf-8",
-          );
-          const htmlWithMetaTags = await injectSharedCapsuleMetaTagsImpl(
-            html,
-            req,
-            getSharedCapsuleOgMetadataImpl,
-            { clientOrigin },
-          );
-          return res
-            .status(200)
-            .set({ "Content-Type": "text/html" })
-            .end(htmlWithMetaTags);
-        } catch (error) {
-          return next(error);
-        }
+      configureProductionApp({
+        appInstance,
+        clientDistPath,
+        clientOrigin,
+        expressStaticImpl,
+        getSharedCapsuleOgMetadataImpl,
+        injectSharedCapsuleMetaTagsImpl,
+        isApiPathImpl,
+        readFileImpl,
       });
     }
 

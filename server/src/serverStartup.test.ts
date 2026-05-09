@@ -1,4 +1,4 @@
-import { test, expect } from "vitest";
+import { test, expect, vi } from "vitest";
 import fs from "node:fs";
 import { createStartServer } from "./serverStartup.js";
 
@@ -140,7 +140,9 @@ test("development startup fixes Vite stack traces before forwarding html errors"
 test("production startup serves static files, spa html, and api 404s when client dist exists", async () => {
   const app = createAppRecorder();
   const nextCalls = [];
+  const assetStaticMiddleware = (_req, _res, next) => next();
   const staticMiddleware = (_req, _res, next) => next();
+  const staticCalls = [];
 
   await createStartServer(app)({
     nodeEnv: "production",
@@ -148,9 +150,11 @@ test("production startup serves static files, spa html, and api 404s when client
     clientDistPath: "/dist/client",
     ensureTablesImpl: async () => {},
     existsSyncImpl: (filePath) => filePath === "/dist/client",
-    expressStaticImpl: (filePath) => {
-      expect(filePath).toBe("/dist/client");
-      return staticMiddleware;
+    expressStaticImpl: (filePath, options) => {
+      staticCalls.push({ filePath, options });
+      return filePath.endsWith("/assets")
+        ? assetStaticMiddleware
+        : staticMiddleware;
     },
     readFileImpl: (async (filePath) => {
       expect(filePath).toBe("/dist/client/index.html");
@@ -162,11 +166,33 @@ test("production startup serves static files, spa html, and api 404s when client
     logInfoImpl: () => {},
   });
 
-  expect(app.calls[0]).toEqual({ type: "use", args: [staticMiddleware] });
-  expect(app.calls[1].type).toBe("get");
-  expect(app.calls[1].args[0]).toBe("*");
+  expect(staticCalls[0]).toEqual({
+    filePath: "/dist/client/assets",
+    options: {
+      immutable: true,
+      index: false,
+      maxAge: 31_536_000_000,
+    },
+  });
+  expect(staticCalls[1].filePath).toBe("/dist/client");
+  expect(staticCalls[1].options.index).toBe(false);
+  expect(typeof staticCalls[1].options.setHeaders).toBe("function");
+  expect(app.calls[0]).toEqual({
+    type: "use",
+    args: ["/assets", assetStaticMiddleware],
+  });
+  expect(app.calls[1]).toEqual({ type: "use", args: [staticMiddleware] });
+  expect(app.calls[2].type).toBe("get");
+  expect(app.calls[2].args[0]).toBe("*");
 
-  const handler = app.calls[1].args[1];
+  const headerResponse = { setHeader: vi.fn() };
+  staticCalls[1].options.setHeaders(headerResponse, "/dist/client/index.html");
+  expect(headerResponse.setHeader).toHaveBeenCalledWith(
+    "Cache-Control",
+    "no-store",
+  );
+
+  const handler = app.calls[2].args[1];
   const apiResponse = createResponse();
   await handler({ path: "/api/missing" }, apiResponse, (error) =>
     nextCalls.push(error),
@@ -179,7 +205,10 @@ test("production startup serves static files, spa html, and api 404s when client
     nextCalls.push(error),
   );
   expect(pageResponse.statusCode).toBe(200);
-  expect(pageResponse.headers).toEqual({ "Content-Type": "text/html" });
+  expect(pageResponse.headers).toEqual({
+    "Cache-Control": "no-store",
+    "Content-Type": "text/html",
+  });
   expect(pageResponse.body).toBe("<html>:meta:/share/abc");
   expect(nextCalls).toEqual([]);
 });
@@ -201,7 +230,7 @@ test("production startup forwards spa html read failures", async () => {
     logInfoImpl: () => {},
   });
 
-  const handler = app.calls[1].args[1];
+  const handler = app.calls[2].args[1];
   await handler({ path: "/share/abc" }, createResponse(), (error) =>
     nextCalls.push(error),
   );

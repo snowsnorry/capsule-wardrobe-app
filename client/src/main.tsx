@@ -7,6 +7,7 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import { LocaleProvider } from "./i18n/LocaleProvider";
+import { installVitePreloadErrorReload } from "./vitePreloadErrorReload";
 
 const container = document.getElementById("root");
 
@@ -15,6 +16,8 @@ if (!container) {
 }
 
 const root = createRoot(container);
+
+installVitePreloadErrorReload();
 
 root.render(
   <React.StrictMode>
