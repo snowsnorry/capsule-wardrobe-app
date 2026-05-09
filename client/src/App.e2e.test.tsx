@@ -26,6 +26,16 @@ const authApi = vi.hoisted(() => ({
 const profileOptionsApi = vi.hoisted(() => ({
   clearProfileOptionsCache: vi.fn(),
   loadProfileOptions: vi.fn(),
+  primeProfileOptionsCache: vi.fn((filters) => ({
+    styles: {
+      core: filters.formalityLevels || [],
+      aesthetics: filters.styles || [],
+    },
+    occasions: filters.occasions || [],
+    seasons: filters.seasons || [],
+    audience: filters.audience || [],
+    patterns: filters.patterns || [],
+  })),
 }));
 
 const wardrobeStream = vi.hoisted(() => ({
@@ -261,6 +271,14 @@ function createBootstrapResponse({
       status: "new",
     },
     capsules: [{ id: "capsule-1", name: "Spring edit", status: "new" }],
+    wardrobeFilters: {
+      formalityLevels: ["casual", "smart_casual", "formal"],
+      styles: ["minimalistic"],
+      occasions: ["office"],
+      seasons: ["spring", "summer"],
+      audience: ["woman", "man", "any"],
+      patterns: ["solid"],
+    },
   };
 }
 
@@ -287,6 +305,7 @@ describe("App e2e-style flows", () => {
 
     profileOptionsApi.clearProfileOptionsCache.mockReset();
     profileOptionsApi.loadProfileOptions.mockReset();
+    profileOptionsApi.primeProfileOptionsCache.mockClear();
 
     wardrobeStream.reset();
     wardrobeApi.subscribeCapsuleEvents.mockReset();

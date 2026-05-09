@@ -104,6 +104,46 @@ describe("useSessionBootstrap", () => {
     expect(mainScreenLoader.preloadMainScreen).toHaveBeenCalledTimes(1);
   });
 
+  test("skips loading options when capsule bootstrap includes them", async () => {
+    vi.mocked(fetchCurrentUser).mockResolvedValue({
+      user: { email: "person@example.com" },
+    });
+    const options = createOptions({
+      bootstrapCapsules: vi.fn(async () => ({
+        ...createTestProfile(),
+        hasProfile: true,
+        optionsLoaded: true,
+      })),
+    });
+
+    render(<Harness options={options} />);
+
+    await waitFor(() => {
+      expect(options.setSessionInitialized).toHaveBeenCalledWith(true);
+    });
+    expect(options.ensureOptionsLoaded).not.toHaveBeenCalled();
+    expect(options.preloadOnboardingOptions).not.toHaveBeenCalled();
+  });
+
+  test("loads options separately when capsule bootstrap omits them", async () => {
+    vi.mocked(fetchCurrentUser).mockResolvedValue({
+      user: { email: "person@example.com" },
+    });
+    const options = createOptions({
+      bootstrapCapsules: vi.fn(async () => ({
+        ...createTestProfile(),
+        hasProfile: true,
+        optionsLoaded: false,
+      })),
+    });
+
+    render(<Harness options={options} />);
+
+    await waitFor(() => {
+      expect(options.ensureOptionsLoaded).toHaveBeenCalled();
+    });
+  });
+
   test("does not preload MainScreen when the current route cannot use it", async () => {
     vi.mocked(fetchCurrentUser).mockResolvedValue({
       user: { email: "person@example.com" },

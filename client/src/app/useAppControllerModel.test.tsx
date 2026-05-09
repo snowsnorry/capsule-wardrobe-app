@@ -149,6 +149,7 @@ vi.mock("./usePasskeyPrompt", () => ({
 
 vi.mock("./useProfileOptions", () => ({
   useProfileOptions: () => ({
+    applyWardrobeFilters: vi.fn(),
     audienceOptions: [],
     ensureOptionsLoaded: vi.fn(),
     occasionOptions: [],

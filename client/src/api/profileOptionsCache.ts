@@ -1,24 +1,10 @@
 import { fetchWardrobeFilters } from "./auth";
+import type {
+  ProfileOptionsResult,
+  WardrobeFiltersResponse,
+} from "../app/appTypes";
 
-type WardrobeFiltersResponse = {
-  formalityLevels?: string[] | null;
-  styles?: string[] | null;
-  occasions?: string[] | null;
-  seasons?: string[] | null;
-  audience?: string[] | null;
-  patterns?: string[] | null;
-};
-
-type CachedProfileOptions = {
-  styles: {
-    core: string[];
-    aesthetics: string[];
-  };
-  occasions: string[];
-  seasons: string[];
-  audience: string[];
-  patterns: string[];
-};
+type CachedProfileOptions = ProfileOptionsResult;
 
 let cachedStyles: CachedProfileOptions["styles"] | null = null;
 let cachedOccasions: string[] | null = null;
@@ -46,29 +32,36 @@ async function loadProfileOptions(): Promise<CachedProfileOptions> {
 
   if (!inFlight) {
     inFlight = fetchWardrobeFilters()
-      .then((filters: WardrobeFiltersResponse) => {
-        cachedStyles = {
-          core: filters.formalityLevels || [],
-          aesthetics: filters.styles || [],
-        };
-        cachedOccasions = filters.occasions || [];
-        cachedSeasons = filters.seasons || [];
-        cachedAudience = filters.audience || [];
-        cachedPatterns = filters.patterns || [];
-        return {
-          styles: cachedStyles,
-          occasions: cachedOccasions,
-          seasons: cachedSeasons,
-          audience: cachedAudience,
-          patterns: cachedPatterns,
-        };
-      })
+      .then((filters: WardrobeFiltersResponse) =>
+        primeProfileOptionsCache(filters),
+      )
       .finally(() => {
         inFlight = null;
       });
   }
 
   return inFlight;
+}
+
+function primeProfileOptionsCache(
+  filters: WardrobeFiltersResponse,
+): CachedProfileOptions {
+  inFlight = null;
+  cachedStyles = {
+    core: filters.formalityLevels || [],
+    aesthetics: filters.styles || [],
+  };
+  cachedOccasions = filters.occasions || [];
+  cachedSeasons = filters.seasons || [];
+  cachedAudience = filters.audience || [];
+  cachedPatterns = filters.patterns || [];
+  return {
+    styles: cachedStyles,
+    occasions: cachedOccasions,
+    seasons: cachedSeasons,
+    audience: cachedAudience,
+    patterns: cachedPatterns,
+  };
 }
 
 function clearProfileOptionsCache() {
@@ -80,4 +73,8 @@ function clearProfileOptionsCache() {
   inFlight = null;
 }
 
-export { loadProfileOptions, clearProfileOptionsCache };
+export {
+  loadProfileOptions,
+  primeProfileOptionsCache,
+  clearProfileOptionsCache,
+};

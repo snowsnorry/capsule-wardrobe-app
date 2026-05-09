@@ -37,7 +37,9 @@ async function loadProfileState(
     return;
   }
 
-  await options.ensureOptionsLoaded();
+  if (!bootstrap.optionsLoaded) {
+    await options.ensureOptionsLoaded();
+  }
 }
 
 export function useSessionBootstrap(options: UseSessionBootstrapOptions) {

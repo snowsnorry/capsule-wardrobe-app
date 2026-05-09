@@ -189,6 +189,14 @@ test("capsule read routes expose bootstrap, recent, search, and lookup fallbacks
   expect((bootstrap.json.activeCapsule as { id?: string }).id).toBe(
     "capsule-1",
   );
+  expect(bootstrap.json.wardrobeFilters).toEqual({
+    formalityLevels: ["casual", "formal"],
+    styles: ["minimalistic", "sporty"],
+    occasions: ["office", "date_night"],
+    seasons: ["spring", "summer"],
+    audience: ["man", "woman", "any"],
+    patterns: ["striped", "plain"],
+  });
 
   const recent = await requestJson(baseUrl, "/capsules/recent", {
     cookie: AUTH_COOKIE,

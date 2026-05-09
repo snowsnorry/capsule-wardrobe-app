@@ -54,6 +54,7 @@ export function useAppControllerOperations({
   appState,
   locale,
   notifications,
+  profileOptions,
   resolveErrorMessage,
   setLocale,
   shareRoute,
@@ -116,11 +117,15 @@ export function useAppControllerOperations({
     const normalizedProfile = normalizeProfileSettings(result.profile, email);
     appState.setSettingsProfile(normalizedProfile);
     if (normalizedProfile.locale) setLocale(normalizedProfile.locale);
+    const optionsLoaded = Boolean(result.wardrobeFilters);
+    if (result.wardrobeFilters) {
+      profileOptions.applyWardrobeFilters(result.wardrobeFilters);
+    }
     operations.applyCapsuleState(result.activeCapsule, {
       capsules: result.capsules || [],
     });
     await restoreCapsuleSnapshot(operations, result);
-    return { ...normalizedProfile, hasProfile: true };
+    return { ...normalizedProfile, hasProfile: true, optionsLoaded };
   };
   operations.getAppActionContext = () =>
     buildDefaultActionContext({

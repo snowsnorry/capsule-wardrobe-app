@@ -43,6 +43,16 @@ const capsulesApi = vi.hoisted(() => ({
 const profileOptionsApi = vi.hoisted(() => ({
   clearProfileOptionsCache: vi.fn(),
   loadProfileOptions: vi.fn(),
+  primeProfileOptionsCache: vi.fn((filters) => ({
+    styles: {
+      core: filters.formalityLevels || [],
+      aesthetics: filters.styles || [],
+    },
+    occasions: filters.occasions || [],
+    seasons: filters.seasons || [],
+    audience: filters.audience || [],
+    patterns: filters.patterns || [],
+  })),
 }));
 
 const wardrobeApi = vi.hoisted(() => ({
@@ -177,6 +187,14 @@ function createBootstrapResponse({
     activeCapsule,
     activeSnapshot,
     capsules: [{ id: "capsule-1", name: "Spring edit", status: "new" }],
+    wardrobeFilters: {
+      formalityLevels: ["casual", "smart_casual", "formal"],
+      styles: ["minimalistic"],
+      occasions: ["office"],
+      seasons: ["spring", "summer"],
+      audience: ["woman", "man", "any"],
+      patterns: ["solid"],
+    },
   };
 }
 
@@ -275,6 +293,7 @@ describe("App", () => {
     });
     expect(capsulesApi.fetchCapsule).not.toHaveBeenCalled();
     expect(capsulesApi.fetchRecentCapsules).not.toHaveBeenCalled();
+    expect(profileOptionsApi.loadProfileOptions).not.toHaveBeenCalled();
   });
 
   test("opens statistics on direct statistics route after session bootstrap", async () => {

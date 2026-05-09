@@ -1,17 +1,8 @@
 import { logError } from "../logger.js";
+import { buildWardrobeFilters } from "./wardrobeFilters.js";
 
 export function registerProfileReadRoutes(app, context) {
-  const {
-    getAudienceOptionsImpl,
-    getFormalityLevelsImpl,
-    getOccasionsImpl,
-    getPatternOptionsImpl,
-    getProfileImpl,
-    getSeasonsImpl,
-    getStylesImpl,
-    requireAuth,
-    toProfileResponse,
-  } = context;
+  const { getProfileImpl, requireAuth, toProfileResponse } = context;
 
   app.get("/profile/me", requireAuth, async (req, res) => {
     try {
@@ -28,22 +19,9 @@ export function registerProfileReadRoutes(app, context) {
 
   app.get("/wardrobe/filters", requireAuth, async (req, res) => {
     try {
-      const [formalityLevels, styles, occasions, seasons, patterns] =
-        await Promise.all([
-          getFormalityLevelsImpl(req.user.email),
-          getStylesImpl(req.user.email),
-          getOccasionsImpl(req.user.email),
-          getSeasonsImpl(req.user.email),
-          getPatternOptionsImpl(req.user.email),
-        ]);
       return res.json({
         ok: true,
-        formalityLevels,
-        styles,
-        occasions,
-        seasons,
-        audience: getAudienceOptionsImpl(),
-        patterns,
+        ...(await buildWardrobeFilters(context, req.user.email)),
       });
     } catch (error) {
       logError("[wardrobe/filters]", error);

@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from "react";
 import {
   clearProfileOptionsCache,
   loadProfileOptions,
+  primeProfileOptionsCache,
 } from "../api/profileOptionsCache";
 import {
   FALLBACK_AUDIENCE_OPTIONS,
@@ -10,7 +11,7 @@ import {
   FALLBACK_STYLE_OPTIONS,
 } from "./appConstants";
 import { sortSeasonOptions } from "./capsuleState";
-import type { ProfileOptionsResult } from "./appTypes";
+import type { ProfileOptionsResult, WardrobeFiltersResponse } from "./appTypes";
 
 export function useProfileOptions() {
   const [styleOptions, setStyleOptions] = useState(FALLBACK_STYLE_OPTIONS);
@@ -40,15 +41,26 @@ export function useProfileOptions() {
     setPatternOptions([]);
   }, []);
 
+  const applyLoadedOptions = useCallback((result: ProfileOptionsResult) => {
+    setStyleOptions(result.styles);
+    setOccasionOptions(result.occasions);
+    setSeasonOptions(result.seasons);
+    setAudienceOptions(result.audience);
+    setPatternOptions(result.patterns);
+  }, []);
+
+  const applyWardrobeFilters = useCallback(
+    (filters: WardrobeFiltersResponse) => {
+      applyLoadedOptions(primeProfileOptionsCache(filters));
+    },
+    [applyLoadedOptions],
+  );
+
   const preloadOnboardingOptions = useCallback(
     async ({ useFallback = false }: { useFallback?: boolean } = {}) => {
       try {
         const result = (await loadProfileOptions()) as ProfileOptionsResult;
-        setStyleOptions(result.styles);
-        setOccasionOptions(result.occasions);
-        setSeasonOptions(result.seasons);
-        setAudienceOptions(result.audience);
-        setPatternOptions(result.patterns);
+        applyLoadedOptions(result);
       } catch (error) {
         if (!useFallback) {
           throw error;
@@ -56,7 +68,7 @@ export function useProfileOptions() {
         applyFallbackOptions();
       }
     },
-    [applyFallbackOptions],
+    [applyFallbackOptions, applyLoadedOptions],
   );
 
   const ensureOptionsLoaded = useCallback(
@@ -89,6 +101,7 @@ export function useProfileOptions() {
     orderedSeasonOptions,
     audienceOptions,
     patternOptions,
+    applyWardrobeFilters,
     ensureOptionsLoaded,
     preloadOnboardingOptions,
     resetProfileOptions,

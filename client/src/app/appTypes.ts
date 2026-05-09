@@ -111,6 +111,15 @@ export type ProfileOptionsResult = {
   patterns: string[];
 };
 
+export type WardrobeFiltersResponse = {
+  formalityLevels?: string[] | null;
+  styles?: string[] | null;
+  occasions?: string[] | null;
+  seasons?: string[] | null;
+  audience?: string[] | null;
+  patterns?: string[] | null;
+};
+
 export type CurrentUserResponse = {
   user?: UserLike | null;
 };
@@ -126,10 +135,12 @@ export type CapsuleBootstrapResponse = {
   activeCapsule?: CapsuleMeta | null;
   capsules?: CapsuleMeta[];
   activeSnapshot?: WardrobeSnapshot;
+  wardrobeFilters?: WardrobeFiltersResponse | null;
 };
 
 export type CapsuleBootstrapResult = ProfileSettings & {
   hasProfile: boolean;
+  optionsLoaded?: boolean;
 };
 
 export type CapsuleListResponse = {

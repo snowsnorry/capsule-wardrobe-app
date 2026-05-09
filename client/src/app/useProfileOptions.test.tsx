@@ -3,12 +3,23 @@ import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import {
   clearProfileOptionsCache,
   loadProfileOptions,
+  primeProfileOptionsCache,
 } from "../api/profileOptionsCache";
 import { useProfileOptions } from "./useProfileOptions";
 
 vi.mock("../api/profileOptionsCache", () => ({
   clearProfileOptionsCache: vi.fn(),
   loadProfileOptions: vi.fn(),
+  primeProfileOptionsCache: vi.fn((filters) => ({
+    styles: {
+      core: filters.formalityLevels || [],
+      aesthetics: filters.styles || [],
+    },
+    occasions: filters.occasions || [],
+    seasons: filters.seasons || [],
+    audience: filters.audience || [],
+    patterns: filters.patterns || [],
+  })),
 }));
 
 describe("useProfileOptions", () => {
@@ -58,5 +69,37 @@ describe("useProfileOptions", () => {
       expect(result.current.occasionOptions.length).toBeGreaterThan(0);
     });
     expect(result.current.patternOptions).toEqual([]);
+  });
+
+  test("applies preloaded wardrobe filters and primes the cache", async () => {
+    const { result } = renderHook(() => useProfileOptions());
+
+    act(() => {
+      result.current.applyWardrobeFilters({
+        formalityLevels: ["smart_casual"],
+        styles: ["classic"],
+        occasions: ["travel"],
+        seasons: ["autumn", "spring"],
+        audience: ["any"],
+        patterns: ["striped"],
+      });
+    });
+
+    expect(primeProfileOptionsCache).toHaveBeenCalledWith({
+      formalityLevels: ["smart_casual"],
+      styles: ["classic"],
+      occasions: ["travel"],
+      seasons: ["autumn", "spring"],
+      audience: ["any"],
+      patterns: ["striped"],
+    });
+    expect(result.current.styleOptions).toEqual({
+      core: ["smart_casual"],
+      aesthetics: ["classic"],
+    });
+    expect(result.current.occasionOptions).toEqual(["travel"]);
+    expect(result.current.orderedSeasonOptions).toEqual(["spring", "autumn"]);
+    expect(result.current.audienceOptions).toEqual(["any"]);
+    expect(result.current.patternOptions).toEqual(["striped"]);
   });
 });

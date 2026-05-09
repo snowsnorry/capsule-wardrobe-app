@@ -3,6 +3,7 @@ import { fetchWardrobeFilters } from "./auth";
 import {
   clearProfileOptionsCache,
   loadProfileOptions,
+  primeProfileOptionsCache,
 } from "./profileOptionsCache";
 
 vi.mock("./auth", () => ({
@@ -76,5 +77,31 @@ describe("profileOptionsCache", () => {
 
     expect(fetchWardrobeFilters).toHaveBeenCalledTimes(2);
     expect(reloaded.occasions).toEqual(["travel"]);
+  });
+
+  test("primes cached values from bootstrap filters", async () => {
+    const primed = primeProfileOptionsCache({
+      formalityLevels: ["smart_casual"],
+      styles: ["classic"],
+      occasions: ["travel"],
+      seasons: ["spring"],
+      audience: ["any"],
+      patterns: ["striped"],
+    });
+
+    const loaded = await loadProfileOptions();
+
+    expect(fetchWardrobeFilters).not.toHaveBeenCalled();
+    expect(loaded.styles).toBe(primed.styles);
+    expect(loaded).toEqual({
+      styles: {
+        core: ["smart_casual"],
+        aesthetics: ["classic"],
+      },
+      occasions: ["travel"],
+      seasons: ["spring"],
+      audience: ["any"],
+      patterns: ["striped"],
+    });
   });
 });

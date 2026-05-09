@@ -1,5 +1,6 @@
 import type { ErrorWithCode } from "../ai/types.js";
 import { logError } from "../logger.js";
+import { buildWardrobeFilters } from "./wardrobeFilters.js";
 
 export function registerCapsuleReadRoutes(app, context) {
   registerCapsuleBootstrapRoutes(app, context);
@@ -36,6 +37,10 @@ function registerCapsuleBootstrapRoutes(app, context) {
       }
       const activeCapsule = await resolveActiveCapsuleImpl(req.user.email);
       const recentCapsules = await listRecentCapsulesImpl(req.user.email, 10);
+      const wardrobeFilters = await buildWardrobeFilters(
+        context,
+        req.user.email,
+      );
       return res.json({
         ok: true,
         hasProfile: true,
@@ -46,6 +51,7 @@ function registerCapsuleBootstrapRoutes(app, context) {
           activeCapsule,
         ),
         capsules: recentCapsules.map(toCapsuleSummary),
+        wardrobeFilters,
       });
     } catch (error) {
       logError("[capsules/bootstrap]", error);
