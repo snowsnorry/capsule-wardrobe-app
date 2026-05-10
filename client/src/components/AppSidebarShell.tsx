@@ -123,6 +123,11 @@ function AppSidebarShell({
   shellTestId,
   currentApp = "",
   contentSurface = "panel",
+  contentAlignment = "center",
+  desktopContentGap,
+  desktopContentEndGap,
+  desktopContentMaxWidth,
+  contentWidth,
   userEmail = "",
   userName = "",
   settingsProfile = null,
@@ -172,6 +177,11 @@ function AppSidebarShell({
       <ShellMainContent
         shellTestId={shellTestId}
         contentSurface={contentSurface}
+        contentAlignment={contentAlignment}
+        desktopContentGap={desktopContentGap}
+        desktopContentEndGap={desktopContentEndGap}
+        desktopContentMaxWidth={desktopContentMaxWidth}
+        contentWidth={contentWidth}
         headerContent={headerContent}
         children={children}
         context={shellContext}

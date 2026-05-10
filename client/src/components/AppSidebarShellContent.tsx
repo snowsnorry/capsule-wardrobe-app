@@ -1,17 +1,17 @@
 import type { MouseEvent, ReactNode } from "react";
-import {
-  Avatar,
-  Box,
-  Button,
-  Divider,
-  IconButton,
-  Stack,
-  Typography,
-} from "@mui/material";
+import { Box, Divider, IconButton, Stack, Typography } from "@mui/material";
 import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
+import {
+  getContentSurfaceWidthSx,
+  getShellMainFrameSx,
+  getShellMainLayout,
+  getShellMainStackSx,
+} from "./AppSidebarShellContentLayout";
 import { SidebarFrame, UserMenu } from "./AppSidebarShellContentMenus";
+import SidebarUserButton from "./AppSidebarShellUserButton";
 import SidebarCollapseIcon from "./SidebarCollapseIcon";
 import type {
+  AppSidebarShellContentMaxWidth,
   AppSidebarShellContext,
   AppSidebarShellSlot,
 } from "./AppSidebarShellTypes";
@@ -112,89 +112,6 @@ function SidebarHeader({
   );
 }
 
-function SidebarUserButton({
-  avatarInitials,
-  displayName,
-  userEmail,
-  context,
-  onOpenUserMenu,
-}: {
-  avatarInitials: string;
-  displayName: string;
-  userEmail: string;
-  context: AppSidebarShellContext;
-  onOpenUserMenu: (event: MouseEvent<HTMLElement>) => void;
-}) {
-  const { isOverlaySidebar, isSidebarCollapsed, desktopSidebarRailWidth } =
-    context;
-
-  return (
-    <Button
-      aria-label="Open user menu"
-      onClick={onOpenUserMenu}
-      sx={{
-        width: "100%",
-        justifyContent: "flex-start",
-        px: 0,
-        py: 2,
-        borderRadius: 0,
-      }}
-    >
-      <Box
-        sx={{
-          width: desktopSidebarRailWidth,
-          display: "flex",
-          justifyContent: "center",
-          flexShrink: 0,
-        }}
-      >
-        <Avatar sx={sidebarAvatarSx}>{avatarInitials}</Avatar>
-      </Box>
-      {!isSidebarCollapsed || isOverlaySidebar ? (
-        <Stack
-          justifyContent="center"
-          alignItems="flex-start"
-          sx={{ minHeight: 36, minWidth: 0, textAlign: "left" }}
-        >
-          <Typography
-            color="text.primary"
-            noWrap
-            sx={{
-              width: "100%",
-              opacity: isSidebarCollapsed && !isOverlaySidebar ? 0 : 1,
-              transform:
-                isSidebarCollapsed && !isOverlaySidebar
-                  ? "translateX(-8px)"
-                  : "translateX(0)",
-              transition: "opacity 180ms ease, transform 220ms ease",
-            }}
-          >
-            {displayName || userEmail || ""}
-          </Typography>
-          {displayName ? (
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              noWrap
-              sx={{ width: "100%" }}
-            >
-              {userEmail || ""}
-            </Typography>
-          ) : null}
-        </Stack>
-      ) : null}
-    </Button>
-  );
-}
-
-const sidebarAvatarSx = {
-  width: 36,
-  height: 36,
-  bgcolor: "var(--cw-color-user-avatar-bg)",
-  color: "var(--cw-color-user-avatar-ink)",
-  fontWeight: 650,
-} as const;
-
 function SidebarContent({
   avatarInitials,
   displayName,
@@ -256,9 +173,13 @@ function SidebarContent({
 }
 
 function getContentSurfaceSx({
+  contentWidth,
+  desktopContentMaxWidth = { default: 1600 },
   isOverlaySidebar,
   isPlainContentSurface,
 }: {
+  contentWidth?: "bounded" | "fill";
+  desktopContentMaxWidth?: AppSidebarShellContentMaxWidth;
   isOverlaySidebar: boolean;
   isPlainContentSurface: boolean;
 }) {
@@ -271,10 +192,13 @@ function getContentSurfaceSx({
     : "background.paper";
 
   return {
-    width: isOverlaySidebar ? "100%" : "min(100%, 1600px)",
-    maxWidth: isOverlaySidebar ? undefined : "1600px",
+    ...getContentSurfaceWidthSx({
+      contentWidth: contentWidth ?? "bounded",
+      desktopContentMaxWidth,
+      isOverlaySidebar,
+    }),
     minHeight: 0,
-    overflow: "hidden",
+    overflow: isPlainContentSurface && !isOverlaySidebar ? "visible" : "hidden",
     bgcolor: panelBackground,
     border: isPlainContentSurface ? "none" : "1px solid",
     borderColor: isPlainContentSurface ? "transparent" : "divider",
@@ -287,72 +211,72 @@ function getContentSurfaceSx({
   } as const;
 }
 
-function getSidebarMode({
-  isOverlaySidebar,
-  isLargeDesktopSidebar,
-}: {
-  isOverlaySidebar: boolean;
-  isLargeDesktopSidebar: boolean;
-}) {
-  if (isOverlaySidebar) {
-    return "overlay";
-  }
-
-  return isLargeDesktopSidebar ? "desktop-large" : "desktop-medium";
-}
-
 function ShellMainContent({
   shellTestId,
   contentSurface,
+  contentAlignment,
+  contentWidth,
+  desktopContentEndGap,
+  desktopContentGap,
+  desktopContentMaxWidth,
   headerContent,
   children,
   context,
 }: {
   shellTestId?: string;
   contentSurface: "panel" | "plain";
+  contentAlignment: "center" | "start";
+  contentWidth?: "bounded" | "fill";
+  desktopContentEndGap?: number;
+  desktopContentGap?: number;
+  desktopContentMaxWidth?: AppSidebarShellContentMaxWidth;
   headerContent?: AppSidebarShellSlot;
   children?: AppSidebarShellSlot;
   context: AppSidebarShellContext;
 }) {
-  const {
-    currentApp,
-    isOverlaySidebar,
-    isLargeDesktopSidebar,
-    desktopContentInset,
-    desktopSidebarGap,
-  } = context;
+  const { currentApp, isOverlaySidebar } = context;
   const isPlainContentSurface = contentSurface === "plain";
   const contentSurfaceSx = getContentSurfaceSx({
+    contentWidth,
+    desktopContentMaxWidth,
     isOverlaySidebar,
     isPlainContentSurface,
+  });
+  const usesFillPlainSurface =
+    isPlainContentSurface && !isOverlaySidebar && contentWidth === "fill";
+  const contentOverflow =
+    isPlainContentSurface && !isOverlaySidebar ? "visible" : "hidden";
+  const layout = getShellMainLayout({
+    contentAlignment,
+    desktopContentEndGap,
+    desktopContentGap,
+    context,
   });
 
   return (
     <Stack
       spacing={0}
-      sx={{ height: "100%", minHeight: 0, overflow: "hidden" }}
+      sx={getShellMainStackSx({
+        contentOverflow,
+        left: layout.paddingLeft,
+        usesFillPlainSurface,
+      })}
     >
       <Box
-        sx={{
-          flex: 1,
-          minHeight: 0,
-          overflow: "hidden",
-          pl: isOverlaySidebar ? 0 : `${desktopContentInset}px`,
-          mr: isOverlaySidebar ? 0 : `${desktopSidebarGap}px`,
-          my: { xs: 0, md: 0.5 },
-          display: "flex",
-          justifyContent: isOverlaySidebar ? "stretch" : "center",
-          transition: isOverlaySidebar ? undefined : "padding-left 240ms ease",
-        }}
+        sx={getShellMainFrameSx({
+          contentOverflow,
+          justifyContent: layout.justifyContent,
+          marginRight: layout.marginRight,
+          paddingLeft: layout.paddingLeft,
+          transition: layout.transition,
+          usesFillPlainSurface,
+        })}
       >
         <Box
           data-testid={shellTestId}
           data-current-app={currentApp}
-          data-sidebar-mode={getSidebarMode({
-            isOverlaySidebar,
-            isLargeDesktopSidebar,
-          })}
-          data-content-alignment={isOverlaySidebar ? "overlay" : "centered"}
+          data-sidebar-mode={layout.sidebarMode}
+          data-content-alignment={layout.dataAlignment}
           sx={contentSurfaceSx}
         >
           {renderShellSlot(headerContent, context)}

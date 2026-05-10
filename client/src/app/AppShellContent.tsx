@@ -12,6 +12,7 @@ import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
 import AppSidebarNavigation from "../components/AppSidebarNavigation";
 import AppSidebarShell from "../components/AppSidebarShell";
 import RoutePanelFallback from "./RoutePanelFallback";
+import { getShellContainerVerticalPadding } from "./AppShellContentLayout";
 import { getActiveSidebarApp } from "./appRouting";
 import type {
   AppNavigationOptions,
@@ -196,6 +197,10 @@ function AppSidebarPanel(props: AppShellContentProps) {
       }
       currentApp={activeSidebarApp}
       contentSurface="plain"
+      contentAlignment={props.isMainScreenView ? "start" : "center"}
+      desktopContentGap={props.isMainScreenView ? 32 : undefined}
+      desktopContentEndGap={props.isMainScreenView ? 0 : undefined}
+      contentWidth={props.isMainScreenView ? "fill" : "bounded"}
       userEmail={props.user?.email || ""}
       userName={props.settingsProfile.fullname}
       settingsProfile={props.settingsProfile}
@@ -295,6 +300,11 @@ function CardPanel(
 export default function AppShellContent(props: AppShellContentProps) {
   const isFullScreenRoute =
     props.isMainScreenView || props.isSearchView || props.isStatisticsView;
+  const verticalPadding = getShellContainerVerticalPadding({
+    isFullScreenRoute,
+    isMainScreenView: props.isMainScreenView,
+  });
+
   return (
     <Box
       sx={{
@@ -320,7 +330,7 @@ export default function AppShellContent(props: AppShellContentProps) {
             ? "1fr"
             : { xs: "1fr", md: "1.2fr 1fr" },
           alignItems: "center",
-          py: isFullScreenRoute ? { xs: 0, md: "12px" } : { xs: 0, md: "24px" },
+          ...verticalPadding,
           px: isFullScreenRoute ? 0 : { xs: 0, md: 3 },
           maxWidth: isFullScreenRoute ? "none" : undefined,
           minHeight: "100vh",

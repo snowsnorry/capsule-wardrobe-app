@@ -11,6 +11,17 @@ import type {
 
 const OUTFIT_SET_IMAGE_WIDTH = 896;
 const OUTFIT_SET_IMAGE_HEIGHT = 1195;
+export const MAIN_SCREEN_CONTENT_COLUMN_SX = {
+  width: "100%",
+  maxWidth: { lg: "1240px" },
+  mr: "auto",
+  "@media (min-width: 2100px)": {
+    maxWidth: "1360px",
+  },
+  "@media (min-width: 2600px)": {
+    maxWidth: "1440px",
+  },
+} as const;
 export const OUTFIT_SET_IMAGE_ASPECT_RATIO = `${OUTFIT_SET_IMAGE_WIDTH} / ${OUTFIT_SET_IMAGE_HEIGHT}`;
 export const OUTFIT_SET_IMAGE_PREVIEW_MAX_WIDTH = OUTFIT_SET_IMAGE_WIDTH / 2;
 

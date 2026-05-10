@@ -17,6 +17,7 @@ import ClothingGridPlaceholder, {
 } from "../../components/ClothingGridPlaceholder";
 import { useI18n } from "../../i18n/useI18n";
 import {
+  MAIN_SCREEN_CONTENT_COLUMN_SX,
   OUTFIT_SET_IMAGE_ASPECT_RATIO,
   OUTFIT_SET_IMAGE_PREVIEW_MAX_WIDTH,
 } from "./MainScreenHelpers";
@@ -228,9 +229,9 @@ function MainScreenWardrobe(props: WardrobeProps) {
   return (
     <Box
       sx={{
-        flex: 1,
+        ...MAIN_SCREEN_CONTENT_COLUMN_SX,
         minHeight: 0,
-        overflowY: "auto",
+        overflow: "visible",
         px: paddingX,
         pt: { xs: 1.25, md: 2 },
         pb: 2,

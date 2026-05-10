@@ -23,10 +23,21 @@ type AppSidebarShellSlot =
   | ReactNode
   | ((context: AppSidebarShellContext) => ReactNode);
 
+type AppSidebarShellContentMaxWidth = {
+  default: number;
+  wide?: number;
+  ultraWide?: number;
+};
+
 type AppSidebarShellProps = {
   shellTestId?: string;
   currentApp?: string;
   contentSurface?: "panel" | "plain";
+  contentAlignment?: "center" | "start";
+  desktopContentGap?: number;
+  desktopContentEndGap?: number;
+  desktopContentMaxWidth?: AppSidebarShellContentMaxWidth;
+  contentWidth?: "bounded" | "fill";
   userEmail?: string;
   userName?: string;
   settingsProfile?: SettingsProfile | null;
@@ -38,6 +49,7 @@ type AppSidebarShellProps = {
 };
 
 export type {
+  AppSidebarShellContentMaxWidth,
   AppSidebarShellContext,
   AppSidebarShellProps,
   AppSidebarShellSlot,
