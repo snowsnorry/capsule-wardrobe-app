@@ -58,6 +58,9 @@ function manualChunks(id: string) {
 export default defineConfig(() => {
   return {
     plugins: [react(), tailwindcss()],
+    optimizeDeps: {
+      include: ["recharts"],
+    },
     build: {
       rollupOptions: {
         output: {
