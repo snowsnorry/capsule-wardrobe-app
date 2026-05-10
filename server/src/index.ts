@@ -305,7 +305,7 @@ function createApp(options = {}) {
 const app = createApp();
 const startServer = createStartServer(app);
 
-if (process.env.NODE_ENV !== "test") {
+if (process.env.NODE_ENV !== "test" && process.env.E2E_SERVER !== "true") {
   startServer().catch((error) => {
     logError("[server/start]", error);
     process.exitCode = 1;

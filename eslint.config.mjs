@@ -51,6 +51,7 @@ export default tseslint.config(
           "./client/tsconfig.json",
           "./client/tsconfig.node.json",
           "./server/tsconfig.json",
+          "./server/tsconfig.src.json",
           "./server/tsconfig.test.json",
           "./shared/tsconfig.json"
         ],
@@ -101,6 +102,12 @@ export default tseslint.config(
     rules: {
       "max-lines": "off",
       "max-lines-per-function": "off"
+    }
+  },
+  {
+    files: ["tests/e2e/**/*.ts"],
+    rules: {
+      "react-hooks/rules-of-hooks": "off"
     }
   },
   {

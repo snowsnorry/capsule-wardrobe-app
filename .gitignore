@@ -15,6 +15,9 @@ pnpm-debug.log*
 .vite/
 dist/
 coverage/
+playwright-report/
+test-results/
+tests/e2e/.auth/
 *.log
 last_prompt.txt
 last-prompt/
