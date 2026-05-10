@@ -1,6 +1,7 @@
 import type { ReactElement } from "react";
 import { Box, Divider, Stack, Typography } from "@mui/material";
 import SearchFiltersSidebar from "../../search/SearchFiltersSidebar";
+import { MAIN_SCREEN_CONTENT_COLUMN_SX } from "../mainScreen/MainScreenHelpers";
 import ProductDetail from "./ProductDetail";
 import SearchBar from "./SearchBar";
 import SearchResultsList from "./SearchResultsList";
@@ -11,6 +12,82 @@ type SearchScreenLayoutProps = {
   t: (key: string, params?: Record<string, unknown>) => string;
   locale: string;
 };
+
+export const SEARCH_DESKTOP_LAYOUT_SX = {
+  display: "grid",
+  gridTemplateColumns: { lg: "320px minmax(0, 1fr)" },
+  gap: { xs: 3, lg: "40px" },
+  flex: 1,
+  width: "100%",
+  height: "100%",
+  minWidth: 0,
+  minHeight: 0,
+  overflow: "hidden",
+  pt: 2,
+  boxSizing: "border-box",
+} as const;
+
+export const SEARCH_DESKTOP_MAIN_SX = {
+  display: "grid",
+  gridTemplateColumns: "minmax(280px, 420px) minmax(0, 1fr)",
+  gridTemplateRows: "auto minmax(0, 1fr)",
+  columnGap: "40px",
+  rowGap: 3,
+  width: "100%",
+  height: "100%",
+  minWidth: 0,
+  minHeight: 0,
+  overflow: "hidden",
+} as const;
+
+export const SEARCH_DESKTOP_HEADER_SX = {
+  ...MAIN_SCREEN_CONTENT_COLUMN_SX,
+  gridColumn: "1 / 3",
+  gridRow: "1",
+  zIndex: 1,
+} as const;
+
+export const SEARCH_DESKTOP_FILTERS_SX = {
+  minHeight: 0,
+  alignSelf: "start",
+  maxHeight: "calc(100vh - 32px)",
+  overflowY: "auto",
+  border: "1px solid",
+  borderColor: "divider",
+  borderRadius: "10px",
+  backgroundColor: "background.paper",
+  p: 3,
+} as const;
+
+export const SEARCH_DESKTOP_DETAIL_SX = {
+  gridColumn: "2",
+  gridRow: "1 / 3",
+  minHeight: 0,
+  height: "100%",
+  overflowY: "auto",
+  pt: 9,
+  boxSizing: "border-box",
+} as const;
+
+export const SEARCH_DESKTOP_DETAIL_CONTENT_SX = {
+  width: "100%",
+  maxWidth: { lg: "780px" },
+  mr: "auto",
+  "@media (min-width: 2100px)": {
+    maxWidth: "900px",
+  },
+  "@media (min-width: 2600px)": {
+    maxWidth: "980px",
+  },
+} as const;
+
+export const SEARCH_DESKTOP_RESULTS_SX = {
+  ...MAIN_SCREEN_CONTENT_COLUMN_SX,
+  minHeight: 0,
+  overflow: "hidden",
+  pb: 2,
+  boxSizing: "border-box",
+} as const;
 
 function SearchScreenMobile({
   search,
@@ -33,40 +110,19 @@ function SearchScreenDesktop({
   locale,
 }: SearchScreenLayoutProps): ReactElement {
   return (
-    <Box
-      sx={{
-        display: "grid",
-        gridTemplateColumns: "320px minmax(0, 1fr)",
-        gap: 3,
-        flex: 1,
-        minHeight: 0,
-        overflow: "hidden",
-      }}
-    >
+    <Box sx={SEARCH_DESKTOP_LAYOUT_SX}>
       <SearchDesktopFilters search={search} t={t} />
-      <Box
-        sx={{
-          display: "grid",
-          gridTemplateColumns: "minmax(280px, 420px) minmax(0, 1fr)",
-          gridTemplateRows: "auto minmax(0, 1fr)",
-          gap: 3,
-          minHeight: 0,
-          overflow: "hidden",
-          border: "1px solid",
-          borderColor: "divider",
-          borderRadius: "10px",
-          backgroundColor: "background.paper",
-          p: 3,
-        }}
-      >
-        <Box sx={{ gridColumn: "1 / 3" }}>
+      <Box sx={SEARCH_DESKTOP_MAIN_SX}>
+        <Box sx={SEARCH_DESKTOP_HEADER_SX}>
           <SearchBarView search={search} t={t} isMobile={false} />
         </Box>
-        <Box sx={{ minHeight: 0, overflow: "hidden" }}>
+        <Box sx={SEARCH_DESKTOP_RESULTS_SX}>
           <SearchResultsView search={search} t={t} isMobile={false} />
         </Box>
-        <Box sx={{ minHeight: 0, overflowY: "auto", pl: 0.5 }}>
-          <ProductDetail item={search.selectedItem} t={t} locale={locale} />
+        <Box sx={SEARCH_DESKTOP_DETAIL_SX}>
+          <Box sx={SEARCH_DESKTOP_DETAIL_CONTENT_SX}>
+            <ProductDetail item={search.selectedItem} t={t} locale={locale} />
+          </Box>
         </Box>
       </Box>
     </Box>
@@ -78,19 +134,7 @@ function SearchDesktopFilters({
   t,
 }: Omit<SearchScreenLayoutProps, "locale">): ReactElement {
   return (
-    <Box
-      sx={{
-        minHeight: 0,
-        alignSelf: "start",
-        maxHeight: "100%",
-        overflowY: "auto",
-        border: "1px solid",
-        borderColor: "divider",
-        borderRadius: "10px",
-        backgroundColor: "background.paper",
-        p: 3,
-      }}
-    >
+    <Box sx={SEARCH_DESKTOP_FILTERS_SX}>
       <Stack spacing={2.5} sx={{ mb: 3.5 }}>
         <Typography variant="h6" sx={{ color: "text.primary" }}>
           {t("filters.title")}

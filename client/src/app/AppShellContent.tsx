@@ -186,6 +186,8 @@ function SidebarHeader(
 
 function AppSidebarPanel(props: AppShellContentProps) {
   const activeSidebarApp = getActiveSidebarApp(props.appRoute);
+  const usesCapsuleLayout = props.isMainScreenView || props.isSearchView;
+
   return (
     <AppSidebarShell
       shellTestId={
@@ -197,10 +199,10 @@ function AppSidebarPanel(props: AppShellContentProps) {
       }
       currentApp={activeSidebarApp}
       contentSurface="plain"
-      contentAlignment={props.isMainScreenView ? "start" : "center"}
-      desktopContentGap={props.isMainScreenView ? 32 : undefined}
-      desktopContentEndGap={props.isMainScreenView ? 0 : undefined}
-      contentWidth={props.isMainScreenView ? "fill" : "bounded"}
+      contentAlignment={usesCapsuleLayout ? "start" : "center"}
+      desktopContentGap={usesCapsuleLayout ? 32 : undefined}
+      desktopContentEndGap={usesCapsuleLayout ? 0 : undefined}
+      contentWidth={usesCapsuleLayout ? "fill" : "bounded"}
       userEmail={props.user?.email || ""}
       userName={props.settingsProfile.fullname}
       settingsProfile={props.settingsProfile}
@@ -303,6 +305,7 @@ export default function AppShellContent(props: AppShellContentProps) {
   const verticalPadding = getShellContainerVerticalPadding({
     isFullScreenRoute,
     isMainScreenView: props.isMainScreenView,
+    isSearchView: props.isSearchView,
   });
 
   return (

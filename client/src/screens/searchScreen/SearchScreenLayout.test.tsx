@@ -62,7 +62,17 @@ vi.mock("./SearchResultsList", () => ({
   ),
 }));
 
-import { SearchScreenDesktop, SearchScreenMobile } from "./SearchScreenLayout";
+import {
+  SEARCH_DESKTOP_DETAIL_SX,
+  SEARCH_DESKTOP_DETAIL_CONTENT_SX,
+  SEARCH_DESKTOP_FILTERS_SX,
+  SEARCH_DESKTOP_HEADER_SX,
+  SEARCH_DESKTOP_LAYOUT_SX,
+  SEARCH_DESKTOP_MAIN_SX,
+  SEARCH_DESKTOP_RESULTS_SX,
+  SearchScreenDesktop,
+  SearchScreenMobile,
+} from "./SearchScreenLayout";
 
 function createSearch() {
   return {
@@ -89,6 +99,40 @@ function createSearch() {
 }
 
 describe("SearchScreenLayout", () => {
+  test("desktop layout mirrors the capsule screen sizing contract", () => {
+    expect(SEARCH_DESKTOP_LAYOUT_SX.gridTemplateColumns).toEqual({
+      lg: "320px minmax(0, 1fr)",
+    });
+    expect(SEARCH_DESKTOP_LAYOUT_SX.gap).toEqual({ xs: 3, lg: "40px" });
+    expect(SEARCH_DESKTOP_LAYOUT_SX.width).toBe("100%");
+    expect(SEARCH_DESKTOP_LAYOUT_SX.height).toBe("100%");
+    expect(SEARCH_DESKTOP_LAYOUT_SX.pt).toBe(2);
+    expect(SEARCH_DESKTOP_LAYOUT_SX).not.toHaveProperty("pb");
+
+    expect(SEARCH_DESKTOP_FILTERS_SX.maxHeight).toBe("calc(100vh - 32px)");
+    expect(SEARCH_DESKTOP_FILTERS_SX.p).toBe(3);
+    expect(SEARCH_DESKTOP_MAIN_SX.columnGap).toBe("40px");
+    expect(SEARCH_DESKTOP_MAIN_SX.height).toBe("100%");
+    expect(SEARCH_DESKTOP_MAIN_SX.width).toBe("100%");
+    expect(SEARCH_DESKTOP_MAIN_SX).not.toHaveProperty("maxWidth");
+    expect(SEARCH_DESKTOP_HEADER_SX.gridColumn).toBe("1 / 3");
+    expect(SEARCH_DESKTOP_HEADER_SX.maxWidth).toEqual({ lg: "1240px" });
+    expect(SEARCH_DESKTOP_DETAIL_SX.gridRow).toBe("1 / 3");
+    expect(SEARCH_DESKTOP_DETAIL_SX.overflowY).toBe("auto");
+    expect(SEARCH_DESKTOP_DETAIL_SX.pt).toBe(9);
+    expect(SEARCH_DESKTOP_DETAIL_CONTENT_SX.maxWidth).toEqual({
+      lg: "780px",
+    });
+    expect(SEARCH_DESKTOP_DETAIL_CONTENT_SX.mr).toBe("auto");
+    expect(SEARCH_DESKTOP_RESULTS_SX.maxWidth).toEqual({ lg: "1240px" });
+    expect(SEARCH_DESKTOP_RESULTS_SX.pb).toBe(2);
+    expect(SEARCH_DESKTOP_MAIN_SX).not.toHaveProperty("border");
+    expect(SEARCH_DESKTOP_MAIN_SX).not.toHaveProperty("borderColor");
+    expect(SEARCH_DESKTOP_MAIN_SX).not.toHaveProperty("borderRadius");
+    expect(SEARCH_DESKTOP_MAIN_SX).not.toHaveProperty("backgroundColor");
+    expect(SEARCH_DESKTOP_MAIN_SX).not.toHaveProperty("p");
+  });
+
   test("mobile layout wires query and result callbacks", () => {
     const search = createSearch();
 
