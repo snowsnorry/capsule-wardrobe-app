@@ -1,6 +1,5 @@
 export {
   buildLocalImageCachePath,
-  resolveStorageImagesDir,
   groupPromptImageItemsByCategory,
   readImageFromLocalCache,
   resolveSourceImageUrl,

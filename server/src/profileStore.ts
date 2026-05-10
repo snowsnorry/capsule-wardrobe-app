@@ -330,7 +330,6 @@ function createProfileStore({
 const defaultProfileStore = createProfileStore();
 const {
   getProfile,
-  hasProfile,
   createProfile,
   updateProfile,
   updateProfileLocale,
@@ -341,7 +340,6 @@ const {
 
 export {
   getProfile,
-  hasProfile,
   createProfile,
   updateProfile,
   updateProfileLocale,

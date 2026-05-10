@@ -70,7 +70,7 @@ export const STATISTICS_DESKTOP_MAIN_CONTENT_SX = {
   boxSizing: "border-box",
 } as const;
 
-export const STATISTICS_DESKTOP_CHARTS_STACK_SX = {
+const STATISTICS_DESKTOP_CHARTS_STACK_SX = {
   minHeight: 0,
 } as const;
 
