@@ -27,6 +27,15 @@ import {
 
 type Translate = (key: string, params?: unknown) => string;
 
+const SETTINGS_FIELD_IDS = {
+  email: "settings-email",
+  fullname: "settings-fullname",
+  imageLlm: "settings-image-llm",
+  language: "settings-language",
+  stylistModel: "settings-stylist-model",
+  theme: "settings-theme",
+} as const;
+
 function GeneralSettingsSection({
   draft,
   onDraftChange,
@@ -42,6 +51,7 @@ function GeneralSettingsSection({
   return (
     <Stack spacing={2.5}>
       <TextField
+        id={SETTINGS_FIELD_IDS.theme}
         select
         label={t("settings.fields.theme")}
         value={draft.theme}
@@ -56,6 +66,7 @@ function GeneralSettingsSection({
         ))}
       </TextField>
       <TextField
+        id={SETTINGS_FIELD_IDS.language}
         select
         label={t("settings.fields.language")}
         value={draft.locale}
@@ -88,6 +99,7 @@ function AiSettingsSection({
   return (
     <Stack spacing={2.5}>
       <TextField
+        id={SETTINGS_FIELD_IDS.stylistModel}
         select
         label={t("settings.fields.stylistModel")}
         value={draft.llm}
@@ -102,6 +114,7 @@ function AiSettingsSection({
         ))}
       </TextField>
       <TextField
+        id={SETTINGS_FIELD_IDS.imageLlm}
         select
         label={t("settings.fields.imageGenerationModel")}
         value={draft.imageLlm}
@@ -220,11 +233,13 @@ function AccountSettingsSection({
   return (
     <Stack spacing={2.5}>
       <TextField
+        id={SETTINGS_FIELD_IDS.fullname}
         label={t("settings.fields.name")}
         value={draft.fullname}
         onChange={(event) => onDraftChange("fullname", event.target.value)}
       />
       <TextField
+        id={SETTINGS_FIELD_IDS.email}
         label={t("settings.fields.email")}
         value={draft.email}
         InputProps={{ readOnly: true }}

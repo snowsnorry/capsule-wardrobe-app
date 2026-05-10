@@ -162,6 +162,29 @@ describe("SettingsDialog", () => {
     await deferred.promise;
   });
 
+  test("links each field label to a rendered control", async () => {
+    const user = userEvent.setup();
+    renderDialog();
+
+    const expectFieldLabelsToTargetElements = () => {
+      const labels = Array.from(
+        document.body.querySelectorAll<HTMLLabelElement>("label[for]"),
+      );
+      expect(labels.length).toBeGreaterThan(0);
+      for (const label of labels) {
+        expect(document.getElementById(label.htmlFor)).not.toBeNull();
+      }
+    };
+
+    expectFieldLabelsToTargetElements();
+
+    await user.click(screen.getByRole("button", { name: "AI" }));
+    expectFieldLabelsToTargetElements();
+
+    await user.click(screen.getByRole("button", { name: "Account" }));
+    expectFieldLabelsToTargetElements();
+  });
+
   test("renders passkeys as plain rows with created timestamps", async () => {
     const user = userEvent.setup();
     passkeysApiMock.listPasskeys.mockResolvedValue({
