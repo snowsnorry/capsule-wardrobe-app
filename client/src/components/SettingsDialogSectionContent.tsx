@@ -11,6 +11,10 @@ import {
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import KeyRoundedIcon from "@mui/icons-material/KeyRounded";
 import {
+  SETTINGS_FIELD_IDS,
+  SettingsSelectField,
+} from "./SettingsDialogFields";
+import {
   LANGUAGE_OPTIONS,
   PROFILE_IMAGE_LLM_OPTIONS,
   PROFILE_LLM_OPTIONS,
@@ -27,15 +31,6 @@ import {
 
 type Translate = (key: string, params?: unknown) => string;
 
-const SETTINGS_FIELD_IDS = {
-  email: "settings-email",
-  fullname: "settings-fullname",
-  imageLlm: "settings-image-llm",
-  language: "settings-language",
-  stylistModel: "settings-stylist-model",
-  theme: "settings-theme",
-} as const;
-
 function GeneralSettingsSection({
   draft,
   onDraftChange,
@@ -50,9 +45,9 @@ function GeneralSettingsSection({
 }) {
   return (
     <Stack spacing={2.5}>
-      <TextField
+      <SettingsSelectField
         id={SETTINGS_FIELD_IDS.theme}
-        select
+        labelId={SETTINGS_FIELD_IDS.themeLabel}
         label={t("settings.fields.theme")}
         value={draft.theme}
         onChange={(event) =>
@@ -64,10 +59,10 @@ function GeneralSettingsSection({
             {t(`settings.themeOptions.${value}`)}
           </MenuItem>
         ))}
-      </TextField>
-      <TextField
+      </SettingsSelectField>
+      <SettingsSelectField
         id={SETTINGS_FIELD_IDS.language}
-        select
+        labelId={SETTINGS_FIELD_IDS.languageLabel}
         label={t("settings.fields.language")}
         value={draft.locale}
         onChange={(event) =>
@@ -79,7 +74,7 @@ function GeneralSettingsSection({
             {t(`locale.options.${value}`)}
           </MenuItem>
         ))}
-      </TextField>
+      </SettingsSelectField>
     </Stack>
   );
 }
@@ -98,9 +93,9 @@ function AiSettingsSection({
 }) {
   return (
     <Stack spacing={2.5}>
-      <TextField
+      <SettingsSelectField
         id={SETTINGS_FIELD_IDS.stylistModel}
-        select
+        labelId={SETTINGS_FIELD_IDS.stylistModelLabel}
         label={t("settings.fields.stylistModel")}
         value={draft.llm}
         onChange={(event) =>
@@ -112,10 +107,10 @@ function AiSettingsSection({
             {t(`settings.llmOptions.${value}`)}
           </MenuItem>
         ))}
-      </TextField>
-      <TextField
+      </SettingsSelectField>
+      <SettingsSelectField
         id={SETTINGS_FIELD_IDS.imageLlm}
-        select
+        labelId={SETTINGS_FIELD_IDS.imageLlmLabel}
         label={t("settings.fields.imageGenerationModel")}
         value={draft.imageLlm}
         onChange={(event) =>
@@ -127,7 +122,7 @@ function AiSettingsSection({
             {t(`settings.imageLlmOptions.${value}`)}
           </MenuItem>
         ))}
-      </TextField>
+      </SettingsSelectField>
     </Stack>
   );
 }

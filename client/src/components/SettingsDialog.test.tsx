@@ -162,27 +162,48 @@ describe("SettingsDialog", () => {
     await deferred.promise;
   });
 
-  test("links each field label to a rendered control", async () => {
+  test("keeps field labels attached without dangling label for attributes", async () => {
     const user = userEvent.setup();
     renderDialog();
 
-    const expectFieldLabelsToTargetElements = () => {
+    const expectNoDanglingLabelTargets = () => {
       const labels = Array.from(
         document.body.querySelectorAll<HTMLLabelElement>("label[for]"),
       );
-      expect(labels.length).toBeGreaterThan(0);
       for (const label of labels) {
         expect(document.getElementById(label.htmlFor)).not.toBeNull();
       }
     };
 
-    expectFieldLabelsToTargetElements();
+    expect(screen.getByRole("combobox", { name: "Theme" })).toHaveAttribute(
+      "id",
+      "settings-theme",
+    );
+    expect(screen.getByRole("combobox", { name: "Language" })).toHaveAttribute(
+      "id",
+      "settings-language",
+    );
+    expectNoDanglingLabelTargets();
 
     await user.click(screen.getByRole("button", { name: "AI" }));
-    expectFieldLabelsToTargetElements();
+    expect(
+      screen.getByRole("combobox", { name: "Stylist Model" }),
+    ).toHaveAttribute("id", "settings-stylist-model");
+    expect(
+      screen.getByRole("combobox", { name: "Image Generation Model" }),
+    ).toHaveAttribute("id", "settings-image-llm");
+    expectNoDanglingLabelTargets();
 
     await user.click(screen.getByRole("button", { name: "Account" }));
-    expectFieldLabelsToTargetElements();
+    expect(screen.getByLabelText("Name")).toHaveAttribute(
+      "id",
+      "settings-fullname",
+    );
+    expect(screen.getByLabelText("Email")).toHaveAttribute(
+      "id",
+      "settings-email",
+    );
+    expectNoDanglingLabelTargets();
   });
 
   test("renders passkeys as plain rows with created timestamps", async () => {
