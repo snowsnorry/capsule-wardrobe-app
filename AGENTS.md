@@ -6,6 +6,7 @@ This repository is a full-stack capsule wardrobe application.
 High-level responsibilities:
 - `client/` contains the React frontend
 - `server/` contains the Express API and server-side workflows
+- `tests/e2e/` contains Playwright browser tests
 - shared cross-workspace tests are run from the repository root
 
 ## Architecture
@@ -15,12 +16,15 @@ High-level responsibilities:
 - Persistence: Postgres
 - Email auth delivery: Resend
 - Passkey/WebAuthn auth: SimpleWebAuthn with DB-backed short-lived challenges
+- Browser e2e: Playwright against a dedicated Express/Vite e2e server with in-memory mocks
 - Render single-service deployment is supported
 
 ## Directory map
 - `client/` — frontend app
 - `server/` — backend app
 - `shared/` — shared TypeScript domain models, helpers, and tests
+- `tests/e2e/` — Playwright fixtures, auth setup, and browser smoke tests
+- `playwright.config.ts` — Playwright projects, web server command, and auth setup wiring
 - `client/src/api/` — HTTP client calls and API-facing logic
 - `client/src/app/` — app shell, route content, state/actions, session bootstrap, navigation, and dialogs
 - `client/src/auth/` — browser auth helpers such as passkey/WebAuthn flows
@@ -34,6 +38,7 @@ High-level responsibilities:
 - `client/src/utils/` — client utilities
 - `server/src/ai/` — AI-related integrations and orchestration
 - `server/src/db/` — split DB modules for auth, passkeys, profiles, capsule data, search, schema, and product options
+- `server/src/e2e/` — isolated e2e server, in-memory dependencies, fixtures, and e2e-only routes
 - `server/src/routes/` — grouped Express route modules
 - `server/src/templates/` — server-side templates
 - `server/src/index.ts` — server entrypoint
@@ -47,6 +52,7 @@ Run from repository root unless stated otherwise.
 
 Install:
 - `npm install`
+- `npm run playwright:install`
 
 Development:
 - `npm run dev:all`
@@ -71,6 +77,7 @@ Tests:
 - `npm run test:client`
 - `npm run test:server`
 - `npm run test:shared`
+- `npm run test:e2e`
 
 Coverage:
 - `npm run coverage`
@@ -95,6 +102,8 @@ Lint and quality:
 - When changing localization-visible text, update locale resources and keep EN/RU parity.
 - When changing auth, session, DB, email, or deployment behavior, be conservative and avoid incidental rewrites.
 - When changing passkeys/WebAuthn, preserve DB-backed challenge single-use semantics, do not return stored public keys to the client, and keep `PASSKEY_RP_ID`/`PASSKEY_ORIGIN` aligned with the visible frontend origin.
+- Keep Playwright e2e-only endpoints and env vars isolated from normal dev, production, and Render startup paths.
+- Default Playwright e2e runs should not require real DB, email, LLM, embedding, or remote image services.
 - Prefer extending existing patterns over introducing new abstractions.
 
 ## Change heuristics
@@ -108,6 +117,9 @@ For backend tasks:
 For deployment/config tasks:
 - inspect root `package.json`, `client/render-server.js`, `client/vite.config.ts`, and README first
 
+For Playwright/e2e infrastructure tasks:
+- inspect `playwright.config.ts`, `tests/e2e/`, `server/src/e2e/`, `server/src/index.ts`, and `server/package.json`
+
 ## Validation expectations
 After editing files, check test coverage, ESLint, and test pass status before handing off. Prefer the narrowest relevant validation first:
 - workspace-local tests for the changed area
@@ -120,6 +132,7 @@ At minimum:
 - UI-only changes: `npm run test:client` and `npm run coverage:client`
 - server-only changes: `npm run test:server` and `npm run coverage:server`
 - shared logic changes: `npm run test:shared` and `npm run coverage:shared`
+- Playwright/e2e infrastructure changes: `npm run test:e2e`
 - cross-cutting changes: `npm test` and `npm run coverage`
 - TypeScript-only or contract-shape changes: run the narrowest relevant `typecheck` command
 - after tests, coverage, and typecheck, run ESLint on the changed source files with zero warnings, for example `npx eslint --max-warnings=0 <changed files>`

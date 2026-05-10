@@ -10,6 +10,7 @@ Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, onboard
 - Frontend starts via Vite
 - Client app composition is split across `client/src/App.tsx` and `client/src/app/`
 - Backend starts from `server/src/index.ts`, with route groups under `server/src/routes/`
+- Playwright e2e tests start a dedicated Express/Vite server from `server/src/e2e/server.ts`
 
 ### 2. Authentication flow
 - UI initiates auth from the client
@@ -46,12 +47,22 @@ Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, onboard
 - shared locale option resources live under `shared/i18n/`
 - changes to user-facing copy should preserve EN/RU parity
 
+### 7. Playwright e2e flow
+- root Playwright config lives in `playwright.config.ts`
+- browser tests live under `tests/e2e/`
+- authenticated tests reuse `tests/e2e/.auth/user.json`
+- the e2e server uses in-memory dependencies for auth, profile, capsule, search, generation, images, and embeddings
+- e2e control routes under `/__e2e/*` are mounted only by the dedicated e2e server
+- browser-side request guards block unexpected non-local origins by default
+
 ## Important files
 
 ### Root
 - `package.json` — workspace definitions and top-level dev/test commands
+- `playwright.config.ts` — browser e2e projects, web server command, and auth setup wiring
 - `README.md` — setup, env vars, deployment notes
 - `shared/` — TypeScript shared domain models, helpers, and cross-workspace tests
+- `tests/e2e/` — Playwright fixtures, auth setup, and browser smoke tests
 
 ### Client
 - `client/package.json`
@@ -82,6 +93,7 @@ Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, onboard
 - `server/tsconfig.test.json`
 - `server/tsconfig.src.json`
 - `server/src/index.ts`
+- `server/src/e2e/` — isolated e2e server, in-memory dependencies, fixtures, and test-control routes
 - `server/src/db.ts` — database integration, including passkey credential and challenge persistence
 - `server/src/db/` — split DB modules for auth, schema, passkeys, profiles, capsule data, search, and product options
 - `server/src/routes/` — grouped Express route modules for auth/session, passkeys, profile, capsule, search, health, and images
@@ -118,11 +130,20 @@ Run from root:
 - `shared/i18n/helpers.test.ts`
 - `shared/i18n/localeParity.test.ts`
 
+### Playwright tests
+Run from root:
+- `tests/e2e/*.spec.ts`
+- `tests/e2e/auth.setup.ts`
+
+The Playwright auth state is generated at `tests/e2e/.auth/user.json` and is intentionally ignored by git.
+
 ## Quality commands
 - `npm run lint` — ESLint across the repository
 - `npm run lint:strict` — ESLint across the repository with zero warnings allowed
 - `npm run format` — Prettier write pass for client, server, and shared source files
 - `npm run format:check` — Prettier check for client, server, and shared source files
+- `npm run playwright:install` — install Playwright browser binaries
+- `npm run test:e2e` — run Playwright browser tests against the isolated e2e server
 - `npm run coverage` — coverage for client, server, and shared tests
 - `npm run coverage:client` — client coverage via Vitest
 - `npm run coverage:server` — server coverage via Vitest
@@ -138,6 +159,8 @@ Run from root:
 - Root scripts are the canonical entrypoint for cross-workspace work
 - Localization parity matters
 - Auth test mode matters
+- Playwright e2e mode must stay isolated from normal dev, production, and Render startup paths
+- Default e2e runs should not require a real database, email provider, LLM provider, embedding provider, or remote image host
 - Passkey challenges are single-use and stored separately from normal app sessions
 - Passkey API responses must never expose stored credential public keys
 - DB/env wiring should remain explicit and stable

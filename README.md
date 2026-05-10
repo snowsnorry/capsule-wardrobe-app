@@ -4,7 +4,7 @@ Full-stack TypeScript monorepo for a capsule wardrobe application. The project c
 
 ## Stack
 
-- Frontend: React, Vite, MUI, Vitest
+- Frontend: React, Vite, MUI, Vitest, Playwright
 - Backend: Node.js, Express, TypeScript
 - Shared domain layer: root `shared/`
 - Persistence: Postgres
@@ -28,6 +28,7 @@ Full-stack TypeScript monorepo for a capsule wardrobe application. The project c
 client/   React frontend
 server/   Express API and server workflows
 shared/   shared TypeScript models, helpers, and tests
+tests/    Playwright browser tests
 docs/     repository documentation
 ```
 
@@ -36,7 +37,9 @@ Useful entrypoints:
 - `client/src/App.tsx`
 - `client/src/main.tsx`
 - `client/vite.config.ts`
+- `playwright.config.ts`
 - `server/src/index.ts`
+- `server/src/e2e/server.ts`
 - `server/src/db.ts`
 - `server/src/authStore.ts`
 - `server/src/capsuleStore.ts`
@@ -54,6 +57,12 @@ Install dependencies:
 
 ```bash
 npm install
+```
+
+Install Playwright browsers before the first e2e run:
+
+```bash
+npm run playwright:install
 ```
 
 Create env files from examples:
@@ -149,6 +158,16 @@ Server auth test mode:
 npm --workspace server run dev:test-auth
 ```
 
+### Playwright e2e server
+
+Playwright starts an isolated Express/Vite server automatically when you run e2e tests:
+
+```bash
+npm run test:e2e
+```
+
+That server uses in-memory auth, profile, capsule, search, generation, image, and embedding dependencies. It does not require `DATABASE_URL` or provider API keys and mounts e2e-only control routes such as `POST /__e2e/reset` and `POST /__e2e/login`.
+
 ### Local URLs
 
 - frontend: `http://localhost:5173`
@@ -186,6 +205,15 @@ npm test
 npm run test:client
 npm run test:server
 npm run test:shared
+npm run test:e2e
+```
+
+Playwright helpers:
+
+```bash
+npm run test:e2e:headed
+npm run test:e2e:ui
+npm run test:e2e:debug
 ```
 
 Check coverage:
@@ -219,6 +247,8 @@ Main backend route groups:
 - `/search/*` — search options, saved filters, run search, stats
 - `/wardrobe/*` — profile-derived wardrobe filters
 - `/health`, `/healthall`
+
+The e2e server also mounts `/__e2e/*` test-control and fixture endpoints. Those endpoints are only available when the dedicated e2e server entrypoint is used.
 
 The API is implemented in [server/src/index.ts](server/src/index.ts).
 
