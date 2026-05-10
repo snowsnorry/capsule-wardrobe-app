@@ -2,10 +2,12 @@ function getShellContainerVerticalPadding({
   isFullScreenRoute,
   isMainScreenView,
   isSearchView,
+  isStatisticsView,
 }: {
   isFullScreenRoute: boolean;
   isMainScreenView: boolean;
   isSearchView: boolean;
+  isStatisticsView: boolean;
 }) {
   const fullScreenPadding = { xs: 0, md: "12px" } as const;
   const cardPadding = { xs: 0, md: "24px" } as const;
@@ -16,7 +18,10 @@ function getShellContainerVerticalPadding({
 
   return {
     pt: fullScreenPadding,
-    pb: isMainScreenView || isSearchView ? 0 : fullScreenPadding,
+    pb:
+      isMainScreenView || isSearchView || isStatisticsView
+        ? 0
+        : fullScreenPadding,
   } as const;
 }
 

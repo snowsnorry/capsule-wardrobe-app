@@ -3,7 +3,15 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import { LocaleProvider } from "../../i18n/LocaleProvider";
+import { createSearchState } from "../../search/searchState";
 import { createAppTheme } from "../../theme";
+import {
+  STATISTICS_DESKTOP_FILTERS_SX,
+  STATISTICS_DESKTOP_LAYOUT_SX,
+  STATISTICS_DESKTOP_MAIN_CONTENT_SX,
+  STATISTICS_DESKTOP_MAIN_SCROLL_SX,
+  StatisticsDesktopLayout,
+} from "./StatisticsLayout";
 
 const searchApi = vi.hoisted(() => ({
   fetchSearchOptions: vi.fn(),
@@ -95,6 +103,70 @@ describe("StatisticsLayout", () => {
 
   afterEach(() => {
     cleanup();
+  });
+
+  test("desktop layout mirrors the capsule and search sizing contract", () => {
+    expect(STATISTICS_DESKTOP_LAYOUT_SX.gridTemplateColumns).toEqual({
+      lg: "320px minmax(0, 1fr)",
+    });
+    expect(STATISTICS_DESKTOP_LAYOUT_SX.gap).toEqual({
+      xs: 3,
+      lg: "40px",
+    });
+    expect(STATISTICS_DESKTOP_LAYOUT_SX.width).toBe("100%");
+    expect(STATISTICS_DESKTOP_LAYOUT_SX.height).toBe("100%");
+    expect(STATISTICS_DESKTOP_LAYOUT_SX.overflow).toBe("hidden");
+    expect(STATISTICS_DESKTOP_LAYOUT_SX).not.toHaveProperty("pt");
+    expect(STATISTICS_DESKTOP_LAYOUT_SX).not.toHaveProperty("pb");
+
+    expect(STATISTICS_DESKTOP_FILTERS_SX.mt).toBe(2);
+    expect(STATISTICS_DESKTOP_FILTERS_SX.maxHeight).toBe("calc(100vh - 32px)");
+    expect(STATISTICS_DESKTOP_FILTERS_SX.alignSelf).toBe("start");
+    expect(STATISTICS_DESKTOP_FILTERS_SX.overflowY).toBe("auto");
+    expect(STATISTICS_DESKTOP_FILTERS_SX.p).toBe(3);
+
+    expect(STATISTICS_DESKTOP_MAIN_SCROLL_SX.height).toBe("100%");
+    expect(STATISTICS_DESKTOP_MAIN_SCROLL_SX.overflowY).toBe("auto");
+    expect(STATISTICS_DESKTOP_MAIN_SCROLL_SX).not.toHaveProperty("pt");
+    expect(STATISTICS_DESKTOP_MAIN_SCROLL_SX).not.toHaveProperty("pb");
+    expect(STATISTICS_DESKTOP_MAIN_SCROLL_SX).not.toHaveProperty("border");
+    expect(STATISTICS_DESKTOP_MAIN_SCROLL_SX).not.toHaveProperty("borderColor");
+    expect(STATISTICS_DESKTOP_MAIN_SCROLL_SX).not.toHaveProperty(
+      "borderRadius",
+    );
+    expect(STATISTICS_DESKTOP_MAIN_SCROLL_SX).not.toHaveProperty(
+      "backgroundColor",
+    );
+    expect(STATISTICS_DESKTOP_MAIN_SCROLL_SX).not.toHaveProperty("p");
+    expect(STATISTICS_DESKTOP_MAIN_CONTENT_SX.maxWidth).toEqual({
+      lg: "1240px",
+    });
+    expect(STATISTICS_DESKTOP_MAIN_CONTENT_SX.mr).toBe("auto");
+    expect(STATISTICS_DESKTOP_MAIN_CONTENT_SX.pt).toBe(2);
+    expect(STATISTICS_DESKTOP_MAIN_CONTENT_SX.pb).toBe(2);
+  });
+
+  test("desktop layout renders the main content in the right scroll column", () => {
+    render(
+      <ThemeProvider theme={theme}>
+        <StatisticsDesktopLayout
+          title="Filters"
+          options={makeOptions()}
+          draftState={createSearchState(null, makeOptions().priceRange)}
+          status={{ loading: false, error: "" }}
+          onDraftStateChange={vi.fn()}
+          onApply={vi.fn(async () => undefined)}
+          onReset={vi.fn(async () => undefined)}
+          summary={<div>summary content</div>}
+          chartCards={[<div key="chart">chart content</div>]}
+          emptyLabel="Empty"
+        />
+      </ThemeProvider>,
+    );
+
+    expect(screen.getByText("Filters")).toBeInTheDocument();
+    expect(screen.getByText("summary content")).toBeInTheDocument();
+    expect(screen.getByText("chart content")).toBeInTheDocument();
   });
 
   test("mobile opens the filters dialog", async () => {

@@ -186,7 +186,8 @@ function SidebarHeader(
 
 function AppSidebarPanel(props: AppShellContentProps) {
   const activeSidebarApp = getActiveSidebarApp(props.appRoute);
-  const usesCapsuleLayout = props.isMainScreenView || props.isSearchView;
+  const usesCapsuleLayout =
+    props.isMainScreenView || props.isSearchView || props.isStatisticsView;
 
   return (
     <AppSidebarShell
@@ -306,6 +307,7 @@ export default function AppShellContent(props: AppShellContentProps) {
     isFullScreenRoute,
     isMainScreenView: props.isMainScreenView,
     isSearchView: props.isSearchView,
+    isStatisticsView: props.isStatisticsView,
   });
 
   return (

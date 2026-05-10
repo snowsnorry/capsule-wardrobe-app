@@ -1,6 +1,6 @@
 import type { ComponentProps, ReactNode } from "react";
-import { describe, expect, test, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, test, vi } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 
 vi.mock("../components/AppSidebarShell", () => ({
@@ -34,6 +34,10 @@ import AppShellContent from "./AppShellContent";
 type AppShellContentProps = ComponentProps<typeof AppShellContent>;
 
 const theme = createTheme();
+
+afterEach(() => {
+  cleanup();
+});
 
 function createProps(
   overrides: Partial<AppShellContentProps> = {},
@@ -86,6 +90,21 @@ function renderShellContent(props: Partial<AppShellContentProps> = {}) {
 describe("AppShellContent", () => {
   test("uses capsule-like fill layout for the search route", () => {
     renderShellContent();
+
+    const shell = screen.getByTestId("app-sidebar-shell");
+    expect(shell).toHaveAttribute("data-content-alignment", "start");
+    expect(shell).toHaveAttribute("data-content-width", "fill");
+    expect(shell).toHaveAttribute("data-desktop-content-gap", "32");
+    expect(shell).toHaveAttribute("data-desktop-content-end-gap", "0");
+    expect(screen.getByText("route content")).toBeInTheDocument();
+  });
+
+  test("uses capsule-like fill layout for the statistics route", () => {
+    renderShellContent({
+      appRoute: "statistics",
+      isSearchView: false,
+      isStatisticsView: true,
+    });
 
     const shell = screen.getByTestId("app-sidebar-shell");
     expect(shell).toHaveAttribute("data-content-alignment", "start");

@@ -13,6 +13,7 @@ import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import TuneRoundedIcon from "@mui/icons-material/TuneRounded";
 import SearchFiltersSidebar from "../../search/SearchFiltersSidebar";
 import type { SearchDraftState, SearchOptions } from "../../search/searchState";
+import { MAIN_SCREEN_CONTENT_COLUMN_SX } from "../mainScreen/MainScreenHelpers";
 import type { StatisticsStatus } from "./statisticsTypes";
 
 type FiltersProps = {
@@ -26,6 +27,52 @@ type FiltersProps = {
 };
 
 type SearchFiltersSidebarProps = Parameters<typeof SearchFiltersSidebar>[0];
+
+export const STATISTICS_DESKTOP_LAYOUT_SX = {
+  display: "grid",
+  gridTemplateColumns: { lg: "320px minmax(0, 1fr)" },
+  gap: { xs: 3, lg: "40px" },
+  flex: 1,
+  width: "100%",
+  height: "100%",
+  minWidth: 0,
+  minHeight: 0,
+  overflow: "hidden",
+  boxSizing: "border-box",
+} as const;
+
+export const STATISTICS_DESKTOP_FILTERS_SX = {
+  mt: 2,
+  minHeight: 0,
+  alignSelf: "start",
+  maxHeight: "calc(100vh - 32px)",
+  overflowY: "auto",
+  border: "1px solid",
+  borderColor: "divider",
+  borderRadius: "10px",
+  backgroundColor: "background.paper",
+  p: 3,
+} as const;
+
+export const STATISTICS_DESKTOP_MAIN_SCROLL_SX = {
+  minHeight: 0,
+  height: "100%",
+  minWidth: 0,
+  overflowY: "auto",
+  boxSizing: "border-box",
+} as const;
+
+export const STATISTICS_DESKTOP_MAIN_CONTENT_SX = {
+  ...MAIN_SCREEN_CONTENT_COLUMN_SX,
+  minHeight: 0,
+  pt: 2,
+  pb: 2,
+  boxSizing: "border-box",
+} as const;
+
+export const STATISTICS_DESKTOP_CHARTS_STACK_SX = {
+  minHeight: 0,
+} as const;
 
 function FiltersHeader({
   title,
@@ -63,19 +110,7 @@ function StatisticsFiltersPanel({
   onReset,
 }: FiltersProps) {
   return (
-    <Box
-      sx={{
-        minHeight: 0,
-        alignSelf: "start",
-        maxHeight: "100%",
-        overflowY: "auto",
-        border: "1px solid",
-        borderColor: "divider",
-        borderRadius: "10px",
-        backgroundColor: "background.paper",
-        p: 3,
-      }}
-    >
+    <Box sx={STATISTICS_DESKTOP_FILTERS_SX}>
       <Stack spacing={2.5} sx={{ mb: 3.5 }}>
         <FiltersHeader title={title} />
       </Stack>
@@ -193,16 +228,7 @@ export function StatisticsDesktopLayout({
   emptyLabel: string;
 }) {
   return (
-    <Box
-      sx={{
-        display: "grid",
-        gridTemplateColumns: "320px minmax(0, 1fr)",
-        gap: 3,
-        flex: 1,
-        minHeight: 0,
-        overflow: "hidden",
-      }}
-    >
+    <Box sx={STATISTICS_DESKTOP_LAYOUT_SX}>
       <StatisticsFiltersPanel
         title={title}
         options={options}
@@ -212,25 +238,18 @@ export function StatisticsDesktopLayout({
         onApply={onApply}
         onReset={onReset}
       />
-      <Stack
-        spacing={2.5}
-        sx={{
-          minHeight: 0,
-          overflowY: "auto",
-          border: "1px solid",
-          borderColor: "divider",
-          borderRadius: "10px",
-          backgroundColor: "background.paper",
-          p: 3,
-        }}
-      >
-        <StatisticsChartsPanel
-          summary={summary}
-          chartCards={chartCards}
-          status={status}
-          emptyLabel={emptyLabel}
-        />
-      </Stack>
+      <Box sx={STATISTICS_DESKTOP_MAIN_SCROLL_SX}>
+        <Box sx={STATISTICS_DESKTOP_MAIN_CONTENT_SX}>
+          <Stack spacing={2.5} sx={STATISTICS_DESKTOP_CHARTS_STACK_SX}>
+            <StatisticsChartsPanel
+              summary={summary}
+              chartCards={chartCards}
+              status={status}
+              emptyLabel={emptyLabel}
+            />
+          </Stack>
+        </Box>
+      </Box>
     </Box>
   );
 }
