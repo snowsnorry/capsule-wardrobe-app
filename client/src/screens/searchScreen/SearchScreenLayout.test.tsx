@@ -116,6 +116,7 @@ describe("SearchScreenLayout", () => {
     expect(SEARCH_DESKTOP_MAIN_SX.width).toBe("100%");
     expect(SEARCH_DESKTOP_MAIN_SX).not.toHaveProperty("maxWidth");
     expect(SEARCH_DESKTOP_HEADER_SX.gridColumn).toBe("1 / 3");
+    expect(SEARCH_DESKTOP_HEADER_SX.backgroundColor).toBe("background.default");
     expect(SEARCH_DESKTOP_HEADER_SX.maxWidth).toEqual({ lg: "1240px" });
     expect(SEARCH_DESKTOP_DETAIL_SX.gridRow).toBe("1 / 3");
     expect(SEARCH_DESKTOP_DETAIL_SX.overflowY).toBe("auto");

@@ -14,6 +14,12 @@ type SearchBarProps = {
   onClearQuery: () => void;
 };
 
+export const SEARCH_BAR_FIELD_SX = {
+  "& .MuiOutlinedInput-root": {
+    backgroundColor: "background.paper",
+  },
+} as const;
+
 function SearchBar({
   isMobile,
   query,
@@ -36,6 +42,7 @@ function SearchBar({
       ) : null}
       <TextField
         fullWidth
+        sx={SEARCH_BAR_FIELD_SX}
         value={query}
         onChange={(event) => onQueryChange(event.target.value)}
         onBlur={onApplyQuery}

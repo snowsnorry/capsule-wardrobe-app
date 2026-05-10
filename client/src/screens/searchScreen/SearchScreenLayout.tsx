@@ -44,6 +44,7 @@ export const SEARCH_DESKTOP_HEADER_SX = {
   ...MAIN_SCREEN_CONTENT_COLUMN_SX,
   gridColumn: "1 / 3",
   gridRow: "1",
+  backgroundColor: "background.default",
   zIndex: 1,
 } as const;
 

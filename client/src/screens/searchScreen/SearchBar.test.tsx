@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import SearchBar from "./SearchBar";
+import SearchBar, { SEARCH_BAR_FIELD_SX } from "./SearchBar";
 
 const t = (key: string) => {
   const labels: Record<string, string> = {
@@ -16,6 +16,14 @@ afterEach(() => {
 });
 
 describe("SearchBar", () => {
+  test("uses an opaque search field surface over scrolling content", () => {
+    expect(SEARCH_BAR_FIELD_SX).toEqual({
+      "& .MuiOutlinedInput-root": {
+        backgroundColor: "background.paper",
+      },
+    });
+  });
+
   test("applies query on enter and blur without applying during typing", () => {
     const onQueryChange = vi.fn();
     const onApplyQuery = vi.fn();
