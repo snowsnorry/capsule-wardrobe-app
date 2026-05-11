@@ -154,6 +154,7 @@ function ActiveFilterChips({
           {chips.map((chip) => (
             <Chip
               key={chip.key}
+              data-testid={`active-filter-chip-${chip.field}`}
               label={chip.label}
               onDelete={() => onDeleteChip(chip)}
               sx={{

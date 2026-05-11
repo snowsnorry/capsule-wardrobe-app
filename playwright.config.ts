@@ -21,7 +21,7 @@ export default defineConfig({
     command: `PORT=${E2E_PORT} CLIENT_ORIGIN=${E2E_BASE_URL} E2E_BASE_URL=${E2E_BASE_URL} npm --workspace server run dev:e2e`,
     url: `${E2E_BASE_URL}/health`,
     timeout: 120_000,
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
   },
   projects: [
     {
@@ -39,7 +39,7 @@ export default defineConfig({
     },
     {
       name: "chromium-unauthenticated",
-      testIgnore: [/auth\.setup\.ts/, /authenticated|generation|search/],
+      testMatch: /.*unauthenticated.*\.spec\.ts/,
       use: {
         ...devices["Desktop Chrome"],
         storageState: { cookies: [], origins: [] },

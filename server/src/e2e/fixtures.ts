@@ -49,6 +49,24 @@ export function buildE2eWardrobeItems() {
       pattern: "solid",
     },
     {
+      id: "sporty-overshirt-e2e",
+      name: "Sporty navy overshirt",
+      category: "top",
+      brand: "E2E Studio",
+      price: 88,
+      currency: "EUR",
+      url: "https://example.test/products/sporty-navy-overshirt",
+      image_url: e2eImageUrl("sporty-navy-overshirt"),
+      description: "A deterministic filtered e2e overshirt fixture.",
+      color: "navy",
+      formalityLevel: "casual",
+      style: "sporty",
+      season: ["spring"],
+      occasions: ["office"],
+      audience: "woman",
+      pattern: "solid",
+    },
+    {
       id: "bottom-e2e",
       name: "Straight black trousers",
       category: "bottom",
@@ -123,6 +141,69 @@ export function buildE2eCapsule() {
     status: "new",
     createdAt: new Date(0).toISOString(),
     updatedAt: new Date(0).toISOString(),
+  };
+}
+
+export function buildE2eSearchPayload(payload = {}) {
+  return {
+    query: "",
+    brand: [],
+    priceMin: null,
+    priceMax: null,
+    audience: [],
+    category: [],
+    season: [],
+    formalityLevel: [],
+    style: [],
+    occasions: [],
+    color: [],
+    pattern: [],
+    silhouette: [],
+    fit: [],
+    closureType: [],
+    page: 1,
+    ...payload,
+  };
+}
+
+export function buildE2eSavedSearchPayload() {
+  return buildE2eSearchPayload({
+    query: "saved navy office",
+    category: ["top"],
+    color: ["navy"],
+  });
+}
+
+export function buildE2eSearchStats(payload = {}) {
+  const category =
+    Array.isArray(payload.category) && payload.category.includes("top")
+      ? [{ value: "top", count: 1 }]
+      : [
+          { value: "top", count: 2 },
+          { value: "bottom", count: 1 },
+        ];
+  const total = category.reduce((sum, row) => sum + row.count, 0);
+
+  return {
+    total,
+    stats: {
+      category,
+      color:
+        total === 1
+          ? [{ value: "navy", count: 1 }]
+          : [
+              { value: "navy", count: 2 },
+              { value: "black", count: 1 },
+            ],
+      style:
+        total === 1
+          ? [{ value: "minimalistic", count: 1 }]
+          : [
+              { value: "minimalistic", count: 2 },
+              { value: "sporty", count: 1 },
+            ],
+    },
+    priceBuckets: [],
   };
 }
 

@@ -1,13 +1,20 @@
 import { E2E_CODE, E2E_EMAIL } from "./fixtures.js";
 import {
   buildE2eCapsule,
+  buildE2eSearchPayload,
   buildE2eProfile,
   buildE2eSearchOptions,
+  buildE2eSearchStats,
+  buildE2eSavedSearchPayload,
   buildE2eWardrobeItems,
   e2eImageUrl,
 } from "./fixtures.js";
 
-type E2eScenario = "with-profile" | "no-profile";
+type E2eScenario =
+  | "with-profile"
+  | "no-profile"
+  | "with-saved-search"
+  | "with-non-empty-stats";
 
 type E2eSession = {
   email: string;
@@ -39,6 +46,7 @@ class E2eState {
   capsules = new Map<string, Record<string, unknown>>([
     ["capsule-e2e", buildE2eCapsule()],
   ]);
+  savedSearch = buildE2eSearchPayload();
   loginCodes = new Map<string, string>();
   sessionCounter = 0;
   capsuleCounter = 1;
@@ -51,6 +59,10 @@ class E2eState {
     this.capsuleCounter = 1;
     this.profile = scenario === "no-profile" ? null : buildE2eProfile();
     this.capsules = new Map([["capsule-e2e", buildE2eCapsule()]]);
+    this.savedSearch =
+      scenario === "with-saved-search"
+        ? buildE2eSavedSearchPayload()
+        : buildE2eSearchPayload();
   }
 
   createSession(email = E2E_EMAIL) {
@@ -76,6 +88,42 @@ class E2eState {
 }
 
 export const e2eState = new E2eState();
+
+function payloadIncludes(payload, field: string, value: string) {
+  return Array.isArray(payload?.[field]) && payload[field].includes(value);
+}
+
+function isUrlSearchPayload(payload) {
+  const query = String(payload?.query || "").trim();
+  return query.startsWith("http://") || query.startsWith("https://");
+}
+
+function hasSavedFilterPayload(payload) {
+  return (
+    payloadIncludes(payload, "category", "top") &&
+    payloadIncludes(payload, "color", "navy")
+  );
+}
+
+function buildSearchResultItems(payload) {
+  const items = buildE2eWardrobeItems();
+  const query = String(payload?.query || "").trim();
+  if (isUrlSearchPayload(payload)) {
+    return items.filter((item) => item.url === query);
+  }
+
+  if (payloadIncludes(payload, "style", "sporty")) {
+    return items.filter((item) => item.id === "sporty-overshirt-e2e");
+  }
+
+  if (hasSavedFilterPayload(payload)) {
+    return items.filter((item) => item.id === "top-e2e");
+  }
+
+  return items.filter((item) =>
+    ["top-e2e", "bottom-e2e", "shoes-e2e"].includes(String(item.id)),
+  );
+}
 
 function profileDependencies(state: E2eState) {
   return {
@@ -197,16 +245,23 @@ function searchAndGenerationDependencies(state: E2eState) {
   return {
     checkDatabaseConnectionImpl: async () => {},
     getSearchOptionsImpl: async () => buildE2eSearchOptions(),
-    getSavedSearchImpl: async () => ({ query: "", page: 1 }),
-    getSearchStatsImpl: async () => ({ total: 3, stats: {}, priceBuckets: [] }),
-    runSavedSearchImpl: async (_email, payload) => ({
-      items: buildE2eWardrobeItems().map((item) => ({
+    getSavedSearchImpl: async () => state.savedSearch,
+    getSearchStatsImpl: async (_email, payload) =>
+      state.scenario === "with-non-empty-stats"
+        ? buildE2eSearchStats(payload)
+        : { total: 0, stats: {}, priceBuckets: [] },
+    runSavedSearchImpl: async (_email, payload) => {
+      state.savedSearch = buildE2eSearchPayload(payload);
+      const items = buildSearchResultItems(state.savedSearch).map((item) => ({
         ...item,
         imageUrl: item.image_url,
-      })),
-      total: 3,
-      savedSearch: { query: payload?.query || "", page: 1 },
-    }),
+      }));
+      return {
+        items,
+        total: items.length,
+        savedSearch: state.savedSearch,
+      };
+    },
     getOutfitSetImageJobImpl: () => null,
     getPartialRegenerationJobImpl: () => null,
     getWardrobeJobImpl: () => null,

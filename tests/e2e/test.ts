@@ -1,7 +1,11 @@
 import { expect, test as base } from "@playwright/test";
 import type { Page } from "@playwright/test";
 
-type E2eScenario = "with-profile" | "no-profile";
+type E2eScenario =
+  | "with-profile"
+  | "no-profile"
+  | "with-saved-search"
+  | "with-non-empty-stats";
 type E2eFixtures = {
   resetAndLogin: (scenario?: E2eScenario) => Promise<void>;
 };

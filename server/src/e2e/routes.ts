@@ -7,8 +7,16 @@ const ONE_PIXEL_PNG = Buffer.from(
   "base64",
 );
 
+const SCENARIOS = new Set([
+  "with-profile",
+  "no-profile",
+  "with-saved-search",
+  "with-non-empty-stats",
+]);
+
 function normalizeScenario(value: unknown) {
-  return value === "no-profile" ? "no-profile" : "with-profile";
+  const scenario = String(value || "with-profile");
+  return SCENARIOS.has(scenario) ? scenario : "with-profile";
 }
 
 function setAuthCookies(res, sessionId: string, csrfToken: string) {

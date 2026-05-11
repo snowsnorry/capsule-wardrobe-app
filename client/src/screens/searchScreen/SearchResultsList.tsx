@@ -123,6 +123,7 @@ function ResultsHeader({
           {activeChips.map((chip) => (
             <Chip
               key={chip.key}
+              data-testid={`active-filter-chip-${chip.field}`}
               label={chip.label}
               onDelete={() => onDeleteActiveChip(chip)}
               sx={{

@@ -10,7 +10,9 @@ test("unauthenticated user can sign in with mocked email code", async ({
 
   await page.goto("/");
 
-  await expect(page.getByText("Capsule Wardrobe")).toBeVisible();
+  await expect(
+    page.getByText("Capsule Wardrobe", { exact: true }),
+  ).toBeVisible();
   await page.getByLabel("Email").fill("playwright@example.test");
   await page.getByRole("button", { name: "Send code" }).click();
   await page.getByLabel("Email code").fill("654321");
