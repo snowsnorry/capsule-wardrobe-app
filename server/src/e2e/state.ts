@@ -3,19 +3,19 @@ import {
   E2eCapsuleMemory,
   normalizeCapsuleId,
 } from "./capsuleState.js";
-import { E2E_CODE, E2E_EMAIL } from "./fixtures.js";
 import {
   buildE2eCapsule,
   buildE2ePasskeyDependencies,
   buildE2eSearchPayload,
   buildE2eProfile,
-  buildE2eSearchOptions,
-  buildE2eSearchStats,
   buildE2eSavedSearchPayload,
-  buildE2eWardrobeItems,
   e2eImageUrl,
+  E2E_CODE,
+  E2E_EMAIL,
 } from "./fixtures.js";
-import { buildSearchResultItems, E2eSearchDelayState } from "./searchState.js";
+import { E2eSearchDelayState } from "./searchState.js";
+import { searchAndGenerationDependencies } from "./searchAndGenerationDependencies.js";
+import { E2eSelectedRegenerationMemory } from "./selectedRegenerationState.js";
 import { E2eShareMemory } from "./shareState.js";
 import { getCapsuleIdValue } from "../capsuleStoreModel.js";
 
@@ -34,10 +34,6 @@ type E2eSession = {
 
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
-function parseSetIndex(value: unknown): number {
-  return Number.parseInt(String(value ?? ""), 10);
-}
-
 function buildSession(sessionId: string, email: string): E2eSession {
   const createdAt = Date.now();
   return {
@@ -48,7 +44,7 @@ function buildSession(sessionId: string, email: string): E2eSession {
   };
 }
 
-class E2eState {
+export class E2eState {
   scenario: E2eScenario = "with-profile";
   sessions = new Map<string, E2eSession>();
   profile: Record<string, unknown> | null = buildE2eProfile();
@@ -58,6 +54,7 @@ class E2eState {
   loginCodes = new Map<string, string>();
   sessionCounter = 0;
   outfitImageCounter = 0;
+  selectedRegenerationMemory = new E2eSelectedRegenerationMemory();
   searchDelay = new E2eSearchDelayState();
 
   get capsules() {
@@ -71,6 +68,7 @@ class E2eState {
     this.sessionCounter = 0;
     this.shareMemory.reset();
     this.outfitImageCounter = 0;
+    this.selectedRegenerationMemory.reset();
     this.searchDelay.clear();
     this.capsuleMemory.reset();
     this.profile = scenario === "no-profile" ? null : buildE2eProfile();
@@ -255,101 +253,6 @@ function capsuleDependencies(state: E2eState) {
           state.setActiveCapsuleId(activeCapsuleId);
         },
       }),
-  };
-}
-
-function searchAndGenerationDependencies(state: E2eState) {
-  return {
-    checkDatabaseConnectionImpl: async () => {},
-    getSearchOptionsImpl: async () => buildE2eSearchOptions(),
-    getSavedSearchImpl: async () => state.savedSearch,
-    getSearchStatsImpl: async (_email, payload) =>
-      state.scenario === "with-non-empty-stats"
-        ? buildE2eSearchStats(payload)
-        : { total: 0, stats: {}, priceBuckets: [] },
-    runSavedSearchImpl: async (_email, payload) => {
-      const savedSearch = buildE2eSearchPayload(payload);
-      state.savedSearch = savedSearch;
-      const requestOrder = await state.searchDelay.waitForGate(savedSearch);
-      const items = buildSearchResultItems(savedSearch).map((item) => ({
-        ...item,
-        imageUrl: item.image_url,
-      }));
-      state.searchDelay.completeRequest(requestOrder);
-      return {
-        items,
-        total: items.length,
-        savedSearch,
-      };
-    },
-    getOutfitSetImageJobImpl: () => null,
-    getPartialRegenerationJobImpl: () => null,
-    getWardrobeJobImpl: () => null,
-    streamCapsuleEventsImpl: async (_req, res, { snapshot }) => {
-      res.setHeader("Content-Type", "text/event-stream");
-      res.write(`event: snapshot\ndata: ${JSON.stringify(snapshot)}\n\n`);
-      res.end();
-    },
-    regenerateCapsuleWardrobeHandler: async (req, res) => {
-      const capsule = state.capsules.get(normalizeCapsuleId(req.params?.id));
-      if (capsule?.draft && typeof capsule.draft === "object") {
-        state.capsules.set(String(capsule.id), {
-          ...capsule,
-          draft: {
-            ...capsule.draft,
-            data: {
-              wardrobe: buildE2eCapsule().draft.data.wardrobe,
-              rejectedUrls: [],
-            },
-          },
-        });
-      }
-      return res.json({
-        ok: true,
-        status: "ready",
-        items: buildE2eWardrobeItems(),
-      });
-    },
-    regenerateSelectedCapsuleItemsHandler: async (_req, res) =>
-      res.json({ ok: true, status: "ready", items: buildE2eWardrobeItems() }),
-    generateOutfitSetImageHandler: async (req, res) => {
-      const capsuleId = normalizeCapsuleId(req.params?.id);
-      const setIndex = parseSetIndex(req.params?.setIndex);
-      if (!Number.isInteger(setIndex) || setIndex < 0) {
-        return res.status(400).json({ error: "invalid_payload" });
-      }
-
-      const image = state.nextOutfitImageUrl(capsuleId, setIndex);
-      const result = state.capsuleMemory.setOutfitSetImage(
-        capsuleId,
-        setIndex,
-        image,
-      );
-      if (result.status !== "updated") {
-        return res.status(404).json({ error: "not_found" });
-      }
-
-      return res.json({ ok: true, status: "ready", image: result.image });
-    },
-    deleteOutfitSetImageHandler: async (req, res) => {
-      const setIndex = parseSetIndex(req.params?.setIndex);
-      if (!Number.isInteger(setIndex) || setIndex < 0) {
-        return res.status(400).json({ error: "invalid_payload" });
-      }
-
-      const result = state.capsuleMemory.setOutfitSetImage(
-        req.params?.id,
-        setIndex,
-        null,
-      );
-      if (result.status !== "updated") {
-        return res.status(404).json({ error: "not_found" });
-      }
-
-      return res.json({ ok: true, status: "ready" });
-    },
-    buildWardrobePdfInChildImpl: async () => Buffer.from("e2e-pdf"),
-    getProductsByUrlsInOrderImpl: async () => buildE2eWardrobeItems(),
   };
 }
 

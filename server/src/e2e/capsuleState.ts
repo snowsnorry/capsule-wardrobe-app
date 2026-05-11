@@ -8,6 +8,10 @@ import {
   type NormalizedCapsuleRecord,
 } from "../capsuleStoreModel.js";
 import { buildE2eCapsule } from "./fixtures.js";
+import {
+  buildSnapshotWithSelectedRegeneration,
+  type SelectedRegenerationSnapshotResult,
+} from "./selectedRegenerationState.js";
 
 const INITIAL_CAPSULE_ID = "capsule-e2e";
 const INITIAL_CAPSULE_COUNTER = 1;
@@ -44,12 +48,6 @@ export function cloneCapsule(
   capsule: NormalizedCapsuleRecord | null | undefined,
 ): NormalizedCapsuleRecord | null {
   return capsule ? deepClone(capsule) : null;
-}
-
-export function cloneCapsules(
-  capsules: NormalizedCapsuleRecord[],
-): NormalizedCapsuleRecord[] {
-  return capsules.map((capsule) => deepClone(capsule));
 }
 
 function getCapsuleName(capsule: NormalizedCapsuleRecord): string {
@@ -119,6 +117,15 @@ type OutfitSetImageMutationResult =
     }
   | { status: "missing-capsule" | "missing-set" };
 
+type SelectedRegenerationMutationResult =
+  | {
+      status: "updated";
+      capsule: NormalizedCapsuleRecord | null;
+      items: SelectedRegenerationSnapshotResult["items"];
+      selectedItemUrls: string[];
+    }
+  | { status: "missing-capsule" | "missing-wardrobe" | "invalid-selection" };
+
 function buildSnapshotWithOutfitSetImage(
   snapshot: CapsuleSnapshot | null,
   setIndex: number,
@@ -181,15 +188,16 @@ export class E2eCapsuleMemory {
   }
 
   list(limit = 10): NormalizedCapsuleRecord[] {
-    return cloneCapsules(this.orderedCapsules().slice(0, limit));
+    return this.orderedCapsules()
+      .slice(0, limit)
+      .map((capsule) => deepClone(capsule));
   }
 
   search(query: unknown, limit = 25): NormalizedCapsuleRecord[] {
-    return cloneCapsules(
-      this.orderedCapsules()
-        .filter((capsule) => capsuleMatchesQuery(capsule, query))
-        .slice(0, limit),
-    );
+    return this.orderedCapsules()
+      .filter((capsule) => capsuleMatchesQuery(capsule, query))
+      .slice(0, limit)
+      .map((capsule) => deepClone(capsule));
   }
 
   get(id: unknown): NormalizedCapsuleRecord | null {
@@ -253,6 +261,38 @@ export class E2eCapsuleMemory {
         }),
       ),
       image,
+    };
+  }
+
+  regenerateSelectedItems(
+    id: unknown,
+    selectedItems: unknown,
+  ): SelectedRegenerationMutationResult {
+    const current = this.capsules.get(normalizeCapsuleId(id));
+    if (!current) return { status: "missing-capsule" };
+
+    const effectiveSnapshot = getEffectiveSnapshot(current);
+    if (!effectiveSnapshot?.data?.wardrobe) {
+      return { status: "missing-wardrobe" };
+    }
+
+    const result = buildSnapshotWithSelectedRegeneration(
+      effectiveSnapshot,
+      selectedItems,
+    );
+    if (!result) return { status: "invalid-selection" };
+
+    return {
+      status: "updated",
+      capsule: cloneCapsule(
+        this.set({
+          ...current,
+          draft: result.snapshot,
+          updatedAt: this.nextTimestamp(),
+        }),
+      ),
+      items: result.items,
+      selectedItemUrls: result.selectedItemUrls,
     };
   }
 
