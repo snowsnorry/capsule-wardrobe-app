@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "NODE_ENV=development tsx src/index.ts",
     "dev:test-auth": "AUTH_TEST_MODE=true NODE_ENV=development tsx src/index.ts",
-    "dev:e2e": "E2E_SERVER=true AUTH_TEST_MODE=true NODE_ENV=development VITE_API_BASE_URL=/ VITE_THUMBNAIL_ASSET_BASE_URL=/__e2e/thumbnails tsx src/e2e/server.ts",
+    "dev:e2e": "E2E_SERVER=true AUTH_TEST_MODE=true NODE_ENV=development VITE_API_BASE_URL=/ VITE_GOOGLE_CLIENT_ID=e2e-google-client VITE_THUMBNAIL_ASSET_BASE_URL=/__e2e/thumbnails tsx src/e2e/server.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
     "test": "vitest run",
     "build": "tsc -p tsconfig.build.json && mkdir -p dist/server/src && cp -R src/templates dist/server/src/templates",

@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import {
   Button,
   Dialog,
@@ -95,6 +96,16 @@ export function NameDialog({
 }) {
   const { t } = useI18n();
   const isSaveAs = state.type === "save-as";
+  const nameInputRef = useRef<HTMLInputElement | null>(null);
+  useEffect(() => {
+    if (!state.type) {
+      return undefined;
+    }
+    const focusTimer = window.setTimeout(() => {
+      nameInputRef.current?.focus();
+    }, 0);
+    return () => window.clearTimeout(focusTimer);
+  }, [state.type]);
   const submit = async () => {
     setState({ type: "", capsuleId: "", value: "" });
     if (isSaveAs)
@@ -120,6 +131,12 @@ export function NameDialog({
           fullWidth
           autoFocus
           disabled={disabled}
+          inputProps={{
+            "aria-label": t(
+              isSaveAs ? "capsule.saveAsTitle" : "capsule.renameTitle",
+            ),
+          }}
+          inputRef={nameInputRef}
           value={state.value}
           onChange={(event) =>
             setState((current) => ({ ...current, value: event.target.value }))

@@ -41,6 +41,21 @@ async function expectSignInScreen(page: Page) {
   await expect(page.getByRole("button", { name: "Send code" })).toBeVisible();
 }
 
+async function focusByKeyboard(
+  page: Page,
+  locator: ReturnType<Page["locator"]>,
+) {
+  for (let attempt = 0; attempt < 120; attempt += 1) {
+    if (
+      await locator.evaluate((element) => element === document.activeElement)
+    ) {
+      return;
+    }
+    await page.keyboard.press("Tab");
+  }
+  await expect(locator).toBeFocused();
+}
+
 test("authenticated direct routes restore after reload", async ({
   page,
   resetAndLogin,
@@ -221,4 +236,105 @@ test("mobile shell supports drawer navigation, filters, and product detail", asy
 
   await expect(page).toHaveURL(/\/$/);
   await expectCapsuleRouteLoaded(page);
+});
+
+test("desktop sidebar collapse and mobile card layout preferences persist", async ({
+  page,
+  resetAndLogin,
+}) => {
+  await resetAndLogin("with-profile");
+  await page.goto("/");
+  await page.evaluate(() => {
+    window.localStorage.clear();
+    window.sessionStorage.clear();
+  });
+  await page.reload();
+  await expectCapsuleRouteLoaded(page);
+
+  await page.getByRole("button", { name: "Collapse sidebar" }).click();
+  await expect(
+    page.getByRole("button", { name: "Toggle sidebar" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Collapse sidebar" }),
+  ).toBeHidden();
+  await expect(
+    page.evaluate(() =>
+      window.localStorage.getItem("capsule.appSidebarCollapsed"),
+    ),
+  ).resolves.toBe("true");
+
+  await page.reload();
+
+  await expect(
+    page.getByRole("button", { name: "Toggle sidebar" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Collapse sidebar" }),
+  ).toBeHidden();
+  await expectCapsuleRouteLoaded(page);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(
+    page.getByRole("button", { name: "Open capsule menu" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Open capsule menu" }).click();
+  await page.getByRole("button", { name: "1 column" }).click();
+
+  await expect(
+    page.evaluate(() =>
+      window.localStorage.getItem("capsule.mobileCardColumns"),
+    ),
+  ).resolves.toBe("1");
+
+  await page.reload();
+
+  await expect(
+    page.evaluate(() =>
+      window.localStorage.getItem("capsule.mobileCardColumns"),
+    ),
+  ).resolves.toBe("1");
+  await expectCapsuleRouteLoaded(page);
+});
+
+test("keyboard focus supports critical dialogs and menus", async ({
+  page,
+  resetAndLogin,
+}) => {
+  await resetAndLoginFresh(page, resetAndLogin);
+  await expectCapsuleRouteLoaded(page);
+
+  const capsuleMenuButton = page.getByRole("button", {
+    name: "Open capsule menu",
+  });
+  await focusByKeyboard(page, capsuleMenuButton);
+  await page.keyboard.press("Enter");
+  await page.getByRole("menuitem", { name: "Rename" }).press("Enter");
+
+  const renameDialog = page.getByRole("dialog", { name: "Rename capsule" });
+  await expect(renameDialog).toBeVisible();
+  await expect(renameDialog.getByLabel("Rename capsule")).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(renameDialog).toBeHidden();
+  await expect(
+    page.getByRole("button", { name: "Open capsule menu" }),
+  ).toBeVisible();
+
+  await page.getByRole("button", { name: "Explore" }).click();
+  await page
+    .getByPlaceholder(/Search in natural language/)
+    .fill("navy office shirt");
+  await page.keyboard.press("Enter");
+  await expect(page.getByText("3 results")).toBeVisible();
+
+  const searchResult = page.getByRole("button", {
+    name: /Navy relaxed shirt E2E Studio/,
+  });
+  await searchResult.focus();
+  await expect(searchResult).toBeFocused();
+  await page.keyboard.press("Enter");
+
+  await expect(
+    page.getByRole("link", { name: /Navy relaxed shirt/ }),
+  ).toBeVisible();
 });
