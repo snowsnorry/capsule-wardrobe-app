@@ -4,7 +4,6 @@ import {
   normalizeCapsuleId,
 } from "./capsuleState.js";
 import {
-  buildE2eCapsule,
   buildE2ePasskeyDependencies,
   buildE2eSearchPayload,
   buildE2eProfile,
@@ -13,6 +12,7 @@ import {
   E2E_CODE,
   E2E_EMAIL,
 } from "./fixtures.js";
+import { E2eGenerationMemory } from "./generationState.js";
 import { E2eSearchDelayState } from "./searchState.js";
 import { searchAndGenerationDependencies } from "./searchAndGenerationDependencies.js";
 import { E2eSelectedRegenerationMemory } from "./selectedRegenerationState.js";
@@ -56,6 +56,7 @@ export class E2eState {
   outfitImageCounter = 0;
   selectedRegenerationMemory = new E2eSelectedRegenerationMemory();
   searchDelay = new E2eSearchDelayState();
+  generationMemory = new E2eGenerationMemory();
 
   get capsules() {
     return this.capsuleMemory.capsules;
@@ -70,6 +71,7 @@ export class E2eState {
     this.outfitImageCounter = 0;
     this.selectedRegenerationMemory.reset();
     this.searchDelay.clear();
+    this.generationMemory.reset();
     this.capsuleMemory.reset();
     this.profile = scenario === "no-profile" ? null : buildE2eProfile();
     this.savedSearch =

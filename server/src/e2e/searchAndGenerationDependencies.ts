@@ -49,6 +49,97 @@ function selectedRegenerationHandler(state: E2eState) {
   };
 }
 
+function streamCapsuleEventsImpl(state: E2eState) {
+  return async (_req, res, { email, capsuleId, snapshot }) => {
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache, no-transform");
+    res.setHeader("Connection", "keep-alive");
+    state.generationMemory.subscribe({ email, capsuleId, res, snapshot });
+  };
+}
+
+function regenerateCapsuleWardrobeHandler(state: E2eState) {
+  return async (req, res) => {
+    const capsuleId = normalizeCapsuleId(req.params?.id);
+    if (state.generationMemory.mode === "pending") {
+      const job = state.generationMemory.createPendingWardrobeJob({
+        capsuleMemory: state.capsuleMemory,
+        capsuleId,
+        email: req.user?.email,
+      });
+      if (!job) return res.status(404).json({ error: "not_found" });
+
+      return res.status(202).json({
+        ok: true,
+        status: "pending",
+        pendingStage: "capsule",
+        hasPendingAdditionalItems: false,
+      });
+    }
+
+    const capsule = state.capsules.get(capsuleId);
+    if (capsule?.draft && typeof capsule.draft === "object") {
+      state.capsules.set(String(capsule.id), {
+        ...capsule,
+        draft: {
+          ...capsule.draft,
+          data: {
+            wardrobe: buildE2eCapsule().draft.data.wardrobe,
+            rejectedUrls: [],
+          },
+        },
+      });
+    }
+    return res.json({
+      ok: true,
+      status: "ready",
+      items: buildE2eWardrobeItems(),
+    });
+  };
+}
+
+function generateOutfitSetImageHandler(state: E2eState) {
+  return async (req, res) => {
+    const capsuleId = normalizeCapsuleId(req.params?.id);
+    const setIndex = parseSetIndex(req.params?.setIndex);
+    if (!Number.isInteger(setIndex) || setIndex < 0) {
+      return res.status(400).json({ error: "invalid_payload" });
+    }
+
+    const image = state.nextOutfitImageUrl(capsuleId, setIndex);
+    const result = state.capsuleMemory.setOutfitSetImage(
+      capsuleId,
+      setIndex,
+      image,
+    );
+    if (result.status !== "updated") {
+      return res.status(404).json({ error: "not_found" });
+    }
+
+    return res.json({ ok: true, status: "ready", image: result.image });
+  };
+}
+
+function deleteOutfitSetImageHandler(state: E2eState) {
+  return async (req, res) => {
+    const setIndex = parseSetIndex(req.params?.setIndex);
+    if (!Number.isInteger(setIndex) || setIndex < 0) {
+      return res.status(400).json({ error: "invalid_payload" });
+    }
+
+    const result = state.capsuleMemory.setOutfitSetImage(
+      req.params?.id,
+      setIndex,
+      null,
+    );
+    if (result.status !== "updated") {
+      return res.status(404).json({ error: "not_found" });
+    }
+
+    return res.json({ ok: true, status: "ready" });
+  };
+}
+
 export function searchAndGenerationDependencies(state: E2eState) {
   return {
     checkDatabaseConnectionImpl: async () => {},
@@ -72,69 +163,13 @@ export function searchAndGenerationDependencies(state: E2eState) {
     getOutfitSetImageJobImpl: () => null,
     getPartialRegenerationJobImpl: (email, capsuleId) =>
       state.selectedRegenerationMemory.getJob(email, capsuleId),
-    getWardrobeJobImpl: () => null,
-    streamCapsuleEventsImpl: async (_req, res, { snapshot }) => {
-      res.setHeader("Content-Type", "text/event-stream");
-      res.write(`event: snapshot\ndata: ${JSON.stringify(snapshot)}\n\n`);
-      res.end();
-    },
-    regenerateCapsuleWardrobeHandler: async (req, res) => {
-      const capsule = state.capsules.get(normalizeCapsuleId(req.params?.id));
-      if (capsule?.draft && typeof capsule.draft === "object") {
-        state.capsules.set(String(capsule.id), {
-          ...capsule,
-          draft: {
-            ...capsule.draft,
-            data: {
-              wardrobe: buildE2eCapsule().draft.data.wardrobe,
-              rejectedUrls: [],
-            },
-          },
-        });
-      }
-      return res.json({
-        ok: true,
-        status: "ready",
-        items: buildE2eWardrobeItems(),
-      });
-    },
+    getWardrobeJobImpl: (email, capsuleId) =>
+      state.generationMemory.getJob(email, capsuleId),
+    streamCapsuleEventsImpl: streamCapsuleEventsImpl(state),
+    regenerateCapsuleWardrobeHandler: regenerateCapsuleWardrobeHandler(state),
     regenerateSelectedCapsuleItemsHandler: selectedRegenerationHandler(state),
-    generateOutfitSetImageHandler: async (req, res) => {
-      const capsuleId = normalizeCapsuleId(req.params?.id);
-      const setIndex = parseSetIndex(req.params?.setIndex);
-      if (!Number.isInteger(setIndex) || setIndex < 0) {
-        return res.status(400).json({ error: "invalid_payload" });
-      }
-
-      const image = state.nextOutfitImageUrl(capsuleId, setIndex);
-      const result = state.capsuleMemory.setOutfitSetImage(
-        capsuleId,
-        setIndex,
-        image,
-      );
-      if (result.status !== "updated") {
-        return res.status(404).json({ error: "not_found" });
-      }
-
-      return res.json({ ok: true, status: "ready", image: result.image });
-    },
-    deleteOutfitSetImageHandler: async (req, res) => {
-      const setIndex = parseSetIndex(req.params?.setIndex);
-      if (!Number.isInteger(setIndex) || setIndex < 0) {
-        return res.status(400).json({ error: "invalid_payload" });
-      }
-
-      const result = state.capsuleMemory.setOutfitSetImage(
-        req.params?.id,
-        setIndex,
-        null,
-      );
-      if (result.status !== "updated") {
-        return res.status(404).json({ error: "not_found" });
-      }
-
-      return res.json({ ok: true, status: "ready" });
-    },
+    generateOutfitSetImageHandler: generateOutfitSetImageHandler(state),
+    deleteOutfitSetImageHandler: deleteOutfitSetImageHandler(state),
     buildWardrobePdfInChildImpl: async () => Buffer.from("e2e-pdf"),
     getProductsByUrlsInOrderImpl: async () => buildE2eWardrobeItems(),
   };

@@ -131,6 +131,81 @@ export function buildE2eWardrobeItems() {
   ];
 }
 
+export function buildE2eRegeneratedWardrobeItems() {
+  return [
+    {
+      id: "ready-top-e2e",
+      name: "E2E Ready linen blazer",
+      category: "top",
+      brand: "E2E Ready Studio",
+      price: 149,
+      currency: "EUR",
+      url: "https://example.test/products/ready-linen-blazer",
+      image_url: e2eImageUrl("ready-linen-blazer"),
+      description: "A deterministic e2e ready-state blazer fixture.",
+      color: "sage",
+      formalityLevel: "formal",
+      style: "minimalistic",
+      season: ["spring"],
+      occasions: ["office"],
+      audience: "woman",
+      pattern: "solid",
+    },
+    {
+      id: "ready-bottom-e2e",
+      name: "E2E Ready tailored trousers",
+      category: "bottom",
+      brand: "E2E Ready Studio",
+      price: 119,
+      currency: "EUR",
+      url: "https://example.test/products/ready-tailored-trousers",
+      image_url: e2eImageUrl("ready-tailored-trousers"),
+      description: "A deterministic e2e ready-state trouser fixture.",
+      color: "charcoal",
+      formalityLevel: "formal",
+      style: "minimalistic",
+      season: ["spring"],
+      occasions: ["office"],
+      audience: "woman",
+      pattern: "solid",
+    },
+    {
+      id: "ready-shoes-e2e",
+      name: "E2E Ready almond loafers",
+      category: "shoes",
+      brand: "E2E Ready Studio",
+      price: 135,
+      currency: "EUR",
+      url: "https://example.test/products/ready-almond-loafers",
+      image_url: e2eImageUrl("ready-almond-loafers"),
+      description: "A deterministic e2e ready-state loafer fixture.",
+      color: "almond",
+      formalityLevel: "formal",
+      style: "minimalistic",
+      season: ["spring"],
+      occasions: ["office"],
+      audience: "woman",
+      pattern: "solid",
+    },
+  ];
+}
+
+export function buildE2eRegeneratedWardrobe() {
+  return {
+    items: buildE2eRegeneratedWardrobeItems(),
+    outfitSets: [
+      {
+        itemIds: ["ready-top-e2e", "ready-bottom-e2e", "ready-shoes-e2e"],
+        image: e2eImageUrl("ready-outfit-set"),
+        imageObsolete: false,
+      },
+    ],
+    rawSelectionText: "Mocked e2e ready regeneration response",
+    swimwearReasoning: null,
+    swimwearRawSelectionText: null,
+  };
+}
+
 export function buildE2eCapsule() {
   return {
     id: "capsule-e2e",

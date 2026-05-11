@@ -1,4 +1,5 @@
 import { setCsrfCookie, setSessionCookie } from "../httpCookies.js";
+import { buildCapsuleEventSnapshot } from "../ai/capsuleEvents.js";
 import { E2E_EMAIL } from "./fixtures.js";
 import { e2eState } from "./state.js";
 
@@ -35,6 +36,53 @@ export function registerE2eRoutes(app) {
     const { sessionId, session } = e2eState.createSession(email);
     setAuthCookies(res, sessionId, session.csrfToken);
     return res.json({ ok: true, user: { email } });
+  });
+
+  // E2E full-generation controls:
+  // POST /__e2e/generation/mode { mode: "immediate" | "pending" }
+  // POST /__e2e/generation/release { capsuleId?: string, email?: string }
+  app.post("/__e2e/generation/mode", (req, res) => {
+    const mode = e2eState.generationMemory.setMode(req.body?.mode);
+    if (!mode) {
+      return res.status(400).json({ error: "invalid_payload" });
+    }
+    return res.json({ ok: true, mode });
+  });
+
+  app.post("/__e2e/generation/release", (req, res) => {
+    const email = String(req.body?.email || E2E_EMAIL).trim() || E2E_EMAIL;
+    const job = e2eState.generationMemory.releaseWardrobeJob({
+      capsuleMemory: e2eState.capsuleMemory,
+      capsuleId: req.body?.capsuleId,
+      email,
+    });
+    if (!job) {
+      return res.status(404).json({ error: "not_found" });
+    }
+
+    const capsule = e2eState.capsuleMemory.get(job.capsuleId);
+    const snapshot = buildCapsuleEventSnapshot({
+      capsule,
+      activeJob: e2eState.generationMemory.getJob(email, job.capsuleId),
+      partialRegenerationJob: e2eState.selectedRegenerationMemory.getJob(
+        email,
+        job.capsuleId,
+      ),
+    });
+    const published = e2eState.generationMemory.publish(
+      email,
+      job.capsuleId,
+      snapshot,
+      { close: true },
+    );
+
+    return res.json({
+      ok: true,
+      capsuleId: job.capsuleId,
+      jobId: job.capsuleRequestId,
+      published,
+      status: "ready",
+    });
   });
 
   // E2E search gate controls:
