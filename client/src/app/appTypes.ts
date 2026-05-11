@@ -161,6 +161,8 @@ export type ShareMetadata = {
 
 export type WardrobeMutationResponse = {
   image?: string | null;
+  items?: WardrobeItem[];
+  outfitSets?: OutfitSetSnapshot[];
   status?: string;
 };
 

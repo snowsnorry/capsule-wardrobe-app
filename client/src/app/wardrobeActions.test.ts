@@ -225,6 +225,23 @@ describe("wardrobeActions", () => {
     expect(updater({ error: "" })).toEqual({ error: "boom" });
   });
 
+  test("refreshWardrobe applies immediate ready responses", async () => {
+    vi.mocked(regenerateCapsuleWardrobe).mockResolvedValueOnce({
+      status: "ready",
+      items: [{ id: "ready-top" }],
+    });
+    const context = createActionContext();
+
+    await refreshWardrobe(context);
+
+    expect(context.setStatus).toHaveBeenCalledWith(expect.any(Function));
+    expect(context.setIsLoadingItems).toHaveBeenCalledWith(true);
+    expect(context.applyWardrobeSnapshot).toHaveBeenCalledWith(
+      { status: "ready", items: [{ id: "ready-top" }] },
+      "capsule-1",
+    );
+  });
+
   test("startCapsuleEventStream subscribes and stopCapsuleEventStream aborts the stream", () => {
     vi.mocked(subscribeCapsuleEvents).mockReturnValue(
       new Promise(() => undefined),

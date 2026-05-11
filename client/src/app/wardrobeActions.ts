@@ -54,12 +54,19 @@ export async function refreshWardrobe(context: AppActionContext) {
     context,
     "setIsPartialRegenerationLoading",
   )(false);
+  fromContext<(updater: (current: unknown) => unknown) => void>(
+    context,
+    "setStatus",
+  )((current) => ({
+    ...(current as object),
+    error: "",
+  }));
   fromContext<(value: boolean) => void>(context, "setIsLoadingItems")(true);
   try {
     const response = (await regenerateCapsuleWardrobe({
       capsuleId,
     })) as WardrobeMutationResponse;
-    handlePendingWardrobeResponse(context, response, "full", capsuleId);
+    await handlePendingWardrobeResponse(context, response, "full", capsuleId);
   } catch (error) {
     failWardrobeStream(context);
     fromContext<(updater: (current: unknown) => unknown) => void>(
@@ -75,7 +82,7 @@ export async function refreshWardrobe(context: AppActionContext) {
   }
 }
 
-function handlePendingWardrobeResponse(
+async function handlePendingWardrobeResponse(
   context: AppActionContext,
   response: WardrobeMutationResponse,
   notificationKind: string,
@@ -87,6 +94,16 @@ function handlePendingWardrobeResponse(
       "startPendingNotificationFlow",
     )(notificationKind);
     startCapsuleEventStream(context, capsuleId);
+    return;
+  }
+  if (response?.status === "ready" || Array.isArray(response?.items)) {
+    await fromContext<
+      (
+        snapshot: WardrobeMutationResponse,
+        capsuleId?: string,
+        options?: { refreshReadyCapsule?: boolean },
+      ) => Promise<void>
+    >(context, "applyWardrobeSnapshot")(response, capsuleId);
     return;
   }
   fromContext<(value: boolean) => void>(context, "setIsLoadingItems")(false);
