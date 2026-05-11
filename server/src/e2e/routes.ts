@@ -37,6 +37,36 @@ export function registerE2eRoutes(app) {
     return res.json({ ok: true, user: { email } });
   });
 
+  // E2E search gate controls:
+  // POST /__e2e/search/delay { query: string, match?: "exact" | "includes" }
+  // POST /__e2e/search/release { query?: string, match?: "exact" | "includes" }
+  // GET /__e2e/search/requests returns cloned request metadata for polling.
+  app.post("/__e2e/search/delay", (req, res) => {
+    if (!String(req.body?.query || "").trim()) {
+      return res.status(400).json({ error: "invalid_payload" });
+    }
+    const gate = e2eState.searchDelay.configureGate({
+      query: req.body?.query,
+      match: req.body?.match,
+    });
+    return res.json({ ok: true, gate });
+  });
+
+  app.post("/__e2e/search/release", (req, res) => {
+    const result = e2eState.searchDelay.releaseGate({
+      query: req.body?.query,
+      match: req.body?.match,
+    });
+    return res.json({ ok: true, ...result });
+  });
+
+  app.get("/__e2e/search/requests", (_req, res) => {
+    return res.json({
+      ok: true,
+      requests: e2eState.searchDelay.cloneRequestLog(),
+    });
+  });
+
   app.get("/__e2e/images/:name.svg", (req, res) => {
     const label = String(req.params?.name || "fixture");
     const escaped = label.replace(/[<>&"]/g, "");

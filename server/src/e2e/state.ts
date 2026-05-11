@@ -15,6 +15,7 @@ import {
   buildE2eWardrobeItems,
   e2eImageUrl,
 } from "./fixtures.js";
+import { buildSearchResultItems, E2eSearchDelayState } from "./searchState.js";
 import { getCapsuleIdValue } from "../capsuleStoreModel.js";
 
 type E2eScenario =
@@ -55,6 +56,7 @@ class E2eState {
   loginCodes = new Map<string, string>();
   sessionCounter = 0;
   outfitImageCounter = 0;
+  searchDelay = new E2eSearchDelayState();
 
   get capsules() {
     return this.capsuleMemory.capsules;
@@ -66,6 +68,7 @@ class E2eState {
     this.loginCodes.clear();
     this.sessionCounter = 0;
     this.outfitImageCounter = 0;
+    this.searchDelay.clear();
     this.capsuleMemory.reset();
     this.profile = scenario === "no-profile" ? null : buildE2eProfile();
     this.savedSearch =
@@ -108,42 +111,6 @@ class E2eState {
 }
 
 export const e2eState = new E2eState();
-
-function payloadIncludes(payload, field: string, value: string) {
-  return Array.isArray(payload?.[field]) && payload[field].includes(value);
-}
-
-function isUrlSearchPayload(payload) {
-  const query = String(payload?.query || "").trim();
-  return query.startsWith("http://") || query.startsWith("https://");
-}
-
-function hasSavedFilterPayload(payload) {
-  return (
-    payloadIncludes(payload, "category", "top") &&
-    payloadIncludes(payload, "color", "navy")
-  );
-}
-
-function buildSearchResultItems(payload) {
-  const items = buildE2eWardrobeItems();
-  const query = String(payload?.query || "").trim();
-  if (isUrlSearchPayload(payload)) {
-    return items.filter((item) => item.url === query);
-  }
-
-  if (payloadIncludes(payload, "style", "sporty")) {
-    return items.filter((item) => item.id === "sporty-overshirt-e2e");
-  }
-
-  if (hasSavedFilterPayload(payload)) {
-    return items.filter((item) => item.id === "top-e2e");
-  }
-
-  return items.filter((item) =>
-    ["top-e2e", "bottom-e2e", "shoes-e2e"].includes(String(item.id)),
-  );
-}
 
 function profileDependencies(state: E2eState) {
   return {
@@ -273,15 +240,18 @@ function searchAndGenerationDependencies(state: E2eState) {
         ? buildE2eSearchStats(payload)
         : { total: 0, stats: {}, priceBuckets: [] },
     runSavedSearchImpl: async (_email, payload) => {
-      state.savedSearch = buildE2eSearchPayload(payload);
-      const items = buildSearchResultItems(state.savedSearch).map((item) => ({
+      const savedSearch = buildE2eSearchPayload(payload);
+      state.savedSearch = savedSearch;
+      const requestOrder = await state.searchDelay.waitForGate(savedSearch);
+      const items = buildSearchResultItems(savedSearch).map((item) => ({
         ...item,
         imageUrl: item.image_url,
       }));
+      state.searchDelay.completeRequest(requestOrder);
       return {
         items,
         total: items.length,
-        savedSearch: state.savedSearch,
+        savedSearch,
       };
     },
     getOutfitSetImageJobImpl: () => null,
