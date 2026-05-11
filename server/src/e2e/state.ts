@@ -16,6 +16,7 @@ import {
   e2eImageUrl,
 } from "./fixtures.js";
 import { buildSearchResultItems, E2eSearchDelayState } from "./searchState.js";
+import { E2eShareMemory } from "./shareState.js";
 import { getCapsuleIdValue } from "../capsuleStoreModel.js";
 
 type E2eScenario =
@@ -52,6 +53,7 @@ class E2eState {
   sessions = new Map<string, E2eSession>();
   profile: Record<string, unknown> | null = buildE2eProfile();
   capsuleMemory = new E2eCapsuleMemory();
+  shareMemory = new E2eShareMemory();
   savedSearch = buildE2eSearchPayload();
   loginCodes = new Map<string, string>();
   sessionCounter = 0;
@@ -67,6 +69,7 @@ class E2eState {
     this.sessions.clear();
     this.loginCodes.clear();
     this.sessionCounter = 0;
+    this.shareMemory.reset();
     this.outfitImageCounter = 0;
     this.searchDelay.clear();
     this.capsuleMemory.reset();
@@ -107,6 +110,14 @@ class E2eState {
     return e2eImageUrl(
       `generated-outfit-set-${normalizeCapsuleId(capsuleId)}-${setIndex}-${this.outfitImageCounter}`,
     );
+  }
+
+  resetShares(): void {
+    this.shareMemory.reset();
+  }
+
+  getShareOgMetadataById(id: unknown) {
+    return this.shareMemory.getOgMetadataById(id);
   }
 }
 
@@ -227,6 +238,23 @@ function capsuleDependencies(state: E2eState) {
       }
       return result.deleted;
     },
+    createCapsuleShareImpl: async (email, capsuleId, clientOrigin) =>
+      state.shareMemory.createFromCapsule({
+        capsuleId,
+        capsuleMemory: state.capsuleMemory,
+        clientOrigin,
+      }),
+    getSharedCapsuleImpl: async (id) => state.shareMemory.getById(id),
+    getSharedCapsuleOgMetadataImpl: async (id) =>
+      state.getShareOgMetadataById(id),
+    importSharedCapsuleImpl: async (email, id) =>
+      state.shareMemory.importAsCapsule({
+        capsuleMemory: state.capsuleMemory,
+        id,
+        setActiveCapsuleId: (activeCapsuleId) => {
+          state.setActiveCapsuleId(activeCapsuleId);
+        },
+      }),
   };
 }
 

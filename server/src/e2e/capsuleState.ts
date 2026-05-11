@@ -105,6 +105,12 @@ function getEffectiveSnapshot(
   return capsule ? deepClone(getEffectiveCapsuleSnapshot(capsule)) : null;
 }
 
+export function cloneEffectiveCapsuleSnapshot(
+  capsule: NormalizedCapsuleRecord | null | undefined,
+): CapsuleSnapshot | null {
+  return getEffectiveSnapshot(capsule || null);
+}
+
 type OutfitSetImageMutationResult =
   | {
       status: "updated";
