@@ -177,3 +177,4 @@ The Playwright auth state is generated at `tests/e2e/.auth/user.json` and is int
 8. At the end of the work, after the final file edits, run `npm run format`.
 9. If `npm run format` changes files, include those formatter changes in the diff
 10. At the end, after tests, coverage, typecheck, and format, run ESLint on the changed source files with zero warnings, for example `npx eslint --max-warnings=0 <changed files>`
+11. Provide clear git commit message for the change
