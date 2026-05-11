@@ -1,3 +1,8 @@
+import {
+  deepClone,
+  E2eCapsuleMemory,
+  normalizeCapsuleId,
+} from "./capsuleState.js";
 import { E2E_CODE, E2E_EMAIL } from "./fixtures.js";
 import {
   buildE2eCapsule,
@@ -9,6 +14,7 @@ import {
   buildE2eWardrobeItems,
   e2eImageUrl,
 } from "./fixtures.js";
+import { getCapsuleIdValue } from "../capsuleStoreModel.js";
 
 type E2eScenario =
   | "with-profile"
@@ -35,30 +41,26 @@ function buildSession(sessionId: string, email: string): E2eSession {
   };
 }
 
-function normalizeCapsuleId(id: unknown): string {
-  return String(id || "capsule-e2e").trim() || "capsule-e2e";
-}
-
 class E2eState {
   scenario: E2eScenario = "with-profile";
   sessions = new Map<string, E2eSession>();
   profile: Record<string, unknown> | null = buildE2eProfile();
-  capsules = new Map<string, Record<string, unknown>>([
-    ["capsule-e2e", buildE2eCapsule()],
-  ]);
+  capsuleMemory = new E2eCapsuleMemory();
   savedSearch = buildE2eSearchPayload();
   loginCodes = new Map<string, string>();
   sessionCounter = 0;
-  capsuleCounter = 1;
+
+  get capsules() {
+    return this.capsuleMemory.capsules;
+  }
 
   reset(scenario: E2eScenario = "with-profile") {
     this.scenario = scenario;
     this.sessions.clear();
     this.loginCodes.clear();
     this.sessionCounter = 0;
-    this.capsuleCounter = 1;
+    this.capsuleMemory.reset();
     this.profile = scenario === "no-profile" ? null : buildE2eProfile();
-    this.capsules = new Map([["capsule-e2e", buildE2eCapsule()]]);
     this.savedSearch =
       scenario === "with-saved-search"
         ? buildE2eSavedSearchPayload()
@@ -81,9 +83,13 @@ class E2eState {
     };
   }
 
-  activeCapsule() {
-    const activeId = String(this.profile?.activeCapsuleId || "capsule-e2e");
-    return this.capsules.get(activeId) || this.capsules.get("capsule-e2e");
+  setActiveCapsuleId(activeCapsuleId: string | null): Record<string, unknown> {
+    this.profile = {
+      ...buildE2eProfile(),
+      ...this.profile,
+      activeCapsuleId,
+    };
+    return this.profile;
   }
 }
 
@@ -187,57 +193,59 @@ function authDependencies(state: E2eState) {
 
 function capsuleDependencies(state: E2eState) {
   return {
-    resolveActiveCapsuleImpl: async () => state.activeCapsule(),
-    listRecentCapsulesImpl: async () => [...state.capsules.values()],
-    searchCapsulesImpl: async () => [...state.capsules.values()],
-    getCapsuleImpl: async (_email, id) =>
-      state.capsules.get(normalizeCapsuleId(id)) || null,
+    resolveActiveCapsuleImpl: async () => {
+      const capsule = state.capsuleMemory.resolve(
+        state.profile?.activeCapsuleId,
+      );
+      state.setActiveCapsuleId(getCapsuleIdValue(capsule));
+      return capsule;
+    },
+    listRecentCapsulesImpl: async (_email, limit = 10) =>
+      state.capsuleMemory.list(limit),
+    searchCapsulesImpl: async (_email, query, limit = 25) =>
+      state.capsuleMemory.search(query, limit),
+    getCapsuleImpl: async (_email, id) => state.capsuleMemory.get(id),
     createCapsuleImpl: async (_email, payload) => {
-      state.capsuleCounter += 1;
-      const capsule = {
-        ...buildE2eCapsule(),
-        id: `capsule-e2e-${state.capsuleCounter}`,
+      const capsule = state.capsuleMemory.create({
         name: payload?.name || "Playwright onboarding capsule",
-        draft: payload?.draft || buildE2eCapsule().draft,
-      };
-      state.capsules.set(String(capsule.id), capsule);
-      state.profile = {
-        ...buildE2eProfile(),
-        ...state.profile,
-        activeCapsuleId: capsule.id,
-      };
+        draft: payload?.draft ?? buildE2eCapsule().draft,
+        saved: payload?.saved ?? null,
+      });
+      if (payload?.setActive !== false) {
+        state.setActiveCapsuleId(getCapsuleIdValue(capsule));
+      }
       return capsule;
     },
     setActiveCapsuleIdImpl: async (_email, activeCapsuleId) => {
-      state.profile = {
-        ...buildE2eProfile(),
-        ...state.profile,
-        activeCapsuleId,
-      };
-      return state.profile;
+      const capsuleId = normalizeCapsuleId(activeCapsuleId);
+      const nextActiveId = state.capsules.has(capsuleId)
+        ? capsuleId
+        : getCapsuleIdValue(
+            state.capsuleMemory.resolve(state.profile?.activeCapsuleId),
+          );
+      return deepClone(state.setActiveCapsuleId(nextActiveId));
     },
-    updateCapsuleSnapshotImpl: async (_email, id, draft) => {
-      const capsuleId = normalizeCapsuleId(id);
-      const current = state.capsules.get(capsuleId) || buildE2eCapsule();
-      const next = { ...current, id: capsuleId, draft, status: "new" };
-      state.capsules.set(capsuleId, next);
-      return next;
+    updateCapsuleSnapshotImpl: async (_email, id, draft) =>
+      state.capsuleMemory.update(id, draft),
+    saveCapsuleImpl: async (_email, id) => state.capsuleMemory.save(id),
+    revertCapsuleImpl: async (_email, id) => state.capsuleMemory.revert(id),
+    renameCapsuleImpl: async (_email, id, name) =>
+      state.capsuleMemory.rename(id, name),
+    duplicateCapsuleImpl: async (_email, id, name) => {
+      const capsule = state.capsuleMemory.duplicate(id, name);
+      if (capsule) state.setActiveCapsuleId(getCapsuleIdValue(capsule));
+      return capsule;
     },
-    saveCapsuleImpl: async (_email, id) =>
-      state.capsules.get(normalizeCapsuleId(id)),
-    revertCapsuleImpl: async (_email, id) =>
-      state.capsules.get(normalizeCapsuleId(id)),
-    renameCapsuleImpl: async (_email, id, name) => {
-      const capsuleId = normalizeCapsuleId(id);
-      const current = state.capsules.get(capsuleId);
-      if (!current) return null;
-      const next = { ...current, name };
-      state.capsules.set(capsuleId, next);
-      return next;
+    deleteCapsuleImpl: async (_email, id) => {
+      const result = state.capsuleMemory.delete(
+        id,
+        state.profile?.activeCapsuleId,
+      );
+      if (result.activeCapsuleId) {
+        state.setActiveCapsuleId(result.activeCapsuleId);
+      }
+      return result.deleted;
     },
-    duplicateCapsuleImpl: async () => buildE2eCapsule(),
-    deleteCapsuleImpl: async (_email, id) =>
-      state.capsules.delete(normalizeCapsuleId(id)),
   };
 }
 
