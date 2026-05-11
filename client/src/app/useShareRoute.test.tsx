@@ -62,7 +62,9 @@ describe("useShareRoute", () => {
     await waitFor(() => {
       expect(screen.getByTestId("dialog-open")).toHaveTextContent("true");
       expect(screen.getByTestId("share-name")).toHaveTextContent("Shared edit");
+      expect(screen.getByTestId("loading")).toHaveTextContent("false");
     });
+    expect(fetchSharedCapsule).toHaveBeenCalledTimes(1);
   });
 
   test("does not load share metadata before user/profile readiness", () => {

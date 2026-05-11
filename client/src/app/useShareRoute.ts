@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchSharedCapsule } from "../api/capsules";
 import type { ShareMetadata, StatusState, UserLike } from "./appTypes";
 
@@ -16,16 +16,32 @@ type UseShareRouteOptions = {
   user: UserLike | null;
 };
 
-function canLoadShareMetadata(options: UseShareRouteOptions) {
+function canLoadShareMetadata(
+  options: Pick<
+    UseShareRouteOptions,
+    "hasProfile" | "pendingShareId" | "profileCreated" | "sessionInitialized"
+  >,
+  hasUser: boolean,
+) {
   return Boolean(
     options.sessionInitialized &&
     options.pendingShareId &&
-    options.user &&
+    hasUser &&
     (options.hasProfile || options.profileCreated),
   );
 }
 
 export function useShareRoute(options: UseShareRouteOptions) {
+  const {
+    hasProfile,
+    pendingShareId,
+    profileCreated,
+    sessionInitialized,
+    user,
+  } = options;
+  const hasUser = Boolean(user);
+  const latestOptionsRef = useRef(options);
+  latestOptionsRef.current = options;
   const [shareMetadata, setShareMetadata] = useState<ShareMetadata | null>(
     null,
   );
@@ -35,38 +51,48 @@ export function useShareRoute(options: UseShareRouteOptions) {
   const clearShareRoute = useCallback(() => {
     setShareMetadata(null);
     setIsShareDialogOpen(false);
-    options.clearNavigationShareRoute();
-  }, [options]);
+    latestOptionsRef.current.clearNavigationShareRoute();
+  }, []);
 
   useEffect(() => {
-    if (!canLoadShareMetadata(options)) {
+    if (
+      !canLoadShareMetadata(
+        {
+          hasProfile,
+          pendingShareId,
+          profileCreated,
+          sessionInitialized,
+        },
+        hasUser,
+      )
+    ) {
       return undefined;
     }
 
     let isActive = true;
     setIsShareLoading(true);
-    fetchSharedCapsule(options.pendingShareId)
+    fetchSharedCapsule(pendingShareId)
       .then((metadata) => {
-        if (!isActive || !options.isMountedRef.current) {
+        if (!isActive || !latestOptionsRef.current.isMountedRef.current) {
           return;
         }
         setShareMetadata(metadata as ShareMetadata);
         setIsShareDialogOpen(true);
       })
       .catch((error) => {
-        if (!isActive || !options.isMountedRef.current) {
+        if (!isActive || !latestOptionsRef.current.isMountedRef.current) {
           return;
         }
-        options.setStatus({
+        latestOptionsRef.current.setStatus({
           loading: false,
-          error: options.resolveErrorMessage(error),
+          error: latestOptionsRef.current.resolveErrorMessage(error),
           infoKey: "",
           infoParams: null,
         });
         clearShareRoute();
       })
       .finally(() => {
-        if (isActive && options.isMountedRef.current) {
+        if (isActive && latestOptionsRef.current.isMountedRef.current) {
           setIsShareLoading(false);
         }
       });
@@ -74,7 +100,14 @@ export function useShareRoute(options: UseShareRouteOptions) {
     return () => {
       isActive = false;
     };
-  }, [clearShareRoute, options]);
+  }, [
+    clearShareRoute,
+    hasProfile,
+    pendingShareId,
+    profileCreated,
+    sessionInitialized,
+    hasUser,
+  ]);
 
   return {
     clearShareRoute,
