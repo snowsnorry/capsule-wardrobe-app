@@ -44,6 +44,20 @@ export async function generateOutfitSetImage(
       startCapsuleEventStream(context, capsuleId);
       return;
     }
+    if (typeof response?.image === "string") {
+      fromContext<
+        (updater: (current: OutfitSetSnapshot[]) => OutfitSetSnapshot[]) => void
+      >(
+        context,
+        "setProfileOutfitSets",
+      )((current) =>
+        current.map((set, index) =>
+          index === normalizedSetIndex
+            ? { ...set, image: response.image || null, imageObsolete: false }
+            : set,
+        ),
+      );
+    }
     clearPendingImage(context, normalizedSetIndex);
   } catch (error) {
     if (!fromContext<{ current: boolean }>(context, "isMountedRef").current)

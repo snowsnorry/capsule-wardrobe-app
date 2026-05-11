@@ -153,13 +153,16 @@ function OutfitImageBlock({ props }: { props: WardrobeProps }) {
         </Box>
       ) : null}
       {!props.isImagePending && !props.activeImageSrc ? (
-        <Button
-          variant="outlined"
-          disabled={props.disabled}
-          onClick={() => props.onGenerateImage?.(set.index)}
-        >
-          {t("capsule.createOutfitSetImage")}
-        </Button>
+        <>
+          <OutfitImagePlaceholder />
+          <Button
+            variant="outlined"
+            disabled={props.disabled}
+            onClick={() => props.onGenerateImage?.(set.index)}
+          >
+            {t("capsule.createOutfitSetImage")}
+          </Button>
+        </>
       ) : null}
     </Stack>
   );

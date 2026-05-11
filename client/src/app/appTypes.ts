@@ -160,6 +160,7 @@ export type ShareMetadata = {
 };
 
 export type WardrobeMutationResponse = {
+  image?: string | null;
   status?: string;
 };
 

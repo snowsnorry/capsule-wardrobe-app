@@ -199,7 +199,7 @@ describe("MainScreenHeader", () => {
     });
     const renameContainer = renameButton.parentElement?.parentElement;
     const unsavedDot = renameContainer?.querySelector(
-      "svg[data-testid='FiberManualRecordRoundedIcon']",
+      "svg[data-testid='active-capsule-unsaved-indicator']",
     );
 
     expect(unsavedDot).not.toBeNull();

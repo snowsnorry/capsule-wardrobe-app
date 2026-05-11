@@ -116,6 +116,9 @@ describe("MainScreenWardrobe", () => {
     });
 
     expect(screen.getByTestId("outfit-set-image-divider")).toBeInTheDocument();
+    expect(
+      screen.getByTestId("outfit-set-image-placeholder"),
+    ).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Create image" }));
     expect(onGenerateImage).toHaveBeenCalledWith(0);
   });

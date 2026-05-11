@@ -327,8 +327,33 @@ describe("wardrobeActions", () => {
 
     vi.mocked(generateOutfitSetImage).mockResolvedValueOnce({
       status: "ready",
+      image: "https://images.example.com/generated.png",
     });
     await generateOutfitSetImageAction(context, 3);
+    expect(context.setProfileOutfitSets).toHaveBeenCalledWith(
+      expect.any(Function),
+    );
+    const outfitUpdater = mockCalls(context.setProfileOutfitSets).at(
+      -1,
+    )?.[0] as (
+      current: { image: string | null; imageObsolete: boolean }[],
+    ) => unknown;
+    expect(
+      outfitUpdater([
+        { image: "keep.jpg", imageObsolete: true },
+        { image: null, imageObsolete: true },
+        { image: "old.jpg", imageObsolete: true },
+        { image: null, imageObsolete: true },
+      ]),
+    ).toEqual([
+      { image: "keep.jpg", imageObsolete: true },
+      { image: null, imageObsolete: true },
+      { image: "old.jpg", imageObsolete: true },
+      {
+        image: "https://images.example.com/generated.png",
+        imageObsolete: false,
+      },
+    ]);
     expect(context.setPendingImageSetIndexes).toHaveBeenLastCalledWith(
       expect.any(Function),
     );
