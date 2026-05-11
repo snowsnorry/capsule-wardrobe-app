@@ -180,10 +180,11 @@ function capsuleDependencies(state: E2eState) {
     revertCapsuleImpl: async (_email, id) =>
       state.capsules.get(normalizeCapsuleId(id)),
     renameCapsuleImpl: async (_email, id, name) => {
-      const current = state.capsules.get(normalizeCapsuleId(id));
+      const capsuleId = normalizeCapsuleId(id);
+      const current = state.capsules.get(capsuleId);
       if (!current) return null;
       const next = { ...current, name };
-      state.capsules.set(String(next.id), next);
+      state.capsules.set(capsuleId, next);
       return next;
     },
     duplicateCapsuleImpl: async () => buildE2eCapsule(),
