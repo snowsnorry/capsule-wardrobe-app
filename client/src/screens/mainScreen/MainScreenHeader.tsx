@@ -43,6 +43,7 @@ type HeaderProps = {
 function SummaryLine({ items }: { items: string[] }) {
   return (
     <Stack
+      data-testid="capsule-summary"
       direction="row"
       flexWrap="wrap"
       useFlexGap
@@ -67,6 +68,22 @@ function SummaryLine({ items }: { items: string[] }) {
         </Typography>
       ))}
     </Stack>
+  );
+}
+
+function ActiveCapsuleUnsavedIndicator() {
+  const { t } = useI18n();
+  const label = t("capsule.notSaved");
+
+  return (
+    <Tooltip title={label}>
+      <FiberManualRecordRoundedIcon
+        aria-label={label}
+        data-testid="active-capsule-unsaved-indicator"
+        role="img"
+        sx={{ fontSize: 10, color: "#2f8f58" }}
+      />
+    </Tooltip>
   );
 }
 
@@ -129,11 +146,7 @@ function InlineTitle({
         </Typography>
       </Box>
       {capsuleHasUnsavedChanges(activeCapsule) ? (
-        <Tooltip title="Not saved">
-          <FiberManualRecordRoundedIcon
-            sx={{ fontSize: 10, color: "#2f8f58" }}
-          />
-        </Tooltip>
+        <ActiveCapsuleUnsavedIndicator />
       ) : null}
       <Box
         className="capsule-title-edit-action"

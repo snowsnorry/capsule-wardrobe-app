@@ -307,6 +307,7 @@ function applyFilterUpdateResult(
       (current
         ? {
             ...current,
+            status: "modified",
             draft: {
               filters: draft.filters,
               data: { wardrobe: null, rejectedUrls: [] },
