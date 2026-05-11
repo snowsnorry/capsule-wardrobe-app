@@ -138,21 +138,25 @@ function ProductDetailGroups({ item, t, locale }: DetailGroupsProps) {
   });
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === "dark";
+  const detailGroupBackground = isDarkMode
+    ? theme.palette.background.paper
+    : "rgba(252, 251, 249, 0.72)";
 
   return (
     <Stack spacing={1.4}>
       {detailGroups.map((group) => (
         <Box
           key={group.id}
+          data-testid={`product-detail-group-${group.id}`}
           sx={{
             display: "grid",
             gridTemplateColumns: { xs: "1fr", sm: "repeat(2, minmax(0, 1fr))" },
             gap: 1.5,
             p: 1.8,
             borderRadius: "22px",
-            backgroundColor: isDarkMode
-              ? "background.default"
-              : "var(--cw-color-surface-warm)",
+            border: "1px solid",
+            borderColor: "divider",
+            backgroundColor: detailGroupBackground,
           }}
         >
           {group.items.map((row) => (

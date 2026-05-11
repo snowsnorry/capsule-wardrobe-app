@@ -7,9 +7,11 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
+import { createAppTheme } from "../../theme";
 import ProductDetail from "./ProductDetail";
 
 const theme = createTheme();
+const darkTheme = createAppTheme("dark");
 
 const t = (key: string) => {
   const labels: Record<string, string> = {
@@ -22,9 +24,10 @@ const t = (key: string) => {
 
 const renderProductDetail = (
   item: Parameters<typeof ProductDetail>[0]["item"],
+  renderTheme = theme,
 ) =>
   render(
-    <ThemeProvider theme={theme}>
+    <ThemeProvider theme={renderTheme}>
       <ProductDetail item={item} t={t} locale="en" />
     </ThemeProvider>,
   );
@@ -114,5 +117,34 @@ describe("ProductDetail", () => {
 
     expect(screen.getByText("Wool Trousers")).toBeInTheDocument();
     expect(screen.queryByText("unisex")).not.toBeInTheDocument();
+  });
+
+  test("keeps detail groups visually distinct from the dark page background", () => {
+    renderProductDetail(
+      {
+        id: "coat",
+        name: "Coat",
+        price: 120,
+        currency: "EUR",
+      },
+      darkTheme,
+    );
+
+    expect(screen.getByTestId("product-detail-group-meta")).toHaveStyle({
+      backgroundColor: darkTheme.palette.background.paper,
+    });
+  });
+
+  test("uses the statistics chart card surface for detail groups in light mode", () => {
+    renderProductDetail({
+      id: "coat",
+      name: "Coat",
+      price: 120,
+      currency: "EUR",
+    });
+
+    expect(screen.getByTestId("product-detail-group-meta")).toHaveStyle({
+      backgroundColor: "rgba(252, 251, 249, 0.72)",
+    });
   });
 });
