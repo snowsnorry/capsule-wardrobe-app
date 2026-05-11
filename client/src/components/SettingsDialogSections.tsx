@@ -239,19 +239,34 @@ function SettingsSectionsList({
 }) {
   return (
     <List sx={settingsSectionsListSx}>
-      {SETTINGS_SECTIONS.map((section) => (
-        <ListItemButton
-          key={section}
-          selected={activeSection === section}
-          onClick={() => onSelectSection(section)}
-          sx={{ borderRadius: 2, mb: 0.5 }}
-        >
-          <ListItemText primary={t(`settings.sections.${section}`)} />
-        </ListItemButton>
-      ))}
+      {SETTINGS_SECTIONS.map((section) => {
+        const isActive = activeSection === section;
+
+        return (
+          <ListItemButton
+            key={section}
+            selected={isActive}
+            onClick={() => onSelectSection(section)}
+            sx={settingsSectionButtonSx}
+          >
+            <ListItemText
+              primary={t(`settings.sections.${section}`)}
+              primaryTypographyProps={{
+                fontWeight: isActive ? 700 : 500,
+              }}
+            />
+          </ListItemButton>
+        );
+      })}
     </List>
   );
 }
+
+const settingsSectionButtonSx = {
+  borderRadius: "8px",
+  mb: 0.25,
+  minHeight: 40,
+} as const;
 
 const settingsSectionsListSx = {
   py: 0,
