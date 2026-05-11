@@ -10,7 +10,7 @@ import {
   updateCapsuleFilters,
 } from "../api/capsules";
 import { initialStatus } from "./appConstants";
-import { buildEmptyCapsuleDraft } from "./capsuleState";
+import { buildCapsuleStatus, buildEmptyCapsuleDraft } from "./capsuleState";
 import { fromContext, type AppActionContext } from "./actionContext";
 import { refreshCapsuleList } from "./capsuleListActions";
 import type {
@@ -301,20 +301,17 @@ function applyFilterUpdateResult(
   >(
     context,
     "setActiveCapsuleMeta",
-  )(
-    (current) =>
-      result?.capsule ||
-      (current
-        ? {
-            ...current,
-            status: "modified",
-            draft: {
-              filters: draft.filters,
-              data: { wardrobe: null, rejectedUrls: [] },
-            },
-          }
-        : current),
-  );
+  )((current) => {
+    if (result?.capsule || !current) return result?.capsule || current;
+    const next = {
+      ...current,
+      draft: {
+        filters: draft.filters,
+        data: { wardrobe: null, rejectedUrls: [] },
+      },
+    };
+    return { ...next, status: buildCapsuleStatus(next) };
+  });
   fromContext<(value: []) => void>(context, "setProfileItems")([]);
   fromContext<(value: []) => void>(context, "setProfileOutfitSets")([]);
   fromContext<(value: []) => void>(context, "setPendingImageSetIndexes")([]);

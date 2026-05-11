@@ -79,7 +79,6 @@ function ActiveCapsuleUnsavedIndicator() {
     <Tooltip title={label}>
       <FiberManualRecordRoundedIcon
         aria-label={label}
-        data-testid="active-capsule-unsaved-indicator"
         role="img"
         sx={{ fontSize: 10, color: "#2f8f58" }}
       />
