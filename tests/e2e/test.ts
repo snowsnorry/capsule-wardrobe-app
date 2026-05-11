@@ -5,7 +5,8 @@ type E2eScenario =
   | "with-profile"
   | "no-profile"
   | "with-saved-search"
-  | "with-non-empty-stats";
+  | "with-non-empty-stats"
+  | "empty-wardrobe";
 type E2eFixtures = {
   resetAndLogin: (scenario?: E2eScenario) => Promise<void>;
 };

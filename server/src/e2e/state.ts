@@ -5,6 +5,7 @@ import {
 } from "./capsuleState.js";
 import {
   buildE2ePasskeyDependencies,
+  buildE2eEmptyWardrobeCapsule,
   buildE2eSearchPayload,
   buildE2eProfile,
   buildE2eSavedSearchPayload,
@@ -23,7 +24,8 @@ type E2eScenario =
   | "with-profile"
   | "no-profile"
   | "with-saved-search"
-  | "with-non-empty-stats";
+  | "with-non-empty-stats"
+  | "empty-wardrobe";
 
 type E2eSession = {
   email: string;
@@ -72,7 +74,11 @@ export class E2eState {
     this.selectedRegenerationMemory.reset();
     this.searchDelay.clear();
     this.generationMemory.reset();
-    this.capsuleMemory.reset();
+    this.capsuleMemory.reset(
+      scenario === "empty-wardrobe"
+        ? buildE2eEmptyWardrobeCapsule()
+        : undefined,
+    );
     this.profile = scenario === "no-profile" ? null : buildE2eProfile();
     this.savedSearch =
       scenario === "with-saved-search"

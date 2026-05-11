@@ -13,6 +13,7 @@ const SCENARIOS = new Set([
   "no-profile",
   "with-saved-search",
   "with-non-empty-stats",
+  "empty-wardrobe",
 ]);
 
 function normalizeScenario(value: unknown) {
@@ -25,28 +26,40 @@ function setAuthCookies(res, sessionId: string, csrfToken: string) {
   setCsrfCookie(res, csrfToken, "development");
 }
 
-export function registerE2eRoutes(app) {
-  app.post("/__e2e/reset", (req, res) => {
-    e2eState.reset(normalizeScenario(req.body?.scenario));
-    return res.json({ ok: true, scenario: e2eState.scenario });
-  });
+function isGenerationRegenerateAllFailure(req) {
+  const domain = String(req.body?.domain || "generation");
+  const action = String(req.body?.action || "regenerate-all");
+  return (
+    domain === "generation" &&
+    (action === "regenerate-all" || action === "regenerate-capsule")
+  );
+}
 
-  app.post("/__e2e/login", (req, res) => {
-    const email = String(req.body?.email || E2E_EMAIL).trim() || E2E_EMAIL;
-    const { sessionId, session } = e2eState.createSession(email);
-    setAuthCookies(res, sessionId, session.csrfToken);
-    return res.json({ ok: true, user: { email } });
-  });
-
+function registerGenerationControlRoutes(app) {
   // E2E full-generation controls:
-  // POST /__e2e/generation/mode { mode: "immediate" | "pending" }
+  // POST /__e2e/generation/mode { mode: "immediate" | "pending" | "fail-once" }
   // POST /__e2e/generation/release { capsuleId?: string, email?: string }
   app.post("/__e2e/generation/mode", (req, res) => {
-    const mode = e2eState.generationMemory.setMode(req.body?.mode);
+    const mode = e2eState.generationMemory.setFailureMode(req.body?.mode);
     if (!mode) {
       return res.status(400).json({ error: "invalid_payload" });
     }
-    return res.json({ ok: true, mode });
+    return res.json({
+      ok: true,
+      mode,
+      failure: e2eState.generationMemory.cloneFailureState(),
+    });
+  });
+
+  app.post("/__e2e/fail-once", (req, res) => {
+    if (!isGenerationRegenerateAllFailure(req)) {
+      return res.status(400).json({ error: "invalid_payload" });
+    }
+    const failure = e2eState.generationMemory.failOnce({
+      domain: req.body?.domain || "generation",
+      action: req.body?.action || "regenerate-all",
+    });
+    return res.json({ ok: true, failure });
   });
 
   app.post("/__e2e/generation/release", (req, res) => {
@@ -84,6 +97,22 @@ export function registerE2eRoutes(app) {
       status: "ready",
     });
   });
+}
+
+export function registerE2eRoutes(app) {
+  app.post("/__e2e/reset", (req, res) => {
+    e2eState.reset(normalizeScenario(req.body?.scenario));
+    return res.json({ ok: true, scenario: e2eState.scenario });
+  });
+
+  app.post("/__e2e/login", (req, res) => {
+    const email = String(req.body?.email || E2E_EMAIL).trim() || E2E_EMAIL;
+    const { sessionId, session } = e2eState.createSession(email);
+    setAuthCookies(res, sessionId, session.csrfToken);
+    return res.json({ ok: true, user: { email } });
+  });
+
+  registerGenerationControlRoutes(app);
 
   // E2E search gate controls:
   // POST /__e2e/search/delay { query: string, match?: "exact" | "includes" }

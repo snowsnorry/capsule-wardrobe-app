@@ -245,6 +245,27 @@ export function buildE2eCapsule() {
   };
 }
 
+export function buildE2eEmptyWardrobeCapsule() {
+  const capsule = buildE2eCapsule();
+  return {
+    ...capsule,
+    name: "Empty Playwright capsule",
+    draft: {
+      ...capsule.draft,
+      data: {
+        wardrobe: {
+          items: [],
+          outfitSets: [],
+          rawSelectionText: null,
+          swimwearReasoning: null,
+          swimwearRawSelectionText: null,
+        },
+        rejectedUrls: [],
+      },
+    },
+  };
+}
+
 export function buildE2eSearchPayload(payload = {}) {
   return {
     query: "",

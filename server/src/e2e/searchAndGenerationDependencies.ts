@@ -1,6 +1,7 @@
 import { normalizeCapsuleId } from "./capsuleState.js";
 import {
   buildE2eCapsule,
+  buildE2eRegeneratedWardrobe,
   buildE2eSearchOptions,
   buildE2eSearchPayload,
   buildE2eSearchStats,
@@ -8,10 +9,35 @@ import {
 } from "./fixtures.js";
 import { buildSearchResultItems } from "./searchState.js";
 import type { E2eState } from "./state.js";
+import {
+  getEffectiveCapsuleSnapshot,
+  normalizeCapsuleSnapshot,
+} from "../capsuleStoreModel.js";
 import type { WardrobeUiItemLike } from "../ai/types.js";
 
 function parseSetIndex(value: unknown): number {
   return Number.parseInt(String(value ?? ""), 10);
+}
+
+function applyReadyWardrobeFixture(state: E2eState, capsuleId: unknown) {
+  const normalizedCapsuleId = normalizeCapsuleId(capsuleId);
+  const capsule = state.capsuleMemory.get(normalizedCapsuleId);
+  const baseSnapshot =
+    getEffectiveCapsuleSnapshot(capsule) ||
+    normalizeCapsuleSnapshot(buildE2eCapsule().draft);
+  if (!baseSnapshot) return null;
+
+  return state.capsuleMemory.update(
+    normalizedCapsuleId,
+    normalizeCapsuleSnapshot({
+      filters: baseSnapshot.filters,
+      data: {
+        wardrobe: buildE2eRegeneratedWardrobe(),
+        rejectedUrls: [],
+        regeneration: null,
+      },
+    }),
+  );
 }
 
 function selectedRegenerationHandler(state: E2eState) {
@@ -61,6 +87,16 @@ function streamCapsuleEventsImpl(state: E2eState) {
 function regenerateCapsuleWardrobeHandler(state: E2eState) {
   return async (req, res) => {
     const capsuleId = normalizeCapsuleId(req.params?.id);
+    const failure = state.generationMemory.consumeFailureOnce();
+    if (failure) {
+      return res.status(503).json({
+        error: "service_unavailable",
+        rawSelectionText: null,
+      });
+    }
+
+    const shouldUseReadyFixture =
+      state.generationMemory.consumeRetryReadyOnce();
     if (state.generationMemory.mode === "pending") {
       const job = state.generationMemory.createPendingWardrobeJob({
         capsuleMemory: state.capsuleMemory,
@@ -74,6 +110,16 @@ function regenerateCapsuleWardrobeHandler(state: E2eState) {
         status: "pending",
         pendingStage: "capsule",
         hasPendingAdditionalItems: false,
+      });
+    }
+
+    if (shouldUseReadyFixture) {
+      const capsule = applyReadyWardrobeFixture(state, capsuleId);
+      if (!capsule) return res.status(404).json({ error: "not_found" });
+      return res.json({
+        ok: true,
+        status: "ready",
+        items: buildE2eRegeneratedWardrobe().items,
       });
     }
 

@@ -163,11 +163,11 @@ export class E2eCapsuleMemory {
     this.reset();
   }
 
-  reset() {
+  reset(initialCapsule: Record<string, unknown> = buildE2eCapsule()) {
     this.capsuleCounter = INITIAL_CAPSULE_COUNTER;
     this.capsuleClockCounter = 0;
     this.capsules = new Map([
-      [INITIAL_CAPSULE_ID, toStoredCapsule(buildE2eCapsule())],
+      [INITIAL_CAPSULE_ID, toStoredCapsule(initialCapsule)],
     ]);
   }
 

@@ -17,6 +17,15 @@ import type {
 
 type E2eGenerationMode = "immediate" | "pending";
 
+type E2eGenerationFailureState = {
+  domain: string | null;
+  action: string | null;
+  configured: boolean;
+  consumed: boolean;
+  retryReadyOnce: boolean;
+  lastFailedJobId: string | null;
+};
+
 type E2ePendingWardrobeJob = WardrobeJobState & {
   capsuleId: string;
   email: string;
@@ -81,6 +90,14 @@ export class E2eGenerationMemory {
   private counter = 0;
   private jobs = new Map<string, E2ePendingWardrobeJob>();
   private subscribers = new Map<string, Set<unknown>>();
+  private failure: E2eGenerationFailureState = {
+    domain: null,
+    action: null,
+    configured: false,
+    consumed: false,
+    retryReadyOnce: false,
+    lastFailedJobId: null,
+  };
 
   mode: E2eGenerationMode = "immediate";
 
@@ -88,6 +105,7 @@ export class E2eGenerationMemory {
     this.mode = "immediate";
     this.counter = 0;
     this.jobs.clear();
+    this.resetFailureState();
     this.closeSubscribers();
   }
 
@@ -95,6 +113,57 @@ export class E2eGenerationMemory {
     if (mode !== "immediate" && mode !== "pending") return null;
     this.mode = mode;
     return this.mode;
+  }
+
+  setFailureMode(mode: unknown): E2eGenerationMode | "fail-once" | null {
+    if (mode === "fail-once") {
+      this.failOnce();
+      this.mode = "immediate";
+      return "fail-once";
+    }
+    return this.setMode(mode);
+  }
+
+  failOnce(
+    options: { domain?: unknown; action?: unknown } = {},
+  ): E2eGenerationFailureState {
+    this.failure = {
+      domain: String(options.domain || "generation"),
+      action: String(options.action || "regenerate-all"),
+      configured: true,
+      consumed: false,
+      retryReadyOnce: false,
+      lastFailedJobId: null,
+    };
+    return this.cloneFailureState();
+  }
+
+  consumeFailureOnce(): E2eGenerationFailureState | null {
+    if (!this.failure.configured || this.failure.consumed) return null;
+
+    this.counter += 1;
+    this.failure = {
+      domain: this.failure.domain,
+      action: this.failure.action,
+      configured: false,
+      consumed: true,
+      retryReadyOnce: true,
+      lastFailedJobId: `e2e-full-generation-failed-${this.counter}`,
+    };
+    return this.cloneFailureState();
+  }
+
+  consumeRetryReadyOnce(): boolean {
+    if (!this.failure.retryReadyOnce) return false;
+    this.failure = {
+      ...this.failure,
+      retryReadyOnce: false,
+    };
+    return true;
+  }
+
+  cloneFailureState(): E2eGenerationFailureState {
+    return deepClone(this.failure);
   }
 
   getJob(email: unknown, capsuleId: unknown): WardrobeJobState | null {
@@ -251,6 +320,17 @@ export class E2eGenerationMemory {
       }
     }
     this.subscribers.clear();
+  }
+
+  private resetFailureState(): void {
+    this.failure = {
+      domain: null,
+      action: null,
+      configured: false,
+      consumed: false,
+      retryReadyOnce: false,
+      lastFailedJobId: null,
+    };
   }
 
   private registerCloseHandler(key: string, res: unknown): void {
