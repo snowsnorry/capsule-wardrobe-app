@@ -3,6 +3,32 @@ const E2E_BASE_URL = process.env.E2E_BASE_URL || "http://127.0.0.1:5310";
 export const E2E_EMAIL = "playwright@example.test";
 export const E2E_CODE = "654321";
 
+export function buildE2ePasskeyDependencies() {
+  return {
+    listPasskeysImpl: async () => [],
+    insertPasskeyImpl: async () => null,
+    getPasskeyByCredentialIdImpl: async () => null,
+    updatePasskeyAuthenticationImpl: async () => null,
+    deletePasskeyByIdForEmailImpl: async () => true,
+    insertPasskeyChallengeImpl: async () => {},
+    consumePasskeyChallengeImpl: async () => null,
+    pruneExpiredPasskeyChallengesImpl: async () => {},
+    generateRegistrationOptionsImpl: async () => ({
+      challenge: "e2e-registration-challenge",
+      pubKeyCredParams: [],
+      rp: { id: "127.0.0.1", name: "Capsule Wardrobe E2E" },
+      user: { id: E2E_EMAIL, name: E2E_EMAIL, displayName: E2E_EMAIL },
+    }),
+    verifyRegistrationResponseImpl: async () => ({ verified: false }),
+    generateAuthenticationOptionsImpl: async () => ({
+      challenge: "e2e-authentication-challenge",
+      rpId: "127.0.0.1",
+      userVerification: "required",
+    }),
+    verifyAuthenticationResponseImpl: async () => ({ verified: false }),
+  };
+}
+
 export function e2eImageUrl(name: string): string {
   return `${E2E_BASE_URL}/__e2e/images/${encodeURIComponent(name)}.svg`;
 }

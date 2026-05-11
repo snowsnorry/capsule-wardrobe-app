@@ -6,6 +6,7 @@ import {
 import { E2E_CODE, E2E_EMAIL } from "./fixtures.js";
 import {
   buildE2eCapsule,
+  buildE2ePasskeyDependencies,
   buildE2eSearchPayload,
   buildE2eProfile,
   buildE2eSearchOptions,
@@ -31,6 +32,10 @@ type E2eSession = {
 
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
+function parseSetIndex(value: unknown): number {
+  return Number.parseInt(String(value ?? ""), 10);
+}
+
 function buildSession(sessionId: string, email: string): E2eSession {
   const createdAt = Date.now();
   return {
@@ -49,6 +54,7 @@ class E2eState {
   savedSearch = buildE2eSearchPayload();
   loginCodes = new Map<string, string>();
   sessionCounter = 0;
+  outfitImageCounter = 0;
 
   get capsules() {
     return this.capsuleMemory.capsules;
@@ -59,6 +65,7 @@ class E2eState {
     this.sessions.clear();
     this.loginCodes.clear();
     this.sessionCounter = 0;
+    this.outfitImageCounter = 0;
     this.capsuleMemory.reset();
     this.profile = scenario === "no-profile" ? null : buildE2eProfile();
     this.savedSearch =
@@ -90,6 +97,13 @@ class E2eState {
       activeCapsuleId,
     };
     return this.profile;
+  }
+
+  nextOutfitImageUrl(capsuleId: unknown, setIndex: number): string {
+    this.outfitImageCounter += 1;
+    return e2eImageUrl(
+      `generated-outfit-set-${normalizeCapsuleId(capsuleId)}-${setIndex}-${this.outfitImageCounter}`,
+    );
   }
 }
 
@@ -300,42 +314,44 @@ function searchAndGenerationDependencies(state: E2eState) {
     },
     regenerateSelectedCapsuleItemsHandler: async (_req, res) =>
       res.json({ ok: true, status: "ready", items: buildE2eWardrobeItems() }),
-    generateOutfitSetImageHandler: async (_req, res) =>
-      res.json({ ok: true, status: "ready", image: e2eImageUrl("outfit-set") }),
-    deleteOutfitSetImageHandler: async (_req, res) =>
-      res.json({ ok: true, status: "ready" }),
+    generateOutfitSetImageHandler: async (req, res) => {
+      const capsuleId = normalizeCapsuleId(req.params?.id);
+      const setIndex = parseSetIndex(req.params?.setIndex);
+      if (!Number.isInteger(setIndex) || setIndex < 0) {
+        return res.status(400).json({ error: "invalid_payload" });
+      }
+
+      const image = state.nextOutfitImageUrl(capsuleId, setIndex);
+      const result = state.capsuleMemory.setOutfitSetImage(
+        capsuleId,
+        setIndex,
+        image,
+      );
+      if (result.status !== "updated") {
+        return res.status(404).json({ error: "not_found" });
+      }
+
+      return res.json({ ok: true, status: "ready", image: result.image });
+    },
+    deleteOutfitSetImageHandler: async (req, res) => {
+      const setIndex = parseSetIndex(req.params?.setIndex);
+      if (!Number.isInteger(setIndex) || setIndex < 0) {
+        return res.status(400).json({ error: "invalid_payload" });
+      }
+
+      const result = state.capsuleMemory.setOutfitSetImage(
+        req.params?.id,
+        setIndex,
+        null,
+      );
+      if (result.status !== "updated") {
+        return res.status(404).json({ error: "not_found" });
+      }
+
+      return res.json({ ok: true, status: "ready" });
+    },
     buildWardrobePdfInChildImpl: async () => Buffer.from("e2e-pdf"),
     getProductsByUrlsInOrderImpl: async () => buildE2eWardrobeItems(),
-  };
-}
-
-function passkeyDependencies() {
-  return {
-    listPasskeysImpl: async () => [],
-    insertPasskeyImpl: async () => null,
-    getPasskeyByCredentialIdImpl: async () => null,
-    updatePasskeyAuthenticationImpl: async () => null,
-    deletePasskeyByIdForEmailImpl: async () => true,
-    insertPasskeyChallengeImpl: async () => {},
-    consumePasskeyChallengeImpl: async () => null,
-    pruneExpiredPasskeyChallengesImpl: async () => {},
-    generateRegistrationOptionsImpl: async () => ({
-      challenge: "e2e-registration-challenge",
-      pubKeyCredParams: [],
-      rp: { id: "127.0.0.1", name: "Capsule Wardrobe E2E" },
-      user: {
-        id: E2E_EMAIL,
-        name: E2E_EMAIL,
-        displayName: E2E_EMAIL,
-      },
-    }),
-    verifyRegistrationResponseImpl: async () => ({ verified: false }),
-    generateAuthenticationOptionsImpl: async () => ({
-      challenge: "e2e-authentication-challenge",
-      rpId: "127.0.0.1",
-      userVerification: "required",
-    }),
-    verifyAuthenticationResponseImpl: async () => ({ verified: false }),
   };
 }
 
@@ -345,6 +361,6 @@ export function createE2eDependencies(state = e2eState) {
     ...profileDependencies(state),
     ...capsuleDependencies(state),
     ...searchAndGenerationDependencies(state),
-    ...passkeyDependencies(),
+    ...buildE2ePasskeyDependencies(),
   };
 }

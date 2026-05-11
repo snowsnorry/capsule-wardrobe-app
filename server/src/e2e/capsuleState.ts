@@ -105,6 +105,42 @@ function getEffectiveSnapshot(
   return capsule ? deepClone(getEffectiveCapsuleSnapshot(capsule)) : null;
 }
 
+type OutfitSetImageMutationResult =
+  | {
+      status: "updated";
+      capsule: NormalizedCapsuleRecord | null;
+      image: string | null;
+    }
+  | { status: "missing-capsule" | "missing-set" };
+
+function buildSnapshotWithOutfitSetImage(
+  snapshot: CapsuleSnapshot | null,
+  setIndex: number,
+  image: string | null,
+): CapsuleSnapshot | null {
+  const wardrobe = snapshot?.data?.wardrobe;
+  const outfitSets = Array.isArray(wardrobe?.outfitSets)
+    ? wardrobe.outfitSets
+    : [];
+  if (!snapshot || !wardrobe || !outfitSets[setIndex]) {
+    return null;
+  }
+
+  return normalizeCapsuleSnapshot({
+    filters: snapshot.filters,
+    data: {
+      wardrobe: {
+        ...wardrobe,
+        outfitSets: outfitSets.map((set, index) =>
+          index === setIndex ? { ...set, image, imageObsolete: false } : set,
+        ),
+      },
+      rejectedUrls: snapshot.data?.rejectedUrls || [],
+      regeneration: snapshot.data?.regeneration || null,
+    },
+  });
+}
+
 export class E2eCapsuleMemory {
   capsules = new Map<string, NormalizedCapsuleRecord>();
   capsuleCounter = INITIAL_CAPSULE_COUNTER;
@@ -184,6 +220,34 @@ export class E2eCapsuleMemory {
           }),
         )
       : null;
+  }
+
+  setOutfitSetImage(
+    id: unknown,
+    setIndex: number,
+    image: string | null,
+  ): OutfitSetImageMutationResult {
+    const current = this.capsules.get(normalizeCapsuleId(id));
+    if (!current) return { status: "missing-capsule" };
+
+    const draft = buildSnapshotWithOutfitSetImage(
+      getEffectiveSnapshot(current),
+      setIndex,
+      image,
+    );
+    if (!draft) return { status: "missing-set" };
+
+    return {
+      status: "updated",
+      capsule: cloneCapsule(
+        this.set({
+          ...current,
+          draft,
+          updatedAt: this.nextTimestamp(),
+        }),
+      ),
+      image,
+    };
   }
 
   save(id: unknown) {
