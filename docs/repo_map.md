@@ -74,6 +74,7 @@ Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, onboard
 - `client/src/main.tsx`
 - `client/src/theme.ts`
 - `client/src/auth/passkeys.ts`
+- `client/src/test/` — client-side test helpers
 
 ### Client feature areas
 - `client/src/api/`
@@ -94,6 +95,7 @@ Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, onboard
 - `server/tsconfig.src.json`
 - `server/src/index.ts`
 - `server/src/e2e/` — isolated e2e server, in-memory dependencies, fixtures, and test-control routes
+- `server/src/test/` — server-side test helpers
 - `server/src/db.ts` — database integration, including passkey credential and challenge persistence
 - `server/src/db/` — split DB modules for auth, schema, passkeys, profiles, capsule data, search, and product options
 - `server/src/routes/` — grouped Express route modules for auth/session, passkeys, profile, capsule, search, health, and images
@@ -126,7 +128,12 @@ Run from root:
 - `shared/wardrobeOrder.test.ts`
 - `shared/accentColors.test.ts`
 - `shared/colorSwatches.test.ts`
+- `shared/patternOptions.test.ts`
+- `shared/productDetail.test.ts`
+- `shared/profileSettings.test.ts`
 - `shared/stylePreferences.test.ts`
+- `shared/urlSecurity.test.ts`
+- `shared/wardrobeMerge.test.ts`
 - `shared/i18n/helpers.test.ts`
 - `shared/i18n/localeParity.test.ts`
 
@@ -149,9 +156,12 @@ The Playwright auth state is generated at `tests/e2e/.auth/user.json` and is int
 - `npm run coverage:server` — server coverage via Vitest
 - `npm run coverage:shared` — shared coverage via Vitest
 - `npm run quality:deps` — dependency boundary checks
+- `npm run quality:cycles` — circular dependency checks
+- `npm run quality:unused` — unused file/dependency/export checks
 - `npm run quality:large-files` — list largest source files
 - `npm run quality:large-files:strict` — fail on files over configured size thresholds
 - `npm run quality:gate` — strict lint, typecheck, tests, dependency checks, large-file strict check, and coverage
+- `npm run security:audit` — npm audit with high severity threshold
 
 ## Invariants
 - The repo is a two-workspace monorepo: `client` and `server`
@@ -177,4 +187,4 @@ The Playwright auth state is generated at `tests/e2e/.auth/user.json` and is int
 8. At the end of the work, after the final file edits, run `npm run format`.
 9. If `npm run format` changes files, include those formatter changes in the diff
 10. At the end, after tests, coverage, typecheck, and format, run ESLint on the changed source files with zero warnings, for example `npx eslint --max-warnings=0 <changed files>`
-11. Provide clear git commit message for the change
+11. In the final response after changing files, recommend a clear git commit message for the change

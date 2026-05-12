@@ -18,6 +18,7 @@ Primary areas:
 - `searchTypes.ts` — search-related server types
 - `searchValidation.ts` — search request validation
 - `ai/` — AI integrations and orchestration
+- `test/` — server-side test helpers
 - `templates/` — server-side templates
 
 ## Rules
@@ -45,3 +46,6 @@ Primary areas:
 - `routes/`
 - nearest domain module
 - corresponding `*.test.ts` files
+
+## Final response
+- After changing files, include a recommended git commit message for the changes in the final response.

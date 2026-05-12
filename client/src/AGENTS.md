@@ -14,6 +14,7 @@ Primary areas:
 - `screens/statisticsScreen/` — statistics screen composition
 - `i18n/` — locale resources and helpers
 - `search/` — search-related behavior
+- `test/` — client-side test helpers
 - `utils/` — utility helpers
 
 ## Rules
@@ -43,3 +44,6 @@ Primary areas:
 - `api/`
 - `i18n/`
 - `theme.ts`
+
+## Final response
+- After changing files, include a recommended git commit message for the changes in the final response.

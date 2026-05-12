@@ -35,11 +35,13 @@ High-level responsibilities:
 - `client/src/screens/searchScreen/` — search screen composition
 - `client/src/screens/statisticsScreen/` — statistics screen composition
 - `client/src/search/` — search-related UI or logic
+- `client/src/test/` — client-side test helpers
 - `client/src/utils/` — client utilities
 - `server/src/ai/` — AI-related integrations and orchestration
 - `server/src/db/` — split DB modules for auth, passkeys, profiles, capsule data, search, schema, and product options
 - `server/src/e2e/` — isolated e2e server, in-memory dependencies, fixtures, and e2e-only routes
 - `server/src/routes/` — grouped Express route modules
+- `server/src/test/` — server-side test helpers
 - `server/src/templates/` — server-side templates
 - `server/src/index.ts` — server entrypoint
 - `server/src/db.ts` — database integration
@@ -148,3 +150,6 @@ At minimum:
 - Consult `docs/repo_map.md`
 - inspect nearest tests
 - choose the smallest safe implementation
+
+## Final response
+- After changing files, include a recommended git commit message for the changes in the final response.

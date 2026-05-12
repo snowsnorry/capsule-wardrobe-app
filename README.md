@@ -225,6 +225,20 @@ npm run coverage:server
 npm run coverage:shared
 ```
 
+Quality checks:
+
+```bash
+npm run lint
+npm run lint:strict
+npm run format
+npm run format:check
+npm run quality:deps
+npm run quality:cycles
+npm run quality:unused
+npm run quality:large-files:strict
+npm run quality:gate
+```
+
 After editing files, verify that relevant tests pass, coverage remains acceptable, and ESLint has zero warnings for the changed source files. For cross-cutting changes, prefer `npm run quality:gate`.
 
 ## Health checks
