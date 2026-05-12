@@ -7,19 +7,39 @@ import {
   buildE2eSearchStats,
   buildE2eWardrobeItems,
 } from "./fixtures.js";
-import { buildSearchResultItems } from "./searchState.js";
-import type { E2eState } from "./state.js";
+import {
+  buildSearchResultItems,
+  type E2eSearchDelayState,
+} from "./searchState.js";
+import type { E2eCapsuleMemory } from "./capsuleState.js";
+import type { E2eGenerationMemory } from "./generationState.js";
+import type { E2eSelectedRegenerationMemory } from "./selectedRegenerationState.js";
 import {
   getEffectiveCapsuleSnapshot,
   normalizeCapsuleSnapshot,
+  type NormalizedCapsuleRecord,
 } from "../capsuleStoreModel.js";
 import type { WardrobeUiItemLike } from "../ai/types.js";
+
+type E2eSearchAndGenerationState = {
+  scenario: string;
+  capsuleMemory: E2eCapsuleMemory;
+  capsules: Map<string, NormalizedCapsuleRecord>;
+  savedSearch: unknown;
+  searchDelay: E2eSearchDelayState;
+  generationMemory: E2eGenerationMemory;
+  selectedRegenerationMemory: E2eSelectedRegenerationMemory;
+  nextOutfitImageUrl: (capsuleId: unknown, setIndex: number) => string;
+};
 
 function parseSetIndex(value: unknown): number {
   return Number.parseInt(String(value ?? ""), 10);
 }
 
-function applyReadyWardrobeFixture(state: E2eState, capsuleId: unknown) {
+function applyReadyWardrobeFixture(
+  state: E2eSearchAndGenerationState,
+  capsuleId: unknown,
+) {
   const normalizedCapsuleId = normalizeCapsuleId(capsuleId);
   const capsule = state.capsuleMemory.get(normalizedCapsuleId);
   const baseSnapshot =
@@ -40,7 +60,7 @@ function applyReadyWardrobeFixture(state: E2eState, capsuleId: unknown) {
   );
 }
 
-function selectedRegenerationHandler(state: E2eState) {
+function selectedRegenerationHandler(state: E2eSearchAndGenerationState) {
   return async (req, res) => {
     const selectedItemUrls = Array.isArray(req.body?.itemUrls)
       ? req.body.itemUrls
@@ -75,7 +95,7 @@ function selectedRegenerationHandler(state: E2eState) {
   };
 }
 
-function streamCapsuleEventsImpl(state: E2eState) {
+function streamCapsuleEventsImpl(state: E2eSearchAndGenerationState) {
   return async (_req, res, { email, capsuleId, snapshot }) => {
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache, no-transform");
@@ -84,7 +104,7 @@ function streamCapsuleEventsImpl(state: E2eState) {
   };
 }
 
-function regenerateCapsuleWardrobeHandler(state: E2eState) {
+function regenerateCapsuleWardrobeHandler(state: E2eSearchAndGenerationState) {
   return async (req, res) => {
     const capsuleId = normalizeCapsuleId(req.params?.id);
     const failure = state.generationMemory.consumeFailureOnce();
@@ -144,7 +164,7 @@ function regenerateCapsuleWardrobeHandler(state: E2eState) {
   };
 }
 
-function generateOutfitSetImageHandler(state: E2eState) {
+function generateOutfitSetImageHandler(state: E2eSearchAndGenerationState) {
   return async (req, res) => {
     const capsuleId = normalizeCapsuleId(req.params?.id);
     const setIndex = parseSetIndex(req.params?.setIndex);
@@ -166,7 +186,7 @@ function generateOutfitSetImageHandler(state: E2eState) {
   };
 }
 
-function deleteOutfitSetImageHandler(state: E2eState) {
+function deleteOutfitSetImageHandler(state: E2eSearchAndGenerationState) {
   return async (req, res) => {
     const setIndex = parseSetIndex(req.params?.setIndex);
     if (!Number.isInteger(setIndex) || setIndex < 0) {
@@ -186,7 +206,9 @@ function deleteOutfitSetImageHandler(state: E2eState) {
   };
 }
 
-export function searchAndGenerationDependencies(state: E2eState) {
+export function searchAndGenerationDependencies(
+  state: E2eSearchAndGenerationState,
+) {
   return {
     checkDatabaseConnectionImpl: async () => {},
     getSearchOptionsImpl: async () => buildE2eSearchOptions(),
