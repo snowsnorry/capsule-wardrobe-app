@@ -46,7 +46,7 @@ function buildSession(sessionId: string, email: string): E2eSession {
   };
 }
 
-export class E2eState {
+class E2eState {
   scenario: E2eScenario = "with-profile";
   sessions = new Map<string, E2eSession>();
   profile: Record<string, unknown> | null = buildE2eProfile();

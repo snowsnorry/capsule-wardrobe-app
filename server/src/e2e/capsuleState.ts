@@ -44,7 +44,7 @@ function toStoredCapsule(
   );
 }
 
-export function cloneCapsule(
+function cloneCapsule(
   capsule: NormalizedCapsuleRecord | null | undefined,
 ): NormalizedCapsuleRecord | null {
   return capsule ? deepClone(capsule) : null;

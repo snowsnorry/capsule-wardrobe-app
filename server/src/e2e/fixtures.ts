@@ -131,7 +131,7 @@ export function buildE2eWardrobeItems() {
   ];
 }
 
-export function buildE2eRegeneratedWardrobeItems() {
+function buildE2eRegeneratedWardrobeItems() {
   return [
     {
       id: "ready-top-e2e",

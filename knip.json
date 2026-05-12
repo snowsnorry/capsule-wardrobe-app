@@ -1,5 +1,10 @@
 {
   "workspaces": {
+    ".": {
+      "entry": [
+        "tests/e2e/auth.setup.ts"
+      ]
+    },
     "server": {
       "ignore": [
         "src/express.d.ts"
