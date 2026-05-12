@@ -33,7 +33,7 @@
     "quality:large-files": "find client/src server/src shared -type f \\( -name \"*.ts\" -o -name \"*.tsx\" -o -name \"*.js\" -o -name \"*.jsx\" \\) -not -path \"*/node_modules/*\" -not -path \"*/dist/*\" -not -path \"*/build/*\" -exec wc -l {} + | sort -nr | head -40",
     "quality:large-files:strict": "node scripts/check-large-files.mjs",
     "quality:deps": "depcruise client/src server/src shared --config .dependency-cruiser.cjs",
-    "quality:gate": "npm run lint:strict && npm run typecheck && npm test && npm run quality:deps && npm run quality:large-files:strict && npm run coverage && npm run format:check && npm run quality:cycles && npm run quality:unused",
+    "quality:gate": "npm run lint:strict && npm run typecheck && npm test && npm run quality:deps && npm run quality:large-files:strict && npm run coverage && npm run format:check && npm run quality:cycles && npm run quality:unused && npm run test:e2e",
     "quality": "npm run quality:gate && npm run quality:large-files",
     "coverage": "vitest run --coverage",
     "coverage:client": "vitest run --coverage --project client",
