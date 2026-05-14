@@ -5,21 +5,24 @@ import { ThemeProvider, createTheme } from "@mui/material/styles";
 import MyWardrobeScreen from "./MyWardrobeScreen";
 
 const api = vi.hoisted(() => ({
+  downloadMyWardrobePdf: vi.fn(),
   fetchMyWardrobeItems: vi.fn(),
   removeCatalogItemFromMyWardrobe: vi.fn(),
 }));
 const useI18nMock = vi.hoisted(() => vi.fn());
+const useMediaQueryMock = vi.hoisted(() => vi.fn(() => false));
 
 vi.mock("../api/myWardrobe", () => api);
 vi.mock("../i18n/useI18n", () => ({
   useI18n: useI18nMock,
 }));
 vi.mock("@mui/material/useMediaQuery", () => ({
-  default: () => false,
+  default: useMediaQueryMock,
 }));
 vi.mock("../components/ClothingCard", () => ({
   default: ({
     item,
+    mobileColumns,
     onProductClick,
     onProductMenuClick,
     showProductMenu = true,
@@ -28,6 +31,7 @@ vi.mock("../components/ClothingCard", () => ({
       role="button"
       tabIndex={0}
       data-testid={`wardrobe-card-${item.id}`}
+      data-mobile-columns={String(mobileColumns)}
       data-show-product-menu={String(showProductMenu)}
       onClick={() => onProductClick?.(item)}
       onKeyDown={() => undefined}
@@ -62,7 +66,14 @@ vi.mock("../components/productDetail/ProductDetailDialog", () => ({
     ) : null,
 }));
 vi.mock("../components/ClothingGridPlaceholder", () => ({
-  default: ({ count }) => <div data-testid="wardrobe-placeholder">{count}</div>,
+  default: ({ count, mobileColumns }) => (
+    <div
+      data-testid="wardrobe-placeholder"
+      data-mobile-columns={String(mobileColumns)}
+    >
+      {count}
+    </div>
+  ),
   buildClothingGridTemplateColumns: () => "repeat(2, minmax(0, 1fr))",
   buildClothingGridGap: () => 2,
 }));
@@ -73,6 +84,8 @@ const translations: Record<string, string> = {
   "myWardrobe.subtitle":
     "Saved catalog pieces and uploaded items in one place.",
   "myWardrobe.upload": "Upload item photo",
+  "myWardrobe.openMenu": "Open My Wardrobe menu",
+  "myWardrobe.downloadFailed": "Failed to export My Wardrobe PDF.",
   "myWardrobe.filterLabel": "My Wardrobe source",
   "myWardrobe.loadFailed": "Failed to load My Wardrobe.",
   "myWardrobe.removeFailed": "Failed to remove from My Wardrobe.",
@@ -86,6 +99,11 @@ const translations: Record<string, string> = {
   "myWardrobe.filters.all": "All",
   "myWardrobe.filters.uploaded": "Uploaded",
   "myWardrobe.filters.fromCatalog": "From Catalog",
+  "capsule.exportPdf": "Export as PDF",
+  "capsule.cardLayout": "Card layout",
+  "capsule.cardColumnsOne": "1 column",
+  "capsule.cardColumnsTwo": "2 columns",
+  "capsule.cardColumnsThree": "3 columns",
   "capsule.removeFromMyWardrobe": "Remove from My Wardrobe",
   "actions.cancel": "Cancel",
 };
@@ -100,6 +118,11 @@ function renderScreen() {
 
 describe("MyWardrobeScreen", () => {
   beforeEach(() => {
+    window.localStorage.clear();
+    useMediaQueryMock.mockReset();
+    useMediaQueryMock.mockReturnValue(false);
+    api.downloadMyWardrobePdf.mockReset();
+    api.downloadMyWardrobePdf.mockResolvedValue(undefined);
     api.fetchMyWardrobeItems.mockReset();
     api.removeCatalogItemFromMyWardrobe.mockReset();
     api.removeCatalogItemFromMyWardrobe.mockResolvedValue({ ok: true });
@@ -124,8 +147,14 @@ describe("MyWardrobeScreen", () => {
   test("renders toolbar, upload button, filters, and wardrobe cards", async () => {
     renderScreen();
 
+    expect(screen.queryByText("My Wardrobe")).not.toBeInTheDocument();
+    const uploadButton = screen.getByRole("button", {
+      name: "Upload item photo",
+    });
+    expect(uploadButton).toBeInTheDocument();
+    expect(uploadButton).toHaveClass("MuiButton-outlined");
     expect(
-      screen.getByRole("button", { name: "Upload item photo" }),
+      screen.getByRole("button", { name: "Open My Wardrobe menu" }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("group", { name: "My Wardrobe source" }),
@@ -140,6 +169,51 @@ describe("MyWardrobeScreen", () => {
       "true",
     );
     expect(api.fetchMyWardrobeItems).toHaveBeenCalledWith({ source: null });
+  });
+
+  test("exports the current filtered wardrobe as PDF from the action menu", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+
+    await screen.findByTestId("wardrobe-card-wardrobe-1");
+    await user.click(screen.getByRole("button", { name: "Uploaded" }));
+    await waitFor(() => {
+      expect(api.fetchMyWardrobeItems).toHaveBeenLastCalledWith({
+        source: "uploaded",
+      });
+    });
+    await user.click(
+      screen.getByRole("button", { name: "Open My Wardrobe menu" }),
+    );
+    await user.click(screen.getByRole("menuitem", { name: "Export as PDF" }));
+
+    expect(api.downloadMyWardrobePdf).toHaveBeenCalledWith({
+      source: "uploaded",
+    });
+  });
+
+  test("shows mobile card layout controls and updates wardrobe columns", async () => {
+    useMediaQueryMock.mockReturnValue(true);
+    const user = userEvent.setup();
+    renderScreen();
+
+    expect(
+      await screen.findByTestId("wardrobe-card-wardrobe-1"),
+    ).toHaveAttribute("data-mobile-columns", "2");
+
+    await user.click(
+      screen.getByRole("button", { name: "Open My Wardrobe menu" }),
+    );
+    expect(screen.getByText("Card layout")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "3 columns" }));
+
+    expect(screen.getByTestId("wardrobe-card-wardrobe-1")).toHaveAttribute(
+      "data-mobile-columns",
+      "3",
+    );
+    expect(window.localStorage.getItem("myWardrobe.mobileCardColumns")).toBe(
+      "3",
+    );
   });
 
   test("removes an item from the card product menu", async () => {

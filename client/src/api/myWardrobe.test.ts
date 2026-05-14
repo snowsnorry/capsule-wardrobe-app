@@ -1,7 +1,8 @@
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 const requestApi = vi.hoisted(() => ({
   getCachedJson: vi.fn(),
+  request: vi.fn(),
   requestJson: vi.fn(),
 }));
 
@@ -11,18 +12,71 @@ vi.mock("./config", () => ({
 }));
 
 import {
+  downloadMyWardrobePdf,
   fetchMyWardrobeItems,
+  getWardrobeItemsPdfUrl,
   getWardrobeItemsUrl,
   removeCatalogItemFromMyWardrobe,
   saveCatalogItemToMyWardrobe,
 } from "./myWardrobe";
 
+type HeaderMap = Record<string, string>;
+type MockResponse = Pick<Response, "blob" | "json" | "ok" | "status"> & {
+  headers: Pick<Headers, "get">;
+};
+
+function createResponse({
+  ok = true,
+  status = 200,
+  jsonData = undefined,
+  jsonError = null,
+  blobData = null,
+  headers = {},
+}: {
+  blobData?: Blob | null;
+  headers?: HeaderMap;
+  jsonData?: unknown;
+  jsonError?: Error | null;
+  ok?: boolean;
+  status?: number;
+} = {}): MockResponse {
+  return {
+    ok,
+    status,
+    headers: {
+      get(name) {
+        return headers[String(name).toLowerCase()] ?? null;
+      },
+    },
+    async json() {
+      if (jsonError) {
+        throw jsonError;
+      }
+      return jsonData;
+    },
+    async blob() {
+      return blobData ?? new Blob(["pdf"]);
+    },
+  };
+}
+
 describe("my wardrobe api", () => {
   beforeEach(() => {
+    vi.restoreAllMocks();
     requestApi.getCachedJson.mockReset();
     requestApi.getCachedJson.mockResolvedValue({ ok: true, items: [] });
+    requestApi.request.mockReset();
+    requestApi.request.mockResolvedValue(createResponse() as Response);
     requestApi.requestJson.mockReset();
     requestApi.requestJson.mockResolvedValue({ ok: true, items: [] });
+    vi.stubGlobal("URL", {
+      createObjectURL: vi.fn(() => "blob:my-wardrobe-pdf"),
+      revokeObjectURL: vi.fn(),
+    });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   test("builds list URLs with optional source filters", () => {
@@ -31,6 +85,12 @@ describe("my wardrobe api", () => {
     );
     expect(getWardrobeItemsUrl({ source: "uploaded" })).toBe(
       "https://api.example.test/wardrobe/items?source=uploaded",
+    );
+    expect(getWardrobeItemsPdfUrl()).toBe(
+      "https://api.example.test/wardrobe/items/pdf",
+    );
+    expect(getWardrobeItemsPdfUrl({ source: "from_catalog" })).toBe(
+      "https://api.example.test/wardrobe/items/pdf?source=from_catalog",
     );
   });
 
@@ -72,5 +132,61 @@ describe("my wardrobe api", () => {
         body: JSON.stringify({ url: "https://example.com/1" }),
       },
     );
+  });
+
+  test("downloads filtered my wardrobe PDF and revokes object url", async () => {
+    const originalCreateElement = document.createElement.bind(document);
+    const anchorMethods = { click: vi.fn(), remove: vi.fn() };
+    let createdAnchor: HTMLAnchorElement | null = null;
+    vi.spyOn(document, "createElement").mockImplementation((tagName) => {
+      const element = originalCreateElement(tagName);
+      if (String(tagName).toLowerCase() === "a") {
+        element.click = anchorMethods.click;
+        element.remove = anchorMethods.remove;
+        createdAnchor = element as HTMLAnchorElement;
+      }
+      return element;
+    });
+
+    requestApi.request.mockResolvedValueOnce(
+      createResponse({
+        status: 200,
+        ok: true,
+        blobData: new Blob(["pdf-binary"], { type: "application/pdf" }),
+        headers: {
+          "content-disposition": `attachment; filename="My-Wardrobe.pdf"; filename*=UTF-8''${encodeURIComponent("My Wardrobe.pdf")}`,
+        },
+      }) as Response,
+    );
+
+    await downloadMyWardrobePdf({ source: "uploaded" });
+
+    expect(requestApi.request).toHaveBeenCalledWith(
+      "https://api.example.test/wardrobe/items/pdf?source=uploaded",
+      {
+        method: "POST",
+        credentials: "include",
+      },
+    );
+    expect(URL.createObjectURL).toHaveBeenCalledTimes(1);
+    expect(anchorMethods.click).toHaveBeenCalledTimes(1);
+    expect(anchorMethods.remove).toHaveBeenCalledTimes(1);
+    expect(createdAnchor?.download).toBe("My Wardrobe.pdf");
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:my-wardrobe-pdf");
+  });
+
+  test("downloadMyWardrobePdf surfaces endpoint errors", async () => {
+    requestApi.request.mockResolvedValueOnce(
+      createResponse({
+        ok: false,
+        status: 404,
+        jsonData: { error: "not_found" },
+      }) as Response,
+    );
+
+    await expect(downloadMyWardrobePdf()).rejects.toMatchObject({
+      message: "not_found",
+      status: 404,
+    });
   });
 });

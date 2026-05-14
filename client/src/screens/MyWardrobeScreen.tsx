@@ -4,21 +4,31 @@ import {
   Alert,
   Box,
   Button,
+  IconButton,
   Stack,
   ToggleButton,
   ToggleButtonGroup,
-  Typography,
 } from "@mui/material";
 import FileUploadOutlinedIcon from "@mui/icons-material/FileUploadOutlined";
+import MoreVertRoundedIcon from "@mui/icons-material/MoreVertRounded";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import {
+  downloadMyWardrobePdf,
   fetchMyWardrobeItems,
   removeCatalogItemFromMyWardrobe,
   type MyWardrobeSource,
 } from "../api/myWardrobe";
 import { useI18n } from "../i18n/useI18n";
 import { MAIN_SCREEN_CONTENT_COLUMN_SX } from "./mainScreen/MainScreenHelpers";
-import type { MainScreenItem } from "./mainScreen/MainScreenTypes";
+import type {
+  MainScreenItem,
+  MobileCardColumns,
+} from "./mainScreen/MainScreenTypes";
+import MyWardrobeActionMenu from "./MyWardrobeActionMenu";
+import {
+  readStoredMyWardrobeMobileCardColumns,
+  writeStoredMyWardrobeMobileCardColumns,
+} from "./MyWardrobeCardLayoutStorage";
 import MyWardrobeGrid from "./MyWardrobeGrid";
 import {
   MyWardrobeProductMenu,
@@ -48,10 +58,18 @@ function MyWardrobeScreen(): ReactElement {
   const { t } = useI18n();
   const isOverlay = useMediaQuery("(max-width: 1279.95px)");
   const [filter, setFilter] = useState<MyWardrobeFilter>("all");
+  const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
+  const [mobileColumns, setMobileColumns] = useState<MobileCardColumns>(() =>
+    readStoredMyWardrobeMobileCardColumns(),
+  );
   const [productDetailItem, setProductDetailItem] =
     useState<MainScreenItem | null>(null);
   const wardrobeItems = useMyWardrobeItems(filter, t);
-  const mobileColumns = isOverlay ? 2 : 2;
+  const displayedColumns = isOverlay ? mobileColumns : 2;
+  const updateColumns = (value: MobileCardColumns) => {
+    setMobileColumns(value);
+    writeStoredMyWardrobeMobileCardColumns(value);
+  };
 
   return (
     <Box sx={myWardrobeScreenSx}>
@@ -61,6 +79,16 @@ function MyWardrobeScreen(): ReactElement {
           isLoading={wardrobeItems.isLoading}
           t={t}
           onFilterChange={setFilter}
+          onOpenMenu={(event) => setMenuAnchor(event.currentTarget)}
+        />
+        <MyWardrobeActionMenu
+          anchorEl={menuAnchor}
+          disabled={wardrobeItems.isLoading || wardrobeItems.isDownloadingPdf}
+          isOverlay={isOverlay}
+          mobileCardColumns={mobileColumns}
+          onClose={() => setMenuAnchor(null)}
+          onDownloadPdf={wardrobeItems.handleDownloadPdf}
+          onMobileCardColumnsChange={updateColumns}
         />
         {wardrobeItems.error ? (
           <Alert severity="error">{wardrobeItems.error}</Alert>
@@ -69,7 +97,7 @@ function MyWardrobeScreen(): ReactElement {
           isLoading={wardrobeItems.isLoading}
           isOverlay={isOverlay}
           items={wardrobeItems.items}
-          mobileColumns={mobileColumns}
+          mobileColumns={displayedColumns}
           t={t}
           onProductClick={setProductDetailItem}
           onProductMenuClick={wardrobeItems.handleProductMenuClick}
@@ -104,10 +132,11 @@ function useMyWardrobeItems(
   filter: MyWardrobeFilter,
   t: (key: string) => string,
 ) {
-  const [items, setItems] = useState<MainScreenItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const source = useMemo(() => getSourceFilter(filter), [filter]);
+  const { error, isLoading, items, setError, setItems } =
+    useMyWardrobeItemsQuery(source, t);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const [isMutating, setIsMutating] = useState(false);
-  const [error, setError] = useState("");
   const [productMenu, setProductMenu] = useState<MyWardrobeProductMenuState>({
     anchor: null,
     url: "",
@@ -115,37 +144,6 @@ function useMyWardrobeItems(
   });
   const [removeConfirmItem, setRemoveConfirmItem] =
     useState<MainScreenItem | null>(null);
-  const source = useMemo(() => getSourceFilter(filter), [filter]);
-
-  useEffect(() => {
-    let isActive = true;
-
-    setIsLoading(true);
-    setError("");
-    fetchMyWardrobeItems({ source })
-      .then((response) => {
-        if (!isActive) {
-          return;
-        }
-        setItems(getItemsFromResponse(response));
-      })
-      .catch(() => {
-        if (!isActive) {
-          return;
-        }
-        setItems([]);
-        setError(t("myWardrobe.loadFailed"));
-      })
-      .finally(() => {
-        if (isActive) {
-          setIsLoading(false);
-        }
-      });
-
-    return () => {
-      isActive = false;
-    };
-  }, [source, t]);
   const closeProductMenu = () =>
     setProductMenu({ anchor: null, url: "", item: null });
   const handleProductMenuClick = (
@@ -176,12 +174,25 @@ function useMyWardrobeItems(
       setIsMutating(false);
     }
   };
+  const handleDownloadPdf = async () => {
+    setIsDownloadingPdf(true);
+    try {
+      await downloadMyWardrobePdf({ source });
+      setError("");
+    } catch {
+      setError(t("myWardrobe.downloadFailed"));
+    } finally {
+      setIsDownloadingPdf(false);
+    }
+  };
 
   return {
     closeProductMenu,
     error,
     handleConfirmRemove,
+    handleDownloadPdf,
     handleProductMenuClick,
+    isDownloadingPdf,
     isLoading,
     isMutating,
     items,
@@ -191,39 +202,60 @@ function useMyWardrobeItems(
   };
 }
 
+function useMyWardrobeItemsQuery(
+  source: MyWardrobeSource | null,
+  t: (key: string) => string,
+) {
+  const [items, setItems] = useState<MainScreenItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let isActive = true;
+
+    setIsLoading(true);
+    setError("");
+    fetchMyWardrobeItems({ source })
+      .then((response) => {
+        if (isActive) {
+          setItems(getItemsFromResponse(response));
+        }
+      })
+      .catch(() => {
+        if (isActive) {
+          setItems([]);
+          setError(t("myWardrobe.loadFailed"));
+        }
+      })
+      .finally(() => {
+        if (isActive) {
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [source, t]);
+
+  return { error, isLoading, items, setError, setItems };
+}
+
 function MyWardrobeToolbar({
   filter,
   isLoading,
   onFilterChange,
+  onOpenMenu,
   t,
 }: {
   filter: MyWardrobeFilter;
   isLoading: boolean;
   onFilterChange: (filter: MyWardrobeFilter) => void;
+  onOpenMenu: (event: MouseEvent<HTMLButtonElement>) => void;
   t: (key: string) => string;
 }) {
   return (
-    <Stack spacing={1.5} sx={toolbarSx}>
-      <Stack
-        direction={{ xs: "column", sm: "row" }}
-        spacing={1.5}
-        alignItems={{ xs: "stretch", sm: "center" }}
-        justifyContent="space-between"
-      >
-        <Box sx={{ minWidth: 0 }}>
-          <Typography variant="h5" sx={{ fontWeight: 700 }}>
-            {t("myWardrobe.title")}
-          </Typography>
-        </Box>
-        <Button
-          variant="contained"
-          startIcon={<FileUploadOutlinedIcon />}
-          disabled={isLoading}
-          sx={{ alignSelf: { xs: "flex-start", sm: "center" } }}
-        >
-          {t("myWardrobe.upload")}
-        </Button>
-      </Stack>
+    <Stack direction="row" spacing={1.5} sx={toolbarSx}>
       <ToggleButtonGroup
         exclusive
         value={filter}
@@ -239,12 +271,29 @@ function MyWardrobeToolbar({
           <ToggleButton
             key={value}
             value={value}
+            disabled={isLoading}
             aria-label={t(filterKey(value))}
           >
             {t(filterKey(value))}
           </ToggleButton>
         ))}
       </ToggleButtonGroup>
+      <Stack direction="row" spacing={1} sx={toolbarActionsSx}>
+        <Button
+          variant="outlined"
+          startIcon={<FileUploadOutlinedIcon />}
+          disabled={isLoading}
+        >
+          {t("myWardrobe.upload")}
+        </Button>
+        <IconButton
+          aria-label={t("myWardrobe.openMenu")}
+          disabled={isLoading}
+          onClick={onOpenMenu}
+        >
+          <MoreVertRoundedIcon />
+        </IconButton>
+      </Stack>
     </Stack>
   );
 }
@@ -277,12 +326,20 @@ const toolbarSx = {
   position: "sticky",
   top: 0,
   zIndex: 2,
+  alignItems: "center",
+  justifyContent: "space-between",
+  flexWrap: "wrap",
   py: 1.5,
   bgcolor: "background.default",
 } as const;
 
+const toolbarActionsSx = {
+  alignItems: "center",
+  flexShrink: 0,
+} as const;
+
 const filterGroupSx = {
-  alignSelf: "flex-start",
+  flexShrink: 1,
   maxWidth: "100%",
   overflowX: "auto",
   "& .MuiToggleButton-root": {

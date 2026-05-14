@@ -98,6 +98,75 @@ test("wardrobe routes list and save user wardrobe items", async (t) => {
   ]);
 });
 
+test("wardrobe routes export filtered wardrobe items as PDF", async (t) => {
+  const calls: unknown[] = [];
+  let pdfLocale = "";
+  let pdfItems: unknown[] = [];
+  const { baseUrl } = await startTestServer(t, {
+    overrides: {
+      listWardrobeItemsImpl: async (payload) => {
+        calls.push({ type: "list", payload });
+        return [
+          {
+            id: "wardrobe-1",
+            name: "Saved shirt",
+            image_url: "https://example.com/1.jpg",
+            formality_level: "casual",
+            color_base: ["white"],
+            is_neutral: true,
+            closure_type: "buttons",
+            url: "https://example.com/1",
+            source: "uploaded",
+          },
+        ];
+      },
+      buildWardrobePdfInChildImpl: async (items, locale) => {
+        pdfItems = items;
+        pdfLocale = locale;
+        return Buffer.from("pdf");
+      },
+    },
+  });
+
+  const pdf = await requestJson(
+    baseUrl,
+    "/wardrobe/items/pdf?source=uploaded",
+    {
+      method: "POST",
+      origin: TEST_CLIENT_ORIGIN,
+      cookie: AUTH_COOKIE,
+      csrfToken: CSRF_TOKEN,
+    },
+  );
+
+  expect(pdf.response.status).toBe(200);
+  expect(pdf.response.headers.get("content-type")).toMatch(/application\/pdf/);
+  expect(pdf.response.headers.get("content-disposition")).toBe(
+    `attachment; filename="My-Wardrobe.pdf"; filename*=UTF-8''${encodeURIComponent("My Wardrobe.pdf")}`,
+  );
+  expect(pdf.json).toBe("pdf");
+  expect(pdfLocale).toBe("en");
+  expect(pdfItems).toEqual([
+    expect.objectContaining({
+      id: "wardrobe-1",
+      name: "Saved shirt",
+      imageUrl: "https://example.com/1.jpg",
+      formalityLevel: "casual",
+      colorBase: ["white"],
+      isNeutral: true,
+      closureType: "buttons",
+      url: "https://example.com/1",
+      source: "uploaded",
+    }),
+  ]);
+  expect(calls).toEqual([
+    {
+      type: "list",
+      payload: { email: "person@example.com", source: "uploaded" },
+    },
+  ]);
+});
+
 test("wardrobe routes validate source and catalog item payloads", async (t) => {
   const { baseUrl } = await startTestServer(t);
 
@@ -110,6 +179,19 @@ test("wardrobe routes validate source and catalog item payloads", async (t) => {
   );
   expect(invalidSource.response.status).toBe(400);
   expect(invalidSource.json).toEqual({ error: "invalid_payload" });
+
+  const invalidPdfSource = await requestJson(
+    baseUrl,
+    "/wardrobe/items/pdf?source=other",
+    {
+      method: "POST",
+      origin: TEST_CLIENT_ORIGIN,
+      cookie: AUTH_COOKIE,
+      csrfToken: CSRF_TOKEN,
+    },
+  );
+  expect(invalidPdfSource.response.status).toBe(400);
+  expect(invalidPdfSource.json).toEqual({ error: "invalid_payload" });
 
   const invalidSave = await requestJson(
     baseUrl,
@@ -199,4 +281,46 @@ test("wardrobe routes map missing products and service failures", async (t) => {
   );
   expect(deleteFailure.response.status).toBe(503);
   expect(deleteFailure.json).toEqual({ error: "service_unavailable" });
+});
+
+test("wardrobe PDF route maps empty wardrobes and build failures", async (t) => {
+  vi.spyOn(console, "error").mockImplementation(() => {});
+
+  const emptyServer = await startTestServer(t, {
+    overrides: {
+      listWardrobeItemsImpl: async () => [],
+    },
+  });
+  const emptyPdf = await requestJson(
+    emptyServer.baseUrl,
+    "/wardrobe/items/pdf",
+    {
+      method: "POST",
+      origin: TEST_CLIENT_ORIGIN,
+      cookie: AUTH_COOKIE,
+      csrfToken: CSRF_TOKEN,
+    },
+  );
+  expect(emptyPdf.response.status).toBe(404);
+  expect(emptyPdf.json).toEqual({ error: "not_found" });
+
+  const failingServer = await startTestServer(t, {
+    overrides: {
+      buildWardrobePdfInChildImpl: async () => {
+        throw new Error("pdf_down");
+      },
+    },
+  });
+  const failingPdf = await requestJson(
+    failingServer.baseUrl,
+    "/wardrobe/items/pdf",
+    {
+      method: "POST",
+      origin: TEST_CLIENT_ORIGIN,
+      cookie: AUTH_COOKIE,
+      csrfToken: CSRF_TOKEN,
+    },
+  );
+  expect(failingPdf.response.status).toBe(503);
+  expect(failingPdf.json).toEqual({ error: "service_unavailable" });
 });

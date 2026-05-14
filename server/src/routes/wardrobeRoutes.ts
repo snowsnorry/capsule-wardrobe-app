@@ -24,24 +24,49 @@ function getHttpUrl(value: unknown): string {
   }
 }
 
-export function registerWardrobeRoutes(app, context) {
-  const {
-    deleteWardrobeItemFromCatalogImpl,
-    listWardrobeItemsImpl,
-    requireAuth,
-    requireCsrf,
-    requireTrustedOrigin,
-    saveWardrobeItemFromCatalogImpl,
-  } = context;
+function getFirstPresentValue(...values) {
+  return (
+    values.find(
+      (value) => value !== undefined && value !== null && value !== "",
+    ) ?? null
+  );
+}
 
-  app.get("/wardrobe/items", requireAuth, async (req, res) => {
+function normalizeWardrobeItemForPdf(item) {
+  const source = item || {};
+  return {
+    ...source,
+    imageUrl: getFirstPresentValue(
+      source.imageUrl,
+      source.image_url,
+      source.raw_image_url,
+    ),
+    rawImageUrl: getFirstPresentValue(source.rawImageUrl, source.raw_image_url),
+    formalityLevel: getFirstPresentValue(
+      source.formalityLevel,
+      source.formality_level,
+    ),
+    colorBase: getFirstPresentValue(source.colorBase, source.color_base),
+    isNeutral: getFirstPresentValue(source.isNeutral, source.is_neutral),
+    closureType: getFirstPresentValue(source.closureType, source.closure_type),
+  };
+}
+
+export function registerWardrobeRoutes(app, context) {
+  registerWardrobeListRoute(app, context);
+  registerWardrobePdfRoute(app, context);
+  registerWardrobeCatalogRoutes(app, context);
+}
+
+function registerWardrobeListRoute(app, context) {
+  app.get("/wardrobe/items", context.requireAuth, async (req, res) => {
     const source = normalizeWardrobeSourceParam(req.query?.source);
     if (source === "") {
       return res.status(400).json({ error: "invalid_payload" });
     }
 
     try {
-      const items = await listWardrobeItemsImpl({
+      const items = await context.listWardrobeItemsImpl({
         email: req.user.email,
         source,
       });
@@ -51,12 +76,54 @@ export function registerWardrobeRoutes(app, context) {
       return res.status(503).json({ error: "service_unavailable" });
     }
   });
+}
 
+function registerWardrobePdfRoute(app, context) {
+  app.post(
+    "/wardrobe/items/pdf",
+    context.requireTrustedOrigin,
+    context.requireAuth,
+    context.requireCsrf,
+    async (req, res) => {
+      const source = normalizeWardrobeSourceParam(req.query?.source);
+      if (source === "") {
+        return res.status(400).json({ error: "invalid_payload" });
+      }
+
+      try {
+        const items = await context.listWardrobeItemsImpl({
+          email: req.user.email,
+          source,
+        });
+        if (!Array.isArray(items) || items.length === 0) {
+          return res.status(404).json({ error: "not_found" });
+        }
+
+        const profile = await context.getProfileImpl(req.user.email);
+        const pdfBuffer = await context.buildWardrobePdfInChildImpl(
+          items.map(normalizeWardrobeItemForPdf),
+          String(profile?.locale || "en"),
+        );
+        res.setHeader("Content-Type", "application/pdf");
+        res.setHeader(
+          "Content-Disposition",
+          context.buildPdfDownloadFilename("My Wardrobe"),
+        );
+        return res.status(200).send(pdfBuffer);
+      } catch (error) {
+        logError("[wardrobe/items/pdf]", error);
+        return res.status(503).json({ error: "service_unavailable" });
+      }
+    },
+  );
+}
+
+function registerWardrobeCatalogRoutes(app, context) {
   app.post(
     "/wardrobe/items/from-catalog",
-    requireTrustedOrigin,
-    requireAuth,
-    requireCsrf,
+    context.requireTrustedOrigin,
+    context.requireAuth,
+    context.requireCsrf,
     async (req, res) => {
       const url = getHttpUrl(req.body?.url);
       if (!url) {
@@ -64,7 +131,7 @@ export function registerWardrobeRoutes(app, context) {
       }
 
       try {
-        const item = await saveWardrobeItemFromCatalogImpl({
+        const item = await context.saveWardrobeItemFromCatalogImpl({
           email: req.user.email,
           url,
         });
@@ -82,9 +149,9 @@ export function registerWardrobeRoutes(app, context) {
 
   app.delete(
     "/wardrobe/items/from-catalog",
-    requireTrustedOrigin,
-    requireAuth,
-    requireCsrf,
+    context.requireTrustedOrigin,
+    context.requireAuth,
+    context.requireCsrf,
     async (req, res) => {
       const url = getHttpUrl(req.body?.url);
       if (!url) {
@@ -92,7 +159,7 @@ export function registerWardrobeRoutes(app, context) {
       }
 
       try {
-        const removed = await deleteWardrobeItemFromCatalogImpl({
+        const removed = await context.deleteWardrobeItemFromCatalogImpl({
           email: req.user.email,
           url,
         });
@@ -105,4 +172,8 @@ export function registerWardrobeRoutes(app, context) {
   );
 }
 
-export { getHttpUrl, normalizeWardrobeSourceParam };
+export {
+  getHttpUrl,
+  normalizeWardrobeItemForPdf,
+  normalizeWardrobeSourceParam,
+};
