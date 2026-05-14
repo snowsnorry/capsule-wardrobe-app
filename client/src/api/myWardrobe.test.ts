@@ -18,6 +18,7 @@ import {
   getWardrobeItemsUrl,
   removeCatalogItemFromMyWardrobe,
   saveCatalogItemToMyWardrobe,
+  uploadWardrobeImages,
 } from "./myWardrobe";
 
 type HeaderMap = Record<string, string>;
@@ -95,15 +96,30 @@ describe("my wardrobe api", () => {
   });
 
   test("fetches my wardrobe items", async () => {
-    await fetchMyWardrobeItems({ source: "from_catalog" });
+    await fetchMyWardrobeItems({ source: "from_catalog", force: true });
 
     expect(requestApi.getCachedJson).toHaveBeenCalledWith(
       "https://api.example.test/wardrobe/items?source=from_catalog",
       {
         credentials: "include",
+        force: true,
       },
     );
     expect(requestApi.requestJson).not.toHaveBeenCalled();
+  });
+
+  test("uploads wardrobe images as multipart form data", async () => {
+    const file = new File(["image"], "shirt.png", { type: "image/png" });
+
+    await uploadWardrobeImages([file]);
+
+    expect(requestApi.requestJson).toHaveBeenCalledTimes(1);
+    const [url, options] = requestApi.requestJson.mock.calls[0];
+    expect(url).toBe("https://api.example.test/wardrobe/items/upload");
+    expect(options.method).toBe("POST");
+    expect(options.credentials).toBe("include");
+    expect(options.body).toBeInstanceOf(FormData);
+    expect((options.body as FormData).getAll("images")).toEqual([file]);
   });
 
   test("saves catalog items to my wardrobe", async () => {

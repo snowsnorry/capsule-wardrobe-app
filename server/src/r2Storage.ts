@@ -23,6 +23,12 @@ type UploadImageInput = {
   env?: NodeJS.ProcessEnv;
   client?: S3ClientLike;
 };
+type UploadWardrobeImageInput = {
+  buffer: Buffer | Uint8Array;
+  email: string;
+  env?: NodeJS.ProcessEnv;
+  client?: S3ClientLike;
+};
 
 function normalizeEnvValue(value: unknown): string {
   return String(value ?? "").trim();
@@ -124,6 +130,24 @@ function buildR2PublicUrl(
     .join("/")}`;
 }
 
+function buildWardrobeR2ImageKey({
+  email,
+  digest,
+}: {
+  email: string;
+  digest: string;
+}): string {
+  const profileHash = createHash("sha256")
+    .update(
+      String(email || "")
+        .trim()
+        .toLowerCase(),
+    )
+    .digest("hex")
+    .slice(0, 16);
+  return `wardrobe/${profileHash || "profile"}/${randomUUID()}-${digest}.webp`;
+}
+
 async function uploadImageToR2({
   buffer,
   mimeType = "image/png",
@@ -167,6 +191,43 @@ async function uploadImageToR2({
   };
 }
 
+async function uploadWardrobeImageToR2({
+  buffer,
+  email,
+  env = process.env,
+  client,
+}: UploadWardrobeImageInput): Promise<{
+  key: string;
+  url: string;
+  digest: string;
+}> {
+  const bytes = Buffer.from(buffer);
+  if (bytes.length === 0) {
+    throw new Error("R2 wardrobe image upload received an empty buffer");
+  }
+
+  const config = getR2Config(env);
+  const digest = createHash("sha256").update(bytes).digest("hex");
+  const key = buildWardrobeR2ImageKey({ email, digest });
+  const s3 = client || createR2Client(config);
+
+  await s3.send(
+    new PutObjectCommand({
+      Bucket: config.bucketName,
+      Key: key,
+      Body: bytes,
+      ContentType: "image/webp",
+      CacheControl: "public, max-age=31536000, immutable",
+    }),
+  );
+
+  return {
+    key,
+    url: buildR2PublicUrl(config, key),
+    digest,
+  };
+}
+
 function isHttpImageUrl(value: unknown): boolean {
   const trimmed = String(value ?? "").trim();
   return /^https?:\/\//i.test(trimmed);
@@ -189,7 +250,9 @@ export {
   buildR2Endpoint,
   buildR2ImageKey,
   buildR2PublicUrl,
+  buildWardrobeR2ImageKey,
   decodeLegacyBase64Image,
   getR2Config,
   uploadImageToR2,
+  uploadWardrobeImageToR2,
 };

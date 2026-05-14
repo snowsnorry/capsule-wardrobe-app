@@ -235,6 +235,79 @@ export async function saveWardrobeItemFromCatalogByUrl({
   return row ? toWardrobeUiItem(row) : null;
 }
 
+export async function saveUploadedWardrobeItemsByEmail({
+  email,
+  imageUrls,
+}: {
+  email: string;
+  imageUrls: string[];
+}): Promise<Array<Record<string, unknown>>> {
+  const normalizedUrls = imageUrls
+    .map((url) => String(url || "").trim())
+    .filter((url) => /^https?:\/\//i.test(url));
+  if (normalizedUrls.length === 0) {
+    return [];
+  }
+
+  const sql = getSqlClient();
+  const rows = getResultRows(
+    await sql<UserWardrobeRow>`
+    with uploaded(raw_image_url) as (
+      select value
+      from jsonb_array_elements_text(${JSON.stringify(normalizedUrls)}::jsonb)
+    )
+    insert into wardrobe (
+      profile_email,
+      image_url,
+      source,
+      raw_image_url,
+      processing_status
+    )
+    select
+      ${email},
+      uploaded.raw_image_url,
+      'uploaded',
+      uploaded.raw_image_url,
+      'uploaded'
+    from uploaded
+    returning
+      id,
+      profile_email as "profileEmail",
+      product_id as "productId",
+      name,
+      url,
+      description,
+      brand,
+      price,
+      currency,
+      availability,
+      image_url as "imageUrl",
+      audience,
+      category,
+      season,
+      formality_level as "formalityLevel",
+      style,
+      occasions,
+      color_base as "colorBase",
+      pattern,
+      finish,
+      is_neutral as "isNeutral",
+      composition,
+      silhouette,
+      fit,
+      closure_type as "closureType",
+      embedding,
+      source,
+      raw_image_url as "rawImageUrl",
+      processing_status as "processingStatus",
+      created_at as "createdAt",
+      updated_at as "updatedAt"
+  `,
+  );
+
+  return rows.map(toWardrobeUiItem);
+}
+
 export async function deleteWardrobeItemFromCatalogByUrl({
   email,
   url,

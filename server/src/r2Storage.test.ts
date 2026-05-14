@@ -4,9 +4,11 @@ import {
   buildR2Endpoint,
   buildR2ImageKey,
   buildR2PublicUrl,
+  buildWardrobeR2ImageKey,
   decodeLegacyBase64Image,
   getR2Config,
   uploadImageToR2,
+  uploadWardrobeImageToR2,
 } from "./r2Storage.js";
 
 const testEnv = {
@@ -53,6 +55,12 @@ test("R2 helpers build endpoint, object keys, and public URLs", () => {
       "folder/a b.png",
     ),
   ).toBe("https://images.example.com/folder/a%20b.png");
+  expect(
+    buildWardrobeR2ImageKey({
+      email: "Person@Example.com",
+      digest: "abc123",
+    }),
+  ).toMatch(/^wardrobe\/[a-f0-9]{16}\/[a-f0-9-]+-abc123\.webp$/);
 });
 
 test("uploadImageToR2 sends PutObjectCommand and returns public URL", async () => {
@@ -83,6 +91,34 @@ test("uploadImageToR2 sends PutObjectCommand and returns public URL", async () =
   expect(String(commands[0].input.Key)).toMatch(
     /^capsule-image-assets\/generated\/capsule-1\/0\/[a-f0-9]{64}\.png$/,
   );
+  expect(uploaded.url).toBe(
+    `https://images.example.com/${commands[0].input.Key}`,
+  );
+});
+
+test("uploadWardrobeImageToR2 writes top-level wardrobe WebP objects", async () => {
+  const commands: PutObjectCommand[] = [];
+  const client = {
+    send: async (command: PutObjectCommand) => {
+      commands.push(command);
+      return {};
+    },
+  };
+
+  const uploaded = await uploadWardrobeImageToR2({
+    buffer: Buffer.from("webp"),
+    email: "person@example.com",
+    env: testEnv,
+    client,
+  });
+
+  expect(commands.length).toBe(1);
+  expect(commands[0].input.Bucket).toBe("capsule-images");
+  expect(commands[0].input.ContentType).toBe("image/webp");
+  expect(String(commands[0].input.Key)).toMatch(
+    /^wardrobe\/[a-f0-9]{16}\/[a-f0-9-]+-[a-f0-9]{64}\.webp$/,
+  );
+  expect(uploaded.key).toBe(commands[0].input.Key);
   expect(uploaded.url).toBe(
     `https://images.example.com/${commands[0].input.Key}`,
   );

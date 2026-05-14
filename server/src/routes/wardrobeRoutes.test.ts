@@ -7,6 +7,51 @@ import {
   startTestServer,
 } from "../test/serverRouteTestUtils.js";
 
+const tinyPng = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMB/atcw3kAAAAASUVORK5CYII=",
+  "base64",
+);
+
+async function requestMultipart(baseUrl, pathname, formData) {
+  const response = await fetch(`${baseUrl}${pathname}`, {
+    method: "POST",
+    headers: {
+      cookie: AUTH_COOKIE,
+      "X-CSRF-Token": CSRF_TOKEN,
+      origin: TEST_CLIENT_ORIGIN,
+    },
+    body: formData,
+  });
+  const text = await response.text();
+  return {
+    response,
+    json: text ? JSON.parse(text) : null,
+  };
+}
+
+function buildUploadForm(
+  files: Array<{ bytes?: Buffer; name?: string; type?: string }> = [
+    { bytes: tinyPng, name: "shirt.png", type: "image/png" },
+  ],
+) {
+  const form = new FormData();
+  for (const file of files) {
+    const bytes = file.bytes || tinyPng;
+    const arrayBuffer = bytes.buffer.slice(
+      bytes.byteOffset,
+      bytes.byteOffset + bytes.byteLength,
+    ) as ArrayBuffer;
+    form.append(
+      "images",
+      new Blob([arrayBuffer], {
+        type: file.type || "image/png",
+      }),
+      file.name || "shirt.png",
+    );
+  }
+  return form;
+}
+
 test("wardrobe routes list and save user wardrobe items", async (t) => {
   const calls: unknown[] = [];
   const { baseUrl } = await startTestServer(t, {
@@ -174,6 +219,173 @@ test("wardrobe routes export filtered wardrobe items as PDF", async (t) => {
       payload: { email: "person@example.com", source: "uploaded" },
     },
   ]);
+});
+
+test("wardrobe upload route processes images and creates uploaded items", async (t) => {
+  const calls: unknown[] = [];
+  const { baseUrl } = await startTestServer(t, {
+    overrides: {
+      normalizeWardrobeUploadImagesInChildImpl: async (images) => {
+        calls.push({
+          type: "normalize",
+          images: images.map((image) => ({
+            mimeType: image.mimeType,
+            originalName: image.originalName,
+            size: image.buffer.length,
+          })),
+        });
+        return images.map((image) => ({
+          buffer: Buffer.from("normalized-webp"),
+          mimeType: "image/webp",
+          originalName: image.originalName,
+          width: 800,
+          height: 1000,
+          size: 15,
+        }));
+      },
+      uploadWardrobeImageToR2Impl: async (payload) => {
+        calls.push({
+          type: "upload",
+          email: payload.email,
+          buffer: payload.buffer.toString("utf8"),
+        });
+        return {
+          key: "wardrobe/profile/image.webp",
+          url: "https://images.example.com/wardrobe/profile/image.webp",
+          digest: "digest",
+        };
+      },
+      saveUploadedWardrobeItemsImpl: async (payload) => {
+        calls.push({ type: "saveUploaded", payload });
+        return [
+          {
+            id: "wardrobe-upload-1",
+            profile_email: "person@example.com",
+            image_url: payload.imageUrls[0],
+            raw_image_url: payload.imageUrls[0],
+            source: "uploaded",
+            processing_status: "uploaded",
+            created_at: "2026-05-01T00:00:00.000Z",
+            updated_at: "2026-05-01T00:00:00.000Z",
+          },
+        ];
+      },
+    },
+  });
+
+  const upload = await requestMultipart(
+    baseUrl,
+    "/wardrobe/items/upload",
+    buildUploadForm([{ bytes: tinyPng, name: "shirt.png", type: "image/png" }]),
+  );
+
+  expect(upload.response.status).toBe(201);
+  expect(upload.json).toEqual({
+    ok: true,
+    items: [
+      {
+        id: "wardrobe-upload-1",
+        image_url: "https://images.example.com/wardrobe/profile/image.webp",
+        raw_image_url: "https://images.example.com/wardrobe/profile/image.webp",
+        source: "uploaded",
+        processing_status: "uploaded",
+      },
+    ],
+  });
+  expect(calls).toEqual([
+    {
+      type: "normalize",
+      images: [
+        {
+          mimeType: "image/png",
+          originalName: "shirt.png",
+          size: tinyPng.length,
+        },
+      ],
+    },
+    {
+      type: "upload",
+      email: "person@example.com",
+      buffer: "normalized-webp",
+    },
+    {
+      type: "saveUploaded",
+      payload: {
+        email: "person@example.com",
+        imageUrls: ["https://images.example.com/wardrobe/profile/image.webp"],
+      },
+    },
+  ]);
+});
+
+test("wardrobe upload route validates files and maps failures", async (t) => {
+  vi.spyOn(console, "error").mockImplementation(() => {});
+  const { baseUrl } = await startTestServer(t);
+
+  const empty = await requestMultipart(
+    baseUrl,
+    "/wardrobe/items/upload",
+    new FormData(),
+  );
+  expect(empty.response.status).toBe(400);
+  expect(empty.json).toEqual({ error: "invalid_payload" });
+
+  const invalidMime = await requestMultipart(
+    baseUrl,
+    "/wardrobe/items/upload",
+    buildUploadForm([
+      {
+        bytes: Buffer.from("not an image"),
+        name: "notes.txt",
+        type: "text/plain",
+      },
+    ]),
+  );
+  expect(invalidMime.response.status).toBe(400);
+  expect(invalidMime.json).toEqual({ error: "invalid_image" });
+
+  const invalidBytes = await requestMultipart(
+    baseUrl,
+    "/wardrobe/items/upload",
+    buildUploadForm([
+      {
+        bytes: Buffer.from("not an image"),
+        name: "fake.png",
+        type: "image/png",
+      },
+    ]),
+  );
+  expect(invalidBytes.response.status).toBe(400);
+  expect(invalidBytes.json).toEqual({ error: "invalid_image" });
+
+  const tooMany = await requestMultipart(
+    baseUrl,
+    "/wardrobe/items/upload",
+    buildUploadForm(
+      Array.from({ length: 6 }, (_value, index) => ({
+        bytes: tinyPng,
+        name: `shirt-${index}.png`,
+        type: "image/png",
+      })),
+    ),
+  );
+  expect(tooMany.response.status).toBe(400);
+  expect(tooMany.json).toEqual({ error: "too_many_files" });
+
+  const failingServer = await startTestServer(t, {
+    overrides: {
+      normalizeWardrobeUploadImagesInChildImpl: async () => {
+        throw new Error("child_down");
+      },
+    },
+  });
+  const serviceFailure = await requestMultipart(
+    failingServer.baseUrl,
+    "/wardrobe/items/upload",
+    buildUploadForm(),
+  );
+  expect(serviceFailure.response.status).toBe(503);
+  expect(serviceFailure.json).toEqual({ error: "service_unavailable" });
 });
 
 test("wardrobe routes validate source and catalog item payloads", async (t) => {

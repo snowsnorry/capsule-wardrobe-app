@@ -19,6 +19,7 @@ import {
   deleteProfileByEmail,
   deleteWardrobeItemFromCatalogByUrl,
   listWardrobeItemsByEmail,
+  saveUploadedWardrobeItemsByEmail,
   saveWardrobeItemFromCatalogByUrl,
 } from "./db.js";
 
@@ -95,8 +96,8 @@ type WardrobeRow = {
   id: string;
   profileEmail: string;
   productId: string | null;
-  name: string;
-  url: string;
+  name: string | null;
+  url: string | null;
   imageUrl: string | null;
   source: string;
   rawImageUrl: string | null;
@@ -465,6 +466,45 @@ test("db integration lists and saves user wardrobe items", async () => {
   expect(calls[2].values).toEqual([
     "user@example.com",
     "https://example.com/products/linen-shirt",
+  ]);
+});
+
+test("db integration saves uploaded wardrobe items", async () => {
+  const uploadedRow: WardrobeRow = {
+    id: "wardrobe-upload-1",
+    profileEmail: "user@example.com",
+    productId: null,
+    name: null,
+    url: null,
+    imageUrl: "https://images.example.com/wardrobe/user/image.webp",
+    source: "uploaded",
+    rawImageUrl: "https://images.example.com/wardrobe/user/image.webp",
+    processingStatus: "uploaded",
+    createdAt: new Date(0).toISOString(),
+    updatedAt: new Date(0).toISOString(),
+  };
+  const { sql, calls } = createSqlMock([[uploadedRow]]);
+  setSqlClientOverride(sql);
+
+  const saved = await saveUploadedWardrobeItemsByEmail({
+    email: "user@example.com",
+    imageUrls: ["https://images.example.com/wardrobe/user/image.webp"],
+  });
+
+  expect(saved).toEqual([
+    expect.objectContaining({
+      id: "wardrobe-upload-1",
+      image_url: "https://images.example.com/wardrobe/user/image.webp",
+      raw_image_url: "https://images.example.com/wardrobe/user/image.webp",
+      source: "uploaded",
+      processing_status: "uploaded",
+    }),
+  ]);
+  expect(calls[0].text).toMatch(/insert into wardrobe/i);
+  expect(calls[0].text).toMatch(/jsonb_array_elements_text/i);
+  expect(calls[0].values).toEqual([
+    JSON.stringify(["https://images.example.com/wardrobe/user/image.webp"]),
+    "user@example.com",
   ]);
 });
 

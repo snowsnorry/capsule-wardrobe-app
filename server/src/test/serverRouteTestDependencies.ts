@@ -4,6 +4,7 @@ import {
   TEST_CLIENT_ORIGIN,
 } from "./serverRouteTestConstants.js";
 import type { DependencyOverrides } from "./serverRouteTestTypes.js";
+import { createWardrobeDependencies } from "./serverRouteTestWardrobeDependencies.js";
 
 function createAuthDependencies() {
   return {
@@ -315,30 +316,6 @@ function createSearchAndGenerationDependencies() {
       { url: "https://example.com/1" },
     ],
     checkDatabaseConnectionImpl: async () => {},
-  };
-}
-
-function createWardrobeDependencies() {
-  return {
-    listWardrobeItemsImpl: async () => [
-      {
-        id: "wardrobe-1",
-        name: "Saved shirt",
-        url: "https://example.com/1",
-        image_url: "https://example.com/1.jpg",
-        source: "from_catalog",
-        processing_status: "ready",
-      },
-    ],
-    saveWardrobeItemFromCatalogImpl: async (_payload) => ({
-      id: "wardrobe-1",
-      name: "Saved shirt",
-      url: "https://example.com/1",
-      image_url: "https://example.com/1.jpg",
-      source: "from_catalog",
-      processing_status: "ready",
-    }),
-    deleteWardrobeItemFromCatalogImpl: async () => true,
   };
 }
 

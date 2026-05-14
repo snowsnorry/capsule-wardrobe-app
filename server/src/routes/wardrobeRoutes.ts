@@ -1,4 +1,29 @@
+import multer from "multer";
+import { fileTypeFromBuffer } from "file-type";
 import { logError } from "../logger.js";
+import {
+  WARDROBE_UPLOAD_FIELD_NAME,
+  WARDROBE_UPLOAD_MAX_FILE_SIZE_BYTES,
+  WARDROBE_UPLOAD_MAX_FILES,
+  isAllowedWardrobeUploadMimeType,
+} from "../wardrobeUploadImagesCore.js";
+
+const wardrobeUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: WARDROBE_UPLOAD_MAX_FILE_SIZE_BYTES,
+    files: WARDROBE_UPLOAD_MAX_FILES,
+    parts: WARDROBE_UPLOAD_MAX_FILES,
+  },
+  fileFilter: (_req, file, callback) => {
+    if (isAllowedWardrobeUploadMimeType(file.mimetype)) {
+      callback(null, true);
+      return;
+    }
+
+    callback(new Error("invalid_image"));
+  },
+}).array(WARDROBE_UPLOAD_FIELD_NAME, WARDROBE_UPLOAD_MAX_FILES);
 
 function normalizeWardrobeSourceParam(value: unknown) {
   if (value === undefined || value === null || value === "") {
@@ -78,6 +103,7 @@ function normalizeWardrobeItemForPdf(item) {
 
 export function registerWardrobeRoutes(app, context) {
   registerWardrobeListRoute(app, context);
+  registerWardrobeUploadRoute(app, context);
   registerWardrobePdfRoute(app, context);
   registerWardrobeCatalogRoutes(app, context);
 }
@@ -103,6 +129,114 @@ function registerWardrobeListRoute(app, context) {
       return res.status(503).json({ error: "service_unavailable" });
     }
   });
+}
+
+function runWardrobeUploadMiddleware(req, res) {
+  return new Promise<boolean>((resolve) => {
+    wardrobeUpload(req, res, (error) => {
+      if (!error) {
+        resolve(true);
+        return;
+      }
+
+      if (error instanceof multer.MulterError) {
+        if (error.code === "LIMIT_FILE_SIZE") {
+          res.status(413).json({ error: "file_too_large" });
+          resolve(false);
+          return;
+        }
+
+        if (
+          error.code === "LIMIT_FILE_COUNT" ||
+          error.code === "LIMIT_PART_COUNT" ||
+          error.code === "LIMIT_UNEXPECTED_FILE"
+        ) {
+          res.status(400).json({ error: "too_many_files" });
+          resolve(false);
+          return;
+        }
+      }
+
+      if (error?.message === "invalid_image") {
+        res.status(400).json({ error: "invalid_image" });
+        resolve(false);
+        return;
+      }
+
+      logError("[wardrobe/items/upload][parse]", error);
+      res.status(400).json({ error: "invalid_payload" });
+      resolve(false);
+    });
+  });
+}
+
+async function getValidatedWardrobeUploadImages(files) {
+  const images = [];
+
+  for (const file of files) {
+    const detectedType = await fileTypeFromBuffer(file.buffer);
+    if (!isAllowedWardrobeUploadMimeType(detectedType?.mime)) {
+      throw new Error("invalid_image");
+    }
+
+    images.push({
+      buffer: file.buffer,
+      mimeType: detectedType.mime,
+      originalName: String(file.originalname || "wardrobe-image"),
+    });
+  }
+
+  return images;
+}
+
+function registerWardrobeUploadRoute(app, context) {
+  app.post(
+    "/wardrobe/items/upload",
+    context.requireTrustedOrigin,
+    context.requireAuth,
+    context.requireCsrf,
+    async (req, res) => {
+      const parsed = await runWardrobeUploadMiddleware(req, res);
+      if (!parsed) {
+        return;
+      }
+
+      const files = Array.isArray(req.files) ? req.files : [];
+      if (files.length === 0) {
+        return res.status(400).json({ error: "invalid_payload" });
+      }
+
+      try {
+        const images = await getValidatedWardrobeUploadImages(files);
+        const normalizedImages =
+          await context.normalizeWardrobeUploadImagesInChildImpl(images);
+        const uploadedImages = await Promise.all(
+          normalizedImages.map((image) =>
+            context.uploadWardrobeImageToR2Impl({
+              buffer: image.buffer,
+              email: req.user.email,
+            }),
+          ),
+        );
+        const items = await context.saveUploadedWardrobeItemsImpl({
+          email: req.user.email,
+          imageUrls: uploadedImages.map((image) => image.url),
+        });
+        const displayItems = Array.isArray(items)
+          ? items.map(filterWardrobeItemForDisplay)
+          : [];
+
+        return res.status(201).json({ ok: true, items: displayItems });
+      } catch (error) {
+        if (error?.message === "invalid_image") {
+          return res.status(400).json({ error: "invalid_image" });
+        }
+
+        logError("[wardrobe/items/upload]", error);
+        return res.status(503).json({ error: "service_unavailable" });
+      }
+    },
+  );
 }
 
 function registerWardrobePdfRoute(app, context) {

@@ -77,6 +77,7 @@ import {
   getPasskeyByCredentialId,
   getProductsByUrlsInOrder,
   listWardrobeItemsByEmail,
+  saveUploadedWardrobeItemsByEmail,
   saveWardrobeItemFromCatalogByUrl,
   insertPasskey,
   insertPasskeyChallenge,
@@ -113,6 +114,8 @@ import {
   toCapsuleSummary,
 } from "./capsuleHttp.js";
 import { createStartServer } from "./serverStartup.js";
+import { uploadWardrobeImageToR2 } from "./r2Storage.js";
+import { normalizeWardrobeUploadImagesInChild } from "./wardrobeUploadImagesRunner.js";
 import {
   applyCorsMiddleware,
   applySecurityMiddleware,
@@ -217,6 +220,7 @@ function createAppDependencies(options: Record<string, unknown> = {}) {
     revokeSessionImpl: revokeSession,
     runSavedSearchImpl: runSavedSearch,
     saveCapsuleImpl: saveCapsule,
+    saveUploadedWardrobeItemsImpl: saveUploadedWardrobeItemsByEmail,
     saveWardrobeItemFromCatalogImpl: saveWardrobeItemFromCatalogByUrl,
     searchCapsulesImpl: searchCapsules,
     sendLoginCodeEmailImpl: sendLoginCodeEmail,
@@ -227,6 +231,9 @@ function createAppDependencies(options: Record<string, unknown> = {}) {
     updateProfileActiveCapsuleIdImpl: updateProfileActiveCapsuleId,
     updateProfileImpl: updateProfile,
     updateProfileLocaleImpl: updateProfileLocale,
+    uploadWardrobeImageToR2Impl: uploadWardrobeImageToR2,
+    normalizeWardrobeUploadImagesInChildImpl:
+      normalizeWardrobeUploadImagesInChild,
     verifyAuthenticationResponseImpl: verifyAuthenticationResponse,
     verifyCodeImpl: verifyCode,
     verifyRegistrationResponseImpl: verifyRegistrationResponse,

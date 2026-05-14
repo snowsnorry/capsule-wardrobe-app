@@ -4,6 +4,7 @@ import type { JsonObject } from "./request";
 
 type MyWardrobeSource = "uploaded" | "from_catalog";
 type MyWardrobeFetchOptions = {
+  force?: boolean;
   source?: MyWardrobeSource | null;
 };
 type RequestErrorWithStatus = Error & {
@@ -54,6 +55,20 @@ async function fetchMyWardrobeItems(
 ): Promise<JsonObject> {
   return getCachedJson(getWardrobeItemsUrl(options), {
     credentials: "include",
+    force: options.force,
+  });
+}
+
+async function uploadWardrobeImages(files: File[]): Promise<JsonObject> {
+  const formData = new FormData();
+  files.forEach((file) => {
+    formData.append("images", file);
+  });
+
+  return requestJson(`${API_BASE_URL}/wardrobe/items/upload`, {
+    method: "POST",
+    credentials: "include",
+    body: formData,
   });
 }
 
@@ -119,5 +134,6 @@ export {
   getWardrobeItemsUrl,
   removeCatalogItemFromMyWardrobe,
   saveCatalogItemToMyWardrobe,
+  uploadWardrobeImages,
 };
 export type { MyWardrobeSource };
