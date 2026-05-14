@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import type { ReactElement } from "react";
+import type { MouseEvent, ReactElement } from "react";
 import {
   Alert,
   Box,
@@ -11,7 +11,11 @@ import {
 } from "@mui/material";
 import FileUploadOutlinedIcon from "@mui/icons-material/FileUploadOutlined";
 import useMediaQuery from "@mui/material/useMediaQuery";
-import { fetchMyWardrobeItems, type MyWardrobeSource } from "../api/myWardrobe";
+import {
+  fetchMyWardrobeItems,
+  removeCatalogItemFromMyWardrobe,
+  type MyWardrobeSource,
+} from "../api/myWardrobe";
 import ClothingCard from "../components/ClothingCard";
 import ClothingGridPlaceholder, {
   buildClothingGridGap,
@@ -20,6 +24,11 @@ import ClothingGridPlaceholder, {
 import { useI18n } from "../i18n/useI18n";
 import { MAIN_SCREEN_CONTENT_COLUMN_SX } from "./mainScreen/MainScreenHelpers";
 import type { MainScreenItem } from "./mainScreen/MainScreenTypes";
+import {
+  MyWardrobeProductMenu,
+  MyWardrobeRemoveConfirmDialog,
+  type MyWardrobeProductMenuState,
+} from "./MyWardrobeProductMenu";
 
 type MyWardrobeFilter = "all" | MyWardrobeSource;
 
@@ -42,10 +51,61 @@ function MyWardrobeScreen(): ReactElement {
   const { t } = useI18n();
   const isOverlay = useMediaQuery("(max-width: 1279.95px)");
   const [filter, setFilter] = useState<MyWardrobeFilter>("all");
+  const wardrobeItems = useMyWardrobeItems(filter, t);
+  const mobileColumns = isOverlay ? 2 : 2;
+
+  return (
+    <Box sx={myWardrobeScreenSx}>
+      <Stack spacing={2.25} sx={myWardrobeContentSx}>
+        <MyWardrobeToolbar
+          filter={filter}
+          isLoading={wardrobeItems.isLoading}
+          t={t}
+          onFilterChange={setFilter}
+        />
+        {wardrobeItems.error ? (
+          <Alert severity="error">{wardrobeItems.error}</Alert>
+        ) : null}
+        <MyWardrobeGrid
+          isLoading={wardrobeItems.isLoading}
+          isOverlay={isOverlay}
+          items={wardrobeItems.items}
+          mobileColumns={mobileColumns}
+          t={t}
+          onProductMenuClick={wardrobeItems.handleProductMenuClick}
+        />
+        <MyWardrobeProductMenu
+          anchor={wardrobeItems.productMenu.anchor}
+          item={wardrobeItems.productMenu.item}
+          t={t}
+          onClose={wardrobeItems.closeProductMenu}
+          onRequestRemove={wardrobeItems.setRemoveConfirmItem}
+        />
+        <MyWardrobeRemoveConfirmDialog
+          item={wardrobeItems.removeConfirmItem}
+          t={t}
+          onClose={() => wardrobeItems.setRemoveConfirmItem(null)}
+          onConfirm={wardrobeItems.handleConfirmRemove}
+        />
+      </Stack>
+    </Box>
+  );
+}
+
+function useMyWardrobeItems(
+  filter: MyWardrobeFilter,
+  t: (key: string) => string,
+) {
   const [items, setItems] = useState<MainScreenItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
-  const mobileColumns = isOverlay ? 2 : 2;
+  const [productMenu, setProductMenu] = useState<MyWardrobeProductMenuState>({
+    anchor: null,
+    url: "",
+    item: null,
+  });
+  const [removeConfirmItem, setRemoveConfirmItem] =
+    useState<MainScreenItem | null>(null);
   const source = useMemo(() => getSourceFilter(filter), [filter]);
 
   useEffect(() => {
@@ -77,27 +137,45 @@ function MyWardrobeScreen(): ReactElement {
       isActive = false;
     };
   }, [source, t]);
+  const closeProductMenu = () =>
+    setProductMenu({ anchor: null, url: "", item: null });
+  const handleProductMenuClick = (
+    event: MouseEvent<HTMLButtonElement>,
+    url: string,
+    item: MainScreenItem,
+  ) => {
+    setProductMenu({ anchor: event.currentTarget, url, item });
+  };
+  const handleConfirmRemove = async (item: MainScreenItem) => {
+    const url = String(item?.url || "").trim();
+    if (!url) return;
 
-  return (
-    <Box sx={myWardrobeScreenSx}>
-      <Stack spacing={2.25} sx={myWardrobeContentSx}>
-        <MyWardrobeToolbar
-          filter={filter}
-          isLoading={isLoading}
-          t={t}
-          onFilterChange={setFilter}
-        />
-        {error ? <Alert severity="error">{error}</Alert> : null}
-        <MyWardrobeGrid
-          isLoading={isLoading}
-          isOverlay={isOverlay}
-          items={items}
-          mobileColumns={mobileColumns}
-          t={t}
-        />
-      </Stack>
-    </Box>
-  );
+    try {
+      await removeCatalogItemFromMyWardrobe(url);
+      setError("");
+      setItems((current) =>
+        current.filter(
+          (currentItem) =>
+            currentItem !== item &&
+            String(currentItem?.url || "").trim() !== url,
+        ),
+      );
+    } catch {
+      setError(t("myWardrobe.removeFailed"));
+    }
+  };
+
+  return {
+    closeProductMenu,
+    error,
+    handleConfirmRemove,
+    handleProductMenuClick,
+    isLoading,
+    items,
+    productMenu,
+    removeConfirmItem,
+    setRemoveConfirmItem,
+  };
 }
 
 function MyWardrobeToolbar({
@@ -171,12 +249,18 @@ function MyWardrobeGrid({
   isOverlay,
   items,
   mobileColumns,
+  onProductMenuClick,
   t,
 }: {
   isLoading: boolean;
   isOverlay: boolean;
   items: MainScreenItem[];
   mobileColumns: 1 | 2 | 3;
+  onProductMenuClick: (
+    event: MouseEvent<HTMLButtonElement>,
+    productUrl: string,
+    item: MainScreenItem,
+  ) => void;
   t: (key: string) => string;
 }) {
   if (isLoading) {
@@ -214,7 +298,7 @@ function MyWardrobeGrid({
           item={item}
           isMobile={isOverlay}
           mobileColumns={mobileColumns}
-          showProductMenu={false}
+          onProductMenuClick={onProductMenuClick}
         />
       ))}
     </Box>
