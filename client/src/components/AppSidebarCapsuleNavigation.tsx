@@ -1,4 +1,4 @@
-import type { MouseEvent } from "react";
+import type { MouseEvent, ReactNode } from "react";
 import {
   Box,
   IconButton,
@@ -239,17 +239,18 @@ function CapsuleList({
   );
 }
 
-function CapsuleSectionLabel({ label }: { label: string }) {
+function CapsuleSectionLabel({
+  label,
+  actions,
+}: {
+  label: string;
+  actions?: ReactNode;
+}) {
   return (
     <Stack
       direction="row"
       alignItems="center"
-      sx={{
-        minHeight: 32,
-        pt: 1.5,
-        pb: 0.5,
-        pl: "10px",
-      }}
+      sx={{ minHeight: 40, pt: 1.5, pb: 0.5, pl: "10px", pr: 0 }}
     >
       <Typography
         sx={{
@@ -264,6 +265,7 @@ function CapsuleSectionLabel({ label }: { label: string }) {
       >
         {label}
       </Typography>
+      {actions}
     </Stack>
   );
 }
@@ -313,14 +315,18 @@ function CapsuleChildren({
           pl: capsuleHighlightInlineStartInset,
         }}
       >
-        <CapsulePrimaryActions
-          capsuleChildTabIndex={capsuleChildTabIndex}
-          isInteractionDisabled={isInteractionDisabled}
-          onCreateCapsule={onCreateCapsule}
-          onSearchCapsules={onSearchCapsules}
-          t={t}
+        <CapsuleSectionLabel
+          label={t("capsule.yourCapsules")}
+          actions={
+            <CapsulePrimaryActions
+              capsuleChildTabIndex={capsuleChildTabIndex}
+              isInteractionDisabled={isInteractionDisabled}
+              onCreateCapsule={onCreateCapsule}
+              onSearchCapsules={onSearchCapsules}
+              t={t}
+            />
+          }
         />
-        <CapsuleSectionLabel label={t("capsule.yourCapsules")} />
         <CapsuleList
           capsuleList={capsuleList}
           activeCapsuleId={activeCapsuleId}

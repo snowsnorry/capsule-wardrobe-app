@@ -101,7 +101,6 @@ describe("AppSidebarNavigation", () => {
   test("insets the active capsule highlight without clipping or moving content", () => {
     renderNavigation();
 
-    const topLevelCapsule = screen.getByRole("button", { name: "Capsule" });
     const capsuleRow = screen.getByRole("button", { name: "Modified capsule" });
     const capsuleChildren = screen.getByTestId("capsule-sidebar-children");
     const capsuleContent = capsuleChildren.firstElementChild;
@@ -115,6 +114,13 @@ describe("AppSidebarNavigation", () => {
     expect(getComputedStyle(capsuleSectionLabel as Element).paddingLeft).toBe(
       "10px",
     );
+    const capsulePrimaryActions = capsuleSectionLabel?.querySelector(
+      ".capsule-primary-actions",
+    );
+    expect(capsulePrimaryActions).not.toBeNull();
+    expect(getComputedStyle(capsulePrimaryActions as Element).marginLeft).toBe(
+      "auto",
+    );
     expect(getComputedStyle(capsuleRow).borderRadius).toBe("8px");
     expect(getComputedStyle(capsuleRow).marginLeft).toBe("0px");
     expect(getComputedStyle(capsuleRow).paddingLeft).toBe("36px");
@@ -124,20 +130,30 @@ describe("AppSidebarNavigation", () => {
       screen.getByRole("button", { name: "New capsule" }),
       screen.getByRole("button", { name: "Search capsules" }),
     ]) {
-      const iconRail = button.querySelector(".capsule-primary-action-icon");
-
-      expect(iconRail).not.toBeNull();
-      expect(getComputedStyle(button).width).toBe("100%");
-      expect(getComputedStyle(button).marginLeft).toBe("0px");
-      expect(getComputedStyle(button).paddingLeft).toBe("0px");
-      expect(getComputedStyle(button).borderRadius).toBe(
-        getComputedStyle(topLevelCapsule).borderRadius,
-      );
-      expect(getComputedStyle(iconRail as Element).width).toBe("60px");
-      expect(getComputedStyle(iconRail as Element).transform).toBe(
-        "translateX(-6px)",
-      );
+      expect(button.querySelector("svg")).not.toBeNull();
+      expect(button.textContent).toBe("");
+      expect(getComputedStyle(button).width).toBe("32px");
+      expect(getComputedStyle(button).height).toBe("32px");
+      expect(getComputedStyle(button).borderRadius).toBe("8px");
     }
+
+    expect(
+      screen
+        .getByRole("button", { name: "New capsule" })
+        .querySelector('[data-testid="NoteAltOutlinedIcon"]'),
+    ).not.toBeNull();
+  });
+
+  test("uses capsule action labels as tooltips", async () => {
+    const user = userEvent.setup();
+    renderNavigation({
+      onCreateCapsule: vi.fn(),
+      onSearchCapsules: vi.fn(),
+    });
+
+    await user.hover(screen.getByRole("button", { name: "New capsule" }));
+
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("New capsule");
   });
 
   test("aligns expanded top-level icon centers with the collapsed rail", () => {
