@@ -75,6 +75,7 @@ function MainScreen(props: MainScreenProps) {
       isOverlaySidebar={isOverlaySidebar}
       mobileColumns={ui.mobileColumns}
       nameDialog={ui.nameDialog}
+      productDetailItem={ui.productDetailItem}
       productMenu={ui.productMenu}
       props={props}
       requestRegenerateAll={requestRegenerateAll}
@@ -89,6 +90,7 @@ function MainScreen(props: MainScreenProps) {
       setHeaderMenuAnchor={ui.setHeaderMenuAnchor}
       setImageDialogOpen={ui.setImageDialogOpen}
       setNameDialog={ui.setNameDialog}
+      setProductDetailItem={ui.setProductDetailItem}
       setProductMenu={ui.setProductMenu}
       setRowMenuAnchor={ui.setRowMenuAnchor}
       setRowMenuCapsule={ui.setRowMenuCapsule}

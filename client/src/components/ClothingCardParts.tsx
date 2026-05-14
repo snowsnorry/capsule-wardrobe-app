@@ -1,4 +1,5 @@
-import { Box, Chip, Link as MuiLink, Stack, Typography } from "@mui/material";
+import { Box, Chip, Stack, Typography } from "@mui/material";
+import type { KeyboardEvent } from "react";
 import type { ReactNode } from "react";
 import { CardActions } from "./ClothingCardActions";
 import { ClothingCardDetails } from "./ClothingCardDetailsParts";
@@ -50,11 +51,13 @@ function getCardRootSx({
   showCardActions,
   isSelected,
   isMobile,
+  isInteractive,
 }: {
   isDenseMobileCard: boolean;
   showCardActions: boolean;
   isSelected: boolean;
   isMobile: boolean;
+  isInteractive: boolean;
 }) {
   return {
     display: "flex",
@@ -68,6 +71,14 @@ function getCardRootSx({
       ? "0.5px solid rgba(17, 36, 34, 0.44)"
       : "1px solid rgba(17, 36, 34, 0.08)",
     boxShadow: isDenseMobileCard ? "none" : "0 0px 8px rgba(17, 36, 34, 0.08)",
+    cursor: isInteractive ? "pointer" : "default",
+    "&:focus-visible": isInteractive
+      ? {
+          outline: "3px solid",
+          outlineColor: "primary.main",
+          outlineOffset: 3,
+        }
+      : undefined,
     ...(showCardActions && !isSelected && !isMobile
       ? {
           "& .wardrobe-card-actions": {
@@ -158,7 +169,6 @@ function ProductImageContent({
 }
 
 function ClothingCardImageSection({
-  productUrl,
   displayImageSource,
   showImageNotFound,
   showImagePlaceholder,
@@ -169,7 +179,6 @@ function ClothingCardImageSection({
   actionProps,
   onImageError,
 }: {
-  productUrl: string | null;
   displayImageSource: {
     src: string;
     srcSet?: string;
@@ -196,7 +205,7 @@ function ClothingCardImageSection({
     >
       {actionProps ? <CardActions {...actionProps} /> : null}
       {!isMobile ? <CategoryChip label={categoryDisplayLabel} /> : null}
-      <CardImageFrame productUrl={productUrl}>
+      <CardImageFrame>
         <ProductImageContent
           displayImageSource={displayImageSource}
           showImageNotFound={showImageNotFound}
@@ -215,7 +224,6 @@ function ClothingCardView({
   displayImageSource,
   showImageNotFound,
   showImagePlaceholder,
-  productUrl,
   label,
   isMobile,
   mobileColumns,
@@ -227,6 +235,7 @@ function ClothingCardView({
   showCardActions,
   actionProps,
   mobileCardMetrics,
+  onCardClick,
   onImageError,
 }: {
   item: ClothingCardItem;
@@ -237,7 +246,6 @@ function ClothingCardView({
   } | null;
   showImageNotFound: boolean;
   showImagePlaceholder: boolean;
-  productUrl: string | null;
   label: string;
   isMobile: boolean;
   mobileColumns: 1 | 2 | 3;
@@ -249,20 +257,29 @@ function ClothingCardView({
   showCardActions: boolean;
   actionProps: CardActionProps | null;
   mobileCardMetrics: MobileCardMetrics;
+  onCardClick?: () => void;
   onImageError: () => void;
 }) {
+  const isInteractive = typeof onCardClick === "function";
+  const handleKeyDown = createCardKeyDownHandler(onCardClick);
+
   return (
     <Box
       className="wardrobe-card-root"
+      role={isInteractive ? "button" : undefined}
+      tabIndex={isInteractive ? 0 : undefined}
+      aria-label={isInteractive ? label : undefined}
+      onClick={onCardClick}
+      onKeyDown={handleKeyDown}
       sx={getCardRootSx({
         isDenseMobileCard: isMobile && mobileColumns !== 1,
         showCardActions,
         isSelected,
         isMobile,
+        isInteractive,
       })}
     >
       <ClothingCardImageSection
-        productUrl={productUrl}
         displayImageSource={displayImageSource}
         showImageNotFound={showImageNotFound}
         showImagePlaceholder={showImagePlaceholder}
@@ -285,6 +302,19 @@ function ClothingCardView({
       />
     </Box>
   );
+}
+
+function createCardKeyDownHandler(onCardClick?: () => void) {
+  return (event: KeyboardEvent<HTMLDivElement>) => {
+    if (!onCardClick) {
+      return;
+    }
+
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      onCardClick();
+    }
+  };
 }
 
 function CategoryChip({ label }: { label: string }) {
@@ -322,27 +352,7 @@ function CategoryChip({ label }: { label: string }) {
   );
 }
 
-function CardImageFrame({
-  children,
-  productUrl,
-}: {
-  children: ReactNode;
-  productUrl: string | null;
-}) {
-  if (productUrl) {
-    return (
-      <MuiLink
-        href={productUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        underline="none"
-        sx={{ position: "absolute", inset: 0, zIndex: 0 }}
-      >
-        {children}
-      </MuiLink>
-    );
-  }
-
+function CardImageFrame({ children }: { children: ReactNode }) {
   return (
     <Box sx={{ position: "absolute", inset: 0, zIndex: 0 }}>{children}</Box>
   );

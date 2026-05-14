@@ -78,14 +78,19 @@ const labels = {
     cardColumnsTwo: "2 columns",
     cardColumnsThree: "3 columns",
     copyProductLinkAddress: "Copy Link Address",
-    showProductInfo: "Show Product Info",
   },
   myWardrobe: {
     removeConfirmTitle: "Remove from My Wardrobe?",
     removeConfirmBody: "Remove body",
     removeConfirm: "Remove",
   },
-  search: { all: "All" },
+  search: {
+    all: "All",
+    back: "Back",
+    detailLoading: "Loading product details",
+    openProductPage: "Open product page",
+    untitled: "Untitled product",
+  },
   main: {
     cancelSelection: "Cancel",
     regenerateSelected: "Regenerate Selected ({count})",

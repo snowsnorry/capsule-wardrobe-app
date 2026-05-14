@@ -16,19 +16,16 @@ import {
   removeCatalogItemFromMyWardrobe,
   type MyWardrobeSource,
 } from "../api/myWardrobe";
-import ClothingCard from "../components/ClothingCard";
-import ClothingGridPlaceholder, {
-  buildClothingGridGap,
-  buildClothingGridTemplateColumns,
-} from "../components/ClothingGridPlaceholder";
 import { useI18n } from "../i18n/useI18n";
 import { MAIN_SCREEN_CONTENT_COLUMN_SX } from "./mainScreen/MainScreenHelpers";
 import type { MainScreenItem } from "./mainScreen/MainScreenTypes";
+import MyWardrobeGrid from "./MyWardrobeGrid";
 import {
   MyWardrobeProductMenu,
   MyWardrobeRemoveConfirmDialog,
   type MyWardrobeProductMenuState,
 } from "./MyWardrobeProductMenu";
+import ProductDetailDialog from "../components/productDetail/ProductDetailDialog";
 
 type MyWardrobeFilter = "all" | MyWardrobeSource;
 
@@ -51,6 +48,8 @@ function MyWardrobeScreen(): ReactElement {
   const { t } = useI18n();
   const isOverlay = useMediaQuery("(max-width: 1279.95px)");
   const [filter, setFilter] = useState<MyWardrobeFilter>("all");
+  const [productDetailItem, setProductDetailItem] =
+    useState<MainScreenItem | null>(null);
   const wardrobeItems = useMyWardrobeItems(filter, t);
   const mobileColumns = isOverlay ? 2 : 2;
 
@@ -72,6 +71,7 @@ function MyWardrobeScreen(): ReactElement {
           items={wardrobeItems.items}
           mobileColumns={mobileColumns}
           t={t}
+          onProductClick={setProductDetailItem}
           onProductMenuClick={wardrobeItems.handleProductMenuClick}
         />
         <MyWardrobeProductMenu
@@ -83,9 +83,17 @@ function MyWardrobeScreen(): ReactElement {
         />
         <MyWardrobeRemoveConfirmDialog
           item={wardrobeItems.removeConfirmItem}
+          isLoading={wardrobeItems.isMutating}
           t={t}
           onClose={() => wardrobeItems.setRemoveConfirmItem(null)}
           onConfirm={wardrobeItems.handleConfirmRemove}
+        />
+        <ProductDetailDialog
+          item={productDetailItem}
+          open={Boolean(productDetailItem)}
+          isMobile={isOverlay}
+          onClose={() => setProductDetailItem(null)}
+          onRemoveFromMyWardrobe={wardrobeItems.handleConfirmRemove}
         />
       </Stack>
     </Box>
@@ -98,6 +106,7 @@ function useMyWardrobeItems(
 ) {
   const [items, setItems] = useState<MainScreenItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isMutating, setIsMutating] = useState(false);
   const [error, setError] = useState("");
   const [productMenu, setProductMenu] = useState<MyWardrobeProductMenuState>({
     anchor: null,
@@ -150,6 +159,7 @@ function useMyWardrobeItems(
     const url = String(item?.url || "").trim();
     if (!url) return;
 
+    setIsMutating(true);
     try {
       await removeCatalogItemFromMyWardrobe(url);
       setError("");
@@ -162,6 +172,8 @@ function useMyWardrobeItems(
       );
     } catch {
       setError(t("myWardrobe.removeFailed"));
+    } finally {
+      setIsMutating(false);
     }
   };
 
@@ -171,6 +183,7 @@ function useMyWardrobeItems(
     handleConfirmRemove,
     handleProductMenuClick,
     isLoading,
+    isMutating,
     items,
     productMenu,
     removeConfirmItem,
@@ -244,67 +257,6 @@ function filterKey(filter: MyWardrobeFilter) {
       : "myWardrobe.filters.fromCatalog";
 }
 
-function MyWardrobeGrid({
-  isLoading,
-  isOverlay,
-  items,
-  mobileColumns,
-  onProductMenuClick,
-  t,
-}: {
-  isLoading: boolean;
-  isOverlay: boolean;
-  items: MainScreenItem[];
-  mobileColumns: 1 | 2 | 3;
-  onProductMenuClick: (
-    event: MouseEvent<HTMLButtonElement>,
-    productUrl: string,
-    item: MainScreenItem,
-  ) => void;
-  t: (key: string) => string;
-}) {
-  if (isLoading) {
-    return <ClothingGridPlaceholder count={12} mobileColumns={mobileColumns} />;
-  }
-
-  if (items.length === 0) {
-    return (
-      <Stack spacing={0.75} sx={emptyStateSx}>
-        <Typography variant="h6">{t("myWardrobe.emptyTitle")}</Typography>
-        <Typography variant="body2" color="text.secondary">
-          {t("myWardrobe.emptyBody")}
-        </Typography>
-      </Stack>
-    );
-  }
-
-  return (
-    <Box
-      sx={{
-        display: "grid",
-        gridTemplateColumns: buildClothingGridTemplateColumns(mobileColumns),
-        gap: buildClothingGridGap(mobileColumns),
-        "@media (min-width: 1400px)": {
-          gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-        },
-        "@media (min-width: 1760px)": {
-          gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-        },
-      }}
-    >
-      {items.map((item) => (
-        <ClothingCard
-          key={item.id || item.url}
-          item={item}
-          isMobile={isOverlay}
-          mobileColumns={mobileColumns}
-          onProductMenuClick={onProductMenuClick}
-        />
-      ))}
-    </Box>
-  );
-}
-
 const myWardrobeScreenSx = {
   height: "100%",
   minHeight: 0,
@@ -353,11 +305,6 @@ const filterGroupSx = {
     borderColor: "divider",
     mx: 0.25,
   },
-} as const;
-
-const emptyStateSx = {
-  maxWidth: 520,
-  pt: { xs: 3, md: 4 },
 } as const;
 
 export default MyWardrobeScreen;

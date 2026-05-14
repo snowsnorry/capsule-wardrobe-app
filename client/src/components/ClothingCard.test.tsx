@@ -102,6 +102,22 @@ describe("ClothingCard", () => {
     ).not.toBeInTheDocument();
   });
 
+  test("uses the card click for selection instead of product details in selection mode", () => {
+    const onToggleSelected = vi.fn();
+    const onProductClick = vi.fn();
+    renderCard({
+      isSelectable: true,
+      isSelectionMode: true,
+      onToggleSelected,
+      onProductClick,
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /Red Jacket/ }));
+
+    expect(onToggleSelected).toHaveBeenCalledWith(item);
+    expect(onProductClick).not.toHaveBeenCalled();
+  });
+
   test("renders an inline saved wardrobe icon for saved catalog items", () => {
     const { container } = renderCard({
       item: { ...item, isSavedToWardrobe: true },
@@ -119,18 +135,17 @@ describe("ClothingCard", () => {
     );
   });
 
-  test("renders an outbound link with the product thumbnail image and attributes", async () => {
-    renderCard();
+  test("renders the product thumbnail image and opens product details from the card", async () => {
+    const onProductClick = vi.fn();
+    renderCard({ onProductClick });
 
     const image = await screen.findByRole("img", { name: item.name ?? "" });
-    const link = screen.getByRole("link", { name: /Red Jacket/ });
     const digest =
       "701ef83d3205bee4cedc8663c6a2100ddeaad5bb7f5aeefbabfa58ac0d84c40a";
 
-    expect(link).toHaveAttribute("href", item.url);
-    expect(link).toHaveAttribute("target", "_blank");
-    expect(link).toHaveAttribute("rel", expect.stringContaining("noopener"));
-    expect(link).toHaveAttribute("rel", expect.stringContaining("noreferrer"));
+    expect(
+      screen.queryByRole("link", { name: /Red Jacket/ }),
+    ).not.toBeInTheDocument();
     expect(image).toHaveAttribute(
       "src",
       `https://assets.capsule-wardrobe.org/thumbnails/${digest}_640.webp`,
@@ -144,6 +159,9 @@ describe("ClothingCard", () => {
       "(max-width: 600px) calc((100vw - 48px) / 2), 285px",
     );
     expect(image).toHaveAttribute("alt", item.name);
+
+    fireEvent.click(screen.getByRole("button", { name: /Red Jacket/ }));
+    expect(onProductClick).toHaveBeenCalledWith(item);
   });
 
   test("falls back from thumbnails to the original image and then a 404 placeholder", async () => {
@@ -384,12 +402,14 @@ describe("ClothingCard", () => {
   });
 
   test("drops unsafe product and image urls", () => {
+    const onProductClick = vi.fn();
     renderCard({
       item: {
         ...item,
         url: "javascript:alert(1)",
         image_url: "data:text/html,<script>alert(1)</script>",
       },
+      onProductClick,
     });
 
     expect(
@@ -399,14 +419,21 @@ describe("ClothingCard", () => {
       screen.queryByRole("img", { name: item.name ?? "" }),
     ).not.toBeInTheDocument();
     expect(screen.getAllByText("Red Jacket").length).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getByRole("button", { name: /Red Jacket/ }));
+    expect(onProductClick).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "item-1" }),
+    );
   });
 
   test("appends unisex suffix for all-audience products", async () => {
+    const onProductClick = vi.fn();
     renderCard({
       item: {
         ...item,
         audience: "all",
       },
+      onProductClick,
     });
 
     const expectedLabel = "Red Jacket unisex";
@@ -415,8 +442,8 @@ describe("ClothingCard", () => {
     expect(screen.getByText("unisex")).toBeInTheDocument();
     const image = await screen.findByRole("img", { name: expectedLabel });
     expect(
-      screen.getByRole("link", { name: /Red Jacket unisex/ }),
-    ).toHaveAttribute("href", item.url);
+      screen.getByRole("button", { name: /Red Jacket unisex/ }),
+    ).toBeInTheDocument();
     expect(image).toHaveAttribute("alt", expectedLabel);
   });
 
@@ -434,7 +461,8 @@ describe("ClothingCard", () => {
 
   test("opens product menu callback for safe product URLs", () => {
     const onProductMenuClick = vi.fn();
-    renderCard({ onProductMenuClick });
+    const onProductClick = vi.fn();
+    renderCard({ onProductMenuClick, onProductClick });
 
     const menuButton = document.querySelector(".wardrobe-card-product-menu");
     fireEvent.click(menuButton as Element);
@@ -444,6 +472,7 @@ describe("ClothingCard", () => {
       "https://example.com/products/red-jacket",
       expect.objectContaining({ id: "item-1" }),
     );
+    expect(onProductClick).not.toHaveBeenCalled();
   });
 
   test("does not render product menu button when product URL is not safe", () => {

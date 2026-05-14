@@ -62,6 +62,10 @@ export async function saveItemToMyWardrobe(
   const url = String(item?.url || "").trim();
   if (!url) return;
 
+  fromContext<(value: boolean) => void>(
+    context,
+    "setIsContentOperationLoading",
+  )(true);
   try {
     await saveCatalogItemToMyWardrobe(url);
     applySavedFlagToProfileItems(context, url, true);
@@ -79,6 +83,13 @@ export async function saveItemToMyWardrobe(
             "t",
           )("myWardrobe.saveFailed"),
     );
+  } finally {
+    if (fromContext<{ current: boolean }>(context, "isMountedRef").current) {
+      fromContext<(value: boolean) => void>(
+        context,
+        "setIsContentOperationLoading",
+      )(false);
+    }
   }
 }
 
@@ -89,6 +100,10 @@ export async function removeItemFromMyWardrobe(
   const url = String(item?.url || "").trim();
   if (!url) return;
 
+  fromContext<(value: boolean) => void>(
+    context,
+    "setIsContentOperationLoading",
+  )(true);
   try {
     await removeCatalogItemFromMyWardrobe(url);
     applySavedFlagToProfileItems(context, url, false);
@@ -101,5 +116,12 @@ export async function removeItemFromMyWardrobe(
         "t",
       )("myWardrobe.removeFailed"),
     );
+  } finally {
+    if (fromContext<{ current: boolean }>(context, "isMountedRef").current) {
+      fromContext<(value: boolean) => void>(
+        context,
+        "setIsContentOperationLoading",
+      )(false);
+    }
   }
 }

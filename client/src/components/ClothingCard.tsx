@@ -25,6 +25,7 @@ type ClothingCardProps = {
   isSelectionMode?: boolean;
   isRegenerating?: boolean;
   onToggleSelected?: (item: ClothingCardItem) => void;
+  onProductClick?: (item: ClothingCardItem) => void;
   onProductMenuClick?: (
     event: MouseEvent<HTMLButtonElement>,
     productUrl: string,
@@ -45,6 +46,7 @@ function normalizeClothingCardProps(props: ClothingCardProps) {
     isSelectionMode: props.isSelectionMode ?? false,
     isRegenerating: props.isRegenerating ?? false,
     onToggleSelected: props.onToggleSelected,
+    onProductClick: props.onProductClick,
     onProductMenuClick: props.onProductMenuClick,
     showProductMenu: props.showProductMenu ?? true,
     isMobile: props.isMobile ?? false,
@@ -95,6 +97,105 @@ function getClothingCardLabels(
   };
 }
 
+function buildCardClickHandler({
+  item,
+  isSelectable,
+  isSelectionMode,
+  isRegenerating,
+  onToggleSelected,
+  onProductClick,
+}: {
+  item: ClothingCardItem;
+  isSelectable: boolean;
+  isSelectionMode: boolean;
+  isRegenerating: boolean;
+  onToggleSelected?: (item: ClothingCardItem) => void;
+  onProductClick?: (item: ClothingCardItem) => void;
+}) {
+  if (!isSelectionMode && typeof onProductClick !== "function") {
+    return undefined;
+  }
+
+  return () => {
+    if (isSelectionMode) {
+      if (isSelectable && !isRegenerating) {
+        onToggleSelected?.(item);
+      }
+      return;
+    }
+
+    onProductClick?.(item);
+  };
+}
+
+function buildCardActionState({
+  isMobile,
+  isSelected,
+  isRegenerating,
+  showToggleButton,
+  showProductMenuButton,
+  mobileCardMetrics,
+}: {
+  isMobile: boolean;
+  isSelected: boolean;
+  isRegenerating: boolean;
+  showToggleButton: boolean;
+  showProductMenuButton: boolean;
+  mobileCardMetrics: ReturnType<typeof getMobileCardMetrics>;
+}) {
+  return {
+    isMobile,
+    isSelected,
+    isRegenerating,
+    showToggleButton,
+    showProductMenuButton,
+    showMobileProductMenuButton: isMobile && showProductMenuButton,
+    showActionButtons: isMobile || isSelected,
+    mobileCardMetrics,
+  };
+}
+
+function buildActionPropsForCard({
+  showCardActions,
+  isMobile,
+  isSelected,
+  isRegenerating,
+  showToggleButton,
+  showProductMenuButton,
+  mobileCardMetrics,
+  handlers,
+  t,
+}: {
+  showCardActions: boolean;
+  isMobile: boolean;
+  isSelected: boolean;
+  isRegenerating: boolean;
+  showToggleButton: boolean;
+  showProductMenuButton: boolean;
+  mobileCardMetrics: ReturnType<typeof getMobileCardMetrics>;
+  handlers: Parameters<typeof buildClothingCardActionProps>[0]["handlers"];
+  t: (key: string) => string;
+}) {
+  return buildClothingCardActionProps({
+    showCardActions,
+    actionState: buildCardActionState({
+      isMobile,
+      isSelected,
+      isRegenerating,
+      showToggleButton,
+      showProductMenuButton,
+      mobileCardMetrics,
+    }),
+    handlers,
+    t,
+  });
+}
+
+function stopCardActionPropagation(event: MouseEvent<HTMLElement>) {
+  event.preventDefault();
+  event.stopPropagation();
+}
+
 function ClothingCard(props: ClothingCardProps): ReactElement {
   const {
     item,
@@ -103,6 +204,7 @@ function ClothingCard(props: ClothingCardProps): ReactElement {
     isSelectionMode,
     isRegenerating,
     onToggleSelected,
+    onProductClick,
     onProductMenuClick,
     showProductMenu,
     isMobile,
@@ -126,36 +228,34 @@ function ClothingCard(props: ClothingCardProps): ReactElement {
   const showProductMenuButton =
     showProductMenu && !isSelectionMode && Boolean(productUrl);
   const showCardActions = showToggleButton || showProductMenuButton;
-  const showMobileProductMenuButton = isMobile && showProductMenuButton;
-  const showActionButtons = isMobile || isSelected;
-  const stopCardActionPropagation = (event: MouseEvent<HTMLElement>) => {
-    event.preventDefault();
-    event.stopPropagation();
-  };
   const handleToggleSelected = (event: MouseEvent<HTMLButtonElement>) => {
     stopCardActionPropagation(event);
     if (!isRegenerating && typeof onToggleSelected === "function") {
       onToggleSelected(item);
     }
   };
+  const handleCardClick = buildCardClickHandler({
+    item,
+    isSelectable,
+    isSelectionMode,
+    isRegenerating,
+    onToggleSelected,
+    onProductClick,
+  });
   const handleProductMenuClick = (event: MouseEvent<HTMLButtonElement>) => {
     stopCardActionPropagation(event);
     if (productUrl && typeof onProductMenuClick === "function") {
       onProductMenuClick(event, productUrl, item);
     }
   };
-  const actionProps = buildClothingCardActionProps({
+  const actionProps = buildActionPropsForCard({
     showCardActions,
-    actionState: {
-      isMobile,
-      isSelected,
-      isRegenerating,
-      showToggleButton,
-      showProductMenuButton,
-      showMobileProductMenuButton,
-      showActionButtons,
-      mobileCardMetrics,
-    },
+    isMobile,
+    isSelected,
+    isRegenerating,
+    showToggleButton,
+    showProductMenuButton,
+    mobileCardMetrics,
     handlers: {
       onToggleSelected: handleToggleSelected,
       onProductMenuClick: handleProductMenuClick,
@@ -169,7 +269,6 @@ function ClothingCard(props: ClothingCardProps): ReactElement {
       displayImageSource={imageState.displayImageSource}
       showImageNotFound={imageState.imageMode === "missing"}
       showImagePlaceholder={imageState.imageMode !== "loading"}
-      productUrl={productUrl}
       label={label}
       isMobile={isMobile}
       mobileColumns={mobileColumns}
@@ -181,6 +280,7 @@ function ClothingCard(props: ClothingCardProps): ReactElement {
       showCardActions={showCardActions}
       actionProps={actionProps}
       mobileCardMetrics={mobileCardMetrics}
+      onCardClick={handleCardClick}
       onImageError={imageState.handleImageError}
     />
   );

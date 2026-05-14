@@ -23,6 +23,7 @@ function DialogHarness({
   initialFiltersOpen = false,
   initialImageDialogOpen = false,
   initialNameDialog = { type: "", capsuleId: "", value: "" },
+  initialProductDetailItem = null,
   initialSearch = { open: false, query: "", results: [], loading: false },
   initialShare = {
     open: false,
@@ -43,6 +44,7 @@ function DialogHarness({
   initialFiltersOpen?: boolean;
   initialImageDialogOpen?: boolean;
   initialNameDialog?: NameDialogState;
+  initialProductDetailItem?: DialogsProps["productDetailItem"];
   initialSearch?: SearchState;
   initialShare?: ShareState;
   interactionDisabled?: boolean;
@@ -56,6 +58,9 @@ function DialogHarness({
     initialImageDialogOpen,
   );
   const [nameDialog, setNameDialog] = useState(initialNameDialog);
+  const [productDetailItem, setProductDetailItem] = useState<
+    DialogsProps["productDetailItem"]
+  >(initialProductDetailItem);
   const [search, setSearch] = useState(initialSearch);
   const [share, setShare] = useState<ShareState>({
     loading: false,
@@ -73,6 +78,7 @@ function DialogHarness({
       interactionDisabled={interactionDisabled}
       isOverlay={isOverlay}
       nameDialog={nameDialog}
+      productDetailItem={productDetailItem}
       props={props}
       search={search}
       share={share}
@@ -80,6 +86,7 @@ function DialogHarness({
       setFiltersOpen={setFiltersOpen}
       setImageDialogOpen={setImageDialogOpen}
       setNameDialog={setNameDialog}
+      setProductDetailItem={setProductDetailItem}
       setSearch={setSearch}
       setShare={setShare}
       onOpenCapsule={props.onOpenCapsule}
@@ -132,6 +139,31 @@ describe("MainScreenDialogs", () => {
       expect(
         screen.queryByTestId("profile-filters-sidebar"),
       ).not.toBeInTheDocument();
+    });
+  });
+
+  test("opens and closes the product detail dialog", async () => {
+    const user = userEvent.setup();
+    renderDialogs({
+      initialProductDetailItem: {
+        id: "shirt",
+        name: "Linen Shirt",
+        url: "https://example.com/shirt",
+        image_url: "https://example.com/shirt.jpg",
+        price: 79,
+        currency: "EUR",
+      },
+    });
+
+    expect(screen.getByText("Linen Shirt")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /linen shirt/i })).toHaveAttribute(
+      "href",
+      "https://example.com/shirt",
+    );
+
+    await user.click(screen.getByRole("button", { name: "Close" }));
+    await waitFor(() => {
+      expect(screen.queryByText("Linen Shirt")).not.toBeInTheDocument();
     });
   });
 

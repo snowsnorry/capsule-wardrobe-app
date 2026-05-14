@@ -2,7 +2,7 @@ import type { ReactElement } from "react";
 import { Box, Divider, Stack, Typography } from "@mui/material";
 import SearchFiltersSidebar from "../../search/SearchFiltersSidebar";
 import { MAIN_SCREEN_CONTENT_COLUMN_SX } from "../mainScreen/MainScreenHelpers";
-import ProductDetail from "./ProductDetail";
+import ProductDetail from "../../components/productDetail/ProductDetail";
 import SearchBar from "./SearchBar";
 import SearchResultsList from "./SearchResultsList";
 import type { SearchResultItem } from "./searchTypes";

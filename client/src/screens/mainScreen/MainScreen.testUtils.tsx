@@ -106,6 +106,7 @@ vi.mock("../../components/ClothingCard", () => ({
     isRegenerating,
     mobileColumns,
     onToggleSelected,
+    onProductClick,
     onProductMenuClick,
   }: {
     item: MainScreenItem;
@@ -115,6 +116,7 @@ vi.mock("../../components/ClothingCard", () => ({
     isRegenerating?: boolean;
     mobileColumns?: MobileCardColumns;
     onToggleSelected: (item: MainScreenItem) => void;
+    onProductClick?: (item: MainScreenItem) => void;
     onProductMenuClick?: (
       event: React.MouseEvent<HTMLButtonElement>,
       url: string,
@@ -131,7 +133,13 @@ vi.mock("../../components/ClothingCard", () => ({
         data-regenerating={String(isRegenerating)}
         data-mobile-columns={String(mobileColumns ?? 2)}
         disabled={isRegenerating}
-        onClick={() => onToggleSelected(item)}
+        onClick={() => {
+          if (isSelectionMode) {
+            onToggleSelected(item);
+            return;
+          }
+          onProductClick?.(item);
+        }}
       >
         {item.name}
       </button>

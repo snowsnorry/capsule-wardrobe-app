@@ -28,6 +28,16 @@ async function fetchSavedSearch({
   });
 }
 
+async function fetchProductDetailByUrl(url: string): Promise<SearchResponse> {
+  return getCachedJson(
+    `${API_BASE_URL}/search/product?url=${encodeURIComponent(url)}`,
+    {
+      credentials: "include",
+      ttlMs: 60_000,
+    },
+  );
+}
+
 async function runSearch(
   payload: SearchRequestPayload,
 ): Promise<SearchResponse> {
@@ -50,4 +60,10 @@ async function fetchSearchStats(
   });
 }
 
-export { fetchSearchOptions, fetchSavedSearch, fetchSearchStats, runSearch };
+export {
+  fetchProductDetailByUrl,
+  fetchSearchOptions,
+  fetchSavedSearch,
+  fetchSearchStats,
+  runSearch,
+};

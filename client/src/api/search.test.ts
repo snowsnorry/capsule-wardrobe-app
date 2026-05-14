@@ -11,6 +11,7 @@ vi.mock("./config", () => ({
 }));
 
 import {
+  fetchProductDetailByUrl,
   fetchSavedSearch,
   fetchSearchOptions,
   fetchSearchStats,
@@ -69,6 +70,18 @@ describe("search api", () => {
         credentials: "include",
         ttlMs: 1000,
         force: true,
+      },
+    );
+  });
+
+  test("fetchProductDetailByUrl uses a cached authenticated GET contract", async () => {
+    await fetchProductDetailByUrl("https://example.com/product?sku=1");
+
+    expect(requestApi.getCachedJson).toHaveBeenCalledWith(
+      "https://api.example.test/search/product?url=https%3A%2F%2Fexample.com%2Fproduct%3Fsku%3D1",
+      {
+        credentials: "include",
+        ttlMs: 60000,
       },
     );
   });

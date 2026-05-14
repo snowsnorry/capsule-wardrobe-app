@@ -40,6 +40,7 @@ function createWardrobeProps(
     onDeleteImage: vi.fn(),
     onGenerateImage: vi.fn(),
     onImageClick: vi.fn(),
+    onProductClick: vi.fn(),
     onProductMenuClick: vi.fn(),
     onToggleSelected: vi.fn(),
     ...overrides,
@@ -97,6 +98,22 @@ describe("MainScreenWardrobe", () => {
 
     await user.click(screen.getByTestId("clothing-card-https://example.com/c"));
     expect(onToggleSelected).toHaveBeenCalledWith(items[2]);
+  });
+
+  test("opens product details from a product card outside selection mode", async () => {
+    const user = userEvent.setup();
+    const onProductClick = vi.fn();
+    const onToggleSelected = vi.fn();
+    renderWardrobe({
+      visibleItems: items,
+      onProductClick,
+      onToggleSelected,
+    });
+
+    await user.click(screen.getByTestId("clothing-card-https://example.com/a"));
+
+    expect(onProductClick).toHaveBeenCalledWith(items[0]);
+    expect(onToggleSelected).not.toHaveBeenCalled();
   });
 
   test("renders create image button for outfit tab without generated image", async () => {

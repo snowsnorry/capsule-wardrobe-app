@@ -38,6 +38,7 @@ export type DialogsProps = {
   interactionDisabled: boolean;
   isOverlay: boolean;
   nameDialog: NameDialogState;
+  productDetailItem: MainScreenProps["items"][number] | null;
   props: MainScreenProps;
   search: SearchState;
   share: ShareState;
@@ -45,6 +46,7 @@ export type DialogsProps = {
   setFiltersOpen: (open: boolean) => void;
   setImageDialogOpen: (open: boolean) => void;
   setNameDialog: Dispatch<SetStateAction<NameDialogState>>;
+  setProductDetailItem: (item: MainScreenProps["items"][number] | null) => void;
   setSearch: Dispatch<SetStateAction<SearchState>>;
   setShare: Dispatch<SetStateAction<ShareState>>;
   onCloseRowMenu: () => void;

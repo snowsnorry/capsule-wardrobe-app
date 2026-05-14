@@ -95,6 +95,24 @@ describe("MyWardrobeProductMenu", () => {
     renderWithTheme(
       <MyWardrobeRemoveConfirmDialog
         item={item}
+        isLoading
+        t={t}
+        onClose={onClose}
+        onConfirm={onConfirm}
+      />,
+    );
+
+    expect(
+      screen.getByRole("progressbar", { name: "Remove from My Wardrobe" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Remove" })).toBeDisabled();
+
+    cleanup();
+
+    renderWithTheme(
+      <MyWardrobeRemoveConfirmDialog
+        item={item}
         t={t}
         onClose={onClose}
         onConfirm={onConfirm}
@@ -102,7 +120,7 @@ describe("MyWardrobeProductMenu", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "Cancel" }));
-    expect(onClose).toHaveBeenCalled();
+    expect(onClose).toHaveBeenCalledTimes(1);
     expect(onConfirm).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole("button", { name: "Remove" }));

@@ -47,6 +47,8 @@ function useMainScreenUiState() {
     url: string;
     item: MainScreenItem | null;
   }>({ anchor: null, url: "", item: null });
+  const [productDetailItem, setProductDetailItem] =
+    useState<MainScreenItem | null>(null);
   const [selectionMode, setSelectionMode] = useState(false);
   const [mobileColumns, setMobileColumns] = useState<MobileCardColumns>(() =>
     readStoredMobileCardColumns(),
@@ -75,6 +77,7 @@ function useMainScreenUiState() {
     imageDialogOpen,
     mobileColumns,
     nameDialog,
+    productDetailItem,
     productMenu,
     rowMenuAnchor,
     rowMenuCapsule,
@@ -85,6 +88,7 @@ function useMainScreenUiState() {
     setHeaderMenuAnchor,
     setImageDialogOpen,
     setNameDialog,
+    setProductDetailItem,
     setProductMenu,
     setRowMenuAnchor,
     setRowMenuCapsule,

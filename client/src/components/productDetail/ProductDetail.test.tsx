@@ -128,6 +128,33 @@ describe("ProductDetail", () => {
     expect(screen.queryByText("unisex")).not.toBeInTheDocument();
   });
 
+  test("normalizes capsule item string fields into product details", () => {
+    renderProductDetail({
+      id: "shirt",
+      name: "Navy Shirt",
+      price: 79,
+      currency: "EUR",
+      color: "navy",
+      formalityLevel: "casual",
+      style: "minimalistic",
+      season: "spring",
+      occasions: "office",
+      audience: "woman",
+      pattern: "solid",
+      closureType: "button",
+    });
+
+    expect(screen.getByText("79 EUR")).toBeInTheDocument();
+    expect(screen.getByText("Woman")).toBeInTheDocument();
+    expect(screen.getByText("Spring")).toBeInTheDocument();
+    expect(screen.getByText("Casual")).toBeInTheDocument();
+    expect(screen.getByText("Minimalistic")).toBeInTheDocument();
+    expect(screen.getByText("Office")).toBeInTheDocument();
+    expect(screen.getByText("Navy")).toBeInTheDocument();
+    expect(screen.getByText("Solid")).toBeInTheDocument();
+    expect(screen.getByText("Button")).toBeInTheDocument();
+  });
+
   test("renders saved wardrobe icon before the product detail label", () => {
     const { container } = renderProductDetail({
       id: "coat",
@@ -191,6 +218,42 @@ describe("ProductDetail", () => {
     expect(onSaveToMyWardrobe).toHaveBeenCalledWith(item);
   });
 
+  test("shows save progress while the wardrobe request is pending", async () => {
+    let resolveSave: () => void = () => undefined;
+    const onSaveToMyWardrobe = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveSave = resolve;
+        }),
+    );
+    const item = {
+      id: "coat",
+      name: "Coat",
+      url: "https://example.com/coat",
+    };
+    renderProductDetail(item, theme, { onSaveToMyWardrobe });
+
+    fireEvent.click(screen.getByRole("button", { name: "Product actions" }));
+    fireEvent.click(
+      screen.getByRole("menuitem", { name: "Save to My Wardrobe" }),
+    );
+
+    expect(
+      screen.getByRole("progressbar", { name: "Save to My Wardrobe" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Product actions" }),
+    ).toBeDisabled();
+
+    resolveSave();
+
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("progressbar", { name: "Save to My Wardrobe" }),
+      ).not.toBeInTheDocument();
+    });
+  });
+
   test("confirms before removing a saved product from my wardrobe", () => {
     const onRemoveFromMyWardrobe = vi.fn();
     const onSaveToMyWardrobe = vi.fn();
@@ -215,5 +278,24 @@ describe("ProductDetail", () => {
 
     expect(onRemoveFromMyWardrobe).toHaveBeenCalledWith(item);
     expect(onSaveToMyWardrobe).not.toHaveBeenCalled();
+  });
+
+  test("shows remove actions for wardrobe detail items without a save handler", () => {
+    const onRemoveFromMyWardrobe = vi.fn();
+    const item = {
+      id: "coat",
+      name: "Coat",
+      url: "https://example.com/coat",
+      source: "from_catalog",
+    };
+    renderProductDetail(item, theme, { onRemoveFromMyWardrobe });
+
+    fireEvent.click(screen.getByRole("button", { name: "Product actions" }));
+    fireEvent.click(
+      screen.getByRole("menuitem", { name: "Remove from My Wardrobe" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Remove" }));
+
+    expect(onRemoveFromMyWardrobe).toHaveBeenCalledWith(item);
   });
 });

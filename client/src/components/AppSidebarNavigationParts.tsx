@@ -3,7 +3,7 @@ import { Box, Button, Divider, Stack, Tooltip } from "@mui/material";
 import BarChartRoundedIcon from "@mui/icons-material/BarChartRounded";
 import ManageSearchRoundedIcon from "@mui/icons-material/ManageSearchRounded";
 import CheckroomOutlinedIcon from "@mui/icons-material/CheckroomOutlined";
-import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
+import { PiDresser } from "react-icons/pi";
 import type { AppId } from "./AppSidebarNavigationTypes";
 
 const naturalEase = "cubic-bezier(0.2, 0, 0, 1)";
@@ -84,6 +84,10 @@ function TopLevelIcon({
             ? "none"
             : `translateX(${expandedTopLevelIconShift})`,
           color: isActive ? "primary.main" : "text.secondary",
+          "& svg": {
+            width: 24,
+            height: 24,
+          },
         }}
       >
         {icon}
@@ -261,7 +265,7 @@ function MyWardrobeTopLevelNavigation({
     <Box sx={{ px: isCollapsedDesktop ? 0 : 1.5, pt: 0.5 }}>
       <SidebarTopLevelButton
         label={t("launcher.myWardrobe")}
-        icon={<Inventory2OutlinedIcon />}
+        icon={<PiDresser />}
         isActive={isActive}
         isInteractionDisabled={isInteractionDisabled}
         isCollapsedDesktop={isCollapsedDesktop}

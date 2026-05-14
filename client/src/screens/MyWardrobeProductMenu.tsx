@@ -6,6 +6,7 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
+  LinearProgress,
   ListItemIcon,
   ListItemText,
   Menu,
@@ -30,6 +31,7 @@ type MyWardrobeProductMenuProps = {
 
 type MyWardrobeRemoveConfirmDialogProps = {
   item: MainScreenItem | null;
+  isLoading?: boolean;
   onClose: () => void;
   onConfirm: (item: MainScreenItem) => Promise<void> | void;
   t: (key: string) => string;
@@ -63,30 +65,49 @@ function MyWardrobeProductMenu({
 
 function MyWardrobeRemoveConfirmDialog({
   item,
+  isLoading = false,
   onClose,
   onConfirm,
   t,
 }: MyWardrobeRemoveConfirmDialogProps): ReactElement {
   return (
-    <Dialog open={Boolean(item)} onClose={onClose} fullWidth maxWidth="xs">
+    <Dialog
+      open={Boolean(item)}
+      onClose={() => {
+        if (!isLoading) {
+          onClose();
+        }
+      }}
+      fullWidth
+      maxWidth="xs"
+    >
       <DialogTitle sx={{ pb: 1 }}>
         {t("myWardrobe.removeConfirmTitle")}
       </DialogTitle>
       <DialogContent sx={{ pt: 0.5, pb: 0 }}>
+        {isLoading ? (
+          <LinearProgress
+            color="success"
+            aria-label={t("capsule.removeFromMyWardrobe")}
+            sx={{ mb: 2 }}
+          />
+        ) : null}
         <DialogContentText sx={{ color: "text.secondary" }}>
           {t("myWardrobe.removeConfirmBody")}
         </DialogContentText>
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2.5, pt: 2 }}>
-        <Button onClick={onClose}>{t("actions.cancel")}</Button>
+        <Button disabled={isLoading} onClick={onClose}>
+          {t("actions.cancel")}
+        </Button>
         <Button
           color="error"
           variant="contained"
+          disabled={isLoading}
           onClick={() => {
             const nextItem = item;
-            onClose();
             if (nextItem) {
-              void onConfirm(nextItem);
+              void Promise.resolve(onConfirm(nextItem)).finally(onClose);
             }
           }}
         >

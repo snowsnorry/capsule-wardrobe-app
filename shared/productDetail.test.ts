@@ -28,3 +28,46 @@ test("product detail formatter uses locale-specific labels", () => {
   expect(enGroups[1].items[0].label).toBe("Color");
   expect(ruGroups[1].items[0].label).toBe("Цвет");
 });
+
+test("product detail formatter includes translated optional construction fields", () => {
+  const groups = buildProductDetailGroups(
+    {
+      price: 49,
+      availability: "in_stock",
+      audience: "all",
+      season: ["summer"],
+      formalityLevel: ["smart_casual"],
+      style: ["minimalistic"],
+      occasions: ["office"],
+      colorBase: ["grey"],
+      pattern: "solid",
+      finish: "matte",
+      isNeutral: true,
+      composition: "linen, silk",
+      silhouette: "a_line",
+      fit: "regular",
+      closureType: ["zipper"],
+    },
+    {
+      t: (key, params) => t(key, params, "en"),
+      translateOption,
+      locale: "en",
+    },
+  );
+
+  expect(groups).toHaveLength(3);
+  expect(groups[0].items.map((item) => item.key)).toEqual([
+    "price",
+    "availability",
+    "audience",
+    "season",
+  ]);
+  expect(groups[1].items.map((item) => item.key)).toContain("neutral");
+  expect(groups[2].items.map((item) => item.key)).toEqual([
+    "composition",
+    "finish",
+    "silhouette",
+    "fit",
+    "closureType",
+  ]);
+});

@@ -147,28 +147,22 @@ describe("MainScreenMenus", () => {
     expect(onSaveToMyWardrobe).not.toHaveBeenCalled();
   });
 
-  test("copies product URL and shows product in search from the product menu", async () => {
+  test("copies product URL from the product menu", async () => {
     const user = userEvent.setup();
     const writeText = vi.fn(() => Promise.resolve());
-    const onNavigateApp = vi.fn();
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
       value: { writeText },
     });
-    renderMenus({ props: createMainScreenProps({ onNavigateApp }) });
+    renderMenus();
 
     await user.click(
       screen.getByRole("menuitem", { name: "Copy Link Address" }),
     );
     expect(writeText).toHaveBeenCalledWith("https://example.com/a");
-
-    await user.click(
-      screen.getByRole("menuitem", { name: "Show Product Info" }),
-    );
-    expect(onNavigateApp).toHaveBeenCalledWith("explore", {
-      query: "https://example.com/a",
-      openProductDetail: true,
-    });
+    expect(
+      screen.queryByRole("menuitem", { name: "Show Product Info" }),
+    ).not.toBeInTheDocument();
   });
 
   test("runs header menu actions and mobile layout update", async () => {
@@ -324,7 +318,6 @@ describe("MainScreenMenus", () => {
     const setNameDialog = vi.fn();
     const setSelectionMode = vi.fn();
     const onToggleRegenerationSelection = vi.fn();
-    const onNavigateApp = vi.fn();
     renderMenus({
       headerMenuAnchor: headerAnchor,
       productMenu: { anchor: null, url: "", item: null },
@@ -338,7 +331,6 @@ describe("MainScreenMenus", () => {
         },
         onSaveCapsule: undefined,
         onToggleRegenerationSelection,
-        onNavigateApp,
       }),
       setNameDialog,
       setSelectionMode,
@@ -359,7 +351,6 @@ describe("MainScreenMenus", () => {
       productMenu: { anchor: productAnchor, url: "", item: null },
       props: createMainScreenProps({
         onToggleRegenerationSelection,
-        onNavigateApp,
       }),
       setSelectionMode,
     });
@@ -367,10 +358,5 @@ describe("MainScreenMenus", () => {
     await user.click(screen.getByRole("menuitem", { name: "Select" }));
     expect(setSelectionMode).not.toHaveBeenCalled();
     expect(onToggleRegenerationSelection).not.toHaveBeenCalled();
-
-    await user.click(
-      screen.getByRole("menuitem", { name: "Show Product Info" }),
-    );
-    expect(onNavigateApp).not.toHaveBeenCalled();
   });
 });

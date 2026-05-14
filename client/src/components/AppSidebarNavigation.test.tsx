@@ -188,6 +188,18 @@ describe("AppSidebarNavigation", () => {
     expect(collapsedIconCenter).toBe(desktopSidebarRailWidth / 2);
   });
 
+  test("keeps the my wardrobe top-level icon at the standard sidebar size", () => {
+    renderNavigation({ activeApp: "myWardrobe" });
+
+    const myWardrobeIcon = screen
+      .getByRole("button", { name: "My Wardrobe" })
+      .querySelector("svg");
+
+    expect(myWardrobeIcon).not.toBeNull();
+    expect(getComputedStyle(myWardrobeIcon as Element).width).toBe("24px");
+    expect(getComputedStyle(myWardrobeIcon as Element).height).toBe("24px");
+  });
+
   test("uses the default unsaved-change predicate when none is supplied", () => {
     const { container } = renderNavigation({
       capsuleHasUnsavedChanges: undefined,

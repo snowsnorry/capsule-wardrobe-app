@@ -13,7 +13,7 @@ vi.mock("../../search/SearchFiltersSidebar", () => ({
     </div>
   ),
 }));
-vi.mock("./ProductDetail", () => ({
+vi.mock("../../components/productDetail/ProductDetail", () => ({
   default: ({ item, mobileBackAction, onSaveToMyWardrobe }) => (
     <div>
       <span>detail {item?.id || "none"}</span>

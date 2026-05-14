@@ -48,6 +48,7 @@ type WardrobeProps = {
     url: string,
     item: MainScreenItem,
   ) => void;
+  onProductClick: (item: MainScreenItem) => void;
   onToggleSelected: (item: MainScreenItem) => void;
 };
 
@@ -206,6 +207,7 @@ function WardrobeGrid({ props }: { props: WardrobeProps }) {
             isSelectionMode={props.selectionMode}
             isRegenerating={props.disabled}
             onToggleSelected={props.onToggleSelected}
+            onProductClick={props.onProductClick}
             onProductMenuClick={props.onProductMenuClick}
             isMobile={props.isOverlay}
             mobileColumns={props.mobileColumns}

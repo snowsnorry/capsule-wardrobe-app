@@ -2,6 +2,7 @@ import { ConfirmDialog, NameDialog } from "./MainScreenActionDialogs";
 import type { DialogsProps } from "./MainScreenDialogsTypes";
 import { FiltersDialog, ImageDialog } from "./MainScreenMediaDialogs";
 import { SearchDialog, ShareDialog } from "./MainScreenUtilityDialogs";
+import ProductDetailDialog from "../../components/productDetail/ProductDetailDialog";
 
 function MainScreenDialogs(props: DialogsProps) {
   return (
@@ -46,6 +47,14 @@ function MainScreenDialogs(props: DialogsProps) {
         disabled={props.interactionDisabled}
         open={props.imageDialogOpen}
         setOpen={props.setImageDialogOpen}
+      />
+      <ProductDetailDialog
+        item={props.productDetailItem}
+        open={Boolean(props.productDetailItem)}
+        isMobile={props.isOverlay}
+        onClose={() => props.setProductDetailItem(null)}
+        onRemoveFromMyWardrobe={props.props.onRemoveFromMyWardrobe}
+        onSaveToMyWardrobe={props.props.onSaveToMyWardrobe}
       />
     </>
   );

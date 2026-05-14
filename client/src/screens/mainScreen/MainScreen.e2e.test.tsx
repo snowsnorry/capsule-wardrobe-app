@@ -72,20 +72,30 @@ vi.mock("../../components/ClothingCard", () => ({
     item,
     isSelectionMode,
     onToggleSelected,
+    onProductClick,
     onProductMenuClick,
   }) => (
-    <button
-      type="button"
-      data-testid={`clothing-card-${item.url}`}
-      data-selection-mode={String(isSelectionMode)}
-      onClick={(event) =>
-        isSelectionMode
-          ? onToggleSelected(item)
-          : onProductMenuClick?.(event, item.url, item)
-      }
-    >
-      {item.name}
-    </button>
+    <div>
+      <button
+        type="button"
+        data-testid={`clothing-card-${item.url}`}
+        data-selection-mode={String(isSelectionMode)}
+        onClick={() =>
+          isSelectionMode ? onToggleSelected(item) : onProductClick?.(item)
+        }
+      >
+        {item.name}
+      </button>
+      {!isSelectionMode ? (
+        <button
+          type="button"
+          data-testid={`product-menu-${item.url}`}
+          onClick={(event) => onProductMenuClick?.(event, item.url, item)}
+        >
+          menu
+        </button>
+      ) : null}
+    </div>
   ),
 }));
 
@@ -146,7 +156,6 @@ function t(key, params) {
       cardColumnsTwo: "2 columns",
       cardColumnsThree: "3 columns",
       copyProductLinkAddress: "Copy Link Address",
-      showProductInfo: "Show Product Info",
     },
     main: {
       cancelSelection: "Cancel",
@@ -301,7 +310,7 @@ describe("MainScreen e2e-style flow", () => {
     mediaQueryMock.mockReset();
     mediaQueryMock.mockReturnValue(false);
     useI18nMock.mockReset();
-    useI18nMock.mockReturnValue({ t });
+    useI18nMock.mockReturnValue({ t, locale: "en" });
   });
 
   afterEach(() => {
@@ -334,7 +343,7 @@ describe("MainScreen e2e-style flow", () => {
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     });
 
-    await user.click(screen.getByTestId("clothing-card-https://example.com/a"));
+    await user.click(screen.getByTestId("product-menu-https://example.com/a"));
     await user.click(screen.getByRole("menuitem", { name: "Select" }));
     expect(
       screen.getByRole("button", { name: "Regenerate Selected (1)" }),

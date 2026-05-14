@@ -27,10 +27,6 @@ type ProductMenuProps = {
   menuProps: {
     productMenu: ProductMenuState;
     props: {
-      onNavigateApp: (
-        nextApp: "capsule" | "explore" | "myWardrobe" | "statistics",
-        options?: { query?: string; openProductDetail?: boolean },
-      ) => void;
       onRemoveFromMyWardrobe?: (item: MainScreenItem) => Promise<void> | void;
       onSaveToMyWardrobe?: (item: MainScreenItem) => Promise<void> | void;
       onToggleRegenerationSelection: (item: MainScreenItem) => void;
@@ -94,7 +90,6 @@ function ProductMenuItems({
         onRequestRemove={onRequestRemove}
       />
       <CopyProductLinkMenuItem menuProps={menuProps} onClose={onClose} t={t} />
-      <ShowProductInfoMenuItem menuProps={menuProps} onClose={onClose} t={t} />
     </>
   );
 }
@@ -170,24 +165,6 @@ function CopyProductLinkMenuItem({ menuProps, onClose, t }: ProductMenuProps) {
       }}
     >
       {t("capsule.copyProductLinkAddress")}
-    </MenuItem>
-  );
-}
-
-function ShowProductInfoMenuItem({ menuProps, onClose, t }: ProductMenuProps) {
-  return (
-    <MenuItem
-      onClick={() => {
-        const url = menuProps.productMenu.url;
-        onClose();
-        if (url)
-          menuProps.props.onNavigateApp("explore", {
-            query: url,
-            openProductDetail: true,
-          });
-      }}
-    >
-      {t("capsule.showProductInfo")}
     </MenuItem>
   );
 }

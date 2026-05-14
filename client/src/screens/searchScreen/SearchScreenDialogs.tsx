@@ -10,7 +10,7 @@ import {
 } from "@mui/material";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import SearchFiltersSidebar from "../../search/SearchFiltersSidebar";
-import ProductDetail from "./ProductDetail";
+import ProductDetail from "../../components/productDetail/ProductDetail";
 import type { SearchResultItem } from "./searchTypes";
 import type { SearchScreenStateController } from "./useSearchScreenState";
 

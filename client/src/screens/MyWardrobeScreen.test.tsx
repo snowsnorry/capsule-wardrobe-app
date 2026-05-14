@@ -18,22 +18,48 @@ vi.mock("@mui/material/useMediaQuery", () => ({
   default: () => false,
 }));
 vi.mock("../components/ClothingCard", () => ({
-  default: ({ item, onProductMenuClick, showProductMenu = true }) => (
+  default: ({
+    item,
+    onProductClick,
+    onProductMenuClick,
+    showProductMenu = true,
+  }) => (
     <div
+      role="button"
+      tabIndex={0}
       data-testid={`wardrobe-card-${item.id}`}
       data-show-product-menu={String(showProductMenu)}
+      onClick={() => onProductClick?.(item)}
+      onKeyDown={() => undefined}
     >
       {item.name}
       {showProductMenu ? (
         <button
           type="button"
-          onClick={(event) => onProductMenuClick?.(event, item.url, item)}
+          onClick={(event) => {
+            event.stopPropagation();
+            onProductMenuClick?.(event, item.url, item);
+          }}
         >
           open product menu
         </button>
       ) : null}
     </div>
   ),
+}));
+vi.mock("../components/productDetail/ProductDetailDialog", () => ({
+  default: ({ item, open, onClose, onRemoveFromMyWardrobe }) =>
+    open ? (
+      <div data-testid="product-detail-dialog">
+        {item?.name}
+        <button type="button" onClick={onClose}>
+          close product
+        </button>
+        <button type="button" onClick={() => onRemoveFromMyWardrobe?.(item)}>
+          dialog remove product
+        </button>
+      </div>
+    ) : null,
 }));
 vi.mock("../components/ClothingGridPlaceholder", () => ({
   default: ({ count }) => <div data-testid="wardrobe-placeholder">{count}</div>,
@@ -88,6 +114,7 @@ describe("MyWardrobeScreen", () => {
       ],
     });
     useI18nMock.mockReturnValue({
+      locale: "en",
       t: (key: string) => translations[key] || key,
     });
   });
@@ -137,6 +164,24 @@ describe("MyWardrobeScreen", () => {
         screen.queryByTestId("wardrobe-card-wardrobe-1"),
       ).not.toBeInTheDocument();
     });
+  });
+
+  test("opens product details from a wardrobe card", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+
+    await user.click(await screen.findByTestId("wardrobe-card-wardrobe-1"));
+
+    expect(screen.getByTestId("product-detail-dialog")).toHaveTextContent(
+      "Linen Shirt",
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "dialog remove product" }),
+    );
+    expect(api.removeCatalogItemFromMyWardrobe).toHaveBeenCalledWith(
+      "https://example.com/1",
+    );
   });
 
   test("reloads when source filter changes", async () => {

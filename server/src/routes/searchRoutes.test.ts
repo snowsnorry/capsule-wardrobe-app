@@ -27,6 +27,19 @@ test("search routes expose options, saved search, run, and stats", async (t) => 
     search: { query: "coat", page: 1 },
   });
 
+  const productDetail = await requestJson(
+    baseUrl,
+    "/search/product?url=https%3A%2F%2Fexample.com%2F1",
+    {
+      cookie: AUTH_COOKIE,
+    },
+  );
+  expect(productDetail.response.status).toBe(200);
+  expect(productDetail.json).toEqual({
+    ok: true,
+    item: { url: "https://example.com/1" },
+  });
+
   const searchRun = await requestJson(baseUrl, "/search/run", {
     method: "POST",
     origin: TEST_CLIENT_ORIGIN,
@@ -79,6 +92,48 @@ test("search run maps invalid payload failures", async (t) => {
   );
   expect(invalidSearch.response.status).toBe(400);
   expect(invalidSearch.json).toEqual({ error: "invalid_payload" });
+});
+
+test("search product detail rejects missing or unsafe URLs", async (t) => {
+  const { baseUrl } = await startTestServer(t);
+
+  const missingUrl = await requestJson(baseUrl, "/search/product", {
+    cookie: AUTH_COOKIE,
+  });
+  expect(missingUrl.response.status).toBe(400);
+  expect(missingUrl.json).toEqual({ error: "invalid_payload" });
+
+  const unsafeUrl = await requestJson(
+    baseUrl,
+    "/search/product?url=javascript%3Aalert(1)",
+    {
+      cookie: AUTH_COOKIE,
+    },
+  );
+  expect(unsafeUrl.response.status).toBe(400);
+  expect(unsafeUrl.json).toEqual({ error: "invalid_payload" });
+});
+
+test("search product detail maps store failures", async (t) => {
+  vi.spyOn(console, "error").mockImplementation(() => {});
+
+  const failingServer = await startTestServer(t, {
+    overrides: {
+      getProductsByUrlsInOrderImpl: async () => {
+        throw new Error("product_store_down");
+      },
+    },
+  });
+
+  const productFailure = await requestJson(
+    failingServer.baseUrl,
+    "/search/product?url=https%3A%2F%2Fexample.com%2F1",
+    {
+      cookie: AUTH_COOKIE,
+    },
+  );
+  expect(productFailure.response.status).toBe(503);
+  expect(productFailure.json).toEqual({ error: "service_unavailable" });
 });
 
 test("search routes map options, saved search, run, and stats failures", async (t) => {

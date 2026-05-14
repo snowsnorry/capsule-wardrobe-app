@@ -278,7 +278,6 @@ const ru = {
     cardColumnsTwo: "2 колонки",
     cardColumnsThree: "3 колонки",
     copyProductLinkAddress: "Скопировать адрес ссылки",
-    showProductInfo: "Показать товар",
   },
   myWardrobe: {
     title: "Мой гардероб",
@@ -312,6 +311,7 @@ const ru = {
     clear: "Очистить поиск",
     productCard: "Карточка товара",
     detailEmpty: "Выберите товар, чтобы посмотреть подробности.",
+    detailLoading: "Загружаем детали товара",
     empty: "По этому запросу ничего не найдено.",
     untitled: "Товар без названия",
     noBrand: "Бренд не указан",
@@ -319,6 +319,7 @@ const ru = {
     all: "Все",
     back: "Назад",
     productActions: "Действия с товаром",
+    openProductPage: "Открыть страницу товара",
     yes: "Да",
     no: "Нет",
     resultsCount: "Результатов: {count}",

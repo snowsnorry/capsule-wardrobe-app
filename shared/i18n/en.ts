@@ -277,7 +277,6 @@ const en = {
     cardColumnsTwo: "2 columns",
     cardColumnsThree: "3 columns",
     copyProductLinkAddress: "Copy Link Address",
-    showProductInfo: "Show Product Info",
   },
   myWardrobe: {
     title: "My Wardrobe",
@@ -311,6 +310,7 @@ const en = {
     clear: "Clear search",
     productCard: "Product card",
     detailEmpty: "Select a product to inspect its details.",
+    detailLoading: "Loading product details",
     empty: "No products matched this search.",
     untitled: "Untitled product",
     noBrand: "Unknown brand",
@@ -318,6 +318,7 @@ const en = {
     all: "All",
     back: "Back",
     productActions: "Product actions",
+    openProductPage: "Open product page",
     yes: "Yes",
     no: "No",
     resultsCount: "{count} results",

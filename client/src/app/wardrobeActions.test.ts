@@ -200,6 +200,13 @@ describe("wardrobeActions", () => {
     expect(saveCatalogItemToMyWardrobe).toHaveBeenCalledWith(
       "https://example.com/top-1",
     );
+    expect(context.setIsContentOperationLoading).toHaveBeenNthCalledWith(
+      1,
+      true,
+    );
+    expect(context.setIsContentOperationLoading).toHaveBeenLastCalledWith(
+      false,
+    );
     const successUpdater = mockCalls(context.setStatus).at(-1)?.[0] as (
       current: unknown,
     ) => unknown;
@@ -238,6 +245,13 @@ describe("wardrobeActions", () => {
     expect(removeCatalogItemFromMyWardrobe).toHaveBeenCalledTimes(1);
     expect(removeCatalogItemFromMyWardrobe).toHaveBeenCalledWith(
       "https://example.com/top-1",
+    );
+    expect(context.setIsContentOperationLoading).toHaveBeenNthCalledWith(
+      1,
+      true,
+    );
+    expect(context.setIsContentOperationLoading).toHaveBeenLastCalledWith(
+      false,
     );
     const itemsUpdater = mockCalls(context.setProfileItems).at(-1)?.[0] as (
       current: unknown,

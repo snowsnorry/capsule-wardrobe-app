@@ -61,6 +61,7 @@ type MainScreenViewProps = {
   isOverlaySidebar: boolean;
   mobileColumns: MobileCardColumns;
   nameDialog: NameDialogState;
+  productDetailItem: MainScreenItem | null;
   productMenu: ProductMenuState;
   props: MainScreenProps;
   requestRegenerateAll: () => void;
@@ -75,6 +76,7 @@ type MainScreenViewProps = {
   setHeaderMenuAnchor: (anchor: CapsuleMenuAnchor) => void;
   setImageDialogOpen: (open: boolean) => void;
   setNameDialog: (state: NameDialogState) => void;
+  setProductDetailItem: (item: MainScreenItem | null) => void;
   setProductMenu: (state: ProductMenuState) => void;
   setRowMenuAnchor: (anchor: CapsuleMenuAnchor) => void;
   setRowMenuCapsule: (capsule: CapsuleLike | null) => void;
@@ -265,6 +267,7 @@ function MainScreenCapsulePanel(model: MainScreenViewProps) {
           }
           onGenerateImage={model.props.onGenerateOutfitSetImage}
           onImageClick={() => model.setImageDialogOpen(true)}
+          onProductClick={model.setProductDetailItem}
           onProductMenuClick={(event, url, item) =>
             model.setProductMenu({ anchor: event.currentTarget, url, item })
           }
@@ -286,6 +289,7 @@ function MainScreenDialogsPanel(model: MainScreenViewProps) {
       interactionDisabled={model.interactionDisabled}
       isOverlay={model.isOverlaySidebar}
       nameDialog={model.nameDialog}
+      productDetailItem={model.productDetailItem}
       props={model.props}
       search={model.search}
       share={model.share}
@@ -293,6 +297,7 @@ function MainScreenDialogsPanel(model: MainScreenViewProps) {
       setFiltersOpen={model.setFiltersOpen}
       setImageDialogOpen={model.setImageDialogOpen}
       setNameDialog={model.setNameDialog}
+      setProductDetailItem={model.setProductDetailItem}
       setSearch={model.setSearch}
       setShare={model.setShare}
       onOpenCapsule={model.props.onOpenCapsule}
