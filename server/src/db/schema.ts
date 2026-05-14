@@ -258,6 +258,68 @@ export async function ensureSharedCapsulesTable(): Promise<void> {
   `;
 }
 
+export async function ensureWardrobeTable(): Promise<void> {
+  const sql = getSqlClient();
+  await sql`create extension if not exists pgcrypto`;
+  await sql`create extension if not exists vector`;
+  await sql`
+    create table if not exists wardrobe (
+      id uuid primary key default gen_random_uuid(),
+      profile_email text not null references profiles(email) on delete cascade,
+      product_id text null,
+      name text null,
+      url text null,
+      description text null,
+      brand text null,
+      price double precision null,
+      currency text null,
+      availability text null,
+      image_url text null,
+      audience text null,
+      category text null,
+      season text[] not null default '{}'::text[],
+      formality_level text[] not null default '{}'::text[],
+      style text[] not null default '{}'::text[],
+      occasions text[] not null default '{}'::text[],
+      color_base text[] not null default '{}'::text[],
+      pattern text null,
+      finish text null,
+      is_neutral boolean null,
+      composition text null,
+      silhouette text null,
+      fit text null,
+      closure_type text[] not null default '{}'::text[],
+      embedding vector null,
+      source text not null check (source in ('uploaded', 'from_catalog')),
+      raw_image_url text
+        constraint user_wardrobe_items_raw_image_url_http_check
+        check (raw_image_url is null or raw_image_url ~* '^https?://'),
+      processing_status text not null default 'ready'
+        check (processing_status in (
+          'uploaded',
+          'image_processing',
+          'metadata_processing',
+          'needs_review',
+          'ready',
+          'failed'
+        )),
+      created_at timestamptz not null default now(),
+      updated_at timestamptz not null default now(),
+      constraint wardrobe_from_catalog_url_required_check
+        check (source <> 'from_catalog' or nullif(trim(url), '') is not null)
+    )
+  `;
+  await sql`
+    create index if not exists wardrobe_profile_email_updated_at_idx
+    on wardrobe (profile_email, updated_at desc)
+  `;
+  await sql`
+    create unique index if not exists wardrobe_profile_email_from_catalog_url_idx
+    on wardrobe (profile_email, url)
+    where source = 'from_catalog' and url is not null
+  `;
+}
+
 export async function ensureSearchTable(): Promise<void> {
   const sql = getSqlClient();
   await sql`
@@ -297,5 +359,6 @@ export async function ensureTables(): Promise<void> {
   await ensurePasskeysTables();
   await ensureCapsulesTable();
   await ensureSharedCapsulesTable();
+  await ensureWardrobeTable();
   await ensureSearchTable();
 }

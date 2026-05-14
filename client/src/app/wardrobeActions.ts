@@ -204,6 +204,10 @@ export {
   generateOutfitSetImage,
 } from "./wardrobeImageActions";
 export {
+  removeItemFromMyWardrobe,
+  saveItemToMyWardrobe,
+} from "./myWardrobeItemActions";
+export {
   handleWardrobeError,
   startCapsuleEventStream,
   stopCapsuleEventStream,

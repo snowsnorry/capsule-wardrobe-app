@@ -12,6 +12,7 @@ import {
   ensureProfilesTable,
   ensureSearchTable,
   ensureSharedCapsulesTable,
+  ensureWardrobeTable,
   ensureTables,
 } from "./schema.js";
 
@@ -52,6 +53,7 @@ test("ensure auth, profile, passkey, capsule, shared capsule, and search schemas
   await ensurePasskeysTables();
   await ensureCapsulesTable();
   await ensureSharedCapsulesTable();
+  await ensureWardrobeTable();
   await ensureSearchTable();
 
   expect(
@@ -93,6 +95,21 @@ test("ensure auth, profile, passkey, capsule, shared capsule, and search schemas
   ).toBeTruthy();
   expect(
     statements.some((statement) =>
+      statement.includes("create table if not exists wardrobe"),
+    ),
+  ).toBeTruthy();
+  expect(
+    statements.some((statement) =>
+      statement.includes("user_wardrobe_items_raw_image_url_http_check"),
+    ),
+  ).toBeTruthy();
+  expect(
+    statements.some((statement) =>
+      statement.includes("wardrobe_profile_email_from_catalog_url_idx"),
+    ),
+  ).toBeTruthy();
+  expect(
+    statements.some((statement) =>
       statement.includes("create table if not exists search"),
     ),
   ).toBeTruthy();
@@ -109,6 +126,7 @@ test("ensureTables runs every schema group in dependency order", async () => {
   expect(joined).toMatch(/create table if not exists profile_passkeys/);
   expect(joined).toMatch(/create table if not exists capsules/);
   expect(joined).toMatch(/create table if not exists shared_capsules/);
+  expect(joined).toMatch(/create table if not exists wardrobe/);
   expect(joined).toMatch(/create table if not exists search/);
   expect(
     joined.indexOf("create table if not exists profiles") <

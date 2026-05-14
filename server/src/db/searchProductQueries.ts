@@ -19,6 +19,7 @@ type SearchQueryParams = {
   normalizedUrlPrefix: string | null;
   occasions: string[];
   pattern: string[];
+  profileEmail: string | null;
   priceMax: number | null;
   priceMin: number | null;
   season: string[];
@@ -93,6 +94,7 @@ async function querySearchProductItems(
     occasions,
     offset,
     pattern,
+    profileEmail,
     priceMax,
     priceMin,
     season,
@@ -107,6 +109,13 @@ async function querySearchProductItems(
       audience, category, season, formality_level as "formalityLevel", style, occasions,
       color_base as "colorBase", pattern, finish, is_neutral as "isNeutral", composition,
       silhouette, fit, closure_type as "closureType",
+      exists (
+        select 1
+        from wardrobe
+        where wardrobe.profile_email = ${profileEmail}
+          and wardrobe.source = 'from_catalog'
+          and wardrobe.url = products.url
+      ) as "isSavedToWardrobe",
       case when ${embeddingVector}::text is null then null else embedding <=> ${embeddingVector}::vector end as distance
     from products
     where

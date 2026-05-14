@@ -56,7 +56,7 @@ function renderScreen(props = {}, { layoutMode = "medium" } = {}) {
   return render(
     <ThemeProvider theme={theme}>
       <LocaleProvider>
-        <SearchScreen onNavigateApp={vi.fn()} {...props} />
+        <SearchScreen {...props} />
       </LocaleProvider>
     </ThemeProvider>,
   );
@@ -161,6 +161,63 @@ describe("SearchScreen", () => {
     expect(await screen.findByText("55 results")).toBeInTheDocument();
     expect(screen.getAllByText("Linen Shirt").length).toBeGreaterThan(0);
     expect(screen.getAllByText("unisex").length).toBeGreaterThan(0);
+  });
+
+  test("desktop save action marks selected catalog result as saved", async () => {
+    const onSaveToMyWardrobe = vi.fn(async () => undefined);
+    renderScreen({ onSaveToMyWardrobe });
+
+    expect(await screen.findByText("55 results")).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText("Product actions"));
+    fireEvent.click(
+      screen.getByRole("menuitem", { name: "Save to My Wardrobe" }),
+    );
+
+    await waitFor(() => {
+      expect(onSaveToMyWardrobe).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "1" }),
+      );
+    });
+    await waitFor(() => {
+      expect(screen.getAllByLabelText("Saved").length).toBeGreaterThan(0);
+    });
+  });
+
+  test("desktop remove action confirms and clears selected saved result", async () => {
+    const onRemoveFromMyWardrobe = vi.fn(async () => undefined);
+    searchApi.runSearch.mockResolvedValueOnce(
+      makeResults([
+        {
+          id: "1",
+          name: "Linen Shirt",
+          brand: "UNIQLO",
+          category: "top",
+          url: "https://example.com/1",
+          isSavedToWardrobe: true,
+        },
+      ]),
+    );
+    renderScreen({ onRemoveFromMyWardrobe });
+
+    await waitFor(() => {
+      expect(screen.getAllByLabelText("Saved").length).toBeGreaterThan(0);
+    });
+    fireEvent.click(screen.getByLabelText("Product actions"));
+    fireEvent.click(
+      screen.getByRole("menuitem", { name: "Remove from My Wardrobe" }),
+    );
+    expect(onRemoveFromMyWardrobe).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Remove" }));
+
+    await waitFor(() => {
+      expect(onRemoveFromMyWardrobe).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "1" }),
+      );
+    });
+    await waitFor(() => {
+      expect(screen.queryByLabelText("Saved")).not.toBeInTheDocument();
+    });
   });
 
   test("initial query handoff replaces saved filters on first search", async () => {

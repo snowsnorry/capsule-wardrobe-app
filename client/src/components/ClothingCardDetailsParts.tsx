@@ -1,3 +1,4 @@
+import BookmarkBorderRoundedIcon from "@mui/icons-material/BookmarkBorderRounded";
 import { Box, Stack, Typography } from "@mui/material";
 import type { ReactElement } from "react";
 import type { IconType } from "react-icons";
@@ -91,6 +92,8 @@ function ClothingCardDetails({
   showMobileCategoryPrefix,
   categoryName,
   categoryDisplayLabel,
+  isSavedToWardrobe,
+  savedToWardrobeLabel,
 }: {
   item: ClothingCardItem;
   isMobile: boolean;
@@ -98,6 +101,8 @@ function ClothingCardDetails({
   showMobileCategoryPrefix: boolean;
   categoryName: string;
   categoryDisplayLabel: string;
+  isSavedToWardrobe: boolean;
+  savedToWardrobeLabel: string;
 }): ReactElement {
   return (
     <Stack
@@ -143,6 +148,12 @@ function ClothingCardDetails({
             categoryDisplayLabel={categoryDisplayLabel}
           />
         ) : null}
+        {isSavedToWardrobe ? (
+          <SavedToWardrobeIcon
+            isMobile={isMobile}
+            label={savedToWardrobeLabel}
+          />
+        ) : null}
         <ProductLabelText
           item={item}
           fallbackLabel=""
@@ -150,6 +161,29 @@ function ClothingCardDetails({
         />
       </Typography>
     </Stack>
+  );
+}
+
+function SavedToWardrobeIcon({
+  isMobile,
+  label,
+}: {
+  isMobile: boolean;
+  label: string;
+}) {
+  return (
+    <BookmarkBorderRoundedIcon
+      className="wardrobe-card-saved-icon"
+      titleAccess={label}
+      aria-label={label}
+      sx={{
+        display: "inline-block",
+        color: "#15766f",
+        fontSize: isMobile ? 14 : 16,
+        mr: 0.45,
+        verticalAlign: "-0.16em",
+      }}
+    />
   );
 }
 

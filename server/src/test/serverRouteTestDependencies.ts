@@ -318,6 +318,30 @@ function createSearchAndGenerationDependencies() {
   };
 }
 
+function createWardrobeDependencies() {
+  return {
+    listWardrobeItemsImpl: async () => [
+      {
+        id: "wardrobe-1",
+        name: "Saved shirt",
+        url: "https://example.com/1",
+        image_url: "https://example.com/1.jpg",
+        source: "from_catalog",
+        processing_status: "ready",
+      },
+    ],
+    saveWardrobeItemFromCatalogImpl: async (_payload) => ({
+      id: "wardrobe-1",
+      name: "Saved shirt",
+      url: "https://example.com/1",
+      image_url: "https://example.com/1.jpg",
+      source: "from_catalog",
+      processing_status: "ready",
+    }),
+    deleteWardrobeItemFromCatalogImpl: async () => true,
+  };
+}
+
 export function createDependencies(overrides: DependencyOverrides = {}) {
   return {
     ...createAuthDependencies(),
@@ -325,6 +349,7 @@ export function createDependencies(overrides: DependencyOverrides = {}) {
     ...createProfileDependencies(),
     ...createCapsuleDependencies(),
     ...createSearchAndGenerationDependencies(),
+    ...createWardrobeDependencies(),
     ...overrides,
   };
 }

@@ -159,6 +159,10 @@ function buildSearchQueryParams(input) {
     normalizedUrlPrefix: getNormalizedUrlPrefix(input.urlPrefix),
     occasions: getSearchArray(input, "occasions"),
     pattern: getSearchArray(input, "pattern"),
+    profileEmail:
+      typeof input.profileEmail === "string" && input.profileEmail.trim()
+        ? input.profileEmail.trim()
+        : null,
     priceMax: input.priceMax ?? null,
     priceMin: input.priceMin ?? null,
     season: getSearchArray(input, "season"),

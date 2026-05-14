@@ -277,6 +277,7 @@ function createSearchStore({
 
     let results = await searchProductsImpl({
       ...normalized,
+      profileEmail: email,
       queryEmbedding: embedding,
       semanticDistanceThreshold,
       urlPrefix: isUrlSearch ? normalized.query : null,
@@ -285,6 +286,7 @@ function createSearchStore({
     if (!isUrlSearch && normalized.query && results.total === 0) {
       results = await searchProductsImpl({
         ...normalized,
+        profileEmail: email,
         queryEmbedding: embedding,
         semanticDistanceThreshold: getRelaxedSemanticDistanceThreshold(
           normalized.query,

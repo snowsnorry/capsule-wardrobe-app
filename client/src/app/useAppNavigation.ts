@@ -2,6 +2,18 @@ import { useCallback, useEffect, useState } from "react";
 import type { AppNavigationOptions, AppRoute } from "./appTypes";
 import { getAppRoute, getShareIdFromPath } from "./appRouting";
 
+function getNavigationPath(nextApp: Exclude<AppRoute, "share">): string {
+  if (nextApp === "myWardrobe") {
+    return "/my-wardrobe";
+  }
+
+  if (nextApp === "explore") {
+    return "/explore";
+  }
+
+  return nextApp === "statistics" ? "/statistics" : "/";
+}
+
 export function useAppNavigation() {
   const [appRoute, setAppRoute] = useState<AppRoute>(() =>
     typeof window === "undefined"
@@ -46,12 +58,7 @@ export function useAppNavigation() {
       if (typeof window === "undefined") {
         return;
       }
-      const nextPath =
-        nextApp === "explore"
-          ? "/explore"
-          : nextApp === "statistics"
-            ? "/statistics"
-            : "/";
+      const nextPath = getNavigationPath(nextApp);
       if (window.location.pathname !== nextPath) {
         window.history.pushState({}, "", nextPath);
       }

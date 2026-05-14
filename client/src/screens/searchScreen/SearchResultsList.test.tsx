@@ -14,6 +14,7 @@ const t = (key: string, params?: Record<string, unknown>) => {
     "search.empty": "No results",
     "search.noBrand": "No brand",
     "search.untitled": "Untitled",
+    "myWardrobe.savedBadge": "Saved",
   };
   if (key === "search.resultsCount") {
     return `${params?.count} results`;
@@ -28,7 +29,13 @@ const baseProps = {
   status: { loading: false, error: "" },
   activeChips: [],
   results: [
-    { id: "1", name: "Linen Shirt", brand: "UNIQLO", audience: "all" },
+    {
+      id: "1",
+      name: "Linen Shirt",
+      brand: "UNIQLO",
+      audience: "all",
+      isSavedToWardrobe: true,
+    },
     { id: "2", name: "Wool Trousers", brand: "COS", audience: "woman" },
   ],
   selectedResultId: "1",
@@ -52,6 +59,11 @@ describe("SearchResultsList", () => {
     expect(screen.getByText("55 results")).toBeInTheDocument();
     expect(screen.getByText("Linen Shirt")).toBeInTheDocument();
     expect(screen.getByText("unisex")).toBeInTheDocument();
+    expect(screen.getByLabelText("Saved")).toBeInTheDocument();
+    const titleHtml = screen.getByText("Linen Shirt").closest("p")?.innerHTML;
+    expect(titleHtml?.indexOf("catalog-result-saved-icon")).toBeLessThan(
+      titleHtml?.indexOf("Linen Shirt") ?? 0,
+    );
     expect(screen.getByText("Wool Trousers")).toBeInTheDocument();
     expect(
       screen

@@ -11,12 +11,15 @@ import {
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import SearchFiltersSidebar from "../../search/SearchFiltersSidebar";
 import ProductDetail from "./ProductDetail";
+import type { SearchResultItem } from "./searchTypes";
 import type { SearchScreenStateController } from "./useSearchScreenState";
 
 type SearchScreenDialogsProps = {
   search: SearchScreenStateController;
   t: (key: string, params?: Record<string, unknown>) => string;
   locale: string;
+  onRemoveFromMyWardrobe?: (item: SearchResultItem) => Promise<void> | void;
+  onSaveToMyWardrobe?: (item: SearchResultItem) => Promise<void> | void;
 };
 
 function SearchFiltersDialog({
@@ -93,6 +96,8 @@ function SearchProductDialog({
   search,
   t,
   locale,
+  onRemoveFromMyWardrobe,
+  onSaveToMyWardrobe,
 }: SearchScreenDialogsProps): ReactElement {
   return (
     <Dialog
@@ -127,6 +132,8 @@ function SearchProductDialog({
               t={t}
               locale={locale}
               mobileBackAction={() => search.setIsDetailOpen(false)}
+              onRemoveFromMyWardrobe={onRemoveFromMyWardrobe}
+              onSaveToMyWardrobe={onSaveToMyWardrobe}
             />
           </Box>
         </Stack>
@@ -139,11 +146,19 @@ function SearchScreenDialogs({
   search,
   t,
   locale,
+  onRemoveFromMyWardrobe,
+  onSaveToMyWardrobe,
 }: SearchScreenDialogsProps): ReactElement {
   return (
     <>
       <SearchFiltersDialog search={search} t={t} />
-      <SearchProductDialog search={search} t={t} locale={locale} />
+      <SearchProductDialog
+        search={search}
+        t={t}
+        locale={locale}
+        onRemoveFromMyWardrobe={onRemoveFromMyWardrobe}
+        onSaveToMyWardrobe={onSaveToMyWardrobe}
+      />
     </>
   );
 }

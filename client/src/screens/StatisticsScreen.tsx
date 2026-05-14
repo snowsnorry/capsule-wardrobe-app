@@ -14,7 +14,9 @@ import { useStatisticsChartCards } from "./statisticsScreen/useStatisticsChartCa
 import { useStatisticsStats } from "./statisticsScreen/useStatisticsStats";
 
 type StatisticsScreenProps = {
-  onNavigateApp: (nextApp: "capsule" | "explore" | "statistics") => void;
+  onNavigateApp: (
+    nextApp: "capsule" | "explore" | "myWardrobe" | "statistics",
+  ) => void;
 };
 
 function StatisticsScreen({

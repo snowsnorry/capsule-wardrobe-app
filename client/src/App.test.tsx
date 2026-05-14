@@ -96,7 +96,9 @@ vi.mock("./screens/OnboardingScreen", () => ({
 
 vi.mock("./screens/mainScreen/MainScreen", () => ({
   default: function MainScreenMock(props: {
-    onNavigateApp: (route: "capsule" | "explore" | "statistics") => void;
+    onNavigateApp: (
+      route: "capsule" | "explore" | "myWardrobe" | "statistics",
+    ) => void;
   }) {
     return (
       <div data-testid="main-screen">
@@ -112,12 +114,15 @@ vi.mock("./screens/mainScreen/MainScreen", () => ({
 }));
 
 vi.mock("./screens/SearchScreen", () => ({
-  default: function SearchScreenMock(props: {
-    onNavigateApp: (route: "capsule") => void;
-  }) {
+  default: function SearchScreenMock() {
+    const backToCapsule = () => {
+      window.history.pushState({}, "", "/");
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    };
+
     return (
       <div data-testid="search-screen">
-        <button type="button" onClick={() => props.onNavigateApp("capsule")}>
+        <button type="button" onClick={backToCapsule}>
           back-to-capsule
         </button>
       </div>

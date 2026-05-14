@@ -7,17 +7,21 @@ import {
   SearchScreenDesktop,
   SearchScreenMobile,
 } from "./searchScreen/SearchScreenLayout";
+import type { SearchResultItem } from "./searchScreen/searchTypes";
 import useSearchScreenState from "./searchScreen/useSearchScreenState";
 
 type SearchScreenProps = {
-  onNavigateApp: (nextApp: "capsule" | "explore" | "statistics") => void;
   initialQuery?: string;
   autoOpenProductDetail?: boolean;
+  onRemoveFromMyWardrobe?: (item: SearchResultItem) => Promise<void> | void;
+  onSaveToMyWardrobe?: (item: SearchResultItem) => Promise<void> | void;
 };
 
 function SearchScreen({
   initialQuery = "",
   autoOpenProductDetail = false,
+  onRemoveFromMyWardrobe,
+  onSaveToMyWardrobe,
 }: SearchScreenProps): ReactElement {
   const { t, locale } = useI18n();
   const isMobile = useMediaQuery("(max-width: 1279.95px)");
@@ -28,6 +32,14 @@ function SearchScreen({
     locale,
     t,
   });
+  const handleSaveToMyWardrobe = async (item: SearchResultItem) => {
+    await onSaveToMyWardrobe?.(item);
+    search.markResultSavedToWardrobe(item);
+  };
+  const handleRemoveFromMyWardrobe = async (item: SearchResultItem) => {
+    await onRemoveFromMyWardrobe?.(item);
+    search.markResultRemovedFromWardrobe(item);
+  };
 
   return (
     <>
@@ -38,10 +50,22 @@ function SearchScreen({
         {isMobile ? (
           <SearchScreenMobile search={search} t={t} />
         ) : (
-          <SearchScreenDesktop search={search} t={t} locale={locale} />
+          <SearchScreenDesktop
+            search={search}
+            t={t}
+            locale={locale}
+            onRemoveFromMyWardrobe={handleRemoveFromMyWardrobe}
+            onSaveToMyWardrobe={handleSaveToMyWardrobe}
+          />
         )}
       </Stack>
-      <SearchScreenDialogs search={search} t={t} locale={locale} />
+      <SearchScreenDialogs
+        search={search}
+        t={t}
+        locale={locale}
+        onRemoveFromMyWardrobe={handleRemoveFromMyWardrobe}
+        onSaveToMyWardrobe={handleSaveToMyWardrobe}
+      />
     </>
   );
 }

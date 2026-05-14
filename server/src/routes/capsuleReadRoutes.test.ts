@@ -221,6 +221,16 @@ test("capsule read routes expose bootstrap, recent, search, and lookup fallbacks
   });
   expect(capsule.response.status).toBe(200);
   expect((capsule.json.capsule as { id?: string }).id).toBe("capsule-1");
+  const capsuleBody = capsule.json as {
+    capsule: {
+      effective: {
+        data: { wardrobe: { items: { isSavedToWardrobe?: boolean }[] } };
+      };
+    };
+  };
+  expect(
+    capsuleBody.capsule.effective.data.wardrobe.items[0].isSavedToWardrobe,
+  ).toBe(true);
 
   expect(calls).toEqual([
     { type: "recent", limit: 10 },

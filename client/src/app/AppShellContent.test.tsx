@@ -1,7 +1,34 @@
 import type { ComponentProps, ReactNode } from "react";
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
+
+vi.mock("../components/AppSidebarNavigation", () => ({
+  default: ({
+    capsuleHasUnsavedChanges,
+    onCreateCapsule,
+    onOpenCapsule,
+  }: {
+    capsuleHasUnsavedChanges: (capsule: { status?: string }) => boolean;
+    onCreateCapsule: () => void;
+    onOpenCapsule: (capsuleId: string) => void;
+  }) => (
+    <div>
+      <button type="button" onClick={onCreateCapsule}>
+        create capsule
+      </button>
+      <button type="button" onClick={() => onOpenCapsule("capsule-2")}>
+        open capsule
+      </button>
+      <span data-testid="unsaved-capsule">
+        {String(capsuleHasUnsavedChanges({ status: "modified" }))}
+      </span>
+      <span data-testid="saved-capsule">
+        {String(capsuleHasUnsavedChanges({ status: "saved" }))}
+      </span>
+    </div>
+  ),
+}));
 
 vi.mock("../components/AppSidebarShell", () => ({
   default: ({
@@ -10,12 +37,27 @@ vi.mock("../components/AppSidebarShell", () => ({
     contentWidth,
     desktopContentEndGap,
     desktopContentGap,
+    headerContent,
+    shellTestId,
+    sidebarBodyContent,
   }: {
     children?: ReactNode;
     contentAlignment?: string;
     contentWidth?: string;
     desktopContentEndGap?: number;
     desktopContentGap?: number;
+    headerContent?: (input: {
+      isOverlaySidebar: boolean;
+      openSidebar: () => void;
+    }) => ReactNode;
+    shellTestId?: string;
+    sidebarBodyContent?: (input: {
+      closeSidebar: () => void;
+      desktopSidebarRailWidth: number;
+      expandCollapsedSidebar: () => void;
+      isOverlaySidebar: boolean;
+      isSidebarCollapsed: boolean;
+    }) => ReactNode;
   }) => (
     <div
       data-testid="app-sidebar-shell"
@@ -23,7 +65,17 @@ vi.mock("../components/AppSidebarShell", () => ({
       data-content-width={contentWidth}
       data-desktop-content-end-gap={desktopContentEndGap}
       data-desktop-content-gap={desktopContentGap}
+      data-shell-test-id={shellTestId}
     >
+      {headerContent?.({ isOverlaySidebar: false, openSidebar: vi.fn() })}
+      {headerContent?.({ isOverlaySidebar: true, openSidebar: vi.fn() })}
+      {sidebarBodyContent?.({
+        closeSidebar: vi.fn(),
+        desktopSidebarRailWidth: 64,
+        expandCollapsedSidebar: vi.fn(),
+        isOverlaySidebar: true,
+        isSidebarCollapsed: false,
+      })}
       {children}
     </div>
   ),
@@ -54,6 +106,7 @@ function createProps(
     isContentBusy: false,
     isLarge: false,
     isMainScreenView: false,
+    isMyWardrobeView: false,
     isSearchView: true,
     isSignInView: false,
     isStatisticsView: false,
@@ -96,6 +149,7 @@ describe("AppShellContent", () => {
     expect(shell).toHaveAttribute("data-content-width", "fill");
     expect(shell).toHaveAttribute("data-desktop-content-gap", "32");
     expect(shell).toHaveAttribute("data-desktop-content-end-gap", "0");
+    expect(shell).toHaveAttribute("data-shell-test-id", "search-screen-shell");
     expect(screen.getByText("route content")).toBeInTheDocument();
   });
 
@@ -111,6 +165,62 @@ describe("AppShellContent", () => {
     expect(shell).toHaveAttribute("data-content-width", "fill");
     expect(shell).toHaveAttribute("data-desktop-content-gap", "32");
     expect(shell).toHaveAttribute("data-desktop-content-end-gap", "0");
+    expect(shell).toHaveAttribute(
+      "data-shell-test-id",
+      "statistics-screen-shell",
+    );
     expect(screen.getByText("route content")).toBeInTheDocument();
+  });
+
+  test("uses capsule-like fill layout for the my wardrobe route", () => {
+    renderShellContent({
+      appRoute: "myWardrobe",
+      isMyWardrobeView: true,
+      isSearchView: false,
+    });
+
+    const shell = screen.getByTestId("app-sidebar-shell");
+    expect(shell).toHaveAttribute("data-content-alignment", "start");
+    expect(shell).toHaveAttribute("data-content-width", "fill");
+    expect(shell).toHaveAttribute("data-desktop-content-gap", "32");
+    expect(shell).toHaveAttribute("data-desktop-content-end-gap", "0");
+    expect(shell).toHaveAttribute(
+      "data-shell-test-id",
+      "my-wardrobe-screen-shell",
+    );
+  });
+
+  test("wires sidebar capsule header and capsule navigation actions", () => {
+    const onCreateCapsuleFromSidebar = vi.fn(() => Promise.resolve());
+    const onOpenCapsuleFromSidebar = vi.fn(() => Promise.resolve());
+    renderShellContent({
+      appRoute: "capsule",
+      activeCapsuleMeta: {
+        id: "capsule-1",
+        name: "Travel",
+        status: "modified",
+      },
+      isContentBusy: true,
+      isMainScreenView: true,
+      isSearchView: false,
+      onCreateCapsuleFromSidebar,
+      onOpenCapsuleFromSidebar,
+    });
+
+    expect(
+      screen.getByRole("button", { name: "Toggle sidebar" }),
+    ).toBeDisabled();
+    expect(screen.getByText("Travel")).toBeInTheDocument();
+    expect(screen.getByTestId("unsaved-capsule")).toHaveTextContent("true");
+    expect(screen.getByTestId("saved-capsule")).toHaveTextContent("false");
+
+    fireEvent.click(screen.getByRole("button", { name: "create capsule" }));
+    fireEvent.click(screen.getByRole("button", { name: "open capsule" }));
+
+    expect(onCreateCapsuleFromSidebar).toHaveBeenCalledTimes(1);
+    expect(onOpenCapsuleFromSidebar).toHaveBeenCalledWith(
+      "capsule-2",
+      expect.any(Function),
+    );
   });
 });

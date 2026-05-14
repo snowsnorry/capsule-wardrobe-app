@@ -222,6 +222,8 @@ function ClothingCardView({
   isSelected,
   categoryName,
   categoryDisplayLabel,
+  isSavedToWardrobe,
+  savedToWardrobeLabel,
   showCardActions,
   actionProps,
   mobileCardMetrics,
@@ -242,6 +244,8 @@ function ClothingCardView({
   isSelected: boolean;
   categoryName: string;
   categoryDisplayLabel: string;
+  isSavedToWardrobe: boolean;
+  savedToWardrobeLabel: string;
   showCardActions: boolean;
   actionProps: CardActionProps | null;
   mobileCardMetrics: MobileCardMetrics;
@@ -276,6 +280,8 @@ function ClothingCardView({
         showMobileCategoryPrefix={isMobile && Boolean(categoryDisplayLabel)}
         categoryName={categoryName}
         categoryDisplayLabel={categoryDisplayLabel}
+        isSavedToWardrobe={isSavedToWardrobe}
+        savedToWardrobeLabel={savedToWardrobeLabel}
       />
     </Box>
   );

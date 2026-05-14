@@ -17,6 +17,9 @@ import {
   updateProfileByEmail,
   updateProfileLocaleByEmail,
   deleteProfileByEmail,
+  deleteWardrobeItemFromCatalogByUrl,
+  listWardrobeItemsByEmail,
+  saveWardrobeItemFromCatalogByUrl,
 } from "./db.js";
 
 type SqlCall = {
@@ -86,6 +89,20 @@ type ProductSearchRow = {
   name: string;
   brand: string | null;
   distance?: number;
+};
+
+type WardrobeRow = {
+  id: string;
+  profileEmail: string;
+  productId: string | null;
+  name: string;
+  url: string;
+  imageUrl: string | null;
+  source: string;
+  rawImageUrl: string | null;
+  processingStatus: string;
+  createdAt: string;
+  updatedAt: string;
 };
 
 type ProfileRow = {
@@ -385,6 +402,70 @@ test("db integration filters searchProducts by URL prefix", async () => {
       (value) => value === "https://example.com/products/linen%",
     ),
   ).toBe(true);
+});
+
+test("db integration lists and saves user wardrobe items", async () => {
+  const wardrobeRow: WardrobeRow = {
+    id: "wardrobe-1",
+    profileEmail: "user@example.com",
+    productId: "prod-1",
+    name: "Linen Shirt",
+    url: "https://example.com/products/linen-shirt",
+    imageUrl: "https://example.com/products/linen-shirt.jpg",
+    source: "from_catalog",
+    rawImageUrl: null,
+    processingStatus: "ready",
+    createdAt: new Date(0).toISOString(),
+    updatedAt: new Date(0).toISOString(),
+  };
+  const { sql, calls } = createSqlMock([
+    [wardrobeRow],
+    [wardrobeRow],
+    { count: 1 },
+  ]);
+  setSqlClientOverride(sql);
+
+  const listed = await listWardrobeItemsByEmail({
+    email: "user@example.com",
+    source: "from_catalog",
+  });
+  const saved = await saveWardrobeItemFromCatalogByUrl({
+    email: "user@example.com",
+    url: "https://example.com/products/linen-shirt",
+  });
+  const deleted = await deleteWardrobeItemFromCatalogByUrl({
+    email: "user@example.com",
+    url: "https://example.com/products/linen-shirt",
+  });
+
+  expect(listed[0]).toMatchObject({
+    id: "wardrobe-1",
+    image_url: "https://example.com/products/linen-shirt.jpg",
+    source: "from_catalog",
+    processing_status: "ready",
+  });
+  expect(saved).toMatchObject({
+    id: "wardrobe-1",
+    url: "https://example.com/products/linen-shirt",
+    source: "from_catalog",
+  });
+  expect(calls[0].text).toMatch(/from wardrobe/i);
+  expect(calls[0].values).toEqual([
+    "user@example.com",
+    "from_catalog",
+    "from_catalog",
+  ]);
+  expect(calls[1].text).toMatch(/insert into wardrobe/i);
+  expect(calls[1].text).toMatch(/from products/i);
+  expect(calls[1].text).toMatch(/on conflict \(profile_email, url\)/i);
+  expect(calls[1].values[0]).toBe("user@example.com");
+  expect(calls[1].values[1]).toBe("https://example.com/products/linen-shirt");
+  expect(deleted).toBe(true);
+  expect(calls[2].text).toMatch(/delete from wardrobe/i);
+  expect(calls[2].values).toEqual([
+    "user@example.com",
+    "https://example.com/products/linen-shirt",
+  ]);
 });
 
 test("db integration applies price range to product stats price buckets", async () => {

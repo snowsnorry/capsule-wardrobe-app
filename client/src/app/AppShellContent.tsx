@@ -13,6 +13,10 @@ import AppSidebarNavigation from "../components/AppSidebarNavigation";
 import AppSidebarShell from "../components/AppSidebarShell";
 import RoutePanelFallback from "./RoutePanelFallback";
 import { getShellContainerVerticalPadding } from "./AppShellContentLayout";
+import {
+  getSidebarShellTestId,
+  isFullScreenAppShellRoute,
+} from "./AppShellRouteLayout";
 import { getActiveSidebarApp } from "./appRouting";
 import type {
   AppNavigationOptions,
@@ -37,6 +41,7 @@ type AppShellContentProps = {
   isContentBusy: boolean;
   isLarge: boolean;
   isMainScreenView: boolean;
+  isMyWardrobeView: boolean;
   isSearchView: boolean;
   isSignInView: boolean;
   isStatisticsView: boolean;
@@ -186,18 +191,11 @@ function SidebarHeader(
 
 function AppSidebarPanel(props: AppShellContentProps) {
   const activeSidebarApp = getActiveSidebarApp(props.appRoute);
-  const usesCapsuleLayout =
-    props.isMainScreenView || props.isSearchView || props.isStatisticsView;
+  const usesCapsuleLayout = isFullScreenAppShellRoute(props);
 
   return (
     <AppSidebarShell
-      shellTestId={
-        props.isSearchView
-          ? "search-screen-shell"
-          : props.isStatisticsView
-            ? "statistics-screen-shell"
-            : "main-screen-shell"
-      }
+      shellTestId={getSidebarShellTestId(props)}
       currentApp={activeSidebarApp}
       contentSurface="plain"
       contentAlignment={usesCapsuleLayout ? "start" : "center"}
@@ -301,11 +299,11 @@ function CardPanel(
 }
 
 export default function AppShellContent(props: AppShellContentProps) {
-  const isFullScreenRoute =
-    props.isMainScreenView || props.isSearchView || props.isStatisticsView;
+  const isFullScreenRoute = isFullScreenAppShellRoute(props);
   const verticalPadding = getShellContainerVerticalPadding({
     isFullScreenRoute,
     isMainScreenView: props.isMainScreenView,
+    isMyWardrobeView: props.isMyWardrobeView,
     isSearchView: props.isSearchView,
     isStatisticsView: props.isStatisticsView,
   });

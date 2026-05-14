@@ -12,7 +12,7 @@ import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
 import { useTheme } from "@mui/material/styles";
 import { useI18n } from "../i18n/useI18n";
 
-type AppId = "capsule" | "explore" | "statistics";
+type AppId = "capsule" | "explore" | "myWardrobe" | "statistics";
 
 type AppLauncherProps = {
   currentApp?: AppId;
@@ -23,6 +23,11 @@ type LauncherItem = { id: AppId; label: string; subtitle: string };
 
 function buildLauncherItems(t: (key: string) => string): LauncherItem[] {
   return [
+    {
+      id: "myWardrobe",
+      label: t("launcher.myWardrobe"),
+      subtitle: t("launcher.myWardrobeHint"),
+    },
     {
       id: "capsule",
       label: t("launcher.capsule"),

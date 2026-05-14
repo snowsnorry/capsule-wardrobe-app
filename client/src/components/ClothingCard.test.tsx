@@ -102,6 +102,23 @@ describe("ClothingCard", () => {
     ).not.toBeInTheDocument();
   });
 
+  test("renders an inline saved wardrobe icon for saved catalog items", () => {
+    const { container } = renderCard({
+      item: { ...item, isSavedToWardrobe: true },
+    });
+
+    expect(screen.getByLabelText("myWardrobe.savedBadge")).toBeInTheDocument();
+    expect(
+      container.querySelector(".wardrobe-card-title .wardrobe-card-saved-icon"),
+    ).toBeInTheDocument();
+    const titleHtml = container.querySelector(
+      ".wardrobe-card-title",
+    )?.innerHTML;
+    expect(titleHtml?.indexOf("wardrobe-card-saved-icon")).toBeLessThan(
+      titleHtml?.indexOf("Red Jacket") ?? 0,
+    );
+  });
+
   test("renders an outbound link with the product thumbnail image and attributes", async () => {
     renderCard();
 

@@ -4,6 +4,9 @@ export function getAppRoute(pathname = "/"): AppRoute {
   if (pathname.startsWith("/share/")) {
     return "share";
   }
+  if (pathname === "/my-wardrobe" || pathname === "/my-wardrobe/") {
+    return "myWardrobe";
+  }
   if (pathname === "/explore" || pathname === "/explore/") {
     return "explore";
   }
@@ -20,8 +23,14 @@ export function getShareIdFromPath(pathname = "") {
 
 export function getActiveSidebarApp(
   appRoute: AppRoute,
-): "capsule" | "explore" | "statistics" {
-  return appRoute === "explore" || appRoute === "statistics"
-    ? appRoute
-    : "capsule";
+): "capsule" | "explore" | "myWardrobe" | "statistics" {
+  if (
+    appRoute === "explore" ||
+    appRoute === "myWardrobe" ||
+    appRoute === "statistics"
+  ) {
+    return appRoute;
+  }
+
+  return "capsule";
 }

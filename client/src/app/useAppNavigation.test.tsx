@@ -17,6 +17,12 @@ function Harness() {
       </button>
       <button
         type="button"
+        onClick={() => navigation.navigateApp("myWardrobe")}
+      >
+        my wardrobe
+      </button>
+      <button
+        type="button"
         onClick={() =>
           navigation.navigateApp("explore", {
             query: "https://example.com/products/linen-shirt",
@@ -53,6 +59,7 @@ describe("useAppNavigation", () => {
 
   test.each([
     ["/explore", "explore"],
+    ["/my-wardrobe", "myWardrobe"],
     ["/statistics", "statistics"],
   ])("initializes route state from %s", (path, route) => {
     window.history.replaceState({}, "", path);
@@ -79,6 +86,10 @@ describe("useAppNavigation", () => {
     expect(window.location.pathname).toBe("/statistics");
     expect(screen.getByTestId("query")).toHaveTextContent("");
     expect(screen.getByTestId("auto-open")).toHaveTextContent("false");
+
+    fireEvent.click(screen.getByRole("button", { name: "my wardrobe" }));
+    expect(window.location.pathname).toBe("/my-wardrobe");
+    expect(screen.getByTestId("route")).toHaveTextContent("myWardrobe");
   });
 
   test("clears and resets share route state", () => {

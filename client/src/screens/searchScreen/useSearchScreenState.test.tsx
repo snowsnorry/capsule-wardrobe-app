@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
+import { getSearchStateWithoutChip } from "./searchChipState";
 import useSearchScreenState from "./useSearchScreenState";
 
 const searchApi = vi.hoisted(() => ({
@@ -145,6 +146,36 @@ describe("useSearchScreenState", () => {
     });
   });
 
+  test("builds search state after deleting price and facet chips", () => {
+    const currentState = {
+      ...makeSavedSearch().search,
+      priceEnabled: true,
+      priceMinDraft: 25,
+      priceMaxDraft: 80,
+    };
+
+    expect(
+      getSearchStateWithoutChip({
+        chip: { key: "price", field: "price", label: "Price" },
+        currentState,
+        priceRange: { min: 10, max: 150 },
+      }),
+    ).toEqual({
+      ...currentState,
+      priceEnabled: false,
+      priceMinDraft: 10,
+      priceMaxDraft: 150,
+      page: 1,
+    });
+    expect(
+      getSearchStateWithoutChip({
+        chip: { key: "category-top", field: "category", label: "Top" },
+        currentState,
+        priceRange: { min: 10, max: 150 },
+      }),
+    ).toEqual({ ...currentState, category: [], page: 1 });
+  });
+
   test("uses initial query handoff instead of saved filters on first search", async () => {
     const { result } = renderSearchState({
       initialQuery: "https://example.com/products/linen-shirt",
@@ -260,6 +291,22 @@ describe("useSearchScreenState", () => {
         page: 1,
       }),
     );
+  });
+
+  test("marks matching search results as saved to wardrobe", async () => {
+    const { result } = renderSearchState();
+    await waitForBootstrap();
+
+    act(() => {
+      result.current.markResultSavedToWardrobe({
+        id: "1",
+        url: "https://example.com/1",
+      });
+    });
+
+    expect(result.current.results[0].isSavedToWardrobe).toBe(true);
+    expect(result.current.selectedItem?.isSavedToWardrobe).toBe(true);
+    expect(result.current.results[1].isSavedToWardrobe).toBeUndefined();
   });
 
   test("reset and chip deletion debounce search updates", async () => {

@@ -14,9 +14,14 @@ vi.mock("../../search/SearchFiltersSidebar", () => ({
   ),
 }));
 vi.mock("./ProductDetail", () => ({
-  default: ({ item, mobileBackAction }) => (
+  default: ({ item, mobileBackAction, onSaveToMyWardrobe }) => (
     <div>
       <span>detail {item?.id || "none"}</span>
+      {onSaveToMyWardrobe ? (
+        <button type="button" onClick={() => onSaveToMyWardrobe(item)}>
+          save detail
+        </button>
+      ) : null}
       {mobileBackAction ? (
         <button type="button" onClick={mobileBackAction}>
           back detail
@@ -161,19 +166,23 @@ describe("SearchScreenLayout", () => {
 
   test("desktop layout applies filters and closes the filter panel", async () => {
     const search = createSearch();
+    const onSaveToMyWardrobe = vi.fn();
 
     render(
       <SearchScreenDesktop
         search={search as never}
         t={(key) => key}
         locale="en"
+        onSaveToMyWardrobe={onSaveToMyWardrobe}
       />,
     );
 
     fireEvent.click(screen.getByRole("button", { name: "apply filters" }));
     fireEvent.click(screen.getByRole("button", { name: "reset filters" }));
+    fireEvent.click(screen.getByRole("button", { name: "save detail" }));
 
     expect(search.applyCurrentQuery).toHaveBeenCalled();
     expect(search.resetSearch).toHaveBeenCalled();
+    expect(onSaveToMyWardrobe).toHaveBeenCalledWith(search.selectedItem);
   });
 });

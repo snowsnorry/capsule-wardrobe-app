@@ -177,10 +177,15 @@ vi.mock("./screens/ProfileScreen", () => ({
 }));
 
 vi.mock("./screens/SearchScreen", () => ({
-  default: function SearchScreenMock(props) {
+  default: function SearchScreenMock() {
+    const backToCapsule = () => {
+      window.history.pushState({}, "", "/");
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    };
+
     return (
       <div data-testid="search-screen">
-        <button type="button" onClick={() => props.onNavigateApp("capsule")}>
+        <button type="button" onClick={backToCapsule}>
           back-to-capsule
         </button>
       </div>

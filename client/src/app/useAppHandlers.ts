@@ -24,8 +24,10 @@ import {
   deleteGeneratedOutfitSetImage,
   downloadWardrobePdf,
   generateOutfitSetImage,
+  removeItemFromMyWardrobe,
   refreshWardrobe,
   regenerateSelectedItems,
+  saveItemToMyWardrobe,
   toggleRegenerationSelection,
 } from "./wardrobeActions";
 import {
@@ -221,6 +223,10 @@ function buildAppHandlers({
       resetProfileFilters(getAppActionContext()),
     handleRevertCapsule,
     handleSaveCapsule,
+    handleRemoveFromMyWardrobe: async (item: WardrobeItem) =>
+      removeItemFromMyWardrobe(getAppActionContext(), item),
+    handleSaveToMyWardrobe: async (item: WardrobeItem) =>
+      saveItemToMyWardrobe(getAppActionContext(), item),
     handleSaveProfile: async () => handleApplyCapsuleFilters(),
     handleSaveSettings: async (nextSettings: SettingsSavePayload) =>
       saveSettings(getAppActionContext(), nextSettings),

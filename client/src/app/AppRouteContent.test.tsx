@@ -69,6 +69,10 @@ vi.mock("../screens/SearchScreen", () => ({
   ),
 }));
 
+vi.mock("../screens/MyWardrobeScreen", () => ({
+  default: () => <div>my wardrobe</div>,
+}));
+
 vi.mock("../screens/StatisticsScreen", () => ({
   default: () => <div>statistics</div>,
 }));
@@ -163,6 +167,8 @@ function makeProps(overrides: Record<string, unknown> = {}) {
     onResetProfileFilters: vi.fn(() => Promise.resolve()),
     onRevertCapsule: vi.fn(() => Promise.resolve()),
     onSaveCapsule: vi.fn(() => Promise.resolve()),
+    onRemoveFromMyWardrobe: vi.fn(() => Promise.resolve()),
+    onSaveToMyWardrobe: vi.fn(() => Promise.resolve()),
     onSaveProfile: vi.fn(() => Promise.resolve()),
     onSaveSettings: vi.fn(() => Promise.resolve()),
     onSearchCapsules: vi.fn(() => Promise.resolve([])),
@@ -219,7 +225,7 @@ describe("AppRouteContent", () => {
     expect(setEmail).toHaveBeenCalledWith("next@example.com");
   });
 
-  test("renders search and statistics app routes", async () => {
+  test("renders my wardrobe, search, and statistics app routes", async () => {
     const { rerender } = renderRoute({
       appRoute: "explore",
       searchInitialQuery: "linen",
@@ -227,6 +233,13 @@ describe("AppRouteContent", () => {
     });
 
     expect(await screen.findByText("search:linen:true")).toBeInTheDocument();
+
+    rerender(
+      <Suspense fallback={<div>loading</div>}>
+        <AppRouteContent {...routeProps({ appRoute: "myWardrobe" })} />
+      </Suspense>,
+    );
+    expect(await screen.findByText("my wardrobe")).toBeInTheDocument();
 
     rerender(
       <Suspense fallback={<div>loading</div>}>

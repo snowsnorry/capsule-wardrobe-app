@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { MutableRefObject } from "react";
+import type { Dispatch, MutableRefObject, SetStateAction } from "react";
 import {
   fetchSavedSearch,
   fetchSearchOptions,
@@ -17,6 +17,11 @@ import type {
   SearchOptions,
 } from "../../search/searchState";
 import useSearchScreenDerivedState from "./useSearchScreenDerivedState";
+import { getSearchStateWithoutChip } from "./searchChipState";
+import {
+  markSearchResultRemovedFromWardrobe,
+  markSearchResultSavedToWardrobe,
+} from "./searchResultSavedState";
 import type { SearchResultItem, SearchStatus } from "./searchTypes";
 
 type SearchResponse = {
@@ -36,7 +41,7 @@ type SearchRuntime = UseSearchScreenStateParams & {
   options: SearchOptions;
   setOptions: (value: SearchOptions) => void;
   setDraftState: (value: SearchDraftState) => void;
-  setResults: (value: SearchResultItem[]) => void;
+  setResults: Dispatch<SetStateAction<SearchResultItem[]>>;
   setTotal: (value: number) => void;
   setSelectedResultId: (value: string | number | null) => void;
   setStatus: (value: SearchStatus) => void;
@@ -142,7 +147,6 @@ function createSearchActions(runtime: SearchRuntime) {
     runtime.draftStateRef.current = nextState;
     runtime.setDraftState(nextState);
     clearPendingSearch(runtime.debouncedSearchRef);
-
     if (debounce) {
       runtime.debouncedSearchRef.current = setTimeout(() => {
         runtime.debouncedSearchRef.current = null;
@@ -150,7 +154,6 @@ function createSearchActions(runtime: SearchRuntime) {
       }, SEARCH_AUTO_APPLY_DEBOUNCE_MS);
       return;
     }
-
     await runTrackedSearch(runtime, nextState, false);
   };
 
@@ -187,11 +190,26 @@ function createSearchActions(runtime: SearchRuntime) {
         page: 1,
       }),
     deleteActiveChip: (chip: ActiveFilterChip) =>
-      applySearchState(getStateWithoutChip(runtime, chip), { debounce: true }),
+      applySearchState(
+        getSearchStateWithoutChip({
+          chip,
+          currentState: runtime.draftStateRef.current,
+          priceRange: runtime.options.priceRange,
+        }),
+        { debounce: true },
+      ),
     resetSearch: () =>
       applySearchState(createSearchState(null, runtime.options.priceRange), {
         debounce: true,
       }),
+    markResultSavedToWardrobe: (item: SearchResultItem) =>
+      runtime.setResults((current) =>
+        markSearchResultSavedToWardrobe(current, item),
+      ),
+    markResultRemovedFromWardrobe: (item: SearchResultItem) =>
+      runtime.setResults((current) =>
+        markSearchResultRemovedFromWardrobe(current, item),
+      ),
     selectResult: (item: SearchResultItem) => {
       runtime.setSelectedResultId(item.id);
       if (runtime.isMobile) {
@@ -199,21 +217,6 @@ function createSearchActions(runtime: SearchRuntime) {
       }
     },
   };
-}
-
-function getStateWithoutChip(
-  runtime: SearchRuntime,
-  chip: ActiveFilterChip,
-): SearchDraftState {
-  return chip.field === "price"
-    ? {
-        ...runtime.draftStateRef.current,
-        priceEnabled: false,
-        priceMinDraft: runtime.options.priceRange.min ?? 0,
-        priceMaxDraft: runtime.options.priceRange.max ?? 0,
-        page: 1,
-      }
-    : { ...runtime.draftStateRef.current, [chip.field]: [], page: 1 };
 }
 
 function runBootstrapEffect(runtime: SearchRuntime): () => void {
@@ -350,11 +353,11 @@ function bumpSearchRequestSeq(runtime: SearchRuntime): number {
 }
 
 function clearPendingSearch(
-  debouncedSearchRef: MutableRefObject<ReturnType<typeof setTimeout> | null>,
+  ref: MutableRefObject<ReturnType<typeof setTimeout> | null>,
 ): void {
-  if (debouncedSearchRef.current) {
-    clearTimeout(debouncedSearchRef.current);
-    debouncedSearchRef.current = null;
+  if (ref.current) {
+    clearTimeout(ref.current);
+    ref.current = null;
   }
 }
 

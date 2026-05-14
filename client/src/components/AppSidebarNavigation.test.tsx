@@ -10,7 +10,8 @@ vi.mock("../i18n/useI18n", () => ({
       const value =
         {
           "launcher.capsule": "Capsule",
-          "launcher.explore": "Explore",
+          "launcher.explore": "Catalog",
+          "launcher.myWardrobe": "My Wardrobe",
           "launcher.statistics": "Statistics",
           "capsule.new": "New capsule",
           "capsule.search": "Search capsules",
@@ -148,7 +149,7 @@ describe("AppSidebarNavigation", () => {
     });
 
     const expandedExploreIconRail = screen.getByRole("button", {
-      name: "Explore",
+      name: "Catalog",
     }).firstElementChild;
 
     expect(expandedExploreIconRail).not.toBeNull();
@@ -172,7 +173,7 @@ describe("AppSidebarNavigation", () => {
     );
 
     const collapsedExploreIconRail = screen.getByRole("button", {
-      name: "Explore",
+      name: "Catalog",
     }).firstElementChild;
 
     expect(collapsedExploreIconRail).not.toBeNull();
@@ -215,7 +216,8 @@ describe("AppSidebarNavigation", () => {
       onExpandedAction,
     });
 
-    await user.click(screen.getByRole("button", { name: "Explore" }));
+    await user.click(screen.getByRole("button", { name: "My Wardrobe" }));
+    await user.click(screen.getByRole("button", { name: "Catalog" }));
     await user.click(screen.getByRole("button", { name: "New capsule" }));
     await user.click(screen.getByRole("button", { name: "Search capsules" }));
     await user.click(screen.getByRole("button", { name: "Modified capsule" }));
@@ -223,6 +225,7 @@ describe("AppSidebarNavigation", () => {
       screen.getByRole("button", { name: "Capsule actions Modified capsule" }),
     );
 
+    expect(onNavigateApp).toHaveBeenCalledWith("myWardrobe");
     expect(onNavigateApp).toHaveBeenCalledWith("explore");
     expect(onExpandedAction).toHaveBeenCalled();
     expect(onCreateCapsule).toHaveBeenCalled();

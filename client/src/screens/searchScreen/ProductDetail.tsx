@@ -1,13 +1,16 @@
 import { useEffect, useState } from "react";
 import type { ReactElement } from "react";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
+import BookmarkBorderRoundedIcon from "@mui/icons-material/BookmarkBorderRounded";
 import OpenInNewRoundedIcon from "@mui/icons-material/OpenInNewRounded";
 import { Box, IconButton, Stack, Typography, useTheme } from "@mui/material";
 import ProductLabelText from "../../components/ProductLabelText";
 import { translateOption } from "../../i18n";
+import { isSavedToWardrobe } from "../../utils/savedWardrobeState";
 import { getColorSwatchStyle } from "../../../../shared/colorSwatches.js";
 import { buildProductDetailGroups } from "../../../../shared/productDetail.js";
 import { getSafeHttpUrl } from "../../../../shared/urlSecurity.js";
+import ProductActionsMenu from "./ProductActionsMenu";
 import type { SearchResultItem } from "./searchTypes";
 
 type ProductDetailProps = {
@@ -15,6 +18,8 @@ type ProductDetailProps = {
   t: (key: string, params?: Record<string, unknown>) => string;
   locale: string;
   mobileBackAction?: (() => void) | null;
+  onRemoveFromMyWardrobe?: (item: SearchResultItem) => Promise<void> | void;
+  onSaveToMyWardrobe?: (item: SearchResultItem) => Promise<void> | void;
 };
 
 type DetailGroupsProps = {
@@ -28,6 +33,8 @@ function ProductDetail({
   t,
   locale,
   mobileBackAction = null,
+  onRemoveFromMyWardrobe,
+  onSaveToMyWardrobe,
 }: ProductDetailProps): ReactElement {
   if (!item) {
     return (
@@ -46,6 +53,8 @@ function ProductDetail({
         t={t}
         locale={locale}
         mobileBackAction={mobileBackAction}
+        onRemoveFromMyWardrobe={onRemoveFromMyWardrobe}
+        onSaveToMyWardrobe={onSaveToMyWardrobe}
       />
       {item.description ? (
         <Typography variant="body1" color="text.secondary">
@@ -63,23 +72,25 @@ function ProductHeader({
   t,
   locale,
   mobileBackAction,
+  onRemoveFromMyWardrobe,
+  onSaveToMyWardrobe,
 }: Required<Pick<ProductDetailProps, "item" | "t" | "locale">> &
-  Pick<ProductDetailProps, "mobileBackAction">) {
+  Pick<
+    ProductDetailProps,
+    "mobileBackAction" | "onRemoveFromMyWardrobe" | "onSaveToMyWardrobe"
+  >) {
   const productUrl = getSafeHttpUrl(item.url);
+  const isSaved = isSavedToWardrobe(item);
+  const savedLabel = t("myWardrobe.savedBadge");
 
   return (
     <Box>
-      <Box sx={{ position: "relative" }}>
+      <Stack direction="row" spacing={1} alignItems="center">
         {mobileBackAction ? (
           <IconButton
             aria-label={t("search.back")}
             onClick={mobileBackAction}
-            sx={{
-              position: "absolute",
-              top: -4,
-              left: -8,
-              zIndex: 1,
-            }}
+            sx={{ ml: -1, flexShrink: 0 }}
           >
             <ArrowBackRoundedIcon />
           </IconButton>
@@ -97,6 +108,8 @@ function ProductHeader({
             color: "secondary.main",
             textDecoration: "none",
             display: "block",
+            flex: 1,
+            minWidth: 0,
             "&:hover": productUrl ? { textDecoration: "underline" } : undefined,
           }}
         >
@@ -107,9 +120,9 @@ function ProductHeader({
               color: "inherit",
               display: "block",
               overflowWrap: "anywhere",
-              textIndent: mobileBackAction ? "40px" : 0,
             }}
           >
+            {isSaved ? <SavedToWardrobeTitleIcon label={savedLabel} /> : null}
             <ProductLabelText
               item={item}
               fallbackLabel={t("search.untitled")}
@@ -119,7 +132,16 @@ function ProductHeader({
             ) : null}
           </Typography>
         </Box>
-      </Box>
+        {onSaveToMyWardrobe ? (
+          <ProductActionsMenu
+            item={item}
+            t={t}
+            isSavedToWardrobe={isSaved}
+            onRemoveFromMyWardrobe={onRemoveFromMyWardrobe}
+            onSaveToMyWardrobe={onSaveToMyWardrobe}
+          />
+        ) : null}
+      </Stack>
       {item.brand ? <Typography variant="h6">{item.brand}</Typography> : null}
       {item.category ? (
         <Typography variant="body2" color="text.secondary">
@@ -127,6 +149,23 @@ function ProductHeader({
         </Typography>
       ) : null}
     </Box>
+  );
+}
+
+function SavedToWardrobeTitleIcon({ label }: { label: string }) {
+  return (
+    <BookmarkBorderRoundedIcon
+      className="catalog-detail-saved-icon"
+      titleAccess={label}
+      aria-label={label}
+      sx={{
+        color: "#15766f",
+        display: "inline-block",
+        fontSize: 20,
+        mr: 0.6,
+        verticalAlign: "-0.12em",
+      }}
+    />
   );
 }
 

@@ -113,9 +113,11 @@ export type MainScreenProps = {
   onApplyFilters: () => Promise<void> | void;
   onResetFilters: () => Promise<void> | void;
   onNavigateApp: (
-    nextApp: "capsule" | "explore" | "statistics",
+    nextApp: "capsule" | "explore" | "myWardrobe" | "statistics",
     options?: AppNavigationOptions,
   ) => void;
+  onRemoveFromMyWardrobe?: (item: MainScreenItem) => Promise<void> | void;
+  onSaveToMyWardrobe?: (item: MainScreenItem) => Promise<void> | void;
   selectedRegenerationUrls: string[];
   partialRegenerationPendingUrls: string[];
   pendingImageSetIndexes?: number[];

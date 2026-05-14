@@ -4,6 +4,7 @@ import { useI18n } from "../i18n/useI18n";
 import { CapsuleChildren } from "./AppSidebarCapsuleNavigation";
 import {
   CapsuleTopLevelNavigation,
+  MyWardrobeTopLevelNavigation,
   SidebarNavigationDivider,
   SidebarSecondaryNavigation,
 } from "./AppSidebarNavigationParts";
@@ -41,6 +42,14 @@ function AppSidebarNavigation({
 
   return (
     <Stack sx={{ height: "100%", minHeight: 0, overflow: "hidden" }}>
+      <MyWardrobeTopLevelNavigation
+        isActive={activeApp === "myWardrobe"}
+        isInteractionDisabled={isInteractionDisabled}
+        isCollapsedDesktop={isCollapsedDesktop}
+        desktopSidebarRailWidth={desktopSidebarRailWidth}
+        onNavigateApp={handleNavigateApp}
+        t={t}
+      />
       <CapsuleTopLevelNavigation
         isActive={activeApp === "capsule"}
         isExpanded={showCapsuleChildren}

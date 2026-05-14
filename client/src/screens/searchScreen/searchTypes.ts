@@ -7,6 +7,9 @@ export type SearchResultItem = {
   imageUrl?: string;
   description?: string;
   audience?: string;
+  isSavedToWardrobe?: boolean;
+  is_saved_to_wardrobe?: boolean;
+  savedToMyWardrobe?: boolean;
   [key: string]: unknown;
 };
 

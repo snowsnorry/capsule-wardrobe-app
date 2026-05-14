@@ -29,8 +29,10 @@ const wardrobeActions = vi.hoisted(() => ({
   deleteGeneratedOutfitSetImage: vi.fn(),
   downloadWardrobePdf: vi.fn(),
   generateOutfitSetImage: vi.fn(),
+  removeItemFromMyWardrobe: vi.fn(),
   refreshWardrobe: vi.fn(),
   regenerateSelectedItems: vi.fn(),
+  saveItemToMyWardrobe: vi.fn(),
   toggleRegenerationSelection: vi.fn(),
 }));
 const sessionActions = vi.hoisted(() => ({
@@ -134,6 +136,12 @@ describe("useAppHandlers", () => {
     result.current.handleRequestSignOut();
     await result.current.handleResetProfileFilters();
     await result.current.handleSaveProfile();
+    await result.current.handleRemoveFromMyWardrobe({
+      url: "https://example.com/top",
+    });
+    await result.current.handleSaveToMyWardrobe({
+      url: "https://example.com/top",
+    });
     await result.current.handleSaveSettings({
       fullname: "Ada",
       locale: "en",
@@ -168,6 +176,14 @@ describe("useAppHandlers", () => {
     expect(wardrobeActions.downloadWardrobePdf).toHaveBeenCalledWith(
       actionContext,
       "capsule-1",
+    );
+    expect(wardrobeActions.removeItemFromMyWardrobe).toHaveBeenCalledWith(
+      actionContext,
+      { url: "https://example.com/top" },
+    );
+    expect(wardrobeActions.saveItemToMyWardrobe).toHaveBeenCalledWith(
+      actionContext,
+      { url: "https://example.com/top" },
     );
     expect(profileActions.saveSettings).toHaveBeenCalledWith(actionContext, {
       fullname: "Ada",

@@ -2,6 +2,10 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import type { Mock } from "vitest";
 import { downloadCapsulePdf } from "../api/capsules";
 import {
+  removeCatalogItemFromMyWardrobe,
+  saveCatalogItemToMyWardrobe,
+} from "../api/myWardrobe";
+import {
   deleteOutfitSetImage,
   generateOutfitSetImage,
   regenerateCapsuleWardrobe,
@@ -13,8 +17,10 @@ import {
   downloadWardrobePdf,
   generateOutfitSetImage as generateOutfitSetImageAction,
   handleWardrobeError,
+  removeItemFromMyWardrobe,
   refreshWardrobe,
   regenerateSelectedItems,
+  saveItemToMyWardrobe,
   startCapsuleEventStream,
   stopCapsuleEventStream,
   toggleRegenerationSelection,
@@ -23,6 +29,10 @@ import { createActionContext } from "./testUtils";
 
 vi.mock("../api/capsules", () => ({
   downloadCapsulePdf: vi.fn(),
+}));
+vi.mock("../api/myWardrobe", () => ({
+  removeCatalogItemFromMyWardrobe: vi.fn(),
+  saveCatalogItemToMyWardrobe: vi.fn(),
 }));
 vi.mock("../api/wardrobe", () => ({
   deleteOutfitSetImage: vi.fn(),
@@ -172,6 +182,105 @@ describe("wardrobeActions", () => {
     )?.[0] as (current: unknown) => unknown;
     expect(genericUpdater({ error: "" })).toEqual({
       error: "Failed to regenerate selected items",
+    });
+  });
+
+  test("saveItemToMyWardrobe posts catalog item URLs and reports failures", async () => {
+    vi.mocked(saveCatalogItemToMyWardrobe).mockResolvedValueOnce({
+      ok: true,
+    });
+    const context = createActionContext();
+
+    await saveItemToMyWardrobe(context, {
+      url: " https://example.com/top-1 ",
+    });
+    await saveItemToMyWardrobe(context, { url: " " });
+
+    expect(saveCatalogItemToMyWardrobe).toHaveBeenCalledTimes(1);
+    expect(saveCatalogItemToMyWardrobe).toHaveBeenCalledWith(
+      "https://example.com/top-1",
+    );
+    const successUpdater = mockCalls(context.setStatus).at(-1)?.[0] as (
+      current: unknown,
+    ) => unknown;
+    expect(successUpdater({ error: "old" })).toEqual({
+      error: "",
+      infoKey: "myWardrobe.saved",
+      infoParams: null,
+    });
+
+    vi.mocked(saveCatalogItemToMyWardrobe).mockRejectedValueOnce(
+      new Error("not_found"),
+    );
+    await saveItemToMyWardrobe(context, { url: "https://example.com/missing" });
+    const notFoundUpdater = mockCalls(context.setStatus).at(-1)?.[0] as (
+      current: unknown,
+    ) => unknown;
+    expect(notFoundUpdater({ error: "" })).toEqual({
+      error: "myWardrobe.saveNotFound",
+      infoKey: "",
+      infoParams: null,
+    });
+  });
+
+  test("removeItemFromMyWardrobe deletes catalog item URLs and clears saved state", async () => {
+    vi.mocked(removeCatalogItemFromMyWardrobe).mockResolvedValueOnce({
+      ok: true,
+      removed: true,
+    });
+    const context = createActionContext();
+
+    await removeItemFromMyWardrobe(context, {
+      url: " https://example.com/top-1 ",
+    });
+    await removeItemFromMyWardrobe(context, { url: " " });
+
+    expect(removeCatalogItemFromMyWardrobe).toHaveBeenCalledTimes(1);
+    expect(removeCatalogItemFromMyWardrobe).toHaveBeenCalledWith(
+      "https://example.com/top-1",
+    );
+    const itemsUpdater = mockCalls(context.setProfileItems).at(-1)?.[0] as (
+      current: unknown,
+    ) => unknown;
+    expect(
+      itemsUpdater([
+        {
+          url: "https://example.com/top-1",
+          isSavedToWardrobe: true,
+          is_saved_to_wardrobe: true,
+          savedToMyWardrobe: true,
+        },
+      ]),
+    ).toEqual([
+      {
+        url: "https://example.com/top-1",
+        isSavedToWardrobe: false,
+        is_saved_to_wardrobe: false,
+        savedToMyWardrobe: false,
+      },
+    ]);
+    const successUpdater = mockCalls(context.setStatus).at(-1)?.[0] as (
+      current: unknown,
+    ) => unknown;
+    expect(successUpdater({ error: "old" })).toEqual({
+      error: "",
+      infoKey: "myWardrobe.removed",
+      infoParams: null,
+    });
+
+    vi.mocked(removeCatalogItemFromMyWardrobe).mockRejectedValueOnce(
+      new Error("network"),
+    );
+    await removeItemFromMyWardrobe(context, {
+      url: "https://example.com/top-1",
+    });
+    const errorUpdater = mockCalls(context.setStatus).at(-1)?.[0] as (
+      current: unknown,
+    ) => unknown;
+    expect(errorUpdater({ error: "" })).toEqual({
+      error: "myWardrobe.removeFailed",
+      infoKey: "",
+      infoParams: null,
     });
   });
 

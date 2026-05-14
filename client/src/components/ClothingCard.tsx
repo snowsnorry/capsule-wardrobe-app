@@ -3,6 +3,7 @@ import type { MouseEvent, ReactElement } from "react";
 import { useI18n } from "../i18n/useI18n";
 import { formatProductLabel } from "../utils/productLabel";
 import { getSafeHttpUrl } from "../../../shared/urlSecurity.js";
+import { isSavedToWardrobe } from "../utils/savedWardrobeState";
 import {
   buildProductImageThumbnailSizes,
   buildProductImageThumbnails,
@@ -29,9 +30,12 @@ type ClothingCardProps = {
     productUrl: string,
     item: ClothingCardItem,
   ) => void;
+  showProductMenu?: boolean;
   isMobile?: boolean;
   mobileColumns?: 1 | 2 | 3;
 };
+
+const savedWardrobeSourceOptions = { includeWardrobeSource: true };
 
 function normalizeClothingCardProps(props: ClothingCardProps) {
   return {
@@ -42,6 +46,7 @@ function normalizeClothingCardProps(props: ClothingCardProps) {
     isRegenerating: props.isRegenerating ?? false,
     onToggleSelected: props.onToggleSelected,
     onProductMenuClick: props.onProductMenuClick,
+    showProductMenu: props.showProductMenu ?? true,
     isMobile: props.isMobile ?? false,
     mobileColumns: props.mobileColumns ?? 2,
   };
@@ -99,6 +104,7 @@ function ClothingCard(props: ClothingCardProps): ReactElement {
     isRegenerating,
     onToggleSelected,
     onProductMenuClick,
+    showProductMenu,
     isMobile,
     mobileColumns,
   } = normalizeClothingCardProps(props);
@@ -117,23 +123,21 @@ function ClothingCard(props: ClothingCardProps): ReactElement {
   );
   const mobileCardMetrics = getMobileCardMetrics(mobileColumns);
   const showToggleButton = isSelectionMode && isSelectable;
-  const showProductMenuButton = !isSelectionMode && Boolean(productUrl);
+  const showProductMenuButton =
+    showProductMenu && !isSelectionMode && Boolean(productUrl);
   const showCardActions = showToggleButton || showProductMenuButton;
   const showMobileProductMenuButton = isMobile && showProductMenuButton;
   const showActionButtons = isMobile || isSelected;
-
   const stopCardActionPropagation = (event: MouseEvent<HTMLElement>) => {
     event.preventDefault();
     event.stopPropagation();
   };
-
   const handleToggleSelected = (event: MouseEvent<HTMLButtonElement>) => {
     stopCardActionPropagation(event);
     if (!isRegenerating && typeof onToggleSelected === "function") {
       onToggleSelected(item);
     }
   };
-
   const handleProductMenuClick = (event: MouseEvent<HTMLButtonElement>) => {
     stopCardActionPropagation(event);
     if (productUrl && typeof onProductMenuClick === "function") {
@@ -159,7 +163,6 @@ function ClothingCard(props: ClothingCardProps): ReactElement {
     },
     t,
   });
-
   return (
     <ClothingCardView
       item={item}
@@ -173,6 +176,8 @@ function ClothingCard(props: ClothingCardProps): ReactElement {
       isSelected={isSelected}
       categoryName={categoryName}
       categoryDisplayLabel={categoryDisplayLabel}
+      isSavedToWardrobe={isSavedToWardrobe(item, savedWardrobeSourceOptions)}
+      savedToWardrobeLabel={t("myWardrobe.savedBadge")}
       showCardActions={showCardActions}
       actionProps={actionProps}
       mobileCardMetrics={mobileCardMetrics}

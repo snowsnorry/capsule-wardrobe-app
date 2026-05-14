@@ -260,6 +260,7 @@ test("runSavedSearch uses URL prefix for URL queries and skips embeddings", asyn
   expect(result.total).toBe(1);
   expect(upsertCalls[0].embedding).toBe(null);
   expect(productCalls.length).toBe(1);
+  expect(productCalls[0].profileEmail).toBe("person@example.com");
   expect(productCalls[0].urlPrefix).toBe("https://example.com/products/1");
   expect(productCalls[0].queryEmbedding).toBe(null);
 });
@@ -289,6 +290,7 @@ test("runSavedSearch retries text searches with relaxed semantic threshold when 
 
   expect(result.total).toBe(2);
   expect(productCalls.length).toBe(2);
+  expect(productCalls[1].profileEmail).toBe("person@example.com");
   expect(productCalls[0].semanticDistanceThreshold).toBe(0.4);
   expect(
     Math.abs(productCalls[1].semanticDistanceThreshold - 0.48) < 1e-9,

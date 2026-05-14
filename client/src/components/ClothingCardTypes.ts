@@ -7,6 +7,10 @@ type ClothingCardItem = {
   image_url?: string | null;
   url?: string | null;
   audience?: string | null;
+  source?: string | null;
+  isSavedToWardrobe?: boolean | null;
+  is_saved_to_wardrobe?: boolean | null;
+  savedToMyWardrobe?: boolean | null;
 };
 
 type MobileCardMetrics = {

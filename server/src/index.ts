@@ -73,8 +73,11 @@ import {
   checkDatabaseConnection,
   consumePasskeyChallenge,
   deletePasskeyByIdForEmail,
+  deleteWardrobeItemFromCatalogByUrl,
   getPasskeyByCredentialId,
   getProductsByUrlsInOrder,
+  listWardrobeItemsByEmail,
+  saveWardrobeItemFromCatalogByUrl,
   insertPasskey,
   insertPasskeyChallenge,
   listPasskeysByEmail,
@@ -104,6 +107,7 @@ import {
   hasUnexpectedCapsuleCreateFields,
   hasUnexpectedCapsuleFiltersFields,
   hasUnexpectedRejectedUrlsFields,
+  annotateWardrobeSavedItems,
   isTruthyQueryFlag,
   toCapsuleResponse,
   toCapsuleSummary,
@@ -124,6 +128,7 @@ import { registerSearchRoutes } from "./routes/searchRoutes.js";
 import { registerProfileMutationRoutes } from "./routes/profileMutationRoutes.js";
 import { registerHealthImageRoutes } from "./routes/healthImageRoutes.js";
 import { registerSessionAuthRoutes } from "./routes/sessionAuthRoutes.js";
+import { registerWardrobeRoutes } from "./routes/wardrobeRoutes.js";
 import { logError, logInfo } from "./logger.js";
 
 const sharpConfig = configureSharp();
@@ -195,7 +200,9 @@ function createAppDependencies(options: Record<string, unknown> = {}) {
     importSharedCapsuleImpl: importSharedCapsule,
     insertPasskeyChallengeImpl: insertPasskeyChallenge,
     insertPasskeyImpl: insertPasskey,
+    deleteWardrobeItemFromCatalogImpl: deleteWardrobeItemFromCatalogByUrl,
     listPasskeysImpl: listPasskeysByEmail,
+    listWardrobeItemsImpl: listWardrobeItemsByEmail,
     listRecentCapsulesImpl: listRecentCapsules,
     nodeEnv: NODE_ENV,
     passkeyOrigin: PASSKEY_ORIGIN,
@@ -210,6 +217,7 @@ function createAppDependencies(options: Record<string, unknown> = {}) {
     revokeSessionImpl: revokeSession,
     runSavedSearchImpl: runSavedSearch,
     saveCapsuleImpl: saveCapsule,
+    saveWardrobeItemFromCatalogImpl: saveWardrobeItemFromCatalogByUrl,
     searchCapsulesImpl: searchCapsules,
     sendLoginCodeEmailImpl: sendLoginCodeEmail,
     setActiveCapsuleIdImpl: setActiveCapsuleId,
@@ -270,6 +278,7 @@ function createAppRouteContext(deps) {
     hasUnexpectedCapsuleCreateFields,
     hasUnexpectedCapsuleFiltersFields,
     hasUnexpectedRejectedUrlsFields,
+    annotateWardrobeSavedItems,
     isTruthyQueryFlag,
     normalizeCapsuleSnapshot,
     normalizeProfileSettingsPayload,
@@ -286,6 +295,7 @@ function registerAuthenticationRoutes(app, routeContext) {
 
 function registerDomainRoutes(app, routeContext) {
   registerProfileReadRoutes(app, routeContext);
+  registerWardrobeRoutes(app, routeContext);
   registerCapsuleReadRoutes(app, routeContext);
   registerCapsuleMutationRoutes(app, routeContext);
   registerSearchRoutes(app, routeContext);

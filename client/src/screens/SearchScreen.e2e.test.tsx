@@ -55,7 +55,7 @@ function renderScreen(props = {}) {
   return render(
     <ThemeProvider theme={theme}>
       <LocaleProvider>
-        <SearchScreen onNavigateApp={vi.fn()} {...props} />
+        <SearchScreen {...props} />
       </LocaleProvider>
     </ThemeProvider>,
   );

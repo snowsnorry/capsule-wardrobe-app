@@ -166,7 +166,12 @@ export type WardrobeMutationResponse = {
   status?: string;
 };
 
-export type AppRoute = "capsule" | "explore" | "statistics" | "share";
+export type AppRoute =
+  | "capsule"
+  | "explore"
+  | "myWardrobe"
+  | "statistics"
+  | "share";
 
 export type AppNavigationOptions = {
   query?: string;

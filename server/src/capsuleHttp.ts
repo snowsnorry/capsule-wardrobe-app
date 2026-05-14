@@ -172,3 +172,103 @@ export function getCapsuleItems(capsule) {
     ? sortWardrobeItems(wardrobe.items)
     : [];
 }
+
+function annotateItemSavedState(item, savedUrls: Set<string>) {
+  if (!item || typeof item !== "object" || Array.isArray(item)) {
+    return item;
+  }
+
+  const itemUrl = String(item.url || "").trim();
+  return {
+    ...item,
+    isSavedToWardrobe: Boolean(itemUrl && savedUrls.has(itemUrl)),
+  };
+}
+
+function annotateWardrobePayload(payload, savedUrls: Set<string>) {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return payload;
+  }
+
+  if (!Array.isArray(payload.items)) {
+    return payload;
+  }
+
+  return {
+    ...payload,
+    items: payload.items.map((item) => annotateItemSavedState(item, savedUrls)),
+  };
+}
+
+function annotateCapsuleSnapshot(snapshot, savedUrls: Set<string>) {
+  if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot)) {
+    return snapshot;
+  }
+
+  const data =
+    snapshot.data &&
+    typeof snapshot.data === "object" &&
+    !Array.isArray(snapshot.data)
+      ? snapshot.data
+      : null;
+  const wardrobe = data
+    ? annotateWardrobePayload(data.wardrobe, savedUrls)
+    : null;
+  const topLevelItems = Array.isArray(snapshot.items)
+    ? snapshot.items.map((item) => annotateItemSavedState(item, savedUrls))
+    : null;
+
+  return {
+    ...snapshot,
+    ...(topLevelItems ? { items: topLevelItems } : {}),
+    ...(data
+      ? {
+          data: {
+            ...data,
+            wardrobe,
+          },
+        }
+      : {}),
+  };
+}
+
+export function annotateWardrobeSavedItems(value, savedUrlsInput = []) {
+  const savedUrls = new Set(
+    Array.from(savedUrlsInput)
+      .map((url) => String(url || "").trim())
+      .filter(Boolean),
+  );
+
+  if (savedUrls.size === 0) {
+    return value;
+  }
+
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return value;
+  }
+
+  const annotated = { ...value };
+  for (const key of [
+    "draft",
+    "saved",
+    "effective",
+    "snapshot",
+    "activeSnapshot",
+  ]) {
+    if (value[key]) {
+      annotated[key] = annotateCapsuleSnapshot(value[key], savedUrls);
+    }
+  }
+
+  if (value.data) {
+    annotated.data = annotateCapsuleSnapshot(value, savedUrls).data;
+  }
+
+  if (Array.isArray(value.items)) {
+    annotated.items = value.items.map((item) =>
+      annotateItemSavedState(item, savedUrls),
+    );
+  }
+
+  return annotated;
+}

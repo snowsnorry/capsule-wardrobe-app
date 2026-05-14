@@ -9,9 +9,12 @@ vi.mock("../../search/SearchFiltersSidebar", () => ({
   ),
 }));
 vi.mock("./ProductDetail", () => ({
-  default: ({ item, mobileBackAction }) => (
+  default: ({ item, mobileBackAction, onSaveToMyWardrobe }) => (
     <div>
       <span>detail {item?.id || "none"}</span>
+      <button type="button" onClick={() => onSaveToMyWardrobe(item)}>
+        save detail
+      </button>
       <button type="button" onClick={mobileBackAction}>
         close detail
       </button>
@@ -40,6 +43,7 @@ function createSearch() {
 describe("SearchScreenDialogs", () => {
   test("applies filters, closes filters, and closes product detail", async () => {
     const search = createSearch();
+    const onSaveToMyWardrobe = vi.fn();
 
     render(
       <SearchScreenDialogs
@@ -51,6 +55,7 @@ describe("SearchScreenDialogs", () => {
           })[key] || key
         }
         locale="en"
+        onSaveToMyWardrobe={onSaveToMyWardrobe}
       />,
     );
 
@@ -67,5 +72,8 @@ describe("SearchScreenDialogs", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "close detail" }));
     expect(search.setIsDetailOpen).toHaveBeenCalledWith(false);
+
+    fireEvent.click(screen.getByRole("button", { name: "save detail" }));
+    expect(onSaveToMyWardrobe).toHaveBeenCalledWith(search.selectedItem);
   });
 });

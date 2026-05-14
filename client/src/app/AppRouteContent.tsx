@@ -4,6 +4,7 @@ import type {
   AppNavigationOptions,
   AppRoute,
   CapsuleMeta,
+  CapsuleSidebarActions,
   OutfitSetSnapshot,
   ProfileSettings,
   StatusState,
@@ -18,6 +19,7 @@ import {
 import { importMainScreen } from "./mainScreenLoader";
 
 const MainScreen = lazy(importMainScreen);
+const MyWardrobeScreen = lazy(() => import("../screens/MyWardrobeScreen"));
 const OnboardingScreen = lazy(() => import("../screens/OnboardingScreen"));
 const ProfileScreen = lazy(() => import("../screens/ProfileScreen"));
 const SearchScreen = lazy(() => import("../screens/SearchScreen"));
@@ -122,6 +124,8 @@ type AppRouteContentProps = SharedFilterProps & {
   onResetProfileFilters: () => Promise<void>;
   onRevertCapsule: (capsuleId?: string) => Promise<void>;
   onSaveCapsule: (capsuleId?: string) => Promise<void>;
+  onRemoveFromMyWardrobe: (item: WardrobeItem) => Promise<void>;
+  onSaveToMyWardrobe: (item: WardrobeItem) => Promise<void>;
   onSaveProfile: () => Promise<void>;
   onSaveSettings: (nextSettings: SettingsSavePayload) => Promise<void>;
   onSearchCapsules: (query: string) => Promise<CapsuleMeta[]>;
@@ -131,18 +135,11 @@ type AppRouteContentProps = SharedFilterProps & {
   onToggleRegenerationSelection: (item: WardrobeItem) => void;
   onVerifyCode: (event: FormEvent<HTMLFormElement>) => Promise<void>;
   registerCapsuleSidebarActions: (
-    actions: {
-      openSearchDialog: () => void;
-      openCapsuleActions: (
-        event: MouseEvent<HTMLElement>,
-        capsule: CapsuleMeta,
-      ) => void;
-    } | null,
+    actions: CapsuleSidebarActions | null,
   ) => void;
   setCode: (value: string) => void;
   setEmail: (value: string) => void;
 };
-
 function ProfileRoute(props: AppRouteContentProps) {
   return (
     <ProfileScreen
@@ -187,7 +184,6 @@ function ProfileRoute(props: AppRouteContentProps) {
     />
   );
 }
-
 function MainRoute(props: AppRouteContentProps) {
   return (
     <MainScreen
@@ -209,6 +205,8 @@ function MainRoute(props: AppRouteContentProps) {
       onDuplicateCapsule={props.onDuplicateCapsule}
       onDeleteCapsule={props.onDeleteCapsule}
       onShareCapsule={props.onShareCapsule}
+      onRemoveFromMyWardrobe={props.onRemoveFromMyWardrobe}
+      onSaveToMyWardrobe={props.onSaveToMyWardrobe}
       onSearchCapsules={props.onSearchCapsules}
       items={props.profileItems || []}
       outfitSets={props.profileOutfitSets}
@@ -330,16 +328,19 @@ export default function AppRouteContent(props: AppRouteContentProps) {
       />
     );
   }
-
   if (props.hasProfile || props.profileCreated) {
     if (props.appRoute === "explore") {
       return (
         <SearchScreen
-          onNavigateApp={props.onNavigateApp}
           initialQuery={props.searchInitialQuery}
           autoOpenProductDetail={props.searchAutoOpenProductDetail}
+          onRemoveFromMyWardrobe={props.onRemoveFromMyWardrobe}
+          onSaveToMyWardrobe={props.onSaveToMyWardrobe}
         />
       );
+    }
+    if (props.appRoute === "myWardrobe") {
+      return <MyWardrobeScreen />;
     }
 
     if (props.appRoute === "statistics") {

@@ -5,12 +5,15 @@ import { MAIN_SCREEN_CONTENT_COLUMN_SX } from "../mainScreen/MainScreenHelpers";
 import ProductDetail from "./ProductDetail";
 import SearchBar from "./SearchBar";
 import SearchResultsList from "./SearchResultsList";
+import type { SearchResultItem } from "./searchTypes";
 import type { SearchScreenStateController } from "./useSearchScreenState";
 
 type SearchScreenLayoutProps = {
   search: SearchScreenStateController;
   t: (key: string, params?: Record<string, unknown>) => string;
   locale: string;
+  onRemoveFromMyWardrobe?: (item: SearchResultItem) => Promise<void> | void;
+  onSaveToMyWardrobe?: (item: SearchResultItem) => Promise<void> | void;
 };
 
 export const SEARCH_DESKTOP_LAYOUT_SX = {
@@ -109,6 +112,8 @@ function SearchScreenDesktop({
   search,
   t,
   locale,
+  onRemoveFromMyWardrobe,
+  onSaveToMyWardrobe,
 }: SearchScreenLayoutProps): ReactElement {
   return (
     <Box sx={SEARCH_DESKTOP_LAYOUT_SX}>
@@ -122,7 +127,13 @@ function SearchScreenDesktop({
         </Box>
         <Box sx={SEARCH_DESKTOP_DETAIL_SX}>
           <Box sx={SEARCH_DESKTOP_DETAIL_CONTENT_SX}>
-            <ProductDetail item={search.selectedItem} t={t} locale={locale} />
+            <ProductDetail
+              item={search.selectedItem}
+              t={t}
+              locale={locale}
+              onRemoveFromMyWardrobe={onRemoveFromMyWardrobe}
+              onSaveToMyWardrobe={onSaveToMyWardrobe}
+            />
           </Box>
         </Box>
       </Box>

@@ -124,6 +124,7 @@ export type ProductRow = {
 
 export type ProductSearchRow = ProductRow & {
   distance: number | string | null;
+  isSavedToWardrobe?: boolean | null;
 };
 
 export type ProductWithEmbeddingRow = ProductRow &

@@ -8,6 +8,7 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
+import BookmarkBorderRoundedIcon from "@mui/icons-material/BookmarkBorderRounded";
 import ProductLabelText from "../../components/ProductLabelText";
 import type { ActiveFilterChip } from "../../search/searchState";
 import type { SearchResultItem, SearchStatus } from "./searchTypes";
@@ -155,6 +156,13 @@ function ResultListItem({
   t: SearchResultsListProps["t"];
   onSelectResult: (item: SearchResultItem) => void;
 }) {
+  const isSavedToWardrobe = Boolean(
+    item.isSavedToWardrobe ||
+    item.is_saved_to_wardrobe ||
+    item.savedToMyWardrobe,
+  );
+  const savedLabel = t("myWardrobe.savedBadge");
+
   return (
     <Box
       role="button"
@@ -193,11 +201,36 @@ function ResultListItem({
       data-mobile-result={isMobile ? "true" : undefined}
     >
       <Typography variant="body1" sx={{ fontWeight: 700 }}>
+        {isSavedToWardrobe ? (
+          <BookmarkBorderRoundedIcon
+            className="catalog-result-saved-icon"
+            titleAccess={savedLabel}
+            aria-label={savedLabel}
+            sx={{
+              color: "#15766f",
+              display: "inline-block",
+              fontSize: 16,
+              mr: 0.45,
+              verticalAlign: "-0.16em",
+            }}
+          />
+        ) : null}
         <ProductLabelText item={item} fallbackLabel={t("search.untitled")} />
       </Typography>
-      <Typography variant="body2" color="text.secondary">
-        {item.brand || t("search.noBrand")}
-      </Typography>
+      <Stack
+        direction="row"
+        spacing={0.75}
+        alignItems="center"
+        sx={{ minWidth: 0 }}
+      >
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          sx={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}
+        >
+          {item.brand || t("search.noBrand")}
+        </Typography>
+      </Stack>
     </Box>
   );
 }

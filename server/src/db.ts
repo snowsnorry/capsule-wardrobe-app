@@ -48,6 +48,11 @@ export {
 } from "./db/searchPersistence.js";
 export { searchProductStats } from "./db/searchStats.js";
 export {
+  deleteWardrobeItemFromCatalogByUrl,
+  listWardrobeItemsByEmail,
+  saveWardrobeItemFromCatalogByUrl,
+} from "./db/wardrobe.js";
+export {
   getProfileByEmail,
   createProfileRecord,
   updateProfileByEmail,

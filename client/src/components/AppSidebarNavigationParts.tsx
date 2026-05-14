@@ -3,6 +3,7 @@ import { Box, Button, Divider, Stack, Tooltip } from "@mui/material";
 import BarChartRoundedIcon from "@mui/icons-material/BarChartRounded";
 import ManageSearchRoundedIcon from "@mui/icons-material/ManageSearchRounded";
 import CheckroomOutlinedIcon from "@mui/icons-material/CheckroomOutlined";
+import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
 import type { AppId } from "./AppSidebarNavigationTypes";
 
 const naturalEase = "cubic-bezier(0.2, 0, 0, 1)";
@@ -241,8 +242,39 @@ function CapsuleTopLevelNavigation({
   );
 }
 
+function MyWardrobeTopLevelNavigation({
+  isActive,
+  isInteractionDisabled,
+  isCollapsedDesktop,
+  desktopSidebarRailWidth,
+  onNavigateApp,
+  t,
+}: {
+  isActive: boolean;
+  isInteractionDisabled: boolean;
+  isCollapsedDesktop: boolean;
+  desktopSidebarRailWidth: number;
+  onNavigateApp: (nextApp: AppId) => void;
+  t: Translate;
+}) {
+  return (
+    <Box sx={{ px: isCollapsedDesktop ? 0 : 1.5, pt: 0.5 }}>
+      <SidebarTopLevelButton
+        label={t("launcher.myWardrobe")}
+        icon={<Inventory2OutlinedIcon />}
+        isActive={isActive}
+        isInteractionDisabled={isInteractionDisabled}
+        isCollapsedDesktop={isCollapsedDesktop}
+        desktopSidebarRailWidth={desktopSidebarRailWidth}
+        onClick={() => onNavigateApp("myWardrobe")}
+      />
+    </Box>
+  );
+}
+
 export {
   CapsuleTopLevelNavigation,
+  MyWardrobeTopLevelNavigation,
   SidebarNavigationDivider,
   SidebarSecondaryNavigation,
 };

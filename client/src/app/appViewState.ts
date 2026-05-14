@@ -56,6 +56,9 @@ function buildRouteViewState(
       options.user && !options.hasProfile && !options.profileCreated,
     ),
     isSearchView: Boolean(isProfileUser && options.appRoute === "explore"),
+    isMyWardrobeView: Boolean(
+      isProfileUser && options.appRoute === "myWardrobe",
+    ),
     isSignInView: !options.user,
     isStatisticsView: Boolean(
       isProfileUser && options.appRoute === "statistics",

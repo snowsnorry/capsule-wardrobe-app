@@ -21,10 +21,12 @@ function renderLauncher(
     t: (key) =>
       ({
         "launcher.open": "Open app launcher",
+        "launcher.myWardrobe": "My Wardrobe",
+        "launcher.myWardrobeHint": "Switch to saved wardrobe",
         "launcher.capsule": "Capsule",
         "launcher.capsuleHint": "Switch to the wardrobe capsule",
-        "launcher.explore": "Explore",
-        "launcher.exploreHint": "Switch to explore",
+        "launcher.explore": "Catalog",
+        "launcher.exploreHint": "Switch to catalog",
         "launcher.statistics": "Statistics",
         "launcher.statisticsHint": "Switch to statistics",
       })[key] || key,
@@ -63,7 +65,7 @@ describe("AppLauncher", () => {
     ).toHaveTextContent("Capsule");
 
     await user.click(screen.getByRole("button", { name: "Open app launcher" }));
-    await user.click(screen.getByRole("menuitem", { name: /Explore/ }));
+    await user.click(screen.getByRole("menuitem", { name: /Catalog/ }));
 
     expect(onSelectApp).toHaveBeenCalledWith("explore");
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
@@ -75,7 +77,7 @@ describe("AppLauncher", () => {
     const { rerender } = renderLauncher({ currentApp: "capsule", onSelectApp });
 
     await user.click(screen.getByRole("button", { name: "Open app launcher" }));
-    await user.click(screen.getByRole("menuitem", { name: /Explore/ }));
+    await user.click(screen.getByRole("menuitem", { name: /Catalog/ }));
 
     expect(onSelectApp).toHaveBeenCalledWith("explore");
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
@@ -88,7 +90,19 @@ describe("AppLauncher", () => {
 
     expect(
       screen.getByRole("button", { name: "Open app launcher" }),
-    ).toHaveTextContent("Explore");
+    ).toHaveTextContent("Catalog");
+  });
+
+  test("shows the my wardrobe app and can select it", async () => {
+    const user = userEvent.setup();
+    const onSelectApp = vi.fn();
+
+    renderLauncher({ onSelectApp, currentApp: "capsule" });
+
+    await user.click(screen.getByRole("button", { name: "Open app launcher" }));
+    await user.click(screen.getByRole("menuitem", { name: /My Wardrobe/ }));
+
+    expect(onSelectApp).toHaveBeenCalledWith("myWardrobe");
   });
 
   test("shows the statistics app and can select it", async () => {

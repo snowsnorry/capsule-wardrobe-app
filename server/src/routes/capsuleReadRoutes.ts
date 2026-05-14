@@ -13,6 +13,7 @@ function registerCapsuleBootstrapRoutes(app, context) {
   const {
     getCapsuleEventSnapshot,
     getProfileImpl,
+    listWardrobeItemsImpl,
     listRecentCapsulesImpl,
     requireAuth,
     resolveActiveCapsuleImpl,
@@ -20,6 +21,7 @@ function registerCapsuleBootstrapRoutes(app, context) {
     toCapsuleSummary,
     toCapsuleResponse,
     toProfileResponse,
+    annotateWardrobeSavedItems,
   } = context;
 
   app.get("/capsules/bootstrap", requireAuth, async (req, res) => {
@@ -37,6 +39,10 @@ function registerCapsuleBootstrapRoutes(app, context) {
       }
       const activeCapsule = await resolveActiveCapsuleImpl(req.user.email);
       const recentCapsules = await listRecentCapsulesImpl(req.user.email, 10);
+      const savedCatalogUrls = await listSavedCatalogUrls(
+        listWardrobeItemsImpl,
+        req.user.email,
+      );
       const wardrobeFilters = await buildWardrobeFilters(
         context,
         req.user.email,
@@ -45,10 +51,13 @@ function registerCapsuleBootstrapRoutes(app, context) {
         ok: true,
         hasProfile: true,
         profile: toProfileResponse(profile),
-        activeCapsule: toCapsuleResponse(activeCapsule),
-        activeSnapshot: await getCapsuleEventSnapshot(
-          req.user.email,
-          activeCapsule,
+        activeCapsule: annotateWardrobeSavedItems(
+          toCapsuleResponse(activeCapsule),
+          savedCatalogUrls,
+        ),
+        activeSnapshot: annotateWardrobeSavedItems(
+          await getCapsuleEventSnapshot(req.user.email, activeCapsule),
+          savedCatalogUrls,
         ),
         capsules: recentCapsules.map(toCapsuleSummary),
         wardrobeFilters,
@@ -87,10 +96,12 @@ function registerCapsuleLookupRoutes(app, context) {
   const {
     getCapsuleEventSnapshot,
     getCapsuleImpl,
+    listWardrobeItemsImpl,
     requireAuth,
     setActiveCapsuleIdImpl,
     streamCapsuleEventsHandler,
     toCapsuleResponse,
+    annotateWardrobeSavedItems,
   } = context;
 
   app.get("/capsules/:id", requireAuth, async (req, res) => {
@@ -100,10 +111,20 @@ function registerCapsuleLookupRoutes(app, context) {
         return res.status(404).json({ error: "not_found" });
       }
       await setActiveCapsuleIdImpl(req.user.email, capsule.id);
+      const savedCatalogUrls = await listSavedCatalogUrls(
+        listWardrobeItemsImpl,
+        req.user.email,
+      );
       return res.json({
         ok: true,
-        capsule: toCapsuleResponse(capsule),
-        snapshot: await getCapsuleEventSnapshot(req.user.email, capsule),
+        capsule: annotateWardrobeSavedItems(
+          toCapsuleResponse(capsule),
+          savedCatalogUrls,
+        ),
+        snapshot: annotateWardrobeSavedItems(
+          await getCapsuleEventSnapshot(req.user.email, capsule),
+          savedCatalogUrls,
+        ),
       });
     } catch (error) {
       logError("[capsules/get]", error);
@@ -112,6 +133,17 @@ function registerCapsuleLookupRoutes(app, context) {
   });
 
   app.get("/capsules/:id/events", requireAuth, streamCapsuleEventsHandler);
+}
+
+async function listSavedCatalogUrls(listWardrobeItemsImpl, email: string) {
+  const items = await listWardrobeItemsImpl({
+    email,
+    source: "from_catalog",
+  });
+
+  return Array.isArray(items)
+    ? items.map((item) => String(item?.url || "").trim()).filter(Boolean)
+    : [];
 }
 
 function registerCapsuleShareRoutes(app, context) {

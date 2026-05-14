@@ -89,6 +89,64 @@ describe("MainScreenMenus", () => {
     });
   });
 
+  test("saves a product to my wardrobe from the product menu", async () => {
+    const user = userEvent.setup();
+    const onSaveToMyWardrobe = vi.fn(() => Promise.resolve());
+    renderMenus({
+      props: createMainScreenProps({ onSaveToMyWardrobe }),
+    });
+
+    await user.click(
+      screen.getByRole("menuitem", { name: "Save to My Wardrobe" }),
+    );
+
+    expect(onSaveToMyWardrobe).toHaveBeenCalledWith({
+      id: "a",
+      url: "https://example.com/a",
+      name: "Shirt",
+      category: "top",
+    });
+  });
+
+  test("confirms before removing a saved product from my wardrobe", async () => {
+    const user = userEvent.setup();
+    const onRemoveFromMyWardrobe = vi.fn(() => Promise.resolve());
+    const onSaveToMyWardrobe = vi.fn(() => Promise.resolve());
+    renderMenus({
+      productMenu: {
+        anchor: createAnchor(),
+        url: "https://example.com/a",
+        item: {
+          id: "a",
+          url: "https://example.com/a",
+          name: "Shirt",
+          category: "top",
+          isSavedToWardrobe: true,
+        },
+      },
+      props: createMainScreenProps({
+        onRemoveFromMyWardrobe,
+        onSaveToMyWardrobe,
+      }),
+    });
+
+    await user.click(
+      screen.getByRole("menuitem", { name: "Remove from My Wardrobe" }),
+    );
+    expect(onRemoveFromMyWardrobe).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Remove" }));
+
+    expect(onRemoveFromMyWardrobe).toHaveBeenCalledWith({
+      id: "a",
+      url: "https://example.com/a",
+      name: "Shirt",
+      category: "top",
+      isSavedToWardrobe: true,
+    });
+    expect(onSaveToMyWardrobe).not.toHaveBeenCalled();
+  });
+
   test("copies product URL and shows product in search from the product menu", async () => {
     const user = userEvent.setup();
     const writeText = vi.fn(() => Promise.resolve());

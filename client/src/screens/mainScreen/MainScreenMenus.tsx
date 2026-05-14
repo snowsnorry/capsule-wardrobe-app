@@ -1,6 +1,5 @@
-import { Menu, MenuItem, ListItemIcon, ListItemText } from "@mui/material";
-import ThumbDownAltOutlinedIcon from "@mui/icons-material/ThumbDownAltOutlined";
 import CapsuleActionMenu from "./CapsuleActionMenu";
+import ProductMenu from "./MainScreenProductMenu";
 import type {
   CapsuleLike,
   CapsuleMenuAnchor,
@@ -152,62 +151,6 @@ function MainScreenMenus(props: MenusProps) {
       />
       <ProductMenu menuProps={props} onClose={closeProductMenu} t={props.t} />
     </>
-  );
-}
-
-function ProductMenu({
-  menuProps,
-  onClose,
-  t,
-}: {
-  menuProps: MenusProps;
-  onClose: () => void;
-  t: MenusProps["t"];
-}) {
-  return (
-    <Menu
-      anchorEl={menuProps.productMenu.anchor}
-      open={Boolean(menuProps.productMenu.anchor)}
-      onClose={onClose}
-    >
-      <MenuItem
-        onClick={() => {
-          const item = menuProps.productMenu.item;
-          onClose();
-          if (item) {
-            menuProps.setSelectionMode(true);
-            menuProps.props.onToggleRegenerationSelection(item);
-          }
-        }}
-      >
-        <ListItemIcon>
-          <ThumbDownAltOutlinedIcon fontSize="small" />
-        </ListItemIcon>
-        <ListItemText>{t("capsule.selectProductForRegeneration")}</ListItemText>
-      </MenuItem>
-      <MenuItem
-        onClick={() => {
-          const url = menuProps.productMenu.url;
-          onClose();
-          void navigator.clipboard?.writeText(url);
-        }}
-      >
-        {t("capsule.copyProductLinkAddress")}
-      </MenuItem>
-      <MenuItem
-        onClick={() => {
-          const url = menuProps.productMenu.url;
-          onClose();
-          if (url)
-            menuProps.props.onNavigateApp("explore", {
-              query: url,
-              openProductDetail: true,
-            });
-        }}
-      >
-        {t("capsule.showProductInfo")}
-      </MenuItem>
-    </Menu>
   );
 }
 
