@@ -15,18 +15,27 @@ test("wardrobe routes list and save user wardrobe items", async (t) => {
         calls.push({ type: "list", payload });
         return [
           {
+            createdAt: "2026-05-01T00:00:00.000Z",
+            email: "person@example.com",
             id: "wardrobe-1",
+            productId: "product-1",
+            profileEmail: "person@example.com",
             url: "https://example.com/1",
             source: "from_catalog",
+            updatedAt: "2026-05-01T00:00:00.000Z",
           },
         ];
       },
       saveWardrobeItemFromCatalogImpl: async (payload) => {
         calls.push({ type: "save", payload });
         return {
+          created_at: "2026-05-01T00:00:00.000Z",
           id: "wardrobe-1",
+          product_id: "product-1",
+          profile_email: "person@example.com",
           url: payload.url,
           source: "from_catalog",
+          updated_at: "2026-05-01T00:00:00.000Z",
         };
       },
       deleteWardrobeItemFromCatalogImpl: async (payload) => {

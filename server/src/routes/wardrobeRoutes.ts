@@ -32,6 +32,30 @@ function getFirstPresentValue(...values) {
   );
 }
 
+const WARDROBE_ITEM_PRIVATE_FIELDS = new Set([
+  "createdAt",
+  "created_at",
+  "email",
+  "productId",
+  "product_id",
+  "profileEmail",
+  "profile_email",
+  "updatedAt",
+  "updated_at",
+]);
+
+function filterWardrobeItemForDisplay(item) {
+  if (!item || typeof item !== "object" || Array.isArray(item)) {
+    return item;
+  }
+
+  return Object.fromEntries(
+    Object.entries(item).filter(
+      ([key]) => !WARDROBE_ITEM_PRIVATE_FIELDS.has(key),
+    ),
+  );
+}
+
 function normalizeWardrobeItemForPdf(item) {
   const source = item || {};
   return {
@@ -70,7 +94,10 @@ function registerWardrobeListRoute(app, context) {
         email: req.user.email,
         source,
       });
-      return res.json({ ok: true, items });
+      const displayItems = Array.isArray(items)
+        ? items.map(filterWardrobeItemForDisplay)
+        : items;
+      return res.json({ ok: true, items: displayItems });
     } catch (error) {
       logError("[wardrobe/items]", error);
       return res.status(503).json({ error: "service_unavailable" });
@@ -139,7 +166,10 @@ function registerWardrobeCatalogRoutes(app, context) {
           return res.status(404).json({ error: "not_found" });
         }
 
-        return res.status(201).json({ ok: true, item });
+        return res.status(201).json({
+          ok: true,
+          item: filterWardrobeItemForDisplay(item),
+        });
       } catch (error) {
         logError("[wardrobe/items/from-catalog]", error);
         return res.status(503).json({ error: "service_unavailable" });
@@ -173,6 +203,7 @@ function registerWardrobeCatalogRoutes(app, context) {
 }
 
 export {
+  filterWardrobeItemForDisplay,
   getHttpUrl,
   normalizeWardrobeItemForPdf,
   normalizeWardrobeSourceParam,
