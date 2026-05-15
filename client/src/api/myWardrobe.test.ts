@@ -16,6 +16,7 @@ vi.mock("./config", () => ({
 }));
 
 import {
+  deleteUploadedWardrobeItem,
   downloadMyWardrobePdf,
   fetchMyWardrobeItems,
   getWardrobeItemsPdfUrl,
@@ -238,6 +239,18 @@ describe("my wardrobe api", () => {
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify(payload),
+      },
+    );
+  });
+
+  test("deletes uploaded wardrobe items", async () => {
+    await deleteUploadedWardrobeItem("uploaded 1");
+
+    expect(requestApi.requestJson).toHaveBeenCalledWith(
+      "https://api.example.test/wardrobe/items/uploaded/uploaded%201",
+      {
+        method: "DELETE",
+        credentials: "include",
       },
     );
   });

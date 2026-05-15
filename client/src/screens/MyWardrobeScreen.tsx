@@ -3,12 +3,12 @@ import type { MouseEvent, ReactElement } from "react";
 import { Alert, Box, Stack } from "@mui/material";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import {
+  deleteUploadedWardrobeItem,
   downloadMyWardrobePdf,
   fetchMyWardrobeItems,
   removeCatalogItemFromMyWardrobe,
   type MyWardrobeSource,
   type UploadedWardrobeItemUpdatePayload,
-  type UploadWardrobeProgress,
   updateUploadedWardrobeItem,
   uploadWardrobeImages,
 } from "../api/myWardrobe";
@@ -33,6 +33,11 @@ import {
   getItemFromResponse,
   getItemsFromResponse,
 } from "./myWardrobeResponse";
+import {
+  getMyWardrobeDeletionTarget,
+  isDifferentWardrobeItem,
+} from "./myWardrobeDelete";
+import { EMPTY_UPLOAD_PROGRESS } from "./myWardrobeUploadProgress";
 import ProductDetailDialog from "../components/productDetail/ProductDetailDialog";
 import UploadedProductDetailDialog from "../components/productDetail/UploadedProductDetailDialog";
 import WardrobeUploadDialog from "./WardrobeUploadDialog";
@@ -40,15 +45,6 @@ import MyWardrobeToolbar, {
   getSourceFilter,
   type MyWardrobeFilter,
 } from "./MyWardrobeToolbar";
-
-const EMPTY_UPLOAD_PROGRESS: UploadWardrobeProgress = {
-  total: 0,
-  uploaded: 0,
-  completedSteps: 0,
-  metadataProcessed: 0,
-  imageProcessed: 0,
-  failed: 0,
-};
 
 // Main screen composition stays local so toolbar, menus, dialogs, and grid share state.
 // eslint-disable-next-line max-lines-per-function
@@ -181,9 +177,7 @@ function useMyWardrobeItems(
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const [isMutating, setIsMutating] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState<UploadWardrobeProgress>(
-    EMPTY_UPLOAD_PROGRESS,
-  );
+  const [uploadProgress, setUploadProgress] = useState(EMPTY_UPLOAD_PROGRESS);
   const [productMenu, setProductMenu] = useState<MyWardrobeProductMenuState>({
     anchor: null,
     url: "",
@@ -201,18 +195,20 @@ function useMyWardrobeItems(
     setProductMenu({ anchor: event.currentTarget, url, item });
   };
   const handleConfirmRemove = async (item: MainScreenItem) => {
-    const url = String(item?.url || "").trim();
-    if (!url) return;
+    const target = getMyWardrobeDeletionTarget(item);
+    if (!target) return;
 
     setIsMutating(true);
     try {
-      await removeCatalogItemFromMyWardrobe(url);
+      if (target.kind === "uploaded") {
+        await deleteUploadedWardrobeItem(target.id);
+      } else {
+        await removeCatalogItemFromMyWardrobe(target.url);
+      }
       setError("");
       setItems((current) =>
-        current.filter(
-          (currentItem) =>
-            currentItem !== item &&
-            String(currentItem?.url || "").trim() !== url,
+        current.filter((currentItem) =>
+          isDifferentWardrobeItem(currentItem, item, target),
         ),
       );
     } catch {

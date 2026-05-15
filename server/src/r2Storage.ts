@@ -11,7 +11,7 @@ type R2Config = {
 };
 
 type S3ClientLike = {
-  send: (command: PutObjectCommand) => Promise<unknown>;
+  send: (command: unknown) => Promise<unknown>;
 };
 
 type UploadImageInput = {
@@ -369,6 +369,7 @@ export {
   buildWardrobeDerivativeR2ImageKey,
   buildWardrobeR2ImageKey,
   decodeLegacyBase64Image,
+  getR2KeyFromPublicUrl,
   getR2Config,
   uploadImageToR2,
   uploadWardrobeDerivativeImageToR2,

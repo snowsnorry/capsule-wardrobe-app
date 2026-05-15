@@ -53,6 +53,7 @@ export {
   saveUploadedWardrobeItemsByEmail,
   saveWardrobeItemFromCatalogByUrl,
 } from "./db/wardrobe.js";
+export { deleteUploadedWardrobeItemById } from "./db/wardrobeDelete.js";
 export {
   updateUploadedWardrobeItemDetailsById,
   updateUploadedWardrobeItemMetadataById,

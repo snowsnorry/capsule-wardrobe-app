@@ -1,5 +1,5 @@
 import { test, expect } from "vitest";
-import { PutObjectCommand } from "@aws-sdk/client-s3";
+import { DeleteObjectsCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import {
   buildR2Endpoint,
   buildR2ImageKey,
@@ -7,11 +7,13 @@ import {
   buildWardrobeDerivativeR2ImageKey,
   buildWardrobeR2ImageKey,
   decodeLegacyBase64Image,
+  getR2KeyFromPublicUrl,
   getR2Config,
   uploadImageToR2,
   uploadWardrobeDerivativeImageToR2,
   uploadWardrobeImageToR2,
 } from "./r2Storage.js";
+import { deleteObjectsFromR2 } from "./r2Delete.js";
 
 const testEnv = {
   R2_ACCOUNT_ID: "account-1",
@@ -77,6 +79,11 @@ test("R2 helpers build endpoint, object keys, and public URLs", () => {
       mimeType: "image/webp",
     }),
   ).toBe("wardrobe/profile/item_clean_320.webp");
+  expect(
+    getR2KeyFromPublicUrl(
+      "https://images.example.com/wardrobe/profile/a%20b.webp",
+    ),
+  ).toBe("wardrobe/profile/a b.webp");
 });
 
 test("uploadImageToR2 sends PutObjectCommand and returns public URL", async () => {
@@ -163,6 +170,32 @@ test("uploadWardrobeDerivativeImageToR2 writes caller-provided wardrobe keys", a
   expect(uploaded.url).toBe(
     "https://images.example.com/wardrobe/profile/image_clean_640.webp",
   );
+});
+
+test("deleteObjectsFromR2 sends DeleteObjectsCommand with unique keys", async () => {
+  const commands: DeleteObjectsCommand[] = [];
+  const client = {
+    send: async (command: DeleteObjectsCommand | PutObjectCommand) => {
+      if (command instanceof DeleteObjectsCommand) {
+        commands.push(command);
+      }
+      return {};
+    },
+  };
+
+  const deleted = await deleteObjectsFromR2({
+    keys: ["wardrobe/profile/image.webp", "wardrobe/profile/image.webp", ""],
+    env: testEnv,
+    client,
+  });
+
+  expect(deleted).toEqual({ deleted: 1 });
+  expect(commands.length).toBe(1);
+  expect(commands[0].input.Bucket).toBe("capsule-images");
+  expect(commands[0].input.Delete?.Objects).toEqual([
+    { Key: "wardrobe/profile/image.webp" },
+  ]);
+  expect(commands[0].input.Delete?.Quiet).toBe(true);
 });
 
 test("decodeLegacyBase64Image skips URLs, data URLs, and invalid values", () => {

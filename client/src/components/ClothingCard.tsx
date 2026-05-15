@@ -20,6 +20,7 @@ type ClothingCardProps = {
     productUrl: string,
     item: ClothingCardItem,
   ) => void;
+  allowProductMenuWithoutUrl?: boolean;
   showProductMenu?: boolean;
   isMobile?: boolean;
   mobileColumns?: 1 | 2 | 3;
@@ -37,6 +38,7 @@ function normalizeClothingCardProps(props: ClothingCardProps) {
     onToggleSelected: props.onToggleSelected,
     onProductClick: props.onProductClick,
     onProductMenuClick: props.onProductMenuClick,
+    allowProductMenuWithoutUrl: props.allowProductMenuWithoutUrl ?? false,
     showProductMenu: props.showProductMenu ?? true,
     isMobile: props.isMobile ?? false,
     mobileColumns: props.mobileColumns ?? 2,
@@ -213,6 +215,28 @@ function useCardImageStateForItem({
   );
 }
 
+function getProductMenuKey({
+  allowProductMenuWithoutUrl,
+  item,
+  productUrl,
+}: {
+  allowProductMenuWithoutUrl: boolean;
+  item: ClothingCardItem;
+  productUrl: string | null;
+}) {
+  if (productUrl) {
+    return productUrl;
+  }
+
+  if (!allowProductMenuWithoutUrl || item?.source !== "uploaded" || !item?.id) {
+    return "";
+  }
+
+  return String(item.id);
+}
+
+// The card keeps render wiring local so image, click, and action state stay in sync.
+// eslint-disable-next-line max-lines-per-function
 function ClothingCard(props: ClothingCardProps): ReactElement {
   const {
     item,
@@ -223,6 +247,7 @@ function ClothingCard(props: ClothingCardProps): ReactElement {
     onToggleSelected,
     onProductClick,
     onProductMenuClick,
+    allowProductMenuWithoutUrl,
     showProductMenu,
     isMobile,
     mobileColumns,
@@ -242,9 +267,14 @@ function ClothingCard(props: ClothingCardProps): ReactElement {
   );
   const badgeLabels = getClothingCardBadgeLabels(t);
   const mobileCardMetrics = getMobileCardMetrics(mobileColumns);
+  const productMenuKey = getProductMenuKey({
+    allowProductMenuWithoutUrl,
+    item,
+    productUrl,
+  });
   const showToggleButton = isSelectionMode && isSelectable;
   const showProductMenuButton =
-    showProductMenu && !isSelectionMode && Boolean(productUrl);
+    showProductMenu && !isSelectionMode && Boolean(productMenuKey);
   const showCardActions = showToggleButton || showProductMenuButton;
   const handleToggleSelected = (event: MouseEvent<HTMLButtonElement>) => {
     stopCardActionPropagation(event);
@@ -262,8 +292,8 @@ function ClothingCard(props: ClothingCardProps): ReactElement {
   });
   const handleProductMenuClick = (event: MouseEvent<HTMLButtonElement>) => {
     stopCardActionPropagation(event);
-    if (productUrl && typeof onProductMenuClick === "function") {
-      onProductMenuClick(event, productUrl, item);
+    if (productMenuKey && typeof onProductMenuClick === "function") {
+      onProductMenuClick(event, productMenuKey, item);
     }
   };
   const actionProps = buildActionPropsForCard({

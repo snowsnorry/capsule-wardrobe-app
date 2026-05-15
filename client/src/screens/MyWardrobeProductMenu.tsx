@@ -13,6 +13,7 @@ import {
   MenuItem,
 } from "@mui/material";
 import BookmarkRemoveOutlinedIcon from "@mui/icons-material/BookmarkRemoveOutlined";
+import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import type { MainScreenItem } from "./mainScreen/MainScreenTypes";
 
 type MyWardrobeProductMenuState = {
@@ -44,6 +45,8 @@ function MyWardrobeProductMenu({
   onRequestRemove,
   t,
 }: MyWardrobeProductMenuProps): ReactElement {
+  const isUploaded = item?.source === "uploaded";
+
   return (
     <Menu anchorEl={anchor} open={Boolean(anchor)} onClose={onClose}>
       <MenuItem
@@ -55,9 +58,19 @@ function MyWardrobeProductMenu({
         }}
       >
         <ListItemIcon>
-          <BookmarkRemoveOutlinedIcon fontSize="small" />
+          {isUploaded ? (
+            <DeleteOutlineRoundedIcon fontSize="small" />
+          ) : (
+            <BookmarkRemoveOutlinedIcon fontSize="small" />
+          )}
         </ListItemIcon>
-        <ListItemText>{t("capsule.removeFromMyWardrobe")}</ListItemText>
+        <ListItemText>
+          {t(
+            isUploaded
+              ? "myWardrobe.deleteUploaded"
+              : "capsule.removeFromMyWardrobe",
+          )}
+        </ListItemText>
       </MenuItem>
     </Menu>
   );
@@ -70,6 +83,8 @@ function MyWardrobeRemoveConfirmDialog({
   onConfirm,
   t,
 }: MyWardrobeRemoveConfirmDialogProps): ReactElement {
+  const isUploaded = item?.source === "uploaded";
+
   return (
     <Dialog
       open={Boolean(item)}
@@ -82,7 +97,11 @@ function MyWardrobeRemoveConfirmDialog({
       maxWidth="xs"
     >
       <DialogTitle sx={{ pb: 1 }}>
-        {t("myWardrobe.removeConfirmTitle")}
+        {t(
+          isUploaded
+            ? "myWardrobe.deleteUploadedConfirmTitle"
+            : "myWardrobe.removeConfirmTitle",
+        )}
       </DialogTitle>
       <DialogContent sx={{ pt: 0.5, pb: 0 }}>
         {isLoading ? (
@@ -93,7 +112,11 @@ function MyWardrobeRemoveConfirmDialog({
           />
         ) : null}
         <DialogContentText sx={{ color: "text.secondary" }}>
-          {t("myWardrobe.removeConfirmBody")}
+          {t(
+            isUploaded
+              ? "myWardrobe.deleteUploadedConfirmBody"
+              : "myWardrobe.removeConfirmBody",
+          )}
         </DialogContentText>
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2.5, pt: 2 }}>
@@ -111,7 +134,11 @@ function MyWardrobeRemoveConfirmDialog({
             }
           }}
         >
-          {t("myWardrobe.removeConfirm")}
+          {t(
+            isUploaded
+              ? "myWardrobe.deleteUploadedConfirm"
+              : "myWardrobe.removeConfirm",
+          )}
         </Button>
       </DialogActions>
     </Dialog>

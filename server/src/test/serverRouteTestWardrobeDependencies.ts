@@ -118,6 +118,14 @@ function createWardrobeDependencies() {
       processing_status: "ready",
       ...payload.details,
     }),
+    deleteUploadedWardrobeItemImpl: async () => ({
+      id: "wardrobe-upload-1",
+      image_url: "https://images.example.com/wardrobe/profile/image_clean.png",
+      raw_image_url: "https://images.example.com/wardrobe/profile/image.webp",
+      source: "uploaded",
+      processing_status: "ready",
+    }),
+    deleteR2ObjectsImpl: async () => ({ deleted: 5 }),
     deleteWardrobeItemFromCatalogImpl: async () => true,
   };
 }

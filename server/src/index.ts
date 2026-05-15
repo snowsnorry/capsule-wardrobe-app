@@ -73,6 +73,7 @@ import {
   checkDatabaseConnection,
   consumePasskeyChallenge,
   deletePasskeyByIdForEmail,
+  deleteUploadedWardrobeItemById,
   deleteWardrobeItemFromCatalogByUrl,
   getPasskeyByCredentialId,
   getProductsByUrlsInOrder,
@@ -117,6 +118,7 @@ import {
 } from "./capsuleHttp.js";
 import { createStartServer } from "./serverStartup.js";
 import { uploadWardrobeImageToR2 } from "./r2Storage.js";
+import { deleteObjectsFromR2 } from "./r2Delete.js";
 import { normalizeWardrobeUploadImagesInChild } from "./wardrobeUploadImagesRunner.js";
 import { analyzeWardrobeImageUrl } from "./wardrobeImageAnalysis.js";
 import { cleanupUploadedWardrobeItemImage } from "./wardrobeImageCleanup.js";
@@ -159,6 +161,14 @@ function resolveGoogleAuthClient({
   }
 
   return googleClientId ? new OAuth2Client(googleClientId) : null;
+}
+
+function createWardrobeImageStorageDependencies() {
+  return {
+    deleteR2ObjectsImpl: deleteObjectsFromR2,
+    deleteUploadedWardrobeItemImpl: deleteUploadedWardrobeItemById,
+    uploadWardrobeImageToR2Impl: uploadWardrobeImageToR2,
+  };
 }
 
 function createAppDependencies(options: Record<string, unknown> = {}) {
@@ -241,7 +251,7 @@ function createAppDependencies(options: Record<string, unknown> = {}) {
       updateUploadedWardrobeItemDetailsById,
     updateUploadedWardrobeItemMetadataImpl:
       updateUploadedWardrobeItemMetadataById,
-    uploadWardrobeImageToR2Impl: uploadWardrobeImageToR2,
+    ...createWardrobeImageStorageDependencies(),
     normalizeWardrobeUploadImagesInChildImpl:
       normalizeWardrobeUploadImagesInChild,
     verifyAuthenticationResponseImpl: verifyAuthenticationResponse,

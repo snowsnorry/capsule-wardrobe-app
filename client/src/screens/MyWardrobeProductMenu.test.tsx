@@ -12,6 +12,10 @@ const theme = createTheme();
 const translations: Record<string, string> = {
   "actions.cancel": "Cancel",
   "capsule.removeFromMyWardrobe": "Remove from My Wardrobe",
+  "myWardrobe.deleteUploaded": "Delete item",
+  "myWardrobe.deleteUploadedConfirm": "Delete",
+  "myWardrobe.deleteUploadedConfirmBody": "Delete uploaded body",
+  "myWardrobe.deleteUploadedConfirmTitle": "Delete uploaded item?",
   "myWardrobe.removeConfirm": "Remove",
   "myWardrobe.removeConfirmBody": "Remove body",
   "myWardrobe.removeConfirmTitle": "Remove from My Wardrobe?",
@@ -83,6 +87,29 @@ describe("MyWardrobeProductMenu", () => {
     expect(onRequestRemove).not.toHaveBeenCalled();
   });
 
+  test("uses permanent delete copy for uploaded items", async () => {
+    const user = userEvent.setup();
+    const onRequestRemove = vi.fn();
+    const item = {
+      id: "wardrobe-uploaded",
+      name: "Uploaded shirt",
+      source: "uploaded",
+    };
+    renderWithTheme(
+      <MyWardrobeProductMenu
+        anchor={createAnchor()}
+        item={item}
+        t={t}
+        onClose={vi.fn()}
+        onRequestRemove={onRequestRemove}
+      />,
+    );
+
+    await user.click(screen.getByRole("menuitem", { name: "Delete item" }));
+
+    expect(onRequestRemove).toHaveBeenCalledWith(item);
+  });
+
   test("confirms or cancels removal in the dialog", async () => {
     const user = userEvent.setup();
     const onClose = vi.fn();
@@ -124,6 +151,32 @@ describe("MyWardrobeProductMenu", () => {
     expect(onConfirm).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole("button", { name: "Remove" }));
+    expect(onConfirm).toHaveBeenCalledWith(item);
+  });
+
+  test("confirms uploaded item deletion with permanent delete copy", async () => {
+    const user = userEvent.setup();
+    const onConfirm = vi.fn();
+    const item = {
+      id: "wardrobe-uploaded",
+      name: "Uploaded shirt",
+      source: "uploaded",
+    };
+    renderWithTheme(
+      <MyWardrobeRemoveConfirmDialog
+        item={item}
+        t={t}
+        onClose={vi.fn()}
+        onConfirm={onConfirm}
+      />,
+    );
+
+    expect(
+      screen.getByRole("heading", { name: "Delete uploaded item?" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Delete uploaded body")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Delete" }));
     expect(onConfirm).toHaveBeenCalledWith(item);
   });
 });

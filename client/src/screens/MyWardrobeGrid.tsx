@@ -63,6 +63,7 @@ function MyWardrobeGrid({
         <ClothingCard
           key={item.id || item.url}
           item={item}
+          allowProductMenuWithoutUrl
           isMobile={isOverlay}
           mobileColumns={mobileColumns}
           onProductClick={onProductClick}

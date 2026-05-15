@@ -17,6 +17,7 @@ import {
   updateProfileByEmail,
   updateProfileLocaleByEmail,
   deleteProfileByEmail,
+  deleteUploadedWardrobeItemById,
   deleteWardrobeItemFromCatalogByUrl,
   listWardrobeItemsByEmail,
   saveUploadedWardrobeItemsByEmail,
@@ -509,6 +510,54 @@ test("db integration saves uploaded wardrobe items", async () => {
     JSON.stringify(["https://images.example.com/wardrobe/user/image.webp"]),
     "user@example.com",
   ]);
+});
+
+test("db integration deletes uploaded wardrobe items by id", async () => {
+  const uploadedRow: WardrobeRow = {
+    id: "wardrobe-upload-1",
+    profileEmail: "user@example.com",
+    productId: null,
+    name: "Uploaded shirt",
+    url: null,
+    imageUrl: "https://images.example.com/wardrobe/user/image_clean.png",
+    source: "uploaded",
+    rawImageUrl: "https://images.example.com/wardrobe/user/image.webp",
+    processingStatus: "ready",
+    createdAt: new Date(0).toISOString(),
+    updatedAt: new Date(0).toISOString(),
+  };
+  const { sql, calls } = createSqlMock([[uploadedRow]]);
+  setSqlClientOverride(sql);
+
+  const deleted = await deleteUploadedWardrobeItemById({
+    email: "user@example.com",
+    id: " wardrobe-upload-1 ",
+  });
+
+  expect(deleted).toEqual(
+    expect.objectContaining({
+      id: "wardrobe-upload-1",
+      image_url: "https://images.example.com/wardrobe/user/image_clean.png",
+      raw_image_url: "https://images.example.com/wardrobe/user/image.webp",
+      source: "uploaded",
+    }),
+  );
+  expect(calls[0].text).toMatch(/delete from wardrobe/i);
+  expect(calls[0].text).toMatch(/source = 'uploaded'/i);
+  expect(calls[0].values).toEqual(["user@example.com", "wardrobe-upload-1"]);
+});
+
+test("db integration skips uploaded wardrobe delete for blank ids", async () => {
+  const { sql, calls } = createSqlMock([]);
+  setSqlClientOverride(sql);
+
+  const deleted = await deleteUploadedWardrobeItemById({
+    email: "user@example.com",
+    id: "   ",
+  });
+
+  expect(deleted).toBeNull();
+  expect(calls).toEqual([]);
 });
 
 test("db integration updates uploaded wardrobe item metadata status", async () => {

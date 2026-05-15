@@ -11,6 +11,7 @@ import { ThemeProvider, createTheme } from "@mui/material/styles";
 import MyWardrobeScreen from "./MyWardrobeScreen";
 
 const api = vi.hoisted(() => ({
+  deleteUploadedWardrobeItem: vi.fn(),
   downloadMyWardrobePdf: vi.fn(),
   fetchMyWardrobeItems: vi.fn(),
   removeCatalogItemFromMyWardrobe: vi.fn(),
@@ -29,6 +30,7 @@ vi.mock("@mui/material/useMediaQuery", () => ({
 }));
 vi.mock("../components/ClothingCard", () => ({
   default: ({
+    allowProductMenuWithoutUrl = false,
     item,
     mobileColumns,
     onProductClick,
@@ -50,7 +52,11 @@ vi.mock("../components/ClothingCard", () => ({
           type="button"
           onClick={(event) => {
             event.stopPropagation();
-            onProductMenuClick?.(event, item.url, item);
+            onProductMenuClick?.(
+              event,
+              item.url || (allowProductMenuWithoutUrl ? item.id : ""),
+              item,
+            );
           }}
         >
           open product menu
@@ -138,6 +144,11 @@ const translations: Record<string, string> = {
   "myWardrobe.failedUploadBadge": "Failed",
   "myWardrobe.noCategoryBadge": "No category",
   "myWardrobe.needsReviewBadge": "Needs review",
+  "myWardrobe.deleteUploaded": "Delete item",
+  "myWardrobe.deleteUploadedConfirmTitle": "Delete uploaded item?",
+  "myWardrobe.deleteUploadedConfirmBody":
+    "This uploaded item and its images will be permanently deleted.",
+  "myWardrobe.deleteUploadedConfirm": "Delete",
   "myWardrobe.removeConfirmTitle": "Remove from My Wardrobe?",
   "myWardrobe.removeConfirmBody":
     "This product will be removed from My Wardrobe.",
@@ -191,6 +202,8 @@ describe("MyWardrobeScreen", () => {
     useMediaQueryMock.mockReturnValue(false);
     api.downloadMyWardrobePdf.mockReset();
     api.downloadMyWardrobePdf.mockResolvedValue(undefined);
+    api.deleteUploadedWardrobeItem.mockReset();
+    api.deleteUploadedWardrobeItem.mockResolvedValue({ ok: true });
     api.fetchMyWardrobeItems.mockReset();
     api.removeCatalogItemFromMyWardrobe.mockReset();
     api.removeCatalogItemFromMyWardrobe.mockResolvedValue({ ok: true });
@@ -447,6 +460,39 @@ describe("MyWardrobeScreen", () => {
     await waitFor(() => {
       expect(
         screen.queryByTestId("wardrobe-card-wardrobe-1"),
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  test("deletes an uploaded item from the card product menu", async () => {
+    const user = userEvent.setup();
+    api.fetchMyWardrobeItems.mockResolvedValueOnce({
+      items: [
+        {
+          id: "wardrobe-uploaded",
+          name: "Uploaded shirt",
+          source: "uploaded",
+          image_url: "https://example.com/uploaded.jpg",
+        },
+      ],
+    });
+    renderScreen();
+
+    await user.click(
+      await screen.findByRole("button", { name: "open product menu" }),
+    );
+    await user.click(screen.getByRole("menuitem", { name: "Delete item" }));
+    expect(api.deleteUploadedWardrobeItem).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+
+    expect(api.deleteUploadedWardrobeItem).toHaveBeenCalledWith(
+      "wardrobe-uploaded",
+    );
+    expect(api.removeCatalogItemFromMyWardrobe).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("wardrobe-card-wardrobe-uploaded"),
       ).not.toBeInTheDocument();
     });
   });

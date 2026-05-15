@@ -226,6 +226,18 @@ async function updateUploadedWardrobeItem(
   );
 }
 
+async function deleteUploadedWardrobeItem(
+  id: string | number,
+): Promise<JsonObject> {
+  return requestJson(
+    `${API_BASE_URL}/wardrobe/items/uploaded/${encodeURIComponent(String(id))}`,
+    {
+      method: "DELETE",
+      credentials: "include",
+    },
+  );
+}
+
 async function downloadMyWardrobePdf(
   options: MyWardrobeFetchOptions = {},
 ): Promise<void> {
@@ -262,6 +274,7 @@ async function downloadMyWardrobePdf(
 }
 
 export {
+  deleteUploadedWardrobeItem,
   downloadMyWardrobePdf,
   fetchMyWardrobeItems,
   getWardrobeItemsPdfUrl,

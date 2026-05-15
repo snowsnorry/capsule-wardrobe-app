@@ -6,6 +6,7 @@ import {
   requestJson,
   startTestServer,
 } from "../test/serverRouteTestUtils.js";
+import { buildUploadedWardrobeItemImageKeys } from "./wardrobeUploadedItemUpdateRoute.js";
 
 const tinyPng = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMB/atcw3kAAAAASUVORK5CYII=",
@@ -75,6 +76,38 @@ function buildUploadForm(
   }
   return form;
 }
+
+test("uploaded wardrobe image key builder handles camel fields invalid URLs and duplicates", () => {
+  expect(
+    buildUploadedWardrobeItemImageKeys({
+      imageUrl: "https://images.example.com/wardrobe/profile/image_clean.png",
+      rawImageUrl: "https://images.example.com/wardrobe/profile/image.webp",
+    }),
+  ).toEqual([
+    "wardrobe/profile/image.webp",
+    "wardrobe/profile/image_clean.png",
+    "wardrobe/profile/image_clean_320.webp",
+    "wardrobe/profile/image_clean_480.webp",
+    "wardrobe/profile/image_clean_640.webp",
+  ]);
+  expect(
+    buildUploadedWardrobeItemImageKeys({
+      image_url: "not a url",
+      raw_image_url: "not a url",
+    }),
+  ).toEqual([]);
+  expect(
+    buildUploadedWardrobeItemImageKeys({
+      image_url: "https://images.example.com/wardrobe/profile/image.webp",
+      raw_image_url: "https://images.example.com/wardrobe/profile/image.webp",
+    }),
+  ).toEqual([
+    "wardrobe/profile/image.webp",
+    "wardrobe/profile/image_320.webp",
+    "wardrobe/profile/image_480.webp",
+    "wardrobe/profile/image_640.webp",
+  ]);
+});
 
 test("wardrobe routes list and save user wardrobe items", async (t) => {
   const calls: unknown[] = [];
@@ -317,6 +350,131 @@ test("wardrobe uploaded item updates reject invalid payloads and missing items",
   );
   expect(missing.response.status).toBe(404);
   expect(missing.json).toEqual({ error: "not_found" });
+});
+
+test("wardrobe routes delete uploaded items and best-effort cleanup R2 images", async (t) => {
+  const calls: Array<{ type: string; payload?: unknown }> = [];
+  const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+  const { baseUrl } = await startTestServer(t, {
+    overrides: {
+      deleteUploadedWardrobeItemImpl: async (payload) => {
+        calls.push({ type: "deleteUploaded", payload });
+        return {
+          id: payload.id,
+          image_url:
+            "https://images.example.com/wardrobe/profile/image_clean.png",
+          raw_image_url:
+            "https://images.example.com/wardrobe/profile/image.webp",
+          source: "uploaded",
+        };
+      },
+      deleteR2ObjectsImpl: async (payload) => {
+        calls.push({ type: "deleteR2", payload });
+        if (calls.filter((call) => call.type === "deleteR2").length === 2) {
+          throw new Error("r2_failed");
+        }
+        return { deleted: payload.keys.length };
+      },
+    },
+  });
+
+  const forbidden = await requestJson(
+    baseUrl,
+    "/wardrobe/items/uploaded/uploaded-1",
+    {
+      method: "DELETE",
+      origin: TEST_CLIENT_ORIGIN,
+      cookie: AUTH_COOKIE,
+    },
+  );
+  expect(forbidden.response.status).toBe(403);
+
+  const deleted = await requestJson(
+    baseUrl,
+    "/wardrobe/items/uploaded/uploaded-1",
+    {
+      method: "DELETE",
+      origin: TEST_CLIENT_ORIGIN,
+      cookie: AUTH_COOKIE,
+      csrfToken: CSRF_TOKEN,
+    },
+  );
+  expect(deleted.response.status).toBe(200);
+  expect(deleted.json).toEqual({ ok: true, removed: true });
+
+  const deletedWithR2Failure = await requestJson(
+    baseUrl,
+    "/wardrobe/items/uploaded/uploaded-2",
+    {
+      method: "DELETE",
+      origin: TEST_CLIENT_ORIGIN,
+      cookie: AUTH_COOKIE,
+      csrfToken: CSRF_TOKEN,
+    },
+  );
+  expect(deletedWithR2Failure.response.status).toBe(200);
+  expect(deletedWithR2Failure.json).toEqual({ ok: true, removed: true });
+  expect(consoleError).toHaveBeenCalled();
+
+  expect(calls).toEqual([
+    {
+      type: "deleteUploaded",
+      payload: { email: "person@example.com", id: "uploaded-1" },
+    },
+    {
+      type: "deleteR2",
+      payload: {
+        keys: [
+          "wardrobe/profile/image.webp",
+          "wardrobe/profile/image_clean.png",
+          "wardrobe/profile/image_clean_320.webp",
+          "wardrobe/profile/image_clean_480.webp",
+          "wardrobe/profile/image_clean_640.webp",
+        ],
+      },
+    },
+    {
+      type: "deleteUploaded",
+      payload: { email: "person@example.com", id: "uploaded-2" },
+    },
+    {
+      type: "deleteR2",
+      payload: {
+        keys: [
+          "wardrobe/profile/image.webp",
+          "wardrobe/profile/image_clean.png",
+          "wardrobe/profile/image_clean_320.webp",
+          "wardrobe/profile/image_clean_480.webp",
+          "wardrobe/profile/image_clean_640.webp",
+        ],
+      },
+    },
+  ]);
+});
+
+test("wardrobe uploaded item delete reports not removed when row is missing", async (t) => {
+  const { baseUrl } = await startTestServer(t, {
+    overrides: {
+      deleteUploadedWardrobeItemImpl: async () => null,
+      deleteR2ObjectsImpl: async () => {
+        throw new Error("should_not_delete_r2");
+      },
+    },
+  });
+
+  const deleted = await requestJson(
+    baseUrl,
+    "/wardrobe/items/uploaded/missing",
+    {
+      method: "DELETE",
+      origin: TEST_CLIENT_ORIGIN,
+      cookie: AUTH_COOKIE,
+      csrfToken: CSRF_TOKEN,
+    },
+  );
+
+  expect(deleted.response.status).toBe(200);
+  expect(deleted.json).toEqual({ ok: true, removed: false });
 });
 
 test("wardrobe routes export filtered wardrobe items as PDF", async (t) => {

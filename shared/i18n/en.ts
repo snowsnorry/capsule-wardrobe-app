@@ -297,6 +297,11 @@ const en = {
     saveNotFound: "This product is no longer available in the catalog.",
     removeFailed: "Failed to remove from My Wardrobe. Please try again.",
     updateFailed: "Failed to update the item. Please try again.",
+    deleteUploaded: "Delete item",
+    deleteUploadedConfirmTitle: "Delete uploaded item?",
+    deleteUploadedConfirmBody:
+      "This uploaded item and its images will be permanently deleted.",
+    deleteUploadedConfirm: "Delete",
     removeConfirmTitle: "Remove from My Wardrobe?",
     removeConfirmBody:
       "This product will be removed from My Wardrobe. You can save it again later.",
