@@ -100,6 +100,11 @@ test("ensure auth, profile, passkey, capsule, shared capsule, and search schemas
   ).toBeTruthy();
   expect(
     statements.some((statement) =>
+      statement.includes("id bigserial primary key"),
+    ),
+  ).toBeTruthy();
+  expect(
+    statements.some((statement) =>
       statement.includes("user_wardrobe_items_raw_image_url_http_check"),
     ),
   ).toBeTruthy();

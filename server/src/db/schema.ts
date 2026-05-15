@@ -3,6 +3,9 @@ import {
   getSqlClient,
   type DatabaseConnectionRow,
 } from "./core.js";
+import { ensureSearchTable } from "./searchSchema.js";
+
+export { ensureSearchTable } from "./searchSchema.js";
 
 export async function checkDatabaseConnection(): Promise<DatabaseConnectionRow | null> {
   const sql = getSqlClient();
@@ -264,7 +267,7 @@ export async function ensureWardrobeTable(): Promise<void> {
   await sql`create extension if not exists vector`;
   await sql`
     create table if not exists wardrobe (
-      id uuid primary key default gen_random_uuid(),
+      id bigserial primary key,
       profile_email text not null references profiles(email) on delete cascade,
       product_id text null,
       name text null,
@@ -317,34 +320,6 @@ export async function ensureWardrobeTable(): Promise<void> {
     create unique index if not exists wardrobe_profile_email_from_catalog_url_idx
     on wardrobe (profile_email, url)
     where source = 'from_catalog' and url is not null
-  `;
-}
-
-export async function ensureSearchTable(): Promise<void> {
-  const sql = getSqlClient();
-  await sql`
-    create table if not exists search (
-      email text primary key,
-      query text null,
-      embedding jsonb null,
-      brand text[] not null default '{}'::text[],
-      price_min double precision null,
-      price_max double precision null,
-      audience text[] not null default '{}'::text[],
-      category text[] not null default '{}'::text[],
-      season text[] not null default '{}'::text[],
-      formality_level text[] not null default '{}'::text[],
-      style text[] not null default '{}'::text[],
-      occasions text[] not null default '{}'::text[],
-      color text[] not null default '{}'::text[],
-      pattern text[] not null default '{}'::text[],
-      silhouette text[] not null default '{}'::text[],
-      fit text[] not null default '{}'::text[],
-      closure_type text[] not null default '{}'::text[],
-      page integer not null default 1,
-      created_at timestamptz not null default now(),
-      updated_at timestamptz not null default now()
-    )
   `;
 }
 
