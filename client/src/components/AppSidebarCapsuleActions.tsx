@@ -1,5 +1,5 @@
 import { IconButton, Stack, Tooltip } from "@mui/material";
-import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
+import { IoCreateOutline } from "react-icons/io5";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 
 type Translate = (key: string) => string;
@@ -60,7 +60,7 @@ function CapsulePrimaryActions({
             onClick={() => void onCreateCapsule?.()}
             sx={capsulePrimaryActionButtonSx}
           >
-            <AddOutlinedIcon fontSize="small" />
+            <IoCreateOutline data-testid="IoCreateOutline" size={20} />
           </IconButton>
         </span>
       </Tooltip>

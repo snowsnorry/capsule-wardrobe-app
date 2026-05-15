@@ -137,11 +137,13 @@ describe("AppSidebarNavigation", () => {
       expect(getComputedStyle(button).borderRadius).toBe("8px");
     }
 
-    expect(
-      screen
-        .getByRole("button", { name: "New capsule" })
-        .querySelector('[data-testid="NoteAltOutlinedIcon"]'),
-    ).not.toBeNull();
+    const createCapsuleIcon = screen
+      .getByRole("button", { name: "New capsule" })
+      .querySelector('[data-testid="IoCreateOutline"]');
+
+    expect(createCapsuleIcon).not.toBeNull();
+    expect(createCapsuleIcon).toHaveAttribute("height", "20");
+    expect(createCapsuleIcon).toHaveAttribute("width", "20");
   });
 
   test("uses capsule action labels as tooltips", async () => {
