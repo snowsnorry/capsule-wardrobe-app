@@ -294,9 +294,11 @@ const ru = {
     savedBadge: "Сохранено",
     failedUploadBadge: "Failed",
     noCategoryBadge: "No category",
+    needsReviewBadge: "Требует проверки",
     saveFailed: "Не удалось сохранить в Мой гардероб. Попробуйте еще раз.",
     saveNotFound: "Этого товара больше нет в каталоге.",
     removeFailed: "Не удалось удалить из Моего гардероба. Попробуйте еще раз.",
+    updateFailed: "Не удалось обновить вещь. Попробуйте еще раз.",
     removeConfirmTitle: "Удалить из Моего гардероба?",
     removeConfirmBody:
       "Товар будет удален из Моего гардероба. Его можно будет сохранить снова позже.",
@@ -330,6 +332,22 @@ const ru = {
       label: "Версия изображения загруженной вещи",
       original: "Original",
       ai: "AI",
+    },
+    uploadedDetail: {
+      title: "Детали загруженной вещи",
+      notSpecified: "Не указано",
+      missingRequired: "Чтобы применить изменения, заполните: {items}.",
+      fields: {
+        name: "Название",
+        description: "Описание",
+        brand: "Бренд",
+      },
+      required: {
+        name: "название",
+        audience: "для кого",
+        category: "категорию",
+        season: "хотя бы один сезон",
+      },
     },
   },
   search: {

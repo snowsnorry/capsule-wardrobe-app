@@ -79,6 +79,7 @@ import {
   listWardrobeItemsByEmail,
   saveUploadedWardrobeItemsByEmail,
   saveWardrobeItemFromCatalogByUrl,
+  updateUploadedWardrobeItemDetailsById,
   updateUploadedWardrobeItemMetadataById,
   insertPasskey,
   insertPasskeyChallenge,
@@ -236,6 +237,8 @@ function createAppDependencies(options: Record<string, unknown> = {}) {
     updateProfileActiveCapsuleIdImpl: updateProfileActiveCapsuleId,
     updateProfileImpl: updateProfile,
     updateProfileLocaleImpl: updateProfileLocale,
+    updateUploadedWardrobeItemDetailsImpl:
+      updateUploadedWardrobeItemDetailsById,
     updateUploadedWardrobeItemMetadataImpl:
       updateUploadedWardrobeItemMetadataById,
     uploadWardrobeImageToR2Impl: uploadWardrobeImageToR2,

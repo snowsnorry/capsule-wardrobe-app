@@ -16,10 +16,14 @@ import {
 
 type ProductDialogImagePaneProps = {
   item: ProductDetailItem | null;
+  edge?: "right" | "top";
+  imageFit?: "contain" | "cover";
   t: (key: string, params?: Record<string, unknown>) => string;
 };
 
 function ProductDialogImagePane({
+  edge = "right",
+  imageFit = "cover",
   item,
   t,
 }: ProductDialogImagePaneProps): ReactElement {
@@ -46,7 +50,7 @@ function ProductDialogImagePane({
   return (
     <Box
       data-testid="product-detail-dialog-image-pane"
-      sx={imagePaneSx(imageSurface)}
+      sx={imagePaneSx(imageSurface, edge)}
     >
       {imageUrl && !imageFailed ? (
         <>
@@ -55,7 +59,7 @@ function ProductDialogImagePane({
             src={imageUrl}
             alt={label}
             onError={() => setImageFailed(true)}
-            sx={imageSx}
+            sx={imageSx(imageFit)}
           />
           {showImageToggle ? (
             <ProductImageVersionToggle
@@ -111,14 +115,15 @@ function ProductImageVersionToggle({
   );
 }
 
-function imagePaneSx(imageSurface: string) {
+function imagePaneSx(imageSurface: string, edge: "right" | "top") {
   return {
     minHeight: 0,
     height: "100%",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    borderRight: "1px solid",
+    borderRight: edge === "right" ? "1px solid" : 0,
+    borderTop: edge === "top" ? "1px solid" : 0,
     borderColor: "divider",
     bgcolor: imageSurface,
     overflow: "hidden",
@@ -126,12 +131,14 @@ function imagePaneSx(imageSurface: string) {
   } as const;
 }
 
-const imageSx = {
-  width: "100%",
-  height: "100%",
-  objectFit: "cover",
-  objectPosition: "center",
-} as const;
+function imageSx(imageFit: "contain" | "cover") {
+  return {
+    width: "100%",
+    height: "100%",
+    objectFit: imageFit,
+    objectPosition: "center",
+  } as const;
+}
 
 const imageVersionToggleSx = {
   position: "absolute",

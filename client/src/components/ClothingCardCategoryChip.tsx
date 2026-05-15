@@ -1,11 +1,11 @@
 import { Chip, Stack } from "@mui/material";
 import type { ClothingCardItem } from "./ClothingCardTypes";
 
-type CategoryChipTone = "category" | "failed" | "noCategory";
+type CategoryChipTone = "category" | "failed" | "needsReview";
 
 type ClothingCardBadgeLabels = {
   failedUploadLabel: string;
-  noCategoryLabel: string;
+  needsReviewLabel: string;
   savedToWardrobeLabel: string;
 };
 
@@ -13,14 +13,23 @@ function isFailedUploadedWardrobeItem(item: ClothingCardItem) {
   return item.source === "uploaded" && item.processing_status === "failed";
 }
 
-function isProcessedUploadedWardrobeItemWithoutCategory(
+function isProcessedUploadedWardrobeItemWithMissingRequiredMetadata(
   item: ClothingCardItem,
 ) {
+  const season = Array.isArray(item.season)
+    ? item.season
+    : typeof item.season === "string"
+      ? [item.season]
+      : [];
+
   return (
     item.source === "uploaded" &&
     (item.processing_status === "metadata_processed" ||
       item.processing_status === "ready") &&
-    !String(item.category || "").trim()
+    (!String(item.name || "").trim() ||
+      !String(item.audience || "").trim() ||
+      !String(item.category || "").trim() ||
+      season.length === 0)
   );
 }
 
@@ -37,8 +46,8 @@ function getCategoryChip({
     return { label: badgeLabels.failedUploadLabel, tone: "failed" };
   }
 
-  if (isProcessedUploadedWardrobeItemWithoutCategory(item)) {
-    return { label: badgeLabels.noCategoryLabel, tone: "noCategory" };
+  if (isProcessedUploadedWardrobeItemWithMissingRequiredMetadata(item)) {
+    return { label: badgeLabels.needsReviewLabel, tone: "needsReview" };
   }
 
   return categoryDisplayLabel
@@ -54,7 +63,7 @@ function getCategoryChipColors(tone: CategoryChipTone) {
     };
   }
 
-  if (tone === "noCategory") {
+  if (tone === "needsReview") {
     return {
       bgcolor: "#fff1c2",
       color: "#8a5a00",

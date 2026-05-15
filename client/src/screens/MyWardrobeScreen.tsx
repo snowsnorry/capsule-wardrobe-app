@@ -7,7 +7,9 @@ import {
   fetchMyWardrobeItems,
   removeCatalogItemFromMyWardrobe,
   type MyWardrobeSource,
+  type UploadedWardrobeItemUpdatePayload,
   type UploadWardrobeProgress,
+  updateUploadedWardrobeItem,
   uploadWardrobeImages,
 } from "../api/myWardrobe";
 import { useI18n } from "../i18n/useI18n";
@@ -27,16 +29,17 @@ import {
   MyWardrobeRemoveConfirmDialog,
   type MyWardrobeProductMenuState,
 } from "./MyWardrobeProductMenu";
+import {
+  getItemFromResponse,
+  getItemsFromResponse,
+} from "./myWardrobeResponse";
 import ProductDetailDialog from "../components/productDetail/ProductDetailDialog";
+import UploadedProductDetailDialog from "../components/productDetail/UploadedProductDetailDialog";
 import WardrobeUploadDialog from "./WardrobeUploadDialog";
 import MyWardrobeToolbar, {
   getSourceFilter,
   type MyWardrobeFilter,
 } from "./MyWardrobeToolbar";
-
-type MyWardrobeItemsResponse = {
-  items?: MainScreenItem[];
-};
 
 const EMPTY_UPLOAD_PROGRESS: UploadWardrobeProgress = {
   total: 0,
@@ -47,15 +50,10 @@ const EMPTY_UPLOAD_PROGRESS: UploadWardrobeProgress = {
   failed: 0,
 };
 
-function getItemsFromResponse(response: unknown): MainScreenItem[] {
-  const items = (response as MyWardrobeItemsResponse)?.items;
-  return Array.isArray(items) ? items : [];
-}
-
 // Main screen composition stays local so toolbar, menus, dialogs, and grid share state.
 // eslint-disable-next-line max-lines-per-function
 function MyWardrobeScreen(): ReactElement {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const isOverlay = useMediaQuery("(max-width: 1279.95px)");
   const [filter, setFilter] = useState<MyWardrobeFilter>("all");
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
@@ -79,6 +77,13 @@ function MyWardrobeScreen(): ReactElement {
       setRefreshKey((current) => current + 1);
       setIsUploadDialogOpen(false);
     }
+  };
+  const handleApplyUploadedProductDetail = async (
+    item: MainScreenItem,
+    payload: UploadedWardrobeItemUpdatePayload,
+  ) => {
+    const updated = await wardrobeItems.handleUpdateUploadedItem(item, payload);
+    setProductDetailItem(updated);
   };
 
   return (
@@ -131,13 +136,25 @@ function MyWardrobeScreen(): ReactElement {
           onClose={() => wardrobeItems.setRemoveConfirmItem(null)}
           onConfirm={wardrobeItems.handleConfirmRemove}
         />
-        <ProductDetailDialog
-          item={productDetailItem}
-          open={Boolean(productDetailItem)}
-          isMobile={isOverlay}
-          onClose={() => setProductDetailItem(null)}
-          onRemoveFromMyWardrobe={wardrobeItems.handleConfirmRemove}
-        />
+        {productDetailItem?.source === "uploaded" ? (
+          <UploadedProductDetailDialog
+            item={productDetailItem}
+            open={Boolean(productDetailItem)}
+            isMobile={isOverlay}
+            locale={locale}
+            t={t}
+            onClose={() => setProductDetailItem(null)}
+            onApply={handleApplyUploadedProductDetail}
+          />
+        ) : (
+          <ProductDetailDialog
+            item={productDetailItem}
+            open={Boolean(productDetailItem)}
+            isMobile={isOverlay}
+            onClose={() => setProductDetailItem(null)}
+            onRemoveFromMyWardrobe={wardrobeItems.handleConfirmRemove}
+          />
+        )}
         <WardrobeUploadDialog
           open={isUploadDialogOpen}
           isUploading={wardrobeItems.isUploading}
@@ -238,6 +255,38 @@ function useMyWardrobeItems(
       setIsUploading(false);
     }
   };
+  const handleUpdateUploadedItem = async (
+    item: MainScreenItem,
+    payload: UploadedWardrobeItemUpdatePayload,
+  ) => {
+    const id = item?.id;
+    if (!id) {
+      throw new Error("missing_uploaded_item_id");
+    }
+
+    setIsMutating(true);
+    try {
+      const response = await updateUploadedWardrobeItem(id, payload);
+      const updatedItem = getItemFromResponse(response) || {
+        ...item,
+        ...payload,
+      };
+      setError("");
+      setItems((current) =>
+        current.map((currentItem) =>
+          String(currentItem?.id || "") === String(id)
+            ? updatedItem
+            : currentItem,
+        ),
+      );
+      return updatedItem;
+    } catch (error) {
+      setError(t("myWardrobe.updateFailed"));
+      throw error;
+    } finally {
+      setIsMutating(false);
+    }
+  };
 
   return {
     closeProductMenu,
@@ -245,6 +294,7 @@ function useMyWardrobeItems(
     handleConfirmRemove,
     handleDownloadPdf,
     handleProductMenuClick,
+    handleUpdateUploadedItem,
     handleUploadImages,
     isDownloadingPdf,
     isLoading,

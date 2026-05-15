@@ -176,6 +176,149 @@ test("wardrobe routes list and save user wardrobe items", async (t) => {
   ]);
 });
 
+test("wardrobe routes update uploaded item details", async (t) => {
+  const calls: unknown[] = [];
+  const { baseUrl } = await startTestServer(t, {
+    overrides: {
+      updateUploadedWardrobeItemDetailsImpl: async (payload) => {
+        calls.push(payload);
+        return {
+          id: payload.id,
+          profileEmail: payload.email,
+          email: payload.email,
+          source: "uploaded",
+          updatedAt: "2026-05-01T00:00:00.000Z",
+          ...payload.details,
+        };
+      },
+    },
+  });
+
+  const update = await requestJson(
+    baseUrl,
+    "/wardrobe/items/uploaded/uploaded-1",
+    {
+      method: "PATCH",
+      origin: TEST_CLIENT_ORIGIN,
+      cookie: AUTH_COOKIE,
+      csrfToken: CSRF_TOKEN,
+      body: {
+        name: "Updated shirt",
+        description: "Button-front shirt",
+        brand: "",
+        audience: "unisex",
+        category: "top",
+        season: ["summer"],
+        formality_level: ["casual"],
+        style: ["minimalistic"],
+        occasions: ["office"],
+        color_base: ["white"],
+        pattern: "solid",
+        finish: null,
+        composition: ["linen", "cotton"],
+        silhouette: null,
+        fit: "regular",
+        closure_type: ["button"],
+      },
+    },
+  );
+
+  expect(update.response.status).toBe(200);
+  expect(update.json).toEqual({
+    ok: true,
+    item: {
+      id: "uploaded-1",
+      source: "uploaded",
+      name: "Updated shirt",
+      description: "Button-front shirt",
+      brand: null,
+      audience: "all",
+      category: "top",
+      season: ["summer"],
+      formality_level: ["casual"],
+      style: ["minimalistic"],
+      occasions: ["office"],
+      color_base: ["white"],
+      pattern: "solid",
+      finish: null,
+      composition: "linen, cotton",
+      silhouette: null,
+      fit: "regular",
+      closure_type: ["button"],
+    },
+  });
+  expect(calls).toEqual([
+    {
+      email: "person@example.com",
+      id: "uploaded-1",
+      details: {
+        name: "Updated shirt",
+        description: "Button-front shirt",
+        brand: null,
+        audience: "all",
+        category: "top",
+        season: ["summer"],
+        formality_level: ["casual"],
+        style: ["minimalistic"],
+        occasions: ["office"],
+        color_base: ["white"],
+        pattern: "solid",
+        finish: null,
+        composition: "linen, cotton",
+        silhouette: null,
+        fit: "regular",
+        closure_type: ["button"],
+      },
+    },
+  ]);
+});
+
+test("wardrobe uploaded item updates reject invalid payloads and missing items", async (t) => {
+  const { baseUrl } = await startTestServer(t, {
+    overrides: {
+      updateUploadedWardrobeItemDetailsImpl: async () => null,
+    },
+  });
+
+  const invalid = await requestJson(
+    baseUrl,
+    "/wardrobe/items/uploaded/uploaded-1",
+    {
+      method: "PATCH",
+      origin: TEST_CLIENT_ORIGIN,
+      cookie: AUTH_COOKIE,
+      csrfToken: CSRF_TOKEN,
+      body: {
+        name: "",
+        audience: "unisex",
+        category: "top",
+        season: ["summer"],
+      },
+    },
+  );
+  expect(invalid.response.status).toBe(400);
+  expect(invalid.json).toEqual({ error: "invalid_payload" });
+
+  const missing = await requestJson(
+    baseUrl,
+    "/wardrobe/items/uploaded/uploaded-1",
+    {
+      method: "PATCH",
+      origin: TEST_CLIENT_ORIGIN,
+      cookie: AUTH_COOKIE,
+      csrfToken: CSRF_TOKEN,
+      body: {
+        name: "Updated shirt",
+        audience: "women",
+        category: "top",
+        season: ["summer"],
+      },
+    },
+  );
+  expect(missing.response.status).toBe(404);
+  expect(missing.json).toEqual({ error: "not_found" });
+});
+
 test("wardrobe routes export filtered wardrobe items as PDF", async (t) => {
   const calls: unknown[] = [];
   let pdfLocale = "";

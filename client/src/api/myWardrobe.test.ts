@@ -22,6 +22,7 @@ import {
   getWardrobeItemsUrl,
   removeCatalogItemFromMyWardrobe,
   saveCatalogItemToMyWardrobe,
+  updateUploadedWardrobeItem,
   uploadWardrobeImages,
 } from "./myWardrobe";
 
@@ -204,6 +205,39 @@ describe("my wardrobe api", () => {
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({ url: "https://example.com/1" }),
+      },
+    );
+  });
+
+  test("updates uploaded wardrobe item metadata", async () => {
+    const payload = {
+      name: "Linen shirt",
+      description: "Button-front shirt",
+      brand: null,
+      audience: "all",
+      category: "top",
+      season: ["summer"],
+      formality_level: ["casual"],
+      style: ["minimalistic"],
+      occasions: ["office"],
+      color_base: ["white"],
+      pattern: "solid",
+      finish: null,
+      composition: "linen, cotton",
+      silhouette: null,
+      fit: "regular",
+      closure_type: ["button"],
+    };
+
+    await updateUploadedWardrobeItem("uploaded-1", payload);
+
+    expect(requestApi.requestJson).toHaveBeenCalledWith(
+      "https://api.example.test/wardrobe/items/uploaded/uploaded-1",
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(payload),
       },
     );
   });

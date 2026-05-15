@@ -24,6 +24,7 @@ vi.mock("../../i18n/useI18n", () => ({
         "actions.cancel": "Cancel",
         "capsule.removeFromMyWardrobe": "Remove from My Wardrobe",
         "myWardrobe.savedBadge": "Saved",
+        "myWardrobe.filters.uploaded": "Uploaded",
         "myWardrobe.removeConfirm": "Remove",
         "myWardrobe.removeConfirmBody": "Remove body",
         "myWardrobe.removeConfirmTitle": "Remove from My Wardrobe?",

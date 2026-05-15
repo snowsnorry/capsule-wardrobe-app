@@ -2,6 +2,7 @@ import type { ReactElement } from "react";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import BookmarkBorderRoundedIcon from "@mui/icons-material/BookmarkBorderRounded";
 import OpenInNewRoundedIcon from "@mui/icons-material/OpenInNewRounded";
+import PhotoCameraOutlinedIcon from "@mui/icons-material/PhotoCameraOutlined";
 import { Box, IconButton, Stack, Typography } from "@mui/material";
 import ProductLabelText from "../ProductLabelText";
 import { translateOption } from "../../i18n";
@@ -196,6 +197,7 @@ function ProductTitle({
   t: ProductDetailProps["t"];
 }) {
   const savedLabel = t("myWardrobe.savedBadge");
+  const uploadedLabel = t("myWardrobe.filters.uploaded");
   const linkProps =
     productUrl && linkTitle
       ? { href: productUrl, target: "_blank", rel: "noreferrer" }
@@ -220,7 +222,11 @@ function ProductTitle({
         variant="h5"
         sx={{ color: "inherit", display: "block", overflowWrap: "anywhere" }}
       >
-        {isSaved ? <SavedToWardrobeTitleIcon label={savedLabel} /> : null}
+        {item.source === "uploaded" ? (
+          <UploadedWardrobeTitleIcon label={uploadedLabel} />
+        ) : isSaved ? (
+          <SavedToWardrobeTitleIcon label={savedLabel} />
+        ) : null}
         <ProductLabelText item={item} fallbackLabel={t("search.untitled")} />
         {productUrl && linkTitle ? (
           <OpenInNewRoundedIcon sx={externalLinkIconSx} />
@@ -261,6 +267,23 @@ function SavedToWardrobeTitleIcon({ label }: { label: string }) {
   return (
     <BookmarkBorderRoundedIcon
       className="catalog-detail-saved-icon"
+      titleAccess={label}
+      aria-label={label}
+      sx={{
+        color: "#15766f",
+        display: "inline-block",
+        fontSize: 20,
+        mr: 0.6,
+        verticalAlign: "-0.12em",
+      }}
+    />
+  );
+}
+
+function UploadedWardrobeTitleIcon({ label }: { label: string }) {
+  return (
+    <PhotoCameraOutlinedIcon
+      className="catalog-detail-uploaded-icon"
       titleAccess={label}
       aria-label={label}
       sx={{

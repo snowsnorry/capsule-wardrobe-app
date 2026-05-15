@@ -110,6 +110,14 @@ function createWardrobeDependencies() {
       processing_status: payload.processingStatus,
       ...(payload.metadata || {}),
     }),
+    updateUploadedWardrobeItemDetailsImpl: async (payload) => ({
+      id: payload.id,
+      image_url: "https://images.example.com/wardrobe/profile/image.webp",
+      raw_image_url: "https://images.example.com/wardrobe/profile/image.webp",
+      source: "uploaded",
+      processing_status: "ready",
+      ...payload.details,
+    }),
     deleteWardrobeItemFromCatalogImpl: async () => true,
   };
 }

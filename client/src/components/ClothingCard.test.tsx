@@ -185,20 +185,21 @@ describe("ClothingCard", () => {
     ).not.toBeInTheDocument();
   });
 
-  test("shows a no category chip for processed uploaded wardrobe items without a category", () => {
+  test("shows a needs review chip for processed uploaded wardrobe items with missing required metadata", () => {
     const { container } = renderCard({
       item: {
         ...item,
         category: null,
+        season: ["summer"],
         source: "uploaded",
         processing_status: "metadata_processed",
       },
     });
 
-    const noCategoryChip = container.querySelector(
-      ".wardrobe-card-category-noCategory",
+    const needsReviewChip = container.querySelector(
+      ".wardrobe-card-category-needsReview",
     );
-    expect(noCategoryChip).toHaveTextContent("myWardrobe.noCategoryBadge");
+    expect(needsReviewChip).toHaveTextContent("myWardrobe.needsReviewBadge");
     expect(
       container.querySelector(".wardrobe-card-category-category"),
     ).not.toBeInTheDocument();

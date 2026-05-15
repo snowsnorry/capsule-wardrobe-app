@@ -12,6 +12,8 @@ import {
   processUploadedWardrobeItemMetadata,
   writeWardrobeUploadEvent,
 } from "./wardrobeUploadStream.js";
+import { normalizeWardrobeSourceParam } from "./wardrobeRouteParams.js";
+import { registerUploadedWardrobeItemUpdateRoute } from "./wardrobeUploadedItemUpdateRoute.js";
 
 const wardrobeUpload = multer({
   storage: multer.memoryStorage(),
@@ -29,14 +31,6 @@ const wardrobeUpload = multer({
     callback(new Error("invalid_image"));
   },
 }).array(WARDROBE_UPLOAD_FIELD_NAME, WARDROBE_UPLOAD_MAX_FILES);
-
-function normalizeWardrobeSourceParam(value: unknown) {
-  if (value === undefined || value === null || value === "") {
-    return null;
-  }
-
-  return value === "uploaded" || value === "from_catalog" ? value : "";
-}
 
 function getHttpUrl(value: unknown): string {
   const normalized = String(value || "").trim();
@@ -109,6 +103,11 @@ function normalizeWardrobeItemForPdf(item) {
 export function registerWardrobeRoutes(app, context) {
   registerWardrobeListRoute(app, context);
   registerWardrobeUploadRoute(app, context);
+  registerUploadedWardrobeItemUpdateRoute(
+    app,
+    context,
+    filterWardrobeItemForDisplay,
+  );
   registerWardrobePdfRoute(app, context);
   registerWardrobeCatalogRoutes(app, context);
 }

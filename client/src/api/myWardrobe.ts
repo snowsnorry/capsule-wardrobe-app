@@ -19,6 +19,24 @@ type MyWardrobeFetchOptions = {
   force?: boolean;
   source?: MyWardrobeSource | null;
 };
+type UploadedWardrobeItemUpdatePayload = {
+  name: string;
+  description: string | null;
+  brand: string | null;
+  audience: string;
+  category: string;
+  season: string[];
+  formality_level: string[];
+  style: string[];
+  occasions: string[];
+  color_base: string[];
+  pattern: string | null;
+  finish: string | null;
+  composition: string | null;
+  silhouette: string | null;
+  fit: string | null;
+  closure_type: string[];
+};
 type RequestErrorWithStatus = Error & {
   status: number;
 };
@@ -193,6 +211,21 @@ async function removeCatalogItemFromMyWardrobe(
   });
 }
 
+async function updateUploadedWardrobeItem(
+  id: string | number,
+  payload: UploadedWardrobeItemUpdatePayload,
+): Promise<JsonObject> {
+  return requestJson(
+    `${API_BASE_URL}/wardrobe/items/uploaded/${encodeURIComponent(String(id))}`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(payload),
+    },
+  );
+}
+
 async function downloadMyWardrobePdf(
   options: MyWardrobeFetchOptions = {},
 ): Promise<void> {
@@ -235,7 +268,9 @@ export {
   getWardrobeItemsUrl,
   removeCatalogItemFromMyWardrobe,
   saveCatalogItemToMyWardrobe,
+  updateUploadedWardrobeItem,
   uploadWardrobeImages,
 };
 export type { MyWardrobeSource };
+export type { UploadedWardrobeItemUpdatePayload };
 export type { UploadWardrobeProgress };

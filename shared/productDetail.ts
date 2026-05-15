@@ -223,7 +223,16 @@ const detailFields: readonly DetailField[] = [
   {
     key: "finish",
     labelKey: "search.fields.finish",
-    resolveValue: (item) => createTextValue(item?.finish),
+    resolveValue: (item, context) =>
+      createTextValue(
+        item?.finish
+          ? context.translateOption(
+              "finishes",
+              String(item.finish),
+              context.locale,
+            )
+          : null,
+      ),
   },
   {
     key: "neutral",

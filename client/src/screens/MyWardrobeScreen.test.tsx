@@ -14,6 +14,7 @@ const api = vi.hoisted(() => ({
   downloadMyWardrobePdf: vi.fn(),
   fetchMyWardrobeItems: vi.fn(),
   removeCatalogItemFromMyWardrobe: vi.fn(),
+  updateUploadedWardrobeItem: vi.fn(),
   uploadWardrobeImages: vi.fn(),
 }));
 const useI18nMock = vi.hoisted(() => vi.fn());
@@ -72,6 +73,42 @@ vi.mock("../components/productDetail/ProductDetailDialog", () => ({
       </div>
     ) : null,
 }));
+vi.mock("../components/productDetail/UploadedProductDetailDialog", () => ({
+  default: ({ item, open, onClose, onApply }) =>
+    open ? (
+      <div data-testid="uploaded-product-detail-dialog">
+        {item?.name}
+        <button type="button" onClick={onClose}>
+          close uploaded product
+        </button>
+        <button
+          type="button"
+          onClick={() =>
+            onApply?.(item, {
+              name: "Updated uploaded shirt",
+              description: null,
+              brand: null,
+              audience: "all",
+              category: "top",
+              season: ["summer"],
+              formality_level: [],
+              style: [],
+              occasions: [],
+              color_base: [],
+              pattern: null,
+              finish: null,
+              composition: "linen",
+              silhouette: null,
+              fit: null,
+              closure_type: [],
+            })
+          }
+        >
+          apply uploaded product
+        </button>
+      </div>
+    ) : null,
+}));
 vi.mock("../components/ClothingGridPlaceholder", () => ({
   default: ({ count, mobileColumns }) => (
     <div
@@ -96,9 +133,11 @@ const translations: Record<string, string> = {
   "myWardrobe.filterLabel": "My Wardrobe source",
   "myWardrobe.loadFailed": "Failed to load My Wardrobe.",
   "myWardrobe.removeFailed": "Failed to remove from My Wardrobe.",
+  "myWardrobe.updateFailed": "Failed to update the item.",
   "myWardrobe.uploadFailed": "Failed to upload wardrobe photos.",
   "myWardrobe.failedUploadBadge": "Failed",
   "myWardrobe.noCategoryBadge": "No category",
+  "myWardrobe.needsReviewBadge": "Needs review",
   "myWardrobe.removeConfirmTitle": "Remove from My Wardrobe?",
   "myWardrobe.removeConfirmBody":
     "This product will be removed from My Wardrobe.",
@@ -155,6 +194,14 @@ describe("MyWardrobeScreen", () => {
     api.fetchMyWardrobeItems.mockReset();
     api.removeCatalogItemFromMyWardrobe.mockReset();
     api.removeCatalogItemFromMyWardrobe.mockResolvedValue({ ok: true });
+    api.updateUploadedWardrobeItem.mockReset();
+    api.updateUploadedWardrobeItem.mockResolvedValue({
+      item: {
+        id: "wardrobe-uploaded",
+        name: "Updated uploaded shirt",
+        source: "uploaded",
+      },
+    });
     api.uploadWardrobeImages.mockReset();
     api.uploadWardrobeImages.mockResolvedValue({ ok: true, items: [] });
     api.fetchMyWardrobeItems.mockResolvedValue({
@@ -420,6 +467,46 @@ describe("MyWardrobeScreen", () => {
     expect(api.removeCatalogItemFromMyWardrobe).toHaveBeenCalledWith(
       "https://example.com/1",
     );
+  });
+
+  test("opens editable uploaded product details and updates local item state", async () => {
+    const user = userEvent.setup();
+    api.fetchMyWardrobeItems.mockResolvedValueOnce({
+      items: [
+        {
+          id: "wardrobe-uploaded",
+          name: "Uploaded shirt",
+          source: "uploaded",
+          image_url: "https://example.com/uploaded.jpg",
+        },
+      ],
+    });
+    renderScreen();
+
+    await user.click(
+      await screen.findByTestId("wardrobe-card-wardrobe-uploaded"),
+    );
+    expect(
+      screen.getByTestId("uploaded-product-detail-dialog"),
+    ).toHaveTextContent("Uploaded shirt");
+
+    await user.click(
+      screen.getByRole("button", { name: "apply uploaded product" }),
+    );
+
+    expect(api.updateUploadedWardrobeItem).toHaveBeenCalledWith(
+      "wardrobe-uploaded",
+      expect.objectContaining({
+        audience: "all",
+        composition: "linen",
+        name: "Updated uploaded shirt",
+      }),
+    );
+    await waitFor(() => {
+      expect(
+        screen.getByTestId("wardrobe-card-wardrobe-uploaded"),
+      ).toHaveTextContent("Updated uploaded shirt");
+    });
   });
 
   test("reloads when source filter changes", async () => {

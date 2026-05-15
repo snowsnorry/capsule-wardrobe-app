@@ -21,6 +21,7 @@ const t = (key: string) => {
     "search.untitled": "Untitled",
     "actions.cancel": "Cancel",
     "myWardrobe.savedBadge": "Saved",
+    "myWardrobe.filters.uploaded": "Uploaded",
     "myWardrobe.removeConfirmTitle": "Remove from My Wardrobe?",
     "myWardrobe.removeConfirmBody": "Remove body",
     "myWardrobe.removeConfirm": "Remove",
@@ -217,6 +218,23 @@ describe("ProductDetail", () => {
     expect(titleHtml?.indexOf("catalog-detail-saved-icon")).toBeLessThan(
       titleHtml?.indexOf("Coat") ?? 0,
     );
+  });
+
+  test("renders uploaded wardrobe icon instead of bookmark for uploaded detail items", () => {
+    const { container } = renderProductDetail({
+      id: "uploaded-coat",
+      name: "Uploaded Coat",
+      source: "uploaded",
+      isSavedToWardrobe: true,
+    });
+
+    expect(screen.getByLabelText("Uploaded")).toBeInTheDocument();
+    expect(
+      container.querySelector(".catalog-detail-uploaded-icon"),
+    ).toBeInTheDocument();
+    expect(
+      container.querySelector(".catalog-detail-saved-icon"),
+    ).not.toBeInTheDocument();
   });
 
   test("keeps detail groups visually distinct from the dark page background", () => {

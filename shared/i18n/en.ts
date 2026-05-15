@@ -292,9 +292,11 @@ const en = {
     savedBadge: "Saved",
     failedUploadBadge: "Failed",
     noCategoryBadge: "No category",
+    needsReviewBadge: "Needs review",
     saveFailed: "Failed to save to My Wardrobe. Please try again.",
     saveNotFound: "This product is no longer available in the catalog.",
     removeFailed: "Failed to remove from My Wardrobe. Please try again.",
+    updateFailed: "Failed to update the item. Please try again.",
     removeConfirmTitle: "Remove from My Wardrobe?",
     removeConfirmBody:
       "This product will be removed from My Wardrobe. You can save it again later.",
@@ -328,6 +330,22 @@ const en = {
       label: "Uploaded item image version",
       original: "Original",
       ai: "AI",
+    },
+    uploadedDetail: {
+      title: "Uploaded item details",
+      notSpecified: "Not specified",
+      missingRequired: "To apply changes, fill in: {items}.",
+      fields: {
+        name: "Name",
+        description: "Description",
+        brand: "Brand",
+      },
+      required: {
+        name: "name",
+        audience: "audience",
+        category: "category",
+        season: "at least one season",
+      },
     },
   },
   search: {

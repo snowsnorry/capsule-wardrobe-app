@@ -21,6 +21,7 @@ import {
   listWardrobeItemsByEmail,
   saveUploadedWardrobeItemsByEmail,
   saveWardrobeItemFromCatalogByUrl,
+  updateUploadedWardrobeItemDetailsById,
   updateUploadedWardrobeItemMetadataById,
 } from "./db.js";
 
@@ -103,6 +104,7 @@ type WardrobeRow = {
   source: string;
   rawImageUrl: string | null;
   processingStatus: string;
+  isNeutral?: boolean | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -629,6 +631,111 @@ test("db integration skips uploaded wardrobe metadata update for blank ids", asy
     id: "   ",
     processingStatus: "failed",
     metadata: null,
+  });
+
+  expect(saved).toBeNull();
+  expect(calls).toEqual([]);
+});
+
+test("db integration updates uploaded wardrobe item details", async () => {
+  const updatedRow: WardrobeRow = {
+    id: "wardrobe-upload-1",
+    profileEmail: "user@example.com",
+    productId: null,
+    name: "Updated shirt",
+    url: null,
+    imageUrl: "https://images.example.com/wardrobe/user/image.webp",
+    source: "uploaded",
+    rawImageUrl: "https://images.example.com/wardrobe/user/image.webp",
+    processingStatus: "ready",
+    isNeutral: false,
+    createdAt: new Date(0).toISOString(),
+    updatedAt: new Date(0).toISOString(),
+  };
+  const { sql, calls } = createSqlMock([[updatedRow]]);
+  setSqlClientOverride(sql);
+
+  const saved = await updateUploadedWardrobeItemDetailsById({
+    email: "user@example.com",
+    id: " wardrobe-upload-1 ",
+    details: {
+      name: "Updated shirt",
+      description: "Button-front shirt",
+      brand: null,
+      audience: "all",
+      category: "top",
+      season: ["summer"],
+      formality_level: ["casual"],
+      style: ["minimalistic"],
+      occasions: ["office"],
+      color_base: ["red"],
+      pattern: "solid",
+      finish: null,
+      composition: "linen, cotton",
+      silhouette: null,
+      fit: "regular",
+      closure_type: ["button"],
+    },
+  });
+
+  expect(saved).toEqual(
+    expect.objectContaining({
+      id: "wardrobe-upload-1",
+      name: "Updated shirt",
+      processing_status: "ready",
+      is_neutral: false,
+    }),
+  );
+  expect(calls[0].text).toMatch(/update wardrobe/i);
+  expect(calls[0].text).toMatch(/source = 'uploaded'/i);
+  expect(calls[0].values).toEqual([
+    "Updated shirt",
+    "Button-front shirt",
+    null,
+    "all",
+    "top",
+    ["summer"],
+    ["casual"],
+    ["minimalistic"],
+    ["office"],
+    ["red"],
+    false,
+    "solid",
+    null,
+    "linen, cotton",
+    null,
+    "regular",
+    ["button"],
+    "user@example.com",
+    "wardrobe-upload-1",
+  ]);
+});
+
+test("db integration skips uploaded wardrobe detail update for blank ids", async () => {
+  const { sql, calls } = createSqlMock([]);
+  setSqlClientOverride(sql);
+
+  const saved = await updateUploadedWardrobeItemDetailsById({
+    email: "user@example.com",
+    id: "   ",
+    details: {
+      name: "Updated shirt",
+      description: null,
+      brand: null,
+      audience: "all",
+      category: "top",
+      season: ["summer"],
+      formality_level: [],
+      style: [],
+      occasions: [],
+      color_base: [],
+      pattern: null,
+      finish: null,
+      composition: null,
+      silhouette: null,
+      fit: null,
+      closure_type: [],
+    },
   });
 
   expect(saved).toBeNull();

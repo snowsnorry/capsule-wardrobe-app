@@ -90,7 +90,7 @@ function getClothingCardBadgeLabels(t: (key: string) => string) {
   return {
     savedToWardrobeLabel: t("myWardrobe.savedBadge"),
     failedUploadLabel: t("myWardrobe.failedUploadBadge"),
-    noCategoryLabel: t("myWardrobe.noCategoryBadge"),
+    needsReviewLabel: t("myWardrobe.needsReviewBadge"),
   };
 }
 

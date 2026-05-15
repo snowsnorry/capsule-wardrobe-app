@@ -1,7 +1,11 @@
 import { getFirstRow, getSqlClient } from "./core.js";
 import { toWardrobeUiItem } from "./wardrobe.js";
 import type { UserWardrobeRow } from "./wardrobeTypes.js";
-import type { WardrobeImageAnalysisMetadata } from "../wardrobeImageAnalysis.js";
+import {
+  calculateWardrobeImageIsNeutral,
+  type WardrobeImageAnalysisMetadata,
+} from "../wardrobeImageAnalysis.js";
+import type { UploadedWardrobeItemDetails } from "../wardrobeUploadedItemUpdate.js";
 
 type UploadedWardrobeMetadataUpdate = {
   email: string;
@@ -164,4 +168,90 @@ async function updateUploadedWardrobeItemMetadataById({
   });
 }
 
-export { updateUploadedWardrobeItemMetadataById };
+async function updateUploadedWardrobeItemDetailsById({
+  email,
+  id,
+  details,
+}: {
+  email: string;
+  id: string;
+  details: UploadedWardrobeItemDetails;
+}): Promise<Record<string, unknown> | null> {
+  const normalizedId = String(id || "").trim();
+  if (!normalizedId) {
+    return null;
+  }
+
+  const sql = getSqlClient();
+  const isNeutral = calculateWardrobeImageIsNeutral({
+    ...details,
+    is_neutral: null,
+  });
+  const row = getFirstRow(
+    await sql<UserWardrobeRow>`
+      update wardrobe
+      set
+        name = ${details.name},
+        description = ${details.description},
+        brand = ${details.brand},
+        audience = ${details.audience},
+        category = ${details.category},
+        season = ${details.season},
+        formality_level = ${details.formality_level},
+        style = ${details.style},
+        occasions = ${details.occasions},
+        color_base = ${details.color_base},
+        is_neutral = ${isNeutral},
+        pattern = ${details.pattern},
+        finish = ${details.finish},
+        composition = ${details.composition},
+        silhouette = ${details.silhouette},
+        fit = ${details.fit},
+        closure_type = ${details.closure_type},
+        processing_status = 'ready',
+        updated_at = now()
+      where profile_email = ${email}
+        and id = ${normalizedId}
+        and source = 'uploaded'
+      returning
+        id,
+        profile_email as "profileEmail",
+        product_id as "productId",
+        name,
+        url,
+        description,
+        brand,
+        price,
+        currency,
+        availability,
+        image_url as "imageUrl",
+        audience,
+        category,
+        season,
+        formality_level as "formalityLevel",
+        style,
+        occasions,
+        color_base as "colorBase",
+        pattern,
+        finish,
+        is_neutral as "isNeutral",
+        composition,
+        silhouette,
+        fit,
+        closure_type as "closureType",
+        embedding,
+        source,
+        raw_image_url as "rawImageUrl",
+        processing_status as "processingStatus",
+        created_at as "createdAt",
+        updated_at as "updatedAt"
+    `,
+  );
+
+  return row ? toWardrobeUiItem(row) : null;
+}
+
+export {
+  updateUploadedWardrobeItemDetailsById,
+  updateUploadedWardrobeItemMetadataById,
+};
