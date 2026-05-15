@@ -5,7 +5,9 @@ import { fetchEventSource } from "@microsoft/fetch-event-source";
 
 type MyWardrobeSource = "uploaded" | "from_catalog";
 type UploadWardrobeProgress = {
+  completedSteps: number;
   failed: number;
+  imageProcessed: number;
   metadataProcessed: number;
   total: number;
   uploaded: number;
@@ -78,7 +80,9 @@ function toUploadProgress(payload: JsonObject): UploadWardrobeProgress {
   return {
     total: Number(payload.total) || 0,
     uploaded: Number(payload.uploaded) || 0,
+    completedSteps: Number(payload.completedSteps) || 0,
     metadataProcessed: Number(payload.metadataProcessed) || 0,
+    imageProcessed: Number(payload.imageProcessed) || 0,
     failed: Number(payload.failed) || 0,
   };
 }

@@ -29,6 +29,13 @@ type UploadWardrobeImageInput = {
   env?: NodeJS.ProcessEnv;
   client?: S3ClientLike;
 };
+type UploadWardrobeDerivativeInput = {
+  buffer: Buffer | Uint8Array;
+  key: string;
+  mimeType?: string | null;
+  env?: NodeJS.ProcessEnv;
+  client?: S3ClientLike;
+};
 
 function normalizeEnvValue(value: unknown): string {
   return String(value ?? "").trim();
@@ -148,6 +155,73 @@ function buildWardrobeR2ImageKey({
   return `wardrobe/${profileHash || "profile"}/${randomUUID()}-${digest}.webp`;
 }
 
+function getKeyExtension(mimeType: unknown): string {
+  return getImageExtension(mimeType);
+}
+
+function insertSuffixBeforeExtension(filename: string, suffix: string) {
+  const lastDotIndex = filename.lastIndexOf(".");
+  if (lastDotIndex <= 0) {
+    return `${filename}${suffix}`;
+  }
+
+  return `${filename.slice(0, lastDotIndex)}${suffix}${filename.slice(lastDotIndex)}`;
+}
+
+function replaceKeyExtension(filename: string, extension: string) {
+  const normalizedExtension = extension.replace(/^\.+/, "") || "png";
+  const lastDotIndex = filename.lastIndexOf(".");
+  if (lastDotIndex <= 0) {
+    return `${filename}.${normalizedExtension}`;
+  }
+
+  return `${filename.slice(0, lastDotIndex)}.${normalizedExtension}`;
+}
+
+function getR2KeyFromPublicUrl(value: unknown): string {
+  const normalized = String(value ?? "").trim();
+  if (!normalized) {
+    return "";
+  }
+
+  try {
+    const url = new URL(normalized);
+    return url.pathname
+      .split("/")
+      .filter(Boolean)
+      .map((part) => decodeURIComponent(part))
+      .join("/");
+  } catch {
+    return "";
+  }
+}
+
+function buildWardrobeDerivativeR2ImageKey({
+  sourceKey,
+  sourceUrl,
+  suffix,
+  mimeType,
+}: {
+  sourceKey?: string | null;
+  sourceUrl?: string | null;
+  suffix: string;
+  mimeType?: string | null;
+}): string {
+  const key =
+    String(sourceKey || "").trim() || getR2KeyFromPublicUrl(sourceUrl);
+  if (!key) {
+    throw new Error("wardrobe_derivative_source_key_missing");
+  }
+
+  const segments = key.split("/").filter(Boolean);
+  const filename = segments.pop() || "image";
+  const derivativeFilename = replaceKeyExtension(
+    insertSuffixBeforeExtension(filename, suffix),
+    getKeyExtension(mimeType),
+  );
+  return [...segments, derivativeFilename].join("/");
+}
+
 async function uploadImageToR2({
   buffer,
   mimeType = "image/png",
@@ -228,6 +302,48 @@ async function uploadWardrobeImageToR2({
   };
 }
 
+async function uploadWardrobeDerivativeImageToR2({
+  buffer,
+  key,
+  mimeType = "image/png",
+  env = process.env,
+  client,
+}: UploadWardrobeDerivativeInput): Promise<{
+  key: string;
+  url: string;
+  digest: string;
+}> {
+  const bytes = Buffer.from(buffer);
+  if (bytes.length === 0) {
+    throw new Error("R2 wardrobe derivative upload received an empty buffer");
+  }
+
+  const normalizedKey = String(key || "").trim();
+  if (!normalizedKey) {
+    throw new Error("R2 wardrobe derivative upload received an empty key");
+  }
+
+  const config = getR2Config(env);
+  const digest = createHash("sha256").update(bytes).digest("hex");
+  const s3 = client || createR2Client(config);
+
+  await s3.send(
+    new PutObjectCommand({
+      Bucket: config.bucketName,
+      Key: normalizedKey,
+      Body: bytes,
+      ContentType: String(mimeType || "image/png"),
+      CacheControl: "public, max-age=31536000, immutable",
+    }),
+  );
+
+  return {
+    key: normalizedKey,
+    url: buildR2PublicUrl(config, normalizedKey),
+    digest,
+  };
+}
+
 function isHttpImageUrl(value: unknown): boolean {
   const trimmed = String(value ?? "").trim();
   return /^https?:\/\//i.test(trimmed);
@@ -250,9 +366,11 @@ export {
   buildR2Endpoint,
   buildR2ImageKey,
   buildR2PublicUrl,
+  buildWardrobeDerivativeR2ImageKey,
   buildWardrobeR2ImageKey,
   decodeLegacyBase64Image,
   getR2Config,
   uploadImageToR2,
+  uploadWardrobeDerivativeImageToR2,
   uploadWardrobeImageToR2,
 };

@@ -118,6 +118,7 @@ import { createStartServer } from "./serverStartup.js";
 import { uploadWardrobeImageToR2 } from "./r2Storage.js";
 import { normalizeWardrobeUploadImagesInChild } from "./wardrobeUploadImagesRunner.js";
 import { analyzeWardrobeImageUrl } from "./wardrobeImageAnalysis.js";
+import { cleanupUploadedWardrobeItemImage } from "./wardrobeImageCleanup.js";
 import {
   applyCorsMiddleware,
   applySecurityMiddleware,
@@ -168,6 +169,7 @@ function createAppDependencies(options: Record<string, unknown> = {}) {
     authTestMode: AUTH_TEST_MODE,
     buildWardrobePdfInChildImpl: buildWardrobePdfInChild,
     analyzeWardrobeImageUrlImpl: analyzeWardrobeImageUrl,
+    cleanupUploadedWardrobeItemImageImpl: cleanupUploadedWardrobeItemImage,
     checkDatabaseConnectionImpl: checkDatabaseConnection,
     clientOrigin: CLIENT_ORIGIN,
     consumePasskeyChallengeImpl: consumePasskeyChallenge,

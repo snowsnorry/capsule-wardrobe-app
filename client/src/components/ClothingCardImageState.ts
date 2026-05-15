@@ -24,12 +24,14 @@ function toClothingCardImageSource(
 function useResponsiveClothingCardImageState(
   originalImageUrl: unknown,
   safeImageUrl: string | null,
+  source: unknown,
   isMobile: boolean,
   mobileColumns: 1 | 2 | 3,
 ) {
   return useClothingCardImageState(
     originalImageUrl,
     safeImageUrl,
+    source,
     buildProductImageThumbnailSizes({ isMobile, mobileColumns }),
   );
 }
@@ -37,6 +39,7 @@ function useResponsiveClothingCardImageState(
 function useClothingCardImageState(
   originalImageUrl: unknown,
   safeImageUrl: string | null,
+  source: unknown,
   imageSizes: string,
 ) {
   const [displayImageSource, setDisplayImageSource] =
@@ -57,26 +60,27 @@ function useClothingCardImageState(
       };
     }
 
-    buildProductImageThumbnails(originalImageUrl, { sizes: imageSizes }).then(
-      (thumbnails) => {
-        if (!isActive) {
-          return;
-        }
+    buildProductImageThumbnails(originalImageUrl, {
+      sizes: imageSizes,
+      source,
+    }).then((thumbnails) => {
+      if (!isActive) {
+        return;
+      }
 
-        if (thumbnails) {
-          setDisplayImageSource(toClothingCardImageSource(thumbnails));
-          setImageMode("thumbnail");
-        } else {
-          setDisplayImageSource({ src: safeImageUrl });
-          setImageMode("original");
-        }
-      },
-    );
+      if (thumbnails) {
+        setDisplayImageSource(toClothingCardImageSource(thumbnails));
+        setImageMode("thumbnail");
+      } else {
+        setDisplayImageSource({ src: safeImageUrl });
+        setImageMode("original");
+      }
+    });
 
     return () => {
       isActive = false;
     };
-  }, [imageSizes, originalImageUrl, safeImageUrl]);
+  }, [imageSizes, originalImageUrl, safeImageUrl, source]);
 
   return {
     displayImageSource,

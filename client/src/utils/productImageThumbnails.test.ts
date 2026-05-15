@@ -24,6 +24,20 @@ describe("productImageThumbnails", () => {
     expect(digest).toMatch(/^[a-f0-9]{64}$/);
   });
 
+  test("builds colocated uploaded product thumbnail URLs", async () => {
+    await expect(
+      buildProductImageThumbnails(
+        "https://images.example.test/wardrobe/profile/item_clean.png",
+        { source: "uploaded" },
+      ),
+    ).resolves.toEqual({
+      src: "https://images.example.test/wardrobe/profile/item_clean_640.webp",
+      srcSet:
+        "https://images.example.test/wardrobe/profile/item_clean_320.webp 320w, https://images.example.test/wardrobe/profile/item_clean_480.webp 480w, https://images.example.test/wardrobe/profile/item_clean_640.webp 640w",
+      sizes: PRODUCT_IMAGE_THUMBNAIL_SIZES,
+    });
+  });
+
   test("rejects unsafe and blank image URLs", async () => {
     await expect(
       buildProductImageThumbnails("javascript:alert(1)"),

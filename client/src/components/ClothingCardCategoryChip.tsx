@@ -18,7 +18,8 @@ function isProcessedUploadedWardrobeItemWithoutCategory(
 ) {
   return (
     item.source === "uploaded" &&
-    item.processing_status === "metadata_processed" &&
+    (item.processing_status === "metadata_processed" ||
+      item.processing_status === "ready") &&
     !String(item.category || "").trim()
   );
 }

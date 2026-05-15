@@ -559,7 +559,7 @@ test("db integration updates uploaded wardrobe item metadata status", async () =
     }),
   );
   expect(calls[0].text).toMatch(/update wardrobe/i);
-  expect(calls[0].text).toMatch(/processing_status = 'metadata_processed'/i);
+  expect(calls[0].text).toMatch(/processing_status =/i);
   expect(calls[0].values).toEqual([
     "Linen shirt",
     null,
@@ -578,6 +578,8 @@ test("db integration updates uploaded wardrobe item metadata status", async () =
     null,
     "regular",
     ["button"],
+    null,
+    "metadata_processed",
     "user@example.com",
     "wardrobe-upload-1",
   ]);

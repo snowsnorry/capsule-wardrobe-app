@@ -7,7 +7,8 @@ type UploadedWardrobeMetadataUpdate = {
   email: string;
   id: string;
   metadata?: WardrobeImageAnalysisMetadata | null;
-  processingStatus: "metadata_processed" | "failed";
+  imageUrl?: string | null;
+  processingStatus: "metadata_processed" | "ready" | "failed";
 };
 
 async function markUploadedWardrobeItemFailed(email: string, id: string) {
@@ -61,13 +62,18 @@ async function markUploadedWardrobeItemFailed(email: string, id: string) {
 async function markUploadedWardrobeItemMetadataProcessed({
   email,
   id,
+  imageUrl = null,
   metadata,
+  processingStatus = "metadata_processed",
 }: {
   email: string;
   id: string;
+  imageUrl?: string | null;
   metadata: WardrobeImageAnalysisMetadata;
+  processingStatus?: "metadata_processed" | "ready" | "failed";
 }) {
   const sql = getSqlClient();
+  const normalizedImageUrl = String(imageUrl || "").trim() || null;
   const row = getFirstRow(
     await sql<UserWardrobeRow>`
     update wardrobe
@@ -89,7 +95,8 @@ async function markUploadedWardrobeItemMetadataProcessed({
       silhouette = ${metadata.silhouette},
       fit = ${metadata.fit},
       closure_type = ${metadata.closure_type},
-      processing_status = 'metadata_processed',
+      image_url = coalesce(${normalizedImageUrl}, image_url),
+      processing_status = ${processingStatus},
       updated_at = now()
     where profile_email = ${email}
       and id = ${id}
@@ -135,6 +142,7 @@ async function markUploadedWardrobeItemMetadataProcessed({
 async function updateUploadedWardrobeItemMetadataById({
   email,
   id,
+  imageUrl = null,
   metadata,
   processingStatus,
 }: UploadedWardrobeMetadataUpdate): Promise<Record<string, unknown> | null> {
@@ -143,14 +151,16 @@ async function updateUploadedWardrobeItemMetadataById({
     return null;
   }
 
-  if (processingStatus === "failed" || !metadata) {
+  if (!metadata) {
     return markUploadedWardrobeItemFailed(email, normalizedId);
   }
 
   return markUploadedWardrobeItemMetadataProcessed({
     email,
+    imageUrl,
     id: normalizedId,
     metadata,
+    processingStatus,
   });
 }
 

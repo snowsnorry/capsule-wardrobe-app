@@ -4,10 +4,12 @@ import {
   buildR2Endpoint,
   buildR2ImageKey,
   buildR2PublicUrl,
+  buildWardrobeDerivativeR2ImageKey,
   buildWardrobeR2ImageKey,
   decodeLegacyBase64Image,
   getR2Config,
   uploadImageToR2,
+  uploadWardrobeDerivativeImageToR2,
   uploadWardrobeImageToR2,
 } from "./r2Storage.js";
 
@@ -61,6 +63,20 @@ test("R2 helpers build endpoint, object keys, and public URLs", () => {
       digest: "abc123",
     }),
   ).toMatch(/^wardrobe\/[a-f0-9]{16}\/[a-f0-9-]+-abc123\.webp$/);
+  expect(
+    buildWardrobeDerivativeR2ImageKey({
+      sourceKey: "wardrobe/profile/item.webp",
+      suffix: "_clean",
+      mimeType: "image/png",
+    }),
+  ).toBe("wardrobe/profile/item_clean.png");
+  expect(
+    buildWardrobeDerivativeR2ImageKey({
+      sourceKey: "wardrobe/profile/item_clean.png",
+      suffix: "_320",
+      mimeType: "image/webp",
+    }),
+  ).toBe("wardrobe/profile/item_clean_320.webp");
 });
 
 test("uploadImageToR2 sends PutObjectCommand and returns public URL", async () => {
@@ -121,6 +137,31 @@ test("uploadWardrobeImageToR2 writes top-level wardrobe WebP objects", async () 
   expect(uploaded.key).toBe(commands[0].input.Key);
   expect(uploaded.url).toBe(
     `https://images.example.com/${commands[0].input.Key}`,
+  );
+});
+
+test("uploadWardrobeDerivativeImageToR2 writes caller-provided wardrobe keys", async () => {
+  const commands: PutObjectCommand[] = [];
+  const client = {
+    send: async (command: PutObjectCommand) => {
+      commands.push(command);
+      return {};
+    },
+  };
+
+  const uploaded = await uploadWardrobeDerivativeImageToR2({
+    buffer: Buffer.from("clean"),
+    key: "wardrobe/profile/image_clean_640.webp",
+    mimeType: "image/webp",
+    env: testEnv,
+    client,
+  });
+
+  expect(commands.length).toBe(1);
+  expect(commands[0].input.Key).toBe("wardrobe/profile/image_clean_640.webp");
+  expect(commands[0].input.ContentType).toBe("image/webp");
+  expect(uploaded.url).toBe(
+    "https://images.example.com/wardrobe/profile/image_clean_640.webp",
   );
 });
 

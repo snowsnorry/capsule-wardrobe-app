@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { act, cleanup, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import { createAppTheme } from "../../theme";
 import ProductDetailDialog from "./ProductDetailDialog";
@@ -21,6 +27,9 @@ vi.mock("../../i18n/useI18n", () => ({
         "myWardrobe.removeConfirm": "Remove",
         "myWardrobe.removeConfirmBody": "Remove body",
         "myWardrobe.removeConfirmTitle": "Remove from My Wardrobe?",
+        "myWardrobe.imageVersionToggle.label": "Uploaded item image version",
+        "myWardrobe.imageVersionToggle.original": "Original",
+        "myWardrobe.imageVersionToggle.ai": "AI",
         "search.back": "Back",
         "search.detailLoading": "Loading product details",
         "search.openProductPage": "Open product page",
@@ -123,6 +132,33 @@ describe("ProductDetailDialog", () => {
     expect(screen.getByTestId("product-detail-dialog-image-pane")).toHaveStyle({
       backgroundColor: darkTheme.palette.background.default,
     });
+  });
+
+  test("defaults uploaded desktop detail images to AI and switches to original", () => {
+    renderDialog({
+      item: {
+        id: "uploaded-coat",
+        name: "Uploaded Coat",
+        source: "uploaded",
+        image_url: "https://example.com/coat_clean.png",
+        raw_image_url: "https://example.com/coat_original.webp",
+        price: 120,
+      },
+    });
+
+    const image = screen.getByRole("img", { name: "Uploaded Coat" });
+    expect(image).toHaveAttribute("src", "https://example.com/coat_clean.png");
+    expect(screen.getByRole("button", { name: "AI" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Original" }));
+
+    expect(image).toHaveAttribute(
+      "src",
+      "https://example.com/coat_original.webp",
+    );
   });
 
   test("renders product actions when only remove is available", () => {

@@ -234,17 +234,21 @@ function registerWardrobeUploadRoute(app, context) {
         const progress = {
           total: displayItems.length,
           uploaded: displayItems.length,
+          completedSteps: displayItems.length,
           metadataProcessed: 0,
+          imageProcessed: 0,
           failed: 0,
         };
         writeWardrobeUploadEvent(res, "progress", progress);
         const processedItems = await Promise.all(
-          displayItems.map((item) =>
+          displayItems.map((item, index) =>
             processUploadedWardrobeItemMetadata({
               context,
               email: req.user.email,
               filterItem: filterWardrobeItemForDisplay,
               item,
+              sourceImage: normalizedImages[index] || null,
+              sourceImageKey: uploadedImages[index]?.key || null,
               progress,
               res,
             }),

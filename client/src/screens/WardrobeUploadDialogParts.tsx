@@ -39,8 +39,12 @@ function getUploadProgressValue(progress: UploadWardrobeProgress) {
   }
 
   const completedSteps =
-    progress.uploaded + progress.metadataProcessed + progress.failed;
-  return Math.min(100, (completedSteps / (progress.total * 2)) * 100);
+    progress.completedSteps ||
+    progress.uploaded +
+      progress.metadataProcessed +
+      progress.imageProcessed +
+      progress.failed;
+  return Math.min(100, (completedSteps / (progress.total * 3)) * 100);
 }
 
 function UploadProgressContent({
@@ -69,6 +73,13 @@ function UploadProgressContent({
             t,
             "myWardrobe.uploadDialog.metadataProcessedStatus",
             progress.metadataProcessed,
+          )}
+        </Typography>
+        <Typography variant="body2">
+          {formatUploadStatusLabel(
+            t,
+            "myWardrobe.uploadDialog.imageProcessedStatus",
+            progress.imageProcessed,
           )}
         </Typography>
         <Typography variant="body2" color="error">

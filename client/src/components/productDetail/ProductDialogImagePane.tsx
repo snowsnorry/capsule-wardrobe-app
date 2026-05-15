@@ -1,8 +1,16 @@
 import { useEffect, useState } from "react";
 import type { ReactElement } from "react";
-import { Box, Typography, useTheme } from "@mui/material";
+import {
+  Box,
+  ToggleButton,
+  ToggleButtonGroup,
+  Typography,
+  useTheme,
+} from "@mui/material";
 import {
   getProductDetailImageUrl,
+  getProductDetailRawImageUrl,
+  hasUploadedProductImageVersions,
   type ProductDetailItem,
 } from "./ProductDetailModel";
 
@@ -16,12 +24,18 @@ function ProductDialogImagePane({
   t,
 }: ProductDialogImagePaneProps): ReactElement {
   const theme = useTheme();
-  const imageUrl = getProductDetailImageUrl(item);
+  const [imageMode, setImageMode] = useState<"ai" | "original">("ai");
+  const aiImageUrl = getProductDetailImageUrl(item);
+  const rawImageUrl = getProductDetailRawImageUrl(item);
+  const showImageToggle = hasUploadedProductImageVersions(item);
+  const imageUrl =
+    showImageToggle && imageMode === "original" ? rawImageUrl : aiImageUrl;
   const [imageFailed, setImageFailed] = useState(false);
 
   useEffect(() => {
+    setImageMode("ai");
     setImageFailed(false);
-  }, [imageUrl]);
+  }, [aiImageUrl, rawImageUrl]);
 
   const imageSurface =
     theme.palette.mode === "dark"
@@ -35,13 +49,22 @@ function ProductDialogImagePane({
       sx={imagePaneSx(imageSurface)}
     >
       {imageUrl && !imageFailed ? (
-        <Box
-          component="img"
-          src={imageUrl}
-          alt={label}
-          onError={() => setImageFailed(true)}
-          sx={imageSx}
-        />
+        <>
+          <Box
+            component="img"
+            src={imageUrl}
+            alt={label}
+            onError={() => setImageFailed(true)}
+            sx={imageSx}
+          />
+          {showImageToggle ? (
+            <ProductImageVersionToggle
+              imageMode={imageMode}
+              t={t}
+              onChange={setImageMode}
+            />
+          ) : null}
+        </>
       ) : (
         <Typography
           variant="body2"
@@ -56,6 +79,38 @@ function ProductDialogImagePane({
   );
 }
 
+function ProductImageVersionToggle({
+  imageMode,
+  onChange,
+  t,
+}: {
+  imageMode: "ai" | "original";
+  onChange: (value: "ai" | "original") => void;
+  t: (key: string, params?: Record<string, unknown>) => string;
+}) {
+  return (
+    <ToggleButtonGroup
+      exclusive
+      size="small"
+      value={imageMode}
+      aria-label={t("myWardrobe.imageVersionToggle.label")}
+      onChange={(_event, value: "ai" | "original" | null) => {
+        if (value) {
+          onChange(value);
+        }
+      }}
+      sx={imageVersionToggleSx}
+    >
+      <ToggleButton value="original">
+        {t("myWardrobe.imageVersionToggle.original")}
+      </ToggleButton>
+      <ToggleButton value="ai">
+        {t("myWardrobe.imageVersionToggle.ai")}
+      </ToggleButton>
+    </ToggleButtonGroup>
+  );
+}
+
 function imagePaneSx(imageSurface: string) {
   return {
     minHeight: 0,
@@ -67,6 +122,7 @@ function imagePaneSx(imageSurface: string) {
     borderColor: "divider",
     bgcolor: imageSurface,
     overflow: "hidden",
+    position: "relative",
   } as const;
 }
 
@@ -77,4 +133,20 @@ const imageSx = {
   objectPosition: "center",
 } as const;
 
+const imageVersionToggleSx = {
+  position: "absolute",
+  top: 12,
+  left: 12,
+  bgcolor: "background.paper",
+  boxShadow: "0 2px 10px rgba(17, 36, 34, 0.14)",
+  "& .MuiToggleButton-root": {
+    px: 1.25,
+    py: 0.45,
+    fontSize: 12,
+    fontWeight: 700,
+    lineHeight: 1.2,
+  },
+} as const;
+
+export { ProductImageVersionToggle };
 export default ProductDialogImagePane;

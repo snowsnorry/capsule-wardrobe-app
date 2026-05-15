@@ -8,6 +8,9 @@ type ProductDetailItem = {
   url?: string | null;
   imageUrl?: string | null;
   image_url?: string | null;
+  rawImageUrl?: string | null;
+  raw_image_url?: string | null;
+  source?: string | null;
   description?: string | null;
   audience?: string | null;
   color?: string | null;
@@ -66,6 +69,11 @@ function normalizeProductDetailItem(
   );
   setDefinedDetailValue(
     normalized,
+    "rawImageUrl",
+    item.rawImageUrl ?? item.raw_image_url,
+  );
+  setDefinedDetailValue(
+    normalized,
     "colorBase",
     normalizeArrayValue(item.colorBase ?? item.color_base ?? item.color),
   );
@@ -99,5 +107,29 @@ function getProductDetailImageUrl(item: ProductDetailItem | null | undefined) {
   return getSafeHttpUrl(item?.imageUrl ?? item?.image_url);
 }
 
+function getProductDetailRawImageUrl(
+  item: ProductDetailItem | null | undefined,
+) {
+  return getSafeHttpUrl(item?.rawImageUrl ?? item?.raw_image_url);
+}
+
+function hasUploadedProductImageVersions(
+  item: ProductDetailItem | null | undefined,
+) {
+  const imageUrl = getProductDetailImageUrl(item);
+  const rawImageUrl = getProductDetailRawImageUrl(item);
+  return (
+    item?.source === "uploaded" &&
+    Boolean(imageUrl) &&
+    Boolean(rawImageUrl) &&
+    imageUrl !== rawImageUrl
+  );
+}
+
 export type { ProductDetailItem };
-export { getProductDetailImageUrl, normalizeProductDetailItem };
+export {
+  getProductDetailImageUrl,
+  getProductDetailRawImageUrl,
+  hasUploadedProductImageVersions,
+  normalizeProductDetailItem,
+};

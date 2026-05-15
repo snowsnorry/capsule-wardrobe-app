@@ -67,7 +67,7 @@ function ProductDetail({
         </Typography>
       ) : null}
       <ProductDetailGroups item={normalizedItem} t={t} locale={locale} />
-      {showImage ? <ProductImage item={normalizedItem} /> : null}
+      {showImage ? <ProductImage item={normalizedItem} t={t} /> : null}
     </Stack>
   );
 }

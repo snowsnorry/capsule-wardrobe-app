@@ -233,6 +233,26 @@ describe("ClothingCard", () => {
     expect(onProductClick).toHaveBeenCalledWith(item);
   });
 
+  test("renders colocated thumbnails for uploaded wardrobe items", async () => {
+    renderCard({
+      item: {
+        ...item,
+        image_url: "https://images.example.com/wardrobe/profile/item_clean.png",
+        source: "uploaded",
+      },
+    });
+
+    const image = await screen.findByRole("img", { name: item.name ?? "" });
+    expect(image).toHaveAttribute(
+      "src",
+      "https://images.example.com/wardrobe/profile/item_clean_640.webp",
+    );
+    expect(image).toHaveAttribute(
+      "srcset",
+      "https://images.example.com/wardrobe/profile/item_clean_320.webp 320w, https://images.example.com/wardrobe/profile/item_clean_480.webp 480w, https://images.example.com/wardrobe/profile/item_clean_640.webp 640w",
+    );
+  });
+
   test("falls back from thumbnails to the original image and then a 404 placeholder", async () => {
     renderCard();
 

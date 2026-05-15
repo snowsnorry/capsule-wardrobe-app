@@ -24,6 +24,9 @@ const t = (key: string) => {
     "myWardrobe.removeConfirmTitle": "Remove from My Wardrobe?",
     "myWardrobe.removeConfirmBody": "Remove body",
     "myWardrobe.removeConfirm": "Remove",
+    "myWardrobe.imageVersionToggle.label": "Uploaded item image version",
+    "myWardrobe.imageVersionToggle.original": "Original",
+    "myWardrobe.imageVersionToggle.ai": "AI",
     "capsule.removeFromMyWardrobe": "Remove from My Wardrobe",
     "capsule.saveToMyWardrobe": "Save to My Wardrobe",
   };
@@ -90,6 +93,50 @@ describe("ProductDetail", () => {
     const image = await screen.findByRole("img", { name: "Coat" });
     expect(image).toHaveAttribute("src", "https://example.com/coat.jpg");
     expect(image).not.toHaveAttribute("srcset");
+  });
+
+  test("shows an AI original image toggle only for uploaded items", async () => {
+    renderProductDetail({
+      id: "uploaded-coat",
+      name: "Uploaded Coat",
+      source: "uploaded",
+      imageUrl: "https://example.com/coat_clean.png",
+      rawImageUrl: "https://example.com/coat_original.webp",
+    });
+
+    const image = await screen.findByRole("img", { name: "Uploaded Coat" });
+    expect(image).toHaveAttribute("src", "https://example.com/coat_clean.png");
+    expect(screen.getByRole("button", { name: "AI" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Original" }));
+
+    expect(image).toHaveAttribute(
+      "src",
+      "https://example.com/coat_original.webp",
+    );
+    expect(screen.getByRole("button", { name: "Original" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+
+    cleanup();
+    renderProductDetail({
+      id: "catalog-coat",
+      name: "Catalog Coat",
+      source: "from_catalog",
+      imageUrl: "https://example.com/catalog.jpg",
+      rawImageUrl: "https://example.com/catalog-original.jpg",
+    });
+
+    expect(
+      screen.queryByRole("button", { name: "AI" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Original" }),
+    ).not.toBeInTheDocument();
   });
 
   test("removes the detail image after the original image fails", async () => {

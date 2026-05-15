@@ -6,6 +6,7 @@ const PRODUCT_IMAGE_THUMBNAIL_SIZES =
 
 type ProductImageThumbnailOptions = {
   sizes?: string;
+  source?: unknown;
 };
 
 type ProductImageThumbnails = {
@@ -50,6 +51,35 @@ async function sha256Hex(value: string): Promise<string> {
   return bytesToHex(new Uint8Array(digest));
 }
 
+function replaceImageUrlSuffix(imageUrl: string, suffix: string) {
+  const url = new URL(imageUrl);
+  const pathSegments = url.pathname.split("/");
+  const filename = pathSegments.pop() || "";
+  const lastDotIndex = filename.lastIndexOf(".");
+  const basename =
+    lastDotIndex > 0 ? filename.slice(0, lastDotIndex) : filename;
+  pathSegments.push(`${basename}${suffix}.webp`);
+  url.pathname = pathSegments.join("/");
+  url.search = "";
+  url.hash = "";
+  return url.toString();
+}
+
+function buildUploadedProductImageThumbnails(
+  imageUrl: string,
+  options: ProductImageThumbnailOptions = {},
+): ProductImageThumbnails {
+  const image320 = replaceImageUrlSuffix(imageUrl, "_320");
+  const image480 = replaceImageUrlSuffix(imageUrl, "_480");
+  const image640 = replaceImageUrlSuffix(imageUrl, "_640");
+
+  return {
+    src: image640,
+    srcSet: `${image320} 320w, ${image480} 480w, ${image640} 640w`,
+    sizes: options.sizes || PRODUCT_IMAGE_THUMBNAIL_SIZES,
+  };
+}
+
 async function buildProductImageThumbnails(
   originalImageUrl: unknown,
   options: ProductImageThumbnailOptions = {},
@@ -57,6 +87,10 @@ async function buildProductImageThumbnails(
   const original = String(originalImageUrl ?? "").trim();
   if (!getSafeHttpUrl(original)) {
     return null;
+  }
+
+  if (options.source === "uploaded") {
+    return buildUploadedProductImageThumbnails(original, options);
   }
 
   const digest = await sha256Hex(original);
@@ -75,6 +109,7 @@ export {
   PRODUCT_IMAGE_THUMBNAIL_SIZES,
   buildProductImageThumbnailSizes,
   buildProductImageThumbnails,
+  buildUploadedProductImageThumbnails,
   sha256Hex,
 };
 export type { ProductImageThumbnails };

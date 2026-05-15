@@ -35,16 +35,27 @@ async function markUploadedItemFailed({ context, email, id }) {
     });
 }
 
+function advanceWardrobeUploadProgress(progress, updates) {
+  Object.entries(updates).forEach(([key, value]) => {
+    progress[key] = (Number(progress[key]) || 0) + Number(value || 0);
+  });
+}
+
+// Upload processing deliberately keeps metadata and image cleanup in one ordered flow.
+// eslint-disable-next-line complexity
 async function processUploadedWardrobeItemMetadata({
   context,
   email,
   filterItem,
   item,
+  sourceImage = null,
+  sourceImageKey = null,
   progress,
   res,
 }) {
   const id = String(item?.id || "").trim();
   const imageUrl = resolveUploadedImageUrl(item);
+  let metadataAccepted = false;
 
   try {
     if (!id || !imageUrl) {
@@ -52,25 +63,61 @@ async function processUploadedWardrobeItemMetadata({
     }
 
     const analysis = await context.analyzeWardrobeImageUrlImpl({ imageUrl });
-    const processingStatus = analysis.hasMetadata
-      ? "metadata_processed"
-      : "failed";
+    if (!analysis.hasMetadata) {
+      const updated = await context.updateUploadedWardrobeItemMetadataImpl({
+        email,
+        id,
+        metadata: null,
+        processingStatus: "failed",
+      });
+      advanceWardrobeUploadProgress(progress, {
+        completedSteps: 2,
+        failed: 1,
+      });
+      writeWardrobeUploadEvent(res, "progress", progress);
+      return filterItem(updated || { ...item, processing_status: "failed" });
+    }
+
+    metadataAccepted = true;
+    advanceWardrobeUploadProgress(progress, {
+      completedSteps: 1,
+      metadataProcessed: 1,
+    });
+    writeWardrobeUploadEvent(res, "progress", progress);
+
+    const cleanup = await context.cleanupUploadedWardrobeItemImageImpl({
+      email,
+      imageUrl,
+      sourceBuffer: sourceImage?.buffer,
+      sourceFilename: sourceImage?.originalName,
+      sourceKey: sourceImageKey,
+      sourceMimeType: sourceImage?.mimeType,
+    });
+    const cleanImageUrl = String(cleanup?.cleanImage?.url || "").trim();
+    if (!cleanImageUrl) {
+      throw new Error("wardrobe_image_cleanup_missing_url");
+    }
     const updated = await context.updateUploadedWardrobeItemMetadataImpl({
       email,
       id,
-      metadata: analysis.hasMetadata ? analysis.metadata : null,
-      processingStatus,
+      imageUrl: cleanImageUrl,
+      metadata: analysis.metadata,
+      processingStatus: "ready",
     });
 
-    progress[analysis.hasMetadata ? "metadataProcessed" : "failed"] += 1;
+    advanceWardrobeUploadProgress(progress, {
+      completedSteps: 1,
+      imageProcessed: 1,
+    });
     writeWardrobeUploadEvent(res, "progress", progress);
-    return filterItem(
-      updated || { ...item, processing_status: processingStatus },
-    );
+    return filterItem(updated || { ...item, processing_status: "ready" });
   } catch (error) {
     logError("[wardrobe/items/upload][metadata]", { id, imageUrl }, error);
     const updated = await markUploadedItemFailed({ context, email, id });
-    progress.failed += 1;
+    advanceWardrobeUploadProgress(progress, {
+      completedSteps: metadataAccepted ? 1 : 2,
+      failed: 1,
+    });
     writeWardrobeUploadEvent(res, "progress", progress);
     return filterItem(updated || { ...item, processing_status: "failed" });
   }

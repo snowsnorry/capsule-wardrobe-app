@@ -321,11 +321,32 @@ test("wardrobe upload route processes images and creates uploaded items", async 
           rawResponse: JSON.stringify(metadata),
         };
       },
+      cleanupUploadedWardrobeItemImageImpl: async (payload) => {
+        calls.push({
+          type: "cleanup",
+          payload: {
+            email: payload.email,
+            imageUrl: payload.imageUrl,
+            sourceBuffer: payload.sourceBuffer.toString("utf8"),
+            sourceFilename: payload.sourceFilename,
+            sourceKey: payload.sourceKey,
+            sourceMimeType: payload.sourceMimeType,
+          },
+        });
+        return {
+          cleanImage: {
+            key: "wardrobe/profile/image_clean.png",
+            url: "https://images.example.com/wardrobe/profile/image_clean.png",
+            digest: "clean-digest",
+          },
+          thumbnails: [],
+        };
+      },
       updateUploadedWardrobeItemMetadataImpl: async (payload) => {
         calls.push({ type: "updateMetadata", payload });
         return {
           id: payload.id,
-          image_url: "https://images.example.com/wardrobe/profile/image.webp",
+          image_url: payload.imageUrl,
           raw_image_url:
             "https://images.example.com/wardrobe/profile/image.webp",
           source: "uploaded",
@@ -350,22 +371,26 @@ test("wardrobe upload route processes images and creates uploaded items", async 
   expect(events.map((event) => event.event)).toEqual([
     "progress",
     "progress",
+    "progress",
     "complete",
   ]);
   expect(events.at(-1)?.data).toEqual({
     ok: true,
     total: 1,
     uploaded: 1,
+    completedSteps: 3,
     metadataProcessed: 1,
+    imageProcessed: 1,
     failed: 0,
     items: [
       expect.objectContaining({
         id: "wardrobe-upload-1",
         name: "Linen shirt",
-        image_url: "https://images.example.com/wardrobe/profile/image.webp",
+        image_url:
+          "https://images.example.com/wardrobe/profile/image_clean.png",
         raw_image_url: "https://images.example.com/wardrobe/profile/image.webp",
         source: "uploaded",
-        processing_status: "metadata_processed",
+        processing_status: "ready",
       }),
     ],
   });
@@ -399,12 +424,24 @@ test("wardrobe upload route processes images and creates uploaded items", async 
       },
     },
     {
+      type: "cleanup",
+      payload: {
+        email: "person@example.com",
+        imageUrl: "https://images.example.com/wardrobe/profile/image.webp",
+        sourceBuffer: "normalized-webp",
+        sourceFilename: "shirt.png",
+        sourceKey: "wardrobe/profile/image.webp",
+        sourceMimeType: "image/webp",
+      },
+    },
+    {
       type: "updateMetadata",
       payload: {
         email: "person@example.com",
         id: "wardrobe-upload-1",
+        imageUrl: "https://images.example.com/wardrobe/profile/image_clean.png",
         metadata,
-        processingStatus: "metadata_processed",
+        processingStatus: "ready",
       },
     },
   ]);

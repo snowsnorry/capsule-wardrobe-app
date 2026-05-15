@@ -1,0 +1,32 @@
+version: 1
+
+name: single_item_image_cleanup
+
+messages:
+  - role: user
+    content: |
+      Edit the provided reference image. Produce a highly realistic, professional e-commerce product photograph of the exact same single wardrobe item from the input image.
+
+      The final image must show only this one item, centered and fully visible, on a seamless solid light neutral background, preferably light grey or warm off-white. The item should be neatly laid flat, gently straightened, and presented as a clean top-down flat lay product photo. Do not create an outfit. Do not add any other garments, accessories, props, people, mannequins, hangers, furniture, labels, packaging, or decorative objects.
+
+      The final image must use a portrait canvas with an aspect ratio of 3:4 (width:height). Keep the entire item fully visible inside the frame with clean margins on all sides.
+
+      The input image is the source of truth. Preserve the real item exactly: its category, silhouette, cut, proportions, length, construction, color, material, fabric texture, pattern, print, logo, stitching, seams, pockets, buttons, zippers, laces, straps, buckles, embroidery, hems, collars, cuffs, sleeves, legs, handles, hardware, and visible wear condition.
+
+      CRITICAL RULES FOR EDITING:
+      - EXACTLY ONE ITEM: Keep exactly the item from the input image. If the item is naturally a pair, such as shoes, gloves, socks, or earrings, keep the pair together as one wardrobe item. Do not add anything else.
+      - PRESERVE ORIGINAL DESIGN: Do not redesign, simplify, stylize, modernize, beautify, repair, replace, or reinterpret the item. Do not invent new pockets, seams, fasteners, prints, logos, folds, panels, sleeves, straps, handles, or decorative elements.
+      - PRESERVE ORIGINAL COLOR AND MATERIAL: Match the original colors, fabric, texture, weave, sheen, transparency, thickness, leather grain, knit structure, denim wash, metal hardware, and all visible material qualities. Do not recolor, repaint, bleach, darken, brighten, or change the material.
+      - CLEAN BACKGROUND ONLY: Remove the original photo background, floor, table, wall, shadows from clutter, hands, hangers, packaging, tags not attached to the item, and all unrelated objects. Replace them with a seamless, plain, light neutral studio background.
+      - DO NOT CLEAN OR REPAIR THE ITEM ITSELF: Do not remove real stains, scuffs, fading, pilling, wrinkles, distressing, worn edges, or other visible condition details that belong to the item. Only remove photographic noise, background clutter, and accidental environmental artifacts.
+      - NEAT FLAT-LAY PRESENTATION: Gently straighten the item for a tidy product-photo look. Sleeves, legs, straps, handles, collars, cuffs, and hems may be arranged naturally and symmetrically where possible, but the item must not be structurally changed.
+      - NO STORAGE FOLDING: Do not fold the item into a compact shape. Show it open, extended, and readable as a product. Natural fabric drape and small realistic wrinkles are allowed.
+      - NO PEOPLE: No human body, model, hands, feet, face, mannequin, ghost mannequin, hanger, or body-shaped filling.
+      - NO EXTRA TEXT: Do not add captions, typography, watermarks, price tags, labels, brand marks, or written text in the image. However, preserve any logo, print, embroidery, label, or text that is physically part of the original item.
+      - NO CROPPING: The entire item must be visible with clean margins on all sides. Do not cut off sleeves, hems, straps, soles, handles, or edges.
+      - REALISTIC LIGHTING: Use soft, even studio lighting with minimal natural shadow. A subtle contact shadow under the item is acceptable. Avoid dramatic shadows, reflections, glare, overexposure, or color cast.
+      - PHOTOREALISTIC ONLY: The result must look like a real product photograph, not an illustration, render, drawing, fashion sketch, catalog mockup, or AI-stylized object.
+      - HANDLE AMBIGUITY CONSERVATIVELY: If some details are hidden, blurry, or occluded in the input image, do not invent decorative details. Preserve visible structure and make only minimal plausible adjustments needed for a clean flat-lay presentation.
+
+      NEGATIVE CONSTRAINTS:
+      multiple items, outfit set, accessories, jewelry, sunglasses, hat, bag unless the bag is the input item, props, hanger, mannequin, human, hands, model, body, face, floor, room, table, chair, wall texture, packaging, price tag, watermark, caption, added logo, changed color, changed fabric, changed silhouette, redesigned garment, invented pockets, invented buttons, invented seams, cropped item, folded storage presentation, illustration, CGI, render, cartoon, sketch

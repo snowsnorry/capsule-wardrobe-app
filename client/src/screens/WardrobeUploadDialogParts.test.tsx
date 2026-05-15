@@ -20,6 +20,8 @@ const translations: Record<string, string> = {
   "myWardrobe.uploadDialog.uploadedStatus": "Uploaded: {image_count}",
   "myWardrobe.uploadDialog.metadataProcessedStatus":
     "Metadata processed: {image_count}",
+  "myWardrobe.uploadDialog.imageProcessedStatus":
+    "Images processed: {image_count}",
   "myWardrobe.uploadDialog.failedStatus": "Failed: {image_count}",
 };
 
@@ -49,7 +51,9 @@ describe("WardrobeUploadDialogParts", () => {
         progress={{
           total: 5,
           uploaded: 5,
+          completedSteps: 12,
           metadataProcessed: 3,
+          imageProcessed: 3,
           failed: 1,
         }}
         t={t}
@@ -58,17 +62,25 @@ describe("WardrobeUploadDialogParts", () => {
 
     expect(screen.getByText("Uploaded: 5")).toBeInTheDocument();
     expect(screen.getByText("Metadata processed: 3")).toBeInTheDocument();
+    expect(screen.getByText("Images processed: 3")).toBeInTheDocument();
     expect(screen.getByText("Failed: 1")).toBeInTheDocument();
     expect(screen.getByRole("progressbar")).toHaveAttribute(
       "aria-valuenow",
-      "90",
+      "80",
     );
   });
 
   test("renders indeterminate progress when total is unknown", () => {
     renderWithTheme(
       <UploadProgressContent
-        progress={{ total: 0, uploaded: 0, metadataProcessed: 0, failed: 0 }}
+        progress={{
+          total: 0,
+          uploaded: 0,
+          completedSteps: 0,
+          metadataProcessed: 0,
+          imageProcessed: 0,
+          failed: 0,
+        }}
         t={t}
       />,
     );

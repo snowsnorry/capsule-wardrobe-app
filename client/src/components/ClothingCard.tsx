@@ -193,6 +193,26 @@ function stopCardActionPropagation(event: MouseEvent<HTMLElement>) {
   event.stopPropagation();
 }
 
+function useCardImageStateForItem({
+  imageUrl,
+  isMobile,
+  item,
+  mobileColumns,
+}: {
+  imageUrl: string | null;
+  isMobile: boolean;
+  item: ClothingCardItem;
+  mobileColumns: 1 | 2 | 3;
+}) {
+  return useResponsiveClothingCardImageState(
+    item?.image_url,
+    imageUrl,
+    item?.source,
+    isMobile,
+    mobileColumns,
+  );
+}
+
 function ClothingCard(props: ClothingCardProps): ReactElement {
   const {
     item,
@@ -209,12 +229,12 @@ function ClothingCard(props: ClothingCardProps): ReactElement {
   } = normalizeClothingCardProps(props);
   const { t } = useI18n();
   const imageUrl = getSafeHttpUrl(item?.image_url);
-  const imageState = useResponsiveClothingCardImageState(
-    item?.image_url,
+  const imageState = useCardImageStateForItem({
     imageUrl,
     isMobile,
+    item,
     mobileColumns,
-  );
+  });
   const productUrl = getSafeHttpUrl(item?.url);
   const { categoryDisplayLabel, categoryName, label } = getClothingCardLabels(
     item,

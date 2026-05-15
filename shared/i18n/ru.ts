@@ -320,10 +320,16 @@ const ru = {
       upload: "Загрузить",
       uploadedStatus: "Загружено: {image_count}",
       metadataProcessedStatus: "Метаданные обработаны: {image_count}",
+      imageProcessedStatus: "Изображения обработаны: {image_count}",
       failedStatus: "Ошибки: {image_count}",
       tooManyFiles: "Можно загрузить до 5 файлов.",
       invalidType: "Используйте изображения JPEG, PNG или WebP.",
       fileTooLarge: "Каждое изображение должно быть не больше 10 MB.",
+    },
+    imageVersionToggle: {
+      label: "Версия изображения загруженной вещи",
+      original: "Original",
+      ai: "AI",
     },
   },
   search: {

@@ -318,10 +318,16 @@ const en = {
       upload: "Upload",
       uploadedStatus: "Uploaded: {image_count}",
       metadataProcessedStatus: "Metadata processed: {image_count}",
+      imageProcessedStatus: "Images processed: {image_count}",
       failedStatus: "Failed: {image_count}",
       tooManyFiles: "Upload up to 5 files.",
       invalidType: "Use JPEG, PNG, or WebP images.",
       fileTooLarge: "Each image must be 10 MB or less.",
+    },
+    imageVersionToggle: {
+      label: "Uploaded item image version",
+      original: "Original",
+      ai: "AI",
     },
   },
   search: {

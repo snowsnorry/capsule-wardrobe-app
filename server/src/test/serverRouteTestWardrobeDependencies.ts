@@ -1,3 +1,55 @@
+function createUploadedWardrobeMetadata() {
+  return {
+    name: "Uploaded shirt",
+    description: null,
+    brand: null,
+    audience: null,
+    category: "top",
+    season: [],
+    formality_level: [],
+    style: [],
+    occasions: [],
+    color_base: [],
+    is_neutral: false,
+    pattern: null,
+    finish: null,
+    composition: null,
+    silhouette: null,
+    fit: null,
+    closure_type: [],
+  };
+}
+
+function createUploadedWardrobeCleanupResult() {
+  return {
+    cleanImage: {
+      key: "wardrobe/profile/image_clean.png",
+      url: "https://images.example.com/wardrobe/profile/image_clean.png",
+      digest: "clean-digest",
+    },
+    thumbnails: [
+      {
+        width: 320,
+        key: "wardrobe/profile/image_clean_320.webp",
+        url: "https://images.example.com/wardrobe/profile/image_clean_320.webp",
+        digest: "thumb-320",
+      },
+      {
+        width: 480,
+        key: "wardrobe/profile/image_clean_480.webp",
+        url: "https://images.example.com/wardrobe/profile/image_clean_480.webp",
+        digest: "thumb-480",
+      },
+      {
+        width: 640,
+        key: "wardrobe/profile/image_clean_640.webp",
+        url: "https://images.example.com/wardrobe/profile/image_clean_640.webp",
+        digest: "thumb-640",
+      },
+    ],
+  };
+}
+
 function createWardrobeDependencies() {
   return {
     listWardrobeItemsImpl: async () => [
@@ -43,30 +95,16 @@ function createWardrobeDependencies() {
     ],
     analyzeWardrobeImageUrlImpl: async () => ({
       hasMetadata: true,
-      metadata: {
-        name: "Uploaded shirt",
-        description: null,
-        brand: null,
-        audience: null,
-        category: "top",
-        season: [],
-        formality_level: [],
-        style: [],
-        occasions: [],
-        color_base: [],
-        is_neutral: false,
-        pattern: null,
-        finish: null,
-        composition: null,
-        silhouette: null,
-        fit: null,
-        closure_type: [],
-      },
+      metadata: createUploadedWardrobeMetadata(),
       rawResponse: "{}",
     }),
+    cleanupUploadedWardrobeItemImageImpl: async () =>
+      createUploadedWardrobeCleanupResult(),
     updateUploadedWardrobeItemMetadataImpl: async (payload) => ({
       id: payload.id,
-      image_url: "https://images.example.com/wardrobe/profile/image.webp",
+      image_url:
+        payload.imageUrl ||
+        "https://images.example.com/wardrobe/profile/image.webp",
       raw_image_url: "https://images.example.com/wardrobe/profile/image.webp",
       source: "uploaded",
       processing_status: payload.processingStatus,

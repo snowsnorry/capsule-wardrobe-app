@@ -128,7 +128,9 @@ describe("my wardrobe api", () => {
           data: JSON.stringify({
             total: 1,
             uploaded: 1,
+            completedSteps: 1,
             metadataProcessed: 0,
+            imageProcessed: 0,
             failed: 0,
           }),
         });
@@ -138,7 +140,9 @@ describe("my wardrobe api", () => {
             ok: true,
             total: 1,
             uploaded: 1,
+            completedSteps: 3,
             metadataProcessed: 1,
+            imageProcessed: 1,
             failed: 0,
             items: [{ id: "uploaded-1" }],
           }),
@@ -159,14 +163,18 @@ describe("my wardrobe api", () => {
     expect(onProgress).toHaveBeenLastCalledWith({
       total: 1,
       uploaded: 1,
+      completedSteps: 3,
       metadataProcessed: 1,
+      imageProcessed: 1,
       failed: 0,
     });
     expect(result).toEqual({
       ok: true,
       total: 1,
       uploaded: 1,
+      completedSteps: 3,
       metadataProcessed: 1,
+      imageProcessed: 1,
       failed: 0,
       items: [{ id: "uploaded-1" }],
     });

@@ -5,8 +5,11 @@ import { getColorSwatchStyle } from "../../../../shared/colorSwatches.js";
 import { buildProductDetailGroups } from "../../../../shared/productDetail.js";
 import {
   getProductDetailImageUrl,
+  getProductDetailRawImageUrl,
+  hasUploadedProductImageVersions,
   type ProductDetailItem,
 } from "./ProductDetailModel";
+import { ProductImageVersionToggle } from "./ProductDialogImagePane";
 
 type ProductDetailSectionsProps = {
   item: ProductDetailItem;
@@ -110,33 +113,54 @@ function ColorValues({
   );
 }
 
-function ProductImage({ item }: { item: ProductDetailItem }) {
-  const imageUrl = getProductDetailImageUrl(item);
+function ProductImage({
+  item,
+  t,
+}: {
+  item: ProductDetailItem;
+  t: ProductDetailSectionsProps["t"];
+}) {
+  const [imageMode, setImageMode] = useState<"ai" | "original">("ai");
+  const aiImageUrl = getProductDetailImageUrl(item);
+  const rawImageUrl = getProductDetailRawImageUrl(item);
+  const showImageToggle = hasUploadedProductImageVersions(item);
+  const imageUrl =
+    showImageToggle && imageMode === "original" ? rawImageUrl : aiImageUrl;
   const [imageFailed, setImageFailed] = useState(false);
 
   useEffect(() => {
+    setImageMode("ai");
     setImageFailed(false);
-  }, [imageUrl]);
+  }, [aiImageUrl, rawImageUrl]);
 
   if (!imageUrl || imageFailed) {
     return null;
   }
 
   return (
-    <Box
-      component="img"
-      src={imageUrl}
-      alt={item.name || ""}
-      onError={() => setImageFailed(true)}
-      sx={{
-        width: "100%",
-        borderRadius: "22px",
-        border: "1px solid",
-        borderColor: "divider",
-        objectFit: "cover",
-        backgroundColor: "background.default",
-      }}
-    />
+    <Box sx={{ position: "relative" }}>
+      <Box
+        component="img"
+        src={imageUrl}
+        alt={item.name || ""}
+        onError={() => setImageFailed(true)}
+        sx={{
+          width: "100%",
+          borderRadius: "22px",
+          border: "1px solid",
+          borderColor: "divider",
+          objectFit: "cover",
+          backgroundColor: "background.default",
+        }}
+      />
+      {showImageToggle ? (
+        <ProductImageVersionToggle
+          imageMode={imageMode}
+          t={t}
+          onChange={setImageMode}
+        />
+      ) : null}
+    </Box>
   );
 }
 

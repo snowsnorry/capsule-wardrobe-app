@@ -122,6 +122,8 @@ const translations: Record<string, string> = {
   "myWardrobe.uploadDialog.uploadedStatus": "Uploaded: {image_count}",
   "myWardrobe.uploadDialog.metadataProcessedStatus":
     "Metadata processed: {image_count}",
+  "myWardrobe.uploadDialog.imageProcessedStatus":
+    "Images processed: {image_count}",
   "myWardrobe.uploadDialog.failedStatus": "Failed: {image_count}",
   "myWardrobe.uploadDialog.tooManyFiles": "Upload up to 5 files.",
   "myWardrobe.uploadDialog.invalidType": "Use JPEG, PNG, or WebP images.",
@@ -220,7 +222,9 @@ describe("MyWardrobeScreen", () => {
           options.onProgress({
             total: 1,
             uploaded: 1,
+            completedSteps: 1,
             metadataProcessed: 0,
+            imageProcessed: 0,
             failed: 0,
           });
           resolveUpload = resolve;
@@ -255,10 +259,11 @@ describe("MyWardrobeScreen", () => {
     expect(screen.getAllByRole("progressbar")).toHaveLength(1);
     expect(screen.getByRole("progressbar")).toHaveAttribute(
       "aria-valuenow",
-      "50",
+      "33",
     );
     expect(screen.getByText("Uploaded: 1")).toBeInTheDocument();
     expect(screen.getByText("Metadata processed: 0")).toBeInTheDocument();
+    expect(screen.getByText("Images processed: 0")).toBeInTheDocument();
     expect(screen.getByText("Failed: 0")).toBeInTheDocument();
 
     resolveUpload({ ok: true, items: [] });
