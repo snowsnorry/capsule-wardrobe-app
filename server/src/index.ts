@@ -79,6 +79,7 @@ import {
   listWardrobeItemsByEmail,
   saveUploadedWardrobeItemsByEmail,
   saveWardrobeItemFromCatalogByUrl,
+  updateUploadedWardrobeItemMetadataById,
   insertPasskey,
   insertPasskeyChallenge,
   listPasskeysByEmail,
@@ -116,6 +117,7 @@ import {
 import { createStartServer } from "./serverStartup.js";
 import { uploadWardrobeImageToR2 } from "./r2Storage.js";
 import { normalizeWardrobeUploadImagesInChild } from "./wardrobeUploadImagesRunner.js";
+import { analyzeWardrobeImageUrl } from "./wardrobeImageAnalysis.js";
 import {
   applyCorsMiddleware,
   applySecurityMiddleware,
@@ -165,6 +167,7 @@ function createAppDependencies(options: Record<string, unknown> = {}) {
   return {
     authTestMode: AUTH_TEST_MODE,
     buildWardrobePdfInChildImpl: buildWardrobePdfInChild,
+    analyzeWardrobeImageUrlImpl: analyzeWardrobeImageUrl,
     checkDatabaseConnectionImpl: checkDatabaseConnection,
     clientOrigin: CLIENT_ORIGIN,
     consumePasskeyChallengeImpl: consumePasskeyChallenge,
@@ -231,6 +234,8 @@ function createAppDependencies(options: Record<string, unknown> = {}) {
     updateProfileActiveCapsuleIdImpl: updateProfileActiveCapsuleId,
     updateProfileImpl: updateProfile,
     updateProfileLocaleImpl: updateProfileLocale,
+    updateUploadedWardrobeItemMetadataImpl:
+      updateUploadedWardrobeItemMetadataById,
     uploadWardrobeImageToR2Impl: uploadWardrobeImageToR2,
     normalizeWardrobeUploadImagesInChildImpl:
       normalizeWardrobeUploadImagesInChild,

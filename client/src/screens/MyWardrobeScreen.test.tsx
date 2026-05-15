@@ -97,6 +97,8 @@ const translations: Record<string, string> = {
   "myWardrobe.loadFailed": "Failed to load My Wardrobe.",
   "myWardrobe.removeFailed": "Failed to remove from My Wardrobe.",
   "myWardrobe.uploadFailed": "Failed to upload wardrobe photos.",
+  "myWardrobe.failedUploadBadge": "Failed",
+  "myWardrobe.noCategoryBadge": "No category",
   "myWardrobe.removeConfirmTitle": "Remove from My Wardrobe?",
   "myWardrobe.removeConfirmBody":
     "This product will be removed from My Wardrobe.",
@@ -117,6 +119,10 @@ const translations: Record<string, string> = {
   "myWardrobe.uploadDialog.selectedSummary": "{count} files, {size}",
   "myWardrobe.uploadDialog.removeFile": "Remove {name}",
   "myWardrobe.uploadDialog.upload": "Upload",
+  "myWardrobe.uploadDialog.uploadedStatus": "Uploaded: {image_count}",
+  "myWardrobe.uploadDialog.metadataProcessedStatus":
+    "Metadata processed: {image_count}",
+  "myWardrobe.uploadDialog.failedStatus": "Failed: {image_count}",
   "myWardrobe.uploadDialog.tooManyFiles": "Upload up to 5 files.",
   "myWardrobe.uploadDialog.invalidType": "Use JPEG, PNG, or WebP images.",
   "myWardrobe.uploadDialog.fileTooLarge": "Each image must be 10 MB or less.",
@@ -208,10 +214,17 @@ describe("MyWardrobeScreen", () => {
   test("uploads selected wardrobe photos and refreshes uploaded items", async () => {
     const user = userEvent.setup();
     let resolveUpload: (value: unknown) => void = () => {};
-    api.uploadWardrobeImages.mockReturnValueOnce(
-      new Promise((resolve) => {
-        resolveUpload = resolve;
-      }),
+    api.uploadWardrobeImages.mockImplementationOnce(
+      (_files, options) =>
+        new Promise((resolve) => {
+          options.onProgress({
+            total: 1,
+            uploaded: 1,
+            metadataProcessed: 0,
+            failed: 0,
+          });
+          resolveUpload = resolve;
+        }),
     );
     renderScreen();
 
@@ -234,17 +247,25 @@ describe("MyWardrobeScreen", () => {
     expect(screen.getByText("linen-shirt.png")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Upload" }));
 
-    expect(api.uploadWardrobeImages).toHaveBeenCalledWith([file]);
+    expect(api.uploadWardrobeImages).toHaveBeenCalledWith(
+      [file],
+      expect.objectContaining({ onProgress: expect.any(Function) }),
+    );
+    expect(screen.getByText("Upload wardrobe photos")).toBeInTheDocument();
+    expect(screen.getAllByRole("progressbar")).toHaveLength(1);
+    expect(screen.getByRole("progressbar")).toHaveAttribute(
+      "aria-valuenow",
+      "50",
+    );
+    expect(screen.getByText("Uploaded: 1")).toBeInTheDocument();
+    expect(screen.getByText("Metadata processed: 0")).toBeInTheDocument();
+    expect(screen.getByText("Failed: 0")).toBeInTheDocument();
+
+    resolveUpload({ ok: true, items: [] });
     await waitFor(() => {
       expect(
         screen.queryByText("Upload wardrobe photos"),
       ).not.toBeInTheDocument();
-    });
-    expect(screen.getByRole("progressbar")).toBeInTheDocument();
-
-    resolveUpload({ ok: true, items: [] });
-    await waitFor(() => {
-      expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
     });
     await waitFor(() => {
       expect(api.fetchMyWardrobeItems).toHaveBeenLastCalledWith({

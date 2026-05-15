@@ -7,6 +7,11 @@ import {
   WARDROBE_UPLOAD_MAX_FILES,
   isAllowedWardrobeUploadMimeType,
 } from "../wardrobeUploadImagesCore.js";
+import {
+  openWardrobeUploadEventStream,
+  processUploadedWardrobeItemMetadata,
+  writeWardrobeUploadEvent,
+} from "./wardrobeUploadStream.js";
 
 const wardrobeUpload = multer({
   storage: multer.memoryStorage(),
@@ -208,6 +213,7 @@ function registerWardrobeUploadRoute(app, context) {
 
       try {
         const images = await getValidatedWardrobeUploadImages(files);
+        openWardrobeUploadEventStream(res);
         const normalizedImages =
           await context.normalizeWardrobeUploadImagesInChildImpl(images);
         const uploadedImages = await Promise.all(
@@ -225,14 +231,44 @@ function registerWardrobeUploadRoute(app, context) {
         const displayItems = Array.isArray(items)
           ? items.map(filterWardrobeItemForDisplay)
           : [];
+        const progress = {
+          total: displayItems.length,
+          uploaded: displayItems.length,
+          metadataProcessed: 0,
+          failed: 0,
+        };
+        writeWardrobeUploadEvent(res, "progress", progress);
+        const processedItems = await Promise.all(
+          displayItems.map((item) =>
+            processUploadedWardrobeItemMetadata({
+              context,
+              email: req.user.email,
+              filterItem: filterWardrobeItemForDisplay,
+              item,
+              progress,
+              res,
+            }),
+          ),
+        );
 
-        return res.status(201).json({ ok: true, items: displayItems });
+        writeWardrobeUploadEvent(res, "complete", {
+          ok: true,
+          ...progress,
+          items: processedItems,
+        });
+        return res.end();
       } catch (error) {
         if (error?.message === "invalid_image") {
           return res.status(400).json({ error: "invalid_image" });
         }
 
         logError("[wardrobe/items/upload]", error);
+        if (res.headersSent) {
+          writeWardrobeUploadEvent(res, "fatal", {
+            error: "service_unavailable",
+          });
+          return res.end();
+        }
         return res.status(503).json({ error: "service_unavailable" });
       }
     },

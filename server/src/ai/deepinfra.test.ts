@@ -101,6 +101,23 @@ test("buildChatMessages emits multimodal user content and preserves images", () 
   });
 });
 
+test("buildChatMessages supports direct safe image URLs", () => {
+  const content = buildChatMessages("Describe uploaded image", [
+    {
+      imageUrl: "https://images.example.com/wardrobe/image.webp",
+    },
+  ]);
+
+  assertDeepInfraImagePart(content[0]);
+  expect(content[0].image_url.url).toBe(
+    "https://images.example.com/wardrobe/image.webp",
+  );
+  expect(content[1]).toEqual({
+    type: "text",
+    text: "Describe uploaded image",
+  });
+});
+
 test("buildChatMessages trims empty prompts and skips unusable image assets", () => {
   const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
 

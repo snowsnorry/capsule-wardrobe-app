@@ -1,22 +1,11 @@
-import { useEffect, useState } from "react";
 import type { MouseEvent, ReactElement } from "react";
 import { useI18n } from "../i18n/useI18n";
 import { formatProductLabel } from "../utils/productLabel";
 import { getSafeHttpUrl } from "../../../shared/urlSecurity.js";
 import { isSavedToWardrobe } from "../utils/savedWardrobeState";
-import {
-  buildProductImageThumbnailSizes,
-  buildProductImageThumbnails,
-  type ProductImageThumbnails,
-} from "../utils/productImageThumbnails";
+import { useResponsiveClothingCardImageState } from "./ClothingCardImageState";
 import { ClothingCardView, getMobileCardMetrics } from "./ClothingCardParts";
 import type { ClothingCardItem } from "./ClothingCardTypes";
-
-type ClothingCardImageSource = {
-  src: string;
-  srcSet?: string;
-  sizes?: string;
-};
 
 type ClothingCardProps = {
   item: ClothingCardItem;
@@ -94,6 +83,14 @@ function getClothingCardLabels(
     categoryDisplayLabel: categoryLabel || categoryName,
     categoryName,
     label: formatProductLabel(item, ""),
+  };
+}
+
+function getClothingCardBadgeLabels(t: (key: string) => string) {
+  return {
+    savedToWardrobeLabel: t("myWardrobe.savedBadge"),
+    failedUploadLabel: t("myWardrobe.failedUploadBadge"),
+    noCategoryLabel: t("myWardrobe.noCategoryBadge"),
   };
 }
 
@@ -223,6 +220,7 @@ function ClothingCard(props: ClothingCardProps): ReactElement {
     item,
     t,
   );
+  const badgeLabels = getClothingCardBadgeLabels(t);
   const mobileCardMetrics = getMobileCardMetrics(mobileColumns);
   const showToggleButton = isSelectionMode && isSelectable;
   const showProductMenuButton =
@@ -276,7 +274,7 @@ function ClothingCard(props: ClothingCardProps): ReactElement {
       categoryName={categoryName}
       categoryDisplayLabel={categoryDisplayLabel}
       isSavedToWardrobe={isSavedToWardrobe(item, savedWardrobeSourceOptions)}
-      savedToWardrobeLabel={t("myWardrobe.savedBadge")}
+      badgeLabels={badgeLabels}
       showCardActions={showCardActions}
       actionProps={actionProps}
       mobileCardMetrics={mobileCardMetrics}
@@ -286,86 +284,4 @@ function ClothingCard(props: ClothingCardProps): ReactElement {
   );
 }
 
-function toClothingCardImageSource(
-  thumbnails: ProductImageThumbnails,
-): ClothingCardImageSource {
-  return {
-    src: thumbnails.src,
-    srcSet: thumbnails.srcSet,
-    sizes: thumbnails.sizes,
-  };
-}
-
-function useResponsiveClothingCardImageState(
-  originalImageUrl: unknown,
-  safeImageUrl: string | null,
-  isMobile: boolean,
-  mobileColumns: 1 | 2 | 3,
-) {
-  return useClothingCardImageState(
-    originalImageUrl,
-    safeImageUrl,
-    buildProductImageThumbnailSizes({ isMobile, mobileColumns }),
-  );
-}
-
-function useClothingCardImageState(
-  originalImageUrl: unknown,
-  safeImageUrl: string | null,
-  imageSizes: string,
-) {
-  const [displayImageSource, setDisplayImageSource] =
-    useState<ClothingCardImageSource | null>(null);
-  const [imageMode, setImageMode] = useState<
-    "loading" | "thumbnail" | "original" | "missing"
-  >("loading");
-
-  useEffect(() => {
-    let isActive = true;
-
-    setDisplayImageSource(null);
-    setImageMode(safeImageUrl ? "loading" : "missing");
-
-    if (!safeImageUrl) {
-      return () => {
-        isActive = false;
-      };
-    }
-
-    buildProductImageThumbnails(originalImageUrl, { sizes: imageSizes }).then(
-      (thumbnails) => {
-        if (!isActive) {
-          return;
-        }
-
-        if (thumbnails) {
-          setDisplayImageSource(toClothingCardImageSource(thumbnails));
-          setImageMode("thumbnail");
-        } else {
-          setDisplayImageSource({ src: safeImageUrl });
-          setImageMode("original");
-        }
-      },
-    );
-
-    return () => {
-      isActive = false;
-    };
-  }, [imageSizes, originalImageUrl, safeImageUrl]);
-
-  return {
-    displayImageSource,
-    imageMode,
-    handleImageError() {
-      if (imageMode === "thumbnail" && safeImageUrl) {
-        setDisplayImageSource({ src: safeImageUrl });
-        setImageMode("original");
-        return;
-      }
-
-      setDisplayImageSource(null);
-      setImageMode("missing");
-    },
-  };
-}
 export default ClothingCard;

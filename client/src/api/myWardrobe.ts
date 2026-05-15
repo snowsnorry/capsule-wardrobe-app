@@ -1,8 +1,18 @@
 import { API_BASE_URL } from "./config";
 import { getCachedJson, request, requestJson } from "./request";
 import type { JsonObject } from "./request";
+import { fetchEventSource } from "@microsoft/fetch-event-source";
 
 type MyWardrobeSource = "uploaded" | "from_catalog";
+type UploadWardrobeProgress = {
+  failed: number;
+  metadataProcessed: number;
+  total: number;
+  uploaded: number;
+};
+type UploadWardrobeImagesOptions = {
+  onProgress?: (progress: UploadWardrobeProgress) => void;
+};
 type MyWardrobeFetchOptions = {
   force?: boolean;
   source?: MyWardrobeSource | null;
@@ -27,6 +37,50 @@ function getWardrobeItemsPdfUrl(options: MyWardrobeFetchOptions = {}) {
   }
   const query = params.toString();
   return `${API_BASE_URL}/wardrobe/items/pdf${query ? `?${query}` : ""}`;
+}
+
+function getCsrfHeader(): Record<string, string> {
+  if (typeof document === "undefined") {
+    return {};
+  }
+
+  let cookie: string;
+  try {
+    cookie = document.cookie;
+  } catch {
+    return {};
+  }
+
+  const csrfToken = cookie
+    .split(";")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith("csrf="))
+    ?.slice("csrf=".length);
+  return csrfToken ? { "X-CSRF-Token": decodeURIComponent(csrfToken) } : {};
+}
+
+function parseUploadEventPayload(data: string | undefined): JsonObject {
+  if (typeof data !== "string" || data.trim().length === 0) {
+    return {};
+  }
+
+  try {
+    const parsed = JSON.parse(data);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? parsed
+      : {};
+  } catch {
+    throw new Error("invalid_event_payload");
+  }
+}
+
+function toUploadProgress(payload: JsonObject): UploadWardrobeProgress {
+  return {
+    total: Number(payload.total) || 0,
+    uploaded: Number(payload.uploaded) || 0,
+    metadataProcessed: Number(payload.metadataProcessed) || 0,
+    failed: Number(payload.failed) || 0,
+  };
 }
 
 function getDownloadFilenameFromDisposition(
@@ -59,17 +113,60 @@ async function fetchMyWardrobeItems(
   });
 }
 
-async function uploadWardrobeImages(files: File[]): Promise<JsonObject> {
+async function uploadWardrobeImages(
+  files: File[],
+  options: UploadWardrobeImagesOptions = {},
+): Promise<JsonObject> {
   const formData = new FormData();
   files.forEach((file) => {
     formData.append("images", file);
   });
 
-  return requestJson(`${API_BASE_URL}/wardrobe/items/upload`, {
+  let completePayload: JsonObject | null = null;
+  await fetchEventSource(`${API_BASE_URL}/wardrobe/items/upload`, {
     method: "POST",
     credentials: "include",
+    headers: getCsrfHeader(),
     body: formData,
+    openWhenHidden: true,
+    async onopen(response) {
+      const contentType = (
+        response.headers.get("content-type") || ""
+      ).toLowerCase();
+      if (response.ok && contentType.includes("text/event-stream")) {
+        return;
+      }
+
+      throw new Error(`request_failed_${response.status}`);
+    },
+    onmessage(event) {
+      const payload = parseUploadEventPayload(event.data);
+      if (event.event === "progress") {
+        options.onProgress?.(toUploadProgress(payload));
+        return;
+      }
+
+      if (event.event === "complete") {
+        options.onProgress?.(toUploadProgress(payload));
+        completePayload = payload;
+        return;
+      }
+
+      if (event.event === "fatal") {
+        throw new Error(String(payload.error || "service_unavailable"));
+      }
+    },
+    onclose() {
+      if (!completePayload) {
+        throw new Error("event_stream_closed");
+      }
+    },
+    onerror(error) {
+      throw error;
+    },
   });
+
+  return completePayload || {};
 }
 
 async function saveCatalogItemToMyWardrobe(url: string): Promise<JsonObject> {
@@ -137,3 +234,4 @@ export {
   uploadWardrobeImages,
 };
 export type { MyWardrobeSource };
+export type { UploadWardrobeProgress };

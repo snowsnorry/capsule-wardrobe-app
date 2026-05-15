@@ -298,7 +298,7 @@ export async function ensureWardrobeTable(): Promise<void> {
         check (processing_status in (
           'uploaded',
           'image_processing',
-          'metadata_processing',
+          'metadata_processed',
           'needs_review',
           'ready',
           'failed'

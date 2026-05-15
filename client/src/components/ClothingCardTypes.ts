@@ -8,6 +8,7 @@ type ClothingCardItem = {
   url?: string | null;
   audience?: string | null;
   source?: string | null;
+  processing_status?: string | null;
   isSavedToWardrobe?: boolean | null;
   is_saved_to_wardrobe?: boolean | null;
   savedToMyWardrobe?: boolean | null;

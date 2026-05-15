@@ -5,7 +5,11 @@ const requestApi = vi.hoisted(() => ({
   request: vi.fn(),
   requestJson: vi.fn(),
 }));
+const fetchEventSourceApi = vi.hoisted(() => ({
+  fetchEventSource: vi.fn(),
+}));
 
+vi.mock("@microsoft/fetch-event-source", () => fetchEventSourceApi);
 vi.mock("./request", () => requestApi);
 vi.mock("./config", () => ({
   API_BASE_URL: "https://api.example.test",
@@ -70,6 +74,7 @@ describe("my wardrobe api", () => {
     requestApi.request.mockResolvedValue(createResponse() as Response);
     requestApi.requestJson.mockReset();
     requestApi.requestJson.mockResolvedValue({ ok: true, items: [] });
+    fetchEventSourceApi.fetchEventSource.mockReset();
     vi.stubGlobal("URL", {
       createObjectURL: vi.fn(() => "blob:my-wardrobe-pdf"),
       revokeObjectURL: vi.fn(),
@@ -110,16 +115,61 @@ describe("my wardrobe api", () => {
 
   test("uploads wardrobe images as multipart form data", async () => {
     const file = new File(["image"], "shirt.png", { type: "image/png" });
+    const onProgress = vi.fn();
+    fetchEventSourceApi.fetchEventSource.mockImplementation(
+      async (_url, options) => {
+        await options.onopen({
+          ok: true,
+          status: 200,
+          headers: { get: () => "text/event-stream; charset=utf-8" },
+        });
+        options.onmessage({
+          event: "progress",
+          data: JSON.stringify({
+            total: 1,
+            uploaded: 1,
+            metadataProcessed: 0,
+            failed: 0,
+          }),
+        });
+        options.onmessage({
+          event: "complete",
+          data: JSON.stringify({
+            ok: true,
+            total: 1,
+            uploaded: 1,
+            metadataProcessed: 1,
+            failed: 0,
+            items: [{ id: "uploaded-1" }],
+          }),
+        });
+        options.onclose();
+      },
+    );
 
-    await uploadWardrobeImages([file]);
+    const result = await uploadWardrobeImages([file], { onProgress });
 
-    expect(requestApi.requestJson).toHaveBeenCalledTimes(1);
-    const [url, options] = requestApi.requestJson.mock.calls[0];
+    expect(fetchEventSourceApi.fetchEventSource).toHaveBeenCalledTimes(1);
+    const [url, options] = fetchEventSourceApi.fetchEventSource.mock.calls[0];
     expect(url).toBe("https://api.example.test/wardrobe/items/upload");
     expect(options.method).toBe("POST");
     expect(options.credentials).toBe("include");
     expect(options.body).toBeInstanceOf(FormData);
     expect((options.body as FormData).getAll("images")).toEqual([file]);
+    expect(onProgress).toHaveBeenLastCalledWith({
+      total: 1,
+      uploaded: 1,
+      metadataProcessed: 1,
+      failed: 0,
+    });
+    expect(result).toEqual({
+      ok: true,
+      total: 1,
+      uploaded: 1,
+      metadataProcessed: 1,
+      failed: 0,
+      items: [{ id: "uploaded-1" }],
+    });
   });
 
   test("saves catalog items to my wardrobe", async () => {

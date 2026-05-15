@@ -21,6 +21,7 @@ import {
   listWardrobeItemsByEmail,
   saveUploadedWardrobeItemsByEmail,
   saveWardrobeItemFromCatalogByUrl,
+  updateUploadedWardrobeItemMetadataById,
 } from "./db.js";
 
 type SqlCall = {
@@ -506,6 +507,130 @@ test("db integration saves uploaded wardrobe items", async () => {
     JSON.stringify(["https://images.example.com/wardrobe/user/image.webp"]),
     "user@example.com",
   ]);
+});
+
+test("db integration updates uploaded wardrobe item metadata status", async () => {
+  const updatedRow: WardrobeRow = {
+    id: "wardrobe-upload-1",
+    profileEmail: "user@example.com",
+    productId: null,
+    name: "Linen shirt",
+    url: null,
+    imageUrl: "https://images.example.com/wardrobe/user/image.webp",
+    source: "uploaded",
+    rawImageUrl: "https://images.example.com/wardrobe/user/image.webp",
+    processingStatus: "metadata_processed",
+    createdAt: new Date(0).toISOString(),
+    updatedAt: new Date(0).toISOString(),
+  };
+  const { sql, calls } = createSqlMock([[updatedRow]]);
+  setSqlClientOverride(sql);
+
+  const saved = await updateUploadedWardrobeItemMetadataById({
+    email: "user@example.com",
+    id: "wardrobe-upload-1",
+    processingStatus: "metadata_processed",
+    metadata: {
+      name: "Linen shirt",
+      description: null,
+      brand: null,
+      audience: "women",
+      category: "top",
+      season: ["summer"],
+      formality_level: ["smart_casual"],
+      style: [],
+      occasions: [],
+      color_base: ["white"],
+      is_neutral: true,
+      pattern: "solid",
+      finish: null,
+      composition: "linen",
+      silhouette: null,
+      fit: "regular",
+      closure_type: ["button"],
+    },
+  });
+
+  expect(saved).toEqual(
+    expect.objectContaining({
+      id: "wardrobe-upload-1",
+      name: "Linen shirt",
+      processing_status: "metadata_processed",
+    }),
+  );
+  expect(calls[0].text).toMatch(/update wardrobe/i);
+  expect(calls[0].text).toMatch(/processing_status = 'metadata_processed'/i);
+  expect(calls[0].values).toEqual([
+    "Linen shirt",
+    null,
+    null,
+    "women",
+    "top",
+    ["summer"],
+    ["smart_casual"],
+    [],
+    [],
+    ["white"],
+    true,
+    "solid",
+    null,
+    "linen",
+    null,
+    "regular",
+    ["button"],
+    "user@example.com",
+    "wardrobe-upload-1",
+  ]);
+});
+
+test("db integration marks uploaded wardrobe item metadata failed", async () => {
+  const failedRow: WardrobeRow = {
+    id: "wardrobe-upload-1",
+    profileEmail: "user@example.com",
+    productId: null,
+    name: null,
+    url: null,
+    imageUrl: "https://images.example.com/wardrobe/user/image.webp",
+    source: "uploaded",
+    rawImageUrl: "https://images.example.com/wardrobe/user/image.webp",
+    processingStatus: "failed",
+    createdAt: new Date(0).toISOString(),
+    updatedAt: new Date(0).toISOString(),
+  };
+  const { sql, calls } = createSqlMock([[failedRow]]);
+  setSqlClientOverride(sql);
+
+  const saved = await updateUploadedWardrobeItemMetadataById({
+    email: "user@example.com",
+    id: " wardrobe-upload-1 ",
+    processingStatus: "failed",
+    metadata: null,
+  });
+
+  expect(saved).toEqual(
+    expect.objectContaining({
+      id: "wardrobe-upload-1",
+      processing_status: "failed",
+    }),
+  );
+  expect(calls[0].text).toMatch(/update wardrobe/i);
+  expect(calls[0].text).toMatch(/processing_status = 'failed'/i);
+  expect(calls[0].values).toEqual(["user@example.com", "wardrobe-upload-1"]);
+});
+
+test("db integration skips uploaded wardrobe metadata update for blank ids", async () => {
+  const { sql, calls } = createSqlMock([]);
+  setSqlClientOverride(sql);
+
+  const saved = await updateUploadedWardrobeItemMetadataById({
+    email: "user@example.com",
+    id: "   ",
+    processingStatus: "failed",
+    metadata: null,
+  });
+
+  expect(saved).toBeNull();
+  expect(calls).toEqual([]);
 });
 
 test("db integration applies price range to product stats price buckets", async () => {

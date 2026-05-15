@@ -25,8 +25,32 @@ async function requestMultipart(baseUrl, pathname, formData) {
   const text = await response.text();
   return {
     response,
-    json: text ? JSON.parse(text) : null,
+    json: text && text.startsWith("{") ? JSON.parse(text) : null,
+    text,
   };
+}
+
+function parseSseEvents(text: string) {
+  return text
+    .trim()
+    .split(/\n\n+/)
+    .filter(Boolean)
+    .map((chunk) => {
+      const event =
+        chunk
+          .split("\n")
+          .find((line) => line.startsWith("event: "))
+          ?.slice("event: ".length) || "message";
+      const data = chunk
+        .split("\n")
+        .filter((line) => line.startsWith("data: "))
+        .map((line) => line.slice("data: ".length))
+        .join("\n");
+      return {
+        event,
+        data: data ? JSON.parse(data) : {},
+      };
+    });
 }
 
 function buildUploadForm(
@@ -223,6 +247,25 @@ test("wardrobe routes export filtered wardrobe items as PDF", async (t) => {
 
 test("wardrobe upload route processes images and creates uploaded items", async (t) => {
   const calls: unknown[] = [];
+  const metadata = {
+    name: "Linen shirt",
+    description: null,
+    brand: null,
+    audience: "women",
+    category: "top",
+    season: ["summer"],
+    formality_level: ["smart_casual"],
+    style: [],
+    occasions: [],
+    color_base: ["white"],
+    is_neutral: true,
+    pattern: "solid",
+    finish: null,
+    composition: "linen",
+    silhouette: null,
+    fit: "regular",
+    closure_type: ["button"],
+  };
   const { baseUrl } = await startTestServer(t, {
     overrides: {
       normalizeWardrobeUploadImagesInChildImpl: async (images) => {
@@ -270,6 +313,26 @@ test("wardrobe upload route processes images and creates uploaded items", async 
           },
         ];
       },
+      analyzeWardrobeImageUrlImpl: async (payload) => {
+        calls.push({ type: "analyze", payload });
+        return {
+          hasMetadata: true,
+          metadata,
+          rawResponse: JSON.stringify(metadata),
+        };
+      },
+      updateUploadedWardrobeItemMetadataImpl: async (payload) => {
+        calls.push({ type: "updateMetadata", payload });
+        return {
+          id: payload.id,
+          image_url: "https://images.example.com/wardrobe/profile/image.webp",
+          raw_image_url:
+            "https://images.example.com/wardrobe/profile/image.webp",
+          source: "uploaded",
+          processing_status: payload.processingStatus,
+          ...payload.metadata,
+        };
+      },
     },
   });
 
@@ -279,17 +342,31 @@ test("wardrobe upload route processes images and creates uploaded items", async 
     buildUploadForm([{ bytes: tinyPng, name: "shirt.png", type: "image/png" }]),
   );
 
-  expect(upload.response.status).toBe(201);
-  expect(upload.json).toEqual({
+  expect(upload.response.status).toBe(200);
+  expect(upload.response.headers.get("content-type")).toMatch(
+    /text\/event-stream/,
+  );
+  const events = parseSseEvents(upload.text);
+  expect(events.map((event) => event.event)).toEqual([
+    "progress",
+    "progress",
+    "complete",
+  ]);
+  expect(events.at(-1)?.data).toEqual({
     ok: true,
+    total: 1,
+    uploaded: 1,
+    metadataProcessed: 1,
+    failed: 0,
     items: [
-      {
+      expect.objectContaining({
         id: "wardrobe-upload-1",
+        name: "Linen shirt",
         image_url: "https://images.example.com/wardrobe/profile/image.webp",
         raw_image_url: "https://images.example.com/wardrobe/profile/image.webp",
         source: "uploaded",
-        processing_status: "uploaded",
-      },
+        processing_status: "metadata_processed",
+      }),
     ],
   });
   expect(calls).toEqual([
@@ -313,6 +390,21 @@ test("wardrobe upload route processes images and creates uploaded items", async 
       payload: {
         email: "person@example.com",
         imageUrls: ["https://images.example.com/wardrobe/profile/image.webp"],
+      },
+    },
+    {
+      type: "analyze",
+      payload: {
+        imageUrl: "https://images.example.com/wardrobe/profile/image.webp",
+      },
+    },
+    {
+      type: "updateMetadata",
+      payload: {
+        email: "person@example.com",
+        id: "wardrobe-upload-1",
+        metadata,
+        processingStatus: "metadata_processed",
       },
     },
   ]);
@@ -384,8 +476,11 @@ test("wardrobe upload route validates files and maps failures", async (t) => {
     "/wardrobe/items/upload",
     buildUploadForm(),
   );
-  expect(serviceFailure.response.status).toBe(503);
-  expect(serviceFailure.json).toEqual({ error: "service_unavailable" });
+  expect(serviceFailure.response.status).toBe(200);
+  expect(parseSseEvents(serviceFailure.text).at(-1)).toEqual({
+    event: "fatal",
+    data: { error: "service_unavailable" },
+  });
 });
 
 test("wardrobe routes validate source and catalog item payloads", async (t) => {

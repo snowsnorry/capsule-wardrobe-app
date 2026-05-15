@@ -53,6 +53,7 @@ export {
   saveUploadedWardrobeItemsByEmail,
   saveWardrobeItemFromCatalogByUrl,
 } from "./db/wardrobe.js";
+export { updateUploadedWardrobeItemMetadataById } from "./db/wardrobeMetadata.js";
 export {
   getProfileByEmail,
   createProfileRecord,

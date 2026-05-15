@@ -6,7 +6,7 @@ export type UserWardrobeSource = "uploaded" | "from_catalog";
 export type UserWardrobeProcessingStatus =
   | "uploaded"
   | "image_processing"
-  | "metadata_processing"
+  | "metadata_processed"
   | "needs_review"
   | "ready"
   | "failed";

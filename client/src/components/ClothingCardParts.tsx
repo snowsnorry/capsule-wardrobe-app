@@ -1,7 +1,12 @@
-import { Box, Chip, Stack, Typography } from "@mui/material";
+import { Box, Typography } from "@mui/material";
 import type { KeyboardEvent } from "react";
 import type { ReactNode } from "react";
 import { CardActions } from "./ClothingCardActions";
+import {
+  CategoryChip,
+  getCategoryChip,
+  type ClothingCardBadgeLabels,
+} from "./ClothingCardCategoryChip";
 import { ClothingCardDetails } from "./ClothingCardDetailsParts";
 import { ClothingCardImagePlaceholder } from "./ClothingCardImagePlaceholder";
 import type {
@@ -169,6 +174,7 @@ function ProductImageContent({
 }
 
 function ClothingCardImageSection({
+  item,
   displayImageSource,
   showImageNotFound,
   showImagePlaceholder,
@@ -176,9 +182,11 @@ function ClothingCardImageSection({
   isSelected,
   isMobile,
   categoryDisplayLabel,
+  badgeLabels,
   actionProps,
   onImageError,
 }: {
+  item: ClothingCardItem;
   displayImageSource: {
     src: string;
     srcSet?: string;
@@ -190,9 +198,16 @@ function ClothingCardImageSection({
   isSelected: boolean;
   isMobile: boolean;
   categoryDisplayLabel: string;
+  badgeLabels: ClothingCardBadgeLabels;
   actionProps: CardActionProps | null;
   onImageError: () => void;
 }) {
+  const categoryChip = getCategoryChip({
+    item,
+    categoryDisplayLabel,
+    badgeLabels,
+  });
+
   return (
     <Box
       sx={{
@@ -204,7 +219,7 @@ function ClothingCardImageSection({
       }}
     >
       {actionProps ? <CardActions {...actionProps} /> : null}
-      {!isMobile ? <CategoryChip label={categoryDisplayLabel} /> : null}
+      {!isMobile && categoryChip ? <CategoryChip {...categoryChip} /> : null}
       <CardImageFrame>
         <ProductImageContent
           displayImageSource={displayImageSource}
@@ -231,7 +246,7 @@ function ClothingCardView({
   categoryName,
   categoryDisplayLabel,
   isSavedToWardrobe,
-  savedToWardrobeLabel,
+  badgeLabels,
   showCardActions,
   actionProps,
   mobileCardMetrics,
@@ -253,7 +268,7 @@ function ClothingCardView({
   categoryName: string;
   categoryDisplayLabel: string;
   isSavedToWardrobe: boolean;
-  savedToWardrobeLabel: string;
+  badgeLabels: ClothingCardBadgeLabels;
   showCardActions: boolean;
   actionProps: CardActionProps | null;
   mobileCardMetrics: MobileCardMetrics;
@@ -280,6 +295,7 @@ function ClothingCardView({
       })}
     >
       <ClothingCardImageSection
+        item={item}
         displayImageSource={displayImageSource}
         showImageNotFound={showImageNotFound}
         showImagePlaceholder={showImagePlaceholder}
@@ -287,6 +303,7 @@ function ClothingCardView({
         isSelected={isSelected}
         isMobile={isMobile}
         categoryDisplayLabel={categoryDisplayLabel}
+        badgeLabels={badgeLabels}
         actionProps={actionProps}
         onImageError={onImageError}
       />
@@ -298,7 +315,7 @@ function ClothingCardView({
         categoryName={categoryName}
         categoryDisplayLabel={categoryDisplayLabel}
         isSavedToWardrobe={isSavedToWardrobe}
-        savedToWardrobeLabel={savedToWardrobeLabel}
+        savedToWardrobeLabel={badgeLabels.savedToWardrobeLabel}
       />
     </Box>
   );
@@ -317,45 +334,8 @@ function createCardKeyDownHandler(onCardClick?: () => void) {
   };
 }
 
-function CategoryChip({ label }: { label: string }) {
-  return (
-    <Stack
-      className="wardrobe-card-category-wrapper"
-      direction="row"
-      spacing={1}
-      sx={{ position: "absolute", top: 12, left: 12, zIndex: 1 }}
-    >
-      <Chip
-        className="wardrobe-card-category"
-        label={label}
-        size="small"
-        sx={{
-          "&&": {
-            bgcolor: "#dcefeb",
-            color: "#15766f",
-          },
-          maxWidth: "100%",
-          height: 28,
-          textTransform: "uppercase",
-          letterSpacing: "0.08em",
-          fontSize: "12px",
-          fontWeight: 800,
-          padding: 0,
-          "& .MuiChip-label": {
-            px: 1,
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-          },
-        }}
-      />
-    </Stack>
-  );
-}
-
-function CardImageFrame({ children }: { children: ReactNode }) {
-  return (
-    <Box sx={{ position: "absolute", inset: 0, zIndex: 0 }}>{children}</Box>
-  );
-}
+const CardImageFrame = ({ children }: { children: ReactNode }) => (
+  <Box sx={{ position: "absolute", inset: 0, zIndex: 0 }}>{children}</Box>
+);
 
 export { ClothingCardView, getMobileCardMetrics };

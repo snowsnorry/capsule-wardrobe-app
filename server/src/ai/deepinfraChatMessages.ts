@@ -1,4 +1,5 @@
 import { logWarn } from "../logger.js";
+import { getSafeHttpUrl } from "../../../shared/urlSecurity.js";
 import { buildImageDataUrl } from "./openai.js";
 import type { ImageAssetLike } from "./types.js";
 
@@ -14,14 +15,14 @@ function buildChatMessages(
   const userText = String(user || "").trim();
 
   for (const image of images) {
-    const imageUrl = buildImageDataUrl(image);
+    const imageUrl = buildDeepInfraImageUrl(image);
     if (!imageUrl) {
       logWarn(
         "[deepinfra][image-skipped]",
         JSON.stringify({
           category: image?.category ?? null,
           filename: image?.filename ?? null,
-          reason: "missing_buffer",
+          reason: "missing_buffer_or_url",
         }),
       );
       continue;
@@ -43,6 +44,10 @@ function buildChatMessages(
   }
 
   return content.length > 0 ? content : [{ type: "text", text: "" }];
+}
+
+function buildDeepInfraImageUrl(image: ImageAssetLike): string {
+  return buildImageDataUrl(image) || getSafeHttpUrl(image?.imageUrl);
 }
 
 export { buildChatMessages };

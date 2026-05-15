@@ -161,6 +161,49 @@ describe("ClothingCard", () => {
     );
   });
 
+  test("keeps the inline photo camera icon and shows a failed chip for failed uploaded wardrobe items", () => {
+    const { container } = renderCard({
+      item: { ...item, source: "uploaded", processing_status: "failed" },
+    });
+
+    expect(
+      container.querySelector(
+        ".wardrobe-card-title .wardrobe-card-uploaded-icon",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      container.querySelector(
+        ".wardrobe-card-title .wardrobe-card-failed-upload-icon",
+      ),
+    ).not.toBeInTheDocument();
+    const failedChip = container.querySelector(
+      ".wardrobe-card-category-failed",
+    );
+    expect(failedChip).toHaveTextContent("myWardrobe.failedUploadBadge");
+    expect(
+      container.querySelector(".wardrobe-card-category-category"),
+    ).not.toBeInTheDocument();
+  });
+
+  test("shows a no category chip for processed uploaded wardrobe items without a category", () => {
+    const { container } = renderCard({
+      item: {
+        ...item,
+        category: null,
+        source: "uploaded",
+        processing_status: "metadata_processed",
+      },
+    });
+
+    const noCategoryChip = container.querySelector(
+      ".wardrobe-card-category-noCategory",
+    );
+    expect(noCategoryChip).toHaveTextContent("myWardrobe.noCategoryBadge");
+    expect(
+      container.querySelector(".wardrobe-card-category-category"),
+    ).not.toBeInTheDocument();
+  });
+
   test("renders the product thumbnail image and opens product details from the card", async () => {
     const onProductClick = vi.fn();
     renderCard({ onProductClick });
@@ -241,6 +284,7 @@ describe("ClothingCard", () => {
     expect(category).toContainElement(
       screen.getByText("options.categories.outerwear"),
     );
+    expect(category).toHaveClass("wardrobe-card-category-category");
   });
 
   test("moves known category icons into the mobile title prefix", () => {

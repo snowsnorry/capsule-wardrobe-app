@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import type { MouseEvent, ReactElement } from "react";
-import { Alert, Box, LinearProgress, Stack } from "@mui/material";
+import { Alert, Box, Stack } from "@mui/material";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import {
   downloadMyWardrobePdf,
   fetchMyWardrobeItems,
   removeCatalogItemFromMyWardrobe,
   type MyWardrobeSource,
+  type UploadWardrobeProgress,
   uploadWardrobeImages,
 } from "../api/myWardrobe";
 import { useI18n } from "../i18n/useI18n";
@@ -37,6 +38,13 @@ type MyWardrobeItemsResponse = {
   items?: MainScreenItem[];
 };
 
+const EMPTY_UPLOAD_PROGRESS: UploadWardrobeProgress = {
+  total: 0,
+  uploaded: 0,
+  metadataProcessed: 0,
+  failed: 0,
+};
+
 function getItemsFromResponse(response: unknown): MainScreenItem[] {
   const items = (response as MyWardrobeItemsResponse)?.items;
   return Array.isArray(items) ? items : [];
@@ -63,11 +71,11 @@ function MyWardrobeScreen(): ReactElement {
     writeStoredMyWardrobeMobileCardColumns(value);
   };
   const handleUploadImages = async (files: File[]) => {
-    setIsUploadDialogOpen(false);
     const uploaded = await wardrobeItems.handleUploadImages(files);
     if (uploaded) {
       setFilter("uploaded");
       setRefreshKey((current) => current + 1);
+      setIsUploadDialogOpen(false);
     }
   };
 
@@ -82,7 +90,6 @@ function MyWardrobeScreen(): ReactElement {
           onOpenMenu={(event) => setMenuAnchor(event.currentTarget)}
           onOpenUpload={() => setIsUploadDialogOpen(true)}
         />
-        {wardrobeItems.isUploading ? <LinearProgress /> : null}
         <MyWardrobeActionMenu
           anchorEl={menuAnchor}
           disabled={
@@ -132,6 +139,7 @@ function MyWardrobeScreen(): ReactElement {
         <WardrobeUploadDialog
           open={isUploadDialogOpen}
           isUploading={wardrobeItems.isUploading}
+          progress={wardrobeItems.uploadProgress}
           t={t}
           onClose={() => setIsUploadDialogOpen(false)}
           onUpload={handleUploadImages}
@@ -154,6 +162,9 @@ function useMyWardrobeItems(
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const [isMutating, setIsMutating] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<UploadWardrobeProgress>(
+    EMPTY_UPLOAD_PROGRESS,
+  );
   const [productMenu, setProductMenu] = useState<MyWardrobeProductMenuState>({
     anchor: null,
     url: "",
@@ -208,8 +219,14 @@ function useMyWardrobeItems(
     }
 
     setIsUploading(true);
+    setUploadProgress({
+      ...EMPTY_UPLOAD_PROGRESS,
+      total: files.length,
+    });
     try {
-      await uploadWardrobeImages(files);
+      await uploadWardrobeImages(files, {
+        onProgress: setUploadProgress,
+      });
       setError("");
       return true;
     } catch {
@@ -235,6 +252,7 @@ function useMyWardrobeItems(
     productMenu,
     removeConfirmItem,
     setRemoveConfirmItem,
+    uploadProgress,
   };
 }
 
