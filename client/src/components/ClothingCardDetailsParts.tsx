@@ -1,4 +1,5 @@
 import BookmarkBorderRoundedIcon from "@mui/icons-material/BookmarkBorderRounded";
+import PhotoCameraOutlinedIcon from "@mui/icons-material/PhotoCameraOutlined";
 import { Box, Stack, Typography } from "@mui/material";
 import type { ReactElement } from "react";
 import type { IconType } from "react-icons";
@@ -150,6 +151,7 @@ function ClothingCardDetails({
         ) : null}
         {isSavedToWardrobe ? (
           <SavedToWardrobeIcon
+            isUploaded={item.source === "uploaded"}
             isMobile={isMobile}
             label={savedToWardrobeLabel}
           />
@@ -165,15 +167,23 @@ function ClothingCardDetails({
 }
 
 function SavedToWardrobeIcon({
+  isUploaded,
   isMobile,
   label,
 }: {
+  isUploaded: boolean;
   isMobile: boolean;
   label: string;
 }) {
+  const Icon = isUploaded ? PhotoCameraOutlinedIcon : BookmarkBorderRoundedIcon;
+
   return (
-    <BookmarkBorderRoundedIcon
-      className="wardrobe-card-saved-icon"
+    <Icon
+      className={`wardrobe-card-saved-icon ${
+        isUploaded
+          ? "wardrobe-card-uploaded-icon"
+          : "wardrobe-card-bookmark-icon"
+      }`}
       titleAccess={label}
       aria-label={label}
       sx={{

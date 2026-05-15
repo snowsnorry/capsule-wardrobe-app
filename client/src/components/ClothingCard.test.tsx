@@ -125,12 +125,38 @@ describe("ClothingCard", () => {
 
     expect(screen.getByLabelText("myWardrobe.savedBadge")).toBeInTheDocument();
     expect(
-      container.querySelector(".wardrobe-card-title .wardrobe-card-saved-icon"),
+      container.querySelector(
+        ".wardrobe-card-title .wardrobe-card-bookmark-icon",
+      ),
     ).toBeInTheDocument();
     const titleHtml = container.querySelector(
       ".wardrobe-card-title",
     )?.innerHTML;
     expect(titleHtml?.indexOf("wardrobe-card-saved-icon")).toBeLessThan(
+      titleHtml?.indexOf("Red Jacket") ?? 0,
+    );
+  });
+
+  test("renders an inline photo camera icon for uploaded wardrobe items", () => {
+    const { container } = renderCard({
+      item: { ...item, source: "uploaded" },
+    });
+
+    expect(screen.getByLabelText("myWardrobe.savedBadge")).toBeInTheDocument();
+    expect(
+      container.querySelector(
+        ".wardrobe-card-title .wardrobe-card-uploaded-icon",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      container.querySelector(
+        ".wardrobe-card-title .wardrobe-card-bookmark-icon",
+      ),
+    ).not.toBeInTheDocument();
+    const titleHtml = container.querySelector(
+      ".wardrobe-card-title",
+    )?.innerHTML;
+    expect(titleHtml?.indexOf("wardrobe-card-uploaded-icon")).toBeLessThan(
       titleHtml?.indexOf("Red Jacket") ?? 0,
     );
   });
