@@ -104,6 +104,7 @@ Lint and quality:
 - When changing localization-visible text, update locale resources and keep EN/RU parity.
 - When changing auth, session, DB, email, or deployment behavior, be conservative and avoid incidental rewrites.
 - When changing passkeys/WebAuthn, preserve DB-backed challenge single-use semantics, do not return stored public keys to the client, and keep `PASSKEY_RP_ID`/`PASSKEY_ORIGIN` aligned with the visible frontend origin.
+- When using Playwright for code validation, run it against the dedicated e2e server with in-memory dependencies, not against normal dev or production-like servers with external dependencies.
 - Keep Playwright e2e-only endpoints and env vars isolated from normal dev, production, and Render startup paths.
 - Default Playwright e2e runs should not require real DB, email, LLM, embedding, or remote image services.
 - Prefer extending existing patterns over introducing new abstractions.
