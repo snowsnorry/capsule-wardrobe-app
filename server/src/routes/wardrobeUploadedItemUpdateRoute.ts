@@ -18,10 +18,21 @@ function registerUploadedWardrobeItemUpdateRoute(app, context, filterItem) {
       }
 
       try {
+        let embedding: number[] | null = null;
+        let processingStatus = "ready";
+        try {
+          embedding =
+            await context.createUploadedWardrobeItemEmbeddingImpl(details);
+        } catch (embeddingError) {
+          logError("[wardrobe/items/uploaded/:id][embedding]", embeddingError);
+          processingStatus = "failed";
+        }
         const item = await context.updateUploadedWardrobeItemDetailsImpl({
+          embedding,
           email: req.user.email,
           id,
           details,
+          processingStatus,
         });
         if (!item) {
           return res.status(404).json({ error: "not_found" });

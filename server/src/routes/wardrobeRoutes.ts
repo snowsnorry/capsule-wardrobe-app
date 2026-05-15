@@ -60,6 +60,7 @@ const WARDROBE_ITEM_PRIVATE_FIELDS = new Set([
   "createdAt",
   "created_at",
   "email",
+  "embedding",
   "productId",
   "product_id",
   "profileEmail",

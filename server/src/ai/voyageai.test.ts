@@ -64,6 +64,31 @@ test("voyage client requires api key and shapes embedding request", async () => 
   });
 });
 
+test("voyage client shapes document embedding request", async () => {
+  let requestInit = null;
+  const client = createVoyageClient({
+    getVoyageApiKeyImpl: () => "voyage-key",
+    fetchImpl: async (_url, init) => {
+      requestInit = init;
+      return {
+        ok: true,
+        json: async () => ({
+          data: [{ embedding: [0.4, 0.5, 0.6] }],
+        }),
+      };
+    },
+  });
+
+  const embedding = await client.getDocumentEmbeddings("wardrobe document");
+
+  expect(embedding).toEqual([0.4, 0.5, 0.6]);
+  expect(JSON.parse(requestInit.body)).toEqual({
+    input: "wardrobe document",
+    model: "voyage-4-large",
+    input_type: "document",
+  });
+});
+
 test("voyage client throws for missing key, http failure, and invalid embedding payload", async () => {
   const missingKeyClient = createVoyageClient({
     getVoyageApiKeyImpl: () => {

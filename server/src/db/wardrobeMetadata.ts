@@ -9,11 +9,18 @@ import type { UploadedWardrobeItemDetails } from "../wardrobeUploadedItemUpdate.
 
 type UploadedWardrobeMetadataUpdate = {
   email: string;
+  embedding?: number[] | null;
   id: string;
   metadata?: WardrobeImageAnalysisMetadata | null;
   imageUrl?: string | null;
   processingStatus: "metadata_processed" | "ready" | "failed";
 };
+
+function formatEmbeddingVector(embedding: number[] | null | undefined) {
+  return Array.isArray(embedding) && embedding.length > 0
+    ? `[${embedding.join(",")}]`
+    : null;
+}
 
 async function markUploadedWardrobeItemFailed(email: string, id: string) {
   const sql = getSqlClient();
@@ -65,12 +72,14 @@ async function markUploadedWardrobeItemFailed(email: string, id: string) {
 
 async function markUploadedWardrobeItemMetadataProcessed({
   email,
+  embedding = null,
   id,
   imageUrl = null,
   metadata,
   processingStatus = "metadata_processed",
 }: {
   email: string;
+  embedding?: number[] | null;
   id: string;
   imageUrl?: string | null;
   metadata: WardrobeImageAnalysisMetadata;
@@ -78,6 +87,7 @@ async function markUploadedWardrobeItemMetadataProcessed({
 }) {
   const sql = getSqlClient();
   const normalizedImageUrl = String(imageUrl || "").trim() || null;
+  const embeddingVector = formatEmbeddingVector(embedding);
   const row = getFirstRow(
     await sql<UserWardrobeRow>`
     update wardrobe
@@ -99,6 +109,7 @@ async function markUploadedWardrobeItemMetadataProcessed({
       silhouette = ${metadata.silhouette},
       fit = ${metadata.fit},
       closure_type = ${metadata.closure_type},
+      embedding = ${embeddingVector}::vector,
       image_url = coalesce(${normalizedImageUrl}, image_url),
       processing_status = ${processingStatus},
       updated_at = now()
@@ -145,6 +156,7 @@ async function markUploadedWardrobeItemMetadataProcessed({
 
 async function updateUploadedWardrobeItemMetadataById({
   email,
+  embedding = null,
   id,
   imageUrl = null,
   metadata,
@@ -160,6 +172,7 @@ async function updateUploadedWardrobeItemMetadataById({
   }
 
   return markUploadedWardrobeItemMetadataProcessed({
+    embedding,
     email,
     imageUrl,
     id: normalizedId,
@@ -170,12 +183,16 @@ async function updateUploadedWardrobeItemMetadataById({
 
 async function updateUploadedWardrobeItemDetailsById({
   email,
+  embedding = null,
   id,
   details,
+  processingStatus = "ready",
 }: {
   email: string;
+  embedding?: number[] | null;
   id: string;
   details: UploadedWardrobeItemDetails;
+  processingStatus?: "ready" | "failed";
 }): Promise<Record<string, unknown> | null> {
   const normalizedId = String(id || "").trim();
   if (!normalizedId) {
@@ -187,6 +204,7 @@ async function updateUploadedWardrobeItemDetailsById({
     ...details,
     is_neutral: null,
   });
+  const embeddingVector = formatEmbeddingVector(embedding);
   const row = getFirstRow(
     await sql<UserWardrobeRow>`
       update wardrobe
@@ -208,7 +226,8 @@ async function updateUploadedWardrobeItemDetailsById({
         silhouette = ${details.silhouette},
         fit = ${details.fit},
         closure_type = ${details.closure_type},
-        processing_status = 'ready',
+        embedding = ${embeddingVector}::vector,
+        processing_status = ${processingStatus},
         updated_at = now()
       where profile_email = ${email}
         and id = ${normalizedId}

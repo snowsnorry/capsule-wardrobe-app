@@ -579,6 +579,7 @@ test("db integration updates uploaded wardrobe item metadata status", async () =
 
   const saved = await updateUploadedWardrobeItemMetadataById({
     email: "user@example.com",
+    embedding: [0.1, 0.2],
     id: "wardrobe-upload-1",
     processingStatus: "metadata_processed",
     metadata: {
@@ -629,6 +630,7 @@ test("db integration updates uploaded wardrobe item metadata status", async () =
     null,
     "regular",
     ["button"],
+    "[0.1,0.2]",
     null,
     "metadata_processed",
     "user@example.com",
@@ -706,6 +708,7 @@ test("db integration updates uploaded wardrobe item details", async () => {
 
   const saved = await updateUploadedWardrobeItemDetailsById({
     email: "user@example.com",
+    embedding: [0.3, 0.4],
     id: " wardrobe-upload-1 ",
     details: {
       name: "Updated shirt",
@@ -725,6 +728,7 @@ test("db integration updates uploaded wardrobe item details", async () => {
       fit: "regular",
       closure_type: ["button"],
     },
+    processingStatus: "ready",
   });
 
   expect(saved).toEqual(
@@ -755,9 +759,66 @@ test("db integration updates uploaded wardrobe item details", async () => {
     null,
     "regular",
     ["button"],
+    "[0.3,0.4]",
+    "ready",
     "user@example.com",
     "wardrobe-upload-1",
   ]);
+});
+
+test("db integration saves failed uploaded detail update with null embedding", async () => {
+  const updatedRow: WardrobeRow = {
+    id: "wardrobe-upload-1",
+    profileEmail: "user@example.com",
+    productId: null,
+    name: "Updated shirt",
+    url: null,
+    imageUrl: "https://images.example.com/wardrobe/user/image.webp",
+    source: "uploaded",
+    rawImageUrl: "https://images.example.com/wardrobe/user/image.webp",
+    processingStatus: "failed",
+    isNeutral: true,
+    createdAt: new Date(0).toISOString(),
+    updatedAt: new Date(0).toISOString(),
+  };
+  const { sql, calls } = createSqlMock([[updatedRow]]);
+  setSqlClientOverride(sql);
+
+  const saved = await updateUploadedWardrobeItemDetailsById({
+    email: "user@example.com",
+    embedding: null,
+    id: " wardrobe-upload-1 ",
+    details: {
+      name: "Updated shirt",
+      description: null,
+      brand: null,
+      audience: "all",
+      category: "top",
+      season: ["summer"],
+      formality_level: [],
+      style: [],
+      occasions: [],
+      color_base: ["white"],
+      pattern: null,
+      finish: null,
+      composition: null,
+      silhouette: null,
+      fit: null,
+      closure_type: [],
+    },
+    processingStatus: "failed",
+  });
+
+  expect(saved).toEqual(
+    expect.objectContaining({
+      id: "wardrobe-upload-1",
+      processing_status: "failed",
+      is_neutral: true,
+    }),
+  );
+  expect(calls[0].text).toMatch(/embedding =/i);
+  expect(calls[0].values).toContain("failed");
+  expect(calls[0].values).toContain(null);
 });
 
 test("db integration skips uploaded wardrobe detail update for blank ids", async () => {

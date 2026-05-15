@@ -100,8 +100,10 @@ function createWardrobeDependencies() {
     }),
     cleanupUploadedWardrobeItemImageImpl: async () =>
       createUploadedWardrobeCleanupResult(),
+    createUploadedWardrobeItemEmbeddingImpl: async () => [0.1, 0.2, 0.3],
     updateUploadedWardrobeItemMetadataImpl: async (payload) => ({
       id: payload.id,
+      embedding: payload.embedding,
       image_url:
         payload.imageUrl ||
         "https://images.example.com/wardrobe/profile/image.webp",
@@ -112,10 +114,11 @@ function createWardrobeDependencies() {
     }),
     updateUploadedWardrobeItemDetailsImpl: async (payload) => ({
       id: payload.id,
+      embedding: payload.embedding,
       image_url: "https://images.example.com/wardrobe/profile/image.webp",
       raw_image_url: "https://images.example.com/wardrobe/profile/image.webp",
       source: "uploaded",
-      processing_status: "ready",
+      processing_status: payload.processingStatus,
       ...payload.details,
     }),
     deleteUploadedWardrobeItemImpl: async () => ({

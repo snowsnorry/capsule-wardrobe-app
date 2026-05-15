@@ -224,6 +224,10 @@ test("wardrobe routes update uploaded item details", async (t) => {
           ...payload.details,
         };
       },
+      createUploadedWardrobeItemEmbeddingImpl: async (details) => {
+        calls.push({ type: "embed", details });
+        return [0.4, 0.5];
+      },
     },
   });
 
@@ -282,6 +286,28 @@ test("wardrobe routes update uploaded item details", async (t) => {
   });
   expect(calls).toEqual([
     {
+      type: "embed",
+      details: {
+        name: "Updated shirt",
+        description: "Button-front shirt",
+        brand: null,
+        audience: "all",
+        category: "top",
+        season: ["summer"],
+        formality_level: ["casual"],
+        style: ["minimalistic"],
+        occasions: ["office"],
+        color_base: ["white"],
+        pattern: "solid",
+        finish: null,
+        composition: "linen, cotton",
+        silhouette: null,
+        fit: "regular",
+        closure_type: ["button"],
+      },
+    },
+    {
+      embedding: [0.4, 0.5],
       email: "person@example.com",
       id: "uploaded-1",
       details: {
@@ -302,8 +328,79 @@ test("wardrobe routes update uploaded item details", async (t) => {
         fit: "regular",
         closure_type: ["button"],
       },
+      processingStatus: "ready",
     },
   ]);
+});
+
+test("wardrobe uploaded item updates save failed status when embedding fails", async (t) => {
+  const calls: unknown[] = [];
+  const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+  const { baseUrl } = await startTestServer(t, {
+    overrides: {
+      createUploadedWardrobeItemEmbeddingImpl: async (details) => {
+        calls.push({ type: "embed", details });
+        throw new Error("voyage_down");
+      },
+      updateUploadedWardrobeItemDetailsImpl: async (payload) => {
+        calls.push({ type: "update", payload });
+        return {
+          id: payload.id,
+          source: "uploaded",
+          processing_status: payload.processingStatus,
+          ...payload.details,
+        };
+      },
+    },
+  });
+
+  const update = await requestJson(
+    baseUrl,
+    "/wardrobe/items/uploaded/uploaded-1",
+    {
+      method: "PATCH",
+      origin: TEST_CLIENT_ORIGIN,
+      cookie: AUTH_COOKIE,
+      csrfToken: CSRF_TOKEN,
+      body: {
+        name: "Updated shirt",
+        audience: "unisex",
+        category: "top",
+        season: ["summer"],
+      },
+    },
+  );
+
+  expect(update.response.status).toBe(200);
+  expect(update.json).toEqual({
+    ok: true,
+    item: expect.objectContaining({
+      id: "uploaded-1",
+      source: "uploaded",
+      processing_status: "failed",
+      name: "Updated shirt",
+    }),
+  });
+  expect(calls).toEqual([
+    {
+      type: "embed",
+      details: expect.objectContaining({
+        name: "Updated shirt",
+        audience: "all",
+        category: "top",
+      }),
+    },
+    {
+      type: "update",
+      payload: expect.objectContaining({
+        embedding: null,
+        email: "person@example.com",
+        id: "uploaded-1",
+        processingStatus: "failed",
+      }),
+    },
+  ]);
+  consoleError.mockRestore();
 });
 
 test("wardrobe uploaded item updates reject invalid payloads and missing items", async (t) => {
@@ -643,6 +740,10 @@ test("wardrobe upload route processes images and creates uploaded items", async 
           thumbnails: [],
         };
       },
+      createUploadedWardrobeItemEmbeddingImpl: async (item) => {
+        calls.push({ type: "embed", item });
+        return [0.7, 0.8];
+      },
       updateUploadedWardrobeItemMetadataImpl: async (payload) => {
         calls.push({ type: "updateMetadata", payload });
         return {
@@ -736,9 +837,14 @@ test("wardrobe upload route processes images and creates uploaded items", async 
       },
     },
     {
+      type: "embed",
+      item: metadata,
+    },
+    {
       type: "updateMetadata",
       payload: {
         email: "person@example.com",
+        embedding: [0.7, 0.8],
         id: "wardrobe-upload-1",
         imageUrl: "https://images.example.com/wardrobe/profile/image_clean.png",
         metadata,

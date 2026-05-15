@@ -97,16 +97,32 @@ async function processUploadedWardrobeItemMetadata({
     if (!cleanImageUrl) {
       throw new Error("wardrobe_image_cleanup_missing_url");
     }
+    let embedding: number[] | null = null;
+    let processingStatus = "ready";
+    try {
+      embedding = await context.createUploadedWardrobeItemEmbeddingImpl(
+        analysis.metadata,
+      );
+    } catch (embeddingError) {
+      logError(
+        "[wardrobe/items/upload][embedding]",
+        { id, imageUrl },
+        embeddingError,
+      );
+      processingStatus = "failed";
+    }
     const updated = await context.updateUploadedWardrobeItemMetadataImpl({
       email,
+      embedding,
       id,
       imageUrl: cleanImageUrl,
       metadata: analysis.metadata,
-      processingStatus: "ready",
+      processingStatus,
     });
 
     advanceWardrobeUploadProgress(progress, {
       completedSteps: 1,
+      failed: processingStatus === "failed" ? 1 : 0,
       imageProcessed: 1,
     });
     writeWardrobeUploadEvent(res, "progress", progress);

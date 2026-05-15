@@ -23,7 +23,7 @@ function createVoyageClient({
     return apiKey;
   },
 } = {}) {
-  async function getPromptEmbeddings(prompt) {
+  async function getEmbeddings(prompt, inputType, errorPrefix) {
     const response = await fetchImpl(VOYAGE_API_URL, {
       method: "POST",
       headers: {
@@ -33,15 +33,13 @@ function createVoyageClient({
       body: JSON.stringify({
         input: prompt,
         model: DEFAULT_EMBEDDING_MODEL,
-        input_type: "query",
+        input_type: inputType,
       }),
     });
 
     if (!response.ok) {
       const details = response.text ? await response.text() : "";
-      throw new Error(
-        `Failed to compute prompt embeddings: ${response.status} ${details}`,
-      );
+      throw new Error(`${errorPrefix}: ${response.status} ${details}`);
     }
 
     const payload = (await (response.json
@@ -49,13 +47,29 @@ function createVoyageClient({
       : Promise.resolve({}))) as { data?: Array<{ embedding?: number[] }> };
     const embedding = payload?.data?.[0]?.embedding;
     if (!Array.isArray(embedding) || embedding.length === 0) {
-      throw new Error("Failed to compute prompt embeddings");
+      throw new Error(errorPrefix);
     }
 
     return embedding;
   }
 
-  return { getPromptEmbeddings };
+  async function getPromptEmbeddings(prompt) {
+    return getEmbeddings(
+      prompt,
+      "query",
+      "Failed to compute prompt embeddings",
+    );
+  }
+
+  async function getDocumentEmbeddings(documentText) {
+    return getEmbeddings(
+      documentText,
+      "document",
+      "Failed to compute document embeddings",
+    );
+  }
+
+  return { getDocumentEmbeddings, getPromptEmbeddings };
 }
 
 /**
@@ -120,6 +134,11 @@ function getAdditionalPromptPart(userProfile) {
 }
 
 const voyageClient = createVoyageClient();
-const { getPromptEmbeddings } = voyageClient;
+const { getDocumentEmbeddings, getPromptEmbeddings } = voyageClient;
 
-export { createVoyageClient, getPromptEmbeddings, getWardrobePrompt };
+export {
+  createVoyageClient,
+  getDocumentEmbeddings,
+  getPromptEmbeddings,
+  getWardrobePrompt,
+};

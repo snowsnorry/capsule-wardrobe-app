@@ -271,5 +271,6 @@ export function createE2eDependencies(state = e2eState) {
     ...capsuleDependencies(state),
     ...searchAndGenerationDependencies(state),
     ...buildE2ePasskeyDependencies(),
+    createUploadedWardrobeItemEmbeddingImpl: async () => [0.1, 0.2, 0.3],
   };
 }

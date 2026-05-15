@@ -64,6 +64,7 @@ test("wardrobe upload stream processes successful metadata", async () => {
         url: "https://images.example.com/item_clean.png",
       },
     })),
+    createUploadedWardrobeItemEmbeddingImpl: vi.fn(async () => [0.1, 0.2]),
     updateUploadedWardrobeItemMetadataImpl: vi.fn(async () => ({
       id: "item-1",
       image_url: "https://images.example.com/item_clean.png",
@@ -123,11 +124,103 @@ test("wardrobe upload stream processes successful metadata", async () => {
   });
   expect(context.updateUploadedWardrobeItemMetadataImpl).toHaveBeenCalledWith({
     email: "person@example.com",
+    embedding: [0.1, 0.2],
     id: "item-1",
     imageUrl: "https://images.example.com/item_clean.png",
     metadata,
     processingStatus: "ready",
   });
+  expect(context.createUploadedWardrobeItemEmbeddingImpl).toHaveBeenCalledWith(
+    metadata,
+  );
+});
+
+test("wardrobe upload stream saves failed status when embedding fails", async () => {
+  const res = createResponse();
+  const metadata = {
+    name: "Linen shirt",
+    description: null,
+    brand: null,
+    audience: null,
+    category: "top",
+    season: [],
+    formality_level: [],
+    style: [],
+    occasions: [],
+    color_base: [],
+    is_neutral: false,
+    pattern: null,
+    finish: null,
+    composition: null,
+    silhouette: null,
+    fit: null,
+    closure_type: [],
+  };
+  const context = {
+    analyzeWardrobeImageUrlImpl: vi.fn(async () => ({
+      hasMetadata: true,
+      metadata,
+    })),
+    cleanupUploadedWardrobeItemImageImpl: vi.fn(async () => ({
+      cleanImage: {
+        url: "https://images.example.com/item_clean.png",
+      },
+    })),
+    createUploadedWardrobeItemEmbeddingImpl: vi.fn(async () => {
+      throw new Error("voyage_down");
+    }),
+    updateUploadedWardrobeItemMetadataImpl: vi.fn(async () => ({
+      id: "item-1",
+      image_url: "https://images.example.com/item_clean.png",
+      processing_status: "failed",
+      name: "Linen shirt",
+    })),
+  };
+  const progress = {
+    total: 1,
+    uploaded: 1,
+    completedSteps: 1,
+    metadataProcessed: 0,
+    imageProcessed: 0,
+    failed: 0,
+  };
+  const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+
+  const item = await processUploadedWardrobeItemMetadata({
+    context,
+    email: "person@example.com",
+    filterItem: (value) => value,
+    item: {
+      id: "item-1",
+      image_url: "https://images.example.com/item.webp",
+    },
+    progress,
+    res,
+  });
+
+  expect(item).toEqual(
+    expect.objectContaining({
+      id: "item-1",
+      processing_status: "failed",
+    }),
+  );
+  expect(progress).toEqual({
+    total: 1,
+    uploaded: 1,
+    completedSteps: 3,
+    metadataProcessed: 1,
+    imageProcessed: 1,
+    failed: 1,
+  });
+  expect(context.updateUploadedWardrobeItemMetadataImpl).toHaveBeenCalledWith({
+    email: "person@example.com",
+    embedding: null,
+    id: "item-1",
+    imageUrl: "https://images.example.com/item_clean.png",
+    metadata,
+    processingStatus: "failed",
+  });
+  consoleError.mockRestore();
 });
 
 test("wardrobe upload stream marks missing or throwing metadata failed", async () => {

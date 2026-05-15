@@ -122,6 +122,7 @@ import { deleteObjectsFromR2 } from "./r2Delete.js";
 import { normalizeWardrobeUploadImagesInChild } from "./wardrobeUploadImagesRunner.js";
 import { analyzeWardrobeImageUrl } from "./wardrobeImageAnalysis.js";
 import { cleanupUploadedWardrobeItemImage } from "./wardrobeImageCleanup.js";
+import { createUploadedWardrobeItemEmbedding } from "./wardrobeSemanticEmbedding.js";
 import {
   applyCorsMiddleware,
   applySecurityMiddleware,
@@ -165,6 +166,10 @@ function resolveGoogleAuthClient({
 
 function createWardrobeImageStorageDependencies() {
   return {
+    analyzeWardrobeImageUrlImpl: analyzeWardrobeImageUrl,
+    cleanupUploadedWardrobeItemImageImpl: cleanupUploadedWardrobeItemImage,
+    createUploadedWardrobeItemEmbeddingImpl:
+      createUploadedWardrobeItemEmbedding,
     deleteR2ObjectsImpl: deleteObjectsFromR2,
     deleteUploadedWardrobeItemImpl: deleteUploadedWardrobeItemById,
     uploadWardrobeImageToR2Impl: uploadWardrobeImageToR2,
@@ -179,8 +184,6 @@ function createAppDependencies(options: Record<string, unknown> = {}) {
   return {
     authTestMode: AUTH_TEST_MODE,
     buildWardrobePdfInChildImpl: buildWardrobePdfInChild,
-    analyzeWardrobeImageUrlImpl: analyzeWardrobeImageUrl,
-    cleanupUploadedWardrobeItemImageImpl: cleanupUploadedWardrobeItemImage,
     checkDatabaseConnectionImpl: checkDatabaseConnection,
     clientOrigin: CLIENT_ORIGIN,
     consumePasskeyChallengeImpl: consumePasskeyChallenge,
