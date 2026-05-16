@@ -30,7 +30,7 @@ function buildBaseSqlParams(
     sourceMode: "catalog_only",
     profileEmail: "person@example.com",
     wardrobeBoost: 25,
-    catalogPoolLimit: 8,
+    catalogPoolLimit: 10,
     wardrobePoolLimit: 5,
     finalCandidateLimit: 10,
     formalityLevel: "casual",
@@ -68,7 +68,7 @@ test("buildCapsuleWardrobeSqlParams preserves defaults and profile filters", () 
   expect(params.sourceMode).toBe("wardrobe_preferred");
   expect(params.profileEmail).toBe("person@example.com");
   expect(params.wardrobeBoost).toBe(25);
-  expect(params.catalogPoolLimit).toBe(8);
+  expect(params.catalogPoolLimit).toBe(10);
   expect(params.wardrobePoolLimit).toBe(5);
   expect(params.finalCandidateLimit).toBe(10);
   expect(params.formalityLevel).toBe("casual");
@@ -153,7 +153,7 @@ test("wardrobe preferred SQL mixes catalog and wardrobe candidates with quotas a
   );
   expect(sqlText).toMatch(/LIMIT \?::int/i);
   expect(recorder.calls[0].values).toEqual(
-    expect.arrayContaining(["person@example.com", 25, 8, 5, 10]),
+    expect.arrayContaining(["person@example.com", 25, 10, 5, 10]),
   );
 });
 

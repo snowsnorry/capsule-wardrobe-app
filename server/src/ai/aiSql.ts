@@ -9,7 +9,7 @@ import type {
 
 const MULTIPLE_ACCENT_COLORS = "multiple_accent_colors";
 const WARDROBE_RELEVANCE_BOOST = 25;
-const CATALOG_POOL_LIMIT = 8;
+const CATALOG_POOL_LIMIT = 10;
 const WARDROBE_POOL_LIMIT = 5;
 const FINAL_CANDIDATE_LIMIT = 10;
 
