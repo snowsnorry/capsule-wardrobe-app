@@ -12,7 +12,7 @@ export type CapsuleFilters = {
   text: string;
 };
 
-export type CapsuleSourceMode = "catalog_only" | "wardrobe_preferred";
+type CapsuleSourceMode = "catalog_only" | "wardrobe_preferred";
 
 type OutfitSetPayload = {
   itemIds: string[];

@@ -347,4 +347,4 @@ export async function deleteWardrobeItemFromCatalogByUrl({
   return hasAffectedRows(result);
 }
 
-export { normalizeWardrobeSource, toWardrobeUiItem };
+export { toWardrobeUiItem };

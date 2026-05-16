@@ -96,4 +96,3 @@ export {
   buildUploadedWardrobeSemanticSummary,
   createUploadedWardrobeItemEmbedding,
 };
-export type { WardrobeEmbeddingItem };

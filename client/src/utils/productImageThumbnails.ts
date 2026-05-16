@@ -109,7 +109,6 @@ export {
   PRODUCT_IMAGE_THUMBNAIL_SIZES,
   buildProductImageThumbnailSizes,
   buildProductImageThumbnails,
-  buildUploadedProductImageThumbnails,
   sha256Hex,
 };
 export type { ProductImageThumbnails };

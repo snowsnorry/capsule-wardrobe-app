@@ -268,6 +268,5 @@ export {
   UploadDropzone,
   UploadProgressContent,
   formatFileSize,
-  getUploadProgressValue,
 };
 export type { SelectedUploadFile };

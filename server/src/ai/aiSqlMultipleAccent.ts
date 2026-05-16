@@ -322,7 +322,4 @@ async function queryCapsuleWardrobePreferredItemsForMultipleAccentColors(
     ) results`;
 }
 
-export {
-  queryCapsuleWardrobeItemsForMultipleAccentColors,
-  queryCapsuleWardrobePreferredItemsForMultipleAccentColors,
-};
+export { queryCapsuleWardrobeItemsForMultipleAccentColors };

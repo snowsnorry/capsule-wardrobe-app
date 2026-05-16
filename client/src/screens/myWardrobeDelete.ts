@@ -31,4 +31,3 @@ function isDifferentWardrobeItem(
 }
 
 export { getMyWardrobeDeletionTarget, isDifferentWardrobeItem };
-export type { MyWardrobeDeletionTarget };

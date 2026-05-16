@@ -54,8 +54,4 @@ type ProfileFiltersSidebarProps = {
   showSettingsTitle?: boolean;
 };
 
-export type {
-  CapsuleSourceMode,
-  ProfileFiltersSidebarProps,
-  ProfileFilterValue,
-};
+export type { ProfileFiltersSidebarProps, ProfileFilterValue };

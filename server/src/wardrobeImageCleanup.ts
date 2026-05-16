@@ -186,8 +186,6 @@ async function cleanupUploadedWardrobeItemImage({
 export {
   THUMBNAIL_WIDTHS,
   buildSingleItemImageCleanupPrompt,
-  buildWardrobeImageThumbnailBuffer,
   buildWardrobeImageThumbnailBuffers,
   cleanupUploadedWardrobeItemImage,
 };
-export type { WardrobeImageCleanupResult };

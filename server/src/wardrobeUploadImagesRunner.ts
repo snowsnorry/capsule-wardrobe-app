@@ -177,4 +177,3 @@ function getChildPayloadError(
 }
 
 export { normalizeWardrobeUploadImagesInChild };
-export type { NormalizedWardrobeUploadImage };

@@ -375,10 +375,3 @@ function registerWardrobeCatalogRoutes(app, context) {
     },
   );
 }
-
-export {
-  filterWardrobeItemForDisplay,
-  getHttpUrl,
-  normalizeWardrobeItemForPdf,
-  normalizeWardrobeSourceParam,
-};

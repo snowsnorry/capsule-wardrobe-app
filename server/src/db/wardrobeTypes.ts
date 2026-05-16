@@ -3,7 +3,7 @@ import type { ProductRow } from "./core.js";
 type JsonObject = Record<string, unknown>;
 
 export type UserWardrobeSource = "uploaded" | "from_catalog";
-export type UserWardrobeProcessingStatus =
+type UserWardrobeProcessingStatus =
   | "uploaded"
   | "image_processing"
   | "metadata_processed"

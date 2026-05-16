@@ -205,4 +205,4 @@ export {
   hasWardrobeImageAnalysisMetadata,
   normalizeWardrobeImageAnalysisMetadata,
 };
-export type { WardrobeImageAnalysisMetadata, WardrobeImageAnalysisResult };
+export type { WardrobeImageAnalysisMetadata };
