@@ -24,6 +24,7 @@ type ProductDetailProps = {
   reserveHeaderActionsSpace?: boolean;
   showImage?: boolean;
   onRemoveFromMyWardrobe?: (item: ProductDetailItem) => Promise<void> | void;
+  onEditUploadedWardrobeItem?: (item: ProductDetailItem) => void;
   onSaveToMyWardrobe?: (item: ProductDetailItem) => Promise<void> | void;
 };
 
@@ -36,6 +37,7 @@ function ProductDetail({
   reserveHeaderActionsSpace = false,
   showImage = true,
   onRemoveFromMyWardrobe,
+  onEditUploadedWardrobeItem,
   onSaveToMyWardrobe,
 }: ProductDetailProps): ReactElement {
   const normalizedItem = normalizeProductDetailItem(item);
@@ -59,6 +61,7 @@ function ProductDetail({
         linkTitle={linkTitle}
         mobileBackAction={mobileBackAction}
         reserveHeaderActionsSpace={reserveHeaderActionsSpace}
+        onEditUploadedWardrobeItem={onEditUploadedWardrobeItem}
         onRemoveFromMyWardrobe={onRemoveFromMyWardrobe}
         onSaveToMyWardrobe={onSaveToMyWardrobe}
       />
@@ -81,6 +84,7 @@ function ProductHeader({
   mobileBackAction,
   reserveHeaderActionsSpace,
   onRemoveFromMyWardrobe,
+  onEditUploadedWardrobeItem,
   onSaveToMyWardrobe,
 }: Required<Pick<ProductDetailProps, "item" | "t" | "locale">> &
   Pick<
@@ -88,6 +92,7 @@ function ProductHeader({
     | "linkTitle"
     | "mobileBackAction"
     | "reserveHeaderActionsSpace"
+    | "onEditUploadedWardrobeItem"
     | "onRemoveFromMyWardrobe"
     | "onSaveToMyWardrobe"
   >) {
@@ -102,6 +107,7 @@ function ProductHeader({
         reserveHeaderActionsSpace={reserveHeaderActionsSpace}
         productUrl={productUrl}
         t={t}
+        onEditUploadedWardrobeItem={onEditUploadedWardrobeItem}
         onRemoveFromMyWardrobe={onRemoveFromMyWardrobe}
         onSaveToMyWardrobe={onSaveToMyWardrobe}
       />
@@ -123,6 +129,7 @@ function ProductHeaderTitleRow({
   productUrl,
   t,
   onRemoveFromMyWardrobe,
+  onEditUploadedWardrobeItem,
   onSaveToMyWardrobe,
 }: {
   item: ProductDetailItem;
@@ -130,6 +137,7 @@ function ProductHeaderTitleRow({
   mobileBackAction?: (() => void) | null;
   productUrl: string | null;
   t: ProductDetailProps["t"];
+  onEditUploadedWardrobeItem?: ProductDetailProps["onEditUploadedWardrobeItem"];
   onRemoveFromMyWardrobe?: ProductDetailProps["onRemoveFromMyWardrobe"];
   reserveHeaderActionsSpace?: ProductDetailProps["reserveHeaderActionsSpace"];
   onSaveToMyWardrobe?: ProductDetailProps["onSaveToMyWardrobe"];
@@ -138,7 +146,7 @@ function ProductHeaderTitleRow({
     isSavedToWardrobe(item) ||
     Boolean(onRemoveFromMyWardrobe && !onSaveToMyWardrobe);
   const shouldShowActionsMenu = Boolean(
-    onSaveToMyWardrobe || onRemoveFromMyWardrobe,
+    onSaveToMyWardrobe || onRemoveFromMyWardrobe || onEditUploadedWardrobeItem,
   );
 
   return (
@@ -175,6 +183,7 @@ function ProductHeaderTitleRow({
           item={item}
           t={t}
           isSavedToWardrobe={isSaved}
+          onEditUploadedWardrobeItem={onEditUploadedWardrobeItem}
           onRemoveFromMyWardrobe={onRemoveFromMyWardrobe}
           onSaveToMyWardrobe={onSaveToMyWardrobe}
         />

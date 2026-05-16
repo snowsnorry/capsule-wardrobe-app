@@ -3,6 +3,7 @@ import { getR2KeyFromPublicUrl } from "../r2Storage.js";
 import { normalizeUploadedWardrobeItemDetails } from "../wardrobeUploadedItemUpdate.js";
 
 function registerUploadedWardrobeItemUpdateRoute(app, context, filterItem) {
+  registerUploadedWardrobeItemDetailRoute(app, context, filterItem);
   registerUploadedWardrobeItemDeleteRoute(app, context);
 
   app.patch(
@@ -44,6 +45,37 @@ function registerUploadedWardrobeItemUpdateRoute(app, context, filterItem) {
         });
       } catch (error) {
         logError("[wardrobe/items/uploaded/:id]", error);
+        return res.status(503).json({ error: "service_unavailable" });
+      }
+    },
+  );
+}
+
+function registerUploadedWardrobeItemDetailRoute(app, context, filterItem) {
+  app.get(
+    "/wardrobe/items/uploaded/:id",
+    context.requireAuth,
+    async (req, res) => {
+      const id = String(req.params?.id || "").trim();
+      if (!id) {
+        return res.status(400).json({ error: "invalid_payload" });
+      }
+
+      try {
+        const item = await context.getUploadedWardrobeItemImpl({
+          email: req.user.email,
+          id,
+        });
+        if (!item) {
+          return res.status(404).json({ error: "not_found" });
+        }
+
+        return res.json({
+          ok: true,
+          item: filterItem(item),
+        });
+      } catch (error) {
+        logError("[wardrobe/items/uploaded/:id][get]", error);
         return res.status(503).json({ error: "service_unavailable" });
       }
     },

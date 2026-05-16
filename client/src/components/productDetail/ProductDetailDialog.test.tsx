@@ -13,8 +13,12 @@ import ProductDetailDialog from "./ProductDetailDialog";
 const searchApi = vi.hoisted(() => ({
   fetchProductDetailByUrl: vi.fn(),
 }));
+const myWardrobeApi = vi.hoisted(() => ({
+  fetchUploadedWardrobeItemDetail: vi.fn(),
+}));
 
 vi.mock("../../api/search", () => searchApi);
+vi.mock("../../api/myWardrobe", () => myWardrobeApi);
 vi.mock("../../i18n/useI18n", () => ({
   useI18n: () => ({
     locale: "en",
@@ -22,6 +26,7 @@ vi.mock("../../i18n/useI18n", () => ({
       const labels: Record<string, string> = {
         "actions.close": "Close",
         "actions.cancel": "Cancel",
+        "actions.edit": "Edit",
         "capsule.removeFromMyWardrobe": "Remove from My Wardrobe",
         "myWardrobe.savedBadge": "Saved",
         "myWardrobe.filters.uploaded": "Uploaded",
@@ -75,6 +80,7 @@ function renderDialog(
 afterEach(() => {
   cleanup();
   searchApi.fetchProductDetailByUrl.mockReset();
+  myWardrobeApi.fetchUploadedWardrobeItemDetail.mockReset();
 });
 
 describe("ProductDetailDialog", () => {
@@ -197,6 +203,60 @@ describe("ProductDetailDialog", () => {
     );
     expect(await screen.findByText("180 EUR")).toBeInTheDocument();
     expect(screen.getByText("Winter")).toBeInTheDocument();
+  });
+
+  test("loads uploaded wardrobe details by wardrobe URL", async () => {
+    myWardrobeApi.fetchUploadedWardrobeItemDetail.mockResolvedValue({
+      item: {
+        id: "uploaded-1",
+        name: "Uploaded shirt",
+        source: "uploaded",
+        url: "wardrobe://uploaded-1",
+        image_url: "https://example.com/uploaded.jpg",
+        raw_image_url: "https://example.com/uploaded-original.jpg",
+        audience: "all",
+        category: "top",
+        season: ["summer"],
+      },
+    });
+
+    renderDialog({
+      item: {
+        id: "Wuploaded-1",
+        name: "Uploaded shirt",
+        source: "uploaded",
+        url: "wardrobe://uploaded-1",
+        image_url: "https://example.com/uploaded.jpg",
+      },
+    });
+
+    expect(myWardrobeApi.fetchUploadedWardrobeItemDetail).toHaveBeenCalledWith(
+      "uploaded-1",
+    );
+    expect(await screen.findByText("Summer")).toBeInTheDocument();
+    expect(screen.getByText("Unisex")).toBeInTheDocument();
+    expect(searchApi.fetchProductDetailByUrl).not.toHaveBeenCalled();
+  });
+
+  test("shows edit action for uploaded item details", async () => {
+    const onEdit = vi.fn();
+    renderDialog({
+      item: {
+        id: "uploaded-coat",
+        name: "Uploaded Coat",
+        source: "uploaded",
+        image_url: "https://example.com/coat_clean.png",
+        season: ["winter"],
+      },
+      onEditUploadedWardrobeItem: onEdit,
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Product actions" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Edit" }));
+
+    expect(onEdit).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "uploaded-coat", source: "uploaded" }),
+    );
   });
 
   test("shows progress instead of sparse details until catalog details load", async () => {

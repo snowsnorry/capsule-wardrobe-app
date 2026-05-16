@@ -206,6 +206,7 @@ function WardrobeGrid({ props }: { props: WardrobeProps }) {
             onToggleSelected={props.onToggleSelected}
             onProductClick={props.onProductClick}
             onProductMenuClick={props.onProductMenuClick}
+            allowProductMenuWithoutUrl
             isMobile={props.isOverlay}
             mobileColumns={props.mobileColumns}
           />

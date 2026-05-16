@@ -1,4 +1,8 @@
 import { logError } from "../logger.js";
+import {
+  hasRequiredUploadedWardrobeMetadata,
+  normalizeWardrobeImageAnalysisMetadata,
+} from "../wardrobeImageAnalysis.js";
 
 function writeWardrobeUploadEvent(res, event, data) {
   res.write(`event: ${event}\n`);
@@ -41,6 +45,49 @@ function advanceWardrobeUploadProgress(progress, updates) {
   });
 }
 
+async function updateUploadedItemWithReviewableMetadata({
+  context,
+  email,
+  id,
+  imageUrl,
+  metadata,
+}) {
+  if (!hasRequiredUploadedWardrobeMetadata(metadata)) {
+    const updated = await context.updateUploadedWardrobeItemMetadataImpl({
+      email,
+      embedding: null,
+      id,
+      imageUrl,
+      metadata,
+      processingStatus: "needs_review",
+    });
+    return { processingStatus: "needs_review", updated };
+  }
+
+  let embedding: number[] | null = null;
+  let processingStatus = "ready";
+  try {
+    embedding = await context.createUploadedWardrobeItemEmbeddingImpl(metadata);
+  } catch (embeddingError) {
+    logError(
+      "[wardrobe/items/upload][embedding]",
+      { id, imageUrl },
+      embeddingError,
+    );
+    processingStatus = "failed";
+  }
+
+  const updated = await context.updateUploadedWardrobeItemMetadataImpl({
+    email,
+    embedding,
+    id,
+    imageUrl,
+    metadata,
+    processingStatus,
+  });
+  return { processingStatus, updated };
+}
+
 // Upload processing deliberately keeps metadata and image cleanup in one ordered flow.
 // eslint-disable-next-line complexity
 async function processUploadedWardrobeItemMetadata({
@@ -63,25 +110,14 @@ async function processUploadedWardrobeItemMetadata({
     }
 
     const analysis = await context.analyzeWardrobeImageUrlImpl({ imageUrl });
-    if (!analysis.hasMetadata) {
-      const updated = await context.updateUploadedWardrobeItemMetadataImpl({
-        email,
-        id,
-        metadata: null,
-        processingStatus: "failed",
-      });
-      advanceWardrobeUploadProgress(progress, {
-        completedSteps: 2,
-        failed: 1,
-      });
-      writeWardrobeUploadEvent(res, "progress", progress);
-      return filterItem(updated || { ...item, processing_status: "failed" });
-    }
+    const metadata = analysis.hasMetadata
+      ? analysis.metadata
+      : normalizeWardrobeImageAnalysisMetadata(null);
 
     metadataAccepted = true;
     advanceWardrobeUploadProgress(progress, {
       completedSteps: 1,
-      metadataProcessed: 1,
+      metadataProcessed: analysis.hasMetadata ? 1 : 0,
     });
     writeWardrobeUploadEvent(res, "progress", progress);
 
@@ -97,28 +133,14 @@ async function processUploadedWardrobeItemMetadata({
     if (!cleanImageUrl) {
       throw new Error("wardrobe_image_cleanup_missing_url");
     }
-    let embedding: number[] | null = null;
-    let processingStatus = "ready";
-    try {
-      embedding = await context.createUploadedWardrobeItemEmbeddingImpl(
-        analysis.metadata,
-      );
-    } catch (embeddingError) {
-      logError(
-        "[wardrobe/items/upload][embedding]",
-        { id, imageUrl },
-        embeddingError,
-      );
-      processingStatus = "failed";
-    }
-    const updated = await context.updateUploadedWardrobeItemMetadataImpl({
-      email,
-      embedding,
-      id,
-      imageUrl: cleanImageUrl,
-      metadata: analysis.metadata,
-      processingStatus,
-    });
+    const { processingStatus, updated } =
+      await updateUploadedItemWithReviewableMetadata({
+        context,
+        email,
+        id,
+        imageUrl: cleanImageUrl,
+        metadata,
+      });
 
     advanceWardrobeUploadProgress(progress, {
       completedSteps: 1,
@@ -126,7 +148,9 @@ async function processUploadedWardrobeItemMetadata({
       imageProcessed: 1,
     });
     writeWardrobeUploadEvent(res, "progress", progress);
-    return filterItem(updated || { ...item, processing_status: "ready" });
+    return filterItem(
+      updated || { ...item, processing_status: processingStatus },
+    );
   } catch (error) {
     logError("[wardrobe/items/upload][metadata]", { id, imageUrl }, error);
     const updated = await markUploadedItemFailed({ context, email, id });

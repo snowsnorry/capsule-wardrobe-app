@@ -130,6 +130,18 @@ function hasWardrobeImageAnalysisMetadata(
   });
 }
 
+function hasRequiredUploadedWardrobeMetadata(
+  metadata: WardrobeImageAnalysisMetadata | null | undefined,
+) {
+  return (
+    Boolean(String(metadata?.name || "").trim()) &&
+    Boolean(String(metadata?.audience || "").trim()) &&
+    Boolean(String(metadata?.category || "").trim()) &&
+    Array.isArray(metadata?.season) &&
+    metadata.season.some((season) => String(season || "").trim())
+  );
+}
+
 function calculateWardrobeImageIsNeutral(
   metadata: WardrobeImageAnalysisMetadata,
 ) {
@@ -202,6 +214,7 @@ export {
   analyzeWardrobeImageUrl,
   buildWardrobeImageAnalysisPrompt,
   calculateWardrobeImageIsNeutral,
+  hasRequiredUploadedWardrobeMetadata,
   hasWardrobeImageAnalysisMetadata,
   normalizeWardrobeImageAnalysisMetadata,
 };

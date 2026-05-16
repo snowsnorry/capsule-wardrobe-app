@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import {
   getFirstRow,
   getResultRows,
@@ -97,6 +98,63 @@ export async function listWardrobeItemsByEmail({
   );
 
   return rows.map(toWardrobeUiItem);
+}
+
+export async function getUploadedWardrobeItemById({
+  email,
+  id,
+}: {
+  email: string;
+  id: string;
+}): Promise<Record<string, unknown> | null> {
+  const normalizedId = String(id || "").trim();
+  if (!normalizedId) {
+    return null;
+  }
+
+  const sql = getSqlClient();
+  const row = getFirstRow(
+    await sql<UserWardrobeRow>`
+    select
+      id,
+      profile_email as "profileEmail",
+      product_id as "productId",
+      name,
+      url,
+      description,
+      brand,
+      price,
+      currency,
+      availability,
+      image_url as "imageUrl",
+      audience,
+      category,
+      season,
+      formality_level as "formalityLevel",
+      style,
+      occasions,
+      color_base as "colorBase",
+      pattern,
+      finish,
+      is_neutral as "isNeutral",
+      composition,
+      silhouette,
+      fit,
+      closure_type as "closureType",
+      embedding,
+      source,
+      raw_image_url as "rawImageUrl",
+      processing_status as "processingStatus",
+      created_at as "createdAt",
+      updated_at as "updatedAt"
+    from wardrobe
+    where profile_email = ${email}
+      and id = ${normalizedId}
+      and source = 'uploaded'
+  `,
+  );
+
+  return row ? toWardrobeUiItem(row) : null;
 }
 
 // eslint-disable-next-line max-lines-per-function

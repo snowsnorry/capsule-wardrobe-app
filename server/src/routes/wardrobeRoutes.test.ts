@@ -220,6 +220,7 @@ test("wardrobe routes update uploaded item details", async (t) => {
           profileEmail: payload.email,
           email: payload.email,
           source: "uploaded",
+          processing_status: payload.processingStatus,
           updatedAt: "2026-05-01T00:00:00.000Z",
           ...payload.details,
         };
@@ -266,6 +267,7 @@ test("wardrobe routes update uploaded item details", async (t) => {
     item: {
       id: "uploaded-1",
       source: "uploaded",
+      processing_status: "ready",
       name: "Updated shirt",
       description: "Button-front shirt",
       brand: null,
@@ -330,6 +332,75 @@ test("wardrobe routes update uploaded item details", async (t) => {
       },
       processingStatus: "ready",
     },
+  ]);
+});
+
+test("wardrobe routes fetch uploaded item details for the authenticated user", async (t) => {
+  const calls: unknown[] = [];
+  const { baseUrl } = await startTestServer(t, {
+    overrides: {
+      getUploadedWardrobeItemImpl: async (payload) => {
+        calls.push(payload);
+        if (payload.id === "missing") {
+          return null;
+        }
+
+        return {
+          id: payload.id,
+          profileEmail: payload.email,
+          email: payload.email,
+          product_id: "private-product",
+          name: "Uploaded shirt",
+          url: `wardrobe://${payload.id}`,
+          source: "uploaded",
+          image_url: "https://example.com/uploaded.jpg",
+          raw_image_url: "https://example.com/uploaded-original.jpg",
+          processing_status: "ready",
+          audience: "all",
+          category: "top",
+          season: ["summer"],
+          updatedAt: "2026-05-01T00:00:00.000Z",
+        };
+      },
+    },
+  });
+
+  const detail = await requestJson(
+    baseUrl,
+    "/wardrobe/items/uploaded/uploaded-1",
+    {
+      cookie: AUTH_COOKIE,
+    },
+  );
+  expect(detail.response.status).toBe(200);
+  expect(detail.json).toEqual({
+    ok: true,
+    item: {
+      id: "uploaded-1",
+      name: "Uploaded shirt",
+      url: "wardrobe://uploaded-1",
+      source: "uploaded",
+      image_url: "https://example.com/uploaded.jpg",
+      raw_image_url: "https://example.com/uploaded-original.jpg",
+      processing_status: "ready",
+      audience: "all",
+      category: "top",
+      season: ["summer"],
+    },
+  });
+
+  const missing = await requestJson(
+    baseUrl,
+    "/wardrobe/items/uploaded/missing",
+    {
+      cookie: AUTH_COOKIE,
+    },
+  );
+  expect(missing.response.status).toBe(404);
+  expect(missing.json).toEqual({ error: "not_found" });
+  expect(calls).toEqual([
+    { email: "person@example.com", id: "uploaded-1" },
+    { email: "person@example.com", id: "missing" },
   ]);
 });
 

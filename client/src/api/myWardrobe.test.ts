@@ -19,6 +19,7 @@ import {
   deleteUploadedWardrobeItem,
   downloadMyWardrobePdf,
   fetchMyWardrobeItems,
+  fetchUploadedWardrobeItemDetail,
   getWardrobeItemsPdfUrl,
   getWardrobeItemsUrl,
   removeCatalogItemFromMyWardrobe,
@@ -113,6 +114,18 @@ describe("my wardrobe api", () => {
       },
     );
     expect(requestApi.requestJson).not.toHaveBeenCalled();
+  });
+
+  test("fetches uploaded wardrobe item detail", async () => {
+    await fetchUploadedWardrobeItemDetail("uploaded 1");
+
+    expect(requestApi.getCachedJson).toHaveBeenCalledWith(
+      "https://api.example.test/wardrobe/items/uploaded/uploaded%201",
+      {
+        credentials: "include",
+        ttlMs: 60_000,
+      },
+    );
   });
 
   test("uploads wardrobe images as multipart form data", async () => {

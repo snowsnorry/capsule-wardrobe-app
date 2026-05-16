@@ -13,7 +13,7 @@ type UploadedWardrobeMetadataUpdate = {
   id: string;
   metadata?: WardrobeImageAnalysisMetadata | null;
   imageUrl?: string | null;
-  processingStatus: "metadata_processed" | "ready" | "failed";
+  processingStatus: "metadata_processed" | "needs_review" | "ready" | "failed";
 };
 
 function formatEmbeddingVector(embedding: number[] | null | undefined) {
@@ -83,7 +83,7 @@ async function markUploadedWardrobeItemMetadataProcessed({
   id: string;
   imageUrl?: string | null;
   metadata: WardrobeImageAnalysisMetadata;
-  processingStatus?: "metadata_processed" | "ready" | "failed";
+  processingStatus?: "metadata_processed" | "needs_review" | "ready" | "failed";
 }) {
   const sql = getSqlClient();
   const normalizedImageUrl = String(imageUrl || "").trim() || null;

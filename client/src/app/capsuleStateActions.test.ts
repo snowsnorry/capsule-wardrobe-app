@@ -58,4 +58,33 @@ describe("capsuleStateActions", () => {
       "wardrobe_preferred",
     );
   });
+
+  test("normalizes uploaded wardrobe snapshot items before rendering", () => {
+    const context = createContext();
+    const draft = createTestDraft({
+      items: [
+        {
+          id: "uploaded-1",
+          url: "wardrobe://uploaded-1",
+          name: "Uploaded shirt",
+          category: "top",
+        },
+      ],
+    });
+
+    applyCapsuleStateToApp(
+      context,
+      createTestCapsule({
+        draft,
+        effective: draft,
+      }),
+    );
+
+    expect(context.setProfileItems).toHaveBeenCalledWith([
+      expect.objectContaining({
+        id: "uploaded-1",
+        source: "uploaded",
+      }),
+    ]);
+  });
 });

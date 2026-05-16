@@ -104,6 +104,7 @@ vi.mock("../../components/ClothingCard", () => ({
     isSelectable,
     isSelectionMode,
     isRegenerating,
+    allowProductMenuWithoutUrl,
     mobileColumns,
     onToggleSelected,
     onProductClick,
@@ -114,6 +115,7 @@ vi.mock("../../components/ClothingCard", () => ({
     isSelectable?: boolean;
     isSelectionMode?: boolean;
     isRegenerating?: boolean;
+    allowProductMenuWithoutUrl?: boolean;
     mobileColumns?: MobileCardColumns;
     onToggleSelected: (item: MainScreenItem) => void;
     onProductClick?: (item: MainScreenItem) => void;
@@ -147,6 +149,9 @@ vi.mock("../../components/ClothingCard", () => ({
         <button
           type="button"
           data-testid={`product-menu-${item.url}`}
+          data-allow-product-menu-without-url={String(
+            allowProductMenuWithoutUrl,
+          )}
           data-selection-mode={String(isSelectionMode)}
           onClick={(event) =>
             onProductMenuClick?.(event, String(item.url || ""), item)
@@ -263,6 +268,7 @@ export function createMainScreenProps(
     onApplyFilters: vi.fn(),
     onResetFilters: vi.fn(),
     onNavigateApp: vi.fn(),
+    onUpdateUploadedWardrobeItem: vi.fn((item) => Promise.resolve(item)),
     selectedRegenerationUrls: [],
     partialRegenerationPendingUrls: [],
     pendingImageSetIndexes: [],

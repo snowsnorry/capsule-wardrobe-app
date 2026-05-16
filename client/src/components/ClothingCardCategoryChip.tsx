@@ -1,4 +1,5 @@
 import { Chip, Stack } from "@mui/material";
+import { isUploadedWardrobeItemNeedsReview } from "../utils/uploadedWardrobeItemStatus";
 import type { ClothingCardItem } from "./ClothingCardTypes";
 
 type CategoryChipTone = "category" | "failed" | "needsReview";
@@ -13,24 +14,8 @@ function isFailedUploadedWardrobeItem(item: ClothingCardItem) {
   return item.source === "uploaded" && item.processing_status === "failed";
 }
 
-function isProcessedUploadedWardrobeItemWithMissingRequiredMetadata(
-  item: ClothingCardItem,
-) {
-  const season = Array.isArray(item.season)
-    ? item.season
-    : typeof item.season === "string"
-      ? [item.season]
-      : [];
-
-  return (
-    item.source === "uploaded" &&
-    (item.processing_status === "metadata_processed" ||
-      item.processing_status === "ready") &&
-    (!String(item.name || "").trim() ||
-      !String(item.audience || "").trim() ||
-      !String(item.category || "").trim() ||
-      season.length === 0)
-  );
+function isNeedsReviewUploadedWardrobeItem(item: ClothingCardItem) {
+  return isUploadedWardrobeItemNeedsReview(item);
 }
 
 function getCategoryChip({
@@ -46,7 +31,7 @@ function getCategoryChip({
     return { label: badgeLabels.failedUploadLabel, tone: "failed" };
   }
 
-  if (isProcessedUploadedWardrobeItemWithMissingRequiredMetadata(item)) {
+  if (isNeedsReviewUploadedWardrobeItem(item)) {
     return { label: badgeLabels.needsReviewLabel, tone: "needsReview" };
   }
 

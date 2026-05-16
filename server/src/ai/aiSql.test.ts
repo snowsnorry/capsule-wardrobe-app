@@ -116,6 +116,19 @@ test("wardrobe preferred SQL mixes catalog and wardrobe candidates with quotas a
   expect(sqlText).toMatch(/FROM wardrobe/i);
   expect(sqlText).toMatch(/wardrobe\.profile_email = \?::text/i);
   expect(sqlText).toMatch(/wardrobe\.processing_status = 'ready'/i);
+  expect(sqlText).not.toMatch(/wardrobe\.source <> 'uploaded'/i);
+  expect(sqlText).not.toMatch(
+    /NULLIF\(trim\(COALESCE\(wardrobe\.name, ''\)\), ''\) IS NOT NULL/i,
+  );
+  expect(sqlText).not.toMatch(
+    /NULLIF\(trim\(COALESCE\(wardrobe\.audience, ''\)\), ''\) IS NOT NULL/i,
+  );
+  expect(sqlText).not.toMatch(
+    /NULLIF\(trim\(COALESCE\(wardrobe\.category, ''\)\), ''\) IS NOT NULL/i,
+  );
+  expect(sqlText).not.toMatch(
+    /cardinality\(COALESCE\(wardrobe\.season, ARRAY\[\]::text\[\]\)\) > 0/i,
+  );
   expect(sqlText).toMatch(
     /NULLIF\(trim\(COALESCE\(wardrobe\.url, ''\)\), ''\) IS NOT NULL/i,
   );
@@ -125,6 +138,9 @@ test("wardrobe preferred SQL mixes catalog and wardrobe candidates with quotas a
   expect(sqlText).toMatch(/owned\.product_id = products\.id::text/i);
   expect(sqlText).toMatch(/\('W' \|\| wardrobe_deduped\.id::text\) AS id/i);
   expect(sqlText).toMatch(/'wardrobe'::text AS item_source/i);
+  expect(sqlText).toMatch(/wardrobe_deduped\.raw_image_url/i);
+  expect(sqlText).toMatch(/wardrobe_deduped\.processing_status/i);
+  expect(sqlText).toMatch(/wardrobe_deduped\.id::text AS wardrobe_id/i);
   expect(sqlText).toMatch(
     /CASE WHEN item_source = 'wardrobe' THEN \?::int ELSE 0 END/i,
   );
@@ -218,6 +234,18 @@ test("queryCapsuleWardrobeItemsForProfile dispatches wardrobe preferred regular 
   expect(multiple.calls[0].strings.join("?")).toMatch(/neutrality_rank/);
   expect(multiple.calls[0].strings.join("?")).toMatch(
     /'wardrobe'::text AS item_source/i,
+  );
+  expect(multiple.calls[0].strings.join("?")).toMatch(
+    /wardrobe\.processing_status = 'ready'/i,
+  );
+  expect(multiple.calls[0].strings.join("?")).not.toMatch(
+    /wardrobe\.source <> 'uploaded'/i,
+  );
+  expect(multiple.calls[0].strings.join("?")).not.toMatch(
+    /cardinality\(COALESCE\(wardrobe\.season, ARRAY\[\]::text\[\]\)\) > 0/i,
+  );
+  expect(multiple.calls[0].strings.join("?")).toMatch(
+    /wardrobe_deduped\.id::text AS wardrobe_id/i,
   );
 });
 

@@ -50,6 +50,7 @@ function createUploadedWardrobeCleanupResult() {
   };
 }
 
+// eslint-disable-next-line max-lines-per-function
 function createWardrobeDependencies() {
   return {
     listWardrobeItemsImpl: async () => [
@@ -120,6 +121,20 @@ function createWardrobeDependencies() {
       source: "uploaded",
       processing_status: payload.processingStatus,
       ...payload.details,
+    }),
+    getUploadedWardrobeItemImpl: async (payload) => ({
+      id: payload.id,
+      profileEmail: payload.email,
+      name: "Uploaded shirt",
+      url: `wardrobe://${payload.id}`,
+      image_url: "https://images.example.com/wardrobe/profile/image.webp",
+      raw_image_url: "https://images.example.com/wardrobe/profile/image.webp",
+      source: "uploaded",
+      processing_status: "ready",
+      audience: "all",
+      category: "top",
+      season: ["summer"],
+      updatedAt: "2026-05-01T00:00:00.000Z",
     }),
     deleteUploadedWardrobeItemImpl: async () => ({
       id: "wardrobe-upload-1",

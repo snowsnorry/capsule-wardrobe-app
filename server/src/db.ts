@@ -49,6 +49,7 @@ export {
 export { searchProductStats } from "./db/searchStats.js";
 export {
   deleteWardrobeItemFromCatalogByUrl,
+  getUploadedWardrobeItemById,
   listWardrobeItemsByEmail,
   saveUploadedWardrobeItemsByEmail,
   saveWardrobeItemFromCatalogByUrl,

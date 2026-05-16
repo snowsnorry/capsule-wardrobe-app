@@ -29,6 +29,7 @@ import {
   regenerateSelectedItems,
   saveItemToMyWardrobe,
   toggleRegenerationSelection,
+  updateUploadedItemInMyWardrobe,
 } from "./wardrobeActions";
 import {
   googleCredential,
@@ -47,6 +48,7 @@ import type {
   WardrobeItem,
 } from "./appTypes";
 import type { SettingsSavePayload } from "../components/SettingsDialog";
+import type { UploadedWardrobeItemUpdatePayload } from "../api/myWardrobe";
 
 type UseAppHandlersOptions = {
   activeCapsuleId: string;
@@ -154,6 +156,7 @@ type BuildAppHandlersOptions = Pick<
   handleSaveCapsule: (capsuleId?: string) => Promise<void>;
 };
 
+// eslint-disable-next-line max-lines-per-function
 function buildAppHandlers({
   activeCapsuleId,
   capsuleSidebarActionsRef,
@@ -227,6 +230,10 @@ function buildAppHandlers({
       removeItemFromMyWardrobe(getAppActionContext(), item),
     handleSaveToMyWardrobe: async (item: WardrobeItem) =>
       saveItemToMyWardrobe(getAppActionContext(), item),
+    handleUpdateUploadedWardrobeItem: async (
+      item: WardrobeItem,
+      payload: UploadedWardrobeItemUpdatePayload,
+    ) => updateUploadedItemInMyWardrobe(getAppActionContext(), item, payload),
     handleSaveProfile: async () => handleApplyCapsuleFilters(),
     handleSaveSettings: async (nextSettings: SettingsSavePayload) =>
       saveSettings(getAppActionContext(), nextSettings),

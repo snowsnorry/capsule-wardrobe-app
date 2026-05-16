@@ -1,10 +1,57 @@
+import { useEffect, useRef, useState } from "react";
+import type { ReactElement } from "react";
+import type { UploadedWardrobeItemUpdatePayload } from "../../api/myWardrobe";
 import { ConfirmDialog, NameDialog } from "./MainScreenActionDialogs";
 import type { DialogsProps } from "./MainScreenDialogsTypes";
 import { FiltersDialog, ImageDialog } from "./MainScreenMediaDialogs";
 import { SearchDialog, ShareDialog } from "./MainScreenUtilityDialogs";
-import ProductDetailDialog from "../../components/productDetail/ProductDetailDialog";
+import { useI18n } from "../../i18n/useI18n";
+import { isUploadedWardrobeItemNeedsReview } from "../../utils/uploadedWardrobeItemStatus";
+import CapsuleProductDetailDialog from "./CapsuleProductDetailDialog";
 
+type ProductDetailMode = "read" | "edit";
+
+// eslint-disable-next-line max-lines-per-function
 function MainScreenDialogs(props: DialogsProps) {
+  const { t, locale } = useI18n();
+  const [productDetailMode, setProductDetailMode] =
+    useState<ProductDetailMode>("read");
+  const productDetailKeyRef = useRef("");
+  const productDetailKey = getProductDetailKey(props.productDetailItem);
+
+  useEffect(() => {
+    if (!productDetailKey) {
+      productDetailKeyRef.current = "";
+      setProductDetailMode("read");
+      return;
+    }
+
+    if (productDetailKeyRef.current !== productDetailKey) {
+      productDetailKeyRef.current = productDetailKey;
+      setProductDetailMode(
+        isUploadedWardrobeItemNeedsReview(props.productDetailItem)
+          ? "edit"
+          : "read",
+      );
+    }
+  }, [productDetailKey, props.productDetailItem]);
+
+  const closeProductDetail = () => {
+    props.setProductDetailItem(null);
+    setProductDetailMode("read");
+  };
+  const applyUploadedProductDetail = async (
+    item: NonNullable<DialogsProps["productDetailItem"]>,
+    payload: UploadedWardrobeItemUpdatePayload,
+  ) => {
+    const updated = await props.props.onUpdateUploadedWardrobeItem?.(
+      item,
+      payload,
+    );
+    props.setProductDetailItem(updated || { ...item, ...payload });
+    setProductDetailMode("read");
+  };
+
   return (
     <>
       <NameDialog
@@ -48,15 +95,81 @@ function MainScreenDialogs(props: DialogsProps) {
         open={props.imageDialogOpen}
         setOpen={props.setImageDialogOpen}
       />
-      <ProductDetailDialog
+      <ProductDetailDialogSwitch
         item={props.productDetailItem}
-        open={Boolean(props.productDetailItem)}
+        mode={productDetailMode}
         isMobile={props.isOverlay}
-        onClose={() => props.setProductDetailItem(null)}
+        locale={locale}
+        t={t}
+        onApply={applyUploadedProductDetail}
+        onClose={closeProductDetail}
+        onEdit={(item) => {
+          props.setProductDetailItem(item);
+          setProductDetailMode("edit");
+        }}
+        onReadMode={() => setProductDetailMode("read")}
         onRemoveFromMyWardrobe={props.props.onRemoveFromMyWardrobe}
         onSaveToMyWardrobe={props.props.onSaveToMyWardrobe}
       />
     </>
+  );
+}
+
+function getProductDetailKey(item: DialogsProps["productDetailItem"]) {
+  if (!item) {
+    return "";
+  }
+
+  return String(item.id ?? item.url ?? "");
+}
+
+function ProductDetailDialogSwitch({
+  item,
+  isMobile,
+  locale,
+  mode,
+  onApply,
+  onClose,
+  onEdit,
+  onReadMode,
+  onRemoveFromMyWardrobe,
+  onSaveToMyWardrobe,
+  t,
+}: {
+  item: DialogsProps["productDetailItem"];
+  isMobile: boolean;
+  locale: string;
+  mode: ProductDetailMode;
+  onApply: (
+    item: NonNullable<DialogsProps["productDetailItem"]>,
+    payload: UploadedWardrobeItemUpdatePayload,
+  ) => Promise<void> | void;
+  onClose: () => void;
+  onEdit: (item: NonNullable<DialogsProps["productDetailItem"]>) => void;
+  onReadMode: () => void;
+  onRemoveFromMyWardrobe?: DialogsProps["props"]["onRemoveFromMyWardrobe"];
+  onSaveToMyWardrobe?: DialogsProps["props"]["onSaveToMyWardrobe"];
+  t: (key: string, params?: Record<string, unknown>) => string;
+}): ReactElement {
+  if (!item) {
+    return <></>;
+  }
+
+  return (
+    <CapsuleProductDetailDialog
+      item={item}
+      open={Boolean(item)}
+      mode={mode}
+      isMobile={isMobile}
+      locale={locale}
+      t={t}
+      onApply={onApply}
+      onClose={onClose}
+      onEdit={onEdit}
+      onRemoveFromMyWardrobe={onRemoveFromMyWardrobe}
+      onReadMode={onReadMode}
+      onSaveToMyWardrobe={onSaveToMyWardrobe}
+    />
   );
 }
 

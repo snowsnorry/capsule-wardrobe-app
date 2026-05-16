@@ -108,6 +108,52 @@ describe("MainScreenMenus", () => {
     });
   });
 
+  test("shows only regeneration selection for uploaded product card menu", async () => {
+    const user = userEvent.setup();
+    const setSelectionMode = vi.fn();
+    const onRemoveFromMyWardrobe = vi.fn(() => Promise.resolve());
+    const onSaveToMyWardrobe = vi.fn(() => Promise.resolve());
+    const onToggleRegenerationSelection = vi.fn();
+    const uploadedItem = {
+      id: "uploaded-1",
+      url: "wardrobe://uploaded-1",
+      name: "Uploaded shirt",
+      category: "top",
+      source: "uploaded" as const,
+    };
+    renderMenus({
+      productMenu: {
+        anchor: createAnchor(),
+        url: "uploaded-1",
+        item: uploadedItem,
+      },
+      props: createMainScreenProps({
+        onRemoveFromMyWardrobe,
+        onSaveToMyWardrobe,
+        onToggleRegenerationSelection,
+      }),
+      setSelectionMode,
+    });
+
+    expect(screen.getByRole("menuitem", { name: "Select" })).toBeVisible();
+    expect(
+      screen.queryByRole("menuitem", { name: "Save to My Wardrobe" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("menuitem", { name: "Remove from My Wardrobe" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("menuitem", { name: "Copy Link Address" }),
+    ).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("menuitem", { name: "Select" }));
+
+    expect(setSelectionMode).toHaveBeenCalledWith(true);
+    expect(onToggleRegenerationSelection).toHaveBeenCalledWith(uploadedItem);
+    expect(onSaveToMyWardrobe).not.toHaveBeenCalled();
+    expect(onRemoveFromMyWardrobe).not.toHaveBeenCalled();
+  });
+
   test("confirms before removing a saved product from my wardrobe", async () => {
     const user = userEvent.setup();
     const onRemoveFromMyWardrobe = vi.fn(() => Promise.resolve());

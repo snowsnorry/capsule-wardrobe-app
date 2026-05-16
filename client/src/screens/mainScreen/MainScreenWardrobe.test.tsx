@@ -116,6 +116,36 @@ describe("MainScreenWardrobe", () => {
     expect(onToggleSelected).not.toHaveBeenCalled();
   });
 
+  test("opens product menu for uploaded cards without a safe product URL", async () => {
+    const user = userEvent.setup();
+    const onProductMenuClick = vi.fn();
+    const uploadedItem = {
+      id: "uploaded-1",
+      url: "wardrobe://uploaded-1",
+      name: "Uploaded shirt",
+      category: "top",
+      source: "uploaded" as const,
+    };
+    renderWardrobe({
+      visibleItems: [uploadedItem],
+      isOverlay: true,
+      onProductMenuClick,
+    });
+
+    const menuButton = screen.getByTestId("product-menu-wardrobe://uploaded-1");
+    expect(menuButton).toHaveAttribute(
+      "data-allow-product-menu-without-url",
+      "true",
+    );
+    await user.click(menuButton);
+
+    expect(onProductMenuClick).toHaveBeenCalledWith(
+      expect.objectContaining({ target: expect.any(HTMLButtonElement) }),
+      "wardrobe://uploaded-1",
+      uploadedItem,
+    );
+  });
+
   test("renders only create image button for outfit tab without generated image", async () => {
     const user = userEvent.setup();
     const onGenerateImage = vi.fn();

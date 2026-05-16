@@ -170,6 +170,7 @@ function makeProps(overrides: Record<string, unknown> = {}) {
     onSaveCapsule: vi.fn(() => Promise.resolve()),
     onRemoveFromMyWardrobe: vi.fn(() => Promise.resolve()),
     onSaveToMyWardrobe: vi.fn(() => Promise.resolve()),
+    onUpdateUploadedWardrobeItem: vi.fn((item) => Promise.resolve(item)),
     onSaveProfile: vi.fn(() => Promise.resolve()),
     onSaveSettings: vi.fn(() => Promise.resolve()),
     onSearchCapsules: vi.fn(() => Promise.resolve([])),

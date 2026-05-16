@@ -66,12 +66,24 @@ vi.mock("../components/ClothingCard", () => ({
   ),
 }));
 vi.mock("../components/productDetail/ProductDetailDialog", () => ({
-  default: ({ item, open, onClose, onRemoveFromMyWardrobe }) =>
+  default: ({
+    item,
+    open,
+    onClose,
+    onEditUploadedWardrobeItem,
+    onRemoveFromMyWardrobe,
+  }) =>
     open ? (
       <div data-testid="product-detail-dialog">
         {item?.name}
         <button type="button" onClick={onClose}>
           close product
+        </button>
+        <button
+          type="button"
+          onClick={() => onEditUploadedWardrobeItem?.(item)}
+        >
+          edit uploaded product
         </button>
         <button type="button" onClick={() => onRemoveFromMyWardrobe?.(item)}>
           dialog remove product
@@ -114,6 +126,73 @@ vi.mock("../components/productDetail/UploadedProductDetailDialog", () => ({
         </button>
       </div>
     ) : null,
+}));
+vi.mock("./mainScreen/CapsuleProductDetailDialog", () => ({
+  default: ({
+    item,
+    mode,
+    open,
+    onApply,
+    onClose,
+    onEdit,
+    onReadMode,
+    onRemoveFromMyWardrobe,
+  }) => {
+    if (!open) {
+      return null;
+    }
+
+    if (mode === "edit") {
+      return (
+        <div data-testid="uploaded-product-detail-dialog">
+          {item?.name}
+          <button type="button" onClick={onReadMode}>
+            cancel uploaded product
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              onApply?.(item, {
+                name: "Updated uploaded shirt",
+                description: null,
+                brand: null,
+                audience: "all",
+                category: "top",
+                season: ["summer"],
+                formality_level: [],
+                style: [],
+                occasions: [],
+                color_base: [],
+                pattern: null,
+                finish: null,
+                composition: "linen",
+                silhouette: null,
+                fit: null,
+                closure_type: [],
+              })
+            }
+          >
+            apply uploaded product
+          </button>
+        </div>
+      );
+    }
+
+    return (
+      <div data-testid="product-detail-dialog">
+        {item?.name}
+        <button type="button" onClick={onClose}>
+          close product
+        </button>
+        <button type="button" onClick={() => onEdit?.(item)}>
+          edit uploaded product
+        </button>
+        <button type="button" onClick={() => onRemoveFromMyWardrobe?.(item)}>
+          dialog remove product
+        </button>
+      </div>
+    );
+  },
 }));
 vi.mock("../components/ClothingGridPlaceholder", () => ({
   default: ({ count, mobileColumns }) => (
@@ -185,6 +264,7 @@ const translations: Record<string, string> = {
   "capsule.cardColumnsThree": "3 columns",
   "capsule.removeFromMyWardrobe": "Remove from My Wardrobe",
   "actions.cancel": "Cancel",
+  "actions.edit": "Edit",
 };
 
 function renderScreen() {
@@ -515,7 +595,7 @@ describe("MyWardrobeScreen", () => {
     );
   });
 
-  test("opens editable uploaded product details and updates local item state", async () => {
+  test("opens complete uploaded product details in read mode and edits from detail action", async () => {
     const user = userEvent.setup();
     api.fetchMyWardrobeItems.mockResolvedValueOnce({
       items: [
@@ -524,6 +604,10 @@ describe("MyWardrobeScreen", () => {
           name: "Uploaded shirt",
           source: "uploaded",
           image_url: "https://example.com/uploaded.jpg",
+          processing_status: "ready",
+          audience: "all",
+          category: "top",
+          season: ["summer"],
         },
       ],
     });
@@ -532,10 +616,33 @@ describe("MyWardrobeScreen", () => {
     await user.click(
       await screen.findByTestId("wardrobe-card-wardrobe-uploaded"),
     );
+    expect(screen.getByTestId("product-detail-dialog")).toHaveTextContent(
+      "Uploaded shirt",
+    );
+    expect(
+      screen.queryByTestId("uploaded-product-detail-dialog"),
+    ).not.toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", { name: "edit uploaded product" }),
+    );
     expect(
       screen.getByTestId("uploaded-product-detail-dialog"),
     ).toHaveTextContent("Uploaded shirt");
 
+    await user.click(
+      screen.getByRole("button", { name: "cancel uploaded product" }),
+    );
+    expect(screen.getByTestId("product-detail-dialog")).toHaveTextContent(
+      "Uploaded shirt",
+    );
+    expect(
+      screen.queryByTestId("uploaded-product-detail-dialog"),
+    ).not.toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", { name: "edit uploaded product" }),
+    );
     await user.click(
       screen.getByRole("button", { name: "apply uploaded product" }),
     );
@@ -553,6 +660,39 @@ describe("MyWardrobeScreen", () => {
         screen.getByTestId("wardrobe-card-wardrobe-uploaded"),
       ).toHaveTextContent("Updated uploaded shirt");
     });
+    expect(screen.getByTestId("product-detail-dialog")).toHaveTextContent(
+      "Updated uploaded shirt",
+    );
+  });
+
+  test("opens needs-review uploaded product details directly in edit mode", async () => {
+    const user = userEvent.setup();
+    api.fetchMyWardrobeItems.mockResolvedValueOnce({
+      items: [
+        {
+          id: "wardrobe-uploaded",
+          name: "",
+          source: "uploaded",
+          image_url: "https://example.com/uploaded.jpg",
+          processing_status: "needs_review",
+          audience: null,
+          category: null,
+          season: [],
+        },
+      ],
+    });
+    renderScreen();
+
+    await user.click(
+      await screen.findByTestId("wardrobe-card-wardrobe-uploaded"),
+    );
+
+    expect(
+      screen.getByTestId("uploaded-product-detail-dialog"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("product-detail-dialog"),
+    ).not.toBeInTheDocument();
   });
 
   test("reloads when source filter changes", async () => {

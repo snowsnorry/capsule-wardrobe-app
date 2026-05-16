@@ -156,6 +156,10 @@ async function queryCapsuleWardrobePreferredItemsForMultipleAccentColors(
         SELECT
           products.id::text AS id,
           'catalog'::text AS item_source,
+          NULL::text AS source,
+          NULL::text AS raw_image_url,
+          NULL::text AS processing_status,
+          NULL::text AS wardrobe_id,
           products.id::text AS product_id,
           products.name,
           products.url,
@@ -193,6 +197,10 @@ async function queryCapsuleWardrobePreferredItemsForMultipleAccentColors(
         SELECT
           ('W' || wardrobe_deduped.id::text) AS id,
           'wardrobe'::text AS item_source,
+          wardrobe_deduped.source,
+          wardrobe_deduped.raw_image_url,
+          wardrobe_deduped.processing_status,
+          wardrobe_deduped.id::text AS wardrobe_id,
           wardrobe_deduped.product_id,
           wardrobe_deduped.name,
           wardrobe_deduped.url,

@@ -34,6 +34,7 @@ const wardrobeActions = vi.hoisted(() => ({
   regenerateSelectedItems: vi.fn(),
   saveItemToMyWardrobe: vi.fn(),
   toggleRegenerationSelection: vi.fn(),
+  updateUploadedItemInMyWardrobe: vi.fn(),
 }));
 const sessionActions = vi.hoisted(() => ({
   googleCredential: vi.fn(),
@@ -142,6 +143,30 @@ describe("useAppHandlers", () => {
     await result.current.handleSaveToMyWardrobe({
       url: "https://example.com/top",
     });
+    await result.current.handleUpdateUploadedWardrobeItem(
+      {
+        id: "uploaded-1",
+        source: "uploaded",
+      },
+      {
+        name: "Uploaded top",
+        description: null,
+        brand: null,
+        audience: "all",
+        category: "top",
+        season: ["summer"],
+        formality_level: [],
+        style: [],
+        occasions: [],
+        color_base: [],
+        pattern: null,
+        finish: null,
+        composition: null,
+        silhouette: null,
+        fit: null,
+        closure_type: [],
+      },
+    );
     await result.current.handleSaveSettings({
       fullname: "Ada",
       locale: "en",
@@ -184,6 +209,11 @@ describe("useAppHandlers", () => {
     expect(wardrobeActions.saveItemToMyWardrobe).toHaveBeenCalledWith(
       actionContext,
       { url: "https://example.com/top" },
+    );
+    expect(wardrobeActions.updateUploadedItemInMyWardrobe).toHaveBeenCalledWith(
+      actionContext,
+      { id: "uploaded-1", source: "uploaded" },
+      expect.objectContaining({ name: "Uploaded top" }),
     );
     expect(profileActions.saveSettings).toHaveBeenCalledWith(actionContext, {
       fullname: "Ada",

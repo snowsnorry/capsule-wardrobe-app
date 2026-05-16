@@ -36,6 +36,7 @@ function createHandlers() {
     "handleSaveProfile",
     "handleSaveSettings",
     "handleSaveToMyWardrobe",
+    "handleUpdateUploadedWardrobeItem",
     "handleSearchCapsules",
     "handleShareCapsule",
     "handleToggleRegenerationSelection",

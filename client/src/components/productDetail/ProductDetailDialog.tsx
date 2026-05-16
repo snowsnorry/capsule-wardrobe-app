@@ -8,6 +8,7 @@ import {
   IconButton,
   useMediaQuery,
 } from "@mui/material";
+import { fetchUploadedWardrobeItemDetail } from "../../api/myWardrobe";
 import { fetchProductDetailByUrl } from "../../api/search";
 import { useI18n } from "../../i18n/useI18n";
 import { getSafeHttpUrl } from "../../../../shared/urlSecurity.js";
@@ -21,6 +22,7 @@ type ProductDetailDialogProps = {
   open: boolean;
   isMobile?: boolean;
   onClose: () => void;
+  onEditUploadedWardrobeItem?: (item: ProductDetailItem) => void;
   onRemoveFromMyWardrobe?: (item: ProductDetailItem) => Promise<void> | void;
   onSaveToMyWardrobe?: (item: ProductDetailItem) => Promise<void> | void;
 };
@@ -30,6 +32,7 @@ function ProductDetailDialog({
   open,
   isMobile,
   onClose,
+  onEditUploadedWardrobeItem,
   onRemoveFromMyWardrobe,
   onSaveToMyWardrobe,
 }: ProductDetailDialogProps): ReactElement {
@@ -57,6 +60,7 @@ function ProductDetailDialog({
           mobileLayout={mobileLayout}
           t={t}
           onClose={onClose}
+          onEditUploadedWardrobeItem={onEditUploadedWardrobeItem}
           onRemoveFromMyWardrobe={onRemoveFromMyWardrobe}
           onSaveToMyWardrobe={onSaveToMyWardrobe}
         />
@@ -69,7 +73,7 @@ type ProductDetailResponse = {
   item?: ProductDetailItem | null;
 };
 
-function useResolvedProductDetailItem(
+export function useResolvedProductDetailItem(
   item: ProductDetailItem | null,
   open: boolean,
 ) {
@@ -78,20 +82,32 @@ function useResolvedProductDetailItem(
   );
   const [isLoading, setIsLoading] = useState(false);
   const safeUrl = getSafeHttpUrl(item?.url);
+  const uploadedDetailId = getUploadedWardrobeDetailId(item);
 
   useEffect(() => {
     let isActive = true;
     setFetchedItem(null);
     setIsLoading(false);
 
-    if (!open || !safeUrl || hasExpandedProductDetails(item)) {
+    if (!open || hasExpandedProductDetails(item)) {
+      return () => {
+        isActive = false;
+      };
+    }
+
+    const detailRequest = uploadedDetailId
+      ? fetchUploadedWardrobeItemDetail(uploadedDetailId)
+      : safeUrl
+        ? fetchProductDetailByUrl(safeUrl)
+        : null;
+    if (!detailRequest) {
       return () => {
         isActive = false;
       };
     }
 
     setIsLoading(true);
-    fetchProductDetailByUrl(safeUrl)
+    detailRequest
       .then((response: ProductDetailResponse) => {
         if (isActive) {
           setFetchedItem(response.item || null);
@@ -111,12 +127,28 @@ function useResolvedProductDetailItem(
     return () => {
       isActive = false;
     };
-  }, [item, open, safeUrl]);
+  }, [item, open, safeUrl, uploadedDetailId]);
 
   return {
     item: mergeProductDetailItems(item, fetchedItem),
     isLoading,
   };
+}
+
+// eslint-disable-next-line complexity
+function getUploadedWardrobeDetailId(item: ProductDetailItem | null) {
+  const explicitId = item?.wardrobeId ?? item?.wardrobe_id;
+  if (explicitId !== null && explicitId !== undefined && explicitId !== "") {
+    return String(explicitId);
+  }
+
+  const itemUrl = String(item?.url || "").trim();
+  const wardrobeUrlMatch = itemUrl.match(/^wardrobe:\/\/(.+)$/i);
+  if (wardrobeUrlMatch?.[1]) {
+    return decodeURIComponent(wardrobeUrlMatch[1].replace(/^\/+/, ""));
+  }
+
+  return item?.source === "uploaded" && item?.id != null ? String(item.id) : "";
 }
 
 function hasExpandedProductDetails(item: ProductDetailItem | null) {
@@ -150,6 +182,7 @@ function hasExpandedProductDetails(item: ProductDetailItem | null) {
   );
 }
 
+// eslint-disable-next-line complexity
 function mergeProductDetailItems(
   item: ProductDetailItem | null,
   fetchedItem: ProductDetailItem | null,
@@ -158,9 +191,16 @@ function mergeProductDetailItems(
     return item;
   }
 
+  const isUploadedWardrobeItem =
+    item.source === "uploaded" || fetchedItem.source === "uploaded";
+
   return {
     ...item,
     ...fetchedItem,
+    id: isUploadedWardrobeItem ? item.id : fetchedItem.id,
+    wardrobe_id: isUploadedWardrobeItem
+      ? (item.wardrobe_id ?? item.wardrobeId ?? fetchedItem.id)
+      : (fetchedItem.wardrobe_id ?? item.wardrobe_id),
     isSavedToWardrobe:
       item.isSavedToWardrobe ?? fetchedItem.isSavedToWardrobe ?? null,
     is_saved_to_wardrobe:
@@ -177,11 +217,16 @@ function ProductDetailDialogContent({
   mobileLayout,
   t,
   onClose,
+  onEditUploadedWardrobeItem,
   onRemoveFromMyWardrobe,
   onSaveToMyWardrobe,
 }: Pick<
   ProductDetailDialogProps,
-  "item" | "onClose" | "onRemoveFromMyWardrobe" | "onSaveToMyWardrobe"
+  | "item"
+  | "onClose"
+  | "onEditUploadedWardrobeItem"
+  | "onRemoveFromMyWardrobe"
+  | "onSaveToMyWardrobe"
 > & {
   isLoading: boolean;
   locale: string;
@@ -205,6 +250,7 @@ function ProductDetailDialogContent({
         t={t}
         locale={locale}
         mobileBackAction={onClose}
+        onEditUploadedWardrobeItem={onEditUploadedWardrobeItem}
         onRemoveFromMyWardrobe={onRemoveFromMyWardrobe}
         onSaveToMyWardrobe={onSaveToMyWardrobe}
       />
@@ -219,6 +265,7 @@ function ProductDetailDialogContent({
         locale={locale}
         t={t}
         onClose={onClose}
+        onEditUploadedWardrobeItem={onEditUploadedWardrobeItem}
         onRemoveFromMyWardrobe={onRemoveFromMyWardrobe}
         onSaveToMyWardrobe={onSaveToMyWardrobe}
       />
@@ -226,11 +273,12 @@ function ProductDetailDialogContent({
   );
 }
 
-function DesktopProductDetailPane({
+export function DesktopProductDetailPane({
   item,
   locale,
   t,
   onClose,
+  onEditUploadedWardrobeItem,
   onRemoveFromMyWardrobe,
   onSaveToMyWardrobe,
 }: Omit<ProductDetailDialogProps, "open" | "isMobile"> & {
@@ -252,6 +300,7 @@ function DesktopProductDetailPane({
         locale={locale}
         showImage={false}
         reserveHeaderActionsSpace
+        onEditUploadedWardrobeItem={onEditUploadedWardrobeItem}
         onRemoveFromMyWardrobe={onRemoveFromMyWardrobe}
         onSaveToMyWardrobe={onSaveToMyWardrobe}
       />
@@ -259,7 +308,7 @@ function DesktopProductDetailPane({
   );
 }
 
-function getDialogPaperSx(mobileLayout: boolean) {
+export function getDialogPaperSx(mobileLayout: boolean) {
   if (mobileLayout) {
     return { overflowX: "hidden", backgroundColor: "background.paper" };
   }
@@ -274,7 +323,7 @@ function getDialogPaperSx(mobileLayout: boolean) {
   };
 }
 
-function getDialogContentSx(mobileLayout: boolean, isLoading: boolean) {
+export function getDialogContentSx(mobileLayout: boolean, isLoading: boolean) {
   if (isLoading) {
     return {
       width: "100%",

@@ -10,6 +10,8 @@ type ProductDetailItem = {
   image_url?: string | null;
   rawImageUrl?: string | null;
   raw_image_url?: string | null;
+  wardrobeId?: string | number | null;
+  wardrobe_id?: string | number | null;
   source?: string | null;
   description?: string | null;
   audience?: string | null;

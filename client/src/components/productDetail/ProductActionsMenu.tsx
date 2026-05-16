@@ -1,6 +1,7 @@
 import { useState } from "react";
 import BookmarkBorderRoundedIcon from "@mui/icons-material/BookmarkBorderRounded";
 import BookmarkRemoveOutlinedIcon from "@mui/icons-material/BookmarkRemoveOutlined";
+import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import MoreVertRoundedIcon from "@mui/icons-material/MoreVertRounded";
 import {
   Box,
@@ -27,6 +28,7 @@ type ProductActionsMenuProps = {
   onRemoveFromMyWardrobe?: (
     item: ProductActionsMenuItem,
   ) => Promise<void> | void;
+  onEditUploadedWardrobeItem?: (item: ProductActionsMenuItem) => void;
   onSaveToMyWardrobe?: (item: ProductActionsMenuItem) => Promise<void> | void;
   t: (key: string, params?: Record<string, unknown>) => string;
 };
@@ -36,6 +38,7 @@ type WardrobeAction = (item: ProductActionsMenuItem) => Promise<void> | void;
 function ProductActionsMenu({
   item,
   isSavedToWardrobe,
+  onEditUploadedWardrobeItem,
   onRemoveFromMyWardrobe,
   onSaveToMyWardrobe,
   t,
@@ -81,8 +84,13 @@ function ProductActionsMenu({
         isActionPending={isActionPending}
         isMenuOpen={isMenuOpen}
         isSavedToWardrobe={isSavedToWardrobe}
+        item={item}
+        showWardrobeAction={Boolean(
+          onSaveToMyWardrobe || onRemoveFromMyWardrobe,
+        )}
         t={t}
         onClose={closeMenu}
+        onEditUploadedWardrobeItem={onEditUploadedWardrobeItem}
         onWardrobeMenuAction={handleWardrobeMenuAction}
       />
       <ProductRemoveConfirmDialog
@@ -147,18 +155,27 @@ function ProductActionsDropdown({
   isActionPending,
   isMenuOpen,
   isSavedToWardrobe,
+  item,
   onClose,
+  onEditUploadedWardrobeItem,
   onWardrobeMenuAction,
+  showWardrobeAction,
   t,
 }: {
   anchorEl: HTMLElement | null;
   isActionPending: boolean;
   isMenuOpen: boolean;
   isSavedToWardrobe: boolean;
+  item: ProductActionsMenuItem;
   onClose: () => void;
+  onEditUploadedWardrobeItem?: ProductActionsMenuProps["onEditUploadedWardrobeItem"];
   onWardrobeMenuAction: () => void;
+  showWardrobeAction: boolean;
   t: ProductActionsMenuProps["t"];
 }) {
+  const showEdit = item.source === "uploaded" && onEditUploadedWardrobeItem;
+  const showSaveRemove = item.source !== "uploaded" && showWardrobeAction;
+
   return (
     <Menu
       id="catalog-product-menu"
@@ -168,18 +185,34 @@ function ProductActionsDropdown({
       anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
       transformOrigin={{ vertical: "top", horizontal: "right" }}
     >
-      <MenuItem disabled={isActionPending} onClick={onWardrobeMenuAction}>
-        <ListItemIcon>
-          {isSavedToWardrobe ? (
-            <BookmarkRemoveOutlinedIcon fontSize="small" />
-          ) : (
-            <BookmarkBorderRoundedIcon fontSize="small" />
-          )}
-        </ListItemIcon>
-        <ListItemText>
-          {t(getWardrobeActionLabelKey(isSavedToWardrobe))}
-        </ListItemText>
-      </MenuItem>
+      {showEdit ? (
+        <MenuItem
+          disabled={isActionPending}
+          onClick={() => {
+            onClose();
+            onEditUploadedWardrobeItem(item);
+          }}
+        >
+          <ListItemIcon>
+            <EditOutlinedIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>{t("actions.edit")}</ListItemText>
+        </MenuItem>
+      ) : null}
+      {showSaveRemove ? (
+        <MenuItem disabled={isActionPending} onClick={onWardrobeMenuAction}>
+          <ListItemIcon>
+            {isSavedToWardrobe ? (
+              <BookmarkRemoveOutlinedIcon fontSize="small" />
+            ) : (
+              <BookmarkBorderRoundedIcon fontSize="small" />
+            )}
+          </ListItemIcon>
+          <ListItemText>
+            {t(getWardrobeActionLabelKey(isSavedToWardrobe))}
+          </ListItemText>
+        </MenuItem>
+      ) : null}
     </Menu>
   );
 }

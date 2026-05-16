@@ -135,6 +135,18 @@ async function fetchMyWardrobeItems(
   });
 }
 
+async function fetchUploadedWardrobeItemDetail(
+  id: string | number,
+): Promise<JsonObject> {
+  return getCachedJson(
+    `${API_BASE_URL}/wardrobe/items/uploaded/${encodeURIComponent(String(id))}`,
+    {
+      credentials: "include",
+      ttlMs: 60_000,
+    },
+  );
+}
+
 async function uploadWardrobeImages(
   files: File[],
   options: UploadWardrobeImagesOptions = {},
@@ -277,6 +289,7 @@ export {
   deleteUploadedWardrobeItem,
   downloadMyWardrobePdf,
   fetchMyWardrobeItems,
+  fetchUploadedWardrobeItemDetail,
   getWardrobeItemsPdfUrl,
   getWardrobeItemsUrl,
   removeCatalogItemFromMyWardrobe,

@@ -79,17 +79,27 @@ function ProductMenuItems({
   onRequestRemove: (item: MainScreenItem) => void;
   savedToWardrobe: boolean;
 }) {
+  const isUploadedItem = menuProps.productMenu.item?.source === "uploaded";
+
   return (
     <>
       <RegenerationMenuItem menuProps={menuProps} onClose={onClose} t={t} />
-      <WardrobeMenuItem
-        menuProps={menuProps}
-        savedToWardrobe={savedToWardrobe}
-        t={t}
-        onClose={onClose}
-        onRequestRemove={onRequestRemove}
-      />
-      <CopyProductLinkMenuItem menuProps={menuProps} onClose={onClose} t={t} />
+      {isUploadedItem ? null : (
+        <>
+          <WardrobeMenuItem
+            menuProps={menuProps}
+            savedToWardrobe={savedToWardrobe}
+            t={t}
+            onClose={onClose}
+            onRequestRemove={onRequestRemove}
+          />
+          <CopyProductLinkMenuItem
+            menuProps={menuProps}
+            onClose={onClose}
+            t={t}
+          />
+        </>
+      )}
     </>
   );
 }

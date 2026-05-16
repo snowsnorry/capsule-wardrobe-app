@@ -22,6 +22,7 @@ import {
 type UploadedProductDetailDialogProps = {
   item: ProductDetailItem | null;
   open: boolean;
+  closeOnApply?: boolean;
   isMobile?: boolean;
   t: (key: string, params?: Record<string, unknown>) => string;
   locale: string;
@@ -35,6 +36,7 @@ type UploadedProductDetailDialogProps = {
 function UploadedProductDetailDialog({
   item,
   open,
+  closeOnApply = true,
   isMobile = false,
   t,
   locale,
@@ -62,7 +64,9 @@ function UploadedProductDetailDialog({
     setIsSaving(true);
     try {
       await onApply(item, buildPayload(form));
-      onClose();
+      if (closeOnApply) {
+        onClose();
+      }
     } catch {
       // Keep the dialog open; the parent screen owns the visible error message.
     } finally {

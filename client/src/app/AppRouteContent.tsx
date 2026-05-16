@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { lazy } from "react";
 import type { Dispatch, FormEvent, MouseEvent, SetStateAction } from "react";
 import type {
@@ -13,6 +14,7 @@ import type {
   WardrobeItem,
 } from "./appTypes";
 import type { SettingsSavePayload } from "../components/SettingsDialog";
+import type { UploadedWardrobeItemUpdatePayload } from "../api/myWardrobe";
 import {
   FALLBACK_ACCENT_COLOR_OPTIONS,
   GOOGLE_CLIENT_ID,
@@ -122,6 +124,10 @@ type AppRouteContentProps = SharedFilterProps & {
   onSaveCapsule: (capsuleId?: string) => Promise<void>;
   onRemoveFromMyWardrobe: (item: WardrobeItem) => Promise<void>;
   onSaveToMyWardrobe: (item: WardrobeItem) => Promise<void>;
+  onUpdateUploadedWardrobeItem: (
+    item: WardrobeItem,
+    payload: UploadedWardrobeItemUpdatePayload,
+  ) => Promise<WardrobeItem>;
   onSaveProfile: () => Promise<void>;
   onSaveSettings: (nextSettings: SettingsSavePayload) => Promise<void>;
   onSearchCapsules: (query: string) => Promise<CapsuleMeta[]>;
@@ -203,6 +209,7 @@ function MainRoute(props: AppRouteContentProps) {
       onShareCapsule={props.onShareCapsule}
       onRemoveFromMyWardrobe={props.onRemoveFromMyWardrobe}
       onSaveToMyWardrobe={props.onSaveToMyWardrobe}
+      onUpdateUploadedWardrobeItem={props.onUpdateUploadedWardrobeItem}
       onSearchCapsules={props.onSearchCapsules}
       items={props.profileItems || []}
       outfitSets={props.profileOutfitSets}

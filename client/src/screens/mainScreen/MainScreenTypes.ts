@@ -1,4 +1,5 @@
 import type { MouseEvent } from "react";
+import type { UploadedWardrobeItemUpdatePayload } from "../../api/myWardrobe";
 
 export type CapsuleMenuAnchor = HTMLElement | null;
 
@@ -122,6 +123,10 @@ export type MainScreenProps = {
   ) => void;
   onRemoveFromMyWardrobe?: (item: MainScreenItem) => Promise<void> | void;
   onSaveToMyWardrobe?: (item: MainScreenItem) => Promise<void> | void;
+  onUpdateUploadedWardrobeItem?: (
+    item: MainScreenItem,
+    payload: UploadedWardrobeItemUpdatePayload,
+  ) => Promise<MainScreenItem> | MainScreenItem;
   selectedRegenerationUrls: string[];
   partialRegenerationPendingUrls: string[];
   pendingImageSetIndexes?: number[];

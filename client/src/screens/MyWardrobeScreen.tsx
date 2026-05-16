@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { useEffect, useMemo, useState } from "react";
 import type { MouseEvent, ReactElement } from "react";
 import { Alert, Box, Stack } from "@mui/material";
@@ -13,6 +14,7 @@ import {
   uploadWardrobeImages,
 } from "../api/myWardrobe";
 import { useI18n } from "../i18n/useI18n";
+import { isUploadedWardrobeItemNeedsReview } from "../utils/uploadedWardrobeItemStatus";
 import { MAIN_SCREEN_CONTENT_COLUMN_SX } from "./mainScreen/MainScreenHelpers";
 import type {
   MainScreenItem,
@@ -38,13 +40,14 @@ import {
   isDifferentWardrobeItem,
 } from "./myWardrobeDelete";
 import { EMPTY_UPLOAD_PROGRESS } from "./myWardrobeUploadProgress";
-import ProductDetailDialog from "../components/productDetail/ProductDetailDialog";
-import UploadedProductDetailDialog from "../components/productDetail/UploadedProductDetailDialog";
+import CapsuleProductDetailDialog from "./mainScreen/CapsuleProductDetailDialog";
 import WardrobeUploadDialog from "./WardrobeUploadDialog";
 import MyWardrobeToolbar, {
   getSourceFilter,
   type MyWardrobeFilter,
 } from "./MyWardrobeToolbar";
+
+type ProductDetailMode = "read" | "edit";
 
 // Main screen composition stays local so toolbar, menus, dialogs, and grid share state.
 // eslint-disable-next-line max-lines-per-function
@@ -60,6 +63,8 @@ function MyWardrobeScreen(): ReactElement {
   );
   const [productDetailItem, setProductDetailItem] =
     useState<MainScreenItem | null>(null);
+  const [productDetailMode, setProductDetailMode] =
+    useState<ProductDetailMode>("read");
   const wardrobeItems = useMyWardrobeItems(filter, refreshKey, t);
   const displayedColumns = isOverlay ? mobileColumns : 2;
   const updateColumns = (value: MobileCardColumns) => {
@@ -80,6 +85,17 @@ function MyWardrobeScreen(): ReactElement {
   ) => {
     const updated = await wardrobeItems.handleUpdateUploadedItem(item, payload);
     setProductDetailItem(updated);
+    setProductDetailMode("read");
+  };
+  const openProductDetail = (item: MainScreenItem) => {
+    setProductDetailMode(
+      isUploadedWardrobeItemNeedsReview(item) ? "edit" : "read",
+    );
+    setProductDetailItem(item);
+  };
+  const closeProductDetail = () => {
+    setProductDetailItem(null);
+    setProductDetailMode("read");
   };
 
   return (
@@ -115,7 +131,7 @@ function MyWardrobeScreen(): ReactElement {
           items={wardrobeItems.items}
           mobileColumns={displayedColumns}
           t={t}
-          onProductClick={setProductDetailItem}
+          onProductClick={openProductDetail}
           onProductMenuClick={wardrobeItems.handleProductMenuClick}
         />
         <MyWardrobeProductMenu
@@ -132,25 +148,24 @@ function MyWardrobeScreen(): ReactElement {
           onClose={() => wardrobeItems.setRemoveConfirmItem(null)}
           onConfirm={wardrobeItems.handleConfirmRemove}
         />
-        {productDetailItem?.source === "uploaded" ? (
-          <UploadedProductDetailDialog
+        {productDetailItem ? (
+          <CapsuleProductDetailDialog
             item={productDetailItem}
             open={Boolean(productDetailItem)}
+            mode={productDetailMode}
             isMobile={isOverlay}
             locale={locale}
             t={t}
-            onClose={() => setProductDetailItem(null)}
             onApply={handleApplyUploadedProductDetail}
-          />
-        ) : (
-          <ProductDetailDialog
-            item={productDetailItem}
-            open={Boolean(productDetailItem)}
-            isMobile={isOverlay}
-            onClose={() => setProductDetailItem(null)}
+            onClose={closeProductDetail}
+            onEdit={(item) => {
+              setProductDetailItem(item);
+              setProductDetailMode("edit");
+            }}
+            onReadMode={() => setProductDetailMode("read")}
             onRemoveFromMyWardrobe={wardrobeItems.handleConfirmRemove}
           />
-        )}
+        ) : null}
         <WardrobeUploadDialog
           open={isUploadDialogOpen}
           isUploading={wardrobeItems.isUploading}

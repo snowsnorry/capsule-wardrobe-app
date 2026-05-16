@@ -13,6 +13,7 @@ const labels = {
     cancel: "Cancel",
     ok: "OK",
     delete: "Delete",
+    edit: "Edit",
     save: "Save",
     close: "Close",
   },
@@ -80,15 +81,41 @@ const labels = {
     copyProductLinkAddress: "Copy Link Address",
   },
   myWardrobe: {
+    filters: {
+      uploaded: "Uploaded",
+    },
+    imageVersionToggle: {
+      label: "Uploaded item image version",
+      original: "Original",
+      ai: "AI",
+    },
     removeConfirmTitle: "Remove from My Wardrobe?",
     removeConfirmBody: "Remove body",
     removeConfirm: "Remove",
+    uploadedDetail: {
+      title: "Uploaded item details",
+      notSpecified: "Not specified",
+      missingRequired: "To apply changes, fill in: {items}.",
+      fields: {
+        name: "Name",
+        description: "Description",
+        brand: "Brand",
+      },
+      required: {
+        name: "name",
+        audience: "audience",
+        category: "category",
+        season: "at least one season",
+      },
+    },
   },
   search: {
     all: "All",
     back: "Back",
+    detailEmpty: "Select a product to inspect its details.",
     detailLoading: "Loading product details",
     openProductPage: "Open product page",
+    productActions: "Product actions",
     untitled: "Untitled product",
   },
   main: {

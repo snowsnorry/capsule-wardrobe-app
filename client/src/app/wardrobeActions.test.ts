@@ -4,6 +4,7 @@ import { downloadCapsulePdf } from "../api/capsules";
 import {
   removeCatalogItemFromMyWardrobe,
   saveCatalogItemToMyWardrobe,
+  updateUploadedWardrobeItem,
 } from "../api/myWardrobe";
 import {
   deleteOutfitSetImage,
@@ -24,6 +25,7 @@ import {
   startCapsuleEventStream,
   stopCapsuleEventStream,
   toggleRegenerationSelection,
+  updateUploadedItemInMyWardrobe,
 } from "./wardrobeActions";
 import { createActionContext } from "./testUtils";
 
@@ -33,6 +35,7 @@ vi.mock("../api/capsules", () => ({
 vi.mock("../api/myWardrobe", () => ({
   removeCatalogItemFromMyWardrobe: vi.fn(),
   saveCatalogItemToMyWardrobe: vi.fn(),
+  updateUploadedWardrobeItem: vi.fn(),
 }));
 vi.mock("../api/wardrobe", () => ({
   deleteOutfitSetImage: vi.fn(),
@@ -296,6 +299,79 @@ describe("wardrobeActions", () => {
       infoKey: "",
       infoParams: null,
     });
+  });
+
+  test("updateUploadedItemInMyWardrobe patches uploaded details and preserves capsule item id", async () => {
+    vi.mocked(updateUploadedWardrobeItem).mockResolvedValueOnce({
+      item: {
+        id: "uploaded-1",
+        name: "Updated uploaded top",
+        source: "uploaded",
+        audience: "all",
+        category: "top",
+        season: ["summer"],
+      },
+    });
+    const context = createActionContext();
+    const payload = {
+      name: "Updated uploaded top",
+      description: null,
+      brand: null,
+      audience: "all",
+      category: "top",
+      season: ["summer"],
+      formality_level: [],
+      style: [],
+      occasions: [],
+      color_base: [],
+      pattern: null,
+      finish: null,
+      composition: null,
+      silhouette: null,
+      fit: null,
+      closure_type: [],
+    };
+
+    const updated = await updateUploadedItemInMyWardrobe(
+      context,
+      {
+        id: "Wuploaded-1",
+        url: "wardrobe://uploaded-1",
+        source: "uploaded",
+      },
+      payload,
+    );
+
+    expect(updateUploadedWardrobeItem).toHaveBeenCalledWith(
+      "uploaded-1",
+      payload,
+    );
+    expect(updated).toEqual(
+      expect.objectContaining({
+        id: "Wuploaded-1",
+        name: "Updated uploaded top",
+        source: "uploaded",
+        wardrobe_id: "uploaded-1",
+      }),
+    );
+    const itemsUpdater = mockCalls(context.setProfileItems).at(-1)?.[0] as (
+      current: unknown,
+    ) => unknown;
+    expect(
+      itemsUpdater([
+        {
+          id: "Wuploaded-1",
+          url: "wardrobe://uploaded-1",
+          name: "Old uploaded top",
+        },
+      ]),
+    ).toEqual([
+      expect.objectContaining({
+        id: "Wuploaded-1",
+        name: "Updated uploaded top",
+        wardrobe_id: "uploaded-1",
+      }),
+    ]);
   });
 
   test("toggleRegenerationSelection toggles valid urls only when idle", () => {

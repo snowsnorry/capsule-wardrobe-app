@@ -206,6 +206,7 @@ export {
 export {
   removeItemFromMyWardrobe,
   saveItemToMyWardrobe,
+  updateUploadedItemInMyWardrobe,
 } from "./myWardrobeItemActions";
 export {
   handleWardrobeError,

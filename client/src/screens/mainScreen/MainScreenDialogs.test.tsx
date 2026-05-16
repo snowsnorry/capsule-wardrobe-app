@@ -10,6 +10,12 @@ import {
 } from "./MainScreen.testUtils";
 import MainScreenDialogs from "./MainScreenDialogs";
 
+const myWardrobeApi = vi.hoisted(() => ({
+  fetchUploadedWardrobeItemDetail: vi.fn(),
+}));
+
+vi.mock("../../api/myWardrobe", () => myWardrobeApi);
+
 type DialogsProps = ComponentProps<typeof MainScreenDialogs>;
 type ConfirmState = DialogsProps["confirm"];
 type NameDialogState = DialogsProps["nameDialog"];
@@ -102,6 +108,7 @@ function renderDialogs(props: ComponentProps<typeof DialogHarness>) {
 describe("MainScreenDialogs", () => {
   beforeEach(() => {
     resetMainScreenTestMocks();
+    myWardrobeApi.fetchUploadedWardrobeItemDetail.mockReset();
   });
 
   afterEach(() => {
@@ -165,6 +172,129 @@ describe("MainScreenDialogs", () => {
     await waitFor(() => {
       expect(screen.queryByText("Linen Shirt")).not.toBeInTheDocument();
     });
+  });
+
+  test("opens needs-review uploaded capsule item directly in edit mode", () => {
+    const onUpdateUploadedWardrobeItem = vi.fn((item) => Promise.resolve(item));
+    renderDialogs({
+      initialProductDetailItem: {
+        id: "Wuploaded-1",
+        name: "",
+        source: "uploaded",
+        url: "wardrobe://uploaded-1",
+        image_url: "https://example.com/uploaded.jpg",
+        processing_status: "needs_review",
+        audience: "",
+        category: "",
+        season: [],
+      },
+      propsOverrides: { onUpdateUploadedWardrobeItem },
+    });
+
+    expect(screen.getByText("Uploaded item details")).toBeInTheDocument();
+    expect(screen.queryByText("Select a product")).not.toBeInTheDocument();
+  });
+
+  test("switches uploaded capsule item from read mode to edit mode", async () => {
+    const user = userEvent.setup();
+    const onUpdateUploadedWardrobeItem = vi.fn((_item, payload) =>
+      Promise.resolve({
+        id: "Wuploaded-1",
+        name: payload.name,
+        source: "uploaded",
+        url: "wardrobe://uploaded-1",
+        image_url: "https://example.com/uploaded.jpg",
+        processing_status: "ready",
+        audience: payload.audience,
+        category: payload.category,
+        season: payload.season,
+      }),
+    );
+    renderDialogs({
+      initialProductDetailItem: {
+        id: "Wuploaded-1",
+        name: "Uploaded shirt",
+        source: "uploaded",
+        url: "wardrobe://uploaded-1",
+        image_url: "https://example.com/uploaded.jpg",
+        processing_status: "ready",
+        audience: "all",
+        category: "top",
+        season: ["summer"],
+      },
+      propsOverrides: { onUpdateUploadedWardrobeItem },
+    });
+
+    expect(screen.getByText("Uploaded shirt")).toBeInTheDocument();
+    const imagePane = screen.getByTestId("product-detail-dialog-image-pane");
+    await user.click(screen.getByRole("button", { name: "Product actions" }));
+    expect(
+      screen.queryByRole("menuitem", { name: "Save to My Wardrobe" }),
+    ).not.toBeInTheDocument();
+    await user.click(screen.getByRole("menuitem", { name: "Edit" }));
+
+    expect(screen.getByText("Uploaded item details")).toBeInTheDocument();
+    expect(screen.getByTestId("product-detail-dialog-image-pane")).toBe(
+      imagePane,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByText("Uploaded item details")).not.toBeInTheDocument();
+    expect(screen.getByText("Uploaded shirt")).toBeInTheDocument();
+    expect(screen.getByTestId("product-detail-dialog-image-pane")).toBe(
+      imagePane,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Product actions" }));
+    await user.click(screen.getByRole("menuitem", { name: "Edit" }));
+    await user.click(screen.getByRole("button", { name: "Apply" }));
+
+    await waitFor(() => {
+      expect(
+        screen.queryByText("Uploaded item details"),
+      ).not.toBeInTheDocument();
+    });
+    expect(screen.getByText("Uploaded shirt")).toBeInTheDocument();
+    expect(onUpdateUploadedWardrobeItem).toHaveBeenCalledTimes(1);
+  });
+
+  test("switches wardrobe-url capsule item to edit mode after fetched uploaded detail", async () => {
+    const user = userEvent.setup();
+    myWardrobeApi.fetchUploadedWardrobeItemDetail.mockResolvedValueOnce({
+      item: {
+        id: "uploaded-1",
+        name: "Uploaded shirt",
+        source: "uploaded",
+        url: "wardrobe://uploaded-1",
+        image_url: "https://example.com/uploaded.jpg",
+        processing_status: "ready",
+        audience: "all",
+        category: "top",
+        season: ["summer"],
+      },
+    });
+    renderDialogs({
+      initialProductDetailItem: {
+        id: "Wuploaded-1",
+        name: "Uploaded shirt",
+        url: "wardrobe://uploaded-1",
+        image_url: "https://example.com/uploaded.jpg",
+      },
+    });
+
+    await waitFor(() => {
+      expect(
+        myWardrobeApi.fetchUploadedWardrobeItemDetail,
+      ).toHaveBeenCalledWith("uploaded-1");
+    });
+    await user.click(screen.getByRole("button", { name: "Product actions" }));
+    expect(
+      screen.queryByRole("menuitem", { name: "Save to My Wardrobe" }),
+    ).not.toBeInTheDocument();
+    await user.click(screen.getByRole("menuitem", { name: "Edit" }));
+
+    expect(screen.getByText("Uploaded item details")).toBeInTheDocument();
+    expect(screen.queryByText("Select a product")).not.toBeInTheDocument();
   });
 
   test("closes rename dialog immediately and calls rename callback", async () => {

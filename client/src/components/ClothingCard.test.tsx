@@ -185,14 +185,14 @@ describe("ClothingCard", () => {
     ).not.toBeInTheDocument();
   });
 
-  test("shows a needs review chip for processed uploaded wardrobe items with missing required metadata", () => {
+  test("shows a needs review chip for uploaded wardrobe items with needs-review status", () => {
     const { container } = renderCard({
       item: {
         ...item,
         category: null,
         season: ["summer"],
         source: "uploaded",
-        processing_status: "metadata_processed",
+        processing_status: "needs_review",
       },
     });
 
@@ -202,6 +202,22 @@ describe("ClothingCard", () => {
     expect(needsReviewChip).toHaveTextContent("myWardrobe.needsReviewBadge");
     expect(
       container.querySelector(".wardrobe-card-category-category"),
+    ).not.toBeInTheDocument();
+  });
+
+  test("does not show a needs review chip for ready uploaded wardrobe items with sparse metadata", () => {
+    const { container } = renderCard({
+      item: {
+        ...item,
+        category: null,
+        season: [],
+        source: "uploaded",
+        processing_status: "ready",
+      },
+    });
+
+    expect(
+      container.querySelector(".wardrobe-card-category-needsReview"),
     ).not.toBeInTheDocument();
   });
 
@@ -564,6 +580,33 @@ describe("ClothingCard", () => {
       expect.objectContaining({ id: "item-1" }),
     );
     expect(onProductClick).not.toHaveBeenCalled();
+  });
+
+  test("opens product menu callback for uploaded items without safe product URLs", () => {
+    const onProductMenuClick = vi.fn();
+    renderCard({
+      item: {
+        id: "uploaded-1",
+        source: "uploaded",
+        url: "wardrobe://uploaded-1",
+        name: "Uploaded shirt",
+        category: "top",
+        image_url: "https://example.com/uploaded-shirt.jpg",
+      },
+      allowProductMenuWithoutUrl: true,
+      isMobile: true,
+      onProductMenuClick,
+    });
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "capsule.openProductMenu" }),
+    );
+
+    expect(onProductMenuClick).toHaveBeenCalledWith(
+      expect.objectContaining({ target: expect.any(HTMLButtonElement) }),
+      "uploaded-1",
+      expect.objectContaining({ id: "uploaded-1", source: "uploaded" }),
+    );
   });
 
   test("does not render product menu button when product URL is not safe", () => {
