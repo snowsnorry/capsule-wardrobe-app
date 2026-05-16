@@ -65,17 +65,32 @@ export async function openCapsule(
       context,
       "applyCapsuleState",
     )(result.capsule);
-    await fromContext<
-      (
-        capsuleId?: string,
-        snapshot?: WardrobeSnapshot,
-        options?: unknown,
-      ) => Promise<void>
-    >(context, "restoreCapsuleSnapshot")(result.capsule?.id, result.snapshot, {
-      shouldResumeEvents: true,
-    });
+    await restoreCapsuleSnapshot(context, result.capsule?.id, result.snapshot);
     await refreshCapsuleList(context);
   });
+}
+
+async function restoreCapsuleSnapshot(
+  context: AppActionContext,
+  capsuleId: string | undefined,
+  snapshot: WardrobeSnapshot | undefined,
+) {
+  await fromContext<
+    (
+      snapshot?: WardrobeSnapshot,
+      capsuleId?: string,
+      options?: unknown,
+    ) => Promise<void>
+  >(context, "applyWardrobeSnapshot")(snapshot, capsuleId, {
+    refreshReadyCapsule: false,
+  });
+
+  if (snapshot?.status === "pending") {
+    fromContext<(capsuleId: string | undefined) => void>(
+      context,
+      "startCapsuleEventStream",
+    )(capsuleId);
+  }
 }
 
 async function mutateCurrentCapsule(

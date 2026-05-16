@@ -118,14 +118,12 @@ describe("capsuleActions", () => {
     );
   });
 
-  test("openCapsule applies capsule state and resumes snapshot events", async () => {
+  test("openCapsule applies capsule state and snapshot", async () => {
     vi.mocked(fetchCapsule).mockResolvedValue({
       capsule: createTestCapsule({ id: "capsule-2" }),
       snapshot: { status: "ready", items: [{ id: "top-1" }] },
     });
-    const context = createActionContext({
-      restoreCapsuleSnapshot: vi.fn(async () => undefined),
-    });
+    const context = createActionContext();
 
     await openCapsule(context, "capsule-2");
 
@@ -133,11 +131,28 @@ describe("capsuleActions", () => {
     expect(context.applyCapsuleState).toHaveBeenCalledWith(
       expect.objectContaining({ id: "capsule-2" }),
     );
-    expect(context.restoreCapsuleSnapshot).toHaveBeenCalledWith(
-      "capsule-2",
+    expect(context.applyWardrobeSnapshot).toHaveBeenCalledWith(
       { status: "ready", items: [{ id: "top-1" }] },
-      { shouldResumeEvents: true },
+      "capsule-2",
+      { refreshReadyCapsule: false },
     );
+  });
+
+  test("openCapsule resumes pending capsule events", async () => {
+    vi.mocked(fetchCapsule).mockResolvedValue({
+      capsule: createTestCapsule({ id: "capsule-2" }),
+      snapshot: { status: "pending", items: [{ id: "top-1" }] },
+    });
+    const context = createActionContext();
+
+    await openCapsule(context, "capsule-2");
+
+    expect(context.applyWardrobeSnapshot).toHaveBeenCalledWith(
+      { status: "pending", items: [{ id: "top-1" }] },
+      "capsule-2",
+      { refreshReadyCapsule: false },
+    );
+    expect(context.startCapsuleEventStream).toHaveBeenCalledWith("capsule-2");
   });
 
   test("current capsule mutations update only the active capsule", async () => {
