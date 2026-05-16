@@ -52,6 +52,7 @@ function MainScreenSidebar({ props, disabled, isSigningOut }: SidebarProps) {
         selectedAudience={props.selectedAudience}
         selectedAccentColor={props.selectedAccentColor}
         selectedPattern={props.selectedPattern}
+        selectedSourceMode={props.selectedSourceMode}
         selectedText={props.selectedText}
         hasFilterChanges={props.hasFilterChanges}
         status={props.status}
@@ -62,6 +63,7 @@ function MainScreenSidebar({ props, disabled, isSigningOut }: SidebarProps) {
         onSelectAudience={props.onSelectAudience}
         onSelectAccentColor={props.onSelectAccentColor}
         onSelectPattern={props.onSelectPattern}
+        onSelectSourceMode={props.onSelectSourceMode}
         onTextChange={props.onTextChange}
         onApply={props.onApplyFilters}
         onReset={props.onResetFilters}

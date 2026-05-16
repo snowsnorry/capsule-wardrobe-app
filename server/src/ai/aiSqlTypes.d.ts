@@ -2,6 +2,7 @@ import type { WardrobeUiItemLike } from "./types.js";
 
 type CapsuleWardrobeSqlRow = WardrobeUiItemLike & {
   embedding?: unknown;
+  item_source?: "catalog" | "wardrobe";
 };
 
 type CapsuleWardrobeSqlClient = {
@@ -13,6 +14,12 @@ type CapsuleWardrobeSqlClient = {
 
 type CapsuleWardrobeSqlParams = {
   categories: string[];
+  sourceMode: "catalog_only" | "wardrobe_preferred";
+  profileEmail: string;
+  wardrobeBoost: number;
+  catalogPoolLimit: number;
+  wardrobePoolLimit: number;
+  finalCandidateLimit: number;
   formalityLevel: string | null;
   style: string | null;
   occasions: string[];

@@ -247,6 +247,7 @@ function MainScreenFlowHarness({
       selectedAudience="woman"
       selectedAccentColor={null}
       selectedPattern={null}
+      selectedSourceMode="catalog_only"
       selectedText=""
       hasFilterChanges={false}
       status={{ loading: false, error: "", infoKey: "", infoParams: null }}
@@ -257,6 +258,7 @@ function MainScreenFlowHarness({
       onSelectAudience={vi.fn()}
       onSelectAccentColor={vi.fn()}
       onSelectPattern={vi.fn()}
+      onSelectSourceMode={vi.fn()}
       onTextChange={vi.fn()}
       onApplyFilters={vi.fn()}
       onResetFilters={vi.fn()}

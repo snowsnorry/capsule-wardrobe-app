@@ -181,6 +181,7 @@ function buildCapsuleStateSetters(
     setSelectedOccasions: state.setSelectedOccasions,
     setSelectedPattern: state.setSelectedPattern,
     setSelectedSeason: state.setSelectedSeason,
+    setSelectedSourceMode: state.setSelectedSourceMode,
     setSelectedStyle: state.setSelectedStyle,
     setSelectedText: state.setSelectedText,
   };
@@ -204,6 +205,7 @@ function buildDraftSnapshotInput(
     selectedOccasions: state.selectedOccasions,
     selectedPattern: state.selectedPattern,
     selectedSeason: state.selectedSeason,
+    selectedSourceMode: state.selectedSourceMode,
     selectedStyle: state.selectedStyle,
     selectedText: state.selectedText,
     wardrobe,

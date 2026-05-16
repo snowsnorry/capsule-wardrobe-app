@@ -129,6 +129,7 @@ function buildCapsuleSnapshot(
 ): CapsuleSnapshot {
   return {
     filters: {
+      sourceMode: "catalog_only",
       formalityLevel: "casual",
       style: "minimalistic",
       occasions: ["office"],

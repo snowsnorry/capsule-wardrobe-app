@@ -19,6 +19,8 @@ const PROMPT_TEMPLATE = getPromptTemplateContent(
   CAPSULE_GENERATION_PROMPT_TEMPLATE,
   "user",
 );
+const WARDROBE_PREFERENCE_RULES =
+  "Wardrobe items are items the user already owns. Prefer wardrobe items over catalog items when they are similarly suitable for the capsule. Preserve capsule quality: category, season, formality, color, style, and outfit compatibility remain the deciding constraints.";
 
 function formatStringOrDefault(value, fallback) {
   return typeof value === "string" && value.trim().length > 0
@@ -42,6 +44,12 @@ function getAdditionalInfoBlock(userProfile) {
     : "";
 }
 
+function getWardrobePreferenceRules(userProfile) {
+  return userProfile?.sourceMode === "wardrobe_preferred"
+    ? WARDROBE_PREFERENCE_RULES
+    : "";
+}
+
 function getWardrobeSelectionReplacements(userProfile, items, categories) {
   const formalityText = formatStringOrDefault(
     userProfile?.formalityLevel,
@@ -62,6 +70,7 @@ function getWardrobeSelectionReplacements(userProfile, items, categories) {
     ),
     pattern: getSelectionPatternText(userProfile),
     additional_info_block: getAdditionalInfoBlock(userProfile),
+    wardrobe_preference_rules: getWardrobePreferenceRules(userProfile),
     items: JSON.stringify(simplifiedItems, null, 2),
     category_list: getCategoryListText(categories),
     categories_schema: getCategorySchema(categories),
@@ -94,6 +103,7 @@ function getItemArray(item, key) {
 function toPromptItem(item) {
   return {
     id: getItemValue(item, "id", null),
+    item_source: getItemValue(item, "item_source", "catalog"),
     name: getItemValue(item, "name"),
     type: getItemValue(item, "category"),
     color: formatItemColorParts(item).join(", "),

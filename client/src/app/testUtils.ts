@@ -18,14 +18,17 @@ export const testStatus: StatusState = {
 export function createTestDraft({
   items = [],
   pattern = "solid",
+  sourceMode = "catalog_only",
   text = "",
 }: {
   items?: WardrobeItem[];
   pattern?: string | null;
+  sourceMode?: CapsuleDraft["filters"]["sourceMode"];
   text?: string;
 } = {}): CapsuleDraft {
   return {
     filters: {
+      sourceMode,
       formalityLevel: "casual",
       style: "minimalistic",
       occasions: ["office"],
@@ -102,6 +105,7 @@ export function createActionContext(
     selectedOccasions: ["office"],
     selectedRegenerationUrls: [],
     selectedSeason: ["summer"],
+    selectedSourceMode: "catalog_only",
     setActiveCapsuleMeta: vi.fn(),
     setCapsuleList: vi.fn(),
     setCurrentView: vi.fn(),
@@ -121,6 +125,7 @@ export function createActionContext(
     setProfileItems: vi.fn(),
     setProfileOutfitSets: vi.fn(),
     setSelectedRegenerationUrls: vi.fn(),
+    setSelectedSourceMode: vi.fn(),
     setSettingsProfile: vi.fn(),
     setStatus: vi.fn(),
     settingsProfile: createTestProfile(),

@@ -1,5 +1,6 @@
 import { test, expect } from "vitest";
 import {
+  buildProfileCapsuleContext,
   buildSharedCapsuleOgMetadata,
   createCapsuleStore,
   normalizeCapsuleFilters,
@@ -21,6 +22,7 @@ function capsuleRow(overrides = {}) {
     draft: null,
     saved: {
       filters: {
+        sourceMode: "catalog_only",
         formalityLevel: "casual",
         style: "minimalistic",
         occasions: ["office"],
@@ -58,6 +60,13 @@ test("normalizeCapsuleFilters drops removed profile occasions and keeps supporte
       ],
     }).occasions,
   ).toEqual(["office", "everyday_errands"]);
+  expect(normalizeCapsuleFilters({}).sourceMode).toBe("catalog_only");
+  expect(
+    normalizeCapsuleFilters({ sourceMode: "wardrobe_preferred" }).sourceMode,
+  ).toBe("wardrobe_preferred");
+  expect(
+    normalizeCapsuleFilters({ sourceMode: "owned_first" }).sourceMode,
+  ).toBe("catalog_only");
 });
 
 test("normalizeCapsuleSnapshot sanitizes saved profile occasions on read and write", () => {
@@ -108,11 +117,43 @@ test("normalizeCapsuleSnapshot preserves outfit set image payloads", () => {
   ]);
 });
 
+test("buildProfileCapsuleContext forwards source mode and rejected urls", () => {
+  const context = buildProfileCapsuleContext(
+    { email: "person@example.com", locale: "en" },
+    {
+      draft: {
+        filters: {
+          sourceMode: "wardrobe_preferred",
+          formalityLevel: "casual",
+          style: "minimalistic",
+          occasions: ["office"],
+          season: ["spring"],
+          audience: "woman",
+          color: null,
+          pattern: "solid",
+          text: "",
+        },
+        data: {
+          wardrobe: null,
+          rejectedUrls: ["https://example.com/rejected"],
+        },
+      },
+    },
+  );
+
+  expect(context).toMatchObject({
+    email: "person@example.com",
+    sourceMode: "wardrobe_preferred",
+    rejected: ["https://example.com/rejected"],
+  });
+});
+
 test("buildSharedCapsuleOgMetadata formats English filter sentences and prefers outfit set images", () => {
   const metadata = buildSharedCapsuleOgMetadata({
     name: "Spring <edit>",
     content: {
       filters: {
+        sourceMode: "catalog_only",
         formalityLevel: "casual",
         style: "minimalistic",
         occasions: ["office", "date_night"],

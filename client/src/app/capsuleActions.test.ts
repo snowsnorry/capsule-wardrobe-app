@@ -66,13 +66,16 @@ describe("capsuleActions", () => {
     expect(context.setSelectedStyle).not.toHaveBeenCalled();
   });
 
-  test("applyCapsuleFilters preserves optional text in the API payload", async () => {
+  test("applyCapsuleFilters preserves generation filters in the API payload", async () => {
     vi.mocked(updateCapsuleFilters).mockResolvedValue({
       capsule: createTestCapsule(),
     });
     const context = createActionContext({
       buildCurrentDraftSnapshot: vi.fn(() =>
-        createTestDraft({ text: "Prefer natural fabrics" }),
+        createTestDraft({
+          sourceMode: "wardrobe_preferred",
+          text: "Prefer natural fabrics",
+        }),
       ),
     });
 
@@ -80,7 +83,10 @@ describe("capsuleActions", () => {
 
     expect(updateCapsuleFilters).toHaveBeenCalledWith(
       "capsule-1",
-      expect.objectContaining({ text: "Prefer natural fabrics" }),
+      expect.objectContaining({
+        sourceMode: "wardrobe_preferred",
+        text: "Prefer natural fabrics",
+      }),
       { regenerate: true },
     );
     expect(context.setIsLoadingItems).toHaveBeenCalledWith(false);

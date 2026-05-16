@@ -42,6 +42,7 @@ function t(key: string, params?: Record<string, unknown>) {
     "profile.styleAestheticNotImportant": "Aesthetic not important",
     "capsule.settingsTitle": "Capsule settings",
     "capsule.settingsSubtitle": "Adjust the inputs used to build this capsule.",
+    "capsule.preferWardrobe": "Prefer items from my wardrobe",
     "filters.apply": "Apply",
     "filters.applyDisabledHint": "To apply filters, choose: {items}.",
     "filters.applyDisabledUnchangedHint": "Filters have not changed.",
@@ -93,6 +94,7 @@ function renderFrame({
     selectedAudience: "woman",
     selectedAccentColor: "blue",
     selectedPattern: "solid",
+    selectedSourceMode: "catalog_only",
     selectedText: "",
     hasFilterChanges: true,
     status: { loading: false, error: "", infoKey: "", infoParams: null },
@@ -103,6 +105,7 @@ function renderFrame({
     onSelectAudience: vi.fn(),
     onSelectAccentColor: vi.fn(),
     onSelectPattern: vi.fn(),
+    onSelectSourceMode: vi.fn(),
     onTextChange: vi.fn(),
     onApply: vi.fn(),
     onReset: vi.fn(),
@@ -136,14 +139,27 @@ describe("ProfileFiltersSidebarSections", () => {
   });
 
   test("renders the capsule settings header", () => {
-    renderFrame();
+    const { container } = renderFrame();
+    const subtitle = screen.getByText(
+      "Adjust the inputs used to build this capsule.",
+    );
+    const sourceModeToggle = screen.getByRole("checkbox", {
+      name: "Prefer items from my wardrobe",
+    });
+    const firstDivider = container.querySelector(".MuiDivider-root");
 
     expect(
       screen.getByRole("heading", { name: "Capsule settings" }),
     ).toBeInTheDocument();
+    expect(subtitle).toBeInTheDocument();
     expect(
-      screen.getByText("Adjust the inputs used to build this capsule."),
-    ).toBeInTheDocument();
+      sourceModeToggle.compareDocumentPosition(subtitle) &
+        Node.DOCUMENT_POSITION_PRECEDING,
+    ).toBeTruthy();
+    expect(
+      (firstDivider?.compareDocumentPosition(sourceModeToggle) ?? 0) &
+        Node.DOCUMENT_POSITION_PRECEDING,
+    ).toBeTruthy();
   });
 
   test("can keep the subtitle while moving the settings title outside", () => {
@@ -166,6 +182,7 @@ describe("ProfileFiltersSidebarSections", () => {
     const onSelectAudience = vi.fn();
     const onSelectAccentColor = vi.fn();
     const onSelectPattern = vi.fn();
+    const onSelectSourceMode = vi.fn();
     const onTextChange = vi.fn();
 
     renderFrame({
@@ -177,6 +194,7 @@ describe("ProfileFiltersSidebarSections", () => {
         onSelectAudience,
         onSelectAccentColor,
         onSelectPattern,
+        onSelectSourceMode,
         onTextChange,
       },
     });
@@ -188,6 +206,11 @@ describe("ProfileFiltersSidebarSections", () => {
     await user.click(screen.getByRole("button", { name: "man" }));
     await user.click(screen.getByRole("button", { name: "red" }));
     await user.click(screen.getByRole("button", { name: "Stripe" }));
+    await user.click(
+      screen.getByRole("checkbox", {
+        name: "Prefer items from my wardrobe",
+      }),
+    );
     await user.type(
       screen.getByPlaceholderText("Additional placeholder"),
       "linen only",
@@ -200,6 +223,7 @@ describe("ProfileFiltersSidebarSections", () => {
     expect(onSelectAudience).toHaveBeenCalledWith("man");
     expect(onSelectAccentColor).toHaveBeenCalledWith("red");
     expect(onSelectPattern).toHaveBeenCalledWith("stripe");
+    expect(onSelectSourceMode).toHaveBeenCalledWith("wardrobe_preferred");
     expect(onTextChange).toHaveBeenCalled();
   });
 
@@ -280,6 +304,9 @@ describe("ProfileFiltersSidebarSections", () => {
     );
     expect(
       screen.getByPlaceholderText("Additional placeholder"),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole("checkbox", { name: "Prefer items from my wardrobe" }),
     ).toBeDisabled();
 
     expect(onSelectStyleCore).not.toHaveBeenCalled();

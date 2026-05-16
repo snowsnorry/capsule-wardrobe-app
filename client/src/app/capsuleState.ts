@@ -2,6 +2,7 @@ import type {
   CapsuleDraft,
   CapsuleFilters,
   CapsuleMeta,
+  CapsuleSourceMode,
   CapsuleWardrobeData,
   OutfitSetSnapshot,
   WardrobeItem,
@@ -70,6 +71,7 @@ export function buildCapsuleStatus(capsule: CapsuleMeta | null | undefined) {
 export function buildEmptyCapsuleDraft(): CapsuleDraft {
   return {
     filters: {
+      sourceMode: "catalog_only",
       formalityLevel: "",
       style: null,
       occasions: [],
@@ -103,6 +105,7 @@ export function buildDraftSnapshotFromState({
   selectedOccasions,
   selectedPattern,
   selectedSeason,
+  selectedSourceMode,
   selectedStyle,
   selectedText,
   wardrobe,
@@ -117,6 +120,7 @@ export function buildDraftSnapshotFromState({
   selectedOccasions: string[];
   selectedPattern: string;
   selectedSeason: string[];
+  selectedSourceMode: CapsuleSourceMode;
   selectedStyle: string | null;
   selectedText: string;
   wardrobe?:
@@ -130,6 +134,7 @@ export function buildDraftSnapshotFromState({
       : wardrobe;
   return {
     filters: {
+      sourceMode: selectedSourceMode,
       formalityLevel: selectedFormalityLevel,
       style: selectedStyle,
       occasions: selectedOccasions,
@@ -158,6 +163,10 @@ export function buildDraftSnapshotFromState({
 
 function normalizeComparableFilters(filters: Partial<CapsuleFilters> = {}) {
   return {
+    sourceMode:
+      filters.sourceMode === "wardrobe_preferred"
+        ? "wardrobe_preferred"
+        : "catalog_only",
     formalityLevel:
       typeof filters.formalityLevel === "string" ? filters.formalityLevel : "",
     style: filters.style ?? null,

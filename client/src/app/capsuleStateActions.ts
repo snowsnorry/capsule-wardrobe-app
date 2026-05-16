@@ -6,6 +6,7 @@ import {
 } from "./capsuleState";
 import { buildDisplayWardrobeItems } from "../../../shared/wardrobeMerge.js";
 import type { CapsuleMeta, WardrobeItem } from "./appTypes";
+import type { CapsuleSourceMode } from "./appTypes";
 
 type StateSetter<T> = (value: T) => void;
 
@@ -23,6 +24,7 @@ type ApplyCapsuleStateContext = {
   setSelectedOccasions: StateSetter<string[]>;
   setSelectedPattern: StateSetter<string>;
   setSelectedSeason: StateSetter<string[]>;
+  setSelectedSourceMode: StateSetter<CapsuleSourceMode>;
   setSelectedStyle: StateSetter<string | null>;
   setSelectedText: StateSetter<string>;
 };
@@ -31,6 +33,12 @@ function normalizePattern(pattern: unknown) {
   return typeof pattern === "string" && pattern.trim().length > 0
     ? pattern
     : "solid";
+}
+
+function normalizeSourceMode(sourceMode: unknown): CapsuleSourceMode {
+  return sourceMode === "wardrobe_preferred"
+    ? "wardrobe_preferred"
+    : "catalog_only";
 }
 
 function fallbackString(value: unknown) {
@@ -59,6 +67,7 @@ function applyCapsuleFilters(
   context.setSelectedAudience(fallbackString(filters.audience));
   context.setSelectedColor(fallbackNullableString(filters.color));
   context.setSelectedPattern(normalizePattern(filters.pattern));
+  context.setSelectedSourceMode(normalizeSourceMode(filters.sourceMode));
   context.setSelectedText(fallbackString(filters.text));
   return effective;
 }

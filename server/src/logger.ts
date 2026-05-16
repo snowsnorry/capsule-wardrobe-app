@@ -3,6 +3,7 @@ import { inspect } from "node:util";
 const isTestEnv =
   process.env.NODE_ENV === "test" || process.env.VITEST === "true";
 const defaultStdoutWrite = process.stdout.write;
+const defaultConsoleError = globalThis.console.error;
 
 function formatLogValue(value: unknown): string {
   if (typeof value === "string") {
@@ -33,5 +34,6 @@ export function logWarn(...values: unknown[]): void {
 }
 
 export function logError(...values: unknown[]): void {
+  if (isTestEnv && globalThis.console.error === defaultConsoleError) return;
   globalThis.console.error(...values);
 }

@@ -29,6 +29,8 @@ export type MainScreenItem = {
   [key: string]: unknown;
 };
 
+export type CapsuleSourceMode = "catalog_only" | "wardrobe_preferred";
+
 type ScreenStatus = {
   loading: boolean;
   error: string;
@@ -99,6 +101,7 @@ export type MainScreenProps = {
   selectedAudience: string;
   selectedAccentColor: string | null;
   selectedPattern: string | null;
+  selectedSourceMode: CapsuleSourceMode;
   selectedText: string;
   hasFilterChanges: boolean;
   status: ScreenStatus;
@@ -109,6 +112,7 @@ export type MainScreenProps = {
   onSelectAudience: (value: string) => void;
   onSelectAccentColor: (value: string | null) => void;
   onSelectPattern: (value: string) => void;
+  onSelectSourceMode: (value: CapsuleSourceMode) => void;
   onTextChange: (value: string) => void;
   onApplyFilters: () => Promise<void> | void;
   onResetFilters: () => Promise<void> | void;

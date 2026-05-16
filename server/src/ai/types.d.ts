@@ -31,6 +31,8 @@ type JsonSchemaFormat = {
 };
 
 type UserProfileLike = {
+  email?: string | null;
+  sourceMode?: "catalog_only" | "wardrobe_preferred" | null;
   llm?: string | null;
   imageLlm?: string | null;
   style?: string | null;
@@ -99,6 +101,7 @@ type CountByKey = Record<string, number>;
 
 type WardrobeUiItemLike = {
   id?: string | number | null;
+  item_source?: "catalog" | "wardrobe" | string | null;
   url?: string | null;
   name?: string | null;
   category?: string | null;

@@ -39,6 +39,20 @@ test("logInfo falls back to an error message when stack is empty", () => {
   expect(writes).toEqual(["message only\n"]);
 });
 
+test("logError does not write to stderr in tests unless console.error is mocked", () => {
+  const writes: string[] = [];
+  vi.spyOn(process.stderr, "write").mockImplementation(
+    (chunk: string | Uint8Array) => {
+      writes.push(String(chunk));
+      return true;
+    },
+  );
+
+  logError("expected test failure path");
+
+  expect(writes).toEqual([]);
+});
+
 test("logWarn and logError delegate to console methods", () => {
   const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
   const error = vi.spyOn(console, "error").mockImplementation(() => {});

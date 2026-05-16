@@ -1,8 +1,11 @@
+/* eslint-disable max-lines */
 import {
   Button,
   Chip,
   Divider,
+  FormControlLabel,
   Stack,
+  Switch,
   TextField,
   Typography,
 } from "@mui/material";
@@ -63,9 +66,13 @@ function ProfileFilterChipSection({
 }
 
 function ProfileFiltersHeader({
+  disabled,
+  props,
   showTitle,
   t,
 }: {
+  disabled: boolean;
+  props: ProfileFiltersSidebarProps;
   showTitle: boolean;
   t: Translate;
 }) {
@@ -80,6 +87,40 @@ function ProfileFiltersHeader({
         <Typography variant="body2" color="text.secondary">
           {t("capsule.settingsSubtitle")}
         </Typography>
+        <FormControlLabel
+          labelPlacement="start"
+          control={
+            <Switch
+              checked={props.selectedSourceMode === "wardrobe_preferred"}
+              disabled={disabled}
+              size="small"
+              onChange={(event) =>
+                props.onSelectSourceMode(
+                  event.target.checked ? "wardrobe_preferred" : "catalog_only",
+                )
+              }
+            />
+          }
+          label={t("capsule.preferWardrobe")}
+          sx={{
+            alignSelf: "stretch",
+            justifyContent: "space-between",
+            ml: 0,
+            mr: 0,
+            mt: 1,
+            py: 0.75,
+            px: 1,
+            borderRadius: "8px",
+            bgcolor: "action.hover",
+            gap: 1.5,
+            "& .MuiFormControlLabel-label": {
+              color: "text.primary",
+              fontSize: "0.875rem",
+              fontWeight: 600,
+              lineHeight: 1.35,
+            },
+          }}
+        />
       </Stack>
       <Divider />
     </Stack>
@@ -306,6 +347,8 @@ function ProfileFiltersSidebarFrame({
   return (
     <Stack spacing={3.5} sx={{ boxSizing: "border-box" }}>
       <ProfileFiltersHeader
+        disabled={disabled}
+        props={props}
         showTitle={props.showSettingsTitle !== false}
         t={t}
       />

@@ -44,6 +44,7 @@ function renderSidebar(
     selectedAudience: "woman",
     selectedAccentColor: "blue",
     selectedPattern: "solid",
+    selectedSourceMode: "catalog_only",
     selectedText: "",
     hasFilterChanges: true,
     status: { loading: false, error: "", infoKey: "", infoParams: null },
@@ -54,6 +55,7 @@ function renderSidebar(
     onSelectAudience: vi.fn(),
     onSelectAccentColor: vi.fn(),
     onSelectPattern: vi.fn(),
+    onSelectSourceMode: vi.fn(),
     onTextChange: vi.fn(),
     onApply: vi.fn(),
     onReset: vi.fn(),
@@ -89,6 +91,7 @@ function renderSidebar(
         "capsule.settingsTitle": "Capsule settings",
         "capsule.settingsSubtitle":
           "Adjust the inputs used to build this capsule.",
+        "capsule.preferWardrobe": "Prefer items from my wardrobe",
         "filters.apply": "Apply",
         "filters.applyDisabledHint": "To apply filters, choose: {items}.",
         "filters.applyDisabledUnchangedHint": "Filters have not changed.",

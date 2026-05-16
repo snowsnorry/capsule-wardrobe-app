@@ -213,6 +213,7 @@ const en = {
     new: "New capsule",
     settingsTitle: "Capsule settings",
     settingsSubtitle: "Adjust the inputs used to build this capsule.",
+    preferWardrobe: "Prefer items from my wardrobe",
     search: "Search capsules",
     yourCapsules: "Your capsules",
     notSaved: "Not saved",

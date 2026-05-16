@@ -40,7 +40,7 @@ type UploadedProductDetailFormProps = {
 };
 
 type SingleSelectConfig = {
-  key: keyof Pick<
+  fieldKey: keyof Pick<
     UploadedProductFormState,
     "audience" | "category" | "pattern" | "finish" | "silhouette" | "fit"
   >;
@@ -51,7 +51,7 @@ type SingleSelectConfig = {
 };
 
 type MultiSelectConfig = {
-  key: keyof Pick<
+  fieldKey: keyof Pick<
     UploadedProductFormState,
     | "season"
     | "formality_level"
@@ -95,23 +95,23 @@ function UploadedProductDetailForm({
         <UploadedProductTextFields form={form} t={t} setField={setField} />
         {getSingleSelectConfigs(t).map((field) => (
           <SingleSelectField
-            key={field.key}
+            key={field.fieldKey}
             {...field}
             locale={locale}
             emptyLabel={emptyLabel}
-            value={form[field.key]}
+            value={form[field.fieldKey]}
             onChange={(value) =>
-              setField(field.key, value || (field.required ? "" : null))
+              setField(field.fieldKey, value || (field.required ? "" : null))
             }
           />
         ))}
         {getMultiSelectConfigs(t).map((field) => (
           <MultiSelectField
-            key={field.key}
+            key={field.fieldKey}
             {...field}
             locale={locale}
-            values={form[field.key]}
-            onChange={(value) => setField(field.key, value)}
+            values={form[field.fieldKey]}
+            onChange={(value) => setField(field.fieldKey, value)}
           />
         ))}
         <MultiSelectField
@@ -180,39 +180,39 @@ function getSingleSelectConfigs(
 ): SingleSelectConfig[] {
   return [
     {
-      key: "audience",
+      fieldKey: "audience",
       required: true,
       label: t("search.fields.audience"),
       options: PRODUCT_AUDIENCE_OPTIONS,
       optionGroup: "audience",
     },
     {
-      key: "category",
+      fieldKey: "category",
       required: true,
       label: t("search.filters.category"),
       options: PRODUCT_CATEGORY_OPTIONS,
       optionGroup: "categories",
     },
     {
-      key: "pattern",
+      fieldKey: "pattern",
       label: t("search.fields.pattern"),
       options: PRODUCT_PATTERN_OPTIONS,
       optionGroup: "patterns",
     },
     {
-      key: "finish",
+      fieldKey: "finish",
       label: t("search.fields.finish"),
       options: PRODUCT_FINISH_OPTIONS,
       optionGroup: "finishes",
     },
     {
-      key: "silhouette",
+      fieldKey: "silhouette",
       label: t("search.fields.silhouette"),
       options: PRODUCT_SILHOUETTE_OPTIONS,
       optionGroup: "silhouettes",
     },
     {
-      key: "fit",
+      fieldKey: "fit",
       label: t("search.fields.fit"),
       options: PRODUCT_FIT_OPTIONS,
       optionGroup: "fits",
@@ -225,38 +225,38 @@ function getMultiSelectConfigs(
 ): MultiSelectConfig[] {
   return [
     {
-      key: "season",
+      fieldKey: "season",
       required: true,
       label: t("search.fields.season"),
       options: PRODUCT_SEASON_OPTIONS,
       optionGroup: "seasons",
     },
     {
-      key: "formality_level",
+      fieldKey: "formality_level",
       label: t("search.fields.formalityLevel"),
       options: PRODUCT_FORMALITY_LEVEL_OPTIONS,
       optionGroup: "styles",
     },
     {
-      key: "style",
+      fieldKey: "style",
       label: t("search.fields.style"),
       options: PRODUCT_STYLE_OPTIONS,
       optionGroup: "styles",
     },
     {
-      key: "occasions",
+      fieldKey: "occasions",
       label: t("search.fields.occasions"),
       options: PRODUCT_OCCASION_OPTIONS,
       optionGroup: "occasions",
     },
     {
-      key: "color_base",
+      fieldKey: "color_base",
       label: t("search.fields.color"),
       options: PRODUCT_COLOR_BASE_OPTIONS,
       optionGroup: "accentColors",
     },
     {
-      key: "closure_type",
+      fieldKey: "closure_type",
       label: t("search.fields.closureType"),
       options: PRODUCT_CLOSURE_TYPE_OPTIONS,
       optionGroup: "closureTypes",
@@ -315,7 +315,7 @@ function MultiSelectField({
   options,
   required = false,
   values,
-}: Omit<MultiSelectConfig, "key"> & {
+}: Omit<MultiSelectConfig, "fieldKey"> & {
   locale: string;
   onChange: (value: string[]) => void;
   values: string[];

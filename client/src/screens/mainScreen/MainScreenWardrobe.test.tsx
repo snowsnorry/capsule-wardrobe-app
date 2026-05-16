@@ -116,7 +116,7 @@ describe("MainScreenWardrobe", () => {
     expect(onToggleSelected).not.toHaveBeenCalled();
   });
 
-  test("renders create image button for outfit tab without generated image", async () => {
+  test("renders only create image button for outfit tab without generated image", async () => {
     const user = userEvent.setup();
     const onGenerateImage = vi.fn();
     renderWardrobe({
@@ -134,8 +134,8 @@ describe("MainScreenWardrobe", () => {
 
     expect(screen.getByTestId("outfit-set-image-divider")).toBeInTheDocument();
     expect(
-      screen.getByTestId("outfit-set-image-placeholder"),
-    ).toBeInTheDocument();
+      screen.queryByTestId("outfit-set-image-placeholder"),
+    ).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Create image" }));
     expect(onGenerateImage).toHaveBeenCalledWith(0);
   });

@@ -462,6 +462,8 @@ test("db integration lists and saves user wardrobe items", async () => {
   ]);
   expect(calls[1].text).toMatch(/insert into wardrobe/i);
   expect(calls[1].text).toMatch(/from products/i);
+  expect(calls[1].text).toMatch(/products\.id::text/i);
+  expect(calls[1].text).toMatch(/product_id = excluded\.product_id/i);
   expect(calls[1].text).toMatch(/on conflict \(profile_email, url\)/i);
   expect(calls[1].values[0]).toBe("user@example.com");
   expect(calls[1].values[1]).toBe("https://example.com/products/linen-shirt");

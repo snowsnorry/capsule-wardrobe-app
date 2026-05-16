@@ -32,7 +32,10 @@ export type ProfileSettings = {
   image_llm?: string;
 };
 
+export type CapsuleSourceMode = "catalog_only" | "wardrobe_preferred";
+
 export type CapsuleFilters = {
+  sourceMode: CapsuleSourceMode;
   formalityLevel: string;
   style: string | null;
   occasions: string[];

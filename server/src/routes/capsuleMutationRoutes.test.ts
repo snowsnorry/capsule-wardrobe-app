@@ -129,6 +129,7 @@ test("capsule creation only accepts name and filters and initializes server-owne
       filters: {
         formalityLevel: "casual",
         style: "minimalistic",
+        sourceMode: "wardrobe_preferred",
         occasions: ["office", "", null],
         season: ["spring"],
         audience: "woman",
@@ -145,6 +146,7 @@ test("capsule creation only accepts name and filters and initializes server-owne
       filters: {
         formalityLevel: "casual",
         style: "minimalistic",
+        sourceMode: "wardrobe_preferred",
         occasions: ["office"],
         season: ["spring"],
         audience: "woman",
@@ -172,6 +174,7 @@ test("capsule creation rejects client-supplied state-bearing fields", async (t) 
     csrfToken: CSRF_TOKEN,
     body: {
       name: "Spring edit",
+      sourceMode: "wardrobe_preferred",
       draft: {
         filters: { audience: "woman" },
         data: {
@@ -206,6 +209,7 @@ test("filters patch only accepts filters and resets draft data", async (t) => {
       filters: {
         formalityLevel: "casual",
         style: "minimalistic",
+        sourceMode: "wardrobe_preferred",
         occasions: ["office", "", null],
         season: ["spring"],
         audience: "woman",
@@ -222,6 +226,7 @@ test("filters patch only accepts filters and resets draft data", async (t) => {
     filters: {
       formalityLevel: "casual",
       style: "minimalistic",
+      sourceMode: "wardrobe_preferred",
       occasions: ["office"],
       season: ["spring"],
       audience: "woman",
@@ -234,6 +239,23 @@ test("filters patch only accepts filters and resets draft data", async (t) => {
       rejectedUrls: [],
     },
   });
+
+  const invalidTopLevel = await requestJson(
+    baseUrl,
+    "/capsules/capsule-1/filters",
+    {
+      method: "PATCH",
+      origin: TEST_CLIENT_ORIGIN,
+      cookie: AUTH_COOKIE,
+      csrfToken: CSRF_TOKEN,
+      body: {
+        filters: {},
+        sourceMode: "wardrobe_preferred",
+      },
+    },
+  );
+  expect(invalidTopLevel.response.status).toBe(400);
+  expect(invalidTopLevel.json).toEqual({ error: "invalid_payload" });
 });
 
 test("filters patch can trigger regenerate via query flag after saving filters", async (t) => {
@@ -276,6 +298,7 @@ test("filters patch can trigger regenerate via query flag after saving filters",
         filters: {
           formalityLevel: "",
           style: null,
+          sourceMode: "catalog_only",
           occasions: [],
           audience: "woman",
           season: ["summer"],
@@ -328,6 +351,7 @@ test("rejected urls patch validates against current capsule wardrobe", async (t)
     filters: {
       formalityLevel: "casual",
       style: "minimalistic",
+      sourceMode: "catalog_only",
       occasions: ["office"],
       season: ["spring"],
       audience: "woman",
@@ -377,6 +401,7 @@ test("rejected urls patch rejects unknown urls and missing wardrobe", async (t) 
           filters: {
             formalityLevel: "casual",
             style: "minimalistic",
+            sourceMode: "catalog_only",
             occasions: ["office"],
             season: ["spring"],
             audience: "woman",

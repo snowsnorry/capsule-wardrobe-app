@@ -120,6 +120,7 @@ messages:
       AVAILABLE ITEMS (Candidates):
       {{items}}
       (Note: Each candidate has "formality_level" and "style" as arrays of strings. Assume all candidates already match the requested season and occasions.)
+      {{wardrobe_preference_rules}}
 
       INSTRUCTIONS & CONSTRAINTS:
       1. Blueprint: You MUST select exactly {{num_items}} items.

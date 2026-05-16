@@ -3,6 +3,7 @@ import { initialStatus } from "./appConstants";
 import { normalizeProfileSettings } from "./profileSettings";
 import type {
   CapsuleMeta,
+  CapsuleSourceMode,
   CapsuleSidebarActions,
   OutfitSetSnapshot,
   SessionStep,
@@ -56,6 +57,8 @@ export function useProfileFilterAppState() {
   const [selectedAudience, setSelectedAudience] = useState("");
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [selectedPattern, setSelectedPattern] = useState("solid");
+  const [selectedSourceMode, setSelectedSourceMode] =
+    useState<CapsuleSourceMode>("catalog_only");
   const [selectedText, setSelectedText] = useState("");
   const [currentView, setCurrentView] = useState("main");
   const [settingsProfile, setSettingsProfile] = useState(() =>
@@ -71,6 +74,7 @@ export function useProfileFilterAppState() {
     selectedOccasions,
     selectedPattern,
     selectedSeason,
+    selectedSourceMode,
     selectedStyle,
     selectedText,
     setCurrentView,
@@ -81,6 +85,7 @@ export function useProfileFilterAppState() {
     setSelectedOccasions,
     setSelectedPattern,
     setSelectedSeason,
+    setSelectedSourceMode,
     setSelectedStyle,
     setSelectedText,
     setSettingsProfile,

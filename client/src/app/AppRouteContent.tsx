@@ -4,6 +4,7 @@ import type {
   AppNavigationOptions,
   AppRoute,
   CapsuleMeta,
+  CapsuleSourceMode,
   CapsuleSidebarActions,
   OutfitSetSnapshot,
   ProfileSettings,
@@ -17,7 +18,6 @@ import {
   GOOGLE_CLIENT_ID,
 } from "./appConstants";
 import { importMainScreen } from "./mainScreenLoader";
-
 const MainScreen = lazy(importMainScreen);
 const MyWardrobeScreen = lazy(() => import("../screens/MyWardrobeScreen"));
 const OnboardingScreen = lazy(() => import("../screens/OnboardingScreen"));
@@ -25,14 +25,13 @@ const ProfileScreen = lazy(() => import("../screens/ProfileScreen"));
 const SearchScreen = lazy(() => import("../screens/SearchScreen"));
 const SignInScreen = lazy(() => import("../screens/SignInScreen"));
 const StatisticsScreen = lazy(() => import("../screens/StatisticsScreen"));
-
 type TranslationFn = (key: string, params?: Record<string, unknown>) => string;
 type ToggleSelectionFn = (
   value: string,
   selected: string[],
   setter: Dispatch<SetStateAction<string[]>>,
 ) => void;
-
+type OutfitSetIndex = number | string | null | undefined;
 type SharedFilterProps = {
   styleOptions: { core: string[]; aesthetics: string[] };
   occasionOptions: string[];
@@ -47,6 +46,7 @@ type SharedFilterProps = {
   selectedColor: string | null;
   selectedPattern: string;
   selectedText: string;
+  selectedSourceMode: CapsuleSourceMode;
   setSelectedFormalityLevel: (value: string) => void;
   setSelectedStyle: (value: string | null) => void;
   setSelectedOccasions: Dispatch<SetStateAction<string[]>>;
@@ -55,9 +55,9 @@ type SharedFilterProps = {
   setSelectedColor: (value: string | null) => void;
   setSelectedPattern: (value: string) => void;
   setSelectedText: (value: string) => void;
+  setSelectedSourceMode: (value: CapsuleSourceMode) => void;
   toggleSelection: ToggleSelectionFn;
 };
-
 type AppRouteContentProps = SharedFilterProps & {
   appRoute: AppRoute;
   currentView: string;
@@ -95,16 +95,12 @@ type AppRouteContentProps = SharedFilterProps & {
   onCancelRegenerationSelection: () => void;
   onCreateCapsule: () => Promise<void>;
   onDeleteCapsule: (capsuleId?: string) => Promise<void>;
-  onDeleteOutfitSetImage: (
-    setIndex: number | string | null | undefined,
-  ) => Promise<void>;
+  onDeleteOutfitSetImage: (setIndex: OutfitSetIndex) => Promise<void>;
   onDeleteProfile: () => Promise<void>;
   onDownloadWardrobePdf: (capsuleId?: string) => Promise<void>;
   onDuplicateCapsule: (name: string, capsuleId?: string) => Promise<void>;
   onFinishOnboarding: () => Promise<void>;
-  onGenerateOutfitSetImage: (
-    setIndex: number | string | null | undefined,
-  ) => Promise<void>;
+  onGenerateOutfitSetImage: (setIndex: OutfitSetIndex) => Promise<void>;
   onGoogleCredential: (idToken: string) => Promise<void>;
   onNavigateApp: (
     nextApp: Exclude<AppRoute, "share">,
@@ -227,6 +223,7 @@ function MainRoute(props: AppRouteContentProps) {
       selectedAudience={props.selectedAudience}
       selectedAccentColor={props.selectedColor}
       selectedPattern={props.selectedPattern}
+      selectedSourceMode={props.selectedSourceMode}
       selectedText={props.selectedText}
       hasFilterChanges={props.hasFilterChanges}
       status={props.status}
@@ -249,6 +246,7 @@ function MainRoute(props: AppRouteContentProps) {
       onSelectAudience={props.setSelectedAudience}
       onSelectAccentColor={props.setSelectedColor}
       onSelectPattern={props.setSelectedPattern}
+      onSelectSourceMode={props.setSelectedSourceMode}
       onTextChange={props.setSelectedText}
       onApplyFilters={props.onApplyCapsuleFilters}
       onResetFilters={props.onResetProfileFilters}
@@ -266,7 +264,6 @@ function MainRoute(props: AppRouteContentProps) {
     />
   );
 }
-
 function OnboardingRoute(props: AppRouteContentProps) {
   return (
     <OnboardingScreen
@@ -304,12 +301,10 @@ function OnboardingRoute(props: AppRouteContentProps) {
     />
   );
 }
-
 export default function AppRouteContent(props: AppRouteContentProps) {
   if (props.isCheckingSession || !props.sessionInitialized) {
     return null;
   }
-
   if (!props.user) {
     return (
       <SignInScreen
@@ -342,17 +337,14 @@ export default function AppRouteContent(props: AppRouteContentProps) {
     if (props.appRoute === "myWardrobe") {
       return <MyWardrobeScreen />;
     }
-
     if (props.appRoute === "statistics") {
       return <StatisticsScreen onNavigateApp={props.onNavigateApp} />;
     }
-
     return props.currentView === "profile" ? (
       <ProfileRoute {...props} />
     ) : (
       <MainRoute {...props} />
     );
   }
-
   return <OnboardingRoute {...props} />;
 }

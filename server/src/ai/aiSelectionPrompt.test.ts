@@ -56,6 +56,36 @@ test("getWardrobeSelectionPrompt includes no-accent and solid guidance by defaul
   expect(prompt).toMatch(/solid \(no print\)/);
 });
 
+test("getWardrobeSelectionPrompt renders wardrobe preference rules only for wardrobe mode", () => {
+  const catalogPrompt = getWardrobeSelectionPrompt(
+    {
+      audience: "woman",
+      formalityLevel: "casual",
+      sourceMode: "catalog_only",
+    },
+    [{ id: "top-1", name: "Top", category: "top" }],
+    { top: 1 },
+  );
+  const wardrobePrompt = getWardrobeSelectionPrompt(
+    {
+      audience: "woman",
+      formalityLevel: "casual",
+      sourceMode: "wardrobe_preferred",
+    },
+    [{ id: "W7", item_source: "wardrobe", name: "Top", category: "top" }],
+    { top: 1 },
+  );
+
+  expect(catalogPrompt).not.toMatch(
+    /Wardrobe items are items the user already owns/,
+  );
+  expect(catalogPrompt).toMatch(/"item_source": "catalog"/);
+  expect(wardrobePrompt).toMatch(
+    /Prefer wardrobe items over catalog items when they are similarly suitable/,
+  );
+  expect(wardrobePrompt).toMatch(/"item_source": "wardrobe"/);
+});
+
 test("toWardrobeUiItem preserves audience for downstream UI labeling", () => {
   expect(
     toWardrobeUiItem({

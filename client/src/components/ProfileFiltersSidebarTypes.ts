@@ -9,6 +9,7 @@ type AccentColorValue = Parameters<
   NonNullable<Parameters<typeof AccentColorChips>[0]["onSelect"]>
 >[0];
 type ProfileFilterValue = string;
+type CapsuleSourceMode = "catalog_only" | "wardrobe_preferred";
 
 type ProfileFiltersStatus = {
   loading: boolean;
@@ -31,6 +32,7 @@ type ProfileFiltersSidebarProps = {
   selectedAudience: ProfileFilterValue | null;
   selectedAccentColor: AccentColorValue;
   selectedPattern: ProfileFilterValue | null;
+  selectedSourceMode: CapsuleSourceMode;
   selectedText: string;
   hasFilterChanges?: boolean;
   status: ProfileFiltersStatus;
@@ -41,6 +43,7 @@ type ProfileFiltersSidebarProps = {
   onSelectAudience: (value: ProfileFilterValue) => void;
   onSelectAccentColor: (value: AccentColorValue) => void;
   onSelectPattern: (value: ProfileFilterValue) => void;
+  onSelectSourceMode: (value: CapsuleSourceMode) => void;
   onTextChange: (value: string) => void;
   onApply: () => void;
   onReset: () => void;
@@ -51,4 +54,8 @@ type ProfileFiltersSidebarProps = {
   showSettingsTitle?: boolean;
 };
 
-export type { ProfileFiltersSidebarProps, ProfileFilterValue };
+export type {
+  CapsuleSourceMode,
+  ProfileFiltersSidebarProps,
+  ProfileFilterValue,
+};

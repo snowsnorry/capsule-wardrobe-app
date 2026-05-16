@@ -24,6 +24,7 @@ export type RequestedWardrobeParams = Partial<{
   audience: string;
   color: string;
   pattern: string;
+  sourceMode: string;
   locale: string;
 }>;
 
@@ -137,6 +138,7 @@ export function getRequestedWardrobeParams(
     "audience",
     "color",
     "pattern",
+    "sourceMode",
     "locale",
   ]);
   addRequestedArrayParams(params, userProfile, ["occasions", "season"]);

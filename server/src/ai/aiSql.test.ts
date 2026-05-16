@@ -3,8 +3,10 @@ import {
   buildCapsuleWardrobeSqlParams,
   queryCapsuleWardrobeItems,
   queryCapsuleWardrobeItemsForMultipleAccentColors,
+  queryCapsuleWardrobePreferredItems,
   queryCapsuleWardrobeItemsForProfile,
   type CapsuleWardrobeSqlClient,
+  type CapsuleWardrobeSqlParams,
 } from "./aiSql.js";
 
 function createSqlRecorder() {
@@ -20,9 +22,17 @@ function createSqlRecorder() {
   return { sql, calls };
 }
 
-function buildBaseSqlParams(overrides = {}) {
+function buildBaseSqlParams(
+  overrides: Partial<CapsuleWardrobeSqlParams> = {},
+): CapsuleWardrobeSqlParams {
   return {
     categories: ["top", "bottom"],
+    sourceMode: "catalog_only",
+    profileEmail: "person@example.com",
+    wardrobeBoost: 25,
+    catalogPoolLimit: 8,
+    wardrobePoolLimit: 5,
+    finalCandidateLimit: 10,
     formalityLevel: "casual",
     style: "classic",
     occasions: ["office"],
@@ -40,6 +50,8 @@ function buildBaseSqlParams(overrides = {}) {
 test("buildCapsuleWardrobeSqlParams preserves defaults and profile filters", () => {
   const params = buildCapsuleWardrobeSqlParams(
     {
+      email: "person@example.com",
+      sourceMode: "wardrobe_preferred",
       formalityLevel: "casual",
       style: "classic",
       audience: "unknown",
@@ -53,6 +65,12 @@ test("buildCapsuleWardrobeSqlParams preserves defaults and profile filters", () 
   );
 
   expect(params.categories).toEqual(["top", "bottom"]);
+  expect(params.sourceMode).toBe("wardrobe_preferred");
+  expect(params.profileEmail).toBe("person@example.com");
+  expect(params.wardrobeBoost).toBe(25);
+  expect(params.catalogPoolLimit).toBe(8);
+  expect(params.wardrobePoolLimit).toBe(5);
+  expect(params.finalCandidateLimit).toBe(10);
   expect(params.formalityLevel).toBe("casual");
   expect(params.style).toBe("classic");
   expect(params.occasions).toEqual([]);
@@ -77,10 +95,62 @@ test("buildCapsuleWardrobeSqlParams falls back to solid pattern and random noise
   );
 
   expect(params.categories).toEqual(["shoe"]);
+  expect(params.sourceMode).toBe("catalog_only");
+  expect(params.profileEmail).toBe("");
   expect(params.audienceFilters).toEqual(["woman", "all"]);
   expect(params.pattern).toBe("solid");
   expect(params.embeddingVector).toBe("[]");
   expect(params.noiseFactor).toBe(0.05);
+});
+
+test("wardrobe preferred SQL mixes catalog and wardrobe candidates with quotas and owned boost", async () => {
+  const recorder = createSqlRecorder();
+
+  await queryCapsuleWardrobeItems(
+    recorder.sql,
+    buildBaseSqlParams({ sourceMode: "wardrobe_preferred" }),
+  );
+
+  expect(recorder.calls.length).toBe(1);
+  const sqlText = recorder.calls[0].strings.join("?");
+  expect(sqlText).toMatch(/FROM wardrobe/i);
+  expect(sqlText).toMatch(/wardrobe\.profile_email = \?::text/i);
+  expect(sqlText).toMatch(/wardrobe\.processing_status = 'ready'/i);
+  expect(sqlText).toMatch(
+    /NULLIF\(trim\(COALESCE\(wardrobe\.url, ''\)\), ''\) IS NOT NULL/i,
+  );
+  expect(sqlText).toMatch(
+    /PARTITION BY COALESCE\(wardrobe\.product_id, 'wardrobe:' \|\| wardrobe\.id::text\)/i,
+  );
+  expect(sqlText).toMatch(/owned\.product_id = products\.id::text/i);
+  expect(sqlText).toMatch(/\('W' \|\| wardrobe_deduped\.id::text\) AS id/i);
+  expect(sqlText).toMatch(/'wardrobe'::text AS item_source/i);
+  expect(sqlText).toMatch(
+    /CASE WHEN item_source = 'wardrobe' THEN \?::int ELSE 0 END/i,
+  );
+  expect(sqlText).toMatch(/PARTITION BY item_source/i);
+  expect(sqlText).toMatch(
+    /item_source = 'catalog' AND source_rank <= \?::int/i,
+  );
+  expect(sqlText).toMatch(
+    /item_source = 'wardrobe' AND source_rank <= \?::int/i,
+  );
+  expect(sqlText).toMatch(/LIMIT \?::int/i);
+  expect(recorder.calls[0].values).toEqual(
+    expect.arrayContaining(["person@example.com", 25, 8, 5, 10]),
+  );
+});
+
+test("catalog-only SQL keeps products-only retrieval with catalog item source", async () => {
+  const recorder = createSqlRecorder();
+
+  await queryCapsuleWardrobeItems(recorder.sql, buildBaseSqlParams());
+
+  const sqlText = recorder.calls[0].strings.join("?");
+  expect(sqlText).toMatch(/FROM products/i);
+  expect(sqlText).toMatch(/'catalog'::text as item_source/i);
+  expect(sqlText).not.toMatch(/FROM wardrobe/i);
+  expect(sqlText).toMatch(/LIMIT \?::int/i);
 });
 
 test("queryCapsuleWardrobeItemsForProfile dispatches regular and multiple accent SQL branches", async () => {
@@ -110,6 +180,45 @@ test("queryCapsuleWardrobeItemsForProfile dispatches regular and multiple accent
 
   expect(regular.calls).toEqual(directRegular.calls);
   expect(multiple.calls).toEqual(directMultiple.calls);
+});
+
+test("queryCapsuleWardrobeItemsForProfile dispatches wardrobe preferred regular and multiple accent branches", async () => {
+  const regular = createSqlRecorder();
+  await queryCapsuleWardrobeItemsForProfile(
+    regular.sql,
+    buildBaseSqlParams({ color: "red", sourceMode: "wardrobe_preferred" }),
+  );
+
+  const directRegular = createSqlRecorder();
+  await queryCapsuleWardrobePreferredItems(
+    directRegular.sql,
+    buildBaseSqlParams({ color: "red", sourceMode: "wardrobe_preferred" }),
+  );
+
+  const multiple = createSqlRecorder();
+  await queryCapsuleWardrobeItemsForProfile(
+    multiple.sql,
+    buildBaseSqlParams({
+      color: "multiple_accent_colors",
+      sourceMode: "wardrobe_preferred",
+    }),
+  );
+
+  const directMultiple = createSqlRecorder();
+  await queryCapsuleWardrobeItemsForMultipleAccentColors(
+    directMultiple.sql,
+    buildBaseSqlParams({
+      color: "multiple_accent_colors",
+      sourceMode: "wardrobe_preferred",
+    }),
+  );
+
+  expect(regular.calls).toEqual(directRegular.calls);
+  expect(multiple.calls).toEqual(directMultiple.calls);
+  expect(multiple.calls[0].strings.join("?")).toMatch(/neutrality_rank/);
+  expect(multiple.calls[0].strings.join("?")).toMatch(
+    /'wardrobe'::text AS item_source/i,
+  );
 });
 
 test("multiple accent SQL query uses neutral/non-neutral color logic", async () => {

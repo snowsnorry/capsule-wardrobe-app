@@ -17,6 +17,7 @@ function createContext() {
     setSelectedOccasions: vi.fn(),
     setSelectedPattern: vi.fn(),
     setSelectedSeason: vi.fn(),
+    setSelectedSourceMode: vi.fn(),
     setSelectedStyle: vi.fn(),
     setSelectedText: vi.fn(),
   };
@@ -40,4 +41,21 @@ describe("capsuleStateActions", () => {
       expect(context.setSelectedPattern).toHaveBeenCalledWith("solid");
     },
   );
+
+  test("restores persisted source mode into UI state", () => {
+    const context = createContext();
+    const draft = createTestDraft({ sourceMode: "wardrobe_preferred" });
+
+    applyCapsuleStateToApp(
+      context,
+      createTestCapsule({
+        draft,
+        effective: draft,
+      }),
+    );
+
+    expect(context.setSelectedSourceMode).toHaveBeenCalledWith(
+      "wardrobe_preferred",
+    );
+  });
 });

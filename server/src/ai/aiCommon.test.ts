@@ -85,6 +85,7 @@ test("requested wardrobe params trim strings and filter arrays", () => {
         audience: " woman ",
         color: "blue",
         pattern: "plain",
+        sourceMode: "wardrobe_preferred",
         locale: " en ",
       } as never,
       { forceRefresh: true },
@@ -97,6 +98,7 @@ test("requested wardrobe params trim strings and filter arrays", () => {
     audience: "woman",
     color: "blue",
     pattern: "plain",
+    sourceMode: "wardrobe_preferred",
     locale: "en",
   });
 });

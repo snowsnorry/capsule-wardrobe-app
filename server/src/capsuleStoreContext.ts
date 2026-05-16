@@ -17,6 +17,7 @@ export function buildSnapshotFromProfile(
 ): CapsuleSnapshot | null {
   return normalizeCapsuleSnapshot({
     filters: {
+      sourceMode: "catalog_only",
       formalityLevel: "",
       style: null,
       occasions: [],
@@ -52,6 +53,7 @@ export function buildProfileCapsuleContext(
 }
 
 const emptyProfileFilterContext = {
+  sourceMode: "catalog_only",
   formalityLevel: "",
   style: null,
   occasions: [],
@@ -99,6 +101,7 @@ function buildProfileFilterContext(
   }
 
   return {
+    sourceMode: filters.sourceMode,
     formalityLevel: filters.formalityLevel,
     style: filters.style,
     occasions: filters.occasions,

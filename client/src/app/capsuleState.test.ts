@@ -77,6 +77,7 @@ describe("capsuleState", () => {
       selectedOccasions: ["office"],
       selectedPattern: "solid",
       selectedSeason: ["summer"],
+      selectedSourceMode: "wardrobe_preferred",
       selectedStyle: "minimalistic",
       selectedText: "linen",
     });
@@ -85,7 +86,11 @@ describe("capsuleState", () => {
     expect(snapshot.data.wardrobe?.outfitSets).toEqual([
       { itemIds: ["top-1"], image: null, imageObsolete: false },
     ]);
-    expect(snapshot.filters).toMatchObject({ color: "blue", text: "linen" });
+    expect(snapshot.filters).toMatchObject({
+      color: "blue",
+      sourceMode: "wardrobe_preferred",
+      text: "linen",
+    });
   });
 
   test("compares filters by normalized values", () => {
@@ -99,11 +104,18 @@ describe("capsuleState", () => {
         {
           occasions: ["travel", "office"],
           season: ["spring", "summer"],
+          sourceMode: "catalog_only",
           text: "linen",
           pattern: "",
         },
       ),
     ).toBe(true);
+    expect(
+      areFiltersEqual(
+        { sourceMode: "catalog_only" },
+        { sourceMode: "wardrobe_preferred" },
+      ),
+    ).toBe(false);
     expect(areFiltersEqual({ color: "blue" }, { color: "green" })).toBe(false);
   });
 

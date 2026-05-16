@@ -1,6 +1,7 @@
 import { normalizeOccasionList } from "./profileStore.js";
 
 export type CapsuleFilters = {
+  sourceMode: CapsuleSourceMode;
   formalityLevel: string;
   style: string | null;
   occasions: string[];
@@ -10,6 +11,8 @@ export type CapsuleFilters = {
   pattern: string;
   text: string;
 };
+
+export type CapsuleSourceMode = "catalog_only" | "wardrobe_preferred";
 
 type OutfitSetPayload = {
   itemIds: string[];
@@ -91,6 +94,10 @@ export function normalizeCapsulePattern(value: unknown): string {
     : "solid";
 }
 
+function normalizeCapsuleSourceMode(value: unknown): CapsuleSourceMode {
+  return value === "wardrobe_preferred" ? "wardrobe_preferred" : "catalog_only";
+}
+
 function isPlainRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === "object" && !Array.isArray(value));
 }
@@ -169,6 +176,7 @@ export function normalizeCapsuleFilters(
 ): CapsuleFilters {
   if (!filters || typeof filters !== "object" || Array.isArray(filters)) {
     return {
+      sourceMode: "catalog_only",
       formalityLevel: "",
       style: null,
       occasions: [],
@@ -181,6 +189,7 @@ export function normalizeCapsuleFilters(
   }
 
   return {
+    sourceMode: normalizeCapsuleSourceMode(filters.sourceMode),
     formalityLevel:
       typeof filters.formalityLevel === "string" ? filters.formalityLevel : "",
     style: typeof filters.style === "string" ? filters.style : null,
