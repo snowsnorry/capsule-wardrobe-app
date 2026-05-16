@@ -250,8 +250,8 @@ export async function saveUploadedWardrobeItemsByEmail({
   }
 
   const sql = getSqlClient();
-  const rows = getResultRows(
-    await sql<UserWardrobeRow>`
+  const insertedRows = getResultRows(
+    await sql<Pick<UserWardrobeRow, "id">>`
     with uploaded(raw_image_url) as (
       select value
       from jsonb_array_elements_text(${JSON.stringify(normalizedUrls)}::jsonb)
@@ -270,38 +270,58 @@ export async function saveUploadedWardrobeItemsByEmail({
       uploaded.raw_image_url,
       'uploaded'
     from uploaded
-    returning
-      id,
-      profile_email as "profileEmail",
-      product_id as "productId",
-      name,
-      url,
-      description,
-      brand,
-      price,
-      currency,
-      availability,
-      image_url as "imageUrl",
-      audience,
-      category,
-      season,
-      formality_level as "formalityLevel",
-      style,
-      occasions,
-      color_base as "colorBase",
-      pattern,
-      finish,
-      is_neutral as "isNeutral",
-      composition,
-      silhouette,
-      fit,
-      closure_type as "closureType",
-      embedding,
-      source,
-      raw_image_url as "rawImageUrl",
-      processing_status as "processingStatus",
-      created_at as "createdAt",
-      updated_at as "updatedAt"
+    returning id
+  `,
+  );
+  const insertedIds = insertedRows.map((row) => String(row.id || "").trim());
+  if (insertedIds.length === 0) {
+    return [];
+  }
+
+  const rows = getResultRows(
+    await sql<UserWardrobeRow>`
+    with updated as (
+      update wardrobe
+      set
+        url = 'wardrobe://' || wardrobe.id,
+        updated_at = now()
+      where wardrobe.id::text = any(${insertedIds}::text[])
+      returning
+        wardrobe.id,
+        wardrobe.profile_email as "profileEmail",
+        wardrobe.product_id as "productId",
+        wardrobe.name,
+        wardrobe.url,
+        wardrobe.description,
+        wardrobe.brand,
+        wardrobe.price,
+        wardrobe.currency,
+        wardrobe.availability,
+        wardrobe.image_url as "imageUrl",
+        wardrobe.audience,
+        wardrobe.category,
+        wardrobe.season,
+        wardrobe.formality_level as "formalityLevel",
+        wardrobe.style,
+        wardrobe.occasions,
+        wardrobe.color_base as "colorBase",
+        wardrobe.pattern,
+        wardrobe.finish,
+        wardrobe.is_neutral as "isNeutral",
+        wardrobe.composition,
+        wardrobe.silhouette,
+        wardrobe.fit,
+        wardrobe.closure_type as "closureType",
+        wardrobe.embedding,
+        wardrobe.source,
+        wardrobe.raw_image_url as "rawImageUrl",
+        wardrobe.processing_status as "processingStatus",
+        wardrobe.created_at as "createdAt",
+        wardrobe.updated_at as "updatedAt"
+    )
+    select *
+    from updated
+    order by array_position(${insertedIds}::text[], updated.id::text)
   `,
   );
 

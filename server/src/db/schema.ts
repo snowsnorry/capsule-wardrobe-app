@@ -308,6 +308,8 @@ export async function ensureWardrobeTable(): Promise<void> {
         )),
       created_at timestamptz not null default now(),
       updated_at timestamptz not null default now(),
+      constraint wardrobe_url_scheme_check
+        check (url is null or url ~* '^(https?://|wardrobe://)'),
       constraint wardrobe_from_catalog_url_required_check
         check (source <> 'from_catalog' or nullif(trim(url), '') is not null)
     )

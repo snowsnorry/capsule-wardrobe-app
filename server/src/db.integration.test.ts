@@ -479,7 +479,7 @@ test("db integration saves uploaded wardrobe items", async () => {
     profileEmail: "user@example.com",
     productId: null,
     name: null,
-    url: null,
+    url: "wardrobe://wardrobe-upload-1",
     imageUrl: "https://images.example.com/wardrobe/user/image.webp",
     source: "uploaded",
     rawImageUrl: "https://images.example.com/wardrobe/user/image.webp",
@@ -487,7 +487,10 @@ test("db integration saves uploaded wardrobe items", async () => {
     createdAt: new Date(0).toISOString(),
     updatedAt: new Date(0).toISOString(),
   };
-  const { sql, calls } = createSqlMock([[uploadedRow]]);
+  const { sql, calls } = createSqlMock([
+    [{ id: "wardrobe-upload-1" }],
+    [uploadedRow],
+  ]);
   setSqlClientOverride(sql);
 
   const saved = await saveUploadedWardrobeItemsByEmail({
@@ -498,6 +501,7 @@ test("db integration saves uploaded wardrobe items", async () => {
   expect(saved).toEqual([
     expect.objectContaining({
       id: "wardrobe-upload-1",
+      url: "wardrobe://wardrobe-upload-1",
       image_url: "https://images.example.com/wardrobe/user/image.webp",
       raw_image_url: "https://images.example.com/wardrobe/user/image.webp",
       source: "uploaded",
@@ -510,6 +514,27 @@ test("db integration saves uploaded wardrobe items", async () => {
     JSON.stringify(["https://images.example.com/wardrobe/user/image.webp"]),
     "user@example.com",
   ]);
+  expect(calls[1].text).toMatch(/update wardrobe/i);
+  expect(calls[1].text).toMatch(/url = 'wardrobe:\/\/' \|\| wardrobe\.id/i);
+  expect(calls[1].text).toMatch(/array_position/i);
+  expect(calls[1].values).toEqual([
+    ["wardrobe-upload-1"],
+    ["wardrobe-upload-1"],
+  ]);
+});
+
+test("db integration skips uploaded wardrobe url update when insert returns no ids", async () => {
+  const { sql, calls } = createSqlMock([[]]);
+  setSqlClientOverride(sql);
+
+  const saved = await saveUploadedWardrobeItemsByEmail({
+    email: "user@example.com",
+    imageUrls: ["https://images.example.com/wardrobe/user/image.webp"],
+  });
+
+  expect(saved).toEqual([]);
+  expect(calls).toHaveLength(1);
+  expect(calls[0].text).toMatch(/insert into wardrobe/i);
 });
 
 test("db integration deletes uploaded wardrobe items by id", async () => {

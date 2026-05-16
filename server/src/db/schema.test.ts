@@ -110,6 +110,16 @@ test("ensure auth, profile, passkey, capsule, shared capsule, and search schemas
   ).toBeTruthy();
   expect(
     statements.some((statement) =>
+      statement.includes("wardrobe_url_scheme_check"),
+    ),
+  ).toBeTruthy();
+  expect(
+    statements.some((statement) =>
+      statement.includes("^(https?://|wardrobe://)"),
+    ),
+  ).toBeTruthy();
+  expect(
+    statements.some((statement) =>
       statement.includes("wardrobe_profile_email_from_catalog_url_idx"),
     ),
   ).toBeTruthy();
