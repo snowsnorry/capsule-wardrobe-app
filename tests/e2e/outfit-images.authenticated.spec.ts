@@ -43,9 +43,9 @@ async function expectOutfitImage(page: Page, sourcePattern: RegExp) {
   return image;
 }
 
-async function expectOutfitImagePlaceholder(page: Page) {
+async function expectOutfitImageEmpty(page: Page) {
   await expect(page.getByTestId("outfit-set-image")).toHaveCount(0);
-  await expect(page.getByTestId("outfit-set-image-placeholder")).toBeVisible();
+  await expect(page.getByTestId("outfit-set-image-placeholder")).toHaveCount(0);
   await expect(
     page.getByRole("button", { name: "Create image" }),
   ).toBeVisible();
@@ -92,14 +92,14 @@ test("outfit set image preview delete generate and reload persistence works thro
   });
   await expect(deleteDialog).toBeVisible();
   await deleteDialog.getByRole("button", { name: "Delete" }).click();
-  await expectOutfitImagePlaceholder(page);
+  await expectOutfitImageEmpty(page);
 
   await page.reload();
   await expect(
     page.getByRole("button", { name: "Regenerate all" }),
   ).toBeVisible();
   await page.getByRole("tab", { name: "Outfit 1" }).click();
-  await expectOutfitImagePlaceholder(page);
+  await expectOutfitImageEmpty(page);
 
   await page.getByRole("button", { name: "Create image" }).click();
   await expectOutfitImage(

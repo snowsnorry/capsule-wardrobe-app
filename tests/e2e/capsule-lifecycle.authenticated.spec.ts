@@ -121,7 +121,7 @@ test("capsule draft filter change can be reverted and stays reverted after reloa
   ).toHaveCount(0);
   await expect(page.getByTestId("capsule-summary")).not.toContainText("Summer");
   await expect(
-    page.getByRole("link", { name: "Navy relaxed shirt", exact: true }),
+    page.getByRole("button", { name: "Navy relaxed shirt", exact: true }),
   ).toBeVisible();
 
   await page.reload();
@@ -164,7 +164,7 @@ test("capsule duplicate select delete fallback and reload persistence work throu
   ).toHaveCount(0);
   await expectActiveCapsule(page, originalCapsuleName);
   await expect(
-    page.getByRole("link", { name: "Navy relaxed shirt", exact: true }),
+    page.getByRole("button", { name: "Navy relaxed shirt", exact: true }),
   ).toBeVisible();
 
   await page.reload();

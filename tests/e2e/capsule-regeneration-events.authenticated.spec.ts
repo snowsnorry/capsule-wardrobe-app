@@ -3,7 +3,6 @@ import { expect, test } from "./test";
 
 const capsuleId = "capsule-e2e";
 const originalProductName = "Navy relaxed shirt";
-const originalProductUrl = "https://example.test/products/navy-shirt";
 const readyProducts = [
   {
     name: "E2E Ready linen blazer",
@@ -38,10 +37,8 @@ async function openApp(page: Page) {
   ).toBeVisible();
 }
 
-async function expectProductLink(page: Page, name: string, url: string) {
-  const link = page.getByRole("link", { name, exact: true });
-  await expect(link).toBeVisible();
-  await expect(link).toHaveAttribute("href", url);
+async function expectProductCard(page: Page, name: string) {
+  await expect(page.getByRole("button", { name, exact: true })).toBeVisible();
 }
 
 test("applying capsule filters shows pending regeneration until SSE ready snapshot", async ({
@@ -67,7 +64,7 @@ test("applying capsule filters shows pending regeneration until SSE ready snapsh
   await resetAndLogin("with-profile");
   await openApp(page);
 
-  await expectProductLink(page, originalProductName, originalProductUrl);
+  await expectProductCard(page, originalProductName);
 
   const modeResponse = await page
     .context()
@@ -107,7 +104,7 @@ test("applying capsule filters shows pending regeneration until SSE ready snapsh
   await expect(page.getByRole("progressbar")).toBeVisible();
   for (const product of readyProducts) {
     await expect(
-      page.getByRole("link", { name: product.name, exact: true }),
+      page.getByRole("button", { name: product.name, exact: true }),
     ).toHaveCount(0);
   }
 
@@ -120,11 +117,11 @@ test("applying capsule filters shows pending regeneration until SSE ready snapsh
   ).toEqual(expect.objectContaining({ published: true, status: "ready" }));
 
   for (const product of readyProducts) {
-    await expectProductLink(page, product.name, product.url);
+    await expectProductCard(page, product.name);
   }
   await expect(page.getByRole("progressbar")).toHaveCount(0);
   await expect(
-    page.getByRole("link", { name: originalProductName, exact: true }),
+    page.getByRole("button", { name: originalProductName, exact: true }),
   ).toHaveCount(0);
 
   await page.reload();
@@ -132,10 +129,10 @@ test("applying capsule filters shows pending regeneration until SSE ready snapsh
     page.getByRole("button", { name: "Regenerate all" }),
   ).toBeVisible();
   for (const product of readyProducts) {
-    await expectProductLink(page, product.name, product.url);
+    await expectProductCard(page, product.name);
   }
   await expect(
-    page.getByRole("link", { name: originalProductName, exact: true }),
+    page.getByRole("button", { name: originalProductName, exact: true }),
   ).toHaveCount(0);
   expect(externalRequests).toEqual([]);
 });

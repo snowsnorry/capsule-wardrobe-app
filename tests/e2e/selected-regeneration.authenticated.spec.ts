@@ -2,12 +2,8 @@ import type { Page } from "@playwright/test";
 import { expect, test } from "./test";
 
 const selectedProductName = "Navy relaxed shirt";
-const selectedProductUrl = "https://example.test/products/navy-shirt";
 const controlProductName = "Straight black trousers";
-const controlProductUrl = "https://example.test/products/black-trousers";
 const replacementProductName = "E2E Regenerated Shirt";
-const replacementProductUrl =
-  "https://example.test/products/regenerated-shirt-1";
 const EXPECTED_GLOBAL_EXTERNAL_HOSTS = new Set(["fonts.googleapis.com"]);
 
 function isLocalHttpUrl(rawUrl: string, baseURL: string | undefined): boolean {
@@ -28,10 +24,8 @@ async function openApp(page: Page) {
   ).toBeVisible();
 }
 
-async function expectProductLink(page: Page, name: string, url: string) {
-  const link = page.getByRole("link", { name, exact: true });
-  await expect(link).toBeVisible();
-  await expect(link).toHaveAttribute("href", url);
+async function expectProductCard(page: Page, name: string) {
+  await expect(page.getByRole("button", { name, exact: true })).toBeVisible();
 }
 
 test("selected item regeneration replaces only the selected wardrobe product and persists", async ({
@@ -57,11 +51,11 @@ test("selected item regeneration replaces only the selected wardrobe product and
   await resetAndLogin("with-profile");
   await openApp(page);
 
-  await expectProductLink(page, selectedProductName, selectedProductUrl);
-  await expectProductLink(page, controlProductName, controlProductUrl);
+  await expectProductCard(page, selectedProductName);
+  await expectProductCard(page, controlProductName);
 
   await page
-    .getByRole("link", { name: selectedProductName, exact: true })
+    .getByRole("button", { name: selectedProductName, exact: true })
     .hover();
   await page.getByRole("button", { name: "Open product menu" }).first().click();
   await page.getByRole("menuitem", { name: "Select" }).click();
@@ -82,10 +76,10 @@ test("selected item regeneration replaces only the selected wardrobe product and
   await page.getByRole("button", { name: "Regenerate Selected (1)" }).click();
   await selectedRegenerationResponse;
 
-  await expectProductLink(page, replacementProductName, replacementProductUrl);
-  await expectProductLink(page, controlProductName, controlProductUrl);
+  await expectProductCard(page, replacementProductName);
+  await expectProductCard(page, controlProductName);
   await expect(
-    page.getByRole("link", { name: selectedProductName, exact: true }),
+    page.getByRole("button", { name: selectedProductName, exact: true }),
   ).toHaveCount(0);
   await expect(
     page.getByRole("button", { name: "Regenerate all" }),
@@ -99,10 +93,10 @@ test("selected item regeneration replaces only the selected wardrobe product and
   await expect(
     page.getByRole("button", { name: "Regenerate all" }),
   ).toBeVisible();
-  await expectProductLink(page, replacementProductName, replacementProductUrl);
-  await expectProductLink(page, controlProductName, controlProductUrl);
+  await expectProductCard(page, replacementProductName);
+  await expectProductCard(page, controlProductName);
   await expect(
-    page.getByRole("link", { name: selectedProductName, exact: true }),
+    page.getByRole("button", { name: selectedProductName, exact: true }),
   ).toHaveCount(0);
   expect(externalRequests).toEqual([]);
 });

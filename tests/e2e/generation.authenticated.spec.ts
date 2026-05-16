@@ -14,6 +14,6 @@ test("wardrobe regeneration uses mocked server response", async ({
   await page.getByRole("button", { name: "Regenerate" }).click();
 
   await expect(
-    page.getByRole("link", { name: "Navy relaxed shirt", exact: true }),
+    page.getByRole("button", { name: "Navy relaxed shirt", exact: true }),
   ).toBeVisible();
 });

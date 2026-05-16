@@ -15,7 +15,7 @@ test("authenticated app opens past the sign-in screen", async ({
     page.getByRole("button", { name: "Playwright capsule", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("link", { name: "Navy relaxed shirt", exact: true }),
+    page.getByRole("button", { name: "Navy relaxed shirt", exact: true }),
   ).toBeVisible();
 });
 

@@ -94,7 +94,7 @@ test("search hydrates saved filters, applies filters, and opens product detail",
   ).toBeHidden();
 });
 
-test("capsule product menu hands off to Explore product detail", async ({
+test("capsule product card opens product detail without leaving capsule", async ({
   page,
   resetAndLogin,
 }) => {
@@ -103,31 +103,24 @@ test("capsule product menu hands off to Explore product detail", async ({
   await expect(
     page.getByRole("button", { name: "Regenerate all" }),
   ).toBeVisible();
-  const shirtLink = page.getByRole("link", {
+  const shirtCard = page.getByRole("button", {
     name: "Navy relaxed shirt",
     exact: true,
   });
-  await expect(shirtLink).toBeVisible();
-  await shirtLink.hover();
-  await page.getByRole("button", { name: "Open product menu" }).first().click();
-  await page.getByRole("menuitem", { name: "Show Product Info" }).click();
+  await expect(shirtCard).toBeVisible();
+  await shirtCard.click();
 
-  await expect(page).toHaveURL(/\/explore$/);
-  await expect(page.getByPlaceholder(/Search in natural language/)).toHaveValue(
-    "https://example.test/products/navy-shirt",
-  );
-  await expect(page.getByText("1 results")).toBeVisible();
+  const productDialog = page.getByRole("dialog").filter({
+    has: page.getByRole("link", { name: /Navy relaxed shirt/ }),
+  });
+  await expect(productDialog).toBeVisible();
   await expect(
-    page.getByRole("button", { name: /Navy relaxed shirt E2E Studio/ }),
-  ).toBeVisible();
+    productDialog.getByRole("link", { name: /Navy relaxed shirt/ }),
+  ).toHaveAttribute("href", "https://example.test/products/navy-shirt");
   await expect(
-    page.getByRole("link", { name: /Navy relaxed shirt/ }),
+    productDialog.getByText("A deterministic e2e shirt fixture."),
   ).toBeVisible();
-  await expect(
-    page.getByText("A deterministic e2e shirt fixture."),
-  ).toBeVisible();
-
-  await page.goBack();
+  await productDialog.getByRole("button", { name: "Close" }).click();
 
   await expect(page).toHaveURL(/\/$/);
   await expect(
@@ -137,7 +130,7 @@ test("capsule product menu hands off to Explore product detail", async ({
     page.getByRole("button", { name: "Playwright capsule", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("link", { name: "Navy relaxed shirt", exact: true }),
+    page.getByRole("button", { name: "Navy relaxed shirt", exact: true }),
   ).toBeVisible();
 });
 

@@ -32,7 +32,7 @@ async function expectCapsuleRouteLoaded(page: Page) {
     page.getByRole("button", { name: "Regenerate all" }),
   ).toBeVisible();
   await expect(
-    page.getByRole("link", { name: "Navy relaxed shirt", exact: true }),
+    page.getByRole("button", { name: "Navy relaxed shirt", exact: true }),
   ).toBeVisible();
 }
 
@@ -87,7 +87,7 @@ test("authenticated direct routes restore after reload", async ({
   await expect(
     page.getByText("No data available for the current filters."),
   ).toBeVisible();
-  await expect(page.getByRole("button", { name: "Explore" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Catalog" })).toBeVisible();
   await expect(page.getByLabel("Email")).toBeHidden();
 });
 
@@ -107,7 +107,7 @@ test("sign out clears session and cached authenticated UI", async ({
   await dialog.getByRole("button", { name: "Sign out" }).click();
 
   await expectSignInScreen(page);
-  await expect(page.getByRole("button", { name: "Explore" })).toBeHidden();
+  await expect(page.getByRole("button", { name: "Catalog" })).toBeHidden();
 
   await page.reload();
   await expectSignInScreen(page);
@@ -145,7 +145,7 @@ test("settings save persists profile and locale across reload", async ({
     page.getByRole("button", { name: "Капсула", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Поиск", exact: true }),
+    page.getByRole("button", { name: "Каталог", exact: true }),
   ).toBeVisible();
 
   await page.reload();
@@ -207,7 +207,7 @@ test("mobile shell supports drawer navigation, filters, and product detail", asy
   await expectCapsuleRouteLoaded(page);
 
   await page.getByRole("button", { name: "Toggle sidebar" }).click();
-  await page.getByRole("button", { name: "Explore" }).click();
+  await page.getByRole("button", { name: "Catalog" }).click();
 
   await expect(page).toHaveURL(/\/explore$/);
   await page
@@ -320,7 +320,7 @@ test("keyboard focus supports critical dialogs and menus", async ({
     page.getByRole("button", { name: "Open capsule menu" }),
   ).toBeVisible();
 
-  await page.getByRole("button", { name: "Explore" }).click();
+  await page.getByRole("button", { name: "Catalog" }).click();
   await page
     .getByPlaceholder(/Search in natural language/)
     .fill("navy office shirt");

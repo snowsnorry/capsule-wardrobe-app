@@ -53,7 +53,7 @@ test("unauthenticated locale choice carries into onboarding and profile creation
     page.getByRole("button", { name: "Капсула", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Поиск", exact: true }),
+    page.getByRole("button", { name: "Каталог", exact: true }),
   ).toBeVisible();
 
   await page.reload();
@@ -62,7 +62,7 @@ test("unauthenticated locale choice carries into onboarding and profile creation
     page.getByRole("button", { name: "Капсула", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Поиск", exact: true }),
+    page.getByRole("button", { name: "Каталог", exact: true }),
   ).toBeVisible();
   await expect(page.getByLabel("Эл. почта")).toBeHidden();
 });

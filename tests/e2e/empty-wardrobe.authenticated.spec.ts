@@ -38,10 +38,8 @@ async function openApp(page: Page) {
   ).toBeVisible();
 }
 
-async function expectProductLink(page: Page, name: string, url: string) {
-  const link = page.getByRole("link", { name, exact: true });
-  await expect(link).toBeVisible();
-  await expect(link).toHaveAttribute("href", url);
+async function expectProductCard(page: Page, name: string) {
+  await expect(page.getByRole("button", { name, exact: true })).toBeVisible();
 }
 
 async function expectEmptyWardrobe(page: Page) {
@@ -110,7 +108,7 @@ test("empty wardrobe recovers from one failed full regeneration and persists ret
   await successfulRetryResponse;
 
   for (const product of readyProducts) {
-    await expectProductLink(page, product.name, product.url);
+    await expectProductCard(page, product.name);
   }
   await expect(page.getByRole("alert")).toHaveCount(0);
   await expect(page.getByRole("progressbar")).toHaveCount(0);
@@ -120,7 +118,7 @@ test("empty wardrobe recovers from one failed full regeneration and persists ret
     page.getByRole("button", { name: "Regenerate all" }),
   ).toBeVisible();
   for (const product of readyProducts) {
-    await expectProductLink(page, product.name, product.url);
+    await expectProductCard(page, product.name);
   }
   await expect(page.getByRole("alert")).toHaveCount(0);
   expect(externalRequests).toEqual([]);
