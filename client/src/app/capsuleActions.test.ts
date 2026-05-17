@@ -353,6 +353,13 @@ describe("capsuleActions", () => {
       infoKey: "",
       infoParams: null,
     });
+
+    vi.mocked(shareCapsule).mockRejectedValueOnce(
+      new Error("capsule_contains_personal_items"),
+    );
+    await expect(shareCurrentCapsule(context, "capsule-1")).resolves.toEqual({
+      blockedReason: "personal_uploaded_items",
+    });
   });
 
   test("importSharedCapsuleToApp imports, refreshes list, and clears the share route", async () => {

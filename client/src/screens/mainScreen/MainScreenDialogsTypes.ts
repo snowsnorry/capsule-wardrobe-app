@@ -27,6 +27,7 @@ export type ShareState = {
   name: string;
   copied: boolean;
   loading: boolean;
+  blockedReason?: "personal_uploaded_items" | null;
 };
 
 export type DialogsProps = {

@@ -31,6 +31,9 @@ const labels = {
     share: "Share",
     shareTitle: "Share capsule",
     shareReady: "Your share link is ready.",
+    shareBlockedTitle: "Can't share this capsule",
+    shareBlockedBody:
+      "Capsules with personal uploaded wardrobe items can't be shared. Remove uploaded items or replace them with catalog items before sharing.",
     copyShareLink: "Copy share link",
     shareCopied: "Copied",
     shareExpires: "Expires {date}",

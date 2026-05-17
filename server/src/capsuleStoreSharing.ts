@@ -1,4 +1,8 @@
 import {
+  hasUploadedPersonalWardrobeItems,
+  normalizeCapsuleSnapshotItemsForShare,
+} from "../../shared/capsuleShareItems.js";
+import {
   DEFAULT_CAPSULE_NAME,
   SHARE_TTL_MS,
   isShareableCapsuleSnapshot,
@@ -47,14 +51,21 @@ export async function createCapsuleShareForStore({
   if (!isShareableCapsuleSnapshot(snapshot)) {
     throwCapsuleNotShareable();
   }
+  if (hasUploadedPersonalWardrobeItems(snapshot)) {
+    throwCapsuleContainsPersonalItems();
+  }
+  const shareSnapshot = normalizeCapsuleSnapshotItemsForShare(snapshot);
+  if (!shareSnapshot) {
+    throwCapsuleNotShareable();
+  }
 
   await pruneExpiredSharedCapsulesImpl();
   const expiresAt = new Date(nowImpl() + SHARE_TTL_MS);
   const shared = await upsertSharedCapsuleImpl({
     profileEmail: email,
     name: String(capsule.name || DEFAULT_CAPSULE_NAME),
-    content: snapshot as unknown as Record<string, unknown>,
-    contentHash: hashCapsuleContentImpl(snapshot),
+    content: shareSnapshot as unknown as Record<string, unknown>,
+    contentHash: hashCapsuleContentImpl(shareSnapshot),
     expiresAt,
   });
 
@@ -136,11 +147,19 @@ export async function importSharedCapsuleForStore({
   if (!isShareableCapsuleSnapshot(content)) {
     throwCapsuleNotShareable();
   }
+  if (hasUploadedPersonalWardrobeItems(content)) {
+    throwCapsuleContainsPersonalItems();
+  }
+
+  const shareableContent = normalizeCapsuleSnapshotItemsForShare(content);
+  if (!shareableContent) {
+    throwCapsuleNotShareable();
+  }
 
   return createCapsuleImpl(email, {
     name: shared.name,
     draft: null,
-    saved: content,
+    saved: shareableContent,
     setActive: true,
   });
 }
@@ -148,5 +167,11 @@ export async function importSharedCapsuleForStore({
 function throwCapsuleNotShareable(): never {
   const error = new Error("capsule_not_shareable");
   (error as Error & { code?: string }).code = "capsule_not_shareable";
+  throw error;
+}
+
+function throwCapsuleContainsPersonalItems(): never {
+  const error = new Error("capsule_contains_personal_items");
+  (error as Error & { code?: string }).code = "capsule_contains_personal_items";
   throw error;
 }

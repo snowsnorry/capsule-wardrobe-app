@@ -421,4 +421,46 @@ test("capsule read and share routes map missing records and service failures", a
   );
   expect(notImportable.response.status).toBe(400);
   expect(notImportable.json).toEqual({ error: "capsule_not_shareable" });
+
+  const personalItemsServer = await startTestServer(t, {
+    overrides: {
+      createCapsuleShareImpl: async () => {
+        const error = new Error("capsule_contains_personal_items");
+        throw error;
+      },
+      importSharedCapsuleImpl: async () => {
+        const error = new Error("capsule_contains_personal_items");
+        throw error;
+      },
+    },
+  });
+  const personalItemsShare = await requestJson(
+    personalItemsServer.baseUrl,
+    "/capsules/capsule-1/share",
+    {
+      method: "POST",
+      origin: TEST_CLIENT_ORIGIN,
+      cookie: AUTH_COOKIE,
+      csrfToken: CSRF_TOKEN,
+    },
+  );
+  expect(personalItemsShare.response.status).toBe(400);
+  expect(personalItemsShare.json).toEqual({
+    error: "capsule_contains_personal_items",
+  });
+
+  const personalItemsImport = await requestJson(
+    personalItemsServer.baseUrl,
+    "/shared-capsules/share-1/import",
+    {
+      method: "POST",
+      origin: TEST_CLIENT_ORIGIN,
+      cookie: AUTH_COOKIE,
+      csrfToken: CSRF_TOKEN,
+    },
+  );
+  expect(personalItemsImport.response.status).toBe(400);
+  expect(personalItemsImport.json).toEqual({
+    error: "capsule_contains_personal_items",
+  });
 });

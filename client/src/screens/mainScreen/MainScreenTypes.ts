@@ -76,11 +76,17 @@ export type MainScreenProps = {
     capsuleId?: string,
   ) => Promise<void> | void;
   onDeleteCapsule?: (capsuleId?: string) => Promise<void> | void;
-  onShareCapsule?: (
-    capsuleId?: string,
-  ) =>
-    | Promise<{ url?: string; expiresAt?: string | Date } | void>
-    | { url?: string; expiresAt?: string | Date }
+  onShareCapsule?: (capsuleId?: string) =>
+    | Promise<{
+        url?: string;
+        expiresAt?: string | Date;
+        blockedReason?: "personal_uploaded_items";
+      } | void>
+    | {
+        url?: string;
+        expiresAt?: string | Date;
+        blockedReason?: "personal_uploaded_items";
+      }
     | void;
   onSearchCapsules?: (query: string) => Promise<CapsuleLike[]> | CapsuleLike[];
   items: MainScreenItem[];

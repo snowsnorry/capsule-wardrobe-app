@@ -14,6 +14,7 @@ const ERROR_MESSAGE_KEYS: Record<string, string> = {
   passkey_registration_failed: "errors.passkeySetupFailed",
   passkey_login_failed: "errors.passkeyLoginFailed",
   passkey_failed: "errors.passkeyLoginFailed",
+  capsule_contains_personal_items: "errors.capsuleContainsPersonalItems",
   capsule_not_shareable: "errors.capsuleNotShareable",
   shared_capsule_unavailable: "errors.sharedCapsuleUnavailable",
 };

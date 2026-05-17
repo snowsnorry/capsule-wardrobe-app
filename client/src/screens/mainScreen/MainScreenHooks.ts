@@ -5,7 +5,6 @@ import {
 } from "./MainScreenHelpers";
 import {
   buildCapsuleSummaryItems,
-  capsuleCanRequestShare,
   normalizeCapsuleName,
   resolveOutfitSetImageSrc,
   resolveOutfitSets,
@@ -22,15 +21,6 @@ type SearchState = {
   open: boolean;
   query: string;
   results: CapsuleLike[];
-  loading: boolean;
-};
-
-type ShareState = {
-  open: boolean;
-  url: string;
-  expiresAt: string | Date | null;
-  name: string;
-  copied: boolean;
   loading: boolean;
 };
 
@@ -95,26 +85,6 @@ function useMainScreenUiState() {
     setSelectionMode,
     updateColumns,
   };
-}
-
-function canStartShare(
-  capsule: CapsuleLike | null | undefined,
-  disabled: boolean,
-  allowUnknownContent: boolean,
-) {
-  return (
-    Boolean(capsule?.id) &&
-    !disabled &&
-    capsuleCanRequestShare(capsule, { allowUnknownContent })
-  );
-}
-
-function readShareResult(
-  result: Awaited<ReturnType<NonNullable<MainScreenProps["onShareCapsule"]>>>,
-) {
-  const data = result && typeof result === "object" ? result : null;
-  const url = typeof data?.url === "string" ? data.url : "";
-  return url ? { url, expiresAt: data?.expiresAt || null } : null;
 }
 
 function useInlineRename({
@@ -215,44 +185,6 @@ function useCapsuleSearch(
   return { search, setSearch };
 }
 
-function useShareCapsule(
-  props: MainScreenProps,
-  interactionDisabled: boolean,
-  activeName: string,
-) {
-  const [share, setShare] = useState<ShareState>({
-    open: false,
-    url: "",
-    expiresAt: null,
-    name: "",
-    copied: false,
-    loading: false,
-  });
-  const shareCapsule = useCallback(
-    async (capsule = props.activeCapsule, allowUnknownContent = false) => {
-      if (!canStartShare(capsule, interactionDisabled, allowUnknownContent))
-        return;
-      setShare((state) => ({ ...state, loading: true }));
-      try {
-        const result = await props.onShareCapsule?.(capsule.id);
-        const shareData = readShareResult(result);
-        if (shareData)
-          setShare({
-            open: true,
-            ...shareData,
-            name: capsule.name || activeName,
-            copied: false,
-            loading: false,
-          });
-      } finally {
-        setShare((state) => ({ ...state, loading: false }));
-      }
-    },
-    [activeName, interactionDisabled, props],
-  );
-  return { share, setShare, shareCapsule };
-}
-
 function useCapsuleDisplay(
   props: MainScreenProps,
   activeTab: string,
@@ -336,7 +268,8 @@ export {
   useInlineRename,
   useMainScreenUiState,
   useRegenerateAllRequest,
-  useShareCapsule,
 };
-export type { SearchState, ShareState };
+export { useShareCapsule } from "./MainScreenShareHook";
+export type { ShareState } from "./MainScreenShareHook";
+export type { SearchState };
 export type MainScreenDisplay = ReturnType<typeof useCapsuleDisplay>;

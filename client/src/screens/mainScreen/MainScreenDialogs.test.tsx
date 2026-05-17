@@ -174,6 +174,30 @@ describe("MainScreenDialogs", () => {
     });
   });
 
+  test("shows blocked share dialog without copy controls", () => {
+    renderDialogs({
+      initialShare: {
+        open: true,
+        url: "",
+        expiresAt: null,
+        name: "Private capsule",
+        copied: false,
+        loading: false,
+        blockedReason: "personal_uploaded_items",
+      },
+    });
+
+    expect(
+      screen.getByRole("dialog", { name: "Can't share this capsule" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/personal uploaded wardrobe items can't be shared/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Copy share link" }),
+    ).not.toBeInTheDocument();
+  });
+
   test("opens needs-review uploaded capsule item directly in edit mode", () => {
     const onUpdateUploadedWardrobeItem = vi.fn((item) => Promise.resolve(item));
     renderDialogs({

@@ -35,7 +35,14 @@ function capsuleRow(overrides = {}) {
       data: {
         wardrobe: {
           items: [
-            { id: "top-1", image_url: "https://images.example.com/top.jpg" },
+            {
+              id: "top-1",
+              url: "https://example.com/top",
+              name: "Top",
+              audience: "woman",
+              category: "top",
+              image_url: "https://images.example.com/top.jpg",
+            },
           ],
         },
         rejectedUrls: [],
@@ -458,4 +465,147 @@ test("createCapsuleStore shares, imports, prunes, and rejects unshareable capsul
   expect(
     calls.filter((call) => call.type === "prune").length >= 3,
   ).toBeTruthy();
+});
+
+test("createCapsuleStore normalizes catalog wardrobe items for shares", async () => {
+  const calls: StoreCall[] = [];
+  const store = createCapsuleStore({
+    nowImpl: () => 0,
+    getCapsuleByIdForEmailImpl: async () =>
+      capsuleRow({
+        saved: {
+          filters: {},
+          data: {
+            wardrobe: {
+              items: [
+                {
+                  id: "W7",
+                  wardrobe_id: "7",
+                  product_id: "catalog-7",
+                  source: "from_catalog",
+                  url: "https://example.com/catalog-7",
+                  name: "Catalog shirt",
+                  audience: "woman",
+                  category: "top",
+                  image_url: "https://example.com/catalog-7.jpg",
+                  brand: "Dropped",
+                },
+                {
+                  id: "catalog-8",
+                  url: "https://example.com/catalog-8",
+                  name: "Catalog jeans",
+                  audience: "woman",
+                  category: "bottom",
+                  image_url: "https://example.com/catalog-8.jpg",
+                  brand: "Dropped",
+                },
+              ],
+              outfitSets: [{ itemIds: ["W7", "catalog-8"] }],
+            },
+            rejectedUrls: [],
+          },
+        },
+      }),
+    pruneExpiredSharedCapsulesImpl: async () => {
+      calls.push({ type: "prune" });
+    },
+    upsertSharedCapsuleImpl: async (payload) => {
+      calls.push({ type: "upsert", payload });
+      return { id: "share-1", expiresAt: payload.expiresAt.toISOString() };
+    },
+    hashCapsuleContentImpl: (content) => {
+      calls.push({ type: "hash", payload: content });
+      return "content-hash";
+    },
+  });
+
+  await expect(
+    store.createCapsuleShare(
+      "person@example.com",
+      "capsule-1",
+      "https://client.example",
+    ),
+  ).resolves.toEqual({
+    id: "share-1",
+    url: "https://client.example/share/share-1",
+    expiresAt: new Date(604800000).toISOString(),
+  });
+
+  const upsert = calls.find((call) => call.type === "upsert");
+  const content = upsert?.payload?.content as {
+    data?: { wardrobe?: { items?: unknown[]; outfitSets?: unknown[] } };
+  };
+  expect(content?.data?.wardrobe?.items).toEqual([
+    {
+      id: "catalog-7",
+      url: "https://example.com/catalog-7",
+      name: "Catalog shirt",
+      audience: "woman",
+      category: "top",
+      image_url: "https://example.com/catalog-7.jpg",
+    },
+    {
+      id: "catalog-8",
+      url: "https://example.com/catalog-8",
+      name: "Catalog jeans",
+      audience: "woman",
+      category: "bottom",
+      image_url: "https://example.com/catalog-8.jpg",
+    },
+  ]);
+  expect(content?.data?.wardrobe?.outfitSets).toEqual([
+    {
+      itemIds: ["catalog-7", "catalog-8"],
+      image: null,
+      imageObsolete: false,
+    },
+  ]);
+  expect(
+    Object.keys(
+      (content?.data?.wardrobe?.items as Record<string, unknown>[])[0],
+    ).sort(),
+  ).toEqual(["audience", "category", "id", "image_url", "name", "url"]);
+});
+
+test("createCapsuleStore rejects uploaded personal items in shared capsules", async () => {
+  const uploadedSnapshot = {
+    filters: {},
+    data: {
+      wardrobe: {
+        items: [
+          {
+            id: "Wuploaded-1",
+            url: "wardrobe://uploaded-1",
+            name: "Uploaded shirt",
+            source: "uploaded",
+            audience: "woman",
+            category: "top",
+            image_url: "https://example.com/uploaded.jpg",
+          },
+        ],
+      },
+      rejectedUrls: [],
+    },
+  };
+  const store = createCapsuleStore({
+    getCapsuleByIdForEmailImpl: async () =>
+      capsuleRow({ saved: uploadedSnapshot }),
+    getValidSharedCapsuleByIdImpl: async () => ({
+      id: "share-1",
+      name: "Shared capsule",
+      content: uploadedSnapshot,
+      expiresAt: timestamp,
+    }),
+  });
+
+  await expect(() =>
+    store.createCapsuleShare(
+      "person@example.com",
+      "capsule-1",
+      "https://client.example",
+    ),
+  ).rejects.toThrow(/capsule_contains_personal_items/);
+  await expect(() =>
+    store.importSharedCapsule("person@example.com", "share-1"),
+  ).rejects.toThrow(/capsule_contains_personal_items/);
 });

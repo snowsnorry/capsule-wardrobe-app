@@ -100,7 +100,13 @@ export function SearchDialog({
   );
 }
 
-function ShareDialogTitle({ onClose }: { onClose: () => void }) {
+function ShareDialogTitle({
+  titleKey,
+  onClose,
+}: {
+  titleKey: string;
+  onClose: () => void;
+}) {
   const { t } = useI18n();
   return (
     <DialogTitle>
@@ -113,7 +119,7 @@ function ShareDialogTitle({ onClose }: { onClose: () => void }) {
         <Stack direction="row" alignItems="center" spacing={1.5}>
           <ShareRoundedIcon fontSize="small" />
           <Typography id="share-link-dialog-title" variant="h6">
-            {t("capsule.shareTitle")}
+            {t(titleKey)}
           </Typography>
         </Stack>
         <IconButton aria-label={t("actions.close")} onClick={onClose}>
@@ -134,6 +140,7 @@ export function ShareDialog({
   setState: DialogsProps["setShare"];
 }) {
   const { t } = useI18n();
+  const isBlocked = state.blockedReason === "personal_uploaded_items";
   const close = () => setState((current) => ({ ...current, open: false }));
 
   return (
@@ -145,60 +152,91 @@ export function ShareDialog({
       maxWidth="sm"
       aria-labelledby="share-link-dialog-title"
     >
-      <ShareDialogTitle onClose={close} />
+      <ShareDialogTitle
+        titleKey={
+          isBlocked ? "capsule.shareBlockedTitle" : "capsule.shareTitle"
+        }
+        onClose={close}
+      />
       <DialogContent>
-        <Typography variant="body2" color="text.secondary">
-          {t("capsule.shareReady")}
-        </Typography>
-        <Stack
-          direction="row"
-          spacing={1.25}
-          sx={{ mt: 1.5, p: 1, border: "1px solid", borderColor: "divider" }}
-        >
-          <Link
-            href={state.url}
-            target="_blank"
-            rel="noreferrer"
-            aria-label={state.name || state.url}
-            underline="none"
-            sx={{ minWidth: 0, flex: 1 }}
-          >
-            <Typography noWrap sx={{ fontWeight: 700 }}>
-              {state.name || state.url}
-            </Typography>
-            <Typography variant="body2" color="text.secondary" noWrap>
-              {state.url}
-            </Typography>
-          </Link>
-          <Tooltip
-            title={
-              state.copied
-                ? t("capsule.shareCopied")
-                : t("capsule.copyShareLink")
-            }
-          >
-            <IconButton
-              aria-label={t("capsule.copyShareLink")}
-              onClick={() => {
-                void navigator.clipboard?.writeText(state.url);
-                setState((current) => ({ ...current, copied: true }));
-              }}
-            >
-              {state.copied ? <CheckRoundedIcon /> : <ContentCopyRoundedIcon />}
-            </IconButton>
-          </Tooltip>
-        </Stack>
-        {state.expiresAt ? (
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>
-            {t("capsule.shareExpires", {
-              date: new Date(state.expiresAt).toLocaleString(),
-            })}
-          </Typography>
-        ) : null}
+        {isBlocked ? (
+          <BlockedShareDialogContent />
+        ) : (
+          <ShareLinkDialogContent state={state} setState={setState} />
+        )}
       </DialogContent>
       <DialogActions>
         <Button onClick={close}>{t("actions.close")}</Button>
       </DialogActions>
     </Dialog>
+  );
+}
+
+function BlockedShareDialogContent() {
+  const { t } = useI18n();
+  return (
+    <Typography variant="body2" color="text.secondary">
+      {t("capsule.shareBlockedBody")}
+    </Typography>
+  );
+}
+
+function ShareLinkDialogContent({
+  state,
+  setState,
+}: {
+  state: ShareState;
+  setState: DialogsProps["setShare"];
+}) {
+  const { t } = useI18n();
+  return (
+    <>
+      <Typography variant="body2" color="text.secondary">
+        {t("capsule.shareReady")}
+      </Typography>
+      <Stack
+        direction="row"
+        spacing={1.25}
+        sx={{ mt: 1.5, p: 1, border: "1px solid", borderColor: "divider" }}
+      >
+        <Link
+          href={state.url}
+          target="_blank"
+          rel="noreferrer"
+          aria-label={state.name || state.url}
+          underline="none"
+          sx={{ minWidth: 0, flex: 1 }}
+        >
+          <Typography noWrap sx={{ fontWeight: 700 }}>
+            {state.name || state.url}
+          </Typography>
+          <Typography variant="body2" color="text.secondary" noWrap>
+            {state.url}
+          </Typography>
+        </Link>
+        <Tooltip
+          title={
+            state.copied ? t("capsule.shareCopied") : t("capsule.copyShareLink")
+          }
+        >
+          <IconButton
+            aria-label={t("capsule.copyShareLink")}
+            onClick={() => {
+              void navigator.clipboard?.writeText(state.url);
+              setState((current) => ({ ...current, copied: true }));
+            }}
+          >
+            {state.copied ? <CheckRoundedIcon /> : <ContentCopyRoundedIcon />}
+          </IconButton>
+        </Tooltip>
+      </Stack>
+      {state.expiresAt ? (
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>
+          {t("capsule.shareExpires", {
+            date: new Date(state.expiresAt).toLocaleString(),
+          })}
+        </Typography>
+      ) : null}
+    </>
   );
 }

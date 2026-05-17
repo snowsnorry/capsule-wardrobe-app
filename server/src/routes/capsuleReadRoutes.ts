@@ -175,10 +175,9 @@ function registerCapsuleShareRoutes(app, context) {
         }
         return res.status(201).json({ ok: true, ...share });
       } catch (error) {
-        const code =
-          (error as ErrorWithCode)?.code || (error as Error)?.message;
-        if (code === "capsule_not_shareable") {
-          return res.status(400).json({ error: "capsule_not_shareable" });
+        const errorResponse = sendCapsuleShareErrorResponse(res, error);
+        if (errorResponse) {
+          return errorResponse;
         }
         logError("[capsules/share]", error);
         return res.status(503).json({ error: "service_unavailable" });
@@ -220,16 +219,26 @@ function registerCapsuleShareRoutes(app, context) {
           name: capsule.name,
         });
       } catch (error) {
-        const code =
-          (error as ErrorWithCode)?.code || (error as Error)?.message;
-        if (code === "capsule_not_shareable") {
-          return res.status(400).json({ error: "capsule_not_shareable" });
+        const errorResponse = sendCapsuleShareErrorResponse(res, error);
+        if (errorResponse) {
+          return errorResponse;
         }
         logError("[shared-capsules/import]", error);
         return res.status(503).json({ error: "service_unavailable" });
       }
     },
   );
+}
+
+function sendCapsuleShareErrorResponse(res, error) {
+  const code = (error as ErrorWithCode)?.code || (error as Error)?.message;
+  if (code === "capsule_contains_personal_items") {
+    return res.status(400).json({ error: "capsule_contains_personal_items" });
+  }
+  if (code === "capsule_not_shareable") {
+    return res.status(400).json({ error: "capsule_not_shareable" });
+  }
+  return null;
 }
 
 function registerCapsuleActionRoutes(app, context) {

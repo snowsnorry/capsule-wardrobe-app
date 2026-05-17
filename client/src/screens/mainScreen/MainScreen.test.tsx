@@ -147,6 +147,133 @@ describe("MainScreen", () => {
     ).toHaveAttribute("href", "https://client.example/share/capsule-2");
   });
 
+  test("blocks sharing active capsules with uploaded personal wardrobe items before API call", async () => {
+    const user = userEvent.setup();
+    const onShareCapsule = vi.fn();
+    renderMainScreen({
+      activeCapsule: {
+        id: "capsule-uploaded",
+        name: "Private capsule",
+        draft: {
+          filters: {},
+          data: {
+            wardrobe: {
+              items: [
+                {
+                  id: "Wuploaded-1",
+                  url: "wardrobe://uploaded-1",
+                  source: "uploaded",
+                  name: "Uploaded shirt",
+                  audience: "woman",
+                  category: "top",
+                  image_url: "https://example.com/uploaded.jpg",
+                },
+              ],
+            },
+          },
+        },
+        saved: null,
+        status: "new",
+      },
+      onShareCapsule,
+    });
+
+    await user.click(screen.getByRole("button", { name: "Open capsule menu" }));
+    await user.click(screen.getByRole("menuitem", { name: "Share" }));
+
+    expect(onShareCapsule).not.toHaveBeenCalled();
+    expect(
+      await screen.findByRole("dialog", { name: "Can't share this capsule" }),
+    ).toBeInTheDocument();
+  });
+
+  test("allows sharing catalog items saved through wardrobe and handles server-side personal item blocks", async () => {
+    const user = userEvent.setup();
+    const onShareCapsule = vi
+      .fn()
+      .mockResolvedValueOnce({
+        url: "https://client.example/share/capsule-catalog",
+      })
+      .mockResolvedValueOnce({ blockedReason: "personal_uploaded_items" });
+    const { rerender } = renderMainScreen({
+      activeCapsule: {
+        id: "capsule-catalog",
+        name: "Catalog wardrobe capsule",
+        draft: {
+          filters: {},
+          data: {
+            wardrobe: {
+              items: [
+                {
+                  id: "W7",
+                  product_id: "catalog-7",
+                  source: "from_catalog",
+                  url: "https://example.com/catalog-7",
+                  name: "Catalog shirt",
+                  audience: "woman",
+                  category: "top",
+                  image_url: "https://example.com/catalog-7.jpg",
+                },
+              ],
+            },
+          },
+        },
+        saved: null,
+        status: "new",
+      },
+      onShareCapsule,
+    });
+
+    await user.click(screen.getByRole("button", { name: "Open capsule menu" }));
+    await user.click(screen.getByRole("menuitem", { name: "Share" }));
+    expect(onShareCapsule).toHaveBeenCalledWith("capsule-catalog");
+    expect(
+      await screen.findByRole("link", { name: "Catalog wardrobe capsule" }),
+    ).toHaveAttribute("href", "https://client.example/share/capsule-catalog");
+
+    await user.click(screen.getAllByRole("button", { name: "Close" }).at(-1)!);
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("dialog", { name: "Share capsule" }),
+      ).not.toBeInTheDocument();
+    });
+    rerender(
+      <ThemeProvider theme={theme}>
+        <MainScreen
+          {...createMainScreenProps({
+            activeCapsule: {
+              id: "capsule-unknown-personal",
+              name: "Unknown private capsule",
+              draft: {
+                filters: {},
+                data: {
+                  wardrobe: {
+                    items: [
+                      {
+                        id: "catalog-1",
+                        url: "https://example.com/catalog-1",
+                      },
+                    ],
+                  },
+                },
+              },
+              saved: null,
+              status: "new",
+            },
+            onShareCapsule,
+          })}
+        />
+      </ThemeProvider>,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Open capsule menu" }));
+    await user.click(screen.getByRole("menuitem", { name: "Share" }));
+    expect(onShareCapsule).toHaveBeenLastCalledWith("capsule-unknown-personal");
+    expect(
+      await screen.findByRole("dialog", { name: "Can't share this capsule" }),
+    ).toBeInTheDocument();
+  });
+
   test("resets back to All when the selected outfit tab disappears", async () => {
     const user = userEvent.setup();
     const initialProps = createMainScreenProps({

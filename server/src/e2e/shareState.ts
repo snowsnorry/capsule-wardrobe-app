@@ -3,6 +3,10 @@ import {
   deepClone,
   type E2eCapsuleMemory,
 } from "./capsuleState.js";
+import {
+  hasUploadedPersonalWardrobeItems,
+  normalizeCapsuleSnapshotItemsForShare,
+} from "../../../shared/capsuleShareItems.js";
 import { buildSharedCapsuleOgMetadata } from "../capsuleShareMetadata.js";
 import {
   DEFAULT_CAPSULE_NAME,
@@ -35,6 +39,12 @@ function buildShareExpiresAt(counter: number): string {
 function throwCapsuleNotShareable(): never {
   const error = new Error("capsule_not_shareable");
   (error as Error & { code?: string }).code = "capsule_not_shareable";
+  throw error;
+}
+
+function throwCapsuleContainsPersonalItems(): never {
+  const error = new Error("capsule_contains_personal_items");
+  (error as Error & { code?: string }).code = "capsule_contains_personal_items";
   throw error;
 }
 
@@ -71,6 +81,13 @@ export class E2eShareMemory {
     if (!isShareableCapsuleSnapshot(content)) {
       throwCapsuleNotShareable();
     }
+    if (hasUploadedPersonalWardrobeItems(content)) {
+      throwCapsuleContainsPersonalItems();
+    }
+    const shareContent = normalizeCapsuleSnapshotItemsForShare(content);
+    if (!shareContent) {
+      throwCapsuleNotShareable();
+    }
 
     this.shareCounter += 1;
     const id = `e2e-share-${this.shareCounter}`;
@@ -81,7 +98,7 @@ export class E2eShareMemory {
       url,
       name: String(capsule.name || DEFAULT_CAPSULE_NAME),
       expiresAt,
-      content: deepClone(content),
+      content: deepClone(shareContent),
     };
     this.shares.set(id, share);
     return { id, url, expiresAt };
@@ -126,11 +143,18 @@ export class E2eShareMemory {
     if (!isShareableCapsuleSnapshot(content)) {
       throwCapsuleNotShareable();
     }
+    if (hasUploadedPersonalWardrobeItems(content)) {
+      throwCapsuleContainsPersonalItems();
+    }
+    const shareContent = normalizeCapsuleSnapshotItemsForShare(content);
+    if (!shareContent) {
+      throwCapsuleNotShareable();
+    }
 
     const capsule = capsuleMemory.create({
       name: share.name,
       draft: null,
-      saved: content,
+      saved: shareContent,
     });
     setActiveCapsuleId(getCapsuleIdValue(capsule));
     return capsule;

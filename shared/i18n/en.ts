@@ -253,6 +253,9 @@ const en = {
     share: "Share",
     shareTitle: "Share capsule",
     shareReady: "Your share link is ready.",
+    shareBlockedTitle: "Can't share this capsule",
+    shareBlockedBody:
+      "Capsules with personal uploaded wardrobe items can't be shared. Remove uploaded items or replace them with catalog items before sharing.",
     copyShareLink: "Copy share link",
     shareCopied: "Copied",
     shareExpires: "Expires {date}",
@@ -469,6 +472,8 @@ const en = {
       "Failed to regenerate the capsule. Your previous capsule was restored.",
     regenerateSelectedFailed:
       "Failed to regenerate the selected items. Please try again.",
+    capsuleContainsPersonalItems:
+      "Capsules with personal uploaded wardrobe items can't be shared.",
     capsuleNotShareable: "Capsule has no shareable content.",
     sharedCapsuleUnavailable: "This shared capsule is unavailable or expired.",
   },

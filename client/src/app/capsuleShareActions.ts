@@ -12,8 +12,12 @@ export async function shareCurrentCapsule(
     return (await shareCapsule(capsuleId)) as {
       url?: string;
       expiresAt?: string | Date;
+      blockedReason?: "personal_uploaded_items";
     };
   } catch (error) {
+    if ((error as Error)?.message === "capsule_contains_personal_items") {
+      return { blockedReason: "personal_uploaded_items" as const };
+    }
     fromContext<(value: unknown) => void>(
       context,
       "setStatus",
