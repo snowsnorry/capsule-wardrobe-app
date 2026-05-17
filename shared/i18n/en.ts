@@ -26,6 +26,11 @@ const en = {
     statistics: "Statistics",
     statisticsHint: "Search analytics",
   },
+  sidebar: {
+    catalog: "Catalog",
+    explore: "Explore",
+    statistics: "Statistics",
+  },
   options,
   auth: {
     signInTitle: "Sign in",

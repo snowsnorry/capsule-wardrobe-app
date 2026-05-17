@@ -26,6 +26,11 @@ const ru = {
     statistics: "Статистика",
     statisticsHint: "Аналитика поиска",
   },
+  sidebar: {
+    catalog: "Каталог",
+    explore: "Обзор",
+    statistics: "Статистика",
+  },
   options,
   auth: {
     signInTitle: "Вход",

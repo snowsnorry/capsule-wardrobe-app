@@ -13,6 +13,9 @@ vi.mock("../i18n/useI18n", () => ({
           "launcher.explore": "Catalog",
           "launcher.myWardrobe": "My Wardrobe",
           "launcher.statistics": "Statistics",
+          "sidebar.catalog": "Catalog",
+          "sidebar.explore": "Explore",
+          "sidebar.statistics": "Statistics",
           "capsule.new": "New capsule",
           "capsule.search": "Search capsules",
           "capsule.yourCapsules": "Your capsules",
@@ -156,6 +159,98 @@ describe("AppSidebarNavigation", () => {
     await user.hover(screen.getByRole("button", { name: "New capsule" }));
 
     expect(await screen.findByRole("tooltip")).toHaveTextContent("New capsule");
+  });
+
+  test("opens the catalog group through explore and renders iconless child rows", async () => {
+    const user = userEvent.setup();
+    const onNavigateApp = vi.fn();
+
+    const { rerender } = renderNavigation({ onNavigateApp });
+
+    await user.click(screen.getByRole("button", { name: "Catalog" }));
+
+    expect(onNavigateApp).toHaveBeenCalledWith("explore");
+
+    rerender(
+      <ThemeProvider theme={theme}>
+        <AppSidebarNavigation
+          activeApp="explore"
+          isOverlaySidebar={false}
+          isSidebarCollapsed={false}
+          desktopSidebarRailWidth={72}
+          capsuleList={[]}
+          onNavigateApp={onNavigateApp}
+        />
+      </ThemeProvider>,
+    );
+
+    const catalogChildren = screen.getByTestId("catalog-sidebar-children");
+    const exploreChild = screen.getByRole("button", { name: "Explore" });
+    const statisticsChild = screen.getByRole("button", { name: "Statistics" });
+
+    expect(catalogChildren).toHaveAttribute("aria-hidden", "false");
+    expect(screen.getByRole("button", { name: "Catalog" })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+    expect(exploreChild).toHaveClass("Mui-selected");
+    expect(statisticsChild).not.toHaveClass("Mui-selected");
+    expect(exploreChild.querySelector("svg")).toBeNull();
+    expect(statisticsChild.querySelector("svg")).toBeNull();
+    expect(getComputedStyle(exploreChild).borderRadius).toBe("8px");
+    expect(getComputedStyle(exploreChild).minHeight).toBe("40px");
+    expect(getComputedStyle(exploreChild).paddingLeft).toBe("36px");
+  });
+
+  test("selects statistics inside the expanded catalog group", async () => {
+    const user = userEvent.setup();
+    const onNavigateApp = vi.fn();
+
+    renderNavigation({
+      activeApp: "statistics",
+      onNavigateApp,
+    });
+
+    const statisticsChild = screen.getByRole("button", { name: "Statistics" });
+
+    expect(screen.getByTestId("catalog-sidebar-children")).toHaveAttribute(
+      "aria-hidden",
+      "false",
+    );
+    expect(screen.getByRole("button", { name: "Catalog" })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+    expect(screen.getByRole("button", { name: "Explore" })).not.toHaveClass(
+      "Mui-selected",
+    );
+    expect(statisticsChild).toHaveClass("Mui-selected");
+
+    await user.click(statisticsChild);
+
+    expect(onNavigateApp).toHaveBeenCalledWith("statistics");
+  });
+
+  test("hides catalog children from the collapsed desktop sidebar", () => {
+    renderNavigation({
+      activeApp: "explore",
+      isSidebarCollapsed: true,
+    });
+
+    expect(screen.getByRole("button", { name: "Catalog" })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+    expect(screen.getByTestId("catalog-sidebar-children")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
+    expect(
+      screen.queryByRole("button", { name: "Explore" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Statistics" }),
+    ).not.toBeInTheDocument();
   });
 
   test("aligns expanded top-level icon centers with the collapsed rail", () => {

@@ -1,12 +1,12 @@
 import type { ReactElement } from "react";
 import { Stack } from "@mui/material";
 import { useI18n } from "../i18n/useI18n";
+import CatalogGroupNavigation from "./AppSidebarCatalogNavigation";
 import { CapsuleChildren } from "./AppSidebarCapsuleNavigation";
 import {
   CapsuleTopLevelNavigation,
   MyWardrobeTopLevelNavigation,
   SidebarNavigationDivider,
-  SidebarSecondaryNavigation,
 } from "./AppSidebarNavigationParts";
 import type {
   AppId,
@@ -33,6 +33,9 @@ function AppSidebarNavigation({
   const { t } = useI18n();
   const isCollapsedDesktop = isSidebarCollapsed && !isOverlaySidebar;
   const showCapsuleChildren = activeApp === "capsule" && !isCollapsedDesktop;
+  const showCatalogChildren =
+    (activeApp === "explore" || activeApp === "statistics") &&
+    !isCollapsedDesktop;
   const capsuleChildTabIndex = showCapsuleChildren ? 0 : -1;
 
   const handleNavigateApp = (nextApp: AppId) => {
@@ -74,11 +77,11 @@ function AppSidebarNavigation({
         t={t}
       />
       <SidebarNavigationDivider showCapsuleChildren={showCapsuleChildren} />
-      <SidebarSecondaryNavigation
+      <CatalogGroupNavigation
         activeApp={activeApp}
         isInteractionDisabled={isInteractionDisabled}
         isCollapsedDesktop={isCollapsedDesktop}
-        showCapsuleChildren={showCapsuleChildren}
+        showCatalogChildren={showCatalogChildren}
         desktopSidebarRailWidth={desktopSidebarRailWidth}
         onNavigateApp={handleNavigateApp}
         t={t}

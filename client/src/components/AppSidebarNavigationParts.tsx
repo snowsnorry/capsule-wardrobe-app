@@ -1,7 +1,5 @@
 import type { ReactElement } from "react";
-import { Box, Button, Divider, Stack, Tooltip } from "@mui/material";
-import BarChartRoundedIcon from "@mui/icons-material/BarChartRounded";
-import ManageSearchRoundedIcon from "@mui/icons-material/ManageSearchRounded";
+import { Box, Button, Divider, Tooltip } from "@mui/material";
 import CheckroomOutlinedIcon from "@mui/icons-material/CheckroomOutlined";
 import { PiDresser } from "react-icons/pi";
 import type { AppId } from "./AppSidebarNavigationTypes";
@@ -162,57 +160,6 @@ function SidebarNavigationDivider({
   );
 }
 
-function SidebarSecondaryNavigation({
-  activeApp,
-  isInteractionDisabled,
-  isCollapsedDesktop,
-  showCapsuleChildren,
-  desktopSidebarRailWidth,
-  onNavigateApp,
-  t,
-}: {
-  activeApp: AppId;
-  isInteractionDisabled: boolean;
-  isCollapsedDesktop: boolean;
-  showCapsuleChildren: boolean;
-  desktopSidebarRailWidth: number;
-  onNavigateApp: (nextApp: AppId) => void;
-  t: Translate;
-}) {
-  return (
-    <Stack
-      spacing={0.5}
-      sx={{
-        px: isCollapsedDesktop ? 0 : 1.5,
-        mt: showCapsuleChildren ? 0 : 0.5,
-        transition: `margin 240ms ${naturalEase}`,
-        "@media (prefers-reduced-motion: reduce)": {
-          transition: "none",
-        },
-      }}
-    >
-      <SidebarTopLevelButton
-        label={t("launcher.explore")}
-        icon={<ManageSearchRoundedIcon />}
-        isActive={activeApp === "explore"}
-        isInteractionDisabled={isInteractionDisabled}
-        isCollapsedDesktop={isCollapsedDesktop}
-        desktopSidebarRailWidth={desktopSidebarRailWidth}
-        onClick={() => onNavigateApp("explore")}
-      />
-      <SidebarTopLevelButton
-        label={t("launcher.statistics")}
-        icon={<BarChartRoundedIcon />}
-        isActive={activeApp === "statistics"}
-        isInteractionDisabled={isInteractionDisabled}
-        isCollapsedDesktop={isCollapsedDesktop}
-        desktopSidebarRailWidth={desktopSidebarRailWidth}
-        onClick={() => onNavigateApp("statistics")}
-      />
-    </Stack>
-  );
-}
-
 function CapsuleTopLevelNavigation({
   isActive,
   isExpanded,
@@ -280,5 +227,5 @@ export {
   CapsuleTopLevelNavigation,
   MyWardrobeTopLevelNavigation,
   SidebarNavigationDivider,
-  SidebarSecondaryNavigation,
+  SidebarTopLevelButton,
 };
