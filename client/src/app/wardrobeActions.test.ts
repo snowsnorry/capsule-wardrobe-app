@@ -210,6 +210,13 @@ describe("wardrobeActions", () => {
     expect(context.setIsContentOperationLoading).toHaveBeenLastCalledWith(
       false,
     );
+    const itemsUpdater = mockCalls(context.setProfileItems).at(-1)?.[0] as (
+      current: unknown,
+    ) => unknown;
+    expect(itemsUpdater(null)).toBeNull();
+    expect(itemsUpdater([{ url: "https://example.com/other" }])).toEqual([
+      { url: "https://example.com/other" },
+    ]);
     const successUpdater = mockCalls(context.setStatus).at(-1)?.[0] as (
       current: unknown,
     ) => unknown;
@@ -231,6 +238,30 @@ describe("wardrobeActions", () => {
       infoKey: "",
       infoParams: null,
     });
+
+    vi.mocked(saveCatalogItemToMyWardrobe).mockRejectedValueOnce(
+      new Error("network"),
+    );
+    const genericFailureContext = createActionContext({
+      isMountedRef: { current: false },
+    });
+    await saveItemToMyWardrobe(genericFailureContext, {
+      url: "https://example.com/failing",
+    });
+    const genericErrorUpdater = mockCalls(genericFailureContext.setStatus).at(
+      -1,
+    )?.[0] as (current: unknown) => unknown;
+    expect(genericErrorUpdater({ error: "" })).toEqual({
+      error: "myWardrobe.saveFailed",
+      infoKey: "",
+      infoParams: null,
+    });
+    expect(
+      genericFailureContext.setIsContentOperationLoading,
+    ).toHaveBeenCalledTimes(1);
+    expect(
+      genericFailureContext.setIsContentOperationLoading,
+    ).toHaveBeenCalledWith(true);
   });
 
   test("removeItemFromMyWardrobe deletes catalog item URLs and clears saved state", async () => {
@@ -372,6 +403,166 @@ describe("wardrobeActions", () => {
         wardrobe_id: "uploaded-1",
       }),
     ]);
+  });
+
+  test("updateUploadedItemInMyWardrobe accepts alternate uploaded ids and fallback payloads", async () => {
+    const payload = {
+      name: "Payload-only top",
+      description: null,
+      brand: null,
+      audience: "all",
+      category: "top",
+      season: ["spring"],
+      formality_level: [],
+      style: [],
+      occasions: [],
+      color_base: [],
+      pattern: null,
+      finish: null,
+      composition: null,
+      silhouette: null,
+      fit: null,
+      closure_type: [],
+    };
+    vi.mocked(updateUploadedWardrobeItem).mockResolvedValueOnce({ item: null });
+    const explicitContext = createActionContext();
+
+    const explicitUpdated = await updateUploadedItemInMyWardrobe(
+      explicitContext,
+      {
+        wardrobe_id: "explicit-uploaded-1",
+        source: "uploaded",
+      },
+      payload,
+    );
+
+    expect(updateUploadedWardrobeItem).toHaveBeenCalledWith(
+      "explicit-uploaded-1",
+      payload,
+    );
+    expect(explicitUpdated).toEqual(
+      expect.objectContaining({
+        name: "Payload-only top",
+        source: "uploaded",
+        wardrobe_id: "explicit-uploaded-1",
+      }),
+    );
+    const explicitItemsUpdater = mockCalls(explicitContext.setProfileItems).at(
+      -1,
+    )?.[0] as (current: unknown) => unknown;
+    expect(explicitItemsUpdater(null)).toBeNull();
+
+    vi.mocked(updateUploadedWardrobeItem).mockResolvedValueOnce({
+      item: {
+        id: "uploaded-from-response",
+        name: "Updated by url",
+        source: "uploaded",
+      },
+    });
+    const urlContext = createActionContext();
+    await updateUploadedItemInMyWardrobe(
+      urlContext,
+      {
+        wardrobeId: "wardrobe-id-from-alias",
+        url: "https://example.com/uploaded-item",
+      },
+      payload,
+    );
+
+    expect(updateUploadedWardrobeItem).toHaveBeenLastCalledWith(
+      "wardrobe-id-from-alias",
+      payload,
+    );
+    const urlItemsUpdater = mockCalls(urlContext.setProfileItems).at(
+      -1,
+    )?.[0] as (current: unknown) => unknown;
+    expect(
+      urlItemsUpdater([
+        {
+          id: "different-id",
+          url: " https://example.com/uploaded-item ",
+          name: "Old by url",
+        },
+      ]),
+    ).toEqual([
+      expect.objectContaining({
+        id: "uploaded-from-response",
+        name: "Updated by url",
+      }),
+    ]);
+
+    vi.mocked(updateUploadedWardrobeItem).mockResolvedValueOnce({
+      item: {
+        id: "source-uploaded-1",
+        name: "Updated by source id",
+        source: "uploaded",
+      },
+    });
+    await updateUploadedItemInMyWardrobe(
+      createActionContext(),
+      {
+        id: "source-uploaded-1",
+        source: "uploaded",
+      },
+      payload,
+    );
+    expect(updateUploadedWardrobeItem).toHaveBeenLastCalledWith(
+      "source-uploaded-1",
+      payload,
+    );
+  });
+
+  test("updateUploadedItemInMyWardrobe reports missing ids and update failures", async () => {
+    const payload = {
+      name: "Updated top",
+      description: null,
+      brand: null,
+      audience: "all",
+      category: "top",
+      season: ["summer"],
+      formality_level: [],
+      style: [],
+      occasions: [],
+      color_base: [],
+      pattern: null,
+      finish: null,
+      composition: null,
+      silhouette: null,
+      fit: null,
+      closure_type: [],
+    };
+
+    await expect(
+      updateUploadedItemInMyWardrobe(createActionContext(), {}, payload),
+    ).rejects.toThrow("missing_uploaded_item_id");
+
+    vi.mocked(updateUploadedWardrobeItem).mockRejectedValueOnce(
+      new Error("network"),
+    );
+    const context = createActionContext({ isMountedRef: { current: false } });
+
+    await expect(
+      updateUploadedItemInMyWardrobe(
+        context,
+        { url: "wardrobe:///encoded%20item", source: "uploaded" },
+        payload,
+      ),
+    ).rejects.toThrow("network");
+
+    expect(updateUploadedWardrobeItem).toHaveBeenCalledWith(
+      "encoded item",
+      payload,
+    );
+    const errorUpdater = mockCalls(context.setStatus).at(-1)?.[0] as (
+      current: unknown,
+    ) => unknown;
+    expect(errorUpdater({ error: "" })).toEqual({
+      error: "myWardrobe.updateFailed",
+      infoKey: "",
+      infoParams: null,
+    });
+    expect(context.setIsContentOperationLoading).toHaveBeenCalledTimes(1);
+    expect(context.setIsContentOperationLoading).toHaveBeenCalledWith(true);
   });
 
   test("toggleRegenerationSelection toggles valid urls only when idle", () => {
