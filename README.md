@@ -4,12 +4,13 @@ Full-stack TypeScript monorepo for a capsule wardrobe application. The project c
 
 ## Stack
 
-- Frontend: React, Vite, MUI, Vitest, Playwright
+- Frontend: React, Vite, MUI, Tailwind CSS, Recharts, Vitest, Playwright
 - Backend: Node.js, Express, TypeScript
 - Shared domain layer: root `shared/`
 - Persistence: Postgres
 - Email auth delivery: Resend
 - Optional auth provider: Google Sign-In
+- Generated and uploaded image storage: Cloudflare R2 when configured
 - Deployment path: Render single-service
 
 ## What the app does
@@ -20,6 +21,8 @@ Full-stack TypeScript monorepo for a capsule wardrobe application. The project c
 - capsule creation, duplication, rename, save/revert, and delete
 - AI-assisted wardrobe generation and selective regeneration
 - outfit-set image generation and PDF export
+- My Wardrobe uploads, uploaded item metadata editing, catalog saves, and wardrobe PDF export
+- shareable capsule links and shared capsule import
 - product search and aggregated statistics views
 
 ## Repository layout
@@ -45,6 +48,9 @@ Useful entrypoints:
 - `server/src/capsuleStore.ts`
 - `server/src/profileStore.ts`
 - `server/src/searchStore.ts`
+- `server/src/r2Storage.ts`
+- `server/src/wardrobeUploadImagesRunner.ts`
+- `server/src/routes/`
 
 ## Requirements
 
@@ -99,6 +105,7 @@ Common optional values:
 - `CLIENT_ORIGIN` — defaults to `http://localhost:5173`
 - `NODE_ENV` — defaults to `development`
 - `AUTH_TEST_MODE` — prints sign-in codes to logs outside production
+- `PASSKEY_RP_NAME` — optional WebAuthn relying party display name, defaults to `Capsule Wardrobe`
 - `SESSION_PRUNE_MIN_INTERVAL_MS` — session cleanup throttle
 - `WARDROBE_PDF_CHILD_TIMEOUT_MS` — PDF child-process timeout
 - `SHARP_CONCURRENCY` and related image/prompt concurrency envs — optional tuning knobs for image work
@@ -232,11 +239,14 @@ npm run lint
 npm run lint:strict
 npm run format
 npm run format:check
+npm run lint:fix
 npm run quality:deps
 npm run quality:cycles
 npm run quality:unused
+npm run quality:large-files
 npm run quality:large-files:strict
 npm run quality:gate
+npm run security:audit
 ```
 
 After editing files, verify that relevant tests pass, coverage remains acceptable, and ESLint has zero warnings for the changed source files. For cross-cutting changes, prefer `npm run quality:gate`.
@@ -257,9 +267,10 @@ Main backend route groups:
 
 - `/auth/*` — email auth, Google auth, logout, current session
 - `/profile/*` — onboarding, profile data, locale, delete profile
-- `/capsules/*` — bootstrap, recent, search, CRUD, save/revert, regenerate, PDF, SSE events
+- `/capsules/*` — bootstrap, recent, search, CRUD, save/revert, regenerate, share, import support, PDF, SSE events, outfit-set image jobs
+- `/shared-capsules/*` — public shared capsule read and authenticated import
 - `/search/*` — search options, saved filters, run search, stats
-- `/wardrobe/*` — profile-derived wardrobe filters
+- `/wardrobe/*` — profile-derived filters, My Wardrobe uploaded/catalog items, upload event stream, item metadata updates, and wardrobe PDF export
 - `/health`, `/healthall`
 
 The e2e server also mounts `/__e2e/*` test-control and fixture endpoints. Those endpoints are only available when the dedicated e2e server entrypoint is used.

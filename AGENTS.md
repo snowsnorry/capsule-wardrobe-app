@@ -11,11 +11,12 @@ High-level responsibilities:
 
 ## Architecture
 - Monorepo using npm workspaces
-- Frontend: React + Vite + MUI + TypeScript
+- Frontend: React + Vite + MUI + Tailwind CSS + Recharts + TypeScript
 - Backend: Node.js + Express + TypeScript
 - Persistence: Postgres
 - Email auth delivery: Resend
 - Passkey/WebAuthn auth: SimpleWebAuthn with DB-backed short-lived challenges
+- Generated and uploaded image storage: Cloudflare R2 when configured
 - Browser e2e: Playwright against a dedicated Express/Vite e2e server with in-memory mocks
 - Render single-service deployment is supported
 
@@ -29,6 +30,8 @@ High-level responsibilities:
 - `client/src/app/` — app shell, route content, state/actions, session bootstrap, navigation, and dialogs
 - `client/src/auth/` — browser auth helpers such as passkey/WebAuthn flows
 - `client/src/components/` — reusable UI pieces
+- `client/src/components/productDetail/` — product and uploaded wardrobe item detail dialogs
+- `client/src/components/tremor/` — local chart component wrappers used by statistics
 - `client/src/i18n/` — localization resources and helpers
 - `client/src/screens/` — page/screen-level UI flows
 - `client/src/screens/mainScreen/` — main capsule/wardrobe screen composition
@@ -48,6 +51,8 @@ High-level responsibilities:
 - `server/src/email.ts` — email delivery/auth messaging
 - `server/src/authStore.ts` — auth/session-related storage logic
 - `server/src/capsuleStore.ts` — capsule/domain storage logic
+- `server/src/r2Storage.ts` and `server/src/r2Delete.ts` — Cloudflare R2 upload/delete helpers
+- `server/src/wardrobe*.ts` — uploaded wardrobe image processing, semantic metadata, PDF, and download helpers
 
 ## Commands
 Run from repository root unless stated otherwise.
@@ -80,6 +85,9 @@ Tests:
 - `npm run test:server`
 - `npm run test:shared`
 - `npm run test:e2e`
+- `npm run test:e2e:headed`
+- `npm run test:e2e:ui`
+- `npm run test:e2e:debug`
 
 Coverage:
 - `npm run coverage`
@@ -90,10 +98,17 @@ Coverage:
 Lint and quality:
 - `npm run lint`
 - `npm run lint:strict`
+- `npm run lint:fix`
 - `npm run format`
 - `npm run format:check`
+- `npm run quality:deps`
+- `npm run quality:cycles`
+- `npm run quality:unused`
+- `npm run quality:large-files`
+- `npm run quality:large-files:strict`
 - `npm run quality:gate`
 - `npm run quality`
+- `npm run security:audit`
 
 ## Working rules
 - Prefer minimal diffs.
@@ -138,6 +153,7 @@ At minimum:
 - Playwright/e2e infrastructure changes: `npm run test:e2e`
 - cross-cutting changes: `npm test` and `npm run coverage`
 - TypeScript-only or contract-shape changes: run the narrowest relevant `typecheck` command
+- docs-only changes: run `npm run format` and `npm run lint:strict`; code tests are not required when behavior is untouched
 - after tests, coverage, and typecheck, run ESLint on the changed source files with zero warnings, for example `npx eslint --max-warnings=0 <changed files>`
 
 ## Avoid

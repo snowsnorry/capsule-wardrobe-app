@@ -1,7 +1,7 @@
 # Repo Map
 
 ## Purpose
-Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, onboarding, profile flows, localization, and capsule-wardrobe-related backend workflows.
+Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, onboarding, profile flows, localization, saved wardrobe/capsule workflows, AI-assisted generation, image upload/storage, product search, and statistics.
 
 ## Main runtime flows
 
@@ -33,21 +33,32 @@ Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, onboard
 - server-side domain state likely centers on `capsuleStore.ts`
 - capsule read/mutation HTTP behavior lives under `server/src/routes/capsule*Routes.ts`
 - client capsule state/actions live under `client/src/app/` and `client/src/screens/mainScreen/`
-- AI-related generation or enrichment behavior lives under `server/src/ai/`
+- AI-related generation, regeneration, event streaming, and outfit-set image behavior lives under `server/src/ai/`
+- public sharing and import behavior is exposed through `/shared-capsules/*` and implemented in the capsule read/store modules
 
-### 5. Search / statistics flow
+### 5. My Wardrobe flow
+- client My Wardrobe screen composition lives in `client/src/screens/MyWardrobeScreen.tsx` and related `MyWardrobe*` files
+- My Wardrobe API calls live in `client/src/api/myWardrobe.ts`
+- uploaded/catalog item actions are orchestrated through `client/src/app/myWardrobeItemActions.ts`, `client/src/app/wardrobeImageActions.ts`, and related wardrobe action modules
+- server HTTP behavior lives in `server/src/routes/wardrobeRoutes.ts`, `server/src/routes/wardrobeUploadStream.ts`, and `server/src/routes/wardrobeUploadedItemUpdateRoute.ts`
+- upload normalization, image analysis, embeddings, cleanup, PDF export, and child-process helpers live in root `server/src/wardrobe*.ts` modules
+- uploaded/generated image persistence uses `server/src/r2Storage.ts` and `server/src/r2Delete.ts` when R2 is configured
+
+### 6. Search / statistics flow
 - search UI state and filters live under `client/src/search/`
 - search screen composition lives under `client/src/screens/searchScreen/`
 - statistics screen composition lives under `client/src/screens/statisticsScreen/`
+- product detail dialogs live under `client/src/components/productDetail/`
+- chart wrappers live under `client/src/components/tremor/`
 - search API routes live in `server/src/routes/searchRoutes.ts`
 - search persistence is split across `searchStore.ts`, `searchTypes.ts`, and `server/src/db/search*`
 
-### 6. Localization flow
+### 7. Localization flow
 - locale resources and helpers live under `client/src/i18n/`
 - shared locale option resources live under `shared/i18n/`
 - changes to user-facing copy should preserve EN/RU parity
 
-### 7. Playwright e2e flow
+### 8. Playwright e2e flow
 - root Playwright config lives in `playwright.config.ts`
 - browser tests live under `tests/e2e/`
 - authenticated tests reuse `tests/e2e/.auth/user.json`
@@ -79,6 +90,8 @@ Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, onboard
 ### Client feature areas
 - `client/src/api/`
 - `client/src/components/`
+- `client/src/components/productDetail/`
+- `client/src/components/tremor/`
 - `client/src/screens/`
 - `client/src/screens/mainScreen/`
 - `client/src/screens/searchScreen/`
@@ -109,6 +122,12 @@ Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, onboard
 - `server/src/searchTypes.ts`
 - `server/src/searchValidation.ts`
 - `server/src/serverUrlSecurity.ts`
+- `server/src/r2Storage.ts`
+- `server/src/r2Delete.ts`
+- `server/src/wardrobeImageAnalysis.ts`
+- `server/src/wardrobeImageCleanup.ts`
+- `server/src/wardrobeSemanticEmbedding.ts`
+- `server/src/wardrobeUploadImages*.ts`
 - `server/src/wardrobePdf*.ts`
 - `server/src/ai/`
 - `server/src/templates/`
@@ -173,6 +192,7 @@ The Playwright auth state is generated at `tests/e2e/.auth/user.json` and is int
 - Default e2e runs should not require a real database, email provider, LLM provider, embedding provider, or remote image host
 - Passkey challenges are single-use and stored separately from normal app sessions
 - Passkey API responses must never expose stored credential public keys
+- Uploaded wardrobe item API responses must not expose private owner, embedding, or internal timestamp fields
 - DB/env wiring should remain explicit and stable
 - Render deployment path is a first-class deployment concern
 
