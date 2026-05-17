@@ -80,6 +80,7 @@ export function buildEmptyCapsuleDraft(): CapsuleDraft {
       color: null,
       pattern: "solid",
       text: "",
+      anchorWardrobeItemIds: [],
     },
     data: {
       wardrobe: null,
@@ -108,6 +109,7 @@ export function buildDraftSnapshotFromState({
   selectedSourceMode,
   selectedStyle,
   selectedText,
+  selectedAnchorWardrobeItemIds = [],
   wardrobe,
 }: {
   activeCapsuleMeta: CapsuleMeta | null;
@@ -123,6 +125,7 @@ export function buildDraftSnapshotFromState({
   selectedSourceMode: CapsuleSourceMode;
   selectedStyle: string | null;
   selectedText: string;
+  selectedAnchorWardrobeItemIds?: string[];
   wardrobe?:
     | CapsuleWardrobeData
     | { items: WardrobeItem[] | null; outfitSets: OutfitSetSnapshot[] }
@@ -143,6 +146,7 @@ export function buildDraftSnapshotFromState({
       color: selectedColor,
       pattern: selectedPattern,
       text: selectedText,
+      anchorWardrobeItemIds: selectedAnchorWardrobeItemIds,
     },
     data: {
       wardrobe: selectedWardrobe
@@ -161,6 +165,7 @@ export function buildDraftSnapshotFromState({
   };
 }
 
+// eslint-disable-next-line complexity
 function normalizeComparableFilters(filters: Partial<CapsuleFilters> = {}) {
   return {
     sourceMode:
@@ -181,6 +186,9 @@ function normalizeComparableFilters(filters: Partial<CapsuleFilters> = {}) {
         ? filters.pattern
         : "solid",
     text: typeof filters.text === "string" ? filters.text.trim() : "",
+    anchorWardrobeItemIds: Array.isArray(filters.anchorWardrobeItemIds)
+      ? [...filters.anchorWardrobeItemIds].sort()
+      : [],
   };
 }
 

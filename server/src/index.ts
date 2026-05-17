@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import "dotenv/config";
 import express from "express";
 import { OAuth2Client } from "google-auth-library";
@@ -78,6 +79,7 @@ import {
   getPasskeyByCredentialId,
   getProductsByUrlsInOrder,
   getUploadedWardrobeItemById,
+  listWardrobeItemsByIdsForEmail,
   listWardrobeItemsByEmail,
   saveUploadedWardrobeItemsByEmail,
   saveWardrobeItemFromCatalogByUrl,
@@ -117,6 +119,7 @@ import {
   toCapsuleResponse,
   toCapsuleSummary,
 } from "./capsuleHttp.js";
+import { validateCapsuleAnchorItems } from "./capsuleAnchors.js";
 import { createStartServer } from "./serverStartup.js";
 import { uploadWardrobeImageToR2 } from "./r2Storage.js";
 import { deleteObjectsFromR2 } from "./r2Delete.js";
@@ -177,6 +180,7 @@ function createWardrobeImageStorageDependencies() {
   };
 }
 
+// eslint-disable-next-line max-lines-per-function
 function createAppDependencies(options: Record<string, unknown> = {}) {
   const googleClientId =
     options.googleClientId === undefined
@@ -226,6 +230,7 @@ function createAppDependencies(options: Record<string, unknown> = {}) {
     insertPasskeyImpl: insertPasskey,
     deleteWardrobeItemFromCatalogImpl: deleteWardrobeItemFromCatalogByUrl,
     listPasskeysImpl: listPasskeysByEmail,
+    listWardrobeItemsByIdsImpl: listWardrobeItemsByIdsForEmail,
     listWardrobeItemsImpl: listWardrobeItemsByEmail,
     listRecentCapsulesImpl: listRecentCapsules,
     nodeEnv: NODE_ENV,
@@ -248,6 +253,12 @@ function createAppDependencies(options: Record<string, unknown> = {}) {
     setActiveCapsuleIdImpl: setActiveCapsuleId,
     streamCapsuleEventsImpl: capsuleEventHub.subscribe,
     updateCapsuleSnapshotImpl: updateCapsuleSnapshot,
+    validateCapsuleAnchorItemsImpl: (email, anchorWardrobeItemIds) =>
+      validateCapsuleAnchorItems({
+        email,
+        anchorWardrobeItemIds,
+        deps: { listWardrobeItemsByIdsImpl: listWardrobeItemsByIdsForEmail },
+      }),
     updatePasskeyAuthenticationImpl: updatePasskeyAuthentication,
     updateProfileActiveCapsuleIdImpl: updateProfileActiveCapsuleId,
     updateProfileImpl: updateProfile,

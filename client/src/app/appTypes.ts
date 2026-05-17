@@ -44,6 +44,7 @@ export type CapsuleFilters = {
   color: string | null;
   pattern: string;
   text: string;
+  anchorWardrobeItemIds: string[];
 };
 
 export type OutfitSetSnapshot = {

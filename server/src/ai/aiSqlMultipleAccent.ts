@@ -9,8 +9,16 @@ const MULTIPLE_ACCENT_CATALOG_ONLY_SQL_FILE = new URL(
   "./sql/capsule_multiple_accent_catalog_only.sql",
   import.meta.url,
 );
+const MULTIPLE_ACCENT_CATALOG_ONLY_WITH_ANCHORS_SQL_FILE = new URL(
+  "./sql/capsule_multiple_accent_catalog_only_with_anchors.sql",
+  import.meta.url,
+);
 const MULTIPLE_ACCENT_WARDROBE_PREFERRED_SQL_FILE = new URL(
   "./sql/capsule_multiple_accent_wardrobe_preferred.sql",
+  import.meta.url,
+);
+const MULTIPLE_ACCENT_WARDROBE_PREFERRED_WITH_ANCHORS_SQL_FILE = new URL(
+  "./sql/capsule_multiple_accent_wardrobe_preferred_with_anchors.sql",
   import.meta.url,
 );
 
@@ -36,6 +44,31 @@ function buildMultipleAccentCapsuleSqlValues(
   ];
 }
 
+function hasAnchorParams(params: CapsuleWardrobeSqlParams): boolean {
+  return params.anchorWardrobeNumericIds.length > 0;
+}
+
+function buildMultipleAccentCatalogOnlyAnchorSqlValues(
+  params: CapsuleWardrobeSqlParams,
+): readonly unknown[] {
+  return [
+    ...buildMultipleAccentCapsuleSqlValues(params).slice(0, 11),
+    params.profileEmail,
+    params.anchorWardrobeNumericIds,
+    params.anchorSimilarityBonusWeight,
+  ];
+}
+
+function buildMultipleAccentWardrobePreferredAnchorSqlValues(
+  params: CapsuleWardrobeSqlParams,
+): readonly unknown[] {
+  return [
+    ...buildMultipleAccentCapsuleSqlValues(params),
+    params.anchorWardrobeNumericIds,
+    params.anchorSimilarityBonusWeight,
+  ];
+}
+
 async function queryCapsuleWardrobeItemsForMultipleAccentColors(
   sql: CapsuleWardrobeSqlClient,
   params: CapsuleWardrobeSqlParams,
@@ -44,6 +77,14 @@ async function queryCapsuleWardrobeItemsForMultipleAccentColors(
     return queryCapsuleWardrobePreferredItemsForMultipleAccentColors(
       sql,
       params,
+    );
+  }
+
+  if (hasAnchorParams(params)) {
+    return executeSqlFile<CapsuleWardrobeSqlRow>(
+      sql,
+      MULTIPLE_ACCENT_CATALOG_ONLY_WITH_ANCHORS_SQL_FILE,
+      buildMultipleAccentCatalogOnlyAnchorSqlValues(params),
     );
   }
 
@@ -58,6 +99,14 @@ async function queryCapsuleWardrobePreferredItemsForMultipleAccentColors(
   sql: CapsuleWardrobeSqlClient,
   params: CapsuleWardrobeSqlParams,
 ) {
+  if (hasAnchorParams(params)) {
+    return executeSqlFile<CapsuleWardrobeSqlRow>(
+      sql,
+      MULTIPLE_ACCENT_WARDROBE_PREFERRED_WITH_ANCHORS_SQL_FILE,
+      buildMultipleAccentWardrobePreferredAnchorSqlValues(params),
+    );
+  }
+
   return executeSqlFile<CapsuleWardrobeSqlRow>(
     sql,
     MULTIPLE_ACCENT_WARDROBE_PREFERRED_SQL_FILE,

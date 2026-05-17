@@ -60,6 +60,8 @@ export function useProfileFilterAppState() {
   const [selectedSourceMode, setSelectedSourceMode] =
     useState<CapsuleSourceMode>("catalog_only");
   const [selectedText, setSelectedText] = useState("");
+  const [selectedAnchorWardrobeItemIds, setSelectedAnchorWardrobeItemIds] =
+    useState<string[]>([]);
   const [currentView, setCurrentView] = useState("main");
   const [settingsProfile, setSettingsProfile] = useState(() =>
     normalizeProfileSettings(),
@@ -77,6 +79,7 @@ export function useProfileFilterAppState() {
     selectedSourceMode,
     selectedStyle,
     selectedText,
+    selectedAnchorWardrobeItemIds,
     setCurrentView,
     setOnboardingStep,
     setSelectedAudience,
@@ -88,6 +91,7 @@ export function useProfileFilterAppState() {
     setSelectedSourceMode,
     setSelectedStyle,
     setSelectedText,
+    setSelectedAnchorWardrobeItemIds,
     setSettingsProfile,
     settingsProfile,
   };

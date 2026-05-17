@@ -116,6 +116,7 @@ messages:
       Accent Color: {{color}}
       Pattern: {{pattern}}
       {{additional_info_block}}
+      {{anchor_items_block}}
 
       AVAILABLE ITEMS (Candidates):
       {{items}}

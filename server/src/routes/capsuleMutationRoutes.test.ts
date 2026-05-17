@@ -153,6 +153,7 @@ test("capsule creation only accepts name and filters and initializes server-owne
         color: "red",
         pattern: "striped",
         text: "",
+        anchorWardrobeItemIds: [],
       },
       data: {
         wardrobe: null,
@@ -233,6 +234,7 @@ test("filters patch only accepts filters and resets draft data", async (t) => {
       color: "red",
       pattern: "striped",
       text: "Prefer natural fabrics",
+      anchorWardrobeItemIds: [],
     },
     data: {
       wardrobe: null,
@@ -256,6 +258,71 @@ test("filters patch only accepts filters and resets draft data", async (t) => {
   );
   expect(invalidTopLevel.response.status).toBe(400);
   expect(invalidTopLevel.json).toEqual({ error: "invalid_payload" });
+});
+
+test("filters patch normalizes and validates anchor wardrobe ids", async (t) => {
+  let receivedAnchorIds = null;
+  let receivedDraft = null;
+  const { baseUrl } = await startTestServer(t, {
+    overrides: {
+      validateCapsuleAnchorItemsImpl: async (_email, anchorIds) => {
+        receivedAnchorIds = anchorIds;
+        return {
+          anchorWardrobeItemIds: ["W12", "W18"],
+          anchorWardrobeNumericIds: [12, 18],
+          anchorItems: [],
+        };
+      },
+      updateCapsuleSnapshotImpl: async (_email, _id, draft) => {
+        receivedDraft = draft;
+        return { id: "capsule-1", draft, saved: null, status: "new" };
+      },
+    },
+  });
+
+  const result = await requestJson(baseUrl, "/capsules/capsule-1/filters", {
+    method: "PATCH",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN,
+    body: {
+      filters: {
+        audience: "woman",
+        anchorWardrobeItemIds: ["w12", "W18"],
+      },
+    },
+  });
+
+  expect(result.response.status).toBe(200);
+  expect(receivedAnchorIds).toEqual(["W12", "W18"]);
+  expect(receivedDraft?.filters.anchorWardrobeItemIds).toEqual(["W12", "W18"]);
+});
+
+test("filters patch rejects invalid anchor wardrobe ids", async (t) => {
+  const { baseUrl } = await startTestServer(t, {
+    overrides: {
+      validateCapsuleAnchorItemsImpl: async () => {
+        const error = new Error("invalid_payload") as Error & { code: string };
+        error.code = "invalid_payload";
+        throw error;
+      },
+    },
+  });
+
+  const result = await requestJson(baseUrl, "/capsules/capsule-1/filters", {
+    method: "PATCH",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN,
+    body: {
+      filters: {
+        anchorWardrobeItemIds: ["not-a-wardrobe-id"],
+      },
+    },
+  });
+
+  expect(result.response.status).toBe(400);
+  expect(result.json).toEqual({ error: "invalid_payload" });
 });
 
 test("filters patch can trigger regenerate via query flag after saving filters", async (t) => {
@@ -305,6 +372,7 @@ test("filters patch can trigger regenerate via query flag after saving filters",
           color: null,
           pattern: "solid",
           text: "",
+          anchorWardrobeItemIds: [],
         },
         data: {
           wardrobe: null,
@@ -358,6 +426,7 @@ test("rejected urls patch validates against current capsule wardrobe", async (t)
       color: null,
       pattern: "solid",
       text: "",
+      anchorWardrobeItemIds: [],
     },
     data: {
       wardrobe: {

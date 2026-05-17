@@ -184,6 +184,7 @@ function buildCapsuleStateSetters(
     setSelectedSourceMode: state.setSelectedSourceMode,
     setSelectedStyle: state.setSelectedStyle,
     setSelectedText: state.setSelectedText,
+    setSelectedAnchorWardrobeItemIds: state.setSelectedAnchorWardrobeItemIds,
   };
 }
 
@@ -208,6 +209,7 @@ function buildDraftSnapshotInput(
     selectedSourceMode: state.selectedSourceMode,
     selectedStyle: state.selectedStyle,
     selectedText: state.selectedText,
+    selectedAnchorWardrobeItemIds: state.selectedAnchorWardrobeItemIds,
     wardrobe,
   };
 }

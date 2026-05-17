@@ -1,4 +1,5 @@
-import { getSqlClient } from "../db.js";
+/* eslint-disable max-lines */
+import { getSqlClient, listWardrobeItemsByIdsForEmail } from "../db.js";
 import {
   getGenerateJsonWithLlm,
   isNoLlmProfileEnabled,
@@ -33,9 +34,16 @@ import {
   getWardrobeSelectionPrompt,
   toWardrobeUiItem,
 } from "./aiSelectionPrompt.js";
+import {
+  buildAnchorRepairPrompt,
+  expandCategoriesForAnchors,
+  splitAnchorSelectionRows,
+  validateAnchorSelectedIds,
+} from "./anchorGeneration.js";
+import { validateCapsuleAnchorItems } from "../capsuleAnchors.js";
 import { logInfo, logWarn } from "../logger.js";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// eslint-disable-next-line @typescript-eslint/no-explicit-any, complexity
 function createCapsuleGenerationDeps(deps: Record<string, any> = {}) {
   return {
     buildCapsuleWardrobeSqlParamsImpl:
@@ -56,6 +64,14 @@ function createCapsuleGenerationDeps(deps: Record<string, any> = {}) {
     runWithImageWorkSlotImpl:
       deps.runWithImageWorkSlotImpl || runWithImageWorkSlot,
     getSqlClientImpl: deps.getSqlClientImpl || getSqlClient,
+    validateCapsuleAnchorItemsImpl:
+      deps.validateCapsuleAnchorItemsImpl ||
+      ((email, anchorWardrobeItemIds) =>
+        validateCapsuleAnchorItems({
+          email,
+          anchorWardrobeItemIds,
+          deps: { listWardrobeItemsByIdsImpl: listWardrobeItemsByIdsForEmail },
+        })),
   };
 }
 
@@ -96,6 +112,15 @@ async function getNormalizedWardrobeItems(
   return normalizedItems;
 }
 
+async function getValidatedAnchorContext(userProfile, deps) {
+  const anchorIds = Array.isArray(userProfile?.anchorWardrobeItemIds)
+    ? userProfile.anchorWardrobeItemIds
+    : [];
+  const email = typeof userProfile?.email === "string" ? userProfile.email : "";
+  const anchors = await deps.validateCapsuleAnchorItemsImpl(email, anchorIds);
+  return anchors;
+}
+
 function buildNoLlmCapsuleResult({
   normalizedItems,
   capsuleCategories,
@@ -113,8 +138,11 @@ function buildNoLlmCapsuleResult({
     },
     logContext,
   );
+  const seedItems = Array.isArray(userProfile?.anchorItems)
+    ? userProfile.anchorItems
+    : [];
   const balancedItems = enforceCategoryCounts(
-    [],
+    seedItems,
     normalizedItems,
     capsuleCategories,
     userProfile,
@@ -201,6 +229,8 @@ async function generateSelection({
   userProfile,
   normalizedItems,
   capsuleCategories,
+  anchorItems,
+  candidateItems,
   promptDebugImages,
   llmResolution,
   logContext,
@@ -241,7 +271,45 @@ async function generateSelection({
     logContext,
   );
 
-  return { parsedSelection, selectionResponse };
+  const selectedIds = getSelectedIdsFromCapsule(parsedSelection?.capsule).map(
+    (id) => String(id),
+  );
+  const validation = validateAnchorSelectedIds({
+    selectedIds,
+    anchorItems,
+    candidateItems,
+  });
+  if (validation.ok) {
+    return { parsedSelection, selectionResponse, selectedIds };
+  }
+
+  const retryPrompt = `${selectionPrompt}\n\n${buildAnchorRepairPrompt(
+    validation.missingAnchorIds,
+  )}`;
+  const { response: repairResponse, json: repairedSelection } =
+    await generateJsonWithLlm(retryPrompt, {
+      userProfile,
+      images: [],
+    });
+  const repairedIds = getSelectedIdsFromCapsule(repairedSelection?.capsule).map(
+    (id) => String(id),
+  );
+  const repairedValidation = validateAnchorSelectedIds({
+    selectedIds: repairedIds,
+    anchorItems,
+    candidateItems,
+  });
+  if (!repairedValidation.ok) {
+    const error = new Error("anchor_validation_failed");
+    (error as { code?: string }).code = "anchor_validation_failed";
+    throw error;
+  }
+
+  return {
+    parsedSelection: repairedSelection,
+    selectionResponse: repairResponse,
+    selectedIds: repairedIds,
+  };
 }
 
 function logEmptySelectionResponse(parsedSelection, selectionResponse) {
@@ -273,6 +341,7 @@ function getRawSelectionText(selectionResponse) {
     : null;
 }
 
+// eslint-disable-next-line max-lines-per-function
 export function createGenerateCapsuleWardrobe(deps = {}) {
   const resolvedDeps = createCapsuleGenerationDeps(deps);
 
@@ -283,21 +352,36 @@ export function createGenerateCapsuleWardrobe(deps = {}) {
     const llmResolution = resolvedDeps.resolveLlmProviderImpl(userProfile);
     const prompt = resolvedDeps.getWardrobePromptImpl(userProfile);
     const promptEmbeddings = await resolvedDeps.getPromptEmbeddingsImpl(prompt);
-    const capsuleCategories = getCapsuleCategories(userProfile);
-    const normalizedItems = await getNormalizedWardrobeItems(
+    const baseCapsuleCategories = getCapsuleCategories(userProfile);
+    const anchorContext = await getValidatedAnchorContext(
       userProfile,
+      resolvedDeps,
+    );
+    const capsuleCategories = expandCategoriesForAnchors(
+      baseCapsuleCategories,
+      anchorContext.anchorItems,
+    );
+    const normalizedItems = await getNormalizedWardrobeItems(
+      {
+        ...userProfile,
+        anchorWardrobeItemIds: anchorContext.anchorWardrobeItemIds,
+        anchorWardrobeNumericIds: anchorContext.anchorWardrobeNumericIds,
+      },
       promptEmbeddings,
       capsuleCategories,
       logContext,
       resolvedDeps,
     );
+    const { anchorItems, candidateItems } =
+      splitAnchorSelectionRows(normalizedItems);
+    const promptUserProfile = { ...userProfile, anchorItems };
     const noLlm = resolvedDeps.isNoLlmProfileEnabledImpl(userProfile);
 
     if (noLlm) {
       return buildNoLlmCapsuleResult({
         normalizedItems,
         capsuleCategories,
-        userProfile,
+        userProfile: promptUserProfile,
         promptEmbeddings,
         llmResolution,
         logContext,
@@ -309,19 +393,21 @@ export function createGenerateCapsuleWardrobe(deps = {}) {
       logContext,
       resolvedDeps,
     );
-    const { selectionResponse, parsedSelection } = await generateSelection({
-      userProfile,
-      normalizedItems,
-      capsuleCategories,
-      promptDebugImages,
-      llmResolution,
-      logContext,
-      deps: resolvedDeps,
-    });
+    const { selectionResponse, parsedSelection, selectedIds } =
+      await generateSelection({
+        userProfile: promptUserProfile,
+        normalizedItems,
+        capsuleCategories,
+        anchorItems,
+        candidateItems,
+        promptDebugImages,
+        llmResolution,
+        logContext,
+        deps: resolvedDeps,
+      });
     logInfo("[wardrobe-ai][selected-json]", JSON.stringify(parsedSelection));
     logEmptySelectionResponse(parsedSelection, selectionResponse);
 
-    const selectedIds = getSelectedIdsFromCapsule(parsedSelection?.capsule);
     const uniqueSelectedIds = [...new Set(selectedIds.map((id) => String(id)))];
     const itemsById = new Map(
       normalizedItems.map((item) => [String(item.id), item]),
@@ -333,7 +419,7 @@ export function createGenerateCapsuleWardrobe(deps = {}) {
       selectedItems,
       normalizedItems,
       capsuleCategories,
-      userProfile,
+      promptUserProfile,
     );
 
     if (balancedItems.length === 0) {

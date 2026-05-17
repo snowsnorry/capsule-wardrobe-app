@@ -104,6 +104,7 @@ export type MainScreenProps = {
   selectedPattern: string | null;
   selectedSourceMode: CapsuleSourceMode;
   selectedText: string;
+  selectedAnchorWardrobeItemIds: string[];
   hasFilterChanges: boolean;
   status: ScreenStatus;
   onSelectStyleCore: (value: string) => void;
@@ -115,6 +116,7 @@ export type MainScreenProps = {
   onSelectPattern: (value: string) => void;
   onSelectSourceMode: (value: CapsuleSourceMode) => void;
   onTextChange: (value: string) => void;
+  onSelectAnchorWardrobeItemIds: (value: string[]) => void;
   onApplyFilters: () => Promise<void> | void;
   onResetFilters: () => Promise<void> | void;
   onNavigateApp: (

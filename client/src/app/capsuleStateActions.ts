@@ -27,6 +27,7 @@ type ApplyCapsuleStateContext = {
   setSelectedSourceMode: StateSetter<CapsuleSourceMode>;
   setSelectedStyle: StateSetter<string | null>;
   setSelectedText: StateSetter<string>;
+  setSelectedAnchorWardrobeItemIds: StateSetter<string[]>;
 };
 
 function normalizePattern(pattern: unknown) {
@@ -69,6 +70,9 @@ function applyCapsuleFilters(
   context.setSelectedPattern(normalizePattern(filters.pattern));
   context.setSelectedSourceMode(normalizeSourceMode(filters.sourceMode));
   context.setSelectedText(fallbackString(filters.text));
+  context.setSelectedAnchorWardrobeItemIds(
+    fallbackStringArray(filters.anchorWardrobeItemIds),
+  );
   return effective;
 }
 

@@ -157,6 +157,69 @@ export async function getUploadedWardrobeItemById({
   return row ? toWardrobeUiItem(row) : null;
 }
 
+export async function listWardrobeItemsByIdsForEmail({
+  email,
+  ids,
+}: {
+  email: string;
+  ids: number[];
+}): Promise<Array<Record<string, unknown>>> {
+  const normalizedIds = [
+    ...new Set(
+      ids
+        .map((id) => Number(id))
+        .filter((id) => Number.isInteger(id) && id > 0),
+    ),
+  ];
+  if (normalizedIds.length === 0) {
+    return [];
+  }
+
+  const sql = getSqlClient();
+  const rows = getResultRows(
+    await sql<UserWardrobeRow>`
+    select
+      id,
+      profile_email as "profileEmail",
+      product_id as "productId",
+      name,
+      url,
+      description,
+      brand,
+      price,
+      currency,
+      availability,
+      image_url as "imageUrl",
+      audience,
+      category,
+      season,
+      formality_level as "formalityLevel",
+      style,
+      occasions,
+      color_base as "colorBase",
+      pattern,
+      finish,
+      is_neutral as "isNeutral",
+      composition,
+      silhouette,
+      fit,
+      closure_type as "closureType",
+      embedding,
+      source,
+      raw_image_url as "rawImageUrl",
+      processing_status as "processingStatus",
+      created_at as "createdAt",
+      updated_at as "updatedAt"
+    from wardrobe
+    where profile_email = ${email}
+      and id = any(${normalizedIds}::bigint[])
+    order by array_position(${normalizedIds}::bigint[], id), id
+  `,
+  );
+
+  return rows.map(toWardrobeUiItem);
+}
+
 // eslint-disable-next-line max-lines-per-function
 export async function saveWardrobeItemFromCatalogByUrl({
   email,

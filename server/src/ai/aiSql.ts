@@ -12,12 +12,21 @@ const WARDROBE_RELEVANCE_BOOST = 25;
 const CATALOG_POOL_LIMIT = 10;
 const WARDROBE_POOL_LIMIT = 5;
 const FINAL_CANDIDATE_LIMIT = 10;
+const ANCHOR_SIMILARITY_BONUS_WEIGHT = 18;
 const CATALOG_ONLY_SQL_FILE = new URL(
   "./sql/capsule_catalog_only.sql",
   import.meta.url,
 );
+const CATALOG_ONLY_WITH_ANCHORS_SQL_FILE = new URL(
+  "./sql/capsule_catalog_only_with_anchors.sql",
+  import.meta.url,
+);
 const WARDROBE_PREFERRED_SQL_FILE = new URL(
   "./sql/capsule_wardrobe_preferred.sql",
+  import.meta.url,
+);
+const WARDROBE_PREFERRED_WITH_ANCHORS_SQL_FILE = new URL(
+  "./sql/capsule_wardrobe_preferred_with_anchors.sql",
   import.meta.url,
 );
 
@@ -95,6 +104,15 @@ function buildCapsuleWardrobeSqlParams(
     catalogPoolLimit: CATALOG_POOL_LIMIT,
     wardrobePoolLimit: WARDROBE_POOL_LIMIT,
     finalCandidateLimit: FINAL_CANDIDATE_LIMIT,
+    anchorWardrobeItemIds: Array.isArray(userProfile?.anchorWardrobeItemIds)
+      ? userProfile.anchorWardrobeItemIds
+      : [],
+    anchorWardrobeNumericIds: Array.isArray(
+      userProfile?.anchorWardrobeNumericIds,
+    )
+      ? userProfile.anchorWardrobeNumericIds
+      : [],
+    anchorSimilarityBonusWeight: ANCHOR_SIMILARITY_BONUS_WEIGHT,
     ...getProfileSqlFilters(userProfile),
     embeddingVector: `[${promptEmbeddings.join(",")}]`,
   };
@@ -123,10 +141,43 @@ function buildRegularCapsuleSqlValues(
   ];
 }
 
+function hasAnchorParams(params: CapsuleWardrobeSqlParams): boolean {
+  return params.anchorWardrobeNumericIds.length > 0;
+}
+
+function buildCatalogOnlyAnchorSqlValues(
+  params: CapsuleWardrobeSqlParams,
+): readonly unknown[] {
+  return [
+    ...buildRegularCapsuleSqlValues(params).slice(0, 12),
+    params.profileEmail,
+    params.anchorWardrobeNumericIds,
+    params.anchorSimilarityBonusWeight,
+  ];
+}
+
+function buildWardrobePreferredAnchorSqlValues(
+  params: CapsuleWardrobeSqlParams,
+): readonly unknown[] {
+  return [
+    ...buildRegularCapsuleSqlValues(params),
+    params.anchorWardrobeNumericIds,
+    params.anchorSimilarityBonusWeight,
+  ];
+}
+
 async function queryCatalogOnlyCapsuleWardrobeItems(
   sql: CapsuleWardrobeSqlClient,
   params: CapsuleWardrobeSqlParams,
 ) {
+  if (hasAnchorParams(params)) {
+    return executeSqlFile<CapsuleWardrobeSqlRow>(
+      sql,
+      CATALOG_ONLY_WITH_ANCHORS_SQL_FILE,
+      buildCatalogOnlyAnchorSqlValues(params),
+    );
+  }
+
   return executeSqlFile<CapsuleWardrobeSqlRow>(
     sql,
     CATALOG_ONLY_SQL_FILE,
@@ -138,6 +189,14 @@ async function queryCapsuleWardrobePreferredItems(
   sql: CapsuleWardrobeSqlClient,
   params: CapsuleWardrobeSqlParams,
 ) {
+  if (hasAnchorParams(params)) {
+    return executeSqlFile<CapsuleWardrobeSqlRow>(
+      sql,
+      WARDROBE_PREFERRED_WITH_ANCHORS_SQL_FILE,
+      buildWardrobePreferredAnchorSqlValues(params),
+    );
+  }
+
   return executeSqlFile<CapsuleWardrobeSqlRow>(
     sql,
     WARDROBE_PREFERRED_SQL_FILE,

@@ -10,6 +10,7 @@ export type CapsuleFilters = {
   color: string | null;
   pattern: string;
   text: string;
+  anchorWardrobeItemIds: string[];
 };
 
 type CapsuleSourceMode = "catalog_only" | "wardrobe_preferred";
@@ -123,6 +124,10 @@ function uniqueTrimmedStrings(values: unknown): string[] {
     : [];
 }
 
+function normalizeAnchorWardrobeItemIds(values: unknown): string[] {
+  return uniqueTrimmedStrings(values).map((value) => value.toUpperCase());
+}
+
 function normalizeOutfitSetPayload(value: unknown): OutfitSetPayload | null {
   if (!isPlainRecord(value)) {
     return null;
@@ -185,6 +190,7 @@ export function normalizeCapsuleFilters(
       color: null,
       pattern: "solid",
       text: "",
+      anchorWardrobeItemIds: [],
     };
   }
 
@@ -202,6 +208,9 @@ export function normalizeCapsuleFilters(
       typeof filters.text === "string" && filters.text.trim()
         ? filters.text.trim()
         : "",
+    anchorWardrobeItemIds: normalizeAnchorWardrobeItemIds(
+      filters.anchorWardrobeItemIds,
+    ),
   };
 }
 

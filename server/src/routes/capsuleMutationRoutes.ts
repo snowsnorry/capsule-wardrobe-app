@@ -5,6 +5,7 @@ function isObjectPayload(body) {
   return Boolean(body) && typeof body === "object" && !Array.isArray(body);
 }
 
+// eslint-disable-next-line max-lines-per-function
 function registerCapsuleCreateRoutes(app, context) {
   const { hasOwnProperty, requireTrustedOrigin, requireAuth, requireCsrf } =
     context;
@@ -14,6 +15,7 @@ function registerCapsuleCreateRoutes(app, context) {
     requireTrustedOrigin,
     requireAuth,
     requireCsrf,
+    // eslint-disable-next-line complexity
     async (req, res) => {
       if (
         !isObjectPayload(req.body) ||
@@ -24,12 +26,18 @@ function registerCapsuleCreateRoutes(app, context) {
 
       try {
         const profile = await context.getProfileImpl(req.user.email);
+        const draft = context.buildCapsuleDraftFromFilters(
+          profile,
+          req.body?.filters,
+        );
+        const anchors = await context.validateCapsuleAnchorItemsImpl(
+          req.user.email,
+          draft?.filters?.anchorWardrobeItemIds,
+        );
+        draft.filters.anchorWardrobeItemIds = anchors.anchorWardrobeItemIds;
         const capsule = await context.createCapsuleImpl(req.user.email, {
           name: String(req.body?.name || "").trim() || undefined,
-          draft: context.buildCapsuleDraftFromFilters(
-            profile,
-            req.body?.filters,
-          ),
+          draft,
           saved: null,
           setActive: true,
         });
@@ -37,6 +45,12 @@ function registerCapsuleCreateRoutes(app, context) {
           .status(201)
           .json({ ok: true, capsule: context.toCapsuleResponse(capsule) });
       } catch (error) {
+        if (
+          error?.code === "invalid_payload" ||
+          error?.message === "invalid_payload"
+        ) {
+          return res.status(400).json({ error: "invalid_payload" });
+        }
         logError("[capsules/create]", error);
         return res.status(503).json({ error: "service_unavailable" });
       }
@@ -48,6 +62,7 @@ function registerCapsuleCreateRoutes(app, context) {
     requireTrustedOrigin,
     requireAuth,
     requireCsrf,
+    // eslint-disable-next-line complexity
     async (req, res) => {
       if (
         !isObjectPayload(req.body) ||
@@ -58,10 +73,19 @@ function registerCapsuleCreateRoutes(app, context) {
       }
 
       try {
+        const normalizedFilters = context.normalizeCapsuleSnapshot({
+          filters: req.body?.filters,
+        })?.filters;
+        const anchors = await context.validateCapsuleAnchorItemsImpl(
+          req.user.email,
+          normalizedFilters?.anchorWardrobeItemIds,
+        );
+        if (normalizedFilters) {
+          normalizedFilters.anchorWardrobeItemIds =
+            anchors.anchorWardrobeItemIds;
+        }
         const nextDraft = {
-          filters: context.normalizeCapsuleSnapshot({
-            filters: req.body?.filters,
-          })?.filters,
+          filters: normalizedFilters,
           data: { wardrobe: null, rejectedUrls: [] },
         };
         const capsule = await context.updateCapsuleSnapshotImpl(
@@ -82,6 +106,12 @@ function registerCapsuleCreateRoutes(app, context) {
           capsule: context.toCapsuleResponse(capsule),
         });
       } catch (error) {
+        if (
+          error?.code === "invalid_payload" ||
+          error?.message === "invalid_payload"
+        ) {
+          return res.status(400).json({ error: "invalid_payload" });
+        }
         logError("[capsules/filters]", error);
         return res.status(503).json({ error: "service_unavailable" });
       }

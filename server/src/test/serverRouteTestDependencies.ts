@@ -282,6 +282,13 @@ function createCapsuleMutationDependencies() {
     }),
     deleteCapsuleImpl: async () => true,
     setActiveCapsuleIdImpl: async () => ({ activeCapsuleId: "capsule-1" }),
+    validateCapsuleAnchorItemsImpl: async (_email, anchorWardrobeItemIds) => ({
+      anchorWardrobeItemIds: Array.isArray(anchorWardrobeItemIds)
+        ? anchorWardrobeItemIds
+        : [],
+      anchorWardrobeNumericIds: [],
+      anchorItems: [],
+    }),
   };
 }
 

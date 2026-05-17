@@ -249,6 +249,7 @@ function MainScreenFlowHarness({
       selectedPattern={null}
       selectedSourceMode="catalog_only"
       selectedText=""
+      selectedAnchorWardrobeItemIds={[]}
       hasFilterChanges={false}
       status={{ loading: false, error: "", infoKey: "", infoParams: null }}
       onSelectStyleCore={vi.fn()}
@@ -260,6 +261,7 @@ function MainScreenFlowHarness({
       onSelectPattern={vi.fn()}
       onSelectSourceMode={vi.fn()}
       onTextChange={vi.fn()}
+      onSelectAnchorWardrobeItemIds={vi.fn()}
       onApplyFilters={vi.fn()}
       onResetFilters={vi.fn()}
       onNavigateApp={vi.fn()}

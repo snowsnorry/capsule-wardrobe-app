@@ -221,6 +221,7 @@ function buildView(input: ControllerModelInput) {
     selectedSourceMode: state.selectedSourceMode,
     selectedStyle: state.selectedStyle,
     selectedText: state.selectedText,
+    selectedAnchorWardrobeItemIds: state.selectedAnchorWardrobeItemIds,
     setCode: state.setCode,
     setEmail: state.setEmail,
     setSelectedAudience: state.setSelectedAudience,
@@ -232,6 +233,7 @@ function buildView(input: ControllerModelInput) {
     setSelectedSourceMode: state.setSelectedSourceMode,
     setSelectedStyle: state.setSelectedStyle,
     setSelectedText: state.setSelectedText,
+    setSelectedAnchorWardrobeItemIds: state.setSelectedAnchorWardrobeItemIds,
     toggleSelection: input.toggleSelection,
   };
 }

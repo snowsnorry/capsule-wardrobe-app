@@ -168,6 +168,82 @@ test("generateCapsuleWardrobe uses LLM selection, prompt images, and short capsu
   expect(result.rawSelectionText).toBe("Raw selected text");
 });
 
+test("generateCapsuleWardrobe injects anchors and repairs missing anchor selections", async () => {
+  const llmPrompts = [];
+  const generateCapsuleWardrobe = createGenerateCapsuleWardrobe(
+    createBaseDeps({
+      validateCapsuleAnchorItemsImpl: async () => ({
+        anchorWardrobeItemIds: ["W12"],
+        anchorWardrobeNumericIds: [12],
+        anchorItems: [
+          {
+            id: "W12",
+            item_source: "wardrobe",
+            selection_role: "anchor",
+            wardrobe_id: "12",
+            name: "White shirt",
+            category: "top",
+            image_url: "https://example.com/anchor.jpg",
+          },
+        ],
+      }),
+      queryCapsuleWardrobeItemsForProfileImpl: async () => [
+        {
+          id: "W12",
+          item_source: "wardrobe",
+          selection_role: "anchor",
+          wardrobe_id: "12",
+          name: "White shirt",
+          category: "top",
+          image_url: "https://example.com/anchor.jpg",
+        },
+        ...createWardrobeRows().map((row) => ({
+          ...row,
+          selection_role: "candidate",
+        })),
+      ],
+      getGenerateJsonWithLlmImpl: () => async (prompt, options) => {
+        llmPrompts.push(prompt);
+        options.onPayloadBuilt?.();
+        const isRepair = String(prompt).includes("Missing anchor ids: W12");
+        return {
+          response: { output_text: isRepair ? " repaired " : " missing " },
+          json: {
+            capsule: isRepair
+              ? {
+                  top: ["W12"],
+                  bottom: ["bottom-1"],
+                  bag: ["bag-1"],
+                }
+              : {
+                  top: ["top-1"],
+                  bottom: ["bottom-1"],
+                  bag: ["bag-1"],
+                },
+            outfit_formulas: [],
+            system_evaluation: {
+              short_capsule_name: "Anchor edit",
+            },
+          },
+        };
+      },
+    }),
+  );
+
+  const result = await generateCapsuleWardrobe({
+    email: "person@example.com",
+    audience: "woman",
+    season: ["spring"],
+    anchorWardrobeItemIds: ["W12"],
+  });
+
+  expect(llmPrompts[0]).toContain("ANCHOR ITEMS - MANDATORY");
+  expect(llmPrompts[0]).toContain('"id": "W12"');
+  expect(llmPrompts[1]).toContain("Missing anchor ids: W12");
+  expect(result.items.map((item) => item.id)).toContain("W12");
+  expect(result.rawSelectionText).toBe("repaired");
+});
+
 test("generateCapsuleWardrobe continues without prompt images and reports empty selections", async () => {
   vi.spyOn(console, "warn").mockImplementation(() => {});
 

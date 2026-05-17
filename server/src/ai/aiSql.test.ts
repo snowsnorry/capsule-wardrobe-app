@@ -53,6 +53,9 @@ function buildBaseSqlParams(
     rejectedUrls: ["https://example.com/rejected"],
     embeddingVector: "[0.1,0.2]",
     noiseFactor: 0.05,
+    anchorWardrobeItemIds: [],
+    anchorWardrobeNumericIds: [],
+    anchorSimilarityBonusWeight: 18,
     ...overrides,
   };
 }
@@ -91,6 +94,9 @@ test("buildCapsuleWardrobeSqlParams preserves defaults and profile filters", () 
   expect(params.rejectedUrls).toEqual(["https://example.com/one"]);
   expect(params.embeddingVector).toBe("[0.12,-0.34]");
   expect(params.noiseFactor).toBe(0);
+  expect(params.anchorWardrobeItemIds).toEqual([]);
+  expect(params.anchorWardrobeNumericIds).toEqual([]);
+  expect(params.anchorSimilarityBonusWeight).toBe(18);
 });
 
 test("buildCapsuleWardrobeSqlParams falls back to solid pattern and random noise without additional text", () => {
@@ -360,4 +366,61 @@ test("multiple accent SQL query uses neutral/non-neutral color logic", async () 
     ["https://example.com/rejected"],
     10,
   ]);
+});
+
+test("anchor-aware SQL dispatch selects all four anchor variants", async () => {
+  const anchorParams = {
+    anchorWardrobeItemIds: ["W12"],
+    anchorWardrobeNumericIds: [12],
+  };
+
+  const catalog = createSqlRecorder();
+  await queryCapsuleWardrobeItems(
+    catalog.sql,
+    buildBaseSqlParams(anchorParams),
+  );
+
+  const catalogMultiple = createSqlRecorder();
+  await queryCapsuleWardrobeItemsForMultipleAccentColors(
+    catalogMultiple.sql,
+    buildBaseSqlParams({ ...anchorParams, color: "multiple_accent_colors" }),
+  );
+
+  const wardrobe = createSqlRecorder();
+  await queryCapsuleWardrobePreferredItems(
+    wardrobe.sql,
+    buildBaseSqlParams({ ...anchorParams, sourceMode: "wardrobe_preferred" }),
+  );
+
+  const wardrobeMultiple = createSqlRecorder();
+  await queryCapsuleWardrobeItemsForMultipleAccentColors(
+    wardrobeMultiple.sql,
+    buildBaseSqlParams({
+      ...anchorParams,
+      color: "multiple_accent_colors",
+      sourceMode: "wardrobe_preferred",
+    }),
+  );
+
+  expect(catalog.calls[0].text).toMatch(/selection_role/i);
+  expect(catalog.calls[0].text).toMatch(
+    /\$14::bigint\[\] AS anchor_wardrobe_ids/i,
+  );
+  expect(catalog.calls[0].values.slice(-3)).toEqual([
+    "person@example.com",
+    [12],
+    18,
+  ]);
+  expect(catalogMultiple.calls[0].text).toMatch(
+    /\$13::bigint\[\] AS anchor_wardrobe_ids/i,
+  );
+  expect(wardrobe.calls[0].text).toMatch(
+    /wardrobe\.id <> ALL\(params\.anchor_wardrobe_ids\)/i,
+  );
+  expect(wardrobe.calls[0].text).toMatch(
+    /params\.wardrobe_pool_limit - COALESCE/i,
+  );
+  expect(wardrobeMultiple.calls[0].text).toMatch(
+    /\$16::bigint\[\] AS anchor_wardrobe_ids/i,
+  );
 });

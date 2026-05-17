@@ -5,6 +5,7 @@ import { ThemeProvider, createTheme } from "@mui/material/styles";
 import type { ComponentProps } from "react";
 
 const useI18nMock = vi.hoisted(() => vi.fn());
+const fetchMyWardrobeItemsMock = vi.hoisted(() => vi.fn());
 
 vi.mock("../i18n/useI18n", () => ({
   useI18n: useI18nMock,
@@ -18,6 +19,9 @@ vi.mock("../i18n", () => ({
       argyle: "Argyle",
       graphic: "Graphic",
     })[value] || value,
+}));
+vi.mock("../api/myWardrobe", () => ({
+  fetchMyWardrobeItems: fetchMyWardrobeItemsMock,
 }));
 
 import ProfileFiltersSidebar from "./ProfileFiltersSidebar";
@@ -46,6 +50,7 @@ function renderSidebar(
     selectedPattern: "solid",
     selectedSourceMode: "catalog_only",
     selectedText: "",
+    selectedAnchorWardrobeItemIds: [],
     hasFilterChanges: true,
     status: { loading: false, error: "", infoKey: "", infoParams: null },
     onSelectStyleCore: vi.fn(),
@@ -57,6 +62,7 @@ function renderSidebar(
     onSelectPattern: vi.fn(),
     onSelectSourceMode: vi.fn(),
     onTextChange: vi.fn(),
+    onSelectAnchorWardrobeItemIds: vi.fn(),
     onApply: vi.fn(),
     onReset: vi.fn(),
     onSignOut: vi.fn(),
@@ -92,6 +98,24 @@ function renderSidebar(
         "capsule.settingsSubtitle":
           "Adjust the inputs used to build this capsule.",
         "capsule.preferWardrobe": "Prefer items from my wardrobe",
+        "capsule.anchors.title": "Anchor items",
+        "capsule.anchors.hint": "Choose up to 5 wardrobe items to keep.",
+        "capsule.anchors.add": "Add items from wardrobe",
+        "capsule.anchors.edit": "Add / edit",
+        "capsule.anchors.unnamed": "{id}",
+        "capsule.anchors.remove": "Remove {name}",
+        "capsule.anchors.loadFailed": "Failed to load wardrobe items.",
+        "capsule.anchors.dialogTitle": "Select anchor items",
+        "capsule.anchors.selectedCount": "{count} of {max} selected",
+        "capsule.anchors.selectedMax":
+          "{count} of {max} selected · maximum reached",
+        "capsule.anchors.type": "Type:",
+        "capsule.anchors.typesAll": "All",
+        "capsule.anchors.empty": "No wardrobe items found.",
+        "capsule.anchors.apply": "Apply",
+        "capsule.anchors.sources.all": "All",
+        "capsule.anchors.sources.uploaded": "Uploaded",
+        "capsule.anchors.sources.catalog": "Catalog",
         "filters.apply": "Apply",
         "filters.applyDisabledHint": "To apply filters, choose: {items}.",
         "filters.applyDisabledUnchangedHint": "Filters have not changed.",
@@ -100,6 +124,8 @@ function renderSidebar(
         "filters.required.seasons": "at least one season",
         "filters.required.audience": "an audience",
         "filters.reset": "Reset",
+        "actions.cancel": "Cancel",
+        "actions.close": "Close",
         "actions.signOut": "Sign out",
         "main.partialRegenerateToggle": "Toggle",
       };
@@ -132,6 +158,7 @@ describe("ProfileFiltersSidebar", () => {
   afterEach(() => {
     cleanup();
     useI18nMock.mockReset();
+    fetchMyWardrobeItemsMock.mockReset();
   });
 
   test("shows no hint and keeps apply enabled when required filters are selected", () => {
@@ -255,5 +282,57 @@ describe("ProfileFiltersSidebar", () => {
     await user.click(screen.getByRole("button", { name: "Sign out" }));
 
     expect(onSignOut).toHaveBeenCalledTimes(1);
+  });
+
+  test("renders anchor empty state and applies picker selection", async () => {
+    const user = userEvent.setup();
+    const onSelectAnchorWardrobeItemIds = vi.fn();
+    fetchMyWardrobeItemsMock.mockResolvedValue({
+      items: [
+        {
+          id: 12,
+          name: "White shirt",
+          url: "https://example.com/shirt",
+          image_url: "https://example.com/shirt.jpg",
+          category: "top",
+        },
+      ],
+    });
+
+    renderSidebar({ onSelectAnchorWardrobeItemIds });
+    await user.click(
+      screen.getByRole("button", { name: "Add items from wardrobe" }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: /White shirt/ }),
+    );
+    await user.click(screen.getByRole("button", { name: "Apply" }));
+
+    expect(onSelectAnchorWardrobeItemIds).toHaveBeenCalledWith(["W12"]);
+  });
+
+  test("keeps anchor picker cancel local and disables sixth unselected item", async () => {
+    const user = userEvent.setup();
+    const onSelectAnchorWardrobeItemIds = vi.fn();
+    fetchMyWardrobeItemsMock.mockResolvedValue({
+      items: [1, 2, 3, 4, 5, 6].map((id) => ({
+        id,
+        name: `Item ${id}`,
+        url: `wardrobe://${id}`,
+        category: id === 6 ? "bottom" : "top",
+      })),
+    });
+
+    renderSidebar({
+      selectedAnchorWardrobeItemIds: ["W1", "W2", "W3", "W4", "W5"],
+      onSelectAnchorWardrobeItemIds,
+    });
+    await user.click(screen.getByRole("button", { name: "Add / edit" }));
+
+    expect(
+      await screen.findByRole("button", { name: /Item 6/ }),
+    ).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(onSelectAnchorWardrobeItemIds).not.toHaveBeenCalled();
   });
 });

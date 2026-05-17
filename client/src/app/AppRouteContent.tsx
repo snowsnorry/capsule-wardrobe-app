@@ -49,6 +49,7 @@ type SharedFilterProps = {
   selectedPattern: string;
   selectedText: string;
   selectedSourceMode: CapsuleSourceMode;
+  selectedAnchorWardrobeItemIds: string[];
   setSelectedFormalityLevel: (value: string) => void;
   setSelectedStyle: (value: string | null) => void;
   setSelectedOccasions: Dispatch<SetStateAction<string[]>>;
@@ -58,6 +59,7 @@ type SharedFilterProps = {
   setSelectedPattern: (value: string) => void;
   setSelectedText: (value: string) => void;
   setSelectedSourceMode: (value: CapsuleSourceMode) => void;
+  setSelectedAnchorWardrobeItemIds: (value: string[]) => void;
   toggleSelection: ToggleSelectionFn;
 };
 type AppRouteContentProps = SharedFilterProps & {
@@ -232,6 +234,7 @@ function MainRoute(props: AppRouteContentProps) {
       selectedPattern={props.selectedPattern}
       selectedSourceMode={props.selectedSourceMode}
       selectedText={props.selectedText}
+      selectedAnchorWardrobeItemIds={props.selectedAnchorWardrobeItemIds}
       hasFilterChanges={props.hasFilterChanges}
       status={props.status}
       onSelectStyleCore={props.setSelectedFormalityLevel}
@@ -255,6 +258,7 @@ function MainRoute(props: AppRouteContentProps) {
       onSelectPattern={props.setSelectedPattern}
       onSelectSourceMode={props.setSelectedSourceMode}
       onTextChange={props.setSelectedText}
+      onSelectAnchorWardrobeItemIds={props.setSelectedAnchorWardrobeItemIds}
       onApplyFilters={props.onApplyCapsuleFilters}
       onResetFilters={props.onResetProfileFilters}
       onNavigateApp={props.onNavigateApp}

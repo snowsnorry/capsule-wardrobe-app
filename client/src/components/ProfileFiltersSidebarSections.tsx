@@ -12,6 +12,7 @@ import {
 import AccentColorChips from "./AccentColorChips";
 import { FilterSectionTitle } from "./ProfileFilterSectionTitle";
 import { ProfileSignOutAction } from "./ProfileFiltersSidebarActions";
+import ProfileFiltersAnchorSection from "./ProfileFiltersAnchorSection";
 import StylePreferenceSelector from "./StylePreferenceSelector";
 import { translateOption } from "../i18n";
 import type {
@@ -70,11 +71,13 @@ function ProfileFiltersHeader({
   props,
   showTitle,
   t,
+  locale,
 }: {
   disabled: boolean;
   props: ProfileFiltersSidebarProps;
   showTitle: boolean;
   t: Translate;
+  locale: string;
 }) {
   return (
     <Stack spacing={2.5}>
@@ -122,6 +125,14 @@ function ProfileFiltersHeader({
           }}
         />
       </Stack>
+      <Divider />
+      <ProfileFiltersAnchorSection
+        disabled={disabled}
+        selectedIds={props.selectedAnchorWardrobeItemIds || []}
+        onChange={props.onSelectAnchorWardrobeItemIds}
+        t={t}
+        locale={locale}
+      />
       <Divider />
     </Stack>
   );
@@ -351,6 +362,7 @@ function ProfileFiltersSidebarFrame({
         props={props}
         showTitle={props.showSettingsTitle !== false}
         t={t}
+        locale={locale}
       />
       <ProfileFilterControls
         disabled={disabled}

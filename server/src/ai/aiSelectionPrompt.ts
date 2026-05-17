@@ -71,6 +71,7 @@ function getWardrobeSelectionReplacements(userProfile, items, categories) {
     pattern: getSelectionPatternText(userProfile),
     additional_info_block: getAdditionalInfoBlock(userProfile),
     wardrobe_preference_rules: getWardrobePreferenceRules(userProfile),
+    anchor_items_block: renderAnchorItemsBlock(userProfile?.anchorItems),
     items: JSON.stringify(simplifiedItems, null, 2),
     category_list: getCategoryListText(categories),
     categories_schema: getCategorySchema(categories),
@@ -81,6 +82,29 @@ function getWardrobeSelectionReplacements(userProfile, items, categories) {
       ),
     ),
   };
+}
+
+function renderAnchorItemsBlock(anchorItems = []) {
+  if (!Array.isArray(anchorItems) || anchorItems.length === 0) {
+    return "";
+  }
+
+  return [
+    "ANCHOR ITEMS - MANDATORY USER-SELECTED ITEMS",
+    "",
+    "The following items were selected by the user from My Wardrobe as anchor items.",
+    "You must build the capsule around these items.",
+    "",
+    "Rules:",
+    "- Include every anchor item in the final capsule exactly once.",
+    "- Do not replace, omit, reinterpret, or modify anchor items.",
+    "- Preserve anchor item ids exactly as provided.",
+    "- Select additional items only from the candidate items section.",
+    "- If an anchor item conflicts with the selected filters, the anchor remains mandatory.",
+    "",
+    "Anchor items:",
+    JSON.stringify(anchorItems.map(toPromptItem), null, 2),
+  ].join("\n");
 }
 
 function formatItemColorParts(item) {
