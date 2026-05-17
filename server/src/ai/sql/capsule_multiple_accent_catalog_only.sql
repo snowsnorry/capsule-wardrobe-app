@@ -1,12 +1,27 @@
+WITH query_params AS (
+  SELECT
+    $1::text[] AS categories,
+    $2::float AS noise_factor,
+    $3::vector AS embedding_vector,
+    $4::text AS style,
+    $5::text AS pattern,
+    $6::text AS formality_level,
+    $7::text[] AS occasions,
+    $8::text[] AS season,
+    $9::text[] AS audience_filters,
+    $10::text[] AS rejected_urls,
+    $11::int AS final_candidate_limit
+)
 SELECT results.*
-FROM unnest($1::text[]) AS cats(target_category)
+FROM query_params AS params
+CROSS JOIN unnest(params.categories) AS cats(target_category)
 CROSS JOIN LATERAL (
   SELECT * FROM (
     SELECT
       filtered_items.*,
       ROW_NUMBER() OVER (
         PARTITION BY COALESCE(color_base, ARRAY[]::text[])
-        ORDER BY relevance_score DESC, (distance + (RANDOM() * $2::float)) ASC
+        ORDER BY relevance_score DESC, (distance + (RANDOM() * params.noise_factor)) ASC
       ) as color_rank
     FROM (
       SELECT
@@ -50,53 +65,53 @@ CROSS JOIN LATERAL (
           products.fit,
           products.closure_type,
           products.embedding,
-          embedding <=> $3::vector as distance,
-          CASE WHEN $4::text IS NOT NULL AND lower($4::text) != 'minimalistic' AND $4::text = ANY(COALESCE(style, ARRAY[]::text[])) THEN 'accent'
+          embedding <=> params.embedding_vector as distance,
+          CASE WHEN params.style IS NOT NULL AND lower(params.style) != 'minimalistic' AND params.style = ANY(COALESCE(style, ARRAY[]::text[])) THEN 'accent'
             WHEN 'minimalistic' = ANY(COALESCE(style, ARRAY[]::text[])) THEN 'base'
             ELSE 'other' END as style_role,
           (COALESCE(is_neutral, false) IS NOT TRUE AND cardinality(COALESCE(color_base, ARRAY[]::text[])) > 0) as is_non_neutral_color,
-          (CASE WHEN lower($5::text) = 'solid' THEN FALSE
-            WHEN $5::text IS NOT NULL AND $5::text != '' THEN lower(COALESCE(pattern, '')) = lower($5::text)
+          (CASE WHEN lower(params.pattern) = 'solid' THEN FALSE
+            WHEN params.pattern IS NOT NULL AND params.pattern != '' THEN lower(COALESCE(pattern, '')) = lower(params.pattern)
             ELSE pattern IS NOT NULL AND trim(pattern) != '' AND lower(pattern) != 'solid' END) as is_pattern_limited_item,
           (
-            CASE WHEN $6::text IS NOT NULL AND $6::text = ANY(COALESCE(formality_level, ARRAY[]::text[])) THEN 20 ELSE 0 END
+            CASE WHEN params.formality_level IS NOT NULL AND params.formality_level = ANY(COALESCE(formality_level, ARRAY[]::text[])) THEN 20 ELSE 0 END
             +
-            CASE WHEN $4::text IS NOT NULL AND $4::text = ANY(COALESCE(style, ARRAY[]::text[])) THEN 20
-              WHEN $4::text IS NOT NULL AND 'minimalistic' = ANY(COALESCE(style, ARRAY[]::text[])) THEN 15
-              WHEN $4::text IS NULL AND 'minimalistic' = ANY(COALESCE(style, ARRAY[]::text[])) THEN 20
+            CASE WHEN params.style IS NOT NULL AND params.style = ANY(COALESCE(style, ARRAY[]::text[])) THEN 20
+              WHEN params.style IS NOT NULL AND 'minimalistic' = ANY(COALESCE(style, ARRAY[]::text[])) THEN 15
+              WHEN params.style IS NULL AND 'minimalistic' = ANY(COALESCE(style, ARRAY[]::text[])) THEN 20
               ELSE 0 END
             +
-            CASE WHEN COALESCE(occasions, ARRAY[]::text[]) && $7::text[] THEN 20 ELSE 0 END
+            CASE WHEN COALESCE(occasions, ARRAY[]::text[]) && params.occasions THEN 20 ELSE 0 END
             +
-            CASE WHEN COALESCE(season, ARRAY[]::text[]) && $8::text[] THEN 50
+            CASE WHEN COALESCE(season, ARRAY[]::text[]) && params.season THEN 50
               WHEN cardinality(COALESCE(season, ARRAY[]::text[])) = 0 THEN 40
               ELSE 0 END
             +
             CASE WHEN COALESCE(is_neutral, false) IS NOT TRUE AND cardinality(COALESCE(color_base, ARRAY[]::text[])) > 0 THEN 20 ELSE 0 END
             +
-            CASE WHEN $5::text IS NOT NULL AND $5::text != '' AND lower(COALESCE(pattern, '')) = lower($5::text) THEN 20 ELSE 0 END
+            CASE WHEN params.pattern IS NOT NULL AND params.pattern != '' AND lower(COALESCE(pattern, '')) = lower(params.pattern) THEN 20 ELSE 0 END
           ) as relevance_score
         FROM products
         WHERE
           category = cats.target_category
-          AND lower(COALESCE(audience, '')) = ANY($9::text[])
+          AND lower(COALESCE(audience, '')) = ANY(params.audience_filters)
           AND (COALESCE(is_neutral, false) OR cardinality(COALESCE(color_base, ARRAY[]::text[])) > 0)
-          AND (CASE WHEN lower($5::text) = 'solid' THEN pattern IS NULL OR trim(pattern) = '' OR lower(pattern) = 'solid'
-            ELSE lower(COALESCE(pattern, '')) = lower($5::text) OR pattern IS NULL OR trim(pattern) = '' OR lower(pattern) = 'solid' END)
-          AND NOT (products.url = ANY($10::text[]))
+          AND (CASE WHEN lower(params.pattern) = 'solid' THEN pattern IS NULL OR trim(pattern) = '' OR lower(pattern) = 'solid'
+            ELSE lower(COALESCE(pattern, '')) = lower(params.pattern) OR pattern IS NULL OR trim(pattern) = '' OR lower(pattern) = 'solid' END)
+          AND NOT (products.url = ANY(params.rejected_urls))
       ) raw_scored
     ) filtered_items
     WHERE
-      (CASE WHEN $4::text IS NOT NULL THEN (style_role != 'accent' OR style_rank <= 3)
+      (CASE WHEN params.style IS NOT NULL THEN (style_role != 'accent' OR style_rank <= 3)
         ELSE (style_role != 'base' OR style_rank <= 6) END)
       AND
       (COALESCE(is_neutral, false) IS TRUE OR (is_non_neutral_color IS TRUE AND neutrality_rank <= 4))
       AND
-      (is_pattern_limited_item IS NOT TRUE OR lower($5::text) = 'solid' OR pattern_rank <= 3)
+      (is_pattern_limited_item IS NOT TRUE OR lower(params.pattern) = 'solid' OR pattern_rank <= 3)
   ) results
   ORDER BY
     relevance_score DESC,
     color_rank ASC,
-    (distance + (RANDOM() * $2::float)) ASC
-  LIMIT $11::int
+    (distance + (RANDOM() * params.noise_factor)) ASC
+  LIMIT (SELECT final_candidate_limit FROM query_params)
 ) results

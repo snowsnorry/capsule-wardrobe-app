@@ -52,10 +52,14 @@ test("queryRegenerationCandidateItems builds the expected parameterized regenera
     { id: "candidate-1", url: "https://example.test/p1", embedding: [1, 2, 3] },
   ]);
   expect(calls.length).toBe(1);
-  expect(calls[0].text).toMatch(/FROM unnest\(\$1::text\[\]\) AS cats/);
+  expect(calls[0].text).toMatch(/WITH query_params AS/i);
+  expect(calls[0].text).toMatch(/\$1::text\[\] AS categories/);
+  expect(calls[0].text).toMatch(
+    /FROM query_params AS params\s+CROSS JOIN unnest\(params\.categories\) AS cats/s,
+  );
   expect(calls[0].text).toMatch(/PARTITION BY COALESCE\(color_base/);
   expect(calls[0].text).toMatch(
-    /NOT \(products\.url = ANY\(\$11::text\[\]\)\)/,
+    /NOT \(products\.url = ANY\(params\.excluded_urls\)\)/,
   );
   expect(calls[0].text).toMatch(/LIMIT 10/);
   expect(calls[0].values).toEqual([

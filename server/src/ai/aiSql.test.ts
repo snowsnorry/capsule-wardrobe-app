@@ -123,8 +123,10 @@ test("wardrobe preferred SQL mixes catalog and wardrobe candidates with quotas a
 
   expect(recorder.calls.length).toBe(1);
   const sqlText = recorder.calls[0].text;
+  expect(sqlText).toMatch(/WITH query_params AS/i);
+  expect(sqlText).toMatch(/\$13::text AS profile_email/i);
   expect(sqlText).toMatch(/FROM wardrobe/i);
-  expect(sqlText).toMatch(/wardrobe\.profile_email = \$13::text/i);
+  expect(sqlText).toMatch(/wardrobe\.profile_email = params\.profile_email/i);
   expect(sqlText).toMatch(/wardrobe\.processing_status = 'ready'/i);
   expect(sqlText).not.toMatch(/wardrobe\.source <> 'uploaded'/i);
   expect(sqlText).not.toMatch(
@@ -152,16 +154,18 @@ test("wardrobe preferred SQL mixes catalog and wardrobe candidates with quotas a
   expect(sqlText).toMatch(/wardrobe_deduped\.processing_status/i);
   expect(sqlText).toMatch(/wardrobe_deduped\.id::text AS wardrobe_id/i);
   expect(sqlText).toMatch(
-    /CASE WHEN item_source = 'wardrobe' THEN \$14::int ELSE 0 END/i,
+    /CASE WHEN item_source = 'wardrobe' THEN params\.wardrobe_boost ELSE 0 END/i,
   );
   expect(sqlText).toMatch(/PARTITION BY item_source/i);
   expect(sqlText).toMatch(
-    /item_source = 'catalog' AND source_rank <= \$15::int/i,
+    /item_source = 'catalog' AND source_rank <= params\.catalog_pool_limit/i,
   );
   expect(sqlText).toMatch(
-    /item_source = 'wardrobe' AND source_rank <= \$16::int/i,
+    /item_source = 'wardrobe' AND source_rank <= params\.wardrobe_pool_limit/i,
   );
-  expect(sqlText).toMatch(/LIMIT \$12::int/i);
+  expect(sqlText).toMatch(
+    /LIMIT \(SELECT final_candidate_limit FROM query_params\)/i,
+  );
   expect(recorder.calls[0].values).toEqual([
     ["top", "bottom"],
     0.05,
@@ -188,10 +192,14 @@ test("catalog-only SQL keeps products-only retrieval with catalog item source", 
   await queryCapsuleWardrobeItems(recorder.sql, buildBaseSqlParams());
 
   const sqlText = recorder.calls[0].text;
+  expect(sqlText).toMatch(/WITH query_params AS/i);
+  expect(sqlText).toMatch(/\$12::int AS final_candidate_limit/i);
   expect(sqlText).toMatch(/FROM products/i);
   expect(sqlText).toMatch(/'catalog'::text as item_source/i);
   expect(sqlText).not.toMatch(/FROM wardrobe/i);
-  expect(sqlText).toMatch(/LIMIT \$12::int/i);
+  expect(sqlText).toMatch(
+    /LIMIT \(SELECT final_candidate_limit FROM query_params\)/i,
+  );
   expect(recorder.calls[0].values).toEqual([
     ["top", "bottom"],
     0.05,
@@ -283,16 +291,17 @@ test("queryCapsuleWardrobeItemsForProfile dispatches wardrobe preferred regular 
     /wardrobe_deduped\.id::text AS wardrobe_id/i,
   );
   expect(multiple.calls[0].text).toMatch(
-    /wardrobe\.profile_email = \$12::text/i,
+    /wardrobe\.profile_email = params\.profile_email/i,
+  );
+  expect(multiple.calls[0].text).toMatch(/\$12::text AS profile_email/i);
+  expect(multiple.calls[0].text).toMatch(
+    /CASE WHEN item_source = 'wardrobe' THEN params\.wardrobe_boost ELSE 0 END/i,
   );
   expect(multiple.calls[0].text).toMatch(
-    /CASE WHEN item_source = 'wardrobe' THEN \$13::int ELSE 0 END/i,
+    /item_source = 'catalog' AND source_rank <= params\.catalog_pool_limit/i,
   );
   expect(multiple.calls[0].text).toMatch(
-    /item_source = 'catalog' AND source_rank <= \$14::int/i,
-  );
-  expect(multiple.calls[0].text).toMatch(
-    /item_source = 'wardrobe' AND source_rank <= \$15::int/i,
+    /item_source = 'wardrobe' AND source_rank <= params\.wardrobe_pool_limit/i,
   );
   expect(multiple.calls[0].values).toEqual([
     ["top", "bottom"],
