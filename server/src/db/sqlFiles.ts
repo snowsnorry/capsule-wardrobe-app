@@ -17,7 +17,7 @@ type RawSqlClientLike = {
 
 const sqlFileCache = new Map<string, string>();
 
-export async function readSqlFile(fileUrl: URL): Promise<string> {
+async function readSqlFile(fileUrl: URL): Promise<string> {
   const cacheKey = fileUrl.href;
   const cachedSql = sqlFileCache.get(cacheKey);
   if (cachedSql) {

@@ -1,7 +1,7 @@
 import type { SqlClientLike } from "./core.js";
 import { executeSqlFile } from "./sqlFiles.js";
 
-export async function executeSchemaSqlFile(
+async function executeSchemaSqlFile(
   sql: SqlClientLike,
   fileName: string,
 ): Promise<void> {
