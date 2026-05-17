@@ -10,12 +10,22 @@ import {
 } from "./aiSql.js";
 
 function createSqlRecorder() {
-  const calls: { strings: string[]; values: readonly unknown[] }[] = [];
+  const calls: { text: string; values: readonly unknown[] }[] = [];
   const sql = (async (
-    strings: TemplateStringsArray,
+    query: string | TemplateStringsArray,
     ...values: readonly unknown[]
   ) => {
-    calls.push({ strings: [...strings], values });
+    if (typeof query === "string") {
+      calls.push({
+        text: query,
+        values: Array.isArray(values[0])
+          ? (values[0] as readonly unknown[])
+          : values,
+      });
+      return [];
+    }
+
+    calls.push({ text: query.join("?"), values });
     return [];
   }) as CapsuleWardrobeSqlClient;
 
@@ -112,9 +122,9 @@ test("wardrobe preferred SQL mixes catalog and wardrobe candidates with quotas a
   );
 
   expect(recorder.calls.length).toBe(1);
-  const sqlText = recorder.calls[0].strings.join("?");
+  const sqlText = recorder.calls[0].text;
   expect(sqlText).toMatch(/FROM wardrobe/i);
-  expect(sqlText).toMatch(/wardrobe\.profile_email = \?::text/i);
+  expect(sqlText).toMatch(/wardrobe\.profile_email = \$13::text/i);
   expect(sqlText).toMatch(/wardrobe\.processing_status = 'ready'/i);
   expect(sqlText).not.toMatch(/wardrobe\.source <> 'uploaded'/i);
   expect(sqlText).not.toMatch(
@@ -142,19 +152,34 @@ test("wardrobe preferred SQL mixes catalog and wardrobe candidates with quotas a
   expect(sqlText).toMatch(/wardrobe_deduped\.processing_status/i);
   expect(sqlText).toMatch(/wardrobe_deduped\.id::text AS wardrobe_id/i);
   expect(sqlText).toMatch(
-    /CASE WHEN item_source = 'wardrobe' THEN \?::int ELSE 0 END/i,
+    /CASE WHEN item_source = 'wardrobe' THEN \$14::int ELSE 0 END/i,
   );
   expect(sqlText).toMatch(/PARTITION BY item_source/i);
   expect(sqlText).toMatch(
-    /item_source = 'catalog' AND source_rank <= \?::int/i,
+    /item_source = 'catalog' AND source_rank <= \$15::int/i,
   );
   expect(sqlText).toMatch(
-    /item_source = 'wardrobe' AND source_rank <= \?::int/i,
+    /item_source = 'wardrobe' AND source_rank <= \$16::int/i,
   );
-  expect(sqlText).toMatch(/LIMIT \?::int/i);
-  expect(recorder.calls[0].values).toEqual(
-    expect.arrayContaining(["person@example.com", 25, 10, 5, 10]),
-  );
+  expect(sqlText).toMatch(/LIMIT \$12::int/i);
+  expect(recorder.calls[0].values).toEqual([
+    ["top", "bottom"],
+    0.05,
+    "[0.1,0.2]",
+    "classic",
+    "red",
+    "solid",
+    "casual",
+    ["office"],
+    ["winter"],
+    ["woman", "all"],
+    ["https://example.com/rejected"],
+    10,
+    "person@example.com",
+    25,
+    10,
+    5,
+  ]);
 });
 
 test("catalog-only SQL keeps products-only retrieval with catalog item source", async () => {
@@ -162,11 +187,25 @@ test("catalog-only SQL keeps products-only retrieval with catalog item source", 
 
   await queryCapsuleWardrobeItems(recorder.sql, buildBaseSqlParams());
 
-  const sqlText = recorder.calls[0].strings.join("?");
+  const sqlText = recorder.calls[0].text;
   expect(sqlText).toMatch(/FROM products/i);
   expect(sqlText).toMatch(/'catalog'::text as item_source/i);
   expect(sqlText).not.toMatch(/FROM wardrobe/i);
-  expect(sqlText).toMatch(/LIMIT \?::int/i);
+  expect(sqlText).toMatch(/LIMIT \$12::int/i);
+  expect(recorder.calls[0].values).toEqual([
+    ["top", "bottom"],
+    0.05,
+    "[0.1,0.2]",
+    "classic",
+    "red",
+    "solid",
+    "casual",
+    ["office"],
+    ["winter"],
+    ["woman", "all"],
+    ["https://example.com/rejected"],
+    10,
+  ]);
 });
 
 test("queryCapsuleWardrobeItemsForProfile dispatches regular and multiple accent SQL branches", async () => {
@@ -231,22 +270,47 @@ test("queryCapsuleWardrobeItemsForProfile dispatches wardrobe preferred regular 
 
   expect(regular.calls).toEqual(directRegular.calls);
   expect(multiple.calls).toEqual(directMultiple.calls);
-  expect(multiple.calls[0].strings.join("?")).toMatch(/neutrality_rank/);
-  expect(multiple.calls[0].strings.join("?")).toMatch(
-    /'wardrobe'::text AS item_source/i,
-  );
-  expect(multiple.calls[0].strings.join("?")).toMatch(
+  expect(multiple.calls[0].text).toMatch(/neutrality_rank/);
+  expect(multiple.calls[0].text).toMatch(/'wardrobe'::text AS item_source/i);
+  expect(multiple.calls[0].text).toMatch(
     /wardrobe\.processing_status = 'ready'/i,
   );
-  expect(multiple.calls[0].strings.join("?")).not.toMatch(
-    /wardrobe\.source <> 'uploaded'/i,
-  );
-  expect(multiple.calls[0].strings.join("?")).not.toMatch(
+  expect(multiple.calls[0].text).not.toMatch(/wardrobe\.source <> 'uploaded'/i);
+  expect(multiple.calls[0].text).not.toMatch(
     /cardinality\(COALESCE\(wardrobe\.season, ARRAY\[\]::text\[\]\)\) > 0/i,
   );
-  expect(multiple.calls[0].strings.join("?")).toMatch(
+  expect(multiple.calls[0].text).toMatch(
     /wardrobe_deduped\.id::text AS wardrobe_id/i,
   );
+  expect(multiple.calls[0].text).toMatch(
+    /wardrobe\.profile_email = \$12::text/i,
+  );
+  expect(multiple.calls[0].text).toMatch(
+    /CASE WHEN item_source = 'wardrobe' THEN \$13::int ELSE 0 END/i,
+  );
+  expect(multiple.calls[0].text).toMatch(
+    /item_source = 'catalog' AND source_rank <= \$14::int/i,
+  );
+  expect(multiple.calls[0].text).toMatch(
+    /item_source = 'wardrobe' AND source_rank <= \$15::int/i,
+  );
+  expect(multiple.calls[0].values).toEqual([
+    ["top", "bottom"],
+    0.05,
+    "[0.1,0.2]",
+    "classic",
+    "solid",
+    "casual",
+    ["office"],
+    ["winter"],
+    ["woman", "all"],
+    ["https://example.com/rejected"],
+    10,
+    "person@example.com",
+    25,
+    10,
+    5,
+  ]);
 });
 
 test("multiple accent SQL query uses neutral/non-neutral color logic", async () => {
@@ -261,7 +325,7 @@ test("multiple accent SQL query uses neutral/non-neutral color logic", async () 
   expect(multiple.calls.length).toBe(1);
   expect(multiple.calls).not.toEqual(regular.calls);
 
-  const multipleSqlText = multiple.calls[0].strings.join("?");
+  const multipleSqlText = multiple.calls[0].text;
   expect(multipleSqlText).toMatch(/neutrality_rank/);
   expect(multipleSqlText).toMatch(/is_non_neutral_color/);
   expect(multipleSqlText).toMatch(
@@ -274,4 +338,17 @@ test("multiple accent SQL query uses neutral/non-neutral color logic", async () 
   expect(
     !multiple.calls[0].values.includes("multiple_accent_colors"),
   ).toBeTruthy();
+  expect(multiple.calls[0].values).toEqual([
+    ["top", "bottom"],
+    0.05,
+    "[0.1,0.2]",
+    "classic",
+    "solid",
+    "casual",
+    ["office"],
+    ["winter"],
+    ["woman", "all"],
+    ["https://example.com/rejected"],
+    10,
+  ]);
 });

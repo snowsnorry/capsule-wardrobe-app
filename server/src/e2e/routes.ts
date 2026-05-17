@@ -1,14 +1,14 @@
 import { setCsrfCookie, setSessionCookie } from "../httpCookies.js";
 import { buildCapsuleEventSnapshot } from "../ai/capsuleEvents.js";
 import { E2E_EMAIL } from "./fixtures.js";
-import { e2eState } from "./state.js";
+import { e2eState, type E2eScenario } from "./state.js";
 
 const ONE_PIXEL_PNG = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAFgwJ/lcrPrwAAAABJRU5ErkJggg==",
   "base64",
 );
 
-const SCENARIOS = new Set([
+const SCENARIOS = new Set<E2eScenario>([
   "with-profile",
   "no-profile",
   "with-saved-search",
@@ -16,9 +16,11 @@ const SCENARIOS = new Set([
   "empty-wardrobe",
 ]);
 
-function normalizeScenario(value: unknown) {
+function normalizeScenario(value: unknown): E2eScenario {
   const scenario = String(value || "with-profile");
-  return SCENARIOS.has(scenario) ? scenario : "with-profile";
+  return SCENARIOS.has(scenario as E2eScenario)
+    ? (scenario as E2eScenario)
+    : "with-profile";
 }
 
 function setAuthCookies(res, sessionId: string, csrfToken: string) {

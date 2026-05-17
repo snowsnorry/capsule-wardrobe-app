@@ -1,0 +1,41 @@
+import { readFile } from "node:fs/promises";
+import type { SqlResultLike } from "./core.js";
+
+type TemplateSqlClientLike = {
+  <TRow = unknown>(
+    strings: TemplateStringsArray,
+    ...values: readonly unknown[]
+  ): Promise<SqlResultLike<TRow>>;
+};
+
+type RawSqlClientLike = {
+  <TRow = unknown>(
+    query: string,
+    values?: readonly unknown[],
+  ): Promise<SqlResultLike<TRow>>;
+};
+
+const sqlFileCache = new Map<string, string>();
+
+export async function readSqlFile(fileUrl: URL): Promise<string> {
+  const cacheKey = fileUrl.href;
+  const cachedSql = sqlFileCache.get(cacheKey);
+  if (cachedSql) {
+    return cachedSql;
+  }
+
+  const sql = await readFile(fileUrl, "utf8");
+  sqlFileCache.set(cacheKey, sql);
+  return sql;
+}
+
+export async function executeSqlFile<TRow = unknown>(
+  sql: TemplateSqlClientLike,
+  fileUrl: URL,
+  values: readonly unknown[] = [],
+): Promise<SqlResultLike<TRow>> {
+  return (sql as TemplateSqlClientLike & RawSqlClientLike)<TRow>(
+    await readSqlFile(fileUrl),
+    values,
+  );
+}

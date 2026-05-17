@@ -19,6 +19,7 @@ import {
   deleteProfileByEmail,
   deleteUploadedWardrobeItemById,
   deleteWardrobeItemFromCatalogByUrl,
+  getUploadedWardrobeItemById,
   listWardrobeItemsByEmail,
   saveUploadedWardrobeItemsByEmail,
   saveWardrobeItemFromCatalogByUrl,
@@ -475,6 +476,108 @@ test("db integration lists and saves user wardrobe items", async () => {
   ]);
 });
 
+test("db integration normalizes wardrobe source filters", async () => {
+  const uploadedRow: WardrobeRow = {
+    id: "wardrobe-upload-1",
+    profileEmail: "user@example.com",
+    productId: null,
+    name: "Uploaded shirt",
+    url: "wardrobe://wardrobe-upload-1",
+    imageUrl: "https://images.example.com/wardrobe/user/image.webp",
+    source: "uploaded",
+    rawImageUrl: "https://images.example.com/wardrobe/user/image.webp",
+    processingStatus: "ready",
+    createdAt: new Date(0).toISOString(),
+    updatedAt: new Date(0).toISOString(),
+  };
+  const { sql, calls } = createSqlMock([[uploadedRow], [uploadedRow]]);
+  setSqlClientOverride(sql);
+
+  const uploaded = await listWardrobeItemsByEmail({
+    email: "user@example.com",
+    source: "uploaded",
+  });
+  const invalidSource = await listWardrobeItemsByEmail({
+    email: "user@example.com",
+    source: "legacy" as never,
+  });
+
+  expect(uploaded[0]).toMatchObject({
+    id: "wardrobe-upload-1",
+    source: "uploaded",
+  });
+  expect(invalidSource[0]).toMatchObject({
+    id: "wardrobe-upload-1",
+    source: "uploaded",
+  });
+  expect(calls[0].values).toEqual(["user@example.com", "uploaded", "uploaded"]);
+  expect(calls[1].values).toEqual(["user@example.com", null, null]);
+});
+
+test("db integration reads uploaded wardrobe items by id", async () => {
+  const uploadedRow: WardrobeRow = {
+    id: "wardrobe-upload-1",
+    profileEmail: "user@example.com",
+    productId: null,
+    name: "Uploaded shirt",
+    url: "wardrobe://wardrobe-upload-1",
+    imageUrl: "https://images.example.com/wardrobe/user/image.webp",
+    source: "uploaded",
+    rawImageUrl: "https://images.example.com/wardrobe/user/image.webp",
+    processingStatus: "ready",
+    isNeutral: true,
+    createdAt: new Date(0).toISOString(),
+    updatedAt: new Date(0).toISOString(),
+  };
+  const { sql, calls } = createSqlMock([[uploadedRow], []]);
+  setSqlClientOverride(sql);
+
+  const blank = await getUploadedWardrobeItemById({
+    email: "user@example.com",
+    id: "   ",
+  });
+  const found = await getUploadedWardrobeItemById({
+    email: "user@example.com",
+    id: " wardrobe-upload-1 ",
+  });
+  const missing = await getUploadedWardrobeItemById({
+    email: "user@example.com",
+    id: "missing-upload",
+  });
+
+  expect(blank).toBeNull();
+  expect(found).toMatchObject({
+    id: "wardrobe-upload-1",
+    image_url: "https://images.example.com/wardrobe/user/image.webp",
+    is_neutral: true,
+    source: "uploaded",
+  });
+  expect(missing).toBeNull();
+  expect(calls).toHaveLength(2);
+  expect(calls[0].text).toMatch(/from wardrobe/i);
+  expect(calls[0].text).toMatch(/source = 'uploaded'/i);
+  expect(calls[0].values).toEqual(["user@example.com", "wardrobe-upload-1"]);
+  expect(calls[1].values).toEqual(["user@example.com", "missing-upload"]);
+});
+
+test("db integration returns null when catalog wardrobe save finds no product", async () => {
+  const { sql, calls } = createSqlMock([[]]);
+  setSqlClientOverride(sql);
+
+  const saved = await saveWardrobeItemFromCatalogByUrl({
+    email: "user@example.com",
+    url: "https://example.com/products/missing",
+  });
+
+  expect(saved).toBeNull();
+  expect(calls).toHaveLength(1);
+  expect(calls[0].text).toMatch(/insert into wardrobe/i);
+  expect(calls[0].values).toEqual([
+    "user@example.com",
+    "https://example.com/products/missing",
+  ]);
+});
+
 test("db integration saves uploaded wardrobe items", async () => {
   const uploadedRow: WardrobeRow = {
     id: "wardrobe-upload-1",
@@ -523,6 +626,19 @@ test("db integration saves uploaded wardrobe items", async () => {
     ["wardrobe-upload-1"],
     ["wardrobe-upload-1"],
   ]);
+});
+
+test("db integration ignores uploaded wardrobe items without http urls", async () => {
+  const { sql, calls } = createSqlMock([]);
+  setSqlClientOverride(sql);
+
+  const saved = await saveUploadedWardrobeItemsByEmail({
+    email: "user@example.com",
+    imageUrls: ["", "ftp://images.example.com/item.webp", "   "],
+  });
+
+  expect(saved).toEqual([]);
+  expect(calls).toHaveLength(0);
 });
 
 test("db integration skips uploaded wardrobe url update when insert returns no ids", async () => {

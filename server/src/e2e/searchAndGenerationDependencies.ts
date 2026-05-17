@@ -70,14 +70,14 @@ function selectedRegenerationHandler(state: E2eSearchAndGenerationState) {
       capsuleId,
       selectedItemUrls,
     );
-    if (result.status === "missing-capsule") {
-      return res.status(404).json({ error: "not_found" });
-    }
-    if (result.status === "missing-wardrobe") {
-      return res.status(404).json({ error: "not_found" });
-    }
-    if (result.status === "invalid-selection") {
-      return res.status(400).json({ error: "invalid_payload" });
+    switch (result.status) {
+      case "missing-capsule":
+      case "missing-wardrobe":
+        return res.status(404).json({ error: "not_found" });
+      case "invalid-selection":
+        return res.status(400).json({ error: "invalid_payload" });
+      case "updated":
+        break;
     }
 
     state.selectedRegenerationMemory.recordCompletedJob({
@@ -152,6 +152,7 @@ function regenerateCapsuleWardrobeHandler(state: E2eSearchAndGenerationState) {
           data: {
             wardrobe: buildE2eCapsule().draft.data.wardrobe,
             rejectedUrls: [],
+            regeneration: null,
           },
         },
       });

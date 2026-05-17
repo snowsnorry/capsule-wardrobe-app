@@ -266,7 +266,7 @@ export function buildE2eEmptyWardrobeCapsule() {
   };
 }
 
-export function buildE2eSearchPayload(payload = {}) {
+export function buildE2eSearchPayload(payload: Record<string, unknown> = {}) {
   return {
     query: "",
     brand: [],
@@ -296,7 +296,7 @@ export function buildE2eSavedSearchPayload() {
   });
 }
 
-export function buildE2eSearchStats(payload = {}) {
+export function buildE2eSearchStats(payload: { category?: unknown } = {}) {
   const category =
     Array.isArray(payload.category) && payload.category.includes("top")
       ? [{ value: "top", count: 1 }]

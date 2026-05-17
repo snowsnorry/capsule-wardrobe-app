@@ -4,6 +4,7 @@ import {
   normalizeCapsuleId,
 } from "./capsuleState.js";
 import {
+  buildE2eCapsule,
   buildE2ePasskeyDependencies,
   buildE2eEmptyWardrobeCapsule,
   buildE2eSearchPayload,
@@ -20,7 +21,7 @@ import { E2eSelectedRegenerationMemory } from "./selectedRegenerationState.js";
 import { E2eShareMemory } from "./shareState.js";
 import { getCapsuleIdValue } from "../capsuleStoreModel.js";
 
-type E2eScenario =
+export type E2eScenario =
   | "with-profile"
   | "no-profile"
   | "with-saved-search"

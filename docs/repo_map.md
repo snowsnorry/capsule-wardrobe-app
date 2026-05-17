@@ -131,6 +131,7 @@ Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, onboard
 - `server/src/wardrobeUploadImages*.ts`
 - `server/src/wardrobePdf*.ts`
 - `server/src/ai/`
+- `server/src/ai/sql/` — canonical SQL assets used by AI wardrobe selection queries
 - `server/src/templates/`
 
 ## Test map

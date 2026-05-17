@@ -5,10 +5,26 @@ import type { RegenerateSelectedSqlClient } from "./regenerateSelectedSql.js";
 test("queryRegenerationCandidateItems builds the expected parameterized regeneration query", async () => {
   const calls: Array<{ text: string; values: readonly unknown[] }> = [];
   const sql: RegenerateSelectedSqlClient = async <TRow = unknown>(
-    strings,
+    query: string | TemplateStringsArray,
     ...values
   ) => {
-    calls.push({ text: strings.join("?"), values });
+    if (typeof query === "string") {
+      calls.push({
+        text: query,
+        values: Array.isArray(values[0])
+          ? (values[0] as readonly unknown[])
+          : values,
+      });
+      return [
+        {
+          id: "candidate-1",
+          url: "https://example.test/p1",
+          embedding: [1, 2, 3],
+        },
+      ] as TRow[];
+    }
+
+    calls.push({ text: query.join("?"), values });
     return [
       {
         id: "candidate-1",
@@ -36,28 +52,23 @@ test("queryRegenerationCandidateItems builds the expected parameterized regenera
     { id: "candidate-1", url: "https://example.test/p1", embedding: [1, 2, 3] },
   ]);
   expect(calls.length).toBe(1);
-  expect(calls[0].text).toMatch(/FROM unnest\(\?::text\[\]\) AS cats/);
+  expect(calls[0].text).toMatch(/FROM unnest\(\$1::text\[\]\) AS cats/);
   expect(calls[0].text).toMatch(/PARTITION BY COALESCE\(color_base/);
-  expect(calls[0].text).toMatch(/NOT \(products\.url = ANY\(\?::text\[\]\)\)/);
-  expect(calls[0].values.length).toBe(33);
-  expect(calls[0].values.slice(0, 7)).toEqual([
+  expect(calls[0].text).toMatch(
+    /NOT \(products\.url = ANY\(\$11::text\[\]\)\)/,
+  );
+  expect(calls[0].text).toMatch(/LIMIT 10/);
+  expect(calls[0].values).toEqual([
     ["top", "bottom"],
     0.05,
     "[0.1,0.2]",
     "minimalistic",
-    "minimalistic",
     "blue",
-    "blue",
-  ]);
-  expect(calls[0].values.slice(24)).toEqual([
+    "solid",
+    "casual",
+    ["office"],
+    ["summer"],
     ["woman", "all"],
-    "blue",
-    "blue",
-    "blue",
-    "solid",
-    "solid",
     ["https://example.test/old"],
-    "solid",
-    0.05,
   ]);
 });
