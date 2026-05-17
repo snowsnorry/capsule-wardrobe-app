@@ -19,13 +19,23 @@ import {
 function createSqlRecorder(results: SqlResultLike[] = []) {
   const statements: string[] = [];
   const values: unknown[][] = [];
-  const sql = (async (
-    strings: TemplateStringsArray,
+  const sql = (async <TRow = unknown>(
+    query: string | TemplateStringsArray,
     ...queryValues: readonly unknown[]
-  ) => {
-    statements.push(strings.join("?").replace(/\s+/g, " ").trim());
+  ): Promise<SqlResultLike<TRow>> => {
+    if (typeof query === "string") {
+      statements.push(query.replace(/\s+/g, " ").trim());
+      values.push(
+        Array.isArray(queryValues[0])
+          ? [...(queryValues[0] as readonly unknown[])]
+          : [...queryValues],
+      );
+      return (results.shift() ?? []) as SqlResultLike<TRow>;
+    }
+
+    statements.push(query.join("?").replace(/\s+/g, " ").trim());
     values.push([...queryValues]);
-    return results.shift() ?? [];
+    return (results.shift() ?? []) as SqlResultLike<TRow>;
   }) as SqlClientLike;
 
   setSqlClientOverride(sql);
@@ -72,13 +82,38 @@ test("ensure auth, profile, passkey, capsule, shared capsule, and search schemas
     ),
   ).toBeTruthy();
   expect(
+    statements.some((statement) =>
+      statement.includes("theme text not null default 'system'"),
+    ),
+  ).toBeTruthy();
+  expect(
+    statements.some((statement) =>
+      statement.includes("llm text not null default 'openai:gpt-5.5'"),
+    ),
+  ).toBeTruthy();
+  expect(
+    statements.some((statement) =>
+      statement.includes(
+        "image_llm text not null default 'openai:gpt-image-2'",
+      ),
+    ),
+  ).toBeTruthy();
+  expect(
     statements.some((statement) => statement.includes("profiles_theme_check")),
   ).toBeTruthy();
   expect(
     statements.some((statement) => statement.includes("profiles_llm_check")),
   ).toBeTruthy();
   expect(
+    statements.some((statement) =>
+      statement.includes("profiles_image_llm_check"),
+    ),
+  ).toBeTruthy();
+  expect(
     statements.some((statement) => statement.includes("profile_passkeys")),
+  ).toBeTruthy();
+  expect(
+    statements.some((statement) => statement.includes("aaguid text null")),
   ).toBeTruthy();
   expect(
     statements.some((statement) => statement.includes("passkey_challenges")),
@@ -128,6 +163,11 @@ test("ensure auth, profile, passkey, capsule, shared capsule, and search schemas
       statement.includes("create table if not exists search"),
     ),
   ).toBeTruthy();
+
+  const joined = statements.join("\n");
+  expect(joined).not.toMatch(/alter table profiles/i);
+  expect(joined).not.toMatch(/alter table profile_passkeys/i);
+  expect(joined).not.toMatch(/update profiles\s+set\s+llm/i);
 });
 
 test("ensureTables runs every schema group in dependency order", async () => {

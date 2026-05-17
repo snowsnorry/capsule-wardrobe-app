@@ -4,8 +4,46 @@ import {
   type DatabaseConnectionRow,
 } from "./core.js";
 import { ensureSearchTable } from "./searchSchema.js";
+import { executeSchemaSqlFiles } from "./schemaSql.js";
 
 export { ensureSearchTable } from "./searchSchema.js";
+
+const AUTH_SCHEMA_FILES = [
+  "010_create_login_codes_table.sql",
+  "011_create_user_sessions_table.sql",
+] as const;
+
+const PROFILE_SCHEMA_FILES = ["020_create_profiles_table.sql"] as const;
+
+const PASSKEY_SCHEMA_FILES = [
+  "001_create_pgcrypto_extension.sql",
+  "030_create_profile_passkeys_table.sql",
+  "031_create_profile_passkeys_profile_email_index.sql",
+  "032_create_passkey_challenges_table.sql",
+  "033_create_passkey_challenges_expires_at_index.sql",
+] as const;
+
+const CAPSULE_SCHEMA_FILES = [
+  "001_create_pgcrypto_extension.sql",
+  "040_create_capsules_table.sql",
+  "041_create_capsules_email_updated_at_index.sql",
+  "042_create_capsules_email_lower_name_index.sql",
+] as const;
+
+const SHARED_CAPSULE_SCHEMA_FILES = [
+  "001_create_pgcrypto_extension.sql",
+  "050_create_shared_capsules_table.sql",
+  "051_create_shared_capsules_profile_email_name_hash_index.sql",
+  "052_create_shared_capsules_expires_at_index.sql",
+] as const;
+
+const WARDROBE_SCHEMA_FILES = [
+  "001_create_pgcrypto_extension.sql",
+  "002_create_vector_extension.sql",
+  "060_create_wardrobe_table.sql",
+  "061_create_wardrobe_profile_email_updated_at_index.sql",
+  "062_create_wardrobe_profile_email_from_catalog_url_index.sql",
+] as const;
 
 export async function checkDatabaseConnection(): Promise<DatabaseConnectionRow | null> {
   const sql = getSqlClient();
@@ -19,315 +57,34 @@ export async function checkDatabaseConnection(): Promise<DatabaseConnectionRow |
   return row;
 }
 
-async function ensureLoginCodesTable(): Promise<void> {
+export async function ensureAuthTables(): Promise<void> {
   const sql = getSqlClient();
-  await sql`
-    create table if not exists login_codes (
-      email text primary key,
-      "codeHash" text not null,
-      nonce text not null default '',
-      "expiresAt" timestamptz not null,
-      attempts integer not null default 0,
-      "consumedAt" timestamptz null
-    )
-  `;
-}
-
-async function ensureSessionsTable(): Promise<void> {
-  const sql = getSqlClient();
-  await sql`
-    create table if not exists user_sessions (
-      "sessionId" text primary key,
-      email text not null,
-      "csrfToken" text not null default '',
-      "createdAt" timestamptz not null,
-      "expiresAt" timestamptz not null
-    )
-  `;
-}
-
-export async function ensurePasskeysTables(): Promise<void> {
-  const sql = getSqlClient();
-  await sql`create extension if not exists pgcrypto`;
-  await sql`
-    create table if not exists profile_passkeys (
-      id uuid primary key default gen_random_uuid(),
-      profile_email text not null references profiles(email) on delete cascade,
-      credential_id text not null unique,
-      credential_public_key text not null,
-      counter bigint not null default 0,
-      device_type text null,
-      backed_up boolean null,
-      transports text[] not null default '{}'::text[],
-      name text null,
-      aaguid text null,
-      last_used_at timestamptz null,
-      created_at timestamptz not null default now(),
-      updated_at timestamptz not null default now()
-    )
-  `;
-  await sql`
-    alter table profile_passkeys
-    add column if not exists aaguid text null
-  `;
-  await sql`
-    create index if not exists profile_passkeys_profile_email_idx
-    on profile_passkeys(profile_email)
-  `;
-  await sql`
-    create table if not exists passkey_challenges (
-      id text primary key,
-      kind text not null,
-      challenge text not null,
-      profile_email text null,
-      expires_at timestamptz not null,
-      consumed_at timestamptz null,
-      created_at timestamptz not null default now()
-    )
-  `;
-  await sql`
-    create index if not exists passkey_challenges_expires_at_idx
-    on passkey_challenges(expires_at)
-  `;
+  await executeSchemaSqlFiles(sql, AUTH_SCHEMA_FILES);
 }
 
 export async function ensureProfilesTable(): Promise<void> {
   const sql = getSqlClient();
-  await ensureProfilesBaseTable(sql);
-  await ensureProfilesSettingColumns(sql);
-  await ensureProfilesSettingsConstraints(sql);
+  await executeSchemaSqlFiles(sql, PROFILE_SCHEMA_FILES);
 }
 
-async function ensureProfilesBaseTable(
-  sql: ReturnType<typeof getSqlClient>,
-): Promise<void> {
-  await sql`
-    create table if not exists profiles (
-      email text primary key,
-      active_capsule_id uuid null,
-      locale text not null,
-      fullname text null,
-      theme text not null default 'system',
-      llm text not null default 'openai:gpt-5.5',
-      image_llm text not null default 'openai:gpt-image-2',
-      created_at timestamptz not null default now(),
-      updated_at timestamptz not null default now()
-    )
-  `;
-}
-
-async function ensureProfilesSettingColumns(
-  sql: ReturnType<typeof getSqlClient>,
-): Promise<void> {
-  await sql`
-    alter table profiles
-    add column if not exists fullname text null
-  `;
-  await sql`
-    alter table profiles
-    add column if not exists theme text not null default 'system'
-  `;
-  await sql`
-    alter table profiles
-    add column if not exists llm text not null default 'openai:gpt-5.5'
-  `;
-  await sql`
-    alter table profiles
-    alter column llm set default 'openai:gpt-5.5'
-  `;
-  await sql`
-    alter table profiles
-    add column if not exists image_llm text not null default 'openai:gpt-image-2'
-  `;
-  await sql`
-    alter table profiles
-    alter column image_llm set default 'openai:gpt-image-2'
-  `;
-  await sql`
-    update profiles
-    set llm = 'openai:gpt-5.5'
-    where llm = 'openai:gpt-5'
-  `;
-  await sql`
-    update profiles
-    set llm = 'openai:gpt-5.5'
-    where llm = 'openai:gpt-5.2'
-  `;
-}
-
-async function ensureProfilesSettingsConstraints(
-  sql: ReturnType<typeof getSqlClient>,
-): Promise<void> {
-  await sql`
-    do $$
-    begin
-      if not exists (
-        select 1
-        from pg_constraint
-        where conname = 'profiles_theme_check'
-      ) then
-        alter table profiles
-        add constraint profiles_theme_check
-        check (theme in ('system', 'light', 'dark'));
-      end if;
-    end
-    $$;
-  `;
-  await sql`
-    do $$
-    begin
-      if exists (
-        select 1
-        from pg_constraint
-        where conname = 'profiles_llm_check'
-      ) then
-        alter table profiles
-        drop constraint profiles_llm_check;
-      end if;
-      alter table profiles
-      add constraint profiles_llm_check
-      check (
-        llm = 'none'
-        or llm ~ '^(openai|claude|gemini|deepinfra):'
-      );
-    end
-    $$;
-  `;
-  await sql`
-    do $$
-    begin
-      if exists (
-        select 1
-        from pg_constraint
-        where conname = 'profiles_image_llm_check'
-      ) then
-        alter table profiles
-        drop constraint profiles_image_llm_check;
-      end if;
-      alter table profiles
-      add constraint profiles_image_llm_check
-      check (image_llm ~ '^(openai|gemini):');
-    end
-    $$;
-  `;
+export async function ensurePasskeysTables(): Promise<void> {
+  const sql = getSqlClient();
+  await executeSchemaSqlFiles(sql, PASSKEY_SCHEMA_FILES);
 }
 
 export async function ensureCapsulesTable(): Promise<void> {
   const sql = getSqlClient();
-  await sql`create extension if not exists pgcrypto`;
-  await sql`
-    create table if not exists capsules (
-      id uuid primary key default gen_random_uuid(),
-      email text not null,
-      name text not null,
-      draft jsonb null,
-      saved jsonb null,
-      created_at timestamptz not null default now(),
-      updated_at timestamptz not null default now()
-    )
-  `;
-  await sql`
-    create index if not exists capsules_email_updated_at_idx
-    on capsules (email, updated_at desc)
-  `;
-  await sql`
-    create index if not exists capsules_email_lower_name_idx
-    on capsules (email, lower(name))
-  `;
+  await executeSchemaSqlFiles(sql, CAPSULE_SCHEMA_FILES);
 }
 
 export async function ensureSharedCapsulesTable(): Promise<void> {
   const sql = getSqlClient();
-  await sql`create extension if not exists pgcrypto`;
-  await sql`
-    create table if not exists shared_capsules (
-      id uuid primary key default gen_random_uuid(),
-      profile_email text not null references profiles(email) on delete cascade,
-      name text not null,
-      content jsonb not null,
-      content_hash text not null,
-      expires_at timestamptz not null,
-      created_at timestamptz not null default now(),
-      updated_at timestamptz not null default now()
-    )
-  `;
-  await sql`
-    create unique index if not exists shared_capsules_profile_email_name_hash_idx
-    on shared_capsules (profile_email, name, content_hash)
-  `;
-  await sql`
-    create index if not exists shared_capsules_expires_at_idx
-    on shared_capsules (expires_at)
-  `;
+  await executeSchemaSqlFiles(sql, SHARED_CAPSULE_SCHEMA_FILES);
 }
 
 export async function ensureWardrobeTable(): Promise<void> {
   const sql = getSqlClient();
-  await sql`create extension if not exists pgcrypto`;
-  await sql`create extension if not exists vector`;
-  await sql`
-    create table if not exists wardrobe (
-      id bigserial primary key,
-      profile_email text not null references profiles(email) on delete cascade,
-      product_id text null,
-      name text null,
-      url text null,
-      description text null,
-      brand text null,
-      price double precision null,
-      currency text null,
-      availability text null,
-      image_url text null,
-      audience text null,
-      category text null,
-      season text[] not null default '{}'::text[],
-      formality_level text[] not null default '{}'::text[],
-      style text[] not null default '{}'::text[],
-      occasions text[] not null default '{}'::text[],
-      color_base text[] not null default '{}'::text[],
-      pattern text null,
-      finish text null,
-      is_neutral boolean null,
-      composition text null,
-      silhouette text null,
-      fit text null,
-      closure_type text[] not null default '{}'::text[],
-      embedding vector null,
-      source text not null check (source in ('uploaded', 'from_catalog')),
-      raw_image_url text
-        constraint user_wardrobe_items_raw_image_url_http_check
-        check (raw_image_url is null or raw_image_url ~* '^https?://'),
-      processing_status text not null default 'ready'
-        check (processing_status in (
-          'uploaded',
-          'image_processing',
-          'metadata_processed',
-          'needs_review',
-          'ready',
-          'failed'
-        )),
-      created_at timestamptz not null default now(),
-      updated_at timestamptz not null default now(),
-      constraint wardrobe_url_scheme_check
-        check (url is null or url ~* '^(https?://|wardrobe://)'),
-      constraint wardrobe_from_catalog_url_required_check
-        check (source <> 'from_catalog' or nullif(trim(url), '') is not null)
-    )
-  `;
-  await sql`
-    create index if not exists wardrobe_profile_email_updated_at_idx
-    on wardrobe (profile_email, updated_at desc)
-  `;
-  await sql`
-    create unique index if not exists wardrobe_profile_email_from_catalog_url_idx
-    on wardrobe (profile_email, url)
-    where source = 'from_catalog' and url is not null
-  `;
-}
-
-export async function ensureAuthTables(): Promise<void> {
-  await ensureLoginCodesTable();
-  await ensureSessionsTable();
+  await executeSchemaSqlFiles(sql, WARDROBE_SCHEMA_FILES);
 }
 
 export async function ensureTables(): Promise<void> {

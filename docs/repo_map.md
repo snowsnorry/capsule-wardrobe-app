@@ -110,7 +110,8 @@ Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, onboard
 - `server/src/e2e/` — isolated e2e server, in-memory dependencies, fixtures, and test-control routes
 - `server/src/test/` — server-side test helpers
 - `server/src/db.ts` — database integration, including passkey credential and challenge persistence
-- `server/src/db/` — split DB modules for auth, schema, passkeys, profiles, capsule data, search, and product options
+- `server/src/db/` — split DB modules for auth, schema bootstrap wiring, passkeys, profiles, capsule data, search, and product options
+- `server/src/db/sql/` — canonical SQL assets used by DB schema bootstrap; one schema SQL file should contain one executable statement
 - `server/src/routes/` — grouped Express route modules for auth/session, passkeys, profile, capsule, search, health, and images
 - `server/src/email.ts`
 - `server/src/authStore.ts`
