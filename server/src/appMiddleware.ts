@@ -23,7 +23,7 @@ export function applySecurityMiddleware(app, nodeEnv) {
               "https://fonts.googleapis.com",
               "https://accounts.google.com",
             ],
-            imgSrc: ["'self'", "data:", "https:"],
+            imgSrc: ["'self'", "data:", "https:", "blob:"],
             fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"],
             connectSrc: ["'self'", "https:"],
             frameSrc: ["'self'", "https://accounts.google.com"],
