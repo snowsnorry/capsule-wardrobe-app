@@ -158,6 +158,7 @@ At minimum:
 
 ## Avoid
 - Do not invent new architecture not already present in the repo.
+- Never read, search, print, parse, or use `.env` / `.env*` files unless the user explicitly asks for that exact action in the current turn.
 - Do not silently change env var names.
 - Do not break auth-test mode.
 - Do not change i18n behavior in only one locale.
