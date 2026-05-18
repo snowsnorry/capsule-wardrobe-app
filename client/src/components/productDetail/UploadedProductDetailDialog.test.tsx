@@ -118,6 +118,22 @@ describe("UploadedProductDetailDialog", () => {
     expect(screen.getAllByText("Not specified").length).toBeGreaterThan(0);
   });
 
+  test("preserves trailing spaces while editing text fields", () => {
+    renderDialog();
+
+    fireEvent.change(screen.getByLabelText(/Brand/), {
+      target: { value: "Studio " },
+    });
+    fireEvent.change(screen.getByLabelText(/Description/), {
+      target: { value: "Button-front shirt " },
+    });
+
+    expect(screen.getByLabelText(/Brand/)).toHaveValue("Studio ");
+    expect(screen.getByLabelText(/Description/)).toHaveValue(
+      "Button-front shirt ",
+    );
+  });
+
   test("disables Apply and explains missing required fields", () => {
     renderDialog({
       item: {

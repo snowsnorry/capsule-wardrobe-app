@@ -30,7 +30,6 @@ import {
 } from "../../../../shared/productMetadataOptions.js";
 import { translateOption } from "../../i18n";
 import type { UploadedProductFormState } from "./UploadedProductDetailFormState";
-import { nullableText } from "./UploadedProductDetailFormState";
 
 type UploadedProductDetailFormProps = {
   form: UploadedProductFormState;
@@ -161,19 +160,21 @@ function UploadedProductTextFields({
         multiline
         minRows={3}
         onChange={(event) =>
-          setField("description", nullableText(event.target.value))
+          setField("description", nullableDraftText(event.target.value))
         }
       />
       <TextField
         label={t("myWardrobe.uploadedDetail.fields.brand")}
         value={form.brand || ""}
         onChange={(event) =>
-          setField("brand", nullableText(event.target.value))
+          setField("brand", nullableDraftText(event.target.value))
         }
       />
     </>
   );
 }
+
+const nullableDraftText = (value: string): string | null => value || null;
 
 function getSingleSelectConfigs(
   t: UploadedProductDetailFormProps["t"],
