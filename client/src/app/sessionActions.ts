@@ -1,5 +1,6 @@
 import type { FormEvent, MouseEvent } from "react";
 import {
+  initializeProfile,
   logout,
   requestLoginCode,
   signInWithGoogle,
@@ -28,12 +29,8 @@ export type SessionActionContext = {
   ensureOptionsLoaded: (options?: { useFallback?: boolean }) => Promise<void>;
   locale: string;
   maybeShowPasskeyPrompt: () => Promise<void>;
-  preloadOnboardingOptions: (options?: {
-    useFallback?: boolean;
-  }) => Promise<void>;
   resetCapsuleState: () => void;
   resetNavigation: () => void;
-  resetOnboardingSelections: () => void;
   resetProfileOptions: () => void;
   resetSessionState: () => void;
   resolveErrorMessage: (
@@ -43,7 +40,6 @@ export type SessionActionContext = {
   setCode: (code: string) => void;
   setHasProfile: (hasProfile: boolean) => void;
   setIsSignOutConfirmOpen: (isOpen: boolean) => void;
-  setOnboardingStep: (step: number) => void;
   setProfileCreated: (profileCreated: boolean) => void;
   setSettingsProfile: (profile: ProfileSettings) => void;
   setStatus: (status: StatusState) => void;
@@ -103,20 +99,17 @@ async function prepareSignedInProfile(
   return bootstrap;
 }
 
-async function prepareOnboardingProfile(
+async function initializeMissingProfile(
   context: SessionActionContext,
   userEmail: string | undefined,
 ) {
-  await context.preloadOnboardingOptions({ useFallback: true });
-  context.setSettingsProfile(normalizeProfileSettings({}, userEmail));
-  context.resetOnboardingSelections();
-  context.setOnboardingStep(0);
-  context.setStatus({
-    loading: false,
-    error: "",
-    infoKey: "",
-    infoParams: null,
-  });
+  const result = (await initializeProfile(context.locale)) as {
+    profile?: Partial<ProfileSettings>;
+  };
+  context.setSettingsProfile(
+    normalizeProfileSettings(result.profile, userEmail),
+  );
+  await context.ensureOptionsLoaded({ useFallback: true });
 }
 
 async function applyAuthResult(
@@ -134,8 +127,19 @@ async function applyAuthResult(
   context.setProfileCreated(bootstrap.hasProfile);
 
   if (!bootstrap.hasProfile) {
-    await prepareOnboardingProfile(context, user?.email);
+    await initializeMissingProfile(context, user?.email);
+    context.setHasProfile(true);
+    context.setProfileCreated(true);
     context.setUser(user);
+    context.setStatus({
+      loading: false,
+      error: "",
+      infoKey: "auth.signedIn",
+      infoParams: null,
+    });
+    if (showPasskeyPrompt) {
+      void context.maybeShowPasskeyPrompt();
+    }
     return;
   }
 

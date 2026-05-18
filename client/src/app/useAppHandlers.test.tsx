@@ -19,10 +19,7 @@ const capsuleActions = vi.hoisted(() => ({
   shareCurrentCapsule: vi.fn(),
 }));
 const profileActions = vi.hoisted(() => ({
-  backOnboarding: vi.fn(),
   deleteUserProfile: vi.fn(),
-  finishOnboarding: vi.fn(),
-  nextOnboarding: vi.fn(),
   saveSettings: vi.fn(),
 }));
 const wardrobeActions = vi.hoisted(() => ({
@@ -59,10 +56,8 @@ function createSessionContext(): SessionActionContext {
     ensureOptionsLoaded: vi.fn(),
     locale: "en",
     maybeShowPasskeyPrompt: vi.fn(),
-    preloadOnboardingOptions: vi.fn(),
     resetCapsuleState: vi.fn(),
     resetNavigation: vi.fn(),
-    resetOnboardingSelections: vi.fn(),
     resetProfileOptions: vi.fn(),
     resetSessionState: vi.fn(),
     resolveErrorMessage: vi.fn(),
@@ -70,7 +65,6 @@ function createSessionContext(): SessionActionContext {
     setCode: vi.fn(),
     setHasProfile: vi.fn(),
     setIsSignOutConfirmOpen: vi.fn(),
-    setOnboardingStep: vi.fn(),
     setProfileCreated: vi.fn(),
     setSettingsProfile: vi.fn(),
     setStatus: vi.fn(),
@@ -123,11 +117,8 @@ describe("useAppHandlers", () => {
     await result.current.handleDeleteOutfitSetImage(1);
     await result.current.handleDeleteProfile();
     await result.current.handleDownloadWardrobePdf();
-    await result.current.handleFinishOnboarding();
     await result.current.handleGenerateOutfitSetImage(2);
     await result.current.handleGoogleCredential("token");
-    result.current.handleNextOnboarding();
-    result.current.handleBackOnboarding();
     await result.current.handlePasskeySignIn();
     await result.current.handleRefreshWardrobe();
     await result.current.handleRegenerateSelectedItems();

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { fetchCurrentUser } from "../api/auth";
+import { fetchCurrentUser, initializeProfile } from "../api/auth";
 import {
   preloadMainScreen,
   shouldPreloadMainScreenForCurrentPath,
@@ -15,7 +15,7 @@ import type {
 type UseSessionBootstrapOptions = {
   bootstrapCapsules: (email?: string) => Promise<CapsuleBootstrapResult>;
   ensureOptionsLoaded: () => Promise<void>;
-  preloadOnboardingOptions: () => Promise<void>;
+  locale: string;
   setHasProfile: (hasProfile: boolean) => void;
   setIsCheckingSession: (isCheckingSession: boolean) => void;
   setProfileCreated: (profileCreated: boolean) => void;
@@ -24,19 +24,36 @@ type UseSessionBootstrapOptions = {
   setUser: (user: UserLike | null) => void;
 };
 
+async function initializeFirstLoginProfile(
+  options: UseSessionBootstrapOptions,
+  user: UserLike,
+) {
+  const result = (await initializeProfile(options.locale)) as {
+    profile?: Partial<ProfileSettings>;
+  };
+  options.setSettingsProfile(
+    normalizeProfileSettings(result.profile, user.email),
+  );
+  await options.ensureOptionsLoaded();
+  options.setHasProfile(true);
+  options.setProfileCreated(true);
+}
+
 async function loadProfileState(
   options: UseSessionBootstrapOptions,
   user: UserLike | null,
 ) {
   const bootstrap = await options.bootstrapCapsules(user?.email);
-  options.setHasProfile(bootstrap.hasProfile);
-  options.setProfileCreated(bootstrap.hasProfile);
 
   if (!bootstrap.hasProfile) {
-    await options.preloadOnboardingOptions();
+    if (user) {
+      await initializeFirstLoginProfile(options, user);
+    }
     return;
   }
 
+  options.setHasProfile(true);
+  options.setProfileCreated(true);
   if (!bootstrap.optionsLoaded) {
     await options.ensureOptionsLoaded();
   }

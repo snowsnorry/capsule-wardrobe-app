@@ -90,10 +90,6 @@ vi.mock("./screens/SignInScreen", () => ({
   },
 }));
 
-vi.mock("./screens/OnboardingScreen", () => ({
-  default: () => <div data-testid="onboarding-screen">onboarding-screen</div>,
-}));
-
 vi.mock("./screens/mainScreen/MainScreen", () => ({
   default: function MainScreenMock(props: {
     onNavigateApp: (
@@ -232,6 +228,9 @@ describe("App", () => {
     capsulesApi.fetchCapsule.mockResolvedValue({
       capsule: createBootstrapResponse().activeCapsule,
     });
+    capsulesApi.createCapsule.mockResolvedValue({
+      capsule: createBootstrapResponse().activeCapsule,
+    });
     authApi.updateProfileLocale.mockResolvedValue({});
   });
 
@@ -344,5 +343,41 @@ describe("App", () => {
       expect(screen.getByTestId("main-screen")).toBeInTheDocument();
     });
     expect(capsulesApi.fetchCapsuleBootstrap).toHaveBeenCalledTimes(3);
+  });
+
+  test("auto-initializes first-login users and creates a blank capsule on capsule route", async () => {
+    authApi.fetchCurrentUser.mockRejectedValue(new Error("unauthorized"));
+    authApi.verifyLoginCode.mockResolvedValue({
+      user: { email: "person@example.com" },
+    });
+    authApi.initializeProfile.mockResolvedValue({
+      profile: {
+        email: "person@example.com",
+        locale: "en",
+        theme: "system",
+        llm: "none",
+        image_llm: "openai:gpt-image-2",
+        fullname: "",
+      },
+    });
+    capsulesApi.fetchCapsuleBootstrap.mockResolvedValue({
+      hasProfile: false,
+      profile: null,
+      activeCapsule: null,
+      activeSnapshot: null,
+      capsules: [],
+    });
+
+    renderApp();
+
+    fireEvent.click(await screen.findByRole("button", { name: "verify-code" }));
+
+    expect(await screen.findByTestId("main-screen")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(authApi.initializeProfile).toHaveBeenCalledWith("en");
+      expect(capsulesApi.createCapsule).toHaveBeenCalledWith({
+        filters: expect.any(Object),
+      });
+    });
   });
 });

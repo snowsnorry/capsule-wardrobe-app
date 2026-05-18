@@ -91,7 +91,6 @@ function buildActions(input: ControllerModelInput) {
 function buildHandlers(handlers: ReturnType<typeof useAppHandlers>) {
   return {
     onApplyCapsuleFilters: handlers.handleApplyCapsuleFilters,
-    onBackOnboarding: handlers.handleBackOnboarding,
     onBackToMain: handlers.handleBackToMain,
     onCancelRegenerationSelection: handlers.handleCancelRegenerationSelection,
     onCreateCapsule: handlers.handleCreateCapsule,
@@ -101,11 +100,9 @@ function buildHandlers(handlers: ReturnType<typeof useAppHandlers>) {
     onDeleteProfile: handlers.handleDeleteProfile,
     onDownloadWardrobePdf: handlers.handleDownloadWardrobePdf,
     onDuplicateCapsule: handlers.handleDuplicateCapsule,
-    onFinishOnboarding: handlers.handleFinishOnboarding,
     onGenerateOutfitSetImage: handlers.handleGenerateOutfitSetImage,
     onGoogleCredential: handlers.handleGoogleCredential,
     onNavigateApp: handlers.handleNavigateApp,
-    onNextOnboarding: handlers.handleNextOnboarding,
     onOpenCapsule: handlers.handleOpenCapsule,
     onOpenCapsuleFromSidebar: handlers.handleOpenCapsuleFromSidebar,
     onPasskeySignIn: handlers.handlePasskeySignIn,
@@ -204,7 +201,6 @@ function buildView(input: ControllerModelInput) {
     isLoadingItems: state.isLoadingItems,
     isPartialRegenerationLoading: state.isPartialRegenerationLoading,
     isSigningOut: state.status.loading,
-    onboardingStep: state.onboardingStep,
     partialRegenerationPendingUrls: state.partialRegenerationPendingUrls,
     pendingImageSetIndexes: state.pendingImageSetIndexes,
     profileItems: state.profileItems,

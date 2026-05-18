@@ -6,7 +6,6 @@ import type { MouseEvent } from "react";
 function createHandlers() {
   const names = [
     "handleApplyCapsuleFilters",
-    "handleBackOnboarding",
     "handleBackToMain",
     "handleCancelRegenerationSelection",
     "handleCreateCapsule",
@@ -15,12 +14,10 @@ function createHandlers() {
     "handleDeleteOutfitSetImage",
     "handleDownloadWardrobePdf",
     "handleDuplicateCapsule",
-    "handleFinishOnboarding",
     "handleGenerateOutfitSetImage",
     "handleGoogleCredential",
     "handleImportSharedCapsule",
     "handleNavigateApp",
-    "handleNextOnboarding",
     "handleOpenCapsule",
     "handleOpenCapsuleFromSidebar",
     "handlePasskeySignIn",

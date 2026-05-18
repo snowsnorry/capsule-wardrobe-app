@@ -56,7 +56,7 @@ export function useProfileOptions() {
     [applyLoadedOptions],
   );
 
-  const preloadOnboardingOptions = useCallback(
+  const loadOptions = useCallback(
     async ({ useFallback = false }: { useFallback?: boolean } = {}) => {
       try {
         const result = (await loadProfileOptions()) as ProfileOptionsResult;
@@ -81,14 +81,14 @@ export function useProfileOptions() {
         audienceOptions.length > 0 &&
         Array.isArray(patternOptions);
       if (!optionsLoaded) {
-        await preloadOnboardingOptions({ useFallback });
+        await loadOptions({ useFallback });
       }
     },
     [
       audienceOptions.length,
       occasionOptions.length,
       patternOptions,
-      preloadOnboardingOptions,
+      loadOptions,
       seasonOptions.length,
       styleOptions,
     ],
@@ -103,7 +103,7 @@ export function useProfileOptions() {
     patternOptions,
     applyWardrobeFilters,
     ensureOptionsLoaded,
-    preloadOnboardingOptions,
+    loadOptions,
     resetProfileOptions,
   };
 }

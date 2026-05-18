@@ -1,11 +1,12 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { cleanup, render, waitFor } from "@testing-library/react";
-import { fetchCurrentUser } from "../api/auth";
+import { fetchCurrentUser, initializeProfile } from "../api/auth";
 import { useSessionBootstrap } from "./useSessionBootstrap";
 import { createTestProfile } from "./testUtils";
 
 vi.mock("../api/auth", () => ({
   fetchCurrentUser: vi.fn(),
+  initializeProfile: vi.fn(),
 }));
 
 const mainScreenLoader = vi.hoisted(() => ({
@@ -33,7 +34,7 @@ function createOptions(
       hasProfile: true,
     })),
     ensureOptionsLoaded: vi.fn(async () => undefined),
-    preloadOnboardingOptions: vi.fn(async () => undefined),
+    locale: "en",
     setHasProfile: vi.fn(),
     setIsCheckingSession: vi.fn(),
     setProfileCreated: vi.fn(),
@@ -75,13 +76,15 @@ describe("useSessionBootstrap", () => {
     expect(options.bootstrapCapsules).toHaveBeenCalledWith(
       "person@example.com",
     );
-    expect(options.preloadOnboardingOptions).not.toHaveBeenCalled();
     expect(mainScreenLoader.preloadMainScreen).toHaveBeenCalledTimes(1);
   });
 
-  test("preloads onboarding options for users without a profile", async () => {
+  test("initializes a profile for users without one", async () => {
     vi.mocked(fetchCurrentUser).mockResolvedValue({
       user: { email: "person@example.com" },
+    });
+    vi.mocked(initializeProfile).mockResolvedValue({
+      profile: createTestProfile({ locale: "en" }),
     });
     const options = createOptions({
       bootstrapCapsules: vi.fn(async () => ({
@@ -93,11 +96,14 @@ describe("useSessionBootstrap", () => {
     render(<Harness options={options} />);
 
     await waitFor(() => {
-      expect(options.preloadOnboardingOptions).toHaveBeenCalled();
+      expect(initializeProfile).toHaveBeenCalledWith("en");
     });
-    expect(options.setHasProfile).toHaveBeenCalledWith(false);
-    expect(options.setProfileCreated).toHaveBeenCalledWith(false);
-    expect(options.ensureOptionsLoaded).not.toHaveBeenCalled();
+    expect(options.setSettingsProfile).toHaveBeenCalledWith(
+      expect.objectContaining({ email: "person@example.com", locale: "en" }),
+    );
+    expect(options.ensureOptionsLoaded).toHaveBeenCalled();
+    expect(options.setHasProfile).toHaveBeenCalledWith(true);
+    expect(options.setProfileCreated).toHaveBeenCalledWith(true);
     expect(options.bootstrapCapsules).toHaveBeenCalledWith(
       "person@example.com",
     );
@@ -122,7 +128,6 @@ describe("useSessionBootstrap", () => {
       expect(options.setSessionInitialized).toHaveBeenCalledWith(true);
     });
     expect(options.ensureOptionsLoaded).not.toHaveBeenCalled();
-    expect(options.preloadOnboardingOptions).not.toHaveBeenCalled();
   });
 
   test("loads options separately when capsule bootstrap omits them", async () => {

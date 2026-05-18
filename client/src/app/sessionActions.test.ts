@@ -12,6 +12,7 @@ import { createTestProfile, testStatus } from "./testUtils";
 
 const authApi = vi.hoisted(() => ({
   clearRequestCache: vi.fn(),
+  initializeProfile: vi.fn(),
   logout: vi.fn(),
   requestLoginCode: vi.fn(),
   signInWithGoogle: vi.fn(),
@@ -47,10 +48,8 @@ function createSessionContext(
     ensureOptionsLoaded: vi.fn(async () => undefined),
     locale: "en",
     maybeShowPasskeyPrompt: vi.fn(async () => undefined),
-    preloadOnboardingOptions: vi.fn(async () => undefined),
     resetCapsuleState: vi.fn(),
     resetNavigation: vi.fn(),
-    resetOnboardingSelections: vi.fn(),
     resetProfileOptions: vi.fn(),
     resetSessionState: vi.fn(),
     resolveErrorMessage: vi.fn((error) => error?.message || "resolved error"),
@@ -58,7 +57,6 @@ function createSessionContext(
     setCode: vi.fn(),
     setHasProfile: vi.fn(),
     setIsSignOutConfirmOpen: vi.fn(),
-    setOnboardingStep: vi.fn(),
     setProfileCreated: vi.fn(),
     setSettingsProfile: vi.fn(),
     setStatus: vi.fn(),
@@ -95,9 +93,12 @@ describe("sessionActions", () => {
     expect(context.setStep).toHaveBeenCalledWith("code");
   });
 
-  test("verifyCode prepares onboarding when the signed-in user has no profile", async () => {
+  test("verifyCode initializes a profile when the signed-in user has no profile", async () => {
     authApi.verifyLoginCode.mockResolvedValue({
       user: { email: "person@example.com" },
+    });
+    authApi.initializeProfile.mockResolvedValue({
+      profile: createTestProfile({ email: "person@example.com" }),
     });
     const context = createSessionContext({
       bootstrapCapsules: vi.fn(async () => ({
@@ -112,15 +113,25 @@ describe("sessionActions", () => {
       "person@example.com",
       "654321",
     );
-    expect(context.preloadOnboardingOptions).toHaveBeenCalledWith({
+    expect(authApi.initializeProfile).toHaveBeenCalledWith("en");
+    expect(context.ensureOptionsLoaded).toHaveBeenCalledWith({
       useFallback: true,
     });
-    expect(context.resetOnboardingSelections).toHaveBeenCalled();
-    expect(context.setOnboardingStep).toHaveBeenCalledWith(0);
-    expect(context.setHasProfile).toHaveBeenCalledWith(false);
+    expect(context.setSettingsProfile).toHaveBeenCalledWith(
+      expect.objectContaining({ email: "person@example.com" }),
+    );
+    expect(context.setHasProfile).toHaveBeenCalledWith(true);
+    expect(context.setProfileCreated).toHaveBeenCalledWith(true);
     expect(context.setUser).toHaveBeenCalledWith({
       email: "person@example.com",
     });
+    expect(context.setStatus).toHaveBeenLastCalledWith({
+      loading: false,
+      error: "",
+      infoKey: "auth.signedIn",
+      infoParams: null,
+    });
+    expect(context.maybeShowPasskeyPrompt).toHaveBeenCalled();
     expect(mainScreenLoader.preloadMainScreen).toHaveBeenCalledTimes(1);
   });
 

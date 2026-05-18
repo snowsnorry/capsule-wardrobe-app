@@ -45,22 +45,6 @@ vi.mock("../screens/ProfileScreen", () => ({
   ),
 }));
 
-vi.mock("../screens/OnboardingScreen", () => ({
-  default: ({ onToggleOccasion, onToggleSeason, onNext }) => (
-    <div>
-      <button type="button" onClick={() => onToggleOccasion("office")}>
-        onboarding-occasion
-      </button>
-      <button type="button" onClick={() => onToggleSeason("summer")}>
-        onboarding-season
-      </button>
-      <button type="button" onClick={onNext}>
-        onboarding-next
-      </button>
-    </div>
-  ),
-}));
-
 vi.mock("../screens/SearchScreen", () => ({
   default: ({ initialQuery, autoOpenProductDetail }) => (
     <div>
@@ -102,7 +86,6 @@ function makeProps(overrides: Record<string, unknown> = {}) {
     isLoadingItems: false,
     isPartialRegenerationLoading: false,
     isSigningOut: false,
-    onboardingStep: 1,
     partialRegenerationPendingUrls: [],
     pendingImageSetIndexes: [],
     profileCreated: false,
@@ -144,7 +127,6 @@ function makeProps(overrides: Record<string, unknown> = {}) {
     capsuleList: [{ id: "capsule-1", name: "Spring", status: "new" }],
     onApplyCapsuleFilters: vi.fn(() => Promise.resolve()),
     onBackToMain: vi.fn(),
-    onBackOnboarding: vi.fn(),
     onCancelRegenerationSelection: vi.fn(),
     onCreateCapsule: vi.fn(() => Promise.resolve()),
     onDeleteCapsule: vi.fn(() => Promise.resolve()),
@@ -152,11 +134,9 @@ function makeProps(overrides: Record<string, unknown> = {}) {
     onDeleteProfile: vi.fn(() => Promise.resolve()),
     onDownloadWardrobePdf: vi.fn(() => Promise.resolve()),
     onDuplicateCapsule: vi.fn(() => Promise.resolve()),
-    onFinishOnboarding: vi.fn(() => Promise.resolve()),
     onGenerateOutfitSetImage: vi.fn(() => Promise.resolve()),
     onGoogleCredential: vi.fn(() => Promise.resolve()),
     onNavigateApp: vi.fn(),
-    onNextOnboarding: vi.fn(),
     onOpenCapsule: vi.fn(() => Promise.resolve()),
     onPasskeySignIn: vi.fn(() => Promise.resolve()),
     onRefreshWardrobe: vi.fn(() => Promise.resolve()),
@@ -280,7 +260,7 @@ describe("AppRouteContent", () => {
     expect(props.onOpenCapsule).toHaveBeenCalledWith("capsule-1");
   });
 
-  test("wires profile and onboarding route shared filter callbacks", async () => {
+  test("wires profile route shared filter callbacks and hides transient profile setup", async () => {
     const user = userEvent.setup();
     const profileProps = routeProps({ currentView: "profile" });
     const { rerender } = render(
@@ -304,28 +284,15 @@ describe("AppRouteContent", () => {
       profileProps.setSelectedSeason,
     );
 
-    const onboardingProps = routeProps({
+    const setupProps = routeProps({
       hasProfile: false,
       profileCreated: false,
     });
     rerender(
       <Suspense fallback={<div>loading</div>}>
-        <AppRouteContent {...onboardingProps} />
+        <AppRouteContent {...setupProps} />
       </Suspense>,
     );
-    await user.click(
-      await screen.findByRole("button", { name: "onboarding-occasion" }),
-    );
-    await user.click(screen.getByRole("button", { name: "onboarding-season" }));
-    expect(onboardingProps.toggleSelection).toHaveBeenCalledWith(
-      "office",
-      [],
-      onboardingProps.setSelectedOccasions,
-    );
-    expect(onboardingProps.toggleSelection).toHaveBeenCalledWith(
-      "summer",
-      [],
-      onboardingProps.setSelectedSeason,
-    );
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 });

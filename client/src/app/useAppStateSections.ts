@@ -49,7 +49,6 @@ export function useSessionAppState() {
 }
 
 export function useProfileFilterAppState() {
-  const [onboardingStep, setOnboardingStep] = useState(0);
   const [selectedFormalityLevel, setSelectedFormalityLevel] = useState("");
   const [selectedStyle, setSelectedStyle] = useState<string | null>(null);
   const [selectedOccasions, setSelectedOccasions] = useState<string[]>([]);
@@ -69,7 +68,6 @@ export function useProfileFilterAppState() {
 
   return {
     currentView,
-    onboardingStep,
     selectedAudience,
     selectedColor,
     selectedFormalityLevel,
@@ -81,7 +79,6 @@ export function useProfileFilterAppState() {
     selectedText,
     selectedAnchorWardrobeItemIds,
     setCurrentView,
-    setOnboardingStep,
     setSelectedAudience,
     setSelectedColor,
     setSelectedFormalityLevel,

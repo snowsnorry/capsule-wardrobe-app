@@ -1,4 +1,3 @@
-/* eslint-disable max-lines */
 import { lazy } from "react";
 import type { Dispatch, FormEvent, MouseEvent, SetStateAction } from "react";
 import type {
@@ -22,7 +21,6 @@ import {
 import { importMainScreen } from "./mainScreenLoader";
 const MainScreen = lazy(importMainScreen);
 const MyWardrobeScreen = lazy(() => import("../screens/MyWardrobeScreen"));
-const OnboardingScreen = lazy(() => import("../screens/OnboardingScreen"));
 const ProfileScreen = lazy(() => import("../screens/ProfileScreen"));
 const SearchScreen = lazy(() => import("../screens/SearchScreen"));
 const SignInScreen = lazy(() => import("../screens/SignInScreen"));
@@ -74,7 +72,6 @@ type AppRouteContentProps = SharedFilterProps & {
   isLoadingItems: boolean;
   isPartialRegenerationLoading: boolean;
   isSigningOut: boolean;
-  onboardingStep: number;
   partialRegenerationPendingUrls: string[];
   pendingImageSetIndexes: number[];
   profileCreated: boolean;
@@ -95,7 +92,6 @@ type AppRouteContentProps = SharedFilterProps & {
   capsuleList: CapsuleMeta[];
   onApplyCapsuleFilters: () => Promise<void>;
   onBackToMain: () => void;
-  onBackOnboarding: () => void;
   onCancelRegenerationSelection: () => void;
   onCreateCapsule: () => Promise<void>;
   onDeleteCapsule: (capsuleId?: string) => Promise<void>;
@@ -103,14 +99,12 @@ type AppRouteContentProps = SharedFilterProps & {
   onDeleteProfile: () => Promise<void>;
   onDownloadWardrobePdf: (capsuleId?: string) => Promise<void>;
   onDuplicateCapsule: (name: string, capsuleId?: string) => Promise<void>;
-  onFinishOnboarding: () => Promise<void>;
   onGenerateOutfitSetImage: (setIndex: OutfitSetIndex) => Promise<void>;
   onGoogleCredential: (idToken: string) => Promise<void>;
   onNavigateApp: (
     nextApp: Exclude<AppRoute, "share">,
     options?: AppNavigationOptions,
   ) => void;
-  onNextOnboarding: () => void;
   onOpenCapsule: (capsuleId: string) => Promise<void>;
   onPasskeySignIn: () => Promise<void>;
   onRefreshWardrobe: () => Promise<void>;
@@ -275,43 +269,6 @@ function MainRoute(props: AppRouteContentProps) {
     />
   );
 }
-function OnboardingRoute(props: AppRouteContentProps) {
-  return (
-    <OnboardingScreen
-      onboardingStep={props.onboardingStep}
-      styleOptions={props.styleOptions}
-      occasionOptions={props.occasionOptions}
-      seasonOptions={props.orderedSeasonOptions}
-      audienceOptions={props.audienceOptions}
-      selectedStyleCore={props.selectedFormalityLevel}
-      selectedStyleAesthetic={props.selectedStyle}
-      selectedOccasions={props.selectedOccasions}
-      selectedSeasons={props.selectedSeason}
-      selectedAudience={props.selectedAudience}
-      status={props.status}
-      onSelectStyleCore={props.setSelectedFormalityLevel}
-      onSelectStyleAesthetic={props.setSelectedStyle}
-      onToggleOccasion={(value) =>
-        props.toggleSelection(
-          value,
-          props.selectedOccasions,
-          props.setSelectedOccasions,
-        )
-      }
-      onToggleSeason={(value) =>
-        props.toggleSelection(
-          value,
-          props.selectedSeason,
-          props.setSelectedSeason,
-        )
-      }
-      onSelectAudience={props.setSelectedAudience}
-      onNext={props.onNextOnboarding}
-      onBack={props.onBackOnboarding}
-      onFinish={props.onFinishOnboarding}
-    />
-  );
-}
 export default function AppRouteContent(props: AppRouteContentProps) {
   if (props.isCheckingSession || !props.sessionInitialized) {
     return null;
@@ -357,5 +314,5 @@ export default function AppRouteContent(props: AppRouteContentProps) {
       <MainRoute {...props} />
     );
   }
-  return <OnboardingRoute {...props} />;
+  return null;
 }

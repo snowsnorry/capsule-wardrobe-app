@@ -76,7 +76,7 @@ test("capsule create rename save and reload persistence works through the UI", a
   await openApp(page);
 
   await page.getByRole("button", { name: "New capsule" }).click();
-  await expectActiveCapsule(page, "Playwright onboarding capsule");
+  await expectActiveCapsule(page, "Playwright new capsule");
 
   await renameActiveCapsule(page, createdCapsuleName);
   await saveActiveCapsule(page);

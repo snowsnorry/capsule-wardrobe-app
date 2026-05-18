@@ -2,9 +2,9 @@ import { useCallback, useMemo } from "react";
 import { useMediaQuery } from "@mui/material";
 import { useI18n } from "../i18n/useI18n";
 import { createAppTheme } from "../theme";
-import { buildAppActionContext } from "./buildAppActionContext";
 import { buildAppControllerModel } from "./buildAppControllerModel";
 import { buildAppSessionActionContext } from "./buildAppSessionActionContext";
+import { connectAppActionContext } from "./connectAppActionContext";
 import {
   buildAppViewState,
   resolveThemeMode,
@@ -20,6 +20,7 @@ import { useAppLifecycleEffects } from "./useAppLifecycleEffects";
 import { useAppNavigation } from "./useAppNavigation";
 import { useAppNotifications } from "./useAppNotifications";
 import { useAppState } from "./useAppState";
+import { useEmptyCapsuleRouteCreation } from "./useEmptyCapsuleRouteCreation";
 import { usePasskeyPrompt } from "./usePasskeyPrompt";
 import { useProfileOptions } from "./useProfileOptions";
 import { useSessionBootstrap } from "./useSessionBootstrap";
@@ -60,7 +61,7 @@ export function useAppControllerModel() {
     shareRoute,
     t,
   });
-  useSessionBootstrapForApp({ appState, operations, profileOptions });
+  useSessionBootstrapForApp({ appState, locale, operations, profileOptions });
   const sessionActionContext = useSessionActionContextForApp({
     appState,
     locale,
@@ -78,26 +79,26 @@ export function useAppControllerModel() {
     sessionActionContext,
     shareRoute,
   });
-  operations.getAppActionContext = () =>
-    buildAppActionContext({
+  useEmptyCapsuleRouteCreation(
+    buildEmptyCapsuleRouteCreationOptions({
       appState,
-      applyCapsuleState: operations.applyCapsuleState,
-      applyWardrobeSnapshot: operations.applyWardrobeSnapshot,
-      bootstrapCapsules: operations.bootstrapCapsules,
-      buildCurrentDraftSnapshot: operations.buildCurrentDraftSnapshot,
-      clearShareRoute: shareRoute.clearShareRoute,
-      closeNotificationPrompt: notifications.closeNotificationPrompt,
       handlers,
-      locale,
-      pendingShareId: navigation.pendingShareId,
+      navigation,
       resolveErrorMessage,
-      setIsShareLoading: shareRoute.setIsShareLoading,
-      setLocale,
-      shareMetadata: shareRoute.shareMetadata,
-      startCapsuleEventStream: operations.startCapsuleEventStream,
-      startPendingNotificationFlow: operations.startPendingNotificationFlow,
-      t,
-    });
+    }),
+  );
+  connectAppActionContext({
+    appState,
+    handlers,
+    locale,
+    navigation,
+    notifications,
+    operations,
+    resolveErrorMessage,
+    setLocale,
+    shareRoute,
+    t,
+  });
   useAppLifecycleEffects({ appState, locale });
   return buildControllerModel({
     appState,
@@ -124,17 +125,19 @@ function useAppTheme(theme: string, prefersDarkMode: boolean) {
 
 function useSessionBootstrapForApp({
   appState,
+  locale,
   operations,
   profileOptions,
 }: {
   appState: ReturnType<typeof useAppState>;
+  locale: string;
   operations: AppControllerOperations;
   profileOptions: ReturnType<typeof useProfileOptions>;
 }) {
   useSessionBootstrap({
     bootstrapCapsules: operations.bootstrapCapsules,
     ensureOptionsLoaded: profileOptions.ensureOptionsLoaded,
-    preloadOnboardingOptions: profileOptions.preloadOnboardingOptions,
+    locale,
     setHasProfile: appState.setHasProfile,
     setIsCheckingSession: appState.setIsCheckingSession,
     setProfileCreated: appState.setProfileCreated,
@@ -142,6 +145,34 @@ function useSessionBootstrapForApp({
     setSettingsProfile: appState.setSettingsProfile,
     setUser: appState.setUser,
   });
+}
+
+function buildEmptyCapsuleRouteCreationOptions({
+  appState,
+  handlers,
+  navigation,
+  resolveErrorMessage,
+}: {
+  appState: ReturnType<typeof useAppState>;
+  handlers: ReturnType<typeof useAppHandlers>;
+  navigation: ReturnType<typeof useAppNavigation>;
+  resolveErrorMessage: (
+    error: { message?: string } | null | undefined,
+  ) => string;
+}) {
+  return {
+    activeCapsuleId: appState.activeCapsuleId,
+    appRoute: navigation.appRoute,
+    capsuleListLength: appState.capsuleList.length,
+    createCapsule: handlers.handleCreateCapsule,
+    hasUsableProfile: appState.hasProfile || appState.profileCreated,
+    isContentOperationLoading: appState.isContentOperationLoading,
+    pendingShareId: navigation.pendingShareId,
+    resolveErrorMessage,
+    sessionInitialized: appState.sessionInitialized,
+    setStatus: appState.setStatus,
+    userEmail: appState.user?.email || "",
+  };
 }
 
 function useSessionActionContextForApp({

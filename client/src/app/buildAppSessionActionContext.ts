@@ -19,7 +19,7 @@ type AppSessionActionInput = {
 export function buildAppSessionActionContext(input: AppSessionActionInput) {
   const state = input.appState;
 
-  const resetOnboardingSelections = () => {
+  const resetProfileSelections = () => {
     state.setSelectedFormalityLevel("");
     state.setSelectedStyle(null);
     state.setSelectedOccasions([]);
@@ -39,8 +39,7 @@ export function buildAppSessionActionContext(input: AppSessionActionInput) {
     state.setStep("email");
     state.setEmail("");
     state.setCode("");
-    resetOnboardingSelections();
-    state.setOnboardingStep(0);
+    resetProfileSelections();
   };
 
   const resetCapsuleState = () => {
@@ -71,10 +70,8 @@ export function buildAppSessionActionContext(input: AppSessionActionInput) {
     ensureOptionsLoaded: input.profileOptions.ensureOptionsLoaded,
     locale: input.locale,
     maybeShowPasskeyPrompt: input.maybeShowPasskeyPrompt,
-    preloadOnboardingOptions: input.profileOptions.preloadOnboardingOptions,
     resetCapsuleState,
     resetNavigation: input.resetNavigation,
-    resetOnboardingSelections,
     resetProfileOptions: input.profileOptions.resetProfileOptions,
     resetSessionState,
     resolveErrorMessage: input.resolveErrorMessage,
@@ -82,7 +79,6 @@ export function buildAppSessionActionContext(input: AppSessionActionInput) {
     setCode: state.setCode,
     setHasProfile: state.setHasProfile,
     setIsSignOutConfirmOpen: state.setIsSignOutConfirmOpen,
-    setOnboardingStep: state.setOnboardingStep,
     setProfileCreated: state.setProfileCreated,
     setSettingsProfile: state.setSettingsProfile,
     setStatus: state.setStatus,
@@ -92,7 +88,6 @@ export function buildAppSessionActionContext(input: AppSessionActionInput) {
 
   return {
     resetCapsuleState,
-    resetOnboardingSelections,
     resetSessionState,
     sessionActionContext,
   };

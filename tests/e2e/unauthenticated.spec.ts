@@ -18,7 +18,9 @@ test("unauthenticated user can sign in with mocked email code", async ({
   await page.getByLabel("Email code").fill("654321");
   await page.getByRole("button", { name: "Verify" }).click();
 
-  await expect(page.getByRole("button", { name: "Next" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Regenerate all" }),
+  ).toBeVisible();
 });
 
 test("google sign-in UI keeps email code sign-in usable when provider script is blocked", async ({
@@ -45,5 +47,7 @@ test("google sign-in UI keeps email code sign-in usable when provider script is 
   await page.getByLabel("Email code").fill("654321");
   await page.getByRole("button", { name: "Verify" }).click();
 
-  await expect(page.getByRole("button", { name: "Next" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Regenerate all" }),
+  ).toBeVisible();
 });

@@ -42,7 +42,6 @@ export function buildAppActionContext(input: AppActionContextInput) {
     locale: input.locale,
     manualWardrobeRegenerationCapsuleIdRef:
       state.manualWardrobeRegenerationCapsuleIdRef,
-    onboardingStep: state.onboardingStep,
     pendingShareId: input.pendingShareId,
     pendingNotificationKindRef: state.pendingNotificationKindRef,
     pendingRegenerationUrlsRef: state.pendingRegenerationUrlsRef,
@@ -66,7 +65,6 @@ export function buildAppActionContext(input: AppActionContextInput) {
     setIsShareLoading: input.setIsShareLoading,
     setIsWardrobePending: state.setIsWardrobePending,
     setLocale: input.setLocale,
-    setOnboardingStep: state.setOnboardingStep,
     setPartialRegenerationPendingUrls: state.setPartialRegenerationPendingUrls,
     setPendingImageSetIndexes: state.setPendingImageSetIndexes,
     setProfileCreated: state.setProfileCreated,

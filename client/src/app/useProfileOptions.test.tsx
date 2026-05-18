@@ -60,10 +60,8 @@ describe("useProfileOptions", () => {
     vi.mocked(loadProfileOptions).mockRejectedValue(new Error("failed"));
     const { result } = renderHook(() => useProfileOptions());
 
-    await expect(result.current.preloadOnboardingOptions()).rejects.toThrow(
-      "failed",
-    );
-    await result.current.preloadOnboardingOptions({ useFallback: true });
+    await expect(result.current.loadOptions()).rejects.toThrow("failed");
+    await result.current.loadOptions({ useFallback: true });
 
     await waitFor(() => {
       expect(result.current.occasionOptions.length).toBeGreaterThan(0);

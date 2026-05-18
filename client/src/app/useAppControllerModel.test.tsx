@@ -156,7 +156,7 @@ vi.mock("./useProfileOptions", () => ({
     occasionOptions: [],
     orderedSeasonOptions: [],
     patternOptions: [],
-    preloadOnboardingOptions: vi.fn(),
+    loadOptions: vi.fn(),
     styleOptions: { core: [], aesthetics: [] },
   }),
 }));

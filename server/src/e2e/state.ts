@@ -206,7 +206,7 @@ function capsuleDependencies(state: E2eState) {
     getCapsuleImpl: async (_email, id) => state.capsuleMemory.get(id),
     createCapsuleImpl: async (_email, payload) => {
       const capsule = state.capsuleMemory.create({
-        name: payload?.name || "Playwright onboarding capsule",
+        name: payload?.name || "Playwright new capsule",
         draft: payload?.draft ?? buildE2eCapsule().draft,
         saved: payload?.saved ?? null,
       });

@@ -133,29 +133,6 @@ vi.mock("./screens/SignInScreen", () => ({
   },
 }));
 
-vi.mock("./screens/OnboardingScreen", () => ({
-  default: function OnboardingScreenMock(props) {
-    return (
-      <div data-testid="onboarding-screen">
-        <button
-          type="button"
-          onClick={() => {
-            props.onSelectStyleCore("casual");
-            props.onToggleOccasion("office");
-            props.onToggleSeason("summer");
-            props.onSelectAudience("woman");
-            queueMicrotask(() => {
-              props.onFinish();
-            });
-          }}
-        >
-          finish-onboarding
-        </button>
-      </div>
-    );
-  },
-}));
-
 vi.mock("./screens/mainScreen/MainScreen", () => ({
   default: function MainScreenMock(props) {
     return (
@@ -362,7 +339,7 @@ describe("App e2e-style flows", () => {
     cleanup();
   });
 
-  test("covers auth happy path through onboarding, wardrobe load, search navigation, and sign-out", async () => {
+  test("covers auth happy path through first-login setup, search navigation, and sign-out", async () => {
     authApi.fetchCurrentUser.mockRejectedValue(new Error("unauthorized"));
     authApi.requestLoginCode.mockResolvedValue({ expiresInMs: 300000 });
     authApi.verifyLoginCode.mockResolvedValue({
@@ -392,9 +369,6 @@ describe("App e2e-style flows", () => {
     });
 
     fireEvent.click(screen.getByRole("button", { name: "verify-code" }));
-    expect(await screen.findByTestId("onboarding-screen")).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: "finish-onboarding" }));
 
     expect(await screen.findByTestId("main-screen")).toBeInTheDocument();
     await waitFor(() => {
@@ -402,14 +376,12 @@ describe("App e2e-style flows", () => {
       expect(capsulesApi.createCapsule).toHaveBeenCalledWith({
         filters: expect.any(Object),
       });
-      expect(wardrobeApi.regenerateCapsuleWardrobe).toHaveBeenCalledWith({
-        capsuleId: "capsule-1",
-      });
-      expect(wardrobeApi.subscribeCapsuleEvents).toHaveBeenCalled();
     });
     expect(capsulesApi.createCapsule.mock.calls[0][0]).not.toHaveProperty(
       "draft",
     );
+    expect(wardrobeApi.regenerateCapsuleWardrobe).not.toHaveBeenCalled();
+    expect(wardrobeApi.subscribeCapsuleEvents).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("button", { name: "open-explore" }));
     expect(await screen.findByTestId("search-screen")).toBeInTheDocument();
@@ -431,7 +403,7 @@ describe("App e2e-style flows", () => {
     expect(profileOptionsApi.clearProfileOptionsCache).toHaveBeenCalledTimes(1);
   });
 
-  test("shows notification prompt during pending onboarding generation and sends ready notification after permission is granted", async () => {
+  test("does not start generation notifications during first-login setup", async () => {
     notificationApi.nextPermission = "granted";
     authApi.fetchCurrentUser.mockRejectedValue(new Error("unauthorized"));
     authApi.requestLoginCode.mockResolvedValue({ expiresInMs: 300000 });
@@ -453,39 +425,13 @@ describe("App e2e-style flows", () => {
 
     expect(await screen.findByTestId("sign-in-screen")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "verify-code" }));
-    expect(await screen.findByTestId("onboarding-screen")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "finish-onboarding" }));
-
-    expect(
-      await screen.findByText(
-        "Capsule generation usually takes about a minute. Enable notifications and we will let you know when your result is ready.",
-      ),
-    ).toBeInTheDocument();
-    fireEvent.click(
-      screen.getByRole("button", { name: "Enable notifications" }),
-    );
-
+    expect(await screen.findByTestId("main-screen")).toBeInTheDocument();
     await waitFor(() => {
-      expect(notificationApi.requestPermission).toHaveBeenCalledTimes(1);
+      expect(capsulesApi.createCapsule).toHaveBeenCalledTimes(1);
     });
-
-    wardrobeStream.emit({ status: "ready", items: [] });
-
-    await waitFor(() => {
-      expect(notificationApi.created).toHaveBeenCalledWith(
-        "Your capsule is ready",
-        {
-          body: "Your new capsule is ready to review. Open the app to see the result.",
-        },
-      );
-    });
-    await waitFor(() => {
-      expect(
-        screen.queryByText(
-          "Capsule generation usually takes about a minute. Enable notifications and we will let you know when your result is ready.",
-        ),
-      ).not.toBeInTheDocument();
-    });
+    expect(notificationApi.requestPermission).not.toHaveBeenCalled();
+    expect(notificationApi.created).not.toHaveBeenCalled();
+    expect(wardrobeApi.regenerateCapsuleWardrobe).not.toHaveBeenCalled();
   });
 });

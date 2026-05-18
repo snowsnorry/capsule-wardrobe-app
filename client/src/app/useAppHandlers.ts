@@ -13,13 +13,7 @@ import {
   searchUserCapsules,
   shareCurrentCapsule,
 } from "./capsuleActions";
-import {
-  backOnboarding,
-  deleteUserProfile,
-  finishOnboarding,
-  nextOnboarding,
-  saveSettings,
-} from "./profileActions";
+import { deleteUserProfile, saveSettings } from "./profileActions";
 import {
   deleteGeneratedOutfitSetImage,
   downloadWardrobePdf,
@@ -178,7 +172,6 @@ function buildAppHandlers({
 }: BuildAppHandlersOptions) {
   return {
     handleApplyCapsuleFilters,
-    handleBackOnboarding: () => backOnboarding(getAppActionContext()),
     handleBackToMain: () => setCurrentView("main"),
     handleCancelRegenerationSelection: () => setSelectedRegenerationUrls([]),
     handleCreateCapsule,
@@ -195,7 +188,6 @@ function buildAppHandlers({
     handleDownloadWardrobePdf: async (capsuleId = activeCapsuleId) =>
       downloadWardrobePdf(getAppActionContext(), capsuleId),
     handleDuplicateCapsule,
-    handleFinishOnboarding: async () => finishOnboarding(getAppActionContext()),
     handleGenerateOutfitSetImage: async (
       setIndex: number | string | null | undefined,
     ) => generateOutfitSetImage(getAppActionContext(), setIndex),
@@ -203,7 +195,6 @@ function buildAppHandlers({
       googleCredential(sessionActionContext, idToken),
     handleImportSharedCapsule,
     handleNavigateApp,
-    handleNextOnboarding: () => nextOnboarding(getAppActionContext()),
     handleOpenCapsule,
     handleOpenCapsuleFromSidebar: async (
       capsuleId: string,

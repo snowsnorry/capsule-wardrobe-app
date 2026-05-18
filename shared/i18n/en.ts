@@ -144,22 +144,6 @@ const en = {
       "gemini:gemini-3-pro-image-preview": "Gemini 3 Pro Image Preview",
     },
   },
-  onboarding: {
-    title: "Welcome",
-    subtitle: "Let us set up your profile in a few quick steps.",
-    step1Title: "Step 1 · Style preferences",
-    step1Hint: "Choose one core style and optionally one aesthetic.",
-    step2Title: "Step 2 · Wardrobe needs",
-    step2Hint: "Pick the occasions you want your wardrobe to cover.",
-    step3Title: "Step 3 · Seasons",
-    step3Hint: "Choose the season or seasons this wardrobe is for.",
-    step4Title: "Step 4 · Audience",
-    step4Hint: "Choose who this wardrobe is for.",
-    completedHint:
-      "Your profile is ready. You can change these choices anytime in profile settings.",
-    next: "Next",
-    start: "Start",
-  },
   actions: {
     signOut: "Sign out",
     cancel: "Cancel",
