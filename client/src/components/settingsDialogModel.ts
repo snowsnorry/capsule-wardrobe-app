@@ -23,7 +23,6 @@ export type SettingsProfile = {
   theme?: string | null;
   llm?: string | null;
   imageLlm?: string | null;
-  image_llm?: string | null;
 };
 
 export type SettingsDraft = {
@@ -40,7 +39,7 @@ export type SettingsSavePayload = {
   locale: SettingsLocale;
   theme: SettingsTheme;
   llm: SettingsLlm;
-  image_llm: SettingsImageLlm;
+  imageLlm: SettingsImageLlm;
 };
 
 export type PasskeyMetadata = {
@@ -98,9 +97,7 @@ export function normalizeSettingsDraft(
     locale: isOneOf(LANGUAGE_OPTIONS, settings.locale) ? settings.locale : "en",
     theme: normalizeThemeValue(String(settings.theme || "")),
     llm: normalizeLlmValue(String(settings.llm || "")),
-    imageLlm: normalizeImageLlmValue(
-      String(settings.imageLlm || settings.image_llm || ""),
-    ),
+    imageLlm: normalizeImageLlmValue(String(settings.imageLlm || "")),
   };
 }
 

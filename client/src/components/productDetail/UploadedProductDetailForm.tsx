@@ -54,11 +54,11 @@ type MultiSelectConfig = {
   fieldKey: keyof Pick<
     UploadedProductFormState,
     | "season"
-    | "formality_level"
+    | "formalityLevel"
     | "style"
     | "occasions"
-    | "color_base"
-    | "closure_type"
+    | "colorBase"
+    | "closureType"
   >;
   label: string;
   options: readonly string[];
@@ -232,7 +232,7 @@ function getMultiSelectConfigs(
       optionGroup: "seasons",
     },
     {
-      fieldKey: "formality_level",
+      fieldKey: "formalityLevel",
       label: t("search.fields.formalityLevel"),
       options: PRODUCT_FORMALITY_LEVEL_OPTIONS,
       optionGroup: "styles",
@@ -250,13 +250,13 @@ function getMultiSelectConfigs(
       optionGroup: "occasions",
     },
     {
-      fieldKey: "color_base",
+      fieldKey: "colorBase",
       label: t("search.fields.color"),
       options: PRODUCT_COLOR_BASE_OPTIONS,
       optionGroup: "accentColors",
     },
     {
-      fieldKey: "closure_type",
+      fieldKey: "closureType",
       label: t("search.fields.closureType"),
       options: PRODUCT_CLOSURE_TYPE_OPTIONS,
       optionGroup: "closureTypes",

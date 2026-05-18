@@ -50,7 +50,7 @@ function getNormalizedProfileSettingsValues(record: Record<string, unknown>) {
       .trim()
       .toLowerCase(),
     llm: String(record.llm || "").trim(),
-    imageLlm: String(record.image_llm || "").trim(),
+    imageLlm: String(record.imageLlm || "").trim(),
   };
 }
 
@@ -106,7 +106,7 @@ export function toProfileResponse(profile) {
   const { imageLlm, ...rest } = profile;
   return {
     ...rest,
-    image_llm:
+    imageLlm:
       typeof imageLlm === "string" && imageLlm.trim()
         ? imageLlm.trim()
         : DEFAULT_PROFILE_IMAGE_LLM,

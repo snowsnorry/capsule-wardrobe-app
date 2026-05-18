@@ -202,7 +202,7 @@ async function updateUploadedWardrobeItemDetailsById({
   const sql = getSqlClient();
   const isNeutral = calculateWardrobeImageIsNeutral({
     ...details,
-    is_neutral: null,
+    isNeutral: null,
   });
   const embeddingVector = formatEmbeddingVector(embedding);
   const row = getFirstRow(
@@ -215,17 +215,17 @@ async function updateUploadedWardrobeItemDetailsById({
         audience = ${details.audience},
         category = ${details.category},
         season = ${details.season},
-        formality_level = ${details.formality_level},
+        formality_level = ${details.formalityLevel},
         style = ${details.style},
         occasions = ${details.occasions},
-        color_base = ${details.color_base},
+        color_base = ${details.colorBase},
         is_neutral = ${isNeutral},
         pattern = ${details.pattern},
         finish = ${details.finish},
         composition = ${details.composition},
         silhouette = ${details.silhouette},
         fit = ${details.fit},
-        closure_type = ${details.closure_type},
+        closure_type = ${details.closureType},
         embedding = ${embeddingVector}::vector,
         processing_status = ${processingStatus},
         updated_at = now()

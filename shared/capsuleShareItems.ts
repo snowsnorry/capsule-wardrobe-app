@@ -18,7 +18,7 @@ const MINIMAL_CAPSULE_ITEM_KEYS = [
   "name",
   "audience",
   "category",
-  "image_url",
+  "imageUrl",
 ] as const;
 
 function getTrimmedString(value: unknown): string {
@@ -65,7 +65,7 @@ function isCatalogWardrobeItem(item: unknown): boolean {
   }
 
   const source = getTrimmedString(value.source).toLowerCase();
-  const itemSource = getTrimmedString(value.item_source).toLowerCase();
+  const itemSource = getTrimmedString(value.itemSource).toLowerCase();
   return (
     source === "from_catalog" ||
     (itemSource === "wardrobe" && isHttpUrl(value.url))
@@ -78,7 +78,7 @@ function hasUploadedPersonalWardrobeItems(snapshot: unknown): boolean {
 
 function getCatalogItemId(item: ShareItem): string {
   return (
-    getItemString(item, "product_id", "productId") ||
+    getItemString(item, "productId") ||
     (isCatalogWardrobeItem(item) ? "" : getItemString(item, "id"))
   );
 }
@@ -95,7 +95,7 @@ function normalizeCapsuleItemForShare(item: unknown): ShareItem | null {
     name: getItemString(source, "name"),
     audience: getItemString(source, "audience"),
     category: getItemString(source, "category"),
-    image_url: getItemString(source, "image_url", "imageUrl"),
+    imageUrl: getItemString(source, "imageUrl"),
   };
 
   return MINIMAL_CAPSULE_ITEM_KEYS.every((key) => normalized[key])
@@ -106,9 +106,9 @@ function normalizeCapsuleItemForShare(item: unknown): ShareItem | null {
 function getItemIdAliases(item: ShareItem): string[] {
   const aliases = [
     getItemString(item, "id"),
-    getItemString(item, "wardrobe_id", "wardrobeId"),
+    getItemString(item, "wardrobeId"),
   ].filter(Boolean);
-  const wardrobeId = getItemString(item, "wardrobe_id", "wardrobeId");
+  const wardrobeId = getItemString(item, "wardrobeId");
   if (wardrobeId) {
     aliases.push(`W${wardrobeId}`);
   }

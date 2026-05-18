@@ -24,8 +24,8 @@ function getDownloadIdentity(item: PromptImageItemLike) {
   return {
     id: String(item?.id ?? ""),
     category: item?.category ?? "",
-    imageUrl: resolveSourceImageUrl(item?.image_url),
-    originalImageUrl: getOriginalImageUrl(item?.image_url),
+    imageUrl: resolveSourceImageUrl(item?.imageUrl),
+    originalImageUrl: getOriginalImageUrl(item?.imageUrl),
   };
 }
 
@@ -110,7 +110,7 @@ async function downloadProductImageAsset(
   }
 
   try {
-    const cachedImage = await readImageFromLocalCache(item?.image_url);
+    const cachedImage = await readImageFromLocalCache(item?.imageUrl);
     if (cachedImage?.buffer) {
       return buildCachedDownloadResult(identity, cachedImage, true);
     }
@@ -152,7 +152,7 @@ async function downloadPromptImageAsset(
 
   try {
     const cacheLookupStartedAt = nowMs();
-    const cachedImage = await readImageFromLocalCache(item?.image_url);
+    const cachedImage = await readImageFromLocalCache(item?.imageUrl);
     addTiming(timings, "cacheLookupMs", cacheLookupStartedAt);
     if (cachedImage?.buffer) {
       const inspectStartedAt = nowMs();

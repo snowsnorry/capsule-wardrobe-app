@@ -207,7 +207,7 @@ function useCardImageStateForItem({
   mobileColumns: 1 | 2 | 3;
 }) {
   return useResponsiveClothingCardImageState(
-    item?.image_url,
+    item?.imageUrl,
     imageUrl,
     item?.source,
     isMobile,
@@ -253,7 +253,7 @@ function ClothingCard(props: ClothingCardProps): ReactElement {
     mobileColumns,
   } = normalizeClothingCardProps(props);
   const { t } = useI18n();
-  const imageUrl = getSafeHttpUrl(item?.image_url);
+  const imageUrl = getSafeHttpUrl(item?.imageUrl);
   const imageState = useCardImageStateForItem({
     imageUrl,
     isMobile,

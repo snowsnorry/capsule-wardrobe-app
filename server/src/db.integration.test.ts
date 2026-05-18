@@ -196,10 +196,10 @@ test("db integration shapes login code persistence and verification queries", as
     "nonce-1",
     expiresAt,
   ]);
-  expect(calls[1].text).toMatch(/select\s+email,\s+"codeHash"/i);
+  expect(calls[1].text).toMatch(/code_hash as "codeHash"/i);
   expect(calls[1].values).toEqual(["user@example.com"]);
   expect(calls[2].text).toMatch(
-    /update login_codes\s+set "consumedAt" = now\(\)/i,
+    /update login_codes\s+set consumed_at = now\(\)/i,
   );
   expect(calls[2].values).toEqual(["user@example.com", 5, "wrong-hash"]);
   expect(calls[3].text).toMatch(/set attempts = attempts \+ 1/i);
@@ -249,11 +249,11 @@ test("db integration shapes session persistence queries", async () => {
   expect(calls[1].text).toMatch(/from user_sessions/i);
   expect(calls[1].values).toEqual(["sess-1"]);
   expect(calls[2].text).toMatch(
-    /delete from user_sessions where "sessionId" =/i,
+    /delete from user_sessions where session_id =/i,
   );
   expect(calls[2].values).toEqual(["sess-1"]);
   expect(calls[3].text).toMatch(
-    /delete from user_sessions where "expiresAt" <= now\(\)/i,
+    /delete from user_sessions where expires_at <= now\(\)/i,
   );
 });
 
@@ -446,9 +446,9 @@ test("db integration lists and saves user wardrobe items", async () => {
 
   expect(listed[0]).toMatchObject({
     id: "wardrobe-1",
-    image_url: "https://example.com/products/linen-shirt.jpg",
+    imageUrl: "https://example.com/products/linen-shirt.jpg",
     source: "from_catalog",
-    processing_status: "ready",
+    processingStatus: "ready",
   });
   expect(saved).toMatchObject({
     id: "wardrobe-1",
@@ -548,8 +548,8 @@ test("db integration reads uploaded wardrobe items by id", async () => {
   expect(blank).toBeNull();
   expect(found).toMatchObject({
     id: "wardrobe-upload-1",
-    image_url: "https://images.example.com/wardrobe/user/image.webp",
-    is_neutral: true,
+    imageUrl: "https://images.example.com/wardrobe/user/image.webp",
+    isNeutral: true,
     source: "uploaded",
   });
   expect(missing).toBeNull();
@@ -607,10 +607,10 @@ test("db integration saves uploaded wardrobe items", async () => {
     expect.objectContaining({
       id: "wardrobe-upload-1",
       url: "wardrobe://wardrobe-upload-1",
-      image_url: "https://images.example.com/wardrobe/user/image.webp",
-      raw_image_url: "https://images.example.com/wardrobe/user/image.webp",
+      imageUrl: "https://images.example.com/wardrobe/user/image.webp",
+      rawImageUrl: "https://images.example.com/wardrobe/user/image.webp",
       source: "uploaded",
-      processing_status: "uploaded",
+      processingStatus: "uploaded",
     }),
   ]);
   expect(calls[0].text).toMatch(/insert into wardrobe/i);
@@ -680,8 +680,8 @@ test("db integration deletes uploaded wardrobe items by id", async () => {
   expect(deleted).toEqual(
     expect.objectContaining({
       id: "wardrobe-upload-1",
-      image_url: "https://images.example.com/wardrobe/user/image_clean.png",
-      raw_image_url: "https://images.example.com/wardrobe/user/image.webp",
+      imageUrl: "https://images.example.com/wardrobe/user/image_clean.png",
+      rawImageUrl: "https://images.example.com/wardrobe/user/image.webp",
       source: "uploaded",
     }),
   );
@@ -750,7 +750,7 @@ test("db integration updates uploaded wardrobe item metadata status", async () =
     expect.objectContaining({
       id: "wardrobe-upload-1",
       name: "Linen shirt",
-      processing_status: "metadata_processed",
+      processingStatus: "metadata_processed",
     }),
   );
   expect(calls[0].text).toMatch(/update wardrobe/i);
@@ -808,7 +808,7 @@ test("db integration marks uploaded wardrobe item metadata failed", async () => 
   expect(saved).toEqual(
     expect.objectContaining({
       id: "wardrobe-upload-1",
-      processing_status: "failed",
+      processingStatus: "failed",
     }),
   );
   expect(calls[0].text).toMatch(/update wardrobe/i);
@@ -860,16 +860,16 @@ test("db integration updates uploaded wardrobe item details", async () => {
       audience: "all",
       category: "top",
       season: ["summer"],
-      formality_level: ["casual"],
+      formalityLevel: ["casual"],
       style: ["minimalistic"],
       occasions: ["office"],
-      color_base: ["red"],
+      colorBase: ["red"],
       pattern: "solid",
       finish: null,
       composition: "linen, cotton",
       silhouette: null,
       fit: "regular",
-      closure_type: ["button"],
+      closureType: ["button"],
     },
     processingStatus: "ready",
   });
@@ -878,8 +878,8 @@ test("db integration updates uploaded wardrobe item details", async () => {
     expect.objectContaining({
       id: "wardrobe-upload-1",
       name: "Updated shirt",
-      processing_status: "ready",
-      is_neutral: false,
+      processingStatus: "ready",
+      isNeutral: false,
     }),
   );
   expect(calls[0].text).toMatch(/update wardrobe/i);
@@ -938,16 +938,16 @@ test("db integration saves failed uploaded detail update with null embedding", a
       audience: "all",
       category: "top",
       season: ["summer"],
-      formality_level: [],
+      formalityLevel: [],
       style: [],
       occasions: [],
-      color_base: ["white"],
+      colorBase: ["white"],
       pattern: null,
       finish: null,
       composition: null,
       silhouette: null,
       fit: null,
-      closure_type: [],
+      closureType: [],
     },
     processingStatus: "failed",
   });
@@ -955,8 +955,8 @@ test("db integration saves failed uploaded detail update with null embedding", a
   expect(saved).toEqual(
     expect.objectContaining({
       id: "wardrobe-upload-1",
-      processing_status: "failed",
-      is_neutral: true,
+      processingStatus: "failed",
+      isNeutral: true,
     }),
   );
   expect(calls[0].text).toMatch(/embedding =/i);
@@ -978,16 +978,16 @@ test("db integration skips uploaded wardrobe detail update for blank ids", async
       audience: "all",
       category: "top",
       season: ["summer"],
-      formality_level: [],
+      formalityLevel: [],
       style: [],
       occasions: [],
-      color_base: [],
+      colorBase: [],
       pattern: null,
       finish: null,
       composition: null,
       silhouette: null,
       fit: null,
-      closure_type: [],
+      closureType: [],
     },
   });
 

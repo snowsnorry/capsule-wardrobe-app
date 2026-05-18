@@ -105,10 +105,8 @@ function replaceImageUrlSuffix(imageUrl: string, suffix: string) {
 }
 
 function buildUploadedWardrobeItemImageKeys(item) {
-  const originalUrl = String(
-    item?.raw_image_url || item?.rawImageUrl || "",
-  ).trim();
-  const imageUrl = String(item?.image_url || item?.imageUrl || "").trim();
+  const originalUrl = String(item?.rawImageUrl || "").trim();
+  const imageUrl = String(item?.imageUrl || "").trim();
   const thumbnailUrls = imageUrl
     ? ["_320", "_480", "_640"].map((suffix) =>
         replaceImageUrlSuffix(imageUrl, suffix),

@@ -49,14 +49,14 @@ function buildOptionFormState(
     audience: normalizeAudienceValue(item?.audience),
     category: getOptionValue(item?.category, PRODUCT_CATEGORY_OPTIONS) || "",
     season: getOptionArrayValue(item?.season, PRODUCT_SEASON_OPTIONS),
-    formality_level: getOptionArrayValue(
-      getFirstItemValue(item, "formality_level", "formalityLevel"),
+    formalityLevel: getOptionArrayValue(
+      getFirstItemValue(item, "formalityLevel"),
       PRODUCT_FORMALITY_LEVEL_OPTIONS,
     ),
     style: getOptionArrayValue(item?.style, PRODUCT_STYLE_OPTIONS),
     occasions: getOptionArrayValue(item?.occasions, PRODUCT_OCCASION_OPTIONS),
-    color_base: getOptionArrayValue(
-      getFirstItemValue(item, "color_base", "colorBase"),
+    colorBase: getOptionArrayValue(
+      getFirstItemValue(item, "colorBase"),
       PRODUCT_COLOR_BASE_OPTIONS,
     ),
     pattern: getOptionValue(item?.pattern, PRODUCT_PATTERN_OPTIONS),
@@ -66,8 +66,8 @@ function buildOptionFormState(
     compositionValues,
     silhouette: getOptionValue(item?.silhouette, PRODUCT_SILHOUETTE_OPTIONS),
     fit: getOptionValue(item?.fit, PRODUCT_FIT_OPTIONS),
-    closure_type: getOptionArrayValue(
-      getFirstItemValue(item, "closure_type", "closureType"),
+    closureType: getOptionArrayValue(
+      getFirstItemValue(item, "closureType"),
       PRODUCT_CLOSURE_TYPE_OPTIONS,
     ),
   };

@@ -93,7 +93,7 @@ function toWardrobeUiItem(item: SwimwearCandidate) {
     url: getItemValue(item, "url"),
     name: getItemValue(item, "name"),
     category: getItemValue(item, "category"),
-    image_url: getItemValue(item, "image_url"),
+    imageUrl: getItemValue(item, "image_url"),
     audience: getItemValue(item, "audience"),
   };
 }

@@ -293,7 +293,7 @@ describe("ProfileFiltersSidebar", () => {
           id: 12,
           name: "White shirt",
           url: "https://example.com/shirt",
-          image_url: "https://example.com/shirt.jpg",
+          imageUrl: "https://example.com/shirt.jpg",
           category: "top",
         },
       ],

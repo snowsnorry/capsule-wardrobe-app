@@ -41,7 +41,7 @@ function capsuleRow(overrides = {}) {
               name: "Top",
               audience: "woman",
               category: "top",
-              image_url: "https://images.example.com/top.jpg",
+              imageUrl: "https://images.example.com/top.jpg",
             },
           ],
         },
@@ -172,7 +172,7 @@ test("buildSharedCapsuleOgMetadata formats English filter sentences and prefers 
       },
       data: {
         wardrobe: {
-          items: [{ image_url: "https://images.example.com/item.jpg" }],
+          items: [{ imageUrl: "https://images.example.com/item.jpg" }],
           outfitSets: [
             { itemIds: ["top-1"], image: "", imageObsolete: false },
             {
@@ -195,7 +195,7 @@ test("buildSharedCapsuleOgMetadata formats English filter sentences and prefers 
   });
 });
 
-test("buildSharedCapsuleOgMetadata falls back to the first item image_url", () => {
+test("buildSharedCapsuleOgMetadata falls back to the first item imageUrl", () => {
   expect(
     buildSharedCapsuleOgMetadata({
       name: "Spring edit",
@@ -203,7 +203,7 @@ test("buildSharedCapsuleOgMetadata falls back to the first item image_url", () =
         filters: {},
         data: {
           wardrobe: {
-            items: [{ image_url: "https://images.example.com/item.jpg" }],
+            items: [{ imageUrl: "https://images.example.com/item.jpg" }],
             outfitSets: [
               { itemIds: ["top-1"], image: null, imageObsolete: false },
             ],
@@ -480,14 +480,14 @@ test("createCapsuleStore normalizes catalog wardrobe items for shares", async ()
               items: [
                 {
                   id: "W7",
-                  wardrobe_id: "7",
-                  product_id: "catalog-7",
+                  wardrobeId: "7",
+                  productId: "catalog-7",
                   source: "from_catalog",
                   url: "https://example.com/catalog-7",
                   name: "Catalog shirt",
                   audience: "woman",
                   category: "top",
-                  image_url: "https://example.com/catalog-7.jpg",
+                  imageUrl: "https://example.com/catalog-7.jpg",
                   brand: "Dropped",
                 },
                 {
@@ -496,7 +496,7 @@ test("createCapsuleStore normalizes catalog wardrobe items for shares", async ()
                   name: "Catalog jeans",
                   audience: "woman",
                   category: "bottom",
-                  image_url: "https://example.com/catalog-8.jpg",
+                  imageUrl: "https://example.com/catalog-8.jpg",
                   brand: "Dropped",
                 },
               ],
@@ -542,7 +542,7 @@ test("createCapsuleStore normalizes catalog wardrobe items for shares", async ()
       name: "Catalog shirt",
       audience: "woman",
       category: "top",
-      image_url: "https://example.com/catalog-7.jpg",
+      imageUrl: "https://example.com/catalog-7.jpg",
     },
     {
       id: "catalog-8",
@@ -550,7 +550,7 @@ test("createCapsuleStore normalizes catalog wardrobe items for shares", async ()
       name: "Catalog jeans",
       audience: "woman",
       category: "bottom",
-      image_url: "https://example.com/catalog-8.jpg",
+      imageUrl: "https://example.com/catalog-8.jpg",
     },
   ]);
   expect(content?.data?.wardrobe?.outfitSets).toEqual([
@@ -564,7 +564,7 @@ test("createCapsuleStore normalizes catalog wardrobe items for shares", async ()
     Object.keys(
       (content?.data?.wardrobe?.items as Record<string, unknown>[])[0],
     ).sort(),
-  ).toEqual(["audience", "category", "id", "image_url", "name", "url"]);
+  ).toEqual(["audience", "category", "id", "imageUrl", "name", "url"]);
 });
 
 test("createCapsuleStore rejects uploaded personal items in shared capsules", async () => {
@@ -580,7 +580,7 @@ test("createCapsuleStore rejects uploaded personal items in shared capsules", as
             source: "uploaded",
             audience: "woman",
             category: "top",
-            image_url: "https://example.com/uploaded.jpg",
+            imageUrl: "https://example.com/uploaded.jpg",
           },
         ],
       },

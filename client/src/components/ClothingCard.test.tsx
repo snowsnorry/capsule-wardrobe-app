@@ -23,7 +23,7 @@ const item: ComponentProps<typeof ClothingCard>["item"] = {
   id: "item-1",
   name: "Red Jacket",
   category: "outerwear",
-  image_url: "https://example.com/red-jacket.jpg",
+  imageUrl: "https://example.com/red-jacket.jpg",
   url: "https://example.com/products/red-jacket",
 };
 
@@ -163,7 +163,7 @@ describe("ClothingCard", () => {
 
   test("keeps the inline photo camera icon and shows a failed chip for failed uploaded wardrobe items", () => {
     const { container } = renderCard({
-      item: { ...item, source: "uploaded", processing_status: "failed" },
+      item: { ...item, source: "uploaded", processingStatus: "failed" },
     });
 
     expect(
@@ -192,7 +192,7 @@ describe("ClothingCard", () => {
         category: null,
         season: ["summer"],
         source: "uploaded",
-        processing_status: "needs_review",
+        processingStatus: "needs_review",
       },
     });
 
@@ -212,7 +212,7 @@ describe("ClothingCard", () => {
         category: null,
         season: [],
         source: "uploaded",
-        processing_status: "ready",
+        processingStatus: "ready",
       },
     });
 
@@ -254,7 +254,7 @@ describe("ClothingCard", () => {
     renderCard({
       item: {
         ...item,
-        image_url: "https://images.example.com/wardrobe/profile/item_clean.png",
+        imageUrl: "https://images.example.com/wardrobe/profile/item_clean.png",
         source: "uploaded",
       },
     });
@@ -282,7 +282,7 @@ describe("ClothingCard", () => {
     fireEvent.error(image);
 
     await waitFor(() => {
-      expect(image).toHaveAttribute("src", item.image_url);
+      expect(image).toHaveAttribute("src", item.imageUrl);
     });
     expect(image).not.toHaveAttribute("srcset");
 
@@ -514,7 +514,7 @@ describe("ClothingCard", () => {
       item: {
         ...item,
         url: "javascript:alert(1)",
-        image_url: "data:text/html,<script>alert(1)</script>",
+        imageUrl: "data:text/html,<script>alert(1)</script>",
       },
       onProductClick,
     });
@@ -591,7 +591,7 @@ describe("ClothingCard", () => {
         url: "wardrobe://uploaded-1",
         name: "Uploaded shirt",
         category: "top",
-        image_url: "https://example.com/uploaded-shirt.jpg",
+        imageUrl: "https://example.com/uploaded-shirt.jpg",
       },
       allowProductMenuWithoutUrl: true,
       isMobile: true,

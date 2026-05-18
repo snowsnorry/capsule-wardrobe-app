@@ -29,7 +29,7 @@ describe("capsuleAnchors", () => {
             id: 12,
             name: "White shirt",
             category: "top",
-            processing_status: "ready",
+            processingStatus: "ready",
           },
         ],
       },
@@ -60,7 +60,7 @@ describe("capsuleAnchors", () => {
         anchorWardrobeItemIds: ["W12"],
         deps: {
           listWardrobeItemsByIdsImpl: async () => [
-            { id: 12, category: "", processing_status: "ready" },
+            { id: 12, category: "", processingStatus: "ready" },
           ],
         },
       }),

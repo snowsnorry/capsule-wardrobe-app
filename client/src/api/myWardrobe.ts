@@ -26,16 +26,16 @@ type UploadedWardrobeItemUpdatePayload = {
   audience: string;
   category: string;
   season: string[];
-  formality_level: string[];
+  formalityLevel: string[];
   style: string[];
   occasions: string[];
-  color_base: string[];
+  colorBase: string[];
   pattern: string | null;
   finish: string | null;
   composition: string | null;
   silhouette: string | null;
   fit: string | null;
-  closure_type: string[];
+  closureType: string[];
 };
 type RequestErrorWithStatus = Error & {
   status: number;

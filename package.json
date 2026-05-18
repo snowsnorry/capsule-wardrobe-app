@@ -14,6 +14,7 @@
     "dev:server": "npm --workspace server run dev",
     "dev:all": "concurrently -k -n client,server \"npm:dev:client\" \"npm:dev:server\"",
     "dev:server:test-auth": "npm --workspace server run dev:test-auth",
+    "migration": "npm --workspace server run migration",
     "playwright:install": "playwright install",
     "test:e2e": "playwright test",
     "test:e2e:debug": "playwright test --debug",

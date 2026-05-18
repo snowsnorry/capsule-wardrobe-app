@@ -54,10 +54,10 @@ const item = {
   id: "coat",
   name: "Wool Coat",
   url: "https://example.com/coat",
-  image_url: "https://example.com/coat.jpg",
+  imageUrl: "https://example.com/coat.jpg",
   price: 120,
   currency: "EUR",
-  color_base: ["black"],
+  colorBase: ["black"],
 };
 
 function renderDialog(
@@ -124,7 +124,7 @@ describe("ProductDetailDialog", () => {
         id: "unsafe",
         name: "Unsafe Coat",
         url: "javascript:alert(1)",
-        image_url: "data:text/html,<script>alert(1)</script>",
+        imageUrl: "data:text/html,<script>alert(1)</script>",
       },
     });
 
@@ -147,8 +147,8 @@ describe("ProductDetailDialog", () => {
         id: "uploaded-coat",
         name: "Uploaded Coat",
         source: "uploaded",
-        image_url: "https://example.com/coat_clean.png",
-        raw_image_url: "https://example.com/coat_original.webp",
+        imageUrl: "https://example.com/coat_clean.png",
+        rawImageUrl: "https://example.com/coat_original.webp",
         price: 120,
       },
     });
@@ -193,7 +193,7 @@ describe("ProductDetailDialog", () => {
         id: "capsule-coat",
         name: "Wool Coat",
         url: "https://example.com/coat",
-        image_url: "https://example.com/coat.jpg",
+        imageUrl: "https://example.com/coat.jpg",
         audience: "woman",
       },
     });
@@ -212,8 +212,8 @@ describe("ProductDetailDialog", () => {
         name: "Uploaded shirt",
         source: "uploaded",
         url: "wardrobe://uploaded-1",
-        image_url: "https://example.com/uploaded.jpg",
-        raw_image_url: "https://example.com/uploaded-original.jpg",
+        imageUrl: "https://example.com/uploaded.jpg",
+        rawImageUrl: "https://example.com/uploaded-original.jpg",
         audience: "all",
         category: "top",
         season: ["summer"],
@@ -226,7 +226,7 @@ describe("ProductDetailDialog", () => {
         name: "Uploaded shirt",
         source: "uploaded",
         url: "wardrobe://uploaded-1",
-        image_url: "https://example.com/uploaded.jpg",
+        imageUrl: "https://example.com/uploaded.jpg",
       },
     });
 
@@ -245,7 +245,7 @@ describe("ProductDetailDialog", () => {
         id: "uploaded-coat",
         name: "Uploaded Coat",
         source: "uploaded",
-        image_url: "https://example.com/coat_clean.png",
+        imageUrl: "https://example.com/coat_clean.png",
         season: ["winter"],
       },
       onEditUploadedWardrobeItem: onEdit,
@@ -280,7 +280,7 @@ describe("ProductDetailDialog", () => {
         id: "capsule-coat",
         name: "Wool Coat",
         url: "https://example.com/coat",
-        image_url: "https://example.com/coat.jpg",
+        imageUrl: "https://example.com/coat.jpg",
         audience: "woman",
       },
     });
@@ -315,7 +315,7 @@ describe("ProductDetailDialog", () => {
         id: "capsule-coat",
         name: "Wool Coat",
         url: "https://example.com/coat",
-        image_url: "https://example.com/coat.jpg",
+        imageUrl: "https://example.com/coat.jpg",
       },
     });
 

@@ -146,16 +146,16 @@ describe("useAppHandlers", () => {
         audience: "all",
         category: "top",
         season: ["summer"],
-        formality_level: [],
+        formalityLevel: [],
         style: [],
         occasions: [],
-        color_base: [],
+        colorBase: [],
         pattern: null,
         finish: null,
         composition: null,
         silhouette: null,
         fit: null,
-        closure_type: [],
+        closureType: [],
       },
     );
     await result.current.handleSaveSettings({
@@ -163,7 +163,7 @@ describe("useAppHandlers", () => {
       locale: "en",
       theme: "system",
       llm: "none",
-      image_llm: "openai:gpt-image-2",
+      imageLlm: "openai:gpt-image-2",
     });
     await result.current.handleSearchCapsules("spring");
     await result.current.handleShareCapsule();
@@ -215,7 +215,7 @@ describe("useAppHandlers", () => {
       locale: "en",
       theme: "system",
       llm: "none",
-      image_llm: "openai:gpt-image-2",
+      imageLlm: "openai:gpt-image-2",
     });
     expect(sessionActions.googleCredential).toHaveBeenCalledWith(
       sessionActionContext,

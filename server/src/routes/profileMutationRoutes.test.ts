@@ -13,12 +13,12 @@ test("account wardrobe image cleanup keys cover uploaded originals and derivativ
     buildAccountWardrobeImageKeys([
       {
         source: "uploaded",
-        image_url: "https://images.example.com/wardrobe/profile/item_clean.png",
-        raw_image_url: "https://images.example.com/wardrobe/profile/item.webp",
+        imageUrl: "https://images.example.com/wardrobe/profile/item_clean.png",
+        rawImageUrl: "https://images.example.com/wardrobe/profile/item.webp",
       },
       {
         source: "from_catalog",
-        image_url: "https://images.example.com/catalog/item.jpg",
+        imageUrl: "https://images.example.com/catalog/item.jpg",
       },
     ]),
   ).toEqual([
@@ -109,7 +109,7 @@ test("profile mutation routes cover update, locale update, and delete branches",
         locale: "en",
         theme: "system",
         llm: "openai:gpt-5.5",
-        image_llm: "openai:gpt-image-2",
+        imageLlm: "openai:gpt-image-2",
         fullname: null,
       },
     },
@@ -129,7 +129,7 @@ test("profile mutation routes cover update, locale update, and delete branches",
         locale: "en",
         theme: "sepia",
         llm: "openai:gpt-5.5",
-        image_llm: "openai:gpt-image-2",
+        imageLlm: "openai:gpt-image-2",
         fullname: "Ada",
       },
     },
@@ -191,7 +191,7 @@ test("profile mutation routes cover update, locale update, and delete branches",
         locale: "ru",
         theme: "dark",
         llm: "claude:claude-opus-4-7",
-        image_llm: "gemini:gemini-3-pro-image-preview",
+        imageLlm: "gemini:gemini-3-pro-image-preview",
         fullname: "  Ada Lovelace  ",
       },
     },
@@ -201,7 +201,7 @@ test("profile mutation routes cover update, locale update, and delete branches",
   expect(updateSuccess.json.profile.locale).toBe("ru");
   expect(updateSuccess.json.profile.theme).toBe("dark");
   expect(updateSuccess.json.profile.llm).toBe("claude:claude-opus-4-7");
-  expect(updateSuccess.json.profile.image_llm).toBe(
+  expect(updateSuccess.json.profile.imageLlm).toBe(
     "gemini:gemini-3-pro-image-preview",
   );
   expect(updateSuccess.json.profile.fullname).toBe("Ada Lovelace");
@@ -256,15 +256,15 @@ test("profile delete clears auth cookies and cleans uploaded wardrobe images bes
           {
             id: "uploaded-1",
             source: "uploaded",
-            image_url:
+            imageUrl:
               "https://images.example.com/wardrobe/profile/image_clean.png",
-            raw_image_url:
+            rawImageUrl:
               "https://images.example.com/wardrobe/profile/image.webp",
           },
           {
             id: "catalog-1",
             source: "from_catalog",
-            image_url: "https://catalog.example.com/item.jpg",
+            imageUrl: "https://catalog.example.com/item.jpg",
           },
         ];
       },

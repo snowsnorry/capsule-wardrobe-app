@@ -22,7 +22,6 @@ export function markSearchResultSavedToWardrobe(
       ? {
           ...result,
           isSavedToWardrobe: true,
-          is_saved_to_wardrobe: true,
           savedToMyWardrobe: true,
         }
       : result,
@@ -40,7 +39,6 @@ export function markSearchResultRemovedFromWardrobe(
       ? {
           ...result,
           isSavedToWardrobe: false,
-          is_saved_to_wardrobe: false,
           savedToMyWardrobe: false,
         }
       : result,

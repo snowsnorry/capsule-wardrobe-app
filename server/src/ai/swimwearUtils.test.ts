@@ -60,7 +60,7 @@ test("sanitizeProductRow removes embedding metadata and toWardrobeUiItem maps UI
     url: "https://example.test/p1",
     name: "Suit",
     category: "swimwear",
-    image_url: "https://example.test/p1.jpg",
+    imageUrl: "https://example.test/p1.jpg",
     audience: "woman",
   });
 });

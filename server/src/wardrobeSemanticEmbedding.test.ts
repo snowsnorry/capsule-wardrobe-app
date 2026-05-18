@@ -10,15 +10,15 @@ test("buildUploadedWardrobeSemanticSummary matches uploaded wardrobe fields", ()
       audience: "all",
       category: "top",
       season: ["summer", "spring"],
-      formality_level: ["casual"],
+      formalityLevel: ["casual"],
       style: ["minimalistic"],
       occasions: ["office", "travel"],
-      color_base: ["white"],
+      colorBase: ["white"],
       pattern: "solid",
       composition: "linen, cotton",
       silhouette: "straight",
       fit: "regular",
-      closure_type: ["button"],
+      closureType: ["button"],
     }),
   ).toBe(
     [

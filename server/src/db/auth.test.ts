@@ -177,6 +177,6 @@ test("session helpers insert, select, delete, and prune sessions", async () => {
     "2026-05-08T00:00:00.000Z",
   ]);
   expect(statements.at(-1)).toContain(
-    'delete from user_sessions where "expiresAt" <= now()',
+    "delete from user_sessions where expires_at <= now()",
   );
 });

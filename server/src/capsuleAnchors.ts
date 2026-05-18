@@ -64,7 +64,7 @@ function getRowPublicId(row: Record<string, unknown>): string {
 
 function hasReadyCategory(row: Record<string, unknown>): boolean {
   return (
-    row.processing_status === "ready" &&
+    row.processingStatus === "ready" &&
     typeof row.category === "string" &&
     row.category.trim().length > 0
   );

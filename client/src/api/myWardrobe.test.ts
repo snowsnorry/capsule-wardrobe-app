@@ -231,16 +231,16 @@ describe("my wardrobe api", () => {
       audience: "all",
       category: "top",
       season: ["summer"],
-      formality_level: ["casual"],
+      formalityLevel: ["casual"],
       style: ["minimalistic"],
       occasions: ["office"],
-      color_base: ["white"],
+      colorBase: ["white"],
       pattern: "solid",
       finish: null,
       composition: "linen, cotton",
       silhouette: null,
       fit: "regular",
-      closure_type: ["button"],
+      closureType: ["button"],
     };
 
     await updateUploadedWardrobeItem("uploaded-1", payload);

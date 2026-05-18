@@ -41,17 +41,17 @@ function createCapsule() {
           items: [
             {
               id: "top-1",
-              image_url: "https://example.com/top.jpg",
+              imageUrl: "https://example.com/top.jpg",
               category: "top",
             },
             {
               id: "bottom-1",
-              image_url: "https://example.com/bottom.jpg",
+              imageUrl: "https://example.com/bottom.jpg",
               category: "bottom",
             },
             {
               id: "bag-1",
-              image_url: "https://example.com/bag.jpg",
+              imageUrl: "https://example.com/bag.jpg",
               category: "bag",
             },
           ],
@@ -129,8 +129,8 @@ test("outfitSetImage service validates missing set index", async () => {
 test("buildPromptFromTemplate injects description into prompt template", () => {
   const prompt = buildPromptFromTemplate(
     [
-      { image_url: "https://example.com/top.jpg" },
-      { image_url: "https://example.com/bottom.jpg" },
+      { imageUrl: "https://example.com/top.jpg" },
+      { imageUrl: "https://example.com/bottom.jpg" },
     ],
     {
       promptTemplate: "Prompt\n{{description}}",
@@ -144,7 +144,7 @@ test("buildPromptFromTemplate injects description into prompt template", () => {
 
 test("buildPromptFromTemplate appends description when YAML user prompt has no placeholder", () => {
   const prompt = buildPromptFromTemplate(
-    [{ image_url: "https://example.com/top.jpg" }],
+    [{ imageUrl: "https://example.com/top.jpg" }],
     {
       promptTemplate: "Prompt without placeholder",
       buildOutfitSetDescriptionImpl: () => "Desc <raw>",
@@ -526,17 +526,17 @@ test("deleteOutfitSetImage writes a draft when the capsule only has saved data",
           items: [
             {
               id: "top-1",
-              image_url: "https://example.com/top.jpg",
+              imageUrl: "https://example.com/top.jpg",
               category: "top",
             },
             {
               id: "bottom-1",
-              image_url: "https://example.com/bottom.jpg",
+              imageUrl: "https://example.com/bottom.jpg",
               category: "bottom",
             },
             {
               id: "bag-1",
-              image_url: "https://example.com/bag.jpg",
+              imageUrl: "https://example.com/bag.jpg",
               category: "bag",
             },
           ],

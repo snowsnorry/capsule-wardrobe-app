@@ -8,7 +8,7 @@ import {
 
 export async function pruneLoginCodes(): Promise<void> {
   const sql = getSqlClient();
-  await sql`delete from login_codes where "expiresAt" <= now() or "consumedAt" is not null`;
+  await sql`delete from login_codes where expires_at <= now() or consumed_at is not null`;
 }
 
 export async function upsertLoginCode({
@@ -24,15 +24,15 @@ export async function upsertLoginCode({
 }): Promise<void> {
   const sql = getSqlClient();
   await sql`
-    insert into login_codes (email, "codeHash", nonce, "expiresAt", attempts, "consumedAt")
+    insert into login_codes (email, code_hash, nonce, expires_at, attempts, consumed_at)
     values (${email}, ${codeHash}, ${nonce}, ${expiresAt}, 0, null)
     on conflict (email)
     do update set
-      "codeHash" = excluded."codeHash",
+      code_hash = excluded.code_hash,
       nonce = excluded.nonce,
-      "expiresAt" = excluded."expiresAt",
+      expires_at = excluded.expires_at,
       attempts = 0,
-      "consumedAt" = null
+      consumed_at = null
   `;
 }
 
@@ -44,11 +44,11 @@ export async function getLoginCodeByEmail(
     await sql<LoginCodeRow>`
     select
       email,
-      "codeHash",
+      code_hash as "codeHash",
       nonce,
-      "expiresAt",
+      expires_at as "expiresAt",
       attempts,
-      "consumedAt"
+      consumed_at as "consumedAt"
     from login_codes
     where email = ${email}
     limit 1
@@ -71,13 +71,13 @@ export async function verifyAndConsumeLoginCode({
   const consumed = getFirstRow(
     await sql<{ email: string }>`
     update login_codes
-    set "consumedAt" = now()
+    set consumed_at = now()
     where
       email = ${email}
-      and "consumedAt" is null
-      and "expiresAt" > now()
+      and consumed_at is null
+      and expires_at > now()
       and attempts < ${maxAttempts}
-      and "codeHash" = ${codeHash}
+      and code_hash = ${codeHash}
     returning email
   `,
   );
@@ -91,10 +91,10 @@ export async function verifyAndConsumeLoginCode({
     set attempts = attempts + 1
     where
       email = ${email}
-      and "consumedAt" is null
-      and "expiresAt" > now()
+      and consumed_at is null
+      and expires_at > now()
       and attempts < ${maxAttempts}
-      and "codeHash" <> ${codeHash}
+      and code_hash <> ${codeHash}
     returning attempts
   `,
   );
@@ -104,7 +104,10 @@ export async function verifyAndConsumeLoginCode({
 
   const entry = getFirstRow(
     await sql<Pick<LoginCodeRow, "expiresAt" | "attempts" | "consumedAt">>`
-    select "expiresAt", attempts, "consumedAt"
+    select
+      expires_at as "expiresAt",
+      attempts,
+      consumed_at as "consumedAt"
     from login_codes
     where email = ${email}
     limit 1
@@ -140,7 +143,7 @@ export async function insertSession({
 }: SessionRow): Promise<void> {
   const sql = getSqlClient();
   await sql`
-    insert into user_sessions ("sessionId", email, "csrfToken", "createdAt", "expiresAt")
+    insert into user_sessions (session_id, email, csrf_token, created_at, expires_at)
     values (${sessionId}, ${email}, ${csrfToken}, ${createdAt}, ${expiresAt})
   `;
 }
@@ -151,9 +154,14 @@ export async function getSessionById(
   const sql = getSqlClient();
   const session = getFirstRow(
     await sql<SessionRow>`
-    select "sessionId", email, "csrfToken", "createdAt", "expiresAt"
+    select
+      session_id as "sessionId",
+      email,
+      csrf_token as "csrfToken",
+      created_at as "createdAt",
+      expires_at as "expiresAt"
     from user_sessions
-    where "sessionId" = ${sessionId}
+    where session_id = ${sessionId}
     limit 1
   `,
   );
@@ -162,11 +170,11 @@ export async function getSessionById(
 
 export async function deleteSessionById(sessionId: string): Promise<void> {
   const sql = getSqlClient();
-  await sql`delete from user_sessions where "sessionId" = ${sessionId}`;
+  await sql`delete from user_sessions where session_id = ${sessionId}`;
 }
 
 export async function pruneExpiredSessions(): Promise<void> {
   const sql = getSqlClient();
-  await sql`delete from user_sessions where "expiresAt" <= now()`;
+  await sql`delete from user_sessions where expires_at <= now()`;
 }
 export * from "./passkeys.js";

@@ -1,8 +1,8 @@
 create table if not exists login_codes (
   email text primary key,
-  "codeHash" text not null,
+  code_hash text not null,
   nonce text not null default '',
-  "expiresAt" timestamptz not null,
+  expires_at timestamptz not null,
   attempts integer not null default 0,
-  "consumedAt" timestamptz null
+  consumed_at timestamptz null
 )

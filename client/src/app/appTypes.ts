@@ -29,7 +29,6 @@ export type ProfileSettings = {
   theme: string;
   llm: string;
   imageLlm: string;
-  image_llm?: string;
 };
 
 export type CapsuleSourceMode = "catalog_only" | "wardrobe_preferred";

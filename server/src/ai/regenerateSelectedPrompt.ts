@@ -161,23 +161,15 @@ function getPromptItemColors(item) {
     getPromptItemBaseColors(item),
     getTrimmedText(item?.pattern) || "",
     getTrimmedText(item?.finish) || "",
-    item?.is_neutral || item?.isNeutral ? "neutral" : "",
+    item?.isNeutral ? "neutral" : "",
   ].filter(Boolean);
 }
 
 function getPromptItemBaseColors(item) {
-  if (Array.isArray(item?.color_base)) {
-    return item.color_base.join(", ");
-  }
-
   return Array.isArray(item?.colorBase) ? item.colorBase.join(", ") : "";
 }
 
 function getPromptItemFormalityLevels(item) {
-  if (Array.isArray(item?.formality_level)) {
-    return item.formality_level;
-  }
-
   return Array.isArray(item?.formalityLevel) ? item.formalityLevel : [];
 }
 

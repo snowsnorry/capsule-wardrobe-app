@@ -1,7 +1,7 @@
 type PromptImageItemLike = {
   id?: string | number | null;
   category?: string | null;
-  image_url?: string | null;
+  imageUrl?: string | null;
 };
 
 type PromptImageTimings = {

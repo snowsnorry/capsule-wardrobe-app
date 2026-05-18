@@ -93,7 +93,7 @@ function getSharedCapsuleImage(snapshot: CapsuleSnapshot | null): string {
   }
 
   const items = Array.isArray(wardrobe?.items) ? wardrobe.items : [];
-  return isPlainRecord(items[0]) ? firstStringValue(items[0].image_url) : "";
+  return isPlainRecord(items[0]) ? firstStringValue(items[0].imageUrl) : "";
 }
 
 export function buildSharedCapsuleOgMetadata({

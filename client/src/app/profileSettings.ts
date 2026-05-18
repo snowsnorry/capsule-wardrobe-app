@@ -19,10 +19,7 @@ function normalizedLowerSetting(value: unknown, fallback: string) {
 }
 
 function normalizedImageLlm(profile: Partial<ProfileSettings>) {
-  return normalizedSetting(
-    normalizedString(profile.imageLlm) || normalizedString(profile.image_llm),
-    DEFAULT_PROFILE_IMAGE_LLM,
-  );
+  return normalizedSetting(profile.imageLlm, DEFAULT_PROFILE_IMAGE_LLM);
 }
 
 export function normalizeProfileSettings(
@@ -47,13 +44,13 @@ export function buildProfileSettingsPayload(
   const nextLocale = nextSettings.locale || currentSettings.locale || locale;
   const nextTheme = nextSettings.theme || currentSettings.theme;
   const nextLlm = nextSettings.llm || currentSettings.llm;
-  const nextImageLlm = nextSettings.image_llm || currentSettings.imageLlm;
+  const nextImageLlm = nextSettings.imageLlm || currentSettings.imageLlm;
 
   return {
     locale: normalizedLowerSetting(nextLocale, "en"),
     theme: normalizedLowerSetting(nextTheme, DEFAULT_PROFILE_THEME),
     llm: normalizedSetting(nextLlm, DEFAULT_PROFILE_LLM),
-    image_llm: normalizedSetting(nextImageLlm, DEFAULT_PROFILE_IMAGE_LLM),
+    imageLlm: normalizedSetting(nextImageLlm, DEFAULT_PROFILE_IMAGE_LLM),
     fullname: normalizedString(nextSettings.fullname),
   };
 }

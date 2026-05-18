@@ -60,7 +60,7 @@ function createItems(
   return Array.from({ length: count }, (_, index) => ({
     id: `${category}-${index + 1}`,
     category,
-    image_url: imageUrlFactory(index + 1),
+    imageUrl: imageUrlFactory(index + 1),
   }));
 }
 

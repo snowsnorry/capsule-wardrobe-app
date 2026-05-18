@@ -181,7 +181,7 @@ test("generateSwimwearAddition skips non-summer profiles and selects male swimwe
     url: "https://example.com/swim-1",
     name: "Swim Shorts",
     category: "swimwear",
-    image_url: "https://example.com/swim-1.jpg",
+    imageUrl: "https://example.com/swim-1.jpg",
     audience: "man",
   });
 });

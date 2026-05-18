@@ -157,9 +157,7 @@ function ResultListItem({
   onSelectResult: (item: SearchResultItem) => void;
 }) {
   const isSavedToWardrobe = Boolean(
-    item.isSavedToWardrobe ||
-    item.is_saved_to_wardrobe ||
-    item.savedToMyWardrobe,
+    item.isSavedToWardrobe || item.savedToMyWardrobe,
   );
   const savedLabel = t("myWardrobe.savedBadge");
 

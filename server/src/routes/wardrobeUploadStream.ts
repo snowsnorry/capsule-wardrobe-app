@@ -18,7 +18,7 @@ function openWardrobeUploadEventStream(res) {
 }
 
 function resolveUploadedImageUrl(item) {
-  return String(item?.raw_image_url || item?.image_url || "").trim();
+  return String(item?.rawImageUrl || item?.imageUrl || "").trim();
 }
 
 async function markUploadedItemFailed({ context, email, id }) {
@@ -148,9 +148,7 @@ async function processUploadedWardrobeItemMetadata({
       imageProcessed: 1,
     });
     writeWardrobeUploadEvent(res, "progress", progress);
-    return filterItem(
-      updated || { ...item, processing_status: processingStatus },
-    );
+    return filterItem(updated || { ...item, processingStatus });
   } catch (error) {
     logError("[wardrobe/items/upload][metadata]", { id, imageUrl }, error);
     const updated = await markUploadedItemFailed({ context, email, id });
@@ -159,7 +157,7 @@ async function processUploadedWardrobeItemMetadata({
       failed: 1,
     });
     writeWardrobeUploadEvent(res, "progress", progress);
-    return filterItem(updated || { ...item, processing_status: "failed" });
+    return filterItem(updated || { ...item, processingStatus: "failed" });
   }
 }
 

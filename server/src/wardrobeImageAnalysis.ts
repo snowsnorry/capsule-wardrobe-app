@@ -143,9 +143,16 @@ function hasRequiredUploadedWardrobeMetadata(
 }
 
 function calculateWardrobeImageIsNeutral(
-  metadata: WardrobeImageAnalysisMetadata,
+  metadata: Partial<Pick<WardrobeImageAnalysisMetadata, "color_base">> & {
+    colorBase?: string[] | null;
+    isNeutral?: boolean | null;
+  },
 ) {
-  const colors = Array.isArray(metadata.color_base) ? metadata.color_base : [];
+  const colors = Array.isArray(metadata.colorBase)
+    ? metadata.colorBase
+    : Array.isArray(metadata.color_base)
+      ? metadata.color_base
+      : [];
   return (
     colors.length > 0 &&
     colors.every((color) => NEUTRAL_COLOR_NAMES.has(color.trim().toLowerCase()))

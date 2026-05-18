@@ -137,7 +137,7 @@ export function useResolvedProductDetailItem(
 
 // eslint-disable-next-line complexity
 function getUploadedWardrobeDetailId(item: ProductDetailItem | null) {
-  const explicitId = item?.wardrobeId ?? item?.wardrobe_id;
+  const explicitId = item?.wardrobeId;
   if (explicitId !== null && explicitId !== undefined && explicitId !== "") {
     return String(explicitId);
   }
@@ -161,20 +161,16 @@ function hasExpandedProductDetails(item: ProductDetailItem | null) {
     item.availability,
     item.season,
     item.formalityLevel,
-    item.formality_level,
     item.style,
     item.occasions,
     item.colorBase,
-    item.color_base,
     item.pattern,
     item.finish,
     item.isNeutral,
-    item.is_neutral,
     item.composition,
     item.silhouette,
     item.fit,
     item.closureType,
-    item.closure_type,
   ].some((value) =>
     Array.isArray(value)
       ? value.length > 0
@@ -182,7 +178,6 @@ function hasExpandedProductDetails(item: ProductDetailItem | null) {
   );
 }
 
-// eslint-disable-next-line complexity
 function mergeProductDetailItems(
   item: ProductDetailItem | null,
   fetchedItem: ProductDetailItem | null,
@@ -198,13 +193,11 @@ function mergeProductDetailItems(
     ...item,
     ...fetchedItem,
     id: isUploadedWardrobeItem ? item.id : fetchedItem.id,
-    wardrobe_id: isUploadedWardrobeItem
-      ? (item.wardrobe_id ?? item.wardrobeId ?? fetchedItem.id)
-      : (fetchedItem.wardrobe_id ?? item.wardrobe_id),
+    wardrobeId: isUploadedWardrobeItem
+      ? (item.wardrobeId ?? fetchedItem.id)
+      : fetchedItem.wardrobeId,
     isSavedToWardrobe:
       item.isSavedToWardrobe ?? fetchedItem.isSavedToWardrobe ?? null,
-    is_saved_to_wardrobe:
-      item.is_saved_to_wardrobe ?? fetchedItem.is_saved_to_wardrobe ?? null,
     savedToMyWardrobe:
       item.savedToMyWardrobe ?? fetchedItem.savedToMyWardrobe ?? null,
   };

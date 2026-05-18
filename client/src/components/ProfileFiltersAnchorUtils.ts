@@ -27,9 +27,8 @@ export function toAnchorItem(item: unknown): AnchorItem | null {
     url,
     name: getStringValue(source, "name") || null,
     imageUrl:
-      getStringValue(source, "image_url") ||
       getStringValue(source, "imageUrl") ||
-      getStringValue(source, "raw_image_url") ||
+      getStringValue(source, "rawImageUrl") ||
       null,
     category: getStringValue(source, "category") || null,
     source: getWardrobeItemSource(url),

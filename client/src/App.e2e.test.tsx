@@ -215,7 +215,7 @@ function createBootstrapResponse({
 } = {}) {
   return {
     hasProfile: true,
-    profile: { locale, llm, image_llm: imageLlm },
+    profile: { locale, llm, imageLlm: imageLlm },
     activeCapsule: {
       id: "capsule-1",
       name: "Spring edit",

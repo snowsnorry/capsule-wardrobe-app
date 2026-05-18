@@ -58,15 +58,11 @@ function getFirstPresentValue(...values) {
 
 const WARDROBE_ITEM_PRIVATE_FIELDS = new Set([
   "createdAt",
-  "created_at",
   "email",
   "embedding",
   "productId",
-  "product_id",
   "profileEmail",
-  "profile_email",
   "updatedAt",
-  "updated_at",
 ]);
 
 function filterWardrobeItemForDisplay(item) {
@@ -85,19 +81,12 @@ function normalizeWardrobeItemForPdf(item) {
   const source = item || {};
   return {
     ...source,
-    imageUrl: getFirstPresentValue(
-      source.imageUrl,
-      source.image_url,
-      source.raw_image_url,
-    ),
-    rawImageUrl: getFirstPresentValue(source.rawImageUrl, source.raw_image_url),
-    formalityLevel: getFirstPresentValue(
-      source.formalityLevel,
-      source.formality_level,
-    ),
-    colorBase: getFirstPresentValue(source.colorBase, source.color_base),
-    isNeutral: getFirstPresentValue(source.isNeutral, source.is_neutral),
-    closureType: getFirstPresentValue(source.closureType, source.closure_type),
+    imageUrl: getFirstPresentValue(source.imageUrl, source.rawImageUrl),
+    rawImageUrl: getFirstPresentValue(source.rawImageUrl),
+    formalityLevel: getFirstPresentValue(source.formalityLevel),
+    colorBase: getFirstPresentValue(source.colorBase),
+    isNeutral: getFirstPresentValue(source.isNeutral),
+    closureType: getFirstPresentValue(source.closureType),
   };
 }
 

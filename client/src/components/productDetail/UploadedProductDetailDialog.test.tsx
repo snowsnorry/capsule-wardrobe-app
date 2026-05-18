@@ -59,21 +59,21 @@ const validItem = {
   description: "Button-front shirt",
   brand: "Studio",
   source: "uploaded",
-  image_url: "https://example.com/shirt.jpg",
-  raw_image_url: "https://example.com/shirt-original.jpg",
+  imageUrl: "https://example.com/shirt.jpg",
+  rawImageUrl: "https://example.com/shirt-original.jpg",
   audience: "unisex",
   category: "top",
   season: ["summer"],
-  formality_level: ["casual"],
+  formalityLevel: ["casual"],
   style: ["minimalistic"],
   occasions: ["office"],
-  color_base: ["white"],
+  colorBase: ["white"],
   pattern: "solid",
   finish: null,
   composition: "linen, cotton",
   silhouette: null,
   fit: "regular",
-  closure_type: ["button"],
+  closureType: ["button"],
 };
 
 function renderDialog(
@@ -164,7 +164,7 @@ describe("UploadedProductDetailDialog", () => {
       item: {
         ...validItem,
         audience: "women",
-        color_base: ["light blue"],
+        colorBase: ["light blue"],
         formalityLevel: ["casual"],
         closureType: ["button"],
       },
@@ -215,11 +215,11 @@ describe("UploadedProductDetailDialog", () => {
     });
     const payload = onApply.mock.calls[0][1];
     expect(payload.season).toContain("winter");
-    expect(payload.formality_level).toContain("formal");
+    expect(payload.formalityLevel).toContain("formal");
     expect(payload.style).toContain("sporty");
     expect(payload.occasions).toContain("date_night");
-    expect(payload.color_base).toContain("black");
-    expect(payload.closure_type).toContain("zipper");
+    expect(payload.colorBase).toContain("black");
+    expect(payload.closureType).toContain("zipper");
   }, 15_000);
 
   test("keeps the dialog open when Apply fails and supports mobile layout", async () => {

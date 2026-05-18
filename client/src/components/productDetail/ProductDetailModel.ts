@@ -7,28 +7,20 @@ type ProductDetailItem = {
   category?: string | null;
   url?: string | null;
   imageUrl?: string | null;
-  image_url?: string | null;
   rawImageUrl?: string | null;
-  raw_image_url?: string | null;
   wardrobeId?: string | number | null;
-  wardrobe_id?: string | number | null;
   source?: string | null;
   description?: string | null;
   audience?: string | null;
   color?: string | null;
   colorBase?: unknown;
-  color_base?: unknown;
   season?: unknown;
   formalityLevel?: unknown;
-  formality_level?: unknown;
   style?: unknown;
   occasions?: unknown;
   closureType?: unknown;
-  closure_type?: unknown;
   isNeutral?: unknown;
-  is_neutral?: unknown;
   isSavedToWardrobe?: boolean | null;
-  is_saved_to_wardrobe?: boolean | null;
   savedToMyWardrobe?: boolean | null;
   [key: string]: unknown;
 };
@@ -64,26 +56,18 @@ function normalizeProductDetailItem(
   }
 
   const normalized: ProductDetailItem = { ...item };
-  setDefinedDetailValue(
-    normalized,
-    "imageUrl",
-    item.imageUrl ?? item.image_url,
-  );
-  setDefinedDetailValue(
-    normalized,
-    "rawImageUrl",
-    item.rawImageUrl ?? item.raw_image_url,
-  );
+  setDefinedDetailValue(normalized, "imageUrl", item.imageUrl);
+  setDefinedDetailValue(normalized, "rawImageUrl", item.rawImageUrl);
   setDefinedDetailValue(
     normalized,
     "colorBase",
-    normalizeArrayValue(item.colorBase ?? item.color_base ?? item.color),
+    normalizeArrayValue(item.colorBase ?? item.color),
   );
   setDefinedDetailValue(normalized, "season", normalizeArrayValue(item.season));
   setDefinedDetailValue(
     normalized,
     "formalityLevel",
-    normalizeArrayValue(item.formalityLevel ?? item.formality_level),
+    normalizeArrayValue(item.formalityLevel),
   );
   setDefinedDetailValue(normalized, "style", normalizeArrayValue(item.style));
   setDefinedDetailValue(
@@ -94,25 +78,21 @@ function normalizeProductDetailItem(
   setDefinedDetailValue(
     normalized,
     "closureType",
-    normalizeArrayValue(item.closureType ?? item.closure_type),
+    normalizeArrayValue(item.closureType),
   );
-  setDefinedDetailValue(
-    normalized,
-    "isNeutral",
-    item.isNeutral ?? item.is_neutral,
-  );
+  setDefinedDetailValue(normalized, "isNeutral", item.isNeutral);
 
   return normalized;
 }
 
 function getProductDetailImageUrl(item: ProductDetailItem | null | undefined) {
-  return getSafeHttpUrl(item?.imageUrl ?? item?.image_url);
+  return getSafeHttpUrl(item?.imageUrl);
 }
 
 function getProductDetailRawImageUrl(
   item: ProductDetailItem | null | undefined,
 ) {
-  return getSafeHttpUrl(item?.rawImageUrl ?? item?.raw_image_url);
+  return getSafeHttpUrl(item?.rawImageUrl);
 }
 
 function hasUploadedProductImageVersions(

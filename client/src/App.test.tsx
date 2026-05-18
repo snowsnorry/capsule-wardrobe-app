@@ -182,7 +182,7 @@ function createBootstrapResponse({
       locale,
       theme: "system",
       llm: "none",
-      image_llm: "openai:gpt-image-2",
+      imageLlm: "openai:gpt-image-2",
       fullname: "",
     },
     activeCapsule,
@@ -356,7 +356,7 @@ describe("App", () => {
         locale: "en",
         theme: "system",
         llm: "none",
-        image_llm: "openai:gpt-image-2",
+        imageLlm: "openai:gpt-image-2",
         fullname: "",
       },
     });

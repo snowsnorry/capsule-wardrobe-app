@@ -24,7 +24,6 @@ function applySavedFlagToProfileItems(
             ? {
                 ...currentItem,
                 isSavedToWardrobe: isSaved,
-                is_saved_to_wardrobe: isSaved,
                 savedToMyWardrobe: isSaved,
               }
             : currentItem,
@@ -59,7 +58,7 @@ function setMyWardrobeError(context: AppActionContext, error: string) {
 
 // eslint-disable-next-line complexity
 function getUploadedWardrobeItemId(item: WardrobeItem) {
-  const explicitId = item?.wardrobe_id ?? item?.wardrobeId;
+  const explicitId = item?.wardrobeId;
   if (explicitId !== null && explicitId !== undefined && explicitId !== "") {
     return String(explicitId);
   }
@@ -82,7 +81,7 @@ function mergeUpdatedUploadedItem(
     ...updatedItem,
     id: item.id ?? updatedItem.id,
     source: "uploaded",
-    wardrobe_id: updatedItem.id ?? item.wardrobe_id ?? item.wardrobeId,
+    wardrobeId: updatedItem.id ?? item.wardrobeId,
   };
 }
 

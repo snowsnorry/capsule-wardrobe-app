@@ -7,7 +7,6 @@ type WardrobeEmbeddingItem = {
   audience?: unknown;
   category?: unknown;
   category_root?: unknown;
-  color_base?: unknown;
   colorBase?: unknown;
   pattern?: unknown;
   composition?: unknown;
@@ -15,11 +14,9 @@ type WardrobeEmbeddingItem = {
   style?: unknown;
   silhouette?: unknown;
   fit?: unknown;
-  formality_level?: unknown;
   formalityLevel?: unknown;
   occasions?: unknown;
   season?: unknown;
-  closure_type?: unknown;
   closureType?: unknown;
 };
 
@@ -55,22 +52,16 @@ function buildUploadedWardrobeSemanticSummary(
     getText(item.category_root, "item"),
   );
   const description = getText(item.description);
-  const colorBase = formatList(item.color_base ?? item.colorBase, "");
+  const colorBase = formatList(item.colorBase, "");
   const materials = formatList(item.composition ?? item.materials, "");
   const pattern = getText(item.pattern, "solid");
   const style = formatList(item.style, "modern");
   const silhouette = getText(item.silhouette, "standard");
   const fit = getText(item.fit);
-  const formality = formatList(
-    item.formality_level ?? item.formalityLevel,
-    "general",
-  );
+  const formality = formatList(item.formalityLevel, "general");
   const occasions = formatList(item.occasions, "everyday use");
   const season = formatList(item.season, "all seasons");
-  const closure = formatList(
-    item.closure_type ?? item.closureType,
-    "standard closure",
-  );
+  const closure = formatList(item.closureType, "standard closure");
 
   const fitPhrase = fit ? ` and a ${fit} fit` : "";
   const closurePhrase =

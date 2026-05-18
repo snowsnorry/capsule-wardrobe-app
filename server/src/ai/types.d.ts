@@ -104,24 +104,26 @@ type CountByKey = Record<string, number>;
 
 type WardrobeUiItemLike = {
   id?: string | number | null;
-  item_source?: "catalog" | "wardrobe" | string | null;
+  itemSource?: "catalog" | "wardrobe" | string | null;
   url?: string | null;
   name?: string | null;
   category?: string | null;
-  image_url?: string | null;
+  imageUrl?: string | null;
+  rawImageUrl?: string | null;
   audience?: string | null;
-  color_base?: string[] | null;
   colorBase?: string[] | null;
   pattern?: string | null;
   finish?: string | null;
   style?: string[] | null;
-  formality_level?: string[] | null;
   formalityLevel?: string[] | null;
   composition?: string | null;
   fit?: string | null;
   silhouette?: string | null;
-  is_neutral?: boolean | null;
   isNeutral?: boolean | null;
+  closureType?: string[] | null;
+  source?: string | null;
+  processingStatus?: string | null;
+  wardrobeId?: string | number | null;
 };
 
 type OutfitSetLike = {

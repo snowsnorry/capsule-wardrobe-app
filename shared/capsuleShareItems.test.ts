@@ -21,7 +21,7 @@ describe("capsuleShareItems", () => {
     ).toBe(true);
     expect(
       isCatalogWardrobeItem({
-        item_source: "wardrobe",
+        itemSource: "wardrobe",
         url: "https://example.com/catalog",
       }),
     ).toBe(true);
@@ -58,13 +58,13 @@ describe("capsuleShareItems", () => {
     expect(
       normalizeCapsuleItemForShare({
         id: "W7",
-        product_id: "catalog-7",
+        productId: "catalog-7",
         source: "from_catalog",
         url: "https://example.com/catalog-7",
         name: "Catalog shirt",
         audience: "woman",
         category: "top",
-        image_url: "https://example.com/catalog-7.jpg",
+        imageUrl: "https://example.com/catalog-7.jpg",
         brand: "Ignored",
       }),
     ).toEqual({
@@ -73,7 +73,7 @@ describe("capsuleShareItems", () => {
       name: "Catalog shirt",
       audience: "woman",
       category: "top",
-      image_url: "https://example.com/catalog-7.jpg",
+      imageUrl: "https://example.com/catalog-7.jpg",
     });
   });
 
@@ -86,7 +86,7 @@ describe("capsuleShareItems", () => {
             items: [
               {
                 id: "W7",
-                wardrobe_id: "7",
+                wardrobeId: "7",
                 productId: "catalog-7",
                 source: "from_catalog",
                 url: "https://example.com/catalog-7",
@@ -101,7 +101,7 @@ describe("capsuleShareItems", () => {
                 name: "Catalog jeans",
                 audience: "woman",
                 category: "bottom",
-                image_url: "https://example.com/catalog-8.jpg",
+                imageUrl: "https://example.com/catalog-8.jpg",
               },
             ],
             outfitSets: [{ itemIds: ["W7", "catalog-8"] }],
@@ -120,7 +120,7 @@ describe("capsuleShareItems", () => {
               name: "Catalog shirt",
               audience: "woman",
               category: "top",
-              image_url: "https://example.com/catalog-7.jpg",
+              imageUrl: "https://example.com/catalog-7.jpg",
             },
             {
               id: "catalog-8",
@@ -128,7 +128,7 @@ describe("capsuleShareItems", () => {
               name: "Catalog jeans",
               audience: "woman",
               category: "bottom",
-              image_url: "https://example.com/catalog-8.jpg",
+              imageUrl: "https://example.com/catalog-8.jpg",
             },
           ],
           outfitSets: [{ itemIds: ["catalog-7", "catalog-8"] }],

@@ -73,7 +73,7 @@ function useSettingsDraftState({
         locale: draft.locale,
         theme: draft.theme,
         llm: draft.llm,
-        image_llm: draft.imageLlm,
+        imageLlm: draft.imageLlm,
       });
       onClose();
     } catch (saveError) {

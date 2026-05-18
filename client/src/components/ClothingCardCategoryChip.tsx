@@ -11,7 +11,7 @@ type ClothingCardBadgeLabels = {
 };
 
 function isFailedUploadedWardrobeItem(item: ClothingCardItem) {
-  return item.source === "uploaded" && item.processing_status === "failed";
+  return item.source === "uploaded" && item.processingStatus === "failed";
 }
 
 function isNeedsReviewUploadedWardrobeItem(item: ClothingCardItem) {

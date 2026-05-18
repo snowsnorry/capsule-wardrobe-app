@@ -78,12 +78,12 @@ test("buildPromptDebugImagesInChild resolves buffered collages from child succes
       {
         id: "top-1",
         category: "top",
-        image_url: "https://example.com/top-1.png",
+        imageUrl: "https://example.com/top-1.png",
       },
       {
         id: "bottom-1",
         category: "bottom",
-        image_url: "https://example.com/bottom-1.png",
+        imageUrl: "https://example.com/bottom-1.png",
       },
     ],
     forkImpl: (_modulePath, _options) => {
@@ -161,7 +161,7 @@ test("buildPromptDebugImagesInChild works with a real child process", async (t) 
       {
         id: "top-1",
         category: "top",
-        image_url: imageUrl,
+        imageUrl: imageUrl,
       },
     ],
   });
@@ -188,7 +188,7 @@ test("buildPromptDebugImagesInChild saves debug artifacts when enabled", async (
       {
         id: "top-1",
         category: "top",
-        image_url: imageUrl,
+        imageUrl: imageUrl,
       },
     ],
     saveDebugArtifacts: true,
@@ -215,7 +215,7 @@ test("buildPromptDebugImagesInChild rejects on child-reported failure", async (_
         {
           id: "top-1",
           category: "top",
-          image_url: "https://example.com/top-1.png",
+          imageUrl: "https://example.com/top-1.png",
         },
       ],
       forkImpl: () => {
@@ -247,7 +247,7 @@ test("buildPromptDebugImagesInChild rejects on unexpected child exit", async (_t
         {
           id: "top-1",
           category: "top",
-          image_url: "https://example.com/top-1.png",
+          imageUrl: "https://example.com/top-1.png",
         },
       ],
       forkImpl: () => {

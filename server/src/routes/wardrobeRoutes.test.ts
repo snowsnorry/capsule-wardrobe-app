@@ -92,14 +92,14 @@ test("uploaded wardrobe image key builder handles camel fields invalid URLs and 
   ]);
   expect(
     buildUploadedWardrobeItemImageKeys({
-      image_url: "not a url",
-      raw_image_url: "not a url",
+      imageUrl: "not a url",
+      rawImageUrl: "not a url",
     }),
   ).toEqual([]);
   expect(
     buildUploadedWardrobeItemImageKeys({
-      image_url: "https://images.example.com/wardrobe/profile/image.webp",
-      raw_image_url: "https://images.example.com/wardrobe/profile/image.webp",
+      imageUrl: "https://images.example.com/wardrobe/profile/image.webp",
+      rawImageUrl: "https://images.example.com/wardrobe/profile/image.webp",
     }),
   ).toEqual([
     "wardrobe/profile/image.webp",
@@ -131,13 +131,13 @@ test("wardrobe routes list and save user wardrobe items", async (t) => {
       saveWardrobeItemFromCatalogImpl: async (payload) => {
         calls.push({ type: "save", payload });
         return {
-          created_at: "2026-05-01T00:00:00.000Z",
+          createdAt: "2026-05-01T00:00:00.000Z",
           id: "wardrobe-1",
-          product_id: "product-1",
-          profile_email: "person@example.com",
+          productId: "product-1",
+          profileEmail: "person@example.com",
           url: payload.url,
           source: "from_catalog",
-          updated_at: "2026-05-01T00:00:00.000Z",
+          updatedAt: "2026-05-01T00:00:00.000Z",
         };
       },
       deleteWardrobeItemFromCatalogImpl: async (payload) => {
@@ -220,7 +220,7 @@ test("wardrobe routes update uploaded item details", async (t) => {
           profileEmail: payload.email,
           email: payload.email,
           source: "uploaded",
-          processing_status: payload.processingStatus,
+          processingStatus: payload.processingStatus,
           updatedAt: "2026-05-01T00:00:00.000Z",
           ...payload.details,
         };
@@ -247,16 +247,16 @@ test("wardrobe routes update uploaded item details", async (t) => {
         audience: "unisex",
         category: "top",
         season: ["summer"],
-        formality_level: ["casual"],
+        formalityLevel: ["casual"],
         style: ["minimalistic"],
         occasions: ["office"],
-        color_base: ["white"],
+        colorBase: ["white"],
         pattern: "solid",
         finish: null,
         composition: ["linen", "cotton"],
         silhouette: null,
         fit: "regular",
-        closure_type: ["button"],
+        closureType: ["button"],
       },
     },
   );
@@ -267,23 +267,23 @@ test("wardrobe routes update uploaded item details", async (t) => {
     item: {
       id: "uploaded-1",
       source: "uploaded",
-      processing_status: "ready",
+      processingStatus: "ready",
       name: "Updated shirt",
       description: "Button-front shirt",
       brand: null,
       audience: "all",
       category: "top",
       season: ["summer"],
-      formality_level: ["casual"],
+      formalityLevel: ["casual"],
       style: ["minimalistic"],
       occasions: ["office"],
-      color_base: ["white"],
+      colorBase: ["white"],
       pattern: "solid",
       finish: null,
       composition: "linen, cotton",
       silhouette: null,
       fit: "regular",
-      closure_type: ["button"],
+      closureType: ["button"],
     },
   });
   expect(calls).toEqual([
@@ -296,16 +296,16 @@ test("wardrobe routes update uploaded item details", async (t) => {
         audience: "all",
         category: "top",
         season: ["summer"],
-        formality_level: ["casual"],
+        formalityLevel: ["casual"],
         style: ["minimalistic"],
         occasions: ["office"],
-        color_base: ["white"],
+        colorBase: ["white"],
         pattern: "solid",
         finish: null,
         composition: "linen, cotton",
         silhouette: null,
         fit: "regular",
-        closure_type: ["button"],
+        closureType: ["button"],
       },
     },
     {
@@ -319,16 +319,16 @@ test("wardrobe routes update uploaded item details", async (t) => {
         audience: "all",
         category: "top",
         season: ["summer"],
-        formality_level: ["casual"],
+        formalityLevel: ["casual"],
         style: ["minimalistic"],
         occasions: ["office"],
-        color_base: ["white"],
+        colorBase: ["white"],
         pattern: "solid",
         finish: null,
         composition: "linen, cotton",
         silhouette: null,
         fit: "regular",
-        closure_type: ["button"],
+        closureType: ["button"],
       },
       processingStatus: "ready",
     },
@@ -349,13 +349,13 @@ test("wardrobe routes fetch uploaded item details for the authenticated user", a
           id: payload.id,
           profileEmail: payload.email,
           email: payload.email,
-          product_id: "private-product",
+          productId: "private-product",
           name: "Uploaded shirt",
           url: `wardrobe://${payload.id}`,
           source: "uploaded",
-          image_url: "https://example.com/uploaded.jpg",
-          raw_image_url: "https://example.com/uploaded-original.jpg",
-          processing_status: "ready",
+          imageUrl: "https://example.com/uploaded.jpg",
+          rawImageUrl: "https://example.com/uploaded-original.jpg",
+          processingStatus: "ready",
           audience: "all",
           category: "top",
           season: ["summer"],
@@ -380,9 +380,9 @@ test("wardrobe routes fetch uploaded item details for the authenticated user", a
       name: "Uploaded shirt",
       url: "wardrobe://uploaded-1",
       source: "uploaded",
-      image_url: "https://example.com/uploaded.jpg",
-      raw_image_url: "https://example.com/uploaded-original.jpg",
-      processing_status: "ready",
+      imageUrl: "https://example.com/uploaded.jpg",
+      rawImageUrl: "https://example.com/uploaded-original.jpg",
+      processingStatus: "ready",
       audience: "all",
       category: "top",
       season: ["summer"],
@@ -418,7 +418,7 @@ test("wardrobe uploaded item updates save failed status when embedding fails", a
         return {
           id: payload.id,
           source: "uploaded",
-          processing_status: payload.processingStatus,
+          processingStatus: payload.processingStatus,
           ...payload.details,
         };
       },
@@ -448,7 +448,7 @@ test("wardrobe uploaded item updates save failed status when embedding fails", a
     item: expect.objectContaining({
       id: "uploaded-1",
       source: "uploaded",
-      processing_status: "failed",
+      processingStatus: "failed",
       name: "Updated shirt",
     }),
   });
@@ -529,10 +529,9 @@ test("wardrobe routes delete uploaded items and best-effort cleanup R2 images", 
         calls.push({ type: "deleteUploaded", payload });
         return {
           id: payload.id,
-          image_url:
+          imageUrl:
             "https://images.example.com/wardrobe/profile/image_clean.png",
-          raw_image_url:
-            "https://images.example.com/wardrobe/profile/image.webp",
+          rawImageUrl: "https://images.example.com/wardrobe/profile/image.webp",
           source: "uploaded",
         };
       },
@@ -657,11 +656,11 @@ test("wardrobe routes export filtered wardrobe items as PDF", async (t) => {
           {
             id: "wardrobe-1",
             name: "Saved shirt",
-            image_url: "https://example.com/1.jpg",
-            formality_level: "casual",
-            color_base: ["white"],
-            is_neutral: true,
-            closure_type: "buttons",
+            imageUrl: "https://example.com/1.jpg",
+            formalityLevel: "casual",
+            colorBase: ["white"],
+            isNeutral: true,
+            closureType: "buttons",
             url: "https://example.com/1",
             source: "uploaded",
           },
@@ -723,17 +722,17 @@ test("wardrobe upload route processes images and creates uploaded items", async 
     audience: "women",
     category: "top",
     season: ["summer"],
-    formality_level: ["smart_casual"],
+    formalityLevel: ["smart_casual"],
     style: [],
     occasions: [],
-    color_base: ["white"],
-    is_neutral: true,
+    colorBase: ["white"],
+    isNeutral: true,
     pattern: "solid",
     finish: null,
     composition: "linen",
     silhouette: null,
     fit: "regular",
-    closure_type: ["button"],
+    closureType: ["button"],
   };
   const { baseUrl } = await startTestServer(t, {
     overrides: {
@@ -772,13 +771,13 @@ test("wardrobe upload route processes images and creates uploaded items", async 
         return [
           {
             id: "wardrobe-upload-1",
-            profile_email: "person@example.com",
-            image_url: payload.imageUrls[0],
-            raw_image_url: payload.imageUrls[0],
+            profileEmail: "person@example.com",
+            imageUrl: payload.imageUrls[0],
+            rawImageUrl: payload.imageUrls[0],
             source: "uploaded",
-            processing_status: "uploaded",
-            created_at: "2026-05-01T00:00:00.000Z",
-            updated_at: "2026-05-01T00:00:00.000Z",
+            processingStatus: "uploaded",
+            createdAt: "2026-05-01T00:00:00.000Z",
+            updatedAt: "2026-05-01T00:00:00.000Z",
           },
         ];
       },
@@ -819,11 +818,10 @@ test("wardrobe upload route processes images and creates uploaded items", async 
         calls.push({ type: "updateMetadata", payload });
         return {
           id: payload.id,
-          image_url: payload.imageUrl,
-          raw_image_url:
-            "https://images.example.com/wardrobe/profile/image.webp",
+          imageUrl: payload.imageUrl,
+          rawImageUrl: "https://images.example.com/wardrobe/profile/image.webp",
           source: "uploaded",
-          processing_status: payload.processingStatus,
+          processingStatus: payload.processingStatus,
           ...payload.metadata,
         };
       },
@@ -859,11 +857,10 @@ test("wardrobe upload route processes images and creates uploaded items", async 
       expect.objectContaining({
         id: "wardrobe-upload-1",
         name: "Linen shirt",
-        image_url:
-          "https://images.example.com/wardrobe/profile/image_clean.png",
-        raw_image_url: "https://images.example.com/wardrobe/profile/image.webp",
+        imageUrl: "https://images.example.com/wardrobe/profile/image_clean.png",
+        rawImageUrl: "https://images.example.com/wardrobe/profile/image.webp",
         source: "uploaded",
-        processing_status: "ready",
+        processingStatus: "ready",
       }),
     ],
   });

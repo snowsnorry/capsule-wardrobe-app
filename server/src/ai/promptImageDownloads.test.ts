@@ -72,7 +72,7 @@ test("downloadProductImageAssets uses local cached jpeg before remote fetch", as
     {
       id: "top-1",
       category: "top",
-      image_url: imageUrl,
+      imageUrl: imageUrl,
     },
   ]);
 
@@ -102,7 +102,7 @@ test("downloadProductImageAssets replaces width placeholder in image url before 
     {
       id: "top-1",
       category: "top",
-      image_url: "https://static.zara.net/image.jpg?ts=1773310573314&w={width}",
+      imageUrl: "https://static.zara.net/image.jpg?ts=1773310573314&w={width}",
     },
   ]);
 

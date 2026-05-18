@@ -1,5 +1,5 @@
 type UploadedWardrobeItemStatusFields = {
-  processing_status?: unknown;
+  processingStatus?: unknown;
   source?: unknown;
 };
 
@@ -14,7 +14,7 @@ function getUploadedWardrobeItemStatusFields(
 function isUploadedWardrobeItemNeedsReview(item: unknown) {
   const fields = getUploadedWardrobeItemStatusFields(item);
   return (
-    fields.source === "uploaded" && fields.processing_status === "needs_review"
+    fields.source === "uploaded" && fields.processingStatus === "needs_review"
   );
 }
 

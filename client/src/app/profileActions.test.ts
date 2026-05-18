@@ -21,7 +21,7 @@ describe("profileActions", () => {
         locale: "ru",
         theme: "dark",
         llm: "openai:gpt-5.5",
-        image_llm: "gemini:gemini-3-pro-image-preview",
+        imageLlm: "gemini:gemini-3-pro-image-preview",
         fullname: "Ada Lovelace",
       },
     });
@@ -38,7 +38,7 @@ describe("profileActions", () => {
       locale: "ru",
       theme: "dark",
       llm: "openai:gpt-5.5",
-      image_llm: "gemini:gemini-3-pro-image-preview",
+      imageLlm: "gemini:gemini-3-pro-image-preview",
     });
 
     expect(updateProfile).toHaveBeenCalledWith({
@@ -46,7 +46,7 @@ describe("profileActions", () => {
       locale: "ru",
       theme: "dark",
       llm: "openai:gpt-5.5",
-      image_llm: "gemini:gemini-3-pro-image-preview",
+      imageLlm: "gemini:gemini-3-pro-image-preview",
     });
     expect(context.setSettingsProfile).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -72,7 +72,7 @@ describe("profileActions", () => {
         locale: "en",
         theme: "system",
         llm: "none",
-        image_llm: "openai:gpt-image-2",
+        imageLlm: "openai:gpt-image-2",
       }),
     ).rejects.toThrow("invalid_payload");
 

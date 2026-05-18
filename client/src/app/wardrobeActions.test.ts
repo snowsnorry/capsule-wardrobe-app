@@ -295,7 +295,6 @@ describe("wardrobeActions", () => {
         {
           url: "https://example.com/top-1",
           isSavedToWardrobe: true,
-          is_saved_to_wardrobe: true,
           savedToMyWardrobe: true,
         },
       ]),
@@ -303,7 +302,6 @@ describe("wardrobeActions", () => {
       {
         url: "https://example.com/top-1",
         isSavedToWardrobe: false,
-        is_saved_to_wardrobe: false,
         savedToMyWardrobe: false,
       },
     ]);
@@ -351,16 +349,16 @@ describe("wardrobeActions", () => {
       audience: "all",
       category: "top",
       season: ["summer"],
-      formality_level: [],
+      formalityLevel: [],
       style: [],
       occasions: [],
-      color_base: [],
+      colorBase: [],
       pattern: null,
       finish: null,
       composition: null,
       silhouette: null,
       fit: null,
-      closure_type: [],
+      closureType: [],
     };
 
     const updated = await updateUploadedItemInMyWardrobe(
@@ -382,7 +380,7 @@ describe("wardrobeActions", () => {
         id: "Wuploaded-1",
         name: "Updated uploaded top",
         source: "uploaded",
-        wardrobe_id: "uploaded-1",
+        wardrobeId: "uploaded-1",
       }),
     );
     const itemsUpdater = mockCalls(context.setProfileItems).at(-1)?.[0] as (
@@ -400,7 +398,7 @@ describe("wardrobeActions", () => {
       expect.objectContaining({
         id: "Wuploaded-1",
         name: "Updated uploaded top",
-        wardrobe_id: "uploaded-1",
+        wardrobeId: "uploaded-1",
       }),
     ]);
   });
@@ -413,16 +411,16 @@ describe("wardrobeActions", () => {
       audience: "all",
       category: "top",
       season: ["spring"],
-      formality_level: [],
+      formalityLevel: [],
       style: [],
       occasions: [],
-      color_base: [],
+      colorBase: [],
       pattern: null,
       finish: null,
       composition: null,
       silhouette: null,
       fit: null,
-      closure_type: [],
+      closureType: [],
     };
     vi.mocked(updateUploadedWardrobeItem).mockResolvedValueOnce({ item: null });
     const explicitContext = createActionContext();
@@ -430,7 +428,7 @@ describe("wardrobeActions", () => {
     const explicitUpdated = await updateUploadedItemInMyWardrobe(
       explicitContext,
       {
-        wardrobe_id: "explicit-uploaded-1",
+        wardrobeId: "explicit-uploaded-1",
         source: "uploaded",
       },
       payload,
@@ -444,7 +442,7 @@ describe("wardrobeActions", () => {
       expect.objectContaining({
         name: "Payload-only top",
         source: "uploaded",
-        wardrobe_id: "explicit-uploaded-1",
+        wardrobeId: "explicit-uploaded-1",
       }),
     );
     const explicitItemsUpdater = mockCalls(explicitContext.setProfileItems).at(
@@ -520,16 +518,16 @@ describe("wardrobeActions", () => {
       audience: "all",
       category: "top",
       season: ["summer"],
-      formality_level: [],
+      formalityLevel: [],
       style: [],
       occasions: [],
-      color_base: [],
+      colorBase: [],
       pattern: null,
       finish: null,
       composition: null,
       silhouette: null,
       fit: null,
-      closure_type: [],
+      closureType: [],
     };
 
     await expect(

@@ -4,14 +4,13 @@ type ClothingCardItem = {
   id?: string | number | null;
   name?: string | null;
   category?: string | null;
-  image_url?: string | null;
+  imageUrl?: string | null;
   url?: string | null;
   audience?: string | null;
   season?: unknown;
   source?: string | null;
-  processing_status?: string | null;
+  processingStatus?: string | null;
   isSavedToWardrobe?: boolean | null;
-  is_saved_to_wardrobe?: boolean | null;
   savedToMyWardrobe?: boolean | null;
 };
 

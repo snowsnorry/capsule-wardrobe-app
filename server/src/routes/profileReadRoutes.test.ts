@@ -23,7 +23,7 @@ test("profile read routes expose profile and wardrobe filters", async (t) => {
   expect(profile.json.profile.locale).toBe("en");
   expect(profile.json.profile.theme).toBe("system");
   expect(profile.json.profile.llm).toBe("openai:gpt-5.5");
-  expect(profile.json.profile.image_llm).toBe("openai:gpt-image-2");
+  expect(profile.json.profile.imageLlm).toBe("openai:gpt-image-2");
   expect(profile.json.profile.fullname).toBe(null);
 
   const wardrobeFilters = await requestJson(baseUrl, "/wardrobe/filters", {

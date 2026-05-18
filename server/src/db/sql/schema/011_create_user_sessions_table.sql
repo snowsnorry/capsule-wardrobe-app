@@ -1,7 +1,7 @@
 create table if not exists user_sessions (
-  "sessionId" text primary key,
+  session_id text primary key,
   email text not null,
-  "csrfToken" text not null default '',
-  "createdAt" timestamptz not null,
-  "expiresAt" timestamptz not null
+  csrf_token text not null default '',
+  created_at timestamptz not null,
+  expires_at timestamptz not null
 )

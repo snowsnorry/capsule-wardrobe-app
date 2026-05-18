@@ -21,16 +21,16 @@ type UploadedWardrobeItemDetails = {
   audience: string;
   category: string;
   season: string[];
-  formality_level: string[];
+  formalityLevel: string[];
   style: string[];
   occasions: string[];
-  color_base: string[];
+  colorBase: string[];
   pattern: string | null;
   finish: string | null;
   composition: string | null;
   silhouette: string | null;
   fit: string | null;
-  closure_type: string[];
+  closureType: string[];
 };
 
 type NormalizedField<T> =
@@ -164,7 +164,7 @@ function normalizeUploadedWardrobeItemDetails(
   }
 
   const formalityLevel = normalizeOptionArray(
-    payload.formality_level,
+    payload.formalityLevel,
     PRODUCT_FORMALITY_LEVEL_OPTIONS,
   );
   const style = normalizeOptionArray(payload.style, PRODUCT_STYLE_OPTIONS);
@@ -173,7 +173,7 @@ function normalizeUploadedWardrobeItemDetails(
     PRODUCT_OCCASION_OPTIONS,
   );
   const colorBase = normalizeOptionArray(
-    payload.color_base,
+    payload.colorBase,
     PRODUCT_COLOR_BASE_OPTIONS,
   );
   const pattern = normalizeNullableOption(
@@ -194,7 +194,7 @@ function normalizeUploadedWardrobeItemDetails(
   );
   const fit = normalizeNullableOption(payload.fit, PRODUCT_FIT_OPTIONS);
   const closureType = normalizeOptionArray(
-    payload.closure_type,
+    payload.closureType,
     PRODUCT_CLOSURE_TYPE_OPTIONS,
   );
 
@@ -222,10 +222,10 @@ function normalizeUploadedWardrobeItemDetails(
     audience,
     category,
     season,
-    formality_level: getNormalizedPayloadValue(formalityLevel)!,
+    formalityLevel: getNormalizedPayloadValue(formalityLevel)!,
     style: getNormalizedPayloadValue(style)!,
     occasions: getNormalizedPayloadValue(occasions)!,
-    color_base: getNormalizedPayloadValue(colorBase)!,
+    colorBase: getNormalizedPayloadValue(colorBase)!,
     pattern: getNormalizedPayloadValue(pattern)!,
     finish: getNormalizedPayloadValue(finish)!,
     composition:
@@ -234,7 +234,7 @@ function normalizeUploadedWardrobeItemDetails(
         : null,
     silhouette: getNormalizedPayloadValue(silhouette)!,
     fit: getNormalizedPayloadValue(fit)!,
-    closure_type: getNormalizedPayloadValue(closureType)!,
+    closureType: getNormalizedPayloadValue(closureType)!,
   };
 }
 

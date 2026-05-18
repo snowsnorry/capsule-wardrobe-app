@@ -138,12 +138,12 @@ test("buildPromptDebugImages skips failed downloads and still produces outputs",
       {
         id: "top-1",
         category: "top",
-        image_url: "https://example.com/good-top.png",
+        imageUrl: "https://example.com/good-top.png",
       },
       {
         id: "top-2",
         category: "top",
-        image_url: "https://example.com/bad-top.png",
+        imageUrl: "https://example.com/bad-top.png",
       },
     ],
     saveDebugArtifacts: true,
@@ -198,7 +198,7 @@ test("buildPromptDebugImages uses local cached image before remote fetch", async
       {
         id: "top-1",
         category: "top",
-        image_url: imageUrl,
+        imageUrl: imageUrl,
       },
     ],
     saveDebugArtifacts: true,
