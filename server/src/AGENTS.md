@@ -5,30 +5,47 @@ This directory contains the Express backend and server-side domain logic.
 
 Primary areas:
 - `index.ts` — app/server entrypoint
+- `appConfig.ts` — env-backed runtime constants and client dist/root resolution
+- `appMiddleware.ts` — Helmet/CSP, CORS, rate limiters, auth guard, trusted-origin guard, and CSRF guard
+- `serverStartup.ts` — DB bootstrap, dev Vite middleware, production static serving, and shared-capsule HTML metadata injection
 - `db.ts` — database access
-- `db/` — split database modules for auth, schema, passkeys, profiles, capsule data, search, and product options
+- `db/` — split database modules for auth, schema, passkeys, profiles, capsule data, wardrobe, search, and product options
+- `db/sql/` — canonical schema SQL assets; keep one executable statement per schema file
 - `routes/` — grouped Express route modules
+- `httpCookies.ts` — session, CSRF, and passkey challenge cookie helpers
 - `email.ts` — email sending and auth delivery behavior
 - `authStore.ts` — auth/session storage logic
 - `capsuleStore.ts` — capsule/domain storage logic
+- `capsuleStoreContext.ts`, `capsuleStoreDelete.ts`, `capsuleStoreNaming.ts`, and `capsuleStoreSharing.ts` — capsule store helpers
 - `capsuleStoreModel.ts` — capsule store model helpers
+- `capsuleEventHttp.ts` — capsule SSE/event response helpers
 - `profileStore.ts` — profile storage logic
 - `profileHttp.ts` — profile HTTP response helpers
+- `passkeyHttp.ts` and `passkeyNames.ts` — passkey response and naming helpers
 - `searchStore.ts` — search-related storage logic
+- `searchSemantic.ts` — semantic search helpers
 - `searchTypes.ts` — search-related server types
 - `searchValidation.ts` — search request validation
 - `ai/` — AI integrations and orchestration
+- `ai/sql/` — SQL assets for AI wardrobe selection and regeneration queries
+- `wardrobe*.ts` — upload normalization, image analysis, embeddings, metadata updates, cleanup, PDF, and child-process helpers
+- `sharedCapsuleMeta.ts` — shared capsule HTML/OG metadata injection helpers
+- `e2e/` — isolated e2e server, in-memory dependencies, fixtures, and test-control routes
 - `test/` — server-side test helpers
 - `templates/` — server-side templates
 
 ## Rules
 - Keep request/response contracts stable unless explicitly changing them.
+- Public API payloads and fixtures use the final camelCase contract; do not reintroduce snake_case compatibility or removed naming-convention migration scripts unless explicitly requested.
 - When editing server behavior, inspect the client caller as well.
 - When editing HTTP behavior, prefer the owning route module under `routes/` and keep `index.ts` focused on app wiring.
+- State-changing authenticated routes should preserve `requireTrustedOrigin`, `requireAuth`, and `requireCsrf`; auth endpoints should preserve their route-specific guards and rate limiters.
 - Preserve auth test mode behavior.
 - Be conservative around env vars and startup logic.
 - Passkey/WebAuthn routes live in `routes/passkeyRoutes.ts` and persist through `db.ts` / `db/passkeys.ts`; preserve single-use challenge consumption and never expose `credential_public_key` in API responses.
 - `PASSKEY_RP_ID` is the visible frontend hostname only, while `PASSKEY_ORIGIN` is the full visible frontend origin.
+- Account removal lives under `DELETE /profile/me`; preserve cleanup of profile-scoped DB records, sessions, transient generation/image/PDF jobs, uploaded R2 image objects, and session/passkey challenge cookies.
+- Production CSP lives in `appMiddleware.ts`; when changing image previews, Google Sign-In, or other external resources, update the CSP and its tests together.
 - Prefer small changes to existing modules over introducing new framework layers.
 - For AI integrations, avoid changing provider behavior or output assumptions without corresponding tests.
 
@@ -39,7 +56,7 @@ Primary areas:
 - At the end of the work, after the final file edits, run `npm run format`.
 - If `npm run format` changes files, include those formatter changes in the diff.
 - After editing files, verify test coverage, test pass status, and ESLint before handing off.
-- After tests, coverage, and typecheck, run ESLint on changed server source files with zero warnings, for example `npx eslint --max-warnings=0 server/src/path/to/file.ts`
+- After tests, coverage, typecheck, and format, run `npm run lint:strict`.
 
 ## First files to inspect
 - `index.ts`

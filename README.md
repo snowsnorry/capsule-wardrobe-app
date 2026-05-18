@@ -1,6 +1,6 @@
 # Capsule Wardrobe App
 
-Full-stack TypeScript monorepo for a capsule wardrobe application. The project combines passwordless auth, profile onboarding, AI-assisted wardrobe generation, saved capsules, product search, and statistics.
+Full-stack TypeScript monorepo for a capsule wardrobe application. The project combines passwordless auth, passkeys, profile onboarding and account removal, AI-assisted wardrobe generation, saved capsules, My Wardrobe uploads, product search, and statistics.
 
 ## Stack
 
@@ -9,17 +9,18 @@ Full-stack TypeScript monorepo for a capsule wardrobe application. The project c
 - Shared domain layer: root `shared/`
 - Persistence: Postgres
 - Email auth delivery: Resend
-- Optional auth provider: Google Sign-In
+- Optional auth providers: Google Sign-In and passkeys/WebAuthn
 - Generated and uploaded image storage: Cloudflare R2 when configured
+- Browser e2e: Playwright against a dedicated Express/Vite server with in-memory dependencies
 - Deployment path: Render single-service
 
 ## What the app does
 
 - passwordless email sign-in with verification codes
-- optional Google sign-in
-- onboarding and profile settings with EN/RU localization
+- optional Google sign-in and passkey registration/sign-in
+- onboarding, profile settings, and account removal with EN/RU localization
 - capsule creation, duplication, rename, save/revert, and delete
-- AI-assisted wardrobe generation and selective regeneration
+- AI-assisted wardrobe generation, wardrobe/catalog source modes, and selective regeneration
 - outfit-set image generation and PDF export
 - My Wardrobe uploads, uploaded item metadata editing, catalog saves, and wardrobe PDF export
 - shareable capsule links and shared capsule import
@@ -38,12 +39,18 @@ docs/     repository documentation
 Useful entrypoints:
 
 - `client/src/App.tsx`
+- `client/src/api/request.ts`
 - `client/src/main.tsx`
 - `client/vite.config.ts`
 - `playwright.config.ts`
 - `server/src/index.ts`
+- `server/src/appConfig.ts`
+- `server/src/appMiddleware.ts`
+- `server/src/serverStartup.ts`
 - `server/src/e2e/server.ts`
 - `server/src/db.ts`
+- `server/src/db/sql/`
+- `server/src/ai/`
 - `server/src/authStore.ts`
 - `server/src/capsuleStore.ts`
 - `server/src/profileStore.ts`
@@ -99,7 +106,7 @@ Common optional values:
 - `DEEPINFRA_API_KEY` — DeepInfra-backed generation flows
 - `GEMINI_API_KEY` — Gemini-backed text and image generation flows
 - `ANTHROPIC_API_KEY` — Claude-backed generation flows
-- `R2_ACCOUNT_ID`, `R2_BUCKET_NAME`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_PUBLIC_BASE_URL` — Cloudflare R2 storage for generated outfit set images; `R2_PUBLIC_BASE_URL` must be a public bucket URL or custom domain
+- `R2_ACCOUNT_ID`, `R2_BUCKET_NAME`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_PUBLIC_BASE_URL` — Cloudflare R2 storage for generated and uploaded wardrobe images; `R2_PUBLIC_BASE_URL` must be a public bucket URL or custom domain
 - `R2_IMAGE_KEY_PREFIX` — optional R2 object key prefix, defaults to `outfit-set-images`
 - `PORT` — defaults to `3000`
 - `CLIENT_ORIGIN` — defaults to `http://localhost:5173`
@@ -108,7 +115,8 @@ Common optional values:
 - `PASSKEY_RP_NAME` — optional WebAuthn relying party display name, defaults to `Capsule Wardrobe`
 - `SESSION_PRUNE_MIN_INTERVAL_MS` — session cleanup throttle
 - `WARDROBE_PDF_CHILD_TIMEOUT_MS` — PDF child-process timeout
-- `SHARP_CONCURRENCY` and related image/prompt concurrency envs — optional tuning knobs for image work
+- `WARDROBE_UPLOAD_CHILD_TIMEOUT_MS` — uploaded wardrobe image normalization child-process timeout
+- `SHARP_CONCURRENCY`, `IMAGE_DOWNLOAD_CONCURRENCY`, `IMAGE_WORK_MAX_CONCURRENCY`, `PROMPT_IMAGES_CHILD_TIMEOUT_MS`, `PROMPT_CATEGORY_DOWNLOAD_CONCURRENCY`, `PROMPT_CATEGORY_SHARP_CONCURRENCY`, `PROMPT_IMAGE_REQUEST_WIDTH`, `MAX_SOURCE_IMAGE_PIXELS`, `STORAGE_IMAGES_DIR` — optional tuning knobs for image and prompt-image work
 
 See [server/.env.example](server/.env.example) for the baseline template.
 
@@ -118,7 +126,6 @@ See [server/.env.example](server/.env.example) for the baseline template.
 - `VITE_THUMBNAIL_ASSET_BASE_URL` — thumbnail URL prefix, defaults to `https://assets.capsule-wardrobe.org/thumbnails`
 - `VITE_GOOGLE_CLIENT_ID` — Google Sign-In client ID for the frontend
 - `BFF_UPSTREAM_ORIGIN` — upstream backend origin for proxy-based deployments
-- `BFF_STRIP_PREFIXES` — path prefixes stripped by the BFF, default `/api`
 
 See [client/.env.example](client/.env.example).
 
@@ -173,14 +180,14 @@ Playwright starts an isolated Express/Vite server automatically when you run e2e
 npm run test:e2e
 ```
 
-That server uses in-memory auth, profile, capsule, search, generation, image, and embedding dependencies. It does not require `DATABASE_URL` or provider API keys and mounts e2e-only control routes such as `POST /__e2e/reset` and `POST /__e2e/login`.
+That server uses in-memory auth, profile, capsule, search, generation, image, and embedding dependencies. It does not require `DATABASE_URL` or provider API keys and mounts e2e-only control routes such as `POST /__e2e/reset` and `POST /__e2e/login`. E2E login sets the same session and CSRF cookies that normal authenticated routes expect.
 
 ### Local URLs
 
 - frontend: `http://localhost:5173`
 - backend: `http://localhost:3000`
 
-In local development, Vite proxies `/api`, `/auth`, `/profile`, `/wardrobe`, and `/health` to the Express server.
+In local development, Vite proxies `/api` to the Express server and strips that prefix, so frontend calls to `/api/auth`, `/api/profile`, `/api/capsules`, `/api/shared-capsules`, `/api/search`, and `/api/wardrobe` reach the matching backend route groups. Direct `/auth`, `/profile`, `/wardrobe`, and `/health` proxy entries are also present for compatibility.
 
 ## Build, start, validation
 
@@ -266,12 +273,15 @@ There is also `GET /healthall` for a broader backend health check.
 Main backend route groups:
 
 - `/auth/*` — email auth, Google auth, logout, current session
-- `/profile/*` — onboarding, profile data, locale, delete profile
+- `/auth/passkeys/*` — passkey list, register, authenticate, and delete flows
+- `/profile/*` — onboarding, profile data, locale, and account removal
 - `/capsules/*` — bootstrap, recent, search, CRUD, save/revert, regenerate, share, import support, PDF, SSE events, outfit-set image jobs
 - `/shared-capsules/*` — public shared capsule read and authenticated import
 - `/search/*` — search options, saved filters, run search, stats
 - `/wardrobe/*` — profile-derived filters, My Wardrobe uploaded/catalog items, upload event stream, item metadata updates, and wardrobe PDF export
 - `/health`, `/healthall`
+
+The API uses camelCase request and response fields at the client/server boundary. State-changing authenticated routes expect trusted-origin checks and a CSRF token; `client/src/api/request.ts` adds `X-CSRF-Token` from the CSRF cookie.
 
 The e2e server also mounts `/__e2e/*` test-control and fixture endpoints. Those endpoints are only available when the dedicated e2e server entrypoint is used.
 
@@ -291,6 +301,8 @@ Related files:
 
 - [render.yaml](render.yaml)
 - [server/src/index.ts](server/src/index.ts)
+- [server/src/serverStartup.ts](server/src/serverStartup.ts)
+- [server/src/appMiddleware.ts](server/src/appMiddleware.ts)
 
 Minimum env for this path:
 
@@ -323,5 +335,6 @@ This path requires:
 
 - The server entry source is TypeScript: `server/src/index.ts`.
 - Production start runs compiled output from `server/dist`.
+- DB schema bootstrap uses canonical SQL assets under `server/src/db/sql/`; there is no active standalone naming-convention migration script.
 - Shared business logic and locale helpers live in `shared/`.
 - Auth test mode should remain non-production only.

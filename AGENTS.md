@@ -16,6 +16,8 @@ High-level responsibilities:
 - Persistence: Postgres
 - Email auth delivery: Resend
 - Passkey/WebAuthn auth: SimpleWebAuthn with DB-backed short-lived challenges
+- HTTP security: Helmet/CSP plus trusted-origin and CSRF guards for state-changing authenticated requests
+- Public API contract: final camelCase request/response payloads
 - Generated and uploaded image storage: Cloudflare R2 when configured
 - Browser e2e: Playwright against a dedicated Express/Vite e2e server with in-memory mocks
 - Render single-service deployment is supported
@@ -26,7 +28,7 @@ High-level responsibilities:
 - `shared/` — shared TypeScript domain models, helpers, and tests
 - `tests/e2e/` — Playwright fixtures, auth setup, and browser smoke tests
 - `playwright.config.ts` — Playwright projects, web server command, and auth setup wiring
-- `client/src/api/` — HTTP client calls and API-facing logic
+- `client/src/api/` — HTTP client calls, API-facing logic, request cache, and CSRF header injection
 - `client/src/app/` — app shell, route content, state/actions, session bootstrap, navigation, and dialogs
 - `client/src/auth/` — browser auth helpers such as passkey/WebAuthn flows
 - `client/src/components/` — reusable UI pieces
@@ -47,12 +49,20 @@ High-level responsibilities:
 - `server/src/test/` — server-side test helpers
 - `server/src/templates/` — server-side templates
 - `server/src/index.ts` — server entrypoint
+- `server/src/appConfig.ts` — runtime env/config constants
+- `server/src/appMiddleware.ts` — Helmet/CSP, CORS, rate limiters, auth guard, trusted-origin guard, and CSRF guard
+- `server/src/serverStartup.ts` — DB bootstrap, dev Vite middleware, production static serving, and shared-capsule HTML metadata injection
 - `server/src/db.ts` — database integration
+- `server/src/db/sql/` — canonical schema SQL assets
 - `server/src/email.ts` — email delivery/auth messaging
 - `server/src/authStore.ts` — auth/session-related storage logic
 - `server/src/capsuleStore.ts` — capsule/domain storage logic
+- `server/src/capsuleStore*.ts` — capsule context, delete, naming, sharing, model, and domain helpers
+- `server/src/httpCookies.ts` — session, CSRF, and passkey challenge cookie helpers
+- `server/src/passkeyHttp.ts` and `server/src/passkeyNames.ts` — passkey response/name helpers
 - `server/src/r2Storage.ts` and `server/src/r2Delete.ts` — Cloudflare R2 upload/delete helpers
 - `server/src/wardrobe*.ts` — uploaded wardrobe image processing, semantic metadata, PDF, and download helpers
+- `server/src/ai/sql/` — canonical SQL assets for AI wardrobe selection
 
 ## Commands
 Run from repository root unless stated otherwise.
@@ -116,9 +126,13 @@ Lint and quality:
 - Preserve current workspace boundaries unless the task explicitly requires cross-cutting changes.
 - Read the nearest tests before editing implementation.
 - When changing API contracts, inspect both `server/` and the corresponding `client/src/api/` usage.
+- Keep public API payloads, client state, and e2e fixtures on the final camelCase contract; do not reintroduce snake_case compatibility or naming migration code unless explicitly requested.
 - When changing localization-visible text, update locale resources and keep EN/RU parity.
 - When changing auth, session, DB, email, or deployment behavior, be conservative and avoid incidental rewrites.
+- When changing state-changing authenticated routes, preserve trusted-origin and CSRF checks and keep client calls on `client/src/api/request.ts` unless there is a specific reason not to.
 - When changing passkeys/WebAuthn, preserve DB-backed challenge single-use semantics, do not return stored public keys to the client, and keep `PASSKEY_RP_ID`/`PASSKEY_ORIGIN` aligned with the visible frontend origin.
+- When changing account removal, preserve deletion of profile-scoped DB records, active sessions, transient generation/image/PDF jobs, uploaded R2 image objects, and session/passkey challenge cookies.
+- When changing production CSP or image upload previews, update `server/src/appMiddleware.ts` tests with the allowed source behavior.
 - When using Playwright for code validation, run it against the dedicated e2e server with in-memory dependencies, not against normal dev or production-like servers with external dependencies.
 - Keep Playwright e2e-only endpoints and env vars isolated from normal dev, production, and Render startup paths.
 - Default Playwright e2e runs should not require real DB, email, LLM, embedding, or remote image services.
@@ -154,7 +168,7 @@ At minimum:
 - cross-cutting changes: `npm test` and `npm run coverage`
 - TypeScript-only or contract-shape changes: run the narrowest relevant `typecheck` command
 - docs-only changes: run `npm run format` and `npm run lint:strict`; code tests are not required when behavior is untouched
-- after tests, coverage, and typecheck, run ESLint on the changed source files with zero warnings, for example `npx eslint --max-warnings=0 <changed files>`
+- after tests, coverage, typecheck, and format, run `npm run lint:strict`
 
 ## Avoid
 - Do not invent new architecture not already present in the repo.
@@ -163,6 +177,7 @@ At minimum:
 - Do not break auth-test mode.
 - Do not change i18n behavior in only one locale.
 - Do not move files across workspaces unless explicitly requested.
+- Do not resurrect removed naming-convention migration scripts or package commands unless explicitly requested.
 
 ## When uncertain
 - Consult `docs/repo_map.md`

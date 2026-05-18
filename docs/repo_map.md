@@ -1,7 +1,7 @@
 # Repo Map
 
 ## Purpose
-Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, onboarding, profile flows, localization, saved wardrobe/capsule workflows, AI-assisted generation, image upload/storage, product search, and statistics.
+Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, passkeys, onboarding, profile and account removal flows, localization, saved wardrobe/capsule workflows, AI-assisted generation, image upload/storage, product search, and statistics. The public API contract uses the final camelCase shape; the temporary naming-convention migration has been removed.
 
 ## Main runtime flows
 
@@ -9,7 +9,9 @@ Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, onboard
 - Root workspace scripts coordinate `client` and `server`
 - Frontend starts via Vite
 - Client app composition is split across `client/src/App.tsx` and `client/src/app/`
-- Backend starts from `server/src/index.ts`, with route groups under `server/src/routes/`
+- Backend app wiring starts from `server/src/index.ts`, with route groups under `server/src/routes/`
+- Runtime config, security middleware, and static serving are split across `server/src/appConfig.ts`, `server/src/appMiddleware.ts`, and `server/src/serverStartup.ts`
+- Development startup mounts Vite middleware from Express; production startup serves `client/dist` and injects shared-capsule metadata into HTML
 - Playwright e2e tests start a dedicated Express/Vite server from `server/src/e2e/server.ts`
 
 ### 2. Authentication flow
@@ -18,8 +20,11 @@ Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, onboard
 - auth/session logic lives around `authStore.ts` and `server/src/routes/sessionAuthRoutes.ts`
 - email delivery logic lives in `email.ts`
 - Google and passkey login create the same normal app session as email-code login
+- session and CSRF cookies are handled in `server/src/httpCookies.ts`, while trusted-origin and CSRF guards live in `server/src/appMiddleware.ts`
+- client state-changing requests should go through `client/src/api/request.ts` so the `X-CSRF-Token` header is populated from the CSRF cookie
 - Passkey/WebAuthn browser work lives in `client/src/auth/passkeys.ts` and API calls in `client/src/api/passkeys.ts`
 - Passkey credentials and short-lived single-use challenges are persisted via `server/src/db.ts` and `server/src/db/passkeys.ts`
+- Passkey display helpers live in `server/src/passkeyHttp.ts` and `server/src/passkeyNames.ts`; deletion is registered from `server/src/routes/passkeyDeleteRoute.ts`
 - Passkey RP config uses `PASSKEY_RP_ID` for the visible frontend hostname and `PASSKEY_ORIGIN` for the full visible frontend origin
 - auth test mode exists and should remain usable
 
@@ -28,21 +33,26 @@ Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, onboard
 - app-level profile/session orchestration lives under `client/src/app/`
 - API integration should live in `client/src/api/`
 - persisted server-side behavior likely touches DB-backed modules and `server/src/routes/profile*Routes.ts`
+- settings and account removal UI live in `client/src/components/SettingsDialog*` and `client/src/components/SettingsRemoveAccount*`
+- `DELETE /profile/me` removes profile-scoped data, clears transient jobs, deletes uploaded wardrobe image objects from R2 when configured, and clears session/passkey challenge cookies
 
 ### 4. Capsule / wardrobe flow
 - server-side domain state likely centers on `capsuleStore.ts`
+- capsule storage helpers are split across `capsuleStoreContext.ts`, `capsuleStoreDelete.ts`, `capsuleStoreNaming.ts`, and `capsuleStoreSharing.ts`
 - capsule read/mutation HTTP behavior lives under `server/src/routes/capsule*Routes.ts`
 - client capsule state/actions live under `client/src/app/` and `client/src/screens/mainScreen/`
-- AI-related generation, regeneration, event streaming, and outfit-set image behavior lives under `server/src/ai/`
+- AI-related generation, regeneration, event streaming, and outfit-set image behavior lives under `server/src/ai/`; SSE route helpers live in `server/src/capsuleEventHttp.ts`
 - public sharing and import behavior is exposed through `/shared-capsules/*` and implemented in the capsule read/store modules
+- shared-capsule OG metadata helpers live in `server/src/sharedCapsuleMeta.ts`
 
 ### 5. My Wardrobe flow
 - client My Wardrobe screen composition lives in `client/src/screens/MyWardrobeScreen.tsx` and related `MyWardrobe*` files
 - My Wardrobe API calls live in `client/src/api/myWardrobe.ts`
 - uploaded/catalog item actions are orchestrated through `client/src/app/myWardrobeItemActions.ts`, `client/src/app/wardrobeImageActions.ts`, and related wardrobe action modules
 - server HTTP behavior lives in `server/src/routes/wardrobeRoutes.ts`, `server/src/routes/wardrobeUploadStream.ts`, and `server/src/routes/wardrobeUploadedItemUpdateRoute.ts`
-- upload normalization, image analysis, embeddings, cleanup, PDF export, and child-process helpers live in root `server/src/wardrobe*.ts` modules
+- upload normalization, image analysis, embeddings, metadata updates, cleanup, PDF export, and child-process helpers live in root `server/src/wardrobe*.ts` modules
 - uploaded/generated image persistence uses `server/src/r2Storage.ts` and `server/src/r2Delete.ts` when R2 is configured
+- uploaded wardrobe item API payloads and fixtures use camelCase image fields
 
 ### 6. Search / statistics flow
 - search UI state and filters live under `client/src/search/`
@@ -52,6 +62,7 @@ Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, onboard
 - chart wrappers live under `client/src/components/tremor/`
 - search API routes live in `server/src/routes/searchRoutes.ts`
 - search persistence is split across `searchStore.ts`, `searchTypes.ts`, and `server/src/db/search*`
+- semantic search helpers live in `server/src/searchSemantic.ts`
 
 ### 7. Localization flow
 - locale resources and helpers live under `client/src/i18n/`
@@ -64,6 +75,7 @@ Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, onboard
 - authenticated tests reuse `tests/e2e/.auth/user.json`
 - the e2e server uses in-memory dependencies for auth, profile, capsule, search, generation, images, and embeddings
 - e2e control routes under `/__e2e/*` are mounted only by the dedicated e2e server
+- e2e auth control routes set the same session and CSRF cookies expected by normal authenticated routes
 - browser-side request guards block unexpected non-local origins by default
 
 ## Important files
@@ -82,6 +94,7 @@ Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, onboard
 - `client/render-server.js`
 - `client/src/App.tsx`
 - `client/src/app/` — app shell, route content, state/actions, session bootstrap, navigation, and dialogs
+- `client/src/api/request.ts` — shared fetch wrapper, JSON/error handling, short-lived GET cache, and CSRF header injection
 - `client/src/main.tsx`
 - `client/src/theme.ts`
 - `client/src/auth/passkeys.ts`
@@ -107,28 +120,40 @@ Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, onboard
 - `server/tsconfig.test.json`
 - `server/tsconfig.src.json`
 - `server/src/index.ts`
+- `server/src/appConfig.ts` — env-backed runtime constants and client dist/root resolution
+- `server/src/appMiddleware.ts` — Helmet/CSP, CORS, rate limiters, trusted-origin guard, auth guard, and CSRF guard
+- `server/src/serverStartup.ts` — DB bootstrap, dev Vite middleware, production static serving, and shared-capsule HTML metadata injection
 - `server/src/e2e/` — isolated e2e server, in-memory dependencies, fixtures, and test-control routes
 - `server/src/test/` — server-side test helpers
 - `server/src/db.ts` — database integration, including passkey credential and challenge persistence
 - `server/src/db/` — split DB modules for auth, schema bootstrap wiring, passkeys, profiles, capsule data, search, and product options
 - `server/src/db/sql/` — canonical SQL assets used by DB schema bootstrap; one schema SQL file should contain one executable statement
+- `server/src/httpCookies.ts` — session, CSRF, and passkey challenge cookie helpers
+- `server/src/logger.ts` — test-aware server logging helpers
 - `server/src/routes/` — grouped Express route modules for auth/session, passkeys, profile, capsule, search, health, and images
 - `server/src/email.ts`
 - `server/src/authStore.ts`
 - `server/src/capsuleStore.ts`
+- `server/src/capsuleStoreContext.ts`, `server/src/capsuleStoreDelete.ts`, `server/src/capsuleStoreNaming.ts`, and `server/src/capsuleStoreSharing.ts`
 - `server/src/capsuleStoreModel.ts`
+- `server/src/capsuleEventHttp.ts`
 - `server/src/profileStore.ts`
 - `server/src/profileHttp.ts`
+- `server/src/passkeyHttp.ts`
+- `server/src/passkeyNames.ts`
 - `server/src/searchStore.ts`
+- `server/src/searchSemantic.ts`
 - `server/src/searchTypes.ts`
 - `server/src/searchValidation.ts`
 - `server/src/serverUrlSecurity.ts`
+- `server/src/sharedCapsuleMeta.ts`
 - `server/src/r2Storage.ts`
 - `server/src/r2Delete.ts`
 - `server/src/wardrobeImageAnalysis.ts`
 - `server/src/wardrobeImageCleanup.ts`
 - `server/src/wardrobeSemanticEmbedding.ts`
 - `server/src/wardrobeUploadImages*.ts`
+- `server/src/wardrobeUploadedItemUpdate.ts`
 - `server/src/wardrobePdf*.ts`
 - `server/src/ai/`
 - `server/src/ai/sql/` — canonical SQL assets used by AI wardrobe selection queries
@@ -137,8 +162,8 @@ Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, onboard
 ## Test map
 
 ### Client tests
-- `client/src/*.test.*`
-- `client/src/*.e2e.test.*`
+- `client/src/**/*.test.*`
+- `client/src/**/*.e2e.test.*`
 
 ### Server tests
 - `server/src/*.test.ts`
@@ -148,6 +173,7 @@ Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, onboard
 Run from root:
 - `shared/wardrobeOrder.test.ts`
 - `shared/accentColors.test.ts`
+- `shared/capsuleShareItems.test.ts`
 - `shared/colorSwatches.test.ts`
 - `shared/patternOptions.test.ts`
 - `shared/productDetail.test.ts`
@@ -190,12 +216,16 @@ The Playwright auth state is generated at `tests/e2e/.auth/user.json` and is int
 - Root scripts are the canonical entrypoint for cross-workspace work
 - Localization parity matters
 - Auth test mode matters
+- State-changing authenticated routes should preserve trusted-origin and CSRF protections
+- Public API payloads, client state, and e2e fixtures use the final camelCase contract
 - Playwright e2e mode must stay isolated from normal dev, production, and Render startup paths
 - Default e2e runs should not require a real database, email provider, LLM provider, embedding provider, or remote image host
 - Passkey challenges are single-use and stored separately from normal app sessions
 - Passkey API responses must never expose stored credential public keys
+- Account removal must clear profile-scoped DB records, active sessions, transient generation/image/PDF jobs, passkey challenge cookies, and uploaded image objects from R2 when configured
 - Uploaded wardrobe item API responses must not expose private owner, embedding, or internal timestamp fields
 - DB/env wiring should remain explicit and stable
+- DB schema bootstrap uses SQL assets under `server/src/db/sql/`; there is no active standalone naming-convention migration script
 - Render deployment path is a first-class deployment concern
 
 ## Safe edit strategy
@@ -208,5 +238,5 @@ The Playwright auth state is generated at `tests/e2e/.auth/user.json` and is int
 7. Prefer `npm run typecheck` or workspace `typecheck` when changing TS types or module boundaries
 8. At the end of the work, after the final file edits, run `npm run format`.
 9. If `npm run format` changes files, include those formatter changes in the diff
-10. At the end, after tests, coverage, typecheck, and format, run ESLint on the changed source files with zero warnings, for example `npx eslint --max-warnings=0 <changed files>`
+10. At the end, after tests, coverage, typecheck, and format, run `npm run lint:strict`
 11. In the final response after changing files, recommend a clear git commit message for the change
