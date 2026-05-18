@@ -19,6 +19,10 @@ import { E2eSearchDelayState } from "./searchState.js";
 import { searchAndGenerationDependencies } from "./searchAndGenerationDependencies.js";
 import { E2eSelectedRegenerationMemory } from "./selectedRegenerationState.js";
 import { E2eShareMemory } from "./shareState.js";
+import {
+  createE2eWardrobeDependencies,
+  E2eWardrobeMemory,
+} from "./wardrobeState.js";
 import { getCapsuleIdValue } from "../capsuleStoreModel.js";
 
 export type E2eScenario =
@@ -57,6 +61,7 @@ class E2eState {
   loginCodes = new Map<string, string>();
   sessionCounter = 0;
   outfitImageCounter = 0;
+  wardrobeMemory = new E2eWardrobeMemory();
   selectedRegenerationMemory = new E2eSelectedRegenerationMemory();
   searchDelay = new E2eSearchDelayState();
   generationMemory = new E2eGenerationMemory();
@@ -72,6 +77,7 @@ class E2eState {
     this.sessionCounter = 0;
     this.shareMemory.reset();
     this.outfitImageCounter = 0;
+    this.wardrobeMemory.reset();
     this.selectedRegenerationMemory.reset();
     this.searchDelay.clear();
     this.generationMemory.reset();
@@ -271,11 +277,11 @@ export function createE2eDependencies(state = e2eState) {
     ...profileDependencies(state),
     ...capsuleDependencies(state),
     ...searchAndGenerationDependencies(state),
+    ...createE2eWardrobeDependencies(state.wardrobeMemory),
     ...buildE2ePasskeyDependencies(),
     createUploadedWardrobeItemEmbeddingImpl: async () => [0.1, 0.2, 0.3],
     deleteR2ObjectsImpl: async (payload) => ({
       deleted: Array.isArray(payload?.keys) ? payload.keys.length : 0,
     }),
-    listWardrobeItemsImpl: async () => [],
   };
 }

@@ -20,7 +20,7 @@ const wardrobeUpload = multer({
   limits: {
     fileSize: WARDROBE_UPLOAD_MAX_FILE_SIZE_BYTES,
     files: WARDROBE_UPLOAD_MAX_FILES,
-    parts: WARDROBE_UPLOAD_MAX_FILES,
+    parts: WARDROBE_UPLOAD_MAX_FILES + 1,
   },
   fileFilter: (_req, file, callback) => {
     if (isAllowedWardrobeUploadMimeType(file.mimetype)) {
