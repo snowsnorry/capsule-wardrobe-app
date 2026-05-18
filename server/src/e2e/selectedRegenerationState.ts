@@ -88,7 +88,7 @@ function buildDeterministicReplacementItem(
     name: label.name,
     brand: "E2E Regenerated",
     url: `https://example.test/products/${label.urlSlug}-${stableIndex}`,
-    image_url: e2eImageUrl(`${label.imageName}-${stableIndex}`),
+    imageUrl: e2eImageUrl(`${label.imageName}-${stableIndex}`),
     description: `A deterministic e2e regenerated ${category} fixture.`,
   };
 }

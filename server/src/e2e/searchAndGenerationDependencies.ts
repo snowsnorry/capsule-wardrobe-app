@@ -224,7 +224,7 @@ export function searchAndGenerationDependencies(
       const requestOrder = await state.searchDelay.waitForGate(savedSearch);
       const items = buildSearchResultItems(savedSearch).map((item) => ({
         ...item,
-        imageUrl: item.image_url,
+        imageUrl: item.imageUrl,
       }));
       state.searchDelay.completeRequest(requestOrder);
       return { items, total: items.length, savedSearch };
