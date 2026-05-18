@@ -20,9 +20,48 @@ import {
   type SettingsDraft,
   type SettingsSection,
 } from "./settingsDialogModel";
+import {
+  settingsDialogBodySx,
+  settingsDialogContentSx,
+  settingsDialogMainPanelSx,
+  settingsDialogPaperSx,
+} from "./SettingsDialogLayoutStyles";
 import { SettingsSectionContent } from "./SettingsDialogSectionContent";
+import { SettingsRemoveAccountDialog } from "./SettingsRemoveAccountDialog";
 
 type Translate = (key: string, params?: unknown) => string;
+
+type SettingsDialogFrameProps = {
+  open: boolean;
+  activeSection: SettingsSection;
+  draft: SettingsDraft;
+  passkeys: PasskeyMetadata[];
+  locale: string;
+  isSaving: boolean;
+  isPasskeyLoading: boolean;
+  isRemoveAccountOpen: boolean;
+  isRemovingAccount: boolean;
+  hasChanges: boolean;
+  error: string;
+  passkeyToDelete: PasskeyMetadata | null;
+  removeAccountConfirmation: string;
+  onClose: () => void;
+  onSave: () => void;
+  onSelectSection: (section: SettingsSection) => void;
+  onDraftChange: <Key extends keyof SettingsDraft>(
+    key: Key,
+    value: SettingsDraft[Key],
+  ) => void;
+  onAddPasskey: () => void;
+  onRequestDelete: (passkey: PasskeyMetadata) => void;
+  onRequestRemoveAccount: () => void;
+  onClosePasskeyDelete: () => void;
+  onConfirmPasskeyDelete: () => void;
+  onCloseRemoveAccount: () => void;
+  onConfirmRemoveAccount: () => void;
+  onRemoveAccountConfirmationChange: (value: string) => void;
+  t: Translate;
+};
 
 function PasskeyDeleteDialog({
   passkeyToDelete,
@@ -68,56 +107,50 @@ function SettingsDialogFrame({
   locale,
   isSaving,
   isPasskeyLoading,
+  isRemoveAccountOpen,
+  isRemovingAccount,
   hasChanges,
   error,
   passkeyToDelete,
+  removeAccountConfirmation,
   onClose,
   onSave,
   onSelectSection,
   onDraftChange,
   onAddPasskey,
   onRequestDelete,
+  onRequestRemoveAccount,
   onClosePasskeyDelete,
   onConfirmPasskeyDelete,
+  onCloseRemoveAccount,
+  onConfirmRemoveAccount,
+  onRemoveAccountConfirmationChange,
   t,
-}: {
-  open: boolean;
-  activeSection: SettingsSection;
-  draft: SettingsDraft;
-  passkeys: PasskeyMetadata[];
-  locale: string;
-  isSaving: boolean;
-  isPasskeyLoading: boolean;
-  hasChanges: boolean;
-  error: string;
-  passkeyToDelete: PasskeyMetadata | null;
-  onClose: () => void;
-  onSave: () => void;
-  onSelectSection: (section: SettingsSection) => void;
-  onDraftChange: <Key extends keyof SettingsDraft>(
-    key: Key,
-    value: SettingsDraft[Key],
-  ) => void;
-  onAddPasskey: () => void;
-  onRequestDelete: (passkey: PasskeyMetadata) => void;
-  onClosePasskeyDelete: () => void;
-  onConfirmPasskeyDelete: () => void;
-  t: Translate;
-}) {
+}: SettingsDialogFrameProps) {
+  const isBusy = isSaving || isRemovingAccount;
+
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
+    <Dialog
+      open={open}
+      onClose={onClose}
+      fullWidth
+      maxWidth="md"
+      PaperProps={{ sx: settingsDialogPaperSx }}
+    >
       <DialogTitle>{t("settings.title")}</DialogTitle>
-      <SettingsDialogProgress isSaving={isSaving} />
-      <DialogContent sx={{ pt: 1, pb: 0 }}>
+      <SettingsDialogProgress isSaving={isBusy} />
+      <DialogContent sx={settingsDialogContentSx}>
         <SettingsDialogBody
           activeSection={activeSection}
           draft={draft}
           error={error}
           isPasskeyLoading={isPasskeyLoading}
+          isRemoveAccountDisabled={isBusy}
           locale={locale}
           onAddPasskey={onAddPasskey}
           onDraftChange={onDraftChange}
           onRequestDelete={onRequestDelete}
+          onRequestRemoveAccount={onRequestRemoveAccount}
           onSelectSection={onSelectSection}
           passkeys={passkeys}
           t={t}
@@ -125,7 +158,7 @@ function SettingsDialogFrame({
       </DialogContent>
       <SettingsDialogActions
         hasChanges={hasChanges}
-        isSaving={isSaving}
+        isSaving={isBusy}
         onClose={onClose}
         onSave={onSave}
         t={t}
@@ -137,6 +170,17 @@ function SettingsDialogFrame({
         onConfirm={onConfirmPasskeyDelete}
         t={t}
       />
+      {isRemoveAccountOpen ? (
+        <SettingsRemoveAccountDialog
+          confirmation={removeAccountConfirmation}
+          confirmationWord={t("settings.removeAccount.confirmationWord")}
+          isRemoving={isRemovingAccount}
+          onClose={onCloseRemoveAccount}
+          onConfirm={onConfirmRemoveAccount}
+          onConfirmationChange={onRemoveAccountConfirmationChange}
+          t={t}
+        />
+      ) : null}
     </Dialog>
   );
 }
@@ -166,10 +210,12 @@ function SettingsDialogBody({
   draft,
   error,
   isPasskeyLoading,
+  isRemoveAccountDisabled,
   locale,
   onAddPasskey,
   onDraftChange,
   onRequestDelete,
+  onRequestRemoveAccount,
   onSelectSection,
   passkeys,
   t,
@@ -178,6 +224,7 @@ function SettingsDialogBody({
   draft: SettingsDraft;
   error: string;
   isPasskeyLoading: boolean;
+  isRemoveAccountDisabled: boolean;
   locale: string;
   onAddPasskey: () => void;
   onDraftChange: <Key extends keyof SettingsDraft>(
@@ -185,6 +232,7 @@ function SettingsDialogBody({
     value: SettingsDraft[Key],
   ) => void;
   onRequestDelete: (passkey: PasskeyMetadata) => void;
+  onRequestRemoveAccount: () => void;
   onSelectSection: (section: SettingsSection) => void;
   passkeys: PasskeyMetadata[];
   t: Translate;
@@ -196,7 +244,7 @@ function SettingsDialogBody({
         onSelectSection={onSelectSection}
         t={t}
       />
-      <Stack spacing={2} sx={{ minWidth: 0 }}>
+      <Stack spacing={2} sx={settingsDialogMainPanelSx}>
         <Typography variant="body2" color="text.secondary">
           {t(`settings.sectionHints.${activeSection}`)}
         </Typography>
@@ -206,9 +254,11 @@ function SettingsDialogBody({
           passkeys={passkeys}
           locale={locale}
           isPasskeyLoading={isPasskeyLoading}
+          isRemoveAccountDisabled={isRemoveAccountDisabled}
           onDraftChange={onDraftChange}
           onAddPasskey={onAddPasskey}
           onRequestDelete={onRequestDelete}
+          onRequestRemoveAccount={onRequestRemoveAccount}
           t={t}
         />
         {error ? (
@@ -220,13 +270,6 @@ function SettingsDialogBody({
     </Box>
   );
 }
-
-const settingsDialogBodySx = {
-  display: "grid",
-  gridTemplateColumns: { xs: "1fr", sm: "220px minmax(0, 1fr)" },
-  gap: 3,
-  minHeight: { sm: 320 },
-} as const;
 
 function SettingsSectionsList({
   activeSection,

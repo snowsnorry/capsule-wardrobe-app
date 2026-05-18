@@ -273,5 +273,9 @@ export function createE2eDependencies(state = e2eState) {
     ...searchAndGenerationDependencies(state),
     ...buildE2ePasskeyDependencies(),
     createUploadedWardrobeItemEmbeddingImpl: async () => [0.1, 0.2, 0.3],
+    deleteR2ObjectsImpl: async (payload) => ({
+      deleted: Array.isArray(payload?.keys) ? payload.keys.length : 0,
+    }),
+    listWardrobeItemsImpl: async () => [],
   };
 }

@@ -156,10 +156,14 @@ export async function updateProfileActiveCapsuleIdByEmail({
 
 export async function deleteProfileByEmail(email: string): Promise<boolean> {
   const sql = getSqlClient();
-  await sql`
-    delete from capsules
-    where email = ${email}
-  `;
+  await sql`delete from user_sessions where email = ${email}`;
+  await sql`delete from login_codes where email = ${email}`;
+  await sql`delete from passkey_challenges where profile_email = ${email}`;
+  await sql`delete from capsules where email = ${email}`;
+  await sql`delete from shared_capsules where profile_email = ${email}`;
+  await sql`delete from wardrobe where profile_email = ${email}`;
+  await sql`delete from search where email = ${email}`;
+  await sql`delete from profile_passkeys where profile_email = ${email}`;
   const result = await sql`
     delete from profiles
     where email = ${email}

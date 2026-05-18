@@ -28,6 +28,21 @@ import type {
 
 const wardrobeJobs = new Map();
 
+function deleteJobsForEmail(jobs: Map<string, unknown>, email: string) {
+  const normalizedEmail = String(email || "")
+    .trim()
+    .toLowerCase();
+  if (!normalizedEmail) {
+    return;
+  }
+  const keyPrefix = `${normalizedEmail}::`;
+  for (const key of jobs.keys()) {
+    if (key === normalizedEmail || key.startsWith(keyPrefix)) {
+      jobs.delete(key);
+    }
+  }
+}
+
 function withDefault<T>(value: T | undefined, defaultValue: T) {
   return value === undefined ? defaultValue : value;
 }
@@ -114,6 +129,8 @@ export function createWardrobeService(
   };
 
   return {
+    clearWardrobeJobsForEmail: (email: string) =>
+      deleteJobsForEmail(deps.jobs, email),
     getCapsuleItems: createGetCapsuleItems(deps, getWardrobeJob),
     getWardrobeJob,
     regenerateCapsuleWardrobe: createRegenerateCapsuleWardrobe(

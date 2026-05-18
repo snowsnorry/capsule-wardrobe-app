@@ -122,6 +122,7 @@ function createProps(
     t: (key: string) => key,
     user: { email: "person@example.com" },
     onCreateCapsuleFromSidebar: vi.fn(() => Promise.resolve()),
+    onDeleteProfile: vi.fn(() => Promise.resolve()),
     onNavigateApp: vi.fn(),
     onOpenCapsuleFromSidebar: vi.fn(() => Promise.resolve()),
     onRequestSignOut: vi.fn(),

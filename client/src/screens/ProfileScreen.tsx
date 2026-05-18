@@ -56,7 +56,7 @@ type ProfileScreenProps = {
   onSelectPattern: (value: string) => void;
   onTextChange?: (value: string) => void;
   onSave: () => void;
-  onDelete: () => void;
+  onDelete: () => Promise<void> | void;
   onBack: () => void;
 };
 
@@ -303,7 +303,7 @@ function ProfileScreen(props: ProfileScreenProps) {
 
   const handleConfirmDelete = () => {
     setIsDeleteOpen(false);
-    onDelete();
+    void Promise.resolve(onDelete()).catch(() => {});
   };
 
   return (

@@ -128,13 +128,32 @@ test("updateProfileByEmail writes all editable profile fields", async () => {
   ]);
 });
 
-test("deleteProfileByEmail deletes capsules first and returns affected profile state", async () => {
-  const deletedSql = useQueuedSql([[], [{ email: "person@example.com" }]]);
+test("deleteProfileByEmail deletes account data and returns affected profile state", async () => {
+  const deletedSql = useQueuedSql([
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [{ email: "person@example.com" }],
+  ]);
   await expect(deleteProfileByEmail("person@example.com")).resolves.toBe(true);
-  expect(deletedSql.statements[0]).toContain("delete from capsules");
-  expect(deletedSql.statements[1]).toContain("delete from profiles");
+  expect(deletedSql.statements).toEqual([
+    "delete from user_sessions where email = ?",
+    "delete from login_codes where email = ?",
+    "delete from passkey_challenges where profile_email = ?",
+    "delete from capsules where email = ?",
+    "delete from shared_capsules where profile_email = ?",
+    "delete from wardrobe where profile_email = ?",
+    "delete from search where email = ?",
+    "delete from profile_passkeys where profile_email = ?",
+    "delete from profiles where email = ? returning email",
+  ]);
 
-  useQueuedSql([[], []]);
+  useQueuedSql([[], [], [], [], [], [], [], [], []]);
   await expect(deleteProfileByEmail("missing@example.com")).resolves.toBe(
     false,
   );

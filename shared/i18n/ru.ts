@@ -107,6 +107,7 @@ const ru = {
   settings: {
     title: "Настройки",
     saved: "Настройки сохранены.",
+    accountRemoved: "Аккаунт удалён.",
     sections: {
       general: "Основные",
       ai: "AI",
@@ -141,6 +142,21 @@ const ru = {
     imageLlmOptions: {
       "openai:gpt-image-2": "OpenAI GPT Image 2",
       "gemini:gemini-3-pro-image-preview": "Gemini 3 Pro Image Preview",
+    },
+    removeAccount: {
+      title: "Удаление аккаунта",
+      description:
+        "Навсегда удалить этот аккаунт и сохранённые персональные данные.",
+      button: "Удалить аккаунт",
+      dialogTitle: "Удалить аккаунт",
+      warning:
+        "Все данные, связанные с этим аккаунтом, будут удалены без возможности восстановления.",
+      instructionPrefix: "Чтобы продолжить, введите это слово:",
+      instructionSuffix: "Затем подтвердите удаление аккаунта ниже.",
+      confirmationWord: "удалить",
+      copyWord: "Скопировать слово",
+      inputLabel: "Слово подтверждения",
+      remove: "Удалить",
     },
   },
   actions: {

@@ -4,6 +4,7 @@ import { deleteUserProfile, saveSettings } from "./profileActions";
 import { createActionContext, createTestProfile } from "./testUtils";
 
 vi.mock("../api/auth", () => ({
+  clearRequestCache: vi.fn(),
   deleteProfile: vi.fn(),
   updateProfile: vi.fn(),
 }));
@@ -87,13 +88,35 @@ describe("profileActions", () => {
     vi.mocked(deleteProfile).mockResolvedValueOnce({});
     const context = createActionContext();
 
-    await deleteUserProfile(context);
+    const sessionContext = {
+      closeNotificationPrompt: vi.fn(),
+      resetCapsuleState: vi.fn(),
+      resetNavigation: vi.fn(),
+      resetProfileOptions: vi.fn(),
+      resetSessionState: vi.fn(),
+      setIsSignOutConfirmOpen: vi.fn(),
+      setStatus: vi.fn(),
+    };
+
+    await deleteUserProfile(context, sessionContext as never);
 
     expect(deleteProfile).toHaveBeenCalledTimes(1);
-    expect(context.handleLogout).toHaveBeenCalledTimes(1);
+    expect(context.handleLogout).not.toHaveBeenCalled();
+    expect(sessionContext.resetSessionState).toHaveBeenCalledTimes(1);
+    expect(sessionContext.resetCapsuleState).toHaveBeenCalledTimes(1);
+    expect(sessionContext.resetProfileOptions).toHaveBeenCalledTimes(1);
+    expect(sessionContext.resetNavigation).toHaveBeenCalledTimes(1);
+    expect(sessionContext.setStatus).toHaveBeenCalledWith({
+      loading: false,
+      error: "",
+      infoKey: "settings.accountRemoved",
+      infoParams: null,
+    });
 
     vi.mocked(deleteProfile).mockRejectedValueOnce(new Error("not_found"));
-    await deleteUserProfile(context);
+    await expect(
+      deleteUserProfile(context, sessionContext as never),
+    ).rejects.toThrow("not_found");
     expect(context.setStatus).toHaveBeenLastCalledWith({
       loading: false,
       error: "not_found",

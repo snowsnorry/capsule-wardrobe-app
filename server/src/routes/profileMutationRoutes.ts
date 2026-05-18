@@ -8,8 +8,12 @@ import {
 export function registerProfileMutationRoutes(app, context) {
   const {
     createProfileImpl,
+    clearAccountTransientStateImpl,
+    deleteR2ObjectsImpl,
     deleteProfileImpl,
+    listWardrobeItemsImpl,
     normalizeProfileSettingsPayload,
+    nodeEnv,
     requireAuth,
     requireCsrf,
     requireTrustedOrigin,
@@ -54,6 +58,12 @@ export function registerProfileMutationRoutes(app, context) {
     requireTrustedOrigin,
     requireAuth,
     requireCsrf,
-    createDeleteProfileHandler({ deleteProfileImpl }),
+    createDeleteProfileHandler({
+      clearAccountTransientStateImpl,
+      deleteProfileImpl,
+      deleteR2ObjectsImpl,
+      listWardrobeItemsImpl,
+      nodeEnv,
+    }),
   );
 }

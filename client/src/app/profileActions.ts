@@ -1,10 +1,11 @@
-import { deleteProfile, updateProfile } from "../api/auth";
+import { clearRequestCache, deleteProfile, updateProfile } from "../api/auth";
 import {
   buildProfileSettingsPayload,
   normalizeProfileSettings,
 } from "./profileSettings";
 import { fromContext, type AppActionContext } from "./actionContext";
 import type { ProfileSettings } from "./appTypes";
+import type { SessionActionContext } from "./sessionActions";
 import type { SettingsSavePayload } from "../components/SettingsDialog";
 
 export async function saveSettings(
@@ -64,21 +65,38 @@ export async function saveSettings(
   }
 }
 
-export async function deleteUserProfile(context: AppActionContext) {
+export async function deleteUserProfile(
+  context: AppActionContext,
+  sessionContext: SessionActionContext,
+) {
   const setStatus = fromContext<(value: unknown) => void>(context, "setStatus");
   setStatus({ loading: true, error: "", infoKey: "", infoParams: null });
   try {
     await deleteProfile();
-    await fromContext<() => Promise<void>>(context, "handleLogout")();
+    clearRequestCache();
+    sessionContext.setIsSignOutConfirmOpen(false);
+    sessionContext.resetSessionState();
+    sessionContext.resetCapsuleState();
+    sessionContext.closeNotificationPrompt();
+    sessionContext.resetProfileOptions();
+    sessionContext.resetNavigation();
+    sessionContext.setStatus({
+      loading: false,
+      error: "",
+      infoKey: "settings.accountRemoved",
+      infoParams: null,
+    });
   } catch (error) {
+    const message = fromContext<(error: unknown) => string>(
+      context,
+      "resolveErrorMessage",
+    )(error);
     setStatus({
       loading: false,
-      error: fromContext<(error: unknown) => string>(
-        context,
-        "resolveErrorMessage",
-      )(error),
+      error: message,
       infoKey: "",
       infoParams: null,
     });
+    throw new Error(message, { cause: error });
   }
 }

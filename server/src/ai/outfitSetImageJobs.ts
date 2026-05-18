@@ -40,3 +40,18 @@ export function setPendingOutfitSetImageJob(jobKey, job) {
 export function deleteOutfitSetImageJob(jobKey) {
   outfitSetImageJobs.delete(jobKey);
 }
+
+export function clearOutfitSetImageJobsForEmail(email) {
+  const normalizedEmail = String(email || "")
+    .trim()
+    .toLowerCase();
+  if (!normalizedEmail) {
+    return;
+  }
+  const keyPrefix = `${normalizedEmail}::`;
+  for (const key of outfitSetImageJobs.keys()) {
+    if (key === normalizedEmail || key.startsWith(keyPrefix)) {
+      outfitSetImageJobs.delete(key);
+    }
+  }
+}

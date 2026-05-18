@@ -4,6 +4,13 @@ import {
   createOutfitSetImageService,
 } from "./outfitSetImages.js";
 import {
+  clearOutfitSetImageJobsForEmail,
+  createOutfitSetImageJobKey,
+  deleteOutfitSetImageJob,
+  getOutfitSetImageJobByKey,
+  setPendingOutfitSetImageJob,
+} from "./outfitSetImageJobs.js";
+import {
   buildCapsuleSnapshot,
   buildNormalizedCapsuleRecord,
   buildNormalizedProfileRecord,
@@ -61,6 +68,45 @@ function createCapsule() {
     saved: null,
   });
 }
+
+test("clearOutfitSetImageJobsForEmail removes normalized email-owned jobs only", () => {
+  const ownedKey = createOutfitSetImageJobKey(
+    "person@example.com",
+    "capsule-1",
+    0,
+  );
+  const otherOwnedKey = createOutfitSetImageJobKey(
+    "PERSON@example.com",
+    "capsule-2",
+    1,
+  );
+  const otherUserKey = createOutfitSetImageJobKey(
+    "other@example.com",
+    "capsule-1",
+    0,
+  );
+  setPendingOutfitSetImageJob(ownedKey, { status: "pending", setIndex: 0 });
+  setPendingOutfitSetImageJob(otherOwnedKey, {
+    status: "pending",
+    setIndex: 1,
+  });
+  setPendingOutfitSetImageJob(otherUserKey, {
+    status: "pending",
+    setIndex: 0,
+  });
+
+  clearOutfitSetImageJobsForEmail(" person@example.com ");
+  clearOutfitSetImageJobsForEmail("");
+
+  expect(getOutfitSetImageJobByKey(ownedKey)).toBeUndefined();
+  expect(getOutfitSetImageJobByKey(otherOwnedKey)).toBeUndefined();
+  expect(getOutfitSetImageJobByKey(otherUserKey)).toEqual({
+    status: "pending",
+    setIndex: 0,
+  });
+
+  deleteOutfitSetImageJob(otherUserKey);
+});
 
 test("outfitSetImage service validates missing set index", async () => {
   const service = createOutfitSetImageService({

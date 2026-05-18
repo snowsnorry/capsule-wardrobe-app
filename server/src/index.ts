@@ -55,7 +55,13 @@ import {
   getSearchStats,
   runSavedSearch,
 } from "./searchStore.js";
-import { getWardrobeJob, regenerateCapsuleWardrobe } from "./ai/ai.js";
+import {
+  clearWardrobeJobsForEmail,
+  getWardrobeJob,
+  regenerateCapsuleWardrobe,
+} from "./ai/ai.js";
+import { clearPartialRegenerationJobsForEmail } from "./ai/partialRegenerationJobs.js";
+import { clearOutfitSetImageJobsForEmail } from "./ai/outfitSetImageJobs.js";
 import {
   getPartialRegenerationJob,
   regenerateSelectedWardrobeItems,
@@ -70,6 +76,7 @@ import {
   capsuleEventHub,
 } from "./ai/capsuleEvents.js";
 import { buildWardrobePdfInChild } from "./wardrobePdf.js";
+import { deleteWardrobePdfJob } from "./wardrobePdfJobRegistry.js";
 import {
   checkDatabaseConnection,
   consumePasskeyChallenge,
@@ -180,6 +187,13 @@ function createWardrobeImageStorageDependencies() {
   };
 }
 
+function clearAccountTransientState(email: string) {
+  clearWardrobeJobsForEmail(email);
+  clearPartialRegenerationJobsForEmail(email);
+  clearOutfitSetImageJobsForEmail(email);
+  deleteWardrobePdfJob(email);
+}
+
 // eslint-disable-next-line max-lines-per-function
 function createAppDependencies(options: Record<string, unknown> = {}) {
   const googleClientId =
@@ -190,6 +204,7 @@ function createAppDependencies(options: Record<string, unknown> = {}) {
     authTestMode: AUTH_TEST_MODE,
     buildWardrobePdfInChildImpl: buildWardrobePdfInChild,
     checkDatabaseConnectionImpl: checkDatabaseConnection,
+    clearAccountTransientStateImpl: clearAccountTransientState,
     clientOrigin: CLIENT_ORIGIN,
     consumePasskeyChallengeImpl: consumePasskeyChallenge,
     createCapsuleImpl: createCapsule,

@@ -1,5 +1,10 @@
 import { SUPPORTED_LOCALES } from "../appConfig.js";
+import {
+  clearPasskeyChallengeCookie,
+  clearSessionCookie,
+} from "../httpCookies.js";
 import { logError } from "../logger.js";
+import { buildUploadedWardrobeItemImageKeys } from "./wardrobeUploadedItemUpdateRoute.js";
 
 function getSupportedLocale(value: unknown): string | null {
   const locale = String(value || "")
@@ -78,13 +83,48 @@ export function createUpdateProfileLocaleHandler({
   };
 }
 
-export function createDeleteProfileHandler({ deleteProfileImpl }) {
+function buildAccountWardrobeImageKeys(items: unknown[] = []): string[] {
+  return Array.from(
+    new Set(
+      items
+        .filter((item) => {
+          const source =
+            typeof item === "object" && item !== null
+              ? (item as { source?: unknown }).source
+              : null;
+          return source === "uploaded";
+        })
+        .flatMap((item) => buildUploadedWardrobeItemImageKeys(item)),
+    ),
+  );
+}
+
+export function createDeleteProfileHandler({
+  clearAccountTransientStateImpl,
+  deleteProfileImpl,
+  deleteR2ObjectsImpl,
+  listWardrobeItemsImpl,
+  nodeEnv,
+}) {
   return async (req, res) => {
     try {
+      const wardrobeItems = await listWardrobeItemsImpl({
+        email: req.user.email,
+        source: "uploaded",
+      });
       const deleted = await deleteProfileImpl(req.user.email);
       if (!deleted) {
         return res.status(404).json({ error: "not_found" });
       }
+      clearAccountTransientStateImpl?.(req.user.email);
+      const imageKeys = buildAccountWardrobeImageKeys(wardrobeItems);
+      if (imageKeys.length > 0) {
+        await deleteR2ObjectsImpl({ keys: imageKeys }).catch((error) => {
+          logError("[profile/delete][r2]", error);
+        });
+      }
+      clearSessionCookie(res, nodeEnv);
+      clearPasskeyChallengeCookie(res, nodeEnv);
       return res.json({ ok: true });
     } catch (error) {
       logError("[profile/delete]", error);
@@ -92,3 +132,5 @@ export function createDeleteProfileHandler({ deleteProfileImpl }) {
     }
   };
 }
+
+export { buildAccountWardrobeImageKeys };

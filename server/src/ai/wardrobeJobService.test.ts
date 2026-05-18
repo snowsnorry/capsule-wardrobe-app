@@ -20,6 +20,29 @@ function createCapsuleWithWardrobe(wardrobe = null) {
   });
 }
 
+test("clearWardrobeJobsForEmail removes normalized email-owned jobs only", () => {
+  const job = {
+    capsuleRequestId: "request-1",
+    status: "pending" as const,
+    startedAt: 1,
+    updatedAt: 1,
+    promise: null,
+    phase: "capsule" as const,
+    result: null,
+  };
+  const jobs = new Map([
+    ["person@example.com", job],
+    ["person@example.com::capsule-1", job],
+    ["other@example.com::capsule-1", job],
+  ]);
+  const service = createWardrobeService({ jobs });
+
+  service.clearWardrobeJobsForEmail(" PERSON@example.com ");
+  service.clearWardrobeJobsForEmail("");
+
+  expect([...jobs.keys()]).toEqual(["other@example.com::capsule-1"]);
+});
+
 test("startWardrobeJob reuses active pending job for the same email", async () => {
   let resolveGeneration;
   const pendingGeneration = new Promise<

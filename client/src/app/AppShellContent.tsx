@@ -50,6 +50,7 @@ type AppShellContentProps = {
   t: TranslationFn;
   user: UserLike | null;
   onCreateCapsuleFromSidebar: (onComplete?: () => void) => Promise<void>;
+  onDeleteProfile: () => Promise<void>;
   onNavigateApp: (
     nextApp: Exclude<AppRoute, "share">,
     options?: AppNavigationOptions,
@@ -205,6 +206,7 @@ function AppSidebarPanel(props: AppShellContentProps) {
       userEmail={props.user?.email || ""}
       userName={props.settingsProfile.fullname}
       settingsProfile={props.settingsProfile}
+      onRemoveAccount={props.onDeleteProfile}
       onSaveSettings={props.onSaveSettings}
       onSignOut={props.onRequestSignOut}
       headerContent={({ isOverlaySidebar, openSidebar }) =>

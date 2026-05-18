@@ -1,5 +1,4 @@
 import {
-  Button,
   Divider,
   IconButton,
   LinearProgress,
@@ -9,7 +8,6 @@ import {
   Typography,
 } from "@mui/material";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
-import KeyRoundedIcon from "@mui/icons-material/KeyRounded";
 import {
   SETTINGS_FIELD_IDS,
   SettingsSelectField,
@@ -28,6 +26,8 @@ import {
   type SettingsDraft,
   type SettingsSection,
 } from "./settingsDialogModel";
+import { SettingsPasskeySectionHeader } from "./SettingsPasskeySectionHeader";
+import { SettingsRemoveAccountSection } from "./SettingsRemoveAccountSection";
 
 type Translate = (key: string, params?: unknown) => string;
 
@@ -175,6 +175,8 @@ const passkeyListSx = {
   borderTop: "1px solid",
   borderBottom: "1px solid",
   borderColor: "divider",
+  maxHeight: 200,
+  overflowY: "auto",
 } as const;
 
 function PasskeyListText({
@@ -208,21 +210,25 @@ function AccountSettingsSection({
   passkeys,
   locale,
   isPasskeyLoading,
+  isRemoveAccountDisabled,
   onDraftChange,
   onAddPasskey,
   onRequestDelete,
+  onRequestRemoveAccount,
   t,
 }: {
   draft: SettingsDraft;
   passkeys: PasskeyMetadata[];
   locale: string;
   isPasskeyLoading: boolean;
+  isRemoveAccountDisabled: boolean;
   onDraftChange: <Key extends keyof SettingsDraft>(
     key: Key,
     value: SettingsDraft[Key],
   ) => void;
   onAddPasskey: () => void;
   onRequestDelete: (passkey: PasskeyMetadata) => void;
+  onRequestRemoveAccount: () => void;
   t: Translate;
 }) {
   return (
@@ -241,7 +247,7 @@ function AccountSettingsSection({
       />
       <Divider />
       <Stack spacing={1.5}>
-        <PasskeySectionHeader
+        <SettingsPasskeySectionHeader
           isPasskeyLoading={isPasskeyLoading}
           onAddPasskey={onAddPasskey}
           t={t}
@@ -262,39 +268,12 @@ function AccountSettingsSection({
           t={t}
         />
       </Stack>
-    </Stack>
-  );
-}
-
-function PasskeySectionHeader({
-  isPasskeyLoading,
-  onAddPasskey,
-  t,
-}: {
-  isPasskeyLoading: boolean;
-  onAddPasskey: () => void;
-  t: Translate;
-}) {
-  return (
-    <Stack
-      direction="row"
-      alignItems="center"
-      justifyContent="space-between"
-      spacing={2}
-    >
-      <Typography variant="subtitle1" fontWeight={700}>
-        {t("passkeys.title")}
-      </Typography>
-      <Button
-        type="button"
-        variant="outlined"
-        size="small"
-        startIcon={<KeyRoundedIcon />}
-        onClick={onAddPasskey}
-        disabled={isPasskeyLoading}
-      >
-        {t("passkeys.add")}
-      </Button>
+      {passkeys.length === 0 ? <Divider /> : null}
+      <SettingsRemoveAccountSection
+        isDisabled={isRemoveAccountDisabled}
+        onRequestRemoveAccount={onRequestRemoveAccount}
+        t={t}
+      />
     </Stack>
   );
 }
@@ -305,9 +284,11 @@ function SettingsSectionContent({
   passkeys,
   locale,
   isPasskeyLoading,
+  isRemoveAccountDisabled,
   onDraftChange,
   onAddPasskey,
   onRequestDelete,
+  onRequestRemoveAccount,
   t,
 }: {
   activeSection: SettingsSection;
@@ -315,12 +296,14 @@ function SettingsSectionContent({
   passkeys: PasskeyMetadata[];
   locale: string;
   isPasskeyLoading: boolean;
+  isRemoveAccountDisabled: boolean;
   onDraftChange: <Key extends keyof SettingsDraft>(
     key: Key,
     value: SettingsDraft[Key],
   ) => void;
   onAddPasskey: () => void;
   onRequestDelete: (passkey: PasskeyMetadata) => void;
+  onRequestRemoveAccount: () => void;
   t: Translate;
 }) {
   if (activeSection === "general") {
@@ -343,9 +326,11 @@ function SettingsSectionContent({
       passkeys={passkeys}
       locale={locale}
       isPasskeyLoading={isPasskeyLoading}
+      isRemoveAccountDisabled={isRemoveAccountDisabled}
       onDraftChange={onDraftChange}
       onAddPasskey={onAddPasskey}
       onRequestDelete={onRequestDelete}
+      onRequestRemoveAccount={onRequestRemoveAccount}
       t={t}
     />
   );

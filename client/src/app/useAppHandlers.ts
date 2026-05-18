@@ -184,7 +184,8 @@ function buildAppHandlers({
     handleDeleteOutfitSetImage: async (
       setIndex: number | string | null | undefined,
     ) => deleteGeneratedOutfitSetImage(getAppActionContext(), setIndex),
-    handleDeleteProfile: async () => deleteUserProfile(getAppActionContext()),
+    handleDeleteProfile: async () =>
+      deleteUserProfile(getAppActionContext(), sessionActionContext),
     handleDownloadWardrobePdf: async (capsuleId = activeCapsuleId) =>
       downloadWardrobePdf(getAppActionContext(), capsuleId),
     handleDuplicateCapsule,

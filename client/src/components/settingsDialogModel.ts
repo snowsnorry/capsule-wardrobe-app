@@ -57,6 +57,7 @@ export type SettingsDialogProps = {
   open: boolean;
   settings: SettingsProfile;
   onClose: () => void;
+  onRemoveAccount: () => Promise<void> | void;
   onSave: (settings: SettingsSavePayload) => Promise<void> | void;
 };
 

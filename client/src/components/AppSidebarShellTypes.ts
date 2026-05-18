@@ -41,6 +41,7 @@ type AppSidebarShellProps = {
   userEmail?: string;
   userName?: string;
   settingsProfile?: SettingsProfile | null;
+  onRemoveAccount?: () => Promise<void> | void;
   onSaveSettings?: (settings: SettingsSavePayload) => Promise<void> | void;
   onSignOut?: () => void;
   headerContent?: AppSidebarShellSlot;

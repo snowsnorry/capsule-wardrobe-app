@@ -1,4 +1,4 @@
-import { test, expect } from "vitest";
+import { test, expect, vi } from "vitest";
 import {
   AUTH_COOKIE,
   CSRF_TOKEN,
@@ -6,6 +6,29 @@ import {
   requestJson,
   startTestServer,
 } from "../test/serverRouteTestUtils.js";
+import { buildAccountWardrobeImageKeys } from "./profileMutationHandlers.js";
+
+test("account wardrobe image cleanup keys cover uploaded originals and derivatives only", () => {
+  expect(
+    buildAccountWardrobeImageKeys([
+      {
+        source: "uploaded",
+        image_url: "https://images.example.com/wardrobe/profile/item_clean.png",
+        raw_image_url: "https://images.example.com/wardrobe/profile/item.webp",
+      },
+      {
+        source: "from_catalog",
+        image_url: "https://images.example.com/catalog/item.jpg",
+      },
+    ]),
+  ).toEqual([
+    "wardrobe/profile/item.webp",
+    "wardrobe/profile/item_clean.png",
+    "wardrobe/profile/item_clean_320.webp",
+    "wardrobe/profile/item_clean_480.webp",
+    "wardrobe/profile/item_clean_640.webp",
+  ]);
+});
 
 test("profile initialize route maps validation, conflict, and success branches", async (t) => {
   const invalidServer = await startTestServer(t);
@@ -209,4 +232,78 @@ test("profile mutation routes cover update, locale update, and delete branches",
   );
   expect(deleteSuccess.response.status).toBe(200);
   expect(deleteSuccess.json).toEqual({ ok: true });
+});
+
+test("profile delete clears auth cookies and cleans uploaded wardrobe images best-effort", async (t) => {
+  const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+  const calls: Array<{ type: string; payload?: unknown }> = [];
+  const { baseUrl } = await startTestServer(t, {
+    overrides: {
+      clearAccountTransientStateImpl: (email) => {
+        calls.push({ type: "clearTransient", payload: email });
+      },
+      deleteProfileImpl: async (email) => {
+        calls.push({ type: "deleteProfile", payload: email });
+        return true;
+      },
+      deleteR2ObjectsImpl: async (payload) => {
+        calls.push({ type: "deleteR2", payload });
+        throw new Error("r2_failed");
+      },
+      listWardrobeItemsImpl: async (payload) => {
+        calls.push({ type: "listWardrobe", payload });
+        return [
+          {
+            id: "uploaded-1",
+            source: "uploaded",
+            image_url:
+              "https://images.example.com/wardrobe/profile/image_clean.png",
+            raw_image_url:
+              "https://images.example.com/wardrobe/profile/image.webp",
+          },
+          {
+            id: "catalog-1",
+            source: "from_catalog",
+            image_url: "https://catalog.example.com/item.jpg",
+          },
+        ];
+      },
+    },
+  });
+
+  const deleted = await requestJson(baseUrl, "/profile/me", {
+    method: "DELETE",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN,
+  });
+
+  expect(deleted.response.status).toBe(200);
+  expect(deleted.json).toEqual({ ok: true });
+  expect(consoleError).toHaveBeenCalled();
+  expect(deleted.response.headers.get("set-cookie")).toContain("session=");
+  expect(deleted.response.headers.get("set-cookie")).toContain("csrf=");
+  expect(deleted.response.headers.get("set-cookie")).toContain(
+    "passkey_challenge=",
+  );
+  expect(calls).toEqual([
+    {
+      type: "listWardrobe",
+      payload: { email: "person@example.com", source: "uploaded" },
+    },
+    { type: "deleteProfile", payload: "person@example.com" },
+    { type: "clearTransient", payload: "person@example.com" },
+    {
+      type: "deleteR2",
+      payload: {
+        keys: [
+          "wardrobe/profile/image.webp",
+          "wardrobe/profile/image_clean.png",
+          "wardrobe/profile/image_clean_320.webp",
+          "wardrobe/profile/image_clean_480.webp",
+          "wardrobe/profile/image_clean_640.webp",
+        ],
+      },
+    },
+  ]);
 });

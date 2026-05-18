@@ -189,6 +189,10 @@ describe("useAppHandlers", () => {
       actionContext,
       "share-meta",
     );
+    expect(profileActions.deleteUserProfile).toHaveBeenCalledWith(
+      actionContext,
+      sessionActionContext,
+    );
     expect(wardrobeActions.downloadWardrobePdf).toHaveBeenCalledWith(
       actionContext,
       "capsule-1",

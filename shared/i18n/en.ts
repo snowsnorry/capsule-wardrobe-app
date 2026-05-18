@@ -108,6 +108,7 @@ const en = {
   settings: {
     title: "Settings",
     saved: "Settings saved.",
+    accountRemoved: "Account removed.",
     sections: {
       general: "General",
       ai: "AI",
@@ -142,6 +143,21 @@ const en = {
     imageLlmOptions: {
       "openai:gpt-image-2": "OpenAI GPT Image 2",
       "gemini:gemini-3-pro-image-preview": "Gemini 3 Pro Image Preview",
+    },
+    removeAccount: {
+      title: "Remove account",
+      description:
+        "Permanently delete this account and its saved personal data.",
+      button: "Remove account",
+      dialogTitle: "Remove account",
+      warning:
+        "All data connected to this account will be deleted without the possibility of recovery.",
+      instructionPrefix: "To continue, type this word:",
+      instructionSuffix: "Then confirm the account removal below.",
+      confirmationWord: "delete",
+      copyWord: "Copy word",
+      inputLabel: "Confirmation word",
+      remove: "Remove",
     },
   },
   actions: {

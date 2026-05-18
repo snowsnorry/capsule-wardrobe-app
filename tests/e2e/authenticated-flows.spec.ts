@@ -119,6 +119,41 @@ test("sign out clears session and cached authenticated UI", async ({
   ).toBeHidden();
 });
 
+test("settings account removal requires confirmation and signs the user out", async ({
+  page,
+  resetAndLogin,
+}) => {
+  await resetAndLoginFresh(page, resetAndLogin);
+  await expectSignedInCapsule(page);
+
+  await page.getByRole("button", { name: "Open user menu" }).click();
+  await page.getByRole("menuitem", { name: "Settings" }).click();
+  const settingsDialog = page.getByRole("dialog", { name: "Settings" });
+  await settingsDialog.getByRole("button", { name: "Account" }).click();
+  await settingsDialog.getByRole("button", { name: "Remove account" }).click();
+
+  const removeDialog = page.getByRole("dialog", { name: "Remove account" });
+  await expect(removeDialog).toBeVisible();
+  const removeButton = removeDialog.getByRole("button", { name: "Remove" });
+  await expect(removeButton).toBeDisabled();
+  await removeDialog
+    .getByRole("textbox", { name: "Confirmation word" })
+    .fill("wrong");
+  await expect(removeButton).toBeDisabled();
+  await removeDialog.getByRole("button", { name: "Copy word" }).click();
+  await removeDialog
+    .getByRole("textbox", { name: "Confirmation word" })
+    .fill("delete");
+  await expect(removeButton).toBeEnabled();
+  await removeButton.click();
+
+  await expectSignInScreen(page);
+  await page.reload();
+  await expectSignInScreen(page);
+  await page.goto("/explore");
+  await expectSignInScreen(page);
+});
+
 test("settings save persists profile and locale across reload", async ({
   page,
   resetAndLogin,

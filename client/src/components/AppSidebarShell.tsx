@@ -119,6 +119,40 @@ function useAppSidebarShellContext(currentApp: string): AppSidebarShellContext {
   };
 }
 
+function AppSidebarSettingsDialog({
+  isOpen,
+  settingsProfile,
+  userEmail,
+  onClose,
+  onRemoveAccount,
+  onSaveSettings,
+}: Pick<
+  AppSidebarShellProps,
+  "settingsProfile" | "userEmail" | "onRemoveAccount" | "onSaveSettings"
+> & {
+  isOpen: boolean;
+  onClose: () => void;
+}): ReactElement | null {
+  if (!isOpen) {
+    return null;
+  }
+
+  return (
+    <Suspense fallback={null}>
+      <SettingsDialog
+        open={isOpen}
+        settings={{
+          ...(settingsProfile ?? {}),
+          email: userEmail,
+        }}
+        onClose={onClose}
+        onRemoveAccount={onRemoveAccount}
+        onSave={onSaveSettings}
+      />
+    </Suspense>
+  );
+}
+
 function AppSidebarShell({
   shellTestId,
   currentApp = "",
@@ -131,6 +165,7 @@ function AppSidebarShell({
   userEmail = "",
   userName = "",
   settingsProfile = null,
+  onRemoveAccount = async () => {},
   onSaveSettings = async () => {},
   onSignOut = () => {},
   headerContent,
@@ -194,20 +229,14 @@ function AppSidebarShell({
         onSignOut={onSignOut}
         t={t}
       />
-
-      {isSettingsOpen ? (
-        <Suspense fallback={null}>
-          <SettingsDialog
-            open={isSettingsOpen}
-            settings={{
-              ...(settingsProfile ?? {}),
-              email: userEmail,
-            }}
-            onClose={() => setIsSettingsOpen(false)}
-            onSave={onSaveSettings}
-          />
-        </Suspense>
-      ) : null}
+      <AppSidebarSettingsDialog
+        isOpen={isSettingsOpen}
+        settingsProfile={settingsProfile}
+        userEmail={userEmail}
+        onClose={() => setIsSettingsOpen(false)}
+        onRemoveAccount={onRemoveAccount}
+        onSaveSettings={onSaveSettings}
+      />
     </>
   );
 }

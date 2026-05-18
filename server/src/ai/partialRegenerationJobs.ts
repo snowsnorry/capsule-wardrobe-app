@@ -44,7 +44,23 @@ function getPartialRegenerationJob(email: string, capsuleId: string) {
   return getPartialRegenerationJobFromStore({ email, capsuleId });
 }
 
+function clearPartialRegenerationJobsForEmail(email: string) {
+  const normalizedEmail = String(email || "")
+    .trim()
+    .toLowerCase();
+  if (!normalizedEmail) {
+    return;
+  }
+  const keyPrefix = `${normalizedEmail}::`;
+  for (const key of partialRegenerationJobs.keys()) {
+    if (key === normalizedEmail || key.startsWith(keyPrefix)) {
+      partialRegenerationJobs.delete(key);
+    }
+  }
+}
+
 export {
+  clearPartialRegenerationJobsForEmail,
   createPartialRegenerationJobKey,
   getPartialRegenerationJob,
   getPartialRegenerationJobFromStore,

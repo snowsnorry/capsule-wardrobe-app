@@ -22,7 +22,9 @@ function useSettingsDraftState({
   onClose,
   onSave,
   t,
-}: SettingsDialogProps & { t: Translate }) {
+}: Pick<SettingsDialogProps, "onClose" | "onSave" | "open" | "settings"> & {
+  t: Translate;
+}) {
   const initialDraft = useMemo(
     () => normalizeSettingsDraft(settings, settings?.email),
     [settings],
@@ -184,6 +186,64 @@ function useSettingsPasskeys({
   };
 }
 
+function useRemoveAccount({
+  onClose,
+  onRemoveAccount,
+  setError,
+  t,
+}: Pick<SettingsDialogProps, "onClose" | "onRemoveAccount"> & {
+  setError: (error: string) => void;
+  t: Translate;
+}) {
+  const [isRemoveAccountOpen, setIsRemoveAccountOpen] = useState(false);
+  const [isRemovingAccount, setIsRemovingAccount] = useState(false);
+  const [removeAccountConfirmation, setRemoveAccountConfirmation] =
+    useState("");
+
+  const openRemoveAccount = () => {
+    setError("");
+    setRemoveAccountConfirmation("");
+    setIsRemoveAccountOpen(true);
+  };
+
+  const closeRemoveAccount = () => {
+    if (isRemovingAccount) {
+      return;
+    }
+    setRemoveAccountConfirmation("");
+    setIsRemoveAccountOpen(false);
+  };
+
+  const handleRemoveAccount = async () => {
+    setIsRemovingAccount(true);
+    setError("");
+    try {
+      await onRemoveAccount();
+      setIsRemoveAccountOpen(false);
+      setRemoveAccountConfirmation("");
+      onClose();
+    } catch (removeError) {
+      setError(
+        removeError instanceof Error
+          ? removeError.message
+          : t("errors.generic"),
+      );
+    } finally {
+      setIsRemovingAccount(false);
+    }
+  };
+
+  return {
+    isRemoveAccountOpen,
+    isRemovingAccount,
+    removeAccountConfirmation,
+    setRemoveAccountConfirmation,
+    openRemoveAccount,
+    closeRemoveAccount,
+    handleRemoveAccount,
+  };
+}
+
 function normalizePasskeys(response: { passkeys?: unknown }) {
   return Array.isArray(response.passkeys)
     ? (response.passkeys as PasskeyMetadata[])
@@ -227,6 +287,7 @@ function SettingsDialog({
   open,
   settings,
   onClose,
+  onRemoveAccount,
   onSave,
 }: SettingsDialogProps): ReactElement {
   const { locale, t } = useI18n();
@@ -242,6 +303,12 @@ function SettingsDialog({
     setError: draftState.setError,
     t,
   });
+  const removeAccountState = useRemoveAccount({
+    onClose,
+    onRemoveAccount,
+    setError: draftState.setError,
+    t,
+  });
 
   return (
     <SettingsDialogFrame
@@ -252,10 +319,15 @@ function SettingsDialog({
       locale={locale}
       isSaving={draftState.isSaving}
       isPasskeyLoading={passkeyState.isPasskeyLoading}
+      isRemoveAccountOpen={removeAccountState.isRemoveAccountOpen}
+      isRemovingAccount={removeAccountState.isRemovingAccount}
       hasChanges={draftState.hasChanges}
       error={draftState.error}
       passkeyToDelete={passkeyState.passkeyToDelete}
-      onClose={draftState.handleClose}
+      removeAccountConfirmation={removeAccountState.removeAccountConfirmation}
+      onClose={
+        removeAccountState.isRemovingAccount ? () => {} : draftState.handleClose
+      }
       onSave={() => {
         void draftState.handleSave();
       }}
@@ -265,10 +337,18 @@ function SettingsDialog({
         void passkeyState.handleAddPasskey();
       }}
       onRequestDelete={passkeyState.setPasskeyToDelete}
+      onRequestRemoveAccount={removeAccountState.openRemoveAccount}
       onClosePasskeyDelete={passkeyState.closePasskeyDelete}
       onConfirmPasskeyDelete={() => {
         void passkeyState.handleDeletePasskey();
       }}
+      onCloseRemoveAccount={removeAccountState.closeRemoveAccount}
+      onConfirmRemoveAccount={() => {
+        void removeAccountState.handleRemoveAccount();
+      }}
+      onRemoveAccountConfirmationChange={
+        removeAccountState.setRemoveAccountConfirmation
+      }
       t={t}
     />
   );

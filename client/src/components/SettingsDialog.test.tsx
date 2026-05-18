@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import type { ComponentProps } from "react";
@@ -54,6 +54,7 @@ function renderDialog(
         "settings.sectionHints.ai":
           "Pick which stylist model to save on your profile.",
         "settings.sectionHints.account": "Review your account details.",
+        "settings.accountRemoved": "Account removed.",
         "settings.fields.theme": "Theme",
         "settings.fields.language": "Language",
         "settings.fields.stylistModel": "Stylist Model",
@@ -75,6 +76,21 @@ function renderDialog(
         "settings.imageLlmOptions.openai:gpt-image-2": "OpenAI GPT Image 2",
         "settings.imageLlmOptions.gemini:gemini-3-pro-image-preview":
           "Gemini 3 Pro Image Preview",
+        "settings.removeAccount.title": "Remove account",
+        "settings.removeAccount.description":
+          "Permanently delete this account and its saved personal data.",
+        "settings.removeAccount.button": "Remove account",
+        "settings.removeAccount.dialogTitle": "Remove account",
+        "settings.removeAccount.warning":
+          "All data connected to this account will be deleted without the possibility of recovery.",
+        "settings.removeAccount.instructionPrefix":
+          "To continue, type this word:",
+        "settings.removeAccount.instructionSuffix":
+          "Then confirm the account removal below.",
+        "settings.removeAccount.confirmationWord": "delete",
+        "settings.removeAccount.copyWord": "Copy word",
+        "settings.removeAccount.inputLabel": "Confirmation word",
+        "settings.removeAccount.remove": "Remove",
         "passkeys.title": "Passkeys",
         "passkeys.add": "Add passkey",
         "passkeys.remove": "Remove passkey",
@@ -112,6 +128,7 @@ function renderDialog(
       imageLlm: "openai:gpt-image-2",
     },
     onClose: vi.fn(),
+    onRemoveAccount: vi.fn(() => Promise.resolve()),
     onSave: vi.fn(() => Promise.resolve()),
   };
 
@@ -132,6 +149,12 @@ describe("SettingsDialog", () => {
     passkeysApiMock.deletePasskey.mockReset();
     passkeysApiMock.listPasskeys.mockReset();
     passkeysAuthMock.registerPasskey.mockReset();
+  });
+
+  test("does not load passkeys while closed", () => {
+    renderDialog({ open: false });
+
+    expect(passkeysApiMock.listPasskeys).not.toHaveBeenCalled();
   });
 
   test("shows a header divider and turns it into a progress indicator while saving", async () => {
@@ -301,6 +324,76 @@ describe("SettingsDialog", () => {
     await user.click(screen.getByRole("button", { name: "Remove passkey" }));
     await user.click(screen.getByRole("button", { name: "Remove passkey" }));
     expect(passkeysApiMock.deletePasskey).toHaveBeenLastCalledWith("passkey-1");
+  });
+
+  test("confirms account removal with the localized confirmation word", async () => {
+    const user = userEvent.setup();
+    const writeText = vi.fn(() => Promise.resolve());
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    });
+    const onRemoveAccount = vi.fn(() => Promise.resolve());
+
+    renderDialog({ onRemoveAccount });
+    await user.click(screen.getByRole("button", { name: "Account" }));
+    await user.click(screen.getByRole("button", { name: "Remove account" }));
+
+    const dialog = screen.getByRole("dialog", { name: "Remove account" });
+    const removeButton = within(dialog).getByRole("button", {
+      name: "Remove",
+    });
+    expect(removeButton).toBeDisabled();
+
+    await user.click(
+      within(dialog).getByRole("button", {
+        name: "Copy word",
+      }),
+    );
+    expect(writeText).toHaveBeenCalledWith("delete");
+
+    await user.type(
+      within(dialog).getByLabelText("Confirmation word"),
+      "wrong",
+    );
+    expect(removeButton).toBeDisabled();
+    await user.clear(within(dialog).getByLabelText("Confirmation word"));
+    await user.type(
+      within(dialog).getByLabelText("Confirmation word"),
+      "delete",
+    );
+    expect(removeButton).toBeEnabled();
+
+    await user.click(removeButton);
+    expect(onRemoveAccount).toHaveBeenCalledTimes(1);
+  });
+
+  test("cancels account removal and reports remove failures", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    const onRemoveAccount = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("remove failed"));
+
+    renderDialog({ onClose, onRemoveAccount });
+    await user.click(screen.getByRole("button", { name: "Account" }));
+    await user.click(screen.getByRole("button", { name: "Remove account" }));
+    let dialog = screen.getByRole("dialog", { name: "Remove account" });
+    await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    expect(
+      screen.queryByRole("dialog", { name: "Remove account" }),
+    ).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Remove account" }));
+    dialog = screen.getByRole("dialog", { name: "Remove account" });
+    await user.type(
+      within(dialog).getByLabelText("Confirmation word"),
+      "delete",
+    );
+    await user.click(within(dialog).getByRole("button", { name: "Remove" }));
+
+    expect(await screen.findByText("remove failed")).toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
   });
 
   test("closes and shows save errors without closing the dialog", async () => {

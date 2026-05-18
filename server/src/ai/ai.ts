@@ -2,6 +2,7 @@ import { createWardrobeService } from "./aiService.js";
 
 const wardrobeService = createWardrobeService();
 const {
+  clearWardrobeJobsForEmail,
   getCapsuleItems,
   getWardrobeJob,
   regenerateCapsuleWardrobe,
@@ -21,6 +22,7 @@ export {
 } from "./aiSelectionPrompt.js";
 export { createWardrobeService };
 export {
+  clearWardrobeJobsForEmail,
   getCapsuleItems,
   getWardrobeJob,
   regenerateCapsuleWardrobe,
