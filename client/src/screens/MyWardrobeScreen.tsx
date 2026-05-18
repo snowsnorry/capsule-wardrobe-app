@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { MouseEvent, ReactElement } from "react";
 import { Alert, Box, Stack } from "@mui/material";
 import useMediaQuery from "@mui/material/useMediaQuery";
+import { sortWardrobeItems } from "../../../shared/wardrobeOrder.js";
 import {
   deleteUploadedWardrobeItem,
   downloadMyWardrobePdf,
@@ -284,10 +285,12 @@ function useMyWardrobeItems(
       };
       setError("");
       setItems((current) =>
-        current.map((currentItem) =>
-          String(currentItem?.id || "") === String(id)
-            ? updatedItem
-            : currentItem,
+        sortWardrobeItems(
+          current.map((currentItem) =>
+            String(currentItem?.id || "") === String(id)
+              ? updatedItem
+              : currentItem,
+          ),
         ),
       );
       return updatedItem;
@@ -336,7 +339,7 @@ function useMyWardrobeItemsQuery(
     fetchMyWardrobeItems({ source, force: refreshKey > 0 })
       .then((response) => {
         if (isActive) {
-          setItems(getItemsFromResponse(response));
+          setItems(sortWardrobeItems(getItemsFromResponse(response)));
         }
       })
       .catch(() => {

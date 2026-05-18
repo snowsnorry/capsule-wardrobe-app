@@ -353,6 +353,42 @@ describe("MyWardrobeScreen", () => {
     });
   });
 
+  test("sorts wardrobe cards with the same order as capsule items", async () => {
+    api.fetchMyWardrobeItems.mockResolvedValueOnce({
+      items: [
+        {
+          id: "wardrobe-bag",
+          name: "Canvas Bag",
+          category: "bag",
+        },
+        {
+          id: "wardrobe-bottom",
+          name: "Trousers",
+          category: "bottom",
+        },
+        {
+          id: "wardrobe-top-z",
+          name: "Zulu Shirt",
+          category: "top",
+        },
+        {
+          id: "wardrobe-top-a",
+          name: "Alpha Shirt",
+          category: "top",
+        },
+      ],
+    });
+    const { container } = renderScreen();
+
+    await screen.findByTestId("wardrobe-card-wardrobe-top-a");
+
+    expect(
+      Array.from(container.querySelectorAll("[data-testid^='wardrobe-card-']"))
+        .map((card) => card.textContent)
+        .map((text) => text?.replace("open product menu", "")),
+    ).toEqual(["Alpha Shirt", "Zulu Shirt", "Trousers", "Canvas Bag"]);
+  });
+
   test("uploads selected wardrobe photos and refreshes uploaded items", async () => {
     const user = userEvent.setup();
     let resolveUpload: (value: unknown) => void = () => {};
