@@ -1,19 +1,17 @@
+import { useEffect, useState } from "react";
 import {
   Box,
-  Button,
   Dialog,
-  DialogActions,
   DialogContent,
-  DialogContentText,
   DialogTitle,
-  Divider,
-  LinearProgress,
   List,
   ListItemButton,
   ListItemText,
   Stack,
   Typography,
 } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
+import useMediaQuery from "@mui/material/useMediaQuery";
 import {
   SETTINGS_SECTIONS,
   type PasskeyMetadata,
@@ -24,8 +22,20 @@ import {
   settingsDialogBodySx,
   settingsDialogContentSx,
   settingsDialogMainPanelSx,
+  settingsDialogMobileContentSx,
+  settingsDialogMobilePaperSx,
   settingsDialogPaperSx,
 } from "./SettingsDialogLayoutStyles";
+import {
+  SettingsMobileDialogBody,
+  SettingsMobileDialogTitle,
+  type SettingsMobileView,
+} from "./SettingsDialogMobile";
+import {
+  PasskeyDeleteDialog,
+  SettingsDialogActions,
+  SettingsDialogProgress,
+} from "./SettingsDialogShellParts";
 import { SettingsSectionContent } from "./SettingsDialogSectionContent";
 import { SettingsRemoveAccountDialog } from "./SettingsRemoveAccountDialog";
 
@@ -63,145 +73,131 @@ type SettingsDialogFrameProps = {
   t: Translate;
 };
 
-function PasskeyDeleteDialog({
-  passkeyToDelete,
-  isPasskeyLoading,
-  onClose,
-  onConfirm,
-  t,
-}: {
-  passkeyToDelete: PasskeyMetadata | null;
-  isPasskeyLoading: boolean;
-  onClose: () => void;
-  onConfirm: () => void;
-  t: Translate;
-}) {
-  return (
-    <Dialog open={Boolean(passkeyToDelete)} onClose={onClose}>
-      <DialogTitle>{t("passkeys.remove")}</DialogTitle>
-      <DialogContent>
-        <DialogContentText>{t("passkeys.removeConfirm")}</DialogContentText>
-      </DialogContent>
-      <DialogActions>
-        <Button disabled={isPasskeyLoading} onClick={onClose}>
-          {t("actions.cancel")}
-        </Button>
-        <Button
-          color="error"
-          variant="contained"
-          disabled={isPasskeyLoading}
-          onClick={onConfirm}
-        >
-          {t("passkeys.remove")}
-        </Button>
-      </DialogActions>
-    </Dialog>
-  );
-}
+type SettingsDialogContentPaneProps = SettingsDialogFrameProps & {
+  isBusy: boolean;
+  isMobile: boolean;
+  mobileView: SettingsMobileView;
+  onMobileSectionSelect: (section: SettingsSection) => void;
+};
 
-function SettingsDialogFrame({
-  open,
-  activeSection,
-  draft,
-  passkeys,
-  locale,
-  isSaving,
-  isPasskeyLoading,
-  isRemoveAccountOpen,
-  isRemovingAccount,
-  hasChanges,
-  error,
-  passkeyToDelete,
-  removeAccountConfirmation,
-  onClose,
-  onSave,
-  onSelectSection,
-  onDraftChange,
-  onAddPasskey,
-  onRequestDelete,
-  onRequestRemoveAccount,
-  onClosePasskeyDelete,
-  onConfirmPasskeyDelete,
-  onCloseRemoveAccount,
-  onConfirmRemoveAccount,
-  onRemoveAccountConfirmationChange,
-  t,
-}: SettingsDialogFrameProps) {
-  const isBusy = isSaving || isRemovingAccount;
+function SettingsDialogFrame(props: SettingsDialogFrameProps) {
+  const isBusy = props.isSaving || props.isRemovingAccount;
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const [mobileView, setMobileView] = useState<SettingsMobileView>("index");
+
+  useEffect(() => {
+    if (props.open) {
+      setMobileView("index");
+    }
+  }, [props.open]);
+
+  const handleMobileSectionSelect = (section: SettingsSection) => {
+    props.onSelectSection(section);
+    setMobileView("section");
+  };
 
   return (
     <Dialog
-      open={open}
-      onClose={onClose}
+      open={props.open}
+      onClose={props.onClose}
+      fullScreen={isMobile}
       fullWidth
-      maxWidth="md"
-      PaperProps={{ sx: settingsDialogPaperSx }}
+      maxWidth={isMobile ? false : "md"}
+      PaperProps={{
+        sx: isMobile ? settingsDialogMobilePaperSx : settingsDialogPaperSx,
+      }}
     >
-      <DialogTitle>{t("settings.title")}</DialogTitle>
-      <SettingsDialogProgress isSaving={isBusy} />
-      <DialogContent sx={settingsDialogContentSx}>
-        <SettingsDialogBody
-          activeSection={activeSection}
-          draft={draft}
-          error={error}
-          isPasskeyLoading={isPasskeyLoading}
-          isRemoveAccountDisabled={isBusy}
-          locale={locale}
-          onAddPasskey={onAddPasskey}
-          onDraftChange={onDraftChange}
-          onRequestDelete={onRequestDelete}
-          onRequestRemoveAccount={onRequestRemoveAccount}
-          onSelectSection={onSelectSection}
-          passkeys={passkeys}
-          t={t}
+      {isMobile ? (
+        <SettingsMobileDialogTitle
+          activeSection={props.activeSection}
+          mobileView={mobileView}
+          onBack={() => setMobileView("index")}
+          t={props.t}
         />
-      </DialogContent>
+      ) : (
+        <DialogTitle>{props.t("settings.title")}</DialogTitle>
+      )}
+      <SettingsDialogProgress isSaving={isBusy} />
+      <SettingsDialogContentPane
+        {...props}
+        isBusy={isBusy}
+        isMobile={isMobile}
+        mobileView={mobileView}
+        onMobileSectionSelect={handleMobileSectionSelect}
+      />
       <SettingsDialogActions
-        hasChanges={hasChanges}
+        hasChanges={props.hasChanges}
         isSaving={isBusy}
-        onClose={onClose}
-        onSave={onSave}
-        t={t}
+        isMobile={isMobile}
+        onClose={props.onClose}
+        onSave={props.onSave}
+        t={props.t}
       />
       <PasskeyDeleteDialog
-        passkeyToDelete={passkeyToDelete}
-        isPasskeyLoading={isPasskeyLoading}
-        onClose={onClosePasskeyDelete}
-        onConfirm={onConfirmPasskeyDelete}
-        t={t}
+        passkeyToDelete={props.passkeyToDelete}
+        isPasskeyLoading={props.isPasskeyLoading}
+        onClose={props.onClosePasskeyDelete}
+        onConfirm={props.onConfirmPasskeyDelete}
+        t={props.t}
       />
-      {isRemoveAccountOpen ? (
+      {props.isRemoveAccountOpen ? (
         <SettingsRemoveAccountDialog
-          confirmation={removeAccountConfirmation}
-          confirmationWord={t("settings.removeAccount.confirmationWord")}
-          isRemoving={isRemovingAccount}
-          onClose={onCloseRemoveAccount}
-          onConfirm={onConfirmRemoveAccount}
-          onConfirmationChange={onRemoveAccountConfirmationChange}
-          t={t}
+          confirmation={props.removeAccountConfirmation}
+          confirmationWord={props.t("settings.removeAccount.confirmationWord")}
+          isRemoving={props.isRemovingAccount}
+          onClose={props.onCloseRemoveAccount}
+          onConfirm={props.onConfirmRemoveAccount}
+          onConfirmationChange={props.onRemoveAccountConfirmationChange}
+          t={props.t}
         />
       ) : null}
     </Dialog>
   );
 }
 
-function SettingsDialogProgress({ isSaving }: { isSaving: boolean }) {
+function SettingsDialogContentPane(props: SettingsDialogContentPaneProps) {
   return (
-    <Box sx={{ px: 3, pb: 0.5 }}>
-      <Divider sx={{ borderColor: "divider" }} />
-      {isSaving ? (
-        <LinearProgress
-          color="success"
-          sx={{
-            mt: "-2px",
-            height: 3,
-            borderRadius: 999,
-            backgroundColor: "action.hover",
-            "& .MuiLinearProgress-bar": { borderRadius: 999 },
-          }}
+    <DialogContent
+      sx={
+        props.isMobile ? settingsDialogMobileContentSx : settingsDialogContentSx
+      }
+    >
+      {props.isMobile ? (
+        <SettingsMobileDialogBody
+          activeSection={props.activeSection}
+          draft={props.draft}
+          error={props.error}
+          isPasskeyLoading={props.isPasskeyLoading}
+          isRemoveAccountDisabled={props.isBusy}
+          locale={props.locale}
+          mobileView={props.mobileView}
+          onAddPasskey={props.onAddPasskey}
+          onDraftChange={props.onDraftChange}
+          onRequestDelete={props.onRequestDelete}
+          onRequestRemoveAccount={props.onRequestRemoveAccount}
+          onSelectSection={props.onMobileSectionSelect}
+          passkeys={props.passkeys}
+          t={props.t}
         />
-      ) : null}
-    </Box>
+      ) : (
+        <SettingsDialogBody
+          activeSection={props.activeSection}
+          draft={props.draft}
+          error={props.error}
+          isPasskeyLoading={props.isPasskeyLoading}
+          isRemoveAccountDisabled={props.isBusy}
+          locale={props.locale}
+          onAddPasskey={props.onAddPasskey}
+          onDraftChange={props.onDraftChange}
+          onRequestDelete={props.onRequestDelete}
+          onRequestRemoveAccount={props.onRequestRemoveAccount}
+          onSelectSection={props.onSelectSection}
+          passkeys={props.passkeys}
+          t={props.t}
+        />
+      )}
+    </DialogContent>
   );
 }
 
@@ -317,34 +313,5 @@ const settingsSectionsListSx = {
   borderColor: { sm: "divider" },
   pr: { sm: 2 },
 } as const;
-
-function SettingsDialogActions({
-  hasChanges,
-  isSaving,
-  onClose,
-  onSave,
-  t,
-}: {
-  hasChanges: boolean;
-  isSaving: boolean;
-  onClose: () => void;
-  onSave: () => void;
-  t: Translate;
-}) {
-  return (
-    <DialogActions sx={{ justifyContent: "flex-end", px: 3, pb: 2.5, pt: 2 }}>
-      <Button onClick={onClose} disabled={isSaving}>
-        {t("actions.cancel")}
-      </Button>
-      <Button
-        variant="contained"
-        onClick={onSave}
-        disabled={isSaving || !hasChanges}
-      >
-        {t("actions.save")}
-      </Button>
-    </DialogActions>
-  );
-}
 
 export { SettingsDialogFrame };

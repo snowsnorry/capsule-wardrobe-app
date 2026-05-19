@@ -13,12 +13,16 @@ const passkeysApiMock = vi.hoisted(() => ({
 const passkeysAuthMock = vi.hoisted(() => ({
   registerPasskey: vi.fn(),
 }));
+const useMediaQueryMock = vi.hoisted(() => vi.fn(() => false));
 
 vi.mock("../i18n/useI18n", () => ({
   useI18n: useI18nMock,
 }));
 vi.mock("../api/passkeys", () => passkeysApiMock);
 vi.mock("../auth/passkeys", () => passkeysAuthMock);
+vi.mock("@mui/material/useMediaQuery", () => ({
+  default: useMediaQueryMock,
+}));
 
 const theme = createTheme();
 
@@ -103,6 +107,7 @@ function renderDialog(
         "passkeys.loading": "Loading passkeys",
         "errors.passkeySetupFailed": "Passkey setup failed.",
         "errors.passkeyNotSupported": "Passkeys are not supported.",
+        "profile.back": "Back",
         "actions.cancel": "Cancel",
         "actions.save": "Save",
         "errors.generic": "Something went wrong",
@@ -149,6 +154,8 @@ describe("SettingsDialog", () => {
     passkeysApiMock.deletePasskey.mockReset();
     passkeysApiMock.listPasskeys.mockReset();
     passkeysAuthMock.registerPasskey.mockReset();
+    useMediaQueryMock.mockReset();
+    useMediaQueryMock.mockReturnValue(false);
   });
 
   test("does not load passkeys while closed", () => {
@@ -232,6 +239,63 @@ describe("SettingsDialog", () => {
       "settings-email",
     );
     expectNoDanglingLabelTargets();
+  });
+
+  test("renders mobile settings as a fullscreen two-level flow", async () => {
+    const user = userEvent.setup();
+    useMediaQueryMock.mockReturnValue(true);
+
+    renderDialog();
+
+    const dialog = screen.getByRole("dialog", { name: "Settings" });
+    expect(dialog).toHaveClass("MuiDialog-paperFullScreen");
+    expect(
+      within(dialog).getByRole("button", { name: "General" }),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).queryByRole("combobox", { name: "Theme" }),
+    ).not.toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole("button", { name: "Account" }));
+
+    const accountDialog = screen.getByRole("dialog", { name: "Account" });
+    expect(
+      within(accountDialog).getByRole("button", { name: "Back" }),
+    ).toBeInTheDocument();
+    expect(within(accountDialog).getByLabelText("Name")).toHaveValue(
+      "Ada Lovelace",
+    );
+    expect(
+      await within(accountDialog).findByRole("button", {
+        name: "Remove account",
+      }),
+    ).toBeInTheDocument();
+  });
+
+  test("keeps mobile draft changes when navigating back to the section list", async () => {
+    const user = userEvent.setup();
+    useMediaQueryMock.mockReturnValue(true);
+
+    renderDialog();
+
+    await user.click(screen.getByRole("button", { name: "Account" }));
+    await user.clear(screen.getByLabelText("Name"));
+    await user.type(screen.getByLabelText("Name"), "Grace Hopper");
+    expect(screen.getByRole("button", { name: "Save" })).toBeEnabled();
+
+    await user.click(screen.getByRole("button", { name: "Back" }));
+
+    const settingsDialog = screen.getByRole("dialog", { name: "Settings" });
+    expect(
+      within(settingsDialog).getByRole("button", { name: "Account" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByLabelText("Name")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save" })).toBeEnabled();
+
+    await user.click(
+      within(settingsDialog).getByRole("button", { name: "Account" }),
+    );
+    expect(screen.getByLabelText("Name")).toHaveValue("Grace Hopper");
   });
 
   test("renders passkeys as plain rows with created timestamps", async () => {
