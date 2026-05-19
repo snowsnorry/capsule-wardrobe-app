@@ -123,9 +123,9 @@ describe("SearchScreenLayout", () => {
     expect(SEARCH_DESKTOP_HEADER_SX.gridColumn).toBe("1 / 3");
     expect(SEARCH_DESKTOP_HEADER_SX.backgroundColor).toBe("background.default");
     expect(SEARCH_DESKTOP_HEADER_SX.maxWidth).toEqual({ lg: "1240px" });
-    expect(SEARCH_DESKTOP_DETAIL_SX.gridRow).toBe("1 / 3");
+    expect(SEARCH_DESKTOP_DETAIL_SX.gridRow).toBe("2");
     expect(SEARCH_DESKTOP_DETAIL_SX.overflowY).toBe("auto");
-    expect(SEARCH_DESKTOP_DETAIL_SX.pt).toBe(9);
+    expect(SEARCH_DESKTOP_DETAIL_SX).not.toHaveProperty("pt");
     expect(SEARCH_DESKTOP_DETAIL_CONTENT_SX.maxWidth).toEqual({
       lg: "780px",
     });

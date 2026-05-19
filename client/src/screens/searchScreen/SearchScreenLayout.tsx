@@ -71,11 +71,10 @@ export const SEARCH_DESKTOP_FILTERS_SX = {
 
 export const SEARCH_DESKTOP_DETAIL_SX = {
   gridColumn: "2",
-  gridRow: "1 / 3",
+  gridRow: "2",
   minHeight: 0,
   height: "100%",
   overflowY: "auto",
-  pt: 9,
   boxSizing: "border-box",
 } as const;
 
