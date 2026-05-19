@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import type { ReactNode, RefObject } from "react";
 import {
   Box,
@@ -12,6 +13,8 @@ import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
 import type { AppSidebarShellContext } from "./AppSidebarShellTypes";
 
 type Translate = (key: string) => string;
+const USER_MENU_HORIZONTAL_INSET = 16;
+const USER_MENU_VERTICAL_OFFSET_PX = 6;
 
 function SidebarFrame({
   sidebarContent,
@@ -50,15 +53,39 @@ function UserMenu({
   onSignOut: () => void;
   t: Translate;
 }) {
+  const anchorWidth = anchorEl?.getBoundingClientRect().width ?? 0;
+  const measuredMenuWidth =
+    anchorWidth > USER_MENU_HORIZONTAL_INSET * 2
+      ? anchorWidth - USER_MENU_HORIZONTAL_INSET * 2
+      : undefined;
+  const [lastMenuWidth, setLastMenuWidth] = useState<number | undefined>(
+    undefined,
+  );
+  const menuWidth = measuredMenuWidth ?? lastMenuWidth;
+
+  useEffect(() => {
+    if (measuredMenuWidth !== undefined) {
+      setLastMenuWidth(measuredMenuWidth);
+    }
+  }, [measuredMenuWidth]);
+
   return (
     <Menu
       anchorEl={anchorEl}
       open={Boolean(anchorEl)}
       onClose={onClose}
       disableRestoreFocus
-      anchorOrigin={{ vertical: "center", horizontal: "right" }}
-      transformOrigin={{ vertical: "center", horizontal: "left" }}
-      slotProps={{ paper: { ref: paperRef, sx: { ml: 1 } } }}
+      anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      transformOrigin={{ vertical: "bottom", horizontal: "center" }}
+      slotProps={{
+        paper: {
+          ref: paperRef,
+          sx: {
+            mt: `-${USER_MENU_VERTICAL_OFFSET_PX}px`,
+            width: menuWidth,
+          },
+        },
+      }}
     >
       <MenuItem
         onClick={() => {
