@@ -406,6 +406,12 @@ test("anchor-aware SQL dispatch selects all four anchor variants", async () => {
   expect(catalog.calls[0].text).toMatch(
     /\$14::bigint\[\] AS anchor_wardrobe_ids/i,
   );
+  expect(catalog.calls[0].text).toMatch(/is_color_match/i);
+  expect(catalog.calls[0].text).toMatch(/accent_rank/i);
+  expect(catalog.calls[0].text).toMatch(
+    /is_color_match IS NOT TRUE OR accent_rank <= 3/i,
+  );
+  expect(catalog.calls[0].text).toMatch(/color_rank ASC/i);
   expect(catalog.calls[0].values.slice(-3)).toEqual([
     "person@example.com",
     [12],
@@ -414,13 +420,31 @@ test("anchor-aware SQL dispatch selects all four anchor variants", async () => {
   expect(catalogMultiple.calls[0].text).toMatch(
     /\$13::bigint\[\] AS anchor_wardrobe_ids/i,
   );
+  expect(catalogMultiple.calls[0].text).toMatch(/neutrality_rank/i);
+  expect(catalogMultiple.calls[0].text).toMatch(/style_rank/i);
+  expect(catalogMultiple.calls[0].text).toMatch(/pattern_rank/i);
+  expect(catalogMultiple.calls[0].text).toMatch(/neutrality_rank <= 4/i);
+  expect(catalogMultiple.calls[0].text).toMatch(/color_rank ASC/i);
+  expect(catalogMultiple.calls[0].text).not.toMatch(/accent_rank/);
   expect(wardrobe.calls[0].text).toMatch(
     /wardrobe\.id <> ALL\(params\.anchor_wardrobe_ids\)/i,
   );
   expect(wardrobe.calls[0].text).toMatch(
     /params\.wardrobe_pool_limit - COALESCE/i,
   );
+  expect(wardrobe.calls[0].text).toMatch(/is_color_match/i);
+  expect(wardrobe.calls[0].text).toMatch(/accent_rank/i);
+  expect(wardrobe.calls[0].text).toMatch(
+    /is_color_match IS NOT TRUE OR accent_rank <= 3/i,
+  );
+  expect(wardrobe.calls[0].text).toMatch(/color_rank ASC/i);
   expect(wardrobeMultiple.calls[0].text).toMatch(
     /\$16::bigint\[\] AS anchor_wardrobe_ids/i,
   );
+  expect(wardrobeMultiple.calls[0].text).toMatch(/neutrality_rank/i);
+  expect(wardrobeMultiple.calls[0].text).toMatch(/style_rank/i);
+  expect(wardrobeMultiple.calls[0].text).toMatch(/pattern_rank/i);
+  expect(wardrobeMultiple.calls[0].text).toMatch(/neutrality_rank <= 4/i);
+  expect(wardrobeMultiple.calls[0].text).toMatch(/color_rank ASC/i);
+  expect(wardrobeMultiple.calls[0].text).not.toMatch(/accent_rank/);
 });

@@ -87,96 +87,152 @@ catalog_candidates AS (
   CROSS JOIN anchor_catalog_urls AS anchor_urls
   CROSS JOIN unnest(params.categories) AS cats(target_category)
   CROSS JOIN LATERAL (
-    SELECT
-      products.id::text AS id,
-      'catalog'::text AS item_source,
-      'candidate'::text AS selection_role,
-      NULL::text AS source,
-      NULL::text AS raw_image_url,
-      NULL::text AS processing_status,
-      NULL::text AS wardrobe_id,
-      products.id::text AS product_id,
-      products.name,
-      products.url,
-      products.description,
-      products.brand,
-      products.price,
-      products.currency,
-      products.availability,
-      products.image_url,
-      products.audience,
-      products.category,
-      products.season,
-      products.formality_level,
-      products.style,
-      products.occasions,
-      products.color_base,
-      products.pattern,
-      products.finish,
-      products.is_neutral,
-      products.composition,
-      products.silhouette,
-      products.fit,
-      products.closure_type,
-      products.embedding,
-      -- Semantic distance from the prompt embedding; lower distance is better.
-      products.embedding <=> params.embedding_vector AS distance,
-      -- Scoring stage: combine profile boosts, non-neutral color preference, and anchor similarity.
-      (
-        -- Boost items matching the requested formality level.
-        CASE WHEN params.formality_level IS NOT NULL AND params.formality_level = ANY(COALESCE(products.formality_level, ARRAY[]::text[])) THEN 20 ELSE 0 END
-        -- Boost exact style matches, with a smaller base-item boost for minimalistic items.
-        + CASE WHEN params.style IS NOT NULL AND params.style = ANY(COALESCE(products.style, ARRAY[]::text[])) THEN 20
-               WHEN 'minimalistic' = ANY(COALESCE(products.style, ARRAY[]::text[])) THEN 15 ELSE 0 END
-        -- Boost items that match any requested occasion.
-        + CASE WHEN COALESCE(products.occasions, ARRAY[]::text[]) && params.occasions THEN 20 ELSE 0 END
-        -- Strongly boost seasonal matches, while keeping seasonless products viable.
-        + CASE WHEN COALESCE(products.season, ARRAY[]::text[]) && params.season THEN 50
-               WHEN cardinality(COALESCE(products.season, ARRAY[]::text[])) = 0 THEN 40 ELSE 0 END
-        -- Boost colored non-neutral items because multiple accent colors are permitted.
-        + CASE WHEN cardinality(COALESCE(products.color_base, ARRAY[]::text[])) > 0 AND NOT COALESCE(products.is_neutral, false) THEN 12 ELSE 0 END
-        -- Boost exact pattern matches.
-        + CASE WHEN params.pattern IS NOT NULL AND params.pattern != '' AND lower(COALESCE(products.pattern, '')) = lower(params.pattern) THEN 20 ELSE 0 END
-        -- Boost candidates similar to anchors, reduced when they are in the same category as an anchor.
-        + CASE WHEN EXISTS (
-            SELECT 1 FROM anchor_items AS anchor
-            WHERE lower(COALESCE(anchor.category, '')) = lower(COALESCE(products.category, ''))
-          )
-          THEN params.anchor_similarity_bonus_weight * 0.25 * COALESCE((
-            SELECT MAX(1 - (products.embedding <=> anchor.embedding))
-            FROM anchor_items AS anchor
-            WHERE products.embedding IS NOT NULL AND anchor.embedding IS NOT NULL
-          ), 0)
-          ELSE params.anchor_similarity_bonus_weight * COALESCE((
-            SELECT MAX(1 - (products.embedding <=> anchor.embedding))
-            FROM anchor_items AS anchor
-            WHERE products.embedding IS NOT NULL AND anchor.embedding IS NOT NULL
-          ), 0)
-        END
-      ) AS relevance_score
-    FROM products
-    -- Hard filter: catalog candidates must match the category currently being expanded.
-    WHERE products.category = cats.target_category
-      -- Hard filter: only include profile-compatible product audiences.
-      AND lower(COALESCE(products.audience, '')) = ANY(params.audience_filters)
-      -- Hard filter: multiple-accent mode allows either neutral items or items with color metadata.
-      AND (
-        COALESCE(products.is_neutral, false)
-        OR cardinality(COALESCE(products.color_base, ARRAY[]::text[])) > 0
-      )
-      -- Hard filter: keep solid requests solid-like; otherwise allow exact requested pattern plus solid fallback.
-      AND (
-        CASE WHEN lower(params.pattern) = 'solid' THEN
-          products.pattern IS NULL OR trim(products.pattern) = '' OR lower(products.pattern) = 'solid'
-        ELSE lower(COALESCE(products.pattern, '')) = lower(params.pattern)
-          OR products.pattern IS NULL OR trim(products.pattern) = '' OR lower(products.pattern) = 'solid' END
-      )
-      -- Hard filter: exclude URLs already rejected by previous capsule attempts.
-      AND NOT (products.url = ANY(params.rejected_urls))
-      -- Hard filter: exclude catalog products already represented by mandatory anchors.
-      AND NOT (products.url = ANY(anchor_urls.urls))
-    -- Final per-category ranking keeps the strongest optional catalog candidates after scoring.
-    ORDER BY relevance_score DESC, (products.embedding <=> params.embedding_vector) + (RANDOM() * params.noise_factor) ASC
+    WITH raw_scored AS (
+      SELECT
+        products.id::text AS id,
+        'catalog'::text AS item_source,
+        'candidate'::text AS selection_role,
+        NULL::text AS source,
+        NULL::text AS raw_image_url,
+        NULL::text AS processing_status,
+        NULL::text AS wardrobe_id,
+        products.id::text AS product_id,
+        products.name,
+        products.url,
+        products.description,
+        products.brand,
+        products.price,
+        products.currency,
+        products.availability,
+        products.image_url,
+        products.audience,
+        products.category,
+        products.season,
+        products.formality_level,
+        products.style,
+        products.occasions,
+        products.color_base,
+        products.pattern,
+        products.finish,
+        products.is_neutral,
+        products.composition,
+        products.silhouette,
+        products.fit,
+        products.closure_type,
+        products.embedding,
+        -- Semantic distance from the prompt embedding; lower distance is better.
+        products.embedding <=> params.embedding_vector AS distance,
+        -- Scoring stage: classify items as requested-style accent, minimalistic base, or other.
+        CASE WHEN params.style IS NOT NULL AND lower(params.style) != 'minimalistic' AND params.style = ANY(COALESCE(products.style, ARRAY[]::text[])) THEN 'accent'
+          WHEN 'minimalistic' = ANY(COALESCE(products.style, ARRAY[]::text[])) THEN 'base'
+          ELSE 'other' END AS style_role,
+        -- Scoring stage: mark colored, non-neutral items for multiple-accent capping.
+        (COALESCE(products.is_neutral, false) IS NOT TRUE AND cardinality(COALESCE(products.color_base, ARRAY[]::text[])) > 0) AS is_non_neutral_color,
+        -- Scoring stage: mark non-solid pattern matches so they can be capped.
+        (CASE WHEN lower(params.pattern) = 'solid' THEN FALSE
+          WHEN params.pattern IS NOT NULL AND params.pattern != '' THEN lower(COALESCE(products.pattern, '')) = lower(params.pattern)
+          ELSE products.pattern IS NOT NULL AND trim(products.pattern) != '' AND lower(products.pattern) != 'solid' END) AS is_pattern_limited_item,
+        -- Scoring stage: combine profile boosts, non-neutral color preference, and anchor similarity.
+        (
+          -- Boost items matching the requested formality level.
+          CASE WHEN params.formality_level IS NOT NULL AND params.formality_level = ANY(COALESCE(products.formality_level, ARRAY[]::text[])) THEN 20 ELSE 0 END
+          -- Boost exact style matches, with a smaller base-item boost for minimalistic items.
+          + CASE WHEN params.style IS NOT NULL AND params.style = ANY(COALESCE(products.style, ARRAY[]::text[])) THEN 20
+                 WHEN 'minimalistic' = ANY(COALESCE(products.style, ARRAY[]::text[])) THEN 15 ELSE 0 END
+          -- Boost items that match any requested occasion.
+          + CASE WHEN COALESCE(products.occasions, ARRAY[]::text[]) && params.occasions THEN 20 ELSE 0 END
+          -- Strongly boost seasonal matches, while keeping seasonless products viable.
+          + CASE WHEN COALESCE(products.season, ARRAY[]::text[]) && params.season THEN 50
+                 WHEN cardinality(COALESCE(products.season, ARRAY[]::text[])) = 0 THEN 40 ELSE 0 END
+          -- Boost colored non-neutral items because multiple accent colors are permitted.
+          + CASE WHEN cardinality(COALESCE(products.color_base, ARRAY[]::text[])) > 0 AND NOT COALESCE(products.is_neutral, false) THEN 12 ELSE 0 END
+          -- Boost exact pattern matches.
+          + CASE WHEN params.pattern IS NOT NULL AND params.pattern != '' AND lower(COALESCE(products.pattern, '')) = lower(params.pattern) THEN 20 ELSE 0 END
+          -- Boost candidates similar to anchors, reduced when they are in the same category as an anchor.
+          + CASE WHEN EXISTS (
+              SELECT 1 FROM anchor_items AS anchor
+              WHERE lower(COALESCE(anchor.category, '')) = lower(COALESCE(products.category, ''))
+            )
+            THEN params.anchor_similarity_bonus_weight * 0.25 * COALESCE((
+              SELECT MAX(1 - (products.embedding <=> anchor.embedding))
+              FROM anchor_items AS anchor
+              WHERE products.embedding IS NOT NULL AND anchor.embedding IS NOT NULL
+            ), 0)
+            ELSE params.anchor_similarity_bonus_weight * COALESCE((
+              SELECT MAX(1 - (products.embedding <=> anchor.embedding))
+              FROM anchor_items AS anchor
+              WHERE products.embedding IS NOT NULL AND anchor.embedding IS NOT NULL
+            ), 0)
+          END
+        ) AS relevance_score
+      FROM products
+      -- Hard filter: catalog candidates must match the category currently being expanded.
+      WHERE products.category = cats.target_category
+        -- Hard filter: only include profile-compatible product audiences.
+        AND lower(COALESCE(products.audience, '')) = ANY(params.audience_filters)
+        -- Hard filter: multiple-accent mode allows either neutral items or items with color metadata.
+        AND (
+          COALESCE(products.is_neutral, false)
+          OR cardinality(COALESCE(products.color_base, ARRAY[]::text[])) > 0
+        )
+        -- Hard filter: keep solid requests solid-like; otherwise allow exact requested pattern plus solid fallback.
+        AND (
+          CASE WHEN lower(params.pattern) = 'solid' THEN
+            products.pattern IS NULL OR trim(products.pattern) = '' OR lower(products.pattern) = 'solid'
+          ELSE lower(COALESCE(products.pattern, '')) = lower(params.pattern)
+            OR products.pattern IS NULL OR trim(products.pattern) = '' OR lower(products.pattern) = 'solid' END
+        )
+        -- Hard filter: exclude URLs already rejected by previous capsule attempts.
+        AND NOT (products.url = ANY(params.rejected_urls))
+        -- Hard filter: exclude catalog products already represented by mandatory anchors.
+        AND NOT (products.url = ANY(anchor_urls.urls))
+    ),
+    ranked AS (
+      SELECT
+        raw_scored.*,
+        -- Neutrality rank; caps non-neutral color items while always allowing neutral basics.
+        ROW_NUMBER() OVER (
+          PARTITION BY COALESCE(is_neutral, false)
+          ORDER BY relevance_score DESC, distance ASC
+        ) AS neutrality_rank,
+        -- Style role rank; caps accent/base style groups depending on requested style.
+        ROW_NUMBER() OVER (
+          PARTITION BY style_role
+          ORDER BY relevance_score DESC, distance ASC
+        ) AS style_rank,
+        -- Pattern rank; caps limited non-solid pattern matches for visual variety.
+        ROW_NUMBER() OVER (
+          PARTITION BY is_pattern_limited_item
+          ORDER BY relevance_score DESC, distance ASC
+        ) AS pattern_rank
+      FROM raw_scored
+    ),
+    filtered_items AS (
+      SELECT *
+      FROM ranked
+      WHERE
+        -- Hard filter: cap accent/base style groups after relevance ranking.
+        (CASE WHEN params.style IS NOT NULL THEN (style_role != 'accent' OR style_rank <= 3)
+          ELSE (style_role != 'base' OR style_rank <= 6) END)
+        -- Hard filter: keep all neutral items but cap non-neutral accent color candidates.
+        AND (COALESCE(is_neutral, false) IS TRUE OR (is_non_neutral_color IS TRUE AND neutrality_rank <= 4))
+        -- Hard filter: cap non-solid pattern matches after relevance ranking.
+        AND (is_pattern_limited_item IS NOT TRUE OR lower(params.pattern) = 'solid' OR pattern_rank <= 3)
+    ),
+    color_ranked AS (
+      SELECT
+        filtered_items.*,
+        -- Final color diversity rank; keeps repeated color groups from dominating results.
+        ROW_NUMBER() OVER (
+          PARTITION BY COALESCE(color_base, ARRAY[]::text[])
+          ORDER BY relevance_score DESC, (distance + (RANDOM() * params.noise_factor)) ASC
+        ) AS color_rank
+      FROM filtered_items
+    )
+    SELECT id, item_source, selection_role, source, raw_image_url, processing_status, wardrobe_id, product_id, name, url, description, brand, price, currency, availability, image_url, audience, category, season, formality_level, style, occasions, color_base, pattern, finish, is_neutral, composition, silhouette, fit, closure_type, embedding, distance, relevance_score
+    FROM color_ranked
+    -- Final per-category ranking keeps the strongest optional catalog candidates after diversity caps.
+    ORDER BY relevance_score DESC, color_rank ASC, (distance + (RANDOM() * params.noise_factor)) ASC
     LIMIT (SELECT final_candidate_limit FROM query_params)
   ) results
 )

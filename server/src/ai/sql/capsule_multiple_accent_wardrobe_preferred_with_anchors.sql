@@ -185,6 +185,16 @@ optional_candidates AS (
         candidate_items.*,
         -- Semantic distance from the prompt embedding; lower distance is better.
         candidate_items.embedding <=> params.embedding_vector AS distance,
+        -- Scoring stage: classify items as requested-style accent, minimalistic base, or other.
+        CASE WHEN params.style IS NOT NULL AND lower(params.style) != 'minimalistic' AND params.style = ANY(COALESCE(candidate_items.style, ARRAY[]::text[])) THEN 'accent'
+          WHEN 'minimalistic' = ANY(COALESCE(candidate_items.style, ARRAY[]::text[])) THEN 'base'
+          ELSE 'other' END AS style_role,
+        -- Scoring stage: mark colored, non-neutral items for multiple-accent capping.
+        (COALESCE(candidate_items.is_neutral, false) IS NOT TRUE AND cardinality(COALESCE(candidate_items.color_base, ARRAY[]::text[])) > 0) AS is_non_neutral_color,
+        -- Scoring stage: mark non-solid pattern matches so they can be capped.
+        (CASE WHEN lower(params.pattern) = 'solid' THEN FALSE
+          WHEN params.pattern IS NOT NULL AND params.pattern != '' THEN lower(COALESCE(candidate_items.pattern, '')) = lower(params.pattern)
+          ELSE candidate_items.pattern IS NOT NULL AND trim(candidate_items.pattern) != '' AND lower(candidate_items.pattern) != 'solid' END) AS is_pattern_limited_item,
         -- Scoring stage: combine profile boosts, non-neutral color preference, wardrobe preference, and anchor similarity.
         (
           -- Boost items matching the requested formality level.
@@ -238,25 +248,71 @@ optional_candidates AS (
         -- Hard filter: exclude URLs already rejected by previous capsule attempts.
         AND NOT (candidate_items.url = ANY(params.rejected_urls))
     ),
-    source_ranked AS (
+    ranked AS (
       SELECT
         scored.*,
+        -- Neutrality rank; caps non-neutral color items while always allowing neutral basics.
+        ROW_NUMBER() OVER (
+          PARTITION BY COALESCE(is_neutral, false)
+          ORDER BY relevance_score DESC, distance ASC
+        ) AS neutrality_rank,
+        -- Style role rank; caps accent/base style groups depending on requested style.
+        ROW_NUMBER() OVER (
+          PARTITION BY style_role
+          ORDER BY relevance_score DESC, distance ASC
+        ) AS style_rank,
+        -- Pattern rank; caps limited non-solid pattern matches for visual variety.
+        ROW_NUMBER() OVER (
+          PARTITION BY is_pattern_limited_item
+          ORDER BY relevance_score DESC, distance ASC
+        ) AS pattern_rank
+      FROM scored
+    ),
+    filtered_items AS (
+      SELECT *
+      FROM ranked
+      WHERE
+        -- Hard filter: cap accent/base style groups after relevance ranking.
+        (CASE WHEN params.style IS NOT NULL THEN (style_role != 'accent' OR style_rank <= 3)
+          ELSE (style_role != 'base' OR style_rank <= 6) END)
+        -- Hard filter: keep all neutral items but cap non-neutral accent color candidates.
+        AND (COALESCE(is_neutral, false) IS TRUE OR (is_non_neutral_color IS TRUE AND neutrality_rank <= 4))
+        -- Hard filter: cap non-solid pattern matches after relevance ranking.
+        AND (is_pattern_limited_item IS NOT TRUE OR lower(params.pattern) = 'solid' OR pattern_rank <= 3)
+    ),
+    source_ranked AS (
+      SELECT
+        filtered_items.*,
         -- Source rank; caps catalog and wardrobe pools before final cross-source ranking.
         ROW_NUMBER() OVER (PARTITION BY item_source ORDER BY relevance_score DESC, distance ASC) AS source_rank
-      FROM scored
+      FROM filtered_items
+    ),
+    source_limited AS (
+      SELECT *
+      FROM source_ranked
+      WHERE
+        -- Hard filter: cap optional catalog candidates to the configured catalog pool.
+        (item_source = 'catalog' AND source_rank <= params.catalog_pool_limit)
+        OR (
+          item_source = 'wardrobe'
+          -- Hard filter: cap optional wardrobe candidates after reserving category slots for anchors.
+          AND source_rank <= GREATEST(params.wardrobe_pool_limit - COALESCE((SELECT anchor_count FROM anchor_counts WHERE category = cats.target_category), 0), 0)
+        )
+    ),
+    color_ranked AS (
+      SELECT
+        source_limited.*,
+        -- Final color diversity rank; keeps repeated color groups from dominating results.
+        ROW_NUMBER() OVER (
+          PARTITION BY COALESCE(color_base, ARRAY[]::text[])
+          ORDER BY relevance_score DESC, (distance + (RANDOM() * params.noise_factor)) ASC
+        ) AS color_rank
+      FROM source_limited
     )
     SELECT id, item_source, selection_role, source, raw_image_url, processing_status, wardrobe_id, product_id, name, url, description, brand, price, currency, availability, image_url, audience, category, season, formality_level, style, occasions, color_base, pattern, finish, is_neutral, composition, silhouette, fit, closure_type, embedding, distance, relevance_score
-    FROM source_ranked
-    WHERE
-      -- Hard filter: cap optional catalog candidates to the configured catalog pool.
-      (item_source = 'catalog' AND source_rank <= params.catalog_pool_limit)
-      OR (
-        item_source = 'wardrobe'
-        -- Hard filter: cap optional wardrobe candidates after reserving category slots for anchors.
-        AND source_rank <= GREATEST(params.wardrobe_pool_limit - COALESCE((SELECT anchor_count FROM anchor_counts WHERE category = cats.target_category), 0), 0)
-      )
+    FROM color_ranked
     -- Final per-category ranking keeps the strongest optional candidates after source caps.
-    ORDER BY relevance_score DESC, CASE WHEN item_source = 'wardrobe' THEN 0 ELSE 1 END, distance + (RANDOM() * params.noise_factor) ASC
+    ORDER BY relevance_score DESC, CASE WHEN item_source = 'wardrobe' THEN 0 ELSE 1 END, color_rank ASC, distance + (RANDOM() * params.noise_factor) ASC
     LIMIT (SELECT final_candidate_limit FROM query_params)
   ) results
 )
