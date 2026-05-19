@@ -224,7 +224,7 @@ const uploadedEditFormScrollSx = {
 const uploadedEditActionsSx = {
   borderTop: "1px solid",
   borderColor: "divider",
-  bgcolor: "background.paper",
+  bgcolor: "transparent",
   flexShrink: 0,
   px: 0,
   pb: 0,

@@ -76,7 +76,7 @@ export function FiltersDialog({
         sx={
           isOverlay
             ? mobileCapsuleDialogActionsSx
-            : { px: 3, pb: 2.5, pt: 2, bgcolor: "background.paper" }
+            : { px: 3, pb: 2.5, pt: 2, bgcolor: "transparent" }
         }
       >
         <ProfileFiltersActions

@@ -70,6 +70,12 @@ describe("theme contract", () => {
     expect(theme.typography.fontFamily).toContain("DM Sans");
     expect(theme.shape.borderRadius).toBe(18);
     expect(theme.components.MuiButton.defaultProps.disableElevation).toBe(true);
+    expect(theme.components.MuiDialogActions.styleOverrides.root).toEqual(
+      expect.objectContaining({
+        backgroundColor: "transparent",
+        justifyContent: "flex-end",
+      }),
+    );
     expect(
       theme.components.MuiCssBaseline.styleOverrides[
         "@keyframes placeholderShimmer"
