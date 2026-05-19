@@ -159,6 +159,7 @@ After editing files, check test coverage, ESLint, and test pass status before ha
 - workspace-local tests for the changed area
 - then broader repo tests if the change crosses boundaries
 - coverage for the changed area, or full coverage for cross-cutting changes
+- Run test commands and coverage commands sequentially. Do not run different test blocks in parallel, do not run coverage blocks in parallel, and do not run coverage at the same time as tests; these runs contend for resources and create misleading timeouts.
 - At the end of the work, after the final file edits, run `npm run format`, then `npm run lint:strict`.
 - if `npm run format` changes files, include those formatter changes in the diff
 
