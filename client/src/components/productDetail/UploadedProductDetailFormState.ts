@@ -182,4 +182,4 @@ function getArrayValue(value: unknown): string[] {
 }
 
 export type { UploadedProductFormState };
-export { buildFormState, buildPayload, getMissingRequiredFields, nullableText };
+export { buildFormState, buildPayload, getMissingRequiredFields };

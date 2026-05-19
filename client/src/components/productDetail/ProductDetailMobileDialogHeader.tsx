@@ -70,4 +70,3 @@ function ProductDetailMobileDialogHeader({
 }
 
 export default ProductDetailMobileDialogHeader;
-export type { ProductDetailMobileDialogHeaderProps };
