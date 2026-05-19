@@ -157,7 +157,7 @@ function MyWardrobeToolbar(props: MyWardrobeToolbarProps) {
 const toolbarSurfaceSx = {
   position: "sticky",
   top: 0,
-  zIndex: 4,
+  zIndex: (theme) => theme.zIndex.appBar,
   alignItems: "center",
   bgcolor: "background.default",
   boxShadow: (theme) => `0 0 0 100vmax ${theme.palette.background.default}`,
