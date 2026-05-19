@@ -249,6 +249,7 @@ describe("SettingsDialog", () => {
 
     const dialog = screen.getByRole("dialog", { name: "Settings" });
     expect(dialog).toHaveClass("MuiDialog-paperFullScreen");
+    expect(dialog.querySelector(".MuiDivider-root")).not.toBeInTheDocument();
     expect(
       within(dialog).getByRole("button", { name: "General" }),
     ).toBeInTheDocument();

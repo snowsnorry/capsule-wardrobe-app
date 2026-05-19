@@ -118,7 +118,7 @@ function SettingsDialogFrame(props: SettingsDialogFrameProps) {
       ) : (
         <DialogTitle>{props.t("settings.title")}</DialogTitle>
       )}
-      <SettingsDialogProgress isSaving={isBusy} />
+      <SettingsDialogProgress isMobile={isMobile} isSaving={isBusy} />
       <SettingsDialogContentPane
         {...props}
         isBusy={isBusy}

@@ -50,22 +50,35 @@ function PasskeyDeleteDialog({
   );
 }
 
-function SettingsDialogProgress({ isSaving }: { isSaving: boolean }) {
+function SettingsDialogProgress({
+  isMobile,
+  isSaving,
+}: {
+  isMobile?: boolean;
+  isSaving: boolean;
+}) {
+  if (isMobile && !isSaving) {
+    return null;
+  }
+
+  const progressSx = isMobile
+    ? {
+        height: 3,
+        backgroundColor: "action.hover",
+        "& .MuiLinearProgress-bar": { borderRadius: 999 },
+      }
+    : {
+        mt: "-2px",
+        height: 3,
+        borderRadius: 999,
+        backgroundColor: "action.hover",
+        "& .MuiLinearProgress-bar": { borderRadius: 999 },
+      };
+
   return (
-    <Box sx={{ px: 3, pb: 0.5 }}>
-      <Divider sx={{ borderColor: "divider" }} />
-      {isSaving ? (
-        <LinearProgress
-          color="success"
-          sx={{
-            mt: "-2px",
-            height: 3,
-            borderRadius: 999,
-            backgroundColor: "action.hover",
-            "& .MuiLinearProgress-bar": { borderRadius: 999 },
-          }}
-        />
-      ) : null}
+    <Box sx={isMobile ? { flexShrink: 0 } : { px: 3, pb: 0.5 }}>
+      {isMobile ? null : <Divider sx={{ borderColor: "divider" }} />}
+      {isSaving ? <LinearProgress color="success" sx={progressSx} /> : null}
     </Box>
   );
 }
