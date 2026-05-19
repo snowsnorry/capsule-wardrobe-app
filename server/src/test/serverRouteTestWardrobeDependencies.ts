@@ -63,6 +63,19 @@ function createWardrobeDependencies() {
         processingStatus: "ready",
       },
     ],
+    listWardrobeItemsByIdsImpl: async ({ ids }) =>
+      ids.map((id) => ({
+        id,
+        name: `Uploaded shirt ${id}`,
+        url: `wardrobe://${id}`,
+        imageUrl: `https://images.example.com/wardrobe/profile/${id}.webp`,
+        rawImageUrl: `https://images.example.com/wardrobe/profile/${id}.webp`,
+        source: "uploaded",
+        processingStatus: "ready",
+        audience: "all",
+        category: "top",
+        season: ["summer"],
+      })),
     saveWardrobeItemFromCatalogImpl: async (_payload) => ({
       id: "wardrobe-1",
       name: "Saved shirt",

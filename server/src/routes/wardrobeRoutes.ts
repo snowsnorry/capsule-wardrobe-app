@@ -14,6 +14,7 @@ import {
 } from "./wardrobeUploadStream.js";
 import { normalizeWardrobeSourceParam } from "./wardrobeRouteParams.js";
 import { registerUploadedWardrobeItemUpdateRoute } from "./wardrobeUploadedItemUpdateRoute.js";
+import { normalizeWardrobeItemForPdf } from "../wardrobePdfItems.js";
 
 const wardrobeUpload = multer({
   storage: multer.memoryStorage(),
@@ -48,14 +49,6 @@ function getHttpUrl(value: unknown): string {
   }
 }
 
-function getFirstPresentValue(...values) {
-  return (
-    values.find(
-      (value) => value !== undefined && value !== null && value !== "",
-    ) ?? null
-  );
-}
-
 const WARDROBE_ITEM_PRIVATE_FIELDS = new Set([
   "createdAt",
   "email",
@@ -75,19 +68,6 @@ function filterWardrobeItemForDisplay(item) {
       ([key]) => !WARDROBE_ITEM_PRIVATE_FIELDS.has(key),
     ),
   );
-}
-
-function normalizeWardrobeItemForPdf(item) {
-  const source = item || {};
-  return {
-    ...source,
-    imageUrl: getFirstPresentValue(source.imageUrl, source.rawImageUrl),
-    rawImageUrl: getFirstPresentValue(source.rawImageUrl),
-    formalityLevel: getFirstPresentValue(source.formalityLevel),
-    colorBase: getFirstPresentValue(source.colorBase),
-    isNeutral: getFirstPresentValue(source.isNeutral),
-    closureType: getFirstPresentValue(source.closureType),
-  };
 }
 
 export function registerWardrobeRoutes(app, context) {

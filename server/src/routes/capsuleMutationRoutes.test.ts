@@ -12,6 +12,7 @@ test("capsule action routes cover wardrobe handlers and pdf download", async (t)
   let fullRegenerateCalled = false;
   let regenerateCalled = false;
   let pdfLocale = null;
+  let pdfProducts = null;
 
   const { baseUrl } = await startTestServer(t, {
     overrides: {
@@ -27,7 +28,8 @@ test("capsule action routes cover wardrobe handlers and pdf download", async (t)
         regenerateCalled = true;
         res.json({ ok: true, items: [{ id: "2" }] });
       },
-      buildWardrobePdfInChildImpl: async (_products, locale) => {
+      buildWardrobePdfInChildImpl: async (products, locale) => {
+        pdfProducts = products;
         pdfLocale = locale;
         return Buffer.from("pdf");
       },
@@ -101,6 +103,90 @@ test("capsule action routes cover wardrobe handlers and pdf download", async (t)
   expect(pdf.response.headers.get("content-disposition")).toBe(
     `attachment; filename="New-capsule.pdf"; filename*=UTF-8''${encodeURIComponent("New capsule.pdf")}`,
   );
+  expect(pdfProducts).toHaveLength(1);
+  expect(pdfProducts?.[0]).toMatchObject({ url: "https://example.com/1" });
+});
+
+test("capsule pdf route includes uploaded wardrobe items from capsule snapshots", async (t) => {
+  let pdfProducts = null;
+  const { baseUrl } = await startTestServer(t, {
+    overrides: {
+      getCapsuleImpl: async () => ({
+        id: "capsule-1",
+        name: "Mixed capsule",
+        draft: {
+          filters: {},
+          data: {
+            wardrobe: {
+              items: [
+                { id: "catalog-1", url: "https://example.com/1" },
+                {
+                  id: "W7",
+                  itemSource: "wardrobe",
+                  wardrobeId: "7",
+                  url: "wardrobe://7",
+                  name: "Snapshot uploaded shirt",
+                  imageUrl: "https://images.example.com/snapshot.webp",
+                  source: "uploaded",
+                },
+              ],
+            },
+            rejectedUrls: [],
+          },
+        },
+        saved: null,
+        status: "new",
+      }),
+      getProductsByUrlsInOrderImpl: async (urls) =>
+        urls.map((url) => ({ name: "Catalog shirt", url })),
+      listWardrobeItemsByIdsImpl: async ({ email, ids }) => {
+        expect(email).toBe("person@example.com");
+        expect(ids).toEqual([7]);
+        return [
+          {
+            id: 7,
+            name: "Uploaded shirt",
+            url: "wardrobe://7",
+            imageUrl: "https://images.example.com/uploaded.webp",
+            rawImageUrl: "https://images.example.com/uploaded-raw.webp",
+            source: "uploaded",
+            category: "top",
+          },
+        ];
+      },
+      buildWardrobePdfInChildImpl: async (products) => {
+        pdfProducts = products;
+        return Buffer.from("pdf");
+      },
+    },
+  });
+
+  const pdf = await requestJson(baseUrl, "/capsules/capsule-1/pdf", {
+    method: "POST",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN,
+  });
+
+  expect(pdf.response.status).toBe(200);
+  expect(pdfProducts).toHaveLength(2);
+  expect(pdfProducts?.[0]).toMatchObject({
+    name: "Catalog shirt",
+    url: "https://example.com/1",
+  });
+  expect(pdfProducts?.[1]).toEqual({
+    id: 7,
+    name: "Uploaded shirt",
+    url: "wardrobe://7",
+    imageUrl: "https://images.example.com/uploaded.webp",
+    rawImageUrl: "https://images.example.com/uploaded-raw.webp",
+    source: "uploaded",
+    category: "top",
+    formalityLevel: null,
+    colorBase: null,
+    isNeutral: null,
+    closureType: null,
+  });
 });
 
 test("capsule creation only accepts name and filters and initializes server-owned data", async (t) => {
