@@ -68,7 +68,7 @@ function MainScreenMenus(props: MenusProps) {
     props.setRowMenuCapsule(null);
   };
   const closeProductMenu = () =>
-    props.setProductMenu({ anchor: null, url: "", item: null });
+    props.setProductMenu({ ...props.productMenu, anchor: null });
 
   return (
     <>

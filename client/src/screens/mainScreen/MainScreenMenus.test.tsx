@@ -154,6 +154,34 @@ describe("MainScreenMenus", () => {
     expect(onRemoveFromMyWardrobe).not.toHaveBeenCalled();
   });
 
+  test("preserves uploaded product menu data while the menu closes", async () => {
+    const user = userEvent.setup();
+    const setProductMenu = vi.fn();
+    const uploadedItem = {
+      id: "uploaded-1",
+      url: "wardrobe://uploaded-1",
+      name: "Uploaded shirt",
+      category: "top",
+      source: "uploaded" as const,
+    };
+    renderMenus({
+      productMenu: {
+        anchor: createAnchor(),
+        url: "uploaded-1",
+        item: uploadedItem,
+      },
+      setProductMenu,
+    });
+
+    await user.keyboard("{Escape}");
+
+    expect(setProductMenu).toHaveBeenCalledWith({
+      anchor: null,
+      url: "uploaded-1",
+      item: uploadedItem,
+    });
+  });
+
   test("confirms before removing a saved product from my wardrobe", async () => {
     const user = userEvent.setup();
     const onRemoveFromMyWardrobe = vi.fn(() => Promise.resolve());

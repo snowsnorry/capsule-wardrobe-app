@@ -208,7 +208,7 @@ function useMyWardrobeItems(
   const [removeConfirmItem, setRemoveConfirmItem] =
     useState<MainScreenItem | null>(null);
   const closeProductMenu = () =>
-    setProductMenu({ anchor: null, url: "", item: null });
+    setProductMenu((current) => ({ ...current, anchor: null }));
   const handleProductMenuClick = (
     event: MouseEvent<HTMLButtonElement>,
     url: string,
