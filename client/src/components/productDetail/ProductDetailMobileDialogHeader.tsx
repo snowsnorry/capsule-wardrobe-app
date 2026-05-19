@@ -32,6 +32,9 @@ function ProductDetailMobileDialogHeader({
       onRemoveFromMyWardrobe ||
       onEditUploadedWardrobeItem),
   );
+  const isSaved =
+    isSavedToWardrobe(actionItem) ||
+    Boolean(onRemoveFromMyWardrobe && !onSaveToMyWardrobe);
 
   return (
     <DialogTitle sx={mobileCapsuleDialogTitleSx}>
@@ -55,7 +58,7 @@ function ProductDetailMobileDialogHeader({
           <ProductActionsMenu
             item={actionItem}
             t={t}
-            isSavedToWardrobe={isSavedToWardrobe(actionItem)}
+            isSavedToWardrobe={isSaved}
             onEditUploadedWardrobeItem={onEditUploadedWardrobeItem}
             onRemoveFromMyWardrobe={onRemoveFromMyWardrobe}
             onSaveToMyWardrobe={onSaveToMyWardrobe}

@@ -28,6 +28,7 @@ vi.mock("../../i18n/useI18n", () => ({
         "actions.cancel": "Cancel",
         "actions.edit": "Edit",
         "capsule.removeFromMyWardrobe": "Remove from My Wardrobe",
+        "capsule.saveToMyWardrobe": "Save to My Wardrobe",
         "myWardrobe.savedBadge": "Saved",
         "myWardrobe.filters.uploaded": "Uploaded",
         "myWardrobe.removeConfirm": "Remove",
@@ -219,6 +220,19 @@ describe("ProductDetailDialog", () => {
     expect(
       screen.getByRole("button", { name: "Product actions" }),
     ).toBeInTheDocument();
+  });
+
+  test("shows remove action in the mobile header when only remove is available", () => {
+    renderDialog({ isMobile: true, onRemoveFromMyWardrobe: vi.fn() });
+
+    fireEvent.click(screen.getByRole("button", { name: "Product actions" }));
+
+    expect(
+      screen.getByRole("menuitem", { name: "Remove from My Wardrobe" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("menuitem", { name: "Save to My Wardrobe" }),
+    ).not.toBeInTheDocument();
   });
 
   test("loads full catalog details when opened with a sparse capsule item", async () => {
