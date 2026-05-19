@@ -134,6 +134,8 @@ Lint and quality:
 - When changing account removal, preserve deletion of profile-scoped DB records, active sessions, transient generation/image/PDF jobs, uploaded R2 image objects, and session/passkey challenge cookies.
 - When changing production CSP or image upload previews, update `server/src/appMiddleware.ts` tests with the allowed source behavior.
 - When using Playwright for code validation, run it against the dedicated e2e server with in-memory dependencies, not against normal dev or production-like servers with external dependencies.
+- Use Browser/Chrome DevTools/browser-use tools only when the user explicitly asks for browser-based validation or interaction in the current turn.
+- If visual validation is explicitly requested, prefer headless Playwright against the dedicated e2e server with in-memory dependencies. Do not open interactive browsers or Browser plugin sessions unless explicitly requested.
 - Keep Playwright e2e-only endpoints and env vars isolated from normal dev, production, and Render startup paths.
 - Default Playwright e2e runs should not require real DB, email, LLM, embedding, or remote image services.
 - Prefer extending existing patterns over introducing new abstractions.

@@ -32,6 +32,8 @@ Primary areas:
 - When changing account removal UI, preserve the localized confirmation-word flow and keep `app/profileActions.ts` aligned with `DELETE /profile/me`.
 - My Wardrobe upload and capsule event subscriptions use `@microsoft/fetch-event-source`; keep stream event names and payload shapes aligned with server routes.
 - Do not hardcode backend origins when an existing proxy/config pattern exists.
+- Use Browser/Chrome DevTools/browser-use tools only when the user explicitly asks for browser-based validation or interaction in the current turn.
+- If visual validation is explicitly requested, prefer headless Playwright against the repository's dedicated e2e server with in-memory dependencies. Do not open interactive browsers or Browser plugin sessions unless explicitly requested.
 - Avoid large UI rewrites unless explicitly requested.
 
 ## Validation
