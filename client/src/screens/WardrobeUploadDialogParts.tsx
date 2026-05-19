@@ -17,6 +17,8 @@ type SelectedUploadFile = {
   previewUrl: string;
 };
 
+type UploadDropzoneVariant = "desktop" | "mobile";
+
 function formatFileSize(bytes: number) {
   if (bytes >= 1024 * 1024) {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
@@ -101,6 +103,7 @@ function UploadDropzone({
   onDrop,
   onFileInputChange,
   t,
+  variant = "desktop",
 }: {
   inputRef: RefObject<HTMLInputElement | null>;
   isDragging: boolean;
@@ -108,30 +111,38 @@ function UploadDropzone({
   onDrop: (event: DragEvent<HTMLDivElement>) => void;
   onFileInputChange: (event: ChangeEvent<HTMLInputElement>) => void;
   t: (key: string) => string;
+  variant?: UploadDropzoneVariant;
 }) {
+  const isMobile = variant === "mobile";
+  const dragHandlers = isMobile
+    ? {}
+    : {
+        onDragEnter: (event: DragEvent<HTMLDivElement>) => {
+          event.preventDefault();
+          onDragStateChange(true);
+        },
+        onDragOver: (event: DragEvent<HTMLDivElement>) => {
+          event.preventDefault();
+          onDragStateChange(true);
+        },
+        onDragLeave: () => onDragStateChange(false),
+        onDrop,
+      };
+
   return (
     <Box
       role="button"
       tabIndex={0}
       aria-label={t("myWardrobe.uploadDialog.dropzoneLabel")}
       onClick={() => inputRef.current?.click()}
-      onDragEnter={(event) => {
-        event.preventDefault();
-        onDragStateChange(true);
-      }}
-      onDragOver={(event) => {
-        event.preventDefault();
-        onDragStateChange(true);
-      }}
-      onDragLeave={() => onDragStateChange(false)}
-      onDrop={onDrop}
       onKeyDown={(event) => {
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
           inputRef.current?.click();
         }
       }}
-      sx={dropzoneSx(isDragging)}
+      sx={dropzoneSx(isDragging, variant)}
+      {...dragHandlers}
     >
       <input
         ref={inputRef}
@@ -141,13 +152,23 @@ function UploadDropzone({
         accept="image/jpeg,image/png,image/webp"
         onChange={onFileInputChange}
       />
-      <AddPhotoAlternateOutlinedIcon color="primary" />
-      <Stack spacing={0.25} sx={{ minWidth: 0 }}>
+      <Box sx={dropzoneIconSx(isMobile)}>
+        <AddPhotoAlternateOutlinedIcon color="primary" />
+      </Box>
+      <Stack spacing={0.25} sx={dropzoneTextSx(isMobile)}>
         <Typography variant="subtitle1">
-          {t("myWardrobe.uploadDialog.dropzoneTitle")}
+          {t(
+            isMobile
+              ? "myWardrobe.uploadDialog.mobileDropzoneTitle"
+              : "myWardrobe.uploadDialog.dropzoneTitle",
+          )}
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          {t("myWardrobe.uploadDialog.dropzoneHint")}
+          {t(
+            isMobile
+              ? "myWardrobe.uploadDialog.mobileDropzoneHint"
+              : "myWardrobe.uploadDialog.dropzoneHint",
+          )}
         </Typography>
       </Stack>
     </Box>
@@ -213,18 +234,25 @@ function SelectedFilesList({
   );
 }
 
-const dropzoneSx = (isDragging: boolean) =>
+const dropzoneSx = (
+  isDragging: boolean,
+  variant: UploadDropzoneVariant = "desktop",
+) =>
   ({
     display: "flex",
     alignItems: "center",
+    justifyContent: variant === "mobile" ? "center" : "flex-start",
+    flexDirection: variant === "mobile" ? "column" : "row",
+    textAlign: variant === "mobile" ? "center" : "left",
     gap: 1.5,
-    minHeight: 132,
-    px: 2,
-    py: 2.25,
+    minHeight: variant === "mobile" ? 172 : 132,
+    px: variant === "mobile" ? 2.5 : 2,
+    py: variant === "mobile" ? 3 : 2.25,
     borderRadius: 2,
-    border: "1px dashed",
+    border: variant === "mobile" ? "1px solid" : "1px dashed",
     borderColor: isDragging ? "primary.main" : "divider",
-    bgcolor: isDragging ? "primary.light" : "background.default",
+    bgcolor:
+      isDragging && variant !== "mobile" ? "primary.light" : "background.paper",
     cursor: "pointer",
     transition: "border-color 180ms ease-out, background-color 180ms ease-out",
     "&:focus-visible": {
@@ -232,6 +260,23 @@ const dropzoneSx = (isDragging: boolean) =>
       outlineColor: "primary.main",
       outlineOffset: 3,
     },
+  }) as const;
+
+const dropzoneIconSx = (isMobile: boolean) =>
+  ({
+    width: isMobile ? 56 : "auto",
+    height: isMobile ? 56 : "auto",
+    borderRadius: "50%",
+    bgcolor: isMobile ? "primary.light" : "transparent",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  }) as const;
+
+const dropzoneTextSx = (isMobile: boolean) =>
+  ({
+    minWidth: 0,
+    maxWidth: isMobile ? 280 : "none",
   }) as const;
 
 const fileRowSx = {

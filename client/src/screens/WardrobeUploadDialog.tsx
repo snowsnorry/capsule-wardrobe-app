@@ -13,6 +13,12 @@ import {
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import type { UploadWardrobeProgress } from "../api/myWardrobe";
 import {
+  mobileCapsuleDialogActionsSx,
+  mobileCapsuleDialogContentSx,
+  mobileCapsuleDialogPaperSx,
+  mobileCapsuleDialogTitleSx,
+} from "../components/MobileDialogSurfaceStyles";
+import {
   SelectedFilesList,
   UploadDropzone,
   UploadProgressContent,
@@ -21,6 +27,7 @@ import {
 } from "./WardrobeUploadDialogParts";
 
 type WardrobeUploadDialogProps = {
+  isMobile: boolean;
   isUploading: boolean;
   onClose: () => void;
   onUpload: (files: File[]) => Promise<void> | void;
@@ -51,6 +58,7 @@ function createUploadFile(file: File): SelectedUploadFile {
 // The dialog keeps selection, drag, validation, and preview cleanup together.
 // eslint-disable-next-line max-lines-per-function
 function WardrobeUploadDialog({
+  isMobile,
   isUploading,
   onClose,
   onUpload,
@@ -151,17 +159,21 @@ function WardrobeUploadDialog({
     <Dialog
       open={open}
       onClose={isUploading ? undefined : onClose}
-      fullWidth
-      maxWidth="sm"
+      fullScreen={isMobile}
+      fullWidth={!isMobile}
+      maxWidth={isMobile ? false : "sm"}
+      PaperProps={isMobile ? { sx: mobileCapsuleDialogPaperSx } : undefined}
     >
-      <DialogTitle sx={dialogTitleSx}>
+      <DialogTitle sx={getDialogTitleSx(isMobile)}>
         <Stack spacing={0.75}>
           <Typography variant="h5">
             {t("myWardrobe.uploadDialog.title")}
           </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {t("myWardrobe.uploadDialog.body")}
-          </Typography>
+          {!isMobile ? (
+            <Typography variant="body2" color="text.secondary">
+              {t("myWardrobe.uploadDialog.body")}
+            </Typography>
+          ) : null}
         </Stack>
         <IconButton
           aria-label={t("actions.close")}
@@ -171,15 +183,21 @@ function WardrobeUploadDialog({
           <CloseRoundedIcon />
         </IconButton>
       </DialogTitle>
-      <DialogContent sx={dialogContentSx}>
+      <DialogContent sx={getDialogContentSx(isMobile)}>
         {isUploading ? (
           <UploadProgressContent progress={progress} t={t} />
         ) : (
           <>
+            {isMobile ? (
+              <Typography variant="body2" color="text.secondary">
+                {t("myWardrobe.uploadDialog.body")}
+              </Typography>
+            ) : null}
             <UploadDropzone
               inputRef={inputRef}
               isDragging={isDragging}
               t={t}
+              variant={isMobile ? "mobile" : "desktop"}
               onDragStateChange={setIsDragging}
               onDrop={handleDrop}
               onFileInputChange={handleFileInputChange}
@@ -199,7 +217,7 @@ function WardrobeUploadDialog({
         )}
       </DialogContent>
       {!isUploading ? (
-        <DialogActions sx={dialogActionsSx}>
+        <DialogActions sx={getDialogActionsSx(isMobile)}>
           <Button onClick={onClose}>{t("actions.cancel")}</Button>
           <Button
             variant="contained"
@@ -212,6 +230,26 @@ function WardrobeUploadDialog({
       ) : null}
     </Dialog>
   );
+}
+
+function getDialogTitleSx(isMobile: boolean) {
+  return isMobile ? mobileCapsuleDialogTitleSx : dialogTitleSx;
+}
+
+function getDialogContentSx(isMobile: boolean) {
+  return isMobile
+    ? {
+        ...mobileCapsuleDialogContentSx,
+        ...dialogContentSx,
+        px: 2,
+        pb: 2,
+        overflowY: "auto",
+      }
+    : dialogContentSx;
+}
+
+function getDialogActionsSx(isMobile: boolean) {
+  return isMobile ? mobileCapsuleDialogActionsSx : dialogActionsSx;
 }
 
 const dialogTitleSx = {
@@ -232,6 +270,7 @@ const dialogContentSx = {
 const dialogActionsSx = {
   px: 3,
   pb: 2.5,
+  justifyContent: "flex-end",
 } as const;
 
 export default WardrobeUploadDialog;

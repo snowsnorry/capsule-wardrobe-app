@@ -170,6 +170,7 @@ function MyWardrobeScreen(): ReactElement {
         ) : null}
         <WardrobeUploadDialog
           open={isUploadDialogOpen}
+          isMobile={isOverlay}
           isUploading={wardrobeItems.isUploading}
           progress={wardrobeItems.uploadProgress}
           t={t}

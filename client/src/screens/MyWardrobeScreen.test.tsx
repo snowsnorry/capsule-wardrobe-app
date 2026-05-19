@@ -4,6 +4,7 @@ import {
   fireEvent,
   render,
   screen,
+  within,
   waitFor,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -244,6 +245,9 @@ const translations: Record<string, string> = {
   "myWardrobe.uploadDialog.dropzoneLabel": "Choose wardrobe photos",
   "myWardrobe.uploadDialog.dropzoneTitle": "Drop images here",
   "myWardrobe.uploadDialog.dropzoneHint": "JPEG, PNG, or WebP. Up to 5 files.",
+  "myWardrobe.uploadDialog.mobileDropzoneTitle": "Choose photos",
+  "myWardrobe.uploadDialog.mobileDropzoneHint":
+    "JPEG, PNG, or WebP. Up to 5 files, 10 MB each.",
   "myWardrobe.uploadDialog.fileList": "Selected files",
   "myWardrobe.uploadDialog.selectedSummary": "{count} files, {size}",
   "myWardrobe.uploadDialog.removeFile": "Remove {name}",
@@ -384,6 +388,29 @@ describe("MyWardrobeScreen", () => {
         force: false,
       });
     });
+  });
+
+  test("opens upload dialog as a full-screen mobile picker", async () => {
+    useMediaQueryMock.mockReturnValue(true);
+    const user = userEvent.setup();
+    renderScreen();
+
+    await screen.findByTestId("wardrobe-card-wardrobe-1");
+    await user.click(screen.getByRole("button", { name: "Upload item photo" }));
+
+    const dialog = screen.getByRole("dialog", {
+      name: "Upload wardrobe photos",
+    });
+    expect(dialog).toHaveClass("MuiDialog-paperFullScreen");
+    expect(within(dialog).getByText("Choose photos")).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(
+        "JPEG, PNG, or WebP. Up to 5 files, 10 MB each.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).queryByText("Drop images here"),
+    ).not.toBeInTheDocument();
   });
 
   test("sorts wardrobe cards with the same order as capsule items", async () => {

@@ -353,6 +353,8 @@ const ru = {
       dropzoneLabel: "Выбрать фото вещей",
       dropzoneTitle: "Перетащите изображения сюда",
       dropzoneHint: "JPEG, PNG или WebP. До 5 файлов, каждый до 10 MB.",
+      mobileDropzoneTitle: "Выбрать фото",
+      mobileDropzoneHint: "JPEG, PNG или WebP. До 5 файлов, каждый до 10 MB.",
       fileList: "Выбранные файлы",
       selectedSummary: "{count} файлов, {size}",
       removeFile: "Убрать {name}",

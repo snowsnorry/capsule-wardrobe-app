@@ -14,6 +14,9 @@ const translations: Record<string, string> = {
   "myWardrobe.uploadDialog.dropzoneLabel": "Choose wardrobe photos",
   "myWardrobe.uploadDialog.dropzoneTitle": "Drop images here",
   "myWardrobe.uploadDialog.dropzoneHint": "JPEG, PNG, or WebP. Up to 5 files.",
+  "myWardrobe.uploadDialog.mobileDropzoneTitle": "Choose photos",
+  "myWardrobe.uploadDialog.mobileDropzoneHint":
+    "JPEG, PNG, or WebP. Up to 5 files, 10 MB each.",
   "myWardrobe.uploadDialog.fileList": "Selected files",
   "myWardrobe.uploadDialog.selectedSummary": "{count} files, {size}",
   "myWardrobe.uploadDialog.removeFile": "Remove {name}",
@@ -129,6 +132,50 @@ describe("WardrobeUploadDialogParts", () => {
     expect(onDragStateChange).toHaveBeenNthCalledWith(2, true);
     expect(onDragStateChange).toHaveBeenNthCalledWith(3, false);
     expect(onDrop).toHaveBeenCalledTimes(1);
+    expect(onFileInputChange).toHaveBeenCalledTimes(1);
+  });
+
+  test("mobile dropzone uses touch-first copy without drag behavior", () => {
+    const inputClick = vi
+      .spyOn(HTMLInputElement.prototype, "click")
+      .mockImplementation(() => undefined);
+    const onDragStateChange = vi.fn();
+    const onDrop = vi.fn((event) => event.preventDefault());
+    const onFileInputChange = vi.fn();
+    const file = new File(["image"], "shirt.webp", { type: "image/webp" });
+
+    renderWithTheme(
+      <UploadDropzone
+        inputRef={createRef<HTMLInputElement>()}
+        isDragging={false}
+        onDragStateChange={onDragStateChange}
+        onDrop={onDrop}
+        onFileInputChange={onFileInputChange}
+        t={t}
+        variant="mobile"
+      />,
+    );
+
+    const dropzone = screen.getByRole("button", {
+      name: "Choose wardrobe photos",
+    });
+    expect(screen.getByText("Choose photos")).toBeInTheDocument();
+    expect(
+      screen.getByText("JPEG, PNG, or WebP. Up to 5 files, 10 MB each."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Drop images here")).not.toBeInTheDocument();
+
+    fireEvent.click(dropzone);
+    fireEvent.keyDown(dropzone, { key: "Enter" });
+    fireEvent.dragEnter(dropzone);
+    fireEvent.drop(dropzone, { dataTransfer: { files: [file] } });
+    fireEvent.change(document.querySelector("input") as HTMLInputElement, {
+      target: { files: [file] },
+    });
+
+    expect(inputClick).toHaveBeenCalledTimes(2);
+    expect(onDragStateChange).not.toHaveBeenCalled();
+    expect(onDrop).not.toHaveBeenCalled();
     expect(onFileInputChange).toHaveBeenCalledTimes(1);
   });
 
