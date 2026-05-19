@@ -396,8 +396,9 @@ describe("MyWardrobeScreen", () => {
 
     await screen.findByTestId("wardrobe-card-wardrobe-1");
 
-    expect(getComputedStyle(screen.getByTestId("my-wardrobe-screen")).overflowX)
-      .toBe("hidden");
+    expect(
+      getComputedStyle(screen.getByTestId("my-wardrobe-screen")).overflowX,
+    ).toBe("hidden");
     expect(
       getComputedStyle(screen.getByTestId("my-wardrobe-content")).boxSizing,
     ).toBe("border-box");
