@@ -86,7 +86,7 @@ function UploadedProductDetailForm({
     <Stack spacing={2} sx={{ minHeight: 0, pt: topOffset }}>
       {showTitle ? (
         <Typography variant="h6" sx={{ overflowWrap: "anywhere" }}>
-          {t("myWardrobe.uploadedDetail.title")}
+          {t("search.productDetailsTitle")}
         </Typography>
       ) : null}
       <Box sx={formGridSx}>

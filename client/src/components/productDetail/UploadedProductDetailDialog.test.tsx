@@ -29,7 +29,6 @@ const labels: Record<string, string> = {
   "myWardrobe.uploadedDetail.required.category": "category",
   "myWardrobe.uploadedDetail.required.name": "name",
   "myWardrobe.uploadedDetail.required.season": "at least one season",
-  "myWardrobe.uploadedDetail.title": "Uploaded item details",
   "search.productDetailsTitle": "Product details",
   "search.fields.audience": "Audience",
   "search.fields.closureType": "Closure type",
@@ -104,10 +103,10 @@ afterEach(() => {
 });
 
 describe("UploadedProductDetailDialog", () => {
-  test("renders editable uploaded item fields with a plain title", () => {
+  test("renders editable uploaded item fields with the product details title", () => {
     renderDialog();
 
-    expect(screen.getByText("Uploaded item details")).toBeInTheDocument();
+    expect(screen.getByText("Product details")).toBeInTheDocument();
     expect(
       document.querySelector(".uploaded-detail-camera-icon"),
     ).not.toBeInTheDocument();

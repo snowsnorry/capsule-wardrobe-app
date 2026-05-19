@@ -371,7 +371,6 @@ const ru = {
       ai: "AI",
     },
     uploadedDetail: {
-      title: "Детали загруженной вещи",
       notSpecified: "Не указано",
       missingRequired: "Чтобы применить изменения, заполните: {items}.",
       fields: {

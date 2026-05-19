@@ -335,7 +335,7 @@ describe("MainScreenDialogs", () => {
     ).not.toBeInTheDocument();
     await user.click(screen.getByRole("menuitem", { name: "Edit" }));
 
-    expect(screen.getByText("Uploaded item details")).toBeInTheDocument();
+    expect(screen.getByText("Product details")).toBeInTheDocument();
     expect(
       screen.getByTestId("product-detail-dialog-image-pane"),
     ).toBeVisible();
@@ -355,7 +355,7 @@ describe("MainScreenDialogs", () => {
     expect(editActions!.closest(".MuiDialogContent-root")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Cancel" }));
-    expect(screen.queryByText("Uploaded item details")).not.toBeInTheDocument();
+    expect(screen.queryByText("Product details")).not.toBeInTheDocument();
     expect(screen.getByText("Uploaded shirt")).toBeInTheDocument();
     expect(
       screen.getByTestId("product-detail-dialog-image-pane"),
@@ -366,9 +366,7 @@ describe("MainScreenDialogs", () => {
     await user.click(screen.getByRole("button", { name: "Apply" }));
 
     await waitFor(() => {
-      expect(
-        screen.queryByText("Uploaded item details"),
-      ).not.toBeInTheDocument();
+      expect(screen.queryByText("Product details")).not.toBeInTheDocument();
     });
     expect(screen.getByText("Uploaded shirt")).toBeInTheDocument();
     expect(onUpdateUploadedWardrobeItem).toHaveBeenCalledTimes(1);
@@ -409,7 +407,7 @@ describe("MainScreenDialogs", () => {
     ).not.toBeInTheDocument();
     await user.click(screen.getByRole("menuitem", { name: "Edit" }));
 
-    expect(screen.getByText("Uploaded item details")).toBeInTheDocument();
+    expect(screen.getByText("Product details")).toBeInTheDocument();
     expect(screen.queryByText("Select a product")).not.toBeInTheDocument();
   });
 

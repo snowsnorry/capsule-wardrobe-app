@@ -96,7 +96,6 @@ const labels = {
     removeConfirmBody: "Remove body",
     removeConfirm: "Remove",
     uploadedDetail: {
-      title: "Uploaded item details",
       notSpecified: "Not specified",
       missingRequired: "To apply changes, fill in: {items}.",
       fields: {
