@@ -35,17 +35,47 @@ vi.mock("../../components/ProfileFiltersSidebar", () => ({
     onApply,
     onReset,
     showSettingsTitle,
+    showFooterActions = true,
+  }: {
+    onApply: () => void;
+    onReset: () => void;
+    showSettingsTitle?: boolean;
+    showFooterActions?: boolean;
+  }) => (
+    <div
+      data-testid="profile-filters-sidebar"
+      data-show-settings-title={String(showSettingsTitle)}
+    >
+      {showFooterActions ? (
+        <>
+          <button type="button" onClick={onReset}>
+            reset-filters
+          </button>
+          <button type="button" onClick={onApply}>
+            apply-filters
+          </button>
+        </>
+      ) : null}
+    </div>
+  ),
+  ProfileFiltersActions: ({
+    onApply,
+    onReset,
+    showSettingsTitle,
   }: {
     onApply: () => void;
     onReset: () => void;
     showSettingsTitle?: boolean;
   }) => (
-    <div data-show-settings-title={String(showSettingsTitle)}>
-      <button type="button" onClick={onApply}>
-        apply-filters
-      </button>
+    <div
+      data-testid="profile-filters-actions"
+      data-show-settings-title={String(showSettingsTitle)}
+    >
       <button type="button" onClick={onReset}>
         reset-filters
+      </button>
+      <button type="button" onClick={onApply}>
+        apply-filters
       </button>
     </div>
   ),
@@ -154,8 +184,11 @@ describe("MainScreenMediaDialogs", () => {
       .getByText("Capsule settings")
       .closest(".MuiDialogTitle-root");
     const content = screen
-      .getByText("apply-filters")
+      .getByTestId("profile-filters-sidebar")
       .closest(".MuiDialogContent-root");
+    const footer = screen
+      .getByTestId("profile-filters-actions")
+      .closest(".MuiDialogActions-root");
 
     expect(getComputedStyle(header!).paddingTop).toBe("12px");
     expect(getComputedStyle(header!).paddingBottom).toBe("8px");
@@ -164,6 +197,8 @@ describe("MainScreenMediaDialogs", () => {
     expect(getComputedStyle(header!).borderBottomWidth).toBe("");
     expect(getComputedStyle(content!).backgroundColor).toBe("rgb(16, 24, 23)");
     expect(getComputedStyle(content!).paddingTop).toBe("8px");
+    expect(getComputedStyle(footer!).backgroundColor).toBe("rgb(21, 32, 31)");
+    expect(getComputedStyle(footer!).justifyContent).toBe("flex-end");
   });
 
   test("ImageDialog only closes from dialog onClose while interactions are enabled", async () => {

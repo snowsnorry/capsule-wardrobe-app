@@ -1,6 +1,7 @@
 import {
   Box,
   Dialog,
+  DialogActions,
   DialogContent,
   DialogTitle,
   IconButton,
@@ -8,11 +9,14 @@ import {
 } from "@mui/material";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import {
+  mobileCapsuleDialogActionsSx,
   mobileCapsuleDialogContentSx,
   mobileCapsuleDialogPaperSx,
   mobileCapsuleDialogTitleSx,
 } from "../../components/MobileDialogSurfaceStyles";
-import ProfileFiltersSidebar from "../../components/ProfileFiltersSidebar";
+import ProfileFiltersSidebar, {
+  ProfileFiltersActions,
+} from "../../components/ProfileFiltersSidebar";
 import { useI18n } from "../../i18n/useI18n";
 import type { MainScreenProps } from "./MainScreenTypes";
 
@@ -65,8 +69,32 @@ export function FiltersDialog({
           onSignOut={null}
           isInteractionDisabled={disabled}
           showSettingsTitle={!isOverlay}
+          showFooterActions={false}
         />
       </DialogContent>
+      <DialogActions
+        sx={
+          isOverlay
+            ? mobileCapsuleDialogActionsSx
+            : { px: 3, pb: 2.5, pt: 2, bgcolor: "background.paper" }
+        }
+      >
+        <ProfileFiltersActions
+          {...props}
+          onApply={async () => {
+            setOpen(false);
+            await props.onApplyFilters();
+          }}
+          onReset={async () => {
+            setOpen(false);
+            await props.onResetFilters();
+          }}
+          onSignOut={undefined}
+          isInteractionDisabled={disabled}
+          showSettingsTitle={!isOverlay}
+          showFooterActions={false}
+        />
+      </DialogActions>
     </Dialog>
   );
 }

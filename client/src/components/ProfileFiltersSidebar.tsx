@@ -2,7 +2,10 @@ import type { ReactElement } from "react";
 import { useI18n } from "../i18n/useI18n";
 import { translateOption } from "../i18n";
 import { buildCanonicalPatternOptions } from "../../../shared/patternOptions.js";
-import { ProfileFiltersSidebarFrame } from "./ProfileFiltersSidebarSections";
+import {
+  ProfileFilterActions,
+  ProfileFiltersSidebarFrame,
+} from "./ProfileFiltersSidebarSections";
 import type {
   ProfileFiltersSidebarProps,
   ProfileFilterValue,
@@ -54,6 +57,26 @@ function ProfileFiltersSidebar(
   props: ProfileFiltersSidebarProps,
 ): ReactElement {
   const { t, locale } = useI18n();
+  const actionState = getProfileFilterActionState(props, t);
+
+  return (
+    <ProfileFiltersSidebarFrame
+      props={props}
+      sortedPatternOptions={sortPatternOptions(props.patternOptions, locale)}
+      normalizedSelectedPattern={props.selectedPattern ?? "solid"}
+      missingRequiredFilters={actionState.missingRequiredFilters}
+      showUnchangedFiltersHint={actionState.showUnchangedFiltersHint}
+      isApplyDisabled={actionState.isApplyDisabled}
+      t={t}
+      locale={locale}
+    />
+  );
+}
+
+function getProfileFilterActionState(
+  props: ProfileFiltersSidebarProps,
+  t: (key: string) => string,
+) {
   const missingRequiredFilters = getMissingRequiredFilters({ ...props, t });
   const isMissingRequiredFilters = missingRequiredFilters.length > 0;
   const hasFilterChanges = props.hasFilterChanges ?? true;
@@ -65,17 +88,19 @@ function ProfileFiltersSidebar(
     isMissingRequiredFilters ||
     !hasFilterChanges;
 
-  return (
-    <ProfileFiltersSidebarFrame
-      props={props}
-      sortedPatternOptions={sortPatternOptions(props.patternOptions, locale)}
-      normalizedSelectedPattern={props.selectedPattern ?? "solid"}
-      missingRequiredFilters={missingRequiredFilters}
-      showUnchangedFiltersHint={showUnchangedFiltersHint}
-      isApplyDisabled={isApplyDisabled}
-      t={t}
-      locale={locale}
-    />
-  );
+  return {
+    missingRequiredFilters,
+    showUnchangedFiltersHint,
+    isApplyDisabled,
+  };
 }
+
+function ProfileFiltersActions(props: ProfileFiltersSidebarProps) {
+  const { t } = useI18n();
+  const actionState = getProfileFilterActionState(props, t);
+
+  return <ProfileFilterActions {...actionState} props={props} t={t} />;
+}
+
+export { ProfileFiltersActions };
 export default ProfileFiltersSidebar;

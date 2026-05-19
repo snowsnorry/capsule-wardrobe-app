@@ -1,12 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
-import {
-  Box,
-  Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  Typography,
-} from "@mui/material";
+import { Dialog, DialogContent } from "@mui/material";
 import type { UploadedWardrobeItemUpdatePayload } from "../../api/myWardrobe";
 import ProductDetail from "../../components/productDetail/ProductDetail";
 import {
@@ -18,13 +10,11 @@ import {
 import ProductDetailLoadingContent from "../../components/productDetail/ProductDetailLoadingContent";
 import ProductDetailMobileDialogHeader from "../../components/productDetail/ProductDetailMobileDialogHeader";
 import ProductDialogImagePane from "../../components/productDetail/ProductDialogImagePane";
-import UploadedProductDetailForm from "../../components/productDetail/UploadedProductDetailForm";
 import UploadedProductDetailMobileDialogHeader from "../../components/productDetail/UploadedProductDetailMobileDialogHeader";
 import {
-  buildFormState,
-  buildPayload,
-  getMissingRequiredFields,
-} from "../../components/productDetail/UploadedProductDetailFormState";
+  UploadedCapsuleEditDialogBody,
+  UploadedCapsuleEditPane,
+} from "./CapsuleProductUploadedEdit";
 import type { DialogsProps } from "./MainScreenDialogsTypes";
 
 type ProductDetailMode = "read" | "edit";
@@ -68,7 +58,8 @@ function CapsuleProductDetailDialog({
   const showLoading = mode === "read" && resolvedItem.isLoading;
   const showMobileHeader = isMobile && mode === "read";
   const isUploadedItem = detailItem.source === "uploaded";
-  const showMobileEditHeader = isMobile && mode === "edit" && isUploadedItem;
+  const editMode = mode === "edit" && isUploadedItem;
+  const showMobileEditHeader = isMobile && editMode;
 
   return (
     <Dialog
@@ -77,7 +68,9 @@ function CapsuleProductDetailDialog({
       fullScreen={isMobile}
       fullWidth={!isMobile}
       maxWidth={false}
-      PaperProps={{ sx: getDialogPaperSx(isMobile) }}
+      PaperProps={{
+        sx: getProductDialogPaperSx(isMobile, showMobileEditHeader),
+      }}
     >
       {showMobileHeader ? (
         <ProductDetailMobileDialogHeader
@@ -94,29 +87,35 @@ function CapsuleProductDetailDialog({
       {showMobileEditHeader ? (
         <UploadedProductDetailMobileDialogHeader t={t} />
       ) : null}
-      <DialogContent
-        sx={getDialogContentSx(
-          isMobile,
-          showLoading,
-          showMobileHeader || showMobileEditHeader,
-        )}
-      >
-        <CapsuleProductDetailContent
-          isLoading={showLoading}
-          isMobile={isMobile}
-          showMobileHeader={showMobileHeader}
+      {showMobileEditHeader ? (
+        <UploadedCapsuleEditDialogBody
           item={detailItem}
           locale={locale}
-          mode={mode}
           t={t}
           onApply={onApply}
-          onClose={onClose}
-          onEdit={onEdit}
-          onRemoveFromMyWardrobe={onRemoveFromMyWardrobe}
-          onReadMode={onReadMode}
-          onSaveToMyWardrobe={onSaveToMyWardrobe}
+          onCancel={onReadMode}
         />
-      </DialogContent>
+      ) : (
+        <DialogContent
+          sx={getDialogContentSx(isMobile, showLoading, showMobileHeader)}
+        >
+          <CapsuleProductDetailContent
+            isLoading={showLoading}
+            isMobile={isMobile}
+            showMobileHeader={showMobileHeader}
+            item={detailItem}
+            locale={locale}
+            mode={mode}
+            t={t}
+            onApply={onApply}
+            onClose={onClose}
+            onEdit={onEdit}
+            onRemoveFromMyWardrobe={onRemoveFromMyWardrobe}
+            onReadMode={onReadMode}
+            onSaveToMyWardrobe={onSaveToMyWardrobe}
+          />
+        </DialogContent>
+      )}
     </Dialog>
   );
 }
@@ -169,16 +168,7 @@ function CapsuleProductDetailContent({
   }
 
   if (isMobile) {
-    return editMode ? (
-      <UploadedCapsuleEditPane
-        isMobile={isMobile}
-        item={item}
-        locale={locale}
-        t={t}
-        onApply={onApply}
-        onCancel={onReadMode}
-      />
-    ) : (
+    return (
       <ProductDetail item={item} t={t} locale={locale} bodyBottomPadding={1} />
     );
   }
@@ -188,7 +178,6 @@ function CapsuleProductDetailContent({
       <ProductDialogImagePane item={item} t={t} />
       {editMode ? (
         <UploadedCapsuleEditPane
-          isMobile={isMobile}
           item={item}
           locale={locale}
           t={t}
@@ -210,102 +199,16 @@ function CapsuleProductDetailContent({
   );
 }
 
-function UploadedCapsuleEditPane({
-  item,
-  isMobile,
-  locale,
-  onApply,
-  onCancel,
-  t,
-}: {
-  isMobile: boolean;
-  item: ProductDetailItem;
-  locale: string;
-  onApply: CapsuleProductDetailDialogProps["onApply"];
-  onCancel: () => void;
-  t: Translate;
-}) {
-  const [form, setForm] = useState(() => buildFormState(item));
-  const [isSaving, setIsSaving] = useState(false);
-
-  useEffect(() => {
-    setForm(buildFormState(item));
-    setIsSaving(false);
-  }, [item]);
-
-  const missingRequired = useMemo(
-    () => getMissingRequiredFields(form, t),
-    [form, t],
-  );
-  const canApply = missingRequired.length === 0 && !isSaving;
-  const handleApply = async () => {
-    if (!canApply) {
-      return;
-    }
-
-    setIsSaving(true);
-    try {
-      await onApply(item, buildPayload(form));
-    } catch {
-      // Parent screen owns the visible error message; keep edit mode open.
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  return (
-    <Box sx={uploadedEditPaneSx}>
-      <UploadedProductDetailForm
-        form={form}
-        locale={locale}
-        showTitle={!isMobile}
-        topOffset={isMobile ? 0.75 : 0}
-        t={t}
-        onChange={setForm}
-      />
-      <DialogActions sx={uploadedEditActionsSx}>
-        {missingRequired.length > 0 ? (
-          <Typography
-            variant="caption"
-            color="warning.dark"
-            sx={{ mr: "auto" }}
-          >
-            {t("myWardrobe.uploadedDetail.missingRequired", {
-              items: missingRequired.join(", "),
-            })}
-          </Typography>
-        ) : (
-          <Box sx={{ flex: 1 }} />
-        )}
-        <Button onClick={onCancel} disabled={isSaving}>
-          {t("actions.cancel")}
-        </Button>
-        <Button variant="contained" onClick={handleApply} disabled={!canApply}>
-          {t("filters.apply")}
-        </Button>
-      </DialogActions>
-    </Box>
-  );
+function getProductDialogPaperSx(isMobile: boolean, mobileEditMode: boolean) {
+  const baseSx = getDialogPaperSx(isMobile);
+  return mobileEditMode
+    ? {
+        ...baseSx,
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
+      }
+    : baseSx;
 }
-
-const uploadedEditPaneSx = {
-  minHeight: 0,
-  overflowY: "auto",
-  display: "flex",
-  flexDirection: "column",
-  p: { xs: 0, md: 3 },
-  pb: { xs: 1, md: 3 },
-} as const;
-
-const uploadedEditActionsSx = {
-  borderTop: "1px solid",
-  borderColor: "divider",
-  px: 0,
-  pb: 0,
-  pt: 2,
-  mt: 2,
-  alignItems: "center",
-  gap: 1,
-} as const;
 
 export default CapsuleProductDetailDialog;

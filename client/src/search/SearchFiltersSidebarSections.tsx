@@ -168,8 +168,16 @@ function SearchFiltersFooter({
   t: (key: string) => string;
 }) {
   return (
-    <>
+    <Stack spacing={1} sx={{ width: "100%", alignItems: "flex-end" }}>
       <Stack direction="row" spacing={1.5}>
+        <Button
+          variant="outlined"
+          color="inherit"
+          onClick={onReset}
+          disabled={status.loading}
+        >
+          {t("filters.reset")}
+        </Button>
         {showApplyButton ? (
           <Button
             variant="contained"
@@ -179,21 +187,13 @@ function SearchFiltersFooter({
             {t("filters.apply")}
           </Button>
         ) : null}
-        <Button
-          variant="outlined"
-          color="inherit"
-          onClick={onReset}
-          disabled={status.loading}
-        >
-          {t("filters.reset")}
-        </Button>
       </Stack>
       {status.error ? (
-        <Typography variant="body2" color="error">
+        <Typography variant="body2" color="error" sx={{ alignSelf: "stretch" }}>
           {status.error}
         </Typography>
       ) : null}
-    </>
+    </Stack>
   );
 }
 
@@ -252,15 +252,17 @@ function SearchFiltersSidebarFrame({
         updateDraftState={updateDraftState}
         t={t}
       />
-      <SearchFiltersFooter
-        status={props.status}
-        onApply={props.onApply}
-        onReset={props.onReset}
-        showApplyButton={props.showApplyButton ?? true}
-        t={t}
-      />
+      {props.showFooterActions === false ? null : (
+        <SearchFiltersFooter
+          status={props.status}
+          onApply={props.onApply}
+          onReset={props.onReset}
+          showApplyButton={props.showApplyButton ?? true}
+          t={t}
+        />
+      )}
     </Stack>
   );
 }
 
-export { SearchFiltersSidebarFrame };
+export { SearchFiltersFooter, SearchFiltersSidebarFrame };

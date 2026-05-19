@@ -22,13 +22,27 @@ vi.mock("../../components/LocaleSwitcher", () => ({
   default: () => <div data-testid="locale-switcher">locale-switcher</div>,
 }));
 vi.mock("../../components/ProfileFiltersSidebar", () => ({
-  default: ({ onApply, onReset }) => (
+  default: ({ onApply, onReset, showFooterActions = true }) => (
     <div data-testid="profile-filters-sidebar">
-      <button type="button" onClick={onApply}>
-        apply-filters
-      </button>
+      {showFooterActions ? (
+        <>
+          <button type="button" onClick={onReset}>
+            reset-filters
+          </button>
+          <button type="button" onClick={onApply}>
+            apply-filters
+          </button>
+        </>
+      ) : null}
+    </div>
+  ),
+  ProfileFiltersActions: ({ onApply, onReset }) => (
+    <div data-testid="profile-filters-actions">
       <button type="button" onClick={onReset}>
         reset-filters
+      </button>
+      <button type="button" onClick={onApply}>
+        apply-filters
       </button>
     </div>
   ),

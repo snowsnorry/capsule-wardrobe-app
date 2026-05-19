@@ -124,6 +124,28 @@ describe("UploadedProductDetailDialog", () => {
     expect(screen.getAllByText("Not specified").length).toBeGreaterThan(0);
   });
 
+  test("keeps mobile edit actions in a right-aligned footer outside the scrollable body", () => {
+    renderDialog({ isMobile: true });
+
+    const content = screen
+      .getByDisplayValue("Linen shirt")
+      .closest(".MuiDialogContent-root");
+    const footer = screen
+      .getByRole("button", { name: "Apply" })
+      .closest(".MuiDialogActions-root");
+    const applyButton = screen.getByRole("button", { name: "Apply" });
+    const cancelButton = screen.getByRole("button", { name: "Cancel" });
+
+    expect(footer).not.toBeNull();
+    expect(content!.contains(footer)).toBe(false);
+    expect(getComputedStyle(footer!).justifyContent).toBe("flex-end");
+    expect(
+      cancelButton.compareDocumentPosition(applyButton) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(applyButton).toHaveClass("MuiButton-contained");
+  });
+
   test("preserves trailing spaces while editing text fields", () => {
     renderDialog();
 
@@ -269,6 +291,11 @@ describe("UploadedProductDetailDialog", () => {
       paddingTop: "8px",
       paddingBottom: "32px",
     });
+    expect(
+      screen
+        .getByRole("button", { name: "Apply" })
+        .closest(".MuiDialogActions-root"),
+    ).not.toBeNull();
     expect(screen.getByLabelText(/Name/).closest(".MuiStack-root")).toHaveStyle(
       {
         paddingTop: "6px",

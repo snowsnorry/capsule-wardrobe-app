@@ -127,6 +127,21 @@ describe("MainScreenDialogs", () => {
     });
 
     expect(screen.getAllByTestId("profile-filters-sidebar")).toHaveLength(1);
+    const content = screen
+      .getByTestId("profile-filters-sidebar")
+      .closest(".MuiDialogContent-root");
+    const footer = screen
+      .getByTestId("profile-filters-actions")
+      .closest(".MuiDialogActions-root");
+    expect(footer).not.toBeNull();
+    expect(content!.contains(footer)).toBe(false);
+    expect(getComputedStyle(footer!).justifyContent).toBe("flex-end");
+    expect(
+      screen
+        .getByText("reset-filters")
+        .compareDocumentPosition(screen.getByText("apply-filters")) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
     await user.click(screen.getByText("apply-filters"));
     expect(onApplyFilters).toHaveBeenCalledTimes(1);
     await waitFor(() => {
@@ -250,8 +265,21 @@ describe("MainScreenDialogs", () => {
       paddingLeft: "24px",
       paddingRight: "24px",
       paddingTop: "8px",
-      paddingBottom: "32px",
+      paddingBottom: "24px",
     });
+    const content = document.querySelector(".MuiDialogContent-root");
+    const footer = screen
+      .getByRole("button", { name: "Apply" })
+      .closest(".MuiDialogActions-root");
+    const applyButton = screen.getByRole("button", { name: "Apply" });
+    const cancelButton = screen.getByRole("button", { name: "Cancel" });
+    expect(footer).not.toBeNull();
+    expect(content!.contains(footer)).toBe(false);
+    expect(getComputedStyle(footer!).justifyContent).toBe("flex-end");
+    expect(
+      cancelButton.compareDocumentPosition(applyButton) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
     expect(screen.getByLabelText(/Name/).closest(".MuiStack-root")).toHaveStyle(
       {
         paddingTop: "6px",
@@ -298,7 +326,9 @@ describe("MainScreenDialogs", () => {
     });
 
     expect(screen.getByText("Uploaded shirt")).toBeInTheDocument();
-    const imagePane = screen.getByTestId("product-detail-dialog-image-pane");
+    expect(
+      screen.getByTestId("product-detail-dialog-image-pane"),
+    ).toBeVisible();
     await user.click(screen.getByRole("button", { name: "Product actions" }));
     expect(
       screen.queryByRole("menuitem", { name: "Save to My Wardrobe" }),
@@ -306,16 +336,30 @@ describe("MainScreenDialogs", () => {
     await user.click(screen.getByRole("menuitem", { name: "Edit" }));
 
     expect(screen.getByText("Uploaded item details")).toBeInTheDocument();
-    expect(screen.getByTestId("product-detail-dialog-image-pane")).toBe(
-      imagePane,
+    expect(
+      screen.getByTestId("product-detail-dialog-image-pane"),
+    ).toBeVisible();
+    const editFormScroll = screen.getByTestId(
+      "uploaded-capsule-edit-form-scroll",
     );
+    const editActions = screen
+      .getByRole("button", { name: "Apply" })
+      .closest(".MuiDialogActions-root");
+    expect(editFormScroll).toHaveStyle({
+      flex: "1",
+      minHeight: "0",
+      overflowY: "auto",
+    });
+    expect(editActions).not.toBeNull();
+    expect(getComputedStyle(editActions!).flexShrink).toBe("0");
+    expect(editActions!.closest(".MuiDialogContent-root")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Cancel" }));
     expect(screen.queryByText("Uploaded item details")).not.toBeInTheDocument();
     expect(screen.getByText("Uploaded shirt")).toBeInTheDocument();
-    expect(screen.getByTestId("product-detail-dialog-image-pane")).toBe(
-      imagePane,
-    );
+    expect(
+      screen.getByTestId("product-detail-dialog-image-pane"),
+    ).toBeVisible();
 
     await user.click(screen.getByRole("button", { name: "Product actions" }));
     await user.click(screen.getByRole("menuitem", { name: "Edit" }));
@@ -387,7 +431,15 @@ describe("MainScreenDialogs", () => {
       propsOverrides: { onRenameCapsule },
     });
 
-    await user.click(screen.getByRole("button", { name: "OK" }));
+    const cancelButton = screen.getByRole("button", { name: "Cancel" });
+    const okButton = screen.getByRole("button", { name: "OK" });
+    expect(okButton).toHaveClass("MuiButton-contained");
+    expect(
+      cancelButton.compareDocumentPosition(okButton) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+
+    await user.click(okButton);
 
     expect(onRenameCapsule).toHaveBeenCalledWith("Spring edit", "capsule-1");
     await waitFor(() => {

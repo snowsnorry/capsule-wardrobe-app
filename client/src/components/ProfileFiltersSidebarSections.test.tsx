@@ -43,6 +43,9 @@ function t(key: string, params?: Record<string, unknown>) {
     "capsule.settingsTitle": "Capsule settings",
     "capsule.settingsSubtitle": "Adjust the inputs used to build this capsule.",
     "capsule.preferWardrobe": "Prefer items from my wardrobe",
+    "capsule.anchors.title": "Anchor items",
+    "capsule.anchors.hint": "Choose up to 5 wardrobe items to keep.",
+    "capsule.anchors.add": "Add items from wardrobe",
     "filters.apply": "Apply",
     "filters.applyDisabledHint": "To apply filters, choose: {items}.",
     "filters.applyDisabledUnchangedHint": "Filters have not changed.",
@@ -173,6 +176,16 @@ describe("ProfileFiltersSidebarSections", () => {
     ).toBeInTheDocument();
   });
 
+  test("centers the anchor empty-state button content", () => {
+    renderFrame();
+
+    expect(
+      getComputedStyle(
+        screen.getByRole("button", { name: "Add items from wardrobe" }),
+      ).justifyContent,
+    ).toBe("center");
+  });
+
   test("forwards filter interactions to the corresponding callbacks", async () => {
     const user = userEvent.setup();
     const onSelectStyleCore = vi.fn();
@@ -245,6 +258,13 @@ describe("ProfileFiltersSidebarSections", () => {
       },
     });
 
+    expect(
+      screen
+        .getByRole("button", { name: "Reset" })
+        .compareDocumentPosition(
+          screen.getByRole("button", { name: "Apply" }),
+        ) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Apply" }));
     await user.click(screen.getByRole("button", { name: "Reset" }));
 

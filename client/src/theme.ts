@@ -247,6 +247,14 @@ function createComponentOverrides(mode: ThemeMode): Components<Theme> {
         },
       },
     },
+    MuiDialogActions: {
+      styleOverrides: {
+        root: {
+          justifyContent: "flex-start",
+          backgroundColor: tokens.backgroundPaper,
+        },
+      },
+    },
     MuiChip: {
       styleOverrides: {
         root: {

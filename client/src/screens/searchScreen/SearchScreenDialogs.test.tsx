@@ -10,10 +10,22 @@ import { ThemeProvider } from "@mui/material/styles";
 import { createAppTheme } from "../../theme";
 
 vi.mock("../../search/SearchFiltersSidebar", () => ({
-  default: ({ onApply }) => (
-    <button type="button" onClick={onApply}>
-      apply filters
-    </button>
+  default: ({ onApply, showFooterActions = true }) => (
+    <div data-testid="search-filters-body">
+      filter body
+      {showFooterActions ? (
+        <button type="button" onClick={onApply}>
+          apply filters
+        </button>
+      ) : null}
+      <button
+        type="button"
+        data-testid="search-filters-body-apply"
+        onClick={onApply}
+      >
+        body apply callback
+      </button>
+    </div>
   ),
 }));
 vi.mock("../../components/productDetail/ProductDetail", () => ({
@@ -46,6 +58,20 @@ function createSearch() {
   };
 }
 
+function getFilterFooterApplyButton() {
+  const filterDialog = screen.getByText("Filters").closest('[role="dialog"]');
+  const footer = filterDialog?.querySelector(".MuiDialogActions-root");
+  const applyButton = Array.from(footer?.querySelectorAll("button") || []).find(
+    (button) => button.textContent === "Apply",
+  );
+
+  if (!applyButton) {
+    throw new Error("Apply button not found in filters footer");
+  }
+
+  return applyButton;
+}
+
 describe("SearchScreenDialogs", () => {
   test("applies filters, closes filters, and closes product detail", async () => {
     const search = createSearch();
@@ -59,6 +85,8 @@ describe("SearchScreenDialogs", () => {
             "capsule.closeFilters": "Close filters",
             "actions.close": "Close",
             "capsule.saveToMyWardrobe": "Save to My Wardrobe",
+            "filters.apply": "Apply",
+            "filters.reset": "Reset",
             "filters.title": "Filters",
             "search.productActions": "Product actions",
             "search.productDetailsTitle": "Product details",
@@ -69,7 +97,7 @@ describe("SearchScreenDialogs", () => {
       />,
     );
 
-    fireEvent.click(screen.getByText("apply filters"));
+    fireEvent.click(getFilterFooterApplyButton());
     await waitFor(() => {
       expect(search.applyCurrentQuery).toHaveBeenCalled();
     });
@@ -90,6 +118,33 @@ describe("SearchScreenDialogs", () => {
     expect(onSaveToMyWardrobe).toHaveBeenCalledWith(search.selectedItem);
   });
 
+  test("keeps filter body apply callback wired after moving actions to the footer", async () => {
+    const search = createSearch();
+
+    render(
+      <SearchScreenDialogs
+        search={search as never}
+        t={(key) =>
+          ({
+            "capsule.closeFilters": "Close filters",
+            "actions.close": "Close",
+            "filters.apply": "Apply",
+            "filters.reset": "Reset",
+            "filters.title": "Filters",
+            "search.productDetailsTitle": "Product details",
+          })[key] || key
+        }
+        locale="en"
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId("search-filters-body-apply"));
+    await waitFor(() => {
+      expect(search.applyCurrentQuery).toHaveBeenCalled();
+    });
+    expect(search.setIsFiltersOpen).toHaveBeenCalledWith(false);
+  });
+
   test("uses capsule-sized filter header surfaces in dark mode", () => {
     const search = createSearch();
     const theme = createAppTheme("dark");
@@ -102,6 +157,8 @@ describe("SearchScreenDialogs", () => {
             ({
               "capsule.closeFilters": "Close filters",
               "actions.close": "Close",
+              "filters.apply": "Apply",
+              "filters.reset": "Reset",
               "filters.title": "Filters",
               "search.productDetailsTitle": "Product details",
             })[key] || key
@@ -113,8 +170,11 @@ describe("SearchScreenDialogs", () => {
 
     const header = screen.getByText("Filters").closest(".MuiDialogTitle-root");
     const content = screen
-      .getByText("apply filters")
+      .getByTestId("search-filters-body")
       .closest(".MuiDialogContent-root");
+    const footer = getFilterFooterApplyButton().closest(
+      ".MuiDialogActions-root",
+    );
 
     expect(getComputedStyle(header!).paddingTop).toBe("12px");
     expect(getComputedStyle(header!).paddingBottom).toBe("8px");
@@ -123,5 +183,22 @@ describe("SearchScreenDialogs", () => {
     expect(getComputedStyle(content!).backgroundColor).toBe("rgb(16, 24, 23)");
     expect(getComputedStyle(content!).overflowY).toBe("auto");
     expect(getComputedStyle(content!).paddingTop).toBe("8px");
+    expect(footer).not.toBeNull();
+    expect(content!.contains(footer)).toBe(false);
+    expect(getComputedStyle(footer!).justifyContent).toBe("flex-end");
+    const footerButtons = Array.from(footer!.querySelectorAll("button"));
+    const resetButton = footerButtons.find(
+      (button) => button.textContent === "Reset",
+    );
+    const applyButton = footerButtons.find(
+      (button) => button.textContent === "Apply",
+    );
+    expect(resetButton).toBeDefined();
+    expect(applyButton).toBeDefined();
+    expect(
+      resetButton!.compareDocumentPosition(applyButton!) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(getComputedStyle(footer!).backgroundColor).toBe("rgb(21, 32, 31)");
   });
 });

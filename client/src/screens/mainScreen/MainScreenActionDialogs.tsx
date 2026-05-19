@@ -167,6 +167,7 @@ export function NameDialog({
           {t("actions.cancel")}
         </Button>
         <Button
+          variant="contained"
           onClick={() => void submit()}
           disabled={disabled || !state.value.trim()}
         >

@@ -7,9 +7,9 @@ import { StatisticsSummaryCard } from "./statisticsScreen/StatisticsCards";
 import { formatCount } from "./statisticsScreen/StatisticsCharts";
 import {
   StatisticsDesktopLayout,
-  StatisticsFiltersDialog,
   StatisticsMobileLayout,
 } from "./statisticsScreen/StatisticsLayout";
+import { StatisticsFiltersDialog } from "./statisticsScreen/StatisticsFiltersDialog";
 import { useStatisticsChartCards } from "./statisticsScreen/useStatisticsChartCards";
 import { useStatisticsStats } from "./statisticsScreen/useStatisticsStats";
 

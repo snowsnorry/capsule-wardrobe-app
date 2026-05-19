@@ -4,11 +4,11 @@ import { fireEvent, render, screen } from "@testing-library/react";
 vi.mock("../../search/SearchFiltersSidebar", () => ({
   default: ({ onApply, onReset }) => (
     <div>
-      <button type="button" onClick={onApply}>
-        apply filters
-      </button>
       <button type="button" onClick={onReset}>
         reset filters
+      </button>
+      <button type="button" onClick={onApply}>
+        apply filters
       </button>
     </div>
   ),

@@ -222,6 +222,9 @@ describe("StatisticsLayout", () => {
     const content = screen
       .getByText("UNIQLO")
       .closest(".MuiDialogContent-root");
+    const footer = screen
+      .getByRole("button", { name: "Apply" })
+      .closest(".MuiDialogActions-root");
 
     expect(getComputedStyle(header!).paddingTop).toBe("12px");
     expect(getComputedStyle(header!).paddingBottom).toBe("8px");
@@ -230,6 +233,23 @@ describe("StatisticsLayout", () => {
     expect(getComputedStyle(content!).backgroundColor).toBe("rgb(16, 24, 23)");
     expect(getComputedStyle(content!).overflowY).toBe("auto");
     expect(getComputedStyle(content!).paddingTop).toBe("8px");
+    expect(footer).not.toBeNull();
+    expect(content!.contains(footer)).toBe(false);
+    expect(getComputedStyle(footer!).justifyContent).toBe("flex-end");
+    const footerButtons = Array.from(footer!.querySelectorAll("button"));
+    const resetButton = footerButtons.find(
+      (button) => button.textContent === "Reset",
+    );
+    const applyButton = footerButtons.find(
+      (button) => button.textContent === "Apply",
+    );
+    expect(resetButton).toBeDefined();
+    expect(applyButton).toBeDefined();
+    expect(
+      resetButton!.compareDocumentPosition(applyButton!) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(getComputedStyle(footer!).backgroundColor).toBe("rgb(21, 32, 31)");
   });
 
   test("uses dark paper chart cards in dark mode", async () => {

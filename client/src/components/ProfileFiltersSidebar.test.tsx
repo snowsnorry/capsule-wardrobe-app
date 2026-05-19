@@ -306,6 +306,11 @@ describe("ProfileFiltersSidebar", () => {
     await user.click(
       await screen.findByRole("button", { name: /White shirt/ }),
     );
+    const footer = screen
+      .getByRole("button", { name: "Apply" })
+      .closest(".MuiDialogActions-root");
+    expect(footer).not.toBeNull();
+    expect(getComputedStyle(footer!).justifyContent).toBe("flex-end");
     await user.click(screen.getByRole("button", { name: "Apply" }));
 
     expect(onSelectAnchorWardrobeItemIds).toHaveBeenCalledWith(["W12"]);

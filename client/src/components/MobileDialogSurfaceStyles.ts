@@ -36,6 +36,7 @@ const mobileCapsuleDialogActionsSx = {
   bgcolor: "background.paper",
   borderTop: 1,
   borderColor: "divider",
+  justifyContent: "flex-end",
   px: 2,
   py: 1.5,
   gap: 1,

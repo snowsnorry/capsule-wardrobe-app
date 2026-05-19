@@ -54,6 +54,7 @@ type ProfileFiltersSidebarProps = {
   isInteractionDisabled?: boolean;
   resetLabelKey?: string;
   showSettingsTitle?: boolean;
+  showFooterActions?: boolean;
 };
 
 export type { ProfileFiltersSidebarProps, ProfileFilterValue };

@@ -165,6 +165,11 @@ describe("SettingsDialog", () => {
     renderDialog({ onSave });
 
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+    const footer = screen
+      .getByRole("button", { name: "Save" })
+      .closest(".MuiDialogActions-root");
+    expect(footer).not.toBeNull();
+    expect(getComputedStyle(footer!).justifyContent).toBe("flex-end");
 
     await user.click(screen.getByRole("button", { name: "AI" }));
     await user.click(screen.getByRole("combobox", { name: "Stylist Model" }));

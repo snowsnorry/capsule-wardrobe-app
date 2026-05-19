@@ -2,6 +2,7 @@ import type { ReactElement } from "react";
 import {
   Box,
   Dialog,
+  DialogActions,
   DialogContent,
   DialogTitle,
   IconButton,
@@ -10,11 +11,13 @@ import {
 } from "@mui/material";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import {
+  mobileCapsuleDialogActionsSx,
   mobileCapsuleDialogContentSx,
   mobileCapsuleDialogPaperSx,
   mobileCapsuleDialogTitleSx,
 } from "../../components/MobileDialogSurfaceStyles";
 import SearchFiltersSidebar from "../../search/SearchFiltersSidebar";
+import { SearchFiltersFooter } from "../../search/SearchFiltersSidebarSections";
 import ProductDetail from "../../components/productDetail/ProductDetail";
 import ProductDetailMobileDialogHeader from "../../components/productDetail/ProductDetailMobileDialogHeader";
 import type { SearchResultItem } from "./searchTypes";
@@ -47,7 +50,11 @@ function SearchFiltersDialog({
       }}
     >
       <DialogTitle sx={mobileCapsuleDialogTitleSx}>
-        <Typography variant="h6" sx={{ color: "text.primary" }}>
+        <Typography
+          component="span"
+          variant="h6"
+          sx={{ color: "text.primary" }}
+        >
           {t("filters.title")}
         </Typography>
         <IconButton
@@ -86,9 +93,22 @@ function SearchFiltersDialog({
             }}
             onReset={search.resetSearch}
             autoApply
+            showFooterActions={false}
           />
         </Box>
       </DialogContent>
+      <DialogActions sx={mobileCapsuleDialogActionsSx}>
+        <SearchFiltersFooter
+          status={search.status}
+          onApply={async () => {
+            await search.applyCurrentQuery();
+            search.setIsFiltersOpen(false);
+          }}
+          onReset={search.resetSearch}
+          showApplyButton
+          t={t}
+        />
+      </DialogActions>
     </Dialog>
   );
 }

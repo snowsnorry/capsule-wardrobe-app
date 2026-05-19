@@ -245,6 +245,12 @@ describe("SearchFiltersSidebar", () => {
       page: 1,
     });
 
+    expect(
+      (
+        screen.getAllByRole("button", { name: "Reset" }).at(-1) as HTMLElement
+      ).compareDocumentPosition(screen.getByRole("button", { name: "Apply" })) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Apply" }));
     expect(onApply).toHaveBeenCalledTimes(1);
     expect(screen.getByText("Filter error")).toBeInTheDocument();

@@ -332,7 +332,7 @@ function SettingsDialogActions({
   t: Translate;
 }) {
   return (
-    <DialogActions sx={{ px: 3, pb: 2.5, pt: 2 }}>
+    <DialogActions sx={{ justifyContent: "flex-end", px: 3, pb: 2.5, pt: 2 }}>
       <Button onClick={onClose} disabled={isSaving}>
         {t("actions.cancel")}
       </Button>

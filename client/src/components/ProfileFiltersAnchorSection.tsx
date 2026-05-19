@@ -130,7 +130,7 @@ function AnchorEmptyButton({
       startIcon={<AddRoundedIcon />}
       disabled={!canEdit}
       onClick={onOpen}
-      sx={{ justifyContent: "flex-start" }}
+      sx={{ justifyContent: "center" }}
     >
       {t("capsule.anchors.add")}
     </Button>

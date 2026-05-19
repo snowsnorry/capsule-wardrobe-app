@@ -22,6 +22,7 @@ type SearchFiltersSidebarProps = {
   onReset: () => void | Promise<void>;
   autoApply?: boolean;
   showApplyButton?: boolean;
+  showFooterActions?: boolean;
 };
 
 type SelectItem = {

@@ -126,7 +126,7 @@ export function WardrobeAnchorPickerDialog({
           )}
         </Stack>
       </DialogContent>
-      <DialogActions>
+      <DialogActions sx={{ justifyContent: "flex-end" }}>
         <Button color="inherit" onClick={onClose} disabled={disabled}>
           {t("actions.cancel")}
         </Button>

@@ -1,8 +1,6 @@
 import type { ReactNode } from "react";
 import {
   Box,
-  Dialog,
-  DialogContent,
   DialogTitle,
   Divider,
   IconButton,
@@ -12,17 +10,13 @@ import {
 } from "@mui/material";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import TuneRoundedIcon from "@mui/icons-material/TuneRounded";
-import {
-  mobileCapsuleDialogContentSx,
-  mobileCapsuleDialogPaperSx,
-  mobileCapsuleDialogTitleSx,
-} from "../../components/MobileDialogSurfaceStyles";
+import { mobileCapsuleDialogTitleSx } from "../../components/MobileDialogSurfaceStyles";
 import SearchFiltersSidebar from "../../search/SearchFiltersSidebar";
 import type { SearchDraftState, SearchOptions } from "../../search/searchState";
 import { MAIN_SCREEN_CONTENT_COLUMN_SX } from "../mainScreen/MainScreenHelpers";
 import type { StatisticsStatus } from "./statisticsTypes";
 
-type FiltersProps = {
+export type FiltersProps = {
   title: string;
   options: SearchOptions;
   draftState: SearchDraftState;
@@ -80,7 +74,7 @@ const STATISTICS_DESKTOP_CHARTS_STACK_SX = {
   minHeight: 0,
 } as const;
 
-function FiltersHeader({
+export function FiltersHeader({
   title,
   closeLabel,
   mobile = false,
@@ -94,7 +88,11 @@ function FiltersHeader({
   if (mobile) {
     return (
       <DialogTitle sx={mobileCapsuleDialogTitleSx}>
-        <Typography variant="h6" sx={{ color: "text.primary" }}>
+        <Typography
+          component="span"
+          variant="h6"
+          sx={{ color: "text.primary" }}
+        >
           {title}
         </Typography>
         {closeLabel && onClose ? (
@@ -290,74 +288,5 @@ export function StatisticsDesktopLayout({
         </Box>
       </Box>
     </Box>
-  );
-}
-
-export function StatisticsFiltersDialog({
-  open,
-  title,
-  closeLabel,
-  options,
-  draftState,
-  status,
-  onDraftStateChange,
-  onApply,
-  onReset,
-  onClose,
-}: FiltersProps & {
-  open: boolean;
-  closeLabel: string;
-  onClose: () => void;
-}) {
-  return (
-    <Dialog
-      fullScreen
-      open={open}
-      onClose={onClose}
-      PaperProps={{
-        sx: {
-          ...mobileCapsuleDialogPaperSx,
-          display: "flex",
-          flexDirection: "column",
-          overflow: "hidden",
-        },
-      }}
-    >
-      <FiltersHeader
-        title={title}
-        closeLabel={closeLabel}
-        mobile
-        onClose={onClose}
-      />
-      <DialogContent
-        sx={{
-          ...mobileCapsuleDialogContentSx,
-          flex: 1,
-          minHeight: 0,
-          width: "100%",
-          boxSizing: "border-box",
-          overflowX: "hidden",
-          overflowY: "auto",
-          px: 2,
-          pt: 1,
-          pb: 3,
-          "&&": {
-            pt: 1,
-          },
-        }}
-      >
-        <Box sx={{ minHeight: 0, maxWidth: "100%", overflowX: "hidden" }}>
-          <SearchFiltersSidebar
-            options={options}
-            draftState={draftState}
-            onDraftStateChange={onDraftStateChange}
-            status={status}
-            onApply={onApply}
-            onReset={onReset}
-            autoApply
-          />
-        </Box>
-      </DialogContent>
-    </Dialog>
   );
 }

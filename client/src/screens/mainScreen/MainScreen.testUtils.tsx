@@ -26,24 +26,56 @@ vi.mock("../../components/ProfileFiltersSidebar", () => ({
     onReset,
     onSignOut,
     isInteractionDisabled,
+    showFooterActions = true,
   }: {
     onApply: () => void;
     onReset: () => void;
     onSignOut?: (() => void) | null;
     isInteractionDisabled?: boolean;
+    showFooterActions?: boolean;
   }) => (
     <div data-testid="profile-filters-sidebar">
-      <button type="button" onClick={onApply} disabled={isInteractionDisabled}>
-        apply-filters
-      </button>
-      <button type="button" onClick={onReset} disabled={isInteractionDisabled}>
-        reset-filters
-      </button>
+      {showFooterActions ? (
+        <>
+          <button
+            type="button"
+            onClick={onReset}
+            disabled={isInteractionDisabled}
+          >
+            reset-filters
+          </button>
+          <button
+            type="button"
+            onClick={onApply}
+            disabled={isInteractionDisabled}
+          >
+            apply-filters
+          </button>
+        </>
+      ) : null}
       {typeof onSignOut === "function" ? (
         <button type="button" onClick={onSignOut}>
           sign-out
         </button>
       ) : null}
+    </div>
+  ),
+  ProfileFiltersActions: ({
+    onApply,
+    onReset,
+    isInteractionDisabled,
+  }: {
+    onApply: () => void;
+    onReset: () => void;
+    isInteractionDisabled?: boolean;
+  }) => (
+    <div data-testid="profile-filters-actions">
+      <button type="button" onClick={onReset} disabled={isInteractionDisabled}>
+        reset-filters
+      </button>
+      <button type="button" onClick={onApply} disabled={isInteractionDisabled}>
+        apply-filters
+      </button>
     </div>
   ),
 }));

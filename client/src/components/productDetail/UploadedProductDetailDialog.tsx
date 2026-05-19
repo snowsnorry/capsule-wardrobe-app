@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ReactElement } from "react";
 import {
-  Box,
   Button,
   Dialog,
   DialogActions,
   DialogContent,
+  Box,
+  Stack,
   Typography,
 } from "@mui/material";
 import {
@@ -109,6 +110,40 @@ function UploadedProductDetailDialog({
         />
       </DialogContent>
       <DialogActions sx={getDialogActionsSx(isMobile)}>
+        <UploadedProductDetailActions
+          canApply={canApply}
+          isMobile={isMobile}
+          isSaving={isSaving}
+          missingRequired={missingRequired}
+          t={t}
+          onApply={handleApply}
+          onClose={onClose}
+        />
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+function UploadedProductDetailActions({
+  canApply,
+  isMobile,
+  isSaving,
+  missingRequired,
+  t,
+  onApply,
+  onClose,
+}: {
+  canApply: boolean;
+  isMobile: boolean;
+  isSaving: boolean;
+  missingRequired: string[];
+  t: UploadedProductDetailDialogProps["t"];
+  onApply: () => void;
+  onClose: () => void;
+}) {
+  if (!isMobile) {
+    return (
+      <>
         {missingRequired.length > 0 ? (
           <Typography
             variant="caption"
@@ -125,11 +160,35 @@ function UploadedProductDetailDialog({
         <Button onClick={onClose} disabled={isSaving}>
           {t("actions.cancel")}
         </Button>
-        <Button variant="contained" onClick={handleApply} disabled={!canApply}>
+        <Button variant="contained" onClick={onApply} disabled={!canApply}>
           {t("filters.apply")}
         </Button>
-      </DialogActions>
-    </Dialog>
+      </>
+    );
+  }
+
+  return (
+    <Stack spacing={1} sx={{ alignItems: "flex-end", width: "100%" }}>
+      <Stack direction="row" spacing={1.5}>
+        <Button onClick={onClose} disabled={isSaving}>
+          {t("actions.cancel")}
+        </Button>
+        <Button variant="contained" onClick={onApply} disabled={!canApply}>
+          {t("filters.apply")}
+        </Button>
+      </Stack>
+      {missingRequired.length > 0 ? (
+        <Typography
+          variant="caption"
+          color="warning.dark"
+          sx={{ alignSelf: "stretch" }}
+        >
+          {t("myWardrobe.uploadedDetail.missingRequired", {
+            items: missingRequired.join(", "),
+          })}
+        </Typography>
+      ) : null}
+    </Stack>
   );
 }
 
@@ -167,7 +226,14 @@ function UploadedProductDialogContent({
 
 function getDialogPaperSx(isMobile: boolean) {
   if (isMobile) {
-    return { ...mobileCapsuleDialogPaperSx, width: "100%", height: "100%" };
+    return {
+      ...mobileCapsuleDialogPaperSx,
+      width: "100%",
+      height: "100%",
+      display: "flex",
+      flexDirection: "column",
+      overflow: "hidden",
+    };
   }
 
   return {
