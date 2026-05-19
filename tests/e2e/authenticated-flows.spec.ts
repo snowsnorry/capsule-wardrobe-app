@@ -259,11 +259,13 @@ test("mobile shell supports drawer navigation, filters, and product detail", asy
   await page
     .getByRole("button", { name: /Navy relaxed shirt E2E Studio/ })
     .click();
-  await expect(page.getByRole("button", { name: "Back" })).toBeVisible();
+  const productDialog = page.getByRole("dialog", { name: /Product details/ });
+  await expect(productDialog).toBeVisible();
   await expect(
     page.getByText("A deterministic e2e shirt fixture."),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Back" }).click();
+  await productDialog.getByRole("button", { name: "Close" }).click();
+  await expect(productDialog).toBeHidden();
   await expect(page.getByText("3 results")).toBeVisible();
 
   await page.getByRole("button", { name: "Toggle sidebar" }).click();
