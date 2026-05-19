@@ -100,8 +100,12 @@ function MyWardrobeScreen(): ReactElement {
   };
 
   return (
-    <Box sx={myWardrobeScreenSx}>
-      <Stack spacing={2.25} sx={myWardrobeContentSx}>
+    <Box data-testid="my-wardrobe-screen" sx={myWardrobeScreenSx}>
+      <Stack
+        spacing={2.25}
+        data-testid="my-wardrobe-content"
+        sx={myWardrobeContentSx}
+      >
         <MyWardrobeToolbar
           filter={filter}
           isMobile={isOverlay}
@@ -367,6 +371,7 @@ function useMyWardrobeItemsQuery(
 const myWardrobeScreenSx = {
   height: "100%",
   minHeight: 0,
+  overflowX: "hidden",
   overflowY: "auto",
   overscrollBehaviorY: "contain",
   WebkitOverflowScrolling: "touch",
@@ -377,6 +382,8 @@ const myWardrobeScreenSx = {
 const myWardrobeContentSx = {
   ...MAIN_SCREEN_CONTENT_COLUMN_SX,
   px: { xs: 2, md: 3 },
+  boxSizing: "border-box",
+  minWidth: 0,
   minHeight: "100%",
 } as const;
 

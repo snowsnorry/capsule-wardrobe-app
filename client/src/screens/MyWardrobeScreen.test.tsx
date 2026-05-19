@@ -390,6 +390,19 @@ describe("MyWardrobeScreen", () => {
     });
   });
 
+  test("keeps the mobile wardrobe surface from creating horizontal page overflow", async () => {
+    useMediaQueryMock.mockReturnValue(true);
+    renderScreen();
+
+    await screen.findByTestId("wardrobe-card-wardrobe-1");
+
+    expect(getComputedStyle(screen.getByTestId("my-wardrobe-screen")).overflowX)
+      .toBe("hidden");
+    expect(
+      getComputedStyle(screen.getByTestId("my-wardrobe-content")).boxSizing,
+    ).toBe("border-box");
+  });
+
   test("opens upload dialog as a full-screen mobile picker", async () => {
     useMediaQueryMock.mockReturnValue(true);
     const user = userEvent.setup();
