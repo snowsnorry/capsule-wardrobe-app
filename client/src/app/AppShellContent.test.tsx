@@ -122,6 +122,7 @@ function createProps(
     },
     t: (key: string) =>
       ({
+        "myWardrobe.title": "My Wardrobe",
         "search.title": "Catalog: Explore",
         "statistics.title": "Catalog: Statistics",
       })[key] ?? key,
@@ -199,6 +200,7 @@ describe("AppShellContent", () => {
       "data-shell-test-id",
       "my-wardrobe-screen-shell",
     );
+    expect(screen.getByText("My Wardrobe")).toBeInTheDocument();
   });
 
   test("wires sidebar capsule header and capsule navigation actions", () => {

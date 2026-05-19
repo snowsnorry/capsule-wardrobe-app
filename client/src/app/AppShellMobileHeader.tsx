@@ -28,6 +28,10 @@ function getRouteTitle({
     return t("statistics.title");
   }
 
+  if (activeSidebarApp === "myWardrobe") {
+    return t("myWardrobe.title");
+  }
+
   return "";
 }
 

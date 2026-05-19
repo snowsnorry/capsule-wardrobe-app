@@ -353,6 +353,39 @@ describe("MyWardrobeScreen", () => {
     });
   });
 
+  test("uses a compact source dropdown on mobile", async () => {
+    useMediaQueryMock.mockReturnValue(true);
+    const user = userEvent.setup();
+    renderScreen();
+
+    const uploadButton = screen.getByRole("button", {
+      name: "Upload item photo",
+    });
+    expect(uploadButton).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Open My Wardrobe menu" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("group", { name: "My Wardrobe source" }),
+    ).not.toBeInTheDocument();
+
+    const sourceSelect = screen.getByRole("combobox", {
+      name: "My Wardrobe source",
+    });
+    expect(sourceSelect).toHaveTextContent("All");
+
+    await screen.findByTestId("wardrobe-card-wardrobe-1");
+    await user.click(sourceSelect);
+    await user.click(screen.getByRole("option", { name: "Uploaded" }));
+
+    await waitFor(() => {
+      expect(api.fetchMyWardrobeItems).toHaveBeenLastCalledWith({
+        source: "uploaded",
+        force: false,
+      });
+    });
+  });
+
   test("sorts wardrobe cards with the same order as capsule items", async () => {
     api.fetchMyWardrobeItems.mockResolvedValueOnce({
       items: [

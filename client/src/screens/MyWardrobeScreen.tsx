@@ -104,6 +104,7 @@ function MyWardrobeScreen(): ReactElement {
       <Stack spacing={2.25} sx={myWardrobeContentSx}>
         <MyWardrobeToolbar
           filter={filter}
+          isMobile={isOverlay}
           isLoading={wardrobeItems.isLoading || wardrobeItems.isUploading}
           t={t}
           onFilterChange={setFilter}
@@ -368,7 +369,7 @@ const myWardrobeScreenSx = {
   overflowY: "auto",
   overscrollBehaviorY: "contain",
   WebkitOverflowScrolling: "touch",
-  pt: { xs: 1.5, md: 2 },
+  pt: { xs: 0, md: 2 },
   pb: 2,
 } as const;
 
