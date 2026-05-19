@@ -1,0 +1,73 @@
+import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
+import { Box, DialogTitle, IconButton, Typography } from "@mui/material";
+import { mobileCapsuleDialogTitleSx } from "../MobileDialogSurfaceStyles";
+import { isSavedToWardrobe } from "../../utils/savedWardrobeState";
+import ProductActionsMenu from "./ProductActionsMenu";
+import {
+  normalizeProductDetailItem,
+  type ProductDetailItem,
+} from "./ProductDetailModel";
+
+type ProductDetailMobileDialogHeaderProps = {
+  item: ProductDetailItem | null;
+  onClose: () => void;
+  onEditUploadedWardrobeItem?: (item: ProductDetailItem) => void;
+  onRemoveFromMyWardrobe?: (item: ProductDetailItem) => Promise<void> | void;
+  onSaveToMyWardrobe?: (item: ProductDetailItem) => Promise<void> | void;
+  t: (key: string, params?: Record<string, unknown>) => string;
+};
+
+function ProductDetailMobileDialogHeader({
+  item,
+  onClose,
+  onEditUploadedWardrobeItem,
+  onRemoveFromMyWardrobe,
+  onSaveToMyWardrobe,
+  t,
+}: ProductDetailMobileDialogHeaderProps) {
+  const actionItem = normalizeProductDetailItem(item);
+  const shouldShowActions = Boolean(
+    actionItem &&
+    (onSaveToMyWardrobe ||
+      onRemoveFromMyWardrobe ||
+      onEditUploadedWardrobeItem),
+  );
+
+  return (
+    <DialogTitle sx={mobileCapsuleDialogTitleSx}>
+      <Typography
+        component="span"
+        variant="h6"
+        sx={{ flex: "1 1 auto", minWidth: 0, whiteSpace: "nowrap" }}
+      >
+        {t("search.productDetailsTitle")}
+      </Typography>
+      <Box
+        sx={{
+          alignItems: "center",
+          display: "flex",
+          flexShrink: 0,
+          gap: 0.25,
+          ml: "auto",
+        }}
+      >
+        {shouldShowActions ? (
+          <ProductActionsMenu
+            item={actionItem}
+            t={t}
+            isSavedToWardrobe={isSavedToWardrobe(actionItem)}
+            onEditUploadedWardrobeItem={onEditUploadedWardrobeItem}
+            onRemoveFromMyWardrobe={onRemoveFromMyWardrobe}
+            onSaveToMyWardrobe={onSaveToMyWardrobe}
+          />
+        ) : null}
+        <IconButton aria-label={t("actions.close")} onClick={onClose}>
+          <CloseRoundedIcon />
+        </IconButton>
+      </Box>
+    </DialogTitle>
+  );
+}
+
+export default ProductDetailMobileDialogHeader;
+export type { ProductDetailMobileDialogHeaderProps };

@@ -150,6 +150,7 @@ describe("StatisticsLayout", () => {
     render(
       <ThemeProvider theme={theme}>
         <StatisticsDesktopLayout
+          screenTitle="Catalog: Statistics"
           title="Filters"
           options={makeOptions()}
           draftState={createSearchState(null, makeOptions().priceRange)}
@@ -165,6 +166,7 @@ describe("StatisticsLayout", () => {
     );
 
     expect(screen.getByText("Filters")).toBeInTheDocument();
+    expect(screen.getByText("Catalog: Statistics")).toBeInTheDocument();
     expect(screen.getByText("summary content")).toBeInTheDocument();
     expect(screen.getByText("chart content")).toBeInTheDocument();
   });
@@ -174,6 +176,10 @@ describe("StatisticsLayout", () => {
     renderScreen({}, { layoutMode: "overlay" });
 
     expect((await screen.findAllByText("120")).length).toBeGreaterThan(0);
+    expect(
+      getComputedStyle(screen.getByLabelText("Open filters").parentElement!)
+        .justifyContent,
+    ).toBe("flex-start");
     await user.click(screen.getByLabelText("Open filters"));
     expect(await screen.findByText("Filters")).toBeInTheDocument();
     expect(
@@ -201,6 +207,29 @@ describe("StatisticsLayout", () => {
     });
     expect(await screen.findByText("Brand: UNIQLO")).toBeInTheDocument();
     expect((await screen.findAllByText("37")).length).toBeGreaterThan(0);
+  });
+
+  test("mobile filters dialog uses capsule-sized surfaces in dark mode", async () => {
+    const user = userEvent.setup();
+    const darkTheme = createAppTheme("dark");
+    renderScreen({}, { layoutMode: "overlay", themeOverride: darkTheme });
+
+    expect((await screen.findAllByText("120")).length).toBeGreaterThan(0);
+    await user.click(screen.getByLabelText("Open filters"));
+
+    expect(await screen.findByText("Filters")).toBeInTheDocument();
+    const header = screen.getByText("Filters").closest(".MuiDialogTitle-root");
+    const content = screen
+      .getByText("UNIQLO")
+      .closest(".MuiDialogContent-root");
+
+    expect(getComputedStyle(header!).paddingTop).toBe("12px");
+    expect(getComputedStyle(header!).paddingBottom).toBe("8px");
+    expect(getComputedStyle(header!).backgroundColor).toBe("rgb(21, 32, 31)");
+    expect(getComputedStyle(header!).borderBottomWidth).toBe("");
+    expect(getComputedStyle(content!).backgroundColor).toBe("rgb(16, 24, 23)");
+    expect(getComputedStyle(content!).overflowY).toBe("auto");
+    expect(getComputedStyle(content!).paddingTop).toBe("8px");
   });
 
   test("uses dark paper chart cards in dark mode", async () => {

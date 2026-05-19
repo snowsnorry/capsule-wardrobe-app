@@ -7,6 +7,7 @@ import {
   createMainScreenProps,
   renderWithTheme,
   resetMainScreenTestMocks,
+  theme,
 } from "./MainScreen.testUtils";
 import MainScreenDialogs from "./MainScreenDialogs";
 
@@ -198,9 +199,31 @@ describe("MainScreenDialogs", () => {
     ).not.toBeInTheDocument();
   });
 
-  test("opens needs-review uploaded capsule item directly in edit mode", () => {
+  test("keeps mobile share dialog close action at the header edge", () => {
+    renderDialogs({
+      isOverlay: true,
+      initialShare: {
+        open: true,
+        url: "https://client.example/share/share-1",
+        expiresAt: null,
+        name: "Spring edit",
+        copied: false,
+        loading: false,
+      },
+    });
+
+    const closeButtons = screen.getAllByRole("button", { name: "Close" });
+    expect(closeButtons).toHaveLength(1);
+    const closeButton = closeButtons[0];
+    expect(closeButton.closest(".MuiStack-root")).toHaveStyle({
+      width: "100%",
+    });
+  });
+
+  test("opens needs-review uploaded capsule item directly in mobile edit mode with standard header", () => {
     const onUpdateUploadedWardrobeItem = vi.fn((item) => Promise.resolve(item));
     renderDialogs({
+      isOverlay: true,
       initialProductDetailItem: {
         id: "Wuploaded-1",
         name: "",
@@ -215,7 +238,32 @@ describe("MainScreenDialogs", () => {
       propsOverrides: { onUpdateUploadedWardrobeItem },
     });
 
-    expect(screen.getByText("Uploaded item details")).toBeInTheDocument();
+    const title = screen.getByText("Product details");
+    expect(title.closest(".MuiDialogTitle-root")).toHaveStyle({
+      backgroundColor: theme.palette.background.paper,
+      minHeight: "60px",
+      paddingTop: "12px",
+      paddingBottom: "8px",
+    });
+    expect(document.querySelector(".MuiDialogContent-root")).toHaveStyle({
+      backgroundColor: theme.palette.background.default,
+      paddingLeft: "24px",
+      paddingRight: "24px",
+      paddingTop: "8px",
+      paddingBottom: "32px",
+    });
+    expect(screen.getByLabelText(/Name/).closest(".MuiStack-root")).toHaveStyle(
+      {
+        paddingTop: "6px",
+      },
+    );
+    expect(screen.queryByRole("button", { name: "Close" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Product actions" }),
+    ).toBeNull();
+    expect(
+      document.querySelector(".uploaded-detail-camera-icon"),
+    ).not.toBeInTheDocument();
     expect(screen.queryByText("Select a product")).not.toBeInTheDocument();
   });
 

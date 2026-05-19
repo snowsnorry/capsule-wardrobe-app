@@ -8,11 +8,17 @@ import {
   DialogContent,
   Typography,
 } from "@mui/material";
+import {
+  mobileCapsuleDialogActionsSx,
+  mobileCapsuleDialogContentSx,
+  mobileCapsuleDialogPaperSx,
+} from "../MobileDialogSurfaceStyles";
 import type { UploadedWardrobeItemUpdatePayload } from "../../api/myWardrobe";
 import type { ProductDetailItem } from "./ProductDetailModel";
 import ProductDialogImagePane from "./ProductDialogImagePane";
 import { ProductImage } from "./ProductDetailSections";
 import UploadedProductDetailForm from "./UploadedProductDetailForm";
+import UploadedProductDetailMobileDialogHeader from "./UploadedProductDetailMobileDialogHeader";
 import {
   buildFormState,
   buildPayload,
@@ -77,6 +83,8 @@ function UploadedProductDetailDialog({
     <UploadedProductDetailForm
       form={form}
       locale={locale}
+      showTitle={!isMobile}
+      topOffset={isMobile ? 0.75 : 0}
       t={t}
       onChange={setForm}
     />
@@ -91,6 +99,7 @@ function UploadedProductDetailDialog({
       maxWidth={false}
       PaperProps={{ sx: getDialogPaperSx(isMobile) }}
     >
+      {isMobile ? <UploadedProductDetailMobileDialogHeader t={t} /> : null}
       <DialogContent sx={getDialogContentSx(isMobile)}>
         <UploadedProductDialogContent
           formContent={formContent}
@@ -99,7 +108,7 @@ function UploadedProductDetailDialog({
           t={t}
         />
       </DialogContent>
-      <DialogActions sx={dialogActionsSx}>
+      <DialogActions sx={getDialogActionsSx(isMobile)}>
         {missingRequired.length > 0 ? (
           <Typography
             variant="caption"
@@ -157,24 +166,45 @@ function UploadedProductDialogContent({
 }
 
 function getDialogPaperSx(isMobile: boolean) {
+  if (isMobile) {
+    return { ...mobileCapsuleDialogPaperSx, width: "100%", height: "100%" };
+  }
+
   return {
-    width: isMobile ? "100%" : "min(1120px, calc(100vw - 48px))",
-    height: isMobile ? "100%" : "min(820px, calc(100vh - 48px))",
+    width: "min(1120px, calc(100vw - 48px))",
+    height: "min(820px, calc(100vh - 48px))",
     maxWidth: "none",
-    borderRadius: isMobile ? 0 : "8px",
+    borderRadius: "8px",
     overflow: "hidden",
+    backgroundColor: "background.paper",
   } as const;
 }
 
 function getDialogContentSx(isMobile: boolean) {
+  if (isMobile) {
+    return {
+      ...mobileCapsuleDialogContentSx,
+      width: "100%",
+      boxSizing: "border-box",
+      overflowX: "hidden",
+      overflowY: "auto",
+      WebkitOverflowScrolling: "touch",
+      backgroundColor: "background.default",
+      px: 3,
+      pt: 1,
+      pb: 4,
+      "&&": { pt: 1 },
+    } as const;
+  }
+
   return {
-    display: isMobile ? "block" : "grid",
-    gridTemplateColumns: isMobile ? undefined : "minmax(360px, 0.9fr) 1fr",
+    display: "grid",
+    gridTemplateColumns: "minmax(360px, 0.9fr) 1fr",
     gap: 0,
     p: 0,
     minHeight: 0,
-    overflow: isMobile ? "auto" : "hidden",
-    WebkitOverflowScrolling: isMobile ? "touch" : undefined,
+    overflow: "hidden",
+    backgroundColor: "background.paper",
   } as const;
 }
 
@@ -185,8 +215,7 @@ const desktopFormPaneSx = {
 } as const;
 
 const mobileImageSectionSx = {
-  px: 2,
-  pb: 2,
+  pb: 1,
 } as const;
 
 const dialogActionsSx = {
@@ -197,5 +226,9 @@ const dialogActionsSx = {
   alignItems: "center",
   gap: 1,
 } as const;
+
+function getDialogActionsSx(isMobile: boolean) {
+  return isMobile ? mobileCapsuleDialogActionsSx : dialogActionsSx;
+}
 
 export default UploadedProductDetailDialog;

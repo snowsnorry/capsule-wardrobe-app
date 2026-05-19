@@ -114,9 +114,11 @@ function ColorValues({
 }
 
 function ProductImage({
+  bottomMargin = 0,
   item,
   t,
 }: {
+  bottomMargin?: number;
   item: ProductDetailItem;
   t: ProductDetailSectionsProps["t"];
 }) {
@@ -138,28 +140,32 @@ function ProductImage({
   }
 
   return (
-    <Box sx={{ position: "relative" }}>
-      <Box
-        component="img"
-        src={imageUrl}
-        alt={item.name || ""}
-        onError={() => setImageFailed(true)}
-        sx={{
-          width: "100%",
-          borderRadius: "22px",
-          border: "1px solid",
-          borderColor: "divider",
-          objectFit: "cover",
-          backgroundColor: "background.default",
-        }}
-      />
-      {showImageToggle ? (
-        <ProductImageVersionToggle
-          imageMode={imageMode}
-          t={t}
-          onChange={setImageMode}
+    <Box data-testid="product-detail-image-wrapper">
+      <Box sx={{ position: "relative" }}>
+        <Box
+          component="img"
+          src={imageUrl}
+          alt={item.name || ""}
+          onError={() => setImageFailed(true)}
+          sx={{
+            display: "block",
+            width: "100%",
+            mb: bottomMargin,
+            borderRadius: "22px",
+            border: "1px solid",
+            borderColor: "divider",
+            objectFit: "cover",
+            backgroundColor: "background.default",
+          }}
         />
-      ) : null}
+        {showImageToggle ? (
+          <ProductImageVersionToggle
+            imageMode={imageMode}
+            t={t}
+            onChange={setImageMode}
+          />
+        ) : null}
+      </Box>
     </Box>
   );
 }

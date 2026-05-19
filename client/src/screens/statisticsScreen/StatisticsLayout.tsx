@@ -3,6 +3,7 @@ import {
   Box,
   Dialog,
   DialogContent,
+  DialogTitle,
   Divider,
   IconButton,
   Skeleton,
@@ -11,6 +12,11 @@ import {
 } from "@mui/material";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import TuneRoundedIcon from "@mui/icons-material/TuneRounded";
+import {
+  mobileCapsuleDialogContentSx,
+  mobileCapsuleDialogPaperSx,
+  mobileCapsuleDialogTitleSx,
+} from "../../components/MobileDialogSurfaceStyles";
 import SearchFiltersSidebar from "../../search/SearchFiltersSidebar";
 import type { SearchDraftState, SearchOptions } from "../../search/searchState";
 import { MAIN_SCREEN_CONTENT_COLUMN_SX } from "../mainScreen/MainScreenHelpers";
@@ -77,12 +83,29 @@ const STATISTICS_DESKTOP_CHARTS_STACK_SX = {
 function FiltersHeader({
   title,
   closeLabel,
+  mobile = false,
   onClose,
 }: {
   title: string;
   closeLabel?: string;
+  mobile?: boolean;
   onClose?: () => void;
 }) {
+  if (mobile) {
+    return (
+      <DialogTitle sx={mobileCapsuleDialogTitleSx}>
+        <Typography variant="h6" sx={{ color: "text.primary" }}>
+          {title}
+        </Typography>
+        {closeLabel && onClose ? (
+          <IconButton aria-label={closeLabel} onClick={onClose}>
+            <CloseRoundedIcon />
+          </IconButton>
+        ) : null}
+      </DialogTitle>
+    );
+  }
+
   return (
     <Stack spacing={2.5}>
       <Stack direction="row" justifyContent="space-between" alignItems="center">
@@ -195,8 +218,19 @@ export function StatisticsMobileLayout({
   emptyLabel: string;
 }) {
   return (
-    <Stack spacing={2} sx={{ minHeight: 0, overflowY: "auto", px: 2, pb: 2 }}>
-      <Stack direction="row" justifyContent="flex-start">
+    <Stack
+      spacing={2}
+      sx={{
+        flex: 1,
+        minHeight: 0,
+        overflowY: "auto",
+        bgcolor: "background.default",
+        px: 2,
+        pb: 2,
+      }}
+      data-testid="statistics-mobile-body"
+    >
+      <Stack direction="row" justifyContent="flex-start" alignItems="center">
         <IconButton aria-label={openFiltersLabel} onClick={onOpenFilters}>
           <TuneRoundedIcon />
         </IconButton>
@@ -212,6 +246,7 @@ export function StatisticsMobileLayout({
 }
 
 export function StatisticsDesktopLayout({
+  screenTitle,
   title,
   options,
   draftState,
@@ -223,6 +258,7 @@ export function StatisticsDesktopLayout({
   chartCards,
   emptyLabel,
 }: FiltersProps & {
+  screenTitle: string;
   summary: ReactNode;
   chartCards: ReactNode[];
   emptyLabel: string;
@@ -241,6 +277,9 @@ export function StatisticsDesktopLayout({
       <Box sx={STATISTICS_DESKTOP_MAIN_SCROLL_SX}>
         <Box sx={STATISTICS_DESKTOP_MAIN_CONTENT_SX}>
           <Stack spacing={2.5} sx={STATISTICS_DESKTOP_CHARTS_STACK_SX}>
+            <Typography variant="h5" sx={{ color: "text.primary" }}>
+              {screenTitle}
+            </Typography>
             <StatisticsChartsPanel
               summary={summary}
               chartCards={chartCards}
@@ -275,46 +314,49 @@ export function StatisticsFiltersDialog({
       fullScreen
       open={open}
       onClose={onClose}
-      PaperProps={{ sx: { overflowX: "hidden" } }}
+      PaperProps={{
+        sx: {
+          ...mobileCapsuleDialogPaperSx,
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+        },
+      }}
     >
+      <FiltersHeader
+        title={title}
+        closeLabel={closeLabel}
+        mobile
+        onClose={onClose}
+      />
       <DialogContent
         sx={{
+          ...mobileCapsuleDialogContentSx,
+          flex: 1,
+          minHeight: 0,
           width: "100%",
           boxSizing: "border-box",
           overflowX: "hidden",
-          px: 3,
-          py: 3,
+          overflowY: "auto",
+          px: 2,
+          pt: 1,
+          pb: 3,
+          "&&": {
+            pt: 1,
+          },
         }}
       >
-        <Stack
-          spacing={2.5}
-          sx={{ minHeight: "100%", width: "100%", maxWidth: "100%" }}
-        >
-          <FiltersHeader
-            title={title}
-            closeLabel={closeLabel}
-            onClose={onClose}
+        <Box sx={{ minHeight: 0, maxWidth: "100%", overflowX: "hidden" }}>
+          <SearchFiltersSidebar
+            options={options}
+            draftState={draftState}
+            onDraftStateChange={onDraftStateChange}
+            status={status}
+            onApply={onApply}
+            onReset={onReset}
+            autoApply
           />
-          <Box
-            sx={{
-              minHeight: 0,
-              maxWidth: "100%",
-              overflowX: "hidden",
-              overflowY: "auto",
-              pb: 2,
-            }}
-          >
-            <SearchFiltersSidebar
-              options={options}
-              draftState={draftState}
-              onDraftStateChange={onDraftStateChange}
-              status={status}
-              onApply={onApply}
-              onReset={onReset}
-              autoApply
-            />
-          </Box>
-        </Stack>
+        </Box>
       </DialogContent>
     </Dialog>
   );

@@ -19,6 +19,11 @@ import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import ContentCopyRoundedIcon from "@mui/icons-material/ContentCopyRounded";
 import ShareRoundedIcon from "@mui/icons-material/ShareRounded";
+import {
+  mobileCapsuleDialogContentSx,
+  mobileCapsuleDialogPaperSx,
+  mobileCapsuleDialogTitleSx,
+} from "../../components/MobileDialogSurfaceStyles";
 import { useI18n } from "../../i18n/useI18n";
 import { groupCapsules, highlightMatch } from "./MainScreenHelpers";
 import type {
@@ -51,9 +56,14 @@ export function SearchDialog({
       fullScreen={isOverlay}
       maxWidth="md"
       fullWidth
+      PaperProps={isOverlay ? { sx: mobileCapsuleDialogPaperSx } : undefined}
     >
-      <DialogContent sx={{ p: 0 }}>
-        <Stack direction="row" alignItems="center" sx={{ px: 2, py: 2 }}>
+      <DialogContent sx={isOverlay ? mobileSearchContentSx : { p: 0 }}>
+        <Stack
+          direction="row"
+          alignItems="center"
+          sx={isOverlay ? mobileCapsuleDialogTitleSx : { px: 2, py: 2 }}
+        >
           <TextField
             autoFocus
             fullWidth
@@ -70,9 +80,9 @@ export function SearchDialog({
             <CloseRoundedIcon />
           </IconButton>
         </Stack>
-        <Divider />
+        {isOverlay ? null : <Divider />}
         {state.loading ? <LinearProgress color="success" /> : null}
-        <Box sx={{ p: 2, maxHeight: "70vh", overflowY: "auto" }}>
+        <Box sx={isOverlay ? mobileSearchResultsSx : desktopSearchResultsSx}>
           {Object.entries(groups).map(([label, group]) => (
             <Stack key={label} spacing={1} sx={{ mb: 3 }}>
               <Typography color="text.secondary">
@@ -101,20 +111,23 @@ export function SearchDialog({
 }
 
 function ShareDialogTitle({
+  isOverlay,
   titleKey,
   onClose,
 }: {
+  isOverlay: boolean;
   titleKey: string;
   onClose: () => void;
 }) {
   const { t } = useI18n();
   return (
-    <DialogTitle>
+    <DialogTitle sx={isOverlay ? mobileCapsuleDialogTitleSx : undefined}>
       <Stack
         direction="row"
         alignItems="center"
         justifyContent="space-between"
         spacing={2}
+        sx={isOverlay ? { width: "100%" } : undefined}
       >
         <Stack direction="row" alignItems="center" spacing={1.5}>
           <ShareRoundedIcon fontSize="small" />
@@ -151,26 +164,55 @@ export function ShareDialog({
       fullWidth
       maxWidth="sm"
       aria-labelledby="share-link-dialog-title"
+      PaperProps={isOverlay ? { sx: mobileCapsuleDialogPaperSx } : undefined}
     >
       <ShareDialogTitle
+        isOverlay={isOverlay}
         titleKey={
           isBlocked ? "capsule.shareBlockedTitle" : "capsule.shareTitle"
         }
         onClose={close}
       />
-      <DialogContent>
+      <DialogContent sx={isOverlay ? mobileCapsuleDialogContentSx : undefined}>
         {isBlocked ? (
           <BlockedShareDialogContent />
         ) : (
           <ShareLinkDialogContent state={state} setState={setState} />
         )}
       </DialogContent>
-      <DialogActions>
-        <Button onClick={close}>{t("actions.close")}</Button>
-      </DialogActions>
+      {isOverlay ? null : (
+        <DialogActions>
+          <Button onClick={close}>{t("actions.close")}</Button>
+        </DialogActions>
+      )}
     </Dialog>
   );
 }
+
+const mobileSearchContentSx = {
+  ...mobileCapsuleDialogContentSx,
+  p: 0,
+  "&&": {
+    pt: 0,
+  },
+  display: "flex",
+  flexDirection: "column",
+} as const;
+
+const mobileSearchResultsSx = {
+  px: 2,
+  pt: 1,
+  pb: 2,
+  flex: 1,
+  minHeight: 0,
+  overflowY: "auto",
+} as const;
+
+const desktopSearchResultsSx = {
+  p: 2,
+  maxHeight: "70vh",
+  overflowY: "auto",
+} as const;
 
 function BlockedShareDialogContent() {
   const { t } = useI18n();

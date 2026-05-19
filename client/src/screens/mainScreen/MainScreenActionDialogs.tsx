@@ -8,6 +8,12 @@ import {
   DialogTitle,
   TextField,
 } from "@mui/material";
+import {
+  mobileCapsuleDialogActionsSx,
+  mobileCapsuleDialogContentSx,
+  mobileCapsuleDialogPaperSx,
+  mobileCapsuleDialogTitleSx,
+} from "../../components/MobileDialogSurfaceStyles";
 import { useI18n } from "../../i18n/useI18n";
 import type {
   ConfirmState,
@@ -122,11 +128,18 @@ export function NameDialog({
       fullScreen={isOverlay}
       fullWidth
       maxWidth="sm"
+      PaperProps={isOverlay ? { sx: mobileCapsuleDialogPaperSx } : undefined}
     >
-      <DialogTitle>
+      <DialogTitle sx={isOverlay ? mobileCapsuleDialogTitleSx : undefined}>
         {t(isSaveAs ? "capsule.saveAsTitle" : "capsule.renameTitle")}
       </DialogTitle>
-      <DialogContent sx={{ pt: 1, pb: 0.5 }}>
+      <DialogContent
+        sx={
+          isOverlay
+            ? { ...mobileCapsuleDialogContentSx, px: 2, pb: 0.5 }
+            : { pt: 1, pb: 0.5 }
+        }
+      >
         <TextField
           fullWidth
           autoFocus
@@ -144,7 +157,9 @@ export function NameDialog({
           margin="normal"
         />
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2.5 }}>
+      <DialogActions
+        sx={isOverlay ? mobileCapsuleDialogActionsSx : { px: 3, pb: 2.5 }}
+      >
         <Button
           disabled={disabled}
           onClick={() => setState({ type: "", capsuleId: "", value: "" })}
@@ -187,14 +202,27 @@ export function ConfirmDialog({
       fullScreen={isOverlay}
       fullWidth
       maxWidth="xs"
+      PaperProps={isOverlay ? { sx: mobileCapsuleDialogPaperSx } : undefined}
     >
-      <DialogTitle sx={{ pb: 1 }}>{t(title)}</DialogTitle>
-      <DialogContent sx={{ pt: 0.5, pb: 0 }}>
+      <DialogTitle sx={isOverlay ? mobileCapsuleDialogTitleSx : { pb: 1 }}>
+        {t(title)}
+      </DialogTitle>
+      <DialogContent
+        sx={
+          isOverlay
+            ? { ...mobileCapsuleDialogContentSx, px: 2, pb: 0 }
+            : { pt: 0.5, pb: 0 }
+        }
+      >
         <DialogContentText sx={{ color: "text.secondary" }}>
           {t(body)}
         </DialogContentText>
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2.5, pt: 2 }}>
+      <DialogActions
+        sx={
+          isOverlay ? mobileCapsuleDialogActionsSx : { px: 3, pb: 2.5, pt: 2 }
+        }
+      >
         <Button disabled={disabled} onClick={() => clearConfirm(setState)}>
           {t("actions.cancel")}
         </Button>

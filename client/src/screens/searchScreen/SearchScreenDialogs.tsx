@@ -3,14 +3,20 @@ import {
   Box,
   Dialog,
   DialogContent,
-  Divider,
+  DialogTitle,
   IconButton,
   Stack,
   Typography,
 } from "@mui/material";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
+import {
+  mobileCapsuleDialogContentSx,
+  mobileCapsuleDialogPaperSx,
+  mobileCapsuleDialogTitleSx,
+} from "../../components/MobileDialogSurfaceStyles";
 import SearchFiltersSidebar from "../../search/SearchFiltersSidebar";
 import ProductDetail from "../../components/productDetail/ProductDetail";
+import ProductDetailMobileDialogHeader from "../../components/productDetail/ProductDetailMobileDialogHeader";
 import type { SearchResultItem } from "./searchTypes";
 import type { SearchScreenStateController } from "./useSearchScreenState";
 
@@ -31,62 +37,57 @@ function SearchFiltersDialog({
       fullScreen
       open={search.isFiltersOpen}
       onClose={() => search.setIsFiltersOpen(false)}
-      PaperProps={{ sx: { overflowX: "hidden" } }}
+      PaperProps={{
+        sx: {
+          ...mobileCapsuleDialogPaperSx,
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+        },
+      }}
     >
+      <DialogTitle sx={mobileCapsuleDialogTitleSx}>
+        <Typography variant="h6" sx={{ color: "text.primary" }}>
+          {t("filters.title")}
+        </Typography>
+        <IconButton
+          aria-label={t("capsule.closeFilters")}
+          onClick={() => search.setIsFiltersOpen(false)}
+        >
+          <CloseRoundedIcon />
+        </IconButton>
+      </DialogTitle>
       <DialogContent
         sx={{
+          ...mobileCapsuleDialogContentSx,
+          flex: 1,
+          minHeight: 0,
           width: "100%",
           boxSizing: "border-box",
           overflowX: "hidden",
-          px: 3,
-          py: 3,
+          overflowY: "auto",
+          px: 2,
+          pt: 1,
+          pb: 3,
+          "&&": {
+            pt: 1,
+          },
         }}
       >
-        <Stack
-          spacing={2.5}
-          sx={{ minHeight: "100%", width: "100%", maxWidth: "100%" }}
-        >
-          <Stack spacing={2.5}>
-            <Stack
-              direction="row"
-              justifyContent="space-between"
-              alignItems="center"
-            >
-              <Typography variant="h6" sx={{ color: "text.primary" }}>
-                {t("filters.title")}
-              </Typography>
-              <IconButton
-                aria-label={t("capsule.closeFilters")}
-                onClick={() => search.setIsFiltersOpen(false)}
-              >
-                <CloseRoundedIcon />
-              </IconButton>
-            </Stack>
-            <Divider />
-          </Stack>
-          <Box
-            sx={{
-              minHeight: 0,
-              maxWidth: "100%",
-              overflowX: "hidden",
-              overflowY: "auto",
-              pb: 2,
+        <Box sx={{ minHeight: 0, maxWidth: "100%", overflowX: "hidden" }}>
+          <SearchFiltersSidebar
+            options={search.options}
+            draftState={search.draftState}
+            onDraftStateChange={search.changeSidebarDraft}
+            status={search.status}
+            onApply={async () => {
+              await search.applyCurrentQuery();
+              search.setIsFiltersOpen(false);
             }}
-          >
-            <SearchFiltersSidebar
-              options={search.options}
-              draftState={search.draftState}
-              onDraftStateChange={search.changeSidebarDraft}
-              status={search.status}
-              onApply={async () => {
-                await search.applyCurrentQuery();
-                search.setIsFiltersOpen(false);
-              }}
-              onReset={search.resetSearch}
-              autoApply
-            />
-          </Box>
-        </Stack>
+            onReset={search.resetSearch}
+            autoApply
+          />
+        </Box>
       </DialogContent>
     </Dialog>
   );
@@ -104,15 +105,28 @@ function SearchProductDialog({
       fullScreen
       open={search.isDetailOpen}
       onClose={() => search.setIsDetailOpen(false)}
-      PaperProps={{ sx: { overflowX: "hidden" } }}
+      PaperProps={{
+        sx: { ...mobileCapsuleDialogPaperSx, overflowX: "hidden" },
+      }}
     >
+      <ProductDetailMobileDialogHeader
+        item={search.selectedItem}
+        t={t}
+        onClose={() => search.setIsDetailOpen(false)}
+        onRemoveFromMyWardrobe={onRemoveFromMyWardrobe}
+        onSaveToMyWardrobe={onSaveToMyWardrobe}
+      />
       <DialogContent
         sx={{
+          ...mobileCapsuleDialogContentSx,
           width: "100%",
           boxSizing: "border-box",
           overflowX: "hidden",
           px: 3,
-          py: 3,
+          pb: 3,
+          "&&": {
+            pt: 1,
+          },
         }}
       >
         <Stack
@@ -131,9 +145,7 @@ function SearchProductDialog({
               item={search.selectedItem}
               t={t}
               locale={locale}
-              mobileBackAction={() => search.setIsDetailOpen(false)}
-              onRemoveFromMyWardrobe={onRemoveFromMyWardrobe}
-              onSaveToMyWardrobe={onSaveToMyWardrobe}
+              bodyBottomPadding={1}
             />
           </Box>
         </Stack>

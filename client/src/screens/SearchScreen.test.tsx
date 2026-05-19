@@ -147,6 +147,7 @@ describe("SearchScreen", () => {
   test("desktop hydrates saved search and renders results", async () => {
     renderScreen();
 
+    expect(await screen.findByText("Catalog: Explore")).toBeInTheDocument();
     expect(await screen.findByDisplayValue("linen shirt")).toBeInTheDocument();
     expect(searchApi.fetchSearchOptions).toHaveBeenCalledWith({ force: true });
     expect(searchApi.fetchSavedSearch).toHaveBeenCalledWith({ force: true });
@@ -264,6 +265,8 @@ describe("SearchScreen", () => {
     await waitFor(() => {
       expect(screen.getAllByText("COS").length).toBeGreaterThan(0);
     });
-    expect(screen.getByLabelText("Back")).toBeInTheDocument();
+    expect(screen.getByText("Product details")).toBeInTheDocument();
+    expect(screen.getByLabelText("Close")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Back")).not.toBeInTheDocument();
   });
 });

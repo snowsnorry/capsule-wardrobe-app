@@ -1,7 +1,8 @@
 import type { ComponentProps, ReactNode } from "react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { ThemeProvider, createTheme } from "@mui/material/styles";
+import { ThemeProvider } from "@mui/material/styles";
+import { createAppTheme } from "../theme";
 
 vi.mock("../components/AppSidebarNavigation", () => ({
   default: ({
@@ -85,7 +86,7 @@ import AppShellContent from "./AppShellContent";
 
 type AppShellContentProps = ComponentProps<typeof AppShellContent>;
 
-const theme = createTheme();
+const theme = createAppTheme("light");
 
 afterEach(() => {
   cleanup();
@@ -119,7 +120,11 @@ function createProps(
       llm: "openai:gpt-5.5",
       imageLlm: "openai:gpt-image-2",
     },
-    t: (key: string) => key,
+    t: (key: string) =>
+      ({
+        "search.title": "Catalog: Explore",
+        "statistics.title": "Catalog: Statistics",
+      })[key] ?? key,
     user: { email: "person@example.com" },
     onCreateCapsuleFromSidebar: vi.fn(() => Promise.resolve()),
     onDeleteProfile: vi.fn(() => Promise.resolve()),
@@ -151,6 +156,10 @@ describe("AppShellContent", () => {
     expect(shell).toHaveAttribute("data-desktop-content-gap", "32");
     expect(shell).toHaveAttribute("data-desktop-content-end-gap", "0");
     expect(shell).toHaveAttribute("data-shell-test-id", "search-screen-shell");
+    expect(screen.getByText("Catalog: Explore")).toBeInTheDocument();
+    expect(screen.getByTestId("app-shell-mobile-header")).toHaveStyle({
+      backgroundColor: "rgb(255, 253, 249)",
+    });
     expect(screen.getByText("route content")).toBeInTheDocument();
   });
 
@@ -170,6 +179,7 @@ describe("AppShellContent", () => {
       "data-shell-test-id",
       "statistics-screen-shell",
     );
+    expect(screen.getByText("Catalog: Statistics")).toBeInTheDocument();
     expect(screen.getByText("route content")).toBeInTheDocument();
   });
 

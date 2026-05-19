@@ -14,8 +14,13 @@ import { useI18n } from "../../i18n/useI18n";
 import { getSafeHttpUrl } from "../../../../shared/urlSecurity.js";
 import ProductDetail from "./ProductDetail";
 import type { ProductDetailItem } from "./ProductDetailModel";
+import {
+  getDialogContentSx,
+  getDialogPaperSx,
+} from "./ProductDetailDialogSurface";
 import ProductDialogImagePane from "./ProductDialogImagePane";
 import ProductDetailLoadingContent from "./ProductDetailLoadingContent";
+import ProductDetailMobileDialogHeader from "./ProductDetailMobileDialogHeader";
 
 type ProductDetailDialogProps = {
   item: ProductDetailItem | null;
@@ -50,8 +55,22 @@ function ProductDetailDialog({
       maxWidth={false}
       PaperProps={{ sx: getDialogPaperSx(mobileLayout) }}
     >
+      {mobileLayout ? (
+        <ProductDetailMobileDialogHeader
+          item={resolvedItem.item}
+          t={t}
+          onClose={onClose}
+          onEditUploadedWardrobeItem={onEditUploadedWardrobeItem}
+          onRemoveFromMyWardrobe={onRemoveFromMyWardrobe}
+          onSaveToMyWardrobe={onSaveToMyWardrobe}
+        />
+      ) : null}
       <DialogContent
-        sx={getDialogContentSx(mobileLayout, resolvedItem.isLoading)}
+        sx={getDialogContentSx(
+          mobileLayout,
+          resolvedItem.isLoading,
+          mobileLayout,
+        )}
       >
         <ProductDetailDialogContent
           item={resolvedItem.item}
@@ -232,21 +251,14 @@ function ProductDetailDialogContent({
         mobileLayout={mobileLayout}
         t={t}
         onClose={onClose}
+        showCloseAction={!mobileLayout}
       />
     );
   }
 
   if (mobileLayout) {
     return (
-      <ProductDetail
-        item={item}
-        t={t}
-        locale={locale}
-        mobileBackAction={onClose}
-        onEditUploadedWardrobeItem={onEditUploadedWardrobeItem}
-        onRemoveFromMyWardrobe={onRemoveFromMyWardrobe}
-        onSaveToMyWardrobe={onSaveToMyWardrobe}
-      />
+      <ProductDetail item={item} t={t} locale={locale} bodyBottomPadding={1} />
     );
   }
 
@@ -301,51 +313,6 @@ export function DesktopProductDetailPane({
   );
 }
 
-export function getDialogPaperSx(mobileLayout: boolean) {
-  if (mobileLayout) {
-    return { overflowX: "hidden", backgroundColor: "background.paper" };
-  }
-
-  return {
-    width: "min(1240px, 94vw)",
-    height: "min(82vh, 820px)",
-    maxHeight: "82vh",
-    borderRadius: "18px",
-    overflow: "hidden",
-    backgroundColor: "background.paper",
-  };
-}
-
-export function getDialogContentSx(mobileLayout: boolean, isLoading: boolean) {
-  if (isLoading) {
-    return {
-      width: "100%",
-      boxSizing: "border-box",
-      overflowX: "hidden",
-      px: 3,
-      py: 3,
-    };
-  }
-
-  if (mobileLayout) {
-    return {
-      width: "100%",
-      boxSizing: "border-box",
-      overflowX: "hidden",
-      px: 3,
-      py: 3,
-    };
-  }
-
-  return {
-    p: 0,
-    height: "100%",
-    display: "grid",
-    gridTemplateColumns: "minmax(420px, 48%) minmax(0, 1fr)",
-    overflow: "hidden",
-  };
-}
-
 const desktopDetailPaneSx = {
   position: "relative",
   minHeight: 0,
@@ -370,4 +337,5 @@ const desktopCloseButtonSx = {
   },
 } as const;
 
+export { getDialogContentSx, getDialogPaperSx };
 export default ProductDetailDialog;

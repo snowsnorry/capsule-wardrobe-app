@@ -38,6 +38,7 @@ vi.mock("../../i18n/useI18n", () => ({
         "myWardrobe.imageVersionToggle.ai": "AI",
         "search.back": "Back",
         "search.detailLoading": "Loading product details",
+        "search.productDetailsTitle": "Product details",
         "search.openProductPage": "Open product page",
         "search.productActions": "Product actions",
         "search.untitled": "Untitled",
@@ -106,16 +107,60 @@ describe("ProductDetailDialog", () => {
     expect(searchApi.fetchProductDetailByUrl).not.toHaveBeenCalled();
   });
 
-  test("uses the catalog mobile detail layout with the image after the title", () => {
-    renderDialog({ isMobile: true });
+  test("uses the standard mobile detail dialog header and body surface", () => {
+    renderDialog({ isMobile: true }, darkTheme);
 
     const title = screen.getByText("Wool Coat");
     const image = screen.getByRole("img", { name: "Wool Coat" });
-    expect(screen.getByRole("button", { name: "Back" })).toBeInTheDocument();
+    const header = screen
+      .getByText("Product details")
+      .closest(".MuiDialogTitle-root");
+    const content = document.querySelector(".MuiDialogContent-root");
+
+    expect(
+      screen.queryByRole("button", { name: "Back" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Close" })).toBeInTheDocument();
+    expect(header).toHaveStyle({
+      backgroundColor: darkTheme.palette.background.paper,
+      minHeight: "60px",
+      paddingTop: "12px",
+      paddingBottom: "8px",
+    });
+    expect(content).toHaveStyle({
+      backgroundColor: darkTheme.palette.background.default,
+      paddingTop: "8px",
+      paddingBottom: "32px",
+    });
+    expect(screen.getByTestId("product-detail-content")).toHaveStyle({
+      paddingBottom: "8px",
+    });
+    expect(image).toHaveStyle({
+      display: "block",
+      marginBottom: "8px",
+    });
     expect(image).toBeInTheDocument();
     expect(
       title.compareDocumentPosition(image) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
+  });
+
+  test("keeps mobile detail actions attached before the close button", () => {
+    renderDialog({ isMobile: true, onSaveToMyWardrobe: vi.fn() });
+
+    const actions = screen.getByRole("button", { name: "Product actions" });
+    const close = screen.getByRole("button", { name: "Close" });
+    const headerTitle = screen.getByText("Product details");
+    const actionGroup = close.parentElement;
+
+    expect(headerTitle).toHaveStyle({ whiteSpace: "nowrap" });
+    expect(actionGroup).toHaveStyle({
+      display: "flex",
+      marginLeft: "auto",
+    });
+    expect(actions.compareDocumentPosition(close)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
   });
 
   test("blocks unsafe product and image URLs", () => {

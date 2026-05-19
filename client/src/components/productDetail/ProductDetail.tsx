@@ -20,6 +20,7 @@ type ProductDetailProps = {
   t: (key: string, params?: Record<string, unknown>) => string;
   locale: string;
   linkTitle?: boolean;
+  bodyBottomPadding?: number;
   mobileBackAction?: (() => void) | null;
   reserveHeaderActionsSpace?: boolean;
   showImage?: boolean;
@@ -33,6 +34,7 @@ function ProductDetail({
   t,
   locale,
   linkTitle = true,
+  bodyBottomPadding = 0,
   mobileBackAction = null,
   reserveHeaderActionsSpace = false,
   showImage = true,
@@ -53,7 +55,11 @@ function ProductDetail({
   }
 
   return (
-    <Stack spacing={2.2} sx={{ height: "100%", minHeight: 0 }}>
+    <Stack
+      data-testid="product-detail-content"
+      spacing={2.2}
+      sx={{ height: "100%", minHeight: 0, pb: bodyBottomPadding }}
+    >
       <ProductHeader
         item={normalizedItem}
         t={t}
@@ -71,7 +77,13 @@ function ProductDetail({
         </Typography>
       ) : null}
       <ProductDetailGroups item={normalizedItem} t={t} locale={locale} />
-      {showImage ? <ProductImage item={normalizedItem} t={t} /> : null}
+      {showImage ? (
+        <ProductImage
+          item={normalizedItem}
+          t={t}
+          bottomMargin={bodyBottomPadding}
+        />
+      ) : null}
     </Stack>
   );
 }

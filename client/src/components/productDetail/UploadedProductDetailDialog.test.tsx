@@ -7,9 +7,11 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
+import { createAppTheme } from "../../theme";
 import UploadedProductDetailDialog from "./UploadedProductDetailDialog";
 
 const theme = createTheme();
+const darkTheme = createAppTheme("dark");
 
 const labels: Record<string, string> = {
   "actions.cancel": "Cancel",
@@ -28,6 +30,7 @@ const labels: Record<string, string> = {
   "myWardrobe.uploadedDetail.required.name": "name",
   "myWardrobe.uploadedDetail.required.season": "at least one season",
   "myWardrobe.uploadedDetail.title": "Uploaded item details",
+  "search.productDetailsTitle": "Product details",
   "search.fields.audience": "Audience",
   "search.fields.closureType": "Closure type",
   "search.fields.color": "Color",
@@ -78,9 +81,10 @@ const validItem = {
 
 function renderDialog(
   props: Partial<Parameters<typeof UploadedProductDetailDialog>[0]> = {},
+  renderTheme = theme,
 ) {
   return render(
-    <ThemeProvider theme={theme}>
+    <ThemeProvider theme={renderTheme}>
       <UploadedProductDetailDialog
         item={validItem}
         open
@@ -100,11 +104,13 @@ afterEach(() => {
 });
 
 describe("UploadedProductDetailDialog", () => {
-  test("renders editable uploaded item fields with a camera title icon", () => {
+  test("renders editable uploaded item fields with a plain title", () => {
     renderDialog();
 
     expect(screen.getByText("Uploaded item details")).toBeInTheDocument();
-    expect(document.querySelector(".uploaded-detail-camera-icon")).toBeTruthy();
+    expect(
+      document.querySelector(".uploaded-detail-camera-icon"),
+    ).not.toBeInTheDocument();
     expect(screen.getByDisplayValue("Linen shirt")).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "Linen shirt" })).toHaveStyle({
       objectFit: "contain",
@@ -241,11 +247,36 @@ describe("UploadedProductDetailDialog", () => {
   test("keeps the dialog open when Apply fails and supports mobile layout", async () => {
     const onApply = vi.fn(() => Promise.reject(new Error("failed")));
     const onClose = vi.fn();
-    renderDialog({ isMobile: true, onApply, onClose });
+    renderDialog({ isMobile: true, onApply, onClose }, darkTheme);
+
+    const title = screen.getByText("Product details");
+    expect(title.closest(".MuiDialogTitle-root")).toHaveStyle({
+      backgroundColor: darkTheme.palette.background.paper,
+      minHeight: "60px",
+      paddingTop: "12px",
+      paddingBottom: "8px",
+    });
+    expect(screen.queryByRole("button", { name: "Close" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Product actions" }),
+    ).toBeNull();
 
     expect(document.querySelector(".MuiDialogContent-root")).toHaveStyle({
-      overflow: "auto",
+      backgroundColor: darkTheme.palette.background.default,
+      overflowY: "auto",
+      paddingLeft: "24px",
+      paddingRight: "24px",
+      paddingTop: "8px",
+      paddingBottom: "32px",
     });
+    expect(screen.getByLabelText(/Name/).closest(".MuiStack-root")).toHaveStyle(
+      {
+        paddingTop: "6px",
+      },
+    );
+    expect(
+      document.querySelector(".uploaded-detail-camera-icon"),
+    ).not.toBeInTheDocument();
     expect(
       screen.queryByTestId("product-detail-dialog-image-pane"),
     ).not.toBeInTheDocument();

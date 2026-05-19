@@ -3,6 +3,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import type { ReactNode } from "react";
+import { createAppTheme } from "../../theme";
 import { FiltersDialog, ImageDialog } from "./MainScreenMediaDialogs";
 
 vi.mock("@mui/material", async (importOriginal) => {
@@ -128,6 +129,41 @@ describe("MainScreenMediaDialogs", () => {
       "data-show-settings-title",
       "false",
     );
+  });
+
+  test("FiltersDialog matches the capsule mobile header size and surfaces in dark mode", () => {
+    const props = {
+      onApplyFilters: vi.fn(),
+      onResetFilters: vi.fn(),
+    };
+    const theme = createAppTheme("dark");
+
+    render(
+      <ThemeProvider theme={theme}>
+        <FiltersDialog
+          props={props as never}
+          disabled={false}
+          open
+          isOverlay
+          setOpen={vi.fn()}
+        />
+      </ThemeProvider>,
+    );
+
+    const header = screen
+      .getByText("Capsule settings")
+      .closest(".MuiDialogTitle-root");
+    const content = screen
+      .getByText("apply-filters")
+      .closest(".MuiDialogContent-root");
+
+    expect(getComputedStyle(header!).paddingTop).toBe("12px");
+    expect(getComputedStyle(header!).paddingBottom).toBe("8px");
+    expect(getComputedStyle(header!).paddingLeft).toBe("16px");
+    expect(getComputedStyle(header!).backgroundColor).toBe("rgb(21, 32, 31)");
+    expect(getComputedStyle(header!).borderBottomWidth).toBe("");
+    expect(getComputedStyle(content!).backgroundColor).toBe("rgb(16, 24, 23)");
+    expect(getComputedStyle(content!).paddingTop).toBe("8px");
   });
 
   test("ImageDialog only closes from dialog onClose while interactions are enabled", async () => {

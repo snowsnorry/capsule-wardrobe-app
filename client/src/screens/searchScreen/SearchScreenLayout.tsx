@@ -10,11 +10,17 @@ import type { SearchScreenStateController } from "./useSearchScreenState";
 
 type SearchScreenLayoutProps = {
   search: SearchScreenStateController;
+  title: string;
   t: (key: string, params?: Record<string, unknown>) => string;
   locale: string;
   onRemoveFromMyWardrobe?: (item: SearchResultItem) => Promise<void> | void;
   onSaveToMyWardrobe?: (item: SearchResultItem) => Promise<void> | void;
 };
+
+type SearchScreenControlsProps = Omit<
+  SearchScreenLayoutProps,
+  "locale" | "title"
+>;
 
 export const SEARCH_DESKTOP_LAYOUT_SX = {
   display: "grid",
@@ -96,9 +102,21 @@ export const SEARCH_DESKTOP_RESULTS_SX = {
 function SearchScreenMobile({
   search,
   t,
-}: Omit<SearchScreenLayoutProps, "locale">): ReactElement {
+}: Omit<SearchScreenLayoutProps, "locale" | "title">): ReactElement {
   return (
-    <Stack spacing={2} sx={{ minHeight: 0, overflow: "hidden", px: 2, pb: 2 }}>
+    <Stack
+      spacing={2}
+      sx={{
+        flex: 1,
+        minHeight: 0,
+        overflow: "hidden",
+        bgcolor: "background.default",
+        px: 2,
+        pt: 1,
+        pb: 2,
+      }}
+      data-testid="search-mobile-body"
+    >
       <SearchBarView search={search} t={t} isMobile />
       <Divider sx={{ mx: -2 }} />
       <Box sx={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
@@ -110,6 +128,7 @@ function SearchScreenMobile({
 
 function SearchScreenDesktop({
   search,
+  title,
   t,
   locale,
   onRemoveFromMyWardrobe,
@@ -120,7 +139,12 @@ function SearchScreenDesktop({
       <SearchDesktopFilters search={search} t={t} />
       <Box sx={SEARCH_DESKTOP_MAIN_SX}>
         <Box sx={SEARCH_DESKTOP_HEADER_SX}>
-          <SearchBarView search={search} t={t} isMobile={false} />
+          <Stack spacing={2}>
+            <Typography variant="h5" sx={{ color: "text.primary" }}>
+              {title}
+            </Typography>
+            <SearchBarView search={search} t={t} isMobile={false} />
+          </Stack>
         </Box>
         <Box sx={SEARCH_DESKTOP_RESULTS_SX}>
           <SearchResultsView search={search} t={t} isMobile={false} />
@@ -144,7 +168,7 @@ function SearchScreenDesktop({
 function SearchDesktopFilters({
   search,
   t,
-}: Omit<SearchScreenLayoutProps, "locale">): ReactElement {
+}: SearchScreenControlsProps): ReactElement {
   return (
     <Box sx={SEARCH_DESKTOP_FILTERS_SX}>
       <Stack spacing={2.5} sx={{ mb: 3.5 }}>
@@ -173,7 +197,7 @@ function SearchBarView({
   search,
   t,
   isMobile,
-}: Omit<SearchScreenLayoutProps, "locale"> & {
+}: SearchScreenControlsProps & {
   isMobile: boolean;
 }): ReactElement {
   return (
@@ -197,7 +221,7 @@ function SearchResultsView({
   search,
   t,
   isMobile,
-}: Omit<SearchScreenLayoutProps, "locale"> & {
+}: SearchScreenControlsProps & {
   isMobile: boolean;
 }): ReactElement {
   return (

@@ -16,8 +16,10 @@ import {
   useResolvedProductDetailItem,
 } from "../../components/productDetail/ProductDetailDialog";
 import ProductDetailLoadingContent from "../../components/productDetail/ProductDetailLoadingContent";
+import ProductDetailMobileDialogHeader from "../../components/productDetail/ProductDetailMobileDialogHeader";
 import ProductDialogImagePane from "../../components/productDetail/ProductDialogImagePane";
 import UploadedProductDetailForm from "../../components/productDetail/UploadedProductDetailForm";
+import UploadedProductDetailMobileDialogHeader from "../../components/productDetail/UploadedProductDetailMobileDialogHeader";
 import {
   buildFormState,
   buildPayload,
@@ -64,6 +66,9 @@ function CapsuleProductDetailDialog({
   const resolvedItem = useResolvedProductDetailItem(item, open);
   const detailItem = resolvedItem.item ?? item;
   const showLoading = mode === "read" && resolvedItem.isLoading;
+  const showMobileHeader = isMobile && mode === "read";
+  const isUploadedItem = detailItem.source === "uploaded";
+  const showMobileEditHeader = isMobile && mode === "edit" && isUploadedItem;
 
   return (
     <Dialog
@@ -74,10 +79,32 @@ function CapsuleProductDetailDialog({
       maxWidth={false}
       PaperProps={{ sx: getDialogPaperSx(isMobile) }}
     >
-      <DialogContent sx={getDialogContentSx(isMobile, showLoading)}>
+      {showMobileHeader ? (
+        <ProductDetailMobileDialogHeader
+          item={detailItem}
+          t={t}
+          onClose={onClose}
+          onEditUploadedWardrobeItem={isUploadedItem ? onEdit : undefined}
+          onRemoveFromMyWardrobe={
+            isUploadedItem ? undefined : onRemoveFromMyWardrobe
+          }
+          onSaveToMyWardrobe={isUploadedItem ? undefined : onSaveToMyWardrobe}
+        />
+      ) : null}
+      {showMobileEditHeader ? (
+        <UploadedProductDetailMobileDialogHeader t={t} />
+      ) : null}
+      <DialogContent
+        sx={getDialogContentSx(
+          isMobile,
+          showLoading,
+          showMobileHeader || showMobileEditHeader,
+        )}
+      >
         <CapsuleProductDetailContent
           isLoading={showLoading}
           isMobile={isMobile}
+          showMobileHeader={showMobileHeader}
           item={detailItem}
           locale={locale}
           mode={mode}
@@ -106,6 +133,7 @@ function CapsuleProductDetailContent({
   onRemoveFromMyWardrobe,
   onReadMode,
   onSaveToMyWardrobe,
+  showMobileHeader,
   t,
 }: {
   isLoading: boolean;
@@ -119,6 +147,7 @@ function CapsuleProductDetailContent({
   onRemoveFromMyWardrobe?: DialogsProps["props"]["onRemoveFromMyWardrobe"];
   onReadMode: () => void;
   onSaveToMyWardrobe?: DialogsProps["props"]["onSaveToMyWardrobe"];
+  showMobileHeader: boolean;
   t: Translate;
 }) {
   const isUploadedItem = item.source === "uploaded";
@@ -134,6 +163,7 @@ function CapsuleProductDetailContent({
         mobileLayout={isMobile}
         t={t}
         onClose={onClose}
+        showCloseAction={!showMobileHeader}
       />
     );
   }
@@ -141,6 +171,7 @@ function CapsuleProductDetailContent({
   if (isMobile) {
     return editMode ? (
       <UploadedCapsuleEditPane
+        isMobile={isMobile}
         item={item}
         locale={locale}
         t={t}
@@ -148,15 +179,7 @@ function CapsuleProductDetailContent({
         onCancel={onReadMode}
       />
     ) : (
-      <ProductDetail
-        item={item}
-        t={t}
-        locale={locale}
-        mobileBackAction={onClose}
-        onEditUploadedWardrobeItem={isUploadedItem ? onEdit : undefined}
-        onRemoveFromMyWardrobe={removeFromWardrobe}
-        onSaveToMyWardrobe={saveToWardrobe}
-      />
+      <ProductDetail item={item} t={t} locale={locale} bodyBottomPadding={1} />
     );
   }
 
@@ -165,6 +188,7 @@ function CapsuleProductDetailContent({
       <ProductDialogImagePane item={item} t={t} />
       {editMode ? (
         <UploadedCapsuleEditPane
+          isMobile={isMobile}
           item={item}
           locale={locale}
           t={t}
@@ -188,11 +212,13 @@ function CapsuleProductDetailContent({
 
 function UploadedCapsuleEditPane({
   item,
+  isMobile,
   locale,
   onApply,
   onCancel,
   t,
 }: {
+  isMobile: boolean;
   item: ProductDetailItem;
   locale: string;
   onApply: CapsuleProductDetailDialogProps["onApply"];
@@ -232,6 +258,8 @@ function UploadedCapsuleEditPane({
       <UploadedProductDetailForm
         form={form}
         locale={locale}
+        showTitle={!isMobile}
+        topOffset={isMobile ? 0.75 : 0}
         t={t}
         onChange={setForm}
       />
@@ -266,6 +294,7 @@ const uploadedEditPaneSx = {
   display: "flex",
   flexDirection: "column",
   p: { xs: 0, md: 3 },
+  pb: { xs: 1, md: 3 },
 } as const;
 
 const uploadedEditActionsSx = {

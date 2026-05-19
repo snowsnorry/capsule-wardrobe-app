@@ -65,6 +65,7 @@ function StatisticsScreen({
           />
         ) : (
           <StatisticsDesktopLayout
+            screenTitle={t("statistics.title")}
             title={t("filters.title")}
             options={statistics.options}
             draftState={statistics.draftState}

@@ -7,6 +7,11 @@ import {
   Typography,
 } from "@mui/material";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
+import {
+  mobileCapsuleDialogContentSx,
+  mobileCapsuleDialogPaperSx,
+  mobileCapsuleDialogTitleSx,
+} from "../../components/MobileDialogSurfaceStyles";
 import ProfileFiltersSidebar from "../../components/ProfileFiltersSidebar";
 import { useI18n } from "../../i18n/useI18n";
 import type { MainScreenProps } from "./MainScreenTypes";
@@ -30,8 +35,9 @@ export function FiltersDialog({
       open={open}
       onClose={() => !disabled && setOpen(false)}
       fullScreen={isOverlay}
+      PaperProps={isOverlay ? { sx: mobileCapsuleDialogPaperSx } : undefined}
     >
-      <DialogTitle sx={isOverlay ? mobileFiltersDialogTitleSx : undefined}>
+      <DialogTitle sx={isOverlay ? mobileCapsuleDialogTitleSx : undefined}>
         {isOverlay ? (
           <Typography component="span" variant="h6">
             {t("capsule.settingsTitle")}
@@ -45,7 +51,7 @@ export function FiltersDialog({
           <CloseRoundedIcon />
         </IconButton>
       </DialogTitle>
-      <DialogContent>
+      <DialogContent sx={isOverlay ? mobileCapsuleDialogContentSx : undefined}>
         <ProfileFiltersSidebar
           {...props}
           onApply={async () => {
@@ -64,13 +70,6 @@ export function FiltersDialog({
     </Dialog>
   );
 }
-
-const mobileFiltersDialogTitleSx = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  gap: 2,
-} as const;
 
 export function ImageDialog({
   src,

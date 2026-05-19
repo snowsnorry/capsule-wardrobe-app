@@ -386,12 +386,13 @@ const en = {
     },
   },
   search: {
-    title: "Catalog",
+    title: "Catalog: Explore",
     placeholder:
       "Search in natural language, for example: relaxed blue linen shirt for summer office days",
     cta: "Search",
     clear: "Clear search",
     productCard: "Product card",
+    productDetailsTitle: "Product details",
     detailEmpty: "Select a product to inspect its details.",
     detailLoading: "Loading product details",
     empty: "No products matched this search.",
@@ -436,7 +437,7 @@ const en = {
     },
   },
   statistics: {
-    title: "Statistics",
+    title: "Catalog: Statistics",
     total: "Total",
     totalHint:
       "Charts are calculated for the full result set after all current filters are applied.",

@@ -1,5 +1,13 @@
-import { describe, expect, test, vi } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, describe, expect, test, vi } from "vitest";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import { ThemeProvider } from "@mui/material/styles";
+import { createAppTheme } from "../../theme";
 
 vi.mock("../../search/SearchFiltersSidebar", () => ({
   default: ({ onApply }) => (
@@ -9,20 +17,18 @@ vi.mock("../../search/SearchFiltersSidebar", () => ({
   ),
 }));
 vi.mock("../../components/productDetail/ProductDetail", () => ({
-  default: ({ item, mobileBackAction, onSaveToMyWardrobe }) => (
+  default: ({ item }) => (
     <div>
       <span>detail {item?.id || "none"}</span>
-      <button type="button" onClick={() => onSaveToMyWardrobe(item)}>
-        save detail
-      </button>
-      <button type="button" onClick={mobileBackAction}>
-        close detail
-      </button>
     </div>
   ),
 }));
 
 import SearchScreenDialogs from "./SearchScreenDialogs";
+
+afterEach(() => {
+  cleanup();
+});
 
 function createSearch() {
   return {
@@ -51,7 +57,11 @@ describe("SearchScreenDialogs", () => {
         t={(key) =>
           ({
             "capsule.closeFilters": "Close filters",
+            "actions.close": "Close",
+            "capsule.saveToMyWardrobe": "Save to My Wardrobe",
             "filters.title": "Filters",
+            "search.productActions": "Product actions",
+            "search.productDetailsTitle": "Product details",
           })[key] || key
         }
         locale="en"
@@ -70,10 +80,48 @@ describe("SearchScreenDialogs", () => {
     );
     expect(search.setIsFiltersOpen).toHaveBeenCalledWith(false);
 
-    fireEvent.click(screen.getByRole("button", { name: "close detail" }));
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
     expect(search.setIsDetailOpen).toHaveBeenCalledWith(false);
 
-    fireEvent.click(screen.getByRole("button", { name: "save detail" }));
+    fireEvent.click(screen.getByRole("button", { name: "Product actions" }));
+    fireEvent.click(
+      screen.getByRole("menuitem", { name: "Save to My Wardrobe" }),
+    );
     expect(onSaveToMyWardrobe).toHaveBeenCalledWith(search.selectedItem);
+  });
+
+  test("uses capsule-sized filter header surfaces in dark mode", () => {
+    const search = createSearch();
+    const theme = createAppTheme("dark");
+
+    render(
+      <ThemeProvider theme={theme}>
+        <SearchScreenDialogs
+          search={search as never}
+          t={(key) =>
+            ({
+              "capsule.closeFilters": "Close filters",
+              "actions.close": "Close",
+              "filters.title": "Filters",
+              "search.productDetailsTitle": "Product details",
+            })[key] || key
+          }
+          locale="en"
+        />
+      </ThemeProvider>,
+    );
+
+    const header = screen.getByText("Filters").closest(".MuiDialogTitle-root");
+    const content = screen
+      .getByText("apply filters")
+      .closest(".MuiDialogContent-root");
+
+    expect(getComputedStyle(header!).paddingTop).toBe("12px");
+    expect(getComputedStyle(header!).paddingBottom).toBe("8px");
+    expect(getComputedStyle(header!).backgroundColor).toBe("rgb(21, 32, 31)");
+    expect(getComputedStyle(header!).borderBottomWidth).toBe("");
+    expect(getComputedStyle(content!).backgroundColor).toBe("rgb(16, 24, 23)");
+    expect(getComputedStyle(content!).overflowY).toBe("auto");
+    expect(getComputedStyle(content!).paddingTop).toBe("8px");
   });
 });

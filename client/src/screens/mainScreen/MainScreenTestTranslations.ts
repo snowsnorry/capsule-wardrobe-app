@@ -119,6 +119,7 @@ const labels = {
     detailLoading: "Loading product details",
     openProductPage: "Open product page",
     productActions: "Product actions",
+    productDetailsTitle: "Product details",
     untitled: "Untitled product",
   },
   main: {

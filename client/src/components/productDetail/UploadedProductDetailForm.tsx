@@ -1,4 +1,3 @@
-import PhotoCameraOutlinedIcon from "@mui/icons-material/PhotoCameraOutlined";
 import {
   Box,
   Checkbox,
@@ -34,6 +33,8 @@ import type { UploadedProductFormState } from "./UploadedProductDetailFormState"
 type UploadedProductDetailFormProps = {
   form: UploadedProductFormState;
   locale: string;
+  showTitle?: boolean;
+  topOffset?: number;
   t: (key: string, params?: Record<string, unknown>) => string;
   onChange: (form: UploadedProductFormState) => void;
 };
@@ -70,6 +71,8 @@ const nullableValue = "__none__";
 function UploadedProductDetailForm({
   form,
   locale,
+  showTitle = true,
+  topOffset = 0,
   t,
   onChange,
 }: UploadedProductDetailFormProps) {
@@ -80,16 +83,12 @@ function UploadedProductDetailForm({
   const emptyLabel = t("myWardrobe.uploadedDetail.notSpecified");
 
   return (
-    <Stack spacing={2} sx={{ minHeight: 0, p: { xs: 2, md: 0 } }}>
-      <Stack direction="row" spacing={1} alignItems="center">
-        <PhotoCameraOutlinedIcon
-          className="uploaded-detail-camera-icon"
-          color="secondary"
-        />
-        <Typography variant="h5">
+    <Stack spacing={2} sx={{ minHeight: 0, pt: topOffset }}>
+      {showTitle ? (
+        <Typography variant="h6" sx={{ overflowWrap: "anywhere" }}>
           {t("myWardrobe.uploadedDetail.title")}
         </Typography>
-      </Stack>
+      ) : null}
       <Box sx={formGridSx}>
         <UploadedProductTextFields form={form} t={t} setField={setField} />
         {getSingleSelectConfigs(t).map((field) => (

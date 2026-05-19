@@ -1,17 +1,9 @@
 import { Suspense, type ReactNode } from "react";
-import {
-  Box,
-  Container,
-  IconButton,
-  Paper,
-  Stack,
-  Typography,
-} from "@mui/material";
-import FiberManualRecordRoundedIcon from "@mui/icons-material/FiberManualRecordRounded";
-import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
+import { Box, Container, Paper, Stack, Typography } from "@mui/material";
 import AppSidebarNavigation from "../components/AppSidebarNavigation";
 import AppSidebarShell from "../components/AppSidebarShell";
 import RoutePanelFallback from "./RoutePanelFallback";
+import AppShellMobileHeader from "./AppShellMobileHeader";
 import { getShellContainerVerticalPadding } from "./AppShellContentLayout";
 import {
   getSidebarShellTestId,
@@ -144,52 +136,6 @@ function MarketingPanel({
   );
 }
 
-function SidebarHeader(
-  props: Pick<
-    AppShellContentProps,
-    "activeCapsuleMeta" | "appRoute" | "isContentBusy" | "t"
-  > & {
-    openSidebar: () => void;
-  },
-) {
-  const activeSidebarApp = getActiveSidebarApp(props.appRoute);
-  return (
-    <Stack
-      direction="row"
-      alignItems="center"
-      spacing={1.25}
-      sx={{ px: 2, pt: 1.5, pb: 1 }}
-    >
-      <IconButton
-        aria-label="Toggle sidebar"
-        onClick={props.openSidebar}
-        disabled={activeSidebarApp === "capsule" && props.isContentBusy}
-        sx={{ ml: -1, flexShrink: 0 }}
-      >
-        <MenuRoundedIcon />
-      </IconButton>
-      {activeSidebarApp === "capsule" ? (
-        <Stack
-          direction="row"
-          alignItems="center"
-          spacing={0.75}
-          sx={{ minWidth: 0, flex: "0 1 auto" }}
-        >
-          <Typography variant="h6" noWrap sx={{ minWidth: 0 }}>
-            {props.activeCapsuleMeta?.name || `<${props.t("capsule.new")}>`}
-          </Typography>
-          {props.activeCapsuleMeta?.status === "new" ||
-          props.activeCapsuleMeta?.status === "modified" ? (
-            <FiberManualRecordRoundedIcon
-              sx={{ fontSize: 10, color: "success.main", flexShrink: 0 }}
-            />
-          ) : null}
-        </Stack>
-      ) : null}
-    </Stack>
-  );
-}
-
 function AppSidebarPanel(props: AppShellContentProps) {
   const activeSidebarApp = getActiveSidebarApp(props.appRoute);
   const usesCapsuleLayout = isFullScreenAppShellRoute(props);
@@ -211,7 +157,7 @@ function AppSidebarPanel(props: AppShellContentProps) {
       onSignOut={props.onRequestSignOut}
       headerContent={({ isOverlaySidebar, openSidebar }) =>
         isOverlaySidebar ? (
-          <SidebarHeader {...props} openSidebar={openSidebar} />
+          <AppShellMobileHeader {...props} openSidebar={openSidebar} />
         ) : null
       }
       sidebarBodyContent={({
