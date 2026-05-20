@@ -55,11 +55,42 @@ const settingsDialogMobileSectionSx = {
   width: "100%",
 } as const;
 
+const settingsDialogMobileMotionViewportSx = {
+  minHeight: "100%",
+  overflowX: "hidden",
+  position: "relative",
+} as const;
+
+const settingsDialogMobileMotionTrackSx = {
+  display: "grid",
+  gridTemplateAreas: '"panel"',
+  minHeight: "100%",
+  position: "relative",
+  width: "100%",
+} as const;
+
+const settingsDialogMobileMotionPanelSx = {
+  gridArea: "panel",
+  minWidth: 0,
+  opacity: 1,
+  transition:
+    "transform 240ms cubic-bezier(0.2, 0, 0, 1), opacity 200ms cubic-bezier(0.2, 0, 0, 1)",
+  willChange: "transform",
+  width: "100%",
+  "@media (prefers-reduced-motion: reduce)": {
+    transition: "none",
+    willChange: "auto",
+  },
+} as const;
+
 export {
   settingsDialogBodySx,
   settingsDialogContentSx,
   settingsDialogMainPanelSx,
   settingsDialogMobileContentSx,
+  settingsDialogMobileMotionPanelSx,
+  settingsDialogMobileMotionTrackSx,
+  settingsDialogMobileMotionViewportSx,
   settingsDialogMobilePaperSx,
   settingsDialogMobileSectionSx,
   settingsDialogPaperSx,

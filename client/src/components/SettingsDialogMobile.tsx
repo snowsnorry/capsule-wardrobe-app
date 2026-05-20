@@ -1,6 +1,8 @@
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import ChevronRightRoundedIcon from "@mui/icons-material/ChevronRightRounded";
+import { useLayoutEffect, useRef, type ReactNode } from "react";
 import {
+  Box,
   DialogTitle,
   IconButton,
   List,
@@ -16,11 +18,17 @@ import {
   type SettingsDraft,
   type SettingsSection,
 } from "./settingsDialogModel";
-import { settingsDialogMobileSectionSx } from "./SettingsDialogLayoutStyles";
+import {
+  settingsDialogMobileMotionPanelSx,
+  settingsDialogMobileMotionTrackSx,
+  settingsDialogMobileMotionViewportSx,
+  settingsDialogMobileSectionSx,
+} from "./SettingsDialogLayoutStyles";
 import { SettingsSectionContent } from "./SettingsDialogSectionContent";
 
 type Translate = (key: string, params?: unknown) => string;
 type SettingsMobileView = "index" | "section";
+type SettingsMobileTransitionDirection = "forward" | "back";
 
 type SettingsMobileBodyProps = {
   activeSection: SettingsSection;
@@ -29,6 +37,7 @@ type SettingsMobileBodyProps = {
   isPasskeyLoading: boolean;
   isRemoveAccountDisabled: boolean;
   locale: string;
+  mobileTransitionDirection: SettingsMobileTransitionDirection;
   mobileView: SettingsMobileView;
   onAddPasskey: () => void;
   onDraftChange: <Key extends keyof SettingsDraft>(
@@ -96,39 +105,121 @@ function SettingsMobileDialogTitle({
 }
 
 function SettingsMobileDialogBody(props: SettingsMobileBodyProps) {
-  if (props.mobileView === "index") {
-    return (
-      <Stack spacing={2}>
-        <SettingsMobileSectionsList
-          onSelectSection={props.onSelectSection}
-          t={props.t}
-        />
-        <SettingsMobileError error={props.error} />
-      </Stack>
-    );
-  }
+  const isSectionView = props.mobileView === "section";
+  const isIndexView = !isSectionView;
 
   return (
-    <Stack spacing={2} sx={settingsDialogMobileSectionSx}>
-      <Typography variant="body2" color="text.secondary">
-        {props.t(`settings.sectionHints.${props.activeSection}`)}
-      </Typography>
-      <SettingsSectionContent
-        activeSection={props.activeSection}
-        draft={props.draft}
-        passkeys={props.passkeys}
-        locale={props.locale}
-        isPasskeyLoading={props.isPasskeyLoading}
-        isRemoveAccountDisabled={props.isRemoveAccountDisabled}
-        onDraftChange={props.onDraftChange}
-        onAddPasskey={props.onAddPasskey}
-        onRequestDelete={props.onRequestDelete}
-        onRequestRemoveAccount={props.onRequestRemoveAccount}
-        t={props.t}
-      />
-      <SettingsMobileError error={props.error} />
+    <Box
+      data-settings-mobile-motion="viewport"
+      data-settings-mobile-transition={props.mobileTransitionDirection}
+      sx={settingsDialogMobileMotionViewportSx}
+    >
+      <Box
+        data-settings-mobile-motion="track"
+        sx={settingsDialogMobileMotionTrackSx}
+      >
+        <SettingsMobilePanel
+          inactiveTransform="translate3d(-100%, 0, 0)"
+          isActive={isIndexView}
+          panel="index"
+          spacing={2}
+        >
+          <SettingsMobileSectionsList
+            onSelectSection={props.onSelectSection}
+            t={props.t}
+          />
+          <SettingsMobileError error={props.error} />
+        </SettingsMobilePanel>
+        <SettingsMobilePanel
+          inactiveTransform="translate3d(100%, 0, 0)"
+          isActive={isSectionView}
+          panel="section"
+          spacing={2}
+          sx={settingsDialogMobileSectionSx}
+        >
+          <Typography variant="body2" color="text.secondary">
+            {props.t(`settings.sectionHints.${props.activeSection}`)}
+          </Typography>
+          <SettingsSectionContent
+            activeSection={props.activeSection}
+            draft={props.draft}
+            passkeys={props.passkeys}
+            locale={props.locale}
+            isPasskeyLoading={props.isPasskeyLoading}
+            isRemoveAccountDisabled={props.isRemoveAccountDisabled}
+            onDraftChange={props.onDraftChange}
+            onAddPasskey={props.onAddPasskey}
+            onRequestDelete={props.onRequestDelete}
+            onRequestRemoveAccount={props.onRequestRemoveAccount}
+            t={props.t}
+          />
+          <SettingsMobileError error={props.error} />
+        </SettingsMobilePanel>
+      </Box>
+    </Box>
+  );
+}
+
+function SettingsMobilePanel({
+  children,
+  inactiveTransform,
+  isActive,
+  panel,
+  spacing,
+  sx = {},
+}: {
+  children: ReactNode;
+  inactiveTransform: string;
+  isActive: boolean;
+  panel: "index" | "section";
+  spacing: number;
+  sx?: Record<string, unknown>;
+}) {
+  const panelRef = useRef<HTMLDivElement | null>(null);
+
+  useLayoutEffect(() => {
+    const panelElement = panelRef.current;
+
+    if (!panelElement) {
+      return;
+    }
+
+    if (isActive) {
+      panelElement.removeAttribute("inert");
+      return;
+    }
+
+    panelElement.setAttribute("inert", "");
+  }, [isActive]);
+
+  return (
+    <Stack
+      ref={panelRef}
+      aria-hidden={!isActive}
+      data-settings-mobile-panel={panel}
+      spacing={spacing}
+      sx={{
+        ...getSettingsMobilePanelSx(isActive, inactiveTransform),
+        ...sx,
+      }}
+    >
+      {children}
     </Stack>
   );
+}
+
+function getSettingsMobilePanelSx(
+  isActive: boolean,
+  inactiveTransform: string,
+) {
+  return {
+    ...settingsDialogMobileMotionPanelSx,
+    inset: isActive ? undefined : 0,
+    opacity: isActive ? 1 : 0.85,
+    pointerEvents: isActive ? "auto" : "none",
+    position: isActive ? "relative" : "absolute",
+    transform: isActive ? "translate3d(0, 0, 0)" : inactiveTransform,
+  } as const;
 }
 
 function SettingsMobileError({ error }: { error: string }) {
@@ -187,4 +278,4 @@ const settingsMobileSectionsListSx = {
 } as const;
 
 export { SettingsMobileDialogBody, SettingsMobileDialogTitle };
-export type { SettingsMobileView };
+export type { SettingsMobileTransitionDirection, SettingsMobileView };

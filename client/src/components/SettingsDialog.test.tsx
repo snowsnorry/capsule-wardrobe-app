@@ -256,10 +256,34 @@ describe("SettingsDialog", () => {
     expect(
       within(dialog).queryByRole("combobox", { name: "Theme" }),
     ).not.toBeInTheDocument();
+    const initialMotionViewport = dialog.querySelector(
+      '[data-settings-mobile-motion="viewport"]',
+    );
+    expect(initialMotionViewport).toHaveAttribute(
+      "data-settings-mobile-transition",
+      "forward",
+    );
 
     await user.click(within(dialog).getByRole("button", { name: "Account" }));
 
     const accountDialog = screen.getByRole("dialog", { name: "Account" });
+    const accountMotionViewport = accountDialog.querySelector(
+      '[data-settings-mobile-motion="viewport"]',
+    );
+    const indexPanel = accountDialog.querySelector(
+      '[data-settings-mobile-panel="index"]',
+    );
+    const sectionPanel = accountDialog.querySelector(
+      '[data-settings-mobile-panel="section"]',
+    );
+    expect(accountMotionViewport).toHaveAttribute(
+      "data-settings-mobile-transition",
+      "forward",
+    );
+    expect(indexPanel).toHaveAttribute("aria-hidden", "true");
+    expect(indexPanel).toHaveAttribute("inert");
+    expect(sectionPanel).toHaveAttribute("aria-hidden", "false");
+    expect(sectionPanel).not.toHaveAttribute("inert");
     expect(
       within(accountDialog).getByRole("button", { name: "Back" }),
     ).toBeInTheDocument();
@@ -287,10 +311,29 @@ describe("SettingsDialog", () => {
     await user.click(screen.getByRole("button", { name: "Back" }));
 
     const settingsDialog = screen.getByRole("dialog", { name: "Settings" });
+    const motionViewport = settingsDialog.querySelector(
+      '[data-settings-mobile-motion="viewport"]',
+    );
+    const indexPanel = settingsDialog.querySelector(
+      '[data-settings-mobile-panel="index"]',
+    );
+    const sectionPanel = settingsDialog.querySelector(
+      '[data-settings-mobile-panel="section"]',
+    );
+    expect(motionViewport).toHaveAttribute(
+      "data-settings-mobile-transition",
+      "back",
+    );
+    expect(indexPanel).toHaveAttribute("aria-hidden", "false");
+    expect(indexPanel).not.toHaveAttribute("inert");
+    expect(sectionPanel).toHaveAttribute("aria-hidden", "true");
+    expect(sectionPanel).toHaveAttribute("inert");
     expect(
       within(settingsDialog).getByRole("button", { name: "Account" }),
     ).toBeInTheDocument();
-    expect(screen.queryByLabelText("Name")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("textbox", { name: "Name" }),
+    ).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Save" })).toBeEnabled();
 
     await user.click(

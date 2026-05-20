@@ -29,6 +29,7 @@ import {
 import {
   SettingsMobileDialogBody,
   SettingsMobileDialogTitle,
+  type SettingsMobileTransitionDirection,
   type SettingsMobileView,
 } from "./SettingsDialogMobile";
 import {
@@ -76,6 +77,7 @@ type SettingsDialogFrameProps = {
 type SettingsDialogContentPaneProps = SettingsDialogFrameProps & {
   isBusy: boolean;
   isMobile: boolean;
+  mobileTransitionDirection: SettingsMobileTransitionDirection;
   mobileView: SettingsMobileView;
   onMobileSectionSelect: (section: SettingsSection) => void;
 };
@@ -85,16 +87,25 @@ function SettingsDialogFrame(props: SettingsDialogFrameProps) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [mobileView, setMobileView] = useState<SettingsMobileView>("index");
+  const [mobileTransitionDirection, setMobileTransitionDirection] =
+    useState<SettingsMobileTransitionDirection>("forward");
 
   useEffect(() => {
     if (props.open) {
       setMobileView("index");
+      setMobileTransitionDirection("forward");
     }
   }, [props.open]);
 
   const handleMobileSectionSelect = (section: SettingsSection) => {
     props.onSelectSection(section);
+    setMobileTransitionDirection("forward");
     setMobileView("section");
+  };
+
+  const handleMobileBack = () => {
+    setMobileTransitionDirection("back");
+    setMobileView("index");
   };
 
   return (
@@ -112,7 +123,7 @@ function SettingsDialogFrame(props: SettingsDialogFrameProps) {
         <SettingsMobileDialogTitle
           activeSection={props.activeSection}
           mobileView={mobileView}
-          onBack={() => setMobileView("index")}
+          onBack={handleMobileBack}
           t={props.t}
         />
       ) : (
@@ -123,6 +134,7 @@ function SettingsDialogFrame(props: SettingsDialogFrameProps) {
         {...props}
         isBusy={isBusy}
         isMobile={isMobile}
+        mobileTransitionDirection={mobileTransitionDirection}
         mobileView={mobileView}
         onMobileSectionSelect={handleMobileSectionSelect}
       />
@@ -171,6 +183,7 @@ function SettingsDialogContentPane(props: SettingsDialogContentPaneProps) {
           isPasskeyLoading={props.isPasskeyLoading}
           isRemoveAccountDisabled={props.isBusy}
           locale={props.locale}
+          mobileTransitionDirection={props.mobileTransitionDirection}
           mobileView={props.mobileView}
           onAddPasskey={props.onAddPasskey}
           onDraftChange={props.onDraftChange}
