@@ -17,7 +17,7 @@ import type {
   AppSidebarShellSlot,
 } from "./AppSidebarShellTypes";
 
-type Translate = (key: string) => string;
+type Translate = (key: string, params?: Record<string, unknown>) => string;
 const naturalEase = "cubic-bezier(0.2, 0, 0, 1)";
 
 function renderShellSlot(
@@ -62,7 +62,7 @@ function SidebarHeader({
           }}
         >
           <IconButton
-            aria-label="Toggle sidebar"
+            aria-label={t("appShell.toggleSidebar")}
             onClick={onToggle}
             sx={{ width: 40, height: 40 }}
           >
@@ -101,7 +101,7 @@ function SidebarHeader({
         {!isSidebarCollapsed ? (
           <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
             <IconButton
-              aria-label="Collapse sidebar"
+              aria-label={t("appShell.collapseSidebar")}
               onClick={onCollapse}
               sx={{ width: 40, height: 40 }}
             >
@@ -191,6 +191,7 @@ function SidebarContent({
           userEmail={userEmail}
           context={context}
           onOpenUserMenu={onOpenUserMenu}
+          t={t}
         />
       </Box>
     </Stack>

@@ -125,6 +125,7 @@ function createProps(
         "myWardrobe.title": "My Wardrobe",
         "search.title": "Catalog: Explore",
         "statistics.title": "Catalog: Statistics",
+        "appShell.toggleSidebar": "Toggle sidebar",
       })[key] ?? key,
     user: { email: "person@example.com" },
     onCreateCapsuleFromSidebar: vi.fn(() => Promise.resolve()),

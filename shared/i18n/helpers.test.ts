@@ -45,9 +45,31 @@ test("t translates sidebar navigation labels", () => {
   expect(t("sidebar.statistics", undefined, "ru")).toBe("Статистика");
 });
 
+test("t translates app shell accessibility labels", () => {
+  expect(t("appShell.toggleSidebar", undefined, "ru")).toBe(
+    "Переключить боковую панель",
+  );
+  expect(t("appShell.collapseSidebar", undefined, "ru")).toBe(
+    "Свернуть боковую панель",
+  );
+  expect(t("appShell.openUserMenu", undefined, "ru")).toBe(
+    "Открыть меню пользователя",
+  );
+  expect(t("appShell.loadingSection", undefined, "ru")).toBe(
+    "Загружаем раздел",
+  );
+});
+
 test("t translates capsule action and outfit image accessibility labels", () => {
   expect(t("capsule.openCapsuleActions", { name: "Лето" }, "ru")).toBe(
     "Действия с капсулой Лето",
+  );
+  expect(t("capsule.nameLabel", undefined, "ru")).toBe("Название капсулы");
+  expect(t("capsule.renameWithName", { name: "Лето" }, "ru")).toBe(
+    "Переименовать капсулу Лето",
+  );
+  expect(t("capsule.editName", undefined, "ru")).toBe(
+    "Изменить название капсулы",
   );
   expect(t("capsule.outfitSetImageAlt", { number: 2 }, "ru")).toBe("Образ 2");
   expect(t("capsule.createOutfitSetImage", undefined, "ru")).toBe(

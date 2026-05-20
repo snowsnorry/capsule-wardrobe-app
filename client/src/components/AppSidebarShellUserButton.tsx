@@ -2,6 +2,8 @@ import type { MouseEvent } from "react";
 import { Avatar, Box, Button, Stack, Typography } from "@mui/material";
 import type { AppSidebarShellContext } from "./AppSidebarShellTypes";
 
+type Translate = (key: string, params?: Record<string, unknown>) => string;
+
 const sidebarAvatarSx = {
   width: 36,
   height: 36,
@@ -16,19 +18,21 @@ function SidebarUserButton({
   userEmail,
   context,
   onOpenUserMenu,
+  t,
 }: {
   avatarInitials: string;
   displayName: string;
   userEmail: string;
   context: AppSidebarShellContext;
   onOpenUserMenu: (event: MouseEvent<HTMLElement>) => void;
+  t: Translate;
 }) {
   const { isOverlaySidebar, isSidebarCollapsed, desktopSidebarRailWidth } =
     context;
 
   return (
     <Button
-      aria-label="Open user menu"
+      aria-label={t("appShell.openUserMenu")}
       onClick={onOpenUserMenu}
       sx={{
         width: "100%",

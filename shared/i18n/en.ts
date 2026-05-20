@@ -31,6 +31,12 @@ const en = {
     explore: "Explore",
     statistics: "Statistics",
   },
+  appShell: {
+    toggleSidebar: "Toggle sidebar",
+    collapseSidebar: "Collapse sidebar",
+    openUserMenu: "Open user menu",
+    loadingSection: "Loading section",
+  },
   options,
   auth: {
     signInTitle: "Sign in",
@@ -244,6 +250,9 @@ const en = {
     search: "Search capsules",
     yourCapsules: "Your capsules",
     notSaved: "Not saved",
+    nameLabel: "Capsule name",
+    renameWithName: "Rename capsule {name}",
+    editName: "Edit capsule name",
     regenerateAll: "Regenerate all",
     exportPdf: "Export as PDF",
     rename: "Rename",

@@ -31,6 +31,12 @@ const ru = {
     explore: "Обзор",
     statistics: "Статистика",
   },
+  appShell: {
+    toggleSidebar: "Переключить боковую панель",
+    collapseSidebar: "Свернуть боковую панель",
+    openUserMenu: "Открыть меню пользователя",
+    loadingSection: "Загружаем раздел",
+  },
   options,
   auth: {
     signInTitle: "Вход",
@@ -244,6 +250,9 @@ const ru = {
     search: "Поиск капсул",
     yourCapsules: "Ваши капсулы",
     notSaved: "Не сохранено",
+    nameLabel: "Название капсулы",
+    renameWithName: "Переименовать капсулу {name}",
+    editName: "Изменить название капсулы",
     regenerateAll: "Обновить все",
     exportPdf: "Экспорт в PDF",
     rename: "Переименовать",

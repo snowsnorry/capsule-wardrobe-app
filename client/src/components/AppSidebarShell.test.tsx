@@ -185,6 +185,28 @@ describe("AppSidebarShell", () => {
     expect(onSignOut).toHaveBeenCalledTimes(1);
   });
 
+  test("localizes shell-only accessibility labels in Russian", async () => {
+    const user = userEvent.setup();
+    window.localStorage.setItem("locale", "ru");
+
+    renderShell();
+
+    expect(
+      screen.getByRole("button", { name: "Свернуть боковую панель" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Открыть меню пользователя" }),
+    ).toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", { name: "Свернуть боковую панель" }),
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Переключить боковую панель" }),
+    ).toBeInTheDocument();
+  });
+
   test("keeps desktop collapsed state consistent across remounts", async () => {
     const user = userEvent.setup();
 

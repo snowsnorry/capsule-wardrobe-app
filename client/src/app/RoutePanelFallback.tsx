@@ -1,6 +1,9 @@
 import { Box, LinearProgress } from "@mui/material";
+import { useI18n } from "../i18n/useI18n";
 
 export default function RoutePanelFallback() {
+  const { t } = useI18n();
+
   return (
     <Box
       sx={{
@@ -11,7 +14,10 @@ export default function RoutePanelFallback() {
         px: { xs: 3, md: 4 },
       }}
     >
-      <LinearProgress aria-label="Loading section" sx={{ width: "100%" }} />
+      <LinearProgress
+        aria-label={t("appShell.loadingSection")}
+        sx={{ width: "100%" }}
+      />
     </Box>
   );
 }

@@ -60,7 +60,7 @@ export default function AppShellMobileHeader({
       data-testid="app-shell-mobile-header"
     >
       <IconButton
-        aria-label="Toggle sidebar"
+        aria-label={t("appShell.toggleSidebar")}
         onClick={openSidebar}
         disabled={activeSidebarApp === "capsule" && isContentBusy}
         sx={{ ml: -1, flexShrink: 0 }}

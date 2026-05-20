@@ -96,6 +96,8 @@ function InlineTitle({
   HeaderProps,
   "activeCapsule" | "activeName" | "disabled" | "inlineRename"
 >) {
+  const { t } = useI18n();
+
   if (inlineRename.active) {
     return (
       <TextField
@@ -103,7 +105,7 @@ function InlineTitle({
         variant="standard"
         value={inlineRename.value}
         disabled={disabled}
-        inputProps={{ "aria-label": "Capsule name" }}
+        inputProps={{ "aria-label": t("capsule.nameLabel") }}
         onChange={(event) => inlineRename.setValue(event.target.value)}
         onBlur={() => void inlineRename.submit()}
         onKeyDown={(event: KeyboardEvent<HTMLInputElement>) => {
@@ -130,7 +132,7 @@ function InlineTitle({
       <Box
         component="button"
         type="button"
-        aria-label={`Rename capsule ${activeName}`}
+        aria-label={t("capsule.renameWithName", { name: activeName })}
         disabled={disabled}
         onClick={inlineRename.start}
         sx={{
@@ -160,7 +162,7 @@ function InlineTitle({
         }}
       >
         <IconButton
-          aria-label="Edit capsule name"
+          aria-label={t("capsule.editName")}
           size="small"
           disabled={disabled}
           onClick={inlineRename.start}
