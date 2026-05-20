@@ -4,7 +4,7 @@ import { SidebarTopLevelButton } from "./AppSidebarNavigationParts";
 import type { AppId } from "./AppSidebarNavigationTypes";
 
 const naturalEase = "cubic-bezier(0.2, 0, 0, 1)";
-const catalogChildrenMotionTransition = `grid-template-rows 240ms ${naturalEase}, max-height 240ms ${naturalEase}, opacity 180ms ease-in-out`;
+const catalogChildrenMotionTransition = "opacity 180ms ease-in-out";
 
 type Translate = (key: string) => string;
 
@@ -120,11 +120,12 @@ function CatalogGroupNavigation({
 
   return (
     <Stack
+      data-testid="catalog-sidebar-group"
       spacing={0.5}
       sx={{
         px: isCollapsedDesktop ? 0 : 1.5,
         mt: 0.5,
-        transition: `margin 240ms ${naturalEase}`,
+        transition: `opacity 180ms ${naturalEase}`,
         "@media (prefers-reduced-motion: reduce)": {
           transition: "none",
         },

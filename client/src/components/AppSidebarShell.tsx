@@ -57,8 +57,11 @@ function useAppSidebarShellContext(currentApp: string): AppSidebarShellContext {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() =>
     readSharedDesktopSidebarCollapsed(),
   );
-  const desktopSidebarWidth = isSidebarCollapsed ? 72 : 296;
+  const desktopSidebarExpandedWidth = 296;
   const desktopSidebarRailWidth = 72;
+  const desktopSidebarWidth = isSidebarCollapsed
+    ? desktopSidebarRailWidth
+    : desktopSidebarExpandedWidth;
   const desktopSidebarGap = 12;
   const desktopContentInset = isOverlaySidebar
     ? 0
@@ -108,6 +111,7 @@ function useAppSidebarShellContext(currentApp: string): AppSidebarShellContext {
     isSidebarOpen,
     isSidebarCollapsed,
     desktopSidebarWidth,
+    desktopSidebarExpandedWidth,
     desktopSidebarRailWidth,
     desktopSidebarGap,
     desktopContentInset,

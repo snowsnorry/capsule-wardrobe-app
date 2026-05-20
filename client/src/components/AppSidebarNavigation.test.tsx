@@ -64,7 +64,7 @@ describe("AppSidebarNavigation", () => {
     cleanup();
   });
 
-  test("keeps the desktop capsule action out of the row width until hover or focus", () => {
+  test("keeps reserved desktop capsule action space hidden until hover or focus", () => {
     const { container } = renderNavigation();
 
     const rowAction = screen.getByRole("button", {
@@ -74,7 +74,11 @@ describe("AppSidebarNavigation", () => {
 
     expect(unsavedDot).toBeVisible();
     expect(rowAction).not.toBeVisible();
-    expect(getComputedStyle(rowAction).width).toBe("0px");
+    expect(getComputedStyle(rowAction).width).toBe("32px");
+    expect(getComputedStyle(rowAction).pointerEvents).toBe("none");
+    expect(getComputedStyle(rowAction).transition).not.toMatch(
+      /(?:^|,\s*)(?:width|padding)\b/,
+    );
   });
 
   test("shows the capsule name tooltip when hovering a capsule row", async () => {
@@ -99,6 +103,9 @@ describe("AppSidebarNavigation", () => {
     expect(unsavedDot).toBeVisible();
     expect(rowAction).toBeVisible();
     expect(getComputedStyle(rowAction).width).toBe("32px");
+    expect(getComputedStyle(rowAction).transition).not.toMatch(
+      /(?:^|,\s*)(?:width|padding)\b/,
+    );
   });
 
   test("insets the active capsule highlight without clipping or moving content", () => {
@@ -329,6 +336,16 @@ describe("AppSidebarNavigation", () => {
     ).not.toBeInTheDocument();
   });
 
+  test("omits capsule row actions when no action handler is supplied", () => {
+    renderNavigation({ onOpenCapsuleActions: undefined });
+
+    expect(
+      screen.queryByRole("button", {
+        name: "Capsule actions Modified capsule",
+      }),
+    ).not.toBeInTheDocument();
+  });
+
   test("wires navigation and capsule callbacks in expanded and collapsed modes", async () => {
     const user = userEvent.setup();
     const onNavigateApp = vi.fn();
@@ -379,5 +396,20 @@ describe("AppSidebarNavigation", () => {
     );
 
     expect(screen.getByRole("button", { name: "expand" })).toBeInTheDocument();
+  });
+
+  test("does not animate layout properties in sidebar navigation groups", () => {
+    renderNavigation({ activeApp: "explore" });
+
+    for (const element of [
+      screen.getByTestId("catalog-sidebar-group"),
+      screen.getByTestId("catalog-sidebar-children"),
+      screen.getByTestId("capsule-sidebar-children"),
+      screen.getByTestId("sidebar-navigation-divider"),
+    ]) {
+      expect(getComputedStyle(element).transition).not.toMatch(
+        /\b(?:width|height|padding|margin|max-height|grid-template-rows)\b/,
+      );
+    }
   });
 });

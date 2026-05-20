@@ -73,17 +73,20 @@ function getShellMainLayout({
       : isLargeDesktopSidebar
         ? "desktop-large"
         : "desktop-medium",
-    transition: isOverlaySidebar ? undefined : "padding-left 240ms ease",
   } as const;
 }
 
 function getShellMainStackSx({
   contentOverflow,
   left,
+  transform,
+  transition,
   usesFillPlainSurface,
 }: {
   contentOverflow: "hidden" | "visible";
   left: string | 0;
+  transform?: string;
+  transition?: string;
   usesFillPlainSurface: boolean;
 }) {
   return {
@@ -96,6 +99,13 @@ function getShellMainStackSx({
     height: usesFillPlainSurface ? "auto" : "100%",
     minHeight: 0,
     overflow: contentOverflow,
+    transform,
+    transition,
+    willChange: transition ? "transform" : undefined,
+    "@media (prefers-reduced-motion: reduce)": {
+      transform: "none",
+      transition: "none",
+    },
   } as const;
 }
 
@@ -104,14 +114,12 @@ function getShellMainFrameSx({
   justifyContent,
   marginRight,
   paddingLeft,
-  transition,
   usesFillPlainSurface,
 }: {
   contentOverflow: "hidden" | "visible";
   justifyContent: "center" | "start" | "stretch";
   marginRight: string | 0;
   paddingLeft: string | 0;
-  transition?: string;
   usesFillPlainSurface: boolean;
 }) {
   return {
@@ -126,7 +134,6 @@ function getShellMainFrameSx({
     boxSizing: "border-box",
     display: "flex",
     justifyContent,
-    transition,
   } as const;
 }
 

@@ -61,12 +61,14 @@ function renderShell(
           sidebarBodyContent={({
             isSidebarCollapsed,
             isOverlaySidebar,
+            desktopSidebarExpandedWidth,
             expandCollapsedSidebar,
           }) =>
             isSidebarCollapsed && !isOverlaySidebar ? (
               <button
                 type="button"
                 data-testid="shell-expand-hitbox"
+                data-expanded-width={desktopSidebarExpandedWidth}
                 onClick={expandCollapsedSidebar}
               >
                 expand
@@ -206,5 +208,34 @@ describe("AppSidebarShell", () => {
     expect(
       screen.getByRole("button", { name: "Collapse sidebar" }),
     ).toBeInTheDocument();
+  });
+
+  test("uses transform and clipping for desktop sidebar motion", async () => {
+    const user = userEvent.setup();
+
+    renderShell();
+
+    const shell = screen.getByTestId("app-sidebar-shell");
+    const motionFrame = screen.getByTestId("app-sidebar-shell-motion-frame");
+    const sidebarSurface = screen.getByTestId("app-sidebar-surface");
+
+    expect(shell).toHaveAttribute("data-sidebar-mode", "desktop-medium");
+    expect(getComputedStyle(motionFrame).transition).not.toContain(
+      "padding-left",
+    );
+    expect(getComputedStyle(sidebarSurface).transition).not.toContain("width");
+    expect(getComputedStyle(sidebarSurface).transition).toContain("clip-path");
+
+    await user.click(screen.getByRole("button", { name: "Collapse sidebar" }));
+
+    expect(screen.getByTestId("shell-expand-hitbox")).toHaveAttribute(
+      "data-expanded-width",
+      "296",
+    );
+    expect(getComputedStyle(motionFrame).transition).not.toContain(
+      "padding-left",
+    );
+    expect(getComputedStyle(sidebarSurface).transition).not.toContain("width");
+    expect(document.head.textContent).toContain("prefers-reduced-motion");
   });
 });

@@ -8,6 +8,7 @@ import {
   getShellMainStackSx,
 } from "./AppSidebarShellContentLayout";
 import { SidebarFrame, UserMenu } from "./AppSidebarShellContentMenus";
+import { useShellOffsetMotion } from "./AppSidebarShellMotion";
 import SidebarUserButton from "./AppSidebarShellUserButton";
 import SidebarCollapseIcon from "./SidebarCollapseIcon";
 import type {
@@ -17,6 +18,7 @@ import type {
 } from "./AppSidebarShellTypes";
 
 type Translate = (key: string) => string;
+const naturalEase = "cubic-bezier(0.2, 0, 0, 1)";
 
 function renderShellSlot(
   slot: AppSidebarShellSlot | undefined,
@@ -129,13 +131,28 @@ function SidebarContent({
   onOpenUserMenu: (event: MouseEvent<HTMLElement>) => void;
   t: Translate;
 }) {
-  const { isOverlaySidebar, desktopSidebarWidth } = context;
+  const {
+    isOverlaySidebar,
+    isSidebarCollapsed,
+    desktopSidebarExpandedWidth,
+    desktopSidebarWidth,
+  } = context;
+  const desktopSidebarSurfaceWidth = isOverlaySidebar
+    ? desktopSidebarWidth
+    : desktopSidebarExpandedWidth;
+  const desktopSidebarReveal =
+    desktopSidebarSurfaceWidth > 0
+      ? (desktopSidebarWidth / desktopSidebarSurfaceWidth) * 100
+      : 100;
 
   return (
     <Stack
+      data-testid="app-sidebar-surface"
       sx={{
         height: "100%",
-        width: isOverlaySidebar ? "min(92vw, 360px)" : desktopSidebarWidth,
+        width: isOverlaySidebar
+          ? "min(92vw, 360px)"
+          : desktopSidebarSurfaceWidth,
         bgcolor: (theme) =>
           theme.palette.mode === "dark"
             ? "var(--cw-color-surface-warm)"
@@ -144,9 +161,17 @@ function SidebarContent({
         borderRight: "1px solid",
         borderColor: "divider",
         overflow: "hidden",
+        clipPath:
+          !isOverlaySidebar && isSidebarCollapsed
+            ? `inset(0 ${100 - desktopSidebarReveal}% 0 0)`
+            : "inset(0 0 0 0)",
         transition: isOverlaySidebar
           ? undefined
-          : "width 240ms ease, box-shadow 240ms ease",
+          : `clip-path 240ms ${naturalEase}`,
+        willChange: isOverlaySidebar ? undefined : "clip-path",
+        "@media (prefers-reduced-motion: reduce)": {
+          transition: "none",
+        },
       }}
     >
       <SidebarHeader
@@ -254,13 +279,22 @@ function ShellMainContent({
     desktopContentGap,
     context,
   });
+  const offsetMotion = useShellOffsetMotion({
+    isOverlaySidebar,
+    offset: layout.paddingLeft,
+  });
 
   return (
     <Stack
+      data-testid={
+        shellTestId ? `${shellTestId}-motion-frame` : "app-sidebar-motion-frame"
+      }
       spacing={0}
       sx={getShellMainStackSx({
         contentOverflow,
         left: layout.paddingLeft,
+        transform: offsetMotion.transform,
+        transition: offsetMotion.transition,
         usesFillPlainSurface,
       })}
     >
@@ -270,7 +304,6 @@ function ShellMainContent({
           justifyContent: layout.justifyContent,
           marginRight: layout.marginRight,
           paddingLeft: layout.paddingLeft,
-          transition: layout.transition,
           usesFillPlainSurface,
         })}
       >

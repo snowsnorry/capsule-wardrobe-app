@@ -9,6 +9,7 @@ type AppSidebarShellContext = {
   isSidebarOpen: boolean;
   isSidebarCollapsed: boolean;
   desktopSidebarWidth: number;
+  desktopSidebarExpandedWidth: number;
   desktopSidebarRailWidth: number;
   desktopSidebarGap: number;
   desktopContentInset: number;

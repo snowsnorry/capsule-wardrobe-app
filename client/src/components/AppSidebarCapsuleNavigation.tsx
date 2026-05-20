@@ -12,62 +12,16 @@ import {
 import FiberManualRecordRoundedIcon from "@mui/icons-material/FiberManualRecordRounded";
 import MoreVertRoundedIcon from "@mui/icons-material/MoreVertRounded";
 import { CapsulePrimaryActions } from "./AppSidebarCapsuleActions";
+import {
+  getCapsuleChildrenSx,
+  getCapsuleRowSx,
+} from "./AppSidebarCapsuleNavigationStyles";
 import type { CapsuleNavItem } from "./AppSidebarNavigationTypes";
 
-const naturalEase = "cubic-bezier(0.2, 0, 0, 1)";
-const motionTransition = `grid-template-rows 240ms ${naturalEase}, max-height 240ms ${naturalEase}, opacity 180ms ease-in-out`;
-const expandedCapsuleChildrenMaxHeight = "calc(100vh - 260px)";
-const capsuleChildrenContentInset = 4.5;
 const capsuleChildrenInlineEndInset = 1.5;
 const capsuleHighlightInlineStartInset = 1.5;
-const capsuleRowTextInset = 1.5;
 
 type Translate = (key: string, params?: Record<string, unknown>) => string;
-
-function getCapsuleRowSx(isOverlaySidebar: boolean) {
-  return {
-    borderRadius: "var(--cw-radius-card)",
-    mb: 0.25,
-    pl: capsuleChildrenContentInset,
-    pr: capsuleRowTextInset,
-    minHeight: 40,
-    columnGap: 0.5,
-    "& .capsule-row-unsaved-dot": {
-      opacity: 1,
-      transition: "opacity 120ms ease",
-    },
-    "& .capsule-row-actions": {
-      opacity: isOverlaySidebar ? 1 : 0,
-      width: isOverlaySidebar ? 32 : 0,
-      height: 32,
-      minWidth: 0,
-      p: isOverlaySidebar ? 0.5 : 0,
-      overflow: "hidden",
-      pointerEvents: isOverlaySidebar ? "auto" : "none",
-      transition: "opacity 160ms ease, width 160ms ease, padding 160ms ease",
-    },
-    ...(!isOverlaySidebar
-      ? {
-          "&:hover .capsule-row-unsaved-dot, &:focus-within .capsule-row-unsaved-dot":
-            {
-              opacity: 0,
-            },
-        }
-      : {}),
-    "&:hover .capsule-row-actions": {
-      opacity: 1,
-      width: 32,
-      p: 0.5,
-      pointerEvents: "auto",
-    },
-    "&:focus-within .capsule-row-actions": {
-      opacity: 1,
-      width: 32,
-      p: 0.5,
-      pointerEvents: "auto",
-    },
-  } as const;
-}
 
 function CapsuleUnsavedDot({
   isVisible,
@@ -341,22 +295,6 @@ function CapsuleChildren({
       </Stack>
     </Box>
   );
-}
-
-function getCapsuleChildrenSx(showCapsuleChildren: boolean) {
-  return {
-    display: "grid",
-    flex: "0 1 auto",
-    minHeight: 0,
-    maxHeight: showCapsuleChildren ? expandedCapsuleChildrenMaxHeight : "0px",
-    gridTemplateRows: showCapsuleChildren ? "minmax(0, 1fr)" : "0fr",
-    opacity: showCapsuleChildren ? 1 : 0,
-    overflow: "hidden",
-    transition: motionTransition,
-    "@media (prefers-reduced-motion: reduce)": {
-      transition: "none",
-    },
-  } as const;
 }
 
 export { CapsuleChildren };

@@ -4,7 +4,6 @@ import CheckroomOutlinedIcon from "@mui/icons-material/CheckroomOutlined";
 import { PiDresser } from "react-icons/pi";
 import type { AppId } from "./AppSidebarNavigationTypes";
 
-const naturalEase = "cubic-bezier(0.2, 0, 0, 1)";
 const topLevelIconRailWidth = "60px";
 const expandedTopLevelIconShift = "-6px";
 
@@ -147,11 +146,12 @@ function SidebarNavigationDivider({
 }) {
   return (
     <Divider
+      data-testid="sidebar-navigation-divider"
       sx={{
         mt: showCapsuleChildren ? 1.5 : 0,
         mb: showCapsuleChildren ? 1.5 : 0,
         opacity: showCapsuleChildren ? 1 : 0,
-        transition: `margin 240ms ${naturalEase}, opacity 160ms ease-in-out`,
+        transition: "opacity 160ms ease-in-out",
         "@media (prefers-reduced-motion: reduce)": {
           transition: "none",
         },
