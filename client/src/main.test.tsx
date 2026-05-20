@@ -70,6 +70,10 @@ describe("theme contract", () => {
     const darkRootVars = darkTheme.components.MuiCssBaseline.styleOverrides[
       ":root"
     ] as Record<string, string>;
+    const outlinedInputRoot = theme.components.MuiOutlinedInput.styleOverrides
+      .root as Record<string, Record<string, string> | string>;
+    const darkOutlinedInputRoot = darkTheme.components.MuiOutlinedInput
+      .styleOverrides.root as Record<string, Record<string, string> | string>;
 
     expect(theme.palette.primary.main).toBe("#1c7c7c");
     expect(theme.palette.background.default).toBe("#f7f4ef");
@@ -93,6 +97,16 @@ describe("theme contract", () => {
     expect(theme.typography.fontFamily).toContain("DM Sans");
     expect(theme.shape.borderRadius).toBe(14);
     expect(theme.components.MuiButton.defaultProps.disableElevation).toBe(true);
+    expect(outlinedInputRoot["& .MuiOutlinedInput-notchedOutline"]).toEqual(
+      expect.objectContaining({
+        borderColor: "rgba(20, 60, 60, 0.11)",
+      }),
+    );
+    expect(darkOutlinedInputRoot["& .MuiOutlinedInput-notchedOutline"]).toEqual(
+      expect.objectContaining({
+        borderColor: "rgba(218, 236, 231, 0.16)",
+      }),
+    );
     expect(theme.components.MuiDialogActions.styleOverrides.root).toEqual(
       expect.objectContaining({
         backgroundColor: "transparent",

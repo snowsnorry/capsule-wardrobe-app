@@ -10,6 +10,7 @@ const componentToneByMode = {
     disabledButtonBg: "rgba(20, 60, 60, 0.045)",
     disabledButtonBorder: "rgba(20, 60, 60, 0.08)",
     disabledButtonColor: "rgba(31, 41, 51, 0.42)",
+    inputBorder: "rgba(20, 60, 60, 0.11)",
     inputBg: "#fffefa",
     inputHoverBorder: "rgba(28, 124, 124, 0.24)",
     outlinedHoverBorder: "rgba(20, 60, 60, 0.12)",
@@ -26,6 +27,7 @@ const componentToneByMode = {
     disabledButtonBg: "rgba(238, 245, 243, 0.06)",
     disabledButtonBorder: "rgba(218, 236, 231, 0.12)",
     disabledButtonColor: "rgba(238, 245, 243, 0.42)",
+    inputBorder: "rgba(218, 236, 231, 0.16)",
     inputBg: "rgba(238, 245, 243, 0.03)",
     inputHoverBorder: "rgba(101, 178, 175, 0.38)",
     outlinedHoverBorder: "rgba(218, 236, 231, 0.24)",
@@ -216,7 +218,7 @@ function createComponentOverrides(mode: ThemeMode): Components<Theme> {
         root: {
           backgroundColor: tone.inputBg,
           "& .MuiOutlinedInput-notchedOutline": {
-            borderColor: tokens.divider,
+            borderColor: tone.inputBorder,
           },
           "&:hover .MuiOutlinedInput-notchedOutline": {
             borderColor: tone.inputHoverBorder,
