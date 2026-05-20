@@ -15,6 +15,7 @@
     "dev:all": "concurrently -k -n client,server \"npm:dev:client\" \"npm:dev:server\"",
     "dev:server:test-auth": "npm --workspace server run dev:test-auth",
     "playwright:install": "playwright install",
+    "screenshots": "node scripts/capture-screenshots.mjs",
     "test:e2e": "playwright test",
     "test:e2e:debug": "playwright test --debug",
     "test:e2e:headed": "playwright test --headed",
@@ -39,8 +40,8 @@
     "coverage:client": "vitest run --coverage --project client",
     "coverage:server": "vitest run --coverage --project server",
     "coverage:shared": "vitest run --coverage --project shared",
-    "format": "prettier --write \"client/src/**/*.{ts,tsx,js,jsx,css,scss}\" \"server/src/**/*.{ts,tsx,js,jsx}\" \"shared/**/*.{ts,tsx,js,jsx}\" \"playwright.config.ts\" \"tests/e2e/**/*.{ts,tsx}\"",
-    "format:check": "prettier --check \"client/src/**/*.{ts,tsx,js,jsx,css,scss}\" \"server/src/**/*.{ts,tsx,js,jsx}\" \"shared/**/*.{ts,tsx,js,jsx}\" \"playwright.config.ts\" \"tests/e2e/**/*.{ts,tsx}\"",
+    "format": "prettier --write \"client/src/**/*.{ts,tsx,js,jsx,css,scss}\" \"server/src/**/*.{ts,tsx,js,jsx}\" \"shared/**/*.{ts,tsx,js,jsx}\" \"playwright.config.ts\" \"tests/e2e/**/*.{ts,tsx}\" \"scripts/**/*.{js,mjs,cjs}\"",
+    "format:check": "prettier --check \"client/src/**/*.{ts,tsx,js,jsx,css,scss}\" \"server/src/**/*.{ts,tsx,js,jsx}\" \"shared/**/*.{ts,tsx,js,jsx}\" \"playwright.config.ts\" \"tests/e2e/**/*.{ts,tsx}\" \"scripts/**/*.{js,mjs,cjs}\"",
     "security:audit": "npm audit --audit-level=high",
     "quality:unused": "knip",
     "quality:cycles": "madge client/src/**/*.{ts,tsx} server/src/**/*.ts shared/**/*.ts --extensions ts,tsx --circular"

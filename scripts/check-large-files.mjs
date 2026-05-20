@@ -4,7 +4,9 @@ import path from "node:path";
 const ROOT_DIR = process.cwd();
 
 const DEFAULT_MAX_LINES = 500;
-const MAX_LINES = Number(process.env.CODE_QUALITY_MAX_LINES ?? DEFAULT_MAX_LINES);
+const MAX_LINES = Number(
+  process.env.CODE_QUALITY_MAX_LINES ?? DEFAULT_MAX_LINES,
+);
 
 const ROOTS = ["client/src", "server/src", "shared"];
 
@@ -16,14 +18,14 @@ const IGNORED_DIRS = new Set([
   "build",
   "coverage",
   ".next",
-  ".turbo"
+  ".turbo",
 ]);
 
 const IGNORED_FILE_PATTERNS = [
   /\.d\.ts$/,
   /\.test\.(ts|tsx|js|jsx)$/,
   /\.spec\.(ts|tsx|js|jsx)$/,
-  /(?:^|[/\\])shared[/\\]i18n[/\\][a-z]{2}(?:Options)?\.ts$/
+  /(?:^|[/\\])shared[/\\]i18n[/\\][a-z]{2}(?:Options)?\.ts$/,
 ];
 
 function shouldIgnoreFile(filePath) {
@@ -81,7 +83,7 @@ const oversizedFiles = ROOTS.flatMap((root) => {
   return walk(absoluteRoot).map((filePath) => ({
     filePath,
     relativePath: path.relative(ROOT_DIR, filePath),
-    lines: countLines(filePath)
+    lines: countLines(filePath),
   }));
 })
   .filter((file) => file.lines > MAX_LINES)
@@ -92,7 +94,9 @@ if (oversizedFiles.length === 0) {
   process.exit(0);
 }
 
-console.error(`Found ${oversizedFiles.length} source file(s) above ${MAX_LINES} LOC:\n`);
+console.error(
+  `Found ${oversizedFiles.length} source file(s) above ${MAX_LINES} LOC:\n`,
+);
 
 for (const file of oversizedFiles) {
   console.error(`${String(file.lines).padStart(5, " ")}  ${file.relativePath}`);

@@ -18,6 +18,7 @@ coverage/
 playwright-report/
 test-results/
 tests/e2e/.auth/
+screenshots/
 *.log
 last_prompt.txt
 last-prompt/
