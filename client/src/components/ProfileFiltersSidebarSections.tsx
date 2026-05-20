@@ -113,7 +113,7 @@ function ProfileFiltersHeader({
             mt: 1,
             py: 0.75,
             px: 1,
-            borderRadius: "8px",
+            borderRadius: "var(--cw-radius-card)",
             bgcolor: "action.hover",
             gap: 1.5,
             "& .MuiFormControlLabel-label": {

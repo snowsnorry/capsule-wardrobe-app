@@ -27,8 +27,8 @@ function SignInHeader({
       >
         <Typography
           sx={{
-            fontFamily: '"Leckerli One", cursive',
-            fontSize: "1.85rem",
+            fontFamily: "var(--cw-font-family-wordmark)",
+            fontSize: "var(--cw-font-size-wordmark-sign-in)",
             lineHeight: 1.1,
             color: "secondary.main",
             textAlign: "left",
@@ -69,18 +69,15 @@ function PasskeySignInButton({
           height: 40,
           position: "relative",
           justifyContent: "center",
-          borderRadius: "4px",
-          borderColor: "#dadce0",
-          backgroundColor: "#fffdf9",
-          color: "#3c4043",
-          fontFamily: "Roboto, arial, sans-serif",
-          fontSize: "14px",
-          fontWeight: 500,
-          letterSpacing: "0.25px",
-          lineHeight: "20px",
-          textTransform: "none",
+          borderRadius: "var(--cw-radius-dialog)",
+          borderColor: "divider",
+          backgroundColor: "background.paper",
+          color: "text.primary",
           paddingLeft: "38px",
-          "&:hover": { borderColor: "#dadce0", backgroundColor: "#f2f5fe" },
+          "&:hover": {
+            borderColor: "primary.main",
+            backgroundColor: "var(--cw-color-passkey-hover-bg)",
+          },
           "& .MuiButton-startIcon": {
             position: "absolute",
             left: 12,

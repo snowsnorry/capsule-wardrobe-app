@@ -68,14 +68,14 @@ function getCardRootSx({
     display: "flex",
     flexDirection: "column",
     height: "100%",
-    borderRadius: isDenseMobileCard ? 0 : "8px",
+    borderRadius: isDenseMobileCard ? 0 : "var(--cw-radius-card)",
     overflow: "hidden",
-    backgroundColor: "#fffdf9",
+    backgroundColor: "var(--cw-color-product-card-bg)",
     position: "relative",
     border: isDenseMobileCard
-      ? "0.5px solid rgba(17, 36, 34, 0.44)"
-      : "1px solid rgba(17, 36, 34, 0.08)",
-    boxShadow: isDenseMobileCard ? "none" : "0 0px 8px rgba(17, 36, 34, 0.08)",
+      ? "0.5px solid var(--cw-color-product-dense-border)"
+      : "1px solid var(--cw-color-product-border)",
+    boxShadow: isDenseMobileCard ? "none" : "var(--cw-shadow-wardrobe-card)",
     cursor: isInteractive ? "pointer" : "default",
     "&:focus-visible": isInteractive
       ? {
@@ -163,7 +163,7 @@ function ProductImageContent({
           sx={{
             position: "absolute",
             inset: 0,
-            backgroundColor: "rgba(0, 0, 0, 0.38)",
+            backgroundColor: "var(--cw-color-product-selection-scrim)",
             zIndex: 1,
             pointerEvents: "none",
           }}
@@ -213,7 +213,7 @@ function ClothingCardImageSection({
       sx={{
         width: "100%",
         aspectRatio: "3 / 4",
-        backgroundColor: "#f7f5f1",
+        backgroundColor: "var(--cw-color-product-image-wash)",
         position: "relative",
         overflow: "hidden",
       }}

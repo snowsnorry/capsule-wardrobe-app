@@ -8,15 +8,15 @@ const mobileProductMenuSx = {
     width: 44,
     height: 44,
     border: 0,
-    borderRadius: "999px",
+    borderRadius: "var(--cw-radius-pill)",
     bgcolor: "transparent",
-    color: "rgba(31, 41, 55, 0.72)",
+    color: "var(--cw-color-mobile-image-action-ink)",
     backdropFilter: "none",
     WebkitBackdropFilter: "none",
     boxShadow: "none",
     "&:hover": {
-      bgcolor: "rgba(255, 255, 255, 0.68)",
-      color: "rgba(17, 24, 39, 0.78)",
+      bgcolor: "var(--cw-color-mobile-image-action-bg-hover)",
+      color: "var(--cw-color-mobile-image-action-ink-hover)",
     },
   },
 } as const;
@@ -38,12 +38,14 @@ function getActionOffset({
 
 function getRegenerateButtonSx(isSelected: boolean) {
   const backgroundColor = isSelected
-    ? "rgba(17, 17, 17, 0.92)"
-    : "rgba(17, 17, 17, 0.42)";
+    ? "var(--cw-color-on-image-action-bg-selected)"
+    : "var(--cw-color-on-image-action-bg)";
   const hoverBackgroundColor = isSelected
-    ? "rgba(17, 17, 17, 0.96)"
-    : "rgba(17, 17, 17, 0.62)";
-  const color = isSelected ? "error.main" : "#fbfffd";
+    ? "var(--cw-color-on-image-action-bg-selected-hover)"
+    : "var(--cw-color-on-image-action-bg-hover)";
+  const color = isSelected
+    ? "error.main"
+    : "var(--cw-color-on-image-action-ink)";
 
   return {
     bgcolor: backgroundColor,
@@ -73,13 +75,13 @@ function getActionStackSx(props: CardActionProps) {
     "& .wardrobe-card-action-button": {
       width: 44,
       height: 44,
-      bgcolor: "rgba(17, 17, 17, 0.42)",
-      color: "#fbfffd",
+      bgcolor: "var(--cw-color-on-image-action-bg)",
+      color: "var(--cw-color-on-image-action-ink)",
       transition: "background-color 160ms ease, color 160ms ease",
-      "&:hover": { bgcolor: "rgba(17, 17, 17, 0.62)" },
+      "&:hover": { bgcolor: "var(--cw-color-on-image-action-bg-hover)" },
       "&.Mui-disabled": {
-        color: "#fbfffd",
-        bgcolor: "rgba(17, 17, 17, 0.42)",
+        color: "var(--cw-color-on-image-action-ink)",
+        bgcolor: "var(--cw-color-on-image-action-bg)",
         opacity: props.showActionButtons ? 0.72 : 0,
       },
     },

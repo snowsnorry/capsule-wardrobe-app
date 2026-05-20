@@ -124,7 +124,9 @@ describe("AppSidebarNavigation", () => {
     expect(getComputedStyle(capsulePrimaryActions as Element).marginLeft).toBe(
       "auto",
     );
-    expect(getComputedStyle(capsuleRow).borderRadius).toBe("8px");
+    expect(getComputedStyle(capsuleRow).borderRadius).toBe(
+      "var(--cw-radius-card)",
+    );
     expect(getComputedStyle(capsuleRow).marginLeft).toBe("0px");
     expect(getComputedStyle(capsuleRow).paddingLeft).toBe("36px");
     expect(getComputedStyle(capsuleRow).paddingRight).toBe("12px");
@@ -137,7 +139,9 @@ describe("AppSidebarNavigation", () => {
       expect(button.textContent).toBe("");
       expect(getComputedStyle(button).width).toBe("32px");
       expect(getComputedStyle(button).height).toBe("32px");
-      expect(getComputedStyle(button).borderRadius).toBe("8px");
+      expect(getComputedStyle(button).borderRadius).toBe(
+        "var(--cw-radius-card)",
+      );
     }
 
     const createCapsuleIcon = screen
@@ -197,7 +201,9 @@ describe("AppSidebarNavigation", () => {
     expect(statisticsChild).not.toHaveClass("Mui-selected");
     expect(exploreChild.querySelector("svg")).toBeNull();
     expect(statisticsChild.querySelector("svg")).toBeNull();
-    expect(getComputedStyle(exploreChild).borderRadius).toBe("8px");
+    expect(getComputedStyle(exploreChild).borderRadius).toBe(
+      "var(--cw-radius-card)",
+    );
     expect(getComputedStyle(exploreChild).minHeight).toBe("40px");
     expect(getComputedStyle(exploreChild).paddingLeft).toBe("36px");
   });

@@ -26,7 +26,7 @@ type Translate = (key: string, params?: Record<string, unknown>) => string;
 
 function getCapsuleRowSx(isOverlaySidebar: boolean) {
   return {
-    borderRadius: "8px",
+    borderRadius: "var(--cw-radius-card)",
     mb: 0.25,
     pl: capsuleChildrenContentInset,
     pr: capsuleRowTextInset,
@@ -84,7 +84,7 @@ function CapsuleUnsavedDot({
     <Tooltip title={label}>
       <FiberManualRecordRoundedIcon
         className="capsule-row-unsaved-dot"
-        sx={{ fontSize: 10, color: "#2f8f58", mr: 0.75, flexShrink: 0 }}
+        sx={{ fontSize: 10, color: "success.main", mr: 0.75, flexShrink: 0 }}
       />
     </Tooltip>
   );

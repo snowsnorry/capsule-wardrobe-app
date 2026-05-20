@@ -37,10 +37,7 @@ function NotificationPromptSnackbar({
               color: "primary.main",
               fontWeight: 700,
               "&:hover": {
-                backgroundColor: (theme) =>
-                  theme.palette.mode === "dark"
-                    ? "rgba(73, 163, 163, 0.14)"
-                    : "rgba(28, 124, 124, 0.08)",
+                backgroundColor: "var(--cw-color-notification-action-hover)",
               },
             }}
           >
@@ -54,11 +51,8 @@ function NotificationPromptSnackbar({
           backgroundColor: "background.paper",
           border: "1px solid",
           borderColor: "divider",
-          boxShadow: (theme) =>
-            theme.palette.mode === "dark"
-              ? "0 14px 36px rgba(0, 0, 0, 0.34)"
-              : "0 14px 32px rgba(31, 41, 51, 0.12)",
-          "& .MuiAlert-icon": { color: "#8f6f45" },
+          boxShadow: "var(--cw-shadow-overlay-panel)",
+          "& .MuiAlert-icon": { color: "var(--cw-color-notification-icon)" },
           "& .MuiAlert-message": { py: 1 },
         }}
       >
@@ -114,10 +108,7 @@ function PasskeyPromptSnackbar({
           backgroundColor: "background.paper",
           border: "1px solid",
           borderColor: "divider",
-          boxShadow: (theme) =>
-            theme.palette.mode === "dark"
-              ? "0 14px 36px rgba(0, 0, 0, 0.34)"
-              : "0 14px 32px rgba(31, 41, 51, 0.12)",
+          boxShadow: "var(--cw-shadow-overlay-panel)",
         }}
       >
         {t("passkeys.prompt")}

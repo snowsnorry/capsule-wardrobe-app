@@ -5,7 +5,7 @@ function ClothingCardImagePlaceholder({ label }: { label: string }) {
     <Stack spacing={0.75} alignItems="center">
       <Typography
         sx={{
-          color: "rgba(17, 36, 34, 0.32)",
+          color: "var(--cw-color-product-placeholder-muted)",
           fontSize: "28px",
           fontWeight: 800,
           lineHeight: 1,
@@ -17,7 +17,7 @@ function ClothingCardImagePlaceholder({ label }: { label: string }) {
       <Typography
         variant="caption"
         sx={{
-          color: "rgba(17, 36, 34, 0.54)",
+          color: "var(--cw-color-product-placeholder-text)",
           fontWeight: 700,
           lineHeight: 1.2,
         }}

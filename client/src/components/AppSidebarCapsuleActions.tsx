@@ -9,7 +9,7 @@ const capsulePrimaryActionButtonSx = {
   height: 32,
   minWidth: 0,
   p: 0.5,
-  borderRadius: "8px",
+  borderRadius: "var(--cw-radius-card)",
   color: "primary.main",
 } as const;
 

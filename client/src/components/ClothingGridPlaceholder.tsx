@@ -53,19 +53,22 @@ function ClothingPlaceholderCard({
         display: "flex",
         flexDirection: "column",
         height: "100%",
-        borderRadius: { xs: isDenseMobileCard ? 0 : "8px", sm: "8px" },
+        borderRadius: {
+          xs: isDenseMobileCard ? 0 : "var(--cw-radius-card)",
+          sm: "var(--cw-radius-card)",
+        },
         overflow: "hidden",
         backgroundColor: "background.paper",
         position: "relative",
         border: {
           xs: isDenseMobileCard
-            ? "1px solid rgba(17, 36, 34, 0.44)"
-            : "1px solid rgba(17, 36, 34, 0.08)",
-          sm: "1px solid rgba(17, 36, 34, 0.08)",
+            ? "1px solid var(--cw-color-product-dense-border)"
+            : "1px solid var(--cw-color-product-border)",
+          sm: "1px solid var(--cw-color-product-border)",
         },
         boxShadow: {
-          xs: isDenseMobileCard ? "none" : "0 0px 8px rgba(17, 36, 34, 0.08)",
-          sm: "0 0px 8px rgba(17, 36, 34, 0.08)",
+          xs: isDenseMobileCard ? "none" : "var(--cw-shadow-wardrobe-card)",
+          sm: "var(--cw-shadow-wardrobe-card)",
         },
       }}
     >
@@ -73,8 +76,7 @@ function ClothingPlaceholderCard({
         sx={{
           width: "100%",
           aspectRatio: "3 / 4",
-          background:
-            "linear-gradient(110deg, #ece8e2 8%, #f6f4f1 18%, #ece8e2 33%)",
+          background: "var(--cw-gradient-placeholder-image)",
           backgroundSize: "200% 100%",
           animation: "placeholderShimmer 1.3s linear infinite",
           position: "relative",
@@ -88,8 +90,8 @@ function ClothingPlaceholderCard({
             left: 12,
             width: 112,
             height: 32,
-            borderRadius: "999px",
-            bgcolor: "#dcefeb",
+            borderRadius: "var(--cw-radius-pill)",
+            bgcolor: "var(--cw-color-category-badge-bg)",
           }}
         />
       </Box>
@@ -102,16 +104,15 @@ function ClothingPlaceholderCard({
           pb: 2.25,
           minHeight: 64,
           backgroundColor: "background.paper",
-          borderTop: "1px solid rgba(15, 23, 42, 0.055)",
+          borderTop: "1px solid var(--cw-color-product-detail-divider)",
         }}
       >
         <Box
           sx={{
             width: "72%",
             height: 20,
-            borderRadius: "6px",
-            background:
-              "linear-gradient(110deg, #e5e7eb 8%, #f8fafc 18%, #e5e7eb 33%)",
+            borderRadius: "var(--cw-radius-sm)",
+            background: "var(--cw-gradient-placeholder-text)",
             backgroundSize: "200% 100%",
             animation: "placeholderShimmer 1.3s linear infinite",
           }}

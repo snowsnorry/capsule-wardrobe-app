@@ -145,10 +145,10 @@ export function ImageDialog({
             position: "fixed",
             top: 16,
             right: 16,
-            bgcolor: "rgba(255,255,255,0.9)",
-            color: "common.black",
+            bgcolor: "var(--cw-color-media-control-bg)",
+            color: "var(--cw-color-media-control-ink)",
             "&:hover": {
-              bgcolor: "rgba(255,255,255,1)",
+              bgcolor: "var(--cw-color-media-control-bg-hover)",
             },
           }}
         >
@@ -163,7 +163,7 @@ export function ImageDialog({
             sx={{
               maxWidth: "calc(100vw - 32px)",
               maxHeight: "calc(100vh - 32px)",
-              borderRadius: "8px",
+              borderRadius: "var(--cw-radius-card)",
             }}
           />
         ) : null}

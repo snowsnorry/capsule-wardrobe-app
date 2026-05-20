@@ -233,7 +233,7 @@ const selectedRowSx = {
   p: 0.75,
   border: "1px solid",
   borderColor: "divider",
-  borderRadius: "8px",
+  borderRadius: "var(--cw-radius-card)",
   bgcolor: "background.paper",
 } as const;
 

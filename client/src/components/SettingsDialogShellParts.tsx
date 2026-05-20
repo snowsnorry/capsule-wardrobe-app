@@ -65,14 +65,14 @@ function SettingsDialogProgress({
     ? {
         height: 3,
         backgroundColor: "action.hover",
-        "& .MuiLinearProgress-bar": { borderRadius: 999 },
+        "& .MuiLinearProgress-bar": { borderRadius: "var(--cw-radius-pill)" },
       }
     : {
         mt: "-2px",
         height: 3,
-        borderRadius: 999,
+        borderRadius: "var(--cw-radius-pill)",
         backgroundColor: "action.hover",
-        "& .MuiLinearProgress-bar": { borderRadius: 999 },
+        "& .MuiLinearProgress-bar": { borderRadius: "var(--cw-radius-pill)" },
       };
 
   return (

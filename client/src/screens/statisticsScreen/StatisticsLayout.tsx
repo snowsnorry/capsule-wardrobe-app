@@ -49,7 +49,7 @@ export const STATISTICS_DESKTOP_FILTERS_SX = {
   overflowY: "auto",
   border: "1px solid",
   borderColor: "divider",
-  borderRadius: "10px",
+  borderRadius: "var(--cw-radius-panel)",
   backgroundColor: "background.paper",
   p: 3,
 } as const;

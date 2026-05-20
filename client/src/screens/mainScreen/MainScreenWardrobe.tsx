@@ -59,10 +59,9 @@ function OutfitImagePlaceholder() {
       sx={{
         width: "100%",
         aspectRatio: OUTFIT_SET_IMAGE_ASPECT_RATIO,
-        background:
-          "linear-gradient(110deg, #ece8e2 8%, #f6f4f1 18%, #ece8e2 33%)",
+        background: "var(--cw-gradient-placeholder-image)",
         backgroundSize: "200% 100%",
-        borderRadius: "8px",
+        borderRadius: "var(--cw-radius-card)",
         animation: "placeholderShimmer 1.3s linear infinite",
       }}
     />
@@ -72,7 +71,7 @@ function OutfitImagePlaceholder() {
 const outfitImagePreviewButtonSx = {
   display: "block",
   maxWidth: "100%",
-  borderRadius: "8px",
+  borderRadius: "var(--cw-radius-card)",
   cursor: "zoom-in",
   p: 0,
   textAlign: "left",
@@ -89,7 +88,7 @@ const outfitImageSx = {
   display: "block",
   border: "1px solid",
   borderColor: "divider",
-  borderRadius: "8px",
+  borderRadius: "var(--cw-radius-card)",
 } as const;
 
 function OutfitImageBlock({ props }: { props: WardrobeProps }) {
@@ -130,7 +129,7 @@ function OutfitImageBlock({ props }: { props: WardrobeProps }) {
               top: 12,
               right: 12,
               zIndex: 1,
-              bgcolor: "rgba(255,255,255,0.9)",
+              bgcolor: "var(--cw-color-media-control-bg)",
               color: "error.main",
             }}
           >

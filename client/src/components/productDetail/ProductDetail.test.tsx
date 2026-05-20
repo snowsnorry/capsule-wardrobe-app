@@ -237,7 +237,7 @@ describe("ProductDetail", () => {
     ).not.toBeInTheDocument();
   });
 
-  test("keeps detail groups visually distinct from the dark page background", () => {
+  test("keeps detail groups on the detail surface token in dark mode", () => {
     renderProductDetail(
       {
         id: "coat",
@@ -249,11 +249,11 @@ describe("ProductDetail", () => {
     );
 
     expect(screen.getByTestId("product-detail-group-meta")).toHaveStyle({
-      backgroundColor: darkTheme.palette.background.paper,
+      backgroundColor: "var(--cw-color-product-detail-wash)",
     });
   });
 
-  test("uses the statistics chart card surface for detail groups in light mode", () => {
+  test("uses the detail surface token for detail groups in light mode", () => {
     renderProductDetail({
       id: "coat",
       name: "Coat",
@@ -262,7 +262,7 @@ describe("ProductDetail", () => {
     });
 
     expect(screen.getByTestId("product-detail-group-meta")).toHaveStyle({
-      backgroundColor: "rgba(252, 251, 249, 0.72)",
+      backgroundColor: "var(--cw-color-product-detail-wash)",
     });
   });
 

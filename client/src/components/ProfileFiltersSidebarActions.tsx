@@ -23,7 +23,11 @@ function ProfileSignOutAction({
         color="error"
         onClick={onSignOut}
         disabled={isSigningOut}
-        sx={{ alignSelf: "flex-start", borderRadius: "999px", px: 2.5 }}
+        sx={{
+          alignSelf: "flex-start",
+          borderRadius: "var(--cw-radius-pill)",
+          px: 2.5,
+        }}
       >
         {t("actions.signOut")}
       </Button>

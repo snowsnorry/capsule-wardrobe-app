@@ -176,7 +176,7 @@ function ResultListItem({
         pl: "10px",
         pr: 0.5,
         py: 1.1,
-        borderRadius: "8px",
+        borderRadius: "var(--cw-radius-card)",
         cursor: "pointer",
         border: "1px solid",
         borderColor: isSelected ? "primary.main" : "transparent",
@@ -205,7 +205,7 @@ function ResultListItem({
             titleAccess={savedLabel}
             aria-label={savedLabel}
             sx={{
-              color: "#15766f",
+              color: "var(--cw-color-product-saved-indicator)",
               display: "inline-block",
               fontSize: 16,
               mr: 0.45,

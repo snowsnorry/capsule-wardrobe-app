@@ -74,8 +74,8 @@ function SidebarHeader({
           <Typography
             noWrap
             sx={{
-              fontFamily: '"Leckerli One", cursive',
-              fontSize: { xs: "1.40rem", md: "1.40rem" },
+              fontFamily: "var(--cw-font-family-wordmark)",
+              fontSize: "var(--cw-font-size-wordmark-sidebar)",
               lineHeight: 1.1,
               color: "secondary.main",
             }}
@@ -202,7 +202,9 @@ function getContentSurfaceSx({
     bgcolor: panelBackground,
     border: isPlainContentSurface ? "none" : "1px solid",
     borderColor: isPlainContentSurface ? "transparent" : "divider",
-    borderRadius: isPlainContentSurface ? 0 : { xs: 0, md: "22px" },
+    borderRadius: isPlainContentSurface
+      ? 0
+      : { xs: 0, md: "var(--cw-radius-detail)" },
     boxShadow: "none",
     px: panelPadding,
     py: panelVerticalPadding,

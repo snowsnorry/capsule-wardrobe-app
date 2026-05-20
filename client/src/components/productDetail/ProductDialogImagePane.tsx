@@ -5,7 +5,6 @@ import {
   ToggleButton,
   ToggleButtonGroup,
   Typography,
-  useTheme,
 } from "@mui/material";
 import {
   getProductDetailImageUrl,
@@ -27,7 +26,6 @@ function ProductDialogImagePane({
   item,
   t,
 }: ProductDialogImagePaneProps): ReactElement {
-  const theme = useTheme();
   const [imageMode, setImageMode] = useState<"ai" | "original">("ai");
   const aiImageUrl = getProductDetailImageUrl(item);
   const rawImageUrl = getProductDetailRawImageUrl(item);
@@ -41,10 +39,7 @@ function ProductDialogImagePane({
     setImageFailed(false);
   }, [aiImageUrl, rawImageUrl]);
 
-  const imageSurface =
-    theme.palette.mode === "dark"
-      ? theme.palette.background.default
-      : "#f7f5f1";
+  const imageSurface = "var(--cw-color-product-image-wash)";
   const label = item?.name || t("search.untitled");
 
   return (
@@ -145,7 +140,7 @@ const imageVersionToggleSx = {
   top: 12,
   left: 12,
   bgcolor: "background.paper",
-  boxShadow: "0 2px 10px rgba(17, 36, 34, 0.14)",
+  boxShadow: "var(--cw-shadow-image-toggle)",
   "& .MuiToggleButton-root": {
     px: 1.25,
     py: 0.45,

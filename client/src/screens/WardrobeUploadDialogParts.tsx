@@ -266,7 +266,7 @@ const dropzoneIconSx = (isMobile: boolean) =>
   ({
     width: isMobile ? 56 : "auto",
     height: isMobile ? 56 : "auto",
-    borderRadius: "50%",
+    borderRadius: "var(--cw-radius-circle)",
     bgcolor: isMobile ? "primary.light" : "transparent",
     display: "flex",
     alignItems: "center",
@@ -295,7 +295,7 @@ const previewSx = {
   flex: "0 0 auto",
   borderRadius: 1,
   overflow: "hidden",
-  bgcolor: "#f7f5f1",
+  bgcolor: "var(--cw-color-product-image-wash)",
   display: "flex",
   alignItems: "center",
   justifyContent: "center",

@@ -28,7 +28,7 @@ function CatalogChildRow({
       disabled={isInteractionDisabled}
       onClick={onClick}
       sx={{
-        borderRadius: "8px",
+        borderRadius: "var(--cw-radius-card)",
         mb: 0.25,
         pl: 4.5,
         pr: 1.5,

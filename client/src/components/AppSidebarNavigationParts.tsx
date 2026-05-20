@@ -17,7 +17,7 @@ function getTopLevelButtonSx(isCollapsedDesktop: boolean) {
     minHeight: 48,
     width: "100%",
     minWidth: 0,
-    borderRadius: isCollapsedDesktop ? 0 : "8px",
+    borderRadius: isCollapsedDesktop ? 0 : "var(--cw-radius-card)",
     color: "text.primary",
     bgcolor: "transparent",
     "&.Mui-disabled": { color: "text.disabled" },

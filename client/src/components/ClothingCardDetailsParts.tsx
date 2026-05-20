@@ -120,15 +120,15 @@ function ClothingCardDetails({
         pt: isMobile ? mobileCardMetrics.detailPt : 2,
         pb: isMobile ? mobileCardMetrics.detailPb : 2.25,
         minHeight: isMobile ? mobileCardMetrics.detailMinHeight : 64,
-        backgroundColor: "#fffdf9",
-        borderTop: "1px solid rgba(15, 23, 42, 0.055)",
+        backgroundColor: "var(--cw-color-product-card-bg)",
+        borderTop: "1px solid var(--cw-color-product-detail-divider)",
       }}
     >
       <Typography
         className="wardrobe-card-title"
         variant="subtitle1"
         sx={{
-          color: "#1f2933",
+          color: "var(--cw-color-product-card-ink)",
           width: "100%",
           minWidth: 0,
           maxWidth: "100%",
@@ -188,7 +188,7 @@ function SavedToWardrobeIcon({
       aria-label={label}
       sx={{
         display: "inline-block",
-        color: "#15766f",
+        color: "var(--cw-color-product-saved-indicator)",
         fontSize: isMobile ? 14 : 16,
         mr: 0.45,
         verticalAlign: "-0.16em",

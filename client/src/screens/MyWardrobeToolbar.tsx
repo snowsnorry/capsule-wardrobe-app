@@ -224,7 +224,7 @@ const mobileFilterControlSx = {
 } as const;
 
 const mobileFilterSelectSx = {
-  borderRadius: "999px",
+  borderRadius: "var(--cw-radius-pill)",
   bgcolor: "background.paper",
   fontWeight: 700,
   "& .MuiSelect-select": {
@@ -241,7 +241,7 @@ const filterGroupSx = {
   "& .MuiToggleButton-root": {
     px: 1.5,
     py: 0.65,
-    borderRadius: "999px",
+    borderRadius: "var(--cw-radius-pill)",
     textTransform: "none",
     fontWeight: 700,
     whiteSpace: "nowrap",

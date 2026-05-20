@@ -264,7 +264,7 @@ describe("MainScreenMediaDialogs", () => {
     expect(setOpen).not.toHaveBeenCalled();
   });
 
-  test("ImageDialog close button keeps a contrasting icon color in dark mode", () => {
+  test("ImageDialog close button uses the media control theme token in dark mode", () => {
     render(
       <ThemeProvider theme={createTheme({ palette: { mode: "dark" } })}>
         <ImageDialog
@@ -277,7 +277,7 @@ describe("MainScreenMediaDialogs", () => {
     );
 
     expect(screen.getByRole("button", { name: "Close" })).toHaveStyle({
-      color: "rgb(0, 0, 0)",
+      color: "var(--cw-color-media-control-ink)",
     });
   });
 });

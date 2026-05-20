@@ -42,7 +42,7 @@ export function pickerCardSx(
     borderColor: selected
       ? theme.palette.primary.main
       : alpha(theme.palette.primary.main, 0.14),
-    borderRadius: "8px",
+    borderRadius: "var(--cw-radius-card)",
     bgcolor: selected
       ? alpha(theme.palette.primary.main, 0.08)
       : theme.palette.background.paper,

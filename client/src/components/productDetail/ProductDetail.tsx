@@ -291,7 +291,7 @@ function SavedToWardrobeTitleIcon({ label }: { label: string }) {
       titleAccess={label}
       aria-label={label}
       sx={{
-        color: "#15766f",
+        color: "var(--cw-color-product-saved-indicator)",
         display: "inline-block",
         fontSize: 20,
         mr: 0.6,
@@ -308,7 +308,7 @@ function UploadedWardrobeTitleIcon({ label }: { label: string }) {
       titleAccess={label}
       aria-label={label}
       sx={{
-        color: "#15766f",
+        color: "var(--cw-color-product-saved-indicator)",
         display: "inline-block",
         fontSize: 20,
         mr: 0.6,

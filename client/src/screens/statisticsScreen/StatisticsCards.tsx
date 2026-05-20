@@ -16,7 +16,7 @@ export function StatisticsCard({
   const isDarkMode = theme.palette.mode === "dark";
   const cardBackground = isDarkMode
     ? theme.palette.background.paper
-    : "rgba(252, 251, 249, 0.72)";
+    : "var(--cw-color-product-detail-wash)";
 
   return (
     <Stack
@@ -28,7 +28,7 @@ export function StatisticsCard({
         minWidth: 0,
         flexShrink: 0,
         overflow: "hidden",
-        borderRadius: "8px",
+        borderRadius: "var(--cw-radius-card)",
         border: "1px solid",
         borderColor: "divider",
         bgcolor: cardBackground,
@@ -116,11 +116,9 @@ function ActiveFilterChips({
   isDarkMode: boolean;
 }) {
   const subtleChipBackground = isDarkMode
-    ? "rgba(238, 245, 243, 0.08)"
+    ? "var(--cw-color-product-detail-wash)"
     : undefined;
-  const subtleChipDeleteColor = isDarkMode
-    ? "rgba(238, 245, 243, 0.68)"
-    : undefined;
+  const subtleChipDeleteColor = isDarkMode ? "text.secondary" : undefined;
 
   return (
     <Stack
@@ -205,7 +203,7 @@ export function StatisticsSummaryCard({
   const isDarkMode = theme.palette.mode === "dark";
   const cardBackground = isDarkMode
     ? theme.palette.background.paper
-    : "rgba(252, 251, 249, 0.82)";
+    : "var(--cw-color-product-detail-strong-wash)";
 
   return (
     <Box
@@ -215,7 +213,7 @@ export function StatisticsSummaryCard({
         minHeight: { xs: 156, md: 156 },
         height: "auto",
         flexShrink: 0,
-        borderRadius: "10px",
+        borderRadius: "var(--cw-radius-panel)",
         border: "1px solid",
         borderColor: "divider",
         bgcolor: cardBackground,

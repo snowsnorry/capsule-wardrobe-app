@@ -302,7 +302,7 @@ function SettingsSectionsList({
 }
 
 const settingsSectionButtonSx = {
-  borderRadius: "8px",
+  borderRadius: "var(--cw-radius-card)",
   mb: 0.25,
   minHeight: 40,
 } as const;

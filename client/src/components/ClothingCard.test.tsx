@@ -430,7 +430,7 @@ describe("ClothingCard", () => {
     expect(root).toHaveStyle({
       borderRadius: "0",
       boxShadow: "none",
-      border: "0.5px solid rgba(17, 36, 34, 0.44)",
+      border: "0.5px solid var(--cw-color-product-dense-border)",
     });
     expect(details).toHaveStyle({ minHeight: "50px" });
     expect(title).toHaveStyle({
@@ -445,7 +445,7 @@ describe("ClothingCard", () => {
     expect(menuButton).toHaveStyle({
       width: "44px",
       height: "44px",
-      color: "rgba(31, 41, 55, 0.72)",
+      color: "var(--cw-color-mobile-image-action-ink)",
     });
   });
 
@@ -458,9 +458,9 @@ describe("ClothingCard", () => {
     const image = await screen.findByRole("img", { name: item.name ?? "" });
 
     expect(container.querySelector(".wardrobe-card-root")).toHaveStyle({
-      borderRadius: "8px",
-      boxShadow: "0 0px 8px rgba(17, 36, 34, 0.08)",
-      border: "1px solid rgba(17, 36, 34, 0.08)",
+      borderRadius: "var(--cw-radius-card)",
+      boxShadow: "var(--cw-shadow-wardrobe-card)",
+      border: "1px solid var(--cw-color-product-border)",
     });
     expect(container.querySelector(".wardrobe-card-details")).toHaveStyle({
       minHeight: "64px",
@@ -489,7 +489,7 @@ describe("ClothingCard", () => {
     expect(container.querySelector(".wardrobe-card-root")).toHaveStyle({
       borderRadius: "0",
       boxShadow: "none",
-      border: "0.5px solid rgba(17, 36, 34, 0.44)",
+      border: "0.5px solid var(--cw-color-product-dense-border)",
     });
     expect(container.querySelector(".wardrobe-card-details")).toHaveStyle({
       minHeight: "42px",

@@ -86,13 +86,7 @@ function MarketingPanel({
             position: "absolute",
             inset: 0,
             pointerEvents: "none",
-            background: `
-              radial-gradient(circle at 50% 50%, rgba(252, 251, 249, 0) 62%, rgba(252, 251, 249, 0.07) 84%, rgba(252, 251, 249, 0.14) 100%),
-              linear-gradient(to top, rgba(252, 251, 249, 0.08), rgba(252, 251, 249, 0)),
-              linear-gradient(to bottom, rgba(252, 251, 249, 0.07), rgba(252, 251, 249, 0)),
-              linear-gradient(to right, rgba(252, 251, 249, 0.07), rgba(252, 251, 249, 0)),
-              linear-gradient(to left, rgba(252, 251, 249, 0.07), rgba(252, 251, 249, 0))
-            `,
+            background: "var(--cw-gradient-marketing-image-fade)",
           },
         }}
       >
@@ -224,7 +218,7 @@ function CardPanel(
         pt: props.hasBrandedPanelHeader ? { xs: 3, md: 3.25 } : undefined,
         minHeight: 0,
         height: props.isSignInView ? { xs: "100%", md: "532px" } : "100%",
-        borderRadius: { xs: 0, md: "22px" },
+        borderRadius: { xs: 0, md: "var(--cw-radius-detail)" },
         display: "flex",
         flexDirection: "column",
         overflow: "hidden",

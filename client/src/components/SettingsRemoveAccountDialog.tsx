@@ -103,10 +103,10 @@ const confirmationWordSx = {
   alignItems: "center",
   minHeight: 32,
   px: 1.25,
-  borderRadius: "6px",
+  borderRadius: "var(--cw-radius-sm)",
   bgcolor: "action.hover",
   color: "text.primary",
-  fontFamily: "monospace",
+  fontFamily: "var(--cw-font-family-confirmation-code)",
   fontSize: "0.875rem",
 } as const;
 

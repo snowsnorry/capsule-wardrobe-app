@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Box, Stack, Typography, useTheme } from "@mui/material";
+import { Box, Stack, Typography } from "@mui/material";
 import { translateOption } from "../../i18n";
 import { getColorSwatchStyle } from "../../../../shared/colorSwatches.js";
 import { buildProductDetailGroups } from "../../../../shared/productDetail.js";
@@ -23,11 +23,7 @@ function ProductDetailGroups({ item, t, locale }: ProductDetailSectionsProps) {
     translateOption,
     locale,
   });
-  const theme = useTheme();
-  const isDarkMode = theme.palette.mode === "dark";
-  const detailGroupBackground = isDarkMode
-    ? theme.palette.background.paper
-    : "rgba(252, 251, 249, 0.72)";
+  const detailGroupBackground = "var(--cw-color-product-detail-wash)";
 
   return (
     <Stack spacing={1.4}>
@@ -40,7 +36,7 @@ function ProductDetailGroups({ item, t, locale }: ProductDetailSectionsProps) {
             gridTemplateColumns: { xs: "1fr", sm: "repeat(2, minmax(0, 1fr))" },
             gap: 1.5,
             p: 1.8,
-            borderRadius: "22px",
+            borderRadius: "var(--cw-radius-detail)",
             border: "1px solid",
             borderColor: "divider",
             backgroundColor: detailGroupBackground,
@@ -98,7 +94,7 @@ function ColorValues({
             sx={{
               width: 12,
               height: 12,
-              borderRadius: "999px",
+              borderRadius: "var(--cw-radius-pill)",
               boxSizing: "border-box",
               flexShrink: 0,
               border: "1px solid",
@@ -151,7 +147,7 @@ function ProductImage({
             display: "block",
             width: "100%",
             mb: bottomMargin,
-            borderRadius: "22px",
+            borderRadius: "var(--cw-radius-detail)",
             border: "1px solid",
             borderColor: "divider",
             objectFit: "cover",

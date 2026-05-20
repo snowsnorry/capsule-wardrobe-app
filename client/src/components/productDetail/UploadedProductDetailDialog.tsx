@@ -240,7 +240,7 @@ function getDialogPaperSx(isMobile: boolean) {
     width: "min(1120px, calc(100vw - 48px))",
     height: "min(820px, calc(100vh - 48px))",
     maxWidth: "none",
-    borderRadius: "8px",
+    borderRadius: "var(--cw-radius-card)",
     overflow: "hidden",
     backgroundColor: "background.paper",
   } as const;

@@ -9,7 +9,6 @@ import {
 } from "@mui/material";
 import AppsRoundedIcon from "@mui/icons-material/AppsRounded";
 import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
-import { useTheme } from "@mui/material/styles";
 import { useI18n } from "../i18n/useI18n";
 
 type AppId = "capsule" | "explore" | "myWardrobe" | "statistics";
@@ -51,10 +50,8 @@ function AppLauncher({
   onSelectApp,
 }: AppLauncherProps) {
   const { t } = useI18n();
-  const theme = useTheme();
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const isOpen = Boolean(anchorEl);
-  const isDarkMode = theme.palette.mode === "dark";
   const items = buildLauncherItems(t);
 
   return (
@@ -65,27 +62,21 @@ function AppLauncher({
           setAnchorEl(event.currentTarget)
         }
         sx={{
-          borderRadius: "999px",
+          borderRadius: "var(--cw-radius-pill)",
           px: 1.4,
           py: 0.7,
-          border: isDarkMode
-            ? "1px solid rgba(240, 180, 41, 0.28)"
-            : "1px solid rgba(143, 111, 69, 0.2)",
-          background: isDarkMode
-            ? "linear-gradient(135deg, rgba(240, 180, 41, 0.16), rgba(127, 84, 38, 0.22) 52%, rgba(28, 40, 38, 0.96))"
-            : "linear-gradient(135deg, rgba(127, 84, 38, 0.14), rgba(240, 180, 41, 0.14) 58%, rgba(255, 244, 220, 0.88))",
-          boxShadow: isDarkMode
-            ? "inset 0 1px 0 rgba(255,255,255,0.06), 0 10px 20px rgba(0, 0, 0, 0.28)"
-            : "inset 0 1px 0 rgba(255,255,255,0.7), 0 8px 18px rgba(127, 84, 38, 0.08)",
+          border: "1px solid var(--cw-color-launcher-border)",
+          background: "var(--cw-gradient-launcher)",
+          boxShadow: "var(--cw-shadow-launcher)",
         }}
       >
         <Stack direction="row" spacing={1} alignItems="center">
           <AppsRoundedIcon
-            sx={{ color: isDarkMode ? "#f0d39a" : "#7f5426", fontSize: 18 }}
+            sx={{ color: "var(--cw-color-launcher-icon)", fontSize: 18 }}
           />
           <Typography
             variant="body2"
-            sx={{ fontWeight: 700, color: isDarkMode ? "#f7ead0" : "#7f5426" }}
+            sx={{ fontWeight: 700, color: "var(--cw-color-launcher-ink)" }}
           >
             {items.find((item) => item.id === currentApp)?.label ||
               t("launcher.capsule")}

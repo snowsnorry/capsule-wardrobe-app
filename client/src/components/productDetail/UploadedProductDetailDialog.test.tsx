@@ -309,7 +309,7 @@ describe("UploadedProductDetailDialog", () => {
     const mobileImage = screen.getByRole("img", { name: "Linen shirt" });
     expect(mobileImage).toHaveStyle({
       width: "100%",
-      borderRadius: "22px",
+      borderRadius: "var(--cw-radius-detail)",
     });
     expect(screen.getByRole("button", { name: "AI" })).toHaveAttribute(
       "aria-pressed",

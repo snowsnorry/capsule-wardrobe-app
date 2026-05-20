@@ -43,21 +43,21 @@ function getCategoryChip({
 function getCategoryChipColors(tone: CategoryChipTone) {
   if (tone === "failed") {
     return {
-      bgcolor: "#fde2e1",
-      color: "#b42318",
+      bgcolor: "var(--cw-color-failed-badge-bg)",
+      color: "var(--cw-color-failed-badge-ink)",
     };
   }
 
   if (tone === "needsReview") {
     return {
-      bgcolor: "#fff1c2",
-      color: "#8a5a00",
+      bgcolor: "var(--cw-color-needs-review-badge-bg)",
+      color: "var(--cw-color-needs-review-badge-ink)",
     };
   }
 
   return {
-    bgcolor: "#dcefeb",
-    color: "#15766f",
+    bgcolor: "var(--cw-color-category-badge-bg)",
+    color: "var(--cw-color-category-badge-ink)",
   };
 }
 
@@ -91,7 +91,7 @@ function CategoryChip({
           textTransform: "uppercase",
           letterSpacing: "0.08em",
           fontSize: "12px",
-          fontWeight: 800,
+          fontWeight: "var(--cw-font-weight-product-badge)",
           padding: 0,
           "& .MuiChip-label": {
             px: 1,

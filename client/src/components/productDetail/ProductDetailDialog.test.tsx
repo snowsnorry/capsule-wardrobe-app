@@ -179,11 +179,11 @@ describe("ProductDetailDialog", () => {
     expect(screen.getAllByText("Unsafe Coat").length).toBeGreaterThan(0);
   });
 
-  test("keeps the desktop image pane theme-aware in dark mode", () => {
+  test("keeps the desktop image pane on the product image surface in dark mode", () => {
     renderDialog({}, darkTheme);
 
     expect(screen.getByTestId("product-detail-dialog-image-pane")).toHaveStyle({
-      backgroundColor: darkTheme.palette.background.default,
+      backgroundColor: "var(--cw-color-product-image-wash)",
     });
   });
 

@@ -12,7 +12,7 @@ function getDialogPaperSx(mobileLayout: boolean) {
     width: "min(1240px, 94vw)",
     height: "min(82vh, 820px)",
     maxHeight: "82vh",
-    borderRadius: "18px",
+    borderRadius: "var(--cw-radius-dialog)",
     overflow: "hidden",
     backgroundColor: "background.paper",
   };

@@ -23,11 +23,11 @@ const sidebarPanelSx = (theme: Theme) => {
     p: 3,
     border: "1px solid",
     borderColor: alpha(theme.palette.primary.main, 0.12),
-    borderRadius: "10px",
+    borderRadius: "var(--cw-radius-panel)",
     backgroundColor: alpha(theme.palette.background.paper, 0.78),
     backdropFilter: "blur(12px) saturate(1.04)",
     WebkitBackdropFilter: "blur(12px) saturate(1.04)",
-    boxShadow: "0 0px 8px rgba(17, 36, 34, 0.08)",
+    boxShadow: "var(--cw-shadow-wardrobe-card)",
     "@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)))":
       {
         backgroundColor: alpha(theme.palette.background.paper, 0.94),

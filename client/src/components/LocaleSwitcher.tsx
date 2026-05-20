@@ -37,7 +37,7 @@ function LocaleSwitcher() {
           width: 48,
           height: 48,
           p: 0,
-          borderRadius: "50%",
+          borderRadius: "var(--cw-radius-circle)",
           flexShrink: 0,
         }}
       >

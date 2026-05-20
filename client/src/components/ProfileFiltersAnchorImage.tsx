@@ -18,7 +18,7 @@ export function AnchorImage({
       sx={{
         width: large ? 56 : 40,
         height: large ? 70 : 50,
-        borderRadius: "6px",
+        borderRadius: "var(--cw-radius-sm)",
         objectFit: "cover",
         bgcolor: "background.default",
         border: "1px solid",

@@ -278,7 +278,7 @@ const pendingIconProgressSx = {
   right: 8,
   bottom: 2,
   left: 8,
-  borderRadius: 999,
+  borderRadius: "var(--cw-radius-pill)",
 } as const;
 
 export default ProductActionsMenu;

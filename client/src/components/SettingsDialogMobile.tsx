@@ -170,7 +170,7 @@ function SettingsMobileSectionsList({
 }
 
 const settingsMobileSectionButtonSx = {
-  borderRadius: "8px",
+  borderRadius: "var(--cw-radius-card)",
   minHeight: 56,
   px: 2,
   py: 1.25,
