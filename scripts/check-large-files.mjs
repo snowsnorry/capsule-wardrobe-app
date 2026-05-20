@@ -22,7 +22,8 @@ const IGNORED_DIRS = new Set([
 const IGNORED_FILE_PATTERNS = [
   /\.d\.ts$/,
   /\.test\.(ts|tsx|js|jsx)$/,
-  /\.spec\.(ts|tsx|js|jsx)$/
+  /\.spec\.(ts|tsx|js|jsx)$/,
+  /(?:^|[/\\])shared[/\\]i18n[/\\][a-z]{2}(?:Options)?\.ts$/
 ];
 
 function shouldIgnoreFile(filePath) {
