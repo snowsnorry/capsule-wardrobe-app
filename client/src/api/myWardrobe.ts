@@ -1,7 +1,6 @@
 import { API_BASE_URL } from "./config";
 import { getCachedJson, request, requestJson } from "./request";
 import type { JsonObject } from "./request";
-import { fetchEventSource } from "@microsoft/fetch-event-source";
 
 type MyWardrobeSource = "uploaded" | "from_catalog";
 type UploadWardrobeProgress = {
@@ -40,6 +39,26 @@ type UploadedWardrobeItemUpdatePayload = {
 type RequestErrorWithStatus = Error & {
   status: number;
 };
+type EventStreamLike = {
+  fetchEventSource: (
+    url: string,
+    options: Record<string, unknown>,
+  ) => Promise<unknown>;
+};
+
+let fetchEventSourcePromise: Promise<
+  EventStreamLike["fetchEventSource"]
+> | null = null;
+
+function loadFetchEventSource(): Promise<EventStreamLike["fetchEventSource"]> {
+  if (!fetchEventSourcePromise) {
+    fetchEventSourcePromise = import("@microsoft/fetch-event-source").then(
+      (module) => module.fetchEventSource,
+    );
+  }
+
+  return fetchEventSourcePromise;
+}
 
 function getWardrobeItemsUrl({ source = null }: MyWardrobeFetchOptions = {}) {
   const params = new URLSearchParams();
@@ -151,6 +170,7 @@ async function uploadWardrobeImages(
   files: File[],
   options: UploadWardrobeImagesOptions = {},
 ): Promise<JsonObject> {
+  const fetchEventSource = await loadFetchEventSource();
   const formData = new FormData();
   files.forEach((file) => {
     formData.append("images", file);
