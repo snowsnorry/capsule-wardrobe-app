@@ -79,22 +79,29 @@ describe("theme contract", () => {
     expect(darkTheme.palette.background.default).toBe("#101817");
     expect(appThemeTokens.radii.card).toBe("8px");
     expect(appThemeTokens.radii.panel).toBe("10px");
+    expect(appThemeTokens.radii.dialog).toBe("14px");
+    expect(appThemeTokens.radii.detail).toBe("16px");
     expect(rootVars["--cw-color-primary"]).toBe(theme.palette.primary.main);
     expect(rootVars["--cw-radius-card"]).toBe(appThemeTokens.radii.card);
     expect(rootVars["--cw-color-product-image-wash"]).toBe("#f7f5f1");
     expect(rootVars["--cw-shadow-wardrobe-card"]).toBe(
-      "0 0px 8px rgba(17, 36, 34, 0.08)",
+      "0 1px 6px rgba(17, 36, 34, 0.055)",
     );
     expect(darkRootVars["--cw-color-primary"]).toBe(
       darkTheme.palette.primary.main,
     );
     expect(theme.typography.fontFamily).toContain("DM Sans");
-    expect(theme.shape.borderRadius).toBe(18);
+    expect(theme.shape.borderRadius).toBe(14);
     expect(theme.components.MuiButton.defaultProps.disableElevation).toBe(true);
     expect(theme.components.MuiDialogActions.styleOverrides.root).toEqual(
       expect.objectContaining({
         backgroundColor: "transparent",
         justifyContent: "flex-end",
+      }),
+    );
+    expect(theme.components.MuiDialog.styleOverrides.paperFullScreen).toEqual(
+      expect.objectContaining({
+        borderRadius: 0,
       }),
     );
     expect(

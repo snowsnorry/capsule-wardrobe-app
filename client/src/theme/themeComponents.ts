@@ -2,13 +2,49 @@ import { alpha } from "@mui/material/styles";
 import type { Components, Theme } from "@mui/material/styles";
 import { createThemeCssVariables } from "./themeCssVariables";
 import type { ThemeMode } from "./themeTypes";
-import { paletteTokens } from "./themeTokens";
+import { appThemeTokens, paletteTokens } from "./themeTokens";
+
+const componentToneByMode = {
+  light: {
+    defaultChipBg: "rgba(20, 60, 60, 0.04)",
+    disabledButtonBg: "rgba(20, 60, 60, 0.045)",
+    disabledButtonBorder: "rgba(20, 60, 60, 0.08)",
+    disabledButtonColor: "rgba(31, 41, 51, 0.42)",
+    inputBg: "#fffefa",
+    inputHoverBorder: "rgba(28, 124, 124, 0.24)",
+    outlinedHoverBorder: "rgba(20, 60, 60, 0.12)",
+    selectedChipBorderOpacity: 0.24,
+    selectedControlColorToken: "primaryMain",
+    sliderFocusOpacity: 0.1,
+    sliderRailOpacity: 0.16,
+    sliderThumbBorderOpacity: 0.22,
+    sliderTrackOpacity: 0.68,
+    tabIndicatorOpacity: 0.68,
+  },
+  dark: {
+    defaultChipBg: "rgba(238, 245, 243, 0.055)",
+    disabledButtonBg: "rgba(238, 245, 243, 0.06)",
+    disabledButtonBorder: "rgba(218, 236, 231, 0.12)",
+    disabledButtonColor: "rgba(238, 245, 243, 0.42)",
+    inputBg: "rgba(238, 245, 243, 0.03)",
+    inputHoverBorder: "rgba(101, 178, 175, 0.38)",
+    outlinedHoverBorder: "rgba(218, 236, 231, 0.24)",
+    selectedChipBorderOpacity: 0.34,
+    selectedControlColorToken: "primaryDark",
+    sliderFocusOpacity: 0.14,
+    sliderRailOpacity: 0.22,
+    sliderThumbBorderOpacity: 0.34,
+    sliderTrackOpacity: 0.72,
+    tabIndicatorOpacity: 0.72,
+  },
+} as const;
 
 // MUI component configuration is intentionally centralized here.
 // eslint-disable-next-line max-lines-per-function
 function createComponentOverrides(mode: ThemeMode): Components<Theme> {
   const tokens = paletteTokens[mode];
-  const isDark = mode === "dark";
+  const tone = componentToneByMode[mode];
+  const selectedControlColor = tokens[tone.selectedControlColorToken];
 
   return {
     MuiCssBaseline: {
@@ -37,9 +73,14 @@ function createComponentOverrides(mode: ThemeMode): Components<Theme> {
       styleOverrides: {
         root: {
           textTransform: "none",
-          fontWeight: 650,
+          fontWeight: appThemeTokens.typography.denseLabelWeight,
           transition:
             "background-color 180ms cubic-bezier(0.2, 0, 0, 1), border-color 180ms cubic-bezier(0.2, 0, 0, 1), color 180ms cubic-bezier(0.2, 0, 0, 1)",
+          "&.Mui-disabled": {
+            backgroundColor: tone.disabledButtonBg,
+            borderColor: tone.disabledButtonBorder,
+            color: tone.disabledButtonColor,
+          },
         },
         containedPrimary: {
           "&:hover": {
@@ -47,14 +88,10 @@ function createComponentOverrides(mode: ThemeMode): Components<Theme> {
           },
         },
         outlinedInherit: {
-          borderColor: isDark
-            ? "rgba(218, 236, 231, 0.34)"
-            : "rgba(20, 60, 60, 0.16)",
+          borderColor: tokens.divider,
           color: tokens.textPrimary,
           "&:hover": {
-            borderColor: isDark
-              ? "rgba(218, 236, 231, 0.52)"
-              : "rgba(28, 124, 124, 0.34)",
+            borderColor: tone.outlinedHoverBorder,
             backgroundColor: "var(--cw-color-action-wash)",
           },
         },
@@ -72,9 +109,7 @@ function createComponentOverrides(mode: ThemeMode): Components<Theme> {
       styleOverrides: {
         root: {
           "&.MuiChip-colorDefault": {
-            backgroundColor: isDark
-              ? "rgba(238, 245, 243, 0.08)"
-              : "rgba(20, 60, 60, 0.055)",
+            backgroundColor: tone.defaultChipBg,
             color: tokens.textPrimary,
             "&:hover": {
               backgroundColor: "var(--cw-color-action-wash)",
@@ -82,18 +117,19 @@ function createComponentOverrides(mode: ThemeMode): Components<Theme> {
           },
         },
         label: {
-          fontWeight: 600,
+          fontWeight: appThemeTokens.typography.denseLabelWeight,
         },
         filledPrimary: {
-          backgroundColor: tokens.primaryMain,
-          color: tokens.primaryContrast,
+          backgroundColor: "var(--cw-color-action-wash)",
+          boxShadow: `inset 0 0 0 1px ${alpha(tokens.primaryMain, tone.selectedChipBorderOpacity)}`,
+          color: selectedControlColor,
           "&:hover": {
-            backgroundColor: tokens.primaryDark,
+            backgroundColor: "var(--cw-color-action-hover)",
           },
           "& .MuiChip-deleteIcon": {
-            color: alpha(tokens.primaryContrast, 0.72),
+            color: alpha(selectedControlColor, 0.68),
             "&:hover": {
-              color: tokens.primaryContrast,
+              color: selectedControlColor,
             },
           },
         },
@@ -109,16 +145,64 @@ function createComponentOverrides(mode: ThemeMode): Components<Theme> {
     MuiPaper: {
       styleOverrides: {
         root: {
-          border: isDark
-            ? "1px solid rgba(218, 236, 231, 0.34)"
-            : "1px solid rgba(20, 60, 60, 0.08)",
+          border: `1px solid ${tokens.divider}`,
         },
       },
     },
     MuiDivider: {
       styleOverrides: {
         root: {
-          borderColor: isDark ? "rgba(218, 236, 231, 0.42)" : tokens.divider,
+          borderColor: tokens.divider,
+        },
+      },
+    },
+    MuiDialog: {
+      styleOverrides: {
+        paper: {
+          borderColor: tokens.divider,
+          borderRadius: "var(--cw-radius-dialog)",
+          boxShadow: "var(--cw-shadow-overlay-panel)",
+        },
+        paperFullScreen: {
+          borderRadius: 0,
+        },
+      },
+    },
+    MuiTab: {
+      styleOverrides: {
+        root: {
+          fontWeight: appThemeTokens.typography.denseLabelWeight,
+          "&.Mui-selected": {
+            color: selectedControlColor,
+          },
+        },
+      },
+    },
+    MuiTabs: {
+      styleOverrides: {
+        indicator: {
+          backgroundColor: alpha(tokens.primaryMain, tone.tabIndicatorOpacity),
+        },
+      },
+    },
+    MuiSlider: {
+      styleOverrides: {
+        root: {
+          color: tokens.primaryMain,
+          "& .MuiSlider-rail": {
+            opacity: 1,
+            backgroundColor: alpha(tokens.primaryMain, tone.sliderRailOpacity),
+          },
+          "& .MuiSlider-track": {
+            backgroundColor: alpha(tokens.primaryMain, tone.sliderTrackOpacity),
+            border: 0,
+          },
+          "& .MuiSlider-thumb": {
+            boxShadow: `0 0 0 1px ${alpha(tokens.primaryMain, tone.sliderThumbBorderOpacity)}`,
+            "&:hover, &.Mui-focusVisible": {
+              boxShadow: `0 0 0 6px ${alpha(tokens.primaryMain, tone.sliderFocusOpacity)}`,
+            },
+          },
         },
       },
     },
@@ -130,11 +214,12 @@ function createComponentOverrides(mode: ThemeMode): Components<Theme> {
     MuiOutlinedInput: {
       styleOverrides: {
         root: {
-          backgroundColor: isDark ? "rgba(238, 245, 243, 0.03)" : "#fffefa",
+          backgroundColor: tone.inputBg,
+          "& .MuiOutlinedInput-notchedOutline": {
+            borderColor: tokens.divider,
+          },
           "&:hover .MuiOutlinedInput-notchedOutline": {
-            borderColor: isDark
-              ? "rgba(121, 199, 196, 0.62)"
-              : "rgba(28, 124, 124, 0.34)",
+            borderColor: tone.inputHoverBorder,
           },
           "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
             borderColor: tokens.primaryMain,

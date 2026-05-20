@@ -50,7 +50,7 @@ function createTypography(): NonNullable<ThemeOptions["typography"]> {
     },
     subtitle2: {
       fontSize: "0.875rem",
-      fontWeight: 650,
+      fontWeight: 600,
       lineHeight: 1.4,
       letterSpacing: 0,
     },
@@ -68,7 +68,7 @@ function createTypography(): NonNullable<ThemeOptions["typography"]> {
     },
     button: {
       fontSize: "0.875rem",
-      fontWeight: 650,
+      fontWeight: 600,
       lineHeight: 1.4,
       letterSpacing: 0,
       textTransform: "none",
@@ -81,7 +81,7 @@ function createTypography(): NonNullable<ThemeOptions["typography"]> {
     },
     overline: {
       fontSize: "0.75rem",
-      fontWeight: 650,
+      fontWeight: 600,
       lineHeight: 1.45,
       letterSpacing: 0,
       textTransform: "uppercase",

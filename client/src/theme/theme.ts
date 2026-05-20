@@ -10,7 +10,7 @@ function createAppTheme(mode: ThemeMode = "light") {
     palette: createPalette(mode),
     typography: createTypography(),
     shape: {
-      borderRadius: 18,
+      borderRadius: 14,
     },
     components: createComponentOverrides(mode),
   });

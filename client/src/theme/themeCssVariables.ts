@@ -24,9 +24,9 @@ function createThemeCssVariables(mode: ThemeMode) {
       appThemeTokens.typography.productBadgeWeight,
     "--cw-color-primary": tokens.primaryMain,
     "--cw-color-action-wash":
-      mode === "dark" ? "oklch(28% 0.035 190)" : "oklch(95% 0.025 190)",
+      mode === "dark" ? "oklch(27% 0.018 190)" : "oklch(96% 0.014 190)",
     "--cw-color-action-hover":
-      mode === "dark" ? "oklch(31% 0.04 190)" : "oklch(93% 0.03 190)",
+      mode === "dark" ? "oklch(30% 0.024 190)" : "oklch(94% 0.018 190)",
     "--cw-color-gold-wash":
       mode === "dark" ? "oklch(30% 0.045 80)" : "oklch(94% 0.055 82)",
     "--cw-color-user-avatar-bg": tokens.userAvatarBg,
