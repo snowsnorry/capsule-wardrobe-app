@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Divider,
   LinearProgress,
@@ -18,6 +18,7 @@ import {
 import type { SignInScreenProps } from "./SignInScreenTypes";
 
 const GOOGLE_GSI_SCRIPT_SRC = "https://accounts.google.com/gsi/client";
+const GOOGLE_SIGN_IN_BUTTON_MAX_WIDTH = 320;
 
 type GoogleCredentialResponse = {
   credential?: string | null;
@@ -98,6 +99,70 @@ function ensureGoogleScriptLoaded(): Promise<void> {
   });
 }
 
+function getGoogleButtonRenderWidth(container: HTMLDivElement): number {
+  const { width } = container.getBoundingClientRect();
+  const measuredWidth = width || container.clientWidth;
+
+  if (!Number.isFinite(measuredWidth) || measuredWidth <= 0) {
+    return GOOGLE_SIGN_IN_BUTTON_MAX_WIDTH;
+  }
+
+  return Math.min(GOOGLE_SIGN_IN_BUTTON_MAX_WIDTH, Math.floor(measuredWidth));
+}
+
+function useGoogleButtonContainer({
+  step,
+  googleClientId,
+}: {
+  step: SignInScreenProps["step"];
+  googleClientId: string;
+}) {
+  const [googleButtonContainer, setGoogleButtonContainer] =
+    useState<HTMLDivElement | null>(null);
+  const [googleButtonWidth, setGoogleButtonWidth] = useState(
+    GOOGLE_SIGN_IN_BUTTON_MAX_WIDTH,
+  );
+
+  const updateGoogleButtonWidth = useCallback((container: HTMLDivElement) => {
+    const nextWidth = getGoogleButtonRenderWidth(container);
+    setGoogleButtonWidth((currentWidth) =>
+      currentWidth === nextWidth ? currentWidth : nextWidth,
+    );
+  }, []);
+
+  const googleButtonRef = useCallback(
+    (container: HTMLDivElement | null) => {
+      setGoogleButtonContainer(container);
+      if (container) {
+        updateGoogleButtonWidth(container);
+      }
+    },
+    [updateGoogleButtonWidth],
+  );
+
+  useEffect(() => {
+    if (step !== "email" || !googleClientId || !googleButtonContainer) {
+      return;
+    }
+
+    updateGoogleButtonWidth(googleButtonContainer);
+
+    const onResize = () => updateGoogleButtonWidth(googleButtonContainer);
+
+    if (typeof window.ResizeObserver === "undefined") {
+      window.addEventListener("resize", onResize);
+      return () => window.removeEventListener("resize", onResize);
+    }
+
+    const resizeObserver = new window.ResizeObserver(onResize);
+    resizeObserver.observe(googleButtonContainer);
+
+    return () => resizeObserver.disconnect();
+  }, [googleButtonContainer, googleClientId, step, updateGoogleButtonWidth]);
+
+  return { googleButtonContainer, googleButtonRef, googleButtonWidth };
+}
+
 function useGoogleSignInButton({
   step,
   googleClientId,
@@ -109,7 +174,11 @@ function useGoogleSignInButton({
   googleLocale: string;
   onGoogleCredential: (credential: string) => void;
 }) {
-  const googleButtonRef = useRef<HTMLDivElement | null>(null);
+  const { googleButtonContainer, googleButtonRef, googleButtonWidth } =
+    useGoogleButtonContainer({ step, googleClientId });
+  const [initializedGoogleClientId, setInitializedGoogleClientId] = useState<
+    string | null
+  >(null);
   const googleCredentialHandlerRef =
     useRef<SignInScreenProps["onGoogleCredential"]>(onGoogleCredential);
 
@@ -118,23 +187,22 @@ function useGoogleSignInButton({
   }, [onGoogleCredential]);
 
   useEffect(() => {
-    if (step !== "email" || !googleClientId || !googleButtonRef.current) {
+    if (step !== "email" || !googleClientId) {
+      setInitializedGoogleClientId(null);
       return;
     }
 
     let isCancelled = false;
-    const initGoogleButton = async () => {
+    setInitializedGoogleClientId(null);
+
+    const initGoogleClient = async () => {
       try {
         await ensureGoogleScriptLoaded();
       } catch {
         return;
       }
 
-      if (
-        isCancelled ||
-        !googleButtonRef.current ||
-        !window.google?.accounts?.id
-      ) {
+      if (isCancelled || !window.google?.accounts?.id) {
         return;
       }
 
@@ -147,24 +215,44 @@ function useGoogleSignInButton({
           }
         },
       });
-
-      googleButtonRef.current.innerHTML = "";
-      window.google.accounts.id.renderButton(googleButtonRef.current, {
-        type: "standard",
-        theme: "outline",
-        size: "large",
-        width: 320,
-        text: "continue_with",
-        locale: googleLocale,
-      });
+      setInitializedGoogleClientId(googleClientId);
     };
 
-    initGoogleButton();
+    initGoogleClient();
 
     return () => {
       isCancelled = true;
     };
-  }, [step, googleClientId, googleLocale]);
+  }, [step, googleClientId]);
+
+  useEffect(() => {
+    if (
+      step !== "email" ||
+      !googleClientId ||
+      initializedGoogleClientId !== googleClientId ||
+      !googleButtonContainer ||
+      !window.google?.accounts?.id
+    ) {
+      return;
+    }
+
+    googleButtonContainer.innerHTML = "";
+    window.google.accounts.id.renderButton(googleButtonContainer, {
+      type: "standard",
+      theme: "outline",
+      size: "large",
+      width: googleButtonWidth,
+      text: "continue_with",
+      locale: googleLocale,
+    });
+  }, [
+    googleButtonContainer,
+    googleButtonWidth,
+    googleClientId,
+    googleLocale,
+    initializedGoogleClientId,
+    step,
+  ]);
 
   return googleButtonRef;
 }

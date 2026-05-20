@@ -1,5 +1,5 @@
-import type { ChangeEvent, RefObject } from "react";
-import { Button, Stack, TextField, Typography } from "@mui/material";
+import type { ChangeEvent, Ref } from "react";
+import { Box, Button, Stack, TextField, Typography } from "@mui/material";
 import KeyRoundedIcon from "@mui/icons-material/KeyRounded";
 import LocaleSwitcher from "../components/LocaleSwitcher";
 import type { SignInScreenProps, SignInStatus } from "./SignInScreenTypes";
@@ -106,7 +106,7 @@ function EmailStepForm({
   email: string;
   status: SignInStatus;
   googleClientId: string;
-  googleButtonRef: RefObject<HTMLDivElement | null>;
+  googleButtonRef: Ref<HTMLDivElement>;
   onEmailChange: (nextEmail: string) => void;
   onRequestCode: SignInScreenProps["onRequestCode"];
   onPasskeySignIn: () => void;
@@ -122,7 +122,19 @@ function EmailStepForm({
       {googleClientId ? (
         <>
           <Stack alignItems="center">
-            <div ref={googleButtonRef} />
+            <Box
+              ref={googleButtonRef}
+              sx={{
+                width: "min(320px, 100%)",
+                maxWidth: "100%",
+                minWidth: 0,
+                display: "flex",
+                justifyContent: "center",
+                "& iframe": {
+                  maxWidth: "100%",
+                },
+              }}
+            />
           </Stack>
           <Typography variant="caption" color="text.secondary">
             {t("auth.orEmailCode")}

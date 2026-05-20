@@ -1,7 +1,7 @@
 import React from "react";
 import type { ComponentProps } from "react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import { LocaleProvider } from "../i18n/LocaleProvider";
@@ -87,6 +87,25 @@ function renderHarness({
   };
 }
 
+function mockElementWidth(widthProvider: () => number) {
+  return vi
+    .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+    .mockImplementation(() => {
+      const width = widthProvider();
+      return {
+        bottom: 40,
+        height: 40,
+        left: 0,
+        right: width,
+        top: 0,
+        width,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      } as DOMRect;
+    });
+}
+
 describe("SignInScreen", () => {
   beforeEach(() => {
     mediaQueryMock.mockReset();
@@ -101,6 +120,7 @@ describe("SignInScreen", () => {
 
   afterEach(() => {
     cleanup();
+    vi.unstubAllGlobals();
   });
 
   test("shows progress indicator while sign-in is loading", () => {
@@ -194,6 +214,87 @@ describe("SignInScreen", () => {
       expect(renderButton).toHaveBeenCalledTimes(1);
     });
     expect(appendChildSpy).not.toHaveBeenCalled();
+  });
+
+  test("renders google button using the available narrow container width", async () => {
+    const initialize = vi.fn();
+    const renderButton = vi.fn();
+    window.google = {
+      accounts: {
+        id: {
+          initialize,
+          renderButton,
+        },
+      },
+    };
+    mockElementWidth(() => 248);
+
+    renderHarness({ googleClientId: "client-id-123" });
+
+    await waitFor(() => {
+      expect(renderButton).toHaveBeenCalledWith(
+        expect.any(HTMLDivElement),
+        expect.objectContaining({
+          width: 248,
+        }),
+      );
+    });
+  });
+
+  test("re-renders google button when the container width changes", async () => {
+    const initialize = vi.fn();
+    const renderButton = vi.fn();
+    const resizeObserverInstances: Array<{ trigger: () => void }> = [];
+    class ResizeObserverMock {
+      constructor(private readonly callback: ResizeObserverCallback) {
+        resizeObserverInstances.push(this);
+      }
+
+      observe = vi.fn();
+      unobserve = vi.fn();
+      disconnect = vi.fn();
+
+      trigger() {
+        this.callback([], this as unknown as ResizeObserver);
+      }
+    }
+    vi.stubGlobal("ResizeObserver", ResizeObserverMock);
+    let measuredWidth = 320;
+    mockElementWidth(() => measuredWidth);
+    window.google = {
+      accounts: {
+        id: {
+          initialize,
+          renderButton,
+        },
+      },
+    };
+
+    renderHarness({ googleClientId: "client-id-123" });
+
+    await waitFor(() => {
+      expect(resizeObserverInstances.length).toBeGreaterThan(0);
+      expect(renderButton).toHaveBeenCalledWith(
+        expect.any(HTMLDivElement),
+        expect.objectContaining({
+          width: 320,
+        }),
+      );
+    });
+
+    measuredWidth = 244;
+    act(() => {
+      resizeObserverInstances[0].trigger();
+    });
+
+    await waitFor(() => {
+      expect(renderButton).toHaveBeenLastCalledWith(
+        expect.any(HTMLDivElement),
+        expect.objectContaining({
+          width: 244,
+        }),
+      );
+    });
   });
 
   test("waits for an existing google script element to load", async () => {
