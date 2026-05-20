@@ -225,11 +225,10 @@ describe("AppSidebarNavigation", () => {
     });
 
     const statisticsChild = screen.getByRole("button", { name: "Statistics" });
+    const catalogChildren = screen.getByTestId("catalog-sidebar-children");
 
-    expect(screen.getByTestId("catalog-sidebar-children")).toHaveAttribute(
-      "aria-hidden",
-      "false",
-    );
+    expect(catalogChildren).toHaveAttribute("aria-hidden", "false");
+    expect(getComputedStyle(catalogChildren).maxHeight).toBe("none");
     expect(screen.getByRole("button", { name: "Catalog" })).toHaveAttribute(
       "aria-expanded",
       "true",

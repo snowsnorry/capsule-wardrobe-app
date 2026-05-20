@@ -69,7 +69,7 @@ function CatalogChildren({
         display: "grid",
         flex: "0 0 auto",
         minHeight: 0,
-        maxHeight: showCatalogChildren ? "96px" : "0px",
+        maxHeight: showCatalogChildren ? "none" : "0px",
         gridTemplateRows: showCatalogChildren ? "1fr" : "0fr",
         opacity: showCatalogChildren ? 1 : 0,
         overflow: "hidden",
