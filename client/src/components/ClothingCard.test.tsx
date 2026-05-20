@@ -245,6 +245,8 @@ describe("ClothingCard", () => {
       "(max-width: 600px) calc((100vw - 48px) / 2), 285px",
     );
     expect(image).toHaveAttribute("alt", item.name);
+    expect(image).toHaveAttribute("loading", "lazy");
+    expect(image).toHaveAttribute("decoding", "async");
 
     fireEvent.click(screen.getByRole("button", { name: /Red Jacket/ }));
     expect(onProductClick).toHaveBeenCalledWith(item);

@@ -128,6 +128,8 @@ function ProductImageContent({
           srcSet={displayImageSource.srcSet}
           sizes={displayImageSource.sizes}
           alt={label}
+          loading="lazy"
+          decoding="async"
           onError={onImageError}
           sx={{
             position: "absolute",
