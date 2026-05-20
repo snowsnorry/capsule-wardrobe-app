@@ -3,11 +3,14 @@ name: "Capsule Wardrobe App"
 description: "A warm, restrained product UI for generating and refining capsule wardrobes."
 colors:
   wardrobe-teal: "#1c7c7c"
-  wardrobe-teal-dark: "#49a3a3"
-  wardrobe-gold: "#f0b429"
+  wardrobe-teal-hover: "#155f5f"
+  wardrobe-teal-dark-mode: "#49a3a3"
+  wardrobe-gold: "#b68416"
+  wardrobe-gold-dark-mode: "#f0b429"
   signature-olive-gold: "#8f6f45"
   canvas-cream: "#f7f4ef"
-  card-white: "#ffffff"
+  warm-paper: "#fffdf9"
+  primary-contrast: "#fbfffd"
   ink-slate: "#1f2933"
   secondary-slate: "#52606d"
   divider-teal-wash: "rgba(20, 60, 60, 0.08)"
@@ -23,29 +26,34 @@ colors:
 typography:
   display:
     fontFamily: "\"DM Sans\", \"Helvetica\", sans-serif"
+    fontSize: "2.25rem"
     fontWeight: 700
-    lineHeight: 1.1
-    letterSpacing: "-0.5px"
+    lineHeight: 1.12
+    letterSpacing: 0
   headline:
     fontFamily: "\"DM Sans\", \"Helvetica\", sans-serif"
-    fontSize: "1.5rem"
+    fontSize: "1.875rem"
     fontWeight: 700
-    lineHeight: 1.2
+    lineHeight: 1.16
+    letterSpacing: 0
   title:
     fontFamily: "\"DM Sans\", \"Helvetica\", sans-serif"
-    fontSize: "18px"
-    fontWeight: 600
-    lineHeight: 1.25
+    fontSize: "1.125rem"
+    fontWeight: 650
+    lineHeight: 1.28
+    letterSpacing: 0
   body:
     fontFamily: "\"DM Sans\", \"Helvetica\", sans-serif"
     fontSize: "1rem"
     fontWeight: 400
-    lineHeight: 1.5
+    lineHeight: 1.55
+    letterSpacing: 0
   label:
     fontFamily: "\"DM Sans\", \"Helvetica\", sans-serif"
     fontSize: "0.875rem"
-    fontWeight: 600
+    fontWeight: 650
     lineHeight: 1.4
+    letterSpacing: 0
   wordmark:
     fontFamily: "\"Leckerli One\", cursive"
     fontSize: "1.4rem"
@@ -53,7 +61,7 @@ typography:
     lineHeight: 1.1
 rounded:
   xs: "4px"
-  sm: "5.4px"
+  sm: "6px"
   card: "8px"
   panel: "10px"
   dialog: "18px"
@@ -69,29 +77,29 @@ spacing:
 components:
   button-primary:
     backgroundColor: "{colors.wardrobe-teal}"
-    textColor: "{colors.card-white}"
+    textColor: "{colors.primary-contrast}"
     typography: "{typography.label}"
     rounded: "{rounded.dialog}"
     padding: "6px 16px"
   button-secondary:
-    backgroundColor: "{colors.card-white}"
+    backgroundColor: "{colors.warm-paper}"
     textColor: "{colors.ink-slate}"
     typography: "{typography.label}"
     rounded: "{rounded.dialog}"
     padding: "5px 15px"
   chip-selected:
     backgroundColor: "{colors.wardrobe-teal}"
-    textColor: "{colors.card-white}"
+    textColor: "{colors.primary-contrast}"
     typography: "{typography.label}"
     rounded: "{rounded.pill}"
     height: "32px"
   wardrobe-card:
-    backgroundColor: "{colors.card-white}"
+    backgroundColor: "{colors.warm-paper}"
     textColor: "{colors.ink-slate}"
     rounded: "{rounded.card}"
     width: "100%"
   sidebar-panel:
-    backgroundColor: "{colors.card-white}"
+    backgroundColor: "{colors.warm-paper}"
     textColor: "{colors.ink-slate}"
     rounded: "{rounded.panel}"
 ---
@@ -104,7 +112,7 @@ components:
 
 This product should feel like a clean worktable for planning outfits: warm surface, clear tools, visible materials, and no theatrical AI wrapper. The strongest visual asset is always the clothing itself. Panels, filters, charts, and actions exist to help the user shape a capsule wardrobe, not to compete with the garments.
 
-The visual system is restrained product UI with a personal styling temperature. Cream canvas and white panels keep the workspace soft; muted teal identifies primary action and selected state; amber-gold appears as a brand accent and chart support, never as decoration. The app may include dense filters and statistics, but it must not become a generic SaaS dashboard or a generic AI slop app.
+The visual system is restrained product UI with a personal styling temperature. Cream canvas and warm paper panels keep the workspace soft; muted teal identifies primary action and selected state; muted ochre-gold appears as a brand accent and chart support, never as decoration. The app may include dense filters and statistics, but it must not become a generic SaaS dashboard or a generic AI slop app.
 
 **Key Characteristics:**
 - Warm neutral workspace with strict accent discipline.
@@ -113,16 +121,30 @@ The visual system is restrained product UI with a personal styling temperature. 
 - Sidebar-led navigation with collapsible desktop behavior and full-screen mobile drawers.
 - Compact charts and filters that support decisions without analytics theater.
 
-## 2. Colors
+## 2. Theme Source of Truth
 
-The palette is warm, muted, and utility-first: cream and white carry the surfaces, teal marks action and selection, gold gives the app its wardrobe-planner signature.
+Runtime theme values live under `client/src/theme/`.
+
+- `themeTokens.ts`: canonical radii, wordmark and dense-label weights, palette tokens for light and dark mode, product-surface exceptions, status colors, launcher treatments, and shadows.
+- `themePalette.ts`: maps palette tokens into MUI `palette` values.
+- `themeCssVariables.ts`: exposes the shared `--cw-*` CSS variables used by cards, dialogs, navigation, product imagery, placeholder shimmers, media controls, and launcher surfaces.
+- `themeTypography.ts`: defines the fixed MUI typography scale with DM Sans, 0 letter spacing, and compact product UI weights.
+- `themeComponents.ts`: centralizes MUI component defaults and overrides, including `CssBaseline`, buttons, chips, paper, dividers, and outlined inputs.
+- `theme.ts`: builds the app theme with `createAppTheme(mode)`, a global MUI shape radius of `18`, and the component overrides.
+
+The app resolves `light`, `dark`, or `system` profile settings in `client/src/app/appViewState.ts` and `client/src/app/useAppControllerModel.ts`. `client/src/app/AppRootView.tsx` applies the resulting theme through MUI `ThemeProvider` and `CssBaseline`.
+
+## 3. Colors
+
+The palette is warm, muted, and utility-first: cream and warm paper carry the surfaces, teal marks action and selection, and ochre-gold gives the app its wardrobe-planner signature.
 
 ### Primary
 - **Wardrobe Teal**: The primary action and selection color. Use for contained buttons, selected chips, active navigation labels, sliders, pagination, and subtle selected-row washes.
-- **Dark Wardrobe Teal**: The dark-mode primary color. Use only when the app is in dark mode so teal stays legible against the dark canvas.
+- **Wardrobe Teal Hover**: The light-mode hover and pressed primary color. Do not use it as a separate accent.
+- **Dark-Mode Wardrobe Teal**: The dark-mode primary color. Use only when the app is in dark mode so teal stays legible against the dark canvas.
 
 ### Secondary
-- **Wardrobe Gold**: The support accent for charts, launcher treatment, and rare highlight moments. It should not replace teal for primary actions.
+- **Wardrobe Gold**: The support accent for charts, launcher treatment, and rare highlight moments. The light-mode runtime value is muted ochre; the brighter gold is reserved for dark mode and gold wash surfaces. Gold should not replace teal for primary actions.
 - **Signature Olive Gold**: The wordmark and product-title link color. It carries the personal styling character without turning the UI into fashion editorial.
 
 ### Tertiary
@@ -133,7 +155,8 @@ The palette is warm, muted, and utility-first: cream and white carry the surface
 
 ### Neutral
 - **Canvas Cream**: The default light app background. It keeps the workspace warmer than a pure SaaS gray.
-- **Card White**: The default panel, card, input, and sidebar background.
+- **Warm Paper**: The default light-mode paper, product card, and sidebar surface. It is intentionally off-white rather than pure white.
+- **Primary Contrast**: The near-white text color used on primary teal and image-action controls.
 - **Ink Slate**: Primary light-mode text.
 - **Secondary Slate**: Secondary copy, captions, hints, and inactive icon labels.
 - **Divider Teal Wash**: Light-mode dividers and paper borders.
@@ -151,7 +174,7 @@ The palette is warm, muted, and utility-first: cream and white carry the surface
 
 **The No AI Glow Rule.** Do not introduce purple-blue gradients, neon glows, or magical AI color language. The product generates wardrobes, but the interface behaves like a dependable planning tool.
 
-## 3. Typography
+## 4. Typography
 
 **Display Font:** DM Sans with Helvetica fallback.
 **Body Font:** DM Sans with Helvetica fallback.
@@ -159,13 +182,16 @@ The palette is warm, muted, and utility-first: cream and white carry the surface
 
 **Character:** The interface uses one practical sans family for almost everything. The exception is the Leckerli One wordmark, which adds personal wardrobe character and must stay confined to app identity moments.
 
+Runtime typography comes from `client/src/theme/themeTypography.ts`. The scale is fixed, not fluid, and every MUI variant uses `letterSpacing: 0`.
+
 ### Hierarchy
 
-- **Display** (700, inherited MUI h1 sizing, 1.1 line-height): Rare page-level emphasis and large empty/loading states. Do not use display scale inside panels or controls.
-- **Headline** (700, 1.5rem, 1.2 line-height): Main screen headings and major dialog titles.
-- **Title** (600, 18px, 1.25 line-height): Sidebar titles, filter titles, statistics card titles, and compact section headers.
-- **Body** (400, 1rem, 1.5 line-height): Product descriptions, helper text, screen copy, result rows, and readable prose. Keep prose blocks under roughly 75 characters per line.
-- **Label** (600, 0.875rem, 1.4 line-height): Chip labels, button labels, form labels, dense section labels, and filter captions.
+- **Display / h1** (2.25rem, 700, 1.12 line-height): Rare page-level emphasis and large empty/loading states. Do not use display scale inside panels or controls.
+- **Headline / h2-h4** (1.875rem to 1.375rem, 700, 1.16-1.22 line-height): Main screen headings and major dialog titles.
+- **Title / h5-h6** (1.25rem to 1.125rem, 700 or 650, 1.25-1.28 line-height): Sidebar titles, filter titles, statistics card titles, and compact section headers.
+- **Body** (1rem or 0.875rem, 400, 1.5-1.55 line-height): Product descriptions, helper text, screen copy, result rows, and readable prose. Keep prose blocks under roughly 75 characters per line.
+- **Label / Button / Subtitle** (0.875rem to 1rem, 600-650, 1.35-1.4 line-height): Chip labels, button labels, form labels, dense section labels, and filter captions.
+- **Caption / Overline** (0.75rem, 500-650, 1.45 line-height): Metadata, small helper labels, and compact uppercase labels.
 - **Wordmark** (Leckerli One, 1.4rem desktop sidebar and 1.85rem sign-in/onboarding): The app name only. Do not use this font for headings, buttons, labels, product names, or data.
 
 ### Named Rules
@@ -174,7 +200,7 @@ The palette is warm, muted, and utility-first: cream and white carry the surface
 
 **The Dense Tool Rule.** Filters, product rows, and statistics use compact type with weight contrast, not oversized headings. This is a working surface.
 
-## 4. Elevation
+## 5. Elevation
 
 The system is mostly flat and layered through tone, borders, and image framing. Shadows exist, but they are shallow and contextual: wardrobe cards get a faint resting shadow, dialogs and overlays get moderate depth, and chart/tooltips may lift above dense data. Default panels should use borders before shadows.
 
@@ -192,12 +218,12 @@ The system is mostly flat and layered through tone, borders, and image framing. 
 
 **The No Decorative Glass Rule.** Backdrop blur may exist only on surfaces that need data separation, such as statistics cards. Do not use glassmorphism as a page style.
 
-## 5. Components
+## 6. Components
 
 ### Buttons
 
 - **Shape:** MUI default rounded controls inherit the app radius (18px). Contextual pill actions may use full rounding (999px).
-- **Primary:** Muted teal background with white text, semibold label, no elevation. Used for apply, next, start, save, and generation actions.
+- **Primary:** Muted teal background with near-white text, 650-weight label, no elevation. Used for apply, next, start, save, and generation actions.
 - **Hover / Focus:** Use MUI state overlays and visible focus rings. Motion should be 150-240ms and limited to color, opacity, transform, or width where the existing sidebar behavior requires it.
 - **Secondary / Ghost / Tertiary:** Outlined and text buttons stay neutral unless they are selected, destructive, or directly tied to a primary workflow. Reset and sign-out actions use outlined treatment.
 
@@ -210,20 +236,20 @@ The system is mostly flat and layered through tone, borders, and image framing. 
 ### Cards / Containers
 
 - **Corner Style:** Wardrobe item cards use a compact 8px radius on normal grids and square edges on dense mobile multi-column grids. Search and statistics panels use 10px; detail groups use 22px.
-- **Background:** White panels on cream canvas in light mode; dark paper on dark canvas in dark mode.
+- **Background:** Warm paper panels on cream canvas in light mode; dark paper on dark canvas in dark mode.
 - **Shadow Strategy:** Wardrobe cards may use the faint resting shadow; panels and filters use borders.
 - **Border:** Use the teal-wash divider for light-mode paper borders. Dense mobile cards use stronger 0.5-1px borders for image separation.
 - **Internal Padding:** Filter panels and search panels use 24px; wardrobe card details use 20px horizontal padding on desktop and tighter responsive padding on mobile.
 
 ### Inputs / Fields
 
-- **Style:** Standard MUI text fields with rounded app shape, neutral border, white/paper background, and DM Sans input text.
+- **Style:** Standard MUI text fields with rounded app shape, neutral border, warm paper input background, and DM Sans input text.
 - **Focus:** MUI focus treatment should resolve to primary teal. Do not introduce custom glowing fields.
 - **Error / Disabled:** Use MUI error and disabled states. Error copy appears in body2 text with error color below the relevant action area.
 
 ### Navigation
 
-- **Style:** Persistent desktop sidebar, collapsible rail on wide screens, overlay drawer on smaller screens. The sidebar is white/paper with a single divider line and compact top-level buttons.
+- **Style:** Persistent desktop sidebar, collapsible rail on wide screens, overlay drawer on smaller screens. The sidebar uses warm paper in light mode and dark paper in dark mode, with a single divider line and compact top-level buttons.
 - **Active State:** Active top-level navigation uses teal icon and label color. Child capsule rows use pill selection and reveal actions on hover or focus.
 - **Motion:** Sidebar collapse and child-list expansion use 180-240ms transitions, with reduced-motion fallback already present for navigation expansion.
 - **Mobile Treatment:** Filters and details open as full-screen dialogs where space is constrained. Avoid modal-first behavior on desktop when inline panels work.
@@ -242,13 +268,13 @@ supporting panels theme-aware, but do not force product image surfaces dark.
 
 Statistics cards are dense, compact, and chart-led. Use the existing chart palette for distinct categorical data, but avoid importing that saturation into the rest of the app shell. The statistics screen supports product understanding; it should not become the product's visual identity.
 
-## 6. Do's and Don'ts
+## 7. Do's and Don'ts
 
 ### Do:
 
 - **Do** keep wardrobe imagery, preference chips, and product details ahead of decorative layout.
 - **Do** use Wardrobe Teal for primary action, active navigation, selected filters, sliders, and selected rows.
-- **Do** use Canvas Cream and Card White as the main workspace layers in light mode.
+- **Do** use Canvas Cream and Warm Paper as the main workspace layers in light mode.
 - **Do** keep Leckerli One restricted to the app name.
 - **Do** use MUI's familiar controls and states before inventing custom affordances.
 - **Do** keep search and statistics dense enough for repeated product exploration.

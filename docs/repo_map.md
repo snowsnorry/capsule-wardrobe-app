@@ -9,6 +9,8 @@ Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, passkey
 - Root workspace scripts coordinate `client` and `server`
 - Frontend starts via Vite
 - Client app composition is split across `client/src/App.tsx` and `client/src/app/`
+- Client MUI theme creation, design tokens, CSS variables, palette mapping, typography, and component overrides live under `client/src/theme/`
+- User theme settings resolve through `client/src/app/appViewState.ts` and `client/src/app/useAppControllerModel.ts`, then `client/src/app/AppRootView.tsx` applies the generated MUI theme through `ThemeProvider` and `CssBaseline`
 - Backend app wiring starts from `server/src/index.ts`, with route groups under `server/src/routes/`
 - Runtime config, security middleware, and static serving are split across `server/src/appConfig.ts`, `server/src/appMiddleware.ts`, and `server/src/serverStartup.ts`
 - Development startup mounts Vite middleware from Express; production startup serves `client/dist` and injects shared-capsule metadata into HTML
@@ -96,7 +98,7 @@ Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, passkey
 - `client/src/app/` — app shell, route content, state/actions, session bootstrap, navigation, and dialogs
 - `client/src/api/request.ts` — shared fetch wrapper, JSON/error handling, short-lived GET cache, and CSRF header injection
 - `client/src/main.tsx`
-- `client/src/theme.ts`
+- `client/src/theme/` — centralized MUI theme factory, palette and radius tokens, CSS variables, component overrides, and typography
 - `client/src/auth/passkeys.ts`
 - `client/src/test/` — client-side test helpers
 
@@ -111,6 +113,7 @@ Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, passkey
 - `client/src/screens/statisticsScreen/`
 - `client/src/search/`
 - `client/src/i18n/`
+- `client/src/theme/`
 - `client/src/utils/`
 
 ### Server
@@ -164,6 +167,7 @@ Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, passkey
 ### Client tests
 - `client/src/**/*.test.*`
 - `client/src/**/*.e2e.test.*`
+- `client/src/main.test.tsx` includes the theme export and CSS-variable contract smoke test
 
 ### Server tests
 - `server/src/*.test.ts`
