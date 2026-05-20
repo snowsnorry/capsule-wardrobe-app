@@ -190,7 +190,7 @@ test("settings save persists profile and locale across reload", async ({
   ).toBeVisible();
   await expect(page.getByLabel("Email")).toBeHidden();
 
-  await page.getByRole("button", { name: "Open user menu" }).click();
+  await page.getByRole("button", { name: "Открыть меню пользователя" }).click();
   await page.getByRole("menuitem", { name: "Настройки" }).click();
   const reloadedSettingsDialog = page.getByRole("dialog", {
     name: "Настройки",
