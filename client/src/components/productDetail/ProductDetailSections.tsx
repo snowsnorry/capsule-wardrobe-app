@@ -54,7 +54,11 @@ function ProductDetailGroups({ item, t, locale }: ProductDetailSectionsProps) {
               <Typography
                 component="div"
                 variant="body2"
-                sx={{ lineHeight: 1.45 }}
+                sx={{
+                  lineHeight: 1.45,
+                  fontVariantNumeric:
+                    row.key === "price" ? "tabular-nums" : undefined,
+                }}
               >
                 {row.value.kind === "colors" ? (
                   <ColorValues values={row.value.items} />

@@ -132,7 +132,7 @@ function ClothingCardDetails({
           width: "100%",
           minWidth: 0,
           maxWidth: "100%",
-          fontWeight: 600,
+          fontWeight: 650,
           lineHeight: isMobile ? mobileCardMetrics.titleLineHeight : 1.22,
           letterSpacing: 0,
           fontSize: isMobile ? mobileCardMetrics.titleFontSize : "16px",

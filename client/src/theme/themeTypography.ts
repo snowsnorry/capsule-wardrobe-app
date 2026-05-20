@@ -2,9 +2,10 @@ import type { ThemeOptions } from "@mui/material/styles";
 
 function createTypography(): NonNullable<ThemeOptions["typography"]> {
   return {
-    fontFamily: '"DM Sans", "Helvetica", sans-serif',
+    fontFamily:
+      '"Onest Variable", "Onest", "Helvetica Neue", "Arial", sans-serif',
     fontWeightRegular: 400,
-    fontWeightMedium: 500,
+    fontWeightMedium: 600,
     fontWeightBold: 700,
     h1: {
       fontSize: "2.25rem",

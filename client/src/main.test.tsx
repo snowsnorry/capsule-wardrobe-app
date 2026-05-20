@@ -94,7 +94,7 @@ describe("theme contract", () => {
     expect(darkRootVars["--cw-color-primary"]).toBe(
       darkTheme.palette.primary.main,
     );
-    expect(theme.typography.fontFamily).toContain("DM Sans");
+    expect(theme.typography.fontFamily).toContain("Onest");
     expect(theme.shape.borderRadius).toBe(14);
     expect(theme.components.MuiButton.defaultProps.disableElevation).toBe(true);
     expect(outlinedInputRoot["& .MuiOutlinedInput-notchedOutline"]).toEqual(

@@ -8,6 +8,7 @@ function getTooltipStyle(isDarkMode = false): CSSProperties {
       background: "rgba(8, 17, 17, 0.96)",
       boxShadow: "0 16px 40px rgba(8, 17, 17, 0.4)",
       color: "#eef5f3",
+      fontVariantNumeric: "tabular-nums",
     };
   }
 
@@ -17,12 +18,14 @@ function getTooltipStyle(isDarkMode = false): CSSProperties {
     background: "rgba(255, 253, 249, 0.98)",
     boxShadow: "0 16px 40px rgba(15, 23, 42, 0.12)",
     color: "#1f2933",
+    fontVariantNumeric: "tabular-nums",
   };
 }
 
 function getTooltipTextStyle(isDarkMode = false): CSSProperties {
   return {
     color: isDarkMode ? "#eef5f3" : "#1f2933",
+    fontVariantNumeric: "tabular-nums",
   };
 }
 

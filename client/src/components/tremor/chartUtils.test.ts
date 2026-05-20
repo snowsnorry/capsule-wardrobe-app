@@ -16,8 +16,14 @@ describe("chartUtils", () => {
       background: "rgba(8, 17, 17, 0.96)",
       color: "#eef5f3",
     });
-    expect(getTooltipTextStyle(false)).toEqual({ color: "#1f2933" });
-    expect(getTooltipTextStyle(true)).toEqual({ color: "#eef5f3" });
+    expect(getTooltipTextStyle(false)).toEqual({
+      color: "#1f2933",
+      fontVariantNumeric: "tabular-nums",
+    });
+    expect(getTooltipTextStyle(true)).toEqual({
+      color: "#eef5f3",
+      fontVariantNumeric: "tabular-nums",
+    });
   });
 
   test("extracts hex gradient stops and normalizes SVG ids", () => {

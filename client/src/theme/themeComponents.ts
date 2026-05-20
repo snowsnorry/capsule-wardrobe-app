@@ -62,6 +62,12 @@ function createComponentOverrides(mode: ThemeMode): Components<Theme> {
           fontOpticalSizing: "auto",
           textRendering: "optimizeLegibility",
         },
+        'input[type="number"]': {
+          fontVariantNumeric: "tabular-nums",
+        },
+        ".recharts-cartesian-axis-tick-value, .recharts-tooltip-wrapper": {
+          fontVariantNumeric: "tabular-nums",
+        },
         "@keyframes placeholderShimmer": {
           "0%": { backgroundPosition: "-200% 0" },
           "100%": { backgroundPosition: "200% 0" },

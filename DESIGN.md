@@ -25,31 +25,31 @@ colors:
   image-wash: "#f7f5f1"
 typography:
   display:
-    fontFamily: "\"DM Sans\", \"Helvetica\", sans-serif"
+    fontFamily: "\"Onest Variable\", \"Onest\", \"Helvetica Neue\", \"Arial\", sans-serif"
     fontSize: "2.25rem"
     fontWeight: 700
     lineHeight: 1.12
     letterSpacing: 0
   headline:
-    fontFamily: "\"DM Sans\", \"Helvetica\", sans-serif"
+    fontFamily: "\"Onest Variable\", \"Onest\", \"Helvetica Neue\", \"Arial\", sans-serif"
     fontSize: "1.875rem"
     fontWeight: 700
     lineHeight: 1.16
     letterSpacing: 0
   title:
-    fontFamily: "\"DM Sans\", \"Helvetica\", sans-serif"
+    fontFamily: "\"Onest Variable\", \"Onest\", \"Helvetica Neue\", \"Arial\", sans-serif"
     fontSize: "1.125rem"
     fontWeight: 650
     lineHeight: 1.28
     letterSpacing: 0
   body:
-    fontFamily: "\"DM Sans\", \"Helvetica\", sans-serif"
+    fontFamily: "\"Onest Variable\", \"Onest\", \"Helvetica Neue\", \"Arial\", sans-serif"
     fontSize: "1rem"
     fontWeight: 400
     lineHeight: 1.55
     letterSpacing: 0
   label:
-    fontFamily: "\"DM Sans\", \"Helvetica\", sans-serif"
+    fontFamily: "\"Onest Variable\", \"Onest\", \"Helvetica Neue\", \"Arial\", sans-serif"
     fontSize: "0.875rem"
     fontWeight: 600
     lineHeight: 1.4
@@ -128,7 +128,7 @@ Runtime theme values live under `client/src/theme/`.
 - `themeTokens.ts`: canonical radii, wordmark and dense-label weights, palette tokens for light and dark mode, product-surface exceptions, status colors, launcher treatments, and shadows.
 - `themePalette.ts`: maps palette tokens into MUI `palette` values.
 - `themeCssVariables.ts`: exposes the shared `--cw-*` CSS variables used by cards, dialogs, navigation, product imagery, placeholder shimmers, media controls, and launcher surfaces.
-- `themeTypography.ts`: defines the fixed MUI typography scale with DM Sans, 0 letter spacing, and compact product UI weights.
+- `themeTypography.ts`: defines the fixed MUI typography scale with Onest Variable, 0 letter spacing, and compact product UI weights.
 - `themeComponents.ts`: centralizes MUI component defaults and overrides, including `CssBaseline`, buttons, chips, paper, dividers, dialogs, tabs, sliders, and outlined inputs.
 - `theme.ts`: builds the app theme with `createAppTheme(mode)`, a global MUI shape radius of `14`, and the component overrides.
 
@@ -176,11 +176,11 @@ The palette is warm, muted, and utility-first: cream and warm paper carry the su
 
 ## 4. Typography
 
-**Display Font:** DM Sans with Helvetica fallback.
-**Body Font:** DM Sans with Helvetica fallback.
-**Label/Mono Font:** DM Sans for labels; no mono system is currently established.
+**Display Font:** Onest Variable with Onest, Helvetica Neue, Arial, and sans-serif fallbacks.
+**Body Font:** Onest Variable with Onest, Helvetica Neue, Arial, and sans-serif fallbacks.
+**Label/Mono Font:** Onest Variable for labels; no mono system is currently established.
 
-**Character:** The interface uses one practical sans family for almost everything. The exception is the Leckerli One wordmark, which adds personal wardrobe character and must stay confined to app identity moments.
+**Character:** The interface uses one practical sans family for almost everything. Onest Variable keeps dense filters, cards, dialogs, and statistics modern, readable, and warm while preserving Cyrillic coverage. The exception is the Leckerli One wordmark, which adds personal wardrobe character and must stay confined to app identity moments.
 
 Runtime typography comes from `client/src/theme/themeTypography.ts`. The scale is fixed, not fluid, and every MUI variant uses `letterSpacing: 0`.
 
@@ -243,7 +243,7 @@ The system is mostly flat and layered through tone, borders, and image framing. 
 
 ### Inputs / Fields
 
-- **Style:** Standard MUI text fields with rounded app shape, neutral border, warm paper input background, and DM Sans input text.
+- **Style:** Standard MUI text fields with rounded app shape, neutral border, warm paper input background, and Onest input text.
 - **Focus:** MUI focus treatment should resolve to primary teal. Do not introduce custom glowing fields.
 - **Error / Disabled:** Use MUI error and disabled states. Error copy appears in body2 text with error color below the relevant action area.
 
