@@ -2,12 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Box,
-  Button,
-  ButtonBase,
   Chip,
   CircularProgress,
   Dialog,
-  DialogActions,
   DialogContent,
   DialogTitle,
   IconButton,
@@ -16,19 +13,13 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import { translateOption } from "../i18n";
 import {
   CATEGORY_ORDER,
   sortWardrobeItems,
 } from "../../../shared/wardrobeOrder.js";
-import { AnchorImage } from "./ProfileFiltersAnchorImage";
-import {
-  getAnchorCategoryLabel,
-  getAnchorLabel,
-  normalizeSelectedIds,
-} from "./ProfileFiltersAnchorUtils";
+import { normalizeSelectedIds } from "./ProfileFiltersAnchorUtils";
 import type {
   AnchorItem,
   AnchorSourceFilter,
@@ -37,15 +28,22 @@ import type {
 } from "./ProfileFiltersAnchorTypes";
 import { MAX_ANCHOR_ITEMS } from "./ProfileFiltersAnchorTypes";
 import {
+  mobileCapsuleDialogContentSx,
+  mobileCapsuleDialogPaperSx,
+  mobileCapsuleDialogTitleSx,
+} from "./MobileDialogSurfaceStyles";
+import {
   dialogTitleSx,
   loadingSx,
-  pickerCardSx,
   pickerGridSx,
 } from "./ProfileFiltersAnchorStyles";
+import AnchorPickerCard from "./ProfileFiltersAnchorPickerCard";
+import AnchorDialogActions from "./ProfileFiltersAnchorPickerDialogActions";
 
 type WardrobeAnchorPickerDialogProps = {
   disabled: boolean;
   error: string;
+  fullScreen?: boolean;
   isLoading: boolean;
   items: AnchorItem[];
   locale: string;
@@ -59,6 +57,7 @@ type WardrobeAnchorPickerDialogProps = {
 export function WardrobeAnchorPickerDialog({
   disabled,
   error,
+  fullScreen = false,
   isLoading,
   items,
   locale,
@@ -88,16 +87,22 @@ export function WardrobeAnchorPickerDialog({
     <Dialog
       open={open}
       onClose={() => !disabled && onClose()}
-      fullWidth
-      maxWidth="md"
+      fullScreen={fullScreen}
+      fullWidth={!fullScreen}
+      maxWidth={fullScreen ? false : "md"}
+      PaperProps={fullScreen ? { sx: mobileCapsuleDialogPaperSx } : undefined}
     >
       <AnchorDialogTitle
         disabled={disabled}
+        fullScreen={fullScreen}
         selectionText={selectionText}
         t={t}
         onClose={onClose}
       />
-      <DialogContent dividers>
+      <DialogContent
+        dividers={!fullScreen}
+        sx={fullScreen ? mobileCapsuleDialogContentSx : undefined}
+      >
         <Stack spacing={2.5}>
           <AnchorPickerFilters
             locale={locale}
@@ -126,18 +131,14 @@ export function WardrobeAnchorPickerDialog({
           )}
         </Stack>
       </DialogContent>
-      <DialogActions sx={{ justifyContent: "flex-end" }}>
-        <Button color="inherit" onClick={onClose} disabled={disabled}>
-          {t("actions.cancel")}
-        </Button>
-        <Button
-          variant="contained"
-          onClick={() => onApply(tempIds)}
-          disabled={disabled}
-        >
-          {t("capsule.anchors.apply")}
-        </Button>
-      </DialogActions>
+      <AnchorDialogActions
+        disabled={disabled}
+        fullScreen={fullScreen}
+        tempIds={tempIds}
+        t={t}
+        onApply={onApply}
+        onClose={onClose}
+      />
     </Dialog>
   );
 }
@@ -187,17 +188,19 @@ function toggleAnchor(id: string, current: string[]) {
 
 function AnchorDialogTitle({
   disabled,
+  fullScreen,
   onClose,
   selectionText,
   t,
 }: {
   disabled: boolean;
+  fullScreen: boolean;
   onClose: () => void;
   selectionText: string;
   t: Translate;
 }) {
   return (
-    <DialogTitle sx={dialogTitleSx}>
+    <DialogTitle sx={fullScreen ? mobileCapsuleDialogTitleSx : dialogTitleSx}>
       <Box>
         <Typography component="span" variant="h6">
           {t("capsule.anchors.dialogTitle")}
@@ -308,46 +311,5 @@ function AnchorPickerGrid({
         />
       ))}
     </Box>
-  );
-}
-
-function AnchorPickerCard({
-  item,
-  locale,
-  onToggle,
-  selected,
-  selectionFull,
-  t,
-}: {
-  item: AnchorItem;
-  locale: string;
-  onToggle: (id: string) => void;
-  selected: boolean;
-  selectionFull: boolean;
-  t: Translate;
-}) {
-  const disabled = !selected && selectionFull;
-  const label = getAnchorLabel(item, item.id, t);
-
-  return (
-    <ButtonBase
-      disabled={disabled}
-      aria-pressed={selected}
-      onClick={() => onToggle(item.id)}
-      sx={(theme) => pickerCardSx(theme, selected, disabled)}
-    >
-      <AnchorImage item={item} label={label} large />
-      <Box sx={{ minWidth: 0, flex: 1 }}>
-        <Typography variant="body2" noWrap sx={{ fontWeight: 700 }}>
-          {label}
-        </Typography>
-        <Typography variant="caption" color="text.secondary" noWrap>
-          {getAnchorCategoryLabel(item.category, locale)}
-        </Typography>
-      </Box>
-      {selected ? (
-        <CheckCircleRoundedIcon color="primary" fontSize="small" />
-      ) : null}
-    </ButtonBase>
   );
 }

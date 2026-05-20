@@ -70,6 +70,7 @@ export function FiltersDialog({
           isInteractionDisabled={disabled}
           showSettingsTitle={!isOverlay}
           showFooterActions={false}
+          anchorPickerFullScreen={isOverlay}
         />
       </DialogContent>
       <DialogActions

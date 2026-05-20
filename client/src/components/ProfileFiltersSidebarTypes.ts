@@ -55,6 +55,7 @@ type ProfileFiltersSidebarProps = {
   resetLabelKey?: string;
   showSettingsTitle?: boolean;
   showFooterActions?: boolean;
+  anchorPickerFullScreen?: boolean;
 };
 
 export type { ProfileFiltersSidebarProps, ProfileFilterValue };

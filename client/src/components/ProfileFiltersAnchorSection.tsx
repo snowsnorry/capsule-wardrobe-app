@@ -19,6 +19,7 @@ import type {
 } from "./ProfileFiltersAnchorTypes";
 
 function ProfileFiltersAnchorSection({
+  anchorPickerFullScreen = false,
   disabled,
   selectedIds,
   onChange,
@@ -89,6 +90,7 @@ function ProfileFiltersAnchorSection({
         isLoading={isLoading}
         items={items}
         locale={locale}
+        fullScreen={anchorPickerFullScreen}
         selectedIds={normalizedSelectedIds}
         t={t}
         onApply={(nextIds) => {

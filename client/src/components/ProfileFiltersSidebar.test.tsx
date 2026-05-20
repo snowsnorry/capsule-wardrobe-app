@@ -3,6 +3,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import type { ComponentProps } from "react";
+import { createAppTheme } from "../theme";
 
 const useI18nMock = vi.hoisted(() => vi.fn());
 const fetchMyWardrobeItemsMock = vi.hoisted(() => vi.fn());
@@ -30,6 +31,7 @@ const theme = createTheme();
 
 function renderSidebar(
   props: Partial<ComponentProps<typeof ProfileFiltersSidebar>> = {},
+  options: { themeOverride?: typeof theme } = {},
 ) {
   const defaults: ComponentProps<typeof ProfileFiltersSidebar> = {
     styleOptions: {
@@ -147,7 +149,7 @@ function renderSidebar(
     ...defaults,
     ...props,
     ...render(
-      <ThemeProvider theme={theme}>
+      <ThemeProvider theme={options.themeOverride || theme}>
         <ProfileFiltersSidebar {...defaults} {...props} />
       </ThemeProvider>,
     ),
@@ -314,6 +316,52 @@ describe("ProfileFiltersSidebar", () => {
     await user.click(screen.getByRole("button", { name: "Apply" }));
 
     expect(onSelectAnchorWardrobeItemIds).toHaveBeenCalledWith(["W12"]);
+  });
+
+  test("uses full-screen mobile surfaces for the anchor picker when requested", async () => {
+    const user = userEvent.setup();
+    const darkTheme = createAppTheme("dark");
+    fetchMyWardrobeItemsMock.mockResolvedValue({
+      items: [
+        {
+          id: 12,
+          name: "White shirt",
+          url: "https://example.com/shirt",
+          imageUrl: "https://example.com/shirt.jpg",
+          category: "top",
+        },
+      ],
+    });
+
+    renderSidebar(
+      {
+        anchorPickerFullScreen: true,
+      },
+      { themeOverride: darkTheme },
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Add items from wardrobe" }),
+    );
+
+    const title = await screen.findByText("Select anchor items");
+    const header = title.closest(".MuiDialogTitle-root");
+    const content = title
+      .closest(".MuiDialog-paper")
+      ?.querySelector(".MuiDialogContent-root");
+    const footer = screen
+      .getByRole("button", { name: "Apply" })
+      .closest(".MuiDialogActions-root");
+    const paper = title.closest(".MuiDialog-paper");
+
+    expect(paper).toHaveClass("MuiDialog-paperFullScreen");
+    expect(header).not.toBeNull();
+    expect(content).not.toBeNull();
+    expect(footer).not.toBeNull();
+    expect(getComputedStyle(header!).backgroundColor).toBe("rgb(21, 32, 31)");
+    expect(getComputedStyle(content!).backgroundColor).toBe("rgb(16, 24, 23)");
+    expect(content!.contains(footer)).toBe(false);
+    expect(getComputedStyle(footer!).backgroundColor).toBe("rgb(21, 32, 31)");
+    expect(getComputedStyle(footer!).justifyContent).toBe("flex-end");
   });
 
   test("keeps anchor picker cancel local and disables sixth unselected item", async () => {

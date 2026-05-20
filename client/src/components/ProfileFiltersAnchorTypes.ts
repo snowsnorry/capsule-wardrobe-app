@@ -18,6 +18,7 @@ export type AnchorItem = {
 };
 
 export type ProfileFiltersAnchorSectionProps = {
+  anchorPickerFullScreen?: boolean;
   disabled: boolean;
   selectedIds: string[];
   onChange?: (value: string[]) => void;

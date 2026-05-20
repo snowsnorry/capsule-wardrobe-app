@@ -127,6 +127,7 @@ function ProfileFiltersHeader({
       </Stack>
       <Divider />
       <ProfileFiltersAnchorSection
+        anchorPickerFullScreen={props.anchorPickerFullScreen}
         disabled={disabled}
         selectedIds={props.selectedAnchorWardrobeItemIds || []}
         onChange={props.onSelectAnchorWardrobeItemIds}
