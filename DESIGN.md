@@ -4,7 +4,7 @@ description: "A warm, restrained product UI for generating and refining capsule 
 colors:
   wardrobe-teal: "#1c7c7c"
   wardrobe-teal-hover: "#155f5f"
-  wardrobe-teal-dark-mode: "#49a3a3"
+  wardrobe-teal-dark-mode: "#438f8f"
   wardrobe-gold: "#b68416"
   wardrobe-gold-dark-mode: "#f0b429"
   signature-olive-gold: "#8f6f45"
@@ -13,7 +13,7 @@ colors:
   primary-contrast: "#fbfffd"
   ink-slate: "#1f2933"
   secondary-slate: "#52606d"
-  divider-teal-wash: "rgba(20, 60, 60, 0.08)"
+  divider-teal-wash: "rgba(20, 60, 60, 0.055)"
   dark-canvas: "#101817"
   dark-paper: "#15201f"
   dark-ink: "#eef5f3"
@@ -51,7 +51,7 @@ typography:
   label:
     fontFamily: "\"DM Sans\", \"Helvetica\", sans-serif"
     fontSize: "0.875rem"
-    fontWeight: 650
+    fontWeight: 600
     lineHeight: 1.4
     letterSpacing: 0
   wordmark:
@@ -64,8 +64,8 @@ rounded:
   sm: "6px"
   card: "8px"
   panel: "10px"
-  dialog: "18px"
-  detail: "22px"
+  dialog: "14px"
+  detail: "16px"
   pill: "999px"
 spacing:
   xs: "4px"
@@ -88,8 +88,8 @@ components:
     rounded: "{rounded.dialog}"
     padding: "5px 15px"
   chip-selected:
-    backgroundColor: "{colors.wardrobe-teal}"
-    textColor: "{colors.primary-contrast}"
+    backgroundColor: "subtle teal action wash"
+    textColor: "{colors.wardrobe-teal}"
     typography: "{typography.label}"
     rounded: "{rounded.pill}"
     height: "32px"
@@ -129,8 +129,8 @@ Runtime theme values live under `client/src/theme/`.
 - `themePalette.ts`: maps palette tokens into MUI `palette` values.
 - `themeCssVariables.ts`: exposes the shared `--cw-*` CSS variables used by cards, dialogs, navigation, product imagery, placeholder shimmers, media controls, and launcher surfaces.
 - `themeTypography.ts`: defines the fixed MUI typography scale with DM Sans, 0 letter spacing, and compact product UI weights.
-- `themeComponents.ts`: centralizes MUI component defaults and overrides, including `CssBaseline`, buttons, chips, paper, dividers, and outlined inputs.
-- `theme.ts`: builds the app theme with `createAppTheme(mode)`, a global MUI shape radius of `18`, and the component overrides.
+- `themeComponents.ts`: centralizes MUI component defaults and overrides, including `CssBaseline`, buttons, chips, paper, dividers, dialogs, tabs, sliders, and outlined inputs.
+- `theme.ts`: builds the app theme with `createAppTheme(mode)`, a global MUI shape radius of `14`, and the component overrides.
 
 The app resolves `light`, `dark`, or `system` profile settings in `client/src/app/appViewState.ts` and `client/src/app/useAppControllerModel.ts`. `client/src/app/AppRootView.tsx` applies the resulting theme through MUI `ThemeProvider` and `CssBaseline`.
 
@@ -139,7 +139,7 @@ The app resolves `light`, `dark`, or `system` profile settings in `client/src/ap
 The palette is warm, muted, and utility-first: cream and warm paper carry the surfaces, teal marks action and selection, and ochre-gold gives the app its wardrobe-planner signature.
 
 ### Primary
-- **Wardrobe Teal**: The primary action and selection color. Use for contained buttons, selected chips, active navigation labels, sliders, pagination, and subtle selected-row washes.
+- **Wardrobe Teal**: The primary action and selection color. Use for contained buttons, active navigation labels, sliders, pagination, major selected states, and subtle selected-row washes. Repeated secondary selections such as filter chips should use quieter teal washes rather than solid teal fills.
 - **Wardrobe Teal Hover**: The light-mode hover and pressed primary color. Do not use it as a separate accent.
 - **Dark-Mode Wardrobe Teal**: The dark-mode primary color. Use only when the app is in dark mode so teal stays legible against the dark canvas.
 
@@ -190,7 +190,7 @@ Runtime typography comes from `client/src/theme/themeTypography.ts`. The scale i
 - **Headline / h2-h4** (1.875rem to 1.375rem, 700, 1.16-1.22 line-height): Main screen headings and major dialog titles.
 - **Title / h5-h6** (1.25rem to 1.125rem, 700 or 650, 1.25-1.28 line-height): Sidebar titles, filter titles, statistics card titles, and compact section headers.
 - **Body** (1rem or 0.875rem, 400, 1.5-1.55 line-height): Product descriptions, helper text, screen copy, result rows, and readable prose. Keep prose blocks under roughly 75 characters per line.
-- **Label / Button / Subtitle** (0.875rem to 1rem, 600-650, 1.35-1.4 line-height): Chip labels, button labels, form labels, dense section labels, and filter captions.
+- **Label / Button / Subtitle** (0.875rem to 1rem, 600, 1.35-1.4 line-height): Chip labels, button labels, form labels, dense section labels, and filter captions.
 - **Caption / Overline** (0.75rem, 500-650, 1.45 line-height): Metadata, small helper labels, and compact uppercase labels.
 - **Wordmark** (Leckerli One, 1.4rem desktop sidebar and 1.85rem sign-in/onboarding): The app name only. Do not use this font for headings, buttons, labels, product names, or data.
 
@@ -206,11 +206,11 @@ The system is mostly flat and layered through tone, borders, and image framing. 
 
 ### Shadow Vocabulary
 
-- **Wardrobe Card Rest** (`0 0px 8px rgba(17, 36, 34, 0.08)`): Default desktop clothing cards and placeholders.
-- **Image Action Float** (`0 8px 24px rgba(17, 36, 34, 0.16)`): Floating image action buttons on outfit set imagery.
+- **Wardrobe Card Rest** (`0 1px 6px rgba(17, 36, 34, 0.055)`): Default desktop clothing cards and placeholders.
+- **Image Action Float** (`0 8px 20px rgba(17, 36, 34, 0.14)`): Floating image action buttons on outfit set imagery.
 - **Overlay Panel** (`0 14px 32px rgba(31, 41, 51, 0.12)`): Dialog-style floating panels in light mode.
-- **Overlay Panel Dark** (`0 14px 36px rgba(0, 0, 0, 0.34)`): Dialog-style floating panels in dark mode.
-- **Chart Tooltip** (`0 16px 40px rgba(15, 23, 42, 0.12)`): Tooltips above charts and dense visualizations.
+- **Overlay Panel Dark** (`0 14px 36px rgba(0, 0, 0, 0.3)`): Dialog-style floating panels in dark mode.
+- **Chart Tooltip** (`0 14px 32px rgba(15, 23, 42, 0.1)`): Tooltips above charts and dense visualizations.
 
 ### Named Rules
 
@@ -222,20 +222,20 @@ The system is mostly flat and layered through tone, borders, and image framing. 
 
 ### Buttons
 
-- **Shape:** MUI default rounded controls inherit the app radius (18px). Contextual pill actions may use full rounding (999px).
-- **Primary:** Muted teal background with near-white text, 650-weight label, no elevation. Used for apply, next, start, save, and generation actions.
+- **Shape:** MUI default rounded controls inherit the app radius (14px). Contextual pill actions may use full rounding (999px).
+- **Primary:** Muted teal background with near-white text, 600-weight label, no elevation. Used for apply, next, start, save, and generation actions.
 - **Hover / Focus:** Use MUI state overlays and visible focus rings. Motion should be 150-240ms and limited to color, opacity, transform, or width where the existing sidebar behavior requires it.
 - **Secondary / Ghost / Tertiary:** Outlined and text buttons stay neutral unless they are selected, destructive, or directly tied to a primary workflow. Reset and sign-out actions use outlined treatment.
 
 ### Chips
 
-- **Style:** Filter chips are rounded MUI chips. Selected chips use primary teal; unselected chips remain default neutral.
+- **Style:** Filter chips are rounded MUI chips. Selected secondary chips use a subtle teal wash with teal text and border; unselected chips remain default neutral. Reserve solid teal for primary actions and major selected states.
 - **State:** Chips represent active wardrobe preferences and search/statistics filters. Accent color chips include a 12px circular swatch with a neutral stroke so color remains inspectable.
 - **Category Badge:** Wardrobe card category chips are compact, uppercase, mint-backed, and strongly weighted. They are labels, not controls.
 
 ### Cards / Containers
 
-- **Corner Style:** Wardrobe item cards use a compact 8px radius on normal grids and square edges on dense mobile multi-column grids. Search and statistics panels use 10px; detail groups use 22px.
+- **Corner Style:** Wardrobe item cards use a compact 8px radius on normal grids and square edges on dense mobile multi-column grids. Search and statistics panels use 10px; detail groups use 16px.
 - **Background:** Warm paper panels on cream canvas in light mode; dark paper on dark canvas in dark mode.
 - **Shadow Strategy:** Wardrobe cards may use the faint resting shadow; panels and filters use borders.
 - **Border:** Use the teal-wash divider for light-mode paper borders. Dense mobile cards use stronger 0.5-1px borders for image separation.
@@ -252,7 +252,7 @@ The system is mostly flat and layered through tone, borders, and image framing. 
 - **Style:** Persistent desktop sidebar, collapsible rail on wide screens, overlay drawer on smaller screens. The sidebar uses warm paper in light mode and dark paper in dark mode, with a single divider line and compact top-level buttons.
 - **Active State:** Active top-level navigation uses teal icon and label color. Child capsule rows use pill selection and reveal actions on hover or focus.
 - **Motion:** Sidebar collapse and child-list expansion use 180-240ms transitions, with reduced-motion fallback already present for navigation expansion.
-- **Mobile Treatment:** Filters and details open as full-screen dialogs where space is constrained. Avoid modal-first behavior on desktop when inline panels work.
+- **Mobile Treatment:** Filters and details open as full-screen dialogs where space is constrained. Full-screen dialog paper must keep square viewport corners (`border-radius: 0`), even though non-fullscreen dialogs use the app dialog radius. Avoid modal-first behavior on desktop when inline panels work.
 
 ### Wardrobe Card
 
