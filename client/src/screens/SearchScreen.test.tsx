@@ -147,8 +147,8 @@ describe("SearchScreen", () => {
   test("desktop hydrates saved search and renders results", async () => {
     renderScreen();
 
-    expect(await screen.findByText("Catalog: Explore")).toBeInTheDocument();
     expect(await screen.findByDisplayValue("linen shirt")).toBeInTheDocument();
+    expect(screen.queryByText("Catalog: Explore")).not.toBeInTheDocument();
     expect(searchApi.fetchSearchOptions).toHaveBeenCalledWith({ force: true });
     expect(searchApi.fetchSavedSearch).toHaveBeenCalledWith({ force: true });
     expect(searchApi.runSearch).toHaveBeenCalledWith(

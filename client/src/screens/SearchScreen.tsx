@@ -52,7 +52,6 @@ function SearchScreen({
         ) : (
           <SearchScreenDesktop
             search={search}
-            title={t("search.title")}
             t={t}
             locale={locale}
             onRemoveFromMyWardrobe={handleRemoveFromMyWardrobe}

@@ -244,7 +244,6 @@ export function StatisticsMobileLayout({
 }
 
 export function StatisticsDesktopLayout({
-  screenTitle,
   title,
   options,
   draftState,
@@ -256,7 +255,6 @@ export function StatisticsDesktopLayout({
   chartCards,
   emptyLabel,
 }: FiltersProps & {
-  screenTitle: string;
   summary: ReactNode;
   chartCards: ReactNode[];
   emptyLabel: string;
@@ -275,9 +273,6 @@ export function StatisticsDesktopLayout({
       <Box sx={STATISTICS_DESKTOP_MAIN_SCROLL_SX}>
         <Box sx={STATISTICS_DESKTOP_MAIN_CONTENT_SX}>
           <Stack spacing={2.5} sx={STATISTICS_DESKTOP_CHARTS_STACK_SX}>
-            <Typography variant="h5" sx={{ color: "text.primary" }}>
-              {screenTitle}
-            </Typography>
             <StatisticsChartsPanel
               summary={summary}
               chartCards={chartCards}

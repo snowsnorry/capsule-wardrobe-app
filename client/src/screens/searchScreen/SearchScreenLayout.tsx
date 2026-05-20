@@ -10,17 +10,13 @@ import type { SearchScreenStateController } from "./useSearchScreenState";
 
 type SearchScreenLayoutProps = {
   search: SearchScreenStateController;
-  title: string;
   t: (key: string, params?: Record<string, unknown>) => string;
   locale: string;
   onRemoveFromMyWardrobe?: (item: SearchResultItem) => Promise<void> | void;
   onSaveToMyWardrobe?: (item: SearchResultItem) => Promise<void> | void;
 };
 
-type SearchScreenControlsProps = Omit<
-  SearchScreenLayoutProps,
-  "locale" | "title"
->;
+type SearchScreenControlsProps = Omit<SearchScreenLayoutProps, "locale">;
 
 export const SEARCH_DESKTOP_LAYOUT_SX = {
   display: "grid",
@@ -127,7 +123,6 @@ function SearchScreenMobile({
 
 function SearchScreenDesktop({
   search,
-  title,
   t,
   locale,
   onRemoveFromMyWardrobe,
@@ -138,12 +133,7 @@ function SearchScreenDesktop({
       <SearchDesktopFilters search={search} t={t} />
       <Box sx={SEARCH_DESKTOP_MAIN_SX}>
         <Box sx={SEARCH_DESKTOP_HEADER_SX}>
-          <Stack spacing={2}>
-            <Typography variant="h5" sx={{ color: "text.primary" }}>
-              {title}
-            </Typography>
-            <SearchBarView search={search} t={t} isMobile={false} />
-          </Stack>
+          <SearchBarView search={search} t={t} isMobile={false} />
         </Box>
         <Box sx={SEARCH_DESKTOP_RESULTS_SX}>
           <SearchResultsView search={search} t={t} isMobile={false} />

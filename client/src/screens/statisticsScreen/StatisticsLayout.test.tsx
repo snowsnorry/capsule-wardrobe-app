@@ -150,7 +150,6 @@ describe("StatisticsLayout", () => {
     render(
       <ThemeProvider theme={theme}>
         <StatisticsDesktopLayout
-          screenTitle="Catalog: Statistics"
           title="Filters"
           options={makeOptions()}
           draftState={createSearchState(null, makeOptions().priceRange)}
@@ -166,7 +165,7 @@ describe("StatisticsLayout", () => {
     );
 
     expect(screen.getByText("Filters")).toBeInTheDocument();
-    expect(screen.getByText("Catalog: Statistics")).toBeInTheDocument();
+    expect(screen.queryByText("Catalog: Statistics")).not.toBeInTheDocument();
     expect(screen.getByText("summary content")).toBeInTheDocument();
     expect(screen.getByText("chart content")).toBeInTheDocument();
   });

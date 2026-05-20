@@ -174,14 +174,13 @@ describe("SearchScreenLayout", () => {
     render(
       <SearchScreenDesktop
         search={search as never}
-        title="Catalog: Explore"
         t={(key) => key}
         locale="en"
         onSaveToMyWardrobe={onSaveToMyWardrobe}
       />,
     );
 
-    expect(screen.getAllByText("Catalog: Explore").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Catalog: Explore")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "apply filters" }));
     fireEvent.click(screen.getByRole("button", { name: "reset filters" }));
     fireEvent.click(screen.getByRole("button", { name: "save detail" }));
