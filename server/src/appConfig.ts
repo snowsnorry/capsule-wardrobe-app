@@ -67,6 +67,9 @@ export const MCP_ACCESS_TOKEN_TTL_SECONDS = Number(
 export const MCP_AUTH_CODE_TTL_SECONDS = Number(
   process.env.MCP_AUTH_CODE_TTL_SECONDS || 300,
 );
+export const MCP_REFRESH_TOKEN_TTL_SECONDS = Number(
+  process.env.MCP_REFRESH_TOKEN_TTL_SECONDS || 2592000,
+);
 export const MCP_JWT_SECRET =
   process.env.MCP_JWT_SECRET ||
   (NODE_ENV === "production" ? "" : "development-mcp-jwt-secret");

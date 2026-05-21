@@ -1,6 +1,7 @@
 import { getFirstRow, getSqlClient } from "./core.js";
 import type {
   McpAuthorizationCodeRow,
+  McpOAuthGrantTypes,
   McpRegisteredClientRow,
 } from "../mcp/types.js";
 
@@ -177,11 +178,13 @@ export async function upsertMcpGrant({
 export async function insertMcpRegisteredClient({
   clientId,
   clientName,
+  grantTypes,
   redirectUris,
   scope,
 }: {
   clientId: string;
   clientName: string | null;
+  grantTypes: McpOAuthGrantTypes;
   redirectUris: string[];
   scope: string | null;
 }): Promise<McpRegisteredClientRow> {
@@ -203,7 +206,7 @@ export async function insertMcpRegisteredClient({
         ${JSON.stringify(redirectUris)}::jsonb,
         ${scope},
         'none',
-        'authorization_code',
+        ${grantTypes},
         'code'
       )
       returning

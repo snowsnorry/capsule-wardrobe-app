@@ -138,12 +138,18 @@ test("deleteProfileByEmail deletes account data and returns affected profile sta
     [],
     [],
     [],
+    [],
+    [],
+    [],
     [{ email: "person@example.com" }],
   ]);
   await expect(deleteProfileByEmail("person@example.com")).resolves.toBe(true);
   expect(deletedSql.statements).toEqual([
     "delete from user_sessions where email = ?",
     "delete from login_codes where email = ?",
+    "delete from mcp_oauth_refresh_tokens where user_email = ?",
+    "delete from mcp_oauth_grants where user_email = ?",
+    "delete from mcp_oauth_authorization_codes where user_email = ? and consumed_at is null",
     "delete from passkey_challenges where profile_email = ?",
     "delete from capsules where email = ?",
     "delete from shared_capsules where profile_email = ?",
@@ -153,7 +159,7 @@ test("deleteProfileByEmail deletes account data and returns affected profile sta
     "delete from profiles where email = ? returning email",
   ]);
 
-  useQueuedSql([[], [], [], [], [], [], [], [], []]);
+  useQueuedSql([[], [], [], [], [], [], [], [], [], [], [], []]);
   await expect(deleteProfileByEmail("missing@example.com")).resolves.toBe(
     false,
   );

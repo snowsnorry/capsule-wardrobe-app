@@ -158,6 +158,13 @@ export async function deleteProfileByEmail(email: string): Promise<boolean> {
   const sql = getSqlClient();
   await sql`delete from user_sessions where email = ${email}`;
   await sql`delete from login_codes where email = ${email}`;
+  await sql`delete from mcp_oauth_refresh_tokens where user_email = ${email}`;
+  await sql`delete from mcp_oauth_grants where user_email = ${email}`;
+  await sql`
+    delete from mcp_oauth_authorization_codes
+    where user_email = ${email}
+      and consumed_at is null
+  `;
   await sql`delete from passkey_challenges where profile_email = ${email}`;
   await sql`delete from capsules where email = ${email}`;
   await sql`delete from shared_capsules where profile_email = ${email}`;

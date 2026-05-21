@@ -52,6 +52,9 @@ const MCP_OAUTH_SCHEMA_FILES = [
   "082_create_mcp_oauth_grants_table.sql",
   "083_create_mcp_oauth_grants_active_index.sql",
   "084_create_mcp_oauth_registered_clients_table.sql",
+  "085_update_mcp_oauth_registered_clients_grant_types_check.sql",
+  "086_create_mcp_oauth_refresh_tokens_table.sql",
+  "087_create_mcp_oauth_refresh_tokens_active_index.sql",
 ] as const;
 
 export async function checkDatabaseConnection(): Promise<DatabaseConnectionRow | null> {

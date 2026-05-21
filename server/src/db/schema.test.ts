@@ -184,6 +184,16 @@ test("ensure auth, profile, passkey, capsule, shared capsule, and search schemas
       ),
     ),
   ).toBeTruthy();
+  expect(
+    statements.some((statement) =>
+      statement.includes("create table if not exists mcp_oauth_refresh_tokens"),
+    ),
+  ).toBeTruthy();
+  expect(
+    statements.some((statement) =>
+      statement.includes("mcp_oauth_refresh_tokens_active_idx"),
+    ),
+  ).toBeTruthy();
 
   const joined = statements.join("\n");
   expect(joined).not.toMatch(/alter table profiles/i);
@@ -210,6 +220,7 @@ test("ensureTables runs every schema group in dependency order", async () => {
   expect(joined).toMatch(
     /create table if not exists mcp_oauth_registered_clients/,
   );
+  expect(joined).toMatch(/create table if not exists mcp_oauth_refresh_tokens/);
   expect(joined).toMatch(/create table if not exists search/);
   expect(
     joined.indexOf("create table if not exists profiles") <

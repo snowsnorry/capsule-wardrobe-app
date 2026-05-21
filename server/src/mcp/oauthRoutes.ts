@@ -6,15 +6,18 @@ import {
   createAuthorizationCode,
   createConsentCsrfToken,
   createPkceS256Challenge,
+  createRefreshToken,
   createRegisteredClientId,
   hashOAuthSecret,
   signAccessToken,
 } from "./oauthCrypto.js";
 import {
   type McpAuthorizationRequest,
+  type McpOAuthGrantTypes,
   type McpOAuthClientMetadata,
   type McpOAuthConfig,
   type McpReadScope,
+  type McpRefreshTokenRow,
   type McpRegisteredClientRow,
 } from "./types.js";
 
@@ -30,6 +33,21 @@ function escapeHtml(value: string): string {
 
 function scopesToKey(scopes: readonly string[]): string {
   return [...scopes].sort().join(" ");
+}
+
+function scopesFromKey(scopes: string): string[] {
+  return scopes
+    .split(/\s+/)
+    .map((scope) => scope.trim())
+    .filter(Boolean);
+}
+
+function isScopeSubset(
+  requestedScopes: string,
+  grantedScopes: string,
+): boolean {
+  const granted = new Set(scopesFromKey(grantedScopes));
+  return scopesFromKey(requestedScopes).every((scope) => granted.has(scope));
 }
 
 function readString(value: unknown): string {
@@ -452,23 +470,30 @@ async function redirectWithAuthorizationCode({
 }
 
 function buildTokenResponse({
-  authCode,
+  clientId,
   config,
+  refreshToken,
+  resource,
+  scope,
+  userEmail,
 }: {
-  authCode;
+  clientId: string;
   config: McpOAuthConfig;
+  refreshToken?: string;
+  resource: string;
+  scope: string;
+  userEmail: string;
 }) {
   const issuedAt = Math.floor(Date.now() / 1000);
-  const scope = authCode.scopes;
   const accessToken = signAccessToken(
     {
-      aud: authCode.resource,
-      client_id: authCode.clientId,
+      aud: resource,
+      client_id: clientId,
       exp: issuedAt + config.accessTokenTtlSeconds,
       iat: issuedAt,
       iss: config.issuer,
       scope,
-      sub: authCode.userEmail,
+      sub: userEmail,
       token_use: "access",
     },
     config.jwtSecret,
@@ -476,10 +501,67 @@ function buildTokenResponse({
 
   return {
     access_token: accessToken,
+    ...(refreshToken ? { refresh_token: refreshToken } : {}),
     token_type: "Bearer",
     expires_in: config.accessTokenTtlSeconds,
     scope,
   };
+}
+
+function registeredClientAllowsRefreshToken(
+  registeredClient: McpRegisteredClientRow | null,
+): boolean {
+  return (
+    !registeredClient || registeredClient.grantTypes.includes("refresh_token")
+  );
+}
+
+async function clientAllowsRefreshToken({
+  clientId,
+  context,
+}: {
+  clientId: string;
+  context;
+}): Promise<boolean> {
+  const registeredClient = await context.getMcpRegisteredClientImpl?.(clientId);
+  return registeredClientAllowsRefreshToken(registeredClient || null);
+}
+
+async function issueRefreshToken({
+  clientId,
+  config,
+  context,
+  resource,
+  scopes,
+  userEmail,
+}: {
+  clientId: string;
+  config: McpOAuthConfig;
+  context;
+  resource: string;
+  scopes: string;
+  userEmail: string;
+}): Promise<string> {
+  const refreshToken = createRefreshToken();
+  await context.insertMcpRefreshTokenImpl({
+    clientId,
+    expiresAt: new Date(Date.now() + config.refreshTokenTtlSeconds * 1000),
+    resource,
+    scopes,
+    tokenHash: hashOAuthSecret(refreshToken),
+    userEmail,
+  });
+  return refreshToken;
+}
+
+function hasUsableRefreshToken(
+  refreshToken: McpRefreshTokenRow | null,
+): refreshToken is McpRefreshTokenRow {
+  if (!refreshToken || refreshToken.revokedAt || refreshToken.consumedAt) {
+    return false;
+  }
+
+  return new Date(refreshToken.expiresAt).getTime() > Date.now();
 }
 
 function isJsonObject(value: unknown): value is Record<string, unknown> {
@@ -510,6 +592,18 @@ function hasOnlyAllowedValues(
   return values.every((value) => allowed.has(value));
 }
 
+function grantTypesToKey(grantTypes: readonly string[]): McpOAuthGrantTypes {
+  return grantTypes.includes("refresh_token")
+    ? "authorization_code refresh_token"
+    : "authorization_code";
+}
+
+function grantTypesFromKey(grantTypes: string): string[] {
+  return grantTypes.includes("refresh_token")
+    ? ["authorization_code", "refresh_token"]
+    : ["authorization_code"];
+}
+
 function parseRegistrationScope(
   config: McpOAuthConfig,
   scope: unknown,
@@ -537,6 +631,7 @@ function validateRegistrationRequest(
 ):
   | {
       clientName: string | null;
+      grantTypes: McpOAuthGrantTypes;
       redirectUris: string[];
       scope: string | null;
     }
@@ -588,6 +683,7 @@ function validateRegistrationRequest(
 
   return {
     clientName: readString(body.client_name) || null,
+    grantTypes: grantTypesToKey(grantTypes),
     redirectUris: [...new Set(redirectUris)],
     scope: typeof scope === "string" ? scope : null,
   };
@@ -607,10 +703,164 @@ function buildRegistrationResponse(client: McpRegisteredClientRow) {
     client_name: client.clientName || undefined,
     redirect_uris: client.redirectUris,
     response_types: ["code"],
-    grant_types: ["authorization_code"],
+    grant_types: grantTypesFromKey(client.grantTypes),
     token_endpoint_auth_method: "none",
     scope: client.scope || undefined,
   };
+}
+
+async function handleAuthorizationCodeTokenRequest({
+  config,
+  context,
+  req,
+  res,
+}) {
+  const code = readString(req.body?.code);
+  const redirectUri = readString(req.body?.redirect_uri);
+  const clientId = readString(req.body?.client_id);
+  const verifier = readString(req.body?.code_verifier);
+  const resource = readString(req.body?.resource) || config.resourceUrl;
+
+  if (!code || !redirectUri || !clientId || !verifier) {
+    logInfo("[mcp/oauth/token/failure]", { error: "invalid_request" });
+    return res.status(400).json({ error: "invalid_request" });
+  }
+
+  if (resource !== config.resourceUrl) {
+    logInfo("[mcp/oauth/token/failure]", { error: "invalid_target" });
+    return res.status(400).json({ error: "invalid_target" });
+  }
+
+  try {
+    const authCode = await context.consumeMcpAuthorizationCodeImpl({
+      clientId,
+      codeChallenge: createPkceS256Challenge(verifier),
+      codeHash: hashOAuthSecret(code),
+      redirectUri,
+      resource,
+    });
+
+    if (!authCode) {
+      logInfo("[mcp/oauth/token/failure]", { error: "invalid_grant" });
+      return res.status(400).json({ error: "invalid_grant" });
+    }
+
+    const refreshToken = (await clientAllowsRefreshToken({
+      clientId: authCode.clientId,
+      context,
+    }))
+      ? await issueRefreshToken({
+          clientId: authCode.clientId,
+          config,
+          context,
+          resource: authCode.resource,
+          scopes: authCode.scopes,
+          userEmail: authCode.userEmail,
+        })
+      : undefined;
+
+    logInfo("[mcp/oauth/token/success]", {
+      clientId,
+      subject: authCode.userEmail,
+    });
+    return res.json(
+      buildTokenResponse({
+        clientId: authCode.clientId,
+        config,
+        refreshToken,
+        resource: authCode.resource,
+        scope: authCode.scopes,
+        userEmail: authCode.userEmail,
+      }),
+    );
+  } catch (error) {
+    logError("[mcp/oauth/token]", error);
+    return res.status(503).json({ error: "service_unavailable" });
+  }
+}
+
+async function handleRefreshTokenGrantRequest({ config, context, req, res }) {
+  const clientId = readString(req.body?.client_id);
+  const refreshToken = readString(req.body?.refresh_token);
+  const resource = readString(req.body?.resource) || config.resourceUrl;
+  const requestedScope = readString(req.body?.scope);
+
+  if (!clientId || !refreshToken) {
+    logInfo("[mcp/oauth/token/failure]", { error: "invalid_request" });
+    return res.status(400).json({ error: "invalid_request" });
+  }
+
+  if (resource !== config.resourceUrl) {
+    logInfo("[mcp/oauth/token/failure]", { error: "invalid_target" });
+    return res.status(400).json({ error: "invalid_target" });
+  }
+
+  try {
+    const tokenHash = hashOAuthSecret(refreshToken);
+    const existing = await context.getMcpRefreshTokenImpl(tokenHash);
+    if (
+      !hasUsableRefreshToken(existing) ||
+      existing.clientId !== clientId ||
+      existing.resource !== resource
+    ) {
+      logInfo("[mcp/oauth/token/failure]", { error: "invalid_grant" });
+      return res.status(400).json({ error: "invalid_grant" });
+    }
+
+    if (!(await clientAllowsRefreshToken({ clientId, context }))) {
+      logInfo("[mcp/oauth/token/failure]", { error: "invalid_grant" });
+      return res.status(400).json({ error: "invalid_grant" });
+    }
+
+    let effectiveScopes = existing.scopes;
+    if (requestedScope) {
+      const scopes = parseScopes(config, requestedScope);
+      if (!scopes) {
+        logInfo("[mcp/oauth/token/failure]", { error: "invalid_scope" });
+        return res.status(400).json({ error: "invalid_scope" });
+      }
+
+      const requestedScopes = scopesToKey(scopes);
+      if (!isScopeSubset(requestedScopes, existing.scopes)) {
+        logInfo("[mcp/oauth/token/failure]", { error: "invalid_scope" });
+        return res.status(400).json({ error: "invalid_scope" });
+      }
+      effectiveScopes = requestedScopes;
+    }
+
+    const nextRefreshToken = createRefreshToken();
+    const rotated = await context.rotateMcpRefreshTokenImpl({
+      clientId,
+      expiresAt: new Date(Date.now() + config.refreshTokenTtlSeconds * 1000),
+      newTokenHash: hashOAuthSecret(nextRefreshToken),
+      resource,
+      scopes: effectiveScopes,
+      tokenHash,
+    });
+
+    if (!rotated) {
+      logInfo("[mcp/oauth/token/failure]", { error: "invalid_grant" });
+      return res.status(400).json({ error: "invalid_grant" });
+    }
+
+    logInfo("[mcp/oauth/token/refresh-success]", {
+      clientId,
+      subject: rotated.userEmail,
+    });
+    return res.json(
+      buildTokenResponse({
+        clientId: rotated.clientId,
+        config,
+        refreshToken: nextRefreshToken,
+        resource: rotated.resource,
+        scope: rotated.scopes,
+        userEmail: rotated.userEmail,
+      }),
+    );
+  } catch (error) {
+    logError("[mcp/oauth/token]", error);
+    return res.status(503).json({ error: "service_unavailable" });
+  }
 }
 
 export function registerMcpOAuthRoutes(app, context) {
@@ -637,7 +887,7 @@ export function registerMcpOAuthRoutes(app, context) {
     token_endpoint: buildIssuerUrl(config, "/oauth/token"),
     registration_endpoint: buildIssuerUrl(config, "/oauth/register"),
     response_types_supported: ["code"],
-    grant_types_supported: ["authorization_code"],
+    grant_types_supported: ["authorization_code", "refresh_token"],
     code_challenge_methods_supported: ["S256"],
     token_endpoint_auth_methods_supported: ["none"],
     scopes_supported: config.scopesSupported,
@@ -666,6 +916,7 @@ export function registerMcpOAuthRoutes(app, context) {
         const client = await context.insertMcpRegisteredClientImpl({
           clientId: createRegisteredClientId(),
           clientName: registration.clientName,
+          grantTypes: registration.grantTypes,
           redirectUris: registration.redirectUris,
           scope: registration.scope,
         });
@@ -811,50 +1062,15 @@ export function registerMcpOAuthRoutes(app, context) {
     }
 
     const grantType = readString(req.body?.grant_type);
-    const code = readString(req.body?.code);
-    const redirectUri = readString(req.body?.redirect_uri);
-    const clientId = readString(req.body?.client_id);
-    const verifier = readString(req.body?.code_verifier);
-    const resource = readString(req.body?.resource) || config.resourceUrl;
-
-    if (
-      grantType !== "authorization_code" ||
-      !code ||
-      !redirectUri ||
-      !clientId ||
-      !verifier
-    ) {
-      logInfo("[mcp/oauth/token/failure]", { error: "invalid_request" });
-      return res.status(400).json({ error: "invalid_request" });
+    if (grantType === "authorization_code") {
+      return handleAuthorizationCodeTokenRequest({ config, context, req, res });
     }
 
-    if (resource !== config.resourceUrl) {
-      logInfo("[mcp/oauth/token/failure]", { error: "invalid_target" });
-      return res.status(400).json({ error: "invalid_target" });
+    if (grantType === "refresh_token") {
+      return handleRefreshTokenGrantRequest({ config, context, req, res });
     }
 
-    try {
-      const authCode = await context.consumeMcpAuthorizationCodeImpl({
-        clientId,
-        codeChallenge: createPkceS256Challenge(verifier),
-        codeHash: hashOAuthSecret(code),
-        redirectUri,
-        resource,
-      });
-
-      if (!authCode) {
-        logInfo("[mcp/oauth/token/failure]", { error: "invalid_grant" });
-        return res.status(400).json({ error: "invalid_grant" });
-      }
-
-      logInfo("[mcp/oauth/token/success]", {
-        clientId,
-        subject: authCode.userEmail,
-      });
-      return res.json(buildTokenResponse({ authCode, config }));
-    } catch (error) {
-      logError("[mcp/oauth/token]", error);
-      return res.status(503).json({ error: "service_unavailable" });
-    }
+    logInfo("[mcp/oauth/token/failure]", { error: "invalid_request" });
+    return res.status(400).json({ error: "invalid_request" });
   });
 }

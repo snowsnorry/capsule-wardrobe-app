@@ -18,6 +18,7 @@ export type McpOAuthConfig = {
   enabled: boolean;
   issuer: string;
   jwtSecret: string;
+  refreshTokenTtlSeconds: number;
   resourceUrl: string;
   scopesSupported: readonly McpReadScope[];
 };
@@ -27,13 +28,17 @@ export type McpOAuthClientMetadata = {
   redirectUris: string[];
 };
 
+export type McpOAuthGrantTypes =
+  | "authorization_code"
+  | "authorization_code refresh_token";
+
 export type McpRegisteredClientRow = {
   clientId: string;
   clientName: string | null;
   redirectUris: string[];
   scope: string | null;
   tokenEndpointAuthMethod: "none";
-  grantTypes: "authorization_code";
+  grantTypes: McpOAuthGrantTypes;
   responseTypes: "code";
   createdAt: string | Date;
   updatedAt: string | Date;
@@ -62,6 +67,18 @@ export type McpAuthorizationCodeRow = {
   expiresAt: string | Date;
   consumedAt: string | Date | null;
   createdAt: string | Date;
+};
+
+export type McpRefreshTokenRow = {
+  tokenHash: string;
+  userEmail: string;
+  clientId: string;
+  scopes: string;
+  resource: string;
+  expiresAt: string | Date;
+  revokedAt: string | Date | null;
+  createdAt: string | Date;
+  consumedAt: string | Date | null;
 };
 
 export type McpAccessTokenClaims = {

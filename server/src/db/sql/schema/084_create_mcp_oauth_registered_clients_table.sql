@@ -13,7 +13,7 @@ create table if not exists mcp_oauth_registered_clients (
   constraint mcp_oauth_registered_clients_public_check
     check (token_endpoint_auth_method = 'none'),
   constraint mcp_oauth_registered_clients_grant_types_check
-    check (grant_types = 'authorization_code'),
+    check (grant_types in ('authorization_code', 'authorization_code refresh_token')),
   constraint mcp_oauth_registered_clients_response_types_check
     check (response_types = 'code')
 )

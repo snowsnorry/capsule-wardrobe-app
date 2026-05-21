@@ -13,8 +13,15 @@ import {
   insertMcpRegisteredClient,
   upsertMcpGrant,
 } from "./mcpOAuth.js";
+import {
+  getMcpRefreshToken,
+  insertMcpRefreshToken,
+  revokeMcpRefreshToken,
+  rotateMcpRefreshToken,
+} from "./mcpOAuthRefreshTokens.js";
 import type {
   McpAuthorizationCodeRow,
+  McpRefreshTokenRow,
   McpRegisteredClientRow,
 } from "../mcp/types.js";
 
@@ -62,6 +69,18 @@ const registeredClientRow: McpRegisteredClientRow = {
   responseTypes: "code",
   createdAt: "2026-05-21T00:00:00.000Z",
   updatedAt: "2026-05-21T00:00:00.000Z",
+};
+
+const refreshTokenRow: McpRefreshTokenRow = {
+  tokenHash: "refresh-hash",
+  userEmail: "person@example.com",
+  clientId: "chatgpt-dev",
+  scopes: "mcp:read wardrobe:read",
+  resource: "https://app.example/mcp",
+  expiresAt: "2099-01-01T00:00:00.000Z",
+  revokedAt: null,
+  createdAt: "2026-05-21T00:00:00.000Z",
+  consumedAt: null,
 };
 
 test("mcp authorization code helpers insert, select, and consume once", async () => {
@@ -158,6 +177,7 @@ test("mcp registered client helpers insert and fetch public clients", async () =
     await insertMcpRegisteredClient({
       clientId: "mcp-dcr_client",
       clientName: "Codex",
+      grantTypes: "authorization_code",
       redirectUris: ["http://127.0.0.1:5555/callback"],
       scope: "mcp:read",
     }),
@@ -174,5 +194,53 @@ test("mcp registered client helpers insert and fetch public clients", async () =
     "Codex",
     JSON.stringify(["http://127.0.0.1:5555/callback"]),
     "mcp:read",
+    "authorization_code",
+  ]);
+});
+
+test("mcp refresh token helpers insert, select, rotate, and revoke", async () => {
+  const expiresAt = new Date("2099-01-01T00:00:00.000Z");
+  const rotatedRow: McpRefreshTokenRow = {
+    ...refreshTokenRow,
+    tokenHash: "new-refresh-hash",
+    scopes: "mcp:read",
+  };
+  const { statements, values } = useQueuedSql([
+    [],
+    [refreshTokenRow],
+    [rotatedRow],
+    [{ tokenHash: "new-refresh-hash" }],
+    [],
+  ]);
+
+  await insertMcpRefreshToken({
+    ...refreshTokenRow,
+    expiresAt,
+  });
+  expect(await getMcpRefreshToken("refresh-hash")).toEqual(refreshTokenRow);
+  expect(
+    await rotateMcpRefreshToken({
+      tokenHash: "refresh-hash",
+      newTokenHash: "new-refresh-hash",
+      clientId: "chatgpt-dev",
+      scopes: "mcp:read",
+      resource: "https://app.example/mcp",
+      expiresAt,
+    }),
+  ).toEqual(rotatedRow);
+  expect(await revokeMcpRefreshToken("new-refresh-hash")).toBe(true);
+  expect(await getMcpRefreshToken("missing")).toBeNull();
+
+  expect(statements[0]).toContain("insert into mcp_oauth_refresh_tokens");
+  expect(statements[1]).toContain("from mcp_oauth_refresh_tokens");
+  expect(statements[2]).toContain("set consumed_at = now()");
+  expect(statements[3]).toContain("set revoked_at = now()");
+  expect(values[0]).toEqual([
+    "refresh-hash",
+    "person@example.com",
+    "chatgpt-dev",
+    "mcp:read wardrobe:read",
+    "https://app.example/mcp",
+    expiresAt,
   ]);
 });

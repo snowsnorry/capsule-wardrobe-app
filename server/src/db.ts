@@ -98,3 +98,9 @@ export {
   insertMcpRegisteredClient,
   upsertMcpGrant,
 } from "./db/mcpOAuth.js";
+export {
+  getMcpRefreshToken,
+  insertMcpRefreshToken,
+  revokeMcpRefreshToken,
+  rotateMcpRefreshToken,
+} from "./db/mcpOAuthRefreshTokens.js";

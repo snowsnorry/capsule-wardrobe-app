@@ -30,6 +30,10 @@ export function createAuthorizationCode(): string {
   return crypto.randomBytes(32).toString("base64url");
 }
 
+export function createRefreshToken(): string {
+  return crypto.randomBytes(48).toString("base64url");
+}
+
 export function createRegisteredClientId(): string {
   return `mcp-dcr_${crypto.randomBytes(24).toString("base64url")}`;
 }

@@ -1109,6 +1109,9 @@ test("db integration shapes reduced profile persistence queries", async () => {
     [],
     [],
     [],
+    [],
+    [],
+    [],
     [{ email: "user@example.com" }],
   ]);
   setSqlClientOverride(sql);
@@ -1145,13 +1148,17 @@ test("db integration shapes reduced profile persistence queries", async () => {
   ]);
   expect(calls[3].text).toMatch(/delete from user_sessions/i);
   expect(calls[4].text).toMatch(/delete from login_codes/i);
-  expect(calls[5].text).toMatch(/delete from passkey_challenges/i);
-  expect(calls[6].text).toMatch(/delete from capsules/i);
-  expect(calls[7].text).toMatch(/delete from shared_capsules/i);
-  expect(calls[8].text).toMatch(/delete from wardrobe/i);
-  expect(calls[9].text).toMatch(/delete from search/i);
-  expect(calls[10].text).toMatch(/delete from profile_passkeys/i);
-  expect(calls[11].text).toMatch(/delete from profiles/i);
+  expect(calls[5].text).toMatch(/delete from mcp_oauth_refresh_tokens/i);
+  expect(calls[6].text).toMatch(/delete from mcp_oauth_grants/i);
+  expect(calls[7].text).toMatch(/delete from mcp_oauth_authorization_codes/i);
+  expect(calls[7].text).toMatch(/consumed_at is null/i);
+  expect(calls[8].text).toMatch(/delete from passkey_challenges/i);
+  expect(calls[9].text).toMatch(/delete from capsules/i);
+  expect(calls[10].text).toMatch(/delete from shared_capsules/i);
+  expect(calls[11].text).toMatch(/delete from wardrobe/i);
+  expect(calls[12].text).toMatch(/delete from search/i);
+  expect(calls[13].text).toMatch(/delete from profile_passkeys/i);
+  expect(calls[14].text).toMatch(/delete from profiles/i);
 });
 
 test("db integration checkDatabaseConnection selects current database metadata", async () => {

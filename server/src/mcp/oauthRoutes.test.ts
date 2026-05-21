@@ -9,6 +9,7 @@ import {
 import {
   createConsentCsrfToken,
   createPkceS256Challenge,
+  hashOAuthSecret,
   signAccessToken,
 } from "./oauthCrypto.js";
 import type { McpOAuthConfig } from "./types.js";
@@ -172,6 +173,7 @@ function createTestMcpConfig(
     enabled: true,
     issuer: ISSUER,
     jwtSecret: JWT_SECRET,
+    refreshTokenTtlSeconds: 2592000,
     resourceUrl: RESOURCE,
     scopesSupported: [
       "profile:read",
@@ -287,7 +289,29 @@ async function approveAndExchangeCode(baseUrl: string) {
   });
   expect(token.response.status).toBe(200);
   expect(token.json.token_type).toBe("Bearer");
-  return { code, token: String(token.json.access_token || "") };
+  expect(String(token.json.refresh_token || "")).toBeTruthy();
+  return {
+    code,
+    refreshToken: String(token.json.refresh_token || ""),
+    token: String(token.json.access_token || ""),
+  };
+}
+
+async function refreshAccessToken(
+  baseUrl: string,
+  refreshToken: string,
+  body: Record<string, unknown> = {},
+) {
+  return requestJson(baseUrl, "/oauth/token", {
+    method: "POST",
+    body: {
+      grant_type: "refresh_token",
+      refresh_token: refreshToken,
+      client_id: CLIENT_ID,
+      resource: RESOURCE,
+      ...body,
+    },
+  });
 }
 
 function mcpHeaders(token: string) {
@@ -450,6 +474,7 @@ test("mcp oauth metadata endpoints return discoverable JSON", async (t) => {
     token_endpoint: `${ISSUER}/oauth/token`,
     registration_endpoint: `${ISSUER}/oauth/register`,
     code_challenge_methods_supported: ["S256"],
+    grant_types_supported: ["authorization_code", "refresh_token"],
   });
 
   const openid = await requestJson(
@@ -459,6 +484,10 @@ test("mcp oauth metadata endpoints return discoverable JSON", async (t) => {
   expect(openid.response.status).toBe(200);
   expect(openid.json.issuer).toBe(ISSUER);
   expect(openid.json.registration_endpoint).toBe(`${ISSUER}/oauth/register`);
+  expect(openid.json.grant_types_supported).toEqual([
+    "authorization_code",
+    "refresh_token",
+  ]);
 });
 
 test("oauth dynamic client registration stores public clients", async (t) => {
@@ -494,7 +523,10 @@ test("oauth dynamic client registration accepts refresh token grant metadata", a
 
   expect(registration.response.status).toBe(201);
   expect(String(registration.json.client_id)).toMatch(/^mcp-dcr_/);
-  expect(registration.json.grant_types).toEqual(["authorization_code"]);
+  expect(registration.json.grant_types).toEqual([
+    "authorization_code",
+    "refresh_token",
+  ]);
 });
 
 test("oauth dynamic client registration rejects invalid metadata", async (t) => {
@@ -740,6 +772,77 @@ test("oauth PKCE code flow issues an access token accepted by mcp", async (t) =>
   });
   expect(unknown.response.status).toBe(200);
   expect(unknown.json).toMatchObject({ error: { code: -32601 } });
+});
+
+test("oauth refresh token grant issues rotated tokens accepted by mcp", async (t) => {
+  const { baseUrl } = await startMcpTestServer(t);
+  const { refreshToken } = await approveAndExchangeCode(baseUrl);
+
+  const refreshed = await refreshAccessToken(baseUrl, refreshToken);
+
+  expect(refreshed.response.status).toBe(200);
+  expect(refreshed.json.token_type).toBe("Bearer");
+  expect(String(refreshed.json.access_token || "")).toBeTruthy();
+  expect(String(refreshed.json.refresh_token || "")).toBeTruthy();
+  expect(refreshed.json.refresh_token).not.toBe(refreshToken);
+  expect(refreshed.json.scope).toBe("mcp:read wardrobe:read");
+
+  const tools = await listMcpTools(
+    baseUrl,
+    String(refreshed.json.access_token),
+  );
+  expect(tools.response.status).toBe(200);
+  expectMcpToolNames(tools);
+
+  const reused = await refreshAccessToken(baseUrl, refreshToken);
+  expect(reused.response.status).toBe(400);
+  expect(reused.json.error).toBe("invalid_grant");
+});
+
+test("oauth refresh token grant rejects expired and revoked tokens", async (t) => {
+  const expiredServer = await startMcpTestServer(t, {
+    refreshTokenTtlSeconds: -1,
+  });
+  const expiredGrant = await approveAndExchangeCode(expiredServer.baseUrl);
+  const expired = await refreshAccessToken(
+    expiredServer.baseUrl,
+    expiredGrant.refreshToken,
+  );
+  expect(expired.response.status).toBe(400);
+  expect(expired.json.error).toBe("invalid_grant");
+
+  const { baseUrl, deps } = await startMcpTestServer(t);
+  const grant = await approveAndExchangeCode(baseUrl);
+  await (deps.revokeMcpRefreshTokenImpl as (hash: string) => Promise<boolean>)(
+    hashOAuthSecret(grant.refreshToken),
+  );
+
+  const revoked = await refreshAccessToken(baseUrl, grant.refreshToken);
+  expect(revoked.response.status).toBe(400);
+  expect(revoked.json.error).toBe("invalid_grant");
+});
+
+test("oauth refresh token grant rejects wrong client and scope expansion", async (t) => {
+  const { baseUrl } = await startMcpTestServer(t);
+  const { refreshToken } = await approveAndExchangeCode(baseUrl);
+
+  const wrongClient = await refreshAccessToken(baseUrl, refreshToken, {
+    client_id: "other-client",
+  });
+  expect(wrongClient.response.status).toBe(400);
+  expect(wrongClient.json.error).toBe("invalid_grant");
+
+  const expandedScope = await refreshAccessToken(baseUrl, refreshToken, {
+    scope: "mcp:read wardrobe:read capsules:read",
+  });
+  expect(expandedScope.response.status).toBe(400);
+  expect(expandedScope.json.error).toBe("invalid_scope");
+
+  const narrowed = await refreshAccessToken(baseUrl, refreshToken, {
+    scope: "mcp:read",
+  });
+  expect(narrowed.response.status).toBe(200);
+  expect(narrowed.json.scope).toBe("mcp:read");
 });
 
 test("mcp get_search_options matches search options endpoint", async (t) => {
@@ -1034,6 +1137,81 @@ test("oauth dynamic registered public client completes PKCE flow without client 
   });
   expect(tools.response.status).toBe(200);
   expectMcpToolNames(tools);
+});
+
+test("oauth dynamic client without refresh grant does not receive or use refresh tokens", async (t) => {
+  let registeredClientId = "";
+  let rotateCalls = 0;
+  const legacyRefreshToken = "legacy-refresh-token";
+  const { baseUrl } = await startMcpTestServerWithDependencyOverrides(t, {
+    mcpOAuthConfig: createTestMcpConfig({
+      allowedRedirectOrigins: new Set(["http://127.0.0.1"]),
+      allowedRedirectUris: new Set(),
+    }),
+    getMcpRefreshTokenImpl: async (tokenHash) =>
+      tokenHash === hashOAuthSecret(legacyRefreshToken)
+        ? {
+            tokenHash,
+            userEmail: "person@example.com",
+            clientId: registeredClientId,
+            scopes: "mcp:read wardrobe:read",
+            resource: RESOURCE,
+            expiresAt: "2099-01-01T00:00:00.000Z",
+            revokedAt: null,
+            createdAt: "2026-05-21T00:00:00.000Z",
+            consumedAt: null,
+          }
+        : null,
+    rotateMcpRefreshTokenImpl: async () => {
+      rotateCalls += 1;
+      return null;
+    },
+  });
+  const registration = await registerDynamicClient(baseUrl, {
+    grant_types: ["authorization_code"],
+  });
+  registeredClientId = String(registration.json.client_id || "");
+  expect(registeredClientId).toBeTruthy();
+
+  const consent = await fetchManual(`${baseUrl}/oauth/authorize`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      cookie: AUTH_COOKIE,
+    },
+    body: consentBody("allow", {
+      client_id: registeredClientId,
+      redirect_uri: DYNAMIC_REDIRECT_URI,
+    }),
+  });
+  expect(consent.status).toBe(302);
+  const code = new URL(consent.headers.get("location") || "").searchParams.get(
+    "code",
+  );
+  expect(code).toBeTruthy();
+
+  const token = await requestJson(baseUrl, "/oauth/token", {
+    method: "POST",
+    body: {
+      grant_type: "authorization_code",
+      code,
+      redirect_uri: DYNAMIC_REDIRECT_URI,
+      client_id: registeredClientId,
+      code_verifier: CODE_VERIFIER,
+      resource: RESOURCE,
+    },
+  });
+  expect(token.response.status).toBe(200);
+  expect(token.json.token_type).toBe("Bearer");
+  expect(String(token.json.access_token || "")).toBeTruthy();
+  expect(token.json).not.toHaveProperty("refresh_token");
+
+  const refresh = await refreshAccessToken(baseUrl, legacyRefreshToken, {
+    client_id: registeredClientId,
+  });
+  expect(refresh.response.status).toBe(400);
+  expect(refresh.json.error).toBe("invalid_grant");
+  expect(rotateCalls).toBe(0);
 });
 
 test("token exchange fails for wrong verifier, reused code, and expired code", async (t) => {

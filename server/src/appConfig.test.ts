@@ -22,6 +22,7 @@ test("appConfig reads environment overrides and auth test mode variants", async 
     MCP_JWT_SECRET: process.env.MCP_JWT_SECRET,
     MCP_OAUTH_ENABLED: process.env.MCP_OAUTH_ENABLED,
     MCP_OAUTH_ISSUER: process.env.MCP_OAUTH_ISSUER,
+    MCP_REFRESH_TOKEN_TTL_SECONDS: process.env.MCP_REFRESH_TOKEN_TTL_SECONDS,
     MCP_RESOURCE_URL: process.env.MCP_RESOURCE_URL,
     PASSKEY_RP_NAME: process.env.PASSKEY_RP_NAME,
     PASSKEY_RP_ID: process.env.PASSKEY_RP_ID,
@@ -44,6 +45,7 @@ test("appConfig reads environment overrides and auth test mode variants", async 
     process.env.MCP_JWT_SECRET = "mcp-secret";
     process.env.MCP_OAUTH_ENABLED = "true";
     process.env.MCP_OAUTH_ISSUER = "https://server.example.test";
+    process.env.MCP_REFRESH_TOKEN_TTL_SECONDS = "86400";
     process.env.MCP_RESOURCE_URL = "https://server.example.test/mcp";
     process.env.PASSKEY_RP_NAME = "Wardrobe";
     process.env.PASSKEY_RP_ID = "example.test";
@@ -68,6 +70,7 @@ test("appConfig reads environment overrides and auth test mode variants", async 
     expect(overridden.MCP_JWT_SECRET).toBe("mcp-secret");
     expect(overridden.MCP_OAUTH_ENABLED).toBe(true);
     expect(overridden.MCP_OAUTH_ISSUER).toBe("https://server.example.test");
+    expect(overridden.MCP_REFRESH_TOKEN_TTL_SECONDS).toBe(86400);
     expect(overridden.MCP_RESOURCE_URL).toBe("https://server.example.test/mcp");
     expect(overridden.PASSKEY_RP_NAME).toBe("Wardrobe");
     expect(overridden.PASSKEY_RP_ID).toBe("example.test");

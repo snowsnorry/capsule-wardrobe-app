@@ -9,6 +9,7 @@ import {
   MCP_JWT_SECRET,
   MCP_OAUTH_ENABLED,
   MCP_OAUTH_ISSUER,
+  MCP_REFRESH_TOKEN_TTL_SECONDS,
   MCP_RESOURCE_URL,
   NODE_ENV,
 } from "../appConfig.js";
@@ -75,6 +76,10 @@ export function createMcpOAuthConfig(
     enabled,
     issuer,
     jwtSecret: overrides.jwtSecret ?? MCP_JWT_SECRET,
+    refreshTokenTtlSeconds: parsePositiveInteger(
+      overrides.refreshTokenTtlSeconds,
+      MCP_REFRESH_TOKEN_TTL_SECONDS,
+    ),
     resourceUrl,
     scopesSupported: overrides.scopesSupported ?? MCP_READ_SCOPES,
   };

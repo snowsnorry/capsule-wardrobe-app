@@ -9,6 +9,7 @@ const ORIGINAL_ENV = {
   MCP_JWT_SECRET: process.env.MCP_JWT_SECRET,
   MCP_OAUTH_ENABLED: process.env.MCP_OAUTH_ENABLED,
   MCP_OAUTH_ISSUER: process.env.MCP_OAUTH_ISSUER,
+  MCP_REFRESH_TOKEN_TTL_SECONDS: process.env.MCP_REFRESH_TOKEN_TTL_SECONDS,
   MCP_RESOURCE_URL: process.env.MCP_RESOURCE_URL,
   NODE_ENV: process.env.NODE_ENV,
 };
@@ -64,6 +65,27 @@ test("mcp oauth production config allows dynamic registration without static cli
     const config = createMcpOAuthConfig();
     expect(config.allowedClientIds.size).toBe(0);
     expect(config.allowUnregisteredClients).toBe(false);
+    expect(config.jwtSecret).toBe("secret");
+    expect(config.refreshTokenTtlSeconds).toBe(2592000);
+  } finally {
+    restoreEnv();
+  }
+});
+
+test("mcp oauth config reads refresh token ttl override", async () => {
+  try {
+    process.env.NODE_ENV = "test";
+    process.env.MCP_REFRESH_TOKEN_TTL_SECONDS = "86400";
+
+    const { createMcpOAuthConfig } = await importConfig();
+    expect(
+      createMcpOAuthConfig({
+        enabled: true,
+        issuer: "https://app.example.test",
+        jwtSecret: "secret",
+        resourceUrl: "https://app.example.test/mcp",
+      }).refreshTokenTtlSeconds,
+    ).toBe(86400);
   } finally {
     restoreEnv();
   }
