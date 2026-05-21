@@ -127,6 +127,7 @@ function CapsuleRow({
         <ListItemText
           primary={capsuleName}
           primaryTypographyProps={{
+            fontSize: "14px",
             noWrap: true,
             fontWeight: isActive ? 700 : 500,
           }}

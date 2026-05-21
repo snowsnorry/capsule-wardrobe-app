@@ -121,6 +121,7 @@ describe("AppSidebarNavigation", () => {
     const capsuleChildren = screen.getByTestId("capsule-sidebar-children");
     const capsuleContent = capsuleChildren.firstElementChild;
     const capsuleSectionLabel = screen.getByText("Your capsules").parentElement;
+    const capsuleRowLabel = screen.getByText("Modified capsule");
 
     expect(capsuleContent).not.toBeNull();
     expect(getComputedStyle(capsuleContent as Element).paddingLeft).toBe(
@@ -140,9 +141,13 @@ describe("AppSidebarNavigation", () => {
     expect(getComputedStyle(capsuleRow).borderRadius).toBe(
       "var(--cw-radius-card)",
     );
+    expect(getComputedStyle(capsuleRow).minHeight).toBe("36px");
     expect(getComputedStyle(capsuleRow).marginLeft).toBe("0px");
     expect(getComputedStyle(capsuleRow).paddingLeft).toBe("36px");
     expect(getComputedStyle(capsuleRow).paddingRight).toBe("0px");
+    expect(getComputedStyle(capsuleRow).paddingTop).toBe("4px");
+    expect(getComputedStyle(capsuleRow).paddingBottom).toBe("4px");
+    expect(getComputedStyle(capsuleRowLabel).fontSize).toBe("14px");
 
     for (const button of [
       screen.getByRole("button", { name: "New capsule" }),
@@ -217,8 +222,11 @@ describe("AppSidebarNavigation", () => {
     expect(getComputedStyle(exploreChild).borderRadius).toBe(
       "var(--cw-radius-card)",
     );
-    expect(getComputedStyle(exploreChild).minHeight).toBe("40px");
+    expect(getComputedStyle(exploreChild).minHeight).toBe("36px");
     expect(getComputedStyle(exploreChild).paddingLeft).toBe("36px");
+    expect(getComputedStyle(exploreChild).paddingTop).toBe("4px");
+    expect(getComputedStyle(exploreChild).paddingBottom).toBe("4px");
+    expect(getComputedStyle(screen.getByText("Explore")).fontSize).toBe("14px");
   });
 
   test("selects statistics inside the expanded catalog group", async () => {

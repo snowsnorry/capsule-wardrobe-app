@@ -9,7 +9,8 @@ function getCapsuleRowSx(isOverlaySidebar: boolean) {
     mb: 0.25,
     pl: capsuleChildrenContentInset,
     pr: capsuleRowTextInset,
-    minHeight: 40,
+    minHeight: 36,
+    py: 0.5,
     columnGap: 0.5,
     "& .capsule-row-unsaved-dot": {
       opacity: 1,

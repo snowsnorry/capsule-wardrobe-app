@@ -32,12 +32,14 @@ function CatalogChildRow({
         mb: 0.25,
         pl: 4.5,
         pr: 1.5,
-        minHeight: 40,
+        minHeight: 36,
+        py: 0.5,
       }}
     >
       <ListItemText
         primary={label}
         primaryTypographyProps={{
+          fontSize: "14px",
           noWrap: true,
           fontWeight: isActive ? 700 : 500,
         }}
