@@ -1,7 +1,7 @@
 const motionTransition = "opacity 180ms ease-in-out";
 const expandedCapsuleChildrenMaxHeight = "calc(100vh - 260px)";
 const capsuleChildrenContentInset = 4.5;
-const capsuleRowTextInset = 1.5;
+const capsuleRowTextInset = 0;
 
 function getCapsuleRowSx(isOverlaySidebar: boolean) {
   return {
@@ -15,16 +15,23 @@ function getCapsuleRowSx(isOverlaySidebar: boolean) {
       opacity: 1,
       transition: "opacity 120ms ease",
     },
-    "& .capsule-row-actions": {
+    "& .capsule-row-actions-slot": {
+      display: "flex",
+      flex: "0 0 auto",
       opacity: isOverlaySidebar ? 1 : 0,
-      width: 32,
+      width: isOverlaySidebar ? 32 : 0,
       height: 32,
       minWidth: 0,
-      p: 0.5,
       overflow: "hidden",
       pointerEvents: isOverlaySidebar ? "auto" : "none",
       transform: isOverlaySidebar ? "translateX(0)" : "translateX(6px)",
       transition: "opacity 160ms ease, transform 180ms ease",
+    },
+    "& .capsule-row-actions": {
+      width: 32,
+      height: 32,
+      minWidth: 0,
+      flexShrink: 0,
     },
     ...(!isOverlaySidebar
       ? {
@@ -34,18 +41,20 @@ function getCapsuleRowSx(isOverlaySidebar: boolean) {
             },
         }
       : {}),
-    "&:hover .capsule-row-actions": {
+    "&:hover .capsule-row-actions-slot": {
       opacity: 1,
+      width: 32,
       transform: "translateX(0)",
       pointerEvents: "auto",
     },
-    "&:focus-within .capsule-row-actions": {
+    "&:focus-within .capsule-row-actions-slot": {
       opacity: 1,
+      width: 32,
       transform: "translateX(0)",
       pointerEvents: "auto",
     },
     "@media (prefers-reduced-motion: reduce)": {
-      "& .capsule-row-actions": {
+      "& .capsule-row-actions-slot": {
         transition: "none",
         transform: "none",
       },

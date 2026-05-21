@@ -67,19 +67,21 @@ function CapsuleActionsButton({
   }
 
   return (
-    <IconButton
-      className="capsule-row-actions"
-      aria-label={t("capsule.openCapsuleActions", { name: capsuleName })}
-      size="small"
-      tabIndex={capsuleChildTabIndex}
-      disabled={isInteractionDisabled}
-      onClick={(event) => {
-        event.stopPropagation();
-        onOpenCapsuleActions(event, capsule);
-      }}
-    >
-      <MoreVertRoundedIcon fontSize="small" />
-    </IconButton>
+    <Box className="capsule-row-actions-slot">
+      <IconButton
+        className="capsule-row-actions"
+        aria-label={t("capsule.openCapsuleActions", { name: capsuleName })}
+        size="small"
+        tabIndex={capsuleChildTabIndex}
+        disabled={isInteractionDisabled}
+        onClick={(event) => {
+          event.stopPropagation();
+          onOpenCapsuleActions(event, capsule);
+        }}
+      >
+        <MoreVertRoundedIcon fontSize="small" />
+      </IconButton>
+    </Box>
   );
 }
 

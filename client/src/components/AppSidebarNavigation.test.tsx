@@ -64,19 +64,23 @@ describe("AppSidebarNavigation", () => {
     cleanup();
   });
 
-  test("keeps reserved desktop capsule action space hidden until hover or focus", () => {
+  test("does not reserve desktop capsule action space until hover or focus", () => {
     const { container } = renderNavigation();
 
     const rowAction = screen.getByRole("button", {
       name: "Capsule actions Modified capsule",
     });
+    const rowActionSlot = rowAction.closest(".capsule-row-actions-slot");
     const unsavedDot = container.querySelector(".capsule-row-unsaved-dot");
 
+    expect(rowActionSlot).not.toBeNull();
     expect(unsavedDot).toBeVisible();
     expect(rowAction).not.toBeVisible();
-    expect(getComputedStyle(rowAction).width).toBe("32px");
-    expect(getComputedStyle(rowAction).pointerEvents).toBe("none");
-    expect(getComputedStyle(rowAction).transition).not.toMatch(
+    expect(getComputedStyle(rowActionSlot as Element).width).toBe("0px");
+    expect(getComputedStyle(rowActionSlot as Element).pointerEvents).toBe(
+      "none",
+    );
+    expect(getComputedStyle(rowActionSlot as Element).transition).not.toMatch(
       /(?:^|,\s*)(?:width|padding)\b/,
     );
   });
@@ -98,12 +102,14 @@ describe("AppSidebarNavigation", () => {
     const rowAction = screen.getByRole("button", {
       name: "Capsule actions Modified capsule",
     });
+    const rowActionSlot = rowAction.closest(".capsule-row-actions-slot");
     const unsavedDot = container.querySelector(".capsule-row-unsaved-dot");
 
+    expect(rowActionSlot).not.toBeNull();
     expect(unsavedDot).toBeVisible();
     expect(rowAction).toBeVisible();
-    expect(getComputedStyle(rowAction).width).toBe("32px");
-    expect(getComputedStyle(rowAction).transition).not.toMatch(
+    expect(getComputedStyle(rowActionSlot as Element).width).toBe("32px");
+    expect(getComputedStyle(rowActionSlot as Element).transition).not.toMatch(
       /(?:^|,\s*)(?:width|padding)\b/,
     );
   });
@@ -136,7 +142,7 @@ describe("AppSidebarNavigation", () => {
     );
     expect(getComputedStyle(capsuleRow).marginLeft).toBe("0px");
     expect(getComputedStyle(capsuleRow).paddingLeft).toBe("36px");
-    expect(getComputedStyle(capsuleRow).paddingRight).toBe("12px");
+    expect(getComputedStyle(capsuleRow).paddingRight).toBe("0px");
 
     for (const button of [
       screen.getByRole("button", { name: "New capsule" }),
