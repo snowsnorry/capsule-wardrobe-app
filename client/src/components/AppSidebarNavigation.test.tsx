@@ -76,6 +76,9 @@ describe("AppSidebarNavigation", () => {
     expect(rowActionSlot).not.toBeNull();
     expect(unsavedDot).toBeVisible();
     expect(rowAction).not.toBeVisible();
+    expect(getComputedStyle(rowActionSlot as Element).position).toBe(
+      "absolute",
+    );
     expect(getComputedStyle(rowActionSlot as Element).width).toBe("0px");
     expect(getComputedStyle(rowActionSlot as Element).pointerEvents).toBe(
       "none",
@@ -108,6 +111,7 @@ describe("AppSidebarNavigation", () => {
     expect(rowActionSlot).not.toBeNull();
     expect(unsavedDot).toBeVisible();
     expect(rowAction).toBeVisible();
+    expect(getComputedStyle(rowActionSlot as Element).position).toBe("static");
     expect(getComputedStyle(rowActionSlot as Element).width).toBe("32px");
     expect(getComputedStyle(rowActionSlot as Element).transition).not.toMatch(
       /(?:^|,\s*)(?:width|padding)\b/,

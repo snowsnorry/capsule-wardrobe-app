@@ -12,12 +12,15 @@ function getCapsuleRowSx(isOverlaySidebar: boolean) {
     minHeight: 36,
     py: 0.5,
     columnGap: 0.5,
+    position: "relative",
     "& .capsule-row-unsaved-dot": {
       opacity: 1,
       transition: "opacity 120ms ease",
     },
     "& .capsule-row-actions-slot": {
       display: "flex",
+      position: isOverlaySidebar ? "static" : "absolute",
+      right: 0,
       flex: "0 0 auto",
       opacity: isOverlaySidebar ? 1 : 0,
       width: isOverlaySidebar ? 32 : 0,
