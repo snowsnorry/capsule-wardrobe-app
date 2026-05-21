@@ -182,10 +182,10 @@ function createTestMcpConfig(
     refreshTokenTtlSeconds: 2592000,
     resourceUrl: RESOURCE,
     scopesSupported: [
+      "mcp:read",
       "profile:read",
       "wardrobe:read",
       "capsules:read",
-      "mcp:read",
     ],
     ...overrides,
   };
@@ -488,8 +488,14 @@ test("mcp oauth metadata endpoints return discoverable JSON", async (t) => {
   expect(resource.response.status).toBe(200);
   expect(resource.json).toMatchObject({
     resource: RESOURCE,
-    authorization_servers: [`${ISSUER}/.well-known/oauth-authorization-server`],
+    authorization_servers: [ISSUER],
     bearer_methods_supported: ["header"],
+    scopes_supported: [
+      "mcp:read",
+      "profile:read",
+      "wardrobe:read",
+      "capsules:read",
+    ],
   });
 
   const server = await requestJson(
@@ -1367,8 +1373,12 @@ test("mcp rejects missing, malformed, wrong audience, wrong scope, and expired t
 
   const missing = await requestJson(baseUrl, "/mcp");
   expect(missing.response.status).toBe(401);
-  expect(missing.response.headers.get("www-authenticate")).toContain(
-    "/.well-known/oauth-protected-resource",
+  expect(missing.json).toEqual({ error: "missing_token" });
+  const missingChallenge = missing.response.headers.get("www-authenticate");
+  expect(missingChallenge).toContain('Bearer realm="capsule-wardrobe-mcp"');
+  expect(missingChallenge).toContain("resource_metadata=");
+  expect(missingChallenge).toContain(
+    `resource_metadata="${ISSUER}/.well-known/oauth-protected-resource"`,
   );
 
   const malformed = await requestJson(baseUrl, "/mcp", {

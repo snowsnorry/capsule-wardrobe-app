@@ -1,8 +1,8 @@
 export const MCP_READ_SCOPES = [
+  "mcp:read",
   "profile:read",
   "wardrobe:read",
   "capsules:read",
-  "mcp:read",
 ] as const;
 
 export type McpReadScope = (typeof MCP_READ_SCOPES)[number];

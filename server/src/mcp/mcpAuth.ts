@@ -61,6 +61,11 @@ function unauthorized(res, config, error = "invalid_token") {
   return res.status(401).json({ error });
 }
 
+function missingToken(res, config) {
+  res.setHeader("WWW-Authenticate", buildBearerChallenge({ config }));
+  return res.status(401).json({ error: "missing_token" });
+}
+
 export function createMcpAuthMiddleware(context) {
   const config = context.mcpOAuthConfig ?? createMcpOAuthConfig();
 
@@ -72,7 +77,7 @@ export function createMcpAuthMiddleware(context) {
     const token = parseBearerToken(req);
     if (!token) {
       logInfo("[mcp/access/failure]", { error: "missing_token" });
-      return unauthorized(res, config, "invalid_token");
+      return missingToken(res, config);
     }
 
     const claims = verifyAccessTokenSignature(token, config.jwtSecret);

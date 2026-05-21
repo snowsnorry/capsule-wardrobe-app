@@ -873,9 +873,7 @@ export function registerMcpOAuthRoutes(app, context) {
     res.json({
       resource: config.resourceUrl,
       resource_name: CONSENT_APP_NAME,
-      authorization_servers: [
-        buildIssuerUrl(config, "/.well-known/oauth-authorization-server"),
-      ],
+      authorization_servers: [config.issuer],
       bearer_methods_supported: ["header"],
       scopes_supported: config.scopesSupported,
     });
