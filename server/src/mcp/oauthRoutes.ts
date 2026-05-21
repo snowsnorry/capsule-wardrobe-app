@@ -545,10 +545,6 @@ function validateRegistrationRequest(
     return { error: "invalid_client_metadata" };
   }
 
-  logInfo("[mcp/oauth/register/request]", {
-    body: JSON.stringify(body, null, 2),
-  });
-
   const redirectUris = readStringArray(body.redirect_uris);
   if (
     redirectUris.length === 0 ||

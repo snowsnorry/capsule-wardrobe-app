@@ -19,6 +19,7 @@ const CLIENT_ID = "chatgpt-dev";
 const REDIRECT_URI = "https://chatgpt.com/oauth/callback";
 const DYNAMIC_REDIRECT_URI = "http://127.0.0.1:49387/callback";
 const JWT_SECRET = "test-mcp-jwt-secret";
+const MCP_ACCEPT = "application/json, text/event-stream";
 const CODE_VERIFIER =
   "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~";
 const CODE_CHALLENGE = createPkceS256Challenge(CODE_VERIFIER);
@@ -370,30 +371,27 @@ test("oauth PKCE code flow issues an access token accepted by mcp", async (t) =>
   const { baseUrl } = await startMcpTestServer(t);
 
   const { token } = await approveAndExchangeCode(baseUrl);
-
-  const mcp = await requestJson(baseUrl, "/mcp", {
-    headers: { authorization: `Bearer ${token}` },
-  });
-  expect(mcp.response.status).toBe(200);
-  expect(mcp.json).toEqual({
-    ok: true,
-    service: "capsule-wardrobe-mcp",
-    subject: "person@example.com",
-    scopes: ["mcp:read", "wardrobe:read"],
-  });
-
-  const tools = await requestJson(baseUrl, "/mcp", {
-    method: "POST",
-    headers: { authorization: `Bearer ${token}` },
-    body: { jsonrpc: "2.0", id: 1, method: "tools/list" },
-  });
-  expect(tools.response.status).toBe(200);
-  expect(tools.json.result).toEqual({ tools: [] });
+  const mcpHeaders = {
+    accept: MCP_ACCEPT,
+    authorization: `Bearer ${token}`,
+  };
 
   const initialize = await requestJson(baseUrl, "/mcp", {
     method: "POST",
-    headers: { authorization: `Bearer ${token}` },
-    body: { jsonrpc: "2.0", id: 2, method: "initialize" },
+    headers: mcpHeaders,
+    body: {
+      jsonrpc: "2.0",
+      id: 2,
+      method: "initialize",
+      params: {
+        protocolVersion: "2025-03-26",
+        capabilities: {},
+        clientInfo: {
+          name: "capsule-wardrobe-test-client",
+          version: "0.1.0",
+        },
+      },
+    },
   });
   expect(initialize.response.status).toBe(200);
   expect(initialize.json).toMatchObject({
@@ -402,26 +400,66 @@ test("oauth PKCE code flow issues an access token accepted by mcp", async (t) =>
 
   const initialized = await requestJson(baseUrl, "/mcp", {
     method: "POST",
-    headers: { authorization: `Bearer ${token}` },
+    headers: mcpHeaders,
     body: { jsonrpc: "2.0", method: "notifications/initialized" },
   });
   expect(initialized.response.status).toBe(202);
-  expect(initialized.json).toEqual({ ok: true });
 
-  const diagnosticPost = await requestJson(baseUrl, "/mcp", {
+  const tools = await requestJson(baseUrl, "/mcp", {
     method: "POST",
-    headers: { authorization: `Bearer ${token}` },
-    body: {},
+    headers: mcpHeaders,
+    body: { jsonrpc: "2.0", id: 1, method: "tools/list" },
   });
-  expect(diagnosticPost.response.status).toBe(200);
-  expect(diagnosticPost.json.service).toBe("capsule-wardrobe-mcp");
+  expect(tools.response.status).toBe(200);
+  expect(tools.json.result).toMatchObject({
+    tools: [
+      {
+        name: "ping",
+        description:
+          "Check that the Capsule Wardrobe MCP server is reachable and authenticated.",
+        inputSchema: {
+          type: "object",
+          properties: {},
+        },
+      },
+    ],
+  });
+
+  const ping = await requestJson(baseUrl, "/mcp", {
+    method: "POST",
+    headers: mcpHeaders,
+    body: {
+      jsonrpc: "2.0",
+      id: 4,
+      method: "tools/call",
+      params: { name: "ping", arguments: {} },
+    },
+  });
+  expect(ping.response.status).toBe(200);
+  expect(ping.json).toMatchObject({
+    result: {
+      content: [
+        {
+          type: "text",
+          text: expect.stringContaining('"ok":true'),
+        },
+      ],
+      structuredContent: {
+        ok: true,
+        service: "capsule-wardrobe-mcp",
+        authenticated: true,
+        subject: "person@example.com",
+        scopes: ["mcp:read", "wardrobe:read"],
+      },
+    },
+  });
 
   const unknown = await requestJson(baseUrl, "/mcp", {
     method: "POST",
-    headers: { authorization: `Bearer ${token}` },
+    headers: mcpHeaders,
     body: { jsonrpc: "2.0", id: 3, method: "unknown/method" },
   });
-  expect(unknown.response.status).toBe(404);
+  expect(unknown.response.status).toBe(200);
   expect(unknown.json).toMatchObject({ error: { code: -32601 } });
 });
 
@@ -494,14 +532,19 @@ test("oauth dynamic registered public client completes PKCE flow without client 
   expect(withSecret.response.status).toBe(400);
   expect(withSecret.json.error).toBe("invalid_client");
 
-  const mcp = await requestJson(baseUrl, "/mcp", {
-    headers: { authorization: `Bearer ${String(token.json.access_token)}` },
+  const tools = await requestJson(baseUrl, "/mcp", {
+    method: "POST",
+    headers: {
+      accept: MCP_ACCEPT,
+      authorization: `Bearer ${String(token.json.access_token)}`,
+    },
+    body: { jsonrpc: "2.0", id: 1, method: "tools/list" },
   });
-  expect(mcp.response.status).toBe(200);
-  expect(mcp.json).toMatchObject({
-    ok: true,
-    service: "capsule-wardrobe-mcp",
-    subject: "person@example.com",
+  expect(tools.response.status).toBe(200);
+  expect(tools.json).toMatchObject({
+    result: {
+      tools: [{ name: "ping" }],
+    },
   });
 });
 

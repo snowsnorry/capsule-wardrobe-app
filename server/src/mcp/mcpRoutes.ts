@@ -1,62 +1,86 @@
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+
+import { logError } from "../logger.js";
 import { createMcpAuthMiddleware } from "./mcpAuth.js";
 
-function diagnosticResponse(req) {
+const MCP_SERVER_NAME = "capsule-wardrobe-mcp";
+const PING_DESCRIPTION =
+  "Check that the Capsule Wardrobe MCP server is reachable and authenticated.";
+
+function pingResponse(req) {
   return {
     ok: true,
-    service: "capsule-wardrobe-mcp",
+    service: MCP_SERVER_NAME,
+    authenticated: true,
     subject: req.mcpAuth.subject,
     scopes: req.mcpAuth.scopes,
   };
 }
 
-function jsonRpcResponse(id: unknown, result: unknown) {
-  return { jsonrpc: "2.0", id, result };
+function createMcpServer(req) {
+  const server = new McpServer({
+    name: MCP_SERVER_NAME,
+    version: "0.1.0",
+  });
+
+  server.registerTool(
+    "ping",
+    {
+      description: PING_DESCRIPTION,
+      inputSchema: {},
+    },
+    async () => {
+      const response = pingResponse(req);
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(response),
+          },
+        ],
+        structuredContent: response,
+      };
+    },
+  );
+
+  return server;
 }
 
-function jsonRpcError(id: unknown, code: number, message: string) {
-  return { jsonrpc: "2.0", id: id ?? null, error: { code, message } };
+function sendMcpInternalError(res) {
+  res.status(500).json({
+    jsonrpc: "2.0",
+    error: {
+      code: -32603,
+      message: "Internal server error",
+    },
+    id: null,
+  });
 }
 
-function handleJsonRpc(req, res) {
-  const body = req.body || {};
-  if (body.method === "initialize") {
-    return res.json(
-      jsonRpcResponse(body.id, {
-        protocolVersion: "2025-03-26",
-        capabilities: { tools: { listChanged: false } },
-        serverInfo: {
-          name: "capsule-wardrobe-mcp",
-          version: "0.1.0",
-        },
-      }),
-    );
-  }
+async function handleMcpRequest(req, res) {
+  const server = createMcpServer(req);
+  const transport = new StreamableHTTPServerTransport({
+    enableJsonResponse: true,
+    sessionIdGenerator: undefined,
+  });
 
-  if (body.method === "notifications/initialized") {
-    return res.status(202).json({ ok: true });
+  try {
+    await server.connect(transport);
+    await transport.handleRequest(req, res, req.body);
+  } catch (error) {
+    logError("[mcp/request]", error);
+    sendMcpInternalError(res);
+  } finally {
+    await transport.close();
+    await server.close();
   }
-
-  if (body.method === "tools/list") {
-    return res.json(jsonRpcResponse(body.id, { tools: [] }));
-  }
-
-  if (!body.method) {
-    return res.json(diagnosticResponse(req));
-  }
-
-  return res
-    .status(404)
-    .json(jsonRpcError(body.id, -32601, "Method not found"));
 }
 
 export function registerMcpRoutes(app, context) {
   const requireMcpBearerToken = createMcpAuthMiddleware(context);
 
-  app.get("/mcp", requireMcpBearerToken, (req, res) => {
-    res.json(diagnosticResponse(req));
-  });
-
-  app.post("/mcp", requireMcpBearerToken, (req, res) => {
-    handleJsonRpc(req, res);
+  app.all("/mcp", requireMcpBearerToken, (req, res) => {
+    void handleMcpRequest(req, res);
   });
 }
