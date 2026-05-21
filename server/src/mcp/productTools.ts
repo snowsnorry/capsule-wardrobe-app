@@ -15,6 +15,93 @@ const DEFAULT_SEARCH_OFFSET = 0;
 const DEFAULT_SEARCH_LIMIT = 20;
 
 const STRING_ARRAY_SCHEMA = z.array(z.string());
+const NULLABLE_STRING_SCHEMA = z.string().nullable();
+const NULLABLE_STRING_ARRAY_SCHEMA = STRING_ARRAY_SCHEMA.nullable();
+const NULLABLE_BOOLEAN_SCHEMA = z.boolean().nullable();
+const NULLABLE_PRICE_SCHEMA = z.union([z.number(), z.string()]).nullable();
+const READ_ONLY_TOOL_ANNOTATIONS = {
+  readOnlyHint: true,
+  destructiveHint: false,
+  idempotentHint: true,
+  openWorldHint: false,
+} as const;
+
+const SEARCH_OPTION_OUTPUT_SCHEMA = z.object({
+  value: z.string(),
+  label: z.string(),
+});
+const PRICE_RANGE_OUTPUT_SCHEMA = z.object({
+  min: z.number(),
+  max: z.number(),
+});
+const GET_SEARCH_OPTIONS_OUTPUT_SCHEMA = z.object({
+  ok: z.boolean(),
+  brands: z.array(SEARCH_OPTION_OUTPUT_SCHEMA),
+  categories: STRING_ARRAY_SCHEMA,
+  seasons: STRING_ARRAY_SCHEMA,
+  formalityLevels: STRING_ARRAY_SCHEMA,
+  styles: STRING_ARRAY_SCHEMA,
+  occasions: STRING_ARRAY_SCHEMA,
+  audience: STRING_ARRAY_SCHEMA,
+  colors: STRING_ARRAY_SCHEMA,
+  patterns: STRING_ARRAY_SCHEMA,
+  silhouettes: STRING_ARRAY_SCHEMA,
+  fits: STRING_ARRAY_SCHEMA,
+  closureTypes: STRING_ARRAY_SCHEMA,
+  priceRange: PRICE_RANGE_OUTPUT_SCHEMA,
+});
+const PRODUCT_SEARCH_PREVIEW_OUTPUT_SCHEMA = z.object({
+  id: z.string(),
+  name: z.string(),
+  url: z.string(),
+  brand: NULLABLE_STRING_SCHEMA,
+  price: NULLABLE_PRICE_SCHEMA,
+  currency: NULLABLE_STRING_SCHEMA,
+  imageUrl: NULLABLE_STRING_SCHEMA,
+  category: NULLABLE_STRING_SCHEMA,
+  colorBase: NULLABLE_STRING_ARRAY_SCHEMA,
+  season: NULLABLE_STRING_ARRAY_SCHEMA,
+  style: NULLABLE_STRING_ARRAY_SCHEMA,
+  formalityLevel: NULLABLE_STRING_ARRAY_SCHEMA,
+  isSavedToWardrobe: NULLABLE_BOOLEAN_SCHEMA,
+});
+const SEARCH_OUTPUT_SCHEMA = z.object({
+  ok: z.boolean(),
+  items: z.array(PRODUCT_SEARCH_PREVIEW_OUTPUT_SCHEMA),
+  total: z.number(),
+  offset: z.number(),
+  limit: z.number(),
+});
+const PRODUCT_DETAIL_OUTPUT_SCHEMA = z.object({
+  id: z.string(),
+  name: z.string(),
+  url: z.string(),
+  description: NULLABLE_STRING_SCHEMA,
+  brand: NULLABLE_STRING_SCHEMA,
+  price: NULLABLE_PRICE_SCHEMA,
+  currency: NULLABLE_STRING_SCHEMA,
+  availability: NULLABLE_STRING_SCHEMA,
+  imageUrl: NULLABLE_STRING_SCHEMA,
+  audience: NULLABLE_STRING_SCHEMA,
+  category: NULLABLE_STRING_SCHEMA,
+  season: NULLABLE_STRING_ARRAY_SCHEMA,
+  formalityLevel: NULLABLE_STRING_ARRAY_SCHEMA,
+  style: NULLABLE_STRING_ARRAY_SCHEMA,
+  occasions: NULLABLE_STRING_ARRAY_SCHEMA,
+  colorBase: NULLABLE_STRING_ARRAY_SCHEMA,
+  pattern: NULLABLE_STRING_SCHEMA,
+  finish: NULLABLE_STRING_SCHEMA,
+  isNeutral: NULLABLE_BOOLEAN_SCHEMA,
+  composition: NULLABLE_STRING_SCHEMA,
+  silhouette: NULLABLE_STRING_SCHEMA,
+  fit: NULLABLE_STRING_SCHEMA,
+  closureType: NULLABLE_STRING_ARRAY_SCHEMA,
+  isSavedToWardrobe: NULLABLE_BOOLEAN_SCHEMA,
+});
+const FETCH_OUTPUT_SCHEMA = z.object({
+  ok: z.boolean(),
+  item: PRODUCT_DETAIL_OUTPUT_SCHEMA,
+});
 
 type ProductRowLike = Record<string, unknown>;
 
@@ -170,7 +257,8 @@ function registerGetSearchOptionsTool(server, deps: ProductToolsDeps) {
     {
       description: GET_SEARCH_OPTIONS_DESCRIPTION,
       inputSchema: {},
-      annotations: { readOnlyHint: true, idempotentHint: true },
+      outputSchema: GET_SEARCH_OPTIONS_OUTPUT_SCHEMA,
+      annotations: READ_ONLY_TOOL_ANNOTATIONS,
     },
     async () => {
       const options = await deps.getSearchOptionsImpl(deps.profileEmail);
@@ -192,7 +280,8 @@ function registerSearchTool(
     {
       description: SEARCH_DESCRIPTION,
       inputSchema: getSearchInputSchema(schemaOptions),
-      annotations: { readOnlyHint: true, idempotentHint: true },
+      outputSchema: SEARCH_OUTPUT_SCHEMA,
+      annotations: READ_ONLY_TOOL_ANNOTATIONS,
     },
     async (args) => {
       try {
@@ -229,7 +318,8 @@ function registerFetchTool(server, deps: ProductToolsDeps) {
         id: z.string().optional(),
         url: z.string().optional(),
       },
-      annotations: { readOnlyHint: true, idempotentHint: true },
+      outputSchema: FETCH_OUTPUT_SCHEMA,
+      annotations: READ_ONLY_TOOL_ANNOTATIONS,
     },
     async (args) => {
       const id = normalizeOptionalString(args?.id);

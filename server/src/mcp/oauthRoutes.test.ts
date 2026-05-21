@@ -26,6 +26,12 @@ const CODE_VERIFIER =
 const CODE_CHALLENGE = createPkceS256Challenge(CODE_VERIFIER);
 const SEARCH_DESCRIPTION =
   "Search the product catalog with wardrobe-relevant filters. `query` is optional. Use `get_search_options` to discover valid filter values before applying filters. Prefer exact option values from `get_search_options`; do not invent filter values.";
+const EXPECTED_READ_ONLY_TOOL_ANNOTATIONS = {
+  readOnlyHint: true,
+  destructiveHint: false,
+  idempotentHint: true,
+  openWorldHint: false,
+};
 const EXPECTED_SEARCH_ENUMS = {
   category: ["top", "outerwear"],
   season: ["autumn", "winter"],
@@ -356,6 +362,8 @@ type McpResult = Record<string, unknown> & {
     name: string;
     description?: string;
     inputSchema?: Record<string, unknown>;
+    outputSchema?: Record<string, unknown>;
+    annotations?: Record<string, unknown>;
   }>;
 };
 
@@ -374,6 +382,27 @@ function expectMcpToolNames(response) {
     "search",
     "fetch",
   ]);
+}
+
+function expectReadOnlyToolMetadata(response, name: string) {
+  const tool = getMcpTool(response, name);
+  expect(tool?.annotations).toMatchObject(EXPECTED_READ_ONLY_TOOL_ANNOTATIONS);
+}
+
+function expectOutputSchemaProperties(
+  response,
+  name: string,
+  expectedProperties: readonly string[],
+) {
+  const outputSchema = getMcpTool(response, name)?.outputSchema || {};
+  const properties = outputSchema.properties as Record<string, unknown>;
+  expect(outputSchema.type).toBe("object");
+  expect(Object.keys(properties || {})).toEqual(
+    expect.arrayContaining([...expectedProperties]),
+  );
+  expect(outputSchema.required).toEqual(
+    expect.arrayContaining([...expectedProperties]),
+  );
 }
 
 function expectSearchFacetEnum(
@@ -704,6 +733,40 @@ test("oauth PKCE code flow issues an access token accepted by mcp", async (t) =>
   });
   expect(tools.response.status).toBe(200);
   expectMcpToolNames(tools);
+  for (const toolName of ["ping", "get_search_options", "search", "fetch"]) {
+    expectReadOnlyToolMetadata(tools, toolName);
+  }
+  expectOutputSchemaProperties(tools, "ping", [
+    "ok",
+    "service",
+    "authenticated",
+    "subject",
+    "scopes",
+  ]);
+  expectOutputSchemaProperties(tools, "get_search_options", [
+    "ok",
+    "brands",
+    "categories",
+    "seasons",
+    "formalityLevels",
+    "styles",
+    "occasions",
+    "audience",
+    "colors",
+    "patterns",
+    "silhouettes",
+    "fits",
+    "closureTypes",
+    "priceRange",
+  ]);
+  expectOutputSchemaProperties(tools, "search", [
+    "ok",
+    "items",
+    "total",
+    "offset",
+    "limit",
+  ]);
+  expectOutputSchemaProperties(tools, "fetch", ["ok", "item"]);
   expect(mcpResult(tools).tools?.[0]).toMatchObject({
     name: "ping",
     description:

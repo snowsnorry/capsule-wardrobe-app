@@ -1,5 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import { z } from "zod";
 
 import { logError } from "../logger.js";
 import { createMcpAuthMiddleware } from "./mcpAuth.js";
@@ -8,6 +9,19 @@ import { registerProductTools } from "./productTools.js";
 const MCP_SERVER_NAME = "capsule-wardrobe-mcp";
 const PING_DESCRIPTION =
   "Check that the Capsule Wardrobe MCP server is reachable and authenticated.";
+const READ_ONLY_TOOL_ANNOTATIONS = {
+  readOnlyHint: true,
+  destructiveHint: false,
+  idempotentHint: true,
+  openWorldHint: false,
+} as const;
+const PING_OUTPUT_SCHEMA = z.object({
+  ok: z.boolean(),
+  service: z.string(),
+  authenticated: z.boolean(),
+  subject: z.string(),
+  scopes: z.array(z.string()),
+});
 
 function pingResponse(req) {
   return {
@@ -30,6 +44,8 @@ async function createMcpServer(req, context) {
     {
       description: PING_DESCRIPTION,
       inputSchema: {},
+      outputSchema: PING_OUTPUT_SCHEMA,
+      annotations: READ_ONLY_TOOL_ANNOTATIONS,
     },
     async () => {
       const response = pingResponse(req);
