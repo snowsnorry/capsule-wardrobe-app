@@ -20,6 +20,10 @@ import {
   getProductsWithEmbeddingsByUrlsInOrder,
   hasProfileByEmail,
 } from "./productOptions.js";
+import {
+  getProductByIdForEmail,
+  getProductByUrlForEmail,
+} from "./productLookup.js";
 
 function useQueuedSql(results: SqlResultLike[]) {
   const statements: string[] = [];
@@ -123,4 +127,37 @@ test("product url lookups short-circuit empty input and preserve normalized url 
   ).toEqual([{ ...product, embedding: [0.1, 0.2] }]);
   expect(values[0]).toEqual([["https://example.com/shirt"]]);
   expect(values[1]).toEqual([["https://example.com/shirt"]]);
+});
+
+test("product MCP fetch lookups include wardrobe saved state by id and exact url", async () => {
+  const product = {
+    id: "p1",
+    name: "Shirt",
+    url: "https://example.com/shirt",
+    distance: null,
+    isSavedToWardrobe: true,
+  };
+  const { statements, values } = useQueuedSql([[product], [product]]);
+
+  expect(await getProductByIdForEmail(" p1 ", "person@example.com")).toEqual(
+    product,
+  );
+  expect(
+    await getProductByUrlForEmail(
+      " https://example.com/shirt ",
+      "person@example.com",
+    ),
+  ).toEqual(product);
+
+  expect(statements[0]).toMatch(/where products\.id =/i);
+  expect(statements[0]).toMatch(/wardrobe\.profile_email =/i);
+  expect(statements[1]).toMatch(/where products\.url =/i);
+  expect(statements[1]).toMatch(/wardrobe\.source = 'from_catalog'/i);
+  expect(values[0]).toEqual(["person@example.com", "p1"]);
+  expect(values[1]).toEqual([
+    "person@example.com",
+    "https://example.com/shirt",
+  ]);
+  expect(await getProductByIdForEmail("", "person@example.com")).toBeNull();
+  expect(await getProductByUrlForEmail("", "person@example.com")).toBeNull();
 });

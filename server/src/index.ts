@@ -55,6 +55,7 @@ import {
   getSearchStats,
   runSavedSearch,
 } from "./searchStore.js";
+import { runMcpProductSearch } from "./mcp/productSearch.js";
 import {
   clearWardrobeJobsForEmail,
   getWardrobeJob,
@@ -86,6 +87,8 @@ import {
   deleteWardrobeItemFromCatalogByUrl,
   getPasskeyByCredentialId,
   getMcpRegisteredClient,
+  getProductByIdForEmail,
+  getProductByUrlForEmail,
   getProductsByUrlsInOrder,
   getUploadedWardrobeItemById,
   hasActiveMcpGrant,
@@ -237,6 +240,8 @@ function createAppDependencies(options: Record<string, unknown> = {}) {
     getPartialRegenerationJobImpl: getPartialRegenerationJob,
     getPasskeyByCredentialIdImpl: getPasskeyByCredentialId,
     getPatternOptionsImpl: getPatternOptions,
+    getProductByIdForEmailImpl: getProductByIdForEmail,
+    getProductByUrlForEmailImpl: getProductByUrlForEmail,
     getProductsByUrlsInOrderImpl: getProductsByUrlsInOrder,
     getProfileImpl: getProfile,
     getSavedSearchImpl: getSavedSearch,
@@ -274,6 +279,7 @@ function createAppDependencies(options: Record<string, unknown> = {}) {
     resolveActiveCapsuleImpl: resolveActiveCapsule,
     revertCapsuleImpl: revertCapsule,
     revokeSessionImpl: revokeSession,
+    runMcpProductSearchImpl: runMcpProductSearch,
     runSavedSearchImpl: runSavedSearch,
     saveCapsuleImpl: saveCapsule,
     saveUploadedWardrobeItemsImpl: saveUploadedWardrobeItemsByEmail,

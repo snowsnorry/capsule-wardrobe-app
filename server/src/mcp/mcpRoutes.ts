@@ -3,6 +3,7 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 
 import { logError } from "../logger.js";
 import { createMcpAuthMiddleware } from "./mcpAuth.js";
+import { registerProductTools } from "./productTools.js";
 
 const MCP_SERVER_NAME = "capsule-wardrobe-mcp";
 const PING_DESCRIPTION =
@@ -18,7 +19,7 @@ function pingResponse(req) {
   };
 }
 
-function createMcpServer(req) {
+async function createMcpServer(req, context) {
   const server = new McpServer({
     name: MCP_SERVER_NAME,
     version: "0.1.0",
@@ -44,6 +45,14 @@ function createMcpServer(req) {
     },
   );
 
+  await registerProductTools(server, {
+    profileEmail: req.mcpAuth.subject,
+    runSearchImpl: context.runMcpProductSearchImpl,
+    getSearchOptionsImpl: context.getSearchOptionsImpl,
+    getProductByIdImpl: context.getProductByIdForEmailImpl,
+    getProductByUrlImpl: context.getProductByUrlForEmailImpl,
+  });
+
   return server;
 }
 
@@ -58,8 +67,8 @@ function sendMcpInternalError(res) {
   });
 }
 
-async function handleMcpRequest(req, res) {
-  const server = createMcpServer(req);
+async function handleMcpRequest(req, res, context) {
+  const server = await createMcpServer(req, context);
   const transport = new StreamableHTTPServerTransport({
     enableJsonResponse: true,
     sessionIdGenerator: undefined,
@@ -81,6 +90,6 @@ export function registerMcpRoutes(app, context) {
   const requireMcpBearerToken = createMcpAuthMiddleware(context);
 
   app.all("/mcp", requireMcpBearerToken, (req, res) => {
-    void handleMcpRequest(req, res);
+    void handleMcpRequest(req, res, context);
   });
 }

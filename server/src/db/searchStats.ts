@@ -16,7 +16,12 @@ const PRICE_BUCKET_COUNT = 100;
 
 type SearchStatsInput = Omit<
   SearchProductsInput,
-  "queryEmbedding" | "semanticDistanceThreshold" | "page"
+  | "queryEmbedding"
+  | "semanticDistanceThreshold"
+  | "page"
+  | "profileEmail"
+  | "offset"
+  | "limit"
 >;
 type SearchStatsFilters = Required<Omit<SearchStatsInput, "urlPrefix">>;
 type SearchStatsFacetKey = Exclude<

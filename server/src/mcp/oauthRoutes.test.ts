@@ -23,6 +23,140 @@ const MCP_ACCEPT = "application/json, text/event-stream";
 const CODE_VERIFIER =
   "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~";
 const CODE_CHALLENGE = createPkceS256Challenge(CODE_VERIFIER);
+const SEARCH_DESCRIPTION =
+  "Search the product catalog with wardrobe-relevant filters. `query` is optional. Use `get_search_options` to discover valid filter values before applying filters. Prefer exact option values from `get_search_options`; do not invent filter values.";
+const EXPECTED_SEARCH_ENUMS = {
+  category: ["top", "outerwear"],
+  season: ["autumn", "winter"],
+  formalityLevel: ["casual", "formal"],
+  style: ["minimalistic"],
+  occasions: ["office"],
+  audience: ["woman", "man", "all"],
+  color: ["black"],
+  pattern: ["solid"],
+  silhouette: ["straight"],
+  fit: ["regular"],
+  closureType: ["button"],
+} as const;
+type ExpectedSearchEnums = Record<
+  keyof typeof EXPECTED_SEARCH_ENUMS,
+  readonly string[]
+>;
+const FALLBACK_SEARCH_ENUMS = {
+  category: [
+    "bag",
+    "belt",
+    "bottom",
+    "dress",
+    "midlayer",
+    "other",
+    "outerwear",
+    "shoes",
+    "swimwear",
+    "top",
+  ],
+  season: ["autumn", "spring", "summer", "winter"],
+  formalityLevel: ["casual", "formal", "smart_casual"],
+  style: [
+    "minimalistic",
+    "street_style",
+    "romantic",
+    "preppy",
+    "retro",
+    "boho",
+    "nautical",
+    "safari",
+    "equestrian",
+    "military",
+    "grunge",
+    "sporty",
+  ],
+  occasions: ["brunch_in_the_city", "date_night", "everyday_errands", "office"],
+  audience: ["woman", "man", "all"],
+  color: [
+    "beige",
+    "black",
+    "blue",
+    "brown",
+    "burgundy",
+    "denim",
+    "green",
+    "grey",
+    "khaki",
+    "light blue",
+    "metallic",
+    "multicolor",
+    "navy",
+    "orange",
+    "pink",
+    "purple",
+    "red",
+    "white",
+    "yellow",
+  ],
+  pattern: [
+    "abstract",
+    "argyle",
+    "cable",
+    "camo",
+    "check",
+    "color_block",
+    "corduroy",
+    "crocodile",
+    "floral",
+    "graphic",
+    "herringbone",
+    "houndstooth",
+    "jacquard",
+    "lace",
+    "leopard",
+    "logo",
+    "marble",
+    "paisley",
+    "polka_dot",
+    "quilted",
+    "ribbed",
+    "snake",
+    "solid",
+    "stripe",
+    "tie_dye",
+    "waffle",
+    "zebra",
+  ],
+  silhouette: [
+    "a_line",
+    "asymmetric",
+    "balloon",
+    "barrel",
+    "belted",
+    "boxy",
+    "cocoon",
+    "cropped",
+    "draped",
+    "fit_and_flare",
+    "flare",
+    "peplum",
+    "straight",
+    "tapered",
+    "wide_leg",
+    "wrap",
+  ],
+  fit: ["loose", "oversized", "regular", "relaxed", "skinny", "slim"],
+  closureType: [
+    "buckle",
+    "button",
+    "drawstring",
+    "elastic",
+    "hook_and_eye",
+    "lace_up",
+    "magnetic",
+    "snap",
+    "tie_belt",
+    "toggle",
+    "velcro",
+    "zipper",
+  ],
+} as const;
 
 function createTestMcpConfig(
   overrides: Partial<McpOAuthConfig> = {},
@@ -68,6 +202,18 @@ async function startMcpTestServer(t, overrides: Partial<McpOAuthConfig> = {}) {
   return startTestServer(t, {
     overrides: {
       mcpOAuthConfig: createTestMcpConfig(overrides),
+    },
+  });
+}
+
+async function startMcpTestServerWithDependencyOverrides(
+  t,
+  dependencyOverrides: Record<string, unknown>,
+) {
+  return startTestServer(t, {
+    overrides: {
+      mcpOAuthConfig: createTestMcpConfig(),
+      ...dependencyOverrides,
     },
   });
 }
@@ -142,6 +288,123 @@ async function approveAndExchangeCode(baseUrl: string) {
   expect(token.response.status).toBe(200);
   expect(token.json.token_type).toBe("Bearer");
   return { code, token: String(token.json.access_token || "") };
+}
+
+function mcpHeaders(token: string) {
+  return {
+    accept: MCP_ACCEPT,
+    authorization: `Bearer ${token}`,
+  };
+}
+
+async function callMcpTool(
+  baseUrl: string,
+  token: string,
+  name: string,
+  args: Record<string, unknown>,
+) {
+  return requestJson(baseUrl, "/mcp", {
+    method: "POST",
+    headers: mcpHeaders(token),
+    body: {
+      jsonrpc: "2.0",
+      id: 10,
+      method: "tools/call",
+      params: { name, arguments: args },
+    },
+  });
+}
+
+async function listMcpTools(baseUrl: string, token: string) {
+  return requestJson(baseUrl, "/mcp", {
+    method: "POST",
+    headers: mcpHeaders(token),
+    body: { jsonrpc: "2.0", id: 1, method: "tools/list" },
+  });
+}
+
+type McpResult = Record<string, unknown> & {
+  structuredContent?: Record<string, unknown> & {
+    items?: Record<string, unknown>[];
+    item?: Record<string, unknown>;
+  };
+  tools?: Array<{
+    name: string;
+    description?: string;
+    inputSchema?: Record<string, unknown>;
+  }>;
+};
+
+function mcpResult(response): McpResult {
+  return (response.json.result || {}) as McpResult;
+}
+
+function getMcpTool(response, name: string) {
+  return mcpResult(response).tools?.find((tool) => tool.name === name);
+}
+
+function expectMcpToolNames(response) {
+  expect(mcpResult(response).tools?.map((tool) => tool.name)).toEqual([
+    "ping",
+    "get_search_options",
+    "search",
+    "fetch",
+  ]);
+}
+
+function expectSearchFacetEnum(
+  inputSchema: Record<string, unknown>,
+  field: keyof typeof EXPECTED_SEARCH_ENUMS,
+  expectedEnums: ExpectedSearchEnums,
+) {
+  const properties = inputSchema.properties as Record<
+    string,
+    Record<string, unknown>
+  >;
+  const property = properties[field] || {};
+  const items = property.items as Record<string, unknown>;
+  expect(property.type).toBe("array");
+  expect(items.type).toBe("string");
+  expect(items.enum).toEqual([...expectedEnums[field]]);
+}
+
+function expectSearchSchemaEnums(
+  inputSchema: Record<string, unknown>,
+  expectedEnums: ExpectedSearchEnums,
+) {
+  for (const field of Object.keys(expectedEnums) as Array<
+    keyof typeof EXPECTED_SEARCH_ENUMS
+  >) {
+    expectSearchFacetEnum(inputSchema, field, expectedEnums);
+  }
+}
+
+function expectNoInternalSearchFields(value: unknown) {
+  const serialized = JSON.stringify(value);
+  expect(serialized).not.toContain("distance");
+  expect(serialized).not.toContain("savedSearch");
+  expect(serialized).not.toContain("pageSize");
+  expect(serialized).not.toContain('"page"');
+  expect(serialized).not.toContain("embedding");
+}
+
+function minimalSearchOptions(overrides: Record<string, unknown> = {}) {
+  return {
+    brands: [{ value: "zara", label: "Zara" }],
+    categories: ["top"],
+    seasons: ["autumn"],
+    formalityLevels: ["casual"],
+    styles: ["minimalistic"],
+    occasions: ["office"],
+    audience: ["woman"],
+    colors: ["black"],
+    patterns: ["solid"],
+    silhouettes: ["straight"],
+    fits: ["regular"],
+    closureTypes: ["button"],
+    priceRange: { min: 10, max: 250 },
+    ...overrides,
+  };
 }
 
 function bearerToken(claims: Record<string, unknown>) {
@@ -371,14 +634,11 @@ test("oauth PKCE code flow issues an access token accepted by mcp", async (t) =>
   const { baseUrl } = await startMcpTestServer(t);
 
   const { token } = await approveAndExchangeCode(baseUrl);
-  const mcpHeaders = {
-    accept: MCP_ACCEPT,
-    authorization: `Bearer ${token}`,
-  };
+  const headers = mcpHeaders(token);
 
   const initialize = await requestJson(baseUrl, "/mcp", {
     method: "POST",
-    headers: mcpHeaders,
+    headers,
     body: {
       jsonrpc: "2.0",
       id: 2,
@@ -400,34 +660,53 @@ test("oauth PKCE code flow issues an access token accepted by mcp", async (t) =>
 
   const initialized = await requestJson(baseUrl, "/mcp", {
     method: "POST",
-    headers: mcpHeaders,
+    headers,
     body: { jsonrpc: "2.0", method: "notifications/initialized" },
   });
   expect(initialized.response.status).toBe(202);
 
   const tools = await requestJson(baseUrl, "/mcp", {
     method: "POST",
-    headers: mcpHeaders,
+    headers,
     body: { jsonrpc: "2.0", id: 1, method: "tools/list" },
   });
   expect(tools.response.status).toBe(200);
-  expect(tools.json.result).toMatchObject({
-    tools: [
-      {
-        name: "ping",
-        description:
-          "Check that the Capsule Wardrobe MCP server is reachable and authenticated.",
-        inputSchema: {
-          type: "object",
-          properties: {},
-        },
-      },
-    ],
+  expectMcpToolNames(tools);
+  expect(mcpResult(tools).tools?.[0]).toMatchObject({
+    name: "ping",
+    description:
+      "Check that the Capsule Wardrobe MCP server is reachable and authenticated.",
+    inputSchema: {
+      type: "object",
+      properties: {},
+    },
   });
+  expect(getMcpTool(tools, "get_search_options")).toMatchObject({
+    name: "get_search_options",
+    description: "Return allowed filter values for product catalog search.",
+    inputSchema: {
+      type: "object",
+      properties: {},
+    },
+  });
+
+  const searchTool = getMcpTool(tools, "search");
+  expect(searchTool?.description).toBe(SEARCH_DESCRIPTION);
+  const searchInputSchema = searchTool?.inputSchema || {};
+  expect(searchInputSchema.required || []).not.toContain("query");
+  expectSearchSchemaEnums(searchInputSchema, EXPECTED_SEARCH_ENUMS);
+  const searchProperties = searchInputSchema.properties as Record<
+    string,
+    Record<string, unknown>
+  >;
+  const brandItems = searchProperties.brand?.items as Record<string, unknown>;
+  expect(searchProperties.brand?.type).toBe("array");
+  expect(brandItems.type).toBe("string");
+  expect(brandItems).not.toHaveProperty("enum");
 
   const ping = await requestJson(baseUrl, "/mcp", {
     method: "POST",
-    headers: mcpHeaders,
+    headers,
     body: {
       jsonrpc: "2.0",
       id: 4,
@@ -456,11 +735,224 @@ test("oauth PKCE code flow issues an access token accepted by mcp", async (t) =>
 
   const unknown = await requestJson(baseUrl, "/mcp", {
     method: "POST",
-    headers: mcpHeaders,
+    headers,
     body: { jsonrpc: "2.0", id: 3, method: "unknown/method" },
   });
   expect(unknown.response.status).toBe(200);
   expect(unknown.json).toMatchObject({ error: { code: -32601 } });
+});
+
+test("mcp get_search_options matches search options endpoint", async (t) => {
+  const { baseUrl } = await startMcpTestServer(t);
+  const token = bearerToken({ scope: "mcp:read wardrobe:read" });
+
+  const httpOptions = await requestJson(baseUrl, "/search/options", {
+    cookie: AUTH_COOKIE,
+  });
+  expect(httpOptions.response.status).toBe(200);
+
+  const mcpOptions = await callMcpTool(
+    baseUrl,
+    token,
+    "get_search_options",
+    {},
+  );
+  expect(mcpOptions.response.status).toBe(200);
+  expect(mcpResult(mcpOptions).structuredContent).toEqual(httpOptions.json);
+});
+
+test("mcp search schema uses cached dynamic search options", async (t) => {
+  let optionsCalls = 0;
+  const { baseUrl } = await startMcpTestServerWithDependencyOverrides(t, {
+    getSearchOptionsImpl: async () => {
+      optionsCalls += 1;
+      return minimalSearchOptions({
+        categories: ["dress"],
+        colors: ["red"],
+        fits: ["slim"],
+      });
+    },
+  });
+  const token = bearerToken({
+    scope: "mcp:read wardrobe:read",
+    sub: "schema-cache@example.com",
+  });
+
+  const firstTools = await listMcpTools(baseUrl, token);
+  const secondTools = await listMcpTools(baseUrl, token);
+
+  expect(firstTools.response.status).toBe(200);
+  expect(secondTools.response.status).toBe(200);
+  expect(optionsCalls).toBe(1);
+  const searchInputSchema = getMcpTool(firstTools, "search")?.inputSchema || {};
+  expectSearchSchemaEnums(searchInputSchema, {
+    category: ["dress"],
+    season: ["autumn"],
+    formalityLevel: ["casual"],
+    style: ["minimalistic"],
+    occasions: ["office"],
+    audience: ["woman"],
+    color: ["red"],
+    pattern: ["solid"],
+    silhouette: ["straight"],
+    fit: ["slim"],
+    closureType: ["button"],
+  });
+});
+
+test("mcp search schema falls back when search options are unavailable", async (t) => {
+  const { baseUrl } = await startMcpTestServerWithDependencyOverrides(t, {
+    getSearchOptionsImpl: async () => {
+      throw new Error("search_options_down");
+    },
+  });
+  const token = bearerToken({
+    scope: "mcp:read wardrobe:read",
+    sub: "schema-fallback@example.com",
+  });
+
+  const tools = await listMcpTools(baseUrl, token);
+
+  expect(tools.response.status).toBe(200);
+  const searchInputSchema = getMcpTool(tools, "search")?.inputSchema || {};
+  expectSearchSchemaEnums(searchInputSchema, FALLBACK_SEARCH_ENUMS);
+});
+
+test("mcp product search accepts empty, query, filters, and pagination inputs", async (t) => {
+  const { baseUrl } = await startMcpTestServer(t);
+  const token = bearerToken({ scope: "mcp:read wardrobe:read" });
+
+  const empty = await callMcpTool(baseUrl, token, "search", {});
+  expect(empty.response.status).toBe(200);
+  expect(mcpResult(empty).structuredContent).toMatchObject({
+    ok: true,
+    total: 1,
+    offset: 0,
+    limit: 20,
+  });
+
+  const queryOnly = await callMcpTool(baseUrl, token, "search", {
+    query: "black blazer",
+  });
+  expect(queryOnly.response.status).toBe(200);
+  expect(mcpResult(queryOnly).structuredContent?.ok).toBe(true);
+
+  const filtersOnly = await callMcpTool(baseUrl, token, "search", {
+    brand: ["acme"],
+    category: ["outerwear"],
+  });
+  expect(filtersOnly.response.status).toBe(200);
+  expect(mcpResult(filtersOnly).structuredContent?.ok).toBe(true);
+
+  const queryWithFilters = await callMcpTool(baseUrl, token, "search", {
+    query: "black blazer",
+    color: ["black"],
+    offset: 5,
+    limit: 75,
+  });
+  expect(queryWithFilters.response.status).toBe(200);
+  expect(mcpResult(queryWithFilters).structuredContent).toMatchObject({
+    ok: true,
+    offset: 5,
+    limit: 50,
+  });
+});
+
+test("mcp product search returns sanitized preview items", async (t) => {
+  const { baseUrl } = await startMcpTestServer(t);
+  const token = bearerToken({ scope: "mcp:read wardrobe:read" });
+
+  const search = await callMcpTool(baseUrl, token, "search", {
+    query: "black blazer",
+  });
+
+  expect(search.response.status).toBe(200);
+  const output = mcpResult(search).structuredContent;
+  expect(output?.items?.[0]).toEqual({
+    id: "product-1",
+    name: "Black Blazer",
+    url: "https://example.com/products/black-blazer",
+    brand: "Acme",
+    price: 120,
+    currency: "USD",
+    imageUrl: "https://example.com/products/black-blazer.jpg",
+    category: "jacket",
+    colorBase: ["black"],
+    season: ["autumn", "winter"],
+    style: ["minimalistic"],
+    formalityLevel: ["formal"],
+    isSavedToWardrobe: true,
+  });
+  expectNoInternalSearchFields(mcpResult(search));
+});
+
+test("mcp product fetch returns sanitized detail by id and url", async (t) => {
+  const { baseUrl } = await startMcpTestServer(t);
+  const token = bearerToken({ scope: "mcp:read wardrobe:read" });
+
+  const byId = await callMcpTool(baseUrl, token, "fetch", {
+    id: "product-1",
+  });
+  expect(byId.response.status).toBe(200);
+  expect(mcpResult(byId).structuredContent).toEqual({
+    ok: true,
+    item: {
+      id: "product-1",
+      name: "Black Blazer",
+      url: "https://example.com/products/black-blazer",
+      description: "A tailored black blazer.",
+      brand: "Acme",
+      price: 120,
+      currency: "USD",
+      availability: "in_stock",
+      imageUrl: "https://example.com/products/black-blazer.jpg",
+      audience: "woman",
+      category: "jacket",
+      season: ["autumn", "winter"],
+      formalityLevel: ["formal"],
+      style: ["minimalistic"],
+      occasions: ["office"],
+      colorBase: ["black"],
+      pattern: "solid",
+      finish: "matte",
+      isNeutral: true,
+      composition: "wool",
+      silhouette: "tailored",
+      fit: "regular",
+      closureType: ["button"],
+      isSavedToWardrobe: true,
+    },
+  });
+  expectNoInternalSearchFields(mcpResult(byId));
+
+  const byUrl = await callMcpTool(baseUrl, token, "fetch", {
+    url: "https://example.com/products/black-blazer",
+  });
+  expect(byUrl.response.status).toBe(200);
+  expect(mcpResult(byUrl).structuredContent?.item?.id).toBe("product-1");
+  expectNoInternalSearchFields(mcpResult(byUrl));
+});
+
+test("mcp product fetch rejects missing or conflicting identifiers", async (t) => {
+  const { baseUrl } = await startMcpTestServer(t);
+  const token = bearerToken({ scope: "mcp:read wardrobe:read" });
+
+  const neither = await callMcpTool(baseUrl, token, "fetch", {});
+  expect(neither.response.status).toBe(200);
+  expect(mcpResult(neither)).toMatchObject({
+    isError: true,
+    structuredContent: { ok: false, error: "invalid_payload" },
+  });
+
+  const both = await callMcpTool(baseUrl, token, "fetch", {
+    id: "product-1",
+    url: "https://example.com/products/black-blazer",
+  });
+  expect(both.response.status).toBe(200);
+  expect(mcpResult(both)).toMatchObject({
+    isError: true,
+    structuredContent: { ok: false, error: "invalid_payload" },
+  });
 });
 
 test("oauth dynamic registered public client completes PKCE flow without client secret", async (t) => {
@@ -541,11 +1033,7 @@ test("oauth dynamic registered public client completes PKCE flow without client 
     body: { jsonrpc: "2.0", id: 1, method: "tools/list" },
   });
   expect(tools.response.status).toBe(200);
-  expect(tools.json).toMatchObject({
-    result: {
-      tools: [{ name: "ping" }],
-    },
-  });
+  expectMcpToolNames(tools);
 });
 
 test("token exchange fails for wrong verifier, reused code, and expired code", async (t) => {

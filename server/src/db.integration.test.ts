@@ -410,6 +410,29 @@ test("db integration filters searchProducts by URL prefix", async () => {
   ).toBe(true);
 });
 
+test("db integration applies explicit search offset and limit", async () => {
+  const { sql, calls } = createSqlMock([
+    [{ total: 3 }] satisfies CountRow[],
+    [
+      { id: "prod-2", name: "Blazer", brand: "Acme" },
+    ] satisfies ProductSearchRow[],
+  ]);
+  setSqlClientOverride(sql);
+
+  const results = await searchProducts({
+    profileEmail: "person@example.com",
+    offset: 20,
+    limit: 10,
+  });
+
+  expect(results.total).toBe(3);
+  expect(results.pageSize).toBe(10);
+  expect(results.items[0]?.id).toBe("prod-2");
+  expect(calls[1].values.filter((value) => value === 10).length).toBe(1);
+  expect(calls[1].values.filter((value) => value === 20).length).toBe(1);
+  expect(calls[1].values).toContain("person@example.com");
+});
+
 test("db integration lists and saves user wardrobe items", async () => {
   const wardrobeRow: WardrobeRow = {
     id: "wardrobe-1",

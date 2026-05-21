@@ -259,12 +259,13 @@ function createSearchStore({
     assertValidSearchPayload(normalized, options);
 
     const isUrlSearch = isHttpUrlQuery(normalized.query);
-    const embedding = isUrlSearch
-      ? null
-      : await resolveSearchEmbeddingImpl({
-          currentSearch,
-          query: normalized.query,
-        });
+    const embedding =
+      !normalized.query || isUrlSearch
+        ? null
+        : await resolveSearchEmbeddingImpl({
+            currentSearch,
+            query: normalized.query,
+          });
     const semanticDistanceThreshold = isUrlSearch
       ? null
       : getSemanticDistanceThreshold(normalized.query);

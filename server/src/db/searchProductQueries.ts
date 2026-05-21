@@ -1,5 +1,4 @@
 import {
-  SEARCH_PAGE_SIZE,
   getFirstRow,
   getResultRows,
   getSqlClient,
@@ -29,6 +28,7 @@ type SearchQueryParams = {
 };
 
 type SearchItemsQueryParams = SearchQueryParams & {
+  limit: number;
   offset: number;
 };
 
@@ -90,6 +90,7 @@ async function querySearchProductItems(
     embeddingVector,
     fit,
     formalityLevel,
+    limit,
     normalizedUrlPrefix,
     occasions,
     offset,
@@ -140,7 +141,7 @@ async function querySearchProductItems(
       case when ${embeddingVector}::text is null then null else embedding <=> ${embeddingVector}::vector end asc nulls last,
       lower(coalesce(brand, '')) asc,
       lower(coalesce(name, '')) asc
-    limit ${SEARCH_PAGE_SIZE}
+    limit ${limit}
     offset ${offset}
   `,
   );

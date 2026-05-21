@@ -19,6 +19,12 @@ import {
   querySearchProductItems,
 } from "./searchProductQueries.js";
 
+type ProductSearchInput = SearchProductsInput & {
+  profileEmail?: string | null;
+  offset?: number;
+  limit?: number;
+};
+
 export async function getSearchByEmail(
   email: string,
 ): Promise<SearchRow | null> {
@@ -106,28 +112,39 @@ export async function upsertSearchByEmail({
 }
 
 export async function searchProducts(
-  input: SearchProductsInput = {},
+  input: ProductSearchInput = {},
 ): Promise<SearchProductsResult> {
   const sql = getSqlClient();
   const currentPage = getSearchPage(input.page);
-  const offset = (currentPage - 1) * SEARCH_PAGE_SIZE;
+  const limit = getSearchLimit(input.limit);
+  const offset = getSearchOffset(input.offset, currentPage);
   const searchQueryParams = buildSearchQueryParams(input);
 
   const [countRow, items] = await Promise.all([
     querySearchProductCount(sql, searchQueryParams),
-    querySearchProductItems(sql, { ...searchQueryParams, offset }),
+    querySearchProductItems(sql, { ...searchQueryParams, limit, offset }),
   ]);
 
   return {
     items,
     total: Number(countRow?.total || 0),
     page: currentPage,
-    pageSize: SEARCH_PAGE_SIZE,
+    pageSize: limit,
   };
 }
 
 function getSearchPage(page) {
   return Number.isInteger(page) && page > 0 ? page : 1;
+}
+
+function getSearchLimit(limit) {
+  return Number.isInteger(limit) && limit > 0 ? limit : SEARCH_PAGE_SIZE;
+}
+
+function getSearchOffset(offset, page) {
+  return Number.isInteger(offset) && offset >= 0
+    ? offset
+    : (page - 1) * SEARCH_PAGE_SIZE;
 }
 
 function getSearchArray(input, key) {

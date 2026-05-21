@@ -45,6 +45,10 @@ export {
   getProductsWithEmbeddingsByUrlsInOrder,
 } from "./db/productOptions.js";
 export {
+  getProductByIdForEmail,
+  getProductByUrlForEmail,
+} from "./db/productLookup.js";
+export {
   buildPriceBuckets,
   getSearchByEmail,
   upsertSearchByEmail,
