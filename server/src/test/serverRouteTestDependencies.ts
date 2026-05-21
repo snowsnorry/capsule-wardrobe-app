@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import {
   CSRF_TOKEN,
   SESSION_ID,
@@ -326,6 +327,96 @@ function createSearchAndGenerationDependencies() {
   };
 }
 
+function createMcpOAuthDependencies() {
+  const authorizationCodes = new Map<string, Record<string, unknown>>();
+  const grants: Record<string, unknown>[] = [];
+  const registeredClients = new Map<string, Record<string, unknown>>();
+
+  return {
+    getMcpRegisteredClientImpl: async (clientId) =>
+      registeredClients.get(clientId) || null,
+    insertMcpAuthorizationCodeImpl: async (payload) => {
+      authorizationCodes.set(payload.codeHash, {
+        ...payload,
+        consumedAt: null,
+        createdAt: new Date().toISOString(),
+      });
+    },
+    insertMcpRegisteredClientImpl: async (payload) => {
+      const now = new Date().toISOString();
+      const client = {
+        clientId: payload.clientId,
+        clientName: payload.clientName,
+        redirectUris: payload.redirectUris,
+        scope: payload.scope,
+        tokenEndpointAuthMethod: "none",
+        grantTypes: "authorization_code",
+        responseTypes: "code",
+        createdAt: now,
+        updatedAt: now,
+      };
+      registeredClients.set(payload.clientId, client);
+      return client;
+    },
+    consumeMcpAuthorizationCodeImpl: async ({
+      codeHash,
+      clientId,
+      redirectUri,
+      codeChallenge,
+      resource,
+    }) => {
+      const entry = authorizationCodes.get(codeHash);
+      if (
+        !entry ||
+        entry.consumedAt ||
+        entry.clientId !== clientId ||
+        entry.redirectUri !== redirectUri ||
+        entry.codeChallenge !== codeChallenge ||
+        entry.resource !== resource ||
+        new Date(String(entry.expiresAt)).getTime() <= Date.now()
+      ) {
+        return null;
+      }
+
+      const consumedAt = new Date().toISOString();
+      entry.consumedAt = consumedAt;
+      return {
+        ...entry,
+        consumedAt,
+      };
+    },
+    hasActiveMcpGrantImpl: async ({ userEmail, clientId, scopes, resource }) =>
+      grants.some(
+        (grant) =>
+          grant.userEmail === userEmail &&
+          grant.clientId === clientId &&
+          grant.scopes === scopes &&
+          grant.resource === resource &&
+          !grant.revokedAt,
+      ),
+    upsertMcpGrantImpl: async ({ userEmail, clientId, scopes, resource }) => {
+      const exists = grants.some(
+        (grant) =>
+          grant.userEmail === userEmail &&
+          grant.clientId === clientId &&
+          grant.scopes === scopes &&
+          grant.resource === resource &&
+          !grant.revokedAt,
+      );
+      if (!exists) {
+        grants.push({
+          userEmail,
+          clientId,
+          scopes,
+          resource,
+          createdAt: new Date().toISOString(),
+          revokedAt: null,
+        });
+      }
+    },
+  };
+}
+
 export function createDependencies(overrides: DependencyOverrides = {}) {
   return {
     ...createAuthDependencies(),
@@ -333,6 +424,7 @@ export function createDependencies(overrides: DependencyOverrides = {}) {
     ...createProfileDependencies(),
     ...createCapsuleDependencies(),
     ...createSearchAndGenerationDependencies(),
+    ...createMcpOAuthDependencies(),
     ...createWardrobeDependencies(),
     ...overrides,
   };

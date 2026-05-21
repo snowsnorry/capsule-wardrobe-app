@@ -34,6 +34,12 @@ const passkeyAuth = vi.hoisted(() => ({
 
 vi.mock("../auth/passkeys", () => passkeyAuth);
 
+const oauthReturn = vi.hoisted(() => ({
+  redirectToOAuthReturnIfPresent: vi.fn(() => false),
+}));
+
+vi.mock("./oauthReturn", () => oauthReturn);
+
 function createSessionContext(
   overrides: Partial<SessionActionContext> = {},
 ): SessionActionContext {
@@ -72,6 +78,7 @@ describe("sessionActions", () => {
     mainScreenLoader.shouldPreloadMainScreenForCurrentPath.mockReturnValue(
       true,
     );
+    oauthReturn.redirectToOAuthReturnIfPresent.mockReturnValue(false);
   });
 
   test("requestCode sends the trimmed email with current locale and moves to code step", async () => {
@@ -157,6 +164,19 @@ describe("sessionActions", () => {
     });
     expect(context.maybeShowPasskeyPrompt).toHaveBeenCalled();
     expect(mainScreenLoader.preloadMainScreen).toHaveBeenCalledTimes(1);
+  });
+
+  test("verifyCode redirects to pending oauth authorize return after existing login", async () => {
+    authApi.verifyLoginCode.mockResolvedValue({
+      user: { email: "person@example.com" },
+    });
+    oauthReturn.redirectToOAuthReturnIfPresent.mockReturnValue(true);
+    const context = createSessionContext();
+
+    await verifyCode(context, { preventDefault: vi.fn() } as never);
+
+    expect(oauthReturn.redirectToOAuthReturnIfPresent).toHaveBeenCalledTimes(1);
+    expect(context.maybeShowPasskeyPrompt).not.toHaveBeenCalled();
   });
 
   test("verifyCode skips MainScreen preload when the current route cannot render it", async () => {

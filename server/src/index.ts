@@ -79,24 +79,30 @@ import { buildWardrobePdfInChild } from "./wardrobePdf.js";
 import { deleteWardrobePdfJob } from "./wardrobePdfJobRegistry.js";
 import {
   checkDatabaseConnection,
+  consumeMcpAuthorizationCode,
   consumePasskeyChallenge,
   deletePasskeyByIdForEmail,
   deleteUploadedWardrobeItemById,
   deleteWardrobeItemFromCatalogByUrl,
   getPasskeyByCredentialId,
+  getMcpRegisteredClient,
   getProductsByUrlsInOrder,
   getUploadedWardrobeItemById,
+  hasActiveMcpGrant,
+  insertMcpAuthorizationCode,
+  insertMcpRegisteredClient,
+  insertPasskey,
+  insertPasskeyChallenge,
   listWardrobeItemsByIdsForEmail,
   listWardrobeItemsByEmail,
   saveUploadedWardrobeItemsByEmail,
   saveWardrobeItemFromCatalogByUrl,
   updateUploadedWardrobeItemDetailsById,
   updateUploadedWardrobeItemMetadataById,
-  insertPasskey,
-  insertPasskeyChallenge,
   listPasskeysByEmail,
   pruneExpiredPasskeyChallenges,
   updatePasskeyAuthentication,
+  upsertMcpGrant,
 } from "./db.js";
 import { configureSharp } from "./ai/sharpConfig.js";
 import {
@@ -150,6 +156,9 @@ import { registerProfileMutationRoutes } from "./routes/profileMutationRoutes.js
 import { registerHealthImageRoutes } from "./routes/healthImageRoutes.js";
 import { registerSessionAuthRoutes } from "./routes/sessionAuthRoutes.js";
 import { registerWardrobeRoutes } from "./routes/wardrobeRoutes.js";
+import { createMcpOAuthConfig } from "./mcp/oauthConfig.js";
+import { registerMcpOAuthRoutes } from "./mcp/oauthRoutes.js";
+import { registerMcpRoutes } from "./mcp/mcpRoutes.js";
 import { logError, logInfo } from "./logger.js";
 
 const sharpConfig = configureSharp();
@@ -236,14 +245,19 @@ function createAppDependencies(options: Record<string, unknown> = {}) {
     getSeasonsImpl: getSeasons,
     getSessionImpl: getSession,
     getSharedCapsuleImpl: getSharedCapsule,
+    getMcpRegisteredClientImpl: getMcpRegisteredClient,
     getStylesImpl: getStyles,
     getUploadedWardrobeItemImpl: getUploadedWardrobeItemById,
     getWardrobeJobImpl: getWardrobeJob,
     googleClientId,
     importSharedCapsuleImpl: importSharedCapsule,
+    insertMcpAuthorizationCodeImpl: insertMcpAuthorizationCode,
+    insertMcpRegisteredClientImpl: insertMcpRegisteredClient,
     insertPasskeyChallengeImpl: insertPasskeyChallenge,
     insertPasskeyImpl: insertPasskey,
+    consumeMcpAuthorizationCodeImpl: consumeMcpAuthorizationCode,
     deleteWardrobeItemFromCatalogImpl: deleteWardrobeItemFromCatalogByUrl,
+    hasActiveMcpGrantImpl: hasActiveMcpGrant,
     listPasskeysImpl: listPasskeysByEmail,
     listWardrobeItemsByIdsImpl: listWardrobeItemsByIdsForEmail,
     listWardrobeItemsImpl: listWardrobeItemsByEmail,
@@ -252,6 +266,7 @@ function createAppDependencies(options: Record<string, unknown> = {}) {
     passkeyOrigin: PASSKEY_ORIGIN,
     passkeyRpId: PASSKEY_RP_ID,
     passkeyRpName: PASSKEY_RP_NAME,
+    mcpOAuthConfig: createMcpOAuthConfig(),
     pruneExpiredPasskeyChallengesImpl: pruneExpiredPasskeyChallenges,
     regenerateCapsuleWardrobeHandler: regenerateCapsuleWardrobe,
     regenerateSelectedCapsuleItemsHandler: regenerateSelectedWardrobeItems,
@@ -278,6 +293,7 @@ function createAppDependencies(options: Record<string, unknown> = {}) {
     updateProfileActiveCapsuleIdImpl: updateProfileActiveCapsuleId,
     updateProfileImpl: updateProfile,
     updateProfileLocaleImpl: updateProfileLocale,
+    upsertMcpGrantImpl: upsertMcpGrant,
     updateUploadedWardrobeItemDetailsImpl:
       updateUploadedWardrobeItemDetailsById,
     updateUploadedWardrobeItemMetadataImpl:
@@ -297,6 +313,7 @@ function createExpressApp(deps) {
   const app = express();
   app.set("trust proxy", 1);
   app.use(express.json({ limit: "100kb" }));
+  app.use(express.urlencoded({ extended: false, limit: "20kb" }));
   applySecurityMiddleware(app, deps.nodeEnv);
   applyCorsMiddleware(app, {
     nodeEnv: deps.nodeEnv,
@@ -352,6 +369,8 @@ function registerAuthenticationRoutes(app, routeContext) {
 }
 
 function registerDomainRoutes(app, routeContext) {
+  registerMcpOAuthRoutes(app, routeContext);
+  registerMcpRoutes(app, routeContext);
   registerProfileReadRoutes(app, routeContext);
   registerWardrobeRoutes(app, routeContext);
   registerCapsuleReadRoutes(app, routeContext);

@@ -12,6 +12,7 @@ import {
   preloadMainScreen,
   shouldPreloadMainScreenForCurrentPath,
 } from "./mainScreenLoader";
+import { redirectToOAuthReturnIfPresent } from "./oauthReturn";
 import { normalizeProfileSettings } from "./profileSettings";
 import type {
   AuthResultResponse,
@@ -116,7 +117,7 @@ async function applyAuthResult(
   context: SessionActionContext,
   result: AuthResultResponse,
   showPasskeyPrompt: boolean,
-) {
+): Promise<boolean> {
   const user = result.user || null;
   if (user && shouldPreloadMainScreenForCurrentPath()) {
     preloadMainScreen();
@@ -137,10 +138,13 @@ async function applyAuthResult(
       infoKey: "auth.signedIn",
       infoParams: null,
     });
+    if (redirectToOAuthReturnIfPresent()) {
+      return true;
+    }
     if (showPasskeyPrompt) {
       void context.maybeShowPasskeyPrompt();
     }
-    return;
+    return false;
   }
 
   context.setUser(user);
@@ -150,9 +154,13 @@ async function applyAuthResult(
     infoKey: "auth.signedIn",
     infoParams: null,
   });
+  if (redirectToOAuthReturnIfPresent()) {
+    return true;
+  }
   if (showPasskeyPrompt) {
     void context.maybeShowPasskeyPrompt();
   }
+  return false;
 }
 
 export async function verifyCode(
@@ -219,7 +227,10 @@ export async function passkeySignIn(context: SessionActionContext) {
     const { authenticateWithPasskey } = await import("../auth/passkeys");
     const result = (await authenticateWithPasskey()) as AuthResultResponse;
     clearRequestCache();
-    await applyAuthResult(context, result, false);
+    const redirected = await applyAuthResult(context, result, false);
+    if (redirected) {
+      return;
+    }
     context.setStatus({
       loading: false,
       error: "",

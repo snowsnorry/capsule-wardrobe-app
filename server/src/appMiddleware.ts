@@ -79,6 +79,13 @@ export function createRateLimiters() {
       legacyHeaders: false,
       message: { error: "too_many_requests" },
     }),
+    oauthRegisterLimiter: rateLimit({
+      windowMs: 15 * 60 * 1000,
+      max: 60,
+      standardHeaders: true,
+      legacyHeaders: false,
+      message: { error: "too_many_requests" },
+    }),
   };
 }
 

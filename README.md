@@ -113,6 +113,9 @@ Common optional values:
 - `NODE_ENV` — defaults to `development`
 - `AUTH_TEST_MODE` — prints sign-in codes to logs outside production
 - `PASSKEY_RP_NAME` — optional WebAuthn relying party display name, defaults to `Capsule Wardrobe`
+- `MCP_OAUTH_ENABLED` — enables the ChatGPT custom MCP connector OAuth surface; defaults to enabled outside production and disabled in production
+- `MCP_OAUTH_ISSUER`, `MCP_RESOURCE_URL`, `MCP_JWT_SECRET`, and a ChatGPT/Codex redirect allowlist — required when MCP OAuth is enabled in production
+- `MCP_ACCESS_TOKEN_TTL_SECONDS`, `MCP_AUTH_CODE_TTL_SECONDS` — optional MCP OAuth connector controls
 - `SESSION_PRUNE_MIN_INTERVAL_MS` — session cleanup throttle
 - `WARDROBE_PDF_CHILD_TIMEOUT_MS` — PDF child-process timeout
 - `WARDROBE_UPLOAD_CHILD_TIMEOUT_MS` — uploaded wardrobe image normalization child-process timeout
@@ -318,6 +321,7 @@ Minimum env for this path:
 Optional:
 
 - `GOOGLE_CLIENT_ID`
+- `MCP_OAUTH_ENABLED=true`, `MCP_OAUTH_ISSUER=https://<your-service>.onrender.com`, `MCP_RESOURCE_URL=https://<your-service>.onrender.com/mcp`, `MCP_JWT_SECRET`, and a ChatGPT/Codex redirect allowlist when enabling the Phase 1 MCP connector OAuth surface
 - AI provider keys you actually use
 
 ### Render client-only proxy server

@@ -39,3 +39,41 @@ export const PASSKEY_ORIGIN =
   process.env.PASSKEY_ORIGIN || "http://localhost:3000";
 export const PASSKEY_CHALLENGE_COOKIE = "passkey_challenge";
 export const PASSKEY_CHALLENGE_TTL_MS = 5 * 60 * 1000;
+
+function readBooleanEnv(
+  value: string | undefined,
+  defaultValue: boolean,
+): boolean {
+  if (value === undefined) {
+    return defaultValue;
+  }
+
+  return ["1", "true", "yes"].includes(String(value).toLowerCase());
+}
+
+export const MCP_OAUTH_ENABLED = readBooleanEnv(
+  process.env.MCP_OAUTH_ENABLED,
+  NODE_ENV !== "production",
+);
+export const MCP_OAUTH_ISSUER =
+  process.env.MCP_OAUTH_ISSUER ||
+  (NODE_ENV === "production" ? "" : `http://localhost:${PORT}`);
+export const MCP_RESOURCE_URL =
+  process.env.MCP_RESOURCE_URL ||
+  (MCP_OAUTH_ISSUER ? `${MCP_OAUTH_ISSUER.replace(/\/+$/, "")}/mcp` : "");
+export const MCP_ACCESS_TOKEN_TTL_SECONDS = Number(
+  process.env.MCP_ACCESS_TOKEN_TTL_SECONDS || 3600,
+);
+export const MCP_AUTH_CODE_TTL_SECONDS = Number(
+  process.env.MCP_AUTH_CODE_TTL_SECONDS || 300,
+);
+export const MCP_JWT_SECRET =
+  process.env.MCP_JWT_SECRET ||
+  (NODE_ENV === "production" ? "" : "development-mcp-jwt-secret");
+export const MCP_ALLOWED_CLIENT_IDS = process.env.MCP_ALLOWED_CLIENT_IDS || "";
+export const MCP_ALLOWED_CLIENT_METADATA_HOSTS =
+  process.env.MCP_ALLOWED_CLIENT_METADATA_HOSTS || "";
+export const MCP_ALLOWED_REDIRECT_URIS =
+  process.env.MCP_ALLOWED_REDIRECT_URIS || "";
+export const MCP_ALLOWED_REDIRECT_ORIGINS =
+  process.env.MCP_ALLOWED_REDIRECT_ORIGINS || "";

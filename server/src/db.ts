@@ -5,7 +5,11 @@ export {
   hashCapsuleContent,
   hasAffectedRows,
 } from "./db/core.js";
-export { checkDatabaseConnection, ensureTables } from "./db/schema.js";
+export {
+  checkDatabaseConnection,
+  ensureMcpOAuthTables,
+  ensureTables,
+} from "./db/schema.js";
 export {
   pruneLoginCodes,
   upsertLoginCode,
@@ -81,3 +85,12 @@ export {
   pruneExpiredSharedCapsules,
   deleteProfileByEmail,
 } from "./db/profileCapsules.js";
+export {
+  consumeMcpAuthorizationCode,
+  getMcpAuthorizationCode,
+  getMcpRegisteredClient,
+  hasActiveMcpGrant,
+  insertMcpAuthorizationCode,
+  insertMcpRegisteredClient,
+  upsertMcpGrant,
+} from "./db/mcpOAuth.js";

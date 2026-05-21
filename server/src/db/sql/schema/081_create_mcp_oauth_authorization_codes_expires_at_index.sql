@@ -1,0 +1,2 @@
+create index if not exists mcp_oauth_authorization_codes_expires_at_idx
+on mcp_oauth_authorization_codes (expires_at)

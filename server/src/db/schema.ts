@@ -45,6 +45,15 @@ const WARDROBE_SCHEMA_FILES = [
   "062_create_wardrobe_profile_email_from_catalog_url_index.sql",
 ] as const;
 
+const MCP_OAUTH_SCHEMA_FILES = [
+  "001_create_pgcrypto_extension.sql",
+  "080_create_mcp_oauth_authorization_codes_table.sql",
+  "081_create_mcp_oauth_authorization_codes_expires_at_index.sql",
+  "082_create_mcp_oauth_grants_table.sql",
+  "083_create_mcp_oauth_grants_active_index.sql",
+  "084_create_mcp_oauth_registered_clients_table.sql",
+] as const;
+
 export async function checkDatabaseConnection(): Promise<DatabaseConnectionRow | null> {
   const sql = getSqlClient();
   const row = getFirstRow(
@@ -87,6 +96,11 @@ export async function ensureWardrobeTable(): Promise<void> {
   await executeSchemaSqlFiles(sql, WARDROBE_SCHEMA_FILES);
 }
 
+export async function ensureMcpOAuthTables(): Promise<void> {
+  const sql = getSqlClient();
+  await executeSchemaSqlFiles(sql, MCP_OAUTH_SCHEMA_FILES);
+}
+
 export async function ensureTables(): Promise<void> {
   await ensureAuthTables();
   await ensureProfilesTable();
@@ -94,5 +108,6 @@ export async function ensureTables(): Promise<void> {
   await ensureCapsulesTable();
   await ensureSharedCapsulesTable();
   await ensureWardrobeTable();
+  await ensureMcpOAuthTables();
   await ensureSearchTable();
 }

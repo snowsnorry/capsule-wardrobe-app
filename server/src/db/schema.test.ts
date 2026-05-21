@@ -10,6 +10,7 @@ import {
   ensureCapsulesTable,
   ensurePasskeysTables,
   ensureProfilesTable,
+  ensureMcpOAuthTables,
   ensureSearchTable,
   ensureSharedCapsulesTable,
   ensureWardrobeTable,
@@ -64,6 +65,7 @@ test("ensure auth, profile, passkey, capsule, shared capsule, and search schemas
   await ensureCapsulesTable();
   await ensureSharedCapsulesTable();
   await ensureWardrobeTable();
+  await ensureMcpOAuthTables();
   await ensureSearchTable();
 
   expect(
@@ -163,6 +165,25 @@ test("ensure auth, profile, passkey, capsule, shared capsule, and search schemas
       statement.includes("create table if not exists search"),
     ),
   ).toBeTruthy();
+  expect(
+    statements.some((statement) =>
+      statement.includes(
+        "create table if not exists mcp_oauth_authorization_codes",
+      ),
+    ),
+  ).toBeTruthy();
+  expect(
+    statements.some((statement) =>
+      statement.includes("create table if not exists mcp_oauth_grants"),
+    ),
+  ).toBeTruthy();
+  expect(
+    statements.some((statement) =>
+      statement.includes(
+        "create table if not exists mcp_oauth_registered_clients",
+      ),
+    ),
+  ).toBeTruthy();
 
   const joined = statements.join("\n");
   expect(joined).not.toMatch(/alter table profiles/i);
@@ -182,6 +203,13 @@ test("ensureTables runs every schema group in dependency order", async () => {
   expect(joined).toMatch(/create table if not exists capsules/);
   expect(joined).toMatch(/create table if not exists shared_capsules/);
   expect(joined).toMatch(/create table if not exists wardrobe/);
+  expect(joined).toMatch(
+    /create table if not exists mcp_oauth_authorization_codes/,
+  );
+  expect(joined).toMatch(/create table if not exists mcp_oauth_grants/);
+  expect(joined).toMatch(
+    /create table if not exists mcp_oauth_registered_clients/,
+  );
   expect(joined).toMatch(/create table if not exists search/);
   expect(
     joined.indexOf("create table if not exists profiles") <
