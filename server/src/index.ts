@@ -328,7 +328,10 @@ function createExpressApp(deps) {
   app.set("trust proxy", 1);
   app.use(express.json({ limit: "100kb" }));
   app.use(express.urlencoded({ extended: false, limit: "20kb" }));
-  applySecurityMiddleware(app, deps.nodeEnv);
+  applySecurityMiddleware(app, deps.nodeEnv, {
+    clientOrigin: deps.clientOrigin,
+    mcpOAuthIssuer: deps.mcpOAuthConfig?.issuer,
+  });
   applyCorsMiddleware(app, {
     nodeEnv: deps.nodeEnv,
     clientOrigin: deps.clientOrigin,

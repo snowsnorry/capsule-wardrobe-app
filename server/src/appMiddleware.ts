@@ -7,7 +7,49 @@ import {
 } from "./httpCookies.js";
 import { logError } from "./logger.js";
 
-export function applySecurityMiddleware(app, nodeEnv) {
+type SecurityMiddlewareOptions = {
+  clientOrigin?: string;
+  mcpOAuthIssuer?: string;
+};
+
+function resolveCspOrigin(value) {
+  const rawValue = String(value || "").trim();
+  if (!rawValue) {
+    return "";
+  }
+
+  try {
+    const url = new URL(rawValue);
+    if (url.protocol !== "http:" && url.protocol !== "https:") {
+      return "";
+    }
+
+    return url.origin;
+  } catch {
+    return "";
+  }
+}
+
+function buildFormActionSources({
+  clientOrigin,
+  mcpOAuthIssuer,
+}: SecurityMiddlewareOptions = {}) {
+  const sources = new Set(["'self'"]);
+  for (const value of [clientOrigin, mcpOAuthIssuer]) {
+    const origin = resolveCspOrigin(value);
+    if (origin) {
+      sources.add(origin);
+    }
+  }
+
+  return Array.from(sources);
+}
+
+export function applySecurityMiddleware(
+  app,
+  nodeEnv,
+  options: SecurityMiddlewareOptions = {},
+) {
   if (nodeEnv === "production") {
     app.use(
       helmet({
@@ -27,6 +69,7 @@ export function applySecurityMiddleware(app, nodeEnv) {
             fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"],
             connectSrc: ["'self'", "https:"],
             frameSrc: ["'self'", "https://accounts.google.com"],
+            formAction: buildFormActionSources(options),
           },
         },
       }),
