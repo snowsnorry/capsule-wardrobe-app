@@ -30,11 +30,28 @@ function resolveCspOrigin(value) {
   }
 }
 
+function isHttpsOrigin(value) {
+  const rawValue = String(value || "").trim();
+  if (!rawValue) {
+    return false;
+  }
+
+  try {
+    return new URL(rawValue).protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 function buildFormActionSources({
   clientOrigin,
   mcpOAuthIssuer,
 }: SecurityMiddlewareOptions = {}) {
   const sources = new Set(["'self'"]);
+  if (isHttpsOrigin(mcpOAuthIssuer)) {
+    sources.add("https:");
+  }
+
   for (const value of [clientOrigin, mcpOAuthIssuer]) {
     const origin = resolveCspOrigin(value);
     if (origin) {

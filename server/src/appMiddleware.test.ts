@@ -30,6 +30,6 @@ test("production security headers allow configured app and OAuth form actions", 
     response.headers.get("content-security-policy") || "";
 
   expect(contentSecurityPolicy).toContain(
-    "form-action 'self' https://client.example https://www.capsule-wardrobe.org",
+    "form-action 'self' https: https://client.example https://www.capsule-wardrobe.org",
   );
 });
