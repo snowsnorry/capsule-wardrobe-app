@@ -16,6 +16,7 @@ High-level responsibilities:
 - Persistence: Postgres
 - Email auth delivery: Resend
 - Passkey/WebAuthn auth: SimpleWebAuthn with DB-backed short-lived challenges
+- External assistant access: read-only Streamable HTTP MCP connector with OAuth PKCE and DB-backed grants/tokens
 - HTTP security: Helmet/CSP plus trusted-origin and CSRF guards for state-changing authenticated requests
 - Public API contract: final camelCase request/response payloads
 - Generated and uploaded image storage: Cloudflare R2 when configured
@@ -43,7 +44,8 @@ High-level responsibilities:
 - `client/src/test/` — client-side test helpers
 - `client/src/utils/` — client utilities
 - `server/src/ai/` — AI-related integrations and orchestration
-- `server/src/db/` — split DB modules for auth, passkeys, profiles, capsule data, search, schema, and product options
+- `server/src/db/` — split DB modules for auth, passkeys, profiles, capsule data, wardrobe, search, schema, product options, and MCP OAuth persistence
+- `server/src/mcp/` — Streamable HTTP MCP server, bearer auth, OAuth discovery/PKCE/token routes, and read-only product/wardrobe tools
 - `server/src/e2e/` — isolated e2e server, in-memory dependencies, fixtures, and e2e-only routes
 - `server/src/routes/` — grouped Express route modules
 - `server/src/test/` — server-side test helpers
@@ -53,7 +55,7 @@ High-level responsibilities:
 - `server/src/appMiddleware.ts` — Helmet/CSP, CORS, rate limiters, auth guard, trusted-origin guard, and CSRF guard
 - `server/src/serverStartup.ts` — DB bootstrap, dev Vite middleware, production static serving, and shared-capsule HTML metadata injection
 - `server/src/db.ts` — database integration
-- `server/src/db/sql/` — canonical schema SQL assets
+- `server/src/db/sql/` — canonical schema SQL assets, including MCP OAuth tables
 - `server/src/email.ts` — email delivery/auth messaging
 - `server/src/authStore.ts` — auth/session-related storage logic
 - `server/src/capsuleStore.ts` — capsule/domain storage logic
@@ -62,6 +64,7 @@ High-level responsibilities:
 - `server/src/passkeyHttp.ts` and `server/src/passkeyNames.ts` — passkey response/name helpers
 - `server/src/r2Storage.ts` and `server/src/r2Delete.ts` — Cloudflare R2 upload/delete helpers
 - `server/src/wardrobe*.ts` — uploaded wardrobe image processing, semantic metadata, PDF, and download helpers
+- `server/src/mcp/*.ts` — MCP OAuth config/routes, token validation, product search/stats/fetch tools, and wardrobe item tools
 - `server/src/ai/sql/` — canonical SQL assets for AI wardrobe selection
 
 ## Commands
@@ -131,7 +134,8 @@ Lint and quality:
 - When changing auth, session, DB, email, or deployment behavior, be conservative and avoid incidental rewrites.
 - When changing state-changing authenticated routes, preserve trusted-origin and CSRF checks and keep client calls on `client/src/api/request.ts` unless there is a specific reason not to.
 - When changing passkeys/WebAuthn, preserve DB-backed challenge single-use semantics, do not return stored public keys to the client, and keep `PASSKEY_RP_ID`/`PASSKEY_ORIGIN` aligned with the visible frontend origin.
-- When changing account removal, preserve deletion of profile-scoped DB records, active sessions, transient generation/image/PDF jobs, uploaded R2 image objects, and session/passkey challenge cookies.
+- When changing MCP connector/OAuth behavior, keep the connector read-only, preserve OAuth discovery, PKCE, dynamic client registration safeguards, redirect allowlists, bearer token issuer/audience/scope validation, hashed single-use authorization codes, and refresh-token rotation.
+- When changing account removal, preserve deletion of profile-scoped DB records, active sessions, MCP OAuth refresh tokens/grants/unconsumed authorization codes, transient generation/image/PDF jobs, uploaded R2 image objects, and session/passkey challenge cookies.
 - When changing production CSP or image upload previews, update `server/src/appMiddleware.ts` tests with the allowed source behavior.
 - When using Playwright for code validation, run it against the dedicated e2e server with in-memory dependencies, not against normal dev or production-like servers with external dependencies.
 - Use Browser/Chrome DevTools/browser-use tools only when the user explicitly asks for browser-based validation or interaction in the current turn.
@@ -147,6 +151,7 @@ For frontend tasks:
 For backend tasks:
 - first inspect `server/src/index.ts`, the closest route module in `server/src/routes/`, and the closest domain module (`db.ts`, `db/`, `email.ts`, `authStore.ts`, `capsuleStore.ts`, `profileStore.ts`, `searchStore.ts`, or `ai/`)
 - for passkey/WebAuthn work, inspect `server/src/index.ts`, `server/src/routes/passkeyRoutes.ts`, `server/src/db.ts`, `server/src/db/passkeys.ts`, `client/src/api/passkeys.ts`, and `client/src/auth/passkeys.ts`
+- for MCP connector/OAuth work, inspect `server/src/index.ts`, `server/src/mcp/`, `server/src/db/mcpOAuth*.ts`, `server/src/db/sql/schema/08*_mcp_*.sql`, `server/src/appConfig.ts`, `server/src/appMiddleware.ts`, and `client/src/app/oauthReturn.ts`
 
 For deployment/config tasks:
 - inspect root `package.json`, `client/render-server.js`, `client/vite.config.ts`, and README first

@@ -26,6 +26,8 @@ Primary areas:
 - `searchSemantic.ts` — semantic search helpers
 - `searchTypes.ts` — search-related server types
 - `searchValidation.ts` — search request validation
+- `mcp/` — Streamable HTTP MCP server, bearer auth, OAuth discovery/PKCE/token routes, read-only product tools, wardrobe tools, and schemas
+- `db/mcpOAuth.ts` and `db/mcpOAuthRefreshTokens.ts` — MCP authorization code, grant, dynamic client registration, and refresh-token persistence
 - `ai/` — AI integrations and orchestration
 - `ai/sql/` — SQL assets for AI wardrobe selection and regeneration queries
 - `wardrobe*.ts` — upload normalization, image analysis, embeddings, metadata updates, cleanup, PDF, and child-process helpers
@@ -44,7 +46,8 @@ Primary areas:
 - Be conservative around env vars and startup logic.
 - Passkey/WebAuthn routes live in `routes/passkeyRoutes.ts` and persist through `db.ts` / `db/passkeys.ts`; preserve single-use challenge consumption and never expose `credential_public_key` in API responses.
 - `PASSKEY_RP_ID` is the visible frontend hostname only, while `PASSKEY_ORIGIN` is the full visible frontend origin.
-- Account removal lives under `DELETE /profile/me`; preserve cleanup of profile-scoped DB records, sessions, transient generation/image/PDF jobs, uploaded R2 image objects, and session/passkey challenge cookies.
+- MCP connector routes live in `mcp/` and are registered from `index.ts`; keep tools read-only and preserve OAuth discovery, PKCE, dynamic client registration safeguards, redirect allowlists, bearer token issuer/audience/scope validation, hashed single-use authorization codes, and refresh-token rotation.
+- Account removal lives under `DELETE /profile/me`; preserve cleanup of profile-scoped DB records, sessions, MCP OAuth refresh tokens/grants/unconsumed authorization codes, transient generation/image/PDF jobs, uploaded R2 image objects, and session/passkey challenge cookies.
 - Production CSP lives in `appMiddleware.ts`; when changing image previews, Google Sign-In, or other external resources, update the CSP and its tests together.
 - Prefer small changes to existing modules over introducing new framework layers.
 - For AI integrations, avoid changing provider behavior or output assumptions without corresponding tests.
@@ -61,6 +64,7 @@ Primary areas:
 ## First files to inspect
 - `index.ts`
 - `routes/`
+- `mcp/` for MCP connector or OAuth work
 - nearest domain module
 - corresponding `*.test.ts` files
 

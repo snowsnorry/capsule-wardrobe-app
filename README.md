@@ -10,6 +10,7 @@ Full-stack TypeScript monorepo for a capsule wardrobe application. The project c
 - Persistence: Postgres
 - Email auth delivery: Resend
 - Optional auth providers: Google Sign-In and passkeys/WebAuthn
+- Optional external assistant access: read-only MCP connector over Streamable HTTP with OAuth PKCE
 - Generated and uploaded image storage: Cloudflare R2 when configured
 - Browser e2e: Playwright against a dedicated Express/Vite server with in-memory dependencies
 - Deployment path: Render single-service
@@ -25,6 +26,7 @@ Full-stack TypeScript monorepo for a capsule wardrobe application. The project c
 - My Wardrobe uploads, uploaded item metadata editing, catalog saves, and wardrobe PDF export
 - shareable capsule links and shared capsule import
 - product search and aggregated statistics views
+- read-only MCP tools for authenticated product search, product stats, product fetch, and wardrobe item reads
 
 ## Repository layout
 
@@ -39,6 +41,7 @@ docs/     repository documentation
 Useful entrypoints:
 
 - `client/src/App.tsx`
+- `client/src/app/oauthReturn.ts`
 - `client/src/api/request.ts`
 - `client/src/main.tsx`
 - `client/vite.config.ts`
@@ -50,6 +53,7 @@ Useful entrypoints:
 - `server/src/e2e/server.ts`
 - `server/src/db.ts`
 - `server/src/db/sql/`
+- `server/src/mcp/`
 - `server/src/ai/`
 - `server/src/authStore.ts`
 - `server/src/capsuleStore.ts`
@@ -113,9 +117,11 @@ Common optional values:
 - `NODE_ENV` — defaults to `development`
 - `AUTH_TEST_MODE` — prints sign-in codes to logs outside production
 - `PASSKEY_RP_NAME` — optional WebAuthn relying party display name, defaults to `Capsule Wardrobe`
-- `MCP_OAUTH_ENABLED` — enables the ChatGPT custom MCP connector OAuth surface; defaults to enabled outside production and disabled in production
-- `MCP_OAUTH_ISSUER`, `MCP_RESOURCE_URL`, `MCP_JWT_SECRET`, and a ChatGPT/Codex redirect allowlist — required when MCP OAuth is enabled in production
-- `MCP_ACCESS_TOKEN_TTL_SECONDS`, `MCP_AUTH_CODE_TTL_SECONDS` — optional MCP OAuth connector controls
+- `MCP_OAUTH_ENABLED` — enables the MCP connector OAuth surface; defaults to enabled outside production and disabled in production
+- `MCP_OAUTH_ISSUER`, `MCP_RESOURCE_URL`, `MCP_JWT_SECRET`, and at least one redirect allowlist entry — required when MCP OAuth is enabled in production
+- `MCP_ALLOWED_REDIRECT_URIS`, `MCP_ALLOWED_REDIRECT_ORIGINS` — allowed OAuth redirect destinations for MCP clients such as ChatGPT or Codex
+- `MCP_ALLOWED_CLIENT_IDS`, `MCP_ALLOWED_CLIENT_METADATA_HOSTS` — optional MCP client allowlists; dynamic client registration is supported and production still requires redirect allowlists
+- `MCP_ACCESS_TOKEN_TTL_SECONDS`, `MCP_AUTH_CODE_TTL_SECONDS`, `MCP_REFRESH_TOKEN_TTL_SECONDS` — optional MCP OAuth connector controls
 - `SESSION_PRUNE_MIN_INTERVAL_MS` — session cleanup throttle
 - `WARDROBE_PDF_CHILD_TIMEOUT_MS` — PDF child-process timeout
 - `WARDROBE_UPLOAD_CHILD_TIMEOUT_MS` — uploaded wardrobe image normalization child-process timeout
@@ -282,6 +288,8 @@ Main backend route groups:
 - `/shared-capsules/*` — public shared capsule read and authenticated import
 - `/search/*` — search options, saved filters, run search, stats
 - `/wardrobe/*` — profile-derived filters, My Wardrobe uploaded/catalog items, upload event stream, item metadata updates, and wardrobe PDF export
+- `/mcp` — authenticated Streamable HTTP MCP endpoint with read-only tools: `ping`, `get_search_options`, `search`, `stats`, `fetch`, and `wardrobe_items`
+- `/.well-known/oauth-protected-resource`, `/.well-known/oauth-authorization-server`, `/.well-known/openid-configuration`, `/oauth/register`, `/oauth/authorize`, `/oauth/token` — MCP OAuth discovery, dynamic client registration, PKCE consent, token exchange, and refresh-token rotation
 - `/health`, `/healthall`
 
 The API uses camelCase request and response fields at the client/server boundary. State-changing authenticated routes expect trusted-origin checks and a CSRF token; `client/src/api/request.ts` adds `X-CSRF-Token` from the CSRF cookie.
@@ -289,6 +297,14 @@ The API uses camelCase request and response fields at the client/server boundary
 The e2e server also mounts `/__e2e/*` test-control and fixture endpoints. Those endpoints are only available when the dedicated e2e server entrypoint is used.
 
 The API is implemented in [server/src/index.ts](server/src/index.ts).
+
+## MCP connector
+
+The optional MCP connector is implemented entirely on the server in [server/src/mcp](server/src/mcp). When `MCP_OAUTH_ENABLED=true`, `/mcp` requires bearer tokens issued by the local OAuth PKCE flow and validates `mcp:read`, issuer, audience, expiry, token use, and supported read scopes.
+
+MCP consent reuses the normal app session. If an external client starts authorization before the user is signed in, the server redirects to `/?oauthReturnTo=...`; after email, Google, or passkey sign-in, [client/src/app/oauthReturn.ts](client/src/app/oauthReturn.ts) resumes only safe same-origin `/oauth/authorize` paths.
+
+MCP OAuth state is persisted in Postgres through `mcp_oauth_authorization_codes`, `mcp_oauth_grants`, `mcp_oauth_registered_clients`, and `mcp_oauth_refresh_tokens`. Authorization codes and refresh tokens are hashed before storage and consumed once.
 
 ## Deployment
 
@@ -321,7 +337,7 @@ Minimum env for this path:
 Optional:
 
 - `GOOGLE_CLIENT_ID`
-- `MCP_OAUTH_ENABLED=true`, `MCP_OAUTH_ISSUER=https://<your-service>.onrender.com`, `MCP_RESOURCE_URL=https://<your-service>.onrender.com/mcp`, `MCP_JWT_SECRET`, and a ChatGPT/Codex redirect allowlist when enabling the Phase 1 MCP connector OAuth surface
+- `MCP_OAUTH_ENABLED=true`, `MCP_OAUTH_ISSUER=https://<your-service>.onrender.com`, `MCP_RESOURCE_URL=https://<your-service>.onrender.com/mcp`, `MCP_JWT_SECRET`, and `MCP_ALLOWED_REDIRECT_URIS` or `MCP_ALLOWED_REDIRECT_ORIGINS` when enabling the MCP connector OAuth surface
 - AI provider keys you actually use
 
 ### Render client-only proxy server

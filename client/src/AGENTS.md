@@ -6,6 +6,7 @@ This directory contains the React frontend.
 Primary areas:
 - `app/` — app shell, route content, state/actions, session bootstrap, navigation, and dialogs
 - `app/appRouting.ts` — route mapping for capsule, My Wardrobe, explore, statistics, and share URLs
+- `app/oauthReturn.ts` — safe same-origin OAuth authorization return bridge used after sign-in for the MCP connector
 - `api/` — API-facing client logic
 - `api/request.ts` — shared fetch wrapper, JSON/error handling, short-lived GET cache, and CSRF header injection
 - `auth/` — browser auth helpers such as passkey/WebAuthn registration and login
@@ -28,6 +29,7 @@ Primary areas:
 - When changing API usage, inspect the matching backend route/behavior.
 - Keep request/response payloads, local state, and test fixtures on the final camelCase API contract.
 - State-changing API calls should use `api/request.ts` so the CSRF header is populated from the CSRF cookie.
+- When changing sign-in success/session actions, preserve `oauthReturnTo` handling so MCP OAuth authorization resumes only for safe same-origin `/oauth/authorize` paths.
 - When changing passkey UI or helpers, keep API contracts in `api/passkeys.ts` aligned with server `/auth/passkeys/*` routes and normalize browser cancellation separately from verification failures.
 - When changing account removal UI, preserve the localized confirmation-word flow and keep `app/profileActions.ts` aligned with `DELETE /profile/me`.
 - My Wardrobe upload and capsule event subscriptions use `@microsoft/fetch-event-source`; keep stream event names and payload shapes aligned with server routes.
@@ -52,7 +54,7 @@ Primary areas:
 - `components/`
 - `api/`
 - `i18n/`
-- `theme.ts`
+- `theme/`
 
 ## Final response
 - After changing files, include a recommended git commit message for the changes in the final response.

@@ -1,7 +1,7 @@
 # Repo Map
 
 ## Purpose
-Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, passkeys, onboarding, profile and account removal flows, localization, saved wardrobe/capsule workflows, AI-assisted generation, image upload/storage, product search, and statistics. The public API contract uses the final camelCase shape; the temporary naming-convention migration has been removed.
+Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, passkeys, onboarding, profile and account removal flows, localization, saved wardrobe/capsule workflows, AI-assisted generation, image upload/storage, product search, statistics, and a read-only MCP connector for external assistant access. The public API contract uses the final camelCase shape; the temporary naming-convention migration has been removed.
 
 ## Main runtime flows
 
@@ -13,6 +13,7 @@ Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, passkey
 - User theme settings resolve through `client/src/app/appViewState.ts` and `client/src/app/useAppControllerModel.ts`, then `client/src/app/AppRootView.tsx` applies the generated MUI theme through `ThemeProvider` and `CssBaseline`
 - Backend app wiring starts from `server/src/index.ts`, with route groups under `server/src/routes/`
 - Runtime config, security middleware, and static serving are split across `server/src/appConfig.ts`, `server/src/appMiddleware.ts`, and `server/src/serverStartup.ts`
+- MCP connector and OAuth routes are registered from `server/src/mcp/`
 - Development startup mounts Vite middleware from Express; production startup serves `client/dist` and injects shared-capsule metadata into HTML
 - Playwright e2e tests start a dedicated Express/Vite server from `server/src/e2e/server.ts`
 
@@ -28,6 +29,7 @@ Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, passkey
 - Passkey credentials and short-lived single-use challenges are persisted via `server/src/db.ts` and `server/src/db/passkeys.ts`
 - Passkey display helpers live in `server/src/passkeyHttp.ts` and `server/src/passkeyNames.ts`; deletion is registered from `server/src/routes/passkeyDeleteRoute.ts`
 - Passkey RP config uses `PASSKEY_RP_ID` for the visible frontend hostname and `PASSKEY_ORIGIN` for the full visible frontend origin
+- MCP OAuth consent reuses the normal app session; unauthenticated authorization requests redirect through the client `oauthReturnTo` bridge and resume only same-origin `/oauth/authorize` paths
 - auth test mode exists and should remain usable
 
 ### 3. Profile / onboarding flow
@@ -36,7 +38,7 @@ Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, passkey
 - API integration should live in `client/src/api/`
 - persisted server-side behavior likely touches DB-backed modules and `server/src/routes/profile*Routes.ts`
 - settings and account removal UI live in `client/src/components/SettingsDialog*` and `client/src/components/SettingsRemoveAccount*`
-- `DELETE /profile/me` removes profile-scoped data, clears transient jobs, deletes uploaded wardrobe image objects from R2 when configured, and clears session/passkey challenge cookies
+- `DELETE /profile/me` removes profile-scoped data, clears transient jobs, deletes MCP OAuth refresh tokens, grants, and unconsumed authorization codes, deletes uploaded wardrobe image objects from R2 when configured, and clears session/passkey challenge cookies
 
 ### 4. Capsule / wardrobe flow
 - server-side domain state likely centers on `capsuleStore.ts`
@@ -66,12 +68,24 @@ Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, passkey
 - search persistence is split across `searchStore.ts`, `searchTypes.ts`, and `server/src/db/search*`
 - semantic search helpers live in `server/src/searchSemantic.ts`
 
-### 7. Localization flow
+### 7. MCP connector flow
+- `/mcp` is a Streamable HTTP MCP endpoint implemented in `server/src/mcp/mcpRoutes.ts`
+- MCP access requires a bearer access token validated by `server/src/mcp/mcpAuth.ts`; token issuer, audience, expiry, token use, and supported read scopes must match the `MCP_*` config
+- OAuth discovery, dynamic client registration, PKCE authorization, consent HTML, access tokens, refresh tokens, and refresh-token rotation live in `server/src/mcp/oauthRoutes.ts`
+- MCP OAuth config is built by `server/src/mcp/oauthConfig.ts` from `server/src/appConfig.ts`; it is enabled by default outside production and disabled by default in production
+- MCP OAuth state persists through `server/src/db/mcpOAuth.ts`, `server/src/db/mcpOAuthRefreshTokens.ts`, and SQL schema assets `080` through `087` under `server/src/db/sql/schema/`
+- MCP product tools live in `server/src/mcp/productTools.ts`, `server/src/mcp/productStatsTool.ts`, `server/src/mcp/productSearch.ts`, `server/src/mcp/productSearchSchemaOptions.ts`, and `server/src/mcp/productToolSchemas.ts`
+- MCP wardrobe tools live in `server/src/mcp/wardrobeTools.ts`
+- Exposed tools are read-only: `ping`, `get_search_options`, `search`, `stats`, `fetch`, and `wardrobe_items`
+- Product and wardrobe MCP results are sanitized before returning to clients; internal embeddings, ownership fields, and private timestamps should stay out of tool output
+- The client sign-in success path calls `client/src/app/oauthReturn.ts` to resume safe same-origin OAuth authorization requests after normal email, Google, or passkey login
+
+### 8. Localization flow
 - locale resources and helpers live under `client/src/i18n/`
 - shared locale option resources live under `shared/i18n/`
 - changes to user-facing copy should preserve EN/RU parity
 
-### 8. Playwright e2e flow
+### 9. Playwright e2e flow
 - root Playwright config lives in `playwright.config.ts`
 - browser tests live under `tests/e2e/`
 - authenticated tests reuse `tests/e2e/.auth/user.json`
@@ -98,6 +112,7 @@ Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, passkey
 - `client/src/app/` — app shell, route content, state/actions, session bootstrap, navigation, and dialogs
 - `client/src/api/request.ts` — shared fetch wrapper, JSON/error handling, short-lived GET cache, and CSRF header injection
 - `client/src/main.tsx`
+- `client/src/app/oauthReturn.ts` — safe OAuth authorization return bridge used by MCP connector login handoff
 - `client/src/theme/` — centralized MUI theme factory, palette and radius tokens, CSS variables, component overrides, and typography
 - `client/src/auth/passkeys.ts`
 - `client/src/test/` — client-side test helpers
@@ -129,11 +144,13 @@ Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, passkey
 - `server/src/e2e/` — isolated e2e server, in-memory dependencies, fixtures, and test-control routes
 - `server/src/test/` — server-side test helpers
 - `server/src/db.ts` — database integration, including passkey credential and challenge persistence
-- `server/src/db/` — split DB modules for auth, schema bootstrap wiring, passkeys, profiles, capsule data, search, and product options
+- `server/src/db/` — split DB modules for auth, schema bootstrap wiring, passkeys, profiles, capsule data, wardrobe, search, product options, and MCP OAuth persistence
 - `server/src/db/sql/` — canonical SQL assets used by DB schema bootstrap; one schema SQL file should contain one executable statement
 - `server/src/httpCookies.ts` — session, CSRF, and passkey challenge cookie helpers
 - `server/src/logger.ts` — test-aware server logging helpers
-- `server/src/routes/` — grouped Express route modules for auth/session, passkeys, profile, capsule, search, health, and images
+- `server/src/routes/` — grouped Express route modules for auth/session, passkeys, profile, capsule, wardrobe, search, health, and images
+- `server/src/mcp/` — Streamable HTTP MCP server, bearer auth, OAuth discovery/PKCE/token routes, product tools, wardrobe tools, and MCP tool schemas
+- `server/src/db/mcpOAuth.ts` and `server/src/db/mcpOAuthRefreshTokens.ts` — MCP authorization code, grant, dynamic client registration, and refresh-token persistence
 - `server/src/email.ts`
 - `server/src/authStore.ts`
 - `server/src/capsuleStore.ts`
@@ -172,6 +189,8 @@ Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, passkey
 ### Server tests
 - `server/src/*.test.ts`
 - `server/src/**/*.test.ts`
+- `server/src/mcp/oauthRoutes.test.ts`, `server/src/mcp/oauthConfig.test.ts`, and `server/src/mcp/productSearch.test.ts` cover MCP OAuth discovery/token behavior, read-only tool metadata/output, and product search semantics
+- `server/src/db/mcpOAuth.test.ts` covers MCP OAuth persistence helpers
 
 ### Shared tests
 Run from root:
@@ -226,7 +245,10 @@ The Playwright auth state is generated at `tests/e2e/.auth/user.json` and is int
 - Default e2e runs should not require a real database, email provider, LLM provider, embedding provider, or remote image host
 - Passkey challenges are single-use and stored separately from normal app sessions
 - Passkey API responses must never expose stored credential public keys
-- Account removal must clear profile-scoped DB records, active sessions, transient generation/image/PDF jobs, passkey challenge cookies, and uploaded image objects from R2 when configured
+- MCP connector access is read-only and must require valid bearer tokens with `mcp:read`, matching issuer/audience, unexpired access-token claims, and supported read scopes
+- MCP OAuth production enablement must keep explicit issuer, resource URL, JWT secret, and redirect allowlist configuration
+- MCP OAuth authorization codes and refresh tokens are hashed before persistence and must remain single-use
+- Account removal must clear profile-scoped DB records, active sessions, MCP OAuth refresh tokens/grants/unconsumed authorization codes, transient generation/image/PDF jobs, passkey challenge cookies, and uploaded image objects from R2 when configured
 - Uploaded wardrobe item API responses must not expose private owner, embedding, or internal timestamp fields
 - DB/env wiring should remain explicit and stable
 - DB schema bootstrap uses SQL assets under `server/src/db/sql/`; there is no active standalone naming-convention migration script
