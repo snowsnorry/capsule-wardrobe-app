@@ -78,3 +78,23 @@ export function buildProductDetailMeta(item: ProductToolCardItem) {
     itemsById: buildProductItemsById([item]),
   };
 }
+
+export function formatProductSearchText(items: ProductToolCardItem[]) {
+  if (items.length === 0) {
+    return "Found 0 products.";
+  }
+
+  const lines = [`Found ${items.length} products:`];
+  items.slice(0, 10).forEach((item, index) => {
+    const summary =
+      compactStrings([item.name, item.brand, item.price.display]).join(" - ") ||
+      item.name ||
+      item.id;
+    lines.push(`${index + 1}. ${summary}`);
+    if (item.url) {
+      lines.push(`   ${item.url}`);
+    }
+  });
+
+  return lines.join("\n");
+}

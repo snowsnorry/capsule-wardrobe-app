@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { logError } from "../logger.js";
 import { createMcpAuthMiddleware } from "./mcpAuth.js";
+import { registerProductGridWidgetResource } from "./productGridWidget.js";
 import { registerProductTools } from "./productTools.js";
 import { registerWardrobeTools } from "./wardrobeTools.js";
 
@@ -39,6 +40,8 @@ async function createMcpServer(req, context) {
     name: MCP_SERVER_NAME,
     version: "0.1.0",
   });
+
+  registerProductGridWidgetResource(server);
 
   server.registerTool(
     "ping",

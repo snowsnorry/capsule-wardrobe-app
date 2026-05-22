@@ -10,7 +10,9 @@ import { getCachedSearchSchemaOptions } from "./productSearchSchemaOptions.js";
 import {
   buildProductDetailMeta,
   buildProductGridMeta,
+  formatProductSearchText,
 } from "./productToolCards.js";
+import { PRODUCT_GRID_WIDGET_URI } from "./productGridWidget.js";
 
 const SEARCH_DESCRIPTION =
   "Search the product catalog with wardrobe-relevant filters. Include optional natural-language `query` with filters for more precise matches when the desired item or style is easier to describe. Use `get_search_options` to discover valid filter values before applying filters. Prefer exact option values from `get_search_options`; do not invent filter values.";
@@ -31,6 +33,14 @@ const READ_ONLY_TOOL_ANNOTATIONS = {
   destructiveHint: false,
   idempotentHint: true,
   openWorldHint: false,
+} as const;
+const SEARCH_TOOL_META = {
+  ui: {
+    resourceUri: PRODUCT_GRID_WIDGET_URI,
+  },
+  "openai/outputTemplate": PRODUCT_GRID_WIDGET_URI,
+  "openai/toolInvocation/invoking": "Searching products",
+  "openai/toolInvocation/invoked": "Products ready",
 } as const;
 
 const SEARCH_OPTION_OUTPUT_SCHEMA = z.object({
@@ -281,6 +291,7 @@ function registerSearchTool(
       inputSchema: getSearchInputSchema(schemaOptions),
       outputSchema: SEARCH_OUTPUT_SCHEMA,
       annotations: READ_ONLY_TOOL_ANNOTATIONS,
+      _meta: SEARCH_TOOL_META,
     },
     async (args) => {
       try {
@@ -300,7 +311,7 @@ function registerSearchTool(
         };
         return toTextToolResult(
           output,
-          `Found ${items.length} products.`,
+          formatProductSearchText(items),
           buildProductGridMeta(items),
         );
       } catch (error) {

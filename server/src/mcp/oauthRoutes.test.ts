@@ -31,6 +31,7 @@ const STATS_DESCRIPTION =
   "Return product catalog result counts and facet statistics for wardrobe-relevant filters. Use `get_search_options` to discover valid filter values before applying filters. Prefer exact option values from `get_search_options`; do not invent filter values.";
 const WARDROBE_ITEMS_DESCRIPTION =
   "Return the authenticated user's wardrobe items, including uploaded items and saved catalog items. Optionally filter by `source`: `uploaded` or `from_catalog`.";
+const PRODUCT_GRID_WIDGET_URI = "ui://capsule/product-grid.html";
 const BLACK_BLAZER_THUMBNAIL_URL =
   "https://assets.capsule-wardrobe.org/thumbnails/e8a4045eda747e670055011d0588e0cec8f1dc531cc81b55dcad75de337f0209_640.webp";
 const SAVED_BLAZER_THUMBNAIL_URL =
@@ -362,6 +363,27 @@ async function listMcpTools(baseUrl: string, token: string) {
   });
 }
 
+async function listMcpResources(baseUrl: string, token: string) {
+  return requestJson(baseUrl, "/mcp", {
+    method: "POST",
+    headers: mcpHeaders(token),
+    body: { jsonrpc: "2.0", id: 1, method: "resources/list" },
+  });
+}
+
+async function readMcpResource(baseUrl: string, token: string, uri: string) {
+  return requestJson(baseUrl, "/mcp", {
+    method: "POST",
+    headers: mcpHeaders(token),
+    body: {
+      jsonrpc: "2.0",
+      id: 1,
+      method: "resources/read",
+      params: { uri },
+    },
+  });
+}
+
 type McpResult = Record<string, unknown> & {
   _meta?: {
     cards?: Record<string, unknown>[];
@@ -380,6 +402,21 @@ type McpResult = Record<string, unknown> & {
     inputSchema?: Record<string, unknown>;
     outputSchema?: Record<string, unknown>;
     annotations?: Record<string, unknown>;
+    _meta?: Record<string, unknown>;
+  }>;
+  resources?: Array<{
+    uri: string;
+    name?: string;
+    title?: string;
+    description?: string;
+    mimeType?: string;
+    _meta?: Record<string, unknown>;
+  }>;
+  contents?: Array<{
+    uri: string;
+    mimeType?: string;
+    text?: string;
+    _meta?: Record<string, unknown>;
   }>;
 };
 
@@ -389,6 +426,12 @@ function mcpResult(response): McpResult {
 
 function getMcpTool(response, name: string) {
   return mcpResult(response).tools?.find((tool) => tool.name === name);
+}
+
+function getMcpResource(response, uri: string) {
+  return mcpResult(response).resources?.find(
+    (resource) => resource.uri === uri,
+  );
 }
 
 function expectMcpToolNames(response) {
@@ -877,6 +920,12 @@ test("oauth PKCE code flow issues an access token accepted by mcp", async (t) =>
 
   const searchTool = getMcpTool(tools, "search");
   expect(searchTool?.description).toBe(SEARCH_DESCRIPTION);
+  expect(searchTool?._meta).toMatchObject({
+    ui: {
+      resourceUri: PRODUCT_GRID_WIDGET_URI,
+    },
+    "openai/outputTemplate": PRODUCT_GRID_WIDGET_URI,
+  });
   const searchInputSchema = searchTool?.inputSchema || {};
   expect(searchInputSchema.required || []).not.toContain("query");
   expectSearchSchemaEnums(searchInputSchema, EXPECTED_SEARCH_ENUMS);
@@ -1043,6 +1092,56 @@ test("mcp get_search_options matches search options endpoint", async (t) => {
   );
   expect(mcpOptions.response.status).toBe(200);
   expect(mcpResult(mcpOptions).structuredContent).toEqual(httpOptions.json);
+});
+
+test("mcp search exposes product grid widget resource", async (t) => {
+  const { baseUrl } = await startMcpTestServer(t);
+  const token = bearerToken({ scope: "mcp:read wardrobe:read" });
+
+  const resources = await listMcpResources(baseUrl, token);
+  const widget = await readMcpResource(baseUrl, token, PRODUCT_GRID_WIDGET_URI);
+
+  expect(resources.response.status).toBe(200);
+  expect(getMcpResource(resources, PRODUCT_GRID_WIDGET_URI)).toMatchObject({
+    uri: PRODUCT_GRID_WIDGET_URI,
+    name: "product_grid_widget",
+    title: "Product grid",
+    mimeType: "text/html",
+    _meta: {
+      ui: {
+        prefersBorder: true,
+        csp: {
+          resourceDomains: ["https://assets.capsule-wardrobe.org"],
+        },
+      },
+      "openai/widgetCSP": {
+        resource_domains: ["https://assets.capsule-wardrobe.org"],
+        redirect_domains: ["https://www.stories.com", "https://example.com"],
+      },
+    },
+  });
+  expect(widget.response.status).toBe(200);
+  const content = mcpResult(widget).contents?.[0];
+  expect(content).toMatchObject({
+    uri: PRODUCT_GRID_WIDGET_URI,
+    mimeType: "text/html",
+    _meta: {
+      ui: {
+        prefersBorder: true,
+        csp: {
+          resourceDomains: ["https://assets.capsule-wardrobe.org"],
+        },
+      },
+      "openai/widgetCSP": {
+        resource_domains: ["https://assets.capsule-wardrobe.org"],
+        redirect_domains: ["https://www.stories.com", "https://example.com"],
+      },
+    },
+  });
+  expect(content?.text).toContain("window.openai");
+  expect(content?.text).toContain("toolOutput");
+  expect(content?.text).toContain("toolResponseMetadata");
+  expect(content?.text).toContain('document.createElement("img")');
 });
 
 test("mcp stats matches search stats endpoint without price buckets", async (t) => {
@@ -1358,7 +1457,14 @@ test("mcp product search accepts empty, query, filters, and pagination inputs", 
     offset: 0,
     limit: 20,
   });
-  expectShortTextSummary(empty, "Found 1 products.");
+  expectShortTextSummary(
+    empty,
+    [
+      "Found 1 products:",
+      "1. Black Blazer - Acme - 120 USD",
+      "   https://example.com/products/black-blazer",
+    ].join("\n"),
+  );
 
   const queryOnly = await callMcpTool(baseUrl, token, "search", {
     query: "black blazer",
@@ -1410,7 +1516,14 @@ test("mcp product search returns sanitized preview items", async (t) => {
     limit: 20,
   });
   expect(output?.items?.[0]).toEqual(expectedProduct);
-  expectShortTextSummary(search, "Found 1 products.");
+  expectShortTextSummary(
+    search,
+    [
+      "Found 1 products:",
+      "1. Black Blazer - Acme - 120 USD",
+      "   https://example.com/products/black-blazer",
+    ].join("\n"),
+  );
   expect(mcpResult(search)._meta).toMatchObject({
     ui: {
       component: "product_grid",
