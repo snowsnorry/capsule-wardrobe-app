@@ -65,6 +65,7 @@ async function createMcpServer(req, context) {
   await registerProductTools(server, {
     profileEmail: req.mcpAuth.subject,
     runSearchImpl: context.runMcpProductSearchImpl,
+    getSearchStatsImpl: context.getSearchStatsImpl,
     getSearchOptionsImpl: context.getSearchOptionsImpl,
     getProductByIdImpl: context.getProductByIdForEmailImpl,
     getProductByUrlImpl: context.getProductByUrlForEmailImpl,

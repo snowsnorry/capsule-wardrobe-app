@@ -3,6 +3,7 @@ import {
   AUTH_COOKIE,
   CSRF_TOKEN,
   SESSION_ID,
+  TEST_CLIENT_ORIGIN,
   requestJson,
   startTestServer,
 } from "../test/serverRouteTestUtils.js";
@@ -26,6 +27,8 @@ const CODE_VERIFIER =
 const CODE_CHALLENGE = createPkceS256Challenge(CODE_VERIFIER);
 const SEARCH_DESCRIPTION =
   "Search the product catalog with wardrobe-relevant filters. `query` is optional. Use `get_search_options` to discover valid filter values before applying filters. Prefer exact option values from `get_search_options`; do not invent filter values.";
+const STATS_DESCRIPTION =
+  "Return product catalog result counts and facet statistics for wardrobe-relevant filters. Use `get_search_options` to discover valid filter values before applying filters. Prefer exact option values from `get_search_options`; do not invent filter values.";
 const WARDROBE_ITEMS_DESCRIPTION =
   "Return the authenticated user's wardrobe items, including uploaded items and saved catalog items. Optionally filter by `source`: `uploaded` or `from_catalog`.";
 const EXPECTED_READ_ONLY_TOOL_ANNOTATIONS = {
@@ -359,6 +362,7 @@ type McpResult = Record<string, unknown> & {
   structuredContent?: Record<string, unknown> & {
     items?: Record<string, unknown>[];
     item?: Record<string, unknown>;
+    stats?: Record<string, unknown>;
   };
   tools?: Array<{
     name: string;
@@ -382,6 +386,7 @@ function expectMcpToolNames(response) {
     "ping",
     "get_search_options",
     "search",
+    "stats",
     "fetch",
     "wardrobe_items",
   ]);
@@ -756,6 +761,7 @@ test("oauth PKCE code flow issues an access token accepted by mcp", async (t) =>
     "ping",
     "get_search_options",
     "search",
+    "stats",
     "fetch",
     "wardrobe_items",
   ]) {
@@ -791,6 +797,10 @@ test("oauth PKCE code flow issues an access token accepted by mcp", async (t) =>
     "offset",
     "limit",
   ]);
+  expectOutputSchemaProperties(tools, "stats", ["ok", "total", "stats"]);
+  expect(
+    getMcpTool(tools, "stats")?.outputSchema?.properties,
+  ).not.toHaveProperty("priceBuckets");
   expectOutputSchemaProperties(tools, "fetch", ["ok", "item"]);
   expectOutputSchemaProperties(tools, "wardrobe_items", ["ok", "items"]);
   expect(mcpResult(tools).tools?.[0]).toMatchObject({
@@ -824,6 +834,18 @@ test("oauth PKCE code flow issues an access token accepted by mcp", async (t) =>
   expect(searchProperties.brand?.type).toBe("array");
   expect(brandItems.type).toBe("string");
   expect(brandItems).not.toHaveProperty("enum");
+
+  const statsTool = getMcpTool(tools, "stats");
+  expect(statsTool?.description).toBe(STATS_DESCRIPTION);
+  const statsInputSchema = statsTool?.inputSchema || {};
+  expectSearchSchemaEnums(statsInputSchema, EXPECTED_SEARCH_ENUMS);
+  const statsProperties = statsInputSchema.properties as Record<
+    string,
+    Record<string, unknown>
+  >;
+  expect(statsProperties).not.toHaveProperty("query");
+  expect(statsProperties).not.toHaveProperty("offset");
+  expect(statsProperties).not.toHaveProperty("limit");
 
   const wardrobeItemsTool = getMcpTool(tools, "wardrobe_items");
   expect(wardrobeItemsTool?.description).toBe(WARDROBE_ITEMS_DESCRIPTION);
@@ -964,6 +986,88 @@ test("mcp get_search_options matches search options endpoint", async (t) => {
   );
   expect(mcpOptions.response.status).toBe(200);
   expect(mcpResult(mcpOptions).structuredContent).toEqual(httpOptions.json);
+});
+
+test("mcp stats matches search stats endpoint without price buckets", async (t) => {
+  const { baseUrl } = await startMcpTestServer(t);
+  const token = bearerToken({ scope: "mcp:read wardrobe:read" });
+  const payload = { category: ["top"] };
+
+  const httpStats = await requestJson(baseUrl, "/search/stats", {
+    method: "POST",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN,
+    body: payload,
+  });
+  const mcpStats = await callMcpTool(baseUrl, token, "stats", payload);
+
+  expect(httpStats.response.status).toBe(200);
+  expect(mcpStats.response.status).toBe(200);
+  expect(httpStats.json).toMatchObject({
+    ok: true,
+    total: 3,
+    stats: { category: [{ value: "top", count: 3 }] },
+    priceBuckets: [],
+  });
+  expect(mcpResult(mcpStats).structuredContent).toEqual({
+    ok: true,
+    total: httpStats.json.total,
+    stats: httpStats.json.stats,
+  });
+  expect(mcpResult(mcpStats).structuredContent).not.toHaveProperty(
+    "priceBuckets",
+  );
+  expect(mcpResult(mcpStats).content).toEqual([
+    {
+      type: "text",
+      text: JSON.stringify({
+        ok: true,
+        total: httpStats.json.total,
+        stats: httpStats.json.stats,
+      }),
+    },
+  ]);
+});
+
+test("mcp stats returns tool error on invalid payload", async (t) => {
+  const { baseUrl } = await startMcpTestServerWithDependencyOverrides(t, {
+    getSearchStatsImpl: async (_email, payload) => {
+      expect(payload).toEqual({ brand: ["not-allowed"] });
+      const error = new Error("invalid_payload");
+      (error as Error & { code?: string }).code = "invalid_payload";
+      throw error;
+    },
+  });
+  const token = bearerToken({ scope: "mcp:read wardrobe:read" });
+
+  const result = await callMcpTool(baseUrl, token, "stats", {
+    brand: ["not-allowed"],
+  });
+
+  expect(result.response.status).toBe(200);
+  expect(mcpResult(result)).toMatchObject({
+    isError: true,
+    structuredContent: { ok: false, error: "invalid_payload" },
+  });
+});
+
+test("mcp stats returns tool error on service failure", async (t) => {
+  vi.spyOn(console, "error").mockImplementation(() => {});
+  const { baseUrl } = await startMcpTestServerWithDependencyOverrides(t, {
+    getSearchStatsImpl: async () => {
+      throw new Error("stats_down");
+    },
+  });
+  const token = bearerToken({ scope: "mcp:read wardrobe:read" });
+
+  const result = await callMcpTool(baseUrl, token, "stats", {});
+
+  expect(result.response.status).toBe(200);
+  expect(mcpResult(result)).toMatchObject({
+    isError: true,
+    structuredContent: { ok: false, error: "service_unavailable" },
+  });
 });
 
 test("mcp wardrobe_items matches wardrobe items endpoint and filters by source", async (t) => {

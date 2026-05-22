@@ -1,9 +1,11 @@
 import { z } from "zod";
 
 import {
-  getCachedSearchSchemaOptions,
-  type SearchSchemaOptions,
-} from "./productSearchSchemaOptions.js";
+  getSearchInputSchema,
+  type SearchToolSchemaOptions,
+} from "./productToolSchemas.js";
+import { registerStatsTool } from "./productStatsTool.js";
+import { getCachedSearchSchemaOptions } from "./productSearchSchemaOptions.js";
 
 const SEARCH_DESCRIPTION =
   "Search the product catalog with wardrobe-relevant filters. `query` is optional. Use `get_search_options` to discover valid filter values before applying filters. Prefer exact option values from `get_search_options`; do not invent filter values.";
@@ -105,9 +107,13 @@ const FETCH_OUTPUT_SCHEMA = z.object({
 
 type ProductRowLike = Record<string, unknown>;
 
-type ProductToolsDeps = {
+export type ProductToolsDeps = {
   profileEmail: string;
   runSearchImpl: (
+    email: string,
+    payload: Record<string, unknown>,
+  ) => Promise<Record<string, unknown>>;
+  getSearchStatsImpl: (
     email: string,
     payload: Record<string, unknown>,
   ) => Promise<Record<string, unknown>>;
@@ -225,32 +231,6 @@ function toProductDetail(item: ProductRowLike) {
   };
 }
 
-function stringEnumArraySchema(values: readonly string[]) {
-  return z.array(z.enum(values as [string, ...string[]])).optional();
-}
-
-function getSearchInputSchema(schemaOptions: SearchSchemaOptions) {
-  return {
-    query: z.string().optional(),
-    brand: STRING_ARRAY_SCHEMA.optional(),
-    priceMin: z.number().nullable().optional(),
-    priceMax: z.number().nullable().optional(),
-    audience: stringEnumArraySchema(schemaOptions.audience),
-    category: stringEnumArraySchema(schemaOptions.category),
-    season: stringEnumArraySchema(schemaOptions.season),
-    formalityLevel: stringEnumArraySchema(schemaOptions.formalityLevel),
-    style: stringEnumArraySchema(schemaOptions.style),
-    occasions: stringEnumArraySchema(schemaOptions.occasions),
-    color: stringEnumArraySchema(schemaOptions.color),
-    pattern: stringEnumArraySchema(schemaOptions.pattern),
-    silhouette: stringEnumArraySchema(schemaOptions.silhouette),
-    fit: stringEnumArraySchema(schemaOptions.fit),
-    closureType: stringEnumArraySchema(schemaOptions.closureType),
-    offset: z.number().int().nonnegative().optional(),
-    limit: z.number().int().positive().optional(),
-  };
-}
-
 function registerGetSearchOptionsTool(server, deps: ProductToolsDeps) {
   server.registerTool(
     "get_search_options",
@@ -273,7 +253,7 @@ function registerGetSearchOptionsTool(server, deps: ProductToolsDeps) {
 function registerSearchTool(
   server,
   deps: ProductToolsDeps,
-  schemaOptions: SearchSchemaOptions,
+  schemaOptions: SearchToolSchemaOptions,
 ) {
   server.registerTool(
     "search",
@@ -348,5 +328,6 @@ export async function registerProductTools(server, deps: ProductToolsDeps) {
   const searchSchemaOptions = await getCachedSearchSchemaOptions(deps);
   registerGetSearchOptionsTool(server, deps);
   registerSearchTool(server, deps, searchSchemaOptions);
+  registerStatsTool(server, deps, searchSchemaOptions);
   registerFetchTool(server, deps);
 }
