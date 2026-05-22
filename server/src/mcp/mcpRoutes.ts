@@ -5,6 +5,7 @@ import { z } from "zod";
 import { logError } from "../logger.js";
 import { createMcpAuthMiddleware } from "./mcpAuth.js";
 import { registerProductTools } from "./productTools.js";
+import { registerWardrobeTools } from "./wardrobeTools.js";
 
 const MCP_SERVER_NAME = "capsule-wardrobe-mcp";
 const PING_DESCRIPTION =
@@ -67,6 +68,10 @@ async function createMcpServer(req, context) {
     getSearchOptionsImpl: context.getSearchOptionsImpl,
     getProductByIdImpl: context.getProductByIdForEmailImpl,
     getProductByUrlImpl: context.getProductByUrlForEmailImpl,
+  });
+  registerWardrobeTools(server, {
+    profileEmail: req.mcpAuth.subject,
+    listWardrobeItemsImpl: context.listWardrobeItemsImpl,
   });
 
   return server;

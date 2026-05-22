@@ -14,6 +14,7 @@ import {
 } from "./wardrobeUploadStream.js";
 import { normalizeWardrobeSourceParam } from "./wardrobeRouteParams.js";
 import { registerUploadedWardrobeItemUpdateRoute } from "./wardrobeUploadedItemUpdateRoute.js";
+import { filterWardrobeItemForDisplay } from "../wardrobeItemDisplay.js";
 import { normalizeWardrobeItemForPdf } from "../wardrobePdfItems.js";
 
 const wardrobeUpload = multer({
@@ -47,27 +48,6 @@ function getHttpUrl(value: unknown): string {
   } catch {
     return "";
   }
-}
-
-const WARDROBE_ITEM_PRIVATE_FIELDS = new Set([
-  "createdAt",
-  "email",
-  "embedding",
-  "productId",
-  "profileEmail",
-  "updatedAt",
-]);
-
-function filterWardrobeItemForDisplay(item) {
-  if (!item || typeof item !== "object" || Array.isArray(item)) {
-    return item;
-  }
-
-  return Object.fromEntries(
-    Object.entries(item).filter(
-      ([key]) => !WARDROBE_ITEM_PRIVATE_FIELDS.has(key),
-    ),
-  );
 }
 
 export function registerWardrobeRoutes(app, context) {

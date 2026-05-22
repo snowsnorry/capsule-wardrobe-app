@@ -1,4 +1,4 @@
-import { expect, test } from "vitest";
+import { expect, test, vi } from "vitest";
 import {
   AUTH_COOKIE,
   CSRF_TOKEN,
@@ -26,6 +26,8 @@ const CODE_VERIFIER =
 const CODE_CHALLENGE = createPkceS256Challenge(CODE_VERIFIER);
 const SEARCH_DESCRIPTION =
   "Search the product catalog with wardrobe-relevant filters. `query` is optional. Use `get_search_options` to discover valid filter values before applying filters. Prefer exact option values from `get_search_options`; do not invent filter values.";
+const WARDROBE_ITEMS_DESCRIPTION =
+  "Return the authenticated user's wardrobe items, including uploaded items and saved catalog items. Optionally filter by `source`: `uploaded` or `from_catalog`.";
 const EXPECTED_READ_ONLY_TOOL_ANNOTATIONS = {
   readOnlyHint: true,
   destructiveHint: false,
@@ -381,6 +383,7 @@ function expectMcpToolNames(response) {
     "get_search_options",
     "search",
     "fetch",
+    "wardrobe_items",
   ]);
 }
 
@@ -439,6 +442,16 @@ function expectNoInternalSearchFields(value: unknown) {
   expect(serialized).not.toContain("pageSize");
   expect(serialized).not.toContain('"page"');
   expect(serialized).not.toContain("embedding");
+}
+
+function expectNoPrivateWardrobeFields(value: unknown) {
+  const serialized = JSON.stringify(value);
+  expect(serialized).not.toContain("createdAt");
+  expect(serialized).not.toContain("email");
+  expect(serialized).not.toContain("embedding");
+  expect(serialized).not.toContain("productId");
+  expect(serialized).not.toContain("profileEmail");
+  expect(serialized).not.toContain("updatedAt");
 }
 
 function minimalSearchOptions(overrides: Record<string, unknown> = {}) {
@@ -739,7 +752,13 @@ test("oauth PKCE code flow issues an access token accepted by mcp", async (t) =>
   });
   expect(tools.response.status).toBe(200);
   expectMcpToolNames(tools);
-  for (const toolName of ["ping", "get_search_options", "search", "fetch"]) {
+  for (const toolName of [
+    "ping",
+    "get_search_options",
+    "search",
+    "fetch",
+    "wardrobe_items",
+  ]) {
     expectReadOnlyToolMetadata(tools, toolName);
   }
   expectOutputSchemaProperties(tools, "ping", [
@@ -773,6 +792,7 @@ test("oauth PKCE code flow issues an access token accepted by mcp", async (t) =>
     "limit",
   ]);
   expectOutputSchemaProperties(tools, "fetch", ["ok", "item"]);
+  expectOutputSchemaProperties(tools, "wardrobe_items", ["ok", "items"]);
   expect(mcpResult(tools).tools?.[0]).toMatchObject({
     name: "ping",
     description:
@@ -804,6 +824,19 @@ test("oauth PKCE code flow issues an access token accepted by mcp", async (t) =>
   expect(searchProperties.brand?.type).toBe("array");
   expect(brandItems.type).toBe("string");
   expect(brandItems).not.toHaveProperty("enum");
+
+  const wardrobeItemsTool = getMcpTool(tools, "wardrobe_items");
+  expect(wardrobeItemsTool?.description).toBe(WARDROBE_ITEMS_DESCRIPTION);
+  const wardrobeProperties = wardrobeItemsTool?.inputSchema?.properties as
+    | Record<string, Record<string, unknown>>
+    | undefined;
+  expect(wardrobeItemsTool?.inputSchema?.required || []).not.toContain(
+    "source",
+  );
+  expect(wardrobeProperties?.source).toMatchObject({
+    type: "string",
+    enum: ["uploaded", "from_catalog"],
+  });
 
   const ping = await requestJson(baseUrl, "/mcp", {
     method: "POST",
@@ -931,6 +964,93 @@ test("mcp get_search_options matches search options endpoint", async (t) => {
   );
   expect(mcpOptions.response.status).toBe(200);
   expect(mcpResult(mcpOptions).structuredContent).toEqual(httpOptions.json);
+});
+
+test("mcp wardrobe_items matches wardrobe items endpoint and filters by source", async (t) => {
+  const calls: unknown[] = [];
+  const { baseUrl } = await startMcpTestServerWithDependencyOverrides(t, {
+    listWardrobeItemsImpl: async (payload) => {
+      calls.push(payload);
+      return [
+        {
+          id: "wardrobe-1",
+          profileEmail: payload.email,
+          email: payload.email,
+          productId: "product-1",
+          name: "Saved blazer",
+          url: "https://example.com/products/saved-blazer",
+          description: "A saved blazer.",
+          brand: "Acme",
+          price: 120,
+          currency: "USD",
+          availability: "in_stock",
+          imageUrl: "https://example.com/products/saved-blazer.jpg",
+          audience: "woman",
+          category: "jacket",
+          season: ["autumn", "winter"],
+          formalityLevel: ["formal"],
+          style: ["minimalistic"],
+          occasions: ["office"],
+          colorBase: ["black"],
+          pattern: "solid",
+          finish: "matte",
+          isNeutral: true,
+          composition: "wool",
+          silhouette: "tailored",
+          fit: "regular",
+          closureType: ["button"],
+          source: payload.source || "from_catalog",
+          rawImageUrl: null,
+          processingStatus: "ready",
+          embedding: [0.1, 0.2],
+          createdAt: "2026-05-01T00:00:00.000Z",
+          updatedAt: "2026-05-02T00:00:00.000Z",
+        },
+      ];
+    },
+  });
+  const token = bearerToken({ scope: "mcp:read wardrobe:read" });
+
+  const httpItems = await requestJson(baseUrl, "/wardrobe/items", {
+    cookie: AUTH_COOKIE,
+  });
+  const mcpItems = await callMcpTool(baseUrl, token, "wardrobe_items", {});
+  const uploadedItems = await callMcpTool(baseUrl, token, "wardrobe_items", {
+    source: "uploaded",
+  });
+
+  expect(httpItems.response.status).toBe(200);
+  expect(mcpItems.response.status).toBe(200);
+  expect(uploadedItems.response.status).toBe(200);
+  expect(mcpResult(mcpItems).structuredContent).toEqual(httpItems.json);
+  expectNoPrivateWardrobeFields(mcpResult(mcpItems));
+  expect(mcpResult(uploadedItems).structuredContent).toMatchObject({
+    ok: true,
+    items: [{ source: "uploaded" }],
+  });
+  expect(calls).toEqual([
+    { email: "person@example.com", source: null },
+    { email: "person@example.com", source: null },
+    { email: "person@example.com", source: "uploaded" },
+  ]);
+});
+
+test("mcp wardrobe_items returns tool error on service failure", async (t) => {
+  vi.spyOn(console, "error").mockImplementation(() => {});
+  const { baseUrl } = await startMcpTestServerWithDependencyOverrides(t, {
+    listWardrobeItemsImpl: async () => {
+      throw new Error("wardrobe_down");
+    },
+  });
+  const token = bearerToken({ scope: "mcp:read wardrobe:read" });
+
+  const result = await callMcpTool(baseUrl, token, "wardrobe_items", {});
+
+  expect(result.response.status).toBe(200);
+  expect(mcpResult(result)).toMatchObject({
+    isError: true,
+    structuredContent: { ok: false, error: "service_unavailable" },
+  });
 });
 
 test("mcp search schema uses cached dynamic search options", async (t) => {
