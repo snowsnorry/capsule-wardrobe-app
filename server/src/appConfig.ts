@@ -6,6 +6,12 @@ export const PORT = process.env.PORT || 3000;
 export const CLIENT_ORIGIN =
   process.env.CLIENT_ORIGIN || "http://localhost:5173";
 export const NODE_ENV = process.env.NODE_ENV || "development";
+const rawThumbnailAssetBaseUrl =
+  process.env.VITE_THUMBNAIL_ASSET_BASE_URL ||
+  "https://assets.capsule-wardrobe.org/thumbnails";
+export const THUMBNAIL_ASSET_BASE_URL = rawThumbnailAssetBaseUrl.endsWith("/")
+  ? rawThumbnailAssetBaseUrl.slice(0, -1)
+  : rawThumbnailAssetBaseUrl;
 export const AUTH_TEST_MODE =
   NODE_ENV !== "production" &&
   ["1", "true", "yes"].includes(

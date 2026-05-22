@@ -4,6 +4,7 @@ import {
   getSearchInputSchema,
   type SearchToolSchemaOptions,
 } from "./productToolSchemas.js";
+import { buildMcpImageThumbnailUrl } from "./mcpImageThumbnails.js";
 import { registerStatsTool } from "./productStatsTool.js";
 import { getCachedSearchSchemaOptions } from "./productSearchSchemaOptions.js";
 
@@ -192,7 +193,7 @@ function toProductSearchPreview(item: ProductRowLike) {
     brand: nullableString(item.brand),
     price: nullablePrice(item.price),
     currency: nullableString(item.currency),
-    imageUrl: nullableString(item.imageUrl),
+    imageUrl: buildMcpImageThumbnailUrl(item.imageUrl),
     category: nullableString(item.category),
     colorBase: nullableStringArray(item.colorBase),
     season: nullableStringArray(item.season),
@@ -212,7 +213,7 @@ function toProductDetail(item: ProductRowLike) {
     price: nullablePrice(item.price),
     currency: nullableString(item.currency),
     availability: nullableString(item.availability),
-    imageUrl: nullableString(item.imageUrl),
+    imageUrl: buildMcpImageThumbnailUrl(item.imageUrl),
     audience: nullableString(item.audience),
     category: nullableString(item.category),
     season: nullableStringArray(item.season),

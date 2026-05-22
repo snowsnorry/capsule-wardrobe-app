@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { logError } from "../logger.js";
 import { filterWardrobeItemForDisplay } from "../wardrobeItemDisplay.js";
+import { buildMcpImageThumbnailUrl } from "./mcpImageThumbnails.js";
 
 const WARDROBE_ITEMS_DESCRIPTION =
   "Return the authenticated user's wardrobe items, including uploaded items and saved catalog items. Optionally filter by `source`: `uploaded` or `from_catalog`.";
@@ -93,6 +94,19 @@ function toToolError(error: "service_unavailable") {
   return toJsonToolResult({ ok: false, error }, true);
 }
 
+function toWardrobeItemToolOutput(item: unknown) {
+  const displayItem = filterWardrobeItemForDisplay(item) as Record<
+    string,
+    unknown
+  >;
+  return {
+    ...displayItem,
+    imageUrl: buildMcpImageThumbnailUrl(displayItem.imageUrl, {
+      source: displayItem.source,
+    }),
+  };
+}
+
 function registerWardrobeItemsTool(server, deps: WardrobeToolsDeps) {
   server.registerTool(
     "wardrobe_items",
@@ -113,7 +127,7 @@ function registerWardrobeItemsTool(server, deps: WardrobeToolsDeps) {
         return toJsonToolResult({
           ok: true,
           items: Array.isArray(items)
-            ? items.map(filterWardrobeItemForDisplay)
+            ? items.map(toWardrobeItemToolOutput)
             : [],
         });
       } catch (error) {

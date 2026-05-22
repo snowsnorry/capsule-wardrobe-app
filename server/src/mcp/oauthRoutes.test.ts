@@ -31,6 +31,10 @@ const STATS_DESCRIPTION =
   "Return product catalog result counts and facet statistics for wardrobe-relevant filters. Use `get_search_options` to discover valid filter values before applying filters. Prefer exact option values from `get_search_options`; do not invent filter values.";
 const WARDROBE_ITEMS_DESCRIPTION =
   "Return the authenticated user's wardrobe items, including uploaded items and saved catalog items. Optionally filter by `source`: `uploaded` or `from_catalog`.";
+const BLACK_BLAZER_THUMBNAIL_URL =
+  "https://assets.capsule-wardrobe.org/thumbnails/e8a4045eda747e670055011d0588e0cec8f1dc531cc81b55dcad75de337f0209_640.webp";
+const SAVED_BLAZER_THUMBNAIL_URL =
+  "https://assets.capsule-wardrobe.org/thumbnails/c09464120c85f978fc7a0f1e5481fb8402ed0905843ed4326324830fdd280196_640.webp";
 const EXPECTED_READ_ONLY_TOOL_ANNOTATIONS = {
   readOnlyHint: true,
   destructiveHint: false,
@@ -1073,7 +1077,7 @@ test("mcp stats returns tool error on service failure", async (t) => {
   });
 });
 
-test("mcp wardrobe_items matches wardrobe items endpoint and filters by source", async (t) => {
+test("mcp wardrobe_items returns thumbnail image urls and filters by source", async (t) => {
   const calls: unknown[] = [];
   const { baseUrl } = await startMcpTestServerWithDependencyOverrides(t, {
     listWardrobeItemsImpl: async (payload) => {
@@ -1129,11 +1133,27 @@ test("mcp wardrobe_items matches wardrobe items endpoint and filters by source",
   expect(httpItems.response.status).toBe(200);
   expect(mcpItems.response.status).toBe(200);
   expect(uploadedItems.response.status).toBe(200);
-  expect(mcpResult(mcpItems).structuredContent).toEqual(httpItems.json);
+  expect(httpItems.json.items?.[0]?.imageUrl).toBe(
+    "https://example.com/products/saved-blazer.jpg",
+  );
+  expect(mcpResult(mcpItems).structuredContent).toEqual({
+    ...httpItems.json,
+    items: [
+      {
+        ...httpItems.json.items[0],
+        imageUrl: SAVED_BLAZER_THUMBNAIL_URL,
+      },
+    ],
+  });
   expectNoPrivateWardrobeFields(mcpResult(mcpItems));
   expect(mcpResult(uploadedItems).structuredContent).toMatchObject({
     ok: true,
-    items: [{ source: "uploaded" }],
+    items: [
+      {
+        imageUrl: "https://example.com/products/saved-blazer_640.webp",
+        source: "uploaded",
+      },
+    ],
   });
   expect(calls).toEqual([
     { email: "person@example.com", source: null },
@@ -1274,7 +1294,7 @@ test("mcp product search returns sanitized preview items", async (t) => {
     brand: "Acme",
     price: 120,
     currency: "USD",
-    imageUrl: "https://example.com/products/black-blazer.jpg",
+    imageUrl: BLACK_BLAZER_THUMBNAIL_URL,
     category: "jacket",
     colorBase: ["black"],
     season: ["autumn", "winter"],
@@ -1304,7 +1324,7 @@ test("mcp product fetch returns sanitized detail by id and url", async (t) => {
       price: 120,
       currency: "USD",
       availability: "in_stock",
-      imageUrl: "https://example.com/products/black-blazer.jpg",
+      imageUrl: BLACK_BLAZER_THUMBNAIL_URL,
       audience: "woman",
       category: "jacket",
       season: ["autumn", "winter"],
