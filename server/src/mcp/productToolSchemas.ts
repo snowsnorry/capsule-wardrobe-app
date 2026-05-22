@@ -33,7 +33,12 @@ export function getSearchFilterInputSchema(
 
 export function getSearchInputSchema(schemaOptions: SearchToolSchemaOptions) {
   return {
-    query: z.string().optional(),
+    query: z
+      .string()
+      .describe(
+        "Optional natural-language search phrase to combine with filters for more precise product matches.",
+      )
+      .optional(),
     ...getSearchFilterInputSchema(schemaOptions),
     offset: z.number().int().nonnegative().optional(),
     limit: z.number().int().positive().optional(),

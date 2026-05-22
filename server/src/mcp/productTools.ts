@@ -8,7 +8,7 @@ import { registerStatsTool } from "./productStatsTool.js";
 import { getCachedSearchSchemaOptions } from "./productSearchSchemaOptions.js";
 
 const SEARCH_DESCRIPTION =
-  "Search the product catalog with wardrobe-relevant filters. `query` is optional. Use `get_search_options` to discover valid filter values before applying filters. Prefer exact option values from `get_search_options`; do not invent filter values.";
+  "Search the product catalog with wardrobe-relevant filters. Include optional natural-language `query` with filters for more precise matches when the desired item or style is easier to describe. Use `get_search_options` to discover valid filter values before applying filters. Prefer exact option values from `get_search_options`; do not invent filter values.";
 const GET_SEARCH_OPTIONS_DESCRIPTION =
   "Return allowed filter values for product catalog search.";
 const FETCH_DESCRIPTION =

@@ -26,7 +26,7 @@ const CODE_VERIFIER =
   "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~";
 const CODE_CHALLENGE = createPkceS256Challenge(CODE_VERIFIER);
 const SEARCH_DESCRIPTION =
-  "Search the product catalog with wardrobe-relevant filters. `query` is optional. Use `get_search_options` to discover valid filter values before applying filters. Prefer exact option values from `get_search_options`; do not invent filter values.";
+  "Search the product catalog with wardrobe-relevant filters. Include optional natural-language `query` with filters for more precise matches when the desired item or style is easier to describe. Use `get_search_options` to discover valid filter values before applying filters. Prefer exact option values from `get_search_options`; do not invent filter values.";
 const STATS_DESCRIPTION =
   "Return product catalog result counts and facet statistics for wardrobe-relevant filters. Use `get_search_options` to discover valid filter values before applying filters. Prefer exact option values from `get_search_options`; do not invent filter values.";
 const WARDROBE_ITEMS_DESCRIPTION =
@@ -830,6 +830,9 @@ test("oauth PKCE code flow issues an access token accepted by mcp", async (t) =>
     string,
     Record<string, unknown>
   >;
+  expect(searchProperties.query?.description).toBe(
+    "Optional natural-language search phrase to combine with filters for more precise product matches.",
+  );
   const brandItems = searchProperties.brand?.items as Record<string, unknown>;
   expect(searchProperties.brand?.type).toBe("array");
   expect(brandItems.type).toBe("string");
