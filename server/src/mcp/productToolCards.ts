@@ -1,0 +1,80 @@
+type ProductToolCardItem = {
+  id: string;
+  name: string;
+  brand: string | null;
+  url: string;
+  price: {
+    display: string | null;
+  };
+  availability: string | null;
+  image: string | null;
+  category: string | null;
+  attributes: {
+    isSavedToWardrobe: boolean | null;
+    season: string[] | null;
+    style: string[] | null;
+  };
+};
+
+function compactStrings(values: Array<string | null | undefined>): string[] {
+  return values
+    .map((value) => (typeof value === "string" ? value.trim() : ""))
+    .filter(Boolean);
+}
+
+function firstString(value: string[] | null): string | null {
+  return value?.[0] || null;
+}
+
+function buildProductCard(item: ProductToolCardItem) {
+  return {
+    type: "product_card",
+    itemId: item.id,
+    title: item.name,
+    subtitle:
+      compactStrings([item.brand, item.price.display]).join(" · ") ||
+      item.category ||
+      "",
+    image: item.image,
+    badges: compactStrings([
+      item.attributes.isSavedToWardrobe ? "Saved" : null,
+      item.category,
+      item.availability,
+      firstString(item.attributes.season),
+      firstString(item.attributes.style),
+    ]),
+    primaryAction: {
+      type: "open_external",
+      label: "Open product",
+      url: item.url,
+    },
+  };
+}
+
+function buildProductItemsById(items: ProductToolCardItem[]) {
+  return Object.fromEntries(items.map((item) => [item.id, item]));
+}
+
+export function buildProductGridMeta(items: ProductToolCardItem[]) {
+  return {
+    ui: {
+      component: "product_grid",
+      version: "1.0",
+      layout: "responsive_grid",
+      itemOrder: items.map((item) => item.id),
+    },
+    cards: items.map(buildProductCard),
+    itemsById: buildProductItemsById(items),
+  };
+}
+
+export function buildProductDetailMeta(item: ProductToolCardItem) {
+  return {
+    ui: {
+      component: "product_detail",
+      version: "1.0",
+    },
+    cards: [buildProductCard(item)],
+    itemsById: buildProductItemsById([item]),
+  };
+}

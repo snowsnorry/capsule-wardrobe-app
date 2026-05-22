@@ -363,6 +363,12 @@ async function listMcpTools(baseUrl: string, token: string) {
 }
 
 type McpResult = Record<string, unknown> & {
+  _meta?: {
+    cards?: Record<string, unknown>[];
+    itemsById?: Record<string, Record<string, unknown>>;
+    ui?: Record<string, unknown>;
+  };
+  content?: Array<Record<string, unknown>>;
   structuredContent?: Record<string, unknown> & {
     items?: Record<string, unknown>[];
     item?: Record<string, unknown>;
@@ -460,7 +466,46 @@ function expectNoPrivateWardrobeFields(value: unknown) {
   expect(serialized).not.toContain("embedding");
   expect(serialized).not.toContain("productId");
   expect(serialized).not.toContain("profileEmail");
+  expect(serialized).not.toContain("rawImageUrl");
   expect(serialized).not.toContain("updatedAt");
+}
+
+function expectShortTextSummary(response, text: string) {
+  expect(mcpResult(response).content).toEqual([{ type: "text", text }]);
+}
+
+function expectedBlackBlazerProduct() {
+  return {
+    id: "product-1",
+    name: "Black Blazer",
+    brand: "Acme",
+    url: "https://example.com/products/black-blazer",
+    description: "A tailored black blazer.",
+    price: {
+      amount: 120,
+      currency: "USD",
+      display: "120 USD",
+    },
+    availability: "in_stock",
+    image: BLACK_BLAZER_THUMBNAIL_URL,
+    audience: "woman",
+    category: "jacket",
+    attributes: {
+      season: ["autumn", "winter"],
+      formalityLevel: ["formal"],
+      style: ["minimalistic"],
+      occasions: ["office"],
+      colorBase: ["black"],
+      pattern: "solid",
+      finish: "matte",
+      isNeutral: true,
+      composition: "wool",
+      silhouette: "tailored",
+      fit: "regular",
+      closureType: ["button"],
+      isSavedToWardrobe: true,
+    },
+  };
 }
 
 function minimalSearchOptions(overrides: Record<string, unknown> = {}) {
@@ -795,7 +840,8 @@ test("oauth PKCE code flow issues an access token accepted by mcp", async (t) =>
     "priceRange",
   ]);
   expectOutputSchemaProperties(tools, "search", [
-    "ok",
+    "resultType",
+    "count",
     "items",
     "total",
     "offset",
@@ -805,8 +851,12 @@ test("oauth PKCE code flow issues an access token accepted by mcp", async (t) =>
   expect(
     getMcpTool(tools, "stats")?.outputSchema?.properties,
   ).not.toHaveProperty("priceBuckets");
-  expectOutputSchemaProperties(tools, "fetch", ["ok", "item"]);
-  expectOutputSchemaProperties(tools, "wardrobe_items", ["ok", "items"]);
+  expectOutputSchemaProperties(tools, "fetch", ["resultType", "item", "items"]);
+  expectOutputSchemaProperties(tools, "wardrobe_items", [
+    "resultType",
+    "count",
+    "items",
+  ]);
   expect(mcpResult(tools).tools?.[0]).toMatchObject({
     name: "ping",
     description:
@@ -1137,24 +1187,82 @@ test("mcp wardrobe_items returns thumbnail image urls and filters by source", as
     "https://example.com/products/saved-blazer.jpg",
   );
   expect(mcpResult(mcpItems).structuredContent).toEqual({
-    ...httpItems.json,
+    resultType: "wardrobe_items",
+    count: 1,
     items: [
       {
-        ...httpItems.json.items[0],
-        imageUrl: SAVED_BLAZER_THUMBNAIL_URL,
+        id: "wardrobe-1",
+        name: "Saved blazer",
+        brand: "Acme",
+        url: "https://example.com/products/saved-blazer",
+        description: "A saved blazer.",
+        price: {
+          amount: 120,
+          currency: "USD",
+          display: "120 USD",
+        },
+        availability: "in_stock",
+        image: SAVED_BLAZER_THUMBNAIL_URL,
+        audience: "woman",
+        category: "jacket",
+        attributes: {
+          season: ["autumn", "winter"],
+          formalityLevel: ["formal"],
+          style: ["minimalistic"],
+          occasions: ["office"],
+          colorBase: ["black"],
+          pattern: "solid",
+          finish: "matte",
+          isNeutral: true,
+          composition: "wool",
+          silhouette: "tailored",
+          fit: "regular",
+          closureType: ["button"],
+          isSavedToWardrobe: null,
+        },
+        source: "from_catalog",
+        processingStatus: "ready",
+      },
+    ],
+  });
+  expectShortTextSummary(mcpItems, "Found 1 wardrobe items.");
+  expect(mcpResult(mcpItems)._meta).toMatchObject({
+    ui: {
+      component: "wardrobe_grid",
+      version: "1.0",
+      layout: "responsive_grid",
+      itemOrder: ["wardrobe-1"],
+    },
+    cards: [
+      {
+        type: "wardrobe_item_card",
+        itemId: "wardrobe-1",
+        title: "Saved blazer",
+        subtitle: "Acme · 120 USD",
+        image: SAVED_BLAZER_THUMBNAIL_URL,
+        badges: ["from_catalog", "ready", "jacket", "autumn", "minimalistic"],
+        primaryAction: {
+          type: "open_external",
+          label: "Open product",
+          url: "https://example.com/products/saved-blazer",
+        },
       },
     ],
   });
   expectNoPrivateWardrobeFields(mcpResult(mcpItems));
   expect(mcpResult(uploadedItems).structuredContent).toMatchObject({
-    ok: true,
+    resultType: "wardrobe_items",
+    count: 1,
     items: [
       {
-        imageUrl: "https://example.com/products/saved-blazer_640.webp",
+        image: "https://example.com/products/saved-blazer_640.webp",
         source: "uploaded",
       },
     ],
   });
+  expect(mcpResult(uploadedItems)._meta?.cards?.[0]).not.toHaveProperty(
+    "primaryAction",
+  );
   expect(calls).toEqual([
     { email: "person@example.com", source: null },
     { email: "person@example.com", source: null },
@@ -1244,24 +1352,30 @@ test("mcp product search accepts empty, query, filters, and pagination inputs", 
   const empty = await callMcpTool(baseUrl, token, "search", {});
   expect(empty.response.status).toBe(200);
   expect(mcpResult(empty).structuredContent).toMatchObject({
-    ok: true,
+    resultType: "product_search",
+    count: 1,
     total: 1,
     offset: 0,
     limit: 20,
   });
+  expectShortTextSummary(empty, "Found 1 products.");
 
   const queryOnly = await callMcpTool(baseUrl, token, "search", {
     query: "black blazer",
   });
   expect(queryOnly.response.status).toBe(200);
-  expect(mcpResult(queryOnly).structuredContent?.ok).toBe(true);
+  expect(mcpResult(queryOnly).structuredContent?.resultType).toBe(
+    "product_search",
+  );
 
   const filtersOnly = await callMcpTool(baseUrl, token, "search", {
     brand: ["acme"],
     category: ["outerwear"],
   });
   expect(filtersOnly.response.status).toBe(200);
-  expect(mcpResult(filtersOnly).structuredContent?.ok).toBe(true);
+  expect(mcpResult(filtersOnly).structuredContent?.resultType).toBe(
+    "product_search",
+  );
 
   const queryWithFilters = await callMcpTool(baseUrl, token, "search", {
     query: "black blazer",
@@ -1271,7 +1385,7 @@ test("mcp product search accepts empty, query, filters, and pagination inputs", 
   });
   expect(queryWithFilters.response.status).toBe(200);
   expect(mcpResult(queryWithFilters).structuredContent).toMatchObject({
-    ok: true,
+    resultType: "product_search",
     offset: 5,
     limit: 50,
   });
@@ -1287,20 +1401,41 @@ test("mcp product search returns sanitized preview items", async (t) => {
 
   expect(search.response.status).toBe(200);
   const output = mcpResult(search).structuredContent;
-  expect(output?.items?.[0]).toEqual({
-    id: "product-1",
-    name: "Black Blazer",
-    url: "https://example.com/products/black-blazer",
-    brand: "Acme",
-    price: 120,
-    currency: "USD",
-    imageUrl: BLACK_BLAZER_THUMBNAIL_URL,
-    category: "jacket",
-    colorBase: ["black"],
-    season: ["autumn", "winter"],
-    style: ["minimalistic"],
-    formalityLevel: ["formal"],
-    isSavedToWardrobe: true,
+  const expectedProduct = expectedBlackBlazerProduct();
+  expect(output).toMatchObject({
+    resultType: "product_search",
+    count: 1,
+    total: 1,
+    offset: 0,
+    limit: 20,
+  });
+  expect(output?.items?.[0]).toEqual(expectedProduct);
+  expectShortTextSummary(search, "Found 1 products.");
+  expect(mcpResult(search)._meta).toMatchObject({
+    ui: {
+      component: "product_grid",
+      version: "1.0",
+      layout: "responsive_grid",
+      itemOrder: ["product-1"],
+    },
+    cards: [
+      {
+        type: "product_card",
+        itemId: "product-1",
+        title: "Black Blazer",
+        subtitle: "Acme · 120 USD",
+        image: BLACK_BLAZER_THUMBNAIL_URL,
+        badges: ["Saved", "jacket", "in_stock", "autumn", "minimalistic"],
+        primaryAction: {
+          type: "open_external",
+          label: "Open product",
+          url: "https://example.com/products/black-blazer",
+        },
+      },
+    ],
+    itemsById: {
+      "product-1": expectedProduct,
+    },
   });
   expectNoInternalSearchFields(mcpResult(search));
 });
@@ -1313,33 +1448,35 @@ test("mcp product fetch returns sanitized detail by id and url", async (t) => {
     id: "product-1",
   });
   expect(byId.response.status).toBe(200);
+  const expectedProduct = expectedBlackBlazerProduct();
   expect(mcpResult(byId).structuredContent).toEqual({
-    ok: true,
-    item: {
-      id: "product-1",
-      name: "Black Blazer",
-      url: "https://example.com/products/black-blazer",
-      description: "A tailored black blazer.",
-      brand: "Acme",
-      price: 120,
-      currency: "USD",
-      availability: "in_stock",
-      imageUrl: BLACK_BLAZER_THUMBNAIL_URL,
-      audience: "woman",
-      category: "jacket",
-      season: ["autumn", "winter"],
-      formalityLevel: ["formal"],
-      style: ["minimalistic"],
-      occasions: ["office"],
-      colorBase: ["black"],
-      pattern: "solid",
-      finish: "matte",
-      isNeutral: true,
-      composition: "wool",
-      silhouette: "tailored",
-      fit: "regular",
-      closureType: ["button"],
-      isSavedToWardrobe: true,
+    resultType: "product_fetch",
+    item: expectedProduct,
+    items: [expectedProduct],
+  });
+  expectShortTextSummary(byId, "Fetched product Black Blazer.");
+  expect(mcpResult(byId)._meta).toMatchObject({
+    ui: {
+      component: "product_detail",
+      version: "1.0",
+    },
+    cards: [
+      {
+        type: "product_card",
+        itemId: "product-1",
+        title: "Black Blazer",
+        subtitle: "Acme · 120 USD",
+        image: BLACK_BLAZER_THUMBNAIL_URL,
+        badges: ["Saved", "jacket", "in_stock", "autumn", "minimalistic"],
+        primaryAction: {
+          type: "open_external",
+          label: "Open product",
+          url: "https://example.com/products/black-blazer",
+        },
+      },
+    ],
+    itemsById: {
+      "product-1": expectedProduct,
     },
   });
   expectNoInternalSearchFields(mcpResult(byId));
@@ -1349,6 +1486,7 @@ test("mcp product fetch returns sanitized detail by id and url", async (t) => {
   });
   expect(byUrl.response.status).toBe(200);
   expect(mcpResult(byUrl).structuredContent?.item?.id).toBe("product-1");
+  expect(mcpResult(byUrl).structuredContent?.items?.[0]?.id).toBe("product-1");
   expectNoInternalSearchFields(mcpResult(byUrl));
 });
 

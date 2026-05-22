@@ -10,12 +10,7 @@ const WARDROBE_ITEMS_DESCRIPTION =
 const STRING_OR_NUMBER_SCHEMA = z.union([z.string(), z.number()]);
 const NULLABLE_STRING_SCHEMA = z.string().nullable();
 const NULLABLE_STRING_OR_NUMBER_SCHEMA = STRING_OR_NUMBER_SCHEMA.nullable();
-const STRING_OR_STRING_ARRAY_SCHEMA = z.union([
-  z.string(),
-  z.array(z.string()),
-]);
-const NULLABLE_STRING_OR_STRING_ARRAY_SCHEMA =
-  STRING_OR_STRING_ARRAY_SCHEMA.nullable();
+const NULLABLE_STRING_ARRAY_SCHEMA = z.array(z.string()).nullable();
 const NULLABLE_BOOLEAN_SCHEMA = z.boolean().nullable();
 const WARDROBE_SOURCE_SCHEMA = z.enum(["uploaded", "from_catalog"]);
 const WARDROBE_PROCESSING_STATUS_SCHEMA = z.enum([
@@ -35,37 +30,43 @@ const READ_ONLY_TOOL_ANNOTATIONS = {
 
 const WARDROBE_ITEM_OUTPUT_SCHEMA = z
   .object({
-    id: STRING_OR_NUMBER_SCHEMA.optional(),
-    name: NULLABLE_STRING_SCHEMA.optional(),
-    url: NULLABLE_STRING_SCHEMA.optional(),
-    description: NULLABLE_STRING_SCHEMA.optional(),
-    brand: NULLABLE_STRING_SCHEMA.optional(),
-    price: NULLABLE_STRING_OR_NUMBER_SCHEMA.optional(),
-    currency: NULLABLE_STRING_SCHEMA.optional(),
-    availability: NULLABLE_STRING_SCHEMA.optional(),
-    imageUrl: NULLABLE_STRING_SCHEMA.optional(),
-    audience: NULLABLE_STRING_SCHEMA.optional(),
-    category: NULLABLE_STRING_SCHEMA.optional(),
-    season: NULLABLE_STRING_OR_STRING_ARRAY_SCHEMA.optional(),
-    formalityLevel: NULLABLE_STRING_OR_STRING_ARRAY_SCHEMA.optional(),
-    style: NULLABLE_STRING_OR_STRING_ARRAY_SCHEMA.optional(),
-    occasions: NULLABLE_STRING_OR_STRING_ARRAY_SCHEMA.optional(),
-    colorBase: NULLABLE_STRING_OR_STRING_ARRAY_SCHEMA.optional(),
-    pattern: NULLABLE_STRING_SCHEMA.optional(),
-    finish: NULLABLE_STRING_SCHEMA.optional(),
-    isNeutral: NULLABLE_BOOLEAN_SCHEMA.optional(),
-    composition: NULLABLE_STRING_SCHEMA.optional(),
-    silhouette: NULLABLE_STRING_SCHEMA.optional(),
-    fit: NULLABLE_STRING_SCHEMA.optional(),
-    closureType: NULLABLE_STRING_OR_STRING_ARRAY_SCHEMA.optional(),
-    source: WARDROBE_SOURCE_SCHEMA.optional(),
-    rawImageUrl: NULLABLE_STRING_SCHEMA.optional(),
-    processingStatus: WARDROBE_PROCESSING_STATUS_SCHEMA.optional(),
+    id: z.string(),
+    name: z.string(),
+    brand: NULLABLE_STRING_SCHEMA,
+    url: z.string(),
+    description: NULLABLE_STRING_SCHEMA,
+    price: z.object({
+      amount: NULLABLE_STRING_OR_NUMBER_SCHEMA,
+      currency: NULLABLE_STRING_SCHEMA,
+      display: NULLABLE_STRING_SCHEMA,
+    }),
+    availability: NULLABLE_STRING_SCHEMA,
+    image: NULLABLE_STRING_SCHEMA,
+    audience: NULLABLE_STRING_SCHEMA,
+    category: NULLABLE_STRING_SCHEMA,
+    attributes: z.object({
+      season: NULLABLE_STRING_ARRAY_SCHEMA,
+      formalityLevel: NULLABLE_STRING_ARRAY_SCHEMA,
+      style: NULLABLE_STRING_ARRAY_SCHEMA,
+      occasions: NULLABLE_STRING_ARRAY_SCHEMA,
+      colorBase: NULLABLE_STRING_ARRAY_SCHEMA,
+      pattern: NULLABLE_STRING_SCHEMA,
+      finish: NULLABLE_STRING_SCHEMA,
+      isNeutral: NULLABLE_BOOLEAN_SCHEMA,
+      composition: NULLABLE_STRING_SCHEMA,
+      silhouette: NULLABLE_STRING_SCHEMA,
+      fit: NULLABLE_STRING_SCHEMA,
+      closureType: NULLABLE_STRING_ARRAY_SCHEMA,
+      isSavedToWardrobe: NULLABLE_BOOLEAN_SCHEMA,
+    }),
+    source: WARDROBE_SOURCE_SCHEMA.nullable(),
+    processingStatus: WARDROBE_PROCESSING_STATUS_SCHEMA.nullable(),
   })
-  .passthrough();
+  .strict();
 
 const WARDROBE_ITEMS_OUTPUT_SCHEMA = z.object({
-  ok: z.boolean(),
+  resultType: z.literal("wardrobe_items"),
+  count: z.number(),
   items: z.array(WARDROBE_ITEM_OUTPUT_SCHEMA),
 });
 
@@ -90,8 +91,83 @@ function toJsonToolResult(payload: Record<string, unknown>, isError = false) {
   };
 }
 
+function toTextToolResult(
+  structuredContent: Record<string, unknown>,
+  text: string,
+  meta?: Record<string, unknown>,
+) {
+  return {
+    content: [
+      {
+        type: "text" as const,
+        text,
+      },
+    ],
+    structuredContent,
+    ...(meta ? { _meta: meta } : {}),
+  };
+}
+
 function toToolError(error: "service_unavailable") {
   return toJsonToolResult({ ok: false, error }, true);
+}
+
+function nullableString(value: unknown): string | null {
+  return typeof value === "string" ? value : null;
+}
+
+function nullableBoolean(value: unknown): boolean | null {
+  return typeof value === "boolean" ? value : null;
+}
+
+function nullablePrice(value: unknown): number | string | null {
+  return typeof value === "number" || typeof value === "string" ? value : null;
+}
+
+function nullableStringArray(value: unknown): string[] | null {
+  if (Array.isArray(value)) {
+    return value.filter((item) => typeof item === "string");
+  }
+  return typeof value === "string" ? [value] : null;
+}
+
+function nullableWardrobeSource(
+  value: unknown,
+): "uploaded" | "from_catalog" | null {
+  return value === "uploaded" || value === "from_catalog" ? value : null;
+}
+
+function nullableProcessingStatus(value: unknown): string | null {
+  return typeof value === "string" ? value : null;
+}
+
+function getPriceDisplay(
+  amount: number | string | null,
+  currency: string | null,
+) {
+  if (amount == null) {
+    return null;
+  }
+  return currency ? `${String(amount)} ${currency}` : String(amount);
+}
+
+function compactStrings(values: Array<string | null | undefined>): string[] {
+  return values
+    .map((value) => (typeof value === "string" ? value.trim() : ""))
+    .filter(Boolean);
+}
+
+function firstString(value: string[] | null): string | null {
+  return value?.[0] || null;
+}
+
+function isHttpUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
 }
 
 function toWardrobeItemToolOutput(item: unknown) {
@@ -99,11 +175,88 @@ function toWardrobeItemToolOutput(item: unknown) {
     string,
     unknown
   >;
+  const amount = nullablePrice(displayItem.price);
+  const currency = nullableString(displayItem.currency);
+  const source = nullableWardrobeSource(displayItem.source);
+  const season = nullableStringArray(displayItem.season);
+  const style = nullableStringArray(displayItem.style);
+
   return {
-    ...displayItem,
-    imageUrl: buildMcpImageThumbnailUrl(displayItem.imageUrl, {
-      source: displayItem.source,
-    }),
+    id: String(displayItem.id || ""),
+    name: String(displayItem.name || ""),
+    brand: nullableString(displayItem.brand),
+    url: String(displayItem.url || ""),
+    description: nullableString(displayItem.description),
+    price: {
+      amount,
+      currency,
+      display: getPriceDisplay(amount, currency),
+    },
+    availability: nullableString(displayItem.availability),
+    image: buildMcpImageThumbnailUrl(displayItem.imageUrl, { source }),
+    audience: nullableString(displayItem.audience),
+    category: nullableString(displayItem.category),
+    attributes: {
+      season,
+      formalityLevel: nullableStringArray(displayItem.formalityLevel),
+      style,
+      occasions: nullableStringArray(displayItem.occasions),
+      colorBase: nullableStringArray(displayItem.colorBase),
+      pattern: nullableString(displayItem.pattern),
+      finish: nullableString(displayItem.finish),
+      isNeutral: nullableBoolean(displayItem.isNeutral),
+      composition: nullableString(displayItem.composition),
+      silhouette: nullableString(displayItem.silhouette),
+      fit: nullableString(displayItem.fit),
+      closureType: nullableStringArray(displayItem.closureType),
+      isSavedToWardrobe: nullableBoolean(displayItem.isSavedToWardrobe),
+    },
+    source,
+    processingStatus: nullableProcessingStatus(displayItem.processingStatus),
+  };
+}
+
+type NormalizedWardrobeItem = ReturnType<typeof toWardrobeItemToolOutput>;
+
+function buildWardrobeCard(item: NormalizedWardrobeItem) {
+  const primaryAction =
+    item.source === "from_catalog" && isHttpUrl(item.url)
+      ? {
+          type: "open_external",
+          label: "Open product",
+          url: item.url,
+        }
+      : undefined;
+
+  return {
+    type: "wardrobe_item_card",
+    itemId: item.id,
+    title: item.name,
+    subtitle:
+      compactStrings([item.brand, item.price.display]).join(" · ") ||
+      item.category ||
+      "",
+    image: item.image,
+    badges: compactStrings([
+      item.source,
+      item.processingStatus,
+      item.category,
+      firstString(item.attributes.season),
+      firstString(item.attributes.style),
+    ]),
+    ...(primaryAction ? { primaryAction } : {}),
+  };
+}
+
+function buildWardrobeItemsMeta(items: NormalizedWardrobeItem[]) {
+  return {
+    ui: {
+      component: "wardrobe_grid",
+      version: "1.0",
+      layout: "responsive_grid",
+      itemOrder: items.map((item) => item.id),
+    },
+    cards: items.map(buildWardrobeCard),
   };
 }
 
@@ -124,12 +277,18 @@ function registerWardrobeItemsTool(server, deps: WardrobeToolsDeps) {
           email: deps.profileEmail,
           source: args?.source ?? null,
         });
-        return toJsonToolResult({
-          ok: true,
-          items: Array.isArray(items)
-            ? items.map(toWardrobeItemToolOutput)
-            : [],
-        });
+        const normalizedItems = Array.isArray(items)
+          ? items.map(toWardrobeItemToolOutput)
+          : [];
+        return toTextToolResult(
+          {
+            resultType: "wardrobe_items",
+            count: normalizedItems.length,
+            items: normalizedItems,
+          },
+          `Found ${normalizedItems.length} wardrobe items.`,
+          buildWardrobeItemsMeta(normalizedItems),
+        );
       } catch (error) {
         logError("[mcp/wardrobe_items]", error);
         return toToolError("service_unavailable");

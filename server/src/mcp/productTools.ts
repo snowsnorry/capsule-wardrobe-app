@@ -7,6 +7,10 @@ import {
 import { buildMcpImageThumbnailUrl } from "./mcpImageThumbnails.js";
 import { registerStatsTool } from "./productStatsTool.js";
 import { getCachedSearchSchemaOptions } from "./productSearchSchemaOptions.js";
+import {
+  buildProductDetailMeta,
+  buildProductGridMeta,
+} from "./productToolCards.js";
 
 const SEARCH_DESCRIPTION =
   "Search the product catalog with wardrobe-relevant filters. Include optional natural-language `query` with filters for more precise matches when the desired item or style is easier to describe. Use `get_search_options` to discover valid filter values before applying filters. Prefer exact option values from `get_search_options`; do not invent filter values.";
@@ -58,52 +62,44 @@ const PRODUCT_SEARCH_PREVIEW_OUTPUT_SCHEMA = z.object({
   name: z.string(),
   url: z.string(),
   brand: NULLABLE_STRING_SCHEMA,
-  price: NULLABLE_PRICE_SCHEMA,
-  currency: NULLABLE_STRING_SCHEMA,
-  imageUrl: NULLABLE_STRING_SCHEMA,
+  description: NULLABLE_STRING_SCHEMA,
+  price: z.object({
+    amount: NULLABLE_PRICE_SCHEMA,
+    currency: NULLABLE_STRING_SCHEMA,
+    display: NULLABLE_STRING_SCHEMA,
+  }),
+  availability: NULLABLE_STRING_SCHEMA,
+  image: NULLABLE_STRING_SCHEMA,
+  audience: NULLABLE_STRING_SCHEMA,
   category: NULLABLE_STRING_SCHEMA,
-  colorBase: NULLABLE_STRING_ARRAY_SCHEMA,
-  season: NULLABLE_STRING_ARRAY_SCHEMA,
-  style: NULLABLE_STRING_ARRAY_SCHEMA,
-  formalityLevel: NULLABLE_STRING_ARRAY_SCHEMA,
-  isSavedToWardrobe: NULLABLE_BOOLEAN_SCHEMA,
+  attributes: z.object({
+    season: NULLABLE_STRING_ARRAY_SCHEMA,
+    formalityLevel: NULLABLE_STRING_ARRAY_SCHEMA,
+    style: NULLABLE_STRING_ARRAY_SCHEMA,
+    occasions: NULLABLE_STRING_ARRAY_SCHEMA,
+    colorBase: NULLABLE_STRING_ARRAY_SCHEMA,
+    pattern: NULLABLE_STRING_SCHEMA,
+    finish: NULLABLE_STRING_SCHEMA,
+    isNeutral: NULLABLE_BOOLEAN_SCHEMA,
+    composition: NULLABLE_STRING_SCHEMA,
+    silhouette: NULLABLE_STRING_SCHEMA,
+    fit: NULLABLE_STRING_SCHEMA,
+    closureType: NULLABLE_STRING_ARRAY_SCHEMA,
+    isSavedToWardrobe: NULLABLE_BOOLEAN_SCHEMA,
+  }),
 });
 const SEARCH_OUTPUT_SCHEMA = z.object({
-  ok: z.boolean(),
+  resultType: z.literal("product_search"),
+  count: z.number(),
   items: z.array(PRODUCT_SEARCH_PREVIEW_OUTPUT_SCHEMA),
   total: z.number(),
   offset: z.number(),
   limit: z.number(),
 });
-const PRODUCT_DETAIL_OUTPUT_SCHEMA = z.object({
-  id: z.string(),
-  name: z.string(),
-  url: z.string(),
-  description: NULLABLE_STRING_SCHEMA,
-  brand: NULLABLE_STRING_SCHEMA,
-  price: NULLABLE_PRICE_SCHEMA,
-  currency: NULLABLE_STRING_SCHEMA,
-  availability: NULLABLE_STRING_SCHEMA,
-  imageUrl: NULLABLE_STRING_SCHEMA,
-  audience: NULLABLE_STRING_SCHEMA,
-  category: NULLABLE_STRING_SCHEMA,
-  season: NULLABLE_STRING_ARRAY_SCHEMA,
-  formalityLevel: NULLABLE_STRING_ARRAY_SCHEMA,
-  style: NULLABLE_STRING_ARRAY_SCHEMA,
-  occasions: NULLABLE_STRING_ARRAY_SCHEMA,
-  colorBase: NULLABLE_STRING_ARRAY_SCHEMA,
-  pattern: NULLABLE_STRING_SCHEMA,
-  finish: NULLABLE_STRING_SCHEMA,
-  isNeutral: NULLABLE_BOOLEAN_SCHEMA,
-  composition: NULLABLE_STRING_SCHEMA,
-  silhouette: NULLABLE_STRING_SCHEMA,
-  fit: NULLABLE_STRING_SCHEMA,
-  closureType: NULLABLE_STRING_ARRAY_SCHEMA,
-  isSavedToWardrobe: NULLABLE_BOOLEAN_SCHEMA,
-});
 const FETCH_OUTPUT_SCHEMA = z.object({
-  ok: z.boolean(),
-  item: PRODUCT_DETAIL_OUTPUT_SCHEMA,
+  resultType: z.literal("product_fetch"),
+  item: PRODUCT_SEARCH_PREVIEW_OUTPUT_SCHEMA,
+  items: z.array(PRODUCT_SEARCH_PREVIEW_OUTPUT_SCHEMA),
 });
 
 type ProductRowLike = Record<string, unknown>;
@@ -139,6 +135,23 @@ function toJsonToolResult(payload: Record<string, unknown>, isError = false) {
     ],
     structuredContent: payload,
     ...(isError ? { isError: true } : {}),
+  };
+}
+
+function toTextToolResult(
+  structuredContent: Record<string, unknown>,
+  text: string,
+  meta?: Record<string, unknown>,
+) {
+  return {
+    content: [
+      {
+        type: "text" as const,
+        text,
+      },
+    ],
+    structuredContent,
+    ...(meta ? { _meta: meta } : {}),
   };
 }
 
@@ -185,50 +198,55 @@ function nullableStringArray(value: unknown): string[] | null {
     : null;
 }
 
-function toProductSearchPreview(item: ProductRowLike) {
-  return {
-    id: String(item.id || ""),
-    name: String(item.name || ""),
-    url: String(item.url || ""),
-    brand: nullableString(item.brand),
-    price: nullablePrice(item.price),
-    currency: nullableString(item.currency),
-    imageUrl: buildMcpImageThumbnailUrl(item.imageUrl),
-    category: nullableString(item.category),
-    colorBase: nullableStringArray(item.colorBase),
-    season: nullableStringArray(item.season),
-    style: nullableStringArray(item.style),
-    formalityLevel: nullableStringArray(item.formalityLevel),
-    isSavedToWardrobe: nullableBoolean(item.isSavedToWardrobe),
-  };
+function getPriceDisplay(
+  amount: number | string | null,
+  currency: string | null,
+) {
+  if (amount == null) {
+    return null;
+  }
+  return currency ? `${String(amount)} ${currency}` : String(amount);
 }
 
-function toProductDetail(item: ProductRowLike) {
+function toNormalizedProduct(item: ProductRowLike) {
+  const amount = nullablePrice(item.price);
+  const currency = nullableString(item.currency);
+  const category = nullableString(item.category);
+  const availability = nullableString(item.availability);
+  const season = nullableStringArray(item.season);
+  const style = nullableStringArray(item.style);
+  const isSavedToWardrobe = nullableBoolean(item.isSavedToWardrobe);
+
   return {
     id: String(item.id || ""),
     name: String(item.name || ""),
+    brand: nullableString(item.brand),
     url: String(item.url || ""),
     description: nullableString(item.description),
-    brand: nullableString(item.brand),
-    price: nullablePrice(item.price),
-    currency: nullableString(item.currency),
-    availability: nullableString(item.availability),
-    imageUrl: buildMcpImageThumbnailUrl(item.imageUrl),
+    price: {
+      amount,
+      currency,
+      display: getPriceDisplay(amount, currency),
+    },
+    availability,
+    image: buildMcpImageThumbnailUrl(item.imageUrl),
     audience: nullableString(item.audience),
-    category: nullableString(item.category),
-    season: nullableStringArray(item.season),
-    formalityLevel: nullableStringArray(item.formalityLevel),
-    style: nullableStringArray(item.style),
-    occasions: nullableStringArray(item.occasions),
-    colorBase: nullableStringArray(item.colorBase),
-    pattern: nullableString(item.pattern),
-    finish: nullableString(item.finish),
-    isNeutral: nullableBoolean(item.isNeutral),
-    composition: nullableString(item.composition),
-    silhouette: nullableString(item.silhouette),
-    fit: nullableString(item.fit),
-    closureType: nullableStringArray(item.closureType),
-    isSavedToWardrobe: nullableBoolean(item.isSavedToWardrobe),
+    category,
+    attributes: {
+      season,
+      formalityLevel: nullableStringArray(item.formalityLevel),
+      style,
+      occasions: nullableStringArray(item.occasions),
+      colorBase: nullableStringArray(item.colorBase),
+      pattern: nullableString(item.pattern),
+      finish: nullableString(item.finish),
+      isNeutral: nullableBoolean(item.isNeutral),
+      composition: nullableString(item.composition),
+      silhouette: nullableString(item.silhouette),
+      fit: nullableString(item.fit),
+      closureType: nullableStringArray(item.closureType),
+      isSavedToWardrobe,
+    },
   };
 }
 
@@ -269,17 +287,22 @@ function registerSearchTool(
         const result = await deps.runSearchImpl(deps.profileEmail, args || {});
         const items = Array.isArray(result.items)
           ? result.items.map((item) =>
-              toProductSearchPreview(item as ProductRowLike),
+              toNormalizedProduct(item as ProductRowLike),
             )
           : [];
         const output = {
-          ok: true,
+          resultType: "product_search",
+          count: items.length,
           items,
           total: Number(result.total || 0),
           offset: Number(result.offset ?? DEFAULT_SEARCH_OFFSET),
           limit: Number(result.limit ?? DEFAULT_SEARCH_LIMIT),
         };
-        return toJsonToolResult(output);
+        return toTextToolResult(
+          output,
+          `Found ${items.length} products.`,
+          buildProductGridMeta(items),
+        );
       } catch (error) {
         if (isInvalidPayloadError(error)) {
           return toToolError("invalid_payload");
@@ -317,10 +340,17 @@ function registerFetchTool(server, deps: ProductToolsDeps) {
         return toToolError("not_found");
       }
 
-      return toJsonToolResult({
-        ok: true,
-        item: toProductDetail(item),
-      });
+      const normalizedItem = toNormalizedProduct(item);
+
+      return toTextToolResult(
+        {
+          resultType: "product_fetch",
+          item: normalizedItem,
+          items: [normalizedItem],
+        },
+        `Fetched product ${normalizedItem.name}.`,
+        buildProductDetailMeta(normalizedItem),
+      );
     },
   );
 }
