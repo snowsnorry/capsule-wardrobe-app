@@ -763,6 +763,76 @@ test("oauth authorize rejects unknown unregistered client ids when disabled", as
   expect(response.json.error).toBe("unauthorized_client");
 });
 
+test("oauth authorize accepts allowed web client metadata redirects", async (t) => {
+  const clientId = "https://metadata.example/oauth-client.json";
+  const originalFetch = globalThis.fetch;
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input) === clientId) {
+        return new Response(
+          JSON.stringify({
+            client_name: "Metadata client",
+            redirect_uris: [REDIRECT_URI],
+          }),
+          { headers: { "Content-Type": "application/json" } },
+        );
+      }
+
+      return originalFetch(input, init);
+    }),
+  );
+  t.onTestFinished(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const { baseUrl } = await startMcpTestServer(t, {
+    allowedClientIds: new Set(),
+    allowedClientMetadataHosts: new Set(["metadata.example"]),
+  });
+
+  const response = await fetch(
+    `${baseUrl}${authorizePath({ client_id: clientId })}`,
+    {
+      headers: { cookie: AUTH_COOKIE },
+    },
+  );
+
+  expect(response.status).toBe(200);
+  expect(await response.text()).toContain(clientId);
+});
+
+test("oauth authorize rejects unavailable web client metadata", async (t) => {
+  const clientId = "https://metadata.example/oauth-client.json";
+  const originalFetch = globalThis.fetch;
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input) === clientId) {
+        return new Response("not found", { status: 404 });
+      }
+
+      return originalFetch(input, init);
+    }),
+  );
+  t.onTestFinished(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const { baseUrl } = await startMcpTestServer(t, {
+    allowedClientIds: new Set(),
+    allowedClientMetadataHosts: new Set(["metadata.example"]),
+  });
+
+  const response = await requestJson(
+    baseUrl,
+    authorizePath({ client_id: clientId }),
+  );
+
+  expect(response.response.status).toBe(400);
+  expect(response.json.error).toBe("unauthorized_client");
+});
+
 test("oauth authorize can allow unregistered local clients only when explicitly enabled", async (t) => {
   const { baseUrl } = await startMcpTestServer(t, {
     allowedClientIds: new Set(),
