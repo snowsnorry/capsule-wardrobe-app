@@ -75,7 +75,6 @@ function buildCardGridWidgetMeta(description: string) {
   const resourceDomains = getResourceDomains();
   const ui = {
     prefersBorder: true,
-    ...(domain ? { domain } : {}),
     csp: {
       connectDomains: [],
       resourceDomains,

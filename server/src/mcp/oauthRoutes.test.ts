@@ -1174,7 +1174,6 @@ test("mcp tools expose Apps widget resources", async (t) => {
     _meta: {
       ui: {
         prefersBorder: true,
-        domain: expect.any(String),
         csp: {
           resourceDomains: expect.arrayContaining([
             "https://assets.capsule-wardrobe.org",
@@ -1191,6 +1190,9 @@ test("mcp tools expose Apps widget resources", async (t) => {
       },
     },
   });
+  expect(
+    getMcpResource(resources, PRODUCT_GRID_WIDGET_URI)?._meta?.ui,
+  ).not.toHaveProperty("domain");
   expect(getMcpResource(resources, PRODUCT_DETAIL_WIDGET_URI)).toMatchObject({
     uri: PRODUCT_DETAIL_WIDGET_URI,
     name: "product_detail_widget",
@@ -1214,7 +1216,6 @@ test("mcp tools expose Apps widget resources", async (t) => {
     _meta: {
       ui: {
         prefersBorder: true,
-        domain: expect.any(String),
         csp: {
           resourceDomains: expect.arrayContaining([
             "https://assets.capsule-wardrobe.org",
@@ -1231,6 +1232,7 @@ test("mcp tools expose Apps widget resources", async (t) => {
       },
     },
   });
+  expect(content?._meta?.ui).not.toHaveProperty("domain");
   expect(content?.text).toContain("window.openai");
   expect(content?.text).toContain("toolOutput");
   expect(content?.text).toContain("toolResponseMetadata");
