@@ -3,6 +3,7 @@ import { z } from "zod";
 import { logError } from "../logger.js";
 import { filterWardrobeItemForDisplay } from "../wardrobeItemDisplay.js";
 import { buildMcpImageThumbnailUrl } from "./mcpImageThumbnails.js";
+import { WARDROBE_GRID_WIDGET_URI } from "./productGridWidget.js";
 
 const WARDROBE_ITEMS_DESCRIPTION =
   "Return the authenticated user's wardrobe items, including uploaded items and saved catalog items. Optionally filter by `source`: `uploaded` or `from_catalog`.";
@@ -26,6 +27,14 @@ const READ_ONLY_TOOL_ANNOTATIONS = {
   destructiveHint: false,
   idempotentHint: true,
   openWorldHint: false,
+} as const;
+const WARDROBE_ITEMS_TOOL_META = {
+  ui: {
+    resourceUri: WARDROBE_GRID_WIDGET_URI,
+  },
+  "openai/outputTemplate": WARDROBE_GRID_WIDGET_URI,
+  "openai/toolInvocation/invoking": "Loading wardrobe",
+  "openai/toolInvocation/invoked": "Wardrobe ready",
 } as const;
 
 const WARDROBE_ITEM_OUTPUT_SCHEMA = z
@@ -260,6 +269,32 @@ function buildWardrobeItemsMeta(items: NormalizedWardrobeItem[]) {
   };
 }
 
+function formatWardrobeItemsText(items: NormalizedWardrobeItem[]) {
+  if (items.length === 0) {
+    return "Found 0 wardrobe items.";
+  }
+
+  const lines = [`Found ${items.length} wardrobe items:`];
+  items.slice(0, 10).forEach((item, index) => {
+    const summary =
+      compactStrings([
+        item.name,
+        item.brand,
+        item.price.display,
+        item.source,
+        item.processingStatus,
+      ]).join(" - ") ||
+      item.name ||
+      item.id;
+    lines.push(`${index + 1}. ${summary}`);
+    if (item.source === "from_catalog" && isHttpUrl(item.url)) {
+      lines.push(`   ${item.url}`);
+    }
+  });
+
+  return lines.join("\n");
+}
+
 function registerWardrobeItemsTool(server, deps: WardrobeToolsDeps) {
   server.registerTool(
     "wardrobe_items",
@@ -270,6 +305,7 @@ function registerWardrobeItemsTool(server, deps: WardrobeToolsDeps) {
       },
       outputSchema: WARDROBE_ITEMS_OUTPUT_SCHEMA,
       annotations: READ_ONLY_TOOL_ANNOTATIONS,
+      _meta: WARDROBE_ITEMS_TOOL_META,
     },
     async (args) => {
       try {
@@ -286,7 +322,7 @@ function registerWardrobeItemsTool(server, deps: WardrobeToolsDeps) {
             count: normalizedItems.length,
             items: normalizedItems,
           },
-          `Found ${normalizedItems.length} wardrobe items.`,
+          formatWardrobeItemsText(normalizedItems),
           buildWardrobeItemsMeta(normalizedItems),
         );
       } catch (error) {

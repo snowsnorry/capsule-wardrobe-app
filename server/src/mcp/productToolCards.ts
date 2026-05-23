@@ -98,3 +98,11 @@ export function formatProductSearchText(items: ProductToolCardItem[]) {
 
   return lines.join("\n");
 }
+
+export function formatProductFetchText(item: ProductToolCardItem) {
+  const summary =
+    compactStrings([item.name, item.brand, item.price.display]).join(" - ") ||
+    item.name ||
+    item.id;
+  return item.url ? `Fetched product:\n${summary}\n${item.url}` : summary;
+}

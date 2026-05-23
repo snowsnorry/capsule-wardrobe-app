@@ -1,22 +1,104 @@
+import {
+  CLIENT_ORIGIN,
+  MCP_OAUTH_ISSUER,
+  THUMBNAIL_ASSET_BASE_URL,
+} from "../appConfig.js";
+
 const PRODUCT_GRID_WIDGET_URI = "ui://capsule/product-grid.html";
-const PRODUCT_GRID_WIDGET_META = {
-  ui: {
+const PRODUCT_DETAIL_WIDGET_URI = "ui://capsule/product-detail.html";
+const WARDROBE_GRID_WIDGET_URI = "ui://capsule/wardrobe-grid.html";
+const CARD_GRID_WIDGET_DEFINITIONS = [
+  {
+    name: "product_grid_widget",
+    uri: PRODUCT_GRID_WIDGET_URI,
+    title: "Product grid",
+    description:
+      "A responsive product grid with images, prices, badges, and product links.",
+  },
+  {
+    name: "product_detail_widget",
+    uri: PRODUCT_DETAIL_WIDGET_URI,
+    title: "Product detail",
+    description:
+      "A product detail card with image, price, badges, and product link.",
+  },
+  {
+    name: "wardrobe_grid_widget",
+    uri: WARDROBE_GRID_WIDGET_URI,
+    title: "Wardrobe grid",
+    description:
+      "A responsive wardrobe grid with item images, sources, statuses, and product links.",
+  },
+] as const;
+const DEFAULT_ASSET_ORIGIN = "https://assets.capsule-wardrobe.org";
+
+function normalizeHttpOrigin(value: string | undefined): string | null {
+  const trimmed = String(value || "").trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  try {
+    const url = new URL(trimmed);
+    return url.protocol === "http:" || url.protocol === "https:"
+      ? url.origin
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function uniqueStrings(values: Array<string | null>): string[] {
+  return [
+    ...new Set(values.filter((value): value is string => Boolean(value))),
+  ];
+}
+
+function resolveWidgetDomain() {
+  return (
+    normalizeHttpOrigin(process.env.CLIENT_ORIGIN) ||
+    normalizeHttpOrigin(MCP_OAUTH_ISSUER) ||
+    normalizeHttpOrigin(CLIENT_ORIGIN)
+  );
+}
+
+function getResourceDomains() {
+  return uniqueStrings([
+    normalizeHttpOrigin(THUMBNAIL_ASSET_BASE_URL),
+    DEFAULT_ASSET_ORIGIN,
+  ]);
+}
+
+function buildCardGridWidgetMeta(description: string) {
+  const domain = resolveWidgetDomain();
+  const resourceDomains = getResourceDomains();
+  const ui = {
     prefersBorder: true,
+    ...(domain ? { domain } : {}),
     csp: {
       connectDomains: [],
-      resourceDomains: ["https://assets.capsule-wardrobe.org"],
+      resourceDomains,
     },
-  },
-  "openai/widgetDescription":
-    "A responsive product grid with images, prices, badges, and product links.",
-  "openai/widgetPrefersBorder": true,
-  "openai/widgetCSP": {
-    connect_domains: [],
-    resource_domains: ["https://assets.capsule-wardrobe.org"],
-    redirect_domains: ["https://www.stories.com", "https://example.com"],
-  },
-};
-const PRODUCT_GRID_WIDGET_HTML = String.raw`<!doctype html>
+  };
+
+  return {
+    ui,
+    "openai/widgetDescription": description,
+    "openai/widgetPrefersBorder": true,
+    ...(domain ? { "openai/widgetDomain": domain } : {}),
+    "openai/widgetCSP": {
+      connect_domains: [],
+      resource_domains: resourceDomains,
+      redirect_domains: [
+        "https://www.stories.com",
+        "https://example.com",
+        ...(domain ? [domain] : []),
+      ],
+    },
+  };
+}
+
+const CARD_GRID_WIDGET_HTML = String.raw`<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -100,7 +182,7 @@ const PRODUCT_GRID_WIDGET_HTML = String.raw`<!doctype html>
     </style>
   </head>
   <body>
-    <main id="root" class="empty">No products to display.</main>
+    <main id="root" class="empty">No items to display.</main>
     <script>
       const openai = window.openai || {};
       const output = openai.toolOutput || {};
@@ -113,7 +195,7 @@ const PRODUCT_GRID_WIDGET_HTML = String.raw`<!doctype html>
       function buildCardsFromItems(items) {
         return Array.isArray(items)
           ? items.map((item) => ({
-              type: "product_card",
+              type: "item_card",
               itemId: item.id,
               title: item.name,
               subtitle: [item.brand, item.price && item.price.display]
@@ -131,7 +213,7 @@ const PRODUCT_GRID_WIDGET_HTML = String.raw`<!doctype html>
                 typeof item.url === "string"
                   ? {
                       type: "open_external",
-                      label: "Open product",
+                      label: "Open",
                       url: item.url,
                     }
                   : null,
@@ -197,27 +279,40 @@ const PRODUCT_GRID_WIDGET_HTML = String.raw`<!doctype html>
   </body>
 </html>`;
 
-function registerProductGridWidgetResource(server) {
+function registerCardGridWidgetResource(server, definition) {
+  const widgetMeta = buildCardGridWidgetMeta(definition.description);
   server.registerResource(
-    "product_grid_widget",
-    PRODUCT_GRID_WIDGET_URI,
+    definition.name,
+    definition.uri,
     {
-      title: "Product grid",
-      description: "Renders product search results as image cards.",
+      title: definition.title,
+      description: definition.description,
       mimeType: "text/html",
-      _meta: PRODUCT_GRID_WIDGET_META,
+      _meta: widgetMeta,
     },
     async () => ({
       contents: [
         {
-          uri: PRODUCT_GRID_WIDGET_URI,
+          uri: definition.uri,
           mimeType: "text/html",
-          text: PRODUCT_GRID_WIDGET_HTML,
-          _meta: PRODUCT_GRID_WIDGET_META,
+          text: CARD_GRID_WIDGET_HTML,
+          _meta: widgetMeta,
         },
       ],
     }),
   );
 }
 
-export { PRODUCT_GRID_WIDGET_URI, registerProductGridWidgetResource };
+function registerProductGridWidgetResource(server) {
+  for (const definition of CARD_GRID_WIDGET_DEFINITIONS) {
+    registerCardGridWidgetResource(server, definition);
+  }
+}
+
+export {
+  PRODUCT_DETAIL_WIDGET_URI,
+  PRODUCT_GRID_WIDGET_URI,
+  WARDROBE_GRID_WIDGET_URI,
+  registerProductGridWidgetResource,
+  resolveWidgetDomain,
+};

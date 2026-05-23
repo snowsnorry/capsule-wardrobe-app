@@ -4,15 +4,22 @@ import {
   getSearchInputSchema,
   type SearchToolSchemaOptions,
 } from "./productToolSchemas.js";
-import { buildMcpImageThumbnailUrl } from "./mcpImageThumbnails.js";
 import { registerStatsTool } from "./productStatsTool.js";
 import { getCachedSearchSchemaOptions } from "./productSearchSchemaOptions.js";
 import {
+  toNormalizedProduct,
+  type ProductRowLike,
+} from "./productToolOutput.js";
+import {
   buildProductDetailMeta,
   buildProductGridMeta,
+  formatProductFetchText,
   formatProductSearchText,
 } from "./productToolCards.js";
-import { PRODUCT_GRID_WIDGET_URI } from "./productGridWidget.js";
+import {
+  PRODUCT_DETAIL_WIDGET_URI,
+  PRODUCT_GRID_WIDGET_URI,
+} from "./productGridWidget.js";
 
 const SEARCH_DESCRIPTION =
   "Search the product catalog with wardrobe-relevant filters. Include optional natural-language `query` with filters for more precise matches when the desired item or style is easier to describe. Use `get_search_options` to discover valid filter values before applying filters. Prefer exact option values from `get_search_options`; do not invent filter values.";
@@ -41,6 +48,14 @@ const SEARCH_TOOL_META = {
   "openai/outputTemplate": PRODUCT_GRID_WIDGET_URI,
   "openai/toolInvocation/invoking": "Searching products",
   "openai/toolInvocation/invoked": "Products ready",
+} as const;
+const FETCH_TOOL_META = {
+  ui: {
+    resourceUri: PRODUCT_DETAIL_WIDGET_URI,
+  },
+  "openai/outputTemplate": PRODUCT_DETAIL_WIDGET_URI,
+  "openai/toolInvocation/invoking": "Fetching product",
+  "openai/toolInvocation/invoked": "Product ready",
 } as const;
 
 const SEARCH_OPTION_OUTPUT_SCHEMA = z.object({
@@ -111,8 +126,6 @@ const FETCH_OUTPUT_SCHEMA = z.object({
   item: PRODUCT_SEARCH_PREVIEW_OUTPUT_SCHEMA,
   items: z.array(PRODUCT_SEARCH_PREVIEW_OUTPUT_SCHEMA),
 });
-
-type ProductRowLike = Record<string, unknown>;
 
 export type ProductToolsDeps = {
   profileEmail: string;
@@ -190,76 +203,6 @@ function isHttpUrl(value: string): boolean {
   }
 }
 
-function nullableString(value: unknown): string | null {
-  return typeof value === "string" ? value : null;
-}
-
-function nullableBoolean(value: unknown): boolean | null {
-  return typeof value === "boolean" ? value : null;
-}
-
-function nullablePrice(value: unknown): number | string | null {
-  return typeof value === "number" || typeof value === "string" ? value : null;
-}
-
-function nullableStringArray(value: unknown): string[] | null {
-  return Array.isArray(value)
-    ? value.filter((item) => typeof item === "string")
-    : null;
-}
-
-function getPriceDisplay(
-  amount: number | string | null,
-  currency: string | null,
-) {
-  if (amount == null) {
-    return null;
-  }
-  return currency ? `${String(amount)} ${currency}` : String(amount);
-}
-
-function toNormalizedProduct(item: ProductRowLike) {
-  const amount = nullablePrice(item.price);
-  const currency = nullableString(item.currency);
-  const category = nullableString(item.category);
-  const availability = nullableString(item.availability);
-  const season = nullableStringArray(item.season);
-  const style = nullableStringArray(item.style);
-  const isSavedToWardrobe = nullableBoolean(item.isSavedToWardrobe);
-
-  return {
-    id: String(item.id || ""),
-    name: String(item.name || ""),
-    brand: nullableString(item.brand),
-    url: String(item.url || ""),
-    description: nullableString(item.description),
-    price: {
-      amount,
-      currency,
-      display: getPriceDisplay(amount, currency),
-    },
-    availability,
-    image: buildMcpImageThumbnailUrl(item.imageUrl),
-    audience: nullableString(item.audience),
-    category,
-    attributes: {
-      season,
-      formalityLevel: nullableStringArray(item.formalityLevel),
-      style,
-      occasions: nullableStringArray(item.occasions),
-      colorBase: nullableStringArray(item.colorBase),
-      pattern: nullableString(item.pattern),
-      finish: nullableString(item.finish),
-      isNeutral: nullableBoolean(item.isNeutral),
-      composition: nullableString(item.composition),
-      silhouette: nullableString(item.silhouette),
-      fit: nullableString(item.fit),
-      closureType: nullableStringArray(item.closureType),
-      isSavedToWardrobe,
-    },
-  };
-}
-
 function registerGetSearchOptionsTool(server, deps: ProductToolsDeps) {
   server.registerTool(
     "get_search_options",
@@ -335,6 +278,7 @@ function registerFetchTool(server, deps: ProductToolsDeps) {
       },
       outputSchema: FETCH_OUTPUT_SCHEMA,
       annotations: READ_ONLY_TOOL_ANNOTATIONS,
+      _meta: FETCH_TOOL_META,
     },
     async (args) => {
       const id = normalizeOptionalString(args?.id);
@@ -359,7 +303,7 @@ function registerFetchTool(server, deps: ProductToolsDeps) {
           item: normalizedItem,
           items: [normalizedItem],
         },
-        `Fetched product ${normalizedItem.name}.`,
+        formatProductFetchText(normalizedItem),
         buildProductDetailMeta(normalizedItem),
       );
     },

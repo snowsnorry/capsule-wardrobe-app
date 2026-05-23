@@ -32,6 +32,8 @@ const STATS_DESCRIPTION =
 const WARDROBE_ITEMS_DESCRIPTION =
   "Return the authenticated user's wardrobe items, including uploaded items and saved catalog items. Optionally filter by `source`: `uploaded` or `from_catalog`.";
 const PRODUCT_GRID_WIDGET_URI = "ui://capsule/product-grid.html";
+const PRODUCT_DETAIL_WIDGET_URI = "ui://capsule/product-detail.html";
+const WARDROBE_GRID_WIDGET_URI = "ui://capsule/wardrobe-grid.html";
 const BLACK_BLAZER_THUMBNAIL_URL =
   "https://assets.capsule-wardrobe.org/thumbnails/e8a4045eda747e670055011d0588e0cec8f1dc531cc81b55dcad75de337f0209_640.webp";
 const SAVED_BLAZER_THUMBNAIL_URL =
@@ -953,8 +955,22 @@ test("oauth PKCE code flow issues an access token accepted by mcp", async (t) =>
   expect(statsProperties).not.toHaveProperty("offset");
   expect(statsProperties).not.toHaveProperty("limit");
 
+  const fetchTool = getMcpTool(tools, "fetch");
+  expect(fetchTool?._meta).toMatchObject({
+    ui: {
+      resourceUri: PRODUCT_DETAIL_WIDGET_URI,
+    },
+    "openai/outputTemplate": PRODUCT_DETAIL_WIDGET_URI,
+  });
+
   const wardrobeItemsTool = getMcpTool(tools, "wardrobe_items");
   expect(wardrobeItemsTool?.description).toBe(WARDROBE_ITEMS_DESCRIPTION);
+  expect(wardrobeItemsTool?._meta).toMatchObject({
+    ui: {
+      resourceUri: WARDROBE_GRID_WIDGET_URI,
+    },
+    "openai/outputTemplate": WARDROBE_GRID_WIDGET_URI,
+  });
   const wardrobeProperties = wardrobeItemsTool?.inputSchema?.properties as
     | Record<string, Record<string, unknown>>
     | undefined;
@@ -1094,12 +1110,26 @@ test("mcp get_search_options matches search options endpoint", async (t) => {
   expect(mcpResult(mcpOptions).structuredContent).toEqual(httpOptions.json);
 });
 
-test("mcp search exposes product grid widget resource", async (t) => {
+test("mcp tools expose Apps widget resources", async (t) => {
   const { baseUrl } = await startMcpTestServer(t);
   const token = bearerToken({ scope: "mcp:read wardrobe:read" });
 
   const resources = await listMcpResources(baseUrl, token);
-  const widget = await readMcpResource(baseUrl, token, PRODUCT_GRID_WIDGET_URI);
+  const productGridWidget = await readMcpResource(
+    baseUrl,
+    token,
+    PRODUCT_GRID_WIDGET_URI,
+  );
+  const productDetailWidget = await readMcpResource(
+    baseUrl,
+    token,
+    PRODUCT_DETAIL_WIDGET_URI,
+  );
+  const wardrobeGridWidget = await readMcpResource(
+    baseUrl,
+    token,
+    WARDROBE_GRID_WIDGET_URI,
+  );
 
   expect(resources.response.status).toBe(200);
   expect(getMcpResource(resources, PRODUCT_GRID_WIDGET_URI)).toMatchObject({
@@ -1110,31 +1140,60 @@ test("mcp search exposes product grid widget resource", async (t) => {
     _meta: {
       ui: {
         prefersBorder: true,
+        domain: expect.any(String),
         csp: {
-          resourceDomains: ["https://assets.capsule-wardrobe.org"],
+          resourceDomains: expect.arrayContaining([
+            "https://assets.capsule-wardrobe.org",
+          ]),
         },
       },
+      "openai/widgetDomain": expect.any(String),
       "openai/widgetCSP": {
         resource_domains: ["https://assets.capsule-wardrobe.org"],
-        redirect_domains: ["https://www.stories.com", "https://example.com"],
+        redirect_domains: expect.arrayContaining([
+          "https://www.stories.com",
+          "https://example.com",
+        ]),
       },
     },
   });
-  expect(widget.response.status).toBe(200);
-  const content = mcpResult(widget).contents?.[0];
+  expect(getMcpResource(resources, PRODUCT_DETAIL_WIDGET_URI)).toMatchObject({
+    uri: PRODUCT_DETAIL_WIDGET_URI,
+    name: "product_detail_widget",
+    title: "Product detail",
+    mimeType: "text/html",
+  });
+  expect(getMcpResource(resources, WARDROBE_GRID_WIDGET_URI)).toMatchObject({
+    uri: WARDROBE_GRID_WIDGET_URI,
+    name: "wardrobe_grid_widget",
+    title: "Wardrobe grid",
+    mimeType: "text/html",
+  });
+
+  expect(productGridWidget.response.status).toBe(200);
+  expect(productDetailWidget.response.status).toBe(200);
+  expect(wardrobeGridWidget.response.status).toBe(200);
+  const content = mcpResult(productGridWidget).contents?.[0];
   expect(content).toMatchObject({
     uri: PRODUCT_GRID_WIDGET_URI,
     mimeType: "text/html",
     _meta: {
       ui: {
         prefersBorder: true,
+        domain: expect.any(String),
         csp: {
-          resourceDomains: ["https://assets.capsule-wardrobe.org"],
+          resourceDomains: expect.arrayContaining([
+            "https://assets.capsule-wardrobe.org",
+          ]),
         },
       },
+      "openai/widgetDomain": expect.any(String),
       "openai/widgetCSP": {
         resource_domains: ["https://assets.capsule-wardrobe.org"],
-        redirect_domains: ["https://www.stories.com", "https://example.com"],
+        redirect_domains: expect.arrayContaining([
+          "https://www.stories.com",
+          "https://example.com",
+        ]),
       },
     },
   });
@@ -1142,6 +1201,14 @@ test("mcp search exposes product grid widget resource", async (t) => {
   expect(content?.text).toContain("toolOutput");
   expect(content?.text).toContain("toolResponseMetadata");
   expect(content?.text).toContain('document.createElement("img")');
+  expect(mcpResult(productDetailWidget).contents?.[0]).toMatchObject({
+    uri: PRODUCT_DETAIL_WIDGET_URI,
+    mimeType: "text/html",
+  });
+  expect(mcpResult(wardrobeGridWidget).contents?.[0]).toMatchObject({
+    uri: WARDROBE_GRID_WIDGET_URI,
+    mimeType: "text/html",
+  });
 });
 
 test("mcp stats matches search stats endpoint without price buckets", async (t) => {
@@ -1324,7 +1391,14 @@ test("mcp wardrobe_items returns thumbnail image urls and filters by source", as
       },
     ],
   });
-  expectShortTextSummary(mcpItems, "Found 1 wardrobe items.");
+  expectShortTextSummary(
+    mcpItems,
+    [
+      "Found 1 wardrobe items:",
+      "1. Saved blazer - Acme - 120 USD - from_catalog - ready",
+      "   https://example.com/products/saved-blazer",
+    ].join("\n"),
+  );
   expect(mcpResult(mcpItems)._meta).toMatchObject({
     ui: {
       component: "wardrobe_grid",
@@ -1567,7 +1641,14 @@ test("mcp product fetch returns sanitized detail by id and url", async (t) => {
     item: expectedProduct,
     items: [expectedProduct],
   });
-  expectShortTextSummary(byId, "Fetched product Black Blazer.");
+  expectShortTextSummary(
+    byId,
+    [
+      "Fetched product:",
+      "Black Blazer - Acme - 120 USD",
+      "https://example.com/products/black-blazer",
+    ].join("\n"),
+  );
   expect(mcpResult(byId)._meta).toMatchObject({
     ui: {
       component: "product_detail",
