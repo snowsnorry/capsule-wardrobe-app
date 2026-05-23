@@ -293,24 +293,54 @@ const CARD_GRID_WIDGET_HTML = String.raw`<!doctype html>
         });
       }
 
-      render(window.openai || {});
+      function parseMessageData(data) {
+        if (typeof data !== "string") {
+          return data;
+        }
+        try {
+          return JSON.parse(data);
+        } catch {
+          return null;
+        }
+      }
+
+      function getToolResultFromMessage(message) {
+        if (!message || typeof message !== "object") {
+          return null;
+        }
+        if (message.structuredContent || message._meta) {
+          return message;
+        }
+        if (message.method === "ui/notifications/tool-result") {
+          return message.params || null;
+        }
+        return (
+          (message.params && message.params.result) ||
+          message.toolResult ||
+          message.result ||
+          null
+        );
+      }
+
+      function renderFromOpenAi() {
+        render(window.openai || {});
+      }
+
+      renderFromOpenAi();
+      requestAnimationFrame(renderFromOpenAi);
+      [100, 500].forEach((delay) => setTimeout(renderFromOpenAi, delay));
       window.addEventListener(
         "openai:set_globals",
-        (event) => render(event.detail && event.detail.globals),
+        (event) => render((event.detail && event.detail.globals) || event.detail),
         { passive: true },
       );
       window.addEventListener(
         "message",
         (event) => {
-          if (event.source !== window.parent) {
-            return;
-          }
-          const message = event.data;
-          if (!message || message.jsonrpc !== "2.0") {
-            return;
-          }
-          if (message.method === "ui/notifications/tool-result") {
-            renderToolResult(message.params);
+          const message = parseMessageData(event.data);
+          const toolResult = getToolResultFromMessage(message);
+          if (toolResult) {
+            renderToolResult(toolResult);
           }
         },
         { passive: true },
