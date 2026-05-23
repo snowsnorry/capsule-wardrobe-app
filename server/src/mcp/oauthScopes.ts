@@ -4,7 +4,7 @@ export function scopesToKey(scopes: readonly string[]): string {
   return [...scopes].sort().join(" ");
 }
 
-export function scopesFromKey(scopes: string): string[] {
+function scopesFromKey(scopes: string): string[] {
   return scopes
     .split(/\s+/)
     .map((scope) => scope.trim())
