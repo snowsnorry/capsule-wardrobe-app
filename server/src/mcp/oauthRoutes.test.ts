@@ -31,9 +31,9 @@ const STATS_DESCRIPTION =
   "Return product catalog result counts and facet statistics for wardrobe-relevant filters. Use `get_search_options` to discover valid filter values before applying filters. Prefer exact option values from `get_search_options`; do not invent filter values.";
 const WARDROBE_ITEMS_DESCRIPTION =
   "Return the authenticated user's wardrobe items, including uploaded items and saved catalog items. Optionally filter by `source`: `uploaded` or `from_catalog`.";
-const PRODUCT_GRID_WIDGET_URI = "ui://capsule/product-grid.html";
-const PRODUCT_DETAIL_WIDGET_URI = "ui://capsule/product-detail.html";
-const WARDROBE_GRID_WIDGET_URI = "ui://capsule/wardrobe-grid.html";
+const PRODUCT_GRID_WIDGET_URI = "ui://capsule/product-grid.v2.html";
+const PRODUCT_DETAIL_WIDGET_URI = "ui://capsule/product-detail.v2.html";
+const WARDROBE_GRID_WIDGET_URI = "ui://capsule/wardrobe-grid.v2.html";
 const CARD_GRID_WIDGET_MIME_TYPE = "text/html;profile=mcp-app";
 const BLACK_BLAZER_THUMBNAIL_URL =
   "https://assets.capsule-wardrobe.org/thumbnails/e8a4045eda747e670055011d0588e0cec8f1dc531cc81b55dcad75de337f0209_640.webp";
@@ -1202,6 +1202,7 @@ test("mcp tools expose Apps widget resources", async (t) => {
   expect(content?.text).toContain("toolOutput");
   expect(content?.text).toContain("toolResponseMetadata");
   expect(content?.text).toContain("openai:set_globals");
+  expect(content?.text).toContain("ui/notifications/tool-result");
   expect(content?.text).toContain('document.createElement("img")');
   expect(mcpResult(productDetailWidget).contents?.[0]).toMatchObject({
     uri: PRODUCT_DETAIL_WIDGET_URI,

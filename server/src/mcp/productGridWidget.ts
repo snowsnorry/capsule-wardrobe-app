@@ -4,9 +4,9 @@ import {
   THUMBNAIL_ASSET_BASE_URL,
 } from "../appConfig.js";
 
-const PRODUCT_GRID_WIDGET_URI = "ui://capsule/product-grid.html";
-const PRODUCT_DETAIL_WIDGET_URI = "ui://capsule/product-detail.html";
-const WARDROBE_GRID_WIDGET_URI = "ui://capsule/wardrobe-grid.html";
+const PRODUCT_GRID_WIDGET_URI = "ui://capsule/product-grid.v2.html";
+const PRODUCT_DETAIL_WIDGET_URI = "ui://capsule/product-detail.v2.html";
+const WARDROBE_GRID_WIDGET_URI = "ui://capsule/wardrobe-grid.v2.html";
 const CARD_GRID_WIDGET_MIME_TYPE = "text/html;profile=mcp-app";
 const CARD_GRID_WIDGET_DEFINITIONS = [
   {
@@ -286,10 +286,33 @@ const CARD_GRID_WIDGET_HTML = String.raw`<!doctype html>
         root.replaceChildren(...cards.map(renderCard));
       }
 
+      function renderToolResult(toolResult) {
+        render({
+          toolOutput: (toolResult && toolResult.structuredContent) || {},
+          toolResponseMetadata: (toolResult && toolResult._meta) || {},
+        });
+      }
+
       render(window.openai || {});
       window.addEventListener(
         "openai:set_globals",
         (event) => render(event.detail && event.detail.globals),
+        { passive: true },
+      );
+      window.addEventListener(
+        "message",
+        (event) => {
+          if (event.source !== window.parent) {
+            return;
+          }
+          const message = event.data;
+          if (!message || message.jsonrpc !== "2.0") {
+            return;
+          }
+          if (message.method === "ui/notifications/tool-result") {
+            renderToolResult(message.params);
+          }
+        },
         { passive: true },
       );
     </script>
