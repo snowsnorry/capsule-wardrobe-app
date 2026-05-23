@@ -4,9 +4,9 @@ import {
   THUMBNAIL_ASSET_BASE_URL,
 } from "../appConfig.js";
 
-const PRODUCT_GRID_WIDGET_URI = "ui://capsule/product-grid.v2.html";
-const PRODUCT_DETAIL_WIDGET_URI = "ui://capsule/product-detail.v2.html";
-const WARDROBE_GRID_WIDGET_URI = "ui://capsule/wardrobe-grid.v2.html";
+const PRODUCT_GRID_WIDGET_URI = "ui://capsule/product-grid.v3.html";
+const PRODUCT_DETAIL_WIDGET_URI = "ui://capsule/product-detail.v3.html";
+const WARDROBE_GRID_WIDGET_URI = "ui://capsule/wardrobe-grid.v3.html";
 const CARD_GRID_WIDGET_MIME_TYPE = "text/html;profile=mcp-app";
 const CARD_GRID_WIDGET_DEFINITIONS = [
   {
@@ -156,11 +156,7 @@ const CARD_GRID_WIDGET_HTML = String.raw`<!doctype html>
         line-height: 1;
       }
 
-      .empty {
-        padding: 16px;
-        color: color-mix(in srgb, CanvasText 68%, transparent);
-        font-size: 13px;
-      }
+      .empty { padding: 16px; color: color-mix(in srgb, CanvasText 68%, transparent); font-size: 13px; white-space: pre-wrap; }
     </style>
   </head>
   <body>
@@ -168,14 +164,25 @@ const CARD_GRID_WIDGET_HTML = String.raw`<!doctype html>
     <script>
       const root = document.getElementById("root");
 
+      function firstArray(values) { return values.find((value) => Array.isArray(value) && value.length) || values.find(Array.isArray) || []; }
+
       function getCards(globals) {
         const rawOutput = globals.toolOutput || globals.structuredContent || {};
         const output = rawOutput.structuredContent || rawOutput;
         const metadata =
           globals.toolResponseMetadata || rawOutput._meta || globals._meta || {};
-        return Array.isArray(metadata.cards)
-          ? metadata.cards
-          : buildCardsFromItems(output.items);
+        const cards = firstArray([metadata.cards, rawOutput.cards]);
+        return cards.length ? cards : buildCardsFromItems(firstArray([
+          output.items,
+          globals.toolInput && globals.toolInput.items,
+          metadata.items,
+        ]));
+      }
+
+      function getImageUrl(item) {
+        if (typeof item.image === "string") return item.image;
+        if (item.image && typeof item.image.url === "string") return item.image.url;
+        return typeof item.imageUrl === "string" ? item.imageUrl : null;
       }
 
       function buildCardsFromItems(items) {
@@ -184,24 +191,16 @@ const CARD_GRID_WIDGET_HTML = String.raw`<!doctype html>
               type: "item_card",
               itemId: item.id,
               title: item.name,
-              subtitle: [item.brand, item.price && item.price.display]
-                .filter(Boolean)
-                .join(" - "),
-              image: item.image,
+              subtitle: [item.brand, item.price && item.price.display].filter(Boolean).join(" - "),
+              image: getImageUrl(item),
               badges: [
-                item.attributes && item.attributes.isSavedToWardrobe
-                  ? "Saved"
-                  : null,
+                item.attributes && item.attributes.isSavedToWardrobe ? "Saved" : null,
                 item.category,
                 item.availability,
               ].filter(Boolean),
               primaryAction:
                 typeof item.url === "string"
-                  ? {
-                      type: "open_external",
-                      label: "Open",
-                      url: item.url,
-                    }
+                  ? { type: "open_external", label: "Open", url: item.url }
                   : null,
             }))
           : [];
@@ -262,46 +261,48 @@ const CARD_GRID_WIDGET_HTML = String.raw`<!doctype html>
         const cards = getCards(globals || window.openai || {});
         if (!cards.length) {
           root.className = "empty";
-          root.textContent = "No items to display.";
+          root.textContent = "No items to display.\n" + JSON.stringify(buildDebug(globals || window.openai || {}), null, 2);
           return;
         }
         root.className = "grid";
         root.replaceChildren(...cards.map(renderCard));
       }
 
-      function renderToolResult(toolResult) {
-        render({
-          toolOutput: toolResult || {},
-        });
+      function renderToolResult(toolResult) { render({ toolOutput: toolResult || {} }); }
+
+      function renderToolInput(toolInput) { render({ toolInput: toolInput || {} }); }
+
+      function objectKeys(value) { return value && typeof value === "object" ? Object.keys(value) : []; }
+
+      function arrayLength(value) { return Array.isArray(value) ? value.length : null; }
+
+      function buildDebug(globals) {
+        const rawOutput = globals.toolOutput || globals.structuredContent || {};
+        const output = rawOutput.structuredContent || rawOutput;
+        const metadata =
+          globals.toolResponseMetadata || rawOutput._meta || globals._meta || {};
+        const toolInput = globals.toolInput || {};
+        return { toolInputKeys: objectKeys(toolInput), toolOutputKeys: objectKeys(output),
+          rawToolOutputKeys: objectKeys(rawOutput), metaKeys: objectKeys(metadata),
+          toolInputItems: arrayLength(toolInput.items), toolOutputItems: arrayLength(output.items),
+          nestedStructuredItems: arrayLength(rawOutput.structuredContent && rawOutput.structuredContent.items),
+          metaCards: arrayLength(metadata.cards) };
       }
 
       function parseMessageData(data) {
-        if (typeof data !== "string") {
-          return data;
-        }
-        try {
-          return JSON.parse(data);
-        } catch {
-          return null;
-        }
+        if (typeof data !== "string") return data;
+        try { return JSON.parse(data); } catch { return null; }
       }
 
       function getToolResultFromMessage(message) {
-        if (!message || typeof message !== "object") {
-          return null;
-        }
-        if (message.structuredContent || message._meta) {
-          return message;
-        }
-        if (message.method === "ui/notifications/tool-result") {
-          return message.params || null;
-        }
-        return (
-          (message.params && message.params.result) ||
-          message.toolResult ||
-          message.result ||
-          null
-        );
+        if (!message || typeof message !== "object") return null;
+        if (message.structuredContent || message._meta) return message;
+        if (message.method === "ui/notifications/tool-result") return message.params || null;
+        return (message.params && message.params.result) || message.toolResult || message.result || null;
+      }
+
+      function getToolInputFromMessage(message) {
+        return message && message.method === "ui/notifications/tool-input" ? message.params || null : null;
       }
 
       function renderFromOpenAi() {
@@ -323,6 +324,10 @@ const CARD_GRID_WIDGET_HTML = String.raw`<!doctype html>
           const toolResult = getToolResultFromMessage(message);
           if (toolResult) {
             renderToolResult(toolResult);
+          }
+          const toolInput = getToolInputFromMessage(message);
+          if (toolInput) {
+            renderToolInput(toolInput);
           }
         },
         { passive: true },
