@@ -168,6 +168,10 @@ function compactStrings(values: Array<string | null | undefined>): string[] {
     .filter(Boolean);
 }
 
+function markdownImageAlt(value: string): string {
+  return value.replace(/[[\]\n\r]/g, " ").trim() || "Wardrobe item";
+}
+
 function firstString(value: string[] | null): string | null {
   return value?.[0] || null;
 }
@@ -289,6 +293,9 @@ function formatWardrobeItemsText(items: NormalizedWardrobeItem[]) {
       item.name ||
       item.id;
     lines.push(`${index + 1}. ${summary}`);
+    if (item.image) {
+      lines.push(`   ![${markdownImageAlt(item.name)}](${item.image})`);
+    }
     if (item.source === "from_catalog" && isHttpUrl(item.url)) {
       lines.push(`   ${item.url}`);
     }
@@ -356,7 +363,7 @@ function registerRenderWardrobeGridTool(server) {
           count: items.length,
           items,
         },
-        `Showing ${items.length} wardrobe items.`,
+        formatWardrobeItemsText(items),
         buildWardrobeItemsMeta(items),
       );
     },

@@ -118,12 +118,7 @@ const CARD_GRID_WIDGET_HTML = String.raw`<!doctype html>
         color: CanvasText;
       }
 
-      .grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(164px, 1fr));
-        gap: 12px;
-        padding: 2px;
-      }
+      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(164px, 1fr)); gap: 12px; padding: 2px; }
 
       .card {
         overflow: hidden;
@@ -134,19 +129,9 @@ const CARD_GRID_WIDGET_HTML = String.raw`<!doctype html>
         color: inherit;
       }
 
-      .image {
-        width: 100%;
-        aspect-ratio: 4 / 5;
-        object-fit: cover;
-        display: block;
-        background: color-mix(in srgb, CanvasText 8%, transparent);
-      }
+      .image { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; display: block; background: color-mix(in srgb, CanvasText 8%, transparent); }
 
-      .body {
-        display: grid;
-        gap: 7px;
-        padding: 10px;
-      }
+      .body { display: grid; gap: 7px; padding: 10px; }
 
       .title {
         font-size: 13px;
@@ -161,11 +146,7 @@ const CARD_GRID_WIDGET_HTML = String.raw`<!doctype html>
         line-height: 1.3;
       }
 
-      .badges {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 5px;
-      }
+      .badges { display: flex; flex-wrap: wrap; gap: 5px; }
 
       .badge {
         border-radius: 999px;
@@ -188,8 +169,10 @@ const CARD_GRID_WIDGET_HTML = String.raw`<!doctype html>
       const root = document.getElementById("root");
 
       function getCards(globals) {
-        const output = globals.toolOutput || {};
-        const metadata = globals.toolResponseMetadata || {};
+        const rawOutput = globals.toolOutput || globals.structuredContent || {};
+        const output = rawOutput.structuredContent || rawOutput;
+        const metadata =
+          globals.toolResponseMetadata || rawOutput._meta || globals._meta || {};
         return Array.isArray(metadata.cards)
           ? metadata.cards
           : buildCardsFromItems(output.items);
@@ -288,8 +271,7 @@ const CARD_GRID_WIDGET_HTML = String.raw`<!doctype html>
 
       function renderToolResult(toolResult) {
         render({
-          toolOutput: (toolResult && toolResult.structuredContent) || {},
-          toolResponseMetadata: (toolResult && toolResult._meta) || {},
+          toolOutput: toolResult || {},
         });
       }
 

@@ -22,6 +22,10 @@ function compactStrings(values: Array<string | null | undefined>): string[] {
     .filter(Boolean);
 }
 
+function markdownImageAlt(value: string): string {
+  return value.replace(/[[\]\n\r]/g, " ").trim() || "Product";
+}
+
 function firstString(value: string[] | null): string | null {
   return value?.[0] || null;
 }
@@ -91,6 +95,9 @@ export function formatProductSearchText(items: ProductToolCardItem[]) {
       item.name ||
       item.id;
     lines.push(`${index + 1}. ${summary}`);
+    if (item.image) {
+      lines.push(`   ![${markdownImageAlt(item.name)}](${item.image})`);
+    }
     if (item.url) {
       lines.push(`   ${item.url}`);
     }
@@ -104,5 +111,12 @@ export function formatProductFetchText(item: ProductToolCardItem) {
     compactStrings([item.name, item.brand, item.price.display]).join(" - ") ||
     item.name ||
     item.id;
-  return item.url ? `Fetched product:\n${summary}\n${item.url}` : summary;
+  return [
+    "Fetched product:",
+    summary,
+    item.image ? `![${markdownImageAlt(item.name)}](${item.image})` : null,
+    item.url,
+  ]
+    .filter(Boolean)
+    .join("\n");
 }

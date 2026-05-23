@@ -7,6 +7,8 @@ import {
 import {
   buildProductDetailMeta,
   buildProductGridMeta,
+  formatProductFetchText,
+  formatProductSearchText,
   type ProductToolCardItem,
 } from "./productToolCards.js";
 
@@ -134,7 +136,7 @@ export function registerRenderProductGridTool(server) {
           offset: Number(args?.offset ?? 0),
           limit: Number(args?.limit ?? items.length),
         },
-        `Showing ${items.length} products.`,
+        formatProductSearchText(items),
         buildProductGridMeta(items),
       );
     },
@@ -161,7 +163,7 @@ export function registerRenderProductDetailTool(server) {
           item,
           items: [item],
         },
-        `Showing product ${item.name || item.id}.`,
+        formatProductFetchText(item),
         buildProductDetailMeta(item),
       );
     },

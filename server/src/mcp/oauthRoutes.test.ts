@@ -1441,6 +1441,7 @@ test("mcp wardrobe_items returns thumbnail image urls and filters by source", as
     [
       "Found 1 wardrobe items:",
       "1. Saved blazer - Acme - 120 USD - from_catalog - ready",
+      `   ![Saved blazer](${SAVED_BLAZER_THUMBNAIL_URL})`,
       "   https://example.com/products/saved-blazer",
     ].join("\n"),
   );
@@ -1467,7 +1468,15 @@ test("mcp wardrobe_items returns thumbnail image urls and filters by source", as
       },
     ],
   });
-  expectShortTextSummary(renderItems, "Showing 1 wardrobe items.");
+  expectShortTextSummary(
+    renderItems,
+    [
+      "Found 1 wardrobe items:",
+      "1. Saved blazer - Acme - 120 USD - from_catalog - ready",
+      `   ![Saved blazer](${SAVED_BLAZER_THUMBNAIL_URL})`,
+      "   https://example.com/products/saved-blazer",
+    ].join("\n"),
+  );
   expect(mcpResult(renderItems)).toMatchObject({
     structuredContent: {
       resultType: "wardrobe_items",
@@ -1604,6 +1613,7 @@ test("mcp product search accepts empty, query, filters, and pagination inputs", 
     [
       "Found 1 products:",
       "1. Black Blazer - Acme - 120 USD",
+      `   ![Black Blazer](${BLACK_BLAZER_THUMBNAIL_URL})`,
       "   https://example.com/products/black-blazer",
     ].join("\n"),
   );
@@ -1663,6 +1673,7 @@ test("mcp product search returns sanitized preview items", async (t) => {
     [
       "Found 1 products:",
       "1. Black Blazer - Acme - 120 USD",
+      `   ![Black Blazer](${BLACK_BLAZER_THUMBNAIL_URL})`,
       "   https://example.com/products/black-blazer",
     ].join("\n"),
   );
@@ -1699,7 +1710,15 @@ test("mcp product search returns sanitized preview items", async (t) => {
     limit: output?.limit,
   });
   expect(render.response.status).toBe(200);
-  expectShortTextSummary(render, "Showing 1 products.");
+  expectShortTextSummary(
+    render,
+    [
+      "Found 1 products:",
+      "1. Black Blazer - Acme - 120 USD",
+      `   ![Black Blazer](${BLACK_BLAZER_THUMBNAIL_URL})`,
+      "   https://example.com/products/black-blazer",
+    ].join("\n"),
+  );
   expect(mcpResult(render)).toMatchObject({
     structuredContent: {
       resultType: "product_search",
@@ -1750,6 +1769,7 @@ test("mcp product fetch returns sanitized detail by id and url", async (t) => {
     [
       "Fetched product:",
       "Black Blazer - Acme - 120 USD",
+      `![Black Blazer](${BLACK_BLAZER_THUMBNAIL_URL})`,
       "https://example.com/products/black-blazer",
     ].join("\n"),
   );
@@ -1781,7 +1801,15 @@ test("mcp product fetch returns sanitized detail by id and url", async (t) => {
     item: expectedProduct,
   });
   expect(render.response.status).toBe(200);
-  expectShortTextSummary(render, "Showing product Black Blazer.");
+  expectShortTextSummary(
+    render,
+    [
+      "Fetched product:",
+      "Black Blazer - Acme - 120 USD",
+      `![Black Blazer](${BLACK_BLAZER_THUMBNAIL_URL})`,
+      "https://example.com/products/black-blazer",
+    ].join("\n"),
+  );
   expect(mcpResult(render)).toMatchObject({
     structuredContent: {
       resultType: "product_fetch",
