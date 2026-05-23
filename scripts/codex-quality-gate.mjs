@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 
-const promptPath = ".codex/quality-gate-repair-loop.md";
+const promptPath = ".agents/quality-gate-repair-loop.md";
 
 if (!existsSync(promptPath)) {
   console.error(`Missing prompt file: ${promptPath}`);
