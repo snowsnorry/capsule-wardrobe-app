@@ -31,39 +31,10 @@ const CARD_GRID_WIDGET_DEFINITIONS = [
   WARDROBE_GRID_WIDGET_DEFINITION,
 ] as const;
 
-function buildWidgetResourceLink(
-  definition: (typeof CARD_GRID_WIDGET_DEFINITIONS)[number],
-) {
-  return {
-    type: "resource_link" as const,
-    uri: definition.uri,
-    name: definition.name,
-    title: definition.title,
-    description: definition.description,
-    mimeType: CARD_GRID_WIDGET_MIME_TYPE,
-  };
-}
-
-type WidgetResourceLink = ReturnType<typeof buildWidgetResourceLink>;
-
-const PRODUCT_GRID_WIDGET_RESOURCE_LINK = buildWidgetResourceLink(
-  PRODUCT_GRID_WIDGET_DEFINITION,
-);
-const PRODUCT_DETAIL_WIDGET_RESOURCE_LINK = buildWidgetResourceLink(
-  PRODUCT_DETAIL_WIDGET_DEFINITION,
-);
-const WARDROBE_GRID_WIDGET_RESOURCE_LINK = buildWidgetResourceLink(
-  WARDROBE_GRID_WIDGET_DEFINITION,
-);
-
 export {
   CARD_GRID_WIDGET_DEFINITIONS,
   CARD_GRID_WIDGET_MIME_TYPE,
-  PRODUCT_DETAIL_WIDGET_RESOURCE_LINK,
   PRODUCT_DETAIL_WIDGET_URI,
-  PRODUCT_GRID_WIDGET_RESOURCE_LINK,
   PRODUCT_GRID_WIDGET_URI,
-  WARDROBE_GRID_WIDGET_RESOURCE_LINK,
   WARDROBE_GRID_WIDGET_URI,
-  type WidgetResourceLink,
 };

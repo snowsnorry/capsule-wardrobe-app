@@ -22,7 +22,7 @@ function createToolRegistry() {
   return { server, tools };
 }
 
-test("render product grid returns fallback text and resource link without items", async () => {
+test("render product grid returns fallback text without items", async () => {
   const { server, tools } = createToolRegistry();
   registerRenderProductGridTool(server);
 
@@ -33,12 +33,6 @@ test("render product grid returns fallback text and resource link without items"
       {
         type: "text",
         text: "Found 0 products.",
-      },
-      {
-        type: "resource_link",
-        uri: "ui://capsule/product-grid.v7.html",
-        name: "product_grid_widget",
-        mimeType: "text/html;profile=mcp-app",
       },
     ],
     structuredContent: {
@@ -60,7 +54,7 @@ test("render product grid returns fallback text and resource link without items"
   });
 });
 
-test("render product detail returns fallback text and resource link", async () => {
+test("render product detail returns fallback text", async () => {
   const { server, tools } = createToolRegistry();
   registerRenderProductDetailTool(server);
 
@@ -104,12 +98,6 @@ test("render product detail returns fallback text and resource link", async () =
           "![Black Blazer](https://example.test/black-blazer.webp)",
           "https://example.test/products/black-blazer",
         ].join("\n"),
-      },
-      {
-        type: "resource_link",
-        uri: "ui://capsule/product-detail.v7.html",
-        name: "product_detail_widget",
-        mimeType: "text/html;profile=mcp-app",
       },
     ],
     structuredContent: {

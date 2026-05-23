@@ -3,16 +3,12 @@ import { z } from "zod";
 import { logError } from "../logger.js";
 import { filterWardrobeItemForDisplay } from "../wardrobeItemDisplay.js";
 import { buildMcpImageThumbnailUrl } from "./mcpImageThumbnails.js";
-import {
-  WARDROBE_GRID_WIDGET_RESOURCE_LINK,
-  WARDROBE_GRID_WIDGET_URI,
-  type WidgetResourceLink,
-} from "./productGridWidget.js";
+import { WARDROBE_GRID_WIDGET_URI } from "./productGridWidget.js";
 
 const WARDROBE_ITEMS_DESCRIPTION =
-  "Return the authenticated user's wardrobe items, including uploaded items and saved catalog items. Optionally filter by `source`: `uploaded` or `from_catalog`. The textual result includes markdown image links; clients that support MCP app resource links or OpenAI output templates may render the attached wardrobe grid directly.";
+  "Return the authenticated user's wardrobe items, including uploaded items and saved catalog items. Optionally filter by `source`: `uploaded` or `from_catalog`. When the user asks to display, show, render, view, or visualize the wardrobe, call `render_wardrobe_grid` immediately with the returned `items` before answering.";
 const RENDER_WARDROBE_GRID_DESCRIPTION =
-  "Render wardrobe items returned by `wardrobe_items` for clients that support MCP app resource links or OpenAI output templates. The result also includes markdown image links as a fallback.";
+  "Render wardrobe items returned by `wardrobe_items` as a visual wardrobe grid. Use this immediately after `wardrobe_items` when the user asks to display, show, view, render, or visualize the wardrobe.";
 
 const STRING_OR_NUMBER_SCHEMA = z.union([z.string(), z.number()]);
 const NULLABLE_STRING_SCHEMA = z.string().nullable();
@@ -110,20 +106,14 @@ function toTextToolResult(
   structuredContent: Record<string, unknown>,
   text: string,
   meta?: Record<string, unknown>,
-  resourceLink?: WidgetResourceLink,
 ) {
-  const content: Array<{ type: "text"; text: string } | WidgetResourceLink> = [
-    {
-      type: "text",
-      text,
-    },
-  ];
-  if (resourceLink) {
-    content.push(resourceLink);
-  }
-
   return {
-    content,
+    content: [
+      {
+        type: "text" as const,
+        text,
+      },
+    ],
     structuredContent,
     ...(meta ? { _meta: meta } : {}),
   };
@@ -314,6 +304,7 @@ function registerWardrobeItemsTool(server, deps: WardrobeToolsDeps) {
       },
       outputSchema: WARDROBE_ITEMS_OUTPUT_SCHEMA,
       annotations: READ_ONLY_TOOL_ANNOTATIONS,
+      _meta: WARDROBE_GRID_RENDER_TOOL_META,
     },
     async (args) => {
       try {
@@ -332,7 +323,6 @@ function registerWardrobeItemsTool(server, deps: WardrobeToolsDeps) {
           },
           formatWardrobeItemsText(normalizedItems),
           buildWardrobeItemsMeta(normalizedItems),
-          WARDROBE_GRID_WIDGET_RESOURCE_LINK,
         );
       } catch (error) {
         logError("[mcp/wardrobe_items]", error);
@@ -366,7 +356,6 @@ function registerRenderWardrobeGridTool(server) {
         },
         formatWardrobeItemsText(items),
         buildWardrobeItemsMeta(items),
-        WARDROBE_GRID_WIDGET_RESOURCE_LINK,
       );
     },
   );

@@ -21,17 +21,16 @@ import {
   registerRenderProductGridTool,
 } from "./productRenderTools.js";
 import {
-  PRODUCT_DETAIL_WIDGET_RESOURCE_LINK,
-  PRODUCT_GRID_WIDGET_RESOURCE_LINK,
-  type WidgetResourceLink,
+  PRODUCT_DETAIL_WIDGET_URI,
+  PRODUCT_GRID_WIDGET_URI,
 } from "./productGridWidget.js";
 
 const SEARCH_DESCRIPTION =
-  "Search the product catalog with wardrobe-relevant filters. Include optional natural-language `query` with filters for more precise matches when the desired item or style is easier to describe. Use `get_search_options` to discover valid filter values before applying filters. Prefer exact option values from `get_search_options`; do not invent filter values. The textual result includes markdown image links; clients that support MCP app resource links or OpenAI output templates may render the attached product grid directly.";
+  "Search the product catalog with wardrobe-relevant filters. Include optional natural-language `query` with filters for more precise matches when the desired item or style is easier to describe. Use `get_search_options` to discover valid filter values before applying filters. Prefer exact option values from `get_search_options`; do not invent filter values. The textual result includes markdown image links; clients that support OpenAI output templates may render the product grid directly.";
 const GET_SEARCH_OPTIONS_DESCRIPTION =
   "Return allowed filter values for product catalog search.";
 const FETCH_DESCRIPTION =
-  "Fetch one product by id or URL returned from MCP search. The textual result includes the image link; clients that support MCP app resource links or OpenAI output templates may render the attached product detail card directly.";
+  "Fetch one product by id or URL returned from MCP search. The textual result includes the image link; clients that support OpenAI output templates may render the product detail card directly.";
 const DEFAULT_SEARCH_OFFSET = 0;
 const DEFAULT_SEARCH_LIMIT = 20;
 
@@ -45,6 +44,22 @@ const READ_ONLY_TOOL_ANNOTATIONS = {
   destructiveHint: false,
   idempotentHint: true,
   openWorldHint: false,
+} as const;
+const PRODUCT_GRID_RENDER_TOOL_META = {
+  ui: {
+    resourceUri: PRODUCT_GRID_WIDGET_URI,
+  },
+  "openai/outputTemplate": PRODUCT_GRID_WIDGET_URI,
+  "openai/toolInvocation/invoking": "Searching products",
+  "openai/toolInvocation/invoked": "Products ready",
+} as const;
+const PRODUCT_DETAIL_RENDER_TOOL_META = {
+  ui: {
+    resourceUri: PRODUCT_DETAIL_WIDGET_URI,
+  },
+  "openai/outputTemplate": PRODUCT_DETAIL_WIDGET_URI,
+  "openai/toolInvocation/invoking": "Fetching product",
+  "openai/toolInvocation/invoked": "Product ready",
 } as const;
 const SEARCH_OPTION_OUTPUT_SCHEMA = z.object({
   value: z.string(),
@@ -153,20 +168,14 @@ function toTextToolResult(
   structuredContent: Record<string, unknown>,
   text: string,
   meta?: Record<string, unknown>,
-  resourceLink?: WidgetResourceLink,
 ) {
-  const content: Array<{ type: "text"; text: string } | WidgetResourceLink> = [
-    {
-      type: "text",
-      text,
-    },
-  ];
-  if (resourceLink) {
-    content.push(resourceLink);
-  }
-
   return {
-    content,
+    content: [
+      {
+        type: "text" as const,
+        text,
+      },
+    ],
     structuredContent,
     ...(meta ? { _meta: meta } : {}),
   };
@@ -228,6 +237,7 @@ function registerSearchTool(
       inputSchema: getSearchInputSchema(schemaOptions),
       outputSchema: SEARCH_OUTPUT_SCHEMA,
       annotations: READ_ONLY_TOOL_ANNOTATIONS,
+      _meta: PRODUCT_GRID_RENDER_TOOL_META,
     },
     async (args) => {
       try {
@@ -249,7 +259,6 @@ function registerSearchTool(
           output,
           formatProductSearchText(items),
           buildProductGridMeta(items),
-          PRODUCT_GRID_WIDGET_RESOURCE_LINK,
         );
       } catch (error) {
         if (isInvalidPayloadError(error)) {
@@ -272,6 +281,7 @@ function registerFetchTool(server, deps: ProductToolsDeps) {
       },
       outputSchema: FETCH_OUTPUT_SCHEMA,
       annotations: READ_ONLY_TOOL_ANNOTATIONS,
+      _meta: PRODUCT_DETAIL_RENDER_TOOL_META,
     },
     async (args) => {
       const id = normalizeOptionalString(args?.id);
@@ -298,7 +308,6 @@ function registerFetchTool(server, deps: ProductToolsDeps) {
         },
         formatProductFetchText(normalizedItem),
         buildProductDetailMeta(normalizedItem),
-        PRODUCT_DETAIL_WIDGET_RESOURCE_LINK,
       );
     },
   );

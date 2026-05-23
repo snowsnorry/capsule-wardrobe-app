@@ -345,11 +345,7 @@ function registerProductGridWidgetResource(server) {
 
 export { registerProductGridWidgetResource };
 export {
-  PRODUCT_DETAIL_WIDGET_RESOURCE_LINK,
   PRODUCT_DETAIL_WIDGET_URI,
-  PRODUCT_GRID_WIDGET_RESOURCE_LINK,
   PRODUCT_GRID_WIDGET_URI,
-  WARDROBE_GRID_WIDGET_RESOURCE_LINK,
   WARDROBE_GRID_WIDGET_URI,
-  type WidgetResourceLink,
 } from "./productGridWidgetDefinitions.js";

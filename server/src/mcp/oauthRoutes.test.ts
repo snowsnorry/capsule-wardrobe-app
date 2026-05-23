@@ -26,11 +26,11 @@ const CODE_VERIFIER =
   "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~";
 const CODE_CHALLENGE = createPkceS256Challenge(CODE_VERIFIER);
 const SEARCH_DESCRIPTION =
-  "Search the product catalog with wardrobe-relevant filters. Include optional natural-language `query` with filters for more precise matches when the desired item or style is easier to describe. Use `get_search_options` to discover valid filter values before applying filters. Prefer exact option values from `get_search_options`; do not invent filter values. The textual result includes markdown image links; clients that support MCP app resource links or OpenAI output templates may render the attached product grid directly.";
+  "Search the product catalog with wardrobe-relevant filters. Include optional natural-language `query` with filters for more precise matches when the desired item or style is easier to describe. Use `get_search_options` to discover valid filter values before applying filters. Prefer exact option values from `get_search_options`; do not invent filter values. The textual result includes markdown image links; clients that support OpenAI output templates may render the product grid directly.";
 const STATS_DESCRIPTION =
   "Return product catalog result counts and facet statistics for wardrobe-relevant filters. Use `get_search_options` to discover valid filter values before applying filters. Prefer exact option values from `get_search_options`; do not invent filter values.";
 const WARDROBE_ITEMS_DESCRIPTION =
-  "Return the authenticated user's wardrobe items, including uploaded items and saved catalog items. Optionally filter by `source`: `uploaded` or `from_catalog`. The textual result includes markdown image links; clients that support MCP app resource links or OpenAI output templates may render the attached wardrobe grid directly.";
+  "Return the authenticated user's wardrobe items, including uploaded items and saved catalog items. Optionally filter by `source`: `uploaded` or `from_catalog`. When the user asks to display, show, render, view, or visualize the wardrobe, call `render_wardrobe_grid` immediately with the returned `items` before answering.";
 const PRODUCT_GRID_WIDGET_URI = "ui://capsule/product-grid.v7.html";
 const PRODUCT_DETAIL_WIDGET_URI = "ui://capsule/product-detail.v7.html";
 const WARDROBE_GRID_WIDGET_URI = "ui://capsule/wardrobe-grid.v7.html";
@@ -422,14 +422,6 @@ type McpResult = Record<string, unknown> & {
     _meta?: Record<string, unknown>;
   }>;
 };
-type ExpectedWidgetResourceLink = {
-  type: "resource_link";
-  uri: string;
-  name: string;
-  title: string;
-  description: string;
-  mimeType: string;
-};
 
 function mcpResult(response): McpResult {
   return (response.json.result || {}) as McpResult;
@@ -442,49 +434,6 @@ function getMcpTool(response, name: string) {
 function getMcpResource(response, uri: string) {
   return mcpResult(response).resources?.find(
     (resource) => resource.uri === uri,
-  );
-}
-
-function expectedWidgetResourceLink(
-  uri: string,
-  name: string,
-  title: string,
-  description: string,
-): ExpectedWidgetResourceLink {
-  return {
-    type: "resource_link",
-    uri,
-    name,
-    title,
-    description,
-    mimeType: CARD_GRID_WIDGET_MIME_TYPE,
-  };
-}
-
-function expectedProductGridResourceLink() {
-  return expectedWidgetResourceLink(
-    PRODUCT_GRID_WIDGET_URI,
-    "product_grid_widget",
-    "Product grid",
-    "A responsive product grid with images, prices, badges, and product links.",
-  );
-}
-
-function expectedProductDetailResourceLink() {
-  return expectedWidgetResourceLink(
-    PRODUCT_DETAIL_WIDGET_URI,
-    "product_detail_widget",
-    "Product detail",
-    "A product detail card with image, price, badges, and product link.",
-  );
-}
-
-function expectedWardrobeGridResourceLink() {
-  return expectedWidgetResourceLink(
-    WARDROBE_GRID_WIDGET_URI,
-    "wardrobe_grid_widget",
-    "Wardrobe grid",
-    "A responsive wardrobe grid with item images, sources, statuses, and product links.",
   );
 }
 
@@ -570,17 +519,8 @@ function expectNoPrivateWardrobeFields(value: unknown) {
   expect(serialized).not.toContain("updatedAt");
 }
 
-function expectShortTextSummary(
-  response,
-  text: string,
-  resourceLink?: ExpectedWidgetResourceLink,
-) {
-  const expectedContent: Array<
-    { type: "text"; text: string } | ExpectedWidgetResourceLink
-  > = [{ type: "text", text }];
-  if (resourceLink) {
-    expectedContent.push(resourceLink);
-  }
+function expectShortTextSummary(response, text: string) {
+  const expectedContent = [{ type: "text", text }];
   expect(mcpResult(response).content).toEqual(expectedContent);
 }
 
@@ -1008,8 +948,11 @@ test("oauth PKCE code flow issues an access token accepted by mcp", async (t) =>
 
   const searchTool = getMcpTool(tools, "search");
   expect(searchTool?.description).toBe(SEARCH_DESCRIPTION);
-  expect(searchTool?._meta).not.toMatchObject({
-    "openai/outputTemplate": expect.any(String),
+  expect(searchTool?._meta).toMatchObject({
+    ui: {
+      resourceUri: PRODUCT_GRID_WIDGET_URI,
+    },
+    "openai/outputTemplate": PRODUCT_GRID_WIDGET_URI,
   });
   expect(getMcpTool(tools, "render_product_grid")?._meta).toMatchObject({
     ui: {
@@ -1045,8 +988,11 @@ test("oauth PKCE code flow issues an access token accepted by mcp", async (t) =>
   expect(statsProperties).not.toHaveProperty("limit");
 
   const fetchTool = getMcpTool(tools, "fetch");
-  expect(fetchTool?._meta).not.toMatchObject({
-    "openai/outputTemplate": expect.any(String),
+  expect(fetchTool?._meta).toMatchObject({
+    ui: {
+      resourceUri: PRODUCT_DETAIL_WIDGET_URI,
+    },
+    "openai/outputTemplate": PRODUCT_DETAIL_WIDGET_URI,
   });
   expect(getMcpTool(tools, "render_product_detail")?._meta).toMatchObject({
     ui: {
@@ -1057,8 +1003,11 @@ test("oauth PKCE code flow issues an access token accepted by mcp", async (t) =>
 
   const wardrobeItemsTool = getMcpTool(tools, "wardrobe_items");
   expect(wardrobeItemsTool?.description).toBe(WARDROBE_ITEMS_DESCRIPTION);
-  expect(wardrobeItemsTool?._meta).not.toMatchObject({
-    "openai/outputTemplate": expect.any(String),
+  expect(wardrobeItemsTool?._meta).toMatchObject({
+    ui: {
+      resourceUri: WARDROBE_GRID_WIDGET_URI,
+    },
+    "openai/outputTemplate": WARDROBE_GRID_WIDGET_URI,
   });
   expect(getMcpTool(tools, "render_wardrobe_grid")?._meta).toMatchObject({
     ui: {
@@ -1559,7 +1508,6 @@ test("mcp wardrobe_items returns thumbnail image urls and filters by source", as
       `   ![Saved blazer](${SAVED_BLAZER_THUMBNAIL_URL})`,
       "   https://example.com/products/saved-blazer",
     ].join("\n"),
-    expectedWardrobeGridResourceLink(),
   );
   expect(mcpResult(mcpItems)._meta).toMatchObject({
     ui: {
@@ -1592,7 +1540,6 @@ test("mcp wardrobe_items returns thumbnail image urls and filters by source", as
       `   ![Saved blazer](${SAVED_BLAZER_THUMBNAIL_URL})`,
       "   https://example.com/products/saved-blazer",
     ].join("\n"),
-    expectedWardrobeGridResourceLink(),
   );
   expect(mcpResult(renderItems)).toMatchObject({
     structuredContent: {
@@ -1733,7 +1680,6 @@ test("mcp product search accepts empty, query, filters, and pagination inputs", 
       `   ![Black Blazer](${BLACK_BLAZER_THUMBNAIL_URL})`,
       "   https://example.com/products/black-blazer",
     ].join("\n"),
-    expectedProductGridResourceLink(),
   );
 
   const queryOnly = await callMcpTool(baseUrl, token, "search", {
@@ -1794,7 +1740,6 @@ test("mcp product search returns sanitized preview items", async (t) => {
       `   ![Black Blazer](${BLACK_BLAZER_THUMBNAIL_URL})`,
       "   https://example.com/products/black-blazer",
     ].join("\n"),
-    expectedProductGridResourceLink(),
   );
   expect(mcpResult(search)._meta).toMatchObject({
     ui: {
@@ -1837,7 +1782,6 @@ test("mcp product search returns sanitized preview items", async (t) => {
       `   ![Black Blazer](${BLACK_BLAZER_THUMBNAIL_URL})`,
       "   https://example.com/products/black-blazer",
     ].join("\n"),
-    expectedProductGridResourceLink(),
   );
   expect(mcpResult(render)).toMatchObject({
     structuredContent: {
@@ -1892,7 +1836,6 @@ test("mcp product fetch returns sanitized detail by id and url", async (t) => {
       `![Black Blazer](${BLACK_BLAZER_THUMBNAIL_URL})`,
       "https://example.com/products/black-blazer",
     ].join("\n"),
-    expectedProductDetailResourceLink(),
   );
   expect(mcpResult(byId)._meta).toMatchObject({
     ui: {
@@ -1930,7 +1873,6 @@ test("mcp product fetch returns sanitized detail by id and url", async (t) => {
       `![Black Blazer](${BLACK_BLAZER_THUMBNAIL_URL})`,
       "https://example.com/products/black-blazer",
     ].join("\n"),
-    expectedProductDetailResourceLink(),
   );
   expect(mcpResult(render)).toMatchObject({
     structuredContent: {
