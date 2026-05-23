@@ -4,6 +4,7 @@ import {
   getSearchInputSchema,
   type SearchToolSchemaOptions,
 } from "./productToolSchemas.js";
+import type { ProductToolsDeps } from "./productToolDeps.js";
 import { registerStatsTool } from "./productStatsTool.js";
 import { getCachedSearchSchemaOptions } from "./productSearchSchemaOptions.js";
 import {
@@ -129,27 +130,6 @@ const FETCH_OUTPUT_SCHEMA = z.object({
   item: PRODUCT_SEARCH_PREVIEW_OUTPUT_SCHEMA,
   items: z.array(PRODUCT_SEARCH_PREVIEW_OUTPUT_SCHEMA),
 });
-
-export type ProductToolsDeps = {
-  profileEmail: string;
-  runSearchImpl: (
-    email: string,
-    payload: Record<string, unknown>,
-  ) => Promise<Record<string, unknown>>;
-  getSearchStatsImpl: (
-    email: string,
-    payload: Record<string, unknown>,
-  ) => Promise<Record<string, unknown>>;
-  getSearchOptionsImpl: (email: string) => Promise<Record<string, unknown>>;
-  getProductByIdImpl: (
-    id: string,
-    email: string,
-  ) => Promise<ProductRowLike | null>;
-  getProductByUrlImpl: (
-    url: string,
-    email: string,
-  ) => Promise<ProductRowLike | null>;
-};
 
 function toJsonToolResult(payload: Record<string, unknown>, isError = false) {
   return {

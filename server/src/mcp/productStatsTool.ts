@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { logError } from "../logger.js";
-import type { ProductToolsDeps } from "./productTools.js";
+import type { ProductToolsDeps } from "./productToolDeps.js";
 import {
   getSearchFilterInputSchema,
   type SearchToolSchemaOptions,

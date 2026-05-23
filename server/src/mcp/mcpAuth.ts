@@ -115,10 +115,6 @@ export function createMcpAuthMiddleware(context) {
       scopes: scopes as McpReadScope[],
       subject: claims.sub,
     } satisfies McpAuthenticatedSubject;
-    logInfo("[mcp/access/success]", {
-      clientId: claims.client_id,
-      subject: claims.sub,
-    });
     return next();
   };
 }
