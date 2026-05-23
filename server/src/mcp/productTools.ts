@@ -20,13 +20,18 @@ import {
   registerRenderProductDetailTool,
   registerRenderProductGridTool,
 } from "./productRenderTools.js";
+import {
+  PRODUCT_DETAIL_WIDGET_RESOURCE_LINK,
+  PRODUCT_GRID_WIDGET_RESOURCE_LINK,
+  type WidgetResourceLink,
+} from "./productGridWidget.js";
 
 const SEARCH_DESCRIPTION =
-  "Search the product catalog with wardrobe-relevant filters. Include optional natural-language `query` with filters for more precise matches when the desired item or style is easier to describe. Use `get_search_options` to discover valid filter values before applying filters. Prefer exact option values from `get_search_options`; do not invent filter values. To show product cards in ChatGPT, call `render_product_grid` with the returned `items`.";
+  "Search the product catalog with wardrobe-relevant filters. Include optional natural-language `query` with filters for more precise matches when the desired item or style is easier to describe. Use `get_search_options` to discover valid filter values before applying filters. Prefer exact option values from `get_search_options`; do not invent filter values. The textual result includes markdown image links; clients that support MCP app resource links or OpenAI output templates may render the attached product grid directly.";
 const GET_SEARCH_OPTIONS_DESCRIPTION =
   "Return allowed filter values for product catalog search.";
 const FETCH_DESCRIPTION =
-  "Fetch one product by id or URL returned from MCP search. To show a product card in ChatGPT, call `render_product_detail` with the returned `item`.";
+  "Fetch one product by id or URL returned from MCP search. The textual result includes the image link; clients that support MCP app resource links or OpenAI output templates may render the attached product detail card directly.";
 const DEFAULT_SEARCH_OFFSET = 0;
 const DEFAULT_SEARCH_LIMIT = 20;
 
@@ -148,14 +153,20 @@ function toTextToolResult(
   structuredContent: Record<string, unknown>,
   text: string,
   meta?: Record<string, unknown>,
+  resourceLink?: WidgetResourceLink,
 ) {
+  const content: Array<{ type: "text"; text: string } | WidgetResourceLink> = [
+    {
+      type: "text",
+      text,
+    },
+  ];
+  if (resourceLink) {
+    content.push(resourceLink);
+  }
+
   return {
-    content: [
-      {
-        type: "text" as const,
-        text,
-      },
-    ],
+    content,
     structuredContent,
     ...(meta ? { _meta: meta } : {}),
   };
@@ -238,6 +249,7 @@ function registerSearchTool(
           output,
           formatProductSearchText(items),
           buildProductGridMeta(items),
+          PRODUCT_GRID_WIDGET_RESOURCE_LINK,
         );
       } catch (error) {
         if (isInvalidPayloadError(error)) {
@@ -286,6 +298,7 @@ function registerFetchTool(server, deps: ProductToolsDeps) {
         },
         formatProductFetchText(normalizedItem),
         buildProductDetailMeta(normalizedItem),
+        PRODUCT_DETAIL_WIDGET_RESOURCE_LINK,
       );
     },
   );

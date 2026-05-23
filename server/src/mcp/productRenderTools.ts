@@ -1,8 +1,11 @@
 import { z } from "zod";
 
 import {
+  PRODUCT_DETAIL_WIDGET_RESOURCE_LINK,
   PRODUCT_DETAIL_WIDGET_URI,
+  PRODUCT_GRID_WIDGET_RESOURCE_LINK,
   PRODUCT_GRID_WIDGET_URI,
+  type WidgetResourceLink,
 } from "./productGridWidget.js";
 import {
   buildProductDetailMeta,
@@ -24,9 +27,9 @@ const READ_ONLY_TOOL_ANNOTATIONS = {
   openWorldHint: false,
 } as const;
 const RENDER_PRODUCT_GRID_DESCRIPTION =
-  "Render product search results returned by `search` as ChatGPT product cards. Call this after `search` when the user wants to see images or a visual grid.";
+  "Render product search results returned by `search` for clients that support MCP app resource links or OpenAI output templates. The result also includes markdown image links as a fallback.";
 const RENDER_PRODUCT_DETAIL_DESCRIPTION =
-  "Render a product returned by `fetch` as a ChatGPT product card. Call this after `fetch` when the user wants to see the product image.";
+  "Render a product returned by `fetch` for clients that support MCP app resource links or OpenAI output templates. The result also includes a markdown image link as a fallback.";
 const PRODUCT_GRID_RENDER_TOOL_META = {
   ui: {
     resourceUri: PRODUCT_GRID_WIDGET_URI,
@@ -94,6 +97,7 @@ type NormalizedProductItem = ProductToolCardItem &
 function toTextToolResult(
   structuredContent: Record<string, unknown>,
   text: string,
+  resourceLink: WidgetResourceLink,
   meta?: Record<string, unknown>,
 ) {
   return {
@@ -102,6 +106,7 @@ function toTextToolResult(
         type: "text" as const,
         text,
       },
+      resourceLink,
     ],
     structuredContent,
     ...(meta ? { _meta: meta } : {}),
@@ -137,6 +142,7 @@ export function registerRenderProductGridTool(server) {
           limit: Number(args?.limit ?? items.length),
         },
         formatProductSearchText(items),
+        PRODUCT_GRID_WIDGET_RESOURCE_LINK,
         buildProductGridMeta(items),
       );
     },
@@ -164,6 +170,7 @@ export function registerRenderProductDetailTool(server) {
           items: [item],
         },
         formatProductFetchText(item),
+        PRODUCT_DETAIL_WIDGET_RESOURCE_LINK,
         buildProductDetailMeta(item),
       );
     },
