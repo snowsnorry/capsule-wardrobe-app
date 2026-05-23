@@ -26,7 +26,7 @@ import {
 } from "./productGridWidget.js";
 
 const SEARCH_DESCRIPTION =
-  "Search the product catalog with wardrobe-relevant filters. Include optional natural-language `query` with filters for more precise matches when the desired item or style is easier to describe. Use `get_search_options` to discover valid filter values before applying filters. Prefer exact option values from `get_search_options`; do not invent filter values. The textual result includes markdown image links; clients that support OpenAI output templates may render the product grid directly.";
+  "Search the product catalog with wardrobe-relevant filters. Include optional natural-language `query` with filters for more precise matches when the desired item or style is easier to describe. Use `get_search_options` to discover valid filter values before applying filters. Prefer exact option values from `get_search_options`; do not invent filter values. If the client already rendered the product grid from this tool result, do not call `render_product_grid` again.";
 const GET_SEARCH_OPTIONS_DESCRIPTION =
   "Return allowed filter values for product catalog search.";
 const FETCH_DESCRIPTION =

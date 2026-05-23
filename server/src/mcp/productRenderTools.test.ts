@@ -22,6 +22,36 @@ function createToolRegistry() {
   return { server, tools };
 }
 
+function createProductItem() {
+  return {
+    id: "product-1",
+    name: "Black Blazer",
+    url: "https://example.test/products/black-blazer",
+    brand: "Acme",
+    description: null,
+    price: { amount: 120, currency: "USD", display: "120 USD" },
+    availability: null,
+    image: "https://example.test/black-blazer.webp",
+    audience: null,
+    category: "outerwear",
+    attributes: {
+      season: ["winter"],
+      formalityLevel: null,
+      style: null,
+      occasions: null,
+      colorBase: null,
+      pattern: null,
+      finish: null,
+      isNeutral: null,
+      composition: null,
+      silhouette: null,
+      fit: null,
+      closureType: null,
+      isSavedToWardrobe: null,
+    },
+  };
+}
+
 test("render product grid returns fallback text without items", async () => {
   const { server, tools } = createToolRegistry();
   registerRenderProductGridTool(server);
@@ -54,37 +84,42 @@ test("render product grid returns fallback text without items", async () => {
   });
 });
 
+test("render product grid normalizes scalar array-like attributes", async () => {
+  const { server, tools } = createToolRegistry();
+  registerRenderProductGridTool(server);
+
+  const item = {
+    ...createProductItem(),
+    attributes: {
+      ...createProductItem().attributes,
+      formalityLevel: " formal ",
+      closureType: "button",
+    },
+  };
+
+  const result = await tools.get("render_product_grid")?.handler({
+    items: [item],
+  });
+
+  expect(result).toMatchObject({
+    structuredContent: {
+      items: [
+        {
+          attributes: {
+            formalityLevel: ["formal"],
+            closureType: ["button"],
+          },
+        },
+      ],
+    },
+  });
+});
+
 test("render product detail returns fallback text", async () => {
   const { server, tools } = createToolRegistry();
   registerRenderProductDetailTool(server);
 
-  const item = {
-    id: "product-1",
-    name: "Black Blazer",
-    url: "https://example.test/products/black-blazer",
-    brand: "Acme",
-    description: null,
-    price: { amount: 120, currency: "USD", display: "120 USD" },
-    availability: null,
-    image: "https://example.test/black-blazer.webp",
-    audience: null,
-    category: "outerwear",
-    attributes: {
-      season: ["winter"],
-      formalityLevel: null,
-      style: null,
-      occasions: null,
-      colorBase: null,
-      pattern: null,
-      finish: null,
-      isNeutral: null,
-      composition: null,
-      silhouette: null,
-      fit: null,
-      closureType: null,
-      isSavedToWardrobe: null,
-    },
-  };
+  const item = createProductItem();
 
   const result = await tools.get("render_product_detail")?.handler({ item });
 
@@ -104,6 +139,33 @@ test("render product detail returns fallback text", async () => {
       resultType: "product_fetch",
       item,
       items: [item],
+    },
+  });
+});
+
+test("render product detail normalizes scalar array-like attributes", async () => {
+  const { server, tools } = createToolRegistry();
+  registerRenderProductDetailTool(server);
+
+  const item = {
+    ...createProductItem(),
+    attributes: {
+      ...createProductItem().attributes,
+      formalityLevel: "formal",
+      closureType: " button ",
+    },
+  };
+
+  const result = await tools.get("render_product_detail")?.handler({ item });
+
+  expect(result).toMatchObject({
+    structuredContent: {
+      item: {
+        attributes: {
+          formalityLevel: ["formal"],
+          closureType: ["button"],
+        },
+      },
     },
   });
 });

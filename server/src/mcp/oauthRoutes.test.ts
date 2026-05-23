@@ -26,7 +26,9 @@ const CODE_VERIFIER =
   "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~";
 const CODE_CHALLENGE = createPkceS256Challenge(CODE_VERIFIER);
 const SEARCH_DESCRIPTION =
-  "Search the product catalog with wardrobe-relevant filters. Include optional natural-language `query` with filters for more precise matches when the desired item or style is easier to describe. Use `get_search_options` to discover valid filter values before applying filters. Prefer exact option values from `get_search_options`; do not invent filter values. The textual result includes markdown image links; clients that support OpenAI output templates may render the product grid directly.";
+  "Search the product catalog with wardrobe-relevant filters. Include optional natural-language `query` with filters for more precise matches when the desired item or style is easier to describe. Use `get_search_options` to discover valid filter values before applying filters. Prefer exact option values from `get_search_options`; do not invent filter values. If the client already rendered the product grid from this tool result, do not call `render_product_grid` again.";
+const RENDER_PRODUCT_GRID_DESCRIPTION =
+  "Compatibility helper for rendering product search results returned by `search`. Use only if the client did not already render the search result as a visual product grid.";
 const STATS_DESCRIPTION =
   "Return product catalog result counts and facet statistics for wardrobe-relevant filters. Use `get_search_options` to discover valid filter values before applying filters. Prefer exact option values from `get_search_options`; do not invent filter values.";
 const WARDROBE_ITEMS_DESCRIPTION =
@@ -954,7 +956,11 @@ test("oauth PKCE code flow issues an access token accepted by mcp", async (t) =>
     },
     "openai/outputTemplate": PRODUCT_GRID_WIDGET_URI,
   });
-  expect(getMcpTool(tools, "render_product_grid")?._meta).toMatchObject({
+  const renderProductGridTool = getMcpTool(tools, "render_product_grid");
+  expect(renderProductGridTool?.description).toBe(
+    RENDER_PRODUCT_GRID_DESCRIPTION,
+  );
+  expect(renderProductGridTool?._meta).toMatchObject({
     ui: {
       resourceUri: PRODUCT_GRID_WIDGET_URI,
     },
@@ -1563,6 +1569,39 @@ test("mcp wardrobe_items returns thumbnail image urls and filters by source", as
       ],
     },
   });
+  const wardrobeItem = mcpResult(mcpItems).structuredContent?.items?.[0] || {};
+  const scalarRenderItems = await callMcpTool(
+    baseUrl,
+    token,
+    "render_wardrobe_grid",
+    {
+      items: [
+        {
+          ...wardrobeItem,
+          attributes: {
+            ...(wardrobeItem.attributes as Record<string, unknown>),
+            formalityLevel: " formal ",
+            closureType: "button",
+          },
+        },
+      ],
+    },
+  );
+  expect(scalarRenderItems.response.status).toBe(200);
+  expect(mcpResult(scalarRenderItems)).toMatchObject({
+    structuredContent: {
+      resultType: "wardrobe_items",
+      count: 1,
+      items: [
+        {
+          attributes: {
+            formalityLevel: ["formal"],
+            closureType: ["button"],
+          },
+        },
+      ],
+    },
+  });
   expectNoPrivateWardrobeFields(mcpResult(mcpItems));
   expect(mcpResult(uploadedItems).structuredContent).toMatchObject({
     resultType: "wardrobe_items",
@@ -1809,6 +1848,44 @@ test("mcp product search returns sanitized preview items", async (t) => {
       itemsById: {
         "product-1": expectedProduct,
       },
+    },
+  });
+  const scalarRender = await callMcpTool(
+    baseUrl,
+    token,
+    "render_product_grid",
+    {
+      items: [
+        {
+          ...expectedProduct,
+          attributes: {
+            ...expectedProduct.attributes,
+            formalityLevel: " formal ",
+            closureType: "button",
+          },
+        },
+      ],
+      total: 1,
+      offset: 0,
+      limit: 20,
+    },
+  );
+  expect(scalarRender.response.status).toBe(200);
+  expect(mcpResult(scalarRender)).toMatchObject({
+    structuredContent: {
+      resultType: "product_search",
+      count: 1,
+      items: [
+        {
+          attributes: {
+            formalityLevel: ["formal"],
+            closureType: ["button"],
+          },
+        },
+      ],
+      total: 1,
+      offset: 0,
+      limit: 20,
     },
   });
   expectNoInternalSearchFields(mcpResult(search));
