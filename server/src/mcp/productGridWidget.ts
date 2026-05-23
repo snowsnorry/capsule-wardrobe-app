@@ -1,12 +1,8 @@
-import {
-  CLIENT_ORIGIN,
-  MCP_OAUTH_ISSUER,
-  THUMBNAIL_ASSET_BASE_URL,
-} from "../appConfig.js";
+import { THUMBNAIL_ASSET_BASE_URL } from "../appConfig.js";
 
-const PRODUCT_GRID_WIDGET_URI = "ui://capsule/product-grid.v6.html";
-const PRODUCT_DETAIL_WIDGET_URI = "ui://capsule/product-detail.v6.html";
-const WARDROBE_GRID_WIDGET_URI = "ui://capsule/wardrobe-grid.v6.html";
+const PRODUCT_GRID_WIDGET_URI = "ui://capsule/product-grid.v7.html";
+const PRODUCT_DETAIL_WIDGET_URI = "ui://capsule/product-detail.v7.html";
+const WARDROBE_GRID_WIDGET_URI = "ui://capsule/wardrobe-grid.v7.html";
 const CARD_GRID_WIDGET_MIME_TYPE = "text/html;profile=mcp-app";
 const CARD_GRID_WIDGET_DEFINITIONS = [
   {
@@ -55,14 +51,6 @@ function uniqueStrings(values: Array<string | null>): string[] {
   ];
 }
 
-function resolveWidgetDomain() {
-  return (
-    normalizeHttpOrigin(process.env.CLIENT_ORIGIN) ||
-    normalizeHttpOrigin(MCP_OAUTH_ISSUER) ||
-    normalizeHttpOrigin(CLIENT_ORIGIN)
-  );
-}
-
 function getResourceDomains() {
   return uniqueStrings([
     normalizeHttpOrigin(THUMBNAIL_ASSET_BASE_URL),
@@ -71,7 +59,6 @@ function getResourceDomains() {
 }
 
 function buildCardGridWidgetMeta(description: string) {
-  const domain = resolveWidgetDomain();
   const resourceDomains = getResourceDomains();
   const ui = {
     prefersBorder: true,
@@ -85,15 +72,10 @@ function buildCardGridWidgetMeta(description: string) {
     ui,
     "openai/widgetDescription": description,
     "openai/widgetPrefersBorder": true,
-    ...(domain ? { "openai/widgetDomain": domain } : {}),
     "openai/widgetCSP": {
       connect_domains: [],
       resource_domains: resourceDomains,
-      redirect_domains: [
-        "https://www.stories.com",
-        "https://example.com",
-        ...(domain ? [domain] : []),
-      ],
+      redirect_domains: ["https://www.stories.com", "https://example.com"],
     },
   };
 }
@@ -390,5 +372,4 @@ export {
   PRODUCT_GRID_WIDGET_URI,
   WARDROBE_GRID_WIDGET_URI,
   registerProductGridWidgetResource,
-  resolveWidgetDomain,
 };
