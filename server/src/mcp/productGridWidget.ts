@@ -4,9 +4,9 @@ import {
   THUMBNAIL_ASSET_BASE_URL,
 } from "../appConfig.js";
 
-const PRODUCT_GRID_WIDGET_URI = "ui://capsule/product-grid.v3.html";
-const PRODUCT_DETAIL_WIDGET_URI = "ui://capsule/product-detail.v3.html";
-const WARDROBE_GRID_WIDGET_URI = "ui://capsule/wardrobe-grid.v3.html";
+const PRODUCT_GRID_WIDGET_URI = "ui://capsule/product-grid.v4.html";
+const PRODUCT_DETAIL_WIDGET_URI = "ui://capsule/product-detail.v4.html";
+const WARDROBE_GRID_WIDGET_URI = "ui://capsule/wardrobe-grid.v4.html";
 const CARD_GRID_WIDGET_MIME_TYPE = "text/html;profile=mcp-app";
 const CARD_GRID_WIDGET_DEFINITIONS = [
   {
@@ -163,8 +163,9 @@ const CARD_GRID_WIDGET_HTML = String.raw`<!doctype html>
     <main id="root" class="empty">No items to display.</main>
     <script>
       const root = document.getElementById("root");
+      let hasReceivedProductPayload = false;
 
-      function firstArray(values) { return values.find((value) => Array.isArray(value) && value.length) || values.find(Array.isArray) || []; }
+      function firstArray(values) { const arrays = values.filter(Array.isArray); return arrays.find((value) => value.length) || arrays[0]; }
 
       function getCards(globals) {
         const rawOutput = globals.toolOutput || globals.structuredContent || {};
@@ -172,11 +173,13 @@ const CARD_GRID_WIDGET_HTML = String.raw`<!doctype html>
         const metadata =
           globals.toolResponseMetadata || rawOutput._meta || globals._meta || {};
         const cards = firstArray([metadata.cards, rawOutput.cards]);
-        return cards.length ? cards : buildCardsFromItems(firstArray([
+        if (cards && cards.length) return cards;
+        const items = firstArray([
           output.items,
           globals.toolInput && globals.toolInput.items,
           metadata.items,
-        ]));
+        ]);
+        return items ? buildCardsFromItems(items) : cards;
       }
 
       function getImageUrl(item) {
@@ -259,13 +262,22 @@ const CARD_GRID_WIDGET_HTML = String.raw`<!doctype html>
 
       function render(globals) {
         const cards = getCards(globals || window.openai || {});
+        if (cards === undefined) {
+          if (!hasReceivedProductPayload) renderEmpty("Waiting for product payload.", globals);
+          return;
+        }
+        hasReceivedProductPayload = true;
         if (!cards.length) {
-          root.className = "empty";
-          root.textContent = "No items to display.\n" + JSON.stringify(buildDebug(globals || window.openai || {}), null, 2);
+          renderEmpty("No items to display.", globals);
           return;
         }
         root.className = "grid";
         root.replaceChildren(...cards.map(renderCard));
+      }
+
+      function renderEmpty(label, globals) {
+        root.className = "empty";
+        root.textContent = label + "\n" + JSON.stringify(buildDebug(globals || window.openai || {}), null, 2);
       }
 
       function renderToolResult(toolResult) { render({ toolOutput: toolResult || {} }); }
@@ -282,7 +294,8 @@ const CARD_GRID_WIDGET_HTML = String.raw`<!doctype html>
         const metadata =
           globals.toolResponseMetadata || rawOutput._meta || globals._meta || {};
         const toolInput = globals.toolInput || {};
-        return { toolInputKeys: objectKeys(toolInput), toolOutputKeys: objectKeys(output),
+        return { hasWindowOpenAI: Boolean(window.openai), hasReceivedProductPayload,
+          toolInputKeys: objectKeys(toolInput), toolOutputKeys: objectKeys(output),
           rawToolOutputKeys: objectKeys(rawOutput), metaKeys: objectKeys(metadata),
           toolInputItems: arrayLength(toolInput.items), toolOutputItems: arrayLength(output.items),
           nestedStructuredItems: arrayLength(rawOutput.structuredContent && rawOutput.structuredContent.items),
@@ -297,12 +310,12 @@ const CARD_GRID_WIDGET_HTML = String.raw`<!doctype html>
       function getToolResultFromMessage(message) {
         if (!message || typeof message !== "object") return null;
         if (message.structuredContent || message._meta) return message;
-        if (message.method === "ui/notifications/tool-result") return message.params || null;
+        if (message.method === "ui/notifications/tool-result") return (message.params && message.params.result) || message.params || null;
         return (message.params && message.params.result) || message.toolResult || message.result || null;
       }
 
       function getToolInputFromMessage(message) {
-        return message && message.method === "ui/notifications/tool-input" ? message.params || null : null;
+        return message && message.method === "ui/notifications/tool-input" ? (message.params && message.params.input) || message.params || null : null;
       }
 
       function renderFromOpenAi() {
