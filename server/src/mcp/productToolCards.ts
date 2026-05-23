@@ -1,4 +1,4 @@
-type ProductToolCardItem = {
+export type ProductToolCardItem = {
   id: string;
   name: string;
   brand: string | null;

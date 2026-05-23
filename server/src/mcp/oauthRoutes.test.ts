@@ -26,11 +26,11 @@ const CODE_VERIFIER =
   "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~";
 const CODE_CHALLENGE = createPkceS256Challenge(CODE_VERIFIER);
 const SEARCH_DESCRIPTION =
-  "Search the product catalog with wardrobe-relevant filters. Include optional natural-language `query` with filters for more precise matches when the desired item or style is easier to describe. Use `get_search_options` to discover valid filter values before applying filters. Prefer exact option values from `get_search_options`; do not invent filter values.";
+  "Search the product catalog with wardrobe-relevant filters. Include optional natural-language `query` with filters for more precise matches when the desired item or style is easier to describe. Use `get_search_options` to discover valid filter values before applying filters. Prefer exact option values from `get_search_options`; do not invent filter values. To show product cards in ChatGPT, call `render_product_grid` with the returned `items`.";
 const STATS_DESCRIPTION =
   "Return product catalog result counts and facet statistics for wardrobe-relevant filters. Use `get_search_options` to discover valid filter values before applying filters. Prefer exact option values from `get_search_options`; do not invent filter values.";
 const WARDROBE_ITEMS_DESCRIPTION =
-  "Return the authenticated user's wardrobe items, including uploaded items and saved catalog items. Optionally filter by `source`: `uploaded` or `from_catalog`.";
+  "Return the authenticated user's wardrobe items, including uploaded items and saved catalog items. Optionally filter by `source`: `uploaded` or `from_catalog`. To show wardrobe cards in ChatGPT, call `render_wardrobe_grid` with the returned `items`.";
 const PRODUCT_GRID_WIDGET_URI = "ui://capsule/product-grid.v2.html";
 const PRODUCT_DETAIL_WIDGET_URI = "ui://capsule/product-detail.v2.html";
 const WARDROBE_GRID_WIDGET_URI = "ui://capsule/wardrobe-grid.v2.html";
@@ -442,9 +442,12 @@ function expectMcpToolNames(response) {
     "ping",
     "get_search_options",
     "search",
+    "render_product_grid",
     "stats",
     "fetch",
+    "render_product_detail",
     "wardrobe_items",
+    "render_wardrobe_grid",
   ]);
 }
 
@@ -856,9 +859,12 @@ test("oauth PKCE code flow issues an access token accepted by mcp", async (t) =>
     "ping",
     "get_search_options",
     "search",
+    "render_product_grid",
     "stats",
     "fetch",
+    "render_product_detail",
     "wardrobe_items",
+    "render_wardrobe_grid",
   ]) {
     expectReadOnlyToolMetadata(tools, toolName);
   }
@@ -893,12 +899,30 @@ test("oauth PKCE code flow issues an access token accepted by mcp", async (t) =>
     "offset",
     "limit",
   ]);
+  expectOutputSchemaProperties(tools, "render_product_grid", [
+    "resultType",
+    "count",
+    "items",
+    "total",
+    "offset",
+    "limit",
+  ]);
   expectOutputSchemaProperties(tools, "stats", ["ok", "total", "stats"]);
   expect(
     getMcpTool(tools, "stats")?.outputSchema?.properties,
   ).not.toHaveProperty("priceBuckets");
   expectOutputSchemaProperties(tools, "fetch", ["resultType", "item", "items"]);
+  expectOutputSchemaProperties(tools, "render_product_detail", [
+    "resultType",
+    "item",
+    "items",
+  ]);
   expectOutputSchemaProperties(tools, "wardrobe_items", [
+    "resultType",
+    "count",
+    "items",
+  ]);
+  expectOutputSchemaProperties(tools, "render_wardrobe_grid", [
     "resultType",
     "count",
     "items",
@@ -923,7 +947,10 @@ test("oauth PKCE code flow issues an access token accepted by mcp", async (t) =>
 
   const searchTool = getMcpTool(tools, "search");
   expect(searchTool?.description).toBe(SEARCH_DESCRIPTION);
-  expect(searchTool?._meta).toMatchObject({
+  expect(searchTool?._meta).not.toMatchObject({
+    "openai/outputTemplate": expect.any(String),
+  });
+  expect(getMcpTool(tools, "render_product_grid")?._meta).toMatchObject({
     ui: {
       resourceUri: PRODUCT_GRID_WIDGET_URI,
     },
@@ -957,7 +984,10 @@ test("oauth PKCE code flow issues an access token accepted by mcp", async (t) =>
   expect(statsProperties).not.toHaveProperty("limit");
 
   const fetchTool = getMcpTool(tools, "fetch");
-  expect(fetchTool?._meta).toMatchObject({
+  expect(fetchTool?._meta).not.toMatchObject({
+    "openai/outputTemplate": expect.any(String),
+  });
+  expect(getMcpTool(tools, "render_product_detail")?._meta).toMatchObject({
     ui: {
       resourceUri: PRODUCT_DETAIL_WIDGET_URI,
     },
@@ -966,7 +996,10 @@ test("oauth PKCE code flow issues an access token accepted by mcp", async (t) =>
 
   const wardrobeItemsTool = getMcpTool(tools, "wardrobe_items");
   expect(wardrobeItemsTool?.description).toBe(WARDROBE_ITEMS_DESCRIPTION);
-  expect(wardrobeItemsTool?._meta).toMatchObject({
+  expect(wardrobeItemsTool?._meta).not.toMatchObject({
+    "openai/outputTemplate": expect.any(String),
+  });
+  expect(getMcpTool(tools, "render_wardrobe_grid")?._meta).toMatchObject({
     ui: {
       resourceUri: WARDROBE_GRID_WIDGET_URI,
     },
@@ -1345,12 +1378,21 @@ test("mcp wardrobe_items returns thumbnail image urls and filters by source", as
     cookie: AUTH_COOKIE,
   });
   const mcpItems = await callMcpTool(baseUrl, token, "wardrobe_items", {});
+  const renderItems = await callMcpTool(
+    baseUrl,
+    token,
+    "render_wardrobe_grid",
+    {
+      items: mcpResult(mcpItems).structuredContent?.items,
+    },
+  );
   const uploadedItems = await callMcpTool(baseUrl, token, "wardrobe_items", {
     source: "uploaded",
   });
 
   expect(httpItems.response.status).toBe(200);
   expect(mcpItems.response.status).toBe(200);
+  expect(renderItems.response.status).toBe(200);
   expect(uploadedItems.response.status).toBe(200);
   expect(httpItems.json.items?.[0]?.imageUrl).toBe(
     "https://example.com/products/saved-blazer.jpg",
@@ -1424,6 +1466,29 @@ test("mcp wardrobe_items returns thumbnail image urls and filters by source", as
         },
       },
     ],
+  });
+  expectShortTextSummary(renderItems, "Showing 1 wardrobe items.");
+  expect(mcpResult(renderItems)).toMatchObject({
+    structuredContent: {
+      resultType: "wardrobe_items",
+      count: 1,
+      items: mcpResult(mcpItems).structuredContent?.items,
+    },
+    _meta: {
+      ui: {
+        component: "wardrobe_grid",
+        version: "1.0",
+        layout: "responsive_grid",
+        itemOrder: ["wardrobe-1"],
+      },
+      cards: [
+        {
+          type: "wardrobe_item_card",
+          itemId: "wardrobe-1",
+          image: SAVED_BLAZER_THUMBNAIL_URL,
+        },
+      ],
+    },
   });
   expectNoPrivateWardrobeFields(mcpResult(mcpItems));
   expect(mcpResult(uploadedItems).structuredContent).toMatchObject({
@@ -1627,6 +1692,42 @@ test("mcp product search returns sanitized preview items", async (t) => {
       "product-1": expectedProduct,
     },
   });
+  const render = await callMcpTool(baseUrl, token, "render_product_grid", {
+    items: output?.items,
+    total: output?.total,
+    offset: output?.offset,
+    limit: output?.limit,
+  });
+  expect(render.response.status).toBe(200);
+  expectShortTextSummary(render, "Showing 1 products.");
+  expect(mcpResult(render)).toMatchObject({
+    structuredContent: {
+      resultType: "product_search",
+      count: 1,
+      items: [expectedProduct],
+      total: 1,
+      offset: 0,
+      limit: 20,
+    },
+    _meta: {
+      ui: {
+        component: "product_grid",
+        version: "1.0",
+        layout: "responsive_grid",
+        itemOrder: ["product-1"],
+      },
+      cards: [
+        {
+          type: "product_card",
+          itemId: "product-1",
+          image: BLACK_BLAZER_THUMBNAIL_URL,
+        },
+      ],
+      itemsById: {
+        "product-1": expectedProduct,
+      },
+    },
+  });
   expectNoInternalSearchFields(mcpResult(search));
 });
 
@@ -1674,6 +1775,34 @@ test("mcp product fetch returns sanitized detail by id and url", async (t) => {
     ],
     itemsById: {
       "product-1": expectedProduct,
+    },
+  });
+  const render = await callMcpTool(baseUrl, token, "render_product_detail", {
+    item: expectedProduct,
+  });
+  expect(render.response.status).toBe(200);
+  expectShortTextSummary(render, "Showing product Black Blazer.");
+  expect(mcpResult(render)).toMatchObject({
+    structuredContent: {
+      resultType: "product_fetch",
+      item: expectedProduct,
+      items: [expectedProduct],
+    },
+    _meta: {
+      ui: {
+        component: "product_detail",
+        version: "1.0",
+      },
+      cards: [
+        {
+          type: "product_card",
+          itemId: "product-1",
+          image: BLACK_BLAZER_THUMBNAIL_URL,
+        },
+      ],
+      itemsById: {
+        "product-1": expectedProduct,
+      },
     },
   });
   expectNoInternalSearchFields(mcpResult(byId));

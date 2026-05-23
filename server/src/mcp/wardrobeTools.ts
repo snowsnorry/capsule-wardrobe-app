@@ -6,7 +6,9 @@ import { buildMcpImageThumbnailUrl } from "./mcpImageThumbnails.js";
 import { WARDROBE_GRID_WIDGET_URI } from "./productGridWidget.js";
 
 const WARDROBE_ITEMS_DESCRIPTION =
-  "Return the authenticated user's wardrobe items, including uploaded items and saved catalog items. Optionally filter by `source`: `uploaded` or `from_catalog`.";
+  "Return the authenticated user's wardrobe items, including uploaded items and saved catalog items. Optionally filter by `source`: `uploaded` or `from_catalog`. To show wardrobe cards in ChatGPT, call `render_wardrobe_grid` with the returned `items`.";
+const RENDER_WARDROBE_GRID_DESCRIPTION =
+  "Render wardrobe items returned by `wardrobe_items` as ChatGPT wardrobe cards. Call this after `wardrobe_items` when the user wants to see images or a visual grid.";
 
 const STRING_OR_NUMBER_SCHEMA = z.union([z.string(), z.number()]);
 const NULLABLE_STRING_SCHEMA = z.string().nullable();
@@ -28,7 +30,7 @@ const READ_ONLY_TOOL_ANNOTATIONS = {
   idempotentHint: true,
   openWorldHint: false,
 } as const;
-const WARDROBE_ITEMS_TOOL_META = {
+const WARDROBE_GRID_RENDER_TOOL_META = {
   ui: {
     resourceUri: WARDROBE_GRID_WIDGET_URI,
   },
@@ -305,7 +307,6 @@ function registerWardrobeItemsTool(server, deps: WardrobeToolsDeps) {
       },
       outputSchema: WARDROBE_ITEMS_OUTPUT_SCHEMA,
       annotations: READ_ONLY_TOOL_ANNOTATIONS,
-      _meta: WARDROBE_ITEMS_TOOL_META,
     },
     async (args) => {
       try {
@@ -333,6 +334,36 @@ function registerWardrobeItemsTool(server, deps: WardrobeToolsDeps) {
   );
 }
 
+function registerRenderWardrobeGridTool(server) {
+  server.registerTool(
+    "render_wardrobe_grid",
+    {
+      description: RENDER_WARDROBE_GRID_DESCRIPTION,
+      inputSchema: {
+        items: z.array(WARDROBE_ITEM_OUTPUT_SCHEMA),
+      },
+      outputSchema: WARDROBE_ITEMS_OUTPUT_SCHEMA,
+      annotations: READ_ONLY_TOOL_ANNOTATIONS,
+      _meta: WARDROBE_GRID_RENDER_TOOL_META,
+    },
+    async (args) => {
+      const items = Array.isArray(args?.items)
+        ? (args.items as NormalizedWardrobeItem[])
+        : [];
+      return toTextToolResult(
+        {
+          resultType: "wardrobe_items",
+          count: items.length,
+          items,
+        },
+        `Showing ${items.length} wardrobe items.`,
+        buildWardrobeItemsMeta(items),
+      );
+    },
+  );
+}
+
 export function registerWardrobeTools(server, deps: WardrobeToolsDeps) {
   registerWardrobeItemsTool(server, deps);
+  registerRenderWardrobeGridTool(server);
 }

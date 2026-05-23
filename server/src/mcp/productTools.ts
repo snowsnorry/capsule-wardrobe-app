@@ -17,16 +17,16 @@ import {
   formatProductSearchText,
 } from "./productToolCards.js";
 import {
-  PRODUCT_DETAIL_WIDGET_URI,
-  PRODUCT_GRID_WIDGET_URI,
-} from "./productGridWidget.js";
+  registerRenderProductDetailTool,
+  registerRenderProductGridTool,
+} from "./productRenderTools.js";
 
 const SEARCH_DESCRIPTION =
-  "Search the product catalog with wardrobe-relevant filters. Include optional natural-language `query` with filters for more precise matches when the desired item or style is easier to describe. Use `get_search_options` to discover valid filter values before applying filters. Prefer exact option values from `get_search_options`; do not invent filter values.";
+  "Search the product catalog with wardrobe-relevant filters. Include optional natural-language `query` with filters for more precise matches when the desired item or style is easier to describe. Use `get_search_options` to discover valid filter values before applying filters. Prefer exact option values from `get_search_options`; do not invent filter values. To show product cards in ChatGPT, call `render_product_grid` with the returned `items`.";
 const GET_SEARCH_OPTIONS_DESCRIPTION =
   "Return allowed filter values for product catalog search.";
 const FETCH_DESCRIPTION =
-  "Fetch one product by id or URL returned from MCP search.";
+  "Fetch one product by id or URL returned from MCP search. To show a product card in ChatGPT, call `render_product_detail` with the returned `item`.";
 const DEFAULT_SEARCH_OFFSET = 0;
 const DEFAULT_SEARCH_LIMIT = 20;
 
@@ -41,23 +41,6 @@ const READ_ONLY_TOOL_ANNOTATIONS = {
   idempotentHint: true,
   openWorldHint: false,
 } as const;
-const SEARCH_TOOL_META = {
-  ui: {
-    resourceUri: PRODUCT_GRID_WIDGET_URI,
-  },
-  "openai/outputTemplate": PRODUCT_GRID_WIDGET_URI,
-  "openai/toolInvocation/invoking": "Searching products",
-  "openai/toolInvocation/invoked": "Products ready",
-} as const;
-const FETCH_TOOL_META = {
-  ui: {
-    resourceUri: PRODUCT_DETAIL_WIDGET_URI,
-  },
-  "openai/outputTemplate": PRODUCT_DETAIL_WIDGET_URI,
-  "openai/toolInvocation/invoking": "Fetching product",
-  "openai/toolInvocation/invoked": "Product ready",
-} as const;
-
 const SEARCH_OPTION_OUTPUT_SCHEMA = z.object({
   value: z.string(),
   label: z.string(),
@@ -234,7 +217,6 @@ function registerSearchTool(
       inputSchema: getSearchInputSchema(schemaOptions),
       outputSchema: SEARCH_OUTPUT_SCHEMA,
       annotations: READ_ONLY_TOOL_ANNOTATIONS,
-      _meta: SEARCH_TOOL_META,
     },
     async (args) => {
       try {
@@ -278,7 +260,6 @@ function registerFetchTool(server, deps: ProductToolsDeps) {
       },
       outputSchema: FETCH_OUTPUT_SCHEMA,
       annotations: READ_ONLY_TOOL_ANNOTATIONS,
-      _meta: FETCH_TOOL_META,
     },
     async (args) => {
       const id = normalizeOptionalString(args?.id);
@@ -314,6 +295,8 @@ export async function registerProductTools(server, deps: ProductToolsDeps) {
   const searchSchemaOptions = await getCachedSearchSchemaOptions(deps);
   registerGetSearchOptionsTool(server, deps);
   registerSearchTool(server, deps, searchSchemaOptions);
+  registerRenderProductGridTool(server);
   registerStatsTool(server, deps, searchSchemaOptions);
   registerFetchTool(server, deps);
+  registerRenderProductDetailTool(server);
 }
