@@ -18,7 +18,7 @@ const WARDROBE_PROCESSING_STATUS_SCHEMA = z.enum([
   "failed",
 ]);
 
-export const WARDROBE_ITEM_OUTPUT_SCHEMA = z
+const WARDROBE_ITEM_OUTPUT_SCHEMA = z
   .object({
     id: z.string(),
     name: z.string(),
