@@ -4,9 +4,9 @@ import {
   THUMBNAIL_ASSET_BASE_URL,
 } from "../appConfig.js";
 
-const PRODUCT_GRID_WIDGET_URI = "ui://capsule/product-grid.v5.html";
-const PRODUCT_DETAIL_WIDGET_URI = "ui://capsule/product-detail.v5.html";
-const WARDROBE_GRID_WIDGET_URI = "ui://capsule/wardrobe-grid.v5.html";
+const PRODUCT_GRID_WIDGET_URI = "ui://capsule/product-grid.v6.html";
+const PRODUCT_DETAIL_WIDGET_URI = "ui://capsule/product-detail.v6.html";
+const WARDROBE_GRID_WIDGET_URI = "ui://capsule/wardrobe-grid.v6.html";
 const CARD_GRID_WIDGET_MIME_TYPE = "text/html;profile=mcp-app";
 const CARD_GRID_WIDGET_DEFINITIONS = [
   {
@@ -148,12 +148,19 @@ const CARD_GRID_WIDGET_HTML = String.raw`<!doctype html>
       .badges { display: flex; flex-wrap: wrap; gap: 4px; min-height: 20px; }
 
       .badge {
-        border: 1px solid color-mix(in oklch, CanvasText 12%, transparent);
-        border-radius: 0;
-        background: transparent;
-        padding: 3px 6px;
+        border: 1px solid color-mix(in oklch, CanvasText 10%, transparent);
+        border-radius: 999px;
+        background: color-mix(in oklch, CanvasText 7%, transparent);
+        padding: 3px 8px 4px;
         font-size: 11px;
         line-height: 1.1;
+      }
+
+      .badge.category {
+        border-color: color-mix(in oklch, oklch(46% 0.085 184) 20%, transparent);
+        background: oklch(91% 0.028 181);
+        color: oklch(39% 0.08 184);
+        font-weight: 620;
       }
 
       .empty { padding: 16px; color: color-mix(in srgb, CanvasText 68%, transparent); font-size: 13px; white-space: pre-wrap; }
@@ -247,9 +254,10 @@ const CARD_GRID_WIDGET_HTML = String.raw`<!doctype html>
 
         const badges = document.createElement("div");
         badges.className = "badges";
-        for (const label of Array.isArray(card.badges) ? card.badges : []) {
+        const labels = Array.isArray(card.badges) ? card.badges : [];
+        for (const [index, label] of labels.entries()) {
           const badge = document.createElement("span");
-          badge.className = "badge";
+          badge.className = index === 0 ? "badge category" : "badge";
           badge.textContent = label;
           badges.appendChild(badge);
         }
