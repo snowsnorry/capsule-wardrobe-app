@@ -1054,6 +1054,56 @@ test("oauth PKCE code flow issues an access token accepted by mcp", async (t) =>
   expect(unknown.json).toMatchObject({ error: { code: -32601 } });
 });
 
+test("mcp streamable http session supports GET SSE", async (t) => {
+  const { baseUrl } = await startMcpTestServer(t);
+  const token = bearerToken({ scope: "mcp:read wardrobe:read" });
+
+  const initialize = await requestJson(baseUrl, "/mcp", {
+    method: "POST",
+    headers: mcpHeaders(token),
+    body: {
+      jsonrpc: "2.0",
+      id: 2,
+      method: "initialize",
+      params: {
+        protocolVersion: "2025-03-26",
+        capabilities: {},
+        clientInfo: {
+          name: "streamable-http-test-client",
+          version: "0.1.0",
+        },
+      },
+    },
+  });
+  const sessionId = initialize.response.headers.get("mcp-session-id") || "";
+
+  expect(initialize.response.status).toBe(200);
+  expect(sessionId).toMatch(/^[!-~]+$/);
+
+  const stream = await fetch(`${baseUrl}/mcp`, {
+    method: "GET",
+    headers: {
+      ...mcpHeaders(token),
+      "mcp-protocol-version": "2025-03-26",
+      "mcp-session-id": sessionId,
+    },
+  });
+
+  expect(stream.status).toBe(200);
+  expect(stream.headers.get("content-type")).toContain("text/event-stream");
+  await stream.body?.cancel();
+
+  const closed = await fetch(`${baseUrl}/mcp`, {
+    method: "DELETE",
+    headers: {
+      ...mcpHeaders(token),
+      "mcp-protocol-version": "2025-03-26",
+      "mcp-session-id": sessionId,
+    },
+  });
+  expect(closed.status).toBe(200);
+});
+
 test("oauth refresh token grant issues rotated tokens accepted by mcp", async (t) => {
   const { baseUrl } = await startMcpTestServer(t);
   const { refreshToken } = await approveAndExchangeCode(baseUrl);

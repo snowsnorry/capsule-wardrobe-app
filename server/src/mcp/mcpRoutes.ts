@@ -1,5 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import { randomUUID } from "node:crypto";
 import { z } from "zod";
 
 import { logError } from "../logger.js";
@@ -24,6 +25,15 @@ const PING_OUTPUT_SCHEMA = z.object({
   subject: z.string(),
   scopes: z.array(z.string()),
 });
+const MCP_SESSION_TTL_MS = 30 * 60 * 1000;
+type McpHttpSession = {
+  clientId: string;
+  server: McpServer;
+  subject: string;
+  timeout: ReturnType<typeof setTimeout> | null;
+  transport: StreamableHTTPServerTransport;
+};
+const mcpSessions = new Map<string, McpHttpSession>();
 
 function pingResponse(req) {
   return {
@@ -111,10 +121,139 @@ async function handleMcpRequest(req, res, context) {
   }
 }
 
+function isInitializeRequestBody(body): boolean {
+  const messages = Array.isArray(body) ? body : [body];
+  return messages.some(
+    (message) =>
+      message && typeof message === "object" && message.method === "initialize",
+  );
+}
+
+function getMcpSessionId(req): string {
+  return String(req.headers["mcp-session-id"] || "").trim();
+}
+
+async function closeMcpSession(sessionId: string, closeTransport = true) {
+  const session = mcpSessions.get(sessionId);
+  if (!session) {
+    return;
+  }
+  mcpSessions.delete(sessionId);
+  if (session.timeout) {
+    clearTimeout(session.timeout);
+  }
+  if (closeTransport) {
+    await session.transport.close();
+  }
+  await session.server.close();
+}
+
+function refreshMcpSession(sessionId: string, session: McpHttpSession) {
+  if (session.timeout) {
+    clearTimeout(session.timeout);
+  }
+  session.timeout = setTimeout(() => {
+    void closeMcpSession(sessionId);
+  }, MCP_SESSION_TTL_MS);
+}
+
+function getMcpSession(req, res) {
+  const sessionId = getMcpSessionId(req);
+  if (!sessionId) {
+    return null;
+  }
+
+  const session = mcpSessions.get(sessionId);
+  if (!session) {
+    res.status(404).json({ error: "session_not_found" });
+    return null;
+  }
+
+  if (
+    session.subject !== req.mcpAuth.subject ||
+    session.clientId !== req.mcpAuth.clientId
+  ) {
+    res.status(404).json({ error: "session_not_found" });
+    return null;
+  }
+
+  refreshMcpSession(sessionId, session);
+  return session;
+}
+
+async function handleStatefulMcpInitialize(req, res, context) {
+  const server = await createMcpServer(req, context);
+  let sessionId = "";
+  const transport = new StreamableHTTPServerTransport({
+    enableJsonResponse: true,
+    sessionIdGenerator: randomUUID,
+    onsessioninitialized: (initializedSessionId) => {
+      sessionId = initializedSessionId;
+      mcpSessions.set(initializedSessionId, session);
+      refreshMcpSession(initializedSessionId, session);
+    },
+    onsessionclosed: (closedSessionId) => {
+      void closeMcpSession(closedSessionId, false);
+    },
+  });
+  const session: McpHttpSession = {
+    clientId: req.mcpAuth.clientId,
+    server,
+    subject: req.mcpAuth.subject,
+    timeout: null,
+    transport,
+  };
+
+  try {
+    await server.connect(transport);
+    await transport.handleRequest(req, res, req.body);
+  } catch (error) {
+    logError("[mcp/request]", error);
+    if (!res.headersSent) {
+      sendMcpInternalError(res);
+    }
+  } finally {
+    if (!sessionId) {
+      await transport.close();
+      await server.close();
+    }
+  }
+}
+
+async function handleStatefulMcpSessionRequest(req, res) {
+  const session = getMcpSession(req, res);
+  if (!session) {
+    return;
+  }
+
+  try {
+    await session.transport.handleRequest(req, res, req.body);
+  } catch (error) {
+    logError("[mcp/request]", error);
+    if (!res.headersSent) {
+      sendMcpInternalError(res);
+    }
+  }
+}
+
+async function handleMcpTransportRequest(req, res, context) {
+  if (getMcpSessionId(req)) {
+    await handleStatefulMcpSessionRequest(req, res);
+    return;
+  }
+
+  if (req.method === "POST" && isInitializeRequestBody(req.body)) {
+    await handleStatefulMcpInitialize(req, res, context);
+    return;
+  }
+
+  await handleMcpRequest(req, res, context);
+}
+
 export function registerMcpRoutes(app, context) {
   const requireMcpBearerToken = createMcpAuthMiddleware(context);
 
   app.all("/mcp", requireMcpBearerToken, (req, res) => {
-    void handleMcpRequest(req, res, context);
+    void handleMcpTransportRequest(req, res, context);
   });
 }
