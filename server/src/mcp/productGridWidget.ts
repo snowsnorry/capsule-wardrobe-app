@@ -62,17 +62,17 @@ const CARD_GRID_WIDGET_HTML = String.raw`<!doctype html>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <style>
-      :root { color-scheme: light dark; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      :root { color-scheme: light dark; --card-text: oklch(24% 0.015 88); font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
       body { margin: 0; background: transparent; color: CanvasText; }
 
       .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(176px, 1fr)); gap: 10px; padding: 2px; }
-      .card { overflow: hidden; border: 1px solid color-mix(in oklch, CanvasText 16%, transparent); border-radius: 0; background: oklch(97% 0.006 88); text-decoration: none; color: inherit; }
+      .card { overflow: hidden; border: 1px solid color-mix(in oklch, var(--card-text) 16%, transparent); border-radius: 0; background: oklch(97% 0.006 88); text-decoration: none; color: var(--card-text); }
       .image { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; display: block; background: oklch(95% 0.004 88); }
       .body { display: grid; gap: 8px; padding: 12px 12px 14px; }
       .title { font-size: 14px; font-weight: 680; line-height: 1.2; }
-      .subtitle { color: color-mix(in oklch, CanvasText 62%, transparent); font-size: 12px; line-height: 1.25; }
+      .subtitle { color: color-mix(in oklch, var(--card-text) 62%, transparent); font-size: 12px; line-height: 1.25; }
       .badges { display: flex; flex-wrap: wrap; gap: 4px; min-height: 20px; }
-      .badge { border: 1px solid color-mix(in oklch, CanvasText 10%, transparent); border-radius: 999px; background: color-mix(in oklch, CanvasText 7%, transparent); padding: 3px 8px 4px; font-size: 11px; line-height: 1.1; }
+      .badge { border: 1px solid color-mix(in oklch, var(--card-text) 10%, transparent); border-radius: 999px; background: color-mix(in oklch, var(--card-text) 7%, transparent); padding: 3px 8px 4px; font-size: 11px; line-height: 1.1; }
       .badge.category { border-color: color-mix(in oklch, oklch(46% 0.085 184) 20%, transparent); background: oklch(91% 0.028 181); color: oklch(39% 0.08 184); font-weight: 620; }
       .empty { padding: 16px; color: color-mix(in srgb, CanvasText 68%, transparent); font-size: 13px; white-space: pre-wrap; }
     </style>

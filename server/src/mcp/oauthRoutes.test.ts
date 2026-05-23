@@ -1302,6 +1302,8 @@ test("mcp tools expose Apps widget resources", async (t) => {
   expect(content?._meta?.ui).not.toHaveProperty("domain");
   expect(content?._meta).not.toHaveProperty("openai/widgetDomain");
   expect(content?.text).toContain("window.openai");
+  expect(content?.text).toContain("--card-text");
+  expect(content?.text).toContain("color: var(--card-text)");
   expect(content?.text).toContain("toolOutput");
   expect(content?.text).toContain("toolResponseMetadata");
   expect(content?.text).toContain("openai:set_globals");
