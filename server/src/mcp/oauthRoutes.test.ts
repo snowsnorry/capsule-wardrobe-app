@@ -1305,7 +1305,12 @@ test("mcp tools expose Apps widget resources", async (t) => {
   expect(content?.text).toContain("toolOutput");
   expect(content?.text).toContain("toolResponseMetadata");
   expect(content?.text).toContain("openai:set_globals");
+  expect(content?.text).toContain("window.parent.postMessage");
+  expect(content?.text).toContain("ui/initialize");
+  expect(content?.text).toContain("ui/notifications/initialized");
   expect(content?.text).toContain("ui/notifications/tool-result");
+  expect(content?.text).toContain("ui/notifications/size-changed");
+  expect(content?.text).toContain("params.arguments");
   expect(content?.text).toContain('document.createElement("img")');
   expect(mcpResult(productDetailWidget).contents?.[0]).toMatchObject({
     uri: PRODUCT_DETAIL_WIDGET_URI,

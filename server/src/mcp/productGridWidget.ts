@@ -62,64 +62,18 @@ const CARD_GRID_WIDGET_HTML = String.raw`<!doctype html>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <style>
-      :root {
-        color-scheme: light dark;
-        font-family:
-          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
-          "Segoe UI", sans-serif;
-      }
-
-      body {
-        margin: 0;
-        background: transparent;
-        color: CanvasText;
-      }
+      :root { color-scheme: light dark; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      body { margin: 0; background: transparent; color: CanvasText; }
 
       .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(176px, 1fr)); gap: 10px; padding: 2px; }
-
-      .card {
-        overflow: hidden;
-        border: 1px solid color-mix(in oklch, CanvasText 16%, transparent);
-        border-radius: 0;
-        background: oklch(97% 0.006 88);
-        text-decoration: none;
-        color: inherit;
-      }
-
+      .card { overflow: hidden; border: 1px solid color-mix(in oklch, CanvasText 16%, transparent); border-radius: 0; background: oklch(97% 0.006 88); text-decoration: none; color: inherit; }
       .image { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; display: block; background: oklch(95% 0.004 88); }
-
       .body { display: grid; gap: 8px; padding: 12px 12px 14px; }
-
-      .title {
-        font-size: 14px;
-        font-weight: 680;
-        line-height: 1.2;
-      }
-
-      .subtitle {
-        color: color-mix(in oklch, CanvasText 62%, transparent);
-        font-size: 12px;
-        line-height: 1.25;
-      }
-
+      .title { font-size: 14px; font-weight: 680; line-height: 1.2; }
+      .subtitle { color: color-mix(in oklch, CanvasText 62%, transparent); font-size: 12px; line-height: 1.25; }
       .badges { display: flex; flex-wrap: wrap; gap: 4px; min-height: 20px; }
-
-      .badge {
-        border: 1px solid color-mix(in oklch, CanvasText 10%, transparent);
-        border-radius: 999px;
-        background: color-mix(in oklch, CanvasText 7%, transparent);
-        padding: 3px 8px 4px;
-        font-size: 11px;
-        line-height: 1.1;
-      }
-
-      .badge.category {
-        border-color: color-mix(in oklch, oklch(46% 0.085 184) 20%, transparent);
-        background: oklch(91% 0.028 181);
-        color: oklch(39% 0.08 184);
-        font-weight: 620;
-      }
-
+      .badge { border: 1px solid color-mix(in oklch, CanvasText 10%, transparent); border-radius: 999px; background: color-mix(in oklch, CanvasText 7%, transparent); padding: 3px 8px 4px; font-size: 11px; line-height: 1.1; }
+      .badge.category { border-color: color-mix(in oklch, oklch(46% 0.085 184) 20%, transparent); background: oklch(91% 0.028 181); color: oklch(39% 0.08 184); font-weight: 620; }
       .empty { padding: 16px; color: color-mix(in srgb, CanvasText 68%, transparent); font-size: 13px; white-space: pre-wrap; }
     </style>
   </head>
@@ -128,6 +82,52 @@ const CARD_GRID_WIDGET_HTML = String.raw`<!doctype html>
     <script>
       const root = document.getElementById("root");
       let hasReceivedProductPayload = false;
+      let nextRpcId = 1;
+      const pendingRpc = new Map();
+      let hasMcpAppInitialized = false;
+
+      function postToHost(message) { if (window.parent && window.parent !== window) window.parent.postMessage(message, "*"); }
+      function sendHostRequest(method, params) { const id = nextRpcId++; postToHost({ jsonrpc: "2.0", id, method, params });
+        return new Promise((resolve, reject) => {
+          pendingRpc.set(id, { resolve, reject });
+          setTimeout(() => { if (!pendingRpc.has(id)) return; pendingRpc.delete(id); reject(new Error(method + " timed out")); }, 5000);
+        });
+      }
+
+      function sendHostNotification(method, params) { postToHost({ jsonrpc: "2.0", method, params: params || {} }); }
+      function resolvePendingRpc(message) {
+        if (!message || typeof message !== "object" || message.id == null) return false;
+        const pending = pendingRpc.get(message.id);
+        if (!pending) return false;
+        pendingRpc.delete(message.id);
+        if (message.error) pending.reject(new Error(message.error.message || "Host RPC error"));
+        else pending.resolve(message.result || {});
+        return true;
+      }
+
+      async function initializeMcpAppHost() {
+        try {
+          await sendHostRequest("ui/initialize", { appInfo: { name: "capsule-wardrobe-grid-widget", version: "1.0.0" }, appCapabilities: { availableDisplayModes: ["inline"] }, protocolVersion: "2026-01-26" });
+          hasMcpAppInitialized = true;
+          sendHostNotification("ui/notifications/initialized", {});
+          notifySizeChanged();
+        } catch {}
+      }
+
+      function notifySizeChanged() {
+        if (!hasMcpAppInitialized) return;
+        requestAnimationFrame(() => {
+          const height = Math.max(document.documentElement.scrollHeight, document.body ? document.body.scrollHeight : 0);
+          const width = Math.max(document.documentElement.scrollWidth, document.body ? document.body.scrollWidth : 0);
+          sendHostNotification("ui/notifications/size-changed", { width, height });
+        });
+      }
+
+      if ("ResizeObserver" in window) {
+        const resizeObserver = new ResizeObserver(() => notifySizeChanged());
+        resizeObserver.observe(document.documentElement);
+        if (document.body) resizeObserver.observe(document.body);
+      }
 
       function firstArray(values) { const arrays = values.filter(Array.isArray); return arrays.find((value) => value.length) || arrays[0]; }
 
@@ -174,9 +174,7 @@ const CARD_GRID_WIDGET_HTML = String.raw`<!doctype html>
 
       function openCard(event, url) {
         const openai = window.openai || {};
-        if (!url || !openai.openExternal) {
-          return;
-        }
+        if (!url || !openai.openExternal) return;
         event.preventDefault();
         openai.openExternal({ href: url, redirectUrl: false });
       }
@@ -185,40 +183,22 @@ const CARD_GRID_WIDGET_HTML = String.raw`<!doctype html>
         const href = card.primaryAction && card.primaryAction.url;
         const element = document.createElement(href ? "a" : "article");
         element.className = "card";
-        if (href) {
-          element.href = href;
-          element.target = "_blank";
-          element.rel = "noreferrer";
-          element.addEventListener("click", (event) => openCard(event, href));
-        }
-
+        if (href) { element.href = href; element.target = "_blank"; element.rel = "noreferrer"; element.addEventListener("click", (event) => openCard(event, href)); }
         const image = document.createElement("img");
-        image.className = "image";
-        image.src = card.image || "";
-        image.alt = card.title || "Product";
-        image.loading = "lazy";
-
+        image.className = "image"; image.src = card.image || ""; image.alt = card.title || "Product"; image.loading = "lazy";
         const body = document.createElement("div");
         body.className = "body";
-
         const title = document.createElement("div");
-        title.className = "title";
-        title.textContent = card.title || "Untitled product";
-
+        title.className = "title"; title.textContent = card.title || "Untitled product";
         const subtitle = document.createElement("div");
-        subtitle.className = "subtitle";
-        subtitle.textContent = card.subtitle || "";
-
+        subtitle.className = "subtitle"; subtitle.textContent = card.subtitle || "";
         const badges = document.createElement("div");
         badges.className = "badges";
         const labels = Array.isArray(card.badges) ? card.badges : [];
         for (const [index, label] of labels.entries()) {
           const badge = document.createElement("span");
-          badge.className = index === 0 ? "badge category" : "badge";
-          badge.textContent = label;
-          badges.appendChild(badge);
+          badge.className = index === 0 ? "badge category" : "badge"; badge.textContent = label; badges.appendChild(badge);
         }
-
         body.append(title, subtitle, badges);
         element.append(image, body);
         return element;
@@ -237,11 +217,13 @@ const CARD_GRID_WIDGET_HTML = String.raw`<!doctype html>
         }
         root.className = "grid";
         root.replaceChildren(...cards.map(renderCard));
+        notifySizeChanged();
       }
 
       function renderEmpty(label, globals) {
         root.className = "empty";
         root.textContent = label + "\n" + JSON.stringify(buildDebug(globals || window.openai || {}), null, 2);
+        notifySizeChanged();
       }
 
       function renderToolResult(toolResult) { render({ toolOutput: toolResult || {} }); }
@@ -279,7 +261,10 @@ const CARD_GRID_WIDGET_HTML = String.raw`<!doctype html>
       }
 
       function getToolInputFromMessage(message) {
-        return message && message.method === "ui/notifications/tool-input" ? (message.params && message.params.input) || message.params || null : null;
+        if (!message || message.method !== "ui/notifications/tool-input") return null;
+        if (message.params && message.params.arguments) return message.params.arguments;
+        if (message.params && message.params.input) return message.params.input;
+        return message.params || null;
       }
 
       function renderFromOpenAi() {
@@ -298,6 +283,11 @@ const CARD_GRID_WIDGET_HTML = String.raw`<!doctype html>
         "message",
         (event) => {
           const message = parseMessageData(event.data);
+
+          if (resolvePendingRpc(message)) {
+            return;
+          }
+
           const toolResult = getToolResultFromMessage(message);
           if (toolResult) {
             renderToolResult(toolResult);
@@ -309,6 +299,7 @@ const CARD_GRID_WIDGET_HTML = String.raw`<!doctype html>
         },
         { passive: true },
       );
+      void initializeMcpAppHost();
     </script>
   </body>
 </html>`;
