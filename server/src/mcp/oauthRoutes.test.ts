@@ -34,6 +34,7 @@ const WARDROBE_ITEMS_DESCRIPTION =
 const PRODUCT_GRID_WIDGET_URI = "ui://capsule/product-grid.html";
 const PRODUCT_DETAIL_WIDGET_URI = "ui://capsule/product-detail.html";
 const WARDROBE_GRID_WIDGET_URI = "ui://capsule/wardrobe-grid.html";
+const CARD_GRID_WIDGET_MIME_TYPE = "text/html;profile=mcp-app";
 const BLACK_BLAZER_THUMBNAIL_URL =
   "https://assets.capsule-wardrobe.org/thumbnails/e8a4045eda747e670055011d0588e0cec8f1dc531cc81b55dcad75de337f0209_640.webp";
 const SAVED_BLAZER_THUMBNAIL_URL =
@@ -1136,7 +1137,7 @@ test("mcp tools expose Apps widget resources", async (t) => {
     uri: PRODUCT_GRID_WIDGET_URI,
     name: "product_grid_widget",
     title: "Product grid",
-    mimeType: "text/html",
+    mimeType: CARD_GRID_WIDGET_MIME_TYPE,
     _meta: {
       ui: {
         prefersBorder: true,
@@ -1161,13 +1162,13 @@ test("mcp tools expose Apps widget resources", async (t) => {
     uri: PRODUCT_DETAIL_WIDGET_URI,
     name: "product_detail_widget",
     title: "Product detail",
-    mimeType: "text/html",
+    mimeType: CARD_GRID_WIDGET_MIME_TYPE,
   });
   expect(getMcpResource(resources, WARDROBE_GRID_WIDGET_URI)).toMatchObject({
     uri: WARDROBE_GRID_WIDGET_URI,
     name: "wardrobe_grid_widget",
     title: "Wardrobe grid",
-    mimeType: "text/html",
+    mimeType: CARD_GRID_WIDGET_MIME_TYPE,
   });
 
   expect(productGridWidget.response.status).toBe(200);
@@ -1176,7 +1177,7 @@ test("mcp tools expose Apps widget resources", async (t) => {
   const content = mcpResult(productGridWidget).contents?.[0];
   expect(content).toMatchObject({
     uri: PRODUCT_GRID_WIDGET_URI,
-    mimeType: "text/html",
+    mimeType: CARD_GRID_WIDGET_MIME_TYPE,
     _meta: {
       ui: {
         prefersBorder: true,
@@ -1200,14 +1201,15 @@ test("mcp tools expose Apps widget resources", async (t) => {
   expect(content?.text).toContain("window.openai");
   expect(content?.text).toContain("toolOutput");
   expect(content?.text).toContain("toolResponseMetadata");
+  expect(content?.text).toContain("openai:set_globals");
   expect(content?.text).toContain('document.createElement("img")');
   expect(mcpResult(productDetailWidget).contents?.[0]).toMatchObject({
     uri: PRODUCT_DETAIL_WIDGET_URI,
-    mimeType: "text/html",
+    mimeType: CARD_GRID_WIDGET_MIME_TYPE,
   });
   expect(mcpResult(wardrobeGridWidget).contents?.[0]).toMatchObject({
     uri: WARDROBE_GRID_WIDGET_URI,
-    mimeType: "text/html",
+    mimeType: CARD_GRID_WIDGET_MIME_TYPE,
   });
 });
 

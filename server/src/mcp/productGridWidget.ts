@@ -7,6 +7,7 @@ import {
 const PRODUCT_GRID_WIDGET_URI = "ui://capsule/product-grid.html";
 const PRODUCT_DETAIL_WIDGET_URI = "ui://capsule/product-detail.html";
 const WARDROBE_GRID_WIDGET_URI = "ui://capsule/wardrobe-grid.html";
+const CARD_GRID_WIDGET_MIME_TYPE = "text/html;profile=mcp-app";
 const CARD_GRID_WIDGET_DEFINITIONS = [
   {
     name: "product_grid_widget",
@@ -184,13 +185,15 @@ const CARD_GRID_WIDGET_HTML = String.raw`<!doctype html>
   <body>
     <main id="root" class="empty">No items to display.</main>
     <script>
-      const openai = window.openai || {};
-      const output = openai.toolOutput || {};
-      const metadata = openai.toolResponseMetadata || {};
-      const cards = Array.isArray(metadata.cards)
-        ? metadata.cards
-        : buildCardsFromItems(output.items);
       const root = document.getElementById("root");
+
+      function getCards(globals) {
+        const output = globals.toolOutput || {};
+        const metadata = globals.toolResponseMetadata || {};
+        return Array.isArray(metadata.cards)
+          ? metadata.cards
+          : buildCardsFromItems(output.items);
+      }
 
       function buildCardsFromItems(items) {
         return Array.isArray(items)
@@ -222,6 +225,7 @@ const CARD_GRID_WIDGET_HTML = String.raw`<!doctype html>
       }
 
       function openCard(event, url) {
+        const openai = window.openai || {};
         if (!url || !openai.openExternal) {
           return;
         }
@@ -271,10 +275,23 @@ const CARD_GRID_WIDGET_HTML = String.raw`<!doctype html>
         return element;
       }
 
-      if (cards.length) {
+      function render(globals) {
+        const cards = getCards(globals || window.openai || {});
+        if (!cards.length) {
+          root.className = "empty";
+          root.textContent = "No items to display.";
+          return;
+        }
         root.className = "grid";
         root.replaceChildren(...cards.map(renderCard));
       }
+
+      render(window.openai || {});
+      window.addEventListener(
+        "openai:set_globals",
+        (event) => render(event.detail && event.detail.globals),
+        { passive: true },
+      );
     </script>
   </body>
 </html>`;
@@ -287,14 +304,14 @@ function registerCardGridWidgetResource(server, definition) {
     {
       title: definition.title,
       description: definition.description,
-      mimeType: "text/html",
+      mimeType: CARD_GRID_WIDGET_MIME_TYPE,
       _meta: widgetMeta,
     },
     async () => ({
       contents: [
         {
           uri: definition.uri,
-          mimeType: "text/html",
+          mimeType: CARD_GRID_WIDGET_MIME_TYPE,
           text: CARD_GRID_WIDGET_HTML,
           _meta: widgetMeta,
         },
