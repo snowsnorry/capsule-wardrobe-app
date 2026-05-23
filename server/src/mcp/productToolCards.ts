@@ -26,10 +26,6 @@ function markdownImageAlt(value: string): string {
   return value.replace(/[[\]\n\r]/g, " ").trim() || "Product";
 }
 
-function firstString(value: string[] | null): string | null {
-  return value?.[0] || null;
-}
-
 function buildProductCard(item: ProductToolCardItem) {
   return {
     type: "product_card",
@@ -40,13 +36,7 @@ function buildProductCard(item: ProductToolCardItem) {
       item.category ||
       "",
     image: item.image,
-    badges: compactStrings([
-      item.attributes.isSavedToWardrobe ? "Saved" : null,
-      item.category,
-      item.availability,
-      firstString(item.attributes.season),
-      firstString(item.attributes.style),
-    ]),
+    badges: compactStrings([item.category, ...(item.attributes.season || [])]),
     primaryAction: {
       type: "open_external",
       label: "Open product",

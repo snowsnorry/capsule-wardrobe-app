@@ -172,10 +172,6 @@ function markdownImageAlt(value: string): string {
   return value.replace(/[[\]\n\r]/g, " ").trim() || "Wardrobe item";
 }
 
-function firstString(value: string[] | null): string | null {
-  return value?.[0] || null;
-}
-
 function isHttpUrl(value: string): boolean {
   try {
     const url = new URL(value);
@@ -252,13 +248,7 @@ function buildWardrobeCard(item: NormalizedWardrobeItem) {
       item.category ||
       "",
     image: item.image,
-    badges: compactStrings([
-      item.source,
-      item.processingStatus,
-      item.category,
-      firstString(item.attributes.season),
-      firstString(item.attributes.style),
-    ]),
+    badges: compactStrings([item.category, ...(item.attributes.season || [])]),
     ...(primaryAction ? { primaryAction } : {}),
   };
 }

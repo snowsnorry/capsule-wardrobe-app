@@ -4,9 +4,9 @@ import {
   THUMBNAIL_ASSET_BASE_URL,
 } from "../appConfig.js";
 
-const PRODUCT_GRID_WIDGET_URI = "ui://capsule/product-grid.v4.html";
-const PRODUCT_DETAIL_WIDGET_URI = "ui://capsule/product-detail.v4.html";
-const WARDROBE_GRID_WIDGET_URI = "ui://capsule/wardrobe-grid.v4.html";
+const PRODUCT_GRID_WIDGET_URI = "ui://capsule/product-grid.v5.html";
+const PRODUCT_DETAIL_WIDGET_URI = "ui://capsule/product-detail.v5.html";
+const WARDROBE_GRID_WIDGET_URI = "ui://capsule/wardrobe-grid.v5.html";
 const CARD_GRID_WIDGET_MIME_TYPE = "text/html;profile=mcp-app";
 const CARD_GRID_WIDGET_DEFINITIONS = [
   {
@@ -118,42 +118,42 @@ const CARD_GRID_WIDGET_HTML = String.raw`<!doctype html>
         color: CanvasText;
       }
 
-      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(164px, 1fr)); gap: 12px; padding: 2px; }
+      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(176px, 1fr)); gap: 10px; padding: 2px; }
 
       .card {
         overflow: hidden;
-        border: 1px solid color-mix(in srgb, CanvasText 14%, transparent);
-        border-radius: 8px;
-        background: color-mix(in srgb, Canvas 94%, CanvasText 6%);
+        border: 1px solid color-mix(in oklch, CanvasText 16%, transparent);
+        border-radius: 0;
+        background: oklch(97% 0.006 88);
         text-decoration: none;
         color: inherit;
       }
 
-      .image { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; display: block; background: color-mix(in srgb, CanvasText 8%, transparent); }
+      .image { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; display: block; background: oklch(95% 0.004 88); }
 
-      .body { display: grid; gap: 7px; padding: 10px; }
+      .body { display: grid; gap: 8px; padding: 12px 12px 14px; }
 
       .title {
-        font-size: 13px;
-        font-weight: 650;
-        line-height: 1.25;
+        font-size: 14px;
+        font-weight: 680;
+        line-height: 1.2;
       }
 
       .subtitle {
-        min-height: 16px;
-        color: color-mix(in srgb, CanvasText 68%, transparent);
+        color: color-mix(in oklch, CanvasText 62%, transparent);
         font-size: 12px;
-        line-height: 1.3;
+        line-height: 1.25;
       }
 
-      .badges { display: flex; flex-wrap: wrap; gap: 5px; }
+      .badges { display: flex; flex-wrap: wrap; gap: 4px; min-height: 20px; }
 
       .badge {
-        border-radius: 999px;
-        background: color-mix(in srgb, CanvasText 9%, transparent);
-        padding: 3px 7px;
+        border: 1px solid color-mix(in oklch, CanvasText 12%, transparent);
+        border-radius: 0;
+        background: transparent;
+        padding: 3px 6px;
         font-size: 11px;
-        line-height: 1;
+        line-height: 1.1;
       }
 
       .empty { padding: 16px; color: color-mix(in srgb, CanvasText 68%, transparent); font-size: 13px; white-space: pre-wrap; }
@@ -197,9 +197,8 @@ const CARD_GRID_WIDGET_HTML = String.raw`<!doctype html>
               subtitle: [item.brand, item.price && item.price.display].filter(Boolean).join(" - "),
               image: getImageUrl(item),
               badges: [
-                item.attributes && item.attributes.isSavedToWardrobe ? "Saved" : null,
                 item.category,
-                item.availability,
+                ...(item.attributes && Array.isArray(item.attributes.season) ? item.attributes.season : []),
               ].filter(Boolean),
               primaryAction:
                 typeof item.url === "string"
