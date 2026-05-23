@@ -23,7 +23,7 @@
     "@simplewebauthn/server": "^13.3.0",
     "better-sse": "^0.16.1",
     "dotenv": "^16.4.5",
-    "express": "^4.19.2",
+    "express": "^4.22.2",
     "express-rate-limit": "^7.4.0",
     "file-type": "^21.3.4",
     "google-auth-library": "^10.6.2",
