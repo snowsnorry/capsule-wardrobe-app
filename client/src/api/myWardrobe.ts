@@ -170,18 +170,50 @@ async function uploadWardrobeImages(
   files: File[],
   options: UploadWardrobeImagesOptions = {},
 ): Promise<JsonObject> {
-  const fetchEventSource = await loadFetchEventSource();
   const formData = new FormData();
   files.forEach((file) => {
     formData.append("images", file);
   });
 
+  return uploadWardrobeEventStream(
+    `${API_BASE_URL}/wardrobe/items/upload`,
+    {
+      body: formData,
+      headers: getCsrfHeader(),
+    },
+    options,
+  );
+}
+
+async function uploadWardrobeUrls(
+  urls: string[],
+  options: UploadWardrobeImagesOptions = {},
+): Promise<JsonObject> {
+  return uploadWardrobeEventStream(
+    `${API_BASE_URL}/wardrobe/items/upload-url`,
+    {
+      body: JSON.stringify({ urls }),
+      headers: {
+        ...getCsrfHeader(),
+        "Content-Type": "application/json",
+      },
+    },
+    options,
+  );
+}
+
+async function uploadWardrobeEventStream(
+  url: string,
+  requestOptions: { body: BodyInit; headers: Record<string, string> },
+  options: UploadWardrobeImagesOptions = {},
+): Promise<JsonObject> {
+  const fetchEventSource = await loadFetchEventSource();
   let completePayload: JsonObject | null = null;
-  await fetchEventSource(`${API_BASE_URL}/wardrobe/items/upload`, {
+  await fetchEventSource(url, {
     method: "POST",
     credentials: "include",
-    headers: getCsrfHeader(),
-    body: formData,
+    headers: requestOptions.headers,
+    body: requestOptions.body,
     openWhenHidden: true,
     async onopen(response) {
       const contentType = (
@@ -316,6 +348,7 @@ export {
   saveCatalogItemToMyWardrobe,
   updateUploadedWardrobeItem,
   uploadWardrobeImages,
+  uploadWardrobeUrls,
 };
 export type { MyWardrobeSource };
 export type { UploadedWardrobeItemUpdatePayload };

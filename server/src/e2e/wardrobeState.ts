@@ -51,9 +51,22 @@ class E2eWardrobeMemory {
     };
   }
 
-  saveUploadedItems(email: string, imageUrls: string[]) {
+  saveUploadedItems(
+    email: string,
+    entries: Array<
+      string | { imageUrl?: string; rawImageUrl?: string; url?: string }
+    >,
+  ) {
     const now = new Date().toISOString();
-    const items = imageUrls.map((imageUrl) => {
+    const items = entries.map((entry) => {
+      const imageUrl =
+        typeof entry === "string" ? entry : String(entry?.imageUrl || "");
+      const rawImageUrl =
+        typeof entry === "string"
+          ? imageUrl
+          : String(entry?.rawImageUrl || imageUrl);
+      const url =
+        typeof entry === "string" ? "" : String(entry?.url || "").trim();
       this.uploadedItemCounter += 1;
       const id = `uploaded-e2e-${this.uploadedItemCounter}`;
       const item: E2eUploadedWardrobeItem = {
@@ -61,8 +74,8 @@ class E2eWardrobeMemory {
         profileEmail: email,
         ...buildUploadedMetadata(this.uploadedItemCounter),
         imageUrl,
-        rawImageUrl: imageUrl,
-        url: `wardrobe://${id}`,
+        rawImageUrl,
+        url: url || `wardrobe://${id}`,
         source: "uploaded",
         processingStatus: "uploaded",
         createdAt: now,
@@ -112,6 +125,15 @@ function createE2eWardrobeDependencies(memory: E2eWardrobeMemory) {
       ),
       rawResponse: "e2e-uploaded-wardrobe-metadata",
     }),
+    analyzeWardrobeProductPageImageImpl: async (payload) => ({
+      hasMetadata: true,
+      metadata: buildUploadedMetadata(
+        getUploadedIndexFromImageUrl(payload?.imageUrl),
+      ),
+      rawResponse: "e2e-uploaded-wardrobe-product-page-metadata",
+    }),
+    buildRemoteWardrobeImageSourceKeyImpl: () =>
+      "wardrobe/e2e/product-page-source.webp",
     cleanupUploadedWardrobeItemImageImpl: async (payload) => ({
       cleanImage: {
         key: `${payload?.sourceKey || "uploaded-e2e"}.clean`,
@@ -119,6 +141,16 @@ function createE2eWardrobeDependencies(memory: E2eWardrobeMemory) {
         digest: "e2e-clean-digest",
       },
       thumbnails: [],
+    }),
+    downloadWardrobeProductPageImageImpl: async (payload) => ({
+      buffer: Buffer.from("e2e-product-page-image"),
+      imageUrl: String(payload?.imageUrl || ""),
+      mimeType: "image/jpeg",
+      originalName: "e2e-product-page-image.jpg",
+    }),
+    fetchProductPageHtmlWithImpersImpl: async (payload) => ({
+      html: '<html><head><meta property="og:image" content="https://images.example.com/uploaded-e2e-1.jpg"></head></html>',
+      url: String(payload?.url || "https://shop.example.com/product"),
     }),
     listWardrobeItemsImpl: async (payload) => memory.listItems(payload?.source),
     normalizeWardrobeUploadImagesInChildImpl: async (images) =>
@@ -131,7 +163,11 @@ function createE2eWardrobeDependencies(memory: E2eWardrobeMemory) {
     saveUploadedWardrobeItemsImpl: async (payload) =>
       memory.saveUploadedItems(
         String(payload?.email || E2E_EMAIL),
-        Array.isArray(payload?.imageUrls) ? payload.imageUrls : [],
+        Array.isArray(payload?.items)
+          ? payload.items
+          : Array.isArray(payload?.imageUrls)
+            ? payload.imageUrls
+            : [],
       ),
     updateUploadedWardrobeItemMetadataImpl: async (payload) =>
       memory.updateMetadata(payload),

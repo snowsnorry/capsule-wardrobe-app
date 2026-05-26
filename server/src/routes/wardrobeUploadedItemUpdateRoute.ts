@@ -107,6 +107,8 @@ function replaceImageUrlSuffix(imageUrl: string, suffix: string) {
 function buildUploadedWardrobeItemImageKeys(item) {
   const originalUrl = String(item?.rawImageUrl || "").trim();
   const imageUrl = String(item?.imageUrl || "").trim();
+  const shouldIncludeOriginal =
+    !imageUrl || getUrlOrigin(originalUrl) === getUrlOrigin(imageUrl);
   const thumbnailUrls = imageUrl
     ? ["_320", "_480", "_640"].map((suffix) =>
         replaceImageUrlSuffix(imageUrl, suffix),
@@ -115,11 +117,19 @@ function buildUploadedWardrobeItemImageKeys(item) {
 
   return Array.from(
     new Set(
-      [originalUrl, imageUrl, ...thumbnailUrls]
+      [shouldIncludeOriginal ? originalUrl : "", imageUrl, ...thumbnailUrls]
         .map(getR2KeyFromPublicUrl)
         .filter(Boolean),
     ),
   );
+}
+
+function getUrlOrigin(value: string) {
+  try {
+    return new URL(value).origin;
+  } catch {
+    return "";
+  }
 }
 
 function registerUploadedWardrobeItemDeleteRoute(app, context) {

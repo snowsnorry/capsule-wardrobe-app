@@ -39,6 +39,28 @@ messages:
   );
 });
 
+test("parsePromptTemplateYaml joins text parts in multimodal-style content arrays", () => {
+  const template = parsePromptTemplateYaml(`
+version: 1
+name: product_page
+messages:
+  - role: user
+    content:
+      - type: text
+        text: |
+          URL: {{url}}
+      - type: image
+        image_url: ignored
+      - type: text
+        text: |
+          HTML: {{html}}
+`);
+
+  expect(getPromptTemplateContent(template, "user")).toBe(
+    "URL: {{url}}\n\nHTML: {{html}}",
+  );
+});
+
 test("renderPromptTemplateContent renders Mustache placeholders without HTML escaping", () => {
   const rendered = renderPromptTemplateContent("JSON: {{payload}}", {
     payload: '{"name":"A&B","items":["<top>"]}',

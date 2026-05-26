@@ -1,8 +1,13 @@
+import { useState } from "react";
 import type { MouseEvent } from "react";
 import {
   Button,
+  ButtonGroup,
   FormControl,
   IconButton,
+  ListItemIcon,
+  ListItemText,
+  Menu,
   MenuItem,
   Select,
   Stack,
@@ -10,7 +15,9 @@ import {
   ToggleButtonGroup,
   type SelectChangeEvent,
 } from "@mui/material";
+import ArrowDropDownRoundedIcon from "@mui/icons-material/ArrowDropDownRounded";
 import FileUploadOutlinedIcon from "@mui/icons-material/FileUploadOutlined";
+import LinkRoundedIcon from "@mui/icons-material/LinkRounded";
 import MoreVertRoundedIcon from "@mui/icons-material/MoreVertRounded";
 import type { MyWardrobeSource } from "../api/myWardrobe";
 
@@ -23,6 +30,7 @@ type MyWardrobeToolbarProps = {
   onFilterChange: (filter: MyWardrobeFilter) => void;
   onOpenMenu: (event: MouseEvent<HTMLButtonElement>) => void;
   onOpenUpload: () => void;
+  onOpenUrlUpload: () => void;
   t: (key: string) => string;
 };
 
@@ -46,6 +54,7 @@ function MyWardrobeMobileToolbar({
   onFilterChange,
   onOpenMenu,
   onOpenUpload,
+  onOpenUrlUpload,
   t,
 }: Omit<MyWardrobeToolbarProps, "isMobile">) {
   return (
@@ -69,16 +78,13 @@ function MyWardrobeMobileToolbar({
         </Select>
       </FormControl>
       <Stack direction="row" spacing={0.75} sx={mobileActionsSx}>
-        <Button
-          variant="outlined"
-          startIcon={<FileUploadOutlinedIcon />}
+        <UploadSplitButton
           disabled={isLoading}
-          aria-label={t("myWardrobe.upload")}
-          onClick={onOpenUpload}
-          sx={mobileUploadButtonSx}
-        >
-          {t("myWardrobe.uploadDialog.upload")}
-        </Button>
+          isMobile
+          onOpenUpload={onOpenUpload}
+          onOpenUrlUpload={onOpenUrlUpload}
+          t={t}
+        />
         <IconButton
           aria-label={t("myWardrobe.openMenu")}
           disabled={isLoading}
@@ -98,6 +104,7 @@ function MyWardrobeDesktopToolbar({
   onFilterChange,
   onOpenMenu,
   onOpenUpload,
+  onOpenUrlUpload,
   t,
 }: Omit<MyWardrobeToolbarProps, "isMobile">) {
   return (
@@ -125,15 +132,12 @@ function MyWardrobeDesktopToolbar({
         ))}
       </ToggleButtonGroup>
       <Stack direction="row" spacing={1} sx={toolbarActionsSx}>
-        <Button
-          variant="outlined"
-          startIcon={<FileUploadOutlinedIcon />}
+        <UploadSplitButton
           disabled={isLoading}
-          aria-label={t("myWardrobe.upload")}
-          onClick={onOpenUpload}
-        >
-          {t("myWardrobe.uploadDialog.upload")}
-        </Button>
+          onOpenUpload={onOpenUpload}
+          onOpenUrlUpload={onOpenUrlUpload}
+          t={t}
+        />
         <IconButton
           aria-label={t("myWardrobe.openMenu")}
           disabled={isLoading}
@@ -143,6 +147,90 @@ function MyWardrobeDesktopToolbar({
         </IconButton>
       </Stack>
     </Stack>
+  );
+}
+
+function UploadSplitButton({
+  disabled,
+  isMobile = false,
+  onOpenUpload,
+  onOpenUrlUpload,
+  t,
+}: {
+  disabled: boolean;
+  isMobile?: boolean;
+  onOpenUpload: () => void;
+  onOpenUrlUpload: () => void;
+  t: (key: string) => string;
+}) {
+  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
+  const isMenuOpen = Boolean(anchorEl);
+
+  const closeMenu = () => setAnchorEl(null);
+  const openMenu = (event: MouseEvent<HTMLButtonElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+  const selectPhotoUpload = () => {
+    closeMenu();
+    onOpenUpload();
+  };
+  const selectUrlUpload = () => {
+    closeMenu();
+    onOpenUrlUpload();
+  };
+
+  return (
+    <>
+      <ButtonGroup
+        variant="outlined"
+        disabled={disabled}
+        sx={isMobile ? mobileUploadButtonGroupSx : uploadButtonGroupSx}
+      >
+        <Button
+          startIcon={<FileUploadOutlinedIcon />}
+          aria-label={t("myWardrobe.upload")}
+          onClick={onOpenUpload}
+          sx={isMobile ? mobileUploadMainButtonSx : uploadMainButtonSx}
+        >
+          {t("myWardrobe.uploadDialog.upload")}
+        </Button>
+        <Button
+          aria-label={t("myWardrobe.uploadMenu")}
+          aria-controls={isMenuOpen ? "my-wardrobe-upload-menu" : undefined}
+          aria-expanded={isMenuOpen ? "true" : undefined}
+          aria-haspopup="menu"
+          onClick={openMenu}
+          sx={uploadMenuButtonSx}
+        >
+          <ArrowDropDownRoundedIcon />
+        </Button>
+      </ButtonGroup>
+      <Menu
+        id="my-wardrobe-upload-menu"
+        anchorEl={anchorEl}
+        open={isMenuOpen}
+        onClose={closeMenu}
+        MenuListProps={{
+          "aria-label": t("myWardrobe.uploadMenuLabel"),
+          dense: true,
+        }}
+        anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
+        transformOrigin={{ horizontal: "right", vertical: "top" }}
+      >
+        <MenuItem onClick={selectPhotoUpload}>
+          <ListItemIcon>
+            <FileUploadOutlinedIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>{t("myWardrobe.uploadPhoto")}</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={selectUrlUpload}>
+          <ListItemIcon>
+            <LinkRoundedIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>{t("myWardrobe.uploadUrl")}</ListItemText>
+        </MenuItem>
+      </Menu>
+    </>
   );
 }
 
@@ -202,20 +290,38 @@ const toolbarActionsSx = {
   flexShrink: 0,
 } as const;
 
-const mobileMenuButtonSx = {
-  flex: "0 0 auto",
-  width: 40,
-  height: 40,
+const uploadButtonGroupSx = {
+  flexShrink: 0,
 } as const;
 
-const mobileUploadButtonSx = {
+const mobileUploadButtonGroupSx = {
+  ...uploadButtonGroupSx,
   flex: "0 1 auto",
   minWidth: 0,
-  px: 1.5,
+} as const;
+
+const uploadMainButtonSx = {
   whiteSpace: "nowrap",
   "& .MuiButton-startIcon": {
     mr: 0.75,
   },
+} as const;
+
+const mobileUploadMainButtonSx = {
+  ...uploadMainButtonSx,
+  minWidth: 0,
+  px: 1.5,
+} as const;
+
+const uploadMenuButtonSx = {
+  minWidth: 40,
+  px: 0.5,
+} as const;
+
+const mobileMenuButtonSx = {
+  flex: "0 0 auto",
+  width: 40,
+  height: 40,
 } as const;
 
 const mobileFilterControlSx = {

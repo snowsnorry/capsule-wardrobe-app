@@ -144,8 +144,16 @@ import { createStartServer } from "./serverStartup.js";
 import { uploadWardrobeImageToR2 } from "./r2Storage.js";
 import { deleteObjectsFromR2 } from "./r2Delete.js";
 import { normalizeWardrobeUploadImagesInChild } from "./wardrobeUploadImagesRunner.js";
-import { analyzeWardrobeImageUrl } from "./wardrobeImageAnalysis.js";
+import {
+  analyzeWardrobeImageUrl,
+  analyzeWardrobeProductPageImage,
+} from "./wardrobeImageAnalysis.js";
 import { cleanupUploadedWardrobeItemImage } from "./wardrobeImageCleanup.js";
+import {
+  buildRemoteWardrobeImageSourceKey,
+  downloadWardrobeProductPageImage,
+  fetchProductPageHtmlWithImpers,
+} from "./wardrobeProductPageImport.js";
 import { createUploadedWardrobeItemEmbedding } from "./wardrobeSemanticEmbedding.js";
 import {
   applyCorsMiddleware,
@@ -194,11 +202,15 @@ function resolveGoogleAuthClient({
 function createWardrobeImageStorageDependencies() {
   return {
     analyzeWardrobeImageUrlImpl: analyzeWardrobeImageUrl,
+    analyzeWardrobeProductPageImageImpl: analyzeWardrobeProductPageImage,
+    buildRemoteWardrobeImageSourceKeyImpl: buildRemoteWardrobeImageSourceKey,
     cleanupUploadedWardrobeItemImageImpl: cleanupUploadedWardrobeItemImage,
     createUploadedWardrobeItemEmbeddingImpl:
       createUploadedWardrobeItemEmbedding,
     deleteR2ObjectsImpl: deleteObjectsFromR2,
     deleteUploadedWardrobeItemImpl: deleteUploadedWardrobeItemById,
+    downloadWardrobeProductPageImageImpl: downloadWardrobeProductPageImage,
+    fetchProductPageHtmlWithImpersImpl: fetchProductPageHtmlWithImpers,
     uploadWardrobeImageToR2Impl: uploadWardrobeImageToR2,
   };
 }

@@ -18,6 +18,7 @@ const api = vi.hoisted(() => ({
   removeCatalogItemFromMyWardrobe: vi.fn(),
   updateUploadedWardrobeItem: vi.fn(),
   uploadWardrobeImages: vi.fn(),
+  uploadWardrobeUrls: vi.fn(),
 }));
 const useI18nMock = vi.hoisted(() => vi.fn());
 const useMediaQueryMock = vi.hoisted(() => vi.fn(() => false));
@@ -214,6 +215,10 @@ const translations: Record<string, string> = {
   "myWardrobe.subtitle":
     "Saved catalog pieces and uploaded items in one place.",
   "myWardrobe.upload": "Upload item photo",
+  "myWardrobe.uploadMenu": "Choose upload method",
+  "myWardrobe.uploadMenuLabel": "Upload methods",
+  "myWardrobe.uploadPhoto": "Upload photo",
+  "myWardrobe.uploadUrl": "Upload URL",
   "myWardrobe.openMenu": "Open My Wardrobe menu",
   "myWardrobe.downloadFailed": "Failed to export My Wardrobe PDF.",
   "myWardrobe.filterLabel": "My Wardrobe source",
@@ -221,6 +226,7 @@ const translations: Record<string, string> = {
   "myWardrobe.removeFailed": "Failed to remove from My Wardrobe.",
   "myWardrobe.updateFailed": "Failed to update the item.",
   "myWardrobe.uploadFailed": "Failed to upload wardrobe photos.",
+  "myWardrobe.urlUploadFailed": "Failed to upload product URLs.",
   "myWardrobe.failedUploadBadge": "Failed",
   "myWardrobe.noCategoryBadge": "No category",
   "myWardrobe.needsReviewBadge": "Needs review",
@@ -261,6 +267,16 @@ const translations: Record<string, string> = {
   "myWardrobe.uploadDialog.tooManyFiles": "Upload up to 5 files.",
   "myWardrobe.uploadDialog.invalidType": "Use JPEG, PNG, or WebP images.",
   "myWardrobe.uploadDialog.fileTooLarge": "Each image must be 10 MB or less.",
+  "myWardrobe.urlUploadDialog.title": "Upload product URLs",
+  "myWardrobe.urlUploadDialog.body":
+    "Add product page links from online stores. Each accepted product becomes an uploaded wardrobe item.",
+  "myWardrobe.urlUploadDialog.fieldLabel": "Product URL {index}",
+  "myWardrobe.urlUploadDialog.placeholder": "https://shop.example.com/product",
+  "myWardrobe.urlUploadDialog.helperText":
+    "Use a product page URL starting with http:// or https://.",
+  "myWardrobe.urlUploadDialog.invalidUrl":
+    "Enter a URL that starts with http:// or https://.",
+  "myWardrobe.urlUploadDialog.upload": "Upload URLs",
   "capsule.exportPdf": "Export as PDF",
   "capsule.cardLayout": "Card layout",
   "capsule.cardColumnsOne": "1 column",
@@ -301,6 +317,8 @@ describe("MyWardrobeScreen", () => {
     });
     api.uploadWardrobeImages.mockReset();
     api.uploadWardrobeImages.mockResolvedValue({ ok: true, items: [] });
+    api.uploadWardrobeUrls.mockReset();
+    api.uploadWardrobeUrls.mockResolvedValue({ ok: true, items: [] });
     api.fetchMyWardrobeItems.mockResolvedValue({
       items: [
         {
@@ -425,6 +443,29 @@ describe("MyWardrobeScreen", () => {
     expect(
       within(dialog).queryByText("Drop images here"),
     ).not.toBeInTheDocument();
+  });
+
+  test("opens upload URL dialog as a full-screen mobile form", async () => {
+    useMediaQueryMock.mockReturnValue(true);
+    const user = userEvent.setup();
+    renderScreen();
+
+    await screen.findByTestId("wardrobe-card-wardrobe-1");
+    await user.click(
+      screen.getByRole("button", { name: "Choose upload method" }),
+    );
+    await user.click(screen.getByRole("menuitem", { name: "Upload URL" }));
+
+    const dialog = screen.getByRole("dialog", {
+      name: "Upload product URLs",
+    });
+    expect(dialog).toHaveClass("MuiDialog-paperFullScreen");
+    expect(within(dialog).getByLabelText("Product URL 1")).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(
+        "Add product page links from online stores. Each accepted product becomes an uploaded wardrobe item.",
+      ),
+    ).toBeInTheDocument();
   });
 
   test("sorts wardrobe cards with the same order as capsule items", async () => {
@@ -582,6 +623,81 @@ describe("MyWardrobeScreen", () => {
 
     expect(screen.queryByText("shirt.png")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Upload" })).toBeDisabled();
+  });
+
+  test("uploads product URLs from the split upload menu", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+
+    await screen.findByTestId("wardrobe-card-wardrobe-1");
+    await user.click(
+      screen.getByRole("button", { name: "Choose upload method" }),
+    );
+    await user.click(screen.getByRole("menuitem", { name: "Upload URL" }));
+
+    const dialog = screen.getByRole("dialog", {
+      name: "Upload product URLs",
+    });
+    const uploadButton = within(dialog).getByRole("button", {
+      name: "Upload URLs",
+    });
+    expect(uploadButton).toBeDisabled();
+
+    const firstUrlInput = within(dialog).getByLabelText("Product URL 1");
+    await user.type(firstUrlInput, "example.com/product");
+    expect(
+      within(dialog).getByText(
+        "Enter a URL that starts with http:// or https://.",
+      ),
+    ).toBeInTheDocument();
+    expect(uploadButton).toBeDisabled();
+
+    await user.clear(firstUrlInput);
+    await user.type(firstUrlInput, "https://shop.example.com/product-1");
+    expect(within(dialog).getByLabelText("Product URL 2")).toBeInTheDocument();
+    expect(uploadButton).toBeEnabled();
+
+    await user.type(
+      within(dialog).getByLabelText("Product URL 2"),
+      "http://shop.example.com/product-2",
+    );
+    await user.type(
+      within(dialog).getByLabelText("Product URL 3"),
+      "https://shop.example.com/product-3",
+    );
+    await user.type(
+      within(dialog).getByLabelText("Product URL 4"),
+      "https://shop.example.com/product-4",
+    );
+    await user.type(
+      within(dialog).getByLabelText("Product URL 5"),
+      "https://shop.example.com/product-5",
+    );
+    expect(
+      within(dialog).queryByLabelText("Product URL 6"),
+    ).not.toBeInTheDocument();
+
+    await user.click(uploadButton);
+
+    expect(api.uploadWardrobeUrls).toHaveBeenCalledWith(
+      [
+        "https://shop.example.com/product-1",
+        "http://shop.example.com/product-2",
+        "https://shop.example.com/product-3",
+        "https://shop.example.com/product-4",
+        "https://shop.example.com/product-5",
+      ],
+      expect.objectContaining({ onProgress: expect.any(Function) }),
+    );
+    await waitFor(() => {
+      expect(screen.queryByText("Upload product URLs")).not.toBeInTheDocument();
+    });
+    await waitFor(() => {
+      expect(api.fetchMyWardrobeItems).toHaveBeenLastCalledWith({
+        source: "uploaded",
+        force: true,
+      });
+    });
   });
 
   test("exports the current filtered wardrobe as PDF from the action menu", async () => {

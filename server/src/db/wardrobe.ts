@@ -5,7 +5,20 @@ import {
   getSqlClient,
   hasAffectedRows,
 } from "./core.js";
+import { getSafeHttpUrl } from "../../../shared/urlSecurity.js";
 import type { UserWardrobeRow, UserWardrobeSource } from "./wardrobeTypes.js";
+
+type UploadedWardrobeItemInput = {
+  imageUrl?: string | null;
+  rawImageUrl?: string | null;
+  url?: string | null;
+};
+
+type NormalizedUploadedWardrobeItem = {
+  imageUrl: string;
+  rawImageUrl: string;
+  url: string | null;
+};
 
 function normalizeWardrobeSource(source: unknown): UserWardrobeSource | null {
   return source === "uploaded" || source === "from_catalog" ? source : null;
@@ -359,34 +372,53 @@ export async function saveWardrobeItemFromCatalogByUrl({
 export async function saveUploadedWardrobeItemsByEmail({
   email,
   imageUrls,
+  items,
 }: {
   email: string;
-  imageUrls: string[];
+  imageUrls?: string[];
+  items?: UploadedWardrobeItemInput[];
 }): Promise<Array<Record<string, unknown>>> {
-  const normalizedUrls = imageUrls
-    .map((url) => String(url || "").trim())
-    .filter((url) => /^https?:\/\//i.test(url));
-  if (normalizedUrls.length === 0) {
+  const normalizedItems = normalizeUploadedWardrobeItems({ imageUrls, items });
+  if (normalizedItems.length === 0) {
     return [];
   }
 
+  const insertedIds = await insertUploadedWardrobeRows(email, normalizedItems);
+  if (insertedIds.length === 0) {
+    return [];
+  }
+
+  return (await listUploadedWardrobeRowsByIds(insertedIds)).map(
+    toWardrobeUiItem,
+  );
+}
+
+async function insertUploadedWardrobeRows(
+  email: string,
+  normalizedItems: NormalizedUploadedWardrobeItem[],
+) {
   const sql = getSqlClient();
   const insertedRows = getResultRows(
     await sql<Pick<UserWardrobeRow, "id">>`
-    with uploaded(raw_image_url) as (
-      select value
-      from jsonb_array_elements_text(${JSON.stringify(normalizedUrls)}::jsonb)
+    with uploaded as (
+      select
+        value ->> 'imageUrl' as image_url,
+        value ->> 'rawImageUrl' as raw_image_url,
+        nullif(trim(value ->> 'url'), '') as url
+      from jsonb_array_elements(${JSON.stringify(normalizedItems)}::jsonb)
     )
     insert into wardrobe (
       profile_email,
       image_url,
+      url,
       source,
       raw_image_url,
       processing_status
     )
     select
       ${email},
-      uploaded.raw_image_url,
+      uploaded.image_url,
+      uploaded.url,
       'uploaded',
       uploaded.raw_image_url,
       'uploaded'
@@ -394,17 +426,17 @@ export async function saveUploadedWardrobeItemsByEmail({
     returning id
   `,
   );
-  const insertedIds = insertedRows.map((row) => String(row.id || "").trim());
-  if (insertedIds.length === 0) {
-    return [];
-  }
+  return insertedRows.map((row) => String(row.id || "").trim());
+}
 
-  const rows = getResultRows(
+async function listUploadedWardrobeRowsByIds(insertedIds: string[]) {
+  const sql = getSqlClient();
+  return getResultRows(
     await sql<UserWardrobeRow>`
     with updated as (
       update wardrobe
       set
-        url = 'wardrobe://' || wardrobe.id,
+        url = coalesce(nullif(trim(wardrobe.url), ''), 'wardrobe://' || wardrobe.id),
         updated_at = now()
       where wardrobe.id::text = any(${insertedIds}::text[])
       returning
@@ -445,8 +477,35 @@ export async function saveUploadedWardrobeItemsByEmail({
     order by array_position(${insertedIds}::text[], updated.id::text)
   `,
   );
+}
 
-  return rows.map(toWardrobeUiItem);
+function normalizeUploadedWardrobeItems({
+  imageUrls,
+  items,
+}: {
+  imageUrls?: string[];
+  items?: UploadedWardrobeItemInput[];
+}): NormalizedUploadedWardrobeItem[] {
+  const sourceItems = Array.isArray(items)
+    ? items
+    : Array.isArray(imageUrls)
+      ? imageUrls.map((imageUrl) => ({ imageUrl, rawImageUrl: imageUrl }))
+      : [];
+
+  return sourceItems
+    .map((item) => {
+      const imageUrl = getSafeHttpUrl(item?.imageUrl);
+      const rawImageUrl = getSafeHttpUrl(item?.rawImageUrl) || imageUrl;
+      const url = getSafeHttpUrl(item?.url) || null;
+      return imageUrl && rawImageUrl
+        ? {
+            imageUrl,
+            rawImageUrl,
+            url,
+          }
+        : null;
+    })
+    .filter((item): item is NormalizedUploadedWardrobeItem => Boolean(item));
 }
 
 export async function deleteWardrobeItemFromCatalogByUrl({

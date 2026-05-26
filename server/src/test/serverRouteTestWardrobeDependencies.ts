@@ -112,8 +112,25 @@ function createWardrobeDependencies() {
       metadata: createUploadedWardrobeMetadata(),
       rawResponse: "{}",
     }),
+    analyzeWardrobeProductPageImageImpl: async () => ({
+      hasMetadata: true,
+      metadata: createUploadedWardrobeMetadata(),
+      rawResponse: "{}",
+    }),
+    buildRemoteWardrobeImageSourceKeyImpl: () =>
+      "wardrobe/profile/product-page-source.webp",
     cleanupUploadedWardrobeItemImageImpl: async () =>
       createUploadedWardrobeCleanupResult(),
+    downloadWardrobeProductPageImageImpl: async (payload) => ({
+      buffer: Buffer.from("product-page-image"),
+      imageUrl: String(payload?.imageUrl || ""),
+      mimeType: "image/jpeg",
+      originalName: "product-page-image.jpg",
+    }),
+    fetchProductPageHtmlWithImpersImpl: async (payload) => ({
+      html: '<html><head><meta property="og:image" content="https://cdn.example.com/product.jpg"></head></html>',
+      url: String(payload?.url || "https://shop.example.com/product"),
+    }),
     createUploadedWardrobeItemEmbeddingImpl: async () => [0.1, 0.2, 0.3],
     updateUploadedWardrobeItemMetadataImpl: async (payload) => ({
       id: payload.id,

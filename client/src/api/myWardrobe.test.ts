@@ -26,6 +26,7 @@ import {
   saveCatalogItemToMyWardrobe,
   updateUploadedWardrobeItem,
   uploadWardrobeImages,
+  uploadWardrobeUrls,
 } from "./myWardrobe";
 
 type HeaderMap = Record<string, string>;
@@ -192,6 +193,81 @@ describe("my wardrobe api", () => {
       imageProcessed: 1,
       failed: 0,
       items: [{ id: "uploaded-1" }],
+    });
+  });
+
+  test("uploads wardrobe URLs as JSON event stream", async () => {
+    vi.spyOn(document, "cookie", "get").mockReturnValue("csrf=csrf-token");
+    const onProgress = vi.fn();
+    fetchEventSourceApi.fetchEventSource.mockImplementation(
+      async (_url, options) => {
+        await options.onopen({
+          ok: true,
+          status: 200,
+          headers: { get: () => "text/event-stream; charset=utf-8" },
+        });
+        options.onmessage({
+          event: "progress",
+          data: JSON.stringify({
+            total: 1,
+            uploaded: 1,
+            completedSteps: 1,
+            metadataProcessed: 0,
+            imageProcessed: 0,
+            failed: 0,
+          }),
+        });
+        options.onmessage({
+          event: "complete",
+          data: JSON.stringify({
+            ok: true,
+            total: 1,
+            uploaded: 1,
+            completedSteps: 3,
+            metadataProcessed: 1,
+            imageProcessed: 1,
+            failed: 0,
+            items: [{ id: "uploaded-url-1" }],
+          }),
+        });
+        options.onclose();
+      },
+    );
+
+    const result = await uploadWardrobeUrls(
+      ["https://shop.example.com/product"],
+      { onProgress },
+    );
+
+    expect(fetchEventSourceApi.fetchEventSource).toHaveBeenCalledTimes(1);
+    const [url, options] = fetchEventSourceApi.fetchEventSource.mock.calls[0];
+    expect(url).toBe("https://api.example.test/wardrobe/items/upload-url");
+    expect(options.method).toBe("POST");
+    expect(options.credentials).toBe("include");
+    expect(options.headers).toEqual({
+      "Content-Type": "application/json",
+      "X-CSRF-Token": "csrf-token",
+    });
+    expect(options.body).toBe(
+      JSON.stringify({ urls: ["https://shop.example.com/product"] }),
+    );
+    expect(onProgress).toHaveBeenLastCalledWith({
+      total: 1,
+      uploaded: 1,
+      completedSteps: 3,
+      metadataProcessed: 1,
+      imageProcessed: 1,
+      failed: 0,
+    });
+    expect(result).toEqual({
+      ok: true,
+      total: 1,
+      uploaded: 1,
+      completedSteps: 3,
+      metadataProcessed: 1,
+      imageProcessed: 1,
+      failed: 0,
+      items: [{ id: "uploaded-url-1" }],
     });
   });
 

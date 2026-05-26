@@ -637,18 +637,77 @@ test("db integration saves uploaded wardrobe items", async () => {
     }),
   ]);
   expect(calls[0].text).toMatch(/insert into wardrobe/i);
-  expect(calls[0].text).toMatch(/jsonb_array_elements_text/i);
+  expect(calls[0].text).toMatch(/jsonb_array_elements/i);
   expect(calls[0].values).toEqual([
-    JSON.stringify(["https://images.example.com/wardrobe/user/image.webp"]),
+    JSON.stringify([
+      {
+        imageUrl: "https://images.example.com/wardrobe/user/image.webp",
+        rawImageUrl: "https://images.example.com/wardrobe/user/image.webp",
+        url: null,
+      },
+    ]),
     "user@example.com",
   ]);
   expect(calls[1].text).toMatch(/update wardrobe/i);
-  expect(calls[1].text).toMatch(/url = 'wardrobe:\/\/' \|\| wardrobe\.id/i);
+  expect(calls[1].text).toMatch(/coalesce\(nullif\(trim\(wardrobe\.url\)/i);
   expect(calls[1].text).toMatch(/array_position/i);
   expect(calls[1].values).toEqual([
     ["wardrobe-upload-1"],
     ["wardrobe-upload-1"],
   ]);
+});
+
+test("db integration saves uploaded wardrobe URL import items with product URLs", async () => {
+  const uploadedRow: WardrobeRow = {
+    id: "wardrobe-upload-url-1",
+    profileEmail: "user@example.com",
+    productId: null,
+    name: null,
+    url: "https://shop.example.com/product",
+    imageUrl: "https://cdn.example.com/product.jpg",
+    source: "uploaded",
+    rawImageUrl: "https://cdn.example.com/product.jpg",
+    processingStatus: "uploaded",
+    createdAt: new Date(0).toISOString(),
+    updatedAt: new Date(0).toISOString(),
+  };
+  const { sql, calls } = createSqlMock([
+    [{ id: "wardrobe-upload-url-1" }],
+    [uploadedRow],
+  ]);
+  setSqlClientOverride(sql);
+
+  const saved = await saveUploadedWardrobeItemsByEmail({
+    email: "user@example.com",
+    items: [
+      {
+        imageUrl: "https://cdn.example.com/product.jpg",
+        rawImageUrl: "https://cdn.example.com/product.jpg",
+        url: "https://shop.example.com/product",
+      },
+    ],
+  });
+
+  expect(saved).toEqual([
+    expect.objectContaining({
+      id: "wardrobe-upload-url-1",
+      url: "https://shop.example.com/product",
+      imageUrl: "https://cdn.example.com/product.jpg",
+      rawImageUrl: "https://cdn.example.com/product.jpg",
+      source: "uploaded",
+    }),
+  ]);
+  expect(calls[0].values).toEqual([
+    JSON.stringify([
+      {
+        imageUrl: "https://cdn.example.com/product.jpg",
+        rawImageUrl: "https://cdn.example.com/product.jpg",
+        url: "https://shop.example.com/product",
+      },
+    ]),
+    "user@example.com",
+  ]);
+  expect(calls[1].text).toMatch(/coalesce\(nullif\(trim\(wardrobe\.url\)/i);
 });
 
 test("db integration ignores uploaded wardrobe items without http urls", async () => {

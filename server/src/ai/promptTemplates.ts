@@ -20,6 +20,28 @@ function normalizeTemplateRole(value: unknown): PromptTemplateRole | null {
   return role === "system" || role === "user" ? role : null;
 }
 
+function normalizeTemplateContent(value: unknown): string {
+  if (typeof value === "string") {
+    return value;
+  }
+
+  if (!Array.isArray(value)) {
+    return "";
+  }
+
+  return value
+    .map((entry) => {
+      if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+        return "";
+      }
+
+      const record = entry as Record<string, unknown>;
+      return typeof record.text === "string" ? record.text.trim() : "";
+    })
+    .filter((part) => part.trim().length > 0)
+    .join("\n\n");
+}
+
 function parsePromptTemplateYaml(
   source: string,
   sourceName = "prompt template",
@@ -58,8 +80,7 @@ function parsePromptTemplateYaml(
 
       const messageRecord = message as Record<string, unknown>;
       const role = normalizeTemplateRole(messageRecord.role);
-      const content =
-        typeof messageRecord.content === "string" ? messageRecord.content : "";
+      const content = normalizeTemplateContent(messageRecord.content);
 
       if (!role) {
         throw new Error(

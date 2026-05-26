@@ -13,6 +13,7 @@ import {
   type UploadedWardrobeItemUpdatePayload,
   updateUploadedWardrobeItem,
   uploadWardrobeImages,
+  uploadWardrobeUrls,
 } from "../api/myWardrobe";
 import { useI18n } from "../i18n/useI18n";
 import { isUploadedWardrobeItemNeedsReview } from "../utils/uploadedWardrobeItemStatus";
@@ -43,6 +44,7 @@ import {
 import { EMPTY_UPLOAD_PROGRESS } from "./myWardrobeUploadProgress";
 import CapsuleProductDetailDialog from "./mainScreen/CapsuleProductDetailDialog";
 import WardrobeUploadDialog from "./WardrobeUploadDialog";
+import WardrobeUrlUploadDialog from "./WardrobeUrlUploadDialog";
 import MyWardrobeToolbar, {
   getSourceFilter,
   type MyWardrobeFilter,
@@ -58,6 +60,7 @@ function MyWardrobeScreen(): ReactElement {
   const [filter, setFilter] = useState<MyWardrobeFilter>("all");
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
+  const [isUrlUploadDialogOpen, setIsUrlUploadDialogOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [mobileColumns, setMobileColumns] = useState<MobileCardColumns>(() =>
     readStoredMyWardrobeMobileCardColumns(),
@@ -78,6 +81,14 @@ function MyWardrobeScreen(): ReactElement {
       setFilter("uploaded");
       setRefreshKey((current) => current + 1);
       setIsUploadDialogOpen(false);
+    }
+  };
+  const handleUploadUrls = async (urls: string[]) => {
+    const uploaded = await wardrobeItems.handleUploadUrls(urls);
+    if (uploaded) {
+      setFilter("uploaded");
+      setRefreshKey((current) => current + 1);
+      setIsUrlUploadDialogOpen(false);
     }
   };
   const handleApplyUploadedProductDetail = async (
@@ -114,6 +125,7 @@ function MyWardrobeScreen(): ReactElement {
           onFilterChange={setFilter}
           onOpenMenu={(event) => setMenuAnchor(event.currentTarget)}
           onOpenUpload={() => setIsUploadDialogOpen(true)}
+          onOpenUrlUpload={() => setIsUrlUploadDialogOpen(true)}
         />
         <MyWardrobeActionMenu
           anchorEl={menuAnchor}
@@ -180,6 +192,15 @@ function MyWardrobeScreen(): ReactElement {
           t={t}
           onClose={() => setIsUploadDialogOpen(false)}
           onUpload={handleUploadImages}
+        />
+        <WardrobeUrlUploadDialog
+          open={isUrlUploadDialogOpen}
+          isMobile={isOverlay}
+          isUploading={wardrobeItems.isUploading}
+          progress={wardrobeItems.uploadProgress}
+          t={t}
+          onClose={() => setIsUrlUploadDialogOpen(false)}
+          onUpload={handleUploadUrls}
         />
       </Stack>
     </Box>
@@ -273,6 +294,29 @@ function useMyWardrobeItems(
       setIsUploading(false);
     }
   };
+  const handleUploadUrls = async (urls: string[]) => {
+    if (urls.length === 0) {
+      return false;
+    }
+
+    setIsUploading(true);
+    setUploadProgress({
+      ...EMPTY_UPLOAD_PROGRESS,
+      total: urls.length,
+    });
+    try {
+      await uploadWardrobeUrls(urls, {
+        onProgress: setUploadProgress,
+      });
+      setError("");
+      return true;
+    } catch {
+      setError(t("myWardrobe.urlUploadFailed"));
+      return false;
+    } finally {
+      setIsUploading(false);
+    }
+  };
   const handleUpdateUploadedItem = async (
     item: MainScreenItem,
     payload: UploadedWardrobeItemUpdatePayload,
@@ -316,6 +360,7 @@ function useMyWardrobeItems(
     handleProductMenuClick,
     handleUpdateUploadedItem,
     handleUploadImages,
+    handleUploadUrls,
     isDownloadingPdf,
     isLoading,
     isMutating,

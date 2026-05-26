@@ -91,6 +91,7 @@ async function updateUploadedItemWithReviewableMetadata({
 // Upload processing deliberately keeps metadata and image cleanup in one ordered flow.
 // eslint-disable-next-line complexity
 async function processUploadedWardrobeItemMetadata({
+  analyzeItemMetadata = null,
   context,
   email,
   filterItem,
@@ -109,7 +110,10 @@ async function processUploadedWardrobeItemMetadata({
       throw new Error("invalid_uploaded_item");
     }
 
-    const analysis = await context.analyzeWardrobeImageUrlImpl({ imageUrl });
+    const analysis =
+      typeof analyzeItemMetadata === "function"
+        ? await analyzeItemMetadata({ imageUrl, item, sourceImage })
+        : await context.analyzeWardrobeImageUrlImpl({ imageUrl });
     const metadata = analysis.hasMetadata
       ? analysis.metadata
       : normalizeWardrobeImageAnalysisMetadata(null);
@@ -162,6 +166,7 @@ async function processUploadedWardrobeItemMetadata({
 }
 
 export {
+  advanceWardrobeUploadProgress,
   openWardrobeUploadEventStream,
   processUploadedWardrobeItemMetadata,
   writeWardrobeUploadEvent,
