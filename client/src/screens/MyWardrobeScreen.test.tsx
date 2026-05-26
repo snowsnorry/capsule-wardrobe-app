@@ -249,11 +249,12 @@ const translations: Record<string, string> = {
   "myWardrobe.uploadDialog.body":
     "Use one image per garment. Photograph the item laid flat or neatly hung, fully visible, with no other clothing in frame, against a plain, even background.",
   "myWardrobe.uploadDialog.dropzoneLabel": "Choose wardrobe photos",
-  "myWardrobe.uploadDialog.dropzoneTitle": "Drop images here",
-  "myWardrobe.uploadDialog.dropzoneHint": "JPEG, PNG, or WebP. Up to 5 files.",
-  "myWardrobe.uploadDialog.mobileDropzoneTitle": "Choose photos",
+  "myWardrobe.uploadDialog.dropzoneTitle": "Upload photos",
+  "myWardrobe.uploadDialog.dropzoneHint":
+    "Drag and drop or click to browse. JPEG, PNG, or WebP. Up to 5 files, 10 MB each.",
+  "myWardrobe.uploadDialog.mobileDropzoneTitle": "Upload photos",
   "myWardrobe.uploadDialog.mobileDropzoneHint":
-    "JPEG, PNG, or WebP. Up to 5 files, 10 MB each.",
+    "Tap to browse. JPEG, PNG, or WebP. Up to 5 files, 10 MB each.",
   "myWardrobe.uploadDialog.fileList": "Selected files",
   "myWardrobe.uploadDialog.selectedSummary": "{count} files, {size}",
   "myWardrobe.uploadDialog.removeFile": "Remove {name}",
@@ -434,10 +435,10 @@ describe("MyWardrobeScreen", () => {
       name: "Upload wardrobe photos",
     });
     expect(dialog).toHaveClass("MuiDialog-paperFullScreen");
-    expect(within(dialog).getByText("Choose photos")).toBeInTheDocument();
+    expect(within(dialog).getByText("Upload photos")).toBeInTheDocument();
     expect(
       within(dialog).getByText(
-        "JPEG, PNG, or WebP. Up to 5 files, 10 MB each.",
+        "Tap to browse. JPEG, PNG, or WebP. Up to 5 files, 10 MB each.",
       ),
     ).toBeInTheDocument();
     expect(

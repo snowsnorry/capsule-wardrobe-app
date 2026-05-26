@@ -365,10 +365,12 @@ const ru = {
       title: "Загрузить фото вещей",
       body: "Используйте отдельное изображение для каждой вещи. Снимите предмет расправленным или аккуратно подвешенным, целиком в кадре, без других вещей, на ровном однотонном фоне.",
       dropzoneLabel: "Выбрать фото вещей",
-      dropzoneTitle: "Перетащите изображения сюда",
-      dropzoneHint: "JPEG, PNG или WebP. До 5 файлов, каждый до 10 MB.",
-      mobileDropzoneTitle: "Выбрать фото",
-      mobileDropzoneHint: "JPEG, PNG или WebP. До 5 файлов, каждый до 10 MB.",
+      dropzoneTitle: "Загрузить фото",
+      dropzoneHint:
+        "Перетащите изображения или нажмите, чтобы выбрать. JPEG, PNG или WebP. До 5 файлов, каждый до 10 MB.",
+      mobileDropzoneTitle: "Загрузить фото",
+      mobileDropzoneHint:
+        "Нажмите, чтобы выбрать. JPEG, PNG или WebP. До 5 файлов, каждый до 10 MB.",
       fileList: "Выбранные файлы",
       selectedSummary: "{count} файлов, {size}",
       removeFile: "Убрать {name}",

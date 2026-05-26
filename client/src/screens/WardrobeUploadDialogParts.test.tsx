@@ -12,11 +12,12 @@ import {
 const theme = createTheme();
 const translations: Record<string, string> = {
   "myWardrobe.uploadDialog.dropzoneLabel": "Choose wardrobe photos",
-  "myWardrobe.uploadDialog.dropzoneTitle": "Drop images here",
-  "myWardrobe.uploadDialog.dropzoneHint": "JPEG, PNG, or WebP. Up to 5 files.",
-  "myWardrobe.uploadDialog.mobileDropzoneTitle": "Choose photos",
+  "myWardrobe.uploadDialog.dropzoneTitle": "Upload photos",
+  "myWardrobe.uploadDialog.dropzoneHint":
+    "Drag and drop or click to browse. JPEG, PNG, or WebP. Up to 5 files, 10 MB each.",
+  "myWardrobe.uploadDialog.mobileDropzoneTitle": "Upload photos",
   "myWardrobe.uploadDialog.mobileDropzoneHint":
-    "JPEG, PNG, or WebP. Up to 5 files, 10 MB each.",
+    "Tap to browse. JPEG, PNG, or WebP. Up to 5 files, 10 MB each.",
   "myWardrobe.uploadDialog.fileList": "Selected files",
   "myWardrobe.uploadDialog.selectedSummary": "{count} files, {size}",
   "myWardrobe.uploadDialog.removeFile": "Remove {name}",
@@ -116,6 +117,13 @@ describe("WardrobeUploadDialogParts", () => {
     const dropzone = screen.getByRole("button", {
       name: "Choose wardrobe photos",
     });
+    expect(screen.getByText("Upload photos")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Drag and drop or click to browse. JPEG, PNG, or WebP. Up to 5 files, 10 MB each.",
+      ),
+    ).toBeInTheDocument();
+
     fireEvent.click(dropzone);
     fireEvent.keyDown(dropzone, { key: "Enter" });
     fireEvent.keyDown(dropzone, { key: " " });
@@ -159,9 +167,11 @@ describe("WardrobeUploadDialogParts", () => {
     const dropzone = screen.getByRole("button", {
       name: "Choose wardrobe photos",
     });
-    expect(screen.getByText("Choose photos")).toBeInTheDocument();
+    expect(screen.getByText("Upload photos")).toBeInTheDocument();
     expect(
-      screen.getByText("JPEG, PNG, or WebP. Up to 5 files, 10 MB each."),
+      screen.getByText(
+        "Tap to browse. JPEG, PNG, or WebP. Up to 5 files, 10 MB each.",
+      ),
     ).toBeInTheDocument();
     expect(screen.queryByText("Drop images here")).not.toBeInTheDocument();
 

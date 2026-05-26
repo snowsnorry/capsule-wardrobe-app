@@ -363,10 +363,12 @@ const en = {
       title: "Upload wardrobe photos",
       body: "Use one image per garment. Photograph the item laid flat or neatly hung, fully visible, with no other clothing in frame, against a plain, even background.",
       dropzoneLabel: "Choose wardrobe photos",
-      dropzoneTitle: "Drop images here",
-      dropzoneHint: "JPEG, PNG, or WebP. Up to 5 files, 10 MB each.",
-      mobileDropzoneTitle: "Choose photos",
-      mobileDropzoneHint: "JPEG, PNG, or WebP. Up to 5 files, 10 MB each.",
+      dropzoneTitle: "Upload photos",
+      dropzoneHint:
+        "Drag and drop or click to browse. JPEG, PNG, or WebP. Up to 5 files, 10 MB each.",
+      mobileDropzoneTitle: "Upload photos",
+      mobileDropzoneHint:
+        "Tap to browse. JPEG, PNG, or WebP. Up to 5 files, 10 MB each.",
       fileList: "Selected files",
       selectedSummary: "{count} files, {size}",
       removeFile: "Remove {name}",
