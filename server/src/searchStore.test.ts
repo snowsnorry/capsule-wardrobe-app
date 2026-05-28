@@ -367,6 +367,52 @@ test("runSavedSearch uses lexical search only for short ordinary text", async ()
   });
 });
 
+test("runSavedSearch falls back to semantic search when lexical search is empty", async () => {
+  const productCalls = [];
+  const upsertCalls = [];
+  const fallbackEmbedding = [0.7, 0.8];
+  const store = createSearchStore(
+    createSearchStoreDeps({
+      upsertSearchByEmailImpl: async (payload) => {
+        upsertCalls.push(payload);
+        return payload;
+      },
+      searchProductsImpl: async (payload) => {
+        productCalls.push(payload);
+        return productCalls.length === 1
+          ? { total: 0, page: 1, pageSize: 24, items: [] }
+          : { total: 1, page: 1, pageSize: 24, items: [{ id: "fallback" }] };
+      },
+      resolveSearchEmbeddingImpl: async () => fallbackEmbedding,
+    }),
+  );
+
+  const result = await store.runSavedSearch("person@example.com", {
+    query: "сумка",
+    category: ["top"],
+  });
+
+  expect(result.total).toBe(1);
+  expect(productCalls).toHaveLength(2);
+  expect(productCalls[0]).toMatchObject({
+    category: ["top"],
+    queryEmbedding: null,
+    semanticDistanceThreshold: null,
+    textQuery: "сумка",
+    textSearchMode: "lexical",
+  });
+  expect(productCalls[1]).toMatchObject({
+    category: ["top"],
+    queryEmbedding: fallbackEmbedding,
+    semanticDistanceThreshold: 0.4,
+    textQuery: "сумка",
+    textSearchMode: "semantic",
+  });
+  expect(upsertCalls).toHaveLength(2);
+  expect(upsertCalls[0].embedding).toBe(null);
+  expect(upsertCalls[1].embedding).toBe(fallbackEmbedding);
+});
+
 test("runSavedSearch retries hybrid text searches with relaxed semantic threshold when first result is empty", async () => {
   const productCalls = [];
   const store = createSearchStore(

@@ -90,6 +90,49 @@ test("MCP product search uses lexical search for short text queries", async () =
   });
 });
 
+test("MCP product search falls back to semantic search when lexical search is empty", async () => {
+  const productCalls = [];
+  let savedSearchReads = 0;
+  const fallbackEmbedding = [0.6, 0.7];
+  const runSearch = createMcpProductSearchRunner({
+    getSearchOptionsImpl: async () => createSearchOptions(),
+    getSearchByEmailImpl: async () => {
+      savedSearchReads += 1;
+      return { query: "other", embedding: [0.1, 0.2] };
+    },
+    searchProductsImpl: async (payload) => {
+      productCalls.push(payload);
+      return productCalls.length === 1
+        ? { total: 0, page: 1, pageSize: 20, items: [] }
+        : { total: 1, page: 1, pageSize: 20, items: [{ id: "p3" }] };
+    },
+    resolveSearchEmbeddingImpl: async () => fallbackEmbedding,
+  });
+
+  const result = await runSearch("person@example.com", {
+    query: "сумка",
+    category: ["top"],
+  });
+
+  expect(result.total).toBe(1);
+  expect(savedSearchReads).toBe(1);
+  expect(productCalls).toHaveLength(2);
+  expect(productCalls[0]).toMatchObject({
+    category: ["top"],
+    queryEmbedding: null,
+    semanticDistanceThreshold: null,
+    textQuery: "сумка",
+    textSearchMode: "lexical",
+  });
+  expect(productCalls[1]).toMatchObject({
+    category: ["top"],
+    queryEmbedding: fallbackEmbedding,
+    semanticDistanceThreshold: 0.4,
+    textQuery: "сумка",
+    textSearchMode: "semantic",
+  });
+});
+
 test("MCP product search uses hybrid search and fallback for medium text queries", async () => {
   const productCalls = [];
   let savedSearchReads = 0;

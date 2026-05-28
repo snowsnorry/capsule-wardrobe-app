@@ -85,6 +85,18 @@ function createMcpProductSearchRunner({
       limit,
     });
 
+    results = await runMcpLexicalSemanticFallback({
+      email,
+      getSearchByEmailImpl,
+      limit,
+      normalized,
+      offset,
+      resolveSearchEmbeddingImpl,
+      results,
+      searchProductsImpl,
+      textRouting,
+    });
+
     if (
       (textRouting.mode === "hybrid" || textRouting.mode === "semantic") &&
       results.total === 0
@@ -110,6 +122,54 @@ function createMcpProductSearchRunner({
       limit,
     };
   };
+}
+
+async function runMcpLexicalSemanticFallback({
+  email,
+  getSearchByEmailImpl,
+  limit,
+  normalized,
+  offset,
+  resolveSearchEmbeddingImpl,
+  results,
+  searchProductsImpl,
+  textRouting,
+}: {
+  email: string;
+  getSearchByEmailImpl: NonNullable<
+    McpProductSearchDeps["getSearchByEmailImpl"]
+  >;
+  limit: number;
+  normalized: SearchPayload;
+  offset: number;
+  resolveSearchEmbeddingImpl: typeof resolveSearchEmbedding;
+  results: SearchResults;
+  searchProductsImpl: NonNullable<McpProductSearchDeps["searchProductsImpl"]>;
+  textRouting: ReturnType<typeof routeSearchText>;
+}): Promise<SearchResults> {
+  if (textRouting.mode !== "lexical" || results.total !== 0) {
+    return results;
+  }
+
+  const fallbackEmbedding = await resolveSearchEmbeddingImpl({
+    currentSearch: await getSearchByEmailImpl(email),
+    query: normalized.query,
+  });
+
+  if (!fallbackEmbedding) {
+    return results;
+  }
+
+  return searchProductsImpl({
+    ...normalized,
+    profileEmail: email,
+    queryEmbedding: fallbackEmbedding,
+    semanticDistanceThreshold: getSemanticDistanceThreshold(normalized.query),
+    textQuery: textRouting.textQuery,
+    textSearchMode: "semantic",
+    offset,
+    limit,
+  });
 }
 
 async function resolveMcpSearchEmbedding({

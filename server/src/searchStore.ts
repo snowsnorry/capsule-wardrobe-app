@@ -270,7 +270,7 @@ function createSearchStore({
       ? getSemanticDistanceThreshold(normalized.query)
       : null;
 
-    const savedSearch = await upsertSearchByEmailImpl({
+    let savedSearch = await upsertSearchByEmailImpl({
       email,
       ...normalized,
       embedding,
@@ -286,6 +286,32 @@ function createSearchStore({
         textRouting.mode === "urlPrefix" ? "none" : textRouting.mode,
       urlPrefix: textRouting.urlPrefix,
     });
+
+    if (textRouting.mode === "lexical" && results.total === 0) {
+      const fallbackEmbedding = await resolveSearchEmbeddingImpl({
+        currentSearch,
+        query: normalized.query,
+      });
+
+      if (fallbackEmbedding) {
+        savedSearch = await upsertSearchByEmailImpl({
+          email,
+          ...normalized,
+          embedding: fallbackEmbedding,
+        });
+
+        results = await searchProductsImpl({
+          ...normalized,
+          profileEmail: email,
+          queryEmbedding: fallbackEmbedding,
+          semanticDistanceThreshold: getSemanticDistanceThreshold(
+            normalized.query,
+          ),
+          textQuery: textRouting.textQuery,
+          textSearchMode: "semantic",
+        });
+      }
+    }
 
     if (
       (textRouting.mode === "hybrid" || textRouting.mode === "semantic") &&
