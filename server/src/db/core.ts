@@ -185,6 +185,8 @@ export type UpsertSearchInput = {
 export type SearchProductsInput = {
   queryEmbedding?: number[] | null;
   semanticDistanceThreshold?: number | null;
+  textQuery?: string | null;
+  textSearchMode?: "none" | "lexical" | "hybrid" | "semantic" | null;
   urlPrefix?: string | null;
   brand?: string[];
   priceMin?: number | null;

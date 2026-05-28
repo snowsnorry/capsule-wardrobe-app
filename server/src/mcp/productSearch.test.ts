@@ -57,7 +57,40 @@ test("MCP product search is read-only and skips embeddings for filter-only searc
   });
 });
 
-test("MCP product search uses semantic search and fallback for text queries", async () => {
+test("MCP product search uses lexical search for short text queries", async () => {
+  const productCalls = [];
+  const runSearch = createMcpProductSearchRunner({
+    getSearchOptionsImpl: async () => createSearchOptions(),
+    getSearchByEmailImpl: async () => {
+      throw new Error("unexpected saved search read");
+    },
+    searchProductsImpl: async (payload) => {
+      productCalls.push(payload);
+      return { total: 1, page: 1, pageSize: 20, items: [{ id: "p2" }] };
+    },
+    resolveSearchEmbeddingImpl: async () => {
+      throw new Error("unexpected embedding");
+    },
+  });
+
+  const result = await runSearch("person@example.com", {
+    query: "black blazer",
+  });
+
+  expect(result.total).toBe(1);
+  expect(productCalls).toHaveLength(1);
+  expect(productCalls[0]).toMatchObject({
+    profileEmail: "person@example.com",
+    queryEmbedding: null,
+    semanticDistanceThreshold: null,
+    textQuery: "black blazer",
+    textSearchMode: "lexical",
+    offset: 0,
+    limit: 20,
+  });
+});
+
+test("MCP product search uses hybrid search and fallback for medium text queries", async () => {
   const productCalls = [];
   let savedSearchReads = 0;
   const runSearch = createMcpProductSearchRunner({
@@ -76,7 +109,7 @@ test("MCP product search uses semantic search and fallback for text queries", as
   });
 
   const result = await runSearch("person@example.com", {
-    query: "black blazer",
+    query: "black blazer for office outfits",
   });
 
   expect(result.total).toBe(1);
@@ -85,11 +118,13 @@ test("MCP product search uses semantic search and fallback for text queries", as
   expect(productCalls[0]).toMatchObject({
     profileEmail: "person@example.com",
     queryEmbedding: [0.1, 0.2],
-    semanticDistanceThreshold: 0.4,
+    semanticDistanceThreshold: 0.35,
+    textQuery: "black blazer for office outfits",
+    textSearchMode: "hybrid",
     offset: 0,
     limit: 20,
   });
   expect(
-    Math.abs(productCalls[1].semanticDistanceThreshold - 0.48) < 1e-9,
+    Math.abs(productCalls[1].semanticDistanceThreshold - 0.43) < 1e-9,
   ).toBeTruthy();
 });

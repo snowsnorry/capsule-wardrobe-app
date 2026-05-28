@@ -5,9 +5,9 @@ import {
   getRelaxedSemanticDistanceThreshold,
   getSemanticDistanceThreshold,
   getSearchOptions,
-  isHttpUrlQuery,
   normalizeSearchPayload,
   resolveSearchEmbedding,
+  routeSearchText,
 } from "../searchStore.js";
 
 const MCP_SEARCH_DEFAULT_LIMIT = 20;
@@ -60,29 +60,35 @@ function createMcpProductSearchRunner({
     const options = await getSearchOptionsImpl(email);
     assertValidSearchPayload(normalized, options);
 
-    const isUrlSearch = isHttpUrlQuery(normalized.query);
+    const textRouting = routeSearchText(normalized.query);
     const embedding = await resolveMcpSearchEmbedding({
-      currentSearch: normalized.query
+      currentSearch: textRouting.usesEmbedding
         ? await getSearchByEmailImpl(email)
         : null,
-      isUrlSearch,
       normalized,
       resolveSearchEmbeddingImpl,
+      usesEmbedding: textRouting.usesEmbedding,
     });
 
     let results = await searchProductsImpl({
       ...normalized,
       profileEmail: email,
       queryEmbedding: embedding,
-      semanticDistanceThreshold: isUrlSearch
-        ? null
-        : getSemanticDistanceThreshold(normalized.query),
-      urlPrefix: isUrlSearch ? normalized.query : null,
+      semanticDistanceThreshold: textRouting.usesEmbedding
+        ? getSemanticDistanceThreshold(normalized.query)
+        : null,
+      textQuery: textRouting.textQuery,
+      textSearchMode:
+        textRouting.mode === "urlPrefix" ? "none" : textRouting.mode,
+      urlPrefix: textRouting.urlPrefix,
       offset,
       limit,
     });
 
-    if (!isUrlSearch && normalized.query && results.total === 0) {
+    if (
+      (textRouting.mode === "hybrid" || textRouting.mode === "semantic") &&
+      results.total === 0
+    ) {
       results = await searchProductsImpl({
         ...normalized,
         profileEmail: email,
@@ -90,6 +96,8 @@ function createMcpProductSearchRunner({
         semanticDistanceThreshold: getRelaxedSemanticDistanceThreshold(
           normalized.query,
         ),
+        textQuery: textRouting.textQuery,
+        textSearchMode: textRouting.mode,
         offset,
         limit,
       });
@@ -106,16 +114,16 @@ function createMcpProductSearchRunner({
 
 async function resolveMcpSearchEmbedding({
   currentSearch,
-  isUrlSearch,
   normalized,
   resolveSearchEmbeddingImpl,
+  usesEmbedding,
 }: {
   currentSearch: SearchRow | null;
-  isUrlSearch: boolean;
   normalized: SearchPayload;
   resolveSearchEmbeddingImpl: typeof resolveSearchEmbedding;
+  usesEmbedding: boolean;
 }) {
-  return !normalized.query || isUrlSearch
+  return !usesEmbedding
     ? null
     : resolveSearchEmbeddingImpl({
         currentSearch,

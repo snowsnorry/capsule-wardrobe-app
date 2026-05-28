@@ -22,6 +22,8 @@ type SearchStatsInput = Omit<
   | "profileEmail"
   | "offset"
   | "limit"
+  | "textQuery"
+  | "textSearchMode"
 >;
 type SearchStatsFilters = Required<Omit<SearchStatsInput, "urlPrefix">>;
 type SearchStatsFacetKey = Exclude<

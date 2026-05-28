@@ -163,7 +163,41 @@ function getNormalizedUrlPrefix(urlPrefix) {
     : null;
 }
 
+function getNormalizedTextQuery(textQuery) {
+  return typeof textQuery === "string" && textQuery.trim()
+    ? textQuery.trim().toLowerCase()
+    : null;
+}
+
+function escapeLikePattern(value) {
+  return value.replace(/~/g, "~~").replace(/%/g, "~%").replace(/_/g, "~_");
+}
+
+function getTextSearchMode(input) {
+  const textQuery = getNormalizedTextQuery(input.textQuery);
+  const mode = input.textSearchMode;
+  if (
+    textQuery &&
+    (mode === "lexical" || mode === "hybrid" || mode === "semantic")
+  ) {
+    return mode;
+  }
+  if (
+    Array.isArray(input.queryEmbedding) &&
+    input.queryEmbedding.length > 0 &&
+    input.semanticDistanceThreshold !== null &&
+    input.semanticDistanceThreshold !== undefined
+  ) {
+    return "semantic";
+  }
+  return "none";
+}
+
 function buildSearchQueryParams(input) {
+  const normalizedTextQuery = getNormalizedTextQuery(input.textQuery);
+  const escapedTextQuery = normalizedTextQuery
+    ? escapeLikePattern(normalizedTextQuery)
+    : null;
   return {
     audience: getSearchArray(input, "audience"),
     brand: getSearchArray(input, "brand"),
@@ -186,6 +220,10 @@ function buildSearchQueryParams(input) {
     semanticDistanceThreshold: input.semanticDistanceThreshold ?? null,
     silhouette: getSearchArray(input, "silhouette"),
     style: getSearchArray(input, "style"),
+    textContainsPattern: escapedTextQuery ? `%${escapedTextQuery}%` : null,
+    textPrefixPattern: escapedTextQuery ? `${escapedTextQuery}%` : null,
+    textQuery: normalizedTextQuery,
+    textSearchMode: getTextSearchMode(input),
   };
 }
 

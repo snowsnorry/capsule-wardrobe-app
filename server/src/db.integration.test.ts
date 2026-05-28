@@ -369,11 +369,12 @@ test("db integration shapes search persistence and searchProducts queries", asyn
   expect(calls[1].values[0]).toBe("user@example.com");
   expect(calls[1].values[2]).toBe(JSON.stringify([0.1, 0.2]));
   expect(calls[2].text).toMatch(
-    /select count\(\*\)::integer as total\s+from products/i,
+    /select count\(\*\)::integer as total\s+from filtered_products/i,
   );
-  expect(calls[2].values[0][0]).toBe("uniqlo");
+  expect(calls[2].values.some((value) => Array.isArray(value))).toBe(true);
   expect(calls[2].values.some((value) => value === "[0.1,0.2]")).toBe(true);
   expect(calls[2].values.some((value) => value === 0.35)).toBe(true);
+  expect(calls[2].values).toContain("semantic");
   expect(calls[3].text).toMatch(/case[\s\S]*embedding <=>[\s\S]*as distance/i);
   expect(calls[3].values.filter((value) => value === 50).length >= 2).toBe(
     true,
@@ -408,6 +409,86 @@ test("db integration filters searchProducts by URL prefix", async () => {
       (value) => value === "https://example.com/products/linen%",
     ),
   ).toBe(true);
+});
+
+test("db integration applies lexical text search across product text fields with hard filters", async () => {
+  const { sql, calls } = createSqlMock([
+    [{ total: 1 }] satisfies CountRow[],
+    [
+      { id: "prod-1", name: "Red Dress", brand: "COS" },
+    ] satisfies ProductSearchRow[],
+  ]);
+  setSqlClientOverride(sql);
+
+  const results = await searchProducts({
+    textQuery: "red",
+    textSearchMode: "lexical",
+    category: ["dress"],
+    color: ["red"],
+    page: 1,
+  });
+
+  expect(results.total).toBe(1);
+  expect(results.items[0]?.id).toBe("prod-1");
+  expect(calls[0].text).toMatch(/lower\(coalesce\(name, ''\)\) like/i);
+  expect(calls[0].text).toMatch(/lower\(coalesce\(description, ''\)\) like/i);
+  expect(calls[0].text).toMatch(/lower\(coalesce\(composition, ''\)\) like/i);
+  expect(calls[0].text).toMatch(/unnest\(coalesce\(color_base/i);
+  expect(calls[0].text).toMatch(/lexical_score > 0/i);
+  expect(calls[0].text).toMatch(/cardinality\([\s\S]*::text\[\]\) = 0/i);
+  expect(calls[0].values).toContain("red");
+  expect(calls[0].values).toContain("red%");
+  expect(calls[0].values).toContain("%red%");
+  expect(calls[0].values).toContain("lexical");
+  expect(calls[0].values.some((value) => Array.isArray(value))).toBe(true);
+  expect(calls[1].text).toMatch(/order by[\s\S]*lexical_score/i);
+});
+
+test("db integration escapes LIKE metacharacters in lexical text search", async () => {
+  const { sql, calls } = createSqlMock([
+    [{ total: 1 }] satisfies CountRow[],
+    [
+      { id: "prod-1", name: "100% Cotton_Bag", brand: "COS" },
+    ] satisfies ProductSearchRow[],
+  ]);
+  setSqlClientOverride(sql);
+
+  await searchProducts({
+    textQuery: "100% cotton_bag~",
+    textSearchMode: "lexical",
+  });
+
+  expect(calls[0].text).toMatch(/like[\s\S]*escape '~'/i);
+  expect(calls[0].values).toContain("100~% cotton~_bag~~%");
+  expect(calls[0].values).toContain("%100~% cotton~_bag~~%");
+});
+
+test("db integration applies hybrid rank fusion for text and semantic search", async () => {
+  const { sql, calls } = createSqlMock([
+    [{ total: 2 }] satisfies CountRow[],
+    [
+      { id: "prod-1", name: "Office Blazer", brand: "COS", distance: 0.18 },
+    ] satisfies ProductSearchRow[],
+  ]);
+  setSqlClientOverride(sql);
+
+  const results = await searchProducts({
+    queryEmbedding: [0.3, 0.4],
+    semanticDistanceThreshold: 0.35,
+    textQuery: "office blazer for work",
+    textSearchMode: "hybrid",
+  });
+
+  expect(results.total).toBe(2);
+  expect(calls[0].text).toMatch(
+    /lexical_score > 0[\s\S]*or[\s\S]*distance <=/i,
+  );
+  expect(calls[1].text).toMatch(/row_number\(\) over[\s\S]*lexical_rank/i);
+  expect(calls[1].text).toMatch(/row_number\(\) over[\s\S]*semantic_rank/i);
+  expect(calls[1].text).toMatch(/1\.0 \/ \(60 \+ lexical_rank\)/i);
+  expect(calls[1].text).toMatch(/1\.0 \/ \(60 \+ semantic_rank\)/i);
+  expect(calls[0].values).toContain("hybrid");
+  expect(calls[0].values).toContain("[0.3,0.4]");
 });
 
 test("db integration applies explicit search offset and limit", async () => {

@@ -23,6 +23,7 @@ import {
   getSemanticDistanceThreshold,
   isHttpUrlQuery,
   resolveSearchEmbedding,
+  routeSearchText,
 } from "./searchSemantic.js";
 
 type SearchRow = Partial<SearchPayload> & {
@@ -258,17 +259,16 @@ function createSearchStore({
     ]);
     assertValidSearchPayload(normalized, options);
 
-    const isUrlSearch = isHttpUrlQuery(normalized.query);
-    const embedding =
-      !normalized.query || isUrlSearch
-        ? null
-        : await resolveSearchEmbeddingImpl({
-            currentSearch,
-            query: normalized.query,
-          });
-    const semanticDistanceThreshold = isUrlSearch
+    const textRouting = routeSearchText(normalized.query);
+    const embedding = !textRouting.usesEmbedding
       ? null
-      : getSemanticDistanceThreshold(normalized.query);
+      : await resolveSearchEmbeddingImpl({
+          currentSearch,
+          query: normalized.query,
+        });
+    const semanticDistanceThreshold = textRouting.usesEmbedding
+      ? getSemanticDistanceThreshold(normalized.query)
+      : null;
 
     const savedSearch = await upsertSearchByEmailImpl({
       email,
@@ -281,10 +281,16 @@ function createSearchStore({
       profileEmail: email,
       queryEmbedding: embedding,
       semanticDistanceThreshold,
-      urlPrefix: isUrlSearch ? normalized.query : null,
+      textQuery: textRouting.textQuery,
+      textSearchMode:
+        textRouting.mode === "urlPrefix" ? "none" : textRouting.mode,
+      urlPrefix: textRouting.urlPrefix,
     });
 
-    if (!isUrlSearch && normalized.query && results.total === 0) {
+    if (
+      (textRouting.mode === "hybrid" || textRouting.mode === "semantic") &&
+      results.total === 0
+    ) {
       results = await searchProductsImpl({
         ...normalized,
         profileEmail: email,
@@ -292,6 +298,8 @@ function createSearchStore({
         semanticDistanceThreshold: getRelaxedSemanticDistanceThreshold(
           normalized.query,
         ),
+        textQuery: textRouting.textQuery,
+        textSearchMode: textRouting.mode,
       });
     }
 
@@ -331,6 +339,7 @@ export {
   isHttpUrlQuery,
   normalizeSearchPayload,
   resolveSearchEmbedding,
+  routeSearchText,
   serializeSearchRow,
   createSearchStore,
   getSearchOptions,

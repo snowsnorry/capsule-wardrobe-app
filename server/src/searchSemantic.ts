@@ -1,5 +1,20 @@
 import { getPromptEmbeddings } from "./ai/voyageai.js";
 
+export type SearchTextMode =
+  | "none"
+  | "urlPrefix"
+  | "lexical"
+  | "hybrid"
+  | "semantic";
+
+type SearchTextRouting = {
+  mode: SearchTextMode;
+  query: string;
+  textQuery: string | null;
+  urlPrefix: string | null;
+  usesEmbedding: boolean;
+};
+
 type SearchRow = {
   query?: unknown;
   embedding?: number[] | null;
@@ -59,6 +74,67 @@ export function isHttpUrlQuery(query: unknown): boolean {
   } catch {
     return false;
   }
+}
+
+export function routeSearchText(query: unknown): SearchTextRouting {
+  const normalized = normalizeQuery(query);
+  if (!normalized) {
+    return {
+      mode: "none",
+      query: "",
+      textQuery: null,
+      urlPrefix: null,
+      usesEmbedding: false,
+    };
+  }
+
+  if (isHttpUrlQuery(normalized)) {
+    return {
+      mode: "urlPrefix",
+      query: normalized,
+      textQuery: null,
+      urlPrefix: normalized,
+      usesEmbedding: false,
+    };
+  }
+
+  if (normalized.length <= 2) {
+    return {
+      mode: "none",
+      query: normalized,
+      textQuery: null,
+      urlPrefix: null,
+      usesEmbedding: false,
+    };
+  }
+
+  if (normalized.length < 20) {
+    return {
+      mode: "lexical",
+      query: normalized,
+      textQuery: normalized,
+      urlPrefix: null,
+      usesEmbedding: false,
+    };
+  }
+
+  if (normalized.length < 60) {
+    return {
+      mode: "hybrid",
+      query: normalized,
+      textQuery: normalized,
+      urlPrefix: null,
+      usesEmbedding: true,
+    };
+  }
+
+  return {
+    mode: "semantic",
+    query: normalized,
+    textQuery: normalized,
+    urlPrefix: null,
+    usesEmbedding: true,
+  };
 }
 
 export async function resolveSearchEmbedding({

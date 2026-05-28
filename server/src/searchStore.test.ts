@@ -7,6 +7,7 @@ import {
   isHttpUrlQuery,
   normalizeSearchPayload,
   resolveSearchEmbedding,
+  routeSearchText,
   serializeSearchRow,
 } from "./searchStore.js";
 
@@ -159,8 +160,49 @@ test("isHttpUrlQuery only accepts http and https URLs", () => {
   expect(isHttpUrlQuery("https://example.com/products/1")).toBe(true);
   expect(isHttpUrlQuery("http://example.com/products/1")).toBe(true);
   expect(isHttpUrlQuery("linen shirt")).toBe(false);
+  expect(isHttpUrlQuery("zara.com/products/1")).toBe(false);
   expect(isHttpUrlQuery("mailto:person@example.com")).toBe(false);
   expect(isHttpUrlQuery("ftp://example.com/products/1")).toBe(false);
+});
+
+test("routeSearchText classifies URL, empty, short, lexical, hybrid, and semantic queries", () => {
+  expect(routeSearchText("   ")).toMatchObject({
+    mode: "none",
+    textQuery: null,
+    urlPrefix: null,
+    usesEmbedding: false,
+  });
+  expect(routeSearchText("re")).toMatchObject({
+    mode: "none",
+    textQuery: null,
+    usesEmbedding: false,
+  });
+  expect(routeSearchText("red")).toMatchObject({
+    mode: "lexical",
+    textQuery: "red",
+    usesEmbedding: false,
+  });
+  expect(
+    routeSearchText("https://example.com/products/red-dress"),
+  ).toMatchObject({
+    mode: "urlPrefix",
+    textQuery: null,
+    urlPrefix: "https://example.com/products/red-dress",
+    usesEmbedding: false,
+  });
+  expect(routeSearchText("linen dress for summer")).toMatchObject({
+    mode: "hybrid",
+    textQuery: "linen dress for summer",
+    usesEmbedding: true,
+  });
+  expect(
+    routeSearchText(
+      "a long descriptive request for breathable office dresses with clean minimal tailoring",
+    ),
+  ).toMatchObject({
+    mode: "semantic",
+    usesEmbedding: true,
+  });
 });
 
 test("resolveSearchEmbedding reuses persisted embedding when query is unchanged", async () => {
@@ -263,9 +305,69 @@ test("runSavedSearch uses URL prefix for URL queries and skips embeddings", asyn
   expect(productCalls[0].profileEmail).toBe("person@example.com");
   expect(productCalls[0].urlPrefix).toBe("https://example.com/products/1");
   expect(productCalls[0].queryEmbedding).toBe(null);
+  expect(productCalls[0].textQuery).toBe(null);
+  expect(productCalls[0].textSearchMode).toBe("none");
 });
 
-test("runSavedSearch retries text searches with relaxed semantic threshold when first result is empty", async () => {
+test("runSavedSearch skips text search and embeddings for 1-2 character queries while preserving filters", async () => {
+  const productCalls = [];
+  const store = createSearchStore(
+    createSearchStoreDeps({
+      searchProductsImpl: async (payload) => {
+        productCalls.push(payload);
+        return { total: 1, page: 1, pageSize: 24, items: [] };
+      },
+      resolveSearchEmbeddingImpl: async () => {
+        throw new Error("unexpected embedding");
+      },
+    }),
+  );
+
+  await store.runSavedSearch("person@example.com", {
+    query: "re",
+    category: ["top"],
+  });
+
+  expect(productCalls).toHaveLength(1);
+  expect(productCalls[0]).toMatchObject({
+    category: ["top"],
+    queryEmbedding: null,
+    semanticDistanceThreshold: null,
+    textQuery: null,
+    textSearchMode: "none",
+    urlPrefix: null,
+  });
+});
+
+test("runSavedSearch uses lexical search only for short ordinary text", async () => {
+  const productCalls = [];
+  const store = createSearchStore(
+    createSearchStoreDeps({
+      searchProductsImpl: async (payload) => {
+        productCalls.push(payload);
+        return { total: 1, page: 1, pageSize: 24, items: [] };
+      },
+      resolveSearchEmbeddingImpl: async () => {
+        throw new Error("unexpected embedding");
+      },
+    }),
+  );
+
+  await store.runSavedSearch("person@example.com", {
+    query: "dress",
+    category: ["top"],
+  });
+
+  expect(productCalls).toHaveLength(1);
+  expect(productCalls[0]).toMatchObject({
+    queryEmbedding: null,
+    semanticDistanceThreshold: null,
+    textQuery: "dress",
+    textSearchMode: "lexical",
+  });
+});
+
+test("runSavedSearch retries hybrid text searches with relaxed semantic threshold when first result is empty", async () => {
   const productCalls = [];
   const store = createSearchStore(
     createSearchStoreDeps({
@@ -284,18 +386,47 @@ test("runSavedSearch retries text searches with relaxed semantic threshold when 
   );
 
   const result = await store.runSavedSearch("person@example.com", {
-    query: "linen shirt",
+    query: "linen shirt for summer office",
     category: ["top"],
   });
 
   expect(result.total).toBe(2);
   expect(productCalls.length).toBe(2);
   expect(productCalls[1].profileEmail).toBe("person@example.com");
-  expect(productCalls[0].semanticDistanceThreshold).toBe(0.4);
+  expect(productCalls[0]).toMatchObject({
+    queryEmbedding: [0.1, 0.2],
+    semanticDistanceThreshold: 0.35,
+    textQuery: "linen shirt for summer office",
+    textSearchMode: "hybrid",
+  });
   expect(
-    Math.abs(productCalls[1].semanticDistanceThreshold - 0.48) < 1e-9,
+    Math.abs(productCalls[1].semanticDistanceThreshold - 0.43) < 1e-9,
   ).toBeTruthy();
   expect(result.savedSearch.category).toEqual(["top"]);
+});
+
+test("runSavedSearch uses semantic-first search for long natural-language queries", async () => {
+  const productCalls = [];
+  const store = createSearchStore(
+    createSearchStoreDeps({
+      searchProductsImpl: async (payload) => {
+        productCalls.push(payload);
+        return { total: 1, page: 1, pageSize: 24, items: [] };
+      },
+    }),
+  );
+
+  await store.runSavedSearch("person@example.com", {
+    query:
+      "a long descriptive request for breathable office dresses with clean minimal tailoring",
+  });
+
+  expect(productCalls).toHaveLength(1);
+  expect(productCalls[0]).toMatchObject({
+    queryEmbedding: [0.1, 0.2],
+    semanticDistanceThreshold: 0.31,
+    textSearchMode: "semantic",
+  });
 });
 
 test("getSearchStats validates payload and delegates normalized filters", async () => {
