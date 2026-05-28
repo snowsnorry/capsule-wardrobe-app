@@ -25,6 +25,7 @@ Primary areas:
 - Keep presentational changes local when possible.
 - Prefer editing screen components before introducing new global abstractions.
 - Reuse existing components and theme tokens before adding new ones.
+- For broad pre-edit exploration or large multi-file code changes, follow the root AGENTS.md sub-agent exploration and post-change review workflow.
 - When changing copy, update locale resources and preserve EN/RU parity.
 - When changing API usage, inspect the matching backend route/behavior.
 - Keep request/response payloads, local state, and test fixtures on the final camelCase API contract.

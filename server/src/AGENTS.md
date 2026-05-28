@@ -39,6 +39,7 @@ Primary areas:
 ## Rules
 - Keep request/response contracts stable unless explicitly changing them.
 - Public API payloads and fixtures use the final camelCase contract; do not reintroduce snake_case compatibility or removed naming-convention migration scripts unless explicitly requested.
+- For broad pre-edit exploration or large multi-file code changes, follow the root AGENTS.md sub-agent exploration and post-change review workflow.
 - When editing server behavior, inspect the client caller as well.
 - When editing HTTP behavior, prefer the owning route module under `routes/` and keep `index.ts` focused on app wiring.
 - State-changing authenticated routes should preserve `requireTrustedOrigin`, `requireAuth`, and `requireCsrf`; auth endpoints should preserve their route-specific guards and rate limiters.

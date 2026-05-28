@@ -127,6 +127,7 @@ Lint and quality:
 - Prefer minimal diffs.
 - Do not refactor unrelated files during task-focused work.
 - Preserve current workspace boundaries unless the task explicitly requires cross-cutting changes.
+- When code exploration before edits is broad or uncertain, use sub-agents freely to inspect independent areas in parallel and synthesize their findings before choosing the implementation path.
 - Read the nearest tests before editing implementation.
 - When changing API contracts, inspect both `server/` and the corresponding `client/src/api/` usage.
 - Keep public API payloads, client state, and e2e fixtures on the final camelCase contract; do not reintroduce snake_case compatibility or naming migration code unless explicitly requested.
@@ -165,6 +166,7 @@ After editing files, check test coverage, ESLint, and test pass status before ha
 - then broader repo tests if the change crosses boundaries
 - coverage for the changed area, or full coverage for cross-cutting changes
 - Run test commands and coverage commands sequentially. Do not run different test blocks in parallel, do not run coverage blocks in parallel, and do not run coverage at the same time as tests; these runs contend for resources and create misleading timeouts.
+- After a large code change that touches multiple files, launch a sub-agent to perform a code review and recommend follow-up fixes. Review the recommendations, apply the ones that are relevant, then rerun the necessary tests, coverage, typecheck, format, and lint checks.
 - At the end of the work, after the final file edits, run `npm run format`, then `npm run lint:strict`.
 - if `npm run format` changes files, include those formatter changes in the diff
 
