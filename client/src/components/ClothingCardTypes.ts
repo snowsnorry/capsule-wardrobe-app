@@ -3,6 +3,7 @@ import type { MouseEvent } from "react";
 type ClothingCardItem = {
   id?: string | number | null;
   name?: string | null;
+  brand?: string | null;
   category?: string | null;
   imageUrl?: string | null;
   url?: string | null;

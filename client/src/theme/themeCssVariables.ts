@@ -35,6 +35,7 @@ function createThemeCssVariables(mode: ThemeMode) {
       mode === "dark" ? "oklch(18% 0.014 180)" : "oklch(98% 0.008 72)",
     "--cw-color-product-card-bg": tokens.productCardBg,
     "--cw-color-product-card-ink": tokens.productCardInk,
+    "--cw-color-product-card-muted": tokens.productCardMuted,
     "--cw-color-product-image-wash": tokens.productImageWash,
     "--cw-color-product-detail-wash": tokens.productDetailWash,
     "--cw-color-product-detail-strong-wash": tokens.productDetailStrongWash,

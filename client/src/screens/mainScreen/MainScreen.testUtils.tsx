@@ -176,6 +176,9 @@ vi.mock("../../components/ClothingCard", () => ({
         }}
       >
         {item.name}
+        {typeof item.brand === "string" && item.brand.trim() ? (
+          <span>{item.brand}</span>
+        ) : null}
       </button>
       {!isSelectionMode ? (
         <button

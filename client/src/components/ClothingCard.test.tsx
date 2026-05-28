@@ -22,6 +22,7 @@ const theme = createTheme();
 const item: ComponentProps<typeof ClothingCard>["item"] = {
   id: "item-1",
   name: "Red Jacket",
+  brand: "Studio Nicholson",
   category: "outerwear",
   imageUrl: "https://example.com/red-jacket.jpg",
   url: "https://example.com/products/red-jacket",
@@ -301,10 +302,17 @@ describe("ClothingCard", () => {
 
     const details = container.querySelector(".wardrobe-card-details");
     const title = container.querySelector(".wardrobe-card-title");
+    const brand = container.querySelector(".wardrobe-card-brand");
     const category = container.querySelector(".wardrobe-card-category");
 
     expect(details).toContainElement(screen.getByText("Red Jacket"));
+    expect(details).toContainElement(screen.getByText("Studio Nicholson"));
     expect(title).toHaveTextContent("Red Jacket");
+    expect(brand).toHaveTextContent("Studio Nicholson");
+    expect(brand).toHaveStyle({
+      color: "var(--cw-color-product-card-muted)",
+      overflow: "hidden",
+    });
     expect(title).not.toHaveTextContent("options.categories.outerwear");
     expect(details).toHaveStyle({
       display: "grid",
@@ -324,6 +332,16 @@ describe("ClothingCard", () => {
       screen.getByText("options.categories.outerwear"),
     );
     expect(category).toHaveClass("wardrobe-card-category-category");
+  });
+
+  test("omits the brand line when the product brand is blank", () => {
+    const { container } = renderCard({
+      item: { ...item, brand: "   " },
+    });
+
+    expect(
+      container.querySelector(".wardrobe-card-brand"),
+    ).not.toBeInTheDocument();
   });
 
   test("moves known category icons into the mobile title prefix", () => {

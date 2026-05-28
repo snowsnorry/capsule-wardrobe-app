@@ -11,7 +11,13 @@ import MainScreenWardrobe from "./MainScreenWardrobe";
 type WardrobeProps = ComponentProps<typeof MainScreenWardrobe>;
 
 const items = [
-  { id: "a", url: "https://example.com/a", name: "Shirt", category: "top" },
+  {
+    id: "a",
+    url: "https://example.com/a",
+    name: "Shirt",
+    brand: "COS",
+    category: "top",
+  },
   {
     id: "b",
     url: "https://example.com/b",
@@ -91,6 +97,7 @@ describe("MainScreenWardrobe", () => {
     expect(
       screen.getByTestId("clothing-card-https://example.com/a"),
     ).toHaveAttribute("data-selection-mode", "true");
+    expect(screen.getByText("COS")).toBeInTheDocument();
     expect(screen.getByTestId("inline-placeholder-1")).toHaveAttribute(
       "data-mobile-columns",
       "2",

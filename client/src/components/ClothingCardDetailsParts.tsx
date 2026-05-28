@@ -105,6 +105,8 @@ function ClothingCardDetails({
   isSavedToWardrobe: boolean;
   savedToWardrobeLabel: string;
 }): ReactElement {
+  const brandLabel = getBrandLabel(item);
+
   return (
     <Stack
       className="wardrobe-card-details"
@@ -162,8 +164,63 @@ function ClothingCardDetails({
           suffixSx={{ fontSize: "0.72em", opacity: 0.72 }}
         />
       </Typography>
+      {brandLabel ? (
+        <ClothingCardBrand
+          brandLabel={brandLabel}
+          isMobile={isMobile}
+          mobileCardMetrics={mobileCardMetrics}
+        />
+      ) : null}
     </Stack>
   );
+}
+
+function ClothingCardBrand({
+  brandLabel,
+  isMobile,
+  mobileCardMetrics,
+}: {
+  brandLabel: string;
+  isMobile: boolean;
+  mobileCardMetrics: MobileCardMetrics;
+}) {
+  return (
+    <Typography
+      className="wardrobe-card-brand"
+      variant="caption"
+      sx={{
+        color: "var(--cw-color-product-card-muted)",
+        width: "100%",
+        minWidth: 0,
+        maxWidth: "100%",
+        fontWeight: 600,
+        lineHeight: isMobile ? 1.08 : 1.2,
+        letterSpacing: 0,
+        fontSize: isMobile ? getMobileBrandFontSize(mobileCardMetrics) : "12px",
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        whiteSpace: "nowrap",
+      }}
+    >
+      {brandLabel}
+    </Typography>
+  );
+}
+
+function getBrandLabel(item: ClothingCardItem) {
+  return String(item.brand || "").trim();
+}
+
+function getMobileBrandFontSize(mobileCardMetrics: MobileCardMetrics) {
+  if (mobileCardMetrics.titleFontSize === "11.5px") {
+    return "10px";
+  }
+
+  if (mobileCardMetrics.titleFontSize === "13px") {
+    return "11px";
+  }
+
+  return "12px";
 }
 
 function SavedToWardrobeIcon({
