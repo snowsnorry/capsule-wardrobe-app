@@ -1,5 +1,5 @@
 import { getFirstRow, getSqlClient } from "./core.js";
-import { toWardrobeUiItem } from "./wardrobe.js";
+import { toWardrobeUiItem } from "./wardrobeMapper.js";
 import type { UserWardrobeRow } from "./wardrobeTypes.js";
 
 async function deleteUploadedWardrobeItemById({

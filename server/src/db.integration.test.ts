@@ -20,6 +20,7 @@ import {
   deleteUploadedWardrobeItemById,
   deleteWardrobeItemFromCatalogByUrl,
   getUploadedWardrobeItemById,
+  listWardrobeItemsByIdsForEmail,
   listWardrobeItemsByEmail,
   saveUploadedWardrobeItemsByEmail,
   saveWardrobeItemFromCatalogByUrl,
@@ -662,6 +663,45 @@ test("db integration reads uploaded wardrobe items by id", async () => {
   expect(calls[0].text).toMatch(/source = 'uploaded'/i);
   expect(calls[0].values).toEqual(["user@example.com", "wardrobe-upload-1"]);
   expect(calls[1].values).toEqual(["user@example.com", "missing-upload"]);
+});
+
+test("db integration lists wardrobe items by ids in caller order", async () => {
+  const wardrobeRow: WardrobeRow = {
+    id: "42",
+    profileEmail: "user@example.com",
+    productId: null,
+    name: "Uploaded shirt",
+    url: "wardrobe://42",
+    imageUrl: "https://images.example.com/wardrobe/user/image.webp",
+    source: "uploaded",
+    rawImageUrl: "https://images.example.com/wardrobe/user/image.webp",
+    processingStatus: "ready",
+    createdAt: new Date(0).toISOString(),
+    updatedAt: new Date(0).toISOString(),
+  };
+  const { sql, calls } = createSqlMock([[wardrobeRow]]);
+  setSqlClientOverride(sql);
+
+  const empty = await listWardrobeItemsByIdsForEmail({
+    email: "user@example.com",
+    ids: [0, -1, Number.NaN],
+  });
+  const listed = await listWardrobeItemsByIdsForEmail({
+    email: "user@example.com",
+    ids: [42, 7, 42],
+  });
+
+  expect(empty).toEqual([]);
+  expect(listed).toEqual([
+    expect.objectContaining({
+      id: "42",
+      source: "uploaded",
+    }),
+  ]);
+  expect(calls).toHaveLength(1);
+  expect(calls[0].text).toMatch(/id = any/i);
+  expect(calls[0].text).toMatch(/array_position/i);
+  expect(calls[0].values).toEqual(["user@example.com", [42, 7], [42, 7]]);
 });
 
 test("db integration returns null when catalog wardrobe save finds no product", async () => {
