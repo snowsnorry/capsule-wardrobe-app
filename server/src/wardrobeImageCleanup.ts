@@ -52,6 +52,11 @@ type WardrobeImageCleanupResult = {
   }>;
 };
 
+type WardrobeImageThumbnailUploadResult = Pick<
+  WardrobeImageCleanupResult,
+  "thumbnails"
+>;
+
 function buildSingleItemImageCleanupPrompt() {
   return CLEANUP_PROMPT;
 }
@@ -101,6 +106,44 @@ function buildCleanupReferenceImage({
     imageUrl,
     mimeType: sourceMimeType || "image/webp",
   };
+}
+
+async function uploadWardrobeImageThumbnails({
+  imageBuffer,
+  sourceKey = null,
+  sourceUrl = null,
+  uploadWardrobeDerivativeImageToR2Impl = uploadWardrobeDerivativeImageToR2,
+  buildThumbnailBuffersImpl = buildWardrobeImageThumbnailBuffers,
+}: {
+  imageBuffer: Buffer | Uint8Array;
+  sourceKey?: string | null;
+  sourceUrl?: string | null;
+  uploadWardrobeDerivativeImageToR2Impl?: typeof uploadWardrobeDerivativeImageToR2;
+  buildThumbnailBuffersImpl?: typeof buildWardrobeImageThumbnailBuffers;
+}): Promise<WardrobeImageThumbnailUploadResult> {
+  const thumbnailBuffers = await buildThumbnailBuffersImpl(imageBuffer);
+  const thumbnails = await Promise.all(
+    thumbnailBuffers.map(async ({ width, buffer }) => {
+      const key = buildWardrobeDerivativeR2ImageKey({
+        sourceKey,
+        sourceUrl,
+        suffix: `_${width}`,
+        mimeType: "image/webp",
+      });
+      const uploaded = await uploadWardrobeDerivativeImageToR2Impl({
+        buffer,
+        key,
+        mimeType: "image/webp",
+      });
+
+      return {
+        width,
+        ...uploaded,
+      };
+    }),
+  );
+
+  return { thumbnails };
 }
 
 async function cleanupUploadedWardrobeItemImage({
@@ -156,26 +199,12 @@ async function cleanupUploadedWardrobeItemImage({
     key: cleanKey,
     mimeType: generated.mimeType,
   });
-  const thumbnailBuffers = await buildThumbnailBuffersImpl(generated.buffer);
-  const thumbnails = await Promise.all(
-    thumbnailBuffers.map(async ({ width, buffer }) => {
-      const key = buildWardrobeDerivativeR2ImageKey({
-        sourceKey: cleanImage.key,
-        suffix: `_${width}`,
-        mimeType: "image/webp",
-      });
-      const uploaded = await uploadWardrobeDerivativeImageToR2Impl({
-        buffer,
-        key,
-        mimeType: "image/webp",
-      });
-
-      return {
-        width,
-        ...uploaded,
-      };
-    }),
-  );
+  const { thumbnails } = await uploadWardrobeImageThumbnails({
+    imageBuffer: generated.buffer,
+    sourceKey: cleanImage.key,
+    uploadWardrobeDerivativeImageToR2Impl,
+    buildThumbnailBuffersImpl,
+  });
 
   return {
     cleanImage,
@@ -188,4 +217,5 @@ export {
   buildSingleItemImageCleanupPrompt,
   buildWardrobeImageThumbnailBuffers,
   cleanupUploadedWardrobeItemImage,
+  uploadWardrobeImageThumbnails,
 };

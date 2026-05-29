@@ -1,8 +1,10 @@
 import { createHash } from "node:crypto";
+import { fileTypeFromBuffer } from "file-type";
 import type { RequestOptions, Response as ImpersResponse } from "impers";
 import { getSafeServerFetchUrl } from "./serverUrlSecurity.js";
 import { downloadProductImageAssets } from "./ai/promptImageDownloads.js";
 import { buildWardrobeR2ImageKey } from "./r2Storage.js";
+import { isAllowedWardrobeUploadMimeType } from "./wardrobeUploadImagesCore.js";
 
 const WARDROBE_PRODUCT_PAGE_MAX_URLS = 5;
 const PRODUCT_PAGE_HTML_MAX_CHARS = 200_000;
@@ -25,6 +27,14 @@ type ProductPageImageDownloadResult = {
   mimeType: string;
   originalName: string;
 };
+
+type ProductPageUrlFetchResult =
+  | ProductPageFetchResult
+  | {
+      type: "image";
+      image: ProductPageImageDownloadResult;
+      url: string;
+    };
 
 async function defaultImpersGet(url: string, options?: RequestOptions) {
   const impers = await import("impers");
@@ -128,18 +138,65 @@ function getImpersContentType(response: ImpersResponse): string {
   ).toLowerCase();
 }
 
-function assertProductPageHtmlResponse(response: ImpersResponse) {
+function getContentTypeMime(contentType: string): string {
+  return String(contentType || "")
+    .split(";")[0]
+    .trim()
+    .toLowerCase();
+}
+
+function isProductPageHtmlContentType(contentType: string): boolean {
+  const mimeType = getContentTypeMime(contentType);
+  return (
+    !mimeType ||
+    mimeType === "text/html" ||
+    mimeType === "application/xhtml+xml" ||
+    mimeType === "text/plain"
+  );
+}
+
+function isDirectWardrobeImageContentType(contentType: string): boolean {
+  return isAllowedWardrobeUploadMimeType(getContentTypeMime(contentType));
+}
+
+function isBufferLike(value: unknown): value is Buffer | Uint8Array {
+  return Buffer.isBuffer(value) || value instanceof Uint8Array;
+}
+
+async function getImpersContentBuffer(response: ImpersResponse) {
+  const responseLike = response as ImpersResponse & {
+    aContent?: () => Promise<Buffer | Uint8Array>;
+    content?: Buffer | Uint8Array;
+    text?: string;
+  };
+
+  try {
+    const content = responseLike.content;
+    if (isBufferLike(content)) {
+      return Buffer.from(content);
+    }
+  } catch {
+    // Fall through to async content or text fallback.
+  }
+
+  if (typeof responseLike.aContent === "function") {
+    const content = await responseLike.aContent();
+    if (isBufferLike(content)) {
+      return Buffer.from(content);
+    }
+  }
+
+  return Buffer.from(String(responseLike.text || ""));
+}
+
+function assertProductPageResponseOk(response: ImpersResponse) {
   if (!response.ok) {
     throw new Error(`product_page_fetch_failed_${response.status}`);
   }
+}
 
-  const contentType = getImpersContentType(response);
-  if (
-    contentType &&
-    !contentType.includes("text/html") &&
-    !contentType.includes("application/xhtml+xml") &&
-    !contentType.includes("text/plain")
-  ) {
+function assertProductPageHtmlContentType(response: ImpersResponse) {
+  if (!isProductPageHtmlContentType(getImpersContentType(response))) {
     throw new Error("product_page_not_html");
   }
 }
@@ -154,7 +211,7 @@ async function fetchProductPageHtmlWithImpers({
 }: {
   getImpl?: ImpersGet;
   url: string;
-}): Promise<ProductPageFetchResult> {
+}): Promise<ProductPageUrlFetchResult> {
   const safeUrl = getSafeServerFetchUrl(url);
   if (!safeUrl) {
     throw new Error("invalid_product_page_url");
@@ -166,9 +223,30 @@ async function fetchProductPageHtmlWithImpers({
     maxRedirects: 5,
     timeout: PRODUCT_PAGE_FETCH_TIMEOUT_SECONDS,
   });
-  assertProductPageHtmlResponse(response);
+  assertProductPageResponseOk(response);
 
   const finalUrl = getSafeServerFetchUrl(response.url) || safeUrl;
+  const contentType = getImpersContentType(response);
+  if (isDirectWardrobeImageContentType(contentType)) {
+    const buffer = await getImpersContentBuffer(response);
+    const detectedType = await fileTypeFromBuffer(buffer);
+    if (!isAllowedWardrobeUploadMimeType(detectedType?.mime)) {
+      throw new Error("product_page_image_invalid");
+    }
+
+    return {
+      type: "image",
+      image: {
+        buffer,
+        imageUrl: finalUrl,
+        mimeType: detectedType.mime,
+        originalName: getImageOriginalName(finalUrl),
+      },
+      url: finalUrl,
+    };
+  }
+
+  assertProductPageHtmlContentType(response);
   const html = truncateProductPageHtml(response.text);
   if (!html.trim()) {
     throw new Error("product_page_empty_html");
@@ -239,4 +317,8 @@ export {
   normalizeWardrobeProductPageUploadUrls,
   parseHtmlTagAttributes,
 };
-export type { ProductPageFetchResult, ProductPageImageDownloadResult };
+export type {
+  ProductPageFetchResult,
+  ProductPageImageDownloadResult,
+  ProductPageUrlFetchResult,
+};

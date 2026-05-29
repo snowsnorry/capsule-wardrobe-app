@@ -131,6 +131,15 @@ function createWardrobeDependencies() {
       html: '<html><head><meta property="og:image" content="https://cdn.example.com/product.jpg"></head></html>',
       url: String(payload?.url || "https://shop.example.com/product"),
     }),
+    uploadWardrobeDerivativeImageToR2Impl: async ({
+      buffer,
+      key,
+      mimeType,
+    }) => ({
+      key,
+      url: `https://images.example.com/${key}`,
+      digest: `${mimeType}:${Buffer.from(buffer).length}`,
+    }),
     createUploadedWardrobeItemEmbeddingImpl: async () => [0.1, 0.2, 0.3],
     updateUploadedWardrobeItemMetadataImpl: async (payload) => ({
       id: payload.id,

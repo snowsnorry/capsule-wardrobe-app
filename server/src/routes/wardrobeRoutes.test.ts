@@ -1175,6 +1175,251 @@ test("wardrobe URL upload route imports product pages with og images", async (t)
   ]);
 });
 
+test("wardrobe URL upload route imports direct image URLs without cleanup generation", async (t) => {
+  const calls: unknown[] = [];
+  const metadata = {
+    name: "Linen shirt",
+    description: null,
+    brand: null,
+    audience: "all",
+    category: "top",
+    season: ["summer"],
+    formalityLevel: ["casual"],
+    style: [],
+    occasions: [],
+    colorBase: ["white"],
+    isNeutral: true,
+    pattern: "solid",
+    finish: null,
+    composition: "linen",
+    silhouette: null,
+    fit: "regular",
+    closureType: ["button"],
+  };
+  const analyzeProductPage = vi.fn(async () => {
+    throw new Error("should_not_analyze_product_page");
+  });
+  const cleanup = vi.fn(async () => {
+    throw new Error("should_not_cleanup_direct_image");
+  });
+  const { baseUrl } = await startTestServer(t, {
+    overrides: {
+      fetchProductPageHtmlWithImpersImpl: async (payload) => {
+        calls.push({ type: "fetchUrl", payload });
+        return {
+          type: "image",
+          url: "https://cdn.example.com/products/linen-shirt.jpg",
+          image: {
+            buffer: Buffer.from("downloaded-direct-image"),
+            imageUrl: "https://cdn.example.com/products/linen-shirt.jpg",
+            mimeType: "image/jpeg",
+            originalName: "linen-shirt.jpg",
+          },
+        };
+      },
+      normalizeWardrobeUploadImagesInChildImpl: async (images) => {
+        calls.push({
+          type: "normalize",
+          images: images.map((image) => ({
+            buffer: image.buffer.toString("utf8"),
+            mimeType: image.mimeType,
+            originalName: image.originalName,
+          })),
+        });
+        return [
+          {
+            buffer: tinyPng,
+            mimeType: "image/webp",
+            originalName: "linen-shirt.jpg",
+            width: 800,
+            height: 1000,
+            size: 22,
+          },
+        ];
+      },
+      uploadWardrobeImageToR2Impl: async (payload) => {
+        calls.push({
+          type: "uploadOriginal",
+          email: payload.email,
+          size: Buffer.from(payload.buffer).length,
+        });
+        return {
+          key: "wardrobe/profile/direct-image.webp",
+          url: "https://images.example.com/wardrobe/profile/direct-image.webp",
+          digest: "direct-digest",
+        };
+      },
+      saveUploadedWardrobeItemsImpl: async (payload) => {
+        calls.push({ type: "saveUploaded", payload });
+        return [
+          {
+            id: "wardrobe-direct-image-1",
+            profileEmail: "person@example.com",
+            url: payload.items[0].url,
+            imageUrl: payload.items[0].imageUrl,
+            rawImageUrl: payload.items[0].rawImageUrl,
+            source: "uploaded",
+            processingStatus: "uploaded",
+            createdAt: "2026-05-01T00:00:00.000Z",
+            updatedAt: "2026-05-01T00:00:00.000Z",
+          },
+        ];
+      },
+      analyzeWardrobeImageUrlImpl: async (payload) => {
+        calls.push({ type: "analyzeUploadedImage", payload });
+        return {
+          hasMetadata: true,
+          metadata,
+          rawResponse: JSON.stringify(metadata),
+        };
+      },
+      analyzeWardrobeProductPageImageImpl: analyzeProductPage,
+      cleanupUploadedWardrobeItemImageImpl: cleanup,
+      uploadWardrobeDerivativeImageToR2Impl: async (payload) => {
+        calls.push({
+          type: "uploadThumbnail",
+          key: payload.key,
+          mimeType: payload.mimeType,
+          size: Buffer.from(payload.buffer).length,
+        });
+        return {
+          key: payload.key,
+          url: `https://images.example.com/${payload.key}`,
+          digest: `thumb-${payload.key}`,
+        };
+      },
+      createUploadedWardrobeItemEmbeddingImpl: async (item) => {
+        calls.push({ type: "embed", item });
+        return [0.7, 0.8];
+      },
+      updateUploadedWardrobeItemMetadataImpl: async (payload) => {
+        calls.push({ type: "updateMetadata", payload });
+        return {
+          id: payload.id,
+          url: "https://cdn.example.com/products/linen-shirt.jpg",
+          imageUrl: payload.imageUrl,
+          rawImageUrl:
+            "https://images.example.com/wardrobe/profile/direct-image.webp",
+          source: "uploaded",
+          processingStatus: payload.processingStatus,
+          ...payload.metadata,
+        };
+      },
+    },
+  });
+
+  const upload = await requestUploadUrls(baseUrl, [
+    "https://cdn.example.com/products/linen-shirt.jpg",
+  ]);
+
+  expect(upload.response.status).toBe(200);
+  const events = parseSseEvents(upload.text);
+  expect(events.map((event) => event.event)).toEqual([
+    "progress",
+    "progress",
+    "progress",
+    "complete",
+  ]);
+  expect(events.at(-1)?.data).toEqual({
+    ok: true,
+    total: 1,
+    uploaded: 1,
+    completedSteps: 3,
+    metadataProcessed: 1,
+    imageProcessed: 1,
+    failed: 0,
+    items: [
+      expect.objectContaining({
+        id: "wardrobe-direct-image-1",
+        name: "Linen shirt",
+        url: "https://cdn.example.com/products/linen-shirt.jpg",
+        imageUrl:
+          "https://images.example.com/wardrobe/profile/direct-image.webp",
+        rawImageUrl:
+          "https://images.example.com/wardrobe/profile/direct-image.webp",
+        source: "uploaded",
+        processingStatus: "ready",
+      }),
+    ],
+  });
+  expect(analyzeProductPage).not.toHaveBeenCalled();
+  expect(cleanup).not.toHaveBeenCalled();
+  expect(calls).toEqual([
+    {
+      type: "fetchUrl",
+      payload: { url: "https://cdn.example.com/products/linen-shirt.jpg" },
+    },
+    {
+      type: "normalize",
+      images: [
+        {
+          buffer: "downloaded-direct-image",
+          mimeType: "image/jpeg",
+          originalName: "linen-shirt.jpg",
+        },
+      ],
+    },
+    {
+      type: "uploadOriginal",
+      email: "person@example.com",
+      size: tinyPng.length,
+    },
+    {
+      type: "saveUploaded",
+      payload: {
+        email: "person@example.com",
+        items: [
+          {
+            imageUrl:
+              "https://images.example.com/wardrobe/profile/direct-image.webp",
+            rawImageUrl:
+              "https://images.example.com/wardrobe/profile/direct-image.webp",
+            url: "https://cdn.example.com/products/linen-shirt.jpg",
+          },
+        ],
+      },
+    },
+    {
+      type: "analyzeUploadedImage",
+      payload: {
+        imageUrl:
+          "https://images.example.com/wardrobe/profile/direct-image.webp",
+      },
+    },
+    expect.objectContaining({
+      type: "uploadThumbnail",
+      key: "wardrobe/profile/direct-image_320.webp",
+      mimeType: "image/webp",
+    }),
+    expect.objectContaining({
+      type: "uploadThumbnail",
+      key: "wardrobe/profile/direct-image_480.webp",
+      mimeType: "image/webp",
+    }),
+    expect.objectContaining({
+      type: "uploadThumbnail",
+      key: "wardrobe/profile/direct-image_640.webp",
+      mimeType: "image/webp",
+    }),
+    {
+      type: "embed",
+      item: metadata,
+    },
+    {
+      type: "updateMetadata",
+      payload: {
+        email: "person@example.com",
+        embedding: [0.7, 0.8],
+        id: "wardrobe-direct-image-1",
+        imageUrl:
+          "https://images.example.com/wardrobe/profile/direct-image.webp",
+        metadata,
+        processingStatus: "ready",
+      },
+    },
+  ]);
+});
+
 test("wardrobe URL upload route marks product pages without og images as failed", async (t) => {
   vi.spyOn(console, "error").mockImplementation(() => {});
   const { baseUrl } = await startTestServer(t, {

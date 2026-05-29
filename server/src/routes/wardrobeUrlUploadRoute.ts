@@ -1,5 +1,6 @@
 import { logError } from "../logger.js";
 import { filterWardrobeItemForDisplay } from "../wardrobeItemDisplay.js";
+import { uploadWardrobeImageThumbnails } from "../wardrobeImageCleanup.js";
 import {
   extractOpenGraphImageUrl,
   normalizeWardrobeProductPageUploadUrls,
@@ -26,6 +27,7 @@ async function saveWardrobeProductPageUploadedItem({
   context,
   email,
   imageUrl,
+  rawImageUrl = imageUrl,
   productPageUrl,
 }) {
   const items = await context.saveUploadedWardrobeItemsImpl({
@@ -33,12 +35,82 @@ async function saveWardrobeProductPageUploadedItem({
     items: [
       {
         imageUrl,
-        rawImageUrl: imageUrl,
+        rawImageUrl,
         url: productPageUrl,
       },
     ],
   });
   return Array.isArray(items) ? items[0] || null : null;
+}
+
+async function processDirectWardrobeImageUploadUrl({
+  context,
+  email,
+  image,
+  progress,
+  res,
+}) {
+  const normalizedImages =
+    await context.normalizeWardrobeUploadImagesInChildImpl([
+      {
+        buffer: Buffer.from(image.buffer),
+        mimeType: image.mimeType,
+        originalName: image.originalName,
+      },
+    ]);
+  const normalizedImage = normalizedImages[0];
+  if (!normalizedImage?.buffer) {
+    throw new Error("direct_image_normalized_image_missing");
+  }
+
+  const uploadedImage = await context.uploadWardrobeImageToR2Impl({
+    buffer: normalizedImage.buffer,
+    email,
+  });
+  const item = await saveWardrobeProductPageUploadedItem({
+    context,
+    email,
+    imageUrl: uploadedImage.url,
+    rawImageUrl: uploadedImage.url,
+    productPageUrl: image.imageUrl,
+  });
+  if (!item) {
+    throw new Error("direct_image_uploaded_item_missing");
+  }
+
+  advanceWardrobeUploadProgress(progress, {
+    completedSteps: 1,
+    uploaded: 1,
+  });
+  writeWardrobeUploadEvent(res, "progress", progress);
+
+  return processUploadedWardrobeItemMetadata({
+    context,
+    email,
+    filterItem: filterWardrobeItemForDisplay,
+    item: filterWardrobeItemForDisplay(item),
+    processUploadedImage: async () => {
+      const { thumbnails } = await uploadWardrobeImageThumbnails({
+        imageBuffer: normalizedImage.buffer,
+        sourceKey: uploadedImage.key,
+        sourceUrl: uploadedImage.url,
+        uploadWardrobeDerivativeImageToR2Impl:
+          context.uploadWardrobeDerivativeImageToR2Impl,
+      });
+      return {
+        cleanImage: uploadedImage,
+        thumbnails,
+      };
+    },
+    progress,
+    res,
+    sourceImage: {
+      buffer: normalizedImage.buffer,
+      mimeType: normalizedImage.mimeType,
+      originalName: normalizedImage.originalName,
+    },
+    sourceImageKey: uploadedImage.key,
+  });
 }
 
 async function processWardrobeProductPageUploadUrl({
@@ -52,6 +124,16 @@ async function processWardrobeProductPageUploadUrl({
     const productPage = await context.fetchProductPageHtmlWithImpersImpl({
       url,
     });
+    if (productPage?.type === "image") {
+      return processDirectWardrobeImageUploadUrl({
+        context,
+        email,
+        image: productPage.image,
+        progress,
+        res,
+      });
+    }
+
     const imageUrl = extractOpenGraphImageUrl(
       productPage.html,
       productPage.url,

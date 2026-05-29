@@ -96,6 +96,7 @@ async function processUploadedWardrobeItemMetadata({
   email,
   filterItem,
   item,
+  processUploadedImage = null,
   sourceImage = null,
   sourceImageKey = null,
   progress,
@@ -125,14 +126,23 @@ async function processUploadedWardrobeItemMetadata({
     });
     writeWardrobeUploadEvent(res, "progress", progress);
 
-    const cleanup = await context.cleanupUploadedWardrobeItemImageImpl({
-      email,
-      imageUrl,
-      sourceBuffer: sourceImage?.buffer,
-      sourceFilename: sourceImage?.originalName,
-      sourceKey: sourceImageKey,
-      sourceMimeType: sourceImage?.mimeType,
-    });
+    const cleanup =
+      typeof processUploadedImage === "function"
+        ? await processUploadedImage({
+            email,
+            imageUrl,
+            item,
+            sourceImage,
+            sourceImageKey,
+          })
+        : await context.cleanupUploadedWardrobeItemImageImpl({
+            email,
+            imageUrl,
+            sourceBuffer: sourceImage?.buffer,
+            sourceFilename: sourceImage?.originalName,
+            sourceKey: sourceImageKey,
+            sourceMimeType: sourceImage?.mimeType,
+          });
     const cleanImageUrl = String(cleanup?.cleanImage?.url || "").trim();
     if (!cleanImageUrl) {
       throw new Error("wardrobe_image_cleanup_missing_url");

@@ -7,6 +7,11 @@ const promptImageDownloads = vi.hoisted(() => ({
 
 vi.mock("./ai/promptImageDownloads.js", () => promptImageDownloads);
 
+const tinyPng = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMB/atcw3kAAAAASUVORK5CYII=",
+  "base64",
+);
+
 import {
   buildRemoteWardrobeImageSourceKey,
   downloadWardrobeProductPageImage,
@@ -131,6 +136,33 @@ test("wardrobe product page fetch uses impers chrome impersonation", async () =>
   });
 });
 
+test("wardrobe product page fetch returns direct image URL downloads", async () => {
+  const getImpl = vi.fn(async () => ({
+    content: tinyPng,
+    contentType: "image/png",
+    ok: true,
+    status: 200,
+    text: "",
+    url: "https://cdn.example.com/products/linen-shirt.png?width=1200",
+  }));
+
+  const result = await fetchProductPageHtmlWithImpers({
+    getImpl: getImpl as never,
+    url: "https://cdn.example.com/products/linen-shirt.png",
+  });
+
+  expect(result).toEqual({
+    type: "image",
+    url: "https://cdn.example.com/products/linen-shirt.png?width=1200",
+    image: {
+      buffer: tinyPng,
+      imageUrl: "https://cdn.example.com/products/linen-shirt.png?width=1200",
+      mimeType: "image/png",
+      originalName: "linen-shirt.png",
+    },
+  });
+});
+
 test("wardrobe product page fetch rejects non-HTML and failed responses", async () => {
   await expect(
     fetchProductPageHtmlWithImpers({
@@ -151,6 +183,20 @@ test("wardrobe product page fetch rejects non-HTML and failed responses", async 
       url: "https://shop.example.com/product",
     }),
   ).rejects.toThrow(/product_page_not_html/);
+
+  await expect(
+    fetchProductPageHtmlWithImpers({
+      getImpl: vi.fn(async () => ({
+        content: Buffer.from("not an image"),
+        contentType: "image/jpeg",
+        ok: true,
+        status: 200,
+        text: "",
+        url: "https://cdn.example.com/product.jpg",
+      })) as never,
+      url: "https://cdn.example.com/product.jpg",
+    }),
+  ).rejects.toThrow(/product_page_image_invalid/);
 
   await expect(
     fetchProductPageHtmlWithImpers({

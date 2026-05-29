@@ -141,7 +141,10 @@ import {
 } from "./capsuleHttp.js";
 import { validateCapsuleAnchorItems } from "./capsuleAnchors.js";
 import { createStartServer } from "./serverStartup.js";
-import { uploadWardrobeImageToR2 } from "./r2Storage.js";
+import {
+  uploadWardrobeDerivativeImageToR2,
+  uploadWardrobeImageToR2,
+} from "./r2Storage.js";
 import { deleteObjectsFromR2 } from "./r2Delete.js";
 import { normalizeWardrobeUploadImagesInChild } from "./wardrobeUploadImagesRunner.js";
 import {
@@ -211,6 +214,7 @@ function createWardrobeImageStorageDependencies() {
     deleteUploadedWardrobeItemImpl: deleteUploadedWardrobeItemById,
     downloadWardrobeProductPageImageImpl: downloadWardrobeProductPageImage,
     fetchProductPageHtmlWithImpersImpl: fetchProductPageHtmlWithImpers,
+    uploadWardrobeDerivativeImageToR2Impl: uploadWardrobeDerivativeImageToR2,
     uploadWardrobeImageToR2Impl: uploadWardrobeImageToR2,
   };
 }

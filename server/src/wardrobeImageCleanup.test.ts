@@ -5,6 +5,7 @@ import {
   buildSingleItemImageCleanupPrompt,
   buildWardrobeImageThumbnailBuffers,
   cleanupUploadedWardrobeItemImage,
+  uploadWardrobeImageThumbnails,
 } from "./wardrobeImageCleanup.js";
 
 async function buildPngBuffer() {
@@ -111,4 +112,35 @@ test("wardrobe thumbnail buffers are generated as bounded WebP images", async ()
     expect(metadata.format).toBe("webp");
     expect(metadata.width).toBeLessThanOrEqual(thumbnail.width);
   }
+});
+
+test("wardrobe image thumbnails can be uploaded without generating a clean image", async () => {
+  const sourceBuffer = await buildPngBuffer();
+  const uploadedKeys: string[] = [];
+  const uploadWardrobeDerivativeImageToR2Impl = vi.fn(
+    async ({ buffer, key, mimeType }) => {
+      uploadedKeys.push(key);
+      return {
+        key,
+        url: `https://images.example.com/${key}`,
+        digest: `${mimeType}:${Buffer.from(buffer).length}`,
+      };
+    },
+  );
+
+  const result = await uploadWardrobeImageThumbnails({
+    imageBuffer: sourceBuffer,
+    sourceKey: "wardrobe/profile/item.webp",
+    sourceUrl: "https://images.example.com/wardrobe/profile/item.webp",
+    uploadWardrobeDerivativeImageToR2Impl,
+  });
+
+  expect(uploadedKeys).toEqual([
+    "wardrobe/profile/item_320.webp",
+    "wardrobe/profile/item_480.webp",
+    "wardrobe/profile/item_640.webp",
+  ]);
+  expect(result.thumbnails.map((thumbnail) => thumbnail.width)).toEqual([
+    320, 480, 640,
+  ]);
 });
