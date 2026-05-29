@@ -84,6 +84,12 @@ type SwimwearType = "swimsuit" | "swimwear_top" | "swimwear_bottom";
 
 type SwimwearCandidate = {
   id?: string | number | null;
+  item_source?: "catalog" | "wardrobe" | string | null;
+  source?: string | null;
+  raw_image_url?: string | null;
+  processing_status?: string | null;
+  wardrobe_id?: string | number | null;
+  product_id?: string | number | null;
   url?: string | null;
   name?: string | null;
   category?: string | null;

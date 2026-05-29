@@ -186,7 +186,79 @@ test("generateSwimwearAddition skips non-summer profiles and selects male swimwe
   });
 });
 
-test("generateSwimwearAddition selects female swimwear without LLM when profile disables models", async () => {
+test("generateSwimwearAddition skips SQL when the capsule already has swimwear", async () => {
+  const sqlCalls = [];
+  const generateSwimwearAddition = createGenerateSwimwearAddition({
+    getSqlClientImpl:
+      () =>
+      async (...args) => {
+        sqlCalls.push(args);
+        return [];
+      },
+  });
+
+  const result = await generateSwimwearAddition({
+    userProfile: { audience: "woman", season: ["summer"] },
+    selectedCapsuleItems: [{ id: "swim-existing", category: "swimwear" }],
+    promptEmbeddings: [0.1, 0.2],
+  });
+
+  expect(result).toEqual({
+    items: [],
+    reasoning: null,
+    rawSelectionText: null,
+  });
+  expect(sqlCalls).toEqual([]);
+});
+
+test("generateSwimwearAddition keeps wardrobe metadata for one male wardrobe swimwear item", async () => {
+  const generateSwimwearAddition = createGenerateSwimwearAddition({
+    getSqlClientImpl: () => async () => [
+      {
+        id: "W7",
+        item_source: "wardrobe",
+        source: "uploaded",
+        raw_image_url: "https://example.com/raw.jpg",
+        processing_status: "ready",
+        wardrobe_id: "7",
+        name: "Swim Shorts",
+        category: "swimwear",
+        audience: "man",
+        url: "wardrobe://7",
+      },
+    ],
+  });
+
+  const result = await generateSwimwearAddition({
+    userProfile: {
+      email: "person@example.com",
+      audience: "man",
+      season: ["summer"],
+      sourceMode: "wardrobe_only",
+    },
+    selectedCapsuleItems: [],
+    promptEmbeddings: [0.1, 0.2],
+  });
+
+  expect(result.items).toEqual([
+    {
+      id: "W7",
+      url: "wardrobe://7",
+      name: "Swim Shorts",
+      category: "swimwear",
+      imageUrl: "",
+      audience: "man",
+      itemSource: "wardrobe",
+      source: "uploaded",
+      rawImageUrl: "https://example.com/raw.jpg",
+      processingStatus: "ready",
+      wardrobeId: "7",
+    },
+  ]);
+});
+
+test("generateSwimwearAddition selects the only female bikini pair without LLM", async () => {
+  const llmCalls = [];
   const generateSwimwearAddition = createGenerateSwimwearAddition({
     getSqlClientImpl: () => async () => [
       {
@@ -206,16 +278,22 @@ test("generateSwimwearAddition selects female swimwear without LLM when profile 
         url: "https://example.com/bottom",
       },
     ],
-    isNoLlmProfileEnabledImpl: () => true,
+    getGenerateJsonWithLlmImpl:
+      () =>
+      async (...args) => {
+        llmCalls.push(args);
+        return { response: {}, json: {} };
+      },
+    isNoLlmProfileEnabledImpl: () => false,
     resolveLlmProviderImpl: () => ({
-      requestedLlm: "none",
-      provider: "none",
-      model: null,
+      requestedLlm: "openai:gpt-5.5",
+      provider: "openai",
+      model: "gpt-5.5",
     }),
   });
 
   const result = await generateSwimwearAddition({
-    userProfile: { audience: "woman", season: ["summer"], llm: "none" },
+    userProfile: { audience: "woman", season: ["summer"] },
     selectedCapsuleItems: [
       { id: "bottom-capsule", category: "bottom", color_base: ["black"] },
     ],
@@ -225,6 +303,44 @@ test("generateSwimwearAddition selects female swimwear without LLM when profile 
   expect(result.items.map((item) => item.id)).toEqual(["top-1", "bottom-1"]);
   expect(result.reasoning).toBe(null);
   expect(result.rawSelectionText).toBe(null);
+  expect(llmCalls).toEqual([]);
+});
+
+test("generateSwimwearAddition selects the only female swimsuit without LLM", async () => {
+  const llmCalls = [];
+  const generateSwimwearAddition = createGenerateSwimwearAddition({
+    getSqlClientImpl: () => async () => [
+      {
+        id: "swimsuit-1",
+        name: "Minimal Swimsuit",
+        category: "swimwear",
+        swimwear_type: "swimsuit",
+        audience: "woman",
+        url: "https://example.com/swimsuit",
+      },
+    ],
+    getGenerateJsonWithLlmImpl:
+      () =>
+      async (...args) => {
+        llmCalls.push(args);
+        return { response: {}, json: {} };
+      },
+    isNoLlmProfileEnabledImpl: () => false,
+    resolveLlmProviderImpl: () => ({
+      requestedLlm: "openai:gpt-5.5",
+      provider: "openai",
+      model: "gpt-5.5",
+    }),
+  });
+
+  const result = await generateSwimwearAddition({
+    userProfile: { audience: "woman", season: ["summer"] },
+    selectedCapsuleItems: [],
+    promptEmbeddings: [0.1, 0.2],
+  });
+
+  expect(result.items.map((item) => item.id)).toEqual(["swimsuit-1"]);
+  expect(llmCalls).toEqual([]);
 });
 
 test("generateSwimwearAddition uses LLM selection and preserves reasoning text for female profiles", async () => {
@@ -238,6 +354,14 @@ test("generateSwimwearAddition uses LLM selection and preserves reasoning text f
         swimwear_type: "swimsuit",
         audience: "woman",
         url: "https://example.com/swimsuit",
+      },
+      {
+        id: "swimsuit-2",
+        name: "Sport Swimsuit",
+        category: "swimwear",
+        swimwear_type: "swimsuit",
+        audience: "woman",
+        url: "https://example.com/swimsuit-2",
       },
     ],
     getGenerateJsonWithLlmImpl: () => async (prompt, options) => {

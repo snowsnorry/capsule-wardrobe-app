@@ -49,6 +49,11 @@ test("sanitizeProductRow removes embedding metadata and toWardrobeUiItem maps UI
   expect(
     toWardrobeUiItem({
       id: "p1",
+      item_source: "wardrobe",
+      source: "uploaded",
+      raw_image_url: "https://example.test/raw.jpg",
+      processing_status: "ready",
+      wardrobe_id: "7",
       url: "https://example.test/p1",
       name: "Suit",
       category: "swimwear",
@@ -62,5 +67,10 @@ test("sanitizeProductRow removes embedding metadata and toWardrobeUiItem maps UI
     category: "swimwear",
     imageUrl: "https://example.test/p1.jpg",
     audience: "woman",
+    itemSource: "wardrobe",
+    source: "uploaded",
+    rawImageUrl: "https://example.test/raw.jpg",
+    processingStatus: "ready",
+    wardrobeId: "7",
   });
 });

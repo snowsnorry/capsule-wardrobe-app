@@ -205,6 +205,7 @@ function buildWardrobeOnlySourceModeStatus({
       items,
       selectedAnchorWardrobeItemIds,
     ),
+    includeSwimwear: true,
     items,
     profile: {
       audience: selectedAudience || "",

@@ -23,6 +23,7 @@ vi.mock("../i18n", () => ({
       shoes: "Shoes",
       solid: "Solid",
       stripe: "Stripe",
+      swimwear: "Swimwear",
       top: "Top",
       abstract: "Abstract",
       argyle: "Argyle",
@@ -341,6 +342,51 @@ describe("ProfileFiltersSidebar", () => {
     expect(screen.getByText(/Layering: 2/)).toBeInTheDocument();
     expect(screen.queryByText(/midlayer/)).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Apply" })).toBeEnabled();
+  });
+
+  test("warns about missing swimwear for summer wardrobe-only capsules", async () => {
+    fetchMyWardrobeItemsMock.mockResolvedValue({
+      items: [
+        {
+          category: "top",
+          processingStatus: "ready",
+        },
+        {
+          category: "swimwear",
+          processingStatus: "needs_review",
+        },
+      ],
+    });
+
+    renderSidebar({
+      selectedSourceMode: "wardrobe_only",
+      selectedSeasons: ["summer"],
+    });
+
+    expect(await screen.findByText(/Swimwear: 1/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Apply" })).toBeEnabled();
+
+    cleanup();
+    fetchMyWardrobeItemsMock.mockResolvedValue({
+      items: [
+        {
+          category: "top",
+          processingStatus: "ready",
+        },
+        {
+          category: "swimwear",
+          processingStatus: "ready",
+        },
+      ],
+    });
+
+    renderSidebar({
+      selectedSourceMode: "wardrobe_only",
+      selectedSeasons: ["summer"],
+    });
+
+    await screen.findByText(/My Wardrobe has 2 ready items/);
+    expect(screen.queryByText(/Swimwear: 1/)).not.toBeInTheDocument();
   });
 
   test("renders anchor empty state and applies picker selection", async () => {

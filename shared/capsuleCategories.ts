@@ -15,6 +15,9 @@ type CapsuleCategoryShortfall = {
   available: number;
   missing: number;
 };
+type CapsuleCategoryShortfallOptions = {
+  includeSwimwear?: boolean;
+};
 
 const BASE_CAPSULE_CATEGORIES: Record<string, number> = {
   bottom: 3,
@@ -123,16 +126,19 @@ function expandCapsuleCategoriesForAnchors(
 
 function getCapsuleCategoryShortfalls({
   anchorItems = [],
+  includeSwimwear = false,
   items,
   profile,
 }: {
   anchorItems?: readonly CapsuleCategoryItem[];
+  includeSwimwear?: boolean;
   items: readonly CapsuleCategoryItem[];
   profile: CapsuleCategoryProfile;
 }): CapsuleCategoryShortfall[] {
-  const requiredCategories = expandCapsuleCategoriesForAnchors(
-    getCapsuleCategories(profile),
+  const requiredCategories = getShortfallRequiredCategories(
+    profile,
     anchorItems,
+    { includeSwimwear },
   );
   const availableCategories = countReadyWardrobeItemsByCategory(items);
 
@@ -147,6 +153,26 @@ function getCapsuleCategoryShortfalls({
       };
     })
     .filter((item) => item.missing > 0);
+}
+
+function getShortfallRequiredCategories(
+  profile: CapsuleCategoryProfile,
+  anchorItems: readonly CapsuleCategoryItem[],
+  options: CapsuleCategoryShortfallOptions,
+): Record<string, number> {
+  const requiredCategories = expandCapsuleCategoriesForAnchors(
+    getCapsuleCategories(profile),
+    anchorItems,
+  );
+
+  if (
+    options.includeSwimwear &&
+    normalizeSeasons(profile?.season).includes("summer")
+  ) {
+    requiredCategories.swimwear = Math.max(requiredCategories.swimwear || 0, 1);
+  }
+
+  return requiredCategories;
 }
 
 export {

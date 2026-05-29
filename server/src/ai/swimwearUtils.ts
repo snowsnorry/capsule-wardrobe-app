@@ -88,7 +88,7 @@ function getItemValue(
 }
 
 function toWardrobeUiItem(item: SwimwearCandidate) {
-  return {
+  const result = {
     id: getItemValue(item, "id", null),
     url: getItemValue(item, "url"),
     name: getItemValue(item, "name"),
@@ -96,6 +96,28 @@ function toWardrobeUiItem(item: SwimwearCandidate) {
     imageUrl: getItemValue(item, "image_url"),
     audience: getItemValue(item, "audience"),
   };
+
+  addOptionalWardrobeUiField(result, "itemSource", item?.item_source);
+  addOptionalWardrobeUiField(result, "source", item?.source);
+  addOptionalWardrobeUiField(result, "rawImageUrl", item?.raw_image_url);
+  addOptionalWardrobeUiField(
+    result,
+    "processingStatus",
+    item?.processing_status,
+  );
+  addOptionalWardrobeUiField(result, "wardrobeId", item?.wardrobe_id);
+
+  return result;
+}
+
+function addOptionalWardrobeUiField(
+  result: Record<string, unknown>,
+  key: string,
+  value: unknown,
+) {
+  if (value !== null && value !== undefined && value !== "") {
+    result[key] = value;
+  }
 }
 
 export {

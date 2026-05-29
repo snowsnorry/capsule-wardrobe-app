@@ -85,6 +85,35 @@ function selectSwimwearWithoutLlm(candidates: SwimwearCandidate[]) {
   );
 }
 
+function hasSelectedSwimwear(items: SwimwearCandidate[]) {
+  return items.some(
+    (item) =>
+      typeof item?.category === "string" &&
+      item.category.trim().toLowerCase() === "swimwear",
+  );
+}
+
+function getSingleViableFemaleSwimwearOption(
+  candidates: SwimwearCandidate[],
+): SwimwearCandidate[] | null {
+  const swimsuits = candidates.filter(
+    (item) => item?.swimwear_type === "swimsuit",
+  );
+  const tops = candidates.filter(
+    (item) => item?.swimwear_type === "swimwear_top",
+  );
+  const bottoms = candidates.filter(
+    (item) => item?.swimwear_type === "swimwear_bottom",
+  );
+  const viableOptions = swimsuits.length + tops.length * bottoms.length;
+
+  if (viableOptions !== 1) {
+    return null;
+  }
+
+  return swimsuits.length === 1 ? [swimsuits[0]] : [tops[0], bottoms[0]];
+}
+
 function buildEmptySwimwearResult() {
   return {
     items: [],
@@ -109,6 +138,17 @@ function buildSwimwearResult(
     reasoning,
     rawSelectionText,
   };
+}
+
+function getProfileSourceMode(userProfile: UserProfileLike | null) {
+  return userProfile?.sourceMode === "wardrobe_preferred" ||
+    userProfile?.sourceMode === "wardrobe_only"
+    ? userProfile.sourceMode
+    : "catalog_only";
+}
+
+function getProfileEmail(userProfile: UserProfileLike | null) {
+  return typeof userProfile?.email === "string" ? userProfile.email.trim() : "";
 }
 
 function selectFemaleSwimwearWithoutLlm(candidates, llmResolution, logContext) {
@@ -171,11 +211,19 @@ async function generateFemaleSwimwear({
     targetStyle,
     bottomColors,
     embeddingVector,
+    sourceMode: getProfileSourceMode(userProfile),
+    profileEmail: getProfileEmail(userProfile),
     logContext,
   });
 
   if (candidates.length === 0) {
     return buildEmptySwimwearResult();
+  }
+
+  const deterministicSelection =
+    getSingleViableFemaleSwimwearOption(candidates);
+  if (deterministicSelection) {
+    return buildSwimwearResult(deterministicSelection);
   }
 
   if (deps.isNoLlmProfileEnabledImpl(userProfile)) {
@@ -246,6 +294,10 @@ function createGenerateSwimwearAddition(deps = {}) {
       return buildEmptySwimwearResult();
     }
 
+    if (hasSelectedSwimwear(selectedCapsuleItems)) {
+      return buildEmptySwimwearResult();
+    }
+
     const sql = resolvedDeps.getSqlClientImpl();
     const embeddingVector = `[${promptEmbeddings.join(",")}]`;
     const targetStyle = userProfile?.style ?? null;
@@ -266,19 +318,22 @@ function createGenerateSwimwearAddition(deps = {}) {
       targetStyle,
       topColors,
       embeddingVector,
+      sourceMode: getProfileSourceMode(userProfile),
+      profileEmail: getProfileEmail(userProfile),
       logContext,
     });
+    const selectedItems = items.length > 0 ? [items[0]] : [];
     logWardrobeInfo(
       "swimwear-completed",
       {
-        swimwearItemsTotal: items.length,
-        swimwearItemsByCategory: countItemsByKey(items),
+        swimwearItemsTotal: selectedItems.length,
+        swimwearItemsByCategory: countItemsByKey(selectedItems),
       },
       logContext,
     );
 
     return {
-      items: items.map(toWardrobeUiItem),
+      items: selectedItems.map(toWardrobeUiItem),
       reasoning: null,
       rawSelectionText: null,
     };

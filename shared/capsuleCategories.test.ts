@@ -63,6 +63,24 @@ describe("capsuleCategories", () => {
     ]);
   });
 
+  test("can include summer swimwear in wardrobe shortfalls", () => {
+    expect(
+      getCapsuleCategoryShortfalls({
+        includeSwimwear: true,
+        profile: { audience: "any", season: ["summer"] },
+        items: [{ category: "swimwear", processingStatus: "needs_review" }],
+      }).some((item) => item.category === "swimwear" && item.missing === 1),
+    ).toBe(true);
+
+    expect(
+      getCapsuleCategoryShortfalls({
+        includeSwimwear: true,
+        profile: { audience: "any", season: ["summer"] },
+        items: [{ category: "swimwear", processingStatus: "ready" }],
+      }).some((item) => item.category === "swimwear"),
+    ).toBe(false);
+  });
+
   test("expands required categories for selected anchors", () => {
     expect(
       expandCapsuleCategoriesForAnchors(getCapsuleCategories(), [
