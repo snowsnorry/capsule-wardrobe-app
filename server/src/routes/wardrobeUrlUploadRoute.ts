@@ -1,6 +1,7 @@
 import { logError } from "../logger.js";
 import { filterWardrobeItemForDisplay } from "../wardrobeItemDisplay.js";
 import { uploadWardrobeImageThumbnails } from "../wardrobeImageCleanup.js";
+import { ensureWardrobeImagePortraitCanvas } from "../wardrobeImagePortraitCanvas.js";
 import {
   extractOpenGraphImageUrl,
   normalizeWardrobeProductPageUploadUrls,
@@ -62,9 +63,13 @@ async function processDirectWardrobeImageUploadUrl({
   if (!normalizedImage?.buffer) {
     throw new Error("direct_image_normalized_image_missing");
   }
+  const portraitImage = await ensureWardrobeImagePortraitCanvas({
+    imageBuffer: normalizedImage.buffer,
+    mimeType: normalizedImage.mimeType,
+  });
 
   const uploadedImage = await context.uploadWardrobeImageToR2Impl({
-    buffer: normalizedImage.buffer,
+    buffer: portraitImage.buffer,
     email,
   });
   const item = await saveWardrobeProductPageUploadedItem({
@@ -91,7 +96,7 @@ async function processDirectWardrobeImageUploadUrl({
     item: filterWardrobeItemForDisplay(item),
     processUploadedImage: async () => {
       const { thumbnails } = await uploadWardrobeImageThumbnails({
-        imageBuffer: normalizedImage.buffer,
+        imageBuffer: portraitImage.buffer,
         sourceKey: uploadedImage.key,
         sourceUrl: uploadedImage.url,
         uploadWardrobeDerivativeImageToR2Impl:
@@ -105,8 +110,8 @@ async function processDirectWardrobeImageUploadUrl({
     progress,
     res,
     sourceImage: {
-      buffer: normalizedImage.buffer,
-      mimeType: normalizedImage.mimeType,
+      buffer: portraitImage.buffer,
+      mimeType: portraitImage.mimeType,
       originalName: normalizedImage.originalName,
     },
     sourceImageKey: uploadedImage.key,
@@ -175,6 +180,7 @@ async function processWardrobeProductPageUploadUrl({
           productPageUrl: productPage.url,
         }),
       context,
+      cleanupGeneratedImagePortraitCanvas: true,
       email,
       filterItem: filterWardrobeItemForDisplay,
       item: filterWardrobeItemForDisplay(item),

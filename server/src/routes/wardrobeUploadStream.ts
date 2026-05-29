@@ -96,6 +96,7 @@ async function processUploadedWardrobeItemMetadata({
   email,
   filterItem,
   item,
+  cleanupGeneratedImagePortraitCanvas = false,
   processUploadedImage = null,
   sourceImage = null,
   sourceImageKey = null,
@@ -137,6 +138,9 @@ async function processUploadedWardrobeItemMetadata({
           })
         : await context.cleanupUploadedWardrobeItemImageImpl({
             email,
+            ...(cleanupGeneratedImagePortraitCanvas
+              ? { ensurePortraitCanvas: true }
+              : {}),
             imageUrl,
             sourceBuffer: sourceImage?.buffer,
             sourceFilename: sourceImage?.originalName,

@@ -12,6 +12,7 @@ import {
   buildWardrobeDerivativeR2ImageKey,
   uploadWardrobeDerivativeImageToR2,
 } from "./r2Storage.js";
+import { ensureWardrobeImagePortraitCanvas } from "./wardrobeImagePortraitCanvas.js";
 
 const CLEANUP_PROMPT_TEMPLATE = loadPromptTemplate(
   new URL("./templates/prompt_single_item_image_cleanup.yaml", import.meta.url),
@@ -31,6 +32,7 @@ type GeneratedImageResult = {
 
 type UploadedWardrobeImageCleanupInput = {
   email: string;
+  ensurePortraitCanvas?: boolean;
   imageUrl: string;
   sourceKey?: string | null;
   sourceBuffer: Buffer | Uint8Array;
@@ -148,6 +150,7 @@ async function uploadWardrobeImageThumbnails({
 
 async function cleanupUploadedWardrobeItemImage({
   email,
+  ensurePortraitCanvas = false,
   imageUrl,
   sourceKey = null,
   sourceBuffer,
@@ -188,19 +191,25 @@ async function cleanupUploadedWardrobeItemImage({
     },
   );
   const generated = getGeneratedImageBuffer(generationResult);
+  const cleanImageAsset = ensurePortraitCanvas
+    ? await ensureWardrobeImagePortraitCanvas({
+        imageBuffer: generated.buffer,
+        mimeType: generated.mimeType,
+      })
+    : generated;
   const cleanKey = buildWardrobeDerivativeR2ImageKey({
     sourceKey,
     sourceUrl: imageUrl,
     suffix: "_clean",
-    mimeType: generated.mimeType,
+    mimeType: cleanImageAsset.mimeType,
   });
   const cleanImage = await uploadWardrobeDerivativeImageToR2Impl({
-    buffer: generated.buffer,
+    buffer: cleanImageAsset.buffer,
     key: cleanKey,
-    mimeType: generated.mimeType,
+    mimeType: cleanImageAsset.mimeType,
   });
   const { thumbnails } = await uploadWardrobeImageThumbnails({
-    imageBuffer: generated.buffer,
+    imageBuffer: cleanImageAsset.buffer,
     sourceKey: cleanImage.key,
     uploadWardrobeDerivativeImageToR2Impl,
     buildThumbnailBuffersImpl,

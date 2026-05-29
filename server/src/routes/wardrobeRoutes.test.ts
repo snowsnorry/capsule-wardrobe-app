@@ -1,4 +1,5 @@
 import { test, expect, vi } from "vitest";
+import sharp from "sharp";
 import {
   AUTH_COOKIE,
   CSRF_TOKEN,
@@ -12,6 +13,19 @@ const tinyPng = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMB/atcw3kAAAAASUVORK5CYII=",
   "base64",
 );
+
+async function buildRouteTestImageBuffer(width: number, height: number) {
+  return sharp({
+    create: {
+      width,
+      height,
+      channels: 4,
+      background: { r: 230, g: 220, b: 210, alpha: 1 },
+    },
+  })
+    .webp()
+    .toBuffer();
+}
 
 async function requestMultipart(baseUrl, pathname, formData) {
   const response = await fetch(`${baseUrl}${pathname}`, {
@@ -1038,6 +1052,7 @@ test("wardrobe URL upload route imports product pages with og images", async (t)
           type: "cleanup",
           payload: {
             email: payload.email,
+            ensurePortraitCanvas: payload.ensurePortraitCanvas,
             imageUrl: payload.imageUrl,
             sourceBuffer: payload.sourceBuffer.toString("utf8"),
             sourceFilename: payload.sourceFilename,
@@ -1149,6 +1164,7 @@ test("wardrobe URL upload route imports product pages with og images", async (t)
       type: "cleanup",
       payload: {
         email: "person@example.com",
+        ensurePortraitCanvas: true,
         imageUrl: "https://shop.example.com/images/linen.jpg",
         sourceBuffer: "downloaded-product-image",
         sourceFilename: "linen.jpg",
@@ -1177,6 +1193,13 @@ test("wardrobe URL upload route imports product pages with og images", async (t)
 
 test("wardrobe URL upload route imports direct image URLs without cleanup generation", async (t) => {
   const calls: unknown[] = [];
+  const normalizedLandscapeImage = await buildRouteTestImageBuffer(900, 500);
+  const uploadOriginalMetadata: Array<{ height?: number; width?: number }> = [];
+  const thumbnailMetadata: Array<{
+    height?: number;
+    key: string;
+    width?: number;
+  }> = [];
   const metadata = {
     name: "Linen shirt",
     description: null,
@@ -1228,16 +1251,21 @@ test("wardrobe URL upload route imports direct image URLs without cleanup genera
         });
         return [
           {
-            buffer: tinyPng,
+            buffer: normalizedLandscapeImage,
             mimeType: "image/webp",
             originalName: "linen-shirt.jpg",
-            width: 800,
-            height: 1000,
-            size: 22,
+            width: 900,
+            height: 500,
+            size: normalizedLandscapeImage.length,
           },
         ];
       },
       uploadWardrobeImageToR2Impl: async (payload) => {
+        const imageMetadata = await sharp(payload.buffer).metadata();
+        uploadOriginalMetadata.push({
+          height: imageMetadata.height,
+          width: imageMetadata.width,
+        });
         calls.push({
           type: "uploadOriginal",
           email: payload.email,
@@ -1276,6 +1304,12 @@ test("wardrobe URL upload route imports direct image URLs without cleanup genera
       analyzeWardrobeProductPageImageImpl: analyzeProductPage,
       cleanupUploadedWardrobeItemImageImpl: cleanup,
       uploadWardrobeDerivativeImageToR2Impl: async (payload) => {
+        const imageMetadata = await sharp(payload.buffer).metadata();
+        thumbnailMetadata.push({
+          height: imageMetadata.height,
+          key: payload.key,
+          width: imageMetadata.width,
+        });
         calls.push({
           type: "uploadThumbnail",
           key: payload.key,
@@ -1344,6 +1378,24 @@ test("wardrobe URL upload route imports direct image URLs without cleanup genera
   });
   expect(analyzeProductPage).not.toHaveBeenCalled();
   expect(cleanup).not.toHaveBeenCalled();
+  expect(uploadOriginalMetadata).toEqual([{ height: 1600, width: 1200 }]);
+  expect(thumbnailMetadata).toEqual([
+    {
+      height: 427,
+      key: "wardrobe/profile/direct-image_320.webp",
+      width: 320,
+    },
+    {
+      height: 640,
+      key: "wardrobe/profile/direct-image_480.webp",
+      width: 480,
+    },
+    {
+      height: 853,
+      key: "wardrobe/profile/direct-image_640.webp",
+      width: 640,
+    },
+  ]);
   expect(calls).toEqual([
     {
       type: "fetchUrl",
@@ -1362,7 +1414,7 @@ test("wardrobe URL upload route imports direct image URLs without cleanup genera
     {
       type: "uploadOriginal",
       email: "person@example.com",
-      size: tinyPng.length,
+      size: expect.any(Number),
     },
     {
       type: "saveUploaded",
