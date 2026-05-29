@@ -268,13 +268,14 @@ const translations: Record<string, string> = {
   "myWardrobe.uploadDialog.tooManyFiles": "Upload up to 5 files.",
   "myWardrobe.uploadDialog.invalidType": "Use JPEG, PNG, or WebP images.",
   "myWardrobe.uploadDialog.fileTooLarge": "Each image must be 10 MB or less.",
-  "myWardrobe.urlUploadDialog.title": "Upload product URLs",
+  "myWardrobe.urlUploadDialog.title": "Upload product image URLs",
   "myWardrobe.urlUploadDialog.body":
-    "Add product page links from online stores. Each accepted product becomes an uploaded wardrobe item.",
-  "myWardrobe.urlUploadDialog.fieldLabel": "Product URL {index}",
-  "myWardrobe.urlUploadDialog.placeholder": "https://shop.example.com/product",
+    "Add links to commercial product images where the item is clearly visible and laid flat. Each accepted image becomes an uploaded wardrobe item.",
+  "myWardrobe.urlUploadDialog.fieldLabel": "Product image URL {index}",
+  "myWardrobe.urlUploadDialog.placeholder":
+    "https://example.com/product-image.jpg",
   "myWardrobe.urlUploadDialog.helperText":
-    "Use a product page URL starting with http:// or https://.",
+    "Use a product image URL starting with http:// or https://.",
   "myWardrobe.urlUploadDialog.invalidUrl":
     "Enter a URL that starts with http:// or https://.",
   "myWardrobe.urlUploadDialog.upload": "Upload URLs",
@@ -458,13 +459,15 @@ describe("MyWardrobeScreen", () => {
     await user.click(screen.getByRole("menuitem", { name: "Upload URL" }));
 
     const dialog = screen.getByRole("dialog", {
-      name: "Upload product URLs",
+      name: "Upload product image URLs",
     });
     expect(dialog).toHaveClass("MuiDialog-paperFullScreen");
-    expect(within(dialog).getByLabelText("Product URL 1")).toBeInTheDocument();
+    expect(
+      within(dialog).getByLabelText("Product image URL 1"),
+    ).toBeInTheDocument();
     expect(
       within(dialog).getByText(
-        "Add product page links from online stores. Each accepted product becomes an uploaded wardrobe item.",
+        "Add links to commercial product images where the item is clearly visible and laid flat. Each accepted image becomes an uploaded wardrobe item.",
       ),
     ).toBeInTheDocument();
   });
@@ -637,14 +640,14 @@ describe("MyWardrobeScreen", () => {
     await user.click(screen.getByRole("menuitem", { name: "Upload URL" }));
 
     const dialog = screen.getByRole("dialog", {
-      name: "Upload product URLs",
+      name: "Upload product image URLs",
     });
     const uploadButton = within(dialog).getByRole("button", {
       name: "Upload URLs",
     });
     expect(uploadButton).toBeDisabled();
 
-    const firstUrlInput = within(dialog).getByLabelText("Product URL 1");
+    const firstUrlInput = within(dialog).getByLabelText("Product image URL 1");
     await user.type(firstUrlInput, "example.com/product");
     expect(
       within(dialog).getByText(
@@ -655,27 +658,29 @@ describe("MyWardrobeScreen", () => {
 
     await user.clear(firstUrlInput);
     await user.type(firstUrlInput, "https://shop.example.com/product-1");
-    expect(within(dialog).getByLabelText("Product URL 2")).toBeInTheDocument();
+    expect(
+      within(dialog).getByLabelText("Product image URL 2"),
+    ).toBeInTheDocument();
     expect(uploadButton).toBeEnabled();
 
     await user.type(
-      within(dialog).getByLabelText("Product URL 2"),
+      within(dialog).getByLabelText("Product image URL 2"),
       "http://shop.example.com/product-2",
     );
     await user.type(
-      within(dialog).getByLabelText("Product URL 3"),
+      within(dialog).getByLabelText("Product image URL 3"),
       "https://shop.example.com/product-3",
     );
     await user.type(
-      within(dialog).getByLabelText("Product URL 4"),
+      within(dialog).getByLabelText("Product image URL 4"),
       "https://shop.example.com/product-4",
     );
     await user.type(
-      within(dialog).getByLabelText("Product URL 5"),
+      within(dialog).getByLabelText("Product image URL 5"),
       "https://shop.example.com/product-5",
     );
     expect(
-      within(dialog).queryByLabelText("Product URL 6"),
+      within(dialog).queryByLabelText("Product image URL 6"),
     ).not.toBeInTheDocument();
 
     await user.click(uploadButton);
@@ -691,7 +696,9 @@ describe("MyWardrobeScreen", () => {
       expect.objectContaining({ onProgress: expect.any(Function) }),
     );
     await waitFor(() => {
-      expect(screen.queryByText("Upload product URLs")).not.toBeInTheDocument();
+      expect(
+        screen.queryByText("Upload product image URLs"),
+      ).not.toBeInTheDocument();
     });
     await waitFor(() => {
       expect(api.fetchMyWardrobeItems).toHaveBeenLastCalledWith({

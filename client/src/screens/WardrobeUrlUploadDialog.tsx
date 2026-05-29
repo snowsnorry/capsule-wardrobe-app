@@ -143,7 +143,7 @@ function WardrobeUrlUploadDialog({
                 {t("myWardrobe.urlUploadDialog.body")}
               </Typography>
             ) : null}
-            <Stack spacing={1.5}>
+            <Stack spacing={1.5} sx={{ pt: 1 }}>
               {urls.map((value, index) => {
                 const isFilled = Boolean(value.trim());
                 const hasError = isFilled && !isValidProductUrl(value);
