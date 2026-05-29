@@ -14,6 +14,21 @@ const AUDIENCE_FILTERS_BY_PROFILE = {
   any: ["man", "woman", "all"],
 };
 
+function getRegenerationSourceMode(userProfile) {
+  if (
+    userProfile?.sourceMode === "wardrobe_preferred" ||
+    userProfile?.sourceMode === "wardrobe_only"
+  ) {
+    return userProfile.sourceMode;
+  }
+
+  return "catalog_only";
+}
+
+function getProfileEmail(userProfile) {
+  return typeof userProfile?.email === "string" ? userProfile.email.trim() : "";
+}
+
 function getProductUrls(items) {
   return Array.isArray(items)
     ? items.map((item) => String(item?.url || "").trim()).filter(Boolean)
@@ -142,7 +157,9 @@ export async function buildRegenerationSqlParams(userProfile, inputs, deps) {
     noiseFactor: 0.05,
     occasions: getProfileList(userProfile?.occasions),
     pattern: getRegenerationPattern(userProfile),
+    profileEmail: getProfileEmail(userProfile),
     season: getProfileList(userProfile?.season),
+    sourceMode: getRegenerationSourceMode(userProfile),
     style: userProfile?.style ?? null,
   };
 }

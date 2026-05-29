@@ -29,6 +29,10 @@ const REGENERATE_SELECTED_SYSTEM_PROMPT_TEMPLATE = getPromptTemplateContent(
   REGENERATE_SELECTED_PROMPT_TEMPLATE,
   "system",
 );
+const WARDROBE_PREFERENCE_RULES =
+  "Wardrobe items are items the user already owns. Prefer wardrobe items over catalog items when they are similarly suitable replacement candidates. Preserve capsule quality: category, season, formality, color, style, and outfit compatibility remain the deciding constraints.";
+const WARDROBE_ONLY_RULES =
+  "Wardrobe items are items the user already owns. Use only the provided My Wardrobe candidates. Catalog substitutions are not available in this mode. Preserve capsule quality: category, season, formality, color, style, and outfit compatibility remain the deciding constraints.";
 
 export type SqlWardrobeRow = WardrobeUiItemLike & {
   embedding?: unknown;
@@ -186,6 +190,11 @@ function getPromptItemValue(item, key, fallback = "") {
 function simplifyPromptItem(item) {
   return {
     id: getPromptItemValue(item, "id", null),
+    item_source: getPromptItemValue(
+      item,
+      "item_source",
+      getPromptItemValue(item, "itemSource", "catalog"),
+    ),
     name: getPromptItemValue(item, "name"),
     type: getPromptItemValue(item, "category"),
     color: getPromptItemColors(item).join(", "),
@@ -291,6 +300,16 @@ function formatPromptPattern(value) {
   return pattern.toLowerCase() === "solid" ? "solid (no print)" : pattern;
 }
 
+function getWardrobePreferenceRules(userProfile: UserProfileLike | null) {
+  if (userProfile?.sourceMode === "wardrobe_only") {
+    return WARDROBE_ONLY_RULES;
+  }
+
+  return userProfile?.sourceMode === "wardrobe_preferred"
+    ? WARDROBE_PREFERENCE_RULES
+    : "";
+}
+
 function buildRegenerateSelectedReplacements(
   userProfile: UserProfileLike | null,
   candidateItems: WardrobeUiItemLike[],
@@ -315,6 +334,7 @@ function buildRegenerateSelectedReplacements(
     additional_info_block: additionalText
       ? `Important Additional Information: ${additionalText}`
       : "",
+    wardrobe_preference_rules: getWardrobePreferenceRules(userProfile),
     current_capsule_items: JSON.stringify(
       simplifyPromptItems(currentCapsuleItems),
       null,

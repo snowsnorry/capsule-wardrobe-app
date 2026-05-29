@@ -49,6 +49,62 @@ test("buildRegenerateSelectedPrompt omits additional information line when text 
   expect(prompt).not.toMatch(/Important Additional Information:/);
 });
 
+test("buildRegenerateSelectedPrompt includes wardrobe source metadata and source-mode rules", () => {
+  const snakeCaseWardrobeCandidates = [
+    {
+      id: "W7",
+      item_source: "wardrobe",
+      name: "Owned Top",
+      category: "top",
+    },
+  ] as unknown as Parameters<typeof buildRegenerateSelectedPrompt>[1];
+  const wardrobePreferredPrompt = buildRegenerateSelectedPrompt(
+    {
+      audience: "woman",
+      sourceMode: "wardrobe_preferred",
+    },
+    snakeCaseWardrobeCandidates,
+    [],
+    { top: 1 },
+  );
+  const wardrobeOnlyPrompt = buildRegenerateSelectedPrompt(
+    {
+      audience: "woman",
+      sourceMode: "wardrobe_only",
+    },
+    [
+      {
+        id: "W8",
+        itemSource: "wardrobe",
+        name: "Owned Shorts",
+        category: "bottom",
+      },
+    ],
+    [],
+    { bottom: 1 },
+  );
+  const catalogPrompt = buildRegenerateSelectedPrompt(
+    { audience: "woman", sourceMode: "catalog_only" },
+    [{ id: "catalog-1", name: "Catalog Top", category: "top" }],
+    [],
+    { top: 1 },
+  );
+
+  expect(wardrobePreferredPrompt).toMatch(/"item_source": "wardrobe"/);
+  expect(wardrobePreferredPrompt).toMatch(
+    /Prefer wardrobe items over catalog items when they are similarly suitable/,
+  );
+  expect(wardrobeOnlyPrompt).toMatch(/"item_source": "wardrobe"/);
+  expect(wardrobeOnlyPrompt).toMatch(
+    /Use only the provided My Wardrobe candidates/,
+  );
+  expect(wardrobeOnlyPrompt).toMatch(/Catalog substitutions are not available/);
+  expect(catalogPrompt).toMatch(/"item_source": "catalog"/);
+  expect(catalogPrompt).not.toMatch(
+    /Wardrobe items are items the user already owns/,
+  );
+});
+
 test("buildRegenerateSelectedSystemPrompt uses partial regeneration template and shared blocks", () => {
   const prompt = buildRegenerateSelectedSystemPrompt({
     audience: "woman",
@@ -154,6 +210,7 @@ test("prompt formatting helpers simplify values and generated schema", () => {
     simplifyPromptItems([
       {
         id: "top-1",
+        itemSource: "wardrobe",
         name: "Top",
         category: "top",
         colorBase: ["blue"],
@@ -178,6 +235,7 @@ test("prompt formatting helpers simplify values and generated schema", () => {
   ).toEqual([
     {
       id: "top-1",
+      item_source: "wardrobe",
       name: "Top",
       type: "top",
       color: "blue, stripe, matte, neutral",
@@ -189,6 +247,7 @@ test("prompt formatting helpers simplify values and generated schema", () => {
     },
     {
       id: "bottom-1",
+      item_source: "catalog",
       name: "Bottom",
       type: "bottom",
       color: "black",

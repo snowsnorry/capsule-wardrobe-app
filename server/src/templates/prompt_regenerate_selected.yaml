@@ -112,6 +112,7 @@ messages:
       AVAILABLE CANDIDATES:
       {{items}}
       (Note: You are only provided with candidates for the categories that need replacement. Each candidate has "formality_level" and "style" as arrays of strings. Assume all candidates already match the requested season and occasions.)
+      {{wardrobe_preference_rules}}
 
       INSTRUCTIONS & CONSTRAINTS:
       1. Blueprint: You MUST select exactly {{num_items}} new items to fulfill the {{category_list}}.

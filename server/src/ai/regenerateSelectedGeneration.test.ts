@@ -27,6 +27,24 @@ const candidates = [
     embedding: [1, 0],
   },
 ];
+const swimwearSelectedProducts = [
+  {
+    id: "swim-old",
+    url: "https://example.com/swim-old",
+    name: "Old Swimsuit",
+    category: "swimwear",
+  },
+];
+const swimwearCandidates = [
+  {
+    id: "swim-new",
+    url: "https://example.com/swim-new",
+    name: "New Swimsuit",
+    category: "swimwear",
+    image_url: "https://example.com/swim-new.jpg",
+    embedding: [1, 0],
+  },
+];
 
 function createProfile(overrides = {}) {
   return {
@@ -112,6 +130,42 @@ test("regenerateCapsuleWardrobe builds a no-LLM replacement from SQL candidates"
     "top-new",
   ]);
   expect(result.rawSelectionText).toBe(null);
+});
+
+test("regenerateCapsuleWardrobe forwards source mode and profile email to SQL candidate lookup", async () => {
+  const queryCalls = [];
+  const regenerateCapsuleWardrobe = createRegenerateCapsuleWardrobe(
+    createBaseDeps({
+      isNoLlmProfileEnabledImpl: () => true,
+      queryRegenerationCandidateItemsImpl: async (sql, params) => {
+        queryCalls.push({ sql, params });
+        return swimwearCandidates;
+      },
+      resolveLlmProviderImpl: () => ({
+        requestedLlm: "none",
+        provider: "none",
+        model: null,
+      }),
+    }),
+  );
+
+  await regenerateCapsuleWardrobe(
+    createProfile({
+      email: " person@example.com ",
+      llm: "none",
+      items: { items: [...currentItems, ...swimwearSelectedProducts] },
+      sourceMode: "wardrobe_only",
+    }),
+    swimwearSelectedProducts,
+  );
+
+  expect(queryCalls).toHaveLength(1);
+  expect(queryCalls[0].sql).toBe("sql-client");
+  expect(queryCalls[0].params).toMatchObject({
+    categories: ["swimwear"],
+    profileEmail: "person@example.com",
+    sourceMode: "wardrobe_only",
+  });
 });
 
 test("regenerateCapsuleWardrobe uses current capsule and candidate images for LLM selection", async () => {
