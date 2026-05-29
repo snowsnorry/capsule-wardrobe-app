@@ -6,7 +6,9 @@ import {
   PRODUCT_PAGE_IMAGE_MAX_BYTES,
   downloadWardrobeProductPageImage,
   fetchProductPageHtmlWithImpers,
+  type ProductPageFetchResult,
   type ProductPageImageDownloadResult,
+  type ProductPageUrlFetchResult,
 } from "./wardrobeProductPageFetch.js";
 
 const WARDROBE_PRODUCT_PAGE_MAX_URLS = 5;
@@ -118,4 +120,9 @@ export {
   fetchProductPageHtmlWithImpers,
   normalizeWardrobeProductPageUploadUrls,
   parseHtmlTagAttributes,
+};
+export type {
+  ProductPageFetchResult,
+  ProductPageImageDownloadResult,
+  ProductPageUrlFetchResult,
 };
