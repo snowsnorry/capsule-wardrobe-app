@@ -340,7 +340,3 @@ export {
   processWardrobeUploadUrlsInChild,
   runWardrobeUploadProcessingChild,
 };
-export type {
-  ProcessWardrobeUploadFilesInChildInput,
-  ProcessWardrobeUploadUrlsInChildInput,
-};

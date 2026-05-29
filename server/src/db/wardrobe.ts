@@ -2,7 +2,6 @@ import { getFirstRow, getResultRows, getSqlClient } from "./core.js";
 import { normalizeWardrobeSource, toWardrobeUiItem } from "./wardrobeMapper.js";
 import type { UserWardrobeRow, UserWardrobeSource } from "./wardrobeTypes.js";
 
-export { toWardrobeUiItem } from "./wardrobeMapper.js";
 export {
   deleteWardrobeItemFromCatalogByUrl,
   saveWardrobeItemFromCatalogByUrl,

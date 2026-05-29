@@ -6,6 +6,9 @@
       ]
     },
     "server": {
+      "entry": [
+        "src/wardrobeUploadProcessing.child.ts"
+      ],
       "ignore": [
         "src/express.d.ts"
       ]

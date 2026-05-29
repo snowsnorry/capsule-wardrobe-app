@@ -120,4 +120,4 @@ export {
   getR2Config,
   setR2ClientFactoryForTests,
 };
-export type { R2ClientFactory, R2Config, S3ClientLike };
+export type { R2Config, S3ClientLike };

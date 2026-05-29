@@ -168,4 +168,3 @@ export {
   normalizeImageBuffer,
   normalizeUploadFile,
 };
-export type { NormalizedImage };

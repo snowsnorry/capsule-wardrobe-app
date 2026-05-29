@@ -181,4 +181,3 @@ export {
   getCapsuleCategoryShortfalls,
   getReadyWardrobeCapsuleItems,
 };
-export type { CapsuleCategoryShortfall };

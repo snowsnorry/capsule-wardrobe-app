@@ -1,11 +1,6 @@
 import { getPromptEmbeddings } from "./ai/voyageai.js";
 
-export type SearchTextMode =
-  | "none"
-  | "urlPrefix"
-  | "lexical"
-  | "hybrid"
-  | "semantic";
+type SearchTextMode = "none" | "urlPrefix" | "lexical" | "hybrid" | "semantic";
 
 type SearchTextRouting = {
   mode: SearchTextMode;

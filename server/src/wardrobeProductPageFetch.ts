@@ -340,8 +340,4 @@ export {
   downloadWardrobeProductPageImage,
   fetchProductPageHtmlWithImpers,
 };
-export type {
-  ProductPageFetchResult,
-  ProductPageImageDownloadResult,
-  ProductPageUrlFetchResult,
-};
+export type { ProductPageImageDownloadResult };

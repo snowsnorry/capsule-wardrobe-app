@@ -48,4 +48,3 @@ export {
   resetWardrobeUploadProcessingMetrics,
   setWardrobeUploadMetric,
 };
-export type { WardrobeUploadProcessingMetrics };

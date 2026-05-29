@@ -289,7 +289,6 @@ async function processPreparedUploadedWardrobeItemMetadata({
 export {
   advanceWardrobeUploadProgress,
   createWardrobeUploadAbortState,
-  isWardrobeUploadResponseWritable,
   markSavedWardrobeUploadSourcesFailed,
   openWardrobeUploadEventStream,
   processPreparedUploadedWardrobeItemMetadata,
