@@ -1,45 +1,17 @@
 import { createHash } from "node:crypto";
-import { fileTypeFromBuffer } from "file-type";
-import type { RequestOptions, Response as ImpersResponse } from "impers";
 import { getSafeServerFetchUrl } from "./serverUrlSecurity.js";
-import { downloadProductImageAssets } from "./ai/promptImageDownloads.js";
 import { buildWardrobeR2ImageKey } from "./r2Storage.js";
-import { isAllowedWardrobeUploadMimeType } from "./wardrobeUploadImagesCore.js";
+import {
+  PRODUCT_PAGE_HTML_MAX_BYTES,
+  PRODUCT_PAGE_IMAGE_MAX_BYTES,
+  downloadWardrobeProductPageImage,
+  fetchProductPageHtmlWithImpers,
+  type ProductPageFetchResult,
+  type ProductPageImageDownloadResult,
+  type ProductPageUrlFetchResult,
+} from "./wardrobeProductPageFetch.js";
 
 const WARDROBE_PRODUCT_PAGE_MAX_URLS = 5;
-const PRODUCT_PAGE_HTML_MAX_CHARS = 200_000;
-const PRODUCT_PAGE_FETCH_TIMEOUT_SECONDS = 30;
-const PRODUCT_PAGE_IMAGE_ID = "product-page-image";
-
-type ImpersGet = (
-  url: string,
-  options?: RequestOptions,
-) => Promise<ImpersResponse>;
-
-type ProductPageFetchResult = {
-  html: string;
-  url: string;
-};
-
-type ProductPageImageDownloadResult = {
-  buffer: Buffer;
-  imageUrl: string;
-  mimeType: string;
-  originalName: string;
-};
-
-type ProductPageUrlFetchResult =
-  | ProductPageFetchResult
-  | {
-      type: "image";
-      image: ProductPageImageDownloadResult;
-      url: string;
-    };
-
-async function defaultImpersGet(url: string, options?: RequestOptions) {
-  const impers = await import("impers");
-  return impers.get(url, options);
-}
 
 function normalizeWardrobeProductPageUploadUrls(
   value: unknown,
@@ -126,175 +98,6 @@ function extractOpenGraphImageUrl(html: string, baseUrl: string): string {
   return "";
 }
 
-function getImpersContentType(response: ImpersResponse): string {
-  const responseLike = response as ImpersResponse & {
-    contentType?: string | null;
-    headers?: { get?: (name: string) => unknown };
-  };
-  return String(
-    responseLike.contentType ||
-      responseLike.headers?.get?.("content-type") ||
-      "",
-  ).toLowerCase();
-}
-
-function getContentTypeMime(contentType: string): string {
-  return String(contentType || "")
-    .split(";")[0]
-    .trim()
-    .toLowerCase();
-}
-
-function isProductPageHtmlContentType(contentType: string): boolean {
-  const mimeType = getContentTypeMime(contentType);
-  return (
-    !mimeType ||
-    mimeType === "text/html" ||
-    mimeType === "application/xhtml+xml" ||
-    mimeType === "text/plain"
-  );
-}
-
-function isDirectWardrobeImageContentType(contentType: string): boolean {
-  return isAllowedWardrobeUploadMimeType(getContentTypeMime(contentType));
-}
-
-function isBufferLike(value: unknown): value is Buffer | Uint8Array {
-  return Buffer.isBuffer(value) || value instanceof Uint8Array;
-}
-
-async function getImpersContentBuffer(response: ImpersResponse) {
-  const responseLike = response as ImpersResponse & {
-    aContent?: () => Promise<Buffer | Uint8Array>;
-    content?: Buffer | Uint8Array;
-    text?: string;
-  };
-
-  try {
-    const content = responseLike.content;
-    if (isBufferLike(content)) {
-      return Buffer.from(content);
-    }
-  } catch {
-    // Fall through to async content or text fallback.
-  }
-
-  if (typeof responseLike.aContent === "function") {
-    const content = await responseLike.aContent();
-    if (isBufferLike(content)) {
-      return Buffer.from(content);
-    }
-  }
-
-  return Buffer.from(String(responseLike.text || ""));
-}
-
-function assertProductPageResponseOk(response: ImpersResponse) {
-  if (!response.ok) {
-    throw new Error(`product_page_fetch_failed_${response.status}`);
-  }
-}
-
-function assertProductPageHtmlContentType(response: ImpersResponse) {
-  if (!isProductPageHtmlContentType(getImpersContentType(response))) {
-    throw new Error("product_page_not_html");
-  }
-}
-
-function truncateProductPageHtml(html: string): string {
-  return String(html || "").slice(0, PRODUCT_PAGE_HTML_MAX_CHARS);
-}
-
-async function fetchProductPageHtmlWithImpers({
-  getImpl = defaultImpersGet,
-  url,
-}: {
-  getImpl?: ImpersGet;
-  url: string;
-}): Promise<ProductPageUrlFetchResult> {
-  const safeUrl = getSafeServerFetchUrl(url);
-  if (!safeUrl) {
-    throw new Error("invalid_product_page_url");
-  }
-
-  const response = await getImpl(safeUrl, {
-    allowRedirects: true,
-    impersonate: "chrome",
-    maxRedirects: 5,
-    timeout: PRODUCT_PAGE_FETCH_TIMEOUT_SECONDS,
-  });
-  assertProductPageResponseOk(response);
-
-  const finalUrl = getSafeServerFetchUrl(response.url) || safeUrl;
-  const contentType = getImpersContentType(response);
-  if (isDirectWardrobeImageContentType(contentType)) {
-    const buffer = await getImpersContentBuffer(response);
-    const detectedType = await fileTypeFromBuffer(buffer);
-    if (!isAllowedWardrobeUploadMimeType(detectedType?.mime)) {
-      throw new Error("product_page_image_invalid");
-    }
-
-    return {
-      type: "image",
-      image: {
-        buffer,
-        imageUrl: finalUrl,
-        mimeType: detectedType.mime,
-        originalName: getImageOriginalName(finalUrl),
-      },
-      url: finalUrl,
-    };
-  }
-
-  assertProductPageHtmlContentType(response);
-  const html = truncateProductPageHtml(response.text);
-  if (!html.trim()) {
-    throw new Error("product_page_empty_html");
-  }
-
-  return {
-    html,
-    url: finalUrl,
-  };
-}
-
-function getImageOriginalName(imageUrl: string): string {
-  try {
-    const filename = new URL(imageUrl).pathname
-      .split("/")
-      .filter(Boolean)
-      .pop();
-    return filename || "product-page-image.jpg";
-  } catch {
-    return "product-page-image.jpg";
-  }
-}
-
-async function downloadWardrobeProductPageImage({
-  imageUrl,
-}: {
-  imageUrl: string;
-}): Promise<ProductPageImageDownloadResult> {
-  const assets = await downloadProductImageAssets([
-    {
-      category: "uploaded",
-      id: PRODUCT_PAGE_IMAGE_ID,
-      imageUrl,
-    },
-  ]);
-  const asset = assets[PRODUCT_PAGE_IMAGE_ID];
-  if (!asset?.buffer) {
-    throw new Error("product_page_image_download_failed");
-  }
-
-  return {
-    buffer: Buffer.from(asset.buffer),
-    imageUrl,
-    mimeType: String(asset.mimeType || "image/jpeg"),
-    originalName: getImageOriginalName(imageUrl),
-  };
-}
-
 function buildRemoteWardrobeImageSourceKey({
   email,
   image,
@@ -310,6 +113,8 @@ function buildRemoteWardrobeImageSourceKey({
 
 export {
   WARDROBE_PRODUCT_PAGE_MAX_URLS,
+  PRODUCT_PAGE_HTML_MAX_BYTES,
+  PRODUCT_PAGE_IMAGE_MAX_BYTES,
   buildRemoteWardrobeImageSourceKey,
   downloadWardrobeProductPageImage,
   extractOpenGraphImageUrl,

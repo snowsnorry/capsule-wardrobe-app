@@ -116,7 +116,7 @@ function getUploadedIndexFromImageUrl(imageUrl: unknown) {
   return Number(match?.[1]) || 1;
 }
 
-function createE2eWardrobeDependencies(memory: E2eWardrobeMemory) {
+function createE2eAnalysisDependencies() {
   return {
     analyzeWardrobeImageUrlImpl: async (payload) => ({
       hasMetadata: true,
@@ -132,16 +132,13 @@ function createE2eWardrobeDependencies(memory: E2eWardrobeMemory) {
       ),
       rawResponse: "e2e-uploaded-wardrobe-product-page-metadata",
     }),
+  };
+}
+
+function createE2eProductPageDependencies() {
+  return {
     buildRemoteWardrobeImageSourceKeyImpl: () =>
       "wardrobe/e2e/product-page-source.webp",
-    cleanupUploadedWardrobeItemImageImpl: async (payload) => ({
-      cleanImage: {
-        key: `${payload?.sourceKey || "uploaded-e2e"}.clean`,
-        url: String(payload?.imageUrl || ""),
-        digest: "e2e-clean-digest",
-      },
-      thumbnails: [],
-    }),
     downloadWardrobeProductPageImageImpl: async (payload) => ({
       buffer: Buffer.from("e2e-product-page-image"),
       imageUrl: String(payload?.imageUrl || ""),
@@ -152,7 +149,11 @@ function createE2eWardrobeDependencies(memory: E2eWardrobeMemory) {
       html: '<html><head><meta property="og:image" content="https://images.example.com/uploaded-e2e-1.jpg"></head></html>',
       url: String(payload?.url || "https://shop.example.com/product"),
     }),
-    listWardrobeItemsImpl: async (payload) => memory.listItems(payload?.source),
+  };
+}
+
+function createE2eUploadProcessingDependencies(memory: E2eWardrobeMemory) {
+  return {
     normalizeWardrobeUploadImagesInChildImpl: async (images) =>
       images.map((image) => ({
         ...image,
@@ -160,6 +161,78 @@ function createE2eWardrobeDependencies(memory: E2eWardrobeMemory) {
         height: 420,
         size: image.buffer.length,
       })),
+    processWardrobeUploadFilesInChildImpl: async (payload) =>
+      payload.files.map((_file, inputIndex) =>
+        buildE2eFileProcessingResult(memory, inputIndex),
+      ),
+    processWardrobeUploadUrlsInChildImpl: async (payload) =>
+      payload.urls.map((url, inputIndex) =>
+        buildE2eUrlProcessingResult(url, inputIndex),
+      ),
+  };
+}
+
+function buildE2eFileProcessingResult(
+  memory: E2eWardrobeMemory,
+  inputIndex: number,
+) {
+  const uploaded = memory.nextUploadedImage();
+  return {
+    analysis: {
+      hasMetadata: true,
+      metadata: buildUploadedMetadata(
+        getUploadedIndexFromImageUrl(uploaded.url),
+      ),
+      rawResponse: "e2e-uploaded-wardrobe-metadata",
+    },
+    cleanup: {
+      cleanImage: uploaded,
+      thumbnails: [],
+    },
+    inputIndex,
+    ok: true,
+    source: {
+      imageUrl: uploaded.url,
+      kind: "file",
+      productPageUrl: uploaded.url,
+      rawImageUrl: uploaded.url,
+      sourceImageKey: uploaded.key,
+      sourceImageUrl: uploaded.url,
+    },
+  };
+}
+
+function buildE2eUrlProcessingResult(url: unknown, inputIndex: number) {
+  return {
+    analysis: {
+      hasMetadata: true,
+      metadata: buildUploadedMetadata(inputIndex + 1),
+      rawResponse: "e2e-uploaded-wardrobe-product-page-metadata",
+    },
+    cleanup: {
+      cleanImage: {
+        key: "wardrobe/e2e/product-page-source.webp.clean",
+        url: "https://images.example.com/uploaded-e2e-1.jpg",
+        digest: "e2e-clean-digest",
+      },
+      thumbnails: [],
+    },
+    inputIndex,
+    ok: true,
+    source: {
+      imageUrl: "https://images.example.com/uploaded-e2e-1.jpg",
+      kind: "product-page",
+      productPageUrl: String(url || "https://shop.example.com/product"),
+      rawImageUrl: "https://images.example.com/uploaded-e2e-1.jpg",
+      sourceImageKey: "wardrobe/e2e/product-page-source.webp",
+      sourceImageUrl: null,
+    },
+  };
+}
+
+function createE2ePersistenceDependencies(memory: E2eWardrobeMemory) {
+  return {
+    listWardrobeItemsImpl: async (payload) => memory.listItems(payload?.source),
     saveUploadedWardrobeItemsImpl: async (payload) =>
       memory.saveUploadedItems(
         String(payload?.email || E2E_EMAIL),
@@ -171,6 +244,23 @@ function createE2eWardrobeDependencies(memory: E2eWardrobeMemory) {
       ),
     updateUploadedWardrobeItemMetadataImpl: async (payload) =>
       memory.updateMetadata(payload),
+  };
+}
+
+function createE2eWardrobeDependencies(memory: E2eWardrobeMemory) {
+  return {
+    ...createE2eAnalysisDependencies(),
+    ...createE2ePersistenceDependencies(memory),
+    ...createE2eProductPageDependencies(),
+    ...createE2eUploadProcessingDependencies(memory),
+    cleanupUploadedWardrobeItemImageImpl: async (payload) => ({
+      cleanImage: {
+        key: `${payload?.sourceKey || "uploaded-e2e"}.clean`,
+        url: String(payload?.imageUrl || ""),
+        digest: "e2e-clean-digest",
+      },
+      thumbnails: [],
+    }),
     uploadWardrobeImageToR2Impl: async () => memory.nextUploadedImage(),
   };
 }

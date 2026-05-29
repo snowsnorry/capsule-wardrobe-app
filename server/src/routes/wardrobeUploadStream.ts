@@ -3,10 +3,20 @@ import {
   hasRequiredUploadedWardrobeMetadata,
   normalizeWardrobeImageAnalysisMetadata,
 } from "../wardrobeImageAnalysis.js";
+import { incrementWardrobeUploadMetric } from "../wardrobeUploadProcessingMetrics.js";
 
 function writeWardrobeUploadEvent(res, event, data) {
-  res.write(`event: ${event}\n`);
-  res.write(`data: ${JSON.stringify(data)}\n\n`);
+  if (!isWardrobeUploadResponseWritable(res)) {
+    return false;
+  }
+
+  try {
+    res.write(`event: ${event}\n`);
+    res.write(`data: ${JSON.stringify(data)}\n\n`);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function openWardrobeUploadEventStream(res) {
@@ -15,6 +25,42 @@ function openWardrobeUploadEventStream(res) {
   res.setHeader("Cache-Control", "no-cache, no-transform");
   res.setHeader("Connection", "keep-alive");
   res.flushHeaders?.();
+}
+
+function isWardrobeUploadResponseWritable(res) {
+  return !res.destroyed && !res.writableEnded;
+}
+
+function createWardrobeUploadAbortState(req, res) {
+  const controller = new AbortController();
+  let disposed = false;
+
+  const abort = () => {
+    if (disposed || controller.signal.aborted) {
+      return;
+    }
+    incrementWardrobeUploadMetric("uploadAbortCount");
+    controller.abort();
+  };
+  const onRequestAborted = () => abort();
+  const onResponseClose = () => {
+    if (!res.writableEnded) {
+      abort();
+    }
+  };
+
+  req.on("aborted", onRequestAborted);
+  res.on("close", onResponseClose);
+
+  return {
+    signal: controller.signal,
+    isAborted: () => controller.signal.aborted,
+    dispose: () => {
+      disposed = true;
+      req.removeListener("aborted", onRequestAborted);
+      res.removeListener("close", onResponseClose);
+    },
+  };
 }
 
 function resolveUploadedImageUrl(item) {
@@ -37,6 +83,32 @@ async function markUploadedItemFailed({ context, email, id }) {
       logError("[wardrobe/items/upload][metadata-status]", updateError);
       return null;
     });
+}
+
+async function markSavedWardrobeUploadSourcesFailed({
+  context,
+  email,
+  sourceSaves,
+}) {
+  const savedSources = Array.from(sourceSaves?.values?.() || []);
+  await Promise.all(
+    savedSources.map(async (savedSource) => {
+      const result = (await savedSource) as {
+        error?: unknown;
+        item?: { id?: unknown } | null;
+      };
+      if (result?.error) {
+        return;
+      }
+
+      const id = String(result?.item?.id || "").trim();
+      if (!id) {
+        return;
+      }
+
+      await markUploadedItemFailed({ context, email, id });
+    }),
+  );
 }
 
 function advanceWardrobeUploadProgress(progress, updates) {
@@ -179,9 +251,48 @@ async function processUploadedWardrobeItemMetadata({
   }
 }
 
+async function processPreparedUploadedWardrobeItemMetadata({
+  context,
+  email,
+  filterItem,
+  item,
+  processingResult,
+  progress,
+  res,
+}) {
+  const errorMessage =
+    String(processingResult?.message || "").trim() ||
+    "wardrobe_upload_processing_failed";
+
+  return processUploadedWardrobeItemMetadata({
+    analyzeItemMetadata: () => {
+      if (processingResult?.analysis) {
+        return processingResult.analysis;
+      }
+      throw new Error(errorMessage);
+    },
+    context,
+    email,
+    filterItem,
+    item,
+    processUploadedImage: () => {
+      if (processingResult?.cleanup) {
+        return processingResult.cleanup;
+      }
+      throw new Error(errorMessage);
+    },
+    progress,
+    res,
+  });
+}
+
 export {
   advanceWardrobeUploadProgress,
+  createWardrobeUploadAbortState,
+  isWardrobeUploadResponseWritable,
+  markSavedWardrobeUploadSourcesFailed,
   openWardrobeUploadEventStream,
+  processPreparedUploadedWardrobeItemMetadata,
   processUploadedWardrobeItemMetadata,
   writeWardrobeUploadEvent,
 };

@@ -148,6 +148,10 @@ import {
 import { deleteObjectsFromR2 } from "./r2Delete.js";
 import { normalizeWardrobeUploadImagesInChild } from "./wardrobeUploadImagesRunner.js";
 import {
+  processWardrobeUploadFilesInChild,
+  processWardrobeUploadUrlsInChild,
+} from "./wardrobeUploadProcessingRunner.js";
+import {
   analyzeWardrobeImageUrl,
   analyzeWardrobeProductPageImage,
 } from "./wardrobeImageAnalysis.js";
@@ -331,6 +335,8 @@ function createAppDependencies(options: Record<string, unknown> = {}) {
     ...createWardrobeImageStorageDependencies(),
     normalizeWardrobeUploadImagesInChildImpl:
       normalizeWardrobeUploadImagesInChild,
+    processWardrobeUploadFilesInChildImpl: processWardrobeUploadFilesInChild,
+    processWardrobeUploadUrlsInChildImpl: processWardrobeUploadUrlsInChild,
     verifyAuthenticationResponseImpl: verifyAuthenticationResponse,
     verifyCodeImpl: verifyCode,
     verifyRegistrationResponseImpl: verifyRegistrationResponse,

@@ -93,6 +93,46 @@ function createWardrobeDependencies() {
         height: 1000,
         size: image.buffer?.length || 0,
       })),
+    processWardrobeUploadFilesInChildImpl: async (payload) =>
+      payload.files.map((_file, inputIndex) => ({
+        analysis: {
+          hasMetadata: true,
+          metadata: createUploadedWardrobeMetadata(),
+          rawResponse: "{}",
+        },
+        cleanup: createUploadedWardrobeCleanupResult(),
+        inputIndex,
+        ok: true,
+        source: {
+          imageUrl: "https://images.example.com/wardrobe/profile/image.webp",
+          kind: "file",
+          productPageUrl:
+            "https://images.example.com/wardrobe/profile/image.webp",
+          rawImageUrl: "https://images.example.com/wardrobe/profile/image.webp",
+          sourceImageKey: "wardrobe/profile/image.webp",
+          sourceImageUrl:
+            "https://images.example.com/wardrobe/profile/image.webp",
+        },
+      })),
+    processWardrobeUploadUrlsInChildImpl: async (payload) =>
+      payload.urls.map((url, inputIndex) => ({
+        analysis: {
+          hasMetadata: true,
+          metadata: createUploadedWardrobeMetadata(),
+          rawResponse: "{}",
+        },
+        cleanup: createUploadedWardrobeCleanupResult(),
+        inputIndex,
+        ok: true,
+        source: {
+          imageUrl: "https://cdn.example.com/product.jpg",
+          kind: "product-page",
+          productPageUrl: String(url || "https://shop.example.com/product"),
+          rawImageUrl: "https://cdn.example.com/product.jpg",
+          sourceImageKey: "wardrobe/profile/product-page-source.webp",
+          sourceImageUrl: null,
+        },
+      })),
     uploadWardrobeImageToR2Impl: async (_payload) => ({
       key: "wardrobe/profile/image.webp",
       url: "https://images.example.com/wardrobe/profile/image.webp",

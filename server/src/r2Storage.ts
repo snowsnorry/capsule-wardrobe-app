@@ -1,18 +1,15 @@
 import { createHash, randomUUID } from "node:crypto";
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
-
-type R2Config = {
-  accountId: string;
-  bucketName: string;
-  accessKeyId: string;
-  secretAccessKey: string;
-  publicBaseUrl: string;
-  imageKeyPrefix: string;
-};
-
-type S3ClientLike = {
-  send: (command: unknown) => Promise<unknown>;
-};
+import { PutObjectCommand } from "@aws-sdk/client-s3";
+import {
+  buildR2Endpoint,
+  clearDefaultR2ClientCache,
+  getDefaultR2Client,
+  getDefaultR2ClientCacheSize,
+  getR2Config,
+  setR2ClientFactoryForTests,
+  type R2Config,
+  type S3ClientLike,
+} from "./r2ClientCache.js";
 
 type UploadImageInput = {
   buffer: Buffer | Uint8Array;
@@ -36,51 +33,6 @@ type UploadWardrobeDerivativeInput = {
   env?: NodeJS.ProcessEnv;
   client?: S3ClientLike;
 };
-
-function normalizeEnvValue(value: unknown): string {
-  return String(value ?? "").trim();
-}
-
-function getRequiredR2Env(env: NodeJS.ProcessEnv, name: string): string {
-  const value = normalizeEnvValue(env[name]);
-  if (!value) {
-    throw new Error(`${name} is not set`);
-  }
-  return value;
-}
-
-function normalizePublicBaseUrl(value: string): string {
-  return value.trim().replace(/\/+$/, "");
-}
-
-function getR2Config(env: NodeJS.ProcessEnv = process.env): R2Config {
-  return {
-    accountId: getRequiredR2Env(env, "R2_ACCOUNT_ID"),
-    bucketName: getRequiredR2Env(env, "R2_BUCKET_NAME"),
-    accessKeyId: getRequiredR2Env(env, "R2_ACCESS_KEY_ID"),
-    secretAccessKey: getRequiredR2Env(env, "R2_SECRET_ACCESS_KEY"),
-    publicBaseUrl: normalizePublicBaseUrl(
-      getRequiredR2Env(env, "R2_PUBLIC_BASE_URL"),
-    ),
-    imageKeyPrefix:
-      normalizeEnvValue(env.R2_IMAGE_KEY_PREFIX) || "outfit-set-images",
-  };
-}
-
-function buildR2Endpoint(accountId: string): string {
-  return `https://${accountId}.r2.cloudflarestorage.com`;
-}
-
-function createR2Client(config: R2Config): S3ClientLike {
-  return new S3Client({
-    region: "auto",
-    endpoint: buildR2Endpoint(config.accountId),
-    credentials: {
-      accessKeyId: config.accessKeyId,
-      secretAccessKey: config.secretAccessKey,
-    },
-  });
-}
 
 function sanitizeKeySegment(value: unknown, fallback: string): string {
   const sanitized = String(value ?? "")
@@ -246,7 +198,7 @@ async function uploadImageToR2({
     digest,
     mimeType,
   });
-  const s3 = client || createR2Client(config);
+  const s3 = client || getDefaultR2Client(config);
 
   await s3.send(
     new PutObjectCommand({
@@ -283,7 +235,7 @@ async function uploadWardrobeImageToR2({
   const config = getR2Config(env);
   const digest = createHash("sha256").update(bytes).digest("hex");
   const key = buildWardrobeR2ImageKey({ email, digest });
-  const s3 = client || createR2Client(config);
+  const s3 = client || getDefaultR2Client(config);
 
   await s3.send(
     new PutObjectCommand({
@@ -325,7 +277,7 @@ async function uploadWardrobeDerivativeImageToR2({
 
   const config = getR2Config(env);
   const digest = createHash("sha256").update(bytes).digest("hex");
-  const s3 = client || createR2Client(config);
+  const s3 = client || getDefaultR2Client(config);
 
   await s3.send(
     new PutObjectCommand({
@@ -368,9 +320,12 @@ export {
   buildR2PublicUrl,
   buildWardrobeDerivativeR2ImageKey,
   buildWardrobeR2ImageKey,
+  clearDefaultR2ClientCache,
   decodeLegacyBase64Image,
+  getDefaultR2ClientCacheSize,
   getR2KeyFromPublicUrl,
   getR2Config,
+  setR2ClientFactoryForTests,
   uploadImageToR2,
   uploadWardrobeDerivativeImageToR2,
   uploadWardrobeImageToR2,

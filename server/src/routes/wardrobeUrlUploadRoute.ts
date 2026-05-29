@@ -1,15 +1,13 @@
 import { logError } from "../logger.js";
+import { resolveImageLlmProvider } from "../ai/imageLlm.js";
 import { filterWardrobeItemForDisplay } from "../wardrobeItemDisplay.js";
-import { uploadWardrobeImageThumbnails } from "../wardrobeImageCleanup.js";
-import { ensureWardrobeImagePortraitCanvas } from "../wardrobeImagePortraitCanvas.js";
-import {
-  extractOpenGraphImageUrl,
-  normalizeWardrobeProductPageUploadUrls,
-} from "../wardrobeProductPageImport.js";
+import { normalizeWardrobeProductPageUploadUrls } from "../wardrobeProductPageImport.js";
 import {
   advanceWardrobeUploadProgress,
+  createWardrobeUploadAbortState,
+  markSavedWardrobeUploadSourcesFailed,
   openWardrobeUploadEventStream,
-  processUploadedWardrobeItemMetadata,
+  processPreparedUploadedWardrobeItemMetadata,
   writeWardrobeUploadEvent,
 } from "./wardrobeUploadStream.js";
 
@@ -24,63 +22,41 @@ function createWardrobeUploadProgress(total) {
   };
 }
 
-async function saveWardrobeProductPageUploadedItem({
-  context,
-  email,
-  imageUrl,
-  rawImageUrl = imageUrl,
-  productPageUrl,
-}) {
+function resolveSourceSaveResult(result) {
+  if (result?.error) {
+    throw result.error;
+  }
+  return result?.item || null;
+}
+
+async function saveWardrobeProductPageUploadedItem({ context, email, source }) {
   const items = await context.saveUploadedWardrobeItemsImpl({
     email,
     items: [
       {
-        imageUrl,
-        rawImageUrl,
-        url: productPageUrl,
+        imageUrl: source.imageUrl,
+        rawImageUrl: source.rawImageUrl,
+        url: source.productPageUrl,
       },
     ],
   });
   return Array.isArray(items) ? items[0] || null : null;
 }
 
-async function processDirectWardrobeImageUploadUrl({
+async function saveWardrobeProductPageUploadedItemWithProgress({
   context,
   email,
-  image,
   progress,
   res,
+  source,
 }) {
-  const normalizedImages =
-    await context.normalizeWardrobeUploadImagesInChildImpl([
-      {
-        buffer: Buffer.from(image.buffer),
-        mimeType: image.mimeType,
-        originalName: image.originalName,
-      },
-    ]);
-  const normalizedImage = normalizedImages[0];
-  if (!normalizedImage?.buffer) {
-    throw new Error("direct_image_normalized_image_missing");
-  }
-  const portraitImage = await ensureWardrobeImagePortraitCanvas({
-    imageBuffer: normalizedImage.buffer,
-    mimeType: normalizedImage.mimeType,
-  });
-
-  const uploadedImage = await context.uploadWardrobeImageToR2Impl({
-    buffer: portraitImage.buffer,
-    email,
-  });
   const item = await saveWardrobeProductPageUploadedItem({
     context,
     email,
-    imageUrl: uploadedImage.url,
-    rawImageUrl: uploadedImage.url,
-    productPageUrl: image.imageUrl,
+    source,
   });
   if (!item) {
-    throw new Error("direct_image_uploaded_item_missing");
+    throw new Error("wardrobe_upload_url_uploaded_item_missing");
   }
 
   advanceWardrobeUploadProgress(progress, {
@@ -88,116 +64,77 @@ async function processDirectWardrobeImageUploadUrl({
     uploaded: 1,
   });
   writeWardrobeUploadEvent(res, "progress", progress);
-
-  return processUploadedWardrobeItemMetadata({
-    context,
-    email,
-    filterItem: filterWardrobeItemForDisplay,
-    item: filterWardrobeItemForDisplay(item),
-    processUploadedImage: async () => {
-      const { thumbnails } = await uploadWardrobeImageThumbnails({
-        imageBuffer: portraitImage.buffer,
-        sourceKey: uploadedImage.key,
-        sourceUrl: uploadedImage.url,
-        uploadWardrobeDerivativeImageToR2Impl:
-          context.uploadWardrobeDerivativeImageToR2Impl,
-      });
-      return {
-        cleanImage: uploadedImage,
-        thumbnails,
-      };
-    },
-    progress,
-    res,
-    sourceImage: {
-      buffer: portraitImage.buffer,
-      mimeType: portraitImage.mimeType,
-      originalName: normalizedImage.originalName,
-    },
-    sourceImageKey: uploadedImage.key,
-  });
+  return item;
 }
 
-async function processWardrobeProductPageUploadUrl({
+function scheduleWardrobeUrlSourceSave({
+  context,
+  email,
+  event,
+  progress,
+  res,
+  sourceSaves,
+}) {
+  if (
+    event?.event !== "source-uploaded" ||
+    !event.source ||
+    sourceSaves.has(event.inputIndex)
+  ) {
+    return;
+  }
+
+  const savePromise = saveWardrobeProductPageUploadedItemWithProgress({
+    context,
+    email,
+    progress,
+    res,
+    source: event.source,
+  })
+    .then((item) => ({ error: null, item }))
+    .catch((error) => ({ error, item: null }));
+  sourceSaves.set(event.inputIndex, savePromise);
+}
+
+async function getWardrobeUploadImageLlm(context, email) {
+  const profile = await context.getProfileImpl(email);
+  return resolveImageLlmProvider(profile).imageLlm;
+}
+
+async function getSavedWardrobeUrlSourceItem({
   context,
   email,
   progress,
+  processingResult,
   res,
-  url,
+  sourceSaves,
 }) {
-  try {
-    const productPage = await context.fetchProductPageHtmlWithImpersImpl({
-      url,
-    });
-    if (productPage?.type === "image") {
-      return processDirectWardrobeImageUploadUrl({
-        context,
-        email,
-        image: productPage.image,
-        progress,
-        res,
-      });
-    }
+  const savedResult = sourceSaves.get(processingResult.inputIndex);
+  if (savedResult) {
+    return resolveSourceSaveResult(await savedResult);
+  }
 
-    const imageUrl = extractOpenGraphImageUrl(
-      productPage.html,
-      productPage.url,
-    );
-    if (!imageUrl) {
-      throw new Error("product_page_og_image_missing");
-    }
+  return saveWardrobeProductPageUploadedItemWithProgress({
+    context,
+    email,
+    progress,
+    res,
+    source: processingResult.source,
+  });
+}
 
-    const image = await context.downloadWardrobeProductPageImageImpl({
-      imageUrl,
+async function processWardrobeUploadUrlResult({
+  context,
+  email,
+  progress,
+  processingResult,
+  res,
+  sourceSaves,
+}) {
+  const source = processingResult?.source || null;
+  if (!source) {
+    logError("[wardrobe/items/upload-url][item]", {
+      error: processingResult?.message || "wardrobe_upload_url_failed",
     });
-    const item = await saveWardrobeProductPageUploadedItem({
-      context,
-      email,
-      imageUrl,
-      productPageUrl: productPage.url,
-    });
-    if (!item) {
-      throw new Error("product_page_uploaded_item_missing");
-    }
-
-    advanceWardrobeUploadProgress(progress, {
-      completedSteps: 1,
-      uploaded: 1,
-    });
-    writeWardrobeUploadEvent(res, "progress", progress);
-
-    return processUploadedWardrobeItemMetadata({
-      analyzeItemMetadata: () =>
-        context.analyzeWardrobeProductPageImageImpl({
-          image: {
-            buffer: Buffer.from(image.buffer),
-            filename: image.originalName,
-            imageUrl,
-            mimeType: image.mimeType,
-          },
-          imageUrl,
-          productPageHtml: productPage.html,
-          productPageUrl: productPage.url,
-        }),
-      context,
-      cleanupGeneratedImagePortraitCanvas: true,
-      email,
-      filterItem: filterWardrobeItemForDisplay,
-      item: filterWardrobeItemForDisplay(item),
-      progress,
-      res,
-      sourceImage: {
-        buffer: image.buffer,
-        mimeType: image.mimeType,
-        originalName: image.originalName,
-      },
-      sourceImageKey: context.buildRemoteWardrobeImageSourceKeyImpl({
-        email,
-        image,
-      }),
-    });
-  } catch (error) {
-    logError("[wardrobe/items/upload-url][item]", { url }, error);
     advanceWardrobeUploadProgress(progress, {
       completedSteps: 3,
       failed: 1,
@@ -205,6 +142,43 @@ async function processWardrobeProductPageUploadUrl({
     writeWardrobeUploadEvent(res, "progress", progress);
     return null;
   }
+
+  try {
+    const item = await getSavedWardrobeUrlSourceItem({
+      context,
+      email,
+      progress,
+      processingResult,
+      res,
+      sourceSaves,
+    });
+
+    return processPreparedUploadedWardrobeItemMetadata({
+      context,
+      email,
+      filterItem: filterWardrobeItemForDisplay,
+      item: filterWardrobeItemForDisplay(item),
+      processingResult,
+      progress,
+      res,
+    });
+  } catch (error) {
+    logError("[wardrobe/items/upload-url][item]", { source }, error);
+    advanceWardrobeUploadProgress(progress, {
+      completedSteps: 3,
+      failed: 1,
+    });
+    writeWardrobeUploadEvent(res, "progress", progress);
+    return null;
+  }
+}
+
+async function markSavedUrlUploadSourcesFailed(context, req, sourceSaves) {
+  await markSavedWardrobeUploadSourcesFailed({
+    context,
+    email: req.user.email,
+    sourceSaves,
+  });
 }
 
 function registerWardrobeUrlUploadRoute(app, context) {
@@ -219,18 +193,52 @@ function registerWardrobeUrlUploadRoute(app, context) {
         return res.status(400).json({ error: "invalid_payload" });
       }
 
+      const abortState = createWardrobeUploadAbortState(req, res);
+      const sourceSaves = new Map();
       try {
         openWardrobeUploadEventStream(res);
         const progress = createWardrobeUploadProgress(urls.length);
+        const imageLlm = await getWardrobeUploadImageLlm(
+          context,
+          req.user.email,
+        );
+        const processingResults =
+          await context.processWardrobeUploadUrlsInChildImpl({
+            email: req.user.email,
+            imageLlm,
+            onEvent: (event) => {
+              if (!abortState.isAborted()) {
+                scheduleWardrobeUrlSourceSave({
+                  context,
+                  email: req.user.email,
+                  event,
+                  progress,
+                  res,
+                  sourceSaves,
+                });
+              }
+            },
+            signal: abortState.signal,
+            urls,
+          });
+        if (abortState.isAborted()) {
+          await markSavedUrlUploadSourcesFailed(context, req, sourceSaves);
+          return;
+        }
         const processedItems = [];
 
-        for (const url of urls) {
-          const item = await processWardrobeProductPageUploadUrl({
+        for (const processingResult of processingResults) {
+          if (abortState.isAborted()) {
+            await markSavedUrlUploadSourcesFailed(context, req, sourceSaves);
+            return;
+          }
+          const item = await processWardrobeUploadUrlResult({
             context,
             email: req.user.email,
             progress,
+            processingResult,
             res,
-            url,
+            sourceSaves,
           });
           if (item) {
             processedItems.push(item);
@@ -244,7 +252,12 @@ function registerWardrobeUrlUploadRoute(app, context) {
         });
         return res.end();
       } catch (error) {
+        if (abortState.isAborted()) {
+          await markSavedUrlUploadSourcesFailed(context, req, sourceSaves);
+          return;
+        }
         logError("[wardrobe/items/upload-url]", error);
+        await markSavedUrlUploadSourcesFailed(context, req, sourceSaves);
         if (res.headersSent) {
           writeWardrobeUploadEvent(res, "fatal", {
             error: "service_unavailable",
@@ -252,6 +265,8 @@ function registerWardrobeUrlUploadRoute(app, context) {
           return res.end();
         }
         return res.status(503).json({ error: "service_unavailable" });
+      } finally {
+        abortState.dispose();
       }
     },
   );

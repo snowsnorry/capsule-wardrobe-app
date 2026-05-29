@@ -1,4 +1,4 @@
-import { test, expect } from "vitest";
+import { afterEach, test, expect, vi } from "vitest";
 import { DeleteObjectsCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import {
   buildR2Endpoint,
@@ -6,9 +6,12 @@ import {
   buildR2PublicUrl,
   buildWardrobeDerivativeR2ImageKey,
   buildWardrobeR2ImageKey,
+  clearDefaultR2ClientCache,
   decodeLegacyBase64Image,
+  getDefaultR2ClientCacheSize,
   getR2KeyFromPublicUrl,
   getR2Config,
+  setR2ClientFactoryForTests,
   uploadImageToR2,
   uploadWardrobeDerivativeImageToR2,
   uploadWardrobeImageToR2,
@@ -23,6 +26,10 @@ const testEnv = {
   R2_PUBLIC_BASE_URL: "https://images.example.com/",
   R2_IMAGE_KEY_PREFIX: "capsule image assets",
 } as NodeJS.ProcessEnv;
+
+afterEach(() => {
+  setR2ClientFactoryForTests(null);
+});
 
 test("getR2Config validates required env and normalizes public URL", () => {
   expect(getR2Config(testEnv)).toEqual({
@@ -170,6 +177,107 @@ test("uploadWardrobeDerivativeImageToR2 writes caller-provided wardrobe keys", a
   expect(uploaded.url).toBe(
     "https://images.example.com/wardrobe/profile/image_clean_640.webp",
   );
+});
+
+test("R2 uploads reuse the cached default client for matching config", async () => {
+  const commands: PutObjectCommand[] = [];
+  const factory = vi.fn(() => ({
+    send: async (command: PutObjectCommand) => {
+      commands.push(command);
+      return {};
+    },
+  }));
+  setR2ClientFactoryForTests(factory);
+
+  await uploadImageToR2({
+    buffer: Buffer.from("image"),
+    env: testEnv,
+  });
+  await uploadWardrobeImageToR2({
+    buffer: Buffer.from("wardrobe"),
+    email: "person@example.com",
+    env: testEnv,
+  });
+  await uploadWardrobeDerivativeImageToR2({
+    buffer: Buffer.from("thumb"),
+    key: "wardrobe/profile/image_320.webp",
+    env: testEnv,
+  });
+
+  expect(factory).toHaveBeenCalledTimes(1);
+  expect(commands).toHaveLength(3);
+  expect(getDefaultR2ClientCacheSize()).toBe(1);
+});
+
+test("R2 default client cache separates stable non-secret config keys", async () => {
+  const factory = vi.fn(() => ({
+    send: async () => ({}),
+  }));
+  setR2ClientFactoryForTests(factory);
+
+  await uploadWardrobeImageToR2({
+    buffer: Buffer.from("one"),
+    email: "person@example.com",
+    env: testEnv,
+  });
+  await uploadWardrobeImageToR2({
+    buffer: Buffer.from("two"),
+    email: "person@example.com",
+    env: {
+      ...testEnv,
+      R2_BUCKET_NAME: "other-bucket",
+      R2_SECRET_ACCESS_KEY: "rotated-secret",
+    },
+  });
+
+  expect(factory).toHaveBeenCalledTimes(2);
+  expect(getDefaultR2ClientCacheSize()).toBe(2);
+});
+
+test("R2 explicit injected clients bypass the default client cache", async () => {
+  const factory = vi.fn(() => ({
+    send: async () => ({}),
+  }));
+  const injectedClient = {
+    send: vi.fn(async () => ({})),
+  };
+  setR2ClientFactoryForTests(factory);
+
+  await uploadImageToR2({
+    buffer: Buffer.from("image"),
+    env: testEnv,
+    client: injectedClient,
+  });
+  await uploadWardrobeImageToR2({
+    buffer: Buffer.from("wardrobe"),
+    email: "person@example.com",
+    env: testEnv,
+    client: injectedClient,
+  });
+
+  expect(factory).not.toHaveBeenCalled();
+  expect(injectedClient.send).toHaveBeenCalledTimes(2);
+  expect(getDefaultR2ClientCacheSize()).toBe(0);
+});
+
+test("R2 default client cache cleanup destroys cached clients", async () => {
+  const destroy = vi.fn();
+  const factory = vi.fn(() => ({
+    destroy,
+    send: async () => ({}),
+  }));
+  setR2ClientFactoryForTests(factory);
+
+  await uploadWardrobeImageToR2({
+    buffer: Buffer.from("wardrobe"),
+    email: "person@example.com",
+    env: testEnv,
+  });
+
+  expect(getDefaultR2ClientCacheSize()).toBe(1);
+  clearDefaultR2ClientCache();
+  expect(destroy).toHaveBeenCalledTimes(1);
+  expect(getDefaultR2ClientCacheSize()).toBe(0);
 });
 
 test("deleteObjectsFromR2 sends DeleteObjectsCommand with unique keys", async () => {

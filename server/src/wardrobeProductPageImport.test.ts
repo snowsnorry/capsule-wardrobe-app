@@ -1,11 +1,5 @@
 import { createHash } from "node:crypto";
-import { beforeEach, expect, test, vi } from "vitest";
-
-const promptImageDownloads = vi.hoisted(() => ({
-  downloadProductImageAssets: vi.fn(),
-}));
-
-vi.mock("./ai/promptImageDownloads.js", () => promptImageDownloads);
+import { expect, test, vi } from "vitest";
 
 const tinyPng = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMB/atcw3kAAAAASUVORK5CYII=",
@@ -13,6 +7,8 @@ const tinyPng = Buffer.from(
 );
 
 import {
+  PRODUCT_PAGE_HTML_MAX_BYTES,
+  PRODUCT_PAGE_IMAGE_MAX_BYTES,
   buildRemoteWardrobeImageSourceKey,
   downloadWardrobeProductPageImage,
   extractOpenGraphImageUrl,
@@ -20,10 +16,6 @@ import {
   normalizeWardrobeProductPageUploadUrls,
   parseHtmlTagAttributes,
 } from "./wardrobeProductPageImport.js";
-
-beforeEach(() => {
-  promptImageDownloads.downloadProductImageAssets.mockReset();
-});
 
 test("wardrobe product page URL normalization accepts only safe HTTP URLs", () => {
   expect(
@@ -130,8 +122,10 @@ test("wardrobe product page fetch uses impers chrome impersonation", async () =>
   });
   expect(getImpl).toHaveBeenCalledWith("https://shop.example.com/product", {
     allowRedirects: true,
+    contentCallback: expect.any(Function),
     impersonate: "chrome",
     maxRedirects: 5,
+    stream: true,
     timeout: 30,
   });
 });
@@ -225,6 +219,46 @@ test("wardrobe product page fetch rejects non-HTML and failed responses", async 
   ).rejects.toThrow(/product_page_empty_html/);
 });
 
+test("wardrobe product page fetch enforces HTML byte caps", async () => {
+  await expect(
+    fetchProductPageHtmlWithImpers({
+      getImpl: vi.fn(async () => ({
+        contentType: "text/html",
+        headers: {
+          get: (name: string) =>
+            name.toLowerCase() === "content-length"
+              ? String(PRODUCT_PAGE_HTML_MAX_BYTES + 1)
+              : "",
+        },
+        ok: true,
+        status: 200,
+        text: "<html>too large</html>",
+        url: "https://shop.example.com/product",
+      })) as never,
+      url: "https://shop.example.com/product",
+    }),
+  ).rejects.toThrow(/product_page_html_too_large/);
+
+  await expect(
+    fetchProductPageHtmlWithImpers({
+      getImpl: vi.fn(async (_url, options) => {
+        const chunk = Buffer.alloc(256 * 1024);
+        options?.contentCallback?.(chunk);
+        options?.contentCallback?.(chunk);
+        options?.contentCallback?.(Buffer.from("overflow"));
+        return {
+          contentType: "text/html",
+          ok: true,
+          status: 200,
+          text: "",
+          url: "https://shop.example.com/product",
+        };
+      }) as never,
+      url: "https://shop.example.com/product",
+    }),
+  ).rejects.toThrow(/product_page_html_too_large/);
+});
+
 test("wardrobe product page fetch handles header content type and unsafe final URLs", async () => {
   const getImpl = vi.fn(async () => ({
     headers: { get: () => "application/xhtml+xml; charset=utf-8" },
@@ -245,46 +279,103 @@ test("wardrobe product page fetch handles header content type and unsafe final U
   });
 });
 
-test("wardrobe product page image download maps assets and fallback names", async () => {
-  promptImageDownloads.downloadProductImageAssets.mockResolvedValue({
-    "product-page-image": {
-      buffer: Buffer.from("image"),
-      mimeType: "image/webp",
-    },
+test("wardrobe product page image download reads capped image responses", async (t) => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = vi.fn(async () => new Response(tinyPng)) as never;
+  t.onTestFinished(() => {
+    globalThis.fetch = originalFetch;
   });
 
   const result = await downloadWardrobeProductPageImage({
-    imageUrl: "https://cdn.example.com/photos/linen-shirt.webp?width=1200",
+    imageUrl: "https://cdn.example.com/photos/linen-shirt.png?width=1200",
   });
 
   expect(result).toMatchObject({
-    imageUrl: "https://cdn.example.com/photos/linen-shirt.webp?width=1200",
-    mimeType: "image/webp",
-    originalName: "linen-shirt.webp",
+    imageUrl: "https://cdn.example.com/photos/linen-shirt.png?width=1200",
+    mimeType: "image/png",
+    originalName: "linen-shirt.png",
   });
-  expect(result.buffer).toEqual(Buffer.from("image"));
-  expect(promptImageDownloads.downloadProductImageAssets).toHaveBeenCalledWith([
-    {
-      category: "uploaded",
-      id: "product-page-image",
-      imageUrl: "https://cdn.example.com/photos/linen-shirt.webp?width=1200",
-    },
-  ]);
-
-  const fallback = await downloadWardrobeProductPageImage({
-    imageUrl: "not a url",
-  });
-  expect(fallback.originalName).toBe("product-page-image.jpg");
+  expect(result.buffer).toEqual(tinyPng);
 });
 
-test("wardrobe product page image download rejects missing assets", async () => {
-  promptImageDownloads.downloadProductImageAssets.mockResolvedValue({});
+test("wardrobe product page image download rejects invalid and oversized responses", async (t) => {
+  const originalFetch = globalThis.fetch;
+  t.onTestFinished(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  await expect(
+    downloadWardrobeProductPageImage({
+      imageUrl: "not a url",
+    }),
+  ).rejects.toThrow(/invalid_product_page_image_url/);
+
+  globalThis.fetch = vi.fn(
+    async () =>
+      new Response(Buffer.from(""), {
+        headers: {
+          "Content-Length": String(PRODUCT_PAGE_IMAGE_MAX_BYTES + 1),
+        },
+      }),
+  ) as never;
+
+  await expect(
+    downloadWardrobeProductPageImage({
+      imageUrl: "https://cdn.example.com/huge.png",
+    }),
+  ).rejects.toThrow(/product_page_image_too_large/);
+
+  globalThis.fetch = vi.fn(async () => {
+    let sent = 0;
+    return new Response(
+      new ReadableStream({
+        pull(controller) {
+          sent += 1;
+          if (sent > 11) {
+            controller.close();
+            return;
+          }
+          controller.enqueue(Buffer.alloc(1024 * 1024));
+        },
+      }),
+    );
+  }) as never;
+
+  await expect(
+    downloadWardrobeProductPageImage({
+      imageUrl: "https://cdn.example.com/stream-huge.png",
+    }),
+  ).rejects.toThrow(/product_page_image_too_large/);
+});
+
+test("wardrobe product page image download rejects failed or invalid image responses", async (t) => {
+  const originalFetch = globalThis.fetch;
+  t.onTestFinished(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  globalThis.fetch = vi.fn(
+    async () =>
+      new Response(Buffer.from("missing"), {
+        status: 404,
+      }),
+  ) as never;
 
   await expect(
     downloadWardrobeProductPageImage({
       imageUrl: "https://cdn.example.com/missing.jpg",
     }),
-  ).rejects.toThrow(/product_page_image_download_failed/);
+  ).rejects.toThrow(/product_page_image_fetch_failed_404/);
+
+  globalThis.fetch = vi.fn(
+    async () => new Response(Buffer.from("nope")),
+  ) as never;
+
+  await expect(
+    downloadWardrobeProductPageImage({
+      imageUrl: "https://cdn.example.com/not-image.jpg",
+    }),
+  ).rejects.toThrow(/product_page_image_invalid/);
 });
 
 test("wardrobe product page remote source key is wardrobe scoped", () => {
