@@ -424,6 +424,21 @@ describe("MyWardrobeScreen", () => {
     ).toBe("border-box");
   });
 
+  test("extends the sticky toolbar surface above the controls while scrolling", async () => {
+    renderScreen();
+
+    await screen.findByTestId("wardrobe-card-wardrobe-1");
+
+    const toolbar = screen
+      .getByRole("group", { name: "My Wardrobe source" })
+      .closest(".MuiStack-root");
+
+    expect(toolbar).not.toBeNull();
+    expect(getComputedStyle(toolbar as Element).clipPath).toBe(
+      "inset(-100vmax -100vmax 0)",
+    );
+  });
+
   test("opens upload dialog as a full-screen mobile picker", async () => {
     useMediaQueryMock.mockReturnValue(true);
     const user = userEvent.setup();

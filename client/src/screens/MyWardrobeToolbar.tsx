@@ -249,7 +249,7 @@ const toolbarSurfaceSx = {
   alignItems: "center",
   bgcolor: "background.default",
   boxShadow: (theme) => `0 0 0 100vmax ${theme.palette.background.default}`,
-  clipPath: "inset(0 -100vmax)",
+  clipPath: "inset(-100vmax -100vmax 0)",
   "&::after": {
     content: '""',
     position: "absolute",
