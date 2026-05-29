@@ -5,17 +5,12 @@ import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
   createMainScreenProps,
+  fetchUploadedWardrobeItemDetailMock,
   renderWithTheme,
   resetMainScreenTestMocks,
   theme,
 } from "./MainScreen.testUtils";
 import MainScreenDialogs from "./MainScreenDialogs";
-
-const myWardrobeApi = vi.hoisted(() => ({
-  fetchUploadedWardrobeItemDetail: vi.fn(),
-}));
-
-vi.mock("../../api/myWardrobe", () => myWardrobeApi);
 
 type DialogsProps = ComponentProps<typeof MainScreenDialogs>;
 type ConfirmState = DialogsProps["confirm"];
@@ -109,7 +104,6 @@ function renderDialogs(props: ComponentProps<typeof DialogHarness>) {
 describe("MainScreenDialogs", () => {
   beforeEach(() => {
     resetMainScreenTestMocks();
-    myWardrobeApi.fetchUploadedWardrobeItemDetail.mockReset();
   });
 
   afterEach(() => {
@@ -374,7 +368,7 @@ describe("MainScreenDialogs", () => {
 
   test("switches wardrobe-url capsule item to edit mode after fetched uploaded detail", async () => {
     const user = userEvent.setup();
-    myWardrobeApi.fetchUploadedWardrobeItemDetail.mockResolvedValueOnce({
+    fetchUploadedWardrobeItemDetailMock.mockResolvedValueOnce({
       item: {
         id: "uploaded-1",
         name: "Uploaded shirt",
@@ -397,9 +391,9 @@ describe("MainScreenDialogs", () => {
     });
 
     await waitFor(() => {
-      expect(
-        myWardrobeApi.fetchUploadedWardrobeItemDetail,
-      ).toHaveBeenCalledWith("uploaded-1");
+      expect(fetchUploadedWardrobeItemDetailMock).toHaveBeenCalledWith(
+        "uploaded-1",
+      );
     });
     await user.click(screen.getByRole("button", { name: "Product actions" }));
     expect(

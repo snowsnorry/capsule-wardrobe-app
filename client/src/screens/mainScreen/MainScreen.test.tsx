@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { ThemeProvider } from "@mui/material/styles";
 import {
   createMainScreenProps,
+  fetchMyWardrobeItemsMock,
   renderWithTheme,
   resetMainScreenTestMocks,
   setMainScreenLayout,
@@ -423,6 +424,24 @@ describe("MainScreen", () => {
       screen.getByRole("button", { name: "Apply and regenerate" }),
     );
     expect(onApplyFilters).toHaveBeenCalledTimes(1);
+  });
+
+  test("blocks regenerate all in wardrobe-only mode when the wardrobe has no ready items", async () => {
+    const onRefreshItems = vi.fn();
+    fetchMyWardrobeItemsMock.mockResolvedValue({ items: [] });
+
+    renderMainScreen({
+      selectedSourceMode: "wardrobe_only",
+      onRefreshItems,
+    });
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: "Regenerate all" }),
+      ).toBeDisabled();
+    });
+    expect(fetchMyWardrobeItemsMock).toHaveBeenCalledWith({ force: true });
+    expect(onRefreshItems).not.toHaveBeenCalled();
   });
 
   test("disables primary controls while content is busy or share link is being created", async () => {

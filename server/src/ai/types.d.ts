@@ -32,7 +32,7 @@ type JsonSchemaFormat = {
 
 type UserProfileLike = {
   email?: string | null;
-  sourceMode?: "catalog_only" | "wardrobe_preferred" | null;
+  sourceMode?: "catalog_only" | "wardrobe_preferred" | "wardrobe_only" | null;
   llm?: string | null;
   imageLlm?: string | null;
   style?: string | null;

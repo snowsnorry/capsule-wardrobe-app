@@ -31,7 +31,10 @@ export type ProfileSettings = {
   imageLlm: string;
 };
 
-export type CapsuleSourceMode = "catalog_only" | "wardrobe_preferred";
+export type CapsuleSourceMode =
+  | "catalog_only"
+  | "wardrobe_preferred"
+  | "wardrobe_only";
 
 export type CapsuleFilters = {
   sourceMode: CapsuleSourceMode;

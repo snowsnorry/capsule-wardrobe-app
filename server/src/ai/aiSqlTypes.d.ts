@@ -14,7 +14,7 @@ type CapsuleWardrobeSqlClient = {
 
 type CapsuleWardrobeSqlParams = {
   categories: string[];
-  sourceMode: "catalog_only" | "wardrobe_preferred";
+  sourceMode: "catalog_only" | "wardrobe_preferred" | "wardrobe_only";
   profileEmail: string;
   wardrobeBoost: number;
   catalogPoolLimit: number;

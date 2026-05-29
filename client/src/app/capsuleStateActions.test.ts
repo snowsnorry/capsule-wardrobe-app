@@ -45,7 +45,7 @@ describe("capsuleStateActions", () => {
 
   test("restores persisted source mode into UI state", () => {
     const context = createContext();
-    const draft = createTestDraft({ sourceMode: "wardrobe_preferred" });
+    const draft = createTestDraft({ sourceMode: "wardrobe_only" });
 
     applyCapsuleStateToApp(
       context,
@@ -55,9 +55,7 @@ describe("capsuleStateActions", () => {
       }),
     );
 
-    expect(context.setSelectedSourceMode).toHaveBeenCalledWith(
-      "wardrobe_preferred",
-    );
+    expect(context.setSelectedSourceMode).toHaveBeenCalledWith("wardrobe_only");
   });
 
   test("normalizes uploaded wardrobe snapshot items before rendering", () => {

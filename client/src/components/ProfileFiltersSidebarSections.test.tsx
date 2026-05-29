@@ -42,7 +42,16 @@ function t(key: string, params?: Record<string, unknown>) {
     "profile.styleAestheticNotImportant": "Aesthetic not important",
     "capsule.settingsTitle": "Capsule settings",
     "capsule.settingsSubtitle": "Adjust the inputs used to build this capsule.",
-    "capsule.preferWardrobe": "Prefer items from my wardrobe",
+    "capsule.sourceMode.label": "Item source",
+    "capsule.sourceMode.catalogOnly": "Catalog items",
+    "capsule.sourceMode.wardrobePreferred": "My wardrobe + catalog",
+    "capsule.sourceMode.wardrobeOnly": "My wardrobe only",
+    "capsule.sourceMode.checkingWardrobe": "Checking My Wardrobe items...",
+    "capsule.sourceMode.emptyWardrobe":
+      "My Wardrobe has no ready items yet. Add items before using this source.",
+    "capsule.sourceMode.loadFailed": "Could not check My Wardrobe items.",
+    "capsule.sourceMode.insufficientWardrobe":
+      "My Wardrobe has {count} ready items. This capsule may need more: {items}.",
     "capsule.anchors.title": "Anchor items",
     "capsule.anchors.hint": "Choose up to 5 wardrobe items to keep.",
     "capsule.anchors.add": "Add items from wardrobe",
@@ -146,8 +155,8 @@ describe("ProfileFiltersSidebarSections", () => {
     const subtitle = screen.getByText(
       "Adjust the inputs used to build this capsule.",
     );
-    const sourceModeToggle = screen.getByRole("checkbox", {
-      name: "Prefer items from my wardrobe",
+    const sourceModeSelect = screen.getByRole("combobox", {
+      name: "Item source",
     });
     const firstDivider = container.querySelector(".MuiDivider-root");
 
@@ -156,11 +165,11 @@ describe("ProfileFiltersSidebarSections", () => {
     ).toBeInTheDocument();
     expect(subtitle).toBeInTheDocument();
     expect(
-      sourceModeToggle.compareDocumentPosition(subtitle) &
+      sourceModeSelect.compareDocumentPosition(subtitle) &
         Node.DOCUMENT_POSITION_PRECEDING,
     ).toBeTruthy();
     expect(
-      (firstDivider?.compareDocumentPosition(sourceModeToggle) ?? 0) &
+      (firstDivider?.compareDocumentPosition(sourceModeSelect) ?? 0) &
         Node.DOCUMENT_POSITION_PRECEDING,
     ).toBeTruthy();
   });
@@ -174,6 +183,60 @@ describe("ProfileFiltersSidebarSections", () => {
     expect(
       screen.getByText("Adjust the inputs used to build this capsule."),
     ).toBeInTheDocument();
+  });
+
+  test("renders source mode warning and disables apply for blocking source mode errors", () => {
+    const warning = renderFrame({
+      props: {
+        sourceModeStatus: {
+          isBlocking: false,
+          message: "My Wardrobe has 2 ready items.",
+          severity: "warning",
+        },
+      },
+    });
+
+    expect(
+      screen.getByText("My Wardrobe has 2 ready items."),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Apply" })).toBeEnabled();
+
+    warning.unmount();
+
+    renderFrame({
+      props: {
+        sourceModeStatus: {
+          isBlocking: true,
+          message: "My Wardrobe has no ready items yet.",
+          severity: "error",
+        },
+      },
+      isApplyDisabled: true,
+    });
+
+    expect(
+      screen.getByText("My Wardrobe has no ready items yet."),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Apply" })).toBeDisabled();
+  });
+
+  test("keeps source mode labels wrap-friendly", async () => {
+    const user = userEvent.setup();
+    renderFrame();
+
+    const sourceModeSelect = screen.getByRole("combobox", {
+      name: "Item source",
+    });
+    expect(getComputedStyle(screen.getByText("Catalog items")).whiteSpace).toBe(
+      "normal",
+    );
+
+    await user.click(sourceModeSelect);
+    expect(
+      getComputedStyle(
+        await screen.findByRole("option", { name: "My wardrobe + catalog" }),
+      ).whiteSpace,
+    ).toBe("normal");
   });
 
   test("centers the anchor empty-state button content", () => {
@@ -219,10 +282,9 @@ describe("ProfileFiltersSidebarSections", () => {
     await user.click(screen.getByRole("button", { name: "man" }));
     await user.click(screen.getByRole("button", { name: "red" }));
     await user.click(screen.getByRole("button", { name: "Stripe" }));
+    await user.click(screen.getByRole("combobox", { name: "Item source" }));
     await user.click(
-      screen.getByRole("checkbox", {
-        name: "Prefer items from my wardrobe",
-      }),
+      await screen.findByRole("option", { name: "My wardrobe + catalog" }),
     );
     await user.type(
       screen.getByPlaceholderText("Additional placeholder"),
@@ -325,9 +387,9 @@ describe("ProfileFiltersSidebarSections", () => {
     expect(
       screen.getByPlaceholderText("Additional placeholder"),
     ).toBeDisabled();
-    expect(
-      screen.getByRole("checkbox", { name: "Prefer items from my wardrobe" }),
-    ).toBeDisabled();
+    expect(screen.getByRole("combobox", { name: "Item source" })).toHaveClass(
+      "Mui-disabled",
+    );
 
     expect(onSelectStyleCore).not.toHaveBeenCalled();
     expect(onToggleOccasion).not.toHaveBeenCalled();

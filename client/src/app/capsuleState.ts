@@ -169,8 +169,9 @@ export function buildDraftSnapshotFromState({
 function normalizeComparableFilters(filters: Partial<CapsuleFilters> = {}) {
   return {
     sourceMode:
-      filters.sourceMode === "wardrobe_preferred"
-        ? "wardrobe_preferred"
+      filters.sourceMode === "wardrobe_preferred" ||
+      filters.sourceMode === "wardrobe_only"
+        ? filters.sourceMode
         : "catalog_only",
     formalityLevel:
       typeof filters.formalityLevel === "string" ? filters.formalityLevel : "",

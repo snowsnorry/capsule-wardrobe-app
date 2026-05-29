@@ -29,6 +29,14 @@ const WARDROBE_PREFERRED_WITH_ANCHORS_SQL_FILE = new URL(
   "./sql/capsule_wardrobe_preferred_with_anchors.sql",
   import.meta.url,
 );
+const WARDROBE_ONLY_SQL_FILE = new URL(
+  "./sql/capsule_wardrobe_only.sql",
+  import.meta.url,
+);
+const WARDROBE_ONLY_WITH_ANCHORS_SQL_FILE = new URL(
+  "./sql/capsule_wardrobe_only_with_anchors.sql",
+  import.meta.url,
+);
 
 const AUDIENCE_FILTERS_BY_PROFILE = {
   man: ["man", "all"],
@@ -71,9 +79,14 @@ function getSqlNoiseFactor(userProfile: UserProfileLike | null) {
 function getSqlSourceMode(
   userProfile: UserProfileLike | null,
 ): CapsuleWardrobeSqlParams["sourceMode"] {
-  return userProfile?.sourceMode === "wardrobe_preferred"
-    ? "wardrobe_preferred"
-    : "catalog_only";
+  if (
+    userProfile?.sourceMode === "wardrobe_preferred" ||
+    userProfile?.sourceMode === "wardrobe_only"
+  ) {
+    return userProfile.sourceMode;
+  }
+
+  return "catalog_only";
 }
 
 function getProfileSqlFilters(userProfile: UserProfileLike | null) {
@@ -166,6 +179,25 @@ function buildWardrobePreferredAnchorSqlValues(
   ];
 }
 
+function buildWardrobeOnlySqlValues(
+  params: CapsuleWardrobeSqlParams,
+): readonly unknown[] {
+  return [
+    ...buildRegularCapsuleSqlValues(params).slice(0, 12),
+    params.profileEmail,
+  ];
+}
+
+function buildWardrobeOnlyAnchorSqlValues(
+  params: CapsuleWardrobeSqlParams,
+): readonly unknown[] {
+  return [
+    ...buildWardrobeOnlySqlValues(params),
+    params.anchorWardrobeNumericIds,
+    params.anchorSimilarityBonusWeight,
+  ];
+}
+
 async function queryCatalogOnlyCapsuleWardrobeItems(
   sql: CapsuleWardrobeSqlClient,
   params: CapsuleWardrobeSqlParams,
@@ -204,10 +236,33 @@ async function queryCapsuleWardrobePreferredItems(
   );
 }
 
+async function queryCapsuleWardrobeOnlyItems(
+  sql: CapsuleWardrobeSqlClient,
+  params: CapsuleWardrobeSqlParams,
+) {
+  if (hasAnchorParams(params)) {
+    return executeSqlFile<CapsuleWardrobeSqlRow>(
+      sql,
+      WARDROBE_ONLY_WITH_ANCHORS_SQL_FILE,
+      buildWardrobeOnlyAnchorSqlValues(params),
+    );
+  }
+
+  return executeSqlFile<CapsuleWardrobeSqlRow>(
+    sql,
+    WARDROBE_ONLY_SQL_FILE,
+    buildWardrobeOnlySqlValues(params),
+  );
+}
+
 async function queryCapsuleWardrobeItems(
   sql: CapsuleWardrobeSqlClient,
   params: CapsuleWardrobeSqlParams,
 ) {
+  if (params.sourceMode === "wardrobe_only") {
+    return queryCapsuleWardrobeOnlyItems(sql, params);
+  }
+
   if (params.sourceMode === "wardrobe_preferred") {
     return queryCapsuleWardrobePreferredItems(sql, params);
   }
@@ -229,6 +284,7 @@ function queryCapsuleWardrobeItemsForProfile(
 export {
   buildCapsuleWardrobeSqlParams,
   queryCapsuleWardrobeItems,
+  queryCapsuleWardrobeOnlyItems,
   queryCapsuleWardrobePreferredItems,
   queryCapsuleWardrobeItemsForMultipleAccentColors,
   queryCapsuleWardrobeItemsForProfile,

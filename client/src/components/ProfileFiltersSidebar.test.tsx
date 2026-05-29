@@ -14,8 +14,16 @@ vi.mock("../i18n/useI18n", () => ({
 vi.mock("../i18n", () => ({
   translateOption: (_group: string, value: string) =>
     ({
+      bag: "Bag",
+      belt: "Belt",
+      bottom: "Bottom",
+      dress: "Dress",
+      midlayer: "Layering",
+      outerwear: "Outerwear",
+      shoes: "Shoes",
       solid: "Solid",
       stripe: "Stripe",
+      top: "Top",
       abstract: "Abstract",
       argyle: "Argyle",
       graphic: "Graphic",
@@ -99,7 +107,16 @@ function renderSidebar(
         "capsule.settingsTitle": "Capsule settings",
         "capsule.settingsSubtitle":
           "Adjust the inputs used to build this capsule.",
-        "capsule.preferWardrobe": "Prefer items from my wardrobe",
+        "capsule.sourceMode.label": "Item source",
+        "capsule.sourceMode.catalogOnly": "Catalog items",
+        "capsule.sourceMode.wardrobePreferred": "My wardrobe + catalog",
+        "capsule.sourceMode.wardrobeOnly": "My wardrobe only",
+        "capsule.sourceMode.checkingWardrobe": "Checking My Wardrobe items...",
+        "capsule.sourceMode.emptyWardrobe":
+          "My Wardrobe has no ready items yet. Add items before using this source.",
+        "capsule.sourceMode.loadFailed": "Could not check My Wardrobe items.",
+        "capsule.sourceMode.insufficientWardrobe":
+          "My Wardrobe has {count} ready items. This capsule may need more: {items}.",
         "capsule.anchors.title": "Anchor items",
         "capsule.anchors.hint": "Choose up to 5 wardrobe items to keep.",
         "capsule.anchors.add": "Add items from wardrobe",
@@ -284,6 +301,46 @@ describe("ProfileFiltersSidebar", () => {
     await user.click(screen.getByRole("button", { name: "Sign out" }));
 
     expect(onSignOut).toHaveBeenCalledTimes(1);
+  });
+
+  test("checks wardrobe-only source mode and blocks apply for an empty wardrobe", async () => {
+    fetchMyWardrobeItemsMock.mockResolvedValue({ items: [] });
+
+    renderSidebar({
+      selectedSourceMode: "wardrobe_only",
+      selectedSeasons: ["winter"],
+    });
+
+    expect(
+      await screen.findByText(/My Wardrobe has no ready items/),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Apply" })).toBeDisabled();
+    expect(fetchMyWardrobeItemsMock).toHaveBeenCalledWith({ force: true });
+  });
+
+  test("warns but allows apply when wardrobe-only source mode has too few ready items", async () => {
+    fetchMyWardrobeItemsMock.mockResolvedValue({
+      items: [
+        {
+          category: "top",
+          processingStatus: "ready",
+        },
+      ],
+    });
+
+    renderSidebar({
+      selectedSourceMode: "wardrobe_only",
+      selectedSeasons: ["winter"],
+    });
+
+    expect(
+      await screen.findByText(
+        /My Wardrobe has 1 ready items\. This capsule may need more:/,
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Layering: 2/)).toBeInTheDocument();
+    expect(screen.queryByText(/midlayer/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Apply" })).toBeEnabled();
   });
 
   test("renders anchor empty state and applies picker selection", async () => {

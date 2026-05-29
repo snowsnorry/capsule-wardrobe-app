@@ -9,13 +9,22 @@ type AccentColorValue = Parameters<
   NonNullable<Parameters<typeof AccentColorChips>[0]["onSelect"]>
 >[0];
 type ProfileFilterValue = string;
-type CapsuleSourceMode = "catalog_only" | "wardrobe_preferred";
+type CapsuleSourceMode =
+  | "catalog_only"
+  | "wardrobe_preferred"
+  | "wardrobe_only";
 
 type ProfileFiltersStatus = {
   loading: boolean;
   error: string;
   infoKey: string;
   infoParams: Record<string, unknown> | null;
+};
+
+type ProfileFiltersSourceModeStatus = {
+  isBlocking: boolean;
+  message: string;
+  severity: "error" | "info" | "warning";
 };
 
 type ProfileFiltersSidebarProps = {
@@ -33,6 +42,7 @@ type ProfileFiltersSidebarProps = {
   selectedAccentColor: AccentColorValue;
   selectedPattern: ProfileFilterValue | null;
   selectedSourceMode: CapsuleSourceMode;
+  sourceModeStatus?: ProfileFiltersSourceModeStatus | null;
   selectedText: string;
   selectedAnchorWardrobeItemIds?: string[];
   hasFilterChanges?: boolean;
@@ -58,4 +68,9 @@ type ProfileFiltersSidebarProps = {
   anchorPickerFullScreen?: boolean;
 };
 
-export type { ProfileFiltersSidebarProps, ProfileFilterValue };
+export type {
+  CapsuleSourceMode,
+  ProfileFiltersSidebarProps,
+  ProfileFilterValue,
+  ProfileFiltersSourceModeStatus,
+};

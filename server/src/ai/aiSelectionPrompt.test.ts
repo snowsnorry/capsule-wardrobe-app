@@ -75,6 +75,15 @@ test("getWardrobeSelectionPrompt renders wardrobe preference rules only for ward
     [{ id: "W7", item_source: "wardrobe", name: "Top", category: "top" }],
     { top: 1 },
   );
+  const wardrobeOnlyPrompt = getWardrobeSelectionPrompt(
+    {
+      audience: "woman",
+      formalityLevel: "casual",
+      sourceMode: "wardrobe_only",
+    },
+    [{ id: "W8", item_source: "wardrobe", name: "Top", category: "top" }],
+    { top: 1 },
+  );
 
   expect(catalogPrompt).not.toMatch(
     /Wardrobe items are items the user already owns/,
@@ -84,6 +93,10 @@ test("getWardrobeSelectionPrompt renders wardrobe preference rules only for ward
     /Prefer wardrobe items over catalog items when they are similarly suitable/,
   );
   expect(wardrobePrompt).toMatch(/"item_source": "wardrobe"/);
+  expect(wardrobeOnlyPrompt).toMatch(
+    /Use only the provided My Wardrobe candidates/,
+  );
+  expect(wardrobeOnlyPrompt).toMatch(/Catalog substitutions are not available/);
 });
 
 test("toWardrobeUiItem preserves detail fields for downstream UI labeling", () => {

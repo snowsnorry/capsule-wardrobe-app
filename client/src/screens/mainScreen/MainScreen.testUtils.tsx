@@ -11,6 +11,8 @@ import { t as translateForMainScreenTests } from "./MainScreenTestTranslations";
 
 const mediaQueryMock = vi.hoisted(() => vi.fn());
 const useI18nMock = vi.hoisted(() => vi.fn());
+const fetchMyWardrobeItemsMock = vi.hoisted(() => vi.fn());
+const fetchUploadedWardrobeItemDetailMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@mui/material/useMediaQuery", () => ({
   default: mediaQueryMock,
@@ -18,6 +20,12 @@ vi.mock("@mui/material/useMediaQuery", () => ({
 
 vi.mock("../../i18n/useI18n", () => ({
   useI18n: useI18nMock,
+}));
+
+vi.mock("../../api/myWardrobe", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../api/myWardrobe")>()),
+  fetchMyWardrobeItems: fetchMyWardrobeItemsMock,
+  fetchUploadedWardrobeItemDetail: fetchUploadedWardrobeItemDetailMock,
 }));
 
 vi.mock("../../components/ProfileFiltersSidebar", () => ({
@@ -202,10 +210,15 @@ vi.mock("../../components/ClothingCard", () => ({
 export const theme = createTheme();
 
 export const t = translateForMainScreenTests;
+export { fetchMyWardrobeItemsMock, fetchUploadedWardrobeItemDetailMock };
 
 export function resetMainScreenTestMocks() {
   window.localStorage.clear();
   mediaQueryMock.mockReset();
+  fetchMyWardrobeItemsMock.mockReset();
+  fetchMyWardrobeItemsMock.mockResolvedValue({ items: [] });
+  fetchUploadedWardrobeItemDetailMock.mockReset();
+  fetchUploadedWardrobeItemDetailMock.mockResolvedValue({ item: null });
   useI18nMock.mockReset();
   useI18nMock.mockReturnValue({ t: translateForMainScreenTests, locale: "en" });
 }

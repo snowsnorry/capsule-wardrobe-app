@@ -13,7 +13,10 @@ export type CapsuleFilters = {
   anchorWardrobeItemIds: string[];
 };
 
-type CapsuleSourceMode = "catalog_only" | "wardrobe_preferred";
+type CapsuleSourceMode =
+  | "catalog_only"
+  | "wardrobe_preferred"
+  | "wardrobe_only";
 
 type OutfitSetPayload = {
   itemIds: string[];
@@ -96,7 +99,11 @@ export function normalizeCapsulePattern(value: unknown): string {
 }
 
 function normalizeCapsuleSourceMode(value: unknown): CapsuleSourceMode {
-  return value === "wardrobe_preferred" ? "wardrobe_preferred" : "catalog_only";
+  if (value === "wardrobe_preferred" || value === "wardrobe_only") {
+    return value;
+  }
+
+  return "catalog_only";
 }
 
 function isPlainRecord(value: unknown): value is Record<string, unknown> {

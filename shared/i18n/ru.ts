@@ -225,7 +225,18 @@ const ru = {
     new: "Новая капсула",
     settingsTitle: "Настройки капсулы",
     settingsSubtitle: "Настройте вводные, по которым собирается эта капсула.",
-    preferWardrobe: "Предпочитать вещи из моего гардероба",
+    sourceMode: {
+      label: "Источник вещей",
+      catalogOnly: "Вещи из каталога",
+      wardrobePreferred: "Мой гардероб + каталог",
+      wardrobeOnly: "Только мой гардероб",
+      checkingWardrobe: "Проверяем вещи в My Wardrobe...",
+      emptyWardrobe:
+        "В My Wardrobe пока нет готовых вещей. Добавьте вещи, прежде чем использовать этот источник.",
+      loadFailed: "Не удалось проверить вещи в My Wardrobe.",
+      insufficientWardrobe:
+        "В My Wardrobe готовых вещей: {count}. Для этой капсулы может не хватить: {items}.",
+    },
     anchors: {
       title: "Анкерные вещи",
       hint: "Выберите до 5 вещей из гардероба, которые стилист обязан оставить.",

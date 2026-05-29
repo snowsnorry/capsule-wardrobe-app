@@ -1192,7 +1192,11 @@ test("wardrobe URL upload route imports product pages with og images", async (t)
 });
 
 test("wardrobe URL upload route imports direct image URLs without cleanup generation", async (t) => {
-  const calls: unknown[] = [];
+  const calls: Array<{
+    type: string;
+    key?: string;
+    [key: string]: unknown;
+  }> = [];
   const normalizedLandscapeImage = await buildRouteTestImageBuffer(900, 500);
   const uploadOriginalMetadata: Array<{ height?: number; width?: number }> = [];
   const thumbnailMetadata: Array<{
@@ -1379,7 +1383,9 @@ test("wardrobe URL upload route imports direct image URLs without cleanup genera
   expect(analyzeProductPage).not.toHaveBeenCalled();
   expect(cleanup).not.toHaveBeenCalled();
   expect(uploadOriginalMetadata).toEqual([{ height: 1600, width: 1200 }]);
-  expect(thumbnailMetadata).toEqual([
+  expect(
+    [...thumbnailMetadata].sort((left, right) => left.width - right.width),
+  ).toEqual([
     {
       height: 427,
       key: "wardrobe/profile/direct-image_320.webp",
@@ -1396,7 +1402,28 @@ test("wardrobe URL upload route imports direct image URLs without cleanup genera
       width: 640,
     },
   ]);
-  expect(calls).toEqual([
+  expect(
+    calls
+      .filter((call) => call.type === "uploadThumbnail")
+      .sort((left, right) => String(left.key).localeCompare(String(right.key))),
+  ).toEqual([
+    expect.objectContaining({
+      type: "uploadThumbnail",
+      key: "wardrobe/profile/direct-image_320.webp",
+      mimeType: "image/webp",
+    }),
+    expect.objectContaining({
+      type: "uploadThumbnail",
+      key: "wardrobe/profile/direct-image_480.webp",
+      mimeType: "image/webp",
+    }),
+    expect.objectContaining({
+      type: "uploadThumbnail",
+      key: "wardrobe/profile/direct-image_640.webp",
+      mimeType: "image/webp",
+    }),
+  ]);
+  expect(calls.filter((call) => call.type !== "uploadThumbnail")).toEqual([
     {
       type: "fetchUrl",
       payload: { url: "https://cdn.example.com/products/linen-shirt.jpg" },
@@ -1438,21 +1465,6 @@ test("wardrobe URL upload route imports direct image URLs without cleanup genera
           "https://images.example.com/wardrobe/profile/direct-image.webp",
       },
     },
-    expect.objectContaining({
-      type: "uploadThumbnail",
-      key: "wardrobe/profile/direct-image_320.webp",
-      mimeType: "image/webp",
-    }),
-    expect.objectContaining({
-      type: "uploadThumbnail",
-      key: "wardrobe/profile/direct-image_480.webp",
-      mimeType: "image/webp",
-    }),
-    expect.objectContaining({
-      type: "uploadThumbnail",
-      key: "wardrobe/profile/direct-image_640.webp",
-      mimeType: "image/webp",
-    }),
     {
       type: "embed",
       item: metadata,

@@ -159,7 +159,11 @@ test("wardrobe image cleanup portrait opt-in pads non-3:4 generated images befor
     mimeType: "image/png",
     width: 1200,
   });
-  expect(uploadMetadata[1]).toEqual(
+  expect(
+    uploadMetadata.find(
+      (metadata) => metadata.key === "wardrobe/profile/item_clean_320.webp",
+    ),
+  ).toEqual(
     expect.objectContaining({
       key: "wardrobe/profile/item_clean_320.webp",
       height: 427,

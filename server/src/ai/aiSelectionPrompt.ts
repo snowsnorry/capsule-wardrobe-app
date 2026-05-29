@@ -21,6 +21,8 @@ const PROMPT_TEMPLATE = getPromptTemplateContent(
 );
 const WARDROBE_PREFERENCE_RULES =
   "Wardrobe items are items the user already owns. Prefer wardrobe items over catalog items when they are similarly suitable for the capsule. Preserve capsule quality: category, season, formality, color, style, and outfit compatibility remain the deciding constraints.";
+const WARDROBE_ONLY_RULES =
+  "Wardrobe items are items the user already owns. Use only the provided My Wardrobe candidates. Catalog substitutions are not available in this mode. Preserve capsule quality: category, season, formality, color, style, and outfit compatibility remain the deciding constraints.";
 
 function formatStringOrDefault(value, fallback) {
   return typeof value === "string" && value.trim().length > 0
@@ -45,6 +47,10 @@ function getAdditionalInfoBlock(userProfile) {
 }
 
 function getWardrobePreferenceRules(userProfile) {
+  if (userProfile?.sourceMode === "wardrobe_only") {
+    return WARDROBE_ONLY_RULES;
+  }
+
   return userProfile?.sourceMode === "wardrobe_preferred"
     ? WARDROBE_PREFERENCE_RULES
     : "";

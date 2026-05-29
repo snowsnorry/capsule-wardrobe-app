@@ -225,7 +225,18 @@ const en = {
     new: "New capsule",
     settingsTitle: "Capsule settings",
     settingsSubtitle: "Adjust the inputs used to build this capsule.",
-    preferWardrobe: "Prefer items from my wardrobe",
+    sourceMode: {
+      label: "Item source",
+      catalogOnly: "Catalog items",
+      wardrobePreferred: "My wardrobe + catalog",
+      wardrobeOnly: "My wardrobe only",
+      checkingWardrobe: "Checking My Wardrobe items...",
+      emptyWardrobe:
+        "My Wardrobe has no ready items yet. Add items before using this source.",
+      loadFailed: "Could not check My Wardrobe items.",
+      insufficientWardrobe:
+        "My Wardrobe has {count} ready items. This capsule may need more: {items}.",
+    },
     anchors: {
       title: "Anchor items",
       hint: "Choose up to 5 wardrobe items the stylist must keep.",

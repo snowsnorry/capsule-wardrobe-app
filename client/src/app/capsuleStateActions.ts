@@ -37,9 +37,11 @@ function normalizePattern(pattern: unknown) {
 }
 
 function normalizeSourceMode(sourceMode: unknown): CapsuleSourceMode {
-  return sourceMode === "wardrobe_preferred"
-    ? "wardrobe_preferred"
-    : "catalog_only";
+  if (sourceMode === "wardrobe_preferred" || sourceMode === "wardrobe_only") {
+    return sourceMode;
+  }
+
+  return "catalog_only";
 }
 
 function fallbackString(value: unknown) {

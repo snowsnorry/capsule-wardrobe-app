@@ -72,6 +72,9 @@ test("normalizeCapsuleFilters drops removed profile occasions and keeps supporte
     normalizeCapsuleFilters({ sourceMode: "wardrobe_preferred" }).sourceMode,
   ).toBe("wardrobe_preferred");
   expect(
+    normalizeCapsuleFilters({ sourceMode: "wardrobe_only" }).sourceMode,
+  ).toBe("wardrobe_only");
+  expect(
     normalizeCapsuleFilters({ sourceMode: "owned_first" }).sourceMode,
   ).toBe("catalog_only");
 });

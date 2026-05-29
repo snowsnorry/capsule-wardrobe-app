@@ -30,7 +30,10 @@ export type MainScreenItem = {
   [key: string]: unknown;
 };
 
-type CapsuleSourceMode = "catalog_only" | "wardrobe_preferred";
+type CapsuleSourceMode =
+  | "catalog_only"
+  | "wardrobe_preferred"
+  | "wardrobe_only";
 
 type ScreenStatus = {
   loading: boolean;

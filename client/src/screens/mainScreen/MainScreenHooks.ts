@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { getReadyWardrobeCapsuleItems } from "../../../../shared/capsuleCategories.js";
+import { fetchMyWardrobeItems } from "../../api/myWardrobe";
 import {
   readStoredMobileCardColumns,
   writeStoredMobileCardColumns,
@@ -232,12 +234,14 @@ function useRegenerateAllRequest({
   interactionDisabled,
   itemCount,
   onRefreshItems,
+  sourceModeBlocked,
   setConfirm,
 }: {
   hasFilterChanges: boolean;
   interactionDisabled: boolean;
   itemCount: number;
   onRefreshItems: () => Promise<void> | void;
+  sourceModeBlocked: boolean;
   setConfirm: (state: {
     action: string;
     capsuleId: string;
@@ -245,7 +249,7 @@ function useRegenerateAllRequest({
   }) => void;
 }) {
   return async () => {
-    if (interactionDisabled) return;
+    if (interactionDisabled || sourceModeBlocked) return;
     if (hasFilterChanges)
       setConfirm({
         action: "regenerate-with-filter-changes",
@@ -262,12 +266,44 @@ function useRegenerateAllRequest({
   };
 }
 
+function useWardrobeOnlyRegenerationBlock(sourceMode: string) {
+  const [isBlocked, setIsBlocked] = useState(false);
+
+  useEffect(() => {
+    if (sourceMode !== "wardrobe_only") {
+      setIsBlocked(false);
+      return;
+    }
+
+    let current = true;
+    setIsBlocked(true);
+    fetchMyWardrobeItems({ force: true })
+      .then((response) => {
+        if (!current) return;
+        const items = Array.isArray(response?.items)
+          ? (response.items as Array<Record<string, unknown>>)
+          : [];
+        setIsBlocked(getReadyWardrobeCapsuleItems(items).length === 0);
+      })
+      .catch(() => {
+        if (current) setIsBlocked(true);
+      });
+
+    return () => {
+      current = false;
+    };
+  }, [sourceMode]);
+
+  return isBlocked;
+}
+
 export {
   useCapsuleDisplay,
   useCapsuleSearch,
   useInlineRename,
   useMainScreenUiState,
   useRegenerateAllRequest,
+  useWardrobeOnlyRegenerationBlock,
 };
 export { useShareCapsule } from "./MainScreenShareHook";
 export type { ShareState } from "./MainScreenShareHook";

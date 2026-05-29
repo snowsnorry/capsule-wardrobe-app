@@ -33,6 +33,7 @@ type HeaderProps = {
   isOverlay: boolean;
   selectedCount: number;
   summary: string[];
+  regenerateAllDisabled?: boolean;
   onCancelSelection: () => void;
   onOpenFilters: () => void;
   onOpenMenu: (event: MouseEvent<HTMLButtonElement>) => void;
@@ -189,6 +190,7 @@ function HeaderActions({
   onOpenMenu,
   onRegenerateAll,
   onRegenerateSelected,
+  regenerateAllDisabled,
 }: Pick<
   HeaderProps,
   | "disabled"
@@ -197,6 +199,7 @@ function HeaderActions({
   | "onOpenMenu"
   | "onRegenerateAll"
   | "onRegenerateSelected"
+  | "regenerateAllDisabled"
 >) {
   const { t } = useI18n();
   if (selectedCount > 0) {
@@ -230,7 +233,11 @@ function HeaderActions({
       spacing={1}
       sx={{ minHeight: 40, alignItems: "center" }}
     >
-      <Button variant="outlined" onClick={onRegenerateAll} disabled={disabled}>
+      <Button
+        variant="outlined"
+        onClick={onRegenerateAll}
+        disabled={disabled || Boolean(regenerateAllDisabled)}
+      >
         {t("capsule.regenerateAll")}
       </Button>
       <IconButton

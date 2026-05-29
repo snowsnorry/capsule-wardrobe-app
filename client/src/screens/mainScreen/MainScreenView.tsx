@@ -65,6 +65,7 @@ type MainScreenViewProps = {
   productMenu: ProductMenuState;
   props: MainScreenProps;
   requestRegenerateAll: () => void;
+  isRegenerateAllDisabled: boolean;
   rowMenuAnchor: CapsuleMenuAnchor;
   rowMenuCapsule: CapsuleLike | null;
   search: SearchState;
@@ -157,6 +158,7 @@ function CapsuleStickyHeader(model: MainScreenViewProps) {
           }
           onRegenerateAll={model.requestRegenerateAll}
           onRegenerateSelected={model.props.onRegenerateSelectedItems}
+          regenerateAllDisabled={model.isRegenerateAllDisabled}
         />
         <MainScreenTabs
           activeTab={model.activeTab}

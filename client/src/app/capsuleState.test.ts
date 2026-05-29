@@ -116,6 +116,12 @@ describe("capsuleState", () => {
         { sourceMode: "wardrobe_preferred" },
       ),
     ).toBe(false);
+    expect(
+      areFiltersEqual(
+        { sourceMode: "wardrobe_only" },
+        { sourceMode: "wardrobe_preferred" },
+      ),
+    ).toBe(false);
     expect(areFiltersEqual({ color: "blue" }, { color: "green" })).toBe(false);
   });
 

@@ -21,6 +21,14 @@ const MULTIPLE_ACCENT_WARDROBE_PREFERRED_WITH_ANCHORS_SQL_FILE = new URL(
   "./sql/capsule_multiple_accent_wardrobe_preferred_with_anchors.sql",
   import.meta.url,
 );
+const MULTIPLE_ACCENT_WARDROBE_ONLY_SQL_FILE = new URL(
+  "./sql/capsule_multiple_accent_wardrobe_only.sql",
+  import.meta.url,
+);
+const MULTIPLE_ACCENT_WARDROBE_ONLY_WITH_ANCHORS_SQL_FILE = new URL(
+  "./sql/capsule_multiple_accent_wardrobe_only_with_anchors.sql",
+  import.meta.url,
+);
 
 function buildMultipleAccentCapsuleSqlValues(
   params: CapsuleWardrobeSqlParams,
@@ -69,10 +77,33 @@ function buildMultipleAccentWardrobePreferredAnchorSqlValues(
   ];
 }
 
+function buildMultipleAccentWardrobeOnlySqlValues(
+  params: CapsuleWardrobeSqlParams,
+): readonly unknown[] {
+  return [
+    ...buildMultipleAccentCapsuleSqlValues(params).slice(0, 11),
+    params.profileEmail,
+  ];
+}
+
+function buildMultipleAccentWardrobeOnlyAnchorSqlValues(
+  params: CapsuleWardrobeSqlParams,
+): readonly unknown[] {
+  return [
+    ...buildMultipleAccentWardrobeOnlySqlValues(params),
+    params.anchorWardrobeNumericIds,
+    params.anchorSimilarityBonusWeight,
+  ];
+}
+
 async function queryCapsuleWardrobeItemsForMultipleAccentColors(
   sql: CapsuleWardrobeSqlClient,
   params: CapsuleWardrobeSqlParams,
 ) {
+  if (params.sourceMode === "wardrobe_only") {
+    return queryCapsuleWardrobeOnlyItemsForMultipleAccentColors(sql, params);
+  }
+
   if (params.sourceMode === "wardrobe_preferred") {
     return queryCapsuleWardrobePreferredItemsForMultipleAccentColors(
       sql,
@@ -111,6 +142,25 @@ async function queryCapsuleWardrobePreferredItemsForMultipleAccentColors(
     sql,
     MULTIPLE_ACCENT_WARDROBE_PREFERRED_SQL_FILE,
     buildMultipleAccentCapsuleSqlValues(params),
+  );
+}
+
+async function queryCapsuleWardrobeOnlyItemsForMultipleAccentColors(
+  sql: CapsuleWardrobeSqlClient,
+  params: CapsuleWardrobeSqlParams,
+) {
+  if (hasAnchorParams(params)) {
+    return executeSqlFile<CapsuleWardrobeSqlRow>(
+      sql,
+      MULTIPLE_ACCENT_WARDROBE_ONLY_WITH_ANCHORS_SQL_FILE,
+      buildMultipleAccentWardrobeOnlyAnchorSqlValues(params),
+    );
+  }
+
+  return executeSqlFile<CapsuleWardrobeSqlRow>(
+    sql,
+    MULTIPLE_ACCENT_WARDROBE_ONLY_SQL_FILE,
+    buildMultipleAccentWardrobeOnlySqlValues(params),
   );
 }
 

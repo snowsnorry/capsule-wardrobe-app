@@ -2,6 +2,7 @@ import { test, expect } from "vitest";
 import {
   buildCapsuleWardrobeSqlParams,
   queryCapsuleWardrobeItems,
+  queryCapsuleWardrobeOnlyItems,
   queryCapsuleWardrobeItemsForMultipleAccentColors,
   queryCapsuleWardrobePreferredItems,
   queryCapsuleWardrobeItemsForProfile,
@@ -192,6 +193,45 @@ test("wardrobe preferred SQL mixes catalog and wardrobe candidates with quotas a
   ]);
 });
 
+test("wardrobe-only SQL selects only current-user ready wardrobe candidates", async () => {
+  const recorder = createSqlRecorder();
+
+  await queryCapsuleWardrobeItems(
+    recorder.sql,
+    buildBaseSqlParams({ sourceMode: "wardrobe_only" }),
+  );
+
+  const sqlText = recorder.calls[0].text;
+  expect(sqlText).toMatch(/FROM wardrobe/i);
+  expect(sqlText).not.toMatch(/FROM products/i);
+  expect(sqlText).toMatch(/wardrobe\.profile_email = params\.profile_email/i);
+  expect(sqlText).toMatch(/wardrobe\.processing_status = 'ready'/i);
+  expect(sqlText).toMatch(
+    /NULLIF\(trim\(COALESCE\(wardrobe\.url, ''\)\), ''\) IS NOT NULL/i,
+  );
+  expect(sqlText).toMatch(
+    /PARTITION BY COALESCE\(wardrobe\.product_id, 'wardrobe:' \|\| wardrobe\.id::text\)/i,
+  );
+  expect(sqlText).toMatch(/\('W' \|\| wardrobe_deduped\.id::text\) AS id/i);
+  expect(sqlText).toMatch(/'wardrobe'::text AS item_source/i);
+  expect(sqlText).toMatch(/wardrobe_deduped\.id::text AS wardrobe_id/i);
+  expect(recorder.calls[0].values).toEqual([
+    ["top", "bottom"],
+    0.05,
+    "[0.1,0.2]",
+    "classic",
+    "red",
+    "solid",
+    "casual",
+    ["office"],
+    ["winter"],
+    ["woman", "all"],
+    ["https://example.com/rejected"],
+    10,
+    "person@example.com",
+  ]);
+});
+
 test("catalog-only SQL keeps products-only retrieval with catalog item source", async () => {
   const recorder = createSqlRecorder();
 
@@ -328,6 +368,59 @@ test("queryCapsuleWardrobeItemsForProfile dispatches wardrobe preferred regular 
   ]);
 });
 
+test("queryCapsuleWardrobeItemsForProfile dispatches wardrobe-only regular and multiple accent branches", async () => {
+  const regular = createSqlRecorder();
+  await queryCapsuleWardrobeItemsForProfile(
+    regular.sql,
+    buildBaseSqlParams({ color: "red", sourceMode: "wardrobe_only" }),
+  );
+
+  const directRegular = createSqlRecorder();
+  await queryCapsuleWardrobeOnlyItems(
+    directRegular.sql,
+    buildBaseSqlParams({ color: "red", sourceMode: "wardrobe_only" }),
+  );
+
+  const multiple = createSqlRecorder();
+  await queryCapsuleWardrobeItemsForProfile(
+    multiple.sql,
+    buildBaseSqlParams({
+      color: "multiple_accent_colors",
+      sourceMode: "wardrobe_only",
+    }),
+  );
+
+  const directMultiple = createSqlRecorder();
+  await queryCapsuleWardrobeItemsForMultipleAccentColors(
+    directMultiple.sql,
+    buildBaseSqlParams({
+      color: "multiple_accent_colors",
+      sourceMode: "wardrobe_only",
+    }),
+  );
+
+  expect(regular.calls).toEqual(directRegular.calls);
+  expect(multiple.calls).toEqual(directMultiple.calls);
+  expect(multiple.calls[0].text).toMatch(/neutrality_rank/);
+  expect(multiple.calls[0].text).toMatch(/FROM wardrobe/i);
+  expect(multiple.calls[0].text).not.toMatch(/FROM products/i);
+  expect(multiple.calls[0].text).toMatch(/\$12::text AS profile_email/i);
+  expect(multiple.calls[0].values).toEqual([
+    ["top", "bottom"],
+    0.05,
+    "[0.1,0.2]",
+    "classic",
+    "solid",
+    "casual",
+    ["office"],
+    ["winter"],
+    ["woman", "all"],
+    ["https://example.com/rejected"],
+    10,
+    "person@example.com",
+  ]);
+});
+
 test("multiple accent SQL query uses neutral/non-neutral color logic", async () => {
   const params = buildBaseSqlParams({ color: "multiple_accent_colors" });
   const regular = createSqlRecorder();
@@ -402,6 +495,22 @@ test("anchor-aware SQL dispatch selects all four anchor variants", async () => {
     }),
   );
 
+  const wardrobeOnly = createSqlRecorder();
+  await queryCapsuleWardrobeOnlyItems(
+    wardrobeOnly.sql,
+    buildBaseSqlParams({ ...anchorParams, sourceMode: "wardrobe_only" }),
+  );
+
+  const wardrobeOnlyMultiple = createSqlRecorder();
+  await queryCapsuleWardrobeItemsForMultipleAccentColors(
+    wardrobeOnlyMultiple.sql,
+    buildBaseSqlParams({
+      ...anchorParams,
+      color: "multiple_accent_colors",
+      sourceMode: "wardrobe_only",
+    }),
+  );
+
   expect(catalog.calls[0].text).toMatch(/selection_role/i);
   expect(catalog.calls[0].text).toMatch(
     /\$14::bigint\[\] AS anchor_wardrobe_ids/i,
@@ -447,4 +556,24 @@ test("anchor-aware SQL dispatch selects all four anchor variants", async () => {
   expect(wardrobeMultiple.calls[0].text).toMatch(/neutrality_rank <= 4/i);
   expect(wardrobeMultiple.calls[0].text).toMatch(/color_rank ASC/i);
   expect(wardrobeMultiple.calls[0].text).not.toMatch(/accent_rank/);
+  expect(wardrobeOnly.calls[0].text).toMatch(
+    /\$14::bigint\[\] AS anchor_wardrobe_ids/i,
+  );
+  expect(wardrobeOnly.calls[0].text).toMatch(/FROM wardrobe/i);
+  expect(wardrobeOnly.calls[0].text).not.toMatch(/FROM products/i);
+  expect(wardrobeOnly.calls[0].text).toMatch(
+    /JOIN wardrobe[\s\S]*wardrobe\.processing_status = 'ready'[\s\S]*NULLIF\(trim\(COALESCE\(wardrobe\.url, ''\)\), ''\) IS NOT NULL/i,
+  );
+  expect(wardrobeOnly.calls[0].text).toMatch(
+    /wardrobe\.id <> ALL\(params\.anchor_wardrobe_ids\)/i,
+  );
+  expect(wardrobeOnlyMultiple.calls[0].text).toMatch(
+    /\$13::bigint\[\] AS anchor_wardrobe_ids/i,
+  );
+  expect(wardrobeOnlyMultiple.calls[0].text).toMatch(/neutrality_rank/i);
+  expect(wardrobeOnlyMultiple.calls[0].text).toMatch(/FROM wardrobe/i);
+  expect(wardrobeOnlyMultiple.calls[0].text).not.toMatch(/FROM products/i);
+  expect(wardrobeOnlyMultiple.calls[0].text).toMatch(
+    /JOIN wardrobe[\s\S]*wardrobe\.processing_status = 'ready'[\s\S]*NULLIF\(trim\(COALESCE\(wardrobe\.url, ''\)\), ''\) IS NOT NULL/i,
+  );
 });

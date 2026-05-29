@@ -1,21 +1,8 @@
-import { countItemsByKey } from "./aiCommon.js";
+import { expandCapsuleCategoriesForAnchors } from "../../../shared/capsuleCategories.js";
 
 type AnchorItemLike = Record<string, unknown>;
 
-function expandCategoriesForAnchors(
-  baseCategories: Record<string, number>,
-  anchorItems: AnchorItemLike[] = [],
-): Record<string, number> {
-  const anchorCounts = countItemsByKey(anchorItems, "category");
-  return Object.fromEntries(
-    Object.entries({ ...baseCategories, ...anchorCounts }).map(
-      ([category, baseCount]) => [
-        category,
-        Math.max(Number(baseCategories[category] || 0), Number(baseCount || 0)),
-      ],
-    ),
-  );
-}
+const expandCategoriesForAnchors = expandCapsuleCategoriesForAnchors;
 
 function splitAnchorSelectionRows(items: AnchorItemLike[] = []) {
   const anchorItems = items.filter((item) => item.selection_role === "anchor");

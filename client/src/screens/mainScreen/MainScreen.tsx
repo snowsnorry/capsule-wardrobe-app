@@ -8,6 +8,7 @@ import {
   useInlineRename,
   useMainScreenUiState,
   useRegenerateAllRequest,
+  useWardrobeOnlyRegenerationBlock,
   useShareCapsule,
 } from "./MainScreenHooks";
 import type { MainScreenProps } from "./MainScreenTypes";
@@ -39,26 +40,18 @@ function MainScreen(props: MainScreenProps) {
     ui.setRowMenuCapsule,
   );
   const selectedCount = props.selectedRegenerationUrls.length;
-  useEffect(() => {
-    if (
-      ui.activeTab !== "all" &&
-      !resolvedSets.some((set) => set.id === ui.activeTab)
-    ) {
-      setActiveTab("all");
-    }
-  }, [resolvedSets, setActiveTab, ui.activeTab]);
-
-  useEffect(() => {
-    if (selectedCount === 0) {
-      setSelectionMode(false);
-    }
-  }, [selectedCount, setSelectionMode]);
+  const sourceModeBlocked = useWardrobeOnlyRegenerationBlock(
+    props.selectedSourceMode,
+  );
+  useResetMissingActiveTab(ui.activeTab, resolvedSets, setActiveTab);
+  useExitSelectionModeWhenEmpty(selectedCount, setSelectionMode);
 
   const requestRegenerateAll = useRegenerateAllRequest({
     hasFilterChanges: props.hasFilterChanges,
     interactionDisabled,
     itemCount: props.items.length,
     onRefreshItems: props.onRefreshItems,
+    sourceModeBlocked,
     setConfirm: ui.setConfirm,
   });
 
@@ -79,6 +72,7 @@ function MainScreen(props: MainScreenProps) {
       productMenu={ui.productMenu}
       props={props}
       requestRegenerateAll={requestRegenerateAll}
+      isRegenerateAllDisabled={sourceModeBlocked}
       rowMenuAnchor={ui.rowMenuAnchor}
       rowMenuCapsule={ui.rowMenuCapsule}
       search={search}
@@ -103,6 +97,32 @@ function MainScreen(props: MainScreenProps) {
       updateColumns={ui.updateColumns}
     />
   );
+}
+
+function useResetMissingActiveTab(
+  activeTab: string,
+  resolvedSets: ReturnType<typeof useCapsuleDisplay>["resolvedSets"],
+  setActiveTab: (tab: string) => void,
+) {
+  useEffect(() => {
+    if (
+      activeTab !== "all" &&
+      !resolvedSets.some((set) => set.id === activeTab)
+    ) {
+      setActiveTab("all");
+    }
+  }, [activeTab, resolvedSets, setActiveTab]);
+}
+
+function useExitSelectionModeWhenEmpty(
+  selectedCount: number,
+  setSelectionMode: (selected: boolean) => void,
+) {
+  useEffect(() => {
+    if (selectedCount === 0) {
+      setSelectionMode(false);
+    }
+  }, [selectedCount, setSelectionMode]);
 }
 
 export default MainScreen;
