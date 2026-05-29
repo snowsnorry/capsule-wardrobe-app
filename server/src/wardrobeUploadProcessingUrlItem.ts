@@ -11,6 +11,7 @@ import {
   fetchProductPageHtmlWithImpers,
   type ProductPageFetchResult,
   type ProductPageImageDownloadResult,
+  type ProductPageUrlFetchResult,
 } from "./wardrobeProductPageImport.js";
 import {
   type WardrobeUploadProcessingCleanup,
@@ -35,6 +36,17 @@ type DirectImageInput = {
   imageUrl: string;
   originalName: string;
 };
+
+type DirectImageFetchResult = Extract<
+  ProductPageUrlFetchResult,
+  { type: "image" }
+>;
+
+function isDirectImageFetchResult(
+  result: ProductPageUrlFetchResult,
+): result is DirectImageFetchResult {
+  return "type" in result && result.type === "image";
+}
 
 function buildDirectImageSource({
   image,
@@ -304,21 +316,20 @@ async function processUrlUploadItem({
       url: input.url,
     });
 
-    const result =
-      productPage?.type === "image"
-        ? await processDirectImageUrlItem({
-            email,
-            image: productPage.image,
-            inputIndex: input.inputIndex,
-            sendImpl,
-          })
-        : await processProductPageUrlItem({
-            email,
-            imageLlm,
-            input,
-            productPage,
-            sendImpl,
-          });
+    const result = isDirectImageFetchResult(productPage)
+      ? await processDirectImageUrlItem({
+          email,
+          image: productPage.image,
+          inputIndex: input.inputIndex,
+          sendImpl,
+        })
+      : await processProductPageUrlItem({
+          email,
+          imageLlm,
+          input,
+          productPage,
+          sendImpl,
+        });
 
     if (result.ok) {
       sendProcessingEvent(sendImpl, {

@@ -58,6 +58,10 @@ type WardrobeImageThumbnailUploadResult = Pick<
   WardrobeImageCleanupResult,
   "thumbnails"
 >;
+type WardrobeImageCleanupProfile = { imageLlm?: string | null } | null;
+type WardrobeImageCleanupGetProfile = (
+  email: string,
+) => Promise<WardrobeImageCleanupProfile>;
 
 function buildSingleItemImageCleanupPrompt() {
   return CLEANUP_PROMPT;
@@ -162,7 +166,7 @@ async function cleanupUploadedWardrobeItemImage({
   uploadWardrobeDerivativeImageToR2Impl = uploadWardrobeDerivativeImageToR2,
   buildThumbnailBuffersImpl = buildWardrobeImageThumbnailBuffers,
 }: UploadedWardrobeImageCleanupInput & {
-  getProfileImpl?: typeof getProfile;
+  getProfileImpl?: WardrobeImageCleanupGetProfile;
   generateImageWithGeminiImpl?: typeof generateImageWithGemini;
   generateImageWithOpenAiImpl?: typeof generateImageWithOpenAi;
   uploadWardrobeDerivativeImageToR2Impl?: typeof uploadWardrobeDerivativeImageToR2;
