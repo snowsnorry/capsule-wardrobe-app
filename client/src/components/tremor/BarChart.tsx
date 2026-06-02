@@ -16,6 +16,7 @@ import ChartContainer from "./ChartContainer";
 type BarChartDatum = {
   rawValue: string;
   color: string;
+  activeColor?: string;
   isActive?: boolean;
   groupLabel: string;
   gradientId?: string;
@@ -204,7 +205,7 @@ function BarChartPlot({
         {data.map((row) => (
           <Cell
             key={row.rawValue}
-            fill={row.color}
+            fill={getBarCellFill(row, focusedValue)}
             fillOpacity={
               focusedValue === row.rawValue
                 ? 1
@@ -226,6 +227,12 @@ function BarChartPlot({
       </Bar>
     </RechartsBarChart>
   );
+}
+
+function getBarCellFill(row: BarChartDatum, focusedValue: string | null) {
+  return focusedValue === row.rawValue || row.isActive
+    ? row.activeColor || row.color
+    : row.color;
 }
 
 function BarChartGradients({ data }) {

@@ -11,31 +11,37 @@ import type { PriceBucket, StatsRow } from "./statisticsTypes";
 
 type ColorFillConfig = {
   color: string;
+  activeColor?: string;
   gradientId?: string;
   gradientStops?: string[];
 };
 
-export const FACET_COLORS = [
-  "#FF6B6B",
-  "#4ECDC4",
-  "#FFE66D",
-  "#FF9F1C",
-  "#E71D36",
-  "#8338EC",
-  "#3A86FF",
-  "#FF006E",
-  "#8AC926",
-  "#1982C4",
-  "#F15BB5",
-  "#00B4D8",
-  "#9B5DE5",
-  "#FFB703",
-  "#38B000",
-  "#E07A5F",
-  "#5A189A",
-  "#F4A261",
-  "#014F86",
-];
+export const STATISTICS_FACET_COLORS = [
+  { color: "#6f9f9a", activeColor: "#1c7c7c" },
+  { color: "#b6974d", activeColor: "#8f6f45" },
+  { color: "#5f6f83", activeColor: "#52606d" },
+  { color: "#b36f58", activeColor: "#9a6149" },
+  { color: "#537fa2", activeColor: "#3f6f96" },
+  { color: "#b66f85", activeColor: "#9d516d" },
+  { color: "#6d8e55", activeColor: "#587a42" },
+  { color: "#8c7463", activeColor: "#6f5b4d" },
+  { color: "#3f8a79", activeColor: "#2d7464" },
+  { color: "#b98955", activeColor: "#956832" },
+  { color: "#77639a", activeColor: "#615083" },
+  { color: "#a96052", activeColor: "#914836" },
+  { color: "#4f8fa0", activeColor: "#377a8c" },
+  { color: "#88964a", activeColor: "#707f35" },
+  { color: "#a86f98", activeColor: "#8f557e" },
+  { color: "#677b9f", activeColor: "#50658a" },
+  { color: "#9c7a49", activeColor: "#806139" },
+  { color: "#4f8063", activeColor: "#3a6c4d" },
+  { color: "#956984", activeColor: "#7f526e" },
+  { color: "#bb7e68", activeColor: "#a2634e" },
+  { color: "#6f7f72", activeColor: "#58695b" },
+  { color: "#a5914f", activeColor: "#867235" },
+  { color: "#7a8ea6", activeColor: "#60758f" },
+  { color: "#8a6f5b", activeColor: "#735844" },
+] as const;
 
 export const BAR_CHART_DIMENSION_KEYS = new Set([
   "style",
@@ -134,6 +140,10 @@ export function getColorChartFillConfig(value: string): ColorFillConfig {
   return { color: "#94a3b8" };
 }
 
+export function getStatisticsFacetFillConfig(index: number): ColorFillConfig {
+  return STATISTICS_FACET_COLORS[index % STATISTICS_FACET_COLORS.length];
+}
+
 function buildDonutChartData({
   rows,
   activeValues,
@@ -146,15 +156,18 @@ function buildDonutChartData({
   title: string;
 }) {
   const summarizedRows = summarizeFacetRows(rows);
-  return summarizedRows.map((row, index) => ({
-    ...row,
-    label: formatLabel(row.value),
-    rawValue: row.value,
-    groupLabel: title,
-    color: FACET_COLORS[index % FACET_COLORS.length],
-    legendColor: FACET_COLORS[index % FACET_COLORS.length],
-    isActive: !row.isOther && activeValues.includes(row.value),
-  }));
+  return summarizedRows.map((row, index) => {
+    const fillConfig = getStatisticsFacetFillConfig(index);
+    return {
+      ...row,
+      label: formatLabel(row.value),
+      rawValue: row.value,
+      groupLabel: title,
+      ...fillConfig,
+      legendColor: fillConfig.color,
+      isActive: !row.isOther && activeValues.includes(row.value),
+    };
+  });
 }
 
 export function StatisticsDonutChart({

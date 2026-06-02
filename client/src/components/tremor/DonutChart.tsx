@@ -8,11 +8,12 @@ import ChartContainer from "./ChartContainer";
 type DonutChartDatum = {
   rawValue: string;
   color: string;
+  activeColor?: string;
   groupLabel: string;
   isActive?: boolean;
   isOther?: boolean;
   legendColor?: string;
-  [key: string]: string | number | boolean | undefined;
+  [key: string]: string | number | boolean | string[] | undefined;
 };
 
 type TooltipPayloadItem = {
@@ -164,7 +165,11 @@ function DonutPie({
         {data.map((row) => (
           <Cell
             key={row.rawValue}
-            fill={row.color}
+            fill={
+              focusedValue === row.rawValue || row.isActive
+                ? row.activeColor || row.color
+                : row.color
+            }
             fillOpacity={
               focusedValue === row.rawValue
                 ? 1
@@ -253,7 +258,9 @@ function DonutLegendItem({ hasSelection, index, row }) {
           width: 12,
           height: 12,
           borderRadius: "999px",
-          bgcolor: row.legendColor || row.color,
+          bgcolor: row.isActive
+            ? row.activeColor || row.legendColor || row.color
+            : row.legendColor || row.color,
           flexShrink: 0,
         }}
       />

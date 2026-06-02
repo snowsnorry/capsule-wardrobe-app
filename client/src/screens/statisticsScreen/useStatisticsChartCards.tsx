@@ -10,11 +10,11 @@ import type {
 import {
   BAR_CHART_DIMENSION_KEYS,
   CHART_DIMENSIONS,
-  FACET_COLORS,
   PriceLineChart,
   StatisticsBarChart,
   StatisticsDonutChart,
   getColorChartFillConfig,
+  getStatisticsFacetFillConfig,
 } from "./StatisticsCharts";
 import type { StatisticsState } from "./statisticsTypes";
 
@@ -67,9 +67,7 @@ function buildDimensionChartCard({
     <StatisticsBarChart
       key={dimension.key}
       {...commonProps}
-      getFillConfig={(_value, index) => ({
-        color: FACET_COLORS[index % FACET_COLORS.length],
-      })}
+      getFillConfig={(_value, index) => getStatisticsFacetFillConfig(index)}
     />
   ) : (
     <StatisticsDonutChart key={dimension.key} {...commonProps} />

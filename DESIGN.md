@@ -267,7 +267,7 @@ supporting panels theme-aware, but do not force product image surfaces dark.
 
 ### Statistics Cards
 
-Statistics cards are dense, compact, and chart-led. Use the existing chart palette for distinct categorical data, but avoid importing that saturation into the rest of the app shell. The statistics screen supports product understanding; it should not become the product's visual identity.
+Statistics cards are dense, compact, and chart-led. Generic facet charts use a long muted wardrobe ramp derived from teal, olive-gold, slate, clay, muted blue, soft rose, sage, taupe, violet, moss, brick, and steel, ordered so adjacent categories stay visually distinct even in charts with many segments. Slightly stronger variants are reserved for active selections. The accent-color chart is the exception: it uses literal clothing swatches and gradients so actual color data remains inspectable. The statistics screen supports product understanding; it should not become the product's visual identity.
 
 ## 7. Do's and Don'ts
 

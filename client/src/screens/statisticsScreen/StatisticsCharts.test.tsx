@@ -70,16 +70,48 @@ import {
   BAR_CHART_DIMENSION_KEYS,
   CHART_DIMENSIONS,
   PriceLineChart,
+  STATISTICS_FACET_COLORS,
   StatisticsBarChart,
   StatisticsDonutChart,
   formatCount,
   getColorChartFillConfig,
+  getStatisticsFacetFillConfig,
 } from "./StatisticsCharts";
 
 const theme = createTheme();
 
 function renderWithTheme(children: ReactNode) {
   return render(<ThemeProvider theme={theme}>{children}</ThemeProvider>);
+}
+
+function getHexSaturation(hexColor: string) {
+  const [red, green, blue] = getHexRgbChannels(hexColor).map(
+    (channel) => channel / 255,
+  );
+  const max = Math.max(red, green, blue);
+  const min = Math.min(red, green, blue);
+
+  return max === min ? 0 : (max - min) / (1 - Math.abs(max + min - 1));
+}
+
+function getHexRgbChannels(hexColor: string) {
+  const normalizedHex = hexColor.replace("#", "");
+  return [
+    Number.parseInt(normalizedHex.slice(0, 2), 16),
+    Number.parseInt(normalizedHex.slice(2, 4), 16),
+    Number.parseInt(normalizedHex.slice(4, 6), 16),
+  ];
+}
+
+function getHexRgbDistance(firstColor: string, secondColor: string) {
+  const firstChannels = getHexRgbChannels(firstColor);
+  const secondChannels = getHexRgbChannels(secondColor);
+
+  return Math.hypot(
+    firstChannels[0] - secondChannels[0],
+    firstChannels[1] - secondChannels[1],
+    firstChannels[2] - secondChannels[2],
+  );
 }
 
 describe("StatisticsCharts", () => {
@@ -93,6 +125,59 @@ describe("StatisticsCharts", () => {
     expect(
       CHART_DIMENSIONS.some((dimension) => dimension.key === "brand"),
     ).toBe(true);
+  });
+
+  test("uses a muted generic facet ramp with active color pairs", () => {
+    const previousDemoColors = new Set<string>([
+      "#FF6B6B",
+      "#4ECDC4",
+      "#FFE66D",
+      "#FF9F1C",
+      "#E71D36",
+      "#8338EC",
+      "#3A86FF",
+      "#FF006E",
+      "#8AC926",
+      "#1982C4",
+      "#F15BB5",
+      "#00B4D8",
+      "#9B5DE5",
+      "#FFB703",
+      "#38B000",
+      "#E07A5F",
+      "#5A189A",
+      "#F4A261",
+      "#014F86",
+    ]);
+    const rampColors = STATISTICS_FACET_COLORS.flatMap(
+      ({ color, activeColor }) => [color, activeColor],
+    );
+    const adjacentDefaultDistances = STATISTICS_FACET_COLORS.map(
+      ({ color }, index) =>
+        getHexRgbDistance(
+          color,
+          STATISTICS_FACET_COLORS[(index + 1) % STATISTICS_FACET_COLORS.length]
+            .color,
+        ),
+    );
+
+    expect(STATISTICS_FACET_COLORS).toHaveLength(24);
+    expect(rampColors.every((color) => /^#[0-9a-f]{6}$/i.test(color))).toBe(
+      true,
+    );
+    expect(
+      rampColors.some((color) => previousDemoColors.has(color.toUpperCase())),
+    ).toBe(false);
+    expect(new Set(rampColors).size).toBe(rampColors.length);
+    expect(
+      STATISTICS_FACET_COLORS.every(
+        ({ color }) => getHexSaturation(color) <= 0.45,
+      ),
+    ).toBe(true);
+    expect(Math.min(...adjacentDefaultDistances)).toBeGreaterThanOrEqual(40);
+    expect(getStatisticsFacetFillConfig(24)).toEqual(
+      STATISTICS_FACET_COLORS[0],
+    );
   });
 
   test("builds donut data with active and summarized values", async () => {
