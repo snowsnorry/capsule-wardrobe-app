@@ -29,11 +29,9 @@ test("t falls back to default locale and interpolates parameters", () => {
   expect(defaultLocale).toBe("en");
 });
 
-test("t translates app launcher labels", () => {
+test("t translates capsule sidebar labels", () => {
   expect(t("launcher.myWardrobe", undefined, "ru")).toBe("Мой гардероб");
   expect(t("launcher.capsule", undefined, "ru")).toBe("Капсула");
-  expect(t("launcher.explore", undefined, "ru")).toBe("Каталог");
-  expect(t("launcher.statistics", undefined, "ru")).toBe("Статистика");
 });
 
 test("t translates sidebar navigation labels", () => {

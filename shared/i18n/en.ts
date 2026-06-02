@@ -16,15 +16,8 @@ const en = {
     },
   },
   launcher: {
-    open: "Choose app",
     myWardrobe: "My Wardrobe",
-    myWardrobeHint: "Saved and uploaded items",
     capsule: "Capsule",
-    capsuleHint: "Capsule wardrobe builder",
-    explore: "Catalog",
-    exploreHint: "Browse product catalog",
-    statistics: "Statistics",
-    statisticsHint: "Search analytics",
   },
   sidebar: {
     catalog: "Catalog",

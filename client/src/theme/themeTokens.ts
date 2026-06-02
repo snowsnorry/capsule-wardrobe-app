@@ -75,13 +75,6 @@ const paletteTokens = {
     mediaControlBgHover: "rgba(251, 255, 253, 1)",
     mediaControlInk: "#081111",
     passkeyHoverBg: "var(--cw-color-action-wash)",
-    launcherBorder: "rgba(143, 111, 69, 0.2)",
-    launcherBackground:
-      "linear-gradient(135deg, rgba(127, 84, 38, 0.14), rgba(240, 180, 41, 0.14) 58%, rgba(255, 244, 220, 0.88))",
-    launcherShadow:
-      "inset 0 1px 0 rgba(255,255,255,0.7), 0 8px 18px rgba(127, 84, 38, 0.08)",
-    launcherIcon: "#7f5426",
-    launcherInk: "#7f5426",
     notificationIcon: "#8f6f45",
     notificationActionHover: "rgba(28, 124, 124, 0.055)",
     wardrobeCardShadow: "0 1px 6px rgba(17, 36, 34, 0.055)",
@@ -143,13 +136,6 @@ const paletteTokens = {
     mediaControlBgHover: "rgba(251, 255, 253, 1)",
     mediaControlInk: "#081111",
     passkeyHoverBg: "var(--cw-color-action-hover)",
-    launcherBorder: "rgba(240, 180, 41, 0.28)",
-    launcherBackground:
-      "linear-gradient(135deg, rgba(240, 180, 41, 0.16), rgba(127, 84, 38, 0.22) 52%, rgba(28, 40, 38, 0.96))",
-    launcherShadow:
-      "inset 0 1px 0 rgba(255,255,255,0.06), 0 10px 20px rgba(0, 0, 0, 0.28)",
-    launcherIcon: "#f0d39a",
-    launcherInk: "#f7ead0",
     notificationIcon: "#8f6f45",
     notificationActionHover: "rgba(67, 143, 143, 0.1)",
     wardrobeCardShadow: "0 1px 6px rgba(17, 36, 34, 0.06)",

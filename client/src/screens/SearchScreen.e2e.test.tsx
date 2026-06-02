@@ -22,11 +22,6 @@ vi.mock("../api/search", () => searchApi);
 vi.mock("@mui/material/useMediaQuery", () => ({
   default: mediaQueryMock,
 }));
-vi.mock("../components/AppLauncher", () => ({
-  default: ({ currentApp }) => (
-    <div data-testid="app-launcher">{currentApp}</div>
-  ),
-}));
 vi.mock("../components/LocaleSwitcher", () => ({
   default: () => <div data-testid="locale-switcher">locale-switcher</div>,
 }));

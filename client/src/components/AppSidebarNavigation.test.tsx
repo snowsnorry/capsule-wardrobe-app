@@ -10,9 +10,7 @@ vi.mock("../i18n/useI18n", () => ({
       const value =
         {
           "launcher.capsule": "Capsule",
-          "launcher.explore": "Catalog",
           "launcher.myWardrobe": "My Wardrobe",
-          "launcher.statistics": "Statistics",
           "sidebar.catalog": "Catalog",
           "sidebar.explore": "Explore",
           "sidebar.statistics": "Statistics",

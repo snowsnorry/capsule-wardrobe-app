@@ -16,15 +16,8 @@ const ru = {
     },
   },
   launcher: {
-    open: "Выбрать приложение",
     myWardrobe: "Мой гардероб",
-    myWardrobeHint: "Сохраненные и загруженные вещи",
     capsule: "Капсула",
-    capsuleHint: "Конструктор капсульного гардероба",
-    explore: "Каталог",
-    exploreHint: "Каталог товаров",
-    statistics: "Статистика",
-    statisticsHint: "Аналитика поиска",
   },
   sidebar: {
     catalog: "Каталог",

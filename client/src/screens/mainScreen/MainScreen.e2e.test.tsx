@@ -13,11 +13,6 @@ vi.mock("@mui/material/useMediaQuery", () => ({
 vi.mock("../../i18n/useI18n", () => ({
   useI18n: useI18nMock,
 }));
-vi.mock("../../components/AppLauncher", () => ({
-  default: ({ currentApp }) => (
-    <div data-testid="app-launcher">{currentApp}</div>
-  ),
-}));
 vi.mock("../../components/LocaleSwitcher", () => ({
   default: () => <div data-testid="locale-switcher">locale-switcher</div>,
 }));
