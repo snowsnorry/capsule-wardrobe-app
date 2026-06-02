@@ -175,6 +175,44 @@ describe("tremor charts", () => {
     expect(focusedSector).toHaveAttribute("stroke-width", "2.5");
   });
 
+  test("DonutChart uses dense legend layout for long visible lists", async () => {
+    render(
+      <DonutChart
+        data={[
+          ...Array.from({ length: 9 }, (_item, index) => ({
+            rawValue: `brand-${index}`,
+            label: `Brand ${index + 1}`,
+            count: 12 - index,
+            color: "#123456",
+            groupLabel: "Brand",
+          })),
+          {
+            rawValue: "other",
+            label: "Other",
+            count: 1,
+            color: "#cccccc",
+            groupLabel: "Brand",
+            isOther: true,
+          },
+        ]}
+        index="label"
+        category="count"
+        valueFormatter={(value) => `${value} items`}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(document.querySelector(".recharts-wrapper")).toBeInTheDocument();
+    });
+
+    expect(screen.getByTestId("donut-legend")).toHaveAttribute(
+      "data-density",
+      "dense",
+    );
+    expect(screen.getByText("Brand 9")).toBeInTheDocument();
+    expect(screen.queryByText("Other")).not.toBeInTheDocument();
+  });
+
   test("LineChart renders without a custom label formatter", async () => {
     render(
       <LineChart

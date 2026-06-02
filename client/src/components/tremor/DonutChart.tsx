@@ -55,6 +55,8 @@ function DonutChart({
     : "rgba(31, 41, 51, 0.42)";
   const tooltipStyle = getTooltipStyle(isDarkMode);
   const tooltipTextStyle = getTooltipTextStyle(isDarkMode);
+  const visibleLegendCount = data.filter((row) => !row.isOther).length;
+  const hasDenseLegend = visibleLegendCount > 8;
 
   return (
     <Box
@@ -64,7 +66,9 @@ function DonutChart({
         display: "grid",
         gridTemplateColumns: {
           xs: "minmax(0, 1fr)",
-          sm: "minmax(0, 1fr) minmax(150px, 0.55fr)",
+          sm: hasDenseLegend
+            ? "minmax(0, 1fr) minmax(240px, 0.8fr)"
+            : "minmax(0, 1fr) minmax(150px, 0.55fr)",
         },
         gridTemplateRows: { xs: "240px auto", sm: "minmax(0, 1fr)" },
         gap: 2,
@@ -99,7 +103,12 @@ function DonutChart({
         )}
         sx={{ height: "100%", minWidth: 0, overflow: "hidden" }}
       />
-      <DonutLegend data={data} hasSelection={hasSelection} index={index} />
+      <DonutLegend
+        data={data}
+        hasDenseLegend={hasDenseLegend}
+        hasSelection={hasSelection}
+        index={index}
+      />
       <DonutA11yButtons
         data={data}
         index={index}
@@ -209,33 +218,36 @@ function getDonutCellStyle(
   };
 }
 
-function DonutLegend({ data, hasSelection, index }) {
+function DonutLegend({ data, hasDenseLegend, hasSelection, index }) {
+  const visibleRows = data.filter((row) => !row.isOther);
+
   return (
-    <Stack
-      spacing={{ xs: 0, sm: 0.85 }}
-      direction={{ xs: "row", sm: "column" }}
-      useFlexGap
+    <Box
+      data-testid="donut-legend"
+      data-density={hasDenseLegend ? "dense" : "regular"}
       sx={{
         minWidth: 0,
-        display: "flex",
-        flexWrap: { xs: "wrap", sm: "nowrap" },
-        gap: { xs: 1.1, sm: 0.85 },
+        display: { xs: "flex", sm: "grid" },
+        flexWrap: "wrap",
+        gridTemplateColumns: {
+          sm: hasDenseLegend ? "repeat(2, minmax(0, 1fr))" : "minmax(0, 1fr)",
+        },
+        columnGap: { xs: 1.1, sm: hasDenseLegend ? 1.6 : 0 },
+        rowGap: { xs: 1.1, sm: 0.85 },
         alignItems: { xs: "center", sm: "stretch" },
         alignContent: "flex-start",
         overflow: "hidden",
       }}
     >
-      {data
-        .filter((row) => !row.isOther)
-        .map((row) => (
-          <DonutLegendItem
-            key={row.rawValue}
-            hasSelection={hasSelection}
-            index={index}
-            row={row}
-          />
-        ))}
-    </Stack>
+      {visibleRows.map((row) => (
+        <DonutLegendItem
+          key={row.rawValue}
+          hasSelection={hasSelection}
+          index={index}
+          row={row}
+        />
+      ))}
+    </Box>
   );
 }
 
@@ -249,6 +261,7 @@ function DonutLegendItem({ hasSelection, index, row }) {
       sx={{
         minWidth: 0,
         maxWidth: "100%",
+        width: "100%",
         flex: { xs: "0 1 auto", sm: "0 1 auto" },
       }}
     >

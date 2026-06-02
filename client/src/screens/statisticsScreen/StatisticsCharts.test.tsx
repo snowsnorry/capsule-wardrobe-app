@@ -21,10 +21,19 @@ vi.mock("../../components/tremor/DonutChart", () => ({
   }) => (
     <div data-testid="donut-chart">
       <span>{valueFormatter(data[0]?.count ?? 0)}</span>
-      <button type="button" onClick={() => onValueChange(data[0])}>
-        {data[0]?.label}
-      </button>
-      <span>{data.find((row) => row.isOther)?.label}</span>
+      {data.map((row) =>
+        row.isOther ? (
+          <span key={row.rawValue}>{row.label}</span>
+        ) : (
+          <button
+            key={row.rawValue}
+            type="button"
+            onClick={() => onValueChange(row)}
+          >
+            {row.label}
+          </button>
+        ),
+      )}
     </div>
   ),
 }));
@@ -183,9 +192,9 @@ describe("StatisticsCharts", () => {
   test("builds donut data with active and summarized values", async () => {
     const user = userEvent.setup();
     const onToggleValue = vi.fn();
-    const rows = Array.from({ length: 14 }, (_item, index) => ({
+    const rows = Array.from({ length: 22 }, (_item, index) => ({
       value: `value-${index}`,
-      count: 20 - index,
+      count: 30 - index,
     }));
 
     renderWithTheme(
@@ -202,7 +211,9 @@ describe("StatisticsCharts", () => {
       />,
     );
 
-    expect(screen.getByText("20")).toBeInTheDocument();
+    expect(screen.getByText("30")).toBeInTheDocument();
+    expect(screen.getByText("Label value-19")).toBeInTheDocument();
+    expect(screen.queryByText("Label value-20")).not.toBeInTheDocument();
     expect(screen.getByText("Other")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Label value-0" }));
     expect(onToggleValue).toHaveBeenCalledWith("value-0");

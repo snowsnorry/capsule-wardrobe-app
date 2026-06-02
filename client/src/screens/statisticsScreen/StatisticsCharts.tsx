@@ -50,6 +50,8 @@ export const BAR_CHART_DIMENSION_KEYS = new Set([
   "closureType",
 ]);
 
+const FACET_DONUT_VISIBLE_ROW_LIMIT = 20;
+
 export const CHART_DIMENSIONS = [
   { key: "brand", titleKey: "search.filters.brand", optionGroup: "brand" },
   {
@@ -106,13 +108,13 @@ function summarizeFacetRows(rows: StatsRow[] = []): StatsRow[] {
   const normalizedRows = Array.isArray(rows)
     ? rows.filter((row) => row?.count > 0 && row?.value)
     : [];
-  if (normalizedRows.length <= 12) {
+  if (normalizedRows.length <= FACET_DONUT_VISIBLE_ROW_LIMIT) {
     return normalizedRows;
   }
 
-  const visibleRows = normalizedRows.slice(0, 12);
+  const visibleRows = normalizedRows.slice(0, FACET_DONUT_VISIBLE_ROW_LIMIT);
   const otherCount = normalizedRows
-    .slice(12)
+    .slice(FACET_DONUT_VISIBLE_ROW_LIMIT)
     .reduce((sum, row) => sum + Number(row.count || 0), 0);
   return [
     ...visibleRows,
