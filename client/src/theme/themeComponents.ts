@@ -47,6 +47,8 @@ function createComponentOverrides(mode: ThemeMode): Components<Theme> {
   const tokens = paletteTokens[mode];
   const tone = componentToneByMode[mode];
   const selectedControlColor = tokens[tone.selectedControlColorToken];
+  const selectedChipColor =
+    mode === "light" ? tokens.primaryDark : selectedControlColor;
 
   return {
     MuiCssBaseline: {
@@ -130,14 +132,14 @@ function createComponentOverrides(mode: ThemeMode): Components<Theme> {
         filledPrimary: {
           backgroundColor: "var(--cw-color-action-wash)",
           boxShadow: `inset 0 0 0 1px ${alpha(tokens.primaryMain, tone.selectedChipBorderOpacity)}`,
-          color: selectedControlColor,
+          color: selectedChipColor,
           "&:hover": {
             backgroundColor: "var(--cw-color-action-hover)",
           },
           "& .MuiChip-deleteIcon": {
-            color: alpha(selectedControlColor, 0.68),
+            color: alpha(selectedChipColor, 0.68),
             "&:hover": {
-              color: selectedControlColor,
+              color: selectedChipColor,
             },
           },
         },

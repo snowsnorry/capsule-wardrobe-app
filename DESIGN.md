@@ -5,6 +5,7 @@ colors:
   wardrobe-teal: "#1c7c7c"
   wardrobe-teal-hover: "#155f5f"
   wardrobe-teal-dark-mode: "#438f8f"
+  wardrobe-teal-dark-mode-selected: "#65b2af"
   wardrobe-gold: "#b68416"
   wardrobe-gold-dark-mode: "#f0b429"
   signature-olive-gold: "#8f6f45"
@@ -89,7 +90,7 @@ components:
     padding: "5px 15px"
   chip-selected:
     backgroundColor: "subtle teal action wash"
-    textColor: "{colors.wardrobe-teal}"
+    textColor: "{colors.wardrobe-teal-hover} in light mode; {colors.wardrobe-teal-dark-mode-selected} in dark mode"
     typography: "{typography.label}"
     rounded: "{rounded.pill}"
     height: "32px"
