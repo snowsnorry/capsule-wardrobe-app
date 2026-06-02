@@ -148,6 +148,55 @@ test("mergeWardrobeItemsWithMetadata falls back to available replacements and cu
   ]);
 });
 
+test("mergeWardrobeItemsWithMetadata collapses selected swimwear parts into one replacement", () => {
+  const result = mergeWardrobeItemsWithMetadata({
+    currentItems: [
+      {
+        id: "keep-top",
+        url: "keep-top-url",
+        category: "top",
+        name: "Keep Top",
+      },
+      {
+        id: "old-swim-top",
+        url: "old-swim-top-url",
+        category: "swimwear",
+        name: "Old Bikini Top",
+      },
+      {
+        id: "old-swim-bottom",
+        url: "old-swim-bottom-url",
+        category: "swimwear",
+        name: "Old Bikini Bottom",
+      },
+    ],
+    nextItems: [
+      {
+        id: "new-swimsuit",
+        url: "new-swimsuit-url",
+        category: "swimwear",
+        name: "New Swimsuit",
+      },
+      {
+        id: "keep-top-new",
+        url: "keep-top-url",
+        category: "top",
+        name: "Keep Top Updated",
+      },
+    ],
+    pendingUrls: ["old-swim-top-url", "old-swim-bottom-url"],
+  });
+
+  expect(result.items.map((item) => item.id)).toEqual([
+    "keep-top-new",
+    "new-swimsuit",
+  ]);
+  expect([...result.replacementMap.entries()]).toEqual([
+    ["old-swim-top", "new-swimsuit"],
+    ["old-swim-bottom", "new-swimsuit"],
+  ]);
+});
+
 test("mergeWardrobeItemsIntoExistingOrder returns only merged items", () => {
   expect(
     mergeWardrobeItemsIntoExistingOrder({

@@ -347,6 +347,91 @@ test("startWardrobeJob stores capsule result and merges swimwear additions when 
   ]);
 });
 
+test("startWardrobeJob completes anchored swimwear even when seasonal swimwear generation is disabled", async () => {
+  const updates = [];
+  const swimwearCalls = [];
+  const service = createWardrobeService({
+    generateCapsuleWardrobeImpl: async () =>
+      buildWardrobeGenerationResult({
+        items: [
+          buildWardrobeUiItem({
+            id: "W12",
+            category: "swimwear",
+            url: "wardrobe://12",
+            name: "Bikini Bottom",
+            imageUrl: undefined,
+            audience: "woman",
+            swimwearType: "swimwear_bottom",
+          }),
+        ],
+        selectedItems: [
+          buildWardrobeUiItem({
+            id: "W12",
+            category: "swimwear",
+            url: "wardrobe://12",
+            name: "Bikini Bottom",
+            imageUrl: undefined,
+            audience: "woman",
+            swimwearType: "swimwear_bottom",
+          }),
+        ],
+        promptEmbeddings: [0.1],
+      }),
+    updateCapsuleSnapshotImpl: async (email, capsuleId, draft) => {
+      updates.push([email, capsuleId, draft]);
+      return buildNormalizedCapsuleRecord({
+        id: capsuleId,
+        draft,
+        saved: null,
+      });
+    },
+    shouldGenerateSwimwearImpl: () => false,
+    generateSwimwearAdditionImpl: async (payload) => {
+      swimwearCalls.push(payload);
+      return {
+        items: [
+          buildWardrobeUiItem({
+            id: "swim-top-1",
+            category: "swimwear",
+            url: "https://example.com/swim-top-1",
+            name: "Bikini Top",
+            imageUrl: undefined,
+            audience: "woman",
+            swimwearType: "swimwear_top",
+          }),
+        ],
+        reasoning: null,
+        rawSelectionText: null,
+      };
+    },
+    jobs: new Map(),
+  });
+
+  const job = service.startWardrobeJob(
+    "person@example.com",
+    "capsule-1",
+    buildNormalizedProfileRecord({ audience: "woman", season: ["winter"] }),
+    createCapsuleWithWardrobe(null),
+  );
+  await job.promise;
+
+  expect(swimwearCalls).toHaveLength(1);
+  expect(swimwearCalls[0].selectedCapsuleItems).toEqual([
+    buildWardrobeUiItem({
+      id: "W12",
+      category: "swimwear",
+      url: "wardrobe://12",
+      name: "Bikini Bottom",
+      imageUrl: undefined,
+      audience: "woman",
+      swimwearType: "swimwear_bottom",
+    }),
+  ]);
+  expect(
+    updates.at(-1)?.[2].data.wardrobe.items.map((item) => item.id),
+  ).toEqual(["W12", "swim-top-1"]);
+});
+
 test("startWardrobeJob renames a new capsule from stylist short_capsule_name on first content generation", async () => {
   const renamedCapsules = [];
   const service = createWardrobeService({

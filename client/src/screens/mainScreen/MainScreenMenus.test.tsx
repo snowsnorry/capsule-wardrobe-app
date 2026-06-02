@@ -89,6 +89,42 @@ describe("MainScreenMenus", () => {
     });
   });
 
+  test("disables product-menu regeneration selection for anchor items", async () => {
+    const user = userEvent.setup();
+    const setSelectionMode = vi.fn();
+    const onToggleRegenerationSelection = vi.fn();
+    renderMenus({
+      productMenu: {
+        anchor: createAnchor(),
+        url: "wardrobe://12",
+        item: {
+          id: "W12",
+          wardrobeId: "12",
+          url: "wardrobe://12",
+          name: "Anchor shirt",
+          category: "top",
+          source: "uploaded",
+        },
+      },
+      props: createMainScreenProps({
+        onToggleRegenerationSelection,
+        selectedAnchorWardrobeItemIds: ["W12"],
+      }),
+      setSelectionMode,
+    });
+
+    const menuItem = screen.getByRole("menuitem", { name: "Select" });
+    expect(menuItem).toHaveAttribute("aria-disabled", "true");
+
+    await user.hover(menuItem.parentElement as HTMLElement);
+    expect(
+      await screen.findByText("Anchor items must stay in the capsule."),
+    ).toBeVisible();
+
+    expect(setSelectionMode).not.toHaveBeenCalled();
+    expect(onToggleRegenerationSelection).not.toHaveBeenCalled();
+  });
+
   test("saves a product to my wardrobe from the product menu", async () => {
     const user = userEvent.setup();
     const onSaveToMyWardrobe = vi.fn(() => Promise.resolve());

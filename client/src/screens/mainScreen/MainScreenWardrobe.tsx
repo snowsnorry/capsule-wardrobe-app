@@ -36,6 +36,7 @@ type WardrobeProps = {
   isOverlay: boolean;
   mobileColumns: MobileCardColumns;
   partialPendingUrls: string[];
+  selectedAnchorWardrobeItemIds: string[];
   selectedUrls: string[];
   selectionMode: boolean;
   showAdditionalItemPlaceholder: boolean;
@@ -90,6 +91,32 @@ const outfitImageSx = {
   borderColor: "divider",
   borderRadius: "var(--cw-radius-card)",
 } as const;
+
+function normalizePublicWardrobeId(value: unknown) {
+  const trimmed = String(value || "").trim();
+  if (!trimmed) {
+    return "";
+  }
+
+  const withoutPrefix = trimmed.replace(/^W/i, "");
+  return /^\d+$/.test(withoutPrefix) ? `W${withoutPrefix}` : trimmed;
+}
+
+function isAnchorWardrobeItem(
+  item: MainScreenItem,
+  anchorWardrobeItemIds: string[],
+) {
+  const anchorIdSet = new Set(
+    anchorWardrobeItemIds.map(normalizePublicWardrobeId).filter(Boolean),
+  );
+  if (anchorIdSet.size === 0) {
+    return false;
+  }
+
+  return [item?.id, item?.wardrobeId]
+    .map(normalizePublicWardrobeId)
+    .some((itemId) => anchorIdSet.has(itemId));
+}
 
 function OutfitImageBlock({ props }: { props: WardrobeProps }) {
   const { t } = useI18n();
@@ -166,6 +193,7 @@ function OutfitImageBlock({ props }: { props: WardrobeProps }) {
 }
 
 function WardrobeGrid({ props }: { props: WardrobeProps }) {
+  const { t } = useI18n();
   const columns = buildClothingGridTemplateColumns(props.mobileColumns);
   const gap = buildClothingGridGap(props.mobileColumns);
 
@@ -185,6 +213,13 @@ function WardrobeGrid({ props }: { props: WardrobeProps }) {
     >
       {props.visibleItems.map((item) => {
         const itemUrl = String(item?.url || "");
+        const isAnchor = isAnchorWardrobeItem(
+          item,
+          props.selectedAnchorWardrobeItemIds,
+        );
+        const regenerationLockedReason = isAnchor
+          ? t("capsule.anchorRegenerationLocked")
+          : null;
         if (props.partialPendingUrls.includes(itemUrl)) {
           return (
             <ClothingPlaceholderCard
@@ -198,10 +233,11 @@ function WardrobeGrid({ props }: { props: WardrobeProps }) {
           <ClothingCard
             key={item.url || item.id}
             item={item}
-            isSelectable={Boolean(itemUrl)}
+            isSelectable={Boolean(itemUrl) && !isAnchor}
             isSelected={props.selectedUrls.includes(itemUrl)}
             isSelectionMode={props.selectionMode}
             isRegenerating={props.disabled}
+            regenerationLockedReason={regenerationLockedReason}
             onToggleSelected={props.onToggleSelected}
             onProductClick={props.onProductClick}
             onProductMenuClick={props.onProductMenuClick}

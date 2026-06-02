@@ -165,6 +165,7 @@ function t(key, params) {
       closeFilters: "Close filters",
       openMenu: "Open capsule menu",
       selectProductForRegeneration: "Select",
+      anchorRegenerationLocked: "Anchor items must stay in the capsule.",
       cardLayout: "Card layout",
       cardColumnsOne: "1 column",
       cardColumnsTwo: "2 columns",

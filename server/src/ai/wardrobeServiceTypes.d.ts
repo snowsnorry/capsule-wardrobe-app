@@ -8,6 +8,7 @@ import type {
 import type { buildCapsuleEventSnapshot } from "./capsuleEvents.js";
 import type {
   generateSwimwearAddition,
+  shouldCompleteSelectedSwimwear,
   shouldGenerateSwimwear,
 } from "./swimwear.js";
 import type {
@@ -28,6 +29,7 @@ type WardrobeServiceDependencies = {
     logContext?: LogContextLike | null,
   ) => Promise<WardrobeGenerationResult>;
   shouldGenerateSwimwearImpl?: typeof shouldGenerateSwimwear;
+  shouldCompleteSelectedSwimwearImpl?: typeof shouldCompleteSelectedSwimwear;
   generateSwimwearAdditionImpl?: typeof generateSwimwearAddition;
   getPartialRegenerationJobImpl?: (
     email: string,

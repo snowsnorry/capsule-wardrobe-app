@@ -144,6 +144,7 @@ vi.mock("../../components/ClothingCard", () => ({
     isSelectable,
     isSelectionMode,
     isRegenerating,
+    regenerationLockedReason,
     allowProductMenuWithoutUrl,
     mobileColumns,
     onToggleSelected,
@@ -155,6 +156,7 @@ vi.mock("../../components/ClothingCard", () => ({
     isSelectable?: boolean;
     isSelectionMode?: boolean;
     isRegenerating?: boolean;
+    regenerationLockedReason?: string | null;
     allowProductMenuWithoutUrl?: boolean;
     mobileColumns?: MobileCardColumns;
     onToggleSelected: (item: MainScreenItem) => void;
@@ -173,10 +175,11 @@ vi.mock("../../components/ClothingCard", () => ({
         data-selectable={String(isSelectable)}
         data-selection-mode={String(isSelectionMode)}
         data-regenerating={String(isRegenerating)}
+        data-regeneration-locked-reason={regenerationLockedReason || ""}
         data-mobile-columns={String(mobileColumns ?? 2)}
-        disabled={isRegenerating}
+        disabled={isRegenerating || (isSelectionMode && !isSelectable)}
         onClick={() => {
-          if (isSelectionMode) {
+          if (isSelectionMode && isSelectable && !regenerationLockedReason) {
             onToggleSelected(item);
             return;
           }

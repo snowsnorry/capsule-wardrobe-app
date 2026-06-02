@@ -321,6 +321,7 @@ const en = {
     openMenu: "Open capsule menu",
     openProductMenu: "Open product menu",
     selectProductForRegeneration: "Select",
+    anchorRegenerationLocked: "Anchor items must stay in the capsule.",
     saveToMyWardrobe: "Save to My Wardrobe",
     removeFromMyWardrobe: "Remove from My Wardrobe",
     cardLayout: "Card layout",

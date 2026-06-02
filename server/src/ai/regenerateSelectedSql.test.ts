@@ -134,6 +134,7 @@ test("queryRegenerationCandidateItems reads only current-user ready wardrobe ite
     ["woman", "all"],
     ["https://example.test/old"],
     "person@example.com",
+    [],
   ]);
 });
 
@@ -181,5 +182,177 @@ test("queryRegenerationCandidateItems mixes catalog and wardrobe candidates in w
     25,
     10,
     5,
+    [],
   ]);
+});
+
+test("queryRegenerationCandidateItems dispatches the full selected-regeneration SQL matrix", async () => {
+  const cases = [
+    {
+      label: "catalog regular",
+      params: createBaseParams({ sourceMode: "catalog_only" }),
+      expectedValues: [
+        ["top", "bottom"],
+        0.05,
+        "[0.1,0.2]",
+        "minimalistic",
+        "blue",
+        "solid",
+        "casual",
+        ["office"],
+        ["summer"],
+        ["woman", "all"],
+        ["https://example.test/old"],
+      ],
+      expectedText: [/is_color_match/, /\$5::text AS color/],
+      forbiddenText: [/is_non_neutral_color/, /anchor_wardrobe_ids/],
+    },
+    {
+      label: "catalog multiple accent",
+      params: createBaseParams({ color: "multiple_accent_colors" }),
+      expectedValues: [
+        ["top", "bottom"],
+        0.05,
+        "[0.1,0.2]",
+        "minimalistic",
+        "solid",
+        "casual",
+        ["office"],
+        ["summer"],
+        ["woman", "all"],
+        ["https://example.test/old"],
+      ],
+      expectedText: [/is_non_neutral_color/, /style_role/],
+      forbiddenText: [/\$5::text AS color/, /is_color_match/],
+    },
+    {
+      label: "wardrobe-only regular",
+      params: createBaseParams({
+        anchorWardrobeNumericIds: [12],
+        profileEmail: "person@example.com",
+        sourceMode: "wardrobe_only",
+      }),
+      expectedValues: [
+        ["top", "bottom"],
+        0.05,
+        "[0.1,0.2]",
+        "minimalistic",
+        "blue",
+        "solid",
+        "casual",
+        ["office"],
+        ["summer"],
+        ["woman", "all"],
+        ["https://example.test/old"],
+        "person@example.com",
+        [12],
+      ],
+      expectedText: [/FROM wardrobe/, /anchor_wardrobe_ids/, /is_color_match/],
+      forbiddenText: [/is_non_neutral_color/],
+    },
+    {
+      label: "wardrobe-only multiple accent",
+      params: createBaseParams({
+        anchorWardrobeNumericIds: [12],
+        color: "multiple_accent_colors",
+        profileEmail: "person@example.com",
+        sourceMode: "wardrobe_only",
+      }),
+      expectedValues: [
+        ["top", "bottom"],
+        0.05,
+        "[0.1,0.2]",
+        "minimalistic",
+        "solid",
+        "casual",
+        ["office"],
+        ["summer"],
+        ["woman", "all"],
+        ["https://example.test/old"],
+        "person@example.com",
+        [12],
+      ],
+      expectedText: [
+        /FROM wardrobe/,
+        /anchor_wardrobe_ids/,
+        /is_non_neutral_color/,
+      ],
+      forbiddenText: [/\$5::text AS color/, /is_color_match/],
+    },
+    {
+      label: "wardrobe-preferred regular",
+      params: createBaseParams({
+        anchorWardrobeNumericIds: [12],
+        profileEmail: "person@example.com",
+        sourceMode: "wardrobe_preferred",
+      }),
+      expectedValues: [
+        ["top", "bottom"],
+        0.05,
+        "[0.1,0.2]",
+        "minimalistic",
+        "blue",
+        "solid",
+        "casual",
+        ["office"],
+        ["summer"],
+        ["woman", "all"],
+        ["https://example.test/old"],
+        "person@example.com",
+        25,
+        10,
+        5,
+        [12],
+      ],
+      expectedText: [/UNION ALL/, /anchor_wardrobe_ids/, /is_color_match/],
+      forbiddenText: [/is_non_neutral_color/],
+    },
+    {
+      label: "wardrobe-preferred multiple accent",
+      params: createBaseParams({
+        anchorWardrobeNumericIds: [12],
+        color: "multiple_accent_colors",
+        profileEmail: "person@example.com",
+        sourceMode: "wardrobe_preferred",
+      }),
+      expectedValues: [
+        ["top", "bottom"],
+        0.05,
+        "[0.1,0.2]",
+        "minimalistic",
+        "solid",
+        "casual",
+        ["office"],
+        ["summer"],
+        ["woman", "all"],
+        ["https://example.test/old"],
+        "person@example.com",
+        25,
+        10,
+        5,
+        [12],
+      ],
+      expectedText: [
+        /UNION ALL/,
+        /anchor_wardrobe_ids/,
+        /is_non_neutral_color/,
+      ],
+      forbiddenText: [/\$5::text AS color/, /is_color_match/],
+    },
+  ];
+
+  for (const testCase of cases) {
+    const { calls, sql } = createSqlRecorder();
+
+    await queryRegenerationCandidateItems(sql, testCase.params);
+
+    expect(calls, testCase.label).toHaveLength(1);
+    expect(calls[0].values, testCase.label).toEqual(testCase.expectedValues);
+    for (const pattern of testCase.expectedText) {
+      expect(calls[0].text, testCase.label).toMatch(pattern);
+    }
+    for (const pattern of testCase.forbiddenText) {
+      expect(calls[0].text, testCase.label).not.toMatch(pattern);
+    }
+  }
 });

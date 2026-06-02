@@ -101,7 +101,7 @@ export function remapOutfitSetsAfterPartialRegeneration({
 
   return (Array.isArray(outfitSets) ? outfitSets : [])
     .map((set) => {
-      const currentItemIds = Array.isArray(set?.itemIds)
+      const currentItemIds: string[] = Array.isArray(set?.itemIds)
         ? set.itemIds.map((id) => String(id || "").trim()).filter(Boolean)
         : [];
       if (currentItemIds.length === 0) {
@@ -109,13 +109,35 @@ export function remapOutfitSetsAfterPartialRegeneration({
       }
 
       let hasChanges = false;
-      const nextItemIds = currentItemIds.map((itemId) => {
-        const nextItemId = replacementMap.get(itemId) || itemId;
-        if (nextItemId !== itemId) {
-          hasChanges = true;
+      const dedupedReplacementIds = new Set<string>();
+      const nextItemIds = currentItemIds.reduce<string[]>((ids, itemId) => {
+        let nextItemId = itemId;
+        let isReplacement = false;
+        if (replacementMap.has(itemId)) {
+          const mappedItemId = replacementMap.get(itemId);
+          if (mappedItemId !== itemId) {
+            hasChanges = true;
+            isReplacement = true;
+          }
+          nextItemId =
+            typeof mappedItemId === "string" ? mappedItemId.trim() : "";
         }
-        return nextItemId;
-      });
+
+        if (!nextItemId) {
+          return ids;
+        }
+
+        if (isReplacement) {
+          if (!dedupedReplacementIds.has(nextItemId)) {
+            ids.push(nextItemId);
+            dedupedReplacementIds.add(nextItemId);
+          }
+          return ids;
+        }
+
+        ids.push(nextItemId);
+        return ids;
+      }, []);
 
       return {
         itemIds: nextItemIds,

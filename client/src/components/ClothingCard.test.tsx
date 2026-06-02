@@ -103,6 +103,24 @@ describe("ClothingCard", () => {
     ).not.toBeInTheDocument();
   });
 
+  test("disables the selection toggle when regeneration is locked", () => {
+    const onToggleSelected = vi.fn();
+    renderCard({
+      isSelectionMode: true,
+      isMobile: true,
+      regenerationLockedReason: "Anchor items must stay in the capsule.",
+      onToggleSelected,
+    });
+
+    const toggleButton = screen.getByRole("button", {
+      name: "main.partialRegenerateToggle",
+    });
+    expect(toggleButton).toBeDisabled();
+
+    fireEvent.click(toggleButton);
+    expect(onToggleSelected).not.toHaveBeenCalled();
+  });
+
   test("uses the card click for selection instead of product details in selection mode", () => {
     const onToggleSelected = vi.fn();
     const onProductClick = vi.fn();

@@ -196,6 +196,57 @@ test("remapOutfitSetsAfterPartialRegeneration remaps replaced items and marks ch
   ]);
 });
 
+test("remapOutfitSetsAfterPartialRegeneration maps collapsed bikini parts to one swimsuit", () => {
+  const result = remapOutfitSetsAfterPartialRegeneration({
+    pendingUrls: [
+      "https://example.test/old-swim-top",
+      "https://example.test/old-swim-bottom",
+    ],
+    currentItems: [
+      {
+        id: "old-swim-top",
+        url: "https://example.test/old-swim-top",
+        name: "Old Bikini Top",
+        category: "swimwear",
+      },
+      {
+        id: "old-swim-bottom",
+        url: "https://example.test/old-swim-bottom",
+        name: "Old Bikini Bottom",
+        category: "swimwear",
+      },
+    ],
+    nextItems: [
+      {
+        id: "new-swimsuit",
+        url: "https://example.test/new-swimsuit",
+        name: "New Swimsuit",
+        category: "swimwear",
+      },
+    ],
+    outfitSets: [
+      {
+        itemIds: ["old-swim-top", "old-swim-bottom", "keep-id"],
+        image: "outfit.jpg",
+      },
+      { itemIds: ["old-swim-bottom"], image: "bottom-only.jpg" },
+    ],
+  });
+
+  expect(result).toEqual([
+    {
+      itemIds: ["new-swimsuit", "keep-id"],
+      image: "outfit.jpg",
+      imageObsolete: true,
+    },
+    {
+      itemIds: ["new-swimsuit"],
+      image: "bottom-only.jpg",
+      imageObsolete: true,
+    },
+  ]);
+});
+
 test("prompt formatting helpers simplify values and generated schema", () => {
   expect(formatProfileValues([" office ", "", "travel"])).toBe(
     " office , travel",

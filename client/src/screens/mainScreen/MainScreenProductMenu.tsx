@@ -10,6 +10,7 @@ import {
   MenuItem,
   ListItemIcon,
   ListItemText,
+  Tooltip,
 } from "@mui/material";
 import BookmarkBorderRoundedIcon from "@mui/icons-material/BookmarkBorderRounded";
 import BookmarkRemoveOutlinedIcon from "@mui/icons-material/BookmarkRemoveOutlined";
@@ -30,6 +31,7 @@ type ProductMenuProps = {
       onRemoveFromMyWardrobe?: (item: MainScreenItem) => Promise<void> | void;
       onSaveToMyWardrobe?: (item: MainScreenItem) => Promise<void> | void;
       onToggleRegenerationSelection: (item: MainScreenItem) => void;
+      selectedAnchorWardrobeItemIds: string[];
     };
     setSelectionMode: (value: boolean) => void;
   };
@@ -104,9 +106,37 @@ function ProductMenuItems({
   );
 }
 
+function normalizePublicWardrobeId(value: unknown) {
+  const trimmed = String(value || "").trim();
+  if (!trimmed) {
+    return "";
+  }
+
+  const withoutPrefix = trimmed.replace(/^W/i, "");
+  return /^\d+$/.test(withoutPrefix) ? `W${withoutPrefix}` : trimmed;
+}
+
+function isAnchorMenuItem(menuProps: ProductMenuProps["menuProps"]) {
+  const anchorIds = menuProps.props.selectedAnchorWardrobeItemIds || [];
+  const anchorIdSet = new Set(
+    anchorIds.map(normalizePublicWardrobeId).filter(Boolean),
+  );
+  const item = menuProps.productMenu.item;
+
+  if (anchorIdSet.size === 0 || !item) {
+    return false;
+  }
+
+  return [item.id, item.wardrobeId]
+    .map(normalizePublicWardrobeId)
+    .some((itemId) => anchorIdSet.has(itemId));
+}
+
 function RegenerationMenuItem({ menuProps, onClose, t }: ProductMenuProps) {
-  return (
+  const isAnchor = isAnchorMenuItem(menuProps);
+  const menuItem = (
     <MenuItem
+      disabled={isAnchor}
       onClick={() => {
         const item = menuProps.productMenu.item;
         onClose();
@@ -121,6 +151,14 @@ function RegenerationMenuItem({ menuProps, onClose, t }: ProductMenuProps) {
       </ListItemIcon>
       <ListItemText>{t("capsule.selectProductForRegeneration")}</ListItemText>
     </MenuItem>
+  );
+
+  return isAnchor ? (
+    <Tooltip title={t("capsule.anchorRegenerationLocked")}>
+      <span>{menuItem}</span>
+    </Tooltip>
+  ) : (
+    menuItem
   );
 }
 

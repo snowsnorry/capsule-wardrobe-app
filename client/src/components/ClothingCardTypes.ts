@@ -13,6 +13,7 @@ type ClothingCardItem = {
   processingStatus?: string | null;
   isSavedToWardrobe?: boolean | null;
   savedToMyWardrobe?: boolean | null;
+  wardrobeId?: string | number | null;
 };
 
 type MobileCardMetrics = {
@@ -29,6 +30,7 @@ type CardActionProps = {
   isMobile: boolean;
   isSelected: boolean;
   isRegenerating: boolean;
+  regenerationLockedReason?: string | null;
   showToggleButton: boolean;
   showProductMenuButton: boolean;
   showMobileProductMenuButton: boolean;

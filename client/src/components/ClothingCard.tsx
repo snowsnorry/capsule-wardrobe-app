@@ -13,6 +13,7 @@ type ClothingCardProps = {
   isSelected?: boolean;
   isSelectionMode?: boolean;
   isRegenerating?: boolean;
+  regenerationLockedReason?: string | null;
   onToggleSelected?: (item: ClothingCardItem) => void;
   onProductClick?: (item: ClothingCardItem) => void;
   onProductMenuClick?: (
@@ -35,6 +36,7 @@ function normalizeClothingCardProps(props: ClothingCardProps) {
     isSelected: props.isSelected ?? false,
     isSelectionMode: props.isSelectionMode ?? false,
     isRegenerating: props.isRegenerating ?? false,
+    regenerationLockedReason: props.regenerationLockedReason ?? null,
     onToggleSelected: props.onToggleSelected,
     onProductClick: props.onProductClick,
     onProductMenuClick: props.onProductMenuClick,
@@ -56,6 +58,7 @@ function buildClothingCardActionProps({
     isMobile: boolean;
     isSelected: boolean;
     isRegenerating: boolean;
+    regenerationLockedReason?: string | null;
     showToggleButton: boolean;
     showProductMenuButton: boolean;
     showMobileProductMenuButton: boolean;
@@ -131,6 +134,7 @@ function buildCardActionState({
   isMobile,
   isSelected,
   isRegenerating,
+  regenerationLockedReason,
   showToggleButton,
   showProductMenuButton,
   mobileCardMetrics,
@@ -138,6 +142,7 @@ function buildCardActionState({
   isMobile: boolean;
   isSelected: boolean;
   isRegenerating: boolean;
+  regenerationLockedReason?: string | null;
   showToggleButton: boolean;
   showProductMenuButton: boolean;
   mobileCardMetrics: ReturnType<typeof getMobileCardMetrics>;
@@ -146,6 +151,7 @@ function buildCardActionState({
     isMobile,
     isSelected,
     isRegenerating,
+    regenerationLockedReason,
     showToggleButton,
     showProductMenuButton,
     showMobileProductMenuButton: isMobile && showProductMenuButton,
@@ -159,6 +165,7 @@ function buildActionPropsForCard({
   isMobile,
   isSelected,
   isRegenerating,
+  regenerationLockedReason,
   showToggleButton,
   showProductMenuButton,
   mobileCardMetrics,
@@ -169,6 +176,7 @@ function buildActionPropsForCard({
   isMobile: boolean;
   isSelected: boolean;
   isRegenerating: boolean;
+  regenerationLockedReason?: string | null;
   showToggleButton: boolean;
   showProductMenuButton: boolean;
   mobileCardMetrics: ReturnType<typeof getMobileCardMetrics>;
@@ -181,6 +189,7 @@ function buildActionPropsForCard({
       isMobile,
       isSelected,
       isRegenerating,
+      regenerationLockedReason,
       showToggleButton,
       showProductMenuButton,
       mobileCardMetrics,
@@ -244,6 +253,7 @@ function ClothingCard(props: ClothingCardProps): ReactElement {
     isSelected,
     isSelectionMode,
     isRegenerating,
+    regenerationLockedReason,
     onToggleSelected,
     onProductClick,
     onProductMenuClick,
@@ -272,13 +282,18 @@ function ClothingCard(props: ClothingCardProps): ReactElement {
     item,
     productUrl,
   });
-  const showToggleButton = isSelectionMode && isSelectable;
+  const showToggleButton =
+    isSelectionMode && (isSelectable || Boolean(regenerationLockedReason));
   const showProductMenuButton =
     showProductMenu && !isSelectionMode && Boolean(productMenuKey);
   const showCardActions = showToggleButton || showProductMenuButton;
   const handleToggleSelected = (event: MouseEvent<HTMLButtonElement>) => {
     stopCardActionPropagation(event);
-    if (!isRegenerating && typeof onToggleSelected === "function") {
+    if (
+      !isRegenerating &&
+      !regenerationLockedReason &&
+      typeof onToggleSelected === "function"
+    ) {
       onToggleSelected(item);
     }
   };
@@ -301,6 +316,7 @@ function ClothingCard(props: ClothingCardProps): ReactElement {
     isMobile,
     isSelected,
     isRegenerating,
+    regenerationLockedReason,
     showToggleButton,
     showProductMenuButton,
     mobileCardMetrics,

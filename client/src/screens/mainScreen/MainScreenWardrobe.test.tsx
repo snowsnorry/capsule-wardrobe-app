@@ -39,6 +39,7 @@ function createWardrobeProps(
     isOverlay: false,
     mobileColumns: 2,
     partialPendingUrls: [],
+    selectedAnchorWardrobeItemIds: [],
     selectedUrls: [],
     selectionMode: false,
     showAdditionalItemPlaceholder: false,
@@ -105,6 +106,38 @@ describe("MainScreenWardrobe", () => {
 
     await user.click(screen.getByTestId("clothing-card-https://example.com/c"));
     expect(onToggleSelected).toHaveBeenCalledWith(items[2]);
+  });
+
+  test("keeps anchor wardrobe cards out of partial-regeneration selection", async () => {
+    const user = userEvent.setup();
+    const onToggleSelected = vi.fn();
+    const anchorItem = {
+      id: "W7",
+      wardrobeId: 7,
+      url: "wardrobe://7",
+      name: "Anchor shirt",
+      category: "top",
+      source: "uploaded" as const,
+    };
+    renderWardrobe({
+      visibleItems: [anchorItem],
+      selectedAnchorWardrobeItemIds: ["W7"],
+      selectionMode: true,
+      isOverlay: true,
+      onToggleSelected,
+    });
+
+    const anchorCard = screen.getByTestId("clothing-card-wardrobe://7");
+    expect(anchorCard).toHaveAttribute("data-selectable", "false");
+    expect(anchorCard).toHaveAttribute(
+      "data-regeneration-locked-reason",
+      "Anchor items must stay in the capsule.",
+    );
+    expect(anchorCard).toBeDisabled();
+
+    await user.click(anchorCard);
+
+    expect(onToggleSelected).not.toHaveBeenCalled();
   });
 
   test("opens product details from a product card outside selection mode", async () => {

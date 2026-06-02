@@ -254,6 +254,9 @@ function MainScreenCapsulePanel(model: MainScreenViewProps) {
           isOverlay={model.isOverlaySidebar}
           mobileColumns={model.mobileColumns}
           partialPendingUrls={model.props.partialRegenerationPendingUrls}
+          selectedAnchorWardrobeItemIds={
+            model.props.selectedAnchorWardrobeItemIds
+          }
           selectedUrls={model.props.selectedRegenerationUrls}
           selectionMode={model.selectionMode || model.selectedCount > 0}
           showAdditionalItemPlaceholder={

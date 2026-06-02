@@ -294,6 +294,59 @@ test("regenerateSelectedWardrobeItems rejects unknown urls from request", async 
   expect(res.body).toEqual({ error: "invalid_payload" });
 });
 
+test("regenerateSelectedWardrobeItems rejects anchor urls from partial regeneration", async () => {
+  const updateCapsuleSnapshotImpl = vi.fn();
+  const service = createPartialRegenerationService({
+    getProfileImpl: async () => createProfile(),
+    getCapsuleImpl: async () =>
+      buildNormalizedCapsuleRecord({
+        draft: buildCapsuleSnapshot({
+          filters: {
+            season: ["winter"],
+            anchorWardrobeItemIds: ["W12"],
+          },
+          data: {
+            rejectedUrls: [],
+            wardrobe: buildStoredWardrobePayload({
+              items: [
+                buildWardrobeUiItem({
+                  id: "W12",
+                  wardrobeId: "12",
+                  url: "wardrobe://12",
+                  category: "swimwear",
+                }),
+                buildWardrobeUiItem({
+                  id: "top-1",
+                  url: "https://example.com/top-1",
+                  category: "top",
+                }),
+              ],
+            }),
+          },
+        }),
+      }),
+    updateCapsuleSnapshotImpl,
+    jobs: new Map(),
+  });
+  const res = createResponseRecorder();
+
+  await service.regenerateSelectedWardrobeItems(
+    {
+      user: { email: "person@example.com" },
+      params: { id: "capsule-1" },
+      body: { itemUrls: ["wardrobe://12"] },
+    },
+    res,
+  );
+
+  expect(res.statusCode).toBe(400);
+  expect(res.body).toEqual({ error: "invalid_payload" });
+  expect(updateCapsuleSnapshotImpl).not.toHaveBeenCalled();
+  expect(
+    service.getPartialRegenerationJob("person@example.com", "capsule-1"),
+  ).toBe(null);
+});
+
 test("regenerateSelectedWardrobeItems updates rejected urls, shrinks partial payload, and starts pending job", async () => {
   const draftUpdates = [];
   let regeneratedProfile = null;

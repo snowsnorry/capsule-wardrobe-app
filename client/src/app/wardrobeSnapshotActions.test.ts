@@ -192,4 +192,53 @@ describe("wardrobeSnapshotActions", () => {
       "https://example.com/bottom-1",
     ]);
   });
+
+  test("partial regeneration ready snapshot collapses bikini parts into one swimsuit", async () => {
+    const baseItems = [
+      { id: "top-1", url: "https://example.com/top-1", category: "top" },
+      {
+        id: "swim-top-1",
+        url: "https://example.com/swim-top-1",
+        category: "swimwear",
+      },
+      {
+        id: "swim-bottom-1",
+        url: "https://example.com/swim-bottom-1",
+        category: "swimwear",
+      },
+    ];
+    const context = createSnapshotContext({
+      pendingRegenerationUrlsRef: {
+        current: [
+          "https://example.com/swim-top-1",
+          "https://example.com/swim-bottom-1",
+        ],
+      },
+      regenerationBaseItemsRef: { current: baseItems },
+    });
+
+    await applyWardrobeSnapshotToApp(
+      context,
+      {
+        status: "ready",
+        items: [
+          { id: "top-1", url: "https://example.com/top-1", category: "top" },
+          {
+            id: "swimsuit-2",
+            url: "https://example.com/swimsuit-2",
+            category: "swimwear",
+          },
+        ],
+      },
+      "capsule-1",
+    );
+
+    const setProfileItems = context.setProfileItems.mock.calls[0][0] as (
+      items: WardrobeItem[],
+    ) => WardrobeItem[];
+    expect(setProfileItems([]).map((item) => item.url)).toEqual([
+      "https://example.com/top-1",
+      "https://example.com/swimsuit-2",
+    ]);
+  });
 });

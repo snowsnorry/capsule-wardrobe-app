@@ -322,6 +322,7 @@ const ru = {
     openMenu: "Открыть меню капсулы",
     openProductMenu: "Открыть меню товара",
     selectProductForRegeneration: "Выбрать",
+    anchorRegenerationLocked: "Анкерные вещи должны остаться в капсуле.",
     saveToMyWardrobe: "Сохранить в Мой гардероб",
     removeFromMyWardrobe: "Удалить из Моего гардероба",
     cardLayout: "Вид карточек",

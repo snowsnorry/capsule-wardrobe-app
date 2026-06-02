@@ -13,7 +13,6 @@ import {
 } from "./swimwearLogging.js";
 import type { SwimwearCandidate, UserProfileLike } from "./types.js";
 import {
-  dedupeStrings,
   getItemColors,
   shouldGenerateSwimwear,
   toWardrobeUiItem,
@@ -23,75 +22,16 @@ import {
   getSwimwearSystemPrompt,
 } from "./swimwearPrompt.js";
 import { selectFemaleSwimwear, selectMaleSwimwear } from "./swimwearSql.js";
-
-function normalizeSelectedSwimwearIds(value: unknown) {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  return dedupeStrings(value.map((item) => String(item || "").trim()));
-}
-
-function normalizeSwimwearSelection(
-  selectedIds: unknown,
-  candidates: SwimwearCandidate[],
-) {
-  const candidateMap = new Map(
-    candidates.map((item) => [String(item.id), item]),
-  );
-  const selected = normalizeSelectedSwimwearIds(selectedIds)
-    .map((id) => candidateMap.get(id))
-    .filter(Boolean);
-
-  const swimsuit = selected.find((item) => item?.swimwear_type === "swimsuit");
-  if (swimsuit) {
-    return [swimsuit];
-  }
-
-  const top = selected.find((item) => item?.swimwear_type === "swimwear_top");
-  const bottom = selected.find(
-    (item) => item?.swimwear_type === "swimwear_bottom",
-  );
-
-  if (top && bottom) {
-    return [top, bottom];
-  }
-
-  if (top) {
-    const fallbackBottom = candidates.find(
-      (item) =>
-        item?.swimwear_type === "swimwear_bottom" &&
-        String(item.id) !== String(top.id),
-    );
-    return fallbackBottom ? [top, fallbackBottom] : [];
-  }
-
-  if (bottom) {
-    const fallbackTop = candidates.find(
-      (item) =>
-        item?.swimwear_type === "swimwear_top" &&
-        String(item.id) !== String(bottom.id),
-    );
-    return fallbackTop ? [fallbackTop, bottom] : [];
-  }
-
-  return [];
-}
-
-function selectSwimwearWithoutLlm(candidates: SwimwearCandidate[]) {
-  return normalizeSwimwearSelection(
-    candidates.map((item) => String(item?.id || "").trim()).filter(Boolean),
-    candidates,
-  );
-}
-
-function hasSelectedSwimwear(items: SwimwearCandidate[]) {
-  return items.some(
-    (item) =>
-      typeof item?.category === "string" &&
-      item.category.trim().toLowerCase() === "swimwear",
-  );
-}
+import {
+  normalizeSwimwearSelection,
+  selectSwimwearWithoutLlm,
+} from "./swimwearSelection.js";
+import {
+  getSelectedSwimwearState,
+  getSwimwearType,
+  normalizeSwimwearType,
+  shouldCompleteSelectedSwimwear,
+} from "./swimwearState.js";
 
 function getSingleViableFemaleSwimwearOption(
   candidates: SwimwearCandidate[],
@@ -174,66 +114,46 @@ function selectFemaleSwimwearWithoutLlm(candidates, llmResolution, logContext) {
   return buildSwimwearResult(selectedItems);
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function createSwimwearDeps(deps: Record<string, any> = {}) {
-  return {
-    getSqlClientImpl: deps.getSqlClientImpl || getSqlClient,
-    getGenerateJsonWithLlmImpl:
-      deps.getGenerateJsonWithLlmImpl || getGenerateJsonWithLlm,
-    isNoLlmProfileEnabledImpl:
-      deps.isNoLlmProfileEnabledImpl || isNoLlmProfileEnabled,
-    resolveLlmProviderImpl: deps.resolveLlmProviderImpl || resolveLlmProvider,
-  };
-}
-
-// eslint-disable-next-line complexity
-async function generateFemaleSwimwear({
-  userProfile,
-  selectedCapsuleItems,
+async function getFemaleSwimwearCandidates({
+  deps,
+  desiredType,
+  logContext,
   promptEmbeddings,
-  logContext = null,
-  deps = createSwimwearDeps(),
-}: {
-  userProfile: UserProfileLike | null;
-  selectedCapsuleItems: SwimwearCandidate[];
-  promptEmbeddings: number[];
-  logContext?: { capsuleRequestId?: string | null } | null;
-  deps?: ReturnType<typeof createSwimwearDeps>;
+  selectedCapsuleItems,
+  userProfile,
 }) {
-  const llmResolution = deps.resolveLlmProviderImpl(userProfile);
-  const sql = deps.getSqlClientImpl();
   const embeddingVector = `[${promptEmbeddings.join(",")}]`;
-  const targetStyle = userProfile?.style ?? null;
-  const bottomColors = getItemColors(selectedCapsuleItems, "bottom");
-  const candidates = await selectFemaleSwimwear({
-    sql,
+  const bottomColors = desiredType
+    ? getItemColors(selectedCapsuleItems, "swimwear")
+    : getItemColors(selectedCapsuleItems, "bottom");
+  const sqlCandidates = await selectFemaleSwimwear({
+    sql: deps.getSqlClientImpl(),
     audience: userProfile?.audience || "woman",
-    targetStyle,
+    targetStyle: userProfile?.style ?? null,
     bottomColors,
     embeddingVector,
     sourceMode: getProfileSourceMode(userProfile),
     profileEmail: getProfileEmail(userProfile),
     logContext,
   });
+  const normalizedDesiredType = normalizeSwimwearType(desiredType);
+  const candidates = normalizedDesiredType
+    ? sqlCandidates.filter(
+        (item) => getSwimwearType(item) === normalizedDesiredType,
+      )
+    : sqlCandidates;
 
-  if (candidates.length === 0) {
-    return buildEmptySwimwearResult();
-  }
+  return { candidates, normalizedDesiredType };
+}
 
-  const deterministicSelection =
-    getSingleViableFemaleSwimwearOption(candidates);
-  if (deterministicSelection) {
-    return buildSwimwearResult(deterministicSelection);
-  }
-
-  if (deps.isNoLlmProfileEnabledImpl(userProfile)) {
-    return selectFemaleSwimwearWithoutLlm(
-      candidates,
-      llmResolution,
-      logContext,
-    );
-  }
-
+async function generateFemaleSwimwearWithLlm({
+  candidates,
+  deps,
+  llmResolution,
+  logContext,
+  selectedCapsuleItems,
+  userProfile,
+}) {
   const prompt = getSwimwearPrompt(selectedCapsuleItems, candidates);
   const llmStartedAt = Date.now();
   const generateJsonWithLlm = deps.getGenerateJsonWithLlmImpl(userProfile);
@@ -276,6 +196,129 @@ async function generateFemaleSwimwear({
   );
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function createSwimwearDeps(deps: Record<string, any> = {}) {
+  return {
+    getSqlClientImpl: deps.getSqlClientImpl || getSqlClient,
+    getGenerateJsonWithLlmImpl:
+      deps.getGenerateJsonWithLlmImpl || getGenerateJsonWithLlm,
+    isNoLlmProfileEnabledImpl:
+      deps.isNoLlmProfileEnabledImpl || isNoLlmProfileEnabled,
+    resolveLlmProviderImpl: deps.resolveLlmProviderImpl || resolveLlmProvider,
+  };
+}
+
+async function generateFemaleSwimwear({
+  userProfile,
+  selectedCapsuleItems,
+  promptEmbeddings,
+  desiredType = null,
+  logContext = null,
+  deps = createSwimwearDeps(),
+}: {
+  userProfile: UserProfileLike | null;
+  selectedCapsuleItems: SwimwearCandidate[];
+  promptEmbeddings: number[];
+  desiredType?: string | null;
+  logContext?: { capsuleRequestId?: string | null } | null;
+  deps?: ReturnType<typeof createSwimwearDeps>;
+}) {
+  const llmResolution = deps.resolveLlmProviderImpl(userProfile);
+  const { candidates, normalizedDesiredType } =
+    await getFemaleSwimwearCandidates({
+      deps,
+      desiredType,
+      logContext,
+      promptEmbeddings,
+      selectedCapsuleItems,
+      userProfile,
+    });
+
+  if (candidates.length === 0) {
+    return buildEmptySwimwearResult();
+  }
+
+  if (normalizedDesiredType) {
+    return buildSwimwearResult([candidates[0]]);
+  }
+
+  const deterministicSelection =
+    getSingleViableFemaleSwimwearOption(candidates);
+  if (deterministicSelection) {
+    return buildSwimwearResult(deterministicSelection);
+  }
+
+  if (deps.isNoLlmProfileEnabledImpl(userProfile)) {
+    return selectFemaleSwimwearWithoutLlm(
+      candidates,
+      llmResolution,
+      logContext,
+    );
+  }
+
+  return generateFemaleSwimwearWithLlm({
+    candidates,
+    deps,
+    llmResolution,
+    logContext,
+    selectedCapsuleItems,
+    userProfile,
+  });
+}
+
+function shouldSkipSwimwearAddition({ force, swimwearState, userProfile }) {
+  if (force) {
+    return false;
+  }
+
+  if (swimwearState.isComplete) {
+    return true;
+  }
+
+  return (
+    !shouldGenerateSwimwear(userProfile) &&
+    !swimwearState.missingType &&
+    !swimwearState.hasAmbiguousType
+  );
+}
+
+function shouldUseFemaleSwimwear(userProfile, swimwearState) {
+  return userProfile?.audience === "woman" || swimwearState.missingType;
+}
+
+async function generateMaleSwimwear({
+  logContext,
+  promptEmbeddings,
+  resolvedDeps,
+  selectedCapsuleItems,
+  userProfile,
+}) {
+  const items = await selectMaleSwimwear({
+    sql: resolvedDeps.getSqlClientImpl(),
+    targetStyle: userProfile?.style ?? null,
+    topColors: getItemColors(selectedCapsuleItems, "top"),
+    embeddingVector: `[${promptEmbeddings.join(",")}]`,
+    sourceMode: getProfileSourceMode(userProfile),
+    profileEmail: getProfileEmail(userProfile),
+    logContext,
+  });
+  const selectedItems = items.length > 0 ? [items[0]] : [];
+  logWardrobeInfo(
+    "swimwear-completed",
+    {
+      swimwearItemsTotal: selectedItems.length,
+      swimwearItemsByCategory: countItemsByKey(selectedItems),
+    },
+    logContext,
+  );
+
+  return {
+    items: selectedItems.map(toWardrobeUiItem),
+    reasoning: null,
+    rawSelectionText: null,
+  };
+}
+
 function createGenerateSwimwearAddition(deps = {}) {
   const resolvedDeps = createSwimwearDeps(deps);
 
@@ -283,60 +326,39 @@ function createGenerateSwimwearAddition(deps = {}) {
     userProfile,
     selectedCapsuleItems,
     promptEmbeddings,
+    force = false,
     logContext = null,
   }: {
     userProfile: UserProfileLike | null;
     selectedCapsuleItems: SwimwearCandidate[];
     promptEmbeddings: number[];
+    force?: boolean;
     logContext?: { capsuleRequestId?: string | null } | null;
   }) {
-    if (!shouldGenerateSwimwear(userProfile)) {
+    const swimwearState = getSelectedSwimwearState(selectedCapsuleItems);
+
+    if (shouldSkipSwimwearAddition({ force, swimwearState, userProfile })) {
       return buildEmptySwimwearResult();
     }
 
-    if (hasSelectedSwimwear(selectedCapsuleItems)) {
-      return buildEmptySwimwearResult();
-    }
-
-    const sql = resolvedDeps.getSqlClientImpl();
-    const embeddingVector = `[${promptEmbeddings.join(",")}]`;
-    const targetStyle = userProfile?.style ?? null;
-
-    if (userProfile?.audience === "woman") {
+    if (shouldUseFemaleSwimwear(userProfile, swimwearState)) {
       return generateFemaleSwimwear({
         userProfile,
         selectedCapsuleItems,
         promptEmbeddings,
+        desiredType: swimwearState.missingType,
         logContext,
         deps: resolvedDeps,
       });
     }
 
-    const topColors = getItemColors(selectedCapsuleItems, "top");
-    const items = await selectMaleSwimwear({
-      sql,
-      targetStyle,
-      topColors,
-      embeddingVector,
-      sourceMode: getProfileSourceMode(userProfile),
-      profileEmail: getProfileEmail(userProfile),
+    return generateMaleSwimwear({
       logContext,
+      promptEmbeddings,
+      resolvedDeps,
+      selectedCapsuleItems,
+      userProfile,
     });
-    const selectedItems = items.length > 0 ? [items[0]] : [];
-    logWardrobeInfo(
-      "swimwear-completed",
-      {
-        swimwearItemsTotal: selectedItems.length,
-        swimwearItemsByCategory: countItemsByKey(selectedItems),
-      },
-      logContext,
-    );
-
-    return {
-      items: selectedItems.map(toWardrobeUiItem),
-      reasoning: null,
-      rawSelectionText: null,
-    };
   };
 }
 
@@ -349,4 +371,6 @@ export {
   getSwimwearSystemPrompt,
   shouldGenerateSwimwear,
   normalizeSwimwearSelection,
+  getSwimwearType,
+  shouldCompleteSelectedSwimwear,
 };

@@ -3,7 +3,9 @@ import {
   createGenerateSwimwearAddition,
   getSwimwearPrompt,
   getSwimwearSystemPrompt,
+  getSwimwearType,
   normalizeSwimwearSelection,
+  shouldCompleteSelectedSwimwear,
   shouldGenerateSwimwear,
 } from "./swimwear.js";
 import type { SwimwearCandidate } from "./types.js";
@@ -132,6 +134,57 @@ test("normalizeSwimwearSelection returns empty array when pair cannot be complet
   expect(normalizeSwimwearSelection(["1"], candidates)).toEqual([]);
 });
 
+test("shouldCompleteSelectedSwimwear detects incomplete bikini swimwear", () => {
+  expect(
+    getSwimwearType({
+      id: "legacy-bottom",
+      category: "swimwear",
+      name: "Swim Bottom",
+    }),
+  ).toBe("swimwear_bottom");
+  expect(
+    getSwimwearType({
+      id: "legacy-one-piece",
+      category: "swimwear",
+      name: "Minimal One Piece",
+    }),
+  ).toBe("swimsuit");
+  expect(
+    getSwimwearType({
+      id: "ambiguous-swimwear",
+      category: "swimwear",
+      name: "Resort Swimwear",
+    }),
+  ).toBe(null);
+  expect(
+    shouldCompleteSelectedSwimwear([
+      {
+        id: "bottom-1",
+        category: "swimwear",
+        swimwearType: "swimwear_bottom",
+      } as never,
+    ]),
+  ).toBe(true);
+  expect(
+    shouldCompleteSelectedSwimwear([
+      {
+        id: "swimsuit-1",
+        category: "swimwear",
+        swimwearType: "swimsuit",
+      } as never,
+    ]),
+  ).toBe(false);
+  expect(
+    shouldCompleteSelectedSwimwear([
+      {
+        id: "ambiguous-swimwear",
+        category: "swimwear",
+        name: "Resort Swimwear",
+      } as never,
+    ]),
+  ).toBe(true);
+});
+
 test("generateSwimwearAddition skips non-summer profiles and selects male swimwear from SQL", async () => {
   const sqlCalls = [];
   const generateSwimwearAddition = createGenerateSwimwearAddition({
@@ -199,7 +252,13 @@ test("generateSwimwearAddition skips SQL when the capsule already has swimwear",
 
   const result = await generateSwimwearAddition({
     userProfile: { audience: "woman", season: ["summer"] },
-    selectedCapsuleItems: [{ id: "swim-existing", category: "swimwear" }],
+    selectedCapsuleItems: [
+      {
+        id: "swim-existing",
+        category: "swimwear",
+        swimwearType: "swimsuit",
+      } as never,
+    ],
     promptEmbeddings: [0.1, 0.2],
   });
 
@@ -209,6 +268,107 @@ test("generateSwimwearAddition skips SQL when the capsule already has swimwear",
     rawSelectionText: null,
   });
   expect(sqlCalls).toEqual([]);
+});
+
+test("generateSwimwearAddition treats ambiguous legacy swimwear as full replacement", async () => {
+  const sqlCalls = [];
+  const generateSwimwearAddition = createGenerateSwimwearAddition({
+    getSqlClientImpl:
+      () =>
+      async (...args) => {
+        sqlCalls.push(args);
+        return [
+          {
+            id: "swimsuit-1",
+            name: "Minimal Swimsuit",
+            category: "swimwear",
+            swimwear_type: "swimsuit",
+            audience: "woman",
+            url: "https://example.com/swimsuit",
+          },
+        ];
+      },
+  });
+
+  const result = await generateSwimwearAddition({
+    userProfile: { audience: "woman", season: ["winter"] },
+    selectedCapsuleItems: [
+      {
+        id: "legacy-swimwear",
+        category: "swimwear",
+        name: "Resort Swimwear",
+      } as never,
+    ],
+    promptEmbeddings: [0.1, 0.2],
+  });
+
+  expect(sqlCalls).toHaveLength(1);
+  expect(result.items).toEqual([
+    {
+      id: "swimsuit-1",
+      url: "https://example.com/swimsuit",
+      name: "Minimal Swimsuit",
+      category: "swimwear",
+      imageUrl: "",
+      audience: "woman",
+      swimwearType: "swimsuit",
+    },
+  ]);
+});
+
+test("generateSwimwearAddition completes a bikini counterpart outside summer", async () => {
+  const sqlCalls = [];
+  const generateSwimwearAddition = createGenerateSwimwearAddition({
+    getSqlClientImpl:
+      () =>
+      async (...args) => {
+        sqlCalls.push(args);
+        return [
+          {
+            id: "top-1",
+            name: "Bikini Top",
+            category: "swimwear",
+            swimwear_type: "swimwear_top",
+            audience: "woman",
+            url: "https://example.com/top",
+          },
+          {
+            id: "swimsuit-1",
+            name: "One Piece",
+            category: "swimwear",
+            swimwear_type: "swimsuit",
+            audience: "woman",
+            url: "https://example.com/swimsuit",
+          },
+        ];
+      },
+  });
+
+  const result = await generateSwimwearAddition({
+    userProfile: { audience: "woman", season: ["winter"] },
+    selectedCapsuleItems: [
+      {
+        id: "bottom-1",
+        category: "swimwear",
+        swimwearType: "swimwear_bottom",
+        colorBase: ["black"],
+      } as never,
+    ],
+    promptEmbeddings: [0.1, 0.2],
+  });
+
+  expect(sqlCalls).toHaveLength(1);
+  expect(result.items).toEqual([
+    {
+      id: "top-1",
+      url: "https://example.com/top",
+      name: "Bikini Top",
+      category: "swimwear",
+      imageUrl: "",
+      audience: "woman",
+      swimwearType: "swimwear_top",
+    },
+  ]);
 });
 
 test("generateSwimwearAddition keeps wardrobe metadata for one male wardrobe swimwear item", async () => {

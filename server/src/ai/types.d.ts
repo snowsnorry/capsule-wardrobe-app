@@ -111,6 +111,7 @@ type CountByKey = Record<string, number>;
 type WardrobeUiItemLike = {
   id?: string | number | null;
   itemSource?: "catalog" | "wardrobe" | string | null;
+  swimwearType?: SwimwearType | string | null;
   url?: string | null;
   name?: string | null;
   category?: string | null;

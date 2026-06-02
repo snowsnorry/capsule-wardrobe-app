@@ -192,7 +192,11 @@ async function addSwimwearIfNeeded(
   logContext: LogContextLike,
 ) {
   const { deps, email, capsuleId, job } = input;
-  if (!deps.shouldGenerateSwimwearImpl(baseResult.generationProfile)) {
+  const shouldGenerateSwimwear =
+    deps.shouldGenerateSwimwearImpl(baseResult.generationProfile) ||
+    deps.shouldCompleteSelectedSwimwearImpl(baseResult.wardrobe.selectedItems);
+
+  if (!shouldGenerateSwimwear) {
     logCapsuleTotalCompleted(deps, job.startedAt, baseResult.items, logContext);
     return baseResult.currentCapsule;
   }

@@ -32,13 +32,20 @@ function dedupeStrings(values: string[]) {
   ];
 }
 
+function getColorBaseValues(item: SwimwearCandidate) {
+  if (Array.isArray(item?.color_base)) {
+    return item.color_base;
+  }
+
+  const camelCaseColors = (item as { colorBase?: unknown })?.colorBase;
+  return Array.isArray(camelCaseColors) ? camelCaseColors : [];
+}
+
 function getItemColors(items: SwimwearCandidate[], category: string) {
   return dedupeStrings(
     items
       .filter((item) => item?.category === category)
-      .flatMap((item) =>
-        Array.isArray(item?.color_base) ? item.color_base : [],
-      )
+      .flatMap(getColorBaseValues)
       .map((value) =>
         String(value || "")
           .trim()
@@ -49,9 +56,10 @@ function getItemColors(items: SwimwearCandidate[], category: string) {
 
 function formatItemColor(item: SwimwearCandidate) {
   const colorParts = [];
+  const colorBase = getColorBaseValues(item);
 
-  if (Array.isArray(item?.color_base) && item.color_base.length > 0) {
-    colorParts.push(item.color_base.join(", "));
+  if (colorBase.length > 0) {
+    colorParts.push(colorBase.join(", "));
   }
 
   if (typeof item?.pattern === "string" && item.pattern.trim().length > 0) {
@@ -98,6 +106,11 @@ function toWardrobeUiItem(item: SwimwearCandidate) {
   };
 
   addOptionalWardrobeUiField(result, "itemSource", item?.item_source);
+  addOptionalWardrobeUiField(
+    result,
+    "swimwearType",
+    item?.swimwear_type || (item as { swimwearType?: unknown })?.swimwearType,
+  );
   addOptionalWardrobeUiField(result, "source", item?.source);
   addOptionalWardrobeUiField(result, "rawImageUrl", item?.raw_image_url);
   addOptionalWardrobeUiField(

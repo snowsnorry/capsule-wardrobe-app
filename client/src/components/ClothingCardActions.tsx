@@ -1,4 +1,4 @@
-import { IconButton, Stack } from "@mui/material";
+import { IconButton, Stack, Tooltip } from "@mui/material";
 import MoreVertRoundedIcon from "@mui/icons-material/MoreVertRounded";
 import ThumbDownAltOutlinedIcon from "@mui/icons-material/ThumbDownAltOutlined";
 import type { CardActionProps } from "./ClothingCardTypes";
@@ -93,6 +93,20 @@ function getActionStackSx(props: CardActionProps) {
 }
 
 function CardActions(props: CardActionProps) {
+  const isRegenerationLocked = Boolean(props.regenerationLockedReason);
+  const regenerateButton = (
+    <IconButton
+      aria-label={props.t("main.partialRegenerateToggle")}
+      className="wardrobe-card-action-button wardrobe-card-regenerate"
+      onMouseDown={props.stopPropagation}
+      onPointerDown={props.stopPropagation}
+      onClick={props.onToggleSelected}
+      disabled={props.isRegenerating || isRegenerationLocked}
+    >
+      <ThumbDownAltOutlinedIcon fontSize="small" />
+    </IconButton>
+  );
+
   return (
     <Stack
       className="wardrobe-card-actions"
@@ -101,16 +115,14 @@ function CardActions(props: CardActionProps) {
       sx={getActionStackSx(props)}
     >
       {props.showToggleButton ? (
-        <IconButton
-          aria-label={props.t("main.partialRegenerateToggle")}
-          className="wardrobe-card-action-button wardrobe-card-regenerate"
-          onMouseDown={props.stopPropagation}
-          onPointerDown={props.stopPropagation}
-          onClick={props.onToggleSelected}
-          disabled={props.isRegenerating}
+        <Tooltip
+          title={props.regenerationLockedReason || ""}
+          disableHoverListener={!isRegenerationLocked}
+          disableFocusListener={!isRegenerationLocked}
+          disableTouchListener={!isRegenerationLocked}
         >
-          <ThumbDownAltOutlinedIcon fontSize="small" />
-        </IconButton>
+          <span>{regenerateButton}</span>
+        </Tooltip>
       ) : null}
       {props.showProductMenuButton ? (
         <IconButton

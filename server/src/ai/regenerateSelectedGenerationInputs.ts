@@ -92,6 +92,14 @@ function getAudienceFilters(userProfile) {
   );
 }
 
+function getAnchorWardrobeNumericIds(userProfile) {
+  return Array.isArray(userProfile?.anchorWardrobeNumericIds)
+    ? userProfile.anchorWardrobeNumericIds
+        .map((value) => Number(value))
+        .filter((value) => Number.isInteger(value) && value > 0)
+    : [];
+}
+
 export async function buildRegenerationInputs(userProfile, products, deps) {
   const prompt = deps.getWardrobePromptImpl(userProfile);
   const promptEmbeddings = await deps.getPromptEmbeddingsImpl(prompt);
@@ -147,6 +155,7 @@ export async function buildRegenerationSqlParams(userProfile, inputs, deps) {
 
   return {
     audienceFilters: getAudienceFilters(userProfile),
+    anchorWardrobeNumericIds: getAnchorWardrobeNumericIds(userProfile),
     categories: Object.keys(inputs.capsuleCategories),
     color: userProfile?.color ?? null,
     embeddingVector: `[${shiftedPromptEmbeddings.join(",")}]`,

@@ -35,17 +35,6 @@ const swimwearSelectedProducts = [
     category: "swimwear",
   },
 ];
-const swimwearCandidates = [
-  {
-    id: "swim-new",
-    url: "https://example.com/swim-new",
-    name: "New Swimsuit",
-    category: "swimwear",
-    image_url: "https://example.com/swim-new.jpg",
-    embedding: [1, 0],
-  },
-];
-
 function createProfile(overrides = {}) {
   return {
     audience: "woman",
@@ -139,7 +128,7 @@ test("regenerateCapsuleWardrobe forwards source mode and profile email to SQL ca
       isNoLlmProfileEnabledImpl: () => true,
       queryRegenerationCandidateItemsImpl: async (sql, params) => {
         queryCalls.push({ sql, params });
-        return swimwearCandidates;
+        return candidates;
       },
       resolveLlmProviderImpl: () => ({
         requestedLlm: "none",
@@ -153,16 +142,15 @@ test("regenerateCapsuleWardrobe forwards source mode and profile email to SQL ca
     createProfile({
       email: " person@example.com ",
       llm: "none",
-      items: { items: [...currentItems, ...swimwearSelectedProducts] },
       sourceMode: "wardrobe_only",
     }),
-    swimwearSelectedProducts,
+    selectedProducts,
   );
 
   expect(queryCalls).toHaveLength(1);
   expect(queryCalls[0].sql).toBe("sql-client");
   expect(queryCalls[0].params).toMatchObject({
-    categories: ["swimwear"],
+    categories: ["top"],
     profileEmail: "person@example.com",
     sourceMode: "wardrobe_only",
   });
@@ -278,4 +266,235 @@ test("regenerateCapsuleWardrobe rejects requests without selected product catego
   await expect(() =>
     noCandidateRegeneration(createProfile({ llm: "none" }), selectedProducts),
   ).rejects.toThrow(/SQL returned no valid regenerated items/);
+});
+
+test("regenerateCapsuleWardrobe replaces a selected one-piece through full swimwear selection", async () => {
+  const swimwearCalls = [];
+  const regenerateCapsuleWardrobe = createRegenerateCapsuleWardrobe(
+    createBaseDeps({
+      queryRegenerationCandidateItemsImpl: async () => {
+        throw new Error("regular SQL should not run for swimwear-only");
+      },
+      generateSwimwearAdditionImpl: async (payload) => {
+        swimwearCalls.push(payload);
+        return {
+          items: [
+            {
+              id: "swim-new",
+              url: "https://example.com/swim-new",
+              name: "New Swimsuit",
+              category: "swimwear",
+              swimwearType: "swimsuit",
+            },
+          ],
+          reasoning: null,
+          rawSelectionText: "swimwear raw",
+        };
+      },
+    }),
+  );
+
+  const result = await regenerateCapsuleWardrobe(
+    createProfile({
+      items: { items: [...currentItems, ...swimwearSelectedProducts] },
+    }),
+    [{ ...swimwearSelectedProducts[0], swimwearType: "swimsuit" }],
+  );
+
+  expect(swimwearCalls).toHaveLength(1);
+  expect(swimwearCalls[0]).toMatchObject({
+    force: true,
+    promptEmbeddings: [0.5, 0.5],
+  });
+  expect(result.items.map((item) => item.id)).toEqual([
+    "top-old",
+    "bottom-1",
+    "bag-1",
+    "swim-new",
+  ]);
+  expect(result.selectedItems.map((item) => item.id)).toEqual(["swim-new"]);
+  expect(result.rawSelectionText).toBe("swimwear raw");
+});
+
+test("regenerateCapsuleWardrobe replaces one selected bikini part by completing the remaining counterpart", async () => {
+  const swimTop = {
+    id: "swim-top-old",
+    url: "https://example.com/swim-top-old",
+    name: "Old Bikini Top",
+    category: "swimwear",
+    swimwearType: "swimwear_top",
+  };
+  const swimBottom = {
+    id: "swim-bottom-old",
+    url: "https://example.com/swim-bottom-old",
+    name: "Old Bikini Bottom",
+    category: "swimwear",
+    swimwearType: "swimwear_bottom",
+  };
+  const swimwearCalls = [];
+  const regenerateCapsuleWardrobe = createRegenerateCapsuleWardrobe(
+    createBaseDeps({
+      generateSwimwearAdditionImpl: async (payload) => {
+        swimwearCalls.push(payload);
+        return {
+          items: [
+            {
+              id: "swim-top-new",
+              url: "https://example.com/swim-top-new",
+              name: "New Bikini Top",
+              category: "swimwear",
+              swimwearType: "swimwear_top",
+            },
+          ],
+          reasoning: null,
+          rawSelectionText: null,
+        };
+      },
+    }),
+  );
+
+  const result = await regenerateCapsuleWardrobe(
+    createProfile({ items: { items: [...currentItems, swimTop, swimBottom] } }),
+    [swimTop],
+  );
+
+  expect(swimwearCalls).toHaveLength(1);
+  expect(swimwearCalls[0].force).toBe(false);
+  expect(swimwearCalls[0].selectedCapsuleItems.map((item) => item.id)).toEqual([
+    "top-old",
+    "bottom-1",
+    "bag-1",
+    "swim-bottom-old",
+  ]);
+  expect(result.items.map((item) => item.id)).toEqual([
+    "top-old",
+    "bottom-1",
+    "bag-1",
+    "swim-bottom-old",
+    "swim-top-new",
+  ]);
+});
+
+test("regenerateCapsuleWardrobe replaces both selected bikini parts through full swimwear selection", async () => {
+  const swimTop = {
+    id: "swim-top-old",
+    url: "https://example.com/swim-top-old",
+    name: "Old Bikini Top",
+    category: "swimwear",
+    swimwearType: "swimwear_top",
+  };
+  const swimBottom = {
+    id: "swim-bottom-old",
+    url: "https://example.com/swim-bottom-old",
+    name: "Old Bikini Bottom",
+    category: "swimwear",
+    swimwearType: "swimwear_bottom",
+  };
+  const swimwearCalls = [];
+  const regenerateCapsuleWardrobe = createRegenerateCapsuleWardrobe(
+    createBaseDeps({
+      generateSwimwearAdditionImpl: async (payload) => {
+        swimwearCalls.push(payload);
+        return {
+          items: [
+            {
+              id: "swim-new",
+              url: "https://example.com/swim-new",
+              name: "New Swimsuit",
+              category: "swimwear",
+              swimwearType: "swimsuit",
+            },
+          ],
+          reasoning: null,
+          rawSelectionText: null,
+        };
+      },
+    }),
+  );
+
+  const result = await regenerateCapsuleWardrobe(
+    createProfile({ items: { items: [...currentItems, swimTop, swimBottom] } }),
+    [swimTop, swimBottom],
+  );
+
+  expect(swimwearCalls[0].force).toBe(true);
+  expect(result.items.map((item) => item.id)).toEqual([
+    "top-old",
+    "bottom-1",
+    "bag-1",
+    "swim-new",
+  ]);
+});
+
+test("regenerateCapsuleWardrobe regenerates mixed non-swimwear and swimwear selections", async () => {
+  const swimTop = {
+    id: "swim-top-old",
+    url: "https://example.com/swim-top-old",
+    name: "Old Bikini Top",
+    category: "swimwear",
+    swimwearType: "swimwear_top",
+  };
+  const swimBottom = {
+    id: "swim-bottom-old",
+    url: "https://example.com/swim-bottom-old",
+    name: "Old Bikini Bottom",
+    category: "swimwear",
+    swimwearType: "swimwear_bottom",
+  };
+  const queryCalls = [];
+  const swimwearCalls = [];
+  const regenerateCapsuleWardrobe = createRegenerateCapsuleWardrobe(
+    createBaseDeps({
+      isNoLlmProfileEnabledImpl: () => true,
+      queryRegenerationCandidateItemsImpl: async (_sql, params) => {
+        queryCalls.push(params);
+        return candidates;
+      },
+      generateSwimwearAdditionImpl: async (payload) => {
+        swimwearCalls.push(payload);
+        return {
+          items: [
+            {
+              id: "swim-top-new",
+              url: "https://example.com/swim-top-new",
+              name: "New Bikini Top",
+              category: "swimwear",
+              swimwearType: "swimwear_top",
+            },
+          ],
+          reasoning: null,
+          rawSelectionText: null,
+        };
+      },
+      resolveLlmProviderImpl: () => ({
+        requestedLlm: "none",
+        provider: "none",
+        model: null,
+      }),
+    }),
+  );
+
+  const result = await regenerateCapsuleWardrobe(
+    createProfile({
+      llm: "none",
+      items: { items: [...currentItems, swimTop, swimBottom] },
+    }),
+    [selectedProducts[0], swimTop],
+  );
+
+  expect(queryCalls).toHaveLength(1);
+  expect(queryCalls[0].categories).toEqual(["top"]);
+  expect(swimwearCalls).toHaveLength(1);
+  expect(swimwearCalls[0].force).toBe(false);
+  expect(result.items.map((item) => item.id)).toEqual([
+    "bottom-1",
+    "bag-1",
+    "swim-bottom-old",
+    "top-new",
+    "swim-top-new",
+  ]);
+  expect(result.selectedItems.map((item) => item.id)).toEqual([
+    "top-new",
+    "swim-top-new",
+  ]);
 });

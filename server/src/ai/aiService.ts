@@ -7,6 +7,7 @@ import {
 } from "../capsuleStore.js";
 import {
   generateSwimwearAddition,
+  shouldCompleteSelectedSwimwear,
   shouldGenerateSwimwear,
 } from "./swimwear.js";
 import { getPartialRegenerationJob } from "./partialRegenerationJobs.js";
@@ -65,6 +66,10 @@ function createWardrobeServiceDeps(
     shouldGenerateSwimwearImpl: withDefault(
       options.shouldGenerateSwimwearImpl,
       shouldGenerateSwimwear,
+    ),
+    shouldCompleteSelectedSwimwearImpl: withDefault(
+      options.shouldCompleteSelectedSwimwearImpl,
+      shouldCompleteSelectedSwimwear,
     ),
     generateSwimwearAdditionImpl: withDefault(
       options.generateSwimwearAdditionImpl,

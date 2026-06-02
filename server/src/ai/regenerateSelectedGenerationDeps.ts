@@ -15,6 +15,7 @@ import {
 import { runWithImageWorkSlot } from "./imagePipeline.js";
 import { getPromptEmbeddings, getWardrobePrompt } from "./voyageai.js";
 import { queryRegenerationCandidateItems } from "./regenerateSelectedSql.js";
+import { generateSwimwearAddition } from "./swimwear.js";
 
 // eslint-disable-next-line complexity, @typescript-eslint/no-explicit-any
 export function createRegenerationDeps(deps: Record<string, any> = {}) {
@@ -26,6 +27,8 @@ export function createRegenerationDeps(deps: Record<string, any> = {}) {
       deps.buildPromptDebugImagesInChildImpl || buildPromptDebugImagesInChild,
     getGenerateJsonWithLlmImpl:
       deps.getGenerateJsonWithLlmImpl || getGenerateJsonWithLlm,
+    generateSwimwearAdditionImpl:
+      deps.generateSwimwearAdditionImpl || generateSwimwearAddition,
     getProductsByUrlsInOrderImpl:
       deps.getProductsByUrlsInOrderImpl || getProductsByUrlsInOrder,
     getProductsWithEmbeddingsByUrlsInOrderImpl:

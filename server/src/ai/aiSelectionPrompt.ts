@@ -158,9 +158,14 @@ export function getWardrobeSelectionPrompt(
 }
 
 export function toWardrobeUiItem(item) {
+  const swimwearType =
+    getItemValue(item, "swimwear_type", null) ||
+    getItemValue(item, "swimwearType", null);
+
   return {
     id: getItemValue(item, "id", null),
     itemSource: getItemValue(item, "item_source", "catalog"),
+    ...(swimwearType ? { swimwearType } : {}),
     url: getItemValue(item, "url"),
     name: getItemValue(item, "name"),
     description: getItemValue(item, "description", null),

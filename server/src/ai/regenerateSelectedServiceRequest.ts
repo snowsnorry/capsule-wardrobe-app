@@ -40,6 +40,42 @@ function getSelectedProductsFromWardrobe(storedWardrobe, itemUrls) {
     .filter(Boolean);
 }
 
+function normalizePublicWardrobeId(value) {
+  const trimmed = String(value || "").trim();
+  if (!trimmed) {
+    return "";
+  }
+
+  const withoutPrefix = trimmed.replace(/^W/i, "");
+  return /^\d+$/.test(withoutPrefix) ? `W${withoutPrefix}` : trimmed;
+}
+
+function getItemPublicWardrobeIds(item) {
+  return [
+    normalizePublicWardrobeId(item?.id),
+    normalizePublicWardrobeId(item?.wardrobeId),
+  ].filter(Boolean);
+}
+
+function hasSelectedAnchorProducts(effectiveSnapshot, selectedProducts) {
+  const anchorIds = Array.isArray(
+    effectiveSnapshot?.filters?.anchorWardrobeItemIds,
+  )
+    ? effectiveSnapshot.filters.anchorWardrobeItemIds
+    : [];
+  const anchorIdSet = new Set(
+    anchorIds.map(normalizePublicWardrobeId).filter(Boolean),
+  );
+
+  if (anchorIdSet.size === 0) {
+    return false;
+  }
+
+  return selectedProducts.some((item) =>
+    getItemPublicWardrobeIds(item).some((itemId) => anchorIdSet.has(itemId)),
+  );
+}
+
 function getNextRejectedUrls(effectiveSnapshot, itemUrls) {
   return [
     ...new Set(
@@ -210,6 +246,9 @@ export function createRegenerateSelectedWardrobeItems(
         itemUrls,
       );
       if (selectedProducts.length !== itemUrls.length) {
+        return res.status(400).json({ error: "invalid_payload" });
+      }
+      if (hasSelectedAnchorProducts(effectiveSnapshot, selectedProducts)) {
         return res.status(400).json({ error: "invalid_payload" });
       }
       const preparedRequest = await preparePartialRegenerationRequest({

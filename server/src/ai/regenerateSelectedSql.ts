@@ -10,6 +10,7 @@ type RegenerateSelectedSqlClient = {
 
 type RegenerateSelectedSqlParams = {
   audienceFilters: string[];
+  anchorWardrobeNumericIds?: number[] | null;
   categories: string[];
   color: string | null;
   embeddingVector: string;
@@ -32,6 +33,7 @@ type RegenerateSelectedSourceMode =
 const WARDROBE_RELEVANCE_BOOST = 25;
 const CATALOG_POOL_LIMIT = 10;
 const WARDROBE_POOL_LIMIT = 5;
+const MULTIPLE_ACCENT_COLORS = "multiple_accent_colors";
 
 const REGENERATE_SELECTED_CANDIDATES_SQL_FILE = new URL(
   "./sql/regenerate_selected_candidates.sql",
@@ -43,6 +45,18 @@ const REGENERATE_SELECTED_WARDROBE_ONLY_SQL_FILE = new URL(
 );
 const REGENERATE_SELECTED_WARDROBE_PREFERRED_SQL_FILE = new URL(
   "./sql/regenerate_selected_wardrobe_preferred.sql",
+  import.meta.url,
+);
+const REGENERATE_SELECTED_MULTIPLE_ACCENT_CANDIDATES_SQL_FILE = new URL(
+  "./sql/regenerate_selected_multiple_accent_candidates.sql",
+  import.meta.url,
+);
+const REGENERATE_SELECTED_MULTIPLE_ACCENT_WARDROBE_ONLY_SQL_FILE = new URL(
+  "./sql/regenerate_selected_multiple_accent_wardrobe_only.sql",
+  import.meta.url,
+);
+const REGENERATE_SELECTED_MULTIPLE_ACCENT_WARDROBE_PREFERRED_SQL_FILE = new URL(
+  "./sql/regenerate_selected_multiple_accent_wardrobe_preferred.sql",
   import.meta.url,
 );
 
@@ -60,6 +74,16 @@ function normalizeProfileEmail(
   value: RegenerateSelectedSqlParams["profileEmail"],
 ) {
   return typeof value === "string" ? value.trim() : "";
+}
+
+function normalizeAnchorWardrobeNumericIds(
+  value: RegenerateSelectedSqlParams["anchorWardrobeNumericIds"],
+) {
+  return Array.isArray(value)
+    ? value
+        .map((item) => Number(item))
+        .filter((item) => Number.isInteger(item) && item > 0)
+    : [];
 }
 
 function buildRegenerateSelectedSqlValues({
@@ -96,6 +120,7 @@ function buildRegenerateSelectedWardrobeOnlySqlValues(
   return [
     ...buildRegenerateSelectedSqlValues(params),
     normalizeProfileEmail(params.profileEmail),
+    normalizeAnchorWardrobeNumericIds(params.anchorWardrobeNumericIds),
   ];
 }
 
@@ -108,6 +133,56 @@ function buildRegenerateSelectedWardrobePreferredSqlValues(
     WARDROBE_RELEVANCE_BOOST,
     CATALOG_POOL_LIMIT,
     WARDROBE_POOL_LIMIT,
+    normalizeAnchorWardrobeNumericIds(params.anchorWardrobeNumericIds),
+  ];
+}
+
+function buildRegenerateSelectedMultipleAccentSqlValues({
+  audienceFilters,
+  categories,
+  embeddingVector,
+  excludedUrls,
+  formalityLevel,
+  noiseFactor,
+  occasions,
+  pattern,
+  season,
+  style,
+}: RegenerateSelectedSqlParams): readonly unknown[] {
+  return [
+    categories,
+    noiseFactor,
+    embeddingVector,
+    style,
+    pattern,
+    formalityLevel,
+    occasions,
+    season,
+    audienceFilters,
+    excludedUrls,
+  ];
+}
+
+function buildRegenerateSelectedMultipleAccentWardrobeOnlySqlValues(
+  params: RegenerateSelectedSqlParams,
+): readonly unknown[] {
+  return [
+    ...buildRegenerateSelectedMultipleAccentSqlValues(params),
+    normalizeProfileEmail(params.profileEmail),
+    normalizeAnchorWardrobeNumericIds(params.anchorWardrobeNumericIds),
+  ];
+}
+
+function buildRegenerateSelectedMultipleAccentWardrobePreferredSqlValues(
+  params: RegenerateSelectedSqlParams,
+): readonly unknown[] {
+  return [
+    ...buildRegenerateSelectedMultipleAccentSqlValues(params),
+    normalizeProfileEmail(params.profileEmail),
+    WARDROBE_RELEVANCE_BOOST,
+    CATALOG_POOL_LIMIT,
+    WARDROBE_POOL_LIMIT,
+    normalizeAnchorWardrobeNumericIds(params.anchorWardrobeNumericIds),
   ];
 }
 
@@ -116,27 +191,42 @@ function queryRegenerationCandidateItems(
   params: RegenerateSelectedSqlParams,
 ) {
   const sourceMode = normalizeSourceMode(params.sourceMode);
+  const hasMultipleAccentColors = params.color === MULTIPLE_ACCENT_COLORS;
 
   if (sourceMode === "wardrobe_only") {
     return executeSqlFile<SqlWardrobeRow>(
       sql,
-      REGENERATE_SELECTED_WARDROBE_ONLY_SQL_FILE,
-      buildRegenerateSelectedWardrobeOnlySqlValues(params),
+      hasMultipleAccentColors
+        ? REGENERATE_SELECTED_MULTIPLE_ACCENT_WARDROBE_ONLY_SQL_FILE
+        : REGENERATE_SELECTED_WARDROBE_ONLY_SQL_FILE,
+      hasMultipleAccentColors
+        ? buildRegenerateSelectedMultipleAccentWardrobeOnlySqlValues(params)
+        : buildRegenerateSelectedWardrobeOnlySqlValues(params),
     );
   }
 
   if (sourceMode === "wardrobe_preferred") {
     return executeSqlFile<SqlWardrobeRow>(
       sql,
-      REGENERATE_SELECTED_WARDROBE_PREFERRED_SQL_FILE,
-      buildRegenerateSelectedWardrobePreferredSqlValues(params),
+      hasMultipleAccentColors
+        ? REGENERATE_SELECTED_MULTIPLE_ACCENT_WARDROBE_PREFERRED_SQL_FILE
+        : REGENERATE_SELECTED_WARDROBE_PREFERRED_SQL_FILE,
+      hasMultipleAccentColors
+        ? buildRegenerateSelectedMultipleAccentWardrobePreferredSqlValues(
+            params,
+          )
+        : buildRegenerateSelectedWardrobePreferredSqlValues(params),
     );
   }
 
   return executeSqlFile<SqlWardrobeRow>(
     sql,
-    REGENERATE_SELECTED_CANDIDATES_SQL_FILE,
-    buildRegenerateSelectedSqlValues(params),
+    hasMultipleAccentColors
+      ? REGENERATE_SELECTED_MULTIPLE_ACCENT_CANDIDATES_SQL_FILE
+      : REGENERATE_SELECTED_CANDIDATES_SQL_FILE,
+    hasMultipleAccentColors
+      ? buildRegenerateSelectedMultipleAccentSqlValues(params)
+      : buildRegenerateSelectedSqlValues(params),
   );
 }
 
