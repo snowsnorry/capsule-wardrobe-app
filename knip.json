@@ -1,4 +1,7 @@
 {
+  "ignoreFiles": [
+    ".agents/skills/impeccable/**"
+  ],
   "workspaces": {
     ".": {
       "entry": [
