@@ -25,4 +25,5 @@ last-prompt/
 storage/
 security_best_practices_report.md
 impeccable_audit_result.md
+.impeccable/critique/*
 docs/PLAN.md

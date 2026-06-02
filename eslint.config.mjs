@@ -15,6 +15,7 @@ export default tseslint.config(
       "coverage/**",
       "client/dist/**",
       "server/dist/**",
+      ".agents/skills/impeccable/**",
       ".dependency-cruiser.cjs"
     ]
   },
