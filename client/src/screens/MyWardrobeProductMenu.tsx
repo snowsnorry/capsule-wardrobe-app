@@ -15,19 +15,24 @@ import {
 import BookmarkRemoveOutlinedIcon from "@mui/icons-material/BookmarkRemoveOutlined";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import MobileProductCardContextMenu from "../components/MobileProductCardContextMenu";
-import type { ProductMenuPresentation } from "../components/ClothingCardTypes";
+import type {
+  MobileContextMenuOriginRect,
+  ProductMenuPresentation,
+} from "../components/ClothingCardTypes";
 import type { MainScreenItem } from "./mainScreen/MainScreenTypes";
 
 type MyWardrobeProductMenuState = {
   anchor: HTMLElement | null;
   url: string;
   item: MainScreenItem | null;
+  originRect?: MobileContextMenuOriginRect;
   presentation?: ProductMenuPresentation;
 };
 
 type MyWardrobeProductMenuProps = {
   anchor: HTMLElement | null;
   item: MainScreenItem | null;
+  originRect?: MobileContextMenuOriginRect;
   presentation?: ProductMenuPresentation;
   onClose: () => void;
   onRequestRemove: (item: MainScreenItem) => void;
@@ -45,6 +50,7 @@ type MyWardrobeRemoveConfirmDialogProps = {
 function MyWardrobeProductMenu({
   anchor,
   item,
+  originRect,
   presentation,
   onClose,
   onRequestRemove,
@@ -74,6 +80,7 @@ function MyWardrobeProductMenu({
         item={item}
         label={t("capsule.openProductMenu")}
         open={Boolean(anchor) && isMobileContextMenu}
+        originRect={originRect}
         onClose={onClose}
       />
     </>

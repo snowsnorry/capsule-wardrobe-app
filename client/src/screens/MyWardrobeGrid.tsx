@@ -4,7 +4,7 @@ import ClothingGridPlaceholder, {
   buildClothingGridGap,
   buildClothingGridTemplateColumns,
 } from "../components/ClothingGridPlaceholder";
-import type { ProductMenuPresentation } from "../components/ClothingCardTypes";
+import type { ProductMenuOpenOptions } from "../components/ClothingCardTypes";
 import type { MainScreenItem } from "./mainScreen/MainScreenTypes";
 
 type MyWardrobeGridProps = {
@@ -17,7 +17,7 @@ type MyWardrobeGridProps = {
     anchor: HTMLElement,
     productUrl: string,
     item: MainScreenItem,
-    options: { presentation: ProductMenuPresentation },
+    options: ProductMenuOpenOptions,
   ) => void;
   t: (key: string) => string;
 };

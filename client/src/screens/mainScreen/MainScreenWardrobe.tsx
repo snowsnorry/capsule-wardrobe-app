@@ -25,7 +25,7 @@ import type {
   MobileCardColumns,
   ResolvedOutfitSet,
 } from "./MainScreenTypes";
-import type { ProductMenuPresentation } from "../../components/ClothingCardTypes";
+import type { ProductMenuOpenOptions } from "../../components/ClothingCardTypes";
 
 type WardrobeProps = {
   activeImageSrc: string;
@@ -48,7 +48,7 @@ type WardrobeProps = {
     anchor: HTMLElement,
     url: string,
     item: MainScreenItem,
-    options: { presentation: ProductMenuPresentation },
+    options: ProductMenuOpenOptions,
   ) => void;
   onProductClick: (item: MainScreenItem) => void;
   onToggleSelected: (item: MainScreenItem) => void;

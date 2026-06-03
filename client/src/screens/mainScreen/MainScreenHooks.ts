@@ -18,7 +18,10 @@ import type {
   MainScreenProps,
   MobileCardColumns,
 } from "./MainScreenTypes";
-import type { ProductMenuPresentation } from "../../components/ClothingCardTypes";
+import type {
+  MobileContextMenuOriginRect,
+  ProductMenuPresentation,
+} from "../../components/ClothingCardTypes";
 
 type SearchState = {
   open: boolean;
@@ -39,6 +42,7 @@ function useMainScreenUiState() {
     anchor: CapsuleMenuAnchor;
     url: string;
     item: MainScreenItem | null;
+    originRect?: MobileContextMenuOriginRect;
     presentation?: ProductMenuPresentation;
   }>({ anchor: null, url: "", item: null });
   const [productDetailItem, setProductDetailItem] =

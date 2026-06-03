@@ -1,5 +1,6 @@
 /* eslint-disable max-lines */
 import { Box, Typography } from "@mui/material";
+import type { CSSProperties } from "react";
 import type { KeyboardEvent } from "react";
 import type { ReactNode } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
@@ -53,6 +54,14 @@ function getMobileCardMetrics(mobileColumns: 1 | 2 | 3): MobileCardMetrics {
   };
 }
 
+function getCardTransformTransition(isPressing: boolean) {
+  if (isPressing) {
+    return "transform 520ms linear, box-shadow 180ms ease";
+  }
+
+  return "transform 140ms cubic-bezier(0.2, 0, 0, 1), box-shadow 180ms ease";
+}
+
 function getCardRootSx({
   isDenseMobileCard,
   showCardActions,
@@ -81,11 +90,11 @@ function getCardRootSx({
       : "1px solid var(--cw-color-product-border)",
     boxShadow: isDenseMobileCard ? "none" : "var(--cw-shadow-wardrobe-card)",
     cursor: isInteractive ? "pointer" : "default",
-    transform: isPressing ? "scale(0.975)" : "scale(1)",
+    transform: isPressing ? "scale(0.94)" : "scale(1)",
     transformOrigin: "center",
-    transition:
-      "transform 180ms cubic-bezier(0.2, 0, 0, 1), box-shadow 180ms ease",
+    transition: getCardTransformTransition(isPressing),
     touchAction: isMobile ? "manipulation" : undefined,
+    willChange: isPressing ? "transform" : undefined,
     "@media (prefers-reduced-motion: reduce)": {
       transition: "none",
       transform: "none",
@@ -117,6 +126,7 @@ function ProductImageContent({
   displayImageSource,
   showImageNotFound,
   showImagePlaceholder,
+  disableImageGestures,
   label,
   isSelected,
   onImageError,
@@ -128,6 +138,7 @@ function ProductImageContent({
   } | null;
   showImageNotFound: boolean;
   showImagePlaceholder: boolean;
+  disableImageGestures: boolean;
   label: string;
   isSelected: boolean;
   onImageError: () => void;
@@ -141,9 +152,13 @@ function ProductImageContent({
           srcSet={displayImageSource.srcSet}
           sizes={displayImageSource.sizes}
           alt={label}
+          draggable={false}
           loading="lazy"
           decoding="async"
           onError={onImageError}
+          style={
+            disableImageGestures ? imageGestureSuppressionStyle : undefined
+          }
           sx={{
             position: "absolute",
             inset: 0,
@@ -151,6 +166,10 @@ function ProductImageContent({
             height: "100%",
             objectFit: "cover",
             objectPosition: "center",
+            userSelect: "none",
+            WebkitUserSelect: "none",
+            WebkitTouchCallout: "none",
+            touchAction: disableImageGestures ? "none" : undefined,
           }}
         />
       ) : (
@@ -193,6 +212,7 @@ function ClothingCardImageSection({
   displayImageSource,
   showImageNotFound,
   showImagePlaceholder,
+  disableImageGestures,
   label,
   isSelected,
   isMobile,
@@ -209,6 +229,7 @@ function ClothingCardImageSection({
   } | null;
   showImageNotFound: boolean;
   showImagePlaceholder: boolean;
+  disableImageGestures: boolean;
   label: string;
   isSelected: boolean;
   isMobile: boolean;
@@ -240,6 +261,7 @@ function ClothingCardImageSection({
           displayImageSource={displayImageSource}
           showImageNotFound={showImageNotFound}
           showImagePlaceholder={showImagePlaceholder}
+          disableImageGestures={disableImageGestures}
           label={label}
           isSelected={isSelected}
           onImageError={onImageError}
@@ -256,6 +278,7 @@ function ClothingCardView({
   displayImageSource,
   showImageNotFound,
   showImagePlaceholder,
+  disableImageGestures,
   label,
   isMobile,
   mobileColumns,
@@ -285,6 +308,7 @@ function ClothingCardView({
   } | null;
   showImageNotFound: boolean;
   showImagePlaceholder: boolean;
+  disableImageGestures: boolean;
   label: string;
   isMobile: boolean;
   mobileColumns: 1 | 2 | 3;
@@ -349,6 +373,7 @@ function ClothingCardView({
         displayImageSource={displayImageSource}
         showImageNotFound={showImageNotFound}
         showImagePlaceholder={showImagePlaceholder}
+        disableImageGestures={disableImageGestures}
         label={label}
         isSelected={isSelected}
         isMobile={isMobile}
@@ -402,5 +427,12 @@ function createCardKeyDownHandler({
 const CardImageFrame = ({ children }: { children: ReactNode }) => (
   <Box sx={{ position: "absolute", inset: 0, zIndex: 0 }}>{children}</Box>
 );
+
+const imageGestureSuppressionStyle = {
+  touchAction: "none",
+  userSelect: "none",
+  WebkitUserSelect: "none",
+  WebkitTouchCallout: "none",
+} as CSSProperties;
 
 export { ClothingCardView, getMobileCardMetrics };

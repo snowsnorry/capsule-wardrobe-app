@@ -16,7 +16,10 @@ import BookmarkBorderRoundedIcon from "@mui/icons-material/BookmarkBorderRounded
 import BookmarkRemoveOutlinedIcon from "@mui/icons-material/BookmarkRemoveOutlined";
 import ThumbDownAltOutlinedIcon from "@mui/icons-material/ThumbDownAltOutlined";
 import MobileProductCardContextMenu from "../../components/MobileProductCardContextMenu";
-import type { ProductMenuPresentation } from "../../components/ClothingCardTypes";
+import type {
+  MobileContextMenuOriginRect,
+  ProductMenuPresentation,
+} from "../../components/ClothingCardTypes";
 import { isSavedToWardrobe } from "../../utils/savedWardrobeState";
 import type { CapsuleMenuAnchor, MainScreenItem } from "./MainScreenTypes";
 
@@ -24,6 +27,7 @@ type ProductMenuState = {
   anchor: CapsuleMenuAnchor;
   url: string;
   item: MainScreenItem | null;
+  originRect?: MobileContextMenuOriginRect;
   presentation?: ProductMenuPresentation;
 };
 
@@ -74,6 +78,7 @@ function ProductMenu({ menuProps, onClose, t }: ProductMenuProps) {
         item={menuProps.productMenu.item}
         label={t("capsule.openProductMenu")}
         open={Boolean(menuProps.productMenu.anchor) && isMobileContextMenu}
+        originRect={menuProps.productMenu.originRect}
         onClose={onClose}
       />
       <ProductRemoveConfirmDialog

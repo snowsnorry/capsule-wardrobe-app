@@ -2,6 +2,18 @@ import type { MouseEvent } from "react";
 
 type ProductMenuPresentation = "anchored" | "mobile-context";
 
+type MobileContextMenuOriginRect = {
+  top: number;
+  left: number;
+  width: number;
+  height: number;
+};
+
+type ProductMenuOpenOptions = {
+  presentation: ProductMenuPresentation;
+  originRect?: MobileContextMenuOriginRect;
+};
+
 type ClothingCardItem = {
   id?: string | number | null;
   name?: string | null;
@@ -48,5 +60,7 @@ export type {
   CardActionProps,
   ClothingCardItem,
   MobileCardMetrics,
+  MobileContextMenuOriginRect,
+  ProductMenuOpenOptions,
   ProductMenuPresentation,
 };

@@ -9,7 +9,7 @@ import { useMobileLongPressMenu } from "./ClothingCardLongPress";
 import { ClothingCardView, getMobileCardMetrics } from "./ClothingCardParts";
 import type {
   ClothingCardItem,
-  ProductMenuPresentation,
+  ProductMenuOpenOptions,
 } from "./ClothingCardTypes";
 
 type ClothingCardProps = {
@@ -25,12 +25,13 @@ type ClothingCardProps = {
     anchor: HTMLElement,
     productUrl: string,
     item: ClothingCardItem,
-    options: { presentation: ProductMenuPresentation },
+    options: ProductMenuOpenOptions,
   ) => void;
   allowProductMenuWithoutUrl?: boolean;
   showProductMenu?: boolean;
   isMobile?: boolean;
   mobileColumns?: 1 | 2 | 3;
+  disableImageGestures?: boolean;
 };
 
 const savedWardrobeSourceOptions = { includeWardrobeSource: true };
@@ -50,6 +51,7 @@ function normalizeClothingCardProps(props: ClothingCardProps) {
     showProductMenu: props.showProductMenu ?? true,
     isMobile: props.isMobile ?? false,
     mobileColumns: props.mobileColumns ?? 2,
+    disableImageGestures: props.disableImageGestures ?? false,
   };
 }
 
@@ -267,6 +269,7 @@ function ClothingCard(props: ClothingCardProps): ReactElement {
     showProductMenu,
     isMobile,
     mobileColumns,
+    disableImageGestures,
   } = normalizeClothingCardProps(props);
   const { t } = useI18n();
   const imageUrl = getSafeHttpUrl(item?.imageUrl);
@@ -357,6 +360,7 @@ function ClothingCard(props: ClothingCardProps): ReactElement {
       displayImageSource={imageState.displayImageSource}
       showImageNotFound={imageState.imageMode === "missing"}
       showImagePlaceholder={imageState.imageMode !== "loading"}
+      disableImageGestures={disableImageGestures}
       label={label}
       isMobile={isMobile}
       mobileColumns={mobileColumns}

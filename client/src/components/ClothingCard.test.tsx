@@ -679,6 +679,17 @@ describe("ClothingCard", () => {
     renderCard({ isMobile: true, onProductClick, onProductMenuOpen });
 
     const card = screen.getByRole("button", { name: /Red Jacket/ });
+    vi.spyOn(card, "getBoundingClientRect").mockReturnValue({
+      top: 20,
+      left: 10,
+      width: 120,
+      height: 160,
+      right: 130,
+      bottom: 180,
+      x: 10,
+      y: 20,
+      toJSON: () => ({}),
+    });
     fireEvent.pointerDown(card, {
       pointerType: "touch",
       pointerId: 1,
@@ -686,7 +697,10 @@ describe("ClothingCard", () => {
       clientY: 20,
     });
 
-    expect(card).toHaveStyle({ transform: "scale(0.975)" });
+    expect(card).toHaveStyle({
+      transform: "scale(0.94)",
+      transition: "transform 520ms linear,box-shadow 180ms ease",
+    });
 
     act(() => {
       vi.advanceTimersByTime(520);
@@ -697,7 +711,10 @@ describe("ClothingCard", () => {
       card,
       "https://example.com/products/red-jacket",
       expect.objectContaining({ id: "item-1" }),
-      { presentation: "mobile-context" },
+      {
+        originRect: { top: 20, left: 10, width: 120, height: 160 },
+        presentation: "mobile-context",
+      },
     );
 
     fireEvent.click(card);

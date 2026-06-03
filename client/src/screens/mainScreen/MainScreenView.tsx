@@ -21,7 +21,10 @@ import type {
   MainScreenProps,
   MobileCardColumns,
 } from "./MainScreenTypes";
-import type { ProductMenuPresentation } from "../../components/ClothingCardTypes";
+import type {
+  MobileContextMenuOriginRect,
+  ProductMenuPresentation,
+} from "../../components/ClothingCardTypes";
 
 type NameDialogState = {
   type: "rename" | "save-as" | "";
@@ -39,6 +42,7 @@ type ProductMenuState = {
   anchor: CapsuleMenuAnchor;
   url: string;
   item: MainScreenItem | null;
+  originRect?: MobileContextMenuOriginRect;
   presentation?: ProductMenuPresentation;
 };
 
@@ -285,6 +289,7 @@ function MainScreenCapsulePanel(model: MainScreenViewProps) {
               url,
               item,
               presentation: options.presentation,
+              ...(options.originRect ? { originRect: options.originRect } : {}),
             })
           }
           onToggleSelected={model.props.onToggleRegenerationSelection}

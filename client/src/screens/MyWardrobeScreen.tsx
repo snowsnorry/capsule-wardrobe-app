@@ -4,7 +4,7 @@ import type { ReactElement } from "react";
 import { Alert, Box, Stack } from "@mui/material";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import { sortWardrobeItems } from "../../../shared/wardrobeOrder.js";
-import type { ProductMenuPresentation } from "../components/ClothingCardTypes";
+import type { ProductMenuOpenOptions } from "../components/ClothingCardTypes";
 import {
   deleteUploadedWardrobeItem,
   downloadMyWardrobePdf,
@@ -156,6 +156,7 @@ function MyWardrobeScreen(): ReactElement {
         <MyWardrobeProductMenu
           anchor={wardrobeItems.productMenu.anchor}
           item={wardrobeItems.productMenu.item}
+          originRect={wardrobeItems.productMenu.originRect}
           presentation={wardrobeItems.productMenu.presentation}
           t={t}
           onClose={wardrobeItems.closeProductMenu}
@@ -236,9 +237,15 @@ function useMyWardrobeItems(
     anchor: HTMLElement,
     url: string,
     item: MainScreenItem,
-    options: { presentation: ProductMenuPresentation },
+    options: ProductMenuOpenOptions,
   ) => {
-    setProductMenu({ anchor, url, item, presentation: options.presentation });
+    setProductMenu({
+      anchor,
+      url,
+      item,
+      presentation: options.presentation,
+      ...(options.originRect ? { originRect: options.originRect } : {}),
+    });
   };
   const handleConfirmRemove = async (item: MainScreenItem) => {
     const target = getMyWardrobeDeletionTarget(item);
