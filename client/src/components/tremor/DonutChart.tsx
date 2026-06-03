@@ -2,7 +2,12 @@ import { Box, Stack, Typography, useTheme } from "@mui/material";
 import type { CSSProperties } from "react";
 import { useState } from "react";
 import { Cell, Pie, PieChart, Tooltip } from "recharts";
-import { getTooltipStyle, getTooltipTextStyle } from "./chartUtils";
+import {
+  getChartFocusFilter,
+  getChartTheme,
+  getTooltipStyle,
+  getTooltipTextStyle,
+} from "./chartUtils";
 import ChartContainer from "./ChartContainer";
 
 type DonutChartDatum = {
@@ -47,12 +52,7 @@ function DonutChart({
   const isDarkMode = theme.palette.mode === "dark";
   const [focusedValue, setFocusedValue] = useState<string | null>(null);
   const hasSelection = activeValues.length > 0;
-  const strokeColor = isDarkMode
-    ? "rgba(238, 245, 243, 0.34)"
-    : "rgba(31, 41, 51, 0.22)";
-  const activeStrokeColor = isDarkMode
-    ? "rgba(238, 245, 243, 0.56)"
-    : "rgba(31, 41, 51, 0.42)";
+  const colors = getChartTheme(isDarkMode);
   const tooltipStyle = getTooltipStyle(isDarkMode);
   const tooltipTextStyle = getTooltipTextStyle(isDarkMode);
   const visibleLegendCount = data.filter((row) => !row.isOther).length;
@@ -78,15 +78,18 @@ function DonutChart({
           outline: "none",
         },
         "& .recharts-surface:focus-visible .recharts-pie-sector": {
-          filter:
-            "drop-shadow(0 0 5px rgba(28, 124, 124, 0.42)) brightness(1.04)",
+          filter: getChartFocusFilter({
+            blur: 5,
+            glow: colors.focusSoftGlow,
+            brightness: 1.04,
+          }),
         },
       }}
     >
       <ChartContainer
         renderChart={({ width, height }) => (
           <DonutPie
-            activeStrokeColor={activeStrokeColor}
+            activeStrokeColor={colors.activeStrokeColor}
             category={category}
             data={data}
             focusedValue={focusedValue}
@@ -94,7 +97,7 @@ function DonutChart({
             height={height}
             index={index}
             onValueChange={onValueChange}
-            strokeColor={strokeColor}
+            strokeColor={colors.strokeColor}
             tooltipStyle={tooltipStyle}
             tooltipTextStyle={tooltipTextStyle}
             valueFormatter={valueFormatter}
@@ -211,7 +214,7 @@ function getDonutCellStyle(
   return {
     cursor: row.isOther ? "default" : "pointer",
     filter: isFocused
-      ? "drop-shadow(0 0 6px rgba(28, 124, 124, 0.55)) brightness(1.08)"
+      ? getChartFocusFilter({ blur: 6, brightness: 1.08 })
       : undefined,
     transition:
       "filter 180ms ease, fill-opacity 180ms ease, stroke 180ms ease, stroke-width 180ms ease",

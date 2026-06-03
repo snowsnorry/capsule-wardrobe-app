@@ -2,6 +2,8 @@ import TremorBarChart from "../../components/tremor/BarChart";
 import TremorDonutChart from "../../components/tremor/DonutChart";
 import TremorLineChart from "../../components/tremor/LineChart";
 import {
+  getChartFallbackSwatch,
+  getChartFacetRamp,
   getGradientStops,
   sanitizeSvgId,
 } from "../../components/tremor/chartUtils";
@@ -16,32 +18,7 @@ type ColorFillConfig = {
   gradientStops?: string[];
 };
 
-export const STATISTICS_FACET_COLORS = [
-  { color: "#6f9f9a", activeColor: "#1c7c7c" },
-  { color: "#b6974d", activeColor: "#8f6f45" },
-  { color: "#5f6f83", activeColor: "#52606d" },
-  { color: "#b36f58", activeColor: "#9a6149" },
-  { color: "#537fa2", activeColor: "#3f6f96" },
-  { color: "#b66f85", activeColor: "#9d516d" },
-  { color: "#6d8e55", activeColor: "#587a42" },
-  { color: "#8c7463", activeColor: "#6f5b4d" },
-  { color: "#3f8a79", activeColor: "#2d7464" },
-  { color: "#b98955", activeColor: "#956832" },
-  { color: "#77639a", activeColor: "#615083" },
-  { color: "#a96052", activeColor: "#914836" },
-  { color: "#4f8fa0", activeColor: "#377a8c" },
-  { color: "#88964a", activeColor: "#707f35" },
-  { color: "#a86f98", activeColor: "#8f557e" },
-  { color: "#677b9f", activeColor: "#50658a" },
-  { color: "#9c7a49", activeColor: "#806139" },
-  { color: "#4f8063", activeColor: "#3a6c4d" },
-  { color: "#956984", activeColor: "#7f526e" },
-  { color: "#bb7e68", activeColor: "#a2634e" },
-  { color: "#6f7f72", activeColor: "#58695b" },
-  { color: "#a5914f", activeColor: "#867235" },
-  { color: "#7a8ea6", activeColor: "#60758f" },
-  { color: "#8a6f5b", activeColor: "#735844" },
-] as const;
+export const STATISTICS_FACET_COLORS = getChartFacetRamp();
 
 export const BAR_CHART_DIMENSION_KEYS = new Set([
   "style",
@@ -139,7 +116,7 @@ export function getColorChartFillConfig(value: string): ColorFillConfig {
     };
   }
 
-  return { color: "#94a3b8" };
+  return { color: getChartFallbackSwatch() };
 }
 
 export function getStatisticsFacetFillConfig(index: number): ColorFillConfig {

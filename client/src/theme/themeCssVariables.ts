@@ -1,6 +1,41 @@
 import type { ThemeMode } from "./themeTypes";
 import { appThemeTokens, paletteTokens } from "./themeTokens";
 
+function createChartFacetCssVariables(mode: ThemeMode) {
+  const tokens = paletteTokens[mode];
+
+  return Object.fromEntries(
+    tokens.chartFacetRamp.flatMap((entry, index) => [
+      [`--cw-chart-facet-${index}`, entry.color],
+      [`--cw-chart-facet-active-${index}`, entry.activeColor],
+    ]),
+  );
+}
+
+function createChartCssVariables(mode: ThemeMode) {
+  const tokens = paletteTokens[mode];
+
+  return {
+    "--cw-shadow-chart-tooltip": tokens.chartTooltipShadow,
+    "--cw-chart-grid": tokens.chartGrid,
+    "--cw-chart-tick": tokens.chartTick,
+    "--cw-chart-secondary-tick": tokens.chartSecondaryTick,
+    "--cw-chart-selected-tick": tokens.chartSelectedTick,
+    "--cw-chart-stroke": tokens.chartStroke,
+    "--cw-chart-active-stroke": tokens.chartActiveStroke,
+    "--cw-chart-cursor-fill": tokens.chartCursorFill,
+    "--cw-chart-tooltip-bg": tokens.chartTooltipBg,
+    "--cw-chart-tooltip-border": tokens.chartTooltipBorder,
+    "--cw-chart-tooltip-ink": tokens.chartTooltipInk,
+    "--cw-chart-focus-glow": tokens.chartFocusGlow,
+    "--cw-chart-focus-soft-glow": tokens.chartFocusSoftGlow,
+    "--cw-chart-series-primary": tokens.chartSeriesPrimary,
+    "--cw-chart-active-dot-stroke": tokens.chartActiveDotStroke,
+    "--cw-chart-fallback-swatch": tokens.chartFallbackSwatch,
+    ...createChartFacetCssVariables(mode),
+  };
+}
+
 function createThemeCssVariables(mode: ThemeMode) {
   const tokens = paletteTokens[mode];
 
@@ -81,7 +116,7 @@ function createThemeCssVariables(mode: ThemeMode) {
     "--cw-shadow-image-toggle": tokens.imageToggleShadow,
     "--cw-shadow-image-action": tokens.imageActionShadow,
     "--cw-shadow-overlay-panel": tokens.overlayPanelShadow,
-    "--cw-shadow-chart-tooltip": tokens.chartTooltipShadow,
+    ...createChartCssVariables(mode),
   } as const;
 }
 

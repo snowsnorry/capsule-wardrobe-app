@@ -1,5 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
+  getChartFocusFilter,
+  getChartTheme,
   getGradientStops,
   getTooltipStyle,
   getTooltipTextStyle,
@@ -8,22 +10,37 @@ import {
 
 describe("chartUtils", () => {
   test("returns light and dark tooltip styles", () => {
+    const chartTheme = getChartTheme(false);
+
     expect(getTooltipStyle(false)).toMatchObject({
-      background: "rgba(255, 253, 249, 0.98)",
-      color: "#1f2933",
+      background: chartTheme.tooltipBg,
+      border: `1px solid ${chartTheme.tooltipBorder}`,
+      boxShadow: chartTheme.tooltipShadow,
+      color: chartTheme.tooltipInk,
     });
-    expect(getTooltipStyle(true)).toMatchObject({
-      background: "rgba(8, 17, 17, 0.96)",
-      color: "#eef5f3",
-    });
+    expect(getTooltipStyle(true)).toMatchObject(getTooltipStyle(false));
     expect(getTooltipTextStyle(false)).toEqual({
-      color: "#1f2933",
+      color: chartTheme.tooltipInk,
       fontVariantNumeric: "tabular-nums",
     });
-    expect(getTooltipTextStyle(true)).toEqual({
-      color: "#eef5f3",
-      fontVariantNumeric: "tabular-nums",
-    });
+    expect(getTooltipTextStyle(true)).toEqual(getTooltipTextStyle(false));
+  });
+
+  test("builds chart focus filters from centralized glow values", () => {
+    const chartTheme = getChartTheme();
+
+    expect(
+      getChartFocusFilter({
+        blur: 4,
+        glow: chartTheme.focusSoftGlow,
+        brightness: 1.04,
+      }),
+    ).toBe(
+      "drop-shadow(0 0 4px var(--cw-chart-focus-soft-glow)) brightness(1.04)",
+    );
+    expect(getChartFocusFilter({ blur: 6, brightness: 1.08 })).toBe(
+      "drop-shadow(0 0 6px var(--cw-chart-focus-glow)) brightness(1.08)",
+    );
   });
 
   test("extracts hex gradient stops and normalizes SVG ids", () => {

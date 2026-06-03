@@ -7,6 +7,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import BarChart from "./BarChart";
+import { getChartFocusFilter } from "./chartUtils";
 import DonutChart from "./DonutChart";
 import LineChart from "./LineChart";
 
@@ -106,7 +107,7 @@ describe("tremor charts", () => {
     });
     const focusedBar = document.querySelector('[stroke-width="2.5"]');
     expect(focusedBar).toHaveStyle({
-      filter: "drop-shadow(0 0 5px rgba(28, 124, 124, 0.55)) brightness(1.08)",
+      filter: getChartFocusFilter({ blur: 5, brightness: 1.08 }),
     });
     expect(focusedBar).toHaveAttribute("stroke-width", "2.5");
   });
@@ -170,7 +171,7 @@ describe("tremor charts", () => {
     });
     const focusedSector = document.querySelector('[stroke-width="2.5"]');
     expect(focusedSector).toHaveStyle({
-      filter: "drop-shadow(0 0 6px rgba(28, 124, 124, 0.55)) brightness(1.08)",
+      filter: getChartFocusFilter({ blur: 6, brightness: 1.08 }),
     });
     expect(focusedSector).toHaveAttribute("stroke-width", "2.5");
   });

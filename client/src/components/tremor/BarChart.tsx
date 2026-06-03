@@ -10,7 +10,12 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { getTooltipStyle, getTooltipTextStyle } from "./chartUtils";
+import {
+  getChartFocusFilter,
+  getChartTheme,
+  getTooltipStyle,
+  getTooltipTextStyle,
+} from "./chartUtils";
 import ChartContainer from "./ChartContainer";
 
 type BarChartDatum = {
@@ -66,7 +71,11 @@ function BarChart({
   const activeLabels = new Set(
     data.filter((row) => row.isActive).map((row) => row[index]),
   );
-  const colors = getBarChartColors(isDarkMode);
+  const colors = {
+    ...getChartTheme(isDarkMode),
+    tooltipStyle: getTooltipStyle(isDarkMode),
+    tooltipTextStyle: getTooltipTextStyle(isDarkMode),
+  };
 
   return (
     <ChartContainer
@@ -91,8 +100,11 @@ function BarChart({
           outline: "none",
         },
         "& .recharts-surface:focus-visible .recharts-bar-rectangle": {
-          filter:
-            "drop-shadow(0 0 4px rgba(28, 124, 124, 0.42)) brightness(1.04)",
+          filter: getChartFocusFilter({
+            blur: 4,
+            glow: colors.focusSoftGlow,
+            brightness: 1.04,
+          }),
         },
       }}
     >
@@ -119,25 +131,6 @@ function BarChart({
       </Box>
     </ChartContainer>
   );
-}
-
-function getBarChartColors(isDarkMode: boolean) {
-  return {
-    tickColor: isDarkMode ? "#f5f5f5" : "#475467",
-    selectedTickColor: isDarkMode ? "#eef5f3" : "#1f2933",
-    secondaryTickColor: isDarkMode ? "rgba(238, 245, 243, 0.76)" : "#667085",
-    gridColor: isDarkMode
-      ? "rgba(238, 245, 243, 0.14)"
-      : "rgba(148, 163, 184, 0.16)",
-    strokeColor: isDarkMode
-      ? "rgba(238, 245, 243, 0.34)"
-      : "rgba(31, 41, 51, 0.22)",
-    activeStrokeColor: isDarkMode
-      ? "rgba(238, 245, 243, 0.56)"
-      : "rgba(31, 41, 51, 0.42)",
-    tooltipStyle: getTooltipStyle(isDarkMode),
-    tooltipTextStyle: getTooltipTextStyle(isDarkMode),
-  };
 }
 
 function BarChartPlot({
@@ -176,7 +169,7 @@ function BarChartPlot({
         tick={{ fontSize: 11, fill: colors.secondaryTickColor }}
       />
       <Tooltip
-        cursor={{ fill: "rgba(143, 111, 69, 0.05)" }}
+        cursor={{ fill: colors.cursorFill }}
         formatter={(
           value: number | string,
           _name: string,
@@ -301,7 +294,7 @@ function getBarCellStyle(isFocused: boolean): CSSProperties {
   return {
     cursor: "pointer",
     filter: isFocused
-      ? "drop-shadow(0 0 5px rgba(28, 124, 124, 0.55)) brightness(1.08)"
+      ? getChartFocusFilter({ blur: 5, brightness: 1.08 })
       : undefined,
     transition:
       "filter 180ms ease, fill-opacity 180ms ease, stroke 180ms ease, stroke-width 180ms ease",

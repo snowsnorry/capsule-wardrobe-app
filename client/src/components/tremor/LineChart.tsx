@@ -7,7 +7,12 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { getTooltipStyle, getTooltipTextStyle } from "./chartUtils";
+import {
+  getChartFocusFilter,
+  getChartTheme,
+  getTooltipStyle,
+  getTooltipTextStyle,
+} from "./chartUtils";
 import ChartContainer from "./ChartContainer";
 
 type LineChartDatum = {
@@ -35,11 +40,7 @@ function LineChart({
 }: LineChartProps) {
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === "dark";
-  const gridColor = isDarkMode
-    ? "rgba(238, 245, 243, 0.14)"
-    : "rgba(148, 163, 184, 0.16)";
-  const tickColor = isDarkMode ? "rgba(238, 245, 243, 0.78)" : "#667085";
-  const areaColor = isDarkMode ? "#49a3a3" : "#1c7c7c";
+  const colors = getChartTheme(isDarkMode);
   const tooltipStyle = getTooltipStyle(isDarkMode);
   const tooltipTextStyle = getTooltipTextStyle(isDarkMode);
 
@@ -52,7 +53,7 @@ function LineChart({
           data={data}
           margin={{ top: 24, right: 24, left: 8, bottom: 15 }}
         >
-          <CartesianGrid vertical={false} stroke={gridColor} />
+          <CartesianGrid vertical={false} stroke={colors.gridColor} />
           <XAxis
             dataKey={index}
             tickLine={false}
@@ -60,9 +61,12 @@ function LineChart({
             interval="preserveStartEnd"
             minTickGap={24}
             height={58}
-            tick={{ fontSize: 11, fill: tickColor }}
+            tick={{ fontSize: 11, fill: colors.secondaryTickColor }}
           />
-          <YAxis width="auto" tick={{ fontSize: 11, fill: tickColor }} />
+          <YAxis
+            width="auto"
+            tick={{ fontSize: 11, fill: colors.secondaryTickColor }}
+          />
           <Tooltip
             formatter={(
               value: number | string,
@@ -82,15 +86,15 @@ function LineChart({
             className="tremor-line-chart-area"
             type="monotone"
             dataKey={category}
-            stroke={areaColor}
-            fill={areaColor}
+            stroke={colors.seriesPrimary}
+            fill={colors.seriesPrimary}
             strokeWidth={1}
             dot={false}
             activeDot={{
               r: 5,
-              stroke: isDarkMode ? "#15201f" : "#fffdf9",
+              stroke: colors.activeDotStroke,
               strokeWidth: 2,
-              fill: areaColor,
+              fill: colors.seriesPrimary,
             }}
             isAnimationActive
             animationDuration={320}
@@ -107,8 +111,7 @@ function LineChart({
           opacity: 0.42,
         },
         "& .recharts-surface:focus-visible .recharts-area-curve": {
-          filter:
-            "drop-shadow(0 0 5px rgba(28, 124, 124, 0.55)) brightness(1.08)",
+          filter: getChartFocusFilter({ blur: 5, brightness: 1.08 }),
           strokeWidth: 3,
         },
       }}

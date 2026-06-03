@@ -32,7 +32,7 @@ function parseRgbaColor(value: string): Rgba {
 }
 
 function parseOklchColor(value: string): Rgb {
-  const match = /^oklch\((\d+)% ([\d.]+) ([\d.]+)\)$/.exec(value);
+  const match = /^oklch\(([\d.]+)% ([\d.]+) ([\d.]+)\)$/.exec(value);
   if (!match) {
     throw new Error(`Unsupported oklch color: ${value}`);
   }
@@ -237,6 +237,22 @@ describe("theme component contrast", () => {
       expect(
         contrastRatio(mobileActionSurfaceOnDarkImage, [0, 0, 0]),
       ).toBeGreaterThanOrEqual(NON_TEXT_CONTRAST);
+    }
+  });
+
+  test("keeps chart tooltip text readable", () => {
+    for (const mode of ["light", "dark"] as const) {
+      const variables = createThemeCssVariables(mode);
+      const tooltipBackground = parseColor(
+        cssVariable("--cw-chart-tooltip-bg", variables),
+      );
+      const tooltipInk = parseColor(
+        cssVariable("--cw-chart-tooltip-ink", variables),
+      );
+
+      expect(
+        contrastRatio(tooltipInk, tooltipBackground),
+      ).toBeGreaterThanOrEqual(AA_NORMAL_TEXT_CONTRAST);
     }
   });
 });

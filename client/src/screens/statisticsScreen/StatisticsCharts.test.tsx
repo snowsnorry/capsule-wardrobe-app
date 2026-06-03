@@ -3,6 +3,7 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
+import { chartFacetRamp } from "../../theme/themeTokens";
 
 vi.mock("../../components/tremor/DonutChart", () => ({
   default: ({
@@ -93,34 +94,17 @@ function renderWithTheme(children: ReactNode) {
   return render(<ThemeProvider theme={theme}>{children}</ThemeProvider>);
 }
 
-function getHexSaturation(hexColor: string) {
-  const [red, green, blue] = getHexRgbChannels(hexColor).map(
-    (channel) => channel / 255,
-  );
-  const max = Math.max(red, green, blue);
-  const min = Math.min(red, green, blue);
+function parseOklchColor(value: string) {
+  const match = /^oklch\(([\d.]+)% ([\d.]+) ([\d.]+)\)$/.exec(value);
+  if (!match) {
+    throw new Error(`Unsupported OKLCH color: ${value}`);
+  }
 
-  return max === min ? 0 : (max - min) / (1 - Math.abs(max + min - 1));
-}
-
-function getHexRgbChannels(hexColor: string) {
-  const normalizedHex = hexColor.replace("#", "");
-  return [
-    Number.parseInt(normalizedHex.slice(0, 2), 16),
-    Number.parseInt(normalizedHex.slice(2, 4), 16),
-    Number.parseInt(normalizedHex.slice(4, 6), 16),
-  ];
-}
-
-function getHexRgbDistance(firstColor: string, secondColor: string) {
-  const firstChannels = getHexRgbChannels(firstColor);
-  const secondChannels = getHexRgbChannels(secondColor);
-
-  return Math.hypot(
-    firstChannels[0] - secondChannels[0],
-    firstChannels[1] - secondChannels[1],
-    firstChannels[2] - secondChannels[2],
-  );
+  return {
+    lightness: Number(match[1]),
+    chroma: Number(match[2]),
+    hue: Number(match[3]),
+  };
 }
 
 describe("StatisticsCharts", () => {
@@ -158,32 +142,39 @@ describe("StatisticsCharts", () => {
       "#F4A261",
       "#014F86",
     ]);
-    const rampColors = STATISTICS_FACET_COLORS.flatMap(
-      ({ color, activeColor }) => [color, activeColor],
-    );
-    const adjacentDefaultDistances = STATISTICS_FACET_COLORS.map(
-      ({ color }, index) =>
-        getHexRgbDistance(
-          color,
-          STATISTICS_FACET_COLORS[(index + 1) % STATISTICS_FACET_COLORS.length]
-            .color,
-        ),
+    const tokenRampColors = chartFacetRamp.flatMap(({ color, activeColor }) => [
+      color,
+      activeColor,
+    ]);
+    const rampDefaults = chartFacetRamp.map(({ color }) =>
+      parseOklchColor(color),
     );
 
-    expect(STATISTICS_FACET_COLORS).toHaveLength(24);
-    expect(rampColors.every((color) => /^#[0-9a-f]{6}$/i.test(color))).toBe(
-      true,
-    );
+    expect(chartFacetRamp).toHaveLength(24);
+    expect(tokenRampColors.every((color) => /^oklch\(/.test(color))).toBe(true);
     expect(
-      rampColors.some((color) => previousDemoColors.has(color.toUpperCase())),
+      tokenRampColors.some((color) =>
+        previousDemoColors.has(color.toUpperCase()),
+      ),
     ).toBe(false);
-    expect(new Set(rampColors).size).toBe(rampColors.length);
+    expect(new Set(tokenRampColors).size).toBe(tokenRampColors.length);
     expect(
-      STATISTICS_FACET_COLORS.every(
-        ({ color }) => getHexSaturation(color) <= 0.45,
+      rampDefaults.every(({ chroma }) => chroma > 0 && chroma <= 0.1),
+    ).toBe(true);
+    expect(
+      rampDefaults.every(
+        (color, index) =>
+          color.hue !== rampDefaults[(index + 1) % rampDefaults.length].hue,
       ),
     ).toBe(true);
-    expect(Math.min(...adjacentDefaultDistances)).toBeGreaterThanOrEqual(40);
+    expect(STATISTICS_FACET_COLORS).toHaveLength(chartFacetRamp.length);
+    expect(
+      STATISTICS_FACET_COLORS.every(
+        ({ color, activeColor }, index) =>
+          color === `var(--cw-chart-facet-${index})` &&
+          activeColor === `var(--cw-chart-facet-active-${index})`,
+      ),
+    ).toBe(true);
     expect(getStatisticsFacetFillConfig(24)).toEqual(
       STATISTICS_FACET_COLORS[0],
     );
@@ -269,5 +260,26 @@ describe("StatisticsCharts", () => {
       color: "url(#statistics-color-bar-unknown-color)",
       gradientId: "statistics-color-bar-unknown-color",
     });
+  });
+
+  test("uses the theme fallback swatch when a color style has no usable fill", async () => {
+    vi.resetModules();
+    vi.doMock("../../../../shared/colorSwatches.js", () => ({
+      getColorSwatchStyle: () => ({
+        background: "linear-gradient(rgba(0,0,0,.2), rgba(0,0,0,.1))",
+      }),
+    }));
+
+    try {
+      const { getColorChartFillConfig: getMockedColorChartFillConfig } =
+        await import("./StatisticsCharts");
+
+      expect(getMockedColorChartFillConfig("empty")).toEqual({
+        color: "var(--cw-chart-fallback-swatch)",
+      });
+    } finally {
+      vi.doUnmock("../../../../shared/colorSwatches.js");
+      vi.resetModules();
+    }
   });
 });

@@ -91,9 +91,15 @@ describe("theme contract", () => {
     expect(rootVars["--cw-shadow-wardrobe-card"]).toBe(
       "0 1px 6px rgba(17, 36, 34, 0.055)",
     );
+    expect(rootVars["--cw-chart-grid"]).toMatch(/^oklch\(/);
+    expect(rootVars["--cw-chart-tooltip-bg"]).toMatch(/^oklch\(/);
+    expect(rootVars["--cw-chart-facet-0"]).toMatch(/^oklch\(/);
+    expect(rootVars["--cw-chart-facet-active-0"]).toMatch(/^oklch\(/);
     expect(darkRootVars["--cw-color-primary"]).toBe(
       darkTheme.palette.primary.main,
     );
+    expect(darkRootVars["--cw-chart-grid"]).toMatch(/^oklch\(/);
+    expect(darkRootVars["--cw-chart-tooltip-bg"]).toMatch(/^oklch\(/);
     expect(theme.typography.fontFamily).toContain("Onest");
     expect(theme.shape.borderRadius).toBe(14);
     expect(theme.components.MuiButton.defaultProps.disableElevation).toBe(true);
