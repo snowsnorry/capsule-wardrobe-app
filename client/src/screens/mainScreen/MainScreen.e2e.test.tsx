@@ -82,7 +82,8 @@ vi.mock("../../components/ClothingCard", () => ({
     isSelectionMode,
     onToggleSelected,
     onProductClick,
-    onProductMenuClick,
+    onProductMenuOpen,
+    showProductMenu = true,
   }) => (
     <div>
       <button
@@ -95,11 +96,15 @@ vi.mock("../../components/ClothingCard", () => ({
       >
         {item.name}
       </button>
-      {!isSelectionMode ? (
+      {!isSelectionMode && showProductMenu ? (
         <button
           type="button"
           data-testid={`product-menu-${item.url}`}
-          onClick={(event) => onProductMenuClick?.(event, item.url, item)}
+          onClick={(event) =>
+            onProductMenuOpen?.(event.currentTarget, item.url, item, {
+              presentation: "anchored",
+            })
+          }
         >
           menu
         </button>

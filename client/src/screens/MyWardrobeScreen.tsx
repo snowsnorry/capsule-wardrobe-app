@@ -1,9 +1,10 @@
 /* eslint-disable max-lines */
 import { useEffect, useMemo, useState } from "react";
-import type { MouseEvent, ReactElement } from "react";
+import type { ReactElement } from "react";
 import { Alert, Box, Stack } from "@mui/material";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import { sortWardrobeItems } from "../../../shared/wardrobeOrder.js";
+import type { ProductMenuPresentation } from "../components/ClothingCardTypes";
 import {
   deleteUploadedWardrobeItem,
   downloadMyWardrobePdf,
@@ -150,11 +151,12 @@ function MyWardrobeScreen(): ReactElement {
           mobileColumns={displayedColumns}
           t={t}
           onProductClick={openProductDetail}
-          onProductMenuClick={wardrobeItems.handleProductMenuClick}
+          onProductMenuOpen={wardrobeItems.handleProductMenuOpen}
         />
         <MyWardrobeProductMenu
           anchor={wardrobeItems.productMenu.anchor}
           item={wardrobeItems.productMenu.item}
+          presentation={wardrobeItems.productMenu.presentation}
           t={t}
           onClose={wardrobeItems.closeProductMenu}
           onRequestRemove={wardrobeItems.setRemoveConfirmItem}
@@ -230,12 +232,13 @@ function useMyWardrobeItems(
     useState<MainScreenItem | null>(null);
   const closeProductMenu = () =>
     setProductMenu((current) => ({ ...current, anchor: null }));
-  const handleProductMenuClick = (
-    event: MouseEvent<HTMLButtonElement>,
+  const handleProductMenuOpen = (
+    anchor: HTMLElement,
     url: string,
     item: MainScreenItem,
+    options: { presentation: ProductMenuPresentation },
   ) => {
-    setProductMenu({ anchor: event.currentTarget, url, item });
+    setProductMenu({ anchor, url, item, presentation: options.presentation });
   };
   const handleConfirmRemove = async (item: MainScreenItem) => {
     const target = getMyWardrobeDeletionTarget(item);
@@ -357,7 +360,7 @@ function useMyWardrobeItems(
     error,
     handleConfirmRemove,
     handleDownloadPdf,
-    handleProductMenuClick,
+    handleProductMenuOpen,
     handleUpdateUploadedItem,
     handleUploadImages,
     handleUploadUrls,

@@ -1,11 +1,16 @@
+/* eslint-disable max-lines */
 import type { MouseEvent, ReactElement } from "react";
 import { useI18n } from "../i18n/useI18n";
 import { formatProductLabel } from "../utils/productLabel";
 import { getSafeHttpUrl } from "../../../shared/urlSecurity.js";
 import { isSavedToWardrobe } from "../utils/savedWardrobeState";
 import { useResponsiveClothingCardImageState } from "./ClothingCardImageState";
+import { useMobileLongPressMenu } from "./ClothingCardLongPress";
 import { ClothingCardView, getMobileCardMetrics } from "./ClothingCardParts";
-import type { ClothingCardItem } from "./ClothingCardTypes";
+import type {
+  ClothingCardItem,
+  ProductMenuPresentation,
+} from "./ClothingCardTypes";
 
 type ClothingCardProps = {
   item: ClothingCardItem;
@@ -16,10 +21,11 @@ type ClothingCardProps = {
   regenerationLockedReason?: string | null;
   onToggleSelected?: (item: ClothingCardItem) => void;
   onProductClick?: (item: ClothingCardItem) => void;
-  onProductMenuClick?: (
-    event: MouseEvent<HTMLButtonElement>,
+  onProductMenuOpen?: (
+    anchor: HTMLElement,
     productUrl: string,
     item: ClothingCardItem,
+    options: { presentation: ProductMenuPresentation },
   ) => void;
   allowProductMenuWithoutUrl?: boolean;
   showProductMenu?: boolean;
@@ -39,7 +45,7 @@ function normalizeClothingCardProps(props: ClothingCardProps) {
     regenerationLockedReason: props.regenerationLockedReason ?? null,
     onToggleSelected: props.onToggleSelected,
     onProductClick: props.onProductClick,
-    onProductMenuClick: props.onProductMenuClick,
+    onProductMenuOpen: props.onProductMenuOpen,
     allowProductMenuWithoutUrl: props.allowProductMenuWithoutUrl ?? false,
     showProductMenu: props.showProductMenu ?? true,
     isMobile: props.isMobile ?? false,
@@ -167,7 +173,7 @@ function buildActionPropsForCard({
   isRegenerating,
   regenerationLockedReason,
   showToggleButton,
-  showProductMenuButton,
+  showVisibleProductMenuButton,
   mobileCardMetrics,
   handlers,
   t,
@@ -178,7 +184,7 @@ function buildActionPropsForCard({
   isRegenerating: boolean;
   regenerationLockedReason?: string | null;
   showToggleButton: boolean;
-  showProductMenuButton: boolean;
+  showVisibleProductMenuButton: boolean;
   mobileCardMetrics: ReturnType<typeof getMobileCardMetrics>;
   handlers: Parameters<typeof buildClothingCardActionProps>[0]["handlers"];
   t: (key: string) => string;
@@ -191,7 +197,7 @@ function buildActionPropsForCard({
       isRegenerating,
       regenerationLockedReason,
       showToggleButton,
-      showProductMenuButton,
+      showProductMenuButton: showVisibleProductMenuButton,
       mobileCardMetrics,
     }),
     handlers,
@@ -245,7 +251,7 @@ function getProductMenuKey({
 }
 
 // The card keeps render wiring local so image, click, and action state stay in sync.
-// eslint-disable-next-line max-lines-per-function
+// eslint-disable-next-line complexity, max-lines-per-function
 function ClothingCard(props: ClothingCardProps): ReactElement {
   const {
     item,
@@ -256,7 +262,7 @@ function ClothingCard(props: ClothingCardProps): ReactElement {
     regenerationLockedReason,
     onToggleSelected,
     onProductClick,
-    onProductMenuClick,
+    onProductMenuOpen,
     allowProductMenuWithoutUrl,
     showProductMenu,
     isMobile,
@@ -286,7 +292,14 @@ function ClothingCard(props: ClothingCardProps): ReactElement {
     isSelectionMode && (isSelectable || Boolean(regenerationLockedReason));
   const showProductMenuButton =
     showProductMenu && !isSelectionMode && Boolean(productMenuKey);
-  const showCardActions = showToggleButton || showProductMenuButton;
+  const showVisibleProductMenuButton = showProductMenuButton && !isMobile;
+  const showCardActions = showToggleButton || showVisibleProductMenuButton;
+  const mobileLongPress = useMobileLongPressMenu({
+    enabled: isMobile && showProductMenuButton,
+    item,
+    onOpen: onProductMenuOpen,
+    productMenuKey,
+  });
   const handleToggleSelected = (event: MouseEvent<HTMLButtonElement>) => {
     stopCardActionPropagation(event);
     if (
@@ -305,10 +318,21 @@ function ClothingCard(props: ClothingCardProps): ReactElement {
     onToggleSelected,
     onProductClick,
   });
+  const handleCardClickWithLongPressGuard = handleCardClick
+    ? () => {
+        if (mobileLongPress.shouldSuppressClick()) {
+          return;
+        }
+
+        handleCardClick();
+      }
+    : undefined;
   const handleProductMenuClick = (event: MouseEvent<HTMLButtonElement>) => {
     stopCardActionPropagation(event);
-    if (productMenuKey && typeof onProductMenuClick === "function") {
-      onProductMenuClick(event, productMenuKey, item);
+    if (productMenuKey && typeof onProductMenuOpen === "function") {
+      onProductMenuOpen(event.currentTarget, productMenuKey, item, {
+        presentation: "anchored",
+      });
     }
   };
   const actionProps = buildActionPropsForCard({
@@ -318,7 +342,7 @@ function ClothingCard(props: ClothingCardProps): ReactElement {
     isRegenerating,
     regenerationLockedReason,
     showToggleButton,
-    showProductMenuButton,
+    showVisibleProductMenuButton,
     mobileCardMetrics,
     handlers: {
       onToggleSelected: handleToggleSelected,
@@ -344,8 +368,15 @@ function ClothingCard(props: ClothingCardProps): ReactElement {
       showCardActions={showCardActions}
       actionProps={actionProps}
       mobileCardMetrics={mobileCardMetrics}
-      onCardClick={handleCardClick}
+      onCardClick={handleCardClickWithLongPressGuard}
+      onContextMenuOpen={
+        isMobile && showProductMenuButton
+          ? mobileLongPress.openMobileMenu
+          : undefined
+      }
       onImageError={imageState.handleImageError}
+      isPressing={mobileLongPress.isPressing}
+      {...mobileLongPress.pointerHandlers}
     />
   );
 }

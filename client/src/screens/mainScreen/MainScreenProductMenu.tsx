@@ -15,6 +15,8 @@ import {
 import BookmarkBorderRoundedIcon from "@mui/icons-material/BookmarkBorderRounded";
 import BookmarkRemoveOutlinedIcon from "@mui/icons-material/BookmarkRemoveOutlined";
 import ThumbDownAltOutlinedIcon from "@mui/icons-material/ThumbDownAltOutlined";
+import MobileProductCardContextMenu from "../../components/MobileProductCardContextMenu";
+import type { ProductMenuPresentation } from "../../components/ClothingCardTypes";
 import { isSavedToWardrobe } from "../../utils/savedWardrobeState";
 import type { CapsuleMenuAnchor, MainScreenItem } from "./MainScreenTypes";
 
@@ -22,6 +24,7 @@ type ProductMenuState = {
   anchor: CapsuleMenuAnchor;
   url: string;
   item: MainScreenItem | null;
+  presentation?: ProductMenuPresentation;
 };
 
 type ProductMenuProps = {
@@ -45,22 +48,34 @@ function ProductMenu({ menuProps, onClose, t }: ProductMenuProps) {
   const savedToWardrobe = isSavedToWardrobe(menuProps.productMenu.item, {
     includeWardrobeSource: true,
   });
+  const renderActions = () => (
+    <ProductMenuItems
+      menuProps={menuProps}
+      savedToWardrobe={savedToWardrobe}
+      t={t}
+      onClose={onClose}
+      onRequestRemove={setRemoveConfirmItem}
+    />
+  );
+  const isMobileContextMenu =
+    menuProps.productMenu.presentation === "mobile-context";
 
   return (
     <>
       <Menu
         anchorEl={menuProps.productMenu.anchor}
-        open={Boolean(menuProps.productMenu.anchor)}
+        open={Boolean(menuProps.productMenu.anchor) && !isMobileContextMenu}
         onClose={onClose}
       >
-        <ProductMenuItems
-          menuProps={menuProps}
-          savedToWardrobe={savedToWardrobe}
-          t={t}
-          onClose={onClose}
-          onRequestRemove={setRemoveConfirmItem}
-        />
+        {renderActions()}
       </Menu>
+      <MobileProductCardContextMenu
+        actions={renderActions()}
+        item={menuProps.productMenu.item}
+        label={t("capsule.openProductMenu")}
+        open={Boolean(menuProps.productMenu.anchor) && isMobileContextMenu}
+        onClose={onClose}
+      />
       <ProductRemoveConfirmDialog
         item={removeConfirmItem}
         t={t}

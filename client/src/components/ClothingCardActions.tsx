@@ -3,43 +3,6 @@ import MoreVertRoundedIcon from "@mui/icons-material/MoreVertRounded";
 import ThumbDownAltOutlinedIcon from "@mui/icons-material/ThumbDownAltOutlined";
 import type { CardActionProps } from "./ClothingCardTypes";
 
-const mobileProductMenuSx = {
-  "& .wardrobe-card-product-menu.MuiIconButton-root": {
-    width: 44,
-    height: 44,
-    border: 0,
-    borderRadius: "var(--cw-radius-pill)",
-    bgcolor: "transparent",
-    color: "var(--cw-color-mobile-image-action-ink)",
-    backdropFilter: "none",
-    WebkitBackdropFilter: "none",
-    boxShadow: "none",
-    position: "relative",
-    "&::before": {
-      content: '""',
-      position: "absolute",
-      inset: 2,
-      border: "1px solid var(--cw-color-mobile-image-action-border)",
-      borderRadius: "var(--cw-radius-pill)",
-      bgcolor: "var(--cw-color-mobile-image-action-bg)",
-      boxShadow: "var(--cw-shadow-mobile-image-action)",
-      transition:
-        "background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease",
-    },
-    "& .MuiSvgIcon-root": {
-      position: "relative",
-      zIndex: 1,
-    },
-    "&:hover": {
-      color: "var(--cw-color-mobile-image-action-ink-hover)",
-      bgcolor: "transparent",
-      "&::before": {
-        bgcolor: "var(--cw-color-mobile-image-action-bg-hover)",
-      },
-    },
-  },
-} as const;
-
 function getActionOffset({
   showMobileProductMenuButton,
   isMobile,
@@ -104,7 +67,6 @@ function getActionStackSx(props: CardActionProps) {
         opacity: props.showActionButtons ? 0.72 : 0,
       },
     },
-    ...(props.showMobileProductMenuButton ? mobileProductMenuSx : {}),
     "& .wardrobe-card-regenerate.MuiIconButton-root": getRegenerateButtonSx(
       props.isSelected,
     ),

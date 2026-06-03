@@ -144,6 +144,62 @@ describe("MainScreenMenus", () => {
     });
   });
 
+  test("renders the same product actions in the mobile context menu", async () => {
+    const user = userEvent.setup();
+    const onSaveToMyWardrobe = vi.fn(() => Promise.resolve());
+    const writeText = vi.fn(() => Promise.resolve());
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    });
+    renderMenus({
+      productMenu: {
+        anchor: createAnchor(),
+        url: "https://example.com/a",
+        item: {
+          id: "a",
+          url: "https://example.com/a",
+          name: "Shirt",
+          category: "top",
+        },
+        presentation: "mobile-context",
+      },
+      props: createMainScreenProps({ onSaveToMyWardrobe }),
+    });
+
+    expect(
+      screen.getByRole("dialog", { name: "Open product menu" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Select" })).toBeVisible();
+
+    await user.click(
+      screen.getByRole("menuitem", { name: "Save to My Wardrobe" }),
+    );
+    expect(onSaveToMyWardrobe).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "a" }),
+    );
+
+    cleanup();
+    renderMenus({
+      productMenu: {
+        anchor: createAnchor(),
+        url: "https://example.com/a",
+        item: {
+          id: "a",
+          url: "https://example.com/a",
+          name: "Shirt",
+          category: "top",
+        },
+        presentation: "mobile-context",
+      },
+    });
+
+    await user.click(
+      screen.getByRole("menuitem", { name: "Copy Link Address" }),
+    );
+    expect(writeText).toHaveBeenCalledWith("https://example.com/a");
+  });
+
   test("shows only regeneration selection for uploaded product card menu", async () => {
     const user = userEvent.setup();
     const setSelectionMode = vi.fn();
@@ -188,6 +244,35 @@ describe("MainScreenMenus", () => {
     expect(onToggleRegenerationSelection).toHaveBeenCalledWith(uploadedItem);
     expect(onSaveToMyWardrobe).not.toHaveBeenCalled();
     expect(onRemoveFromMyWardrobe).not.toHaveBeenCalled();
+  });
+
+  test("keeps uploaded mobile context menus limited to regeneration", () => {
+    const uploadedItem = {
+      id: "uploaded-1",
+      url: "wardrobe://uploaded-1",
+      name: "Uploaded shirt",
+      category: "top",
+      source: "uploaded" as const,
+    };
+    renderMenus({
+      productMenu: {
+        anchor: createAnchor(),
+        url: "uploaded-1",
+        item: uploadedItem,
+        presentation: "mobile-context",
+      },
+    });
+
+    expect(screen.getByRole("menuitem", { name: "Select" })).toBeVisible();
+    expect(
+      screen.queryByRole("menuitem", { name: "Save to My Wardrobe" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("menuitem", { name: "Remove from My Wardrobe" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("menuitem", { name: "Copy Link Address" }),
+    ).not.toBeInTheDocument();
   });
 
   test("preserves uploaded product menu data while the menu closes", async () => {

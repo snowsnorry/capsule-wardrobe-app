@@ -14,17 +14,21 @@ import {
 } from "@mui/material";
 import BookmarkRemoveOutlinedIcon from "@mui/icons-material/BookmarkRemoveOutlined";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
+import MobileProductCardContextMenu from "../components/MobileProductCardContextMenu";
+import type { ProductMenuPresentation } from "../components/ClothingCardTypes";
 import type { MainScreenItem } from "./mainScreen/MainScreenTypes";
 
 type MyWardrobeProductMenuState = {
   anchor: HTMLElement | null;
   url: string;
   item: MainScreenItem | null;
+  presentation?: ProductMenuPresentation;
 };
 
 type MyWardrobeProductMenuProps = {
   anchor: HTMLElement | null;
   item: MainScreenItem | null;
+  presentation?: ProductMenuPresentation;
   onClose: () => void;
   onRequestRemove: (item: MainScreenItem) => void;
   t: (key: string) => string;
@@ -41,38 +45,73 @@ type MyWardrobeRemoveConfirmDialogProps = {
 function MyWardrobeProductMenu({
   anchor,
   item,
+  presentation,
   onClose,
   onRequestRemove,
   t,
 }: MyWardrobeProductMenuProps): ReactElement {
+  const renderActions = () => (
+    <MyWardrobeProductMenuItems
+      item={item}
+      t={t}
+      onClose={onClose}
+      onRequestRemove={onRequestRemove}
+    />
+  );
+  const isMobileContextMenu = presentation === "mobile-context";
+
+  return (
+    <>
+      <Menu
+        anchorEl={anchor}
+        open={Boolean(anchor) && !isMobileContextMenu}
+        onClose={onClose}
+      >
+        {renderActions()}
+      </Menu>
+      <MobileProductCardContextMenu
+        actions={renderActions()}
+        item={item}
+        label={t("capsule.openProductMenu")}
+        open={Boolean(anchor) && isMobileContextMenu}
+        onClose={onClose}
+      />
+    </>
+  );
+}
+
+function MyWardrobeProductMenuItems({
+  item,
+  onClose,
+  onRequestRemove,
+  t,
+}: Omit<MyWardrobeProductMenuProps, "anchor" | "presentation">): ReactElement {
   const isUploaded = item?.source === "uploaded";
 
   return (
-    <Menu anchorEl={anchor} open={Boolean(anchor)} onClose={onClose}>
-      <MenuItem
-        onClick={() => {
-          onClose();
-          if (item) {
-            onRequestRemove(item);
-          }
-        }}
-      >
-        <ListItemIcon>
-          {isUploaded ? (
-            <DeleteOutlineRoundedIcon fontSize="small" />
-          ) : (
-            <BookmarkRemoveOutlinedIcon fontSize="small" />
-          )}
-        </ListItemIcon>
-        <ListItemText>
-          {t(
-            isUploaded
-              ? "myWardrobe.deleteUploaded"
-              : "capsule.removeFromMyWardrobe",
-          )}
-        </ListItemText>
-      </MenuItem>
-    </Menu>
+    <MenuItem
+      onClick={() => {
+        onClose();
+        if (item) {
+          onRequestRemove(item);
+        }
+      }}
+    >
+      <ListItemIcon>
+        {isUploaded ? (
+          <DeleteOutlineRoundedIcon fontSize="small" />
+        ) : (
+          <BookmarkRemoveOutlinedIcon fontSize="small" />
+        )}
+      </ListItemIcon>
+      <ListItemText>
+        {t(
+          isUploaded
+            ? "myWardrobe.deleteUploaded"
+            : "capsule.removeFromMyWardrobe",
+        )}
+      </ListItemText>
+    </MenuItem>
   );
 }
 

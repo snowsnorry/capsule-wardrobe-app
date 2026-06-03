@@ -1,10 +1,10 @@
-import type { MouseEvent } from "react";
 import { Box, Stack, Typography } from "@mui/material";
 import ClothingCard from "../components/ClothingCard";
 import ClothingGridPlaceholder, {
   buildClothingGridGap,
   buildClothingGridTemplateColumns,
 } from "../components/ClothingGridPlaceholder";
+import type { ProductMenuPresentation } from "../components/ClothingCardTypes";
 import type { MainScreenItem } from "./mainScreen/MainScreenTypes";
 
 type MyWardrobeGridProps = {
@@ -13,10 +13,11 @@ type MyWardrobeGridProps = {
   items: MainScreenItem[];
   mobileColumns: 1 | 2 | 3;
   onProductClick: (item: MainScreenItem) => void;
-  onProductMenuClick: (
-    event: MouseEvent<HTMLButtonElement>,
+  onProductMenuOpen: (
+    anchor: HTMLElement,
     productUrl: string,
     item: MainScreenItem,
+    options: { presentation: ProductMenuPresentation },
   ) => void;
   t: (key: string) => string;
 };
@@ -27,7 +28,7 @@ function MyWardrobeGrid({
   items,
   mobileColumns,
   onProductClick,
-  onProductMenuClick,
+  onProductMenuOpen,
   t,
 }: MyWardrobeGridProps) {
   if (isLoading) {
@@ -67,7 +68,7 @@ function MyWardrobeGrid({
           isMobile={isOverlay}
           mobileColumns={mobileColumns}
           onProductClick={onProductClick}
-          onProductMenuClick={onProductMenuClick}
+          onProductMenuOpen={onProductMenuOpen}
         />
       ))}
     </Box>

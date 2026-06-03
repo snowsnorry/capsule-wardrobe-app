@@ -1,4 +1,3 @@
-import type { MouseEvent } from "react";
 import {
   Alert,
   Box,
@@ -26,6 +25,7 @@ import type {
   MobileCardColumns,
   ResolvedOutfitSet,
 } from "./MainScreenTypes";
+import type { ProductMenuPresentation } from "../../components/ClothingCardTypes";
 
 type WardrobeProps = {
   activeImageSrc: string;
@@ -44,10 +44,11 @@ type WardrobeProps = {
   onDeleteImage: (index: number) => void;
   onGenerateImage?: (index: number) => void;
   onImageClick: () => void;
-  onProductMenuClick: (
-    event: MouseEvent<HTMLButtonElement>,
+  onProductMenuOpen: (
+    anchor: HTMLElement,
     url: string,
     item: MainScreenItem,
+    options: { presentation: ProductMenuPresentation },
   ) => void;
   onProductClick: (item: MainScreenItem) => void;
   onToggleSelected: (item: MainScreenItem) => void;
@@ -240,7 +241,7 @@ function WardrobeGrid({ props }: { props: WardrobeProps }) {
             regenerationLockedReason={regenerationLockedReason}
             onToggleSelected={props.onToggleSelected}
             onProductClick={props.onProductClick}
-            onProductMenuClick={props.onProductMenuClick}
+            onProductMenuOpen={props.onProductMenuOpen}
             allowProductMenuWithoutUrl
             isMobile={props.isOverlay}
             mobileColumns={props.mobileColumns}

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -38,6 +39,7 @@ function renderCard(props: Partial<ComponentProps<typeof ClothingCard>> = {}) {
 
 describe("ClothingCard", () => {
   afterEach(() => {
+    vi.useRealTimers();
     cleanup();
   });
 
@@ -88,8 +90,8 @@ describe("ClothingCard", () => {
       screen.queryByRole("button", { name: "main.partialRegenerateToggle" }),
     ).not.toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "capsule.openProductMenu" }),
-    ).toBeVisible();
+      screen.queryByRole("button", { name: "capsule.openProductMenu" }),
+    ).not.toBeInTheDocument();
   });
 
   test("renders only the selection toggle in selection mode", () => {
@@ -455,16 +457,13 @@ describe("ClothingCard", () => {
     expect(title).toHaveTextContent("Red Jacket");
   });
 
-  test("uses compact mobile typography while keeping action buttons touch sized", () => {
+  test("uses compact mobile typography without a visible product menu button", () => {
     const { container } = renderCard({ isSelectable: true, isMobile: true });
 
     const root = container.querySelector(".wardrobe-card-root");
     const details = container.querySelector(".wardrobe-card-details");
     const title = container.querySelector(".wardrobe-card-title");
     const actions = container.querySelector(".wardrobe-card-actions");
-    const menuButton = screen.getByRole("button", {
-      name: "capsule.openProductMenu",
-    });
 
     expect(root).toHaveStyle({
       borderRadius: "0",
@@ -480,14 +479,10 @@ describe("ClothingCard", () => {
     expect(
       container.querySelector(".wardrobe-card-category"),
     ).not.toBeInTheDocument();
-    expect(menuButton).toBeVisible();
-    expect(actions).toHaveStyle({ top: "4px", right: "4px" });
-    expect(menuButton).toHaveStyle({
-      width: "44px",
-      height: "44px",
-      border: "0px solid",
-      color: "var(--cw-color-mobile-image-action-ink)",
-    });
+    expect(actions).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "capsule.openProductMenu" }),
+    ).not.toBeInTheDocument();
   });
 
   test("uses roomier mobile typography for one-column cards", async () => {
@@ -523,9 +518,6 @@ describe("ClothingCard", () => {
       mobileColumns: 3,
     });
     const image = await screen.findByRole("img", { name: item.name ?? "" });
-    const menuButton = screen.getByRole("button", {
-      name: "capsule.openProductMenu",
-    });
 
     expect(container.querySelector(".wardrobe-card-root")).toHaveStyle({
       borderRadius: "0",
@@ -546,7 +538,9 @@ describe("ClothingCard", () => {
       "sizes",
       "(max-width: 600px) 33.333vw, 285px",
     );
-    expect(menuButton).toHaveStyle({ width: "44px", height: "44px" });
+    expect(
+      screen.queryByRole("button", { name: "capsule.openProductMenu" }),
+    ).not.toBeInTheDocument();
   });
 
   test("drops unsafe product and image urls", () => {
@@ -608,23 +602,24 @@ describe("ClothingCard", () => {
   });
 
   test("opens product menu callback for safe product URLs", () => {
-    const onProductMenuClick = vi.fn();
+    const onProductMenuOpen = vi.fn();
     const onProductClick = vi.fn();
-    renderCard({ onProductMenuClick, onProductClick });
+    renderCard({ onProductMenuOpen, onProductClick });
 
     const menuButton = document.querySelector(".wardrobe-card-product-menu");
     fireEvent.click(menuButton as Element);
 
-    expect(onProductMenuClick).toHaveBeenCalledWith(
-      expect.objectContaining({ target: expect.any(HTMLButtonElement) }),
+    expect(onProductMenuOpen).toHaveBeenCalledWith(
+      expect.any(HTMLButtonElement),
       "https://example.com/products/red-jacket",
       expect.objectContaining({ id: "item-1" }),
+      { presentation: "anchored" },
     );
     expect(onProductClick).not.toHaveBeenCalled();
   });
 
   test("opens product menu callback for uploaded items without safe product URLs", () => {
-    const onProductMenuClick = vi.fn();
+    const onProductMenuOpen = vi.fn();
     renderCard({
       item: {
         id: "uploaded-1",
@@ -635,23 +630,177 @@ describe("ClothingCard", () => {
         imageUrl: "https://example.com/uploaded-shirt.jpg",
       },
       allowProductMenuWithoutUrl: true,
-      isMobile: true,
-      onProductMenuClick,
+      onProductMenuOpen,
     });
 
-    fireEvent.click(
-      screen.getByRole("button", { name: "capsule.openProductMenu" }),
-    );
+    const menuButton = document.querySelector(".wardrobe-card-product-menu");
+    fireEvent.click(menuButton as Element);
 
-    expect(onProductMenuClick).toHaveBeenCalledWith(
-      expect.objectContaining({ target: expect.any(HTMLButtonElement) }),
+    expect(onProductMenuOpen).toHaveBeenCalledWith(
+      expect.any(HTMLButtonElement),
       "uploaded-1",
       expect.objectContaining({ id: "uploaded-1", source: "uploaded" }),
+      { presentation: "anchored" },
     );
   });
 
+  test("opens the mobile context menu on touch long press and suppresses the follow-up click", () => {
+    vi.useFakeTimers();
+    const vibrate = vi.fn();
+    Object.defineProperty(navigator, "vibrate", {
+      configurable: true,
+      value: vibrate,
+    });
+    const onProductMenuOpen = vi.fn();
+    const onProductClick = vi.fn();
+    renderCard({ isMobile: true, onProductClick, onProductMenuOpen });
+
+    const card = screen.getByRole("button", { name: /Red Jacket/ });
+    fireEvent.pointerDown(card, {
+      pointerType: "touch",
+      pointerId: 1,
+      clientX: 10,
+      clientY: 20,
+    });
+
+    expect(card).toHaveStyle({ transform: "scale(0.975)" });
+
+    act(() => {
+      vi.advanceTimersByTime(520);
+    });
+
+    expect(vibrate).toHaveBeenCalledWith(10);
+    expect(onProductMenuOpen).toHaveBeenCalledWith(
+      card,
+      "https://example.com/products/red-jacket",
+      expect.objectContaining({ id: "item-1" }),
+      { presentation: "mobile-context" },
+    );
+
+    fireEvent.click(card);
+
+    expect(onProductClick).not.toHaveBeenCalled();
+  });
+
+  test("keeps a regular mobile tap on the card as product detail navigation", () => {
+    vi.useFakeTimers();
+    const onProductMenuOpen = vi.fn();
+    const onProductClick = vi.fn();
+    renderCard({ isMobile: true, onProductClick, onProductMenuOpen });
+
+    const card = screen.getByRole("button", { name: /Red Jacket/ });
+    fireEvent.pointerDown(card, {
+      pointerType: "touch",
+      pointerId: 1,
+      clientX: 10,
+      clientY: 20,
+    });
+    fireEvent.pointerUp(card, {
+      pointerType: "touch",
+      pointerId: 1,
+      clientX: 10,
+      clientY: 20,
+    });
+    act(() => {
+      vi.advanceTimersByTime(520);
+    });
+    fireEvent.click(card);
+
+    expect(onProductClick).toHaveBeenCalledWith(item);
+    expect(onProductMenuOpen).not.toHaveBeenCalled();
+  });
+
+  test("cancels mobile long press when the touch is canceled before the threshold", () => {
+    vi.useFakeTimers();
+    const onProductMenuOpen = vi.fn();
+    renderCard({
+      isMobile: true,
+      onProductClick: vi.fn(),
+      onProductMenuOpen,
+    });
+
+    const card = screen.getByRole("button", { name: /Red Jacket/ });
+    fireEvent.pointerDown(card, {
+      pointerType: "touch",
+      pointerId: 1,
+      clientX: 10,
+      clientY: 20,
+    });
+    fireEvent.pointerCancel(card, {
+      pointerType: "touch",
+      pointerId: 1,
+    });
+    act(() => {
+      vi.advanceTimersByTime(520);
+    });
+
+    expect(onProductMenuOpen).not.toHaveBeenCalled();
+    expect(card).toHaveStyle({ transform: "scale(1)" });
+  });
+
+  test("opens the mobile context menu from keyboard shortcuts without changing Enter behavior", () => {
+    const onProductMenuOpen = vi.fn();
+    const onProductClick = vi.fn();
+    renderCard({ isMobile: true, onProductClick, onProductMenuOpen });
+
+    const card = screen.getByRole("button", { name: /Red Jacket/ });
+    fireEvent.keyDown(card, { key: "ContextMenu" });
+
+    expect(onProductMenuOpen).toHaveBeenCalledWith(
+      card,
+      "https://example.com/products/red-jacket",
+      expect.objectContaining({ id: "item-1" }),
+      { presentation: "mobile-context" },
+    );
+
+    fireEvent.keyDown(card, { key: "Enter" });
+
+    expect(onProductClick).toHaveBeenCalledWith(item);
+  });
+
+  test("opens the mobile context menu from the native context menu event", () => {
+    const onProductMenuOpen = vi.fn();
+    const onProductClick = vi.fn();
+    renderCard({ isMobile: true, onProductClick, onProductMenuOpen });
+
+    const card = screen.getByRole("button", { name: /Red Jacket/ });
+    fireEvent.contextMenu(card);
+
+    expect(onProductMenuOpen).toHaveBeenCalledWith(
+      card,
+      "https://example.com/products/red-jacket",
+      expect.objectContaining({ id: "item-1" }),
+      { presentation: "mobile-context" },
+    );
+    expect(onProductClick).not.toHaveBeenCalled();
+  });
+
+  test("expires long-press click suppression if the synthetic click is not delivered", () => {
+    vi.useFakeTimers();
+    const onProductMenuOpen = vi.fn();
+    const onProductClick = vi.fn();
+    renderCard({ isMobile: true, onProductClick, onProductMenuOpen });
+
+    const card = screen.getByRole("button", { name: /Red Jacket/ });
+    fireEvent.pointerDown(card, {
+      pointerType: "touch",
+      pointerId: 1,
+      clientX: 10,
+      clientY: 20,
+    });
+    act(() => {
+      vi.advanceTimersByTime(520);
+      vi.advanceTimersByTime(750);
+    });
+
+    fireEvent.click(card);
+
+    expect(onProductMenuOpen).toHaveBeenCalledTimes(1);
+    expect(onProductClick).toHaveBeenCalledWith(item);
+  });
+
   test("does not render product menu button when product URL is not safe", () => {
-    const onProductMenuClick = vi.fn();
+    const onProductMenuOpen = vi.fn();
     renderCard({
       item: {
         id: "1",
@@ -659,12 +808,12 @@ describe("ClothingCard", () => {
         name: "Linen Shirt",
         category: "top",
       },
-      onProductMenuClick,
+      onProductMenuOpen,
     });
 
     expect(
       screen.queryByRole("button", { name: "capsule.openProductMenu" }),
     ).not.toBeInTheDocument();
-    expect(onProductMenuClick).not.toHaveBeenCalled();
+    expect(onProductMenuOpen).not.toHaveBeenCalled();
   });
 });

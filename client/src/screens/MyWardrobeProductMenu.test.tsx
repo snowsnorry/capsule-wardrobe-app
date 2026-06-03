@@ -110,6 +110,38 @@ describe("MyWardrobeProductMenu", () => {
     expect(onRequestRemove).toHaveBeenCalledWith(item);
   });
 
+  test("renders remove action in the mobile context menu overlay", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    const onRequestRemove = vi.fn();
+    const item = {
+      id: "wardrobe-1",
+      name: "Linen Shirt",
+      url: "https://example.com/1",
+    };
+    renderWithTheme(
+      <MyWardrobeProductMenu
+        anchor={createAnchor()}
+        item={item}
+        presentation="mobile-context"
+        t={t}
+        onClose={onClose}
+        onRequestRemove={onRequestRemove}
+      />,
+    );
+
+    expect(
+      screen.getByRole("dialog", { name: "capsule.openProductMenu" }),
+    ).toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("menuitem", { name: "Remove from My Wardrobe" }),
+    );
+
+    expect(onClose).toHaveBeenCalled();
+    expect(onRequestRemove).toHaveBeenCalledWith(item);
+  });
+
   test("confirms or cancels removal in the dialog", async () => {
     const user = userEvent.setup();
     const onClose = vi.fn();

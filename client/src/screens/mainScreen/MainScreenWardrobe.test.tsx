@@ -48,7 +48,7 @@ function createWardrobeProps(
     onGenerateImage: vi.fn(),
     onImageClick: vi.fn(),
     onProductClick: vi.fn(),
-    onProductMenuClick: vi.fn(),
+    onProductMenuOpen: vi.fn(),
     onToggleSelected: vi.fn(),
     ...overrides,
   };
@@ -158,7 +158,7 @@ describe("MainScreenWardrobe", () => {
 
   test("opens product menu for uploaded cards without a safe product URL", async () => {
     const user = userEvent.setup();
-    const onProductMenuClick = vi.fn();
+    const onProductMenuOpen = vi.fn();
     const uploadedItem = {
       id: "uploaded-1",
       url: "wardrobe://uploaded-1",
@@ -169,7 +169,7 @@ describe("MainScreenWardrobe", () => {
     renderWardrobe({
       visibleItems: [uploadedItem],
       isOverlay: true,
-      onProductMenuClick,
+      onProductMenuOpen,
     });
 
     const menuButton = screen.getByTestId("product-menu-wardrobe://uploaded-1");
@@ -179,10 +179,11 @@ describe("MainScreenWardrobe", () => {
     );
     await user.click(menuButton);
 
-    expect(onProductMenuClick).toHaveBeenCalledWith(
-      expect.objectContaining({ target: expect.any(HTMLButtonElement) }),
+    expect(onProductMenuOpen).toHaveBeenCalledWith(
+      expect.any(HTMLButtonElement),
       "wardrobe://uploaded-1",
       uploadedItem,
+      { presentation: "anchored" },
     );
   });
 

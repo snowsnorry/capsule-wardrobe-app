@@ -147,9 +147,10 @@ vi.mock("../../components/ClothingCard", () => ({
     regenerationLockedReason,
     allowProductMenuWithoutUrl,
     mobileColumns,
+    showProductMenu = true,
     onToggleSelected,
     onProductClick,
-    onProductMenuClick,
+    onProductMenuOpen,
   }: {
     item: MainScreenItem;
     isSelected?: boolean;
@@ -159,12 +160,14 @@ vi.mock("../../components/ClothingCard", () => ({
     regenerationLockedReason?: string | null;
     allowProductMenuWithoutUrl?: boolean;
     mobileColumns?: MobileCardColumns;
+    showProductMenu?: boolean;
     onToggleSelected: (item: MainScreenItem) => void;
     onProductClick?: (item: MainScreenItem) => void;
-    onProductMenuClick?: (
-      event: React.MouseEvent<HTMLButtonElement>,
+    onProductMenuOpen?: (
+      anchor: HTMLElement,
       url: string,
       item: MainScreenItem,
+      options: { presentation: "anchored" },
     ) => void;
   }) => (
     <div>
@@ -191,7 +194,7 @@ vi.mock("../../components/ClothingCard", () => ({
           <span>{item.brand}</span>
         ) : null}
       </button>
-      {!isSelectionMode ? (
+      {!isSelectionMode && showProductMenu ? (
         <button
           type="button"
           data-testid={`product-menu-${item.url}`}
@@ -200,7 +203,14 @@ vi.mock("../../components/ClothingCard", () => ({
           )}
           data-selection-mode={String(isSelectionMode)}
           onClick={(event) =>
-            onProductMenuClick?.(event, String(item.url || ""), item)
+            onProductMenuOpen?.(
+              event.currentTarget,
+              String(item.url || ""),
+              item,
+              {
+                presentation: "anchored",
+              },
+            )
           }
         >
           menu

@@ -1,5 +1,7 @@
 import type { MouseEvent } from "react";
 
+type ProductMenuPresentation = "anchored" | "mobile-context";
+
 type ClothingCardItem = {
   id?: string | number | null;
   name?: string | null;
@@ -42,4 +44,9 @@ type CardActionProps = {
   t: (key: string) => string;
 };
 
-export type { CardActionProps, ClothingCardItem, MobileCardMetrics };
+export type {
+  CardActionProps,
+  ClothingCardItem,
+  MobileCardMetrics,
+  ProductMenuPresentation,
+};

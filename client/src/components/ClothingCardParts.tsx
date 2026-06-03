@@ -1,6 +1,8 @@
+/* eslint-disable max-lines */
 import { Box, Typography } from "@mui/material";
 import type { KeyboardEvent } from "react";
 import type { ReactNode } from "react";
+import type { PointerEvent as ReactPointerEvent } from "react";
 import { CardActions } from "./ClothingCardActions";
 import {
   CategoryChip,
@@ -57,12 +59,14 @@ function getCardRootSx({
   isSelected,
   isMobile,
   isInteractive,
+  isPressing,
 }: {
   isDenseMobileCard: boolean;
   showCardActions: boolean;
   isSelected: boolean;
   isMobile: boolean;
   isInteractive: boolean;
+  isPressing: boolean;
 }) {
   return {
     display: "flex",
@@ -77,6 +81,15 @@ function getCardRootSx({
       : "1px solid var(--cw-color-product-border)",
     boxShadow: isDenseMobileCard ? "none" : "var(--cw-shadow-wardrobe-card)",
     cursor: isInteractive ? "pointer" : "default",
+    transform: isPressing ? "scale(0.975)" : "scale(1)",
+    transformOrigin: "center",
+    transition:
+      "transform 180ms cubic-bezier(0.2, 0, 0, 1), box-shadow 180ms ease",
+    touchAction: isMobile ? "manipulation" : undefined,
+    "@media (prefers-reduced-motion: reduce)": {
+      transition: "none",
+      transform: "none",
+    },
     "&:focus-visible": isInteractive
       ? {
           outline: "3px solid",
@@ -236,6 +249,8 @@ function ClothingCardImageSection({
   );
 }
 
+// The view keeps root semantics, media, details, and gesture handlers wired together.
+// eslint-disable-next-line max-lines-per-function
 function ClothingCardView({
   item,
   displayImageSource,
@@ -253,7 +268,14 @@ function ClothingCardView({
   actionProps,
   mobileCardMetrics,
   onCardClick,
+  onContextMenuOpen,
   onImageError,
+  onPointerCancel,
+  onPointerDown,
+  onPointerLeave,
+  onPointerMove,
+  onPointerUp,
+  isPressing,
 }: {
   item: ClothingCardItem;
   displayImageSource: {
@@ -275,10 +297,20 @@ function ClothingCardView({
   actionProps: CardActionProps | null;
   mobileCardMetrics: MobileCardMetrics;
   onCardClick?: () => void;
+  onContextMenuOpen?: (anchor: HTMLElement) => void;
   onImageError: () => void;
+  onPointerCancel?: (event: ReactPointerEvent<HTMLDivElement>) => void;
+  onPointerDown?: (event: ReactPointerEvent<HTMLDivElement>) => void;
+  onPointerLeave?: (event: ReactPointerEvent<HTMLDivElement>) => void;
+  onPointerMove?: (event: ReactPointerEvent<HTMLDivElement>) => void;
+  onPointerUp?: (event: ReactPointerEvent<HTMLDivElement>) => void;
+  isPressing: boolean;
 }) {
   const isInteractive = typeof onCardClick === "function";
-  const handleKeyDown = createCardKeyDownHandler(onCardClick);
+  const handleKeyDown = createCardKeyDownHandler({
+    onCardClick,
+    onContextMenuOpen,
+  });
 
   return (
     <Box
@@ -286,14 +318,30 @@ function ClothingCardView({
       role={isInteractive ? "button" : undefined}
       tabIndex={isInteractive ? 0 : undefined}
       aria-label={isInteractive ? label : undefined}
+      aria-haspopup={onContextMenuOpen ? "menu" : undefined}
+      aria-keyshortcuts={onContextMenuOpen ? "Shift+F10" : undefined}
       onClick={onCardClick}
       onKeyDown={handleKeyDown}
+      onContextMenu={
+        onContextMenuOpen
+          ? (event) => {
+              event.preventDefault();
+              onContextMenuOpen(event.currentTarget);
+            }
+          : undefined
+      }
+      onPointerCancel={onPointerCancel}
+      onPointerDown={onPointerDown}
+      onPointerLeave={onPointerLeave}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
       sx={getCardRootSx({
         isDenseMobileCard: isMobile && mobileColumns !== 1,
         showCardActions,
         isSelected,
         isMobile,
         isInteractive,
+        isPressing,
       })}
     >
       <ClothingCardImageSection
@@ -323,8 +371,23 @@ function ClothingCardView({
   );
 }
 
-function createCardKeyDownHandler(onCardClick?: () => void) {
+function createCardKeyDownHandler({
+  onCardClick,
+  onContextMenuOpen,
+}: {
+  onCardClick?: () => void;
+  onContextMenuOpen?: (anchor: HTMLElement) => void;
+}) {
   return (event: KeyboardEvent<HTMLDivElement>) => {
+    if (
+      onContextMenuOpen &&
+      (event.key === "ContextMenu" || (event.shiftKey && event.key === "F10"))
+    ) {
+      event.preventDefault();
+      onContextMenuOpen(event.currentTarget);
+      return;
+    }
+
     if (!onCardClick) {
       return;
     }

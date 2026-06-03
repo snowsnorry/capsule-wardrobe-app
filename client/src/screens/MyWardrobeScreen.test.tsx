@@ -36,7 +36,7 @@ vi.mock("../components/ClothingCard", () => ({
     item,
     mobileColumns,
     onProductClick,
-    onProductMenuClick,
+    onProductMenuOpen,
     showProductMenu = true,
   }) => (
     <div
@@ -54,10 +54,11 @@ vi.mock("../components/ClothingCard", () => ({
           type="button"
           onClick={(event) => {
             event.stopPropagation();
-            onProductMenuClick?.(
-              event,
+            onProductMenuOpen?.(
+              event.currentTarget,
               item.url || (allowProductMenuWithoutUrl ? item.id : ""),
               item,
+              { presentation: "anchored" },
             );
           }}
         >
