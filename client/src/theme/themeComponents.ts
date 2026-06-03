@@ -41,6 +41,11 @@ const componentToneByMode = {
   },
 } as const;
 
+const menuItemHorizontalPaddingPx = 16;
+const menuItemIconColumnWidthPx = 36;
+const mixedIconMenuItemTextOffsetPx =
+  menuItemHorizontalPaddingPx + menuItemIconColumnWidthPx;
+
 // MUI component configuration is intentionally centralized here.
 // eslint-disable-next-line max-lines-per-function
 function createComponentOverrides(mode: ThemeMode): Components<Theme> {
@@ -149,6 +154,14 @@ function createComponentOverrides(mode: ThemeMode): Components<Theme> {
       styleOverrides: {
         root: {
           letterSpacing: 0,
+        },
+      },
+    },
+    MuiMenuItem: {
+      styleOverrides: {
+        root: {
+          '[role="menu"]:has(.MuiListItemIcon-root) &:not(:has(.MuiListItemIcon-root))':
+            { paddingLeft: mixedIconMenuItemTextOffsetPx },
         },
       },
     },

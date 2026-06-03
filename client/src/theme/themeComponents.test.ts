@@ -134,6 +134,20 @@ function contrastRatio(foreground: Rgb, background: Rgb): number {
   );
 }
 
+describe("theme component menu alignment", () => {
+  test("aligns text-only menu items with icon menu item text", () => {
+    const theme = createAppTheme("light");
+    const menuItemRoot = theme.components?.MuiMenuItem?.styleOverrides
+      ?.root as Record<string, Record<string, number>>;
+
+    expect(
+      menuItemRoot[
+        '[role="menu"]:has(.MuiListItemIcon-root) &:not(:has(.MuiListItemIcon-root))'
+      ]?.paddingLeft,
+    ).toBe(52);
+  });
+});
+
 describe("theme component contrast", () => {
   test("keeps light selected chips above contrast thresholds", () => {
     const theme = createAppTheme("light");
