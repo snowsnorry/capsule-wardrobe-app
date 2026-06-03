@@ -1,4 +1,4 @@
-import { describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 import { renderHook } from "@testing-library/react";
 import { createActionContext } from "./testUtils";
 import { useAppHandlers } from "./useAppHandlers";
@@ -46,6 +46,10 @@ vi.mock("./capsuleActions", () => capsuleActions);
 vi.mock("./profileActions", () => profileActions);
 vi.mock("./wardrobeActions", () => wardrobeActions);
 vi.mock("./sessionActions", () => sessionActions);
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
 
 function createSessionContext(): SessionActionContext {
   return {
@@ -227,5 +231,62 @@ describe("useAppHandlers", () => {
         openSearchDialog: expect.any(Function),
       }),
     );
+  });
+
+  test("closes the sidebar immediately after starting capsule open", async () => {
+    const actionContext = createActionContext();
+    const sessionActionContext = createSessionContext();
+    const calls: string[] = [];
+    let resolveOpenCapsule: () => void = () => {};
+    const navigateApp = vi.fn(() => calls.push("navigate"));
+    const onComplete = vi.fn(() => calls.push("close-sidebar"));
+
+    capsuleActions.openCapsule.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          calls.push("open-start");
+          resolveOpenCapsule = () => {
+            calls.push("open-resolve");
+            resolve();
+          };
+        }),
+    );
+
+    const { result } = renderHook(() =>
+      useAppHandlers({
+        activeCapsuleId: "capsule-1",
+        capsuleSidebarActionsRef: { current: null },
+        getAppActionContext: () => actionContext,
+        navigateApp,
+        pendingShareId: "",
+        setCurrentView: vi.fn(),
+        setIsSignOutConfirmOpen: vi.fn(),
+        setSelectedRegenerationUrls: vi.fn(),
+        shareMetadata: null,
+        sessionActionContext,
+      }),
+    );
+
+    const openPromise = result.current.handleOpenCapsuleFromSidebar(
+      "capsule-2",
+      onComplete,
+    );
+
+    expect(calls).toEqual(["navigate", "open-start", "close-sidebar"]);
+    expect(capsuleActions.openCapsule).toHaveBeenCalledWith(
+      actionContext,
+      "capsule-2",
+    );
+    expect(onComplete).toHaveBeenCalledTimes(1);
+
+    resolveOpenCapsule();
+    await openPromise;
+
+    expect(calls).toEqual([
+      "navigate",
+      "open-start",
+      "close-sidebar",
+      "open-resolve",
+    ]);
   });
 });

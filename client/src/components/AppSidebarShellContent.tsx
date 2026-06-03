@@ -9,6 +9,7 @@ import {
 } from "./AppSidebarShellContentLayout";
 import { SidebarFrame, UserMenu } from "./AppSidebarShellContentMenus";
 import { useShellOffsetMotion } from "./AppSidebarShellMotion";
+import { handleDesktopSidebarWheel } from "./AppSidebarShellWheel";
 import SidebarUserButton from "./AppSidebarShellUserButton";
 import SidebarCollapseIcon from "./SidebarCollapseIcon";
 import type {
@@ -148,6 +149,7 @@ function SidebarContent({
   return (
     <Stack
       data-testid="app-sidebar-surface"
+      onWheel={isOverlaySidebar ? undefined : handleDesktopSidebarWheel}
       sx={{
         height: "100%",
         width: isOverlaySidebar

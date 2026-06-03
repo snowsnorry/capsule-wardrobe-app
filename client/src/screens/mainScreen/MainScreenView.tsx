@@ -111,6 +111,10 @@ const capsulePanelSx = {
   backgroundColor: "transparent",
 } as const;
 
+const primaryScrollTargetAttribute = {
+  "data-app-primary-scroll-target": "true",
+} as const;
+
 const capsuleStickyHeaderSx = (theme: Theme) => {
   return {
     position: "sticky",
@@ -241,7 +245,7 @@ const mainScreenBodySx = {
 function MainScreenCapsulePanel(model: MainScreenViewProps) {
   const { activeImageSrc, activeSet, visibleItems } = model.display;
   return (
-    <Box sx={capsulePanelSx}>
+    <Box {...primaryScrollTargetAttribute} sx={capsulePanelSx}>
       <CapsuleStickyHeader {...model} />
       <Box sx={capsuleScrollAreaSx}>
         <MainScreenWardrobe

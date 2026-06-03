@@ -1,4 +1,5 @@
 import type { ReactElement, ReactNode } from "react";
+import type { MouseEvent } from "react";
 import { useId } from "react";
 import { Dialog, DialogTitle, MenuList, Paper, Stack } from "@mui/material";
 import ClothingCard from "./ClothingCard";
@@ -34,7 +35,11 @@ function MobileProductCardContextMenu({
       BackdropProps={{ sx: contextMenuBackdropSx }}
       PaperProps={{ sx: contextMenuDialogPaperSx }}
     >
-      <Stack spacing={1.25} sx={contextMenuContentSx}>
+      <Stack
+        spacing={1.25}
+        onContextMenu={suppressNativeContextMenu}
+        sx={contextMenuContentSx}
+      >
         <DialogTitle id={titleId} sx={visuallyHiddenSx}>
           {label}
         </DialogTitle>
@@ -54,6 +59,10 @@ function MobileProductCardContextMenu({
       </Stack>
     </Dialog>
   );
+}
+
+function suppressNativeContextMenu(event: MouseEvent<HTMLElement>) {
+  event.preventDefault();
 }
 
 const contextMenuBackdropSx = {

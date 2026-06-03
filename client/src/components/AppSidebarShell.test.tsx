@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import type { ComponentProps } from "react";
@@ -15,12 +21,33 @@ import AppSidebarShell from "./AppSidebarShell";
 
 const theme = createTheme();
 
+function setScrollMetrics(
+  element: HTMLElement,
+  {
+    clientHeight,
+    scrollHeight,
+    scrollTop = 0,
+  }: { clientHeight: number; scrollHeight: number; scrollTop?: number },
+) {
+  Object.defineProperty(element, "clientHeight", {
+    configurable: true,
+    value: clientHeight,
+  });
+  Object.defineProperty(element, "scrollHeight", {
+    configurable: true,
+    value: scrollHeight,
+  });
+  element.scrollTop = scrollTop;
+}
+
 function renderShell(
   props: Partial<ComponentProps<typeof AppSidebarShell>> = {},
   {
     layoutMode = "medium",
   }: { layoutMode?: "overlay" | "medium" | "large" } = {},
 ) {
+  const { children = <div>content</div>, ...shellProps } = props;
+
   mediaQueryMock.mockImplementation((query) => {
     if (String(query).includes("max-width: 1279.95px")) {
       return layoutMode === "overlay";
@@ -77,9 +104,9 @@ function renderShell(
               <div>sidebar-body</div>
             )
           }
-          {...props}
+          {...shellProps}
         >
-          <div>content</div>
+          {children}
         </AppSidebarShell>
       </LocaleProvider>
     </ThemeProvider>,
@@ -259,5 +286,45 @@ describe("AppSidebarShell", () => {
     );
     expect(getComputedStyle(sidebarSurface).transition).not.toContain("width");
     expect(document.head.textContent).toContain("prefers-reduced-motion");
+  });
+
+  test("delegates desktop sidebar wheel to the primary route scroll target", () => {
+    renderShell({
+      children: (
+        <div data-app-primary-scroll-target="true">primary content</div>
+      ),
+    });
+    const scrollTarget = screen.getByText("primary content");
+    setScrollMetrics(scrollTarget, { clientHeight: 100, scrollHeight: 500 });
+
+    fireEvent.wheel(screen.getByText("sidebar-body"), { deltaY: 80 });
+
+    expect(scrollTarget.scrollTop).toBe(80);
+  });
+
+  test("keeps wheel inside a scrollable desktop sidebar region", () => {
+    renderShell({
+      children: (
+        <div data-app-primary-scroll-target="true">primary content</div>
+      ),
+      sidebarBodyContent: () => (
+        <div data-testid="sidebar-scroll-region" style={{ overflowY: "auto" }}>
+          <button type="button">sidebar item</button>
+        </div>
+      ),
+    });
+    const scrollTarget = screen.getByText("primary content");
+    const sidebarScrollRegion = screen.getByTestId("sidebar-scroll-region");
+    setScrollMetrics(scrollTarget, { clientHeight: 100, scrollHeight: 500 });
+    setScrollMetrics(sidebarScrollRegion, {
+      clientHeight: 100,
+      scrollHeight: 500,
+    });
+
+    fireEvent.wheel(screen.getByRole("button", { name: "sidebar item" }), {
+      deltaY: 80,
+    });
+
+    expect(scrollTarget.scrollTop).toBe(0);
   });
 });

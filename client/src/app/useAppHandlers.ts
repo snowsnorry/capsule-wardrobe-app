@@ -202,8 +202,9 @@ function buildAppHandlers({
       onComplete?: () => void,
     ) => {
       handleNavigateApp("capsule");
-      await handleOpenCapsule(capsuleId);
+      const openCapsulePromise = handleOpenCapsule(capsuleId);
       onComplete?.();
+      await openCapsulePromise;
     },
     handlePasskeySignIn: async () => passkeySignIn(sessionActionContext),
     handleRefreshWardrobe: async () => refreshWardrobe(getAppActionContext()),
