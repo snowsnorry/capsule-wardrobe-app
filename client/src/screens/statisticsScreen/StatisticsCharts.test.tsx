@@ -120,7 +120,7 @@ describe("StatisticsCharts", () => {
     ).toBe(true);
   });
 
-  test("uses a muted generic facet ramp with active color pairs", () => {
+  test("uses a bolder generic facet ramp with active color pairs", () => {
     const previousDemoColors = new Set<string>([
       "#FF6B6B",
       "#4ECDC4",
@@ -159,7 +159,7 @@ describe("StatisticsCharts", () => {
     ).toBe(false);
     expect(new Set(tokenRampColors).size).toBe(tokenRampColors.length);
     expect(
-      rampDefaults.every(({ chroma }) => chroma > 0 && chroma <= 0.1),
+      rampDefaults.every(({ chroma }) => chroma >= 0.08 && chroma <= 0.14),
     ).toBe(true);
     expect(
       rampDefaults.every(
