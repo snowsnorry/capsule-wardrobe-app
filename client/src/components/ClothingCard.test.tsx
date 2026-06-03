@@ -182,6 +182,29 @@ describe("ClothingCard", () => {
     );
   });
 
+  test("keeps the inline photo camera icon when uploaded items are annotated as unsaved catalog URLs", () => {
+    const { container } = renderCard({
+      item: {
+        ...item,
+        source: "uploaded",
+        url: "https://images.example.com/uploaded-product-photo.jpg",
+        isSavedToWardrobe: false,
+      },
+    });
+
+    expect(screen.getByLabelText("myWardrobe.savedBadge")).toBeInTheDocument();
+    expect(
+      container.querySelector(
+        ".wardrobe-card-title .wardrobe-card-uploaded-icon",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      container.querySelector(
+        ".wardrobe-card-title .wardrobe-card-bookmark-icon",
+      ),
+    ).not.toBeInTheDocument();
+  });
+
   test("keeps the inline photo camera icon and shows a failed chip for failed uploaded wardrobe items", () => {
     const { container } = renderCard({
       item: { ...item, source: "uploaded", processingStatus: "failed" },

@@ -106,6 +106,8 @@ function ClothingCardDetails({
   savedToWardrobeLabel: string;
 }): ReactElement {
   const brandLabel = getBrandLabel(item);
+  const isUploaded = item.source === "uploaded";
+  const showSavedIndicator = shouldShowSavedIndicator(item, isSavedToWardrobe);
 
   return (
     <Stack
@@ -151,9 +153,9 @@ function ClothingCardDetails({
             categoryDisplayLabel={categoryDisplayLabel}
           />
         ) : null}
-        {isSavedToWardrobe ? (
+        {showSavedIndicator ? (
           <SavedToWardrobeIcon
-            isUploaded={item.source === "uploaded"}
+            isUploaded={isUploaded}
             isMobile={isMobile}
             label={savedToWardrobeLabel}
           />
@@ -209,6 +211,13 @@ function ClothingCardBrand({
 
 function getBrandLabel(item: ClothingCardItem) {
   return String(item.brand || "").trim();
+}
+
+function shouldShowSavedIndicator(
+  item: ClothingCardItem,
+  isSavedToWardrobe: boolean,
+) {
+  return item.source === "uploaded" || isSavedToWardrobe;
 }
 
 function getMobileBrandFontSize(mobileCardMetrics: MobileCardMetrics) {
