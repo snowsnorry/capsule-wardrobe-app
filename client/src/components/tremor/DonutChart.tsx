@@ -144,6 +144,7 @@ function DonutPie({
       margin={{ top: 16, right: 16, bottom: 16, left: 16 }}
     >
       <Tooltip
+        isAnimationActive={false}
         formatter={(
           value: number | string,
           _name: string,

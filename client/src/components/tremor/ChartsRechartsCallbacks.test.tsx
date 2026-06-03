@@ -71,16 +71,48 @@ vi.mock("recharts", () => {
         data-stroke={stroke}
       />
     ),
+    Pie: ({
+      children,
+      onClick,
+    }: {
+      children?: ReactNode;
+      onClick?: (entry: unknown) => void;
+    }) => (
+      <g data-testid="pie-series">
+        {children}
+        <foreignObject>
+          <button
+            type="button"
+            onClick={() =>
+              onClick?.({ rawValue: "top", label: "Top", count: 4 })
+            }
+          >
+            valid-pie
+          </button>
+          <button
+            type="button"
+            onClick={() => onClick?.({ label: "Missing raw value" })}
+          >
+            invalid-pie
+          </button>
+        </foreignObject>
+      </g>
+    ),
+    PieChart: ({ children }: { children?: ReactNode }) => (
+      <svg data-testid="pie-plot">{children}</svg>
+    ),
     Tooltip: ({
       formatter,
       labelFormatter,
+      isAnimationActive,
     }: {
       formatter: (
         value: number | string,
         name: string,
         item: { payload?: Record<string, unknown> },
       ) => [string, string];
-      labelFormatter: () => string;
+      labelFormatter?: () => string;
+      isAnimationActive?: boolean | "auto";
     }) => {
       const [value, label] = formatter(5, "count", {
         payload: { label: "Top", bucket: "10" },
@@ -90,7 +122,10 @@ vi.mock("recharts", () => {
           <div data-testid="tooltip">
             <span>{value}</span>
             <span>{label}</span>
-            <span>{labelFormatter()}</span>
+            <span>{labelFormatter?.() || ""}</span>
+            <span data-testid="tooltip-animation">
+              {String(isAnimationActive)}
+            </span>
           </div>
         </foreignObject>
       );
@@ -118,6 +153,7 @@ vi.mock("recharts", () => {
 });
 
 import BarChart from "./BarChart";
+import DonutChart from "./DonutChart";
 import LineChart from "./LineChart";
 
 const lightTheme = createTheme();
@@ -207,5 +243,45 @@ describe("tremor chart recharts callbacks", () => {
     );
 
     expect(screen.getByText("10 EUR")).toBeInTheDocument();
+  });
+
+  test("DonutChart disables tooltip movement animation between segments", () => {
+    const onValueChange = vi.fn();
+    renderWithTheme(
+      <DonutChart
+        data={[
+          {
+            rawValue: "top",
+            label: "Top",
+            count: 4,
+            color: "#123456",
+            groupLabel: "Category",
+            isActive: true,
+          },
+          {
+            rawValue: "bottom",
+            label: "Bottom",
+            count: 2,
+            color: "#abcdef",
+            groupLabel: "Category",
+          },
+        ]}
+        index="label"
+        category="count"
+        activeValues={["top"]}
+        valueFormatter={(value) => `${value} items`}
+        onValueChange={onValueChange}
+      />,
+    );
+
+    expect(screen.getByTestId("tooltip-animation")).toHaveTextContent("false");
+
+    fireEvent.click(screen.getByRole("button", { name: "valid-pie" }));
+    fireEvent.click(screen.getByRole("button", { name: "invalid-pie" }));
+
+    expect(onValueChange).toHaveBeenCalledTimes(1);
+    expect(onValueChange).toHaveBeenCalledWith(
+      expect.objectContaining({ rawValue: "top" }),
+    );
   });
 });
