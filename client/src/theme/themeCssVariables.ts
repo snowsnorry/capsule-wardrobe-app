@@ -43,6 +43,7 @@ function createThemeCssVariables(mode: ThemeMode) {
     "--cw-color-product-dense-border": tokens.productDenseBorder,
     "--cw-color-product-detail-divider": tokens.productDetailDivider,
     "--cw-color-product-placeholder-text": tokens.productPlaceholderText,
+    "--cw-color-product-placeholder-marker": tokens.productPlaceholderMarker,
     "--cw-color-product-placeholder-muted": tokens.productPlaceholderMuted,
     "--cw-color-product-saved-indicator": tokens.productSavedIndicator,
     "--cw-color-product-selection-scrim": tokens.productSelectionScrim,
@@ -54,10 +55,13 @@ function createThemeCssVariables(mode: ThemeMode) {
     "--cw-color-on-image-action-bg-selected-hover":
       tokens.onImageActionBgSelectedHover,
     "--cw-color-on-image-action-ink": tokens.onImageActionInk,
+    "--cw-color-mobile-image-action-bg": tokens.mobileImageActionBg,
+    "--cw-color-mobile-image-action-bg-hover": tokens.mobileImageActionBgHover,
+    "--cw-color-mobile-image-action-border": tokens.mobileImageActionBorder,
     "--cw-color-mobile-image-action-ink": tokens.mobileImageActionInk,
     "--cw-color-mobile-image-action-ink-hover":
       tokens.mobileImageActionInkHover,
-    "--cw-color-mobile-image-action-bg-hover": tokens.mobileImageActionBgHover,
+    "--cw-shadow-mobile-image-action": tokens.mobileImageActionShadow,
     "--cw-color-category-badge-bg": tokens.categoryBadgeBg,
     "--cw-color-category-badge-ink": tokens.categoryBadgeInk,
     "--cw-color-failed-badge-bg": tokens.failedBadgeBg,

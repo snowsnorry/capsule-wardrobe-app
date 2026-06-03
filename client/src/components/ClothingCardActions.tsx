@@ -14,9 +14,28 @@ const mobileProductMenuSx = {
     backdropFilter: "none",
     WebkitBackdropFilter: "none",
     boxShadow: "none",
+    position: "relative",
+    "&::before": {
+      content: '""',
+      position: "absolute",
+      inset: 2,
+      border: "1px solid var(--cw-color-mobile-image-action-border)",
+      borderRadius: "var(--cw-radius-pill)",
+      bgcolor: "var(--cw-color-mobile-image-action-bg)",
+      boxShadow: "var(--cw-shadow-mobile-image-action)",
+      transition:
+        "background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease",
+    },
+    "& .MuiSvgIcon-root": {
+      position: "relative",
+      zIndex: 1,
+    },
     "&:hover": {
-      bgcolor: "var(--cw-color-mobile-image-action-bg-hover)",
       color: "var(--cw-color-mobile-image-action-ink-hover)",
+      bgcolor: "transparent",
+      "&::before": {
+        bgcolor: "var(--cw-color-mobile-image-action-bg-hover)",
+      },
     },
   },
 } as const;
@@ -30,7 +49,7 @@ function getActionOffset({
   "showMobileProductMenuButton" | "isMobile" | "mobileCardMetrics"
 >) {
   if (showMobileProductMenuButton) {
-    return 0;
+    return 4;
   }
 
   return isMobile ? mobileCardMetrics.actionOffset : 12;

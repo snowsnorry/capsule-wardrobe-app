@@ -461,6 +461,7 @@ describe("ClothingCard", () => {
     const root = container.querySelector(".wardrobe-card-root");
     const details = container.querySelector(".wardrobe-card-details");
     const title = container.querySelector(".wardrobe-card-title");
+    const actions = container.querySelector(".wardrobe-card-actions");
     const menuButton = screen.getByRole("button", {
       name: "capsule.openProductMenu",
     });
@@ -480,9 +481,11 @@ describe("ClothingCard", () => {
       container.querySelector(".wardrobe-card-category"),
     ).not.toBeInTheDocument();
     expect(menuButton).toBeVisible();
+    expect(actions).toHaveStyle({ top: "4px", right: "4px" });
     expect(menuButton).toHaveStyle({
       width: "44px",
       height: "44px",
+      border: "0px solid",
       color: "var(--cw-color-mobile-image-action-ink)",
     });
   });

@@ -92,6 +92,18 @@ function resolveCssVariable(
   return String(resolved);
 }
 
+function cssVariable(
+  name: string,
+  variables: Record<string, number | string>,
+): string {
+  const value = variables[name];
+  if (!value) {
+    throw new Error(`Missing CSS variable: ${name}`);
+  }
+
+  return String(value);
+}
+
 function composite(foreground: Rgba, background: Rgb): Rgb {
   const [red, green, blue, alpha] = foreground;
   return [
@@ -151,6 +163,79 @@ describe("theme component contrast", () => {
       );
       expect(
         contrastRatio(compositedDeleteIcon, background),
+      ).toBeGreaterThanOrEqual(NON_TEXT_CONTRAST);
+    }
+  });
+
+  test("keeps product image placeholder text readable", () => {
+    for (const mode of ["light", "dark"] as const) {
+      const variables = createThemeCssVariables(mode);
+      const imageWash = parseColor(
+        cssVariable("--cw-color-product-image-wash", variables),
+      );
+      const placeholderText = composite(
+        parseRgbaColor(
+          cssVariable("--cw-color-product-placeholder-text", variables),
+        ),
+        imageWash,
+      );
+      const placeholderMarker = composite(
+        parseRgbaColor(
+          cssVariable("--cw-color-product-placeholder-marker", variables),
+        ),
+        imageWash,
+      );
+
+      expect(contrastRatio(placeholderText, imageWash)).toBeGreaterThanOrEqual(
+        AA_NORMAL_TEXT_CONTRAST,
+      );
+      expect(
+        contrastRatio(placeholderMarker, imageWash),
+      ).toBeGreaterThanOrEqual(NON_TEXT_CONTRAST);
+    }
+  });
+
+  test("keeps image action controls readable on product image surfaces", () => {
+    for (const mode of ["light", "dark"] as const) {
+      const variables = createThemeCssVariables(mode);
+      const imageWash = parseColor(
+        cssVariable("--cw-color-product-image-wash", variables),
+      );
+      const desktopActionSurface = composite(
+        parseRgbaColor(cssVariable("--cw-color-on-image-action-bg", variables)),
+        imageWash,
+      );
+      const desktopActionInk = parseColor(
+        cssVariable("--cw-color-on-image-action-ink", variables),
+      );
+      const mobileActionSurface = composite(
+        parseRgbaColor(
+          cssVariable("--cw-color-mobile-image-action-bg", variables),
+        ),
+        imageWash,
+      );
+      const mobileActionInk = parseColor(
+        cssVariable("--cw-color-mobile-image-action-ink", variables),
+      );
+      const mobileActionBorder = parseRgbaColor(
+        cssVariable("--cw-color-mobile-image-action-border", variables),
+      );
+      const mobileActionSurfaceOnDarkImage = composite(
+        parseRgbaColor(
+          cssVariable("--cw-color-mobile-image-action-bg", variables),
+        ),
+        [0, 0, 0],
+      );
+
+      expect(
+        contrastRatio(desktopActionInk, desktopActionSurface),
+      ).toBeGreaterThanOrEqual(AA_NORMAL_TEXT_CONTRAST);
+      expect(
+        contrastRatio(mobileActionInk, mobileActionSurface),
+      ).toBeGreaterThanOrEqual(AA_NORMAL_TEXT_CONTRAST);
+      expect(mobileActionBorder[3]).toBeGreaterThan(0);
+      expect(
+        contrastRatio(mobileActionSurfaceOnDarkImage, [0, 0, 0]),
       ).toBeGreaterThanOrEqual(NON_TEXT_CONTRAST);
     }
   });
