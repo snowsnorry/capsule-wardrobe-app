@@ -238,7 +238,8 @@ describe("ProfileFiltersSidebar", () => {
     });
 
     expect(screen.getByRole("button", { name: "Solid" })).toHaveClass(
-      "MuiChip-filledPrimary",
+      "MuiChip-filled",
+      "MuiChip-colorPrimary",
     );
     expect(screen.queryByText("Pattern not important")).not.toBeInTheDocument();
   });

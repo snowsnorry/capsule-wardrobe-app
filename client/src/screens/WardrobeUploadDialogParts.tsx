@@ -46,7 +46,10 @@ function getUploadProgressValue(progress: UploadWardrobeProgress) {
       progress.metadataProcessed +
       progress.imageProcessed +
       progress.failed;
-  return Math.min(100, (completedSteps / (progress.total * 3)) * 100);
+  return Math.min(
+    100,
+    Math.round((completedSteps / (progress.total * 3)) * 100),
+  );
 }
 
 function UploadProgressContent({

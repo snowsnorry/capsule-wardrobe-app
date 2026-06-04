@@ -80,13 +80,15 @@ describe("StylePreferenceSelector", () => {
       screen.getByText("Choose optionally one aesthetic."),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Casual" })).toHaveClass(
-      "MuiChip-filledPrimary",
+      "MuiChip-filled",
+      "MuiChip-colorPrimary",
     );
     expect(
       screen.getByRole("button", { name: "Aesthetic not important" }),
-    ).toHaveClass("MuiChip-filledPrimary");
+    ).toHaveClass("MuiChip-filled", "MuiChip-colorPrimary");
     expect(screen.getByRole("button", { name: "Retro" })).toHaveClass(
-      "MuiChip-filledDefault",
+      "MuiChip-filled",
+      "MuiChip-colorDefault",
     );
 
     rerender(
@@ -105,13 +107,15 @@ describe("StylePreferenceSelector", () => {
     );
 
     expect(screen.getByRole("button", { name: "Formal" })).toHaveClass(
-      "MuiChip-filledPrimary",
+      "MuiChip-filled",
+      "MuiChip-colorPrimary",
     );
     expect(
       screen.getByRole("button", { name: "Aesthetic not important" }),
-    ).toHaveClass("MuiChip-filledDefault");
+    ).toHaveClass("MuiChip-filled", "MuiChip-colorDefault");
     expect(screen.getByRole("button", { name: "Retro" })).toHaveClass(
-      "MuiChip-filledPrimary",
+      "MuiChip-filled",
+      "MuiChip-colorPrimary",
     );
 
     await user.unhover(screen.getByRole("button", { name: "Formal" }));

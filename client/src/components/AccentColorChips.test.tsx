@@ -59,13 +59,16 @@ describe("AccentColorChips", () => {
     });
 
     expect(screen.getByRole("button", { name: "blue" })).toHaveClass(
-      "MuiChip-filledPrimary",
+      "MuiChip-filled",
+      "MuiChip-colorPrimary",
     );
     expect(screen.getByRole("button", { name: "red" })).toHaveClass(
-      "MuiChip-filledDefault",
+      "MuiChip-filled",
+      "MuiChip-colorDefault",
     );
     expect(screen.getByRole("button", { name: "No accent color" })).toHaveClass(
-      "MuiChip-filledDefault",
+      "MuiChip-filled",
+      "MuiChip-colorDefault",
     );
 
     await user.click(screen.getByRole("button", { name: "red" }));
@@ -85,10 +88,12 @@ describe("AccentColorChips", () => {
     });
 
     expect(screen.getByRole("button", { name: "red" })).toHaveClass(
-      "MuiChip-filledPrimary",
+      "MuiChip-filled",
+      "MuiChip-colorPrimary",
     );
     expect(screen.getByRole("button", { name: "blue" })).toHaveClass(
-      "MuiChip-filledDefault",
+      "MuiChip-filled",
+      "MuiChip-colorDefault",
     );
 
     await user.click(screen.getByRole("button", { name: "blue" }));
@@ -103,7 +108,8 @@ describe("AccentColorChips", () => {
     });
 
     expect(screen.getByRole("button", { name: "Not important" })).toHaveClass(
-      "MuiChip-filledPrimary",
+      "MuiChip-filled",
+      "MuiChip-colorPrimary",
     );
   });
 });

@@ -197,7 +197,8 @@ describe("ProfileScreen", () => {
     });
 
     expect(screen.getByRole("button", { name: "Solid" })).toHaveClass(
-      "MuiChip-filledPrimary",
+      "MuiChip-filled",
+      "MuiChip-colorPrimary",
     );
   });
 
