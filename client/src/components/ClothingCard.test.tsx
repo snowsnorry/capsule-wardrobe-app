@@ -158,7 +158,7 @@ describe("ClothingCard", () => {
     );
   });
 
-  test("renders an inline photo camera icon for uploaded wardrobe items", () => {
+  test("renders an inline photo camera icon for uploaded personal items", () => {
     const { container } = renderCard({
       item: { ...item, source: "uploaded" },
     });
@@ -205,7 +205,7 @@ describe("ClothingCard", () => {
     ).not.toBeInTheDocument();
   });
 
-  test("keeps the inline photo camera icon and shows a failed chip for failed uploaded wardrobe items", () => {
+  test("keeps the inline photo camera icon and shows a failed chip for failed uploaded personal items", () => {
     const { container } = renderCard({
       item: { ...item, source: "uploaded", processingStatus: "failed" },
     });
@@ -229,7 +229,7 @@ describe("ClothingCard", () => {
     ).not.toBeInTheDocument();
   });
 
-  test("shows a needs review chip for uploaded wardrobe items with needs-review status", () => {
+  test("shows a needs review chip for uploaded personal items with needs-review status", () => {
     const { container } = renderCard({
       item: {
         ...item,
@@ -249,7 +249,7 @@ describe("ClothingCard", () => {
     ).not.toBeInTheDocument();
   });
 
-  test("does not show a needs review chip for ready uploaded wardrobe items with sparse metadata", () => {
+  test("does not show a needs review chip for ready uploaded personal items with sparse metadata", () => {
     const { container } = renderCard({
       item: {
         ...item,
@@ -296,7 +296,7 @@ describe("ClothingCard", () => {
     expect(onProductClick).toHaveBeenCalledWith(item);
   });
 
-  test("renders colocated thumbnails for uploaded wardrobe items", async () => {
+  test("renders colocated thumbnails for uploaded personal items", async () => {
     renderCard({
       item: {
         ...item,

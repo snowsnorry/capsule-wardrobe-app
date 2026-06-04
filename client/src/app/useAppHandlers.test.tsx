@@ -10,6 +10,7 @@ const capsuleActions = vi.hoisted(() => ({
   deleteCurrentCapsule: vi.fn(),
   duplicateCurrentCapsule: vi.fn(),
   importSharedCapsuleToApp: vi.fn(),
+  loadMoreRecentCapsules: vi.fn(),
   openCapsule: vi.fn(),
   renameCurrentCapsule: vi.fn(),
   resetProfileFilters: vi.fn(),
@@ -177,6 +178,7 @@ describe("useAppHandlers", () => {
       llm: "none",
       imageLlm: "openai:gpt-image-2",
     });
+    await result.current.handleLoadMoreCapsules();
     await result.current.handleSearchCapsules("spring");
     await result.current.handleShareCapsule();
     result.current.handleToggleRegenerationSelection({
@@ -228,6 +230,9 @@ describe("useAppHandlers", () => {
       llm: "none",
       imageLlm: "openai:gpt-image-2",
     });
+    expect(capsuleActions.loadMoreRecentCapsules).toHaveBeenCalledWith(
+      actionContext,
+    );
     expect(sessionActions.googleCredential).toHaveBeenCalledWith(
       sessionActionContext,
       "token",

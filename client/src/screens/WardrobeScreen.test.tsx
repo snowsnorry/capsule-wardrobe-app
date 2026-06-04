@@ -212,20 +212,20 @@ vi.mock("../components/ClothingGridPlaceholder", () => ({
 
 const theme = createTheme();
 const translations: Record<string, string> = {
-  "wardrobe.title": "Wardrobe",
+  "wardrobe.title": "Personal items",
   "wardrobe.subtitle": "Saved catalog pieces and uploaded items in one place.",
   "wardrobe.upload": "Upload item photo",
   "wardrobe.uploadMenu": "Choose upload method",
   "wardrobe.uploadMenuLabel": "Upload methods",
   "wardrobe.uploadPhoto": "Upload photo",
   "wardrobe.uploadUrl": "Upload URL",
-  "wardrobe.openMenu": "Open Wardrobe menu",
-  "wardrobe.downloadFailed": "Failed to export Wardrobe PDF.",
-  "wardrobe.filterLabel": "Wardrobe source",
-  "wardrobe.loadFailed": "Failed to load Wardrobe.",
-  "wardrobe.removeFailed": "Failed to remove from Wardrobe.",
+  "wardrobe.openMenu": "Open Personal items menu",
+  "wardrobe.downloadFailed": "Failed to export Personal items PDF.",
+  "wardrobe.filterLabel": "Personal item source",
+  "wardrobe.loadFailed": "Failed to load Personal items.",
+  "wardrobe.removeFailed": "Failed to remove from Personal items.",
   "wardrobe.updateFailed": "Failed to update the item.",
-  "wardrobe.uploadFailed": "Failed to upload wardrobe photos.",
+  "wardrobe.uploadFailed": "Failed to upload personal item photos.",
   "wardrobe.urlUploadFailed": "Failed to upload product URLs.",
   "wardrobe.failedUploadBadge": "Failed",
   "wardrobe.noCategoryBadge": "No category",
@@ -235,8 +235,9 @@ const translations: Record<string, string> = {
   "wardrobe.deleteUploadedConfirmBody":
     "This uploaded item and its images will be permanently deleted.",
   "wardrobe.deleteUploadedConfirm": "Delete",
-  "wardrobe.removeConfirmTitle": "Remove from Wardrobe?",
-  "wardrobe.removeConfirmBody": "This product will be removed from Wardrobe.",
+  "wardrobe.removeConfirmTitle": "Remove from Personal items?",
+  "wardrobe.removeConfirmBody":
+    "This product will be removed from Personal items.",
   "wardrobe.removeConfirm": "Remove",
   "wardrobe.emptyTitle": "No saved items yet",
   "wardrobe.emptyBody":
@@ -244,10 +245,10 @@ const translations: Record<string, string> = {
   "wardrobe.filters.all": "All",
   "wardrobe.filters.uploaded": "Uploaded",
   "wardrobe.filters.fromCatalog": "From Catalog",
-  "wardrobe.uploadDialog.title": "Upload wardrobe photos",
+  "wardrobe.uploadDialog.title": "Upload personal item photos",
   "wardrobe.uploadDialog.body":
     "Use one image per garment. Photograph the item laid flat or neatly hung, fully visible, with no other clothing in frame, against a plain, even background.",
-  "wardrobe.uploadDialog.dropzoneLabel": "Choose wardrobe photos",
+  "wardrobe.uploadDialog.dropzoneLabel": "Choose personal item photos",
   "wardrobe.uploadDialog.dropzoneTitle": "Upload photos",
   "wardrobe.uploadDialog.dropzoneHint":
     "Drag and drop or click to browse. JPEG, PNG, or WebP. Up to 5 files, 10 MB each.",
@@ -269,7 +270,7 @@ const translations: Record<string, string> = {
   "wardrobe.uploadDialog.fileTooLarge": "Each image must be 10 MB or less.",
   "wardrobe.urlUploadDialog.title": "Upload product image URLs",
   "wardrobe.urlUploadDialog.body":
-    "Add links to commercial product images where the item is clearly visible and laid flat. Each accepted image becomes an uploaded wardrobe item.",
+    "Add links to commercial product images where the item is clearly visible and laid flat. Each accepted image becomes an uploaded personal item.",
   "wardrobe.urlUploadDialog.fieldLabel": "Product image URL {index}",
   "wardrobe.urlUploadDialog.placeholder":
     "https://example.com/product-image.jpg",
@@ -283,7 +284,7 @@ const translations: Record<string, string> = {
   "capsule.cardColumnsOne": "1 column",
   "capsule.cardColumnsTwo": "2 columns",
   "capsule.cardColumnsThree": "3 columns",
-  "capsule.removeFromMyWardrobe": "Remove from Wardrobe",
+  "capsule.removeFromMyWardrobe": "Remove from Personal items",
   "actions.cancel": "Cancel",
   "actions.edit": "Edit",
 };
@@ -349,17 +350,17 @@ describe("WardrobeScreen", () => {
   test("renders toolbar, upload button, filters, and wardrobe cards", async () => {
     renderScreen();
 
-    expect(screen.queryByText("Wardrobe")).not.toBeInTheDocument();
+    expect(screen.queryByText("Personal items")).not.toBeInTheDocument();
     const uploadButton = screen.getByRole("button", {
       name: "Upload item photo",
     });
     expect(uploadButton).toBeInTheDocument();
     expect(uploadButton).toHaveClass("MuiButton-outlined");
     expect(
-      screen.getByRole("button", { name: "Open Wardrobe menu" }),
+      screen.getByRole("button", { name: "Open Personal items menu" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("group", { name: "Wardrobe source" }),
+      screen.getByRole("group", { name: "Personal item source" }),
     ).toBeInTheDocument();
     expect(screen.getByTestId("wardrobe-placeholder")).toBeInTheDocument();
 
@@ -386,14 +387,14 @@ describe("WardrobeScreen", () => {
     });
     expect(uploadButton).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Open Wardrobe menu" }),
+      screen.getByRole("button", { name: "Open Personal items menu" }),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole("group", { name: "Wardrobe source" }),
+      screen.queryByRole("group", { name: "Personal item source" }),
     ).not.toBeInTheDocument();
 
     const sourceSelect = screen.getByRole("combobox", {
-      name: "Wardrobe source",
+      name: "Personal item source",
     });
     expect(sourceSelect).toHaveTextContent("All");
 
@@ -429,7 +430,7 @@ describe("WardrobeScreen", () => {
     await screen.findByTestId("wardrobe-card-wardrobe-1");
 
     const toolbar = screen
-      .getByRole("group", { name: "Wardrobe source" })
+      .getByRole("group", { name: "Personal item source" })
       .closest(".MuiStack-root");
 
     expect(toolbar).not.toBeNull();
@@ -447,7 +448,7 @@ describe("WardrobeScreen", () => {
     await user.click(screen.getByRole("button", { name: "Upload item photo" }));
 
     const dialog = screen.getByRole("dialog", {
-      name: "Upload wardrobe photos",
+      name: "Upload personal item photos",
     });
     expect(dialog).toHaveClass("MuiDialog-paperFullScreen");
     expect(within(dialog).getByText("Upload photos")).toBeInTheDocument();
@@ -481,7 +482,7 @@ describe("WardrobeScreen", () => {
     ).toBeInTheDocument();
     expect(
       within(dialog).getByText(
-        "Add links to commercial product images where the item is clearly visible and laid flat. Each accepted image becomes an uploaded wardrobe item.",
+        "Add links to commercial product images where the item is clearly visible and laid flat. Each accepted image becomes an uploaded personal item.",
       ),
     ).toBeInTheDocument();
   });
@@ -544,7 +545,7 @@ describe("WardrobeScreen", () => {
     await screen.findByTestId("wardrobe-card-wardrobe-1");
     await user.click(screen.getByRole("button", { name: "Upload item photo" }));
 
-    expect(screen.getByText("Upload wardrobe photos")).toBeInTheDocument();
+    expect(screen.getByText("Upload personal item photos")).toBeInTheDocument();
     expect(
       screen.getByText(
         "Use one image per garment. Photograph the item laid flat or neatly hung, fully visible, with no other clothing in frame, against a plain, even background.",
@@ -564,7 +565,7 @@ describe("WardrobeScreen", () => {
       [file],
       expect.objectContaining({ onProgress: expect.any(Function) }),
     );
-    expect(screen.getByText("Upload wardrobe photos")).toBeInTheDocument();
+    expect(screen.getByText("Upload personal item photos")).toBeInTheDocument();
     expect(screen.getAllByRole("progressbar")).toHaveLength(1);
     expect(screen.getByRole("progressbar")).toHaveAttribute(
       "aria-valuenow",
@@ -578,7 +579,7 @@ describe("WardrobeScreen", () => {
     resolveUpload({ ok: true, items: [] });
     await waitFor(() => {
       expect(
-        screen.queryByText("Upload wardrobe photos"),
+        screen.queryByText("Upload personal item photos"),
       ).not.toBeInTheDocument();
     });
     await waitFor(() => {
@@ -735,7 +736,7 @@ describe("WardrobeScreen", () => {
       });
     });
     await user.click(
-      screen.getByRole("button", { name: "Open Wardrobe menu" }),
+      screen.getByRole("button", { name: "Open Personal items menu" }),
     );
     await user.click(screen.getByRole("menuitem", { name: "Export as PDF" }));
 
@@ -754,7 +755,7 @@ describe("WardrobeScreen", () => {
     ).toHaveAttribute("data-mobile-columns", "2");
 
     await user.click(
-      screen.getByRole("button", { name: "Open Wardrobe menu" }),
+      screen.getByRole("button", { name: "Open Personal items menu" }),
     );
     expect(screen.getByText("Card layout")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "3 columns" }));
@@ -774,7 +775,7 @@ describe("WardrobeScreen", () => {
       await screen.findByRole("button", { name: "open product menu" }),
     );
     await user.click(
-      screen.getByRole("menuitem", { name: "Remove from Wardrobe" }),
+      screen.getByRole("menuitem", { name: "Remove from Personal items" }),
     );
     expect(api.removeCatalogItemFromMyWardrobe).not.toHaveBeenCalled();
 
@@ -967,7 +968,7 @@ describe("WardrobeScreen", () => {
     renderScreen();
 
     expect(
-      await screen.findByText("Failed to load Wardrobe."),
+      await screen.findByText("Failed to load Personal items."),
     ).toBeInTheDocument();
   });
 });

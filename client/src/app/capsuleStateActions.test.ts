@@ -8,6 +8,7 @@ function createContext() {
     setActiveCapsuleId: vi.fn(),
     setActiveCapsuleMeta: vi.fn(),
     setCapsuleList: vi.fn(),
+    setCapsulePagination: vi.fn(),
     setPendingImageSetIndexes: vi.fn(),
     setProfileItems: vi.fn(),
     setProfileOutfitSets: vi.fn(),

@@ -74,7 +74,7 @@ test("authenticated direct routes restore after reload", async ({
   await expect(
     page.getByPlaceholder(/Search in natural language/),
   ).toBeVisible();
-  await expect(page.getByRole("button", { name: "Capsule" })).toBeVisible();
+  await expect(page.getByText("Capsules", { exact: true })).toBeVisible();
 
   await page.goto("/statistics");
   await expect(
@@ -87,7 +87,7 @@ test("authenticated direct routes restore after reload", async ({
   await expect(
     page.getByText("No data available for the current filters."),
   ).toBeVisible();
-  await expect(page.getByRole("button", { name: "Catalog" })).toBeVisible();
+  await expect(page.getByText("Catalog", { exact: true })).toBeVisible();
   await expect(page.getByLabel("Email")).toBeHidden();
 });
 
@@ -107,7 +107,7 @@ test("sign out clears session and cached authenticated UI", async ({
   await dialog.getByRole("button", { name: "Sign out" }).click();
 
   await expectSignInScreen(page);
-  await expect(page.getByRole("button", { name: "Catalog" })).toBeHidden();
+  await expect(page.getByText("Catalog", { exact: true })).toBeHidden();
 
   await page.reload();
   await expectSignInScreen(page);
@@ -176,18 +176,12 @@ test("settings save persists profile and locale across reload", async ({
   await settingsDialog.getByRole("button", { name: "Save" }).click();
 
   await expect(settingsDialog).toBeHidden();
-  await expect(
-    page.getByRole("button", { name: "Капсула", exact: true }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "Каталог", exact: true }),
-  ).toBeVisible();
+  await expect(page.getByText("Капсулы", { exact: true })).toBeVisible();
+  await expect(page.getByText("Каталог", { exact: true })).toBeVisible();
 
   await page.reload();
 
-  await expect(
-    page.getByRole("button", { name: "Капсула", exact: true }),
-  ).toBeVisible();
+  await expect(page.getByText("Капсулы", { exact: true })).toBeVisible();
   await expect(page.getByLabel("Email")).toBeHidden();
 
   await page.getByRole("button", { name: "Открыть меню пользователя" }).click();
@@ -242,7 +236,6 @@ test("mobile shell supports drawer navigation, filters, and product detail", asy
   await expectCapsuleRouteLoaded(page);
 
   await page.getByRole("button", { name: "Toggle sidebar" }).click();
-  await page.getByRole("button", { name: "Catalog" }).click();
   await page.getByRole("button", { name: "Explore" }).click();
 
   await expect(page).toHaveURL(/\/explore$/);
@@ -270,7 +263,6 @@ test("mobile shell supports drawer navigation, filters, and product detail", asy
   await expect(page.getByText("3 results")).toBeVisible();
 
   await page.getByRole("button", { name: "Toggle sidebar" }).click();
-  await page.getByRole("button", { name: "Capsule" }).click();
   await page
     .getByRole("button", { name: "Playwright capsule", exact: true })
     .click();
@@ -361,7 +353,6 @@ test("keyboard focus supports critical dialogs and menus", async ({
     page.getByRole("button", { name: "Open capsule menu" }),
   ).toBeVisible();
 
-  await page.getByRole("button", { name: "Catalog" }).click();
   await page.getByRole("button", { name: "Explore" }).click();
   await page
     .getByPlaceholder(/Search in natural language/)

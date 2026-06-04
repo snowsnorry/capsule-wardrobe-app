@@ -27,13 +27,13 @@ vi.mock("../../i18n/useI18n", () => ({
         "actions.close": "Close",
         "actions.cancel": "Cancel",
         "actions.edit": "Edit",
-        "capsule.removeFromMyWardrobe": "Remove from Wardrobe",
-        "capsule.saveToMyWardrobe": "Save to Wardrobe",
+        "capsule.removeFromMyWardrobe": "Remove from Personal items",
+        "capsule.saveToMyWardrobe": "Save to Personal items",
         "wardrobe.savedBadge": "Saved",
         "wardrobe.filters.uploaded": "Uploaded",
         "wardrobe.removeConfirm": "Remove",
         "wardrobe.removeConfirmBody": "Remove body",
-        "wardrobe.removeConfirmTitle": "Remove from Wardrobe?",
+        "wardrobe.removeConfirmTitle": "Remove from Personal items?",
         "wardrobe.imageVersionToggle.label": "Uploaded item image version",
         "wardrobe.imageVersionToggle.original": "Original",
         "wardrobe.imageVersionToggle.ai": "AI",
@@ -228,10 +228,10 @@ describe("ProductDetailDialog", () => {
     fireEvent.click(screen.getByRole("button", { name: "Product actions" }));
 
     expect(
-      screen.getByRole("menuitem", { name: "Remove from Wardrobe" }),
+      screen.getByRole("menuitem", { name: "Remove from Personal items" }),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole("menuitem", { name: "Save to Wardrobe" }),
+      screen.queryByRole("menuitem", { name: "Save to Personal items" }),
     ).not.toBeInTheDocument();
   });
 

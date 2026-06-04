@@ -11,6 +11,7 @@ export function registerCapsuleReadRoutes(app, context) {
 
 function registerCapsuleBootstrapRoutes(app, context) {
   const {
+    countCapsulesImpl,
     getProfileImpl,
     listRecentCapsulesImpl,
     requireAuth,
@@ -32,7 +33,13 @@ function registerCapsuleBootstrapRoutes(app, context) {
           capsules: [],
         });
       }
-      const recentCapsules = await listRecentCapsulesImpl(req.user.email, 10);
+      const paginationRequest = normalizeCapsulePaginationRequest();
+      const recentCapsules = await listRecentCapsulesImpl(
+        req.user.email,
+        paginationRequest.limit,
+        paginationRequest.offset,
+      );
+      const total = await countCapsulesImpl(req.user.email);
       const wardrobeFilters = await buildWardrobeFilters(
         context,
         req.user.email,
@@ -44,6 +51,7 @@ function registerCapsuleBootstrapRoutes(app, context) {
         activeCapsule: null,
         activeSnapshot: null,
         capsules: recentCapsules.map(toCapsuleSummary),
+        pagination: buildCapsulePaginationResponse(paginationRequest, total),
         wardrobeFilters,
       });
     } catch (error) {
@@ -54,8 +62,18 @@ function registerCapsuleBootstrapRoutes(app, context) {
 
   app.get("/capsules/recent", requireAuth, async (req, res) => {
     try {
-      const items = await listRecentCapsulesImpl(req.user.email, 10);
-      return res.json({ ok: true, capsules: items.map(toCapsuleSummary) });
+      const paginationRequest = normalizeCapsulePaginationRequest(req.query);
+      const items = await listRecentCapsulesImpl(
+        req.user.email,
+        paginationRequest.limit,
+        paginationRequest.offset,
+      );
+      const total = await countCapsulesImpl(req.user.email);
+      return res.json({
+        ok: true,
+        capsules: items.map(toCapsuleSummary),
+        pagination: buildCapsulePaginationResponse(paginationRequest, total),
+      });
     } catch (error) {
       logError("[capsules/recent]", error);
       return res.status(503).json({ error: "service_unavailable" });
@@ -74,6 +92,38 @@ function registerCapsuleBootstrapRoutes(app, context) {
       return res.status(503).json({ error: "service_unavailable" });
     }
   });
+}
+
+const DEFAULT_CAPSULE_PAGE_LIMIT = 10;
+const MAX_CAPSULE_PAGE_LIMIT = 50;
+
+function normalizeIntegerParam(value: unknown, fallback: number) {
+  const raw = Array.isArray(value) ? value[0] : value;
+  const parsed = Number.parseInt(String(raw ?? ""), 10);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
+}
+
+function normalizeCapsulePaginationRequest(
+  query: Record<string, unknown> = {},
+) {
+  const limit = Math.min(
+    MAX_CAPSULE_PAGE_LIMIT,
+    Math.max(1, normalizeIntegerParam(query.limit, DEFAULT_CAPSULE_PAGE_LIMIT)),
+  );
+  const offset = normalizeIntegerParam(query.offset, 0);
+  return { limit, offset };
+}
+
+function buildCapsulePaginationResponse(
+  { limit, offset }: { limit: number; offset: number },
+  total: number,
+) {
+  return {
+    limit,
+    offset,
+    total,
+    hasMore: offset + limit < total,
+  };
 }
 
 function registerCapsuleLookupRoutes(app, context) {

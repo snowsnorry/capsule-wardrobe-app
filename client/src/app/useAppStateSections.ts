@@ -3,6 +3,7 @@ import { initialStatus } from "./appConstants";
 import { normalizeProfileSettings } from "./profileSettings";
 import type {
   CapsuleMeta,
+  CapsulePagination,
   CapsuleSourceMode,
   CapsuleSidebarActions,
   OutfitSetSnapshot,
@@ -103,6 +104,14 @@ export function useCapsuleAppState() {
   const [activeCapsuleMeta, setActiveCapsuleMeta] =
     useState<CapsuleMeta | null>(null);
   const [capsuleList, setCapsuleList] = useState<CapsuleMeta[]>([]);
+  const [capsulePagination, setCapsulePagination] = useState<CapsulePagination>(
+    {
+      limit: 10,
+      offset: 0,
+      total: 0,
+      hasMore: false,
+    },
+  );
   const [isLoadingItems, setIsLoadingItems] = useState(false);
   const [isContentOperationLoading, setIsContentOperationLoading] =
     useState(false);
@@ -113,6 +122,7 @@ export function useCapsuleAppState() {
     activeCapsuleId,
     activeCapsuleMeta,
     capsuleList,
+    capsulePagination,
     isContentOperationLoading,
     isDownloadingWardrobePdf,
     isLoadingItems,
@@ -121,6 +131,7 @@ export function useCapsuleAppState() {
     setActiveCapsuleId,
     setActiveCapsuleMeta,
     setCapsuleList,
+    setCapsulePagination,
     setIsContentOperationLoading,
     setIsDownloadingWardrobePdf,
     setIsLoadingItems,

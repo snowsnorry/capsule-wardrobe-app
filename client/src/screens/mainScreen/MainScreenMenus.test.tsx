@@ -133,7 +133,7 @@ describe("MainScreenMenus", () => {
     });
 
     await user.click(
-      screen.getByRole("menuitem", { name: "Save to Wardrobe" }),
+      screen.getByRole("menuitem", { name: "Save to Personal items" }),
     );
 
     expect(onSaveToMyWardrobe).toHaveBeenCalledWith({
@@ -173,7 +173,7 @@ describe("MainScreenMenus", () => {
     expect(screen.getByRole("menuitem", { name: "Select" })).toBeVisible();
 
     await user.click(
-      screen.getByRole("menuitem", { name: "Save to Wardrobe" }),
+      screen.getByRole("menuitem", { name: "Save to Personal items" }),
     );
     expect(onSaveToMyWardrobe).toHaveBeenCalledWith(
       expect.objectContaining({ id: "a" }),
@@ -229,10 +229,10 @@ describe("MainScreenMenus", () => {
 
     expect(screen.getByRole("menuitem", { name: "Select" })).toBeVisible();
     expect(
-      screen.queryByRole("menuitem", { name: "Save to Wardrobe" }),
+      screen.queryByRole("menuitem", { name: "Save to Personal items" }),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByRole("menuitem", { name: "Remove from Wardrobe" }),
+      screen.queryByRole("menuitem", { name: "Remove from Personal items" }),
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("menuitem", { name: "Copy Link Address" }),
@@ -265,10 +265,10 @@ describe("MainScreenMenus", () => {
 
     expect(screen.getByRole("menuitem", { name: "Select" })).toBeVisible();
     expect(
-      screen.queryByRole("menuitem", { name: "Save to Wardrobe" }),
+      screen.queryByRole("menuitem", { name: "Save to Personal items" }),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByRole("menuitem", { name: "Remove from Wardrobe" }),
+      screen.queryByRole("menuitem", { name: "Remove from Personal items" }),
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("menuitem", { name: "Copy Link Address" }),
@@ -326,7 +326,7 @@ describe("MainScreenMenus", () => {
     });
 
     await user.click(
-      screen.getByRole("menuitem", { name: "Remove from Wardrobe" }),
+      screen.getByRole("menuitem", { name: "Remove from Personal items" }),
     );
     expect(onRemoveFromMyWardrobe).not.toHaveBeenCalled();
 

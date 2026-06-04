@@ -193,8 +193,9 @@ function authDependencies(state: E2eState) {
 function capsuleDependencies(state: E2eState) {
   return {
     resolveActiveCapsuleImpl: async () => null,
-    listRecentCapsulesImpl: async (_email, limit = 10) =>
-      state.capsuleMemory.list(limit),
+    listRecentCapsulesImpl: async (_email, limit = 10, offset = 0) =>
+      state.capsuleMemory.list(limit, offset),
+    countCapsulesImpl: async () => state.capsuleMemory.list(1000).length,
     searchCapsulesImpl: async (_email, query, limit = 25) =>
       state.capsuleMemory.search(query, limit),
     getCapsuleImpl: async (_email, id) => state.capsuleMemory.get(id),

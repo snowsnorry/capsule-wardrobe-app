@@ -1,132 +1,101 @@
-import { useEffect, useState, type ReactElement } from "react";
-import { Stack } from "@mui/material";
+import { useState, type ReactElement } from "react";
+import { List, Stack } from "@mui/material";
 import { useI18n } from "../i18n/useI18n";
-import CatalogGroupNavigation from "./AppSidebarCatalogNavigation";
-import { CapsuleChildren } from "./AppSidebarCapsuleNavigation";
-import { WardrobeChildren } from "./AppSidebarWardrobeNavigation";
 import {
-  CapsuleTopLevelNavigation,
-  SidebarNavigationDivider,
-  WardrobeTopLevelNavigation,
-} from "./AppSidebarNavigationParts";
+  CapsuleSection,
+  CatalogSection,
+  OutfitsRow,
+  PersonalItemsRow,
+  useCapsuleNavigationState,
+} from "./AppSidebarNavigationSections";
 import type {
   AppId,
   AppSidebarNavigationProps,
 } from "./AppSidebarNavigationTypes";
 
-type SidebarGroupId = "wardrobe" | "capsule" | "catalog";
+type SidebarNavigationListProps = AppSidebarNavigationProps & {
+  handleLoadMoreCapsules: () => Promise<void>;
+  handleNavigateApp: (nextApp: AppId) => void;
+  isCollapsedDesktop: boolean;
+  isInteractionDisabled: boolean;
+  isLoadingMore: boolean;
+  navState: ReturnType<typeof useCapsuleNavigationState>;
+  t: (key: string, params?: Record<string, unknown>) => string;
+};
 
-function getActiveSidebarGroup(activeApp: AppId): SidebarGroupId {
-  return activeApp === "explore" || activeApp === "statistics"
-    ? "catalog"
-    : activeApp;
-}
-
-function CapsuleNavigationGroup({
+function SidebarNavigationList({
   activeApp,
+  activeCapsule,
   activeCapsuleId,
-  capsuleChildTabIndex,
   capsuleHasUnsavedChanges,
-  capsuleList,
   desktopSidebarRailWidth,
+  handleLoadMoreCapsules,
+  handleNavigateApp,
   isCollapsedDesktop,
   isInteractionDisabled,
+  isLoadingMore,
   isOverlaySidebar,
+  navState,
   onCreateCapsule,
   onOpenCapsule,
   onOpenCapsuleActions,
   onSearchCapsules,
-  onToggle,
-  showCapsuleChildren,
+  personalItemsCount,
   t,
-}: Pick<
-  AppSidebarNavigationProps,
-  | "activeCapsuleId"
-  | "capsuleHasUnsavedChanges"
-  | "capsuleList"
-  | "desktopSidebarRailWidth"
-  | "isInteractionDisabled"
-  | "isOverlaySidebar"
-  | "onCreateCapsule"
-  | "onOpenCapsule"
-  | "onOpenCapsuleActions"
-  | "onSearchCapsules"
-> & {
-  activeApp: AppId;
-  capsuleChildTabIndex: number;
-  isCollapsedDesktop: boolean;
-  onToggle: () => void;
-  showCapsuleChildren: boolean;
-  t: ReturnType<typeof useI18n>["t"];
-}) {
+}: SidebarNavigationListProps) {
   return (
-    <>
-      <CapsuleTopLevelNavigation
-        isActive={activeApp === "capsule"}
-        isExpanded={showCapsuleChildren}
-        isInteractionDisabled={Boolean(isInteractionDisabled)}
-        isCollapsedDesktop={isCollapsedDesktop}
+    <List
+      data-testid="sidebar-navigation-list"
+      sx={{
+        flex: 1,
+        minHeight: 0,
+        overflowY: isCollapsedDesktop ? "hidden" : "auto",
+        px: isCollapsedDesktop ? 0 : 1.5,
+        py: 0.5,
+      }}
+    >
+      <PersonalItemsRow
+        activeApp={activeApp}
         desktopSidebarRailWidth={desktopSidebarRailWidth}
-        onToggle={onToggle}
+        handleNavigateApp={handleNavigateApp}
+        isCollapsedDesktop={isCollapsedDesktop}
+        isInteractionDisabled={isInteractionDisabled}
+        personalItemsCount={personalItemsCount}
         t={t}
       />
-      <CapsuleChildren
-        showCapsuleChildren={showCapsuleChildren}
-        capsuleChildTabIndex={capsuleChildTabIndex}
-        isInteractionDisabled={Boolean(isInteractionDisabled)}
+      <OutfitsRow
+        desktopSidebarRailWidth={desktopSidebarRailWidth}
+        isCollapsedDesktop={isCollapsedDesktop}
+        isInteractionDisabled={isInteractionDisabled}
+        t={t}
+      />
+      <CapsuleSection
+        activeApp={activeApp}
+        activeCapsule={activeCapsule}
+        activeCapsuleId={activeCapsuleId}
+        capsuleHasUnsavedChanges={capsuleHasUnsavedChanges}
+        desktopSidebarRailWidth={desktopSidebarRailWidth}
+        handleLoadMoreCapsules={handleLoadMoreCapsules}
+        isCollapsedDesktop={isCollapsedDesktop}
+        isInteractionDisabled={isInteractionDisabled}
+        isLoadingMore={isLoadingMore}
         isOverlaySidebar={isOverlaySidebar}
-        capsuleList={capsuleList || []}
-        activeCapsuleId={activeCapsuleId || ""}
+        navState={navState}
         onCreateCapsule={onCreateCapsule}
-        onSearchCapsules={onSearchCapsules}
         onOpenCapsule={onOpenCapsule}
         onOpenCapsuleActions={onOpenCapsuleActions}
-        capsuleHasUnsavedChanges={capsuleHasUnsavedChanges || (() => false)}
+        onSearchCapsules={onSearchCapsules}
         t={t}
       />
-    </>
-  );
-}
-
-function WardrobeNavigationGroup({
-  activeApp,
-  desktopSidebarRailWidth,
-  isCollapsedDesktop,
-  isInteractionDisabled,
-  onNavigateApp,
-  onToggle,
-  showWardrobeChildren,
-  t,
-}: Pick<
-  AppSidebarNavigationProps,
-  "desktopSidebarRailWidth" | "isInteractionDisabled"
-> & {
-  activeApp: AppId;
-  isCollapsedDesktop: boolean;
-  onNavigateApp: (nextApp: AppId) => void;
-  onToggle: () => void;
-  showWardrobeChildren: boolean;
-  t: ReturnType<typeof useI18n>["t"];
-}) {
-  return (
-    <>
-      <WardrobeTopLevelNavigation
-        isActive={activeApp === "wardrobe"}
-        isExpanded={showWardrobeChildren}
-        isInteractionDisabled={Boolean(isInteractionDisabled)}
-        isCollapsedDesktop={isCollapsedDesktop}
-        desktopSidebarRailWidth={desktopSidebarRailWidth}
-        onToggle={onToggle}
-        t={t}
-      />
-      <WardrobeChildren
-        showWardrobeChildren={showWardrobeChildren}
+      <CatalogSection
         activeApp={activeApp}
-        isInteractionDisabled={Boolean(isInteractionDisabled)}
-        onNavigateApp={onNavigateApp}
+        desktopSidebarRailWidth={desktopSidebarRailWidth}
+        handleNavigateApp={handleNavigateApp}
+        isCollapsedDesktop={isCollapsedDesktop}
+        isInteractionDisabled={isInteractionDisabled}
         t={t}
       />
-    </>
+    </List>
   );
 }
 
@@ -136,9 +105,13 @@ function AppSidebarNavigation({
   isSidebarCollapsed,
   desktopSidebarRailWidth,
   isInteractionDisabled = false,
+  personalItemsCount = null,
   capsuleList = [],
+  capsulePagination,
   activeCapsuleId = "",
+  activeCapsule = null,
   onNavigateApp,
+  onLoadMoreCapsules,
   onCreateCapsule,
   onSearchCapsules,
   onOpenCapsule,
@@ -148,71 +121,52 @@ function AppSidebarNavigation({
   collapsedExpandHitbox = null,
 }: AppSidebarNavigationProps): ReactElement {
   const { t } = useI18n();
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const isCollapsedDesktop = isSidebarCollapsed && !isOverlaySidebar;
-  const activeGroup = getActiveSidebarGroup(activeApp);
-  const [expandedGroup, setExpandedGroup] = useState<SidebarGroupId | null>(
-    activeGroup,
-  );
-  const showWardrobeChildren =
-    expandedGroup === "wardrobe" && !isCollapsedDesktop;
-  const showCapsuleChildren =
-    expandedGroup === "capsule" && !isCollapsedDesktop;
-  const showCatalogChildren =
-    expandedGroup === "catalog" && !isCollapsedDesktop;
-  const capsuleChildTabIndex = showCapsuleChildren ? 0 : -1;
-
-  useEffect(() => {
-    setExpandedGroup(activeGroup);
-  }, [activeGroup]);
-
-  const handleToggleGroup = (group: SidebarGroupId) => {
-    setExpandedGroup((current) => (current === group ? null : group));
-  };
+  const navState = useCapsuleNavigationState({
+    capsuleList,
+    capsulePagination,
+    isLoadingMore,
+    onLoadMoreCapsules,
+  });
 
   const handleNavigateApp = (nextApp: AppId) => {
     onNavigateApp(nextApp);
     onExpandedAction?.();
   };
+  const handleLoadMoreCapsules = async () => {
+    if (!navState.shouldLoadMore) return;
+    setIsLoadingMore(true);
+    try {
+      await onLoadMoreCapsules();
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
 
   return (
     <Stack sx={{ height: "100%", minHeight: 0, overflow: "hidden" }}>
-      <WardrobeNavigationGroup
+      <SidebarNavigationList
         activeApp={activeApp}
-        desktopSidebarRailWidth={desktopSidebarRailWidth}
-        isCollapsedDesktop={isCollapsedDesktop}
-        isInteractionDisabled={isInteractionDisabled}
-        onNavigateApp={handleNavigateApp}
-        onToggle={() => handleToggleGroup("wardrobe")}
-        showWardrobeChildren={showWardrobeChildren}
-        t={t}
-      />
-      <CapsuleNavigationGroup
-        activeApp={activeApp}
+        activeCapsule={activeCapsule}
         activeCapsuleId={activeCapsuleId}
-        capsuleChildTabIndex={capsuleChildTabIndex}
         capsuleHasUnsavedChanges={capsuleHasUnsavedChanges}
-        capsuleList={capsuleList}
         desktopSidebarRailWidth={desktopSidebarRailWidth}
+        handleLoadMoreCapsules={handleLoadMoreCapsules}
+        handleNavigateApp={handleNavigateApp}
         isCollapsedDesktop={isCollapsedDesktop}
         isInteractionDisabled={isInteractionDisabled}
+        isLoadingMore={isLoadingMore}
         isOverlaySidebar={isOverlaySidebar}
+        isSidebarCollapsed={isSidebarCollapsed}
+        navState={navState}
         onCreateCapsule={onCreateCapsule}
+        onLoadMoreCapsules={onLoadMoreCapsules}
+        onNavigateApp={onNavigateApp}
         onOpenCapsule={onOpenCapsule}
         onOpenCapsuleActions={onOpenCapsuleActions}
         onSearchCapsules={onSearchCapsules}
-        onToggle={() => handleToggleGroup("capsule")}
-        showCapsuleChildren={showCapsuleChildren}
-        t={t}
-      />
-      <SidebarNavigationDivider showCapsuleChildren={showCapsuleChildren} />
-      <CatalogGroupNavigation
-        activeApp={activeApp}
-        isInteractionDisabled={isInteractionDisabled}
-        isCollapsedDesktop={isCollapsedDesktop}
-        showCatalogChildren={showCatalogChildren}
-        desktopSidebarRailWidth={desktopSidebarRailWidth}
-        onToggle={() => handleToggleGroup("catalog")}
-        onNavigateApp={handleNavigateApp}
+        personalItemsCount={personalItemsCount}
         t={t}
       />
       {isCollapsedDesktop ? collapsedExpandHitbox : null}

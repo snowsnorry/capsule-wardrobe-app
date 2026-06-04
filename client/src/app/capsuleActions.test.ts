@@ -5,6 +5,7 @@ import {
   deleteCurrentCapsule,
   duplicateCurrentCapsule,
   importSharedCapsuleToApp,
+  loadMoreRecentCapsules,
   openCapsule,
   renameCurrentCapsule,
   resetProfileFilters,
@@ -54,6 +55,7 @@ describe("capsuleActions", () => {
     vi.clearAllMocks();
     vi.mocked(fetchRecentCapsules).mockResolvedValue({
       capsules: [createTestCapsule()],
+      pagination: { limit: 10, offset: 0, total: 1, hasMore: false },
     });
   });
 
@@ -92,7 +94,7 @@ describe("capsuleActions", () => {
     expect(context.setIsLoadingItems).toHaveBeenCalledWith(false);
   });
 
-  test("createNewCapsule creates an empty capsule and refreshes the list", async () => {
+  test("createNewCapsule creates an empty capsule and schedules a list refresh", async () => {
     vi.mocked(createCapsule).mockResolvedValue({
       capsule: createTestCapsule({ id: "capsule-2" }),
     });
@@ -110,9 +112,11 @@ describe("capsuleActions", () => {
     expect(context.applyCapsuleState).toHaveBeenCalledWith(
       expect.objectContaining({ id: "capsule-2" }),
     );
-    expect(context.setCapsuleList).toHaveBeenCalledWith([
-      expect.objectContaining({ id: "capsule-1" }),
-    ]);
+    await vi.waitFor(() =>
+      expect(context.setCapsuleList).toHaveBeenCalledWith([
+        expect.objectContaining({ id: "capsule-1" }),
+      ]),
+    );
     expect(context.setIsContentOperationLoading).toHaveBeenLastCalledWith(
       false,
     );
@@ -228,7 +232,33 @@ describe("capsuleActions", () => {
 
     await refreshCapsuleList(context);
 
+    expect(fetchRecentCapsules).toHaveBeenCalledWith({ limit: 10, offset: 0 });
     expect(context.setCapsuleList).toHaveBeenCalledWith([]);
+  });
+
+  test("loadMoreRecentCapsules appends unique capsules and stores pagination", async () => {
+    vi.mocked(fetchRecentCapsules).mockResolvedValueOnce({
+      capsules: [createTestCapsule({ id: "capsule-2" })],
+      pagination: { limit: 10, offset: 10, total: 11, hasMore: false },
+    });
+    const context = createActionContext({
+      capsuleList: [createTestCapsule({ id: "capsule-1" })],
+      capsulePagination: { limit: 10, offset: 0, total: 11, hasMore: true },
+    });
+
+    await loadMoreRecentCapsules(context);
+
+    expect(fetchRecentCapsules).toHaveBeenCalledWith({ limit: 10, offset: 10 });
+    expect(context.setCapsuleList).toHaveBeenCalledWith([
+      expect.objectContaining({ id: "capsule-1" }),
+      expect.objectContaining({ id: "capsule-2" }),
+    ]);
+    expect(context.setCapsulePagination).toHaveBeenCalledWith({
+      limit: 10,
+      offset: 10,
+      total: 11,
+      hasMore: false,
+    });
   });
 
   test("resetProfileFilters restores the active capsule or reports errors", async () => {
@@ -375,7 +405,7 @@ describe("capsuleActions", () => {
     expect(context.applyCapsuleState).toHaveBeenCalledWith(
       expect.objectContaining({ id: "capsule-2" }),
     );
-    expect(fetchRecentCapsules).toHaveBeenCalled();
+    expect(fetchRecentCapsules).toHaveBeenCalledWith({ limit: 10, offset: 0 });
     expect(context.clearShareRoute).toHaveBeenCalled();
     expect(context.setIsShareLoading).toHaveBeenLastCalledWith(false);
   });

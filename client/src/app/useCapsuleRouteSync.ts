@@ -88,7 +88,9 @@ export function useCapsuleRouteSync(options: CapsuleRouteSyncOptions) {
     };
 
     if (!canSyncCapsuleRoute(effectOptions)) {
-      latestRouteKeyRef.current = "";
+      if (!isContentOperationLoading || !activeSyncKeyRef.current) {
+        latestRouteKeyRef.current = "";
+      }
       return;
     }
 

@@ -11,14 +11,14 @@ import {
 const theme = createTheme();
 const translations: Record<string, string> = {
   "actions.cancel": "Cancel",
-  "capsule.removeFromMyWardrobe": "Remove from Wardrobe",
+  "capsule.removeFromMyWardrobe": "Remove from Personal items",
   "wardrobe.deleteUploaded": "Delete item",
   "wardrobe.deleteUploadedConfirm": "Delete",
   "wardrobe.deleteUploadedConfirmBody": "Delete uploaded body",
   "wardrobe.deleteUploadedConfirmTitle": "Delete uploaded item?",
   "wardrobe.removeConfirm": "Remove",
   "wardrobe.removeConfirmBody": "Remove body",
-  "wardrobe.removeConfirmTitle": "Remove from Wardrobe?",
+  "wardrobe.removeConfirmTitle": "Remove from Personal items?",
 };
 const t = (key: string) => translations[key] || key;
 
@@ -58,7 +58,7 @@ describe("WardrobeProductMenu", () => {
     );
 
     await user.click(
-      screen.getByRole("menuitem", { name: "Remove from Wardrobe" }),
+      screen.getByRole("menuitem", { name: "Remove from Personal items" }),
     );
 
     expect(onClose).toHaveBeenCalled();
@@ -80,7 +80,7 @@ describe("WardrobeProductMenu", () => {
     );
 
     await user.click(
-      screen.getByRole("menuitem", { name: "Remove from Wardrobe" }),
+      screen.getByRole("menuitem", { name: "Remove from Personal items" }),
     );
 
     expect(onClose).toHaveBeenCalled();
@@ -135,7 +135,7 @@ describe("WardrobeProductMenu", () => {
     ).toBeInTheDocument();
 
     await user.click(
-      screen.getByRole("menuitem", { name: "Remove from Wardrobe" }),
+      screen.getByRole("menuitem", { name: "Remove from Personal items" }),
     );
 
     expect(onClose).toHaveBeenCalled();
@@ -162,7 +162,7 @@ describe("WardrobeProductMenu", () => {
     );
 
     expect(
-      screen.getByRole("progressbar", { name: "Remove from Wardrobe" }),
+      screen.getByRole("progressbar", { name: "Remove from Personal items" }),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Remove" })).toBeDisabled();

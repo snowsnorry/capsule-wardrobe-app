@@ -7,6 +7,7 @@ import {
   type SqlResultLike,
 } from "./core.js";
 import {
+  countCapsulesByEmail,
   createCapsuleRecord,
   deleteCapsuleByIdForEmail,
   getCapsuleByIdForEmail,
@@ -64,10 +65,11 @@ const sharedCapsule: SharedCapsuleRow = {
 };
 
 test("capsule record helpers map rows, json payloads, and query values", async () => {
-  const { values } = useQueuedSql([
+  const { statements, values } = useQueuedSql([
     [capsule],
     [capsule],
     [capsule],
+    [{ total: "4" }],
     [capsule],
     [{ name: " Work " }, { name: "" }, { name: null }],
     [capsule],
@@ -91,8 +93,13 @@ test("capsule record helpers map rows, json payloads, and query values", async (
     }),
   ).toEqual(capsule);
   expect(
-    await listRecentCapsulesByEmail({ email: "person@example.com", limit: 3 }),
+    await listRecentCapsulesByEmail({
+      email: "person@example.com",
+      limit: 3,
+      offset: 2,
+    }),
   ).toEqual([capsule]);
+  expect(await countCapsulesByEmail("person@example.com")).toBe(4);
   expect(
     await searchCapsulesByEmail({
       email: "person@example.com",
@@ -128,8 +135,13 @@ test("capsule record helpers map rows, json payloads, and query values", async (
     }),
   ).toEqual(capsule);
   expect(values[0][2]).toBe(JSON.stringify({ selected: ["a"] }));
-  expect(values[3][1]).toBe("%work%");
-  expect(values[5][0]).toBe(JSON.stringify({ selected: ["b"] }));
+  expect(statements[2]).toContain(
+    "order by updated_at desc, created_at desc, id desc",
+  );
+  expect(values[2][1]).toBe(3);
+  expect(values[2][2]).toBe(2);
+  expect(values[4][1]).toBe("%work%");
+  expect(values[6][0]).toBe(JSON.stringify({ selected: ["b"] }));
 });
 
 test("capsule helpers return null or booleans for empty mutation results", async () => {

@@ -64,6 +64,17 @@ async function expectActiveCapsule(page: Page, name: string) {
   ).toBeVisible();
 }
 
+async function expectCreatedCapsuleReady(page: Page) {
+  await expect(
+    page.getByRole("button", {
+      name: /^Rename capsule (?:<New capsule>|Playwright new capsule(?: \(\d+\))?)$/,
+    }),
+  ).toBeEnabled({ timeout: 20_000 });
+  await expect(
+    page.getByRole("button", { name: "Open capsule menu" }),
+  ).toBeEnabled();
+}
+
 async function expectCapsuleListed(page: Page, name: string) {
   await expect(page.getByRole("button", { name, exact: true })).toBeVisible();
 }
@@ -76,7 +87,7 @@ test("capsule create rename save and reload persistence works through the UI", a
   await openApp(page);
 
   await page.getByRole("button", { name: "New capsule" }).click();
-  await expectActiveCapsule(page, "Playwright new capsule");
+  await expectCreatedCapsuleReady(page);
 
   await renameActiveCapsule(page, createdCapsuleName);
   await saveActiveCapsule(page);

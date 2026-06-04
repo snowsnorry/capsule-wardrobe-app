@@ -6,6 +6,7 @@ import {
 } from "../api/myWardrobe";
 import { fromContext, type AppActionContext } from "./actionContext";
 import type { WardrobeItem } from "./appTypes";
+import { notifyPersonalItemsChanged } from "./personalItemsCount";
 
 function applySavedFlagToProfileItems(
   context: AppActionContext,
@@ -112,6 +113,7 @@ export async function saveItemToMyWardrobe(
     await saveCatalogItemToMyWardrobe(url);
     applySavedFlagToProfileItems(context, url, true);
     setMyWardrobeStatus(context, "wardrobe.saved");
+    notifyPersonalItemsChanged();
   } catch (error) {
     setMyWardrobeError(
       context,
@@ -150,6 +152,7 @@ export async function removeItemFromMyWardrobe(
     await removeCatalogItemFromMyWardrobe(url);
     applySavedFlagToProfileItems(context, url, false);
     setMyWardrobeStatus(context, "wardrobe.removed");
+    notifyPersonalItemsChanged();
   } catch {
     setMyWardrobeError(
       context,

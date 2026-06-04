@@ -1,4 +1,5 @@
 import {
+  countCapsulesByEmail,
   createCapsuleRecord,
   deleteCapsuleByIdForEmail,
   getCapsuleByIdForEmail,
@@ -49,6 +50,7 @@ type CapsuleStoreDeps = Record<string, any>;
 function createCapsuleStore(deps: CapsuleStoreDeps = {}) {
   const {
     createCapsuleRecordImpl = createCapsuleRecord,
+    countCapsulesByEmailImpl = countCapsulesByEmail,
     deleteCapsuleByIdForEmailImpl = deleteCapsuleByIdForEmail,
     getCapsuleByIdForEmailImpl = getCapsuleByIdForEmail,
     getProfileImpl = getProfile,
@@ -78,9 +80,14 @@ function createCapsuleStore(deps: CapsuleStoreDeps = {}) {
   async function listRecentCapsules(
     email: string,
     limit: number = 10,
+    offset: number = 0,
   ): Promise<NormalizedCapsuleRecord[]> {
-    const rows = await listRecentCapsulesByEmailImpl({ email, limit });
+    const rows = await listRecentCapsulesByEmailImpl({ email, limit, offset });
     return rows.map(normalizeCapsuleRecord);
+  }
+
+  async function countCapsules(email: string): Promise<number> {
+    return countCapsulesByEmailImpl(email);
   }
 
   async function searchCapsules(
@@ -274,6 +281,7 @@ function createCapsuleStore(deps: CapsuleStoreDeps = {}) {
     getSharedCapsuleOgMetadata,
     importSharedCapsule,
     listRecentCapsules,
+    countCapsules,
     resolveActiveCapsule,
     revertCapsule,
     saveCapsule,
@@ -295,6 +303,7 @@ const {
   getSharedCapsuleOgMetadata,
   importSharedCapsule,
   listRecentCapsules,
+  countCapsules,
   resolveActiveCapsule,
   revertCapsule,
   saveCapsule,
@@ -320,6 +329,7 @@ export {
   getSharedCapsuleOgMetadata,
   importSharedCapsule,
   listRecentCapsules,
+  countCapsules,
   normalizeCapsuleFilters,
   normalizeCapsuleSnapshot,
   resolveActiveCapsule,

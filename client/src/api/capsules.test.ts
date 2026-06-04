@@ -88,6 +88,7 @@ describe("capsules api", () => {
   test("read helpers use capsule collection routes", async () => {
     await fetchCapsuleBootstrap();
     await fetchRecentCapsules();
+    await fetchRecentCapsules({ limit: 10, offset: 20 });
     await fetchCapsule("capsule-1");
     await searchCapsules(" linen jacket ");
     await searchCapsules(" ");
@@ -108,20 +109,27 @@ describe("capsules api", () => {
     );
     expect(requestApi.requestJson).toHaveBeenNthCalledWith(
       3,
-      "https://api.example.test/capsules/capsule-1",
+      "https://api.example.test/capsules/recent?limit=10&offset=20",
       {
         credentials: "include",
       },
     );
     expect(requestApi.requestJson).toHaveBeenNthCalledWith(
       4,
-      "https://api.example.test/capsules/search?q=linen%20jacket",
+      "https://api.example.test/capsules/capsule-1",
       {
         credentials: "include",
       },
     );
     expect(requestApi.requestJson).toHaveBeenNthCalledWith(
       5,
+      "https://api.example.test/capsules/search?q=linen%20jacket",
+      {
+        credentials: "include",
+      },
+    );
+    expect(requestApi.requestJson).toHaveBeenNthCalledWith(
+      6,
       "https://api.example.test/capsules/search",
       {
         credentials: "include",

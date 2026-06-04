@@ -186,9 +186,9 @@ export class E2eCapsuleMemory {
     });
   }
 
-  list(limit = 10): NormalizedCapsuleRecord[] {
+  list(limit = 10, offset = 0): NormalizedCapsuleRecord[] {
     return this.orderedCapsules()
-      .slice(0, limit)
+      .slice(offset, offset + limit)
       .map((capsule) => deepClone(capsule));
   }
 

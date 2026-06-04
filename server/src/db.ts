@@ -71,6 +71,7 @@ export {
   updateProfileLocaleByEmail,
   updateProfileActiveCapsuleIdByEmail,
   createCapsuleRecord,
+  countCapsulesByEmail,
   getCapsuleByIdForEmail,
   listRecentCapsulesByEmail,
   searchCapsulesByEmail,

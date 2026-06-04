@@ -10,10 +10,12 @@ import {
   isFullScreenAppShellRoute,
 } from "./AppShellRouteLayout";
 import { getActiveSidebarApp } from "./appRouting";
+import { usePersonalItemsCount } from "./personalItemsCount";
 import type {
   AppNavigationOptions,
   AppRoute,
   CapsuleMeta,
+  CapsulePagination,
   ProfileSettings,
   UserLike,
 } from "./appTypes";
@@ -27,6 +29,7 @@ type AppShellContentProps = {
   appRoute: AppRoute;
   capsuleRouteId: string;
   capsuleList: CapsuleMeta[];
+  capsulePagination: CapsulePagination;
   cardPadding: number;
   children: ReactNode;
   currentView: string;
@@ -48,6 +51,7 @@ type AppShellContentProps = {
     nextApp: Exclude<AppRoute, "share">,
     options?: AppNavigationOptions,
   ) => void;
+  onLoadMoreCapsules: () => Promise<void>;
   onOpenCapsuleFromSidebar: (
     capsuleId: string,
     onComplete?: () => void,
@@ -60,6 +64,10 @@ type AppShellContentProps = {
   ) => void;
   openSearchDialog: () => void;
 };
+
+function getUserEmail(user: UserLike | null) {
+  return user?.email || "";
+}
 
 function SuspendedContent({ children }: { children: ReactNode }) {
   return <Suspense fallback={<RoutePanelFallback />}>{children}</Suspense>;
@@ -133,6 +141,8 @@ function MarketingPanel({
 
 function AppSidebarPanel(props: AppShellContentProps) {
   const activeSidebarApp = getActiveSidebarApp(props.appRoute);
+  const userEmail = getUserEmail(props.user);
+  const personalItemsCount = usePersonalItemsCount(userEmail);
   const usesCapsuleLayout = isFullScreenAppShellRoute(props);
   const highlightedCapsuleId =
     activeSidebarApp === "capsule" &&
@@ -151,7 +161,7 @@ function AppSidebarPanel(props: AppShellContentProps) {
       desktopContentGap={usesCapsuleLayout ? 32 : undefined}
       desktopContentEndGap={usesCapsuleLayout ? 0 : undefined}
       contentWidth={usesCapsuleLayout ? "fill" : "bounded"}
-      userEmail={props.user?.email || ""}
+      userEmail={userEmail}
       userName={props.settingsProfile.fullname}
       settingsProfile={props.settingsProfile}
       onRemoveAccount={props.onDeleteProfile}
@@ -177,9 +187,13 @@ function AppSidebarPanel(props: AppShellContentProps) {
           isInteractionDisabled={
             activeSidebarApp === "capsule" && props.isContentBusy
           }
+          personalItemsCount={personalItemsCount}
           capsuleList={props.capsuleList}
+          capsulePagination={props.capsulePagination}
           activeCapsuleId={highlightedCapsuleId}
+          activeCapsule={props.activeCapsuleMeta}
           onNavigateApp={props.onNavigateApp}
+          onLoadMoreCapsules={props.onLoadMoreCapsules}
           onCreateCapsule={async () => {
             await props.onCreateCapsuleFromSidebar(
               isOverlaySidebar ? closeSidebar : undefined,

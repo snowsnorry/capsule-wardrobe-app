@@ -44,17 +44,17 @@ function t(key: string, params?: Record<string, unknown>) {
     "capsule.settingsSubtitle": "Adjust the inputs used to build this capsule.",
     "capsule.sourceMode.label": "Item source",
     "capsule.sourceMode.catalogOnly": "Catalog items",
-    "capsule.sourceMode.wardrobePreferred": "Wardrobe + catalog",
-    "capsule.sourceMode.wardrobeOnly": "Wardrobe only",
-    "capsule.sourceMode.checkingWardrobe": "Checking Wardrobe items...",
+    "capsule.sourceMode.wardrobePreferred": "Personal items + catalog",
+    "capsule.sourceMode.wardrobeOnly": "Personal items only",
+    "capsule.sourceMode.checkingWardrobe": "Checking personal items...",
     "capsule.sourceMode.emptyWardrobe":
-      "Wardrobe has no ready items yet. Add items before using this source.",
-    "capsule.sourceMode.loadFailed": "Could not check Wardrobe items.",
+      "No ready personal items yet. Add items before using this source.",
+    "capsule.sourceMode.loadFailed": "Could not check personal items.",
     "capsule.sourceMode.insufficientWardrobe":
-      "Wardrobe has {count} ready items. This capsule may need more: {items}.",
+      "Personal items include {count} ready items. This capsule may need more: {items}.",
     "capsule.anchors.title": "Anchor items",
-    "capsule.anchors.hint": "Choose up to 5 wardrobe items to keep.",
-    "capsule.anchors.add": "Add items from wardrobe",
+    "capsule.anchors.hint": "Choose up to 5 personal items to keep.",
+    "capsule.anchors.add": "Add personal items",
     "filters.apply": "Apply",
     "filters.applyDisabledHint": "To apply filters, choose: {items}.",
     "filters.applyDisabledUnchangedHint": "Filters have not changed.",
@@ -190,13 +190,15 @@ describe("ProfileFiltersSidebarSections", () => {
       props: {
         sourceModeStatus: {
           isBlocking: false,
-          message: "Wardrobe has 2 ready items.",
+          message: "Personal items include 2 ready items.",
           severity: "warning",
         },
       },
     });
 
-    expect(screen.getByText("Wardrobe has 2 ready items.")).toBeInTheDocument();
+    expect(
+      screen.getByText("Personal items include 2 ready items."),
+    ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Apply" })).toBeEnabled();
 
     warning.unmount();
@@ -205,7 +207,7 @@ describe("ProfileFiltersSidebarSections", () => {
       props: {
         sourceModeStatus: {
           isBlocking: true,
-          message: "Wardrobe has no ready items yet.",
+          message: "No ready personal items yet.",
           severity: "error",
         },
       },
@@ -213,7 +215,7 @@ describe("ProfileFiltersSidebarSections", () => {
     });
 
     expect(
-      screen.getByText("Wardrobe has no ready items yet."),
+      screen.getByText("No ready personal items yet."),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Apply" })).toBeDisabled();
   });
@@ -232,7 +234,9 @@ describe("ProfileFiltersSidebarSections", () => {
     await user.click(sourceModeSelect);
     expect(
       getComputedStyle(
-        await screen.findByRole("option", { name: "Wardrobe + catalog" }),
+        await screen.findByRole("option", {
+          name: "Personal items + catalog",
+        }),
       ).whiteSpace,
     ).toBe("normal");
   });
@@ -242,7 +246,7 @@ describe("ProfileFiltersSidebarSections", () => {
 
     expect(
       getComputedStyle(
-        screen.getByRole("button", { name: "Add items from wardrobe" }),
+        screen.getByRole("button", { name: "Add personal items" }),
       ).justifyContent,
     ).toBe("center");
   });
@@ -282,7 +286,7 @@ describe("ProfileFiltersSidebarSections", () => {
     await user.click(screen.getByRole("button", { name: "Stripe" }));
     await user.click(screen.getByRole("combobox", { name: "Item source" }));
     await user.click(
-      await screen.findByRole("option", { name: "Wardrobe + catalog" }),
+      await screen.findByRole("option", { name: "Personal items + catalog" }),
     );
     await user.type(
       screen.getByPlaceholderText("Additional placeholder"),

@@ -22,14 +22,14 @@ const t = (key: string) => {
     "actions.cancel": "Cancel",
     "wardrobe.savedBadge": "Saved",
     "wardrobe.filters.uploaded": "Uploaded",
-    "wardrobe.removeConfirmTitle": "Remove from Wardrobe?",
+    "wardrobe.removeConfirmTitle": "Remove from Personal items?",
     "wardrobe.removeConfirmBody": "Remove body",
     "wardrobe.removeConfirm": "Remove",
     "wardrobe.imageVersionToggle.label": "Uploaded item image version",
     "wardrobe.imageVersionToggle.original": "Original",
     "wardrobe.imageVersionToggle.ai": "AI",
-    "capsule.removeFromMyWardrobe": "Remove from Wardrobe",
-    "capsule.saveToMyWardrobe": "Save to Wardrobe",
+    "capsule.removeFromMyWardrobe": "Remove from Personal items",
+    "capsule.saveToMyWardrobe": "Save to Personal items",
   };
   return labels[key] ?? key;
 };
@@ -276,7 +276,9 @@ describe("ProductDetail", () => {
     renderProductDetail(item, theme, { onSaveToMyWardrobe });
 
     fireEvent.click(screen.getByRole("button", { name: "Product actions" }));
-    fireEvent.click(screen.getByRole("menuitem", { name: "Save to Wardrobe" }));
+    fireEvent.click(
+      screen.getByRole("menuitem", { name: "Save to Personal items" }),
+    );
 
     expect(onSaveToMyWardrobe).toHaveBeenCalledWith(item);
   });
@@ -297,10 +299,12 @@ describe("ProductDetail", () => {
     renderProductDetail(item, theme, { onSaveToMyWardrobe });
 
     fireEvent.click(screen.getByRole("button", { name: "Product actions" }));
-    fireEvent.click(screen.getByRole("menuitem", { name: "Save to Wardrobe" }));
+    fireEvent.click(
+      screen.getByRole("menuitem", { name: "Save to Personal items" }),
+    );
 
     expect(
-      screen.getByRole("progressbar", { name: "Save to Wardrobe" }),
+      screen.getByRole("progressbar", { name: "Save to Personal items" }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Product actions" }),
@@ -310,7 +314,7 @@ describe("ProductDetail", () => {
 
     await waitFor(() => {
       expect(
-        screen.queryByRole("progressbar", { name: "Save to Wardrobe" }),
+        screen.queryByRole("progressbar", { name: "Save to Personal items" }),
       ).not.toBeInTheDocument();
     });
   });
@@ -331,7 +335,7 @@ describe("ProductDetail", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Product actions" }));
     fireEvent.click(
-      screen.getByRole("menuitem", { name: "Remove from Wardrobe" }),
+      screen.getByRole("menuitem", { name: "Remove from Personal items" }),
     );
     expect(onRemoveFromMyWardrobe).not.toHaveBeenCalled();
 
@@ -353,7 +357,7 @@ describe("ProductDetail", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Product actions" }));
     fireEvent.click(
-      screen.getByRole("menuitem", { name: "Remove from Wardrobe" }),
+      screen.getByRole("menuitem", { name: "Remove from Personal items" }),
     );
     fireEvent.click(screen.getByRole("button", { name: "Remove" }));
 

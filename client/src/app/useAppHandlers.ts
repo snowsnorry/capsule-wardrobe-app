@@ -4,6 +4,7 @@ import {
   deleteCurrentCapsule,
   duplicateCurrentCapsule,
   importSharedCapsuleToApp,
+  loadMoreRecentCapsules,
   renameCurrentCapsule,
   resetProfileFilters,
   revertCurrentCapsule,
@@ -222,6 +223,8 @@ function buildAppHandlers({
     handleImportSharedCapsule,
     handleNavigateApp,
     handleOpenCapsule,
+    handleLoadMoreCapsules: async () =>
+      loadMoreRecentCapsules(getAppActionContext()),
     handleOpenCapsuleFromSidebar: async (
       capsuleId: string,
       onComplete?: () => void,

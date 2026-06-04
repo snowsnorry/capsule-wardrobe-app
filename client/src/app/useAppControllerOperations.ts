@@ -1,5 +1,5 @@
 import { fetchCapsule, fetchCapsuleBootstrap } from "../api/capsules";
-import { buildAppActionContext } from "./buildAppActionContext";
+import { buildDefaultActionContext } from "./buildDefaultActionContext";
 import { buildDraftSnapshotFromState } from "./capsuleState";
 import { applyCapsuleStateToApp } from "./capsuleStateActions";
 import { refreshCapsuleList } from "./capsuleActions";
@@ -9,8 +9,8 @@ import {
   startCapsuleEventStream as startWardrobeEventStream,
   stopCapsuleEventStream as stopWardrobeEventStream,
 } from "./wardrobeActions";
+import type { AppActionContext } from "./actionContext";
 import type { useAppNavigation } from "./useAppNavigation";
-import type { useAppHandlers } from "./useAppHandlers";
 import type { useAppNotifications } from "./useAppNotifications";
 import type { useAppState } from "./useAppState";
 import type { useProfileOptions } from "./useProfileOptions";
@@ -20,6 +20,7 @@ import type {
   CapsuleBootstrapResult,
   CapsuleDraft,
   CapsuleMeta,
+  CapsulePagination,
   CapsuleWardrobeData,
   OutfitSetSnapshot,
   WardrobeItem,
@@ -29,7 +30,10 @@ import type {
 export type AppControllerOperations = {
   applyCapsuleState: (
     capsule: CapsuleMeta | null | undefined,
-    options?: { capsules?: CapsuleMeta[] | null },
+    options?: {
+      capsules?: CapsuleMeta[] | null;
+      pagination?: CapsulePagination | null;
+    },
   ) => void;
   applyWardrobeSnapshot: (
     snapshot: WardrobeSnapshot | undefined,
@@ -47,8 +51,9 @@ export type AppControllerOperations = {
   clearWardrobeProgressState: () => void;
   clearActiveCapsuleState: (options?: {
     capsules?: CapsuleMeta[] | null;
+    pagination?: CapsulePagination | null;
   }) => void;
-  getAppActionContext: () => ReturnType<typeof buildAppActionContext>;
+  getAppActionContext: () => AppActionContext;
   startCapsuleEventStream: (capsuleId: string | undefined) => unknown;
   startPendingNotificationFlow: (kind: string, llm?: string) => void;
 };
@@ -130,11 +135,14 @@ function assignAppControllerOperations({
       options,
     );
   };
-  operations.applyCapsuleState = (capsule, { capsules = null } = {}) => {
+  operations.applyCapsuleState = (
+    capsule,
+    { capsules = null, pagination = null } = {},
+  ) => {
     applyCapsuleStateToApp(
       buildCapsuleStateSetters(appState, operations),
       capsule,
-      { capsules },
+      { capsules, pagination },
     );
   };
   operations.buildCurrentDraftSnapshot = (options = {}) =>
@@ -170,6 +178,7 @@ function assignAppControllerOperations({
     }
     operations.applyCapsuleState(result.activeCapsule, {
       capsules: result.capsules || [],
+      pagination: result.pagination || null,
     });
     await restoreCapsuleSnapshot(operations, result);
     return { ...normalizedProfile, hasProfile: true, optionsLoaded };
@@ -207,6 +216,7 @@ function buildCapsuleStateSetters(
     setActiveCapsuleId: state.setActiveCapsuleId,
     setActiveCapsuleMeta: state.setActiveCapsuleMeta,
     setCapsuleList: state.setCapsuleList,
+    setCapsulePagination: state.setCapsulePagination,
     setPendingImageSetIndexes: state.setPendingImageSetIndexes,
     setProfileItems: state.setProfileItems,
     setProfileOutfitSets: state.setProfileOutfitSets,
@@ -305,46 +315,4 @@ async function restoreCapsuleSnapshot(
   if (result.activeSnapshot.status === "pending") {
     operations.startCapsuleEventStream(result.activeCapsule?.id);
   }
-}
-
-function buildDefaultActionContext({
-  appState,
-  locale,
-  notifications,
-  operations,
-  resolveErrorMessage,
-  setLocale,
-  shareRoute,
-  t,
-}: {
-  appState: ReturnType<typeof useAppState>;
-  locale: string;
-  notifications: ReturnType<typeof useAppNotifications>;
-  operations: AppControllerOperations;
-  resolveErrorMessage: (
-    error: { message?: string } | null | undefined,
-  ) => string;
-  setLocale: (locale: string) => void;
-  shareRoute: ReturnType<typeof useShareRoute>;
-  t: (key: string, params?: Record<string, unknown>) => string;
-}) {
-  return buildAppActionContext({
-    appState,
-    applyCapsuleState: operations.applyCapsuleState,
-    applyWardrobeSnapshot: operations.applyWardrobeSnapshot,
-    bootstrapCapsules: operations.bootstrapCapsules,
-    buildCurrentDraftSnapshot: operations.buildCurrentDraftSnapshot,
-    clearShareRoute: shareRoute.clearShareRoute,
-    closeNotificationPrompt: notifications.closeNotificationPrompt,
-    handlers: {} as ReturnType<typeof useAppHandlers>,
-    locale,
-    pendingShareId: "",
-    resolveErrorMessage,
-    setIsShareLoading: shareRoute.setIsShareLoading,
-    setLocale,
-    shareMetadata: shareRoute.shareMetadata,
-    startCapsuleEventStream: operations.startCapsuleEventStream,
-    startPendingNotificationFlow: operations.startPendingNotificationFlow,
-    t,
-  });
 }

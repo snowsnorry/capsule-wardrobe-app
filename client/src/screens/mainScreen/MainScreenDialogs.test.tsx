@@ -201,7 +201,7 @@ describe("MainScreenDialogs", () => {
       screen.getByRole("dialog", { name: "Can't share this capsule" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/personal uploaded wardrobe items can't be shared/i),
+      screen.getByText(/personal uploaded items can't be shared/i),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Copy share link" }),
@@ -327,7 +327,7 @@ describe("MainScreenDialogs", () => {
       await screen.findByRole("button", { name: "Product actions" }),
     );
     expect(
-      screen.queryByRole("menuitem", { name: "Save to Wardrobe" }),
+      screen.queryByRole("menuitem", { name: "Save to Personal items" }),
     ).not.toBeInTheDocument();
     await user.click(screen.getByRole("menuitem", { name: "Edit" }));
 
@@ -405,7 +405,7 @@ describe("MainScreenDialogs", () => {
     });
     await user.click(screen.getByRole("button", { name: "Product actions" }));
     expect(
-      screen.queryByRole("menuitem", { name: "Save to Wardrobe" }),
+      screen.queryByRole("menuitem", { name: "Save to Personal items" }),
     ).not.toBeInTheDocument();
     await user.click(screen.getByRole("menuitem", { name: "Edit" }));
 

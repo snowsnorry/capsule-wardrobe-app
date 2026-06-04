@@ -117,7 +117,7 @@ describe("my wardrobe api", () => {
     expect(requestApi.requestJson).not.toHaveBeenCalled();
   });
 
-  test("fetches uploaded wardrobe item detail", async () => {
+  test("fetches uploaded personal item detail", async () => {
     await fetchUploadedWardrobeItemDetail("uploaded 1");
 
     expect(requestApi.getCachedJson).toHaveBeenCalledWith(
@@ -299,7 +299,7 @@ describe("my wardrobe api", () => {
     );
   });
 
-  test("updates uploaded wardrobe item metadata", async () => {
+  test("updates uploaded personal item metadata", async () => {
     const payload = {
       name: "Linen shirt",
       description: "Button-front shirt",
@@ -332,7 +332,7 @@ describe("my wardrobe api", () => {
     );
   });
 
-  test("deletes uploaded wardrobe items", async () => {
+  test("deletes uploaded personal items", async () => {
     await deleteUploadedWardrobeItem("uploaded 1");
 
     expect(requestApi.requestJson).toHaveBeenCalledWith(
@@ -364,7 +364,7 @@ describe("my wardrobe api", () => {
         ok: true,
         blobData: new Blob(["pdf-binary"], { type: "application/pdf" }),
         headers: {
-          "content-disposition": `attachment; filename="My-Wardrobe.pdf"; filename*=UTF-8''${encodeURIComponent("My Wardrobe.pdf")}`,
+          "content-disposition": `attachment; filename="Personal-items.pdf"; filename*=UTF-8''${encodeURIComponent("Personal items.pdf")}`,
         },
       }) as Response,
     );
@@ -381,7 +381,7 @@ describe("my wardrobe api", () => {
     expect(URL.createObjectURL).toHaveBeenCalledTimes(1);
     expect(anchorMethods.click).toHaveBeenCalledTimes(1);
     expect(anchorMethods.remove).toHaveBeenCalledTimes(1);
-    expect(createdAnchor?.download).toBe("My Wardrobe.pdf");
+    expect(createdAnchor?.download).toBe("Personal items.pdf");
     expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:my-wardrobe-pdf");
   });
 

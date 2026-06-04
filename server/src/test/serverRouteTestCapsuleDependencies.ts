@@ -4,6 +4,7 @@ export function createCapsuleDependencies() {
   return {
     resolveActiveCapsuleImpl: async () => null,
     listRecentCapsulesImpl: async () => [],
+    countCapsulesImpl: async () => 0,
     searchCapsulesImpl: async () => [],
     getCapsuleImpl: async () => ({
       id: "capsule-1",

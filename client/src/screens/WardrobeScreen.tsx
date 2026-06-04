@@ -16,6 +16,7 @@ import {
   uploadWardrobeImages,
   uploadWardrobeUrls,
 } from "../api/myWardrobe";
+import { notifyPersonalItemsChanged } from "../app/personalItemsCount";
 import { useI18n } from "../i18n/useI18n";
 import { isUploadedWardrobeItemNeedsReview } from "../utils/uploadedWardrobeItemStatus";
 import { MAIN_SCREEN_CONTENT_COLUMN_SX } from "./mainScreen/MainScreenHelpers";
@@ -264,6 +265,7 @@ function useWardrobeItems(
           isDifferentWardrobeItem(currentItem, item, target),
         ),
       );
+      notifyPersonalItemsChanged();
     } catch {
       setError(t("wardrobe.removeFailed"));
     } finally {
@@ -296,6 +298,7 @@ function useWardrobeItems(
         onProgress: setUploadProgress,
       });
       setError("");
+      notifyPersonalItemsChanged();
       return true;
     } catch {
       setError(t("wardrobe.uploadFailed"));
@@ -319,6 +322,7 @@ function useWardrobeItems(
         onProgress: setUploadProgress,
       });
       setError("");
+      notifyPersonalItemsChanged();
       return true;
     } catch {
       setError(t("wardrobe.urlUploadFailed"));

@@ -50,8 +50,8 @@ export async function createNewCapsule(context: AppActionContext) {
       context,
       "applyCapsuleState",
     )(result.capsule);
-    await refreshCapsuleList(context);
   });
+  void refreshCapsuleList(context).catch(() => undefined);
   return createdCapsule;
 }
 
@@ -214,7 +214,10 @@ export async function searchUserCapsules(query: string) {
   return result.capsules || [];
 }
 
-export { refreshCapsuleList } from "./capsuleListActions";
+export {
+  loadMoreRecentCapsules,
+  refreshCapsuleList,
+} from "./capsuleListActions";
 export {
   importSharedCapsuleToApp,
   shareCurrentCapsule,

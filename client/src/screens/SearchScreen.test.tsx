@@ -170,7 +170,9 @@ describe("SearchScreen", () => {
 
     expect(await screen.findByText("55 results")).toBeInTheDocument();
     fireEvent.click(screen.getByLabelText("Product actions"));
-    fireEvent.click(screen.getByRole("menuitem", { name: "Save to Wardrobe" }));
+    fireEvent.click(
+      screen.getByRole("menuitem", { name: "Save to Personal items" }),
+    );
 
     await waitFor(() => {
       expect(onSaveToMyWardrobe).toHaveBeenCalledWith(
@@ -203,7 +205,7 @@ describe("SearchScreen", () => {
     });
     fireEvent.click(screen.getByLabelText("Product actions"));
     fireEvent.click(
-      screen.getByRole("menuitem", { name: "Remove from Wardrobe" }),
+      screen.getByRole("menuitem", { name: "Remove from Personal items" }),
     );
     expect(onRemoveFromMyWardrobe).not.toHaveBeenCalled();
 

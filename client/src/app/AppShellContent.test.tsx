@@ -1,8 +1,25 @@
 import type { ComponentProps, ReactNode } from "react";
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { ThemeProvider } from "@mui/material/styles";
 import { createAppTheme } from "../theme";
+import { notifyPersonalItemsChanged } from "./personalItemsCount";
+
+const myWardrobeApi = vi.hoisted(() => ({
+  fetchMyWardrobeItems: vi.fn(() =>
+    Promise.resolve({
+      items: [{ id: "item-1" }, { id: "item-2" }, { id: "item-3" }],
+    }),
+  ),
+}));
+
+vi.mock("../api/myWardrobe", () => myWardrobeApi);
 
 vi.mock("../components/AppSidebarNavigation", () => ({
   default: ({
@@ -10,11 +27,13 @@ vi.mock("../components/AppSidebarNavigation", () => ({
     capsuleHasUnsavedChanges,
     onCreateCapsule,
     onOpenCapsule,
+    personalItemsCount,
   }: {
     activeCapsuleId: string;
     capsuleHasUnsavedChanges: (capsule: { status?: string }) => boolean;
     onCreateCapsule: () => void;
     onOpenCapsule: (capsuleId: string) => void;
+    personalItemsCount?: number | null;
   }) => (
     <div>
       <button type="button" onClick={onCreateCapsule}>
@@ -24,6 +43,9 @@ vi.mock("../components/AppSidebarNavigation", () => ({
         open capsule
       </button>
       <span data-testid="sidebar-active-capsule">{activeCapsuleId}</span>
+      <span data-testid="sidebar-personal-items-count">
+        {personalItemsCount ?? ""}
+      </span>
       <span data-testid="unsaved-capsule">
         {String(capsuleHasUnsavedChanges({ status: "modified" }))}
       </span>
@@ -93,6 +115,7 @@ const theme = createAppTheme("light");
 
 afterEach(() => {
   cleanup();
+  myWardrobeApi.fetchMyWardrobeItems.mockClear();
 });
 
 function createProps(
@@ -104,6 +127,7 @@ function createProps(
     appRoute: "explore",
     capsuleRouteId: "",
     capsuleList: [],
+    capsulePagination: { limit: 10, offset: 0, total: 0, hasMore: false },
     cardPadding: 3,
     children: <div>route content</div>,
     currentView: "main",
@@ -126,7 +150,7 @@ function createProps(
     },
     t: (key: string) =>
       ({
-        "wardrobe.title": "Wardrobe",
+        "wardrobe.title": "Personal items",
         "search.title": "Catalog: Explore",
         "statistics.title": "Catalog: Statistics",
         "appShell.toggleSidebar": "Toggle sidebar",
@@ -135,6 +159,7 @@ function createProps(
     onCreateCapsuleFromSidebar: vi.fn(() => Promise.resolve()),
     onDeleteProfile: vi.fn(() => Promise.resolve()),
     onNavigateApp: vi.fn(),
+    onLoadMoreCapsules: vi.fn(() => Promise.resolve()),
     onOpenCapsuleFromSidebar: vi.fn(() => Promise.resolve()),
     onRequestSignOut: vi.fn(),
     onSaveSettings: vi.fn(() => Promise.resolve()),
@@ -205,7 +230,51 @@ describe("AppShellContent", () => {
       "data-shell-test-id",
       "wardrobe-screen-shell",
     );
-    expect(screen.getByText("Wardrobe")).toBeInTheDocument();
+    expect(screen.getByText("Personal items")).toBeInTheDocument();
+  });
+
+  test("passes the loaded personal items count to the sidebar", async () => {
+    renderShellContent();
+
+    await waitFor(() =>
+      expect(
+        screen.getByTestId("sidebar-personal-items-count"),
+      ).toHaveTextContent("3"),
+    );
+    expect(myWardrobeApi.fetchMyWardrobeItems).toHaveBeenCalledWith();
+  });
+
+  test("refreshes the personal items count after wardrobe mutations", async () => {
+    myWardrobeApi.fetchMyWardrobeItems
+      .mockResolvedValueOnce({
+        items: [{ id: "item-1" }, { id: "item-2" }, { id: "item-3" }],
+      })
+      .mockResolvedValueOnce({
+        items: [
+          { id: "item-1" },
+          { id: "item-2" },
+          { id: "item-3" },
+          { id: "item-4" },
+        ],
+      });
+    renderShellContent();
+
+    await waitFor(() =>
+      expect(
+        screen.getByTestId("sidebar-personal-items-count"),
+      ).toHaveTextContent("3"),
+    );
+
+    notifyPersonalItemsChanged();
+
+    await waitFor(() =>
+      expect(
+        screen.getByTestId("sidebar-personal-items-count"),
+      ).toHaveTextContent("4"),
+    );
+    expect(myWardrobeApi.fetchMyWardrobeItems).toHaveBeenLastCalledWith({
+      force: true,
+    });
   });
 
   test("wires sidebar capsule header and capsule navigation actions", () => {

@@ -4,6 +4,10 @@ import type { JsonObject } from "./request";
 
 type CapsuleResponse = JsonObject;
 type CapsuleFilters = Record<string, unknown>;
+type CapsuleListOptions = {
+  limit?: number;
+  offset?: number;
+};
 type CapsuleCreatePayload = Record<string, unknown> & {
   filters?: CapsuleFilters | null;
   name?: string;
@@ -55,8 +59,22 @@ async function fetchCapsuleBootstrap(): Promise<CapsuleResponse> {
   });
 }
 
-async function fetchRecentCapsules(): Promise<CapsuleResponse> {
-  return requestJson(capsuleUrl("/recent"), {
+function buildCapsuleListQuery({ limit, offset }: CapsuleListOptions = {}) {
+  const params = new URLSearchParams();
+  if (typeof limit === "number") {
+    params.set("limit", String(limit));
+  }
+  if (typeof offset === "number") {
+    params.set("offset", String(offset));
+  }
+  const query = params.toString();
+  return query ? `?${query}` : "";
+}
+
+async function fetchRecentCapsules(
+  options: CapsuleListOptions = {},
+): Promise<CapsuleResponse> {
+  return requestJson(capsuleUrl(`/recent${buildCapsuleListQuery(options)}`), {
     credentials: "include",
   });
 }

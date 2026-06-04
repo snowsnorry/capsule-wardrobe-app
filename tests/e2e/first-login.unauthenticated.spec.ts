@@ -29,17 +29,11 @@ test("first login keeps the selected Russian locale and opens the app", async ({
     page.getByRole("button", { name: "Обновить все" }),
   ).toBeVisible();
   await expect(page.getByText("Шаг 1")).toHaveCount(0);
-  await expect(
-    page.getByRole("button", { name: "Капсула", exact: true }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "Каталог", exact: true }),
-  ).toBeVisible();
+  await expect(page.getByText("Капсулы", { exact: true })).toBeVisible();
+  await expect(page.getByText("Каталог", { exact: true })).toBeVisible();
 
   await page.reload();
 
-  await expect(
-    page.getByRole("button", { name: "Капсула", exact: true }),
-  ).toBeVisible();
+  await expect(page.getByText("Капсулы", { exact: true })).toBeVisible();
   await expect(page.getByLabel("Эл. почта")).toBeHidden();
 });

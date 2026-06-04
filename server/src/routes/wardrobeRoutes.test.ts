@@ -718,7 +718,7 @@ test("wardrobe routes export filtered wardrobe items as PDF", async (t) => {
   expect(pdf.response.status).toBe(200);
   expect(pdf.response.headers.get("content-type")).toMatch(/application\/pdf/);
   expect(pdf.response.headers.get("content-disposition")).toBe(
-    `attachment; filename="My-Wardrobe.pdf"; filename*=UTF-8''${encodeURIComponent("My Wardrobe.pdf")}`,
+    `attachment; filename="Personal-items.pdf"; filename*=UTF-8''${encodeURIComponent("Personal items.pdf")}`,
   );
   expect(pdf.json).toBe("pdf");
   expect(pdfLocale).toBe("en");

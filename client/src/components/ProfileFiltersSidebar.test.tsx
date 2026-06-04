@@ -110,28 +110,28 @@ function renderSidebar(
           "Adjust the inputs used to build this capsule.",
         "capsule.sourceMode.label": "Item source",
         "capsule.sourceMode.catalogOnly": "Catalog items",
-        "capsule.sourceMode.wardrobePreferred": "Wardrobe + catalog",
-        "capsule.sourceMode.wardrobeOnly": "Wardrobe only",
-        "capsule.sourceMode.checkingWardrobe": "Checking Wardrobe items...",
+        "capsule.sourceMode.wardrobePreferred": "Personal items + catalog",
+        "capsule.sourceMode.wardrobeOnly": "Personal items only",
+        "capsule.sourceMode.checkingWardrobe": "Checking personal items...",
         "capsule.sourceMode.emptyWardrobe":
-          "Wardrobe has no ready items yet. Add items before using this source.",
-        "capsule.sourceMode.loadFailed": "Could not check Wardrobe items.",
+          "No ready personal items yet. Add items before using this source.",
+        "capsule.sourceMode.loadFailed": "Could not check personal items.",
         "capsule.sourceMode.insufficientWardrobe":
-          "Wardrobe has {count} ready items. This capsule may need more: {items}.",
+          "Personal items include {count} ready items. This capsule may need more: {items}.",
         "capsule.anchors.title": "Anchor items",
-        "capsule.anchors.hint": "Choose up to 5 wardrobe items to keep.",
-        "capsule.anchors.add": "Add items from wardrobe",
+        "capsule.anchors.hint": "Choose up to 5 personal items to keep.",
+        "capsule.anchors.add": "Add personal items",
         "capsule.anchors.edit": "Add / edit",
         "capsule.anchors.unnamed": "{id}",
         "capsule.anchors.remove": "Remove {name}",
-        "capsule.anchors.loadFailed": "Failed to load wardrobe items.",
+        "capsule.anchors.loadFailed": "Failed to load personal items.",
         "capsule.anchors.dialogTitle": "Select anchor items",
         "capsule.anchors.selectedCount": "{count} of {max} selected",
         "capsule.anchors.selectedMax":
           "{count} of {max} selected · maximum reached",
         "capsule.anchors.type": "Type:",
         "capsule.anchors.typesAll": "All",
-        "capsule.anchors.empty": "No wardrobe items found.",
+        "capsule.anchors.empty": "No personal items found.",
         "capsule.anchors.apply": "Apply",
         "capsule.anchors.sources.all": "All",
         "capsule.anchors.sources.uploaded": "Uploaded",
@@ -314,7 +314,7 @@ describe("ProfileFiltersSidebar", () => {
     });
 
     expect(
-      await screen.findByText(/Wardrobe has no ready items/),
+      await screen.findByText(/No ready personal items/),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Apply" })).toBeDisabled();
     expect(fetchMyWardrobeItemsMock).toHaveBeenCalledWith({ force: true });
@@ -337,7 +337,7 @@ describe("ProfileFiltersSidebar", () => {
 
     expect(
       await screen.findByText(
-        /Wardrobe has 1 ready items\. This capsule may need more:/,
+        /Personal items include 1 ready items\. This capsule may need more:/,
       ),
     ).toBeInTheDocument();
     expect(screen.getByText(/Layering: 2/)).toBeInTheDocument();
@@ -386,7 +386,7 @@ describe("ProfileFiltersSidebar", () => {
       selectedSeasons: ["summer"],
     });
 
-    await screen.findByText(/Wardrobe has 2 ready items/);
+    await screen.findByText(/Personal items include 2 ready items/);
     expect(screen.queryByText(/Swimwear: 1/)).not.toBeInTheDocument();
   });
 
@@ -407,7 +407,7 @@ describe("ProfileFiltersSidebar", () => {
 
     renderSidebar({ onSelectAnchorWardrobeItemIds });
     await user.click(
-      screen.getByRole("button", { name: "Add items from wardrobe" }),
+      screen.getByRole("button", { name: "Add personal items" }),
     );
     await user.click(
       await screen.findByRole("button", { name: /White shirt/ }),
@@ -444,7 +444,7 @@ describe("ProfileFiltersSidebar", () => {
       { themeOverride: darkTheme },
     );
     await user.click(
-      screen.getByRole("button", { name: "Add items from wardrobe" }),
+      screen.getByRole("button", { name: "Add personal items" }),
     );
 
     const title = await screen.findByText("Select anchor items");

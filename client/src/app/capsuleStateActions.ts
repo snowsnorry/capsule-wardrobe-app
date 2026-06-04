@@ -5,7 +5,7 @@ import {
   normalizeOutfitSets,
 } from "./capsuleState";
 import { buildDisplayWardrobeItems } from "../../../shared/wardrobeMerge.js";
-import type { CapsuleMeta, WardrobeItem } from "./appTypes";
+import type { CapsuleMeta, CapsulePagination, WardrobeItem } from "./appTypes";
 import type { CapsuleSourceMode } from "./appTypes";
 
 type StateSetter<T> = (value: T) => void;
@@ -15,6 +15,7 @@ type ApplyCapsuleStateContext = {
   setActiveCapsuleId: StateSetter<string>;
   setActiveCapsuleMeta: StateSetter<CapsuleMeta | null>;
   setCapsuleList: StateSetter<CapsuleMeta[]>;
+  setCapsulePagination: StateSetter<CapsulePagination>;
   setPendingImageSetIndexes: StateSetter<number[]>;
   setProfileItems: StateSetter<WardrobeItem[] | null>;
   setProfileOutfitSets: StateSetter<ReturnType<typeof normalizeOutfitSets>>;
@@ -28,6 +29,11 @@ type ApplyCapsuleStateContext = {
   setSelectedStyle: StateSetter<string | null>;
   setSelectedText: StateSetter<string>;
   setSelectedAnchorWardrobeItemIds: StateSetter<string[]>;
+};
+
+type CapsuleListPayload = {
+  capsules?: CapsuleMeta[] | null;
+  pagination?: CapsulePagination | null;
 };
 
 function normalizePattern(pattern: unknown) {
@@ -56,6 +62,18 @@ function fallbackNullableString(value: unknown) {
   return typeof value === "string" ? value : null;
 }
 
+function applyCapsuleListPayload(
+  context: ApplyCapsuleStateContext,
+  { capsules = null, pagination = null }: CapsuleListPayload,
+) {
+  if (Array.isArray(capsules)) {
+    context.setCapsuleList(capsules);
+  }
+  if (pagination) {
+    context.setCapsulePagination(pagination);
+  }
+}
+
 function applyCapsuleFilters(
   context: ApplyCapsuleStateContext,
   capsule: CapsuleMeta,
@@ -80,7 +98,7 @@ function applyCapsuleFilters(
 
 function applyEmptyCapsuleState(
   context: ApplyCapsuleStateContext,
-  { capsules = null as CapsuleMeta[] | null } = {},
+  listPayload: CapsuleListPayload = {},
 ) {
   context.clearWardrobeProgressState();
   const emptyDraft = buildEmptyCapsuleDraft();
@@ -103,18 +121,19 @@ function applyEmptyCapsuleState(
     fallbackStringArray(filters.anchorWardrobeItemIds),
   );
 
-  if (Array.isArray(capsules)) {
-    context.setCapsuleList(capsules);
-  }
+  applyCapsuleListPayload(context, listPayload);
 }
 
 export function applyCapsuleStateToApp(
   context: ApplyCapsuleStateContext,
   capsule: CapsuleMeta | null | undefined,
-  { capsules = null as CapsuleMeta[] | null } = {},
+  {
+    capsules = null as CapsuleMeta[] | null,
+    pagination = null as CapsulePagination | null,
+  } = {},
 ) {
   if (!capsule) {
-    applyEmptyCapsuleState(context, { capsules });
+    applyEmptyCapsuleState(context, { capsules, pagination });
     return;
   }
 
@@ -134,8 +153,5 @@ export function applyCapsuleStateToApp(
     normalizeOutfitSets(effective.data?.wardrobe?.outfitSets),
   );
   context.setPendingImageSetIndexes([]);
-
-  if (Array.isArray(capsules)) {
-    context.setCapsuleList(capsules);
-  }
+  applyCapsuleListPayload(context, { capsules, pagination });
 }

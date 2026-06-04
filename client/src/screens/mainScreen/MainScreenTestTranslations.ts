@@ -42,7 +42,7 @@ const labels = {
     shareReady: "Your share link is ready.",
     shareBlockedTitle: "Can't share this capsule",
     shareBlockedBody:
-      "Capsules with personal uploaded wardrobe items can't be shared. Remove uploaded items or replace them with catalog items before sharing.",
+      "Capsules with personal uploaded items can't be shared. Remove uploaded items or replace them with catalog items before sharing.",
     copyShareLink: "Copy share link",
     shareCopied: "Copied",
     shareExpires: "Expires {date}",
@@ -85,8 +85,8 @@ const labels = {
     openProductMenu: "Open product menu",
     selectProductForRegeneration: "Select",
     anchorRegenerationLocked: "Anchor items must stay in the capsule.",
-    saveToMyWardrobe: "Save to Wardrobe",
-    removeFromMyWardrobe: "Remove from Wardrobe",
+    saveToMyWardrobe: "Save to Personal items",
+    removeFromMyWardrobe: "Remove from Personal items",
     cardLayout: "Card layout",
     cardColumnsOne: "1 column",
     cardColumnsTwo: "2 columns",
@@ -102,7 +102,7 @@ const labels = {
       original: "Original",
       ai: "AI",
     },
-    removeConfirmTitle: "Remove from Wardrobe?",
+    removeConfirmTitle: "Remove from Personal items?",
     removeConfirmBody: "Remove body",
     removeConfirm: "Remove",
     uploadedDetail: {

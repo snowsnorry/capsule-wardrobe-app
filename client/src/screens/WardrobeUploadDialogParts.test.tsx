@@ -11,7 +11,7 @@ import {
 
 const theme = createTheme();
 const translations: Record<string, string> = {
-  "wardrobe.uploadDialog.dropzoneLabel": "Choose wardrobe photos",
+  "wardrobe.uploadDialog.dropzoneLabel": "Choose personal item photos",
   "wardrobe.uploadDialog.dropzoneTitle": "Upload photos",
   "wardrobe.uploadDialog.dropzoneHint":
     "Drag and drop or click to browse. JPEG, PNG, or WebP. Up to 5 files, 10 MB each.",
@@ -115,7 +115,7 @@ describe("WardrobeUploadDialogParts", () => {
     );
 
     const dropzone = screen.getByRole("button", {
-      name: "Choose wardrobe photos",
+      name: "Choose personal item photos",
     });
     expect(screen.getByText("Upload photos")).toBeInTheDocument();
     expect(
@@ -165,7 +165,7 @@ describe("WardrobeUploadDialogParts", () => {
     );
 
     const dropzone = screen.getByRole("button", {
-      name: "Choose wardrobe photos",
+      name: "Choose personal item photos",
     });
     expect(screen.getByText("Upload photos")).toBeInTheDocument();
     expect(

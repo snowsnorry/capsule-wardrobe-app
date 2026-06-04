@@ -87,7 +87,7 @@ function registerWardrobePdfRoute(app, context) {
         res.setHeader("Content-Type", "application/pdf");
         res.setHeader(
           "Content-Disposition",
-          context.buildPdfDownloadFilename("My Wardrobe"),
+          context.buildPdfDownloadFilename("Personal items"),
         );
         return res.status(200).send(pdfBuffer);
       } catch (error) {

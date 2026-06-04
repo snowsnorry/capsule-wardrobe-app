@@ -165,8 +165,9 @@ test("capsule read routes expose bootstrap, recent, search, and lookup fallbacks
   const calls: unknown[] = [];
   const { baseUrl } = await startTestServer(t, {
     overrides: {
-      listRecentCapsulesImpl: async (_email, limit) => {
-        calls.push({ type: "recent", limit });
+      countCapsulesImpl: async () => 12,
+      listRecentCapsulesImpl: async (_email, limit, offset) => {
+        calls.push({ type: "recent", limit, offset });
         return [{ id: "capsule-1", name: "Spring edit", status: "saved" }];
       },
       searchCapsulesImpl: async (_email, query, limit) => {
@@ -184,6 +185,12 @@ test("capsule read routes expose bootstrap, recent, search, and lookup fallbacks
   expect(bootstrap.json.hasProfile).toBe(true);
   expect(bootstrap.json.activeCapsule).toBe(null);
   expect(bootstrap.json.activeSnapshot).toBe(null);
+  expect(bootstrap.json.pagination).toEqual({
+    limit: 10,
+    offset: 0,
+    total: 12,
+    hasMore: true,
+  });
   expect(bootstrap.json.wardrobeFilters).toEqual({
     formalityLevels: ["casual", "formal"],
     styles: ["minimalistic", "sporty"],
@@ -198,6 +205,27 @@ test("capsule read routes expose bootstrap, recent, search, and lookup fallbacks
   });
   expect(recent.response.status).toBe(200);
   expect(recent.json.capsules[0].id).toBe("capsule-1");
+  expect(recent.json.pagination).toEqual({
+    limit: 10,
+    offset: 0,
+    total: 12,
+    hasMore: true,
+  });
+
+  const nextRecent = await requestJson(
+    baseUrl,
+    "/capsules/recent?limit=999&offset=10",
+    {
+      cookie: AUTH_COOKIE,
+    },
+  );
+  expect(nextRecent.response.status).toBe(200);
+  expect(nextRecent.json.pagination).toEqual({
+    limit: 50,
+    offset: 10,
+    total: 12,
+    hasMore: false,
+  });
 
   const emptySearch = await requestJson(baseUrl, "/capsules/search", {
     cookie: AUTH_COOKIE,
@@ -228,9 +256,10 @@ test("capsule read routes expose bootstrap, recent, search, and lookup fallbacks
   ).toBe(true);
 
   expect(calls).toEqual([
-    { type: "recent", limit: 10 },
-    { type: "recent", limit: 10 },
-    { type: "recent", limit: 25 },
+    { type: "recent", limit: 10, offset: 0 },
+    { type: "recent", limit: 10, offset: 0 },
+    { type: "recent", limit: 50, offset: 10 },
+    { type: "recent", limit: 25, offset: undefined },
     { type: "search", query: "office", limit: 25 },
   ]);
 });

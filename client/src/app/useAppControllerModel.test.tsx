@@ -106,6 +106,7 @@ vi.mock("./useAppState", () => ({
     ...createActionContext(),
     activeCapsuleMeta: null,
     capsuleList: [],
+    capsulePagination: { limit: 10, offset: 0, total: 0, hasMore: false },
     capsuleSidebarActionsRef: { current: null },
     code: "",
     currentView: "main",

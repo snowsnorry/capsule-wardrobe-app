@@ -87,6 +87,13 @@ export type CapsuleMeta = {
   updatedAt?: string;
 };
 
+export type CapsulePagination = {
+  limit: number;
+  offset: number;
+  total: number;
+  hasMore: boolean;
+};
+
 export type CapsuleSidebarActions = {
   openSearchDialog: () => void;
   openCapsuleActions: (
@@ -140,6 +147,7 @@ export type CapsuleBootstrapResponse = {
   profile?: Partial<ProfileSettings>;
   activeCapsule?: CapsuleMeta | null;
   capsules?: CapsuleMeta[];
+  pagination?: CapsulePagination;
   activeSnapshot?: WardrobeSnapshot;
   wardrobeFilters?: WardrobeFiltersResponse | null;
 };
@@ -151,6 +159,7 @@ export type CapsuleBootstrapResult = ProfileSettings & {
 
 export type CapsuleListResponse = {
   capsules?: CapsuleMeta[];
+  pagination?: CapsulePagination;
 };
 
 export type CapsuleMutationResponse = {

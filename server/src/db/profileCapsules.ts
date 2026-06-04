@@ -12,6 +12,12 @@ import {
   type UpsertSharedCapsuleInput,
 } from "./core.js";
 
+type CapsuleListInput = {
+  email: string;
+  limit?: number;
+  offset?: number;
+};
+
 export async function createCapsuleRecord({
   email,
   name,
@@ -72,10 +78,8 @@ export async function getCapsuleByIdForEmail({
 export async function listRecentCapsulesByEmail({
   email,
   limit = 10,
-}: {
-  email: string;
-  limit?: number;
-}): Promise<CapsuleRow[]> {
+  offset = 0,
+}: CapsuleListInput): Promise<CapsuleRow[]> {
   const sql = getSqlClient();
   return getResultRows(
     await sql<CapsuleRow>`
@@ -89,10 +93,23 @@ export async function listRecentCapsulesByEmail({
       updated_at as "updatedAt"
     from capsules
     where email = ${email}
-    order by updated_at desc, created_at desc
+    order by updated_at desc, created_at desc, id desc
     limit ${limit}
+    offset ${offset}
   `,
   );
+}
+
+export async function countCapsulesByEmail(email: string): Promise<number> {
+  const sql = getSqlClient();
+  const row = getFirstRow<{ total: number | string }>(
+    await sql<{ total: number | string }>`
+    select count(*) as total
+    from capsules
+    where email = ${email}
+  `,
+  );
+  return Number(row?.total || 0);
 }
 
 export async function searchCapsulesByEmail({

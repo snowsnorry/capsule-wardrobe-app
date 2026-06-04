@@ -31,7 +31,9 @@ async function expectUploadedFilterSelected(page: Page) {
 async function uploadWardrobeFiles(page: Page, files: FilePayload[]) {
   await page.getByRole("button", { name: "Upload item photo" }).click();
 
-  const dialog = page.getByRole("dialog", { name: "Upload wardrobe photos" });
+  const dialog = page.getByRole("dialog", {
+    name: "Upload personal item photos",
+  });
   await expect(dialog).toBeVisible();
 
   await page.locator('input[type="file"]').setInputFiles(files);

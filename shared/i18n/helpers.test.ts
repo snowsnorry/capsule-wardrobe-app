@@ -30,15 +30,19 @@ test("t falls back to default locale and interpolates parameters", () => {
 });
 
 test("t translates capsule sidebar labels", () => {
-  expect(t("launcher.wardrobe", undefined, "ru")).toBe("Гардероб");
-  expect(t("launcher.capsule", undefined, "ru")).toBe("Капсула");
+  expect(t("launcher.wardrobe", undefined, "ru")).toBe("Личные вещи");
+  expect(t("launcher.capsule", undefined, "ru")).toBe("Капсулы");
 });
 
 test("t translates sidebar navigation labels", () => {
   expect(t("sidebar.catalog", undefined, "en")).toBe("Catalog");
+  expect(t("sidebar.outfits", undefined, "en")).toBe("Outfits");
+  expect(t("sidebar.showMore", { count: 3 }, "en")).toBe("Show 3 more");
   expect(t("sidebar.explore", undefined, "en")).toBe("Explore");
   expect(t("sidebar.statistics", undefined, "en")).toBe("Statistics");
   expect(t("sidebar.catalog", undefined, "ru")).toBe("Каталог");
+  expect(t("sidebar.outfits", undefined, "ru")).toBe("Образы");
+  expect(t("sidebar.showMore", { count: 3 }, "ru")).toBe("Показать еще 3");
   expect(t("sidebar.explore", undefined, "ru")).toBe("Обзор");
   expect(t("sidebar.statistics", undefined, "ru")).toBe("Статистика");
 });

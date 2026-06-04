@@ -84,7 +84,7 @@ describe("SearchScreenDialogs", () => {
           ({
             "capsule.closeFilters": "Close filters",
             "actions.close": "Close",
-            "capsule.saveToMyWardrobe": "Save to Wardrobe",
+            "capsule.saveToMyWardrobe": "Save to Personal items",
             "filters.apply": "Apply",
             "filters.reset": "Reset",
             "filters.title": "Filters",
@@ -112,7 +112,9 @@ describe("SearchScreenDialogs", () => {
     expect(search.setIsDetailOpen).toHaveBeenCalledWith(false);
 
     fireEvent.click(screen.getByRole("button", { name: "Product actions" }));
-    fireEvent.click(screen.getByRole("menuitem", { name: "Save to Wardrobe" }));
+    fireEvent.click(
+      screen.getByRole("menuitem", { name: "Save to Personal items" }),
+    );
     expect(onSaveToMyWardrobe).toHaveBeenCalledWith(search.selectedItem);
   });
 

@@ -112,6 +112,43 @@ describe("useCapsuleRouteSync", () => {
     expect(navigateCapsule).not.toHaveBeenCalled();
   });
 
+  test("keeps pending create navigation valid while content loading rerenders", async () => {
+    let resolveCreate: (capsule: unknown) => void = () => {};
+    const navigateCapsule = vi.fn();
+    capsuleActions.createNewCapsule.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveCreate = resolve;
+        }),
+    );
+
+    const { rerender } = renderHook(
+      (options: Parameters<typeof useCapsuleRouteSync>[0]) =>
+        useCapsuleRouteSync(options),
+      {
+        initialProps: createOptions({
+          capsuleRouteMode: "create",
+          navigateCapsule,
+        }),
+      },
+    );
+
+    rerender(
+      createOptions({
+        capsuleRouteMode: "create",
+        isContentOperationLoading: true,
+        navigateCapsule,
+      }),
+    );
+    resolveCreate(createTestCapsule({ id: "capsule-2" }));
+
+    await waitFor(() => {
+      expect(navigateCapsule).toHaveBeenCalledWith("capsule-2", {
+        replace: true,
+      });
+    });
+  });
+
   test("loads a capsule id from the route", async () => {
     capsuleActions.openCapsule.mockResolvedValue(undefined);
     const context = {};
