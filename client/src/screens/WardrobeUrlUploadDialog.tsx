@@ -109,7 +109,9 @@ function WardrobeUrlUploadDialog({
       fullScreen={isMobile}
       fullWidth={!isMobile}
       maxWidth={isMobile ? false : "sm"}
-      PaperProps={isMobile ? { sx: mobileCapsuleDialogPaperSx } : undefined}
+      slotProps={{
+        paper: isMobile ? { sx: mobileCapsuleDialogPaperSx } : undefined,
+      }}
     >
       <DialogTitle
         id="wardrobe-url-upload-dialog-title"
@@ -165,12 +167,12 @@ function WardrobeUrlUploadDialog({
                         ? t("myWardrobe.urlUploadDialog.invalidUrl")
                         : t("myWardrobe.urlUploadDialog.helperText")
                     }
-                    inputProps={{ inputMode: "url" }}
                     onChange={(event) =>
                       setUrls((current) =>
                         getNextUrlFields(current, index, event.target.value),
                       )
                     }
+                    slotProps={{ htmlInput: { inputMode: "url" } }}
                   />
                 );
               })}

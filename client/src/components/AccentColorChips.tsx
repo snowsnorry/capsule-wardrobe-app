@@ -46,7 +46,7 @@ function AccentColorChips({
   };
 
   return (
-    <Stack direction="row" flexWrap="wrap" gap={1}>
+    <Stack direction="row" sx={{ flexWrap: "wrap", gap: 1 }}>
       <Chip
         label={emptyChipLabel}
         clickable
@@ -62,7 +62,7 @@ function AccentColorChips({
           color={activeValues.includes(item) ? "primary" : "default"}
           onClick={() => handleToggle(item)}
           label={
-            <Stack direction="row" spacing={1} alignItems="center">
+            <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
               <Box
                 sx={{
                   width: 12,

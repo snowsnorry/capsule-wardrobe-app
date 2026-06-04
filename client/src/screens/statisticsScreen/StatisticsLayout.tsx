@@ -106,7 +106,10 @@ export function FiltersHeader({
 
   return (
     <Stack spacing={2.5}>
-      <Stack direction="row" justifyContent="space-between" alignItems="center">
+      <Stack
+        direction="row"
+        sx={{ justifyContent: "space-between", alignItems: "center" }}
+      >
         <Typography variant="h6" sx={{ color: "text.primary" }}>
           {title}
         </Typography>
@@ -228,7 +231,10 @@ export function StatisticsMobileLayout({
       }}
       data-testid="statistics-mobile-body"
     >
-      <Stack direction="row" justifyContent="flex-start" alignItems="center">
+      <Stack
+        direction="row"
+        sx={{ justifyContent: "flex-start", alignItems: "center" }}
+      >
         <IconButton aria-label={openFiltersLabel} onClick={onOpenFilters}>
           <TuneRoundedIcon />
         </IconButton>

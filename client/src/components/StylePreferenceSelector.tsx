@@ -94,7 +94,7 @@ function StylePreferenceSelector({
             {t("profile.styleCoreHint")}
           </Typography>
         </Stack>
-        <Stack direction="row" flexWrap="wrap" gap={1}>
+        <Stack direction="row" sx={{ flexWrap: "wrap", gap: 1 }}>
           {coreOptions.map((style) => (
             <Chip
               key={style}
@@ -117,7 +117,7 @@ function StylePreferenceSelector({
             {t("profile.styleAestheticHint")}
           </Typography>
         </Stack>
-        <Stack direction="row" flexWrap="wrap" gap={1}>
+        <Stack direction="row" sx={{ flexWrap: "wrap", gap: 1 }}>
           <Chip
             label={t("profile.styleAestheticNotImportant")}
             clickable

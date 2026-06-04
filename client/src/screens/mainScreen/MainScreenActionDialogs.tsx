@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import type { RefObject } from "react";
 import {
   Button,
   Dialog,
@@ -87,6 +88,21 @@ function getConfirmCopy(action: string) {
   ];
 }
 
+function useFocusNameDialogInput(
+  stateType: string,
+  nameInputRef: RefObject<HTMLInputElement | null>,
+) {
+  useEffect(() => {
+    if (!stateType) {
+      return undefined;
+    }
+    const focusTimer = window.setTimeout(() => {
+      nameInputRef.current?.focus();
+    }, 0);
+    return () => window.clearTimeout(focusTimer);
+  }, [nameInputRef, stateType]);
+}
+
 export function NameDialog({
   state,
   disabled,
@@ -103,15 +119,7 @@ export function NameDialog({
   const { t } = useI18n();
   const isSaveAs = state.type === "save-as";
   const nameInputRef = useRef<HTMLInputElement | null>(null);
-  useEffect(() => {
-    if (!state.type) {
-      return undefined;
-    }
-    const focusTimer = window.setTimeout(() => {
-      nameInputRef.current?.focus();
-    }, 0);
-    return () => window.clearTimeout(focusTimer);
-  }, [state.type]);
+  useFocusNameDialogInput(state.type, nameInputRef);
   const submit = async () => {
     setState({ type: "", capsuleId: "", value: "" });
     if (isSaveAs)
@@ -128,7 +136,9 @@ export function NameDialog({
       fullScreen={isOverlay}
       fullWidth
       maxWidth="sm"
-      PaperProps={isOverlay ? { sx: mobileCapsuleDialogPaperSx } : undefined}
+      slotProps={{
+        paper: isOverlay ? { sx: mobileCapsuleDialogPaperSx } : undefined,
+      }}
     >
       <DialogTitle sx={isOverlay ? mobileCapsuleDialogTitleSx : undefined}>
         {t(isSaveAs ? "capsule.saveAsTitle" : "capsule.renameTitle")}
@@ -144,17 +154,19 @@ export function NameDialog({
           fullWidth
           autoFocus
           disabled={disabled}
-          inputProps={{
-            "aria-label": t(
-              isSaveAs ? "capsule.saveAsTitle" : "capsule.renameTitle",
-            ),
-          }}
           inputRef={nameInputRef}
           value={state.value}
           onChange={(event) =>
             setState((current) => ({ ...current, value: event.target.value }))
           }
           margin="normal"
+          slotProps={{
+            htmlInput: {
+              "aria-label": t(
+                isSaveAs ? "capsule.saveAsTitle" : "capsule.renameTitle",
+              ),
+            },
+          }}
         />
       </DialogContent>
       <DialogActions
@@ -203,7 +215,9 @@ export function ConfirmDialog({
       fullScreen={isOverlay}
       fullWidth
       maxWidth="xs"
-      PaperProps={isOverlay ? { sx: mobileCapsuleDialogPaperSx } : undefined}
+      slotProps={{
+        paper: isOverlay ? { sx: mobileCapsuleDialogPaperSx } : undefined,
+      }}
     >
       <DialogTitle sx={isOverlay ? mobileCapsuleDialogTitleSx : { pb: 1 }}>
         {t(title)}

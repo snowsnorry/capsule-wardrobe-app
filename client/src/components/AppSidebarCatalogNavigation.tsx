@@ -38,10 +38,14 @@ function CatalogChildRow({
     >
       <ListItemText
         primary={label}
-        primaryTypographyProps={{
-          fontSize: "14px",
-          noWrap: true,
-          fontWeight: isActive ? 700 : 500,
+        slotProps={{
+          primary: {
+            noWrap: true,
+            sx: {
+              fontSize: "14px",
+              fontWeight: isActive ? 700 : 500,
+            },
+          },
         }}
       />
     </ListItemButton>

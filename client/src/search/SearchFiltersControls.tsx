@@ -51,7 +51,7 @@ function MultiSelectChips({
   ) : null;
 
   return (
-    <Stack direction="row" flexWrap="wrap" gap={1}>
+    <Stack direction="row" sx={{ flexWrap: "wrap", gap: 1 }}>
       {defaultPosition === "start" ? defaultChip : null}
       {items.map((item) => (
         <Chip

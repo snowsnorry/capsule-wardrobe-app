@@ -18,7 +18,7 @@ function ProductDetailLoadingContent({
   return (
     <Stack spacing={2.5} sx={{ width: "100%" }}>
       {showCloseAction ? (
-        <Stack direction="row" justifyContent="flex-end">
+        <Stack direction="row" sx={{ justifyContent: "flex-end" }}>
           <IconButton aria-label={t("actions.close")} onClick={onClose}>
             <CloseRoundedIcon />
           </IconButton>

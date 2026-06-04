@@ -54,8 +54,10 @@ function MobileProductCardContextMenu({
       open={open}
       onClose={onClose}
       maxWidth={false}
-      BackdropProps={{ sx: contextMenuBackdropSx }}
-      PaperProps={{ sx: contextMenuDialogPaperSx }}
+      slotProps={{
+        backdrop: { sx: contextMenuBackdropSx },
+        paper: { sx: contextMenuDialogPaperSx },
+      }}
     >
       <Stack
         spacing={1.25}

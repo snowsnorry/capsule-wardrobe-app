@@ -83,16 +83,15 @@ function ColorValues({
     <Stack
       direction="row"
       spacing={0.9}
-      alignItems="center"
-      flexWrap="wrap"
       useFlexGap
+      sx={{ alignItems: "center", flexWrap: "wrap" }}
     >
       {values.map((value) => (
         <Stack
           key={value.key}
           direction="row"
           spacing={0.7}
-          alignItems="center"
+          sx={{ alignItems: "center" }}
         >
           <Box
             sx={{

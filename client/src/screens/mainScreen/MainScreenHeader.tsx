@@ -46,10 +46,8 @@ function SummaryLine({ items }: { items: string[] }) {
     <Stack
       data-testid="capsule-summary"
       direction="row"
-      flexWrap="wrap"
       useFlexGap
-      gap={0.75}
-      sx={{ color: "text.secondary", minWidth: 0 }}
+      sx={{ flexWrap: "wrap", gap: 0.75, color: "text.secondary", minWidth: 0 }}
     >
       {items.map((item, index) => (
         <Typography
@@ -106,7 +104,6 @@ function InlineTitle({
         variant="standard"
         value={inlineRename.value}
         disabled={disabled}
-        inputProps={{ "aria-label": t("capsule.nameLabel") }}
         onChange={(event) => inlineRename.setValue(event.target.value)}
         onBlur={() => void inlineRename.submit()}
         onKeyDown={(event: KeyboardEvent<HTMLInputElement>) => {
@@ -119,6 +116,7 @@ function InlineTitle({
           }
         }}
         sx={{ minWidth: 0, flex: 1 }}
+        slotProps={{ htmlInput: { "aria-label": t("capsule.nameLabel") } }}
       />
     );
   }
@@ -126,9 +124,8 @@ function InlineTitle({
   return (
     <Stack
       direction="row"
-      alignItems="center"
       spacing={0.75}
-      sx={inlineTitleSx}
+      sx={[{ alignItems: "center" }, inlineTitleSx]}
     >
       <Box
         component="button"
@@ -259,10 +256,10 @@ function MainScreenHeader(props: HeaderProps) {
     <>
       <Stack
         direction="row"
-        justifyContent="space-between"
-        alignItems="flex-start"
         spacing={1}
         sx={{
+          justifyContent: "space-between",
+          alignItems: "flex-start",
           px: { xs: 2, md: 3 },
           pt: { xs: 1, md: 2.5 },
           pb: { xs: 1.5, md: 2 },

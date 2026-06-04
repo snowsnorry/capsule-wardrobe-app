@@ -21,9 +21,8 @@ function SignInHeader({
     <Stack spacing={1}>
       <Stack
         direction="row"
-        alignItems="center"
-        justifyContent="space-between"
         spacing={headerSpacing}
+        sx={{ alignItems: "center", justifyContent: "space-between" }}
       >
         <Typography
           sx={{
@@ -57,7 +56,7 @@ function PasskeySignInButton({
   t: Translate;
 }) {
   return (
-    <Stack alignItems="center">
+    <Stack sx={{ alignItems: "center" }}>
       <Button
         type="button"
         variant="outlined"
@@ -121,7 +120,7 @@ function EmailStepForm({
       />
       {googleClientId ? (
         <>
-          <Stack alignItems="center">
+          <Stack sx={{ alignItems: "center" }}>
             <Box
               ref={googleButtonRef}
               sx={{
@@ -192,9 +191,9 @@ function CodeStepForm({
         placeholder={t("auth.emailCodePlaceholder")}
         type="tel"
         inputMode="numeric"
-        inputProps={{ maxLength: 6 }}
         required
         fullWidth
+        slotProps={{ htmlInput: { maxLength: 6 } }}
       />
       <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
         <Button

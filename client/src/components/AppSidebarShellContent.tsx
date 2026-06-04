@@ -50,8 +50,7 @@ function SidebarHeader({
   return (
     <Stack
       direction="row"
-      alignItems="center"
-      sx={{ minHeight: 64, pt: 2, pb: 1.5 }}
+      sx={{ alignItems: "center", minHeight: 64, pt: 2, pb: 1.5 }}
     >
       {isCollapsedDesktop ? (
         <Box

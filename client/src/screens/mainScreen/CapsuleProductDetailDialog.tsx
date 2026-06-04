@@ -68,8 +68,10 @@ function CapsuleProductDetailDialog({
       fullScreen={isMobile}
       fullWidth={!isMobile}
       maxWidth={false}
-      PaperProps={{
-        sx: getProductDialogPaperSx(isMobile, showMobileEditHeader),
+      slotProps={{
+        paper: {
+          sx: getProductDialogPaperSx(isMobile, showMobileEditHeader),
+        },
       }}
     >
       {showMobileHeader ? (

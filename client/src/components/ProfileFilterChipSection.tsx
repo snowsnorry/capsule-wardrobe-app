@@ -27,7 +27,7 @@ function ProfileFilterChipSection({
   return (
     <Stack spacing={1.5}>
       <FilterSectionTitle title={title} hint={hint} />
-      <Stack direction="row" flexWrap="wrap" gap={1}>
+      <Stack direction="row" sx={{ flexWrap: "wrap", gap: 1 }}>
         {options.map((item) => (
           <Chip
             key={item}

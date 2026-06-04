@@ -53,7 +53,7 @@ function ProductDetailDialog({
       fullScreen={mobileLayout}
       fullWidth={!mobileLayout}
       maxWidth={false}
-      PaperProps={{ sx: getDialogPaperSx(mobileLayout) }}
+      slotProps={{ paper: { sx: getDialogPaperSx(mobileLayout) } }}
     >
       {mobileLayout ? (
         <ProductDetailMobileDialogHeader

@@ -91,23 +91,31 @@ function createComponentOverrides(mode: ThemeMode): Components<Theme> {
           fontWeight: appThemeTokens.typography.denseLabelWeight,
           transition:
             "background-color 180ms cubic-bezier(0.2, 0, 0, 1), border-color 180ms cubic-bezier(0.2, 0, 0, 1), color 180ms cubic-bezier(0.2, 0, 0, 1)",
+          variants: [
+            {
+              props: { variant: "contained", color: "primary" },
+              style: {
+                "&:hover": {
+                  backgroundColor: tokens.primaryDark,
+                },
+              },
+            },
+            {
+              props: { variant: "outlined", color: "inherit" },
+              style: {
+                borderColor: tokens.divider,
+                color: tokens.textPrimary,
+                "&:hover": {
+                  borderColor: tone.outlinedHoverBorder,
+                  backgroundColor: "var(--cw-color-action-wash)",
+                },
+              },
+            },
+          ],
           "&.Mui-disabled": {
             backgroundColor: tone.disabledButtonBg,
             borderColor: tone.disabledButtonBorder,
             color: tone.disabledButtonColor,
-          },
-        },
-        containedPrimary: {
-          "&:hover": {
-            backgroundColor: tokens.primaryDark,
-          },
-        },
-        outlinedInherit: {
-          borderColor: tokens.divider,
-          color: tokens.textPrimary,
-          "&:hover": {
-            borderColor: tone.outlinedHoverBorder,
-            backgroundColor: "var(--cw-color-action-wash)",
           },
         },
       },
@@ -130,23 +138,28 @@ function createComponentOverrides(mode: ThemeMode): Components<Theme> {
               backgroundColor: "var(--cw-color-action-wash)",
             },
           },
+          variants: [
+            {
+              props: { variant: "filled", color: "primary" },
+              style: {
+                backgroundColor: "var(--cw-color-action-wash)",
+                boxShadow: `inset 0 0 0 1px ${alpha(tokens.primaryMain, tone.selectedChipBorderOpacity)}`,
+                color: selectedChipColor,
+                "&:hover": {
+                  backgroundColor: "var(--cw-color-action-hover)",
+                },
+                "& .MuiChip-deleteIcon": {
+                  color: alpha(selectedChipColor, 0.68),
+                  "&:hover": {
+                    color: selectedChipColor,
+                  },
+                },
+              },
+            },
+          ],
         },
         label: {
           fontWeight: appThemeTokens.typography.denseLabelWeight,
-        },
-        filledPrimary: {
-          backgroundColor: "var(--cw-color-action-wash)",
-          boxShadow: `inset 0 0 0 1px ${alpha(tokens.primaryMain, tone.selectedChipBorderOpacity)}`,
-          color: selectedChipColor,
-          "&:hover": {
-            backgroundColor: "var(--cw-color-action-hover)",
-          },
-          "& .MuiChip-deleteIcon": {
-            color: alpha(selectedChipColor, 0.68),
-            "&:hover": {
-              color: selectedChipColor,
-            },
-          },
         },
       },
     },

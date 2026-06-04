@@ -51,7 +51,7 @@ function SettingsRemoveAccountDialog({
             <Typography variant="body2" color="text.secondary">
               {t("settings.removeAccount.instructionPrefix")}
             </Typography>
-            <Stack direction="row" alignItems="center" spacing={0.75}>
+            <Stack direction="row" spacing={0.75} sx={{ alignItems: "center" }}>
               <Typography component="code" sx={confirmationWordSx}>
                 {confirmationWord}
               </Typography>

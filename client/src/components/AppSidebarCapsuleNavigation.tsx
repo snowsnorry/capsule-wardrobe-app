@@ -126,10 +126,14 @@ function CapsuleRow({
       >
         <ListItemText
           primary={capsuleName}
-          primaryTypographyProps={{
-            fontSize: "14px",
-            noWrap: true,
-            fontWeight: isActive ? 700 : 500,
+          slotProps={{
+            primary: {
+              noWrap: true,
+              sx: {
+                fontSize: "14px",
+                fontWeight: isActive ? 700 : 500,
+              },
+            },
           }}
         />
         <CapsuleUnsavedDot
@@ -206,8 +210,14 @@ function CapsuleSectionLabel({
   return (
     <Stack
       direction="row"
-      alignItems="center"
-      sx={{ minHeight: 40, pt: 1.5, pb: 0.5, pl: "10px", pr: 0 }}
+      sx={{
+        alignItems: "center",
+        minHeight: 40,
+        pt: 1.5,
+        pb: 0.5,
+        pl: "10px",
+        pr: 0,
+      }}
     >
       <Typography
         sx={{

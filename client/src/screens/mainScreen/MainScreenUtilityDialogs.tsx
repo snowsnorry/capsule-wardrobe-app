@@ -56,13 +56,17 @@ export function SearchDialog({
       fullScreen={isOverlay}
       maxWidth="md"
       fullWidth
-      PaperProps={isOverlay ? { sx: mobileCapsuleDialogPaperSx } : undefined}
+      slotProps={{
+        paper: isOverlay ? { sx: mobileCapsuleDialogPaperSx } : undefined,
+      }}
     >
       <DialogContent sx={isOverlay ? mobileSearchContentSx : { p: 0 }}>
         <Stack
           direction="row"
-          alignItems="center"
-          sx={isOverlay ? mobileCapsuleDialogTitleSx : { px: 2, py: 2 }}
+          sx={[
+            { alignItems: "center" },
+            isOverlay ? mobileCapsuleDialogTitleSx : { px: 2, py: 2 },
+          ]}
         >
           <TextField
             autoFocus
@@ -74,7 +78,7 @@ export function SearchDialog({
             onChange={(event) =>
               setState((current) => ({ ...current, query: event.target.value }))
             }
-            InputProps={{ disableUnderline: true }}
+            slotProps={{ input: { disableUnderline: true } }}
           />
           <IconButton disabled={disabled} onClick={close}>
             <CloseRoundedIcon />
@@ -124,12 +128,13 @@ function ShareDialogTitle({
     <DialogTitle sx={isOverlay ? mobileCapsuleDialogTitleSx : undefined}>
       <Stack
         direction="row"
-        alignItems="center"
-        justifyContent="space-between"
         spacing={2}
-        sx={isOverlay ? { width: "100%" } : undefined}
+        sx={[
+          { alignItems: "center", justifyContent: "space-between" },
+          isOverlay ? { width: "100%" } : undefined,
+        ]}
       >
-        <Stack direction="row" alignItems="center" spacing={1.5}>
+        <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
           <ShareRoundedIcon fontSize="small" />
           <Typography id="share-link-dialog-title" variant="h6">
             {t(titleKey)}
@@ -164,7 +169,9 @@ export function ShareDialog({
       fullWidth
       maxWidth="sm"
       aria-labelledby="share-link-dialog-title"
-      PaperProps={isOverlay ? { sx: mobileCapsuleDialogPaperSx } : undefined}
+      slotProps={{
+        paper: isOverlay ? { sx: mobileCapsuleDialogPaperSx } : undefined,
+      }}
     >
       <ShareDialogTitle
         isOverlay={isOverlay}

@@ -109,7 +109,10 @@ function ResultsHeader({
 >) {
   return (
     <Stack spacing={1}>
-      <Stack direction="row" justifyContent="space-between" alignItems="center">
+      <Stack
+        direction="row"
+        sx={{ justifyContent: "space-between", alignItems: "center" }}
+      >
         <Typography
           variant="overline"
           color="text.secondary"
@@ -120,7 +123,7 @@ function ResultsHeader({
         {status.loading ? <CircularProgress size={18} /> : null}
       </Stack>
       {activeChips.length > 0 ? (
-        <Stack direction="row" flexWrap="wrap" gap={1} useFlexGap>
+        <Stack direction="row" useFlexGap sx={{ flexWrap: "wrap", gap: 1 }}>
           {activeChips.map((chip) => (
             <Chip
               key={chip.key}
@@ -218,8 +221,7 @@ function ResultListItem({
       <Stack
         direction="row"
         spacing={0.75}
-        alignItems="center"
-        sx={{ minWidth: 0 }}
+        sx={{ alignItems: "center", minWidth: 0 }}
       >
         <Typography
           variant="body2"

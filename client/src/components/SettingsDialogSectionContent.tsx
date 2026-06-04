@@ -150,10 +150,13 @@ function PasskeyList({
           <Stack
             key={passkey.id}
             direction="row"
-            alignItems="center"
-            justifyContent="space-between"
             spacing={2}
-            sx={{ minWidth: 0, py: 1.5 }}
+            sx={{
+              alignItems: "center",
+              justifyContent: "space-between",
+              minWidth: 0,
+              py: 1.5,
+            }}
           >
             <PasskeyListText passkey={passkey} createdAt={createdAt} t={t} />
             <IconButton
@@ -243,7 +246,7 @@ function AccountSettingsSection({
         id={SETTINGS_FIELD_IDS.email}
         label={t("settings.fields.email")}
         value={draft.email}
-        InputProps={{ readOnly: true }}
+        slotProps={{ input: { readOnly: true } }}
       />
       <Divider />
       <Stack spacing={1.5}>

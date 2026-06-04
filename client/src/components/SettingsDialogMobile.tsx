@@ -71,9 +71,8 @@ function SettingsMobileDialogTitle({
     <DialogTitle sx={mobileCapsuleDialogTitleSx}>
       <Stack
         direction="row"
-        alignItems="center"
         spacing={1}
-        sx={{ minWidth: 0 }}
+        sx={{ alignItems: "center", minWidth: 0 }}
       >
         {mobileView === "section" ? (
           <IconButton
@@ -251,7 +250,7 @@ function SettingsMobileSectionsList({
         >
           <ListItemText
             primary={t(`settings.sections.${section}`)}
-            primaryTypographyProps={{ fontWeight: 700 }}
+            slotProps={{ primary: { sx: { fontWeight: 700 } } }}
           />
           <ChevronRightRoundedIcon color="action" />
         </ListItemButton>

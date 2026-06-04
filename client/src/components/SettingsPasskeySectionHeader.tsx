@@ -15,11 +15,10 @@ function SettingsPasskeySectionHeader({
   return (
     <Stack
       direction="row"
-      alignItems="center"
-      justifyContent="space-between"
       spacing={2}
+      sx={{ alignItems: "center", justifyContent: "space-between" }}
     >
-      <Typography variant="subtitle1" fontWeight={700}>
+      <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
         {t("passkeys.title")}
       </Typography>
       <Button

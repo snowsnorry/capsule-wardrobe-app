@@ -40,12 +40,14 @@ function SearchFiltersDialog({
       fullScreen
       open={search.isFiltersOpen}
       onClose={() => search.setIsFiltersOpen(false)}
-      PaperProps={{
-        sx: {
-          ...mobileCapsuleDialogPaperSx,
-          display: "flex",
-          flexDirection: "column",
-          overflow: "hidden",
+      slotProps={{
+        paper: {
+          sx: {
+            ...mobileCapsuleDialogPaperSx,
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
+          },
         },
       }}
     >
@@ -125,8 +127,10 @@ function SearchProductDialog({
       fullScreen
       open={search.isDetailOpen}
       onClose={() => search.setIsDetailOpen(false)}
-      PaperProps={{
-        sx: { ...mobileCapsuleDialogPaperSx, overflowX: "hidden" },
+      slotProps={{
+        paper: {
+          sx: { ...mobileCapsuleDialogPaperSx, overflowX: "hidden" },
+        },
       }}
     >
       <ProductDetailMobileDialogHeader

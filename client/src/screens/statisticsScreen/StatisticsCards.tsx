@@ -73,7 +73,7 @@ function SummaryMetric({
       >
         {title}
       </Typography>
-      <Stack direction="row" alignItems="center" spacing={1.2}>
+      <Stack direction="row" spacing={1.2} sx={{ alignItems: "center" }}>
         <Typography
           variant="h2"
           sx={{
@@ -144,10 +144,8 @@ function ActiveFilterChips({
       {chips.length > 0 ? (
         <Stack
           direction="row"
-          flexWrap="wrap"
-          gap={1}
           useFlexGap
-          sx={{ alignContent: "flex-start" }}
+          sx={{ flexWrap: "wrap", gap: 1, alignContent: "flex-start" }}
         >
           {chips.map((chip) => (
             <Chip

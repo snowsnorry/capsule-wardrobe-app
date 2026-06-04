@@ -261,8 +261,8 @@ function DonutLegendItem({ hasSelection, index, row }) {
       key={row.rawValue}
       direction="row"
       spacing={1}
-      alignItems="center"
       sx={{
+        alignItems: "center",
         minWidth: 0,
         maxWidth: "100%",
         width: "100%",

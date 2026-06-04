@@ -152,8 +152,16 @@ describe("theme component contrast", () => {
   test("keeps light selected chips above contrast thresholds", () => {
     const theme = createAppTheme("light");
     const variables = createThemeCssVariables("light");
-    const filledPrimary = theme.components?.MuiChip?.styleOverrides
-      ?.filledPrimary as Record<string, unknown>;
+    const chipRoot = theme.components?.MuiChip?.styleOverrides?.root as {
+      variants?: Array<{
+        props: Record<string, string>;
+        style: Record<string, unknown>;
+      }>;
+    };
+    const filledPrimary = chipRoot.variants?.find(
+      (variant) =>
+        variant.props.variant === "filled" && variant.props.color === "primary",
+    )?.style as Record<string, unknown>;
     const hover = filledPrimary["&:hover"] as Record<string, string>;
     const deleteIcon = filledPrimary["& .MuiChip-deleteIcon"] as Record<
       string,

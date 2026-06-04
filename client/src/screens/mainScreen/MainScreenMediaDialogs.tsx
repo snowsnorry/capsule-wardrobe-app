@@ -7,6 +7,7 @@ import {
   IconButton,
   Typography,
 } from "@mui/material";
+import type { PaperProps } from "@mui/material/Paper";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import {
   mobileCapsuleDialogActionsSx,
@@ -39,7 +40,9 @@ export function FiltersDialog({
       open={open}
       onClose={() => !disabled && setOpen(false)}
       fullScreen={isOverlay}
-      PaperProps={isOverlay ? { sx: mobileCapsuleDialogPaperSx } : undefined}
+      slotProps={{
+        paper: isOverlay ? { sx: mobileCapsuleDialogPaperSx } : undefined,
+      }}
     >
       <DialogTitle sx={isOverlay ? mobileCapsuleDialogTitleSx : undefined}>
         {isOverlay ? (
@@ -120,9 +123,11 @@ export function ImageDialog({
       onClose={() => !disabled && setOpen(false)}
       fullScreen
       maxWidth={false}
-      PaperProps={{
-        "data-testid": "outfit-set-image-dialog-paper",
-        sx: { bgcolor: "transparent", boxShadow: "none" },
+      slotProps={{
+        paper: {
+          "data-testid": "outfit-set-image-dialog-paper",
+          sx: { bgcolor: "transparent", boxShadow: "none" },
+        } as PaperProps & { "data-testid": string },
       }}
     >
       <Box

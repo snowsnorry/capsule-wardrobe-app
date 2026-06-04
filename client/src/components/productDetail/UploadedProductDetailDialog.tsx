@@ -98,7 +98,7 @@ function UploadedProductDetailDialog({
       fullScreen={isMobile}
       fullWidth={!isMobile}
       maxWidth={false}
-      PaperProps={{ sx: getDialogPaperSx(isMobile) }}
+      slotProps={{ paper: { sx: getDialogPaperSx(isMobile) } }}
     >
       {isMobile ? <UploadedProductDetailMobileDialogHeader t={t} /> : null}
       <DialogContent sx={getDialogContentSx(isMobile)}>

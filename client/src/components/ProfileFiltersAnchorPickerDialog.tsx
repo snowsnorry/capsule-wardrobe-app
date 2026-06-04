@@ -90,7 +90,9 @@ export function WardrobeAnchorPickerDialog({
       fullScreen={fullScreen}
       fullWidth={!fullScreen}
       maxWidth={fullScreen ? false : "md"}
-      PaperProps={fullScreen ? { sx: mobileCapsuleDialogPaperSx } : undefined}
+      slotProps={{
+        paper: fullScreen ? { sx: mobileCapsuleDialogPaperSx } : undefined,
+      }}
     >
       <AnchorDialogTitle
         disabled={disabled}
@@ -239,7 +241,7 @@ function AnchorPickerFilters({
 }) {
   return (
     <Stack spacing={1.5}>
-      <Stack direction="row" flexWrap="wrap" gap={1}>
+      <Stack direction="row" sx={{ flexWrap: "wrap", gap: 1 }}>
         {(["all", "uploaded", "catalog"] as AnchorSourceFilter[]).map(
           (source) => (
             <Chip
@@ -252,7 +254,7 @@ function AnchorPickerFilters({
           ),
         )}
       </Stack>
-      <Stack direction="row" spacing={1.5} alignItems="center">
+      <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
         <Typography variant="body2" color="text.secondary">
           {t("capsule.anchors.type")}
         </Typography>

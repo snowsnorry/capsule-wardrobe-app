@@ -115,8 +115,10 @@ function SettingsDialogFrame(props: SettingsDialogFrameProps) {
       fullScreen={isMobile}
       fullWidth
       maxWidth={isMobile ? false : "md"}
-      PaperProps={{
-        sx: isMobile ? settingsDialogMobilePaperSx : settingsDialogPaperSx,
+      slotProps={{
+        paper: {
+          sx: isMobile ? settingsDialogMobilePaperSx : settingsDialogPaperSx,
+        },
       }}
     >
       {isMobile ? (
@@ -303,8 +305,12 @@ function SettingsSectionsList({
           >
             <ListItemText
               primary={t(`settings.sections.${section}`)}
-              primaryTypographyProps={{
-                fontWeight: isActive ? 700 : 500,
+              slotProps={{
+                primary: {
+                  sx: {
+                    fontWeight: isActive ? 700 : 500,
+                  },
+                },
               }}
             />
           </ListItemButton>

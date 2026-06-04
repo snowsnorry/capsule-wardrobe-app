@@ -210,9 +210,11 @@ function UploadSplitButton({
         anchorEl={anchorEl}
         open={isMenuOpen}
         onClose={closeMenu}
-        MenuListProps={{
-          "aria-label": t("myWardrobe.uploadMenuLabel"),
-          dense: true,
+        slotProps={{
+          list: {
+            "aria-label": t("myWardrobe.uploadMenuLabel"),
+            dense: true,
+          },
         }}
         anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
         transformOrigin={{ horizontal: "right", vertical: "top" }}

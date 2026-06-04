@@ -147,7 +147,7 @@ function SourceModeSelectControl({
         value={selectedSourceMode}
         onChange={handleChange}
         renderValue={(value) => <SourceModeSelectedLabel value={value} t={t} />}
-        MenuProps={{ PaperProps: { sx: { maxWidth: 300 } } }}
+        MenuProps={{ slotProps: { paper: { sx: { maxWidth: 300 } } } }}
         sx={sourceModeSelectSx}
       >
         {sourceModeOptions.map((option) => (

@@ -133,11 +133,13 @@ function ProfileTextSection({
         onChange={(event) => onTextChange(event.target.value)}
         placeholder={t("profile.additionalInfoPlaceholder")}
         fullWidth
-        InputProps={{
-          sx: {
-            alignItems: "flex-start",
-            "& .MuiInputBase-inputMultiline": {
-              overflowY: "auto !important",
+        slotProps={{
+          input: {
+            sx: {
+              alignItems: "flex-start",
+              "& .MuiInputBase-inputMultiline": {
+                overflowY: "auto !important",
+              },
             },
           },
         }}

@@ -325,7 +325,7 @@ function MultiSelectField({
   return (
     <FormControl required={required}>
       <InputLabel id={labelId}>{label}</InputLabel>
-      <Select
+      <Select<string[]>
         multiple
         labelId={labelId}
         value={values}

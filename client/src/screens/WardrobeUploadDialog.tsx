@@ -162,7 +162,9 @@ function WardrobeUploadDialog({
       fullScreen={isMobile}
       fullWidth={!isMobile}
       maxWidth={isMobile ? false : "sm"}
-      PaperProps={isMobile ? { sx: mobileCapsuleDialogPaperSx } : undefined}
+      slotProps={{
+        paper: isMobile ? { sx: mobileCapsuleDialogPaperSx } : undefined,
+      }}
     >
       <DialogTitle sx={getDialogTitleSx(isMobile)}>
         <Stack spacing={0.75}>

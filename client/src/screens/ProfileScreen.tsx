@@ -99,7 +99,7 @@ function ProfileChipSection({
       <Typography variant="body2" color="text.secondary">
         {hint}
       </Typography>
-      <Stack direction="row" flexWrap="wrap" gap={1}>
+      <Stack direction="row" sx={{ flexWrap: "wrap", gap: 1 }}>
         {options.map((item) => (
           <Chip
             key={item}
@@ -319,8 +319,7 @@ function ProfileScreen(props: ProfileScreenProps) {
       >
         <Stack
           direction="row"
-          alignItems="center"
-          justifyContent="space-between"
+          sx={{ alignItems: "center", justifyContent: "space-between" }}
         >
           <Typography variant="h4">{t("profile.title")}</Typography>
           <LocaleSwitcher />

@@ -48,9 +48,9 @@ export default function AppShellMobileHeader({
   return (
     <Stack
       direction="row"
-      alignItems="center"
       spacing={1.25}
       sx={{
+        alignItems: "center",
         px: 2,
         pt: 1.5,
         pb: 1,
@@ -70,9 +70,8 @@ export default function AppShellMobileHeader({
       {activeSidebarApp === "capsule" ? (
         <Stack
           direction="row"
-          alignItems="center"
           spacing={0.75}
-          sx={{ minWidth: 0, flex: "0 1 auto" }}
+          sx={{ alignItems: "center", minWidth: 0, flex: "0 1 auto" }}
         >
           <Typography variant="h6" noWrap sx={{ minWidth: 0 }}>
             {activeCapsuleMeta?.name || `<${t("capsule.new")}>`}

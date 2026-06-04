@@ -14,7 +14,7 @@ function SettingsRemoveAccountSection({
 }) {
   return (
     <Stack spacing={1}>
-      <Typography variant="subtitle1" fontWeight={700} color="error">
+      <Typography variant="subtitle1" color="error" sx={{ fontWeight: 700 }}>
         {t("settings.removeAccount.title")}
       </Typography>
       <Typography variant="body2" color="text.secondary">

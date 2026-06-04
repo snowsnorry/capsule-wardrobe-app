@@ -54,9 +54,13 @@ function SidebarUserButton({
       </Box>
       {!isSidebarCollapsed || isOverlaySidebar ? (
         <Stack
-          justifyContent="center"
-          alignItems="flex-start"
-          sx={{ minHeight: 36, minWidth: 0, textAlign: "left" }}
+          sx={{
+            justifyContent: "center",
+            alignItems: "flex-start",
+            minHeight: 36,
+            minWidth: 0,
+            textAlign: "left",
+          }}
         >
           <Typography
             color="text.primary"

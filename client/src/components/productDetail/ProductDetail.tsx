@@ -165,8 +165,7 @@ function ProductHeaderTitleRow({
     <Stack
       direction="row"
       spacing={1}
-      alignItems="center"
-      sx={{ pr: reserveHeaderActionsSpace ? 6 : 0 }}
+      sx={{ alignItems: "center", pr: reserveHeaderActionsSpace ? 6 : 0 }}
     >
       {mobileBackAction ? (
         <IconButton

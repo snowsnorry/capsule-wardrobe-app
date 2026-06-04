@@ -2,7 +2,7 @@ import { Stack, Typography } from "@mui/material";
 
 function ClothingCardImagePlaceholder({ label }: { label: string }) {
   return (
-    <Stack spacing={0.75} alignItems="center">
+    <Stack spacing={0.75} sx={{ alignItems: "center" }}>
       <Typography
         sx={{
           color: "var(--cw-color-product-placeholder-marker)",

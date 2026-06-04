@@ -30,7 +30,7 @@ function SearchBar({
   onClearQuery,
 }: SearchBarProps): ReactElement {
   return (
-    <Stack direction="row" spacing={1.2} alignItems="center">
+    <Stack direction="row" spacing={1.2} sx={{ alignItems: "center" }}>
       {isMobile ? (
         <IconButton
           aria-label={t("filters.open")}
@@ -53,27 +53,29 @@ function SearchBar({
           }
         }}
         placeholder={t("search.placeholder")}
-        InputProps={{
-          startAdornment: (
-            <InputAdornment position="start">
-              <SearchRoundedIcon sx={{ color: "text.secondary" }} />
-            </InputAdornment>
-          ),
-          endAdornment: query ? (
-            <InputAdornment position="end">
-              <IconButton
-                edge="end"
-                aria-label={t("search.clear")}
-                onMouseDown={(event) => {
-                  event.preventDefault();
-                }}
-                onClick={onClearQuery}
-                size="small"
-              >
-                <ClearRoundedIcon fontSize="small" />
-              </IconButton>
-            </InputAdornment>
-          ) : null,
+        slotProps={{
+          input: {
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchRoundedIcon sx={{ color: "text.secondary" }} />
+              </InputAdornment>
+            ),
+            endAdornment: query ? (
+              <InputAdornment position="end">
+                <IconButton
+                  edge="end"
+                  aria-label={t("search.clear")}
+                  onMouseDown={(event) => {
+                    event.preventDefault();
+                  }}
+                  onClick={onClearQuery}
+                  size="small"
+                >
+                  <ClearRoundedIcon fontSize="small" />
+                </IconButton>
+              </InputAdornment>
+            ) : null,
+          },
         }}
       />
     </Stack>

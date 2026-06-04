@@ -53,7 +53,7 @@ function SearchPriceSection({
             sx={{ width: "100%", display: "block" }}
           />
         </Box>
-        <Stack direction="row" spacing={1.5} alignItems="flex-start">
+        <Stack direction="row" spacing={1.5} sx={{ alignItems: "flex-start" }}>
           <TextField
             fullWidth
             size="small"
@@ -62,11 +62,13 @@ function SearchPriceSection({
             onChange={priceControls.handlePriceInputChange("priceMinDraft")}
             onBlur={priceControls.handlePriceInputBlur("priceMinDraft")}
             onKeyDown={priceControls.handlePriceInputKeyDown("priceMinDraft")}
-            inputProps={{
-              inputMode: "numeric",
-              pattern: "[0-9]*",
-              min: sliderMin,
-              max: sliderMax,
+            slotProps={{
+              htmlInput: {
+                inputMode: "numeric",
+                pattern: "[0-9]*",
+                min: sliderMin,
+                max: sliderMax,
+              },
             }}
           />
           <TextField
@@ -77,11 +79,13 @@ function SearchPriceSection({
             onChange={priceControls.handlePriceInputChange("priceMaxDraft")}
             onBlur={priceControls.handlePriceInputBlur("priceMaxDraft")}
             onKeyDown={priceControls.handlePriceInputKeyDown("priceMaxDraft")}
-            inputProps={{
-              inputMode: "numeric",
-              pattern: "[0-9]*",
-              min: sliderMin,
-              max: sliderMax,
+            slotProps={{
+              htmlInput: {
+                inputMode: "numeric",
+                pattern: "[0-9]*",
+                min: sliderMin,
+                max: sliderMax,
+              },
             }}
           />
           <Button

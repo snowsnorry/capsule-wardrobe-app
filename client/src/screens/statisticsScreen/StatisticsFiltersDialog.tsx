@@ -33,12 +33,14 @@ export function StatisticsFiltersDialog({
       fullScreen
       open={open}
       onClose={onClose}
-      PaperProps={{
-        sx: {
-          ...mobileCapsuleDialogPaperSx,
-          display: "flex",
-          flexDirection: "column",
-          overflow: "hidden",
+      slotProps={{
+        paper: {
+          sx: {
+            ...mobileCapsuleDialogPaperSx,
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
+          },
         },
       }}
     >

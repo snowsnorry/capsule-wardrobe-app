@@ -48,7 +48,7 @@ function LocaleSwitcher() {
       <Menu anchorEl={anchorEl} open={isOpen} onClose={handleClose}>
         {supportedLocales.map((code) => (
           <MenuItem key={code} onClick={() => handleSelect(code)}>
-            <Stack direction="row" spacing={1} alignItems="center">
+            <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
               <Box component="span" sx={{ fontSize: "1.1rem" }}>
                 {t(`locale.flags.${code}`)}
               </Box>
