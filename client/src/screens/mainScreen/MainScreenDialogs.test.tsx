@@ -325,7 +325,7 @@ describe("MainScreenDialogs", () => {
     ).toBeVisible();
     await user.click(screen.getByRole("button", { name: "Product actions" }));
     expect(
-      screen.queryByRole("menuitem", { name: "Save to My Wardrobe" }),
+      screen.queryByRole("menuitem", { name: "Save to Wardrobe" }),
     ).not.toBeInTheDocument();
     await user.click(screen.getByRole("menuitem", { name: "Edit" }));
 
@@ -397,7 +397,7 @@ describe("MainScreenDialogs", () => {
     });
     await user.click(screen.getByRole("button", { name: "Product actions" }));
     expect(
-      screen.queryByRole("menuitem", { name: "Save to My Wardrobe" }),
+      screen.queryByRole("menuitem", { name: "Save to Wardrobe" }),
     ).not.toBeInTheDocument();
     await user.click(screen.getByRole("menuitem", { name: "Edit" }));
 

@@ -15,7 +15,7 @@ import { useStatisticsStats } from "./statisticsScreen/useStatisticsStats";
 
 type StatisticsScreenProps = {
   onNavigateApp: (
-    nextApp: "capsule" | "explore" | "myWardrobe" | "statistics",
+    nextApp: "capsule" | "explore" | "wardrobe" | "statistics",
   ) => void;
 };
 

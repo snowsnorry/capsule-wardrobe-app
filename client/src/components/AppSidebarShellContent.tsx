@@ -1,4 +1,4 @@
-import type { MouseEvent, ReactNode } from "react";
+import { useEffect, useRef, type MouseEvent, type ReactNode } from "react";
 import { Box, Divider, IconButton, Stack, Typography } from "@mui/material";
 import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
 import {
@@ -26,6 +26,29 @@ function renderShellSlot(
   context: AppSidebarShellContext,
 ): ReactNode {
   return typeof slot === "function" ? slot(context) : slot;
+}
+
+function useDesktopSidebarWheel(isOverlaySidebar: boolean) {
+  const sidebarSurfaceRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const sidebarSurface = sidebarSurfaceRef.current;
+    if (isOverlaySidebar || !sidebarSurface) {
+      return undefined;
+    }
+
+    const handleWheel = (event: WheelEvent) => {
+      handleDesktopSidebarWheel(event, sidebarSurface);
+    };
+
+    sidebarSurface.addEventListener("wheel", handleWheel, { passive: false });
+
+    return () => {
+      sidebarSurface.removeEventListener("wheel", handleWheel);
+    };
+  }, [isOverlaySidebar]);
+
+  return sidebarSurfaceRef;
 }
 
 function SidebarHeader({
@@ -144,11 +167,12 @@ function SidebarContent({
     desktopSidebarSurfaceWidth > 0
       ? (desktopSidebarWidth / desktopSidebarSurfaceWidth) * 100
       : 100;
+  const sidebarSurfaceRef = useDesktopSidebarWheel(isOverlaySidebar);
 
   return (
     <Stack
+      ref={sidebarSurfaceRef}
       data-testid="app-sidebar-surface"
-      onWheel={isOverlaySidebar ? undefined : handleDesktopSidebarWheel}
       sx={{
         height: "100%",
         width: isOverlaySidebar

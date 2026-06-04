@@ -111,7 +111,7 @@ export async function saveItemToMyWardrobe(
   try {
     await saveCatalogItemToMyWardrobe(url);
     applySavedFlagToProfileItems(context, url, true);
-    setMyWardrobeStatus(context, "myWardrobe.saved");
+    setMyWardrobeStatus(context, "wardrobe.saved");
   } catch (error) {
     setMyWardrobeError(
       context,
@@ -119,11 +119,11 @@ export async function saveItemToMyWardrobe(
         ? fromContext<(key: string) => string>(
             context,
             "t",
-          )("myWardrobe.saveNotFound")
+          )("wardrobe.saveNotFound")
         : fromContext<(key: string) => string>(
             context,
             "t",
-          )("myWardrobe.saveFailed"),
+          )("wardrobe.saveFailed"),
     );
   } finally {
     if (fromContext<{ current: boolean }>(context, "isMountedRef").current) {
@@ -149,14 +149,14 @@ export async function removeItemFromMyWardrobe(
   try {
     await removeCatalogItemFromMyWardrobe(url);
     applySavedFlagToProfileItems(context, url, false);
-    setMyWardrobeStatus(context, "myWardrobe.removed");
+    setMyWardrobeStatus(context, "wardrobe.removed");
   } catch {
     setMyWardrobeError(
       context,
       fromContext<(key: string) => string>(
         context,
         "t",
-      )("myWardrobe.removeFailed"),
+      )("wardrobe.removeFailed"),
     );
   } finally {
     if (fromContext<{ current: boolean }>(context, "isMountedRef").current) {
@@ -201,7 +201,7 @@ export async function updateUploadedItemInMyWardrobe(
           )
         : current,
     );
-    setMyWardrobeStatus(context, "myWardrobe.updated");
+    setMyWardrobeStatus(context, "wardrobe.updated");
     return mergedItem;
   } catch (error) {
     setMyWardrobeError(
@@ -209,7 +209,7 @@ export async function updateUploadedItemInMyWardrobe(
       fromContext<(key: string) => string>(
         context,
         "t",
-      )("myWardrobe.updateFailed"),
+      )("wardrobe.updateFailed"),
     );
     throw error;
   } finally {

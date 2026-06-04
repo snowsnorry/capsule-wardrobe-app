@@ -4,7 +4,7 @@ import { useI18n } from "../i18n/useI18n";
 import CardLayoutMenuSection from "./mainScreen/CapsuleActionMenuLayout";
 import type { MobileCardColumns } from "./mainScreen/MainScreenTypes";
 
-type MyWardrobeActionMenuProps = {
+type WardrobeActionMenuProps = {
   anchorEl: HTMLElement | null;
   disabled: boolean;
   isOverlay: boolean;
@@ -14,7 +14,7 @@ type MyWardrobeActionMenuProps = {
   onMobileCardColumnsChange: (value: MobileCardColumns) => void;
 };
 
-function MyWardrobeActionMenu({
+function WardrobeActionMenu({
   anchorEl,
   disabled,
   isOverlay,
@@ -22,7 +22,7 @@ function MyWardrobeActionMenu({
   onClose,
   onDownloadPdf,
   onMobileCardColumnsChange,
-}: MyWardrobeActionMenuProps) {
+}: WardrobeActionMenuProps) {
   const { t } = useI18n();
   const handleDownloadPdf = () => {
     onClose();
@@ -48,4 +48,4 @@ function MyWardrobeActionMenu({
   );
 }
 
-export default MyWardrobeActionMenu;
+export default WardrobeActionMenu;

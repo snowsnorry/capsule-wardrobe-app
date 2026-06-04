@@ -103,7 +103,7 @@ function WardrobeUploadDialog({
     }
 
     if (files.length + nextFiles.length > MAX_FILES) {
-      setError(t("myWardrobe.uploadDialog.tooManyFiles"));
+      setError(t("wardrobe.uploadDialog.tooManyFiles"));
       return;
     }
 
@@ -111,13 +111,13 @@ function WardrobeUploadDialog({
       (file) => !ALLOWED_IMAGE_TYPES.has(file.type),
     );
     if (invalidType) {
-      setError(t("myWardrobe.uploadDialog.invalidType"));
+      setError(t("wardrobe.uploadDialog.invalidType"));
       return;
     }
 
     const oversized = nextFiles.find((file) => file.size > MAX_FILE_SIZE_BYTES);
     if (oversized) {
-      setError(t("myWardrobe.uploadDialog.fileTooLarge"));
+      setError(t("wardrobe.uploadDialog.fileTooLarge"));
       return;
     }
 
@@ -169,11 +169,11 @@ function WardrobeUploadDialog({
       <DialogTitle sx={getDialogTitleSx(isMobile)}>
         <Stack spacing={0.75}>
           <Typography variant="h5">
-            {t("myWardrobe.uploadDialog.title")}
+            {t("wardrobe.uploadDialog.title")}
           </Typography>
           {!isMobile ? (
             <Typography variant="body2" color="text.secondary">
-              {t("myWardrobe.uploadDialog.body")}
+              {t("wardrobe.uploadDialog.body")}
             </Typography>
           ) : null}
         </Stack>
@@ -192,7 +192,7 @@ function WardrobeUploadDialog({
           <>
             {isMobile ? (
               <Typography variant="body2" color="text.secondary">
-                {t("myWardrobe.uploadDialog.body")}
+                {t("wardrobe.uploadDialog.body")}
               </Typography>
             ) : null}
             <UploadDropzone
@@ -226,7 +226,7 @@ function WardrobeUploadDialog({
             disabled={files.length === 0 || Boolean(error)}
             onClick={handleUpload}
           >
-            {t("myWardrobe.uploadDialog.upload")}
+            {t("wardrobe.uploadDialog.upload")}
           </Button>
         </DialogActions>
       ) : null}

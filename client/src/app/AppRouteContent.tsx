@@ -20,7 +20,7 @@ import {
 } from "./appConstants";
 import { importMainScreen } from "./mainScreenLoader";
 const MainScreen = lazy(importMainScreen);
-const MyWardrobeScreen = lazy(() => import("../screens/MyWardrobeScreen"));
+const WardrobeScreen = lazy(() => import("../screens/WardrobeScreen"));
 const ProfileScreen = lazy(() => import("../screens/ProfileScreen"));
 const SearchScreen = lazy(() => import("../screens/SearchScreen"));
 const SignInScreen = lazy(() => import("../screens/SignInScreen"));
@@ -302,8 +302,8 @@ export default function AppRouteContent(props: AppRouteContentProps) {
         />
       );
     }
-    if (props.appRoute === "myWardrobe") {
-      return <MyWardrobeScreen />;
+    if (props.appRoute === "wardrobe") {
+      return <WardrobeScreen />;
     }
     if (props.appRoute === "statistics") {
       return <StatisticsScreen onNavigateApp={props.onNavigateApp} />;

@@ -251,11 +251,11 @@ function ProductRemoveConfirmDialog({
   return (
     <Dialog open={Boolean(item)} onClose={onClose} fullWidth maxWidth="xs">
       <DialogTitle sx={{ pb: 1 }}>
-        {t("myWardrobe.removeConfirmTitle")}
+        {t("wardrobe.removeConfirmTitle")}
       </DialogTitle>
       <DialogContent sx={{ pt: 0.5, pb: 0 }}>
         <DialogContentText sx={{ color: "text.secondary" }}>
-          {t("myWardrobe.removeConfirmBody")}
+          {t("wardrobe.removeConfirmBody")}
         </DialogContentText>
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2.5, pt: 2 }}>
@@ -271,7 +271,7 @@ function ProductRemoveConfirmDialog({
             }
           }}
         >
-          {t("myWardrobe.removeConfirm")}
+          {t("wardrobe.removeConfirm")}
         </Button>
       </DialogActions>
     </Dialog>

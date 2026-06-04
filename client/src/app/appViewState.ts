@@ -53,9 +53,7 @@ function buildRouteViewState(
       ["capsule", "share"].includes(options.appRoute),
     ),
     isSearchView: Boolean(isProfileUser && options.appRoute === "explore"),
-    isMyWardrobeView: Boolean(
-      isProfileUser && options.appRoute === "myWardrobe",
-    ),
+    isWardrobeView: Boolean(isProfileUser && options.appRoute === "wardrobe"),
     isSignInView: !options.user,
     isStatisticsView: Boolean(
       isProfileUser && options.appRoute === "statistics",

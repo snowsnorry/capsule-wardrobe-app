@@ -63,7 +63,7 @@ export function UploadedCapsuleEditPane({
             color="warning.dark"
             sx={{ mr: "auto" }}
           >
-            {t("myWardrobe.uploadedDetail.missingRequired", {
+            {t("wardrobe.uploadedDetail.missingRequired", {
               items: editState.missingRequired.join(", "),
             })}
           </Typography>
@@ -123,7 +123,7 @@ export function UploadedCapsuleEditDialogBody({
         </Box>
         {editState.missingRequired.length > 0 ? (
           <Typography variant="caption" color="warning.dark">
-            {t("myWardrobe.uploadedDetail.missingRequired", {
+            {t("wardrobe.uploadedDetail.missingRequired", {
               items: editState.missingRequired.join(", "),
             })}
           </Typography>

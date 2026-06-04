@@ -9,7 +9,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
-import MyWardrobeScreen from "./MyWardrobeScreen";
+import WardrobeScreen from "./WardrobeScreen";
 
 const api = vi.hoisted(() => ({
   deleteUploadedWardrobeItem: vi.fn(),
@@ -212,80 +212,78 @@ vi.mock("../components/ClothingGridPlaceholder", () => ({
 
 const theme = createTheme();
 const translations: Record<string, string> = {
-  "myWardrobe.title": "My Wardrobe",
-  "myWardrobe.subtitle":
-    "Saved catalog pieces and uploaded items in one place.",
-  "myWardrobe.upload": "Upload item photo",
-  "myWardrobe.uploadMenu": "Choose upload method",
-  "myWardrobe.uploadMenuLabel": "Upload methods",
-  "myWardrobe.uploadPhoto": "Upload photo",
-  "myWardrobe.uploadUrl": "Upload URL",
-  "myWardrobe.openMenu": "Open My Wardrobe menu",
-  "myWardrobe.downloadFailed": "Failed to export My Wardrobe PDF.",
-  "myWardrobe.filterLabel": "My Wardrobe source",
-  "myWardrobe.loadFailed": "Failed to load My Wardrobe.",
-  "myWardrobe.removeFailed": "Failed to remove from My Wardrobe.",
-  "myWardrobe.updateFailed": "Failed to update the item.",
-  "myWardrobe.uploadFailed": "Failed to upload wardrobe photos.",
-  "myWardrobe.urlUploadFailed": "Failed to upload product URLs.",
-  "myWardrobe.failedUploadBadge": "Failed",
-  "myWardrobe.noCategoryBadge": "No category",
-  "myWardrobe.needsReviewBadge": "Needs review",
-  "myWardrobe.deleteUploaded": "Delete item",
-  "myWardrobe.deleteUploadedConfirmTitle": "Delete uploaded item?",
-  "myWardrobe.deleteUploadedConfirmBody":
+  "wardrobe.title": "Wardrobe",
+  "wardrobe.subtitle": "Saved catalog pieces and uploaded items in one place.",
+  "wardrobe.upload": "Upload item photo",
+  "wardrobe.uploadMenu": "Choose upload method",
+  "wardrobe.uploadMenuLabel": "Upload methods",
+  "wardrobe.uploadPhoto": "Upload photo",
+  "wardrobe.uploadUrl": "Upload URL",
+  "wardrobe.openMenu": "Open Wardrobe menu",
+  "wardrobe.downloadFailed": "Failed to export Wardrobe PDF.",
+  "wardrobe.filterLabel": "Wardrobe source",
+  "wardrobe.loadFailed": "Failed to load Wardrobe.",
+  "wardrobe.removeFailed": "Failed to remove from Wardrobe.",
+  "wardrobe.updateFailed": "Failed to update the item.",
+  "wardrobe.uploadFailed": "Failed to upload wardrobe photos.",
+  "wardrobe.urlUploadFailed": "Failed to upload product URLs.",
+  "wardrobe.failedUploadBadge": "Failed",
+  "wardrobe.noCategoryBadge": "No category",
+  "wardrobe.needsReviewBadge": "Needs review",
+  "wardrobe.deleteUploaded": "Delete item",
+  "wardrobe.deleteUploadedConfirmTitle": "Delete uploaded item?",
+  "wardrobe.deleteUploadedConfirmBody":
     "This uploaded item and its images will be permanently deleted.",
-  "myWardrobe.deleteUploadedConfirm": "Delete",
-  "myWardrobe.removeConfirmTitle": "Remove from My Wardrobe?",
-  "myWardrobe.removeConfirmBody":
-    "This product will be removed from My Wardrobe.",
-  "myWardrobe.removeConfirm": "Remove",
-  "myWardrobe.emptyTitle": "No saved items yet",
-  "myWardrobe.emptyBody":
+  "wardrobe.deleteUploadedConfirm": "Delete",
+  "wardrobe.removeConfirmTitle": "Remove from Wardrobe?",
+  "wardrobe.removeConfirmBody": "This product will be removed from Wardrobe.",
+  "wardrobe.removeConfirm": "Remove",
+  "wardrobe.emptyTitle": "No saved items yet",
+  "wardrobe.emptyBody":
     "Save products from a capsule or upload item photos later.",
-  "myWardrobe.filters.all": "All",
-  "myWardrobe.filters.uploaded": "Uploaded",
-  "myWardrobe.filters.fromCatalog": "From Catalog",
-  "myWardrobe.uploadDialog.title": "Upload wardrobe photos",
-  "myWardrobe.uploadDialog.body":
+  "wardrobe.filters.all": "All",
+  "wardrobe.filters.uploaded": "Uploaded",
+  "wardrobe.filters.fromCatalog": "From Catalog",
+  "wardrobe.uploadDialog.title": "Upload wardrobe photos",
+  "wardrobe.uploadDialog.body":
     "Use one image per garment. Photograph the item laid flat or neatly hung, fully visible, with no other clothing in frame, against a plain, even background.",
-  "myWardrobe.uploadDialog.dropzoneLabel": "Choose wardrobe photos",
-  "myWardrobe.uploadDialog.dropzoneTitle": "Upload photos",
-  "myWardrobe.uploadDialog.dropzoneHint":
+  "wardrobe.uploadDialog.dropzoneLabel": "Choose wardrobe photos",
+  "wardrobe.uploadDialog.dropzoneTitle": "Upload photos",
+  "wardrobe.uploadDialog.dropzoneHint":
     "Drag and drop or click to browse. JPEG, PNG, or WebP. Up to 5 files, 10 MB each.",
-  "myWardrobe.uploadDialog.mobileDropzoneTitle": "Upload photos",
-  "myWardrobe.uploadDialog.mobileDropzoneHint":
+  "wardrobe.uploadDialog.mobileDropzoneTitle": "Upload photos",
+  "wardrobe.uploadDialog.mobileDropzoneHint":
     "Tap to browse. JPEG, PNG, or WebP. Up to 5 files, 10 MB each.",
-  "myWardrobe.uploadDialog.fileList": "Selected files",
-  "myWardrobe.uploadDialog.selectedSummary": "{count} files, {size}",
-  "myWardrobe.uploadDialog.removeFile": "Remove {name}",
-  "myWardrobe.uploadDialog.upload": "Upload",
-  "myWardrobe.uploadDialog.uploadedStatus": "Uploaded: {image_count}",
-  "myWardrobe.uploadDialog.metadataProcessedStatus":
+  "wardrobe.uploadDialog.fileList": "Selected files",
+  "wardrobe.uploadDialog.selectedSummary": "{count} files, {size}",
+  "wardrobe.uploadDialog.removeFile": "Remove {name}",
+  "wardrobe.uploadDialog.upload": "Upload",
+  "wardrobe.uploadDialog.uploadedStatus": "Uploaded: {image_count}",
+  "wardrobe.uploadDialog.metadataProcessedStatus":
     "Metadata processed: {image_count}",
-  "myWardrobe.uploadDialog.imageProcessedStatus":
+  "wardrobe.uploadDialog.imageProcessedStatus":
     "Images processed: {image_count}",
-  "myWardrobe.uploadDialog.failedStatus": "Failed: {image_count}",
-  "myWardrobe.uploadDialog.tooManyFiles": "Upload up to 5 files.",
-  "myWardrobe.uploadDialog.invalidType": "Use JPEG, PNG, or WebP images.",
-  "myWardrobe.uploadDialog.fileTooLarge": "Each image must be 10 MB or less.",
-  "myWardrobe.urlUploadDialog.title": "Upload product image URLs",
-  "myWardrobe.urlUploadDialog.body":
+  "wardrobe.uploadDialog.failedStatus": "Failed: {image_count}",
+  "wardrobe.uploadDialog.tooManyFiles": "Upload up to 5 files.",
+  "wardrobe.uploadDialog.invalidType": "Use JPEG, PNG, or WebP images.",
+  "wardrobe.uploadDialog.fileTooLarge": "Each image must be 10 MB or less.",
+  "wardrobe.urlUploadDialog.title": "Upload product image URLs",
+  "wardrobe.urlUploadDialog.body":
     "Add links to commercial product images where the item is clearly visible and laid flat. Each accepted image becomes an uploaded wardrobe item.",
-  "myWardrobe.urlUploadDialog.fieldLabel": "Product image URL {index}",
-  "myWardrobe.urlUploadDialog.placeholder":
+  "wardrobe.urlUploadDialog.fieldLabel": "Product image URL {index}",
+  "wardrobe.urlUploadDialog.placeholder":
     "https://example.com/product-image.jpg",
-  "myWardrobe.urlUploadDialog.helperText":
+  "wardrobe.urlUploadDialog.helperText":
     "Use a product image URL starting with http:// or https://.",
-  "myWardrobe.urlUploadDialog.invalidUrl":
+  "wardrobe.urlUploadDialog.invalidUrl":
     "Enter a URL that starts with http:// or https://.",
-  "myWardrobe.urlUploadDialog.upload": "Upload URLs",
+  "wardrobe.urlUploadDialog.upload": "Upload URLs",
   "capsule.exportPdf": "Export as PDF",
   "capsule.cardLayout": "Card layout",
   "capsule.cardColumnsOne": "1 column",
   "capsule.cardColumnsTwo": "2 columns",
   "capsule.cardColumnsThree": "3 columns",
-  "capsule.removeFromMyWardrobe": "Remove from My Wardrobe",
+  "capsule.removeFromMyWardrobe": "Remove from Wardrobe",
   "actions.cancel": "Cancel",
   "actions.edit": "Edit",
 };
@@ -293,12 +291,12 @@ const translations: Record<string, string> = {
 function renderScreen() {
   return render(
     <ThemeProvider theme={theme}>
-      <MyWardrobeScreen />
+      <WardrobeScreen />
     </ThemeProvider>,
   );
 }
 
-describe("MyWardrobeScreen", () => {
+describe("WardrobeScreen", () => {
   beforeEach(() => {
     window.localStorage.clear();
     useMediaQueryMock.mockReset();
@@ -351,17 +349,17 @@ describe("MyWardrobeScreen", () => {
   test("renders toolbar, upload button, filters, and wardrobe cards", async () => {
     renderScreen();
 
-    expect(screen.queryByText("My Wardrobe")).not.toBeInTheDocument();
+    expect(screen.queryByText("Wardrobe")).not.toBeInTheDocument();
     const uploadButton = screen.getByRole("button", {
       name: "Upload item photo",
     });
     expect(uploadButton).toBeInTheDocument();
     expect(uploadButton).toHaveClass("MuiButton-outlined");
     expect(
-      screen.getByRole("button", { name: "Open My Wardrobe menu" }),
+      screen.getByRole("button", { name: "Open Wardrobe menu" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("group", { name: "My Wardrobe source" }),
+      screen.getByRole("group", { name: "Wardrobe source" }),
     ).toBeInTheDocument();
     expect(screen.getByTestId("wardrobe-placeholder")).toBeInTheDocument();
 
@@ -388,14 +386,14 @@ describe("MyWardrobeScreen", () => {
     });
     expect(uploadButton).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Open My Wardrobe menu" }),
+      screen.getByRole("button", { name: "Open Wardrobe menu" }),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole("group", { name: "My Wardrobe source" }),
+      screen.queryByRole("group", { name: "Wardrobe source" }),
     ).not.toBeInTheDocument();
 
     const sourceSelect = screen.getByRole("combobox", {
-      name: "My Wardrobe source",
+      name: "Wardrobe source",
     });
     expect(sourceSelect).toHaveTextContent("All");
 
@@ -418,10 +416,10 @@ describe("MyWardrobeScreen", () => {
     await screen.findByTestId("wardrobe-card-wardrobe-1");
 
     expect(
-      getComputedStyle(screen.getByTestId("my-wardrobe-screen")).overflowX,
+      getComputedStyle(screen.getByTestId("wardrobe-screen")).overflowX,
     ).toBe("hidden");
     expect(
-      getComputedStyle(screen.getByTestId("my-wardrobe-content")).boxSizing,
+      getComputedStyle(screen.getByTestId("wardrobe-content")).boxSizing,
     ).toBe("border-box");
   });
 
@@ -431,7 +429,7 @@ describe("MyWardrobeScreen", () => {
     await screen.findByTestId("wardrobe-card-wardrobe-1");
 
     const toolbar = screen
-      .getByRole("group", { name: "My Wardrobe source" })
+      .getByRole("group", { name: "Wardrobe source" })
       .closest(".MuiStack-root");
 
     expect(toolbar).not.toBeNull();
@@ -737,7 +735,7 @@ describe("MyWardrobeScreen", () => {
       });
     });
     await user.click(
-      screen.getByRole("button", { name: "Open My Wardrobe menu" }),
+      screen.getByRole("button", { name: "Open Wardrobe menu" }),
     );
     await user.click(screen.getByRole("menuitem", { name: "Export as PDF" }));
 
@@ -756,7 +754,7 @@ describe("MyWardrobeScreen", () => {
     ).toHaveAttribute("data-mobile-columns", "2");
 
     await user.click(
-      screen.getByRole("button", { name: "Open My Wardrobe menu" }),
+      screen.getByRole("button", { name: "Open Wardrobe menu" }),
     );
     expect(screen.getByText("Card layout")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "3 columns" }));
@@ -765,9 +763,7 @@ describe("MyWardrobeScreen", () => {
       "data-mobile-columns",
       "3",
     );
-    expect(window.localStorage.getItem("myWardrobe.mobileCardColumns")).toBe(
-      "3",
-    );
+    expect(window.localStorage.getItem("wardrobe.mobileCardColumns")).toBe("3");
   });
 
   test("removes an item from the card product menu", async () => {
@@ -778,7 +774,7 @@ describe("MyWardrobeScreen", () => {
       await screen.findByRole("button", { name: "open product menu" }),
     );
     await user.click(
-      screen.getByRole("menuitem", { name: "Remove from My Wardrobe" }),
+      screen.getByRole("menuitem", { name: "Remove from Wardrobe" }),
     );
     expect(api.removeCatalogItemFromMyWardrobe).not.toHaveBeenCalled();
 
@@ -971,7 +967,7 @@ describe("MyWardrobeScreen", () => {
     renderScreen();
 
     expect(
-      await screen.findByText("Failed to load My Wardrobe."),
+      await screen.findByText("Failed to load Wardrobe."),
     ).toBeInTheDocument();
   });
 });

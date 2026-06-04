@@ -15,11 +15,8 @@ function Harness() {
       <button type="button" onClick={() => navigation.navigateApp("explore")}>
         explore
       </button>
-      <button
-        type="button"
-        onClick={() => navigation.navigateApp("myWardrobe")}
-      >
-        my wardrobe
+      <button type="button" onClick={() => navigation.navigateApp("wardrobe")}>
+        wardrobe
       </button>
       <button
         type="button"
@@ -59,7 +56,7 @@ describe("useAppNavigation", () => {
 
   test.each([
     ["/explore", "explore"],
-    ["/my-wardrobe", "myWardrobe"],
+    ["/wardrobe", "wardrobe"],
     ["/statistics", "statistics"],
   ])("initializes route state from %s", (path, route) => {
     window.history.replaceState({}, "", path);
@@ -67,6 +64,15 @@ describe("useAppNavigation", () => {
     render(<Harness />);
 
     expect(screen.getByTestId("route")).toHaveTextContent(route);
+  });
+
+  test("soft redirects the legacy wardrobe path to the canonical route", () => {
+    window.history.replaceState({}, "", "/my-wardrobe");
+
+    render(<Harness />);
+
+    expect(screen.getByTestId("route")).toHaveTextContent("wardrobe");
+    expect(window.location.pathname).toBe("/wardrobe");
   });
 
   test("navigates to product detail search state and clears it when leaving explore", () => {
@@ -87,9 +93,9 @@ describe("useAppNavigation", () => {
     expect(screen.getByTestId("query")).toHaveTextContent("");
     expect(screen.getByTestId("auto-open")).toHaveTextContent("false");
 
-    fireEvent.click(screen.getByRole("button", { name: "my wardrobe" }));
-    expect(window.location.pathname).toBe("/my-wardrobe");
-    expect(screen.getByTestId("route")).toHaveTextContent("myWardrobe");
+    fireEvent.click(screen.getByRole("button", { name: "wardrobe" }));
+    expect(window.location.pathname).toBe("/wardrobe");
+    expect(screen.getByTestId("route")).toHaveTextContent("wardrobe");
   });
 
   test("clears and resets share route state", () => {

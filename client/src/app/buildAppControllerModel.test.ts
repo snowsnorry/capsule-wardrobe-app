@@ -143,7 +143,7 @@ describe("buildAppControllerModel", () => {
         hasFilterChanges: true,
         isContentBusy: false,
         isMainScreenView: true,
-        isMyWardrobeView: false,
+        isWardrobeView: false,
         isSearchView: false,
         isSignInView: false,
         isStatisticsView: false,

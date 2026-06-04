@@ -44,14 +44,14 @@ function t(key: string, params?: Record<string, unknown>) {
     "capsule.settingsSubtitle": "Adjust the inputs used to build this capsule.",
     "capsule.sourceMode.label": "Item source",
     "capsule.sourceMode.catalogOnly": "Catalog items",
-    "capsule.sourceMode.wardrobePreferred": "My wardrobe + catalog",
-    "capsule.sourceMode.wardrobeOnly": "My wardrobe only",
-    "capsule.sourceMode.checkingWardrobe": "Checking My Wardrobe items...",
+    "capsule.sourceMode.wardrobePreferred": "Wardrobe + catalog",
+    "capsule.sourceMode.wardrobeOnly": "Wardrobe only",
+    "capsule.sourceMode.checkingWardrobe": "Checking Wardrobe items...",
     "capsule.sourceMode.emptyWardrobe":
-      "My Wardrobe has no ready items yet. Add items before using this source.",
-    "capsule.sourceMode.loadFailed": "Could not check My Wardrobe items.",
+      "Wardrobe has no ready items yet. Add items before using this source.",
+    "capsule.sourceMode.loadFailed": "Could not check Wardrobe items.",
     "capsule.sourceMode.insufficientWardrobe":
-      "My Wardrobe has {count} ready items. This capsule may need more: {items}.",
+      "Wardrobe has {count} ready items. This capsule may need more: {items}.",
     "capsule.anchors.title": "Anchor items",
     "capsule.anchors.hint": "Choose up to 5 wardrobe items to keep.",
     "capsule.anchors.add": "Add items from wardrobe",
@@ -190,15 +190,13 @@ describe("ProfileFiltersSidebarSections", () => {
       props: {
         sourceModeStatus: {
           isBlocking: false,
-          message: "My Wardrobe has 2 ready items.",
+          message: "Wardrobe has 2 ready items.",
           severity: "warning",
         },
       },
     });
 
-    expect(
-      screen.getByText("My Wardrobe has 2 ready items."),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Wardrobe has 2 ready items.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Apply" })).toBeEnabled();
 
     warning.unmount();
@@ -207,7 +205,7 @@ describe("ProfileFiltersSidebarSections", () => {
       props: {
         sourceModeStatus: {
           isBlocking: true,
-          message: "My Wardrobe has no ready items yet.",
+          message: "Wardrobe has no ready items yet.",
           severity: "error",
         },
       },
@@ -215,7 +213,7 @@ describe("ProfileFiltersSidebarSections", () => {
     });
 
     expect(
-      screen.getByText("My Wardrobe has no ready items yet."),
+      screen.getByText("Wardrobe has no ready items yet."),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Apply" })).toBeDisabled();
   });
@@ -234,7 +232,7 @@ describe("ProfileFiltersSidebarSections", () => {
     await user.click(sourceModeSelect);
     expect(
       getComputedStyle(
-        await screen.findByRole("option", { name: "My wardrobe + catalog" }),
+        await screen.findByRole("option", { name: "Wardrobe + catalog" }),
       ).whiteSpace,
     ).toBe("normal");
   });
@@ -284,7 +282,7 @@ describe("ProfileFiltersSidebarSections", () => {
     await user.click(screen.getByRole("button", { name: "Stripe" }));
     await user.click(screen.getByRole("combobox", { name: "Item source" }));
     await user.click(
-      await screen.findByRole("option", { name: "My wardrobe + catalog" }),
+      await screen.findByRole("option", { name: "Wardrobe + catalog" }),
     );
     await user.type(
       screen.getByPlaceholderText("Additional placeholder"),

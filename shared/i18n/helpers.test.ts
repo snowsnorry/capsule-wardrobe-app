@@ -30,7 +30,7 @@ test("t falls back to default locale and interpolates parameters", () => {
 });
 
 test("t translates capsule sidebar labels", () => {
-  expect(t("launcher.myWardrobe", undefined, "ru")).toBe("Мой гардероб");
+  expect(t("launcher.wardrobe", undefined, "ru")).toBe("Гардероб");
   expect(t("launcher.capsule", undefined, "ru")).toBe("Капсула");
 });
 

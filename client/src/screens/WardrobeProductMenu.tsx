@@ -21,7 +21,7 @@ import type {
 } from "../components/ClothingCardTypes";
 import type { MainScreenItem } from "./mainScreen/MainScreenTypes";
 
-type MyWardrobeProductMenuState = {
+type WardrobeProductMenuState = {
   anchor: HTMLElement | null;
   url: string;
   item: MainScreenItem | null;
@@ -29,7 +29,7 @@ type MyWardrobeProductMenuState = {
   presentation?: ProductMenuPresentation;
 };
 
-type MyWardrobeProductMenuProps = {
+type WardrobeProductMenuProps = {
   anchor: HTMLElement | null;
   item: MainScreenItem | null;
   originRect?: MobileContextMenuOriginRect;
@@ -39,7 +39,7 @@ type MyWardrobeProductMenuProps = {
   t: (key: string) => string;
 };
 
-type MyWardrobeRemoveConfirmDialogProps = {
+type WardrobeRemoveConfirmDialogProps = {
   item: MainScreenItem | null;
   isLoading?: boolean;
   onClose: () => void;
@@ -47,7 +47,7 @@ type MyWardrobeRemoveConfirmDialogProps = {
   t: (key: string) => string;
 };
 
-function MyWardrobeProductMenu({
+function WardrobeProductMenu({
   anchor,
   item,
   originRect,
@@ -55,9 +55,9 @@ function MyWardrobeProductMenu({
   onClose,
   onRequestRemove,
   t,
-}: MyWardrobeProductMenuProps): ReactElement {
+}: WardrobeProductMenuProps): ReactElement {
   const renderActions = () => (
-    <MyWardrobeProductMenuItems
+    <WardrobeProductMenuItems
       item={item}
       t={t}
       onClose={onClose}
@@ -87,12 +87,12 @@ function MyWardrobeProductMenu({
   );
 }
 
-function MyWardrobeProductMenuItems({
+function WardrobeProductMenuItems({
   item,
   onClose,
   onRequestRemove,
   t,
-}: Omit<MyWardrobeProductMenuProps, "anchor" | "presentation">): ReactElement {
+}: Omit<WardrobeProductMenuProps, "anchor" | "presentation">): ReactElement {
   const isUploaded = item?.source === "uploaded";
 
   return (
@@ -114,7 +114,7 @@ function MyWardrobeProductMenuItems({
       <ListItemText>
         {t(
           isUploaded
-            ? "myWardrobe.deleteUploaded"
+            ? "wardrobe.deleteUploaded"
             : "capsule.removeFromMyWardrobe",
         )}
       </ListItemText>
@@ -122,13 +122,13 @@ function MyWardrobeProductMenuItems({
   );
 }
 
-function MyWardrobeRemoveConfirmDialog({
+function WardrobeRemoveConfirmDialog({
   item,
   isLoading = false,
   onClose,
   onConfirm,
   t,
-}: MyWardrobeRemoveConfirmDialogProps): ReactElement {
+}: WardrobeRemoveConfirmDialogProps): ReactElement {
   const isUploaded = item?.source === "uploaded";
 
   return (
@@ -145,8 +145,8 @@ function MyWardrobeRemoveConfirmDialog({
       <DialogTitle sx={{ pb: 1 }}>
         {t(
           isUploaded
-            ? "myWardrobe.deleteUploadedConfirmTitle"
-            : "myWardrobe.removeConfirmTitle",
+            ? "wardrobe.deleteUploadedConfirmTitle"
+            : "wardrobe.removeConfirmTitle",
         )}
       </DialogTitle>
       <DialogContent sx={{ pt: 0.5, pb: 0 }}>
@@ -160,8 +160,8 @@ function MyWardrobeRemoveConfirmDialog({
         <DialogContentText sx={{ color: "text.secondary" }}>
           {t(
             isUploaded
-              ? "myWardrobe.deleteUploadedConfirmBody"
-              : "myWardrobe.removeConfirmBody",
+              ? "wardrobe.deleteUploadedConfirmBody"
+              : "wardrobe.removeConfirmBody",
           )}
         </DialogContentText>
       </DialogContent>
@@ -182,8 +182,8 @@ function MyWardrobeRemoveConfirmDialog({
         >
           {t(
             isUploaded
-              ? "myWardrobe.deleteUploadedConfirm"
-              : "myWardrobe.removeConfirm",
+              ? "wardrobe.deleteUploadedConfirm"
+              : "wardrobe.removeConfirm",
           )}
         </Button>
       </DialogActions>
@@ -191,5 +191,5 @@ function MyWardrobeRemoveConfirmDialog({
   );
 }
 
-export { MyWardrobeProductMenu, MyWardrobeRemoveConfirmDialog };
-export type { MyWardrobeProductMenuState };
+export { WardrobeProductMenu, WardrobeRemoveConfirmDialog };
+export type { WardrobeProductMenuState };

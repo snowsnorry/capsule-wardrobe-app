@@ -1,11 +1,6 @@
-import type { WheelEvent } from "react";
-
 const primaryScrollTargetSelector = '[data-app-primary-scroll-target="true"]';
 
-function getWheelScrollDelta(
-  event: WheelEvent<HTMLElement>,
-  target: HTMLElement,
-) {
+function getWheelScrollDelta(event: WheelEvent, target: HTMLElement) {
   if (event.deltaMode === 1) {
     return event.deltaY * 16;
   }
@@ -60,8 +55,7 @@ function getPrimaryScrollTarget() {
   return target instanceof HTMLElement ? target : null;
 }
 
-function handleDesktopSidebarWheel(event: WheelEvent<HTMLElement>) {
-  const sidebar = event.currentTarget;
+function handleDesktopSidebarWheel(event: WheelEvent, sidebar: HTMLElement) {
   const sidebarDelta = getWheelScrollDelta(event, sidebar);
 
   if (

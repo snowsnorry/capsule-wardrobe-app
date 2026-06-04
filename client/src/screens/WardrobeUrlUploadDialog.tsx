@@ -119,11 +119,11 @@ function WardrobeUrlUploadDialog({
       >
         <Stack spacing={0.75}>
           <Typography id="wardrobe-url-upload-dialog-heading" variant="h5">
-            {t("myWardrobe.urlUploadDialog.title")}
+            {t("wardrobe.urlUploadDialog.title")}
           </Typography>
           {!isMobile ? (
             <Typography variant="body2" color="text.secondary">
-              {t("myWardrobe.urlUploadDialog.body")}
+              {t("wardrobe.urlUploadDialog.body")}
             </Typography>
           ) : null}
         </Stack>
@@ -142,7 +142,7 @@ function WardrobeUrlUploadDialog({
           <>
             {isMobile ? (
               <Typography variant="body2" color="text.secondary">
-                {t("myWardrobe.urlUploadDialog.body")}
+                {t("wardrobe.urlUploadDialog.body")}
               </Typography>
             ) : null}
             <Stack spacing={1.5} sx={{ pt: 1 }}>
@@ -157,15 +157,15 @@ function WardrobeUrlUploadDialog({
                     disabled={isUploading}
                     error={hasError}
                     fullWidth
-                    label={t("myWardrobe.urlUploadDialog.fieldLabel").replace(
+                    label={t("wardrobe.urlUploadDialog.fieldLabel").replace(
                       "{index}",
                       String(index + 1),
                     )}
-                    placeholder={t("myWardrobe.urlUploadDialog.placeholder")}
+                    placeholder={t("wardrobe.urlUploadDialog.placeholder")}
                     helperText={
                       hasError
-                        ? t("myWardrobe.urlUploadDialog.invalidUrl")
-                        : t("myWardrobe.urlUploadDialog.helperText")
+                        ? t("wardrobe.urlUploadDialog.invalidUrl")
+                        : t("wardrobe.urlUploadDialog.helperText")
                     }
                     onChange={(event) =>
                       setUrls((current) =>
@@ -188,7 +188,7 @@ function WardrobeUrlUploadDialog({
             disabled={!canUpload}
             onClick={handleUpload}
           >
-            {t("myWardrobe.urlUploadDialog.upload")}
+            {t("wardrobe.urlUploadDialog.upload")}
           </Button>
         </DialogActions>
       ) : null}

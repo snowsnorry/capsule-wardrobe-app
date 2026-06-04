@@ -200,7 +200,7 @@ function CapsuleList({
   );
 }
 
-function CapsuleSectionLabel({
+function SidebarSectionLabel({
   label,
   actions,
 }: {
@@ -282,7 +282,7 @@ function CapsuleChildren({
           pl: capsuleHighlightInlineStartInset,
         }}
       >
-        <CapsuleSectionLabel
+        <SidebarSectionLabel
           label={t("capsule.yourCapsules")}
           actions={
             <CapsulePrimaryActions
@@ -310,4 +310,4 @@ function CapsuleChildren({
   );
 }
 
-export { CapsuleChildren };
+export { CapsuleChildren, SidebarSectionLabel };

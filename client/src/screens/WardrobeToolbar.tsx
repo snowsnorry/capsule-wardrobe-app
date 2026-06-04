@@ -21,34 +21,34 @@ import LinkRoundedIcon from "@mui/icons-material/LinkRounded";
 import MoreVertRoundedIcon from "@mui/icons-material/MoreVertRounded";
 import type { MyWardrobeSource } from "../api/myWardrobe";
 
-type MyWardrobeFilter = "all" | MyWardrobeSource;
+type WardrobeFilter = "all" | MyWardrobeSource;
 
-type MyWardrobeToolbarProps = {
-  filter: MyWardrobeFilter;
+type WardrobeToolbarProps = {
+  filter: WardrobeFilter;
   isMobile: boolean;
   isLoading: boolean;
-  onFilterChange: (filter: MyWardrobeFilter) => void;
+  onFilterChange: (filter: WardrobeFilter) => void;
   onOpenMenu: (event: MouseEvent<HTMLButtonElement>) => void;
   onOpenUpload: () => void;
   onOpenUrlUpload: () => void;
   t: (key: string) => string;
 };
 
-const FILTERS: MyWardrobeFilter[] = ["all", "uploaded", "from_catalog"];
+const FILTERS: WardrobeFilter[] = ["all", "uploaded", "from_catalog"];
 
-function getSourceFilter(filter: MyWardrobeFilter): MyWardrobeSource | null {
+function getSourceFilter(filter: WardrobeFilter): MyWardrobeSource | null {
   return filter === "all" ? null : filter;
 }
 
-function filterKey(filter: MyWardrobeFilter) {
+function filterKey(filter: WardrobeFilter) {
   return filter === "all"
-    ? "myWardrobe.filters.all"
+    ? "wardrobe.filters.all"
     : filter === "uploaded"
-      ? "myWardrobe.filters.uploaded"
-      : "myWardrobe.filters.fromCatalog";
+      ? "wardrobe.filters.uploaded"
+      : "wardrobe.filters.fromCatalog";
 }
 
-function MyWardrobeMobileToolbar({
+function WardrobeMobileToolbar({
   filter,
   isLoading,
   onFilterChange,
@@ -56,18 +56,18 @@ function MyWardrobeMobileToolbar({
   onOpenUpload,
   onOpenUrlUpload,
   t,
-}: Omit<MyWardrobeToolbarProps, "isMobile">) {
+}: Omit<WardrobeToolbarProps, "isMobile">) {
   return (
     <Stack direction="row" spacing={1} sx={mobileToolbarSx}>
       <FormControl size="small" sx={mobileFilterControlSx}>
         <Select
           value={filter}
-          onChange={(event: SelectChangeEvent<MyWardrobeFilter>) => {
-            onFilterChange(event.target.value as MyWardrobeFilter);
+          onChange={(event: SelectChangeEvent<WardrobeFilter>) => {
+            onFilterChange(event.target.value as WardrobeFilter);
           }}
           disabled={isLoading}
           displayEmpty
-          inputProps={{ "aria-label": t("myWardrobe.filterLabel") }}
+          inputProps={{ "aria-label": t("wardrobe.filterLabel") }}
           sx={mobileFilterSelectSx}
         >
           {FILTERS.map((value) => (
@@ -86,7 +86,7 @@ function MyWardrobeMobileToolbar({
           t={t}
         />
         <IconButton
-          aria-label={t("myWardrobe.openMenu")}
+          aria-label={t("wardrobe.openMenu")}
           disabled={isLoading}
           onClick={onOpenMenu}
           sx={mobileMenuButtonSx}
@@ -98,7 +98,7 @@ function MyWardrobeMobileToolbar({
   );
 }
 
-function MyWardrobeDesktopToolbar({
+function WardrobeDesktopToolbar({
   filter,
   isLoading,
   onFilterChange,
@@ -106,18 +106,18 @@ function MyWardrobeDesktopToolbar({
   onOpenUpload,
   onOpenUrlUpload,
   t,
-}: Omit<MyWardrobeToolbarProps, "isMobile">) {
+}: Omit<WardrobeToolbarProps, "isMobile">) {
   return (
     <Stack direction="row" spacing={1.5} sx={desktopToolbarSx}>
       <ToggleButtonGroup
         exclusive
         value={filter}
-        onChange={(_event, value: MyWardrobeFilter | null) => {
+        onChange={(_event, value: WardrobeFilter | null) => {
           if (value) {
             onFilterChange(value);
           }
         }}
-        aria-label={t("myWardrobe.filterLabel")}
+        aria-label={t("wardrobe.filterLabel")}
         sx={filterGroupSx}
       >
         {FILTERS.map((value) => (
@@ -139,7 +139,7 @@ function MyWardrobeDesktopToolbar({
           t={t}
         />
         <IconButton
-          aria-label={t("myWardrobe.openMenu")}
+          aria-label={t("wardrobe.openMenu")}
           disabled={isLoading}
           onClick={onOpenMenu}
         >
@@ -188,15 +188,15 @@ function UploadSplitButton({
       >
         <Button
           startIcon={<FileUploadOutlinedIcon />}
-          aria-label={t("myWardrobe.upload")}
+          aria-label={t("wardrobe.upload")}
           onClick={onOpenUpload}
           sx={isMobile ? mobileUploadMainButtonSx : uploadMainButtonSx}
         >
-          {t("myWardrobe.uploadDialog.upload")}
+          {t("wardrobe.uploadDialog.upload")}
         </Button>
         <Button
-          aria-label={t("myWardrobe.uploadMenu")}
-          aria-controls={isMenuOpen ? "my-wardrobe-upload-menu" : undefined}
+          aria-label={t("wardrobe.uploadMenu")}
+          aria-controls={isMenuOpen ? "wardrobe-upload-menu" : undefined}
           aria-expanded={isMenuOpen ? "true" : undefined}
           aria-haspopup="menu"
           onClick={openMenu}
@@ -206,13 +206,13 @@ function UploadSplitButton({
         </Button>
       </ButtonGroup>
       <Menu
-        id="my-wardrobe-upload-menu"
+        id="wardrobe-upload-menu"
         anchorEl={anchorEl}
         open={isMenuOpen}
         onClose={closeMenu}
         slotProps={{
           list: {
-            "aria-label": t("myWardrobe.uploadMenuLabel"),
+            "aria-label": t("wardrobe.uploadMenuLabel"),
             dense: true,
           },
         }}
@@ -223,24 +223,24 @@ function UploadSplitButton({
           <ListItemIcon>
             <FileUploadOutlinedIcon fontSize="small" />
           </ListItemIcon>
-          <ListItemText>{t("myWardrobe.uploadPhoto")}</ListItemText>
+          <ListItemText>{t("wardrobe.uploadPhoto")}</ListItemText>
         </MenuItem>
         <MenuItem onClick={selectUrlUpload}>
           <ListItemIcon>
             <LinkRoundedIcon fontSize="small" />
           </ListItemIcon>
-          <ListItemText>{t("myWardrobe.uploadUrl")}</ListItemText>
+          <ListItemText>{t("wardrobe.uploadUrl")}</ListItemText>
         </MenuItem>
       </Menu>
     </>
   );
 }
 
-function MyWardrobeToolbar(props: MyWardrobeToolbarProps) {
+function WardrobeToolbar(props: WardrobeToolbarProps) {
   return props.isMobile ? (
-    <MyWardrobeMobileToolbar {...props} />
+    <WardrobeMobileToolbar {...props} />
   ) : (
-    <MyWardrobeDesktopToolbar {...props} />
+    <WardrobeDesktopToolbar {...props} />
   );
 }
 
@@ -368,6 +368,6 @@ const filterGroupSx = {
   },
 } as const;
 
-export default MyWardrobeToolbar;
+export default WardrobeToolbar;
 export { getSourceFilter };
-export type { MyWardrobeFilter };
+export type { WardrobeFilter };

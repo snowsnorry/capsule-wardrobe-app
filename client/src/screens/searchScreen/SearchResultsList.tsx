@@ -162,7 +162,7 @@ function ResultListItem({
   const isSavedToWardrobe = Boolean(
     item.isSavedToWardrobe || item.savedToMyWardrobe,
   );
-  const savedLabel = t("myWardrobe.savedBadge");
+  const savedLabel = t("wardrobe.savedBadge");
 
   return (
     <Box

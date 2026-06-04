@@ -1,8 +1,8 @@
 import type { ReactElement } from "react";
 import { Box, Button, Divider, Tooltip } from "@mui/material";
 import CheckroomOutlinedIcon from "@mui/icons-material/CheckroomOutlined";
+import KeyboardArrowDownRoundedIcon from "@mui/icons-material/KeyboardArrowDownRounded";
 import { PiDresser } from "react-icons/pi";
-import type { AppId } from "./AppSidebarNavigationTypes";
 
 const topLevelIconRailWidth = "60px";
 const expandedTopLevelIconShift = "-6px";
@@ -135,6 +135,26 @@ function SidebarTopLevelButton({
         isActive={isActive}
         isCollapsedDesktop={isCollapsedDesktop}
       />
+      <Box
+        component="span"
+        aria-hidden="true"
+        sx={{
+          alignItems: "center",
+          color: isActive ? "primary.main" : "text.secondary",
+          display: isCollapsedDesktop ? "none" : "inline-flex",
+          flexShrink: 0,
+          justifyContent: "center",
+          mr: 1.25,
+          opacity: isExpanded === undefined ? 0 : 1,
+          transform: isExpanded ? "rotate(0deg)" : "rotate(-90deg)",
+          transition: "transform 180ms ease",
+          "@media (prefers-reduced-motion: reduce)": {
+            transition: "none",
+          },
+        }}
+      >
+        <KeyboardArrowDownRoundedIcon fontSize="small" />
+      </Box>
     </Button>
   );
 }
@@ -166,7 +186,7 @@ function CapsuleTopLevelNavigation({
   isInteractionDisabled,
   isCollapsedDesktop,
   desktopSidebarRailWidth,
-  onNavigateApp,
+  onToggle,
   t,
 }: {
   isActive: boolean;
@@ -174,7 +194,7 @@ function CapsuleTopLevelNavigation({
   isInteractionDisabled: boolean;
   isCollapsedDesktop: boolean;
   desktopSidebarRailWidth: number;
-  onNavigateApp: (nextApp: AppId) => void;
+  onToggle: () => void;
   t: Translate;
 }) {
   return (
@@ -187,37 +207,40 @@ function CapsuleTopLevelNavigation({
         isInteractionDisabled={isInteractionDisabled}
         isCollapsedDesktop={isCollapsedDesktop}
         desktopSidebarRailWidth={desktopSidebarRailWidth}
-        onClick={() => onNavigateApp("capsule")}
+        onClick={onToggle}
       />
     </Box>
   );
 }
 
-function MyWardrobeTopLevelNavigation({
+function WardrobeTopLevelNavigation({
   isActive,
+  isExpanded,
   isInteractionDisabled,
   isCollapsedDesktop,
   desktopSidebarRailWidth,
-  onNavigateApp,
+  onToggle,
   t,
 }: {
   isActive: boolean;
+  isExpanded: boolean;
   isInteractionDisabled: boolean;
   isCollapsedDesktop: boolean;
   desktopSidebarRailWidth: number;
-  onNavigateApp: (nextApp: AppId) => void;
+  onToggle: () => void;
   t: Translate;
 }) {
   return (
     <Box sx={{ px: isCollapsedDesktop ? 0 : 1.5, pt: 0.5 }}>
       <SidebarTopLevelButton
-        label={t("launcher.myWardrobe")}
+        label={t("launcher.wardrobe")}
         icon={<PiDresser />}
         isActive={isActive}
+        isExpanded={isExpanded}
         isInteractionDisabled={isInteractionDisabled}
         isCollapsedDesktop={isCollapsedDesktop}
         desktopSidebarRailWidth={desktopSidebarRailWidth}
-        onClick={() => onNavigateApp("myWardrobe")}
+        onClick={onToggle}
       />
     </Box>
   );
@@ -225,7 +248,7 @@ function MyWardrobeTopLevelNavigation({
 
 export {
   CapsuleTopLevelNavigation,
-  MyWardrobeTopLevelNavigation,
   SidebarNavigationDivider,
   SidebarTopLevelButton,
+  WardrobeTopLevelNavigation,
 };

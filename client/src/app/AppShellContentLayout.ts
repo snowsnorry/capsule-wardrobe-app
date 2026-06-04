@@ -1,13 +1,13 @@
 function getShellContainerVerticalPadding({
   isFullScreenRoute,
   isMainScreenView,
-  isMyWardrobeView,
+  isWardrobeView,
   isSearchView,
   isStatisticsView,
 }: {
   isFullScreenRoute: boolean;
   isMainScreenView: boolean;
-  isMyWardrobeView: boolean;
+  isWardrobeView: boolean;
   isSearchView: boolean;
   isStatisticsView: boolean;
 }) {
@@ -21,7 +21,7 @@ function getShellContainerVerticalPadding({
   return {
     pt: fullScreenPadding,
     pb:
-      isMainScreenView || isMyWardrobeView || isSearchView || isStatisticsView
+      isMainScreenView || isWardrobeView || isSearchView || isStatisticsView
         ? 0
         : fullScreenPadding,
   } as const;

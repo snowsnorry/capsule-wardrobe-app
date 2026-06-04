@@ -111,6 +111,7 @@ function CatalogGroupNavigation({
   isCollapsedDesktop,
   showCatalogChildren,
   desktopSidebarRailWidth,
+  onToggle,
   onNavigateApp,
   t,
 }: {
@@ -119,6 +120,7 @@ function CatalogGroupNavigation({
   isCollapsedDesktop: boolean;
   showCatalogChildren: boolean;
   desktopSidebarRailWidth: number;
+  onToggle: () => void;
   onNavigateApp: (nextApp: AppId) => void;
   t: Translate;
 }) {
@@ -145,7 +147,7 @@ function CatalogGroupNavigation({
         isInteractionDisabled={isInteractionDisabled}
         isCollapsedDesktop={isCollapsedDesktop}
         desktopSidebarRailWidth={desktopSidebarRailWidth}
-        onClick={() => onNavigateApp("explore")}
+        onClick={onToggle}
       />
       <CatalogChildren
         showCatalogChildren={showCatalogChildren}

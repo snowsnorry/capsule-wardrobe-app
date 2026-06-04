@@ -142,7 +142,7 @@ function buildLayout(input: ControllerModelInput) {
     isContentBusy: viewState.isContentBusy,
     isLarge: input.isLarge,
     isMainScreenView: viewState.isMainScreenView,
-    isMyWardrobeView: viewState.isMyWardrobeView,
+    isWardrobeView: viewState.isWardrobeView,
     isSearchView: viewState.isSearchView,
     isSignInView: viewState.isSignInView,
     isStatisticsView: viewState.isStatisticsView,

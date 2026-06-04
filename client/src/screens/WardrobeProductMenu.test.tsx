@@ -4,21 +4,21 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import {
-  MyWardrobeProductMenu,
-  MyWardrobeRemoveConfirmDialog,
-} from "./MyWardrobeProductMenu";
+  WardrobeProductMenu,
+  WardrobeRemoveConfirmDialog,
+} from "./WardrobeProductMenu";
 
 const theme = createTheme();
 const translations: Record<string, string> = {
   "actions.cancel": "Cancel",
-  "capsule.removeFromMyWardrobe": "Remove from My Wardrobe",
-  "myWardrobe.deleteUploaded": "Delete item",
-  "myWardrobe.deleteUploadedConfirm": "Delete",
-  "myWardrobe.deleteUploadedConfirmBody": "Delete uploaded body",
-  "myWardrobe.deleteUploadedConfirmTitle": "Delete uploaded item?",
-  "myWardrobe.removeConfirm": "Remove",
-  "myWardrobe.removeConfirmBody": "Remove body",
-  "myWardrobe.removeConfirmTitle": "Remove from My Wardrobe?",
+  "capsule.removeFromMyWardrobe": "Remove from Wardrobe",
+  "wardrobe.deleteUploaded": "Delete item",
+  "wardrobe.deleteUploadedConfirm": "Delete",
+  "wardrobe.deleteUploadedConfirmBody": "Delete uploaded body",
+  "wardrobe.deleteUploadedConfirmTitle": "Delete uploaded item?",
+  "wardrobe.removeConfirm": "Remove",
+  "wardrobe.removeConfirmBody": "Remove body",
+  "wardrobe.removeConfirmTitle": "Remove from Wardrobe?",
 };
 const t = (key: string) => translations[key] || key;
 
@@ -32,7 +32,7 @@ function createAnchor() {
   return anchor;
 }
 
-describe("MyWardrobeProductMenu", () => {
+describe("WardrobeProductMenu", () => {
   afterEach(() => {
     cleanup();
     document.body.innerHTML = "";
@@ -48,7 +48,7 @@ describe("MyWardrobeProductMenu", () => {
       url: "https://example.com/1",
     };
     renderWithTheme(
-      <MyWardrobeProductMenu
+      <WardrobeProductMenu
         anchor={createAnchor()}
         item={item}
         t={t}
@@ -58,7 +58,7 @@ describe("MyWardrobeProductMenu", () => {
     );
 
     await user.click(
-      screen.getByRole("menuitem", { name: "Remove from My Wardrobe" }),
+      screen.getByRole("menuitem", { name: "Remove from Wardrobe" }),
     );
 
     expect(onClose).toHaveBeenCalled();
@@ -70,7 +70,7 @@ describe("MyWardrobeProductMenu", () => {
     const onRequestRemove = vi.fn();
     const onClose = vi.fn();
     renderWithTheme(
-      <MyWardrobeProductMenu
+      <WardrobeProductMenu
         anchor={createAnchor()}
         item={null}
         t={t}
@@ -80,7 +80,7 @@ describe("MyWardrobeProductMenu", () => {
     );
 
     await user.click(
-      screen.getByRole("menuitem", { name: "Remove from My Wardrobe" }),
+      screen.getByRole("menuitem", { name: "Remove from Wardrobe" }),
     );
 
     expect(onClose).toHaveBeenCalled();
@@ -96,7 +96,7 @@ describe("MyWardrobeProductMenu", () => {
       source: "uploaded",
     };
     renderWithTheme(
-      <MyWardrobeProductMenu
+      <WardrobeProductMenu
         anchor={createAnchor()}
         item={item}
         t={t}
@@ -120,7 +120,7 @@ describe("MyWardrobeProductMenu", () => {
       url: "https://example.com/1",
     };
     renderWithTheme(
-      <MyWardrobeProductMenu
+      <WardrobeProductMenu
         anchor={createAnchor()}
         item={item}
         presentation="mobile-context"
@@ -135,7 +135,7 @@ describe("MyWardrobeProductMenu", () => {
     ).toBeInTheDocument();
 
     await user.click(
-      screen.getByRole("menuitem", { name: "Remove from My Wardrobe" }),
+      screen.getByRole("menuitem", { name: "Remove from Wardrobe" }),
     );
 
     expect(onClose).toHaveBeenCalled();
@@ -152,7 +152,7 @@ describe("MyWardrobeProductMenu", () => {
       url: "https://example.com/1",
     };
     renderWithTheme(
-      <MyWardrobeRemoveConfirmDialog
+      <WardrobeRemoveConfirmDialog
         item={item}
         isLoading
         t={t}
@@ -162,7 +162,7 @@ describe("MyWardrobeProductMenu", () => {
     );
 
     expect(
-      screen.getByRole("progressbar", { name: "Remove from My Wardrobe" }),
+      screen.getByRole("progressbar", { name: "Remove from Wardrobe" }),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Remove" })).toBeDisabled();
@@ -170,7 +170,7 @@ describe("MyWardrobeProductMenu", () => {
     cleanup();
 
     renderWithTheme(
-      <MyWardrobeRemoveConfirmDialog
+      <WardrobeRemoveConfirmDialog
         item={item}
         t={t}
         onClose={onClose}
@@ -195,7 +195,7 @@ describe("MyWardrobeProductMenu", () => {
       source: "uploaded",
     };
     renderWithTheme(
-      <MyWardrobeRemoveConfirmDialog
+      <WardrobeRemoveConfirmDialog
         item={item}
         t={t}
         onClose={vi.fn()}

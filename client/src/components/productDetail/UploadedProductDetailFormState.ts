@@ -95,16 +95,16 @@ function getMissingRequiredFields(
 ) {
   const missing: string[] = [];
   if (!form.name.trim()) {
-    missing.push(t("myWardrobe.uploadedDetail.required.name"));
+    missing.push(t("wardrobe.uploadedDetail.required.name"));
   }
   if (!form.audience) {
-    missing.push(t("myWardrobe.uploadedDetail.required.audience"));
+    missing.push(t("wardrobe.uploadedDetail.required.audience"));
   }
   if (!form.category) {
-    missing.push(t("myWardrobe.uploadedDetail.required.category"));
+    missing.push(t("wardrobe.uploadedDetail.required.category"));
   }
   if (form.season.length === 0) {
-    missing.push(t("myWardrobe.uploadedDetail.required.season"));
+    missing.push(t("wardrobe.uploadedDetail.required.season"));
   }
   return missing;
 }

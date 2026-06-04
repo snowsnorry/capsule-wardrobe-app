@@ -222,7 +222,7 @@ describe("wardrobeActions", () => {
     ) => unknown;
     expect(successUpdater({ error: "old" })).toEqual({
       error: "",
-      infoKey: "myWardrobe.saved",
+      infoKey: "wardrobe.saved",
       infoParams: null,
     });
 
@@ -234,7 +234,7 @@ describe("wardrobeActions", () => {
       current: unknown,
     ) => unknown;
     expect(notFoundUpdater({ error: "" })).toEqual({
-      error: "myWardrobe.saveNotFound",
+      error: "wardrobe.saveNotFound",
       infoKey: "",
       infoParams: null,
     });
@@ -252,7 +252,7 @@ describe("wardrobeActions", () => {
       -1,
     )?.[0] as (current: unknown) => unknown;
     expect(genericErrorUpdater({ error: "" })).toEqual({
-      error: "myWardrobe.saveFailed",
+      error: "wardrobe.saveFailed",
       infoKey: "",
       infoParams: null,
     });
@@ -310,7 +310,7 @@ describe("wardrobeActions", () => {
     ) => unknown;
     expect(successUpdater({ error: "old" })).toEqual({
       error: "",
-      infoKey: "myWardrobe.removed",
+      infoKey: "wardrobe.removed",
       infoParams: null,
     });
 
@@ -324,7 +324,7 @@ describe("wardrobeActions", () => {
       current: unknown,
     ) => unknown;
     expect(errorUpdater({ error: "" })).toEqual({
-      error: "myWardrobe.removeFailed",
+      error: "wardrobe.removeFailed",
       infoKey: "",
       infoParams: null,
     });
@@ -555,7 +555,7 @@ describe("wardrobeActions", () => {
       current: unknown,
     ) => unknown;
     expect(errorUpdater({ error: "" })).toEqual({
-      error: "myWardrobe.updateFailed",
+      error: "wardrobe.updateFailed",
       infoKey: "",
       infoParams: null,
     });

@@ -53,8 +53,8 @@ vi.mock("../screens/SearchScreen", () => ({
   ),
 }));
 
-vi.mock("../screens/MyWardrobeScreen", () => ({
-  default: () => <div>my wardrobe</div>,
+vi.mock("../screens/WardrobeScreen", () => ({
+  default: () => <div>wardrobe</div>,
 }));
 
 vi.mock("../screens/StatisticsScreen", () => ({
@@ -208,7 +208,7 @@ describe("AppRouteContent", () => {
     expect(setEmail).toHaveBeenCalledWith("next@example.com");
   });
 
-  test("renders my wardrobe, search, and statistics app routes", async () => {
+  test("renders wardrobe, search, and statistics app routes", async () => {
     const { rerender } = renderRoute({
       appRoute: "explore",
       searchInitialQuery: "linen",
@@ -219,10 +219,10 @@ describe("AppRouteContent", () => {
 
     rerender(
       <Suspense fallback={<div>loading</div>}>
-        <AppRouteContent {...routeProps({ appRoute: "myWardrobe" })} />
+        <AppRouteContent {...routeProps({ appRoute: "wardrobe" })} />
       </Suspense>,
     );
-    expect(await screen.findByText("my wardrobe")).toBeInTheDocument();
+    expect(await screen.findByText("wardrobe")).toBeInTheDocument();
 
     rerender(
       <Suspense fallback={<div>loading</div>}>

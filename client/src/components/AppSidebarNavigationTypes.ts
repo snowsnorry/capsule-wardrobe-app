@@ -1,6 +1,6 @@
 import type { MouseEvent, ReactNode } from "react";
 
-type AppId = "capsule" | "explore" | "myWardrobe" | "statistics";
+type AppId = "capsule" | "explore" | "wardrobe" | "statistics";
 
 type CapsuleNavItem = {
   id?: string;

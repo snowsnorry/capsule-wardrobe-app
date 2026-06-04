@@ -175,7 +175,7 @@ export type WardrobeMutationResponse = {
 export type AppRoute =
   | "capsule"
   | "explore"
-  | "myWardrobe"
+  | "wardrobe"
   | "statistics"
   | "share";
 

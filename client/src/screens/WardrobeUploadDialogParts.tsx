@@ -69,28 +69,28 @@ function UploadProgressContent({
         <Typography variant="body2">
           {formatUploadStatusLabel(
             t,
-            "myWardrobe.uploadDialog.uploadedStatus",
+            "wardrobe.uploadDialog.uploadedStatus",
             progress.uploaded,
           )}
         </Typography>
         <Typography variant="body2">
           {formatUploadStatusLabel(
             t,
-            "myWardrobe.uploadDialog.metadataProcessedStatus",
+            "wardrobe.uploadDialog.metadataProcessedStatus",
             progress.metadataProcessed,
           )}
         </Typography>
         <Typography variant="body2">
           {formatUploadStatusLabel(
             t,
-            "myWardrobe.uploadDialog.imageProcessedStatus",
+            "wardrobe.uploadDialog.imageProcessedStatus",
             progress.imageProcessed,
           )}
         </Typography>
         <Typography variant="body2" color="error">
           {formatUploadStatusLabel(
             t,
-            "myWardrobe.uploadDialog.failedStatus",
+            "wardrobe.uploadDialog.failedStatus",
             progress.failed,
           )}
         </Typography>
@@ -136,7 +136,7 @@ function UploadDropzone({
     <Box
       role="button"
       tabIndex={0}
-      aria-label={t("myWardrobe.uploadDialog.dropzoneLabel")}
+      aria-label={t("wardrobe.uploadDialog.dropzoneLabel")}
       onClick={() => inputRef.current?.click()}
       onKeyDown={(event) => {
         if (event.key === "Enter" || event.key === " ") {
@@ -162,15 +162,15 @@ function UploadDropzone({
         <Typography variant="subtitle1">
           {t(
             isMobile
-              ? "myWardrobe.uploadDialog.mobileDropzoneTitle"
-              : "myWardrobe.uploadDialog.dropzoneTitle",
+              ? "wardrobe.uploadDialog.mobileDropzoneTitle"
+              : "wardrobe.uploadDialog.dropzoneTitle",
           )}
         </Typography>
         <Typography variant="body2" color="text.secondary">
           {t(
             isMobile
-              ? "myWardrobe.uploadDialog.mobileDropzoneHint"
-              : "myWardrobe.uploadDialog.dropzoneHint",
+              ? "wardrobe.uploadDialog.mobileDropzoneHint"
+              : "wardrobe.uploadDialog.dropzoneHint",
           )}
         </Typography>
       </Stack>
@@ -194,9 +194,9 @@ function SelectedFilesList({
   }
 
   return (
-    <Stack spacing={1} aria-label={t("myWardrobe.uploadDialog.fileList")}>
+    <Stack spacing={1} aria-label={t("wardrobe.uploadDialog.fileList")}>
       <Typography variant="subtitle2" color="text.secondary">
-        {t("myWardrobe.uploadDialog.selectedSummary")
+        {t("wardrobe.uploadDialog.selectedSummary")
           .replace("{count}", String(files.length))
           .replace("{size}", totalSizeLabel)}
       </Typography>
@@ -223,7 +223,7 @@ function SelectedFilesList({
             </Typography>
           </Stack>
           <IconButton
-            aria-label={t("myWardrobe.uploadDialog.removeFile").replace(
+            aria-label={t("wardrobe.uploadDialog.removeFile").replace(
               "{name}",
               entry.file.name,
             )}

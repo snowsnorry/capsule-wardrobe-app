@@ -93,7 +93,7 @@ vi.mock("./screens/SignInScreen", () => ({
 vi.mock("./screens/mainScreen/MainScreen", () => ({
   default: function MainScreenMock(props: {
     onNavigateApp: (
-      route: "capsule" | "explore" | "myWardrobe" | "statistics",
+      route: "capsule" | "explore" | "wardrobe" | "statistics",
     ) => void;
   }) {
     return (

@@ -125,7 +125,7 @@ describe("MainScreenMenus", () => {
     expect(onToggleRegenerationSelection).not.toHaveBeenCalled();
   });
 
-  test("saves a product to my wardrobe from the product menu", async () => {
+  test("saves a product to wardrobe from the product menu", async () => {
     const user = userEvent.setup();
     const onSaveToMyWardrobe = vi.fn(() => Promise.resolve());
     renderMenus({
@@ -133,7 +133,7 @@ describe("MainScreenMenus", () => {
     });
 
     await user.click(
-      screen.getByRole("menuitem", { name: "Save to My Wardrobe" }),
+      screen.getByRole("menuitem", { name: "Save to Wardrobe" }),
     );
 
     expect(onSaveToMyWardrobe).toHaveBeenCalledWith({
@@ -173,7 +173,7 @@ describe("MainScreenMenus", () => {
     expect(screen.getByRole("menuitem", { name: "Select" })).toBeVisible();
 
     await user.click(
-      screen.getByRole("menuitem", { name: "Save to My Wardrobe" }),
+      screen.getByRole("menuitem", { name: "Save to Wardrobe" }),
     );
     expect(onSaveToMyWardrobe).toHaveBeenCalledWith(
       expect.objectContaining({ id: "a" }),
@@ -229,10 +229,10 @@ describe("MainScreenMenus", () => {
 
     expect(screen.getByRole("menuitem", { name: "Select" })).toBeVisible();
     expect(
-      screen.queryByRole("menuitem", { name: "Save to My Wardrobe" }),
+      screen.queryByRole("menuitem", { name: "Save to Wardrobe" }),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByRole("menuitem", { name: "Remove from My Wardrobe" }),
+      screen.queryByRole("menuitem", { name: "Remove from Wardrobe" }),
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("menuitem", { name: "Copy Link Address" }),
@@ -265,10 +265,10 @@ describe("MainScreenMenus", () => {
 
     expect(screen.getByRole("menuitem", { name: "Select" })).toBeVisible();
     expect(
-      screen.queryByRole("menuitem", { name: "Save to My Wardrobe" }),
+      screen.queryByRole("menuitem", { name: "Save to Wardrobe" }),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByRole("menuitem", { name: "Remove from My Wardrobe" }),
+      screen.queryByRole("menuitem", { name: "Remove from Wardrobe" }),
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("menuitem", { name: "Copy Link Address" }),
@@ -303,7 +303,7 @@ describe("MainScreenMenus", () => {
     });
   });
 
-  test("confirms before removing a saved product from my wardrobe", async () => {
+  test("confirms before removing a saved product from wardrobe", async () => {
     const user = userEvent.setup();
     const onRemoveFromMyWardrobe = vi.fn(() => Promise.resolve());
     const onSaveToMyWardrobe = vi.fn(() => Promise.resolve());
@@ -326,7 +326,7 @@ describe("MainScreenMenus", () => {
     });
 
     await user.click(
-      screen.getByRole("menuitem", { name: "Remove from My Wardrobe" }),
+      screen.getByRole("menuitem", { name: "Remove from Wardrobe" }),
     );
     expect(onRemoveFromMyWardrobe).not.toHaveBeenCalled();
 

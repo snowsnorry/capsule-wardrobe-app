@@ -110,14 +110,14 @@ function renderSidebar(
           "Adjust the inputs used to build this capsule.",
         "capsule.sourceMode.label": "Item source",
         "capsule.sourceMode.catalogOnly": "Catalog items",
-        "capsule.sourceMode.wardrobePreferred": "My wardrobe + catalog",
-        "capsule.sourceMode.wardrobeOnly": "My wardrobe only",
-        "capsule.sourceMode.checkingWardrobe": "Checking My Wardrobe items...",
+        "capsule.sourceMode.wardrobePreferred": "Wardrobe + catalog",
+        "capsule.sourceMode.wardrobeOnly": "Wardrobe only",
+        "capsule.sourceMode.checkingWardrobe": "Checking Wardrobe items...",
         "capsule.sourceMode.emptyWardrobe":
-          "My Wardrobe has no ready items yet. Add items before using this source.",
-        "capsule.sourceMode.loadFailed": "Could not check My Wardrobe items.",
+          "Wardrobe has no ready items yet. Add items before using this source.",
+        "capsule.sourceMode.loadFailed": "Could not check Wardrobe items.",
         "capsule.sourceMode.insufficientWardrobe":
-          "My Wardrobe has {count} ready items. This capsule may need more: {items}.",
+          "Wardrobe has {count} ready items. This capsule may need more: {items}.",
         "capsule.anchors.title": "Anchor items",
         "capsule.anchors.hint": "Choose up to 5 wardrobe items to keep.",
         "capsule.anchors.add": "Add items from wardrobe",
@@ -314,7 +314,7 @@ describe("ProfileFiltersSidebar", () => {
     });
 
     expect(
-      await screen.findByText(/My Wardrobe has no ready items/),
+      await screen.findByText(/Wardrobe has no ready items/),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Apply" })).toBeDisabled();
     expect(fetchMyWardrobeItemsMock).toHaveBeenCalledWith({ force: true });
@@ -337,7 +337,7 @@ describe("ProfileFiltersSidebar", () => {
 
     expect(
       await screen.findByText(
-        /My Wardrobe has 1 ready items\. This capsule may need more:/,
+        /Wardrobe has 1 ready items\. This capsule may need more:/,
       ),
     ).toBeInTheDocument();
     expect(screen.getByText(/Layering: 2/)).toBeInTheDocument();
@@ -386,7 +386,7 @@ describe("ProfileFiltersSidebar", () => {
       selectedSeasons: ["summer"],
     });
 
-    await screen.findByText(/My Wardrobe has 2 ready items/);
+    await screen.findByText(/Wardrobe has 2 ready items/);
     expect(screen.queryByText(/Swimwear: 1/)).not.toBeInTheDocument();
   });
 

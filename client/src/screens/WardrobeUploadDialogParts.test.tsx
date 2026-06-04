@@ -11,22 +11,22 @@ import {
 
 const theme = createTheme();
 const translations: Record<string, string> = {
-  "myWardrobe.uploadDialog.dropzoneLabel": "Choose wardrobe photos",
-  "myWardrobe.uploadDialog.dropzoneTitle": "Upload photos",
-  "myWardrobe.uploadDialog.dropzoneHint":
+  "wardrobe.uploadDialog.dropzoneLabel": "Choose wardrobe photos",
+  "wardrobe.uploadDialog.dropzoneTitle": "Upload photos",
+  "wardrobe.uploadDialog.dropzoneHint":
     "Drag and drop or click to browse. JPEG, PNG, or WebP. Up to 5 files, 10 MB each.",
-  "myWardrobe.uploadDialog.mobileDropzoneTitle": "Upload photos",
-  "myWardrobe.uploadDialog.mobileDropzoneHint":
+  "wardrobe.uploadDialog.mobileDropzoneTitle": "Upload photos",
+  "wardrobe.uploadDialog.mobileDropzoneHint":
     "Tap to browse. JPEG, PNG, or WebP. Up to 5 files, 10 MB each.",
-  "myWardrobe.uploadDialog.fileList": "Selected files",
-  "myWardrobe.uploadDialog.selectedSummary": "{count} files, {size}",
-  "myWardrobe.uploadDialog.removeFile": "Remove {name}",
-  "myWardrobe.uploadDialog.uploadedStatus": "Uploaded: {image_count}",
-  "myWardrobe.uploadDialog.metadataProcessedStatus":
+  "wardrobe.uploadDialog.fileList": "Selected files",
+  "wardrobe.uploadDialog.selectedSummary": "{count} files, {size}",
+  "wardrobe.uploadDialog.removeFile": "Remove {name}",
+  "wardrobe.uploadDialog.uploadedStatus": "Uploaded: {image_count}",
+  "wardrobe.uploadDialog.metadataProcessedStatus":
     "Metadata processed: {image_count}",
-  "myWardrobe.uploadDialog.imageProcessedStatus":
+  "wardrobe.uploadDialog.imageProcessedStatus":
     "Images processed: {image_count}",
-  "myWardrobe.uploadDialog.failedStatus": "Failed: {image_count}",
+  "wardrobe.uploadDialog.failedStatus": "Failed: {image_count}",
 };
 
 function t(key: string) {

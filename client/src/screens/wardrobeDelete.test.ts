@@ -1,19 +1,19 @@
 import { describe, expect, test } from "vitest";
 import {
-  getMyWardrobeDeletionTarget,
+  getWardrobeDeletionTarget,
   isDifferentWardrobeItem,
-} from "./myWardrobeDelete";
+} from "./wardrobeDelete";
 
-describe("myWardrobeDelete", () => {
+describe("wardrobeDelete", () => {
   test("builds deletion targets for uploaded and catalog items", () => {
     expect(
-      getMyWardrobeDeletionTarget({
+      getWardrobeDeletionTarget({
         id: " uploaded-1 ",
         source: "uploaded",
       }),
     ).toEqual({ kind: "uploaded", id: "uploaded-1" });
     expect(
-      getMyWardrobeDeletionTarget({
+      getWardrobeDeletionTarget({
         url: " https://example.com/1 ",
         source: "from_catalog",
       }),
@@ -21,8 +21,8 @@ describe("myWardrobeDelete", () => {
   });
 
   test("rejects incomplete deletion targets", () => {
-    expect(getMyWardrobeDeletionTarget({ source: "uploaded" })).toBeNull();
-    expect(getMyWardrobeDeletionTarget({ source: "from_catalog" })).toBeNull();
+    expect(getWardrobeDeletionTarget({ source: "uploaded" })).toBeNull();
+    expect(getWardrobeDeletionTarget({ source: "from_catalog" })).toBeNull();
   });
 
   test("matches local wardrobe items by deletion target", () => {

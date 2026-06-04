@@ -33,7 +33,7 @@ type AppShellContentProps = {
   isContentBusy: boolean;
   isLarge: boolean;
   isMainScreenView: boolean;
-  isMyWardrobeView: boolean;
+  isWardrobeView: boolean;
   isSearchView: boolean;
   isSignInView: boolean;
   isStatisticsView: boolean;
@@ -245,7 +245,7 @@ export default function AppShellContent(props: AppShellContentProps) {
   const verticalPadding = getShellContainerVerticalPadding({
     isFullScreenRoute,
     isMainScreenView: props.isMainScreenView,
-    isMyWardrobeView: props.isMyWardrobeView,
+    isWardrobeView: props.isWardrobeView,
     isSearchView: props.isSearchView,
     isStatisticsView: props.isStatisticsView,
   });

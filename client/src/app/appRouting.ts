@@ -4,8 +4,13 @@ export function getAppRoute(pathname = "/"): AppRoute {
   if (pathname.startsWith("/share/")) {
     return "share";
   }
-  if (pathname === "/my-wardrobe" || pathname === "/my-wardrobe/") {
-    return "myWardrobe";
+  if (
+    pathname === "/wardrobe" ||
+    pathname === "/wardrobe/" ||
+    pathname === "/my-wardrobe" ||
+    pathname === "/my-wardrobe/"
+  ) {
+    return "wardrobe";
   }
   if (pathname === "/explore" || pathname === "/explore/") {
     return "explore";
@@ -23,10 +28,10 @@ export function getShareIdFromPath(pathname = "") {
 
 export function getActiveSidebarApp(
   appRoute: AppRoute,
-): "capsule" | "explore" | "myWardrobe" | "statistics" {
+): "capsule" | "explore" | "wardrobe" | "statistics" {
   if (
     appRoute === "explore" ||
-    appRoute === "myWardrobe" ||
+    appRoute === "wardrobe" ||
     appRoute === "statistics"
   ) {
     return appRoute;

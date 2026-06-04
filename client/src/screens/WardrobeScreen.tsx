@@ -23,58 +23,55 @@ import type {
   MainScreenItem,
   MobileCardColumns,
 } from "./mainScreen/MainScreenTypes";
-import MyWardrobeActionMenu from "./MyWardrobeActionMenu";
+import WardrobeActionMenu from "./WardrobeActionMenu";
 import {
-  readStoredMyWardrobeMobileCardColumns,
-  writeStoredMyWardrobeMobileCardColumns,
-} from "./MyWardrobeCardLayoutStorage";
-import MyWardrobeGrid from "./MyWardrobeGrid";
+  readStoredWardrobeMobileCardColumns,
+  writeStoredWardrobeMobileCardColumns,
+} from "./WardrobeCardLayoutStorage";
+import WardrobeGrid from "./WardrobeGrid";
 import {
-  MyWardrobeProductMenu,
-  MyWardrobeRemoveConfirmDialog,
-  type MyWardrobeProductMenuState,
-} from "./MyWardrobeProductMenu";
+  WardrobeProductMenu,
+  WardrobeRemoveConfirmDialog,
+  type WardrobeProductMenuState,
+} from "./WardrobeProductMenu";
+import { getItemFromResponse, getItemsFromResponse } from "./wardrobeResponse";
 import {
-  getItemFromResponse,
-  getItemsFromResponse,
-} from "./myWardrobeResponse";
-import {
-  getMyWardrobeDeletionTarget,
+  getWardrobeDeletionTarget,
   isDifferentWardrobeItem,
-} from "./myWardrobeDelete";
-import { EMPTY_UPLOAD_PROGRESS } from "./myWardrobeUploadProgress";
+} from "./wardrobeDelete";
+import { EMPTY_UPLOAD_PROGRESS } from "./wardrobeUploadProgress";
 import CapsuleProductDetailDialog from "./mainScreen/CapsuleProductDetailDialog";
 import WardrobeUploadDialog from "./WardrobeUploadDialog";
 import WardrobeUrlUploadDialog from "./WardrobeUrlUploadDialog";
-import MyWardrobeToolbar, {
+import WardrobeToolbar, {
   getSourceFilter,
-  type MyWardrobeFilter,
-} from "./MyWardrobeToolbar";
+  type WardrobeFilter,
+} from "./WardrobeToolbar";
 
 type ProductDetailMode = "read" | "edit";
 
 // Main screen composition stays local so toolbar, menus, dialogs, and grid share state.
 // eslint-disable-next-line max-lines-per-function
-function MyWardrobeScreen(): ReactElement {
+function WardrobeScreen(): ReactElement {
   const { t, locale } = useI18n();
   const isOverlay = useMediaQuery("(max-width: 1279.95px)");
-  const [filter, setFilter] = useState<MyWardrobeFilter>("all");
+  const [filter, setFilter] = useState<WardrobeFilter>("all");
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [isUrlUploadDialogOpen, setIsUrlUploadDialogOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [mobileColumns, setMobileColumns] = useState<MobileCardColumns>(() =>
-    readStoredMyWardrobeMobileCardColumns(),
+    readStoredWardrobeMobileCardColumns(),
   );
   const [productDetailItem, setProductDetailItem] =
     useState<MainScreenItem | null>(null);
   const [productDetailMode, setProductDetailMode] =
     useState<ProductDetailMode>("read");
-  const wardrobeItems = useMyWardrobeItems(filter, refreshKey, t);
+  const wardrobeItems = useWardrobeItems(filter, refreshKey, t);
   const displayedColumns = isOverlay ? mobileColumns : 2;
   const updateColumns = (value: MobileCardColumns) => {
     setMobileColumns(value);
-    writeStoredMyWardrobeMobileCardColumns(value);
+    writeStoredWardrobeMobileCardColumns(value);
   };
   const handleUploadImages = async (files: File[]) => {
     const uploaded = await wardrobeItems.handleUploadImages(files);
@@ -112,13 +109,13 @@ function MyWardrobeScreen(): ReactElement {
   };
 
   return (
-    <Box data-testid="my-wardrobe-screen" sx={myWardrobeScreenSx}>
+    <Box data-testid="wardrobe-screen" sx={wardrobeScreenSx}>
       <Stack
         spacing={2.25}
-        data-testid="my-wardrobe-content"
-        sx={myWardrobeContentSx}
+        data-testid="wardrobe-content"
+        sx={wardrobeContentSx}
       >
-        <MyWardrobeToolbar
+        <WardrobeToolbar
           filter={filter}
           isMobile={isOverlay}
           isLoading={wardrobeItems.isLoading || wardrobeItems.isUploading}
@@ -128,7 +125,7 @@ function MyWardrobeScreen(): ReactElement {
           onOpenUpload={() => setIsUploadDialogOpen(true)}
           onOpenUrlUpload={() => setIsUrlUploadDialogOpen(true)}
         />
-        <MyWardrobeActionMenu
+        <WardrobeActionMenu
           anchorEl={menuAnchor}
           disabled={
             wardrobeItems.isLoading ||
@@ -144,7 +141,7 @@ function MyWardrobeScreen(): ReactElement {
         {wardrobeItems.error ? (
           <Alert severity="error">{wardrobeItems.error}</Alert>
         ) : null}
-        <MyWardrobeGrid
+        <WardrobeGrid
           isLoading={wardrobeItems.isLoading}
           isOverlay={isOverlay}
           items={wardrobeItems.items}
@@ -153,7 +150,7 @@ function MyWardrobeScreen(): ReactElement {
           onProductClick={openProductDetail}
           onProductMenuOpen={wardrobeItems.handleProductMenuOpen}
         />
-        <MyWardrobeProductMenu
+        <WardrobeProductMenu
           anchor={wardrobeItems.productMenu.anchor}
           item={wardrobeItems.productMenu.item}
           originRect={wardrobeItems.productMenu.originRect}
@@ -162,7 +159,7 @@ function MyWardrobeScreen(): ReactElement {
           onClose={wardrobeItems.closeProductMenu}
           onRequestRemove={wardrobeItems.setRemoveConfirmItem}
         />
-        <MyWardrobeRemoveConfirmDialog
+        <WardrobeRemoveConfirmDialog
           item={wardrobeItems.removeConfirmItem}
           isLoading={wardrobeItems.isMutating}
           t={t}
@@ -210,21 +207,24 @@ function MyWardrobeScreen(): ReactElement {
   );
 }
 
-// Keeps My Wardrobe network state and item mutations in one place.
+// Keeps Wardrobe network state and item mutations in one place.
 // eslint-disable-next-line max-lines-per-function
-function useMyWardrobeItems(
-  filter: MyWardrobeFilter,
+function useWardrobeItems(
+  filter: WardrobeFilter,
   refreshKey: number,
   t: (key: string) => string,
 ) {
   const source = useMemo(() => getSourceFilter(filter), [filter]);
-  const { error, isLoading, items, setError, setItems } =
-    useMyWardrobeItemsQuery(source, refreshKey, t);
+  const { error, isLoading, items, setError, setItems } = useWardrobeItemsQuery(
+    source,
+    refreshKey,
+    t,
+  );
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const [isMutating, setIsMutating] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(EMPTY_UPLOAD_PROGRESS);
-  const [productMenu, setProductMenu] = useState<MyWardrobeProductMenuState>({
+  const [productMenu, setProductMenu] = useState<WardrobeProductMenuState>({
     anchor: null,
     url: "",
     item: null,
@@ -248,7 +248,7 @@ function useMyWardrobeItems(
     });
   };
   const handleConfirmRemove = async (item: MainScreenItem) => {
-    const target = getMyWardrobeDeletionTarget(item);
+    const target = getWardrobeDeletionTarget(item);
     if (!target) return;
 
     setIsMutating(true);
@@ -265,7 +265,7 @@ function useMyWardrobeItems(
         ),
       );
     } catch {
-      setError(t("myWardrobe.removeFailed"));
+      setError(t("wardrobe.removeFailed"));
     } finally {
       setIsMutating(false);
     }
@@ -276,7 +276,7 @@ function useMyWardrobeItems(
       await downloadMyWardrobePdf({ source });
       setError("");
     } catch {
-      setError(t("myWardrobe.downloadFailed"));
+      setError(t("wardrobe.downloadFailed"));
     } finally {
       setIsDownloadingPdf(false);
     }
@@ -298,7 +298,7 @@ function useMyWardrobeItems(
       setError("");
       return true;
     } catch {
-      setError(t("myWardrobe.uploadFailed"));
+      setError(t("wardrobe.uploadFailed"));
       return false;
     } finally {
       setIsUploading(false);
@@ -321,7 +321,7 @@ function useMyWardrobeItems(
       setError("");
       return true;
     } catch {
-      setError(t("myWardrobe.urlUploadFailed"));
+      setError(t("wardrobe.urlUploadFailed"));
       return false;
     } finally {
       setIsUploading(false);
@@ -355,7 +355,7 @@ function useMyWardrobeItems(
       );
       return updatedItem;
     } catch (error) {
-      setError(t("myWardrobe.updateFailed"));
+      setError(t("wardrobe.updateFailed"));
       throw error;
     } finally {
       setIsMutating(false);
@@ -383,7 +383,7 @@ function useMyWardrobeItems(
   };
 }
 
-function useMyWardrobeItemsQuery(
+function useWardrobeItemsQuery(
   source: MyWardrobeSource | null,
   refreshKey: number,
   t: (key: string) => string,
@@ -406,7 +406,7 @@ function useMyWardrobeItemsQuery(
       .catch(() => {
         if (isActive) {
           setItems([]);
-          setError(t("myWardrobe.loadFailed"));
+          setError(t("wardrobe.loadFailed"));
         }
       })
       .finally(() => {
@@ -423,7 +423,7 @@ function useMyWardrobeItemsQuery(
   return { error, isLoading, items, setError, setItems };
 }
 
-const myWardrobeScreenSx = {
+const wardrobeScreenSx = {
   height: "100%",
   minHeight: 0,
   overflowX: "hidden",
@@ -434,7 +434,7 @@ const myWardrobeScreenSx = {
   pb: 2,
 } as const;
 
-const myWardrobeContentSx = {
+const wardrobeContentSx = {
   ...MAIN_SCREEN_CONTENT_COLUMN_SX,
   px: { xs: 2, md: 3 },
   boxSizing: "border-box",
@@ -442,4 +442,4 @@ const myWardrobeContentSx = {
   minHeight: "100%",
 } as const;
 
-export default MyWardrobeScreen;
+export default WardrobeScreen;

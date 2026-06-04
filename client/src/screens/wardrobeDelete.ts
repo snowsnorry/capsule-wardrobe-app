@@ -1,12 +1,12 @@
 import type { MainScreenItem } from "./mainScreen/MainScreenTypes";
 
-type MyWardrobeDeletionTarget =
+type WardrobeDeletionTarget =
   | { kind: "uploaded"; id: string }
   | { kind: "from_catalog"; url: string };
 
-function getMyWardrobeDeletionTarget(
+function getWardrobeDeletionTarget(
   item: MainScreenItem,
-): MyWardrobeDeletionTarget | null {
+): WardrobeDeletionTarget | null {
   const id = String(item?.id || "").trim();
   const url = String(item?.url || "").trim();
   if (item?.source === "uploaded") {
@@ -19,7 +19,7 @@ function getMyWardrobeDeletionTarget(
 function isDifferentWardrobeItem(
   currentItem: MainScreenItem,
   item: MainScreenItem,
-  target: MyWardrobeDeletionTarget,
+  target: WardrobeDeletionTarget,
 ) {
   if (currentItem === item) {
     return false;
@@ -30,4 +30,4 @@ function isDifferentWardrobeItem(
     : String(currentItem?.url || "").trim() !== target.url;
 }
 
-export { getMyWardrobeDeletionTarget, isDifferentWardrobeItem };
+export { getWardrobeDeletionTarget, isDifferentWardrobeItem };

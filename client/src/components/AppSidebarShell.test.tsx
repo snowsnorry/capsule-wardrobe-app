@@ -297,9 +297,16 @@ describe("AppSidebarShell", () => {
     const scrollTarget = screen.getByText("primary content");
     setScrollMetrics(scrollTarget, { clientHeight: 100, scrollHeight: 500 });
 
-    fireEvent.wheel(screen.getByText("sidebar-body"), { deltaY: 80 });
+    const wheelEvent = new WheelEvent("wheel", {
+      bubbles: true,
+      cancelable: true,
+      deltaY: 80,
+    });
+
+    screen.getByText("sidebar-body").dispatchEvent(wheelEvent);
 
     expect(scrollTarget.scrollTop).toBe(80);
+    expect(wheelEvent.defaultPrevented).toBe(true);
   });
 
   test("keeps wheel inside a scrollable desktop sidebar region", () => {

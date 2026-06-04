@@ -107,7 +107,7 @@ function createProps(
     isContentBusy: false,
     isLarge: false,
     isMainScreenView: false,
-    isMyWardrobeView: false,
+    isWardrobeView: false,
     isSearchView: true,
     isSignInView: false,
     isStatisticsView: false,
@@ -122,7 +122,7 @@ function createProps(
     },
     t: (key: string) =>
       ({
-        "myWardrobe.title": "My Wardrobe",
+        "wardrobe.title": "Wardrobe",
         "search.title": "Catalog: Explore",
         "statistics.title": "Catalog: Statistics",
         "appShell.toggleSidebar": "Toggle sidebar",
@@ -185,10 +185,10 @@ describe("AppShellContent", () => {
     expect(screen.getByText("route content")).toBeInTheDocument();
   });
 
-  test("uses capsule-like fill layout for the my wardrobe route", () => {
+  test("uses capsule-like fill layout for the wardrobe route", () => {
     renderShellContent({
-      appRoute: "myWardrobe",
-      isMyWardrobeView: true,
+      appRoute: "wardrobe",
+      isWardrobeView: true,
       isSearchView: false,
     });
 
@@ -199,9 +199,9 @@ describe("AppShellContent", () => {
     expect(shell).toHaveAttribute("data-desktop-content-end-gap", "0");
     expect(shell).toHaveAttribute(
       "data-shell-test-id",
-      "my-wardrobe-screen-shell",
+      "wardrobe-screen-shell",
     );
-    expect(screen.getByText("My Wardrobe")).toBeInTheDocument();
+    expect(screen.getByText("Wardrobe")).toBeInTheDocument();
   });
 
   test("wires sidebar capsule header and capsule navigation actions", () => {

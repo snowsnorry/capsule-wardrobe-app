@@ -37,7 +37,7 @@ vi.mock("./appViewState", () => ({
     hasFilterChanges: false,
     isContentBusy: false,
     isMainScreenView: true,
-    isMyWardrobeView: false,
+    isWardrobeView: false,
     isSearchView: false,
     isSignInView: false,
     isStatisticsView: false,

@@ -14,7 +14,7 @@ const t = (key: string, params?: Record<string, unknown>) => {
     "search.empty": "No results",
     "search.noBrand": "No brand",
     "search.untitled": "Untitled",
-    "myWardrobe.savedBadge": "Saved",
+    "wardrobe.savedBadge": "Saved",
   };
   if (key === "search.resultsCount") {
     return `${params?.count} results`;

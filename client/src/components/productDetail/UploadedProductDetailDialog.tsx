@@ -150,7 +150,7 @@ function UploadedProductDetailActions({
             color="warning.dark"
             sx={{ mr: "auto" }}
           >
-            {t("myWardrobe.uploadedDetail.missingRequired", {
+            {t("wardrobe.uploadedDetail.missingRequired", {
               items: missingRequired.join(", "),
             })}
           </Typography>
@@ -183,7 +183,7 @@ function UploadedProductDetailActions({
           color="warning.dark"
           sx={{ alignSelf: "stretch" }}
         >
-          {t("myWardrobe.uploadedDetail.missingRequired", {
+          {t("wardrobe.uploadedDetail.missingRequired", {
             items: missingRequired.join(", "),
           })}
         </Typography>

@@ -144,7 +144,7 @@ describe("ClothingCard", () => {
       item: { ...item, isSavedToWardrobe: true },
     });
 
-    expect(screen.getByLabelText("myWardrobe.savedBadge")).toBeInTheDocument();
+    expect(screen.getByLabelText("wardrobe.savedBadge")).toBeInTheDocument();
     expect(
       container.querySelector(
         ".wardrobe-card-title .wardrobe-card-bookmark-icon",
@@ -163,7 +163,7 @@ describe("ClothingCard", () => {
       item: { ...item, source: "uploaded" },
     });
 
-    expect(screen.getByLabelText("myWardrobe.savedBadge")).toBeInTheDocument();
+    expect(screen.getByLabelText("wardrobe.savedBadge")).toBeInTheDocument();
     expect(
       container.querySelector(
         ".wardrobe-card-title .wardrobe-card-uploaded-icon",
@@ -192,7 +192,7 @@ describe("ClothingCard", () => {
       },
     });
 
-    expect(screen.getByLabelText("myWardrobe.savedBadge")).toBeInTheDocument();
+    expect(screen.getByLabelText("wardrobe.savedBadge")).toBeInTheDocument();
     expect(
       container.querySelector(
         ".wardrobe-card-title .wardrobe-card-uploaded-icon",
@@ -223,7 +223,7 @@ describe("ClothingCard", () => {
     const failedChip = container.querySelector(
       ".wardrobe-card-category-failed",
     );
-    expect(failedChip).toHaveTextContent("myWardrobe.failedUploadBadge");
+    expect(failedChip).toHaveTextContent("wardrobe.failedUploadBadge");
     expect(
       container.querySelector(".wardrobe-card-category-category"),
     ).not.toBeInTheDocument();
@@ -243,7 +243,7 @@ describe("ClothingCard", () => {
     const needsReviewChip = container.querySelector(
       ".wardrobe-card-category-needsReview",
     );
-    expect(needsReviewChip).toHaveTextContent("myWardrobe.needsReviewBadge");
+    expect(needsReviewChip).toHaveTextContent("wardrobe.needsReviewBadge");
     expect(
       container.querySelector(".wardrobe-card-category-category"),
     ).not.toBeInTheDocument();

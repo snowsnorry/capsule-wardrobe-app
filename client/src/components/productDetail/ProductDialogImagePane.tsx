@@ -92,7 +92,7 @@ function ProductImageVersionToggle({
       exclusive
       size="small"
       value={imageMode}
-      aria-label={t("myWardrobe.imageVersionToggle.label")}
+      aria-label={t("wardrobe.imageVersionToggle.label")}
       onChange={(_event, value: "ai" | "original" | null) => {
         if (value) {
           onChange(value);
@@ -101,10 +101,10 @@ function ProductImageVersionToggle({
       sx={imageVersionToggleSx}
     >
       <ToggleButton value="original">
-        {t("myWardrobe.imageVersionToggle.original")}
+        {t("wardrobe.imageVersionToggle.original")}
       </ToggleButton>
       <ToggleButton value="ai">
-        {t("myWardrobe.imageVersionToggle.ai")}
+        {t("wardrobe.imageVersionToggle.ai")}
       </ToggleButton>
     </ToggleButtonGroup>
   );

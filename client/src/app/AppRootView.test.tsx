@@ -45,7 +45,7 @@ function createRootProps() {
       isContentBusy: false,
       isLarge: true,
       isMainScreenView: true,
-      isMyWardrobeView: false,
+      isWardrobeView: false,
       isSearchView: false,
       isSignInView: false,
       isStatisticsView: false,

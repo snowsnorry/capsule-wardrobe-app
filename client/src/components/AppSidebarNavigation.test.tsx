@@ -10,10 +10,14 @@ vi.mock("../i18n/useI18n", () => ({
       const value =
         {
           "launcher.capsule": "Capsule",
-          "launcher.myWardrobe": "My Wardrobe",
+          "launcher.wardrobe": "Wardrobe",
           "sidebar.catalog": "Catalog",
           "sidebar.explore": "Explore",
           "sidebar.statistics": "Statistics",
+          "wardrobe.allItems": "All items",
+          "wardrobe.yourOutfits": "Your outfits",
+          "wardrobe.searchOutfits": "Search outfits",
+          "wardrobe.newOutfit": "New outfit",
           "capsule.new": "New capsule",
           "capsule.search": "Search capsules",
           "capsule.yourCapsules": "Your capsules",
@@ -185,39 +189,25 @@ describe("AppSidebarNavigation", () => {
     expect(await screen.findByRole("tooltip")).toHaveTextContent("New capsule");
   });
 
-  test("opens the catalog group through explore and renders iconless child rows", async () => {
+  test("toggles the catalog group and navigates through iconless child rows", async () => {
     const user = userEvent.setup();
     const onNavigateApp = vi.fn();
 
-    const { rerender } = renderNavigation({ onNavigateApp });
+    renderNavigation({ onNavigateApp });
 
     await user.click(screen.getByRole("button", { name: "Catalog" }));
-
-    expect(onNavigateApp).toHaveBeenCalledWith("explore");
-
-    rerender(
-      <ThemeProvider theme={theme}>
-        <AppSidebarNavigation
-          activeApp="explore"
-          isOverlaySidebar={false}
-          isSidebarCollapsed={false}
-          desktopSidebarRailWidth={72}
-          capsuleList={[]}
-          onNavigateApp={onNavigateApp}
-        />
-      </ThemeProvider>,
-    );
 
     const catalogChildren = screen.getByTestId("catalog-sidebar-children");
     const exploreChild = screen.getByRole("button", { name: "Explore" });
     const statisticsChild = screen.getByRole("button", { name: "Statistics" });
 
+    expect(onNavigateApp).not.toHaveBeenCalled();
     expect(catalogChildren).toHaveAttribute("aria-hidden", "false");
     expect(screen.getByRole("button", { name: "Catalog" })).toHaveAttribute(
       "aria-expanded",
       "true",
     );
-    expect(exploreChild).toHaveClass("Mui-selected");
+    expect(exploreChild).not.toHaveClass("Mui-selected");
     expect(statisticsChild).not.toHaveClass("Mui-selected");
     expect(exploreChild.querySelector("svg")).toBeNull();
     expect(statisticsChild.querySelector("svg")).toBeNull();
@@ -229,6 +219,10 @@ describe("AppSidebarNavigation", () => {
     expect(getComputedStyle(exploreChild).paddingTop).toBe("4px");
     expect(getComputedStyle(exploreChild).paddingBottom).toBe("4px");
     expect(getComputedStyle(screen.getByText("Explore")).fontSize).toBe("14px");
+
+    await user.click(exploreChild);
+
+    expect(onNavigateApp).toHaveBeenCalledWith("explore");
   });
 
   test("selects statistics inside the expanded catalog group", async () => {
@@ -329,16 +323,52 @@ describe("AppSidebarNavigation", () => {
     expect(collapsedIconCenter).toBe(desktopSidebarRailWidth / 2);
   });
 
-  test("keeps the my wardrobe top-level icon at the standard sidebar size", () => {
-    renderNavigation({ activeApp: "myWardrobe" });
+  test("keeps the wardrobe top-level icon at the standard sidebar size", () => {
+    renderNavigation({ activeApp: "wardrobe" });
 
-    const myWardrobeIcon = screen
-      .getByRole("button", { name: "My Wardrobe" })
+    const wardrobeIcon = screen
+      .getByRole("button", { name: "Wardrobe" })
       .querySelector("svg");
 
-    expect(myWardrobeIcon).not.toBeNull();
-    expect(getComputedStyle(myWardrobeIcon as Element).width).toBe("24px");
-    expect(getComputedStyle(myWardrobeIcon as Element).height).toBe("24px");
+    expect(wardrobeIcon).not.toBeNull();
+    expect(getComputedStyle(wardrobeIcon as Element).width).toBe("24px");
+    expect(getComputedStyle(wardrobeIcon as Element).height).toBe("24px");
+  });
+
+  test("renders wardrobe children with disabled outfit placeholder actions", async () => {
+    const user = userEvent.setup();
+    const onNavigateApp = vi.fn();
+
+    renderNavigation({ onNavigateApp });
+
+    await user.click(screen.getByRole("button", { name: "Wardrobe" }));
+
+    const wardrobeChildren = screen.getByTestId("wardrobe-sidebar-children");
+    const outfitsSectionLabel = screen.getByText("Your outfits").parentElement;
+    const allItems = screen.getByRole("button", { name: "All items" });
+    const searchOutfits = screen.getByRole("button", {
+      name: "Search outfits",
+    });
+    const newOutfit = screen.getByRole("button", { name: "New outfit" });
+
+    expect(wardrobeChildren).toHaveAttribute("aria-hidden", "false");
+    expect(screen.getByRole("button", { name: "Wardrobe" })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+    expect(outfitsSectionLabel).not.toBeNull();
+    expect(getComputedStyle(outfitsSectionLabel as Element).paddingLeft).toBe(
+      "10px",
+    );
+    expect(screen.getByText("Your outfits")).toHaveStyle({
+      textTransform: "uppercase",
+    });
+    expect(searchOutfits).toBeDisabled();
+    expect(newOutfit).toBeDisabled();
+
+    await user.click(allItems);
+
+    expect(onNavigateApp).toHaveBeenCalledWith("wardrobe");
   });
 
   test("uses the default unsaved-change predicate when none is supplied", () => {
@@ -379,8 +409,11 @@ describe("AppSidebarNavigation", () => {
       onExpandedAction,
     });
 
-    await user.click(screen.getByRole("button", { name: "My Wardrobe" }));
+    await user.click(screen.getByRole("button", { name: "Wardrobe" }));
+    await user.click(screen.getByRole("button", { name: "All items" }));
     await user.click(screen.getByRole("button", { name: "Catalog" }));
+    await user.click(screen.getByRole("button", { name: "Explore" }));
+    await user.click(screen.getByRole("button", { name: "Capsule" }));
     await user.click(screen.getByRole("button", { name: "New capsule" }));
     await user.click(screen.getByRole("button", { name: "Search capsules" }));
     await user.click(screen.getByRole("button", { name: "Modified capsule" }));
@@ -388,7 +421,7 @@ describe("AppSidebarNavigation", () => {
       screen.getByRole("button", { name: "Capsule actions Modified capsule" }),
     );
 
-    expect(onNavigateApp).toHaveBeenCalledWith("myWardrobe");
+    expect(onNavigateApp).toHaveBeenCalledWith("wardrobe");
     expect(onNavigateApp).toHaveBeenCalledWith("explore");
     expect(onExpandedAction).toHaveBeenCalled();
     expect(onCreateCapsule).toHaveBeenCalled();
@@ -418,6 +451,7 @@ describe("AppSidebarNavigation", () => {
 
     for (const element of [
       screen.getByTestId("catalog-sidebar-group"),
+      screen.getByTestId("wardrobe-sidebar-children"),
       screen.getByTestId("catalog-sidebar-children"),
       screen.getByTestId("capsule-sidebar-children"),
       screen.getByTestId("sidebar-navigation-divider"),

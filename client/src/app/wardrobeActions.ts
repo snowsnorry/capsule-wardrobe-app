@@ -207,7 +207,7 @@ export {
   removeItemFromMyWardrobe,
   saveItemToMyWardrobe,
   updateUploadedItemInMyWardrobe,
-} from "./myWardrobeItemActions";
+} from "./wardrobeItemActions";
 export {
   handleWardrobeError,
   startCapsuleEventStream,

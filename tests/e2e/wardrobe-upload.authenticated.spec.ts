@@ -15,8 +15,8 @@ function buildPngUpload(name: string): FilePayload {
   };
 }
 
-async function openMyWardrobe(page: Page) {
-  await page.goto("/my-wardrobe");
+async function openWardrobe(page: Page) {
+  await page.goto("/wardrobe");
   await expect(
     page.getByRole("button", { name: "Upload item photo" }),
   ).toBeVisible();
@@ -66,7 +66,7 @@ async function expectUploadedItemVisible(page: Page, index: number) {
 
 test("uploads one wardrobe image", async ({ page, resetAndLogin }) => {
   await resetAndLogin("with-profile");
-  await openMyWardrobe(page);
+  await openWardrobe(page);
 
   await uploadWardrobeFiles(page, [buildPngUpload("linen-shirt.png")]);
 
@@ -78,12 +78,23 @@ test("uploads one wardrobe image", async ({ page, resetAndLogin }) => {
   await expectUploadedItemVisible(page, 1);
 });
 
+test("redirects the legacy wardrobe URL", async ({ page, resetAndLogin }) => {
+  await resetAndLogin("with-profile");
+
+  await page.goto("/my-wardrobe");
+
+  await expect(page).toHaveURL(/\/wardrobe$/);
+  await expect(
+    page.getByRole("button", { name: "Upload item photo" }),
+  ).toBeVisible();
+});
+
 test("uploads five wardrobe images at once", async ({
   page,
   resetAndLogin,
 }) => {
   await resetAndLogin("with-profile");
-  await openMyWardrobe(page);
+  await openWardrobe(page);
 
   await uploadWardrobeFiles(page, [
     buildPngUpload("linen-shirt.png"),

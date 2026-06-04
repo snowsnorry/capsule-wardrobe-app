@@ -80,7 +80,7 @@ function UploadedProductDetailForm({
     key: TKey,
     value: UploadedProductFormState[TKey],
   ) => onChange({ ...form, [key]: value });
-  const emptyLabel = t("myWardrobe.uploadedDetail.notSpecified");
+  const emptyLabel = t("wardrobe.uploadedDetail.notSpecified");
 
   return (
     <Stack spacing={2} sx={{ minHeight: 0, pt: topOffset }}>
@@ -147,13 +147,13 @@ function UploadedProductTextFields({
     <>
       <TextField
         required
-        label={t("myWardrobe.uploadedDetail.fields.name")}
+        label={t("wardrobe.uploadedDetail.fields.name")}
         sx={fullWidthGridItemSx}
         value={form.name}
         onChange={(event) => setField("name", event.target.value)}
       />
       <TextField
-        label={t("myWardrobe.uploadedDetail.fields.description")}
+        label={t("wardrobe.uploadedDetail.fields.description")}
         sx={fullWidthGridItemSx}
         value={form.description || ""}
         multiline
@@ -163,7 +163,7 @@ function UploadedProductTextFields({
         }
       />
       <TextField
-        label={t("myWardrobe.uploadedDetail.fields.brand")}
+        label={t("wardrobe.uploadedDetail.fields.brand")}
         value={form.brand || ""}
         onChange={(event) =>
           setField("brand", nullableDraftText(event.target.value))

@@ -216,8 +216,8 @@ function ProductTitle({
   productUrl: string | null;
   t: ProductDetailProps["t"];
 }) {
-  const savedLabel = t("myWardrobe.savedBadge");
-  const uploadedLabel = t("myWardrobe.filters.uploaded");
+  const savedLabel = t("wardrobe.savedBadge");
+  const uploadedLabel = t("wardrobe.filters.uploaded");
   const linkProps =
     productUrl && linkTitle
       ? { href: productUrl, target: "_blank", rel: "noreferrer" }

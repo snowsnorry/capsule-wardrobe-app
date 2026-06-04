@@ -129,7 +129,7 @@ export type MainScreenProps = {
   onApplyFilters: () => Promise<void> | void;
   onResetFilters: () => Promise<void> | void;
   onNavigateApp: (
-    nextApp: "capsule" | "explore" | "myWardrobe" | "statistics",
+    nextApp: "capsule" | "explore" | "wardrobe" | "statistics",
     options?: AppNavigationOptions,
   ) => void;
   onRemoveFromMyWardrobe?: (item: MainScreenItem) => Promise<void> | void;

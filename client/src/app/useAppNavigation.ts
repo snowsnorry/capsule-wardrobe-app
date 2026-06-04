@@ -3,8 +3,8 @@ import type { AppNavigationOptions, AppRoute } from "./appTypes";
 import { getAppRoute, getShareIdFromPath } from "./appRouting";
 
 function getNavigationPath(nextApp: Exclude<AppRoute, "share">): string {
-  if (nextApp === "myWardrobe") {
-    return "/my-wardrobe";
+  if (nextApp === "wardrobe") {
+    return "/wardrobe";
   }
 
   if (nextApp === "explore") {
@@ -12,6 +12,21 @@ function getNavigationPath(nextApp: Exclude<AppRoute, "share">): string {
   }
 
   return nextApp === "statistics" ? "/statistics" : "/";
+}
+
+function canonicalizeLegacyWardrobePath() {
+  if (
+    typeof window === "undefined" ||
+    !["/my-wardrobe", "/my-wardrobe/"].includes(window.location.pathname)
+  ) {
+    return;
+  }
+
+  window.history.replaceState(
+    {},
+    "",
+    `/wardrobe${window.location.search}${window.location.hash}`,
+  );
 }
 
 export function useAppNavigation() {
@@ -34,7 +49,11 @@ export function useAppNavigation() {
       return undefined;
     }
 
+    canonicalizeLegacyWardrobePath();
+    setAppRoute(getAppRoute(window.location.pathname));
+
     const handlePopState = () => {
+      canonicalizeLegacyWardrobePath();
       const nextRoute = getAppRoute(window.location.pathname);
       setAppRoute(nextRoute);
       if (nextRoute !== "explore") {

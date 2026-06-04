@@ -20,16 +20,16 @@ const t = (key: string) => {
     "search.productActions": "Product actions",
     "search.untitled": "Untitled",
     "actions.cancel": "Cancel",
-    "myWardrobe.savedBadge": "Saved",
-    "myWardrobe.filters.uploaded": "Uploaded",
-    "myWardrobe.removeConfirmTitle": "Remove from My Wardrobe?",
-    "myWardrobe.removeConfirmBody": "Remove body",
-    "myWardrobe.removeConfirm": "Remove",
-    "myWardrobe.imageVersionToggle.label": "Uploaded item image version",
-    "myWardrobe.imageVersionToggle.original": "Original",
-    "myWardrobe.imageVersionToggle.ai": "AI",
-    "capsule.removeFromMyWardrobe": "Remove from My Wardrobe",
-    "capsule.saveToMyWardrobe": "Save to My Wardrobe",
+    "wardrobe.savedBadge": "Saved",
+    "wardrobe.filters.uploaded": "Uploaded",
+    "wardrobe.removeConfirmTitle": "Remove from Wardrobe?",
+    "wardrobe.removeConfirmBody": "Remove body",
+    "wardrobe.removeConfirm": "Remove",
+    "wardrobe.imageVersionToggle.label": "Uploaded item image version",
+    "wardrobe.imageVersionToggle.original": "Original",
+    "wardrobe.imageVersionToggle.ai": "AI",
+    "capsule.removeFromMyWardrobe": "Remove from Wardrobe",
+    "capsule.saveToMyWardrobe": "Save to Wardrobe",
   };
   return labels[key] ?? key;
 };
@@ -276,9 +276,7 @@ describe("ProductDetail", () => {
     renderProductDetail(item, theme, { onSaveToMyWardrobe });
 
     fireEvent.click(screen.getByRole("button", { name: "Product actions" }));
-    fireEvent.click(
-      screen.getByRole("menuitem", { name: "Save to My Wardrobe" }),
-    );
+    fireEvent.click(screen.getByRole("menuitem", { name: "Save to Wardrobe" }));
 
     expect(onSaveToMyWardrobe).toHaveBeenCalledWith(item);
   });
@@ -299,12 +297,10 @@ describe("ProductDetail", () => {
     renderProductDetail(item, theme, { onSaveToMyWardrobe });
 
     fireEvent.click(screen.getByRole("button", { name: "Product actions" }));
-    fireEvent.click(
-      screen.getByRole("menuitem", { name: "Save to My Wardrobe" }),
-    );
+    fireEvent.click(screen.getByRole("menuitem", { name: "Save to Wardrobe" }));
 
     expect(
-      screen.getByRole("progressbar", { name: "Save to My Wardrobe" }),
+      screen.getByRole("progressbar", { name: "Save to Wardrobe" }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Product actions" }),
@@ -314,7 +310,7 @@ describe("ProductDetail", () => {
 
     await waitFor(() => {
       expect(
-        screen.queryByRole("progressbar", { name: "Save to My Wardrobe" }),
+        screen.queryByRole("progressbar", { name: "Save to Wardrobe" }),
       ).not.toBeInTheDocument();
     });
   });
@@ -335,7 +331,7 @@ describe("ProductDetail", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Product actions" }));
     fireEvent.click(
-      screen.getByRole("menuitem", { name: "Remove from My Wardrobe" }),
+      screen.getByRole("menuitem", { name: "Remove from Wardrobe" }),
     );
     expect(onRemoveFromMyWardrobe).not.toHaveBeenCalled();
 
@@ -357,7 +353,7 @@ describe("ProductDetail", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Product actions" }));
     fireEvent.click(
-      screen.getByRole("menuitem", { name: "Remove from My Wardrobe" }),
+      screen.getByRole("menuitem", { name: "Remove from Wardrobe" }),
     );
     fireEvent.click(screen.getByRole("button", { name: "Remove" }));
 

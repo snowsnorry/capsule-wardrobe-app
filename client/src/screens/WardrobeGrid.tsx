@@ -7,7 +7,7 @@ import ClothingGridPlaceholder, {
 import type { ProductMenuOpenOptions } from "../components/ClothingCardTypes";
 import type { MainScreenItem } from "./mainScreen/MainScreenTypes";
 
-type MyWardrobeGridProps = {
+type WardrobeGridProps = {
   isLoading: boolean;
   isOverlay: boolean;
   items: MainScreenItem[];
@@ -22,7 +22,7 @@ type MyWardrobeGridProps = {
   t: (key: string) => string;
 };
 
-function MyWardrobeGrid({
+function WardrobeGrid({
   isLoading,
   isOverlay,
   items,
@@ -30,7 +30,7 @@ function MyWardrobeGrid({
   onProductClick,
   onProductMenuOpen,
   t,
-}: MyWardrobeGridProps) {
+}: WardrobeGridProps) {
   if (isLoading) {
     return <ClothingGridPlaceholder count={12} mobileColumns={mobileColumns} />;
   }
@@ -38,9 +38,9 @@ function MyWardrobeGrid({
   if (items.length === 0) {
     return (
       <Stack spacing={0.75} sx={emptyStateSx}>
-        <Typography variant="h6">{t("myWardrobe.emptyTitle")}</Typography>
+        <Typography variant="h6">{t("wardrobe.emptyTitle")}</Typography>
         <Typography variant="body2" color="text.secondary">
-          {t("myWardrobe.emptyBody")}
+          {t("wardrobe.emptyBody")}
         </Typography>
       </Stack>
     );
@@ -80,4 +80,4 @@ const emptyStateSx = {
   pt: { xs: 3, md: 4 },
 } as const;
 
-export default MyWardrobeGrid;
+export default WardrobeGrid;

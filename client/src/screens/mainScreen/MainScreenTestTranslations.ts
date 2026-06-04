@@ -85,15 +85,15 @@ const labels = {
     openProductMenu: "Open product menu",
     selectProductForRegeneration: "Select",
     anchorRegenerationLocked: "Anchor items must stay in the capsule.",
-    saveToMyWardrobe: "Save to My Wardrobe",
-    removeFromMyWardrobe: "Remove from My Wardrobe",
+    saveToMyWardrobe: "Save to Wardrobe",
+    removeFromMyWardrobe: "Remove from Wardrobe",
     cardLayout: "Card layout",
     cardColumnsOne: "1 column",
     cardColumnsTwo: "2 columns",
     cardColumnsThree: "3 columns",
     copyProductLinkAddress: "Copy Link Address",
   },
-  myWardrobe: {
+  wardrobe: {
     filters: {
       uploaded: "Uploaded",
     },
@@ -102,7 +102,7 @@ const labels = {
       original: "Original",
       ai: "AI",
     },
-    removeConfirmTitle: "Remove from My Wardrobe?",
+    removeConfirmTitle: "Remove from Wardrobe?",
     removeConfirmBody: "Remove body",
     removeConfirm: "Remove",
     uploadedDetail: {

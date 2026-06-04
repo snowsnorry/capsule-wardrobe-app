@@ -242,7 +242,7 @@ function ProductRemoveConfirmDialog({
       maxWidth="xs"
     >
       <DialogTitle sx={{ pb: 1 }}>
-        {t("myWardrobe.removeConfirmTitle")}
+        {t("wardrobe.removeConfirmTitle")}
       </DialogTitle>
       <DialogContent sx={{ pt: 0.5, pb: 0 }}>
         {isActionPending ? (
@@ -253,7 +253,7 @@ function ProductRemoveConfirmDialog({
           />
         ) : null}
         <DialogContentText sx={{ color: "text.secondary" }}>
-          {t("myWardrobe.removeConfirmBody")}
+          {t("wardrobe.removeConfirmBody")}
         </DialogContentText>
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2.5, pt: 2 }}>
@@ -266,7 +266,7 @@ function ProductRemoveConfirmDialog({
           disabled={isActionPending}
           onClick={onConfirm}
         >
-          {t("myWardrobe.removeConfirm")}
+          {t("wardrobe.removeConfirm")}
         </Button>
       </DialogActions>
     </Dialog>
