@@ -84,8 +84,8 @@ describe("AppSidebarNavigation", () => {
     cleanup();
   });
 
-  test("renders the flat two-level navigation without expand/collapse state", () => {
-    const { container } = renderNavigation();
+  test("renders the flat two-level navigation with section disclosure headers", () => {
+    renderNavigation();
     const navigationList = screen.getByTestId("sidebar-navigation-list");
     const topLevelLabels = ["Personal items", "Outfits", "Capsules", "Catalog"];
 
@@ -93,16 +93,32 @@ describe("AppSidebarNavigation", () => {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
     expect(
-      screen.queryByRole("button", { name: "Outfits" }),
-    ).not.toBeInTheDocument();
+      screen.getByRole("button", { name: "Personal items, 6" }),
+    ).not.toHaveAttribute("aria-expanded");
+    expect(screen.getByRole("button", { name: "Outfits" })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+    expect(screen.getByRole("button", { name: "Capsules" })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+    expect(screen.getByRole("button", { name: "Catalog" })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
     expect(
-      screen.queryByRole("button", { name: "Catalog" }),
-    ).not.toBeInTheDocument();
+      screen.getByRole("button", { name: "Personal items, 6" }),
+    ).not.toHaveClass("sidebar-top-level-quiet-hover");
+    for (const label of ["Outfits", "Capsules", "Catalog"]) {
+      expect(screen.getByRole("button", { name: label })).toHaveClass(
+        "sidebar-top-level-quiet-hover",
+      );
+    }
     expect(screen.getByRole("button", { name: "Explore" })).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Statistics" }),
     ).toBeInTheDocument();
-    expect(container.querySelector("[aria-expanded]")).toBeNull();
     expect(
       navigationList.querySelector(
         '[data-testid="KeyboardArrowDownRoundedIcon"]',
@@ -175,6 +191,71 @@ describe("AppSidebarNavigation", () => {
   test("keeps outfit actions visible but disabled until outfit persistence exists", () => {
     renderNavigation();
 
+    expect(
+      screen.getByRole("button", { name: "Search outfits" }),
+    ).toBeDisabled();
+    expect(screen.getByRole("button", { name: "New outfit" })).toBeDisabled();
+  });
+
+  test("collapses and expands top-level sections without chevrons", async () => {
+    const user = userEvent.setup();
+    renderNavigation();
+
+    const outfitsHeader = screen.getByRole("button", { name: "Outfits" });
+    const capsulesHeader = screen.getByRole("button", { name: "Capsules" });
+    const catalogHeader = screen.getByRole("button", { name: "Catalog" });
+
+    await user.click(capsulesHeader);
+
+    expect(capsulesHeader).toHaveAttribute("aria-expanded", "false");
+    expect(
+      screen.queryByRole("button", { name: "New capsule" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Search capsules" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Capsule 1" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Show 5 more" }),
+    ).not.toBeInTheDocument();
+
+    await user.click(capsulesHeader);
+
+    expect(capsulesHeader).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("button", { name: "New capsule" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Capsule 1" })).toBeVisible();
+
+    await user.click(catalogHeader);
+
+    expect(catalogHeader).toHaveAttribute("aria-expanded", "false");
+    expect(
+      screen.queryByRole("button", { name: "Explore" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Statistics" }),
+    ).not.toBeInTheDocument();
+
+    await user.click(catalogHeader);
+
+    expect(catalogHeader).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("button", { name: "Explore" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Statistics" })).toBeVisible();
+
+    await user.click(outfitsHeader);
+
+    expect(outfitsHeader).toHaveAttribute("aria-expanded", "false");
+    expect(
+      screen.queryByRole("button", { name: "Search outfits" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "New outfit" }),
+    ).not.toBeInTheDocument();
+
+    await user.click(outfitsHeader);
+
+    expect(outfitsHeader).toHaveAttribute("aria-expanded", "true");
     expect(
       screen.getByRole("button", { name: "Search outfits" }),
     ).toBeDisabled();

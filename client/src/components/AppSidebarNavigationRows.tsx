@@ -177,9 +177,11 @@ export function TopLevelRow({
   isInteractionDisabled,
   isCollapsedDesktop,
   desktopSidebarRailWidth,
+  ariaExpanded,
   onClick,
   actions,
   countBadge,
+  suppressHoverBackground = false,
   showActiveBackground = false,
 }: {
   label: string;
@@ -188,9 +190,11 @@ export function TopLevelRow({
   isInteractionDisabled: boolean;
   isCollapsedDesktop: boolean;
   desktopSidebarRailWidth: number;
+  ariaExpanded?: boolean;
   onClick?: () => void;
   actions?: ReactElement;
   countBadge?: number | null;
+  suppressHoverBackground?: boolean;
   showActiveBackground?: boolean;
 }) {
   const countBadgeLabel = getCountBadgeLabel(countBadge);
@@ -200,6 +204,10 @@ export function TopLevelRow({
   const rowContent = onClick ? (
     <ListItemButton
       aria-label={accessibleLabel}
+      aria-expanded={ariaExpanded}
+      className={
+        suppressHoverBackground ? "sidebar-top-level-quiet-hover" : undefined
+      }
       disabled={isInteractionDisabled}
       onClick={onClick}
       selected={showActiveBackground && isActive}
@@ -213,6 +221,9 @@ export function TopLevelRow({
         color: isActive ? "primary.main" : "text.primary",
         textTransform: "none",
         "&.Mui-disabled": { color: "text.disabled" },
+        "&.sidebar-top-level-quiet-hover:hover": {
+          bgcolor: "transparent",
+        },
       }}
     >
       <TopLevelRowContent

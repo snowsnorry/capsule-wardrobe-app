@@ -13,13 +13,17 @@ import type {
   AppSidebarNavigationProps,
 } from "./AppSidebarNavigationTypes";
 
+type ExpandedSectionId = "outfits" | "capsules" | "catalog";
+
 type SidebarNavigationListProps = AppSidebarNavigationProps & {
+  expandedSections: Record<ExpandedSectionId, boolean>;
   handleLoadMoreCapsules: () => Promise<void>;
   handleNavigateApp: (nextApp: AppId) => void;
   isCollapsedDesktop: boolean;
   isInteractionDisabled: boolean;
   isLoadingMore: boolean;
   navState: ReturnType<typeof useCapsuleNavigationState>;
+  onToggleSection: (section: ExpandedSectionId) => void;
   t: (key: string, params?: Record<string, unknown>) => string;
 };
 
@@ -29,6 +33,7 @@ function SidebarNavigationList({
   activeCapsuleId,
   capsuleHasUnsavedChanges,
   desktopSidebarRailWidth,
+  expandedSections,
   handleLoadMoreCapsules,
   handleNavigateApp,
   isCollapsedDesktop,
@@ -40,6 +45,7 @@ function SidebarNavigationList({
   onOpenCapsule,
   onOpenCapsuleActions,
   onSearchCapsules,
+  onToggleSection,
   personalItemsCount,
   t,
 }: SidebarNavigationListProps) {
@@ -65,8 +71,10 @@ function SidebarNavigationList({
       />
       <OutfitsRow
         desktopSidebarRailWidth={desktopSidebarRailWidth}
+        isExpanded={expandedSections.outfits}
         isCollapsedDesktop={isCollapsedDesktop}
         isInteractionDisabled={isInteractionDisabled}
+        onToggle={() => onToggleSection("outfits")}
         t={t}
       />
       <CapsuleSection
@@ -76,6 +84,7 @@ function SidebarNavigationList({
         capsuleHasUnsavedChanges={capsuleHasUnsavedChanges}
         desktopSidebarRailWidth={desktopSidebarRailWidth}
         handleLoadMoreCapsules={handleLoadMoreCapsules}
+        isExpanded={expandedSections.capsules}
         isCollapsedDesktop={isCollapsedDesktop}
         isInteractionDisabled={isInteractionDisabled}
         isLoadingMore={isLoadingMore}
@@ -85,14 +94,17 @@ function SidebarNavigationList({
         onOpenCapsule={onOpenCapsule}
         onOpenCapsuleActions={onOpenCapsuleActions}
         onSearchCapsules={onSearchCapsules}
+        onToggle={() => onToggleSection("capsules")}
         t={t}
       />
       <CatalogSection
         activeApp={activeApp}
         desktopSidebarRailWidth={desktopSidebarRailWidth}
         handleNavigateApp={handleNavigateApp}
+        isExpanded={expandedSections.catalog}
         isCollapsedDesktop={isCollapsedDesktop}
         isInteractionDisabled={isInteractionDisabled}
+        onToggle={() => onToggleSection("catalog")}
         t={t}
       />
     </List>
@@ -122,6 +134,13 @@ function AppSidebarNavigation({
 }: AppSidebarNavigationProps): ReactElement {
   const { t } = useI18n();
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [expandedSections, setExpandedSections] = useState<
+    Record<ExpandedSectionId, boolean>
+  >({
+    outfits: true,
+    capsules: true,
+    catalog: true,
+  });
   const isCollapsedDesktop = isSidebarCollapsed && !isOverlaySidebar;
   const navState = useCapsuleNavigationState({
     capsuleList,
@@ -133,6 +152,12 @@ function AppSidebarNavigation({
   const handleNavigateApp = (nextApp: AppId) => {
     onNavigateApp(nextApp);
     onExpandedAction?.();
+  };
+  const handleToggleSection = (section: ExpandedSectionId) => {
+    setExpandedSections((current) => ({
+      ...current,
+      [section]: !current[section],
+    }));
   };
   const handleLoadMoreCapsules = async () => {
     if (!navState.shouldLoadMore) return;
@@ -152,6 +177,7 @@ function AppSidebarNavigation({
         activeCapsuleId={activeCapsuleId}
         capsuleHasUnsavedChanges={capsuleHasUnsavedChanges}
         desktopSidebarRailWidth={desktopSidebarRailWidth}
+        expandedSections={expandedSections}
         handleLoadMoreCapsules={handleLoadMoreCapsules}
         handleNavigateApp={handleNavigateApp}
         isCollapsedDesktop={isCollapsedDesktop}
@@ -166,6 +192,7 @@ function AppSidebarNavigation({
         onOpenCapsule={onOpenCapsule}
         onOpenCapsuleActions={onOpenCapsuleActions}
         onSearchCapsules={onSearchCapsules}
+        onToggleSection={handleToggleSection}
         personalItemsCount={personalItemsCount}
         t={t}
       />

@@ -91,13 +91,17 @@ export function PersonalItemsRow({
 
 export function OutfitsRow({
   desktopSidebarRailWidth,
+  isExpanded,
   isCollapsedDesktop,
   isInteractionDisabled,
+  onToggle,
   t,
 }: {
   desktopSidebarRailWidth: number;
+  isExpanded: boolean;
   isCollapsedDesktop: boolean;
   isInteractionDisabled: boolean;
+  onToggle: () => void;
   t: Translate;
 }) {
   return (
@@ -108,12 +112,17 @@ export function OutfitsRow({
       isInteractionDisabled={isInteractionDisabled}
       isCollapsedDesktop={isCollapsedDesktop}
       desktopSidebarRailWidth={desktopSidebarRailWidth}
+      ariaExpanded={isExpanded}
+      onClick={onToggle}
+      suppressHoverBackground
       actions={
-        <SearchAddActions
-          searchLabel={t("wardrobe.searchOutfits")}
-          addLabel={t("wardrobe.newOutfit")}
-          isInteractionDisabled
-        />
+        isExpanded ? (
+          <SearchAddActions
+            searchLabel={t("wardrobe.searchOutfits")}
+            addLabel={t("wardrobe.newOutfit")}
+            isInteractionDisabled
+          />
+        ) : undefined
       }
     />
   );
@@ -126,6 +135,7 @@ export function CapsuleSection({
   capsuleHasUnsavedChanges,
   desktopSidebarRailWidth,
   handleLoadMoreCapsules,
+  isExpanded,
   isCollapsedDesktop,
   isInteractionDisabled,
   isLoadingMore,
@@ -135,6 +145,7 @@ export function CapsuleSection({
   onOpenCapsule,
   onOpenCapsuleActions,
   onSearchCapsules,
+  onToggle,
   t,
 }: Pick<
   AppSidebarNavigationProps,
@@ -149,11 +160,13 @@ export function CapsuleSection({
   activeApp: AppId;
   desktopSidebarRailWidth: number;
   handleLoadMoreCapsules: () => Promise<void>;
+  isExpanded: boolean;
   isCollapsedDesktop: boolean;
   isInteractionDisabled: boolean;
   isLoadingMore: boolean;
   isOverlaySidebar: boolean;
   navState: ReturnType<typeof useCapsuleNavigationState>;
+  onToggle: () => void;
   t: Translate;
 }) {
   return (
@@ -165,17 +178,22 @@ export function CapsuleSection({
         isInteractionDisabled={isInteractionDisabled}
         isCollapsedDesktop={isCollapsedDesktop}
         desktopSidebarRailWidth={desktopSidebarRailWidth}
+        ariaExpanded={isExpanded}
+        onClick={onToggle}
+        suppressHoverBackground
         actions={
-          <SearchAddActions
-            searchLabel={t("capsule.search")}
-            addLabel={t("capsule.new")}
-            isInteractionDisabled={isInteractionDisabled}
-            onSearch={onSearchCapsules}
-            onAdd={() => void onCreateCapsule?.()}
-          />
+          isExpanded ? (
+            <SearchAddActions
+              searchLabel={t("capsule.search")}
+              addLabel={t("capsule.new")}
+              isInteractionDisabled={isInteractionDisabled}
+              onSearch={onSearchCapsules}
+              onAdd={() => void onCreateCapsule?.()}
+            />
+          ) : undefined
         }
       />
-      {isCollapsedDesktop ? null : (
+      {isCollapsedDesktop || !isExpanded ? null : (
         <CapsuleRows
           activeCapsule={activeCapsule}
           activeCapsuleId={activeCapsuleId || ""}
@@ -200,15 +218,19 @@ export function CatalogSection({
   activeApp,
   desktopSidebarRailWidth,
   handleNavigateApp,
+  isExpanded,
   isCollapsedDesktop,
   isInteractionDisabled,
+  onToggle,
   t,
 }: {
   activeApp: AppId;
   desktopSidebarRailWidth: number;
   handleNavigateApp: (nextApp: AppId) => void;
+  isExpanded: boolean;
   isCollapsedDesktop: boolean;
   isInteractionDisabled: boolean;
+  onToggle: () => void;
   t: Translate;
 }) {
   return (
@@ -220,8 +242,11 @@ export function CatalogSection({
         isInteractionDisabled={isInteractionDisabled}
         isCollapsedDesktop={isCollapsedDesktop}
         desktopSidebarRailWidth={desktopSidebarRailWidth}
+        ariaExpanded={isExpanded}
+        onClick={onToggle}
+        suppressHoverBackground
       />
-      {isCollapsedDesktop ? null : (
+      {isCollapsedDesktop || !isExpanded ? null : (
         <>
           <ChildRow
             label={t("sidebar.explore")}
