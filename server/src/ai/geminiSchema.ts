@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { zodToJsonSchema } from "zod-to-json-schema";
 import { buildJsonObjectFormat } from "./llmPrompts.js";
 import type { JsonSchema, JsonSchemaFormat, UserProfileLike } from "./types.js";
 
@@ -108,6 +107,27 @@ function buildZodSchemaFromJsonSchema(
   return supportsNull ? zodSchema.nullable() : zodSchema;
 }
 
+function cloneJsonSchema(schema: JsonSchema | undefined | null): JsonSchema {
+  if (!schema || typeof schema !== "object") {
+    return {};
+  }
+
+  return {
+    ...schema,
+    properties: schema.properties
+      ? Object.fromEntries(
+          Object.entries(schema.properties).map(([key, value]) => [
+            key,
+            cloneJsonSchema(value),
+          ]),
+        )
+      : undefined,
+    items: schema.items ? cloneJsonSchema(schema.items) : undefined,
+    enum: schema.enum ? [...schema.enum] : undefined,
+    required: schema.required ? [...schema.required] : undefined,
+  };
+}
+
 function buildGeminiStructuredOutput(
   format: JsonSchemaFormat | null = null,
   userProfile: UserProfileLike | null = null,
@@ -117,7 +137,7 @@ function buildGeminiStructuredOutput(
 
   return {
     zodSchema,
-    responseJsonSchema: zodToJsonSchema(zodSchema),
+    responseJsonSchema: cloneJsonSchema(resolvedFormat?.schema),
   };
 }
 

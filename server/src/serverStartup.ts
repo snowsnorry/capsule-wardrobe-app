@@ -47,7 +47,7 @@ async function configureDevelopmentApp({
   });
   appInstance.use(vite.middlewares);
 
-  appInstance.use("*", async (req, res, next) => {
+  appInstance.use(async (req, res, next) => {
     if (isApiPathImpl(req.path)) {
       return next();
     }
@@ -99,7 +99,7 @@ function configureProductionApp({
     }),
   );
 
-  appInstance.get("*", async (req, res, next) => {
+  appInstance.get("/{*splat}", async (req, res, next) => {
     if (isApiPathImpl(req.path)) {
       return res.status(404).json({ error: "not_found" });
     }

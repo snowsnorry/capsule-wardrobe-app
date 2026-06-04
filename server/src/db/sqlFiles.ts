@@ -9,7 +9,7 @@ type TemplateSqlClientLike = {
 };
 
 type RawSqlClientLike = {
-  <TRow = unknown>(
+  query<TRow = unknown>(
     query: string,
     values?: readonly unknown[],
   ): Promise<SqlResultLike<TRow>>;
@@ -34,8 +34,18 @@ export async function executeSqlFile<TRow = unknown>(
   fileUrl: URL,
   values: readonly unknown[] = [],
 ): Promise<SqlResultLike<TRow>> {
-  return (sql as TemplateSqlClientLike & RawSqlClientLike)<TRow>(
-    await readSqlFile(fileUrl),
-    values,
-  );
+  const query = await readSqlFile(fileUrl);
+  const rawSql = sql as TemplateSqlClientLike & Partial<RawSqlClientLike>;
+  if (rawSql.query) {
+    return rawSql.query<TRow>(query, values);
+  }
+
+  return (
+    sql as TemplateSqlClientLike & {
+      <TRow = unknown>(
+        query: string,
+        values?: readonly unknown[],
+      ): Promise<SqlResultLike<TRow>>;
+    }
+  )<TRow>(query, values);
 }

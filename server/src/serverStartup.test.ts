@@ -81,11 +81,11 @@ test("development startup wires Vite middleware and serves transformed capsule h
   expect(app.calls[0].type).toBe("use");
   expect(app.calls[0].args[0]).toBe("vite-middleware");
   expect(app.calls[1].type).toBe("use");
-  expect(app.calls[1].args[0]).toBe("*");
+  expect(app.calls[1].args[0]).toEqual(expect.any(Function));
   expect(app.calls.at(-1)).toEqual({ type: "listen", port: 4123 });
   expect(logMessages).toEqual(["Server listening on http://localhost:4123"]);
 
-  const handler = app.calls[1].args[1];
+  const handler = app.calls[1].args[0];
   await handler(
     { path: "/api/search", originalUrl: "/api/search" },
     createResponse(),
@@ -126,7 +126,7 @@ test("development startup fixes Vite stack traces before forwarding html errors"
     logInfoImpl: () => {},
   });
 
-  const handler = app.calls[1].args[1];
+  const handler = app.calls[1].args[0];
   await handler(
     { path: "/share/abc", originalUrl: "/share/abc" },
     createResponse(),
@@ -183,7 +183,7 @@ test("production startup serves static files, spa html, and api 404s when client
   });
   expect(app.calls[1]).toEqual({ type: "use", args: [staticMiddleware] });
   expect(app.calls[2].type).toBe("get");
-  expect(app.calls[2].args[0]).toBe("*");
+  expect(app.calls[2].args[0]).toBe("/{*splat}");
 
   const headerResponse = { setHeader: vi.fn() };
   staticCalls[1].options.setHeaders(headerResponse, "/dist/client/index.html");

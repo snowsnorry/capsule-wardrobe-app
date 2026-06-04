@@ -37,7 +37,21 @@ function createSqlRecorder(results: SqlResultLike[] = []) {
     statements.push(query.join("?").replace(/\s+/g, " ").trim());
     values.push([...queryValues]);
     return (results.shift() ?? []) as SqlResultLike<TRow>;
-  }) as SqlClientLike;
+  }) as SqlClientLike & {
+    query: <TRow = unknown>(
+      query: string,
+      values?: readonly unknown[],
+    ) => Promise<SqlResultLike<TRow>>;
+  };
+
+  sql.query = async <TRow = unknown>(
+    query: string,
+    queryValues: readonly unknown[] = [],
+  ): Promise<SqlResultLike<TRow>> => {
+    statements.push(query.replace(/\s+/g, " ").trim());
+    values.push([...queryValues]);
+    return (results.shift() ?? []) as SqlResultLike<TRow>;
+  };
 
   setSqlClientOverride(sql);
   return { statements, values };

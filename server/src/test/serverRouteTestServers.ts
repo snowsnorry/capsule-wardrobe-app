@@ -1,4 +1,5 @@
 import type { Server } from "node:http";
+import { once } from "node:events";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -29,6 +30,15 @@ function registerCleanup(
   throw new Error("test cleanup context is missing");
 }
 
+async function waitForListeningServer(server: Server): Promise<Server> {
+  if (server.address()) {
+    return server;
+  }
+
+  await once(server, "listening");
+  return server;
+}
+
 export async function startTestServer(
   testContext: CleanupContext,
   {
@@ -55,9 +65,7 @@ export async function startTestServer(
     ...deps,
   });
 
-  const server = await new Promise<Server>((resolve) => {
-    const nextServer = app.listen(0, "127.0.0.1", () => resolve(nextServer));
-  });
+  const server = await waitForListeningServer(app.listen(0, "127.0.0.1"));
 
   registerCleanup(testContext, async () => {
     await new Promise<void>((resolve, reject) => {
@@ -92,15 +100,17 @@ export async function startSpaFallbackTestServer(
     "utf-8",
   );
 
-  const server = await startServer({
-    appInstance: app,
-    nodeEnv: "production",
-    ensureTablesImpl: async () => {},
-    port: 0,
-    clientOrigin: TEST_CLIENT_ORIGIN,
-    clientDistPath: tempDir,
-    getSharedCapsuleOgMetadataImpl: deps.getSharedCapsuleOgMetadataImpl,
-  });
+  const server = await waitForListeningServer(
+    await startServer({
+      appInstance: app,
+      nodeEnv: "production",
+      ensureTablesImpl: async () => {},
+      port: 0,
+      clientOrigin: TEST_CLIENT_ORIGIN,
+      clientDistPath: tempDir,
+      getSharedCapsuleOgMetadataImpl: deps.getSharedCapsuleOgMetadataImpl,
+    }),
+  );
 
   registerCleanup(testContext, async () => {
     await new Promise<void>((resolve, reject) => {

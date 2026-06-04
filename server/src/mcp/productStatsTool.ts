@@ -22,7 +22,7 @@ const STATS_ROW_OUTPUT_SCHEMA = z.object({
 const STATS_OUTPUT_SCHEMA = z.object({
   ok: z.boolean(),
   total: z.number(),
-  stats: z.record(z.array(STATS_ROW_OUTPUT_SCHEMA)),
+  stats: z.record(z.string(), z.array(STATS_ROW_OUTPUT_SCHEMA)),
 });
 
 function toJsonToolResult(payload: Record<string, unknown>, isError = false) {
