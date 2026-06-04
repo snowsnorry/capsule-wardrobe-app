@@ -200,7 +200,9 @@ const contextMenuBackdropSx = {
 const contextMenuDialogPaperSx = {
   width: "min(360px, calc(100vw - 40px))",
   m: 0,
+  border: 0,
   bgcolor: "transparent",
+  backgroundImage: "none",
   borderRadius: 0,
   boxShadow: "none",
   overflow: "visible",
@@ -224,10 +226,12 @@ const visuallyHiddenSx = {
 } as const;
 
 const contextMenuPreviewSx = {
+  border: 0,
   borderRadius: "var(--cw-radius-detail)",
   boxShadow: "var(--cw-shadow-overlay-panel)",
   overflow: "hidden",
-  bgcolor: "var(--cw-color-product-card-bg)",
+  bgcolor: "transparent",
+  backgroundImage: "none",
   transformOrigin: "top left",
   willChange: "transform",
   "& .wardrobe-card-root, & img": {

@@ -130,6 +130,26 @@ describe("MobileProductCardContextMenu", () => {
     expect(animate).not.toHaveBeenCalled();
   });
 
+  test("keeps the shared preview container borderless and transparent", () => {
+    const { container } = renderMenu();
+
+    const dialogPaper = screen.getByRole("dialog", {
+      name: "Navy relaxed shirt",
+    });
+    const previewPaper = container.ownerDocument.querySelector(
+      ".wardrobe-card-root",
+    )?.parentElement;
+    const dialogPaperStyle = getComputedStyle(dialogPaper);
+    const previewPaperStyle = getComputedStyle(previewPaper as HTMLElement);
+
+    expect(dialogPaperStyle.backgroundColor).toBe("rgba(0, 0, 0, 0)");
+    expect(dialogPaperStyle.backgroundImage).toBe("none");
+    expect(dialogPaperStyle.borderWidth).toBe("0px");
+    expect(previewPaperStyle.backgroundColor).toBe("rgba(0, 0, 0, 0)");
+    expect(previewPaperStyle.backgroundImage).toBe("none");
+    expect(previewPaperStyle.borderWidth).toBe("0px");
+  });
+
   test("suppresses native browser image interactions inside the preview card", async () => {
     const { container } = renderMenu();
 
