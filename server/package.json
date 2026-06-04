@@ -2,6 +2,9 @@
   "name": "capsule-wardrobe-server",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=22.13.0 <23"
+  },
   "scripts": {
     "dev": "NODE_ENV=development tsx src/index.ts",
     "dev:test-auth": "AUTH_TEST_MODE=true NODE_ENV=development tsx src/index.ts",

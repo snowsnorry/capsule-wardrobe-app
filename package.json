@@ -5,6 +5,9 @@
     "client",
     "server"
   ],
+  "engines": {
+    "node": ">=22.13.0 <23"
+  },
   "scripts": {
     "build": "npm --workspace client run build && npm --workspace server run build",
     "start": "npm --workspace server run start",
@@ -62,5 +65,15 @@
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.59.2",
     "vitest": "^4.1.2"
+  },
+  "allowScripts": {
+    "@google/genai@2.7.0": true,
+    "esbuild@0.25.12": true,
+    "esbuild@0.27.7": true,
+    "fsevents@2.3.3": true,
+    "fsevents@2.3.2": true,
+    "koffi@2.16.2": true,
+    "protobufjs@7.5.8": true,
+    "sharp@0.34.5": true
   }
 }

@@ -7,6 +7,8 @@ services:
     startCommand: npm run start
     healthCheckPath: /health
     envVars:
+      - key: NODE_VERSION
+        value: 22.22.3
       - key: NODE_ENV
         value: production
       - key: CLIENT_ORIGIN

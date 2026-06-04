@@ -65,7 +65,7 @@ Useful entrypoints:
 
 ## Requirements
 
-- Node.js 18+
+- Node.js 22.13+ on the 22.x LTS line
 - npm
 
 ## Setup
