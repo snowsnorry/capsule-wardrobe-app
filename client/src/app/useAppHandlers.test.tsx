@@ -41,8 +41,12 @@ const sessionActions = vi.hoisted(() => ({
   signOut: vi.fn(),
   verifyCode: vi.fn(),
 }));
+const capsulesApi = vi.hoisted(() => ({
+  selectCapsule: vi.fn(),
+}));
 
 vi.mock("./capsuleActions", () => capsuleActions);
+vi.mock("../api/capsules", () => capsulesApi);
 vi.mock("./profileActions", () => profileActions);
 vi.mock("./wardrobeActions", () => wardrobeActions);
 vi.mock("./sessionActions", () => sessionActions);
@@ -82,6 +86,8 @@ describe("useAppHandlers", () => {
     const actionContext = createActionContext();
     const sessionActionContext = createSessionContext();
     const navigateApp = vi.fn();
+    const navigateCapsule = vi.fn();
+    const navigateNewCapsule = vi.fn();
     const setCurrentView = vi.fn();
     const setIsSignOutConfirmOpen = vi.fn();
     const setSelectedRegenerationUrls = vi.fn();
@@ -96,7 +102,9 @@ describe("useAppHandlers", () => {
         activeCapsuleId: "capsule-1",
         capsuleSidebarActionsRef,
         getAppActionContext: () => actionContext,
+        navigateCapsule,
         navigateApp,
+        navigateNewCapsule,
         pendingShareId: "share-pending",
         setCurrentView,
         setIsSignOutConfirmOpen,
@@ -185,10 +193,9 @@ describe("useAppHandlers", () => {
     expect(navigateApp).toHaveBeenCalledWith("explore", { query: "linen" });
     expect(setCurrentView).toHaveBeenCalledWith("main");
     expect(setSelectedRegenerationUrls).toHaveBeenCalledWith([]);
-    expect(capsuleActions.openCapsule).toHaveBeenCalledWith(
-      actionContext,
-      "capsule-2",
-    );
+    expect(navigateNewCapsule).toHaveBeenCalled();
+    expect(capsulesApi.selectCapsule).toHaveBeenCalledWith("capsule-2");
+    expect(navigateCapsule).toHaveBeenCalledWith("capsule-2");
     expect(capsuleActions.importSharedCapsuleToApp).toHaveBeenCalledWith(
       actionContext,
       "share-meta",
@@ -233,20 +240,22 @@ describe("useAppHandlers", () => {
     );
   });
 
-  test("closes the sidebar immediately after starting capsule open", async () => {
+  test("closes the sidebar after validating capsule open", async () => {
     const actionContext = createActionContext();
     const sessionActionContext = createSessionContext();
     const calls: string[] = [];
-    let resolveOpenCapsule: () => void = () => {};
-    const navigateApp = vi.fn(() => calls.push("navigate"));
+    let resolveSelectCapsule: () => void = () => {};
+    const navigateApp = vi.fn();
+    const navigateCapsule = vi.fn(() => calls.push("navigate-capsule"));
+    const navigateNewCapsule = vi.fn();
     const onComplete = vi.fn(() => calls.push("close-sidebar"));
 
-    capsuleActions.openCapsule.mockImplementationOnce(
+    capsulesApi.selectCapsule.mockImplementationOnce(
       () =>
         new Promise<void>((resolve) => {
-          calls.push("open-start");
-          resolveOpenCapsule = () => {
-            calls.push("open-resolve");
+          calls.push("select-start");
+          resolveSelectCapsule = () => {
+            calls.push("select-resolve");
             resolve();
           };
         }),
@@ -257,7 +266,9 @@ describe("useAppHandlers", () => {
         activeCapsuleId: "capsule-1",
         capsuleSidebarActionsRef: { current: null },
         getAppActionContext: () => actionContext,
+        navigateCapsule,
         navigateApp,
+        navigateNewCapsule,
         pendingShareId: "",
         setCurrentView: vi.fn(),
         setIsSignOutConfirmOpen: vi.fn(),
@@ -272,21 +283,18 @@ describe("useAppHandlers", () => {
       onComplete,
     );
 
-    expect(calls).toEqual(["navigate", "open-start", "close-sidebar"]);
-    expect(capsuleActions.openCapsule).toHaveBeenCalledWith(
-      actionContext,
-      "capsule-2",
-    );
-    expect(onComplete).toHaveBeenCalledTimes(1);
+    expect(calls).toEqual(["select-start"]);
+    expect(onComplete).not.toHaveBeenCalled();
 
-    resolveOpenCapsule();
+    resolveSelectCapsule();
     await openPromise;
 
     expect(calls).toEqual([
-      "navigate",
-      "open-start",
+      "select-start",
+      "select-resolve",
+      "navigate-capsule",
       "close-sidebar",
-      "open-resolve",
     ]);
+    expect(navigateCapsule).toHaveBeenCalledWith("capsule-2");
   });
 });

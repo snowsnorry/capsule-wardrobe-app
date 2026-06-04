@@ -20,7 +20,7 @@ import { useAppLifecycleEffects } from "./useAppLifecycleEffects";
 import { useAppNavigation } from "./useAppNavigation";
 import { useAppNotifications } from "./useAppNotifications";
 import { useAppState } from "./useAppState";
-import { useEmptyCapsuleRouteCreation } from "./useEmptyCapsuleRouteCreation";
+import { useCapsuleRouteSync } from "./useCapsuleRouteSync";
 import { usePasskeyPrompt } from "./usePasskeyPrompt";
 import { useProfileOptions } from "./useProfileOptions";
 import { useSessionBootstrap } from "./useSessionBootstrap";
@@ -79,11 +79,11 @@ export function useAppControllerModel() {
     sessionActionContext,
     shareRoute,
   });
-  useEmptyCapsuleRouteCreation(
-    buildEmptyCapsuleRouteCreationOptions({
+  useCapsuleRouteSync(
+    buildCapsuleRouteSyncOptions({
       appState,
-      handlers,
       navigation,
+      operations,
       resolveErrorMessage,
     }),
   );
@@ -147,26 +147,30 @@ function useSessionBootstrapForApp({
   });
 }
 
-function buildEmptyCapsuleRouteCreationOptions({
+function buildCapsuleRouteSyncOptions({
   appState,
-  handlers,
   navigation,
+  operations,
   resolveErrorMessage,
 }: {
   appState: ReturnType<typeof useAppState>;
-  handlers: ReturnType<typeof useAppHandlers>;
   navigation: ReturnType<typeof useAppNavigation>;
+  operations: AppControllerOperations;
   resolveErrorMessage: (
     error: { message?: string } | null | undefined,
   ) => string;
 }) {
   return {
     activeCapsuleId: appState.activeCapsuleId,
+    activeCapsuleMeta: appState.activeCapsuleMeta,
     appRoute: navigation.appRoute,
-    capsuleListLength: appState.capsuleList.length,
-    createCapsule: handlers.handleCreateCapsule,
+    capsuleRouteId: navigation.capsuleRouteId,
+    capsuleRouteMode: navigation.capsuleRouteMode,
+    clearActiveCapsuleState: operations.clearActiveCapsuleState,
+    getAppActionContext: operations.getAppActionContext,
     hasUsableProfile: appState.hasProfile || appState.profileCreated,
     isContentOperationLoading: appState.isContentOperationLoading,
+    navigateCapsule: navigation.navigateCapsule,
     pendingShareId: navigation.pendingShareId,
     resolveErrorMessage,
     sessionInitialized: appState.sessionInitialized,
@@ -226,7 +230,9 @@ function useHandlersForApp({
     activeCapsuleId: appState.activeCapsuleId,
     capsuleSidebarActionsRef: appState.capsuleSidebarActionsRef,
     getAppActionContext: operations.getAppActionContext,
+    navigateCapsule: navigation.navigateCapsule,
     navigateApp: navigation.navigateApp,
+    navigateNewCapsule: navigation.navigateNewCapsule,
     pendingShareId: navigation.pendingShareId,
     setCurrentView: appState.setCurrentView,
     setIsSignOutConfirmOpen: appState.setIsSignOutConfirmOpen,

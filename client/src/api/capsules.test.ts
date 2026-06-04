@@ -282,4 +282,25 @@ describe("capsules api", () => {
       },
     );
   });
+
+  test("capsule id routes encode path segments", async () => {
+    await fetchCapsule("capsule 1");
+    await selectCapsule("capsule 1");
+
+    expect(requestApi.requestJson).toHaveBeenNthCalledWith(
+      1,
+      "https://api.example.test/capsules/capsule%201",
+      {
+        credentials: "include",
+      },
+    );
+    expect(requestApi.requestJson).toHaveBeenNthCalledWith(
+      2,
+      "https://api.example.test/capsules/capsule%201/select",
+      {
+        method: "POST",
+        credentials: "include",
+      },
+    );
+  });
 });

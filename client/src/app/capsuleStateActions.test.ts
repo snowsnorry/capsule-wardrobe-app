@@ -25,6 +25,23 @@ function createContext() {
 }
 
 describe("capsuleStateActions", () => {
+  test("clears active capsule state when applying a null capsule", () => {
+    const context = createContext();
+
+    applyCapsuleStateToApp(context, null, {
+      capsules: [createTestCapsule({ id: "capsule-1" })],
+    });
+
+    expect(context.clearWardrobeProgressState).toHaveBeenCalled();
+    expect(context.setActiveCapsuleId).toHaveBeenCalledWith("");
+    expect(context.setActiveCapsuleMeta).toHaveBeenCalledWith(null);
+    expect(context.setProfileItems).toHaveBeenCalledWith(null);
+    expect(context.setProfileOutfitSets).toHaveBeenCalledWith([]);
+    expect(context.setCapsuleList).toHaveBeenCalledWith([
+      expect.objectContaining({ id: "capsule-1" }),
+    ]);
+  });
+
   test.each([null, ""])(
     "normalizes legacy pattern %s to solid in UI state",
     (pattern) => {

@@ -112,8 +112,8 @@ describe("usePasskeyPrompt", () => {
     fireEvent.click(screen.getByRole("button", { name: "add" }));
 
     await waitFor(() => {
-      expect(screen.getByTestId("open")).toHaveTextContent("true");
+      expect(screen.getByTestId("loading")).toHaveTextContent("false");
     });
-    expect(screen.getByTestId("loading")).toHaveTextContent("false");
+    expect(screen.getByTestId("open")).toHaveTextContent("true");
   });
 });

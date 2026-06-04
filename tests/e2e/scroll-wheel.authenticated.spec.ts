@@ -8,7 +8,7 @@ async function openCapsuleRoute(
   resetAndLogin: () => Promise<void>,
 ) {
   await resetAndLogin();
-  await page.goto("/");
+  await page.goto("/capsule/capsule-e2e");
   await page.getByText("Navy relaxed shirt").waitFor({ state: "visible" });
 }
 

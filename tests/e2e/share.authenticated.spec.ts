@@ -17,7 +17,7 @@ function isLocalHttpUrl(rawUrl: string, baseURL: string | undefined): boolean {
 
 async function openApp(page: Page) {
   await page.setViewportSize({ width: 1440, height: 960 });
-  await page.goto("/");
+  await page.goto("/capsule/capsule-e2e");
   await expect(
     page.getByRole("button", { name: "Regenerate all" }),
   ).toBeVisible();
@@ -108,7 +108,7 @@ test("share link copies to clipboard and import route activates the shared capsu
   );
   await importDialog.getByRole("button", { name: "Save capsule" }).click();
 
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL(/\/capsule\/.+$/);
   await expect(importDialog).toHaveCount(0);
   await expectActiveCapsule(page, importedCapsuleName);
   await expectCapsuleListed(page, importedCapsuleName);

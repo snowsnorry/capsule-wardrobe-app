@@ -6,10 +6,12 @@ import { createAppTheme } from "../theme";
 
 vi.mock("../components/AppSidebarNavigation", () => ({
   default: ({
+    activeCapsuleId,
     capsuleHasUnsavedChanges,
     onCreateCapsule,
     onOpenCapsule,
   }: {
+    activeCapsuleId: string;
     capsuleHasUnsavedChanges: (capsule: { status?: string }) => boolean;
     onCreateCapsule: () => void;
     onOpenCapsule: (capsuleId: string) => void;
@@ -21,6 +23,7 @@ vi.mock("../components/AppSidebarNavigation", () => ({
       <button type="button" onClick={() => onOpenCapsule("capsule-2")}>
         open capsule
       </button>
+      <span data-testid="sidebar-active-capsule">{activeCapsuleId}</span>
       <span data-testid="unsaved-capsule">
         {String(capsuleHasUnsavedChanges({ status: "modified" }))}
       </span>
@@ -99,6 +102,7 @@ function createProps(
     activeCapsuleId: "capsule-1",
     activeCapsuleMeta: { id: "capsule-1", name: "Spring", status: "saved" },
     appRoute: "explore",
+    capsuleRouteId: "",
     capsuleList: [],
     cardPadding: 3,
     children: <div>route content</div>,
@@ -214,6 +218,7 @@ describe("AppShellContent", () => {
         name: "Travel",
         status: "modified",
       },
+      capsuleRouteId: "capsule-1",
       isContentBusy: true,
       isMainScreenView: true,
       isSearchView: false,
@@ -225,6 +230,9 @@ describe("AppShellContent", () => {
       screen.getByRole("button", { name: "Toggle sidebar" }),
     ).toBeDisabled();
     expect(screen.getByText("Travel")).toBeInTheDocument();
+    expect(screen.getByTestId("sidebar-active-capsule")).toHaveTextContent(
+      "capsule-1",
+    );
     expect(screen.getByTestId("unsaved-capsule")).toHaveTextContent("true");
     expect(screen.getByTestId("saved-capsule")).toHaveTextContent("false");
 
@@ -236,5 +244,20 @@ describe("AppShellContent", () => {
       "capsule-2",
       expect.any(Function),
     );
+  });
+
+  test("does not highlight a stale capsule outside the matching capsule URL", () => {
+    renderShellContent({
+      appRoute: "explore",
+      activeCapsuleId: "capsule-1",
+      activeCapsuleMeta: {
+        id: "capsule-1",
+        name: "Travel",
+        status: "modified",
+      },
+      capsuleRouteId: "",
+    });
+
+    expect(screen.getByTestId("sidebar-active-capsule")).toHaveTextContent("");
   });
 });

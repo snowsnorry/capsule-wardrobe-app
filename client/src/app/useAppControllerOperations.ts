@@ -45,6 +45,9 @@ export type AppControllerOperations = {
     rejectedUrls?: string[] | null;
   }) => CapsuleDraft;
   clearWardrobeProgressState: () => void;
+  clearActiveCapsuleState: (options?: {
+    capsules?: CapsuleMeta[] | null;
+  }) => void;
   getAppActionContext: () => ReturnType<typeof buildAppActionContext>;
   startCapsuleEventStream: (capsuleId: string | undefined) => unknown;
   startPendingNotificationFlow: (kind: string, llm?: string) => void;
@@ -73,6 +76,43 @@ export function useAppControllerOperations({
   t: (key: string, params?: Record<string, unknown>) => string;
 }): AppControllerOperations {
   const operations = {} as AppControllerOperations;
+  assignAppControllerOperations({
+    appState,
+    notifications,
+    operations,
+    profileOptions,
+    setLocale,
+    t,
+  });
+  operations.getAppActionContext = () =>
+    buildDefaultActionContext({
+      appState,
+      locale,
+      notifications,
+      operations,
+      resolveErrorMessage,
+      setLocale,
+      shareRoute,
+      t,
+    });
+  return operations;
+}
+
+function assignAppControllerOperations({
+  appState,
+  notifications,
+  operations,
+  profileOptions,
+  setLocale,
+  t,
+}: {
+  appState: ReturnType<typeof useAppState>;
+  notifications: ReturnType<typeof useAppNotifications>;
+  operations: AppControllerOperations;
+  profileOptions: ReturnType<typeof useProfileOptions>;
+  setLocale: (locale: string) => void;
+  t: (key: string, params?: Record<string, unknown>) => string;
+}) {
   operations.startPendingNotificationFlow = (
     kind: string,
     llm = appState.settingsProfile.llm,
@@ -82,6 +122,13 @@ export function useAppControllerOperations({
   };
   operations.clearWardrobeProgressState = () => {
     clearWardrobeProgressState(appState, notifications, operations);
+  };
+  operations.clearActiveCapsuleState = (options = {}) => {
+    applyCapsuleStateToApp(
+      buildCapsuleStateSetters(appState, operations),
+      null,
+      options,
+    );
   };
   operations.applyCapsuleState = (capsule, { capsules = null } = {}) => {
     applyCapsuleStateToApp(
@@ -127,18 +174,6 @@ export function useAppControllerOperations({
     await restoreCapsuleSnapshot(operations, result);
     return { ...normalizedProfile, hasProfile: true, optionsLoaded };
   };
-  operations.getAppActionContext = () =>
-    buildDefaultActionContext({
-      appState,
-      locale,
-      notifications,
-      operations,
-      resolveErrorMessage,
-      setLocale,
-      shareRoute,
-      t,
-    });
-  return operations;
 }
 
 function clearWardrobeProgressState(

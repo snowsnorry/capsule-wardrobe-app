@@ -8,7 +8,7 @@ type ResetAndLogin = (
 async function resetAndLoginFresh(
   page: Page,
   resetAndLogin: ResetAndLogin,
-  path = "/",
+  path = "/capsule/capsule-e2e",
 ) {
   await page.addInitScript(() => {
     window.localStorage.clear();
@@ -243,6 +243,7 @@ test("mobile shell supports drawer navigation, filters, and product detail", asy
 
   await page.getByRole("button", { name: "Toggle sidebar" }).click();
   await page.getByRole("button", { name: "Catalog" }).click();
+  await page.getByRole("button", { name: "Explore" }).click();
 
   await expect(page).toHaveURL(/\/explore$/);
   await page
@@ -270,8 +271,11 @@ test("mobile shell supports drawer navigation, filters, and product detail", asy
 
   await page.getByRole("button", { name: "Toggle sidebar" }).click();
   await page.getByRole("button", { name: "Capsule" }).click();
+  await page
+    .getByRole("button", { name: "Playwright capsule", exact: true })
+    .click();
 
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL(/\/capsule\/capsule-e2e$/);
   await expectCapsuleRouteLoaded(page);
 });
 
@@ -280,7 +284,7 @@ test("desktop sidebar collapse and mobile card layout preferences persist", asyn
   resetAndLogin,
 }) => {
   await resetAndLogin("with-profile");
-  await page.goto("/");
+  await page.goto("/capsule/capsule-e2e");
   await page.evaluate(() => {
     window.localStorage.clear();
     window.sessionStorage.clear();
@@ -358,6 +362,7 @@ test("keyboard focus supports critical dialogs and menus", async ({
   ).toBeVisible();
 
   await page.getByRole("button", { name: "Catalog" }).click();
+  await page.getByRole("button", { name: "Explore" }).click();
   await page
     .getByPlaceholder(/Search in natural language/)
     .fill("navy office shirt");

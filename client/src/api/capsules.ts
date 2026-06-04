@@ -19,6 +19,10 @@ function capsuleUrl(path = ""): string {
   return `${API_BASE_URL}/capsules${path}`;
 }
 
+function capsuleIdPath(id: string): string {
+  return `/${encodeURIComponent(String(id || "").trim())}`;
+}
+
 function sharedCapsuleUrl(path = ""): string {
   return `${API_BASE_URL}/shared-capsules${path}`;
 }
@@ -68,7 +72,7 @@ async function searchCapsules(query: string): Promise<CapsuleResponse> {
 }
 
 async function fetchCapsule(id: string): Promise<CapsuleResponse> {
-  return requestJson(capsuleUrl(`/${id}`), {
+  return requestJson(capsuleUrl(capsuleIdPath(id)), {
     credentials: "include",
   });
 }
@@ -120,14 +124,14 @@ function buildCapsuleFiltersUrl(
   }
 
   const query = params.toString();
-  return capsuleUrl(`/${id}/filters${query ? `?${query}` : ""}`);
+  return capsuleUrl(`${capsuleIdPath(id)}/filters${query ? `?${query}` : ""}`);
 }
 
 async function updateCapsuleRejectedUrls(
   id: string,
   rejectedUrls: string[],
 ): Promise<CapsuleResponse> {
-  return requestJson(capsuleUrl(`/${id}/rejected-urls`), {
+  return requestJson(capsuleUrl(`${capsuleIdPath(id)}/rejected-urls`), {
     method: "PATCH",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
@@ -136,14 +140,14 @@ async function updateCapsuleRejectedUrls(
 }
 
 async function saveCapsule(id: string): Promise<CapsuleResponse> {
-  return requestJson(capsuleUrl(`/${id}/save`), {
+  return requestJson(capsuleUrl(`${capsuleIdPath(id)}/save`), {
     method: "POST",
     credentials: "include",
   });
 }
 
 async function revertCapsule(id: string): Promise<CapsuleResponse> {
-  return requestJson(capsuleUrl(`/${id}/revert`), {
+  return requestJson(capsuleUrl(`${capsuleIdPath(id)}/revert`), {
     method: "POST",
     credentials: "include",
   });
@@ -153,7 +157,7 @@ async function renameCapsule(
   id: string,
   name: string,
 ): Promise<CapsuleResponse> {
-  return requestJson(capsuleUrl(`/${id}/rename`), {
+  return requestJson(capsuleUrl(`${capsuleIdPath(id)}/rename`), {
     method: "PATCH",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
@@ -165,7 +169,7 @@ async function duplicateCapsule(
   id: string,
   name?: string,
 ): Promise<CapsuleResponse> {
-  return requestJson(capsuleUrl(`/${id}/duplicate`), {
+  return requestJson(capsuleUrl(`${capsuleIdPath(id)}/duplicate`), {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
@@ -174,7 +178,7 @@ async function duplicateCapsule(
 }
 
 async function shareCapsule(id: string): Promise<CapsuleResponse> {
-  return requestJson(capsuleUrl(`/${id}/share`), {
+  return requestJson(capsuleUrl(`${capsuleIdPath(id)}/share`), {
     method: "POST",
     credentials: "include",
   });
@@ -194,21 +198,21 @@ async function importSharedCapsule(id: string): Promise<CapsuleResponse> {
 }
 
 async function selectCapsule(id: string): Promise<CapsuleResponse> {
-  return requestJson(capsuleUrl(`/${id}/select`), {
+  return requestJson(capsuleUrl(`${capsuleIdPath(id)}/select`), {
     method: "POST",
     credentials: "include",
   });
 }
 
 async function deleteCapsule(id: string): Promise<CapsuleResponse> {
-  return requestJson(capsuleUrl(`/${id}`), {
+  return requestJson(capsuleUrl(capsuleIdPath(id)), {
     method: "DELETE",
     credentials: "include",
   });
 }
 
 async function downloadCapsulePdf(id: string): Promise<void> {
-  const response = await request(capsuleUrl(`/${id}/pdf`), {
+  const response = await request(capsuleUrl(`${capsuleIdPath(id)}/pdf`), {
     method: "POST",
     credentials: "include",
   });

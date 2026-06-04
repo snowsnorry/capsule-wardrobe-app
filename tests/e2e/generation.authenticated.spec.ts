@@ -6,7 +6,7 @@ test("wardrobe regeneration uses mocked server response", async ({
 }) => {
   await resetAndLogin("with-profile");
 
-  await page.goto("/");
+  await page.goto("/capsule/capsule-e2e");
   await page.getByRole("button", { name: "Regenerate all" }).click();
   await expect(
     page.getByRole("heading", { name: "Regenerate capsule?" }),

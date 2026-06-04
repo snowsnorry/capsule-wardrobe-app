@@ -10,7 +10,7 @@ async function openCapsuleRoute(
 ) {
   await page.setViewportSize({ width: 390, height: 844 });
   await resetAndLogin();
-  await page.goto("/");
+  await page.goto("/capsule/capsule-e2e");
   await page.getByText("Navy relaxed shirt").waitFor({ state: "visible" });
 }
 

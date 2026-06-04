@@ -346,6 +346,7 @@ describe("App", () => {
   });
 
   test("auto-initializes first-login users and creates a blank capsule on capsule route", async () => {
+    window.history.replaceState({}, "", "/capsule");
     authApi.fetchCurrentUser.mockRejectedValue(new Error("unauthorized"));
     authApi.verifyLoginCode.mockResolvedValue({
       user: { email: "person@example.com" },

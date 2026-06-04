@@ -25,6 +25,7 @@ type AppShellContentProps = {
   activeCapsuleId: string;
   activeCapsuleMeta: CapsuleMeta | null;
   appRoute: AppRoute;
+  capsuleRouteId: string;
   capsuleList: CapsuleMeta[];
   cardPadding: number;
   children: ReactNode;
@@ -133,6 +134,13 @@ function MarketingPanel({
 function AppSidebarPanel(props: AppShellContentProps) {
   const activeSidebarApp = getActiveSidebarApp(props.appRoute);
   const usesCapsuleLayout = isFullScreenAppShellRoute(props);
+  const highlightedCapsuleId =
+    activeSidebarApp === "capsule" &&
+    props.capsuleRouteId &&
+    props.capsuleRouteId === props.activeCapsuleId &&
+    props.capsuleRouteId === props.activeCapsuleMeta?.id
+      ? props.capsuleRouteId
+      : "";
 
   return (
     <AppSidebarShell
@@ -170,7 +178,7 @@ function AppSidebarPanel(props: AppShellContentProps) {
             activeSidebarApp === "capsule" && props.isContentBusy
           }
           capsuleList={props.capsuleList}
-          activeCapsuleId={props.activeCapsuleId}
+          activeCapsuleId={highlightedCapsuleId}
           onNavigateApp={props.onNavigateApp}
           onCreateCapsule={async () => {
             await props.onCreateCapsuleFromSidebar(

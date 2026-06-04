@@ -183,3 +183,9 @@ export type AppNavigationOptions = {
   query?: string;
   openProductDetail?: boolean;
 };
+
+export type CapsuleRouteMode = "empty" | "create" | "open";
+
+export type CapsuleNavigationOptions = {
+  replace?: boolean;
+};

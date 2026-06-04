@@ -12,14 +12,12 @@ import {
   saveCapsuleByIdForEmail,
   searchCapsulesByEmail,
   updateCapsuleSnapshotByIdForEmail,
-  updateProfileActiveCapsuleIdByEmail,
   upsertSharedCapsule,
 } from "./db.js";
 import { getProfile } from "./profileStore.js";
 import {
   DEFAULT_CAPSULE_NAME,
   buildCapsuleSnapshotWithRegeneration,
-  getCapsuleIdValue,
   getCapsuleSnapshotRegeneration,
   getEffectiveCapsuleSnapshot,
   normalizeCapsuleFilters,
@@ -64,17 +62,9 @@ function createCapsuleStore(deps: CapsuleStoreDeps = {}) {
     saveCapsuleByIdForEmailImpl = saveCapsuleByIdForEmail,
     searchCapsulesByEmailImpl = searchCapsulesByEmail,
     updateCapsuleSnapshotByIdForEmailImpl = updateCapsuleSnapshotByIdForEmail,
-    updateProfileActiveCapsuleIdByEmailImpl = updateProfileActiveCapsuleIdByEmail,
     upsertSharedCapsuleImpl = upsertSharedCapsule,
     nowImpl = Date.now,
   } = deps;
-
-  async function setActiveCapsuleId(
-    email: string,
-    activeCapsuleId: string | null,
-  ) {
-    return updateProfileActiveCapsuleIdByEmailImpl({ email, activeCapsuleId });
-  }
 
   async function getCapsule(
     email: string,
@@ -108,12 +98,10 @@ function createCapsuleStore(deps: CapsuleStoreDeps = {}) {
       name,
       draft = null,
       saved = null,
-      setActive = true,
     }: {
       name?: string;
       draft?: Record<string, unknown> | null;
       saved?: Record<string, unknown> | null;
-      setActive?: boolean;
     } = {},
   ): Promise<NormalizedCapsuleRecord | null> {
     const resolvedName = await buildUniqueCapsuleNameForStore(
@@ -129,9 +117,6 @@ function createCapsuleStore(deps: CapsuleStoreDeps = {}) {
         saved: normalizeCapsuleSnapshot(saved),
       }),
     );
-    if (capsule && setActive) {
-      await setActiveCapsuleId(email, getCapsuleIdValue(capsule));
-    }
     return capsule;
   }
 
@@ -141,28 +126,11 @@ function createCapsuleStore(deps: CapsuleStoreDeps = {}) {
     const profile = await getProfileImpl(email);
     return createCapsule(email, {
       draft: buildSnapshotFromProfile(profile),
-      setActive: true,
     });
   }
 
-  async function resolveActiveCapsule(
-    email: string,
-  ): Promise<NormalizedCapsuleRecord | null> {
-    const profile = await getProfileImpl(email);
-    if (profile?.activeCapsuleId) {
-      const activeCapsule = await getCapsule(email, profile.activeCapsuleId);
-      if (activeCapsule) {
-        return activeCapsule;
-      }
-    }
-
-    const [recentCapsule] = await listRecentCapsules(email, 1);
-    if (recentCapsule) {
-      await setActiveCapsuleId(email, getCapsuleIdValue(recentCapsule));
-      return recentCapsule;
-    }
-
-    return createBootstrapCapsule(email);
+  async function resolveActiveCapsule(): Promise<NormalizedCapsuleRecord | null> {
+    return null;
   }
 
   async function updateCapsuleSnapshot(
@@ -292,10 +260,6 @@ function createCapsuleStore(deps: CapsuleStoreDeps = {}) {
       email,
       capsuleId,
       deleteCapsuleByIdForEmailImpl,
-      getProfileImpl,
-      listRecentCapsulesImpl: listRecentCapsules,
-      setActiveCapsuleIdImpl: setActiveCapsuleId,
-      createBootstrapCapsuleImpl: createBootstrapCapsule,
     });
   }
 
@@ -314,7 +278,6 @@ function createCapsuleStore(deps: CapsuleStoreDeps = {}) {
     revertCapsule,
     saveCapsule,
     searchCapsules,
-    setActiveCapsuleId,
     updateCapsuleSnapshot,
     renameCapsule,
   };
@@ -336,7 +299,6 @@ const {
   revertCapsule,
   saveCapsule,
   searchCapsules,
-  setActiveCapsuleId,
   updateCapsuleSnapshot,
   renameCapsule,
 } = defaultCapsuleStore;
@@ -364,7 +326,6 @@ export {
   revertCapsule,
   saveCapsule,
   searchCapsules,
-  setActiveCapsuleId,
   updateCapsuleSnapshot,
   renameCapsule,
 };

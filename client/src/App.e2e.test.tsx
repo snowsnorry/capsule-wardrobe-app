@@ -355,6 +355,7 @@ describe("App e2e-style flows", () => {
     authApi.initializeProfile.mockResolvedValue({});
     authApi.logout.mockResolvedValue({});
     mockProfileOptions();
+    window.history.replaceState({}, "", "/capsule");
 
     renderApp();
 
@@ -420,6 +421,7 @@ describe("App e2e-style flows", () => {
     authApi.initializeProfile.mockResolvedValue({});
     authApi.logout.mockResolvedValue({});
     mockProfileOptions();
+    window.history.replaceState({}, "", "/capsule");
 
     renderApp();
 
@@ -428,7 +430,9 @@ describe("App e2e-style flows", () => {
 
     expect(await screen.findByTestId("main-screen")).toBeInTheDocument();
     await waitFor(() => {
-      expect(capsulesApi.createCapsule).toHaveBeenCalledTimes(1);
+      expect(capsulesApi.createCapsule).toHaveBeenCalledWith({
+        filters: expect.any(Object),
+      });
     });
     expect(notificationApi.requestPermission).not.toHaveBeenCalled();
     expect(notificationApi.created).not.toHaveBeenCalled();

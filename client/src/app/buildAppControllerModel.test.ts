@@ -116,7 +116,9 @@ describe("buildAppControllerModel", () => {
       isShareDialogOpen: false,
       isShareLoading: false,
       navigation: {
-        appRoute: "main",
+        appRoute: "capsule",
+        capsuleRouteId: "",
+        capsuleRouteMode: "empty",
         searchAutoOpenProductDetail: null,
         searchInitialQuery: "",
       },

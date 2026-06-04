@@ -38,12 +38,13 @@ export async function importSharedCapsuleToApp(
   context: AppActionContext,
   shareId: string,
 ) {
-  if (!shareId) return;
+  if (!shareId) return null;
   fromContext<(value: boolean) => void>(context, "setIsShareLoading")(true);
   try {
     const result = (await importSharedCapsule(
       shareId,
     )) as CapsuleMutationResponse;
+    const importedCapsule = result.capsule || null;
     if (result.capsule) {
       fromContext<(capsule?: CapsuleMeta | null) => void>(
         context,
@@ -61,6 +62,7 @@ export async function importSharedCapsuleToApp(
       infoParams: null,
     });
     fromContext<() => void>(context, "clearShareRoute")();
+    return importedCapsule;
   } catch (error) {
     fromContext<(value: unknown) => void>(
       context,
@@ -75,6 +77,7 @@ export async function importSharedCapsuleToApp(
       infoParams: null,
     });
     fromContext<() => void>(context, "clearShareRoute")();
+    return null;
   } finally {
     if (fromContext<{ current: boolean }>(context, "isMountedRef").current) {
       fromContext<(value: boolean) => void>(

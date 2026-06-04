@@ -7,7 +7,7 @@ const createdCapsuleName = "Lifecycle saved capsule";
 
 async function openApp(page: Page) {
   await page.setViewportSize({ width: 1440, height: 960 });
-  await page.goto("/");
+  await page.goto("/capsule/capsule-e2e");
   await expect(
     page.getByRole("button", { name: "Regenerate all" }),
   ).toBeVisible();
@@ -162,15 +162,19 @@ test("capsule duplicate select delete fallback and reload persistence work throu
   await expect(
     page.getByRole("button", { name: duplicateCapsuleName, exact: true }),
   ).toHaveCount(0);
-  await expectActiveCapsule(page, originalCapsuleName);
+  await expect(page).toHaveURL(/\/$/);
+  await expectCapsuleListed(page, originalCapsuleName);
   await expect(
-    page.getByRole("button", { name: "Navy relaxed shirt", exact: true }),
-  ).toBeVisible();
+    page.getByRole("button", { name: `Rename capsule ${originalCapsuleName}` }),
+  ).toHaveCount(0);
 
   await page.reload();
 
   await expect(
     page.getByRole("button", { name: duplicateCapsuleName, exact: true }),
   ).toHaveCount(0);
-  await expectActiveCapsule(page, originalCapsuleName);
+  await expectCapsuleListed(page, originalCapsuleName);
+  await expect(
+    page.getByRole("button", { name: `Rename capsule ${originalCapsuleName}` }),
+  ).toHaveCount(0);
 });

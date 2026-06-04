@@ -9,6 +9,7 @@ const controllerOperations = vi.hoisted(() => ({
   applyWardrobeSnapshot: vi.fn(),
   bootstrapCapsules: vi.fn(),
   buildCurrentDraftSnapshot: vi.fn(),
+  clearActiveCapsuleState: vi.fn(),
   getAppActionContext: vi.fn(),
   startCapsuleEventStream: vi.fn(),
   startPendingNotificationFlow: vi.fn(),
@@ -78,9 +79,13 @@ vi.mock("./useAppLifecycleEffects", () => ({
 
 vi.mock("./useAppNavigation", () => ({
   useAppNavigation: () => ({
-    appRoute: "main",
+    appRoute: "capsule",
+    capsuleRouteId: "",
+    capsuleRouteMode: "empty",
     clearShareRoute: vi.fn(),
+    navigateCapsule: vi.fn(),
     navigateApp: vi.fn(),
+    navigateNewCapsule: vi.fn(),
     pendingShareId: "",
     resetNavigation: vi.fn(),
     searchAutoOpenProductDetail: null,

@@ -78,12 +78,43 @@ function applyCapsuleFilters(
   return effective;
 }
 
+function applyEmptyCapsuleState(
+  context: ApplyCapsuleStateContext,
+  { capsules = null as CapsuleMeta[] | null } = {},
+) {
+  context.clearWardrobeProgressState();
+  const emptyDraft = buildEmptyCapsuleDraft();
+  const filters = emptyDraft.filters;
+  context.setActiveCapsuleId("");
+  context.setActiveCapsuleMeta(null);
+  context.setProfileItems(null);
+  context.setProfileOutfitSets([]);
+  context.setPendingImageSetIndexes([]);
+  context.setSelectedFormalityLevel(fallbackString(filters.formalityLevel));
+  context.setSelectedStyle(fallbackNullableString(filters.style));
+  context.setSelectedOccasions(fallbackStringArray(filters.occasions));
+  context.setSelectedSeason(fallbackStringArray(filters.season));
+  context.setSelectedAudience(fallbackString(filters.audience));
+  context.setSelectedColor(fallbackNullableString(filters.color));
+  context.setSelectedPattern(normalizePattern(filters.pattern));
+  context.setSelectedSourceMode(normalizeSourceMode(filters.sourceMode));
+  context.setSelectedText(fallbackString(filters.text));
+  context.setSelectedAnchorWardrobeItemIds(
+    fallbackStringArray(filters.anchorWardrobeItemIds),
+  );
+
+  if (Array.isArray(capsules)) {
+    context.setCapsuleList(capsules);
+  }
+}
+
 export function applyCapsuleStateToApp(
   context: ApplyCapsuleStateContext,
   capsule: CapsuleMeta | null | undefined,
   { capsules = null as CapsuleMeta[] | null } = {},
 ) {
   if (!capsule) {
+    applyEmptyCapsuleState(context, { capsules });
     return;
   }
 

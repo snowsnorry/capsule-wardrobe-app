@@ -23,7 +23,6 @@ import {
   createE2eWardrobeDependencies,
   E2eWardrobeMemory,
 } from "./wardrobeState.js";
-import { getCapsuleIdValue } from "../capsuleStoreModel.js";
 
 export type E2eScenario =
   | "with-profile"
@@ -159,12 +158,7 @@ function profileDependencies(state: E2eState) {
       state.profile = { ...buildE2eProfile(email), ...state.profile, locale };
       return state.profile;
     },
-    updateProfileActiveCapsuleIdImpl: async (_email, activeCapsuleId) => {
-      state.profile = {
-        ...buildE2eProfile(),
-        ...state.profile,
-        activeCapsuleId,
-      };
+    updateProfileActiveCapsuleIdImpl: async () => {
       return state.profile;
     },
     getFormalityLevelsImpl: async () => ["casual", "formal"],
@@ -198,13 +192,7 @@ function authDependencies(state: E2eState) {
 
 function capsuleDependencies(state: E2eState) {
   return {
-    resolveActiveCapsuleImpl: async () => {
-      const capsule = state.capsuleMemory.resolve(
-        state.profile?.activeCapsuleId,
-      );
-      state.setActiveCapsuleId(getCapsuleIdValue(capsule));
-      return capsule;
-    },
+    resolveActiveCapsuleImpl: async () => null,
     listRecentCapsulesImpl: async (_email, limit = 10) =>
       state.capsuleMemory.list(limit),
     searchCapsulesImpl: async (_email, query, limit = 25) =>
@@ -216,20 +204,9 @@ function capsuleDependencies(state: E2eState) {
         draft: payload?.draft ?? buildE2eCapsule().draft,
         saved: payload?.saved ?? null,
       });
-      if (payload?.setActive !== false) {
-        state.setActiveCapsuleId(getCapsuleIdValue(capsule));
-      }
       return capsule;
     },
-    setActiveCapsuleIdImpl: async (_email, activeCapsuleId) => {
-      const capsuleId = normalizeCapsuleId(activeCapsuleId);
-      const nextActiveId = state.capsules.has(capsuleId)
-        ? capsuleId
-        : getCapsuleIdValue(
-            state.capsuleMemory.resolve(state.profile?.activeCapsuleId),
-          );
-      return deepClone(state.setActiveCapsuleId(nextActiveId));
-    },
+    setActiveCapsuleIdImpl: async () => deepClone(state.profile),
     updateCapsuleSnapshotImpl: async (_email, id, draft) =>
       state.capsuleMemory.update(id, draft),
     saveCapsuleImpl: async (_email, id) => state.capsuleMemory.save(id),
@@ -237,20 +214,9 @@ function capsuleDependencies(state: E2eState) {
     renameCapsuleImpl: async (_email, id, name) =>
       state.capsuleMemory.rename(id, name),
     duplicateCapsuleImpl: async (_email, id, name) => {
-      const capsule = state.capsuleMemory.duplicate(id, name);
-      if (capsule) state.setActiveCapsuleId(getCapsuleIdValue(capsule));
-      return capsule;
+      return state.capsuleMemory.duplicate(id, name);
     },
-    deleteCapsuleImpl: async (_email, id) => {
-      const result = state.capsuleMemory.delete(
-        id,
-        state.profile?.activeCapsuleId,
-      );
-      if (result.activeCapsuleId) {
-        state.setActiveCapsuleId(result.activeCapsuleId);
-      }
-      return result.deleted;
-    },
+    deleteCapsuleImpl: async (_email, id) => state.capsuleMemory.delete(id),
     createCapsuleShareImpl: async (email, capsuleId, clientOrigin) =>
       state.shareMemory.createFromCapsule({
         capsuleId,
@@ -264,9 +230,6 @@ function capsuleDependencies(state: E2eState) {
       state.shareMemory.importAsCapsule({
         capsuleMemory: state.capsuleMemory,
         id,
-        setActiveCapsuleId: (activeCapsuleId) => {
-          state.setActiveCapsuleId(activeCapsuleId);
-        },
       }),
   };
 }

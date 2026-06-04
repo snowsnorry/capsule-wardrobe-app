@@ -37,7 +37,7 @@ export function buildE2eProfile(email = E2E_EMAIL) {
   return {
     id: "profile-e2e",
     email,
-    activeCapsuleId: "capsule-e2e",
+    activeCapsuleId: null,
     locale: "en",
     fullname: "Playwright User",
     theme: "system",

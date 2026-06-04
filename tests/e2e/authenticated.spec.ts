@@ -6,7 +6,7 @@ test("authenticated app opens past the sign-in screen", async ({
 }) => {
   await resetAndLogin("with-profile");
 
-  await page.goto("/");
+  await page.goto("/capsule/capsule-e2e");
 
   await expect(
     page.getByRole("button", { name: "Regenerate all" }),

@@ -247,7 +247,6 @@ test("capsule creation only accepts name and filters and initializes server-owne
       },
     },
     saved: null,
-    setActive: true,
   });
 });
 
@@ -631,10 +630,6 @@ test("capsule mutation state and metadata routes map success and missing records
           status: "saved",
         };
       },
-      updateProfileActiveCapsuleIdImpl: async (_email, activeCapsuleId) => {
-        calls.push({ type: "select", activeCapsuleId });
-        return { activeCapsuleId };
-      },
       deleteCapsuleImpl: async (_email, id) => {
         calls.push({ type: "delete", id });
         return true;
@@ -705,7 +700,7 @@ test("capsule mutation state and metadata routes map success and missing records
     csrfToken: CSRF_TOKEN,
   });
   expect(select.response.status).toBe(200);
-  expect(select.json.activeCapsuleId).toBe("capsule-1");
+  expect(select.json).toEqual({ ok: true, capsuleId: "capsule-1" });
 
   const deleted = await requestJson(baseUrl, "/capsules/capsule-1", {
     method: "DELETE",
@@ -714,14 +709,13 @@ test("capsule mutation state and metadata routes map success and missing records
     csrfToken: CSRF_TOKEN,
   });
   expect(deleted.response.status).toBe(200);
-  expect((deleted.json.activeCapsule as { id?: string }).id).toBe("capsule-1");
+  expect(deleted.json).toEqual({ ok: true });
 
   expect(calls).toEqual([
     { type: "save", id: "capsule-1" },
     { type: "revert", id: "capsule-1" },
     { type: "rename", id: "capsule-1", name: "Travel edit" },
     { type: "duplicate", id: "capsule-1", name: "Copy name" },
-    { type: "select", activeCapsuleId: "capsule-1" },
     { type: "delete", id: "capsule-1" },
   ]);
 });

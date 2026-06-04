@@ -17,7 +17,7 @@ function isKnownBaselineExternalRequest(rawUrl: string) {
 
 async function openApp(page: Page) {
   await page.setViewportSize({ width: 1440, height: 960 });
-  await page.goto("/");
+  await page.goto("/capsule/capsule-e2e");
   await expect(
     page.getByRole("button", { name: "Regenerate all" }),
   ).toBeVisible();

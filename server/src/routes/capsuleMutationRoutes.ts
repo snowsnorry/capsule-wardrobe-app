@@ -39,7 +39,6 @@ function registerCapsuleCreateRoutes(app, context) {
           name: String(req.body?.name || "").trim() || undefined,
           draft,
           saved: null,
-          setActive: true,
         });
         return res
           .status(201)
@@ -323,13 +322,9 @@ function registerCapsuleSelectionRoutes(app, context) {
         if (!capsule) {
           return res.status(404).json({ error: "not_found" });
         }
-        const profile = await context.updateProfileActiveCapsuleIdImpl(
-          req.user.email,
-          capsule.id,
-        );
         return res.json({
           ok: true,
-          activeCapsuleId: profile?.activeCapsuleId || capsule.id,
+          capsuleId: capsule.id,
         });
       } catch (error) {
         logError("[capsules/select]", error);
@@ -352,13 +347,7 @@ function registerCapsuleSelectionRoutes(app, context) {
         if (!deleted) {
           return res.status(404).json({ error: "not_found" });
         }
-        const activeCapsule = await context.resolveActiveCapsuleImpl(
-          req.user.email,
-        );
-        return res.json({
-          ok: true,
-          activeCapsule: context.toCapsuleResponse(activeCapsule),
-        });
+        return res.json({ ok: true });
       } catch (error) {
         logError("[capsules/delete]", error);
         return res.status(503).json({ error: "service_unavailable" });

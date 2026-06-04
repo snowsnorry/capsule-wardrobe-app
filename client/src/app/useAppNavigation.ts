@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
-import type { AppNavigationOptions, AppRoute } from "./appTypes";
-import { getAppRoute, getShareIdFromPath } from "./appRouting";
+import type {
+  AppNavigationOptions,
+  AppRoute,
+  CapsuleNavigationOptions,
+} from "./appTypes";
+import { getAppRouteState, getShareIdFromPath } from "./appRouting";
 
 function getNavigationPath(nextApp: Exclude<AppRoute, "share">): string {
   if (nextApp === "wardrobe") {
@@ -29,11 +33,12 @@ function canonicalizeLegacyWardrobePath() {
   );
 }
 
+// eslint-disable-next-line max-lines-per-function
 export function useAppNavigation() {
-  const [appRoute, setAppRoute] = useState<AppRoute>(() =>
+  const [routeState, setRouteState] = useState(() =>
     typeof window === "undefined"
-      ? "capsule"
-      : getAppRoute(window.location.pathname),
+      ? getAppRouteState("/")
+      : getAppRouteState(window.location.pathname),
   );
   const [searchInitialQuery, setSearchInitialQuery] = useState("");
   const [searchAutoOpenProductDetail, setSearchAutoOpenProductDetail] =
@@ -50,13 +55,14 @@ export function useAppNavigation() {
     }
 
     canonicalizeLegacyWardrobePath();
-    setAppRoute(getAppRoute(window.location.pathname));
+    setRouteState(getAppRouteState(window.location.pathname));
 
     const handlePopState = () => {
       canonicalizeLegacyWardrobePath();
-      const nextRoute = getAppRoute(window.location.pathname);
-      setAppRoute(nextRoute);
-      if (nextRoute !== "explore") {
+      const nextRoute = getAppRouteState(window.location.pathname);
+      setRouteState(nextRoute);
+      const nextApp = nextRoute.appRoute;
+      if (nextApp !== "explore") {
         setSearchInitialQuery("");
         setSearchAutoOpenProductDetail(false);
       }
@@ -87,9 +93,47 @@ export function useAppNavigation() {
       setSearchAutoOpenProductDetail(
         nextApp === "explore" && Boolean(options.openProductDetail),
       );
-      setAppRoute(getAppRoute(nextPath));
+      setRouteState(getAppRouteState(nextPath));
     },
     [],
+  );
+
+  const navigateToPath = useCallback((path: string, replace = false) => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    if (window.location.pathname !== path) {
+      if (replace) {
+        window.history.replaceState({}, "", path);
+      } else {
+        window.history.pushState({}, "", path);
+      }
+    }
+    setSearchInitialQuery("");
+    setSearchAutoOpenProductDetail(false);
+    setRouteState(getAppRouteState(path));
+  }, []);
+
+  const navigateCapsule = useCallback(
+    (capsuleId: string, options: CapsuleNavigationOptions = {}) => {
+      const normalizedId = String(capsuleId || "").trim();
+      if (!normalizedId) {
+        return;
+      }
+      navigateToPath(
+        `/capsule/${encodeURIComponent(normalizedId)}`,
+        options.replace,
+      );
+    },
+    [navigateToPath],
+  );
+
+  const navigateNewCapsule = useCallback(
+    (options: CapsuleNavigationOptions = {}) => {
+      navigateToPath("/capsule", options.replace);
+    },
+    [navigateToPath],
   );
 
   const clearShareRoute = useCallback(() => {
@@ -100,28 +144,33 @@ export function useAppNavigation() {
     ) {
       window.history.replaceState({}, "", "/");
     }
-    setAppRoute("capsule");
+    setRouteState(getAppRouteState("/"));
   }, []);
 
   const resetNavigation = useCallback(() => {
     if (typeof window !== "undefined" && window.location.pathname !== "/") {
       window.history.replaceState({}, "", "/");
     }
-    setAppRoute("capsule");
+    setRouteState(getAppRouteState("/"));
     setSearchInitialQuery("");
     setSearchAutoOpenProductDetail(false);
     setPendingShareId("");
   }, []);
 
   return {
-    appRoute,
+    appRoute: routeState.appRoute,
+    capsuleRouteId: routeState.capsuleRouteId,
+    capsuleRouteMode: routeState.capsuleRouteMode,
     searchInitialQuery,
     searchAutoOpenProductDetail,
     pendingShareId,
     setPendingShareId,
-    setAppRoute,
+    setAppRoute: (appRoute: AppRoute) =>
+      setRouteState((current) => ({ ...current, appRoute })),
     clearShareRoute,
+    navigateCapsule,
     navigateApp,
+    navigateNewCapsule,
     resetNavigation,
   };
 }

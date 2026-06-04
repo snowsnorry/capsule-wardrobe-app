@@ -40,16 +40,19 @@ async function runContentOperation(
 }
 
 export async function createNewCapsule(context: AppActionContext) {
+  let createdCapsule: CapsuleMeta | null = null;
   await runContentOperation(context, async () => {
     const result = (await createCapsule({
       filters: buildEmptyCapsuleDraft().filters,
     })) as CapsuleMutationResponse;
+    createdCapsule = result.capsule || null;
     fromContext<(capsule?: CapsuleMeta | null) => void>(
       context,
       "applyCapsuleState",
     )(result.capsule);
     await refreshCapsuleList(context);
   });
+  return createdCapsule;
 }
 
 export async function openCapsule(
@@ -170,33 +173,37 @@ export async function duplicateCurrentCapsule(
   name: string,
   capsuleId: string,
 ) {
+  let duplicatedCapsule: CapsuleMeta | null = null;
   await mutateCurrentCapsule(
     context,
     capsuleId,
     () => duplicateCapsule(capsuleId, name) as Promise<CapsuleMutationResponse>,
     (result) => {
+      duplicatedCapsule = result.capsule || null;
       fromContext<(capsule?: CapsuleMeta | null) => void>(
         context,
         "applyCapsuleState",
       )(result.capsule);
     },
   );
+  return duplicatedCapsule;
 }
 
 export async function deleteCurrentCapsule(
   context: AppActionContext,
   capsuleId: string,
 ) {
+  const activeCapsuleId = fromContext<string>(context, "activeCapsuleId");
   await mutateCurrentCapsule(
     context,
     capsuleId,
     () => deleteCapsule(capsuleId) as Promise<CapsuleMutationResponse>,
     (result) => {
-      if (result.activeCapsule) {
+      if (result.activeCapsule || capsuleId === activeCapsuleId) {
         fromContext<(capsule?: CapsuleMeta | null) => void>(
           context,
           "applyCapsuleState",
-        )(result.activeCapsule);
+        )(result.activeCapsule || null);
       }
     },
   );

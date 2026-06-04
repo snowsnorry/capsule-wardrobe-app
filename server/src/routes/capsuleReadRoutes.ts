@@ -11,17 +11,12 @@ export function registerCapsuleReadRoutes(app, context) {
 
 function registerCapsuleBootstrapRoutes(app, context) {
   const {
-    getCapsuleEventSnapshot,
     getProfileImpl,
-    listWardrobeItemsImpl,
     listRecentCapsulesImpl,
     requireAuth,
-    resolveActiveCapsuleImpl,
     searchCapsulesImpl,
     toCapsuleSummary,
-    toCapsuleResponse,
     toProfileResponse,
-    annotateWardrobeSavedItems,
   } = context;
 
   app.get("/capsules/bootstrap", requireAuth, async (req, res) => {
@@ -37,12 +32,7 @@ function registerCapsuleBootstrapRoutes(app, context) {
           capsules: [],
         });
       }
-      const activeCapsule = await resolveActiveCapsuleImpl(req.user.email);
       const recentCapsules = await listRecentCapsulesImpl(req.user.email, 10);
-      const savedCatalogUrls = await listSavedCatalogUrls(
-        listWardrobeItemsImpl,
-        req.user.email,
-      );
       const wardrobeFilters = await buildWardrobeFilters(
         context,
         req.user.email,
@@ -51,14 +41,8 @@ function registerCapsuleBootstrapRoutes(app, context) {
         ok: true,
         hasProfile: true,
         profile: toProfileResponse(profile),
-        activeCapsule: annotateWardrobeSavedItems(
-          toCapsuleResponse(activeCapsule),
-          savedCatalogUrls,
-        ),
-        activeSnapshot: annotateWardrobeSavedItems(
-          await getCapsuleEventSnapshot(req.user.email, activeCapsule),
-          savedCatalogUrls,
-        ),
+        activeCapsule: null,
+        activeSnapshot: null,
         capsules: recentCapsules.map(toCapsuleSummary),
         wardrobeFilters,
       });
@@ -98,7 +82,6 @@ function registerCapsuleLookupRoutes(app, context) {
     getCapsuleImpl,
     listWardrobeItemsImpl,
     requireAuth,
-    setActiveCapsuleIdImpl,
     streamCapsuleEventsHandler,
     toCapsuleResponse,
     annotateWardrobeSavedItems,
@@ -110,7 +93,6 @@ function registerCapsuleLookupRoutes(app, context) {
       if (!capsule) {
         return res.status(404).json({ error: "not_found" });
       }
-      await setActiveCapsuleIdImpl(req.user.email, capsule.id);
       const savedCatalogUrls = await listSavedCatalogUrls(
         listWardrobeItemsImpl,
         req.user.email,

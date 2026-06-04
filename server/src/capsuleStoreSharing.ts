@@ -160,7 +160,6 @@ export async function importSharedCapsuleForStore({
     name: shared.name,
     draft: null,
     saved: shareableContent,
-    setActive: true,
   });
 }
 

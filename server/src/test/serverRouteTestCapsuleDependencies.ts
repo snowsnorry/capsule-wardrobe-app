@@ -2,15 +2,7 @@ import { TEST_CLIENT_ORIGIN } from "./serverRouteTestConstants.js";
 
 export function createCapsuleDependencies() {
   return {
-    resolveActiveCapsuleImpl: async () => ({
-      id: "capsule-1",
-      name: "<New capsule>",
-      draft: null,
-      saved: null,
-      status: "new",
-      createdAt: new Date(0).toISOString(),
-      updatedAt: new Date(0).toISOString(),
-    }),
+    resolveActiveCapsuleImpl: async () => null,
     listRecentCapsulesImpl: async () => [],
     searchCapsulesImpl: async () => [],
     getCapsuleImpl: async () => ({
@@ -113,7 +105,7 @@ function createCapsuleMutationDependencies() {
       status: "saved",
     }),
     deleteCapsuleImpl: async () => true,
-    setActiveCapsuleIdImpl: async () => ({ activeCapsuleId: "capsule-1" }),
+    setActiveCapsuleIdImpl: async () => ({ activeCapsuleId: null }),
     validateCapsuleAnchorItemsImpl: async (_email, anchorWardrobeItemIds) => ({
       anchorWardrobeItemIds: Array.isArray(anchorWardrobeItemIds)
         ? anchorWardrobeItemIds

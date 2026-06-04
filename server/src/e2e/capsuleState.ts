@@ -1,6 +1,5 @@
 import {
   DEFAULT_CAPSULE_NAME,
-  getCapsuleIdValue,
   getEffectiveCapsuleSnapshot,
   normalizeCapsuleRecord,
   normalizeCapsuleSnapshot,
@@ -352,16 +351,9 @@ export class E2eCapsuleMemory {
       : null;
   }
 
-  delete(id: unknown, activeCapsuleId: unknown) {
+  delete(id: unknown) {
     const capsuleId = normalizeCapsuleId(id);
-    const deleted = this.capsules.delete(capsuleId);
-    if (!deleted) return { deleted: false, activeCapsuleId: null };
-
-    const nextActiveId =
-      String(activeCapsuleId || "") === capsuleId
-        ? getCapsuleIdValue(this.resolve(null))
-        : null;
-    return { deleted: true, activeCapsuleId: nextActiveId };
+    return this.capsules.delete(capsuleId);
   }
 
   resolve(activeCapsuleId: unknown): NormalizedCapsuleRecord | null {
@@ -369,13 +361,7 @@ export class E2eCapsuleMemory {
     const activeCapsule = activeId ? this.capsules.get(activeId) : null;
     if (activeCapsule) return cloneCapsule(activeCapsule);
 
-    const [fallback] = this.orderedCapsules();
-    if (fallback) return cloneCapsule(fallback);
-
-    return this.create({
-      name: DEFAULT_CAPSULE_NAME,
-      draft: buildE2eCapsule().draft,
-    });
+    return null;
   }
 
   private nextCapsuleId(): string {

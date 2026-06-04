@@ -13,7 +13,7 @@ async function resetAndLoginFresh(
   page: Page,
   resetAndLogin: ResetAndLogin,
   scenario: "with-profile" | "with-saved-search" | "with-non-empty-stats",
-  path = "/",
+  path = "/capsule/capsule-e2e",
 ) {
   await page.addInitScript(() => {
     window.localStorage.clear();
@@ -122,7 +122,7 @@ test("capsule product card opens product detail without leaving capsule", async 
   ).toBeVisible();
   await productDialog.getByRole("button", { name: "Close" }).click();
 
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL(/\/capsule\/capsule-e2e$/);
   await expect(
     page.getByRole("button", { name: "Regenerate all" }),
   ).toBeVisible();

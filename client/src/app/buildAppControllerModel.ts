@@ -135,6 +135,7 @@ function buildLayout(input: ControllerModelInput) {
     activeCapsuleId: state.activeCapsuleId,
     activeCapsuleMeta: state.activeCapsuleMeta,
     appRoute: input.navigation.appRoute,
+    capsuleRouteId: input.navigation.capsuleRouteId,
     capsuleList: state.capsuleList,
     cardPadding: input.cardPadding,
     currentView: state.currentView,

@@ -173,10 +173,6 @@ test("capsule read routes expose bootstrap, recent, search, and lookup fallbacks
         calls.push({ type: "search", query, limit });
         return [{ id: "capsule-2", name: "Office edit", status: "saved" }];
       },
-      setActiveCapsuleIdImpl: async (_email, capsuleId) => {
-        calls.push({ type: "set-active", capsuleId });
-        return { activeCapsuleId: capsuleId };
-      },
     },
   });
 
@@ -186,9 +182,8 @@ test("capsule read routes expose bootstrap, recent, search, and lookup fallbacks
   expect(bootstrap.response.status).toBe(200);
   expect(bootstrap.json.ok).toBe(true);
   expect(bootstrap.json.hasProfile).toBe(true);
-  expect((bootstrap.json.activeCapsule as { id?: string }).id).toBe(
-    "capsule-1",
-  );
+  expect(bootstrap.json.activeCapsule).toBe(null);
+  expect(bootstrap.json.activeSnapshot).toBe(null);
   expect(bootstrap.json.wardrobeFilters).toEqual({
     formalityLevels: ["casual", "formal"],
     styles: ["minimalistic", "sporty"],
@@ -237,7 +232,6 @@ test("capsule read routes expose bootstrap, recent, search, and lookup fallbacks
     { type: "recent", limit: 10 },
     { type: "recent", limit: 25 },
     { type: "search", query: "office", limit: 25 },
-    { type: "set-active", capsuleId: "capsule-1" },
   ]);
 });
 
@@ -246,10 +240,6 @@ test("capsule bootstrap returns missing profile status without capsule lookups",
   const { baseUrl } = await startTestServer(t, {
     overrides: {
       getProfileImpl: async () => null,
-      resolveActiveCapsuleImpl: async () => {
-        calls.push({ type: "active" });
-        return null;
-      },
       listRecentCapsulesImpl: async () => {
         calls.push({ type: "recent" });
         return [];
@@ -278,7 +268,7 @@ test("capsule read and share routes map missing records and service failures", a
 
   const failingBootstrapServer = await startTestServer(t, {
     overrides: {
-      resolveActiveCapsuleImpl: async () => {
+      listRecentCapsulesImpl: async () => {
         throw new Error("capsule_store_down");
       },
     },

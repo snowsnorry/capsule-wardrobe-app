@@ -10,7 +10,6 @@ import {
 import { buildSharedCapsuleOgMetadata } from "../capsuleShareMetadata.js";
 import {
   DEFAULT_CAPSULE_NAME,
-  getCapsuleIdValue,
   isShareableCapsuleSnapshot,
   normalizeCapsuleSnapshot,
   SHARE_TTL_MS,
@@ -128,11 +127,9 @@ export class E2eShareMemory {
   importAsCapsule({
     capsuleMemory,
     id,
-    setActiveCapsuleId,
   }: {
     capsuleMemory: E2eCapsuleMemory;
     id: unknown;
-    setActiveCapsuleId: (activeCapsuleId: string | null) => void;
   }): NormalizedCapsuleRecord | null {
     const share = cloneShareRecord(this.shares.get(String(id || "").trim()));
     if (!share) {
@@ -156,7 +153,6 @@ export class E2eShareMemory {
       draft: null,
       saved: shareContent,
     });
-    setActiveCapsuleId(getCapsuleIdValue(capsule));
     return capsule;
   }
 }

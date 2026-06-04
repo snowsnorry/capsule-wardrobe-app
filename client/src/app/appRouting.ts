@@ -1,4 +1,36 @@
-import type { AppRoute } from "./appTypes";
+import type { AppRoute, CapsuleRouteMode } from "./appTypes";
+
+export type AppRouteState = {
+  appRoute: AppRoute;
+  capsuleRouteId: string;
+  capsuleRouteMode: CapsuleRouteMode;
+};
+
+function decodePathSegment(value: string) {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
+export function getCapsuleRouteState(
+  pathname = "/",
+): Pick<AppRouteState, "capsuleRouteId" | "capsuleRouteMode"> {
+  if (pathname === "/capsule" || pathname === "/capsule/") {
+    return { capsuleRouteId: "", capsuleRouteMode: "create" };
+  }
+
+  const match = pathname.match(/^\/capsule\/([^/?#]+)\/?$/);
+  if (match?.[1]) {
+    return {
+      capsuleRouteId: decodePathSegment(match[1]),
+      capsuleRouteMode: "open",
+    };
+  }
+
+  return { capsuleRouteId: "", capsuleRouteMode: "empty" };
+}
 
 export function getAppRoute(pathname = "/"): AppRoute {
   if (pathname.startsWith("/share/")) {
@@ -19,6 +51,19 @@ export function getAppRoute(pathname = "/"): AppRoute {
     return "statistics";
   }
   return "capsule";
+}
+
+export function getAppRouteState(pathname = "/"): AppRouteState {
+  const appRoute = getAppRoute(pathname);
+  const capsuleState =
+    appRoute === "capsule"
+      ? getCapsuleRouteState(pathname)
+      : { capsuleRouteId: "", capsuleRouteMode: "empty" as const };
+
+  return {
+    appRoute,
+    ...capsuleState,
+  };
 }
 
 export function getShareIdFromPath(pathname = "") {

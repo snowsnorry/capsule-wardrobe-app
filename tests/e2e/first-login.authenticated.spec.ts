@@ -6,7 +6,7 @@ test("authenticated user without a profile lands on a new capsule", async ({
 }) => {
   await resetAndLogin("no-profile");
 
-  await page.goto("/");
+  await page.goto("/capsule");
 
   await expect(
     page.getByRole("button", { name: "Regenerate all" }),

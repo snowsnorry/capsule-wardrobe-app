@@ -28,7 +28,6 @@ import {
   getProfile,
   updateProfile,
   updateProfileLocale,
-  updateProfileActiveCapsuleId,
 } from "./profileStore.js";
 import {
   createCapsule,
@@ -42,11 +41,9 @@ import {
   listRecentCapsules,
   normalizeCapsuleSnapshot,
   renameCapsule,
-  resolveActiveCapsule,
   revertCapsule,
   saveCapsule,
   searchCapsules,
-  setActiveCapsuleId,
   updateCapsuleSnapshot,
 } from "./capsuleStore.js";
 import {
@@ -302,7 +299,6 @@ function createAppDependencies(options: Record<string, unknown> = {}) {
     regenerateCapsuleWardrobeHandler: regenerateCapsuleWardrobe,
     regenerateSelectedCapsuleItemsHandler: regenerateSelectedWardrobeItems,
     renameCapsuleImpl: renameCapsule,
-    resolveActiveCapsuleImpl: resolveActiveCapsule,
     revertCapsuleImpl: revertCapsule,
     revokeMcpRefreshTokenImpl: revokeMcpRefreshToken,
     revokeSessionImpl: revokeSession,
@@ -314,7 +310,6 @@ function createAppDependencies(options: Record<string, unknown> = {}) {
     saveWardrobeItemFromCatalogImpl: saveWardrobeItemFromCatalogByUrl,
     searchCapsulesImpl: searchCapsules,
     sendLoginCodeEmailImpl: sendLoginCodeEmail,
-    setActiveCapsuleIdImpl: setActiveCapsuleId,
     streamCapsuleEventsImpl: capsuleEventHub.subscribe,
     updateCapsuleSnapshotImpl: updateCapsuleSnapshot,
     validateCapsuleAnchorItemsImpl: (email, anchorWardrobeItemIds) =>
@@ -324,7 +319,6 @@ function createAppDependencies(options: Record<string, unknown> = {}) {
         deps: { listWardrobeItemsByIdsImpl: listWardrobeItemsByIdsForEmail },
       }),
     updatePasskeyAuthenticationImpl: updatePasskeyAuthentication,
-    updateProfileActiveCapsuleIdImpl: updateProfileActiveCapsuleId,
     updateProfileImpl: updateProfile,
     updateProfileLocaleImpl: updateProfileLocale,
     upsertMcpGrantImpl: upsertMcpGrant,
@@ -419,12 +413,21 @@ function registerDomainRoutes(app, routeContext) {
   registerHealthImageRoutes(app, routeContext);
 }
 
+function registerAppRoutes(app, routeContext) {
+  registerAuthenticationRoutes(app, routeContext);
+  registerDomainRoutes(app, routeContext);
+}
+
 function createApp(options = {}) {
   const deps = createAppDependencies(options);
   const app = createExpressApp(deps);
   const routeContext = createAppRouteContext(deps);
-  registerAuthenticationRoutes(app, routeContext);
-  registerDomainRoutes(app, routeContext);
+  registerAppRoutes(app, routeContext);
+
+  const apiRouter = express.Router();
+  registerAppRoutes(apiRouter, routeContext);
+  app.use("/api", apiRouter);
+
   return app;
 }
 

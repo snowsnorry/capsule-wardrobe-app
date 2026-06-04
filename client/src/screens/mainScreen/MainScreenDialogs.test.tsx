@@ -323,7 +323,9 @@ describe("MainScreenDialogs", () => {
     expect(
       screen.getByTestId("product-detail-dialog-image-pane"),
     ).toBeVisible();
-    await user.click(screen.getByRole("button", { name: "Product actions" }));
+    await user.click(
+      await screen.findByRole("button", { name: "Product actions" }),
+    );
     expect(
       screen.queryByRole("menuitem", { name: "Save to Wardrobe" }),
     ).not.toBeInTheDocument();
@@ -355,7 +357,13 @@ describe("MainScreenDialogs", () => {
       screen.getByTestId("product-detail-dialog-image-pane"),
     ).toBeVisible();
 
-    await user.click(screen.getByRole("button", { name: "Product actions" }));
+    await user.click(
+      await screen.findByRole(
+        "button",
+        { name: "Product actions" },
+        { timeout: 5000 },
+      ),
+    );
     await user.click(screen.getByRole("menuitem", { name: "Edit" }));
     await user.click(screen.getByRole("button", { name: "Apply" }));
 

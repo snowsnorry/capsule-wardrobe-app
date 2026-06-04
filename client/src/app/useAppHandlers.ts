@@ -1,11 +1,9 @@
 import type { FormEvent, MouseEvent } from "react";
 import {
   applyCapsuleFilters,
-  createNewCapsule,
   deleteCurrentCapsule,
   duplicateCurrentCapsule,
   importSharedCapsuleToApp,
-  openCapsule,
   renameCurrentCapsule,
   resetProfileFilters,
   revertCurrentCapsule,
@@ -13,6 +11,7 @@ import {
   searchUserCapsules,
   shareCurrentCapsule,
 } from "./capsuleActions";
+import { selectCapsule } from "../api/capsules";
 import { deleteUserProfile, saveSettings } from "./profileActions";
 import {
   deleteGeneratedOutfitSetImage,
@@ -48,10 +47,12 @@ type UseAppHandlersOptions = {
   activeCapsuleId: string;
   capsuleSidebarActionsRef: { current: CapsuleSidebarActions | null };
   getAppActionContext: () => AppActionContext;
+  navigateCapsule: (capsuleId: string, options?: { replace?: boolean }) => void;
   navigateApp: (
     nextApp: Exclude<AppRoute, "share">,
     options?: AppNavigationOptions,
   ) => void;
+  navigateNewCapsule: (options?: { replace?: boolean }) => void;
   pendingShareId: string;
   setCurrentView: (view: string) => void;
   setIsSignOutConfirmOpen: (open: boolean) => void;
@@ -64,7 +65,9 @@ export function useAppHandlers({
   activeCapsuleId,
   capsuleSidebarActionsRef,
   getAppActionContext,
+  navigateCapsule,
   navigateApp,
+  navigateNewCapsule,
   pendingShareId,
   setCurrentView,
   setIsSignOutConfirmOpen,
@@ -80,10 +83,13 @@ export function useAppHandlers({
   };
   const handleApplyCapsuleFilters = async () =>
     applyCapsuleFilters(getAppActionContext());
-  const handleCreateCapsule = async () =>
-    createNewCapsule(getAppActionContext());
-  const handleOpenCapsule = async (capsuleId: string) =>
-    openCapsule(getAppActionContext(), capsuleId);
+  const handleCreateCapsule = async () => {
+    navigateNewCapsule();
+  };
+  const handleOpenCapsule = async (capsuleId: string) => {
+    await selectCapsule(capsuleId);
+    navigateCapsule(capsuleId);
+  };
   const handleSaveCapsule = async (capsuleId = activeCapsuleId) =>
     saveCurrentCapsule(getAppActionContext(), capsuleId);
   const handleRevertCapsule = async (capsuleId = activeCapsuleId) =>
@@ -95,14 +101,31 @@ export function useAppHandlers({
   const handleDuplicateCapsule = async (
     name: string,
     capsuleId = activeCapsuleId,
-  ) => duplicateCurrentCapsule(getAppActionContext(), name, capsuleId);
-  const handleDeleteCapsule = async (capsuleId = activeCapsuleId) =>
-    deleteCurrentCapsule(getAppActionContext(), capsuleId);
-  const handleImportSharedCapsule = async () =>
-    importSharedCapsuleToApp(
+  ) => {
+    const capsule = await duplicateCurrentCapsule(
+      getAppActionContext(),
+      name,
+      capsuleId,
+    );
+    if (capsule?.id) {
+      navigateCapsule(capsule.id, { replace: true });
+    }
+  };
+  const handleDeleteCapsule = async (capsuleId = activeCapsuleId) => {
+    await deleteCurrentCapsule(getAppActionContext(), capsuleId);
+    if (capsuleId && capsuleId === activeCapsuleId) {
+      navigateApp("capsule");
+    }
+  };
+  const handleImportSharedCapsule = async () => {
+    const capsule = await importSharedCapsuleToApp(
       getAppActionContext(),
       String(shareMetadata?.id || pendingShareId || "").trim(),
     );
+    if (capsule?.id) {
+      navigateCapsule(capsule.id, { replace: true });
+    }
+  };
 
   return buildAppHandlers({
     activeCapsuleId,
@@ -122,6 +145,7 @@ export function useAppHandlers({
     setCurrentView,
     setIsSignOutConfirmOpen,
     setSelectedRegenerationUrls,
+    navigateNewCapsule,
   });
 }
 
@@ -134,6 +158,7 @@ type BuildAppHandlersOptions = Pick<
   | "setCurrentView"
   | "setIsSignOutConfirmOpen"
   | "setSelectedRegenerationUrls"
+  | "navigateNewCapsule"
 > & {
   handleApplyCapsuleFilters: () => Promise<void>;
   handleCreateCapsule: () => Promise<void>;
@@ -162,6 +187,7 @@ function buildAppHandlers({
   handleImportSharedCapsule,
   handleNavigateApp,
   handleOpenCapsule,
+  navigateNewCapsule,
   handleRenameCapsule,
   handleRevertCapsule,
   handleSaveCapsule,
@@ -176,8 +202,7 @@ function buildAppHandlers({
     handleCancelRegenerationSelection: () => setSelectedRegenerationUrls([]),
     handleCreateCapsule,
     handleCreateCapsuleFromSidebar: async (onComplete?: () => void) => {
-      await handleCreateCapsule();
-      handleNavigateApp("capsule");
+      navigateNewCapsule();
       onComplete?.();
     },
     handleDeleteCapsule,
@@ -201,10 +226,8 @@ function buildAppHandlers({
       capsuleId: string,
       onComplete?: () => void,
     ) => {
-      handleNavigateApp("capsule");
-      const openCapsulePromise = handleOpenCapsule(capsuleId);
+      await handleOpenCapsule(capsuleId);
       onComplete?.();
-      await openCapsulePromise;
     },
     handlePasskeySignIn: async () => passkeySignIn(sessionActionContext),
     handleRefreshWardrobe: async () => refreshWardrobe(getAppActionContext()),

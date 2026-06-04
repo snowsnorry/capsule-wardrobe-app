@@ -25,6 +25,18 @@ test("index app wires representative registered routes", async (t) => {
   });
 });
 
+test("index app exposes client api-prefixed routes before spa fallback", async (t) => {
+  const { baseUrl } = await startSpaFallbackTestServer(t);
+
+  const searchOptions = await requestJson(baseUrl, "/api/search/options", {
+    cookie: AUTH_COOKIE,
+  });
+
+  expect(searchOptions.response.status).toBe(200);
+  expect(searchOptions.json.ok).toBe(true);
+  expect(searchOptions.json.audience).toEqual(["woman", "man", "all"]);
+});
+
 test("image cache path is no longer treated as an api path by spa fallback", async (t) => {
   const { baseUrl } = await startSpaFallbackTestServer(t);
 

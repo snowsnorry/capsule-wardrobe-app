@@ -218,7 +218,7 @@ test("buildSharedCapsuleOgMetadata falls back to the first item imageUrl", () =>
   ).toBe("https://images.example.com/item.jpg");
 });
 
-test("createCapsuleStore creates unique capsules and resolves active capsules", async () => {
+test("createCapsuleStore creates unique capsules without resolving active capsules", async () => {
   const calls: StoreCall[] = [];
   let names = ["Spring edit", "Spring edit (1)"];
   const store = createCapsuleStore({
@@ -233,13 +233,8 @@ test("createCapsuleStore creates unique capsules and resolves active capsules", 
         status: "new",
       });
     },
-    updateProfileActiveCapsuleIdByEmailImpl: async (payload) => {
-      calls.push({ type: "active", payload });
-      return payload;
-    },
     getProfileImpl: async () => ({
       email: "person@example.com",
-      activeCapsuleId: "missing-capsule",
       audience: "woman",
     }),
     getCapsuleByIdForEmailImpl: async () => null,
@@ -257,13 +252,9 @@ test("createCapsuleStore creates unique capsules and resolves active capsules", 
   });
   expect(created?.name).toBe("Spring edit (2)");
 
-  const active = await store.resolveActiveCapsule("person@example.com");
-  expect(active?.id).toBe("recent-1");
-  expect(calls.map((call) => call.type)).toEqual([
-    "create",
-    "active",
-    "active",
-  ]);
+  const active = await store.resolveActiveCapsule();
+  expect(active).toBe(null);
+  expect(calls.map((call) => call.type)).toEqual(["create"]);
 
   names = [];
   const bootstrap = await store.createBootstrapCapsule("person@example.com");
@@ -310,15 +301,10 @@ test("createCapsuleStore delegates lookup, update, duplicate, state, and delete 
         saved: payload.saved,
       });
     },
-    updateProfileActiveCapsuleIdByEmailImpl: async (payload) => {
-      calls.push({ type: "active", payload });
-      return payload;
-    },
     deleteCapsuleByIdForEmailImpl: async ({ capsuleId }) =>
       capsuleId !== "missing",
     getProfileImpl: async () => ({
       email: "person@example.com",
-      activeCapsuleId: "capsule-1",
     }),
   });
 
@@ -362,12 +348,7 @@ test("createCapsuleStore delegates lookup, update, duplicate, state, and delete 
   expect(await store.deleteCapsule("person@example.com", "capsule-1")).toBe(
     true,
   );
-  expect(
-    calls.some(
-      (call) =>
-        call.type === "active" && call.payload.activeCapsuleId === "recent-1",
-    ),
-  ).toBeTruthy();
+  expect(calls.some((call) => call.type === "active")).toBe(false);
 });
 
 test("createCapsuleStore shares, imports, prunes, and rejects unshareable capsules", async () => {
@@ -418,10 +399,6 @@ test("createCapsuleStore shares, imports, prunes, and rejects unshareable capsul
         draft: payload.draft,
         saved: payload.saved,
       });
-    },
-    updateProfileActiveCapsuleIdByEmailImpl: async (payload) => {
-      calls.push({ type: "active", payload });
-      return payload;
     },
   });
 
