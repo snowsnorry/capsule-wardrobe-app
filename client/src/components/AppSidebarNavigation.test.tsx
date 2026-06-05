@@ -197,17 +197,26 @@ describe("AppSidebarNavigation", () => {
     expect(screen.getByRole("button", { name: "New outfit" })).toBeDisabled();
   });
 
-  test("shows a right chevron only on collapsed top-level sections", async () => {
+  test("shows disclosure indicators on expandable top-level icons", async () => {
     const user = userEvent.setup();
     renderNavigation();
 
+    const personalItemsHeader = screen.getByRole("button", {
+      name: "Personal items, 6",
+    });
     const outfitsHeader = screen.getByRole("button", { name: "Outfits" });
     const capsulesHeader = screen.getByRole("button", { name: "Capsules" });
     const catalogHeader = screen.getByRole("button", { name: "Catalog" });
 
+    expect(
+      personalItemsHeader.querySelector(".sidebar-top-level-disclosure-badge"),
+    ).toBeNull();
     for (const header of [outfitsHeader, capsulesHeader, catalogHeader]) {
       expect(
-        header.querySelector('[data-testid="ChevronRightRoundedIcon"]'),
+        header.querySelector(".sidebar-top-level-disclosure-badge"),
+      ).toHaveAttribute("data-disclosure-state", "expanded");
+      expect(
+        header.querySelector(".sidebar-top-level-collapsed-indicator"),
       ).toBeNull();
     }
 
@@ -215,8 +224,11 @@ describe("AppSidebarNavigation", () => {
 
     expect(capsulesHeader).toHaveAttribute("aria-expanded", "false");
     expect(
-      capsulesHeader.querySelector('[data-testid="ChevronRightRoundedIcon"]'),
-    ).not.toBeNull();
+      capsulesHeader.querySelector(".sidebar-top-level-disclosure-badge"),
+    ).toHaveAttribute("data-disclosure-state", "collapsed");
+    expect(
+      capsulesHeader.querySelector(".sidebar-top-level-collapsed-indicator"),
+    ).toBeNull();
     expect(
       screen.queryByRole("button", { name: "New capsule" }),
     ).not.toBeInTheDocument();
@@ -234,8 +246,8 @@ describe("AppSidebarNavigation", () => {
 
     expect(capsulesHeader).toHaveAttribute("aria-expanded", "true");
     expect(
-      capsulesHeader.querySelector('[data-testid="ChevronRightRoundedIcon"]'),
-    ).toBeNull();
+      capsulesHeader.querySelector(".sidebar-top-level-disclosure-badge"),
+    ).toHaveAttribute("data-disclosure-state", "expanded");
     expect(screen.getByRole("button", { name: "New capsule" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Capsule 1" })).toBeVisible();
 
@@ -243,8 +255,11 @@ describe("AppSidebarNavigation", () => {
 
     expect(catalogHeader).toHaveAttribute("aria-expanded", "false");
     expect(
-      catalogHeader.querySelector('[data-testid="ChevronRightRoundedIcon"]'),
-    ).not.toBeNull();
+      catalogHeader.querySelector(".sidebar-top-level-disclosure-badge"),
+    ).toHaveAttribute("data-disclosure-state", "collapsed");
+    expect(
+      catalogHeader.querySelector(".sidebar-top-level-collapsed-indicator"),
+    ).toBeNull();
     expect(
       screen.queryByRole("button", { name: "Explore" }),
     ).not.toBeInTheDocument();
@@ -256,8 +271,8 @@ describe("AppSidebarNavigation", () => {
 
     expect(catalogHeader).toHaveAttribute("aria-expanded", "true");
     expect(
-      catalogHeader.querySelector('[data-testid="ChevronRightRoundedIcon"]'),
-    ).toBeNull();
+      catalogHeader.querySelector(".sidebar-top-level-disclosure-badge"),
+    ).toHaveAttribute("data-disclosure-state", "expanded");
     expect(screen.getByRole("button", { name: "Explore" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Statistics" })).toBeVisible();
 
@@ -265,8 +280,11 @@ describe("AppSidebarNavigation", () => {
 
     expect(outfitsHeader).toHaveAttribute("aria-expanded", "false");
     expect(
-      outfitsHeader.querySelector('[data-testid="ChevronRightRoundedIcon"]'),
-    ).not.toBeNull();
+      outfitsHeader.querySelector(".sidebar-top-level-disclosure-badge"),
+    ).toHaveAttribute("data-disclosure-state", "collapsed");
+    expect(
+      outfitsHeader.querySelector(".sidebar-top-level-collapsed-indicator"),
+    ).toBeNull();
     expect(
       screen.queryByRole("button", { name: "Search outfits" }),
     ).not.toBeInTheDocument();
@@ -278,8 +296,8 @@ describe("AppSidebarNavigation", () => {
 
     expect(outfitsHeader).toHaveAttribute("aria-expanded", "true");
     expect(
-      outfitsHeader.querySelector('[data-testid="ChevronRightRoundedIcon"]'),
-    ).toBeNull();
+      outfitsHeader.querySelector(".sidebar-top-level-disclosure-badge"),
+    ).toHaveAttribute("data-disclosure-state", "expanded");
     expect(
       screen.getByRole("button", { name: "Search outfits" }),
     ).toBeDisabled();

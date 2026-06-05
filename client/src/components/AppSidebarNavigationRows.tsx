@@ -1,5 +1,4 @@
 import { type ReactElement } from "react";
-import ChevronRightRoundedIcon from "@mui/icons-material/ChevronRightRounded";
 import {
   Box,
   ListItemButton,
@@ -11,49 +10,18 @@ import {
   getCountBadgeLabel,
   TopLevelCountBadge,
 } from "./AppSidebarNavigationTopLevelBadge";
+import {
+  TopLevelIcon,
+  topLevelIconRailWidth,
+} from "./AppSidebarNavigationTopLevelIcon";
 
-export const topLevelIconRailWidth = "40px";
+export { topLevelIconRailWidth };
 export const sidebarPageSize = 10;
-const topLevelIconSize = 24;
 
 export type Translate = (
   key: string,
   params?: Record<string, unknown>,
 ) => string;
-
-function TopLevelIcon({
-  icon,
-  label,
-  isActive,
-  isCollapsedDesktop,
-  desktopSidebarRailWidth,
-}: {
-  icon: ReactElement;
-  label: string;
-  isActive: boolean;
-  isCollapsedDesktop: boolean;
-  desktopSidebarRailWidth: number;
-}) {
-  return (
-    <Tooltip title={isCollapsedDesktop ? label : ""} placement="right">
-      <Box
-        aria-hidden="true"
-        sx={{
-          width: isCollapsedDesktop
-            ? desktopSidebarRailWidth
-            : topLevelIconRailWidth,
-          display: "flex",
-          justifyContent: "center",
-          flexShrink: 0,
-          color: isActive ? "primary.main" : "text.secondary",
-          "& svg": { width: topLevelIconSize, height: topLevelIconSize },
-        }}
-      >
-        {icon}
-      </Box>
-    </Tooltip>
-  );
-}
 
 function TopLevelActions({
   isCollapsedDesktop,
@@ -87,6 +55,7 @@ function TopLevelRowContent({
   isCollapsedDesktop,
   desktopSidebarRailWidth,
   countBadge,
+  ariaExpanded,
 }: {
   label: string;
   icon: ReactElement;
@@ -94,6 +63,7 @@ function TopLevelRowContent({
   isCollapsedDesktop: boolean;
   desktopSidebarRailWidth: number;
   countBadge?: number | null;
+  ariaExpanded?: boolean;
 }) {
   const countBadgeLabel = getCountBadgeLabel(countBadge);
 
@@ -105,6 +75,7 @@ function TopLevelRowContent({
         isActive={isActive}
         isCollapsedDesktop={isCollapsedDesktop}
         desktopSidebarRailWidth={desktopSidebarRailWidth}
+        ariaExpanded={ariaExpanded}
       />
       <Box
         component="span"
@@ -132,27 +103,6 @@ function TopLevelRowContent({
         <TopLevelCountBadge count={countBadgeLabel} isActive={isActive} />
       ) : null}
     </>
-  );
-}
-
-function CollapsedDisclosureIndicator() {
-  return (
-    <Box
-      aria-hidden="true"
-      className="sidebar-top-level-collapsed-indicator"
-      component="span"
-      sx={{
-        alignItems: "center",
-        color: "text.secondary",
-        display: "inline-flex",
-        flexShrink: 0,
-        ml: 1,
-        mr: 1,
-        "& svg": { height: 20, width: 20 },
-      }}
-    >
-      <ChevronRightRoundedIcon fontSize="small" />
-    </Box>
   );
 }
 
@@ -232,8 +182,6 @@ export function TopLevelRow({
   const accessibleLabel = countBadgeLabel
     ? `${label}, ${countBadgeLabel}`
     : label;
-  const showCollapsedDisclosureIndicator =
-    ariaExpanded === false && !isCollapsedDesktop;
   const rowContent = onClick ? (
     <ListItemButton
       aria-label={accessibleLabel}
@@ -266,10 +214,8 @@ export function TopLevelRow({
         isCollapsedDesktop={isCollapsedDesktop}
         desktopSidebarRailWidth={desktopSidebarRailWidth}
         countBadge={countBadge}
+        ariaExpanded={ariaExpanded}
       />
-      {showCollapsedDisclosureIndicator ? (
-        <CollapsedDisclosureIndicator />
-      ) : null}
     </ListItemButton>
   ) : (
     <TopLevelStaticRow
