@@ -7,6 +7,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { ThemeProvider } from "@mui/material/styles";
 import { createAppTheme } from "../theme";
 import { notifyPersonalItemsChanged } from "./personalItemsCount";
@@ -28,6 +29,7 @@ vi.mock("../components/AppSidebarNavigation", () => ({
     onCreateCapsule,
     onSearchCapsules,
     onOpenCapsule,
+    onOpenCapsuleActions,
     personalItemsCount,
   }: {
     activeCapsuleId: string;
@@ -35,6 +37,15 @@ vi.mock("../components/AppSidebarNavigation", () => ({
     onCreateCapsule: () => void;
     onSearchCapsules: () => void;
     onOpenCapsule: (capsuleId: string) => void;
+    onOpenCapsuleActions: (
+      event: React.MouseEvent<HTMLElement>,
+      capsule: {
+        id: string;
+        name: string;
+        saved?: unknown;
+        status: string;
+      },
+    ) => void;
     personalItemsCount?: number | null;
   }) => (
     <div>
@@ -46,6 +57,32 @@ vi.mock("../components/AppSidebarNavigation", () => ({
       </button>
       <button type="button" onClick={onSearchCapsules}>
         search capsules
+      </button>
+      <button
+        type="button"
+        onClick={(event) =>
+          onOpenCapsuleActions(event, {
+            id: "capsule-2",
+            name: "Travel",
+            saved: { data: { wardrobe: { items: [{ id: "item-1" }] } } },
+            status: "modified",
+          })
+        }
+      >
+        open capsule actions
+      </button>
+      <button
+        type="button"
+        onClick={(event) =>
+          onOpenCapsuleActions(event, {
+            id: "capsule-1",
+            name: "Stale active name",
+            saved: { data: { wardrobe: { items: [{ id: "item-2" }] } } },
+            status: "saved",
+          })
+        }
+      >
+        open active capsule actions
       </button>
       <span data-testid="sidebar-active-capsule">{activeCapsuleId}</span>
       <span data-testid="sidebar-personal-items-count">
@@ -162,16 +199,24 @@ function createProps(
       })[key] ?? key,
     user: { email: "person@example.com" },
     onCreateCapsuleFromSidebar: vi.fn(() => Promise.resolve()),
+    onDeleteCapsule: vi.fn(() => Promise.resolve()),
     onDeleteProfile: vi.fn(() => Promise.resolve()),
+    onDownloadWardrobePdf: vi.fn(() => Promise.resolve()),
+    onDuplicateCapsule: vi.fn(() => Promise.resolve()),
     onNavigateApp: vi.fn(),
     onLoadMoreCapsules: vi.fn(() => Promise.resolve()),
     onOpenCapsuleFromSidebar: vi.fn(() => Promise.resolve()),
+    onRenameCapsule: vi.fn(() => Promise.resolve()),
+    onRevertCapsule: vi.fn(() => Promise.resolve()),
+    onSaveCapsule: vi.fn(() => Promise.resolve()),
     onSearchCapsules: vi.fn(() =>
       Promise.resolve([{ id: "capsule-7", name: "Search result" }]),
     ),
+    onShareCapsule: vi.fn(() =>
+      Promise.resolve({ url: "https://client.example/share/capsule-2" }),
+    ),
     onRequestSignOut: vi.fn(),
     onSaveSettings: vi.fn(() => Promise.resolve()),
-    openCapsuleActions: vi.fn(),
     openSearchDialog: vi.fn(),
     ...overrides,
   };
@@ -266,6 +311,137 @@ describe("AppShellContent", () => {
     fireEvent.click(screen.getByText("Search result"));
 
     expect(onOpenCapsuleFromSidebar).toHaveBeenCalledWith("capsule-7");
+  });
+
+  test("opens sidebar capsule row actions on non-capsule routes", async () => {
+    const user = userEvent.setup();
+    const onDownloadWardrobePdf = vi.fn(() => Promise.resolve());
+    const onDeleteCapsule = vi.fn(() => Promise.resolve());
+    const onDuplicateCapsule = vi.fn(() => Promise.resolve());
+    const onRenameCapsule = vi.fn(() => Promise.resolve());
+    const onRevertCapsule = vi.fn(() => Promise.resolve());
+    const onSaveCapsule = vi.fn(() => Promise.resolve());
+    const onShareCapsule = vi.fn(() =>
+      Promise.resolve({ url: "https://client.example/share/capsule-2" }),
+    );
+    renderShellContent({
+      appRoute: "wardrobe",
+      isWardrobeView: true,
+      isSearchView: false,
+      onDeleteCapsule,
+      onDownloadWardrobePdf,
+      onDuplicateCapsule,
+      onRenameCapsule,
+      onRevertCapsule,
+      onSaveCapsule,
+      onShareCapsule,
+    });
+
+    const openActions = () =>
+      fireEvent.click(
+        screen.getByRole("button", { name: "open capsule actions" }),
+      );
+
+    openActions();
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: "Export as PDF" }),
+    );
+
+    expect(onDownloadWardrobePdf).toHaveBeenCalledWith("capsule-2");
+
+    openActions();
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Rename" }));
+    const renameInput = await screen.findByRole("textbox", {
+      name: "Rename capsule",
+    });
+    await user.clear(renameInput);
+    await user.type(renameInput, "Travel renamed");
+    await user.click(screen.getByRole("button", { name: "OK" }));
+    await waitFor(() =>
+      expect(onRenameCapsule).toHaveBeenCalledWith(
+        "Travel renamed",
+        "capsule-2",
+      ),
+    );
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+    );
+
+    openActions();
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Save" }));
+    expect(onSaveCapsule).toHaveBeenCalledWith("capsule-2");
+
+    openActions();
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: "Save as..." }),
+    );
+    const saveAsInput = await screen.findByRole("textbox", {
+      name: "Save as",
+    });
+    await user.clear(saveAsInput);
+    await user.type(saveAsInput, "Travel copy");
+    await user.click(screen.getByRole("button", { name: "OK" }));
+    await waitFor(() =>
+      expect(onDuplicateCapsule).toHaveBeenCalledWith(
+        "Travel copy",
+        "capsule-2",
+      ),
+    );
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+    );
+
+    openActions();
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Revert" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Revert" }));
+    await waitFor(() =>
+      expect(onRevertCapsule).toHaveBeenCalledWith("capsule-2"),
+    );
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+    );
+
+    openActions();
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Share" }));
+    await waitFor(() =>
+      expect(onShareCapsule).toHaveBeenCalledWith("capsule-2"),
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Close" }));
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+    );
+
+    openActions();
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Delete" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Delete" }));
+    await waitFor(() =>
+      expect(onDeleteCapsule).toHaveBeenCalledWith("capsule-2"),
+    );
+  });
+
+  test("uses current active capsule metadata for sidebar row actions", async () => {
+    const user = userEvent.setup();
+    renderShellContent({
+      appRoute: "wardrobe",
+      isWardrobeView: true,
+      isSearchView: false,
+      activeCapsuleMeta: {
+        id: "capsule-1",
+        name: "Spring",
+        status: "saved",
+      },
+    });
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "open active capsule actions" }),
+    );
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Rename" }));
+
+    expect(
+      await screen.findByRole("textbox", { name: "Rename capsule" }),
+    ).toHaveValue("Spring");
+
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
   });
 
   test("passes the loaded personal items count to the sidebar", async () => {
