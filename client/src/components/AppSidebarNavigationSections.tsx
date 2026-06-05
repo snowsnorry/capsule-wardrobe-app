@@ -47,13 +47,12 @@ export function useCapsuleNavigationState({
   const hasMoreCapsules =
     Boolean(capsulePagination?.hasMore) &&
     visibleCapsuleCount < totalCapsuleCount;
-  const remainingCapsuleCount = totalCapsuleCount - visibleCapsuleCount;
 
   return {
     hasMoreCapsules,
-    remainingCapsuleCount,
     shouldLoadMore: Boolean(onLoadMoreCapsules) && !isLoadingMore,
     sortedCapsules,
+    totalCapsuleCount,
   };
 }
 
@@ -206,8 +205,8 @@ export function CapsuleSection({
           onLoadMoreCapsules={handleLoadMoreCapsules}
           onOpenCapsule={onOpenCapsule}
           onOpenCapsuleActions={onOpenCapsuleActions}
-          remainingCount={navState.remainingCapsuleCount}
           t={t}
+          totalCount={navState.totalCapsuleCount}
         />
       )}
     </>

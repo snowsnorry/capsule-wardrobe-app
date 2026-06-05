@@ -280,8 +280,8 @@ export function CapsuleRows({
   onLoadMoreCapsules,
   onOpenCapsule,
   onOpenCapsuleActions,
-  remainingCount,
   t,
+  totalCount,
 }: {
   activeCapsule?: CapsuleNavItem | null;
   activeCapsuleId: string;
@@ -294,15 +294,21 @@ export function CapsuleRows({
   onLoadMoreCapsules?: () => Promise<void> | void;
   onOpenCapsule?: (capsuleId: string) => void;
   onOpenCapsuleActions?: AppSidebarNavigationProps["onOpenCapsuleActions"];
-  remainingCount: number;
   t: Translate;
+  totalCount: number;
 }) {
   const visibleCapsuleIds = new Set(capsuleList.map(getCapsuleId));
   const shouldAppendActiveCapsule =
     Boolean(activeCapsuleId) &&
     Boolean(activeCapsule) &&
     !visibleCapsuleIds.has(activeCapsuleId);
-  const showMoreCount = Math.min(sidebarPageSize, Math.max(0, remainingCount));
+  const displayedCapsuleCount =
+    capsuleList.length + (shouldAppendActiveCapsule ? 1 : 0);
+  const adjustedRemainingCount = Math.max(
+    0,
+    totalCount - displayedCapsuleCount,
+  );
+  const showMoreCount = Math.min(sidebarPageSize, adjustedRemainingCount);
 
   return (
     <>

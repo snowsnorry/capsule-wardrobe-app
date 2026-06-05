@@ -26,12 +26,14 @@ vi.mock("../components/AppSidebarNavigation", () => ({
     activeCapsuleId,
     capsuleHasUnsavedChanges,
     onCreateCapsule,
+    onSearchCapsules,
     onOpenCapsule,
     personalItemsCount,
   }: {
     activeCapsuleId: string;
     capsuleHasUnsavedChanges: (capsule: { status?: string }) => boolean;
     onCreateCapsule: () => void;
+    onSearchCapsules: () => void;
     onOpenCapsule: (capsuleId: string) => void;
     personalItemsCount?: number | null;
   }) => (
@@ -41,6 +43,9 @@ vi.mock("../components/AppSidebarNavigation", () => ({
       </button>
       <button type="button" onClick={() => onOpenCapsule("capsule-2")}>
         open capsule
+      </button>
+      <button type="button" onClick={onSearchCapsules}>
+        search capsules
       </button>
       <span data-testid="sidebar-active-capsule">{activeCapsuleId}</span>
       <span data-testid="sidebar-personal-items-count">
@@ -161,6 +166,9 @@ function createProps(
     onNavigateApp: vi.fn(),
     onLoadMoreCapsules: vi.fn(() => Promise.resolve()),
     onOpenCapsuleFromSidebar: vi.fn(() => Promise.resolve()),
+    onSearchCapsules: vi.fn(() =>
+      Promise.resolve([{ id: "capsule-7", name: "Search result" }]),
+    ),
     onRequestSignOut: vi.fn(),
     onSaveSettings: vi.fn(() => Promise.resolve()),
     openCapsuleActions: vi.fn(),
@@ -231,6 +239,33 @@ describe("AppShellContent", () => {
       "wardrobe-screen-shell",
     );
     expect(screen.getByText("Personal items")).toBeInTheDocument();
+  });
+
+  test("opens capsule search over the current route without navigating", async () => {
+    const onNavigateApp = vi.fn();
+    const onOpenCapsuleFromSidebar = vi.fn(() => Promise.resolve());
+    const onSearchCapsules = vi.fn(() =>
+      Promise.resolve([{ id: "capsule-7", name: "Search result" }]),
+    );
+    renderShellContent({
+      appRoute: "wardrobe",
+      isWardrobeView: true,
+      isSearchView: false,
+      onNavigateApp,
+      onOpenCapsuleFromSidebar,
+      onSearchCapsules,
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "search capsules" }));
+
+    expect(onNavigateApp).not.toHaveBeenCalled();
+    expect(screen.getByText("route content")).toBeInTheDocument();
+    await waitFor(() => expect(onSearchCapsules).toHaveBeenCalledWith(""));
+    expect(await screen.findByText("Search result")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("Search result"));
+
+    expect(onOpenCapsuleFromSidebar).toHaveBeenCalledWith("capsule-7");
   });
 
   test("passes the loaded personal items count to the sidebar", async () => {
@@ -328,5 +363,24 @@ describe("AppShellContent", () => {
     });
 
     expect(screen.getByTestId("sidebar-active-capsule")).toHaveTextContent("");
+  });
+
+  test("highlights route-matched capsule metadata before active id catches up", () => {
+    renderShellContent({
+      appRoute: "capsule",
+      activeCapsuleId: "",
+      activeCapsuleMeta: {
+        id: "capsule-15",
+        name: "Search result",
+        status: "saved",
+      },
+      capsuleRouteId: "capsule-15",
+      isMainScreenView: true,
+      isSearchView: false,
+    });
+
+    expect(screen.getByTestId("sidebar-active-capsule")).toHaveTextContent(
+      "capsule-15",
+    );
   });
 });

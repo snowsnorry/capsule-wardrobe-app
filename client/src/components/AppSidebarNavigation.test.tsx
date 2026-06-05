@@ -310,6 +310,29 @@ describe("AppSidebarNavigation", () => {
     expect(getComputedStyle(newCapsuleButton).width).toBe("32px");
   });
 
+  test("keeps capsule search action above the disclosure row and does not collapse on action click", async () => {
+    const user = userEvent.setup();
+    const onSearchCapsules = vi.fn();
+    renderNavigation({ onSearchCapsules });
+
+    const capsulesHeader = screen.getByRole("button", { name: "Capsules" });
+    const searchButton = screen.getByRole("button", {
+      name: "Search capsules",
+    });
+    const topLevelActions = searchButton.closest(".sidebar-top-level-actions");
+
+    expect(topLevelActions).not.toBeNull();
+    expect(getComputedStyle(topLevelActions as Element).position).toBe(
+      "relative",
+    );
+    expect(getComputedStyle(topLevelActions as Element).zIndex).toBe("1");
+
+    await user.click(searchButton);
+
+    expect(onSearchCapsules).toHaveBeenCalledTimes(1);
+    expect(capsulesHeader).toHaveAttribute("aria-expanded", "true");
+  });
+
   test("wires personal items, catalog, capsule actions, and capsule rows", async () => {
     const user = userEvent.setup();
     const onNavigateApp = vi.fn();
@@ -403,6 +426,10 @@ describe("AppSidebarNavigation", () => {
     expect(screen.getByRole("button", { name: "Capsule 15" })).toHaveClass(
       "Mui-selected",
     );
+    expect(screen.getByRole("button", { name: "Show 4 more" })).toBeVisible();
+    expect(
+      screen.queryByRole("button", { name: "Show 5 more" }),
+    ).not.toBeInTheDocument();
 
     rerender(
       <ThemeProvider theme={theme}>
@@ -433,6 +460,50 @@ describe("AppSidebarNavigation", () => {
     expect(screen.getByRole("button", { name: "Capsule 15" })).toHaveClass(
       "Mui-selected",
     );
+  });
+
+  test("recalculates show more when the displayed capsule row count changes", () => {
+    const activeCapsule = {
+      id: "capsule-15",
+      name: "Capsule 15",
+      updatedAt: "2026-05-01T00:00:00.000Z",
+      status: "saved",
+    };
+    const { rerender } = renderNavigation({
+      activeCapsuleId: "capsule-15",
+      activeCapsule,
+    });
+
+    expect(screen.getByRole("button", { name: "Show 4 more" })).toBeVisible();
+
+    rerender(
+      <ThemeProvider theme={theme}>
+        <AppSidebarNavigation
+          activeApp="capsule"
+          isOverlaySidebar={false}
+          isSidebarCollapsed={false}
+          desktopSidebarRailWidth={72}
+          personalItemsCount={6}
+          capsuleList={createCapsules(11)}
+          capsulePagination={{
+            limit: 10,
+            offset: 0,
+            total: 15,
+            hasMore: true,
+          }}
+          activeCapsuleId="capsule-15"
+          activeCapsule={activeCapsule}
+          onNavigateApp={vi.fn()}
+          onLoadMoreCapsules={vi.fn()}
+          onOpenCapsuleActions={vi.fn()}
+        />
+      </ThemeProvider>,
+    );
+
+    expect(screen.getByRole("button", { name: "Show 3 more" })).toBeVisible();
+    expect(
+      screen.queryByRole("button", { name: "Show 4 more" }),
+    ).not.toBeInTheDocument();
   });
 
   test("collapsed desktop keeps only the top-level rail and expand hitbox", () => {

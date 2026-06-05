@@ -65,7 +65,14 @@ function TopLevelActions({
   return (
     <Box
       className="sidebar-top-level-actions"
-      sx={{ display: "flex", ml: "auto", mr: 0, flexShrink: 0 }}
+      sx={{
+        display: "flex",
+        flexShrink: 0,
+        ml: "auto",
+        mr: 0,
+        position: "relative",
+        zIndex: 1,
+      }}
     >
       {actions}
     </Box>

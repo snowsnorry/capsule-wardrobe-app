@@ -4,6 +4,7 @@ import AppSidebarNavigation from "../components/AppSidebarNavigation";
 import AppSidebarShell from "../components/AppSidebarShell";
 import RoutePanelFallback from "./RoutePanelFallback";
 import AppShellMobileHeader from "./AppShellMobileHeader";
+import { SearchDialog } from "../screens/mainScreen/MainScreenUtilityDialogs";
 import { getShellContainerVerticalPadding } from "./AppShellContentLayout";
 import {
   getSidebarShellTestId,
@@ -11,6 +12,7 @@ import {
 } from "./AppShellRouteLayout";
 import { getActiveSidebarApp } from "./appRouting";
 import { usePersonalItemsCount } from "./personalItemsCount";
+import { useSidebarCapsuleSearch } from "./useSidebarCapsuleSearch";
 import type {
   AppNavigationOptions,
   AppRoute,
@@ -56,6 +58,7 @@ type AppShellContentProps = {
     capsuleId: string,
     onComplete?: () => void,
   ) => Promise<void>;
+  onSearchCapsules: (query: string) => Promise<CapsuleMeta[]> | CapsuleMeta[];
   onRequestSignOut: () => void;
   onSaveSettings: (nextSettings: SettingsSavePayload) => Promise<void>;
   openCapsuleActions: (
@@ -67,6 +70,10 @@ type AppShellContentProps = {
 
 function getUserEmail(user: UserLike | null) {
   return user?.email || "";
+}
+
+function hasUnsavedCapsuleChanges(capsule: CapsuleMeta | null | undefined) {
+  return capsule?.status === "new" || capsule?.status === "modified";
 }
 
 function SuspendedContent({ children }: { children: ReactNode }) {
@@ -144,10 +151,10 @@ function AppSidebarPanel(props: AppShellContentProps) {
   const userEmail = getUserEmail(props.user);
   const personalItemsCount = usePersonalItemsCount(userEmail);
   const usesCapsuleLayout = isFullScreenAppShellRoute(props);
+  const sidebarSearch = useSidebarCapsuleSearch(props.onSearchCapsules);
   const highlightedCapsuleId =
     activeSidebarApp === "capsule" &&
     props.capsuleRouteId &&
-    props.capsuleRouteId === props.activeCapsuleId &&
     props.capsuleRouteId === props.activeCapsuleMeta?.id
       ? props.capsuleRouteId
       : "";
@@ -199,7 +206,7 @@ function AppSidebarPanel(props: AppShellContentProps) {
               isOverlaySidebar ? closeSidebar : undefined,
             );
           }}
-          onSearchCapsules={props.openSearchDialog}
+          onSearchCapsules={sidebarSearch.open}
           onOpenCapsule={(capsuleId) => {
             void props.onOpenCapsuleFromSidebar(
               capsuleId,
@@ -207,9 +214,7 @@ function AppSidebarPanel(props: AppShellContentProps) {
             );
           }}
           onOpenCapsuleActions={props.openCapsuleActions}
-          capsuleHasUnsavedChanges={(capsule) =>
-            capsule?.status === "new" || capsule?.status === "modified"
-          }
+          capsuleHasUnsavedChanges={hasUnsavedCapsuleChanges}
           onExpandedAction={isOverlaySidebar ? closeSidebar : undefined}
           collapsedExpandHitbox={
             <Box
@@ -222,6 +227,13 @@ function AppSidebarPanel(props: AppShellContentProps) {
       )}
     >
       <SuspendedContent>{props.children}</SuspendedContent>
+      <SearchDialog
+        state={sidebarSearch.state}
+        disabled={props.isContentBusy}
+        isOverlay={!props.isLarge}
+        setState={sidebarSearch.setState}
+        onOpenCapsule={(capsuleId) => props.onOpenCapsuleFromSidebar(capsuleId)}
+      />
     </AppSidebarShell>
   );
 }
