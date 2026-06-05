@@ -1,4 +1,5 @@
 import { type ReactElement } from "react";
+import ChevronRightRoundedIcon from "@mui/icons-material/ChevronRightRounded";
 import {
   Box,
   ListItemButton,
@@ -134,6 +135,27 @@ function TopLevelRowContent({
   );
 }
 
+function CollapsedDisclosureIndicator() {
+  return (
+    <Box
+      aria-hidden="true"
+      className="sidebar-top-level-collapsed-indicator"
+      component="span"
+      sx={{
+        alignItems: "center",
+        color: "text.secondary",
+        display: "inline-flex",
+        flexShrink: 0,
+        ml: 1,
+        mr: 1,
+        "& svg": { height: 20, width: 20 },
+      }}
+    >
+      <ChevronRightRoundedIcon fontSize="small" />
+    </Box>
+  );
+}
+
 function TopLevelStaticRow({
   label,
   icon,
@@ -177,6 +199,21 @@ function TopLevelStaticRow({
   );
 }
 
+type TopLevelRowProps = {
+  label: string;
+  icon: ReactElement;
+  isActive: boolean;
+  isInteractionDisabled: boolean;
+  isCollapsedDesktop: boolean;
+  desktopSidebarRailWidth: number;
+  ariaExpanded?: boolean;
+  onClick?: () => void;
+  actions?: ReactElement;
+  countBadge?: number | null;
+  suppressHoverBackground?: boolean;
+  showActiveBackground?: boolean;
+};
+
 export function TopLevelRow({
   label,
   icon,
@@ -190,24 +227,13 @@ export function TopLevelRow({
   countBadge,
   suppressHoverBackground = false,
   showActiveBackground = false,
-}: {
-  label: string;
-  icon: ReactElement;
-  isActive: boolean;
-  isInteractionDisabled: boolean;
-  isCollapsedDesktop: boolean;
-  desktopSidebarRailWidth: number;
-  ariaExpanded?: boolean;
-  onClick?: () => void;
-  actions?: ReactElement;
-  countBadge?: number | null;
-  suppressHoverBackground?: boolean;
-  showActiveBackground?: boolean;
-}) {
+}: TopLevelRowProps) {
   const countBadgeLabel = getCountBadgeLabel(countBadge);
   const accessibleLabel = countBadgeLabel
     ? `${label}, ${countBadgeLabel}`
     : label;
+  const showCollapsedDisclosureIndicator =
+    ariaExpanded === false && !isCollapsedDesktop;
   const rowContent = onClick ? (
     <ListItemButton
       aria-label={accessibleLabel}
@@ -241,6 +267,9 @@ export function TopLevelRow({
         desktopSidebarRailWidth={desktopSidebarRailWidth}
         countBadge={countBadge}
       />
+      {showCollapsedDisclosureIndicator ? (
+        <CollapsedDisclosureIndicator />
+      ) : null}
     </ListItemButton>
   ) : (
     <TopLevelStaticRow
