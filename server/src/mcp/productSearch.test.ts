@@ -37,6 +37,7 @@ test("MCP product search is read-only and skips embeddings for filter-only searc
 
   const result = await runSearch("person@example.com", {
     category: ["top"],
+    likedOnly: true,
     offset: 10,
     limit: 75,
   });
@@ -50,6 +51,7 @@ test("MCP product search is read-only and skips embeddings for filter-only searc
   expect(productCalls[0]).toMatchObject({
     profileEmail: "person@example.com",
     category: ["top"],
+    likedOnly: true,
     queryEmbedding: null,
     semanticDistanceThreshold: null,
     offset: 10,

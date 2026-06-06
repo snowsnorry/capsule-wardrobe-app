@@ -51,6 +51,7 @@ function t(key: string) {
     {
       "errors.generic": "Something went wrong",
       "search.filters.category": "Category",
+      "search.filters.likedItemsOnly": "Liked items only",
     }[key] || key
   );
 }
@@ -69,6 +70,21 @@ function StatisticsStatsHarness() {
         onClick={() => statistics.toggleFacetValue("category", "top")}
       >
         toggle category
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          statistics.updateDraftState(
+            (current) => ({
+              ...current,
+              likedOnly: !current.likedOnly,
+              page: 1,
+            }),
+            { submit: true },
+          )
+        }
+      >
+        toggle liked
       </button>
       <button
         type="button"
@@ -162,6 +178,7 @@ describe("useStatisticsStats", () => {
     expect(await screen.findByText("120")).toBeInTheDocument();
     expect(searchApi.fetchSearchOptions).toHaveBeenCalledWith({ force: true });
     expect(searchApi.fetchSearchStats).toHaveBeenCalledWith({
+      likedOnly: false,
       brand: [],
       priceMin: null,
       priceMax: null,
@@ -194,6 +211,17 @@ describe("useStatisticsStats", () => {
       );
     });
     expect(screen.getByTestId("chips")).toHaveTextContent("Category: Top");
+
+    await user.click(screen.getByRole("button", { name: "toggle liked" }));
+    await waitFor(() => {
+      expect(searchApi.fetchSearchStats).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          category: ["top"],
+          likedOnly: true,
+        }),
+      );
+    });
+    expect(screen.getByTestId("chips")).toHaveTextContent("Liked items only");
 
     await user.click(screen.getByRole("button", { name: "toggle color" }));
     await waitFor(() => {

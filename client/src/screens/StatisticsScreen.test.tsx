@@ -129,6 +129,7 @@ describe("StatisticsScreen", () => {
     expect((await screen.findAllByText("120")).length).toBeGreaterThan(0);
     expect(searchApi.fetchSearchOptions).toHaveBeenCalledWith({ force: true });
     expect(searchApi.fetchSearchStats).toHaveBeenCalledWith({
+      likedOnly: false,
       brand: [],
       priceMin: null,
       priceMax: null,

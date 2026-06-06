@@ -43,6 +43,7 @@ test("normalizeSearchPayload normalizes nullable scalar filters and arrays", () 
   expect(
     normalizeSearchPayload({
       query: "  linen summer shirt ",
+      likedOnly: true,
       brand: [" Cos ", "cos", "", null],
       audience: [" WOMAN ", "woman"],
       category: [" Top ", "top"],
@@ -61,6 +62,7 @@ test("normalizeSearchPayload normalizes nullable scalar filters and arrays", () 
     }),
   ).toEqual({
     query: "linen summer shirt",
+    likedOnly: true,
     brand: ["cos"],
     priceMin: 12.5,
     priceMax: 99,
@@ -93,6 +95,7 @@ test("serializeSearchRow maps persisted row fields to client shape", () => {
   expect(
     serializeSearchRow({
       query: "blue blazer",
+      likedOnly: true,
       brand: ["cos"],
       priceMin: 10,
       priceMax: 100,
@@ -111,6 +114,7 @@ test("serializeSearchRow maps persisted row fields to client shape", () => {
     }),
   ).toEqual({
     query: "blue blazer",
+    likedOnly: true,
     brand: ["cos"],
     priceMin: 10,
     priceMax: 100,
@@ -296,13 +300,16 @@ test("runSavedSearch uses URL prefix for URL queries and skips embeddings", asyn
 
   const result = await store.runSavedSearch("person@example.com", {
     query: "https://example.com/products/1",
+    likedOnly: true,
     category: ["top"],
   });
 
   expect(result.total).toBe(1);
   expect(upsertCalls[0].embedding).toBe(null);
+  expect(upsertCalls[0].likedOnly).toBe(true);
   expect(productCalls.length).toBe(1);
   expect(productCalls[0].profileEmail).toBe("person@example.com");
+  expect(productCalls[0].likedOnly).toBe(true);
   expect(productCalls[0].urlPrefix).toBe("https://example.com/products/1");
   expect(productCalls[0].queryEmbedding).toBe(null);
   expect(productCalls[0].textQuery).toBe(null);
@@ -490,6 +497,8 @@ test("getSearchStats validates payload and delegates normalized filters", async 
     await store.getSearchStats("person@example.com", { category: ["top"] }),
   ).toEqual({ ok: true });
   expect(statsPayload.category).toEqual(["top"]);
+  expect(statsPayload.profileEmail).toBe("person@example.com");
+  expect(statsPayload.likedOnly).toBe(false);
 
   await expect(() =>
     store.getSearchStats("person@example.com", { category: ["dress"] }),

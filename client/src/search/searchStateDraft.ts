@@ -18,6 +18,10 @@ function normalizeSearchArrayValue(
   return Array.isArray(value) ? value : value ? [value] : [];
 }
 
+function normalizeBoolean(value: unknown): boolean {
+  return value === true;
+}
+
 export function createSearchState(
   savedSearch: Partial<SearchStateSource> | null | undefined,
   priceRange: SearchPriceRange,
@@ -40,6 +44,7 @@ export function createSearchState(
   return {
     ...base,
     ...normalizedArrays,
+    likedOnly: normalizeBoolean(base.likedOnly),
     priceEnabled: hasPriceBounds,
     priceMinDraft: hasPriceBounds ? priceMinDraft : rangeMin,
     priceMaxDraft: hasPriceBounds ? priceMaxDraft : rangeMax,
@@ -71,6 +76,7 @@ export function serializeDraftState(
 
   return {
     query: state.query,
+    likedOnly: state.likedOnly,
     brand: state.brand,
     priceMin: hasPriceFilter ? Number(state.priceMinDraft) : null,
     priceMax: hasPriceFilter ? Number(state.priceMaxDraft) : null,

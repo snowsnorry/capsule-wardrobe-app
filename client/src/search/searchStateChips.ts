@@ -67,6 +67,14 @@ export function buildActiveFilterChips({
   translateOption: (group: string, value: string, locale: string) => string;
 }): ActiveFilterChip[] {
   const chips: ActiveFilterChip[] = [];
+  if (state.likedOnly) {
+    chips.push({
+      key: "likedOnly:true",
+      field: "likedOnly",
+      value: "true",
+      label: t("search.filters.likedItemsOnly"),
+    });
+  }
   pushSearchFacetChips(chips, {
     state,
     options,

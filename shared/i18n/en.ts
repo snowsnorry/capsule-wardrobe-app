@@ -450,6 +450,8 @@ const en = {
     priceMin: "Min: {value}",
     priceMax: "Max: {value}",
     filters: {
+      likedItems: "Liked items",
+      likedItemsOnly: "Liked items only",
       brand: "Brand",
       price: "Price",
       min: "Min",

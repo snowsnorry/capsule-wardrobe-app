@@ -2,6 +2,7 @@ create table if not exists search (
   email text primary key,
   query text null,
   embedding jsonb null,
+  liked_only boolean not null default false,
   brand text[] not null default '{}'::text[],
   price_min double precision null,
   price_max double precision null,

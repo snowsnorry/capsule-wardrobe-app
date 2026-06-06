@@ -19,7 +19,6 @@ type SearchStatsInput = Omit<
   | "queryEmbedding"
   | "semanticDistanceThreshold"
   | "page"
-  | "profileEmail"
   | "offset"
   | "limit"
   | "textQuery"
@@ -28,7 +27,7 @@ type SearchStatsInput = Omit<
 type SearchStatsFilters = Required<Omit<SearchStatsInput, "urlPrefix">>;
 type SearchStatsFacetKey = Exclude<
   keyof SearchStatsFilters,
-  "priceMin" | "priceMax"
+  "likedOnly" | "priceMin" | "priceMax" | "profileEmail"
 >;
 
 type SearchStatsResult = {
@@ -65,6 +64,8 @@ const FACETS: SearchFacetConfig[] = [
 
 const DEFAULT_FILTERS: SearchStatsFilters = {
   brand: [],
+  likedOnly: false,
+  profileEmail: null,
   priceMin: null,
   priceMax: null,
   audience: [],
@@ -89,6 +90,8 @@ function normalizeSearchStatsInput(
 ): SearchStatsFilters {
   return {
     brand: withDefault(input.brand, DEFAULT_FILTERS.brand),
+    likedOnly: withDefault(input.likedOnly, DEFAULT_FILTERS.likedOnly),
+    profileEmail: withDefault(input.profileEmail, DEFAULT_FILTERS.profileEmail),
     priceMin: withDefault(input.priceMin, DEFAULT_FILTERS.priceMin),
     priceMax: withDefault(input.priceMax, DEFAULT_FILTERS.priceMax),
     audience: withDefault(input.audience, DEFAULT_FILTERS.audience),
@@ -168,6 +171,26 @@ function addPriceFilter(
   addSqlValue(sql, "", value, ")");
 }
 
+function addLikedOnlyFilter(
+  sql: BuiltSql,
+  likedOnly: boolean,
+  profileEmail: string | null,
+) {
+  addSqlValue(sql, `(`, likedOnly, `::boolean is not true or (`);
+  addSqlValue(sql, "", profileEmail, "::text is not null and exists (");
+  addSqlValue(
+    sql,
+    `
+          select 1
+          from user_liked_items
+          where user_liked_items.user_email = `,
+    profileEmail,
+    `
+            and user_liked_items.item_url = products.url
+        )))`,
+  );
+}
+
 function addFilterCondition(
   sql: BuiltSql,
   filters: SearchStatsFilters,
@@ -199,6 +222,8 @@ function buildWhereSql(
   addPriceFilter(sql, "priceMin", filters.priceMin);
   addCondition(sql, conditionIndex + 1);
   addPriceFilter(sql, "priceMax", filters.priceMax);
+  addCondition(sql, conditionIndex + 2);
+  addLikedOnlyFilter(sql, filters.likedOnly, filters.profileEmail);
   return sql;
 }
 

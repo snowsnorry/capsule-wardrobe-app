@@ -69,6 +69,7 @@ type SearchRow = {
   email: string;
   query: string | null;
   embedding: number[] | null;
+  likedOnly: boolean | null;
   brand: string[];
   priceMin: number | null;
   priceMax: number | null;
@@ -265,6 +266,7 @@ test("db integration shapes search persistence and searchProducts queries", asyn
         email: "user@example.com",
         query: "linen shirt",
         embedding: [0.1, 0.2],
+        likedOnly: false,
         brand: ["uniqlo"],
         priceMin: 10,
         priceMax: 90,
@@ -287,6 +289,7 @@ test("db integration shapes search persistence and searchProducts queries", asyn
         email: "user@example.com",
         query: "linen shirt",
         embedding: [0.1, 0.2],
+        likedOnly: false,
         brand: ["uniqlo"],
         priceMin: 10,
         priceMax: 90,
@@ -321,6 +324,7 @@ test("db integration shapes search persistence and searchProducts queries", asyn
     email: "user@example.com",
     query: "linen shirt",
     embedding: [0.1, 0.2],
+    likedOnly: false,
     brand: ["uniqlo"],
     priceMin: 10,
     priceMax: 90,

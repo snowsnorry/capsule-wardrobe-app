@@ -1,29 +1,12 @@
-import { afterEach, test, expect } from "vitest";
+import { afterEach, expect, test } from "vitest";
 import { setSqlClientOverride, type SqlClientLike } from "./core.js";
-import { buildPriceBuckets, searchProducts } from "./searchPersistence.js";
+import { searchProductStats } from "./searchStats.js";
 
 afterEach(() => {
   setSqlClientOverride(null);
 });
 
-test("buildPriceBuckets returns a continuous bucket range with zero-count gaps", () => {
-  expect(
-    buildPriceBuckets(
-      [
-        { bucket: 1, count: 3, rangeMin: 0, rangeMax: 240 },
-        { bucket: 3, count: 7, rangeMin: 0, rangeMax: 240 },
-      ],
-      4,
-    ),
-  ).toEqual([
-    { key: "0:60", min: 0, max: 60, count: 3 },
-    { key: "60:120", min: 60, max: 120, count: 0 },
-    { key: "120:180", min: 120, max: 180, count: 7 },
-    { key: "180:240", min: 180, max: 240, count: 0 },
-  ]);
-});
-
-test("searchProducts applies liked-only filter with the profile email", async () => {
+test("searchProductStats applies liked-only filters with the profile email", async () => {
   const statements: string[] = [];
   const values: unknown[][] = [];
   const sql = (async <TRow = unknown>(
@@ -38,7 +21,7 @@ test("searchProducts applies liked-only filter with the profile email", async ()
   }) as SqlClientLike;
   setSqlClientOverride(sql);
 
-  await searchProducts({
+  await searchProductStats({
     likedOnly: true,
     profileEmail: "person@example.com",
   });

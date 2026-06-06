@@ -14,6 +14,7 @@ export function getSearchFilterInputSchema(
   schemaOptions: SearchToolSchemaOptions,
 ) {
   return {
+    likedOnly: z.boolean().optional(),
     brand: STRING_ARRAY_SCHEMA.optional(),
     priceMin: z.number().nullable().optional(),
     priceMax: z.number().nullable().optional(),

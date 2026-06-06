@@ -136,6 +136,7 @@ export type SearchRow = {
   email: string;
   query: string | null;
   embedding: number[] | null;
+  likedOnly: boolean | null;
   brand: string[];
   priceMin: number | null;
   priceMax: number | null;
@@ -165,6 +166,7 @@ export type UpsertSearchInput = {
   email: string;
   query: string | null;
   embedding: number[] | null;
+  likedOnly: boolean;
   brand: string[];
   priceMin: number | null;
   priceMax: number | null;
@@ -188,6 +190,8 @@ export type SearchProductsInput = {
   textQuery?: string | null;
   textSearchMode?: "none" | "lexical" | "hybrid" | "semantic" | null;
   urlPrefix?: string | null;
+  profileEmail?: string | null;
+  likedOnly?: boolean;
   brand?: string[];
   priceMin?: number | null;
   priceMax?: number | null;
@@ -332,25 +336,6 @@ export function hashCapsuleContent(content: unknown): string {
 
 export function toOptionalNumber(value: unknown): number | null {
   return value === null || value === undefined ? null : Number(value);
-}
-
-export function normalizeSearchRow(
-  row: SearchRowQuery | null,
-): SearchRow | null {
-  if (!row) {
-    return null;
-  }
-
-  return {
-    ...row,
-    embedding: Array.isArray(row.embedding)
-      ? row.embedding.filter(
-          (value): value is number => typeof value === "number",
-        )
-      : null,
-    priceMin: toOptionalNumber(row.priceMin),
-    priceMax: toOptionalNumber(row.priceMax),
-  };
 }
 
 export function isPriceBucket(

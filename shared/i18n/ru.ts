@@ -453,6 +453,8 @@ const ru = {
     priceMin: "Мин: {value}",
     priceMax: "Макс: {value}",
     filters: {
+      likedItems: "Лайкнутые вещи",
+      likedItemsOnly: "Только лайкнутые",
       brand: "Бренд",
       price: "Цена",
       min: "Мин",

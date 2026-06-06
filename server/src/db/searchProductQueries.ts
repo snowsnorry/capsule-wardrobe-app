@@ -15,6 +15,7 @@ type SearchQueryParams = {
   embeddingVector: string | null;
   fit: string[];
   formalityLevel: string[];
+  likedOnly: boolean;
   normalizedUrlPrefix: string | null;
   occasions: string[];
   pattern: string[];
@@ -48,9 +49,11 @@ async function querySearchProductCount(
     embeddingVector,
     fit,
     formalityLevel,
+    likedOnly,
     normalizedUrlPrefix,
     occasions,
     pattern,
+    profileEmail,
     priceMax,
     priceMin,
     season,
@@ -113,6 +116,18 @@ async function querySearchProductCount(
         and (${normalizedUrlPrefix}::text is null or products.url like ${normalizedUrlPrefix})
         and (${priceMin}::double precision is null or price >= ${priceMin})
         and (${priceMax}::double precision is null or price <= ${priceMax})
+        and (
+          ${likedOnly}::boolean is not true
+          or (
+            ${profileEmail}::text is not null
+            and exists (
+              select 1
+              from user_liked_items
+              where user_liked_items.user_email = ${profileEmail}
+                and user_liked_items.item_url = products.url
+            )
+          )
+        )
         and (cardinality(${audience}::text[]) = 0 or lower(coalesce(audience, '')) = any(${audience}::text[]))
         and (cardinality(${category}::text[]) = 0 or lower(coalesce(category, '')) = any(${category}::text[]))
         and (cardinality(${season}::text[]) = 0 or coalesce(season, array[]::text[]) && ${season}::text[])
@@ -165,6 +180,7 @@ async function querySearchProductItems(
     embeddingVector,
     fit,
     formalityLevel,
+    likedOnly,
     limit,
     normalizedUrlPrefix,
     occasions,
@@ -233,6 +249,18 @@ async function querySearchProductItems(
         and (${normalizedUrlPrefix}::text is null or products.url like ${normalizedUrlPrefix})
         and (${priceMin}::double precision is null or price >= ${priceMin})
         and (${priceMax}::double precision is null or price <= ${priceMax})
+        and (
+          ${likedOnly}::boolean is not true
+          or (
+            ${profileEmail}::text is not null
+            and exists (
+              select 1
+              from user_liked_items
+              where user_liked_items.user_email = ${profileEmail}
+                and user_liked_items.item_url = products.url
+            )
+          )
+        )
         and (cardinality(${audience}::text[]) = 0 or lower(coalesce(audience, '')) = any(${audience}::text[]))
         and (cardinality(${category}::text[]) = 0 or lower(coalesce(category, '')) = any(${category}::text[]))
         and (cardinality(${season}::text[]) = 0 or coalesce(season, array[]::text[]) && ${season}::text[])

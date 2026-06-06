@@ -70,6 +70,28 @@ afterEach(() => {
 });
 
 describe("SearchFiltersSidebar", () => {
+  test("renders liked items as the first filter and toggles the boolean state", () => {
+    const onDraftStateChange = vi.fn();
+    renderSidebar({ onDraftStateChange });
+
+    const likedLabel = screen.getByText("Liked items");
+    const brandLabel = screen.getByText("Brand");
+    expect(
+      likedLabel.compareDocumentPosition(brandLabel) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("switch", { name: "Liked items" }));
+    expect(onDraftStateChange).toHaveBeenCalledWith(expect.any(Function), {
+      submit: true,
+    });
+    const nextState = onDraftStateChange.mock.calls[0][0](
+      createSearchState(null, options.priceRange),
+    );
+    expect(nextState.likedOnly).toBe(true);
+    expect(nextState.page).toBe(1);
+  });
+
   test("sorts pattern chips alphabetically and keeps Not important first", () => {
     renderSidebar();
 

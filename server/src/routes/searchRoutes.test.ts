@@ -94,6 +94,43 @@ test("search run maps invalid payload failures", async (t) => {
   expect(invalidSearch.json).toEqual({ error: "invalid_payload" });
 });
 
+test("search routes forward liked-only payloads to search and stats handlers", async (t) => {
+  let searchPayload: Record<string, unknown> | null = null;
+  let statsPayload: Record<string, unknown> | null = null;
+  const { baseUrl } = await startTestServer(t, {
+    overrides: {
+      runSavedSearchImpl: async (_email, payload) => {
+        searchPayload = payload;
+        return { items: [], total: 0 };
+      },
+      getSearchStatsImpl: async (_email, payload) => {
+        statsPayload = payload;
+        return { total: 0, stats: {}, priceBuckets: [] };
+      },
+    },
+  });
+
+  const searchRun = await requestJson(baseUrl, "/search/run", {
+    method: "POST",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN,
+    body: { likedOnly: true },
+  });
+  expect(searchRun.response.status).toBe(200);
+  expect(searchPayload?.likedOnly).toBe(true);
+
+  const searchStats = await requestJson(baseUrl, "/search/stats", {
+    method: "POST",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN,
+    body: { likedOnly: true },
+  });
+  expect(searchStats.response.status).toBe(200);
+  expect(statsPayload?.likedOnly).toBe(true);
+});
+
 test("search product detail rejects missing or unsafe URLs", async (t) => {
   const { baseUrl } = await startTestServer(t);
 

@@ -35,6 +35,7 @@ function payload(overrides: Partial<SearchPayload> = {}): SearchPayload {
     priceMin: 10,
     priceMax: 100,
     query: "",
+    likedOnly: false,
     page: 1,
     ...overrides,
   };

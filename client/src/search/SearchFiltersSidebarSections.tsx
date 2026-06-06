@@ -3,9 +3,11 @@ import {
   Button,
   Slider,
   Stack,
+  Switch,
   TextField,
   Typography,
 } from "@mui/material";
+import FavoriteRoundedIcon from "@mui/icons-material/FavoriteRounded";
 import { translateOption } from "../i18n";
 import {
   MultiSelectChips,
@@ -158,6 +160,65 @@ function SearchStyleSections({
   );
 }
 
+function SearchLikedOnlySection({
+  draftState,
+  updateDraftState,
+  t,
+}: {
+  draftState: SearchDraftState;
+  updateDraftState: UpdateDraftState;
+  t: (key: string) => string;
+}) {
+  const label = t("search.filters.likedItems");
+
+  return (
+    <Stack
+      direction="row"
+      spacing={1.5}
+      sx={{
+        alignItems: "center",
+        justifyContent: "space-between",
+        minHeight: 40,
+      }}
+    >
+      <Stack
+        direction="row"
+        spacing={1}
+        sx={{ alignItems: "center", minWidth: 0 }}
+      >
+        <FavoriteRoundedIcon
+          aria-hidden="true"
+          sx={{
+            color: draftState.likedOnly
+              ? "var(--cw-color-liked-indicator, #c62828)"
+              : "text.secondary",
+            flex: "0 0 auto",
+            fontSize: 18,
+          }}
+        />
+        <Typography variant="body2" sx={{ fontWeight: 600, minWidth: 0 }}>
+          {label}
+        </Typography>
+      </Stack>
+      <Switch
+        checked={draftState.likedOnly}
+        onChange={(_event, checked) =>
+          updateDraftState((current) => ({
+            ...current,
+            likedOnly: checked,
+            page: 1,
+          }))
+        }
+        slotProps={{
+          input: {
+            "aria-label": label,
+          },
+        }}
+      />
+    </Stack>
+  );
+}
+
 function SearchFiltersFooter({
   status,
   onApply,
@@ -220,6 +281,11 @@ function SearchFiltersSidebarFrame({
 
   return (
     <Stack spacing={3.2} sx={{ minHeight: 0 }}>
+      <SearchLikedOnlySection
+        draftState={draftState}
+        updateDraftState={updateDraftState}
+        t={t}
+      />
       <SearchSection title={t("search.filters.brand")}>
         <MultiSelectChips
           items={filterItems.brandItems}

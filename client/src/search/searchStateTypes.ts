@@ -24,6 +24,7 @@ export type SearchOptions = {
 
 export type SearchState = {
   query: string;
+  likedOnly: boolean;
   brand: SearchFilterValue[];
   priceMin: number | null;
   priceMax: number | null;

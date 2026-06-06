@@ -1046,6 +1046,7 @@ test("oauth PKCE code flow issues an access token accepted by mcp", async (t) =>
   expect(searchProperties.query?.description).toBe(
     "Optional natural-language search phrase to combine with filters for more precise product matches.",
   );
+  expect(searchProperties.likedOnly?.type).toBe("boolean");
   const brandItems = searchProperties.brand?.items as Record<string, unknown>;
   expect(searchProperties.brand?.type).toBe("array");
   expect(brandItems.type).toBe("string");
@@ -1059,6 +1060,7 @@ test("oauth PKCE code flow issues an access token accepted by mcp", async (t) =>
     string,
     Record<string, unknown>
   >;
+  expect(statsProperties.likedOnly?.type).toBe("boolean");
   expect(statsProperties).not.toHaveProperty("query");
   expect(statsProperties).not.toHaveProperty("offset");
   expect(statsProperties).not.toHaveProperty("limit");

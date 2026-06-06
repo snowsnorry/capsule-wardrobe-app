@@ -10,6 +10,7 @@ describe("searchState", () => {
   test("createSearchState normalizes scalar and array filters for shared search screens", () => {
     const state = createSearchState(
       {
+        likedOnly: true,
         brand: "uniqlo",
         audience: "woman",
         category: "top",
@@ -29,6 +30,7 @@ describe("searchState", () => {
     );
 
     expect(state.brand).toEqual(["uniqlo"]);
+    expect(state.likedOnly).toBe(true);
     expect(state.audience).toEqual(["woman"]);
     expect(state.category).toEqual(["top"]);
     expect(state.formalityLevel).toEqual(["casual"]);
@@ -42,6 +44,7 @@ describe("searchState", () => {
     const nextState = {
       ...state,
       query: "linen shirt",
+      likedOnly: true,
       brand: ["uniqlo"],
       priceEnabled: true,
       priceMinDraft: 15,
@@ -51,6 +54,7 @@ describe("searchState", () => {
 
     expect(serializeDraftState(nextState)).toEqual({
       query: "linen shirt",
+      likedOnly: true,
       brand: ["uniqlo"],
       priceMin: 15,
       priceMax: 90,

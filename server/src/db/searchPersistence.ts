@@ -3,7 +3,7 @@ import {
   getFirstRow,
   getSqlClient,
   isPriceBucket,
-  normalizeSearchRow,
+  toOptionalNumber,
   type BucketRangeRow,
   type FacetRow,
   type PriceBucket,
@@ -25,6 +25,24 @@ type ProductSearchInput = SearchProductsInput & {
   limit?: number;
 };
 
+function normalizeSearchRow(row: SearchRowQuery | null): SearchRow | null {
+  if (!row) {
+    return null;
+  }
+
+  return {
+    ...row,
+    embedding: Array.isArray(row.embedding)
+      ? row.embedding.filter(
+          (value): value is number => typeof value === "number",
+        )
+      : null,
+    likedOnly: row.likedOnly === true,
+    priceMin: toOptionalNumber(row.priceMin),
+    priceMax: toOptionalNumber(row.priceMax),
+  };
+}
+
 export async function getSearchByEmail(
   email: string,
 ): Promise<SearchRow | null> {
@@ -35,6 +53,7 @@ export async function getSearchByEmail(
       email,
       query,
       embedding,
+      liked_only as "likedOnly",
       brand,
       price_min as "priceMin",
       price_max as "priceMax",
@@ -64,6 +83,7 @@ export async function upsertSearchByEmail({
   email,
   query,
   embedding,
+  likedOnly,
   brand,
   priceMin,
   priceMax,
@@ -84,17 +104,18 @@ export async function upsertSearchByEmail({
   const row = getFirstRow(
     await sql<SearchRowQuery>`
 	    insert into search (
-	      email, query, embedding, brand, price_min, price_max, audience, category, season,
+	      email, query, embedding, liked_only, brand, price_min, price_max, audience, category, season,
 	      formality_level, style, occasions, color, pattern, silhouette, fit, closure_type, page
 	    )
 	    values (
-	      ${email}, ${query}, ${embedding === null ? null : JSON.stringify(embedding)}, ${brand},
+	      ${email}, ${query}, ${embedding === null ? null : JSON.stringify(embedding)}, ${likedOnly}, ${brand},
 	      ${priceMin}, ${priceMax}, ${audience}, ${category}, ${season}, ${formalityLevel},
 	      ${style}, ${occasions}, ${color}, ${pattern}, ${silhouette}, ${fit}, ${closureType}, ${page}
 	    )
 	    on conflict (email)
 	    do update set
-	      query = excluded.query, embedding = excluded.embedding, brand = excluded.brand,
+	      query = excluded.query, embedding = excluded.embedding, liked_only = excluded.liked_only,
+	      brand = excluded.brand,
 	      price_min = excluded.price_min, price_max = excluded.price_max, audience = excluded.audience,
 	      category = excluded.category, season = excluded.season, formality_level = excluded.formality_level,
 	      style = excluded.style, occasions = excluded.occasions, color = excluded.color,
@@ -102,7 +123,7 @@ export async function upsertSearchByEmail({
 	      closure_type = excluded.closure_type, page = excluded.page,
 	      updated_at = now()
 	    returning
-	      email, query, embedding, brand, price_min as "priceMin", price_max as "priceMax",
+	      email, query, embedding, liked_only as "likedOnly", brand, price_min as "priceMin", price_max as "priceMax",
 	      audience, category, season, formality_level as "formalityLevel", style, occasions,
 	      color, pattern, silhouette, fit, closure_type as "closureType", page,
 	      created_at as "createdAt", updated_at as "updatedAt"
@@ -207,6 +228,7 @@ function buildSearchQueryParams(input) {
     embeddingVector: getEmbeddingVector(input.queryEmbedding),
     fit: getSearchArray(input, "fit"),
     formalityLevel: getSearchArray(input, "formalityLevel"),
+    likedOnly: input.likedOnly === true,
     normalizedUrlPrefix: getNormalizedUrlPrefix(input.urlPrefix),
     occasions: getSearchArray(input, "occasions"),
     pattern: getSearchArray(input, "pattern"),

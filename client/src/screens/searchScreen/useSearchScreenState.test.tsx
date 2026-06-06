@@ -56,6 +56,7 @@ function makeSavedSearch(overrides = {}) {
   return {
     search: {
       query: "linen shirt",
+      likedOnly: true,
       brand: ["uniqlo"],
       category: [],
       season: ["summer"],
@@ -128,6 +129,7 @@ describe("useSearchScreenState", () => {
     expect(searchApi.fetchSavedSearch).toHaveBeenCalledWith({ force: true });
     expect(searchApi.runSearch).toHaveBeenCalledWith({
       query: "linen shirt",
+      likedOnly: true,
       brand: ["uniqlo"],
       priceMin: null,
       priceMax: null,
@@ -174,6 +176,17 @@ describe("useSearchScreenState", () => {
         priceRange: { min: 10, max: 150 },
       }),
     ).toEqual({ ...currentState, category: [], page: 1 });
+    expect(
+      getSearchStateWithoutChip({
+        chip: {
+          key: "likedOnly:true",
+          field: "likedOnly",
+          label: "Liked items only",
+        },
+        currentState,
+        priceRange: { min: 10, max: 150 },
+      }),
+    ).toEqual({ ...currentState, likedOnly: false, page: 1 });
   });
 
   test("uses initial query handoff instead of saved filters on first search", async () => {
@@ -188,6 +201,7 @@ describe("useSearchScreenState", () => {
     );
     expect(searchApi.runSearch).toHaveBeenCalledWith({
       query: "https://example.com/products/linen-shirt",
+      likedOnly: false,
       brand: [],
       priceMin: null,
       priceMax: null,
@@ -325,7 +339,8 @@ describe("useSearchScreenState", () => {
     });
     expect(searchApi.runSearch).toHaveBeenCalledWith(
       expect.objectContaining({
-        brand: [],
+        likedOnly: false,
+        brand: ["uniqlo"],
         season: ["summer"],
         page: 1,
       }),
@@ -340,6 +355,7 @@ describe("useSearchScreenState", () => {
     });
     expect(searchApi.runSearch).toHaveBeenCalledWith({
       query: "",
+      likedOnly: false,
       brand: [],
       priceMin: null,
       priceMax: null,
