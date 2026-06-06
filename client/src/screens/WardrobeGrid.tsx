@@ -8,6 +8,7 @@ import type { ProductMenuOpenOptions } from "../components/ClothingCardTypes";
 import type { MainScreenItem } from "./mainScreen/MainScreenTypes";
 
 type WardrobeGridProps = {
+  isFilteredEmpty?: boolean;
   isLoading: boolean;
   isOverlay: boolean;
   items: MainScreenItem[];
@@ -23,6 +24,7 @@ type WardrobeGridProps = {
 };
 
 function WardrobeGrid({
+  isFilteredEmpty = false,
   isLoading,
   isOverlay,
   items,
@@ -38,9 +40,19 @@ function WardrobeGrid({
   if (items.length === 0) {
     return (
       <Stack spacing={0.75} sx={emptyStateSx}>
-        <Typography variant="h6">{t("wardrobe.emptyTitle")}</Typography>
+        <Typography variant="h6">
+          {t(
+            isFilteredEmpty
+              ? "wardrobe.filteredEmptyTitle"
+              : "wardrobe.emptyTitle",
+          )}
+        </Typography>
         <Typography variant="body2" color="text.secondary">
-          {t("wardrobe.emptyBody")}
+          {t(
+            isFilteredEmpty
+              ? "wardrobe.filteredEmptyBody"
+              : "wardrobe.emptyBody",
+          )}
         </Typography>
       </Stack>
     );

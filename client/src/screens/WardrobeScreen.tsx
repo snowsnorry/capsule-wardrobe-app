@@ -22,6 +22,7 @@ import { useI18n } from "../i18n/useI18n";
 import { isUploadedWardrobeItemNeedsReview } from "../utils/uploadedWardrobeItemStatus";
 import {
   getCanonicalItemUrl,
+  isLikedItem,
   patchLikedStateByUrl,
 } from "../utils/likedItemState";
 import { MAIN_SCREEN_CONTENT_COLUMN_SX } from "./mainScreen/MainScreenHelpers";
@@ -31,7 +32,9 @@ import type {
 } from "./mainScreen/MainScreenTypes";
 import WardrobeActionMenu from "./WardrobeActionMenu";
 import {
+  readStoredWardrobeFilters,
   readStoredWardrobeMobileCardColumns,
+  writeStoredWardrobeFilters,
   writeStoredWardrobeMobileCardColumns,
 } from "./WardrobeCardLayoutStorage";
 import WardrobeGrid from "./WardrobeGrid";
@@ -61,7 +64,12 @@ type ProductDetailMode = "read" | "edit";
 function WardrobeScreen(): ReactElement {
   const { t, locale } = useI18n();
   const isOverlay = useMediaQuery("(max-width: 1279.95px)");
-  const [filter, setFilter] = useState<WardrobeFilter>("all");
+  const [filter, setFilter] = useState<WardrobeFilter>(
+    () => readStoredWardrobeFilters().filter,
+  );
+  const [likedOnly, setLikedOnly] = useState(
+    () => readStoredWardrobeFilters().likedOnly,
+  );
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [isUrlUploadDialogOpen, setIsUrlUploadDialogOpen] = useState(false);
@@ -74,7 +82,17 @@ function WardrobeScreen(): ReactElement {
   const [productDetailMode, setProductDetailMode] =
     useState<ProductDetailMode>("read");
   const wardrobeItems = useWardrobeItems(filter, refreshKey, t);
+  const displayedItems = useMemo(
+    () =>
+      likedOnly
+        ? wardrobeItems.items.filter((item) => isLikedItem(item))
+        : wardrobeItems.items,
+    [likedOnly, wardrobeItems.items],
+  );
   const displayedColumns = isOverlay ? mobileColumns : 2;
+  useEffect(() => {
+    writeStoredWardrobeFilters({ filter, likedOnly });
+  }, [filter, likedOnly]);
   const updateColumns = (value: MobileCardColumns) => {
     setMobileColumns(value);
     writeStoredWardrobeMobileCardColumns(value);
@@ -83,6 +101,7 @@ function WardrobeScreen(): ReactElement {
     const uploaded = await wardrobeItems.handleUploadImages(files);
     if (uploaded) {
       setFilter("uploaded");
+      setLikedOnly(false);
       setRefreshKey((current) => current + 1);
       setIsUploadDialogOpen(false);
     }
@@ -91,6 +110,7 @@ function WardrobeScreen(): ReactElement {
     const uploaded = await wardrobeItems.handleUploadUrls(urls);
     if (uploaded) {
       setFilter("uploaded");
+      setLikedOnly(false);
       setRefreshKey((current) => current + 1);
       setIsUrlUploadDialogOpen(false);
     }
@@ -144,9 +164,11 @@ function WardrobeScreen(): ReactElement {
         <WardrobeToolbar
           filter={filter}
           isMobile={isOverlay}
+          likedOnly={likedOnly}
           isLoading={wardrobeItems.isLoading || wardrobeItems.isUploading}
           t={t}
           onFilterChange={setFilter}
+          onLikedOnlyChange={setLikedOnly}
           onOpenMenu={(event) => setMenuAnchor(event.currentTarget)}
           onOpenUpload={() => setIsUploadDialogOpen(true)}
           onOpenUrlUpload={() => setIsUrlUploadDialogOpen(true)}
@@ -158,10 +180,14 @@ function WardrobeScreen(): ReactElement {
             wardrobeItems.isDownloadingPdf ||
             wardrobeItems.isUploading
           }
+          filter={filter}
           isOverlay={isOverlay}
+          likedOnly={likedOnly}
           mobileCardColumns={mobileColumns}
           onClose={() => setMenuAnchor(null)}
           onDownloadPdf={wardrobeItems.handleDownloadPdf}
+          onFilterChange={setFilter}
+          onLikedOnlyChange={setLikedOnly}
           onMobileCardColumnsChange={updateColumns}
         />
         {wardrobeItems.error ? (
@@ -170,7 +196,8 @@ function WardrobeScreen(): ReactElement {
         <WardrobeGrid
           isLoading={wardrobeItems.isLoading}
           isOverlay={isOverlay}
-          items={wardrobeItems.items}
+          isFilteredEmpty={likedOnly && wardrobeItems.items.length > 0}
+          items={displayedItems}
           mobileColumns={displayedColumns}
           t={t}
           onProductClick={openProductDetail}

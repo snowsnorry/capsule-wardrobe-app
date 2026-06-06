@@ -70,18 +70,18 @@ afterEach(() => {
 });
 
 describe("SearchFiltersSidebar", () => {
-  test("renders liked items as the first filter and toggles the boolean state", () => {
+  test("renders liked only as the first filter and toggles the boolean state", () => {
     const onDraftStateChange = vi.fn();
     renderSidebar({ onDraftStateChange });
 
-    const likedLabel = screen.getByText("Liked items");
+    const likedLabel = screen.getByText("Liked only");
     const brandLabel = screen.getByText("Brand");
     expect(
       likedLabel.compareDocumentPosition(brandLabel) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
 
-    fireEvent.click(screen.getByRole("switch", { name: "Liked items" }));
+    fireEvent.click(screen.getByRole("switch", { name: "Liked only" }));
     expect(onDraftStateChange).toHaveBeenCalledWith(expect.any(Function), {
       submit: true,
     });

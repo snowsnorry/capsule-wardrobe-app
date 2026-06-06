@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { STATISTICS_FILTERS_STORAGE_KEY } from "./statisticsFilterStorage";
 import { useStatisticsStats } from "./useStatisticsStats";
 
 const searchApi = vi.hoisted(() => ({
@@ -51,7 +52,7 @@ function t(key: string) {
     {
       "errors.generic": "Something went wrong",
       "search.filters.category": "Category",
-      "search.filters.likedItemsOnly": "Liked items only",
+      "search.filters.likedItemsOnly": "Liked only",
     }[key] || key
   );
 }
@@ -115,6 +116,19 @@ function StatisticsStatsHarness() {
         type="button"
         onClick={() =>
           statistics.deleteActiveChip({
+            key: "likedOnly:true",
+            field: "likedOnly",
+            value: "true",
+            label: "Liked only",
+          })
+        }
+      >
+        delete liked chip
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          statistics.deleteActiveChip({
             key: "price",
             field: "price",
             value: "10:150",
@@ -162,6 +176,7 @@ function StatisticsStatsHarness() {
 
 describe("useStatisticsStats", () => {
   beforeEach(() => {
+    window.localStorage.clear();
     searchApi.fetchSearchOptions.mockReset();
     searchApi.fetchSearchStats.mockReset();
     searchApi.fetchSearchOptions.mockResolvedValue(makeOptions());
@@ -211,6 +226,16 @@ describe("useStatisticsStats", () => {
       );
     });
     expect(screen.getByTestId("chips")).toHaveTextContent("Category: Top");
+    expect(
+      JSON.parse(
+        window.localStorage.getItem(STATISTICS_FILTERS_STORAGE_KEY) || "{}",
+      ),
+    ).toEqual(
+      expect.objectContaining({
+        category: ["top"],
+        likedOnly: false,
+      }),
+    );
 
     await user.click(screen.getByRole("button", { name: "toggle liked" }));
     await waitFor(() => {
@@ -221,7 +246,38 @@ describe("useStatisticsStats", () => {
         }),
       );
     });
-    expect(screen.getByTestId("chips")).toHaveTextContent("Liked items only");
+    expect(screen.getByTestId("chips")).toHaveTextContent("Liked only");
+    expect(
+      JSON.parse(
+        window.localStorage.getItem(STATISTICS_FILTERS_STORAGE_KEY) || "{}",
+      ),
+    ).toEqual(
+      expect.objectContaining({
+        category: ["top"],
+        likedOnly: true,
+      }),
+    );
+
+    await user.click(screen.getByRole("button", { name: "delete liked chip" }));
+    await waitFor(() => {
+      expect(searchApi.fetchSearchStats).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          category: ["top"],
+          likedOnly: false,
+        }),
+      );
+    });
+    expect(screen.getByTestId("chips")).not.toHaveTextContent("Liked only");
+    expect(
+      JSON.parse(
+        window.localStorage.getItem(STATISTICS_FILTERS_STORAGE_KEY) || "{}",
+      ),
+    ).toEqual(
+      expect.objectContaining({
+        category: ["top"],
+        likedOnly: false,
+      }),
+    );
 
     await user.click(screen.getByRole("button", { name: "toggle color" }));
     await waitFor(() => {
@@ -254,6 +310,39 @@ describe("useStatisticsStats", () => {
         }),
       );
     });
+    expect(
+      JSON.parse(
+        window.localStorage.getItem(STATISTICS_FILTERS_STORAGE_KEY) || "{}",
+      ),
+    ).toEqual(
+      expect.objectContaining({
+        category: [],
+        color: [],
+        likedOnly: false,
+      }),
+    );
+  });
+
+  test("bootstraps filters from local storage", async () => {
+    window.localStorage.setItem(
+      STATISTICS_FILTERS_STORAGE_KEY,
+      JSON.stringify({
+        likedOnly: true,
+        category: ["top"],
+      }),
+    );
+
+    render(<StatisticsStatsHarness />);
+
+    expect(await screen.findByText("120")).toBeInTheDocument();
+    expect(searchApi.fetchSearchStats).toHaveBeenCalledWith(
+      expect.objectContaining({
+        category: ["top"],
+        likedOnly: true,
+      }),
+    );
+    expect(screen.getByTestId("chips")).toHaveTextContent("Category: Top");
+    expect(screen.getByTestId("chips")).toHaveTextContent("Liked only");
   });
 
   test("handles price chips and failed stats refreshes", async () => {

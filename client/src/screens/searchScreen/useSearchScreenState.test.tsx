@@ -193,7 +193,7 @@ describe("useSearchScreenState", () => {
         chip: {
           key: "likedOnly:true",
           field: "likedOnly",
-          label: "Liked items only",
+          label: "Liked only",
         },
         currentState,
         priceRange: { min: 10, max: 150 },

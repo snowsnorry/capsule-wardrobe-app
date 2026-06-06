@@ -13,6 +13,7 @@ import {
   normalizeStatsResponse,
   serializeStatisticsState,
 } from "./statisticsState";
+import { writeStoredStatisticsFilters } from "./statisticsFilterStorage";
 import type {
   SearchStatsResponse,
   StatisticsState,
@@ -66,9 +67,10 @@ function useStatisticsActions({
           : updater;
       draftStateRef.current = nextState;
       setDraftState(nextState);
+      writeStoredStatisticsFilters(nextState, options.priceRange);
       if (shouldSubmit) await refreshStats(nextState);
     },
-    [draftStateRef, refreshStats, setDraftState],
+    [draftStateRef, options.priceRange, refreshStats, setDraftState],
   );
   const submit = useCallback(async () => {
     await updateDraftState(
@@ -123,15 +125,21 @@ function getStateWithoutChip(
   options: SearchOptions,
   draftStateRef: MutableRefObject<SearchDraftState>,
 ) {
-  return chip.field === "price"
-    ? {
-        ...draftStateRef.current,
-        priceEnabled: false,
-        priceMinDraft: options.priceRange.min ?? 0,
-        priceMaxDraft: options.priceRange.max ?? 0,
-        page: 1,
-      }
-    : { ...draftStateRef.current, [chip.field]: [], page: 1 };
+  if (chip.field === "price") {
+    return {
+      ...draftStateRef.current,
+      priceEnabled: false,
+      priceMinDraft: options.priceRange.min ?? 0,
+      priceMaxDraft: options.priceRange.max ?? 0,
+      page: 1,
+    };
+  }
+
+  if (chip.field === "likedOnly") {
+    return { ...draftStateRef.current, likedOnly: false, page: 1 };
+  }
+
+  return { ...draftStateRef.current, [chip.field]: [], page: 1 };
 }
 
 export default useStatisticsActions;

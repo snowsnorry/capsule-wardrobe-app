@@ -15,6 +15,7 @@ import {
   resolveStatisticsTotal,
   serializeStatisticsState,
 } from "./statisticsState";
+import { readStoredStatisticsFilters } from "./statisticsFilterStorage";
 import type {
   SearchStatsResponse,
   StatisticsState,
@@ -54,9 +55,7 @@ function useBootstrapStatistics({
         }
 
         const nextOptions = buildSearchOptionsPayload(optionsResponse);
-        const nextState = createEmptyStatisticsSearchState(
-          nextOptions.priceRange,
-        );
+        const nextState = readStoredStatisticsFilters(nextOptions.priceRange);
         setOptions(nextOptions);
         setDraftState(nextState);
         const result = (await fetchSearchStats(

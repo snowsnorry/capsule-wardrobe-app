@@ -371,10 +371,14 @@ const ru = {
     removeConfirm: "Удалить",
     emptyTitle: "Пока нет сохраненных вещей",
     emptyBody: "Сохраняйте товары из капсул или позднее загружайте фото вещей.",
+    filteredEmptyTitle: "Здесь нет лайкнутых вещей",
+    filteredEmptyBody:
+      "Лайкайте вещи, чтобы они оставались видимыми в этом фильтре.",
     filters: {
       all: "Все",
       uploaded: "Загруженные",
       fromCatalog: "Из каталога",
+      likedOnly: "Только лайкнутые",
     },
     uploadDialog: {
       title: "Загрузить фото личных вещей",
@@ -454,7 +458,7 @@ const ru = {
     priceMax: "Макс: {value}",
     filters: {
       query: "Запрос: {query}",
-      likedItems: "Лайкнутые вещи",
+      likedItems: "Только лайкнутые",
       likedItemsOnly: "Только лайкнутые",
       brand: "Бренд",
       price: "Цена",

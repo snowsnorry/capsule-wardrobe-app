@@ -369,10 +369,13 @@ const en = {
     removeConfirm: "Remove",
     emptyTitle: "No saved items yet",
     emptyBody: "Save products from a capsule or upload item photos later.",
+    filteredEmptyTitle: "No liked items here",
+    filteredEmptyBody: "Like items to keep them visible in this filtered view.",
     filters: {
       all: "All",
       uploaded: "Uploaded",
       fromCatalog: "From Catalog",
+      likedOnly: "Liked only",
     },
     uploadDialog: {
       title: "Upload personal item photos",
@@ -451,8 +454,8 @@ const en = {
     priceMax: "Max: {value}",
     filters: {
       query: "Search: {query}",
-      likedItems: "Liked items",
-      likedItemsOnly: "Liked items only",
+      likedItems: "Liked only",
+      likedItemsOnly: "Liked only",
       brand: "Brand",
       price: "Price",
       min: "Min",

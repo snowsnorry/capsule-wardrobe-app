@@ -10,6 +10,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import WardrobeScreen from "./WardrobeScreen";
+import { WARDROBE_FILTERS_STORAGE_KEY } from "./WardrobeCardLayoutStorage";
 
 const api = vi.hoisted(() => ({
   deleteUploadedWardrobeItem: vi.fn(),
@@ -251,9 +252,13 @@ const translations: Record<string, string> = {
   "wardrobe.emptyTitle": "No saved items yet",
   "wardrobe.emptyBody":
     "Save products from a capsule or upload item photos later.",
+  "wardrobe.filteredEmptyTitle": "No liked items here",
+  "wardrobe.filteredEmptyBody":
+    "Like items to keep them visible in this filtered view.",
   "wardrobe.filters.all": "All",
   "wardrobe.filters.uploaded": "Uploaded",
   "wardrobe.filters.fromCatalog": "From Catalog",
+  "wardrobe.filters.likedOnly": "Liked only",
   "wardrobe.uploadDialog.title": "Upload personal item photos",
   "wardrobe.uploadDialog.body":
     "Use one image per garment. Photograph the item laid flat or neatly hung, fully visible, with no other clothing in frame, against a plain, even background.",
@@ -375,6 +380,7 @@ describe("WardrobeScreen", () => {
     expect(
       screen.getByRole("group", { name: "Personal item source" }),
     ).toBeInTheDocument();
+    expect(screen.getByTestId("wardrobe-filter-divider")).toBeInTheDocument();
     expect(screen.getByTestId("wardrobe-placeholder")).toBeInTheDocument();
 
     expect(
@@ -390,7 +396,7 @@ describe("WardrobeScreen", () => {
     });
   });
 
-  test("uses a compact source dropdown on mobile", async () => {
+  test("moves mobile source and liked filters into the action menu", async () => {
     useMediaQueryMock.mockReturnValue(true);
     const user = userEvent.setup();
     renderScreen();
@@ -405,15 +411,38 @@ describe("WardrobeScreen", () => {
     expect(
       screen.queryByRole("group", { name: "Personal item source" }),
     ).not.toBeInTheDocument();
-
-    const sourceSelect = screen.getByRole("combobox", {
-      name: "Personal item source",
-    });
-    expect(sourceSelect).toHaveTextContent("All");
+    expect(
+      screen.queryByRole("combobox", {
+        name: "Personal item source",
+      }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Liked only" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("wardrobe-filter-divider"),
+    ).not.toBeInTheDocument();
 
     await screen.findByTestId("wardrobe-card-wardrobe-1");
-    await user.click(sourceSelect);
-    await user.click(screen.getByRole("option", { name: "Uploaded" }));
+    await user.click(
+      screen.getByRole("button", { name: "Open Personal items menu" }),
+    );
+
+    expect(
+      screen.getByRole("radiogroup", {
+        name: "Personal item source",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("radio", {
+        name: "All",
+      }),
+    ).toBeChecked();
+    expect(
+      screen.getByRole("checkbox", { name: "Liked only" }),
+    ).not.toBeChecked();
+
+    await user.click(screen.getByRole("radio", { name: "Uploaded" }));
 
     await waitFor(() => {
       expect(api.fetchMyWardrobeItems).toHaveBeenLastCalledWith({
@@ -421,6 +450,219 @@ describe("WardrobeScreen", () => {
         force: false,
       });
     });
+    expect(
+      JSON.parse(
+        window.localStorage.getItem(WARDROBE_FILTERS_STORAGE_KEY) || "{}",
+      ),
+    ).toEqual({ filter: "uploaded", likedOnly: false });
+  });
+
+  test("combines mobile action-menu source and liked-only filters", async () => {
+    useMediaQueryMock.mockReturnValue(true);
+    const user = userEvent.setup();
+    api.fetchMyWardrobeItems
+      .mockResolvedValueOnce({
+        items: [
+          {
+            id: "liked-catalog",
+            name: "Liked Catalog Jacket",
+            source: "from_catalog",
+            url: "https://example.com/liked-catalog",
+            imageUrl: "https://example.com/liked-catalog.jpg",
+            isLiked: true,
+          },
+          {
+            id: "plain-catalog",
+            name: "Plain Catalog Jacket",
+            source: "from_catalog",
+            url: "https://example.com/plain-catalog",
+            imageUrl: "https://example.com/plain-catalog.jpg",
+            isLiked: false,
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        items: [
+          {
+            id: "liked-uploaded",
+            name: "Liked Uploaded Shirt",
+            source: "uploaded",
+            imageUrl: "https://example.com/liked-uploaded.jpg",
+            isLiked: true,
+          },
+          {
+            id: "plain-uploaded",
+            name: "Plain Uploaded Shirt",
+            source: "uploaded",
+            imageUrl: "https://example.com/plain-uploaded.jpg",
+            isLiked: false,
+          },
+        ],
+      });
+
+    renderScreen();
+
+    await screen.findByTestId("wardrobe-card-liked-catalog");
+    await user.click(
+      screen.getByRole("button", { name: "Open Personal items menu" }),
+    );
+    await user.click(screen.getByRole("checkbox", { name: "Liked only" }));
+    await user.click(screen.getByRole("radio", { name: "Uploaded" }));
+
+    await waitFor(() => {
+      expect(api.fetchMyWardrobeItems).toHaveBeenLastCalledWith({
+        source: "uploaded",
+        force: false,
+      });
+    });
+    await waitFor(() => {
+      expect(screen.getByText("Liked Uploaded Shirt")).toBeInTheDocument();
+      expect(
+        screen.queryByText("Plain Uploaded Shirt"),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByText("Liked Catalog Jacket"),
+      ).not.toBeInTheDocument();
+    });
+    expect(screen.getByRole("checkbox", { name: "Liked only" })).toBeChecked();
+    expect(
+      JSON.parse(
+        window.localStorage.getItem(WARDROBE_FILTERS_STORAGE_KEY) || "{}",
+      ),
+    ).toEqual({ filter: "uploaded", likedOnly: true });
+  });
+
+  test("restores wardrobe source and liked-only filters from local storage", async () => {
+    window.localStorage.setItem(
+      WARDROBE_FILTERS_STORAGE_KEY,
+      JSON.stringify({ filter: "uploaded", likedOnly: true }),
+    );
+    api.fetchMyWardrobeItems.mockResolvedValueOnce({
+      items: [
+        {
+          id: "liked-uploaded",
+          name: "Liked Uploaded Shirt",
+          source: "uploaded",
+          imageUrl: "https://example.com/liked-uploaded.jpg",
+          isLiked: true,
+        },
+        {
+          id: "plain-uploaded",
+          name: "Plain Uploaded Shirt",
+          source: "uploaded",
+          imageUrl: "https://example.com/plain-uploaded.jpg",
+          isLiked: false,
+        },
+      ],
+    });
+
+    renderScreen();
+
+    await waitFor(() => {
+      expect(api.fetchMyWardrobeItems).toHaveBeenCalledWith({
+        source: "uploaded",
+        force: false,
+      });
+    });
+    expect(await screen.findByText("Liked Uploaded Shirt")).toBeInTheDocument();
+    expect(screen.queryByText("Plain Uploaded Shirt")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Uploaded" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByRole("button", { name: "Liked only" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+  });
+
+  test("combines desktop source and liked-only filters", async () => {
+    const user = userEvent.setup();
+    api.fetchMyWardrobeItems
+      .mockResolvedValueOnce({
+        items: [
+          {
+            id: "liked-uploaded",
+            name: "Liked Uploaded Shirt",
+            source: "uploaded",
+            imageUrl: "https://example.com/liked-uploaded.jpg",
+            isLiked: true,
+          },
+          {
+            id: "plain-uploaded",
+            name: "Plain Uploaded Shirt",
+            source: "uploaded",
+            imageUrl: "https://example.com/plain-uploaded.jpg",
+            isLiked: false,
+          },
+          {
+            id: "liked-catalog",
+            name: "Liked Catalog Jacket",
+            source: "from_catalog",
+            url: "https://example.com/liked-catalog",
+            imageUrl: "https://example.com/liked-catalog.jpg",
+            isLiked: true,
+          },
+          {
+            id: "plain-catalog",
+            name: "Plain Catalog Jacket",
+            source: "from_catalog",
+            url: "https://example.com/plain-catalog",
+            imageUrl: "https://example.com/plain-catalog.jpg",
+            isLiked: false,
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        items: [
+          {
+            id: "liked-uploaded",
+            name: "Liked Uploaded Shirt",
+            source: "uploaded",
+            imageUrl: "https://example.com/liked-uploaded.jpg",
+            isLiked: true,
+          },
+          {
+            id: "plain-uploaded",
+            name: "Plain Uploaded Shirt",
+            source: "uploaded",
+            imageUrl: "https://example.com/plain-uploaded.jpg",
+            isLiked: false,
+          },
+        ],
+      });
+
+    renderScreen();
+
+    await screen.findByTestId("wardrobe-card-liked-uploaded");
+    await user.click(screen.getByRole("button", { name: "Liked only" }));
+
+    expect(screen.getByText("Liked Uploaded Shirt")).toBeInTheDocument();
+    expect(screen.getByText("Liked Catalog Jacket")).toBeInTheDocument();
+    expect(screen.queryByText("Plain Uploaded Shirt")).not.toBeInTheDocument();
+    expect(screen.queryByText("Plain Catalog Jacket")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Uploaded" }));
+
+    await waitFor(() => {
+      expect(api.fetchMyWardrobeItems).toHaveBeenLastCalledWith({
+        source: "uploaded",
+        force: false,
+      });
+    });
+    await waitFor(() => {
+      expect(screen.getByText("Liked Uploaded Shirt")).toBeInTheDocument();
+      expect(
+        screen.queryByText("Liked Catalog Jacket"),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByText("Plain Uploaded Shirt"),
+      ).not.toBeInTheDocument();
+    });
+    expect(screen.getByRole("button", { name: "Liked only" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
   });
 
   test("keeps the mobile wardrobe surface from creating horizontal page overflow", async () => {
@@ -442,12 +684,10 @@ describe("WardrobeScreen", () => {
 
     await screen.findByTestId("wardrobe-card-wardrobe-1");
 
-    const toolbar = screen
-      .getByRole("group", { name: "Personal item source" })
-      .closest(".MuiStack-root");
+    const toolbar = screen.getByTestId("wardrobe-toolbar");
 
     expect(toolbar).not.toBeNull();
-    expect(getComputedStyle(toolbar as Element).clipPath).toBe(
+    expect(getComputedStyle(toolbar).clipPath).toBe(
       "inset(-100vmax -100vmax 0)",
     );
   });
@@ -534,6 +774,61 @@ describe("WardrobeScreen", () => {
         .map((card) => card.textContent)
         .map((text) => text?.replace("open product menu", "")),
     ).toEqual(["Alpha Shirt", "Zulu Shirt", "Trousers", "Canvas Bag"]);
+  });
+
+  test("clears liked-only after upload so new uploaded items stay visible", async () => {
+    const user = userEvent.setup();
+    window.localStorage.setItem(
+      WARDROBE_FILTERS_STORAGE_KEY,
+      JSON.stringify({ filter: "all", likedOnly: true }),
+    );
+    api.fetchMyWardrobeItems.mockResolvedValueOnce({
+      items: [
+        {
+          id: "liked-shirt",
+          name: "Liked Shirt",
+          url: "https://example.com/liked-shirt",
+          imageUrl: "https://example.com/liked-shirt.jpg",
+          isLiked: true,
+        },
+      ],
+    });
+
+    renderScreen();
+
+    await screen.findByTestId("wardrobe-card-liked-shirt");
+    expect(screen.getByRole("button", { name: "Liked only" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+
+    await user.click(screen.getByRole("button", { name: "Upload item photo" }));
+    const file = new File(["image"], "linen-shirt.png", { type: "image/png" });
+    fireEvent.change(document.querySelector('input[type="file"]'), {
+      target: { files: [file] },
+    });
+    await user.click(screen.getByRole("button", { name: "Upload" }));
+
+    await waitFor(() => {
+      expect(api.fetchMyWardrobeItems).toHaveBeenLastCalledWith({
+        source: "uploaded",
+        force: true,
+      });
+    });
+    await waitFor(() => {
+      expect(
+        screen.queryByText("Upload personal item photos"),
+      ).not.toBeInTheDocument();
+    });
+    expect(screen.getByRole("button", { name: "Liked only" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+    expect(
+      JSON.parse(
+        window.localStorage.getItem(WARDROBE_FILTERS_STORAGE_KEY) || "{}",
+      ),
+    ).toEqual({ filter: "uploaded", likedOnly: false });
   });
 
   test("uploads selected wardrobe photos and refreshes uploaded items", async () => {
@@ -814,6 +1109,46 @@ describe("WardrobeScreen", () => {
     await user.click(screen.getByRole("menuitem", { name: "Like" }));
 
     expect(likedApi.likeItem).toHaveBeenCalledWith("https://example.com/1");
+  });
+
+  test("removes an unliked item from the visible list while liked-only is active", async () => {
+    const user = userEvent.setup();
+    api.fetchMyWardrobeItems.mockResolvedValueOnce({
+      items: [
+        {
+          id: "liked-shirt",
+          name: "Liked Shirt",
+          url: "https://example.com/liked-shirt",
+          imageUrl: "https://example.com/liked-shirt.jpg",
+          isLiked: true,
+        },
+        {
+          id: "plain-shirt",
+          name: "Plain Shirt",
+          url: "https://example.com/plain-shirt",
+          imageUrl: "https://example.com/plain-shirt.jpg",
+          isLiked: false,
+        },
+      ],
+    });
+    renderScreen();
+
+    await screen.findByTestId("wardrobe-card-liked-shirt");
+    await user.click(screen.getByRole("button", { name: "Liked only" }));
+
+    expect(screen.getByText("Liked Shirt")).toBeInTheDocument();
+    expect(screen.queryByText("Plain Shirt")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "open product menu" }));
+    await user.click(screen.getByRole("menuitem", { name: "Remove like" }));
+
+    expect(likedApi.removeItemLike).toHaveBeenCalledWith(
+      "https://example.com/liked-shirt",
+    );
+    await waitFor(() => {
+      expect(screen.queryByText("Liked Shirt")).not.toBeInTheDocument();
+    });
+    expect(screen.getByText("No liked items here")).toBeInTheDocument();
   });
 
   test("restores the previous item list when liking fails", async () => {
