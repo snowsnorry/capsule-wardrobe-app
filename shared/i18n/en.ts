@@ -243,6 +243,7 @@ const en = {
       selectedMax: "{count} of {max} selected · maximum reached",
       type: "Type:",
       typesAll: "All",
+      likedOnly: "Liked only",
       empty: "No personal items found.",
       unnamed: "{id}",
       remove: "Remove {name}",
@@ -374,7 +375,7 @@ const en = {
     filters: {
       all: "All",
       uploaded: "Uploaded",
-      fromCatalog: "From Catalog",
+      fromCatalog: "Catalog",
       likedOnly: "Liked only",
     },
     uploadDialog: {

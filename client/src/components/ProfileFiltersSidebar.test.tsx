@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import type { ComponentProps } from "react";
@@ -131,11 +131,13 @@ function renderSidebar(
           "{count} of {max} selected · maximum reached",
         "capsule.anchors.type": "Type:",
         "capsule.anchors.typesAll": "All",
+        "capsule.anchors.likedOnly": "Liked only",
         "capsule.anchors.empty": "No personal items found.",
         "capsule.anchors.apply": "Apply",
         "capsule.anchors.sources.all": "All",
         "capsule.anchors.sources.uploaded": "Uploaded",
         "capsule.anchors.sources.catalog": "Catalog",
+        "wardrobe.likedBadge": "Liked",
         "filters.apply": "Apply",
         "filters.applyDisabledHint": "To apply filters, choose: {items}.",
         "filters.applyDisabledUnchangedHint": "Filters have not changed.",
@@ -420,6 +422,64 @@ describe("ProfileFiltersSidebar", () => {
     await user.click(screen.getByRole("button", { name: "Apply" }));
 
     expect(onSelectAnchorWardrobeItemIds).toHaveBeenCalledWith(["W12"]);
+  });
+
+  test("combines anchor picker source and liked-only filters", async () => {
+    const user = userEvent.setup();
+    fetchMyWardrobeItemsMock.mockResolvedValue({
+      items: [
+        {
+          id: 12,
+          name: "Liked uploaded shirt",
+          url: "https://example.com/uploaded-shirt",
+          category: "top",
+          isLiked: true,
+          source: "uploaded",
+        },
+        {
+          id: 13,
+          name: "Plain uploaded shirt",
+          url: "wardrobe://13",
+          category: "top",
+          isLiked: false,
+          source: "uploaded",
+        },
+        {
+          id: 14,
+          name: "Liked catalog jacket",
+          url: "wardrobe://catalog-14",
+          category: "outerwear",
+          isLiked: true,
+          source: "from_catalog",
+        },
+      ],
+    });
+
+    renderSidebar();
+    await user.click(
+      screen.getByRole("button", { name: "Add personal items" }),
+    );
+
+    expect(await screen.findByText("Liked uploaded shirt")).toBeInTheDocument();
+    expect(
+      screen.getByRole("group", { name: "Item source" }),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Uploaded" }));
+    await user.click(screen.getByRole("button", { name: "Liked only" }));
+
+    const likedUploadedButton = screen.getByRole("button", {
+      name: /Liked uploaded shirt/,
+    });
+    expect(likedUploadedButton).toBeInTheDocument();
+    expect(within(likedUploadedButton).getByLabelText("Liked")).toBeVisible();
+    expect(screen.queryByText("Plain uploaded shirt")).not.toBeInTheDocument();
+    expect(screen.queryByText("Liked catalog jacket")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Catalog" }));
+
+    expect(screen.queryByText("Liked uploaded shirt")).not.toBeInTheDocument();
+    expect(screen.getByText("Liked catalog jacket")).toBeInTheDocument();
   });
 
   test("uses full-screen mobile surfaces for the anchor picker when requested", async () => {

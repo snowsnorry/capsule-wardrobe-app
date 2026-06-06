@@ -243,6 +243,7 @@ const ru = {
       selectedMax: "Выбрано {count} из {max} · достигнут максимум",
       type: "Тип:",
       typesAll: "Все",
+      likedOnly: "Только лайкнутые",
       empty: "Среди личных вещей нет подходящих вещей.",
       unnamed: "{id}",
       remove: "Убрать {name}",
@@ -377,7 +378,7 @@ const ru = {
     filters: {
       all: "Все",
       uploaded: "Загруженные",
-      fromCatalog: "Из каталога",
+      fromCatalog: "Каталог",
       likedOnly: "Только лайкнутые",
     },
     uploadDialog: {

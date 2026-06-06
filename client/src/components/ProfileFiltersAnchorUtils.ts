@@ -1,7 +1,32 @@
 import { translateOption } from "../i18n";
 import type { AnchorItem, Translate } from "./ProfileFiltersAnchorTypes";
 
-function getWardrobeItemSource(url: string): AnchorItem["source"] {
+function normalizeWardrobeItemSource(
+  source: unknown,
+): AnchorItem["source"] | null {
+  const value = String(source || "")
+    .trim()
+    .toLowerCase();
+  if (value === "uploaded") {
+    return "uploaded";
+  }
+  if (value === "from_catalog" || value === "catalog") {
+    return "catalog";
+  }
+  return null;
+}
+
+function getWardrobeItemSource(
+  item: Record<string, unknown>,
+  url: string,
+): AnchorItem["source"] {
+  const explicitSource =
+    normalizeWardrobeItemSource(item.source) ||
+    normalizeWardrobeItemSource(item.sourceType) ||
+    normalizeWardrobeItemSource(item.itemSource);
+  if (explicitSource) {
+    return explicitSource;
+  }
   return url.startsWith("wardrobe://") ? "uploaded" : "catalog";
 }
 
@@ -31,7 +56,8 @@ export function toAnchorItem(item: unknown): AnchorItem | null {
       getStringValue(source, "rawImageUrl") ||
       null,
     category: getStringValue(source, "category") || null,
-    source: getWardrobeItemSource(url),
+    isLiked: source.isLiked === true,
+    source: getWardrobeItemSource(source, url),
   };
 }
 

@@ -2,19 +2,15 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Box,
-  Chip,
   CircularProgress,
   Dialog,
   DialogContent,
   DialogTitle,
   IconButton,
-  MenuItem,
-  Select,
   Stack,
   Typography,
 } from "@mui/material";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
-import { translateOption } from "../i18n";
 import {
   CATEGORY_ORDER,
   sortWardrobeItems,
@@ -39,6 +35,7 @@ import {
 } from "./ProfileFiltersAnchorStyles";
 import AnchorPickerCard from "./ProfileFiltersAnchorPickerCard";
 import AnchorDialogActions from "./ProfileFiltersAnchorPickerDialogActions";
+import AnchorPickerFilters from "./ProfileFiltersAnchorPickerFilters";
 
 type WardrobeAnchorPickerDialogProps = {
   disabled: boolean;
@@ -69,18 +66,25 @@ export function WardrobeAnchorPickerDialog({
 }: WardrobeAnchorPickerDialogProps) {
   const [tempIds, setTempIds] = useState<string[]>([]);
   const [sourceFilter, setSourceFilter] = useState<AnchorSourceFilter>("all");
+  const [likedOnly, setLikedOnly] = useState(false);
   const [typeFilter, setTypeFilter] = useState<AnchorTypeFilter>("all");
 
   useEffect(() => {
     if (open) {
       setTempIds(normalizeSelectedIds(selectedIds));
       setSourceFilter("all");
+      setLikedOnly(false);
       setTypeFilter("all");
     }
   }, [open, selectedIds]);
 
   const typeOptions = useAnchorTypeOptions(items);
-  const visibleItems = useVisibleAnchorItems(items, sourceFilter, typeFilter);
+  const visibleItems = useVisibleAnchorItems(
+    items,
+    sourceFilter,
+    likedOnly,
+    typeFilter,
+  );
   const selectionText = getSelectionText(tempIds.length, t);
 
   return (
@@ -101,38 +105,23 @@ export function WardrobeAnchorPickerDialog({
         t={t}
         onClose={onClose}
       />
-      <DialogContent
-        dividers={!fullScreen}
-        sx={fullScreen ? mobileCapsuleDialogContentSx : undefined}
-      >
-        <Stack spacing={2.5}>
-          <AnchorPickerFilters
-            locale={locale}
-            sourceFilter={sourceFilter}
-            typeFilter={typeFilter}
-            typeOptions={typeOptions}
-            t={t}
-            onSourceChange={setSourceFilter}
-            onTypeChange={setTypeFilter}
-          />
-          {error ? <Alert severity="error">{error}</Alert> : null}
-          {isLoading ? (
-            <Box sx={loadingSx}>
-              <CircularProgress size={24} />
-            </Box>
-          ) : (
-            <AnchorPickerGrid
-              items={visibleItems}
-              locale={locale}
-              tempIds={tempIds}
-              t={t}
-              onToggle={(id) =>
-                setTempIds((current) => toggleAnchor(id, current))
-              }
-            />
-          )}
-        </Stack>
-      </DialogContent>
+      <AnchorDialogBody
+        error={error}
+        fullScreen={fullScreen}
+        isLoading={isLoading}
+        items={visibleItems}
+        likedOnly={likedOnly}
+        locale={locale}
+        sourceFilter={sourceFilter}
+        tempIds={tempIds}
+        typeFilter={typeFilter}
+        typeOptions={typeOptions}
+        t={t}
+        onLikedOnlyChange={setLikedOnly}
+        onSourceChange={setSourceFilter}
+        onToggle={(id) => setTempIds((current) => toggleAnchor(id, current))}
+        onTypeChange={setTypeFilter}
+      />
       <AnchorDialogActions
         disabled={disabled}
         fullScreen={fullScreen}
@@ -157,17 +146,19 @@ function useAnchorTypeOptions(items: AnchorItem[]) {
 function useVisibleAnchorItems(
   items: AnchorItem[],
   sourceFilter: AnchorSourceFilter,
+  likedOnly: boolean,
   typeFilter: AnchorTypeFilter,
 ) {
   return useMemo(() => {
     const filtered = items.filter((item) => {
       const sourceMatches =
         sourceFilter === "all" || item.source === sourceFilter;
+      const likedMatches = !likedOnly || item.isLiked;
       const typeMatches = typeFilter === "all" || item.category === typeFilter;
-      return sourceMatches && typeMatches;
+      return sourceMatches && likedMatches && typeMatches;
     });
     return typeFilter === "all" ? sortWardrobeItems(filtered) : filtered;
-  }, [items, sourceFilter, typeFilter]);
+  }, [items, likedOnly, sourceFilter, typeFilter]);
 }
 
 function getSelectionText(count: number, t: Translate) {
@@ -222,59 +213,72 @@ function AnchorDialogTitle({
   );
 }
 
-function AnchorPickerFilters({
+function AnchorDialogBody({
+  error,
+  fullScreen,
+  isLoading,
+  items,
+  likedOnly,
   locale,
+  onLikedOnlyChange,
   onSourceChange,
+  onToggle,
   onTypeChange,
   sourceFilter,
   t,
+  tempIds,
   typeFilter,
   typeOptions,
 }: {
+  error: string;
+  fullScreen: boolean;
+  isLoading: boolean;
+  items: AnchorItem[];
+  likedOnly: boolean;
   locale: string;
+  onLikedOnlyChange: (value: boolean) => void;
   onSourceChange: (value: AnchorSourceFilter) => void;
+  onToggle: (id: string) => void;
   onTypeChange: (value: AnchorTypeFilter) => void;
   sourceFilter: AnchorSourceFilter;
   t: Translate;
+  tempIds: string[];
   typeFilter: AnchorTypeFilter;
   typeOptions: string[];
 }) {
   return (
-    <Stack spacing={1.5}>
-      <Stack direction="row" sx={{ flexWrap: "wrap", gap: 1 }}>
-        {(["all", "uploaded", "catalog"] as AnchorSourceFilter[]).map(
-          (source) => (
-            <Chip
-              key={source}
-              clickable
-              color={sourceFilter === source ? "primary" : "default"}
-              label={t(`capsule.anchors.sources.${source}`)}
-              onClick={() => onSourceChange(source)}
-            />
-          ),
+    <DialogContent
+      dividers={!fullScreen}
+      sx={fullScreen ? mobileCapsuleDialogContentSx : undefined}
+    >
+      <Stack spacing={2.5}>
+        <AnchorPickerFilters
+          likedOnly={likedOnly}
+          locale={locale}
+          sourceFilter={sourceFilter}
+          typeFilter={typeFilter}
+          typeOptions={typeOptions}
+          t={t}
+          onLikedOnlyChange={onLikedOnlyChange}
+          onSourceChange={onSourceChange}
+          onTypeChange={onTypeChange}
+        />
+        {error ? <Alert severity="error">{error}</Alert> : null}
+        {isLoading ? (
+          <Box sx={loadingSx}>
+            <CircularProgress size={24} />
+          </Box>
+        ) : (
+          <AnchorPickerGrid
+            items={items}
+            locale={locale}
+            tempIds={tempIds}
+            t={t}
+            onToggle={onToggle}
+          />
         )}
       </Stack>
-      <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
-        <Typography variant="body2" color="text.secondary">
-          {t("capsule.anchors.type")}
-        </Typography>
-        <Select
-          size="small"
-          value={typeFilter}
-          onChange={(event) =>
-            onTypeChange(event.target.value as AnchorTypeFilter)
-          }
-          sx={{ minWidth: 180 }}
-        >
-          <MenuItem value="all">{t("capsule.anchors.typesAll")}</MenuItem>
-          {typeOptions.map((category) => (
-            <MenuItem key={category} value={category}>
-              {translateOption("categories", category, locale)}
-            </MenuItem>
-          ))}
-        </Select>
-      </Stack>
-    </Stack>
+    </DialogContent>
   );
 }
 

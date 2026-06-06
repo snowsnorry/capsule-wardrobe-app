@@ -257,7 +257,7 @@ const translations: Record<string, string> = {
     "Like items to keep them visible in this filtered view.",
   "wardrobe.filters.all": "All",
   "wardrobe.filters.uploaded": "Uploaded",
-  "wardrobe.filters.fromCatalog": "From Catalog",
+  "wardrobe.filters.fromCatalog": "Catalog",
   "wardrobe.filters.likedOnly": "Liked only",
   "wardrobe.uploadDialog.title": "Upload personal item photos",
   "wardrobe.uploadDialog.body":
@@ -380,7 +380,6 @@ describe("WardrobeScreen", () => {
     expect(
       screen.getByRole("group", { name: "Personal item source" }),
     ).toBeInTheDocument();
-    expect(screen.getByTestId("wardrobe-filter-divider")).toBeInTheDocument();
     expect(screen.getByTestId("wardrobe-placeholder")).toBeInTheDocument();
 
     expect(
@@ -418,9 +417,6 @@ describe("WardrobeScreen", () => {
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Liked only" }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByTestId("wardrobe-filter-divider"),
     ).not.toBeInTheDocument();
 
     await screen.findByTestId("wardrobe-card-wardrobe-1");

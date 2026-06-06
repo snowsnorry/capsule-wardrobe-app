@@ -14,6 +14,7 @@ export type AnchorItem = {
   name: string | null;
   imageUrl: string | null;
   category: string | null;
+  isLiked: boolean;
   source: "uploaded" | "catalog";
 };
 

@@ -1,6 +1,5 @@
 import type { MouseEvent } from "react";
 import {
-  Box,
   IconButton,
   Stack,
   ToggleButton,
@@ -96,6 +95,7 @@ function WardrobeDesktopToolbar({
       <Stack direction="row" spacing={1} sx={desktopFiltersSx}>
         <ToggleButtonGroup
           exclusive
+          size="small"
           value={filter}
           onChange={(_event, value: WardrobeFilter | null) => {
             if (value) {
@@ -116,11 +116,6 @@ function WardrobeDesktopToolbar({
             </ToggleButton>
           ))}
         </ToggleButtonGroup>
-        <Box
-          aria-hidden="true"
-          data-testid="wardrobe-filter-divider"
-          sx={desktopFilterDividerSx}
-        />
         <WardrobeLikedOnlyToggle
           disabled={isLoading}
           likedOnly={likedOnly}
@@ -200,15 +195,6 @@ const desktopFiltersSx = {
   minWidth: 0,
 } as const;
 
-const desktopFilterDividerSx = {
-  flex: "0 0 auto",
-  width: "1px",
-  height: 32,
-  mx: 0.25,
-  bgcolor: "divider",
-  opacity: 0.85,
-} as const;
-
 const mobileActionsSx = {
   alignItems: "center",
   justifyContent: "flex-end",
@@ -232,24 +218,13 @@ const filterGroupSx = {
   maxWidth: "100%",
   overflowX: "auto",
   "& .MuiToggleButton-root": {
-    px: 1.5,
-    py: 0.65,
-    borderRadius: "var(--cw-radius-pill)",
+    minWidth: 44,
+    height: 32,
+    fontSize: 14,
+    px: 1.25,
     textTransform: "none",
     fontWeight: 700,
     whiteSpace: "nowrap",
-    "&.Mui-selected": {
-      bgcolor: "primary.main",
-      color: "primary.contrastText",
-      "&:hover": {
-        bgcolor: "primary.dark",
-      },
-    },
-  },
-  "& .MuiToggleButtonGroup-grouped": {
-    border: "1px solid",
-    borderColor: "divider",
-    mx: 0.25,
   },
 } as const;
 
