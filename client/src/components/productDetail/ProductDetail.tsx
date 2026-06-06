@@ -1,6 +1,7 @@
 import type { ReactElement } from "react";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import BookmarkBorderRoundedIcon from "@mui/icons-material/BookmarkBorderRounded";
+import FavoriteRoundedIcon from "@mui/icons-material/FavoriteRounded";
 import OpenInNewRoundedIcon from "@mui/icons-material/OpenInNewRounded";
 import PhotoCameraOutlinedIcon from "@mui/icons-material/PhotoCameraOutlined";
 import { Box, IconButton, Stack, Typography } from "@mui/material";
@@ -231,6 +232,7 @@ function ProductTitle({
   productUrl: string | null;
   t: ProductDetailProps["t"];
 }) {
+  const likedLabel = t("wardrobe.likedBadge");
   const savedLabel = t("wardrobe.savedBadge");
   const uploadedLabel = t("wardrobe.filters.uploaded");
   const linkProps =
@@ -257,6 +259,7 @@ function ProductTitle({
         variant="h5"
         sx={{ color: "inherit", display: "block", overflowWrap: "anywhere" }}
       >
+        {item.isLiked ? <LikedTitleIcon label={likedLabel} /> : null}
         {item.source === "uploaded" ? (
           <UploadedWardrobeTitleIcon label={uploadedLabel} />
         ) : isSaved ? (
@@ -295,6 +298,23 @@ function ProductHeaderExternalLink({
     >
       <OpenInNewRoundedIcon />
     </IconButton>
+  );
+}
+
+function LikedTitleIcon({ label }: { label: string }) {
+  return (
+    <FavoriteRoundedIcon
+      className="catalog-detail-liked-icon"
+      titleAccess={label}
+      aria-label={label}
+      sx={{
+        color: "var(--cw-color-liked-indicator, #c62828)",
+        display: "inline-block",
+        fontSize: 20,
+        mr: 0.6,
+        verticalAlign: "-0.12em",
+      }}
+    />
   );
 }
 

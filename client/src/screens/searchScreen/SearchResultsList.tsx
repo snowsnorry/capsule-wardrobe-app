@@ -178,11 +178,24 @@ function ResultListItem({
           onSelectResult(item);
         }
       }}
-      sx={getResultListItemSx(isLiked, isSelected)}
+      sx={getResultListItemSx(isSelected)}
       data-mobile-result={isMobile ? "true" : undefined}
     >
-      {isLiked ? <LikedIndicator label={likedLabel} /> : null}
       <Typography variant="body1" sx={{ fontWeight: 700 }}>
+        {isLiked ? (
+          <FavoriteRoundedIcon
+            className="catalog-result-liked-icon"
+            titleAccess={likedLabel}
+            aria-label={likedLabel}
+            sx={{
+              color: "var(--cw-color-liked-indicator, #c62828)",
+              display: "inline-block",
+              fontSize: 16,
+              mr: 0.45,
+              verticalAlign: "-0.16em",
+            }}
+          />
+        ) : null}
         {isSavedToWardrobe ? (
           <BookmarkBorderRoundedIcon
             className="catalog-result-saved-icon"
@@ -216,9 +229,9 @@ function ResultListItem({
   );
 }
 
-function getResultListItemSx(isLiked: boolean, isSelected: boolean) {
+function getResultListItemSx(isSelected: boolean) {
   return {
-    pl: isLiked ? "44px" : "10px",
+    pl: "10px",
     pr: 0.5,
     py: 1.1,
     position: "relative",
@@ -240,30 +253,6 @@ function getResultListItemSx(isLiked: boolean, isSelected: boolean) {
       boxShadow: "inset 0 0 0 2px var(--cw-color-primary)",
     },
   } as const;
-}
-
-function LikedIndicator({ label }: { label: string }) {
-  return (
-    <Box
-      aria-label={label}
-      title={label}
-      sx={{
-        position: "absolute",
-        top: 10,
-        left: 10,
-        width: 28,
-        height: 28,
-        borderRadius: "50%",
-        display: "grid",
-        placeItems: "center",
-        color: "var(--cw-color-liked-indicator, #c62828)",
-        bgcolor: "background.paper",
-        boxShadow: "var(--cw-shadow-image-toggle)",
-      }}
-    >
-      <FavoriteRoundedIcon sx={{ fontSize: 16 }} />
-    </Box>
-  );
 }
 
 export default SearchResultsList;

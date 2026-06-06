@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import type { ReactElement } from "react";
-import FavoriteRoundedIcon from "@mui/icons-material/FavoriteRounded";
 import {
   Box,
   ToggleButton,
@@ -66,7 +65,6 @@ function ProductDialogImagePane({
               onChange={setImageMode}
             />
           ) : null}
-          {isLiked ? <LikedIndicator label={t("wardrobe.likedBadge")} /> : null}
         </>
       ) : (
         <Typography
@@ -116,19 +114,6 @@ function ProductImageVersionToggle({
   );
 }
 
-function LikedIndicator({ label }: { label: string }) {
-  return (
-    <Box
-      className="product-detail-liked-indicator"
-      aria-label={label}
-      title={label}
-      sx={likedIndicatorSx}
-    >
-      <FavoriteRoundedIcon sx={{ fontSize: 18 }} />
-    </Box>
-  );
-}
-
 function imagePaneSx(imageSurface: string, edge: "right" | "top") {
   return {
     minHeight: 0,
@@ -158,33 +143,20 @@ function imageVersionToggleSx(isShifted: boolean) {
   return {
     position: "absolute",
     top: 12,
-    left: isShifted ? 52 : 12,
+    left: isShifted ? 48 : 12,
+    height: 28,
     bgcolor: "background.paper",
     boxShadow: "var(--cw-shadow-image-toggle)",
     "& .MuiToggleButton-root": {
+      height: 28,
       px: 1.25,
-      py: 0.45,
+      py: 0,
       fontSize: 12,
       fontWeight: 700,
       lineHeight: 1.2,
     },
   } as const;
 }
-
-const likedIndicatorSx = {
-  position: "absolute",
-  top: 12,
-  left: 12,
-  width: 36,
-  height: 36,
-  borderRadius: "50%",
-  display: "grid",
-  placeItems: "center",
-  color: "var(--cw-color-liked-indicator, #c62828)",
-  bgcolor: "background.paper",
-  boxShadow: "var(--cw-shadow-image-toggle)",
-  zIndex: 2,
-} as const;
 
 export { ProductImageVersionToggle };
 export default ProductDialogImagePane;

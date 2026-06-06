@@ -377,6 +377,27 @@ describe("ClothingCard", () => {
     expect(category).toHaveClass("wardrobe-card-category-category");
   });
 
+  test("renders liked indicator as a polished product-image overlay", () => {
+    const { container } = renderCard({
+      item: { ...item, isLiked: true },
+    });
+
+    const likedIndicator = container.querySelector(
+      ".wardrobe-card-liked-indicator",
+    );
+
+    expect(screen.getByLabelText("wardrobe.likedBadge")).toBeInTheDocument();
+    expect(likedIndicator).toHaveStyle({
+      width: "28px",
+      height: "28px",
+      color: "var(--cw-color-liked-indicator, #c62828)",
+    });
+    expect(likedIndicator?.querySelector("svg")).toHaveStyle({
+      fontSize: "17px",
+      transform: "translateY(0.5px)",
+    });
+  });
+
   test("omits the brand line when the product brand is blank", () => {
     const { container } = renderCard({
       item: { ...item, brand: "   " },

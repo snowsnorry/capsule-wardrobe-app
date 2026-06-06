@@ -201,7 +201,12 @@ describe("ProductDetailDialog", () => {
     });
 
     const image = screen.getByRole("img", { name: "Uploaded Coat" });
+    const toggle = screen.getByLabelText("Uploaded item image version");
     expect(image).toHaveAttribute("src", "https://example.com/coat_clean.png");
+    expect(toggle).toHaveStyle({ height: "28px" });
+    expect(screen.getByRole("button", { name: "AI" })).toHaveStyle({
+      height: "28px",
+    });
     expect(screen.getByRole("button", { name: "AI" })).toHaveAttribute(
       "aria-pressed",
       "true",
@@ -288,6 +293,9 @@ describe("ProductDetailDialog", () => {
     });
 
     expect(await screen.findByLabelText("Liked")).toBeInTheDocument();
+    expect(
+      document.querySelector(".product-detail-liked-indicator"),
+    ).not.toBeInTheDocument();
   });
 
   test("loads uploaded wardrobe details by wardrobe URL", async () => {

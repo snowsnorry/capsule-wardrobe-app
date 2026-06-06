@@ -88,6 +88,13 @@ describe("theme contract", () => {
     expect(rootVars["--cw-color-primary"]).toBe(theme.palette.primary.main);
     expect(rootVars["--cw-radius-card"]).toBe(appThemeTokens.radii.card);
     expect(rootVars["--cw-color-product-image-wash"]).toBe("#f7f5f1");
+    expect(rootVars["--cw-color-liked-indicator"]).toBe("#d24343");
+    expect(rootVars["--cw-color-liked-indicator-bg"]).toBe(
+      "rgba(255, 253, 249, 0.96)",
+    );
+    expect(rootVars["--cw-color-liked-indicator-border"]).toBe(
+      "rgba(17, 36, 34, 0.08)",
+    );
     expect(rootVars["--cw-shadow-wardrobe-card"]).toBe(
       "0 1px 6px rgba(17, 36, 34, 0.055)",
     );
@@ -97,6 +104,9 @@ describe("theme contract", () => {
     expect(rootVars["--cw-chart-facet-active-0"]).toMatch(/^oklch\(/);
     expect(darkRootVars["--cw-color-primary"]).toBe(
       darkTheme.palette.primary.main,
+    );
+    expect(darkRootVars["--cw-color-liked-indicator-bg"]).toBe(
+      "rgba(255, 253, 249, 0.96)",
     );
     expect(darkRootVars["--cw-chart-grid"]).toMatch(/^oklch\(/);
     expect(darkRootVars["--cw-chart-tooltip-bg"]).toMatch(/^oklch\(/);

@@ -20,6 +20,7 @@ const t = (key: string) => {
     "search.productActions": "Product actions",
     "search.untitled": "Untitled",
     "actions.cancel": "Cancel",
+    "wardrobe.likedBadge": "Liked",
     "wardrobe.savedBadge": "Saved",
     "wardrobe.filters.uploaded": "Uploaded",
     "wardrobe.removeConfirmTitle": "Remove from Personal items?",
@@ -203,18 +204,26 @@ describe("ProductDetail", () => {
     expect(screen.getByText("Button")).toBeInTheDocument();
   });
 
-  test("renders saved wardrobe icon before the product detail label", () => {
+  test("renders liked and saved wardrobe icons before the product detail label", () => {
     const { container } = renderProductDetail({
       id: "coat",
       name: "Coat",
+      isLiked: true,
       isSavedToWardrobe: true,
     });
 
+    expect(screen.getByLabelText("Liked")).toBeInTheDocument();
     expect(screen.getByLabelText("Saved")).toBeInTheDocument();
+    expect(
+      container.querySelector(".catalog-detail-liked-icon"),
+    ).toBeInTheDocument();
     expect(
       container.querySelector(".catalog-detail-saved-icon"),
     ).toBeInTheDocument();
     const titleHtml = container.innerHTML;
+    expect(titleHtml?.indexOf("catalog-detail-liked-icon")).toBeLessThan(
+      titleHtml?.indexOf("catalog-detail-saved-icon") ?? 0,
+    );
     expect(titleHtml?.indexOf("catalog-detail-saved-icon")).toBeLessThan(
       titleHtml?.indexOf("Coat") ?? 0,
     );
@@ -225,16 +234,25 @@ describe("ProductDetail", () => {
       id: "uploaded-coat",
       name: "Uploaded Coat",
       source: "uploaded",
+      isLiked: true,
       isSavedToWardrobe: true,
     });
 
+    expect(screen.getByLabelText("Liked")).toBeInTheDocument();
     expect(screen.getByLabelText("Uploaded")).toBeInTheDocument();
+    expect(
+      container.querySelector(".catalog-detail-liked-icon"),
+    ).toBeInTheDocument();
     expect(
       container.querySelector(".catalog-detail-uploaded-icon"),
     ).toBeInTheDocument();
     expect(
       container.querySelector(".catalog-detail-saved-icon"),
     ).not.toBeInTheDocument();
+    const titleHtml = container.innerHTML;
+    expect(titleHtml?.indexOf("catalog-detail-liked-icon")).toBeLessThan(
+      titleHtml?.indexOf("catalog-detail-uploaded-icon") ?? 0,
+    );
   });
 
   test("keeps detail groups on the detail surface token in dark mode", () => {

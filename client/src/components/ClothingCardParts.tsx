@@ -441,7 +441,13 @@ function LikedIndicator({ label }: { label: string }) {
       title={label}
       sx={likedIndicatorSx}
     >
-      <FavoriteRoundedIcon sx={{ fontSize: 18 }} />
+      <FavoriteRoundedIcon
+        sx={{
+          display: "block",
+          fontSize: 17,
+          transform: "translateY(0.5px)",
+        }}
+      />
     </Box>
   );
 }
@@ -450,13 +456,14 @@ const likedIndicatorSx = {
   position: "absolute",
   top: 12,
   left: 12,
-  width: 36,
-  height: 36,
+  width: 28,
+  height: 28,
   borderRadius: "50%",
   display: "grid",
   placeItems: "center",
   color: "var(--cw-color-liked-indicator, #c62828)",
-  bgcolor: "background.paper",
+  backgroundColor: "var(--cw-color-liked-indicator-bg, #fffdf9)",
+  border: "1px solid var(--cw-color-liked-indicator-border, #ebe8e2)",
   boxShadow: "var(--cw-shadow-image-toggle)",
   zIndex: 2,
   pointerEvents: "none",

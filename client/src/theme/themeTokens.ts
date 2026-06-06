@@ -80,6 +80,9 @@ const paletteTokens = {
     productPlaceholderMarker: "rgba(17, 36, 34, 0.54)",
     productPlaceholderMuted: "rgba(17, 36, 34, 0.32)",
     productSavedIndicator: "#15766f",
+    productLikedIndicator: "#d24343",
+    productLikedIndicatorBg: "rgba(255, 253, 249, 0.96)",
+    productLikedIndicatorBorder: "rgba(17, 36, 34, 0.08)",
     productSelectionScrim: "rgba(0, 0, 0, 0.38)",
     placeholderImageGradient:
       "linear-gradient(110deg, #ece8e2 8%, #f6f4f1 18%, #ece8e2 33%)",
@@ -161,6 +164,9 @@ const paletteTokens = {
     productPlaceholderMarker: "rgba(17, 36, 34, 0.54)",
     productPlaceholderMuted: "rgba(17, 36, 34, 0.32)",
     productSavedIndicator: "#15766f",
+    productLikedIndicator: "#d24343",
+    productLikedIndicatorBg: "rgba(255, 253, 249, 0.96)",
+    productLikedIndicatorBorder: "rgba(17, 36, 34, 0.08)",
     productSelectionScrim: "rgba(0, 0, 0, 0.38)",
     placeholderImageGradient:
       "linear-gradient(110deg, #ece8e2 8%, #f6f4f1 18%, #ece8e2 33%)",
