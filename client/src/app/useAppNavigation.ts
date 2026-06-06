@@ -8,7 +8,7 @@ import { getAppRouteState, getShareIdFromPath } from "./appRouting";
 
 function getNavigationPath(nextApp: Exclude<AppRoute, "share">): string {
   if (nextApp === "wardrobe") {
-    return "/wardrobe";
+    return "/personal-items";
   }
 
   if (nextApp === "explore") {
@@ -16,21 +16,6 @@ function getNavigationPath(nextApp: Exclude<AppRoute, "share">): string {
   }
 
   return nextApp === "statistics" ? "/statistics" : "/";
-}
-
-function canonicalizeLegacyWardrobePath() {
-  if (
-    typeof window === "undefined" ||
-    !["/my-wardrobe", "/my-wardrobe/"].includes(window.location.pathname)
-  ) {
-    return;
-  }
-
-  window.history.replaceState(
-    {},
-    "",
-    `/wardrobe${window.location.search}${window.location.hash}`,
-  );
 }
 
 // eslint-disable-next-line max-lines-per-function
@@ -54,11 +39,9 @@ export function useAppNavigation() {
       return undefined;
     }
 
-    canonicalizeLegacyWardrobePath();
     setRouteState(getAppRouteState(window.location.pathname));
 
     const handlePopState = () => {
-      canonicalizeLegacyWardrobePath();
       const nextRoute = getAppRouteState(window.location.pathname);
       setRouteState(nextRoute);
       const nextApp = nextRoute.appRoute;

@@ -70,7 +70,7 @@ describe("useAppNavigation", () => {
     ["/capsule", "capsule", "", "create"],
     ["/capsule/capsule%201", "capsule", "capsule 1", "open"],
     ["/explore", "explore", "", "empty"],
-    ["/wardrobe", "wardrobe", "", "empty"],
+    ["/personal-items", "wardrobe", "", "empty"],
     ["/statistics", "statistics", "", "empty"],
   ];
 
@@ -88,15 +88,6 @@ describe("useAppNavigation", () => {
       expect(screen.getByTestId("capsule-route-mode")).toHaveTextContent(mode);
     },
   );
-
-  test("soft redirects the legacy wardrobe path to the canonical route", () => {
-    window.history.replaceState({}, "", "/my-wardrobe");
-
-    render(<Harness />);
-
-    expect(screen.getByTestId("route")).toHaveTextContent("wardrobe");
-    expect(window.location.pathname).toBe("/wardrobe");
-  });
 
   test("navigates to product detail search state and clears it when leaving explore", () => {
     render(<Harness />);
@@ -117,7 +108,7 @@ describe("useAppNavigation", () => {
     expect(screen.getByTestId("auto-open")).toHaveTextContent("false");
 
     fireEvent.click(screen.getByRole("button", { name: "wardrobe" }));
-    expect(window.location.pathname).toBe("/wardrobe");
+    expect(window.location.pathname).toBe("/personal-items");
     expect(screen.getByTestId("route")).toHaveTextContent("wardrobe");
   });
 

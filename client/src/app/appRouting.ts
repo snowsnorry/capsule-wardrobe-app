@@ -36,12 +36,7 @@ export function getAppRoute(pathname = "/"): AppRoute {
   if (pathname.startsWith("/share/")) {
     return "share";
   }
-  if (
-    pathname === "/wardrobe" ||
-    pathname === "/wardrobe/" ||
-    pathname === "/my-wardrobe" ||
-    pathname === "/my-wardrobe/"
-  ) {
+  if (pathname === "/personal-items" || pathname === "/personal-items/") {
     return "wardrobe";
   }
   if (pathname === "/explore" || pathname === "/explore/") {

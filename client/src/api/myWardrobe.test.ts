@@ -80,7 +80,7 @@ describe("my wardrobe api", () => {
     requestApi.requestJson.mockResolvedValue({ ok: true, items: [] });
     fetchEventSourceApi.fetchEventSource.mockReset();
     vi.stubGlobal("URL", {
-      createObjectURL: vi.fn(() => "blob:my-wardrobe-pdf"),
+      createObjectURL: vi.fn(() => "blob:personal-items-pdf"),
       revokeObjectURL: vi.fn(),
     });
   });
@@ -382,7 +382,7 @@ describe("my wardrobe api", () => {
     expect(anchorMethods.click).toHaveBeenCalledTimes(1);
     expect(anchorMethods.remove).toHaveBeenCalledTimes(1);
     expect(createdAnchor?.download).toBe("Personal items.pdf");
-    expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:my-wardrobe-pdf");
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:personal-items-pdf");
   });
 
   test("downloadMyWardrobePdf surfaces endpoint errors", async () => {

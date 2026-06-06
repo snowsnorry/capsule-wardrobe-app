@@ -141,7 +141,8 @@ function getDownloadFilenameFromDisposition(
     /filename\s*=\s*"([^"]+)"|filename\s*=\s*([^;]+)/i,
   );
   return (
-    (filenameMatch?.[1] || filenameMatch?.[2] || "").trim() || "my-wardrobe.pdf"
+    (filenameMatch?.[1] || filenameMatch?.[2] || "").trim() ||
+    "personal-items.pdf"
   );
 }
 

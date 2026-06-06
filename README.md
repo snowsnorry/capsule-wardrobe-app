@@ -196,7 +196,7 @@ That server uses in-memory auth, profile, capsule, search, generation, image, an
 - frontend: `http://localhost:5173`
 - backend: `http://localhost:3000`
 
-In local development, Vite proxies `/api` to the Express server and strips that prefix, so frontend calls to `/api/auth`, `/api/profile`, `/api/capsules`, `/api/shared-capsules`, `/api/search`, and `/api/wardrobe` reach the matching backend route groups. Direct `/auth`, `/profile`, `/wardrobe`, and `/health` proxy entries are also present for compatibility.
+In local development, Vite proxies `/api` to the Express server and strips that prefix, so frontend calls to `/api/auth`, `/api/profile`, `/api/capsules`, `/api/shared-capsules`, `/api/search`, and `/api/wardrobe` reach the matching backend route groups. Direct `/auth`, `/profile`, `/wardrobe/filters`, `/wardrobe/items`, and `/health` proxy entries are also present for compatibility.
 
 ## Build, start, validation
 

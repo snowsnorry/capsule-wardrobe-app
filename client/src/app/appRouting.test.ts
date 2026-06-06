@@ -9,6 +9,9 @@ describe("appRouting", () => {
     ["/capsule/capsule-1", "capsule", "capsule-1", "open"],
     ["/capsule/capsule%201/", "capsule", "capsule 1", "open"],
     ["/explore", "explore", "", "empty"],
+    ["/personal-items", "wardrobe", "", "empty"],
+    ["/personal-items/", "wardrobe", "", "empty"],
+    ["/wardrobe", "capsule", "", "empty"],
   ])("parses %s", (pathname, appRoute, capsuleRouteId, capsuleRouteMode) => {
     expect(getAppRouteState(pathname)).toEqual({
       appRoute,
