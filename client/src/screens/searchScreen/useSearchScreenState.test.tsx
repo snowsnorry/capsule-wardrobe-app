@@ -28,6 +28,9 @@ const t = (key: string, params?: Record<string, unknown>) => {
     "search.filters.closureType": "Closure",
     "search.filters.price": "Price",
   };
+  if (key === "search.filters.query") {
+    return `Search: ${params?.query}`;
+  }
   if (key === "search.resultsCount") {
     return `${params?.count} results`;
   }
@@ -123,6 +126,15 @@ describe("useSearchScreenState", () => {
     await waitForBootstrap();
 
     expect(result.current.draftState.query).toBe("linen shirt");
+    expect(result.current.activeChips).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          field: "query",
+          label: "Search: linen shirt",
+          value: "linen shirt",
+        }),
+      ]),
+    );
     expect(result.current.formattedTotal).toBe("55");
     expect(result.current.selectedItem?.id).toBe("1");
     expect(searchApi.fetchSearchOptions).toHaveBeenCalledWith({ force: true });
@@ -187,6 +199,18 @@ describe("useSearchScreenState", () => {
         priceRange: { min: 10, max: 150 },
       }),
     ).toEqual({ ...currentState, likedOnly: false, page: 1 });
+    expect(
+      getSearchStateWithoutChip({
+        chip: {
+          key: "query:linen shirt",
+          field: "query",
+          label: "Search: linen shirt",
+          value: "linen shirt",
+        },
+        currentState,
+        priceRange: { min: 10, max: 150 },
+      }),
+    ).toEqual({ ...currentState, query: "", page: 1 });
   });
 
   test("uses initial query handoff instead of saved filters on first search", async () => {
@@ -218,6 +242,45 @@ describe("useSearchScreenState", () => {
       closureType: [],
       page: 1,
     });
+  });
+
+  test("builds a compact query chip and clears the search string when deleting it", async () => {
+    searchApi.fetchSavedSearch.mockResolvedValueOnce(
+      makeSavedSearch({
+        query:
+          "relaxed blue linen shirt for summer office days with a soft collar",
+      }),
+    );
+    const { result } = renderSearchState();
+    await waitForBootstrap();
+    vi.useFakeTimers();
+    searchApi.runSearch.mockClear();
+
+    const queryChip = result.current.activeChips.find(
+      (chip) => chip.field === "query",
+    );
+    expect(queryChip).toEqual(
+      expect.objectContaining({
+        field: "query",
+        label: "Search: relaxed blue linen shirt for summer office days...",
+      }),
+    );
+
+    act(() => {
+      result.current.deleteActiveChip(queryChip!);
+    });
+    expect(result.current.draftState.query).toBe("");
+    expect(searchApi.runSearch).not.toHaveBeenCalled();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300);
+    });
+    expect(searchApi.runSearch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        query: "",
+        page: 1,
+      }),
+    );
   });
 
   test("mobile auto-opens product detail only for a single handoff result with flag", async () => {
@@ -270,6 +333,15 @@ describe("useSearchScreenState", () => {
       result.current.changeQuery("blue cardigan");
     });
     expect(searchApi.runSearch).not.toHaveBeenCalled();
+    expect(result.current.draftState.query).toBe("blue cardigan");
+    expect(result.current.activeChips).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          field: "query",
+          label: "Search: linen shirt",
+        }),
+      ]),
+    );
 
     await act(async () => {
       await result.current.applyCurrentQuery();
@@ -279,6 +351,14 @@ describe("useSearchScreenState", () => {
         query: "blue cardigan",
         page: 1,
       }),
+    );
+    expect(result.current.activeChips).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          field: "query",
+          label: "Search: blue cardigan",
+        }),
+      ]),
     );
 
     searchApi.runSearch.mockClear();
@@ -330,7 +410,10 @@ describe("useSearchScreenState", () => {
     searchApi.runSearch.mockClear();
 
     act(() => {
-      result.current.deleteActiveChip(result.current.activeChips[0]);
+      const likedChip = result.current.activeChips.find(
+        (chip) => chip.field === "likedOnly",
+      );
+      result.current.deleteActiveChip(likedChip!);
     });
     expect(searchApi.runSearch).not.toHaveBeenCalled();
 

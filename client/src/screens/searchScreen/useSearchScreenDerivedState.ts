@@ -5,6 +5,7 @@ import type { SearchDraftState, SearchOptions } from "../../search/searchState";
 import type { SearchResultItem } from "./searchTypes";
 
 function useSearchScreenDerivedState({
+  appliedQuery,
   draftState,
   locale,
   options,
@@ -13,6 +14,7 @@ function useSearchScreenDerivedState({
   t,
   total,
 }: {
+  appliedQuery: string;
   draftState: SearchDraftState;
   locale: string;
   options: SearchOptions;
@@ -28,13 +30,16 @@ function useSearchScreenDerivedState({
   const activeChips = useMemo(
     () =>
       buildActiveFilterChips({
-        state: draftState,
+        state:
+          draftState.query === appliedQuery
+            ? draftState
+            : { ...draftState, query: appliedQuery },
         options,
         locale,
         t,
         translateOption,
       }),
-    [draftState, locale, options, t],
+    [appliedQuery, draftState, locale, options, t],
   );
   const selectedItem = useMemo(
     () =>

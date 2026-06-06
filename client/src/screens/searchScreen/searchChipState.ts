@@ -27,6 +27,10 @@ function getSearchStateWithoutChip({
     return { ...currentState, likedOnly: false, page: 1 };
   }
 
+  if (chip.field === "query") {
+    return { ...currentState, query: "", page: 1 };
+  }
+
   return { ...currentState, [chip.field]: [], page: 1 };
 }
 

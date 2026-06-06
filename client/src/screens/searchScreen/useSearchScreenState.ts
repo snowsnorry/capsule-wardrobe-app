@@ -22,10 +22,13 @@ import {
   markSearchResultRemovedFromWardrobe,
   markSearchResultSavedToWardrobe,
 } from "./searchResultSavedState";
+import { buildInitialSearchState } from "./searchInitialState";
 import { markSearchResultLikeState } from "./searchResultLikedState";
-import type { SearchResultItem, SearchStatus } from "./searchTypes";
-
-type SearchResponse = import("./searchTypes").SearchResponse;
+import type {
+  SearchResponse,
+  SearchResultItem,
+  SearchStatus,
+} from "./searchTypes";
 
 type UseSearchScreenStateParams = {
   initialQuery: string;
@@ -37,6 +40,7 @@ type UseSearchScreenStateParams = {
 
 type SearchRuntime = UseSearchScreenStateParams & {
   options: SearchOptions;
+  setAppliedQuery: (value: string) => void;
   setOptions: (value: SearchOptions) => void;
   setDraftState: (value: SearchDraftState) => void;
   setResults: Dispatch<SetStateAction<SearchResultItem[]>>;
@@ -58,6 +62,7 @@ function useSearchScreenState(params: UseSearchScreenStateParams) {
   const [draftState, setDraftState] = useState<SearchDraftState>(
     createSearchState(null, EMPTY_SEARCH_OPTIONS.priceRange),
   );
+  const [appliedQuery, setAppliedQuery] = useState("");
   const [results, setResults] = useState<SearchResultItem[]>([]);
   const [total, setTotal] = useState(0);
   const [selectedResultId, setSelectedResultId] = useState<
@@ -78,6 +83,7 @@ function useSearchScreenState(params: UseSearchScreenStateParams) {
   const runtime = {
     ...params,
     options,
+    setAppliedQuery,
     setOptions,
     setDraftState,
     setResults,
@@ -94,6 +100,7 @@ function useSearchScreenState(params: UseSearchScreenStateParams) {
   runtimeRef.current = runtime;
   const actions = createSearchActions(runtime);
   const derivedState = useSearchScreenDerivedState({
+    appliedQuery,
     draftState,
     locale: params.locale,
     options,
@@ -144,6 +151,7 @@ function createSearchActions(runtime: SearchRuntime) {
   ) => {
     runtime.draftStateRef.current = nextState;
     runtime.setDraftState(nextState);
+    runtime.setAppliedQuery(nextState.query);
     clearPendingSearch(runtime.debouncedSearchRef);
     if (debounce) {
       runtime.debouncedSearchRef.current = setTimeout(() => {
@@ -282,6 +290,7 @@ async function bootstrapSearch(
     );
     runtime.setOptions(nextOptions);
     runtime.setDraftState(nextState);
+    runtime.setAppliedQuery(nextState.query);
     runtime.draftStateRef.current = nextState;
     await runBootstrapSearch(runtime, nextState, isActive);
   } catch {
@@ -289,23 +298,6 @@ async function bootstrapSearch(
       runtime.setStatus({ loading: false, error: runtime.t("errors.generic") });
     }
   }
-}
-
-function buildInitialSearchState(
-  initialQuery: string,
-  nextOptions: SearchOptions,
-  savedSearch: unknown,
-): SearchDraftState {
-  const normalizedInitialQuery = String(initialQuery || "").trim();
-  return normalizedInitialQuery
-    ? createSearchState(
-        { query: normalizedInitialQuery, page: 1 },
-        nextOptions.priceRange,
-      )
-    : createSearchState(
-        savedSearch as Partial<SearchDraftState>,
-        nextOptions.priceRange,
-      );
 }
 
 async function runBootstrapSearch(

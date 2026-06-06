@@ -12,6 +12,13 @@ function formatSearchPrice(locale: string, value: number): string {
   }).format(value);
 }
 
+function formatSearchQueryPreview(query: string): string {
+  const normalizedQuery = query.trim().replace(/\s+/g, " ");
+  return normalizedQuery.length > 48
+    ? `${normalizedQuery.slice(0, 47)}...`
+    : normalizedQuery;
+}
+
 export function getFacetLabel({
   value,
   optionGroup,
@@ -73,6 +80,15 @@ export function buildActiveFilterChips({
       field: "likedOnly",
       value: "true",
       label: t("search.filters.likedItemsOnly"),
+    });
+  }
+  const queryPreview = formatSearchQueryPreview(state.query);
+  if (queryPreview) {
+    chips.push({
+      key: `query:${queryPreview}`,
+      field: "query",
+      value: state.query,
+      label: t("search.filters.query", { query: queryPreview }),
     });
   }
   pushSearchFacetChips(chips, {
