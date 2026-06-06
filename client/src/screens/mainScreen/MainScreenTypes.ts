@@ -27,6 +27,7 @@ export type MainScreenItem = {
   id?: string | number;
   url?: string;
   name?: string;
+  isLiked?: boolean | null;
   [key: string]: unknown;
 };
 
@@ -134,6 +135,10 @@ export type MainScreenProps = {
   ) => void;
   onRemoveFromMyWardrobe?: (item: MainScreenItem) => Promise<void> | void;
   onSaveToMyWardrobe?: (item: MainScreenItem) => Promise<void> | void;
+  onSetItemLike?: (
+    item: MainScreenItem,
+    isLiked: boolean,
+  ) => Promise<void> | void;
   onUpdateUploadedWardrobeItem?: (
     item: MainScreenItem,
     payload: UploadedWardrobeItemUpdatePayload,

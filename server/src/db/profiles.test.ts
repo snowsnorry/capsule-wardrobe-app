@@ -141,6 +141,7 @@ test("deleteProfileByEmail deletes account data and returns affected profile sta
     [],
     [],
     [],
+    [],
     [{ email: "person@example.com" }],
   ]);
   await expect(deleteProfileByEmail("person@example.com")).resolves.toBe(true);
@@ -154,12 +155,13 @@ test("deleteProfileByEmail deletes account data and returns affected profile sta
     "delete from capsules where email = ?",
     "delete from shared_capsules where profile_email = ?",
     "delete from wardrobe where profile_email = ?",
+    "delete from user_liked_items where user_email = ?",
     "delete from search where email = ?",
     "delete from profile_passkeys where profile_email = ?",
     "delete from profiles where email = ? returning email",
   ]);
 
-  useQueuedSql([[], [], [], [], [], [], [], [], [], [], [], []]);
+  useQueuedSql([[], [], [], [], [], [], [], [], [], [], [], [], []]);
   await expect(deleteProfileByEmail("missing@example.com")).resolves.toBe(
     false,
   );

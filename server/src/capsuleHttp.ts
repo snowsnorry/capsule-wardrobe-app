@@ -35,6 +35,7 @@ export function isApiPath(pathname = "") {
     pathname.startsWith("/shared-capsules") ||
     pathname.startsWith("/profile") ||
     pathname.startsWith("/wardrobe") ||
+    pathname.startsWith("/liked-items") ||
     pathname.startsWith("/health") ||
     pathname === "/search/options" ||
     pathname === "/search/me" ||

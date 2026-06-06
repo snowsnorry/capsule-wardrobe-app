@@ -14,12 +14,15 @@ import {
 } from "@mui/material";
 import BookmarkBorderRoundedIcon from "@mui/icons-material/BookmarkBorderRounded";
 import BookmarkRemoveOutlinedIcon from "@mui/icons-material/BookmarkRemoveOutlined";
+import FavoriteBorderRoundedIcon from "@mui/icons-material/FavoriteBorderRounded";
+import FavoriteRoundedIcon from "@mui/icons-material/FavoriteRounded";
 import ThumbDownAltOutlinedIcon from "@mui/icons-material/ThumbDownAltOutlined";
 import MobileProductCardContextMenu from "../../components/MobileProductCardContextMenu";
 import type {
   MobileContextMenuOriginRect,
   ProductMenuPresentation,
 } from "../../components/ClothingCardTypes";
+import { getCanonicalItemUrl, isLikedItem } from "../../utils/likedItemState";
 import { isSavedToWardrobe } from "../../utils/savedWardrobeState";
 import type { CapsuleMenuAnchor, MainScreenItem } from "./MainScreenTypes";
 
@@ -37,6 +40,10 @@ type ProductMenuProps = {
     props: {
       onRemoveFromMyWardrobe?: (item: MainScreenItem) => Promise<void> | void;
       onSaveToMyWardrobe?: (item: MainScreenItem) => Promise<void> | void;
+      onSetItemLike?: (
+        item: MainScreenItem,
+        isLiked: boolean,
+      ) => Promise<void> | void;
       onToggleRegenerationSelection: (item: MainScreenItem) => void;
       selectedAnchorWardrobeItemIds: string[];
     };
@@ -106,6 +113,7 @@ function ProductMenuItems({
   return (
     <>
       <RegenerationMenuItem menuProps={menuProps} onClose={onClose} t={t} />
+      <LikeMenuItem menuProps={menuProps} onClose={onClose} t={t} />
       {isUploadedItem ? null : (
         <>
           <WardrobeMenuItem
@@ -123,6 +131,35 @@ function ProductMenuItems({
         </>
       )}
     </>
+  );
+}
+
+function LikeMenuItem({ menuProps, onClose, t }: ProductMenuProps) {
+  const item = menuProps.productMenu.item;
+  const isLiked = isLikedItem(item);
+  const itemUrl = getCanonicalItemUrl(item);
+  if (!item || !itemUrl || !menuProps.props.onSetItemLike) {
+    return null;
+  }
+
+  return (
+    <MenuItem
+      onClick={() => {
+        onClose();
+        void menuProps.props.onSetItemLike?.(item, !isLiked);
+      }}
+    >
+      <ListItemIcon>
+        {isLiked ? (
+          <FavoriteRoundedIcon fontSize="small" />
+        ) : (
+          <FavoriteBorderRoundedIcon fontSize="small" />
+        )}
+      </ListItemIcon>
+      <ListItemText>
+        {t(isLiked ? "wardrobe.removeLike" : "wardrobe.like")}
+      </ListItemText>
+    </MenuItem>
   );
 }
 

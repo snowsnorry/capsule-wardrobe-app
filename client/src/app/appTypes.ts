@@ -58,6 +58,7 @@ export type OutfitSetSnapshot = {
 export type WardrobeItem = {
   id?: string | number;
   url?: string;
+  isLiked?: boolean | null;
   [key: string]: unknown;
 };
 

@@ -153,8 +153,9 @@ test("product MCP fetch lookups include wardrobe saved state by id and exact url
   expect(statements[0]).toMatch(/wardrobe\.profile_email =/i);
   expect(statements[1]).toMatch(/where products\.url =/i);
   expect(statements[1]).toMatch(/wardrobe\.source = 'from_catalog'/i);
-  expect(values[0]).toEqual(["person@example.com", "p1"]);
+  expect(values[0]).toEqual(["person@example.com", "person@example.com", "p1"]);
   expect(values[1]).toEqual([
+    "person@example.com",
     "person@example.com",
     "https://example.com/shirt",
   ]);

@@ -120,6 +120,7 @@ type AppRouteContentProps = SharedFilterProps & {
   onSaveCapsule: (capsuleId?: string) => Promise<void>;
   onRemoveFromMyWardrobe: (item: WardrobeItem) => Promise<void>;
   onSaveToMyWardrobe: (item: WardrobeItem) => Promise<void>;
+  onSetItemLike: (item: WardrobeItem, isLiked: boolean) => Promise<void>;
   onUpdateUploadedWardrobeItem: (
     item: WardrobeItem,
     payload: UploadedWardrobeItemUpdatePayload,
@@ -205,6 +206,7 @@ function MainRoute(props: AppRouteContentProps) {
       onShareCapsule={props.onShareCapsule}
       onRemoveFromMyWardrobe={props.onRemoveFromMyWardrobe}
       onSaveToMyWardrobe={props.onSaveToMyWardrobe}
+      onSetItemLike={props.onSetItemLike}
       onUpdateUploadedWardrobeItem={props.onUpdateUploadedWardrobeItem}
       onSearchCapsules={props.onSearchCapsules}
       items={props.profileItems || []}
@@ -299,6 +301,7 @@ export default function AppRouteContent(props: AppRouteContentProps) {
           autoOpenProductDetail={props.searchAutoOpenProductDetail}
           onRemoveFromMyWardrobe={props.onRemoveFromMyWardrobe}
           onSaveToMyWardrobe={props.onSaveToMyWardrobe}
+          onSetItemLike={props.onSetItemLike}
         />
       );
     }

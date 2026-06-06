@@ -192,6 +192,7 @@ test("wardrobe routes list and save user wardrobe items", async (t) => {
         id: "wardrobe-1",
         url: "https://example.com/1",
         source: "from_catalog",
+        isLiked: false,
       },
     ],
   });
@@ -210,6 +211,7 @@ test("wardrobe routes list and save user wardrobe items", async (t) => {
       id: "wardrobe-1",
       url: "https://example.com/1",
       source: "from_catalog",
+      isLiked: false,
     },
   });
 
@@ -410,6 +412,7 @@ test("wardrobe routes fetch uploaded item details for the authenticated user", a
       name: "Uploaded shirt",
       url: "wardrobe://uploaded-1",
       source: "uploaded",
+      isLiked: false,
       imageUrl: "https://example.com/uploaded.jpg",
       rawImageUrl: "https://example.com/uploaded-original.jpg",
       processingStatus: "ready",

@@ -4,8 +4,7 @@ import { neon } from "@neondatabase/serverless";
 export const SEARCH_PAGE_SIZE = 50;
 
 type JsonObject = Record<string, unknown>;
-type SqlCountResult = { count: number };
-export type SqlResultLike<TRow = unknown> = TRow[] | SqlCountResult;
+export type SqlResultLike<TRow = unknown> = TRow[] | { count: number };
 export type SqlClientLike = {
   <TRow = unknown>(
     strings: TemplateStringsArray,
@@ -125,6 +124,7 @@ export type ProductRow = {
 export type ProductSearchRow = ProductRow & {
   distance: number | string | null;
   isSavedToWardrobe?: boolean | null;
+  isLiked?: boolean | null;
 };
 
 export type ProductWithEmbeddingRow = ProductRow &

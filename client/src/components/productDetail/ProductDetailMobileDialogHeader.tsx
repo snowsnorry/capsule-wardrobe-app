@@ -13,6 +13,10 @@ type ProductDetailMobileDialogHeaderProps = {
   onClose: () => void;
   onEditUploadedWardrobeItem?: (item: ProductDetailItem) => void;
   onRemoveFromMyWardrobe?: (item: ProductDetailItem) => Promise<void> | void;
+  onSetItemLike?: (
+    item: ProductDetailItem,
+    isLiked: boolean,
+  ) => Promise<void> | void;
   onSaveToMyWardrobe?: (item: ProductDetailItem) => Promise<void> | void;
   t: (key: string, params?: Record<string, unknown>) => string;
 };
@@ -22,6 +26,7 @@ function ProductDetailMobileDialogHeader({
   onClose,
   onEditUploadedWardrobeItem,
   onRemoveFromMyWardrobe,
+  onSetItemLike,
   onSaveToMyWardrobe,
   t,
 }: ProductDetailMobileDialogHeaderProps) {
@@ -30,6 +35,7 @@ function ProductDetailMobileDialogHeader({
     actionItem &&
     (onSaveToMyWardrobe ||
       onRemoveFromMyWardrobe ||
+      onSetItemLike ||
       onEditUploadedWardrobeItem),
   );
   const isSaved =
@@ -61,6 +67,7 @@ function ProductDetailMobileDialogHeader({
             isSavedToWardrobe={isSaved}
             onEditUploadedWardrobeItem={onEditUploadedWardrobeItem}
             onRemoveFromMyWardrobe={onRemoveFromMyWardrobe}
+            onSetItemLike={onSetItemLike}
             onSaveToMyWardrobe={onSaveToMyWardrobe}
           />
         ) : null}

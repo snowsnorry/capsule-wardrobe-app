@@ -43,6 +43,7 @@ import type {
 } from "./appTypes";
 import type { SettingsSavePayload } from "../components/SettingsDialog";
 import type { UploadedWardrobeItemUpdatePayload } from "../api/myWardrobe";
+import { setItemLike } from "./likedItemActions";
 
 type UseAppHandlersOptions = {
   activeCapsuleId: string;
@@ -249,6 +250,8 @@ function buildAppHandlers({
       removeItemFromMyWardrobe(getAppActionContext(), item),
     handleSaveToMyWardrobe: async (item: WardrobeItem) =>
       saveItemToMyWardrobe(getAppActionContext(), item),
+    handleSetItemLike: async (item: WardrobeItem, isLiked: boolean) =>
+      setItemLike(getAppActionContext(), item, isLiked),
     handleUpdateUploadedWardrobeItem: async (
       item: WardrobeItem,
       payload: UploadedWardrobeItemUpdatePayload,

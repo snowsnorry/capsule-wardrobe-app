@@ -275,6 +275,106 @@ test("capsule creation rejects client-supplied state-bearing fields", async (t) 
   expect(result.json).toEqual({ error: "invalid_payload" });
 });
 
+test("capsule mutation responses annotate liked item state", async (t) => {
+  type CapsuleMutationJson = {
+    capsule: {
+      draft?: { data?: { wardrobe?: { items?: { isLiked?: boolean }[] } } };
+      saved?: { data?: { wardrobe?: { items?: { isLiked?: boolean }[] } } };
+    };
+  };
+  const getCapsule = (json: unknown) => (json as CapsuleMutationJson).capsule;
+  const likedUrl = "https://example.com/1";
+  const likedWardrobe = {
+    items: [{ url: likedUrl }, { url: "https://example.com/2" }],
+  };
+  const { baseUrl } = await startTestServer(t, {
+    overrides: {
+      listLikedItemUrlsImpl: async () => [likedUrl],
+      createCapsuleImpl: async (_email, payload) => ({
+        id: "capsule-created",
+        ...payload,
+        draft: {
+          ...payload.draft,
+          data: { wardrobe: likedWardrobe, rejectedUrls: [] },
+        },
+        status: "new",
+      }),
+      updateCapsuleSnapshotImpl: async (_email, id, draft) => ({
+        id,
+        draft: {
+          ...draft,
+          data: {
+            wardrobe: likedWardrobe,
+            rejectedUrls: draft?.data?.rejectedUrls || [],
+          },
+        },
+        saved: null,
+        status: "new",
+      }),
+      saveCapsuleImpl: async (_email, id) => ({
+        id,
+        draft: null,
+        saved: { filters: {}, data: { wardrobe: likedWardrobe } },
+        status: "saved",
+      }),
+    },
+  });
+
+  const create = await requestJson(baseUrl, "/capsules", {
+    method: "POST",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN,
+    body: { name: "Liked capsule", filters: {} },
+  });
+  expect(create.response.status).toBe(201);
+  expect(
+    getCapsule(create.json).draft?.data?.wardrobe?.items?.[0]?.isLiked,
+  ).toBe(true);
+  expect(
+    getCapsule(create.json).draft?.data?.wardrobe?.items?.[1]?.isLiked,
+  ).toBe(false);
+
+  const filters = await requestJson(baseUrl, "/capsules/capsule-1/filters", {
+    method: "PATCH",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN,
+    body: { filters: {} },
+  });
+  expect(filters.response.status).toBe(200);
+  expect(
+    getCapsule(filters.json).draft?.data?.wardrobe?.items?.[0]?.isLiked,
+  ).toBe(true);
+
+  const rejected = await requestJson(
+    baseUrl,
+    "/capsules/capsule-1/rejected-urls",
+    {
+      method: "PATCH",
+      origin: TEST_CLIENT_ORIGIN,
+      cookie: AUTH_COOKIE,
+      csrfToken: CSRF_TOKEN,
+      body: { rejectedUrls: [likedUrl] },
+    },
+  );
+  expect(rejected.response.status).toBe(200);
+  expect(
+    getCapsule(rejected.json).draft?.data?.wardrobe?.items?.[0]?.isLiked,
+  ).toBe(true);
+
+  const save = await requestJson(baseUrl, "/capsules/capsule-1/save", {
+    method: "POST",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN,
+  });
+  expect(save.response.status).toBe(200);
+  expect(getCapsule(save.json).saved?.data?.wardrobe?.items?.[0]?.isLiked).toBe(
+    true,
+  );
+});
+
 test("filters patch only accepts filters and resets draft data", async (t) => {
   let receivedDraft = null;
   const { baseUrl } = await startTestServer(t, {

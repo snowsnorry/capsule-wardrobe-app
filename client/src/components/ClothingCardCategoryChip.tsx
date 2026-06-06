@@ -6,6 +6,7 @@ type CategoryChipTone = "category" | "failed" | "needsReview";
 
 type ClothingCardBadgeLabels = {
   failedUploadLabel: string;
+  likedLabel: string;
   needsReviewLabel: string;
   savedToWardrobeLabel: string;
 };
@@ -63,9 +64,11 @@ function getCategoryChipColors(tone: CategoryChipTone) {
 
 function CategoryChip({
   label,
+  left = 12,
   tone,
 }: {
   label: string;
+  left?: number;
   tone: CategoryChipTone;
 }) {
   const colors = getCategoryChipColors(tone);
@@ -75,7 +78,7 @@ function CategoryChip({
       className="wardrobe-card-category-wrapper"
       direction="row"
       spacing={1}
-      sx={{ position: "absolute", top: 12, left: 12, zIndex: 1 }}
+      sx={{ position: "absolute", top: 12, left, zIndex: 1 }}
     >
       <Chip
         className={`wardrobe-card-category wardrobe-card-category-${tone}`}

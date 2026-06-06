@@ -13,6 +13,10 @@ type SearchScreenLayoutProps = {
   t: (key: string, params?: Record<string, unknown>) => string;
   locale: string;
   onRemoveFromMyWardrobe?: (item: SearchResultItem) => Promise<void> | void;
+  onSetItemLike?: (
+    item: SearchResultItem,
+    isLiked: boolean,
+  ) => Promise<void> | void;
   onSaveToMyWardrobe?: (item: SearchResultItem) => Promise<void> | void;
 };
 
@@ -126,6 +130,7 @@ function SearchScreenDesktop({
   t,
   locale,
   onRemoveFromMyWardrobe,
+  onSetItemLike,
   onSaveToMyWardrobe,
 }: SearchScreenLayoutProps): ReactElement {
   return (
@@ -145,6 +150,7 @@ function SearchScreenDesktop({
               t={t}
               locale={locale}
               onRemoveFromMyWardrobe={onRemoveFromMyWardrobe}
+              onSetItemLike={onSetItemLike}
               onSaveToMyWardrobe={onSaveToMyWardrobe}
             />
           </Box>

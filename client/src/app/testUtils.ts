@@ -80,6 +80,7 @@ export function createActionContext(
 ): AppActionContext {
   return {
     activeCapsuleId: "capsule-1",
+    activeCapsuleMeta: createTestCapsule(),
     applyCapsuleState: vi.fn(),
     applyWardrobeSnapshot: vi.fn(),
     bootstrapCapsules: vi.fn(async () => createTestProfile()),

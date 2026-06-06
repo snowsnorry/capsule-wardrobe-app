@@ -1292,6 +1292,7 @@ test("db integration shapes reduced profile persistence queries", async () => {
     [],
     [],
     [],
+    [],
     [{ email: "user@example.com" }],
   ]);
   setSqlClientOverride(sql);
@@ -1336,9 +1337,10 @@ test("db integration shapes reduced profile persistence queries", async () => {
   expect(calls[9].text).toMatch(/delete from capsules/i);
   expect(calls[10].text).toMatch(/delete from shared_capsules/i);
   expect(calls[11].text).toMatch(/delete from wardrobe/i);
-  expect(calls[12].text).toMatch(/delete from search/i);
-  expect(calls[13].text).toMatch(/delete from profile_passkeys/i);
-  expect(calls[14].text).toMatch(/delete from profiles/i);
+  expect(calls[12].text).toMatch(/delete from user_liked_items/i);
+  expect(calls[13].text).toMatch(/delete from search/i);
+  expect(calls[14].text).toMatch(/delete from profile_passkeys/i);
+  expect(calls[15].text).toMatch(/delete from profiles/i);
 });
 
 test("db integration checkDatabaseConnection selects current database metadata", async () => {

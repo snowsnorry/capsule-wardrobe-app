@@ -39,10 +39,12 @@ function createCapsule(overrides = {}) {
 
 function createHandlers(overrides = {}) {
   return createCapsuleEventHandlers({
+    annotateLikedItems: (value) => value,
     getCapsuleImpl: async () => createCapsule(),
     getOutfitSetImageJobImpl: () => null,
     getPartialRegenerationJobImpl: () => null,
     getWardrobeJobImpl: () => null,
+    listLikedItemUrlsImpl: async () => [],
     streamCapsuleEventsImpl: async (_req, res, { snapshot }) =>
       res.json({ snapshot }),
     updateCapsuleSnapshotImpl: async (_email, _capsuleId, snapshot) =>

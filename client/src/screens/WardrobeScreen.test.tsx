@@ -20,10 +20,15 @@ const api = vi.hoisted(() => ({
   uploadWardrobeImages: vi.fn(),
   uploadWardrobeUrls: vi.fn(),
 }));
+const likedApi = vi.hoisted(() => ({
+  likeItem: vi.fn(),
+  removeItemLike: vi.fn(),
+}));
 const useI18nMock = vi.hoisted(() => vi.fn());
 const useMediaQueryMock = vi.hoisted(() => vi.fn(() => false));
 
 vi.mock("../api/myWardrobe", () => api);
+vi.mock("../api/likedItems", () => likedApi);
 vi.mock("../i18n/useI18n", () => ({
   useI18n: useI18nMock,
 }));
@@ -228,8 +233,12 @@ const translations: Record<string, string> = {
   "wardrobe.uploadFailed": "Failed to upload personal item photos.",
   "wardrobe.urlUploadFailed": "Failed to upload product URLs.",
   "wardrobe.failedUploadBadge": "Failed",
+  "wardrobe.like": "Like",
+  "wardrobe.likedBadge": "Liked",
+  "wardrobe.likeFailed": "Failed to update like.",
   "wardrobe.noCategoryBadge": "No category",
   "wardrobe.needsReviewBadge": "Needs review",
+  "wardrobe.removeLike": "Remove like",
   "wardrobe.deleteUploaded": "Delete item",
   "wardrobe.deleteUploadedConfirmTitle": "Delete uploaded item?",
   "wardrobe.deleteUploadedConfirmBody":
@@ -321,6 +330,10 @@ describe("WardrobeScreen", () => {
     api.uploadWardrobeImages.mockResolvedValue({ ok: true, items: [] });
     api.uploadWardrobeUrls.mockReset();
     api.uploadWardrobeUrls.mockResolvedValue({ ok: true, items: [] });
+    likedApi.likeItem.mockReset();
+    likedApi.likeItem.mockResolvedValue({ ok: true });
+    likedApi.removeItemLike.mockReset();
+    likedApi.removeItemLike.mockResolvedValue({ ok: true });
     api.fetchMyWardrobeItems.mockResolvedValue({
       items: [
         {
@@ -789,6 +802,34 @@ describe("WardrobeScreen", () => {
         screen.queryByTestId("wardrobe-card-wardrobe-1"),
       ).not.toBeInTheDocument();
     });
+  });
+
+  test("likes an item from the card product menu", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+
+    await user.click(
+      await screen.findByRole("button", { name: "open product menu" }),
+    );
+    await user.click(screen.getByRole("menuitem", { name: "Like" }));
+
+    expect(likedApi.likeItem).toHaveBeenCalledWith("https://example.com/1");
+  });
+
+  test("restores the previous item list when liking fails", async () => {
+    const user = userEvent.setup();
+    likedApi.likeItem.mockRejectedValueOnce(new Error("network"));
+    renderScreen();
+
+    await user.click(
+      await screen.findByRole("button", { name: "open product menu" }),
+    );
+    await user.click(screen.getByRole("menuitem", { name: "Like" }));
+
+    expect(
+      await screen.findByText("Failed to update like."),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Like" })).toBeInTheDocument();
   });
 
   test("deletes an uploaded item from the card product menu", async () => {

@@ -37,7 +37,7 @@ test("search routes expose options, saved search, run, and stats", async (t) => 
   expect(productDetail.response.status).toBe(200);
   expect(productDetail.json).toEqual({
     ok: true,
-    item: { url: "https://example.com/1" },
+    item: { url: "https://example.com/1", isLiked: false },
   });
 
   const searchRun = await requestJson(baseUrl, "/search/run", {

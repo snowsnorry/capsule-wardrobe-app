@@ -81,6 +81,7 @@ import {
   consumeMcpAuthorizationCode,
   consumePasskeyChallenge,
   deletePasskeyByIdForEmail,
+  deleteLikedItemByUrl,
   deleteUploadedWardrobeItemById,
   deleteWardrobeItemFromCatalogByUrl,
   getPasskeyByCredentialId,
@@ -98,6 +99,7 @@ import {
   insertPasskeyChallenge,
   listWardrobeItemsByIdsForEmail,
   listWardrobeItemsByEmail,
+  listLikedItemUrlsByEmail,
   saveUploadedWardrobeItemsByEmail,
   saveWardrobeItemFromCatalogByUrl,
   updateUploadedWardrobeItemDetailsById,
@@ -106,6 +108,7 @@ import {
   pruneExpiredPasskeyChallenges,
   updatePasskeyAuthentication,
   upsertMcpGrant,
+  upsertLikedItemByUrl,
   revokeMcpRefreshToken,
   rotateMcpRefreshToken,
 } from "./db.js";
@@ -176,6 +179,10 @@ import { registerProfileMutationRoutes } from "./routes/profileMutationRoutes.js
 import { registerHealthImageRoutes } from "./routes/healthImageRoutes.js";
 import { registerSessionAuthRoutes } from "./routes/sessionAuthRoutes.js";
 import { registerWardrobeRoutes } from "./routes/wardrobeRoutes.js";
+import {
+  annotateLikedItems,
+  registerLikedItemsRoutes,
+} from "./routes/likedItemsRoutes.js";
 import { createMcpOAuthConfig } from "./mcp/oauthConfig.js";
 import { registerMcpOAuthRoutes } from "./mcp/oauthRoutes.js";
 import { registerMcpRoutes } from "./mcp/mcpRoutes.js";
@@ -247,6 +254,7 @@ function createAppDependencies(options: Record<string, unknown> = {}) {
     createProfileImpl: createProfile,
     createSessionImpl: createSession,
     deleteCapsuleImpl: deleteCapsule,
+    deleteLikedItemImpl: deleteLikedItemByUrl,
     deleteOutfitSetImageHandler: deleteOutfitSetImage,
     deletePasskeyByIdForEmailImpl: deletePasskeyByIdForEmail,
     deleteProfileImpl: deleteProfile,
@@ -288,6 +296,7 @@ function createAppDependencies(options: Record<string, unknown> = {}) {
     deleteWardrobeItemFromCatalogImpl: deleteWardrobeItemFromCatalogByUrl,
     hasActiveMcpGrantImpl: hasActiveMcpGrant,
     listPasskeysImpl: listPasskeysByEmail,
+    listLikedItemUrlsImpl: listLikedItemUrlsByEmail,
     listWardrobeItemsByIdsImpl: listWardrobeItemsByIdsForEmail,
     listWardrobeItemsImpl: listWardrobeItemsByEmail,
     listRecentCapsulesImpl: listRecentCapsules,
@@ -321,6 +330,7 @@ function createAppDependencies(options: Record<string, unknown> = {}) {
         deps: { listWardrobeItemsByIdsImpl: listWardrobeItemsByIdsForEmail },
       }),
     updatePasskeyAuthenticationImpl: updatePasskeyAuthentication,
+    upsertLikedItemImpl: upsertLikedItemByUrl,
     updateProfileImpl: updateProfile,
     updateProfileLocaleImpl: updateProfileLocale,
     upsertMcpGrantImpl: upsertMcpGrant,
@@ -365,10 +375,12 @@ function createAppRouteContext(deps) {
     getSessionImpl: deps.getSessionImpl,
   });
   const eventHandlers = createCapsuleEventHandlers({
+    annotateLikedItems,
     getCapsuleImpl: deps.getCapsuleImpl,
     getOutfitSetImageJobImpl: deps.getOutfitSetImageJobImpl,
     getPartialRegenerationJobImpl: deps.getPartialRegenerationJobImpl,
     getWardrobeJobImpl: deps.getWardrobeJobImpl,
+    listLikedItemUrlsImpl: deps.listLikedItemUrlsImpl,
     streamCapsuleEventsImpl: deps.streamCapsuleEventsImpl,
     updateCapsuleSnapshotImpl: deps.updateCapsuleSnapshotImpl,
   });
@@ -389,6 +401,7 @@ function createAppRouteContext(deps) {
     hasUnexpectedCapsuleFiltersFields,
     hasUnexpectedRejectedUrlsFields,
     annotateWardrobeSavedItems,
+    annotateLikedItems,
     isTruthyQueryFlag,
     normalizeCapsuleSnapshot,
     normalizeProfileSettingsPayload,
@@ -407,6 +420,7 @@ function registerDomainRoutes(app, routeContext) {
   registerMcpOAuthRoutes(app, routeContext);
   registerMcpRoutes(app, routeContext);
   registerProfileReadRoutes(app, routeContext);
+  registerLikedItemsRoutes(app, routeContext);
   registerWardrobeRoutes(app, routeContext);
   registerCapsuleReadRoutes(app, routeContext);
   registerCapsuleMutationRoutes(app, routeContext);

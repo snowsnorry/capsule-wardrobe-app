@@ -25,6 +25,7 @@ type ClothingCardItem = {
   season?: unknown;
   source?: string | null;
   processingStatus?: string | null;
+  isLiked?: boolean | null;
   isSavedToWardrobe?: boolean | null;
   savedToMyWardrobe?: boolean | null;
   wardrobeId?: string | number | null;

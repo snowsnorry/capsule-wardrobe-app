@@ -6,6 +6,10 @@ import type { DialogsProps } from "./MainScreenDialogsTypes";
 import { FiltersDialog, ImageDialog } from "./MainScreenMediaDialogs";
 import { SearchDialog, ShareDialog } from "./MainScreenUtilityDialogs";
 import { useI18n } from "../../i18n/useI18n";
+import {
+  getCanonicalItemUrl,
+  patchLikedStateByUrl,
+} from "../../utils/likedItemState";
 import { isUploadedWardrobeItemNeedsReview } from "../../utils/uploadedWardrobeItemStatus";
 import CapsuleProductDetailDialog from "./CapsuleProductDetailDialog";
 
@@ -50,6 +54,26 @@ function MainScreenDialogs(props: DialogsProps) {
     );
     props.setProductDetailItem(updated || { ...item, ...payload });
     setProductDetailMode("read");
+  };
+  const setProductDetailItemLike = async (
+    item: NonNullable<DialogsProps["productDetailItem"]>,
+    isLiked: boolean,
+  ) => {
+    const itemUrl = getCanonicalItemUrl(item);
+    if (!itemUrl) {
+      return;
+    }
+
+    const previousItem = props.productDetailItem;
+    props.setProductDetailItem(
+      patchLikedStateByUrl(props.productDetailItem, itemUrl, isLiked),
+    );
+    try {
+      await props.props.onSetItemLike?.(item, isLiked);
+    } catch (error) {
+      props.setProductDetailItem(previousItem);
+      throw error;
+    }
   };
 
   return (
@@ -110,6 +134,7 @@ function MainScreenDialogs(props: DialogsProps) {
         onReadMode={() => setProductDetailMode("read")}
         onRemoveFromMyWardrobe={props.props.onRemoveFromMyWardrobe}
         onSaveToMyWardrobe={props.props.onSaveToMyWardrobe}
+        onSetItemLike={setProductDetailItemLike}
       />
     </>
   );
@@ -134,6 +159,7 @@ function ProductDetailDialogSwitch({
   onReadMode,
   onRemoveFromMyWardrobe,
   onSaveToMyWardrobe,
+  onSetItemLike,
   t,
 }: {
   item: DialogsProps["productDetailItem"];
@@ -149,6 +175,7 @@ function ProductDetailDialogSwitch({
   onReadMode: () => void;
   onRemoveFromMyWardrobe?: DialogsProps["props"]["onRemoveFromMyWardrobe"];
   onSaveToMyWardrobe?: DialogsProps["props"]["onSaveToMyWardrobe"];
+  onSetItemLike?: DialogsProps["props"]["onSetItemLike"];
   t: (key: string, params?: Record<string, unknown>) => string;
 }): ReactElement {
   if (!item) {
@@ -169,6 +196,7 @@ function ProductDetailDialogSwitch({
       onRemoveFromMyWardrobe={onRemoveFromMyWardrobe}
       onReadMode={onReadMode}
       onSaveToMyWardrobe={onSaveToMyWardrobe}
+      onSetItemLike={onSetItemLike}
     />
   );
 }

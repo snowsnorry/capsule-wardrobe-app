@@ -22,12 +22,10 @@ import {
   markSearchResultRemovedFromWardrobe,
   markSearchResultSavedToWardrobe,
 } from "./searchResultSavedState";
+import { markSearchResultLikeState } from "./searchResultLikedState";
 import type { SearchResultItem, SearchStatus } from "./searchTypes";
 
-type SearchResponse = {
-  items?: SearchResultItem[];
-  total?: number;
-};
+type SearchResponse = import("./searchTypes").SearchResponse;
 
 type UseSearchScreenStateParams = {
   initialQuery: string;
@@ -210,6 +208,11 @@ function createSearchActions(runtime: SearchRuntime) {
       runtime.setResults((current) =>
         markSearchResultRemovedFromWardrobe(current, item),
       ),
+    markResultLikeState: (item: SearchResultItem, isLiked: boolean) => {
+      runtime.setResults((current) =>
+        markSearchResultLikeState(current, item, isLiked),
+      );
+    },
     selectResult: (item: SearchResultItem) => {
       runtime.setSelectedResultId(item.id);
       if (runtime.isMobile) {

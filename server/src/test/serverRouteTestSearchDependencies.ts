@@ -69,6 +69,9 @@ export function createSearchAndGenerationDependencies() {
       id === product.id ? { ...product } : null,
     getProductByUrlForEmailImpl: async (url) =>
       url === product.url ? { ...product } : null,
+    listLikedItemUrlsImpl: async () => [],
+    upsertLikedItemImpl: async ({ itemUrl }) => itemUrl,
+    deleteLikedItemImpl: async () => true,
     getOutfitSetImageJobImpl: async () => null,
     streamCapsuleEventsImpl: async (_req, res, { snapshot }) =>
       res.json({ ok: true, snapshot }),

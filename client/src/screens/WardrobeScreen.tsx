@@ -4,6 +4,7 @@ import type { ReactElement } from "react";
 import { Alert, Box, Stack } from "@mui/material";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import { sortWardrobeItems } from "../../../shared/wardrobeOrder.js";
+import { likeItem, removeItemLike } from "../api/likedItems";
 import type { ProductMenuOpenOptions } from "../components/ClothingCardTypes";
 import {
   deleteUploadedWardrobeItem,
@@ -19,6 +20,10 @@ import {
 import { notifyPersonalItemsChanged } from "../app/personalItemsCount";
 import { useI18n } from "../i18n/useI18n";
 import { isUploadedWardrobeItemNeedsReview } from "../utils/uploadedWardrobeItemStatus";
+import {
+  getCanonicalItemUrl,
+  patchLikedStateByUrl,
+} from "../utils/likedItemState";
 import { MAIN_SCREEN_CONTENT_COLUMN_SX } from "./mainScreen/MainScreenHelpers";
 import type {
   MainScreenItem,
@@ -108,6 +113,26 @@ function WardrobeScreen(): ReactElement {
     setProductDetailItem(null);
     setProductDetailMode("read");
   };
+  const handleSetProductDetailItemLike = async (
+    item: MainScreenItem,
+    isLiked: boolean,
+  ) => {
+    const itemUrl = getCanonicalItemUrl(item);
+    if (!itemUrl) {
+      return;
+    }
+
+    const previousItem = productDetailItem;
+    setProductDetailItem(
+      patchLikedStateByUrl(productDetailItem, itemUrl, isLiked),
+    );
+    try {
+      await wardrobeItems.handleSetItemLike(item, isLiked);
+    } catch (error) {
+      setProductDetailItem(previousItem);
+      throw error;
+    }
+  };
 
   return (
     <Box data-testid="wardrobe-screen" sx={wardrobeScreenSx}>
@@ -159,6 +184,7 @@ function WardrobeScreen(): ReactElement {
           t={t}
           onClose={wardrobeItems.closeProductMenu}
           onRequestRemove={wardrobeItems.setRemoveConfirmItem}
+          onSetItemLike={wardrobeItems.handleSetItemLike}
         />
         <WardrobeRemoveConfirmDialog
           item={wardrobeItems.removeConfirmItem}
@@ -183,6 +209,7 @@ function WardrobeScreen(): ReactElement {
             }}
             onReadMode={() => setProductDetailMode("read")}
             onRemoveFromMyWardrobe={wardrobeItems.handleConfirmRemove}
+            onSetItemLike={handleSetProductDetailItemLike}
           />
         ) : null}
         <WardrobeUploadDialog
@@ -365,6 +392,31 @@ function useWardrobeItems(
       setIsMutating(false);
     }
   };
+  const handleSetItemLike = async (item: MainScreenItem, isLiked: boolean) => {
+    const itemUrl = getCanonicalItemUrl(item);
+    if (!itemUrl) {
+      return;
+    }
+
+    const previousItems = items;
+    const previousProductMenu = productMenu;
+    setItems((current) => patchLikedStateByUrl(current, itemUrl, isLiked));
+    setProductMenu((current) =>
+      patchLikedStateByUrl(current, itemUrl, isLiked),
+    );
+    try {
+      if (isLiked) {
+        await likeItem(itemUrl);
+      } else {
+        await removeItemLike(itemUrl);
+      }
+      setError("");
+    } catch {
+      setItems(previousItems);
+      setProductMenu(previousProductMenu);
+      setError(t("wardrobe.likeFailed"));
+    }
+  };
 
   return {
     closeProductMenu,
@@ -372,6 +424,7 @@ function useWardrobeItems(
     handleConfirmRemove,
     handleDownloadPdf,
     handleProductMenuOpen,
+    handleSetItemLike,
     handleUpdateUploadedItem,
     handleUploadImages,
     handleUploadUrls,

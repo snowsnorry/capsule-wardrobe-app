@@ -7,9 +7,15 @@ export type SearchResultItem = {
   imageUrl?: string;
   description?: string;
   audience?: string;
+  isLiked?: boolean | null;
   isSavedToWardrobe?: boolean;
   savedToMyWardrobe?: boolean;
   [key: string]: unknown;
+};
+
+export type SearchResponse = {
+  items?: SearchResultItem[];
+  total?: number;
 };
 
 export type SearchStatus = {

@@ -2,6 +2,8 @@ import { useState } from "react";
 import BookmarkBorderRoundedIcon from "@mui/icons-material/BookmarkBorderRounded";
 import BookmarkRemoveOutlinedIcon from "@mui/icons-material/BookmarkRemoveOutlined";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
+import FavoriteBorderRoundedIcon from "@mui/icons-material/FavoriteBorderRounded";
+import FavoriteRoundedIcon from "@mui/icons-material/FavoriteRounded";
 import MoreVertRoundedIcon from "@mui/icons-material/MoreVertRounded";
 import {
   Box,
@@ -18,6 +20,7 @@ import {
   Menu,
   MenuItem,
 } from "@mui/material";
+import { isLikedItem } from "../../utils/likedItemState";
 import type { ProductDetailItem } from "./ProductDetailModel";
 
 type ProductActionsMenuItem = ProductDetailItem;
@@ -29,6 +32,10 @@ type ProductActionsMenuProps = {
     item: ProductActionsMenuItem,
   ) => Promise<void> | void;
   onEditUploadedWardrobeItem?: (item: ProductActionsMenuItem) => void;
+  onSetItemLike?: (
+    item: ProductActionsMenuItem,
+    isLiked: boolean,
+  ) => Promise<void> | void;
   onSaveToMyWardrobe?: (item: ProductActionsMenuItem) => Promise<void> | void;
   t: (key: string, params?: Record<string, unknown>) => string;
 };
@@ -39,6 +46,7 @@ function ProductActionsMenu({
   item,
   isSavedToWardrobe,
   onEditUploadedWardrobeItem,
+  onSetItemLike,
   onRemoveFromMyWardrobe,
   onSaveToMyWardrobe,
   t,
@@ -69,6 +77,12 @@ function ProductActionsMenu({
     }
     void runWardrobeAction(onSaveToMyWardrobe);
   };
+  const handleLikeMenuAction = () => {
+    closeMenu();
+    void runWardrobeAction((currentItem) =>
+      onSetItemLike?.(currentItem, !isLikedItem(currentItem)),
+    );
+  };
 
   return (
     <>
@@ -85,9 +99,11 @@ function ProductActionsMenu({
         isMenuOpen={isMenuOpen}
         isSavedToWardrobe={isSavedToWardrobe}
         item={item}
+        onLikeMenuAction={handleLikeMenuAction}
         showWardrobeAction={Boolean(
           onSaveToMyWardrobe || onRemoveFromMyWardrobe,
         )}
+        showLikeAction={Boolean(onSetItemLike)}
         t={t}
         onClose={closeMenu}
         onEditUploadedWardrobeItem={onEditUploadedWardrobeItem}
@@ -158,7 +174,9 @@ function ProductActionsDropdown({
   item,
   onClose,
   onEditUploadedWardrobeItem,
+  onLikeMenuAction,
   onWardrobeMenuAction,
+  showLikeAction,
   showWardrobeAction,
   t,
 }: {
@@ -169,7 +187,9 @@ function ProductActionsDropdown({
   item: ProductActionsMenuItem;
   onClose: () => void;
   onEditUploadedWardrobeItem?: ProductActionsMenuProps["onEditUploadedWardrobeItem"];
+  onLikeMenuAction: () => void;
   onWardrobeMenuAction: () => void;
+  showLikeAction: boolean;
   showWardrobeAction: boolean;
   t: ProductActionsMenuProps["t"];
 }) {
@@ -210,6 +230,20 @@ function ProductActionsDropdown({
           </ListItemIcon>
           <ListItemText>
             {t(getWardrobeActionLabelKey(isSavedToWardrobe))}
+          </ListItemText>
+        </MenuItem>
+      ) : null}
+      {showLikeAction ? (
+        <MenuItem disabled={isActionPending} onClick={onLikeMenuAction}>
+          <ListItemIcon>
+            {isLikedItem(item) ? (
+              <FavoriteRoundedIcon fontSize="small" />
+            ) : (
+              <FavoriteBorderRoundedIcon fontSize="small" />
+            )}
+          </ListItemIcon>
+          <ListItemText>
+            {t(isLikedItem(item) ? "wardrobe.removeLike" : "wardrobe.like")}
           </ListItemText>
         </MenuItem>
       ) : null}

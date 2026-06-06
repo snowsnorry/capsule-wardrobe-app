@@ -14,11 +14,14 @@ import {
 } from "@mui/material";
 import BookmarkRemoveOutlinedIcon from "@mui/icons-material/BookmarkRemoveOutlined";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
+import FavoriteBorderRoundedIcon from "@mui/icons-material/FavoriteBorderRounded";
+import FavoriteRoundedIcon from "@mui/icons-material/FavoriteRounded";
 import MobileProductCardContextMenu from "../components/MobileProductCardContextMenu";
 import type {
   MobileContextMenuOriginRect,
   ProductMenuPresentation,
 } from "../components/ClothingCardTypes";
+import { getCanonicalItemUrl, isLikedItem } from "../utils/likedItemState";
 import type { MainScreenItem } from "./mainScreen/MainScreenTypes";
 
 type WardrobeProductMenuState = {
@@ -36,6 +39,10 @@ type WardrobeProductMenuProps = {
   presentation?: ProductMenuPresentation;
   onClose: () => void;
   onRequestRemove: (item: MainScreenItem) => void;
+  onSetItemLike?: (
+    item: MainScreenItem,
+    isLiked: boolean,
+  ) => Promise<void> | void;
   t: (key: string) => string;
 };
 
@@ -54,6 +61,7 @@ function WardrobeProductMenu({
   presentation,
   onClose,
   onRequestRemove,
+  onSetItemLike,
   t,
 }: WardrobeProductMenuProps): ReactElement {
   const renderActions = () => (
@@ -62,6 +70,7 @@ function WardrobeProductMenu({
       t={t}
       onClose={onClose}
       onRequestRemove={onRequestRemove}
+      onSetItemLike={onSetItemLike}
     />
   );
   const isMobileContextMenu = presentation === "mobile-context";
@@ -91,32 +100,79 @@ function WardrobeProductMenuItems({
   item,
   onClose,
   onRequestRemove,
+  onSetItemLike,
   t,
 }: Omit<WardrobeProductMenuProps, "anchor" | "presentation">): ReactElement {
   const isUploaded = item?.source === "uploaded";
 
   return (
+    <>
+      <LikeMenuItem
+        item={item}
+        t={t}
+        onClose={onClose}
+        onSetItemLike={onSetItemLike}
+      />
+      <MenuItem
+        onClick={() => {
+          onClose();
+          if (item) {
+            onRequestRemove(item);
+          }
+        }}
+      >
+        <ListItemIcon>
+          {isUploaded ? (
+            <DeleteOutlineRoundedIcon fontSize="small" />
+          ) : (
+            <BookmarkRemoveOutlinedIcon fontSize="small" />
+          )}
+        </ListItemIcon>
+        <ListItemText>
+          {t(
+            isUploaded
+              ? "wardrobe.deleteUploaded"
+              : "capsule.removeFromMyWardrobe",
+          )}
+        </ListItemText>
+      </MenuItem>
+    </>
+  );
+}
+
+function LikeMenuItem({
+  item,
+  onClose,
+  onSetItemLike,
+  t,
+}: {
+  item: MainScreenItem | null;
+  onClose: () => void;
+  onSetItemLike?: WardrobeProductMenuProps["onSetItemLike"];
+  t: WardrobeProductMenuProps["t"];
+}) {
+  const itemUrl = getCanonicalItemUrl(item);
+  const isLiked = isLikedItem(item);
+  if (!item || !itemUrl || !onSetItemLike) {
+    return null;
+  }
+
+  return (
     <MenuItem
       onClick={() => {
         onClose();
-        if (item) {
-          onRequestRemove(item);
-        }
+        void onSetItemLike(item, !isLiked);
       }}
     >
       <ListItemIcon>
-        {isUploaded ? (
-          <DeleteOutlineRoundedIcon fontSize="small" />
+        {isLiked ? (
+          <FavoriteRoundedIcon fontSize="small" />
         ) : (
-          <BookmarkRemoveOutlinedIcon fontSize="small" />
+          <FavoriteBorderRoundedIcon fontSize="small" />
         )}
       </ListItemIcon>
       <ListItemText>
-        {t(
-          isUploaded
-            ? "wardrobe.deleteUploaded"
-            : "capsule.removeFromMyWardrobe",
-        )}
+        {t(isLiked ? "wardrobe.removeLike" : "wardrobe.like")}
       </ListItemText>
     </MenuItem>
   );

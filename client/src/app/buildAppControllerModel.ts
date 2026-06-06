@@ -118,6 +118,7 @@ function buildHandlers(handlers: ReturnType<typeof useAppHandlers>) {
     onSaveCapsule: handlers.handleSaveCapsule,
     onRemoveFromMyWardrobe: handlers.handleRemoveFromMyWardrobe,
     onSaveToMyWardrobe: handlers.handleSaveToMyWardrobe,
+    onSetItemLike: handlers.handleSetItemLike,
     onUpdateUploadedWardrobeItem: handlers.handleUpdateUploadedWardrobeItem,
     onSaveProfile: handlers.handleSaveProfile,
     onSearchCapsules: handlers.handleSearchCapsules,

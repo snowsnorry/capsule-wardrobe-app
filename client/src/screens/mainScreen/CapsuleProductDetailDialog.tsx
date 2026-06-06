@@ -37,6 +37,7 @@ type CapsuleProductDetailDialogProps = {
   onRemoveFromMyWardrobe?: DialogsProps["props"]["onRemoveFromMyWardrobe"];
   onReadMode: () => void;
   onSaveToMyWardrobe?: DialogsProps["props"]["onSaveToMyWardrobe"];
+  onSetItemLike?: DialogsProps["props"]["onSetItemLike"];
 };
 
 function CapsuleProductDetailDialog({
@@ -50,6 +51,7 @@ function CapsuleProductDetailDialog({
   onRemoveFromMyWardrobe,
   onReadMode,
   onSaveToMyWardrobe,
+  onSetItemLike,
   open,
   t,
 }: CapsuleProductDetailDialogProps) {
@@ -84,6 +86,7 @@ function CapsuleProductDetailDialog({
             isUploadedItem ? undefined : onRemoveFromMyWardrobe
           }
           onSaveToMyWardrobe={isUploadedItem ? undefined : onSaveToMyWardrobe}
+          onSetItemLike={onSetItemLike}
         />
       ) : null}
       {showMobileEditHeader ? (
@@ -115,6 +118,7 @@ function CapsuleProductDetailDialog({
             onRemoveFromMyWardrobe={onRemoveFromMyWardrobe}
             onReadMode={onReadMode}
             onSaveToMyWardrobe={onSaveToMyWardrobe}
+            onSetItemLike={onSetItemLike}
           />
         </DialogContent>
       )}
@@ -134,6 +138,7 @@ function CapsuleProductDetailContent({
   onRemoveFromMyWardrobe,
   onReadMode,
   onSaveToMyWardrobe,
+  onSetItemLike,
   showMobileHeader,
   t,
 }: {
@@ -148,6 +153,7 @@ function CapsuleProductDetailContent({
   onRemoveFromMyWardrobe?: DialogsProps["props"]["onRemoveFromMyWardrobe"];
   onReadMode: () => void;
   onSaveToMyWardrobe?: DialogsProps["props"]["onSaveToMyWardrobe"];
+  onSetItemLike?: DialogsProps["props"]["onSetItemLike"];
   showMobileHeader: boolean;
   t: Translate;
 }) {
@@ -195,6 +201,7 @@ function CapsuleProductDetailContent({
           onEditUploadedWardrobeItem={isUploadedItem ? onEdit : undefined}
           onRemoveFromMyWardrobe={removeFromWardrobe}
           onSaveToMyWardrobe={saveToWardrobe}
+          onSetItemLike={onSetItemLike}
         />
       )}
     </>

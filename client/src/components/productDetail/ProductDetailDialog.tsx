@@ -29,6 +29,10 @@ type ProductDetailDialogProps = {
   onClose: () => void;
   onEditUploadedWardrobeItem?: (item: ProductDetailItem) => void;
   onRemoveFromMyWardrobe?: (item: ProductDetailItem) => Promise<void> | void;
+  onSetItemLike?: (
+    item: ProductDetailItem,
+    isLiked: boolean,
+  ) => Promise<void> | void;
   onSaveToMyWardrobe?: (item: ProductDetailItem) => Promise<void> | void;
 };
 
@@ -39,6 +43,7 @@ function ProductDetailDialog({
   onClose,
   onEditUploadedWardrobeItem,
   onRemoveFromMyWardrobe,
+  onSetItemLike,
   onSaveToMyWardrobe,
 }: ProductDetailDialogProps): ReactElement {
   const { t, locale } = useI18n();
@@ -62,6 +67,7 @@ function ProductDetailDialog({
           onClose={onClose}
           onEditUploadedWardrobeItem={onEditUploadedWardrobeItem}
           onRemoveFromMyWardrobe={onRemoveFromMyWardrobe}
+          onSetItemLike={onSetItemLike}
           onSaveToMyWardrobe={onSaveToMyWardrobe}
         />
       ) : null}
@@ -81,6 +87,7 @@ function ProductDetailDialog({
           onClose={onClose}
           onEditUploadedWardrobeItem={onEditUploadedWardrobeItem}
           onRemoveFromMyWardrobe={onRemoveFromMyWardrobe}
+          onSetItemLike={onSetItemLike}
           onSaveToMyWardrobe={onSaveToMyWardrobe}
         />
       </DialogContent>
@@ -207,18 +214,39 @@ function mergeProductDetailItems(
 
   const isUploadedWardrobeItem =
     item.source === "uploaded" || fetchedItem.source === "uploaded";
+  const identity = getMergedProductDetailIdentity(
+    item,
+    fetchedItem,
+    isUploadedWardrobeItem,
+  );
 
   return {
     ...item,
     ...fetchedItem,
-    id: isUploadedWardrobeItem ? item.id : fetchedItem.id,
-    wardrobeId: isUploadedWardrobeItem
-      ? (item.wardrobeId ?? fetchedItem.id)
-      : fetchedItem.wardrobeId,
+    ...identity,
     isSavedToWardrobe:
       item.isSavedToWardrobe ?? fetchedItem.isSavedToWardrobe ?? null,
+    isLiked: fetchedItem.isLiked ?? item.isLiked ?? null,
     savedToMyWardrobe:
       item.savedToMyWardrobe ?? fetchedItem.savedToMyWardrobe ?? null,
+  };
+}
+
+function getMergedProductDetailIdentity(
+  item: ProductDetailItem,
+  fetchedItem: ProductDetailItem,
+  isUploadedWardrobeItem: boolean,
+) {
+  if (isUploadedWardrobeItem) {
+    return {
+      id: item.id,
+      wardrobeId: item.wardrobeId ?? fetchedItem.id,
+    };
+  }
+
+  return {
+    id: fetchedItem.id,
+    wardrobeId: fetchedItem.wardrobeId,
   };
 }
 
@@ -231,6 +259,7 @@ function ProductDetailDialogContent({
   onClose,
   onEditUploadedWardrobeItem,
   onRemoveFromMyWardrobe,
+  onSetItemLike,
   onSaveToMyWardrobe,
 }: Pick<
   ProductDetailDialogProps,
@@ -238,6 +267,7 @@ function ProductDetailDialogContent({
   | "onClose"
   | "onEditUploadedWardrobeItem"
   | "onRemoveFromMyWardrobe"
+  | "onSetItemLike"
   | "onSaveToMyWardrobe"
 > & {
   isLoading: boolean;
@@ -272,6 +302,7 @@ function ProductDetailDialogContent({
         onClose={onClose}
         onEditUploadedWardrobeItem={onEditUploadedWardrobeItem}
         onRemoveFromMyWardrobe={onRemoveFromMyWardrobe}
+        onSetItemLike={onSetItemLike}
         onSaveToMyWardrobe={onSaveToMyWardrobe}
       />
     </>
@@ -285,6 +316,7 @@ export function DesktopProductDetailPane({
   onClose,
   onEditUploadedWardrobeItem,
   onRemoveFromMyWardrobe,
+  onSetItemLike,
   onSaveToMyWardrobe,
 }: Omit<ProductDetailDialogProps, "open" | "isMobile"> & {
   locale: string;
@@ -307,6 +339,7 @@ export function DesktopProductDetailPane({
         reserveHeaderActionsSpace
         onEditUploadedWardrobeItem={onEditUploadedWardrobeItem}
         onRemoveFromMyWardrobe={onRemoveFromMyWardrobe}
+        onSetItemLike={onSetItemLike}
         onSaveToMyWardrobe={onSaveToMyWardrobe}
       />
     </Box>

@@ -10,9 +10,11 @@ export function createCapsuleEventHandlers({
   getCapsuleImpl,
   getOutfitSetImageJobImpl,
   getPartialRegenerationJobImpl,
+  listLikedItemUrlsImpl,
   getWardrobeJobImpl,
   streamCapsuleEventsImpl,
   updateCapsuleSnapshotImpl,
+  annotateLikedItems,
 }) {
   async function getCapsuleEventSnapshot(email, capsule) {
     const capsuleId = String(capsule?.id || "").trim();
@@ -70,10 +72,11 @@ export function createCapsuleEventHandlers({
       }
 
       const snapshot = await getCapsuleEventSnapshot(req.user.email, capsule);
+      const likedUrls = await listLikedItemUrlsImpl(req.user.email);
       await streamCapsuleEventsImpl(req, res, {
         email: req.user.email,
         capsuleId,
-        snapshot,
+        snapshot: annotateLikedItems(snapshot, likedUrls),
       });
       return undefined;
     } catch (error) {

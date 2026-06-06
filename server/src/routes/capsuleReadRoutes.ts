@@ -131,10 +131,12 @@ function registerCapsuleLookupRoutes(app, context) {
     getCapsuleEventSnapshot,
     getCapsuleImpl,
     listWardrobeItemsImpl,
+    listLikedItemUrlsImpl,
     requireAuth,
     streamCapsuleEventsHandler,
     toCapsuleResponse,
     annotateWardrobeSavedItems,
+    annotateLikedItems,
   } = context;
 
   app.get("/capsules/:id", requireAuth, async (req, res) => {
@@ -147,15 +149,22 @@ function registerCapsuleLookupRoutes(app, context) {
         listWardrobeItemsImpl,
         req.user.email,
       );
+      const likedUrls = await listLikedItemUrlsImpl(req.user.email);
       return res.json({
         ok: true,
-        capsule: annotateWardrobeSavedItems(
-          toCapsuleResponse(capsule),
-          savedCatalogUrls,
+        capsule: annotateLikedItems(
+          annotateWardrobeSavedItems(
+            toCapsuleResponse(capsule),
+            savedCatalogUrls,
+          ),
+          likedUrls,
         ),
-        snapshot: annotateWardrobeSavedItems(
-          await getCapsuleEventSnapshot(req.user.email, capsule),
-          savedCatalogUrls,
+        snapshot: annotateLikedItems(
+          annotateWardrobeSavedItems(
+            await getCapsuleEventSnapshot(req.user.email, capsule),
+            savedCatalogUrls,
+          ),
+          likedUrls,
         ),
       });
     } catch (error) {

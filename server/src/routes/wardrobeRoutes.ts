@@ -47,8 +47,12 @@ function registerWardrobeListRoute(app, context) {
         email: req.user.email,
         source,
       });
+      const likedUrls = await context.listLikedItemUrlsImpl(req.user.email);
       const displayItems = Array.isArray(items)
-        ? items.map(filterWardrobeItemForDisplay)
+        ? context.annotateLikedItems(
+            items.map(filterWardrobeItemForDisplay),
+            likedUrls,
+          )
         : items;
       return res.json({ ok: true, items: displayItems });
     } catch (error) {
@@ -118,10 +122,14 @@ function registerWardrobeCatalogRoutes(app, context) {
         if (!item) {
           return res.status(404).json({ error: "not_found" });
         }
+        const likedUrls = await context.listLikedItemUrlsImpl(req.user.email);
 
         return res.status(201).json({
           ok: true,
-          item: filterWardrobeItemForDisplay(item),
+          item: context.annotateLikedItems(
+            filterWardrobeItemForDisplay(item),
+            likedUrls,
+          ),
         });
       } catch (error) {
         logError("[wardrobe/items/from-catalog]", error);

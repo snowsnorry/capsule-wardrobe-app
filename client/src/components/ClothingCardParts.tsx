@@ -1,5 +1,6 @@
 /* eslint-disable max-lines */
 import { Box, Typography } from "@mui/material";
+import FavoriteRoundedIcon from "@mui/icons-material/FavoriteRounded";
 import type { CSSProperties } from "react";
 import type { KeyboardEvent } from "react";
 import type { ReactNode } from "react";
@@ -243,6 +244,7 @@ function ClothingCardImageSection({
     categoryDisplayLabel,
     badgeLabels,
   });
+  const isLiked = Boolean(item.isLiked);
 
   return (
     <Box
@@ -255,7 +257,10 @@ function ClothingCardImageSection({
       }}
     >
       {actionProps ? <CardActions {...actionProps} /> : null}
-      {!isMobile && categoryChip ? <CategoryChip {...categoryChip} /> : null}
+      {isLiked ? <LikedIndicator label={badgeLabels.likedLabel} /> : null}
+      {!isMobile && categoryChip ? (
+        <CategoryChip {...categoryChip} left={isLiked ? 52 : 12} />
+      ) : null}
       <CardImageFrame>
         <ProductImageContent
           displayImageSource={displayImageSource}
@@ -427,6 +432,35 @@ function createCardKeyDownHandler({
 const CardImageFrame = ({ children }: { children: ReactNode }) => (
   <Box sx={{ position: "absolute", inset: 0, zIndex: 0 }}>{children}</Box>
 );
+
+function LikedIndicator({ label }: { label: string }) {
+  return (
+    <Box
+      className="wardrobe-card-liked-indicator"
+      aria-label={label}
+      title={label}
+      sx={likedIndicatorSx}
+    >
+      <FavoriteRoundedIcon sx={{ fontSize: 18 }} />
+    </Box>
+  );
+}
+
+const likedIndicatorSx = {
+  position: "absolute",
+  top: 12,
+  left: 12,
+  width: 36,
+  height: 36,
+  borderRadius: "50%",
+  display: "grid",
+  placeItems: "center",
+  color: "var(--cw-color-liked-indicator, #c62828)",
+  bgcolor: "background.paper",
+  boxShadow: "var(--cw-shadow-image-toggle)",
+  zIndex: 2,
+  pointerEvents: "none",
+} as const;
 
 const imageGestureSuppressionStyle = {
   touchAction: "none",

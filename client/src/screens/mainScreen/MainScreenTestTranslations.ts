@@ -97,11 +97,15 @@ const labels = {
     filters: {
       uploaded: "Uploaded",
     },
+    like: "Like",
+    likedBadge: "Liked",
+    likeFailed: "Failed to update like. Please try again.",
     imageVersionToggle: {
       label: "Uploaded item image version",
       original: "Original",
       ai: "AI",
     },
+    removeLike: "Remove like",
     removeConfirmTitle: "Remove from Personal items?",
     removeConfirmBody: "Remove body",
     removeConfirm: "Remove",

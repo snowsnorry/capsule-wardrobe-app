@@ -26,6 +26,10 @@ type ProductDetailProps = {
   showImage?: boolean;
   onRemoveFromMyWardrobe?: (item: ProductDetailItem) => Promise<void> | void;
   onEditUploadedWardrobeItem?: (item: ProductDetailItem) => void;
+  onSetItemLike?: (
+    item: ProductDetailItem,
+    isLiked: boolean,
+  ) => Promise<void> | void;
   onSaveToMyWardrobe?: (item: ProductDetailItem) => Promise<void> | void;
 };
 
@@ -40,6 +44,7 @@ function ProductDetail({
   showImage = true,
   onRemoveFromMyWardrobe,
   onEditUploadedWardrobeItem,
+  onSetItemLike,
   onSaveToMyWardrobe,
 }: ProductDetailProps): ReactElement {
   const normalizedItem = normalizeProductDetailItem(item);
@@ -69,6 +74,7 @@ function ProductDetail({
         reserveHeaderActionsSpace={reserveHeaderActionsSpace}
         onEditUploadedWardrobeItem={onEditUploadedWardrobeItem}
         onRemoveFromMyWardrobe={onRemoveFromMyWardrobe}
+        onSetItemLike={onSetItemLike}
         onSaveToMyWardrobe={onSaveToMyWardrobe}
       />
       {normalizedItem.description ? (
@@ -97,6 +103,7 @@ function ProductHeader({
   reserveHeaderActionsSpace,
   onRemoveFromMyWardrobe,
   onEditUploadedWardrobeItem,
+  onSetItemLike,
   onSaveToMyWardrobe,
 }: Required<Pick<ProductDetailProps, "item" | "t" | "locale">> &
   Pick<
@@ -106,6 +113,7 @@ function ProductHeader({
     | "reserveHeaderActionsSpace"
     | "onEditUploadedWardrobeItem"
     | "onRemoveFromMyWardrobe"
+    | "onSetItemLike"
     | "onSaveToMyWardrobe"
   >) {
   const productUrl = getSafeHttpUrl(item.url);
@@ -121,6 +129,7 @@ function ProductHeader({
         t={t}
         onEditUploadedWardrobeItem={onEditUploadedWardrobeItem}
         onRemoveFromMyWardrobe={onRemoveFromMyWardrobe}
+        onSetItemLike={onSetItemLike}
         onSaveToMyWardrobe={onSaveToMyWardrobe}
       />
       {item.brand ? <Typography variant="h6">{item.brand}</Typography> : null}
@@ -142,6 +151,7 @@ function ProductHeaderTitleRow({
   t,
   onRemoveFromMyWardrobe,
   onEditUploadedWardrobeItem,
+  onSetItemLike,
   onSaveToMyWardrobe,
 }: {
   item: ProductDetailItem;
@@ -151,6 +161,7 @@ function ProductHeaderTitleRow({
   t: ProductDetailProps["t"];
   onEditUploadedWardrobeItem?: ProductDetailProps["onEditUploadedWardrobeItem"];
   onRemoveFromMyWardrobe?: ProductDetailProps["onRemoveFromMyWardrobe"];
+  onSetItemLike?: ProductDetailProps["onSetItemLike"];
   reserveHeaderActionsSpace?: ProductDetailProps["reserveHeaderActionsSpace"];
   onSaveToMyWardrobe?: ProductDetailProps["onSaveToMyWardrobe"];
 }) {
@@ -158,7 +169,10 @@ function ProductHeaderTitleRow({
     isSavedToWardrobe(item) ||
     Boolean(onRemoveFromMyWardrobe && !onSaveToMyWardrobe);
   const shouldShowActionsMenu = Boolean(
-    onSaveToMyWardrobe || onRemoveFromMyWardrobe || onEditUploadedWardrobeItem,
+    onSaveToMyWardrobe ||
+    onRemoveFromMyWardrobe ||
+    onEditUploadedWardrobeItem ||
+    onSetItemLike,
   );
 
   return (
@@ -196,6 +210,7 @@ function ProductHeaderTitleRow({
           isSavedToWardrobe={isSaved}
           onEditUploadedWardrobeItem={onEditUploadedWardrobeItem}
           onRemoveFromMyWardrobe={onRemoveFromMyWardrobe}
+          onSetItemLike={onSetItemLike}
           onSaveToMyWardrobe={onSaveToMyWardrobe}
         />
       ) : null}

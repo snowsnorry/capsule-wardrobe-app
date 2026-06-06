@@ -30,6 +30,7 @@ vi.mock("../../i18n/useI18n", () => ({
         "capsule.removeFromMyWardrobe": "Remove from Personal items",
         "capsule.saveToMyWardrobe": "Save to Personal items",
         "wardrobe.savedBadge": "Saved",
+        "wardrobe.likedBadge": "Liked",
         "wardrobe.filters.uploaded": "Uploaded",
         "wardrobe.removeConfirm": "Remove",
         "wardrobe.removeConfirmBody": "Remove body",
@@ -262,6 +263,31 @@ describe("ProductDetailDialog", () => {
     );
     expect(await screen.findByText("180 EUR")).toBeInTheDocument();
     expect(screen.getByText("Winter")).toBeInTheDocument();
+  });
+
+  test("uses fetched liked state for sparse product details", async () => {
+    searchApi.fetchProductDetailByUrl.mockResolvedValue({
+      item: {
+        id: "catalog-coat",
+        name: "Wool Coat",
+        url: "https://example.com/coat",
+        imageUrl: "https://example.com/coat.jpg",
+        isLiked: true,
+        price: 180,
+      },
+    });
+
+    renderDialog({
+      item: {
+        id: "capsule-coat",
+        name: "Wool Coat",
+        url: "https://example.com/coat",
+        imageUrl: "https://example.com/coat.jpg",
+        isLiked: false,
+      },
+    });
+
+    expect(await screen.findByLabelText("Liked")).toBeInTheDocument();
   });
 
   test("loads uploaded wardrobe details by wardrobe URL", async () => {

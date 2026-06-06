@@ -40,9 +40,10 @@ function registerCapsuleCreateRoutes(app, context) {
           draft,
           saved: null,
         });
-        return res
-          .status(201)
-          .json({ ok: true, capsule: context.toCapsuleResponse(capsule) });
+        return res.status(201).json({
+          ok: true,
+          capsule: await buildAnnotatedCapsuleResponse(capsule, req, context),
+        });
       } catch (error) {
         if (
           error?.code === "invalid_payload" ||
@@ -100,10 +101,7 @@ function registerCapsuleCreateRoutes(app, context) {
           return context.regenerateCapsuleWardrobeHandler(req, res);
         }
 
-        return res.json({
-          ok: true,
-          capsule: context.toCapsuleResponse(capsule),
-        });
+        return sendCapsuleMutationResponse(req, res, capsule, context);
       } catch (error) {
         if (
           error?.code === "invalid_payload" ||
@@ -141,12 +139,23 @@ function getRejectedUrlsValidationResponse(validationResult) {
     : { status: 400, error: "invalid_payload" };
 }
 
-function sendCapsuleMutationResponse(res, capsule, context) {
+async function buildAnnotatedCapsuleResponse(capsule, req, context) {
+  const likedUrls = await context.listLikedItemUrlsImpl(req.user.email);
+  return context.annotateLikedItems(
+    context.toCapsuleResponse(capsule),
+    likedUrls,
+  );
+}
+
+async function sendCapsuleMutationResponse(req, res, capsule, context) {
   if (!capsule) {
     return res.status(404).json({ error: "not_found" });
   }
 
-  return res.json({ ok: true, capsule: context.toCapsuleResponse(capsule) });
+  return res.json({
+    ok: true,
+    capsule: await buildAnnotatedCapsuleResponse(capsule, req, context),
+  });
 }
 
 async function updateRejectedUrls(req, res, context) {
@@ -188,7 +197,7 @@ async function updateRejectedUrls(req, res, context) {
       },
     );
 
-    return sendCapsuleMutationResponse(res, nextCapsule, context);
+    return sendCapsuleMutationResponse(req, res, nextCapsule, context);
   } catch (error) {
     logError("[capsules/rejected-urls]", error);
     return res.status(503).json({ error: "service_unavailable" });
@@ -219,9 +228,7 @@ function registerCapsuleStateRoutes(app, context) {
           req.user.email,
           req.params.id,
         );
-        return capsule
-          ? res.json({ ok: true, capsule: context.toCapsuleResponse(capsule) })
-          : res.status(404).json({ error: "not_found" });
+        return sendCapsuleMutationResponse(req, res, capsule, context);
       } catch (error) {
         logError("[capsules/save]", error);
         return res.status(503).json({ error: "service_unavailable" });
@@ -240,9 +247,7 @@ function registerCapsuleStateRoutes(app, context) {
           req.user.email,
           req.params.id,
         );
-        return capsule
-          ? res.json({ ok: true, capsule: context.toCapsuleResponse(capsule) })
-          : res.status(404).json({ error: "not_found" });
+        return sendCapsuleMutationResponse(req, res, capsule, context);
       } catch (error) {
         logError("[capsules/revert]", error);
         return res.status(503).json({ error: "service_unavailable" });
@@ -270,9 +275,7 @@ function registerCapsuleMetadataRoutes(app, context) {
           req.params.id,
           name,
         );
-        return capsule
-          ? res.json({ ok: true, capsule: context.toCapsuleResponse(capsule) })
-          : res.status(404).json({ error: "not_found" });
+        return sendCapsuleMutationResponse(req, res, capsule, context);
       } catch (error) {
         logError("[capsules/rename]", error);
         return res.status(503).json({ error: "service_unavailable" });
@@ -292,11 +295,13 @@ function registerCapsuleMetadataRoutes(app, context) {
           req.params.id,
           String(req.body?.name || "").trim() || undefined,
         );
-        return capsule
-          ? res
-              .status(201)
-              .json({ ok: true, capsule: context.toCapsuleResponse(capsule) })
-          : res.status(404).json({ error: "not_found" });
+        if (!capsule) {
+          return res.status(404).json({ error: "not_found" });
+        }
+        return res.status(201).json({
+          ok: true,
+          capsule: await buildAnnotatedCapsuleResponse(capsule, req, context),
+        });
       } catch (error) {
         logError("[capsules/duplicate]", error);
         return res.status(503).json({ error: "service_unavailable" });

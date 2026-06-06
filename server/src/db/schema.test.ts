@@ -8,6 +8,7 @@ import {
   checkDatabaseConnection,
   ensureAuthTables,
   ensureCapsulesTable,
+  ensureLikedItemsTable,
   ensurePasskeysTables,
   ensureProfilesTable,
   ensureMcpOAuthTables,
@@ -79,6 +80,7 @@ test("ensure auth, profile, passkey, capsule, shared capsule, and search schemas
   await ensureCapsulesTable();
   await ensureSharedCapsulesTable();
   await ensureWardrobeTable();
+  await ensureLikedItemsTable();
   await ensureMcpOAuthTables();
   await ensureSearchTable();
 
@@ -147,6 +149,23 @@ test("ensure auth, profile, passkey, capsule, shared capsule, and search schemas
   expect(
     statements.some((statement) =>
       statement.includes("create table if not exists wardrobe"),
+    ),
+  ).toBeTruthy();
+  expect(
+    statements.some((statement) =>
+      statement.includes("create table if not exists user_liked_items"),
+    ),
+  ).toBeTruthy();
+  expect(
+    statements.some((statement) =>
+      statement.includes(
+        "user_email text not null references profiles(email) on delete cascade",
+      ),
+    ),
+  ).toBeTruthy();
+  expect(
+    statements.some((statement) =>
+      statement.includes("primary key (user_email, item_url)"),
     ),
   ).toBeTruthy();
   expect(
@@ -224,6 +243,7 @@ test("ensureTables runs every schema group in dependency order", async () => {
   expect(joined).toMatch(/create table if not exists login_codes/);
   expect(joined).toMatch(/create table if not exists profiles/);
   expect(joined).toMatch(/create table if not exists profile_passkeys/);
+  expect(joined).toMatch(/create table if not exists user_liked_items/);
   expect(joined).toMatch(/create table if not exists capsules/);
   expect(joined).toMatch(/create table if not exists shared_capsules/);
   expect(joined).toMatch(/create table if not exists wardrobe/);
@@ -238,6 +258,10 @@ test("ensureTables runs every schema group in dependency order", async () => {
   expect(joined).toMatch(/create table if not exists search/);
   expect(
     joined.indexOf("create table if not exists profiles") <
+      joined.indexOf("create table if not exists user_liked_items"),
+  ).toBeTruthy();
+  expect(
+    joined.indexOf("create table if not exists user_liked_items") <
       joined.indexOf("create table if not exists profile_passkeys"),
   ).toBeTruthy();
 });

@@ -15,6 +15,10 @@ const AUTH_SCHEMA_FILES = [
 
 const PROFILE_SCHEMA_FILES = ["020_create_profiles_table.sql"] as const;
 
+const LIKED_ITEMS_SCHEMA_FILES = [
+  "090_create_user_liked_items_table.sql",
+] as const;
+
 const PASSKEY_SCHEMA_FILES = [
   "001_create_pgcrypto_extension.sql",
   "030_create_profile_passkeys_table.sql",
@@ -79,6 +83,11 @@ export async function ensureProfilesTable(): Promise<void> {
   await executeSchemaSqlFiles(sql, PROFILE_SCHEMA_FILES);
 }
 
+export async function ensureLikedItemsTable(): Promise<void> {
+  const sql = getSqlClient();
+  await executeSchemaSqlFiles(sql, LIKED_ITEMS_SCHEMA_FILES);
+}
+
 export async function ensurePasskeysTables(): Promise<void> {
   const sql = getSqlClient();
   await executeSchemaSqlFiles(sql, PASSKEY_SCHEMA_FILES);
@@ -107,6 +116,7 @@ export async function ensureMcpOAuthTables(): Promise<void> {
 export async function ensureTables(): Promise<void> {
   await ensureAuthTables();
   await ensureProfilesTable();
+  await ensureLikedItemsTable();
   await ensurePasskeysTables();
   await ensureCapsulesTable();
   await ensureSharedCapsulesTable();

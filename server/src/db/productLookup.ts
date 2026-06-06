@@ -44,6 +44,12 @@ export async function getProductByIdForEmail(
           and wardrobe.source = 'from_catalog'
           and wardrobe.url = products.url
       ) as "isSavedToWardrobe",
+      exists (
+        select 1
+        from user_liked_items
+        where user_liked_items.user_email = ${normalizedEmail || null}
+          and user_liked_items.item_url = products.url
+      ) as "isLiked",
       null::double precision as distance
     from products
     where products.id = ${normalizedId}
@@ -96,6 +102,12 @@ export async function getProductByUrlForEmail(
           and wardrobe.source = 'from_catalog'
           and wardrobe.url = products.url
       ) as "isSavedToWardrobe",
+      exists (
+        select 1
+        from user_liked_items
+        where user_liked_items.user_email = ${normalizedEmail || null}
+          and user_liked_items.item_url = products.url
+      ) as "isLiked",
       null::double precision as distance
     from products
     where products.url = ${normalizedUrl}

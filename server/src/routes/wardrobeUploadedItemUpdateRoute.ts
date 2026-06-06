@@ -38,10 +38,11 @@ function registerUploadedWardrobeItemUpdateRoute(app, context, filterItem) {
         if (!item) {
           return res.status(404).json({ error: "not_found" });
         }
+        const likedUrls = await context.listLikedItemUrlsImpl(req.user.email);
 
         return res.json({
           ok: true,
-          item: filterItem(item),
+          item: context.annotateLikedItems(filterItem(item), likedUrls),
         });
       } catch (error) {
         logError("[wardrobe/items/uploaded/:id]", error);
@@ -69,10 +70,11 @@ function registerUploadedWardrobeItemDetailRoute(app, context, filterItem) {
         if (!item) {
           return res.status(404).json({ error: "not_found" });
         }
+        const likedUrls = await context.listLikedItemUrlsImpl(req.user.email);
 
         return res.json({
           ok: true,
-          item: filterItem(item),
+          item: context.annotateLikedItems(filterItem(item), likedUrls),
         });
       } catch (error) {
         logError("[wardrobe/items/uploaded/:id][get]", error);

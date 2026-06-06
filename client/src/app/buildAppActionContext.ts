@@ -27,6 +27,7 @@ export function buildAppActionContext(input: AppActionContextInput) {
 
   return {
     activeCapsuleId: state.activeCapsuleId,
+    activeCapsuleMeta: state.activeCapsuleMeta,
     applyCapsuleState: input.applyCapsuleState,
     applyWardrobeSnapshot: input.applyWardrobeSnapshot,
     bootstrapCapsules: input.bootstrapCapsules,

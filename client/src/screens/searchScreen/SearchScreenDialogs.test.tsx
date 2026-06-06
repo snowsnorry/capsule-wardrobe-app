@@ -29,9 +29,12 @@ vi.mock("../../search/SearchFiltersSidebar", () => ({
   ),
 }));
 vi.mock("../../components/productDetail/ProductDetail", () => ({
-  default: ({ item }) => (
+  default: ({ item, onSetItemLike }) => (
     <div>
       <span>detail {item?.id || "none"}</span>
+      {onSetItemLike ? (
+        <button type="button">body product actions</button>
+      ) : null}
     </div>
   ),
 }));
@@ -116,6 +119,36 @@ describe("SearchScreenDialogs", () => {
       screen.getByRole("menuitem", { name: "Save to Personal items" }),
     );
     expect(onSaveToMyWardrobe).toHaveBeenCalledWith(search.selectedItem);
+  });
+
+  test("keeps mobile product actions only in the dialog header", () => {
+    const search = createSearch();
+
+    render(
+      <SearchScreenDialogs
+        search={search as never}
+        t={(key) =>
+          ({
+            "actions.close": "Close",
+            "capsule.closeFilters": "Close filters",
+            "filters.apply": "Apply",
+            "filters.reset": "Reset",
+            "filters.title": "Filters",
+            "search.productActions": "Product actions",
+            "search.productDetailsTitle": "Product details",
+          })[key] || key
+        }
+        locale="en"
+        onSetItemLike={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getAllByRole("button", { name: "Product actions" }),
+    ).toHaveLength(1);
+    expect(
+      screen.queryByRole("button", { name: "body product actions" }),
+    ).not.toBeInTheDocument();
   });
 
   test("keeps filter body apply callback wired after moving actions to the footer", async () => {

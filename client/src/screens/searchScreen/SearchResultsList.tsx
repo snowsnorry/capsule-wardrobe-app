@@ -9,6 +9,7 @@ import {
   Typography,
 } from "@mui/material";
 import BookmarkBorderRoundedIcon from "@mui/icons-material/BookmarkBorderRounded";
+import FavoriteRoundedIcon from "@mui/icons-material/FavoriteRounded";
 import ProductLabelText from "../../components/ProductLabelText";
 import type { ActiveFilterChip } from "../../search/searchState";
 import type { SearchResultItem, SearchStatus } from "./searchTypes";
@@ -162,6 +163,8 @@ function ResultListItem({
   const isSavedToWardrobe = Boolean(
     item.isSavedToWardrobe || item.savedToMyWardrobe,
   );
+  const isLiked = Boolean(item.isLiked);
+  const likedLabel = t("wardrobe.likedBadge");
   const savedLabel = t("wardrobe.savedBadge");
 
   return (
@@ -175,32 +178,10 @@ function ResultListItem({
           onSelectResult(item);
         }
       }}
-      sx={{
-        pl: "10px",
-        pr: 0.5,
-        py: 1.1,
-        borderRadius: "var(--cw-radius-card)",
-        cursor: "pointer",
-        border: "1px solid",
-        borderColor: isSelected ? "primary.main" : "transparent",
-        backgroundColor: isSelected
-          ? "var(--cw-color-action-wash)"
-          : "transparent",
-        transition:
-          "background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease",
-        "&:hover": {
-          backgroundColor: isSelected
-            ? "var(--cw-color-action-wash)"
-            : "var(--cw-color-action-hover)",
-        },
-        "&:focus-visible": {
-          outline: "none",
-          borderColor: "primary.main",
-          boxShadow: "inset 0 0 0 2px var(--cw-color-primary)",
-        },
-      }}
+      sx={getResultListItemSx(isLiked, isSelected)}
       data-mobile-result={isMobile ? "true" : undefined}
     >
+      {isLiked ? <LikedIndicator label={likedLabel} /> : null}
       <Typography variant="body1" sx={{ fontWeight: 700 }}>
         {isSavedToWardrobe ? (
           <BookmarkBorderRoundedIcon
@@ -231,6 +212,56 @@ function ResultListItem({
           {item.brand || t("search.noBrand")}
         </Typography>
       </Stack>
+    </Box>
+  );
+}
+
+function getResultListItemSx(isLiked: boolean, isSelected: boolean) {
+  return {
+    pl: isLiked ? "44px" : "10px",
+    pr: 0.5,
+    py: 1.1,
+    position: "relative",
+    borderRadius: "var(--cw-radius-card)",
+    cursor: "pointer",
+    border: "1px solid",
+    borderColor: isSelected ? "primary.main" : "transparent",
+    backgroundColor: isSelected ? "var(--cw-color-action-wash)" : "transparent",
+    transition:
+      "background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease",
+    "&:hover": {
+      backgroundColor: isSelected
+        ? "var(--cw-color-action-wash)"
+        : "var(--cw-color-action-hover)",
+    },
+    "&:focus-visible": {
+      outline: "none",
+      borderColor: "primary.main",
+      boxShadow: "inset 0 0 0 2px var(--cw-color-primary)",
+    },
+  } as const;
+}
+
+function LikedIndicator({ label }: { label: string }) {
+  return (
+    <Box
+      aria-label={label}
+      title={label}
+      sx={{
+        position: "absolute",
+        top: 10,
+        left: 10,
+        width: 28,
+        height: 28,
+        borderRadius: "50%",
+        display: "grid",
+        placeItems: "center",
+        color: "var(--cw-color-liked-indicator, #c62828)",
+        bgcolor: "background.paper",
+        boxShadow: "var(--cw-shadow-image-toggle)",
+      }}
+    >
+      <FavoriteRoundedIcon sx={{ fontSize: 16 }} />
     </Box>
   );
 }

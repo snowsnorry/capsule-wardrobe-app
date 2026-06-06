@@ -2,15 +2,60 @@ import { logError } from "../logger.js";
 
 export function registerSearchRoutes(app, context) {
   const {
-    getSavedSearchImpl,
+    annotateLikedItems,
     getProductsByUrlsInOrderImpl,
-    getSearchOptionsImpl,
-    getSearchStatsImpl,
+    listLikedItemUrlsImpl,
     requireAuth,
     requireCsrf,
     requireTrustedOrigin,
     runSavedSearchImpl,
   } = context;
+
+  registerSearchReadRoutes(app, context);
+
+  app.get(
+    "/search/product",
+    requireAuth,
+    createProductDetailHandler({
+      annotateLikedItems,
+      getProductsByUrlsInOrderImpl,
+      listLikedItemUrlsImpl,
+    }),
+  );
+
+  app.post(
+    "/search/run",
+    requireTrustedOrigin,
+    requireAuth,
+    requireCsrf,
+    async (req, res) => {
+      try {
+        const result = await runSavedSearchImpl(req.user.email, req.body || {});
+        const likedUrls = await listLikedItemUrlsImpl(req.user.email);
+        return res.json({
+          ok: true,
+          ...(result && typeof result === "object"
+            ? annotateLikedItems(result, likedUrls)
+            : {}),
+        });
+      } catch (error) {
+        if (
+          error?.code === "invalid_payload" ||
+          error?.message === "invalid_payload"
+        ) {
+          return res.status(400).json({ error: "invalid_payload" });
+        }
+        logError("[search/run]", error);
+        return res.status(503).json({ error: "service_unavailable" });
+      }
+    },
+  );
+
+  registerSearchStatsRoute(app, context);
+}
+
+function registerSearchReadRoutes(app, context) {
+  const { getSavedSearchImpl, getSearchOptionsImpl, requireAuth } = context;
 
   app.get("/search/options", requireAuth, async (req, res) => {
     try {
@@ -31,37 +76,11 @@ export function registerSearchRoutes(app, context) {
       return res.status(503).json({ error: "service_unavailable" });
     }
   });
+}
 
-  app.get(
-    "/search/product",
-    requireAuth,
-    createProductDetailHandler(getProductsByUrlsInOrderImpl),
-  );
-
-  app.post(
-    "/search/run",
-    requireTrustedOrigin,
-    requireAuth,
-    requireCsrf,
-    async (req, res) => {
-      try {
-        const result = await runSavedSearchImpl(req.user.email, req.body || {});
-        return res.json({
-          ok: true,
-          ...(result && typeof result === "object" ? result : {}),
-        });
-      } catch (error) {
-        if (
-          error?.code === "invalid_payload" ||
-          error?.message === "invalid_payload"
-        ) {
-          return res.status(400).json({ error: "invalid_payload" });
-        }
-        logError("[search/run]", error);
-        return res.status(503).json({ error: "service_unavailable" });
-      }
-    },
-  );
+function registerSearchStatsRoute(app, context) {
+  const { getSearchStatsImpl, requireAuth, requireCsrf, requireTrustedOrigin } =
+    context;
 
   app.post(
     "/search/stats",
@@ -89,7 +108,11 @@ export function registerSearchRoutes(app, context) {
   );
 }
 
-function createProductDetailHandler(getProductsByUrlsInOrderImpl) {
+function createProductDetailHandler({
+  annotateLikedItems,
+  getProductsByUrlsInOrderImpl,
+  listLikedItemUrlsImpl,
+}) {
   return async (req, res) => {
     const url = getHttpUrlParam(req.query?.url);
     if (!url) {
@@ -98,9 +121,13 @@ function createProductDetailHandler(getProductsByUrlsInOrderImpl) {
 
     try {
       const items = await getProductsByUrlsInOrderImpl([url]);
+      const likedUrls = await listLikedItemUrlsImpl(req.user.email);
       return res.json({
         ok: true,
-        item: Array.isArray(items) ? items[0] || null : null,
+        item: annotateLikedItems(
+          Array.isArray(items) ? items[0] || null : null,
+          likedUrls,
+        ),
       });
     } catch (error) {
       logError("[search/product]", error);

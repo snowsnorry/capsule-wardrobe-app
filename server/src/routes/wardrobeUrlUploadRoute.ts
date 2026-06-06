@@ -245,10 +245,11 @@ function registerWardrobeUrlUploadRoute(app, context) {
           }
         }
 
+        const likedUrls = await context.listLikedItemUrlsImpl(req.user.email);
         writeWardrobeUploadEvent(res, "complete", {
           ok: true,
           ...progress,
-          items: processedItems,
+          items: context.annotateLikedItems(processedItems, likedUrls),
         });
         return res.end();
       } catch (error) {

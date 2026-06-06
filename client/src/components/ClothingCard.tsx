@@ -103,6 +103,7 @@ function getClothingCardBadgeLabels(t: (key: string) => string) {
   return {
     savedToWardrobeLabel: t("wardrobe.savedBadge"),
     failedUploadLabel: t("wardrobe.failedUploadBadge"),
+    likedLabel: t("wardrobe.likedBadge"),
     needsReviewLabel: t("wardrobe.needsReviewBadge"),
   };
 }

@@ -20,6 +20,7 @@ type ProductDetailItem = {
   occasions?: unknown;
   closureType?: unknown;
   isNeutral?: unknown;
+  isLiked?: boolean | null;
   isSavedToWardrobe?: boolean | null;
   savedToMyWardrobe?: boolean | null;
   [key: string]: unknown;

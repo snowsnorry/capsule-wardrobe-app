@@ -289,6 +289,12 @@ async function querySearchProductItems(
           and wardrobe.source = 'from_catalog'
           and wardrobe.url = matching_products.url
       ) as "isSavedToWardrobe",
+      exists (
+        select 1
+        from user_liked_items
+        where user_liked_items.user_email = ${profileEmail}
+          and user_liked_items.item_url = matching_products.url
+      ) as "isLiked",
       distance
     from matching_products
     order by
