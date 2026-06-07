@@ -871,6 +871,7 @@ function AddItemsDialog({
   const [catalogDraftState, setCatalogDraftState] = useState<SearchDraftState>(
     () => createSearchState(null, EMPTY_SEARCH_OPTIONS.priceRange),
   );
+  const [catalogAppliedQuery, setCatalogAppliedQuery] = useState("");
   const [catalogMobileFiltersDraftState, setCatalogMobileFiltersDraftState] =
     useState<SearchDraftState>(() =>
       createSearchState(null, EMPTY_SEARCH_OPTIONS.priceRange),
@@ -933,13 +934,16 @@ function AddItemsDialog({
   const catalogActiveChips = useMemo(
     () =>
       buildActiveFilterChips({
-        state: catalogDraftState,
+        state:
+          catalogDraftState.query === catalogAppliedQuery
+            ? catalogDraftState
+            : { ...catalogDraftState, query: catalogAppliedQuery },
         options: catalogOptions,
         locale,
         t,
         translateOption,
       }),
-    [catalogDraftState, catalogOptions, locale, t],
+    [catalogAppliedQuery, catalogDraftState, catalogOptions, locale, t],
   );
   const totalParts = [
     personalCount ? t("outfit.personalSelected", { count: personalCount }) : "",
@@ -979,6 +983,7 @@ function AddItemsDialog({
       const nextState = createSearchState(null, nextOptions.priceRange);
       setCatalogOptions(nextOptions);
       setCatalogDraftState(nextState);
+      setCatalogAppliedQuery(nextState.query);
       setCatalogMobileFiltersDraftState(nextState);
       const result = await runSearch({
         ...serializeDraftState(nextState, nextOptions.priceRange),
@@ -1003,6 +1008,7 @@ function AddItemsDialog({
       typeof updater === "function" ? updater(catalogDraftState) : updater;
     setCatalogDraftState(nextState);
     if (options.submit) {
+      setCatalogAppliedQuery(nextState.query);
       await runCatalogSearch(nextState);
     }
   };
@@ -1010,6 +1016,7 @@ function AddItemsDialog({
   const applyCatalogSearch = async (state = catalogDraftState) => {
     const nextState = { ...state, page: 1 };
     setCatalogDraftState(nextState);
+    setCatalogAppliedQuery(nextState.query);
     setCatalogMobileFiltersDraftState(nextState);
     await runCatalogSearch(nextState);
     setIsCatalogFiltersOpen(false);
@@ -1018,6 +1025,7 @@ function AddItemsDialog({
   const resetCatalogSearch = async () => {
     const nextState = createSearchState(null, catalogOptions.priceRange);
     setCatalogDraftState(nextState);
+    setCatalogAppliedQuery(nextState.query);
     setCatalogMobileFiltersDraftState(nextState);
     await runCatalogSearch(nextState);
     setIsCatalogFiltersOpen(false);
@@ -1026,12 +1034,14 @@ function AddItemsDialog({
   const clearCatalogQuery = async () => {
     const nextState = { ...catalogDraftState, query: "", page: 1 };
     setCatalogDraftState(nextState);
+    setCatalogAppliedQuery(nextState.query);
     await runCatalogSearch(nextState);
   };
 
   const changeCatalogPage = async (_event: unknown, page: number) => {
     const nextState = { ...catalogDraftState, page };
     setCatalogDraftState(nextState);
+    setCatalogAppliedQuery(nextState.query);
     await runCatalogSearch(nextState);
   };
 
@@ -1042,6 +1052,7 @@ function AddItemsDialog({
       priceRange: catalogOptions.priceRange,
     });
     setCatalogDraftState(nextState);
+    setCatalogAppliedQuery(nextState.query);
     void runCatalogSearch(nextState);
   };
 

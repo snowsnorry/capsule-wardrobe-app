@@ -86,6 +86,7 @@ vi.mock("../../i18n/useI18n", () => ({
         "search.filters.silhouette": "Silhouette",
         "search.notImportant": "Not important",
         "search.clear": "Clear search",
+        "search.filters.query": `Search: ${params?.query ?? ""}`,
         "search.placeholder": "Search in natural language",
         "search.resultsCount": `${params?.count ?? 0} results`,
         "wardrobe.like": "Like",
@@ -507,6 +508,42 @@ describe("OutfitScreen", () => {
         expect.objectContaining({ limit: 20, persist: false, query: "linen" }),
       );
     });
+  });
+
+  test("keeps the catalog query chip on the last applied search while typing", async () => {
+    mockCatalogSearch();
+
+    const user = userEvent.setup();
+    renderScreen();
+
+    await user.click(screen.getByRole("button", { name: "Add items" }));
+    await user.click(screen.getByRole("tab", { name: "Catalog" }));
+    await screen.findByText("1 results");
+    searchApi.runSearch.mockClear();
+
+    const searchInput = screen.getByPlaceholderText(
+      "Search in natural language",
+    );
+    await user.type(searchInput, "linen");
+
+    expect(searchInput).toHaveValue("linen");
+    expect(screen.queryByText("Search: linen")).not.toBeInTheDocument();
+    expect(searchApi.runSearch).not.toHaveBeenCalled();
+
+    await user.type(searchInput, "{Enter}");
+
+    await waitFor(() => {
+      expect(screen.getByText("Search: linen")).toBeInTheDocument();
+      expect(searchApi.runSearch).toHaveBeenLastCalledWith(
+        expect.objectContaining({ limit: 20, persist: false, query: "linen" }),
+      );
+    });
+
+    await user.clear(searchInput);
+    await user.type(searchInput, "silk");
+
+    expect(screen.getByText("Search: linen")).toBeInTheDocument();
+    expect(screen.queryByText("Search: silk")).not.toBeInTheDocument();
   });
 
   test("uses the colocated 320 thumbnail for uploaded personal items in the add dialog", async () => {
