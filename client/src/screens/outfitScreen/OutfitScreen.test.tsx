@@ -247,6 +247,79 @@ describe("OutfitScreen", () => {
     expect(within(preview).getByText("Preview jacket")).toBeInTheDocument();
   });
 
+  test("sorts outfit cards by the capsule wardrobe order", () => {
+    renderScreen({
+      activeOutfit: {
+        id: "outfit-1",
+        name: "<New outfit>",
+        status: "saved",
+        effective: {
+          items: [
+            {
+              key: "https://example.com/bag",
+              source: "catalog",
+              item: {
+                id: "bag",
+                url: "https://example.com/bag",
+                name: "Bag",
+                category: "bag",
+                imageUrl: "https://example.com/bag.png",
+              },
+            },
+            {
+              key: "https://example.com/trousers",
+              source: "catalog",
+              item: {
+                id: "trousers",
+                url: "https://example.com/trousers",
+                name: "Trousers",
+                category: "bottom",
+                imageUrl: "https://example.com/trousers.png",
+              },
+            },
+            {
+              key: "https://example.com/shirt",
+              source: "catalog",
+              item: {
+                id: "shirt",
+                url: "https://example.com/shirt",
+                name: "Shirt",
+                category: "top",
+                imageUrl: "https://example.com/shirt.png",
+              },
+            },
+            {
+              key: "https://example.com/blazer",
+              source: "catalog",
+              item: {
+                id: "blazer",
+                url: "https://example.com/blazer",
+                name: "Blazer",
+                category: "outerwear",
+                imageUrl: "https://example.com/blazer.png",
+              },
+            },
+          ],
+        },
+      },
+    });
+
+    const blazer = screen.getByRole("button", { name: /Blazer/i });
+    const shirt = screen.getByRole("button", { name: /Shirt/i });
+    const trousers = screen.getByRole("button", { name: /Trousers/i });
+    const bag = screen.getByRole("button", { name: /Bag/i });
+
+    expect(blazer.compareDocumentPosition(shirt)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+    expect(shirt.compareDocumentPosition(trousers)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+    expect(trousers.compareDocumentPosition(bag)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+  });
+
   test("does not duplicate the outfit title inside the mobile body", () => {
     setViewportMobile(true);
 

@@ -246,6 +246,16 @@ function sortOutfitWardrobeItems(items: WardrobeItem[]) {
   return sortWardrobeItems(items as SortableWardrobeItem[]);
 }
 
+function sortOutfitItemSnapshots(items: OutfitItemSnapshot[]) {
+  return sortWardrobeItems(
+    items.map((entry) => ({
+      category: entry.item?.category,
+      entry,
+      name: getItemName(entry.item),
+    })),
+  ).map(({ entry }) => entry);
+}
+
 function useOutfitPersonalItemTypeOptions(items: WardrobeItem[]) {
   return useMemo(() => {
     const values = new Set(
@@ -1379,6 +1389,7 @@ export default function OutfitScreen({
   );
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
   const items = useMemo(() => getOutfitItems(activeOutfit), [activeOutfit]);
+  const visibleItems = useMemo(() => sortOutfitItemSnapshots(items), [items]);
   const isSelectionMode = selectedKeys.length > 0;
   const previewItemKey = getPreviewItemKey(previewItem);
   const updateMobileCardColumns = (value: MobileCardColumns) => {
@@ -1459,7 +1470,7 @@ export default function OutfitScreen({
           activeOutfit={activeOutfit}
           isContentBusy={isContentBusy}
           isMobile={isMobile}
-          items={items}
+          items={visibleItems}
           onAdd={() => setIsAddOpen(true)}
           onCancelSelection={() => setSelectedKeys([])}
           onMenuOpen={setMenuAnchor}
@@ -1478,7 +1489,7 @@ export default function OutfitScreen({
             gap: buildOutfitGridGap(mobileCardColumns),
           }}
         >
-          {items.map((entry) => (
+          {visibleItems.map((entry) => (
             <ClothingCard
               key={entry.key}
               item={entry.item}
