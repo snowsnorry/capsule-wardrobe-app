@@ -1,13 +1,13 @@
 import { useEffect, useRef } from "react";
 import { createNewCapsule, openCapsule } from "./capsuleActions";
 import type { AppActionContext } from "./actionContext";
+import type { AppControllerOperations } from "./appControllerOperations";
 import type {
   AppRoute,
   CapsuleMeta,
   CapsuleRouteMode,
   StatusState,
 } from "./appTypes";
-import type { AppControllerOperations } from "./useAppControllerOperations";
 
 type CapsuleRouteSyncOptions = {
   activeCapsuleId: string;

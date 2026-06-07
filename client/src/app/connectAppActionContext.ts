@@ -1,5 +1,5 @@
 import { buildAppActionContext } from "./buildAppActionContext";
-import type { AppControllerOperations } from "./useAppControllerOperations";
+import type { AppControllerOperations } from "./appControllerOperations";
 import type { useAppHandlers } from "./useAppHandlers";
 import type { useAppNavigation } from "./useAppNavigation";
 import type { useAppNotifications } from "./useAppNotifications";

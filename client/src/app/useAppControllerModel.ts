@@ -12,10 +12,7 @@ import {
   toggleStringSelection,
 } from "./appViewState";
 import { resolveAppErrorMessage } from "./errorMessages";
-import {
-  useAppControllerOperations,
-  type AppControllerOperations,
-} from "./useAppControllerOperations";
+import { useAppControllerOperations } from "./useAppControllerOperations";
 import { useAppHandlers } from "./useAppHandlers";
 import { useAppLifecycleEffects } from "./useAppLifecycleEffects";
 import { useAppNavigation } from "./useAppNavigation";
@@ -28,6 +25,7 @@ import { useProfileOptions } from "./useProfileOptions";
 import { useSessionBootstrap } from "./useSessionBootstrap";
 import { useShareRoute } from "./useShareRoute";
 import { retry } from "./retry";
+import type { AppControllerOperations } from "./appControllerOperations";
 
 export function useAppControllerModel() {
   const isLarge = useMediaQuery("(min-width:900px)");
