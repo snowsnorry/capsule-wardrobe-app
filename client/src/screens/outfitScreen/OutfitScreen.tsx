@@ -61,6 +61,7 @@ import { fetchSearchOptions, runSearch } from "../../api/search";
 import { translateOption } from "../../i18n";
 import { useI18n } from "../../i18n/useI18n";
 import SearchFiltersSidebar from "../../search/SearchFiltersSidebar";
+import { SearchFiltersFooter } from "../../search/SearchFiltersSidebarSections";
 import {
   EMPTY_SEARCH_OPTIONS,
   buildActiveFilterChips,
@@ -860,6 +861,10 @@ function AddItemsDialog({
   const [catalogDraftState, setCatalogDraftState] = useState<SearchDraftState>(
     () => createSearchState(null, EMPTY_SEARCH_OPTIONS.priceRange),
   );
+  const [catalogMobileFiltersDraftState, setCatalogMobileFiltersDraftState] =
+    useState<SearchDraftState>(() =>
+      createSearchState(null, EMPTY_SEARCH_OPTIONS.priceRange),
+    );
   const [catalogStatus, setCatalogStatus] = useState({
     loading: false,
     error: "",
@@ -964,6 +969,7 @@ function AddItemsDialog({
       const nextState = createSearchState(null, nextOptions.priceRange);
       setCatalogOptions(nextOptions);
       setCatalogDraftState(nextState);
+      setCatalogMobileFiltersDraftState(nextState);
       const result = await runSearch({
         ...serializeDraftState(nextState, nextOptions.priceRange),
         limit: CATALOG_PICKER_PAGE_SIZE,
@@ -991,9 +997,10 @@ function AddItemsDialog({
     }
   };
 
-  const applyCatalogSearch = async () => {
-    const nextState = { ...catalogDraftState, page: 1 };
+  const applyCatalogSearch = async (state = catalogDraftState) => {
+    const nextState = { ...state, page: 1 };
     setCatalogDraftState(nextState);
+    setCatalogMobileFiltersDraftState(nextState);
     await runCatalogSearch(nextState);
     setIsCatalogFiltersOpen(false);
   };
@@ -1001,7 +1008,9 @@ function AddItemsDialog({
   const resetCatalogSearch = async () => {
     const nextState = createSearchState(null, catalogOptions.priceRange);
     setCatalogDraftState(nextState);
+    setCatalogMobileFiltersDraftState(nextState);
     await runCatalogSearch(nextState);
+    setIsCatalogFiltersOpen(false);
   };
 
   const clearCatalogQuery = async () => {
@@ -1026,15 +1035,43 @@ function AddItemsDialog({
     void runCatalogSearch(nextState);
   };
 
-  const renderCatalogFilters = () => (
+  const openCatalogFilters = () => {
+    setCatalogMobileFiltersDraftState(catalogDraftState);
+    setIsCatalogFiltersOpen(true);
+  };
+
+  const changeCatalogMobileFiltersDraft = (
+    updater:
+      | SearchDraftState
+      | ((current: SearchDraftState) => SearchDraftState),
+  ) => {
+    setCatalogMobileFiltersDraftState((current) =>
+      typeof updater === "function" ? updater(current) : updater,
+    );
+  };
+
+  const renderCatalogFilters = ({
+    autoApply,
+    draftState,
+    onDraftStateChange,
+  }: {
+    autoApply: boolean;
+    draftState: SearchDraftState;
+    onDraftStateChange: (
+      updater:
+        | SearchDraftState
+        | ((current: SearchDraftState) => SearchDraftState),
+      options?: { submit?: boolean },
+    ) => void | Promise<void>;
+  }) => (
     <SearchFiltersSidebar
       options={catalogOptions}
-      draftState={catalogDraftState}
+      draftState={draftState}
       status={catalogStatus}
-      onDraftStateChange={changeCatalogDraft}
+      onDraftStateChange={onDraftStateChange}
       onApply={applyCatalogSearch}
       onReset={resetCatalogSearch}
-      autoApply
+      autoApply={autoApply}
       showFooterActions={false}
     />
   );
@@ -1147,7 +1184,11 @@ function AddItemsDialog({
                 </Typography>
                 <Divider />
               </Stack>
-              {renderCatalogFilters()}
+              {renderCatalogFilters({
+                autoApply: true,
+                draftState: catalogDraftState,
+                onDraftStateChange: changeCatalogDraft,
+              })}
             </Box>
             <Divider orientation="vertical" sx={catalogDesktopDividerSx} />
             <Stack spacing={2} sx={catalogResultsPaneSx}>
@@ -1156,7 +1197,7 @@ function AddItemsDialog({
                   isMobile={isCatalogMobile}
                   query={catalogDraftState.query}
                   t={t}
-                  onOpenFilters={() => setIsCatalogFiltersOpen(true)}
+                  onOpenFilters={openCatalogFilters}
                   onQueryChange={(query) =>
                     setCatalogDraftState((current) => ({
                       ...current,
@@ -1213,7 +1254,9 @@ function AddItemsDialog({
         fullScreen
       >
         <DialogTitle sx={catalogMobileFiltersTitleSx}>
-          <Typography variant="h6">{t("filters.title")}</Typography>
+          <Typography component="span" variant="h6">
+            {t("filters.title")}
+          </Typography>
           <IconButton
             aria-label={t("actions.close")}
             onClick={() => setIsCatalogFiltersOpen(false)}
@@ -1223,8 +1266,21 @@ function AddItemsDialog({
         </DialogTitle>
         <DialogLoadingDivider loading={catalogStatus.loading} />
         <DialogContent sx={catalogMobileFiltersContentSx}>
-          {renderCatalogFilters()}
+          {renderCatalogFilters({
+            autoApply: false,
+            draftState: catalogMobileFiltersDraftState,
+            onDraftStateChange: changeCatalogMobileFiltersDraft,
+          })}
         </DialogContent>
+        <DialogActions sx={mobileCapsuleDialogActionsSx}>
+          <SearchFiltersFooter
+            status={catalogStatus}
+            onApply={() => applyCatalogSearch(catalogMobileFiltersDraftState)}
+            onReset={resetCatalogSearch}
+            showApplyButton
+            t={t}
+          />
+        </DialogActions>
       </Dialog>
       <DialogActions sx={getAddItemsDialogActionsSx(fullScreen)}>
         <Button onClick={onClose}>{t("actions.cancel")}</Button>

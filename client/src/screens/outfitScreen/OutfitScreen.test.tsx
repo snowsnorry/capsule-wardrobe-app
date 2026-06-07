@@ -511,14 +511,82 @@ describe("OutfitScreen", () => {
     await user.click(screen.getByRole("button", { name: "Open filters" }));
 
     const filtersDialog = screen.getByRole("dialog", { name: "Filters" });
+    const likedOnlySwitch = within(filtersDialog).getByRole("switch", {
+      name: "Liked only",
+    });
+    expect(likedOnlySwitch).toBeInTheDocument();
     expect(
-      within(filtersDialog).getByRole("switch", { name: "Liked only" }),
+      within(filtersDialog).getByRole("button", { name: "Apply" }),
     ).toBeInTheDocument();
     expect(
-      within(filtersDialog).queryByRole("button", { name: "Apply" }),
-    ).not.toBeInTheDocument();
+      within(filtersDialog).getAllByRole("button", { name: "Reset" }),
+    ).not.toHaveLength(0);
     expect(
       within(filtersDialog).getByRole("button", { name: "Close" }),
     ).toBeInTheDocument();
+
+    await user.click(likedOnlySwitch);
+    expect(searchApi.runSearch).toHaveBeenCalledTimes(1);
+
+    await user.click(
+      within(filtersDialog).getByRole("button", { name: "Close" }),
+    );
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("dialog", { name: "Filters" }),
+      ).not.toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole("button", { name: "Open filters" }));
+    const reopenedDialog = screen.getByRole("dialog", { name: "Filters" });
+    expect(
+      within(reopenedDialog).getByRole("switch", { name: "Liked only" }),
+    ).not.toBeChecked();
+
+    await user.click(
+      within(reopenedDialog).getByRole("switch", { name: "Liked only" }),
+    );
+    await user.click(
+      within(reopenedDialog).getByRole("button", { name: "Apply" }),
+    );
+
+    await waitFor(() => {
+      expect(searchApi.runSearch).toHaveBeenCalledTimes(2);
+      expect(searchApi.runSearch).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          likedOnly: true,
+          limit: 20,
+          persist: false,
+        }),
+      );
+      expect(
+        screen.queryByRole("dialog", { name: "Filters" }),
+      ).not.toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole("button", { name: "Open filters" }));
+    const appliedDialog = screen.getByRole("dialog", { name: "Filters" });
+    expect(
+      within(appliedDialog).getByRole("switch", { name: "Liked only" }),
+    ).toBeChecked();
+
+    const resetButtons = within(appliedDialog).getAllByRole("button", {
+      name: "Reset",
+    });
+    await user.click(resetButtons.at(-1)!);
+
+    await waitFor(() => {
+      expect(searchApi.runSearch).toHaveBeenCalledTimes(3);
+      expect(searchApi.runSearch).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          likedOnly: false,
+          limit: 20,
+          persist: false,
+        }),
+      );
+      expect(
+        screen.queryByRole("dialog", { name: "Filters" }),
+      ).not.toBeInTheDocument();
+    });
   });
 });
