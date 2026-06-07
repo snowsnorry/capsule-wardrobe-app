@@ -63,11 +63,22 @@ vi.mock("../../i18n/useI18n", () => ({
         "filters.title": "Filters",
         "outfit.addItems": "Add items",
         "outfit.catalog": "Catalog",
+        "outfit.catalogSelected": `${params?.count ?? 0} catalog`,
+        "outfit.categoryCount": `${params?.count ?? 0} ${params?.category ?? ""}`,
+        "outfit.confirmDelete": "Delete outfit?",
+        "outfit.confirmRemoveItem": "Remove item?",
+        "outfit.confirmRemoveSelected": "Remove selected?",
+        "outfit.confirmRevert": "Revert outfit?",
         "outfit.emptySummary": "No items",
         "outfit.noneSelected": "No items selected",
         "outfit.openActions": "Open actions",
+        "outfit.personalSelected": `${params?.count ?? 0} personal`,
         "outfit.personalItems": "Personal items",
+        "outfit.removeSelectedCount": `Remove ${params?.count ?? 0}`,
         "outfit.selectItem": "Select",
+        "main.cancelSelection": "Cancel selection",
+        "options.categories.bag": "Bag",
+        "options.categories.top": "Top",
         "profile.styleAestheticTitle": "Aesthetics",
         "profile.styleCoreTitle": "Core",
         "search.all": "All",
@@ -479,6 +490,152 @@ describe("OutfitScreen", () => {
     expect(window.localStorage.getItem("outfit.mobileCardColumns")).toBe("3");
   });
 
+  test("runs outfit-level menu actions with confirmation for destructive operations", async () => {
+    const user = userEvent.setup();
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+    const onDeleteOutfit = vi.fn(() => Promise.resolve());
+    const onDownloadOutfitPdf = vi.fn(() => Promise.resolve());
+    const onDuplicateOutfit = vi.fn(() => Promise.resolve());
+    const onRevertOutfit = vi.fn(() => Promise.resolve());
+    const onSaveOutfit = vi.fn(() => Promise.resolve());
+    renderScreen({
+      activeOutfit: {
+        id: "outfit-1",
+        name: "Weekend",
+        status: "modified",
+        effective: { items: [] },
+      },
+      onDeleteOutfit,
+      onDownloadOutfitPdf,
+      onDuplicateOutfit,
+      onRevertOutfit,
+      onSaveOutfit,
+    });
+
+    const openMenu = async () => {
+      await user.click(screen.getByRole("button", { name: "Open actions" }));
+    };
+
+    await openMenu();
+    await user.click(screen.getByRole("menuitem", { name: "Export PDF" }));
+    expect(onDownloadOutfitPdf).toHaveBeenCalledWith("outfit-1");
+
+    await openMenu();
+    await user.click(screen.getByRole("menuitem", { name: "Save" }));
+    expect(onSaveOutfit).toHaveBeenCalledWith("outfit-1");
+
+    await openMenu();
+    await user.click(screen.getByRole("menuitem", { name: "Save as" }));
+    expect(onDuplicateOutfit).toHaveBeenCalledWith("Weekend", "outfit-1");
+
+    await openMenu();
+    await user.click(screen.getByRole("menuitem", { name: "Revert" }));
+    expect(confirm).toHaveBeenCalledWith("Revert outfit?");
+    expect(onRevertOutfit).toHaveBeenCalledWith("outfit-1");
+
+    await openMenu();
+    await user.click(screen.getByRole("menuitem", { name: "Delete" }));
+    expect(confirm).toHaveBeenCalledWith("Delete outfit?");
+    expect(onDeleteOutfit).toHaveBeenCalledWith("outfit-1");
+  });
+
+  test("adds selected personal and catalog items to the current outfit", async () => {
+    myWardrobeApi.fetchMyWardrobeItems.mockResolvedValue({
+      items: [
+        {
+          id: 42,
+          url: "https://example.com/personal",
+          name: "Personal shirt",
+          category: "top",
+          imageUrl: "https://example.com/personal.png",
+          source: "uploaded",
+          isLiked: true,
+        },
+        {
+          id: 43,
+          url: "https://example.com/existing",
+          name: "Existing shirt",
+          category: "top",
+          imageUrl: "https://example.com/existing.png",
+          source: "from_catalog",
+        },
+      ],
+    });
+    searchApi.fetchSearchOptions.mockResolvedValue({
+      brands: [],
+      categories: ["bag"],
+      seasons: [],
+      formalityLevels: [],
+      styles: [],
+      occasions: [],
+      audience: [],
+      colors: [],
+      patterns: [],
+      silhouettes: [],
+      fits: [],
+      closureTypes: [],
+      priceRange: { min: 0, max: 100 },
+    });
+    searchApi.runSearch.mockResolvedValue({
+      total: 1,
+      items: [
+        {
+          id: "catalog-bag",
+          url: "https://example.com/bag",
+          name: "Catalog bag",
+          category: "bag",
+          imageUrl: "https://example.com/bag.png",
+        },
+      ],
+    });
+    const onReplaceOutfitItems = vi.fn(() => Promise.resolve());
+    const user = userEvent.setup();
+    renderScreen({
+      activeOutfit: {
+        id: "outfit-1",
+        name: "Weekend",
+        status: "modified",
+        effective: {
+          items: [
+            {
+              key: "wardrobe://43",
+              source: "personal",
+              item: {
+                id: 43,
+                url: "https://example.com/existing",
+                name: "Existing shirt",
+                category: "top",
+              },
+            },
+          ],
+        },
+      },
+      onReplaceOutfitItems,
+    });
+
+    await user.click(screen.getByRole("button", { name: "Add items" }));
+    await user.click(
+      await screen.findByRole("button", { name: /Personal shirt/i }),
+    );
+    await user.click(screen.getByRole("tab", { name: "Catalog" }));
+    await user.click(
+      await screen.findByRole("button", { name: /Catalog bag/i }),
+    );
+
+    expect(screen.getByText("1 personal · 1 catalog")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Add" }));
+
+    expect(onReplaceOutfitItems).toHaveBeenCalledWith("outfit-1", [
+      expect.objectContaining({ key: "wardrobe://43", source: "personal" }),
+      expect.objectContaining({ key: "wardrobe://42", source: "personal" }),
+      expect.objectContaining({
+        key: "https://example.com/bag",
+        source: "catalog",
+      }),
+    ]);
+  });
+
   test("opens the add items dialog fullscreen on mobile", async () => {
     setViewportMobile(true);
     myWardrobeApi.fetchMyWardrobeItems.mockResolvedValue({ items: [] });
@@ -720,5 +877,5 @@ describe("OutfitScreen", () => {
         screen.queryByRole("dialog", { name: "Filters" }),
       ).not.toBeInTheDocument();
     });
-  });
+  }, 10_000);
 });

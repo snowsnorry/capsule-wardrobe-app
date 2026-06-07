@@ -27,16 +27,26 @@ vi.mock("../components/AppSidebarNavigation", () => ({
     activeCapsuleId,
     capsuleHasUnsavedChanges,
     onCreateCapsule,
+    onCreateOutfit,
     onSearchCapsules,
+    onSearchOutfits,
     onOpenCapsule,
+    onOpenOutfit,
+    onLoadMoreOutfits,
     onOpenCapsuleActions,
+    onOpenOutfitActions,
     personalItemsCount,
+    outfitHasUnsavedChanges,
   }: {
     activeCapsuleId: string;
     capsuleHasUnsavedChanges: (capsule: { status?: string }) => boolean;
     onCreateCapsule: () => void;
+    onCreateOutfit: () => void;
     onSearchCapsules: () => void;
+    onSearchOutfits: () => void;
     onOpenCapsule: (capsuleId: string) => void;
+    onOpenOutfit: (outfitId: string) => void;
+    onLoadMoreOutfits: () => void;
     onOpenCapsuleActions: (
       event: React.MouseEvent<HTMLElement>,
       capsule: {
@@ -46,17 +56,39 @@ vi.mock("../components/AppSidebarNavigation", () => ({
         status: string;
       },
     ) => void;
+    onOpenOutfitActions: (
+      event: React.MouseEvent<HTMLElement>,
+      outfit: {
+        id: string;
+        name: string;
+        saved?: unknown;
+        status: string;
+      },
+    ) => void;
     personalItemsCount?: number | null;
+    outfitHasUnsavedChanges: (outfit: { status?: string }) => boolean;
   }) => (
     <div>
       <button type="button" onClick={onCreateCapsule}>
         create capsule
       </button>
+      <button type="button" onClick={onCreateOutfit}>
+        create outfit
+      </button>
       <button type="button" onClick={() => onOpenCapsule("capsule-2")}>
         open capsule
       </button>
+      <button type="button" onClick={() => onOpenOutfit("outfit-2")}>
+        open outfit
+      </button>
+      <button type="button" onClick={onLoadMoreOutfits}>
+        load more outfits
+      </button>
       <button type="button" onClick={onSearchCapsules}>
         search capsules
+      </button>
+      <button type="button" onClick={onSearchOutfits}>
+        search outfits
       </button>
       <button
         type="button"
@@ -84,6 +116,19 @@ vi.mock("../components/AppSidebarNavigation", () => ({
       >
         open active capsule actions
       </button>
+      <button
+        type="button"
+        onClick={(event) =>
+          onOpenOutfitActions(event, {
+            id: "outfit-2",
+            name: "Travel outfit",
+            saved: { items: [] },
+            status: "modified",
+          })
+        }
+      >
+        open outfit actions
+      </button>
       <span data-testid="sidebar-active-capsule">{activeCapsuleId}</span>
       <span data-testid="sidebar-personal-items-count">
         {personalItemsCount ?? ""}
@@ -93,6 +138,9 @@ vi.mock("../components/AppSidebarNavigation", () => ({
       </span>
       <span data-testid="saved-capsule">
         {String(capsuleHasUnsavedChanges({ status: "saved" }))}
+      </span>
+      <span data-testid="unsaved-outfit">
+        {String(outfitHasUnsavedChanges({ status: "new" }))}
       </span>
     </div>
   ),
@@ -200,18 +248,30 @@ function createProps(
       })[key] ?? key,
     user: { email: "person@example.com" },
     onCreateCapsuleFromSidebar: vi.fn(() => Promise.resolve()),
+    onCreateOutfitFromSidebar: vi.fn(() => Promise.resolve()),
     onDeleteCapsule: vi.fn(() => Promise.resolve()),
+    onDeleteOutfit: vi.fn(() => Promise.resolve()),
     onDeleteProfile: vi.fn(() => Promise.resolve()),
+    onDownloadOutfitPdf: vi.fn(() => Promise.resolve()),
     onDownloadWardrobePdf: vi.fn(() => Promise.resolve()),
     onDuplicateCapsule: vi.fn(() => Promise.resolve()),
+    onDuplicateOutfit: vi.fn(() => Promise.resolve()),
     onNavigateApp: vi.fn(),
     onLoadMoreCapsules: vi.fn(() => Promise.resolve()),
+    onLoadMoreOutfits: vi.fn(() => Promise.resolve()),
     onOpenCapsuleFromSidebar: vi.fn(() => Promise.resolve()),
+    onOpenOutfitFromSidebar: vi.fn(() => Promise.resolve()),
     onRenameCapsule: vi.fn(() => Promise.resolve()),
+    onRenameOutfit: vi.fn(() => Promise.resolve()),
     onRevertCapsule: vi.fn(() => Promise.resolve()),
+    onRevertOutfit: vi.fn(() => Promise.resolve()),
     onSaveCapsule: vi.fn(() => Promise.resolve()),
+    onSaveOutfit: vi.fn(() => Promise.resolve()),
     onSearchCapsules: vi.fn(() =>
       Promise.resolve([{ id: "capsule-7", name: "Search result" }]),
+    ),
+    onSearchOutfits: vi.fn(() =>
+      Promise.resolve([{ id: "outfit-7", name: "Outfit result" }]),
     ),
     onShareCapsule: vi.fn(() =>
       Promise.resolve({ url: "https://client.example/share/capsule-2" }),
@@ -232,6 +292,19 @@ function renderShellContent(props: Partial<AppShellContentProps> = {}) {
 }
 
 describe("AppShellContent", () => {
+  test("renders the marketing panel when the session has no user", () => {
+    renderShellContent({
+      user: null,
+      isSearchView: false,
+      t: (key: string) =>
+        ({
+          marketingHeadline: "Build better wardrobes",
+        })[key] ?? key,
+    });
+
+    expect(screen.getByText("Build better wardrobes")).toBeInTheDocument();
+  });
+
   test("uses capsule-like fill layout for the search route", () => {
     renderShellContent();
 
@@ -544,6 +617,129 @@ describe("AppShellContent", () => {
     expect(onOpenCapsuleFromSidebar).toHaveBeenCalledWith(
       "capsule-2",
       expect.any(Function),
+    );
+  });
+
+  test("wires sidebar outfit actions and search over the current route", async () => {
+    const onCreateOutfitFromSidebar = vi.fn(() => Promise.resolve());
+    const onOpenOutfitFromSidebar = vi.fn(() => Promise.resolve());
+    const onSearchOutfits = vi.fn(() =>
+      Promise.resolve([{ id: "outfit-7", name: "Outfit result" }]),
+    );
+    renderShellContent({
+      appRoute: "outfit",
+      activeOutfitMeta: {
+        id: "outfit-1",
+        name: "Weekend",
+        status: "modified",
+      },
+      outfitRouteId: "outfit-1",
+      isMainScreenView: true,
+      isSearchView: false,
+      onCreateOutfitFromSidebar,
+      onOpenOutfitFromSidebar,
+      onSearchOutfits,
+    });
+
+    expect(screen.getByTestId("unsaved-outfit")).toHaveTextContent("true");
+
+    fireEvent.click(screen.getByRole("button", { name: "create outfit" }));
+    fireEvent.click(screen.getByRole("button", { name: "open outfit" }));
+    fireEvent.click(screen.getByRole("button", { name: "search outfits" }));
+
+    expect(onCreateOutfitFromSidebar).toHaveBeenCalledWith(
+      expect.any(Function),
+    );
+    expect(onOpenOutfitFromSidebar).toHaveBeenCalledWith(
+      "outfit-2",
+      expect.any(Function),
+    );
+    await waitFor(() => expect(onSearchOutfits).toHaveBeenCalledWith(""));
+    expect(await screen.findByText("Outfit result")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("Outfit result"));
+
+    expect(onOpenOutfitFromSidebar).toHaveBeenCalledWith("outfit-7");
+  });
+
+  test("falls back safely when optional outfit sidebar handlers are absent", async () => {
+    const user = userEvent.setup();
+    renderShellContent({
+      appRoute: "outfit",
+      activeOutfitMeta: {
+        id: "outfit-1",
+        name: "Weekend",
+        status: "modified",
+      },
+      outfitRouteId: "outfit-1",
+      isMainScreenView: true,
+      isSearchView: false,
+      onCreateOutfitFromSidebar: undefined,
+      onDeleteOutfit: undefined,
+      onDownloadOutfitPdf: undefined,
+      onDuplicateOutfit: undefined,
+      onLoadMoreOutfits: undefined,
+      onOpenOutfitFromSidebar: undefined,
+      onRenameOutfit: undefined,
+      onRevertOutfit: undefined,
+      onSaveOutfit: undefined,
+      onSearchOutfits: undefined,
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "create outfit" }));
+    fireEvent.click(screen.getByRole("button", { name: "load more outfits" }));
+    fireEvent.click(screen.getByRole("button", { name: "open outfit" }));
+
+    const openActions = async () => {
+      fireEvent.click(
+        screen.getByRole("button", { name: "open outfit actions" }),
+      );
+    };
+
+    await openActions();
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: "Export as PDF" }),
+    );
+
+    await openActions();
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Save" }));
+
+    await openActions();
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Rename" }));
+    const renameInput = await screen.findByRole("textbox", { name: /Rename/ });
+    await user.clear(renameInput);
+    await user.type(renameInput, "Renamed");
+    await user.click(screen.getByRole("button", { name: "OK" }));
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+    );
+
+    await openActions();
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: "Save as..." }),
+    );
+    const saveAsInput = await screen.findByRole("textbox", {
+      name: /Save.*as/,
+    });
+    await user.clear(saveAsInput);
+    await user.type(saveAsInput, "Copy");
+    await user.click(screen.getByRole("button", { name: "OK" }));
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+    );
+
+    await openActions();
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Revert" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Revert" }));
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+    );
+
+    await openActions();
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Delete" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Delete" }));
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
     );
   });
 

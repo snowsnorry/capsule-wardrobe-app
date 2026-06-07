@@ -1,0 +1,411 @@
+import { expect, test, vi } from "vitest";
+import {
+  AUTH_COOKIE,
+  CSRF_TOKEN,
+  TEST_CLIENT_ORIGIN,
+  requestJson,
+  startTestServer,
+} from "../test/serverRouteTestUtils.js";
+
+const outfitItems = [
+  {
+    key: "https://example.com/shirt",
+    source: "catalog",
+    item: {
+      url: "https://example.com/shirt",
+      name: "Shirt",
+      category: "top",
+    },
+  },
+];
+
+const outfit = {
+  id: "outfit-1",
+  name: "Weekend",
+  draft: { items: outfitItems },
+  saved: null,
+  effective: { items: outfitItems },
+  status: "new",
+  createdAt: "2026-01-01T00:00:00.000Z",
+  updatedAt: "2026-01-02T00:00:00.000Z",
+};
+
+function authenticatedMutationOptions(body?: unknown) {
+  return {
+    method: "POST",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN,
+    ...(body === undefined ? {} : { body }),
+  };
+}
+
+test("outfit read routes return paginated, searched, and annotated outfits", async (t) => {
+  const listRecentOutfitsImpl = vi.fn(async () => [outfit]);
+  const countOutfitsImpl = vi.fn(async () => 12);
+  const searchOutfitsImpl = vi.fn(async () => [{ ...outfit, id: "outfit-2" }]);
+  const getOutfitImpl = vi.fn(async (_email, id) =>
+    id === "missing" ? null : outfit,
+  );
+  const { baseUrl } = await startTestServer(t, {
+    overrides: {
+      listRecentOutfitsImpl,
+      countOutfitsImpl,
+      searchOutfitsImpl,
+      getOutfitImpl,
+      listLikedItemUrlsImpl: async () => ["https://example.com/shirt"],
+    },
+  });
+
+  const bootstrap = await requestJson(baseUrl, "/outfits/bootstrap", {
+    cookie: AUTH_COOKIE,
+  });
+  expect(bootstrap.response.status).toBe(200);
+  expect(bootstrap.json).toMatchObject({
+    ok: true,
+    pagination: { limit: 10, offset: 0, total: 12, hasMore: true },
+  });
+  expect(bootstrap.json.outfits).toEqual([
+    expect.objectContaining({ id: "outfit-1", itemCount: 1 }),
+  ]);
+
+  const recent = await requestJson(
+    baseUrl,
+    "/outfits/recent?limit=100&offset=bad",
+    { cookie: AUTH_COOKIE },
+  );
+  expect(recent.response.status).toBe(200);
+  expect(recent.json.pagination).toEqual({
+    limit: 50,
+    offset: 0,
+    total: 12,
+    hasMore: false,
+  });
+  expect(listRecentOutfitsImpl).toHaveBeenLastCalledWith(
+    "person@example.com",
+    50,
+    0,
+  );
+
+  const search = await requestJson(baseUrl, "/outfits/search?q=%20weekend", {
+    cookie: AUTH_COOKIE,
+  });
+  expect(search.response.status).toBe(200);
+  expect(search.json.outfits).toEqual([
+    expect.objectContaining({ id: "outfit-2" }),
+  ]);
+  expect(searchOutfitsImpl).toHaveBeenCalledWith(
+    "person@example.com",
+    "weekend",
+    25,
+  );
+
+  const emptySearch = await requestJson(baseUrl, "/outfits/search", {
+    cookie: AUTH_COOKIE,
+  });
+  expect(emptySearch.response.status).toBe(200);
+  expect(listRecentOutfitsImpl).toHaveBeenLastCalledWith(
+    "person@example.com",
+    25,
+  );
+
+  const detail = await requestJson(baseUrl, "/outfits/outfit-1", {
+    cookie: AUTH_COOKIE,
+  });
+  expect(detail.response.status).toBe(200);
+  const detailOutfit = detail.json.outfit as {
+    effective: { items: Array<{ item: unknown }> };
+  };
+  expect(detailOutfit.effective.items[0].item).toMatchObject({
+    url: "https://example.com/shirt",
+    isLiked: true,
+  });
+
+  const missing = await requestJson(baseUrl, "/outfits/missing", {
+    cookie: AUTH_COOKIE,
+  });
+  expect(missing.response.status).toBe(404);
+  expect(missing.json).toEqual({ error: "not_found" });
+});
+
+test("outfit mutation routes validate payloads and mutate profile-owned outfits", async (t) => {
+  const createOutfitImpl = vi.fn(async (_email, payload) => ({
+    ...outfit,
+    ...payload,
+    id: "outfit-created",
+  }));
+  const updateOutfitSnapshotImpl = vi.fn(async (_email, id, draft) => ({
+    ...outfit,
+    id,
+    draft,
+  }));
+  const saveOutfitImpl = vi.fn(async (_email, id) =>
+    id === "missing"
+      ? null
+      : { ...outfit, id, draft: null, saved: outfit.draft, status: "saved" },
+  );
+  const revertOutfitImpl = vi.fn(async (_email, id) =>
+    id === "missing"
+      ? null
+      : { ...outfit, id, draft: null, saved: outfit.draft, status: "saved" },
+  );
+  const renameOutfitImpl = vi.fn(async (_email, id, name) => ({
+    ...outfit,
+    id,
+    name,
+  }));
+  const duplicateOutfitImpl = vi.fn(async (_email, id, name) =>
+    id === "missing" ? null : { ...outfit, id: "outfit-copy", name },
+  );
+  const getOutfitImpl = vi.fn(async (_email, id) =>
+    id === "missing" ? null : { ...outfit, id },
+  );
+  const deleteOutfitImpl = vi.fn(async (_email, id) => id !== "missing");
+  const { baseUrl } = await startTestServer(t, {
+    overrides: {
+      createOutfitImpl,
+      updateOutfitSnapshotImpl,
+      saveOutfitImpl,
+      revertOutfitImpl,
+      renameOutfitImpl,
+      duplicateOutfitImpl,
+      getOutfitImpl,
+      deleteOutfitImpl,
+      listRecentOutfitsImpl: async () => [outfit],
+      countOutfitsImpl: async () => 1,
+      listLikedItemUrlsImpl: async () => [],
+    },
+  });
+
+  const invalidCreate = await requestJson(
+    baseUrl,
+    "/outfits",
+    authenticatedMutationOptions({ name: "Weekend", saved: {} }),
+  );
+  expect(invalidCreate.response.status).toBe(400);
+  expect(invalidCreate.json).toEqual({ error: "invalid_payload" });
+
+  const created = await requestJson(
+    baseUrl,
+    "/outfits",
+    authenticatedMutationOptions({ name: " Weekend ", items: outfitItems }),
+  );
+  expect(created.response.status).toBe(201);
+  expect(createOutfitImpl).toHaveBeenCalledWith("person@example.com", {
+    name: "Weekend",
+    draft: { items: outfitItems },
+    saved: null,
+  });
+
+  const invalidItems = await requestJson(baseUrl, "/outfits/outfit-1/items", {
+    method: "PATCH",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN,
+    body: { items: [], saved: {} },
+  });
+  expect(invalidItems.response.status).toBe(400);
+
+  const updatedItems = await requestJson(baseUrl, "/outfits/outfit-1/items", {
+    method: "PATCH",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN,
+    body: { items: [] },
+  });
+  expect(updatedItems.response.status).toBe(200);
+  expect(updateOutfitSnapshotImpl).toHaveBeenCalledWith(
+    "person@example.com",
+    "outfit-1",
+    { items: [] },
+  );
+
+  const saved = await requestJson(
+    baseUrl,
+    "/outfits/outfit-1/save",
+    authenticatedMutationOptions(),
+  );
+  expect(saved.response.status).toBe(200);
+  expect((saved.json.outfit as { status?: string }).status).toBe("saved");
+
+  const missingSave = await requestJson(
+    baseUrl,
+    "/outfits/missing/save",
+    authenticatedMutationOptions(),
+  );
+  expect(missingSave.response.status).toBe(404);
+
+  const reverted = await requestJson(
+    baseUrl,
+    "/outfits/outfit-1/revert",
+    authenticatedMutationOptions(),
+  );
+  expect(reverted.response.status).toBe(200);
+
+  const missingRevert = await requestJson(
+    baseUrl,
+    "/outfits/missing/revert",
+    authenticatedMutationOptions(),
+  );
+  expect(missingRevert.response.status).toBe(404);
+
+  const invalidRename = await requestJson(baseUrl, "/outfits/outfit-1/rename", {
+    method: "PATCH",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN,
+    body: { name: " " },
+  });
+  expect(invalidRename.response.status).toBe(400);
+
+  const renamed = await requestJson(baseUrl, "/outfits/outfit-1/rename", {
+    method: "PATCH",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN,
+    body: { name: " Travel " },
+  });
+  expect(renamed.response.status).toBe(200);
+  expect(renameOutfitImpl).toHaveBeenCalledWith(
+    "person@example.com",
+    "outfit-1",
+    "Travel",
+  );
+
+  const duplicated = await requestJson(
+    baseUrl,
+    "/outfits/outfit-1/duplicate",
+    authenticatedMutationOptions({ name: " Copy " }),
+  );
+  expect(duplicated.response.status).toBe(201);
+  expect(duplicateOutfitImpl).toHaveBeenCalledWith(
+    "person@example.com",
+    "outfit-1",
+    "Copy",
+  );
+
+  const missingDuplicate = await requestJson(
+    baseUrl,
+    "/outfits/missing/duplicate",
+    authenticatedMutationOptions(),
+  );
+  expect(missingDuplicate.response.status).toBe(404);
+
+  const selected = await requestJson(
+    baseUrl,
+    "/outfits/outfit-1/select",
+    authenticatedMutationOptions(),
+  );
+  expect(selected.response.status).toBe(200);
+  expect(selected.json).toEqual({ ok: true, outfitId: "outfit-1" });
+
+  const missingSelect = await requestJson(
+    baseUrl,
+    "/outfits/missing/select",
+    authenticatedMutationOptions(),
+  );
+  expect(missingSelect.response.status).toBe(404);
+
+  const deleted = await requestJson(baseUrl, "/outfits/outfit-1", {
+    method: "DELETE",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN,
+  });
+  expect(deleted.response.status).toBe(200);
+  expect(deleted.json).toEqual({ ok: true });
+
+  const missingDelete = await requestJson(baseUrl, "/outfits/missing", {
+    method: "DELETE",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN,
+  });
+  expect(missingDelete.response.status).toBe(404);
+});
+
+test("outfit pdf route renders effective outfit items with the profile locale", async (t) => {
+  let pdfProducts: unknown = null;
+  let pdfLocale = "";
+  const { baseUrl } = await startTestServer(t, {
+    overrides: {
+      getOutfitImpl: async (_email, id) =>
+        id === "empty"
+          ? { ...outfit, id, draft: { items: [] }, saved: null }
+          : id === "missing"
+            ? null
+            : outfit,
+      getProfileImpl: async () => ({ locale: "ru" }),
+      buildWardrobePdfInChildImpl: async (products, locale) => {
+        pdfProducts = products;
+        pdfLocale = locale;
+        return Buffer.from("pdf");
+      },
+    },
+  });
+
+  const pdf = await requestJson(
+    baseUrl,
+    "/outfits/outfit-1/pdf",
+    authenticatedMutationOptions(),
+  );
+  expect(pdf.response.status).toBe(200);
+  expect(pdf.response.headers.get("content-type")).toContain("application/pdf");
+  expect(pdf.response.headers.get("content-disposition")).toBe(
+    `attachment; filename="Weekend.pdf"; filename*=UTF-8''${encodeURIComponent("Weekend.pdf")}`,
+  );
+  expect(pdfProducts).toEqual([
+    expect.objectContaining({ url: "https://example.com/shirt" }),
+  ]);
+  expect(pdfLocale).toBe("ru");
+
+  const empty = await requestJson(
+    baseUrl,
+    "/outfits/empty/pdf",
+    authenticatedMutationOptions(),
+  );
+  expect(empty.response.status).toBe(404);
+
+  const missing = await requestJson(
+    baseUrl,
+    "/outfits/missing/pdf",
+    authenticatedMutationOptions(),
+  );
+  expect(missing.response.status).toBe(404);
+});
+
+test("outfit routes map dependency failures to service_unavailable", async (t) => {
+  const { baseUrl } = await startTestServer(t, {
+    overrides: {
+      listRecentOutfitsImpl: async () => {
+        throw new Error("db down");
+      },
+      createOutfitImpl: async () => {
+        throw new Error("db down");
+      },
+      getOutfitImpl: async () => {
+        throw new Error("db down");
+      },
+    },
+  });
+
+  const recent = await requestJson(baseUrl, "/outfits/recent", {
+    cookie: AUTH_COOKIE,
+  });
+  expect(recent.response.status).toBe(503);
+  expect(recent.json).toEqual({ error: "service_unavailable" });
+
+  const created = await requestJson(
+    baseUrl,
+    "/outfits",
+    authenticatedMutationOptions({ items: [] }),
+  );
+  expect(created.response.status).toBe(503);
+
+  const pdf = await requestJson(
+    baseUrl,
+    "/outfits/outfit-1/pdf",
+    authenticatedMutationOptions(),
+  );
+  expect(pdf.response.status).toBe(503);
+});

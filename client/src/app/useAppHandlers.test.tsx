@@ -34,6 +34,21 @@ const wardrobeActions = vi.hoisted(() => ({
   toggleRegenerationSelection: vi.fn(),
   updateUploadedItemInMyWardrobe: vi.fn(),
 }));
+const outfitActions = vi.hoisted(() => ({
+  deleteCurrentOutfit: vi.fn(),
+  downloadCurrentOutfitPdf: vi.fn(),
+  duplicateCurrentOutfit: vi.fn(),
+  loadMoreRecentOutfits: vi.fn(),
+  replaceCurrentOutfitItems: vi.fn(),
+  renameCurrentOutfit: vi.fn(),
+  revertCurrentOutfit: vi.fn(),
+  saveCurrentOutfit: vi.fn(),
+  searchUserOutfits: vi.fn(),
+  selectUserOutfit: vi.fn(),
+}));
+const likedItemActions = vi.hoisted(() => ({
+  setItemLike: vi.fn(),
+}));
 const sessionActions = vi.hoisted(() => ({
   googleCredential: vi.fn(),
   passkeySignIn: vi.fn(),
@@ -51,6 +66,8 @@ vi.mock("../api/capsules", () => capsulesApi);
 vi.mock("./profileActions", () => profileActions);
 vi.mock("./wardrobeActions", () => wardrobeActions);
 vi.mock("./sessionActions", () => sessionActions);
+vi.mock("./outfitActions", () => outfitActions);
+vi.mock("./likedItemActions", () => likedItemActions);
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -88,12 +105,22 @@ describe("useAppHandlers", () => {
     const sessionActionContext = createSessionContext();
     const navigateApp = vi.fn();
     const navigateCapsule = vi.fn();
+    const navigateOutfit = vi.fn();
     const navigateNewCapsule = vi.fn();
+    const navigateNewOutfit = vi.fn();
     const setCurrentView = vi.fn();
     const setIsSignOutConfirmOpen = vi.fn();
     const setSelectedRegenerationUrls = vi.fn();
     const capsuleSidebarActionsRef = { current: null };
+    const outfitSidebarActionsRef = { current: null };
+    capsuleActions.duplicateCurrentCapsule.mockResolvedValue({
+      id: "capsule-copy",
+    });
+    outfitActions.duplicateCurrentOutfit.mockResolvedValue({
+      id: "outfit-copy",
+    });
     capsuleActions.searchUserCapsules.mockResolvedValue([{ id: "capsule-2" }]);
+    outfitActions.searchUserOutfits.mockResolvedValue([{ id: "outfit-2" }]);
     capsuleActions.shareCurrentCapsule.mockResolvedValue({
       url: "https://share.example.test",
     });
@@ -101,11 +128,15 @@ describe("useAppHandlers", () => {
     const { result } = renderHook(() =>
       useAppHandlers({
         activeCapsuleId: "capsule-1",
+        activeOutfitId: "outfit-1",
         capsuleSidebarActionsRef,
+        outfitSidebarActionsRef,
         getAppActionContext: () => actionContext,
         navigateCapsule,
+        navigateOutfit,
         navigateApp,
         navigateNewCapsule,
+        navigateNewOutfit,
         pendingShareId: "share-pending",
         setCurrentView,
         setIsSignOutConfirmOpen,
@@ -120,20 +151,29 @@ describe("useAppHandlers", () => {
     result.current.handleCancelRegenerationSelection();
     await result.current.handleApplyCapsuleFilters();
     await result.current.handleCreateCapsuleFromSidebar();
+    await result.current.handleCreateOutfitFromSidebar();
     await result.current.handleOpenCapsuleFromSidebar("capsule-2");
+    await result.current.handleOpenOutfitFromSidebar("outfit-2");
     await result.current.handleSaveCapsule();
+    await result.current.handleSaveOutfit();
     await result.current.handleRevertCapsule();
+    await result.current.handleRevertOutfit();
     await result.current.handleRenameCapsule("Renamed");
+    await result.current.handleRenameOutfit("Outfit renamed");
     await result.current.handleDuplicateCapsule("Copy");
+    await result.current.handleDuplicateOutfit("Outfit copy");
     await result.current.handleDeleteCapsule();
+    await result.current.handleDeleteOutfit();
     await result.current.handleImportSharedCapsule();
     await result.current.handleDeleteOutfitSetImage(1);
     await result.current.handleDeleteProfile();
     await result.current.handleDownloadWardrobePdf();
+    await result.current.handleDownloadOutfitPdf();
     await result.current.handleGenerateOutfitSetImage(2);
     await result.current.handleGoogleCredential("token");
     await result.current.handlePasskeySignIn();
     await result.current.handleRefreshWardrobe();
+    await result.current.handleReplaceOutfitItems("outfit-1", []);
     await result.current.handleRegenerateSelectedItems();
     await result.current.handleRequestCode({
       preventDefault: vi.fn(),
@@ -147,6 +187,10 @@ describe("useAppHandlers", () => {
     await result.current.handleSaveToMyWardrobe({
       url: "https://example.com/top",
     });
+    await result.current.handleSetItemLike(
+      { url: "https://example.com/top" },
+      true,
+    );
     await result.current.handleUpdateUploadedWardrobeItem(
       {
         id: "uploaded-1",
@@ -179,7 +223,9 @@ describe("useAppHandlers", () => {
       imageLlm: "openai:gpt-image-2",
     });
     await result.current.handleLoadMoreCapsules();
+    await result.current.handleLoadMoreOutfits();
     await result.current.handleSearchCapsules("spring");
+    await result.current.handleSearchOutfits("weekend");
     await result.current.handleShareCapsule();
     result.current.handleToggleRegenerationSelection({
       url: "https://example.com/top",
@@ -189,6 +235,10 @@ describe("useAppHandlers", () => {
       openSearchDialog: vi.fn(),
       openCapsuleActions: vi.fn(),
     });
+    result.current.registerOutfitSidebarActions({
+      openSearchDialog: vi.fn(),
+      openOutfitActions: vi.fn(),
+    });
     result.current.resetToEmail();
     await result.current.signOut();
 
@@ -196,8 +246,14 @@ describe("useAppHandlers", () => {
     expect(setCurrentView).toHaveBeenCalledWith("main");
     expect(setSelectedRegenerationUrls).toHaveBeenCalledWith([]);
     expect(navigateNewCapsule).toHaveBeenCalled();
+    expect(navigateNewOutfit).toHaveBeenCalled();
     expect(capsulesApi.selectCapsule).toHaveBeenCalledWith("capsule-2");
     expect(navigateCapsule).toHaveBeenCalledWith("capsule-2");
+    expect(outfitActions.selectUserOutfit).toHaveBeenCalledWith("outfit-2");
+    expect(navigateOutfit).toHaveBeenCalledWith("outfit-2");
+    expect(navigateOutfit).toHaveBeenCalledWith("outfit-copy", {
+      replace: true,
+    });
     expect(capsuleActions.importSharedCapsuleToApp).toHaveBeenCalledWith(
       actionContext,
       "share-meta",
@@ -210,6 +266,15 @@ describe("useAppHandlers", () => {
       actionContext,
       "capsule-1",
     );
+    expect(outfitActions.downloadCurrentOutfitPdf).toHaveBeenCalledWith(
+      actionContext,
+      "outfit-1",
+    );
+    expect(outfitActions.replaceCurrentOutfitItems).toHaveBeenCalledWith(
+      actionContext,
+      "outfit-1",
+      [],
+    );
     expect(wardrobeActions.removeItemFromMyWardrobe).toHaveBeenCalledWith(
       actionContext,
       { url: "https://example.com/top" },
@@ -217,6 +282,11 @@ describe("useAppHandlers", () => {
     expect(wardrobeActions.saveItemToMyWardrobe).toHaveBeenCalledWith(
       actionContext,
       { url: "https://example.com/top" },
+    );
+    expect(likedItemActions.setItemLike).toHaveBeenCalledWith(
+      actionContext,
+      { url: "https://example.com/top" },
+      true,
     );
     expect(wardrobeActions.updateUploadedItemInMyWardrobe).toHaveBeenCalledWith(
       actionContext,
@@ -233,12 +303,20 @@ describe("useAppHandlers", () => {
     expect(capsuleActions.loadMoreRecentCapsules).toHaveBeenCalledWith(
       actionContext,
     );
+    expect(outfitActions.loadMoreRecentOutfits).toHaveBeenCalledWith(
+      actionContext,
+    );
     expect(sessionActions.googleCredential).toHaveBeenCalledWith(
       sessionActionContext,
       "token",
     );
     expect(setIsSignOutConfirmOpen).toHaveBeenCalledWith(true);
     expect(capsuleSidebarActionsRef.current).toEqual(
+      expect.objectContaining({
+        openSearchDialog: expect.any(Function),
+      }),
+    );
+    expect(outfitSidebarActionsRef.current).toEqual(
       expect.objectContaining({
         openSearchDialog: expect.any(Function),
       }),
