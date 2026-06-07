@@ -48,6 +48,19 @@ import {
   updateCapsuleSnapshot,
 } from "./capsuleStore.js";
 import {
+  countOutfits,
+  createOutfit,
+  deleteOutfit,
+  duplicateOutfit,
+  getOutfit,
+  listRecentOutfits,
+  renameOutfit,
+  revertOutfit,
+  saveOutfit,
+  searchOutfits,
+  updateOutfitSnapshot,
+} from "./outfitStore.js";
+import {
   getSearchOptions,
   getSavedSearch,
   getSearchStats,
@@ -140,6 +153,13 @@ import {
   toCapsuleResponse,
   toCapsuleSummary,
 } from "./capsuleHttp.js";
+import {
+  getOutfitItems,
+  hasUnexpectedOutfitCreateFields,
+  hasUnexpectedOutfitItemsFields,
+  toOutfitResponse,
+  toOutfitSummary,
+} from "./outfitHttp.js";
 import { validateCapsuleAnchorItems } from "./capsuleAnchors.js";
 import { createStartServer } from "./serverStartup.js";
 import {
@@ -174,6 +194,7 @@ import { registerPasskeyRoutes } from "./routes/passkeyRoutes.js";
 import { registerProfileReadRoutes } from "./routes/profileReadRoutes.js";
 import { registerCapsuleReadRoutes } from "./routes/capsuleReadRoutes.js";
 import { registerCapsuleMutationRoutes } from "./routes/capsuleMutationRoutes.js";
+import { registerOutfitRoutes } from "./routes/outfitRoutes.js";
 import { registerSearchRoutes } from "./routes/searchRoutes.js";
 import { registerProfileMutationRoutes } from "./routes/profileMutationRoutes.js";
 import { registerHealthImageRoutes } from "./routes/healthImageRoutes.js";
@@ -250,15 +271,18 @@ function createAppDependencies(options: Record<string, unknown> = {}) {
     consumePasskeyChallengeImpl: consumePasskeyChallenge,
     createCapsuleImpl: createCapsule,
     createCapsuleShareImpl: createCapsuleShare,
+    createOutfitImpl: createOutfit,
     createPendingCodeImpl: createPendingCode,
     createProfileImpl: createProfile,
     createSessionImpl: createSession,
     deleteCapsuleImpl: deleteCapsule,
     deleteLikedItemImpl: deleteLikedItemByUrl,
+    deleteOutfitImpl: deleteOutfit,
     deleteOutfitSetImageHandler: deleteOutfitSetImage,
     deletePasskeyByIdForEmailImpl: deletePasskeyByIdForEmail,
     deleteProfileImpl: deleteProfile,
     duplicateCapsuleImpl: duplicateCapsule,
+    duplicateOutfitImpl: duplicateOutfit,
     generateAuthenticationOptionsImpl: generateAuthenticationOptions,
     generateOutfitSetImageHandler: generateOutfitSetImage,
     generateRegistrationOptionsImpl: generateRegistrationOptions,
@@ -266,6 +290,7 @@ function createAppDependencies(options: Record<string, unknown> = {}) {
     getCapsuleImpl: getCapsule,
     getFormalityLevelsImpl: getFormalityLevels,
     getOccasionsImpl: getOccasions,
+    getOutfitImpl: getOutfit,
     getOutfitSetImageJobImpl: getOutfitSetImageJob,
     getPartialRegenerationJobImpl: getPartialRegenerationJob,
     getPasskeyByCredentialIdImpl: getPasskeyByCredentialId,
@@ -301,6 +326,8 @@ function createAppDependencies(options: Record<string, unknown> = {}) {
     listWardrobeItemsImpl: listWardrobeItemsByEmail,
     listRecentCapsulesImpl: listRecentCapsules,
     countCapsulesImpl: countCapsules,
+    listRecentOutfitsImpl: listRecentOutfits,
+    countOutfitsImpl: countOutfits,
     nodeEnv: NODE_ENV,
     passkeyOrigin: PASSKEY_ORIGIN,
     passkeyRpId: PASSKEY_RP_ID,
@@ -310,19 +337,24 @@ function createAppDependencies(options: Record<string, unknown> = {}) {
     regenerateCapsuleWardrobeHandler: regenerateCapsuleWardrobe,
     regenerateSelectedCapsuleItemsHandler: regenerateSelectedWardrobeItems,
     renameCapsuleImpl: renameCapsule,
+    renameOutfitImpl: renameOutfit,
     revertCapsuleImpl: revertCapsule,
+    revertOutfitImpl: revertOutfit,
     revokeMcpRefreshTokenImpl: revokeMcpRefreshToken,
     revokeSessionImpl: revokeSession,
     rotateMcpRefreshTokenImpl: rotateMcpRefreshToken,
     runMcpProductSearchImpl: runMcpProductSearch,
     runSavedSearchImpl: runSavedSearch,
     saveCapsuleImpl: saveCapsule,
+    saveOutfitImpl: saveOutfit,
     saveUploadedWardrobeItemsImpl: saveUploadedWardrobeItemsByEmail,
     saveWardrobeItemFromCatalogImpl: saveWardrobeItemFromCatalogByUrl,
     searchCapsulesImpl: searchCapsules,
+    searchOutfitsImpl: searchOutfits,
     sendLoginCodeEmailImpl: sendLoginCodeEmail,
     streamCapsuleEventsImpl: capsuleEventHub.subscribe,
     updateCapsuleSnapshotImpl: updateCapsuleSnapshot,
+    updateOutfitSnapshotImpl: updateOutfitSnapshot,
     validateCapsuleAnchorItemsImpl: (email, anchorWardrobeItemIds) =>
       validateCapsuleAnchorItems({
         email,
@@ -394,11 +426,14 @@ function createAppRouteContext(deps) {
     buildCapsuleEventSnapshot,
     buildPdfDownloadFilename,
     getCapsuleItems,
+    getOutfitItems,
     getEffectiveCapsuleSnapshot,
     getValidatedRejectedUrls,
     hasOwnProperty,
     hasUnexpectedCapsuleCreateFields,
     hasUnexpectedCapsuleFiltersFields,
+    hasUnexpectedOutfitCreateFields,
+    hasUnexpectedOutfitItemsFields,
     hasUnexpectedRejectedUrlsFields,
     annotateWardrobeSavedItems,
     annotateLikedItems,
@@ -407,6 +442,8 @@ function createAppRouteContext(deps) {
     normalizeProfileSettingsPayload,
     toCapsuleResponse,
     toCapsuleSummary,
+    toOutfitResponse,
+    toOutfitSummary,
     toProfileResponse,
   };
 }
@@ -424,6 +461,7 @@ function registerDomainRoutes(app, routeContext) {
   registerWardrobeRoutes(app, routeContext);
   registerCapsuleReadRoutes(app, routeContext);
   registerCapsuleMutationRoutes(app, routeContext);
+  registerOutfitRoutes(app, routeContext);
   registerSearchRoutes(app, routeContext);
   registerProfileMutationRoutes(app, routeContext);
   registerHealthImageRoutes(app, routeContext);

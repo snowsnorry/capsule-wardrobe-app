@@ -50,7 +50,7 @@ function buildRouteViewState(
     isMainScreenView: Boolean(
       isProfileUser &&
       options.currentView === "main" &&
-      ["capsule", "share"].includes(options.appRoute),
+      ["capsule", "outfit", "share"].includes(options.appRoute),
     ),
     isSearchView: Boolean(isProfileUser && options.appRoute === "explore"),
     isWardrobeView: Boolean(isProfileUser && options.appRoute === "wardrobe"),

@@ -1,3 +1,4 @@
+/* eslint-disable max-lines, max-lines-per-function */
 import { useCallback, useMemo } from "react";
 import { useMediaQuery } from "@mui/material";
 import { useI18n } from "../i18n/useI18n";
@@ -21,6 +22,7 @@ import { useAppNavigation } from "./useAppNavigation";
 import { useAppNotifications } from "./useAppNotifications";
 import { useAppState } from "./useAppState";
 import { useCapsuleRouteSync } from "./useCapsuleRouteSync";
+import { useOutfitRouteSync } from "./useOutfitRouteSync";
 import { usePasskeyPrompt } from "./usePasskeyPrompt";
 import { useProfileOptions } from "./useProfileOptions";
 import { useSessionBootstrap } from "./useSessionBootstrap";
@@ -81,6 +83,14 @@ export function useAppControllerModel() {
   });
   useCapsuleRouteSync(
     buildCapsuleRouteSyncOptions({
+      appState,
+      navigation,
+      operations,
+      resolveErrorMessage,
+    }),
+  );
+  useOutfitRouteSync(
+    buildOutfitRouteSyncOptions({
       appState,
       navigation,
       operations,
@@ -179,6 +189,37 @@ function buildCapsuleRouteSyncOptions({
   };
 }
 
+function buildOutfitRouteSyncOptions({
+  appState,
+  navigation,
+  operations,
+  resolveErrorMessage,
+}: {
+  appState: ReturnType<typeof useAppState>;
+  navigation: ReturnType<typeof useAppNavigation>;
+  operations: AppControllerOperations;
+  resolveErrorMessage: (
+    error: { message?: string } | null | undefined,
+  ) => string;
+}) {
+  return {
+    activeOutfitId: appState.activeOutfitId,
+    activeOutfitMeta: appState.activeOutfitMeta,
+    appRoute: navigation.appRoute,
+    clearActiveOutfitState: operations.clearActiveOutfitState,
+    getAppActionContext: operations.getAppActionContext,
+    hasUsableProfile: appState.hasProfile || appState.profileCreated,
+    isContentOperationLoading: appState.isContentOperationLoading,
+    navigateOutfit: navigation.navigateOutfit,
+    outfitRouteId: navigation.outfitRouteId,
+    outfitRouteMode: navigation.outfitRouteMode,
+    resolveErrorMessage,
+    sessionInitialized: appState.sessionInitialized,
+    setStatus: appState.setStatus,
+    userEmail: appState.user?.email || "",
+  };
+}
+
 function useSessionActionContextForApp({
   appState,
   locale,
@@ -228,11 +269,15 @@ function useHandlersForApp({
 }) {
   return useAppHandlers({
     activeCapsuleId: appState.activeCapsuleId,
+    activeOutfitId: appState.activeOutfitId,
     capsuleSidebarActionsRef: appState.capsuleSidebarActionsRef,
+    outfitSidebarActionsRef: appState.outfitSidebarActionsRef,
     getAppActionContext: operations.getAppActionContext,
     navigateCapsule: navigation.navigateCapsule,
+    navigateOutfit: navigation.navigateOutfit,
     navigateApp: navigation.navigateApp,
     navigateNewCapsule: navigation.navigateNewCapsule,
+    navigateNewOutfit: navigation.navigateNewOutfit,
     pendingShareId: navigation.pendingShareId,
     setCurrentView: appState.setCurrentView,
     setIsSignOutConfirmOpen: appState.setIsSignOutConfirmOpen,

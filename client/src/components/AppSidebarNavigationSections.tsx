@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { useMemo } from "react";
 import CheckroomOutlinedIcon from "@mui/icons-material/CheckroomOutlined";
 import ManageSearchRoundedIcon from "@mui/icons-material/ManageSearchRounded";
@@ -6,7 +7,9 @@ import { PiDresser } from "react-icons/pi";
 import { SearchAddActions } from "./AppSidebarNavigationActions";
 import {
   CapsuleRows,
+  OutfitRows,
   sortCapsulesByUpdated,
+  sortOutfitsByUpdated,
 } from "./AppSidebarNavigationCapsuleRows";
 import {
   ChildRow,
@@ -18,6 +21,8 @@ import type {
   AppSidebarNavigationProps,
   CapsuleNavItem,
   CapsuleNavPagination,
+  OutfitNavItem,
+  OutfitNavPagination,
 } from "./AppSidebarNavigationTypes";
 
 function isCatalogApp(activeApp: AppId) {
@@ -56,6 +61,37 @@ export function useCapsuleNavigationState({
   };
 }
 
+export function useOutfitNavigationState({
+  outfitList,
+  outfitPagination,
+  isLoadingMore,
+  onLoadMoreOutfits,
+}: {
+  outfitList: OutfitNavItem[];
+  outfitPagination?: OutfitNavPagination;
+  isLoadingMore: boolean;
+  onLoadMoreOutfits?: () => Promise<void> | void;
+}) {
+  const sortedOutfits = useMemo(
+    () => sortOutfitsByUpdated(outfitList),
+    [outfitList],
+  );
+  const visibleOutfitCount = sortedOutfits.length;
+  const totalOutfitCount = Math.max(
+    outfitPagination?.total ?? visibleOutfitCount,
+    visibleOutfitCount,
+  );
+  const hasMoreOutfits =
+    Boolean(outfitPagination?.hasMore) && visibleOutfitCount < totalOutfitCount;
+
+  return {
+    hasMoreOutfits,
+    shouldLoadMore: Boolean(onLoadMoreOutfits) && !isLoadingMore,
+    sortedOutfits,
+    totalOutfitCount,
+  };
+}
+
 export function PersonalItemsRow({
   activeApp,
   desktopSidebarRailWidth,
@@ -90,16 +126,22 @@ export function PersonalItemsRow({
 
 export function OutfitsRow({
   desktopSidebarRailWidth,
+  isActive,
   isExpanded,
   isCollapsedDesktop,
   isInteractionDisabled,
+  onAdd,
+  onSearch,
   onToggle,
   t,
 }: {
   desktopSidebarRailWidth: number;
+  isActive: boolean;
   isExpanded: boolean;
   isCollapsedDesktop: boolean;
   isInteractionDisabled: boolean;
+  onAdd?: () => void;
+  onSearch?: () => void;
   onToggle: () => void;
   t: Translate;
 }) {
@@ -107,7 +149,7 @@ export function OutfitsRow({
     <TopLevelRow
       label={t("sidebar.outfits")}
       icon={<GiClothes />}
-      isActive={false}
+      isActive={isActive}
       isInteractionDisabled={isInteractionDisabled}
       isCollapsedDesktop={isCollapsedDesktop}
       desktopSidebarRailWidth={desktopSidebarRailWidth}
@@ -119,11 +161,88 @@ export function OutfitsRow({
           <SearchAddActions
             searchLabel={t("wardrobe.searchOutfits")}
             addLabel={t("wardrobe.newOutfit")}
-            isInteractionDisabled
+            isInteractionDisabled={isInteractionDisabled}
+            onSearch={onSearch}
+            onAdd={onAdd}
           />
         ) : undefined
       }
     />
+  );
+}
+
+export function OutfitsSection({
+  activeApp,
+  activeOutfit,
+  activeOutfitId,
+  desktopSidebarRailWidth,
+  handleLoadMoreOutfits,
+  isExpanded,
+  isCollapsedDesktop,
+  isInteractionDisabled,
+  isLoadingMore,
+  isOverlaySidebar,
+  navState,
+  onCreateOutfit,
+  onOpenOutfit,
+  onOpenOutfitActions,
+  onSearchOutfits,
+  onToggle,
+  outfitHasUnsavedChanges,
+  t,
+}: Pick<
+  AppSidebarNavigationProps,
+  | "activeOutfit"
+  | "activeOutfitId"
+  | "outfitHasUnsavedChanges"
+  | "onCreateOutfit"
+  | "onOpenOutfit"
+  | "onOpenOutfitActions"
+  | "onSearchOutfits"
+> & {
+  activeApp: AppId;
+  desktopSidebarRailWidth: number;
+  handleLoadMoreOutfits: () => Promise<void>;
+  isExpanded: boolean;
+  isCollapsedDesktop: boolean;
+  isInteractionDisabled: boolean;
+  isLoadingMore: boolean;
+  isOverlaySidebar: boolean;
+  navState: ReturnType<typeof useOutfitNavigationState>;
+  onToggle: () => void;
+  t: Translate;
+}) {
+  return (
+    <>
+      <OutfitsRow
+        desktopSidebarRailWidth={desktopSidebarRailWidth}
+        isActive={activeApp === "outfit"}
+        isExpanded={isExpanded}
+        isCollapsedDesktop={isCollapsedDesktop}
+        isInteractionDisabled={isInteractionDisabled}
+        onAdd={() => void onCreateOutfit?.()}
+        onSearch={onSearchOutfits}
+        onToggle={onToggle}
+        t={t}
+      />
+      {isCollapsedDesktop || !isExpanded ? null : (
+        <OutfitRows
+          activeOutfit={activeOutfit}
+          activeOutfitId={activeApp === "outfit" ? activeOutfitId || "" : ""}
+          outfitHasUnsavedChanges={outfitHasUnsavedChanges || (() => false)}
+          outfitList={navState.sortedOutfits}
+          hasMore={navState.hasMoreOutfits}
+          isInteractionDisabled={isInteractionDisabled}
+          isOverlaySidebar={isOverlaySidebar}
+          isLoadingMore={isLoadingMore}
+          onLoadMoreOutfits={handleLoadMoreOutfits}
+          onOpenOutfit={onOpenOutfit}
+          onOpenOutfitActions={onOpenOutfitActions}
+          t={t}
+          totalCount={navState.totalOutfitCount}
+        />
+      )}
+    </>
   );
 }
 

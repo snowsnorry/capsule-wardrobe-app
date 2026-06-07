@@ -62,6 +62,18 @@ export type WardrobeItem = {
   [key: string]: unknown;
 };
 
+export type OutfitItemSource = "personal" | "catalog";
+
+export type OutfitItemSnapshot = {
+  key: string;
+  source: OutfitItemSource;
+  item: WardrobeItem;
+};
+
+export type OutfitSnapshot = {
+  items: OutfitItemSnapshot[];
+};
+
 export type CapsuleWardrobeData = {
   items: WardrobeItem[];
   outfitSets?: OutfitSetSnapshot[];
@@ -88,6 +100,17 @@ export type CapsuleMeta = {
   updatedAt?: string;
 };
 
+export type OutfitMeta = {
+  id?: string;
+  name?: string;
+  draft?: OutfitSnapshot | null;
+  saved?: OutfitSnapshot | null;
+  effective?: OutfitSnapshot | null;
+  status?: string;
+  updatedAt?: string;
+  itemCount?: number;
+};
+
 export type CapsulePagination = {
   limit: number;
   offset: number;
@@ -100,6 +123,14 @@ export type CapsuleSidebarActions = {
   openCapsuleActions: (
     event: MouseEvent<HTMLElement>,
     capsule: CapsuleMeta,
+  ) => void;
+};
+
+export type OutfitSidebarActions = {
+  openSearchDialog: () => void;
+  openOutfitActions: (
+    event: MouseEvent<HTMLElement>,
+    outfit: OutfitMeta,
   ) => void;
 };
 
@@ -153,6 +184,11 @@ export type CapsuleBootstrapResponse = {
   wardrobeFilters?: WardrobeFiltersResponse | null;
 };
 
+export type OutfitBootstrapResponse = {
+  outfits?: OutfitMeta[];
+  pagination?: CapsulePagination;
+};
+
 export type CapsuleBootstrapResult = ProfileSettings & {
   hasProfile: boolean;
   optionsLoaded?: boolean;
@@ -163,10 +199,19 @@ export type CapsuleListResponse = {
   pagination?: CapsulePagination;
 };
 
+export type OutfitListResponse = {
+  outfits?: OutfitMeta[];
+  pagination?: CapsulePagination;
+};
+
 export type CapsuleMutationResponse = {
   capsule?: CapsuleMeta | null;
   activeCapsule?: CapsuleMeta | null;
   status?: string;
+};
+
+export type OutfitMutationResponse = {
+  outfit?: OutfitMeta | null;
 };
 
 export type ShareMetadata = {
@@ -184,6 +229,7 @@ export type WardrobeMutationResponse = {
 
 export type AppRoute =
   | "capsule"
+  | "outfit"
   | "explore"
   | "wardrobe"
   | "statistics"
@@ -195,6 +241,8 @@ export type AppNavigationOptions = {
 };
 
 export type CapsuleRouteMode = "empty" | "create" | "open";
+
+export type OutfitRouteMode = "empty" | "create" | "open";
 
 export type CapsuleNavigationOptions = {
   replace?: boolean;

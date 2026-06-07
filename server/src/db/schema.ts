@@ -34,6 +34,13 @@ const CAPSULE_SCHEMA_FILES = [
   "042_create_capsules_email_lower_name_index.sql",
 ] as const;
 
+const OUTFIT_SCHEMA_FILES = [
+  "001_create_pgcrypto_extension.sql",
+  "043_create_outfits_table.sql",
+  "044_create_outfits_email_updated_at_index.sql",
+  "045_create_outfits_email_lower_name_index.sql",
+] as const;
+
 const SHARED_CAPSULE_SCHEMA_FILES = [
   "001_create_pgcrypto_extension.sql",
   "050_create_shared_capsules_table.sql",
@@ -98,6 +105,11 @@ export async function ensureCapsulesTable(): Promise<void> {
   await executeSchemaSqlFiles(sql, CAPSULE_SCHEMA_FILES);
 }
 
+export async function ensureOutfitsTable(): Promise<void> {
+  const sql = getSqlClient();
+  await executeSchemaSqlFiles(sql, OUTFIT_SCHEMA_FILES);
+}
+
 export async function ensureSharedCapsulesTable(): Promise<void> {
   const sql = getSqlClient();
   await executeSchemaSqlFiles(sql, SHARED_CAPSULE_SCHEMA_FILES);
@@ -119,6 +131,7 @@ export async function ensureTables(): Promise<void> {
   await ensureLikedItemsTable();
   await ensurePasskeysTables();
   await ensureCapsulesTable();
+  await ensureOutfitsTable();
   await ensureSharedCapsulesTable();
   await ensureWardrobeTable();
   await ensureMcpOAuthTables();

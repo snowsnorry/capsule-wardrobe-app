@@ -6,7 +6,7 @@ import type { useAppNotifications } from "./useAppNotifications";
 import type { useAppState } from "./useAppState";
 import type { useProfileOptions } from "./useProfileOptions";
 import type { buildAppViewState } from "./appViewState";
-import type { CapsuleMeta, PasskeyPromptState } from "./appTypes";
+import type { CapsuleMeta, OutfitMeta, PasskeyPromptState } from "./appTypes";
 
 type ControllerModelInput = {
   appState: ReturnType<typeof useAppState>;
@@ -83,8 +83,13 @@ function buildActions(input: ControllerModelInput) {
         capsule,
       );
     },
+    openOutfitActions: (event: MouseEvent<HTMLElement>, outfit: OutfitMeta) => {
+      state.outfitSidebarActionsRef.current?.openOutfitActions(event, outfit);
+    },
     openSearchDialog: () =>
       state.capsuleSidebarActionsRef.current?.openSearchDialog(),
+    openOutfitSearchDialog: () =>
+      state.outfitSidebarActionsRef.current?.openSearchDialog(),
   };
 }
 
@@ -95,37 +100,51 @@ function buildHandlers(handlers: ReturnType<typeof useAppHandlers>) {
     onCancelRegenerationSelection: handlers.handleCancelRegenerationSelection,
     onCreateCapsule: handlers.handleCreateCapsule,
     onCreateCapsuleFromSidebar: handlers.handleCreateCapsuleFromSidebar,
+    onCreateOutfit: handlers.handleCreateOutfit,
+    onCreateOutfitFromSidebar: handlers.handleCreateOutfitFromSidebar,
     onDeleteCapsule: handlers.handleDeleteCapsule,
+    onDeleteOutfit: handlers.handleDeleteOutfit,
     onDeleteOutfitSetImage: handlers.handleDeleteOutfitSetImage,
     onDeleteProfile: handlers.handleDeleteProfile,
     onDownloadWardrobePdf: handlers.handleDownloadWardrobePdf,
+    onDownloadOutfitPdf: handlers.handleDownloadOutfitPdf,
     onDuplicateCapsule: handlers.handleDuplicateCapsule,
+    onDuplicateOutfit: handlers.handleDuplicateOutfit,
     onGenerateOutfitSetImage: handlers.handleGenerateOutfitSetImage,
     onGoogleCredential: handlers.handleGoogleCredential,
     onNavigateApp: handlers.handleNavigateApp,
     onLoadMoreCapsules: handlers.handleLoadMoreCapsules,
+    onLoadMoreOutfits: handlers.handleLoadMoreOutfits,
     onOpenCapsule: handlers.handleOpenCapsule,
     onOpenCapsuleFromSidebar: handlers.handleOpenCapsuleFromSidebar,
+    onOpenOutfit: handlers.handleOpenOutfit,
+    onOpenOutfitFromSidebar: handlers.handleOpenOutfitFromSidebar,
     onPasskeySignIn: handlers.handlePasskeySignIn,
     onRefreshWardrobe: handlers.handleRefreshWardrobe,
+    onReplaceOutfitItems: handlers.handleReplaceOutfitItems,
     onRegenerateSelectedItems: handlers.handleRegenerateSelectedItems,
     onRenameCapsule: handlers.handleRenameCapsule,
+    onRenameOutfit: handlers.handleRenameOutfit,
     onRequestCode: handlers.handleRequestCode,
     onRequestSignOut: handlers.handleRequestSignOut,
     onResetEmail: handlers.resetToEmail,
     onResetProfileFilters: handlers.handleResetProfileFilters,
     onRevertCapsule: handlers.handleRevertCapsule,
+    onRevertOutfit: handlers.handleRevertOutfit,
     onSaveCapsule: handlers.handleSaveCapsule,
+    onSaveOutfit: handlers.handleSaveOutfit,
     onRemoveFromMyWardrobe: handlers.handleRemoveFromMyWardrobe,
     onSaveToMyWardrobe: handlers.handleSaveToMyWardrobe,
     onSetItemLike: handlers.handleSetItemLike,
     onUpdateUploadedWardrobeItem: handlers.handleUpdateUploadedWardrobeItem,
     onSaveProfile: handlers.handleSaveProfile,
     onSearchCapsules: handlers.handleSearchCapsules,
+    onSearchOutfits: handlers.handleSearchOutfits,
     onShareCapsule: handlers.handleShareCapsule,
     onToggleRegenerationSelection: handlers.handleToggleRegenerationSelection,
     onVerifyCode: handlers.handleVerifyCode,
     registerCapsuleSidebarActions: handlers.registerCapsuleSidebarActions,
+    registerOutfitSidebarActions: handlers.registerOutfitSidebarActions,
   };
 }
 
@@ -136,10 +155,15 @@ function buildLayout(input: ControllerModelInput) {
   return {
     activeCapsuleId: state.activeCapsuleId,
     activeCapsuleMeta: state.activeCapsuleMeta,
+    activeOutfitId: state.activeOutfitId,
+    activeOutfitMeta: state.activeOutfitMeta,
     appRoute: input.navigation.appRoute,
     capsuleRouteId: input.navigation.capsuleRouteId,
+    outfitRouteId: input.navigation.outfitRouteId,
     capsuleList: state.capsuleList,
     capsulePagination: state.capsulePagination,
+    outfitList: state.outfitList,
+    outfitPagination: state.outfitPagination,
     cardPadding: input.cardPadding,
     currentView: state.currentView,
     hasBrandedPanelHeader: viewState.hasBrandedPanelHeader,

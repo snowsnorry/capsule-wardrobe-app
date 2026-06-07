@@ -138,7 +138,7 @@ export async function searchProducts(
   const sql = getSqlClient();
   const currentPage = getSearchPage(input.page);
   const limit = getSearchLimit(input.limit);
-  const offset = getSearchOffset(input.offset, currentPage);
+  const offset = getSearchOffset(input.offset, currentPage, limit);
   const searchQueryParams = buildSearchQueryParams(input);
 
   const [countRow, items] = await Promise.all([
@@ -162,10 +162,8 @@ function getSearchLimit(limit) {
   return Number.isInteger(limit) && limit > 0 ? limit : SEARCH_PAGE_SIZE;
 }
 
-function getSearchOffset(offset, page) {
-  return Number.isInteger(offset) && offset >= 0
-    ? offset
-    : (page - 1) * SEARCH_PAGE_SIZE;
+function getSearchOffset(offset, page, limit) {
+  return Number.isInteger(offset) && offset >= 0 ? offset : (page - 1) * limit;
 }
 
 function getSearchArray(input, key) {

@@ -1,4 +1,6 @@
+/* eslint-disable max-lines-per-function */
 import { fetchCapsule, fetchCapsuleBootstrap } from "../api/capsules";
+import { fetchOutfitBootstrap } from "../api/outfits";
 import { buildDefaultActionContext } from "./buildDefaultActionContext";
 import { buildDraftSnapshotFromState } from "./capsuleState";
 import { applyCapsuleStateToApp } from "./capsuleStateActions";
@@ -22,6 +24,8 @@ import type {
   CapsuleMeta,
   CapsulePagination,
   CapsuleWardrobeData,
+  OutfitBootstrapResponse,
+  OutfitMeta,
   OutfitSetSnapshot,
   WardrobeItem,
   WardrobeSnapshot,
@@ -51,6 +55,10 @@ export type AppControllerOperations = {
   clearWardrobeProgressState: () => void;
   clearActiveCapsuleState: (options?: {
     capsules?: CapsuleMeta[] | null;
+    pagination?: CapsulePagination | null;
+  }) => void;
+  clearActiveOutfitState: (options?: {
+    outfits?: OutfitMeta[] | null;
     pagination?: CapsulePagination | null;
   }) => void;
   getAppActionContext: () => AppActionContext;
@@ -135,6 +143,16 @@ function assignAppControllerOperations({
       options,
     );
   };
+  operations.clearActiveOutfitState = (options = {}) => {
+    appState.setActiveOutfitId("");
+    appState.setActiveOutfitMeta(null);
+    if (options.outfits) {
+      appState.setOutfitList(options.outfits);
+    }
+    if (options.pagination) {
+      appState.setOutfitPagination(options.pagination);
+    }
+  };
   operations.applyCapsuleState = (
     capsule,
     { capsules = null, pagination = null } = {},
@@ -180,9 +198,22 @@ function assignAppControllerOperations({
       capsules: result.capsules || [],
       pagination: result.pagination || null,
     });
+    await bootstrapOutfitList(appState);
     await restoreCapsuleSnapshot(operations, result);
     return { ...normalizedProfile, hasProfile: true, optionsLoaded };
   };
+}
+
+async function bootstrapOutfitList(appState: ReturnType<typeof useAppState>) {
+  try {
+    const result = (await fetchOutfitBootstrap()) as OutfitBootstrapResponse;
+    appState.setOutfitList(result.outfits || []);
+    if (result.pagination) {
+      appState.setOutfitPagination(result.pagination);
+    }
+  } catch {
+    appState.setOutfitList([]);
+  }
 }
 
 function clearWardrobeProgressState(

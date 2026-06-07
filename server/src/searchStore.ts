@@ -36,8 +36,13 @@ type SearchResults = {
   total: number;
   [key: string]: unknown;
 };
+type SearchRunPayload = Partial<SearchPayload> & {
+  limit?: unknown;
+  persist?: unknown;
+};
 
 const SEARCH_AUDIENCE_OPTIONS = Object.freeze(["woman", "man", "all"] as const);
+const MAX_SEARCH_RUN_LIMIT = 100;
 
 type SearchStoreDeps = {
   getDistinctProductBrandsImpl?: () => Promise<SearchOptions["brands"]>;
@@ -64,6 +69,14 @@ type SearchStoreDeps = {
   ) => Promise<unknown>;
   resolveSearchEmbeddingImpl?: typeof resolveSearchEmbedding;
 };
+
+function normalizeSearchRunLimit(value: unknown): number | undefined {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    return undefined;
+  }
+  return Math.min(parsed, MAX_SEARCH_RUN_LIMIT);
+}
 
 // eslint-disable-next-line max-lines-per-function, complexity
 function createSearchStore({
@@ -136,11 +149,14 @@ function createSearchStore({
     return serializeSearchRow(row);
   }
 
+  // eslint-disable-next-line complexity
   async function runSavedSearch(
     email: string,
-    payload: Partial<SearchPayload> = {},
+    payload: SearchRunPayload = {},
   ): Promise<SearchResults & { savedSearch: SearchPayload }> {
     const normalized = normalizeSearchPayload(payload);
+    const limit = normalizeSearchRunLimit(payload.limit);
+    const shouldPersist = payload.persist !== false;
     const [options, currentSearch] = await Promise.all([
       getSearchOptions(email),
       getSearchByEmailImpl(email),
@@ -158,14 +174,17 @@ function createSearchStore({
       ? getSemanticDistanceThreshold(normalized.query)
       : null;
 
-    let savedSearch = await upsertSearchByEmailImpl({
-      email,
-      ...normalized,
-      embedding,
-    });
+    let savedSearch = shouldPersist
+      ? await upsertSearchByEmailImpl({
+          email,
+          ...normalized,
+          embedding,
+        })
+      : currentSearch;
 
     let results = await searchProductsImpl({
       ...normalized,
+      limit,
       profileEmail: email,
       queryEmbedding: embedding,
       semanticDistanceThreshold,
@@ -182,14 +201,17 @@ function createSearchStore({
       });
 
       if (fallbackEmbedding) {
-        savedSearch = await upsertSearchByEmailImpl({
-          email,
-          ...normalized,
-          embedding: fallbackEmbedding,
-        });
+        if (shouldPersist) {
+          savedSearch = await upsertSearchByEmailImpl({
+            email,
+            ...normalized,
+            embedding: fallbackEmbedding,
+          });
+        }
 
         results = await searchProductsImpl({
           ...normalized,
+          limit,
           profileEmail: email,
           queryEmbedding: fallbackEmbedding,
           semanticDistanceThreshold: getSemanticDistanceThreshold(
@@ -207,6 +229,7 @@ function createSearchStore({
     ) {
       results = await searchProductsImpl({
         ...normalized,
+        limit,
         profileEmail: email,
         queryEmbedding: embedding,
         semanticDistanceThreshold: getRelaxedSemanticDistanceThreshold(

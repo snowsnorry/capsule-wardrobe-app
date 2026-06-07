@@ -92,6 +92,19 @@ export {
   deleteProfileByEmail,
 } from "./db/profileCapsules.js";
 export {
+  countOutfitsByEmail,
+  createOutfitRecord,
+  deleteOutfitByIdForEmail,
+  getOutfitByIdForEmail,
+  listOutfitNamesByEmail,
+  listRecentOutfitsByEmail,
+  renameOutfitByIdForEmail,
+  revertOutfitDraftByIdForEmail,
+  saveOutfitByIdForEmail,
+  searchOutfitsByEmail,
+  updateOutfitSnapshotByIdForEmail,
+} from "./db/profileOutfits.js";
+export {
   consumeMcpAuthorizationCode,
   getMcpRegisteredClient,
   hasActiveMcpGrant,

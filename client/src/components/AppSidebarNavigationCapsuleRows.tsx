@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import {
   Box,
   Divider,
@@ -11,6 +12,7 @@ import MoreVertRoundedIcon from "@mui/icons-material/MoreVertRounded";
 import type {
   AppSidebarNavigationProps,
   CapsuleNavItem,
+  OutfitNavItem,
 } from "./AppSidebarNavigationTypes";
 import { ShowMoreRow } from "./AppSidebarNavigationShowMoreRow";
 import {
@@ -36,6 +38,8 @@ export function sortCapsulesByUpdated(capsules: CapsuleNavItem[]) {
     return getCapsuleName(left).localeCompare(getCapsuleName(right));
   });
 }
+
+export const sortOutfitsByUpdated = sortCapsulesByUpdated;
 
 function capsuleRowSx(isOverlaySidebar: boolean) {
   return {
@@ -350,5 +354,53 @@ export function CapsuleRows({
         />
       ) : null}
     </>
+  );
+}
+
+export function OutfitRows({
+  activeOutfit,
+  activeOutfitId,
+  outfitHasUnsavedChanges,
+  outfitList,
+  hasMore,
+  isInteractionDisabled,
+  isOverlaySidebar,
+  isLoadingMore,
+  onLoadMoreOutfits,
+  onOpenOutfit,
+  onOpenOutfitActions,
+  t,
+  totalCount,
+}: {
+  activeOutfit?: OutfitNavItem | null;
+  activeOutfitId: string;
+  outfitHasUnsavedChanges: (outfit: OutfitNavItem) => boolean;
+  outfitList: OutfitNavItem[];
+  hasMore: boolean;
+  isInteractionDisabled: boolean;
+  isOverlaySidebar: boolean;
+  isLoadingMore: boolean;
+  onLoadMoreOutfits?: () => Promise<void> | void;
+  onOpenOutfit?: (outfitId: string) => void;
+  onOpenOutfitActions?: AppSidebarNavigationProps["onOpenOutfitActions"];
+  t: Translate;
+  totalCount: number;
+}) {
+  return (
+    <CapsuleRows
+      activeCapsule={activeOutfit}
+      activeCapsuleId={activeOutfitId}
+      capsuleHasUnsavedChanges={outfitHasUnsavedChanges}
+      capsuleList={outfitList}
+      hasMore={hasMore}
+      isInteractionDisabled={isInteractionDisabled}
+      isOverlaySidebar={isOverlaySidebar}
+      isLoadingMore={isLoadingMore}
+      onLoadMoreCapsules={onLoadMoreOutfits}
+      onOpenCapsule={onOpenOutfit}
+      onOpenCapsuleActions={onOpenOutfitActions}
+      t={t}
+      totalCount={totalCount}
+    />
   );
 }

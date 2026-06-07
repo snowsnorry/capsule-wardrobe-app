@@ -34,12 +34,14 @@ import type {
 
 export function SearchDialog({
   state,
+  copyPrefix = "capsule",
   disabled,
   isOverlay,
   setState,
   onOpenCapsule,
 }: {
   state: SearchState;
+  copyPrefix?: "capsule" | "outfit";
   disabled: boolean;
   isOverlay: boolean;
   setState: DialogsProps["setSearch"];
@@ -72,7 +74,7 @@ export function SearchDialog({
             autoFocus
             fullWidth
             variant="standard"
-            placeholder={t("capsule.searchPlaceholder")}
+            placeholder={t(`${copyPrefix}.searchPlaceholder`)}
             value={state.query}
             disabled={disabled}
             onChange={(event) =>
@@ -90,7 +92,7 @@ export function SearchDialog({
           {Object.entries(groups).map(([label, group]) => (
             <Stack key={label} spacing={1} sx={{ mb: 3 }}>
               <Typography color="text.secondary">
-                {t(`capsule.${label}`)}
+                {t(`${copyPrefix}.${label}`)}
               </Typography>
               {group.map((capsule) => (
                 <ListItemButton

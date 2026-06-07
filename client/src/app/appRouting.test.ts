@@ -1,5 +1,9 @@
 import { describe, expect, test } from "vitest";
-import { getAppRouteState, getCapsuleRouteState } from "./appRouting";
+import {
+  getAppRouteState,
+  getCapsuleRouteState,
+  getOutfitRouteState,
+} from "./appRouting";
 
 describe("appRouting", () => {
   test.each([
@@ -17,6 +21,23 @@ describe("appRouting", () => {
       appRoute,
       capsuleRouteId,
       capsuleRouteMode,
+      outfitRouteId: "",
+      outfitRouteMode: "empty",
+    });
+  });
+
+  test.each([
+    ["/outfit", "", "create"],
+    ["/outfit/", "", "create"],
+    ["/outfit/outfit-1", "outfit-1", "open"],
+    ["/outfit/outfit%201/", "outfit 1", "open"],
+  ])("parses outfit route %s", (pathname, outfitRouteId, outfitRouteMode) => {
+    expect(getAppRouteState(pathname)).toEqual({
+      appRoute: "outfit",
+      capsuleRouteId: "",
+      capsuleRouteMode: "empty",
+      outfitRouteId,
+      outfitRouteMode,
     });
   });
 
@@ -24,6 +45,13 @@ describe("appRouting", () => {
     expect(getCapsuleRouteState("/capsule//")).toEqual({
       capsuleRouteId: "",
       capsuleRouteMode: "empty",
+    });
+  });
+
+  test("treats missing outfit id as an empty outfit route", () => {
+    expect(getOutfitRouteState("/outfit//")).toEqual({
+      outfitRouteId: "",
+      outfitRouteMode: "empty",
     });
   });
 });

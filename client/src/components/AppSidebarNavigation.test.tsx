@@ -188,13 +188,13 @@ describe("AppSidebarNavigation", () => {
     expect(injectedStyles).toContain("pointer-events:auto;}");
   });
 
-  test("keeps outfit actions visible but disabled until outfit persistence exists", () => {
+  test("keeps outfit actions visible and enabled", () => {
     renderNavigation();
 
     expect(
       screen.getByRole("button", { name: "Search outfits" }),
-    ).toBeDisabled();
-    expect(screen.getByRole("button", { name: "New outfit" })).toBeDisabled();
+    ).toBeEnabled();
+    expect(screen.getByRole("button", { name: "New outfit" })).toBeEnabled();
   });
 
   test("shows disclosure indicators on expandable top-level icons", async () => {
@@ -300,8 +300,8 @@ describe("AppSidebarNavigation", () => {
     ).toHaveAttribute("data-disclosure-state", "expanded");
     expect(
       screen.getByRole("button", { name: "Search outfits" }),
-    ).toBeDisabled();
-    expect(screen.getByRole("button", { name: "New outfit" })).toBeDisabled();
+    ).toBeEnabled();
+    expect(screen.getByRole("button", { name: "New outfit" })).toBeEnabled();
   });
 
   test("shows personal item count and gives the active row the second-level selected background", () => {

@@ -1,5 +1,6 @@
 import { Button, DialogActions } from "@mui/material";
 import { mobileCapsuleDialogActionsSx } from "./MobileDialogSurfaceStyles";
+import { pickerDialogActionsSx } from "./ProfileFiltersAnchorStyles";
 import type { Translate } from "./ProfileFiltersAnchorTypes";
 
 function AnchorDialogActions({
@@ -19,11 +20,7 @@ function AnchorDialogActions({
 }) {
   return (
     <DialogActions
-      sx={
-        fullScreen
-          ? mobileCapsuleDialogActionsSx
-          : { justifyContent: "flex-end" }
-      }
+      sx={fullScreen ? mobileCapsuleDialogActionsSx : pickerDialogActionsSx}
     >
       <Button color="inherit" onClick={onClose} disabled={disabled}>
         {t("actions.cancel")}

@@ -1,6 +1,8 @@
+/* eslint-disable max-lines, max-lines-per-function, complexity */
 import { Suspense, useCallback, useRef, type ReactNode } from "react";
 import { Box, Container, Paper, Stack, Typography } from "@mui/material";
 import AppShellCapsuleActionMenu from "./AppShellCapsuleActionMenu";
+import AppShellOutfitActionMenu from "./AppShellOutfitActionMenu";
 import AppShellSidebarNavigationBody from "./AppShellSidebarNavigationBody";
 import AppSidebarShell from "../components/AppSidebarShell";
 import RoutePanelFallback from "./RoutePanelFallback";
@@ -15,11 +17,13 @@ import { getActiveSidebarApp } from "./appRouting";
 import { usePersonalItemsCount } from "./personalItemsCount";
 import { useSidebarCapsuleSearch } from "./useSidebarCapsuleSearch";
 import type { AppShellCapsuleActionMenuController } from "./AppShellCapsuleActionMenu";
+import type { AppShellOutfitActionMenuController } from "./AppShellOutfitActionMenu";
 import type {
   AppNavigationOptions,
   AppRoute,
   CapsuleMeta,
   CapsulePagination,
+  OutfitMeta,
   ProfileSettings,
   UserLike,
 } from "./appTypes";
@@ -30,10 +34,15 @@ type TranslationFn = (key: string, params?: Record<string, unknown>) => string;
 type AppShellContentProps = {
   activeCapsuleId: string;
   activeCapsuleMeta: CapsuleMeta | null;
+  activeOutfitId?: string;
+  activeOutfitMeta?: OutfitMeta | null;
   appRoute: AppRoute;
   capsuleRouteId: string;
+  outfitRouteId?: string;
   capsuleList: CapsuleMeta[];
   capsulePagination: CapsulePagination;
+  outfitList?: OutfitMeta[];
+  outfitPagination?: CapsulePagination;
   cardPadding: number;
   children: ReactNode;
   currentView: string;
@@ -50,23 +59,36 @@ type AppShellContentProps = {
   t: TranslationFn;
   user: UserLike | null;
   onCreateCapsuleFromSidebar: (onComplete?: () => void) => Promise<void>;
+  onCreateOutfitFromSidebar?: (onComplete?: () => void) => Promise<void>;
   onDeleteCapsule: (capsuleId?: string) => Promise<void>;
+  onDeleteOutfit?: (outfitId?: string) => Promise<void>;
+  onDownloadOutfitPdf?: (outfitId?: string) => Promise<void>;
   onDeleteProfile: () => Promise<void>;
   onDownloadWardrobePdf: (capsuleId?: string) => Promise<void>;
   onDuplicateCapsule: (name: string, capsuleId?: string) => Promise<void>;
+  onDuplicateOutfit?: (name: string, outfitId?: string) => Promise<void>;
   onNavigateApp: (
     nextApp: Exclude<AppRoute, "share">,
     options?: AppNavigationOptions,
   ) => void;
   onLoadMoreCapsules: () => Promise<void>;
+  onLoadMoreOutfits?: () => Promise<void>;
   onOpenCapsuleFromSidebar: (
     capsuleId: string,
     onComplete?: () => void,
   ) => Promise<void>;
+  onOpenOutfitFromSidebar?: (
+    outfitId: string,
+    onComplete?: () => void,
+  ) => Promise<void>;
   onRenameCapsule: (name: string, capsuleId?: string) => Promise<void>;
+  onRenameOutfit?: (name: string, outfitId?: string) => Promise<void>;
   onRevertCapsule: (capsuleId?: string) => Promise<void>;
+  onRevertOutfit?: (outfitId?: string) => Promise<void>;
   onSaveCapsule: (capsuleId?: string) => Promise<void>;
+  onSaveOutfit?: (outfitId?: string) => Promise<void>;
   onSearchCapsules: (query: string) => Promise<CapsuleMeta[]> | CapsuleMeta[];
+  onSearchOutfits?: (query: string) => Promise<OutfitMeta[]> | OutfitMeta[];
   onShareCapsule: (capsuleId?: string) => Promise<{
     url?: string;
     expiresAt?: string | Date;
@@ -93,6 +115,17 @@ function getHighlightedCapsuleId(
     props.capsuleRouteId &&
     props.capsuleRouteId === props.activeCapsuleMeta?.id
     ? props.capsuleRouteId
+    : "";
+}
+
+function getHighlightedOutfitId(
+  activeSidebarApp: ReturnType<typeof getActiveSidebarApp>,
+  props: AppShellContentProps,
+) {
+  return activeSidebarApp === "outfit" &&
+    props.outfitRouteId &&
+    props.outfitRouteId === props.activeOutfitMeta?.id
+    ? props.outfitRouteId
     : "";
 }
 
@@ -168,15 +201,27 @@ function AppSidebarPanel(props: AppShellContentProps) {
   const personalItemsCount = usePersonalItemsCount(userEmail);
   const usesCapsuleLayout = isFullScreenAppShellRoute(props);
   const sidebarSearch = useSidebarCapsuleSearch(props.onSearchCapsules);
+  const outfitSidebarSearch = useSidebarCapsuleSearch(
+    props.onSearchOutfits || (() => []),
+  );
   const capsuleActionMenuControllerRef =
     useRef<AppShellCapsuleActionMenuController | null>(null);
+  const outfitActionMenuControllerRef =
+    useRef<AppShellOutfitActionMenuController | null>(null);
   const registerCapsuleActionMenuController = useCallback(
     (controller: AppShellCapsuleActionMenuController) => {
       capsuleActionMenuControllerRef.current = controller;
     },
     [],
   );
+  const registerOutfitActionMenuController = useCallback(
+    (controller: AppShellOutfitActionMenuController) => {
+      outfitActionMenuControllerRef.current = controller;
+    },
+    [],
+  );
   const highlightedCapsuleId = getHighlightedCapsuleId(activeSidebarApp, props);
+  const highlightedOutfitId = getHighlightedOutfitId(activeSidebarApp, props);
 
   return (
     <AppSidebarShell
@@ -207,22 +252,42 @@ function AppSidebarPanel(props: AppShellContentProps) {
       }) => (
         <AppShellSidebarNavigationBody
           activeCapsuleMeta={props.activeCapsuleMeta}
+          activeOutfitMeta={props.activeOutfitMeta || null}
           activeSidebarApp={activeSidebarApp}
           capsuleActionMenuControllerRef={capsuleActionMenuControllerRef}
+          outfitActionMenuControllerRef={outfitActionMenuControllerRef}
           capsuleList={props.capsuleList}
           capsulePagination={props.capsulePagination}
+          outfitList={props.outfitList || []}
+          outfitPagination={
+            props.outfitPagination || {
+              limit: 10,
+              offset: 0,
+              total: 0,
+              hasMore: false,
+            }
+          }
           closeSidebar={closeSidebar}
           desktopSidebarRailWidth={desktopSidebarRailWidth}
           expandCollapsedSidebar={expandCollapsedSidebar}
           highlightedCapsuleId={highlightedCapsuleId}
+          highlightedOutfitId={highlightedOutfitId}
           isContentBusy={props.isContentBusy}
           isOverlaySidebar={isOverlaySidebar}
           isSidebarCollapsed={isSidebarCollapsed}
           onCreateCapsuleFromSidebar={props.onCreateCapsuleFromSidebar}
+          onCreateOutfitFromSidebar={
+            props.onCreateOutfitFromSidebar || (async () => {})
+          }
           onLoadMoreCapsules={props.onLoadMoreCapsules}
+          onLoadMoreOutfits={props.onLoadMoreOutfits || (async () => {})}
           onNavigateApp={props.onNavigateApp}
           onOpenCapsuleFromSidebar={props.onOpenCapsuleFromSidebar}
+          onOpenOutfitFromSidebar={
+            props.onOpenOutfitFromSidebar || (async () => {})
+          }
           onSearchCapsules={sidebarSearch.open}
+          onSearchOutfits={outfitSidebarSearch.open}
           personalItemsCount={personalItemsCount}
         />
       )}
@@ -241,12 +306,32 @@ function AppSidebarPanel(props: AppShellContentProps) {
         onSaveCapsule={props.onSaveCapsule}
         onShareCapsule={props.onShareCapsule}
       />
+      <AppShellOutfitActionMenu
+        activeOutfitMeta={props.activeOutfitMeta || null}
+        disabled={props.isContentBusy}
+        isOverlay={!props.isLarge}
+        onDeleteOutfit={props.onDeleteOutfit || (async () => {})}
+        onDownloadOutfitPdf={props.onDownloadOutfitPdf || (async () => {})}
+        onDuplicateOutfit={props.onDuplicateOutfit || (async () => {})}
+        onRegisterController={registerOutfitActionMenuController}
+        onRenameOutfit={props.onRenameOutfit || (async () => {})}
+        onRevertOutfit={props.onRevertOutfit || (async () => {})}
+        onSaveOutfit={props.onSaveOutfit || (async () => {})}
+      />
       <SearchDialog
         state={sidebarSearch.state}
         disabled={props.isContentBusy}
         isOverlay={!props.isLarge}
         setState={sidebarSearch.setState}
         onOpenCapsule={(capsuleId) => props.onOpenCapsuleFromSidebar(capsuleId)}
+      />
+      <SearchDialog
+        state={outfitSidebarSearch.state}
+        copyPrefix="outfit"
+        disabled={props.isContentBusy}
+        isOverlay={!props.isLarge}
+        setState={outfitSidebarSearch.setState}
+        onOpenCapsule={(outfitId) => props.onOpenOutfitFromSidebar?.(outfitId)}
       />
     </AppSidebarShell>
   );

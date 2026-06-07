@@ -2,11 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Box,
-  CircularProgress,
   Dialog,
   DialogContent,
   DialogTitle,
   IconButton,
+  LinearProgress,
   Stack,
   Typography,
 } from "@mui/material";
@@ -30,8 +30,12 @@ import {
 } from "./MobileDialogSurfaceStyles";
 import {
   dialogTitleSx,
-  loadingSx,
+  pickerDialogContentSx,
+  pickerDialogFullScreenPaperSx,
+  pickerDialogLoadingDividerSx,
+  pickerDialogPaperSx,
   pickerGridSx,
+  pickerScrollAreaSx,
 } from "./ProfileFiltersAnchorStyles";
 import AnchorPickerCard from "./ProfileFiltersAnchorPickerCard";
 import AnchorDialogActions from "./ProfileFiltersAnchorPickerDialogActions";
@@ -95,7 +99,14 @@ export function WardrobeAnchorPickerDialog({
       fullWidth={!fullScreen}
       maxWidth={fullScreen ? false : "md"}
       slotProps={{
-        paper: fullScreen ? { sx: mobileCapsuleDialogPaperSx } : undefined,
+        paper: {
+          sx: fullScreen
+            ? {
+                ...mobileCapsuleDialogPaperSx,
+                ...pickerDialogFullScreenPaperSx,
+              }
+            : pickerDialogPaperSx,
+        },
       }}
     >
       <AnchorDialogTitle
@@ -105,6 +116,7 @@ export function WardrobeAnchorPickerDialog({
         t={t}
         onClose={onClose}
       />
+      <DialogLoadingDivider loading={isLoading} />
       <AnchorDialogBody
         error={error}
         fullScreen={fullScreen}
@@ -248,10 +260,20 @@ function AnchorDialogBody({
 }) {
   return (
     <DialogContent
-      dividers={!fullScreen}
-      sx={fullScreen ? mobileCapsuleDialogContentSx : undefined}
+      sx={
+        fullScreen
+          ? {
+              ...mobileCapsuleDialogContentSx,
+              flex: 1,
+              minHeight: 0,
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+            }
+          : pickerDialogContentSx
+      }
     >
-      <Stack spacing={2.5}>
+      <Stack spacing={2.5} sx={{ flex: 1, minHeight: 0 }}>
         <AnchorPickerFilters
           likedOnly={likedOnly}
           locale={locale}
@@ -264,31 +286,38 @@ function AnchorDialogBody({
           onTypeChange={onTypeChange}
         />
         {error ? <Alert severity="error">{error}</Alert> : null}
-        {isLoading ? (
-          <Box sx={loadingSx}>
-            <CircularProgress size={24} />
-          </Box>
-        ) : (
+        <Box sx={pickerScrollAreaSx}>
           <AnchorPickerGrid
+            isLoading={isLoading}
             items={items}
             locale={locale}
             tempIds={tempIds}
             t={t}
             onToggle={onToggle}
           />
-        )}
+        </Box>
       </Stack>
     </DialogContent>
   );
 }
 
+function DialogLoadingDivider({ loading }: { loading: boolean }) {
+  return (
+    <Box sx={pickerDialogLoadingDividerSx}>
+      {loading ? <LinearProgress /> : null}
+    </Box>
+  );
+}
+
 function AnchorPickerGrid({
+  isLoading,
   items,
   locale,
   onToggle,
   tempIds,
   t,
 }: {
+  isLoading: boolean;
   items: AnchorItem[];
   locale: string;
   onToggle: (id: string) => void;
@@ -296,7 +325,7 @@ function AnchorPickerGrid({
   t: Translate;
 }) {
   if (items.length === 0) {
-    return (
+    return isLoading ? null : (
       <Typography variant="body2" color="text.secondary">
         {t("capsule.anchors.empty")}
       </Typography>

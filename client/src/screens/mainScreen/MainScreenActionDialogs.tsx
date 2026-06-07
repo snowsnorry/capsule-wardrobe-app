@@ -56,7 +56,7 @@ async function runConfirmAction(
   await actions[state.action]?.();
 }
 
-function getConfirmCopy(action: string) {
+function getConfirmCopy(action: string, copyPrefix = "capsule") {
   if (action === "delete-outfit-set-image")
     return [
       "capsule.deleteOutfitSetImageTitle",
@@ -77,14 +77,14 @@ function getConfirmCopy(action: string) {
     ];
   if (action.startsWith("delete"))
     return [
-      "capsule.deleteTitle",
-      "capsule.deleteConfirmBody",
-      "capsule.deleteConfirm",
+      `${copyPrefix}.deleteTitle`,
+      `${copyPrefix}.deleteConfirmBody`,
+      `${copyPrefix}.deleteConfirm`,
     ];
   return [
-    "capsule.revertTitle",
-    "capsule.revertConfirmBody",
-    "capsule.revertConfirm",
+    `${copyPrefix}.revertTitle`,
+    `${copyPrefix}.revertConfirmBody`,
+    `${copyPrefix}.revertConfirm`,
   ];
 }
 
@@ -103,14 +103,17 @@ function useFocusNameDialogInput(
   }, [nameInputRef, stateType]);
 }
 
+// eslint-disable-next-line max-lines-per-function
 export function NameDialog({
   state,
+  copyPrefix = "capsule",
   disabled,
   isOverlay,
   props,
   setState,
 }: {
   state: NameDialogState;
+  copyPrefix?: "capsule" | "outfit";
   disabled: boolean;
   isOverlay: boolean;
   props: MainScreenProps;
@@ -141,7 +144,9 @@ export function NameDialog({
       }}
     >
       <DialogTitle sx={isOverlay ? mobileCapsuleDialogTitleSx : undefined}>
-        {t(isSaveAs ? "capsule.saveAsTitle" : "capsule.renameTitle")}
+        {t(
+          isSaveAs ? `${copyPrefix}.saveAsTitle` : `${copyPrefix}.renameTitle`,
+        )}
       </DialogTitle>
       <DialogContent
         sx={
@@ -163,7 +168,9 @@ export function NameDialog({
           slotProps={{
             htmlInput: {
               "aria-label": t(
-                isSaveAs ? "capsule.saveAsTitle" : "capsule.renameTitle",
+                isSaveAs
+                  ? `${copyPrefix}.saveAsTitle`
+                  : `${copyPrefix}.renameTitle`,
               ),
             },
           }}
@@ -192,6 +199,7 @@ export function NameDialog({
 
 export function ConfirmDialog({
   state,
+  copyPrefix = "capsule",
   disabled,
   isOverlay,
   props,
@@ -199,6 +207,7 @@ export function ConfirmDialog({
   onCloseRowMenu,
 }: {
   state: ConfirmState;
+  copyPrefix?: "capsule" | "outfit";
   disabled: boolean;
   isOverlay: boolean;
   props: MainScreenProps;
@@ -206,7 +215,7 @@ export function ConfirmDialog({
   onCloseRowMenu: () => void;
 }) {
   const { t } = useI18n();
-  const [title, body, button] = getConfirmCopy(state.action);
+  const [title, body, button] = getConfirmCopy(state.action, copyPrefix);
 
   return (
     <Dialog

@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Box, ButtonBase, Typography } from "@mui/material";
 import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
 import FavoriteRoundedIcon from "@mui/icons-material/FavoriteRounded";
@@ -16,14 +17,7 @@ function AnchorPickerCard({
   selected,
   selectionFull,
   t,
-}: {
-  item: AnchorItem;
-  locale: string;
-  onToggle: (id: string) => void;
-  selected: boolean;
-  selectionFull: boolean;
-  t: Translate;
-}) {
+}: AnchorPickerCardProps) {
   const disabled = !selected && selectionFull;
   const label = getAnchorLabel(item, item.id, t);
   const likedLabel = t("wardrobe.likedBadge");
@@ -31,6 +25,9 @@ function AnchorPickerCard({
   return (
     <ButtonBase
       disabled={disabled}
+      disableRipple
+      disableTouchRipple
+      focusRipple={false}
       aria-pressed={selected}
       onClick={() => onToggle(item.id)}
       sx={(theme) => pickerCardSx(theme, selected, disabled)}
@@ -52,6 +49,25 @@ function AnchorPickerCard({
   );
 }
 
+function areAnchorPickerCardsEqual(
+  previous: AnchorPickerCardProps,
+  next: AnchorPickerCardProps,
+) {
+  return (
+    previous.locale === next.locale &&
+    previous.selected === next.selected &&
+    previous.selectionFull === next.selectionFull &&
+    previous.item.id === next.item.id &&
+    previous.item.wardrobeId === next.item.wardrobeId &&
+    previous.item.url === next.item.url &&
+    previous.item.name === next.item.name &&
+    previous.item.imageUrl === next.item.imageUrl &&
+    previous.item.category === next.item.category &&
+    previous.item.isLiked === next.item.isLiked &&
+    previous.item.source === next.item.source
+  );
+}
+
 function AnchorLikedTitleIcon({ label }: { label: string }) {
   return (
     <FavoriteRoundedIcon
@@ -68,4 +84,13 @@ function AnchorLikedTitleIcon({ label }: { label: string }) {
   );
 }
 
-export default AnchorPickerCard;
+type AnchorPickerCardProps = {
+  item: AnchorItem;
+  locale: string;
+  onToggle: (id: string) => void;
+  selected: boolean;
+  selectionFull: boolean;
+  t: Translate;
+};
+
+export default memo(AnchorPickerCard, areAnchorPickerCardsEqual);

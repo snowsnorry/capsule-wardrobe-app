@@ -1,10 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
 import type { SearchState } from "../screens/mainScreen/MainScreenDialogsTypes";
-import type { CapsuleMeta } from "./appTypes";
+import type { CapsuleLike } from "../screens/mainScreen/MainScreenTypes";
 
-type SearchCapsules = (query: string) => Promise<CapsuleMeta[]> | CapsuleMeta[];
+type SearchItems<T extends CapsuleLike = CapsuleLike> = (
+  query: string,
+) => Promise<T[]> | T[];
 
-export function useSidebarCapsuleSearch(onSearchCapsules: SearchCapsules) {
+export function useSidebarCapsuleSearch<T extends CapsuleLike = CapsuleLike>(
+  onSearchCapsules: SearchItems<T>,
+) {
   const [state, setState] = useState<SearchState>({
     open: false,
     query: "",

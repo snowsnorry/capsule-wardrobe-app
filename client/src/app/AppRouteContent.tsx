@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { lazy } from "react";
 import type { Dispatch, FormEvent, MouseEvent, SetStateAction } from "react";
 import type {
@@ -6,6 +7,8 @@ import type {
   CapsuleMeta,
   CapsuleSourceMode,
   CapsuleSidebarActions,
+  OutfitItemSnapshot,
+  OutfitMeta,
   OutfitSetSnapshot,
   ProfileSettings,
   StatusState,
@@ -25,6 +28,7 @@ const ProfileScreen = lazy(() => import("../screens/ProfileScreen"));
 const SearchScreen = lazy(() => import("../screens/SearchScreen"));
 const SignInScreen = lazy(() => import("../screens/SignInScreen"));
 const StatisticsScreen = lazy(() => import("../screens/StatisticsScreen"));
+const OutfitScreen = lazy(() => import("../screens/outfitScreen/OutfitScreen"));
 type TranslationFn = (key: string, params?: Record<string, unknown>) => string;
 type ToggleSelectionFn = (
   value: string,
@@ -89,16 +93,21 @@ type AppRouteContentProps = SharedFilterProps & {
   email: string;
   code: string;
   activeCapsuleMeta: CapsuleMeta | null;
+  activeOutfitMeta: OutfitMeta | null;
   capsuleList: CapsuleMeta[];
   onApplyCapsuleFilters: () => Promise<void>;
   onBackToMain: () => void;
   onCancelRegenerationSelection: () => void;
   onCreateCapsule: () => Promise<void>;
+  onCreateOutfit: () => Promise<void>;
   onDeleteCapsule: (capsuleId?: string) => Promise<void>;
+  onDeleteOutfit: (outfitId?: string) => Promise<void>;
   onDeleteOutfitSetImage: (setIndex: OutfitSetIndex) => Promise<void>;
   onDeleteProfile: () => Promise<void>;
   onDownloadWardrobePdf: (capsuleId?: string) => Promise<void>;
+  onDownloadOutfitPdf: (outfitId?: string) => Promise<void>;
   onDuplicateCapsule: (name: string, capsuleId?: string) => Promise<void>;
+  onDuplicateOutfit: (name: string, outfitId?: string) => Promise<void>;
   onGenerateOutfitSetImage: (setIndex: OutfitSetIndex) => Promise<void>;
   onGoogleCredential: (idToken: string) => Promise<void>;
   onNavigateApp: (
@@ -106,10 +115,12 @@ type AppRouteContentProps = SharedFilterProps & {
     options?: AppNavigationOptions,
   ) => void;
   onOpenCapsule: (capsuleId: string) => Promise<void>;
+  onOpenOutfit: (outfitId: string) => Promise<void>;
   onPasskeySignIn: () => Promise<void>;
   onRefreshWardrobe: () => Promise<void>;
   onRegenerateSelectedItems: () => Promise<void>;
   onRenameCapsule: (name: string, capsuleId?: string) => Promise<void>;
+  onRenameOutfit: (name: string, outfitId?: string) => Promise<void>;
   onRequestCode: (
     event: FormEvent<HTMLFormElement> | MouseEvent<HTMLButtonElement>,
   ) => Promise<void>;
@@ -117,7 +128,13 @@ type AppRouteContentProps = SharedFilterProps & {
   onResetEmail: () => void;
   onResetProfileFilters: () => Promise<void>;
   onRevertCapsule: (capsuleId?: string) => Promise<void>;
+  onRevertOutfit: (outfitId?: string) => Promise<void>;
   onSaveCapsule: (capsuleId?: string) => Promise<void>;
+  onSaveOutfit: (outfitId?: string) => Promise<void>;
+  onReplaceOutfitItems: (
+    outfitId: string,
+    items: OutfitItemSnapshot[],
+  ) => Promise<void>;
   onRemoveFromMyWardrobe: (item: WardrobeItem) => Promise<void>;
   onSaveToMyWardrobe: (item: WardrobeItem) => Promise<void>;
   onSetItemLike: (item: WardrobeItem, isLiked: boolean) => Promise<void>;
@@ -310,6 +327,25 @@ export default function AppRouteContent(props: AppRouteContentProps) {
     }
     if (props.appRoute === "statistics") {
       return <StatisticsScreen onNavigateApp={props.onNavigateApp} />;
+    }
+    if (props.appRoute === "outfit") {
+      return (
+        <OutfitScreen
+          activeOutfit={props.activeOutfitMeta}
+          isContentBusy={props.isContentBusy}
+          onDeleteOutfit={props.onDeleteOutfit}
+          onDownloadOutfitPdf={props.onDownloadOutfitPdf}
+          onDuplicateOutfit={props.onDuplicateOutfit}
+          onRenameOutfit={props.onRenameOutfit}
+          onReplaceOutfitItems={props.onReplaceOutfitItems}
+          onRemoveFromMyWardrobe={props.onRemoveFromMyWardrobe}
+          onRevertOutfit={props.onRevertOutfit}
+          onSaveToMyWardrobe={props.onSaveToMyWardrobe}
+          onSaveOutfit={props.onSaveOutfit}
+          onSetItemLike={props.onSetItemLike}
+          onUpdateUploadedWardrobeItem={props.onUpdateUploadedWardrobeItem}
+        />
+      );
     }
     return props.currentView === "profile" ? (
       <ProfileRoute {...props} />

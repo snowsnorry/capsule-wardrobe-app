@@ -6,6 +6,8 @@ import type {
   CapsulePagination,
   CapsuleSourceMode,
   CapsuleSidebarActions,
+  OutfitMeta,
+  OutfitSidebarActions,
   OutfitSetSnapshot,
   SessionStep,
   StatusState,
@@ -104,6 +106,17 @@ export function useCapsuleAppState() {
   const [activeCapsuleMeta, setActiveCapsuleMeta] =
     useState<CapsuleMeta | null>(null);
   const [capsuleList, setCapsuleList] = useState<CapsuleMeta[]>([]);
+  const [activeOutfitId, setActiveOutfitId] = useState("");
+  const [activeOutfitMeta, setActiveOutfitMeta] = useState<OutfitMeta | null>(
+    null,
+  );
+  const [outfitList, setOutfitList] = useState<OutfitMeta[]>([]);
+  const [outfitPagination, setOutfitPagination] = useState<CapsulePagination>({
+    limit: 10,
+    offset: 0,
+    total: 0,
+    hasMore: false,
+  });
   const [capsulePagination, setCapsulePagination] = useState<CapsulePagination>(
     {
       limit: 10,
@@ -121,20 +134,28 @@ export function useCapsuleAppState() {
   return {
     activeCapsuleId,
     activeCapsuleMeta,
+    activeOutfitId,
+    activeOutfitMeta,
     capsuleList,
     capsulePagination,
     isContentOperationLoading,
     isDownloadingWardrobePdf,
     isLoadingItems,
+    outfitList,
+    outfitPagination,
     profileItems,
     profileOutfitSets,
     setActiveCapsuleId,
     setActiveCapsuleMeta,
+    setActiveOutfitId,
+    setActiveOutfitMeta,
     setCapsuleList,
     setCapsulePagination,
     setIsContentOperationLoading,
     setIsDownloadingWardrobePdf,
     setIsLoadingItems,
+    setOutfitList,
+    setOutfitPagination,
     setProfileItems,
     setProfileOutfitSets,
   };
@@ -179,10 +200,12 @@ export function useAppRefs() {
   const manualWardrobeRegenerationCapsuleIdRef = useRef("");
   const pendingNotificationKindRef = useRef("");
   const capsuleSidebarActionsRef = useRef<CapsuleSidebarActions | null>(null);
+  const outfitSidebarActionsRef = useRef<OutfitSidebarActions | null>(null);
 
   return {
     capsuleEventsAbortRef,
     capsuleSidebarActionsRef,
+    outfitSidebarActionsRef,
     isMountedRef,
     manualWardrobeRegenerationCapsuleIdRef,
     pendingNotificationKindRef,

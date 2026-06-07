@@ -374,6 +374,71 @@ test("runSavedSearch uses lexical search only for short ordinary text", async ()
   });
 });
 
+test("runSavedSearch can run transient searches without persisting state", async () => {
+  const productCalls = [];
+  const upsertCalls = [];
+  const store = createSearchStore(
+    createSearchStoreDeps({
+      getSearchByEmailImpl: async () => ({ query: "saved coat", page: 2 }),
+      upsertSearchByEmailImpl: async (payload) => {
+        upsertCalls.push(payload);
+        return payload;
+      },
+      searchProductsImpl: async (payload) => {
+        productCalls.push(payload);
+        return { total: 1, page: 1, pageSize: 24, items: [] };
+      },
+      resolveSearchEmbeddingImpl: async () => {
+        throw new Error("unexpected embedding");
+      },
+    }),
+  );
+
+  const result = await store.runSavedSearch("person@example.com", {
+    query: "dress",
+    persist: false,
+  });
+
+  expect(upsertCalls).toHaveLength(0);
+  expect(productCalls[0]).toMatchObject({
+    profileEmail: "person@example.com",
+    query: "dress",
+    textQuery: "dress",
+    textSearchMode: "lexical",
+  });
+  expect(result.savedSearch.query).toBe("saved coat");
+  expect(result.savedSearch.page).toBe(2);
+});
+
+test("runSavedSearch forwards transient result limits without persisting them", async () => {
+  const productCalls = [];
+  const upsertCalls = [];
+  const store = createSearchStore(
+    createSearchStoreDeps({
+      upsertSearchByEmailImpl: async (payload) => {
+        upsertCalls.push(payload);
+        return payload;
+      },
+      searchProductsImpl: async (payload) => {
+        productCalls.push(payload);
+        return { total: 25, page: 1, pageSize: 20, items: [] };
+      },
+      resolveSearchEmbeddingImpl: async () => {
+        throw new Error("unexpected embedding");
+      },
+    }),
+  );
+
+  const result = await store.runSavedSearch("person@example.com", {
+    limit: 20,
+    persist: false,
+  });
+
+  expect(upsertCalls).toHaveLength(0);
+  expect(productCalls[0]).toMatchObject({ limit: 20 });
+  expect(result.savedSearch).not.toHaveProperty("limit");
+});
+
 test("runSavedSearch falls back to semantic search when lexical search is empty", async () => {
   const productCalls = [];
   const upsertCalls = [];

@@ -1,6 +1,6 @@
 import type { MouseEvent, ReactNode } from "react";
 
-type AppId = "capsule" | "explore" | "wardrobe" | "statistics";
+type AppId = "capsule" | "outfit" | "explore" | "wardrobe" | "statistics";
 
 type CapsuleNavItem = {
   id?: string;
@@ -16,6 +16,9 @@ type CapsuleNavPagination = {
   hasMore: boolean;
 };
 
+type OutfitNavItem = CapsuleNavItem;
+type OutfitNavPagination = CapsuleNavPagination;
+
 type AppSidebarNavigationProps = {
   activeApp: AppId;
   isOverlaySidebar: boolean;
@@ -25,18 +28,31 @@ type AppSidebarNavigationProps = {
   personalItemsCount?: number | null;
   capsuleList?: CapsuleNavItem[];
   capsulePagination?: CapsuleNavPagination;
+  outfitList?: OutfitNavItem[];
+  outfitPagination?: OutfitNavPagination;
   activeCapsuleId?: string;
   activeCapsule?: CapsuleNavItem | null;
+  activeOutfitId?: string;
+  activeOutfit?: OutfitNavItem | null;
   onNavigateApp: (nextApp: AppId) => void;
   onLoadMoreCapsules?: () => Promise<void> | void;
+  onLoadMoreOutfits?: () => Promise<void> | void;
   onCreateCapsule?: () => Promise<void> | void;
+  onCreateOutfit?: () => Promise<void> | void;
   onSearchCapsules?: () => void;
+  onSearchOutfits?: () => void;
   onOpenCapsule?: (capsuleId: string) => void;
+  onOpenOutfit?: (outfitId: string) => void;
   onOpenCapsuleActions?: (
     event: MouseEvent<HTMLElement>,
     capsule: CapsuleNavItem,
   ) => void;
+  onOpenOutfitActions?: (
+    event: MouseEvent<HTMLElement>,
+    outfit: OutfitNavItem,
+  ) => void;
   capsuleHasUnsavedChanges?: (capsule: CapsuleNavItem) => boolean;
+  outfitHasUnsavedChanges?: (outfit: OutfitNavItem) => boolean;
   onExpandedAction?: () => void;
   collapsedExpandHitbox?: ReactNode;
 };
@@ -46,4 +62,6 @@ export type {
   AppSidebarNavigationProps,
   CapsuleNavItem,
   CapsuleNavPagination,
+  OutfitNavItem,
+  OutfitNavPagination,
 };

@@ -15,6 +15,10 @@ function getNavigationPath(nextApp: Exclude<AppRoute, "share">): string {
     return "/explore";
   }
 
+  if (nextApp === "outfit") {
+    return "/outfit";
+  }
+
   return nextApp === "statistics" ? "/statistics" : "/";
 }
 
@@ -119,6 +123,27 @@ export function useAppNavigation() {
     [navigateToPath],
   );
 
+  const navigateOutfit = useCallback(
+    (outfitId: string, options: CapsuleNavigationOptions = {}) => {
+      const normalizedId = String(outfitId || "").trim();
+      if (!normalizedId) {
+        return;
+      }
+      navigateToPath(
+        `/outfit/${encodeURIComponent(normalizedId)}`,
+        options.replace,
+      );
+    },
+    [navigateToPath],
+  );
+
+  const navigateNewOutfit = useCallback(
+    (options: CapsuleNavigationOptions = {}) => {
+      navigateToPath("/outfit", options.replace);
+    },
+    [navigateToPath],
+  );
+
   const clearShareRoute = useCallback(() => {
     setPendingShareId("");
     if (
@@ -144,6 +169,8 @@ export function useAppNavigation() {
     appRoute: routeState.appRoute,
     capsuleRouteId: routeState.capsuleRouteId,
     capsuleRouteMode: routeState.capsuleRouteMode,
+    outfitRouteId: routeState.outfitRouteId,
+    outfitRouteMode: routeState.outfitRouteMode,
     searchInitialQuery,
     searchAutoOpenProductDetail,
     pendingShareId,
@@ -152,8 +179,10 @@ export function useAppNavigation() {
       setRouteState((current) => ({ ...current, appRoute })),
     clearShareRoute,
     navigateCapsule,
+    navigateOutfit,
     navigateApp,
     navigateNewCapsule,
+    navigateNewOutfit,
     resetNavigation,
   };
 }

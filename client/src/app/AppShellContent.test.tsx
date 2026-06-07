@@ -193,6 +193,7 @@ function createProps(
     t: (key: string) =>
       ({
         "wardrobe.title": "Personal items",
+        "wardrobe.newOutfit": "New outfit",
         "search.title": "Catalog: Explore",
         "statistics.title": "Catalog: Statistics",
         "appShell.toggleSidebar": "Toggle sidebar",
@@ -284,6 +285,26 @@ describe("AppShellContent", () => {
       "wardrobe-screen-shell",
     );
     expect(screen.getByText("Personal items")).toBeInTheDocument();
+  });
+
+  test("shows the outfit title in the mobile shell header", () => {
+    renderShellContent({
+      activeOutfitMeta: {
+        id: "outfit-1",
+        name: "Test outfit",
+        status: "modified",
+      },
+      appRoute: "outfit",
+      outfitRouteId: "outfit-1",
+      isMainScreenView: true,
+      isSearchView: false,
+    });
+
+    const header = screen.getByTestId("app-shell-mobile-header");
+    expect(header).toHaveTextContent("Test outfit");
+    expect(
+      screen.getByRole("button", { name: "Toggle sidebar" }),
+    ).toBeInTheDocument();
   });
 
   test("opens capsule search over the current route without navigating", async () => {

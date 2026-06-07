@@ -1,3 +1,4 @@
+/* eslint-disable complexity */
 import {
   buildSnapshotFromProfile,
   getEffectiveCapsuleSnapshot,
@@ -32,6 +33,7 @@ export function isApiPath(pathname = "") {
   return (
     pathname.startsWith("/auth") ||
     pathname.startsWith("/capsules") ||
+    pathname.startsWith("/outfits") ||
     pathname.startsWith("/shared-capsules") ||
     pathname.startsWith("/profile") ||
     pathname.startsWith("/wardrobe") ||

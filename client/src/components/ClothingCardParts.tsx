@@ -344,6 +344,7 @@ function ClothingCardView({
   return (
     <Box
       className="wardrobe-card-root"
+      data-mobile-columns={mobileColumns}
       role={isInteractive ? "button" : undefined}
       tabIndex={isInteractive ? 0 : undefined}
       aria-label={isInteractive ? label : undefined}

@@ -15,6 +15,7 @@ import {
   E2E_EMAIL,
 } from "./fixtures.js";
 import { E2eGenerationMemory } from "./generationState.js";
+import { E2eOutfitMemory } from "./outfitState.js";
 import { E2eSearchDelayState } from "./searchState.js";
 import { searchAndGenerationDependencies } from "./searchAndGenerationDependencies.js";
 import { E2eSelectedRegenerationMemory } from "./selectedRegenerationState.js";
@@ -55,6 +56,7 @@ class E2eState {
   sessions = new Map<string, E2eSession>();
   profile: Record<string, unknown> | null = buildE2eProfile();
   capsuleMemory = new E2eCapsuleMemory();
+  outfitMemory = new E2eOutfitMemory();
   shareMemory = new E2eShareMemory();
   savedSearch = buildE2eSearchPayload();
   loginCodes = new Map<string, string>();
@@ -80,6 +82,7 @@ class E2eState {
     this.selectedRegenerationMemory.reset();
     this.searchDelay.clear();
     this.generationMemory.reset();
+    this.outfitMemory.reset();
     this.capsuleMemory.reset(
       scenario === "empty-wardrobe"
         ? buildE2eEmptyWardrobeCapsule()
@@ -235,11 +238,38 @@ function capsuleDependencies(state: E2eState) {
   };
 }
 
+function outfitDependencies(state: E2eState) {
+  return {
+    listRecentOutfitsImpl: async (_email, limit = 10, offset = 0) =>
+      state.outfitMemory.list(limit, offset),
+    countOutfitsImpl: async () => state.outfitMemory.list(1000).length,
+    searchOutfitsImpl: async (_email, query, limit = 25) =>
+      state.outfitMemory.search(query, limit),
+    getOutfitImpl: async (_email, id) => state.outfitMemory.get(id),
+    createOutfitImpl: async (_email, payload) =>
+      state.outfitMemory.create({
+        name: payload?.name || undefined,
+        draft: payload?.draft ?? { items: [] },
+        saved: payload?.saved ?? null,
+      }),
+    updateOutfitSnapshotImpl: async (_email, id, draft) =>
+      state.outfitMemory.update(id, draft),
+    saveOutfitImpl: async (_email, id) => state.outfitMemory.save(id),
+    revertOutfitImpl: async (_email, id) => state.outfitMemory.revert(id),
+    renameOutfitImpl: async (_email, id, name) =>
+      state.outfitMemory.rename(id, name),
+    duplicateOutfitImpl: async (_email, id, name) =>
+      state.outfitMemory.duplicate(id, name),
+    deleteOutfitImpl: async (_email, id) => state.outfitMemory.delete(id),
+  };
+}
+
 export function createE2eDependencies(state = e2eState) {
   return {
     ...authDependencies(state),
     ...profileDependencies(state),
     ...capsuleDependencies(state),
+    ...outfitDependencies(state),
     ...searchAndGenerationDependencies(state),
     ...createE2eWardrobeDependencies(state.wardrobeMemory),
     ...buildE2ePasskeyDependencies(),

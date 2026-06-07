@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import crypto from "node:crypto";
 import { neon } from "@neondatabase/serverless";
 
@@ -257,6 +258,16 @@ export type CapsuleRow = {
   updatedAt: string | Date;
 };
 
+export type OutfitRow = {
+  id: string;
+  email: string;
+  name: string;
+  draft: JsonObject | null;
+  saved: JsonObject | null;
+  createdAt: string | Date;
+  updatedAt: string | Date;
+};
+
 export type SharedCapsuleRow = {
   id: string;
   profileEmail: string;
@@ -275,9 +286,16 @@ export type CreateCapsuleInput = {
   saved?: JsonObject | null;
 };
 
+export type CreateOutfitInput = CreateCapsuleInput;
+
 export type CapsuleLookupInput = {
   email: string;
   capsuleId: string;
+};
+
+export type OutfitLookupInput = {
+  email: string;
+  outfitId: string;
 };
 
 export type UpdateCapsuleSnapshotInput = {
@@ -286,9 +304,21 @@ export type UpdateCapsuleSnapshotInput = {
   draft: JsonObject | null;
 };
 
+export type UpdateOutfitSnapshotInput = {
+  email: string;
+  outfitId: string;
+  draft: JsonObject | null;
+};
+
 export type RenameCapsuleInput = {
   email: string;
   capsuleId: string;
+  name: string;
+};
+
+export type RenameOutfitInput = {
+  email: string;
+  outfitId: string;
   name: string;
 };
 

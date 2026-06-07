@@ -8,11 +8,55 @@ export const dialogTitleSx = {
   gap: 2,
 } as const;
 
-export const loadingSx = {
-  minHeight: 220,
+export const pickerDialogPaperSx = {
+  height: "calc(100dvh - 48px)",
+  maxHeight: "calc(100dvh - 48px)",
   display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
+  flexDirection: "column",
+  overflow: "hidden",
+} as const;
+
+export const pickerDialogFullScreenPaperSx = {
+  height: "100dvh",
+  maxHeight: "100dvh",
+  display: "flex",
+  flexDirection: "column",
+  overflow: "hidden",
+} as const;
+
+export const pickerDialogContentSx = {
+  flex: 1,
+  minHeight: 0,
+  overflow: "hidden",
+  display: "flex",
+  flexDirection: "column",
+  px: 3,
+  py: 2.5,
+  "&&": {
+    pt: 2.5,
+  },
+} as const;
+
+export const pickerDialogLoadingDividerSx = {
+  height: 4,
+  borderTop: "1px solid",
+  borderColor: "divider",
+  flexShrink: 0,
+  "& .MuiLinearProgress-root": {
+    height: "100%",
+  },
+} as const;
+
+export const pickerDialogActionsSx = {
+  flexShrink: 0,
+  justifyContent: "flex-end",
+} as const;
+
+export const pickerScrollAreaSx = {
+  flex: 1,
+  minHeight: 0,
+  overflowY: "auto",
+  pr: 0.5,
 } as const;
 
 export const pickerGridSx = {
@@ -47,6 +91,5 @@ export function pickerCardSx(
       ? alpha(theme.palette.primary.main, 0.08)
       : theme.palette.background.paper,
     opacity: disabled ? 0.48 : 1,
-    transition: "background-color 180ms ease-out, border-color 180ms ease-out",
   };
 }

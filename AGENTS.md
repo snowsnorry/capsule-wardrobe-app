@@ -131,6 +131,7 @@ Lint and quality:
 - Read the nearest tests before editing implementation.
 - When changing API contracts, inspect both `server/` and the corresponding `client/src/api/` usage.
 - Keep public API payloads, client state, and e2e fixtures on the final camelCase contract; do not reintroduce snake_case compatibility or naming migration code unless explicitly requested.
+- Treat personal wardrobe items as profile-owned records identified by `id`/`wardrobeId` and stable `wardrobe://...` keys. Determine their source only from the database-backed `source` field (`uploaded` or `from_catalog`) as exposed by the API. Do not infer personal item identity, source, ownership, or uploaded-vs-catalog status from any URL or storage path; product URLs, image URLs, and storage URLs are optional metadata and may be HTTP(S) for both uploaded and catalog-backed personal items.
 - When changing localization-visible text, update locale resources and keep EN/RU parity.
 - When changing auth, session, DB, email, or deployment behavior, be conservative and avoid incidental rewrites.
 - When changing state-changing authenticated routes, preserve trusted-origin and CSRF checks and keep client calls on `client/src/api/request.ts` unless there is a specific reason not to.
@@ -185,6 +186,7 @@ At minimum:
 - Never read, search, print, parse, or use `.env` / `.env*` files unless the user explicitly asks for that exact action in the current turn.
 - Do not silently change env var names.
 - Do not break auth-test mode.
+- Do not identify, deduplicate, classify, or route personal wardrobe items by product `url`, image URL, storage path, URL scheme, or URL host. Never use URL shape checks such as `startsWith("http")`, pathname inspection, asset-domain checks, or `wardrobe://` key presence to determine item source; use only the database-backed `source` field for source classification.
 - Do not change i18n behavior in only one locale.
 - Do not move files across workspaces unless explicitly requested.
 - Do not resurrect removed naming-convention migration scripts or package commands unless explicitly requested.

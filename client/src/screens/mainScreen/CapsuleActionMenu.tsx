@@ -35,6 +35,7 @@ type CapsuleActionMenuProps = {
   onSave: () => void;
   onDuplicate: () => void;
   onShare: () => void;
+  showShare?: boolean;
   allowUnknownShareContent?: boolean;
   showCardLayout?: boolean;
   mobileCardColumns?: MobileCardColumns;
@@ -232,6 +233,7 @@ function CapsuleActionMenu({
   onSave,
   onDuplicate,
   onShare,
+  showShare = true,
   allowUnknownShareContent = false,
   showCardLayout = false,
   mobileCardColumns = 2,
@@ -261,7 +263,7 @@ function CapsuleActionMenu({
         {t("capsule.exportPdf")}
       </ActionMenuItem>
       <ShareMenuItem
-        show={permissions.canShare}
+        show={showShare && permissions.canShare}
         disabled={disabled}
         onClose={onClose}
         onShare={onShare}
