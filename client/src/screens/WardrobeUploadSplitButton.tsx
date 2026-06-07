@@ -102,6 +102,7 @@ function WardrobeUploadSplitButton({
 
 const uploadButtonGroupSx = {
   flexShrink: 0,
+  height: 32,
 } as const;
 
 const mobileUploadButtonGroupSx = {
@@ -111,6 +112,7 @@ const mobileUploadButtonGroupSx = {
 } as const;
 
 const uploadMainButtonSx = {
+  height: 32,
   whiteSpace: "nowrap",
   "& .MuiButton-startIcon": {
     mr: 0.75,
@@ -124,6 +126,7 @@ const mobileUploadMainButtonSx = {
 } as const;
 
 const uploadMenuButtonSx = {
+  height: 32,
   minWidth: 40,
   px: 0.5,
 } as const;
