@@ -217,7 +217,6 @@ export {
   getEffectiveOutfitSnapshot,
   getOutfit,
   listRecentOutfits,
-  normalizeOutfitSnapshot,
   renameOutfit,
   revertOutfit,
   saveOutfit,

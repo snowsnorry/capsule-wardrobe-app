@@ -289,14 +289,6 @@ export function buildCapsuleSnapshotWithRegeneration(
   });
 }
 
-export function getCapsuleIdValue(
-  capsule: { id?: unknown } | null,
-): string | null {
-  return typeof capsule?.id === "string" && capsule.id.trim()
-    ? capsule.id
-    : null;
-}
-
 export function normalizeCapsuleRecord(
   capsule: CapsuleRecord | null,
 ): NormalizedCapsuleRecord | null {

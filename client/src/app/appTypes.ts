@@ -62,7 +62,7 @@ export type WardrobeItem = {
   [key: string]: unknown;
 };
 
-export type OutfitItemSource = "personal" | "catalog";
+type OutfitItemSource = "personal" | "catalog";
 
 export type OutfitItemSnapshot = {
   key: string;
@@ -70,7 +70,7 @@ export type OutfitItemSnapshot = {
   item: WardrobeItem;
 };
 
-export type OutfitSnapshot = {
+type OutfitSnapshot = {
   items: OutfitItemSnapshot[];
 };
 

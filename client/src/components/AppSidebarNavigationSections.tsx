@@ -124,7 +124,7 @@ export function PersonalItemsRow({
   );
 }
 
-export function OutfitsRow({
+function OutfitsRow({
   desktopSidebarRailWidth,
   isActive,
   isExpanded,

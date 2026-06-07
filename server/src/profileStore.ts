@@ -334,7 +334,6 @@ const {
   updateProfile,
   updateProfileLocale,
   deleteProfile,
-  updateProfileActiveCapsuleId,
   getPatternOptions,
 } = defaultProfileStore;
 
@@ -344,7 +343,6 @@ export {
   updateProfile,
   updateProfileLocale,
   deleteProfile,
-  updateProfileActiveCapsuleId,
   getFormalityLevels,
   getStyles,
   getOccasions,

@@ -21,16 +21,16 @@ import {
   type Translate,
 } from "./AppSidebarNavigationRows";
 
-export function getCapsuleId(capsule: CapsuleNavItem | null | undefined) {
+function getCapsuleId(capsule: CapsuleNavItem | null | undefined) {
   return String(capsule?.id || "");
 }
 
-export function getCapsuleName(capsule: CapsuleNavItem | null | undefined) {
+function getCapsuleName(capsule: CapsuleNavItem | null | undefined) {
   return String(capsule?.name || "");
 }
 
-export function sortCapsulesByUpdated(capsules: CapsuleNavItem[]) {
-  return [...capsules].sort((left, right) => {
+function sortNavItemsByUpdated<T extends CapsuleNavItem>(items: T[]) {
+  return [...items].sort((left, right) => {
     const updated = String(right.updatedAt || "").localeCompare(
       String(left.updatedAt || ""),
     );
@@ -39,7 +39,13 @@ export function sortCapsulesByUpdated(capsules: CapsuleNavItem[]) {
   });
 }
 
-export const sortOutfitsByUpdated = sortCapsulesByUpdated;
+export function sortCapsulesByUpdated(capsules: CapsuleNavItem[]) {
+  return sortNavItemsByUpdated(capsules);
+}
+
+export function sortOutfitsByUpdated(outfits: OutfitNavItem[]) {
+  return sortNavItemsByUpdated(outfits);
+}
 
 function capsuleRowSx(isOverlaySidebar: boolean) {
   return {

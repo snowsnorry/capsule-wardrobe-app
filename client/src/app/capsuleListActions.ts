@@ -90,5 +90,3 @@ export async function loadMoreRecentCapsules(context: AppActionContext) {
   });
   applyCapsuleListResponse(context, result, { append: true });
 }
-
-export { CAPSULE_SIDEBAR_PAGE_SIZE };

@@ -26,4 +26,3 @@ async function removeItemLike(itemUrl: string): Promise<LikedItemResponse> {
 }
 
 export { likeItem, removeItemLike };
-export type { LikedItemResponse };

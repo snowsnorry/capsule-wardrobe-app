@@ -105,7 +105,7 @@ export async function ensureCapsulesTable(): Promise<void> {
   await executeSchemaSqlFiles(sql, CAPSULE_SCHEMA_FILES);
 }
 
-export async function ensureOutfitsTable(): Promise<void> {
+async function ensureOutfitsTable(): Promise<void> {
   const sql = getSqlClient();
   await executeSchemaSqlFiles(sql, OUTFIT_SCHEMA_FILES);
 }

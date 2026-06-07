@@ -1,6 +1,6 @@
-export type OutfitItemSource = "personal" | "catalog";
+type OutfitItemSource = "personal" | "catalog";
 
-export type OutfitItemSnapshot = {
+type OutfitItemSnapshot = {
   key: string;
   source: OutfitItemSource;
   item: Record<string, unknown>;
