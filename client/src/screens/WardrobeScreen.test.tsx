@@ -390,7 +390,6 @@ describe("WardrobeScreen", () => {
       "true",
     );
     expect(api.fetchMyWardrobeItems).toHaveBeenCalledWith({
-      source: null,
       force: false,
     });
   });
@@ -440,12 +439,7 @@ describe("WardrobeScreen", () => {
 
     await user.click(screen.getByRole("radio", { name: "Uploaded" }));
 
-    await waitFor(() => {
-      expect(api.fetchMyWardrobeItems).toHaveBeenLastCalledWith({
-        source: "uploaded",
-        force: false,
-      });
-    });
+    expect(api.fetchMyWardrobeItems).toHaveBeenCalledTimes(1);
     expect(
       JSON.parse(
         window.localStorage.getItem(WARDROBE_FILTERS_STORAGE_KEY) || "{}",
@@ -456,45 +450,40 @@ describe("WardrobeScreen", () => {
   test("combines mobile action-menu source and liked-only filters", async () => {
     useMediaQueryMock.mockReturnValue(true);
     const user = userEvent.setup();
-    api.fetchMyWardrobeItems
-      .mockResolvedValueOnce({
-        items: [
-          {
-            id: "liked-catalog",
-            name: "Liked Catalog Jacket",
-            source: "from_catalog",
-            url: "https://example.com/liked-catalog",
-            imageUrl: "https://example.com/liked-catalog.jpg",
-            isLiked: true,
-          },
-          {
-            id: "plain-catalog",
-            name: "Plain Catalog Jacket",
-            source: "from_catalog",
-            url: "https://example.com/plain-catalog",
-            imageUrl: "https://example.com/plain-catalog.jpg",
-            isLiked: false,
-          },
-        ],
-      })
-      .mockResolvedValueOnce({
-        items: [
-          {
-            id: "liked-uploaded",
-            name: "Liked Uploaded Shirt",
-            source: "uploaded",
-            imageUrl: "https://example.com/liked-uploaded.jpg",
-            isLiked: true,
-          },
-          {
-            id: "plain-uploaded",
-            name: "Plain Uploaded Shirt",
-            source: "uploaded",
-            imageUrl: "https://example.com/plain-uploaded.jpg",
-            isLiked: false,
-          },
-        ],
-      });
+    api.fetchMyWardrobeItems.mockResolvedValueOnce({
+      items: [
+        {
+          id: "liked-catalog",
+          name: "Liked Catalog Jacket",
+          source: "from_catalog",
+          url: "https://example.com/liked-catalog",
+          imageUrl: "https://example.com/liked-catalog.jpg",
+          isLiked: true,
+        },
+        {
+          id: "plain-catalog",
+          name: "Plain Catalog Jacket",
+          source: "from_catalog",
+          url: "https://example.com/plain-catalog",
+          imageUrl: "https://example.com/plain-catalog.jpg",
+          isLiked: false,
+        },
+        {
+          id: "liked-uploaded",
+          name: "Liked Uploaded Shirt",
+          source: "uploaded",
+          imageUrl: "https://example.com/liked-uploaded.jpg",
+          isLiked: true,
+        },
+        {
+          id: "plain-uploaded",
+          name: "Plain Uploaded Shirt",
+          source: "uploaded",
+          imageUrl: "https://example.com/plain-uploaded.jpg",
+          isLiked: false,
+        },
+      ],
+    });
 
     renderScreen();
 
@@ -505,12 +494,6 @@ describe("WardrobeScreen", () => {
     await user.click(screen.getByRole("checkbox", { name: "Liked only" }));
     await user.click(screen.getByRole("radio", { name: "Uploaded" }));
 
-    await waitFor(() => {
-      expect(api.fetchMyWardrobeItems).toHaveBeenLastCalledWith({
-        source: "uploaded",
-        force: false,
-      });
-    });
     await waitFor(() => {
       expect(screen.getByText("Liked Uploaded Shirt")).toBeInTheDocument();
       expect(
@@ -556,7 +539,6 @@ describe("WardrobeScreen", () => {
 
     await waitFor(() => {
       expect(api.fetchMyWardrobeItems).toHaveBeenCalledWith({
-        source: "uploaded",
         force: false,
       });
     });
@@ -574,59 +556,40 @@ describe("WardrobeScreen", () => {
 
   test("combines desktop source and liked-only filters", async () => {
     const user = userEvent.setup();
-    api.fetchMyWardrobeItems
-      .mockResolvedValueOnce({
-        items: [
-          {
-            id: "liked-uploaded",
-            name: "Liked Uploaded Shirt",
-            source: "uploaded",
-            imageUrl: "https://example.com/liked-uploaded.jpg",
-            isLiked: true,
-          },
-          {
-            id: "plain-uploaded",
-            name: "Plain Uploaded Shirt",
-            source: "uploaded",
-            imageUrl: "https://example.com/plain-uploaded.jpg",
-            isLiked: false,
-          },
-          {
-            id: "liked-catalog",
-            name: "Liked Catalog Jacket",
-            source: "from_catalog",
-            url: "https://example.com/liked-catalog",
-            imageUrl: "https://example.com/liked-catalog.jpg",
-            isLiked: true,
-          },
-          {
-            id: "plain-catalog",
-            name: "Plain Catalog Jacket",
-            source: "from_catalog",
-            url: "https://example.com/plain-catalog",
-            imageUrl: "https://example.com/plain-catalog.jpg",
-            isLiked: false,
-          },
-        ],
-      })
-      .mockResolvedValueOnce({
-        items: [
-          {
-            id: "liked-uploaded",
-            name: "Liked Uploaded Shirt",
-            source: "uploaded",
-            imageUrl: "https://example.com/liked-uploaded.jpg",
-            isLiked: true,
-          },
-          {
-            id: "plain-uploaded",
-            name: "Plain Uploaded Shirt",
-            source: "uploaded",
-            imageUrl: "https://example.com/plain-uploaded.jpg",
-            isLiked: false,
-          },
-        ],
-      });
+    api.fetchMyWardrobeItems.mockResolvedValueOnce({
+      items: [
+        {
+          id: "liked-uploaded",
+          name: "Liked Uploaded Shirt",
+          source: "uploaded",
+          imageUrl: "https://example.com/liked-uploaded.jpg",
+          isLiked: true,
+        },
+        {
+          id: "plain-uploaded",
+          name: "Plain Uploaded Shirt",
+          source: "uploaded",
+          imageUrl: "https://example.com/plain-uploaded.jpg",
+          isLiked: false,
+        },
+        {
+          id: "liked-catalog",
+          name: "Liked Catalog Jacket",
+          source: "from_catalog",
+          url: "https://example.com/liked-catalog",
+          imageUrl: "https://example.com/liked-catalog.jpg",
+          isLiked: true,
+        },
+        {
+          id: "plain-catalog",
+          name: "Plain Catalog Jacket",
+          source: "from_catalog",
+          url: "https://example.com/plain-catalog",
+          imageUrl: "https://example.com/plain-catalog.jpg",
+          isLiked: false,
+        },
+      ],
+    });
 
     renderScreen();
 
@@ -640,12 +603,6 @@ describe("WardrobeScreen", () => {
 
     await user.click(screen.getByRole("button", { name: "Uploaded" }));
 
-    await waitFor(() => {
-      expect(api.fetchMyWardrobeItems).toHaveBeenLastCalledWith({
-        source: "uploaded",
-        force: false,
-      });
-    });
     await waitFor(() => {
       expect(screen.getByText("Liked Uploaded Shirt")).toBeInTheDocument();
       expect(
@@ -807,7 +764,6 @@ describe("WardrobeScreen", () => {
 
     await waitFor(() => {
       expect(api.fetchMyWardrobeItems).toHaveBeenLastCalledWith({
-        source: "uploaded",
         force: true,
       });
     });
@@ -888,7 +844,6 @@ describe("WardrobeScreen", () => {
     });
     await waitFor(() => {
       expect(api.fetchMyWardrobeItems).toHaveBeenLastCalledWith({
-        source: "uploaded",
         force: true,
       });
     });
@@ -1021,7 +976,6 @@ describe("WardrobeScreen", () => {
     });
     await waitFor(() => {
       expect(api.fetchMyWardrobeItems).toHaveBeenLastCalledWith({
-        source: "uploaded",
         force: true,
       });
     });
@@ -1033,12 +987,7 @@ describe("WardrobeScreen", () => {
 
     await screen.findByTestId("wardrobe-card-wardrobe-1");
     await user.click(screen.getByRole("button", { name: "Uploaded" }));
-    await waitFor(() => {
-      expect(api.fetchMyWardrobeItems).toHaveBeenLastCalledWith({
-        source: "uploaded",
-        force: false,
-      });
-    });
+    expect(api.fetchMyWardrobeItems).toHaveBeenCalledTimes(1);
     await user.click(
       screen.getByRole("button", { name: "Open Personal items menu" }),
     );
@@ -1314,19 +1263,17 @@ describe("WardrobeScreen", () => {
     ).not.toBeInTheDocument();
   });
 
-  test("reloads when source filter changes", async () => {
+  test("filters locally when source filter changes", async () => {
     const user = userEvent.setup();
     renderScreen();
 
     await screen.findByTestId("wardrobe-card-wardrobe-1");
     await user.click(screen.getByRole("button", { name: "Uploaded" }));
 
-    await waitFor(() => {
-      expect(api.fetchMyWardrobeItems).toHaveBeenLastCalledWith({
-        source: "uploaded",
-        force: false,
-      });
-    });
+    expect(api.fetchMyWardrobeItems).toHaveBeenCalledTimes(1);
+    expect(
+      screen.queryByTestId("wardrobe-card-wardrobe-1"),
+    ).not.toBeInTheDocument();
   });
 
   test("renders empty and error states", async () => {

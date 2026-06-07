@@ -82,13 +82,16 @@ function WardrobeScreen(): ReactElement {
   const [productDetailMode, setProductDetailMode] =
     useState<ProductDetailMode>("read");
   const wardrobeItems = useWardrobeItems(filter, refreshKey, t);
-  const displayedItems = useMemo(
-    () =>
-      likedOnly
-        ? wardrobeItems.items.filter((item) => isLikedItem(item))
-        : wardrobeItems.items,
-    [likedOnly, wardrobeItems.items],
-  );
+  const source = getSourceFilter(filter);
+  const displayedItems = useMemo(() => {
+    const sourceItems = filterWardrobeItemsBySource(
+      wardrobeItems.items,
+      source,
+    );
+    return likedOnly
+      ? sourceItems.filter((item) => isLikedItem(item))
+      : sourceItems;
+  }, [likedOnly, source, wardrobeItems.items]);
   const displayedColumns = isOverlay ? mobileColumns : 2;
   useEffect(() => {
     writeStoredWardrobeFilters({ filter, likedOnly });
@@ -271,7 +274,6 @@ function useWardrobeItems(
 ) {
   const source = useMemo(() => getSourceFilter(filter), [filter]);
   const { error, isLoading, items, setError, setItems } = useWardrobeItemsQuery(
-    source,
     refreshKey,
     t,
   );
@@ -467,11 +469,7 @@ function useWardrobeItems(
   };
 }
 
-function useWardrobeItemsQuery(
-  source: MyWardrobeSource | null,
-  refreshKey: number,
-  t: (key: string) => string,
-) {
+function useWardrobeItemsQuery(refreshKey: number, t: (key: string) => string) {
   const [items, setItems] = useState<MainScreenItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -481,7 +479,7 @@ function useWardrobeItemsQuery(
 
     setIsLoading(true);
     setError("");
-    fetchMyWardrobeItems({ source, force: refreshKey > 0 })
+    fetchMyWardrobeItems({ force: refreshKey > 0 })
       .then((response) => {
         if (isActive) {
           setItems(sortWardrobeItems(getItemsFromResponse(response)));
@@ -502,9 +500,33 @@ function useWardrobeItemsQuery(
     return () => {
       isActive = false;
     };
-  }, [refreshKey, source, t]);
+  }, [refreshKey, t]);
 
   return { error, isLoading, items, setError, setItems };
+}
+
+function filterWardrobeItemsBySource(
+  items: MainScreenItem[],
+  source: MyWardrobeSource | null,
+) {
+  return source
+    ? items.filter((item) => getWardrobeItemSource(item) === source)
+    : items;
+}
+
+function getWardrobeItemSource(item: MainScreenItem): MyWardrobeSource {
+  const explicitSource = String(item.source || "")
+    .trim()
+    .toLowerCase();
+  if (explicitSource === "uploaded") {
+    return "uploaded";
+  }
+  if (explicitSource === "from_catalog" || explicitSource === "catalog") {
+    return "from_catalog";
+  }
+  return String(item.url || "").startsWith("wardrobe://")
+    ? "uploaded"
+    : "from_catalog";
 }
 
 const wardrobeScreenSx = {
