@@ -164,7 +164,7 @@ function MarketingPanel({
             aria-hidden="true"
             loading="eager"
             decoding="async"
-            {...({ fetchpriority: "high" } as Record<string, string>)}
+            fetchPriority="high"
             sx={{
               display: "block",
               width: "100%",
