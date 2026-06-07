@@ -45,6 +45,7 @@ import {
   mobileCapsuleDialogPaperSx,
   mobileCapsuleDialogTitleSx,
 } from "../../components/MobileDialogSurfaceStyles";
+import MobileProductCardContextMenu from "../../components/MobileProductCardContextMenu";
 import {
   pickerDialogActionsSx,
   pickerDialogContentSx,
@@ -100,6 +101,7 @@ import type {
   SearchDraftState,
   SearchOptions,
 } from "../../search/searchState";
+import type { ProductMenuOpenOptions } from "../../components/ClothingCardTypes";
 
 type OutfitScreenProps = {
   activeOutfit: OutfitMeta | null;
@@ -126,6 +128,8 @@ type OutfitScreenProps = {
 type ItemMenuState = {
   anchor: HTMLElement | null;
   entry: OutfitItemSnapshot | null;
+  originRect?: ProductMenuOpenOptions["originRect"];
+  presentation?: ProductMenuOpenOptions["presentation"];
 };
 type SortableWardrobeItem = WardrobeItem & {
   category?: unknown;
@@ -738,8 +742,8 @@ function OutfitItemMenu({
 }) {
   const entry = menu.entry;
   const liked = isLikedItem(entry?.item);
-  return (
-    <Menu anchorEl={menu.anchor} open={Boolean(menu.anchor)} onClose={onClose}>
+  const renderActions = () => (
+    <>
       <MenuItem
         onClick={() => {
           if (entry) onSelect(entry);
@@ -782,7 +786,28 @@ function OutfitItemMenu({
         </ListItemIcon>
         <ListItemText>{t("actions.delete")}</ListItemText>
       </MenuItem>
-    </Menu>
+    </>
+  );
+  const isMobileContextMenu = menu.presentation === "mobile-context";
+
+  return (
+    <>
+      <Menu
+        anchorEl={menu.anchor}
+        open={Boolean(menu.anchor) && !isMobileContextMenu}
+        onClose={onClose}
+      >
+        {renderActions()}
+      </Menu>
+      <MobileProductCardContextMenu
+        actions={renderActions()}
+        item={entry?.item ?? null}
+        label={t("capsule.openProductMenu")}
+        open={Boolean(menu.anchor) && isMobileContextMenu}
+        originRect={menu.originRect}
+        onClose={onClose}
+      />
+    </>
   );
 }
 
@@ -1415,7 +1440,16 @@ export default function OutfitScreen({
               allowProductMenuWithoutUrl
               isMobile={isMobile}
               mobileColumns={mobileCardColumns}
-              onProductMenuOpen={(anchor) => setItemMenu({ anchor, entry })}
+              selectionToggleIcon="check"
+              selectionToggleLabel={t("outfit.selectItem")}
+              onProductMenuOpen={(anchor, _productUrl, _item, options) =>
+                setItemMenu({
+                  anchor,
+                  entry,
+                  originRect: options.originRect,
+                  presentation: options.presentation,
+                })
+              }
             />
           ))}
         </Box>

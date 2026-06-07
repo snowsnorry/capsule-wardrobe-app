@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 import {
+  act,
   cleanup,
+  fireEvent,
   render,
   screen,
   waitFor,
@@ -51,6 +53,7 @@ vi.mock("../../i18n/useI18n", () => ({
         "capsule.exportPdf": "Export PDF",
         "capsule.nameLabel": "Capsule name",
         "capsule.notSaved": "Not saved",
+        "capsule.openProductMenu": "Open product menu",
         "capsule.renameWithName": `Rename capsule ${params?.name ?? ""}`,
         "capsule.revert": "Revert",
         "capsule.saveAs": "Save as",
@@ -64,6 +67,7 @@ vi.mock("../../i18n/useI18n", () => ({
         "outfit.noneSelected": "No items selected",
         "outfit.openActions": "Open actions",
         "outfit.personalItems": "Personal items",
+        "outfit.selectItem": "Select",
         "profile.styleAestheticTitle": "Aesthetics",
         "profile.styleCoreTitle": "Core",
         "search.all": "All",
@@ -84,7 +88,9 @@ vi.mock("../../i18n/useI18n", () => ({
         "search.clear": "Clear search",
         "search.placeholder": "Search in natural language",
         "search.resultsCount": `${params?.count ?? 0} results`,
+        "wardrobe.like": "Like",
         "wardrobe.likedBadge": "Liked",
+        "wardrobe.removeLike": "Remove like",
       };
       return labels[key] || key;
     },
@@ -168,6 +174,7 @@ function renderScreen(overrides: Record<string, unknown> = {}) {
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   vi.clearAllMocks();
   Object.defineProperty(window, "matchMedia", {
     writable: true,
@@ -258,6 +265,76 @@ describe("OutfitScreen", () => {
     expect(
       screen.getByRole("button", { name: "Add items" }),
     ).toBeInTheDocument();
+  });
+
+  test("opens the outfit item long-press menu as a centered mobile preview", () => {
+    vi.useFakeTimers();
+    setViewportMobile(true);
+    const vibrate = vi.fn();
+    Object.defineProperty(navigator, "vibrate", {
+      configurable: true,
+      value: vibrate,
+    });
+
+    renderScreen({
+      activeOutfit: {
+        id: "outfit-1",
+        name: "Test outfit",
+        status: "saved",
+        effective: {
+          items: [
+            {
+              key: "https://example.com/context-jacket",
+              source: "catalog",
+              item: {
+                id: "catalog-1",
+                url: "https://example.com/context-jacket",
+                name: "Context jacket",
+                category: "outerwear",
+                imageUrl: "https://example.com/context-jacket.png",
+              },
+            },
+          ],
+        },
+      },
+    });
+
+    const card = screen.getByRole("button", { name: /Context jacket/i });
+    vi.spyOn(card, "getBoundingClientRect").mockReturnValue({
+      top: 24,
+      left: 16,
+      width: 150,
+      height: 210,
+      right: 166,
+      bottom: 234,
+      x: 16,
+      y: 24,
+      toJSON: () => ({}),
+    });
+
+    fireEvent.pointerDown(card, {
+      pointerType: "touch",
+      pointerId: 1,
+      clientX: 24,
+      clientY: 32,
+    });
+    act(() => {
+      vi.advanceTimersByTime(520);
+    });
+
+    expect(vibrate).toHaveBeenCalledWith(10);
+    const dialog = screen.getByRole("dialog", { name: "Open product menu" });
+    expect(dialog).toBeInTheDocument();
+    expect(within(dialog).getByText("Context jacket")).toBeInTheDocument();
+    expect(screen.getAllByText("Select")).toHaveLength(1);
+
+    fireEvent.click(screen.getByText("Select"));
+
+    expect(screen.getByRole("button", { name: "Select" })).toBeVisible();
+    expect(screen.getByTestId("CheckRoundedIcon")).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("ThumbDownAltOutlinedIcon"),
+    ).not.toBeInTheDocument();
   });
 
   test("shows mobile card layout controls and updates outfit columns", async () => {

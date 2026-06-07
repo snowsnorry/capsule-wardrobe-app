@@ -10,6 +10,7 @@ import { ClothingCardView, getMobileCardMetrics } from "./ClothingCardParts";
 import type {
   ClothingCardItem,
   ProductMenuOpenOptions,
+  SelectionToggleIcon,
 } from "./ClothingCardTypes";
 
 type ClothingCardProps = {
@@ -28,6 +29,8 @@ type ClothingCardProps = {
     options: ProductMenuOpenOptions,
   ) => void;
   allowProductMenuWithoutUrl?: boolean;
+  selectionToggleIcon?: SelectionToggleIcon;
+  selectionToggleLabel?: string;
   showProductMenu?: boolean;
   isMobile?: boolean;
   mobileColumns?: 1 | 2 | 3;
@@ -48,6 +51,8 @@ function normalizeClothingCardProps(props: ClothingCardProps) {
     onProductClick: props.onProductClick,
     onProductMenuOpen: props.onProductMenuOpen,
     allowProductMenuWithoutUrl: props.allowProductMenuWithoutUrl ?? false,
+    selectionToggleIcon: props.selectionToggleIcon ?? "thumb-down",
+    selectionToggleLabel: props.selectionToggleLabel,
     showProductMenu: props.showProductMenu ?? true,
     isMobile: props.isMobile ?? false,
     mobileColumns: props.mobileColumns ?? 2,
@@ -67,6 +72,8 @@ function buildClothingCardActionProps({
     isSelected: boolean;
     isRegenerating: boolean;
     regenerationLockedReason?: string | null;
+    selectionToggleIcon: SelectionToggleIcon;
+    selectionToggleLabel: string;
     showToggleButton: boolean;
     showProductMenuButton: boolean;
     showMobileProductMenuButton: boolean;
@@ -144,6 +151,8 @@ function buildCardActionState({
   isSelected,
   isRegenerating,
   regenerationLockedReason,
+  selectionToggleIcon,
+  selectionToggleLabel,
   showToggleButton,
   showProductMenuButton,
   mobileCardMetrics,
@@ -152,6 +161,8 @@ function buildCardActionState({
   isSelected: boolean;
   isRegenerating: boolean;
   regenerationLockedReason?: string | null;
+  selectionToggleIcon: SelectionToggleIcon;
+  selectionToggleLabel: string;
   showToggleButton: boolean;
   showProductMenuButton: boolean;
   mobileCardMetrics: ReturnType<typeof getMobileCardMetrics>;
@@ -161,6 +172,8 @@ function buildCardActionState({
     isSelected,
     isRegenerating,
     regenerationLockedReason,
+    selectionToggleIcon,
+    selectionToggleLabel,
     showToggleButton,
     showProductMenuButton,
     showMobileProductMenuButton: isMobile && showProductMenuButton,
@@ -175,6 +188,8 @@ function buildActionPropsForCard({
   isSelected,
   isRegenerating,
   regenerationLockedReason,
+  selectionToggleIcon,
+  selectionToggleLabel,
   showToggleButton,
   showVisibleProductMenuButton,
   mobileCardMetrics,
@@ -186,6 +201,8 @@ function buildActionPropsForCard({
   isSelected: boolean;
   isRegenerating: boolean;
   regenerationLockedReason?: string | null;
+  selectionToggleIcon: SelectionToggleIcon;
+  selectionToggleLabel: string;
   showToggleButton: boolean;
   showVisibleProductMenuButton: boolean;
   mobileCardMetrics: ReturnType<typeof getMobileCardMetrics>;
@@ -199,6 +216,8 @@ function buildActionPropsForCard({
       isSelected,
       isRegenerating,
       regenerationLockedReason,
+      selectionToggleIcon,
+      selectionToggleLabel,
       showToggleButton,
       showProductMenuButton: showVisibleProductMenuButton,
       mobileCardMetrics,
@@ -267,6 +286,8 @@ function ClothingCard(props: ClothingCardProps): ReactElement {
     onProductClick,
     onProductMenuOpen,
     allowProductMenuWithoutUrl,
+    selectionToggleIcon,
+    selectionToggleLabel,
     showProductMenu,
     isMobile,
     mobileColumns,
@@ -298,6 +319,8 @@ function ClothingCard(props: ClothingCardProps): ReactElement {
     showProductMenu && !isSelectionMode && Boolean(productMenuKey);
   const showVisibleProductMenuButton = showProductMenuButton && !isMobile;
   const showCardActions = showToggleButton || showVisibleProductMenuButton;
+  const resolvedSelectionToggleLabel =
+    selectionToggleLabel || t("main.partialRegenerateToggle");
   const mobileLongPress = useMobileLongPressMenu({
     enabled: isMobile && showProductMenuButton,
     item,
@@ -345,6 +368,8 @@ function ClothingCard(props: ClothingCardProps): ReactElement {
     isSelected,
     isRegenerating,
     regenerationLockedReason,
+    selectionToggleIcon,
+    selectionToggleLabel: resolvedSelectionToggleLabel,
     showToggleButton,
     showVisibleProductMenuButton,
     mobileCardMetrics,

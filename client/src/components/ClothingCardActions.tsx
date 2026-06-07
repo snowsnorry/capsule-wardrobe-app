@@ -1,4 +1,5 @@
 import { IconButton, Stack, Tooltip } from "@mui/material";
+import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
 import MoreVertRoundedIcon from "@mui/icons-material/MoreVertRounded";
 import ThumbDownAltOutlinedIcon from "@mui/icons-material/ThumbDownAltOutlined";
 import type { CardActionProps } from "./ClothingCardTypes";
@@ -75,16 +76,22 @@ function getActionStackSx(props: CardActionProps) {
 
 function CardActions(props: CardActionProps) {
   const isRegenerationLocked = Boolean(props.regenerationLockedReason);
+  const selectionIcon =
+    props.selectionToggleIcon === "check" ? (
+      <CheckRoundedIcon fontSize="small" />
+    ) : (
+      <ThumbDownAltOutlinedIcon fontSize="small" />
+    );
   const regenerateButton = (
     <IconButton
-      aria-label={props.t("main.partialRegenerateToggle")}
+      aria-label={props.selectionToggleLabel}
       className="wardrobe-card-action-button wardrobe-card-regenerate"
       onMouseDown={props.stopPropagation}
       onPointerDown={props.stopPropagation}
       onClick={props.onToggleSelected}
       disabled={props.isRegenerating || isRegenerationLocked}
     >
-      <ThumbDownAltOutlinedIcon fontSize="small" />
+      {selectionIcon}
     </IconButton>
   );
 

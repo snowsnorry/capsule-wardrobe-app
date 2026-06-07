@@ -14,6 +14,8 @@ type ProductMenuOpenOptions = {
   originRect?: MobileContextMenuOriginRect;
 };
 
+type SelectionToggleIcon = "check" | "thumb-down";
+
 type ClothingCardItem = {
   id?: string | number | null;
   name?: string | null;
@@ -46,6 +48,8 @@ type CardActionProps = {
   isSelected: boolean;
   isRegenerating: boolean;
   regenerationLockedReason?: string | null;
+  selectionToggleIcon: SelectionToggleIcon;
+  selectionToggleLabel: string;
   showToggleButton: boolean;
   showProductMenuButton: boolean;
   showMobileProductMenuButton: boolean;
@@ -64,4 +68,5 @@ export type {
   MobileContextMenuOriginRect,
   ProductMenuOpenOptions,
   ProductMenuPresentation,
+  SelectionToggleIcon,
 };

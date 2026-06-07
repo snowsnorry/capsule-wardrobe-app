@@ -100,8 +100,25 @@ describe("ClothingCard", () => {
     expect(
       screen.getByRole("button", { name: "main.partialRegenerateToggle" }),
     ).toBeVisible();
+    expect(screen.getByTestId("ThumbDownAltOutlinedIcon")).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "capsule.openProductMenu" }),
+    ).not.toBeInTheDocument();
+  });
+
+  test("can render a check icon for non-regeneration selection toggles", () => {
+    renderCard({
+      isSelectable: true,
+      isSelectionMode: true,
+      isMobile: true,
+      selectionToggleIcon: "check",
+      selectionToggleLabel: "Select item",
+    });
+
+    expect(screen.getByRole("button", { name: "Select item" })).toBeVisible();
+    expect(screen.getByTestId("CheckRoundedIcon")).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("ThumbDownAltOutlinedIcon"),
     ).not.toBeInTheDocument();
   });
 

@@ -94,7 +94,7 @@ function getCardRootSx({
     transform: isPressing ? "scale(0.94)" : "scale(1)",
     transformOrigin: "center",
     transition: getCardTransformTransition(isPressing),
-    touchAction: isMobile ? "manipulation" : undefined,
+    ...getMobileCardGestureSuppressionSx(isMobile),
     willChange: isPressing ? "transform" : undefined,
     "@media (prefers-reduced-motion: reduce)": {
       transition: "none",
@@ -121,6 +121,19 @@ function getCardRootSx({
         }
       : {}),
   } as const;
+}
+
+function getMobileCardGestureSuppressionSx(isMobile: boolean) {
+  if (!isMobile) {
+    return {};
+  }
+
+  return {
+    touchAction: "manipulation",
+    userSelect: "none",
+    WebkitUserSelect: "none",
+    WebkitTouchCallout: "none",
+  };
 }
 
 function ProductImageContent({
