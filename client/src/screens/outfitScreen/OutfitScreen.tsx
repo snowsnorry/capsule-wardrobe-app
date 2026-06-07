@@ -86,6 +86,10 @@ import {
   CATEGORY_ORDER,
   sortWardrobeItems,
 } from "../../../../shared/wardrobeOrder.js";
+import {
+  buildClothingGridGap,
+  buildClothingGridTemplateColumns,
+} from "../../components/ClothingGridPlaceholder";
 import type {
   AnchorItem,
   AnchorSourceFilter,
@@ -172,21 +176,6 @@ function writeStoredOutfitMobileCardColumns(value: MobileCardColumns) {
     OUTFIT_MOBILE_CARD_COLUMNS_STORAGE_KEY,
     String(value),
   );
-}
-
-function buildOutfitGridTemplateColumns(mobileCardColumns: MobileCardColumns) {
-  return {
-    xs: `repeat(${mobileCardColumns}, minmax(0, 1fr))`,
-    md: "repeat(4, minmax(0, 1fr))",
-    lg: "repeat(5, minmax(0, 1fr))",
-  } as const;
-}
-
-function buildOutfitGridGap(mobileCardColumns: MobileCardColumns) {
-  return {
-    xs: mobileCardColumns === 1 ? 1.25 : 0,
-    md: 2,
-  } as const;
 }
 
 function getItemKey(item: WardrobeItem, source: "personal" | "catalog") {
@@ -1496,8 +1485,14 @@ export default function OutfitScreen({
           sx={{
             display: "grid",
             gridTemplateColumns:
-              buildOutfitGridTemplateColumns(mobileCardColumns),
-            gap: buildOutfitGridGap(mobileCardColumns),
+              buildClothingGridTemplateColumns(mobileCardColumns),
+            gap: buildClothingGridGap(mobileCardColumns),
+            "@media (min-width: 1400px)": {
+              gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+            },
+            "@media (min-width: 1760px)": {
+              gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+            },
           }}
         >
           {visibleItems.map((entry) => (
