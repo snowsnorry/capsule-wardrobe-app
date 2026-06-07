@@ -1,9 +1,8 @@
-type OutfitItemSource = "personal" | "catalog";
+type OutfitItemSource = "uploaded" | "from_catalog";
 
 type OutfitItemSnapshot = {
-  key: string;
   source: OutfitItemSource;
-  item: Record<string, unknown>;
+  url: string;
 };
 
 export type OutfitSnapshot = {
@@ -30,23 +29,8 @@ function isPlainRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === "object" && !Array.isArray(value));
 }
 
-function normalizeItemSource(value: unknown): OutfitItemSource {
-  return value === "personal" ? "personal" : "catalog";
-}
-
-function normalizeItemKey(value: unknown, item: Record<string, unknown>) {
-  const explicitKey = String(value || "").trim();
-  if (explicitKey) {
-    return explicitKey;
-  }
-
-  const itemUrl = String(item.url || "").trim();
-  if (itemUrl) {
-    return itemUrl;
-  }
-
-  const itemId = String(item.id || item.wardrobeId || "").trim();
-  return itemId ? `wardrobe://${itemId}` : "";
+function normalizeItemSource(value: unknown): OutfitItemSource | null {
+  return value === "uploaded" || value === "from_catalog" ? value : null;
 }
 
 function normalizeOutfitItemSnapshot(
@@ -56,20 +40,15 @@ function normalizeOutfitItemSnapshot(
     return null;
   }
 
-  const item = isPlainRecord(value.item) ? value.item : null;
-  if (!item) {
-    return null;
-  }
-
-  const key = normalizeItemKey(value.key, item);
-  if (!key) {
+  const source = normalizeItemSource(value.source);
+  const url = String(value.url || "").trim();
+  if (!source || !url) {
     return null;
   }
 
   return {
-    key,
-    source: normalizeItemSource(value.source),
-    item,
+    url,
+    source,
   };
 }
 

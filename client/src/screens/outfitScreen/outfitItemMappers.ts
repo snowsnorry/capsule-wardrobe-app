@@ -10,6 +10,7 @@ import type {
   AnchorTypeFilter,
 } from "../../components/ProfileFiltersAnchorTypes";
 import type {
+  OutfitItemSource,
   OutfitItemSnapshot,
   OutfitMeta,
   WardrobeItem,
@@ -31,20 +32,41 @@ export function getOutfitItems(
   );
 }
 
-export function getItemKey(item: WardrobeItem, source: "personal" | "catalog") {
-  if (source === "personal") {
-    const id = String(item.id || item.wardrobeId || "").trim();
-    if (id) return `wardrobe://${id}`;
-  }
-  return String(item.url || item.id || "").trim();
+export function getOutfitItemKey(entry: OutfitItemSnapshot | null) {
+  const source = String(entry?.source || "").trim();
+  const url = String(entry?.url || "").trim();
+  return source && url ? `${source}\u0000${url}` : "";
+}
+
+export function getOutfitItem(entry: OutfitItemSnapshot | null) {
+  return entry?.item || null;
+}
+
+export function getItemKey(item: WardrobeItem) {
+  return String(item.url || "").trim();
+}
+
+function getUploadedItemKey(item: WardrobeItem) {
+  const id = String(item.id ?? item.wardrobeId ?? "").trim();
+  return id ? `wardrobe://${id}` : getItemKey(item);
+}
+
+function getSnapshotSource(
+  item: WardrobeItem,
+  source: "personal" | "catalog",
+): OutfitItemSource {
+  if (source === "catalog") return "from_catalog";
+  return item.source === "uploaded" ? "uploaded" : "from_catalog";
 }
 
 export function toSnapshot(
   item: WardrobeItem,
   source: "personal" | "catalog",
 ): OutfitItemSnapshot | null {
-  const key = getItemKey(item, source);
-  return key ? { key, source, item } : null;
+  const snapshotSource = getSnapshotSource(item, source);
+  const url =
+    snapshotSource === "uploaded" ? getUploadedItemKey(item) : getItemKey(item);
+  return url ? { url, source: snapshotSource, item } : null;
 }
 
 export function getItemImageUrl(item: WardrobeItem) {
@@ -85,13 +107,29 @@ export function sortOutfitWardrobeItems(items: WardrobeItem[]) {
 }
 
 export function sortOutfitItemSnapshots(items: OutfitItemSnapshot[]) {
+  const foundItems = items
+    .map((entry, index) => ({ entry, index, item: getOutfitItem(entry) }))
+    .filter(
+      (
+        entry,
+      ): entry is {
+        entry: OutfitItemSnapshot;
+        index: number;
+        item: WardrobeItem;
+      } => Boolean(entry.item),
+    );
+  const missingItems = items.filter((entry) => !getOutfitItem(entry));
+
   return sortWardrobeItems(
-    items.map((entry) => ({
-      category: entry.item?.category,
+    foundItems.map(({ entry, item, index }) => ({
+      category: item.category,
       entry,
-      name: getItemName(entry.item),
+      index,
+      name: getItemName(item),
     })),
-  ).map(({ entry }) => entry);
+  )
+    .map(({ entry }) => entry)
+    .concat(missingItems);
 }
 
 export function useOutfitPersonalItemTypeOptions(items: WardrobeItem[]) {
@@ -144,7 +182,9 @@ export function buildSummary(
   t: (key: string, params?: Record<string, unknown>) => string,
 ) {
   const counts = new Map<string, number>();
-  items.forEach(({ item }) => {
+  items.forEach((entry) => {
+    const item = getOutfitItem(entry);
+    if (!item) return;
     const category = String(item.category || "").trim();
     if (category) counts.set(category, (counts.get(category) || 0) + 1);
   });

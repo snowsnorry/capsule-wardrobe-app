@@ -7,7 +7,9 @@ import {
 import type { OutfitItemSnapshot } from "../../app/appTypes";
 import type { ProductMenuOpenOptions } from "../../components/ClothingCardTypes";
 import type { MobileCardColumns } from "../mainScreen/MainScreenTypes";
+import OutfitMissingItemCard from "./OutfitMissingItemCard";
 import { buildOutfitGridSectionSx } from "./OutfitScreenStyles";
+import { getOutfitItem, getOutfitItemKey } from "./outfitItemMappers";
 
 export function OutfitGrid({
   isMobile,
@@ -37,25 +39,41 @@ export function OutfitGrid({
   return (
     <Box sx={buildOutfitGridSectionSx(mobileCardColumns)}>
       <Box sx={buildOutfitGridSx(mobileCardColumns)}>
-        {visibleItems.map((entry) => (
-          <ClothingCard
-            key={entry.key}
-            item={entry.item}
-            isSelectable
-            isSelected={selectedKeys.includes(entry.key)}
-            isSelectionMode={isSelectionMode}
-            onToggleSelected={() => onToggleSelected(entry.key)}
-            onProductClick={() => onPreviewItem(entry)}
-            allowProductMenuWithoutUrl
-            isMobile={isMobile}
-            mobileColumns={mobileCardColumns}
-            selectionToggleIcon="check"
-            selectionToggleLabel={t("outfit.selectItem")}
-            onProductMenuOpen={(anchor, _productUrl, _item, options) =>
-              onItemMenuOpen(anchor, entry, options)
-            }
-          />
-        ))}
+        {visibleItems.map((entry) => {
+          const key = getOutfitItemKey(entry);
+          const item = getOutfitItem(entry);
+          return item ? (
+            <ClothingCard
+              key={key}
+              item={item}
+              isSelectable
+              isSelected={selectedKeys.includes(key)}
+              isSelectionMode={isSelectionMode}
+              onToggleSelected={() => onToggleSelected(key)}
+              onProductClick={() => onPreviewItem(entry)}
+              allowProductMenuWithoutUrl
+              isMobile={isMobile}
+              mobileColumns={mobileCardColumns}
+              selectionToggleIcon="check"
+              selectionToggleLabel={t("outfit.selectItem")}
+              onProductMenuOpen={(anchor, _productUrl, _item, options) =>
+                onItemMenuOpen(anchor, entry, options)
+              }
+            />
+          ) : (
+            <OutfitMissingItemCard
+              key={key}
+              entry={entry}
+              isMobile={isMobile}
+              isSelected={selectedKeys.includes(key)}
+              isSelectionMode={isSelectionMode}
+              mobileColumns={mobileCardColumns}
+              t={t}
+              onItemMenuOpen={onItemMenuOpen}
+              onToggleSelected={onToggleSelected}
+            />
+          );
+        })}
       </Box>
     </Box>
   );

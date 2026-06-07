@@ -21,6 +21,8 @@ import {
   writeStoredOutfitMobileCardColumns,
 } from "./outfitCardLayoutStorage";
 import {
+  getOutfitItem,
+  getOutfitItemKey,
   getOutfitItems,
   getPreviewItemKey,
   sortOutfitItemSnapshots,
@@ -117,11 +119,12 @@ export default function OutfitScreen({
     setPreviewItem(nextItem);
     setPreviewMode("read");
     replaceItems(
-      items.map((entry) =>
-        getPreviewComparableKey(entry.item) === comparableKey
+      items.map((entry) => {
+        const item = getOutfitItem(entry);
+        return item && getPreviewComparableKey(item) === comparableKey
           ? { ...entry, item: nextItem }
-          : entry,
-      ),
+          : entry;
+      }),
     );
   };
 
@@ -141,13 +144,16 @@ export default function OutfitScreen({
 
   const removeEntry = (entry: OutfitItemSnapshot) => {
     if (window.confirm(t("outfit.confirmRemoveItem"))) {
-      replaceItems(items.filter((item) => item.key !== entry.key));
+      const key = getOutfitItemKey(entry);
+      replaceItems(items.filter((item) => getOutfitItemKey(item) !== key));
     }
   };
 
   const removeSelectedItems = () => {
     if (window.confirm(t("outfit.confirmRemoveSelected"))) {
-      replaceItems(items.filter((item) => !selectedKeys.includes(item.key)));
+      replaceItems(
+        items.filter((item) => !selectedKeys.includes(getOutfitItemKey(item))),
+      );
       setSelectedKeys([]);
     }
   };
@@ -200,7 +206,7 @@ export default function OutfitScreen({
                 presentation: options.presentation,
               })
             }
-            onPreviewItem={(entry) => setPreviewItem(entry.item)}
+            onPreviewItem={(entry) => setPreviewItem(getOutfitItem(entry))}
             onToggleSelected={toggleSelected}
           />
         </Box>
@@ -240,12 +246,15 @@ export default function OutfitScreen({
       <OutfitItemMenu
         menu={itemMenu}
         onClose={() => setItemMenu({ anchor: null, entry: null })}
-        onLike={(entry) =>
-          void onSetItemLike(entry.item, !isLikedItem(entry.item))
-        }
+        onLike={(entry) => {
+          const item = getOutfitItem(entry);
+          if (item) void onSetItemLike(item, !isLikedItem(item));
+        }}
         onRemove={removeEntry}
         onSelect={(entry) =>
-          setSelectedKeys((current) => [...new Set([...current, entry.key])])
+          setSelectedKeys((current) => [
+            ...new Set([...current, getOutfitItemKey(entry)]),
+          ])
         }
         t={t}
       />

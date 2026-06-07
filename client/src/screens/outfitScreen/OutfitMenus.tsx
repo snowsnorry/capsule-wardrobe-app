@@ -17,6 +17,7 @@ import { getCanonicalItemUrl, isLikedItem } from "../../utils/likedItemState";
 import type { OutfitItemSnapshot, OutfitMeta } from "../../app/appTypes";
 import type { MobileCardColumns } from "../mainScreen/MainScreenTypes";
 import type { ItemMenuState } from "./OutfitScreenTypes";
+import { getOutfitItem } from "./outfitItemMappers";
 
 export function OutfitMenu({
   anchor,
@@ -121,7 +122,9 @@ export function OutfitItemMenu({
   t: (key: string) => string;
 }) {
   const entry = menu.entry;
-  const liked = isLikedItem(entry?.item);
+  const item = getOutfitItem(entry);
+  const liked = isLikedItem(item);
+  const showLikeAction = Boolean(item && getCanonicalItemUrl(item));
   const renderActions = () => (
     <>
       <MenuItem
@@ -135,24 +138,25 @@ export function OutfitItemMenu({
         </ListItemIcon>
         <ListItemText>{t("outfit.selectItem")}</ListItemText>
       </MenuItem>
-      <MenuItem
-        disabled={!entry || !getCanonicalItemUrl(entry.item)}
-        onClick={() => {
-          if (entry) onLike(entry);
-          onClose();
-        }}
-      >
-        <ListItemIcon>
-          {liked ? (
-            <FavoriteRoundedIcon fontSize="small" />
-          ) : (
-            <FavoriteBorderRoundedIcon fontSize="small" />
-          )}
-        </ListItemIcon>
-        <ListItemText>
-          {t(liked ? "wardrobe.removeLike" : "wardrobe.like")}
-        </ListItemText>
-      </MenuItem>
+      {showLikeAction ? (
+        <MenuItem
+          onClick={() => {
+            if (entry) onLike(entry);
+            onClose();
+          }}
+        >
+          <ListItemIcon>
+            {liked ? (
+              <FavoriteRoundedIcon fontSize="small" />
+            ) : (
+              <FavoriteBorderRoundedIcon fontSize="small" />
+            )}
+          </ListItemIcon>
+          <ListItemText>
+            {t(liked ? "wardrobe.removeLike" : "wardrobe.like")}
+          </ListItemText>
+        </MenuItem>
+      ) : null}
       <Divider />
       <MenuItem
         onClick={() => {
@@ -181,8 +185,10 @@ export function OutfitItemMenu({
       </Menu>
       <MobileProductCardContextMenu
         actions={renderActions()}
-        item={entry?.item ?? null}
-        label={t("capsule.openProductMenu")}
+        item={item}
+        label={t(
+          item ? "capsule.openProductMenu" : "outfit.openMissingItemActions",
+        )}
         open={Boolean(menu.anchor) && isMobileContextMenu}
         originRect={menu.originRect}
         onClose={onClose}

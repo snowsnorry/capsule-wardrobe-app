@@ -7,40 +7,22 @@ import {
 } from "./outfitStoreModel.js";
 
 describe("outfitStoreModel", () => {
-  test("normalizes outfit item snapshots and derives stable keys", () => {
+  test("normalizes outfit item refs", () => {
     expect(
       normalizeOutfitSnapshot({
         items: [
           null,
-          { item: null },
-          { key: " explicit-key ", source: "personal", item: { id: 1 } },
-          {
-            source: "unknown",
-            item: { url: " https://example.com/jacket ", name: "Jacket" },
-          },
-          { source: "personal", item: { wardrobeId: "42", name: "Hat" } },
-          { item: { id: "catalog-7", name: "Shoes" } },
-          { item: { name: "Missing key" } },
+          { url: "https://example.com/legacy", source: "catalog" },
+          { url: " ", source: "uploaded" },
+          { url: "wardrobe://1", source: "personal" },
+          { url: " wardrobe://42 ", source: "uploaded", item: { id: 42 } },
+          { url: " https://example.com/jacket ", source: "from_catalog" },
         ],
       }),
     ).toEqual({
       items: [
-        { key: "explicit-key", source: "personal", item: { id: 1 } },
-        {
-          key: "https://example.com/jacket",
-          source: "catalog",
-          item: { url: " https://example.com/jacket ", name: "Jacket" },
-        },
-        {
-          key: "wardrobe://42",
-          source: "personal",
-          item: { wardrobeId: "42", name: "Hat" },
-        },
-        {
-          key: "wardrobe://catalog-7",
-          source: "catalog",
-          item: { id: "catalog-7", name: "Shoes" },
-        },
+        { url: "wardrobe://42", source: "uploaded" },
+        { url: "https://example.com/jacket", source: "from_catalog" },
       ],
     });
   });
@@ -53,10 +35,10 @@ describe("outfitStoreModel", () => {
 
   test("normalizes records and resolves status from draft and saved snapshots", () => {
     const saved = {
-      items: [{ key: "saved", source: "catalog", item: { url: "saved" } }],
+      items: [{ url: "https://example.com/saved", source: "from_catalog" }],
     };
     const draft = {
-      items: [{ key: "draft", source: "catalog", item: { url: "draft" } }],
+      items: [{ url: "wardrobe://draft", source: "uploaded" }],
     };
 
     expect(normalizeOutfitRecord(null)).toBeNull();
@@ -90,10 +72,10 @@ describe("outfitStoreModel", () => {
 
   test("uses draft before saved when resolving the effective snapshot", () => {
     const saved = {
-      items: [{ key: "saved", source: "catalog", item: { url: "saved" } }],
+      items: [{ url: "https://example.com/saved", source: "from_catalog" }],
     };
     const draft = {
-      items: [{ key: "draft", source: "catalog", item: { url: "draft" } }],
+      items: [{ url: "wardrobe://draft", source: "uploaded" }],
     };
 
     expect(getEffectiveOutfitSnapshot({ draft, saved })).toEqual(draft);

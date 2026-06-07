@@ -360,6 +360,9 @@ const ru = {
     confirmRevert: "Отменить несохраненные изменения в этом образе?",
     confirmRemoveItem: "Удалить эту вещь из образа?",
     confirmRemoveSelected: "Удалить выбранные вещи из образа?",
+    itemNotFoundTitle: "Вещь не найдена",
+    itemNotFoundDescription: "Эта ссылка в образе больше не находится.",
+    openMissingItemActions: "Открыть действия с ненайденной вещью",
     openOutfitActions: "Действия с образом {name}",
   },
   wardrobe: {

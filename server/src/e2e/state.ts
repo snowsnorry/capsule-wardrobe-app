@@ -9,6 +9,7 @@ import {
   buildE2eEmptyWardrobeCapsule,
   buildE2eSearchPayload,
   buildE2eProfile,
+  buildE2eWardrobeItems,
   buildE2eSavedSearchPayload,
   e2eImageUrl,
   E2E_CODE,
@@ -261,6 +262,36 @@ function outfitDependencies(state: E2eState) {
     duplicateOutfitImpl: async (_email, id, name) =>
       state.outfitMemory.duplicate(id, name),
     deleteOutfitImpl: async (_email, id) => state.outfitMemory.delete(id),
+    getProductsByUrlsForEmailImpl: async (payload) => {
+      const urls = new Set(
+        Array.isArray(payload?.urls)
+          ? payload.urls.map((url) => String(url || "").trim())
+          : [],
+      );
+      return buildE2eWardrobeItems()
+        .filter((item) => urls.has(String(item.url || "").trim()))
+        .map((item) => ({ ...item, source: "from_catalog" }));
+    },
+    listWardrobeItemsByUrlsImpl: async (payload) => {
+      const urls = new Set(
+        Array.isArray(payload?.urls)
+          ? payload.urls.map((url) => String(url || "").trim())
+          : [],
+      );
+      const itemMatchesRequestedUrl = (item: Record<string, unknown>) => {
+        const itemUrl = String(item?.url || "").trim();
+        const uploadedRefUrl =
+          payload?.source === "uploaded" && item?.id
+            ? `wardrobe://${String(item.id).trim()}`
+            : "";
+        return Boolean(
+          urls.has(itemUrl) || (uploadedRefUrl && urls.has(uploadedRefUrl)),
+        );
+      };
+      return state.wardrobeMemory
+        .listItems(payload?.source)
+        .filter(itemMatchesRequestedUrl);
+    },
   };
 }
 

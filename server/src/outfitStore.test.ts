@@ -7,9 +7,8 @@ const row = {
   draft: {
     items: [
       {
-        key: "https://example.com/jacket",
-        source: "catalog",
-        item: { url: "https://example.com/jacket" },
+        url: "https://example.com/jacket",
+        source: "from_catalog",
       },
     ],
   },
@@ -98,9 +97,11 @@ describe("createOutfitStore", () => {
     const draft = {
       items: [
         {
+          url: "https://example.com/jacket",
+          source: "from_catalog",
           item: { id: "catalog-1", name: "Jacket" },
-          source: "unexpected",
         },
+        { url: "wardrobe://legacy", source: "personal" },
       ],
     };
 
@@ -111,9 +112,8 @@ describe("createOutfitStore", () => {
       draft: {
         items: [
           {
-            key: "wardrobe://catalog-1",
-            source: "catalog",
-            item: { id: "catalog-1", name: "Jacket" },
+            url: "https://example.com/jacket",
+            source: "from_catalog",
           },
         ],
       },
@@ -128,9 +128,8 @@ describe("createOutfitStore", () => {
       draft: {
         items: [
           {
-            key: "wardrobe://catalog-1",
-            source: "catalog",
-            item: { id: "catalog-1", name: "Jacket" },
+            url: "https://example.com/jacket",
+            source: "from_catalog",
           },
         ],
       },

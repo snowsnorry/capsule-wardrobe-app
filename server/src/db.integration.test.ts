@@ -21,6 +21,7 @@ import {
   deleteWardrobeItemFromCatalogByUrl,
   getUploadedWardrobeItemById,
   listWardrobeItemsByIdsForEmail,
+  listWardrobeItemsByUrlsForEmail,
   listWardrobeItemsByEmail,
   saveUploadedWardrobeItemsByEmail,
   saveWardrobeItemFromCatalogByUrl,
@@ -667,6 +668,85 @@ test("db integration reads uploaded wardrobe items by id", async () => {
   expect(calls[0].text).toMatch(/source = 'uploaded'/i);
   expect(calls[0].values).toEqual(["user@example.com", "wardrobe-upload-1"]);
   expect(calls[1].values).toEqual(["user@example.com", "missing-upload"]);
+});
+
+test("db integration lists wardrobe items by exact urls and source", async () => {
+  const uploadedRow: WardrobeRow = {
+    id: "wardrobe-upload-1",
+    profileEmail: "user@example.com",
+    productId: null,
+    name: "Uploaded shirt",
+    url: "wardrobe://wardrobe-upload-1",
+    imageUrl: "https://images.example.com/wardrobe/user/image.webp",
+    source: "uploaded",
+    rawImageUrl: "https://images.example.com/wardrobe/user/image.webp",
+    processingStatus: "ready",
+    createdAt: new Date(0).toISOString(),
+    updatedAt: new Date(0).toISOString(),
+  };
+  const catalogRow: WardrobeRow = {
+    id: "wardrobe-catalog-1",
+    profileEmail: "user@example.com",
+    productId: "product-1",
+    name: "Saved catalog shirt",
+    url: "https://example.com/catalog-shirt",
+    imageUrl: "https://images.example.com/catalog-shirt.webp",
+    source: "from_catalog",
+    rawImageUrl: null,
+    processingStatus: "ready",
+    createdAt: new Date(0).toISOString(),
+    updatedAt: new Date(0).toISOString(),
+  };
+  const { sql, calls } = createSqlMock([[uploadedRow], [catalogRow]]);
+  setSqlClientOverride(sql);
+
+  const empty = await listWardrobeItemsByUrlsForEmail({
+    email: "user@example.com",
+    urls: [" "],
+    source: "uploaded",
+  });
+  const listed = await listWardrobeItemsByUrlsForEmail({
+    email: "user@example.com",
+    urls: [" wardrobe://wardrobe-upload-1 "],
+    source: "uploaded",
+  });
+  const listedCatalog = await listWardrobeItemsByUrlsForEmail({
+    email: "user@example.com",
+    urls: [" https://example.com/catalog-shirt "],
+    source: "from_catalog",
+  });
+
+  expect(empty).toEqual([]);
+  expect(listed).toEqual([
+    expect.objectContaining({
+      id: "wardrobe-upload-1",
+      source: "uploaded",
+      url: "wardrobe://wardrobe-upload-1",
+    }),
+  ]);
+  expect(listedCatalog).toEqual([
+    expect.objectContaining({
+      id: "wardrobe-catalog-1",
+      source: "from_catalog",
+      url: "https://example.com/catalog-shirt",
+    }),
+  ]);
+  expect(calls).toHaveLength(2);
+  expect(calls[0].text).toMatch(/from unnest/i);
+  expect(calls[0].text).toMatch(/'wardrobe:\/\/' \|\| wardrobe\.id::text/i);
+  expect(calls[0].text).toMatch(/wardrobe\.source =/i);
+  expect(calls[0].values).toEqual([
+    ["wardrobe://wardrobe-upload-1"],
+    "uploaded",
+    "user@example.com",
+    "uploaded",
+  ]);
+  expect(calls[1].values).toEqual([
+    ["https://example.com/catalog-shirt"],
+    "from_catalog",
+    "user@example.com",
+    "from_catalog",
+  ]);
 });
 
 test("db integration lists wardrobe items by ids in caller order", async () => {

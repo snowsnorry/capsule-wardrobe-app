@@ -77,6 +77,10 @@ test("t translates capsule action and outfit image accessibility labels", () => 
   expect(t("capsule.createOutfitSetImage", undefined, "ru")).toBe(
     "Создать изображение",
   );
+  expect(t("outfit.itemNotFoundTitle", undefined, "en")).toBe("Item not found");
+  expect(t("outfit.openMissingItemActions", undefined, "ru")).toBe(
+    "Открыть действия с ненайденной вещью",
+  );
 });
 
 test("translateOption humanizes unknown values and translates known ones", () => {

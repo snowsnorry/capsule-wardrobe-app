@@ -43,6 +43,7 @@ export {
 export {
   getProductByIdForEmail,
   getProductByUrlForEmail,
+  getProductsByUrlsForEmailInOrder,
 } from "./db/productLookup.js";
 export {
   buildPriceBuckets,
@@ -55,6 +56,7 @@ export {
   deleteWardrobeItemFromCatalogByUrl,
   getUploadedWardrobeItemById,
   listWardrobeItemsByIdsForEmail,
+  listWardrobeItemsByUrlsForEmail,
   listWardrobeItemsByEmail,
   saveUploadedWardrobeItemsByEmail,
   saveWardrobeItemFromCatalogByUrl,

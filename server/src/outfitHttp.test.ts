@@ -10,15 +10,14 @@ import {
 const savedSnapshot = {
   items: [
     {
-      key: "bag",
-      source: "catalog",
-      item: { name: "Bag", category: "bag" },
+      url: "https://example.com/bag",
+      source: "from_catalog",
     },
     {
-      key: "shirt",
-      source: "catalog",
-      item: { name: "Shirt", category: "top" },
+      url: "wardrobe://shirt",
+      source: "uploaded",
     },
+    { url: "wardrobe://missing", source: "uploaded" },
   ],
 };
 
@@ -39,7 +38,7 @@ describe("outfitHttp", () => {
     expect(hasUnexpectedOutfitItemsFields({ items: [], saved: {} })).toBe(true);
   });
 
-  test("serializes summaries and full responses from effective snapshots", () => {
+  test("serializes summaries and full responses from hydrated effective snapshots", async () => {
     const outfit = {
       id: "outfit-1",
       name: "Weekend",
@@ -58,23 +57,166 @@ describe("outfitHttp", () => {
       updatedAt: "2026-01-02",
       hasDraft: false,
       hasSaved: true,
-      itemCount: 2,
+      itemCount: 3,
     });
-    expect(toOutfitResponse(outfit)).toEqual({
+    await expect(
+      toOutfitResponse(outfit, {
+        email: "person@example.com",
+        getProductsByUrlsForEmailImpl: async () => [
+          {
+            url: "https://example.com/bag",
+            name: "Bag",
+            category: "bag",
+          },
+        ],
+        listWardrobeItemsByUrlsImpl: async () => [
+          { url: "wardrobe://shirt", name: "Shirt", category: "top" },
+        ],
+      }),
+    ).resolves.toEqual({
       ...toOutfitSummary(outfit),
       draft: null,
-      saved: savedSnapshot,
-      effective: savedSnapshot,
+      saved: {
+        items: [
+          {
+            url: "https://example.com/bag",
+            source: "from_catalog",
+            item: {
+              url: "https://example.com/bag",
+              source: "from_catalog",
+              name: "Bag",
+              category: "bag",
+            },
+          },
+          {
+            url: "wardrobe://shirt",
+            source: "uploaded",
+            item: {
+              url: "wardrobe://shirt",
+              source: "uploaded",
+              name: "Shirt",
+              category: "top",
+            },
+          },
+          { url: "wardrobe://missing", source: "uploaded", item: null },
+        ],
+      },
+      effective: {
+        items: [
+          {
+            url: "https://example.com/bag",
+            source: "from_catalog",
+            item: {
+              url: "https://example.com/bag",
+              source: "from_catalog",
+              name: "Bag",
+              category: "bag",
+            },
+          },
+          {
+            url: "wardrobe://shirt",
+            source: "uploaded",
+            item: {
+              url: "wardrobe://shirt",
+              source: "uploaded",
+              name: "Shirt",
+              category: "top",
+            },
+          },
+          { url: "wardrobe://missing", source: "uploaded", item: null },
+        ],
+      },
     });
   });
 
-  test("returns sorted effective items for PDF generation", () => {
-    expect(getOutfitItems({ draft: null, saved: savedSnapshot })).toEqual([
-      { name: "Shirt", category: "top" },
-      { name: "Bag", category: "bag" },
+  test("hydrates missing catalog products from wardrobe rows by url", async () => {
+    const outfit = {
+      id: "outfit-1",
+      name: "Weekend",
+      draft: {
+        items: [
+          {
+            url: "https://example.com/catalog-missing-from-products",
+            source: "from_catalog",
+          },
+        ],
+      },
+      saved: null,
+      status: "new",
+      createdAt: "2026-01-01",
+      updatedAt: "2026-01-02",
+    };
+    const wardrobeLookups: unknown[] = [];
+
+    await expect(
+      toOutfitResponse(outfit, {
+        email: "person@example.com",
+        getProductsByUrlsForEmailImpl: async () => [],
+        listWardrobeItemsByUrlsImpl: async (payload) => {
+          wardrobeLookups.push(payload);
+          return [
+            {
+              url: "https://example.com/catalog-missing-from-products",
+              name: "Saved catalog shirt",
+              category: "top",
+            },
+          ];
+        },
+      }),
+    ).resolves.toMatchObject({
+      draft: {
+        items: [
+          {
+            url: "https://example.com/catalog-missing-from-products",
+            source: "from_catalog",
+            item: {
+              url: "https://example.com/catalog-missing-from-products",
+              source: "from_catalog",
+              name: "Saved catalog shirt",
+            },
+          },
+        ],
+      },
+    });
+    expect(wardrobeLookups).toEqual([
+      {
+        email: "person@example.com",
+        urls: ["https://example.com/catalog-missing-from-products"],
+        source: "from_catalog",
+      },
     ]);
-    expect(
+  });
+
+  test("returns sorted resolved effective items for PDF generation", async () => {
+    await expect(
+      getOutfitItems(
+        { draft: null, saved: savedSnapshot },
+        {
+          email: "person@example.com",
+          getProductsByUrlsForEmailImpl: async () => [
+            { url: "https://example.com/bag", name: "Bag", category: "bag" },
+          ],
+          listWardrobeItemsByUrlsImpl: async () => [
+            { url: "wardrobe://shirt", name: "Shirt", category: "top" },
+          ],
+        },
+      ),
+    ).resolves.toEqual([
+      {
+        url: "wardrobe://shirt",
+        name: "Shirt",
+        category: "top",
+        source: "uploaded",
+      },
+      {
+        url: "https://example.com/bag",
+        name: "Bag",
+        category: "bag",
+        source: "from_catalog",
+      },
+    ]);
+    await expect(
       getOutfitItems({ draft: { items: "invalid" }, saved: null }),
-    ).toEqual([]);
+    ).resolves.toEqual([]);
   });
 });

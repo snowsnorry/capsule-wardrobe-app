@@ -62,12 +62,12 @@ export type WardrobeItem = {
   [key: string]: unknown;
 };
 
-type OutfitItemSource = "personal" | "catalog";
+export type OutfitItemSource = "uploaded" | "from_catalog";
 
 export type OutfitItemSnapshot = {
-  key: string;
   source: OutfitItemSource;
-  item: WardrobeItem;
+  url: string;
+  item?: WardrobeItem | null;
 };
 
 type OutfitSnapshot = {

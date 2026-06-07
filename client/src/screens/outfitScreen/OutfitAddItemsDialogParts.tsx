@@ -5,7 +5,11 @@ import { pickerDialogLoadingDividerSx } from "../../components/ProfileFiltersAnc
 import type { Translate } from "../../components/ProfileFiltersAnchorTypes";
 import type { OutfitItemSnapshot, WardrobeItem } from "../../app/appTypes";
 import type { ActiveFilterChip } from "../../search/searchState";
-import { toAnchorCardItem, toSnapshot } from "./outfitItemMappers";
+import {
+  getOutfitItemKey,
+  toAnchorCardItem,
+  toSnapshot,
+} from "./outfitItemMappers";
 
 export function DialogLoadingDivider({ loading }: { loading: boolean }) {
   return (
@@ -92,9 +96,11 @@ export function OutfitAddItemsGrid({
     <Box sx={gridSx}>
       {items.map((item) => {
         const snapshot = toSnapshot(item, source);
-        const key = snapshot?.key || String(item.id || item.url || "");
-        const checked = snapshot ? selectedKeys.has(snapshot.key) : false;
-        const disabled = snapshot ? existingKeys.has(snapshot.key) : true;
+        const key = snapshot
+          ? getOutfitItemKey(snapshot)
+          : String(item.id || item.url || "");
+        const checked = snapshot ? selectedKeys.has(key) : false;
+        const disabled = snapshot ? existingKeys.has(key) : true;
         const anchorItem = toAnchorCardItem(item, key, source);
         return (
           <AnchorPickerCard

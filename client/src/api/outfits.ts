@@ -32,6 +32,20 @@ function buildOutfitListQuery({ limit, offset }: OutfitListOptions = {}) {
   return query ? `?${query}` : "";
 }
 
+function toOutfitItemRef(item: OutfitItemSnapshot) {
+  const url = String(item?.url || "").trim();
+  const source = item?.source;
+  return url && (source === "uploaded" || source === "from_catalog")
+    ? { url, source }
+    : null;
+}
+
+function toOutfitItemRefs(items: OutfitItemSnapshot[] = []) {
+  return items
+    .map(toOutfitItemRef)
+    .filter((item): item is { url: string; source: string } => Boolean(item));
+}
+
 function getDownloadFilenameFromDisposition(
   contentDisposition?: string | null,
 ): string {
@@ -97,7 +111,7 @@ async function createOutfit({
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       ...(typeof name === "string" && name.trim() ? { name } : {}),
-      items,
+      items: toOutfitItemRefs(items),
     }),
   });
 }
@@ -110,7 +124,7 @@ async function updateOutfitItems(
     method: "PATCH",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ items }),
+    body: JSON.stringify({ items: toOutfitItemRefs(items) }),
   });
 }
 

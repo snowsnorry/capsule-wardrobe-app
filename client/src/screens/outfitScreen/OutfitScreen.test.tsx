@@ -95,8 +95,12 @@ vi.mock("../../i18n/useI18n", () => ({
         "outfit.confirmRemoveSelected": "Remove selected?",
         "outfit.confirmRevert": "Revert outfit?",
         "outfit.emptySummary": "No items",
+        "outfit.itemNotFoundDescription":
+          "This outfit reference no longer resolves.",
+        "outfit.itemNotFoundTitle": "Item not found",
         "outfit.noneSelected": "No items selected",
         "outfit.openActions": "Open actions",
+        "outfit.openMissingItemActions": "Open missing item actions",
         "outfit.personalSelected": `${params?.count ?? 0} personal`,
         "outfit.personalItems": "Personal items",
         "outfit.removeSelectedCount": `Remove ${params?.count ?? 0}`,
@@ -128,6 +132,8 @@ vi.mock("../../i18n/useI18n", () => ({
         "wardrobe.like": "Like",
         "wardrobe.likedBadge": "Liked",
         "wardrobe.removeLike": "Remove like",
+        "wardrobe.filters.fromCatalog": "Catalog",
+        "wardrobe.filters.uploaded": "Uploaded",
       };
       return labels[key] || key;
     },
@@ -284,8 +290,8 @@ describe("OutfitScreen", () => {
         effective: {
           items: [
             {
-              key: "https://example.com/jacket",
-              source: "catalog",
+              url: "https://example.com/jacket",
+              source: "from_catalog",
               item: {
                 id: "catalog-1",
                 url: "https://example.com/jacket",
@@ -328,8 +334,8 @@ describe("OutfitScreen", () => {
         effective: {
           items: [
             {
-              key: "wardrobe://42",
-              source: "personal",
+              url: "https://example.com/uploaded",
+              source: "uploaded",
               item: {
                 id: 42,
                 url: "https://example.com/uploaded",
@@ -391,8 +397,8 @@ describe("OutfitScreen", () => {
         effective: {
           items: [
             {
-              key: "https://example.com/context-jacket",
-              source: "catalog",
+              url: "https://example.com/context-jacket",
+              source: "from_catalog",
               item: {
                 id: "catalog-1",
                 url: "https://example.com/context-jacket",
@@ -450,6 +456,53 @@ describe("OutfitScreen", () => {
     expect(onReplaceOutfitItems).toHaveBeenLastCalledWith("outfit-1", []);
   });
 
+  test("renders missing outfit items with select and delete actions", async () => {
+    const user = userEvent.setup();
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+    const onReplaceOutfitItems = vi.fn(() => Promise.resolve());
+    renderScreen({
+      activeOutfit: {
+        id: "outfit-1",
+        name: "Weekend",
+        status: "modified",
+        effective: {
+          items: [
+            {
+              url: "wardrobe://missing",
+              source: "uploaded",
+              item: null,
+            },
+          ],
+        },
+      },
+      onReplaceOutfitItems,
+    });
+
+    expect(screen.getByText("Item not found")).toBeInTheDocument();
+    expect(
+      screen.getByText("This outfit reference no longer resolves."),
+    ).toBeInTheDocument();
+
+    const openMenu = async () => {
+      await user.click(
+        screen.getByRole("button", { name: "Open missing item actions" }),
+      );
+    };
+
+    await openMenu();
+    expect(screen.queryByRole("menuitem", { name: "Like" })).toBeNull();
+    await user.click(screen.getByRole("menuitem", { name: "Select" }));
+    await screen.findByRole("button", { name: "Cancel selection" });
+    await user.click(screen.getByRole("button", { name: "Remove 1" }));
+    expect(confirm).toHaveBeenCalledWith("Remove selected?");
+    expect(onReplaceOutfitItems).toHaveBeenLastCalledWith("outfit-1", []);
+
+    await openMenu();
+    await user.click(screen.getByRole("menuitem", { name: "Delete" }));
+    expect(confirm).toHaveBeenCalledWith("Remove item?");
+    expect(onReplaceOutfitItems).toHaveBeenLastCalledWith("outfit-1", []);
+  });
+
   test("sorts outfit cards by the capsule wardrobe order", () => {
     renderScreen({
       activeOutfit: {
@@ -459,8 +512,8 @@ describe("OutfitScreen", () => {
         effective: {
           items: [
             {
-              key: "https://example.com/bag",
-              source: "catalog",
+              url: "https://example.com/bag",
+              source: "from_catalog",
               item: {
                 id: "bag",
                 url: "https://example.com/bag",
@@ -470,8 +523,8 @@ describe("OutfitScreen", () => {
               },
             },
             {
-              key: "https://example.com/trousers",
-              source: "catalog",
+              url: "https://example.com/trousers",
+              source: "from_catalog",
               item: {
                 id: "trousers",
                 url: "https://example.com/trousers",
@@ -481,8 +534,8 @@ describe("OutfitScreen", () => {
               },
             },
             {
-              key: "https://example.com/shirt",
-              source: "catalog",
+              url: "https://example.com/shirt",
+              source: "from_catalog",
               item: {
                 id: "shirt",
                 url: "https://example.com/shirt",
@@ -492,8 +545,8 @@ describe("OutfitScreen", () => {
               },
             },
             {
-              key: "https://example.com/blazer",
-              source: "catalog",
+              url: "https://example.com/blazer",
+              source: "from_catalog",
               item: {
                 id: "blazer",
                 url: "https://example.com/blazer",
@@ -560,8 +613,8 @@ describe("OutfitScreen", () => {
         effective: {
           items: [
             {
-              key: "https://example.com/context-jacket",
-              source: "catalog",
+              url: "https://example.com/context-jacket",
+              source: "from_catalog",
               item: {
                 id: "catalog-1",
                 url: "https://example.com/context-jacket",
@@ -625,8 +678,8 @@ describe("OutfitScreen", () => {
         effective: {
           items: [
             {
-              key: "wardrobe://42",
-              source: "personal",
+              url: "https://example.com/uploaded",
+              source: "uploaded",
               item: {
                 id: 42,
                 url: "https://example.com/uploaded",
@@ -767,8 +820,8 @@ describe("OutfitScreen", () => {
         effective: {
           items: [
             {
-              key: "wardrobe://43",
-              source: "personal",
+              url: "https://example.com/existing",
+              source: "from_catalog",
               item: {
                 id: 43,
                 url: "https://example.com/existing",
@@ -796,11 +849,17 @@ describe("OutfitScreen", () => {
     await user.click(screen.getByRole("button", { name: "Add" }));
 
     expect(onReplaceOutfitItems).toHaveBeenCalledWith("outfit-1", [
-      expect.objectContaining({ key: "wardrobe://43", source: "personal" }),
-      expect.objectContaining({ key: "wardrobe://42", source: "personal" }),
       expect.objectContaining({
-        key: "https://example.com/bag",
-        source: "catalog",
+        url: "https://example.com/existing",
+        source: "from_catalog",
+      }),
+      expect.objectContaining({
+        url: "wardrobe://42",
+        source: "uploaded",
+      }),
+      expect.objectContaining({
+        url: "https://example.com/bag",
+        source: "from_catalog",
       }),
     ]);
   });

@@ -359,6 +359,9 @@ const en = {
     confirmRevert: "Discard unsaved changes in this outfit?",
     confirmRemoveItem: "Remove this item from the outfit?",
     confirmRemoveSelected: "Remove selected items from the outfit?",
+    itemNotFoundTitle: "Item not found",
+    itemNotFoundDescription: "This outfit reference no longer resolves.",
+    openMissingItemActions: "Open missing item actions",
     openOutfitActions: "Outfit actions {name}",
   },
   wardrobe: {

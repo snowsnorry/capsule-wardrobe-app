@@ -9,13 +9,12 @@ import {
 
 const outfitItems = [
   {
-    key: "https://example.com/shirt",
-    source: "catalog",
-    item: {
-      url: "https://example.com/shirt",
-      name: "Shirt",
-      category: "top",
-    },
+    url: "https://example.com/shirt",
+    source: "from_catalog",
+  },
+  {
+    url: "wardrobe://missing",
+    source: "uploaded",
   },
 ];
 
@@ -44,15 +43,60 @@ test("outfit read routes return paginated, searched, and annotated outfits", asy
   const listRecentOutfitsImpl = vi.fn(async () => [outfit]);
   const countOutfitsImpl = vi.fn(async () => 12);
   const searchOutfitsImpl = vi.fn(async () => [{ ...outfit, id: "outfit-2" }]);
-  const getOutfitImpl = vi.fn(async (_email, id) =>
-    id === "missing" ? null : outfit,
-  );
+  const getOutfitImpl = vi.fn(async (_email, id) => {
+    if (id === "missing") {
+      return null;
+    }
+    if (id === "wardrobe-fallback") {
+      return {
+        ...outfit,
+        id,
+        draft: {
+          items: [
+            {
+              url: "https://example.com/saved-only",
+              source: "from_catalog",
+            },
+          ],
+        },
+        saved: null,
+      };
+    }
+    return outfit;
+  });
   const { baseUrl } = await startTestServer(t, {
     overrides: {
       listRecentOutfitsImpl,
       countOutfitsImpl,
       searchOutfitsImpl,
       getOutfitImpl,
+      getProductsByUrlsForEmailImpl: async ({ urls }: { urls: string[] }) =>
+        urls.includes("https://example.com/shirt")
+          ? [
+              {
+                url: "https://example.com/shirt",
+                name: "Shirt",
+                category: "top",
+              },
+            ]
+          : [],
+      listWardrobeItemsByUrlsImpl: async ({
+        source,
+        urls,
+      }: {
+        source: string;
+        urls: string[];
+      }) =>
+        source === "from_catalog" &&
+        urls.includes("https://example.com/saved-only")
+          ? [
+              {
+                url: "https://example.com/saved-only",
+                name: "Saved-only catalog shirt",
+                category: "top",
+              },
+            ]
+          : [],
       listLikedItemUrlsImpl: async () => ["https://example.com/shirt"],
     },
   });
@@ -66,7 +110,7 @@ test("outfit read routes return paginated, searched, and annotated outfits", asy
     pagination: { limit: 10, offset: 0, total: 12, hasMore: true },
   });
   expect(bootstrap.json.outfits).toEqual([
-    expect.objectContaining({ id: "outfit-1", itemCount: 1 }),
+    expect.objectContaining({ id: "outfit-1", itemCount: 2 }),
   ]);
 
   const recent = await requestJson(
@@ -114,11 +158,35 @@ test("outfit read routes return paginated, searched, and annotated outfits", asy
   });
   expect(detail.response.status).toBe(200);
   const detailOutfit = detail.json.outfit as {
-    effective: { items: Array<{ item: unknown }> };
+    effective: { items: Array<Record<string, unknown> & { item: unknown }> };
   };
   expect(detailOutfit.effective.items[0].item).toMatchObject({
     url: "https://example.com/shirt",
     isLiked: true,
+  });
+  expect(detailOutfit.effective.items[0]).not.toHaveProperty("isLiked");
+  expect(detailOutfit.effective.items[1]).toMatchObject({
+    url: "wardrobe://missing",
+    source: "uploaded",
+    item: null,
+  });
+  expect(detailOutfit.effective.items[1]).not.toHaveProperty("isLiked");
+
+  const fallback = await requestJson(baseUrl, "/outfits/wardrobe-fallback", {
+    cookie: AUTH_COOKIE,
+  });
+  expect(fallback.response.status).toBe(200);
+  const fallbackOutfit = fallback.json.outfit as {
+    effective: { items: Array<Record<string, unknown>> };
+  };
+  expect(fallbackOutfit.effective.items[0]).toMatchObject({
+    url: "https://example.com/saved-only",
+    source: "from_catalog",
+    item: {
+      url: "https://example.com/saved-only",
+      source: "from_catalog",
+      name: "Saved-only catalog shirt",
+    },
   });
 
   const missing = await requestJson(baseUrl, "/outfits/missing", {
@@ -171,6 +239,14 @@ test("outfit mutation routes validate payloads and mutate profile-owned outfits"
       duplicateOutfitImpl,
       getOutfitImpl,
       deleteOutfitImpl,
+      getProductsByUrlsForEmailImpl: async () => [
+        {
+          url: "https://example.com/shirt",
+          name: "Shirt",
+          category: "top",
+        },
+      ],
+      listWardrobeItemsByUrlsImpl: async () => [],
       listRecentOutfitsImpl: async () => [outfit],
       countOutfitsImpl: async () => 1,
       listLikedItemUrlsImpl: async () => [],
@@ -334,7 +410,32 @@ test("outfit pdf route renders effective outfit items with the profile locale", 
           ? { ...outfit, id, draft: { items: [] }, saved: null }
           : id === "missing"
             ? null
-            : outfit,
+            : id === "unresolved"
+              ? {
+                  ...outfit,
+                  id,
+                  draft: {
+                    items: [
+                      {
+                        url: "https://example.com/ghost",
+                        source: "from_catalog",
+                      },
+                    ],
+                  },
+                  saved: null,
+                }
+              : outfit,
+      getProductsByUrlsForEmailImpl: async ({ urls }: { urls: string[] }) =>
+        urls.includes("https://example.com/shirt")
+          ? [
+              {
+                url: "https://example.com/shirt",
+                name: "Shirt",
+                category: "top",
+              },
+            ]
+          : [],
+      listWardrobeItemsByUrlsImpl: async () => [],
       getProfileImpl: async () => ({ locale: "ru" }),
       buildWardrobePdfInChildImpl: async (products, locale) => {
         pdfProducts = products;
@@ -365,6 +466,13 @@ test("outfit pdf route renders effective outfit items with the profile locale", 
     authenticatedMutationOptions(),
   );
   expect(empty.response.status).toBe(404);
+
+  const unresolved = await requestJson(
+    baseUrl,
+    "/outfits/unresolved/pdf",
+    authenticatedMutationOptions(),
+  );
+  expect(unresolved.response.status).toBe(404);
 
   const missing = await requestJson(
     baseUrl,

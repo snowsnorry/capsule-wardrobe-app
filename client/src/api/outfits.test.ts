@@ -126,10 +126,19 @@ describe("outfits api", () => {
   test("writes outfit creation and mutation payloads through JSON requests", async () => {
     const items = [
       {
-        key: "https://example.com/jacket",
-        source: "catalog",
+        url: "https://example.com/jacket",
+        source: "from_catalog",
         item: { url: "https://example.com/jacket" },
       },
+      {
+        url: "wardrobe://uploaded-1",
+        source: "uploaded",
+        item: { url: "wardrobe://uploaded-1" },
+      },
+    ];
+    const itemRefs = [
+      { url: "https://example.com/jacket", source: "from_catalog" },
+      { url: "wardrobe://uploaded-1", source: "uploaded" },
     ];
 
     await createOutfit({ name: " Weekend ", items });
@@ -150,7 +159,7 @@ describe("outfits api", () => {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: " Weekend ", items }),
+        body: JSON.stringify({ name: " Weekend ", items: itemRefs }),
       },
     );
     expect(requestApi.requestJson).toHaveBeenNthCalledWith(
@@ -165,7 +174,7 @@ describe("outfits api", () => {
       "https://api.example.test/outfits/outfit%2F1/items",
       expect.objectContaining({
         method: "PATCH",
-        body: JSON.stringify({ items }),
+        body: JSON.stringify({ items: itemRefs }),
       }),
     );
     expect(requestApi.requestJson).toHaveBeenNthCalledWith(

@@ -65,6 +65,7 @@ import {
   OutfitAddItemsGrid,
 } from "./OutfitAddItemsDialogParts";
 import {
+  getOutfitItemKey,
   sortOutfitWardrobeItems,
   useOutfitPersonalItemTypeOptions,
   useVisibleOutfitPersonalItems,
@@ -139,13 +140,13 @@ export function AddItemsDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, tab]);
 
-  const selectedKeys = new Set(selected.map((item) => item.key));
-  const existingKeys = new Set(existingItems.map((item) => item.key));
+  const selectedKeys = new Set(selected.map(getOutfitItemKey));
+  const existingKeys = new Set(existingItems.map(getOutfitItemKey));
   const personalCount = selected.filter(
-    (item) => item.source === "personal",
+    (item) => item.source === "uploaded",
   ).length;
   const catalogCount = selected.filter(
-    (item) => item.source === "catalog",
+    (item) => item.source === "from_catalog",
   ).length;
   const typeOptions = useOutfitPersonalItemTypeOptions(personalItems);
   const visiblePersonalItems = useVisibleOutfitPersonalItems({
@@ -325,10 +326,11 @@ export function AddItemsDialog({
   );
 
   const toggle = (snapshot: OutfitItemSnapshot | null) => {
-    if (!snapshot || existingKeys.has(snapshot.key)) return;
+    const key = getOutfitItemKey(snapshot);
+    if (!snapshot || !key || existingKeys.has(key)) return;
     setSelected((current) =>
-      current.some((item) => item.key === snapshot.key)
-        ? current.filter((item) => item.key !== snapshot.key)
+      current.some((item) => getOutfitItemKey(item) === key)
+        ? current.filter((item) => getOutfitItemKey(item) !== key)
         : [...current, snapshot],
     );
   };

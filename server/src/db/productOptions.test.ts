@@ -23,6 +23,7 @@ import {
 import {
   getProductByIdForEmail,
   getProductByUrlForEmail,
+  getProductsByUrlsForEmailInOrder,
 } from "./productLookup.js";
 
 function useQueuedSql(results: SqlResultLike[]) {
@@ -161,4 +162,31 @@ test("product MCP fetch lookups include wardrobe saved state by id and exact url
   ]);
   expect(await getProductByIdForEmail("", "person@example.com")).toBeNull();
   expect(await getProductByUrlForEmail("", "person@example.com")).toBeNull();
+});
+
+test("product URL batch lookup includes profile saved state", async () => {
+  const product = {
+    id: "p1",
+    name: "Shirt",
+    url: "https://example.com/shirt",
+    distance: null,
+    isSavedToWardrobe: true,
+  };
+  const { statements, values } = useQueuedSql([[product]]);
+
+  expect(
+    await getProductsByUrlsForEmailInOrder({ email: "", urls: [] }),
+  ).toEqual([]);
+  expect(
+    await getProductsByUrlsForEmailInOrder({
+      email: "person@example.com",
+      urls: [" https://example.com/shirt "],
+    }),
+  ).toEqual([product]);
+  expect(statements[0]).toMatch(/from unnest/i);
+  expect(statements[0]).toMatch(/wardrobe\.source = 'from_catalog'/i);
+  expect(values[0]).toEqual([
+    "person@example.com",
+    ["https://example.com/shirt"],
+  ]);
 });
