@@ -184,6 +184,28 @@ afterEach(() => {
 });
 
 describe("OutfitScreen", () => {
+  test("uses the app primary scroll target for only the outfit cards", () => {
+    renderScreen();
+
+    const screenSurface = screen.getByTestId("outfit-screen");
+    const contentColumn = screen.getByTestId("outfit-content");
+    const cardsScroll = screen.getByTestId("outfit-cards-scroll");
+    const cardsContent = screen.getByTestId("outfit-cards-content");
+
+    expect(screenSurface).not.toHaveAttribute("data-app-primary-scroll-target");
+    expect(getComputedStyle(screenSurface).overflow).toBe("hidden");
+    expect(cardsScroll).toHaveAttribute(
+      "data-app-primary-scroll-target",
+      "true",
+    );
+    expect(getComputedStyle(cardsScroll).overflowY).toBe("auto");
+    expect(getComputedStyle(cardsScroll).overflowX).toBe("hidden");
+    expect(getComputedStyle(cardsScroll).overscrollBehaviorY).toBe("contain");
+    expect(getComputedStyle(screenSurface).marginRight).not.toBe("auto");
+    expect(getComputedStyle(contentColumn).marginRight).toBe("auto");
+    expect(getComputedStyle(cardsContent).marginRight).toBe("auto");
+  });
+
   test("uses capsule-style inline title controls with unsaved dot", async () => {
     const user = userEvent.setup();
     const onRenameOutfit = vi.fn(() => Promise.resolve());

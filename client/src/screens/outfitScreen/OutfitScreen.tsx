@@ -1464,67 +1464,77 @@ export default function OutfitScreen({
   };
 
   return (
-    <Box sx={outfitScreenSx}>
-      <Box sx={outfitHeaderSectionSx}>
-        <OutfitHeader
-          activeOutfit={activeOutfit}
-          isContentBusy={isContentBusy}
-          isMobile={isMobile}
-          items={visibleItems}
-          onAdd={() => setIsAddOpen(true)}
-          onCancelSelection={() => setSelectedKeys([])}
-          onMenuOpen={setMenuAnchor}
-          onRenameOutfit={onRenameOutfit}
-          onRemoveSelected={removeSelectedItems}
-          selectedCount={selectedKeys.length}
-          t={t}
-        />
+    <Box data-testid="outfit-screen" sx={outfitScreenSx}>
+      <Box data-testid="outfit-content" sx={outfitContentSx}>
+        <Box sx={outfitHeaderSectionSx}>
+          <OutfitHeader
+            activeOutfit={activeOutfit}
+            isContentBusy={isContentBusy}
+            isMobile={isMobile}
+            items={visibleItems}
+            onAdd={() => setIsAddOpen(true)}
+            onCancelSelection={() => setSelectedKeys([])}
+            onMenuOpen={setMenuAnchor}
+            onRenameOutfit={onRenameOutfit}
+            onRemoveSelected={removeSelectedItems}
+            selectedCount={selectedKeys.length}
+            t={t}
+          />
+        </Box>
       </Box>
-      <Box sx={buildOutfitGridSectionSx(mobileCardColumns)}>
-        <Box
-          sx={{
-            display: "grid",
-            gridTemplateColumns:
-              buildClothingGridTemplateColumns(mobileCardColumns),
-            gap: buildClothingGridGap(mobileCardColumns),
-            "@media (min-width: 1400px)": {
-              gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-            },
-            "@media (min-width: 1760px)": {
-              gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-            },
-          }}
-        >
-          {visibleItems.map((entry) => (
-            <ClothingCard
-              key={entry.key}
-              item={entry.item}
-              isSelectable
-              isSelected={selectedKeys.includes(entry.key)}
-              isSelectionMode={isSelectionMode}
-              onToggleSelected={() =>
-                setSelectedKeys((current) =>
-                  current.includes(entry.key)
-                    ? current.filter((key) => key !== entry.key)
-                    : [...current, entry.key],
-                )
-              }
-              onProductClick={() => setPreviewItem(entry.item)}
-              allowProductMenuWithoutUrl
-              isMobile={isMobile}
-              mobileColumns={mobileCardColumns}
-              selectionToggleIcon="check"
-              selectionToggleLabel={t("outfit.selectItem")}
-              onProductMenuOpen={(anchor, _productUrl, _item, options) =>
-                setItemMenu({
-                  anchor,
-                  entry,
-                  originRect: options.originRect,
-                  presentation: options.presentation,
-                })
-              }
-            />
-          ))}
+      <Box
+        data-app-primary-scroll-target="true"
+        data-testid="outfit-cards-scroll"
+        sx={outfitCardsScrollSx}
+      >
+        <Box data-testid="outfit-cards-content" sx={outfitContentSx}>
+          <Box sx={buildOutfitGridSectionSx(mobileCardColumns)}>
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns:
+                  buildClothingGridTemplateColumns(mobileCardColumns),
+                gap: buildClothingGridGap(mobileCardColumns),
+                "@media (min-width: 1400px)": {
+                  gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+                },
+                "@media (min-width: 1760px)": {
+                  gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+                },
+              }}
+            >
+              {visibleItems.map((entry) => (
+                <ClothingCard
+                  key={entry.key}
+                  item={entry.item}
+                  isSelectable
+                  isSelected={selectedKeys.includes(entry.key)}
+                  isSelectionMode={isSelectionMode}
+                  onToggleSelected={() =>
+                    setSelectedKeys((current) =>
+                      current.includes(entry.key)
+                        ? current.filter((key) => key !== entry.key)
+                        : [...current, entry.key],
+                    )
+                  }
+                  onProductClick={() => setPreviewItem(entry.item)}
+                  allowProductMenuWithoutUrl
+                  isMobile={isMobile}
+                  mobileColumns={mobileCardColumns}
+                  selectionToggleIcon="check"
+                  selectionToggleLabel={t("outfit.selectItem")}
+                  onProductMenuOpen={(anchor, _productUrl, _item, options) =>
+                    setItemMenu({
+                      anchor,
+                      entry,
+                      originRect: options.originRect,
+                      presentation: options.presentation,
+                    })
+                  }
+                />
+              ))}
+            </Box>
+          </Box>
         </Box>
       </Box>
       <OutfitMenu
@@ -1607,10 +1617,28 @@ export default function OutfitScreen({
 }
 
 const outfitScreenSx = {
-  ...MAIN_SCREEN_CONTENT_COLUMN_SX,
   backgroundColor: "background.default",
   boxSizing: "border-box",
-  minHeight: "100%",
+  display: "flex",
+  flexDirection: "column",
+  height: "100%",
+  minHeight: 0,
+  minWidth: 0,
+  overflow: "hidden",
+} as const;
+
+const outfitCardsScrollSx = {
+  flex: 1,
+  minHeight: 0,
+  minWidth: 0,
+  overflowX: "hidden",
+  overflowY: "auto",
+  overscrollBehaviorY: "contain",
+  WebkitOverflowScrolling: "touch",
+} as const;
+
+const outfitContentSx = {
+  ...MAIN_SCREEN_CONTENT_COLUMN_SX,
   minWidth: 0,
 } as const;
 
