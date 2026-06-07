@@ -1,23 +1,8 @@
-/* eslint-disable max-lines */
 import { useEffect, useMemo, useState } from "react";
 import type { ReactElement } from "react";
 import { Alert, Box, Stack } from "@mui/material";
 import useMediaQuery from "@mui/material/useMediaQuery";
-import { sortWardrobeItems } from "../../../shared/wardrobeOrder.js";
-import { likeItem, removeItemLike } from "../api/likedItems";
-import type { ProductMenuOpenOptions } from "../components/ClothingCardTypes";
-import {
-  deleteUploadedWardrobeItem,
-  downloadMyWardrobePdf,
-  fetchMyWardrobeItems,
-  removeCatalogItemFromMyWardrobe,
-  type MyWardrobeSource,
-  type UploadedWardrobeItemUpdatePayload,
-  updateUploadedWardrobeItem,
-  uploadWardrobeImages,
-  uploadWardrobeUrls,
-} from "../api/myWardrobe";
-import { notifyPersonalItemsChanged } from "../app/personalItemsCount";
+import { type UploadedWardrobeItemUpdatePayload } from "../api/myWardrobe";
 import { useI18n } from "../i18n/useI18n";
 import { isUploadedWardrobeItemNeedsReview } from "../utils/uploadedWardrobeItemStatus";
 import {
@@ -25,7 +10,6 @@ import {
   isLikedItem,
   patchLikedStateByUrl,
 } from "../utils/likedItemState";
-import { MAIN_SCREEN_CONTENT_COLUMN_SX } from "./mainScreen/MainScreenHelpers";
 import type {
   MainScreenItem,
   MobileCardColumns,
@@ -41,14 +25,7 @@ import WardrobeGrid from "./WardrobeGrid";
 import {
   WardrobeProductMenu,
   WardrobeRemoveConfirmDialog,
-  type WardrobeProductMenuState,
 } from "./WardrobeProductMenu";
-import { getItemFromResponse, getItemsFromResponse } from "./wardrobeResponse";
-import {
-  getWardrobeDeletionTarget,
-  isDifferentWardrobeItem,
-} from "./wardrobeDelete";
-import { EMPTY_UPLOAD_PROGRESS } from "./wardrobeUploadProgress";
 import CapsuleProductDetailDialog from "./mainScreen/CapsuleProductDetailDialog";
 import WardrobeUploadDialog from "./WardrobeUploadDialog";
 import WardrobeUrlUploadDialog from "./WardrobeUrlUploadDialog";
@@ -56,8 +33,10 @@ import WardrobeToolbar, {
   getSourceFilter,
   type WardrobeFilter,
 } from "./WardrobeToolbar";
-
-type ProductDetailMode = "read" | "edit";
+import { filterWardrobeItemsBySource } from "./wardrobeItemMappers";
+import { wardrobeContentSx, wardrobeScreenSx } from "./wardrobeScreenStyles";
+import type { ProductDetailMode } from "./wardrobeScreenTypes";
+import { useWardrobeItems } from "./useWardrobeItems";
 
 // Main screen composition stays local so toolbar, menus, dialogs, and grid share state.
 // eslint-disable-next-line max-lines-per-function
@@ -264,288 +243,5 @@ function WardrobeScreen(): ReactElement {
     </Box>
   );
 }
-
-// Keeps Wardrobe network state and item mutations in one place.
-// eslint-disable-next-line max-lines-per-function
-function useWardrobeItems(
-  filter: WardrobeFilter,
-  refreshKey: number,
-  t: (key: string) => string,
-) {
-  const source = useMemo(() => getSourceFilter(filter), [filter]);
-  const { error, isLoading, items, setError, setItems } = useWardrobeItemsQuery(
-    refreshKey,
-    t,
-  );
-  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
-  const [isMutating, setIsMutating] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(EMPTY_UPLOAD_PROGRESS);
-  const [productMenu, setProductMenu] = useState<WardrobeProductMenuState>({
-    anchor: null,
-    url: "",
-    item: null,
-  });
-  const [removeConfirmItem, setRemoveConfirmItem] =
-    useState<MainScreenItem | null>(null);
-  const closeProductMenu = () =>
-    setProductMenu((current) => ({ ...current, anchor: null }));
-  const handleProductMenuOpen = (
-    anchor: HTMLElement,
-    url: string,
-    item: MainScreenItem,
-    options: ProductMenuOpenOptions,
-  ) => {
-    setProductMenu({
-      anchor,
-      url,
-      item,
-      presentation: options.presentation,
-      ...(options.originRect ? { originRect: options.originRect } : {}),
-    });
-  };
-  const handleConfirmRemove = async (item: MainScreenItem) => {
-    const target = getWardrobeDeletionTarget(item);
-    if (!target) return;
-
-    setIsMutating(true);
-    try {
-      if (target.kind === "uploaded") {
-        await deleteUploadedWardrobeItem(target.id);
-      } else {
-        await removeCatalogItemFromMyWardrobe(target.url);
-      }
-      setError("");
-      setItems((current) =>
-        current.filter((currentItem) =>
-          isDifferentWardrobeItem(currentItem, item, target),
-        ),
-      );
-      notifyPersonalItemsChanged();
-    } catch {
-      setError(t("wardrobe.removeFailed"));
-    } finally {
-      setIsMutating(false);
-    }
-  };
-  const handleDownloadPdf = async () => {
-    setIsDownloadingPdf(true);
-    try {
-      await downloadMyWardrobePdf({ source });
-      setError("");
-    } catch {
-      setError(t("wardrobe.downloadFailed"));
-    } finally {
-      setIsDownloadingPdf(false);
-    }
-  };
-  const handleUploadImages = async (files: File[]) => {
-    if (files.length === 0) {
-      return false;
-    }
-
-    setIsUploading(true);
-    setUploadProgress({
-      ...EMPTY_UPLOAD_PROGRESS,
-      total: files.length,
-    });
-    try {
-      await uploadWardrobeImages(files, {
-        onProgress: setUploadProgress,
-      });
-      setError("");
-      notifyPersonalItemsChanged();
-      return true;
-    } catch {
-      setError(t("wardrobe.uploadFailed"));
-      return false;
-    } finally {
-      setIsUploading(false);
-    }
-  };
-  const handleUploadUrls = async (urls: string[]) => {
-    if (urls.length === 0) {
-      return false;
-    }
-
-    setIsUploading(true);
-    setUploadProgress({
-      ...EMPTY_UPLOAD_PROGRESS,
-      total: urls.length,
-    });
-    try {
-      await uploadWardrobeUrls(urls, {
-        onProgress: setUploadProgress,
-      });
-      setError("");
-      notifyPersonalItemsChanged();
-      return true;
-    } catch {
-      setError(t("wardrobe.urlUploadFailed"));
-      return false;
-    } finally {
-      setIsUploading(false);
-    }
-  };
-  const handleUpdateUploadedItem = async (
-    item: MainScreenItem,
-    payload: UploadedWardrobeItemUpdatePayload,
-  ) => {
-    const id = item?.id;
-    if (!id) {
-      throw new Error("missing_uploaded_item_id");
-    }
-
-    setIsMutating(true);
-    try {
-      const response = await updateUploadedWardrobeItem(id, payload);
-      const updatedItem = getItemFromResponse(response) || {
-        ...item,
-        ...payload,
-      };
-      setError("");
-      setItems((current) =>
-        sortWardrobeItems(
-          current.map((currentItem) =>
-            String(currentItem?.id || "") === String(id)
-              ? updatedItem
-              : currentItem,
-          ),
-        ),
-      );
-      return updatedItem;
-    } catch (error) {
-      setError(t("wardrobe.updateFailed"));
-      throw error;
-    } finally {
-      setIsMutating(false);
-    }
-  };
-  const handleSetItemLike = async (item: MainScreenItem, isLiked: boolean) => {
-    const itemUrl = getCanonicalItemUrl(item);
-    if (!itemUrl) {
-      return;
-    }
-
-    const previousItems = items;
-    const previousProductMenu = productMenu;
-    setItems((current) => patchLikedStateByUrl(current, itemUrl, isLiked));
-    setProductMenu((current) =>
-      patchLikedStateByUrl(current, itemUrl, isLiked),
-    );
-    try {
-      if (isLiked) {
-        await likeItem(itemUrl);
-      } else {
-        await removeItemLike(itemUrl);
-      }
-      setError("");
-    } catch {
-      setItems(previousItems);
-      setProductMenu(previousProductMenu);
-      setError(t("wardrobe.likeFailed"));
-    }
-  };
-
-  return {
-    closeProductMenu,
-    error,
-    handleConfirmRemove,
-    handleDownloadPdf,
-    handleProductMenuOpen,
-    handleSetItemLike,
-    handleUpdateUploadedItem,
-    handleUploadImages,
-    handleUploadUrls,
-    isDownloadingPdf,
-    isLoading,
-    isMutating,
-    isUploading,
-    items,
-    productMenu,
-    removeConfirmItem,
-    setRemoveConfirmItem,
-    uploadProgress,
-  };
-}
-
-function useWardrobeItemsQuery(refreshKey: number, t: (key: string) => string) {
-  const [items, setItems] = useState<MainScreenItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    let isActive = true;
-
-    setIsLoading(true);
-    setError("");
-    fetchMyWardrobeItems({ force: refreshKey > 0 })
-      .then((response) => {
-        if (isActive) {
-          setItems(sortWardrobeItems(getItemsFromResponse(response)));
-        }
-      })
-      .catch(() => {
-        if (isActive) {
-          setItems([]);
-          setError(t("wardrobe.loadFailed"));
-        }
-      })
-      .finally(() => {
-        if (isActive) {
-          setIsLoading(false);
-        }
-      });
-
-    return () => {
-      isActive = false;
-    };
-  }, [refreshKey, t]);
-
-  return { error, isLoading, items, setError, setItems };
-}
-
-function filterWardrobeItemsBySource(
-  items: MainScreenItem[],
-  source: MyWardrobeSource | null,
-) {
-  return source
-    ? items.filter((item) => getWardrobeItemSource(item) === source)
-    : items;
-}
-
-function getWardrobeItemSource(item: MainScreenItem): MyWardrobeSource {
-  const explicitSource = String(item.source || "")
-    .trim()
-    .toLowerCase();
-  if (explicitSource === "uploaded") {
-    return "uploaded";
-  }
-  if (explicitSource === "from_catalog" || explicitSource === "catalog") {
-    return "from_catalog";
-  }
-  return String(item.url || "").startsWith("wardrobe://")
-    ? "uploaded"
-    : "from_catalog";
-}
-
-const wardrobeScreenSx = {
-  height: "100%",
-  minHeight: 0,
-  overflowX: "hidden",
-  overflowY: "auto",
-  overscrollBehaviorY: "contain",
-  WebkitOverflowScrolling: "touch",
-  pt: { xs: 0, md: 2 },
-  pb: 2,
-} as const;
-
-const wardrobeContentSx = {
-  ...MAIN_SCREEN_CONTENT_COLUMN_SX,
-  px: { xs: 2, md: 3 },
-  boxSizing: "border-box",
-  minWidth: 0,
-  minHeight: "100%",
-} as const;
 
 export default WardrobeScreen;

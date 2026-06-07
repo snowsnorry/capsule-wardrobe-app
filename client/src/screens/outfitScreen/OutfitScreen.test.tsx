@@ -23,12 +23,37 @@ const searchApi = vi.hoisted(() => ({
 vi.mock("../../api/myWardrobe", () => myWardrobeApi);
 vi.mock("../../api/search", () => searchApi);
 vi.mock("../mainScreen/CapsuleProductDetailDialog", () => ({
-  default: ({ item, open, onClose }) =>
+  default: ({
+    item,
+    mode,
+    onApply,
+    onClose,
+    onEdit,
+    onReadMode,
+    onSetItemLike,
+    open,
+  }) =>
     open ? (
       <div role="dialog" aria-label="Product preview">
         <span>{item?.name}</span>
+        <span>mode: {mode}</span>
         <button type="button" onClick={onClose}>
           Close preview
+        </button>
+        <button type="button" onClick={() => onEdit?.(item)}>
+          Edit preview
+        </button>
+        <button type="button" onClick={onReadMode}>
+          Read preview
+        </button>
+        <button
+          type="button"
+          onClick={() => onApply?.(item, { name: "Updated preview item" })}
+        >
+          Apply preview
+        </button>
+        <button type="button" onClick={() => onSetItemLike?.(item, true)}>
+          Like preview
         </button>
       </div>
     ) : null,
@@ -279,6 +304,150 @@ describe("OutfitScreen", () => {
     const preview = screen.getByRole("dialog", { name: "Product preview" });
     expect(preview).toBeInTheDocument();
     expect(within(preview).getByText("Preview jacket")).toBeInTheDocument();
+  });
+
+  test("applies uploaded preview edits and preview likes to the outfit", async () => {
+    const user = userEvent.setup();
+    const onReplaceOutfitItems = vi.fn(() => Promise.resolve());
+    const onSetItemLike = vi.fn(() => Promise.resolve());
+    const onUpdateUploadedWardrobeItem = vi.fn(() =>
+      Promise.resolve({
+        id: 42,
+        url: "https://example.com/uploaded",
+        name: "Updated preview item",
+        category: "outerwear",
+        imageUrl: "https://example.com/uploaded.png",
+        source: "uploaded",
+      }),
+    );
+    renderScreen({
+      activeOutfit: {
+        id: "outfit-1",
+        name: "Weekend",
+        status: "modified",
+        effective: {
+          items: [
+            {
+              key: "wardrobe://42",
+              source: "personal",
+              item: {
+                id: 42,
+                url: "https://example.com/uploaded",
+                name: "Uploaded jacket",
+                category: "outerwear",
+                imageUrl: "https://example.com/uploaded.png",
+                source: "uploaded",
+              },
+            },
+          ],
+        },
+      },
+      onReplaceOutfitItems,
+      onSetItemLike,
+      onUpdateUploadedWardrobeItem,
+    });
+
+    await user.click(screen.getByRole("button", { name: /Uploaded jacket/i }));
+    await user.click(screen.getByRole("button", { name: "Edit preview" }));
+    expect(screen.getByText("mode: edit")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Read preview" }));
+    expect(screen.getByText("mode: read")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Apply preview" }));
+    await waitFor(() => {
+      expect(onUpdateUploadedWardrobeItem).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 42 }),
+        { name: "Updated preview item" },
+      );
+      expect(onReplaceOutfitItems).toHaveBeenCalledWith("outfit-1", [
+        expect.objectContaining({
+          item: expect.objectContaining({ name: "Updated preview item" }),
+        }),
+      ]);
+    });
+
+    await user.click(screen.getByRole("button", { name: "Like preview" }));
+    expect(onSetItemLike).toHaveBeenCalledWith(
+      expect.objectContaining({ url: "https://example.com/uploaded" }),
+      true,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Close preview" }));
+    expect(
+      screen.queryByRole("dialog", { name: "Product preview" }),
+    ).not.toBeInTheDocument();
+  });
+
+  test("handles desktop outfit item menu like, select, and remove actions", async () => {
+    const user = userEvent.setup();
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+    const onReplaceOutfitItems = vi.fn(() => Promise.resolve());
+    const onSetItemLike = vi.fn(() => Promise.resolve());
+    renderScreen({
+      activeOutfit: {
+        id: "outfit-1",
+        name: "Weekend",
+        status: "modified",
+        effective: {
+          items: [
+            {
+              key: "https://example.com/context-jacket",
+              source: "catalog",
+              item: {
+                id: "catalog-1",
+                url: "https://example.com/context-jacket",
+                name: "Context jacket",
+                category: "outerwear",
+                imageUrl: "https://example.com/context-jacket.png",
+              },
+            },
+          ],
+        },
+      },
+      onReplaceOutfitItems,
+      onSetItemLike,
+    });
+
+    const openMenu = async () => {
+      await screen.findByRole("button", { name: /Context jacket/i });
+      fireEvent.click(document.querySelector(".wardrobe-card-product-menu")!);
+    };
+
+    await openMenu();
+    await user.click(screen.getByRole("menuitem", { name: "Like" }));
+    expect(onSetItemLike).toHaveBeenCalledWith(
+      expect.objectContaining({ url: "https://example.com/context-jacket" }),
+      true,
+    );
+
+    await openMenu();
+    await user.click(screen.getByRole("menuitem", { name: "Select" }));
+    await user.click(screen.getByRole("button", { name: "Cancel selection" }));
+
+    await openMenu();
+    await user.click(screen.getByRole("menuitem", { name: "Select" }));
+    await screen.findByRole("button", { name: "Cancel selection" });
+    const selectedCard = screen.getByRole("button", {
+      name: /Context jacket/i,
+    });
+    await user.click(selectedCard);
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("button", { name: "Cancel selection" }),
+      ).not.toBeInTheDocument();
+    });
+
+    await openMenu();
+    await user.click(screen.getByRole("menuitem", { name: "Select" }));
+    await screen.findByRole("button", { name: "Cancel selection" });
+    await user.click(screen.getByRole("button", { name: "Remove 1" }));
+    expect(confirm).toHaveBeenCalledWith("Remove selected?");
+    expect(onReplaceOutfitItems).toHaveBeenLastCalledWith("outfit-1", []);
+
+    await openMenu();
+    await user.click(screen.getByRole("menuitem", { name: "Delete" }));
+    expect(confirm).toHaveBeenCalledWith("Remove item?");
+    expect(onReplaceOutfitItems).toHaveBeenLastCalledWith("outfit-1", []);
   });
 
   test("sorts outfit cards by the capsule wardrobe order", () => {
@@ -648,6 +817,12 @@ describe("OutfitScreen", () => {
     expect(screen.getByRole("dialog", { name: /Add items/ })).toHaveClass(
       "MuiDialog-paperFullScreen",
     );
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("dialog", { name: /Add items/ }),
+      ).not.toBeInTheDocument();
+    });
   });
 
   test("shows catalog filters, search, total, and picker cards in add dialog", async () => {
