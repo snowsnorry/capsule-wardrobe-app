@@ -356,6 +356,5 @@ export {
   uploadWardrobeUrls,
 };
 export type { PersonalItemSource };
-export type { PersonalItemsFetchOptions };
 export type { UploadedWardrobeItemUpdatePayload };
 export type { UploadWardrobeProgress };

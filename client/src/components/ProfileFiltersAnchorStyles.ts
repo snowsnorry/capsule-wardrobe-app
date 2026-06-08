@@ -1,13 +1,6 @@
 import { alpha } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
 
-export const dialogTitleSx = {
-  display: "flex",
-  alignItems: "flex-start",
-  justifyContent: "space-between",
-  gap: 2,
-} as const;
-
 export const pickerDialogPaperSx = {
   height: "calc(100dvh - 48px)",
   maxHeight: "calc(100dvh - 48px)",

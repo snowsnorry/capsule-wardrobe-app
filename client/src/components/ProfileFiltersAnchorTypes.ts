@@ -32,5 +32,3 @@ export type ProfileFiltersAnchorSectionProps = {
   t: Translate;
   locale: string;
 };
-
-export const MAX_ANCHOR_ITEMS = 5;
