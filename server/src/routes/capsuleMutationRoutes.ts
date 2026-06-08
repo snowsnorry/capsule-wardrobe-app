@@ -33,8 +33,10 @@ function registerCapsuleCreateRoutes(app, context) {
         const anchors = await context.validateCapsuleAnchorItemsImpl(
           req.user.email,
           draft?.filters?.anchorWardrobeItemIds,
+          draft?.filters?.anchorItemRefs,
         );
         draft.filters.anchorWardrobeItemIds = anchors.anchorWardrobeItemIds;
+        draft.filters.anchorItemRefs = anchors.anchorItemRefs || [];
         const capsule = await context.createCapsuleImpl(req.user.email, {
           name: String(req.body?.name || "").trim() || undefined,
           draft,
@@ -79,10 +81,12 @@ function registerCapsuleCreateRoutes(app, context) {
         const anchors = await context.validateCapsuleAnchorItemsImpl(
           req.user.email,
           normalizedFilters?.anchorWardrobeItemIds,
+          normalizedFilters?.anchorItemRefs,
         );
         if (normalizedFilters) {
           normalizedFilters.anchorWardrobeItemIds =
             anchors.anchorWardrobeItemIds;
+          normalizedFilters.anchorItemRefs = anchors.anchorItemRefs || [];
         }
         const nextDraft = {
           filters: normalizedFilters,

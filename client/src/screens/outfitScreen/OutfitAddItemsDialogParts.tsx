@@ -68,6 +68,7 @@ export function OutfitAddItemsGrid({
   gridSx,
   items,
   locale,
+  maxSelectedReached = false,
   onToggle,
   selectedKeys,
   showEmpty = true,
@@ -78,6 +79,7 @@ export function OutfitAddItemsGrid({
   gridSx: SxProps<Theme>;
   items: WardrobeItem[];
   locale: string;
+  maxSelectedReached?: boolean;
   onToggle: (snapshot: OutfitItemSnapshot | null) => void;
   selectedKeys: Set<string>;
   showEmpty?: boolean;
@@ -100,7 +102,9 @@ export function OutfitAddItemsGrid({
           ? getOutfitItemKey(snapshot)
           : String(item.id || item.url || "");
         const checked = snapshot ? selectedKeys.has(key) : false;
-        const disabled = snapshot ? existingKeys.has(key) : true;
+        const disabled =
+          (snapshot ? existingKeys.has(key) : true) ||
+          (!checked && maxSelectedReached);
         const anchorItem = toAnchorCardItem(item, key, source);
         return (
           <AnchorPickerCard

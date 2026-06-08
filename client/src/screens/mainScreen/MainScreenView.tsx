@@ -277,6 +277,7 @@ function MainScreenCapsulePanel(model: MainScreenViewProps) {
           isOverlay={model.isOverlaySidebar}
           mobileColumns={model.mobileColumns}
           partialPendingUrls={model.props.partialRegenerationPendingUrls}
+          selectedAnchorItemRefs={model.props.selectedAnchorItemRefs}
           selectedAnchorWardrobeItemIds={
             model.props.selectedAnchorWardrobeItemIds
           }

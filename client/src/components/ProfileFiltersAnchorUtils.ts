@@ -18,7 +18,6 @@ function normalizeWardrobeItemSource(
 
 function getWardrobeItemSource(
   item: Record<string, unknown>,
-  url: string,
 ): AnchorItem["source"] {
   const explicitSource =
     normalizeWardrobeItemSource(item.source) ||
@@ -27,7 +26,7 @@ function getWardrobeItemSource(
   if (explicitSource) {
     return explicitSource;
   }
-  return url.startsWith("wardrobe://") ? "uploaded" : "catalog";
+  return "catalog";
 }
 
 function getStringValue(item: Record<string, unknown>, key: string): string {
@@ -57,7 +56,7 @@ export function toAnchorItem(item: unknown): AnchorItem | null {
       null,
     category: getStringValue(source, "category") || null,
     isLiked: source.isLiked === true,
-    source: getWardrobeItemSource(source, url),
+    source: getWardrobeItemSource(source),
   };
 }
 

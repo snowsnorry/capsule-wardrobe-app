@@ -27,6 +27,7 @@ export function buildSnapshotFromProfile(
       pattern: "solid",
       text: "",
       anchorWardrobeItemIds: [],
+      anchorItemRefs: [],
     },
     data: {
       wardrobe: null,
@@ -63,6 +64,7 @@ const emptyProfileFilterContext = {
   color: null,
   text: "",
   anchorWardrobeItemIds: [],
+  anchorItemRefs: [],
 } as const;
 
 function getProfileContextFilters(
@@ -112,5 +114,6 @@ function buildProfileFilterContext(
     color: filters.color,
     text: filters.text,
     anchorWardrobeItemIds: filters.anchorWardrobeItemIds,
+    anchorItemRefs: filters.anchorItemRefs,
   };
 }

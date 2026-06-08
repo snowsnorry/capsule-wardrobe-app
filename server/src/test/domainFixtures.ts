@@ -139,6 +139,7 @@ function buildCapsuleSnapshot(
       pattern: "solid",
       text: "",
       anchorWardrobeItemIds: [],
+      anchorItemRefs: [],
       ...overrides.filters,
     },
     data: {

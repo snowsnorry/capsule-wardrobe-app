@@ -2,11 +2,17 @@ import {
   buildCapsuleStatus,
   buildEmptyCapsuleDraft,
   getEffectiveCapsule,
+  normalizeAnchorItemRefs,
   normalizeOutfitSets,
 } from "./capsuleState";
-import { buildDisplayWardrobeItems } from "../../../shared/wardrobeMerge.js";
-import type { CapsuleMeta, CapsulePagination, WardrobeItem } from "./appTypes";
+import type {
+  AnchorItemRef,
+  CapsuleMeta,
+  CapsulePagination,
+  WardrobeItem,
+} from "./appTypes";
 import type { CapsuleSourceMode } from "./appTypes";
+import { buildDisplayWardrobeItems } from "../../../shared/wardrobeMerge.js";
 
 type StateSetter<T> = (value: T) => void;
 
@@ -29,6 +35,7 @@ type ApplyCapsuleStateContext = {
   setSelectedStyle: StateSetter<string | null>;
   setSelectedText: StateSetter<string>;
   setSelectedAnchorWardrobeItemIds: StateSetter<string[]>;
+  setSelectedAnchorItemRefs: StateSetter<AnchorItemRef[]>;
 };
 
 type CapsuleListPayload = {
@@ -93,6 +100,9 @@ function applyCapsuleFilters(
   context.setSelectedAnchorWardrobeItemIds(
     fallbackStringArray(filters.anchorWardrobeItemIds),
   );
+  context.setSelectedAnchorItemRefs(
+    normalizeAnchorItemRefs(filters.anchorItemRefs),
+  );
   return effective;
 }
 
@@ -119,6 +129,9 @@ function applyEmptyCapsuleState(
   context.setSelectedText(fallbackString(filters.text));
   context.setSelectedAnchorWardrobeItemIds(
     fallbackStringArray(filters.anchorWardrobeItemIds),
+  );
+  context.setSelectedAnchorItemRefs(
+    normalizeAnchorItemRefs(filters.anchorItemRefs),
   );
 
   applyCapsuleListPayload(context, listPayload);

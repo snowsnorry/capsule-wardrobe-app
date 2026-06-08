@@ -112,6 +112,8 @@ function createCapsuleMutationDependencies() {
         ? anchorWardrobeItemIds
         : [],
       anchorWardrobeNumericIds: [],
+      anchorCatalogUrls: [],
+      anchorItemRefs: [],
       anchorItems: [],
     }),
   };

@@ -15,6 +15,7 @@ import ClothingGridPlaceholder, {
   buildClothingGridTemplateColumns,
 } from "../../components/ClothingGridPlaceholder";
 import { useI18n } from "../../i18n/useI18n";
+import type { AnchorItemRef } from "../../components/ProfileFiltersSidebarTypes";
 import {
   MAIN_SCREEN_CONTENT_COLUMN_SX,
   OUTFIT_SET_IMAGE_ASPECT_RATIO,
@@ -36,6 +37,7 @@ type WardrobeProps = {
   isOverlay: boolean;
   mobileColumns: MobileCardColumns;
   partialPendingUrls: string[];
+  selectedAnchorItemRefs: AnchorItemRef[];
   selectedAnchorWardrobeItemIds: string[];
   selectedUrls: string[];
   selectionMode: boolean;
@@ -105,8 +107,22 @@ function normalizePublicWardrobeId(value: unknown) {
 
 function isAnchorWardrobeItem(
   item: MainScreenItem,
+  anchorItemRefs: AnchorItemRef[],
   anchorWardrobeItemIds: string[],
 ) {
+  const itemUrl = String(item?.url || "").trim();
+  const source = item?.source === "uploaded" ? "uploaded" : "from_catalog";
+  const anchorRefSet = new Set(
+    anchorItemRefs
+      .map((ref) =>
+        ref.url ? `${ref.source}\u0000${String(ref.url).trim()}` : "",
+      )
+      .filter(Boolean),
+  );
+  if (itemUrl && anchorRefSet.has(`${source}\u0000${itemUrl}`)) {
+    return true;
+  }
+
   const anchorIdSet = new Set(
     anchorWardrobeItemIds.map(normalizePublicWardrobeId).filter(Boolean),
   );
@@ -216,6 +232,7 @@ function WardrobeGrid({ props }: { props: WardrobeProps }) {
         const itemUrl = String(item?.url || "");
         const isAnchor = isAnchorWardrobeItem(
           item,
+          props.selectedAnchorItemRefs,
           props.selectedAnchorWardrobeItemIds,
         );
         const regenerationLockedReason = isAnchor

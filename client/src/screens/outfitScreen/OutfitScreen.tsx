@@ -12,7 +12,7 @@ import { isUploadedWardrobeItemNeedsReview } from "../../utils/uploadedWardrobeI
 import type { OutfitItemSnapshot, WardrobeItem } from "../../app/appTypes";
 import type { MobileCardColumns } from "../mainScreen/MainScreenTypes";
 import { useI18n } from "../../i18n/useI18n";
-import { AddItemsDialog } from "./OutfitAddItemsDialog";
+import { AddItemsDialog } from "../../components/AddItemsDialog";
 import { OutfitGrid } from "./OutfitGrid";
 import { OutfitHeader } from "./OutfitHeader";
 import { OutfitItemMenu, OutfitMenu } from "./OutfitMenus";

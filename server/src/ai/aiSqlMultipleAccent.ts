@@ -53,7 +53,10 @@ function buildMultipleAccentCapsuleSqlValues(
 }
 
 function hasAnchorParams(params: CapsuleWardrobeSqlParams): boolean {
-  return params.anchorWardrobeNumericIds.length > 0;
+  return (
+    params.anchorWardrobeNumericIds.length > 0 ||
+    params.anchorCatalogUrls.length > 0
+  );
 }
 
 function buildMultipleAccentCatalogOnlyAnchorSqlValues(
@@ -63,6 +66,7 @@ function buildMultipleAccentCatalogOnlyAnchorSqlValues(
     ...buildMultipleAccentCapsuleSqlValues(params).slice(0, 11),
     params.profileEmail,
     params.anchorWardrobeNumericIds,
+    params.anchorCatalogUrls,
     params.anchorSimilarityBonusWeight,
   ];
 }
@@ -73,6 +77,7 @@ function buildMultipleAccentWardrobePreferredAnchorSqlValues(
   return [
     ...buildMultipleAccentCapsuleSqlValues(params),
     params.anchorWardrobeNumericIds,
+    params.anchorCatalogUrls,
     params.anchorSimilarityBonusWeight,
   ];
 }
@@ -92,6 +97,7 @@ function buildMultipleAccentWardrobeOnlyAnchorSqlValues(
   return [
     ...buildMultipleAccentWardrobeOnlySqlValues(params),
     params.anchorWardrobeNumericIds,
+    params.anchorCatalogUrls,
     params.anchorSimilarityBonusWeight,
   ];
 }

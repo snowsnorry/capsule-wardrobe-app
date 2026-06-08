@@ -3,6 +3,7 @@ import { initialStatus } from "./appConstants";
 import { normalizeProfileSettings } from "./profileSettings";
 import type {
   CapsuleMeta,
+  AnchorItemRef,
   CapsulePagination,
   CapsuleSourceMode,
   CapsuleSidebarActions,
@@ -64,6 +65,9 @@ export function useProfileFilterAppState() {
   const [selectedText, setSelectedText] = useState("");
   const [selectedAnchorWardrobeItemIds, setSelectedAnchorWardrobeItemIds] =
     useState<string[]>([]);
+  const [selectedAnchorItemRefs, setSelectedAnchorItemRefs] = useState<
+    AnchorItemRef[]
+  >([]);
   const [currentView, setCurrentView] = useState("main");
   const [settingsProfile, setSettingsProfile] = useState(() =>
     normalizeProfileSettings(),
@@ -80,6 +84,7 @@ export function useProfileFilterAppState() {
     selectedSourceMode,
     selectedStyle,
     selectedText,
+    selectedAnchorItemRefs,
     selectedAnchorWardrobeItemIds,
     setCurrentView,
     setSelectedAudience,
@@ -91,6 +96,7 @@ export function useProfileFilterAppState() {
     setSelectedSourceMode,
     setSelectedStyle,
     setSelectedText,
+    setSelectedAnchorItemRefs,
     setSelectedAnchorWardrobeItemIds,
     setSettingsProfile,
     settingsProfile,

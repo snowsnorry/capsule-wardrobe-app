@@ -56,6 +56,7 @@ function buildBaseSqlParams(
     noiseFactor: 0.05,
     anchorWardrobeItemIds: [],
     anchorWardrobeNumericIds: [],
+    anchorCatalogUrls: [],
     anchorSimilarityBonusWeight: 18,
     ...overrides,
   };
@@ -97,6 +98,7 @@ test("buildCapsuleWardrobeSqlParams preserves defaults and profile filters", () 
   expect(params.noiseFactor).toBe(0);
   expect(params.anchorWardrobeItemIds).toEqual([]);
   expect(params.anchorWardrobeNumericIds).toEqual([]);
+  expect(params.anchorCatalogUrls).toEqual([]);
   expect(params.anchorSimilarityBonusWeight).toBe(18);
 });
 
@@ -465,6 +467,7 @@ test("anchor-aware SQL dispatch selects all four anchor variants", async () => {
   const anchorParams = {
     anchorWardrobeItemIds: ["W12"],
     anchorWardrobeNumericIds: [12],
+    anchorCatalogUrls: ["https://example.com/catalog-anchor"],
   };
 
   const catalog = createSqlRecorder();
@@ -522,8 +525,14 @@ test("anchor-aware SQL dispatch selects all four anchor variants", async () => {
   );
   expect(catalog.calls[0].text).toMatch(/color_rank ASC/i);
   expect(catalog.calls[0].values.slice(-3)).toEqual([
+    [12],
+    ["https://example.com/catalog-anchor"],
+    18,
+  ]);
+  expect(catalog.calls[0].values.slice(-4)).toEqual([
     "person@example.com",
     [12],
+    ["https://example.com/catalog-anchor"],
     18,
   ]);
   expect(catalogMultiple.calls[0].text).toMatch(
@@ -560,7 +569,7 @@ test("anchor-aware SQL dispatch selects all four anchor variants", async () => {
     /\$14::bigint\[\] AS anchor_wardrobe_ids/i,
   );
   expect(wardrobeOnly.calls[0].text).toMatch(/FROM wardrobe/i);
-  expect(wardrobeOnly.calls[0].text).not.toMatch(/FROM products/i);
+  expect(wardrobeOnly.calls[0].text).toMatch(/JOIN products/i);
   expect(wardrobeOnly.calls[0].text).toMatch(
     /JOIN wardrobe[\s\S]*wardrobe\.processing_status = 'ready'[\s\S]*NULLIF\(trim\(COALESCE\(wardrobe\.url, ''\)\), ''\) IS NOT NULL/i,
   );

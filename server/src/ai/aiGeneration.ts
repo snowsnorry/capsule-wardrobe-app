@@ -1,5 +1,9 @@
-/* eslint-disable max-lines */
-import { getSqlClient, listWardrobeItemsByIdsForEmail } from "../db.js";
+/* eslint-disable complexity, max-lines, max-lines-per-function */
+import {
+  getProductsByUrlsForEmailInOrder,
+  getSqlClient,
+  listWardrobeItemsByIdsForEmail,
+} from "../db.js";
 import {
   getGenerateJsonWithLlm,
   isNoLlmProfileEnabled,
@@ -43,7 +47,7 @@ import {
 import { validateCapsuleAnchorItems } from "../capsuleAnchors.js";
 import { logInfo, logWarn } from "../logger.js";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any, complexity
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function createCapsuleGenerationDeps(deps: Record<string, any> = {}) {
   return {
     buildCapsuleWardrobeSqlParamsImpl:
@@ -66,11 +70,15 @@ function createCapsuleGenerationDeps(deps: Record<string, any> = {}) {
     getSqlClientImpl: deps.getSqlClientImpl || getSqlClient,
     validateCapsuleAnchorItemsImpl:
       deps.validateCapsuleAnchorItemsImpl ||
-      ((email, anchorWardrobeItemIds) =>
+      ((email, anchorWardrobeItemIds, anchorItemRefs) =>
         validateCapsuleAnchorItems({
           email,
           anchorWardrobeItemIds,
-          deps: { listWardrobeItemsByIdsImpl: listWardrobeItemsByIdsForEmail },
+          anchorItemRefs,
+          deps: {
+            listWardrobeItemsByIdsImpl: listWardrobeItemsByIdsForEmail,
+            getProductsByUrlsForEmailImpl: getProductsByUrlsForEmailInOrder,
+          },
         })),
   };
 }
@@ -116,8 +124,15 @@ async function getValidatedAnchorContext(userProfile, deps) {
   const anchorIds = Array.isArray(userProfile?.anchorWardrobeItemIds)
     ? userProfile.anchorWardrobeItemIds
     : [];
+  const anchorItemRefs = Array.isArray(userProfile?.anchorItemRefs)
+    ? userProfile.anchorItemRefs
+    : [];
   const email = typeof userProfile?.email === "string" ? userProfile.email : "";
-  const anchors = await deps.validateCapsuleAnchorItemsImpl(email, anchorIds);
+  const anchors = await deps.validateCapsuleAnchorItemsImpl(
+    email,
+    anchorIds,
+    anchorItemRefs,
+  );
   return anchors;
 }
 
@@ -341,7 +356,6 @@ function getRawSelectionText(selectionResponse) {
     : null;
 }
 
-// eslint-disable-next-line max-lines-per-function
 export function createGenerateCapsuleWardrobe(deps = {}) {
   const resolvedDeps = createCapsuleGenerationDeps(deps);
 
@@ -366,6 +380,8 @@ export function createGenerateCapsuleWardrobe(deps = {}) {
         ...userProfile,
         anchorWardrobeItemIds: anchorContext.anchorWardrobeItemIds,
         anchorWardrobeNumericIds: anchorContext.anchorWardrobeNumericIds,
+        anchorCatalogUrls: anchorContext.anchorCatalogUrls,
+        anchorItemRefs: anchorContext.anchorItemRefs,
       },
       promptEmbeddings,
       capsuleCategories,

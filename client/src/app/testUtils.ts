@@ -38,6 +38,7 @@ export function createTestDraft({
       pattern: pattern as string,
       text,
       anchorWardrobeItemIds: [],
+      anchorItemRefs: [],
     },
     data: {
       wardrobe: { items, outfitSets: [] },

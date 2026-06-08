@@ -240,6 +240,7 @@ test("capsule creation only accepts name and filters and initializes server-owne
         pattern: "striped",
         text: "",
         anchorWardrobeItemIds: [],
+        anchorItemRefs: [],
       },
       data: {
         wardrobe: null,
@@ -420,6 +421,7 @@ test("filters patch only accepts filters and resets draft data", async (t) => {
       pattern: "striped",
       text: "Prefer natural fabrics",
       anchorWardrobeItemIds: [],
+      anchorItemRefs: [],
     },
     data: {
       wardrobe: null,
@@ -447,14 +449,21 @@ test("filters patch only accepts filters and resets draft data", async (t) => {
 
 test("filters patch normalizes and validates anchor wardrobe ids", async (t) => {
   let receivedAnchorIds = null;
+  let receivedAnchorRefs = null;
   let receivedDraft = null;
   const { baseUrl } = await startTestServer(t, {
     overrides: {
-      validateCapsuleAnchorItemsImpl: async (_email, anchorIds) => {
+      validateCapsuleAnchorItemsImpl: async (_email, anchorIds, anchorRefs) => {
         receivedAnchorIds = anchorIds;
+        receivedAnchorRefs = anchorRefs;
         return {
           anchorWardrobeItemIds: ["W12", "W18"],
           anchorWardrobeNumericIds: [12, 18],
+          anchorCatalogUrls: ["https://example.com/catalog-coat"],
+          anchorItemRefs: [
+            { source: "uploaded", url: "wardrobe://12" },
+            { source: "from_catalog", url: "https://example.com/catalog-coat" },
+          ],
           anchorItems: [],
         };
       },
@@ -474,13 +483,23 @@ test("filters patch normalizes and validates anchor wardrobe ids", async (t) => 
       filters: {
         audience: "woman",
         anchorWardrobeItemIds: ["w12", "W18"],
+        anchorItemRefs: [
+          { source: "from_catalog", url: "https://example.com/catalog-coat" },
+        ],
       },
     },
   });
 
   expect(result.response.status).toBe(200);
   expect(receivedAnchorIds).toEqual(["W12", "W18"]);
+  expect(receivedAnchorRefs).toEqual([
+    { source: "from_catalog", url: "https://example.com/catalog-coat" },
+  ]);
   expect(receivedDraft?.filters.anchorWardrobeItemIds).toEqual(["W12", "W18"]);
+  expect(receivedDraft?.filters.anchorItemRefs).toEqual([
+    { source: "uploaded", url: "wardrobe://12" },
+    { source: "from_catalog", url: "https://example.com/catalog-coat" },
+  ]);
 });
 
 test("filters patch rejects invalid anchor wardrobe ids", async (t) => {
@@ -558,6 +577,7 @@ test("filters patch can trigger regenerate via query flag after saving filters",
           pattern: "solid",
           text: "",
           anchorWardrobeItemIds: [],
+          anchorItemRefs: [],
         },
         data: {
           wardrobe: null,
@@ -612,6 +632,7 @@ test("rejected urls patch validates against current capsule wardrobe", async (t)
       pattern: "solid",
       text: "",
       anchorWardrobeItemIds: [],
+      anchorItemRefs: [],
     },
     data: {
       wardrobe: {

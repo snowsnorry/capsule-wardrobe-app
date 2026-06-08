@@ -63,17 +63,34 @@ function hasSelectedAnchorProducts(effectiveSnapshot, selectedProducts) {
   )
     ? effectiveSnapshot.filters.anchorWardrobeItemIds
     : [];
+  const anchorRefs = Array.isArray(effectiveSnapshot?.filters?.anchorItemRefs)
+    ? effectiveSnapshot.filters.anchorItemRefs
+    : [];
   const anchorIdSet = new Set(
     anchorIds.map(normalizePublicWardrobeId).filter(Boolean),
   );
+  const anchorRefSet = new Set(
+    anchorRefs
+      .map((ref) => {
+        const source = ref?.source === "uploaded" ? "uploaded" : "from_catalog";
+        const url = String(ref?.url || "").trim();
+        return url ? `${source}\u0000${url}` : "";
+      })
+      .filter(Boolean),
+  );
 
-  if (anchorIdSet.size === 0) {
+  if (anchorIdSet.size === 0 && anchorRefSet.size === 0) {
     return false;
   }
 
-  return selectedProducts.some((item) =>
-    getItemPublicWardrobeIds(item).some((itemId) => anchorIdSet.has(itemId)),
-  );
+  return selectedProducts.some((item) => {
+    const source = item?.source === "uploaded" ? "uploaded" : "from_catalog";
+    const url = String(item?.url || "").trim();
+    return (
+      (url && anchorRefSet.has(`${source}\u0000${url}`)) ||
+      getItemPublicWardrobeIds(item).some((itemId) => anchorIdSet.has(itemId))
+    );
+  });
 }
 
 function getNextRejectedUrls(effectiveSnapshot, itemUrls) {

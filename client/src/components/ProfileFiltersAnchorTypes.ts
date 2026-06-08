@@ -6,6 +6,10 @@ export type Translate = (
 ) => string;
 export type AnchorSourceFilter = "all" | "uploaded" | "catalog";
 export type AnchorTypeFilter = "all" | ProfileFilterValue;
+export type AnchorItemRef = {
+  source: "uploaded" | "from_catalog";
+  url: string;
+};
 
 export type AnchorItem = {
   id: string;
@@ -21,8 +25,10 @@ export type AnchorItem = {
 export type ProfileFiltersAnchorSectionProps = {
   anchorPickerFullScreen?: boolean;
   disabled: boolean;
+  selectedRefs: AnchorItemRef[];
   selectedIds: string[];
-  onChange?: (value: string[]) => void;
+  onRefsChange?: (value: AnchorItemRef[]) => void;
+  onLegacyIdsChange?: (value: string[]) => void;
   t: Translate;
   locale: string;
 };

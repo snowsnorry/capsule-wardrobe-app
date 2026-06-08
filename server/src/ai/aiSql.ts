@@ -125,6 +125,9 @@ function buildCapsuleWardrobeSqlParams(
     )
       ? userProfile.anchorWardrobeNumericIds
       : [],
+    anchorCatalogUrls: Array.isArray(userProfile?.anchorCatalogUrls)
+      ? userProfile.anchorCatalogUrls
+      : [],
     anchorSimilarityBonusWeight: ANCHOR_SIMILARITY_BONUS_WEIGHT,
     ...getProfileSqlFilters(userProfile),
     embeddingVector: `[${promptEmbeddings.join(",")}]`,
@@ -155,7 +158,10 @@ function buildRegularCapsuleSqlValues(
 }
 
 function hasAnchorParams(params: CapsuleWardrobeSqlParams): boolean {
-  return params.anchorWardrobeNumericIds.length > 0;
+  return (
+    params.anchorWardrobeNumericIds.length > 0 ||
+    params.anchorCatalogUrls.length > 0
+  );
 }
 
 function buildCatalogOnlyAnchorSqlValues(
@@ -165,6 +171,7 @@ function buildCatalogOnlyAnchorSqlValues(
     ...buildRegularCapsuleSqlValues(params).slice(0, 12),
     params.profileEmail,
     params.anchorWardrobeNumericIds,
+    params.anchorCatalogUrls,
     params.anchorSimilarityBonusWeight,
   ];
 }
@@ -175,6 +182,7 @@ function buildWardrobePreferredAnchorSqlValues(
   return [
     ...buildRegularCapsuleSqlValues(params),
     params.anchorWardrobeNumericIds,
+    params.anchorCatalogUrls,
     params.anchorSimilarityBonusWeight,
   ];
 }
@@ -194,6 +202,7 @@ function buildWardrobeOnlyAnchorSqlValues(
   return [
     ...buildWardrobeOnlySqlValues(params),
     params.anchorWardrobeNumericIds,
+    params.anchorCatalogUrls,
     params.anchorSimilarityBonusWeight,
   ];
 }

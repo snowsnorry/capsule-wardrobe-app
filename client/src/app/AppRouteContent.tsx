@@ -3,6 +3,7 @@ import { lazy } from "react";
 import type { Dispatch, FormEvent, MouseEvent, SetStateAction } from "react";
 import type {
   AppNavigationOptions,
+  AnchorItemRef,
   AppRoute,
   CapsuleMeta,
   CapsuleSourceMode,
@@ -52,6 +53,7 @@ type SharedFilterProps = {
   selectedPattern: string;
   selectedText: string;
   selectedSourceMode: CapsuleSourceMode;
+  selectedAnchorItemRefs: AnchorItemRef[];
   selectedAnchorWardrobeItemIds: string[];
   setSelectedFormalityLevel: (value: string) => void;
   setSelectedStyle: (value: string | null) => void;
@@ -62,6 +64,7 @@ type SharedFilterProps = {
   setSelectedPattern: (value: string) => void;
   setSelectedText: (value: string) => void;
   setSelectedSourceMode: (value: CapsuleSourceMode) => void;
+  setSelectedAnchorItemRefs: (value: AnchorItemRef[]) => void;
   setSelectedAnchorWardrobeItemIds: (value: string[]) => void;
   toggleSelection: ToggleSelectionFn;
 };
@@ -205,6 +208,7 @@ function ProfileRoute(props: AppRouteContentProps) {
     />
   );
 }
+// eslint-disable-next-line max-lines-per-function
 function MainRoute(props: AppRouteContentProps) {
   return (
     <MainScreen
@@ -254,6 +258,7 @@ function MainRoute(props: AppRouteContentProps) {
       selectedPattern={props.selectedPattern}
       selectedSourceMode={props.selectedSourceMode}
       selectedText={props.selectedText}
+      selectedAnchorItemRefs={props.selectedAnchorItemRefs}
       selectedAnchorWardrobeItemIds={props.selectedAnchorWardrobeItemIds}
       hasFilterChanges={props.hasFilterChanges}
       status={props.status}
@@ -278,6 +283,7 @@ function MainRoute(props: AppRouteContentProps) {
       onSelectPattern={props.setSelectedPattern}
       onSelectSourceMode={props.setSelectedSourceMode}
       onTextChange={props.setSelectedText}
+      onSelectAnchorItemRefs={props.setSelectedAnchorItemRefs}
       onSelectAnchorWardrobeItemIds={props.setSelectedAnchorWardrobeItemIds}
       onApplyFilters={props.onApplyCapsuleFilters}
       onResetFilters={props.onResetProfileFilters}

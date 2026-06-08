@@ -29,8 +29,10 @@ WITH query_params AS (
     $12::text AS profile_email,
     -- Numeric wardrobe ids that must be included as mandatory anchors.
     $13::bigint[] AS anchor_wardrobe_ids,
+    -- Catalog product URLs that must be included as mandatory anchors.
+    $14::text[] AS anchor_catalog_urls,
     -- Additional relevance weight for optional candidates similar to selected anchors.
-    $14::float AS anchor_similarity_bonus_weight
+    $15::float AS anchor_similarity_bonus_weight
 ),
 anchor_items AS (
   SELECT
@@ -75,6 +77,47 @@ anchor_items AS (
    -- Hard filter: only ready wardrobe items with a stable category can be mandatory anchors.
    AND wardrobe.processing_status = 'ready'
    AND NULLIF(trim(COALESCE(wardrobe.category, '')), '') IS NOT NULL
+
+  UNION ALL
+
+  SELECT
+    products.id::text AS id,
+    'catalog'::text AS item_source,
+    'anchor'::text AS selection_role,
+    NULL::text AS source,
+    NULL::text AS raw_image_url,
+    NULL::text AS processing_status,
+    NULL::text AS wardrobe_id,
+    products.id::text AS product_id,
+    products.name,
+    products.url,
+    products.description,
+    products.brand,
+    products.price,
+    products.currency,
+    products.availability,
+    products.image_url,
+    products.audience,
+    products.category,
+    products.season,
+    products.formality_level,
+    products.style,
+    products.occasions,
+    products.color_base,
+    products.pattern,
+    products.finish,
+    products.is_neutral,
+    products.composition,
+    products.silhouette,
+    products.fit,
+    products.closure_type,
+    products.embedding,
+    NULL::float AS distance,
+    100000::float AS relevance_score
+  FROM query_params AS params
+  JOIN products
+    ON products.url = ANY(params.anchor_catalog_urls)
+   AND NULLIF(trim(COALESCE(products.category, '')), '') IS NOT NULL
 ),
 anchor_catalog_urls AS (
   -- Catalog URLs represented by selected anchors, used to avoid duplicate catalog candidates.

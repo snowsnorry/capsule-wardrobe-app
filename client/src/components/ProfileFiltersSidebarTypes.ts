@@ -13,6 +13,10 @@ type CapsuleSourceMode =
   | "catalog_only"
   | "wardrobe_preferred"
   | "wardrobe_only";
+type AnchorItemRef = {
+  source: "uploaded" | "from_catalog";
+  url: string;
+};
 
 type ProfileFiltersStatus = {
   loading: boolean;
@@ -44,6 +48,7 @@ type ProfileFiltersSidebarProps = {
   selectedSourceMode: CapsuleSourceMode;
   sourceModeStatus?: ProfileFiltersSourceModeStatus | null;
   selectedText: string;
+  selectedAnchorItemRefs?: AnchorItemRef[];
   selectedAnchorWardrobeItemIds?: string[];
   hasFilterChanges?: boolean;
   status: ProfileFiltersStatus;
@@ -56,6 +61,7 @@ type ProfileFiltersSidebarProps = {
   onSelectPattern: (value: ProfileFilterValue) => void;
   onSelectSourceMode: (value: CapsuleSourceMode) => void;
   onTextChange: (value: string) => void;
+  onSelectAnchorItemRefs?: (value: AnchorItemRef[]) => void;
   onSelectAnchorWardrobeItemIds?: (value: string[]) => void;
   onApply: () => void;
   onReset: () => void;
@@ -70,6 +76,7 @@ type ProfileFiltersSidebarProps = {
 
 export type {
   CapsuleSourceMode,
+  AnchorItemRef,
   ProfileFiltersSidebarProps,
   ProfileFilterValue,
   ProfileFiltersSourceModeStatus,

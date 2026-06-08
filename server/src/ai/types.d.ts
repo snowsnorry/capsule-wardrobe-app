@@ -47,6 +47,11 @@ type UserProfileLike = {
   rejected?: string[] | null;
   anchorWardrobeItemIds?: string[] | null;
   anchorWardrobeNumericIds?: number[] | null;
+  anchorCatalogUrls?: string[] | null;
+  anchorItemRefs?: Array<{
+    source: "uploaded" | "from_catalog";
+    url: string;
+  }> | null;
   anchorItems?: WardrobeUiItemLike[] | null;
 };
 

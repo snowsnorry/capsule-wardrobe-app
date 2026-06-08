@@ -32,6 +32,7 @@ type CapsuleWardrobeSqlParams = {
   noiseFactor: number;
   anchorWardrobeItemIds: string[];
   anchorWardrobeNumericIds: number[];
+  anchorCatalogUrls: string[];
   anchorSimilarityBonusWeight: number;
 };
 

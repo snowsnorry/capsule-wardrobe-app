@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { act, cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import type { ComponentProps } from "react";
@@ -7,6 +7,11 @@ import { createAppTheme } from "../theme";
 
 const useI18nMock = vi.hoisted(() => vi.fn());
 const fetchMyWardrobeItemsMock = vi.hoisted(() => vi.fn());
+const searchApiMock = vi.hoisted(() => ({
+  fetchProductDetailByUrl: vi.fn(),
+  fetchSearchOptions: vi.fn(),
+  runSearch: vi.fn(),
+}));
 
 vi.mock("../i18n/useI18n", () => ({
   useI18n: useI18nMock,
@@ -33,6 +38,7 @@ vi.mock("../i18n", () => ({
 vi.mock("../api/myWardrobe", () => ({
   fetchMyWardrobeItems: fetchMyWardrobeItemsMock,
 }));
+vi.mock("../api/search", () => searchApiMock);
 
 import ProfileFiltersSidebar from "./ProfileFiltersSidebar";
 
@@ -119,12 +125,12 @@ function renderSidebar(
         "capsule.sourceMode.insufficientWardrobe":
           "Personal items include {count} ready items. This capsule may need more: {items}.",
         "capsule.anchors.title": "Anchor items",
-        "capsule.anchors.hint": "Choose up to 5 personal items to keep.",
-        "capsule.anchors.add": "Add personal items",
+        "capsule.anchors.hint": "Choose up to 5 items to keep.",
+        "capsule.anchors.add": "Add items",
         "capsule.anchors.edit": "Add / edit",
         "capsule.anchors.unnamed": "{id}",
         "capsule.anchors.remove": "Remove {name}",
-        "capsule.anchors.loadFailed": "Failed to load personal items.",
+        "capsule.anchors.loadFailed": "Failed to load items.",
         "capsule.anchors.dialogTitle": "Select anchor items",
         "capsule.anchors.selectedCount": "{count} of {max} selected",
         "capsule.anchors.selectedMax":
@@ -132,7 +138,7 @@ function renderSidebar(
         "capsule.anchors.type": "Type:",
         "capsule.anchors.typesAll": "All",
         "capsule.anchors.likedOnly": "Liked only",
-        "capsule.anchors.empty": "No personal items found.",
+        "capsule.anchors.empty": "No items found.",
         "capsule.anchors.apply": "Apply",
         "capsule.anchors.sources.all": "All",
         "capsule.anchors.sources.uploaded": "Uploaded",
@@ -146,8 +152,23 @@ function renderSidebar(
         "filters.required.seasons": "at least one season",
         "filters.required.audience": "an audience",
         "filters.reset": "Reset",
+        "filters.title": "Filters",
         "actions.cancel": "Cancel",
         "actions.close": "Close",
+        "actions.add": "Add",
+        "outfit.addItems": "Add items",
+        "outfit.catalog": "Catalog",
+        "outfit.catalogSelected": "{count} catalog",
+        "outfit.noneSelected": "No items selected",
+        "outfit.personalItems": "Personal items",
+        "outfit.personalSelected": "{count} personal",
+        "search.all": "All",
+        "search.clear": "Clear search",
+        "search.filters.query": "Search: {query}",
+        "search.filters.likedItems": "Liked only",
+        "search.notImportant": "Not important",
+        "search.placeholder": "Search in natural language",
+        "search.resultsCount": "{count} results",
         "actions.signOut": "Sign out",
         "main.partialRegenerateToggle": "Toggle",
       };
@@ -181,6 +202,9 @@ describe("ProfileFiltersSidebar", () => {
     cleanup();
     useI18nMock.mockReset();
     fetchMyWardrobeItemsMock.mockReset();
+    searchApiMock.fetchProductDetailByUrl.mockReset();
+    searchApiMock.fetchSearchOptions.mockReset();
+    searchApiMock.runSearch.mockReset();
   });
 
   test("shows no hint and keeps apply enabled when required filters are selected", () => {
@@ -400,17 +424,16 @@ describe("ProfileFiltersSidebar", () => {
         {
           id: 12,
           name: "White shirt",
-          url: "https://example.com/shirt",
+          url: "wardrobe://12",
           imageUrl: "https://example.com/shirt.jpg",
           category: "top",
+          source: "uploaded",
         },
       ],
     });
 
     renderSidebar({ onSelectAnchorWardrobeItemIds });
-    await user.click(
-      screen.getByRole("button", { name: "Add personal items" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Add items" }));
     await user.click(
       await screen.findByRole("button", { name: /White shirt/ }),
     );
@@ -421,6 +444,175 @@ describe("ProfileFiltersSidebar", () => {
     expect(getComputedStyle(footer!).justifyContent).toBe("flex-end");
     await user.click(screen.getByRole("button", { name: "Apply" }));
 
+    expect(onSelectAnchorWardrobeItemIds).toHaveBeenCalledWith(["W12"]);
+  });
+
+  test("applies mixed personal and catalog anchor selection", async () => {
+    const user = userEvent.setup();
+    const onSelectAnchorItemRefs = vi.fn();
+    const onSelectAnchorWardrobeItemIds = vi.fn();
+    fetchMyWardrobeItemsMock.mockResolvedValue({
+      items: [
+        {
+          id: 12,
+          name: "White shirt",
+          url: "wardrobe://12",
+          imageUrl: "https://example.com/shirt.jpg",
+          category: "top",
+          source: "uploaded",
+        },
+      ],
+    });
+    searchApiMock.fetchSearchOptions.mockResolvedValue({});
+    searchApiMock.runSearch.mockResolvedValue({
+      items: [
+        {
+          id: "p1",
+          name: "Catalog coat",
+          url: "https://example.com/catalog-coat",
+          imageUrl: "https://example.com/catalog-coat.jpg",
+          category: "outerwear",
+        },
+      ],
+      total: 1,
+    });
+
+    renderSidebar({
+      onSelectAnchorItemRefs,
+      onSelectAnchorWardrobeItemIds,
+    });
+    await user.click(screen.getByRole("button", { name: "Add items" }));
+    await user.click(
+      await screen.findByRole("button", { name: /White shirt/ }),
+    );
+    await user.click(screen.getByRole("tab", { name: "Catalog" }));
+    await user.click(
+      await screen.findByRole("button", { name: /Catalog coat/ }),
+    );
+    await user.click(screen.getByRole("button", { name: "Apply" }));
+
+    expect(onSelectAnchorItemRefs).toHaveBeenCalledWith([
+      { source: "uploaded", url: "wardrobe://12" },
+      { source: "from_catalog", url: "https://example.com/catalog-coat" },
+    ]);
+    expect(onSelectAnchorWardrobeItemIds).toHaveBeenCalledWith(["W12"]);
+  });
+
+  test("hydrates saved catalog anchor refs for selected rows", async () => {
+    fetchMyWardrobeItemsMock.mockResolvedValue({ items: [] });
+    searchApiMock.fetchProductDetailByUrl.mockResolvedValue({
+      product: {
+        id: "p1",
+        name: "Catalog coat",
+        url: "https://example.com/catalog-coat",
+        imageUrl: "https://example.com/catalog-coat.jpg",
+        category: "outerwear",
+      },
+    });
+
+    renderSidebar({
+      selectedAnchorItemRefs: [
+        { source: "from_catalog", url: "https://example.com/catalog-coat" },
+      ],
+    });
+
+    expect(await screen.findByText("Catalog coat")).toBeInTheDocument();
+    expect(screen.getByText("Outerwear")).toBeInTheDocument();
+    expect(searchApiMock.fetchProductDetailByUrl).toHaveBeenCalledWith(
+      "https://example.com/catalog-coat",
+    );
+  });
+
+  test("hydrates legacy wardrobe ids together with catalog anchor refs", async () => {
+    fetchMyWardrobeItemsMock.mockResolvedValue({
+      items: [
+        {
+          id: 12,
+          name: "White shirt",
+          url: "wardrobe://12",
+          imageUrl: "https://example.com/shirt.jpg",
+          category: "top",
+          source: "uploaded",
+        },
+      ],
+    });
+    searchApiMock.fetchProductDetailByUrl.mockResolvedValue({
+      product: {
+        id: "p1",
+        name: "Catalog coat",
+        url: "https://example.com/catalog-coat",
+        imageUrl: "https://example.com/catalog-coat.jpg",
+        category: "outerwear",
+      },
+    });
+
+    renderSidebar({
+      selectedAnchorWardrobeItemIds: ["W12"],
+      selectedAnchorItemRefs: [
+        { source: "from_catalog", url: "https://example.com/catalog-coat" },
+      ],
+    });
+
+    expect(await screen.findByText("White shirt")).toBeInTheDocument();
+    expect(await screen.findByText("Catalog coat")).toBeInTheDocument();
+  });
+
+  test("keeps dialog selection when saved catalog refs hydrate while open", async () => {
+    const user = userEvent.setup();
+    const onSelectAnchorItemRefs = vi.fn();
+    const onSelectAnchorWardrobeItemIds = vi.fn();
+    let resolveCatalog: (value: unknown) => void = () => undefined;
+    const catalogPromise = new Promise((resolve) => {
+      resolveCatalog = resolve;
+    });
+    fetchMyWardrobeItemsMock.mockResolvedValue({
+      items: [
+        {
+          id: 12,
+          name: "White shirt",
+          url: "wardrobe://12",
+          imageUrl: "https://example.com/shirt.jpg",
+          category: "top",
+          source: "uploaded",
+        },
+      ],
+    });
+    searchApiMock.fetchProductDetailByUrl.mockReturnValue(catalogPromise);
+
+    renderSidebar({
+      selectedAnchorItemRefs: [
+        { source: "from_catalog", url: "https://example.com/catalog-coat" },
+      ],
+      onSelectAnchorItemRefs,
+      onSelectAnchorWardrobeItemIds,
+    });
+    await user.click(screen.getByRole("button", { name: "Add / edit" }));
+    await user.click(
+      await screen.findByRole("button", { name: /White shirt/ }),
+    );
+
+    await act(async () => {
+      resolveCatalog({
+        product: {
+          id: "p1",
+          name: "Catalog coat",
+          url: "https://example.com/catalog-coat",
+          imageUrl: "https://example.com/catalog-coat.jpg",
+          category: "outerwear",
+        },
+      });
+      await catalogPromise;
+    });
+
+    expect(
+      await screen.findByText("1 personal · 1 catalog"),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Apply" }));
+
+    expect(onSelectAnchorItemRefs).toHaveBeenCalledWith([
+      { source: "from_catalog", url: "https://example.com/catalog-coat" },
+      { source: "uploaded", url: "wardrobe://12" },
+    ]);
     expect(onSelectAnchorWardrobeItemIds).toHaveBeenCalledWith(["W12"]);
   });
 
@@ -456,9 +648,7 @@ describe("ProfileFiltersSidebar", () => {
     });
 
     renderSidebar();
-    await user.click(
-      screen.getByRole("button", { name: "Add personal items" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Add items" }));
 
     expect(await screen.findByText("Liked uploaded shirt")).toBeInTheDocument();
     expect(
@@ -493,6 +683,7 @@ describe("ProfileFiltersSidebar", () => {
           url: "https://example.com/shirt",
           imageUrl: "https://example.com/shirt.jpg",
           category: "top",
+          source: "uploaded",
         },
       ],
     });
@@ -503,11 +694,10 @@ describe("ProfileFiltersSidebar", () => {
       },
       { themeOverride: darkTheme },
     );
-    await user.click(
-      screen.getByRole("button", { name: "Add personal items" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Add items" }));
 
-    const title = await screen.findByText("Select anchor items");
+    const dialog = await screen.findByRole("dialog", { name: /Add items/ });
+    const title = within(dialog).getByRole("heading", { name: "Add items" });
     const header = title.closest(".MuiDialogTitle-root");
     const content = title
       .closest(".MuiDialog-paper")
@@ -537,6 +727,7 @@ describe("ProfileFiltersSidebar", () => {
         name: `Item ${id}`,
         url: `wardrobe://${id}`,
         category: id === 6 ? "bottom" : "top",
+        source: "uploaded",
       })),
     });
 

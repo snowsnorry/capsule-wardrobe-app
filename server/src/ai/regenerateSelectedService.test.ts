@@ -304,6 +304,12 @@ test("regenerateSelectedWardrobeItems rejects anchor urls from partial regenerat
           filters: {
             season: ["winter"],
             anchorWardrobeItemIds: ["W12"],
+            anchorItemRefs: [
+              {
+                source: "from_catalog",
+                url: "https://example.com/catalog-anchor",
+              },
+            ],
           },
           data: {
             rejectedUrls: [],
@@ -320,6 +326,12 @@ test("regenerateSelectedWardrobeItems rejects anchor urls from partial regenerat
                   url: "https://example.com/top-1",
                   category: "top",
                 }),
+                buildWardrobeUiItem({
+                  id: "catalog-anchor",
+                  url: "https://example.com/catalog-anchor",
+                  category: "outerwear",
+                  source: "from_catalog",
+                }),
               ],
             }),
           },
@@ -334,7 +346,7 @@ test("regenerateSelectedWardrobeItems rejects anchor urls from partial regenerat
     {
       user: { email: "person@example.com" },
       params: { id: "capsule-1" },
-      body: { itemUrls: ["wardrobe://12"] },
+      body: { itemUrls: ["https://example.com/catalog-anchor"] },
     },
     res,
   );

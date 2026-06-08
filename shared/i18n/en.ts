@@ -236,8 +236,8 @@ const en = {
     },
     anchors: {
       title: "Anchor items",
-      hint: "Choose up to 5 personal items the stylist must keep.",
-      add: "Add personal items",
+      hint: "Choose up to 5 items the stylist must keep.",
+      add: "Add items",
       edit: "Add / edit",
       apply: "Apply",
       dialogTitle: "Select anchor items",
@@ -246,10 +246,10 @@ const en = {
       type: "Type:",
       typesAll: "All",
       likedOnly: "Liked only",
-      empty: "No personal items found.",
+      empty: "No items found.",
       unnamed: "{id}",
       remove: "Remove {name}",
-      loadFailed: "Failed to load personal items.",
+      loadFailed: "Failed to load items.",
       sources: {
         all: "All",
         uploaded: "Uploaded",

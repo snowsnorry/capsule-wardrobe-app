@@ -37,6 +37,11 @@ type CapsuleSourceMode =
   | "wardrobe_preferred"
   | "wardrobe_only";
 
+type AnchorItemRef = {
+  source: "uploaded" | "from_catalog";
+  url: string;
+};
+
 type ScreenStatus = {
   loading: boolean;
   error: string;
@@ -120,6 +125,7 @@ export type MainScreenProps = {
   selectedPattern: string | null;
   selectedSourceMode: CapsuleSourceMode;
   selectedText: string;
+  selectedAnchorItemRefs: AnchorItemRef[];
   selectedAnchorWardrobeItemIds: string[];
   hasFilterChanges: boolean;
   status: ScreenStatus;
@@ -132,6 +138,7 @@ export type MainScreenProps = {
   onSelectPattern: (value: string) => void;
   onSelectSourceMode: (value: CapsuleSourceMode) => void;
   onTextChange: (value: string) => void;
+  onSelectAnchorItemRefs: (value: AnchorItemRef[]) => void;
   onSelectAnchorWardrobeItemIds: (value: string[]) => void;
   onApplyFilters: () => Promise<void> | void;
   onResetFilters: () => Promise<void> | void;

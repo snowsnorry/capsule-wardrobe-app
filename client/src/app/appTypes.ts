@@ -36,6 +36,11 @@ export type CapsuleSourceMode =
   | "wardrobe_preferred"
   | "wardrobe_only";
 
+export type AnchorItemRef = {
+  source: "uploaded" | "from_catalog";
+  url: string;
+};
+
 export type CapsuleFilters = {
   sourceMode: CapsuleSourceMode;
   formalityLevel: string;
@@ -47,6 +52,7 @@ export type CapsuleFilters = {
   pattern: string;
   text: string;
   anchorWardrobeItemIds: string[];
+  anchorItemRefs: AnchorItemRef[];
 };
 
 export type OutfitSetSnapshot = {

@@ -11,6 +11,12 @@ export type CapsuleFilters = {
   pattern: string;
   text: string;
   anchorWardrobeItemIds: string[];
+  anchorItemRefs: AnchorItemRef[];
+};
+
+type AnchorItemRef = {
+  source: "uploaded" | "from_catalog";
+  url: string;
 };
 
 type CapsuleSourceMode =
@@ -135,6 +141,32 @@ function normalizeAnchorWardrobeItemIds(values: unknown): string[] {
   return uniqueTrimmedStrings(values).map((value) => value.toUpperCase());
 }
 
+function normalizeAnchorItemRefs(values: unknown): AnchorItemRef[] {
+  if (!Array.isArray(values)) {
+    return [];
+  }
+
+  const seen = new Set<string>();
+  const refs: AnchorItemRef[] = [];
+  for (const value of values) {
+    if (!isPlainRecord(value)) {
+      continue;
+    }
+    const source =
+      value.source === "uploaded" || value.source === "from_catalog"
+        ? value.source
+        : null;
+    const url = trimmedString(value.url);
+    const key = source && url ? `${source}\u0000${url}` : "";
+    if (!source || !url || seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    refs.push({ source, url });
+  }
+  return refs;
+}
+
 function normalizeOutfitSetPayload(value: unknown): OutfitSetPayload | null {
   if (!isPlainRecord(value)) {
     return null;
@@ -198,6 +230,7 @@ export function normalizeCapsuleFilters(
       pattern: "solid",
       text: "",
       anchorWardrobeItemIds: [],
+      anchorItemRefs: [],
     };
   }
 
@@ -218,6 +251,7 @@ export function normalizeCapsuleFilters(
     anchorWardrobeItemIds: normalizeAnchorWardrobeItemIds(
       filters.anchorWardrobeItemIds,
     ),
+    anchorItemRefs: normalizeAnchorItemRefs(filters.anchorItemRefs),
   };
 }
 

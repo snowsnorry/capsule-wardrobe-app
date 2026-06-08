@@ -21,6 +21,7 @@ function createContext() {
     setSelectedSourceMode: vi.fn(),
     setSelectedStyle: vi.fn(),
     setSelectedText: vi.fn(),
+    setSelectedAnchorItemRefs: vi.fn(),
     setSelectedAnchorWardrobeItemIds: vi.fn(),
   };
 }

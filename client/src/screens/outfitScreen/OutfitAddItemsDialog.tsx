@@ -1,5 +1,5 @@
-/* eslint-disable max-lines, max-lines-per-function */
-import { useEffect, useMemo, useState } from "react";
+/* eslint-disable complexity, max-lines, max-lines-per-function */
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Box,
   Button,
@@ -73,18 +73,43 @@ import {
 import { OutfitCatalogFiltersDialog } from "./OutfitCatalogFiltersDialog";
 
 const CATALOG_PICKER_PAGE_SIZE = 20;
+const EMPTY_INITIAL_ITEMS: OutfitItemSnapshot[] = [];
+
+function mergeSelectedSnapshots(
+  current: OutfitItemSnapshot[],
+  next: OutfitItemSnapshot[],
+) {
+  const byKey = new Map<string, OutfitItemSnapshot>();
+  [...next, ...current].forEach((item) => {
+    const key = getOutfitItemKey(item);
+    if (key && !byKey.has(key)) {
+      byKey.set(key, item);
+    }
+  });
+  return [...byKey.values()];
+}
 
 export function AddItemsDialog({
   existingItems,
+  initialItems = EMPTY_INITIAL_ITEMS,
   locale,
+  maxSelected = null,
+  fullScreenOverride = null,
+  allowEmptySelection = false,
   open,
+  actionLabel = null,
   onAdd,
   onClose,
   t,
 }: {
   existingItems: OutfitItemSnapshot[];
+  initialItems?: OutfitItemSnapshot[];
   locale: string;
+  maxSelected?: number | null;
+  fullScreenOverride?: boolean | null;
+  allowEmptySelection?: boolean;
   open: boolean;
+  actionLabel?: string | null;
   onAdd: (items: OutfitItemSnapshot[]) => void;
   onClose: () => void;
   t: Translate;
@@ -113,13 +138,29 @@ export function AddItemsDialog({
   const [likedOnly, setLikedOnly] = useState(false);
   const [typeFilter, setTypeFilter] = useState<AnchorTypeFilter>("all");
   const [selected, setSelected] = useState<OutfitItemSnapshot[]>([]);
+  const wasOpenRef = useRef(false);
+  const selectionTouchedRef = useRef(false);
   const isCatalogMobile = useMediaQuery("(max-width:899px)");
-  const fullScreen = isCatalogMobile;
+  const fullScreen = fullScreenOverride ?? isCatalogMobile;
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      wasOpenRef.current = false;
+      selectionTouchedRef.current = false;
+      return;
+    }
+    if (wasOpenRef.current) {
+      setSelected((current) =>
+        selectionTouchedRef.current
+          ? mergeSelectedSnapshots(current, initialItems)
+          : initialItems,
+      );
+      return;
+    }
+    wasOpenRef.current = true;
+    selectionTouchedRef.current = false;
     setTab(0);
-    setSelected([]);
+    setSelected(initialItems);
     setSourceFilter("all");
     setLikedOnly(false);
     setTypeFilter("all");
@@ -132,7 +173,7 @@ export function AddItemsDialog({
         setPersonalItems([]);
       })
       .finally(() => setPersonalLoading(false));
-  }, [open]);
+  }, [initialItems, open]);
 
   useEffect(() => {
     if (!open || tab !== 1) return;
@@ -142,6 +183,8 @@ export function AddItemsDialog({
 
   const selectedKeys = new Set(selected.map(getOutfitItemKey));
   const existingKeys = new Set(existingItems.map(getOutfitItemKey));
+  const maxSelectedReached =
+    typeof maxSelected === "number" && selected.length >= maxSelected;
   const personalCount = selected.filter(
     (item) => item.source === "uploaded",
   ).length;
@@ -328,10 +371,13 @@ export function AddItemsDialog({
   const toggle = (snapshot: OutfitItemSnapshot | null) => {
     const key = getOutfitItemKey(snapshot);
     if (!snapshot || !key || existingKeys.has(key)) return;
+    selectionTouchedRef.current = true;
     setSelected((current) =>
       current.some((item) => getOutfitItemKey(item) === key)
         ? current.filter((item) => getOutfitItemKey(item) !== key)
-        : [...current, snapshot],
+        : typeof maxSelected === "number" && current.length >= maxSelected
+          ? current
+          : [...current, snapshot],
     );
   };
 
@@ -383,6 +429,7 @@ export function AddItemsDialog({
                 gridSx={pickerGridSx}
                 items={visiblePersonalItems}
                 locale={locale}
+                maxSelectedReached={maxSelectedReached}
                 selectedKeys={selectedKeys}
                 showEmpty={!personalLoading}
                 source="personal"
@@ -447,6 +494,7 @@ export function AddItemsDialog({
                   gridSx={catalogPickerGridSx}
                   items={visibleCatalogItems}
                   locale={locale}
+                  maxSelectedReached={maxSelectedReached}
                   selectedKeys={selectedKeys}
                   showEmpty={!catalogStatus.loading}
                   source="catalog"
@@ -489,10 +537,10 @@ export function AddItemsDialog({
         <Button onClick={onClose}>{t("actions.cancel")}</Button>
         <Button
           variant="contained"
-          disabled={selected.length === 0}
+          disabled={!allowEmptySelection && selected.length === 0}
           onClick={() => onAdd(selected)}
         >
-          {t("actions.add")}
+          {actionLabel || t("actions.add")}
         </Button>
       </DialogActions>
     </Dialog>

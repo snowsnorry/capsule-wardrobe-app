@@ -53,8 +53,8 @@ function t(key: string, params?: Record<string, unknown>) {
     "capsule.sourceMode.insufficientWardrobe":
       "Personal items include {count} ready items. This capsule may need more: {items}.",
     "capsule.anchors.title": "Anchor items",
-    "capsule.anchors.hint": "Choose up to 5 personal items to keep.",
-    "capsule.anchors.add": "Add personal items",
+    "capsule.anchors.hint": "Choose up to 5 items to keep.",
+    "capsule.anchors.add": "Add items",
     "filters.apply": "Apply",
     "filters.applyDisabledHint": "To apply filters, choose: {items}.",
     "filters.applyDisabledUnchangedHint": "Filters have not changed.",
@@ -245,9 +245,8 @@ describe("ProfileFiltersSidebarSections", () => {
     renderFrame();
 
     expect(
-      getComputedStyle(
-        screen.getByRole("button", { name: "Add personal items" }),
-      ).justifyContent,
+      getComputedStyle(screen.getByRole("button", { name: "Add items" }))
+        .justifyContent,
     ).toBe("center");
   });
 

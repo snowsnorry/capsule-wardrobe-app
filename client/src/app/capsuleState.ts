@@ -1,4 +1,5 @@
 import type {
+  AnchorItemRef,
   CapsuleDraft,
   CapsuleFilters,
   CapsuleMeta,
@@ -8,6 +9,37 @@ import type {
   WardrobeItem,
 } from "./appTypes";
 import { SEASON_DISPLAY_ORDER } from "./appConstants";
+
+function normalizeAnchorItemSource(
+  value: unknown,
+): AnchorItemRef["source"] | null {
+  return value === "uploaded" || value === "from_catalog" ? value : null;
+}
+
+export function normalizeAnchorItemRefs(values: unknown): AnchorItemRef[] {
+  if (!Array.isArray(values)) {
+    return [];
+  }
+
+  const seen = new Set<string>();
+  const refs: AnchorItemRef[] = [];
+  values.forEach((value) => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return;
+    }
+    const source = normalizeAnchorItemSource(
+      (value as Record<string, unknown>).source,
+    );
+    const url = String((value as Record<string, unknown>).url || "").trim();
+    const key = source && url ? `${source}\u0000${url}` : "";
+    if (!source || !url || seen.has(key)) {
+      return;
+    }
+    seen.add(key);
+    refs.push({ source, url });
+  });
+  return refs;
+}
 
 export function getWardrobeMetadata(
   wardrobe: CapsuleWardrobeData | null | undefined,
@@ -81,6 +113,7 @@ export function buildEmptyCapsuleDraft(): CapsuleDraft {
       pattern: "solid",
       text: "",
       anchorWardrobeItemIds: [],
+      anchorItemRefs: [],
     },
     data: {
       wardrobe: null,
@@ -109,6 +142,7 @@ export function buildDraftSnapshotFromState({
   selectedSourceMode,
   selectedStyle,
   selectedText,
+  selectedAnchorItemRefs = [],
   selectedAnchorWardrobeItemIds = [],
   wardrobe,
 }: {
@@ -125,6 +159,7 @@ export function buildDraftSnapshotFromState({
   selectedSourceMode: CapsuleSourceMode;
   selectedStyle: string | null;
   selectedText: string;
+  selectedAnchorItemRefs?: AnchorItemRef[];
   selectedAnchorWardrobeItemIds?: string[];
   wardrobe?:
     | CapsuleWardrobeData
@@ -147,6 +182,7 @@ export function buildDraftSnapshotFromState({
       pattern: selectedPattern,
       text: selectedText,
       anchorWardrobeItemIds: selectedAnchorWardrobeItemIds,
+      anchorItemRefs: normalizeAnchorItemRefs(selectedAnchorItemRefs),
     },
     data: {
       wardrobe: selectedWardrobe
@@ -190,6 +226,12 @@ function normalizeComparableFilters(filters: Partial<CapsuleFilters> = {}) {
     anchorWardrobeItemIds: Array.isArray(filters.anchorWardrobeItemIds)
       ? [...filters.anchorWardrobeItemIds].sort()
       : [],
+    anchorItemRefs: normalizeAnchorItemRefs(filters.anchorItemRefs).sort(
+      (left, right) =>
+        `${left.source}\u0000${left.url}`.localeCompare(
+          `${right.source}\u0000${right.url}`,
+        ),
+    ),
   };
 }
 
