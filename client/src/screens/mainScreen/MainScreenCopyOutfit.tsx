@@ -6,7 +6,7 @@ import {
   buildOutfitSetCompactSummary,
   MAIN_SCREEN_CONTENT_COLUMN_SX,
 } from "./MainScreenHelpers";
-import type { MainScreenViewProps } from "./MainScreenView";
+import type { MainScreenViewProps } from "./MainScreenViewTypes";
 
 const outfitActionRowSx = {
   ...MAIN_SCREEN_CONTENT_COLUMN_SX,
