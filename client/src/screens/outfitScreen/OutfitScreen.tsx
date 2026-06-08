@@ -33,6 +33,10 @@ import {
   outfitHeaderSectionSx,
   outfitScreenSx,
 } from "./OutfitScreenStyles";
+import {
+  OutfitConfirmDialog,
+  type OutfitConfirmState,
+} from "./OutfitConfirmDialog";
 import type {
   ItemMenuState,
   OutfitScreenProps,
@@ -73,6 +77,10 @@ export default function OutfitScreen({
     () => readStoredOutfitMobileCardColumns(),
   );
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
+  const [confirmDialog, setConfirmDialog] = useState<OutfitConfirmState>({
+    action: "",
+    entry: null,
+  });
   const items = useMemo(() => getOutfitItems(activeOutfit), [activeOutfit]);
   const visibleItems = useMemo(() => sortOutfitItemSnapshots(items), [items]);
   const isSelectionMode = selectedKeys.length > 0;
@@ -143,19 +151,28 @@ export default function OutfitScreen({
   };
 
   const removeEntry = (entry: OutfitItemSnapshot) => {
-    if (window.confirm(t("outfit.confirmRemoveItem"))) {
-      const key = getOutfitItemKey(entry);
-      replaceItems(items.filter((item) => getOutfitItemKey(item) !== key));
-    }
+    setConfirmDialog({ action: "remove-item", entry });
   };
 
   const removeSelectedItems = () => {
-    if (window.confirm(t("outfit.confirmRemoveSelected"))) {
+    setConfirmDialog({ action: "remove-selected", entry: null });
+  };
+
+  const confirmOutfitAction = () => {
+    if (confirmDialog.action === "remove-item") {
+      const key = getOutfitItemKey(confirmDialog.entry);
+      replaceItems(items.filter((item) => getOutfitItemKey(item) !== key));
+    } else if (confirmDialog.action === "remove-selected") {
       replaceItems(
         items.filter((item) => !selectedKeys.includes(getOutfitItemKey(item))),
       );
       setSelectedKeys([]);
+    } else if (confirmDialog.action === "delete") {
+      void onDeleteOutfit(activeOutfit?.id);
+    } else if (confirmDialog.action === "revert") {
+      void onRevertOutfit(activeOutfit?.id);
     }
+    setConfirmDialog({ action: "", entry: null });
   };
 
   const toggleSelected = (key: string) => {
@@ -219,8 +236,7 @@ export default function OutfitScreen({
         onClose={() => setMenuAnchor(null)}
         onDelete={() => {
           setMenuAnchor(null);
-          if (window.confirm(t("outfit.confirmDelete")))
-            void onDeleteOutfit(activeOutfit?.id);
+          setConfirmDialog({ action: "delete", entry: null });
         }}
         onDownload={() => {
           setMenuAnchor(null);
@@ -233,8 +249,7 @@ export default function OutfitScreen({
         onMobileCardColumnsChange={updateMobileCardColumns}
         onRevert={() => {
           setMenuAnchor(null);
-          if (window.confirm(t("outfit.confirmRevert")))
-            void onRevertOutfit(activeOutfit?.id);
+          setConfirmDialog({ action: "revert", entry: null });
         }}
         onSave={() => {
           setMenuAnchor(null);
@@ -258,6 +273,16 @@ export default function OutfitScreen({
         }
         t={t}
       />
+      {confirmDialog.action ? (
+        <OutfitConfirmDialog
+          disabled={isContentBusy}
+          isOverlay={isMobile}
+          state={confirmDialog}
+          t={t}
+          onClose={() => setConfirmDialog({ action: "", entry: null })}
+          onConfirm={confirmOutfitAction}
+        />
+      ) : null}
       <AddItemsDialog
         existingItems={items}
         locale={locale}

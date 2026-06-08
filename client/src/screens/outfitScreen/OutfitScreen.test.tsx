@@ -94,6 +94,10 @@ vi.mock("../../i18n/useI18n", () => ({
         "outfit.confirmRemoveItem": "Remove item?",
         "outfit.confirmRemoveSelected": "Remove selected?",
         "outfit.confirmRevert": "Revert outfit?",
+        "outfit.deleteConfirm": "Delete",
+        "outfit.deleteConfirmBody":
+          "Are you sure you want to delete this outfit?",
+        "outfit.deleteTitle": "Delete outfit",
         "outfit.emptySummary": "No items",
         "outfit.itemNotFoundDescription":
           "This outfit reference no longer resolves.",
@@ -103,7 +107,13 @@ vi.mock("../../i18n/useI18n", () => ({
         "outfit.openMissingItemActions": "Open missing item actions",
         "outfit.personalSelected": `${params?.count ?? 0} personal`,
         "outfit.personalItems": "Personal items",
+        "outfit.removeConfirm": "Remove",
+        "outfit.removeItemTitle": "Remove item",
         "outfit.removeSelectedCount": `Remove ${params?.count ?? 0}`,
+        "outfit.removeSelectedTitle": "Remove selected items",
+        "outfit.revertConfirm": "Revert",
+        "outfit.revertConfirmBody": "Discard unsaved changes?",
+        "outfit.revertTitle": "Revert changes",
         "outfit.selectItem": "Select",
         "main.cancelSelection": "Cancel selection",
         "options.categories.bag": "Bag",
@@ -425,7 +435,7 @@ describe("OutfitScreen", () => {
 
   test("handles desktop outfit item menu like, select, and remove actions", async () => {
     const user = userEvent.setup();
-    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
     const onReplaceOutfitItems = vi.fn(() => Promise.resolve());
     const onSetItemLike = vi.fn(() => Promise.resolve());
     renderScreen({
@@ -486,18 +496,30 @@ describe("OutfitScreen", () => {
     await user.click(screen.getByRole("menuitem", { name: "Select" }));
     await screen.findByRole("button", { name: "Cancel selection" });
     await user.click(screen.getByRole("button", { name: "Remove 1" }));
-    expect(confirm).toHaveBeenCalledWith("Remove selected?");
+    const selectedDialog = screen.getByRole("dialog", {
+      name: "Remove selected items",
+    });
+    expect(within(selectedDialog).getByText("Remove selected?")).toBeVisible();
+    await user.click(
+      within(selectedDialog).getByRole("button", { name: "Remove" }),
+    );
+    expect(confirm).not.toHaveBeenCalled();
     expect(onReplaceOutfitItems).toHaveBeenLastCalledWith("outfit-1", []);
 
     await openMenu();
     await user.click(screen.getByRole("menuitem", { name: "Delete" }));
-    expect(confirm).toHaveBeenCalledWith("Remove item?");
+    const itemDialog = screen.getByRole("dialog", { name: "Remove item" });
+    expect(within(itemDialog).getByText("Remove item?")).toBeVisible();
+    await user.click(
+      within(itemDialog).getByRole("button", { name: "Remove" }),
+    );
+    expect(confirm).not.toHaveBeenCalled();
     expect(onReplaceOutfitItems).toHaveBeenLastCalledWith("outfit-1", []);
   });
 
   test("renders missing outfit items with select and delete actions", async () => {
     const user = userEvent.setup();
-    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
     const onReplaceOutfitItems = vi.fn(() => Promise.resolve());
     renderScreen({
       activeOutfit: {
@@ -533,12 +555,24 @@ describe("OutfitScreen", () => {
     await user.click(screen.getByRole("menuitem", { name: "Select" }));
     await screen.findByRole("button", { name: "Cancel selection" });
     await user.click(screen.getByRole("button", { name: "Remove 1" }));
-    expect(confirm).toHaveBeenCalledWith("Remove selected?");
+    const selectedDialog = screen.getByRole("dialog", {
+      name: "Remove selected items",
+    });
+    expect(within(selectedDialog).getByText("Remove selected?")).toBeVisible();
+    await user.click(
+      within(selectedDialog).getByRole("button", { name: "Remove" }),
+    );
+    expect(confirm).not.toHaveBeenCalled();
     expect(onReplaceOutfitItems).toHaveBeenLastCalledWith("outfit-1", []);
 
     await openMenu();
     await user.click(screen.getByRole("menuitem", { name: "Delete" }));
-    expect(confirm).toHaveBeenCalledWith("Remove item?");
+    const itemDialog = screen.getByRole("dialog", { name: "Remove item" });
+    expect(within(itemDialog).getByText("Remove item?")).toBeVisible();
+    await user.click(
+      within(itemDialog).getByRole("button", { name: "Remove" }),
+    );
+    expect(confirm).not.toHaveBeenCalled();
     expect(onReplaceOutfitItems).toHaveBeenLastCalledWith("outfit-1", []);
   });
 
@@ -753,7 +787,7 @@ describe("OutfitScreen", () => {
 
   test("runs outfit-level menu actions with confirmation for destructive operations", async () => {
     const user = userEvent.setup();
-    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
     const onDeleteOutfit = vi.fn(() => Promise.resolve());
     const onDownloadOutfitPdf = vi.fn(() => Promise.resolve());
     const onDuplicateOutfit = vi.fn(() => Promise.resolve());
@@ -791,12 +825,38 @@ describe("OutfitScreen", () => {
 
     await openMenu();
     await user.click(screen.getByRole("menuitem", { name: "Revert" }));
-    expect(confirm).toHaveBeenCalledWith("Revert outfit?");
+    expect(
+      screen.getByRole("dialog", { name: "Revert changes" }),
+    ).toBeInTheDocument();
+    await user.keyboard("{Escape}");
+    expect(onRevertOutfit).not.toHaveBeenCalled();
+
+    await openMenu();
+    await user.click(screen.getByRole("menuitem", { name: "Revert" }));
+    const revertDialog = screen.getByRole("dialog", {
+      name: "Revert changes",
+    });
+    expect(
+      within(revertDialog).getByText("Discard unsaved changes?"),
+    ).toBeVisible();
+    await user.click(
+      within(revertDialog).getByRole("button", { name: "Revert" }),
+    );
+    expect(confirm).not.toHaveBeenCalled();
     expect(onRevertOutfit).toHaveBeenCalledWith("outfit-1");
 
     await openMenu();
     await user.click(screen.getByRole("menuitem", { name: "Delete" }));
-    expect(confirm).toHaveBeenCalledWith("Delete outfit?");
+    const deleteDialog = screen.getByRole("dialog", { name: "Delete outfit" });
+    expect(
+      within(deleteDialog).getByText(
+        "Are you sure you want to delete this outfit?",
+      ),
+    ).toBeVisible();
+    await user.click(
+      within(deleteDialog).getByRole("button", { name: "Delete" }),
+    );
+    expect(confirm).not.toHaveBeenCalled();
     expect(onDeleteOutfit).toHaveBeenCalledWith("outfit-1");
   });
 
