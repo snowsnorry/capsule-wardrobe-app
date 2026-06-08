@@ -1,7 +1,7 @@
 # Repo Map
 
 ## Purpose
-Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, passkeys, onboarding, profile and account removal flows, localization, saved wardrobe/capsule workflows, AI-assisted generation, image upload/storage, product search, statistics, and a read-only MCP connector for external assistant access. The public API contract uses the final camelCase shape; the temporary naming-convention migration has been removed.
+Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, passkeys, onboarding, profile and account removal flows, localization, saved wardrobe/capsule/outfit workflows, AI-assisted generation, image upload/storage, product search, statistics, and a read-only MCP connector for external assistant access. The public API contract uses the final camelCase shape; the temporary naming-convention migration has been removed.
 
 ## Main runtime flows
 
@@ -40,21 +40,26 @@ Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, passkey
 - settings and account removal UI live in `client/src/components/SettingsDialog*` and `client/src/components/SettingsRemoveAccount*`
 - `DELETE /profile/me` removes profile-scoped data, clears transient jobs, deletes MCP OAuth refresh tokens, grants, and unconsumed authorization codes, deletes uploaded wardrobe image objects from R2 when configured, and clears session/passkey challenge cookies
 
-### 4. Capsule / wardrobe flow
+### 4. Capsule / outfit flow
 - server-side domain state likely centers on `capsuleStore.ts`
 - capsule storage helpers are split across `capsuleStoreContext.ts`, `capsuleStoreDelete.ts`, `capsuleStoreNaming.ts`, and `capsuleStoreSharing.ts`
 - capsule read/mutation HTTP behavior lives under `server/src/routes/capsule*Routes.ts`
 - client capsule state/actions live under `client/src/app/` and `client/src/screens/mainScreen/`
+- saved outfit state centers on `server/src/outfitStore.ts`, `server/src/outfitHttp.ts`, `server/src/routes/outfitRoutes.ts`, and DB helpers under `server/src/db/profileOutfits.ts`
+- client outfit routing, state, sidebar actions, and API calls live under `client/src/app/`, `client/src/screens/outfitScreen/`, and `client/src/api/outfits.ts`
+- outfit URLs use `/outfit` and `/outfit/:id` in the client, while backend CRUD/save/revert/search/PDF endpoints live under `/outfits/*`
+- outfit PDF export reuses the wardrobe PDF pipeline
 - AI-related generation, regeneration, event streaming, and outfit-set image behavior lives under `server/src/ai/`; SSE route helpers live in `server/src/capsuleEventHttp.ts`
 - public sharing and import behavior is exposed through `/shared-capsules/*` and implemented in the capsule read/store modules
 - shared-capsule OG metadata helpers live in `server/src/sharedCapsuleMeta.ts`
 
-### 5. My Wardrobe flow
-- client My Wardrobe screen composition lives in `client/src/screens/MyWardrobeScreen.tsx` and related `MyWardrobe*` files
-- My Wardrobe API calls live in `client/src/api/myWardrobe.ts`
-- uploaded/catalog item actions are orchestrated through `client/src/app/myWardrobeItemActions.ts`, `client/src/app/wardrobeImageActions.ts`, and related wardrobe action modules
-- server HTTP behavior lives in `server/src/routes/wardrobeRoutes.ts`, `server/src/routes/wardrobeUploadStream.ts`, and `server/src/routes/wardrobeUploadedItemUpdateRoute.ts`
-- upload normalization, image analysis, embeddings, metadata updates, cleanup, PDF export, and child-process helpers live in root `server/src/wardrobe*.ts` modules
+### 5. Personal items flow
+- client Personal items screen composition lives in `client/src/screens/WardrobeScreen.tsx` and related `Wardrobe*` files
+- Personal items API calls live in `client/src/api/myWardrobe.ts`
+- liked-item API calls live in `client/src/api/likedItems.ts`
+- uploaded/catalog item actions are orchestrated through `client/src/app/wardrobeActions.ts`, `client/src/app/wardrobeItemActions.ts`, `client/src/app/wardrobeImageActions.ts`, `client/src/app/likedItemActions.ts`, and related wardrobe action modules
+- server HTTP behavior lives in `server/src/routes/wardrobeRoutes.ts`, `server/src/routes/wardrobeFileUploadRoute.ts`, `server/src/routes/wardrobeUrlUploadRoute.ts`, `server/src/routes/wardrobeUploadStream.ts`, and `server/src/routes/wardrobeUploadedItemUpdateRoute.ts`
+- upload normalization, product-page import, image analysis, embeddings, metadata updates, cleanup, PDF export, and child-process helpers live in root `server/src/wardrobe*.ts` modules
 - uploaded/generated image persistence uses `server/src/r2Storage.ts` and `server/src/r2Delete.ts` when R2 is configured
 - uploaded wardrobe item API payloads and fixtures use camelCase image fields
 
@@ -64,6 +69,7 @@ Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, passkey
 - statistics screen composition lives under `client/src/screens/statisticsScreen/`
 - product detail dialogs live under `client/src/components/productDetail/`
 - chart wrappers live under `client/src/components/tremor/`
+- liked-item state is shared across product search, capsule, outfit, and Personal items views through `client/src/api/likedItems.ts` and `server/src/routes/likedItemsRoutes.ts`
 - search API routes live in `server/src/routes/searchRoutes.ts`
 - search persistence is split across `searchStore.ts`, `searchTypes.ts`, and `server/src/db/search*`
 - semantic search helpers live in `server/src/searchSemantic.ts`
@@ -74,9 +80,10 @@ Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, passkey
 - OAuth discovery, dynamic client registration, PKCE authorization, consent HTML, access tokens, refresh tokens, and refresh-token rotation live in `server/src/mcp/oauthRoutes.ts`
 - MCP OAuth config is built by `server/src/mcp/oauthConfig.ts` from `server/src/appConfig.ts`; it is enabled by default outside production and disabled by default in production
 - MCP OAuth state persists through `server/src/db/mcpOAuth.ts`, `server/src/db/mcpOAuthRefreshTokens.ts`, and SQL schema assets `080` through `087` under `server/src/db/sql/schema/`
-- MCP product tools live in `server/src/mcp/productTools.ts`, `server/src/mcp/productStatsTool.ts`, `server/src/mcp/productSearch.ts`, `server/src/mcp/productSearchSchemaOptions.ts`, and `server/src/mcp/productToolSchemas.ts`
-- MCP wardrobe tools live in `server/src/mcp/wardrobeTools.ts`
-- Exposed tools are read-only: `ping`, `get_search_options`, `search`, `stats`, `fetch`, and `wardrobe_items`
+- MCP product tools live in `server/src/mcp/productTools.ts`, `server/src/mcp/productStatsTool.ts`, `server/src/mcp/productSearch.ts`, `server/src/mcp/productSearchSchemaOptions.ts`, `server/src/mcp/productRenderTools.ts`, `server/src/mcp/productToolCards.ts`, `server/src/mcp/productToolOutput.ts`, and `server/src/mcp/productToolSchemas.ts`
+- MCP widget resources live in `server/src/mcp/productGridWidget.ts` and `server/src/mcp/productGridWidgetDefinitions.ts`
+- MCP wardrobe tools live in `server/src/mcp/wardrobeTools.ts` and `server/src/mcp/wardrobeToolSchemas.ts`
+- Exposed tools are read-only: `ping`, `get_search_options`, `search`, `render_product_grid`, `stats`, `fetch`, `render_product_detail`, `wardrobe_items`, and `render_wardrobe_grid`
 - Product and wardrobe MCP results are sanitized before returning to clients; internal embeddings, ownership fields, and private timestamps should stay out of tool output
 - The client sign-in success path calls `client/src/app/oauthReturn.ts` to resume safe same-origin OAuth authorization requests after normal email, Google, or passkey login
 
@@ -89,7 +96,7 @@ Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, passkey
 - root Playwright config lives in `playwright.config.ts`
 - browser tests live under `tests/e2e/`
 - authenticated tests reuse `tests/e2e/.auth/user.json`
-- the e2e server uses in-memory dependencies for auth, profile, capsule, search, generation, images, and embeddings
+- the e2e server uses in-memory dependencies for auth, profile, capsule, outfit, search, wardrobe, generation, images, and embeddings
 - e2e control routes under `/__e2e/*` are mounted only by the dedicated e2e server
 - e2e auth control routes set the same session and CSRF cookies expected by normal authenticated routes
 - browser-side request guards block unexpected non-local origins by default
@@ -100,6 +107,7 @@ Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, passkey
 - `package.json` — workspace definitions and top-level dev/test commands
 - `playwright.config.ts` — browser e2e projects, web server command, and auth setup wiring
 - `README.md` — setup, env vars, deployment notes
+- `scripts/` — utility scripts for screenshots and repository quality checks
 - `shared/` — TypeScript shared domain models, helpers, and cross-workspace tests
 - `tests/e2e/` — Playwright fixtures, auth setup, and browser smoke tests
 
@@ -111,6 +119,8 @@ Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, passkey
 - `client/src/App.tsx`
 - `client/src/app/` — app shell, route content, state/actions, session bootstrap, navigation, and dialogs
 - `client/src/api/request.ts` — shared fetch wrapper, JSON/error handling, short-lived GET cache, and CSRF header injection
+- `client/src/api/outfits.ts` — saved outfit API calls
+- `client/src/api/likedItems.ts` — product like/unlike API calls
 - `client/src/main.tsx`
 - `client/src/app/oauthReturn.ts` — safe OAuth authorization return bridge used by MCP connector login handoff
 - `client/src/theme/` — centralized MUI theme factory, palette and radius tokens, CSS variables, component overrides, and typography
@@ -124,6 +134,7 @@ Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, passkey
 - `client/src/components/tremor/`
 - `client/src/screens/`
 - `client/src/screens/mainScreen/`
+- `client/src/screens/outfitScreen/`
 - `client/src/screens/searchScreen/`
 - `client/src/screens/statisticsScreen/`
 - `client/src/search/`
@@ -153,10 +164,15 @@ Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, passkey
 - `server/src/db/mcpOAuth.ts` and `server/src/db/mcpOAuthRefreshTokens.ts` — MCP authorization code, grant, dynamic client registration, and refresh-token persistence
 - `server/src/email.ts`
 - `server/src/authStore.ts`
+- `server/src/likedItemsHttp.ts`
 - `server/src/capsuleStore.ts`
 - `server/src/capsuleStoreContext.ts`, `server/src/capsuleStoreDelete.ts`, `server/src/capsuleStoreNaming.ts`, and `server/src/capsuleStoreSharing.ts`
 - `server/src/capsuleStoreModel.ts`
 - `server/src/capsuleEventHttp.ts`
+- `server/src/outfitStore.ts`
+- `server/src/outfitStoreModel.ts`
+- `server/src/outfitStoreNaming.ts`
+- `server/src/outfitHttp.ts`
 - `server/src/profileStore.ts`
 - `server/src/profileHttp.ts`
 - `server/src/passkeyHttp.ts`
@@ -169,10 +185,13 @@ Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, passkey
 - `server/src/sharedCapsuleMeta.ts`
 - `server/src/r2Storage.ts`
 - `server/src/r2Delete.ts`
+- `server/src/wardrobeItemDisplay.ts`
 - `server/src/wardrobeImageAnalysis.ts`
 - `server/src/wardrobeImageCleanup.ts`
+- `server/src/wardrobeProductPageImport.ts`
 - `server/src/wardrobeSemanticEmbedding.ts`
 - `server/src/wardrobeUploadImages*.ts`
+- `server/src/wardrobeUploadProcessing*.ts`
 - `server/src/wardrobeUploadedItemUpdate.ts`
 - `server/src/wardrobePdf*.ts`
 - `server/src/ai/`
@@ -189,13 +208,16 @@ Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, passkey
 ### Server tests
 - `server/src/*.test.ts`
 - `server/src/**/*.test.ts`
+- `server/src/routes/outfitRoutes.test.ts` covers saved outfit CRUD, save/revert, search, delete, and PDF behavior
 - `server/src/mcp/oauthRoutes.test.ts`, `server/src/mcp/oauthConfig.test.ts`, and `server/src/mcp/productSearch.test.ts` cover MCP OAuth discovery/token behavior, read-only tool metadata/output, and product search semantics
+- `server/src/mcp/productRenderTools.test.ts`, `server/src/mcp/productToolCards.test.ts`, and `server/src/mcp/productToolOutput.test.ts` cover MCP render helpers and sanitized product output
 - `server/src/db/mcpOAuth.test.ts` covers MCP OAuth persistence helpers
 
 ### Shared tests
 Run from root:
 - `shared/wardrobeOrder.test.ts`
 - `shared/accentColors.test.ts`
+- `shared/capsuleCategories.test.ts`
 - `shared/capsuleShareItems.test.ts`
 - `shared/colorSwatches.test.ts`
 - `shared/patternOptions.test.ts`
@@ -231,12 +253,15 @@ The Playwright auth state is generated at `tests/e2e/.auth/user.json` and is int
 - `npm run quality:large-files` — list largest source files
 - `npm run quality:large-files:strict` — fail on files over configured size thresholds
 - `npm run quality:gate` — strict lint, typecheck, tests, dependency checks, large-file strict check, and coverage
+- `npm run quality` — full quality gate plus the large-file report
 - `npm run security:audit` — npm audit with high severity threshold
+- `npm run screenshots` — capture desktop and mobile screenshots against the isolated e2e server
 
 ## Invariants
 - The repo is a two-workspace monorepo: `client` and `server`
 - Shared TypeScript modules live in root `shared/` and are validated from root scripts
 - Root scripts are the canonical entrypoint for cross-workspace work
+- Saved capsule and outfit workflows are separate backend surfaces and share item/PDF hydration helpers where appropriate
 - Localization parity matters
 - Auth test mode matters
 - State-changing authenticated routes should preserve trusted-origin and CSRF protections

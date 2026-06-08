@@ -1,6 +1,6 @@
 # Capsule Wardrobe App
 
-Full-stack TypeScript monorepo for a capsule wardrobe application. The project combines passwordless auth, passkeys, profile onboarding and account removal, AI-assisted wardrobe generation, saved capsules, My Wardrobe uploads, product search, and statistics.
+Full-stack TypeScript monorepo for a capsule wardrobe application. The project combines passwordless auth, passkeys, profile onboarding and account removal, AI-assisted wardrobe generation, saved capsules and outfits, Personal items uploads, product search, and statistics.
 
 ## Stack
 
@@ -20,13 +20,13 @@ Full-stack TypeScript monorepo for a capsule wardrobe application. The project c
 - passwordless email sign-in with verification codes
 - optional Google sign-in and passkey registration/sign-in
 - onboarding, profile settings, and account removal with EN/RU localization
-- capsule creation, duplication, rename, save/revert, and delete
+- capsule and outfit creation, duplication, rename, save/revert, PDF export, and delete
 - AI-assisted wardrobe generation, wardrobe/catalog source modes, and selective regeneration
-- outfit-set image generation and PDF export
-- My Wardrobe uploads, uploaded item metadata editing, catalog saves, and wardrobe PDF export
+- outfit-set image generation
+- Personal items file and URL uploads, uploaded item metadata editing, catalog saves, liked items, and wardrobe PDF export
 - shareable capsule links and shared capsule import
 - product search and aggregated statistics views
-- read-only MCP tools for authenticated product search, product stats, product fetch, and wardrobe item reads
+- read-only MCP tools for authenticated product search, product stats, product fetch, wardrobe item reads, and visual render helpers
 
 ## Repository layout
 
@@ -41,9 +41,12 @@ docs/     repository documentation
 Useful entrypoints:
 
 - `client/src/App.tsx`
+- `client/src/api/outfits.ts`
+- `client/src/api/likedItems.ts`
 - `client/src/app/oauthReturn.ts`
 - `client/src/api/request.ts`
 - `client/src/main.tsx`
+- `client/src/screens/WardrobeScreen.tsx`
 - `client/vite.config.ts`
 - `playwright.config.ts`
 - `server/src/index.ts`
@@ -57,10 +60,12 @@ Useful entrypoints:
 - `server/src/ai/`
 - `server/src/authStore.ts`
 - `server/src/capsuleStore.ts`
+- `server/src/outfitStore.ts`
 - `server/src/profileStore.ts`
 - `server/src/searchStore.ts`
 - `server/src/r2Storage.ts`
 - `server/src/wardrobeUploadImagesRunner.ts`
+- `server/src/wardrobeUploadProcessingRunner.ts`
 - `server/src/routes/`
 
 ## Requirements
@@ -125,6 +130,7 @@ Common optional values:
 - `SESSION_PRUNE_MIN_INTERVAL_MS` — session cleanup throttle
 - `WARDROBE_PDF_CHILD_TIMEOUT_MS` — PDF child-process timeout
 - `WARDROBE_UPLOAD_CHILD_TIMEOUT_MS` — uploaded wardrobe image normalization child-process timeout
+- `WARDROBE_UPLOAD_PROCESSING_CHILD_TIMEOUT_MS`, `WARDROBE_UPLOAD_PROCESSING_CHILD_KILL_GRACE_MS` — uploaded wardrobe metadata/image processing child-process controls
 - `SHARP_CONCURRENCY`, `IMAGE_DOWNLOAD_CONCURRENCY`, `IMAGE_WORK_MAX_CONCURRENCY`, `PROMPT_IMAGES_CHILD_TIMEOUT_MS`, `PROMPT_CATEGORY_DOWNLOAD_CONCURRENCY`, `PROMPT_CATEGORY_SHARP_CONCURRENCY`, `PROMPT_IMAGE_REQUEST_WIDTH`, `MAX_SOURCE_IMAGE_PIXELS`, `STORAGE_IMAGES_DIR` — optional tuning knobs for image and prompt-image work
 
 See [server/.env.example](server/.env.example) for the baseline template.
@@ -189,14 +195,14 @@ Playwright starts an isolated Express/Vite server automatically when you run e2e
 npm run test:e2e
 ```
 
-That server uses in-memory auth, profile, capsule, search, generation, image, and embedding dependencies. It does not require `DATABASE_URL` or provider API keys and mounts e2e-only control routes such as `POST /__e2e/reset` and `POST /__e2e/login`. E2E login sets the same session and CSRF cookies that normal authenticated routes expect.
+That server uses in-memory auth, profile, capsule, outfit, search, wardrobe, generation, image, and embedding dependencies. It does not require `DATABASE_URL` or provider API keys and mounts e2e-only control routes such as `POST /__e2e/reset` and `POST /__e2e/login`. E2E login sets the same session and CSRF cookies that normal authenticated routes expect.
 
 ### Local URLs
 
 - frontend: `http://localhost:5173`
 - backend: `http://localhost:3000`
 
-In local development, Vite proxies `/api` to the Express server and strips that prefix, so frontend calls to `/api/auth`, `/api/profile`, `/api/capsules`, `/api/shared-capsules`, `/api/search`, and `/api/wardrobe` reach the matching backend route groups. Direct `/auth`, `/profile`, `/wardrobe/filters`, `/wardrobe/items`, and `/health` proxy entries are also present for compatibility.
+In local development, Vite proxies `/api` to the Express server and strips that prefix, so frontend calls to `/api/auth`, `/api/profile`, `/api/capsules`, `/api/outfits`, `/api/shared-capsules`, `/api/search`, `/api/wardrobe`, and `/api/liked-items` reach the matching backend route groups. Direct `/auth`, `/profile`, `/wardrobe/filters`, `/wardrobe/items`, and `/health` proxy entries are also present for compatibility.
 
 ## Build, start, validation
 
@@ -262,7 +268,9 @@ npm run quality:unused
 npm run quality:large-files
 npm run quality:large-files:strict
 npm run quality:gate
+npm run quality
 npm run security:audit
+npm run screenshots
 ```
 
 After editing files, verify that relevant tests pass, coverage remains acceptable, and ESLint has zero warnings for the changed source files. For cross-cutting changes, prefer `npm run quality:gate`.
@@ -285,10 +293,12 @@ Main backend route groups:
 - `/auth/passkeys/*` — passkey list, register, authenticate, and delete flows
 - `/profile/*` — onboarding, profile data, locale, and account removal
 - `/capsules/*` — bootstrap, recent, search, CRUD, save/revert, regenerate, share, import support, PDF, SSE events, outfit-set image jobs
+- `/outfits/*` — bootstrap, recent, search, CRUD, save/revert, duplicate, select, and PDF export for saved outfit sets
 - `/shared-capsules/*` — public shared capsule read and authenticated import
+- `/liked-items` — authenticated product like/unlike mutations
 - `/search/*` — search options, saved filters, run search, stats
-- `/wardrobe/*` — profile-derived filters, My Wardrobe uploaded/catalog items, upload event stream, item metadata updates, and wardrobe PDF export
-- `/mcp` — authenticated Streamable HTTP MCP endpoint with read-only tools: `ping`, `get_search_options`, `search`, `stats`, `fetch`, and `wardrobe_items`
+- `/wardrobe/*` — profile-derived filters, Personal items uploaded/catalog items, file and URL upload event streams, item metadata updates, and wardrobe PDF export
+- `/mcp` — authenticated Streamable HTTP MCP endpoint with read-only tools: `ping`, `get_search_options`, `search`, `render_product_grid`, `stats`, `fetch`, `render_product_detail`, `wardrobe_items`, and `render_wardrobe_grid`
 - `/.well-known/oauth-protected-resource`, `/.well-known/oauth-authorization-server`, `/.well-known/openid-configuration`, `/oauth/register`, `/oauth/authorize`, `/oauth/token` — MCP OAuth discovery, dynamic client registration, PKCE consent, token exchange, and refresh-token rotation
 - `/health`, `/healthall`
 
