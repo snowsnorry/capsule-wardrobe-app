@@ -17,6 +17,7 @@ import type {
 } from "./appTypes";
 import type { SettingsSavePayload } from "../components/SettingsDialog";
 import type { UploadedWardrobeItemUpdatePayload } from "../api/myWardrobe";
+import type { MainScreenItem } from "../screens/mainScreen/MainScreenTypes";
 import {
   FALLBACK_ACCENT_COLOR_OPTIONS,
   GOOGLE_CLIENT_ID,
@@ -100,6 +101,10 @@ type AppRouteContentProps = SharedFilterProps & {
   onCancelRegenerationSelection: () => void;
   onCreateCapsule: () => Promise<void>;
   onCreateOutfit: () => Promise<void>;
+  onCopyOutfitSetToOutfits: (
+    name: string,
+    items: MainScreenItem[],
+  ) => Promise<OutfitMeta | null>;
   onDeleteCapsule: (capsuleId?: string) => Promise<void>;
   onDeleteOutfit: (outfitId?: string) => Promise<void>;
   onDeleteOutfitSetImage: (setIndex: OutfitSetIndex) => Promise<void>;
@@ -226,6 +231,8 @@ function MainRoute(props: AppRouteContentProps) {
       onSetItemLike={props.onSetItemLike}
       onUpdateUploadedWardrobeItem={props.onUpdateUploadedWardrobeItem}
       onSearchCapsules={props.onSearchCapsules}
+      onCopyOutfitSetToOutfits={props.onCopyOutfitSetToOutfits}
+      onOpenOutfit={props.onOpenOutfit}
       items={props.profileItems || []}
       outfitSets={props.profileOutfitSets}
       isLoadingItems={props.isLoadingItems}

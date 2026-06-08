@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, test } from "vitest";
 import {
+  buildOutfitSetCategorySummaryItems,
+  buildOutfitSetCompactSummary,
   buildCapsuleSummaryItems,
   capsuleCanRequestShare,
   capsuleHasUnsavedChanges,
@@ -104,6 +106,23 @@ describe("MainScreenHelpers", () => {
         imageObsolete: false,
       },
     ]);
+  });
+
+  test("builds active outfit summaries in wardrobe category order", () => {
+    const items = [
+      { name: "Boots", category: "shoes" },
+      { name: "Jacket", category: "outerwear" },
+      { name: "Bag", category: "bag" },
+      { name: "T-shirt", category: "top" },
+      { name: "Shirt", category: "top" },
+    ];
+
+    expect(
+      buildOutfitSetCategorySummaryItems({ items, locale: "en", t }),
+    ).toEqual(["Outerwear: 1", "Top: 2", "Shoes: 1", "Bag: 1"]);
+    expect(buildOutfitSetCompactSummary({ items, t })).toBe(
+      "5 items · 4 categories",
+    );
   });
 
   test("resolves outfit set image sources", () => {

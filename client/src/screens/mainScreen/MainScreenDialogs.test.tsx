@@ -20,8 +20,11 @@ type ShareState = DialogsProps["share"];
 
 function DialogHarness({
   activeImageSrc = "",
+  activeName = "Spring edit",
+  activeSet = null,
   activeSetLabel = 1,
   initialConfirm = { action: "", capsuleId: "", outfitSetIndex: -1 },
+  initialCopyOutfitDialog = { open: false, value: "" },
   initialFiltersOpen = false,
   initialImageDialogOpen = false,
   initialNameDialog = { type: "", capsuleId: "", value: "" },
@@ -38,11 +41,15 @@ function DialogHarness({
   interactionDisabled = false,
   isOverlay = false,
   onCloseRowMenu = vi.fn(),
+  onCopyOutfitSuccess = vi.fn(),
   propsOverrides = {},
 }: {
   activeImageSrc?: string;
+  activeName?: string;
+  activeSet?: DialogsProps["activeSet"];
   activeSetLabel?: number;
   initialConfirm?: ConfirmState;
+  initialCopyOutfitDialog?: DialogsProps["copyOutfitDialog"];
   initialFiltersOpen?: boolean;
   initialImageDialogOpen?: boolean;
   initialNameDialog?: NameDialogState;
@@ -52,9 +59,13 @@ function DialogHarness({
   interactionDisabled?: boolean;
   isOverlay?: boolean;
   onCloseRowMenu?: () => void;
+  onCopyOutfitSuccess?: DialogsProps["onCopyOutfitSuccess"];
   propsOverrides?: Partial<DialogsProps["props"]>;
 }) {
   const [confirm, setConfirm] = useState(initialConfirm);
+  const [copyOutfitDialog, setCopyOutfitDialog] = useState(
+    initialCopyOutfitDialog,
+  );
   const [filtersOpen, setFiltersOpen] = useState(initialFiltersOpen);
   const [imageDialogOpen, setImageDialogOpen] = useState(
     initialImageDialogOpen,
@@ -72,9 +83,12 @@ function DialogHarness({
 
   return (
     <MainScreenDialogs
+      activeName={activeName}
       activeImageSrc={activeImageSrc}
+      activeSet={activeSet}
       activeSetLabel={activeSetLabel}
       confirm={confirm}
+      copyOutfitDialog={copyOutfitDialog}
       filtersOpen={filtersOpen}
       imageDialogOpen={imageDialogOpen}
       interactionDisabled={interactionDisabled}
@@ -85,6 +99,7 @@ function DialogHarness({
       search={search}
       share={share}
       setConfirm={setConfirm}
+      setCopyOutfitDialog={setCopyOutfitDialog}
       setFiltersOpen={setFiltersOpen}
       setImageDialogOpen={setImageDialogOpen}
       setNameDialog={setNameDialog}
@@ -93,6 +108,7 @@ function DialogHarness({
       setShare={setShare}
       onOpenCapsule={props.onOpenCapsule}
       onCloseRowMenu={onCloseRowMenu}
+      onCopyOutfitSuccess={onCopyOutfitSuccess}
     />
   );
 }
@@ -465,6 +481,64 @@ describe("MainScreenDialogs", () => {
     await user.click(screen.getByRole("button", { name: "OK" }));
 
     expect(onDuplicateCapsule).toHaveBeenCalledWith("Spring copy", "capsule-1");
+  });
+
+  test("copy outfit dialog prevents duplicate submissions while pending", async () => {
+    const user = userEvent.setup();
+    let resolveCopy: (value: { id: string }) => void = () => {};
+    const onCopyOutfitSetToOutfits = vi.fn(
+      () =>
+        new Promise<{ id: string }>((resolve) => {
+          resolveCopy = resolve;
+        }),
+    );
+    const onCopyOutfitSuccess = vi.fn();
+    renderDialogs({
+      activeSet: {
+        id: "set-1",
+        index: 0,
+        label: 1,
+        image: null,
+        imageObsolete: false,
+        items: [
+          {
+            id: "a",
+            url: "https://example.com/a",
+            source: "from_catalog",
+            name: "Shirt",
+            category: "top",
+          },
+          {
+            id: "b",
+            url: "https://example.com/b",
+            source: "from_catalog",
+            name: "Trousers",
+            category: "bottom",
+          },
+          {
+            id: "c",
+            url: "https://example.com/c",
+            source: "from_catalog",
+            name: "Bag",
+            category: "bag",
+          },
+        ],
+      },
+      initialCopyOutfitDialog: { open: true, value: "Spring edit: Outfit 1" },
+      onCopyOutfitSuccess,
+      propsOverrides: { onCopyOutfitSetToOutfits },
+    });
+
+    const copyButton = screen.getByRole("button", { name: "Copy" });
+    await user.dblClick(copyButton);
+
+    expect(onCopyOutfitSetToOutfits).toHaveBeenCalledTimes(1);
+    expect(copyButton).toBeDisabled();
+
+    resolveCopy({ id: "outfit-copy" });
+    await waitFor(() => {
+      expect(onCopyOutfitSuccess).toHaveBeenCalledWith({ id: "outfit-copy" });
+    });
   });
 
   test("updates and cancels name dialog without submitting", async () => {

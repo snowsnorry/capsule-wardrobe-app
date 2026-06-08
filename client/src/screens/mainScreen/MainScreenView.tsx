@@ -2,6 +2,10 @@ import type { MouseEvent } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { Box, Divider, LinearProgress } from "@mui/material";
 import type { Theme } from "@mui/material/styles";
+import {
+  CopyOutfitActionRow,
+  CopyOutfitFeedbackSnackbar,
+} from "./MainScreenCopyOutfit";
 import MainScreenDialogs from "./MainScreenDialogs";
 import MainScreenHeader from "./MainScreenHeader";
 import MainScreenMenus from "./MainScreenMenus";
@@ -55,9 +59,11 @@ type InlineRenameState = {
   submit: () => Promise<void>;
 };
 
-type MainScreenViewProps = {
+export type MainScreenViewProps = {
   activeTab: string;
   confirm: ConfirmState;
+  copiedOutfit: CapsuleLike | null;
+  copyOutfitDialog: { open: boolean; value: string };
   display: MainScreenDisplay;
   filtersOpen: boolean;
   headerMenuAnchor: CapsuleMenuAnchor;
@@ -65,6 +71,7 @@ type MainScreenViewProps = {
   inlineRename: InlineRenameState;
   interactionDisabled: boolean;
   isOverlaySidebar: boolean;
+  locale: string;
   mobileColumns: MobileCardColumns;
   nameDialog: NameDialogState;
   productDetailItem: MainScreenItem | null;
@@ -79,6 +86,10 @@ type MainScreenViewProps = {
   selectionMode: boolean;
   setActiveTab: (tab: string) => void;
   setConfirm: (state: ConfirmState) => void;
+  setCopiedOutfit: (outfit: CapsuleLike | null) => void;
+  setCopyOutfitDialog: Dispatch<
+    SetStateAction<{ open: boolean; value: string }>
+  >;
   setFiltersOpen: (open: boolean) => void;
   setHeaderMenuAnchor: (anchor: CapsuleMenuAnchor) => void;
   setImageDialogOpen: (open: boolean) => void;
@@ -180,6 +191,7 @@ function CapsuleStickyHeader(model: MainScreenViewProps) {
           onChange={model.setActiveTab}
         />
         <Divider />
+        <CopyOutfitActionRow {...model} />
       </Box>
       <Box sx={capsuleProgressSlotSx}>
         {model.props.isContentBusy || model.share.loading ? (
@@ -194,6 +206,7 @@ function MainScreenView(model: MainScreenViewProps) {
   return (
     <>
       <MainScreenBody {...model} />
+      <CopyOutfitFeedbackSnackbar {...model} />
       <MainScreenMenus
         activeName={model.display.activeName}
         disabled={model.interactionDisabled}
@@ -302,9 +315,12 @@ function MainScreenCapsulePanel(model: MainScreenViewProps) {
 function MainScreenDialogsPanel(model: MainScreenViewProps) {
   return (
     <MainScreenDialogs
+      activeName={model.display.activeName}
       activeImageSrc={model.display.activeImageSrc}
+      activeSet={model.display.activeSet}
       activeSetLabel={model.display.activeSet?.label}
       confirm={model.confirm}
+      copyOutfitDialog={model.copyOutfitDialog}
       filtersOpen={model.filtersOpen}
       imageDialogOpen={model.imageDialogOpen}
       interactionDisabled={model.interactionDisabled}
@@ -315,6 +331,7 @@ function MainScreenDialogsPanel(model: MainScreenViewProps) {
       search={model.search}
       share={model.share}
       setConfirm={model.setConfirm}
+      setCopyOutfitDialog={model.setCopyOutfitDialog}
       setFiltersOpen={model.setFiltersOpen}
       setImageDialogOpen={model.setImageDialogOpen}
       setNameDialog={model.setNameDialog}
@@ -322,6 +339,7 @@ function MainScreenDialogsPanel(model: MainScreenViewProps) {
       setSearch={model.setSearch}
       setShare={model.setShare}
       onOpenCapsule={model.props.onOpenCapsule}
+      onCopyOutfitSuccess={model.setCopiedOutfit}
       onCloseRowMenu={() => {
         model.setRowMenuAnchor(null);
         model.setRowMenuCapsule(null);

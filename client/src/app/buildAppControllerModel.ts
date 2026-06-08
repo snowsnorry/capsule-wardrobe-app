@@ -98,6 +98,7 @@ function buildHandlers(handlers: ReturnType<typeof useAppHandlers>) {
     onApplyCapsuleFilters: handlers.handleApplyCapsuleFilters,
     onBackToMain: handlers.handleBackToMain,
     onCancelRegenerationSelection: handlers.handleCancelRegenerationSelection,
+    onCopyOutfitSetToOutfits: handlers.handleCopyOutfitSetToOutfits,
     onCreateCapsule: handlers.handleCreateCapsule,
     onCreateCapsuleFromSidebar: handlers.handleCreateCapsuleFromSidebar,
     onCreateOutfit: handlers.handleCreateOutfit,

@@ -280,6 +280,45 @@ describe("OutfitScreen", () => {
     });
   });
 
+  test("renders outfit summary with capsule-style separated labels", () => {
+    renderScreen({
+      activeOutfit: {
+        id: "outfit-1",
+        name: "Weekend",
+        status: "saved",
+        effective: {
+          items: [
+            {
+              url: "https://example.com/top",
+              source: "from_catalog",
+              item: {
+                id: "catalog-top",
+                url: "https://example.com/top",
+                name: "Top",
+                category: "top",
+              },
+            },
+            {
+              url: "https://example.com/bag",
+              source: "from_catalog",
+              item: {
+                id: "catalog-bag",
+                url: "https://example.com/bag",
+                name: "Bag",
+                category: "bag",
+              },
+            },
+          ],
+        },
+      },
+    });
+
+    const summary = screen.getByTestId("outfit-summary");
+    expect(within(summary).getByText("1 Top")).toBeInTheDocument();
+    expect(within(summary).getByText("1 Bag")).toBeInTheDocument();
+    expect(screen.queryByText("1 Top · 1 Bag")).not.toBeInTheDocument();
+  });
+
   test("opens item preview when an outfit card is clicked", async () => {
     const user = userEvent.setup();
     renderScreen({

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import { useI18n } from "../../i18n/useI18n";
 import MainScreenView from "./MainScreenView";
@@ -13,9 +13,12 @@ import {
 } from "./MainScreenHooks";
 import type { MainScreenProps } from "./MainScreenTypes";
 
+type CopiedOutfit = { id?: string; name?: string };
+
 function MainScreen(props: MainScreenProps) {
   const { t, locale } = useI18n();
   const isOverlaySidebar = useMediaQuery("(max-width: 1279.95px)");
+  const [copiedOutfit, setCopiedOutfit] = useState<CopiedOutfit | null>(null);
   const ui = useMainScreenUiState();
   const display = useCapsuleDisplay(props, ui.activeTab, locale, t);
   const { activeName, resolvedSets } = display;
@@ -59,6 +62,8 @@ function MainScreen(props: MainScreenProps) {
     <MainScreenView
       activeTab={ui.activeTab}
       confirm={ui.confirm}
+      copiedOutfit={copiedOutfit}
+      copyOutfitDialog={ui.copyOutfitDialog}
       display={display}
       filtersOpen={ui.filtersOpen}
       headerMenuAnchor={ui.headerMenuAnchor}
@@ -66,6 +71,7 @@ function MainScreen(props: MainScreenProps) {
       inlineRename={inlineRename}
       interactionDisabled={interactionDisabled}
       isOverlaySidebar={isOverlaySidebar}
+      locale={locale}
       mobileColumns={ui.mobileColumns}
       nameDialog={ui.nameDialog}
       productDetailItem={ui.productDetailItem}
@@ -80,6 +86,8 @@ function MainScreen(props: MainScreenProps) {
       selectionMode={ui.selectionMode}
       setActiveTab={ui.setActiveTab}
       setConfirm={ui.setConfirm}
+      setCopiedOutfit={setCopiedOutfit}
+      setCopyOutfitDialog={ui.setCopyOutfitDialog}
       setFiltersOpen={ui.setFiltersOpen}
       setHeaderMenuAnchor={ui.setHeaderMenuAnchor}
       setImageDialogOpen={ui.setImageDialogOpen}

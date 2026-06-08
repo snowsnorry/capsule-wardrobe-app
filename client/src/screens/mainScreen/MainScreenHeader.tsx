@@ -12,6 +12,7 @@ import DriveFileRenameOutlineRoundedIcon from "@mui/icons-material/DriveFileRena
 import FiberManualRecordRoundedIcon from "@mui/icons-material/FiberManualRecordRounded";
 import MoreVertRoundedIcon from "@mui/icons-material/MoreVertRounded";
 import TuneRoundedIcon from "@mui/icons-material/TuneRounded";
+import { SummaryLine } from "../../components/SummaryLine";
 import { useI18n } from "../../i18n/useI18n";
 import { capsuleHasUnsavedChanges } from "./MainScreenHelpers";
 import type { CapsuleLike } from "./MainScreenTypes";
@@ -40,35 +41,6 @@ type HeaderProps = {
   onRegenerateAll: () => void;
   onRegenerateSelected: () => void;
 };
-
-function SummaryLine({ items }: { items: string[] }) {
-  return (
-    <Stack
-      data-testid="capsule-summary"
-      direction="row"
-      useFlexGap
-      sx={{ flexWrap: "wrap", gap: 0.75, color: "text.secondary", minWidth: 0 }}
-    >
-      {items.map((item, index) => (
-        <Typography
-          key={`${item}-${index}`}
-          variant="body2"
-          component="span"
-          sx={{
-            display: "inline-flex",
-            gap: 0.75,
-            "&::before":
-              index === 0
-                ? undefined
-                : { content: '"•"', color: "text.disabled" },
-          }}
-        >
-          {item}
-        </Typography>
-      ))}
-    </Stack>
-  );
-}
 
 function ActiveCapsuleUnsavedIndicator() {
   const { t } = useI18n();
@@ -277,13 +249,15 @@ function MainScreenHeader(props: HeaderProps) {
             </IconButton>
           ) : null}
           {showTitle && !props.isOverlay ? <InlineTitle {...props} /> : null}
-          {!props.isOverlay ? <SummaryLine items={props.summary} /> : null}
+          {!props.isOverlay ? (
+            <SummaryLine items={props.summary} testId="capsule-summary" />
+          ) : null}
         </Stack>
         <HeaderActions {...props} />
       </Stack>
       {props.isOverlay && props.selectedCount === 0 ? (
         <Box sx={{ px: 2, pb: 1.5 }}>
-          <SummaryLine items={props.summary} />
+          <SummaryLine items={props.summary} testId="capsule-summary" />
         </Box>
       ) : null}
     </>

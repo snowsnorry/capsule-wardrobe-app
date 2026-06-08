@@ -57,6 +57,10 @@ function useMainScreenUiState() {
     capsuleId: string;
     value: string;
   }>({ type: "", capsuleId: "", value: "" });
+  const [copyOutfitDialog, setCopyOutfitDialog] = useState({
+    open: false,
+    value: "",
+  });
   const [confirm, setConfirm] = useState<{
     action: string;
     capsuleId: string;
@@ -70,6 +74,7 @@ function useMainScreenUiState() {
   return {
     activeTab,
     confirm,
+    copyOutfitDialog,
     filtersOpen,
     headerMenuAnchor,
     imageDialogOpen,
@@ -82,6 +87,7 @@ function useMainScreenUiState() {
     selectionMode,
     setActiveTab,
     setConfirm,
+    setCopyOutfitDialog,
     setFiltersOpen,
     setHeaderMenuAnchor,
     setImageDialogOpen,

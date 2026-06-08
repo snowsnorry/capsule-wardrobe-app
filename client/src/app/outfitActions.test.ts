@@ -15,6 +15,7 @@ import {
   updateOutfitItems,
 } from "../api/outfits";
 import {
+  copyOutfitSetToOutfits,
   createNewOutfit,
   deleteCurrentOutfit,
   downloadCurrentOutfitPdf,
@@ -137,6 +138,45 @@ describe("outfitActions", () => {
 
     expect(fetchOutfit).toHaveBeenCalledWith("outfit-1");
     expect(fetchRecentOutfits).toHaveBeenCalled();
+  });
+
+  test("copies capsule outfit sets into saved outfits without activating them", async () => {
+    vi.mocked(createOutfit).mockResolvedValueOnce({
+      outfit: { ...outfit, id: "copied-outfit", name: "Capsule: Outfit 1" },
+    });
+    vi.mocked(saveOutfit).mockResolvedValueOnce({
+      outfit: {
+        ...outfit,
+        id: "copied-outfit",
+        name: "Capsule: Outfit 1",
+        status: "saved",
+      },
+    });
+    const context = createActionContext({
+      setActiveOutfitId: vi.fn(),
+      setActiveOutfitMeta: vi.fn(),
+      setOutfitList: vi.fn(),
+      setOutfitPagination: vi.fn(),
+    });
+    const items = [
+      {
+        url: "https://example.com/top",
+        source: "from_catalog",
+      },
+    ];
+
+    await expect(
+      copyOutfitSetToOutfits(context, "Capsule: Outfit 1", items),
+    ).resolves.toMatchObject({ id: "copied-outfit" });
+
+    expect(createOutfit).toHaveBeenCalledWith({
+      name: "Capsule: Outfit 1",
+      items,
+    });
+    expect(saveOutfit).toHaveBeenCalledWith("copied-outfit");
+    expect(fetchRecentOutfits).toHaveBeenCalledWith({ limit: 10, offset: 0 });
+    expect(context.setActiveOutfitId).not.toHaveBeenCalled();
+    expect(context.setActiveOutfitMeta).not.toHaveBeenCalled();
   });
 
   test("mutates the active outfit and refreshes sidebar metadata", async () => {

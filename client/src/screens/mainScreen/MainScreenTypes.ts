@@ -27,6 +27,7 @@ export type MainScreenItem = {
   id?: string | number;
   url?: string;
   name?: string;
+  source?: "uploaded" | "from_catalog" | string;
   isLiked?: boolean | null;
   [key: string]: unknown;
 };
@@ -93,6 +94,11 @@ export type MainScreenProps = {
       }
     | void;
   onSearchCapsules?: (query: string) => Promise<CapsuleLike[]> | CapsuleLike[];
+  onCopyOutfitSetToOutfits?: (
+    name: string,
+    items: MainScreenItem[],
+  ) => Promise<{ id?: string; name?: string } | null | undefined>;
+  onOpenOutfit?: (outfitId: string) => Promise<void> | void;
   items: MainScreenItem[];
   outfitSets?: OutfitSetLike[];
   isLoadingItems: boolean;

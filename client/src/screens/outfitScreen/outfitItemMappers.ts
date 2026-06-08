@@ -177,10 +177,10 @@ export function useVisibleOutfitPersonalItems({
   }, [items, likedOnly, sourceFilter, typeFilter]);
 }
 
-export function buildSummary(
+export function buildSummaryItems(
   items: OutfitItemSnapshot[],
   t: (key: string, params?: Record<string, unknown>) => string,
-) {
+): string[] {
   const counts = new Map<string, number>();
   items.forEach((entry) => {
     const item = getOutfitItem(entry);
@@ -194,7 +194,7 @@ export function buildSummary(
       category: t(`options.categories.${category}`) || category,
     }),
   );
-  return parts.length ? parts.join(" · ") : t("outfit.emptySummary");
+  return parts.length ? parts : [t("outfit.emptySummary")];
 }
 
 export function outfitHasUnsavedChanges(outfit: OutfitMeta | null | undefined) {

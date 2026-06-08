@@ -131,6 +131,16 @@ describe("outfits api", () => {
         item: { url: "https://example.com/jacket" },
       },
       {
+        url: "https://example.com/catalog-no-source",
+        name: "Catalog item",
+      },
+      {
+        item: {
+          url: "https://example.com/nested-catalog-url",
+          source: "from_catalog",
+        },
+      },
+      {
         url: "wardrobe://uploaded-1",
         source: "uploaded",
         item: { url: "wardrobe://uploaded-1" },
@@ -138,6 +148,8 @@ describe("outfits api", () => {
     ];
     const itemRefs = [
       { url: "https://example.com/jacket", source: "from_catalog" },
+      { url: "https://example.com/catalog-no-source", source: "from_catalog" },
+      { url: "https://example.com/nested-catalog-url", source: "from_catalog" },
       { url: "wardrobe://uploaded-1", source: "uploaded" },
     ];
 

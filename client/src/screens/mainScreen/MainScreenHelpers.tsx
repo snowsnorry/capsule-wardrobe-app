@@ -1,6 +1,9 @@
 import type { ReactNode } from "react";
 import { translateOption } from "../../i18n";
-import { sortWardrobeItems } from "../../../../shared/wardrobeOrder.js";
+import {
+  CATEGORY_ORDER,
+  sortWardrobeItems,
+} from "../../../../shared/wardrobeOrder.js";
 import type {
   CapsuleLike,
   MainScreenItem,
@@ -264,6 +267,53 @@ export function buildCapsuleSummaryItems({
   summary.push(...[String(selectedText || "").trim()].filter(Boolean));
 
   return summary.filter(Boolean);
+}
+
+export function buildOutfitSetCategorySummaryItems({
+  items,
+  locale,
+  t,
+}: {
+  items: MainScreenItem[];
+  locale: string;
+  t: (key: string, params?: Record<string, unknown>) => string;
+}): string[] {
+  const counts = new Map<string, number>();
+  for (const item of items) {
+    const category = String(item?.category || "other").trim() || "other";
+    counts.set(category, (counts.get(category) || 0) + 1);
+  }
+
+  const orderedCategories = CATEGORY_ORDER.filter((category) =>
+    counts.has(category),
+  ).concat(
+    [...counts.keys()].filter((category) => !CATEGORY_ORDER.includes(category)),
+  );
+
+  return orderedCategories.map((category) =>
+    t("outfit.categoryCount", {
+      category: translateOption("categories", category, locale),
+      count: counts.get(category) || 0,
+    }),
+  );
+}
+
+export function buildOutfitSetCompactSummary({
+  items,
+  t,
+}: {
+  items: MainScreenItem[];
+  t: (key: string, params?: Record<string, unknown>) => string;
+}): string {
+  const categoryCount = new Set(
+    items
+      .map((item) => String(item?.category || "other").trim() || "other")
+      .filter(Boolean),
+  ).size;
+  return [
+    t("capsule.itemsCount", { count: items.length }),
+    t("capsule.categoriesCount", { count: categoryCount }),
+  ].join(" · ");
 }
 
 export function isMobileCardColumns(

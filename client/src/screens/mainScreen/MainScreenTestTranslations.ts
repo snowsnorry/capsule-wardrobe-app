@@ -12,6 +12,7 @@ const labels = {
     signOut: "Sign out",
     cancel: "Cancel",
     ok: "OK",
+    copy: "Copy",
     delete: "Delete",
     edit: "Edit",
     save: "Save",
@@ -46,6 +47,12 @@ const labels = {
     copyShareLink: "Copy share link",
     shareCopied: "Copied",
     shareExpires: "Expires {date}",
+    copyOutfitToOutfits: "Copy to outfits",
+    copyOutfitToOutfitsTitle: "Copy to outfits",
+    copyOutfitToOutfitsBody:
+      'Create a saved outfit from this capsule outfit. The capsule "{name}" stays unchanged.',
+    outfitCopied: "Outfit copied",
+    openCopiedOutfit: "Open outfit",
     renameTitle: "Rename capsule",
     deleteTitle: "Delete capsule",
     deleteOutfitSetImageTitle: "Delete image",
@@ -78,6 +85,7 @@ const labels = {
     searchPrevious30Days: "Previous 30 Days",
     searchEarlier: "Earlier",
     itemsCount: "{count} items",
+    categoriesCount: "{count} categories",
     outfitsCount: "{count} outfits",
     outfitSet: "Outfit {number}",
     closeFilters: "Close filters",
@@ -92,6 +100,10 @@ const labels = {
     cardColumnsTwo: "2 columns",
     cardColumnsThree: "3 columns",
     copyProductLinkAddress: "Copy Link Address",
+  },
+  outfit: {
+    nameLabel: "Outfit name",
+    categoryCount: "{category}: {count}",
   },
   wardrobe: {
     filters: {

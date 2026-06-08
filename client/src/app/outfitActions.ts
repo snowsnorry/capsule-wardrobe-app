@@ -140,6 +140,32 @@ export async function createNewOutfit(context: AppActionContext) {
   return createdOutfit;
 }
 
+export async function copyOutfitSetToOutfits(
+  context: AppActionContext,
+  name: string,
+  items: Record<string, unknown>[],
+) {
+  let createdOutfit: OutfitMeta | null = null;
+  await runOutfitOperation(context, async () => {
+    const result = (await createOutfit({
+      name,
+      items,
+    })) as OutfitMutationResponse;
+    const outfit = result.outfit || null;
+    const outfitId = String(outfit?.id || "");
+    if (outfitId) {
+      const savedResult = (await saveOutfit(
+        outfitId,
+      )) as OutfitMutationResponse;
+      createdOutfit = savedResult.outfit || outfit;
+    } else {
+      createdOutfit = outfit;
+    }
+    await refreshOutfitList(context);
+  });
+  return createdOutfit;
+}
+
 export async function openOutfit(context: AppActionContext, outfitId: string) {
   await runOutfitOperation(context, async () => {
     const result = (await fetchOutfit(outfitId)) as OutfitMutationResponse;

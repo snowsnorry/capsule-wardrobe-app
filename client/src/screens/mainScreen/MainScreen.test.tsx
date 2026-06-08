@@ -1,6 +1,6 @@
 import type { MouseEvent } from "react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { act, cleanup, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ThemeProvider } from "@mui/material/styles";
 import {
@@ -624,6 +624,126 @@ describe("MainScreen", () => {
     await user.click(screen.getByRole("button", { name: "Delete" }));
 
     expect(onDeleteCapsule).toHaveBeenCalledWith("capsule-2");
+  });
+
+  test("copies active capsule outfit sets into saved outfits with a repeatable action", async () => {
+    const user = userEvent.setup();
+    const onCopyOutfitSetToOutfits = vi.fn(() =>
+      Promise.resolve({ id: "outfit-copy", name: "Copied outfit" }),
+    );
+    const onOpenOutfit = vi.fn(() => Promise.resolve());
+    renderMainScreen({
+      onCopyOutfitSetToOutfits,
+      onOpenOutfit,
+      items: [
+        {
+          id: "a",
+          url: "https://example.com/a",
+          source: "from_catalog",
+          name: "Jacket",
+          category: "outerwear",
+        },
+        {
+          id: "b",
+          url: "https://example.com/b",
+          source: "from_catalog",
+          name: "Shirt",
+          category: "top",
+        },
+        {
+          id: "c",
+          url: "https://uploads.example.com/bag",
+          source: "uploaded",
+          name: "Bag",
+          category: "bag",
+        },
+      ],
+      outfitSets: [{ itemIds: ["b", "c", "a"] }],
+    });
+
+    expect(
+      screen.queryByRole("button", { name: "Copy to outfits" }),
+    ).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("tab", { name: "Outfit 1" }));
+
+    const outfitSummary = screen.getByTestId("outfit-summary");
+    expect(within(outfitSummary).getByText("Outerwear: 1")).toBeInTheDocument();
+    expect(within(outfitSummary).getByText("Top: 1")).toBeInTheDocument();
+    expect(within(outfitSummary).getByText("Bag: 1")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Copy to outfits" }));
+
+    const dialog = await screen.findByRole("dialog", {
+      name: "Copy to outfits",
+    });
+    const input = screen.getByRole("textbox", { name: "Outfit name" });
+    expect(input).toHaveValue("Spring edit: Outfit 1");
+    expect(dialog).toHaveTextContent(
+      'The capsule "Spring edit" stays unchanged.',
+    );
+
+    await user.clear(input);
+    await user.type(input, "Travel copy");
+    await user.click(screen.getByRole("button", { name: "Copy" }));
+
+    await waitFor(() => {
+      expect(onCopyOutfitSetToOutfits).toHaveBeenCalledWith("Travel copy", [
+        expect.objectContaining({ url: "https://example.com/a" }),
+        expect.objectContaining({ url: "https://example.com/b" }),
+        expect.objectContaining({
+          url: "https://uploads.example.com/bag",
+          source: "uploaded",
+        }),
+      ]);
+    });
+    expect(onOpenOutfit).not.toHaveBeenCalled();
+    expect(await screen.findByText("Outfit copied")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("dialog", { name: "Copy to outfits" }),
+      ).not.toBeInTheDocument();
+    });
+    expect(
+      screen.getByRole("button", { name: "Copy to outfits" }),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Open outfit" }));
+
+    expect(onOpenOutfit).toHaveBeenCalledWith("outfit-copy");
+  });
+
+  test("uses compact outfit set summary in mobile overlay layouts", async () => {
+    const user = userEvent.setup();
+    renderMainScreen(
+      {
+        items: [
+          {
+            id: "a",
+            url: "https://example.com/a",
+            name: "Jacket",
+            category: "outerwear",
+          },
+          {
+            id: "b",
+            url: "https://example.com/b",
+            name: "Shirt",
+            category: "top",
+          },
+          {
+            id: "c",
+            url: "https://example.com/c",
+            name: "Bag",
+            category: "bag",
+          },
+        ],
+        outfitSets: [{ itemIds: ["a", "b", "c"] }],
+      },
+      { mobile: true },
+    );
+
+    await user.click(screen.getByRole("tab", { name: "Outfit 1" }));
+
+    expect(screen.getByText("3 items · 3 categories")).toBeInTheDocument();
   });
 
   test("submits desktop inline rename with normalized values", async () => {

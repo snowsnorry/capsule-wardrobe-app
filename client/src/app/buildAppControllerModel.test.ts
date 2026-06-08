@@ -8,6 +8,7 @@ function createHandlers() {
     "handleApplyCapsuleFilters",
     "handleBackToMain",
     "handleCancelRegenerationSelection",
+    "handleCopyOutfitSetToOutfits",
     "handleCreateCapsule",
     "handleCreateCapsuleFromSidebar",
     "handleDeleteCapsule",

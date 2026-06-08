@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { ReactElement } from "react";
 import type { UploadedWardrobeItemUpdatePayload } from "../../api/myWardrobe";
 import { ConfirmDialog, NameDialog } from "./MainScreenActionDialogs";
+import { CopyOutfitDialog } from "./MainScreenCopyOutfitDialog";
 import type { DialogsProps } from "./MainScreenDialogsTypes";
 import { FiltersDialog, ImageDialog } from "./MainScreenMediaDialogs";
 import { SearchDialog, ShareDialog } from "./MainScreenUtilityDialogs";
@@ -84,6 +85,16 @@ function MainScreenDialogs(props: DialogsProps) {
         isOverlay={props.isOverlay}
         props={props.props}
         setState={props.setNameDialog}
+      />
+      <CopyOutfitDialog
+        activeName={props.activeName}
+        activeSet={props.activeSet}
+        state={props.copyOutfitDialog}
+        disabled={props.interactionDisabled}
+        isOverlay={props.isOverlay}
+        props={props.props}
+        setState={props.setCopyOutfitDialog}
+        onSuccess={props.onCopyOutfitSuccess}
       />
       <ConfirmDialog
         state={props.confirm}

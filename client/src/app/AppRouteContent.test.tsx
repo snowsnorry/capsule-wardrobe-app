@@ -129,6 +129,7 @@ function makeProps(overrides: Record<string, unknown> = {}) {
     onBackToMain: vi.fn(),
     onCancelRegenerationSelection: vi.fn(),
     onCreateCapsule: vi.fn(() => Promise.resolve()),
+    onCopyOutfitSetToOutfits: vi.fn(() => Promise.resolve(null)),
     onDeleteCapsule: vi.fn(() => Promise.resolve()),
     onDeleteOutfitSetImage: vi.fn(() => Promise.resolve()),
     onDeleteProfile: vi.fn(() => Promise.resolve()),

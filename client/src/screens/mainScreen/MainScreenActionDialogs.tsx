@@ -88,7 +88,7 @@ function getConfirmCopy(action: string, copyPrefix = "capsule") {
   ];
 }
 
-function useFocusNameDialogInput(
+export function useFocusNameDialogInput(
   stateType: string,
   nameInputRef: RefObject<HTMLInputElement | null>,
 ) {

@@ -35,6 +35,7 @@ const wardrobeActions = vi.hoisted(() => ({
   updateUploadedItemInMyWardrobe: vi.fn(),
 }));
 const outfitActions = vi.hoisted(() => ({
+  copyOutfitSetToOutfits: vi.fn(),
   deleteCurrentOutfit: vi.fn(),
   downloadCurrentOutfitPdf: vi.fn(),
   duplicateCurrentOutfit: vi.fn(),
@@ -119,6 +120,9 @@ describe("useAppHandlers", () => {
     outfitActions.duplicateCurrentOutfit.mockResolvedValue({
       id: "outfit-copy",
     });
+    outfitActions.copyOutfitSetToOutfits.mockResolvedValue({
+      id: "outfit-from-capsule",
+    });
     capsuleActions.searchUserCapsules.mockResolvedValue([{ id: "capsule-2" }]);
     outfitActions.searchUserOutfits.mockResolvedValue([{ id: "outfit-2" }]);
     capsuleActions.shareCurrentCapsule.mockResolvedValue({
@@ -162,6 +166,9 @@ describe("useAppHandlers", () => {
     await result.current.handleRenameOutfit("Outfit renamed");
     await result.current.handleDuplicateCapsule("Copy");
     await result.current.handleDuplicateOutfit("Outfit copy");
+    await result.current.handleCopyOutfitSetToOutfits("Capsule: Outfit 1", [
+      { url: "https://example.com/top", source: "from_catalog" },
+    ]);
     await result.current.handleDeleteCapsule();
     await result.current.handleDeleteOutfit();
     await result.current.handleImportSharedCapsule();
@@ -252,6 +259,14 @@ describe("useAppHandlers", () => {
     expect(outfitActions.selectUserOutfit).toHaveBeenCalledWith("outfit-2");
     expect(navigateOutfit).toHaveBeenCalledWith("outfit-2");
     expect(navigateOutfit).toHaveBeenCalledWith("outfit-copy", {
+      replace: true,
+    });
+    expect(outfitActions.copyOutfitSetToOutfits).toHaveBeenCalledWith(
+      actionContext,
+      "Capsule: Outfit 1",
+      [{ url: "https://example.com/top", source: "from_catalog" }],
+    );
+    expect(navigateOutfit).not.toHaveBeenCalledWith("outfit-from-capsule", {
       replace: true,
     });
     expect(capsuleActions.importSharedCapsuleToApp).toHaveBeenCalledWith(

@@ -14,7 +14,11 @@ import DriveFileRenameOutlineRoundedIcon from "@mui/icons-material/DriveFileRena
 import FiberManualRecordRoundedIcon from "@mui/icons-material/FiberManualRecordRounded";
 import MoreVertRoundedIcon from "@mui/icons-material/MoreVertRounded";
 import type { OutfitItemSnapshot, OutfitMeta } from "../../app/appTypes";
-import { buildSummary, outfitHasUnsavedChanges } from "./outfitItemMappers";
+import { SummaryLine } from "../../components/SummaryLine";
+import {
+  buildSummaryItems,
+  outfitHasUnsavedChanges,
+} from "./outfitItemMappers";
 import { useOutfitInlineRename } from "./useOutfitInlineRename";
 import type { OutfitScreenProps } from "./OutfitScreenTypes";
 
@@ -78,9 +82,10 @@ export function OutfitHeader({
           onRemoveSelected={onRemoveSelected}
         />
       </Stack>
-      <Typography variant="body2" color="text.secondary">
-        {buildSummary(items, t)}
-      </Typography>
+      <SummaryLine
+        items={buildSummaryItems(items, t)}
+        testId="outfit-summary"
+      />
       <Divider />
     </Stack>
   );
