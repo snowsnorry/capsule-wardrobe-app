@@ -1,4 +1,5 @@
 import { test, expect } from "vitest";
+import { handleStartServerError, shouldStartServer } from "./index.js";
 import {
   AUTH_COOKIE,
   TEST_CLIENT_ORIGIN,
@@ -7,6 +8,23 @@ import {
   startSpaFallbackTestServer,
   startTestServer,
 } from "./test/serverRouteTestUtils.js";
+
+test("index boot policy skips test and e2e server modes", () => {
+  expect(shouldStartServer({ NODE_ENV: "test" })).toBe(false);
+  expect(
+    shouldStartServer({ NODE_ENV: "production", E2E_SERVER: "true" }),
+  ).toBe(false);
+  expect(shouldStartServer({ NODE_ENV: "production" })).toBe(true);
+});
+
+test("index boot error handler marks startup as failed", () => {
+  const previousExitCode = process.exitCode;
+
+  handleStartServerError(new Error("startup failed"));
+
+  expect(process.exitCode).toBe(1);
+  process.exitCode = previousExitCode;
+});
 
 test("index app wires representative registered routes", async (t) => {
   const { baseUrl } = await startTestServer(t);
