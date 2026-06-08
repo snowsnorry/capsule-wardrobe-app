@@ -1,16 +1,16 @@
-import type { MyWardrobeSource } from "../api/myWardrobe";
+import type { PersonalItemSource } from "../api/personalItems";
 import type { MainScreenItem } from "./mainScreen/MainScreenTypes";
 
 export function filterWardrobeItemsBySource(
   items: MainScreenItem[],
-  source: MyWardrobeSource | null,
+  source: PersonalItemSource | null,
 ) {
   return source
     ? items.filter((item) => getWardrobeItemSource(item) === source)
     : items;
 }
 
-function getWardrobeItemSource(item: MainScreenItem): MyWardrobeSource {
+function getWardrobeItemSource(item: MainScreenItem): PersonalItemSource {
   const explicitSource = String(item.source || "")
     .trim()
     .toLowerCase();

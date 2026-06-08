@@ -14,9 +14,9 @@ import { WARDROBE_FILTERS_STORAGE_KEY } from "./WardrobeCardLayoutStorage";
 
 const api = vi.hoisted(() => ({
   deleteUploadedWardrobeItem: vi.fn(),
-  downloadMyWardrobePdf: vi.fn(),
-  fetchMyWardrobeItems: vi.fn(),
-  removeCatalogItemFromMyWardrobe: vi.fn(),
+  downloadPersonalItemsPdf: vi.fn(),
+  fetchPersonalItems: vi.fn(),
+  removeCatalogItemFromPersonalItems: vi.fn(),
   updateUploadedWardrobeItem: vi.fn(),
   uploadWardrobeImages: vi.fn(),
   uploadWardrobeUrls: vi.fn(),
@@ -28,7 +28,7 @@ const likedApi = vi.hoisted(() => ({
 const useI18nMock = vi.hoisted(() => vi.fn());
 const useMediaQueryMock = vi.hoisted(() => vi.fn(() => false));
 
-vi.mock("../api/myWardrobe", () => api);
+vi.mock("../api/personalItems", () => api);
 vi.mock("../api/likedItems", () => likedApi);
 vi.mock("../i18n/useI18n", () => ({
   useI18n: useI18nMock,
@@ -80,7 +80,7 @@ vi.mock("../components/productDetail/ProductDetailDialog", () => ({
     open,
     onClose,
     onEditUploadedWardrobeItem,
-    onRemoveFromMyWardrobe,
+    onRemoveFromPersonalItems,
   }) =>
     open ? (
       <div data-testid="product-detail-dialog">
@@ -94,7 +94,7 @@ vi.mock("../components/productDetail/ProductDetailDialog", () => ({
         >
           edit uploaded product
         </button>
-        <button type="button" onClick={() => onRemoveFromMyWardrobe?.(item)}>
+        <button type="button" onClick={() => onRemoveFromPersonalItems?.(item)}>
           dialog remove product
         </button>
       </div>
@@ -145,7 +145,7 @@ vi.mock("./mainScreen/CapsuleProductDetailDialog", () => ({
     onClose,
     onEdit,
     onReadMode,
-    onRemoveFromMyWardrobe,
+    onRemoveFromPersonalItems,
   }) => {
     if (!open) {
       return null;
@@ -196,7 +196,7 @@ vi.mock("./mainScreen/CapsuleProductDetailDialog", () => ({
         <button type="button" onClick={() => onEdit?.(item)}>
           edit uploaded product
         </button>
-        <button type="button" onClick={() => onRemoveFromMyWardrobe?.(item)}>
+        <button type="button" onClick={() => onRemoveFromPersonalItems?.(item)}>
           dialog remove product
         </button>
       </div>
@@ -298,7 +298,7 @@ const translations: Record<string, string> = {
   "capsule.cardColumnsOne": "1 column",
   "capsule.cardColumnsTwo": "2 columns",
   "capsule.cardColumnsThree": "3 columns",
-  "capsule.removeFromMyWardrobe": "Remove from Personal items",
+  "capsule.removeFromPersonalItems": "Remove from Personal items",
   "actions.cancel": "Cancel",
   "actions.edit": "Edit",
 };
@@ -316,13 +316,13 @@ describe("WardrobeScreen", () => {
     window.localStorage.clear();
     useMediaQueryMock.mockReset();
     useMediaQueryMock.mockReturnValue(false);
-    api.downloadMyWardrobePdf.mockReset();
-    api.downloadMyWardrobePdf.mockResolvedValue(undefined);
+    api.downloadPersonalItemsPdf.mockReset();
+    api.downloadPersonalItemsPdf.mockResolvedValue(undefined);
     api.deleteUploadedWardrobeItem.mockReset();
     api.deleteUploadedWardrobeItem.mockResolvedValue({ ok: true });
-    api.fetchMyWardrobeItems.mockReset();
-    api.removeCatalogItemFromMyWardrobe.mockReset();
-    api.removeCatalogItemFromMyWardrobe.mockResolvedValue({ ok: true });
+    api.fetchPersonalItems.mockReset();
+    api.removeCatalogItemFromPersonalItems.mockReset();
+    api.removeCatalogItemFromPersonalItems.mockResolvedValue({ ok: true });
     api.updateUploadedWardrobeItem.mockReset();
     api.updateUploadedWardrobeItem.mockResolvedValue({
       item: {
@@ -339,7 +339,7 @@ describe("WardrobeScreen", () => {
     likedApi.likeItem.mockResolvedValue({ ok: true });
     likedApi.removeItemLike.mockReset();
     likedApi.removeItemLike.mockResolvedValue({ ok: true });
-    api.fetchMyWardrobeItems.mockResolvedValue({
+    api.fetchPersonalItems.mockResolvedValue({
       items: [
         {
           id: "wardrobe-1",
@@ -389,7 +389,7 @@ describe("WardrobeScreen", () => {
       "data-show-product-menu",
       "true",
     );
-    expect(api.fetchMyWardrobeItems).toHaveBeenCalledWith({
+    expect(api.fetchPersonalItems).toHaveBeenCalledWith({
       force: false,
     });
   });
@@ -439,7 +439,7 @@ describe("WardrobeScreen", () => {
 
     await user.click(screen.getByRole("radio", { name: "Uploaded" }));
 
-    expect(api.fetchMyWardrobeItems).toHaveBeenCalledTimes(1);
+    expect(api.fetchPersonalItems).toHaveBeenCalledTimes(1);
     expect(
       JSON.parse(
         window.localStorage.getItem(WARDROBE_FILTERS_STORAGE_KEY) || "{}",
@@ -450,7 +450,7 @@ describe("WardrobeScreen", () => {
   test("combines mobile action-menu source and liked-only filters", async () => {
     useMediaQueryMock.mockReturnValue(true);
     const user = userEvent.setup();
-    api.fetchMyWardrobeItems.mockResolvedValueOnce({
+    api.fetchPersonalItems.mockResolvedValueOnce({
       items: [
         {
           id: "liked-catalog",
@@ -516,7 +516,7 @@ describe("WardrobeScreen", () => {
       WARDROBE_FILTERS_STORAGE_KEY,
       JSON.stringify({ filter: "uploaded", likedOnly: true }),
     );
-    api.fetchMyWardrobeItems.mockResolvedValueOnce({
+    api.fetchPersonalItems.mockResolvedValueOnce({
       items: [
         {
           id: "liked-uploaded",
@@ -538,7 +538,7 @@ describe("WardrobeScreen", () => {
     renderScreen();
 
     await waitFor(() => {
-      expect(api.fetchMyWardrobeItems).toHaveBeenCalledWith({
+      expect(api.fetchPersonalItems).toHaveBeenCalledWith({
         force: false,
       });
     });
@@ -556,7 +556,7 @@ describe("WardrobeScreen", () => {
 
   test("combines desktop source and liked-only filters", async () => {
     const user = userEvent.setup();
-    api.fetchMyWardrobeItems.mockResolvedValueOnce({
+    api.fetchPersonalItems.mockResolvedValueOnce({
       items: [
         {
           id: "liked-uploaded",
@@ -694,7 +694,7 @@ describe("WardrobeScreen", () => {
   });
 
   test("sorts wardrobe cards with the same order as capsule items", async () => {
-    api.fetchMyWardrobeItems.mockResolvedValueOnce({
+    api.fetchPersonalItems.mockResolvedValueOnce({
       items: [
         {
           id: "wardrobe-bag",
@@ -735,7 +735,7 @@ describe("WardrobeScreen", () => {
       WARDROBE_FILTERS_STORAGE_KEY,
       JSON.stringify({ filter: "all", likedOnly: true }),
     );
-    api.fetchMyWardrobeItems.mockResolvedValueOnce({
+    api.fetchPersonalItems.mockResolvedValueOnce({
       items: [
         {
           id: "liked-shirt",
@@ -763,7 +763,7 @@ describe("WardrobeScreen", () => {
     await user.click(screen.getByRole("button", { name: "Upload" }));
 
     await waitFor(() => {
-      expect(api.fetchMyWardrobeItems).toHaveBeenLastCalledWith({
+      expect(api.fetchPersonalItems).toHaveBeenLastCalledWith({
         force: true,
       });
     });
@@ -843,7 +843,7 @@ describe("WardrobeScreen", () => {
       ).not.toBeInTheDocument();
     });
     await waitFor(() => {
-      expect(api.fetchMyWardrobeItems).toHaveBeenLastCalledWith({
+      expect(api.fetchPersonalItems).toHaveBeenLastCalledWith({
         force: true,
       });
     });
@@ -975,7 +975,7 @@ describe("WardrobeScreen", () => {
       ).not.toBeInTheDocument();
     });
     await waitFor(() => {
-      expect(api.fetchMyWardrobeItems).toHaveBeenLastCalledWith({
+      expect(api.fetchPersonalItems).toHaveBeenLastCalledWith({
         force: true,
       });
     });
@@ -987,13 +987,13 @@ describe("WardrobeScreen", () => {
 
     await screen.findByTestId("wardrobe-card-wardrobe-1");
     await user.click(screen.getByRole("button", { name: "Uploaded" }));
-    expect(api.fetchMyWardrobeItems).toHaveBeenCalledTimes(1);
+    expect(api.fetchPersonalItems).toHaveBeenCalledTimes(1);
     await user.click(
       screen.getByRole("button", { name: "Open Personal items menu" }),
     );
     await user.click(screen.getByRole("menuitem", { name: "Export as PDF" }));
 
-    expect(api.downloadMyWardrobePdf).toHaveBeenCalledWith({
+    expect(api.downloadPersonalItemsPdf).toHaveBeenCalledWith({
       source: "uploaded",
     });
   });
@@ -1030,11 +1030,11 @@ describe("WardrobeScreen", () => {
     await user.click(
       screen.getByRole("menuitem", { name: "Remove from Personal items" }),
     );
-    expect(api.removeCatalogItemFromMyWardrobe).not.toHaveBeenCalled();
+    expect(api.removeCatalogItemFromPersonalItems).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole("button", { name: "Remove" }));
 
-    expect(api.removeCatalogItemFromMyWardrobe).toHaveBeenCalledWith(
+    expect(api.removeCatalogItemFromPersonalItems).toHaveBeenCalledWith(
       "https://example.com/1",
     );
     await waitFor(() => {
@@ -1058,7 +1058,7 @@ describe("WardrobeScreen", () => {
 
   test("removes an unliked item from the visible list while liked-only is active", async () => {
     const user = userEvent.setup();
-    api.fetchMyWardrobeItems.mockResolvedValueOnce({
+    api.fetchPersonalItems.mockResolvedValueOnce({
       items: [
         {
           id: "liked-shirt",
@@ -1114,7 +1114,7 @@ describe("WardrobeScreen", () => {
 
   test("deletes an uploaded item from the card product menu", async () => {
     const user = userEvent.setup();
-    api.fetchMyWardrobeItems.mockResolvedValueOnce({
+    api.fetchPersonalItems.mockResolvedValueOnce({
       items: [
         {
           id: "wardrobe-uploaded",
@@ -1137,7 +1137,7 @@ describe("WardrobeScreen", () => {
     expect(api.deleteUploadedWardrobeItem).toHaveBeenCalledWith(
       "wardrobe-uploaded",
     );
-    expect(api.removeCatalogItemFromMyWardrobe).not.toHaveBeenCalled();
+    expect(api.removeCatalogItemFromPersonalItems).not.toHaveBeenCalled();
     await waitFor(() => {
       expect(
         screen.queryByTestId("wardrobe-card-wardrobe-uploaded"),
@@ -1158,14 +1158,14 @@ describe("WardrobeScreen", () => {
     await user.click(
       screen.getByRole("button", { name: "dialog remove product" }),
     );
-    expect(api.removeCatalogItemFromMyWardrobe).toHaveBeenCalledWith(
+    expect(api.removeCatalogItemFromPersonalItems).toHaveBeenCalledWith(
       "https://example.com/1",
     );
   });
 
   test("opens complete uploaded product details in read mode and edits from detail action", async () => {
     const user = userEvent.setup();
-    api.fetchMyWardrobeItems.mockResolvedValueOnce({
+    api.fetchPersonalItems.mockResolvedValueOnce({
       items: [
         {
           id: "wardrobe-uploaded",
@@ -1235,7 +1235,7 @@ describe("WardrobeScreen", () => {
 
   test("opens needs-review uploaded product details directly in edit mode", async () => {
     const user = userEvent.setup();
-    api.fetchMyWardrobeItems.mockResolvedValueOnce({
+    api.fetchPersonalItems.mockResolvedValueOnce({
       items: [
         {
           id: "wardrobe-uploaded",
@@ -1270,20 +1270,20 @@ describe("WardrobeScreen", () => {
     await screen.findByTestId("wardrobe-card-wardrobe-1");
     await user.click(screen.getByRole("button", { name: "Uploaded" }));
 
-    expect(api.fetchMyWardrobeItems).toHaveBeenCalledTimes(1);
+    expect(api.fetchPersonalItems).toHaveBeenCalledTimes(1);
     expect(
       screen.queryByTestId("wardrobe-card-wardrobe-1"),
     ).not.toBeInTheDocument();
   });
 
   test("renders empty and error states", async () => {
-    api.fetchMyWardrobeItems.mockResolvedValueOnce({ items: [] });
+    api.fetchPersonalItems.mockResolvedValueOnce({ items: [] });
     renderScreen();
 
     expect(await screen.findByText("No saved items yet")).toBeInTheDocument();
 
     cleanup();
-    api.fetchMyWardrobeItems.mockRejectedValueOnce(new Error("down"));
+    api.fetchPersonalItems.mockRejectedValueOnce(new Error("down"));
     renderScreen();
 
     expect(

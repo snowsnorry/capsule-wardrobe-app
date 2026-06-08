@@ -3,8 +3,6 @@ import type { MobileCardColumns } from "./mainScreen/MainScreenTypes";
 import type { WardrobeFilter } from "./WardrobeToolbar";
 
 const WARDROBE_MOBILE_CARD_COLUMNS_STORAGE_KEY = "wardrobe.mobileCardColumns";
-const LEGACY_WARDROBE_MOBILE_CARD_COLUMNS_STORAGE_KEY =
-  "myWardrobe.mobileCardColumns";
 const WARDROBE_FILTERS_STORAGE_KEY = "wardrobe.filters";
 
 type StoredWardrobeFilters = {
@@ -23,10 +21,7 @@ function readStoredWardrobeMobileCardColumns(): MobileCardColumns {
   }
 
   const parsed = Number(
-    window.localStorage?.getItem(WARDROBE_MOBILE_CARD_COLUMNS_STORAGE_KEY) ??
-      window.localStorage?.getItem(
-        LEGACY_WARDROBE_MOBILE_CARD_COLUMNS_STORAGE_KEY,
-      ),
+    window.localStorage?.getItem(WARDROBE_MOBILE_CARD_COLUMNS_STORAGE_KEY),
   );
   return isMobileCardColumns(parsed) ? parsed : 2;
 }

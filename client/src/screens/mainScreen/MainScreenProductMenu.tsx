@@ -38,8 +38,10 @@ type ProductMenuProps = {
   menuProps: {
     productMenu: ProductMenuState;
     props: {
-      onRemoveFromMyWardrobe?: (item: MainScreenItem) => Promise<void> | void;
-      onSaveToMyWardrobe?: (item: MainScreenItem) => Promise<void> | void;
+      onRemoveFromPersonalItems?: (
+        item: MainScreenItem,
+      ) => Promise<void> | void;
+      onSaveToPersonalItems?: (item: MainScreenItem) => Promise<void> | void;
       onSetItemLike?: (
         item: MainScreenItem,
         isLiked: boolean,
@@ -96,7 +98,7 @@ function ProductMenu({ menuProps, onClose, t }: ProductMenuProps) {
         item={removeConfirmItem}
         t={t}
         onClose={() => setRemoveConfirmItem(null)}
-        onConfirm={(item) => menuProps.props.onRemoveFromMyWardrobe?.(item)}
+        onConfirm={(item) => menuProps.props.onRemoveFromPersonalItems?.(item)}
       />
     </>
   );
@@ -256,7 +258,7 @@ function WardrobeMenuItem({
           onRequestRemove(item);
           return;
         }
-        void menuProps.props.onSaveToMyWardrobe?.(item);
+        void menuProps.props.onSaveToPersonalItems?.(item);
       }}
     >
       <ListItemIcon>
@@ -269,8 +271,8 @@ function WardrobeMenuItem({
       <ListItemText>
         {t(
           savedToWardrobe
-            ? "capsule.removeFromMyWardrobe"
-            : "capsule.saveToMyWardrobe",
+            ? "capsule.removeFromPersonalItems"
+            : "capsule.saveToPersonalItems",
         )}
       </ListItemText>
     </MenuItem>

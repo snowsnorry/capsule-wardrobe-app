@@ -22,7 +22,7 @@ const PROMPT_TEMPLATE = getPromptTemplateContent(
 const WARDROBE_PREFERENCE_RULES =
   "Wardrobe items are items the user already owns. Prefer wardrobe items over catalog items when they are similarly suitable for the capsule. Preserve capsule quality: category, season, formality, color, style, and outfit compatibility remain the deciding constraints.";
 const WARDROBE_ONLY_RULES =
-  "Wardrobe items are items the user already owns. Use only the provided My Wardrobe candidates. Catalog substitutions are not available in this mode. Preserve capsule quality: category, season, formality, color, style, and outfit compatibility remain the deciding constraints.";
+  "Wardrobe items are items the user already owns. Use only the provided Personal items candidates. Catalog substitutions are not available in this mode. Preserve capsule quality: category, season, formality, color, style, and outfit compatibility remain the deciding constraints.";
 
 function formatStringOrDefault(value, fallback) {
   return typeof value === "string" && value.trim().length > 0
@@ -98,7 +98,7 @@ function renderAnchorItemsBlock(anchorItems = []) {
   return [
     "ANCHOR ITEMS - MANDATORY USER-SELECTED ITEMS",
     "",
-    "The following items were selected by the user from My Wardrobe as anchor items.",
+    "The following items were selected by the user from Personal items as anchor items.",
     "You must build the capsule around these items.",
     "",
     "Rules:",

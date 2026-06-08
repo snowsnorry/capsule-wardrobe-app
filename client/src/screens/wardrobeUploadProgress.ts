@@ -1,4 +1,4 @@
-import type { UploadWardrobeProgress } from "../api/myWardrobe";
+import type { UploadWardrobeProgress } from "../api/personalItems";
 
 const EMPTY_UPLOAD_PROGRESS: UploadWardrobeProgress = {
   total: 0,

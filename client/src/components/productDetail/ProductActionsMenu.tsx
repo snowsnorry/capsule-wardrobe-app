@@ -28,7 +28,7 @@ type ProductActionsMenuItem = ProductDetailItem;
 type ProductActionsMenuProps = {
   item: ProductActionsMenuItem;
   isSavedToWardrobe: boolean;
-  onRemoveFromMyWardrobe?: (
+  onRemoveFromPersonalItems?: (
     item: ProductActionsMenuItem,
   ) => Promise<void> | void;
   onEditUploadedWardrobeItem?: (item: ProductActionsMenuItem) => void;
@@ -36,7 +36,9 @@ type ProductActionsMenuProps = {
     item: ProductActionsMenuItem,
     isLiked: boolean,
   ) => Promise<void> | void;
-  onSaveToMyWardrobe?: (item: ProductActionsMenuItem) => Promise<void> | void;
+  onSaveToPersonalItems?: (
+    item: ProductActionsMenuItem,
+  ) => Promise<void> | void;
   t: (key: string, params?: Record<string, unknown>) => string;
 };
 
@@ -47,8 +49,8 @@ function ProductActionsMenu({
   isSavedToWardrobe,
   onEditUploadedWardrobeItem,
   onSetItemLike,
-  onRemoveFromMyWardrobe,
-  onSaveToMyWardrobe,
+  onRemoveFromPersonalItems,
+  onSaveToPersonalItems,
   t,
 }: ProductActionsMenuProps) {
   const [menuAnchorEl, setMenuAnchorEl] = useState<HTMLElement | null>(null);
@@ -75,7 +77,7 @@ function ProductActionsMenu({
       setIsRemoveConfirmOpen(true);
       return;
     }
-    void runWardrobeAction(onSaveToMyWardrobe);
+    void runWardrobeAction(onSaveToPersonalItems);
   };
   const handleLikeMenuAction = () => {
     closeMenu();
@@ -101,7 +103,7 @@ function ProductActionsMenu({
         item={item}
         onLikeMenuAction={handleLikeMenuAction}
         showWardrobeAction={Boolean(
-          onSaveToMyWardrobe || onRemoveFromMyWardrobe,
+          onSaveToPersonalItems || onRemoveFromPersonalItems,
         )}
         showLikeAction={Boolean(onSetItemLike)}
         t={t}
@@ -115,7 +117,7 @@ function ProductActionsMenu({
         t={t}
         onClose={() => setIsRemoveConfirmOpen(false)}
         onConfirm={() => {
-          void runWardrobeAction(onRemoveFromMyWardrobe).finally(() => {
+          void runWardrobeAction(onRemoveFromPersonalItems).finally(() => {
             setIsRemoveConfirmOpen(false);
           });
         }}
@@ -126,8 +128,8 @@ function ProductActionsMenu({
 
 function getWardrobeActionLabelKey(isSavedToWardrobe: boolean) {
   return isSavedToWardrobe
-    ? "capsule.removeFromMyWardrobe"
-    : "capsule.saveToMyWardrobe";
+    ? "capsule.removeFromPersonalItems"
+    : "capsule.saveToPersonalItems";
 }
 
 function ProductActionsIconButton({
@@ -282,7 +284,7 @@ function ProductRemoveConfirmDialog({
         {isActionPending ? (
           <LinearProgress
             color="success"
-            aria-label={t("capsule.removeFromMyWardrobe")}
+            aria-label={t("capsule.removeFromPersonalItems")}
             sx={{ mb: 2 }}
           />
         ) : null}

@@ -4,9 +4,9 @@ import { useWardrobeItems } from "./useWardrobeItems";
 
 const api = vi.hoisted(() => ({
   deleteUploadedWardrobeItem: vi.fn(),
-  downloadMyWardrobePdf: vi.fn(),
-  fetchMyWardrobeItems: vi.fn(),
-  removeCatalogItemFromMyWardrobe: vi.fn(),
+  downloadPersonalItemsPdf: vi.fn(),
+  fetchPersonalItems: vi.fn(),
+  removeCatalogItemFromPersonalItems: vi.fn(),
   updateUploadedWardrobeItem: vi.fn(),
   uploadWardrobeImages: vi.fn(),
   uploadWardrobeUrls: vi.fn(),
@@ -19,7 +19,7 @@ const personalItems = vi.hoisted(() => ({
   notifyPersonalItemsChanged: vi.fn(),
 }));
 
-vi.mock("../api/myWardrobe", () => api);
+vi.mock("../api/personalItems", () => api);
 vi.mock("../api/likedItems", () => likedApi);
 vi.mock("../app/personalItemsCount", () => personalItems);
 
@@ -27,10 +27,10 @@ const t = (key: string) => key;
 
 beforeEach(() => {
   vi.clearAllMocks();
-  api.fetchMyWardrobeItems.mockResolvedValue({ items: [] });
+  api.fetchPersonalItems.mockResolvedValue({ items: [] });
   api.deleteUploadedWardrobeItem.mockResolvedValue({ ok: true });
-  api.downloadMyWardrobePdf.mockResolvedValue(undefined);
-  api.removeCatalogItemFromMyWardrobe.mockResolvedValue({ ok: true });
+  api.downloadPersonalItemsPdf.mockResolvedValue(undefined);
+  api.removeCatalogItemFromPersonalItems.mockResolvedValue({ ok: true });
   api.updateUploadedWardrobeItem.mockResolvedValue({ item: null });
   api.uploadWardrobeImages.mockResolvedValue({ ok: true });
   api.uploadWardrobeUrls.mockResolvedValue({ ok: true });
@@ -42,7 +42,7 @@ afterEach(cleanup);
 
 describe("useWardrobeItems", () => {
   test("loads items and handles successful catalog and uploaded mutations", async () => {
-    api.fetchMyWardrobeItems.mockResolvedValueOnce({
+    api.fetchPersonalItems.mockResolvedValueOnce({
       items: [
         {
           id: "uploaded-1",
@@ -66,7 +66,7 @@ describe("useWardrobeItems", () => {
     await act(async () => {
       await result.current.handleDownloadPdf();
     });
-    expect(api.downloadMyWardrobePdf).toHaveBeenCalledWith({
+    expect(api.downloadPersonalItemsPdf).toHaveBeenCalledWith({
       source: "uploaded",
     });
 
@@ -116,14 +116,14 @@ describe("useWardrobeItems", () => {
         url: "https://example.com/catalog",
       });
     });
-    expect(api.removeCatalogItemFromMyWardrobe).toHaveBeenCalledWith(
+    expect(api.removeCatalogItemFromPersonalItems).toHaveBeenCalledWith(
       "https://example.com/catalog",
     );
     expect(personalItems.notifyPersonalItemsChanged).toHaveBeenCalled();
   });
 
   test("handles empty and failing operations", async () => {
-    api.fetchMyWardrobeItems.mockRejectedValueOnce(new Error("load failed"));
+    api.fetchPersonalItems.mockRejectedValueOnce(new Error("load failed"));
     const { result } = renderHook(() => useWardrobeItems("all", 1, t));
 
     await waitFor(() =>

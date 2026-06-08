@@ -1,4 +1,4 @@
--- Selects mandatory wardrobe anchors plus optional ready My Wardrobe candidates for multiple accent colors.
+-- Selects mandatory wardrobe anchors plus optional ready Personal items candidates for multiple accent colors.
 WITH query_params AS (
   SELECT
     $1::text[] AS categories,

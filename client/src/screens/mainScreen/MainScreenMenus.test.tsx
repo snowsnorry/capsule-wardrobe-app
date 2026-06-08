@@ -127,16 +127,16 @@ describe("MainScreenMenus", () => {
 
   test("saves a product to wardrobe from the product menu", async () => {
     const user = userEvent.setup();
-    const onSaveToMyWardrobe = vi.fn(() => Promise.resolve());
+    const onSaveToPersonalItems = vi.fn(() => Promise.resolve());
     renderMenus({
-      props: createMainScreenProps({ onSaveToMyWardrobe }),
+      props: createMainScreenProps({ onSaveToPersonalItems }),
     });
 
     await user.click(
       screen.getByRole("menuitem", { name: "Save to Personal items" }),
     );
 
-    expect(onSaveToMyWardrobe).toHaveBeenCalledWith({
+    expect(onSaveToPersonalItems).toHaveBeenCalledWith({
       id: "a",
       url: "https://example.com/a",
       name: "Shirt",
@@ -146,7 +146,7 @@ describe("MainScreenMenus", () => {
 
   test("renders the same product actions in the mobile context menu", async () => {
     const user = userEvent.setup();
-    const onSaveToMyWardrobe = vi.fn(() => Promise.resolve());
+    const onSaveToPersonalItems = vi.fn(() => Promise.resolve());
     const writeText = vi.fn(() => Promise.resolve());
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
@@ -164,7 +164,7 @@ describe("MainScreenMenus", () => {
         },
         presentation: "mobile-context",
       },
-      props: createMainScreenProps({ onSaveToMyWardrobe }),
+      props: createMainScreenProps({ onSaveToPersonalItems }),
     });
 
     expect(
@@ -175,7 +175,7 @@ describe("MainScreenMenus", () => {
     await user.click(
       screen.getByRole("menuitem", { name: "Save to Personal items" }),
     );
-    expect(onSaveToMyWardrobe).toHaveBeenCalledWith(
+    expect(onSaveToPersonalItems).toHaveBeenCalledWith(
       expect.objectContaining({ id: "a" }),
     );
 
@@ -203,8 +203,8 @@ describe("MainScreenMenus", () => {
   test("shows only regeneration selection for uploaded product card menu", async () => {
     const user = userEvent.setup();
     const setSelectionMode = vi.fn();
-    const onRemoveFromMyWardrobe = vi.fn(() => Promise.resolve());
-    const onSaveToMyWardrobe = vi.fn(() => Promise.resolve());
+    const onRemoveFromPersonalItems = vi.fn(() => Promise.resolve());
+    const onSaveToPersonalItems = vi.fn(() => Promise.resolve());
     const onToggleRegenerationSelection = vi.fn();
     const uploadedItem = {
       id: "uploaded-1",
@@ -220,8 +220,8 @@ describe("MainScreenMenus", () => {
         item: uploadedItem,
       },
       props: createMainScreenProps({
-        onRemoveFromMyWardrobe,
-        onSaveToMyWardrobe,
+        onRemoveFromPersonalItems,
+        onSaveToPersonalItems,
         onToggleRegenerationSelection,
       }),
       setSelectionMode,
@@ -242,8 +242,8 @@ describe("MainScreenMenus", () => {
 
     expect(setSelectionMode).toHaveBeenCalledWith(true);
     expect(onToggleRegenerationSelection).toHaveBeenCalledWith(uploadedItem);
-    expect(onSaveToMyWardrobe).not.toHaveBeenCalled();
-    expect(onRemoveFromMyWardrobe).not.toHaveBeenCalled();
+    expect(onSaveToPersonalItems).not.toHaveBeenCalled();
+    expect(onRemoveFromPersonalItems).not.toHaveBeenCalled();
   });
 
   test("keeps uploaded mobile context menus limited to regeneration", () => {
@@ -305,8 +305,8 @@ describe("MainScreenMenus", () => {
 
   test("confirms before removing a saved product from wardrobe", async () => {
     const user = userEvent.setup();
-    const onRemoveFromMyWardrobe = vi.fn(() => Promise.resolve());
-    const onSaveToMyWardrobe = vi.fn(() => Promise.resolve());
+    const onRemoveFromPersonalItems = vi.fn(() => Promise.resolve());
+    const onSaveToPersonalItems = vi.fn(() => Promise.resolve());
     renderMenus({
       productMenu: {
         anchor: createAnchor(),
@@ -320,26 +320,26 @@ describe("MainScreenMenus", () => {
         },
       },
       props: createMainScreenProps({
-        onRemoveFromMyWardrobe,
-        onSaveToMyWardrobe,
+        onRemoveFromPersonalItems,
+        onSaveToPersonalItems,
       }),
     });
 
     await user.click(
       screen.getByRole("menuitem", { name: "Remove from Personal items" }),
     );
-    expect(onRemoveFromMyWardrobe).not.toHaveBeenCalled();
+    expect(onRemoveFromPersonalItems).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole("button", { name: "Remove" }));
 
-    expect(onRemoveFromMyWardrobe).toHaveBeenCalledWith({
+    expect(onRemoveFromPersonalItems).toHaveBeenCalledWith({
       id: "a",
       url: "https://example.com/a",
       name: "Shirt",
       category: "top",
       isSavedToWardrobe: true,
     });
-    expect(onSaveToMyWardrobe).not.toHaveBeenCalled();
+    expect(onSaveToPersonalItems).not.toHaveBeenCalled();
   });
 
   test("copies product URL from the product menu", async () => {

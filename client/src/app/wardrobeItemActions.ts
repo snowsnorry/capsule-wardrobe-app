@@ -1,9 +1,9 @@
 import {
-  removeCatalogItemFromMyWardrobe,
-  saveCatalogItemToMyWardrobe,
+  removeCatalogItemFromPersonalItems,
+  saveCatalogItemToPersonalItems,
   updateUploadedWardrobeItem,
   type UploadedWardrobeItemUpdatePayload,
-} from "../api/myWardrobe";
+} from "../api/personalItems";
 import { fromContext, type AppActionContext } from "./actionContext";
 import type { WardrobeItem } from "./appTypes";
 import { notifyPersonalItemsChanged } from "./personalItemsCount";
@@ -25,7 +25,6 @@ function applySavedFlagToProfileItems(
             ? {
                 ...currentItem,
                 isSavedToWardrobe: isSaved,
-                savedToMyWardrobe: isSaved,
               }
             : currentItem,
         )
@@ -33,7 +32,7 @@ function applySavedFlagToProfileItems(
   );
 }
 
-function setMyWardrobeStatus(context: AppActionContext, infoKey: string) {
+function setPersonalItemsStatus(context: AppActionContext, infoKey: string) {
   fromContext<(updater: (current: unknown) => unknown) => void>(
     context,
     "setStatus",
@@ -45,7 +44,7 @@ function setMyWardrobeStatus(context: AppActionContext, infoKey: string) {
   }));
 }
 
-function setMyWardrobeError(context: AppActionContext, error: string) {
+function setPersonalItemsError(context: AppActionContext, error: string) {
   fromContext<(updater: (current: unknown) => unknown) => void>(
     context,
     "setStatus",
@@ -98,7 +97,7 @@ function isSameWardrobeItem(currentItem: WardrobeItem, item: WardrobeItem) {
   );
 }
 
-export async function saveItemToMyWardrobe(
+export async function saveItemToPersonalItems(
   context: AppActionContext,
   item: WardrobeItem,
 ) {
@@ -110,12 +109,12 @@ export async function saveItemToMyWardrobe(
     "setIsContentOperationLoading",
   )(true);
   try {
-    await saveCatalogItemToMyWardrobe(url);
+    await saveCatalogItemToPersonalItems(url);
     applySavedFlagToProfileItems(context, url, true);
-    setMyWardrobeStatus(context, "wardrobe.saved");
+    setPersonalItemsStatus(context, "wardrobe.saved");
     notifyPersonalItemsChanged();
   } catch (error) {
-    setMyWardrobeError(
+    setPersonalItemsError(
       context,
       (error as { message?: string })?.message === "not_found"
         ? fromContext<(key: string) => string>(
@@ -137,7 +136,7 @@ export async function saveItemToMyWardrobe(
   }
 }
 
-export async function removeItemFromMyWardrobe(
+export async function removeItemFromPersonalItems(
   context: AppActionContext,
   item: WardrobeItem,
 ) {
@@ -149,12 +148,12 @@ export async function removeItemFromMyWardrobe(
     "setIsContentOperationLoading",
   )(true);
   try {
-    await removeCatalogItemFromMyWardrobe(url);
+    await removeCatalogItemFromPersonalItems(url);
     applySavedFlagToProfileItems(context, url, false);
-    setMyWardrobeStatus(context, "wardrobe.removed");
+    setPersonalItemsStatus(context, "wardrobe.removed");
     notifyPersonalItemsChanged();
   } catch {
-    setMyWardrobeError(
+    setPersonalItemsError(
       context,
       fromContext<(key: string) => string>(
         context,
@@ -171,7 +170,7 @@ export async function removeItemFromMyWardrobe(
   }
 }
 
-export async function updateUploadedItemInMyWardrobe(
+export async function updateUploadedItemInPersonalItems(
   context: AppActionContext,
   item: WardrobeItem,
   payload: UploadedWardrobeItemUpdatePayload,
@@ -204,10 +203,10 @@ export async function updateUploadedItemInMyWardrobe(
           )
         : current,
     );
-    setMyWardrobeStatus(context, "wardrobe.updated");
+    setPersonalItemsStatus(context, "wardrobe.updated");
     return mergedItem;
   } catch (error) {
-    setMyWardrobeError(
+    setPersonalItemsError(
       context,
       fromContext<(key: string) => string>(
         context,

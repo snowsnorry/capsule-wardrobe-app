@@ -32,7 +32,7 @@ const REGENERATE_SELECTED_SYSTEM_PROMPT_TEMPLATE = getPromptTemplateContent(
 const WARDROBE_PREFERENCE_RULES =
   "Wardrobe items are items the user already owns. Prefer wardrobe items over catalog items when they are similarly suitable replacement candidates. Preserve capsule quality: category, season, formality, color, style, and outfit compatibility remain the deciding constraints.";
 const WARDROBE_ONLY_RULES =
-  "Wardrobe items are items the user already owns. Use only the provided My Wardrobe candidates. Catalog substitutions are not available in this mode. Preserve capsule quality: category, season, formality, color, style, and outfit compatibility remain the deciding constraints.";
+  "Wardrobe items are items the user already owns. Use only the provided Personal items candidates. Catalog substitutions are not available in this mode. Preserve capsule quality: category, season, formality, color, style, and outfit compatibility remain the deciding constraints.";
 
 export type SqlWardrobeRow = WardrobeUiItemLike & {
   embedding?: unknown;

@@ -258,8 +258,8 @@ async function uploadWardrobeFiles(page, imageAsset) {
   await expect(dialog).toBeHidden();
 }
 
-async function captureMyWardrobe(context, theme, imageAsset) {
-  const page = await openPage(context, "/my-wardrobe", "with-profile");
+async function capturePersonalItems(context, theme, imageAsset) {
+  const page = await openPage(context, "/personal-items", "with-profile");
   await expect(
     page.getByRole("button", { name: "Upload item photo" }),
   ).toBeVisible();
@@ -267,7 +267,7 @@ async function captureMyWardrobe(context, theme, imageAsset) {
   await expect(
     page.getByRole("button", { name: "Uploaded e2e item 1", exact: true }),
   ).toBeVisible();
-  await screenshot(page, theme, "02-my-wardrobe.png");
+  await screenshot(page, theme, "02-personal-items.png");
   await page.close();
 }
 
@@ -381,7 +381,7 @@ async function captureTheme(browser, theme, imageAsset) {
   );
 
   await captureCapsule(context, theme);
-  await captureMyWardrobe(context, theme, imageAsset);
+  await capturePersonalItems(context, theme, imageAsset);
   await captureExplore(context, theme);
   await captureStatistics(context, theme);
   await captureProductDetail(context, theme);

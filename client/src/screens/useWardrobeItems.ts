@@ -4,14 +4,14 @@ import { sortWardrobeItems } from "../../../shared/wardrobeOrder.js";
 import { likeItem, removeItemLike } from "../api/likedItems";
 import {
   deleteUploadedWardrobeItem,
-  downloadMyWardrobePdf,
-  fetchMyWardrobeItems,
-  removeCatalogItemFromMyWardrobe,
+  downloadPersonalItemsPdf,
+  fetchPersonalItems,
+  removeCatalogItemFromPersonalItems,
   updateUploadedWardrobeItem,
   uploadWardrobeImages,
   uploadWardrobeUrls,
   type UploadedWardrobeItemUpdatePayload,
-} from "../api/myWardrobe";
+} from "../api/personalItems";
 import { notifyPersonalItemsChanged } from "../app/personalItemsCount";
 import type { ProductMenuOpenOptions } from "../components/ClothingCardTypes";
 import {
@@ -77,7 +77,7 @@ export function useWardrobeItems(
       if (target.kind === "uploaded") {
         await deleteUploadedWardrobeItem(target.id);
       } else {
-        await removeCatalogItemFromMyWardrobe(target.url);
+        await removeCatalogItemFromPersonalItems(target.url);
       }
       setError("");
       setItems((current) =>
@@ -96,7 +96,7 @@ export function useWardrobeItems(
   const handleDownloadPdf = async () => {
     setIsDownloadingPdf(true);
     try {
-      await downloadMyWardrobePdf({ source });
+      await downloadPersonalItemsPdf({ source });
       setError("");
     } catch {
       setError(t("wardrobe.downloadFailed"));
@@ -248,7 +248,7 @@ function useWardrobeItemsQuery(refreshKey: number, t: (key: string) => string) {
 
     setIsLoading(true);
     setError("");
-    fetchMyWardrobeItems({ force: refreshKey > 0 })
+    fetchPersonalItems({ force: refreshKey > 0 })
       .then((response) => {
         if (isActive) {
           setItems(sortWardrobeItems(getItemsFromResponse(response)));

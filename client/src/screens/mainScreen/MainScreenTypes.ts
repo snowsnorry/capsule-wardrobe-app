@@ -1,5 +1,5 @@
 import type { MouseEvent } from "react";
-import type { UploadedWardrobeItemUpdatePayload } from "../../api/myWardrobe";
+import type { UploadedWardrobeItemUpdatePayload } from "../../api/personalItems";
 
 export type CapsuleMenuAnchor = HTMLElement | null;
 
@@ -146,8 +146,8 @@ export type MainScreenProps = {
     nextApp: "capsule" | "explore" | "wardrobe" | "statistics",
     options?: AppNavigationOptions,
   ) => void;
-  onRemoveFromMyWardrobe?: (item: MainScreenItem) => Promise<void> | void;
-  onSaveToMyWardrobe?: (item: MainScreenItem) => Promise<void> | void;
+  onRemoveFromPersonalItems?: (item: MainScreenItem) => Promise<void> | void;
+  onSaveToPersonalItems?: (item: MainScreenItem) => Promise<void> | void;
   onSetItemLike?: (
     item: MainScreenItem,
     isLiked: boolean,

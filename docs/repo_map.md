@@ -55,7 +55,7 @@ Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, passkey
 
 ### 5. Personal items flow
 - client Personal items screen composition lives in `client/src/screens/WardrobeScreen.tsx` and related `Wardrobe*` files
-- Personal items API calls live in `client/src/api/myWardrobe.ts`
+- Personal items API calls live in `client/src/api/personalItems.ts`
 - liked-item API calls live in `client/src/api/likedItems.ts`
 - uploaded/catalog item actions are orchestrated through `client/src/app/wardrobeActions.ts`, `client/src/app/wardrobeItemActions.ts`, `client/src/app/wardrobeImageActions.ts`, `client/src/app/likedItemActions.ts`, and related wardrobe action modules
 - server HTTP behavior lives in `server/src/routes/wardrobeRoutes.ts`, `server/src/routes/wardrobeFileUploadRoute.ts`, `server/src/routes/wardrobeUrlUploadRoute.ts`, `server/src/routes/wardrobeUploadStream.ts`, and `server/src/routes/wardrobeUploadedItemUpdateRoute.ts`

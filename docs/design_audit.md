@@ -9,7 +9,7 @@ current theme tokens in `client/src/theme/`, and the live app at
 Reviewed surfaces:
 
 - Capsule
-- My Wardrobe
+- Personal items
 - Catalog Explore/Search
 - Catalog Statistics
 - product detail and settings dialogs
@@ -39,7 +39,7 @@ Notes:
 3. **Statistics feels more like an analytics dashboard than a supporting
    wardrobe view.** The chart cards are technically clean, but the dense filter
    panel plus many saturated chart colors make Statistics visually louder than
-   Capsule and My Wardrobe.
+   Capsule and Personal items.
 4. **Global control radius is softer than the product-register tone needs.**
    The app theme uses a global MUI radius of `18px`; combined with pill chips
    and rounded inputs, filters and dialogs feel slightly plush compared with the

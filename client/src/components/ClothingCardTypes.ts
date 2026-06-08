@@ -29,7 +29,6 @@ type ClothingCardItem = {
   processingStatus?: string | null;
   isLiked?: boolean | null;
   isSavedToWardrobe?: boolean | null;
-  savedToMyWardrobe?: boolean | null;
   wardrobeId?: string | number | null;
 };
 

@@ -12,15 +12,15 @@ import { ThemeProvider } from "@mui/material/styles";
 import { createAppTheme } from "../theme";
 import { notifyPersonalItemsChanged } from "./personalItemsCount";
 
-const myWardrobeApi = vi.hoisted(() => ({
-  fetchMyWardrobeItems: vi.fn(() =>
+const personalItemsApi = vi.hoisted(() => ({
+  fetchPersonalItems: vi.fn(() =>
     Promise.resolve({
       items: [{ id: "item-1" }, { id: "item-2" }, { id: "item-3" }],
     }),
   ),
 }));
 
-vi.mock("../api/myWardrobe", () => myWardrobeApi);
+vi.mock("../api/personalItems", () => personalItemsApi);
 
 vi.mock("../components/AppSidebarNavigation", () => ({
   default: ({
@@ -205,7 +205,7 @@ const theme = createAppTheme("light");
 
 afterEach(() => {
   cleanup();
-  myWardrobeApi.fetchMyWardrobeItems.mockClear();
+  personalItemsApi.fetchPersonalItems.mockClear();
 });
 
 function createProps(
@@ -546,11 +546,11 @@ describe("AppShellContent", () => {
         screen.getByTestId("sidebar-personal-items-count"),
       ).toHaveTextContent("3"),
     );
-    expect(myWardrobeApi.fetchMyWardrobeItems).toHaveBeenCalledWith();
+    expect(personalItemsApi.fetchPersonalItems).toHaveBeenCalledWith();
   });
 
   test("refreshes the personal items count after wardrobe mutations", async () => {
-    myWardrobeApi.fetchMyWardrobeItems
+    personalItemsApi.fetchPersonalItems
       .mockResolvedValueOnce({
         items: [{ id: "item-1" }, { id: "item-2" }, { id: "item-3" }],
       })
@@ -577,7 +577,7 @@ describe("AppShellContent", () => {
         screen.getByTestId("sidebar-personal-items-count"),
       ).toHaveTextContent("4"),
     );
-    expect(myWardrobeApi.fetchMyWardrobeItems).toHaveBeenLastCalledWith({
+    expect(personalItemsApi.fetchPersonalItems).toHaveBeenLastCalledWith({
       force: true,
     });
   });

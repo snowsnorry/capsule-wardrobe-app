@@ -8,7 +8,7 @@ import {
   IconButton,
   useMediaQuery,
 } from "@mui/material";
-import { fetchUploadedWardrobeItemDetail } from "../../api/myWardrobe";
+import { fetchUploadedWardrobeItemDetail } from "../../api/personalItems";
 import { fetchProductDetailByUrl } from "../../api/search";
 import { useI18n } from "../../i18n/useI18n";
 import { getSafeHttpUrl } from "../../../../shared/urlSecurity.js";
@@ -28,12 +28,12 @@ type ProductDetailDialogProps = {
   isMobile?: boolean;
   onClose: () => void;
   onEditUploadedWardrobeItem?: (item: ProductDetailItem) => void;
-  onRemoveFromMyWardrobe?: (item: ProductDetailItem) => Promise<void> | void;
+  onRemoveFromPersonalItems?: (item: ProductDetailItem) => Promise<void> | void;
   onSetItemLike?: (
     item: ProductDetailItem,
     isLiked: boolean,
   ) => Promise<void> | void;
-  onSaveToMyWardrobe?: (item: ProductDetailItem) => Promise<void> | void;
+  onSaveToPersonalItems?: (item: ProductDetailItem) => Promise<void> | void;
 };
 
 function ProductDetailDialog({
@@ -42,9 +42,9 @@ function ProductDetailDialog({
   isMobile,
   onClose,
   onEditUploadedWardrobeItem,
-  onRemoveFromMyWardrobe,
+  onRemoveFromPersonalItems,
   onSetItemLike,
-  onSaveToMyWardrobe,
+  onSaveToPersonalItems,
 }: ProductDetailDialogProps): ReactElement {
   const { t, locale } = useI18n();
   const fallbackMobile = useMediaQuery("(max-width: 899.95px)");
@@ -66,9 +66,9 @@ function ProductDetailDialog({
           t={t}
           onClose={onClose}
           onEditUploadedWardrobeItem={onEditUploadedWardrobeItem}
-          onRemoveFromMyWardrobe={onRemoveFromMyWardrobe}
+          onRemoveFromPersonalItems={onRemoveFromPersonalItems}
           onSetItemLike={onSetItemLike}
-          onSaveToMyWardrobe={onSaveToMyWardrobe}
+          onSaveToPersonalItems={onSaveToPersonalItems}
         />
       ) : null}
       <DialogContent
@@ -86,9 +86,9 @@ function ProductDetailDialog({
           t={t}
           onClose={onClose}
           onEditUploadedWardrobeItem={onEditUploadedWardrobeItem}
-          onRemoveFromMyWardrobe={onRemoveFromMyWardrobe}
+          onRemoveFromPersonalItems={onRemoveFromPersonalItems}
           onSetItemLike={onSetItemLike}
-          onSaveToMyWardrobe={onSaveToMyWardrobe}
+          onSaveToPersonalItems={onSaveToPersonalItems}
         />
       </DialogContent>
     </Dialog>
@@ -227,8 +227,6 @@ function mergeProductDetailItems(
     isSavedToWardrobe:
       item.isSavedToWardrobe ?? fetchedItem.isSavedToWardrobe ?? null,
     isLiked: fetchedItem.isLiked ?? item.isLiked ?? null,
-    savedToMyWardrobe:
-      item.savedToMyWardrobe ?? fetchedItem.savedToMyWardrobe ?? null,
   };
 }
 
@@ -258,17 +256,17 @@ function ProductDetailDialogContent({
   t,
   onClose,
   onEditUploadedWardrobeItem,
-  onRemoveFromMyWardrobe,
+  onRemoveFromPersonalItems,
   onSetItemLike,
-  onSaveToMyWardrobe,
+  onSaveToPersonalItems,
 }: Pick<
   ProductDetailDialogProps,
   | "item"
   | "onClose"
   | "onEditUploadedWardrobeItem"
-  | "onRemoveFromMyWardrobe"
+  | "onRemoveFromPersonalItems"
   | "onSetItemLike"
-  | "onSaveToMyWardrobe"
+  | "onSaveToPersonalItems"
 > & {
   isLoading: boolean;
   locale: string;
@@ -301,9 +299,9 @@ function ProductDetailDialogContent({
         t={t}
         onClose={onClose}
         onEditUploadedWardrobeItem={onEditUploadedWardrobeItem}
-        onRemoveFromMyWardrobe={onRemoveFromMyWardrobe}
+        onRemoveFromPersonalItems={onRemoveFromPersonalItems}
         onSetItemLike={onSetItemLike}
-        onSaveToMyWardrobe={onSaveToMyWardrobe}
+        onSaveToPersonalItems={onSaveToPersonalItems}
       />
     </>
   );
@@ -315,9 +313,9 @@ export function DesktopProductDetailPane({
   t,
   onClose,
   onEditUploadedWardrobeItem,
-  onRemoveFromMyWardrobe,
+  onRemoveFromPersonalItems,
   onSetItemLike,
-  onSaveToMyWardrobe,
+  onSaveToPersonalItems,
 }: Omit<ProductDetailDialogProps, "open" | "isMobile"> & {
   locale: string;
   t: (key: string, params?: Record<string, unknown>) => string;
@@ -338,9 +336,9 @@ export function DesktopProductDetailPane({
         showImage={false}
         reserveHeaderActionsSpace
         onEditUploadedWardrobeItem={onEditUploadedWardrobeItem}
-        onRemoveFromMyWardrobe={onRemoveFromMyWardrobe}
+        onRemoveFromPersonalItems={onRemoveFromPersonalItems}
         onSetItemLike={onSetItemLike}
-        onSaveToMyWardrobe={onSaveToMyWardrobe}
+        onSaveToPersonalItems={onSaveToPersonalItems}
       />
     </Box>
   );

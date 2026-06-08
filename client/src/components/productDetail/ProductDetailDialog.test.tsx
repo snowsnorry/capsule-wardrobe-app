@@ -13,12 +13,12 @@ import ProductDetailDialog from "./ProductDetailDialog";
 const searchApi = vi.hoisted(() => ({
   fetchProductDetailByUrl: vi.fn(),
 }));
-const myWardrobeApi = vi.hoisted(() => ({
+const personalItemsApi = vi.hoisted(() => ({
   fetchUploadedWardrobeItemDetail: vi.fn(),
 }));
 
 vi.mock("../../api/search", () => searchApi);
-vi.mock("../../api/myWardrobe", () => myWardrobeApi);
+vi.mock("../../api/personalItems", () => personalItemsApi);
 vi.mock("../../i18n/useI18n", () => ({
   useI18n: () => ({
     locale: "en",
@@ -27,8 +27,8 @@ vi.mock("../../i18n/useI18n", () => ({
         "actions.close": "Close",
         "actions.cancel": "Cancel",
         "actions.edit": "Edit",
-        "capsule.removeFromMyWardrobe": "Remove from Personal items",
-        "capsule.saveToMyWardrobe": "Save to Personal items",
+        "capsule.removeFromPersonalItems": "Remove from Personal items",
+        "capsule.saveToPersonalItems": "Save to Personal items",
         "wardrobe.savedBadge": "Saved",
         "wardrobe.likedBadge": "Liked",
         "wardrobe.filters.uploaded": "Uploaded",
@@ -83,7 +83,7 @@ function renderDialog(
 afterEach(() => {
   cleanup();
   searchApi.fetchProductDetailByUrl.mockReset();
-  myWardrobeApi.fetchUploadedWardrobeItemDetail.mockReset();
+  personalItemsApi.fetchUploadedWardrobeItemDetail.mockReset();
 });
 
 describe("ProductDetailDialog", () => {
@@ -148,7 +148,7 @@ describe("ProductDetailDialog", () => {
   });
 
   test("keeps mobile detail actions attached before the close button", () => {
-    renderDialog({ isMobile: true, onSaveToMyWardrobe: vi.fn() });
+    renderDialog({ isMobile: true, onSaveToPersonalItems: vi.fn() });
 
     const actions = screen.getByRole("button", { name: "Product actions" });
     const close = screen.getByRole("button", { name: "Close" });
@@ -221,7 +221,7 @@ describe("ProductDetailDialog", () => {
   });
 
   test("renders product actions when only remove is available", () => {
-    renderDialog({ onRemoveFromMyWardrobe: vi.fn() });
+    renderDialog({ onRemoveFromPersonalItems: vi.fn() });
 
     expect(
       screen.getByRole("button", { name: "Product actions" }),
@@ -229,7 +229,7 @@ describe("ProductDetailDialog", () => {
   });
 
   test("shows remove action in the mobile header when only remove is available", () => {
-    renderDialog({ isMobile: true, onRemoveFromMyWardrobe: vi.fn() });
+    renderDialog({ isMobile: true, onRemoveFromPersonalItems: vi.fn() });
 
     fireEvent.click(screen.getByRole("button", { name: "Product actions" }));
 
@@ -299,7 +299,7 @@ describe("ProductDetailDialog", () => {
   });
 
   test("loads uploaded wardrobe details by wardrobe URL", async () => {
-    myWardrobeApi.fetchUploadedWardrobeItemDetail.mockResolvedValue({
+    personalItemsApi.fetchUploadedWardrobeItemDetail.mockResolvedValue({
       item: {
         id: "uploaded-1",
         name: "Uploaded shirt",
@@ -323,9 +323,9 @@ describe("ProductDetailDialog", () => {
       },
     });
 
-    expect(myWardrobeApi.fetchUploadedWardrobeItemDetail).toHaveBeenCalledWith(
-      "uploaded-1",
-    );
+    expect(
+      personalItemsApi.fetchUploadedWardrobeItemDetail,
+    ).toHaveBeenCalledWith("uploaded-1");
     expect(await screen.findByText("Summer")).toBeInTheDocument();
     expect(screen.getByText("Unisex")).toBeInTheDocument();
     expect(searchApi.fetchProductDetailByUrl).not.toHaveBeenCalled();

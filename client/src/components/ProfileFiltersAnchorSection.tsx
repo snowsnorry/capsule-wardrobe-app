@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Box, Button, IconButton, Stack, Typography } from "@mui/material";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
-import { fetchMyWardrobeItems } from "../api/myWardrobe";
+import { fetchPersonalItems } from "../api/personalItems";
 import { fetchProductDetailByUrl } from "../api/search";
 import type { OutfitItemSnapshot, WardrobeItem } from "../app/appTypes";
 import { sortWardrobeItems } from "../../../shared/wardrobeOrder.js";
@@ -124,7 +124,7 @@ function ProfileFiltersAnchorSection({
 
   const loadItems = useCallback(async () => {
     try {
-      const response = await fetchMyWardrobeItems({ force: true });
+      const response = await fetchPersonalItems({ force: true });
       const nextItems = Array.isArray(response.items)
         ? (response.items as WardrobeItem[])
         : [];

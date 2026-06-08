@@ -9,7 +9,6 @@ export type SearchResultItem = {
   audience?: string;
   isLiked?: boolean | null;
   isSavedToWardrobe?: boolean;
-  savedToMyWardrobe?: boolean;
   [key: string]: unknown;
 };
 

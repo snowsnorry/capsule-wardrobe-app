@@ -132,7 +132,7 @@ function WardrobeProductMenuItems({
           {t(
             isUploaded
               ? "wardrobe.deleteUploaded"
-              : "capsule.removeFromMyWardrobe",
+              : "capsule.removeFromPersonalItems",
           )}
         </ListItemText>
       </MenuItem>
@@ -209,7 +209,7 @@ function WardrobeRemoveConfirmDialog({
         {isLoading ? (
           <LinearProgress
             color="success"
-            aria-label={t("capsule.removeFromMyWardrobe")}
+            aria-label={t("capsule.removeFromPersonalItems")}
             sx={{ mb: 2 }}
           />
         ) : null}

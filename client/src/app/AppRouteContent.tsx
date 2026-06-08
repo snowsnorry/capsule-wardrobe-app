@@ -17,7 +17,7 @@ import type {
   WardrobeItem,
 } from "./appTypes";
 import type { SettingsSavePayload } from "../components/SettingsDialog";
-import type { UploadedWardrobeItemUpdatePayload } from "../api/myWardrobe";
+import type { UploadedWardrobeItemUpdatePayload } from "../api/personalItems";
 import type { MainScreenItem } from "../screens/mainScreen/MainScreenTypes";
 import {
   FALLBACK_ACCENT_COLOR_OPTIONS,
@@ -143,8 +143,8 @@ type AppRouteContentProps = SharedFilterProps & {
     outfitId: string,
     items: OutfitItemSnapshot[],
   ) => Promise<void>;
-  onRemoveFromMyWardrobe: (item: WardrobeItem) => Promise<void>;
-  onSaveToMyWardrobe: (item: WardrobeItem) => Promise<void>;
+  onRemoveFromPersonalItems: (item: WardrobeItem) => Promise<void>;
+  onSaveToPersonalItems: (item: WardrobeItem) => Promise<void>;
   onSetItemLike: (item: WardrobeItem, isLiked: boolean) => Promise<void>;
   onUpdateUploadedWardrobeItem: (
     item: WardrobeItem,
@@ -230,8 +230,8 @@ function MainRoute(props: AppRouteContentProps) {
       onDuplicateCapsule={props.onDuplicateCapsule}
       onDeleteCapsule={props.onDeleteCapsule}
       onShareCapsule={props.onShareCapsule}
-      onRemoveFromMyWardrobe={props.onRemoveFromMyWardrobe}
-      onSaveToMyWardrobe={props.onSaveToMyWardrobe}
+      onRemoveFromPersonalItems={props.onRemoveFromPersonalItems}
+      onSaveToPersonalItems={props.onSaveToPersonalItems}
       onSetItemLike={props.onSetItemLike}
       onUpdateUploadedWardrobeItem={props.onUpdateUploadedWardrobeItem}
       onSearchCapsules={props.onSearchCapsules}
@@ -329,8 +329,8 @@ export default function AppRouteContent(props: AppRouteContentProps) {
         <SearchScreen
           initialQuery={props.searchInitialQuery}
           autoOpenProductDetail={props.searchAutoOpenProductDetail}
-          onRemoveFromMyWardrobe={props.onRemoveFromMyWardrobe}
-          onSaveToMyWardrobe={props.onSaveToMyWardrobe}
+          onRemoveFromPersonalItems={props.onRemoveFromPersonalItems}
+          onSaveToPersonalItems={props.onSaveToPersonalItems}
           onSetItemLike={props.onSetItemLike}
         />
       );
@@ -351,9 +351,9 @@ export default function AppRouteContent(props: AppRouteContentProps) {
           onDuplicateOutfit={props.onDuplicateOutfit}
           onRenameOutfit={props.onRenameOutfit}
           onReplaceOutfitItems={props.onReplaceOutfitItems}
-          onRemoveFromMyWardrobe={props.onRemoveFromMyWardrobe}
+          onRemoveFromPersonalItems={props.onRemoveFromPersonalItems}
           onRevertOutfit={props.onRevertOutfit}
-          onSaveToMyWardrobe={props.onSaveToMyWardrobe}
+          onSaveToPersonalItems={props.onSaveToPersonalItems}
           onSaveOutfit={props.onSaveOutfit}
           onSetItemLike={props.onSetItemLike}
           onUpdateUploadedWardrobeItem={props.onUpdateUploadedWardrobeItem}

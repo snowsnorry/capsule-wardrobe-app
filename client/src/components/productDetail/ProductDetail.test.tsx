@@ -29,8 +29,8 @@ const t = (key: string) => {
     "wardrobe.imageVersionToggle.label": "Uploaded item image version",
     "wardrobe.imageVersionToggle.original": "Original",
     "wardrobe.imageVersionToggle.ai": "AI",
-    "capsule.removeFromMyWardrobe": "Remove from Personal items",
-    "capsule.saveToMyWardrobe": "Save to Personal items",
+    "capsule.removeFromPersonalItems": "Remove from Personal items",
+    "capsule.saveToPersonalItems": "Save to Personal items",
   };
   return labels[key] ?? key;
 };
@@ -284,26 +284,26 @@ describe("ProductDetail", () => {
     });
   });
 
-  test("opens product actions and saves the product to my wardrobe", () => {
-    const onSaveToMyWardrobe = vi.fn();
+  test("opens product actions and saves the product to personal items", () => {
+    const onSaveToPersonalItems = vi.fn();
     const item = {
       id: "coat",
       name: "Coat",
       url: "https://example.com/coat",
     };
-    renderProductDetail(item, theme, { onSaveToMyWardrobe });
+    renderProductDetail(item, theme, { onSaveToPersonalItems });
 
     fireEvent.click(screen.getByRole("button", { name: "Product actions" }));
     fireEvent.click(
       screen.getByRole("menuitem", { name: "Save to Personal items" }),
     );
 
-    expect(onSaveToMyWardrobe).toHaveBeenCalledWith(item);
+    expect(onSaveToPersonalItems).toHaveBeenCalledWith(item);
   });
 
   test("shows save progress while the wardrobe request is pending", async () => {
     let resolveSave: () => void = () => undefined;
-    const onSaveToMyWardrobe = vi.fn(
+    const onSaveToPersonalItems = vi.fn(
       () =>
         new Promise<void>((resolve) => {
           resolveSave = resolve;
@@ -314,7 +314,7 @@ describe("ProductDetail", () => {
       name: "Coat",
       url: "https://example.com/coat",
     };
-    renderProductDetail(item, theme, { onSaveToMyWardrobe });
+    renderProductDetail(item, theme, { onSaveToPersonalItems });
 
     fireEvent.click(screen.getByRole("button", { name: "Product actions" }));
     fireEvent.click(
@@ -337,9 +337,9 @@ describe("ProductDetail", () => {
     });
   });
 
-  test("confirms before removing a saved product from my wardrobe", () => {
-    const onRemoveFromMyWardrobe = vi.fn();
-    const onSaveToMyWardrobe = vi.fn();
+  test("confirms before removing a saved product from personal items", () => {
+    const onRemoveFromPersonalItems = vi.fn();
+    const onSaveToPersonalItems = vi.fn();
     const item = {
       id: "coat",
       name: "Coat",
@@ -347,31 +347,31 @@ describe("ProductDetail", () => {
       isSavedToWardrobe: true,
     };
     renderProductDetail(item, theme, {
-      onRemoveFromMyWardrobe,
-      onSaveToMyWardrobe,
+      onRemoveFromPersonalItems,
+      onSaveToPersonalItems,
     });
 
     fireEvent.click(screen.getByRole("button", { name: "Product actions" }));
     fireEvent.click(
       screen.getByRole("menuitem", { name: "Remove from Personal items" }),
     );
-    expect(onRemoveFromMyWardrobe).not.toHaveBeenCalled();
+    expect(onRemoveFromPersonalItems).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("button", { name: "Remove" }));
 
-    expect(onRemoveFromMyWardrobe).toHaveBeenCalledWith(item);
-    expect(onSaveToMyWardrobe).not.toHaveBeenCalled();
+    expect(onRemoveFromPersonalItems).toHaveBeenCalledWith(item);
+    expect(onSaveToPersonalItems).not.toHaveBeenCalled();
   });
 
   test("shows remove actions for wardrobe detail items without a save handler", () => {
-    const onRemoveFromMyWardrobe = vi.fn();
+    const onRemoveFromPersonalItems = vi.fn();
     const item = {
       id: "coat",
       name: "Coat",
       url: "https://example.com/coat",
       source: "from_catalog",
     };
-    renderProductDetail(item, theme, { onRemoveFromMyWardrobe });
+    renderProductDetail(item, theme, { onRemoveFromPersonalItems });
 
     fireEvent.click(screen.getByRole("button", { name: "Product actions" }));
     fireEvent.click(
@@ -379,6 +379,6 @@ describe("ProductDetail", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "Remove" }));
 
-    expect(onRemoveFromMyWardrobe).toHaveBeenCalledWith(item);
+    expect(onRemoveFromPersonalItems).toHaveBeenCalledWith(item);
   });
 });

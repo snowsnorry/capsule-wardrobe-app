@@ -1,15 +1,14 @@
 type WardrobeSavedFlags = Record<string, unknown> & {
   isSavedToWardrobe?: unknown;
-  savedToMyWardrobe?: unknown;
   source?: unknown;
 };
 
 function hasExplicitUnsavedWardrobeFlag(item: WardrobeSavedFlags | null) {
-  return item?.isSavedToWardrobe === false || item?.savedToMyWardrobe === false;
+  return item?.isSavedToWardrobe === false;
 }
 
 function hasSavedWardrobeFlag(item: WardrobeSavedFlags | null) {
-  return Boolean(item?.isSavedToWardrobe || item?.savedToMyWardrobe);
+  return Boolean(item?.isSavedToWardrobe);
 }
 
 function isSavedToWardrobe(

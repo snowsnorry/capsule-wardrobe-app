@@ -160,9 +160,7 @@ function ResultListItem({
   t: SearchResultsListProps["t"];
   onSelectResult: (item: SearchResultItem) => void;
 }) {
-  const isSavedToWardrobe = Boolean(
-    item.isSavedToWardrobe || item.savedToMyWardrobe,
-  );
+  const isSavedToWardrobe = Boolean(item.isSavedToWardrobe);
   const isLiked = Boolean(item.isLiked);
   const likedLabel = t("wardrobe.likedBadge");
   const savedLabel = t("wardrobe.savedBadge");

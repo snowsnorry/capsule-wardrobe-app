@@ -2,10 +2,10 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import type { Mock } from "vitest";
 import { downloadCapsulePdf } from "../api/capsules";
 import {
-  removeCatalogItemFromMyWardrobe,
-  saveCatalogItemToMyWardrobe,
+  removeCatalogItemFromPersonalItems,
+  saveCatalogItemToPersonalItems,
   updateUploadedWardrobeItem,
-} from "../api/myWardrobe";
+} from "../api/personalItems";
 import {
   deleteOutfitSetImage,
   generateOutfitSetImage,
@@ -18,23 +18,23 @@ import {
   downloadWardrobePdf,
   generateOutfitSetImage as generateOutfitSetImageAction,
   handleWardrobeError,
-  removeItemFromMyWardrobe,
+  removeItemFromPersonalItems,
   refreshWardrobe,
   regenerateSelectedItems,
-  saveItemToMyWardrobe,
+  saveItemToPersonalItems,
   startCapsuleEventStream,
   stopCapsuleEventStream,
   toggleRegenerationSelection,
-  updateUploadedItemInMyWardrobe,
+  updateUploadedItemInPersonalItems,
 } from "./wardrobeActions";
 import { createActionContext } from "./testUtils";
 
 vi.mock("../api/capsules", () => ({
   downloadCapsulePdf: vi.fn(),
 }));
-vi.mock("../api/myWardrobe", () => ({
-  removeCatalogItemFromMyWardrobe: vi.fn(),
-  saveCatalogItemToMyWardrobe: vi.fn(),
+vi.mock("../api/personalItems", () => ({
+  removeCatalogItemFromPersonalItems: vi.fn(),
+  saveCatalogItemToPersonalItems: vi.fn(),
   updateUploadedWardrobeItem: vi.fn(),
 }));
 vi.mock("../api/wardrobe", () => ({
@@ -188,19 +188,19 @@ describe("wardrobeActions", () => {
     });
   });
 
-  test("saveItemToMyWardrobe posts catalog item URLs and reports failures", async () => {
-    vi.mocked(saveCatalogItemToMyWardrobe).mockResolvedValueOnce({
+  test("saveItemToPersonalItems posts catalog item URLs and reports failures", async () => {
+    vi.mocked(saveCatalogItemToPersonalItems).mockResolvedValueOnce({
       ok: true,
     });
     const context = createActionContext();
 
-    await saveItemToMyWardrobe(context, {
+    await saveItemToPersonalItems(context, {
       url: " https://example.com/top-1 ",
     });
-    await saveItemToMyWardrobe(context, { url: " " });
+    await saveItemToPersonalItems(context, { url: " " });
 
-    expect(saveCatalogItemToMyWardrobe).toHaveBeenCalledTimes(1);
-    expect(saveCatalogItemToMyWardrobe).toHaveBeenCalledWith(
+    expect(saveCatalogItemToPersonalItems).toHaveBeenCalledTimes(1);
+    expect(saveCatalogItemToPersonalItems).toHaveBeenCalledWith(
       "https://example.com/top-1",
     );
     expect(context.setIsContentOperationLoading).toHaveBeenNthCalledWith(
@@ -226,10 +226,12 @@ describe("wardrobeActions", () => {
       infoParams: null,
     });
 
-    vi.mocked(saveCatalogItemToMyWardrobe).mockRejectedValueOnce(
+    vi.mocked(saveCatalogItemToPersonalItems).mockRejectedValueOnce(
       new Error("not_found"),
     );
-    await saveItemToMyWardrobe(context, { url: "https://example.com/missing" });
+    await saveItemToPersonalItems(context, {
+      url: "https://example.com/missing",
+    });
     const notFoundUpdater = mockCalls(context.setStatus).at(-1)?.[0] as (
       current: unknown,
     ) => unknown;
@@ -239,13 +241,13 @@ describe("wardrobeActions", () => {
       infoParams: null,
     });
 
-    vi.mocked(saveCatalogItemToMyWardrobe).mockRejectedValueOnce(
+    vi.mocked(saveCatalogItemToPersonalItems).mockRejectedValueOnce(
       new Error("network"),
     );
     const genericFailureContext = createActionContext({
       isMountedRef: { current: false },
     });
-    await saveItemToMyWardrobe(genericFailureContext, {
+    await saveItemToPersonalItems(genericFailureContext, {
       url: "https://example.com/failing",
     });
     const genericErrorUpdater = mockCalls(genericFailureContext.setStatus).at(
@@ -264,20 +266,20 @@ describe("wardrobeActions", () => {
     ).toHaveBeenCalledWith(true);
   });
 
-  test("removeItemFromMyWardrobe deletes catalog item URLs and clears saved state", async () => {
-    vi.mocked(removeCatalogItemFromMyWardrobe).mockResolvedValueOnce({
+  test("removeItemFromPersonalItems deletes catalog item URLs and clears saved state", async () => {
+    vi.mocked(removeCatalogItemFromPersonalItems).mockResolvedValueOnce({
       ok: true,
       removed: true,
     });
     const context = createActionContext();
 
-    await removeItemFromMyWardrobe(context, {
+    await removeItemFromPersonalItems(context, {
       url: " https://example.com/top-1 ",
     });
-    await removeItemFromMyWardrobe(context, { url: " " });
+    await removeItemFromPersonalItems(context, { url: " " });
 
-    expect(removeCatalogItemFromMyWardrobe).toHaveBeenCalledTimes(1);
-    expect(removeCatalogItemFromMyWardrobe).toHaveBeenCalledWith(
+    expect(removeCatalogItemFromPersonalItems).toHaveBeenCalledTimes(1);
+    expect(removeCatalogItemFromPersonalItems).toHaveBeenCalledWith(
       "https://example.com/top-1",
     );
     expect(context.setIsContentOperationLoading).toHaveBeenNthCalledWith(
@@ -295,14 +297,12 @@ describe("wardrobeActions", () => {
         {
           url: "https://example.com/top-1",
           isSavedToWardrobe: true,
-          savedToMyWardrobe: true,
         },
       ]),
     ).toEqual([
       {
         url: "https://example.com/top-1",
         isSavedToWardrobe: false,
-        savedToMyWardrobe: false,
       },
     ]);
     const successUpdater = mockCalls(context.setStatus).at(-1)?.[0] as (
@@ -314,10 +314,10 @@ describe("wardrobeActions", () => {
       infoParams: null,
     });
 
-    vi.mocked(removeCatalogItemFromMyWardrobe).mockRejectedValueOnce(
+    vi.mocked(removeCatalogItemFromPersonalItems).mockRejectedValueOnce(
       new Error("network"),
     );
-    await removeItemFromMyWardrobe(context, {
+    await removeItemFromPersonalItems(context, {
       url: "https://example.com/top-1",
     });
     const errorUpdater = mockCalls(context.setStatus).at(-1)?.[0] as (
@@ -330,7 +330,7 @@ describe("wardrobeActions", () => {
     });
   });
 
-  test("updateUploadedItemInMyWardrobe patches uploaded details and preserves capsule item id", async () => {
+  test("updateUploadedItemInPersonalItems patches uploaded details and preserves capsule item id", async () => {
     vi.mocked(updateUploadedWardrobeItem).mockResolvedValueOnce({
       item: {
         id: "uploaded-1",
@@ -361,7 +361,7 @@ describe("wardrobeActions", () => {
       closureType: [],
     };
 
-    const updated = await updateUploadedItemInMyWardrobe(
+    const updated = await updateUploadedItemInPersonalItems(
       context,
       {
         id: "Wuploaded-1",
@@ -403,7 +403,7 @@ describe("wardrobeActions", () => {
     ]);
   });
 
-  test("updateUploadedItemInMyWardrobe accepts alternate uploaded ids and fallback payloads", async () => {
+  test("updateUploadedItemInPersonalItems accepts alternate uploaded ids and fallback payloads", async () => {
     const payload = {
       name: "Payload-only top",
       description: null,
@@ -425,7 +425,7 @@ describe("wardrobeActions", () => {
     vi.mocked(updateUploadedWardrobeItem).mockResolvedValueOnce({ item: null });
     const explicitContext = createActionContext();
 
-    const explicitUpdated = await updateUploadedItemInMyWardrobe(
+    const explicitUpdated = await updateUploadedItemInPersonalItems(
       explicitContext,
       {
         wardrobeId: "explicit-uploaded-1",
@@ -458,7 +458,7 @@ describe("wardrobeActions", () => {
       },
     });
     const urlContext = createActionContext();
-    await updateUploadedItemInMyWardrobe(
+    await updateUploadedItemInPersonalItems(
       urlContext,
       {
         wardrobeId: "wardrobe-id-from-alias",
@@ -496,7 +496,7 @@ describe("wardrobeActions", () => {
         source: "uploaded",
       },
     });
-    await updateUploadedItemInMyWardrobe(
+    await updateUploadedItemInPersonalItems(
       createActionContext(),
       {
         id: "source-uploaded-1",
@@ -510,7 +510,7 @@ describe("wardrobeActions", () => {
     );
   });
 
-  test("updateUploadedItemInMyWardrobe reports missing ids and update failures", async () => {
+  test("updateUploadedItemInPersonalItems reports missing ids and update failures", async () => {
     const payload = {
       name: "Updated top",
       description: null,
@@ -531,7 +531,7 @@ describe("wardrobeActions", () => {
     };
 
     await expect(
-      updateUploadedItemInMyWardrobe(createActionContext(), {}, payload),
+      updateUploadedItemInPersonalItems(createActionContext(), {}, payload),
     ).rejects.toThrow("missing_uploaded_item_id");
 
     vi.mocked(updateUploadedWardrobeItem).mockRejectedValueOnce(
@@ -540,7 +540,7 @@ describe("wardrobeActions", () => {
     const context = createActionContext({ isMountedRef: { current: false } });
 
     await expect(
-      updateUploadedItemInMyWardrobe(
+      updateUploadedItemInPersonalItems(
         context,
         { url: "wardrobe:///encoded%20item", source: "uploaded" },
         payload,

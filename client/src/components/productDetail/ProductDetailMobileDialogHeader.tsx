@@ -12,12 +12,12 @@ type ProductDetailMobileDialogHeaderProps = {
   item: ProductDetailItem | null;
   onClose: () => void;
   onEditUploadedWardrobeItem?: (item: ProductDetailItem) => void;
-  onRemoveFromMyWardrobe?: (item: ProductDetailItem) => Promise<void> | void;
+  onRemoveFromPersonalItems?: (item: ProductDetailItem) => Promise<void> | void;
   onSetItemLike?: (
     item: ProductDetailItem,
     isLiked: boolean,
   ) => Promise<void> | void;
-  onSaveToMyWardrobe?: (item: ProductDetailItem) => Promise<void> | void;
+  onSaveToPersonalItems?: (item: ProductDetailItem) => Promise<void> | void;
   t: (key: string, params?: Record<string, unknown>) => string;
 };
 
@@ -25,22 +25,22 @@ function ProductDetailMobileDialogHeader({
   item,
   onClose,
   onEditUploadedWardrobeItem,
-  onRemoveFromMyWardrobe,
+  onRemoveFromPersonalItems,
   onSetItemLike,
-  onSaveToMyWardrobe,
+  onSaveToPersonalItems,
   t,
 }: ProductDetailMobileDialogHeaderProps) {
   const actionItem = normalizeProductDetailItem(item);
   const shouldShowActions = Boolean(
     actionItem &&
-    (onSaveToMyWardrobe ||
-      onRemoveFromMyWardrobe ||
+    (onSaveToPersonalItems ||
+      onRemoveFromPersonalItems ||
       onSetItemLike ||
       onEditUploadedWardrobeItem),
   );
   const isSaved =
     isSavedToWardrobe(actionItem) ||
-    Boolean(onRemoveFromMyWardrobe && !onSaveToMyWardrobe);
+    Boolean(onRemoveFromPersonalItems && !onSaveToPersonalItems);
 
   return (
     <DialogTitle sx={mobileCapsuleDialogTitleSx}>
@@ -66,9 +66,9 @@ function ProductDetailMobileDialogHeader({
             t={t}
             isSavedToWardrobe={isSaved}
             onEditUploadedWardrobeItem={onEditUploadedWardrobeItem}
-            onRemoveFromMyWardrobe={onRemoveFromMyWardrobe}
+            onRemoveFromPersonalItems={onRemoveFromPersonalItems}
             onSetItemLike={onSetItemLike}
-            onSaveToMyWardrobe={onSaveToMyWardrobe}
+            onSaveToPersonalItems={onSaveToPersonalItems}
           />
         ) : null}
         <IconButton aria-label={t("actions.close")} onClick={onClose}>

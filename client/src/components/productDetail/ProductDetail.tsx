@@ -25,13 +25,13 @@ type ProductDetailProps = {
   mobileBackAction?: (() => void) | null;
   reserveHeaderActionsSpace?: boolean;
   showImage?: boolean;
-  onRemoveFromMyWardrobe?: (item: ProductDetailItem) => Promise<void> | void;
+  onRemoveFromPersonalItems?: (item: ProductDetailItem) => Promise<void> | void;
   onEditUploadedWardrobeItem?: (item: ProductDetailItem) => void;
   onSetItemLike?: (
     item: ProductDetailItem,
     isLiked: boolean,
   ) => Promise<void> | void;
-  onSaveToMyWardrobe?: (item: ProductDetailItem) => Promise<void> | void;
+  onSaveToPersonalItems?: (item: ProductDetailItem) => Promise<void> | void;
 };
 
 function ProductDetail({
@@ -43,10 +43,10 @@ function ProductDetail({
   mobileBackAction = null,
   reserveHeaderActionsSpace = false,
   showImage = true,
-  onRemoveFromMyWardrobe,
+  onRemoveFromPersonalItems,
   onEditUploadedWardrobeItem,
   onSetItemLike,
-  onSaveToMyWardrobe,
+  onSaveToPersonalItems,
 }: ProductDetailProps): ReactElement {
   const normalizedItem = normalizeProductDetailItem(item);
 
@@ -74,9 +74,9 @@ function ProductDetail({
         mobileBackAction={mobileBackAction}
         reserveHeaderActionsSpace={reserveHeaderActionsSpace}
         onEditUploadedWardrobeItem={onEditUploadedWardrobeItem}
-        onRemoveFromMyWardrobe={onRemoveFromMyWardrobe}
+        onRemoveFromPersonalItems={onRemoveFromPersonalItems}
         onSetItemLike={onSetItemLike}
-        onSaveToMyWardrobe={onSaveToMyWardrobe}
+        onSaveToPersonalItems={onSaveToPersonalItems}
       />
       {normalizedItem.description ? (
         <Typography variant="body1" color="text.secondary">
@@ -102,10 +102,10 @@ function ProductHeader({
   linkTitle,
   mobileBackAction,
   reserveHeaderActionsSpace,
-  onRemoveFromMyWardrobe,
+  onRemoveFromPersonalItems,
   onEditUploadedWardrobeItem,
   onSetItemLike,
-  onSaveToMyWardrobe,
+  onSaveToPersonalItems,
 }: Required<Pick<ProductDetailProps, "item" | "t" | "locale">> &
   Pick<
     ProductDetailProps,
@@ -113,9 +113,9 @@ function ProductHeader({
     | "mobileBackAction"
     | "reserveHeaderActionsSpace"
     | "onEditUploadedWardrobeItem"
-    | "onRemoveFromMyWardrobe"
+    | "onRemoveFromPersonalItems"
     | "onSetItemLike"
-    | "onSaveToMyWardrobe"
+    | "onSaveToPersonalItems"
   >) {
   const productUrl = getSafeHttpUrl(item.url);
 
@@ -129,9 +129,9 @@ function ProductHeader({
         productUrl={productUrl}
         t={t}
         onEditUploadedWardrobeItem={onEditUploadedWardrobeItem}
-        onRemoveFromMyWardrobe={onRemoveFromMyWardrobe}
+        onRemoveFromPersonalItems={onRemoveFromPersonalItems}
         onSetItemLike={onSetItemLike}
-        onSaveToMyWardrobe={onSaveToMyWardrobe}
+        onSaveToPersonalItems={onSaveToPersonalItems}
       />
       {item.brand ? <Typography variant="h6">{item.brand}</Typography> : null}
       {item.category ? (
@@ -150,10 +150,10 @@ function ProductHeaderTitleRow({
   reserveHeaderActionsSpace,
   productUrl,
   t,
-  onRemoveFromMyWardrobe,
+  onRemoveFromPersonalItems,
   onEditUploadedWardrobeItem,
   onSetItemLike,
-  onSaveToMyWardrobe,
+  onSaveToPersonalItems,
 }: {
   item: ProductDetailItem;
   linkTitle: boolean;
@@ -161,17 +161,17 @@ function ProductHeaderTitleRow({
   productUrl: string | null;
   t: ProductDetailProps["t"];
   onEditUploadedWardrobeItem?: ProductDetailProps["onEditUploadedWardrobeItem"];
-  onRemoveFromMyWardrobe?: ProductDetailProps["onRemoveFromMyWardrobe"];
+  onRemoveFromPersonalItems?: ProductDetailProps["onRemoveFromPersonalItems"];
   onSetItemLike?: ProductDetailProps["onSetItemLike"];
   reserveHeaderActionsSpace?: ProductDetailProps["reserveHeaderActionsSpace"];
-  onSaveToMyWardrobe?: ProductDetailProps["onSaveToMyWardrobe"];
+  onSaveToPersonalItems?: ProductDetailProps["onSaveToPersonalItems"];
 }) {
   const isSaved =
     isSavedToWardrobe(item) ||
-    Boolean(onRemoveFromMyWardrobe && !onSaveToMyWardrobe);
+    Boolean(onRemoveFromPersonalItems && !onSaveToPersonalItems);
   const shouldShowActionsMenu = Boolean(
-    onSaveToMyWardrobe ||
-    onRemoveFromMyWardrobe ||
+    onSaveToPersonalItems ||
+    onRemoveFromPersonalItems ||
     onEditUploadedWardrobeItem ||
     onSetItemLike,
   );
@@ -210,9 +210,9 @@ function ProductHeaderTitleRow({
           t={t}
           isSavedToWardrobe={isSaved}
           onEditUploadedWardrobeItem={onEditUploadedWardrobeItem}
-          onRemoveFromMyWardrobe={onRemoveFromMyWardrobe}
+          onRemoveFromPersonalItems={onRemoveFromPersonalItems}
           onSetItemLike={onSetItemLike}
-          onSaveToMyWardrobe={onSaveToMyWardrobe}
+          onSaveToPersonalItems={onSaveToPersonalItems}
         />
       ) : null}
     </Stack>

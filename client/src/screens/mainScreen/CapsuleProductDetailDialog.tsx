@@ -1,5 +1,5 @@
 import { Dialog, DialogContent } from "@mui/material";
-import type { UploadedWardrobeItemUpdatePayload } from "../../api/myWardrobe";
+import type { UploadedWardrobeItemUpdatePayload } from "../../api/personalItems";
 import ProductDetail from "../../components/productDetail/ProductDetail";
 import {
   DesktopProductDetailPane,
@@ -34,9 +34,9 @@ type CapsuleProductDetailDialogProps = {
   ) => Promise<void> | void;
   onClose: () => void;
   onEdit: (item: ProductDetailItem) => void;
-  onRemoveFromMyWardrobe?: DialogsProps["props"]["onRemoveFromMyWardrobe"];
+  onRemoveFromPersonalItems?: DialogsProps["props"]["onRemoveFromPersonalItems"];
   onReadMode: () => void;
-  onSaveToMyWardrobe?: DialogsProps["props"]["onSaveToMyWardrobe"];
+  onSaveToPersonalItems?: DialogsProps["props"]["onSaveToPersonalItems"];
   onSetItemLike?: DialogsProps["props"]["onSetItemLike"];
 };
 
@@ -48,9 +48,9 @@ function CapsuleProductDetailDialog({
   onApply,
   onClose,
   onEdit,
-  onRemoveFromMyWardrobe,
+  onRemoveFromPersonalItems,
   onReadMode,
-  onSaveToMyWardrobe,
+  onSaveToPersonalItems,
   onSetItemLike,
   open,
   t,
@@ -82,10 +82,12 @@ function CapsuleProductDetailDialog({
           t={t}
           onClose={onClose}
           onEditUploadedWardrobeItem={isUploadedItem ? onEdit : undefined}
-          onRemoveFromMyWardrobe={
-            isUploadedItem ? undefined : onRemoveFromMyWardrobe
+          onRemoveFromPersonalItems={
+            isUploadedItem ? undefined : onRemoveFromPersonalItems
           }
-          onSaveToMyWardrobe={isUploadedItem ? undefined : onSaveToMyWardrobe}
+          onSaveToPersonalItems={
+            isUploadedItem ? undefined : onSaveToPersonalItems
+          }
           onSetItemLike={onSetItemLike}
         />
       ) : null}
@@ -115,9 +117,9 @@ function CapsuleProductDetailDialog({
             onApply={onApply}
             onClose={onClose}
             onEdit={onEdit}
-            onRemoveFromMyWardrobe={onRemoveFromMyWardrobe}
+            onRemoveFromPersonalItems={onRemoveFromPersonalItems}
             onReadMode={onReadMode}
-            onSaveToMyWardrobe={onSaveToMyWardrobe}
+            onSaveToPersonalItems={onSaveToPersonalItems}
             onSetItemLike={onSetItemLike}
           />
         </DialogContent>
@@ -135,9 +137,9 @@ function CapsuleProductDetailContent({
   onApply,
   onClose,
   onEdit,
-  onRemoveFromMyWardrobe,
+  onRemoveFromPersonalItems,
   onReadMode,
-  onSaveToMyWardrobe,
+  onSaveToPersonalItems,
   onSetItemLike,
   showMobileHeader,
   t,
@@ -150,19 +152,19 @@ function CapsuleProductDetailContent({
   onApply: CapsuleProductDetailDialogProps["onApply"];
   onClose: () => void;
   onEdit: (item: ProductDetailItem) => void;
-  onRemoveFromMyWardrobe?: DialogsProps["props"]["onRemoveFromMyWardrobe"];
+  onRemoveFromPersonalItems?: DialogsProps["props"]["onRemoveFromPersonalItems"];
   onReadMode: () => void;
-  onSaveToMyWardrobe?: DialogsProps["props"]["onSaveToMyWardrobe"];
+  onSaveToPersonalItems?: DialogsProps["props"]["onSaveToPersonalItems"];
   onSetItemLike?: DialogsProps["props"]["onSetItemLike"];
   showMobileHeader: boolean;
   t: Translate;
 }) {
   const isUploadedItem = item.source === "uploaded";
   const editMode = mode === "edit" && isUploadedItem;
-  const saveToWardrobe = isUploadedItem ? undefined : onSaveToMyWardrobe;
+  const saveToWardrobe = isUploadedItem ? undefined : onSaveToPersonalItems;
   const removeFromWardrobe = isUploadedItem
     ? undefined
-    : onRemoveFromMyWardrobe;
+    : onRemoveFromPersonalItems;
 
   if (isLoading) {
     return (
@@ -199,8 +201,8 @@ function CapsuleProductDetailContent({
           t={t}
           onClose={onClose}
           onEditUploadedWardrobeItem={isUploadedItem ? onEdit : undefined}
-          onRemoveFromMyWardrobe={removeFromWardrobe}
-          onSaveToMyWardrobe={saveToWardrobe}
+          onRemoveFromPersonalItems={removeFromWardrobe}
+          onSaveToPersonalItems={saveToWardrobe}
           onSetItemLike={onSetItemLike}
         />
       )}

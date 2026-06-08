@@ -17,17 +17,17 @@ vi.mock("./config", () => ({
 
 import {
   deleteUploadedWardrobeItem,
-  downloadMyWardrobePdf,
-  fetchMyWardrobeItems,
+  downloadPersonalItemsPdf,
+  fetchPersonalItems,
   fetchUploadedWardrobeItemDetail,
   getWardrobeItemsPdfUrl,
   getWardrobeItemsUrl,
-  removeCatalogItemFromMyWardrobe,
-  saveCatalogItemToMyWardrobe,
+  removeCatalogItemFromPersonalItems,
+  saveCatalogItemToPersonalItems,
   updateUploadedWardrobeItem,
   uploadWardrobeImages,
   uploadWardrobeUrls,
-} from "./myWardrobe";
+} from "./personalItems";
 
 type HeaderMap = Record<string, string>;
 type MockResponse = Pick<Response, "blob" | "json" | "ok" | "status"> & {
@@ -69,7 +69,7 @@ function createResponse({
   };
 }
 
-describe("my wardrobe api", () => {
+describe("personal items api", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     requestApi.getCachedJson.mockReset();
@@ -104,8 +104,8 @@ describe("my wardrobe api", () => {
     );
   });
 
-  test("fetches my wardrobe items", async () => {
-    await fetchMyWardrobeItems({ source: "from_catalog", force: true });
+  test("fetches personal items items", async () => {
+    await fetchPersonalItems({ source: "from_catalog", force: true });
 
     expect(requestApi.getCachedJson).toHaveBeenCalledWith(
       "https://api.example.test/wardrobe/items?source=from_catalog",
@@ -271,8 +271,8 @@ describe("my wardrobe api", () => {
     });
   });
 
-  test("saves catalog items to my wardrobe", async () => {
-    await saveCatalogItemToMyWardrobe("https://example.com/1");
+  test("saves catalog items to personal items", async () => {
+    await saveCatalogItemToPersonalItems("https://example.com/1");
 
     expect(requestApi.requestJson).toHaveBeenCalledWith(
       "https://api.example.test/wardrobe/items/from-catalog",
@@ -285,8 +285,8 @@ describe("my wardrobe api", () => {
     );
   });
 
-  test("removes catalog items from my wardrobe", async () => {
-    await removeCatalogItemFromMyWardrobe("https://example.com/1");
+  test("removes catalog items from personal items", async () => {
+    await removeCatalogItemFromPersonalItems("https://example.com/1");
 
     expect(requestApi.requestJson).toHaveBeenCalledWith(
       "https://api.example.test/wardrobe/items/from-catalog",
@@ -344,7 +344,7 @@ describe("my wardrobe api", () => {
     );
   });
 
-  test("downloads filtered my wardrobe PDF and revokes object url", async () => {
+  test("downloads filtered personal items PDF and revokes object url", async () => {
     const originalCreateElement = document.createElement.bind(document);
     const anchorMethods = { click: vi.fn(), remove: vi.fn() };
     let createdAnchor: HTMLAnchorElement | null = null;
@@ -369,7 +369,7 @@ describe("my wardrobe api", () => {
       }) as Response,
     );
 
-    await downloadMyWardrobePdf({ source: "uploaded" });
+    await downloadPersonalItemsPdf({ source: "uploaded" });
 
     expect(requestApi.request).toHaveBeenCalledWith(
       "https://api.example.test/wardrobe/items/pdf?source=uploaded",
@@ -385,7 +385,7 @@ describe("my wardrobe api", () => {
     expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:personal-items-pdf");
   });
 
-  test("downloadMyWardrobePdf surfaces endpoint errors", async () => {
+  test("downloadPersonalItemsPdf surfaces endpoint errors", async () => {
     requestApi.request.mockResolvedValueOnce(
       createResponse({
         ok: false,
@@ -394,7 +394,7 @@ describe("my wardrobe api", () => {
       }) as Response,
     );
 
-    await expect(downloadMyWardrobePdf()).rejects.toMatchObject({
+    await expect(downloadPersonalItemsPdf()).rejects.toMatchObject({
       message: "not_found",
       status: 404,
     });

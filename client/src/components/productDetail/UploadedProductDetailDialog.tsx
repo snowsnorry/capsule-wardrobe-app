@@ -14,7 +14,7 @@ import {
   mobileCapsuleDialogContentSx,
   mobileCapsuleDialogPaperSx,
 } from "../MobileDialogSurfaceStyles";
-import type { UploadedWardrobeItemUpdatePayload } from "../../api/myWardrobe";
+import type { UploadedWardrobeItemUpdatePayload } from "../../api/personalItems";
 import type { ProductDetailItem } from "./ProductDetailModel";
 import ProductDialogImagePane from "./ProductDialogImagePane";
 import { ProductImage } from "./ProductDetailSections";

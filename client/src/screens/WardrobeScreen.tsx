@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { ReactElement } from "react";
 import { Alert, Box, Stack } from "@mui/material";
 import useMediaQuery from "@mui/material/useMediaQuery";
-import { type UploadedWardrobeItemUpdatePayload } from "../api/myWardrobe";
+import { type UploadedWardrobeItemUpdatePayload } from "../api/personalItems";
 import { useI18n } from "../i18n/useI18n";
 import { isUploadedWardrobeItemNeedsReview } from "../utils/uploadedWardrobeItemStatus";
 import {
@@ -217,7 +217,7 @@ function WardrobeScreen(): ReactElement {
               setProductDetailMode("edit");
             }}
             onReadMode={() => setProductDetailMode("read")}
-            onRemoveFromMyWardrobe={wardrobeItems.handleConfirmRemove}
+            onRemoveFromPersonalItems={wardrobeItems.handleConfirmRemove}
             onSetItemLike={handleSetProductDetailItemLike}
           />
         ) : null}

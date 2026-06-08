@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getReadyWardrobeCapsuleItems } from "../../../../shared/capsuleCategories.js";
-import { fetchMyWardrobeItems } from "../../api/myWardrobe";
+import { fetchPersonalItems } from "../../api/personalItems";
 import {
   readStoredMobileCardColumns,
   writeStoredMobileCardColumns,
@@ -289,7 +289,7 @@ function useWardrobeOnlyRegenerationBlock(sourceMode: string) {
 
     let current = true;
     setIsBlocked(true);
-    fetchMyWardrobeItems({ force: true })
+    fetchPersonalItems({ force: true })
       .then((response) => {
         if (!current) return;
         const items = Array.isArray(response?.items)

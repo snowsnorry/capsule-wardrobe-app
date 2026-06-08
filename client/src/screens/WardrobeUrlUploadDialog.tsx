@@ -12,7 +12,7 @@ import {
   Typography,
 } from "@mui/material";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
-import type { UploadWardrobeProgress } from "../api/myWardrobe";
+import type { UploadWardrobeProgress } from "../api/personalItems";
 import {
   mobileCapsuleDialogActionsSx,
   mobileCapsuleDialogContentSx,

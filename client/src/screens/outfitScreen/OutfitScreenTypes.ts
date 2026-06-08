@@ -1,4 +1,4 @@
-import type { UploadedWardrobeItemUpdatePayload } from "../../api/myWardrobe";
+import type { UploadedWardrobeItemUpdatePayload } from "../../api/personalItems";
 import type { ProductMenuOpenOptions } from "../../components/ClothingCardTypes";
 import type {
   OutfitItemSnapshot,
@@ -17,9 +17,9 @@ export type OutfitScreenProps = {
     outfitId: string,
     items: OutfitItemSnapshot[],
   ) => Promise<void>;
-  onRemoveFromMyWardrobe?: (item: WardrobeItem) => Promise<void>;
+  onRemoveFromPersonalItems?: (item: WardrobeItem) => Promise<void>;
   onRevertOutfit: (outfitId?: string) => Promise<void>;
-  onSaveToMyWardrobe?: (item: WardrobeItem) => Promise<void>;
+  onSaveToPersonalItems?: (item: WardrobeItem) => Promise<void>;
   onSaveOutfit: (outfitId?: string) => Promise<void>;
   onSetItemLike: (item: WardrobeItem, isLiked: boolean) => Promise<void>;
   onUpdateUploadedWardrobeItem?: (

@@ -9,7 +9,7 @@ import {
 import AddPhotoAlternateOutlinedIcon from "@mui/icons-material/AddPhotoAlternateOutlined";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import ImageOutlinedIcon from "@mui/icons-material/ImageOutlined";
-import type { UploadWardrobeProgress } from "../api/myWardrobe";
+import type { UploadWardrobeProgress } from "../api/personalItems";
 
 type SelectedUploadFile = {
   id: string;

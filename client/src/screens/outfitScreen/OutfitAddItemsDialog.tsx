@@ -20,7 +20,7 @@ import {
   pickerGridSx,
   pickerScrollAreaSx,
 } from "../../components/ProfileFiltersAnchorStyles";
-import { fetchMyWardrobeItems } from "../../api/myWardrobe";
+import { fetchPersonalItems } from "../../api/personalItems";
 import { fetchSearchOptions, runSearch } from "../../api/search";
 import { translateOption } from "../../i18n";
 import SearchFiltersSidebar from "../../search/SearchFiltersSidebar";
@@ -165,7 +165,7 @@ export function AddItemsDialog({
     setLikedOnly(false);
     setTypeFilter("all");
     setPersonalLoading(true);
-    void fetchMyWardrobeItems({ force: true })
+    void fetchPersonalItems({ force: true })
       .then((result) => {
         setPersonalItems(Array.isArray(result.items) ? result.items : []);
       })

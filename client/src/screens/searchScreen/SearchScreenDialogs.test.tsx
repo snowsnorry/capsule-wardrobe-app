@@ -78,7 +78,7 @@ function getFilterFooterApplyButton() {
 describe("SearchScreenDialogs", () => {
   test("applies filters, closes filters, and closes product detail", async () => {
     const search = createSearch();
-    const onSaveToMyWardrobe = vi.fn();
+    const onSaveToPersonalItems = vi.fn();
 
     render(
       <SearchScreenDialogs
@@ -87,7 +87,7 @@ describe("SearchScreenDialogs", () => {
           ({
             "capsule.closeFilters": "Close filters",
             "actions.close": "Close",
-            "capsule.saveToMyWardrobe": "Save to Personal items",
+            "capsule.saveToPersonalItems": "Save to Personal items",
             "filters.apply": "Apply",
             "filters.reset": "Reset",
             "filters.title": "Filters",
@@ -96,7 +96,7 @@ describe("SearchScreenDialogs", () => {
           })[key] || key
         }
         locale="en"
-        onSaveToMyWardrobe={onSaveToMyWardrobe}
+        onSaveToPersonalItems={onSaveToPersonalItems}
       />,
     );
 
@@ -118,7 +118,7 @@ describe("SearchScreenDialogs", () => {
     fireEvent.click(
       screen.getByRole("menuitem", { name: "Save to Personal items" }),
     );
-    expect(onSaveToMyWardrobe).toHaveBeenCalledWith(search.selectedItem);
+    expect(onSaveToPersonalItems).toHaveBeenCalledWith(search.selectedItem);
   });
 
   test("keeps mobile product actions only in the dialog header", () => {

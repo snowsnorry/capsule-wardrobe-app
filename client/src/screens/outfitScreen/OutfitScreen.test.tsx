@@ -12,15 +12,15 @@ import userEvent from "@testing-library/user-event";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import OutfitScreen from "./OutfitScreen";
 
-const myWardrobeApi = vi.hoisted(() => ({
-  fetchMyWardrobeItems: vi.fn(),
+const personalItemsApi = vi.hoisted(() => ({
+  fetchPersonalItems: vi.fn(),
 }));
 const searchApi = vi.hoisted(() => ({
   fetchSearchOptions: vi.fn(),
   runSearch: vi.fn(),
 }));
 
-vi.mock("../../api/myWardrobe", () => myWardrobeApi);
+vi.mock("../../api/personalItems", () => personalItemsApi);
 vi.mock("../../api/search", () => searchApi);
 vi.mock("../mainScreen/CapsuleProductDetailDialog", () => ({
   default: ({
@@ -170,7 +170,7 @@ function setViewportMobile(isMobile: boolean) {
 }
 
 function mockCatalogSearch() {
-  myWardrobeApi.fetchMyWardrobeItems.mockResolvedValue({ items: [] });
+  personalItemsApi.fetchPersonalItems.mockResolvedValue({ items: [] });
   searchApi.fetchSearchOptions.mockResolvedValue({
     brands: [{ value: "uniqlo", label: "UNIQLO" }],
     categories: ["outerwear", "top"],
@@ -861,7 +861,7 @@ describe("OutfitScreen", () => {
   });
 
   test("adds selected personal and catalog items to the current outfit", async () => {
-    myWardrobeApi.fetchMyWardrobeItems.mockResolvedValue({
+    personalItemsApi.fetchPersonalItems.mockResolvedValue({
       items: [
         {
           id: 42,
@@ -965,7 +965,7 @@ describe("OutfitScreen", () => {
 
   test("opens the add items dialog fullscreen on mobile", async () => {
     setViewportMobile(true);
-    myWardrobeApi.fetchMyWardrobeItems.mockResolvedValue({ items: [] });
+    personalItemsApi.fetchPersonalItems.mockResolvedValue({ items: [] });
 
     const user = userEvent.setup();
     renderScreen();
@@ -1061,7 +1061,7 @@ describe("OutfitScreen", () => {
   test("uses the colocated 320 thumbnail for uploaded personal items in the add dialog", async () => {
     const imageUrl =
       "https://assets.capsule-wardrobe.org/wardrobe/f2641a1885a7ae72/6f6172c0-de05-4782-b2c1-0e90291f4eea-5ddb4e96b2b825e06d19bc887f32e61e7a5e0fa9d92deea0c3adc4feebb30828.webp";
-    myWardrobeApi.fetchMyWardrobeItems.mockResolvedValue({
+    personalItemsApi.fetchPersonalItems.mockResolvedValue({
       items: [
         {
           id: 42,
@@ -1092,7 +1092,7 @@ describe("OutfitScreen", () => {
   test("does not infer personal item source from wardrobe-looking image URLs", async () => {
     const imageUrl =
       "https://assets.capsule-wardrobe.org/wardrobe/f2641a1885a7ae72/catalog-looking.webp";
-    myWardrobeApi.fetchMyWardrobeItems.mockResolvedValue({
+    personalItemsApi.fetchPersonalItems.mockResolvedValue({
       items: [
         {
           id: 43,

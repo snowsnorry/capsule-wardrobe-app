@@ -165,8 +165,8 @@ describe("SearchScreen", () => {
   });
 
   test("desktop save action marks selected catalog result as saved", async () => {
-    const onSaveToMyWardrobe = vi.fn(async () => undefined);
-    renderScreen({ onSaveToMyWardrobe });
+    const onSaveToPersonalItems = vi.fn(async () => undefined);
+    renderScreen({ onSaveToPersonalItems });
 
     expect(await screen.findByText("55 results")).toBeInTheDocument();
     fireEvent.click(screen.getByLabelText("Product actions"));
@@ -175,7 +175,7 @@ describe("SearchScreen", () => {
     );
 
     await waitFor(() => {
-      expect(onSaveToMyWardrobe).toHaveBeenCalledWith(
+      expect(onSaveToPersonalItems).toHaveBeenCalledWith(
         expect.objectContaining({ id: "1" }),
       );
     });
@@ -185,7 +185,7 @@ describe("SearchScreen", () => {
   });
 
   test("desktop remove action confirms and clears selected saved result", async () => {
-    const onRemoveFromMyWardrobe = vi.fn(async () => undefined);
+    const onRemoveFromPersonalItems = vi.fn(async () => undefined);
     searchApi.runSearch.mockResolvedValueOnce(
       makeResults([
         {
@@ -198,7 +198,7 @@ describe("SearchScreen", () => {
         },
       ]),
     );
-    renderScreen({ onRemoveFromMyWardrobe });
+    renderScreen({ onRemoveFromPersonalItems });
 
     await waitFor(() => {
       expect(screen.getAllByLabelText("Saved").length).toBeGreaterThan(0);
@@ -207,12 +207,12 @@ describe("SearchScreen", () => {
     fireEvent.click(
       screen.getByRole("menuitem", { name: "Remove from Personal items" }),
     );
-    expect(onRemoveFromMyWardrobe).not.toHaveBeenCalled();
+    expect(onRemoveFromPersonalItems).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("button", { name: "Remove" }));
 
     await waitFor(() => {
-      expect(onRemoveFromMyWardrobe).toHaveBeenCalledWith(
+      expect(onRemoveFromPersonalItems).toHaveBeenCalledWith(
         expect.objectContaining({ id: "1" }),
       );
     });

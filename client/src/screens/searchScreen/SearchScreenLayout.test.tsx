@@ -14,11 +14,11 @@ vi.mock("../../search/SearchFiltersSidebar", () => ({
   ),
 }));
 vi.mock("../../components/productDetail/ProductDetail", () => ({
-  default: ({ item, mobileBackAction, onSaveToMyWardrobe }) => (
+  default: ({ item, mobileBackAction, onSaveToPersonalItems }) => (
     <div>
       <span>detail {item?.id || "none"}</span>
-      {onSaveToMyWardrobe ? (
-        <button type="button" onClick={() => onSaveToMyWardrobe(item)}>
+      {onSaveToPersonalItems ? (
+        <button type="button" onClick={() => onSaveToPersonalItems(item)}>
           save detail
         </button>
       ) : null}
@@ -169,14 +169,14 @@ describe("SearchScreenLayout", () => {
 
   test("desktop layout applies filters and closes the filter panel", async () => {
     const search = createSearch();
-    const onSaveToMyWardrobe = vi.fn();
+    const onSaveToPersonalItems = vi.fn();
 
     render(
       <SearchScreenDesktop
         search={search as never}
         t={(key) => key}
         locale="en"
-        onSaveToMyWardrobe={onSaveToMyWardrobe}
+        onSaveToPersonalItems={onSaveToPersonalItems}
       />,
     );
 
@@ -187,6 +187,6 @@ describe("SearchScreenLayout", () => {
 
     expect(search.applyCurrentQuery).toHaveBeenCalled();
     expect(search.resetSearch).toHaveBeenCalled();
-    expect(onSaveToMyWardrobe).toHaveBeenCalledWith(search.selectedItem);
+    expect(onSaveToPersonalItems).toHaveBeenCalledWith(search.selectedItem);
   });
 });

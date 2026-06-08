@@ -1,4 +1,4 @@
--- Selects mandatory wardrobe anchors plus optional ready My Wardrobe candidates.
+-- Selects mandatory wardrobe anchors plus optional ready Personal items candidates.
 WITH query_params AS (
   SELECT
     $1::text[] AS categories,

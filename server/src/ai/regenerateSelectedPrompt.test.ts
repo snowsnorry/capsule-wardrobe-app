@@ -96,7 +96,7 @@ test("buildRegenerateSelectedPrompt includes wardrobe source metadata and source
   );
   expect(wardrobeOnlyPrompt).toMatch(/"item_source": "wardrobe"/);
   expect(wardrobeOnlyPrompt).toMatch(
-    /Use only the provided My Wardrobe candidates/,
+    /Use only the provided Personal items candidates/,
   );
   expect(wardrobeOnlyPrompt).toMatch(/Catalog substitutions are not available/);
   expect(catalogPrompt).toMatch(/"item_source": "catalog"/);

@@ -1,4 +1,4 @@
--- Selects ready My Wardrobe items when multiple accent colors are allowed.
+-- Selects ready Personal items when multiple accent colors are allowed.
 WITH query_params AS (
   SELECT
     $1::text[] AS categories,

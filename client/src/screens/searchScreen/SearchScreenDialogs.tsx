@@ -27,12 +27,12 @@ type SearchScreenDialogsProps = {
   search: SearchScreenStateController;
   t: (key: string, params?: Record<string, unknown>) => string;
   locale: string;
-  onRemoveFromMyWardrobe?: (item: SearchResultItem) => Promise<void> | void;
+  onRemoveFromPersonalItems?: (item: SearchResultItem) => Promise<void> | void;
   onSetItemLike?: (
     item: SearchResultItem,
     isLiked: boolean,
   ) => Promise<void> | void;
-  onSaveToMyWardrobe?: (item: SearchResultItem) => Promise<void> | void;
+  onSaveToPersonalItems?: (item: SearchResultItem) => Promise<void> | void;
 };
 
 function SearchFiltersDialog({
@@ -123,9 +123,9 @@ function SearchProductDialog({
   search,
   t,
   locale,
-  onRemoveFromMyWardrobe,
+  onRemoveFromPersonalItems,
   onSetItemLike,
-  onSaveToMyWardrobe,
+  onSaveToPersonalItems,
 }: SearchScreenDialogsProps): ReactElement {
   return (
     <Dialog
@@ -142,9 +142,9 @@ function SearchProductDialog({
         item={search.selectedItem}
         t={t}
         onClose={() => search.setIsDetailOpen(false)}
-        onRemoveFromMyWardrobe={onRemoveFromMyWardrobe}
+        onRemoveFromPersonalItems={onRemoveFromPersonalItems}
         onSetItemLike={onSetItemLike}
-        onSaveToMyWardrobe={onSaveToMyWardrobe}
+        onSaveToPersonalItems={onSaveToPersonalItems}
       />
       <DialogContent
         sx={{
@@ -188,9 +188,9 @@ function SearchScreenDialogs({
   search,
   t,
   locale,
-  onRemoveFromMyWardrobe,
+  onRemoveFromPersonalItems,
   onSetItemLike,
-  onSaveToMyWardrobe,
+  onSaveToPersonalItems,
 }: SearchScreenDialogsProps): ReactElement {
   return (
     <>
@@ -199,9 +199,9 @@ function SearchScreenDialogs({
         search={search}
         t={t}
         locale={locale}
-        onRemoveFromMyWardrobe={onRemoveFromMyWardrobe}
+        onRemoveFromPersonalItems={onRemoveFromPersonalItems}
         onSetItemLike={onSetItemLike}
-        onSaveToMyWardrobe={onSaveToMyWardrobe}
+        onSaveToPersonalItems={onSaveToPersonalItems}
       />
     </>
   );

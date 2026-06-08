@@ -12,7 +12,7 @@ import {
   PRODUCT_SILHOUETTE_OPTIONS,
   PRODUCT_STYLE_OPTIONS,
 } from "../../../../shared/productMetadataOptions.js";
-import type { UploadedWardrobeItemUpdatePayload } from "../../api/myWardrobe";
+import type { UploadedWardrobeItemUpdatePayload } from "../../api/personalItems";
 import type { ProductDetailItem } from "./ProductDetailModel";
 
 type UploadedProductFormState = UploadedWardrobeItemUpdatePayload & {

@@ -94,7 +94,7 @@ test("getWardrobeSelectionPrompt renders wardrobe preference rules only for ward
   );
   expect(wardrobePrompt).toMatch(/"item_source": "wardrobe"/);
   expect(wardrobeOnlyPrompt).toMatch(
-    /Use only the provided My Wardrobe candidates/,
+    /Use only the provided Personal items candidates/,
   );
   expect(wardrobeOnlyPrompt).toMatch(/Catalog substitutions are not available/);
 });

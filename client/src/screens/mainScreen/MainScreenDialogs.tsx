@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { ReactElement } from "react";
-import type { UploadedWardrobeItemUpdatePayload } from "../../api/myWardrobe";
+import type { UploadedWardrobeItemUpdatePayload } from "../../api/personalItems";
 import { ConfirmDialog, NameDialog } from "./MainScreenActionDialogs";
 import { CopyOutfitDialog } from "./MainScreenCopyOutfitDialog";
 import type { DialogsProps } from "./MainScreenDialogsTypes";
@@ -143,8 +143,8 @@ function MainScreenDialogs(props: DialogsProps) {
           setProductDetailMode("edit");
         }}
         onReadMode={() => setProductDetailMode("read")}
-        onRemoveFromMyWardrobe={props.props.onRemoveFromMyWardrobe}
-        onSaveToMyWardrobe={props.props.onSaveToMyWardrobe}
+        onRemoveFromPersonalItems={props.props.onRemoveFromPersonalItems}
+        onSaveToPersonalItems={props.props.onSaveToPersonalItems}
         onSetItemLike={setProductDetailItemLike}
       />
     </>
@@ -168,8 +168,8 @@ function ProductDetailDialogSwitch({
   onClose,
   onEdit,
   onReadMode,
-  onRemoveFromMyWardrobe,
-  onSaveToMyWardrobe,
+  onRemoveFromPersonalItems,
+  onSaveToPersonalItems,
   onSetItemLike,
   t,
 }: {
@@ -184,8 +184,8 @@ function ProductDetailDialogSwitch({
   onClose: () => void;
   onEdit: (item: NonNullable<DialogsProps["productDetailItem"]>) => void;
   onReadMode: () => void;
-  onRemoveFromMyWardrobe?: DialogsProps["props"]["onRemoveFromMyWardrobe"];
-  onSaveToMyWardrobe?: DialogsProps["props"]["onSaveToMyWardrobe"];
+  onRemoveFromPersonalItems?: DialogsProps["props"]["onRemoveFromPersonalItems"];
+  onSaveToPersonalItems?: DialogsProps["props"]["onSaveToPersonalItems"];
   onSetItemLike?: DialogsProps["props"]["onSetItemLike"];
   t: (key: string, params?: Record<string, unknown>) => string;
 }): ReactElement {
@@ -204,9 +204,9 @@ function ProductDetailDialogSwitch({
       onApply={onApply}
       onClose={onClose}
       onEdit={onEdit}
-      onRemoveFromMyWardrobe={onRemoveFromMyWardrobe}
+      onRemoveFromPersonalItems={onRemoveFromPersonalItems}
       onReadMode={onReadMode}
-      onSaveToMyWardrobe={onSaveToMyWardrobe}
+      onSaveToPersonalItems={onSaveToPersonalItems}
       onSetItemLike={onSetItemLike}
     />
   );

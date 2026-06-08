@@ -12,12 +12,12 @@ type SearchScreenLayoutProps = {
   search: SearchScreenStateController;
   t: (key: string, params?: Record<string, unknown>) => string;
   locale: string;
-  onRemoveFromMyWardrobe?: (item: SearchResultItem) => Promise<void> | void;
+  onRemoveFromPersonalItems?: (item: SearchResultItem) => Promise<void> | void;
   onSetItemLike?: (
     item: SearchResultItem,
     isLiked: boolean,
   ) => Promise<void> | void;
-  onSaveToMyWardrobe?: (item: SearchResultItem) => Promise<void> | void;
+  onSaveToPersonalItems?: (item: SearchResultItem) => Promise<void> | void;
 };
 
 type SearchScreenControlsProps = Omit<SearchScreenLayoutProps, "locale">;
@@ -129,9 +129,9 @@ function SearchScreenDesktop({
   search,
   t,
   locale,
-  onRemoveFromMyWardrobe,
+  onRemoveFromPersonalItems,
   onSetItemLike,
-  onSaveToMyWardrobe,
+  onSaveToPersonalItems,
 }: SearchScreenLayoutProps): ReactElement {
   return (
     <Box sx={SEARCH_DESKTOP_LAYOUT_SX}>
@@ -149,9 +149,9 @@ function SearchScreenDesktop({
               item={search.selectedItem}
               t={t}
               locale={locale}
-              onRemoveFromMyWardrobe={onRemoveFromMyWardrobe}
+              onRemoveFromPersonalItems={onRemoveFromPersonalItems}
               onSetItemLike={onSetItemLike}
-              onSaveToMyWardrobe={onSaveToMyWardrobe}
+              onSaveToPersonalItems={onSaveToPersonalItems}
             />
           </Box>
         </Box>

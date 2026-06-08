@@ -22,7 +22,6 @@ type ProductDetailItem = {
   isNeutral?: unknown;
   isLiked?: boolean | null;
   isSavedToWardrobe?: boolean | null;
-  savedToMyWardrobe?: boolean | null;
   [key: string]: unknown;
 };
 

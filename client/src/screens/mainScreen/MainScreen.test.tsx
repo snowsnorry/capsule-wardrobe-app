@@ -5,7 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { ThemeProvider } from "@mui/material/styles";
 import {
   createMainScreenProps,
-  fetchMyWardrobeItemsMock,
+  fetchPersonalItemsMock,
   renderWithTheme,
   resetMainScreenTestMocks,
   setMainScreenLayout,
@@ -428,7 +428,7 @@ describe("MainScreen", () => {
 
   test("blocks regenerate all in wardrobe-only mode when the wardrobe has no ready items", async () => {
     const onRefreshItems = vi.fn();
-    fetchMyWardrobeItemsMock.mockResolvedValue({ items: [] });
+    fetchPersonalItemsMock.mockResolvedValue({ items: [] });
 
     renderMainScreen({
       selectedSourceMode: "wardrobe_only",
@@ -440,7 +440,7 @@ describe("MainScreen", () => {
         screen.getByRole("button", { name: "Regenerate all" }),
       ).toBeDisabled();
     });
-    expect(fetchMyWardrobeItemsMock).toHaveBeenCalledWith({ force: true });
+    expect(fetchPersonalItemsMock).toHaveBeenCalledWith({ force: true });
     expect(onRefreshItems).not.toHaveBeenCalled();
   });
 

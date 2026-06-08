@@ -2,7 +2,7 @@ import { API_BASE_URL } from "./config";
 import { getCachedJson, request, requestJson } from "./request";
 import type { JsonObject } from "./request";
 
-type MyWardrobeSource = "uploaded" | "from_catalog";
+type PersonalItemSource = "uploaded" | "from_catalog";
 type UploadWardrobeProgress = {
   completedSteps: number;
   failed: number;
@@ -14,9 +14,9 @@ type UploadWardrobeProgress = {
 type UploadWardrobeImagesOptions = {
   onProgress?: (progress: UploadWardrobeProgress) => void;
 };
-type MyWardrobeFetchOptions = {
+type PersonalItemsFetchOptions = {
   force?: boolean;
-  source?: MyWardrobeSource | null;
+  source?: PersonalItemSource | null;
 };
 type UploadedWardrobeItemUpdatePayload = {
   name: string;
@@ -60,7 +60,9 @@ function loadFetchEventSource(): Promise<EventStreamLike["fetchEventSource"]> {
   return fetchEventSourcePromise;
 }
 
-function getWardrobeItemsUrl({ source = null }: MyWardrobeFetchOptions = {}) {
+function getWardrobeItemsUrl({
+  source = null,
+}: PersonalItemsFetchOptions = {}) {
   const params = new URLSearchParams();
   if (source) {
     params.set("source", source);
@@ -69,7 +71,7 @@ function getWardrobeItemsUrl({ source = null }: MyWardrobeFetchOptions = {}) {
   return `${API_BASE_URL}/wardrobe/items${query ? `?${query}` : ""}`;
 }
 
-function getWardrobeItemsPdfUrl(options: MyWardrobeFetchOptions = {}) {
+function getWardrobeItemsPdfUrl(options: PersonalItemsFetchOptions = {}) {
   const params = new URLSearchParams();
   if (options.source) {
     params.set("source", options.source);
@@ -146,8 +148,8 @@ function getDownloadFilenameFromDisposition(
   );
 }
 
-async function fetchMyWardrobeItems(
-  options: MyWardrobeFetchOptions = {},
+async function fetchPersonalItems(
+  options: PersonalItemsFetchOptions = {},
 ): Promise<JsonObject> {
   return getCachedJson(getWardrobeItemsUrl(options), {
     credentials: "include",
@@ -256,7 +258,9 @@ async function uploadWardrobeEventStream(
   return completePayload || {};
 }
 
-async function saveCatalogItemToMyWardrobe(url: string): Promise<JsonObject> {
+async function saveCatalogItemToPersonalItems(
+  url: string,
+): Promise<JsonObject> {
   return requestJson(`${API_BASE_URL}/wardrobe/items/from-catalog`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -265,7 +269,7 @@ async function saveCatalogItemToMyWardrobe(url: string): Promise<JsonObject> {
   });
 }
 
-async function removeCatalogItemFromMyWardrobe(
+async function removeCatalogItemFromPersonalItems(
   url: string,
 ): Promise<JsonObject> {
   return requestJson(`${API_BASE_URL}/wardrobe/items/from-catalog`, {
@@ -303,8 +307,8 @@ async function deleteUploadedWardrobeItem(
   );
 }
 
-async function downloadMyWardrobePdf(
-  options: MyWardrobeFetchOptions = {},
+async function downloadPersonalItemsPdf(
+  options: PersonalItemsFetchOptions = {},
 ): Promise<void> {
   const response = await request(getWardrobeItemsPdfUrl(options), {
     method: "POST",
@@ -340,17 +344,18 @@ async function downloadMyWardrobePdf(
 
 export {
   deleteUploadedWardrobeItem,
-  downloadMyWardrobePdf,
-  fetchMyWardrobeItems,
+  downloadPersonalItemsPdf,
+  fetchPersonalItems,
   fetchUploadedWardrobeItemDetail,
   getWardrobeItemsPdfUrl,
   getWardrobeItemsUrl,
-  removeCatalogItemFromMyWardrobe,
-  saveCatalogItemToMyWardrobe,
+  removeCatalogItemFromPersonalItems,
+  saveCatalogItemToPersonalItems,
   updateUploadedWardrobeItem,
   uploadWardrobeImages,
   uploadWardrobeUrls,
 };
-export type { MyWardrobeSource };
+export type { PersonalItemSource };
+export type { PersonalItemsFetchOptions };
 export type { UploadedWardrobeItemUpdatePayload };
 export type { UploadWardrobeProgress };

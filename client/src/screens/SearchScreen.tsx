@@ -14,20 +14,20 @@ import useSearchScreenState from "./searchScreen/useSearchScreenState";
 type SearchScreenProps = {
   initialQuery?: string;
   autoOpenProductDetail?: boolean;
-  onRemoveFromMyWardrobe?: (item: SearchResultItem) => Promise<void> | void;
+  onRemoveFromPersonalItems?: (item: SearchResultItem) => Promise<void> | void;
   onSetItemLike?: (
     item: SearchResultItem,
     isLiked: boolean,
   ) => Promise<void> | void;
-  onSaveToMyWardrobe?: (item: SearchResultItem) => Promise<void> | void;
+  onSaveToPersonalItems?: (item: SearchResultItem) => Promise<void> | void;
 };
 
 function SearchScreen({
   initialQuery = "",
   autoOpenProductDetail = false,
-  onRemoveFromMyWardrobe,
+  onRemoveFromPersonalItems,
   onSetItemLike,
-  onSaveToMyWardrobe,
+  onSaveToPersonalItems,
 }: SearchScreenProps): ReactElement {
   const { t, locale } = useI18n();
   const isMobile = useMediaQuery("(max-width: 1279.95px)");
@@ -38,12 +38,12 @@ function SearchScreen({
     locale,
     t,
   });
-  const handleSaveToMyWardrobe = async (item: SearchResultItem) => {
-    await onSaveToMyWardrobe?.(item);
+  const handleSaveToPersonalItems = async (item: SearchResultItem) => {
+    await onSaveToPersonalItems?.(item);
     search.markResultSavedToWardrobe(item);
   };
-  const handleRemoveFromMyWardrobe = async (item: SearchResultItem) => {
-    await onRemoveFromMyWardrobe?.(item);
+  const handleRemoveFromPersonalItems = async (item: SearchResultItem) => {
+    await onRemoveFromPersonalItems?.(item);
     search.markResultRemovedFromWardrobe(item);
   };
   const handleSetItemLike = async (
@@ -73,9 +73,9 @@ function SearchScreen({
             search={search}
             t={t}
             locale={locale}
-            onRemoveFromMyWardrobe={handleRemoveFromMyWardrobe}
+            onRemoveFromPersonalItems={handleRemoveFromPersonalItems}
             onSetItemLike={handleSetItemLike}
-            onSaveToMyWardrobe={handleSaveToMyWardrobe}
+            onSaveToPersonalItems={handleSaveToPersonalItems}
           />
         )}
       </Stack>
@@ -83,9 +83,9 @@ function SearchScreen({
         search={search}
         t={t}
         locale={locale}
-        onRemoveFromMyWardrobe={handleRemoveFromMyWardrobe}
+        onRemoveFromPersonalItems={handleRemoveFromPersonalItems}
         onSetItemLike={handleSetItemLike}
-        onSaveToMyWardrobe={handleSaveToMyWardrobe}
+        onSaveToPersonalItems={handleSaveToPersonalItems}
       />
     </>
   );

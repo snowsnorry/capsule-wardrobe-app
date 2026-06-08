@@ -6,11 +6,11 @@ import {
   ToggleButtonGroup,
 } from "@mui/material";
 import MoreVertRoundedIcon from "@mui/icons-material/MoreVertRounded";
-import type { MyWardrobeSource } from "../api/myWardrobe";
+import type { PersonalItemSource } from "../api/personalItems";
 import WardrobeLikedOnlyToggle from "./WardrobeLikedOnlyToggle";
 import WardrobeUploadSplitButton from "./WardrobeUploadSplitButton";
 
-type WardrobeFilter = "all" | MyWardrobeSource;
+type WardrobeFilter = "all" | PersonalItemSource;
 
 type WardrobeToolbarProps = {
   filter: WardrobeFilter;
@@ -27,7 +27,7 @@ type WardrobeToolbarProps = {
 
 const FILTERS: WardrobeFilter[] = ["all", "uploaded", "from_catalog"];
 
-function getSourceFilter(filter: WardrobeFilter): MyWardrobeSource | null {
+function getSourceFilter(filter: WardrobeFilter): PersonalItemSource | null {
   return filter === "all" ? null : filter;
 }
 

@@ -27,12 +27,12 @@ const wardrobeActions = vi.hoisted(() => ({
   deleteGeneratedOutfitSetImage: vi.fn(),
   downloadWardrobePdf: vi.fn(),
   generateOutfitSetImage: vi.fn(),
-  removeItemFromMyWardrobe: vi.fn(),
+  removeItemFromPersonalItems: vi.fn(),
   refreshWardrobe: vi.fn(),
   regenerateSelectedItems: vi.fn(),
-  saveItemToMyWardrobe: vi.fn(),
+  saveItemToPersonalItems: vi.fn(),
   toggleRegenerationSelection: vi.fn(),
-  updateUploadedItemInMyWardrobe: vi.fn(),
+  updateUploadedItemInPersonalItems: vi.fn(),
 }));
 const outfitActions = vi.hoisted(() => ({
   copyOutfitSetToOutfits: vi.fn(),
@@ -188,10 +188,10 @@ describe("useAppHandlers", () => {
     result.current.handleRequestSignOut();
     await result.current.handleResetProfileFilters();
     await result.current.handleSaveProfile();
-    await result.current.handleRemoveFromMyWardrobe({
+    await result.current.handleRemoveFromPersonalItems({
       url: "https://example.com/top",
     });
-    await result.current.handleSaveToMyWardrobe({
+    await result.current.handleSaveToPersonalItems({
       url: "https://example.com/top",
     });
     await result.current.handleSetItemLike(
@@ -290,11 +290,11 @@ describe("useAppHandlers", () => {
       "outfit-1",
       [],
     );
-    expect(wardrobeActions.removeItemFromMyWardrobe).toHaveBeenCalledWith(
+    expect(wardrobeActions.removeItemFromPersonalItems).toHaveBeenCalledWith(
       actionContext,
       { url: "https://example.com/top" },
     );
-    expect(wardrobeActions.saveItemToMyWardrobe).toHaveBeenCalledWith(
+    expect(wardrobeActions.saveItemToPersonalItems).toHaveBeenCalledWith(
       actionContext,
       { url: "https://example.com/top" },
     );
@@ -303,7 +303,9 @@ describe("useAppHandlers", () => {
       { url: "https://example.com/top" },
       true,
     );
-    expect(wardrobeActions.updateUploadedItemInMyWardrobe).toHaveBeenCalledWith(
+    expect(
+      wardrobeActions.updateUploadedItemInPersonalItems,
+    ).toHaveBeenCalledWith(
       actionContext,
       { id: "uploaded-1", source: "uploaded" },
       expect.objectContaining({ name: "Uploaded top" }),

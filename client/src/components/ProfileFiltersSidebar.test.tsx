@@ -6,7 +6,7 @@ import type { ComponentProps } from "react";
 import { createAppTheme } from "../theme";
 
 const useI18nMock = vi.hoisted(() => vi.fn());
-const fetchMyWardrobeItemsMock = vi.hoisted(() => vi.fn());
+const fetchPersonalItemsMock = vi.hoisted(() => vi.fn());
 const searchApiMock = vi.hoisted(() => ({
   fetchProductDetailByUrl: vi.fn(),
   fetchSearchOptions: vi.fn(),
@@ -35,8 +35,8 @@ vi.mock("../i18n", () => ({
       graphic: "Graphic",
     })[value] || value,
 }));
-vi.mock("../api/myWardrobe", () => ({
-  fetchMyWardrobeItems: fetchMyWardrobeItemsMock,
+vi.mock("../api/personalItems", () => ({
+  fetchPersonalItems: fetchPersonalItemsMock,
 }));
 vi.mock("../api/search", () => searchApiMock);
 
@@ -201,7 +201,7 @@ describe("ProfileFiltersSidebar", () => {
   afterEach(() => {
     cleanup();
     useI18nMock.mockReset();
-    fetchMyWardrobeItemsMock.mockReset();
+    fetchPersonalItemsMock.mockReset();
     searchApiMock.fetchProductDetailByUrl.mockReset();
     searchApiMock.fetchSearchOptions.mockReset();
     searchApiMock.runSearch.mockReset();
@@ -332,7 +332,7 @@ describe("ProfileFiltersSidebar", () => {
   });
 
   test("checks wardrobe-only source mode and blocks apply for an empty wardrobe", async () => {
-    fetchMyWardrobeItemsMock.mockResolvedValue({ items: [] });
+    fetchPersonalItemsMock.mockResolvedValue({ items: [] });
 
     renderSidebar({
       selectedSourceMode: "wardrobe_only",
@@ -343,11 +343,11 @@ describe("ProfileFiltersSidebar", () => {
       await screen.findByText(/No ready personal items/),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Apply" })).toBeDisabled();
-    expect(fetchMyWardrobeItemsMock).toHaveBeenCalledWith({ force: true });
+    expect(fetchPersonalItemsMock).toHaveBeenCalledWith({ force: true });
   });
 
   test("warns but allows apply when wardrobe-only source mode has too few ready items", async () => {
-    fetchMyWardrobeItemsMock.mockResolvedValue({
+    fetchPersonalItemsMock.mockResolvedValue({
       items: [
         {
           category: "top",
@@ -372,7 +372,7 @@ describe("ProfileFiltersSidebar", () => {
   });
 
   test("warns about missing swimwear for summer wardrobe-only capsules", async () => {
-    fetchMyWardrobeItemsMock.mockResolvedValue({
+    fetchPersonalItemsMock.mockResolvedValue({
       items: [
         {
           category: "top",
@@ -394,7 +394,7 @@ describe("ProfileFiltersSidebar", () => {
     expect(screen.getByRole("button", { name: "Apply" })).toBeEnabled();
 
     cleanup();
-    fetchMyWardrobeItemsMock.mockResolvedValue({
+    fetchPersonalItemsMock.mockResolvedValue({
       items: [
         {
           category: "top",
@@ -419,7 +419,7 @@ describe("ProfileFiltersSidebar", () => {
   test("renders anchor empty state and applies picker selection", async () => {
     const user = userEvent.setup();
     const onSelectAnchorWardrobeItemIds = vi.fn();
-    fetchMyWardrobeItemsMock.mockResolvedValue({
+    fetchPersonalItemsMock.mockResolvedValue({
       items: [
         {
           id: 12,
@@ -451,7 +451,7 @@ describe("ProfileFiltersSidebar", () => {
     const user = userEvent.setup();
     const onSelectAnchorItemRefs = vi.fn();
     const onSelectAnchorWardrobeItemIds = vi.fn();
-    fetchMyWardrobeItemsMock.mockResolvedValue({
+    fetchPersonalItemsMock.mockResolvedValue({
       items: [
         {
           id: 12,
@@ -499,7 +499,7 @@ describe("ProfileFiltersSidebar", () => {
   });
 
   test("hydrates saved catalog anchor refs for selected rows", async () => {
-    fetchMyWardrobeItemsMock.mockResolvedValue({ items: [] });
+    fetchPersonalItemsMock.mockResolvedValue({ items: [] });
     searchApiMock.fetchProductDetailByUrl.mockResolvedValue({
       product: {
         id: "p1",
@@ -524,7 +524,7 @@ describe("ProfileFiltersSidebar", () => {
   });
 
   test("hydrates legacy wardrobe ids together with catalog anchor refs", async () => {
-    fetchMyWardrobeItemsMock.mockResolvedValue({
+    fetchPersonalItemsMock.mockResolvedValue({
       items: [
         {
           id: 12,
@@ -565,7 +565,7 @@ describe("ProfileFiltersSidebar", () => {
     const catalogPromise = new Promise((resolve) => {
       resolveCatalog = resolve;
     });
-    fetchMyWardrobeItemsMock.mockResolvedValue({
+    fetchPersonalItemsMock.mockResolvedValue({
       items: [
         {
           id: 12,
@@ -618,7 +618,7 @@ describe("ProfileFiltersSidebar", () => {
 
   test("combines anchor picker source and liked-only filters", async () => {
     const user = userEvent.setup();
-    fetchMyWardrobeItemsMock.mockResolvedValue({
+    fetchPersonalItemsMock.mockResolvedValue({
       items: [
         {
           id: 12,
@@ -675,7 +675,7 @@ describe("ProfileFiltersSidebar", () => {
   test("uses full-screen mobile surfaces for the anchor picker when requested", async () => {
     const user = userEvent.setup();
     const darkTheme = createAppTheme("dark");
-    fetchMyWardrobeItemsMock.mockResolvedValue({
+    fetchPersonalItemsMock.mockResolvedValue({
       items: [
         {
           id: 12,
@@ -721,7 +721,7 @@ describe("ProfileFiltersSidebar", () => {
   test("keeps anchor picker cancel local and disables sixth unselected item", async () => {
     const user = userEvent.setup();
     const onSelectAnchorWardrobeItemIds = vi.fn();
-    fetchMyWardrobeItemsMock.mockResolvedValue({
+    fetchPersonalItemsMock.mockResolvedValue({
       items: [1, 2, 3, 4, 5, 6].map((id) => ({
         id,
         name: `Item ${id}`,

@@ -6,7 +6,7 @@ import {
   DialogContent,
   Typography,
 } from "@mui/material";
-import type { UploadedWardrobeItemUpdatePayload } from "../../api/myWardrobe";
+import type { UploadedWardrobeItemUpdatePayload } from "../../api/personalItems";
 import { mobileCapsuleDialogActionsSx } from "../../components/MobileDialogSurfaceStyles";
 import { getDialogContentSx } from "../../components/productDetail/ProductDetailDialog";
 import UploadedProductDetailForm from "../../components/productDetail/UploadedProductDetailForm";

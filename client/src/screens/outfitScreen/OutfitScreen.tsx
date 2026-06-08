@@ -1,7 +1,7 @@
 /* eslint-disable max-lines-per-function */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Box, useMediaQuery } from "@mui/material";
-import type { UploadedWardrobeItemUpdatePayload } from "../../api/myWardrobe";
+import type { UploadedWardrobeItemUpdatePayload } from "../../api/personalItems";
 import CapsuleProductDetailDialog from "../mainScreen/CapsuleProductDetailDialog";
 import {
   getCanonicalItemUrl,
@@ -55,9 +55,9 @@ export default function OutfitScreen({
   onDuplicateOutfit,
   onRenameOutfit,
   onReplaceOutfitItems,
-  onRemoveFromMyWardrobe,
+  onRemoveFromPersonalItems,
   onRevertOutfit,
-  onSaveToMyWardrobe,
+  onSaveToPersonalItems,
   onSaveOutfit,
   onSetItemLike,
   onUpdateUploadedWardrobeItem,
@@ -309,8 +309,8 @@ export default function OutfitScreen({
             setPreviewMode("edit");
           }}
           onReadMode={() => setPreviewMode("read")}
-          onRemoveFromMyWardrobe={onRemoveFromMyWardrobe}
-          onSaveToMyWardrobe={onSaveToMyWardrobe}
+          onRemoveFromPersonalItems={onRemoveFromPersonalItems}
+          onSaveToPersonalItems={onSaveToPersonalItems}
           onSetItemLike={setPreviewItemLike}
         />
       ) : null}

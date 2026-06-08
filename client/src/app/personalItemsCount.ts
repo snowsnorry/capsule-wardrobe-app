@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { fetchMyWardrobeItems } from "../api/myWardrobe";
+import { fetchPersonalItems } from "../api/personalItems";
 
 const personalItemsChangedEvent = "cw-personal-items-changed";
 
@@ -9,7 +9,7 @@ function getPersonalItemsCountFromResponse(response: unknown) {
 }
 
 function fetchPersonalItemsCount(force: boolean) {
-  return force ? fetchMyWardrobeItems({ force: true }) : fetchMyWardrobeItems();
+  return force ? fetchPersonalItems({ force: true }) : fetchPersonalItems();
 }
 
 export function notifyPersonalItemsChanged() {

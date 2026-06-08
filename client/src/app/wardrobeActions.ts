@@ -204,9 +204,9 @@ export {
   generateOutfitSetImage,
 } from "./wardrobeImageActions";
 export {
-  removeItemFromMyWardrobe,
-  saveItemToMyWardrobe,
-  updateUploadedItemInMyWardrobe,
+  removeItemFromPersonalItems,
+  saveItemToPersonalItems,
+  updateUploadedItemInPersonalItems,
 } from "./wardrobeItemActions";
 export {
   handleWardrobeError,

@@ -32,12 +32,12 @@ import {
   deleteGeneratedOutfitSetImage,
   downloadWardrobePdf,
   generateOutfitSetImage,
-  removeItemFromMyWardrobe,
+  removeItemFromPersonalItems,
   refreshWardrobe,
   regenerateSelectedItems,
-  saveItemToMyWardrobe,
+  saveItemToPersonalItems,
   toggleRegenerationSelection,
-  updateUploadedItemInMyWardrobe,
+  updateUploadedItemInPersonalItems,
 } from "./wardrobeActions";
 import {
   googleCredential,
@@ -58,7 +58,7 @@ import type {
   WardrobeItem,
 } from "./appTypes";
 import type { SettingsSavePayload } from "../components/SettingsDialog";
-import type { UploadedWardrobeItemUpdatePayload } from "../api/myWardrobe";
+import type { UploadedWardrobeItemUpdatePayload } from "../api/personalItems";
 import { setItemLike } from "./likedItemActions";
 
 type UseAppHandlersOptions = {
@@ -368,16 +368,17 @@ function buildAppHandlers({
     handleRevertOutfit,
     handleSaveCapsule,
     handleSaveOutfit,
-    handleRemoveFromMyWardrobe: async (item: WardrobeItem) =>
-      removeItemFromMyWardrobe(getAppActionContext(), item),
-    handleSaveToMyWardrobe: async (item: WardrobeItem) =>
-      saveItemToMyWardrobe(getAppActionContext(), item),
+    handleRemoveFromPersonalItems: async (item: WardrobeItem) =>
+      removeItemFromPersonalItems(getAppActionContext(), item),
+    handleSaveToPersonalItems: async (item: WardrobeItem) =>
+      saveItemToPersonalItems(getAppActionContext(), item),
     handleSetItemLike: async (item: WardrobeItem, isLiked: boolean) =>
       setItemLike(getAppActionContext(), item, isLiked),
     handleUpdateUploadedWardrobeItem: async (
       item: WardrobeItem,
       payload: UploadedWardrobeItemUpdatePayload,
-    ) => updateUploadedItemInMyWardrobe(getAppActionContext(), item, payload),
+    ) =>
+      updateUploadedItemInPersonalItems(getAppActionContext(), item, payload),
     handleSaveProfile: async () => handleApplyCapsuleFilters(),
     handleSaveSettings: async (nextSettings: SettingsSavePayload) =>
       saveSettings(getAppActionContext(), nextSettings),

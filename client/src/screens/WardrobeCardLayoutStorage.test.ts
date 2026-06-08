@@ -25,12 +25,6 @@ describe("WardrobeCardLayoutStorage", () => {
     expect(readStoredWardrobeMobileCardColumns()).toBe(2);
   });
 
-  test("reads the legacy mobile card column preference", () => {
-    window.localStorage.setItem("myWardrobe.mobileCardColumns", "3");
-
-    expect(readStoredWardrobeMobileCardColumns()).toBe(3);
-  });
-
   test("uses the default when window is unavailable", () => {
     vi.stubGlobal("window", undefined);
 

@@ -11,7 +11,7 @@ import {
 const theme = createTheme();
 const translations: Record<string, string> = {
   "actions.cancel": "Cancel",
-  "capsule.removeFromMyWardrobe": "Remove from Personal items",
+  "capsule.removeFromPersonalItems": "Remove from Personal items",
   "wardrobe.deleteUploaded": "Delete item",
   "wardrobe.deleteUploadedConfirm": "Delete",
   "wardrobe.deleteUploadedConfirmBody": "Delete uploaded body",

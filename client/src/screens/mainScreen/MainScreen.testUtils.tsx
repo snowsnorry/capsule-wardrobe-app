@@ -11,7 +11,7 @@ import { t as translateForMainScreenTests } from "./MainScreenTestTranslations";
 
 const mediaQueryMock = vi.hoisted(() => vi.fn());
 const useI18nMock = vi.hoisted(() => vi.fn());
-const fetchMyWardrobeItemsMock = vi.hoisted(() => vi.fn());
+const fetchPersonalItemsMock = vi.hoisted(() => vi.fn());
 const fetchUploadedWardrobeItemDetailMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@mui/material/useMediaQuery", () => ({
@@ -22,9 +22,9 @@ vi.mock("../../i18n/useI18n", () => ({
   useI18n: useI18nMock,
 }));
 
-vi.mock("../../api/myWardrobe", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../../api/myWardrobe")>()),
-  fetchMyWardrobeItems: fetchMyWardrobeItemsMock,
+vi.mock("../../api/personalItems", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../api/personalItems")>()),
+  fetchPersonalItems: fetchPersonalItemsMock,
   fetchUploadedWardrobeItemDetail: fetchUploadedWardrobeItemDetailMock,
 }));
 
@@ -223,13 +223,13 @@ vi.mock("../../components/ClothingCard", () => ({
 export const theme = createTheme();
 
 export const t = translateForMainScreenTests;
-export { fetchMyWardrobeItemsMock, fetchUploadedWardrobeItemDetailMock };
+export { fetchPersonalItemsMock, fetchUploadedWardrobeItemDetailMock };
 
 export function resetMainScreenTestMocks() {
   window.localStorage.clear();
   mediaQueryMock.mockReset();
-  fetchMyWardrobeItemsMock.mockReset();
-  fetchMyWardrobeItemsMock.mockResolvedValue({ items: [] });
+  fetchPersonalItemsMock.mockReset();
+  fetchPersonalItemsMock.mockResolvedValue({ items: [] });
   fetchUploadedWardrobeItemDetailMock.mockReset();
   fetchUploadedWardrobeItemDetailMock.mockResolvedValue({ item: null });
   useI18nMock.mockReset();
