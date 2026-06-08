@@ -54,13 +54,13 @@ Primary areas:
 - For AI integrations, avoid changing provider behavior or output assumptions without corresponding tests.
 
 ## Validation
-- `npm run test:server`
 - `npm run coverage:server`
 - `npm run typecheck:server`
 - At the end of the work, after the final file edits, run `npm run format`.
 - If `npm run format` changes files, include those formatter changes in the diff.
-- After editing files, verify test coverage, test pass status, and ESLint before handing off.
-- After tests, coverage, typecheck, and format, run `npm run lint:strict`.
+- `npm run coverage:server` runs the server Vitest suite with coverage instrumentation, so do not also run `npm run test:server` unless debugging a coverage-specific issue, chasing a flaky failure, or doing a fast pre-coverage smoke run.
+- After editing files, verify coverage-backed test pass status and ESLint before handing off.
+- After coverage, typecheck, and format, run `npm run lint:strict`.
 
 ## First files to inspect
 - `index.ts`

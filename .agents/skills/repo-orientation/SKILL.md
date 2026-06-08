@@ -34,12 +34,13 @@ Use this skill to get oriented before changing or reviewing code in this repo.
 ## Validation Guide
 - At the end of the work, after the final file edits, run `npm run format`, then `npm run lint:strict`.
 - If `npm run format` changes files, include those formatter changes in the diff.
-- UI-only client changes: `npm run test:client`, `npm run coverage:client`, then ESLint on changed files with `--max-warnings=0`.
+- `npm run coverage*` commands run the corresponding Vitest suites with coverage instrumentation, so skip the matching `npm run test*` command unless debugging a coverage-specific issue, chasing a flaky failure, or doing a fast pre-coverage smoke run.
+- UI-only client changes: `npm run coverage:client`, then ESLint on changed files with `--max-warnings=0`.
 - Client TypeScript or module-boundary changes: add `npm run typecheck:client`.
-- Server-only changes: `npm run test:server`, `npm run coverage:server`, then ESLint on changed files with `--max-warnings=0`.
+- Server-only changes: `npm run coverage:server`, then ESLint on changed files with `--max-warnings=0`.
 - Server TypeScript or contract-shape changes: add `npm run typecheck:server`.
-- Shared logic changes: `npm run test:shared`, `npm run coverage:shared`, and `npm run typecheck:shared`.
-- Cross-workspace behavior: `npm test`, `npm run coverage`, relevant typecheck commands, and ESLint on changed files.
+- Shared logic changes: `npm run coverage:shared` and `npm run typecheck:shared`.
+- Cross-workspace behavior: `npm run coverage`, relevant typecheck commands, and ESLint on changed files.
 - Narrow fixes may start with the closest test first, but final handoff should state what broader validation did or did not run.
 
 ## Report Format

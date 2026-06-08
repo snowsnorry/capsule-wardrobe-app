@@ -162,24 +162,24 @@ For Playwright/e2e infrastructure tasks:
 - inspect `playwright.config.ts`, `tests/e2e/`, `server/src/e2e/`, `server/src/index.ts`, and `server/package.json`
 
 ## Validation expectations
-After editing files, check test coverage, ESLint, and test pass status before handing off. Prefer the narrowest relevant validation first:
-- workspace-local tests for the changed area
-- then broader repo tests if the change crosses boundaries
-- coverage for the changed area, or full coverage for cross-cutting changes
-- Run test commands and coverage commands sequentially. Do not run different test blocks in parallel, do not run coverage blocks in parallel, and do not run coverage at the same time as tests; these runs contend for resources and create misleading timeouts.
+After editing files, check coverage-backed test pass status, ESLint, and any needed type checks before handing off. Prefer the narrowest relevant validation first:
+- workspace-local coverage for the changed area, or full coverage for cross-cutting changes
+- `npm run coverage*` commands run the corresponding Vitest suites with coverage instrumentation, so do not also run the matching `npm run test*` command unless debugging a coverage-specific issue, chasing a flaky failure, or doing a fast pre-coverage smoke run
+- Playwright e2e tests are separate from Vitest coverage and should still be run for Playwright/e2e infrastructure changes
+- Run validation commands sequentially. Do not run different test blocks in parallel, do not run coverage blocks in parallel, and do not run coverage at the same time as tests; these runs contend for resources and create misleading timeouts.
 - After a large code change that touches multiple files, launch a sub-agent to perform a code review and recommend follow-up fixes. Review the recommendations, apply the ones that are relevant, then rerun the necessary tests, coverage, typecheck, format, and lint checks.
 - At the end of the work, after the final file edits, run `npm run format`, then `npm run lint:strict`.
 - if `npm run format` changes files, include those formatter changes in the diff
 
 At minimum:
-- UI-only changes: `npm run test:client` and `npm run coverage:client`
-- server-only changes: `npm run test:server` and `npm run coverage:server`
-- shared logic changes: `npm run test:shared` and `npm run coverage:shared`
+- UI-only changes: `npm run coverage:client`
+- server-only changes: `npm run coverage:server`
+- shared logic changes: `npm run coverage:shared`
 - Playwright/e2e infrastructure changes: `npm run test:e2e`
-- cross-cutting changes: `npm test` and `npm run coverage`
+- cross-cutting changes: `npm run coverage`
 - TypeScript-only or contract-shape changes: run the narrowest relevant `typecheck` command
 - docs-only changes: run `npm run format` and `npm run lint:strict`; code tests are not required when behavior is untouched
-- after tests, coverage, typecheck, and format, run `npm run lint:strict`
+- after coverage, any needed tests, typecheck, and format, run `npm run lint:strict`
 
 ## Avoid
 - Do not invent new architecture not already present in the repo.
