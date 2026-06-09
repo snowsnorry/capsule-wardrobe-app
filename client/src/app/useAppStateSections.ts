@@ -63,8 +63,6 @@ export function useProfileFilterAppState() {
   const [selectedSourceMode, setSelectedSourceMode] =
     useState<CapsuleSourceMode>("catalog_only");
   const [selectedText, setSelectedText] = useState("");
-  const [selectedAnchorWardrobeItemIds, setSelectedAnchorWardrobeItemIds] =
-    useState<string[]>([]);
   const [selectedAnchorItemRefs, setSelectedAnchorItemRefs] = useState<
     AnchorItemRef[]
   >([]);
@@ -85,7 +83,6 @@ export function useProfileFilterAppState() {
     selectedStyle,
     selectedText,
     selectedAnchorItemRefs,
-    selectedAnchorWardrobeItemIds,
     setCurrentView,
     setSelectedAudience,
     setSelectedColor,
@@ -97,7 +94,6 @@ export function useProfileFilterAppState() {
     setSelectedStyle,
     setSelectedText,
     setSelectedAnchorItemRefs,
-    setSelectedAnchorWardrobeItemIds,
     setSettingsProfile,
     settingsProfile,
   };

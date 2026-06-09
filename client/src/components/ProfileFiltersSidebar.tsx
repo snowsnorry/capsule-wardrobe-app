@@ -130,8 +130,6 @@ function useWardrobeOnlySourceModeStatus(
         loading: state.loading,
         loadFailed: state.error,
         selectedAudience: props.selectedAudience,
-        selectedAnchorWardrobeItemIds:
-          props.selectedAnchorWardrobeItemIds || [],
         selectedAnchorItemRefs: props.selectedAnchorItemRefs || [],
         selectedSeasons: props.selectedSeasons,
         selectedSourceMode: props.selectedSourceMode,
@@ -140,7 +138,6 @@ function useWardrobeOnlySourceModeStatus(
     [
       locale,
       props.selectedAudience,
-      props.selectedAnchorWardrobeItemIds,
       props.selectedAnchorItemRefs,
       props.selectedSeasons,
       props.selectedSourceMode,
@@ -158,7 +155,6 @@ function buildWardrobeOnlySourceModeStatus({
   loading,
   loadFailed,
   selectedAudience,
-  selectedAnchorWardrobeItemIds,
   selectedAnchorItemRefs,
   selectedSeasons,
   selectedSourceMode,
@@ -169,7 +165,6 @@ function buildWardrobeOnlySourceModeStatus({
   loading: boolean;
   loadFailed: boolean;
   selectedAudience: string | null;
-  selectedAnchorWardrobeItemIds: string[];
   selectedAnchorItemRefs: Array<{
     source: "uploaded" | "from_catalog";
     url: string;
@@ -208,11 +203,7 @@ function buildWardrobeOnlySourceModeStatus({
   }
 
   const shortfalls = getCapsuleCategoryShortfalls({
-    anchorItems: getSelectedReadyAnchorItems(
-      items,
-      selectedAnchorItemRefs,
-      selectedAnchorWardrobeItemIds,
-    ),
+    anchorItems: getSelectedReadyAnchorItems(items, selectedAnchorItemRefs),
     includeSwimwear: true,
     items,
     profile: {
@@ -247,11 +238,7 @@ function getSelectedReadyAnchorItems(
     source: "uploaded" | "from_catalog";
     url: string;
   }>,
-  selectedAnchorWardrobeItemIds: string[],
 ) {
-  const selectedIds = new Set(
-    selectedAnchorWardrobeItemIds.map((id) => String(id).trim().toUpperCase()),
-  );
   const selectedRefs = new Set(
     selectedAnchorItemRefs
       .map((ref) =>
@@ -261,13 +248,10 @@ function getSelectedReadyAnchorItems(
   );
   return getReadyWardrobeCapsuleItems(items).filter((item) => {
     const source = item as Record<string, unknown>;
-    return (
-      selectedIds.has(`W${String(source.id || "").trim()}`.toUpperCase()) ||
-      selectedRefs.has(
-        `${
-          source.source === "uploaded" ? "uploaded" : "from_catalog"
-        }\u0000${String(source.url || "").trim()}`,
-      )
+    return selectedRefs.has(
+      `${
+        source.source === "uploaded" ? "uploaded" : "from_catalog"
+      }\u0000${String(source.url || "").trim()}`,
     );
   });
 }

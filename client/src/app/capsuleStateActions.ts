@@ -34,7 +34,6 @@ type ApplyCapsuleStateContext = {
   setSelectedSourceMode: StateSetter<CapsuleSourceMode>;
   setSelectedStyle: StateSetter<string | null>;
   setSelectedText: StateSetter<string>;
-  setSelectedAnchorWardrobeItemIds: StateSetter<string[]>;
   setSelectedAnchorItemRefs: StateSetter<AnchorItemRef[]>;
 };
 
@@ -97,9 +96,6 @@ function applyCapsuleFilters(
   context.setSelectedPattern(normalizePattern(filters.pattern));
   context.setSelectedSourceMode(normalizeSourceMode(filters.sourceMode));
   context.setSelectedText(fallbackString(filters.text));
-  context.setSelectedAnchorWardrobeItemIds(
-    fallbackStringArray(filters.anchorWardrobeItemIds),
-  );
   context.setSelectedAnchorItemRefs(
     normalizeAnchorItemRefs(filters.anchorItemRefs),
   );
@@ -127,9 +123,6 @@ function applyEmptyCapsuleState(
   context.setSelectedPattern(normalizePattern(filters.pattern));
   context.setSelectedSourceMode(normalizeSourceMode(filters.sourceMode));
   context.setSelectedText(fallbackString(filters.text));
-  context.setSelectedAnchorWardrobeItemIds(
-    fallbackStringArray(filters.anchorWardrobeItemIds),
-  );
   context.setSelectedAnchorItemRefs(
     normalizeAnchorItemRefs(filters.anchorItemRefs),
   );

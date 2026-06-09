@@ -302,14 +302,9 @@ export function createAppDependencies(options: Record<string, unknown> = {}) {
     streamCapsuleEventsImpl: capsuleEventHub.subscribe,
     updateCapsuleSnapshotImpl: updateCapsuleSnapshot,
     updateOutfitSnapshotImpl: updateOutfitSnapshot,
-    validateCapsuleAnchorItemsImpl: (
-      email,
-      anchorWardrobeItemIds,
-      anchorItemRefs,
-    ) =>
+    validateCapsuleAnchorItemsImpl: (email, anchorItemRefs) =>
       validateCapsuleAnchorItems({
         email,
-        anchorWardrobeItemIds,
         anchorItemRefs,
         deps: {
           listWardrobeItemsByIdsImpl: listWardrobeItemsByIdsForEmail,

@@ -54,7 +54,6 @@ type SharedFilterProps = {
   selectedText: string;
   selectedSourceMode: CapsuleSourceMode;
   selectedAnchorItemRefs: AnchorItemRef[];
-  selectedAnchorWardrobeItemIds: string[];
   setSelectedFormalityLevel: (value: string) => void;
   setSelectedStyle: (value: string | null) => void;
   setSelectedOccasions: Dispatch<SetStateAction<string[]>>;
@@ -65,7 +64,6 @@ type SharedFilterProps = {
   setSelectedText: (value: string) => void;
   setSelectedSourceMode: (value: CapsuleSourceMode) => void;
   setSelectedAnchorItemRefs: (value: AnchorItemRef[]) => void;
-  setSelectedAnchorWardrobeItemIds: (value: string[]) => void;
   toggleSelection: ToggleSelectionFn;
 };
 type AppRouteContentProps = SharedFilterProps & {
@@ -208,7 +206,6 @@ function ProfileRoute(props: AppRouteContentProps) {
     />
   );
 }
-// eslint-disable-next-line max-lines-per-function
 function MainRoute(props: AppRouteContentProps) {
   return (
     <MainScreen
@@ -259,7 +256,6 @@ function MainRoute(props: AppRouteContentProps) {
       selectedSourceMode={props.selectedSourceMode}
       selectedText={props.selectedText}
       selectedAnchorItemRefs={props.selectedAnchorItemRefs}
-      selectedAnchorWardrobeItemIds={props.selectedAnchorWardrobeItemIds}
       hasFilterChanges={props.hasFilterChanges}
       status={props.status}
       onSelectStyleCore={props.setSelectedFormalityLevel}
@@ -284,7 +280,6 @@ function MainRoute(props: AppRouteContentProps) {
       onSelectSourceMode={props.setSelectedSourceMode}
       onTextChange={props.setSelectedText}
       onSelectAnchorItemRefs={props.setSelectedAnchorItemRefs}
-      onSelectAnchorWardrobeItemIds={props.setSelectedAnchorWardrobeItemIds}
       onApplyFilters={props.onApplyCapsuleFilters}
       onResetFilters={props.onResetProfileFilters}
       onNavigateApp={props.onNavigateApp}

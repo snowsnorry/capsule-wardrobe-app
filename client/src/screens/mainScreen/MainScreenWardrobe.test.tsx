@@ -40,7 +40,6 @@ function createWardrobeProps(
     mobileColumns: 2,
     partialPendingUrls: [],
     selectedAnchorItemRefs: [],
-    selectedAnchorWardrobeItemIds: [],
     selectedUrls: [],
     selectionMode: false,
     showAdditionalItemPlaceholder: false,
@@ -122,7 +121,7 @@ describe("MainScreenWardrobe", () => {
     };
     renderWardrobe({
       visibleItems: [anchorItem],
-      selectedAnchorWardrobeItemIds: ["W7"],
+      selectedAnchorItemRefs: [{ source: "uploaded", url: "wardrobe://7" }],
       selectionMode: true,
       isOverlay: true,
       onToggleSelected,

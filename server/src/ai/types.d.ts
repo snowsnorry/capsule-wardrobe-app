@@ -45,7 +45,6 @@ type UserProfileLike = {
   pattern?: string | null;
   text?: string | null;
   rejected?: string[] | null;
-  anchorWardrobeItemIds?: string[] | null;
   anchorWardrobeNumericIds?: number[] | null;
   anchorCatalogUrls?: string[] | null;
   anchorItemRefs?: Array<{

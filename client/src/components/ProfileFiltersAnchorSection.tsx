@@ -13,7 +13,6 @@ import { AddItemsDialog } from "./AddItemsDialog";
 import {
   getAnchorCategoryLabel,
   getAnchorLabel,
-  normalizeSelectedIds,
   toAnchorItem,
 } from "./ProfileFiltersAnchorUtils";
 import type {
@@ -37,24 +36,6 @@ function getSnapshotRef(snapshot: OutfitItemSnapshot): AnchorItemRef | null {
   return source && url ? { source, url } : null;
 }
 
-function getLegacyWardrobeId(snapshot: OutfitItemSnapshot): string {
-  const item = snapshot.item || {};
-  const wardrobeId = String(item.id ?? item.wardrobeId ?? "")
-    .trim()
-    .replace(/^W/i, "");
-  return snapshot.source === "uploaded" && /^\d+$/.test(wardrobeId)
-    ? `W${wardrobeId}`
-    : "";
-}
-
-function getLegacyWardrobeIdFromRef(ref: AnchorItemRef): string {
-  const match =
-    ref.source === "uploaded"
-      ? ref.url.match(/^wardrobe:\/\/([1-9]\d*)$/i)
-      : null;
-  return match ? `W${match[1]}` : "";
-}
-
 function normalizeAnchorRefs(refs: AnchorItemRef[] = []) {
   const seen = new Set<string>();
   return refs.filter((ref) => {
@@ -63,17 +44,6 @@ function normalizeAnchorRefs(refs: AnchorItemRef[] = []) {
     seen.add(key);
     return true;
   });
-}
-
-function mergeSelectedAnchorRefs(
-  selectedIds: string[],
-  selectedRefs: AnchorItemRef[],
-) {
-  const legacyRefs = selectedIds.map((id) => ({
-    source: "uploaded" as const,
-    url: `wardrobe://${id.replace(/^W/i, "")}`,
-  }));
-  return normalizeAnchorRefs([...selectedRefs, ...legacyRefs]);
 }
 
 function snapshotToAnchorItem(snapshot: OutfitItemSnapshot): AnchorItem | null {
@@ -96,9 +66,7 @@ function ProfileFiltersAnchorSection({
   anchorPickerFullScreen = false,
   disabled,
   selectedRefs,
-  selectedIds,
   onRefsChange,
-  onLegacyIdsChange,
   t,
   locale,
 }: ProfileFiltersAnchorSectionProps) {
@@ -108,18 +76,9 @@ function ProfileFiltersAnchorSection({
   const [selectedSnapshots, setSelectedSnapshots] = useState<
     OutfitItemSnapshot[]
   >([]);
-  const normalizedSelectedIds = useMemo(
-    () => normalizeSelectedIds(selectedIds),
-    [selectedIds],
-  );
-  const normalizedSelectedRefs = useMemo(
+  const selectedAnchorRefs = useMemo(
     () => normalizeAnchorRefs(selectedRefs),
     [selectedRefs],
-  );
-  const selectedAnchorRefs = useMemo(
-    () =>
-      mergeSelectedAnchorRefs(normalizedSelectedIds, normalizedSelectedRefs),
-    [normalizedSelectedIds, normalizedSelectedRefs],
   );
 
   const loadItems = useCallback(async () => {
@@ -139,19 +98,10 @@ function ProfileFiltersAnchorSection({
   }, []);
 
   useEffect(() => {
-    if (
-      dialogOpen ||
-      normalizedSelectedIds.length > 0 ||
-      selectedAnchorRefs.length > 0
-    ) {
+    if (dialogOpen || selectedAnchorRefs.length > 0) {
       void loadItems();
     }
-  }, [
-    dialogOpen,
-    loadItems,
-    normalizedSelectedIds.length,
-    selectedAnchorRefs.length,
-  ]);
+  }, [dialogOpen, loadItems, selectedAnchorRefs.length]);
 
   useEffect(() => {
     let current = true;
@@ -159,7 +109,6 @@ function ProfileFiltersAnchorSection({
       const wardrobeAnchorItems = items.map(toAnchorItem).filter(Boolean);
       const snapshots = buildInitialSnapshots({
         items,
-        selectedIds: normalizedSelectedIds,
         selectedRefs: selectedAnchorRefs,
       });
       const knownKeys = new Set(snapshots.map(getOutfitItemKey));
@@ -204,7 +153,7 @@ function ProfileFiltersAnchorSection({
     return () => {
       current = false;
     };
-  }, [items, normalizedSelectedIds, selectedAnchorRefs]);
+  }, [items, selectedAnchorRefs]);
 
   const itemById = useMemo(
     () => new Map(selectedItems.map((item) => [item.id, item])),
@@ -212,8 +161,7 @@ function ProfileFiltersAnchorSection({
   );
   const initialItems = useMemo(() => selectedSnapshots, [selectedSnapshots]);
   const selectedDisplayKeys = selectedAnchorRefs.map(getAnchorRefKey);
-  const canEdit =
-    !disabled && (Boolean(onRefsChange) || Boolean(onLegacyIdsChange));
+  const canEdit = !disabled && Boolean(onRefsChange);
 
   return (
     <Stack spacing={1.5}>
@@ -238,9 +186,6 @@ function ProfileFiltersAnchorSection({
               selectedKeySet.has(getAnchorRefKey(ref)),
             );
             onRefsChange?.(nextRefs);
-            onLegacyIdsChange?.(
-              nextRefs.map(getLegacyWardrobeIdFromRef).filter(Boolean),
-            );
           }}
         />
       )}
@@ -255,7 +200,7 @@ function ProfileFiltersAnchorSection({
         actionLabel={t("capsule.anchors.apply")}
         t={t}
         onAdd={(nextItems) => {
-          applySnapshots(nextItems, onRefsChange, onLegacyIdsChange);
+          applySnapshots(nextItems, onRefsChange);
           setDialogOpen(false);
         }}
         onClose={() => setDialogOpen(false)}
@@ -266,11 +211,9 @@ function ProfileFiltersAnchorSection({
 
 function buildInitialSnapshots({
   items,
-  selectedIds,
   selectedRefs,
 }: {
   items: WardrobeItem[];
-  selectedIds: string[];
   selectedRefs: AnchorItemRef[];
 }) {
   const snapshotsByKey = new Map<string, OutfitItemSnapshot>();
@@ -280,19 +223,7 @@ function buildInitialSnapshots({
       snapshotsByKey.set(getOutfitItemKey(personalSnapshot), personalSnapshot);
     }
   });
-  const refs =
-    selectedRefs.length > 0
-      ? selectedRefs
-      : selectedIds
-          .map((id) =>
-            snapshotsByKey.get(
-              `uploaded\u0000wardrobe://${id.replace(/^W/i, "")}`,
-            ),
-          )
-          .filter(Boolean)
-          .map((snapshot) => getSnapshotRef(snapshot as OutfitItemSnapshot))
-          .filter(Boolean);
-  return (refs as AnchorItemRef[])
+  return selectedRefs
     .map((ref) => snapshotsByKey.get(getAnchorRefKey(ref)))
     .filter(Boolean) as OutfitItemSnapshot[];
 }
@@ -300,12 +231,9 @@ function buildInitialSnapshots({
 function applySnapshots(
   snapshots: OutfitItemSnapshot[],
   onRefsChange?: (value: AnchorItemRef[]) => void,
-  onLegacyIdsChange?: (value: string[]) => void,
 ) {
   const refs = snapshots.map(getSnapshotRef).filter(Boolean) as AnchorItemRef[];
-  const legacyIds = snapshots.map(getLegacyWardrobeId).filter(Boolean);
   onRefsChange?.(refs);
-  onLegacyIdsChange?.(legacyIds);
 }
 
 function AnchorSectionHeader({ t }: { t: Translate }) {

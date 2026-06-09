@@ -303,8 +303,11 @@ test("regenerateSelectedWardrobeItems rejects anchor urls from partial regenerat
         draft: buildCapsuleSnapshot({
           filters: {
             season: ["winter"],
-            anchorWardrobeItemIds: ["W12"],
             anchorItemRefs: [
+              {
+                source: "uploaded",
+                url: "wardrobe://12",
+              },
               {
                 source: "from_catalog",
                 url: "https://example.com/catalog-anchor",

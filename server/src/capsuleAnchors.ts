@@ -15,7 +15,6 @@ type AnchorItemRef = {
 };
 
 type ValidatedCapsuleAnchors = {
-  anchorWardrobeItemIds: string[];
   anchorWardrobeNumericIds: number[];
   anchorCatalogUrls: string[];
   anchorItemRefs: AnchorItemRef[];
@@ -23,7 +22,6 @@ type ValidatedCapsuleAnchors = {
 };
 
 const MAX_ANCHOR_ITEMS = 5;
-const ANCHOR_ID_PATTERN = /^W([1-9]\d*)$/i;
 const WARDROBE_URL_PATTERN = /^wardrobe:\/\/([1-9]\d*)$/i;
 
 function isAnchorItemSource(value: unknown): value is AnchorItemRef["source"] {
@@ -34,44 +32,6 @@ function invalidPayload(): Error {
   const error = new Error("invalid_payload");
   (error as { code?: string }).code = "invalid_payload";
   return error;
-}
-
-function normalizeAnchorPublicIds(value: unknown): string[] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  return [
-    ...new Set(
-      value
-        .map((id) =>
-          String(id || "")
-            .trim()
-            .toUpperCase(),
-        )
-        .filter(Boolean),
-    ),
-  ];
-}
-
-function parseAnchorPublicIds(value: unknown): {
-  publicIds: string[];
-  numericIds: number[];
-} {
-  const publicIds = normalizeAnchorPublicIds(value);
-  if (publicIds.length > MAX_ANCHOR_ITEMS) {
-    throw invalidPayload();
-  }
-
-  const numericIds = publicIds.map((id) => {
-    const match = id.match(ANCHOR_ID_PATTERN);
-    if (!match) {
-      throw invalidPayload();
-    }
-    return Number(match[1]);
-  });
-
-  return { publicIds, numericIds };
 }
 
 function readAnchorItemRef(item: unknown): AnchorItemRef {
@@ -102,31 +62,6 @@ function normalizeAnchorItemRefs(value: unknown): AnchorItemRef[] {
     refs.push(ref);
   }
   return refs;
-}
-
-function getAnchorRefs({
-  anchorWardrobeItemIds,
-  anchorItemRefs,
-}: {
-  anchorWardrobeItemIds: unknown;
-  anchorItemRefs: unknown;
-}): AnchorItemRef[] {
-  const legacyRefs = parseAnchorPublicIds(anchorWardrobeItemIds).publicIds.map(
-    (id) => ({
-      source: "uploaded" as const,
-      url: `wardrobe://${id.replace(/^W/i, "")}`,
-    }),
-  );
-  const explicitRefs = normalizeAnchorItemRefs(anchorItemRefs);
-  const seen = new Set<string>();
-  return [...explicitRefs, ...legacyRefs].filter((ref) => {
-    const key = `${ref.source}\u0000${ref.url}`;
-    if (seen.has(key)) {
-      return false;
-    }
-    seen.add(key);
-    return true;
-  });
 }
 
 function parseUploadedRefs(refs: AnchorItemRef[]) {
@@ -194,15 +129,13 @@ function toCatalogAnchorGenerationItem(row: Record<string, unknown>) {
 async function validateCapsuleAnchorItems({
   email,
   anchorItemRefs,
-  anchorWardrobeItemIds,
   deps,
 }: {
   email: string;
   anchorItemRefs?: unknown;
-  anchorWardrobeItemIds: unknown;
   deps: AnchorValidationDeps;
 }): Promise<ValidatedCapsuleAnchors> {
-  const refs = getAnchorRefs({ anchorWardrobeItemIds, anchorItemRefs });
+  const refs = normalizeAnchorItemRefs(anchorItemRefs);
   if (refs.length > MAX_ANCHOR_ITEMS) {
     throw invalidPayload();
   }
@@ -212,7 +145,6 @@ async function validateCapsuleAnchorItems({
     .map((ref) => ref.url);
   if (refs.length === 0) {
     return {
-      anchorWardrobeItemIds: [],
       anchorWardrobeNumericIds: [],
       anchorCatalogUrls: [],
       anchorItemRefs: [],
@@ -260,7 +192,6 @@ async function validateCapsuleAnchorItems({
   }
 
   return {
-    anchorWardrobeItemIds: publicIds,
     anchorWardrobeNumericIds: numericIds,
     anchorCatalogUrls: catalogUrls,
     anchorItemRefs: refs,
@@ -268,4 +199,4 @@ async function validateCapsuleAnchorItems({
   };
 }
 
-export { parseAnchorPublicIds, validateCapsuleAnchorItems };
+export { validateCapsuleAnchorItems };

@@ -70,10 +70,9 @@ function createCapsuleGenerationDeps(deps: Record<string, any> = {}) {
     getSqlClientImpl: deps.getSqlClientImpl || getSqlClient,
     validateCapsuleAnchorItemsImpl:
       deps.validateCapsuleAnchorItemsImpl ||
-      ((email, anchorWardrobeItemIds, anchorItemRefs) =>
+      ((email, anchorItemRefs) =>
         validateCapsuleAnchorItems({
           email,
-          anchorWardrobeItemIds,
           anchorItemRefs,
           deps: {
             listWardrobeItemsByIdsImpl: listWardrobeItemsByIdsForEmail,
@@ -121,16 +120,12 @@ async function getNormalizedWardrobeItems(
 }
 
 async function getValidatedAnchorContext(userProfile, deps) {
-  const anchorIds = Array.isArray(userProfile?.anchorWardrobeItemIds)
-    ? userProfile.anchorWardrobeItemIds
-    : [];
   const anchorItemRefs = Array.isArray(userProfile?.anchorItemRefs)
     ? userProfile.anchorItemRefs
     : [];
   const email = typeof userProfile?.email === "string" ? userProfile.email : "";
   const anchors = await deps.validateCapsuleAnchorItemsImpl(
     email,
-    anchorIds,
     anchorItemRefs,
   );
   return anchors;
@@ -378,7 +373,6 @@ export function createGenerateCapsuleWardrobe(deps = {}) {
     const normalizedItems = await getNormalizedWardrobeItems(
       {
         ...userProfile,
-        anchorWardrobeItemIds: anchorContext.anchorWardrobeItemIds,
         anchorWardrobeNumericIds: anchorContext.anchorWardrobeNumericIds,
         anchorCatalogUrls: anchorContext.anchorCatalogUrls,
         anchorItemRefs: anchorContext.anchorItemRefs,

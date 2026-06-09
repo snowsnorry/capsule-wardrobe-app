@@ -22,7 +22,6 @@ function createContext() {
     setSelectedStyle: vi.fn(),
     setSelectedText: vi.fn(),
     setSelectedAnchorItemRefs: vi.fn(),
-    setSelectedAnchorWardrobeItemIds: vi.fn(),
   };
 }
 

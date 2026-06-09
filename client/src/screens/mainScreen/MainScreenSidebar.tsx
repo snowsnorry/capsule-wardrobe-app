@@ -55,7 +55,6 @@ function MainScreenSidebar({ props, disabled, isSigningOut }: SidebarProps) {
         selectedSourceMode={props.selectedSourceMode}
         selectedText={props.selectedText}
         selectedAnchorItemRefs={props.selectedAnchorItemRefs}
-        selectedAnchorWardrobeItemIds={props.selectedAnchorWardrobeItemIds}
         hasFilterChanges={props.hasFilterChanges}
         status={props.status}
         onSelectStyleCore={props.onSelectStyleCore}
@@ -68,7 +67,6 @@ function MainScreenSidebar({ props, disabled, isSigningOut }: SidebarProps) {
         onSelectSourceMode={props.onSelectSourceMode}
         onTextChange={props.onTextChange}
         onSelectAnchorItemRefs={props.onSelectAnchorItemRefs}
-        onSelectAnchorWardrobeItemIds={props.onSelectAnchorWardrobeItemIds}
         onApply={props.onApplyFilters}
         onReset={props.onResetFilters}
         onSignOut={null}

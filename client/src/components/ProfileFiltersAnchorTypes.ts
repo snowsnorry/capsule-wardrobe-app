@@ -26,9 +26,7 @@ export type ProfileFiltersAnchorSectionProps = {
   anchorPickerFullScreen?: boolean;
   disabled: boolean;
   selectedRefs: AnchorItemRef[];
-  selectedIds: string[];
   onRefsChange?: (value: AnchorItemRef[]) => void;
-  onLegacyIdsChange?: (value: string[]) => void;
   t: Translate;
   locale: string;
 };

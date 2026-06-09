@@ -10,7 +10,6 @@ export type CapsuleFilters = {
   color: string | null;
   pattern: string;
   text: string;
-  anchorWardrobeItemIds: string[];
   anchorItemRefs: AnchorItemRef[];
 };
 
@@ -137,10 +136,6 @@ function uniqueTrimmedStrings(values: unknown): string[] {
     : [];
 }
 
-function normalizeAnchorWardrobeItemIds(values: unknown): string[] {
-  return uniqueTrimmedStrings(values).map((value) => value.toUpperCase());
-}
-
 function normalizeAnchorItemRefs(values: unknown): AnchorItemRef[] {
   if (!Array.isArray(values)) {
     return [];
@@ -229,7 +224,6 @@ export function normalizeCapsuleFilters(
       color: null,
       pattern: "solid",
       text: "",
-      anchorWardrobeItemIds: [],
       anchorItemRefs: [],
     };
   }
@@ -248,9 +242,6 @@ export function normalizeCapsuleFilters(
       typeof filters.text === "string" && filters.text.trim()
         ? filters.text.trim()
         : "",
-    anchorWardrobeItemIds: normalizeAnchorWardrobeItemIds(
-      filters.anchorWardrobeItemIds,
-    ),
     anchorItemRefs: normalizeAnchorItemRefs(filters.anchorItemRefs),
   };
 }

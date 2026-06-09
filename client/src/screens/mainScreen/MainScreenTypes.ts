@@ -126,7 +126,6 @@ export type MainScreenProps = {
   selectedSourceMode: CapsuleSourceMode;
   selectedText: string;
   selectedAnchorItemRefs: AnchorItemRef[];
-  selectedAnchorWardrobeItemIds: string[];
   hasFilterChanges: boolean;
   status: ScreenStatus;
   onSelectStyleCore: (value: string) => void;
@@ -139,7 +138,6 @@ export type MainScreenProps = {
   onSelectSourceMode: (value: CapsuleSourceMode) => void;
   onTextChange: (value: string) => void;
   onSelectAnchorItemRefs: (value: AnchorItemRef[]) => void;
-  onSelectAnchorWardrobeItemIds: (value: string[]) => void;
   onApplyFilters: () => Promise<void> | void;
   onResetFilters: () => Promise<void> | void;
   onNavigateApp: (

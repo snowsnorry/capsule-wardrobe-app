@@ -173,8 +173,9 @@ test("generateCapsuleWardrobe injects anchors and repairs missing anchor selecti
   const generateCapsuleWardrobe = createGenerateCapsuleWardrobe(
     createBaseDeps({
       validateCapsuleAnchorItemsImpl: async () => ({
-        anchorWardrobeItemIds: ["W12"],
         anchorWardrobeNumericIds: [12],
+        anchorCatalogUrls: [],
+        anchorItemRefs: [{ source: "uploaded", url: "wardrobe://12" }],
         anchorItems: [
           {
             id: "W12",
@@ -234,7 +235,7 @@ test("generateCapsuleWardrobe injects anchors and repairs missing anchor selecti
     email: "person@example.com",
     audience: "woman",
     season: ["spring"],
-    anchorWardrobeItemIds: ["W12"],
+    anchorItemRefs: [{ source: "uploaded", url: "wardrobe://12" }],
   });
 
   expect(llmPrompts[0]).toContain("ANCHOR ITEMS - MANDATORY");

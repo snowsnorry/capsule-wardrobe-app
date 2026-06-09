@@ -254,7 +254,6 @@ export function renderWithTheme(children: ReactNode) {
   return render(<ThemeProvider theme={theme}>{children}</ThemeProvider>);
 }
 
-// eslint-disable-next-line max-lines-per-function
 export function createMainScreenProps(
   overrides: Partial<MainScreenProps> = {},
 ): MainScreenProps {
@@ -317,7 +316,6 @@ export function createMainScreenProps(
     selectedSourceMode: "catalog_only",
     selectedText: "",
     selectedAnchorItemRefs: [],
-    selectedAnchorWardrobeItemIds: [],
     hasFilterChanges: false,
     status: { loading: false, error: "", infoKey: "", infoParams: null },
     onSelectStyleCore: vi.fn(),
@@ -330,7 +328,6 @@ export function createMainScreenProps(
     onSelectSourceMode: vi.fn(),
     onTextChange: vi.fn(),
     onSelectAnchorItemRefs: vi.fn(),
-    onSelectAnchorWardrobeItemIds: vi.fn(),
     onApplyFilters: vi.fn(),
     onResetFilters: vi.fn(),
     onNavigateApp: vi.fn(),

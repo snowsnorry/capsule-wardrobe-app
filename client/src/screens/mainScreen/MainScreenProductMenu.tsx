@@ -51,7 +51,6 @@ type ProductMenuProps = {
         source: "uploaded" | "from_catalog";
         url: string;
       }>;
-      selectedAnchorWardrobeItemIds: string[];
     };
     setSelectionMode: (value: boolean) => void;
   };
@@ -169,22 +168,8 @@ function LikeMenuItem({ menuProps, onClose, t }: ProductMenuProps) {
   );
 }
 
-function normalizePublicWardrobeId(value: unknown) {
-  const trimmed = String(value || "").trim();
-  if (!trimmed) {
-    return "";
-  }
-
-  const withoutPrefix = trimmed.replace(/^W/i, "");
-  return /^\d+$/.test(withoutPrefix) ? `W${withoutPrefix}` : trimmed;
-}
-
 function isAnchorMenuItem(menuProps: ProductMenuProps["menuProps"]) {
-  const anchorIds = menuProps.props.selectedAnchorWardrobeItemIds || [];
   const anchorRefs = menuProps.props.selectedAnchorItemRefs || [];
-  const anchorIdSet = new Set(
-    anchorIds.map(normalizePublicWardrobeId).filter(Boolean),
-  );
   const anchorRefSet = new Set(
     anchorRefs
       .map((ref) =>
@@ -199,13 +184,7 @@ function isAnchorMenuItem(menuProps: ProductMenuProps["menuProps"]) {
   }
   const itemUrl = String(item.url || "").trim();
   const source = item.source === "uploaded" ? "uploaded" : "from_catalog";
-  if (itemUrl && anchorRefSet.has(`${source}\u0000${itemUrl}`)) {
-    return true;
-  }
-
-  return [item.id, item.wardrobeId]
-    .map(normalizePublicWardrobeId)
-    .some((itemId) => anchorIdSet.has(itemId));
+  return Boolean(itemUrl && anchorRefSet.has(`${source}\u0000${itemUrl}`));
 }
 
 function RegenerationMenuItem({ menuProps, onClose, t }: ProductMenuProps) {

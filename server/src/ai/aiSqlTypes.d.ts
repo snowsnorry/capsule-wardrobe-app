@@ -30,7 +30,6 @@ type CapsuleWardrobeSqlParams = {
   rejectedUrls: string[];
   embeddingVector: string;
   noiseFactor: number;
-  anchorWardrobeItemIds: string[];
   anchorWardrobeNumericIds: number[];
   anchorCatalogUrls: string[];
   anchorSimilarityBonusWeight: number;

@@ -112,7 +112,6 @@ export function buildEmptyCapsuleDraft(): CapsuleDraft {
       color: null,
       pattern: "solid",
       text: "",
-      anchorWardrobeItemIds: [],
       anchorItemRefs: [],
     },
     data: {
@@ -143,7 +142,6 @@ export function buildDraftSnapshotFromState({
   selectedStyle,
   selectedText,
   selectedAnchorItemRefs = [],
-  selectedAnchorWardrobeItemIds = [],
   wardrobe,
 }: {
   activeCapsuleMeta: CapsuleMeta | null;
@@ -160,7 +158,6 @@ export function buildDraftSnapshotFromState({
   selectedStyle: string | null;
   selectedText: string;
   selectedAnchorItemRefs?: AnchorItemRef[];
-  selectedAnchorWardrobeItemIds?: string[];
   wardrobe?:
     | CapsuleWardrobeData
     | { items: WardrobeItem[] | null; outfitSets: OutfitSetSnapshot[] }
@@ -181,7 +178,6 @@ export function buildDraftSnapshotFromState({
       color: selectedColor,
       pattern: selectedPattern,
       text: selectedText,
-      anchorWardrobeItemIds: selectedAnchorWardrobeItemIds,
       anchorItemRefs: normalizeAnchorItemRefs(selectedAnchorItemRefs),
     },
     data: {
@@ -223,9 +219,6 @@ function normalizeComparableFilters(filters: Partial<CapsuleFilters> = {}) {
         ? filters.pattern
         : "solid",
     text: typeof filters.text === "string" ? filters.text.trim() : "",
-    anchorWardrobeItemIds: Array.isArray(filters.anchorWardrobeItemIds)
-      ? [...filters.anchorWardrobeItemIds].sort()
-      : [],
     anchorItemRefs: normalizeAnchorItemRefs(filters.anchorItemRefs).sort(
       (left, right) =>
         `${left.source}\u0000${left.url}`.localeCompare(

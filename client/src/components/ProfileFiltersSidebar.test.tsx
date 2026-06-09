@@ -67,7 +67,6 @@ function renderSidebar(
     selectedPattern: "solid",
     selectedSourceMode: "catalog_only",
     selectedText: "",
-    selectedAnchorWardrobeItemIds: [],
     hasFilterChanges: true,
     status: { loading: false, error: "", infoKey: "", infoParams: null },
     onSelectStyleCore: vi.fn(),
@@ -79,7 +78,7 @@ function renderSidebar(
     onSelectPattern: vi.fn(),
     onSelectSourceMode: vi.fn(),
     onTextChange: vi.fn(),
-    onSelectAnchorWardrobeItemIds: vi.fn(),
+    onSelectAnchorItemRefs: vi.fn(),
     onApply: vi.fn(),
     onReset: vi.fn(),
     onSignOut: vi.fn(),
@@ -418,7 +417,7 @@ describe("ProfileFiltersSidebar", () => {
 
   test("renders anchor empty state and applies picker selection", async () => {
     const user = userEvent.setup();
-    const onSelectAnchorWardrobeItemIds = vi.fn();
+    const onSelectAnchorItemRefs = vi.fn();
     fetchPersonalItemsMock.mockResolvedValue({
       items: [
         {
@@ -432,7 +431,7 @@ describe("ProfileFiltersSidebar", () => {
       ],
     });
 
-    renderSidebar({ onSelectAnchorWardrobeItemIds });
+    renderSidebar({ onSelectAnchorItemRefs });
     await user.click(screen.getByRole("button", { name: "Add items" }));
     await user.click(
       await screen.findByRole("button", { name: /White shirt/ }),
@@ -444,13 +443,14 @@ describe("ProfileFiltersSidebar", () => {
     expect(getComputedStyle(footer!).justifyContent).toBe("flex-end");
     await user.click(screen.getByRole("button", { name: "Apply" }));
 
-    expect(onSelectAnchorWardrobeItemIds).toHaveBeenCalledWith(["W12"]);
+    expect(onSelectAnchorItemRefs).toHaveBeenCalledWith([
+      { source: "uploaded", url: "wardrobe://12" },
+    ]);
   });
 
   test("applies mixed personal and catalog anchor selection", async () => {
     const user = userEvent.setup();
     const onSelectAnchorItemRefs = vi.fn();
-    const onSelectAnchorWardrobeItemIds = vi.fn();
     fetchPersonalItemsMock.mockResolvedValue({
       items: [
         {
@@ -477,10 +477,7 @@ describe("ProfileFiltersSidebar", () => {
       total: 1,
     });
 
-    renderSidebar({
-      onSelectAnchorItemRefs,
-      onSelectAnchorWardrobeItemIds,
-    });
+    renderSidebar({ onSelectAnchorItemRefs });
     await user.click(screen.getByRole("button", { name: "Add items" }));
     await user.click(
       await screen.findByRole("button", { name: /White shirt/ }),
@@ -495,7 +492,6 @@ describe("ProfileFiltersSidebar", () => {
       { source: "uploaded", url: "wardrobe://12" },
       { source: "from_catalog", url: "https://example.com/catalog-coat" },
     ]);
-    expect(onSelectAnchorWardrobeItemIds).toHaveBeenCalledWith(["W12"]);
   });
 
   test("hydrates saved catalog anchor refs for selected rows", async () => {
@@ -523,7 +519,7 @@ describe("ProfileFiltersSidebar", () => {
     );
   });
 
-  test("hydrates legacy wardrobe ids together with catalog anchor refs", async () => {
+  test("hydrates uploaded and catalog anchor refs for selected rows", async () => {
     fetchPersonalItemsMock.mockResolvedValue({
       items: [
         {
@@ -547,8 +543,8 @@ describe("ProfileFiltersSidebar", () => {
     });
 
     renderSidebar({
-      selectedAnchorWardrobeItemIds: ["W12"],
       selectedAnchorItemRefs: [
+        { source: "uploaded", url: "wardrobe://12" },
         { source: "from_catalog", url: "https://example.com/catalog-coat" },
       ],
     });
@@ -560,7 +556,6 @@ describe("ProfileFiltersSidebar", () => {
   test("keeps dialog selection when saved catalog refs hydrate while open", async () => {
     const user = userEvent.setup();
     const onSelectAnchorItemRefs = vi.fn();
-    const onSelectAnchorWardrobeItemIds = vi.fn();
     let resolveCatalog: (value: unknown) => void = () => undefined;
     const catalogPromise = new Promise((resolve) => {
       resolveCatalog = resolve;
@@ -584,7 +579,6 @@ describe("ProfileFiltersSidebar", () => {
         { source: "from_catalog", url: "https://example.com/catalog-coat" },
       ],
       onSelectAnchorItemRefs,
-      onSelectAnchorWardrobeItemIds,
     });
     await user.click(screen.getByRole("button", { name: "Add / edit" }));
     await user.click(
@@ -613,7 +607,6 @@ describe("ProfileFiltersSidebar", () => {
       { source: "from_catalog", url: "https://example.com/catalog-coat" },
       { source: "uploaded", url: "wardrobe://12" },
     ]);
-    expect(onSelectAnchorWardrobeItemIds).toHaveBeenCalledWith(["W12"]);
   });
 
   test("combines anchor picker source and liked-only filters", async () => {
@@ -720,7 +713,7 @@ describe("ProfileFiltersSidebar", () => {
 
   test("keeps anchor picker cancel local and disables sixth unselected item", async () => {
     const user = userEvent.setup();
-    const onSelectAnchorWardrobeItemIds = vi.fn();
+    const onSelectAnchorItemRefs = vi.fn();
     fetchPersonalItemsMock.mockResolvedValue({
       items: [1, 2, 3, 4, 5, 6].map((id) => ({
         id,
@@ -732,8 +725,11 @@ describe("ProfileFiltersSidebar", () => {
     });
 
     renderSidebar({
-      selectedAnchorWardrobeItemIds: ["W1", "W2", "W3", "W4", "W5"],
-      onSelectAnchorWardrobeItemIds,
+      selectedAnchorItemRefs: ["1", "2", "3", "4", "5"].map((id) => ({
+        source: "uploaded",
+        url: `wardrobe://${id}`,
+      })),
+      onSelectAnchorItemRefs,
     });
     await user.click(screen.getByRole("button", { name: "Add / edit" }));
 
@@ -741,6 +737,6 @@ describe("ProfileFiltersSidebar", () => {
       await screen.findByRole("button", { name: /Item 6/ }),
     ).toBeDisabled();
     await user.click(screen.getByRole("button", { name: "Cancel" }));
-    expect(onSelectAnchorWardrobeItemIds).not.toHaveBeenCalled();
+    expect(onSelectAnchorItemRefs).not.toHaveBeenCalled();
   });
 });

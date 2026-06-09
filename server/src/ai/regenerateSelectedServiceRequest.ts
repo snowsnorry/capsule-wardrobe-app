@@ -40,35 +40,10 @@ function getSelectedProductsFromWardrobe(storedWardrobe, itemUrls) {
     .filter(Boolean);
 }
 
-function normalizePublicWardrobeId(value) {
-  const trimmed = String(value || "").trim();
-  if (!trimmed) {
-    return "";
-  }
-
-  const withoutPrefix = trimmed.replace(/^W/i, "");
-  return /^\d+$/.test(withoutPrefix) ? `W${withoutPrefix}` : trimmed;
-}
-
-function getItemPublicWardrobeIds(item) {
-  return [
-    normalizePublicWardrobeId(item?.id),
-    normalizePublicWardrobeId(item?.wardrobeId),
-  ].filter(Boolean);
-}
-
 function hasSelectedAnchorProducts(effectiveSnapshot, selectedProducts) {
-  const anchorIds = Array.isArray(
-    effectiveSnapshot?.filters?.anchorWardrobeItemIds,
-  )
-    ? effectiveSnapshot.filters.anchorWardrobeItemIds
-    : [];
   const anchorRefs = Array.isArray(effectiveSnapshot?.filters?.anchorItemRefs)
     ? effectiveSnapshot.filters.anchorItemRefs
     : [];
-  const anchorIdSet = new Set(
-    anchorIds.map(normalizePublicWardrobeId).filter(Boolean),
-  );
   const anchorRefSet = new Set(
     anchorRefs
       .map((ref) => {
@@ -79,17 +54,14 @@ function hasSelectedAnchorProducts(effectiveSnapshot, selectedProducts) {
       .filter(Boolean),
   );
 
-  if (anchorIdSet.size === 0 && anchorRefSet.size === 0) {
+  if (anchorRefSet.size === 0) {
     return false;
   }
 
   return selectedProducts.some((item) => {
     const source = item?.source === "uploaded" ? "uploaded" : "from_catalog";
     const url = String(item?.url || "").trim();
-    return (
-      (url && anchorRefSet.has(`${source}\u0000${url}`)) ||
-      getItemPublicWardrobeIds(item).some((itemId) => anchorIdSet.has(itemId))
-    );
+    return url && anchorRefSet.has(`${source}\u0000${url}`);
   });
 }
 

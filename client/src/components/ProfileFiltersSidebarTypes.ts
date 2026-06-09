@@ -49,7 +49,6 @@ type ProfileFiltersSidebarProps = {
   sourceModeStatus?: ProfileFiltersSourceModeStatus | null;
   selectedText: string;
   selectedAnchorItemRefs?: AnchorItemRef[];
-  selectedAnchorWardrobeItemIds?: string[];
   hasFilterChanges?: boolean;
   status: ProfileFiltersStatus;
   onSelectStyleCore: (value: ProfileFilterValue) => void;
@@ -62,7 +61,6 @@ type ProfileFiltersSidebarProps = {
   onSelectSourceMode: (value: CapsuleSourceMode) => void;
   onTextChange: (value: string) => void;
   onSelectAnchorItemRefs?: (value: AnchorItemRef[]) => void;
-  onSelectAnchorWardrobeItemIds?: (value: string[]) => void;
   onApply: () => void;
   onReset: () => void;
   onSignOut?: () => void;

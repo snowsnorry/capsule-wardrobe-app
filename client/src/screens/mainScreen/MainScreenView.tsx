@@ -182,9 +182,6 @@ function MainScreenCapsulePanel(model: MainScreenViewProps) {
           mobileColumns={model.mobileColumns}
           partialPendingUrls={model.props.partialRegenerationPendingUrls}
           selectedAnchorItemRefs={model.props.selectedAnchorItemRefs}
-          selectedAnchorWardrobeItemIds={
-            model.props.selectedAnchorWardrobeItemIds
-          }
           selectedUrls={model.props.selectedRegenerationUrls}
           selectionMode={model.selectionMode || model.selectedCount > 0}
           showAdditionalItemPlaceholder={

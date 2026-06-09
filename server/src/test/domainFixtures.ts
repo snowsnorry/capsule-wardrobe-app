@@ -138,7 +138,6 @@ function buildCapsuleSnapshot(
       color: null,
       pattern: "solid",
       text: "",
-      anchorWardrobeItemIds: [],
       anchorItemRefs: [],
       ...overrides.filters,
     },

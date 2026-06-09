@@ -47,9 +47,7 @@ function ProfileFiltersHeader({
         anchorPickerFullScreen={props.anchorPickerFullScreen}
         disabled={disabled}
         selectedRefs={props.selectedAnchorItemRefs || []}
-        selectedIds={props.selectedAnchorWardrobeItemIds || []}
         onRefsChange={props.onSelectAnchorItemRefs}
-        onLegacyIdsChange={props.onSelectAnchorWardrobeItemIds}
         t={t}
         locale={locale}
       />

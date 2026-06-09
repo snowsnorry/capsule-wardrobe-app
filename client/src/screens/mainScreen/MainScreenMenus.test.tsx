@@ -108,7 +108,7 @@ describe("MainScreenMenus", () => {
       },
       props: createMainScreenProps({
         onToggleRegenerationSelection,
-        selectedAnchorWardrobeItemIds: ["W12"],
+        selectedAnchorItemRefs: [{ source: "uploaded", url: "wardrobe://12" }],
       }),
       setSelectionMode,
     });

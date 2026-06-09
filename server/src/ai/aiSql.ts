@@ -117,9 +117,6 @@ function buildCapsuleWardrobeSqlParams(
     catalogPoolLimit: CATALOG_POOL_LIMIT,
     wardrobePoolLimit: WARDROBE_POOL_LIMIT,
     finalCandidateLimit: FINAL_CANDIDATE_LIMIT,
-    anchorWardrobeItemIds: Array.isArray(userProfile?.anchorWardrobeItemIds)
-      ? userProfile.anchorWardrobeItemIds
-      : [],
     anchorWardrobeNumericIds: Array.isArray(
       userProfile?.anchorWardrobeNumericIds,
     )

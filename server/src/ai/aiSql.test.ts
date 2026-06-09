@@ -54,7 +54,6 @@ function buildBaseSqlParams(
     rejectedUrls: ["https://example.com/rejected"],
     embeddingVector: "[0.1,0.2]",
     noiseFactor: 0.05,
-    anchorWardrobeItemIds: [],
     anchorWardrobeNumericIds: [],
     anchorCatalogUrls: [],
     anchorSimilarityBonusWeight: 18,
@@ -96,7 +95,6 @@ test("buildCapsuleWardrobeSqlParams preserves defaults and profile filters", () 
   expect(params.rejectedUrls).toEqual(["https://example.com/one"]);
   expect(params.embeddingVector).toBe("[0.12,-0.34]");
   expect(params.noiseFactor).toBe(0);
-  expect(params.anchorWardrobeItemIds).toEqual([]);
   expect(params.anchorWardrobeNumericIds).toEqual([]);
   expect(params.anchorCatalogUrls).toEqual([]);
   expect(params.anchorSimilarityBonusWeight).toBe(18);
@@ -465,7 +463,6 @@ test("multiple accent SQL query uses neutral/non-neutral color logic", async () 
 
 test("anchor-aware SQL dispatch selects all four anchor variants", async () => {
   const anchorParams = {
-    anchorWardrobeItemIds: ["W12"],
     anchorWardrobeNumericIds: [12],
     anchorCatalogUrls: ["https://example.com/catalog-anchor"],
   };
