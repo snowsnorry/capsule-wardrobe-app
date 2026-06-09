@@ -102,6 +102,7 @@ export type MainScreenProps = {
   onCopyOutfitSetToOutfits?: (
     name: string,
     items: MainScreenItem[],
+    source?: { capsuleId?: string; setIndex?: number | string },
   ) => Promise<{ id?: string; name?: string } | null | undefined>;
   onOpenOutfit?: (outfitId: string) => Promise<void> | void;
   items: MainScreenItem[];

@@ -1,8 +1,11 @@
 /* eslint-disable max-lines-per-function */
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Box, useMediaQuery } from "@mui/material";
+import { Box, Divider, Stack, useMediaQuery } from "@mui/material";
 import type { UploadedWardrobeItemUpdatePayload } from "../../api/personalItems";
+import OutfitGeneratedImageBlock from "../../components/OutfitGeneratedImageBlock";
 import CapsuleProductDetailDialog from "../mainScreen/CapsuleProductDetailDialog";
+import { ImageDialog } from "../mainScreen/MainScreenMediaDialogs";
+import { resolveOutfitSetImageSrc } from "../mainScreen/MainScreenHelpers";
 import {
   getCanonicalItemUrl,
   isLikedItem,
@@ -50,9 +53,12 @@ function getPreviewComparableKey(item: WardrobeItem) {
 export default function OutfitScreen({
   activeOutfit,
   isContentBusy,
+  isImagePending,
   onDeleteOutfit,
+  onDeleteOutfitImage,
   onDownloadOutfitPdf,
   onDuplicateOutfit,
+  onGenerateOutfitImage,
   onRenameOutfit,
   onReplaceOutfitItems,
   onRemoveFromPersonalItems,
@@ -72,6 +78,7 @@ export default function OutfitScreen({
   });
   const [previewItem, setPreviewItem] = useState<WardrobeItem | null>(null);
   const [previewMode, setPreviewMode] = useState<ProductDetailMode>("read");
+  const [imageDialogOpen, setImageDialogOpen] = useState(false);
   const previewItemKeyRef = useRef("");
   const [mobileCardColumns, setMobileCardColumns] = useState<MobileCardColumns>(
     () => readStoredOutfitMobileCardColumns(),
@@ -83,6 +90,8 @@ export default function OutfitScreen({
   });
   const items = useMemo(() => getOutfitItems(activeOutfit), [activeOutfit]);
   const visibleItems = useMemo(() => sortOutfitItemSnapshots(items), [items]);
+  const outfitImage = activeOutfit?.effective?.image || null;
+  const outfitImageSrc = resolveOutfitSetImageSrc(outfitImage);
   const isSelectionMode = selectedKeys.length > 0;
   const previewItemKey = getPreviewItemKey(previewItem);
 
@@ -169,6 +178,8 @@ export default function OutfitScreen({
       setSelectedKeys([]);
     } else if (confirmDialog.action === "delete") {
       void onDeleteOutfit(activeOutfit?.id);
+    } else if (confirmDialog.action === "delete-image") {
+      void onDeleteOutfitImage?.(activeOutfit?.id);
     } else if (confirmDialog.action === "revert") {
       void onRevertOutfit(activeOutfit?.id);
     }
@@ -207,7 +218,11 @@ export default function OutfitScreen({
         data-testid="outfit-cards-scroll"
         sx={outfitCardsScrollSx}
       >
-        <Box data-testid="outfit-cards-content" sx={outfitContentSx}>
+        <Stack
+          data-testid="outfit-cards-content"
+          spacing={3}
+          sx={outfitContentSx}
+        >
           <OutfitGrid
             isMobile={isMobile}
             isSelectionMode={isSelectionMode}
@@ -226,7 +241,24 @@ export default function OutfitScreen({
             onPreviewItem={(entry) => setPreviewItem(getOutfitItem(entry))}
             onToggleSelected={toggleSelected}
           />
-        </Box>
+          {activeOutfit ? (
+            <>
+              <Divider data-testid="outfit-set-image-divider" flexItem />
+              <OutfitGeneratedImageBlock
+                disabled={isContentBusy}
+                imageObsolete={Boolean(activeOutfit.effective?.imageObsolete)}
+                imageSrc={outfitImageSrc}
+                isPending={isImagePending}
+                label={1}
+                onDelete={() =>
+                  setConfirmDialog({ action: "delete-image", entry: null })
+                }
+                onGenerate={() => void onGenerateOutfitImage?.(activeOutfit.id)}
+                onImageClick={() => setImageDialogOpen(true)}
+              />
+            </>
+          ) : null}
+        </Stack>
       </Box>
       <OutfitMenu
         anchor={menuAnchor}
@@ -314,6 +346,13 @@ export default function OutfitScreen({
           onSetItemLike={setPreviewItemLike}
         />
       ) : null}
+      <ImageDialog
+        src={outfitImageSrc}
+        label={1}
+        disabled={isContentBusy}
+        open={imageDialogOpen}
+        setOpen={setImageDialogOpen}
+      />
     </Box>
   );
 }

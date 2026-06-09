@@ -7,6 +7,8 @@ type OutfitItemSnapshot = {
 
 export type OutfitSnapshot = {
   items: OutfitItemSnapshot[];
+  image: string | null;
+  imageObsolete: boolean;
 };
 
 export type OutfitRecord = {
@@ -65,6 +67,11 @@ export function normalizeOutfitSnapshot(
           .map(normalizeOutfitItemSnapshot)
           .filter((item): item is OutfitItemSnapshot => Boolean(item))
       : [],
+    image:
+      typeof snapshot.image === "string" && snapshot.image.trim().length > 0
+        ? snapshot.image.trim()
+        : null,
+    imageObsolete: Boolean(snapshot.imageObsolete),
   };
 }
 

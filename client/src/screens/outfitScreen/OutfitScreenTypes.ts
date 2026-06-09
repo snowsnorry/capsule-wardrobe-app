@@ -9,9 +9,12 @@ import type {
 export type OutfitScreenProps = {
   activeOutfit: OutfitMeta | null;
   isContentBusy: boolean;
+  isImagePending?: boolean;
   onDeleteOutfit: (outfitId?: string) => Promise<void>;
+  onDeleteOutfitImage?: (outfitId?: string) => Promise<void>;
   onDownloadOutfitPdf: (outfitId?: string) => Promise<void>;
   onDuplicateOutfit: (name: string, outfitId?: string) => Promise<void>;
+  onGenerateOutfitImage?: (outfitId?: string) => Promise<void>;
   onRenameOutfit: (name: string, outfitId?: string) => Promise<void>;
   onReplaceOutfitItems: (
     outfitId: string,

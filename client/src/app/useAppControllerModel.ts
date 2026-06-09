@@ -326,6 +326,7 @@ function buildViewState(
     isContentOperationLoading: state.isContentOperationLoading,
     isDownloadingWardrobePdf: state.isDownloadingWardrobePdf,
     isLoadingItems: state.isLoadingItems,
+    isOutfitImagePending: state.isOutfitImagePending,
     isPartialRegenerationLoading: state.isPartialRegenerationLoading,
     isWardrobePending: state.isWardrobePending,
     pendingImageSetIndexes: state.pendingImageSetIndexes,

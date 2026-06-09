@@ -117,5 +117,34 @@ test("outfit set image preview delete generate and reload persistence works thro
     /\/__e2e\/images\/generated-outfit-set-capsule-e2e-0-1\.svg$/,
   );
 
+  await page.getByRole("button", { name: "Copy to outfits" }).click();
+  const copyDialog = page.getByRole("dialog", { name: "Copy to outfits" });
+  await expect(copyDialog).toBeVisible();
+  await copyDialog.getByRole("button", { name: "Copy" }).click();
+  await expect(page.getByText("Outfit copied")).toBeVisible();
+  await page.getByRole("button", { name: "Open outfit", exact: true }).click();
+  await expect(page).toHaveURL(/\/outfit\/outfit-e2e-1$/);
+  await expectOutfitImage(page, /\/__e2e\/images\/copied-saved-outfit\.svg$/);
+
+  await page.getByRole("button", { name: "Delete image" }).click();
+  const savedDeleteDialog = page.getByRole("dialog").filter({
+    has: page.getByRole("heading", { name: "Delete image" }),
+  });
+  await expect(savedDeleteDialog).toBeVisible();
+  await savedDeleteDialog.getByRole("button", { name: "Delete" }).click();
+  await expectOutfitImageEmpty(page);
+
+  await page.getByRole("button", { name: "Create image" }).click();
+  await expectOutfitImage(
+    page,
+    /\/__e2e\/images\/generated-saved-outfit-outfit-e2e-1-\d+\.svg$/,
+  );
+
+  await page.reload();
+  await expectOutfitImage(
+    page,
+    /\/__e2e\/images\/generated-saved-outfit-outfit-e2e-1-\d+\.svg$/,
+  );
+
   expect(unexpectedExternalRequests).toEqual([]);
 });

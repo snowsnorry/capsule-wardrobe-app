@@ -29,6 +29,14 @@ describe("outfitHttp", () => {
       hasUnexpectedOutfitCreateFields({ name: "Weekend", items: [] }),
     ).toBe(false);
     expect(
+      hasUnexpectedOutfitCreateFields({
+        name: "Weekend",
+        items: [],
+        sourceCapsuleId: "capsule-1",
+        sourceSetIndex: 0,
+      }),
+    ).toBe(false);
+    expect(
       hasUnexpectedOutfitCreateFields({ name: "Weekend", saved: {} }),
     ).toBe(true);
 
@@ -100,6 +108,8 @@ describe("outfitHttp", () => {
           },
           { url: "wardrobe://missing", source: "uploaded", item: null },
         ],
+        image: null,
+        imageObsolete: false,
       },
       effective: {
         items: [
@@ -125,6 +135,8 @@ describe("outfitHttp", () => {
           },
           { url: "wardrobe://missing", source: "uploaded", item: null },
         ],
+        image: null,
+        imageObsolete: false,
       },
     });
   });

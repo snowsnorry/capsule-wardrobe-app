@@ -1,15 +1,19 @@
+/* eslint-disable max-lines */
 import {
   createOutfit,
   deleteOutfit,
+  deleteOutfitImage,
   downloadOutfitPdf,
   duplicateOutfit,
   fetchOutfit,
   fetchRecentOutfits,
+  generateOutfitImage,
   renameOutfit,
   revertOutfit,
   saveOutfit,
   searchOutfits,
   selectOutfit,
+  subscribeOutfitEvents,
   updateOutfitItems,
 } from "../api/outfits";
 import { fromContext, type AppActionContext } from "./actionContext";
@@ -144,12 +148,19 @@ export async function copyOutfitSetToOutfits(
   context: AppActionContext,
   name: string,
   items: Record<string, unknown>[],
+  source?: { capsuleId?: string; setIndex?: number | string },
 ) {
   let createdOutfit: OutfitMeta | null = null;
   await runOutfitOperation(context, async () => {
     const result = (await createOutfit({
       name,
       items,
+      ...(source?.capsuleId
+        ? {
+            sourceCapsuleId: source.capsuleId,
+            sourceSetIndex: Number.parseInt(String(source.setIndex ?? ""), 10),
+          }
+        : {}),
     })) as OutfitMutationResponse;
     const outfit = result.outfit || null;
     const outfitId = String(outfit?.id || "");
@@ -164,6 +175,82 @@ export async function copyOutfitSetToOutfits(
     await refreshOutfitList(context);
   });
   return createdOutfit;
+}
+
+async function refreshActiveOutfit(
+  context: AppActionContext,
+  outfitId: string,
+  { onlyIfActive = false }: { onlyIfActive?: boolean } = {},
+) {
+  const result = (await fetchOutfit(outfitId)) as OutfitMutationResponse;
+  if (
+    !onlyIfActive ||
+    fromContext<string>(context, "activeOutfitId") === outfitId
+  ) {
+    setActiveOutfit(context, result.outfit || null);
+  }
+  await refreshOutfitList(context);
+}
+
+function setOutfitImagePending(context: AppActionContext, value: boolean) {
+  fromContext<(nextValue: boolean) => void>(
+    context,
+    "setIsOutfitImagePending",
+  )(value);
+}
+
+async function subscribeUntilOutfitImageReady(
+  context: AppActionContext,
+  outfitId: string,
+) {
+  const controller = new AbortController();
+  await subscribeOutfitEvents({
+    outfitId,
+    signal: controller.signal,
+    onMessage: (message) => {
+      const isReady =
+        message.event === "snapshot" &&
+        !message.data?.pendingImage &&
+        message.data?.status !== "pending";
+      if (!isReady) return;
+
+      controller.abort();
+      void refreshActiveOutfit(context, outfitId, { onlyIfActive: true })
+        .catch((error) => {
+          fromContext<(updater: (current: unknown) => unknown) => void>(
+            context,
+            "setStatus",
+          )((current) => ({
+            ...(current as object),
+            error: fromContext<(error: unknown) => string>(
+              context,
+              "resolveErrorMessage",
+            )(error),
+          }));
+        })
+        .finally(() => {
+          if (
+            fromContext<{ current: boolean }>(context, "isMountedRef").current
+          )
+            setOutfitImagePending(context, false);
+        });
+    },
+    onError: (error) => {
+      if (!fromContext<{ current: boolean }>(context, "isMountedRef").current)
+        return;
+      setOutfitImagePending(context, false);
+      fromContext<(updater: (current: unknown) => unknown) => void>(
+        context,
+        "setStatus",
+      )((current) => ({
+        ...(current as object),
+        error: fromContext<(error: unknown) => string>(
+          context,
+          "resolveErrorMessage",
+        )(error),
+      }));
+    },
+  }).catch(() => undefined);
 }
 
 export async function openOutfit(context: AppActionContext, outfitId: string) {
@@ -270,6 +357,74 @@ export async function replaceCurrentOutfitItems(
     () => updateOutfitItems(outfitId, items) as Promise<OutfitMutationResponse>,
     (result) => setActiveOutfit(context, result.outfit || null),
   );
+}
+
+export async function generateCurrentOutfitImage(
+  context: AppActionContext,
+  outfitId: string,
+) {
+  if (!outfitId) return;
+  setOutfitImagePending(context, true);
+  try {
+    const response = (await generateOutfitImage(
+      outfitId,
+    )) as OutfitMutationResponse;
+    if (response?.status === "pending") {
+      void subscribeUntilOutfitImageReady(context, outfitId);
+      return;
+    }
+    await refreshActiveOutfit(context, outfitId, { onlyIfActive: true });
+    setOutfitImagePending(context, false);
+  } catch (error) {
+    if (fromContext<{ current: boolean }>(context, "isMountedRef").current) {
+      setOutfitImagePending(context, false);
+      fromContext<(updater: (current: unknown) => unknown) => void>(
+        context,
+        "setStatus",
+      )((current) => ({
+        ...(current as object),
+        error: fromContext<(error: unknown) => string>(
+          context,
+          "resolveErrorMessage",
+        )(error),
+      }));
+    }
+  }
+}
+
+export async function deleteCurrentOutfitImage(
+  context: AppActionContext,
+  outfitId: string,
+) {
+  if (!outfitId) return;
+  fromContext<(value: boolean) => void>(
+    context,
+    "setIsContentOperationLoading",
+  )(true);
+  try {
+    await deleteOutfitImage(outfitId);
+    await refreshActiveOutfit(context, outfitId);
+  } catch (error) {
+    if (fromContext<{ current: boolean }>(context, "isMountedRef").current) {
+      fromContext<(updater: (current: unknown) => unknown) => void>(
+        context,
+        "setStatus",
+      )((current) => ({
+        ...(current as object),
+        error: fromContext<(error: unknown) => string>(
+          context,
+          "resolveErrorMessage",
+        )(error),
+      }));
+    }
+  } finally {
+    if (fromContext<{ current: boolean }>(context, "isMountedRef").current) {
+      fromContext<(value: boolean) => void>(
+        context,
+        "setIsContentOperationLoading",
+      )(false);
+    }
+  }
 }
 
 export async function selectUserOutfit(outfitId: string) {

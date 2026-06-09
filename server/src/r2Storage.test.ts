@@ -1,5 +1,9 @@
 import { afterEach, test, expect, vi } from "vitest";
-import { DeleteObjectsCommand, PutObjectCommand } from "@aws-sdk/client-s3";
+import {
+  CopyObjectCommand,
+  DeleteObjectsCommand,
+  PutObjectCommand,
+} from "@aws-sdk/client-s3";
 import {
   buildR2Endpoint,
   buildR2ImageKey,
@@ -7,6 +11,7 @@ import {
   buildWardrobeDerivativeR2ImageKey,
   buildWardrobeR2ImageKey,
   clearDefaultR2ClientCache,
+  copyImageObjectToR2,
   decodeLegacyBase64Image,
   getDefaultR2ClientCacheSize,
   getR2KeyFromPublicUrl,
@@ -120,6 +125,38 @@ test("uploadImageToR2 sends PutObjectCommand and returns public URL", async () =
   );
   expect(String(commands[0].input.Key)).toMatch(
     /^capsule-image-assets\/generated\/capsule-1\/0\/[a-f0-9]{64}\.png$/,
+  );
+  expect(uploaded.url).toBe(
+    `https://images.example.com/${commands[0].input.Key}`,
+  );
+});
+
+test("copyImageObjectToR2 copies existing objects to a new public key", async () => {
+  const commands: CopyObjectCommand[] = [];
+  const client = {
+    send: async (command: CopyObjectCommand) => {
+      commands.push(command);
+      return {};
+    },
+  };
+
+  const uploaded = await copyImageObjectToR2({
+    sourceUrl: "https://images.example.com/outfit-set/generated/a%20b.webp",
+    capsuleId: "capsule-1",
+    setIndex: 0,
+    namespace: "copied",
+    env: testEnv,
+    client,
+  });
+
+  expect(commands.length).toBe(1);
+  expect(commands[0].input.Bucket).toBe("capsule-images");
+  expect(commands[0].input.CopySource).toBe(
+    "capsule-images/outfit-set/generated/a%20b.webp",
+  );
+  expect(commands[0].input.ContentType).toBe("image/webp");
+  expect(String(commands[0].input.Key)).toMatch(
+    /^capsule-image-assets\/copied\/capsule-1\/0\/[a-f0-9]{64}\.webp$/,
   );
   expect(uploaded.url).toBe(
     `https://images.example.com/${commands[0].input.Key}`,

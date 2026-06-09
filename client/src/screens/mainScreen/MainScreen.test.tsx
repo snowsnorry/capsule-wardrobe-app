@@ -687,14 +687,18 @@ describe("MainScreen", () => {
     await user.click(screen.getByRole("button", { name: "Copy" }));
 
     await waitFor(() => {
-      expect(onCopyOutfitSetToOutfits).toHaveBeenCalledWith("Travel copy", [
-        expect.objectContaining({ url: "https://example.com/a" }),
-        expect.objectContaining({ url: "https://example.com/b" }),
-        expect.objectContaining({
-          url: "https://uploads.example.com/bag",
-          source: "uploaded",
-        }),
-      ]);
+      expect(onCopyOutfitSetToOutfits).toHaveBeenCalledWith(
+        "Travel copy",
+        [
+          expect.objectContaining({ url: "https://example.com/a" }),
+          expect.objectContaining({ url: "https://example.com/b" }),
+          expect.objectContaining({
+            url: "https://uploads.example.com/bag",
+            source: "uploaded",
+          }),
+        ],
+        { capsuleId: "capsule-1", setIndex: 0 },
+      );
     });
     expect(onOpenOutfit).not.toHaveBeenCalled();
     expect(await screen.findByText("Outfit copied")).toBeInTheDocument();

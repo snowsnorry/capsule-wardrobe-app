@@ -15,9 +15,11 @@ import {
 } from "./capsuleActions";
 import {
   copyOutfitSetToOutfits,
+  deleteCurrentOutfitImage,
   deleteCurrentOutfit,
   downloadCurrentOutfitPdf,
   duplicateCurrentOutfit,
+  generateCurrentOutfitImage,
   loadMoreRecentOutfits,
   replaceCurrentOutfitItems,
   renameCurrentOutfit,
@@ -178,7 +180,8 @@ export function useAppHandlers({
   const handleCopyOutfitSetToOutfits = async (
     name: string,
     items: Record<string, unknown>[],
-  ) => copyOutfitSetToOutfits(getAppActionContext(), name, items);
+    source?: { capsuleId?: string; setIndex?: number | string },
+  ) => copyOutfitSetToOutfits(getAppActionContext(), name, items, source);
   const handleImportSharedCapsule = async () => {
     const capsule = await importSharedCapsuleToApp(
       getAppActionContext(),
@@ -200,6 +203,8 @@ export function useAppHandlers({
     handleCreateOutfit,
     handleDeleteCapsule,
     handleDeleteOutfit,
+    handleDeleteOutfitImage: async (outfitId = activeOutfitId) =>
+      deleteCurrentOutfitImage(getAppActionContext(), outfitId),
     handleDuplicateCapsule,
     handleDuplicateOutfit,
     handleCopyOutfitSetToOutfits,
@@ -241,11 +246,13 @@ type BuildAppHandlersOptions = Pick<
   handleCreateOutfit: () => Promise<void>;
   handleDeleteCapsule: (capsuleId?: string) => Promise<void>;
   handleDeleteOutfit: (outfitId?: string) => Promise<void>;
+  handleDeleteOutfitImage: (outfitId?: string) => Promise<void>;
   handleDuplicateCapsule: (name: string, capsuleId?: string) => Promise<void>;
   handleDuplicateOutfit: (name: string, outfitId?: string) => Promise<void>;
   handleCopyOutfitSetToOutfits: (
     name: string,
     items: Record<string, unknown>[],
+    source?: { capsuleId?: string; setIndex?: number | string },
   ) => Promise<{ id?: string; name?: string } | null>;
   handleImportSharedCapsule: () => Promise<void>;
   handleNavigateApp: (
@@ -273,6 +280,7 @@ function buildAppHandlers({
   handleCreateOutfit,
   handleDeleteCapsule,
   handleDeleteOutfit,
+  handleDeleteOutfitImage,
   handleDuplicateCapsule,
   handleDuplicateOutfit,
   handleCopyOutfitSetToOutfits,
@@ -309,6 +317,7 @@ function buildAppHandlers({
     },
     handleDeleteCapsule,
     handleDeleteOutfit,
+    handleDeleteOutfitImage,
     handleCopyOutfitSetToOutfits,
     handleDeleteOutfitSetImage: async (
       setIndex: number | string | null | undefined,
@@ -324,6 +333,8 @@ function buildAppHandlers({
     handleGenerateOutfitSetImage: async (
       setIndex: number | string | null | undefined,
     ) => generateOutfitSetImage(getAppActionContext(), setIndex),
+    handleGenerateOutfitImage: async (outfitId = activeOutfitId) =>
+      generateCurrentOutfitImage(getAppActionContext(), outfitId),
     handleGoogleCredential: async (idToken: string) =>
       googleCredential(sessionActionContext, idToken),
     handleImportSharedCapsule,

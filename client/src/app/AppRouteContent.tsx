@@ -76,6 +76,7 @@ type AppRouteContentProps = SharedFilterProps & {
   isContentBusy: boolean;
   isDownloadingWardrobePdf: boolean;
   isLoadingItems: boolean;
+  isOutfitImagePending: boolean;
   isPartialRegenerationLoading: boolean;
   isSigningOut: boolean;
   partialRegenerationPendingUrls: string[];
@@ -105,9 +106,11 @@ type AppRouteContentProps = SharedFilterProps & {
   onCopyOutfitSetToOutfits: (
     name: string,
     items: MainScreenItem[],
+    source?: { capsuleId?: string; setIndex?: number | string },
   ) => Promise<OutfitMeta | null>;
   onDeleteCapsule: (capsuleId?: string) => Promise<void>;
   onDeleteOutfit: (outfitId?: string) => Promise<void>;
+  onDeleteOutfitImage: (outfitId?: string) => Promise<void>;
   onDeleteOutfitSetImage: (setIndex: OutfitSetIndex) => Promise<void>;
   onDeleteProfile: () => Promise<void>;
   onDownloadWardrobePdf: (capsuleId?: string) => Promise<void>;
@@ -115,6 +118,7 @@ type AppRouteContentProps = SharedFilterProps & {
   onDuplicateCapsule: (name: string, capsuleId?: string) => Promise<void>;
   onDuplicateOutfit: (name: string, outfitId?: string) => Promise<void>;
   onGenerateOutfitSetImage: (setIndex: OutfitSetIndex) => Promise<void>;
+  onGenerateOutfitImage: (outfitId?: string) => Promise<void>;
   onGoogleCredential: (idToken: string) => Promise<void>;
   onNavigateApp: (
     nextApp: Exclude<AppRoute, "share">,
@@ -341,9 +345,12 @@ export default function AppRouteContent(props: AppRouteContentProps) {
         <OutfitScreen
           activeOutfit={props.activeOutfitMeta}
           isContentBusy={props.isContentBusy}
+          isImagePending={props.isOutfitImagePending}
           onDeleteOutfit={props.onDeleteOutfit}
+          onDeleteOutfitImage={props.onDeleteOutfitImage}
           onDownloadOutfitPdf={props.onDownloadOutfitPdf}
           onDuplicateOutfit={props.onDuplicateOutfit}
+          onGenerateOutfitImage={props.onGenerateOutfitImage}
           onRenameOutfit={props.onRenameOutfit}
           onReplaceOutfitItems={props.onReplaceOutfitItems}
           onRemoveFromPersonalItems={props.onRemoveFromPersonalItems}

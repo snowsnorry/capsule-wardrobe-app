@@ -4,25 +4,32 @@ const requestApi = vi.hoisted(() => ({
   request: vi.fn(),
   requestJson: vi.fn(),
 }));
+const eventSourceApi = vi.hoisted(() => ({
+  fetchEventSource: vi.fn(),
+}));
 
 vi.mock("./request", () => requestApi);
 vi.mock("./config", () => ({
   API_BASE_URL: "https://api.example.test",
 }));
+vi.mock("@microsoft/fetch-event-source", () => eventSourceApi);
 
 import {
   createOutfit,
   deleteOutfit,
+  deleteOutfitImage,
   downloadOutfitPdf,
   duplicateOutfit,
   fetchOutfit,
   fetchOutfitBootstrap,
   fetchRecentOutfits,
+  generateOutfitImage,
   renameOutfit,
   revertOutfit,
   saveOutfit,
   searchOutfits,
   selectOutfit,
+  subscribeOutfitEvents,
   updateOutfitItems,
 } from "./outfits";
 
@@ -71,6 +78,7 @@ describe("outfits api", () => {
     vi.restoreAllMocks();
     requestApi.request.mockReset();
     requestApi.requestJson.mockReset();
+    eventSourceApi.fetchEventSource.mockReset();
     requestApi.requestJson.mockResolvedValue({ ok: true });
     requestApi.request.mockResolvedValue(createResponse() as Response);
     vi.stubGlobal("URL", {
@@ -153,7 +161,12 @@ describe("outfits api", () => {
       { url: "wardrobe://uploaded-1", source: "uploaded" },
     ];
 
-    await createOutfit({ name: " Weekend ", items });
+    await createOutfit({
+      name: " Weekend ",
+      items,
+      sourceCapsuleId: "capsule-1",
+      sourceSetIndex: 2,
+    });
     await createOutfit({ name: " ", items: [] });
     await updateOutfitItems("outfit/1", items);
     await saveOutfit("outfit-1");
@@ -171,7 +184,12 @@ describe("outfits api", () => {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: " Weekend ", items: itemRefs }),
+        body: JSON.stringify({
+          name: " Weekend ",
+          items: itemRefs,
+          sourceCapsuleId: "capsule-1",
+          sourceSetIndex: 2,
+        }),
       },
     );
     expect(requestApi.requestJson).toHaveBeenNthCalledWith(
@@ -230,6 +248,51 @@ describe("outfits api", () => {
       "https://api.example.test/outfits/outfit-1",
       { method: "DELETE", credentials: "include" },
     );
+  });
+
+  test("generates and deletes saved outfit images", async () => {
+    await generateOutfitImage("outfit-1");
+    await deleteOutfitImage("outfit-1");
+
+    expect(requestApi.requestJson).toHaveBeenNthCalledWith(
+      1,
+      "https://api.example.test/outfits/outfit-1/image",
+      { method: "POST", credentials: "include" },
+    );
+    expect(requestApi.requestJson).toHaveBeenNthCalledWith(
+      2,
+      "https://api.example.test/outfits/outfit-1/image",
+      { method: "DELETE", credentials: "include" },
+    );
+  });
+
+  test("subscribes to saved outfit event streams and parses messages", async () => {
+    eventSourceApi.fetchEventSource.mockImplementationOnce(
+      async (_url, options) => {
+        await options.onopen({
+          ok: true,
+          status: 200,
+          headers: { get: () => "text/event-stream" },
+        });
+        options.onmessage({
+          event: "snapshot",
+          data: JSON.stringify({ status: "ready" }),
+        });
+        expect(options.onerror(new Error("retry"))).toBe(1000);
+      },
+    );
+    const onMessage = vi.fn();
+
+    await subscribeOutfitEvents({ outfitId: "outfit-1", onMessage });
+
+    expect(eventSourceApi.fetchEventSource).toHaveBeenCalledWith(
+      "https://api.example.test/outfits/outfit-1/events",
+      expect.objectContaining({ credentials: "include" }),
+    );
+    expect(onMessage).toHaveBeenCalledWith({
+      event: "snapshot",
+      data: { status: "ready" },
+    });
   });
 
   test("downloads outfit PDFs with RFC 5987 filenames and fallback filenames", async () => {

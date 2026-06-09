@@ -74,11 +74,19 @@ vi.mock("../../i18n/useI18n", () => ({
         "capsule.cardColumnsThree": "3 columns",
         "capsule.cardColumnsTwo": "2 columns",
         "capsule.cardLayout": "Card layout",
+        "capsule.createOutfitSetImage": "Create image",
+        "capsule.deleteConfirm": "Delete",
+        "capsule.deleteOutfitSetImage": "Delete image",
+        "capsule.deleteOutfitSetImageConfirmBody": "Delete this image?",
+        "capsule.deleteOutfitSetImageTitle": "Delete image",
         "capsule.editName": "Edit capsule name",
         "capsule.exportPdf": "Export PDF",
         "capsule.nameLabel": "Capsule name",
         "capsule.notSaved": "Not saved",
+        "capsule.openOutfitSetImagePreview": `Open outfit ${params?.number ?? ""} image preview`,
         "capsule.openProductMenu": "Open product menu",
+        "capsule.outfitSetImageAlt": `Outfit set ${params?.number ?? ""}`,
+        "capsule.outfitSetImageObsolete": "Image obsolete",
         "capsule.renameWithName": `Rename capsule ${params?.name ?? ""}`,
         "capsule.revert": "Revert",
         "capsule.saveAs": "Save as",
@@ -208,12 +216,15 @@ function renderScreen(overrides: Record<string, unknown> = {}) {
           id: "outfit-1",
           name: "<New outfit>",
           status: "saved",
-          effective: { items: [] },
+          effective: { items: [], image: null, imageObsolete: false },
         }}
         isContentBusy={false}
+        isImagePending={false}
         onDeleteOutfit={vi.fn()}
+        onDeleteOutfitImage={vi.fn()}
         onDownloadOutfitPdf={vi.fn()}
         onDuplicateOutfit={vi.fn()}
+        onGenerateOutfitImage={vi.fn()}
         onRenameOutfit={vi.fn()}
         onReplaceOutfitItems={vi.fn()}
         onRevertOutfit={vi.fn()}
@@ -256,6 +267,64 @@ describe("OutfitScreen", () => {
     expect(getComputedStyle(screenSurface).marginRight).not.toBe("auto");
     expect(getComputedStyle(contentColumn).marginRight).toBe("auto");
     expect(getComputedStyle(cardsContent).marginRight).toBe("auto");
+  });
+
+  test("renders saved outfit image actions preview warning and delete flow", async () => {
+    const user = userEvent.setup();
+    const onGenerateOutfitImage = vi.fn(() => Promise.resolve());
+    const onDeleteOutfitImage = vi.fn(() => Promise.resolve());
+
+    const { rerender } = renderScreen({
+      onGenerateOutfitImage,
+      onDeleteOutfitImage,
+    });
+
+    expect(screen.getByTestId("outfit-set-image-divider")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Create image" }));
+    expect(onGenerateOutfitImage).toHaveBeenCalledWith("outfit-1");
+
+    rerender(
+      <ThemeProvider theme={theme}>
+        <OutfitScreen
+          activeOutfit={{
+            id: "outfit-1",
+            name: "<New outfit>",
+            status: "saved",
+            effective: {
+              items: [],
+              image: "https://images.example.com/outfit.png",
+              imageObsolete: true,
+            },
+          }}
+          isContentBusy={false}
+          isImagePending={false}
+          onDeleteOutfit={vi.fn()}
+          onDeleteOutfitImage={onDeleteOutfitImage}
+          onDownloadOutfitPdf={vi.fn()}
+          onDuplicateOutfit={vi.fn()}
+          onGenerateOutfitImage={onGenerateOutfitImage}
+          onRenameOutfit={vi.fn()}
+          onReplaceOutfitItems={vi.fn()}
+          onRevertOutfit={vi.fn()}
+          onSaveOutfit={vi.fn()}
+          onSetItemLike={vi.fn()}
+        />
+      </ThemeProvider>,
+    );
+
+    expect(screen.getByText("Image obsolete")).toBeInTheDocument();
+    await user.click(screen.getByTestId("outfit-set-image"));
+    expect(screen.getByTestId("outfit-set-image-dialog")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Close" }));
+    await waitFor(() =>
+      expect(
+        screen.queryByTestId("outfit-set-image-dialog"),
+      ).not.toBeInTheDocument(),
+    );
+    await user.click(screen.getByRole("button", { name: "Delete image" }));
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+
+    expect(onDeleteOutfitImage).toHaveBeenCalledWith("outfit-1");
   });
 
   test("uses capsule-style inline title controls with unsaved dot", async () => {

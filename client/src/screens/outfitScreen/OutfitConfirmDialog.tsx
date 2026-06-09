@@ -19,6 +19,7 @@ export type OutfitConfirmState =
   | { action: "remove-item"; entry: OutfitItemSnapshot }
   | { action: "remove-selected"; entry: null }
   | { action: "delete"; entry: null }
+  | { action: "delete-image"; entry: null }
   | { action: "revert"; entry: null };
 
 export function OutfitConfirmDialog({
@@ -99,6 +100,13 @@ function getOutfitConfirmCopy(
       "outfit.deleteTitle",
       "outfit.deleteConfirmBody",
       "outfit.deleteConfirm",
+      "error",
+    ];
+  if (action === "delete-image")
+    return [
+      "capsule.deleteOutfitSetImageTitle",
+      "capsule.deleteOutfitSetImageConfirmBody",
+      "capsule.deleteConfirm",
       "error",
     ];
   if (action === "revert")

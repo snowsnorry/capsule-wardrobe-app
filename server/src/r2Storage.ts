@@ -1,5 +1,6 @@
+/* eslint-disable max-lines */
 import { createHash, randomUUID } from "node:crypto";
-import { PutObjectCommand } from "@aws-sdk/client-s3";
+import { CopyObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import {
   buildR2Endpoint,
   clearDefaultR2ClientCache,
@@ -14,6 +15,15 @@ import {
 type UploadImageInput = {
   buffer: Buffer | Uint8Array;
   mimeType?: string | null;
+  capsuleId?: string | null;
+  setIndex?: number | string | null;
+  namespace?: string | null;
+  env?: NodeJS.ProcessEnv;
+  client?: S3ClientLike;
+};
+type CopyImageInput = {
+  sourceUrl?: string | null;
+  sourceKey?: string | null;
   capsuleId?: string | null;
   setIndex?: number | string | null;
   namespace?: string | null;
@@ -54,6 +64,19 @@ function getImageExtension(mimeType: unknown): string {
     return "webp";
   }
   return "png";
+}
+
+function getMimeTypeFromKey(key: unknown): string {
+  const normalized = String(key || "")
+    .trim()
+    .toLowerCase();
+  if (normalized.endsWith(".jpg") || normalized.endsWith(".jpeg")) {
+    return "image/jpeg";
+  }
+  if (normalized.endsWith(".webp")) {
+    return "image/webp";
+  }
+  return "image/png";
 }
 
 function buildR2ImageKey({
@@ -217,6 +240,54 @@ async function uploadImageToR2({
   };
 }
 
+async function copyImageObjectToR2({
+  sourceUrl = null,
+  sourceKey = null,
+  capsuleId = null,
+  setIndex = null,
+  namespace = "copied",
+  env = process.env,
+  client,
+}: CopyImageInput): Promise<{ key: string; url: string; digest: string }> {
+  const normalizedSourceKey =
+    String(sourceKey || "").trim() || getR2KeyFromPublicUrl(sourceUrl);
+  if (!normalizedSourceKey) {
+    throw new Error("R2 image copy received an empty source key");
+  }
+
+  const config = getR2Config(env);
+  const digest = createHash("sha256")
+    .update(`${normalizedSourceKey}:${randomUUID()}`)
+    .digest("hex");
+  const mimeType = getMimeTypeFromKey(normalizedSourceKey);
+  const key = buildR2ImageKey({
+    imageKeyPrefix: config.imageKeyPrefix,
+    namespace,
+    capsuleId: capsuleId || randomUUID(),
+    setIndex,
+    digest,
+    mimeType,
+  });
+  const s3 = client || getDefaultR2Client(config);
+
+  await s3.send(
+    new CopyObjectCommand({
+      Bucket: config.bucketName,
+      Key: key,
+      CopySource: `${config.bucketName}/${encodeURIComponent(normalizedSourceKey).replace(/%2F/g, "/")}`,
+      CacheControl: "public, max-age=31536000, immutable",
+      MetadataDirective: "REPLACE",
+      ContentType: mimeType,
+    }),
+  );
+
+  return {
+    key,
+    url: buildR2PublicUrl(config, key),
+    digest,
+  };
+}
+
 async function uploadWardrobeImageToR2({
   buffer,
   email,
@@ -321,6 +392,7 @@ export {
   buildWardrobeDerivativeR2ImageKey,
   buildWardrobeR2ImageKey,
   clearDefaultR2ClientCache,
+  copyImageObjectToR2,
   decodeLegacyBase64Image,
   getDefaultR2ClientCacheSize,
   getR2KeyFromPublicUrl,

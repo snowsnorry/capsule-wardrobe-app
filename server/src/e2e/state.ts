@@ -262,6 +262,27 @@ function outfitDependencies(state: E2eState) {
     duplicateOutfitImpl: async (_email, id, name) =>
       state.outfitMemory.duplicate(id, name),
     deleteOutfitImpl: async (_email, id) => state.outfitMemory.delete(id),
+    generateOutfitImageHandler: async (req, res) => {
+      const outfitId = String(req.params?.id || "").trim();
+      const image = e2eImageUrl(
+        `generated-saved-outfit-${outfitId}-${state.outfitImageCounter + 1}`,
+      );
+      state.outfitImageCounter += 1;
+      const outfit = state.outfitMemory.setImage(outfitId, image, false);
+      if (!outfit) {
+        return res.status(404).json({ error: "not_found" });
+      }
+      return res.json({ ok: true, status: "ready", image });
+    },
+    deleteOutfitImageHandler: async (req, res) => {
+      const outfit = state.outfitMemory.setImage(req.params?.id, null, false);
+      if (!outfit) {
+        return res.status(404).json({ error: "not_found" });
+      }
+      return res.json({ ok: true, status: "ready" });
+    },
+    getOutfitImageJobImpl: async () => null,
+    streamOutfitEventsImpl: async (_req, res) => res.status(204).end(),
     getProductsByUrlsForEmailImpl: async (payload) => {
       const urls = new Set(
         Array.isArray(payload?.urls)
@@ -307,6 +328,16 @@ export function createE2eDependencies(state = e2eState) {
     createUploadedWardrobeItemEmbeddingImpl: async () => [0.1, 0.2, 0.3],
     deleteR2ObjectsImpl: async (payload) => ({
       deleted: Array.isArray(payload?.keys) ? payload.keys.length : 0,
+    }),
+    copyImageObjectToR2Impl: async () => ({
+      key: "e2e/copied-saved-outfit.svg",
+      url: e2eImageUrl("copied-saved-outfit"),
+      digest: "e2e",
+    }),
+    uploadImageToR2Impl: async () => ({
+      key: "e2e/uploaded-saved-outfit.svg",
+      url: e2eImageUrl("uploaded-saved-outfit"),
+      digest: "e2e",
     }),
   };
 }

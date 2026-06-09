@@ -24,21 +24,41 @@ describe("outfitStoreModel", () => {
         { url: "wardrobe://42", source: "uploaded" },
         { url: "https://example.com/jacket", source: "from_catalog" },
       ],
+      image: null,
+      imageObsolete: false,
     });
   });
 
   test("rejects non-object snapshots and preserves empty item lists", () => {
     expect(normalizeOutfitSnapshot(null)).toBeNull();
     expect(normalizeOutfitSnapshot([] as never)).toBeNull();
-    expect(normalizeOutfitSnapshot({})).toEqual({ items: [] });
+    expect(
+      normalizeOutfitSnapshot({
+        image: " https://images.example.com/outfit.png ",
+        imageObsolete: 1,
+      }),
+    ).toEqual({
+      items: [],
+      image: "https://images.example.com/outfit.png",
+      imageObsolete: true,
+    });
+    expect(normalizeOutfitSnapshot({})).toEqual({
+      items: [],
+      image: null,
+      imageObsolete: false,
+    });
   });
 
   test("normalizes records and resolves status from draft and saved snapshots", () => {
     const saved = {
       items: [{ url: "https://example.com/saved", source: "from_catalog" }],
+      image: null,
+      imageObsolete: false,
     };
     const draft = {
       items: [{ url: "wardrobe://draft", source: "uploaded" }],
+      image: "image.jpg",
+      imageObsolete: true,
     };
 
     expect(normalizeOutfitRecord(null)).toBeNull();
@@ -73,9 +93,13 @@ describe("outfitStoreModel", () => {
   test("uses draft before saved when resolving the effective snapshot", () => {
     const saved = {
       items: [{ url: "https://example.com/saved", source: "from_catalog" }],
+      image: null,
+      imageObsolete: false,
     };
     const draft = {
       items: [{ url: "wardrobe://draft", source: "uploaded" }],
+      image: "image.jpg",
+      imageObsolete: true,
     };
 
     expect(getEffectiveOutfitSnapshot({ draft, saved })).toEqual(draft);

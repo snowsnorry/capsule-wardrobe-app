@@ -1,26 +1,14 @@
-import {
-  Alert,
-  Box,
-  Button,
-  ButtonBase,
-  Divider,
-  IconButton,
-  Stack,
-} from "@mui/material";
-import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
+import { Box, Divider, Stack } from "@mui/material";
 import ClothingCard from "../../components/ClothingCard";
 import ClothingGridPlaceholder, {
   ClothingPlaceholderCard,
   buildClothingGridGap,
   buildClothingGridTemplateColumns,
 } from "../../components/ClothingGridPlaceholder";
+import OutfitGeneratedImageBlock from "../../components/OutfitGeneratedImageBlock";
 import { useI18n } from "../../i18n/useI18n";
 import type { AnchorItemRef } from "../../components/ProfileFiltersSidebarTypes";
-import {
-  MAIN_SCREEN_CONTENT_COLUMN_SX,
-  OUTFIT_SET_IMAGE_ASPECT_RATIO,
-  OUTFIT_SET_IMAGE_PREVIEW_MAX_WIDTH,
-} from "./MainScreenHelpers";
+import { MAIN_SCREEN_CONTENT_COLUMN_SX } from "./MainScreenHelpers";
 import type {
   MainScreenItem,
   MobileCardColumns,
@@ -55,45 +43,6 @@ type WardrobeProps = {
   onToggleSelected: (item: MainScreenItem) => void;
 };
 
-function OutfitImagePlaceholder() {
-  return (
-    <Box
-      data-testid="outfit-set-image-placeholder"
-      sx={{
-        width: "100%",
-        aspectRatio: OUTFIT_SET_IMAGE_ASPECT_RATIO,
-        background: "var(--cw-gradient-placeholder-image)",
-        backgroundSize: "200% 100%",
-        borderRadius: "var(--cw-radius-card)",
-        animation: "placeholderShimmer 1.3s linear infinite",
-      }}
-    />
-  );
-}
-
-const outfitImagePreviewButtonSx = {
-  display: "block",
-  maxWidth: "100%",
-  borderRadius: "var(--cw-radius-card)",
-  cursor: "zoom-in",
-  p: 0,
-  textAlign: "left",
-  "&:focus-visible": {
-    outline: "3px solid",
-    outlineColor: "primary.main",
-    outlineOffset: 3,
-  },
-} as const;
-
-const outfitImageSx = {
-  width: "auto",
-  maxWidth: "100%",
-  display: "block",
-  border: "1px solid",
-  borderColor: "divider",
-  borderRadius: "var(--cw-radius-card)",
-} as const;
-
 function isAnchorWardrobeItem(
   item: MainScreenItem,
   anchorItemRefs: AnchorItemRef[],
@@ -111,76 +60,20 @@ function isAnchorWardrobeItem(
 }
 
 function OutfitImageBlock({ props }: { props: WardrobeProps }) {
-  const { t } = useI18n();
   const set = props.activeSet;
   if (!set) return null;
 
   return (
-    <Stack
-      spacing={2}
-      sx={{ pb: 2, px: { xs: 0.5, md: 1 }, alignItems: "center" }}
-    >
-      {set.image && set.imageObsolete ? (
-        <Alert
-          severity="warning"
-          sx={{
-            width: "100%",
-            maxWidth: `${OUTFIT_SET_IMAGE_PREVIEW_MAX_WIDTH}px`,
-          }}
-        >
-          {t("capsule.outfitSetImageObsolete")}
-        </Alert>
-      ) : null}
-      {props.isImagePending ? <OutfitImagePlaceholder /> : null}
-      {!props.isImagePending && props.activeImageSrc ? (
-        <Box
-          sx={{
-            maxWidth: `${OUTFIT_SET_IMAGE_PREVIEW_MAX_WIDTH}px`,
-            position: "relative",
-          }}
-        >
-          <IconButton
-            aria-label={t("capsule.deleteOutfitSetImage")}
-            disabled={props.disabled}
-            onClick={() => props.onDeleteImage(set.index)}
-            sx={{
-              position: "absolute",
-              top: 12,
-              right: 12,
-              zIndex: 1,
-              bgcolor: "var(--cw-color-media-control-bg)",
-              color: "error.main",
-            }}
-          >
-            <DeleteOutlineRoundedIcon />
-          </IconButton>
-          <ButtonBase
-            aria-label={t("capsule.openOutfitSetImagePreview", {
-              number: set.label,
-            })}
-            onClick={props.onImageClick}
-            sx={outfitImagePreviewButtonSx}
-          >
-            <Box
-              component="img"
-              src={props.activeImageSrc}
-              alt={t("capsule.outfitSetImageAlt", { number: set.label })}
-              data-testid="outfit-set-image"
-              sx={outfitImageSx}
-            />
-          </ButtonBase>
-        </Box>
-      ) : null}
-      {!props.isImagePending && !props.activeImageSrc ? (
-        <Button
-          variant="outlined"
-          disabled={props.disabled}
-          onClick={() => props.onGenerateImage?.(set.index)}
-        >
-          {t("capsule.createOutfitSetImage")}
-        </Button>
-      ) : null}
-    </Stack>
+    <OutfitGeneratedImageBlock
+      disabled={props.disabled}
+      imageObsolete={set.imageObsolete}
+      imageSrc={props.activeImageSrc}
+      isPending={props.isImagePending}
+      label={set.label}
+      onDelete={() => props.onDeleteImage(set.index)}
+      onGenerate={() => props.onGenerateImage?.(set.index)}
+      onImageClick={props.onImageClick}
+    />
   );
 }
 

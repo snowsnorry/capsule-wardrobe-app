@@ -45,7 +45,9 @@ function createCapsuleEventHub() {
       }, 0);
     });
 
-    await session.push(snapshot, "snapshot");
+    const initialSnapshot =
+      typeof snapshot === "function" ? await snapshot() : snapshot;
+    await session.push(initialSnapshot, "snapshot");
     return session;
   }
 

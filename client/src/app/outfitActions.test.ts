@@ -3,23 +3,28 @@ import type { Mock } from "vitest";
 import {
   createOutfit,
   deleteOutfit,
+  deleteOutfitImage,
   downloadOutfitPdf,
   duplicateOutfit,
   fetchOutfit,
   fetchRecentOutfits,
+  generateOutfitImage,
   renameOutfit,
   revertOutfit,
   saveOutfit,
   searchOutfits,
   selectOutfit,
+  subscribeOutfitEvents,
   updateOutfitItems,
 } from "../api/outfits";
 import {
   copyOutfitSetToOutfits,
   createNewOutfit,
   deleteCurrentOutfit,
+  deleteCurrentOutfitImage,
   downloadCurrentOutfitPdf,
   duplicateCurrentOutfit,
+  generateCurrentOutfitImage,
   loadMoreRecentOutfits,
   openOutfit,
   refreshOutfitList,
@@ -35,15 +40,18 @@ import { createActionContext } from "./testUtils";
 vi.mock("../api/outfits", () => ({
   createOutfit: vi.fn(),
   deleteOutfit: vi.fn(),
+  deleteOutfitImage: vi.fn(),
   downloadOutfitPdf: vi.fn(),
   duplicateOutfit: vi.fn(),
   fetchOutfit: vi.fn(),
   fetchRecentOutfits: vi.fn(),
+  generateOutfitImage: vi.fn(),
   renameOutfit: vi.fn(),
   revertOutfit: vi.fn(),
   saveOutfit: vi.fn(),
   searchOutfits: vi.fn(),
   selectOutfit: vi.fn(),
+  subscribeOutfitEvents: vi.fn(),
   updateOutfitItems: vi.fn(),
 }));
 
@@ -166,12 +174,17 @@ describe("outfitActions", () => {
     ];
 
     await expect(
-      copyOutfitSetToOutfits(context, "Capsule: Outfit 1", items),
+      copyOutfitSetToOutfits(context, "Capsule: Outfit 1", items, {
+        capsuleId: "capsule-1",
+        setIndex: 0,
+      }),
     ).resolves.toMatchObject({ id: "copied-outfit" });
 
     expect(createOutfit).toHaveBeenCalledWith({
       name: "Capsule: Outfit 1",
       items,
+      sourceCapsuleId: "capsule-1",
+      sourceSetIndex: 0,
     });
     expect(saveOutfit).toHaveBeenCalledWith("copied-outfit");
     expect(fetchRecentOutfits).toHaveBeenCalledWith({ limit: 10, offset: 0 });
@@ -282,6 +295,106 @@ describe("outfitActions", () => {
       true,
     );
     expect(context.setIsDownloadingWardrobePdf).toHaveBeenLastCalledWith(false);
+  });
+
+  test("generates and deletes saved outfit images through focused API calls", async () => {
+    vi.mocked(generateOutfitImage).mockResolvedValue({ status: "ready" });
+    vi.mocked(deleteOutfitImage).mockResolvedValue({ ok: true });
+    vi.mocked(fetchOutfit).mockResolvedValue({ outfit });
+    const context = createActionContext({
+      activeOutfitId: "outfit-1",
+      setActiveOutfitId: vi.fn(),
+      setActiveOutfitMeta: vi.fn(),
+      setOutfitList: vi.fn(),
+      setOutfitPagination: vi.fn(),
+    });
+
+    await generateCurrentOutfitImage(context, "outfit-1");
+    await deleteCurrentOutfitImage(context, "outfit-1");
+
+    expect(generateOutfitImage).toHaveBeenCalledWith("outfit-1");
+    expect(deleteOutfitImage).toHaveBeenCalledWith("outfit-1");
+    expect(subscribeOutfitEvents).not.toHaveBeenCalled();
+    expect(fetchOutfit).toHaveBeenCalledWith("outfit-1");
+    expect(context.setIsOutfitImagePending).toHaveBeenNthCalledWith(1, true);
+    expect(context.setIsOutfitImagePending).toHaveBeenLastCalledWith(false);
+  });
+
+  test("waits for saved outfit image events and reports generation errors", async () => {
+    vi.mocked(generateOutfitImage)
+      .mockResolvedValueOnce({ status: "pending" })
+      .mockRejectedValueOnce(new Error("network"));
+    vi.mocked(fetchOutfit).mockResolvedValue({ outfit });
+    vi.mocked(subscribeOutfitEvents).mockImplementationOnce(
+      async ({ onMessage }) => {
+        onMessage?.({
+          event: "snapshot",
+          data: { pendingImage: false, status: "ready" },
+        });
+      },
+    );
+    const context = createActionContext({
+      activeOutfitId: "outfit-1",
+      resolveErrorMessage: vi.fn(() => "resolved error"),
+      setActiveOutfitId: vi.fn(),
+      setActiveOutfitMeta: vi.fn(),
+      setIsOutfitImagePending: vi.fn(),
+      setOutfitList: vi.fn(),
+      setOutfitPagination: vi.fn(),
+      setStatus: vi.fn(),
+    });
+
+    await generateCurrentOutfitImage(context, "outfit-1");
+    await vi.waitFor(() => {
+      expect(context.setActiveOutfitMeta).toHaveBeenCalledWith(outfit);
+    });
+    await generateCurrentOutfitImage(context, "outfit-1");
+
+    expect(subscribeOutfitEvents).toHaveBeenCalledWith(
+      expect.objectContaining({ outfitId: "outfit-1" }),
+    );
+    expect(fetchOutfit).toHaveBeenCalledWith("outfit-1");
+    expect(context.setIsOutfitImagePending).toHaveBeenLastCalledWith(false);
+    expect(context.setStatus).toHaveBeenCalledWith(expect.any(Function));
+    expect(
+      (context.setStatus as Mock).mock.calls.at(-1)?.[0]({ previous: true }),
+    ).toEqual({
+      previous: true,
+      error: "resolved error",
+    });
+  });
+
+  test("does not reactivate a previous outfit when image generation finishes after navigation", async () => {
+    vi.mocked(generateOutfitImage).mockResolvedValueOnce({ status: "pending" });
+    vi.mocked(fetchOutfit).mockResolvedValue({ outfit });
+    vi.mocked(subscribeOutfitEvents).mockImplementationOnce(
+      async ({ onMessage }) => {
+        onMessage?.({
+          event: "snapshot",
+          data: { pendingImage: false, status: "ready" },
+        });
+      },
+    );
+    const context = createActionContext({
+      activeOutfitId: "outfit-2",
+      setActiveOutfitId: vi.fn(),
+      setActiveOutfitMeta: vi.fn(),
+      setIsOutfitImagePending: vi.fn(),
+      setOutfitList: vi.fn(),
+      setOutfitPagination: vi.fn(),
+    });
+
+    await generateCurrentOutfitImage(context, "outfit-1");
+    await vi.waitFor(() => {
+      expect(fetchOutfit).toHaveBeenCalledWith("outfit-1");
+    });
+
+    expect(context.setActiveOutfitId).not.toHaveBeenCalled();
+    expect(context.setActiveOutfitMeta).not.toHaveBeenCalled();
+    expect(context.setOutfitList).toHaveBeenCalled();
+    await vi.waitFor(() => {
+      expect(context.setIsOutfitImagePending).toHaveBeenLastCalledWith(false);
+    });
   });
 
   test("resets busy flags when outfit operations fail", async () => {

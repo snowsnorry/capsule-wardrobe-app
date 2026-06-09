@@ -63,6 +63,10 @@ export function CopyOutfitDialog({
       const outfit = await props.onCopyOutfitSetToOutfits?.(
         name,
         activeSet.items,
+        {
+          capsuleId: props.activeCapsule?.id,
+          setIndex: activeSet.index,
+        },
       );
       if (!outfit?.id) {
         return;

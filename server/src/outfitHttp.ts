@@ -8,6 +8,8 @@ type OutfitItemRef = {
 
 type OutfitSnapshot = {
   items?: OutfitItemRef[];
+  image?: string | null;
+  imageObsolete?: boolean | null;
 };
 
 type OutfitHydrationContext = {
@@ -28,7 +30,12 @@ export function hasUnexpectedOutfitCreateFields(payload = {}) {
     return false;
   }
 
-  const allowedKeys = new Set(["name", "items"]);
+  const allowedKeys = new Set([
+    "name",
+    "items",
+    "sourceCapsuleId",
+    "sourceSetIndex",
+  ]);
   return Object.keys(payload).some((key) => !allowedKeys.has(key));
 }
 
@@ -193,6 +200,8 @@ function hydrateSnapshot(
       source: ref.source,
       item: itemsByRef.get(getItemRefKey(ref)) || null,
     })),
+    image: snapshot.image || null,
+    imageObsolete: Boolean(snapshot.imageObsolete),
   };
 }
 

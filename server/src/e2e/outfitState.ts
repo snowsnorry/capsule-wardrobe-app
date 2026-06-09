@@ -190,6 +190,29 @@ export class E2eOutfitMemory {
     });
   }
 
+  setImage(
+    id: unknown,
+    image: string | null,
+    imageObsolete = false,
+  ): NormalizedOutfitRecord | null {
+    const outfitId = normalizeOutfitId(id);
+    const current = this.outfits.get(outfitId);
+    if (!current) return null;
+    this.counter += 1;
+    const effective = current.draft || current.saved || { items: [] };
+    const next = toStoredOutfit({
+      ...current,
+      draft: {
+        ...effective,
+        image,
+        imageObsolete: Boolean(imageObsolete),
+      },
+      updatedAt: deterministicTimestamp(this.counter),
+    });
+    this.outfits.set(outfitId, next);
+    return deepClone(next);
+  }
+
   delete(id: unknown): boolean {
     return this.outfits.delete(normalizeOutfitId(id));
   }

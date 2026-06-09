@@ -166,9 +166,11 @@ describe("useAppHandlers", () => {
     await result.current.handleRenameOutfit("Outfit renamed");
     await result.current.handleDuplicateCapsule("Copy");
     await result.current.handleDuplicateOutfit("Outfit copy");
-    await result.current.handleCopyOutfitSetToOutfits("Capsule: Outfit 1", [
-      { url: "https://example.com/top", source: "from_catalog" },
-    ]);
+    await result.current.handleCopyOutfitSetToOutfits(
+      "Capsule: Outfit 1",
+      [{ url: "https://example.com/top", source: "from_catalog" }],
+      { capsuleId: "capsule-1", setIndex: 0 },
+    );
     await result.current.handleDeleteCapsule();
     await result.current.handleDeleteOutfit();
     await result.current.handleImportSharedCapsule();
@@ -265,6 +267,7 @@ describe("useAppHandlers", () => {
       actionContext,
       "Capsule: Outfit 1",
       [{ url: "https://example.com/top", source: "from_catalog" }],
+      { capsuleId: "capsule-1", setIndex: 0 },
     );
     expect(navigateOutfit).not.toHaveBeenCalledWith("outfit-from-capsule", {
       replace: true,

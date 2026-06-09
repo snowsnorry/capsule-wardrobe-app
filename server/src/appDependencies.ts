@@ -69,6 +69,8 @@ import {
 } from "./ai/ai.js";
 import { clearPartialRegenerationJobsForEmail } from "./ai/partialRegenerationJobs.js";
 import { clearOutfitSetImageJobsForEmail } from "./ai/outfitSetImageJobs.js";
+import { clearOutfitImageJobsForEmail } from "./ai/outfitImageJobs.js";
+import { getOutfitImageJob } from "./ai/outfitImageJobs.js";
 import {
   getPartialRegenerationJob,
   regenerateSelectedWardrobeItems,
@@ -78,7 +80,9 @@ import {
   generateOutfitSetImage,
   getOutfitSetImageJob,
 } from "./ai/outfitSetImages.js";
+import { deleteOutfitImage, generateOutfitImage } from "./ai/outfitImages.js";
 import { capsuleEventHub } from "./ai/capsuleEvents.js";
+import { outfitEventHub } from "./ai/outfitEvents.js";
 import { buildWardrobePdfInChild } from "./wardrobePdf.js";
 import { deleteWardrobePdfJob } from "./wardrobePdfJobRegistry.js";
 import {
@@ -130,6 +134,8 @@ import {
   PASSKEY_RP_NAME,
 } from "./appConfig.js";
 import {
+  copyImageObjectToR2,
+  uploadImageToR2,
   uploadWardrobeDerivativeImageToR2,
   uploadWardrobeImageToR2,
 } from "./r2Storage.js";
@@ -198,6 +204,7 @@ function clearAccountTransientState(email: string) {
   clearWardrobeJobsForEmail(email);
   clearPartialRegenerationJobsForEmail(email);
   clearOutfitSetImageJobsForEmail(email);
+  clearOutfitImageJobsForEmail(email);
   deleteWardrobePdfJob(email);
 }
 
@@ -223,12 +230,14 @@ export function createAppDependencies(options: Record<string, unknown> = {}) {
     deleteCapsuleImpl: deleteCapsule,
     deleteLikedItemImpl: deleteLikedItemByUrl,
     deleteOutfitImpl: deleteOutfit,
+    deleteOutfitImageHandler: deleteOutfitImage,
     deleteOutfitSetImageHandler: deleteOutfitSetImage,
     deletePasskeyByIdForEmailImpl: deletePasskeyByIdForEmail,
     deleteProfileImpl: deleteProfile,
     duplicateCapsuleImpl: duplicateCapsule,
     duplicateOutfitImpl: duplicateOutfit,
     generateAuthenticationOptionsImpl: generateAuthenticationOptions,
+    generateOutfitImageHandler: generateOutfitImage,
     generateOutfitSetImageHandler: generateOutfitSetImage,
     generateRegistrationOptionsImpl: generateRegistrationOptions,
     getAudienceOptionsImpl: getAudienceOptions,
@@ -236,6 +245,7 @@ export function createAppDependencies(options: Record<string, unknown> = {}) {
     getFormalityLevelsImpl: getFormalityLevels,
     getOccasionsImpl: getOccasions,
     getOutfitImpl: getOutfit,
+    getOutfitImageJobImpl: getOutfitImageJob,
     getOutfitSetImageJobImpl: getOutfitSetImageJob,
     getPartialRegenerationJobImpl: getPartialRegenerationJob,
     getPasskeyByCredentialIdImpl: getPasskeyByCredentialId,
@@ -300,8 +310,11 @@ export function createAppDependencies(options: Record<string, unknown> = {}) {
     searchOutfitsImpl: searchOutfits,
     sendLoginCodeEmailImpl: sendLoginCodeEmail,
     streamCapsuleEventsImpl: capsuleEventHub.subscribe,
+    streamOutfitEventsImpl: outfitEventHub.subscribe,
     updateCapsuleSnapshotImpl: updateCapsuleSnapshot,
     updateOutfitSnapshotImpl: updateOutfitSnapshot,
+    copyImageObjectToR2Impl: copyImageObjectToR2,
+    uploadImageToR2Impl: uploadImageToR2,
     validateCapsuleAnchorItemsImpl: (email, anchorItemRefs) =>
       validateCapsuleAnchorItems({
         email,

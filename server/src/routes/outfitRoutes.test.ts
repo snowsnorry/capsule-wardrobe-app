@@ -225,9 +225,74 @@ test("outfit mutation routes validate payloads and mutate profile-owned outfits"
   const duplicateOutfitImpl = vi.fn(async (_email, id, name) =>
     id === "missing" ? null : { ...outfit, id: "outfit-copy", name },
   );
-  const getOutfitImpl = vi.fn(async (_email, id) =>
-    id === "missing" ? null : { ...outfit, id },
-  );
+  const sourceCopyItems = [
+    ...outfitItems,
+    {
+      url: "https://example.com/bag",
+      source: "from_catalog",
+    },
+  ];
+  const getOutfitImpl = vi.fn(async (_email, id) => {
+    if (id === "missing") return null;
+    if (id === "with-image") {
+      return {
+        ...outfit,
+        id,
+        draft: {
+          items: outfitItems,
+          image: "https://images.example.com/outfit.png",
+          imageObsolete: false,
+        },
+      };
+    }
+    return { ...outfit, id };
+  });
+  const getCapsuleImpl = vi.fn(async () => ({
+    id: "capsule-1",
+    draft: {
+      filters: {},
+      data: {
+        wardrobe: {
+          items: [
+            {
+              id: "top-1",
+              url: "https://example.com/shirt",
+              source: "from_catalog",
+            },
+            {
+              id: "missing-1",
+              url: "wardrobe://missing",
+              source: "uploaded",
+            },
+            {
+              id: "bag-1",
+              url: "https://example.com/bag",
+              source: "from_catalog",
+            },
+          ],
+          outfitSets: [
+            {
+              itemIds: ["top-1", "missing-1", "bag-1"],
+              image: "https://images.example.com/source.png",
+              imageObsolete: false,
+            },
+            {
+              itemIds: ["top-1", "missing-1", "bag-1"],
+              image: "https://images.example.com/source-stale.png",
+              imageObsolete: false,
+            },
+          ],
+        },
+        rejectedUrls: [],
+      },
+    },
+    saved: null,
+  }));
+  const copyImageObjectToR2Impl = vi.fn(async () => ({
+    key: "copied/outfit.png",
+    url: "https://images.example.com/copied.png",
+    digest: "digest",
+  }));
   const deleteOutfitImpl = vi.fn(async (_email, id) => id !== "missing");
   const { baseUrl } = await startTestServer(t, {
     overrides: {
@@ -238,6 +303,8 @@ test("outfit mutation routes validate payloads and mutate profile-owned outfits"
       renameOutfitImpl,
       duplicateOutfitImpl,
       getOutfitImpl,
+      getCapsuleImpl,
+      copyImageObjectToR2Impl,
       deleteOutfitImpl,
       getProductsByUrlsForEmailImpl: async () => [
         {
@@ -273,6 +340,55 @@ test("outfit mutation routes validate payloads and mutate profile-owned outfits"
     saved: null,
   });
 
+  const copied = await requestJson(
+    baseUrl,
+    "/outfits",
+    authenticatedMutationOptions({
+      name: "Copied",
+      items: sourceCopyItems,
+      sourceCapsuleId: "capsule-1",
+      sourceSetIndex: 0,
+    }),
+  );
+  expect(copied.response.status).toBe(201);
+  expect(copyImageObjectToR2Impl).toHaveBeenCalledWith(
+    expect.objectContaining({
+      sourceUrl: "https://images.example.com/source.png",
+      namespace: "copied",
+      setIndex: 0,
+    }),
+  );
+  expect(createOutfitImpl).toHaveBeenLastCalledWith("person@example.com", {
+    name: "Copied",
+    draft: {
+      items: sourceCopyItems,
+      image: "https://images.example.com/copied.png",
+      imageObsolete: false,
+    },
+    saved: null,
+  });
+
+  const staleCopied = await requestJson(
+    baseUrl,
+    "/outfits",
+    authenticatedMutationOptions({
+      name: "Stale copied",
+      items: outfitItems,
+      sourceCapsuleId: "capsule-1",
+      sourceSetIndex: 1,
+    }),
+  );
+  expect(staleCopied.response.status).toBe(201);
+  expect(createOutfitImpl).toHaveBeenLastCalledWith("person@example.com", {
+    name: "Stale copied",
+    draft: {
+      items: outfitItems,
+      image: "https://images.example.com/copied.png",
+      imageObsolete: true,
+    },
+    saved: null,
+  });
+
   const invalidItems = await requestJson(baseUrl, "/outfits/outfit-1/items", {
     method: "PATCH",
     origin: TEST_CLIENT_ORIGIN,
@@ -293,7 +409,29 @@ test("outfit mutation routes validate payloads and mutate profile-owned outfits"
   expect(updateOutfitSnapshotImpl).toHaveBeenCalledWith(
     "person@example.com",
     "outfit-1",
-    { items: [] },
+    { items: [], image: null, imageObsolete: false },
+  );
+
+  const updatedWithImage = await requestJson(
+    baseUrl,
+    "/outfits/with-image/items",
+    {
+      method: "PATCH",
+      origin: TEST_CLIENT_ORIGIN,
+      cookie: AUTH_COOKIE,
+      csrfToken: CSRF_TOKEN,
+      body: { items: [] },
+    },
+  );
+  expect(updatedWithImage.response.status).toBe(200);
+  expect(updateOutfitSnapshotImpl).toHaveBeenLastCalledWith(
+    "person@example.com",
+    "with-image",
+    {
+      items: [],
+      image: "https://images.example.com/outfit.png",
+      imageObsolete: true,
+    },
   );
 
   const saved = await requestJson(
@@ -398,6 +536,38 @@ test("outfit mutation routes validate payloads and mutate profile-owned outfits"
     csrfToken: CSRF_TOKEN,
   });
   expect(missingDelete.response.status).toBe(404);
+});
+
+test("outfit image routes delegate to generated image handlers", async (t) => {
+  const generateOutfitImageHandler = vi.fn(async (_req, res) =>
+    res.status(202).json({ ok: true, status: "pending" }),
+  );
+  const deleteOutfitImageHandler = vi.fn(async (_req, res) =>
+    res.json({ ok: true, status: "ready" }),
+  );
+  const { baseUrl } = await startTestServer(t, {
+    overrides: {
+      generateOutfitImageHandler,
+      deleteOutfitImageHandler,
+    },
+  });
+
+  const generated = await requestJson(
+    baseUrl,
+    "/outfits/outfit-1/image",
+    authenticatedMutationOptions(),
+  );
+  expect(generated.response.status).toBe(202);
+  expect(generateOutfitImageHandler).toHaveBeenCalledTimes(1);
+
+  const deleted = await requestJson(baseUrl, "/outfits/outfit-1/image", {
+    method: "DELETE",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN,
+  });
+  expect(deleted.response.status).toBe(200);
+  expect(deleteOutfitImageHandler).toHaveBeenCalledTimes(1);
 });
 
 test("outfit pdf route renders effective outfit items with the profile locale", async (t) => {

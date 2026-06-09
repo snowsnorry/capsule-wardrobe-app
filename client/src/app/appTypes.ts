@@ -77,6 +77,8 @@ export type OutfitItemSnapshot = {
 
 type OutfitSnapshot = {
   items: OutfitItemSnapshot[];
+  image?: string | null;
+  imageObsolete?: boolean;
 };
 
 export type CapsuleWardrobeData = {
@@ -217,6 +219,7 @@ export type CapsuleMutationResponse = {
 
 export type OutfitMutationResponse = {
   outfit?: OutfitMeta | null;
+  status?: string;
 };
 
 export type ShareMetadata = {

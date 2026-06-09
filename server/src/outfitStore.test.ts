@@ -132,6 +132,8 @@ describe("createOutfitStore", () => {
             source: "from_catalog",
           },
         ],
+        image: null,
+        imageObsolete: false,
       },
       saved: null,
     });
@@ -145,7 +147,9 @@ describe("createOutfitStore", () => {
       store.updateOutfitSnapshot("person@example.com", "outfit-1", {
         items: [],
       }),
-    ).resolves.toMatchObject({ draft: { items: [] } });
+    ).resolves.toMatchObject({
+      draft: { items: [], image: null, imageObsolete: false },
+    });
     await expect(
       store.saveOutfit("person@example.com", "outfit-1"),
     ).resolves.toMatchObject({
@@ -170,7 +174,7 @@ describe("createOutfitStore", () => {
     expect(deps.updateOutfitSnapshotByIdForEmailImpl).toHaveBeenCalledWith({
       email: "person@example.com",
       outfitId: "outfit-1",
-      draft: { items: [] },
+      draft: { items: [], image: null, imageObsolete: false },
     });
     expect(deps.deleteOutfitByIdForEmailImpl).toHaveBeenCalledWith({
       email: "person@example.com",

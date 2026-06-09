@@ -70,6 +70,7 @@ export function buildAppActionContext(input: AppActionContextInput) {
     setHasProfile: state.setHasProfile,
     setIsContentOperationLoading: state.setIsContentOperationLoading,
     setIsDownloadingWardrobePdf: state.setIsDownloadingWardrobePdf,
+    setIsOutfitImagePending: state.setIsOutfitImagePending,
     setIsLoadingItems: state.setIsLoadingItems,
     setIsPartialRegenerationLoading: state.setIsPartialRegenerationLoading,
     setIsShareLoading: input.setIsShareLoading,

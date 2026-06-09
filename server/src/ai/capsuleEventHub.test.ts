@@ -102,3 +102,28 @@ test("capsule event hub returns false without subscribers and prunes disconnecte
     false,
   );
 });
+
+test("capsule event hub builds lazy initial snapshots after registering sessions", async () => {
+  const hub = createCapsuleEventHub();
+  const readySnapshot = { status: "ready" };
+
+  await hub.subscribe({} as never, {} as never, {
+    email: "person@example.test",
+    capsuleId: "capsule-1",
+    snapshot: async () => {
+      expect(hub.getSessionCount("person@example.test", "capsule-1")).toBe(1);
+      expect(
+        hub.publish("person@example.test", "capsule-1", readySnapshot),
+      ).toBe(true);
+      return readySnapshot;
+    },
+  });
+
+  expect(channels[0].broadcasts).toEqual([
+    { event: "snapshot", payload: readySnapshot },
+  ]);
+  expect(sessions[0].pushed).toEqual([
+    { event: "snapshot", payload: readySnapshot },
+    { event: "snapshot", payload: readySnapshot },
+  ]);
+});
