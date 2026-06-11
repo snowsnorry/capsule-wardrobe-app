@@ -53,6 +53,7 @@ import {
   revertOutfit,
   saveOutfit,
   searchOutfits,
+  updateOutfitReport,
   updateOutfitSnapshot,
 } from "./outfitStore.js";
 import {
@@ -81,6 +82,7 @@ import {
   getOutfitSetImageJob,
 } from "./ai/outfitSetImages.js";
 import { deleteOutfitImage, generateOutfitImage } from "./ai/outfitImages.js";
+import { generateOutfitReport } from "./ai/outfitReportService.js";
 import { capsuleEventHub } from "./ai/capsuleEvents.js";
 import { outfitEventHub } from "./ai/outfitEvents.js";
 import { buildWardrobePdfInChild } from "./wardrobePdf.js";
@@ -207,6 +209,14 @@ function clearAccountTransientState(email: string) {
   deleteWardrobePdfJob(email);
 }
 
+function generateOutfitReportWithStoreLookups(email: string, outfitId: string) {
+  return generateOutfitReport(email, outfitId, {
+    getProductsByUrlsForEmailImpl: getProductsByUrlsForEmailInOrder,
+    listWardrobeItemsByUrlsImpl: listWardrobeItemsByUrlsForEmail,
+    updateOutfitReportImpl: updateOutfitReport,
+  });
+}
+
 // eslint-disable-next-line max-lines-per-function
 export function createAppDependencies(options: Record<string, unknown> = {}) {
   const googleClientId =
@@ -237,6 +247,7 @@ export function createAppDependencies(options: Record<string, unknown> = {}) {
     duplicateOutfitImpl: duplicateOutfit,
     generateAuthenticationOptionsImpl: generateAuthenticationOptions,
     generateOutfitImageHandler: generateOutfitImage,
+    generateOutfitReportImpl: generateOutfitReportWithStoreLookups,
     generateOutfitSetImageHandler: generateOutfitSetImage,
     generateRegistrationOptionsImpl: generateRegistrationOptions,
     getAudienceOptionsImpl: getAudienceOptions,
@@ -311,6 +322,7 @@ export function createAppDependencies(options: Record<string, unknown> = {}) {
     streamCapsuleEventsImpl: capsuleEventHub.subscribe,
     streamOutfitEventsImpl: outfitEventHub.subscribe,
     updateCapsuleSnapshotImpl: updateCapsuleSnapshot,
+    updateOutfitReportImpl: updateOutfitReport,
     updateOutfitSnapshotImpl: updateOutfitSnapshot,
     copyImageObjectToR2Impl: copyImageObjectToR2,
     validateCapsuleAnchorItemsImpl: (email, anchorItemRefs) =>

@@ -11,6 +11,9 @@ const row = {
         source: "from_catalog",
       },
     ],
+    image: null,
+    imageObsolete: false,
+    report: null,
   },
   saved: null,
   createdAt: "2026-01-01T00:00:00.000Z",
@@ -45,6 +48,14 @@ function createDeps() {
       saved: row.draft,
     })),
     searchOutfitsByEmailImpl: vi.fn(async () => [row, null]),
+    updateOutfitReportByIdForEmailImpl: vi.fn(async (payload) => ({
+      ...row,
+      draft: null,
+      saved: {
+        ...row.draft,
+        report: payload.report,
+      },
+    })),
     updateOutfitSnapshotByIdForEmailImpl: vi.fn(async (payload) => ({
       ...row,
       draft: payload.draft,
@@ -134,6 +145,7 @@ describe("createOutfitStore", () => {
         ],
         image: null,
         imageObsolete: false,
+        report: null,
       },
       saved: null,
     });
@@ -174,7 +186,7 @@ describe("createOutfitStore", () => {
     expect(deps.updateOutfitSnapshotByIdForEmailImpl).toHaveBeenCalledWith({
       email: "person@example.com",
       outfitId: "outfit-1",
-      draft: { items: [], image: null, imageObsolete: false },
+      draft: { items: [], image: null, imageObsolete: false, report: null },
     });
     expect(deps.deleteOutfitByIdForEmailImpl).toHaveBeenCalledWith({
       email: "person@example.com",
@@ -191,5 +203,26 @@ describe("createOutfitStore", () => {
       store.duplicateOutfit("person@example.com", "missing"),
     ).resolves.toBeNull();
     expect(deps.createOutfitRecordImpl).not.toHaveBeenCalled();
+  });
+
+  test("updates outfit report through the effective snapshot helper", async () => {
+    const deps = createDeps();
+    const store = createOutfitStore(deps);
+    const report = { schemaVersion: 1, itemsHash: "items-hash" };
+
+    await expect(
+      store.updateOutfitReport("person@example.com", "outfit-1", report),
+    ).resolves.toMatchObject({
+      draft: null,
+      saved: {
+        report,
+      },
+      status: "saved",
+    });
+    expect(deps.updateOutfitReportByIdForEmailImpl).toHaveBeenCalledWith({
+      email: "person@example.com",
+      outfitId: "outfit-1",
+      report,
+    });
   });
 });

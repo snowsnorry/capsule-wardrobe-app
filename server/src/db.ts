@@ -104,6 +104,7 @@ export {
   revertOutfitDraftByIdForEmail,
   saveOutfitByIdForEmail,
   searchOutfitsByEmail,
+  updateOutfitReportByIdForEmail,
   updateOutfitSnapshotByIdForEmail,
 } from "./db/profileOutfits.js";
 export {

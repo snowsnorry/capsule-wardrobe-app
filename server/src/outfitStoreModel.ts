@@ -9,6 +9,7 @@ export type OutfitSnapshot = {
   items: OutfitItemSnapshot[];
   image: string | null;
   imageObsolete: boolean;
+  report: Record<string, unknown> | null;
 };
 
 export type OutfitRecord = {
@@ -54,6 +55,10 @@ function normalizeOutfitItemSnapshot(
   };
 }
 
+function normalizeOutfitReport(value: unknown): Record<string, unknown> | null {
+  return isPlainRecord(value) ? value : null;
+}
+
 export function normalizeOutfitSnapshot(
   snapshot: Record<string, unknown> | null = null,
 ): OutfitSnapshot | null {
@@ -72,6 +77,7 @@ export function normalizeOutfitSnapshot(
         ? snapshot.image.trim()
         : null,
     imageObsolete: Boolean(snapshot.imageObsolete),
+    report: normalizeOutfitReport(snapshot.report),
   };
 }
 

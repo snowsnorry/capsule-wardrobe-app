@@ -213,6 +213,26 @@ export class E2eOutfitMemory {
     return deepClone(next);
   }
 
+  setReport(
+    id: unknown,
+    report: Record<string, unknown>,
+  ): NormalizedOutfitRecord | null {
+    const outfitId = normalizeOutfitId(id);
+    const current = this.outfits.get(outfitId);
+    if (!current) return null;
+    this.counter += 1;
+    const effective = current.draft || current.saved || { items: [] };
+    const next = toStoredOutfit({
+      ...current,
+      ...(current.draft
+        ? { draft: { ...effective, report } }
+        : { saved: { ...effective, report } }),
+      updatedAt: deterministicTimestamp(this.counter),
+    });
+    this.outfits.set(outfitId, next);
+    return deepClone(next);
+  }
+
   delete(id: unknown): boolean {
     return this.outfits.delete(normalizeOutfitId(id));
   }

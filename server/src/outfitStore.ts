@@ -10,6 +10,7 @@ import {
   revertOutfitDraftByIdForEmail,
   saveOutfitByIdForEmail,
   searchOutfitsByEmail,
+  updateOutfitReportByIdForEmail,
   updateOutfitSnapshotByIdForEmail,
 } from "./db.js";
 import {
@@ -37,6 +38,7 @@ function createOutfitStore(deps: OutfitStoreDeps = {}) {
     revertOutfitDraftByIdForEmailImpl = revertOutfitDraftByIdForEmail,
     saveOutfitByIdForEmailImpl = saveOutfitByIdForEmail,
     searchOutfitsByEmailImpl = searchOutfitsByEmail,
+    updateOutfitReportByIdForEmailImpl = updateOutfitReportByIdForEmail,
     updateOutfitSnapshotByIdForEmailImpl = updateOutfitSnapshotByIdForEmail,
   } = deps;
 
@@ -116,6 +118,20 @@ function createOutfitStore(deps: OutfitStoreDeps = {}) {
     );
   }
 
+  async function updateOutfitReport(
+    email: string,
+    outfitId: string,
+    report: Record<string, unknown>,
+  ): Promise<NormalizedOutfitRecord | null> {
+    return normalizeOutfitRecord(
+      await updateOutfitReportByIdForEmailImpl({
+        email,
+        outfitId,
+        report,
+      }),
+    );
+  }
+
   async function renameOutfit(
     email: string,
     outfitId: string,
@@ -188,6 +204,7 @@ function createOutfitStore(deps: OutfitStoreDeps = {}) {
     revertOutfit,
     saveOutfit,
     searchOutfits,
+    updateOutfitReport,
     updateOutfitSnapshot,
   };
 }
@@ -205,6 +222,7 @@ const {
   revertOutfit,
   saveOutfit,
   searchOutfits,
+  updateOutfitReport,
   updateOutfitSnapshot,
 } = defaultOutfitStore;
 
@@ -221,5 +239,6 @@ export {
   revertOutfit,
   saveOutfit,
   searchOutfits,
+  updateOutfitReport,
   updateOutfitSnapshot,
 };

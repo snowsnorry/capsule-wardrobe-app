@@ -16,6 +16,7 @@ import {
   E2E_EMAIL,
 } from "./fixtures.js";
 import { E2eGenerationMemory } from "./generationState.js";
+import { buildE2eOutfitReport } from "./outfitReportMock.js";
 import { E2eOutfitMemory } from "./outfitState.js";
 import { E2eSearchDelayState } from "./searchState.js";
 import { searchAndGenerationDependencies } from "./searchAndGenerationDependencies.js";
@@ -280,6 +281,17 @@ function outfitDependencies(state: E2eState) {
         return res.status(404).json({ error: "not_found" });
       }
       return res.json({ ok: true, status: "ready" });
+    },
+    generateOutfitReportImpl: async (_email, outfitId) => {
+      const normalizedOutfitId = String(outfitId || "").trim();
+      const report = buildE2eOutfitReport(normalizedOutfitId);
+      const outfit = state.outfitMemory.setReport(outfitId, report);
+      if (!outfit) {
+        const error = new Error("not_found") as Error & { code?: string };
+        error.code = "not_found";
+        throw error;
+      }
+      return report;
     },
     getOutfitImageJobImpl: async () => null,
     streamOutfitEventsImpl: async (_req, res) => res.status(204).end(),

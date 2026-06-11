@@ -310,6 +310,12 @@ export type UpdateOutfitSnapshotInput = {
   draft: JsonObject | null;
 };
 
+export type UpdateOutfitReportInput = {
+  email: string;
+  outfitId: string;
+  report: JsonObject;
+};
+
 export type RenameCapsuleInput = {
   email: string;
   capsuleId: string;

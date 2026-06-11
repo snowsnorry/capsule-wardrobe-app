@@ -570,6 +570,82 @@ test("outfit image routes delegate to generated image handlers", async (t) => {
   expect(deleteOutfitImageHandler).toHaveBeenCalledTimes(1);
 });
 
+test("outfit report route delegates to generator and maps report errors", async (t) => {
+  const generateOutfitReportImpl = vi.fn(async (_email, id) => {
+    if (id === "missing") {
+      const error = new Error("not_found") as Error & { code?: string };
+      error.code = "not_found";
+      throw error;
+    }
+    if (id === "empty") {
+      const error = new Error("invalid_payload") as Error & { code?: string };
+      error.code = "invalid_payload";
+      throw error;
+    }
+    if (id === "llm-failed") {
+      throw new Error("llm_failed");
+    }
+    return {
+      schemaVersion: 1,
+      itemsHash: "items-hash",
+      verdict: { status: "valid", score: 0.9, summary: "Ready." },
+    };
+  });
+  const { baseUrl } = await startTestServer(t, {
+    overrides: { generateOutfitReportImpl },
+  });
+
+  const generated = await requestJson(
+    baseUrl,
+    "/outfits/outfit-1/report",
+    authenticatedMutationOptions(),
+  );
+  expect(generated.response.status).toBe(200);
+  expect(generated.json).toEqual({
+    ok: true,
+    report: {
+      schemaVersion: 1,
+      itemsHash: "items-hash",
+      verdict: { status: "valid", score: 0.9, summary: "Ready." },
+    },
+  });
+  expect(generateOutfitReportImpl).toHaveBeenCalledWith(
+    "person@example.com",
+    "outfit-1",
+  );
+
+  const missingCsrf = await requestJson(baseUrl, "/outfits/outfit-1/report", {
+    method: "POST",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+  });
+  expect(missingCsrf.response.status).toBe(403);
+
+  const missing = await requestJson(
+    baseUrl,
+    "/outfits/missing/report",
+    authenticatedMutationOptions(),
+  );
+  expect(missing.response.status).toBe(404);
+  expect(missing.json).toEqual({ error: "not_found" });
+
+  const empty = await requestJson(
+    baseUrl,
+    "/outfits/empty/report",
+    authenticatedMutationOptions(),
+  );
+  expect(empty.response.status).toBe(400);
+  expect(empty.json).toEqual({ error: "invalid_payload" });
+
+  const failed = await requestJson(
+    baseUrl,
+    "/outfits/llm-failed/report",
+    authenticatedMutationOptions(),
+  );
+  expect(failed.response.status).toBe(503);
+  expect(failed.json).toEqual({ error: "service_unavailable" });
+});
+
 test("outfit pdf route renders effective outfit items with the profile locale", async (t) => {
   let pdfProducts: unknown = null;
   let pdfLocale = "";

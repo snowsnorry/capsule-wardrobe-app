@@ -26,6 +26,7 @@ describe("outfitStoreModel", () => {
       ],
       image: null,
       imageObsolete: false,
+      report: null,
     });
   });
 
@@ -41,11 +42,27 @@ describe("outfitStoreModel", () => {
       items: [],
       image: "https://images.example.com/outfit.png",
       imageObsolete: true,
+      report: null,
     });
     expect(normalizeOutfitSnapshot({})).toEqual({
       items: [],
       image: null,
       imageObsolete: false,
+      report: null,
+    });
+  });
+
+  test("preserves report objects in normalized snapshots", () => {
+    expect(
+      normalizeOutfitSnapshot({
+        items: [],
+        report: { schemaVersion: 1, itemsHash: "hash" },
+      }),
+    ).toEqual({
+      items: [],
+      image: null,
+      imageObsolete: false,
+      report: { schemaVersion: 1, itemsHash: "hash" },
     });
   });
 
@@ -54,11 +71,13 @@ describe("outfitStoreModel", () => {
       items: [{ url: "https://example.com/saved", source: "from_catalog" }],
       image: null,
       imageObsolete: false,
+      report: null,
     };
     const draft = {
       items: [{ url: "wardrobe://draft", source: "uploaded" }],
       image: "image.jpg",
       imageObsolete: true,
+      report: null,
     };
 
     expect(normalizeOutfitRecord(null)).toBeNull();
@@ -95,11 +114,13 @@ describe("outfitStoreModel", () => {
       items: [{ url: "https://example.com/saved", source: "from_catalog" }],
       image: null,
       imageObsolete: false,
+      report: null,
     };
     const draft = {
       items: [{ url: "wardrobe://draft", source: "uploaded" }],
       image: "image.jpg",
       imageObsolete: true,
+      report: null,
     };
 
     expect(getEffectiveOutfitSnapshot({ draft, saved })).toEqual(draft);

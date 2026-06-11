@@ -110,6 +110,7 @@ describe("outfitHttp", () => {
         ],
         image: null,
         imageObsolete: false,
+        report: null,
       },
       effective: {
         items: [
@@ -137,6 +138,7 @@ describe("outfitHttp", () => {
         ],
         image: null,
         imageObsolete: false,
+        report: null,
       },
     });
   });

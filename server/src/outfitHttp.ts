@@ -10,6 +10,7 @@ type OutfitSnapshot = {
   items?: OutfitItemRef[];
   image?: string | null;
   imageObsolete?: boolean | null;
+  report?: Record<string, unknown> | null;
 };
 
 type OutfitHydrationContext = {
@@ -202,6 +203,7 @@ function hydrateSnapshot(
     })),
     image: snapshot.image || null,
     imageObsolete: Boolean(snapshot.imageObsolete),
+    report: snapshot.report || null,
   };
 }
 
