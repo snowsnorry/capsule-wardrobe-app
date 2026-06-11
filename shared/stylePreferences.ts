@@ -92,21 +92,6 @@ function getEnabledStyleValues(
   });
 }
 
-function inferStyleSelections(stylePreferences: readonly unknown[] = []): {
-  styleCore: string | null;
-  styleAesthetic: string | null;
-} {
-  const normalized = dedupeStyleValues(stylePreferences);
-  const styleCore = normalized.find((item) => CORE_STYLE_SET.has(item)) || null;
-  const styleAesthetic =
-    normalized.find(
-      (item) =>
-        AESTHETICS_STYLE_SET.has(item) || (!CORE_STYLE_SET.has(item) && item),
-    ) || null;
-
-  return { styleCore, styleAesthetic };
-}
-
 function buildStylePreferenceArray(
   styleCore: unknown,
   styleAesthetic: unknown,
@@ -119,6 +104,5 @@ export {
   normalizeStyleValue,
   partitionStyleValues,
   getEnabledStyleValues,
-  inferStyleSelections,
   buildStylePreferenceArray,
 };

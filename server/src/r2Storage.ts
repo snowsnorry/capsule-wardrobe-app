@@ -1,4 +1,3 @@
-/* eslint-disable max-lines */
 import { createHash, randomUUID } from "node:crypto";
 import { CopyObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import {
@@ -367,24 +366,6 @@ async function uploadWardrobeDerivativeImageToR2({
   };
 }
 
-function isHttpImageUrl(value: unknown): boolean {
-  const trimmed = String(value ?? "").trim();
-  return /^https?:\/\//i.test(trimmed);
-}
-
-function decodeLegacyBase64Image(value: unknown): Buffer | null {
-  const trimmed = String(value ?? "").trim();
-  if (!trimmed || isHttpImageUrl(trimmed) || /^data:image\//i.test(trimmed)) {
-    return null;
-  }
-  if (!/^[a-z0-9+/]+={0,2}$/i.test(trimmed) || trimmed.length % 4 === 1) {
-    return null;
-  }
-
-  const buffer = Buffer.from(trimmed, "base64");
-  return buffer.length > 0 ? buffer : null;
-}
-
 export {
   buildR2Endpoint,
   buildR2ImageKey,
@@ -393,7 +374,6 @@ export {
   buildWardrobeR2ImageKey,
   clearDefaultR2ClientCache,
   copyImageObjectToR2,
-  decodeLegacyBase64Image,
   getDefaultR2ClientCacheSize,
   getR2KeyFromPublicUrl,
   getR2Config,

@@ -12,7 +12,7 @@ describe("capsuleShareItems", () => {
     expect(isUploadedPersonalWardrobeItem({ source: "uploaded" })).toBe(true);
     expect(
       isUploadedPersonalWardrobeItem({ url: "wardrobe://uploaded-1" }),
-    ).toBe(true);
+    ).toBe(false);
     expect(
       isCatalogWardrobeItem({
         source: "from_catalog",
@@ -24,7 +24,7 @@ describe("capsuleShareItems", () => {
         itemSource: "wardrobe",
         url: "https://example.com/catalog",
       }),
-    ).toBe(true);
+    ).toBe(false);
     expect(
       isCatalogWardrobeItem({
         id: "catalog-1",
@@ -39,6 +39,21 @@ describe("capsuleShareItems", () => {
         data: {
           wardrobe: {
             items: [{ id: "uploaded-1", url: "wardrobe://uploaded-1" }],
+          },
+        },
+      }),
+    ).toBe(false);
+    expect(
+      hasUploadedPersonalWardrobeItems({
+        data: {
+          wardrobe: {
+            items: [
+              {
+                id: "uploaded-1",
+                source: "uploaded",
+                url: "wardrobe://uploaded-1",
+              },
+            ],
           },
         },
       }),

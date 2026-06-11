@@ -3,7 +3,6 @@ import { randomUUID } from "node:crypto";
 import { logError } from "../logger.js";
 import { getEffectiveCapsuleSnapshot } from "../capsuleStore.js";
 import type { CapsuleRecord } from "../capsuleStoreModel.js";
-import { decodeLegacyBase64Image } from "../r2Storage.js";
 import { normalizeWardrobeItemForPdf } from "../wardrobePdfItems.js";
 
 const DEFAULT_OUTFIT_PAGE_LIMIT = 10;
@@ -25,9 +24,6 @@ type CopySourceOutfitImageContext = {
     email: string,
     capsuleId: string,
   ) => Promise<CapsuleRecord | null | undefined>;
-  uploadImageToR2Impl: (
-    input: Record<string, unknown>,
-  ) => Promise<CopyImageResult>;
 };
 
 function isObjectPayload(body) {
@@ -155,21 +151,12 @@ async function copySourceOutfitImage({
   );
   const sourceItemsMatch = areOutfitItemRefKeysEqual(sourceItemRefs, itemRefs);
 
-  const legacyBuffer = decodeLegacyBase64Image(image);
-  const uploaded = legacyBuffer
-    ? await context.uploadImageToR2Impl({
-        buffer: legacyBuffer,
-        mimeType: "image/png",
-        capsuleId: `${source.sourceCapsuleId}-${randomUUID()}`,
-        setIndex: source.sourceSetIndex,
-        namespace: "copied",
-      })
-    : await context.copyImageObjectToR2Impl({
-        sourceUrl: image,
-        capsuleId: `${source.sourceCapsuleId}-${randomUUID()}`,
-        setIndex: source.sourceSetIndex,
-        namespace: "copied",
-      });
+  const uploaded = await context.copyImageObjectToR2Impl({
+    sourceUrl: image,
+    capsuleId: `${source.sourceCapsuleId}-${randomUUID()}`,
+    setIndex: source.sourceSetIndex,
+    namespace: "copied",
+  });
 
   return {
     image: uploaded?.url || null,

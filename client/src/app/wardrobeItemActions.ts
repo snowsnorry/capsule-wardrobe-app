@@ -56,17 +56,10 @@ function setPersonalItemsError(context: AppActionContext, error: string) {
   }));
 }
 
-// eslint-disable-next-line complexity
 function getUploadedWardrobeItemId(item: WardrobeItem) {
   const explicitId = item?.wardrobeId;
   if (explicitId !== null && explicitId !== undefined && explicitId !== "") {
     return String(explicitId);
-  }
-
-  const itemUrl = String(item?.url || "").trim();
-  const wardrobeUrlMatch = itemUrl.match(/^wardrobe:\/\/(.+)$/i);
-  if (wardrobeUrlMatch?.[1]) {
-    return decodeURIComponent(wardrobeUrlMatch[1].replace(/^\/+/, ""));
   }
 
   return item?.source === "uploaded" && item?.id != null ? String(item.id) : "";
@@ -86,15 +79,14 @@ function mergeUpdatedUploadedItem(
 }
 
 function isSameWardrobeItem(currentItem: WardrobeItem, item: WardrobeItem) {
-  const currentId = String(currentItem?.id ?? "");
-  const itemId = String(item?.id ?? "");
-  const currentUrl = String(currentItem?.url || "").trim();
-  const itemUrl = String(item?.url || "").trim();
+  const currentIds = [currentItem?.id, currentItem?.wardrobeId]
+    .map((value) => String(value ?? "").trim())
+    .filter(Boolean);
+  const itemIds = [item?.id, item?.wardrobeId]
+    .map((value) => String(value ?? "").trim())
+    .filter(Boolean);
 
-  return Boolean(
-    (currentId && currentId === itemId) ||
-    (currentUrl && currentUrl === itemUrl),
-  );
+  return currentIds.some((currentId) => itemIds.includes(currentId));
 }
 
 export async function saveItemToPersonalItems(

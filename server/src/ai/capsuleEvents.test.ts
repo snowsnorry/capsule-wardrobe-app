@@ -4,19 +4,8 @@ import {
   getStoredWardrobePayload,
 } from "./capsuleEvents.js";
 
-test("getStoredWardrobePayload normalizes legacy arrays and object payloads", () => {
-  expect(
-    getStoredWardrobePayload({
-      items: [{ id: "1" }],
-    }),
-  ).toEqual({
-    items: [{ id: "1" }],
-    outfitSets: [],
-    rawSelectionText: null,
-    swimwearReasoning: null,
-    swimwearRawSelectionText: null,
-  });
-
+test("getStoredWardrobePayload normalizes object payloads only", () => {
+  expect(getStoredWardrobePayload({ items: [{ id: "1" }] })).toBeNull();
   expect(
     getStoredWardrobePayload({
       items: {
@@ -33,6 +22,20 @@ test("getStoredWardrobePayload normalizes legacy arrays and object payloads", ()
     rawSelectionText: "raw",
     swimwearReasoning: "swim",
     swimwearRawSelectionText: "swim-raw",
+  });
+  expect(
+    getStoredWardrobePayload({
+      items: {
+        items: [{ id: "3" }],
+        reasoning: "legacy reasoning",
+      },
+    }),
+  ).toEqual({
+    items: [{ id: "3" }],
+    outfitSets: [],
+    rawSelectionText: null,
+    swimwearReasoning: null,
+    swimwearRawSelectionText: null,
   });
 });
 

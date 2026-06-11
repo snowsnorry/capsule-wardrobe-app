@@ -365,6 +365,7 @@ describe("wardrobeActions", () => {
       context,
       {
         id: "Wuploaded-1",
+        wardrobeId: "uploaded-1",
         url: "wardrobe://uploaded-1",
         source: "uploaded",
       },
@@ -478,8 +479,9 @@ describe("wardrobeActions", () => {
       urlItemsUpdater([
         {
           id: "different-id",
+          wardrobeId: "wardrobe-id-from-alias",
           url: " https://example.com/uploaded-item ",
-          name: "Old by url",
+          name: "Old by identity",
         },
       ]),
     ).toEqual([
@@ -534,6 +536,14 @@ describe("wardrobeActions", () => {
       updateUploadedItemInPersonalItems(createActionContext(), {}, payload),
     ).rejects.toThrow("missing_uploaded_item_id");
 
+    await expect(
+      updateUploadedItemInPersonalItems(
+        createActionContext(),
+        { url: "wardrobe:///encoded%20item", source: "uploaded" },
+        payload,
+      ),
+    ).rejects.toThrow("missing_uploaded_item_id");
+
     vi.mocked(updateUploadedWardrobeItem).mockRejectedValueOnce(
       new Error("network"),
     );
@@ -542,13 +552,13 @@ describe("wardrobeActions", () => {
     await expect(
       updateUploadedItemInPersonalItems(
         context,
-        { url: "wardrobe:///encoded%20item", source: "uploaded" },
+        { id: "uploaded-1", source: "uploaded" },
         payload,
       ),
     ).rejects.toThrow("network");
 
     expect(updateUploadedWardrobeItem).toHaveBeenCalledWith(
-      "encoded item",
+      "uploaded-1",
       payload,
     );
     const errorUpdater = mockCalls(context.setStatus).at(-1)?.[0] as (

@@ -72,7 +72,7 @@ function ProfileFiltersSidebar(
     <ProfileFiltersSidebarFrame
       props={resolvedProps}
       sortedPatternOptions={sortPatternOptions(props.patternOptions, locale)}
-      normalizedSelectedPattern={props.selectedPattern ?? "solid"}
+      normalizedSelectedPattern={props.selectedPattern ?? ""}
       missingRequiredFilters={actionState.missingRequiredFilters}
       showUnchangedFiltersHint={actionState.showUnchangedFiltersHint}
       isApplyDisabled={actionState.isApplyDisabled}

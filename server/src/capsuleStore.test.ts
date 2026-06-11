@@ -127,6 +127,36 @@ test("normalizeCapsuleSnapshot preserves outfit set image payloads", () => {
   ]);
 });
 
+test("normalizeCapsuleSnapshot reads raw selection text only from current field", () => {
+  expect(
+    normalizeCapsuleSnapshot({
+      filters: {},
+      data: {
+        wardrobe: {
+          items: [],
+          outfitSets: [],
+          rawSelectionText: " raw ",
+          reasoning: "legacy reasoning",
+        },
+        rejectedUrls: [],
+      },
+    })?.data.wardrobe?.rawSelectionText,
+  ).toBe("raw");
+  expect(
+    normalizeCapsuleSnapshot({
+      filters: {},
+      data: {
+        wardrobe: {
+          items: [],
+          outfitSets: [],
+          reasoning: "legacy reasoning",
+        },
+        rejectedUrls: [],
+      },
+    })?.data.wardrobe?.rawSelectionText,
+  ).toBeNull();
+});
+
 test("buildProfileCapsuleContext forwards source mode and rejected urls", () => {
   const context = buildProfileCapsuleContext(
     { email: "person@example.com", locale: "en" },

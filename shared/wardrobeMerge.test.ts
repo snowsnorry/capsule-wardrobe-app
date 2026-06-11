@@ -3,7 +3,6 @@ import {
   buildDisplayWardrobeItems,
   mergeWardrobeItemsIntoExistingOrder,
   mergeWardrobeItemsWithMetadata,
-  normalizeDisplayWardrobeItem,
   normalizeWardrobeItemUrl,
 } from "./wardrobeMerge.js";
 
@@ -28,27 +27,21 @@ test("buildDisplayWardrobeItems sorts array inputs and ignores non-array inputs"
   expect(buildDisplayWardrobeItems("not an array")).toEqual([]);
 });
 
-test("buildDisplayWardrobeItems restores uploaded source for wardrobe URL snapshots", () => {
+test("buildDisplayWardrobeItems preserves explicit item source only", () => {
   expect(
-    normalizeDisplayWardrobeItem({
-      id: "uploaded-1",
-      url: "wardrobe://uploaded-1",
-    }),
-  ).toEqual({
-    id: "uploaded-1",
-    url: "wardrobe://uploaded-1",
-    source: "uploaded",
-  });
+    buildDisplayWardrobeItems([
+      {
+        id: "uploaded-1",
+        url: "wardrobe://uploaded-1",
+        category: "top",
+        source: "uploaded",
+      },
+    ])[0],
+  ).toMatchObject({ source: "uploaded" });
   expect(
     buildDisplayWardrobeItems([
       { id: "uploaded-1", url: "wardrobe://uploaded-1", category: "top" },
     ])[0],
-  ).toMatchObject({ source: "uploaded" });
-  expect(
-    normalizeDisplayWardrobeItem({
-      id: "catalog-1",
-      url: "https://example.com/item",
-    }),
   ).not.toHaveProperty("source");
 });
 

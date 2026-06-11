@@ -257,14 +257,16 @@ describe("ProfileFiltersSidebar", () => {
     ).not.toBeInTheDocument();
   });
 
-  test("treats a legacy null pattern as solid in the UI", () => {
+  test("keeps a null pattern unselected in the UI", () => {
     renderSidebar({
       selectedPattern: null,
     });
 
-    expect(screen.getByRole("button", { name: "Solid" })).toHaveClass(
-      "MuiChip-filled",
+    expect(screen.getByRole("button", { name: "Solid" })).not.toHaveClass(
       "MuiChip-colorPrimary",
+    );
+    expect(screen.getByRole("button", { name: "Solid" })).toHaveClass(
+      "MuiChip-colorDefault",
     );
     expect(screen.queryByText("Pattern not important")).not.toBeInTheDocument();
   });

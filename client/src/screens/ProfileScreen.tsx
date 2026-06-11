@@ -289,7 +289,7 @@ function ProfilePreferenceSections({
 function ProfileScreen(props: ProfileScreenProps) {
   const { patternOptions, selectedPattern, status, onDelete } = props;
   const { t, locale } = useI18n();
-  const normalizedSelectedPattern = selectedPattern ?? "solid";
+  const normalizedSelectedPattern = selectedPattern ?? "";
   const sortedPatternOptions = sortPatternOptions(patternOptions, locale);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 

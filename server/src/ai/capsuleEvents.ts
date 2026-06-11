@@ -41,23 +41,11 @@ function normalizeOutfitSets(value) {
 }
 
 function getStoredRawSelectionText(stored) {
-  return (
-    getTrimmedText(stored.rawSelectionText) || getTrimmedText(stored.reasoning)
-  );
+  return getTrimmedText(stored.rawSelectionText);
 }
 
 function getStoredWardrobePayload(profile) {
   const stored = profile?.items;
-  if (Array.isArray(stored)) {
-    return {
-      items: stored,
-      outfitSets: [],
-      rawSelectionText: null,
-      swimwearReasoning: null,
-      swimwearRawSelectionText: null,
-    };
-  }
-
   if (!stored || typeof stored !== "object" || Array.isArray(stored)) {
     return null;
   }

@@ -44,7 +44,7 @@ describe("capsuleStateActions", () => {
   });
 
   test.each([null, ""])(
-    "normalizes legacy pattern %s to solid in UI state",
+    "keeps invalid restored pattern %s unselected in UI state",
     (pattern) => {
       const context = createContext();
       const draft = createTestDraft({ pattern });
@@ -57,7 +57,7 @@ describe("capsuleStateActions", () => {
         }),
       );
 
-      expect(context.setSelectedPattern).toHaveBeenCalledWith("solid");
+      expect(context.setSelectedPattern).toHaveBeenCalledWith("");
     },
   );
 
@@ -76,7 +76,7 @@ describe("capsuleStateActions", () => {
     expect(context.setSelectedSourceMode).toHaveBeenCalledWith("wardrobe_only");
   });
 
-  test("normalizes uploaded wardrobe snapshot items before rendering", () => {
+  test("does not infer uploaded source from wardrobe snapshot item URLs", () => {
     const context = createContext();
     const draft = createTestDraft({
       items: [
@@ -100,8 +100,10 @@ describe("capsuleStateActions", () => {
     expect(context.setProfileItems).toHaveBeenCalledWith([
       expect.objectContaining({
         id: "uploaded-1",
-        source: "uploaded",
       }),
     ]);
+    expect(
+      context.setProfileItems.mock.calls.at(-1)?.[0][0],
+    ).not.toHaveProperty("source");
   });
 });

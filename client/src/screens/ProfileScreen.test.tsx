@@ -191,14 +191,16 @@ describe("ProfileScreen", () => {
     expect(screen.getByText("Profile updated.")).toBeInTheDocument();
   });
 
-  test("renders solid as selected for a legacy null pattern", () => {
+  test("keeps a null pattern unselected", () => {
     renderScreen({
       selectedPattern: null,
     });
 
-    expect(screen.getByRole("button", { name: "Solid" })).toHaveClass(
-      "MuiChip-filled",
+    expect(screen.getByRole("button", { name: "Solid" })).not.toHaveClass(
       "MuiChip-colorPrimary",
+    );
+    expect(screen.getByRole("button", { name: "Solid" })).toHaveClass(
+      "MuiChip-colorDefault",
     );
   });
 

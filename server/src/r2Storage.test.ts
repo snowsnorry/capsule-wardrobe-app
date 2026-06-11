@@ -12,7 +12,6 @@ import {
   buildWardrobeR2ImageKey,
   clearDefaultR2ClientCache,
   copyImageObjectToR2,
-  decodeLegacyBase64Image,
   getDefaultR2ClientCacheSize,
   getR2KeyFromPublicUrl,
   getR2Config,
@@ -341,17 +340,4 @@ test("deleteObjectsFromR2 sends DeleteObjectsCommand with unique keys", async ()
     { Key: "wardrobe/profile/image.webp" },
   ]);
   expect(commands[0].input.Delete?.Quiet).toBe(true);
-});
-
-test("decodeLegacyBase64Image skips URLs, data URLs, and invalid values", () => {
-  expect(decodeLegacyBase64Image("https://images.example.com/set.png")).toBe(
-    null,
-  );
-  expect(decodeLegacyBase64Image("data:image/png;base64,abc")).toBe(null);
-  expect(decodeLegacyBase64Image("not base64!")).toBe(null);
-  expect(
-    decodeLegacyBase64Image(Buffer.from("image").toString("base64"))?.toString(
-      "utf8",
-    ),
-  ).toBe("image");
 });

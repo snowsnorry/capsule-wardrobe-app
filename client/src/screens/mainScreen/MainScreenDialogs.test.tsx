@@ -390,7 +390,7 @@ describe("MainScreenDialogs", () => {
     expect(onUpdateUploadedWardrobeItem).toHaveBeenCalledTimes(1);
   });
 
-  test("switches wardrobe-url capsule item to edit mode after fetched uploaded detail", async () => {
+  test("switches uploaded capsule item to edit mode after fetched uploaded detail", async () => {
     const user = userEvent.setup();
     fetchUploadedWardrobeItemDetailMock.mockResolvedValueOnce({
       item: {
@@ -408,7 +408,9 @@ describe("MainScreenDialogs", () => {
     renderDialogs({
       initialProductDetailItem: {
         id: "Wuploaded-1",
+        wardrobeId: "uploaded-1",
         name: "Uploaded shirt",
+        source: "uploaded",
         url: "wardrobe://uploaded-1",
         imageUrl: "https://example.com/uploaded.jpg",
       },

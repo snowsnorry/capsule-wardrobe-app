@@ -10,15 +10,17 @@ export function filterWardrobeItemsBySource(
     : items;
 }
 
-function getWardrobeItemSource(item: MainScreenItem): PersonalItemSource {
+function getWardrobeItemSource(
+  item: MainScreenItem,
+): PersonalItemSource | null {
   const explicitSource = String(item.source || "")
     .trim()
     .toLowerCase();
   if (explicitSource === "uploaded") {
     return "uploaded";
   }
-  if (explicitSource === "from_catalog" || explicitSource === "catalog") {
+  if (explicitSource === "from_catalog") {
     return "from_catalog";
   }
-  return "from_catalog";
+  return null;
 }

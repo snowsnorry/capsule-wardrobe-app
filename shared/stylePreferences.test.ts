@@ -2,7 +2,6 @@ import { test, expect } from "vitest";
 import {
   buildStylePreferenceArray,
   getEnabledStyleValues,
-  inferStyleSelections,
   partitionStyleValues,
 } from "./stylePreferences.js";
 
@@ -38,17 +37,6 @@ test("partitionStyleValues groups known styles and appends unknown styles to aes
       { value: "sporty", disabled: false },
       { value: "avant_garde", disabled: false },
     ],
-  });
-});
-
-test("inferStyleSelections extracts core and aesthetics from legacy style arrays", () => {
-  expect(inferStyleSelections(["retro", "formal", "avant_garde"])).toEqual({
-    styleCore: "formal",
-    styleAesthetic: "retro",
-  });
-  expect(inferStyleSelections(["avant_garde"])).toEqual({
-    styleCore: null,
-    styleAesthetic: "avant_garde",
   });
 });
 

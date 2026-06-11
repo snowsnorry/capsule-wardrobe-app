@@ -186,10 +186,7 @@ function normalizeOutfitSetPayloads(value: unknown): OutfitSetPayload[] {
 }
 
 function getRawSelectionText(payload: Record<string, unknown>): string | null {
-  return (
-    nullableTrimmedString(payload.rawSelectionText) ||
-    nullableTrimmedString(payload.reasoning)
-  );
+  return nullableTrimmedString(payload.rawSelectionText);
 }
 
 function normalizeWardrobePayload(

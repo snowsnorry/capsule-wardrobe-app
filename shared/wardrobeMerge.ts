@@ -31,23 +31,9 @@ function normalizeWardrobeItemUrl(
   return String(item?.url || "").trim();
 }
 
-function isUploadedWardrobeUrl(value: unknown): boolean {
-  return /^wardrobe:\/\/.+/i.test(String(value || "").trim());
-}
-
-function normalizeDisplayWardrobeItem(item: WardrobeItem): WardrobeItem {
-  if (item?.source || !isUploadedWardrobeUrl(item?.url)) {
-    return item;
-  }
-
-  return { ...item, source: "uploaded" };
-}
-
 function buildDisplayWardrobeItems(items: unknown): WardrobeItem[] {
   return sortWardrobeItems(
-    Array.isArray(items)
-      ? (items as WardrobeItem[]).map(normalizeDisplayWardrobeItem)
-      : [],
+    Array.isArray(items) ? (items as WardrobeItem[]) : [],
   );
 }
 
@@ -223,6 +209,5 @@ export {
   buildDisplayWardrobeItems,
   mergeWardrobeItemsIntoExistingOrder,
   mergeWardrobeItemsWithMetadata,
-  normalizeDisplayWardrobeItem,
   normalizeWardrobeItemUrl,
 };

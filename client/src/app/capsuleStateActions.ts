@@ -45,7 +45,7 @@ type CapsuleListPayload = {
 function normalizePattern(pattern: unknown) {
   return typeof pattern === "string" && pattern.trim().length > 0
     ? pattern
-    : "solid";
+    : "";
 }
 
 function normalizeSourceMode(sourceMode: unknown): CapsuleSourceMode {

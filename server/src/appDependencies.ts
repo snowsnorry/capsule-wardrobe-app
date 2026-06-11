@@ -135,7 +135,6 @@ import {
 } from "./appConfig.js";
 import {
   copyImageObjectToR2,
-  uploadImageToR2,
   uploadWardrobeDerivativeImageToR2,
   uploadWardrobeImageToR2,
 } from "./r2Storage.js";
@@ -314,7 +313,6 @@ export function createAppDependencies(options: Record<string, unknown> = {}) {
     updateCapsuleSnapshotImpl: updateCapsuleSnapshot,
     updateOutfitSnapshotImpl: updateOutfitSnapshot,
     copyImageObjectToR2Impl: copyImageObjectToR2,
-    uploadImageToR2Impl: uploadImageToR2,
     validateCapsuleAnchorItemsImpl: (email, anchorItemRefs) =>
       validateCapsuleAnchorItems({
         email,

@@ -161,17 +161,10 @@ export function useResolvedProductDetailItem(
   };
 }
 
-// eslint-disable-next-line complexity
 function getUploadedWardrobeDetailId(item: ProductDetailItem | null) {
   const explicitId = item?.wardrobeId;
   if (explicitId !== null && explicitId !== undefined && explicitId !== "") {
     return String(explicitId);
-  }
-
-  const itemUrl = String(item?.url || "").trim();
-  const wardrobeUrlMatch = itemUrl.match(/^wardrobe:\/\/(.+)$/i);
-  if (wardrobeUrlMatch?.[1]) {
-    return decodeURIComponent(wardrobeUrlMatch[1].replace(/^\/+/, ""));
   }
 
   return item?.source === "uploaded" && item?.id != null ? String(item.id) : "";

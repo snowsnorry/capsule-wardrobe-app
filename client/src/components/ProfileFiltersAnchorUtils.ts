@@ -10,7 +10,7 @@ function normalizeWardrobeItemSource(
   if (value === "uploaded") {
     return "uploaded";
   }
-  if (value === "from_catalog" || value === "catalog") {
+  if (value === "from_catalog") {
     return "catalog";
   }
   return null;
@@ -18,15 +18,8 @@ function normalizeWardrobeItemSource(
 
 function getWardrobeItemSource(
   item: Record<string, unknown>,
-): AnchorItem["source"] {
-  const explicitSource =
-    normalizeWardrobeItemSource(item.source) ||
-    normalizeWardrobeItemSource(item.sourceType) ||
-    normalizeWardrobeItemSource(item.itemSource);
-  if (explicitSource) {
-    return explicitSource;
-  }
-  return "catalog";
+): AnchorItem["source"] | null {
+  return normalizeWardrobeItemSource(item.source);
 }
 
 function getStringValue(item: Record<string, unknown>, key: string): string {
@@ -45,6 +38,11 @@ export function toAnchorItem(item: unknown): AnchorItem | null {
   }
 
   const url = getStringValue(source, "url");
+  const itemSource = getWardrobeItemSource(source);
+  if (!itemSource) {
+    return null;
+  }
+
   return {
     id: `W${wardrobeId}`,
     wardrobeId,
@@ -56,7 +54,7 @@ export function toAnchorItem(item: unknown): AnchorItem | null {
       null,
     category: getStringValue(source, "category") || null,
     isLiked: source.isLiked === true,
-    source: getWardrobeItemSource(source),
+    source: itemSource,
   };
 }
 

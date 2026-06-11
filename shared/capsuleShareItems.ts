@@ -35,14 +35,6 @@ function getItemString(item: ShareItem, ...keys: string[]): string {
   return "";
 }
 
-function isHttpUrl(value: unknown): boolean {
-  return /^https?:\/\//i.test(getTrimmedString(value));
-}
-
-function isUploadedWardrobeUrl(value: unknown): boolean {
-  return /^wardrobe:\/\/.+/i.test(getTrimmedString(value));
-}
-
 function getCapsuleSnapshotItems(snapshot: unknown): ShareItem[] {
   const value = snapshot as ShareSnapshot | null | undefined;
   const items = value?.data?.wardrobe?.items;
@@ -52,9 +44,7 @@ function getCapsuleSnapshotItems(snapshot: unknown): ShareItem[] {
 function isUploadedPersonalWardrobeItem(item: unknown): boolean {
   const value = item as ShareItem | null | undefined;
   return Boolean(
-    value &&
-    (getTrimmedString(value.source).toLowerCase() === "uploaded" ||
-      isUploadedWardrobeUrl(value.url)),
+    value && getTrimmedString(value.source).toLowerCase() === "uploaded",
   );
 }
 
@@ -64,12 +54,7 @@ function isCatalogWardrobeItem(item: unknown): boolean {
     return false;
   }
 
-  const source = getTrimmedString(value.source).toLowerCase();
-  const itemSource = getTrimmedString(value.itemSource).toLowerCase();
-  return (
-    source === "from_catalog" ||
-    (itemSource === "wardrobe" && isHttpUrl(value.url))
-  );
+  return getTrimmedString(value.source).toLowerCase() === "from_catalog";
 }
 
 function hasUploadedPersonalWardrobeItems(snapshot: unknown): boolean {

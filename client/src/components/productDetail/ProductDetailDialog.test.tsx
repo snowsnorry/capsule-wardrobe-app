@@ -298,7 +298,7 @@ describe("ProductDetailDialog", () => {
     ).not.toBeInTheDocument();
   });
 
-  test("loads uploaded wardrobe details by wardrobe URL", async () => {
+  test("loads uploaded wardrobe details by explicit wardrobe id", async () => {
     personalItemsApi.fetchUploadedWardrobeItemDetail.mockResolvedValue({
       item: {
         id: "uploaded-1",
@@ -316,6 +316,7 @@ describe("ProductDetailDialog", () => {
     renderDialog({
       item: {
         id: "Wuploaded-1",
+        wardrobeId: "uploaded-1",
         name: "Uploaded shirt",
         source: "uploaded",
         url: "wardrobe://uploaded-1",
@@ -328,6 +329,22 @@ describe("ProductDetailDialog", () => {
     ).toHaveBeenCalledWith("uploaded-1");
     expect(await screen.findByText("Summer")).toBeInTheDocument();
     expect(screen.getByText("Unisex")).toBeInTheDocument();
+    expect(searchApi.fetchProductDetailByUrl).not.toHaveBeenCalled();
+  });
+
+  test("does not load uploaded wardrobe details from wardrobe URL alone", () => {
+    renderDialog({
+      item: {
+        name: "Uploaded shirt",
+        source: "uploaded",
+        url: "wardrobe://uploaded-1",
+        imageUrl: "https://example.com/uploaded.jpg",
+      },
+    });
+
+    expect(
+      personalItemsApi.fetchUploadedWardrobeItemDetail,
+    ).not.toHaveBeenCalled();
     expect(searchApi.fetchProductDetailByUrl).not.toHaveBeenCalled();
   });
 
