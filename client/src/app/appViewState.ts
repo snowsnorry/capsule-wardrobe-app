@@ -15,6 +15,7 @@ type ViewStateOptions = {
   isDownloadingWardrobePdf: boolean;
   isLoadingItems: boolean;
   isOutfitImagePending: boolean;
+  isOutfitReportPending: boolean;
   isPartialRegenerationLoading: boolean;
   isWardrobePending: boolean;
   pendingImageSetIndexes: number[];
@@ -78,6 +79,7 @@ function isContentBusy(options: ViewStateOptions) {
     options.isContentOperationLoading ||
     options.isDownloadingWardrobePdf ||
     options.isOutfitImagePending ||
+    options.isOutfitReportPending ||
     options.pendingImageSetIndexes.length > 0,
   );
 }

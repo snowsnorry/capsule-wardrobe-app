@@ -4,11 +4,13 @@ import {
   createOutfit,
   deleteOutfit,
   deleteOutfitImage,
+  deleteOutfitReport,
   downloadOutfitPdf,
   duplicateOutfit,
   fetchOutfit,
   fetchRecentOutfits,
   generateOutfitImage,
+  generateOutfitReport,
   renameOutfit,
   revertOutfit,
   saveOutfit,
@@ -22,9 +24,11 @@ import {
   createNewOutfit,
   deleteCurrentOutfit,
   deleteCurrentOutfitImage,
+  deleteCurrentOutfitReport,
   downloadCurrentOutfitPdf,
   duplicateCurrentOutfit,
   generateCurrentOutfitImage,
+  generateCurrentOutfitReport,
   loadMoreRecentOutfits,
   openOutfit,
   refreshOutfitList,
@@ -41,11 +45,13 @@ vi.mock("../api/outfits", () => ({
   createOutfit: vi.fn(),
   deleteOutfit: vi.fn(),
   deleteOutfitImage: vi.fn(),
+  deleteOutfitReport: vi.fn(),
   downloadOutfitPdf: vi.fn(),
   duplicateOutfit: vi.fn(),
   fetchOutfit: vi.fn(),
   fetchRecentOutfits: vi.fn(),
   generateOutfitImage: vi.fn(),
+  generateOutfitReport: vi.fn(),
   renameOutfit: vi.fn(),
   revertOutfit: vi.fn(),
   saveOutfit: vi.fn(),
@@ -362,6 +368,61 @@ describe("outfitActions", () => {
       previous: true,
       error: "resolved error",
     });
+  });
+
+  test("generates and deletes outfit reports with pending state and errors", async () => {
+    vi.mocked(generateOutfitReport).mockResolvedValueOnce({
+      ok: true,
+      report: { verdict: { score: 0.9 } },
+    });
+    vi.mocked(deleteOutfitReport).mockResolvedValueOnce({
+      outfit: { ...outfit, effective: { items: [], report: null } },
+    });
+    vi.mocked(fetchOutfit).mockResolvedValue({ outfit });
+    const context = createActionContext({
+      activeOutfitId: "outfit-1",
+      setActiveOutfitId: vi.fn(),
+      setActiveOutfitMeta: vi.fn(),
+      setIsOutfitReportPending: vi.fn(),
+      setOutfitList: vi.fn(),
+      setOutfitPagination: vi.fn(),
+    });
+
+    await generateCurrentOutfitReport(context, "outfit-1");
+    await deleteCurrentOutfitReport(context, "outfit-1");
+
+    expect(generateOutfitReport).toHaveBeenCalledWith("outfit-1");
+    expect(deleteOutfitReport).toHaveBeenCalledWith("outfit-1");
+    expect(fetchOutfit).toHaveBeenCalledWith("outfit-1");
+    expect(context.setActiveOutfitMeta).toHaveBeenCalledWith(outfit);
+    expect(context.setIsOutfitReportPending).toHaveBeenNthCalledWith(1, true);
+    expect(context.setIsOutfitReportPending).toHaveBeenLastCalledWith(false);
+  });
+
+  test("reports outfit report generation failures without clearing old reports", async () => {
+    vi.mocked(generateOutfitReport).mockRejectedValueOnce(new Error("network"));
+    const context = createActionContext({
+      activeOutfitId: "outfit-1",
+      setActiveOutfitMeta: vi.fn(),
+      setIsOutfitReportPending: vi.fn(),
+      setStatus: vi.fn(),
+      t: vi.fn((key: string) =>
+        key === "errors.outfitReportGenerateFailed"
+          ? "Could not generate outfit report."
+          : key,
+      ),
+    });
+
+    await generateCurrentOutfitReport(context, "outfit-1");
+
+    expect(context.setActiveOutfitMeta).not.toHaveBeenCalled();
+    expect(
+      (context.setStatus as Mock).mock.calls.at(-1)?.[0]({ previous: true }),
+    ).toEqual({
+      previous: true,
+      error: "Could not generate outfit report.",
+    });
+    expect(context.setIsOutfitReportPending).toHaveBeenLastCalledWith(false);
   });
 
   test("does not reactivate a previous outfit when image generation finishes after navigation", async () => {

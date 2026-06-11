@@ -1,4 +1,5 @@
 import { getEffectiveOutfitSnapshot } from "./outfitStore.js";
+import { hashCapsuleContent } from "./db.js";
 import { sortWardrobeItems } from "../../shared/wardrobeOrder.js";
 
 type OutfitItemRef = {
@@ -204,6 +205,23 @@ function hydrateSnapshot(
     image: snapshot.image || null,
     imageObsolete: Boolean(snapshot.imageObsolete),
     report: snapshot.report || null,
+    reportMeta: buildReportMeta(snapshot),
+  };
+}
+
+function getReportItemsHash(report: unknown) {
+  return report && typeof report === "object" && !Array.isArray(report)
+    ? String((report as Record<string, unknown>).itemsHash || "").trim()
+    : "";
+}
+
+function buildReportMeta(snapshot: OutfitSnapshot) {
+  const reportItemsHash = getReportItemsHash(snapshot.report);
+  if (!reportItemsHash) {
+    return null;
+  }
+  return {
+    stale: reportItemsHash !== hashCapsuleContent(getSnapshotItems(snapshot)),
   };
 }
 

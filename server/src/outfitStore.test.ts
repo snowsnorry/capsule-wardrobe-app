@@ -224,5 +224,18 @@ describe("createOutfitStore", () => {
       outfitId: "outfit-1",
       report,
     });
+
+    await expect(
+      store.updateOutfitReport("person@example.com", "outfit-1", null),
+    ).resolves.toMatchObject({
+      saved: {
+        report: null,
+      },
+    });
+    expect(deps.updateOutfitReportByIdForEmailImpl).toHaveBeenLastCalledWith({
+      email: "person@example.com",
+      outfitId: "outfit-1",
+      report: null,
+    });
   });
 });

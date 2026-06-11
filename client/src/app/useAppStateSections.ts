@@ -133,6 +133,7 @@ export function useCapsuleAppState() {
   const [isDownloadingWardrobePdf, setIsDownloadingWardrobePdf] =
     useState(false);
   const [isOutfitImagePending, setIsOutfitImagePending] = useState(false);
+  const [isOutfitReportPending, setIsOutfitReportPending] = useState(false);
 
   return {
     activeCapsuleId,
@@ -144,6 +145,7 @@ export function useCapsuleAppState() {
     isContentOperationLoading,
     isDownloadingWardrobePdf,
     isOutfitImagePending,
+    isOutfitReportPending,
     isLoadingItems,
     outfitList,
     outfitPagination,
@@ -158,6 +160,7 @@ export function useCapsuleAppState() {
     setIsContentOperationLoading,
     setIsDownloadingWardrobePdf,
     setIsOutfitImagePending,
+    setIsOutfitReportPending,
     setIsLoadingItems,
     setOutfitList,
     setOutfitPagination,

@@ -1,4 +1,4 @@
-/* eslint-disable max-lines-per-function */
+/* eslint-disable max-lines, max-lines-per-function, complexity */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Box, Divider, Stack, useMediaQuery } from "@mui/material";
 import type { UploadedWardrobeItemUpdatePayload } from "../../api/personalItems";
@@ -19,6 +19,7 @@ import { AddItemsDialog } from "../../components/AddItemsDialog";
 import { OutfitGrid } from "./OutfitGrid";
 import { OutfitHeader } from "./OutfitHeader";
 import { OutfitItemMenu, OutfitMenu } from "./OutfitMenus";
+import OutfitReportPanel from "./OutfitReportPanel";
 import {
   readStoredOutfitMobileCardColumns,
   writeStoredOutfitMobileCardColumns,
@@ -34,6 +35,10 @@ import {
   outfitCardsScrollSx,
   outfitContentSx,
   outfitHeaderSectionSx,
+  outfitReportCompactSectionSx,
+  outfitReportContentSx,
+  outfitReportInspectorSx,
+  outfitReportLayoutSx,
   outfitScreenSx,
 } from "./OutfitScreenStyles";
 import {
@@ -50,15 +55,44 @@ function getPreviewComparableKey(item: WardrobeItem) {
   return getCanonicalItemUrl(item) || getPreviewItemKey(item);
 }
 
+function getReportItemCandidateIds(entry: OutfitItemSnapshot) {
+  const item = getOutfitItem(entry);
+  return [entry.url, item?.id, item?.wardrobeId, item?.url]
+    .map((value) => String(value ?? "").trim())
+    .filter(Boolean);
+}
+
+function getHighlightedReportItemKeys(
+  entries: OutfitItemSnapshot[],
+  reportItemIds: string[],
+) {
+  const targetIds = new Set(
+    reportItemIds.map((value) => String(value || "").trim()).filter(Boolean),
+  );
+  if (!targetIds.size) return [];
+
+  return entries
+    .filter((entry) =>
+      getReportItemCandidateIds(entry).some((candidate) =>
+        targetIds.has(candidate),
+      ),
+    )
+    .map(getOutfitItemKey)
+    .filter(Boolean);
+}
+
 export default function OutfitScreen({
   activeOutfit,
   isContentBusy,
   isImagePending,
+  isReportPending = false,
   onDeleteOutfit,
   onDeleteOutfitImage,
+  onDeleteOutfitReport,
   onDownloadOutfitPdf,
   onDuplicateOutfit,
   onGenerateOutfitImage,
+  onGenerateOutfitReport,
   onRenameOutfit,
   onReplaceOutfitItems,
   onRemoveFromPersonalItems,
@@ -70,6 +104,7 @@ export default function OutfitScreen({
 }: OutfitScreenProps) {
   const { locale, t } = useI18n();
   const isMobile = useMediaQuery("(max-width:899px)");
+  const isReportInspectorLayout = useMediaQuery("(min-width:1200px)");
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const [itemMenu, setItemMenu] = useState<ItemMenuState>({
@@ -88,8 +123,21 @@ export default function OutfitScreen({
     action: "",
     entry: null,
   });
+  const [highlightedReportItemIds, setHighlightedReportItemIds] = useState<
+    string[]
+  >([]);
   const items = useMemo(() => getOutfitItems(activeOutfit), [activeOutfit]);
   const visibleItems = useMemo(() => sortOutfitItemSnapshots(items), [items]);
+  const report = activeOutfit?.effective?.report || null;
+  const reportIsStale = Boolean(activeOutfit?.effective?.reportMeta?.stale);
+  const hasReport = Boolean(report);
+  const showReportInspector = Boolean(
+    report && isReportInspectorLayout && !isMobile,
+  );
+  const highlightedReportItemKeys = useMemo(
+    () => getHighlightedReportItemKeys(visibleItems, highlightedReportItemIds),
+    [highlightedReportItemIds, visibleItems],
+  );
   const outfitImage = activeOutfit?.effective?.image || null;
   const outfitImageSrc = resolveOutfitSetImageSrc(outfitImage);
   const isSelectionMode = selectedKeys.length > 0;
@@ -194,16 +242,61 @@ export default function OutfitScreen({
     );
   };
 
+  const renderOutfitMainContent = () => (
+    <>
+      <OutfitGrid
+        disabled={isContentBusy}
+        highlightedKeys={highlightedReportItemKeys}
+        isMobile={isMobile}
+        isSelectionMode={isSelectionMode}
+        mobileCardColumns={mobileCardColumns}
+        selectedKeys={selectedKeys}
+        visibleItems={visibleItems}
+        t={t}
+        onItemMenuOpen={(anchor, entry, options) =>
+          setItemMenu({
+            anchor,
+            entry,
+            originRect: options.originRect,
+            presentation: options.presentation,
+          })
+        }
+        onPreviewItem={(entry) => setPreviewItem(getOutfitItem(entry))}
+        onToggleSelected={toggleSelected}
+      />
+      {activeOutfit ? (
+        <>
+          <Divider data-testid="outfit-set-image-divider" flexItem />
+          <OutfitGeneratedImageBlock
+            disabled={isContentBusy}
+            imageObsolete={Boolean(activeOutfit.effective?.imageObsolete)}
+            imageSrc={outfitImageSrc}
+            isPending={isImagePending}
+            label={1}
+            onDelete={() =>
+              setConfirmDialog({ action: "delete-image", entry: null })
+            }
+            onGenerate={() => void onGenerateOutfitImage?.(activeOutfit.id)}
+            onImageClick={() => setImageDialogOpen(true)}
+          />
+        </>
+      ) : null}
+    </>
+  );
+
   return (
     <Box data-testid="outfit-screen" sx={outfitScreenSx}>
       <Box data-testid="outfit-content" sx={outfitContentSx}>
         <Box sx={outfitHeaderSectionSx}>
           <OutfitHeader
             activeOutfit={activeOutfit}
+            hasReport={hasReport}
             isContentBusy={isContentBusy}
+            isReportPending={isReportPending}
             isMobile={isMobile}
             items={visibleItems}
             onAdd={() => setIsAddOpen(true)}
+            onAnalyze={() => void onGenerateOutfitReport?.(activeOutfit?.id)}
             onCancelSelection={() => setSelectedKeys([])}
             onMenuOpen={setMenuAnchor}
             onRenameOutfit={onRenameOutfit}
@@ -221,43 +314,48 @@ export default function OutfitScreen({
         <Stack
           data-testid="outfit-cards-content"
           spacing={3}
-          sx={outfitContentSx}
+          sx={showReportInspector ? outfitReportContentSx : outfitContentSx}
         >
-          <OutfitGrid
-            isMobile={isMobile}
-            isSelectionMode={isSelectionMode}
-            mobileCardColumns={mobileCardColumns}
-            selectedKeys={selectedKeys}
-            visibleItems={visibleItems}
-            t={t}
-            onItemMenuOpen={(anchor, entry, options) =>
-              setItemMenu({
-                anchor,
-                entry,
-                originRect: options.originRect,
-                presentation: options.presentation,
-              })
-            }
-            onPreviewItem={(entry) => setPreviewItem(getOutfitItem(entry))}
-            onToggleSelected={toggleSelected}
-          />
-          {activeOutfit ? (
-            <>
-              <Divider data-testid="outfit-set-image-divider" flexItem />
-              <OutfitGeneratedImageBlock
+          {report && !showReportInspector ? (
+            <Box sx={outfitReportCompactSectionSx}>
+              <OutfitReportPanel
                 disabled={isContentBusy}
-                imageObsolete={Boolean(activeOutfit.effective?.imageObsolete)}
-                imageSrc={outfitImageSrc}
-                isPending={isImagePending}
-                label={1}
-                onDelete={() =>
-                  setConfirmDialog({ action: "delete-image", entry: null })
+                isCompact
+                isPending={isReportPending}
+                isStale={reportIsStale}
+                report={report}
+                t={t}
+                onDelete={() => void onDeleteOutfitReport?.(activeOutfit?.id)}
+                onHighlightItemIds={setHighlightedReportItemIds}
+                onRegenerate={() =>
+                  void onGenerateOutfitReport?.(activeOutfit?.id)
                 }
-                onGenerate={() => void onGenerateOutfitImage?.(activeOutfit.id)}
-                onImageClick={() => setImageDialogOpen(true)}
               />
-            </>
+            </Box>
           ) : null}
+          {showReportInspector ? (
+            <Box sx={outfitReportLayoutSx}>
+              <Stack spacing={3} sx={{ minWidth: 0 }}>
+                {renderOutfitMainContent()}
+              </Stack>
+              <Box sx={outfitReportInspectorSx}>
+                <OutfitReportPanel
+                  disabled={isContentBusy}
+                  isPending={isReportPending}
+                  isStale={reportIsStale}
+                  report={report!}
+                  t={t}
+                  onDelete={() => void onDeleteOutfitReport?.(activeOutfit?.id)}
+                  onHighlightItemIds={setHighlightedReportItemIds}
+                  onRegenerate={() =>
+                    void onGenerateOutfitReport?.(activeOutfit?.id)
+                  }
+                />
+              </Box>
+            </Box>
+          ) : (
+            renderOutfitMainContent()
+          )}
         </Stack>
       </Box>
       <OutfitMenu
@@ -266,6 +364,10 @@ export default function OutfitScreen({
         mobileCardColumns={mobileCardColumns}
         outfit={activeOutfit}
         onClose={() => setMenuAnchor(null)}
+        onAnalyze={() => {
+          setMenuAnchor(null);
+          void onGenerateOutfitReport?.(activeOutfit?.id);
+        }}
         onDelete={() => {
           setMenuAnchor(null);
           setConfirmDialog({ action: "delete", entry: null });
@@ -288,6 +390,7 @@ export default function OutfitScreen({
           void onSaveOutfit(activeOutfit?.id);
         }}
         showCardLayout={isMobile}
+        showAnalyze={isMobile && !hasReport}
         t={t}
       />
       <OutfitItemMenu

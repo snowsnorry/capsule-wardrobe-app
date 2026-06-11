@@ -12,6 +12,8 @@ import { buildOutfitGridSectionSx } from "./OutfitScreenStyles";
 import { getOutfitItem, getOutfitItemKey } from "./outfitItemMappers";
 
 export function OutfitGrid({
+  disabled = false,
+  highlightedKeys = [],
   isMobile,
   isSelectionMode,
   mobileCardColumns,
@@ -22,6 +24,8 @@ export function OutfitGrid({
   t,
   visibleItems,
 }: {
+  disabled?: boolean;
+  highlightedKeys?: string[];
   isMobile: boolean;
   isSelectionMode: boolean;
   mobileCardColumns: MobileCardColumns;
@@ -36,47 +40,76 @@ export function OutfitGrid({
   t: (key: string) => string;
   visibleItems: OutfitItemSnapshot[];
 }) {
+  const highlightedKeySet = new Set(highlightedKeys);
   return (
     <Box sx={buildOutfitGridSectionSx(mobileCardColumns)}>
       <Box sx={buildOutfitGridSx(mobileCardColumns)}>
         {visibleItems.map((entry) => {
           const key = getOutfitItemKey(entry);
           const item = getOutfitItem(entry);
-          return item ? (
-            <ClothingCard
+          const highlighted = highlightedKeySet.has(key);
+          return (
+            <Box
               key={key}
-              item={item}
-              isSelectable
-              isSelected={selectedKeys.includes(key)}
-              isSelectionMode={isSelectionMode}
-              onToggleSelected={() => onToggleSelected(key)}
-              onProductClick={() => onPreviewItem(entry)}
-              allowProductMenuWithoutUrl
-              isMobile={isMobile}
-              mobileColumns={mobileCardColumns}
-              selectionToggleIcon="check"
-              selectionToggleLabel={t("outfit.selectItem")}
-              onProductMenuOpen={(anchor, _productUrl, _item, options) =>
-                onItemMenuOpen(anchor, entry, options)
-              }
-            />
-          ) : (
-            <OutfitMissingItemCard
-              key={key}
-              entry={entry}
-              isMobile={isMobile}
-              isSelected={selectedKeys.includes(key)}
-              isSelectionMode={isSelectionMode}
-              mobileColumns={mobileCardColumns}
-              t={t}
-              onItemMenuOpen={onItemMenuOpen}
-              onToggleSelected={onToggleSelected}
-            />
+              data-testid={highlighted ? "outfit-item-highlighted" : undefined}
+              sx={getReportHighlightSx(highlighted)}
+            >
+              {item ? (
+                <ClothingCard
+                  item={item}
+                  isSelectable={!disabled}
+                  isSelected={selectedKeys.includes(key)}
+                  isSelectionMode={isSelectionMode}
+                  onToggleSelected={() => {
+                    if (!disabled) onToggleSelected(key);
+                  }}
+                  onProductClick={
+                    disabled ? undefined : () => onPreviewItem(entry)
+                  }
+                  allowProductMenuWithoutUrl
+                  showProductMenu={!disabled}
+                  isMobile={isMobile}
+                  mobileColumns={mobileCardColumns}
+                  selectionToggleIcon="check"
+                  selectionToggleLabel={t("outfit.selectItem")}
+                  onProductMenuOpen={(anchor, _productUrl, _item, options) => {
+                    if (!disabled) onItemMenuOpen(anchor, entry, options);
+                  }}
+                />
+              ) : (
+                <OutfitMissingItemCard
+                  entry={entry}
+                  isMobile={isMobile}
+                  isSelected={selectedKeys.includes(key)}
+                  isSelectionMode={isSelectionMode && !disabled}
+                  mobileColumns={mobileCardColumns}
+                  t={t}
+                  onItemMenuOpen={(anchor, menuEntry, options) => {
+                    if (!disabled) onItemMenuOpen(anchor, menuEntry, options);
+                  }}
+                  onToggleSelected={(selectedKey) => {
+                    if (!disabled) onToggleSelected(selectedKey);
+                  }}
+                />
+              )}
+            </Box>
           );
         })}
       </Box>
     </Box>
   );
+}
+
+function getReportHighlightSx(highlighted: boolean) {
+  return {
+    minWidth: 0,
+    borderRadius: "var(--cw-radius-card)",
+    outline: highlighted
+      ? "2px solid var(--cw-color-primary)"
+      : "2px solid transparent",
+    outlineOffset: 3,
+    transition: "outline-color 140ms ease, background-color 140ms ease",
+  } as const;
 }
 
 function buildOutfitGridSx(mobileCardColumns: MobileCardColumns) {

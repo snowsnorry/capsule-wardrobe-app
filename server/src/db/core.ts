@@ -313,7 +313,7 @@ export type UpdateOutfitSnapshotInput = {
 export type UpdateOutfitReportInput = {
   email: string;
   outfitId: string;
-  report: JsonObject;
+  report: JsonObject | null;
 };
 
 export type RenameCapsuleInput = {

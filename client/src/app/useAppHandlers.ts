@@ -15,11 +15,13 @@ import {
 } from "./capsuleActions";
 import {
   copyOutfitSetToOutfits,
+  deleteCurrentOutfitReport,
   deleteCurrentOutfitImage,
   deleteCurrentOutfit,
   downloadCurrentOutfitPdf,
   duplicateCurrentOutfit,
   generateCurrentOutfitImage,
+  generateCurrentOutfitReport,
   loadMoreRecentOutfits,
   replaceCurrentOutfitItems,
   renameCurrentOutfit,
@@ -205,10 +207,14 @@ export function useAppHandlers({
     handleDeleteOutfit,
     handleDeleteOutfitImage: async (outfitId = activeOutfitId) =>
       deleteCurrentOutfitImage(getAppActionContext(), outfitId),
+    handleDeleteOutfitReport: async (outfitId = activeOutfitId) =>
+      deleteCurrentOutfitReport(getAppActionContext(), outfitId),
     handleDuplicateCapsule,
     handleDuplicateOutfit,
     handleCopyOutfitSetToOutfits,
     handleImportSharedCapsule,
+    handleGenerateOutfitReport: async (outfitId = activeOutfitId) =>
+      generateCurrentOutfitReport(getAppActionContext(), outfitId),
     handleNavigateApp,
     handleOpenCapsule,
     handleOpenOutfit,
@@ -247,6 +253,7 @@ type BuildAppHandlersOptions = Pick<
   handleDeleteCapsule: (capsuleId?: string) => Promise<void>;
   handleDeleteOutfit: (outfitId?: string) => Promise<void>;
   handleDeleteOutfitImage: (outfitId?: string) => Promise<void>;
+  handleDeleteOutfitReport: (outfitId?: string) => Promise<void>;
   handleDuplicateCapsule: (name: string, capsuleId?: string) => Promise<void>;
   handleDuplicateOutfit: (name: string, outfitId?: string) => Promise<void>;
   handleCopyOutfitSetToOutfits: (
@@ -255,6 +262,7 @@ type BuildAppHandlersOptions = Pick<
     source?: { capsuleId?: string; setIndex?: number | string },
   ) => Promise<{ id?: string; name?: string } | null>;
   handleImportSharedCapsule: () => Promise<void>;
+  handleGenerateOutfitReport: (outfitId?: string) => Promise<void>;
   handleNavigateApp: (
     nextApp: Exclude<AppRoute, "share">,
     options?: AppNavigationOptions,
@@ -281,10 +289,12 @@ function buildAppHandlers({
   handleDeleteCapsule,
   handleDeleteOutfit,
   handleDeleteOutfitImage,
+  handleDeleteOutfitReport,
   handleDuplicateCapsule,
   handleDuplicateOutfit,
   handleCopyOutfitSetToOutfits,
   handleImportSharedCapsule,
+  handleGenerateOutfitReport,
   handleNavigateApp,
   handleOpenCapsule,
   handleOpenOutfit,
@@ -318,6 +328,7 @@ function buildAppHandlers({
     handleDeleteCapsule,
     handleDeleteOutfit,
     handleDeleteOutfitImage,
+    handleDeleteOutfitReport,
     handleCopyOutfitSetToOutfits,
     handleDeleteOutfitSetImage: async (
       setIndex: number | string | null | undefined,
@@ -335,6 +346,7 @@ function buildAppHandlers({
     ) => generateOutfitSetImage(getAppActionContext(), setIndex),
     handleGenerateOutfitImage: async (outfitId = activeOutfitId) =>
       generateCurrentOutfitImage(getAppActionContext(), outfitId),
+    handleGenerateOutfitReport,
     handleGoogleCredential: async (idToken: string) =>
       googleCredential(sessionActionContext, idToken),
     handleImportSharedCapsule,

@@ -215,7 +215,7 @@ export class E2eOutfitMemory {
 
   setReport(
     id: unknown,
-    report: Record<string, unknown>,
+    report: Record<string, unknown> | null,
   ): NormalizedOutfitRecord | null {
     const outfitId = normalizeOutfitId(id);
     const current = this.outfits.get(outfitId);

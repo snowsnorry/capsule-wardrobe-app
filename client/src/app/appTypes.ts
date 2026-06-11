@@ -75,10 +75,118 @@ export type OutfitItemSnapshot = {
   item?: WardrobeItem | null;
 };
 
+export type OutfitReportVerdictStatus =
+  | "valid"
+  | "acceptable_with_notes"
+  | "incomplete"
+  | "incoherent";
+
+export type OutfitReportVerdict = {
+  status?: OutfitReportVerdictStatus | string;
+  score?: number;
+  summary?: string;
+};
+
+export type OutfitReportComposition = {
+  itemCount?: number;
+  categoryCounts?: Record<string, number>;
+  completeness?: string;
+  detectedRoles?: string[];
+  missingCoreRoles?: string[];
+  extraRoles?: string[];
+};
+
+export type OutfitReportTemperatureBandC = {
+  min?: number | null;
+  max?: number | null;
+};
+
+export type OutfitReportSeasonality = {
+  primarySeasons?: string[];
+  secondarySeasons?: string[];
+  temperatureBandC?: OutfitReportTemperatureBandC;
+  weatherSuitability?: string[];
+  weatherLimitations?: string[];
+  seasonScore?: number;
+};
+
+export type OutfitReportStyleProfile = {
+  primaryStyle?: string;
+  secondaryStyles?: string[];
+  formalityLevel?: string;
+  occasions?: string[];
+  styleKeywords?: string[];
+  styleScore?: number;
+};
+
+export type OutfitReportCompatibility = {
+  overallScore?: number;
+  styleCoherence?: number;
+  formalityCoherence?: number;
+  seasonalCoherence?: number;
+  colorCoherence?: number;
+  mainStrengths?: string[];
+  mainRisks?: string[];
+};
+
+export type OutfitReportColorAnalysis = {
+  paletteType?: string;
+  dominantColors?: string[];
+  accentColors?: string[];
+  contrastLevel?: string;
+  harmony?: string;
+  colorScore?: number;
+  notes?: string;
+};
+
+export type OutfitReportIssue = {
+  code?: string;
+  severity?: "info" | "warning" | "critical" | string;
+  dimension?: string;
+  message?: string;
+  affectedItemIds?: string[];
+  suggestion?: string;
+};
+
+export type OutfitReportSuggestion = {
+  type?: "add" | "remove" | "replace" | "keep" | "adjust" | string;
+  priority?: "low" | "medium" | "high" | string;
+  targetItemIds?: string[];
+  replacementCategory?: string | null;
+  replacementDescription?: string | null;
+  message?: string;
+};
+
+export type OutfitReportConfidence = {
+  overall?: number;
+  lowConfidenceAspects?: string[];
+  assumptions?: string[];
+};
+
+export type OutfitReport = {
+  schemaVersion?: number;
+  itemsHash?: string;
+  verdict?: OutfitReportVerdict;
+  composition?: OutfitReportComposition;
+  seasonality?: OutfitReportSeasonality;
+  styleProfile?: OutfitReportStyleProfile;
+  compatibility?: OutfitReportCompatibility;
+  colorAnalysis?: OutfitReportColorAnalysis;
+  issues?: OutfitReportIssue[];
+  suggestions?: OutfitReportSuggestion[];
+  confidence?: OutfitReportConfidence;
+};
+
+export type OutfitReportMeta = {
+  stale?: boolean;
+};
+
 type OutfitSnapshot = {
   items: OutfitItemSnapshot[];
   image?: string | null;
   imageObsolete?: boolean;
+  report?: OutfitReport | null;
+  reportMeta?: OutfitReportMeta | null;
 };
 
 export type CapsuleWardrobeData = {

@@ -6,6 +6,7 @@ import {
   MenuItem,
 } from "@mui/material";
 import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
+import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
 import FavoriteBorderRoundedIcon from "@mui/icons-material/FavoriteBorderRounded";
@@ -19,26 +20,13 @@ import type { MobileCardColumns } from "../mainScreen/MainScreenTypes";
 import type { ItemMenuState } from "./OutfitScreenTypes";
 import { getOutfitItem } from "./outfitItemMappers";
 
-export function OutfitMenu({
-  anchor,
-  disabled,
-  mobileCardColumns,
-  outfit,
-  onClose,
-  onDelete,
-  onDownload,
-  onDuplicate,
-  onMobileCardColumnsChange,
-  onRevert,
-  onSave,
-  showCardLayout,
-  t,
-}: {
+type OutfitMenuProps = {
   anchor: HTMLElement | null;
   disabled: boolean;
   mobileCardColumns: MobileCardColumns;
   outfit: OutfitMeta | null;
   onClose: () => void;
+  onAnalyze: () => void;
   onDelete: () => void;
   onDownload: () => void;
   onDuplicate: () => void;
@@ -46,10 +34,121 @@ export function OutfitMenu({
   onRevert: () => void;
   onSave: () => void;
   showCardLayout: boolean;
+  showAnalyze: boolean;
   t: (key: string, params?: Record<string, unknown>) => string;
-}) {
+};
+
+function AnalyzeMenuSection({
+  disabled,
+  outfit,
+  onAnalyze,
+  showAnalyze,
+  t,
+}: Pick<
+  OutfitMenuProps,
+  "disabled" | "outfit" | "onAnalyze" | "showAnalyze" | "t"
+>) {
+  if (!showAnalyze) return null;
+
+  return (
+    <>
+      <MenuItem disabled={disabled || !outfit?.id} onClick={onAnalyze}>
+        <ListItemIcon>
+          <AutoAwesomeRoundedIcon fontSize="small" />
+        </ListItemIcon>
+        <ListItemText>{t("outfit.analyzeOutfit")}</ListItemText>
+      </MenuItem>
+      <Divider />
+    </>
+  );
+}
+
+function OutfitLifecycleMenuSection({
+  disabled,
+  outfit,
+  onDelete,
+  onDuplicate,
+  onRevert,
+  onSave,
+  t,
+}: Pick<
+  OutfitMenuProps,
+  | "disabled"
+  | "outfit"
+  | "onDelete"
+  | "onDuplicate"
+  | "onRevert"
+  | "onSave"
+  | "t"
+>) {
+  const hasOutfitId = Boolean(outfit?.id);
+  const isSaved = outfit?.status === "saved";
+
+  return (
+    <>
+      <Divider />
+      <MenuItem disabled={disabled || isSaved} onClick={onRevert}>
+        <ListItemIcon>
+          <RestoreRoundedIcon fontSize="small" />
+        </ListItemIcon>
+        <ListItemText>{t("capsule.revert")}</ListItemText>
+      </MenuItem>
+      <MenuItem disabled={disabled || isSaved} onClick={onSave}>
+        <ListItemIcon sx={{ visibility: "hidden" }}>
+          <RestoreRoundedIcon fontSize="small" />
+        </ListItemIcon>
+        <ListItemText>{t("actions.save")}</ListItemText>
+      </MenuItem>
+      <MenuItem disabled={disabled || !hasOutfitId} onClick={onDuplicate}>
+        <ListItemIcon sx={{ visibility: "hidden" }}>
+          <RestoreRoundedIcon fontSize="small" />
+        </ListItemIcon>
+        <ListItemText>{t("capsule.saveAs")}</ListItemText>
+      </MenuItem>
+      <Divider />
+      <MenuItem
+        disabled={disabled || !hasOutfitId}
+        onClick={onDelete}
+        sx={{
+          color: "error.main",
+          "& .MuiListItemIcon-root": { color: "inherit" },
+        }}
+      >
+        <ListItemIcon>
+          <DeleteOutlineRoundedIcon fontSize="small" />
+        </ListItemIcon>
+        <ListItemText>{t("actions.delete")}</ListItemText>
+      </MenuItem>
+    </>
+  );
+}
+
+export function OutfitMenu({
+  anchor,
+  disabled,
+  mobileCardColumns,
+  outfit,
+  onClose,
+  onAnalyze,
+  onDelete,
+  onDownload,
+  onDuplicate,
+  onMobileCardColumnsChange,
+  onRevert,
+  onSave,
+  showCardLayout,
+  showAnalyze,
+  t,
+}: OutfitMenuProps) {
   return (
     <Menu anchorEl={anchor} open={Boolean(anchor)} onClose={onClose}>
+      <AnalyzeMenuSection
+        disabled={disabled}
+        outfit={outfit}
+        showAnalyze={showAnalyze}
+        t={t}
+        onAnalyze={onAnalyze}
+      />
       <MenuItem disabled={disabled || !outfit?.id} onClick={onDownload}>
         <ListItemIcon>
           <DownloadRoundedIcon fontSize="small" />
@@ -63,45 +162,15 @@ export function OutfitMenu({
         onClose={onClose}
         onMobileCardColumnsChange={onMobileCardColumnsChange}
       />
-      <Divider />
-      <MenuItem
-        disabled={disabled || outfit?.status === "saved"}
-        onClick={onRevert}
-      >
-        <ListItemIcon>
-          <RestoreRoundedIcon fontSize="small" />
-        </ListItemIcon>
-        <ListItemText>{t("capsule.revert")}</ListItemText>
-      </MenuItem>
-      <MenuItem
-        disabled={disabled || outfit?.status === "saved"}
-        onClick={onSave}
-      >
-        <ListItemIcon sx={{ visibility: "hidden" }}>
-          <RestoreRoundedIcon fontSize="small" />
-        </ListItemIcon>
-        <ListItemText>{t("actions.save")}</ListItemText>
-      </MenuItem>
-      <MenuItem disabled={disabled || !outfit?.id} onClick={onDuplicate}>
-        <ListItemIcon sx={{ visibility: "hidden" }}>
-          <RestoreRoundedIcon fontSize="small" />
-        </ListItemIcon>
-        <ListItemText>{t("capsule.saveAs")}</ListItemText>
-      </MenuItem>
-      <Divider />
-      <MenuItem
-        disabled={disabled || !outfit?.id}
-        onClick={onDelete}
-        sx={{
-          color: "error.main",
-          "& .MuiListItemIcon-root": { color: "inherit" },
-        }}
-      >
-        <ListItemIcon>
-          <DeleteOutlineRoundedIcon fontSize="small" />
-        </ListItemIcon>
-        <ListItemText>{t("actions.delete")}</ListItemText>
-      </MenuItem>
+      <OutfitLifecycleMenuSection
+        disabled={disabled}
+        outfit={outfit}
+        t={t}
+        onDelete={onDelete}
+        onDuplicate={onDuplicate}
+        onRevert={onRevert}
+        onSave={onSave}
+      />
     </Menu>
   );
 }

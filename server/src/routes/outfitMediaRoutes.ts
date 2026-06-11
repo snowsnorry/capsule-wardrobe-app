@@ -1,6 +1,9 @@
 import { logError } from "../logger.js";
 import { normalizeWardrobeItemForPdf } from "../wardrobePdfItems.js";
-import { buildOutfitHydrationContext } from "./outfitRouteResponses.js";
+import {
+  buildOutfitHydrationContext,
+  sendOutfitMutationResponse,
+} from "./outfitRouteResponses.js";
 
 function getOutfitReportErrorStatus(error) {
   switch (error?.code) {
@@ -36,6 +39,26 @@ function registerOutfitReportRoute(app, context) {
         return res
           .status(status)
           .json({ error: status === 503 ? "service_unavailable" : error.code });
+      }
+    },
+  );
+
+  app.delete(
+    "/outfits/:id/report",
+    requireTrustedOrigin,
+    requireAuth,
+    requireCsrf,
+    async (req, res) => {
+      try {
+        const outfit = await context.updateOutfitReportImpl(
+          req.user.email,
+          req.params.id,
+          null,
+        );
+        return sendOutfitMutationResponse(req, res, outfit, context);
+      } catch (error) {
+        logError("[outfits/report/delete]", error);
+        return res.status(503).json({ error: "service_unavailable" });
       }
     },
   );

@@ -121,7 +121,7 @@ function createOutfitStore(deps: OutfitStoreDeps = {}) {
   async function updateOutfitReport(
     email: string,
     outfitId: string,
-    report: Record<string, unknown>,
+    report: Record<string, unknown> | null,
   ): Promise<NormalizedOutfitRecord | null> {
     return normalizeOutfitRecord(
       await updateOutfitReportByIdForEmailImpl({

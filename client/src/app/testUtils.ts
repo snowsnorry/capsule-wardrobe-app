@@ -121,6 +121,7 @@ export function createActionContext(
     setIsDownloadingWardrobePdf: vi.fn(),
     setIsLoadingItems: vi.fn(),
     setIsOutfitImagePending: vi.fn(),
+    setIsOutfitReportPending: vi.fn(),
     setIsPartialRegenerationLoading: vi.fn(),
     setIsShareLoading: vi.fn(),
     setIsWardrobePending: vi.fn(),

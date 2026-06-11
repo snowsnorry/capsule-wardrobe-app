@@ -18,12 +18,14 @@ import {
   createOutfit,
   deleteOutfit,
   deleteOutfitImage,
+  deleteOutfitReport,
   downloadOutfitPdf,
   duplicateOutfit,
   fetchOutfit,
   fetchOutfitBootstrap,
   fetchRecentOutfits,
   generateOutfitImage,
+  generateOutfitReport,
   renameOutfit,
   revertOutfit,
   saveOutfit,
@@ -250,9 +252,11 @@ describe("outfits api", () => {
     );
   });
 
-  test("generates and deletes saved outfit images", async () => {
+  test("generates and deletes saved outfit images and reports", async () => {
     await generateOutfitImage("outfit-1");
     await deleteOutfitImage("outfit-1");
+    await generateOutfitReport("outfit-1");
+    await deleteOutfitReport("outfit-1");
 
     expect(requestApi.requestJson).toHaveBeenNthCalledWith(
       1,
@@ -262,6 +266,16 @@ describe("outfits api", () => {
     expect(requestApi.requestJson).toHaveBeenNthCalledWith(
       2,
       "https://api.example.test/outfits/outfit-1/image",
+      { method: "DELETE", credentials: "include" },
+    );
+    expect(requestApi.requestJson).toHaveBeenNthCalledWith(
+      3,
+      "https://api.example.test/outfits/outfit-1/report",
+      { method: "POST", credentials: "include" },
+    );
+    expect(requestApi.requestJson).toHaveBeenNthCalledWith(
+      4,
+      "https://api.example.test/outfits/outfit-1/report",
       { method: "DELETE", credentials: "include" },
     );
   });

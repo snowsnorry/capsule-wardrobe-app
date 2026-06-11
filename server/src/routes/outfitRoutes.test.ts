@@ -591,8 +591,17 @@ test("outfit report route delegates to generator and maps report errors", async 
       verdict: { status: "valid", score: 0.9, summary: "Ready." },
     };
   });
+  const updateOutfitReportImpl = vi.fn(async (_email, id, report) =>
+    id === "missing" ? null : { ...outfit, draft: { ...outfit.draft, report } },
+  );
   const { baseUrl } = await startTestServer(t, {
-    overrides: { generateOutfitReportImpl },
+    overrides: {
+      generateOutfitReportImpl,
+      updateOutfitReportImpl,
+      getProductsByUrlsForEmailImpl: async () => [],
+      listLikedItemUrlsImpl: async () => [],
+      listWardrobeItemsByUrlsImpl: async () => [],
+    },
   });
 
   const generated = await requestJson(
@@ -644,6 +653,31 @@ test("outfit report route delegates to generator and maps report errors", async 
   );
   expect(failed.response.status).toBe(503);
   expect(failed.json).toEqual({ error: "service_unavailable" });
+
+  const deleted = await requestJson(baseUrl, "/outfits/outfit-1/report", {
+    method: "DELETE",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN,
+  });
+  expect(deleted.response.status).toBe(200);
+  expect(deleted.json).toMatchObject({
+    ok: true,
+    outfit: { id: "outfit-1", effective: { report: null } },
+  });
+  expect(updateOutfitReportImpl).toHaveBeenCalledWith(
+    "person@example.com",
+    "outfit-1",
+    null,
+  );
+
+  const deleteMissing = await requestJson(baseUrl, "/outfits/missing/report", {
+    method: "DELETE",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN,
+  });
+  expect(deleteMissing.response.status).toBe(404);
 });
 
 test("outfit pdf route renders effective outfit items with the profile locale", async (t) => {

@@ -1,4 +1,5 @@
 import { describe, expect, test } from "vitest";
+import { hashCapsuleContent } from "./db.js";
 import {
   getOutfitItems,
   hasUnexpectedOutfitCreateFields,
@@ -111,6 +112,7 @@ describe("outfitHttp", () => {
         image: null,
         imageObsolete: false,
         report: null,
+        reportMeta: null,
       },
       effective: {
         items: [
@@ -139,7 +141,30 @@ describe("outfitHttp", () => {
         image: null,
         imageObsolete: false,
         report: null,
+        reportMeta: null,
       },
+    });
+  });
+
+  test("reports whether saved outfit reports are stale", async () => {
+    const currentItemsHash = hashCapsuleContent(savedSnapshot.items);
+    const outfit = {
+      id: "outfit-1",
+      name: "Weekend",
+      draft: {
+        ...savedSnapshot,
+        report: { schemaVersion: 1, itemsHash: currentItemsHash },
+      },
+      saved: {
+        ...savedSnapshot,
+        report: { schemaVersion: 1, itemsHash: "old-items-hash" },
+      },
+    };
+
+    await expect(toOutfitResponse(outfit)).resolves.toMatchObject({
+      draft: { reportMeta: { stale: false } },
+      saved: { reportMeta: { stale: true } },
+      effective: { reportMeta: { stale: false } },
     });
   });
 

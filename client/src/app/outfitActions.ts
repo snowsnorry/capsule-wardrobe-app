@@ -3,11 +3,13 @@ import {
   createOutfit,
   deleteOutfit,
   deleteOutfitImage,
+  deleteOutfitReport,
   downloadOutfitPdf,
   duplicateOutfit,
   fetchOutfit,
   fetchRecentOutfits,
   generateOutfitImage,
+  generateOutfitReport,
   renameOutfit,
   revertOutfit,
   saveOutfit,
@@ -199,6 +201,23 @@ function setOutfitImagePending(context: AppActionContext, value: boolean) {
   )(value);
 }
 
+function setOutfitReportPending(context: AppActionContext, value: boolean) {
+  fromContext<(nextValue: boolean) => void>(
+    context,
+    "setIsOutfitReportPending",
+  )(value);
+}
+
+function reportStatusError(context: AppActionContext, error: string) {
+  fromContext<(updater: (current: unknown) => unknown) => void>(
+    context,
+    "setStatus",
+  )((current) => ({
+    ...(current as object),
+    error,
+  }));
+}
+
 async function subscribeUntilOutfitImageReady(
   context: AppActionContext,
   outfitId: string,
@@ -388,6 +407,61 @@ export async function generateCurrentOutfitImage(
           "resolveErrorMessage",
         )(error),
       }));
+    }
+  }
+}
+
+export async function generateCurrentOutfitReport(
+  context: AppActionContext,
+  outfitId: string,
+) {
+  if (!outfitId) return;
+  setOutfitReportPending(context, true);
+  try {
+    await generateOutfitReport(outfitId);
+    await refreshActiveOutfit(context, outfitId, { onlyIfActive: true });
+  } catch {
+    if (fromContext<{ current: boolean }>(context, "isMountedRef").current) {
+      reportStatusError(
+        context,
+        fromContext<(key: string) => string>(
+          context,
+          "t",
+        )("errors.outfitReportGenerateFailed"),
+      );
+    }
+  } finally {
+    if (fromContext<{ current: boolean }>(context, "isMountedRef").current) {
+      setOutfitReportPending(context, false);
+    }
+  }
+}
+
+export async function deleteCurrentOutfitReport(
+  context: AppActionContext,
+  outfitId: string,
+) {
+  if (!outfitId) return;
+  setOutfitReportPending(context, true);
+  try {
+    const result = (await deleteOutfitReport(
+      outfitId,
+    )) as OutfitMutationResponse;
+    setActiveOutfit(context, result.outfit || null);
+    await refreshOutfitList(context);
+  } catch (error) {
+    if (fromContext<{ current: boolean }>(context, "isMountedRef").current) {
+      reportStatusError(
+        context,
+        fromContext<(error: unknown) => string>(
+          context,
+          "resolveErrorMessage",
+        )(error),
+      );
+    }
+  } finally {
+    if (fromContext<{ current: boolean }>(context, "isMountedRef").current) {
+      setOutfitReportPending(context, false);
     }
   }
 }

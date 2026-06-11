@@ -77,6 +77,7 @@ type AppRouteContentProps = SharedFilterProps & {
   isDownloadingWardrobePdf: boolean;
   isLoadingItems: boolean;
   isOutfitImagePending: boolean;
+  isOutfitReportPending: boolean;
   isPartialRegenerationLoading: boolean;
   isSigningOut: boolean;
   partialRegenerationPendingUrls: string[];
@@ -111,6 +112,7 @@ type AppRouteContentProps = SharedFilterProps & {
   onDeleteCapsule: (capsuleId?: string) => Promise<void>;
   onDeleteOutfit: (outfitId?: string) => Promise<void>;
   onDeleteOutfitImage: (outfitId?: string) => Promise<void>;
+  onDeleteOutfitReport: (outfitId?: string) => Promise<void>;
   onDeleteOutfitSetImage: (setIndex: OutfitSetIndex) => Promise<void>;
   onDeleteProfile: () => Promise<void>;
   onDownloadWardrobePdf: (capsuleId?: string) => Promise<void>;
@@ -119,6 +121,7 @@ type AppRouteContentProps = SharedFilterProps & {
   onDuplicateOutfit: (name: string, outfitId?: string) => Promise<void>;
   onGenerateOutfitSetImage: (setIndex: OutfitSetIndex) => Promise<void>;
   onGenerateOutfitImage: (outfitId?: string) => Promise<void>;
+  onGenerateOutfitReport: (outfitId?: string) => Promise<void>;
   onGoogleCredential: (idToken: string) => Promise<void>;
   onNavigateApp: (
     nextApp: Exclude<AppRoute, "share">,
@@ -346,11 +349,14 @@ export default function AppRouteContent(props: AppRouteContentProps) {
           activeOutfit={props.activeOutfitMeta}
           isContentBusy={props.isContentBusy}
           isImagePending={props.isOutfitImagePending}
+          isReportPending={props.isOutfitReportPending}
           onDeleteOutfit={props.onDeleteOutfit}
           onDeleteOutfitImage={props.onDeleteOutfitImage}
+          onDeleteOutfitReport={props.onDeleteOutfitReport}
           onDownloadOutfitPdf={props.onDownloadOutfitPdf}
           onDuplicateOutfit={props.onDuplicateOutfit}
           onGenerateOutfitImage={props.onGenerateOutfitImage}
+          onGenerateOutfitReport={props.onGenerateOutfitReport}
           onRenameOutfit={props.onRenameOutfit}
           onReplaceOutfitItems={props.onReplaceOutfitItems}
           onRemoveFromPersonalItems={props.onRemoveFromPersonalItems}

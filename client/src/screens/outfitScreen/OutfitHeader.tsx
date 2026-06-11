@@ -4,12 +4,14 @@ import {
   Button,
   Divider,
   IconButton,
+  LinearProgress,
   Stack,
   TextField,
   Tooltip,
   Typography,
 } from "@mui/material";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
+import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
 import DriveFileRenameOutlineRoundedIcon from "@mui/icons-material/DriveFileRenameOutlineRounded";
 import FiberManualRecordRoundedIcon from "@mui/icons-material/FiberManualRecordRounded";
 import MoreVertRoundedIcon from "@mui/icons-material/MoreVertRounded";
@@ -24,10 +26,13 @@ import type { OutfitScreenProps } from "./OutfitScreenTypes";
 
 export function OutfitHeader({
   activeOutfit,
+  hasReport,
   isContentBusy,
+  isReportPending,
   isMobile,
   items,
   onAdd,
+  onAnalyze,
   onCancelSelection,
   onMenuOpen,
   onRenameOutfit,
@@ -36,10 +41,13 @@ export function OutfitHeader({
   t,
 }: {
   activeOutfit: OutfitMeta | null;
+  hasReport: boolean;
   isContentBusy: boolean;
+  isReportPending: boolean;
   isMobile: boolean;
   items: OutfitItemSnapshot[];
   onAdd: () => void;
+  onAnalyze: () => void;
   onCancelSelection: () => void;
   onMenuOpen: (anchor: HTMLElement) => void;
   onRenameOutfit: OutfitScreenProps["onRenameOutfit"];
@@ -74,9 +82,12 @@ export function OutfitHeader({
         )}
         <OutfitHeaderActions
           disabled={disabled}
+          hasReport={hasReport}
+          isMobile={isMobile}
           selectedCount={selectedCount}
           t={t}
           onAdd={onAdd}
+          onAnalyze={onAnalyze}
           onCancelSelection={onCancelSelection}
           onMenuOpen={onMenuOpen}
           onRemoveSelected={onRemoveSelected}
@@ -86,6 +97,12 @@ export function OutfitHeader({
         items={buildSummaryItems(items, t)}
         testId="outfit-summary"
       />
+      {isReportPending ? (
+        <LinearProgress
+          color="success"
+          aria-label={t("outfit.reportGenerating")}
+        />
+      ) : null}
       <Divider />
     </Stack>
   );
@@ -204,7 +221,10 @@ const outfitInlineTitleSx = {
 
 function OutfitHeaderActions({
   disabled,
+  hasReport,
+  isMobile,
   onAdd,
+  onAnalyze,
   onCancelSelection,
   onMenuOpen,
   onRemoveSelected,
@@ -212,7 +232,10 @@ function OutfitHeaderActions({
   t,
 }: {
   disabled: boolean;
+  hasReport: boolean;
+  isMobile: boolean;
   onAdd: () => void;
+  onAnalyze: () => void;
   onCancelSelection: () => void;
   onMenuOpen: (anchor: HTMLElement) => void;
   onRemoveSelected: () => void;
@@ -243,6 +266,21 @@ function OutfitHeaderActions({
 
   return (
     <Stack direction="row" spacing={1} sx={outfitHeaderActionsSx}>
+      <Button
+        variant="outlined"
+        startIcon={<AutoAwesomeRoundedIcon />}
+        disabled={disabled}
+        onClick={onAnalyze}
+        sx={{
+          display: hasReport || isMobile ? "none" : "inline-flex",
+          height: 32,
+          minHeight: 32,
+          py: 0,
+          px: 1.5,
+        }}
+      >
+        {t("outfit.analyzeOutfit")}
+      </Button>
       <Button
         variant="outlined"
         startIcon={<AddRoundedIcon />}

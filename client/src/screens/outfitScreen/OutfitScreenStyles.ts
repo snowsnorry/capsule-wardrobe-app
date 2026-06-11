@@ -28,6 +28,37 @@ export const outfitContentSx = {
   minWidth: 0,
 } as const;
 
+export const outfitReportContentSx = {
+  ...outfitContentSx,
+  maxWidth: { lg: "1560px" },
+  "@media (min-width: 2100px)": {
+    maxWidth: "1680px",
+  },
+  "@media (min-width: 2600px)": {
+    maxWidth: "1760px",
+  },
+} as const;
+
+export const outfitReportLayoutSx = {
+  display: "grid",
+  gridTemplateColumns: "minmax(0, 1fr) minmax(360px, 420px)",
+  gap: 3,
+  alignItems: "start",
+  minWidth: 0,
+} as const;
+
+export const outfitReportInspectorSx = {
+  position: "sticky",
+  top: 16,
+  alignSelf: "start",
+  minWidth: 0,
+} as const;
+
+export const outfitReportCompactSectionSx = {
+  px: { xs: 1.25, sm: 2, md: 3 },
+  pt: { xs: 1.25, md: 2 },
+} as const;
+
 export const outfitHeaderSectionSx = {
   px: { xs: 2, md: 3 },
   pt: { xs: 1, md: 2.5 },

@@ -1,8 +1,14 @@
+/* eslint-disable max-lines */
 import { API_BASE_URL } from "./config";
 import { request, requestJson } from "./request";
 import type { JsonObject } from "./request";
+import type { OutfitReport } from "../app/appTypes";
 
 type OutfitResponse = JsonObject;
+type OutfitReportResponse = {
+  ok: true;
+  report: OutfitReport;
+};
 type OutfitListOptions = {
   limit?: number;
   offset?: number;
@@ -333,6 +339,20 @@ async function deleteOutfitImage(id: string): Promise<OutfitResponse> {
   });
 }
 
+async function generateOutfitReport(id: string): Promise<OutfitReportResponse> {
+  return requestJson(outfitUrl(`${outfitIdPath(id)}/report`), {
+    method: "POST",
+    credentials: "include",
+  }) as Promise<OutfitReportResponse>;
+}
+
+async function deleteOutfitReport(id: string): Promise<OutfitResponse> {
+  return requestJson(outfitUrl(`${outfitIdPath(id)}/report`), {
+    method: "DELETE",
+    credentials: "include",
+  });
+}
+
 async function downloadOutfitPdf(id: string): Promise<void> {
   const response = await request(outfitUrl(`${outfitIdPath(id)}/pdf`), {
     method: "POST",
@@ -370,12 +390,14 @@ export {
   createOutfit,
   deleteOutfit,
   deleteOutfitImage,
+  deleteOutfitReport,
   downloadOutfitPdf,
   duplicateOutfit,
   fetchOutfit,
   fetchOutfitBootstrap,
   fetchRecentOutfits,
   generateOutfitImage,
+  generateOutfitReport,
   renameOutfit,
   revertOutfit,
   saveOutfit,

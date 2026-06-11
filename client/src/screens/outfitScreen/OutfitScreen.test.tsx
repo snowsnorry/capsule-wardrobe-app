@@ -95,6 +95,7 @@ vi.mock("../../i18n/useI18n", () => ({
         "filters.reset": "Reset",
         "filters.title": "Filters",
         "outfit.addItems": "Add items",
+        "outfit.analyzeOutfit": "Analyze outfit",
         "outfit.catalog": "Catalog",
         "outfit.catalogSelected": `${params?.count ?? 0} catalog`,
         "outfit.categoryCount": `${params?.count ?? 0} ${params?.category ?? ""}`,
@@ -113,6 +114,25 @@ vi.mock("../../i18n/useI18n", () => ({
         "outfit.noneSelected": "No items selected",
         "outfit.openActions": "Open actions",
         "outfit.openMissingItemActions": "Open missing item actions",
+        "outfit.regenerateReport": "Regenerate report",
+        "outfit.reportConfidence": "Confidence",
+        "outfit.reportConfidenceValue": `${params?.percent ?? 0}% confidence`,
+        "outfit.reportGenerating": "Generating outfit report",
+        "outfit.reportHideDetails": "Hide details",
+        "outfit.reportIssues": "Issues",
+        "outfit.reportOpenMenu": "Open report actions",
+        "outfit.reportOutdated": "Report may be outdated",
+        "outfit.reportScoreColorHarmony": "Color harmony",
+        "outfit.reportScoreFormalityCoherence": "Formality coherence",
+        "outfit.reportScoreOverallCompatibility": "Overall compatibility",
+        "outfit.reportScoreSeasonFit": "Season fit",
+        "outfit.reportScoreStyleCoherence": "Style coherence",
+        "outfit.reportScores": "Scores",
+        "outfit.reportShowDetails": "Show details",
+        "outfit.reportStrengths": "Strengths",
+        "outfit.reportSuggestions": "Suggestions",
+        "outfit.reportTitle": "Outfit report",
+        "outfit.reportVerdict.valid": "Good match",
         "outfit.personalSelected": `${params?.count ?? 0} personal`,
         "outfit.personalItems": "Personal items",
         "outfit.removeConfirm": "Remove",
@@ -234,6 +254,81 @@ function renderScreen(overrides: Record<string, unknown> = {}) {
       />
     </ThemeProvider>,
   );
+}
+
+function buildReportOutfit() {
+  return {
+    id: "outfit-1",
+    name: "Weekend",
+    status: "saved",
+    effective: {
+      items: [
+        {
+          url: "https://example.com/jacket",
+          source: "from_catalog",
+          item: {
+            id: "item-jacket",
+            url: "https://example.com/jacket",
+            name: "Preview jacket",
+            category: "outerwear",
+            imageUrl: "https://example.com/jacket.png",
+          },
+        },
+      ],
+      reportMeta: { stale: true },
+      report: {
+        schemaVersion: 1,
+        itemsHash: "old-hash",
+        verdict: {
+          status: "valid",
+          score: 0.86,
+          summary: "Neutral utility outfit for cool dry weather.",
+        },
+        seasonality: {
+          primarySeasons: ["spring", "autumn"],
+          seasonScore: 0.84,
+        },
+        styleProfile: {
+          primaryStyle: "street_style",
+          formalityLevel: "casual",
+          styleScore: 0.9,
+        },
+        compatibility: {
+          overallScore: 0.86,
+          styleCoherence: 0.9,
+          formalityCoherence: 0.92,
+          seasonalCoherence: 0.84,
+          colorCoherence: 0.88,
+          mainStrengths: ["Balanced neutral palette."],
+          mainRisks: [],
+        },
+        colorAnalysis: {
+          paletteType: "muted_neutral",
+          colorScore: 0.88,
+        },
+        issues: [
+          {
+            severity: "warning",
+            message: "Boots may feel heavy.",
+            suggestion: "Try lighter shoes.",
+            affectedItemIds: ["item-jacket"],
+          },
+        ],
+        suggestions: [
+          {
+            priority: "medium",
+            message: "Roll jeans slightly.",
+            targetItemIds: ["item-jacket"],
+          },
+        ],
+        confidence: {
+          overall: 0.78,
+          assumptions: ["Material weight is inferred."],
+          lowConfidenceAspects: ["material_weight"],
+        },
+      },
+    },
+  };
 }
 
 afterEach(() => {
@@ -396,6 +491,91 @@ describe("OutfitScreen", () => {
     expect(within(summary).getByText("1 Top")).toBeInTheDocument();
     expect(within(summary).getByText("1 Bag")).toBeInTheDocument();
     expect(screen.queryByText("1 Top · 1 Bag")).not.toBeInTheDocument();
+  });
+
+  test("renders analyze action and blocks it while report generation is pending", () => {
+    const onGenerateOutfitReport = vi.fn(() => Promise.resolve());
+    renderScreen({
+      isContentBusy: true,
+      isReportPending: true,
+      onGenerateOutfitReport,
+    });
+
+    expect(
+      screen.getByRole("progressbar", { name: "Generating outfit report" }),
+    ).toBeInTheDocument();
+    const analyze = screen.getByRole("button", { name: "Analyze outfit" });
+    expect(analyze).toBeDisabled();
+    expect(onGenerateOutfitReport).not.toHaveBeenCalled();
+  });
+
+  test("moves initial analyze action into the mobile outfit menu", async () => {
+    setViewportMobile(true);
+    const user = userEvent.setup();
+    const onGenerateOutfitReport = vi.fn(() => Promise.resolve());
+    renderScreen({ onGenerateOutfitReport });
+
+    expect(
+      screen.queryByRole("button", { name: "Analyze outfit" }),
+    ).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Open actions" }));
+    await user.click(screen.getByRole("menuitem", { name: "Analyze outfit" }));
+
+    expect(onGenerateOutfitReport).toHaveBeenCalledWith("outfit-1");
+  });
+
+  test("renders report summary details menu actions and stale state", async () => {
+    const user = userEvent.setup();
+    const onGenerateOutfitReport = vi.fn(() => Promise.resolve());
+    const onDeleteOutfitReport = vi.fn(() => Promise.resolve());
+    renderScreen({
+      activeOutfit: buildReportOutfit(),
+      onDeleteOutfitReport,
+      onGenerateOutfitReport,
+    });
+
+    expect(screen.getByText("Outfit report")).toBeInTheDocument();
+    expect(screen.getByText("86")).toBeInTheDocument();
+    expect(screen.getByText("Good match")).toBeInTheDocument();
+    expect(screen.getByText("Report may be outdated")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Analyze outfit" })).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Show details" }));
+    expect(screen.getByText("Style coherence")).toBeInTheDocument();
+    expect(screen.getByText("90%")).toBeInTheDocument();
+    expect(screen.getByText("Balanced neutral palette.")).toBeInTheDocument();
+    expect(screen.getByText("Boots may feel heavy.")).toBeInTheDocument();
+    expect(screen.getByText("78% confidence")).toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", { name: "Open report actions" }),
+    );
+    const menuItems = screen.getAllByRole("menuitem");
+    expect(menuItems).toHaveLength(2);
+    await user.click(
+      screen.getByRole("menuitem", { name: "Regenerate report" }),
+    );
+    expect(onGenerateOutfitReport).toHaveBeenCalledWith("outfit-1");
+
+    await user.click(
+      screen.getByRole("button", { name: "Open report actions" }),
+    );
+    await user.click(screen.getByRole("menuitem", { name: "Delete" }));
+    expect(onDeleteOutfitReport).toHaveBeenCalledWith("outfit-1");
+  });
+
+  test("highlights linked outfit cards from report issue focus", async () => {
+    const user = userEvent.setup();
+    renderScreen({ activeOutfit: buildReportOutfit() });
+
+    await user.click(screen.getByRole("button", { name: "Show details" }));
+    const issueRow = screen
+      .getByText("Boots may feel heavy.")
+      .closest("[tabindex='0']");
+    expect(issueRow).toBeTruthy();
+    fireEvent.focus(issueRow as HTMLElement);
+
+    expect(screen.getByTestId("outfit-item-highlighted")).toBeInTheDocument();
   });
 
   test("opens item preview when an outfit card is clicked", async () => {
