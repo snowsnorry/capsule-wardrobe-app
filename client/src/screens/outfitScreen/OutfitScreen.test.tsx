@@ -503,9 +503,14 @@ describe("OutfitScreen", () => {
       onGenerateOutfitReport,
     });
 
-    expect(
-      screen.getByRole("progressbar", { name: "Generating outfit report" }),
-    ).toBeInTheDocument();
+    const progress = screen.getByRole("progressbar", {
+      name: "Generating outfit report",
+    });
+    expect(progress).toBeInTheDocument();
+    const headerSeparator = within(
+      screen.getByTestId("outfit-content"),
+    ).getByRole("separator");
+    expect(headerSeparator.nextElementSibling).toContainElement(progress);
     const analyze = screen.getByRole("button", { name: "Analyze" });
     expect(analyze).toBeDisabled();
     expect(onGenerateOutfitReport).not.toHaveBeenCalled();
@@ -532,10 +537,16 @@ describe("OutfitScreen", () => {
     const onDeleteOutfitReport = vi.fn(() => Promise.resolve());
     renderScreen({
       activeOutfit: buildReportOutfit(),
+      isReportPending: true,
       onDeleteOutfitReport,
       onGenerateOutfitReport,
     });
 
+    expect(
+      screen.getAllByRole("progressbar", {
+        name: "Generating outfit report",
+      }),
+    ).toHaveLength(1);
     expect(screen.getByText("Outfit report")).toBeInTheDocument();
     expect(screen.getByText("86")).toBeInTheDocument();
     expect(screen.getByText("Good match")).toBeInTheDocument();

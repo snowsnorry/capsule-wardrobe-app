@@ -396,7 +396,7 @@ const en = {
     reportScoreOverallCompatibility: "Overall compatibility",
     reportVerdict: {
       valid: "Good match",
-      acceptable_with_notes: "Good match",
+      acceptable_with_notes: "Has notes",
       incomplete: "Incomplete",
       incoherent: "Needs work",
     },

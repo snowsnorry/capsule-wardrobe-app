@@ -32,7 +32,7 @@ const labels: Record<string, string> = {
   "outfit.reportStrengths": "Strengths",
   "outfit.reportSuggestions": "Suggestions",
   "outfit.reportTitle": "Outfit report",
-  "outfit.reportVerdict.acceptable_with_notes": "Works with notes",
+  "outfit.reportVerdict.acceptable_with_notes": "Has notes",
   "outfit.reportVerdict.valid": "Good match",
 };
 
@@ -121,8 +121,10 @@ describe("OutfitReportPanel", () => {
       },
     );
 
-    expect(screen.getAllByRole("progressbar")).toHaveLength(2);
-    expect(screen.getByText("Works with notes")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("progressbar", { name: "Generating outfit report" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText("Has notes")).toBeInTheDocument();
     expect(screen.getByText("Winter")).toBeInTheDocument();
     expect(screen.getByText("Smart Casual")).toBeInTheDocument();
 
@@ -230,6 +232,10 @@ describe("OutfitReportPanel", () => {
       "data-score-tone",
       "warning",
     );
+    expect(screen.getByTestId("outfit-report-verdict")).toHaveAttribute(
+      "data-score-tone",
+      "warning",
+    );
     expect(screen.getAllByRole("listitem")).toHaveLength(5);
     expect(
       within(screen.getByTestId("outfit-report-scroll-body")).queryByText(
@@ -253,5 +259,71 @@ describe("OutfitReportPanel", () => {
     fireEvent.mouseLeave(untargetedRow as HTMLElement);
 
     expect(onHighlightItemIds).toHaveBeenCalledWith([]);
+  });
+
+  test("keeps verdict tone aligned with the report score tone", () => {
+    const { rerender } = renderPanel({
+      schemaVersion: 1,
+      itemsHash: "hash",
+      verdict: {
+        status: "acceptable_with_notes",
+        score: 0.72,
+        summary: "Usable with small adjustments.",
+      },
+      seasonality: {},
+      styleProfile: {},
+      compatibility: {},
+      colorAnalysis: {},
+      issues: [],
+      suggestions: [],
+      confidence: {},
+    });
+
+    expect(screen.getByTestId("outfit-report-score")).toHaveAttribute(
+      "data-score-tone",
+      "warning",
+    );
+    expect(screen.getByTestId("outfit-report-verdict")).toHaveAttribute(
+      "data-score-tone",
+      "warning",
+    );
+
+    rerender(
+      <ThemeProvider theme={theme}>
+        <OutfitReportPanel
+          onDelete={vi.fn()}
+          onHighlightItemIds={vi.fn()}
+          onRegenerate={vi.fn()}
+          report={
+            {
+              schemaVersion: 1,
+              itemsHash: "hash",
+              verdict: {
+                status: "valid",
+                score: 0.9,
+                summary: "Strong match.",
+              },
+              seasonality: {},
+              styleProfile: {},
+              compatibility: {},
+              colorAnalysis: {},
+              issues: [],
+              suggestions: [],
+              confidence: {},
+            } as OutfitReport
+          }
+          t={t}
+        />
+      </ThemeProvider>,
+    );
+
+    expect(screen.getByTestId("outfit-report-score")).toHaveAttribute(
+      "data-score-tone",
+      "success",
+    );
+    expect(screen.getByTestId("outfit-report-verdict")).toHaveAttribute(
+      "data-score-tone",
+      "success",
+    );
   });
 });

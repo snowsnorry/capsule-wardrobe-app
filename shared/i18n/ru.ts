@@ -397,7 +397,7 @@ const ru = {
     reportScoreOverallCompatibility: "Общая совместимость",
     reportVerdict: {
       valid: "Хорошее сочетание",
-      acceptable_with_notes: "Хорошее сочетание",
+      acceptable_with_notes: "Есть замечания",
       incomplete: "Не хватает вещей",
       incoherent: "Нужно доработать",
     },

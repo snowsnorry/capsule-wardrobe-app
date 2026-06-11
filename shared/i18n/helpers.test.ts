@@ -83,6 +83,19 @@ test("t translates capsule action and outfit image accessibility labels", () => 
   );
 });
 
+test("t keeps outfit report verdict labels distinct", () => {
+  expect(t("outfit.reportVerdict.valid", undefined, "en")).toBe("Good match");
+  expect(t("outfit.reportVerdict.acceptable_with_notes", undefined, "en")).toBe(
+    "Has notes",
+  );
+  expect(t("outfit.reportVerdict.valid", undefined, "ru")).toBe(
+    "Хорошее сочетание",
+  );
+  expect(t("outfit.reportVerdict.acceptable_with_notes", undefined, "ru")).toBe(
+    "Есть замечания",
+  );
+});
+
 test("translateOption humanizes unknown values and translates known ones", () => {
   expect(translateOption("styles", "street_style", "en")).toBe("Street style");
   expect(translateOption("styles", "unknown_style", "en")).toBe(

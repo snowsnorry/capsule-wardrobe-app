@@ -10,6 +10,7 @@ import {
 import {
   getScoreTone,
   reportToneSx,
+  type ReportTone,
 } from "./OutfitReportPanelSectionPrimitives";
 
 type ReportSummaryProps = {
@@ -20,9 +21,9 @@ type ReportSummaryProps = {
   t: OutfitReportTranslate;
 };
 
-function buildSummaryTitleSx(isCompact: boolean) {
+function buildSummaryTitleSx(isCompact: boolean, tone: ReportTone) {
   return {
-    color: "primary.main",
+    color: reportToneSx[tone].color,
     fontSize: isCompact ? { xs: "1.18rem", md: "1.25rem" } : undefined,
     lineHeight: isCompact ? 1.25 : undefined,
   };
@@ -105,11 +106,17 @@ function ReportSummaryCopy({
 }: Pick<ReportSummaryProps, "isCompact" | "isExpanded" | "report" | "t">) {
   const clampSummary = Boolean(isCompact && !isExpanded);
   const bodySx = buildSummaryBodySx(Boolean(isCompact), clampSummary);
-  const titleSx = buildSummaryTitleSx(Boolean(isCompact));
+  const scoreTone = getScoreTone(getReportScore(report));
+  const titleSx = buildSummaryTitleSx(Boolean(isCompact), scoreTone);
 
   return (
     <Stack spacing={isCompact ? 0.25 : 0.5} sx={{ minWidth: 0 }}>
-      <Typography variant={isCompact ? "h6" : "h5"} sx={titleSx}>
+      <Typography
+        data-score-tone={scoreTone}
+        data-testid="outfit-report-verdict"
+        variant={isCompact ? "h6" : "h5"}
+        sx={titleSx}
+      >
         {getReportVerdictLabel(report, t)}
       </Typography>
       <Typography variant="body2" sx={bodySx}>

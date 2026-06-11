@@ -96,13 +96,18 @@ export function OutfitHeader({
         items={buildSummaryItems(items, t)}
         testId="outfit-summary"
       />
-      {isReportPending ? (
-        <LinearProgress
-          color="success"
-          aria-label={t("outfit.reportGenerating")}
-        />
-      ) : null}
-      <Divider />
+      <Box>
+        <Divider />
+        <Box sx={outfitProgressSlotSx}>
+          {isReportPending ? (
+            <LinearProgress
+              color="success"
+              aria-label={t("outfit.reportGenerating")}
+              sx={outfitProgressSx}
+            />
+          ) : null}
+        </Box>
+      </Box>
     </Stack>
   );
 }
@@ -310,4 +315,13 @@ const outfitHeaderActionsSx = {
   justifyContent: "flex-end",
   ml: "auto",
   flexShrink: 0,
+} as const;
+
+const outfitProgressSlotSx = {
+  height: 2,
+  overflow: "hidden",
+} as const;
+
+const outfitProgressSx = {
+  height: 2,
 } as const;

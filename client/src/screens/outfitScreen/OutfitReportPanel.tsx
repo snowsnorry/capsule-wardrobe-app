@@ -4,7 +4,6 @@ import {
   Button,
   Divider,
   IconButton,
-  LinearProgress,
   ListItemIcon,
   ListItemText,
   Menu,
@@ -220,7 +219,6 @@ function ReportBody({
 export default function OutfitReportPanel({
   disabled = false,
   isCompact = false,
-  isPending = false,
   isStale = false,
   onDelete,
   onHighlightItemIds,
@@ -245,12 +243,6 @@ export default function OutfitReportPanel({
         overflow: "hidden",
       }}
     >
-      {isPending ? (
-        <LinearProgress
-          aria-label={t("outfit.reportGenerating")}
-          color="success"
-        />
-      ) : null}
       <ReportHeader
         compact={isCompact}
         disabled={disabled}
