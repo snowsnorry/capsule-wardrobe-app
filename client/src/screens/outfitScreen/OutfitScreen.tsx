@@ -33,6 +33,7 @@ import {
 } from "./outfitItemMappers";
 import {
   outfitCardsScrollSx,
+  outfitCardsContentSpacing,
   outfitContentSx,
   outfitHeaderSectionSx,
   outfitReportFloatingInspectorSx,
@@ -131,6 +132,9 @@ export default function OutfitScreen({
   const hasReport = Boolean(report);
   const showFloatingReportInspector = Boolean(
     report && isReportInspectorLayout && !isMobile,
+  );
+  const showInlineCompactReport = Boolean(
+    report && !showFloatingReportInspector,
   );
   const highlightedReportItemKeys = useMemo(
     () => getHighlightedReportItemKeys(visibleItems, highlightedReportItemIds),
@@ -245,6 +249,7 @@ export default function OutfitScreen({
       <OutfitGrid
         disabled={isContentBusy}
         highlightedKeys={highlightedReportItemKeys}
+        isAfterCompactReport={showInlineCompactReport}
         isMobile={isMobile}
         isSelectionMode={isSelectionMode}
         mobileCardColumns={mobileCardColumns}
@@ -311,10 +316,10 @@ export default function OutfitScreen({
       >
         <Stack
           data-testid="outfit-cards-content"
-          spacing={3}
+          spacing={outfitCardsContentSpacing}
           sx={outfitContentSx}
         >
-          {report && !showFloatingReportInspector ? (
+          {showInlineCompactReport ? (
             <Box sx={outfitReportCompactSectionSx}>
               <OutfitReportPanel
                 disabled={isContentBusy}

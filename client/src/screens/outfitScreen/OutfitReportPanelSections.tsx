@@ -1,5 +1,4 @@
 import {
-  Alert,
   Box,
   Chip,
   Divider,
@@ -13,12 +12,9 @@ import WarningAmberRoundedIcon from "@mui/icons-material/WarningAmberRounded";
 import type { OutfitReport } from "../../app/appTypes";
 import {
   formatReportValue,
-  getReportChipValues,
   getReportIssueIds,
-  getReportScore,
   getReportScoreRows,
   getReportSuggestionIds,
-  getReportVerdictLabel,
   type OutfitReportTranslate,
 } from "./OutfitReportPanelUtils";
 import { ConfidenceSection } from "./OutfitReportPanelConfidence";
@@ -232,73 +228,6 @@ function SuggestionsSection({
         ))}
       </Stack>
     </ReportSection>
-  );
-}
-
-export function ReportSummary({
-  isStale,
-  report,
-  t,
-}: Pick<ReportContentProps, "report" | "t"> & { isStale?: boolean }) {
-  const score = getReportScore(report);
-  const scoreTone = getScoreTone(score);
-  const chips = getReportChipValues(report);
-
-  return (
-    <Stack spacing={2}>
-      {isStale ? (
-        <Alert severity="warning" sx={{ py: 0.5 }}>
-          {t("outfit.reportOutdated")}
-        </Alert>
-      ) : null}
-      <Stack direction="row" spacing={2} sx={{ alignItems: "center" }}>
-        <Box
-          data-score-tone={scoreTone}
-          data-testid="outfit-report-score"
-          sx={{
-            width: 92,
-            height: 74,
-            borderRadius: "var(--cw-radius-card)",
-            display: "grid",
-            placeItems: "center",
-            flexShrink: 0,
-            color: reportToneSx[scoreTone].color,
-            backgroundColor: reportToneSx[scoreTone].backgroundColor,
-          }}
-        >
-          <Typography
-            variant="h2"
-            sx={{ fontSize: "3rem", fontWeight: 500, lineHeight: 1 }}
-          >
-            {score ?? "-"}
-          </Typography>
-        </Box>
-        <Stack spacing={0.5} sx={{ minWidth: 0 }}>
-          <Typography variant="h5" sx={{ color: "primary.main" }}>
-            {getReportVerdictLabel(report, t)}
-          </Typography>
-          <Typography variant="body2" sx={{ color: "text.secondary" }}>
-            {report.verdict?.summary || ""}
-          </Typography>
-        </Stack>
-      </Stack>
-      {chips.length ? (
-        <Stack direction="row" useFlexGap spacing={1} sx={{ flexWrap: "wrap" }}>
-          {chips.map((chip) => (
-            <Chip
-              key={chip}
-              size="small"
-              label={formatReportValue(chip)}
-              sx={{
-                bgcolor: "action.selected",
-                color: "primary.dark",
-                fontWeight: 650,
-              }}
-            />
-          ))}
-        </Stack>
-      ) : null}
-    </Stack>
   );
 }
 

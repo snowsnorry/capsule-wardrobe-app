@@ -29,6 +29,8 @@ export const outfitContentSx = {
   minWidth: 0,
 } as const;
 
+export const outfitCardsContentSpacing = { xs: 1, md: 3 } as const;
+
 export const outfitReportFloatingInspectorSx = {
   position: "absolute",
   top: { lg: 16, xl: 20 },
@@ -41,8 +43,8 @@ export const outfitReportFloatingInspectorSx = {
 } as const;
 
 export const outfitReportCompactSectionSx = {
-  px: { xs: 1.25, sm: 2, md: 3 },
-  pt: { xs: 1.25, md: 2 },
+  px: { xs: 1, sm: 2, md: 3 },
+  pt: { xs: 1, md: 2 },
 } as const;
 
 export const outfitHeaderSectionSx = {
@@ -51,13 +53,16 @@ export const outfitHeaderSectionSx = {
   pb: 0,
 } as const;
 
-export function buildOutfitGridSectionSx(mobileCardColumns: MobileCardColumns) {
+export function buildOutfitGridSectionSx(
+  mobileCardColumns: MobileCardColumns,
+  isAfterCompactReport = false,
+) {
   return {
     px:
       mobileCardColumns === 1
         ? { xs: 1.25, sm: 2, md: 3 }
         : { xs: 0, sm: 2, md: 3 },
-    pt: { xs: 1.25, md: 2 },
+    pt: isAfterCompactReport ? { xs: 0, md: 2 } : { xs: 1.25, md: 2 },
     pb: 2,
   } as const;
 }

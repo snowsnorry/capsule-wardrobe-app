@@ -14,6 +14,7 @@ import { getOutfitItem, getOutfitItemKey } from "./outfitItemMappers";
 export function OutfitGrid({
   disabled = false,
   highlightedKeys = [],
+  isAfterCompactReport = false,
   isMobile,
   isSelectionMode,
   mobileCardColumns,
@@ -26,6 +27,7 @@ export function OutfitGrid({
 }: {
   disabled?: boolean;
   highlightedKeys?: string[];
+  isAfterCompactReport?: boolean;
   isMobile: boolean;
   isSelectionMode: boolean;
   mobileCardColumns: MobileCardColumns;
@@ -42,7 +44,7 @@ export function OutfitGrid({
 }) {
   const highlightedKeySet = new Set(highlightedKeys);
   return (
-    <Box sx={buildOutfitGridSectionSx(mobileCardColumns)}>
+    <Box sx={buildOutfitGridSectionSx(mobileCardColumns, isAfterCompactReport)}>
       <Box sx={buildOutfitGridSx(mobileCardColumns)}>
         {visibleItems.map((entry) => {
           const key = getOutfitItemKey(entry);

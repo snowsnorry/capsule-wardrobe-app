@@ -18,7 +18,8 @@ import ExpandMoreRoundedIcon from "@mui/icons-material/ExpandMoreRounded";
 import MoreVertRoundedIcon from "@mui/icons-material/MoreVertRounded";
 import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
 import type { OutfitReport } from "../../app/appTypes";
-import { ReportDetails, ReportSummary } from "./OutfitReportPanelSections";
+import { ReportDetails } from "./OutfitReportPanelSections";
+import { ReportSummary } from "./OutfitReportSummary";
 import type { OutfitReportTranslate } from "./OutfitReportPanelUtils";
 
 type OutfitReportPanelProps = {
@@ -34,6 +35,7 @@ type OutfitReportPanelProps = {
 };
 
 function ReportMenu({
+  compact = false,
   disabled,
   onDelete,
   onRegenerate,
@@ -41,7 +43,7 @@ function ReportMenu({
 }: Pick<
   OutfitReportPanelProps,
   "disabled" | "onDelete" | "onRegenerate" | "t"
->) {
+> & { compact?: boolean }) {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const close = () => setAnchor(null);
 
@@ -51,6 +53,15 @@ function ReportMenu({
         aria-label={t("outfit.reportOpenMenu")}
         disabled={disabled}
         onClick={(event) => setAnchor(event.currentTarget)}
+        size={compact ? "small" : "medium"}
+        sx={
+          compact
+            ? {
+                height: 36,
+                width: 36,
+              }
+            : undefined
+        }
       >
         <MoreVertRoundedIcon />
       </IconButton>
@@ -89,6 +100,7 @@ function ReportMenu({
 }
 
 function ReportHeader({
+  compact = false,
   disabled,
   onDelete,
   onRegenerate,
@@ -96,31 +108,112 @@ function ReportHeader({
 }: Pick<
   OutfitReportPanelProps,
   "disabled" | "onDelete" | "onRegenerate" | "t"
->) {
+> & { compact?: boolean }) {
   return (
     <Box sx={{ flexShrink: 0 }}>
       <Stack
         direction="row"
-        spacing={1}
+        spacing={compact ? 0.75 : 1}
         sx={{
           alignItems: "center",
-          px: { xs: 2, md: 2.5 },
-          pt: { xs: 2, md: 2.5 },
-          pb: 1.5,
+          px: compact ? { xs: 1.5, md: 2 } : { xs: 2, md: 2.5 },
+          pt: compact ? { xs: 1.25, md: 1.75 } : { xs: 2, md: 2.5 },
+          pb: compact ? 1 : 1.5,
         }}
       >
-        <Typography variant="h6" sx={{ flex: 1 }}>
+        <Typography
+          variant="h6"
+          sx={{
+            flex: 1,
+            fontSize: compact ? { xs: "1.05rem", md: "1.125rem" } : undefined,
+            lineHeight: compact ? 1.25 : undefined,
+          }}
+        >
           {t("outfit.reportTitle")}
         </Typography>
         <ReportMenu
+          compact={compact}
           disabled={disabled}
           onDelete={onDelete}
           onRegenerate={onRegenerate}
           t={t}
         />
       </Stack>
-      <Divider flexItem sx={{ mx: { xs: 2, md: 2.5 } }} />
+      <Divider
+        flexItem
+        sx={{ mx: compact ? { xs: 1.5, md: 2 } : { xs: 2, md: 2.5 } }}
+      />
     </Box>
+  );
+}
+
+function ReportBody({
+  expanded,
+  isCompact,
+  isStale,
+  onHighlightItemIds,
+  onToggleExpanded,
+  report,
+  t,
+}: Pick<
+  OutfitReportPanelProps,
+  "isCompact" | "isStale" | "onHighlightItemIds" | "report" | "t"
+> & {
+  expanded: boolean;
+  onToggleExpanded: () => void;
+}) {
+  const detailsId = "outfit-report-details";
+
+  return (
+    <Stack
+      data-testid="outfit-report-scroll-body"
+      spacing={isCompact ? 1.25 : 2.5}
+      sx={{
+        flex: 1,
+        minHeight: 0,
+        overflowY: isCompact ? "visible" : "auto",
+        p: isCompact ? { xs: 1.5, md: 2 } : { xs: 2, md: 2.5 },
+      }}
+    >
+      <ReportSummary
+        isCompact={isCompact}
+        isExpanded={expanded}
+        isStale={isStale}
+        report={report}
+        t={t}
+      />
+      {isCompact ? (
+        <Button
+          variant="text"
+          size="small"
+          aria-controls={detailsId}
+          aria-expanded={expanded}
+          endIcon={
+            expanded ? <ExpandLessRoundedIcon /> : <ExpandMoreRoundedIcon />
+          }
+          onClick={onToggleExpanded}
+          sx={{
+            alignSelf: "flex-start",
+            minHeight: 36,
+            mt: -0.25,
+            px: 1,
+          }}
+        >
+          {expanded
+            ? t("outfit.reportHideDetails")
+            : t("outfit.reportShowDetails")}
+        </Button>
+      ) : null}
+      {expanded ? (
+        <Box id={detailsId}>
+          <ReportDetails
+            onHighlightItemIds={onHighlightItemIds}
+            report={report}
+            t={t}
+          />
+        </Box>
+      ) : null}
+    </Stack>
   );
 }
 
@@ -136,7 +229,6 @@ export default function OutfitReportPanel({
   t,
 }: OutfitReportPanelProps) {
   const [expanded, setExpanded] = useState(!isCompact);
-  const detailsId = "outfit-report-details";
 
   return (
     <Box
@@ -160,49 +252,21 @@ export default function OutfitReportPanel({
         />
       ) : null}
       <ReportHeader
+        compact={isCompact}
         disabled={disabled}
         onDelete={onDelete}
         onRegenerate={onRegenerate}
         t={t}
       />
-      <Stack
-        data-testid="outfit-report-scroll-body"
-        spacing={2.5}
-        sx={{
-          flex: 1,
-          minHeight: 0,
-          overflowY: isCompact ? "visible" : "auto",
-          p: { xs: 2, md: 2.5 },
-        }}
-      >
-        <ReportSummary isStale={isStale} report={report} t={t} />
-        {isCompact ? (
-          <Button
-            variant="text"
-            size="small"
-            aria-controls={detailsId}
-            aria-expanded={expanded}
-            endIcon={
-              expanded ? <ExpandLessRoundedIcon /> : <ExpandMoreRoundedIcon />
-            }
-            onClick={() => setExpanded((current) => !current)}
-            sx={{ alignSelf: "flex-start" }}
-          >
-            {expanded
-              ? t("outfit.reportHideDetails")
-              : t("outfit.reportShowDetails")}
-          </Button>
-        ) : null}
-        {expanded ? (
-          <Box id={detailsId}>
-            <ReportDetails
-              onHighlightItemIds={onHighlightItemIds}
-              report={report}
-              t={t}
-            />
-          </Box>
-        ) : null}
-      </Stack>
+      <ReportBody
+        expanded={expanded}
+        isCompact={isCompact}
+        isStale={isStale}
+        onHighlightItemIds={onHighlightItemIds}
+        onToggleExpanded={() => setExpanded((current) => !current)}
+        report={report}
+        t={t}
+      />
     </Box>
   );
 }

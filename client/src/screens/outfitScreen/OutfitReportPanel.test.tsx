@@ -136,6 +136,48 @@ describe("OutfitReportPanel", () => {
     expect(onRegenerate).not.toHaveBeenCalled();
   });
 
+  test("uses compact report density before details are expanded", async () => {
+    renderPanel(
+      {
+        schemaVersion: 1,
+        itemsHash: "hash",
+        verdict: {
+          status: "valid",
+          score: 0.86,
+          summary:
+            "A complete casual autumn-leaning outfit with a cohesive minimal streetwear feel and practical everyday styling.",
+        },
+        seasonality: {
+          primarySeasons: ["autumn"],
+          secondarySeasons: ["spring"],
+        },
+        styleProfile: {
+          formalityLevel: "casual",
+          styleKeywords: ["street_style"],
+        },
+        compatibility: {
+          overallScore: 0.86,
+          styleCoherence: 0.9,
+        },
+        colorAnalysis: { paletteType: "muted_neutral" },
+        issues: [],
+        suggestions: [],
+        confidence: {},
+      },
+      { isCompact: true },
+    );
+
+    expect(screen.getByTestId("outfit-report-score")).toHaveAttribute(
+      "data-density",
+      "compact",
+    );
+    expect(screen.queryByText("Style coherence")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Show details" }));
+
+    expect(screen.getByText("Style coherence")).toBeInTheDocument();
+  });
+
   test("renders risk suggestions and confidence branches without item targets", () => {
     const onHighlightItemIds = vi.fn();
     renderPanel(
