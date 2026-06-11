@@ -16,6 +16,38 @@ function getOutfitReportErrorStatus(error) {
   }
 }
 
+function isResponseWritable(res) {
+  return !res.destroyed && !res.writableEnded;
+}
+
+function openOutfitReportEventStream(res) {
+  res.status(200);
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache, no-transform");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders?.();
+}
+
+function writeOutfitReportEvent(res, event, data) {
+  if (!isResponseWritable(res)) {
+    return false;
+  }
+
+  try {
+    res.write(`event: ${event}\n`);
+    res.write(`data: ${JSON.stringify(data)}\n\n`);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function endOutfitReportEventStream(res) {
+  if (isResponseWritable(res)) {
+    res.end();
+  }
+}
+
 function registerOutfitReportRoute(app, context) {
   const { requireTrustedOrigin, requireAuth, requireCsrf } = context;
 
@@ -25,21 +57,27 @@ function registerOutfitReportRoute(app, context) {
     requireAuth,
     requireCsrf,
     async (req, res) => {
+      openOutfitReportEventStream(res);
+      writeOutfitReportEvent(res, "progress", { status: "pending" });
+
       try {
         const report = await context.generateOutfitReportImpl(
           req.user.email,
           req.params.id,
         );
-        return res.json({ ok: true, report });
+        writeOutfitReportEvent(res, "complete", { ok: true, report });
       } catch (error) {
         const status = getOutfitReportErrorStatus(error);
         if (status === 503) {
           logError("[outfits/report]", error);
         }
-        return res
-          .status(status)
-          .json({ error: status === 503 ? "service_unavailable" : error.code });
+        writeOutfitReportEvent(res, "fatal", {
+          error: status === 503 ? "service_unavailable" : error.code,
+        });
+      } finally {
+        endOutfitReportEventStream(res);
       }
+      return undefined;
     },
   );
 

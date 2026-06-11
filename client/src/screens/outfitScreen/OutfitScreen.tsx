@@ -35,10 +35,8 @@ import {
   outfitCardsScrollSx,
   outfitContentSx,
   outfitHeaderSectionSx,
+  outfitReportFloatingInspectorSx,
   outfitReportCompactSectionSx,
-  outfitReportContentSx,
-  outfitReportInspectorSx,
-  outfitReportLayoutSx,
   outfitScreenSx,
 } from "./OutfitScreenStyles";
 import {
@@ -131,7 +129,7 @@ export default function OutfitScreen({
   const report = activeOutfit?.effective?.report || null;
   const reportIsStale = Boolean(activeOutfit?.effective?.reportMeta?.stale);
   const hasReport = Boolean(report);
-  const showReportInspector = Boolean(
+  const showFloatingReportInspector = Boolean(
     report && isReportInspectorLayout && !isMobile,
   );
   const highlightedReportItemKeys = useMemo(
@@ -314,9 +312,9 @@ export default function OutfitScreen({
         <Stack
           data-testid="outfit-cards-content"
           spacing={3}
-          sx={showReportInspector ? outfitReportContentSx : outfitContentSx}
+          sx={outfitContentSx}
         >
-          {report && !showReportInspector ? (
+          {report && !showFloatingReportInspector ? (
             <Box sx={outfitReportCompactSectionSx}>
               <OutfitReportPanel
                 disabled={isContentBusy}
@@ -333,31 +331,26 @@ export default function OutfitScreen({
               />
             </Box>
           ) : null}
-          {showReportInspector ? (
-            <Box sx={outfitReportLayoutSx}>
-              <Stack spacing={3} sx={{ minWidth: 0 }}>
-                {renderOutfitMainContent()}
-              </Stack>
-              <Box sx={outfitReportInspectorSx}>
-                <OutfitReportPanel
-                  disabled={isContentBusy}
-                  isPending={isReportPending}
-                  isStale={reportIsStale}
-                  report={report!}
-                  t={t}
-                  onDelete={() => void onDeleteOutfitReport?.(activeOutfit?.id)}
-                  onHighlightItemIds={setHighlightedReportItemIds}
-                  onRegenerate={() =>
-                    void onGenerateOutfitReport?.(activeOutfit?.id)
-                  }
-                />
-              </Box>
-            </Box>
-          ) : (
-            renderOutfitMainContent()
-          )}
+          {renderOutfitMainContent()}
         </Stack>
       </Box>
+      {showFloatingReportInspector ? (
+        <Box
+          data-testid="outfit-report-floating-inspector"
+          sx={outfitReportFloatingInspectorSx}
+        >
+          <OutfitReportPanel
+            disabled={isContentBusy}
+            isPending={isReportPending}
+            isStale={reportIsStale}
+            report={report!}
+            t={t}
+            onDelete={() => void onDeleteOutfitReport?.(activeOutfit?.id)}
+            onHighlightItemIds={setHighlightedReportItemIds}
+            onRegenerate={() => void onGenerateOutfitReport?.(activeOutfit?.id)}
+          />
+        </Box>
+      ) : null}
       <OutfitMenu
         anchor={menuAnchor}
         disabled={isContentBusy}

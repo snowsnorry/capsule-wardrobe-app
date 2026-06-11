@@ -39,6 +39,42 @@ function authenticatedMutationOptions(body?: unknown) {
   };
 }
 
+async function requestEventStream(
+  baseUrl: string,
+  pathname: string,
+  {
+    cookie,
+    csrfToken,
+    origin,
+  }: { cookie?: string; csrfToken?: string; origin?: string } = {},
+) {
+  const response = await fetch(`${baseUrl}${pathname}`, {
+    method: "POST",
+    headers: {
+      ...(cookie ? { cookie } : {}),
+      ...(csrfToken ? { "X-CSRF-Token": csrfToken } : {}),
+      ...(origin ? { origin } : {}),
+    },
+  });
+
+  return {
+    response,
+    text: await response.text(),
+  };
+}
+
+function parseEventStream(text: string) {
+  return text
+    .trim()
+    .split("\n\n")
+    .filter(Boolean)
+    .map((entry) => {
+      const event = entry.match(/^event: (.+)$/m)?.[1] || "message";
+      const data = entry.match(/^data: (.+)$/m)?.[1] || "{}";
+      return { event, data: JSON.parse(data) };
+    });
+}
+
 test("outfit read routes return paginated, searched, and annotated outfits", async (t) => {
   const listRecentOutfitsImpl = vi.fn(async () => [outfit]);
   const countOutfitsImpl = vi.fn(async () => 12);
@@ -604,20 +640,29 @@ test("outfit report route delegates to generator and maps report errors", async 
     },
   });
 
-  const generated = await requestJson(
+  const generated = await requestEventStream(
     baseUrl,
     "/outfits/outfit-1/report",
     authenticatedMutationOptions(),
   );
   expect(generated.response.status).toBe(200);
-  expect(generated.json).toEqual({
-    ok: true,
-    report: {
-      schemaVersion: 1,
-      itemsHash: "items-hash",
-      verdict: { status: "valid", score: 0.9, summary: "Ready." },
+  expect(generated.response.headers.get("content-type")).toContain(
+    "text/event-stream",
+  );
+  expect(parseEventStream(generated.text)).toEqual([
+    { event: "progress", data: { status: "pending" } },
+    {
+      event: "complete",
+      data: {
+        ok: true,
+        report: {
+          schemaVersion: 1,
+          itemsHash: "items-hash",
+          verdict: { status: "valid", score: 0.9, summary: "Ready." },
+        },
+      },
     },
-  });
+  ]);
   expect(generateOutfitReportImpl).toHaveBeenCalledWith(
     "person@example.com",
     "outfit-1",
@@ -630,29 +675,38 @@ test("outfit report route delegates to generator and maps report errors", async 
   });
   expect(missingCsrf.response.status).toBe(403);
 
-  const missing = await requestJson(
+  const missing = await requestEventStream(
     baseUrl,
     "/outfits/missing/report",
     authenticatedMutationOptions(),
   );
-  expect(missing.response.status).toBe(404);
-  expect(missing.json).toEqual({ error: "not_found" });
+  expect(missing.response.status).toBe(200);
+  expect(parseEventStream(missing.text)).toEqual([
+    { event: "progress", data: { status: "pending" } },
+    { event: "fatal", data: { error: "not_found" } },
+  ]);
 
-  const empty = await requestJson(
+  const empty = await requestEventStream(
     baseUrl,
     "/outfits/empty/report",
     authenticatedMutationOptions(),
   );
-  expect(empty.response.status).toBe(400);
-  expect(empty.json).toEqual({ error: "invalid_payload" });
+  expect(empty.response.status).toBe(200);
+  expect(parseEventStream(empty.text)).toEqual([
+    { event: "progress", data: { status: "pending" } },
+    { event: "fatal", data: { error: "invalid_payload" } },
+  ]);
 
-  const failed = await requestJson(
+  const failed = await requestEventStream(
     baseUrl,
     "/outfits/llm-failed/report",
     authenticatedMutationOptions(),
   );
-  expect(failed.response.status).toBe(503);
-  expect(failed.json).toEqual({ error: "service_unavailable" });
+  expect(failed.response.status).toBe(200);
+  expect(parseEventStream(failed.text)).toEqual([
+    { event: "progress", data: { status: "pending" } },
+    { event: "fatal", data: { error: "service_unavailable" } },
+  ]);
 
   const deleted = await requestJson(baseUrl, "/outfits/outfit-1/report", {
     method: "DELETE",

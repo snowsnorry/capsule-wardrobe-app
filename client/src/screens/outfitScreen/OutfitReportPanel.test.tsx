@@ -1,6 +1,12 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 import type { ComponentProps } from "react";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import type { OutfitReport } from "../../app/appTypes";
 import OutfitReportPanel from "./OutfitReportPanel";
@@ -11,9 +17,9 @@ const labels: Record<string, string> = {
   "actions.delete": "Delete",
   "outfit.regenerateReport": "Regenerate report",
   "outfit.reportConfidence": "Confidence",
-  "outfit.reportConfidenceValue": "{percent}% confidence",
   "outfit.reportHideDetails": "Hide details",
   "outfit.reportIssues": "Issues",
+  "outfit.reportIssueSuggestionLabel": "Suggestion:",
   "outfit.reportOpenMenu": "Open report actions",
   "outfit.reportOutdated": "Report may be outdated",
   "outfit.reportScoreColorHarmony": "Color harmony",
@@ -152,6 +158,7 @@ describe("OutfitReportPanel", () => {
         issues: [
           {
             message: "Layering needs polish.",
+            suggestion: "Add a warmer midlayer.",
           },
         ],
         suggestions: [
@@ -160,6 +167,7 @@ describe("OutfitReportPanel", () => {
           },
         ],
         confidence: {
+          overall: 0.82,
           assumptions: ["Weather is inferred."],
           lowConfidenceAspects: ["rain_protection"],
         },
@@ -172,12 +180,32 @@ describe("OutfitReportPanel", () => {
     expect(screen.getByText("Shoes may feel too heavy.")).toBeInTheDocument();
     expect(screen.getByText("Layering needs polish.")).toBeInTheDocument();
     expect(screen.getByText("Choose a lighter sneaker.")).toBeInTheDocument();
+    expect(screen.getByText("Confidence: 82%")).toBeInTheDocument();
+    expect(screen.queryByText("82% confidence")).not.toBeInTheDocument();
     expect(screen.getByText("Weather is inferred.")).toBeInTheDocument();
-    expect(screen.getByText("Rain Protection")).toBeInTheDocument();
+    expect(screen.queryByText("Rain Protection")).not.toBeInTheDocument();
+    expect(screen.getByTestId("outfit-report-score")).toHaveAttribute(
+      "data-score-tone",
+      "warning",
+    );
+    expect(screen.getAllByRole("listitem")).toHaveLength(5);
+    expect(
+      within(screen.getByTestId("outfit-report-scroll-body")).queryByText(
+        "Outfit report",
+      ),
+    ).toBeNull();
+    const issueItem = screen.getByText("Layering needs polish.").closest("li");
+    expect(issueItem).toBeTruthy();
+    expect(issueItem).toHaveTextContent(
+      "Layering needs polish.Suggestion: Add a warmer midlayer.",
+    );
+    expect(screen.getByTestId("outfit-report-issue-suggestion")).toHaveStyle(
+      "display: block",
+    );
 
     const untargetedRow = screen
       .getByText("Choose a lighter sneaker.")
-      .closest("div");
+      .closest("li");
     expect(untargetedRow).toBeTruthy();
     fireEvent.mouseEnter(untargetedRow as HTMLElement);
     fireEvent.mouseLeave(untargetedRow as HTMLElement);

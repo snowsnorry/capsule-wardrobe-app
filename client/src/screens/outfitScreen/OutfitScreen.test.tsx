@@ -95,7 +95,7 @@ vi.mock("../../i18n/useI18n", () => ({
         "filters.reset": "Reset",
         "filters.title": "Filters",
         "outfit.addItems": "Add items",
-        "outfit.analyzeOutfit": "Analyze outfit",
+        "outfit.analyzeOutfit": "Analyze",
         "outfit.catalog": "Catalog",
         "outfit.catalogSelected": `${params?.count ?? 0} catalog`,
         "outfit.categoryCount": `${params?.count ?? 0} ${params?.category ?? ""}`,
@@ -116,10 +116,10 @@ vi.mock("../../i18n/useI18n", () => ({
         "outfit.openMissingItemActions": "Open missing item actions",
         "outfit.regenerateReport": "Regenerate report",
         "outfit.reportConfidence": "Confidence",
-        "outfit.reportConfidenceValue": `${params?.percent ?? 0}% confidence`,
         "outfit.reportGenerating": "Generating outfit report",
         "outfit.reportHideDetails": "Hide details",
         "outfit.reportIssues": "Issues",
+        "outfit.reportIssueSuggestionLabel": "Suggestion:",
         "outfit.reportOpenMenu": "Open report actions",
         "outfit.reportOutdated": "Report may be outdated",
         "outfit.reportScoreColorHarmony": "Color harmony",
@@ -185,7 +185,9 @@ function setViewportMobile(isMobile: boolean) {
   Object.defineProperty(window, "matchMedia", {
     writable: true,
     value: vi.fn().mockImplementation((query: string) => ({
-      matches: isMobile && query.includes("max-width:899px"),
+      matches:
+        (isMobile && query.includes("max-width:899px")) ||
+        (!isMobile && query.includes("min-width:1200px")),
       media: query,
       onchange: null,
       addEventListener: vi.fn(),
@@ -504,7 +506,7 @@ describe("OutfitScreen", () => {
     expect(
       screen.getByRole("progressbar", { name: "Generating outfit report" }),
     ).toBeInTheDocument();
-    const analyze = screen.getByRole("button", { name: "Analyze outfit" });
+    const analyze = screen.getByRole("button", { name: "Analyze" });
     expect(analyze).toBeDisabled();
     expect(onGenerateOutfitReport).not.toHaveBeenCalled();
   });
@@ -516,10 +518,10 @@ describe("OutfitScreen", () => {
     renderScreen({ onGenerateOutfitReport });
 
     expect(
-      screen.queryByRole("button", { name: "Analyze outfit" }),
+      screen.queryByRole("button", { name: "Analyze" }),
     ).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Open actions" }));
-    await user.click(screen.getByRole("menuitem", { name: "Analyze outfit" }));
+    await user.click(screen.getByRole("menuitem", { name: "Analyze" }));
 
     expect(onGenerateOutfitReport).toHaveBeenCalledWith("outfit-1");
   });
@@ -538,14 +540,15 @@ describe("OutfitScreen", () => {
     expect(screen.getByText("86")).toBeInTheDocument();
     expect(screen.getByText("Good match")).toBeInTheDocument();
     expect(screen.getByText("Report may be outdated")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Analyze outfit" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Analyze" })).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "Show details" }));
     expect(screen.getByText("Style coherence")).toBeInTheDocument();
     expect(screen.getByText("90%")).toBeInTheDocument();
     expect(screen.getByText("Balanced neutral palette.")).toBeInTheDocument();
     expect(screen.getByText("Boots may feel heavy.")).toBeInTheDocument();
-    expect(screen.getByText("78% confidence")).toBeInTheDocument();
+    expect(screen.getByText("Confidence: 78%")).toBeInTheDocument();
+    expect(screen.queryByText("78% confidence")).not.toBeInTheDocument();
 
     await user.click(
       screen.getByRole("button", { name: "Open report actions" }),
@@ -562,6 +565,22 @@ describe("OutfitScreen", () => {
     );
     await user.click(screen.getByRole("menuitem", { name: "Delete" }));
     expect(onDeleteOutfitReport).toHaveBeenCalledWith("outfit-1");
+  });
+
+  test("renders desktop report as a floating inspector outside the cards scroll", () => {
+    setViewportMobile(false);
+    renderScreen({ activeOutfit: buildReportOutfit() });
+
+    const cardsScroll = screen.getByTestId("outfit-cards-scroll");
+    const floatingInspector = screen.getByTestId(
+      "outfit-report-floating-inspector",
+    );
+
+    expect(floatingInspector).toContainElement(
+      screen.getByTestId("outfit-report"),
+    );
+    expect(within(cardsScroll).queryByTestId("outfit-report")).toBeNull();
+    expect(screen.getByText("Style coherence")).toBeInTheDocument();
   });
 
   test("highlights linked outfit cards from report issue focus", async () => {

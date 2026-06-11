@@ -1,4 +1,3 @@
-import type { ReactNode } from "react";
 import {
   Alert,
   Box,
@@ -10,7 +9,6 @@ import {
 } from "@mui/material";
 import CheckCircleOutlineRoundedIcon from "@mui/icons-material/CheckCircleOutlineRounded";
 import LightbulbOutlinedIcon from "@mui/icons-material/LightbulbOutlined";
-import ShieldOutlinedIcon from "@mui/icons-material/ShieldOutlined";
 import WarningAmberRoundedIcon from "@mui/icons-material/WarningAmberRounded";
 import type { OutfitReport } from "../../app/appTypes";
 import {
@@ -21,9 +19,16 @@ import {
   getReportScoreRows,
   getReportSuggestionIds,
   getReportVerdictLabel,
-  toPercent,
   type OutfitReportTranslate,
 } from "./OutfitReportPanelUtils";
+import { ConfidenceSection } from "./OutfitReportPanelConfidence";
+import {
+  getScoreTone,
+  HighlightRow,
+  ReportSection,
+  reportToneSx,
+  TextList,
+} from "./OutfitReportPanelSectionPrimitives";
 
 type ReportContentProps = {
   onHighlightItemIds: (ids: string[]) => void;
@@ -31,76 +36,10 @@ type ReportContentProps = {
   t: OutfitReportTranslate;
 };
 
-function ReportSection({
-  children,
-  icon,
-  title,
-}: {
-  children: ReactNode;
-  icon?: ReactNode;
-  title: string;
-}) {
-  return (
-    <Stack spacing={1.25}>
-      <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-        {icon}
-        <Typography variant="subtitle1" sx={{ fontWeight: 750 }}>
-          {title}
-        </Typography>
-      </Stack>
-      {children}
-    </Stack>
-  );
-}
-
-function TextList({ items }: { items: string[] | null | undefined }) {
-  const values = (items || []).filter(Boolean);
-  if (!values.length) return null;
-
-  return (
-    <Stack component="ul" spacing={0.75} sx={{ m: 0, pl: 2.5 }}>
-      {values.map((item) => (
-        <Typography key={item} component="li" variant="body2">
-          {item}
-        </Typography>
-      ))}
-    </Stack>
-  );
-}
-
-function HighlightRow({
-  children,
-  ids,
-  onHighlightItemIds,
-}: {
-  children: ReactNode;
-  ids: string[];
-  onHighlightItemIds: ReportContentProps["onHighlightItemIds"];
-}) {
-  const hasTargets = ids.length > 0;
-  return (
-    <Box
-      tabIndex={hasTargets ? 0 : undefined}
-      onBlur={() => onHighlightItemIds([])}
-      onFocus={() => onHighlightItemIds(ids)}
-      onMouseEnter={() => onHighlightItemIds(ids)}
-      onMouseLeave={() => onHighlightItemIds([])}
-      sx={{
-        borderRadius: "var(--cw-radius-card)",
-        p: 1,
-        mx: -1,
-        outline: "none",
-        "&:focus-visible": hasTargets
-          ? {
-              boxShadow: "0 0 0 2px var(--cw-color-primary)",
-            }
-          : undefined,
-      }}
-    >
-      {children}
-    </Box>
-  );
-}
+const reportListTextSx = {
+  fontSize: "0.875rem",
+  lineHeight: 1.55,
+} as const;
 
 function ScoresSection({
   report,
@@ -111,37 +50,52 @@ function ScoresSection({
 
   return (
     <ReportSection title={t("outfit.reportScores")}>
-      <Stack spacing={1.25}>
-        {rows.map((row) => (
-          <Stack
-            key={row.key}
-            direction="row"
-            spacing={1.5}
-            sx={{ alignItems: "center" }}
-          >
-            <Typography variant="body2" sx={{ flex: 1, minWidth: 0 }}>
-              {row.label}
-            </Typography>
-            <LinearProgress
-              aria-label={row.label}
-              variant="determinate"
-              value={row.percent || 0}
-              sx={{
-                width: 116,
-                height: 6,
-                borderRadius: "var(--cw-radius-pill)",
-                bgcolor: "divider",
-                "& .MuiLinearProgress-bar": {
+      <Box
+        sx={{
+          alignItems: "center",
+          columnGap: 1.5,
+          display: "grid",
+          gridTemplateColumns: "max-content minmax(96px, 1fr) max-content",
+          rowGap: 1.25,
+        }}
+      >
+        {rows.map((row) => {
+          const tone = getScoreTone(row.percent);
+          return (
+            <Box key={row.key} sx={{ display: "contents" }}>
+              <Typography variant="body2" noWrap>
+                {row.label}
+              </Typography>
+              <LinearProgress
+                aria-label={row.label}
+                variant="determinate"
+                value={row.percent || 0}
+                sx={{
+                  width: "100%",
+                  height: 6,
                   borderRadius: "var(--cw-radius-pill)",
-                },
-              }}
-            />
-            <Typography variant="body2" sx={{ fontWeight: 750, width: 42 }}>
-              {row.percent}%
-            </Typography>
-          </Stack>
-        ))}
-      </Stack>
+                  bgcolor: "divider",
+                  "& .MuiLinearProgress-bar": {
+                    bgcolor: reportToneSx[tone].markerColor,
+                    borderRadius: "var(--cw-radius-pill)",
+                  },
+                }}
+              />
+              <Typography
+                variant="body2"
+                sx={{
+                  color: reportToneSx[tone].color,
+                  fontWeight: 750,
+                  minWidth: 42,
+                  textAlign: "right",
+                }}
+              >
+                {row.percent}%
+              </Typography>
+            </Box>
+          );
+        })}
+      </Box>
     </ReportSection>
   );
 }
@@ -155,24 +109,68 @@ function IssuesSection({ onHighlightItemIds, report, t }: ReportContentProps) {
       title={t("outfit.reportIssues")}
       icon={<WarningAmberRoundedIcon color="warning" fontSize="small" />}
     >
-      <Stack spacing={0.75}>
+      <Stack
+        component="ul"
+        spacing={0.75}
+        sx={{
+          listStyle: "none",
+          m: 0,
+          p: 0,
+        }}
+      >
         {issues.map((issue, index) => (
           <HighlightRow
+            asListItem
             key={`${issue.code || issue.message || "issue"}-${index}`}
             ids={getReportIssueIds(issue)}
             onHighlightItemIds={onHighlightItemIds}
+            tone="warning"
           >
-            <Stack spacing={0.4}>
-              <Typography variant="body2">{issue.message}</Typography>
+            <Typography variant="body2" sx={reportListTextSx}>
+              <Box component="span">{issue.message}</Box>
               {issue.suggestion ? (
-                <Typography variant="caption" sx={{ color: "text.secondary" }}>
+                <Box
+                  component="span"
+                  data-testid="outfit-report-issue-suggestion"
+                  sx={{ display: "block", mt: 0.25 }}
+                >
+                  <Box component="span" sx={{ fontWeight: 750 }}>
+                    {t("outfit.reportIssueSuggestionLabel")}
+                  </Box>{" "}
                   {issue.suggestion}
-                </Typography>
+                </Box>
               ) : null}
-            </Stack>
+            </Typography>
           </HighlightRow>
         ))}
-        <TextList items={report.compatibility?.mainRisks} />
+        {(report.compatibility?.mainRisks || []).filter(Boolean).map((risk) => (
+          <Box
+            key={risk}
+            component="li"
+            sx={{
+              columnGap: 1,
+              display: "grid",
+              gridTemplateColumns: "20px minmax(0, 1fr)",
+              listStyle: "none",
+            }}
+          >
+            <Box
+              aria-hidden="true"
+              sx={{
+                alignSelf: "start",
+                bgcolor: reportToneSx.warning.markerColor,
+                borderRadius: "var(--cw-radius-pill)",
+                height: 5,
+                justifySelf: "center",
+                mt: "0.58em",
+                width: 5,
+              }}
+            />
+            <Typography variant="body2" sx={reportListTextSx}>
+              {risk}
+            </Typography>
+          </Box>
+        ))}
       </Stack>
     </ReportSection>
   );
@@ -191,9 +189,18 @@ function SuggestionsSection({
       title={t("outfit.reportSuggestions")}
       icon={<LightbulbOutlinedIcon color="primary" fontSize="small" />}
     >
-      <Stack spacing={0.75}>
+      <Stack
+        component="ul"
+        spacing={0.75}
+        sx={{
+          listStyle: "none",
+          m: 0,
+          p: 0,
+        }}
+      >
         {suggestions.map((suggestion, index) => (
           <HighlightRow
+            asListItem
             key={`${suggestion.type || "suggestion"}-${suggestion.message || index}`}
             ids={getReportSuggestionIds(suggestion)}
             onHighlightItemIds={onHighlightItemIds}
@@ -203,63 +210,26 @@ function SuggestionsSection({
               spacing={1}
               sx={{ alignItems: "flex-start" }}
             >
-              <Typography variant="body2" sx={{ flex: 1 }}>
+              <Typography variant="body2" sx={{ ...reportListTextSx, flex: 1 }}>
                 {suggestion.message}
               </Typography>
               {suggestion.priority ? (
                 <Chip
                   size="small"
                   label={formatReportValue(suggestion.priority)}
-                  sx={{ height: 22, fontSize: "0.7rem" }}
+                  sx={{
+                    bgcolor: "action.selected",
+                    color: "text.secondary",
+                    flexShrink: 0,
+                    fontSize: "0.7rem",
+                    fontWeight: 650,
+                    height: 22,
+                  }}
                 />
               ) : null}
             </Stack>
           </HighlightRow>
         ))}
-      </Stack>
-    </ReportSection>
-  );
-}
-
-function ConfidenceSection({
-  report,
-  t,
-}: Pick<ReportContentProps, "report" | "t">) {
-  const percent = toPercent(report.confidence?.overall);
-  const assumptions = report.confidence?.assumptions || [];
-  const lowConfidenceAspects = report.confidence?.lowConfidenceAspects || [];
-  if (percent === null && !assumptions.length && !lowConfidenceAspects.length) {
-    return null;
-  }
-
-  return (
-    <ReportSection
-      title={t("outfit.reportConfidence")}
-      icon={<ShieldOutlinedIcon color="primary" fontSize="small" />}
-    >
-      <Stack spacing={1}>
-        {percent !== null ? (
-          <Typography variant="body2" sx={{ color: "text.secondary" }}>
-            {t("outfit.reportConfidenceValue", { percent })}
-          </Typography>
-        ) : null}
-        <TextList items={assumptions} />
-        {lowConfidenceAspects.length ? (
-          <Stack
-            direction="row"
-            useFlexGap
-            spacing={0.75}
-            sx={{ flexWrap: "wrap" }}
-          >
-            {lowConfidenceAspects.map((aspect) => (
-              <Chip
-                key={aspect}
-                size="small"
-                label={formatReportValue(aspect)}
-              />
-            ))}
-          </Stack>
-        ) : null}
       </Stack>
     </ReportSection>
   );
@@ -271,6 +241,7 @@ export function ReportSummary({
   t,
 }: Pick<ReportContentProps, "report" | "t"> & { isStale?: boolean }) {
   const score = getReportScore(report);
+  const scoreTone = getScoreTone(score);
   const chips = getReportChipValues(report);
 
   return (
@@ -282,18 +253,23 @@ export function ReportSummary({
       ) : null}
       <Stack direction="row" spacing={2} sx={{ alignItems: "center" }}>
         <Box
+          data-score-tone={scoreTone}
+          data-testid="outfit-report-score"
           sx={{
             width: 92,
             height: 74,
-            borderRadius: "var(--cw-radius-detail)",
+            borderRadius: "var(--cw-radius-card)",
             display: "grid",
             placeItems: "center",
             flexShrink: 0,
-            color: "primary.dark",
-            backgroundColor: "action.selected",
+            color: reportToneSx[scoreTone].color,
+            backgroundColor: reportToneSx[scoreTone].backgroundColor,
           }}
         >
-          <Typography variant="h2" sx={{ fontWeight: 750, lineHeight: 1 }}>
+          <Typography
+            variant="h2"
+            sx={{ fontSize: "3rem", fontWeight: 500, lineHeight: 1 }}
+          >
             {score ?? "-"}
           </Typography>
         </Box>

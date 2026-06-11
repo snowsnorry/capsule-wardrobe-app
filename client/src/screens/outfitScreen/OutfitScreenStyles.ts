@@ -11,6 +11,7 @@ export const outfitScreenSx = {
   minHeight: 0,
   minWidth: 0,
   overflow: "hidden",
+  position: "relative",
 } as const;
 
 export const outfitCardsScrollSx = {
@@ -28,30 +29,15 @@ export const outfitContentSx = {
   minWidth: 0,
 } as const;
 
-export const outfitReportContentSx = {
-  ...outfitContentSx,
-  maxWidth: { lg: "1560px" },
-  "@media (min-width: 2100px)": {
-    maxWidth: "1680px",
-  },
-  "@media (min-width: 2600px)": {
-    maxWidth: "1760px",
-  },
-} as const;
-
-export const outfitReportLayoutSx = {
-  display: "grid",
-  gridTemplateColumns: "minmax(0, 1fr) minmax(360px, 420px)",
-  gap: 3,
-  alignItems: "start",
-  minWidth: 0,
-} as const;
-
-export const outfitReportInspectorSx = {
-  position: "sticky",
-  top: 16,
-  alignSelf: "start",
-  minWidth: 0,
+export const outfitReportFloatingInspectorSx = {
+  position: "absolute",
+  top: { lg: 16, xl: 20 },
+  right: { lg: 16, xl: 24 },
+  bottom: { lg: 16, xl: 20 },
+  width: { lg: 380, xl: 420 },
+  maxWidth: "calc(100% - 32px)",
+  minHeight: 0,
+  zIndex: 3,
 } as const;
 
 export const outfitReportCompactSectionSx = {

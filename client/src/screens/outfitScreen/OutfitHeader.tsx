@@ -11,7 +11,6 @@ import {
   Typography,
 } from "@mui/material";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
-import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
 import DriveFileRenameOutlineRoundedIcon from "@mui/icons-material/DriveFileRenameOutlineRounded";
 import FiberManualRecordRoundedIcon from "@mui/icons-material/FiberManualRecordRounded";
 import MoreVertRoundedIcon from "@mui/icons-material/MoreVertRounded";
@@ -268,7 +267,6 @@ function OutfitHeaderActions({
     <Stack direction="row" spacing={1} sx={outfitHeaderActionsSx}>
       <Button
         variant="outlined"
-        startIcon={<AutoAwesomeRoundedIcon />}
         disabled={disabled}
         onClick={onAnalyze}
         sx={{

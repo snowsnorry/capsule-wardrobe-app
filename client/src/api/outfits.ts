@@ -1,6 +1,6 @@
 /* eslint-disable max-lines */
 import { API_BASE_URL } from "./config";
-import { request, requestJson } from "./request";
+import { getCsrfHeader, request, requestJson } from "./request";
 import type { JsonObject } from "./request";
 import type { OutfitReport } from "../app/appTypes";
 
@@ -42,6 +42,7 @@ type OutfitEventSourceMessage = {
 type OutfitStreamResponse = Pick<Response, "ok" | "status"> & {
   headers: Pick<Headers, "get">;
 };
+type OutfitReportStreamResponse = OutfitStreamResponse;
 type RequestErrorWithStatus = Error & {
   status: number;
 };
@@ -340,10 +341,60 @@ async function deleteOutfitImage(id: string): Promise<OutfitResponse> {
 }
 
 async function generateOutfitReport(id: string): Promise<OutfitReportResponse> {
-  return requestJson(outfitUrl(`${outfitIdPath(id)}/report`), {
+  const fetchEventSource = await loadFetchEventSource();
+  let completePayload: OutfitReportResponse | null = null;
+
+  await fetchEventSource(outfitUrl(`${outfitIdPath(id)}/report`), {
     method: "POST",
     credentials: "include",
-  }) as Promise<OutfitReportResponse>;
+    headers: getCsrfHeader(),
+    openWhenHidden: true,
+    async onopen(response: OutfitReportStreamResponse) {
+      const contentType = (
+        response.headers.get("content-type") || ""
+      ).toLowerCase();
+      if (response.ok && contentType.includes("text/event-stream")) {
+        return;
+      }
+
+      throw new FatalError(`request_failed_${response.status}`);
+    },
+    onmessage(event: OutfitEventSourceMessage) {
+      const payload = parseEventPayload(event.data);
+      if (event.event === "progress") {
+        return;
+      }
+
+      if (event.event === "complete") {
+        if (payload.ok !== true || !payload.report) {
+          throw new FatalError("invalid_event_payload");
+        }
+        completePayload = {
+          ok: true,
+          report: payload.report as OutfitReport,
+        };
+        return;
+      }
+
+      if (event.event === "fatal") {
+        throw new FatalError(String(payload.error || "service_unavailable"));
+      }
+    },
+    onclose() {
+      if (!completePayload) {
+        throw new FatalError("event_stream_closed");
+      }
+    },
+    onerror(error: Error) {
+      throw error;
+    },
+  });
+
+  if (!completePayload) {
+    throw new FatalError("event_stream_closed");
+  }
+
+  return completePayload;
 }
 
 async function deleteOutfitReport(id: string): Promise<OutfitResponse> {

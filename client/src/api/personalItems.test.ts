@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 const requestApi = vi.hoisted(() => ({
   getCachedJson: vi.fn(),
+  getCsrfHeader: vi.fn(() => ({ "X-CSRF-Token": "csrf-token" })),
   request: vi.fn(),
   requestJson: vi.fn(),
 }));
@@ -74,6 +75,8 @@ describe("personal items api", () => {
     vi.restoreAllMocks();
     requestApi.getCachedJson.mockReset();
     requestApi.getCachedJson.mockResolvedValue({ ok: true, items: [] });
+    requestApi.getCsrfHeader.mockReset();
+    requestApi.getCsrfHeader.mockReturnValue({ "X-CSRF-Token": "csrf-token" });
     requestApi.request.mockReset();
     requestApi.request.mockResolvedValue(createResponse() as Response);
     requestApi.requestJson.mockReset();

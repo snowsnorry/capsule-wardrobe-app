@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   Box,
   Button,
+  Divider,
   IconButton,
   LinearProgress,
   ListItemIcon,
@@ -87,6 +88,42 @@ function ReportMenu({
   );
 }
 
+function ReportHeader({
+  disabled,
+  onDelete,
+  onRegenerate,
+  t,
+}: Pick<
+  OutfitReportPanelProps,
+  "disabled" | "onDelete" | "onRegenerate" | "t"
+>) {
+  return (
+    <Box sx={{ flexShrink: 0 }}>
+      <Stack
+        direction="row"
+        spacing={1}
+        sx={{
+          alignItems: "center",
+          px: { xs: 2, md: 2.5 },
+          pt: { xs: 2, md: 2.5 },
+          pb: 1.5,
+        }}
+      >
+        <Typography variant="h6" sx={{ flex: 1 }}>
+          {t("outfit.reportTitle")}
+        </Typography>
+        <ReportMenu
+          disabled={disabled}
+          onDelete={onDelete}
+          onRegenerate={onRegenerate}
+          t={t}
+        />
+      </Stack>
+      <Divider flexItem sx={{ mx: { xs: 2, md: 2.5 } }} />
+    </Box>
+  );
+}
+
 export default function OutfitReportPanel({
   disabled = false,
   isCompact = false,
@@ -109,6 +146,10 @@ export default function OutfitReportPanel({
         borderColor: "divider",
         borderRadius: "var(--cw-radius-dialog)",
         bgcolor: "background.paper",
+        display: "flex",
+        flexDirection: "column",
+        height: isCompact ? "auto" : "100%",
+        minHeight: 0,
         overflow: "hidden",
       }}
     >
@@ -118,18 +159,22 @@ export default function OutfitReportPanel({
           color="success"
         />
       ) : null}
-      <Stack spacing={2.5} sx={{ p: { xs: 2, md: 2.5 } }}>
-        <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-          <Typography variant="h5" sx={{ flex: 1 }}>
-            {t("outfit.reportTitle")}
-          </Typography>
-          <ReportMenu
-            disabled={disabled}
-            onDelete={onDelete}
-            onRegenerate={onRegenerate}
-            t={t}
-          />
-        </Stack>
+      <ReportHeader
+        disabled={disabled}
+        onDelete={onDelete}
+        onRegenerate={onRegenerate}
+        t={t}
+      />
+      <Stack
+        data-testid="outfit-report-scroll-body"
+        spacing={2.5}
+        sx={{
+          flex: 1,
+          minHeight: 0,
+          overflowY: isCompact ? "visible" : "auto",
+          p: { xs: 2, md: 2.5 },
+        }}
+      >
         <ReportSummary isStale={isStale} report={report} t={t} />
         {isCompact ? (
           <Button

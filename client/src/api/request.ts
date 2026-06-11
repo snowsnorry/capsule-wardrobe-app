@@ -73,6 +73,27 @@ function getErrorMessage(data: JsonValue | null, status: number): string {
   return `request_failed_${status}`;
 }
 
+function getCsrfHeader(): Record<string, string> {
+  if (typeof document === "undefined") {
+    return {};
+  }
+
+  let cookie: string;
+  try {
+    cookie = document.cookie;
+  } catch {
+    return {};
+  }
+
+  const csrfToken = cookie
+    .split(";")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith("csrf="))
+    ?.slice("csrf=".length);
+
+  return csrfToken ? { [CSRF_HEADER]: decodeURIComponent(csrfToken) } : {};
+}
+
 async function requestJson(
   url: string,
   options: RequestInit = {},
@@ -109,13 +130,10 @@ async function request(
     !headers.has(CSRF_HEADER) &&
     typeof document !== "undefined"
   ) {
-    const csrfToken = document.cookie
-      .split(";")
-      .map((part) => part.trim())
-      .find((part) => part.startsWith("csrf="))
-      ?.slice("csrf=".length);
+    const csrfHeader = getCsrfHeader();
+    const csrfToken = csrfHeader[CSRF_HEADER];
     if (csrfToken) {
-      headers.set(CSRF_HEADER, decodeURIComponent(csrfToken));
+      headers.set(CSRF_HEADER, csrfToken);
     }
   }
 
@@ -157,5 +175,11 @@ function clearRequestCache() {
   inFlight.clear();
 }
 
-export { request, requestJson, getCachedJson, clearRequestCache };
+export {
+  request,
+  requestJson,
+  getCachedJson,
+  clearRequestCache,
+  getCsrfHeader,
+};
 export type { JsonObject };

@@ -1,5 +1,5 @@
 import { API_BASE_URL } from "./config";
-import { getCachedJson, request, requestJson } from "./request";
+import { getCachedJson, getCsrfHeader, request, requestJson } from "./request";
 import type { JsonObject } from "./request";
 
 type PersonalItemSource = "uploaded" | "from_catalog";
@@ -78,26 +78,6 @@ function getWardrobeItemsPdfUrl(options: PersonalItemsFetchOptions = {}) {
   }
   const query = params.toString();
   return `${API_BASE_URL}/wardrobe/items/pdf${query ? `?${query}` : ""}`;
-}
-
-function getCsrfHeader(): Record<string, string> {
-  if (typeof document === "undefined") {
-    return {};
-  }
-
-  let cookie: string;
-  try {
-    cookie = document.cookie;
-  } catch {
-    return {};
-  }
-
-  const csrfToken = cookie
-    .split(";")
-    .map((part) => part.trim())
-    .find((part) => part.startsWith("csrf="))
-    ?.slice("csrf=".length);
-  return csrfToken ? { "X-CSRF-Token": decodeURIComponent(csrfToken) } : {};
 }
 
 function parseUploadEventPayload(data: string | undefined): JsonObject {
