@@ -65,6 +65,13 @@ function ReportScoreBadge({
 }: Pick<ReportSummaryProps, "isCompact" | "report">) {
   const score = getReportScore(report);
   const scoreTone = getScoreTone(score);
+  const scoreValue = score ?? 0;
+  const badgeSize = isCompact ? { xs: 66, sm: 72, md: 78 } : 96;
+  const ringRadius = 16;
+  const ringStrokeWidth = 2.5;
+  const ringCircumference = 2 * Math.PI * ringRadius;
+  const ringProgressOffset =
+    ringCircumference * (1 - Math.min(100, Math.max(0, scoreValue)) / 100);
 
   return (
     <Box
@@ -72,24 +79,64 @@ function ReportScoreBadge({
       data-testid="outfit-report-score"
       data-density={isCompact ? "compact" : "default"}
       sx={{
-        width: isCompact ? { xs: 64, sm: 72, md: 80 } : 92,
-        height: isCompact ? { xs: 50, sm: 56, md: 62 } : 74,
-        borderRadius: "var(--cw-radius-card)",
+        width: badgeSize,
+        height: badgeSize,
+        borderRadius: "var(--cw-radius-circle)",
         display: "grid",
         placeItems: "center",
         flexShrink: 0,
+        position: "relative",
         color: reportToneSx[scoreTone].color,
-        backgroundColor: reportToneSx[scoreTone].backgroundColor,
       }}
     >
+      <Box
+        component="svg"
+        aria-hidden="true"
+        viewBox="0 0 40 40"
+        sx={{
+          height: "100%",
+          inset: 0,
+          position: "absolute",
+          width: "100%",
+        }}
+      >
+        <circle
+          cx="20"
+          cy="20"
+          fill="none"
+          r={ringRadius}
+          stroke="currentColor"
+          strokeWidth={ringStrokeWidth}
+          style={{ color: reportToneSx[scoreTone].ringTrackColor }}
+        />
+        <circle
+          cx="20"
+          cy="20"
+          fill="none"
+          r={ringRadius}
+          stroke="currentColor"
+          strokeDasharray={ringCircumference}
+          strokeDashoffset={ringProgressOffset}
+          strokeLinecap="round"
+          strokeWidth={ringStrokeWidth}
+          style={{
+            color: reportToneSx[scoreTone].markerColor,
+            transform: "rotate(-90deg)",
+            transformOrigin: "50% 50%",
+            transition:
+              "stroke-dashoffset 220ms ease-out, color 180ms ease-out",
+          }}
+        />
+      </Box>
       <Typography
         variant="h2"
         sx={{
           fontSize: isCompact
-            ? { xs: "2rem", sm: "2.25rem", md: "2.5rem" }
-            : "3rem",
-          fontWeight: 500,
+            ? { xs: "1.75rem", sm: "1.95rem", md: "2.1rem" }
+            : "2.45rem",
+          fontWeight: 550,
           lineHeight: 1,
+          position: "relative",
         }}
       >
         {score ?? "-"}

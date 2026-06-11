@@ -8,21 +8,25 @@ const reportToneSx = {
     color: "success.dark",
     backgroundColor: "rgba(47, 143, 88, 0.12)",
     markerColor: "success.main",
+    ringTrackColor: "rgba(47, 143, 88, 0.16)",
   },
   warning: {
     color: "warning.dark",
     backgroundColor: "rgba(182, 132, 22, 0.16)",
     markerColor: "warning.main",
+    ringTrackColor: "rgba(182, 132, 22, 0.18)",
   },
   error: {
     color: "error.main",
     backgroundColor: "rgba(210, 67, 67, 0.12)",
     markerColor: "error.main",
+    ringTrackColor: "rgba(210, 67, 67, 0.16)",
   },
   neutral: {
     color: "text.secondary",
     backgroundColor: "action.selected",
     markerColor: "text.secondary",
+    ringTrackColor: "action.selected",
   },
 } as const;
 
