@@ -72,8 +72,7 @@ describe("capsuleShareItems", () => {
   test("normalizes capsule items to minimal share JSON", () => {
     expect(
       normalizeCapsuleItemForShare({
-        id: "W7",
-        productId: "catalog-7",
+        id: "catalog-7",
         source: "from_catalog",
         url: "https://example.com/catalog-7",
         name: "Catalog shirt",
@@ -100,9 +99,7 @@ describe("capsuleShareItems", () => {
           wardrobe: {
             items: [
               {
-                id: "W7",
-                wardrobeId: "7",
-                productId: "catalog-7",
+                id: "catalog-7",
                 source: "from_catalog",
                 url: "https://example.com/catalog-7",
                 name: "Catalog shirt",
@@ -119,7 +116,7 @@ describe("capsuleShareItems", () => {
                 imageUrl: "https://example.com/catalog-8.jpg",
               },
             ],
-            outfitSets: [{ itemIds: ["W7", "catalog-8"] }],
+            outfitSets: [{ itemIds: ["catalog-7", "catalog-8"] }],
           },
           rejectedUrls: [],
         },

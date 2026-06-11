@@ -4,6 +4,8 @@ export type SearchRow = Partial<SearchPayload> & {
   embedding?: number[] | null;
 };
 
+const INVALID_SEARCH_ARRAY_VALUE = "\u0000invalid-search-array-value";
+
 export const DEFAULT_SEARCH_STATE = Object.freeze({
   query: "",
   likedOnly: false,
@@ -41,8 +43,7 @@ function normalizeQuery(value: unknown): string {
 
 function normalizeStringArray(values: unknown): string[] {
   if (typeof values === "string") {
-    const normalized = normalizeNullableString(values);
-    return normalized ? [normalized] : [];
+    return [INVALID_SEARCH_ARRAY_VALUE];
   }
   if (!Array.isArray(values)) {
     return [];
@@ -52,6 +53,16 @@ function normalizeStringArray(values: unknown): string[] {
       values.map((value) => normalizeNullableString(value)).filter(Boolean),
     ),
   ];
+}
+
+function serializeStringArray(values: unknown): string[] {
+  return Array.isArray(values)
+    ? [
+        ...new Set(
+          values.map((value) => normalizeNullableString(value)).filter(Boolean),
+        ),
+      ]
+    : [];
 }
 
 function normalizePriceValue(value: unknown): number | null {
@@ -105,7 +116,7 @@ export function serializeSearchRow(
   return {
     query: typeof row.query === "string" ? row.query : "",
     likedOnly: normalizeBoolean(row.likedOnly),
-    brand: normalizeStringArray(row.brand),
+    brand: serializeStringArray(row.brand),
     priceMin:
       row.priceMin === null || row.priceMin === undefined
         ? null
@@ -114,17 +125,17 @@ export function serializeSearchRow(
       row.priceMax === null || row.priceMax === undefined
         ? null
         : Number(row.priceMax),
-    audience: normalizeStringArray(row.audience),
-    category: normalizeStringArray(row.category),
-    season: normalizeStringArray(row.season),
-    formalityLevel: normalizeStringArray(row.formalityLevel),
-    style: normalizeStringArray(row.style),
-    occasions: normalizeStringArray(row.occasions),
-    color: normalizeStringArray(row.color),
-    pattern: normalizeStringArray(row.pattern),
-    silhouette: normalizeStringArray(row.silhouette),
-    fit: normalizeStringArray(row.fit),
-    closureType: normalizeStringArray(row.closureType),
+    audience: serializeStringArray(row.audience),
+    category: serializeStringArray(row.category),
+    season: serializeStringArray(row.season),
+    formalityLevel: serializeStringArray(row.formalityLevel),
+    style: serializeStringArray(row.style),
+    occasions: serializeStringArray(row.occasions),
+    color: serializeStringArray(row.color),
+    pattern: serializeStringArray(row.pattern),
+    silhouette: serializeStringArray(row.silhouette),
+    fit: serializeStringArray(row.fit),
+    closureType: serializeStringArray(row.closureType),
     page: normalizePage(row.page),
   };
 }

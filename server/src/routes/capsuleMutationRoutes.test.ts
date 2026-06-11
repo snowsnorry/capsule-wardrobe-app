@@ -121,13 +121,17 @@ test("capsule pdf route includes uploaded wardrobe items from capsule snapshots"
               items: [
                 { id: "catalog-1", url: "https://example.com/1" },
                 {
-                  id: "W7",
-                  itemSource: "wardrobe",
+                  id: "snapshot-uploaded-7",
                   wardrobeId: "7",
                   url: "wardrobe://7",
                   name: "Snapshot uploaded shirt",
                   imageUrl: "https://images.example.com/snapshot.webp",
                   source: "uploaded",
+                },
+                {
+                  id: "legacy-url-only",
+                  url: "wardrobe://9",
+                  name: "Legacy URL-only uploaded shirt",
                 },
               ],
             },

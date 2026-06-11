@@ -489,9 +489,7 @@ test("createCapsuleStore normalizes catalog wardrobe items for shares", async ()
             wardrobe: {
               items: [
                 {
-                  id: "W7",
-                  wardrobeId: "7",
-                  productId: "catalog-7",
+                  id: "catalog-7",
                   source: "from_catalog",
                   url: "https://example.com/catalog-7",
                   name: "Catalog shirt",
@@ -510,7 +508,7 @@ test("createCapsuleStore normalizes catalog wardrobe items for shares", async ()
                   brand: "Dropped",
                 },
               ],
-              outfitSets: [{ itemIds: ["W7", "catalog-8"] }],
+              outfitSets: [{ itemIds: ["catalog-7", "catalog-8"] }],
             },
             rejectedUrls: [],
           },

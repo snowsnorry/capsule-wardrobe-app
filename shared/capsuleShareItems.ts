@@ -61,13 +61,6 @@ function hasUploadedPersonalWardrobeItems(snapshot: unknown): boolean {
   return getCapsuleSnapshotItems(snapshot).some(isUploadedPersonalWardrobeItem);
 }
 
-function getCatalogItemId(item: ShareItem): string {
-  return (
-    getItemString(item, "productId") ||
-    (isCatalogWardrobeItem(item) ? "" : getItemString(item, "id"))
-  );
-}
-
 function normalizeCapsuleItemForShare(item: unknown): ShareItem | null {
   if (!item || typeof item !== "object" || Array.isArray(item)) {
     return null;
@@ -75,7 +68,7 @@ function normalizeCapsuleItemForShare(item: unknown): ShareItem | null {
 
   const source = item as ShareItem;
   const normalized = {
-    id: getCatalogItemId(source),
+    id: getItemString(source, "id"),
     url: getItemString(source, "url"),
     name: getItemString(source, "name"),
     audience: getItemString(source, "audience"),
@@ -89,15 +82,7 @@ function normalizeCapsuleItemForShare(item: unknown): ShareItem | null {
 }
 
 function getItemIdAliases(item: ShareItem): string[] {
-  const aliases = [
-    getItemString(item, "id"),
-    getItemString(item, "wardrobeId"),
-  ].filter(Boolean);
-  const wardrobeId = getItemString(item, "wardrobeId");
-  if (wardrobeId) {
-    aliases.push(`W${wardrobeId}`);
-  }
-  return [...new Set(aliases)];
+  return [getItemString(item, "id")].filter(Boolean);
 }
 
 function buildOutfitSetWithMappedItemIds(

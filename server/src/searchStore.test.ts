@@ -39,7 +39,7 @@ function createSearchStoreDeps(overrides = {}) {
   };
 }
 
-test("normalizeSearchPayload normalizes nullable scalar filters and arrays", () => {
+test("normalizeSearchPayload normalizes nullable values and array filters", () => {
   expect(
     normalizeSearchPayload({
       query: "  linen summer shirt ",
@@ -131,6 +131,33 @@ test("serializeSearchRow maps persisted row fields to client shape", () => {
     closureType: ["zip"],
     page: 3,
   });
+});
+
+test("serializeSearchRow drops non-array persisted facets", () => {
+  expect(
+    serializeSearchRow({
+      brand: "cos",
+      category: "top",
+    } as unknown as Parameters<typeof serializeSearchRow>[0]),
+  ).toMatchObject({
+    brand: [],
+    category: [],
+  });
+});
+
+test("search store rejects scalar request facets", async () => {
+  const store = createSearchStore(createSearchStoreDeps());
+
+  await expect(
+    store.runSavedSearch("person@example.com", {
+      brand: "cos",
+    } as never),
+  ).rejects.toThrow("invalid_payload");
+  await expect(
+    store.getSearchStats("person@example.com", {
+      category: "top",
+    } as never),
+  ).rejects.toThrow("invalid_payload");
 });
 
 test("getSemanticDistanceThreshold returns adaptive thresholds by query length", () => {

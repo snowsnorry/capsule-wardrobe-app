@@ -27,29 +27,18 @@ function getWardrobeIdFromValue(value) {
   return match ? Number(match[1]) : null;
 }
 
-function getWardrobeIdFromUrl(value) {
-  const normalized = getTrimmedString(value);
-  const match = normalized.match(/^wardrobe:\/\/([1-9]\d*)(?:[/?#]|$)/i);
-  return match ? Number(match[1]) : null;
+function isWardrobeSourcedItem(item) {
+  const source = getTrimmedString(item?.source).toLowerCase();
+  return source === "uploaded" || source === "from_catalog";
 }
 
 function getCapsuleItemWardrobeId(item) {
-  return (
-    getWardrobeIdFromValue(item?.wardrobeId) ||
-    getWardrobeIdFromUrl(item?.url) ||
-    getWardrobeIdFromValue(item?.id)
-  );
-}
+  if (!isWardrobeSourcedItem(item)) {
+    return null;
+  }
 
-function isWardrobeSourcedItem(item) {
-  const source = getTrimmedString(item?.source).toLowerCase();
-  const itemSource = getTrimmedString(item?.itemSource).toLowerCase();
   return (
-    Boolean(getCapsuleItemWardrobeId(item)) ||
-    source === "uploaded" ||
-    source === "from_catalog" ||
-    itemSource === "wardrobe" ||
-    /^wardrobe:\/\//i.test(getTrimmedString(item?.url))
+    getWardrobeIdFromValue(item?.wardrobeId) || getWardrobeIdFromValue(item?.id)
   );
 }
 
