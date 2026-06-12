@@ -354,6 +354,7 @@ const ru = {
     searchPrevious7Days: "Последние 7 дней",
     searchPrevious30Days: "Последние 30 дней",
     searchEarlier: "Ранее",
+    loading: "Загружаем образ",
     emptySummary: "Пока нет вещей",
     categoryCount: "{category}: {count}",
     openActions: "Открыть действия с образом",

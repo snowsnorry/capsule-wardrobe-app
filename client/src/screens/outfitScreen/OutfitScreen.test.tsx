@@ -111,6 +111,7 @@ vi.mock("../../i18n/useI18n", () => ({
           "Are you sure you want to delete this outfit?",
         "outfit.deleteTitle": "Delete outfit",
         "outfit.emptySummary": "No items",
+        "outfit.loading": "Loading outfit",
         "outfit.itemNotFoundDescription":
           "This outfit reference no longer resolves.",
         "outfit.itemNotFoundTitle": "Item not found",
@@ -498,6 +499,19 @@ describe("OutfitScreen", () => {
     expect(within(summary).getByText("1 Top")).toBeInTheDocument();
     expect(within(summary).getByText("1 Bag")).toBeInTheDocument();
     expect(screen.queryByText("1 Top · 1 Bag")).not.toBeInTheDocument();
+  });
+
+  test("shows the header progress while outfit content is busy", () => {
+    renderScreen({ isContentBusy: true, isReportPending: false });
+
+    const progress = screen.getByRole("progressbar", {
+      name: "Loading outfit",
+    });
+    expect(progress).toBeInTheDocument();
+    const headerSeparator = within(
+      screen.getByTestId("outfit-content"),
+    ).getByRole("separator");
+    expect(headerSeparator.nextElementSibling).toContainElement(progress);
   });
 
   test("renders analyze action and blocks it while report generation is pending", () => {

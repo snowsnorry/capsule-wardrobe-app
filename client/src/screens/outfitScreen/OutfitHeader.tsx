@@ -62,6 +62,7 @@ export function OutfitHeader({
   const activeName = activeOutfit?.name || "";
   const disabled =
     !activeOutfit?.id || isContentBusy || inlineRename.submitting;
+  const showProgress = isContentBusy || isReportPending;
 
   return (
     <Stack spacing={1.5}>
@@ -99,10 +100,12 @@ export function OutfitHeader({
       <Box>
         <Divider />
         <Box sx={outfitProgressSlotSx}>
-          {isReportPending ? (
+          {showProgress ? (
             <LinearProgress
               color="success"
-              aria-label={t("outfit.reportGenerating")}
+              aria-label={t(
+                isReportPending ? "outfit.reportGenerating" : "outfit.loading",
+              )}
               sx={outfitProgressSx}
             />
           ) : null}

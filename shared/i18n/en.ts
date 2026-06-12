@@ -353,6 +353,7 @@ const en = {
     searchPrevious7Days: "Previous 7 Days",
     searchPrevious30Days: "Previous 30 Days",
     searchEarlier: "Earlier",
+    loading: "Loading outfit",
     emptySummary: "No items yet",
     categoryCount: "{category}: {count}",
     openActions: "Open outfit actions",

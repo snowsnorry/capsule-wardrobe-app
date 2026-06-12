@@ -81,6 +81,8 @@ test("t translates capsule action and outfit image accessibility labels", () => 
   expect(t("outfit.openMissingItemActions", undefined, "ru")).toBe(
     "Открыть действия с ненайденной вещью",
   );
+  expect(t("outfit.loading", undefined, "en")).toBe("Loading outfit");
+  expect(t("outfit.loading", undefined, "ru")).toBe("Загружаем образ");
 });
 
 test("t keeps outfit report verdict labels distinct", () => {
