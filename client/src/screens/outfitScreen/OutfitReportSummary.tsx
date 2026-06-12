@@ -184,20 +184,26 @@ function ReportSummaryChips({
   const temperature = getReportTemperatureLabel(report, t);
   if (!temperature && !chips.length) return null;
 
+  const chipEdgePadding = isCompact ? 0.875 : 1.25;
+
   const chipSx = {
     bgcolor: "action.selected",
     color: "primary.dark",
     fontSize: isCompact ? "0.75rem" : undefined,
     fontWeight: 650,
     height: isCompact ? 24 : undefined,
+    px: chipEdgePadding,
     "& .MuiChip-icon": {
       color: "primary.dark",
       fontSize: isCompact ? "0.85rem" : "0.95rem",
+      ml: 0,
       mr: 0.125,
     },
     "& .MuiChip-label": {
+      px: 0,
+    },
+    "& .MuiChip-icon + .MuiChip-label": {
       pl: 0.25,
-      pr: isCompact ? 1 : undefined,
     },
   };
 
