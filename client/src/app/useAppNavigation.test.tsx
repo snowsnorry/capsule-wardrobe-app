@@ -66,7 +66,7 @@ describe("useAppNavigation", () => {
   });
 
   const routeCases: Array<[string, string, string, string]> = [
-    ["/", "capsule", "", "empty"],
+    ["/", "wardrobe", "", "empty"],
     ["/capsule", "capsule", "", "create"],
     ["/capsule/capsule%201", "capsule", "capsule 1", "open"],
     ["/explore", "explore", "", "empty"],
@@ -81,6 +81,9 @@ describe("useAppNavigation", () => {
 
       render(<Harness />);
 
+      if (path === "/") {
+        expect(window.location.pathname).toBe("/personal-items");
+      }
       expect(screen.getByTestId("route")).toHaveTextContent(route);
       expect(screen.getByTestId("capsule-route-id")).toHaveTextContent(
         capsuleId,
@@ -88,6 +91,22 @@ describe("useAppNavigation", () => {
       expect(screen.getByTestId("capsule-route-mode")).toHaveTextContent(mode);
     },
   );
+
+  test("preserves query params when redirecting the empty path", () => {
+    window.history.replaceState(
+      {},
+      "",
+      `/?oauthReturnTo=${encodeURIComponent("/oauth/authorize?client_id=chatgpt")}`,
+    );
+
+    render(<Harness />);
+
+    expect(window.location.pathname).toBe("/personal-items");
+    expect(window.location.search).toBe(
+      `?oauthReturnTo=${encodeURIComponent("/oauth/authorize?client_id=chatgpt")}`,
+    );
+    expect(screen.getByTestId("route")).toHaveTextContent("wardrobe");
+  });
 
   test("navigates to product detail search state and clears it when leaving explore", () => {
     render(<Harness />);
@@ -121,17 +140,17 @@ describe("useAppNavigation", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "clear-share" }));
 
-    expect(window.location.pathname).toBe("/");
-    expect(screen.getByTestId("route")).toHaveTextContent("capsule");
+    expect(window.location.pathname).toBe("/personal-items");
+    expect(screen.getByTestId("route")).toHaveTextContent("wardrobe");
     expect(screen.getByTestId("share-id")).toHaveTextContent("");
 
     fireEvent.click(screen.getByRole("button", { name: "explore" }));
     fireEvent.click(screen.getByRole("button", { name: "reset" }));
-    expect(window.location.pathname).toBe("/");
-    expect(screen.getByTestId("route")).toHaveTextContent("capsule");
+    expect(window.location.pathname).toBe("/personal-items");
+    expect(screen.getByTestId("route")).toHaveTextContent("wardrobe");
   });
 
-  test("navigates capsule routes separately from the empty capsule root", () => {
+  test("navigates capsule routes separately from the personal items default", () => {
     render(<Harness />);
 
     fireEvent.click(screen.getByRole("button", { name: "new-capsule" }));
@@ -148,8 +167,9 @@ describe("useAppNavigation", () => {
     expect(screen.getByTestId("capsule-route-mode")).toHaveTextContent("open");
 
     fireEvent.click(screen.getByRole("button", { name: "capsule" }));
-    expect(window.location.pathname).toBe("/");
+    expect(window.location.pathname).toBe("/personal-items");
     expect(screen.getByTestId("capsule-route-id")).toHaveTextContent("");
     expect(screen.getByTestId("capsule-route-mode")).toHaveTextContent("empty");
+    expect(screen.getByTestId("route")).toHaveTextContent("wardrobe");
   });
 });

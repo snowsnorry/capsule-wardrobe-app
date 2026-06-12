@@ -16,6 +16,22 @@ import { logInfo } from "./logger.js";
 
 const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
 const HTML_CACHE_CONTROL = "no-store";
+const DEFAULT_APP_PATH = "/personal-items";
+
+function getDefaultAppRedirectPath(req) {
+  const queryStartIndex = String(req.originalUrl || "").indexOf("?");
+  return `${DEFAULT_APP_PATH}${
+    queryStartIndex >= 0 ? req.originalUrl.slice(queryStartIndex) : ""
+  }`;
+}
+
+function redirectEmptyAppPath(req, res, next) {
+  if (req.path === "/") {
+    return res.redirect(302, getDefaultAppRedirectPath(req));
+  }
+
+  return next();
+}
 
 function setStaticHtmlHeaders(res, filePath) {
   if (path.basename(filePath) === "index.html") {
@@ -45,6 +61,7 @@ async function configureDevelopmentApp({
       },
     },
   });
+  appInstance.get("/", redirectEmptyAppPath);
   appInstance.use(vite.middlewares);
 
   appInstance.use(async (req, res, next) => {
@@ -100,6 +117,10 @@ function configureProductionApp({
   );
 
   appInstance.get("/{*splat}", async (req, res, next) => {
+    if (req.path === "/") {
+      return res.redirect(302, getDefaultAppRedirectPath(req));
+    }
+
     if (isApiPathImpl(req.path)) {
       return res.status(404).json({ error: "not_found" });
     }

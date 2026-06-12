@@ -86,6 +86,10 @@ test("opens personal items on the canonical URL", async ({
 }) => {
   await resetAndLogin("with-profile");
 
+  await page.goto("/");
+
+  await expect(page).toHaveURL(/\/personal-items$/);
+
   await page.goto("/personal-items");
 
   await expect(page).toHaveURL(/\/personal-items$/);

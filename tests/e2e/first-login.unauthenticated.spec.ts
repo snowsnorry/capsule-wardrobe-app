@@ -25,12 +25,17 @@ test("first login keeps the selected Russian locale and opens the app", async ({
   await page.getByLabel("Код из письма").fill(E2E_CODE);
   await page.getByRole("button", { name: "Подтвердить" }).click();
 
+  await expect(page).toHaveURL(/\/personal-items$/);
   await expect(
-    page.getByRole("button", { name: "Обновить все" }),
+    page.getByRole("button", { name: "Загрузить фото вещи" }),
   ).toBeVisible();
   await expect(page.getByText("Шаг 1")).toHaveCount(0);
   await expect(page.getByText("Капсулы", { exact: true })).toBeVisible();
-  await expect(page.getByText("Каталог", { exact: true })).toBeVisible();
+  await expect(
+    page
+      .getByTestId("sidebar-navigation-list")
+      .getByRole("button", { name: "Каталог" }),
+  ).toBeVisible();
 
   await page.reload();
 

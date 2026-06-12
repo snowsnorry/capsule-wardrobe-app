@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useState } from "react";
 import type {
   AppNavigationOptions,
   AppRoute,
@@ -6,9 +6,11 @@ import type {
 } from "./appTypes";
 import { getAppRouteState, getShareIdFromPath } from "./appRouting";
 
+const DEFAULT_APP_PATH = "/personal-items";
+
 function getNavigationPath(nextApp: Exclude<AppRoute, "share">): string {
   if (nextApp === "wardrobe") {
-    return "/personal-items";
+    return DEFAULT_APP_PATH;
   }
 
   if (nextApp === "explore") {
@@ -19,7 +21,24 @@ function getNavigationPath(nextApp: Exclude<AppRoute, "share">): string {
     return "/outfit";
   }
 
-  return nextApp === "statistics" ? "/statistics" : "/";
+  return nextApp === "statistics" ? "/statistics" : DEFAULT_APP_PATH;
+}
+
+function redirectEmptyPath() {
+  if (typeof window === "undefined") {
+    return DEFAULT_APP_PATH;
+  }
+
+  if (window.location.pathname !== "/") {
+    return window.location.pathname;
+  }
+
+  window.history.replaceState(
+    {},
+    "",
+    `${DEFAULT_APP_PATH}${window.location.search}`,
+  );
+  return DEFAULT_APP_PATH;
 }
 
 // eslint-disable-next-line max-lines-per-function
@@ -38,15 +57,23 @@ export function useAppNavigation() {
       : getShareIdFromPath(window.location.pathname),
   );
 
+  useLayoutEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const nextPath = redirectEmptyPath();
+    setRouteState(getAppRouteState(nextPath));
+  }, []);
+
   useEffect(() => {
     if (typeof window === "undefined") {
       return undefined;
     }
 
-    setRouteState(getAppRouteState(window.location.pathname));
+    setRouteState(getAppRouteState(redirectEmptyPath()));
 
     const handlePopState = () => {
-      const nextRoute = getAppRouteState(window.location.pathname);
+      const nextRoute = getAppRouteState(redirectEmptyPath());
       setRouteState(nextRoute);
       const nextApp = nextRoute.appRoute;
       if (nextApp !== "explore") {
@@ -150,16 +177,19 @@ export function useAppNavigation() {
       typeof window !== "undefined" &&
       window.location.pathname.startsWith("/share/")
     ) {
-      window.history.replaceState({}, "", "/");
+      window.history.replaceState({}, "", DEFAULT_APP_PATH);
     }
-    setRouteState(getAppRouteState("/"));
+    setRouteState(getAppRouteState(DEFAULT_APP_PATH));
   }, []);
 
   const resetNavigation = useCallback(() => {
-    if (typeof window !== "undefined" && window.location.pathname !== "/") {
-      window.history.replaceState({}, "", "/");
+    if (
+      typeof window !== "undefined" &&
+      window.location.pathname !== DEFAULT_APP_PATH
+    ) {
+      window.history.replaceState({}, "", DEFAULT_APP_PATH);
     }
-    setRouteState(getAppRouteState("/"));
+    setRouteState(getAppRouteState(DEFAULT_APP_PATH));
     setSearchInitialQuery("");
     setSearchAutoOpenProductDetail(false);
     setPendingShareId("");

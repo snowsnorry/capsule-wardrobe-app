@@ -153,10 +153,14 @@ vi.mock("./screens/ProfileScreen", () => ({
   default: () => <div data-testid="profile-screen">profile-screen</div>,
 }));
 
+vi.mock("./screens/WardrobeScreen", () => ({
+  default: () => <div data-testid="wardrobe-screen">wardrobe-screen</div>,
+}));
+
 vi.mock("./screens/SearchScreen", () => ({
   default: function SearchScreenMock() {
     const backToCapsule = () => {
-      window.history.pushState({}, "", "/");
+      window.history.pushState({}, "", "/capsule/capsule-1");
       window.dispatchEvent(new PopStateEvent("popstate"));
     };
 

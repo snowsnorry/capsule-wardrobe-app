@@ -109,10 +109,14 @@ vi.mock("./screens/mainScreen/MainScreen", () => ({
   },
 }));
 
+vi.mock("./screens/WardrobeScreen", () => ({
+  default: () => <div data-testid="wardrobe-screen">wardrobe-screen</div>,
+}));
+
 vi.mock("./screens/SearchScreen", () => ({
   default: function SearchScreenMock() {
     const backToCapsule = () => {
-      window.history.pushState({}, "", "/");
+      window.history.pushState({}, "", "/capsule/capsule-1");
       window.dispatchEvent(new PopStateEvent("popstate"));
     };
 
@@ -249,6 +253,7 @@ describe("App", () => {
   });
 
   test("bootstraps an existing profile and switches between app routes", async () => {
+    window.history.replaceState({}, "", "/capsule/capsule-1");
     authApi.fetchCurrentUser.mockResolvedValue({
       user: { email: "person@example.com" },
     });
@@ -271,6 +276,7 @@ describe("App", () => {
   });
 
   test("uses bootstrap capsule data without fetching active capsule or recent capsules", async () => {
+    window.history.replaceState({}, "", "/capsule/capsule-1");
     authApi.fetchCurrentUser.mockResolvedValue({
       user: { email: "person@example.com" },
     });
@@ -321,7 +327,7 @@ describe("App", () => {
 
     renderApp();
 
-    expect(await screen.findByTestId("main-screen")).toBeInTheDocument();
+    expect(await screen.findByTestId("wardrobe-screen")).toBeInTheDocument();
     expect(authApi.updateProfileLocale).not.toHaveBeenCalled();
   });
 
@@ -340,7 +346,7 @@ describe("App", () => {
     fireEvent.click(await screen.findByRole("button", { name: "verify-code" }));
 
     await waitFor(() => {
-      expect(screen.getByTestId("main-screen")).toBeInTheDocument();
+      expect(screen.getByTestId("wardrobe-screen")).toBeInTheDocument();
     });
     expect(capsulesApi.fetchCapsuleBootstrap).toHaveBeenCalledTimes(3);
   });

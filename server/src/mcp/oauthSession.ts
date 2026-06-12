@@ -16,5 +16,5 @@ export async function readAppSession(req, context) {
 }
 
 export function buildLoginRedirect(req): string {
-  return `/?oauthReturnTo=${encodeURIComponent(req.originalUrl)}`;
+  return `/personal-items?oauthReturnTo=${encodeURIComponent(req.originalUrl)}`;
 }

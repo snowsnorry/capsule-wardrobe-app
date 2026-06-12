@@ -18,6 +18,7 @@ const HOP_BY_HOP_HEADERS = new Set([
 
 const PORT = Number.parseInt(process.env.PORT || "10000", 10);
 const BFF_UPSTREAM_ORIGIN = String(process.env.BFF_UPSTREAM_ORIGIN || "").trim();
+const DEFAULT_APP_PATH = "/personal-items";
 
 if (!BFF_UPSTREAM_ORIGIN) {
   throw new Error("BFF_UPSTREAM_ORIGIN is not set");
@@ -62,6 +63,13 @@ function buildUpstreamUrl(req) {
   return upstreamUrl.toString();
 }
 
+function buildDefaultAppRedirectPath(req) {
+  const queryStartIndex = String(req.originalUrl || "").indexOf("?");
+  return `${DEFAULT_APP_PATH}${
+    queryStartIndex >= 0 ? req.originalUrl.slice(queryStartIndex) : ""
+  }`;
+}
+
 app.use("/api", express.raw({ type: "*/*", limit: "10mb" }));
 
 app.use("/api", async (req, res) => {
@@ -96,7 +104,11 @@ app.use("/api", async (req, res) => {
 
 app.use(express.static(DIST_DIR, { index: false }));
 
-app.get("*", (_req, res) => {
+app.get("/", (req, res) => {
+  res.redirect(302, buildDefaultAppRedirectPath(req));
+});
+
+app.get("/{*splat}", (_req, res) => {
   res.sendFile(INDEX_HTML);
 });
 

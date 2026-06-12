@@ -44,6 +44,11 @@ function createResponse() {
       this.body = body;
       return this;
     },
+    redirect(code, path) {
+      this.statusCode = code;
+      this.headers = { Location: path };
+      return this;
+    },
   };
 }
 
@@ -78,14 +83,35 @@ test("development startup wires Vite middleware and serves transformed capsule h
   });
 
   expect(viteOptions[0].server.middlewareMode).toEqual(true);
-  expect(app.calls[0].type).toBe("use");
-  expect(app.calls[0].args[0]).toBe("vite-middleware");
+  expect(app.calls[0].type).toBe("get");
+  expect(app.calls[0].args[0]).toBe("/");
   expect(app.calls[1].type).toBe("use");
-  expect(app.calls[1].args[0]).toEqual(expect.any(Function));
+  expect(app.calls[1].args[0]).toBe("vite-middleware");
+  expect(app.calls[2].type).toBe("use");
+  expect(app.calls[2].args[0]).toEqual(expect.any(Function));
   expect(app.calls.at(-1)).toEqual({ type: "listen", port: 4123 });
   expect(logMessages).toEqual(["Server listening on http://localhost:4123"]);
 
-  const handler = app.calls[1].args[0];
+  const rootRedirect = app.calls[0].args[1];
+  const rootResponse = createResponse();
+  rootRedirect({ path: "/", originalUrl: "/" }, rootResponse, (error) =>
+    nextCalls.push(error),
+  );
+  expect(rootResponse.statusCode).toBe(302);
+  expect(rootResponse.headers).toEqual({ Location: "/personal-items" });
+
+  const rootQueryResponse = createResponse();
+  rootRedirect(
+    { path: "/", originalUrl: "/?oauthReturnTo=%2Foauth%2Fauthorize" },
+    rootQueryResponse,
+    (error) => nextCalls.push(error),
+  );
+  expect(rootQueryResponse.statusCode).toBe(302);
+  expect(rootQueryResponse.headers).toEqual({
+    Location: "/personal-items?oauthReturnTo=%2Foauth%2Fauthorize",
+  });
+
+  const handler = app.calls[2].args[0];
   await handler(
     { path: "/api/search", originalUrl: "/api/search" },
     createResponse(),
@@ -126,7 +152,7 @@ test("development startup fixes Vite stack traces before forwarding html errors"
     logInfoImpl: () => {},
   });
 
-  const handler = app.calls[1].args[0];
+  const handler = app.calls[2].args[0];
   await handler(
     { path: "/share/abc", originalUrl: "/share/abc" },
     createResponse(),
@@ -193,6 +219,24 @@ test("production startup serves static files, spa html, and api 404s when client
   );
 
   const handler = app.calls[2].args[1];
+  const rootResponse = createResponse();
+  await handler({ path: "/", originalUrl: "/" }, rootResponse, (error) =>
+    nextCalls.push(error),
+  );
+  expect(rootResponse.statusCode).toBe(302);
+  expect(rootResponse.headers).toEqual({ Location: "/personal-items" });
+
+  const rootQueryResponse = createResponse();
+  await handler(
+    { path: "/", originalUrl: "/?oauthReturnTo=%2Foauth%2Fauthorize" },
+    rootQueryResponse,
+    (error) => nextCalls.push(error),
+  );
+  expect(rootQueryResponse.statusCode).toBe(302);
+  expect(rootQueryResponse.headers).toEqual({
+    Location: "/personal-items?oauthReturnTo=%2Foauth%2Fauthorize",
+  });
+
   const apiResponse = createResponse();
   await handler({ path: "/api/missing" }, apiResponse, (error) =>
     nextCalls.push(error),

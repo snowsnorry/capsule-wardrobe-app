@@ -844,7 +844,9 @@ test("oauth authorize can allow unregistered local clients only when explicitly 
   );
 
   expect(response.status).toBe(302);
-  expect(response.headers.get("location")).toMatch(/^\/\?oauthReturnTo=/);
+  expect(response.headers.get("location")).toMatch(
+    /^\/personal-items\?oauthReturnTo=/,
+  );
 });
 
 test("oauth authorize redirects anonymous users back through existing app login", async (t) => {
@@ -854,7 +856,7 @@ test("oauth authorize redirects anonymous users back through existing app login"
 
   expect(response.status).toBe(302);
   const location = response.headers.get("location") || "";
-  expect(location).toMatch(/^\/\?oauthReturnTo=/);
+  expect(location).toMatch(/^\/personal-items\?oauthReturnTo=/);
   const loginUrl = new URL(location, baseUrl);
   expect(loginUrl.searchParams.get("oauthReturnTo")).toBe(authorizePath());
 });

@@ -11,7 +11,7 @@ describe("oauth return bridge", () => {
     window.history.replaceState(
       {},
       "",
-      `/?oauthReturnTo=${encodeURIComponent("/oauth/authorize?client_id=chatgpt&state=1")}`,
+      `/personal-items?oauthReturnTo=${encodeURIComponent("/oauth/authorize?client_id=chatgpt&state=1")}`,
     );
 
     expect(redirectToOAuthReturnIfPresent(assign)).toBe(true);
@@ -28,14 +28,14 @@ describe("oauth return bridge", () => {
     window.history.replaceState(
       {},
       "",
-      `/?oauthReturnTo=${encodeURIComponent("https://evil.example/oauth/authorize")}`,
+      `/personal-items?oauthReturnTo=${encodeURIComponent("https://evil.example/oauth/authorize")}`,
     );
     expect(redirectToOAuthReturnIfPresent(assign)).toBe(false);
 
     window.history.replaceState(
       {},
       "",
-      `/?oauthReturnTo=${encodeURIComponent("/oauth/token")}`,
+      `/personal-items?oauthReturnTo=${encodeURIComponent("/oauth/token")}`,
     );
     expect(redirectToOAuthReturnIfPresent(assign)).toBe(false);
     expect(assign).not.toHaveBeenCalled();
