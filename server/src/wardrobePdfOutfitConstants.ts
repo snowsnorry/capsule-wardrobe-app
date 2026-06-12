@@ -1,7 +1,7 @@
 import { rgb } from "pdf-lib";
 import { CONTENT_WIDTH, PAGE_HEIGHT, PAGE_MARGIN } from "./wardrobePdfCore.js";
 
-export const REPORT_PAGE_PADDING = 0;
+const REPORT_PAGE_PADDING = 0;
 export const REPORT_CONTENT_X = PAGE_MARGIN + REPORT_PAGE_PADDING;
 export const REPORT_CONTENT_WIDTH = CONTENT_WIDTH - REPORT_PAGE_PADDING * 2;
 export const REPORT_CONTENT_TOP =

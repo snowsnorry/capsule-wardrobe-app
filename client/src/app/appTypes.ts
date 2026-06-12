@@ -75,19 +75,19 @@ export type OutfitItemSnapshot = {
   item?: WardrobeItem | null;
 };
 
-export type OutfitReportVerdictStatus =
+type OutfitReportVerdictStatus =
   | "valid"
   | "acceptable_with_notes"
   | "incomplete"
   | "incoherent";
 
-export type OutfitReportVerdict = {
+type OutfitReportVerdict = {
   status?: OutfitReportVerdictStatus | string;
   score?: number;
   summary?: string;
 };
 
-export type OutfitReportComposition = {
+type OutfitReportComposition = {
   itemCount?: number;
   categoryCounts?: Record<string, number>;
   completeness?: string;
@@ -96,12 +96,12 @@ export type OutfitReportComposition = {
   extraRoles?: string[];
 };
 
-export type OutfitReportTemperatureBandC = {
+type OutfitReportTemperatureBandC = {
   min?: number | null;
   max?: number | null;
 };
 
-export type OutfitReportSeasonality = {
+type OutfitReportSeasonality = {
   primarySeasons?: string[];
   secondarySeasons?: string[];
   temperatureBandC?: OutfitReportTemperatureBandC;
@@ -110,7 +110,7 @@ export type OutfitReportSeasonality = {
   seasonScore?: number;
 };
 
-export type OutfitReportStyleProfile = {
+type OutfitReportStyleProfile = {
   primaryStyle?: string;
   secondaryStyles?: string[];
   formalityLevel?: string;
@@ -119,7 +119,7 @@ export type OutfitReportStyleProfile = {
   styleScore?: number;
 };
 
-export type OutfitReportCompatibility = {
+type OutfitReportCompatibility = {
   overallScore?: number;
   styleCoherence?: number;
   formalityCoherence?: number;
@@ -129,7 +129,7 @@ export type OutfitReportCompatibility = {
   mainRisks?: string[];
 };
 
-export type OutfitReportColorAnalysis = {
+type OutfitReportColorAnalysis = {
   paletteType?: string;
   dominantColors?: string[];
   accentColors?: string[];
@@ -157,7 +157,7 @@ export type OutfitReportSuggestion = {
   message?: string;
 };
 
-export type OutfitReportConfidence = {
+type OutfitReportConfidence = {
   overall?: number;
   lowConfidenceAspects?: string[];
   assumptions?: string[];
@@ -177,7 +177,7 @@ export type OutfitReport = {
   confidence?: OutfitReportConfidence;
 };
 
-export type OutfitReportMeta = {
+type OutfitReportMeta = {
   stale?: boolean;
 };
 

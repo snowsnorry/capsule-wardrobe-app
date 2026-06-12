@@ -58,20 +58,6 @@ export function toAnchorItem(item: unknown): AnchorItem | null {
   };
 }
 
-export function normalizeSelectedIds(ids: string[] = []): string[] {
-  return [
-    ...new Set(
-      ids
-        .map((id) =>
-          String(id || "")
-            .trim()
-            .toUpperCase(),
-        )
-        .filter(Boolean),
-    ),
-  ];
-}
-
 export function getAnchorLabel(
   item: AnchorItem | null,
   id: string,

@@ -77,14 +77,6 @@ export type WardrobePdfJobOptions = {
   locale?: string | null;
 };
 
-export type OutfitPdfOptions = {
-  title?: string | null;
-  imageUrl?: string | null;
-  imageStale?: boolean;
-  report?: Record<string, unknown> | null;
-  reportStale?: boolean;
-};
-
 export type ProfileWithPdfResult = {
   profile: ProfileWithItemsLike | null;
   pdf: Buffer | Uint8Array | number[] | null;

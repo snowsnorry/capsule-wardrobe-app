@@ -198,4 +198,4 @@ async function buildCategoryImage({
   };
 }
 
-export { buildCategoryImage, type CategoryImageEntry };
+export { buildCategoryImage };
