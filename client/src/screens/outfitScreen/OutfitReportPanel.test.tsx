@@ -10,6 +10,7 @@ import {
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import type { OutfitReport } from "../../app/appTypes";
 import OutfitReportPanel from "./OutfitReportPanel";
+import { getReportTemperatureLabel } from "./OutfitReportPanelUtils";
 
 const theme = createTheme();
 
@@ -32,14 +33,16 @@ const labels: Record<string, string> = {
   "outfit.reportStrengths": "Strengths",
   "outfit.reportSuggestions": "Suggestions",
   "outfit.reportTitle": "Outfit report",
+  "outfit.reportTemperatureFrom": "from {min}°C",
+  "outfit.reportTemperatureRange": "{min}–{max}°C",
+  "outfit.reportTemperatureUpTo": "up to {max}°C",
   "outfit.reportVerdict.acceptable_with_notes": "Has notes",
   "outfit.reportVerdict.valid": "Good match",
 };
 
 function t(key: string, params?: Record<string, unknown>) {
-  return (labels[key] || key).replace(
-    "{percent}",
-    String(params?.percent ?? ""),
+  return (labels[key] || key).replace(/\{(\w+)\}/g, (_, paramKey) =>
+    String(params?.[paramKey] ?? `{${paramKey}}`),
   );
 }
 
@@ -67,6 +70,32 @@ afterEach(() => {
 });
 
 describe("OutfitReportPanel", () => {
+  test("formats report temperature labels from seasonality bounds", () => {
+    expect(
+      getReportTemperatureLabel(
+        {
+          seasonality: { temperatureBandC: { min: 5, max: 12 } },
+        } as OutfitReport,
+        t,
+      ),
+    ).toBe("5–12°C");
+    expect(
+      getReportTemperatureLabel(
+        { seasonality: { temperatureBandC: { min: 5 } } } as OutfitReport,
+        t,
+      ),
+    ).toBe("from 5°C");
+    expect(
+      getReportTemperatureLabel(
+        { seasonality: { temperatureBandC: { max: 12 } } } as OutfitReport,
+        t,
+      ),
+    ).toBe("up to 12°C");
+    expect(
+      getReportTemperatureLabel({ seasonality: {} } as OutfitReport, t),
+    ).toBeNull();
+  });
+
   test("renders non-compact fallback state without optional sections", () => {
     renderPanel({
       schemaVersion: 1,
@@ -105,7 +134,10 @@ describe("OutfitReportPanel", () => {
           score: 0.5,
           summary: "Usable with small adjustments.",
         },
-        seasonality: { primarySeasons: ["winter"] },
+        seasonality: {
+          primarySeasons: ["winter"],
+          temperatureBandC: { min: 5, max: 12 },
+        },
         styleProfile: { formalityLevel: "smart_casual" },
         compatibility: { overallScore: 0.5 },
         colorAnalysis: { paletteType: "neutral" },
@@ -125,8 +157,16 @@ describe("OutfitReportPanel", () => {
       screen.queryByRole("progressbar", { name: "Generating outfit report" }),
     ).not.toBeInTheDocument();
     expect(screen.getByText("Has notes")).toBeInTheDocument();
+    expect(screen.getByText("5–12°C")).toBeInTheDocument();
     expect(screen.getByText("Winter")).toBeInTheDocument();
     expect(screen.getByText("Smart Casual")).toBeInTheDocument();
+    const temperatureChip = screen.getByTestId(
+      "outfit-report-temperature-chip",
+    );
+    expect(temperatureChip.querySelector("svg")).toBeTruthy();
+    expect(
+      temperatureChip.compareDocumentPosition(screen.getByText("Winter")),
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
 
     const menuButton = screen.getByRole("button", {
       name: "Open report actions",

@@ -22,6 +22,21 @@ export function getReportScore(report: OutfitReport) {
   return toPercent(report.verdict?.score ?? report.compatibility?.overallScore);
 }
 
+export function getReportTemperatureLabel(report: OutfitReport, t: Translate) {
+  const { max, min } = report.seasonality?.temperatureBandC || {};
+
+  if (min != null && max != null) {
+    return t("outfit.reportTemperatureRange", { max, min });
+  }
+  if (min != null) {
+    return t("outfit.reportTemperatureFrom", { min });
+  }
+  if (max != null) {
+    return t("outfit.reportTemperatureUpTo", { max });
+  }
+  return null;
+}
+
 export function getReportChipValues(report: OutfitReport) {
   return [
     ...(report.seasonality?.primarySeasons || []),

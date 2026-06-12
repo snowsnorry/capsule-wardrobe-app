@@ -1,9 +1,11 @@
 import { Alert, Box, Chip, Stack, Typography } from "@mui/material";
+import { FaTemperatureHalf } from "react-icons/fa6";
 import type { OutfitReport } from "../../app/appTypes";
 import {
   formatReportValue,
   getReportChipValues,
   getReportScore,
+  getReportTemperatureLabel,
   getReportVerdictLabel,
   type OutfitReportTranslate,
 } from "./OutfitReportPanelUtils";
@@ -176,9 +178,28 @@ function ReportSummaryCopy({
 function ReportSummaryChips({
   isCompact,
   report,
-}: Pick<ReportSummaryProps, "isCompact" | "report">) {
+  t,
+}: Pick<ReportSummaryProps, "isCompact" | "report" | "t">) {
   const chips = getReportChipValues(report);
-  if (!chips.length) return null;
+  const temperature = getReportTemperatureLabel(report, t);
+  if (!temperature && !chips.length) return null;
+
+  const chipSx = {
+    bgcolor: "action.selected",
+    color: "primary.dark",
+    fontSize: isCompact ? "0.75rem" : undefined,
+    fontWeight: 650,
+    height: isCompact ? 24 : undefined,
+    "& .MuiChip-icon": {
+      color: "primary.dark",
+      fontSize: isCompact ? "0.85rem" : "0.95rem",
+      mr: 0.125,
+    },
+    "& .MuiChip-label": {
+      pl: 0.25,
+      pr: isCompact ? 1 : undefined,
+    },
+  };
 
   return (
     <Stack
@@ -187,21 +208,21 @@ function ReportSummaryChips({
       spacing={isCompact ? 0.75 : 1}
       sx={{ flexWrap: "wrap" }}
     >
+      {temperature ? (
+        <Chip
+          data-testid="outfit-report-temperature-chip"
+          icon={<FaTemperatureHalf aria-hidden="true" />}
+          size="small"
+          label={temperature}
+          sx={chipSx}
+        />
+      ) : null}
       {chips.map((chip) => (
         <Chip
           key={chip}
           size="small"
           label={formatReportValue(chip)}
-          sx={{
-            bgcolor: "action.selected",
-            color: "primary.dark",
-            fontSize: isCompact ? "0.75rem" : undefined,
-            fontWeight: 650,
-            height: isCompact ? 24 : undefined,
-            "& .MuiChip-label": {
-              px: isCompact ? 1 : undefined,
-            },
-          }}
+          sx={chipSx}
         />
       ))}
     </Stack>
@@ -231,7 +252,7 @@ export function ReportSummary({
           t={t}
         />
       </Stack>
-      <ReportSummaryChips isCompact={isCompact} report={report} />
+      <ReportSummaryChips isCompact={isCompact} report={report} t={t} />
     </Stack>
   );
 }
