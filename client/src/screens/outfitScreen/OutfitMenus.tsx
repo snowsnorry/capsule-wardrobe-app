@@ -8,6 +8,7 @@ import {
 import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
 import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
+import DriveFileRenameOutlineRoundedIcon from "@mui/icons-material/DriveFileRenameOutlineRounded";
 import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
 import FavoriteBorderRoundedIcon from "@mui/icons-material/FavoriteBorderRounded";
 import FavoriteRoundedIcon from "@mui/icons-material/FavoriteRounded";
@@ -31,6 +32,7 @@ type OutfitMenuProps = {
   onDownload: () => void;
   onDuplicate: () => void;
   onMobileCardColumnsChange: (value: MobileCardColumns) => void;
+  onRename: () => void;
   onRevert: () => void;
   onSave: () => void;
   showCardLayout: boolean;
@@ -68,6 +70,7 @@ function OutfitLifecycleMenuSection({
   outfit,
   onDelete,
   onDuplicate,
+  onRename,
   onRevert,
   onSave,
   t,
@@ -77,6 +80,7 @@ function OutfitLifecycleMenuSection({
   | "outfit"
   | "onDelete"
   | "onDuplicate"
+  | "onRename"
   | "onRevert"
   | "onSave"
   | "t"
@@ -86,6 +90,13 @@ function OutfitLifecycleMenuSection({
 
   return (
     <>
+      <Divider />
+      <MenuItem disabled={disabled || !hasOutfitId} onClick={onRename}>
+        <ListItemIcon>
+          <DriveFileRenameOutlineRoundedIcon fontSize="small" />
+        </ListItemIcon>
+        <ListItemText>{t("capsule.rename")}</ListItemText>
+      </MenuItem>
       <Divider />
       <MenuItem disabled={disabled || isSaved} onClick={onRevert}>
         <ListItemIcon>
@@ -134,6 +145,7 @@ export function OutfitMenu({
   onDownload,
   onDuplicate,
   onMobileCardColumnsChange,
+  onRename,
   onRevert,
   onSave,
   showCardLayout,
@@ -168,6 +180,7 @@ export function OutfitMenu({
         t={t}
         onDelete={onDelete}
         onDuplicate={onDuplicate}
+        onRename={onRename}
         onRevert={onRevert}
         onSave={onSave}
       />

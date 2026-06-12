@@ -4,6 +4,7 @@ import { Box, Divider, Stack, useMediaQuery } from "@mui/material";
 import type { UploadedWardrobeItemUpdatePayload } from "../../api/personalItems";
 import OutfitGeneratedImageBlock from "../../components/OutfitGeneratedImageBlock";
 import CapsuleProductDetailDialog from "../mainScreen/CapsuleProductDetailDialog";
+import { NameDialog } from "../mainScreen/MainScreenActionDialogs";
 import { ImageDialog } from "../mainScreen/MainScreenMediaDialogs";
 import { resolveOutfitSetImageSrc } from "../mainScreen/MainScreenHelpers";
 import {
@@ -13,7 +14,11 @@ import {
 } from "../../utils/likedItemState";
 import { isUploadedWardrobeItemNeedsReview } from "../../utils/uploadedWardrobeItemStatus";
 import type { OutfitItemSnapshot, WardrobeItem } from "../../app/appTypes";
-import type { MobileCardColumns } from "../mainScreen/MainScreenTypes";
+import type {
+  MainScreenProps,
+  MobileCardColumns,
+} from "../mainScreen/MainScreenTypes";
+import type { NameDialogState } from "../mainScreen/MainScreenDialogsTypes";
 import { useI18n } from "../../i18n/useI18n";
 import { AddItemsDialog } from "../../components/AddItemsDialog";
 import { OutfitGrid } from "./OutfitGrid";
@@ -52,6 +57,17 @@ import type {
 
 function getPreviewComparableKey(item: WardrobeItem) {
   return getCanonicalItemUrl(item) || getPreviewItemKey(item);
+}
+
+function makeOutfitNameDialog(
+  type: "rename" | "save-as",
+  outfit: { id?: string; name?: string } | null | undefined,
+): NameDialogState {
+  return {
+    type,
+    capsuleId: outfit?.id || "",
+    value: outfit?.name || "",
+  };
 }
 
 function getTrimmedString(value: unknown) {
@@ -167,6 +183,11 @@ export default function OutfitScreen({
     action: "",
     entry: null,
   });
+  const [nameDialog, setNameDialog] = useState<NameDialogState>({
+    type: "",
+    capsuleId: "",
+    value: "",
+  });
   const [highlightedReportItemIds, setHighlightedReportItemIds] = useState<
     string[]
   >([]);
@@ -189,6 +210,32 @@ export default function OutfitScreen({
   const outfitImageSrc = resolveOutfitSetImageSrc(outfitImage);
   const isSelectionMode = selectedKeys.length > 0;
   const previewItemKey = getPreviewItemKey(previewItem);
+  const nameDialogProps = useMemo(
+    () =>
+      ({
+        activeCapsule: activeOutfit,
+        onDeleteCapsule: onDeleteOutfit,
+        onDownloadPdf: onDownloadOutfitPdf,
+        onDuplicateCapsule: onDuplicateOutfit,
+        onRenameCapsule: (name: string, outfitId?: string) =>
+          onRenameOutfit(name.trim(), outfitId),
+        onRevertCapsule: onRevertOutfit,
+        onSaveCapsule: onSaveOutfit,
+        onShareCapsule: () => {},
+        onApplyFilters: () => {},
+        onDeleteOutfitSetImage: () => {},
+        onRefreshItems: () => {},
+      }) as unknown as MainScreenProps,
+    [
+      activeOutfit,
+      onDeleteOutfit,
+      onDownloadOutfitPdf,
+      onDuplicateOutfit,
+      onRenameOutfit,
+      onRevertOutfit,
+      onSaveOutfit,
+    ],
+  );
 
   useEffect(() => {
     if (!previewItemKey) {
@@ -424,6 +471,10 @@ export default function OutfitScreen({
           void onDuplicateOutfit(activeOutfit?.name || "", activeOutfit?.id);
         }}
         onMobileCardColumnsChange={updateMobileCardColumns}
+        onRename={() => {
+          setMenuAnchor(null);
+          setNameDialog(makeOutfitNameDialog("rename", activeOutfit));
+        }}
         onRevert={() => {
           setMenuAnchor(null);
           setConfirmDialog({ action: "revert", entry: null });
@@ -435,6 +486,14 @@ export default function OutfitScreen({
         showCardLayout={isMobile}
         showAnalyze={isMobile && !hasReport}
         t={t}
+      />
+      <NameDialog
+        state={nameDialog}
+        copyPrefix="outfit"
+        disabled={isContentBusy}
+        isOverlay={isMobile}
+        props={nameDialogProps}
+        setState={setNameDialog}
       />
       <OutfitItemMenu
         menu={itemMenu}

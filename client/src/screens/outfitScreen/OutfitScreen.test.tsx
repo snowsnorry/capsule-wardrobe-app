@@ -68,6 +68,7 @@ vi.mock("../../i18n/useI18n", () => ({
         "actions.cancel": "Cancel",
         "actions.close": "Close",
         "actions.delete": "Delete",
+        "actions.ok": "OK",
         "actions.save": "Save",
         "capsule.anchors.apply": "Apply",
         "capsule.anchors.empty": "No items",
@@ -89,6 +90,7 @@ vi.mock("../../i18n/useI18n", () => ({
         "capsule.outfitSetImageAlt": `Outfit set ${params?.number ?? ""}`,
         "capsule.outfitSetImageObsolete": "Image obsolete",
         "capsule.renameWithName": `Rename capsule ${params?.name ?? ""}`,
+        "capsule.rename": "Rename",
         "capsule.revert": "Revert",
         "capsule.saveAs": "Save as",
         "filters.apply": "Apply",
@@ -113,8 +115,10 @@ vi.mock("../../i18n/useI18n", () => ({
           "This outfit reference no longer resolves.",
         "outfit.itemNotFoundTitle": "Item not found",
         "outfit.noneSelected": "No items selected",
+        "outfit.nameLabel": "Outfit name",
         "outfit.openActions": "Open actions",
         "outfit.openMissingItemActions": "Open missing item actions",
+        "outfit.renameTitle": "Rename outfit",
         "outfit.regenerateReport": "Regenerate report",
         "outfit.reportConfidence": "Confidence",
         "outfit.reportGenerating": "Generating outfit report",
@@ -530,6 +534,44 @@ describe("OutfitScreen", () => {
     await user.click(screen.getByRole("menuitem", { name: "Analyze" }));
 
     expect(onGenerateOutfitReport).toHaveBeenCalledWith("outfit-1");
+  });
+
+  test("renames outfits from the mobile outfit menu", async () => {
+    setViewportMobile(true);
+    const user = userEvent.setup();
+    const onRenameOutfit = vi.fn(() => Promise.resolve());
+    renderScreen({
+      activeOutfit: {
+        id: "outfit-1",
+        name: "Weekend",
+        status: "saved",
+        effective: { items: [] },
+      },
+      onRenameOutfit,
+    });
+
+    await user.click(screen.getByRole("button", { name: "Open actions" }));
+    await user.click(screen.getByRole("menuitem", { name: "Rename" }));
+
+    const renameDialog = screen.getByRole("dialog", {
+      name: "Rename outfit",
+    });
+    const renameInput = within(renameDialog).getByRole("textbox", {
+      name: "Rename outfit",
+    });
+    expect(renameInput).toHaveValue("Weekend");
+
+    await user.clear(renameInput);
+    expect(
+      within(renameDialog).getByRole("button", { name: "OK" }),
+    ).toBeDisabled();
+
+    await user.type(renameInput, "  City outfit  ");
+    await user.click(within(renameDialog).getByRole("button", { name: "OK" }));
+
+    await waitFor(() =>
+      expect(onRenameOutfit).toHaveBeenCalledWith("City outfit", "outfit-1"),
+    );
   });
 
   test("renders report summary details menu actions and stale state", async () => {
@@ -1107,6 +1149,7 @@ describe("OutfitScreen", () => {
     const onDeleteOutfit = vi.fn(() => Promise.resolve());
     const onDownloadOutfitPdf = vi.fn(() => Promise.resolve());
     const onDuplicateOutfit = vi.fn(() => Promise.resolve());
+    const onRenameOutfit = vi.fn(() => Promise.resolve());
     const onRevertOutfit = vi.fn(() => Promise.resolve());
     const onSaveOutfit = vi.fn(() => Promise.resolve());
     renderScreen({
@@ -1119,6 +1162,7 @@ describe("OutfitScreen", () => {
       onDeleteOutfit,
       onDownloadOutfitPdf,
       onDuplicateOutfit,
+      onRenameOutfit,
       onRevertOutfit,
       onSaveOutfit,
     });
@@ -1130,6 +1174,27 @@ describe("OutfitScreen", () => {
     await openMenu();
     await user.click(screen.getByRole("menuitem", { name: "Export PDF" }));
     expect(onDownloadOutfitPdf).toHaveBeenCalledWith("outfit-1");
+
+    await openMenu();
+    await user.click(screen.getByRole("menuitem", { name: "Rename" }));
+    const renameDialog = screen.getByRole("dialog", {
+      name: "Rename outfit",
+    });
+    const renameInput = within(renameDialog).getByRole("textbox", {
+      name: "Rename outfit",
+    });
+    expect(renameInput).toHaveValue("Weekend");
+    await user.clear(renameInput);
+    await user.type(renameInput, "Desktop outfit");
+    await user.click(within(renameDialog).getByRole("button", { name: "OK" }));
+    await waitFor(() =>
+      expect(onRenameOutfit).toHaveBeenCalledWith("Desktop outfit", "outfit-1"),
+    );
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", { name: "Rename outfit" }),
+      ).not.toBeInTheDocument(),
+    );
 
     await openMenu();
     await user.click(screen.getByRole("menuitem", { name: "Save" }));
