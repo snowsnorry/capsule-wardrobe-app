@@ -10,7 +10,8 @@ import { logError } from "../logger.js";
 import { extractLlmUsage, logWardrobeInfo } from "./aiCommon.js";
 import { getGenerateJsonWithLlm, resolveLlmProvider } from "./llm.js";
 import { runWithImageWorkSlot } from "./imagePipeline.js";
-import { buildPromptDebugImagesInChild } from "./promptImages.js";
+import { buildPromptDebugImagesForCategory } from "./promptImages.js";
+import { saveLastPromptArtifacts } from "./regenerateSelectedArtifacts.js";
 import {
   getPromptTemplateContent,
   loadPromptTemplate,
@@ -23,14 +24,10 @@ import {
 } from "./outfitReportItems.js";
 import type {
   ImageAssetLike,
-  PromptDebugImageResult,
+  PromptDebugImageCategory,
   PromptImageItemLike,
 } from "./types.js";
-import type {
-  OutfitReport,
-  OutfitReportItem,
-  OutfitReportLlmOutput,
-} from "./outfitReportTypes.js";
+import type { OutfitReport, OutfitReportItem } from "./outfitReportTypes.js";
 import { parseOutfitReportLlmOutput } from "./outfitReportValidation.js";
 
 const OUTFIT_REPORT_SCHEMA_VERSION = 1;
@@ -77,24 +74,22 @@ function buildOutfitReportError(
   return error;
 }
 
-function getStitchedCollageImage(
-  promptDebugImages: PromptDebugImageResult,
+function getCurrentOutfitCollageImage(
+  currentOutfitCollage: PromptDebugImageCategory | null | undefined,
 ): ImageAssetLike | null {
-  const stitched = promptDebugImages.stitched;
-  const buffer = Buffer.isBuffer(stitched?.buffer)
-    ? stitched.buffer
-    : stitched?.buffer instanceof Uint8Array
-      ? Buffer.from(stitched.buffer)
+  const buffer = Buffer.isBuffer(currentOutfitCollage?.buffer)
+    ? currentOutfitCollage.buffer
+    : currentOutfitCollage?.buffer instanceof Uint8Array
+      ? Buffer.from(currentOutfitCollage.buffer)
       : null;
 
-  return buffer
-    ? {
-        buffer,
-        mimeType: stitched?.mimeType || "image/jpeg",
-        filename: stitched?.filename || "outfit-report-collage.jpg",
-        category: "outfit-report",
-      }
-    : null;
+  if (!buffer) return null;
+  return {
+    buffer,
+    mimeType: currentOutfitCollage?.mimeType || "image/jpeg",
+    filename: "current-outfit.jpg",
+    category: "Current Outfit",
+  };
 }
 
 function renderOutfitReportPrompt(items: OutfitReportItem[]) {
@@ -120,38 +115,25 @@ async function buildOutfitReportCollage({
   const promptDebugImages = await deps.runWithImageWorkSlotImpl(
     "outfit-report-images",
     () =>
-      deps.buildPromptDebugImagesInChildImpl({
-        normalizedItems: promptItems,
-        saveDebugArtifacts: false,
+      deps.buildPromptDebugImagesForCategoryImpl({
+        category: "Current Outfit",
+        items: promptItems,
       }),
   );
-  const collage = getStitchedCollageImage(promptDebugImages);
+  const collage = getCurrentOutfitCollageImage(promptDebugImages?.category);
   if (!collage) {
     throw buildOutfitReportError("service_unavailable", "missing_collage");
   }
   return collage;
 }
 
-function finalizeReport({
-  parsedReport,
-  itemsHash,
-}: {
-  parsedReport: OutfitReportLlmOutput;
-  itemsHash: string;
-}): OutfitReport {
-  return {
-    ...parsedReport,
-    schemaVersion: OUTFIT_REPORT_SCHEMA_VERSION,
-    itemsHash,
-  };
-}
-
 function createOutfitReportServiceDeps(
   deps: OutfitReportServiceDeps = {},
 ): OutfitReportServiceDeps {
   return {
-    buildPromptDebugImagesInChildImpl:
-      deps.buildPromptDebugImagesInChildImpl || buildPromptDebugImagesInChild,
+    buildPromptDebugImagesForCategoryImpl:
+      deps.buildPromptDebugImagesForCategoryImpl ||
+      buildPromptDebugImagesForCategory,
     getGenerateJsonWithLlmImpl:
       deps.getGenerateJsonWithLlmImpl || getGenerateJsonWithLlm,
     getOutfitImpl: deps.getOutfitImpl || getOutfit,
@@ -161,6 +143,8 @@ function createOutfitReportServiceDeps(
     resolveLlmProviderImpl: deps.resolveLlmProviderImpl || resolveLlmProvider,
     runWithImageWorkSlotImpl:
       deps.runWithImageWorkSlotImpl || runWithImageWorkSlot,
+    saveLastPromptArtifactsImpl:
+      deps.saveLastPromptArtifactsImpl || saveLastPromptArtifacts,
     updateOutfitReportImpl: deps.updateOutfitReportImpl || updateOutfitReport,
     ...deps,
   };
@@ -297,6 +281,12 @@ async function generateAndPersistReport({
     deps,
   });
   const prompt = renderOutfitReportPrompt(reportItems);
+  deps.saveLastPromptArtifactsImpl({
+    prompt,
+    userProfile: profile,
+    systemPrompt: OUTFIT_REPORT_SYSTEM_PROMPT,
+    currentOutfitCollage: collage,
+  });
   const itemsHash = deps.hashItemsImpl(context.itemRefs);
   const llmResolution = deps.resolveLlmProviderImpl(profile);
   const startedAt = Date.now();
@@ -310,7 +300,11 @@ async function generateAndPersistReport({
     itemCount: reportItems.length,
     itemIds: reportItems.map((item) => item.id),
   });
-  const report = finalizeReport({ parsedReport, itemsHash });
+  const report: OutfitReport = {
+    ...parsedReport,
+    schemaVersion: OUTFIT_REPORT_SCHEMA_VERSION,
+    itemsHash,
+  };
   const updatedOutfit = await deps.updateOutfitReportImpl(
     email,
     normalizedOutfitId,
@@ -331,11 +325,8 @@ async function generateAndPersistReport({
 }
 
 function isOutfitReportDomainError(error: unknown) {
-  const code = (error as OutfitReportError).code;
-  return (
-    code === "service_unavailable" ||
-    code === "invalid_payload" ||
-    code === "not_found"
+  return ["service_unavailable", "invalid_payload", "not_found"].includes(
+    String((error as OutfitReportError).code),
   );
 }
 

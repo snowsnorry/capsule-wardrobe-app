@@ -47,6 +47,7 @@ describe("regenerateSelectedArtifacts", () => {
     saveLastPromptArtifacts({
       prompt: "Ignored",
       currentCapsuleCollage: { buffer: Buffer.from("image") },
+      currentOutfitCollage: { buffer: Buffer.from("outfit-image") },
     });
 
     expect(fsMock.mkdirSync).not.toHaveBeenCalled();
@@ -57,6 +58,7 @@ describe("regenerateSelectedArtifacts", () => {
       prompt: "Pick replacements",
       systemPrompt: "System override",
       currentCapsuleCollage: { buffer: Buffer.from("image") },
+      currentOutfitCollage: { buffer: Buffer.from("outfit-image") },
     });
     process.env.NODE_ENV = previousNodeEnv;
 
@@ -71,6 +73,10 @@ describe("regenerateSelectedArtifacts", () => {
     expect(fsMock.writeFileSync).toHaveBeenCalledWith(
       new URL("current-capsule.jpg", LAST_PROMPT_DIR_URL),
       Buffer.from("image"),
+    );
+    expect(fsMock.writeFileSync).toHaveBeenCalledWith(
+      new URL("current-outfit.jpg", LAST_PROMPT_DIR_URL),
+      Buffer.from("outfit-image"),
     );
   });
 });

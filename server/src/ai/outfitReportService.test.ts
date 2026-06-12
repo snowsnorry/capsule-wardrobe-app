@@ -34,6 +34,7 @@ const outfit = {
   draft: { items: outfitItems, image: null, imageObsolete: false },
   saved: null,
 };
+const userProfile = { llm: "openai:gpt-5.5" };
 
 function buildLlmReport(overrides = {}) {
   return {
@@ -146,18 +147,18 @@ function createDeps({
   );
 
   return {
-    buildPromptDebugImagesInChildImpl: vi.fn(async () => ({
-      stitched: {
-        buffer: Buffer.from("collage"),
+    buildPromptDebugImagesForCategoryImpl: vi.fn(async () => ({
+      category: {
+        category: "Current Outfit",
+        buffer: Buffer.from("current-outfit"),
         mimeType: "image/jpeg",
-        filename: "collage.jpg",
+        filename: "category-current-outfit.jpg",
       },
-      categories: [],
     })),
     getGenerateJsonWithLlmImpl: vi.fn(() => generateJsonWithLlm),
     getOutfitImpl: vi.fn(async () => outfitValue),
     getOutfitItemsImpl: vi.fn(async () => items),
-    getProfileImpl: vi.fn(async () => ({ llm: "openai:gpt-5.5" })),
+    getProfileImpl: vi.fn(async () => userProfile),
     hashItemsImpl: vi.fn(() => "items-hash"),
     resolveLlmProviderImpl: vi.fn(() => ({
       provider: "openai",
@@ -165,6 +166,7 @@ function createDeps({
       requestedLlm: "openai:gpt-5.5",
     })),
     runWithImageWorkSlotImpl: vi.fn(async (_label, work) => work()),
+    saveLastPromptArtifactsImpl: vi.fn(),
     updateOutfitReportImpl,
     generateJsonWithLlm,
   };
@@ -181,19 +183,46 @@ describe("generateOutfitReport", () => {
       itemsHash: "items-hash",
       verdict: { status: "incomplete" },
     });
+    expect(deps.buildPromptDebugImagesForCategoryImpl).toHaveBeenCalledWith({
+      category: "Current Outfit",
+      items: [
+        {
+          id: "catalog-top-1",
+          category: "top",
+          imageUrl: "https://images.example.com/top.jpg",
+        },
+        {
+          id: "wardrobe-bottom-1",
+          category: "bottom",
+          imageUrl: "https://images.example.com/bottom.jpg",
+        },
+      ],
+    });
     expect(deps.generateJsonWithLlm).toHaveBeenCalledWith(
       expect.stringContaining('"id": "catalog-top-1"'),
       expect.objectContaining({
         format: expect.objectContaining({ name: "outfit_report" }),
         images: [
           expect.objectContaining({
-            filename: "collage.jpg",
+            buffer: Buffer.from("current-outfit"),
+            category: "Current Outfit",
+            filename: "current-outfit.jpg",
             mimeType: "image/jpeg",
           }),
         ],
         systemPrompt: expect.stringContaining("outfit-report-auditor"),
       }),
     );
+    expect(deps.saveLastPromptArtifactsImpl).toHaveBeenCalledWith({
+      prompt: expect.stringContaining('"id": "catalog-top-1"'),
+      userProfile,
+      systemPrompt: expect.stringContaining("outfit-report-auditor"),
+      currentOutfitCollage: expect.objectContaining({
+        buffer: Buffer.from("current-outfit"),
+        category: "Current Outfit",
+        filename: "current-outfit.jpg",
+      }),
+    });
     expect(deps.updateOutfitReportImpl).toHaveBeenCalledWith(
       "person@example.com",
       "outfit-1",

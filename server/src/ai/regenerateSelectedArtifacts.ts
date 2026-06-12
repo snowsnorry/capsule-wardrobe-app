@@ -1,5 +1,9 @@
 import { mkdirSync, writeFileSync } from "node:fs";
-import type { PromptDebugImageCategory, UserProfileLike } from "./types.js";
+import type {
+  ImageAssetLike,
+  PromptDebugImageCategory,
+  UserProfileLike,
+} from "./types.js";
 import { buildRegenerateSelectedSystemPrompt } from "./regenerateSelectedPrompt.js";
 
 export const LAST_PROMPT_DIR_URL = new URL(
@@ -31,11 +35,13 @@ export function buildLastPromptArtifact(
 export function saveLastPromptArtifacts({
   prompt,
   currentCapsuleCollage,
+  currentOutfitCollage,
   userProfile = null,
   systemPrompt = "",
 }: {
   prompt?: string | null;
   currentCapsuleCollage?: PromptDebugImageCategory | null;
+  currentOutfitCollage?: ImageAssetLike | null;
   userProfile?: UserProfileLike | null;
   systemPrompt?: string | null;
 } = {}) {
@@ -57,6 +63,13 @@ export function saveLastPromptArtifacts({
     writeFileSync(
       new URL("current-capsule.jpg", LAST_PROMPT_DIR_URL),
       currentCapsuleCollage.buffer,
+    );
+  }
+
+  if (currentOutfitCollage?.buffer) {
+    writeFileSync(
+      new URL("current-outfit.jpg", LAST_PROMPT_DIR_URL),
+      currentOutfitCollage.buffer,
     );
   }
 }
