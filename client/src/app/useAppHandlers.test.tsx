@@ -343,7 +343,7 @@ describe("useAppHandlers", () => {
     );
   });
 
-  test("closes the sidebar after validating capsule open", async () => {
+  test("closes the sidebar without waiting for capsule selection persistence", async () => {
     const actionContext = createActionContext();
     const sessionActionContext = createSessionContext();
     const calls: string[] = [];
@@ -386,18 +386,86 @@ describe("useAppHandlers", () => {
       onComplete,
     );
 
-    expect(calls).toEqual(["select-start"]);
-    expect(onComplete).not.toHaveBeenCalled();
+    expect(calls).toEqual(["navigate-capsule", "close-sidebar"]);
+    expect(onComplete).toHaveBeenCalledTimes(1);
+    expect(navigateCapsule).toHaveBeenCalledWith("capsule-2");
 
-    resolveSelectCapsule();
     await openPromise;
-
     expect(calls).toEqual([
-      "select-start",
-      "select-resolve",
       "navigate-capsule",
       "close-sidebar",
+      "select-start",
     ]);
-    expect(navigateCapsule).toHaveBeenCalledWith("capsule-2");
+
+    resolveSelectCapsule();
+
+    expect(calls).toEqual([
+      "navigate-capsule",
+      "close-sidebar",
+      "select-start",
+      "select-resolve",
+    ]);
+  });
+
+  test("closes the sidebar without waiting for outfit selection persistence", async () => {
+    const actionContext = createActionContext();
+    const sessionActionContext = createSessionContext();
+    const calls: string[] = [];
+    let resolveSelectOutfit: () => void = () => {};
+    const navigateApp = vi.fn();
+    const navigateCapsule = vi.fn();
+    const navigateNewCapsule = vi.fn();
+    const navigateOutfit = vi.fn(() => calls.push("navigate-outfit"));
+    const onComplete = vi.fn(() => calls.push("close-sidebar"));
+
+    outfitActions.selectUserOutfit.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          calls.push("select-start");
+          resolveSelectOutfit = () => {
+            calls.push("select-resolve");
+            resolve();
+          };
+        }),
+    );
+
+    const { result } = renderHook(() =>
+      useAppHandlers({
+        activeCapsuleId: "capsule-1",
+        capsuleSidebarActionsRef: { current: null },
+        getAppActionContext: () => actionContext,
+        navigateCapsule,
+        navigateOutfit,
+        navigateApp,
+        navigateNewCapsule,
+        pendingShareId: "",
+        setCurrentView: vi.fn(),
+        setIsSignOutConfirmOpen: vi.fn(),
+        setSelectedRegenerationUrls: vi.fn(),
+        shareMetadata: null,
+        sessionActionContext,
+      }),
+    );
+
+    const openPromise = result.current.handleOpenOutfitFromSidebar(
+      "outfit-2",
+      onComplete,
+    );
+
+    expect(calls).toEqual(["navigate-outfit", "close-sidebar"]);
+    expect(onComplete).toHaveBeenCalledTimes(1);
+    expect(navigateOutfit).toHaveBeenCalledWith("outfit-2");
+
+    await openPromise;
+    expect(calls).toEqual(["navigate-outfit", "close-sidebar", "select-start"]);
+
+    resolveSelectOutfit();
+
+    expect(calls).toEqual([
+      "navigate-outfit",
+      "close-sidebar",
+      "select-start",
+      "select-resolve",
+    ]);
   });
 });

@@ -111,22 +111,36 @@ function getHighlightedCapsuleId(
   activeSidebarApp: ReturnType<typeof getActiveSidebarApp>,
   props: AppShellContentProps,
 ) {
-  return activeSidebarApp === "capsule" &&
-    props.capsuleRouteId &&
-    props.capsuleRouteId === props.activeCapsuleMeta?.id
-    ? props.capsuleRouteId
-    : "";
+  return activeSidebarApp === "capsule" ? props.capsuleRouteId : "";
 }
 
 function getHighlightedOutfitId(
   activeSidebarApp: ReturnType<typeof getActiveSidebarApp>,
   props: AppShellContentProps,
 ) {
-  return activeSidebarApp === "outfit" &&
-    props.outfitRouteId &&
-    props.outfitRouteId === props.activeOutfitMeta?.id
-    ? props.outfitRouteId
-    : "";
+  return activeSidebarApp === "outfit" ? props.outfitRouteId || "" : "";
+}
+
+function getSidebarCapsuleMeta(
+  activeSidebarApp: ReturnType<typeof getActiveSidebarApp>,
+  props: AppShellContentProps,
+) {
+  return activeSidebarApp !== "capsule" ||
+    !props.capsuleRouteId ||
+    props.activeCapsuleMeta?.id === props.capsuleRouteId
+    ? props.activeCapsuleMeta
+    : null;
+}
+
+function getSidebarOutfitMeta(
+  activeSidebarApp: ReturnType<typeof getActiveSidebarApp>,
+  props: AppShellContentProps,
+) {
+  return activeSidebarApp !== "outfit" ||
+    !props.outfitRouteId ||
+    props.activeOutfitMeta?.id === props.outfitRouteId
+    ? props.activeOutfitMeta || null
+    : null;
 }
 
 function MarketingPanel({
@@ -222,6 +236,8 @@ function AppSidebarPanel(props: AppShellContentProps) {
   );
   const highlightedCapsuleId = getHighlightedCapsuleId(activeSidebarApp, props);
   const highlightedOutfitId = getHighlightedOutfitId(activeSidebarApp, props);
+  const sidebarCapsuleMeta = getSidebarCapsuleMeta(activeSidebarApp, props);
+  const sidebarOutfitMeta = getSidebarOutfitMeta(activeSidebarApp, props);
 
   return (
     <AppSidebarShell
@@ -240,7 +256,12 @@ function AppSidebarPanel(props: AppShellContentProps) {
       onSignOut={props.onRequestSignOut}
       headerContent={({ isOverlaySidebar, openSidebar }) =>
         isOverlaySidebar ? (
-          <AppShellMobileHeader {...props} openSidebar={openSidebar} />
+          <AppShellMobileHeader
+            {...props}
+            activeCapsuleMeta={sidebarCapsuleMeta}
+            activeOutfitMeta={sidebarOutfitMeta}
+            openSidebar={openSidebar}
+          />
         ) : null
       }
       sidebarBodyContent={({
@@ -251,8 +272,8 @@ function AppSidebarPanel(props: AppShellContentProps) {
         closeSidebar,
       }) => (
         <AppShellSidebarNavigationBody
-          activeCapsuleMeta={props.activeCapsuleMeta}
-          activeOutfitMeta={props.activeOutfitMeta || null}
+          activeCapsuleMeta={sidebarCapsuleMeta}
+          activeOutfitMeta={sidebarOutfitMeta}
           activeSidebarApp={activeSidebarApp}
           capsuleActionMenuControllerRef={capsuleActionMenuControllerRef}
           outfitActionMenuControllerRef={outfitActionMenuControllerRef}

@@ -120,12 +120,16 @@ export function useAppHandlers({
     navigateNewOutfit();
   };
   const handleOpenCapsule = async (capsuleId: string) => {
-    await selectCapsule(capsuleId);
     navigateCapsule(capsuleId);
+    void Promise.resolve()
+      .then(() => selectCapsule(capsuleId))
+      .catch(() => undefined);
   };
   const handleOpenOutfit = async (outfitId: string) => {
-    await selectUserOutfit(outfitId);
     navigateOutfit(outfitId);
+    void Promise.resolve()
+      .then(() => selectUserOutfit(outfitId))
+      .catch(() => undefined);
   };
   const handleSaveCapsule = async (capsuleId = activeCapsuleId) =>
     saveCurrentCapsule(getAppActionContext(), capsuleId);
@@ -361,14 +365,14 @@ function buildAppHandlers({
       capsuleId: string,
       onComplete?: () => void,
     ) => {
-      await handleOpenCapsule(capsuleId);
+      void handleOpenCapsule(capsuleId).catch(() => undefined);
       onComplete?.();
     },
     handleOpenOutfitFromSidebar: async (
       outfitId: string,
       onComplete?: () => void,
     ) => {
-      await handleOpenOutfit(outfitId);
+      void handleOpenOutfit(outfitId).catch(() => undefined);
       onComplete?.();
     },
     handlePasskeySignIn: async () => passkeySignIn(sessionActionContext),

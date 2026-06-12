@@ -72,8 +72,12 @@ test("mobile capsule switch closes the sidebar while capsule data is loading", a
     .click();
 
   await expect.poll(() => delayedCapsuleFetch).toBe(true);
+  await expect(page).toHaveURL(/\/capsule\/capsule-e2e$/);
   await expect(drawerPaper).toBeHidden();
   await expect(page.getByRole("progressbar")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Toggle sidebar" }),
+  ).toBeDisabled();
 
   releaseCapsuleFetch();
 

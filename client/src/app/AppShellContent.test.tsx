@@ -24,7 +24,10 @@ vi.mock("../api/personalItems", () => personalItemsApi);
 
 vi.mock("../components/AppSidebarNavigation", () => ({
   default: ({
+    activeCapsule,
     activeCapsuleId,
+    activeOutfit,
+    activeOutfitId,
     capsuleHasUnsavedChanges,
     onCreateCapsule,
     onCreateOutfit,
@@ -38,7 +41,10 @@ vi.mock("../components/AppSidebarNavigation", () => ({
     personalItemsCount,
     outfitHasUnsavedChanges,
   }: {
+    activeCapsule?: { id?: string } | null;
     activeCapsuleId: string;
+    activeOutfit?: { id?: string } | null;
+    activeOutfitId: string;
     capsuleHasUnsavedChanges: (capsule: { status?: string }) => boolean;
     onCreateCapsule: () => void;
     onCreateOutfit: () => void;
@@ -130,6 +136,13 @@ vi.mock("../components/AppSidebarNavigation", () => ({
         open outfit actions
       </button>
       <span data-testid="sidebar-active-capsule">{activeCapsuleId}</span>
+      <span data-testid="sidebar-active-capsule-meta">
+        {activeCapsule?.id || ""}
+      </span>
+      <span data-testid="sidebar-active-outfit">{activeOutfitId}</span>
+      <span data-testid="sidebar-active-outfit-meta">
+        {activeOutfit?.id || ""}
+      </span>
       <span data-testid="sidebar-personal-items-count">
         {personalItemsCount ?? ""}
       </span>
@@ -774,6 +787,81 @@ describe("AppShellContent", () => {
 
     expect(screen.getByTestId("sidebar-active-capsule")).toHaveTextContent(
       "capsule-15",
+    );
+    expect(screen.getByTestId("sidebar-active-capsule-meta")).toHaveTextContent(
+      "capsule-15",
+    );
+  });
+
+  test("highlights capsule route ids before matching metadata loads", () => {
+    renderShellContent({
+      appRoute: "capsule",
+      activeCapsuleId: "capsule-1",
+      activeCapsuleMeta: {
+        id: "capsule-1",
+        name: "Previous capsule",
+        status: "saved",
+      },
+      capsuleRouteId: "capsule-15",
+      isMainScreenView: true,
+      isSearchView: false,
+    });
+
+    expect(screen.getByTestId("sidebar-active-capsule")).toHaveTextContent(
+      "capsule-15",
+    );
+    expect(
+      screen.getByTestId("sidebar-active-capsule-meta"),
+    ).toBeEmptyDOMElement();
+    expect(screen.getByTestId("app-shell-mobile-header")).not.toHaveTextContent(
+      "Previous capsule",
+    );
+  });
+
+  test("highlights outfit route ids before matching metadata loads", () => {
+    renderShellContent({
+      appRoute: "outfit",
+      activeOutfitId: "outfit-1",
+      activeOutfitMeta: {
+        id: "outfit-1",
+        name: "Previous outfit",
+        status: "saved",
+      },
+      outfitRouteId: "outfit-15",
+      isMainScreenView: true,
+      isSearchView: false,
+    });
+
+    expect(screen.getByTestId("sidebar-active-outfit")).toHaveTextContent(
+      "outfit-15",
+    );
+    expect(
+      screen.getByTestId("sidebar-active-outfit-meta"),
+    ).toBeEmptyDOMElement();
+    expect(screen.getByTestId("app-shell-mobile-header")).not.toHaveTextContent(
+      "Previous outfit",
+    );
+  });
+
+  test("passes route-matched outfit metadata before active id catches up", () => {
+    renderShellContent({
+      appRoute: "outfit",
+      activeOutfitId: "",
+      activeOutfitMeta: {
+        id: "outfit-15",
+        name: "Search result outfit",
+        status: "saved",
+      },
+      outfitRouteId: "outfit-15",
+      isMainScreenView: true,
+      isSearchView: false,
+    });
+
+    expect(screen.getByTestId("sidebar-active-outfit")).toHaveTextContent(
+      "outfit-15",
+    );
+    expect(screen.getByTestId("sidebar-active-outfit-meta")).toHaveTextContent(
+      "outfit-15",
     );
   });
 });
