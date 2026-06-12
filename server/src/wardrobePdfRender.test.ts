@@ -294,6 +294,44 @@ test("buildWardrobePdf paginates long outfit reports at the end", async () => {
   expect(await getPdfPageCount(pdfBuffer)).toBeGreaterThan(1);
 });
 
+test("buildWardrobePdf wraps long report chips and issue suggestions", async () => {
+  const wrappedReport = buildReport({
+    seasonality: {
+      primarySeasons: [
+        "very_long_transitional_weather_label_that_forces_chip_wrapping",
+        "another_long_weather_context_for_the_next_chip_row",
+      ],
+      temperatureBandC: { min: 5, max: 21 },
+      seasonScore: 0.8,
+    },
+    styleProfile: {
+      formalityLevel: "very_detailed_smart_casual_context",
+      primaryStyle: "minimalist_layered_city_utility_with_extra_detail",
+      styleScore: 0.85,
+    },
+    colorAnalysis: {
+      paletteType: "muted_neutral_with_extended_accent_context",
+      colorScore: 0.92,
+    },
+    issues: [
+      { message: "", suggestion: "" },
+      {
+        message: "Layering may need adjustment.",
+        suggestion:
+          "Use a compact thermal layer under the jacket when the morning starts cold and remove it indoors after commuting.",
+      },
+    ],
+  });
+
+  const pdfBuffer = await buildWardrobePdf([], {
+    locale: "en",
+    outfit: { title: "Wrapped report", report: wrappedReport },
+  });
+
+  expect(Buffer.isBuffer(pdfBuffer)).toBeTruthy();
+  expect(await getPdfPageCount(pdfBuffer)).toBeGreaterThan(0);
+});
+
 test("outfit pdf report helpers mirror desktop report labels and percentages", () => {
   const report = buildReport();
 

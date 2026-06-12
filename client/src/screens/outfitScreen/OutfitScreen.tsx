@@ -23,6 +23,11 @@ import { useI18n } from "../../i18n/useI18n";
 import { AddItemsDialog } from "../../components/AddItemsDialog";
 import { OutfitGrid } from "./OutfitGrid";
 import { OutfitHeader } from "./OutfitHeader";
+import {
+  getHighlightedReportItemKeys,
+  getPreviewComparableKey,
+  makeOutfitNameDialog,
+} from "./OutfitScreenHelpers";
 import { OutfitItemMenu, OutfitMenu } from "./OutfitMenus";
 import OutfitReportPanel from "./OutfitReportPanel";
 import {
@@ -54,92 +59,6 @@ import type {
   OutfitScreenProps,
   ProductDetailMode,
 } from "./OutfitScreenTypes";
-
-function getPreviewComparableKey(item: WardrobeItem) {
-  return getCanonicalItemUrl(item) || getPreviewItemKey(item);
-}
-
-function makeOutfitNameDialog(
-  type: "rename" | "save-as",
-  outfit: { id?: string; name?: string } | null | undefined,
-): NameDialogState {
-  return {
-    type,
-    capsuleId: outfit?.id || "",
-    value: outfit?.name || "",
-  };
-}
-
-function getTrimmedString(value: unknown) {
-  return String(value ?? "").trim();
-}
-
-function isWardrobeReportItem(
-  entry: OutfitItemSnapshot,
-  item: WardrobeItem | null | undefined,
-) {
-  if (entry.source === "uploaded") {
-    return true;
-  }
-
-  if (getTrimmedString(item?.source) === "uploaded") {
-    return true;
-  }
-
-  if (getTrimmedString(item?.itemSource) === "wardrobe") {
-    return true;
-  }
-
-  return Boolean(
-    getTrimmedString(item?.wardrobeId) || getTrimmedString(item?.profileEmail),
-  );
-}
-
-function addReportCandidateId(ids: Set<string>, value: unknown) {
-  const id = getTrimmedString(value);
-  if (id) {
-    ids.add(id);
-  }
-  return id;
-}
-
-function getReportItemCandidateIds(entry: OutfitItemSnapshot) {
-  const item = getOutfitItem(entry);
-  const ids = new Set<string>();
-  addReportCandidateId(ids, entry.url);
-  const itemId = addReportCandidateId(ids, item?.id);
-  const wardrobeId = addReportCandidateId(ids, item?.wardrobeId);
-  addReportCandidateId(ids, item?.url);
-
-  if (isWardrobeReportItem(entry, item)) {
-    for (const id of [itemId, wardrobeId]) {
-      if (id) {
-        ids.add(id.startsWith("W") ? id : `W${id}`);
-      }
-    }
-  }
-
-  return [...ids];
-}
-
-function getHighlightedReportItemKeys(
-  entries: OutfitItemSnapshot[],
-  reportItemIds: string[],
-) {
-  const targetIds = new Set(
-    reportItemIds.map((value) => String(value || "").trim()).filter(Boolean),
-  );
-  if (!targetIds.size) return [];
-
-  return entries
-    .filter((entry) =>
-      getReportItemCandidateIds(entry).some((candidate) =>
-        targetIds.has(candidate),
-      ),
-    )
-    .map(getOutfitItemKey)
-    .filter(Boolean);
-}
 
 export default function OutfitScreen({
   activeOutfit,
