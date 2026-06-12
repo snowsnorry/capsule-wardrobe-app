@@ -198,6 +198,27 @@ describe("outfitActions", () => {
     expect(context.setActiveOutfitMeta).not.toHaveBeenCalled();
   });
 
+  test("copies outfit sets without saving when no outfit id is returned", async () => {
+    const draftOutfit = { name: "Draft outfit" };
+    vi.mocked(createOutfit).mockResolvedValueOnce({ outfit: draftOutfit });
+    const context = createActionContext({
+      setOutfitList: vi.fn(),
+      setOutfitPagination: vi.fn(),
+    });
+    const items = [{ source: "uploaded" }];
+
+    await expect(
+      copyOutfitSetToOutfits(context, "Draft outfit", items),
+    ).resolves.toEqual(draftOutfit);
+
+    expect(createOutfit).toHaveBeenCalledWith({
+      name: "Draft outfit",
+      items,
+    });
+    expect(saveOutfit).not.toHaveBeenCalled();
+    expect(fetchRecentOutfits).toHaveBeenCalledWith({ limit: 10, offset: 0 });
+  });
+
   test("mutates the active outfit and refreshes sidebar metadata", async () => {
     vi.mocked(saveOutfit).mockResolvedValue({
       outfit: { ...outfit, status: "saved" },
@@ -370,6 +391,36 @@ describe("outfitActions", () => {
     });
   });
 
+  test("reports saved outfit image stream errors after ignoring non-ready events", async () => {
+    vi.mocked(generateOutfitImage).mockResolvedValueOnce({ status: "pending" });
+    vi.mocked(subscribeOutfitEvents).mockImplementationOnce(
+      async ({ onError, onMessage }) => {
+        onMessage?.({
+          event: "snapshot",
+          data: { pendingImage: true, status: "pending" },
+        });
+        onError?.(new Error("stream"));
+      },
+    );
+    const context = createActionContext({
+      activeOutfitId: "outfit-1",
+      resolveErrorMessage: vi.fn(() => "stream failed"),
+      setIsOutfitImagePending: vi.fn(),
+      setStatus: vi.fn(),
+    });
+
+    await generateCurrentOutfitImage(context, "outfit-1");
+
+    expect(fetchOutfit).not.toHaveBeenCalled();
+    expect(context.setIsOutfitImagePending).toHaveBeenLastCalledWith(false);
+    expect(
+      (context.setStatus as Mock).mock.calls.at(-1)?.[0]({ previous: true }),
+    ).toEqual({
+      previous: true,
+      error: "stream failed",
+    });
+  });
+
   test("generates and deletes outfit reports with pending state and errors", async () => {
     vi.mocked(generateOutfitReport).mockResolvedValueOnce({
       ok: true,
@@ -423,6 +474,49 @@ describe("outfitActions", () => {
       error: "Could not generate outfit report.",
     });
     expect(context.setIsOutfitReportPending).toHaveBeenLastCalledWith(false);
+  });
+
+  test("reports media deletion failures and skips missing outfit ids", async () => {
+    vi.mocked(deleteOutfitReport).mockRejectedValueOnce(new Error("report"));
+    vi.mocked(deleteOutfitImage).mockRejectedValueOnce(new Error("image"));
+    const context = createActionContext({
+      resolveErrorMessage: vi.fn((error: unknown) =>
+        error instanceof Error ? `resolved ${error.message}` : "resolved",
+      ),
+      setIsContentOperationLoading: vi.fn(),
+      setIsOutfitImagePending: vi.fn(),
+      setIsOutfitReportPending: vi.fn(),
+      setStatus: vi.fn(),
+    });
+
+    await generateCurrentOutfitImage(context, "");
+    await generateCurrentOutfitReport(context, "");
+    await deleteCurrentOutfitReport(context, "");
+    await deleteCurrentOutfitImage(context, "");
+    await deleteCurrentOutfitReport(context, "outfit-1");
+    await deleteCurrentOutfitImage(context, "outfit-1");
+
+    expect(generateOutfitImage).not.toHaveBeenCalled();
+    expect(generateOutfitReport).not.toHaveBeenCalled();
+    expect(deleteOutfitReport).toHaveBeenCalledTimes(1);
+    expect(deleteOutfitImage).toHaveBeenCalledTimes(1);
+    expect(context.setIsOutfitReportPending).toHaveBeenLastCalledWith(false);
+    expect(mockCalls(context.setIsContentOperationLoading)).toEqual([
+      [true],
+      [false],
+    ]);
+    expect(
+      (context.setStatus as Mock).mock.calls.at(-2)?.[0]({ previous: true }),
+    ).toEqual({
+      previous: true,
+      error: "resolved report",
+    });
+    expect(
+      (context.setStatus as Mock).mock.calls.at(-1)?.[0]({ previous: true }),
+    ).toEqual({
+      previous: true,
+      error: "resolved image",
+    });
   });
 
   test("does not reactivate a previous outfit when image generation finishes after navigation", async () => {
