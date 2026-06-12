@@ -173,7 +173,7 @@ test("capsule duplicate select delete fallback and reload persistence work throu
   await expect(
     page.getByRole("button", { name: duplicateCapsuleName, exact: true }),
   ).toHaveCount(0);
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL(/\/personal-items$/);
   await expectCapsuleListed(page, originalCapsuleName);
   await expect(
     page.getByRole("button", { name: `Rename capsule ${originalCapsuleName}` }),
