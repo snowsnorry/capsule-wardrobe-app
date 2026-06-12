@@ -23,6 +23,23 @@ import {
 import { useOutfitInlineRename } from "./useOutfitInlineRename";
 import type { OutfitScreenProps } from "./OutfitScreenTypes";
 
+type OutfitHeaderProps = {
+  activeOutfit: OutfitMeta | null;
+  hasReport: boolean;
+  isContentBusy: boolean;
+  isReportPending: boolean;
+  isMobile: boolean;
+  items: OutfitItemSnapshot[];
+  onAdd: () => void;
+  onAnalyze: () => void;
+  onCancelSelection: () => void;
+  onMenuOpen: (anchor: HTMLElement) => void;
+  onRenameOutfit: OutfitScreenProps["onRenameOutfit"];
+  onRemoveSelected: () => void;
+  selectedCount: number;
+  t: (key: string, params?: Record<string, unknown>) => string;
+};
+
 export function OutfitHeader({
   activeOutfit,
   hasReport,
@@ -38,22 +55,7 @@ export function OutfitHeader({
   onRemoveSelected,
   selectedCount,
   t,
-}: {
-  activeOutfit: OutfitMeta | null;
-  hasReport: boolean;
-  isContentBusy: boolean;
-  isReportPending: boolean;
-  isMobile: boolean;
-  items: OutfitItemSnapshot[];
-  onAdd: () => void;
-  onAnalyze: () => void;
-  onCancelSelection: () => void;
-  onMenuOpen: (anchor: HTMLElement) => void;
-  onRenameOutfit: OutfitScreenProps["onRenameOutfit"];
-  onRemoveSelected: () => void;
-  selectedCount: number;
-  t: (key: string, params?: Record<string, unknown>) => string;
-}) {
+}: OutfitHeaderProps) {
   const inlineRename = useOutfitInlineRename({
     activeOutfit,
     disabled: isContentBusy,
@@ -62,6 +64,7 @@ export function OutfitHeader({
   const activeName = activeOutfit?.name || "";
   const disabled =
     !activeOutfit?.id || isContentBusy || inlineRename.submitting;
+  const canAnalyzeOutfit = items.length > 0;
   const showProgress = isContentBusy || isReportPending;
 
   return (
@@ -84,6 +87,7 @@ export function OutfitHeader({
           disabled={disabled}
           hasReport={hasReport}
           isMobile={isMobile}
+          canAnalyzeOutfit={canAnalyzeOutfit}
           selectedCount={selectedCount}
           t={t}
           onAdd={onAdd}
@@ -227,6 +231,7 @@ const outfitInlineTitleSx = {
 } as const;
 
 function OutfitHeaderActions({
+  canAnalyzeOutfit,
   disabled,
   hasReport,
   isMobile,
@@ -238,6 +243,7 @@ function OutfitHeaderActions({
   selectedCount,
   t,
 }: {
+  canAnalyzeOutfit: boolean;
   disabled: boolean;
   hasReport: boolean;
   isMobile: boolean;
@@ -275,7 +281,7 @@ function OutfitHeaderActions({
     <Stack direction="row" spacing={1} sx={outfitHeaderActionsSx}>
       <Button
         variant="outlined"
-        disabled={disabled}
+        disabled={disabled || !canAnalyzeOutfit}
         onClick={onAnalyze}
         sx={{
           display: hasReport || isMobile ? "none" : "inline-flex",

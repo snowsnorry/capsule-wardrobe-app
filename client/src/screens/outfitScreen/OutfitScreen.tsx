@@ -127,6 +127,8 @@ export default function OutfitScreen({
   );
   const outfitImage = activeOutfit?.effective?.image || null;
   const outfitImageSrc = resolveOutfitSetImageSrc(outfitImage);
+  const hasOutfitItems = visibleItems.length > 0;
+  const showOutfitImageActions = Boolean(activeOutfit && hasOutfitItems);
   const isSelectionMode = selectedKeys.length > 0;
   const previewItemKey = getPreviewItemKey(previewItem);
   const nameDialogProps = useMemo(
@@ -278,7 +280,7 @@ export default function OutfitScreen({
         onPreviewItem={(entry) => setPreviewItem(getOutfitItem(entry))}
         onToggleSelected={toggleSelected}
       />
-      {activeOutfit ? (
+      {showOutfitImageActions ? (
         <>
           <Divider data-testid="outfit-set-image-divider" flexItem />
           <OutfitGeneratedImageBlock
@@ -369,6 +371,7 @@ export default function OutfitScreen({
       ) : null}
       <OutfitMenu
         anchor={menuAnchor}
+        canAnalyzeOutfit={hasOutfitItems}
         disabled={isContentBusy}
         mobileCardColumns={mobileCardColumns}
         outfit={activeOutfit}

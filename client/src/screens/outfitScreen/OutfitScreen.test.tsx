@@ -372,12 +372,46 @@ describe("OutfitScreen", () => {
     expect(getComputedStyle(cardsContent).marginRight).toBe("auto");
   });
 
+  test("hides outfit image actions for an empty outfit", () => {
+    renderScreen();
+
+    expect(
+      screen.queryByTestId("outfit-set-image-divider"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Create image" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Analyze" })).toBeDisabled();
+  });
+
   test("renders saved outfit image actions preview warning and delete flow", async () => {
     const user = userEvent.setup();
     const onGenerateOutfitImage = vi.fn(() => Promise.resolve());
     const onDeleteOutfitImage = vi.fn(() => Promise.resolve());
 
     const { rerender } = renderScreen({
+      activeOutfit: {
+        id: "outfit-1",
+        name: "<New outfit>",
+        status: "saved",
+        effective: {
+          items: [
+            {
+              url: "https://example.com/jacket",
+              source: "from_catalog",
+              item: {
+                id: "catalog-1",
+                url: "https://example.com/jacket",
+                name: "Preview jacket",
+                category: "outerwear",
+                imageUrl: "https://example.com/jacket.png",
+              },
+            },
+          ],
+          image: null,
+          imageObsolete: false,
+        },
+      },
       onGenerateOutfitImage,
       onDeleteOutfitImage,
     });
@@ -394,7 +428,19 @@ describe("OutfitScreen", () => {
             name: "<New outfit>",
             status: "saved",
             effective: {
-              items: [],
+              items: [
+                {
+                  url: "https://example.com/jacket",
+                  source: "from_catalog",
+                  item: {
+                    id: "catalog-1",
+                    url: "https://example.com/jacket",
+                    name: "Preview jacket",
+                    category: "outerwear",
+                    imageUrl: "https://example.com/jacket.png",
+                  },
+                },
+              ],
               image: "https://images.example.com/outfit.png",
               imageObsolete: true,
             },
@@ -539,7 +585,29 @@ describe("OutfitScreen", () => {
     setViewportMobile(true);
     const user = userEvent.setup();
     const onGenerateOutfitReport = vi.fn(() => Promise.resolve());
-    renderScreen({ onGenerateOutfitReport });
+    renderScreen({
+      activeOutfit: {
+        id: "outfit-1",
+        name: "<New outfit>",
+        status: "saved",
+        effective: {
+          items: [
+            {
+              url: "https://example.com/jacket",
+              source: "from_catalog",
+              item: {
+                id: "catalog-1",
+                url: "https://example.com/jacket",
+                name: "Preview jacket",
+                category: "outerwear",
+                imageUrl: "https://example.com/jacket.png",
+              },
+            },
+          ],
+        },
+      },
+      onGenerateOutfitReport,
+    });
 
     expect(
       screen.queryByRole("button", { name: "Analyze" }),
@@ -548,6 +616,21 @@ describe("OutfitScreen", () => {
     await user.click(screen.getByRole("menuitem", { name: "Analyze" }));
 
     expect(onGenerateOutfitReport).toHaveBeenCalledWith("outfit-1");
+  });
+
+  test("disables the mobile analyze menu action for an empty outfit", async () => {
+    setViewportMobile(true);
+    const user = userEvent.setup();
+    const onGenerateOutfitReport = vi.fn(() => Promise.resolve());
+    renderScreen({ onGenerateOutfitReport });
+
+    await user.click(screen.getByRole("button", { name: "Open actions" }));
+
+    expect(screen.getByRole("menuitem", { name: "Analyze" })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+    expect(onGenerateOutfitReport).not.toHaveBeenCalled();
   });
 
   test("renames outfits from the mobile outfit menu", async () => {

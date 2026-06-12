@@ -23,6 +23,7 @@ import { getOutfitItem } from "./outfitItemMappers";
 
 type OutfitMenuProps = {
   anchor: HTMLElement | null;
+  canAnalyzeOutfit: boolean;
   disabled: boolean;
   mobileCardColumns: MobileCardColumns;
   outfit: OutfitMeta | null;
@@ -41,6 +42,7 @@ type OutfitMenuProps = {
 };
 
 function AnalyzeMenuSection({
+  canAnalyzeOutfit,
   disabled,
   outfit,
   onAnalyze,
@@ -48,13 +50,16 @@ function AnalyzeMenuSection({
   t,
 }: Pick<
   OutfitMenuProps,
-  "disabled" | "outfit" | "onAnalyze" | "showAnalyze" | "t"
+  "canAnalyzeOutfit" | "disabled" | "outfit" | "onAnalyze" | "showAnalyze" | "t"
 >) {
   if (!showAnalyze) return null;
 
   return (
     <>
-      <MenuItem disabled={disabled || !outfit?.id} onClick={onAnalyze}>
+      <MenuItem
+        disabled={disabled || !outfit?.id || !canAnalyzeOutfit}
+        onClick={onAnalyze}
+      >
         <ListItemIcon>
           <AutoAwesomeRoundedIcon fontSize="small" />
         </ListItemIcon>
@@ -136,6 +141,7 @@ function OutfitLifecycleMenuSection({
 
 export function OutfitMenu({
   anchor,
+  canAnalyzeOutfit,
   disabled,
   mobileCardColumns,
   outfit,
@@ -155,6 +161,7 @@ export function OutfitMenu({
   return (
     <Menu anchorEl={anchor} open={Boolean(anchor)} onClose={onClose}>
       <AnalyzeMenuSection
+        canAnalyzeOutfit={canAnalyzeOutfit}
         disabled={disabled}
         outfit={outfit}
         showAnalyze={showAnalyze}

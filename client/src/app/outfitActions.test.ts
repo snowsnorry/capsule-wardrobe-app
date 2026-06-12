@@ -257,6 +257,15 @@ describe("outfitActions", () => {
       expect.objectContaining({ id: "copy" }),
     );
     expect(fetchRecentOutfits).toHaveBeenCalledTimes(5);
+    expect(context.setIsContentOperationLoading).toHaveBeenCalledTimes(10);
+    expect(context.setIsContentOperationLoading).toHaveBeenNthCalledWith(
+      1,
+      true,
+    );
+    expect(context.setIsContentOperationLoading).toHaveBeenNthCalledWith(
+      10,
+      false,
+    );
   });
 
   test("skips current outfit mutations without an outfit id", async () => {
