@@ -10,6 +10,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
+import type { OutfitMeta } from "../../app/appTypes";
 import OutfitScreen from "./OutfitScreen";
 
 const personalItemsApi = vi.hoisted(() => ({
@@ -258,7 +259,7 @@ function renderScreen(overrides: Record<string, unknown> = {}) {
   );
 }
 
-function buildReportOutfit() {
+function buildReportOutfit(): OutfitMeta {
   return {
     id: "outfit-1",
     name: "Weekend",
@@ -597,6 +598,42 @@ describe("OutfitScreen", () => {
   test("highlights linked outfit cards from report issue focus", async () => {
     const user = userEvent.setup();
     renderScreen({ activeOutfit: buildReportOutfit() });
+
+    await user.click(screen.getByRole("button", { name: "Show details" }));
+    const issueRow = screen
+      .getByText("Boots may feel heavy.")
+      .closest("[tabindex='0']");
+    expect(issueRow).toBeTruthy();
+    fireEvent.focus(issueRow as HTMLElement);
+
+    expect(screen.getByTestId("outfit-item-highlighted")).toBeInTheDocument();
+  });
+
+  test("highlights uploaded outfit cards from W-prefixed report item ids", async () => {
+    const user = userEvent.setup();
+    const activeOutfit = buildReportOutfit();
+    const effective = activeOutfit.effective;
+    expect(effective?.report?.issues?.[0]).toBeTruthy();
+    expect(effective?.report?.suggestions?.[0]).toBeTruthy();
+
+    effective!.items = [
+      {
+        url: "wardrobe://bottom",
+        source: "uploaded",
+        item: {
+          id: "18",
+          source: "uploaded",
+          url: "wardrobe://bottom",
+          name: "Preview jeans",
+          category: "bottom",
+          imageUrl: "https://example.com/jeans.png",
+        },
+      },
+    ];
+    effective!.report!.issues![0].affectedItemIds = ["W18"];
+    effective!.report!.suggestions![0].targetItemIds = ["W18"];
+
+    renderScreen({ activeOutfit });
 
     await user.click(screen.getByRole("button", { name: "Show details" }));
     const issueRow = screen

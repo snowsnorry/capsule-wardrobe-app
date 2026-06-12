@@ -21,6 +21,11 @@ import {
   TILE_SIZE,
 } from "./promptImagesShared.js";
 
+type CategoryOverlayOptions = {
+  gridHeight?: number;
+  gridRows?: number;
+};
+
 export function createCategoryOverlaySvg(
   category: string,
   entries: Array<{
@@ -28,32 +33,38 @@ export function createCategoryOverlaySvg(
     result: PromptImageDownloadResult;
     slotIndex: number;
   }>,
+  options: CategoryOverlayOptions = {},
 ) {
   const width = GRID_WIDTH;
-  const height = HEADER_HEIGHT + GRID_HEIGHT;
+  const gridHeight = options.gridHeight ?? GRID_HEIGHT;
+  const gridRows = options.gridRows ?? GRID_ROWS;
+  const height = HEADER_HEIGHT + gridHeight;
   const parts = [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">`,
     `<rect x="0" y="0" width="${width}" height="${HEADER_HEIGHT}" fill="${BACKGROUND_COLOR}"/>`,
     `<text x="${width / 2}" y="${Math.round(HEADER_HEIGHT / 2)}" text-anchor="middle" dominant-baseline="middle" fill="${GRID_COLOR}" font-size="${HEADER_FONT_SIZE}" font-family="Arial, Helvetica, sans-serif" font-weight="700">Category: ${escapeXml(category)}</text>`,
-    `<rect x="${BORDER_WIDTH / 2}" y="${HEADER_HEIGHT + BORDER_WIDTH / 2}" width="${GRID_WIDTH - BORDER_WIDTH}" height="${GRID_HEIGHT - BORDER_WIDTH}" fill="none" stroke="${GRID_COLOR}" stroke-width="${BORDER_WIDTH}"/>`,
+    `<rect x="${BORDER_WIDTH / 2}" y="${HEADER_HEIGHT + BORDER_WIDTH / 2}" width="${GRID_WIDTH - BORDER_WIDTH}" height="${gridHeight - BORDER_WIDTH}" fill="none" stroke="${GRID_COLOR}" stroke-width="${BORDER_WIDTH}"/>`,
   ];
 
-  addCategoryGridLines(parts);
+  addCategoryGridLines(parts, { gridHeight, gridRows });
   addCategoryItemLabels(parts, entries);
 
   parts.push("</svg>");
   return Buffer.from(parts.join(""));
 }
 
-function addCategoryGridLines(parts: string[]) {
+function addCategoryGridLines(
+  parts: string[],
+  { gridHeight, gridRows }: Required<CategoryOverlayOptions>,
+) {
   for (let column = 1; column < GRID_COLUMNS; column += 1) {
     const x = column * TILE_SIZE;
     parts.push(
-      `<line x1="${x}" y1="${HEADER_HEIGHT}" x2="${x}" y2="${HEADER_HEIGHT + GRID_HEIGHT}" stroke="${GRID_COLOR}" stroke-width="${BORDER_WIDTH}"/>`,
+      `<line x1="${x}" y1="${HEADER_HEIGHT}" x2="${x}" y2="${HEADER_HEIGHT + gridHeight}" stroke="${GRID_COLOR}" stroke-width="${BORDER_WIDTH}"/>`,
     );
   }
 
-  for (let row = 1; row < GRID_ROWS; row += 1) {
+  for (let row = 1; row < gridRows; row += 1) {
     const y = HEADER_HEIGHT + row * TILE_SIZE;
     parts.push(
       `<line x1="0" y1="${y}" x2="${GRID_WIDTH}" y2="${y}" stroke="${GRID_COLOR}" stroke-width="${BORDER_WIDTH}"/>`,

@@ -2,30 +2,20 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import sharp from "sharp";
 import { IMAGE_DOWNLOAD_CONCURRENCY } from "./imagePipeline.js";
 import type {
   PromptDebugImageCategory,
-  PromptImageDownloadResult,
   PromptImageItemLike,
   PromptImageTimings,
 } from "./types.js";
 import {
-  CATEGORY_COLLAGE_JPEG_QUALITY,
   addTiming,
-  buildPromptTileCompositeInput,
   createPromptImageTimings,
   ensureCleanDirectory,
   getErrorMessage,
   mapWithConcurrency,
   nowMs,
   sanitizeFileName,
-  GRID_COLUMNS,
-  GRID_HEIGHT,
-  GRID_WIDTH,
-  HEADER_HEIGHT,
-  TILE_SIZE,
-  BACKGROUND_COLOR,
   groupPromptImageItemsByCategory,
   type PromptDebugImageCategoryWithFile,
 } from "./promptImagesShared.js";
@@ -36,105 +26,7 @@ import {
   stitchCategoryImagesVertically,
   stripCategoryBuffer,
 } from "./promptImageArtifacts.js";
-import { createCategoryOverlaySvg } from "./promptImageCategoryOverlay.js";
-
-async function buildCategoryImage({
-  category,
-  entries,
-  timings = null,
-}: {
-  category: string;
-  entries: Array<{
-    item: PromptImageItemLike;
-    result: PromptImageDownloadResult;
-    slotIndex: number;
-  }>;
-  timings?: PromptImageTimings | null;
-}): Promise<{
-  buffer: Buffer;
-  mimeType: string;
-  manifestEntries: NonNullable<PromptDebugImageCategory["items"]>;
-}> {
-  const composites = [];
-  const manifestEntries: NonNullable<PromptDebugImageCategory["items"]> = [];
-
-  for (const [slotIndex, entry] of entries.entries()) {
-    const row = Math.floor(slotIndex / GRID_COLUMNS);
-    const column = slotIndex % GRID_COLUMNS;
-    const left = column * TILE_SIZE;
-    const top = HEADER_HEIGHT + row * TILE_SIZE;
-
-    if (entry.result.buffer) {
-      try {
-        const tileStartedAt = nowMs();
-        const tile = await buildPromptTileCompositeInput(entry.result.buffer, {
-          autoRotate: entry.result.source !== "cache",
-        });
-        addTiming(timings, "tileBuildMs", tileStartedAt);
-        composites.push({
-          input: tile.input,
-          raw: tile.raw,
-          left,
-          top,
-        });
-      } catch (error) {
-        const reason =
-          error instanceof Error && error.name === "TimeoutError"
-            ? "timeout"
-            : getErrorMessage(error, "tile_build_failed");
-
-        logWarn(
-          "[prompt-images][tile-build-failed]",
-          JSON.stringify({
-            id: entry.result.id,
-            category,
-            imageUrl: entry.result.imageUrl,
-            reason,
-          }),
-        );
-
-        entry.result.status = "skipped";
-        entry.result.reason = reason;
-      }
-    }
-
-    manifestEntries.push({
-      slotIndex,
-      id: entry.result.id,
-      source: entry.result.source,
-      imageUrl: entry.result.imageUrl,
-      originalImageUrl: entry.result.originalImageUrl,
-      status: entry.result.status,
-      reason: entry.result.reason,
-    });
-  }
-
-  const overlaySvg = createCategoryOverlaySvg(category, entries);
-
-  const collageStartedAt = nowMs();
-  const buffer = await sharp({
-    create: {
-      width: GRID_WIDTH,
-      height: HEADER_HEIGHT + GRID_HEIGHT,
-      channels: 3,
-      background: BACKGROUND_COLOR,
-    },
-  })
-    .composite([...composites, { input: overlaySvg, left: 0, top: 0 }])
-    .jpeg({
-      quality: CATEGORY_COLLAGE_JPEG_QUALITY,
-      mozjpeg: false,
-      progressive: false,
-    })
-    .toBuffer();
-  addTiming(timings, "collageEncodeMs", collageStartedAt);
-
-  return {
-    buffer,
-    mimeType: "image/jpeg",
-    manifestEntries,
-  };
-}
+import { buildCategoryImage } from "./promptImageCategoryImage.js";
 
 async function createIntermediateCollageDirectory({
   debugOutputDir = null,
@@ -253,11 +145,13 @@ async function buildPromptDebugImages({
 async function buildPromptDebugImagesForCategory({
   category = "",
   items = [],
+  compactRows = false,
   downloadConcurrency = IMAGE_DOWNLOAD_CONCURRENCY,
   timings = null,
 }: {
   category?: string;
   items?: PromptImageItemLike[];
+  compactRows?: boolean;
   downloadConcurrency?: number;
   timings?: PromptImageTimings | null;
 } = {}): Promise<{
@@ -298,6 +192,7 @@ async function buildPromptDebugImagesForCategory({
   const { buffer, mimeType, manifestEntries } = await buildCategoryImage({
     category,
     entries,
+    compactRows,
     timings,
   });
   addTiming(timings, "categoryBuildMs", categoryStartedAt);

@@ -117,6 +117,7 @@ async function buildOutfitReportCollage({
     () =>
       deps.buildPromptDebugImagesForCategoryImpl({
         category: "Current Outfit",
+        compactRows: true,
         items: promptItems,
       }),
   );

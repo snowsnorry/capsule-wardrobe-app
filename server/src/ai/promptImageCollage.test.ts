@@ -2,11 +2,15 @@ import { test, expect, vi } from "vitest";
 import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
-import { buildPromptDebugImages } from "./promptImageCollage.js";
+import {
+  buildPromptDebugImages,
+  buildPromptDebugImagesForCategory,
+} from "./promptImageCollage.js";
 import {
   GRID_HEIGHT,
   GRID_WIDTH,
   HEADER_HEIGHT,
+  TILE_SIZE,
 } from "./promptImagesShared.js";
 import { createBinaryResponse } from "../test/testDoubles.js";
 import {
@@ -76,6 +80,52 @@ test("buildPromptDebugImages writes category images with expected geometry and m
   expect(manifest.categories[0].items[0].status).toBe("downloaded");
   expect(manifest.categories[0].items[0].source).toBe("download");
   expect(manifest.categories[0].items[0].tileFile).toBe(undefined);
+});
+
+test("buildPromptDebugImagesForCategory can compact category height to populated rows", async (t) => {
+  const greenBuffer = await createFixtureBuffer("#00aa00");
+  const originalFetch = globalThis.fetch;
+
+  globalThis.fetch = async () =>
+    createBinaryResponse(greenBuffer, { status: 200 });
+
+  t.onTestFinished(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  const defaultResult = await buildPromptDebugImagesForCategory({
+    category: "Current Outfit",
+    items: createItems("current-outfit", 5),
+  });
+  const compactFiveResult = await buildPromptDebugImagesForCategory({
+    category: "Current Outfit",
+    compactRows: true,
+    items: createItems("current-outfit", 5),
+  });
+  const compactSixResult = await buildPromptDebugImagesForCategory({
+    category: "Current Outfit",
+    compactRows: true,
+    items: createItems("current-outfit", 6),
+  });
+
+  await expect(
+    sharp(defaultResult.category.buffer).metadata(),
+  ).resolves.toMatchObject({
+    width: GRID_WIDTH,
+    height: HEADER_HEIGHT + GRID_HEIGHT,
+  });
+  await expect(
+    sharp(compactFiveResult.category.buffer).metadata(),
+  ).resolves.toMatchObject({
+    width: GRID_WIDTH,
+    height: HEADER_HEIGHT + TILE_SIZE,
+  });
+  await expect(
+    sharp(compactSixResult.category.buffer).metadata(),
+  ).resolves.toMatchObject({
+    width: GRID_WIDTH,
+    height: HEADER_HEIGHT + TILE_SIZE * 2,
+  });
 });
 
 test("buildPromptDebugImages keeps collages in memory when debug saving is disabled", async (t) => {

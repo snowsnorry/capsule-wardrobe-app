@@ -28,10 +28,35 @@ function getItemId(item: Record<string, unknown>) {
     : "";
 }
 
+function isWardrobeOutfitItem(item: Record<string, unknown>) {
+  const itemSource = getStringField(item, "itemSource", "item_source");
+  if (itemSource === "wardrobe") {
+    return true;
+  }
+
+  if (getStringField(item, "wardrobeId", "wardrobe_id")) {
+    return true;
+  }
+
+  if (getStringField(item, "profileEmail", "profile_email")) {
+    return true;
+  }
+
+  return getStringField(item, "source") === "uploaded";
+}
+
+function getOutfitReportPromptItemId(item: Record<string, unknown>) {
+  const id = getItemId(item);
+  if (!id || !isWardrobeOutfitItem(item) || id.startsWith("W")) {
+    return id;
+  }
+  return `W${id}`;
+}
+
 function toOutfitReportItem(
   item: Record<string, unknown>,
 ): OutfitReportItem | null {
-  const id = getItemId(item);
+  const id = getOutfitReportPromptItemId(item);
   if (!id) {
     return null;
   }
@@ -60,7 +85,7 @@ function toOutfitReportItem(
 function toOutfitReportPromptImageItem(
   item: Record<string, unknown>,
 ): PromptImageItemLike | null {
-  const id = getItemId(item);
+  const id = getOutfitReportPromptItemId(item);
   if (!id) {
     return null;
   }
@@ -78,4 +103,8 @@ function toOutfitReportPromptImageItem(
   };
 }
 
-export { toOutfitReportItem, toOutfitReportPromptImageItem };
+export {
+  getOutfitReportPromptItemId,
+  toOutfitReportItem,
+  toOutfitReportPromptImageItem,
+};

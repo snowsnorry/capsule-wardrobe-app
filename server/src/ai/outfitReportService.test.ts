@@ -18,7 +18,7 @@ const hydratedItems = [
     style: ["minimalistic"],
   },
   {
-    id: "wardrobe-bottom-1",
+    id: "18",
     source: "uploaded",
     url: "wardrobe://bottom",
     name: "Blue jeans",
@@ -102,7 +102,7 @@ function buildLlmReport(overrides = {}) {
         severity: "critical",
         dimension: "composition",
         message: "The outfit has no footwear.",
-        affectedItemIds: [],
+        affectedItemIds: ["W18"],
         suggestion: "Add casual shoes to complete the look.",
       },
     ],
@@ -110,7 +110,7 @@ function buildLlmReport(overrides = {}) {
       {
         type: "add",
         priority: "high",
-        targetItemIds: [],
+        targetItemIds: ["W18"],
         replacementCategory: "shoes",
         replacementDescription: "clean white sneakers",
         message: "Add clean sneakers to finish the outfit.",
@@ -185,6 +185,7 @@ describe("generateOutfitReport", () => {
     });
     expect(deps.buildPromptDebugImagesForCategoryImpl).toHaveBeenCalledWith({
       category: "Current Outfit",
+      compactRows: true,
       items: [
         {
           id: "catalog-top-1",
@@ -192,7 +193,7 @@ describe("generateOutfitReport", () => {
           imageUrl: "https://images.example.com/top.jpg",
         },
         {
-          id: "wardrobe-bottom-1",
+          id: "W18",
           category: "bottom",
           imageUrl: "https://images.example.com/bottom.jpg",
         },
@@ -213,6 +214,10 @@ describe("generateOutfitReport", () => {
         systemPrompt: expect.stringContaining("outfit-report-auditor"),
       }),
     );
+    expect(deps.generateJsonWithLlm).toHaveBeenCalledWith(
+      expect.stringContaining('"id": "W18"'),
+      expect.any(Object),
+    );
     expect(deps.saveLastPromptArtifactsImpl).toHaveBeenCalledWith({
       prompt: expect.stringContaining('"id": "catalog-top-1"'),
       userProfile,
@@ -223,6 +228,11 @@ describe("generateOutfitReport", () => {
         filename: "current-outfit.jpg",
       }),
     });
+    expect(deps.saveLastPromptArtifactsImpl).toHaveBeenCalledWith(
+      expect.objectContaining({
+        prompt: expect.stringContaining('"id": "W18"'),
+      }),
+    );
     expect(deps.updateOutfitReportImpl).toHaveBeenCalledWith(
       "person@example.com",
       "outfit-1",
